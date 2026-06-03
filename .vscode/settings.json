@@ -1,0 +1,13 @@
+{
+  "cmake.configureOnOpen": true,
+  "cmake.sourceDirectory": "/wsl.localhost/Ubuntu/home/kilian/smac",
+  "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+  "files.exclude": {
+    "**/.git": true
+  },
+  "gitHubCopilot.enable": true,
+  "chat.tools.terminal.autoApprove": {
+    "cmake": true,
+    "./build.sh": true
+  }
+}
