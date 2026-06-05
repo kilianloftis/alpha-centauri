@@ -1,0 +1,161 @@
+[
+  {
+    "id": "TurnStart",
+    "name": "Turn Start",
+    "description": "Initializes the beginning of a new turn",
+    "repeat_for_each_faction": false,
+    "hooks": {
+      "pre": [],
+      "post": [],
+      "replace": []
+    }
+  },
+  {
+    "id": "NewYearBegins",
+    "name": "New Year Begins",
+    "description": "Handles the start of a new mission year",
+    "repeat_for_each_faction": false,
+    "hooks": {
+      "pre": [],
+      "post": [],
+      "replace": []
+    }
+  },
+  {
+    "id": "IncomeCollection",
+    "name": "Income Collection",
+    "description": "Collects income for all factions",
+    "repeat_for_each_faction": true,
+    "hooks": {
+      "pre": [],
+      "post": [],
+      "replace": []
+    }
+  },
+  {
+    "id": "EnergyAllocation",
+    "name": "Energy Allocation",
+    "description": "Allocates energy to economy, labs, and psych",
+    "repeat_for_each_faction": true,
+    "hooks": {
+      "pre": [],
+      "post": [],
+      "replace": []
+    }
+  },
+  {
+    "id": "ResearchAccumulation",
+    "name": "Research Accumulation",
+    "description": "Accumulates research points from labs",
+    "repeat_for_each_faction": true,
+    "hooks": {
+      "pre": [],
+      "post": [],
+      "replace": []
+    }
+  },
+  {
+    "id": "BaseProduction",
+    "name": "Base Production",
+    "description": "Handles production in all bases",
+    "repeat_for_each_faction": true,
+    "hooks": {
+      "pre": [],
+      "post": [],
+      "replace": []
+    }
+  },
+  {
+    "id": "Population",
+    "name": "Population",
+    "description": "Processes population changes and drone/talent balance",
+    "repeat_for_each_faction": true,
+    "hooks": {
+      "pre": [],
+      "post": [],
+      "replace": []
+    }
+  },
+  {
+    "id": "Upkeep",
+    "name": "Upkeep",
+    "description": "Deducts upkeep costs for units and facilities",
+    "repeat_for_each_faction": true,
+    "hooks": {
+      "pre": [],
+      "post": [],
+      "replace": []
+    }
+  },
+  {
+    "id": "PlayerActions",
+    "name": "Player Actions",
+    "description": "Processes player actions during their turn",
+    "repeat_for_each_faction": true,
+    "hooks": {
+      "pre": [],
+      "post": [],
+      "replace": []
+    }
+  },
+  {
+    "id": "WorldEvents",
+    "name": "World Events",
+    "description": "Handles random world events like mindworms and fungus",
+    "repeat_for_each_faction": false,
+    "hooks": {
+      "pre": [],
+      "post": [],
+      "replace": []
+    }
+  },
+  {
+    "id": "VictoryConditionChecks",
+    "name": "Victory Condition Checks",
+    "description": "Checks if any faction has achieved victory",
+    "repeat_for_each_faction": false,
+    "hooks": {
+      "pre": [],
+      "post": [],
+      "replace": []
+    }
+  },
+  {
+    "id": "TurnEnd",
+    "name": "Turn End",
+    "description": "Finalizes the end of the turn",
+    "repeat_for_each_faction": false,
+    "hooks": {
+      "pre": [],
+      "post": [],
+      "replace": []
+    }
+  },
+  {
+    "id": "Save",
+    "name": "Save Game",
+    "description": "Saves the game state",
+    "repeat_for_each_faction": false,
+    "hooks": {
+      "pre": [],
+      "post": [],
+      "replace": []
+    }
+  },
+  {
+    "id": "CustomModStage",
+    "name": "Custom Mod Stage",
+    "description": "A custom stage added by a mod (requires replace hook)",
+    "repeat_for_each_faction": false,
+    "hooks": {
+      "pre": [],
+      "post": [],
+      "replace": [
+        {
+          "mod_id": "example_mod",
+          "script_path": "mods/example_mod/scripts/custom_stage.lua"
+        }
+      ]
+    }
+  }
+]

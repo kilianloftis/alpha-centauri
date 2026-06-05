@@ -4,9 +4,11 @@
 #include <memory>
 #include <optional>
 
-namespace ac {
+namespace ac
+{
 
-enum class Key {
+enum class Key
+{
     Unknown,
     A, B, C, D, E, F, G, H, I, J, K, L, M,
     N, O, P, Q, R, S, T, U, V, W, X, Y, Z,
@@ -16,24 +18,28 @@ enum class Key {
     Enter,
 };
 
-struct KeyEvent {
+struct KeyEvent
+{
     Key key;
 };
 
-enum class MouseButton {
+enum class MouseButton
+{
     None,
     Left,
     Right,
     Middle,
 };
 
-struct MouseEvent {
+struct MouseEvent
+{
     MouseButton button;
     int x;
     int y;
 };
 
-class Input {
+class Input
+{
 public:
     virtual ~Input() = default;
 

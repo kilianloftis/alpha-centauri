@@ -1,9 +1,12 @@
 #include "input/KeyMapping.h"
 
-namespace ac {
+namespace ac
+{
 
-std::optional<Key> KeyFromAscii(char raw) {
-    switch (raw) {
+std::optional<Key> KeyFromAscii(char raw)
+{
+switch (raw)
+    {
         case 'a': case 'A': return Key::A;
         case 'b': case 'B': return Key::B;
         case 'c': case 'C': return Key::C;
@@ -46,8 +49,10 @@ std::optional<Key> KeyFromAscii(char raw) {
     }
 }
 
-std::optional<char> KeyToAscii(Key key) {
-    switch (key) {
+std::optional<char> KeyToAscii(Key key)
+{
+switch (key)
+    {
         case Key::A: return 'a';
         case Key::B: return 'b';
         case Key::C: return 'c';
@@ -90,8 +95,10 @@ std::optional<char> KeyToAscii(Key key) {
     }
 }
 
-std::string KeyToString(Key key) {
-    switch (key) {
+std::string KeyToString(Key key)
+{
+switch (key)
+    {
         case Key::A: return "A";
         case Key::B: return "B";
         case Key::C: return "C";
@@ -136,8 +143,10 @@ std::string KeyToString(Key key) {
 }
 
 #ifdef USE_SFML
-std::optional<Key> KeyFromSfKey(sf::Keyboard::Key key) {
-    switch (key) {
+std::optional<Key> KeyFromSfKey(sf::Keyboard::Key key)
+{
+switch (key)
+    {
         case sf::Keyboard::Key::A: return Key::A;
         case sf::Keyboard::Key::B: return Key::B;
         case sf::Keyboard::Key::C: return Key::C;

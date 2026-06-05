@@ -1,0 +1,167 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+DEFAULT_BUILD_DIR="${ROOT_DIR}/build"
+DEFAULT_CONFIG="Debug"
+
+function usage() {
+  cat <<EOF
+Usage: $(basename "$0") <command> [options]
+
+Commands:
+  configure [build-dir] [--no-sfml] [--sfml-dir <dir>] [-- <cmake-args>...]
+      Create or update the CMake build tree.
+
+  build [build-dir] [--config <Debug|Release>]
+      Build the configured project.
+
+  all [build-dir] [--config <Debug|Release>] [--no-sfml] [--sfml-dir <dir>] [-- <cmake-args>...]
+      Configure and build in one step.
+
+  clean [build-dir]
+      Remove the build directory.
+
+  help
+      Show this help message.
+EOF
+}
+
+function configure() {
+  local build_dir="$DEFAULT_BUILD_DIR"
+  local cmake_args=("-DUSE_SFML=ON")
+
+  if [[ $# -gt 0 && "$1" != --* ]]; then
+    build_dir="$1"
+    shift
+  fi
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --no-sfml)
+        cmake_args+=("-DUSE_SFML=OFF")
+        shift
+        ;;
+      --sfml-dir)
+        cmake_args+=("-DUSE_SFML=ON" "-DSFML_DIR=$2")
+        shift 2
+        ;;
+      --)
+        shift
+        cmake_args+=("$@")
+        break
+        ;;
+      *)
+        cmake_args+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  mkdir -p "$build_dir"
+  cmake -S "$ROOT_DIR" -B "$build_dir" "${cmake_args[@]}"
+}
+
+function build() {
+  local build_dir="${1:-$DEFAULT_BUILD_DIR}"
+  local config="$DEFAULT_CONFIG"
+
+  if [[ -z "$build_dir" || "$build_dir" == --* ]]; then
+    build_dir="$DEFAULT_BUILD_DIR"
+  fi
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --config)
+        config="$2"
+        shift 2
+        ;;
+      --)
+        shift
+        break
+        ;;
+      *)
+        if [[ "$build_dir" == "$DEFAULT_BUILD_DIR" ]]; then
+          build_dir="$1"
+        fi
+        shift
+        ;;
+    esac
+  done
+
+  cmake --build "$build_dir" --config "$config"
+}
+
+function clean() {
+  local build_dir="${1:-$DEFAULT_BUILD_DIR}"
+  rm -rf "$build_dir"
+  echo "Removed build directory: $build_dir"
+}
+
+if [[ $# -lt 1 ]]; then
+  usage
+  exit 1
+fi
+
+command="$1"
+shift
+
+case "$command" in
+  configure)
+    configure "$@"
+    ;;
+  build)
+    build "$@"
+    ;;
+  all)
+    build_dir="${1:-$DEFAULT_BUILD_DIR}"
+    if [[ "$build_dir" != --* ]]; then
+      shift
+    else
+      build_dir="$DEFAULT_BUILD_DIR"
+    fi
+    config="$DEFAULT_CONFIG"
+    cmake_args=("-DUSE_SFML=ON")
+
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --config)
+          config="$2"
+          shift 2
+          ;;
+        --no-sfml)
+          cmake_args+=("-DUSE_SFML=OFF")
+          shift
+          ;;
+        --sfml-dir)
+          cmake_args+=("-DUSE_SFML=ON" "-DSFML_DIR=$2")
+          shift 2
+          ;;
+        --)
+          shift
+          cmake_args+=("$@")
+          break
+          ;;
+        *)
+          cmake_args+=("$1")
+          shift
+          ;;
+      esac
+    done
+
+    mkdir -p "$build_dir"
+    cmake -S "$ROOT_DIR" -B "$build_dir" -DCMAKE_BUILD_TYPE="$config" "${cmake_args[@]}"
+    cmake --build "$build_dir" --config "$config"
+    ;;
+  clean)
+    clean "$@"
+    ;;
+  help|-h|--help)
+    usage
+    ;;
+  *)
+    echo "Unknown command: $command"
+    usage
+    exit 1
+    ;;
+esac

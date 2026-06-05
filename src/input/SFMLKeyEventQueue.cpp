@@ -3,16 +3,20 @@
 #include "input/SFMLKeyEventQueue.h"
 #include <deque>
 
-namespace ac {
+namespace ac
+{
 
 static std::deque<Key> g_pendingKeyEvents;
 
-void PushPendingKeyEvent(Key key) {
+void PushPendingKeyEvent(Key key)
+{
     g_pendingKeyEvents.push_back(key);
 }
 
-std::optional<Key> PopPendingKeyEvent() {
-    if (g_pendingKeyEvents.empty()) {
+std::optional<Key> PopPendingKeyEvent()
+{
+if (g_pendingKeyEvents.empty())
+    {
         return std::nullopt;
     }
 

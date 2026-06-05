@@ -3,9 +3,11 @@
 #include <memory>
 #include <string>
 
-namespace ac {
+namespace ac
+{
 
-class Graphics {
+class Graphics
+{
 public:
     virtual ~Graphics() = default;
 

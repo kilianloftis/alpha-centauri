@@ -28,10 +28,10 @@ A C++ project scaffold for rebuilding a turn-based strategy game inspired by Sid
 
 Use the root helper script to configure and build the project:
 
-- `./build.sh configure` — configure CMake in `build/`
-- `./build.sh build` — build the configured project
-- `./build.sh all` — configure and build in one step
-- `./build.sh clean` — remove the build directory
+- `./bd configure` — configure CMake in `build/`
+- `./bd build` — build the configured project
+- `./bd all` — configure and build in one step
+- `./bd clean` — remove the build directory
 
 ## Next development steps
 

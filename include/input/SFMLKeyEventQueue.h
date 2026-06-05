@@ -3,7 +3,8 @@
 #include "input/Input.h"
 #include <optional>
 
-namespace ac {
+namespace ac
+{
 
 void PushPendingKeyEvent(Key key);
 std::optional<Key> PopPendingKeyEvent();

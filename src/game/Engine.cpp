@@ -1,15 +1,22 @@
 #include "game/Engine.h"
+#include "game/TurnStageFactory.h"
+#include "game/TurnProcessor.h"
 #include "graphics/Graphics.h"
 #include "input/Input.h"
 #include "input/KeyMapping.h"
 #include <iostream>
 #include <stdexcept>
 
-namespace ac {
+namespace ac
+{
 
 Engine::Engine()
     : m_graphics(CreateGraphics())
     , m_input(CreateInput())
+    , m_turnStageFactory(std::make_unique<TurnStageFactory>())
+    , m_missionYear(0)
+    , m_numFactions(1)  // TODO: make configurable
+    , m_bShouldExit(false)
     {}
 
 Engine::~Engine() = default;
@@ -20,46 +27,65 @@ void Engine::Run()
     PrintWelcome_();
 
     std::cout << "Graphics backend initialized successfully.\n";
+    std::cout << "Starting game loop...\n";
 
-    std::string lastKey = "";
-    bool bShouldExit = false;
+    GameLoop_();
 
-    while (!bShouldExit) {
+    std::cout << "Exiting game.\n";
+}
+
+void Engine::GameLoop_()
+{
+    while (!m_bShouldExit)
+    {
+        // Display current game state
         m_graphics->Clear();
-        m_graphics->DrawText("Press a key inside the window. Enter will close it.", 20.f, 20.f, 24);
-        if (!lastKey.empty()) {
-            m_graphics->DrawText(lastKey, 20.f, 80.f, 48);
-        }
+        m_graphics->DrawText("Mission Year: " + std::to_string(m_missionYear), 20.f, 20.f, 24);
+        m_graphics->DrawText("Press Enter to continue or Esc to quit.", 20.f, 80.f, 20);
         m_graphics->Display();
 
-        if (auto key = m_input->CaptureKey()) {
-            if (*key == Key::Enter) {
-                bShouldExit = true;
-            } else {
-                lastKey = KeyToString(*key);
+        // Wait for player input
+        m_input->CaptureKeyAsync([this](KeyEvent event)
+        {
+            if (event.key == Key::Enter)
+            {
+                // Process the turn when Enter is pressed
+                this->ProcessTurn_();
             }
-        }
+            else if (event.key == Key::Escape)
+            {
+                this->m_bShouldExit = true;
+            }
+        });
     }
+}
 
-    std::cout << "Enter pressed, closing the window.\n";
+void Engine::ProcessTurn_()
+{
+    m_turnProcessor->ProcessTurn(m_missionYear, m_numFactions);
+}
+
+void Engine::Initialize_()
+{
+    std::cout << "Initializing game engine...\n";
+    m_turnStageFactory->LoadConfig("config/turn_stages.json");
+    auto registry = m_turnStageFactory->CreateStages();
+    m_turnProcessor = std::make_unique<TurnProcessor>(std::move(registry));
+    CheckInitialized_();
 }
 
 void Engine::CheckInitialized_() const
 {
-    if (!m_graphics) {
+if (!m_graphics)
+    {
         std::cout << "No graphics backend available\n";
         throw std::runtime_error("Failed to create graphics backend");
     }
-    if (!m_input) {
+if (!m_input)
+    {
         std::cout << "No input backend available\n";
         throw std::runtime_error("Failed to create input backend");
     }
-}
-
-void Engine::Initialize_() const
-{
-    CheckInitialized_();
-    std::cout << "Initializing game engine...\n";
 }
 
 void Engine::PrintWelcome_() const

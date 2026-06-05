@@ -1,0 +1,310 @@
+# Faction System Architecture
+
+```mermaid
+graph TB
+    subgraph "Engine Integration"
+        Engine[Engine]
+        TurnProcessor[TurnProcessor]
+        GameState[GameState]
+    end
+
+    subgraph "Faction System"
+        Faction[Faction]
+        FactionVector[FactionVector<br/>vector<unique_ptr<Faction>>]
+        FactionFactory[FactionFactory]
+        FactionSignals[Faction Signals:<br/>on_tech_discovered<br/>on_base_built<br/>on_eliminated]
+    end
+
+    subgraph "Faction Identity"
+        FactionIdentity[FactionIdentity]
+        FactionName[FactionName<br/>string]
+        FactionLeader[FactionLeader<br/>string]
+        FactionColor[FactionColor<br/>enum]
+        FactionLogo[FactionLogo<br/>texture ID]
+    end
+
+    subgraph "AI Profile"
+        AIProfile[AIProfile]
+        Personality[Personality<br/>aggressive, peaceful, etc.]
+        Priorities[Priorities<br/>research, economy, military]
+        BehaviorModifiers[BehaviorModifiers<br/>weights for decisions]
+    end
+
+    subgraph "Economy Subsystem"
+        Economy[Economy]
+        Minerals[Minerals<br/>int]
+        Energy[Energy<br/>int]
+        Credits[Credits<br/>int]
+        TradeRoutes[TradeRoutes<br/>vector]
+        IncomeCalculator[IncomeCalculator]
+    end
+
+    subgraph "Military Subsystem"
+        Military[Military]
+        Units[Units<br/>vector<Unit>]
+        Bases[Bases<br/>vector<Base>]
+        UnitFactory[UnitFactory]
+        BaseManager[BaseManager]
+    end
+
+    subgraph "Base System"
+        Base[Base]
+        Population[Population<br/>(abstract)]
+        BasePopulation[BasePopulation<br/>(concrete)]
+        WorkerRoles[WorkerRoles<br/>Worker, Lab, Psych,<br/>Econ, Drone, Talent]
+        Buildings[Buildings<br/>vector<string>]
+        TileResources[TileResources<br/>nutrients, energy, minerals]
+        TradeRoutes[TradeRoutes<br/>vector<TradeRoute>]
+    end
+
+    subgraph "Research Subsystem"
+        Research[Research]
+        TechTree[TechTree]
+        CurrentTechs[CurrentTechs<br/>set<TechID>]
+        ResearchQueue[ResearchQueue<br/>queue<TechID>]
+        ResearchProgress[ResearchProgress<br/>map<TechID, int>]
+    end
+
+    subgraph "Diplomacy Subsystem"
+        Diplomacy[Diplomacy]
+        Relations[Relations<br/>map<FactionID, Relation>]
+        Treaties[Treaties<br/>vector<Treaty>]
+        AttitudeModifiers[AttitudeModifiers]
+    end
+
+    subgraph "Data Structures"
+        Unit[Unit]
+        Base[Base]
+        Tech[Tech]
+        Treaty[Treaty]
+        Relation[Relation]
+    end
+
+    Engine --> GameState
+    Engine --> TurnProcessor
+    
+    GameState --> FactionVector
+    TurnProcessor --> FactionVector
+    FactionFactory --> Faction
+    FactionVector --> Faction
+    Faction --> FactionSignals
+    
+    Faction --> FactionIdentity
+    Faction --> AIProfile
+    Faction --> Economy
+    Faction --> Military
+    Faction --> Research
+    Faction --> Diplomacy
+    
+    FactionIdentity --> FactionName
+    FactionIdentity --> FactionLeader
+    FactionIdentity --> FactionColor
+    FactionIdentity --> FactionLogo
+    
+    AIProfile --> Personality
+    AIProfile --> Priorities
+    AIProfile --> BehaviorModifiers
+    
+    Economy --> Minerals
+    Economy --> Energy
+    Economy --> Credits
+    Economy --> TradeRoutes
+    Economy --> IncomeCalculator
+
+    Social --> Policies
+    Social --> EnergyDistribution
+    
+    Military --> Units
+    Military --> Bases
+    Military --> UnitFactory
+    Military --> BaseManager
+    
+    Base --> Population
+    Population --> BasePopulation
+    BasePopulation --> WorkerRoles
+    Base --> Buildings
+    Base --> TileResources
+    Base --> TradeRoutes
+    
+    Research --> TechTree
+    Research --> CurrentTechs
+    Research --> ResearchQueue
+    Research --> ResearchProgress
+    
+    Diplomacy --> Relations
+    Diplomacy --> Treaties
+    Diplomacy --> AttitudeModifiers
+    
+    Military --> Unit
+    Military --> Base
+    Research --> Tech
+    Diplomacy --> Treaty
+    Diplomacy --> Relation
+
+    style Faction fill:#f9f,stroke:#333,stroke-width:4px
+    style FactionVector fill:#fbf,stroke:#333,stroke-width:3px
+    style FactionFactory fill:#ff9,stroke:#333,stroke-width:2px
+    style FactionSignals fill:#f9f,stroke:#333,stroke-width:2px
+    style FactionIdentity fill:#bbf,stroke:#333,stroke-width:2px
+    style AIProfile fill:#bbf,stroke:#333,stroke-width:2px
+    style Economy fill:#bfb,stroke:#333,stroke-width:2px
+    style Military fill:#bfb,stroke:#333,stroke-width:2px
+    style Research fill:#bfb,stroke:#333,stroke-width:2px
+    style Diplomacy fill:#bfb,stroke:#333,stroke-width:2px
+```
+
+## Component Overview
+
+### FactionVector
+- **Purpose**: Stores all Faction instances in the game
+- **Implementation**: `std::vector<std::unique_ptr<Faction>>` owned by GameState
+- **Responsibilities**:
+  - Store all factions
+  - Provide indexed access
+- **Interaction**: Owned by GameState, accessed by TurnProcessor
+
+### FactionFactory
+- **Purpose**: Creates Faction instances from configuration or parameters
+- **Responsibilities**:
+  - Create Faction instances with proper initialization
+  - Load faction data from configuration files
+  - Validate faction creation parameters
+- **Interaction**: Used during game initialization to populate FactionVector
+- **Pattern**: Similar to TurnStageFactory, follows factory pattern for object creation
+
+### Faction
+- **Purpose**: Represents a single faction in the game (player or AI)
+- **Responsibilities**:
+  - Coordinate all faction subsystems
+  - Provide unified interface for faction operations
+  - Manage faction-specific state
+  - Handle turn processing for the faction
+- **Composition**: Owns FactionIdentity, AIProfile, Economy, Military, Research, Diplomacy
+- **Signals**: Emits internal signals for engine communication:
+  - `on_tech_discovered`: Fired when a technology is discovered
+  - `on_base_built`: Fired when a new base is constructed
+  - `on_eliminated`: Fired when the faction is eliminated from the game
+
+### FactionIdentity
+- **Purpose**: Static faction information (name, leader, visual identity)
+- **Responsibilities**:
+  - Store faction name and leader name
+  - Manage faction color for UI rendering
+  - Reference faction logo texture
+- **Rationale**: Separated to allow easy faction customization and modding
+
+### AIProfile
+- **Purpose**: Defines AI behavior and decision-making parameters
+- **Responsibilities**:
+  - Store personality traits (aggressive, peaceful, etc.)
+  - Define priority weights for different game aspects
+  - Provide behavior modifiers for AI decisions
+- **Rationale**: Separated to allow different AI personalities and easy AI tuning
+
+### Economy
+- **Purpose**: Manages faction's economic resources and income
+- **Responsibilities**:
+  - Track minerals, energy, and credits
+  - Manage trade routes
+  - Calculate income per turn
+  - Handle resource spending
+- **Rationale**: Economic logic is complex and should be isolated for testing
+
+### Military
+- **Purpose**: Manages faction's units and bases
+- **Responsibilities**:
+  - Own and manage all Unit instances
+  - Own and manage all Base instances
+  - Provide unit creation via UnitFactory
+  - Provide base management via BaseManager
+- **Rationale**: Military logic is substantial and benefits from separation
+
+### Research
+- **Purpose**: Manages faction's technological progress
+- **Responsibilities**:
+  - Track discovered technologies
+  - Manage research queue
+  - Track research progress for current techs
+  - Interact with TechTree for tech dependencies
+- **Rationale**: Research system is complex with its own data structures
+
+### Diplomacy
+- **Purpose**: Manages faction's relationships with other factions
+- **Responsibilities**:
+  - Track relations with all other factions
+  - Manage active treaties
+  - Apply attitude modifiers
+  - Handle diplomatic actions
+- **Rationale**: Diplomacy involves complex state and interactions between factions
+
+### Base System
+- **Purpose**: Represents individual bases that provide resources for a faction
+- **Components**:
+  - `Base`: Main base class managing population, buildings, and resources
+  - `Population`: Abstract base class for population implementations
+  - `BasePopulation`: Concrete implementation managing workers with different roles
+  - `WorkerRoles`: Enum defining worker roles (Worker, Lab, Psych, Econ, Drone, Talent)
+  - `Buildings`: Collection of building IDs in the base
+  - `TileResources`: Resources (nutrients, energy, minerals) from worked tiles
+  - `TradeRoutes`: Collection of trade routes providing additional energy
+- **Responsibilities**:
+  - Manage population growth and size (1-8 initially, expandable with buildings)
+  - Assign workers to different roles (tiles, labs, psych, econ, drones, talents)
+  - Track buildings constructed in the base
+  - Calculate resource output based on worker assignments:
+    - Workers/Talents work tiles (produce nutrients, energy, minerals)
+    - Lab workers contribute to research
+    - Psych workers contribute to psych
+    - Econ workers produce energy directly
+    - Drones produce nothing
+  - Manage trade routes for additional energy
+  - Provide resource calculation methods (CalculateNutrients_, CalculateEnergyProduction_, CalculateMinerals_)
+- **Rationale**: Bases are the primary source of resources and require complex management of population with specialized worker roles, buildings, and tile resources
+
+## Integration with Engine
+
+### Turn Processing Flow
+1. TurnProcessor iterates over FactionVector in GameState
+2. For each Faction, TurnProcessor calls Faction::ProcessTurn()
+3. Faction delegates to subsystems:
+   - Economy::CalculateIncome()
+   - Military::UpdateUnits()
+   - Research::AdvanceResearch()
+   - Diplomacy::UpdateRelations()
+4. AIProfile guides AI decision-making during turn
+
+### Engine Ownership
+- Engine owns GameState
+- GameState owns FactionVector (vector of unique_ptr<Faction>)
+- Each Faction owns its subsystems
+- FactionFactory is used during initialization to create factions
+- This hierarchy ensures proper lifetime management
+
+### Modding Integration
+- FactionFactory loads faction data from configuration files
+- FactionIdentity can be customized via config
+- AIProfile can be customized via config
+- TechTree can be extended via mods
+- HookSystem can inject custom logic into turn processing
+
+## Design Rationale
+
+### Separation of Concerns
+- Each subsystem has a single, well-defined responsibility
+- Follows Single Responsibility Principle
+- Makes testing and maintenance easier
+
+### Moddability
+- Static data (FactionIdentity, AIProfile) separated from dynamic state
+- Easy to add new factions via configuration
+- AI profiles can be customized without code changes
+
+### Extensibility
+- New subsystems can be added to Faction without affecting existing code
+- Open/Closed Principle: open for extension, closed for modification
+- Interface-based design allows different implementations
+
+### Performance Considerations
+- FactionManager provides O(1) faction lookup by ID
+- Subsystems can be updated independently
+- Data-oriented design possible for Units and Bases collections

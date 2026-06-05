@@ -8,7 +8,8 @@
 #include <SFML/Window/Keyboard.hpp>
 #endif
 
-namespace ac {
+namespace ac
+{
 
 std::optional<Key> KeyFromAscii(char raw);
 std::optional<char> KeyToAscii(Key key);

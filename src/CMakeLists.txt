@@ -1,6 +1,24 @@
 add_executable(alpha-centauri
     main.cpp
     game/Engine.cpp
+    game/TurnProcessor.cpp
+    game/TurnStageFactory.cpp
+    game/TurnStageConfigParser.cpp
+    game/HookContext.cpp
+    game/stages/TurnStart.cpp
+    game/stages/NewYearBegins.cpp
+    game/stages/IncomeCollection.cpp
+    game/stages/EnergyAllocation.cpp
+    game/stages/ResearchAccumulation.cpp
+    game/stages/BaseProduction.cpp
+    game/stages/Population.cpp
+    game/stages/Upkeep.cpp
+    game/stages/PlayerActions.cpp
+    game/stages/WorldEvents.cpp
+    game/stages/VictoryConditionChecks.cpp
+    game/stages/TurnEnd.cpp
+    game/stages/Save.cpp
+    game/stages/CustomTurnStage.cpp
     input/KeyMapping.cpp
 )
 
@@ -8,7 +26,26 @@ target_include_directories(alpha-centauri PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
 
-option(USE_SFML "Enable SFML rendering" OFF)
+# Add nlohmann/json library
+include(FetchContent)
+FetchContent_Declare(
+    json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG v3.11.3
+)
+FetchContent_MakeAvailable(json)
+target_link_libraries(alpha-centauri PRIVATE nlohmann_json::nlohmann_json)
+
+# Add magic_enum library
+FetchContent_Declare(
+    magic_enum
+    GIT_REPOSITORY https://github.com/Neargye/magic_enum.git
+    GIT_TAG v0.9.6
+)
+FetchContent_MakeAvailable(magic_enum)
+target_link_libraries(alpha-centauri PRIVATE magic_enum::magic_enum)
+
+option(USE_SFML "Enable SFML rendering" ON)
 if(USE_SFML)
     find_package(SFML 3.0.2 COMPONENTS Graphics Window System REQUIRED)
     target_compile_definitions(alpha-centauri PRIVATE USE_SFML)

@@ -4,60 +4,75 @@
 #include <limits>
 #include <string>
 
-namespace ac {
+namespace ac
+{
 
-class NullInput : public Input {
+class NullInput : public Input
+{
 public:
-    bool Initialize() override {
+bool Initialize() override
+    {
         std::cout << "[Input] Console input backend selected.\n";
         return true;
     }
 
-    std::optional<Key> CaptureKey() override {
+std::optional<Key> CaptureKey() override
+    {
         std::cout << "Press a key and press Enter: ";
         char raw = 0;
-        if (!(std::cin >> raw)) {
+if (!(std::cin >> raw))
+        {
             return std::nullopt;
         }
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         return KeyFromAscii(raw);
     }
 
-    void CaptureKeyAsync(std::function<void(KeyEvent)> callback) override {
-        if (auto key = CaptureKey()) {
+void CaptureKeyAsync(std::function<void(KeyEvent)> callback) override
+    {
+if (auto key = CaptureKey())
+        {
             callback(KeyEvent{*key});
-        } else {
+} else
+        {
             callback(KeyEvent{Key::Unknown});
         }
     }
 
-    std::optional<MouseEvent> CaptureMouse() override {
+std::optional<MouseEvent> CaptureMouse() override
+    {
         std::cout << "Enter mouse click as 'x y' (or 'n' to skip): ";
         std::string line;
         if (!std::getline(std::cin, line)) return std::nullopt;
-        if (line.empty()) {
+if (line.empty())
+        {
             // if previous >> left newline, try again
             if (!std::getline(std::cin, line)) return std::nullopt;
         }
         if (!line.empty() && (line[0] == 'n' || line[0] == 'N')) return std::nullopt;
         int x = 0, y = 0;
-        if (sscanf(line.c_str(), "%d %d", &x, &y) == 2) {
+if (sscanf(line.c_str(), "%d %d", &x, &y) == 2)
+        {
             return MouseEvent{MouseButton::Left, x, y};
         }
         return std::nullopt;
     }
 
-    void CaptureMouseAsync(std::function<void(MouseEvent)> callback) override {
-        if (auto m = CaptureMouse()) {
+void CaptureMouseAsync(std::function<void(MouseEvent)> callback) override
+    {
+if (auto m = CaptureMouse())
+        {
             callback(*m);
-        } else {
+} else
+        {
             callback(MouseEvent{MouseButton::None, 0, 0});
         }
     }
 
 };
 
-std::unique_ptr<Input> CreateInput() {
+std::unique_ptr<Input> CreateInput()
+{
     return std::make_unique<NullInput>();
 }
 

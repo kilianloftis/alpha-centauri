@@ -10,8 +10,10 @@
 #include <thread>
 #include <vector>
 
-namespace ac {
-static const std::vector<sf::Keyboard::Key> keys = {
+namespace ac
+{
+static const std::vector<sf::Keyboard::Key> keys =
+{
     sf::Keyboard::Key::A, sf::Keyboard::Key::B, sf::Keyboard::Key::C, sf::Keyboard::Key::D,
     sf::Keyboard::Key::E, sf::Keyboard::Key::F, sf::Keyboard::Key::G, sf::Keyboard::Key::H,
     sf::Keyboard::Key::I, sf::Keyboard::Key::J, sf::Keyboard::Key::K, sf::Keyboard::Key::L,
@@ -26,32 +28,42 @@ static const std::vector<sf::Keyboard::Key> keys = {
     sf::Keyboard::Key::Escape, sf::Keyboard::Key::Enter
 };
 
-static const std::vector<sf::Mouse::Button> buttons = {
+static const std::vector<sf::Mouse::Button> buttons =
+{
     sf::Mouse::Button::Left, sf::Mouse::Button::Right, sf::Mouse::Button::Middle
 };
 
-class SFMLInput : public Input {
-bool Initialize() override {
+class SFMLInput : public Input
+{
+bool Initialize() override
+{
     std::cout << "[Input] SFML input backend selected.\n";
     return true;
 }
 
-std::optional<Key> CaptureKey() override {
+std::optional<Key> CaptureKey() override
+{
     return PopPendingKeyEvent();
 }
 
-void CaptureKeyAsync(std::function<void(KeyEvent)> callback) override {
-    if (auto key = CaptureKey()) {
+void CaptureKeyAsync(std::function<void(KeyEvent)> callback) override
+{
+if (auto key = CaptureKey())
+    {
         callback(KeyEvent{*key});
     }
 }
 
-std::optional<MouseEvent> CaptureMouse() override {
+std::optional<MouseEvent> CaptureMouse() override
+{
     std::cout << "Waiting for mouse click in window...\n";
 
-    while (true) {
-        for (auto b : buttons) {
-            if (sf::Mouse::isButtonPressed(b)) {
+while (true)
+    {
+for (auto b : buttons)
+        {
+if (sf::Mouse::isButtonPressed(b))
+            {
                 auto pos = sf::Mouse::getPosition();
                 MouseButton mb = MouseButton::None;
                 if (b == sf::Mouse::Button::Left) mb = MouseButton::Left;
@@ -64,16 +76,20 @@ std::optional<MouseEvent> CaptureMouse() override {
     }
 }
 
-void CaptureMouseAsync(std::function<void(MouseEvent)> callback) override {
-    if (auto m = CaptureMouse()) {
+void CaptureMouseAsync(std::function<void(MouseEvent)> callback) override
+{
+if (auto m = CaptureMouse())
+    {
         callback(*m);
-    } else {
+} else
+    {
         callback(MouseEvent{MouseButton::None, 0, 0});
     }
 }
 };
 
-std::unique_ptr<Input> CreateInput() {
+std::unique_ptr<Input> CreateInput()
+{
     return std::make_unique<SFMLInput>();
 }
 
