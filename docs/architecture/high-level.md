@@ -8,7 +8,6 @@ graph TB
 
     subgraph "Game Engine"
         Engine[Engine]
-        GameState[Game State<br/>missionYear, numFactions, bShouldExit]
     end
 
     subgraph "Graphics System"
@@ -106,8 +105,8 @@ graph TB
 - **Purpose**: Main game engine that coordinates all subsystems
 - **Responsibilities**:
   - Initialize and manage game loop
-  - Own and coordinate Graphics, Input, HookSystem, TurnProcessor, and GameState
-  - Maintain game state (mission year, number of factions, exit flag)
+  - Own and coordinate Graphics, Input, HookSystem, TurnProcessor, EventBridge, and GameState
+  - Delegates all game state to GameState; emits `on_turn_started` before each turn
 
 ### Graphics System
 - **Purpose**: Abstract graphics rendering interface
@@ -142,8 +141,8 @@ graph TB
 ### Faction System
 - **Purpose**: Manages all factions and their game state
 - **Components**:
-  - `GameState`: Owns FactionVector and game state data
-  - `FactionVector`: Vector of unique_ptr<Faction> storing all factions
+  - `GameState`: Owns FactionVector, missionYear, bShouldExit, and `on_turn_started` signal
+  - `FactionVector`: Vector of unique_ptr<Faction> stored inside GameState
   - `FactionFactory`: Creates Faction instances from configuration
   - `Faction`: Represents a single faction with all its subsystems
   - `Faction Subsystems`: FactionIdentity, AIProfile, Economy, Military, Research, Diplomacy

@@ -9,6 +9,7 @@ class Graphics;
 class Input;
 class TurnStageFactory;
 class TurnProcessor;
+class GameState;
 
 class Engine
 {
@@ -28,11 +29,7 @@ private:
     std::unique_ptr<Input> m_input;
     std::unique_ptr<TurnStageFactory> m_turnStageFactory;
     std::unique_ptr<TurnProcessor> m_turnProcessor;
-    
-    // Game state
-    int m_missionYear;
-    int m_numFactions;
-    bool m_bShouldExit;
+    std::unique_ptr<GameState> m_gameState;
 };
 
 } // namespace ac

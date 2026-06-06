@@ -1,7 +1,22 @@
 add_executable(alpha-centauri
     main.cpp
     game/Engine.cpp
+    game/GameState.cpp
+    game/Faction.cpp
+    game/faction/FactionIdentity.cpp
+    game/faction/AIProfile.cpp
+    game/faction/Economy.cpp
+    game/faction/Military.cpp
+    game/faction/Research.cpp
+    game/faction/Diplomacy.cpp
+    game/faction/Base.cpp
+    game/faction/BasePopulation.cpp
+    game/faction/Population.cpp
+    game/faction/Pop.cpp
+    game/faction/Specialist.cpp
     game/TurnProcessor.cpp
+    lib/EventBus.cpp
+    lib/EventBridge.cpp
     game/TurnStageFactory.cpp
     game/TurnStageConfigParser.cpp
     game/HookContext.cpp

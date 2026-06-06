@@ -1,4 +1,6 @@
 #include "game/faction/Economy.h"
+#include "game/faction/Base.h"
+#include <vector>
 
 namespace ac
 {

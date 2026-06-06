@@ -1,17 +1,29 @@
+#pragma once
+
+#include <functional>
+#include <vector>
+
+namespace ac
+{
+
 template<typename... Args>
-class Signal {
+class Signal
+{
 public:
     using Slot = std::function<void(Args...)>;
 
-    void connect(Slot slot) {
-        slots_.push_back(std::move(slot));
+    void connect(Slot slot)
+    {
+        m_slots.push_back(std::move(slot));
     }
 
-    void emit(Args... args) const {
-        for (auto& slot : slots_) slot(args...);
+    void emit(Args... args) const
+    {
+        for (auto& slot : m_slots) slot(args...);
     }
 
 private:
-    // Small-buffer: most signals have 1–3 listeners in the engine.
-    std::vector<Slot> slots_;
+    std::vector<Slot> m_slots;
 };
+
+} // namespace ac

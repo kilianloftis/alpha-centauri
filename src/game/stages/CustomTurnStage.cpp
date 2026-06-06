@@ -8,7 +8,7 @@ CustomTurnStage::CustomTurnStage(std::shared_ptr<HookContext> hookContext, const
     : TurnStageBase(hookContext)
     , m_name(name)
 {
-    if (!m_hookContext || (!m_hookContext->HasReplaceHooks() && !m_hookContext->HasPreHooks() && !m_hookContext->HasPostHooks()))
+    if (!m_pHookContext || (!m_pHookContext->HasReplaceHooks() && !m_pHookContext->HasPreHooks() && !m_pHookContext->HasPostHooks()))
     {
         throw std::runtime_error("CustomTurnStage '" + m_name + "' requires at least one hook to be defined");
     }

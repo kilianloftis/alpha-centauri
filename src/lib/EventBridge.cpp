@@ -1,22 +1,20 @@
 #include "lib/EventBridge.h"
+#include "lib/EventBus.h"
+#include "lib/GameEvent.h"
+#include "game/GameState.h"
 
-EventBridge::EventBridge(GameState& state, EventBus& bus) {
-    // Wire every faction's signals to the bus
-    for (auto& faction : state.factions()) {
-        faction.on_tech_discovered.connect([&bus, &faction](TechId t) {
-            bus.publish(EvTechDiscovered{ faction.id(), t });
-            });
-            faction.on_base_built.connect([&bus, &faction](int base_id) {
-                bus.publish(EvBaseBuilt{ faction.id(), base_id });
-            });
-            faction.on_eliminated.connect([&bus, &faction]() {
-                bus.publish(EvFactionElim{ faction.id() });
-            });
-        }
-        // Wire TurnLoop signals
-        state.turn_loop().on_turn_started.connect([&bus](int turn) {
-            bus.publish(EvTurnStarted{ turn });
-        });
-    }
+namespace ac
+{
+
+EventBridge::EventBridge(GameState& rState, EventBus& rBus)
+{
+    // Wire turn started signal
+    rState.on_turn_started.connect([&rBus](int turn) {
+        rBus.publish(EvTurnStarted{ turn });
+    });
+
+    // TODO: Wire faction signals (on_tech_discovered, on_base_built, on_eliminated)
+    // once Faction gains a FactionId and those signals are added.
 }
 
+} // namespace ac

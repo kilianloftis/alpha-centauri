@@ -1,5 +1,15 @@
-class EventBridge {
+#pragma once
+
+namespace ac
+{
+
+class GameState;
+class EventBus;
+
+class EventBridge
+{
 public:
-    EventBridge(GameState& state, EventBus& bus);
+    EventBridge(GameState& rState, EventBus& rBus);
 };
 
+} // namespace ac

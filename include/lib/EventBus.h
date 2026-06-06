@@ -1,4 +1,16 @@
-class EventBus {
+#pragma once
+
+#include "lib/GameEvent.h"
+#include <functional>
+#include <vector>
+
+namespace ac
+{
+
+using SubscriptionId = int;
+
+class EventBus
+{
 public:
     using Handler = std::function<void(const GameEvent&)>;
 
@@ -13,6 +25,8 @@ public:
     void publish(GameEvent event);   // synchronous dispatch
 
 private:
-    std::vector<std::pair<SubscriptionId, Handler>> handlers_;
-    SubscriptionId next_id_ = 0;
+    std::vector<std::pair<SubscriptionId, Handler>> m_handlers;
+    SubscriptionId m_nextId = 0;
 };
+
+} // namespace ac

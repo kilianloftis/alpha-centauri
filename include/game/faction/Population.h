@@ -1,19 +1,7 @@
 #pragma once
 
-#include <map>
-
 namespace ac
 {
-
-enum class WorkerRole
-{
-    Worker,     // Works tiles (produces nutrients, energy, minerals)
-    Lab,        // Contributes to research
-    Psych,      // Contributes to psych
-    Econ,       // Contributes to energy directly
-    Drone,      // Doesn't work tiles or produce anything
-    Talent      // Normal worker (same as Worker for now)
-};
 
 class Population
 {
@@ -28,14 +16,11 @@ public:
     virtual void Grow() = 0;
     virtual bool CanGrow() const = 0;
 
-    // Worker role management
-    virtual int GetWorkerCount(WorkerRole role) const = 0;
-    virtual void SetWorkerCount(WorkerRole role, int count) = 0;
-    virtual int GetTotalWorkers() const = 0;
-
-    // Role assignment
-    virtual bool AssignWorker(WorkerRole role) = 0;
-    virtual bool UnassignWorker(WorkerRole role) = 0;
+    // Drone and talent calculations (override in derived classes)
+    virtual int CalculateDroneCount(int basePopulation, int psychOutput, int factionDroneModifier) const = 0;
+    virtual int CalculateTalentCount(int basePopulation, int psychOutput, int factionTalentModifier) const = 0;
+    virtual bool HasDroneRiot() const = 0;
+    virtual bool IsDestroyed() const = 0;
 
 protected:
     int m_size;

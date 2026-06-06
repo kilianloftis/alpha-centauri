@@ -1,4 +1,5 @@
 #include "game/Engine.h"
+#include "game/GameState.h"
 #include "game/TurnStageFactory.h"
 #include "game/TurnProcessor.h"
 #include "graphics/Graphics.h"
@@ -14,9 +15,7 @@ Engine::Engine()
     : m_graphics(CreateGraphics())
     , m_input(CreateInput())
     , m_turnStageFactory(std::make_unique<TurnStageFactory>())
-    , m_missionYear(0)
-    , m_numFactions(1)  // TODO: make configurable
-    , m_bShouldExit(false)
+    , m_gameState(std::make_unique<GameState>())
     {}
 
 Engine::~Engine() = default;
@@ -36,11 +35,11 @@ void Engine::Run()
 
 void Engine::GameLoop_()
 {
-    while (!m_bShouldExit)
+    while (!m_gameState->ShouldExit())
     {
         // Display current game state
         m_graphics->Clear();
-        m_graphics->DrawText("Mission Year: " + std::to_string(m_missionYear), 20.f, 20.f, 24);
+        m_graphics->DrawText("Mission Year: " + std::to_string(m_gameState->GetMissionYear()), 20.f, 20.f, 24);
         m_graphics->DrawText("Press Enter to continue or Esc to quit.", 20.f, 80.f, 20);
         m_graphics->Display();
 
@@ -54,7 +53,7 @@ void Engine::GameLoop_()
             }
             else if (event.key == Key::Escape)
             {
-                this->m_bShouldExit = true;
+                this->m_gameState->SetShouldExit(true);
             }
         });
     }
@@ -62,7 +61,9 @@ void Engine::GameLoop_()
 
 void Engine::ProcessTurn_()
 {
-    m_turnProcessor->ProcessTurn(m_missionYear, m_numFactions);
+    m_gameState->on_turn_started.emit(m_gameState->GetMissionYear());
+    m_turnProcessor->ProcessTurn(m_gameState->GetMissionYear(), m_gameState->GetNumFactions());
+    m_gameState->IncrementMissionYear();
 }
 
 void Engine::Initialize_()

@@ -1,5 +1,6 @@
 #include "game/faction/Base.h"
 #include "game/faction/BasePopulation.h"
+#include <algorithm>
 
 namespace ac
 {
@@ -87,9 +88,10 @@ int Base::CalculateEnergyProduction_() const
     // TODO: Determine which tiles are worked based on worker assignments
     totalEnergy += m_workedTiles.energy;
     
-    // Energy from econ workers
-    // TODO: Determine energy production per econ worker
-    int econCount = m_pPopulation->GetWorkerCount(WorkerRole::Econ);
+    // Energy from specialists
+    // TODO: When specialist types are implemented, calculate actual energy contribution
+    // For now, count specialists and apply base contribution
+    int specialistCount = m_pPopulation->GetSpecialistCount();
     
     // Energy from trade routes
     for (const auto& route : m_tradeRoutes)

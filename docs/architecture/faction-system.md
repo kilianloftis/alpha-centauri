@@ -10,9 +10,7 @@ graph TB
 
     subgraph "Faction System"
         Faction[Faction]
-        FactionVector[FactionVector<br/>vector<unique_ptr<Faction>>]
-        FactionFactory[FactionFactory]
-        FactionSignals[Faction Signals:<br/>on_tech_discovered<br/>on_base_built<br/>on_eliminated]
+        FactionManager[FactionManager]
     end
 
     subgraph "Faction Identity"
@@ -47,16 +45,6 @@ graph TB
         BaseManager[BaseManager]
     end
 
-    subgraph "Base System"
-        Base[Base]
-        Population[Population<br/>(abstract)]
-        BasePopulation[BasePopulation<br/>(concrete)]
-        WorkerRoles[WorkerRoles<br/>Worker, Lab, Psych,<br/>Econ, Drone, Talent]
-        Buildings[Buildings<br/>vector<string>]
-        TileResources[TileResources<br/>nutrients, energy, minerals]
-        TradeRoutes[TradeRoutes<br/>vector<TradeRoute>]
-    end
-
     subgraph "Research Subsystem"
         Research[Research]
         TechTree[TechTree]
@@ -82,12 +70,10 @@ graph TB
 
     Engine --> GameState
     Engine --> TurnProcessor
+    Engine --> FactionManager
     
-    GameState --> FactionVector
-    TurnProcessor --> FactionVector
-    FactionFactory --> Faction
-    FactionVector --> Faction
-    Faction --> FactionSignals
+    TurnProcessor --> FactionManager
+    FactionManager --> Faction
     
     Faction --> FactionIdentity
     Faction --> AIProfile
@@ -110,21 +96,11 @@ graph TB
     Economy --> Credits
     Economy --> TradeRoutes
     Economy --> IncomeCalculator
-
-    Social --> Policies
-    Social --> EnergyDistribution
     
     Military --> Units
     Military --> Bases
     Military --> UnitFactory
     Military --> BaseManager
-    
-    Base --> Population
-    Population --> BasePopulation
-    BasePopulation --> WorkerRoles
-    Base --> Buildings
-    Base --> TileResources
-    Base --> TradeRoutes
     
     Research --> TechTree
     Research --> CurrentTechs
@@ -142,9 +118,7 @@ graph TB
     Diplomacy --> Relation
 
     style Faction fill:#f9f,stroke:#333,stroke-width:4px
-    style FactionVector fill:#fbf,stroke:#333,stroke-width:3px
-    style FactionFactory fill:#ff9,stroke:#333,stroke-width:2px
-    style FactionSignals fill:#f9f,stroke:#333,stroke-width:2px
+    style FactionManager fill:#fbf,stroke:#333,stroke-width:3px
     style FactionIdentity fill:#bbf,stroke:#333,stroke-width:2px
     style AIProfile fill:#bbf,stroke:#333,stroke-width:2px
     style Economy fill:#bfb,stroke:#333,stroke-width:2px
