@@ -4,6 +4,8 @@ trigger: always_on
 
 # Coding Guidelines
 
+Do not make up game rules or mechanics. Leave TODOs instead.
+
 ## SOLID Principles
 All code must adhere to SOLID principles:
 - **S**ingle Responsibility Principle: Each class/function should have one reason to change

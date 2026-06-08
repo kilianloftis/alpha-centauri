@@ -1,4 +1,5 @@
 #include "game/stages/Save.h"
+#include "game/GameState.h"
 #include <iostream>
 
 namespace ac
@@ -9,8 +10,9 @@ Save::Save(std::shared_ptr<HookContext> hookContext)
 {
 }
 
-void Save::Execute_()
+void Save::Execute_(GameState* pGameState)
 {
+    (void)pGameState;
     std::cout << "Executing Save stage\n";
 }
 

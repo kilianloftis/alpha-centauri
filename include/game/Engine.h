@@ -10,6 +10,8 @@ class Input;
 class TurnStageFactory;
 class TurnProcessor;
 class GameState;
+class EventBus;
+class EventBridge;
 
 class Engine
 {
@@ -30,6 +32,8 @@ private:
     std::unique_ptr<TurnStageFactory> m_turnStageFactory;
     std::unique_ptr<TurnProcessor> m_turnProcessor;
     std::unique_ptr<GameState> m_gameState;
+    std::unique_ptr<EventBus> m_eventBus;
+    std::unique_ptr<EventBridge> m_eventBridge;
 };
 
 } // namespace ac

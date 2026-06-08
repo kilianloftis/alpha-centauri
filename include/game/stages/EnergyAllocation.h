@@ -11,7 +11,7 @@ public:
     EnergyAllocation(std::shared_ptr<HookContext> hookContext);
     ~EnergyAllocation() = default;
 
-    void Execute_() override;
+    void Execute_(GameState* pGameState) override;
 };
 
 } // namespace ac

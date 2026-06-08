@@ -10,9 +10,9 @@ add_executable(alpha-centauri
     game/faction/Research.cpp
     game/faction/Diplomacy.cpp
     game/faction/Base.cpp
-    game/faction/BasePopulation.cpp
-    game/faction/Population.cpp
-    game/faction/Pop.cpp
+    game/faction/population/BasePopulation.cpp
+    game/faction/population/Pop.cpp
+    game/faction/population/PopManager.cpp
     game/faction/Specialist.cpp
     game/TurnProcessor.cpp
     lib/EventBus.cpp
@@ -45,8 +45,9 @@ target_include_directories(alpha-centauri PRIVATE
 include(FetchContent)
 FetchContent_Declare(
     json
-    GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG v3.11.3
+    URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
+    URL_HASH SHA256=d6c65aca6b1ed68e7a182f4757257b107ae403032760ed6ef121c9d55e81757d
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 FetchContent_MakeAvailable(json)
 target_link_libraries(alpha-centauri PRIVATE nlohmann_json::nlohmann_json)
@@ -62,10 +63,10 @@ target_link_libraries(alpha-centauri PRIVATE magic_enum::magic_enum)
 
 option(USE_SFML "Enable SFML rendering" ON)
 if(USE_SFML)
-    find_package(SFML 3.0.2 COMPONENTS Graphics Window System REQUIRED)
+    find_package(SFML 3.0.1 COMPONENTS Graphics Window System REQUIRED)
     target_compile_definitions(alpha-centauri PRIVATE USE_SFML)
     target_sources(alpha-centauri PRIVATE graphics/SFMLGraphics.cpp input/SFMLInput.cpp input/SFMLKeyEventQueue.cpp)
-    target_link_libraries(alpha-centauri PRIVATE SFML::Graphics SFML::Window SFML::System)
+    target_link_libraries(alpha-centauri PRIVATE sfml-graphics sfml-window sfml-system)
 else()
     target_sources(alpha-centauri PRIVATE graphics/NullGraphics.cpp input/NullInput.cpp)
 endif()

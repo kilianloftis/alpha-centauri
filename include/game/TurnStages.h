@@ -10,6 +10,8 @@
 namespace ac
 {
 
+class GameState;
+
 enum class TurnStage
 {
     TurnStart,
@@ -67,7 +69,7 @@ public:
     
     virtual ~TurnStageBase() = default;
     
-    virtual void Execute()
+    virtual void Execute(GameState* pGameState = nullptr)
     {
         if (m_pHookContext && m_pHookContext->HasReplaceHooks())
         {
@@ -75,7 +77,7 @@ public:
         }
         else
         {
-            Execute_();
+            Execute_(pGameState);
         }
     }
     
@@ -97,7 +99,7 @@ public:
 
 private:
 
-    virtual void Execute_() = 0;
+    virtual void Execute_(GameState* pGameState = nullptr) = 0;
 
 protected:
     std::shared_ptr<HookContext> m_pHookContext;

@@ -1,4 +1,5 @@
 #include "game/stages/TurnStart.h"
+#include "game/GameState.h"
 #include <iostream>
 
 namespace ac
@@ -9,8 +10,9 @@ TurnStart::TurnStart(std::shared_ptr<HookContext> hookContext)
 {
 }
 
-void TurnStart::Execute_()
+void TurnStart::Execute_(GameState* pGameState)
 {
+    (void)pGameState;
     std::cout << "Executing TurnStart stage\n";
 }
 

@@ -1,33 +1,29 @@
-#include "game/faction/BasePopulation.h"
+#include "game/faction/population/BasePopulation.h"
 #include "game/faction/Specialist.h"
 
 namespace ac
 {
 
 BasePopulation::BasePopulation()
-    : Population()
+    : m_pPopManager(std::make_unique<PopManager>())
+    , m_size(1)
     , m_maxSize(8)
     , m_growthRate(1)
 {
-    m_size = 1;
-    // Start with one worker
-    m_pops.push_back(std::make_unique<WorkerPop>());
+    // Start with one worker via PopManager
+    m_pops.push_back(m_pPopManager->CreatePop());
 }
 
 BasePopulation::BasePopulation(int initialSize)
-    : Population()
+    : m_pPopManager(std::make_unique<PopManager>())
+    , m_size(initialSize > 0 ? initialSize : 0)
     , m_maxSize(8)
     , m_growthRate(1)
 {
-    m_size = initialSize;
-    if (m_size < 0)
-    {
-        m_size = 0;
-    }
-    // Initialize with workers
+    // Initialize with pops via PopManager
     for (int i = 0; i < m_size; i++)
     {
-        m_pops.push_back(std::make_unique<WorkerPop>());
+        m_pops.push_back(m_pPopManager->CreatePop());
     }
 }
 
@@ -42,38 +38,27 @@ int BasePopulation::GetSize() const
 
 void BasePopulation::SetSize(int size)
 {
-    if (size < 0)
+    if (size > GetSize())
     {
-        size = 0;
+        // Add pops
+        while (GetSize() < size)
+        {
+            AddPop();
+        }
     }
-
-    // Remove pops if size decreased
-    while (static_cast<int>(m_pops.size()) > size)
+    else if (size < GetSize())
     {
-        m_pops.pop_back();
+        // Remove pops
+        while (GetSize() > size)
+        {
+            RemovePop();
+        }
     }
-
-    // Add workers if size increased
-    while (static_cast<int>(m_pops.size()) < size)
-    {
-        m_pops.push_back(std::make_unique<WorkerPop>());
-    }
-
-    m_size = static_cast<int>(m_pops.size());
 }
 
 int BasePopulation::GetGrowthRate() const
 {
     return m_growthRate;
-}
-
-void BasePopulation::Grow()
-{
-    if (CanGrow())
-    {
-        m_pops.push_back(std::make_unique<WorkerPop>());
-        m_size = static_cast<int>(m_pops.size());
-    }
 }
 
 bool BasePopulation::CanGrow() const
@@ -125,25 +110,25 @@ int BasePopulation::GetSpecialistCount() const
     return CountPops_([](const Pop* p) { return p->IsSpecialist(); });
 }
 
-void BasePopulation::AddPop(std::unique_ptr<Pop> pPop)
+void BasePopulation::AddPop()
 {
-    if (pPop && static_cast<int>(m_pops.size()) < m_maxSize)
+    if (CanGrow())
     {
-        m_pops.push_back(std::move(pPop));
+        // Use PopManager to create the pop (currently always a worker)
+        m_pops.push_back(m_pPopManager->CreatePop());
         m_size = static_cast<int>(m_pops.size());
+        NotifyPopGained_();
     }
 }
 
-std::unique_ptr<Pop> BasePopulation::RemovePop(size_t index)
+void BasePopulation::RemovePop()
 {
-    if (index < m_pops.size())
+    if (!m_pops.empty())
     {
-        std::unique_ptr<Pop> removed = std::move(m_pops[index]);
-        m_pops.erase(m_pops.begin() + index);
+        m_pops.pop_back();
         m_size = static_cast<int>(m_pops.size());
-        return removed;
+        NotifyPopLost_();
     }
-    return nullptr;
 }
 
 void BasePopulation::ConvertToWorker(size_t index)
@@ -197,11 +182,17 @@ void BasePopulation::SetMaxSize(int maxSize)
 {
     m_maxSize = maxSize;
     // Trim excess pops if max size decreased
+    bool bLostPop = false;
     while (static_cast<int>(m_pops.size()) > m_maxSize)
     {
         m_pops.pop_back();
+        bLostPop = true;
     }
     m_size = static_cast<int>(m_pops.size());
+    if (bLostPop)
+    {
+        NotifyPopLost_();
+    }
 }
 
 int BasePopulation::CalculateDroneCount(int basePopulation, int psychOutput, int factionDroneModifier) const
@@ -320,6 +311,16 @@ int BasePopulation::CountPops_(bool (*predicate)(const Pop*)) const
         }
     }
     return count;
+}
+
+void BasePopulation::NotifyPopGained_()
+{
+    on_pop_gained.emit(m_size);
+}
+
+void BasePopulation::NotifyPopLost_()
+{
+    on_pop_lost.emit(m_size);
 }
 
 } // namespace ac

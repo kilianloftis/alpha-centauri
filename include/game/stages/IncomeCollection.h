@@ -11,7 +11,7 @@ public:
     IncomeCollection(std::shared_ptr<HookContext> hookContext);
     ~IncomeCollection() = default;
 
-    void Execute_() override;
+    void Execute_(GameState* pGameState) override;
 };
 
 } // namespace ac

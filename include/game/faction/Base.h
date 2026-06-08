@@ -1,12 +1,14 @@
 #pragma once
 
+#include "lib/Signal.h"
 #include <memory>
 #include <vector>
 #include <string>
-#include "game/faction/Population.h"
 
 namespace ac
 {
+
+using FactionId = int;
 
 class BasePopulation;
 
@@ -33,6 +35,7 @@ public:
     // Population management
     BasePopulation* GetPopulation();
     const BasePopulation* GetPopulation() const;
+    void AddPop();
 
     // Building management
     void AddBuilding(const std::string& buildingId);
@@ -53,8 +56,21 @@ public:
     // Base identity
     void SetName(const std::string& name);
     const std::string& GetName() const;
-    
+
+    // Ownership
+    void SetFactionId(FactionId factionId);
+    FactionId GetFactionId() const;
+    void SetBaseId(int baseId);
+    int GetBaseId() const;
+
+    // Signals (wired from BasePopulation)
+    Signal<FactionId, int, int> on_pop_gained;  // factionId, baseId, newSize
+    Signal<FactionId, int, int> on_pop_lost;  // factionId, baseId, newSize
+
 private:
+    void WirePopulationSignals_();
+    FactionId m_factionId;
+    int m_baseId;
     int CalculateNutrients_() const;
     int CalculateEnergyProduction_() const;
     int CalculateMinerals_() const;

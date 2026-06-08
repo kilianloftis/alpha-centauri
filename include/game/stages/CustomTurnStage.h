@@ -14,7 +14,7 @@ public:
     CustomTurnStage(std::shared_ptr<HookContext> hookContext, const std::string& name);
     ~CustomTurnStage() = default;
 
-    void Execute_() override {}
+    void Execute_(GameState* pGameState) override { (void)pGameState; }
 
 private:
     std::string m_name;

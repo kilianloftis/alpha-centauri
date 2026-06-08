@@ -11,7 +11,7 @@ public:
     VictoryConditionChecks(std::shared_ptr<HookContext> hookContext);
     ~VictoryConditionChecks() = default;
 
-    void Execute_() override;
+    void Execute_(GameState* pGameState) override;
 };
 
 } // namespace ac

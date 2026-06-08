@@ -11,7 +11,7 @@ public:
     Population(std::shared_ptr<HookContext> hookContext);
     ~Population() = default;
 
-    void Execute_() override;
+    void Execute_(GameState* pGameState) override;
 };
 
 } // namespace ac

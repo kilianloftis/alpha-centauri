@@ -36,12 +36,28 @@ struct EvDroneRiot
     int baseId;
 };
 
+struct EvBaseGainedPop
+{
+    FactionId factionId;
+    int baseId;
+    int newSize;
+};
+
+struct EvBaseLostPop
+{
+    FactionId factionId;
+    int baseId;
+    int newSize;
+};
+
 using GameEvent = std::variant<
     EvTurnStarted,
     EvTechDiscovered,
     EvBaseBuilt,
     EvFactionElim,
-    EvDroneRiot
+    EvDroneRiot,
+    EvBaseGainedPop,
+    EvBaseLostPop
 >;
 
 } // namespace ac

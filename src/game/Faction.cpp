@@ -6,6 +6,7 @@
 #include "game/faction/Military.h"
 #include "game/faction/Research.h"
 #include "game/faction/Diplomacy.h"
+#include "game/faction/Base.h"
 
 namespace ac
 {
@@ -31,6 +32,37 @@ void Faction::ProcessTurn()
     // m_pMilitary->UpdateUnits();
     // m_pResearch->AdvanceResearch();
     // m_pDiplomacy->UpdateRelations();
+}
+
+void Faction::AddBase(std::unique_ptr<Base> pBase)
+{
+    if (pBase)
+    {
+        m_bases.push_back(std::move(pBase));
+    }
+}
+
+Base* Faction::GetBase(size_t index)
+{
+    if (index < m_bases.size())
+    {
+        return m_bases[index].get();
+    }
+    return nullptr;
+}
+
+const Base* Faction::GetBase(size_t index) const
+{
+    if (index < m_bases.size())
+    {
+        return m_bases[index].get();
+    }
+    return nullptr;
+}
+
+size_t Faction::GetBaseCount() const
+{
+    return m_bases.size();
 }
 
 FactionIdentity* Faction::GetIdentity()

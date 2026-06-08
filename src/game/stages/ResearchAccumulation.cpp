@@ -1,4 +1,5 @@
 #include "game/stages/ResearchAccumulation.h"
+#include "game/GameState.h"
 #include <iostream>
 
 namespace ac
@@ -9,8 +10,9 @@ ResearchAccumulation::ResearchAccumulation(std::shared_ptr<HookContext> hookCont
 {
 }
 
-void ResearchAccumulation::Execute_()
+void ResearchAccumulation::Execute_(GameState* pGameState)
 {
+    (void)pGameState;
     std::cout << "Executing ResearchAccumulation stage\n";
 }
 

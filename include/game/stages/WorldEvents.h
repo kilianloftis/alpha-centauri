@@ -11,7 +11,7 @@ public:
     WorldEvents(std::shared_ptr<HookContext> hookContext);
     ~WorldEvents() = default;
 
-    void Execute_() override;
+    void Execute_(GameState* pGameState) override;
 };
 
 } // namespace ac

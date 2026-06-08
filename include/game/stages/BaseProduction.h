@@ -11,7 +11,7 @@ public:
     BaseProduction(std::shared_ptr<HookContext> hookContext);
     ~BaseProduction() = default;
 
-    void Execute_() override;
+    void Execute_(GameState* pGameState) override;
 };
 
 } // namespace ac

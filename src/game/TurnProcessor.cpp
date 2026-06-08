@@ -1,5 +1,6 @@
 #include "game/TurnProcessor.h"
 #include "game/TurnStages.h"
+#include "game/GameState.h"
 #include <magic_enum.hpp>
 #include <iostream>
 
@@ -11,7 +12,7 @@ TurnProcessor::TurnProcessor(TurnStageRegistry_t registry)
     , m_registry(std::move(registry))
 {}
 
-void TurnProcessor::ProcessTurn(int missionYear, int numFactions)
+void TurnProcessor::ProcessTurn(int missionYear, int numFactions, GameState& rGameState)
 {
     m_missionYear = missionYear;
     std::cout << "\n--- Mission Year " << m_missionYear << " ---\n";
@@ -29,7 +30,7 @@ void TurnProcessor::ProcessTurn(int missionYear, int numFactions)
         {
             auto& stage = it->second;
             stage->OnEnter();
-            stage->Execute();
+            stage->Execute(&rGameState);
             stage->OnExit();
         }
     }

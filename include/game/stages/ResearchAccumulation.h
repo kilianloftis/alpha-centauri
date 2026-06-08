@@ -11,7 +11,7 @@ public:
     ResearchAccumulation(std::shared_ptr<HookContext> hookContext);
     ~ResearchAccumulation() = default;
 
-    void Execute_() override;
+    void Execute_(GameState* pGameState) override;
 };
 
 } // namespace ac

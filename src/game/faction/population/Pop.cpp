@@ -1,4 +1,4 @@
-#include "game/faction/Pop.h"
+#include "game/faction/population/Pop.h"
 #include "game/faction/Specialist.h"
 
 namespace ac
