@@ -1,6 +1,5 @@
-#include "game/faction/WorkerAssignmentManager.h"
+#include "game/faction/base/WorkerAssignmentManager.h"
 #include "game/faction/population/PopContainer.h"
-#include "game/faction/Base.h"
 #include "game/map/Tile.h"
 
 namespace ac

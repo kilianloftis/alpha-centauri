@@ -1,5 +1,8 @@
 #include "game/stages/ResearchAccumulation.h"
 #include "game/GameState.h"
+#include "game/Faction.h"
+#include "game/faction/base/Economy.h"
+#include "game/faction/Research.h"
 #include <iostream>
 
 namespace ac
@@ -13,8 +16,31 @@ ResearchAccumulation::ResearchAccumulation(std::shared_ptr<HookContext> hookCont
 void ResearchAccumulation::Execute_(GameState* pGameState, Faction* pFaction)
 {
     (void)pGameState;
-    (void)pFaction;
-    std::cout << "Executing ResearchAccumulation stage\n";
+
+    if (!pFaction)
+    {
+        std::cout << "Executing ResearchAccumulation stage (no faction)\n";
+        return;
+    }
+
+    std::cout << "Executing ResearchAccumulation stage for faction\n";
+
+    // Energy allocated to Labs is set by the EnergyAllocation stage.
+    // We convert that energy to research points.
+    if (Economy* pEconomy = pFaction->GetEconomy())
+    {
+        int labsEnergy = pEconomy->GetEnergyForLabs();
+
+        if (Research* pResearch = pFaction->GetResearch())
+        {
+            // TODO: Apply any modifiers (e.g., from facilities, techs, etc.)
+            int researchPoints = labsEnergy;
+            pResearch->AddResearchPoints(researchPoints);
+
+            std::cout << "  Energy allocated to Labs: " << labsEnergy
+                      << " -> " << researchPoints << " research points\n";
+        }
+    }
 }
 
 } // namespace ac

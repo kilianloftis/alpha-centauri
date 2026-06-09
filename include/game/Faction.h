@@ -3,6 +3,8 @@
 #include <memory>
 #include <vector>
 
+#include "game/faction/base/ResourceManager.h"
+
 namespace ac
 {
 
@@ -13,7 +15,6 @@ class Economy;
 class Military;
 class Research;
 class Diplomacy;
-class Base;
 
 class Faction
 {
@@ -25,9 +26,9 @@ public:
     void ProcessTurn();
 
     // Base management
-    void AddBase(std::unique_ptr<Base> pBase);
-    Base* GetBase(size_t index);
-    const Base* GetBase(size_t index) const;
+    void AddBase(std::unique_ptr<ResourceManager> pBase);
+    ResourceManager* GetBase(size_t index);
+    const ResourceManager* GetBase(size_t index) const;
     size_t GetBaseCount() const;
 
     // Subsystem accessors
@@ -56,7 +57,7 @@ private:
     std::unique_ptr<Military> m_pMilitary;
     std::unique_ptr<Research> m_pResearch;
     std::unique_ptr<Diplomacy> m_pDiplomacy;
-    std::vector<std::unique_ptr<Base>> m_bases;
+    std::vector<std::unique_ptr<ResourceManager>> m_bases;
 };
 
 } // namespace ac

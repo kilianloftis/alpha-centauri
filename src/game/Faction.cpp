@@ -2,11 +2,11 @@
 
 #include "game/faction/FactionIdentity.h"
 #include "game/faction/AIProfile.h"
-#include "game/faction/Economy.h"
+#include "game/faction/base/Economy.h"
 #include "game/faction/Military.h"
 #include "game/faction/Research.h"
 #include "game/faction/Diplomacy.h"
-#include "game/faction/Base.h"
+#include "game/faction/base/ResourceManager.h"
 
 namespace ac
 {
@@ -34,7 +34,7 @@ void Faction::ProcessTurn()
     // m_pDiplomacy->UpdateRelations();
 }
 
-void Faction::AddBase(std::unique_ptr<Base> pBase)
+void Faction::AddBase(std::unique_ptr<ResourceManager> pBase)
 {
     if (pBase)
     {
@@ -42,7 +42,7 @@ void Faction::AddBase(std::unique_ptr<Base> pBase)
     }
 }
 
-Base* Faction::GetBase(size_t index)
+ResourceManager* Faction::GetBase(size_t index)
 {
     if (index < m_bases.size())
     {
@@ -51,7 +51,7 @@ Base* Faction::GetBase(size_t index)
     return nullptr;
 }
 
-const Base* Faction::GetBase(size_t index) const
+const ResourceManager* Faction::GetBase(size_t index) const
 {
     if (index < m_bases.size())
     {

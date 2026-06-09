@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/faction/base/BaseTypes.h"
 #include "game/faction/population/Pop.h"
 #include <functional>
 #include <unordered_map>
@@ -14,7 +15,7 @@ class Tile;
 
 // Manages the mapping of worker pops to workable tile coordinates for a single base.
 // Workers are identified by stable pop IDs (set by PopContainer at creation).
-// Tile coordinates are (x, y) pairs matching Base::GetWorkableTilePositions().
+// Tile coordinates are (x, y) pairs matching BaseManager::GetWorkableTilePositions().
 //
 // This class does NOT own tiles. Resource computation requires a tile-lookup
 // callable supplied at call-site; this decouples the manager from the future TileMap.

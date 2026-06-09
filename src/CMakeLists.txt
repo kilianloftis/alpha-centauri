@@ -5,12 +5,13 @@ add_executable(alpha-centauri
     game/Faction.cpp
     game/faction/FactionIdentity.cpp
     game/faction/AIProfile.cpp
-    game/faction/Economy.cpp
     game/faction/Military.cpp
     game/faction/Research.cpp
     game/faction/Diplomacy.cpp
-    game/faction/Base.cpp
-    game/faction/WorkerAssignmentManager.cpp
+    game/faction/base/BaseManager.cpp
+    game/faction/base/ResourceManager.cpp
+    game/faction/base/WorkerAssignmentManager.cpp
+    game/faction/base/Economy.cpp
     game/faction/population/PopulationManager.cpp
     game/faction/population/PopContainer.cpp
     game/faction/population/Pop.cpp

@@ -1,6 +1,6 @@
 #include "ui/BaseWorkableAreaDisplay.h"
-#include "game/faction/Base.h"
-#include "game/faction/WorkerAssignmentManager.h"
+#include "game/faction/base/ResourceManager.h"
+#include "game/faction/base/WorkerAssignmentManager.h"
 #include <sstream>
 
 namespace ac
@@ -12,7 +12,7 @@ BaseWorkableAreaDisplay::BaseWorkableAreaDisplay(Graphics& rGraphics, const Worl
 {
 }
 
-void BaseWorkableAreaDisplay::SetBase(const Base* pBase)
+void BaseWorkableAreaDisplay::SetBase(const ResourceManager* pBase)
 {
     m_pBase = pBase;
 }

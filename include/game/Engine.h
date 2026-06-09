@@ -5,6 +5,8 @@
 #include <utility>
 #include <string>
 
+#include "game/faction/base/ResourceManager.h"
+
 namespace ac
 {
 
@@ -18,7 +20,6 @@ class EventBridge;
 class BaseWorkableAreaDisplay;
 class WorldDisplay;
 class WorldMap;
-class Base;
 class PopTypeRegistry;
 class PopCompositionCalculator;
 struct PopCompositionConfig;
@@ -46,8 +47,8 @@ private:
     void HandleWorldViewMouse_(int mouseX, int mouseY);
     void HandleBaseViewMouse_(int mouseX, int mouseY);
 
-    Base* FindBaseAtTile_(int tileX, int tileY) const;
-    void OpenBaseView_(Base* pBase);
+    ResourceManager* FindBaseAtTile_(int tileX, int tileY) const;
+    void OpenBaseView_(ResourceManager* pBase);
     void ReturnToWorldView_();
 
     std::unique_ptr<Graphics> m_graphics;
@@ -72,7 +73,7 @@ private:
     };
 
     ViewMode m_activeView = ViewMode::World;
-    Base* m_pActiveBase = nullptr;
+    ResourceManager* m_pActiveBase = nullptr;
 
     std::optional<std::pair<int, int>> m_lastClickedTile;
     std::string m_lastClickedTileText;
