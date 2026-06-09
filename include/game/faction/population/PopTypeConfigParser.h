@@ -29,6 +29,7 @@ struct PopTypeConfig
     std::string id;
     std::string name;
     bool bCanWorkTile;
+    bool bPlayerAssignable;
     PopTileMultipliers_t tileMultipliers;
     PopGeneration_t generation;
     int riotContribution;

@@ -11,6 +11,7 @@ namespace ac
 {
 
 class GameState;
+class Faction;
 
 enum class TurnStage
 {
@@ -69,7 +70,7 @@ public:
     
     virtual ~TurnStageBase() = default;
     
-    virtual void Execute(GameState* pGameState = nullptr)
+    virtual void Execute(GameState* pGameState = nullptr, Faction* pFaction = nullptr)
     {
         if (m_pHookContext && m_pHookContext->HasReplaceHooks())
         {
@@ -77,7 +78,7 @@ public:
         }
         else
         {
-            Execute_(pGameState);
+            Execute_(pGameState, pFaction);
         }
     }
     
@@ -99,7 +100,7 @@ public:
 
 private:
 
-    virtual void Execute_(GameState* pGameState = nullptr) = 0;
+    virtual void Execute_(GameState* pGameState = nullptr, Faction* pFaction = nullptr) = 0;
 
 protected:
     std::shared_ptr<HookContext> m_pHookContext;

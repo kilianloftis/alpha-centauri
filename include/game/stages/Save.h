@@ -11,7 +11,7 @@ public:
     Save(std::shared_ptr<HookContext> hookContext);
     ~Save() = default;
 
-    void Execute_(GameState* pGameState) override;
+    void Execute_(GameState* pGameState, Faction* pFaction = nullptr) override;
 };
 
 } // namespace ac

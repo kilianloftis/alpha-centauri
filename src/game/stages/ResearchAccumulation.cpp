@@ -10,9 +10,10 @@ ResearchAccumulation::ResearchAccumulation(std::shared_ptr<HookContext> hookCont
 {
 }
 
-void ResearchAccumulation::Execute_(GameState* pGameState)
+void ResearchAccumulation::Execute_(GameState* pGameState, Faction* pFaction)
 {
     (void)pGameState;
+    (void)pFaction;
     std::cout << "Executing ResearchAccumulation stage\n";
 }
 

@@ -10,13 +10,16 @@ add_executable(alpha-centauri
     game/faction/Research.cpp
     game/faction/Diplomacy.cpp
     game/faction/Base.cpp
-    game/faction/population/BasePopulation.cpp
+    game/faction/population/PopulationManager.cpp
     game/faction/population/Pop.cpp
-    game/faction/population/PopManager.cpp
+    game/faction/population/PopFactory.cpp
     game/faction/population/PopTypeConfigParser.cpp
     game/faction/population/PopTypeRegistry.cpp
     game/faction/population/PopCompositionConfigParser.cpp
     game/faction/population/PopCompositionCalculator.cpp
+    game/faction/population/RiotCalculator.cpp
+    game/faction/population/GrowthCalculator.cpp
+    game/faction/population/GoldenAgeCalculator.cpp
     game/faction/Specialist.cpp
     game/TurnProcessor.cpp
     lib/EventBus.cpp
@@ -76,8 +79,9 @@ FetchContent_Declare(
 )
 FetchContent_GetProperties(lua)
 if(NOT lua_POPULATED)
-    FetchContent_Populate(lua)
+    FetchContent_MakeAvailable(lua)
     set(LUA_SRC ${lua_SOURCE_DIR}/src)
+    add_compile_definitions(LUA_USE_LINUX)
     file(GLOB LUA_SOURCES
         ${LUA_SRC}/lapi.c ${LUA_SRC}/lcode.c ${LUA_SRC}/lctype.c
         ${LUA_SRC}/ldebug.c ${LUA_SRC}/ldo.c ${LUA_SRC}/ldump.c

@@ -1,12 +1,12 @@
 #include "game/faction/Base.h"
-#include "game/faction/population/BasePopulation.h"
+#include "game/faction/population/PopulationManager.h"
 #include <algorithm>
 
 namespace ac
 {
 
 Base::Base()
-    : m_pPopulation(std::make_unique<BasePopulation>())
+    : m_pPopulation(std::make_unique<PopulationManager>())
     , m_workedTiles{0, 0, 0}
     , m_factionId(-1)
     , m_baseId(-1)
@@ -17,12 +17,12 @@ Base::~Base()
 {
 }
 
-BasePopulation* Base::GetPopulation()
+PopulationManager* Base::GetPopulation()
 {
     return m_pPopulation.get();
 }
 
-const BasePopulation* Base::GetPopulation() const
+const PopulationManager* Base::GetPopulation() const
 {
     return m_pPopulation.get();
 }
@@ -165,6 +165,11 @@ void Base::SetBaseId(int baseId)
 int Base::GetBaseId() const
 {
     return m_baseId;
+}
+
+int Base::GetNutrientProduction() const
+{
+    return CalculateNutrients_();
 }
 
 int Base::GetEnergyProduction() const

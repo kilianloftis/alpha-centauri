@@ -3,6 +3,7 @@
     "id": "Worker",
     "name": "Worker",
     "can_work_tile": true,
+    "player_assignable": false,
     "tile_multipliers": {
       "nutrients": 1.0,
       "energy": 1.0,
@@ -24,6 +25,7 @@
     "id": "Drone",
     "name": "Drone",
     "can_work_tile": false,
+    "player_assignable": false,
     "tile_multipliers": {
       "nutrients": 0.0,
       "energy": 0.0,
@@ -45,6 +47,7 @@
     "id": "Talent",
     "name": "Talent",
     "can_work_tile": true,
+    "player_assignable": false,
     "tile_multipliers": {
       "nutrients": 1.0,
       "energy": 1.0,
@@ -58,7 +61,7 @@
       "labs": 0,
       "psych": 0
     },
-    "riot_contribution": 0,
+    "riot_contribution": -1,
     "golden_age_contribution": 1,
     "obsoletes": []
   },
@@ -66,6 +69,7 @@
     "id": "Doctor",
     "name": "Doctor",
     "can_work_tile": false,
+    "player_assignable": true,
     "tile_multipliers": {
       "nutrients": 0.0,
       "energy": 0.0,
@@ -87,6 +91,7 @@
     "id": "Technician",
     "name": "Technician",
     "can_work_tile": false,
+    "player_assignable": true,
     "tile_multipliers": {
       "nutrients": 0.0,
       "energy": 0.0,
@@ -108,6 +113,7 @@
     "id": "Librarian",
     "name": "Librarian",
     "can_work_tile": false,
+    "player_assignable": true,
     "tile_multipliers": {
       "nutrients": 0.0,
       "energy": 0.0,
@@ -130,6 +136,7 @@
     "id": "Empath",
     "name": "Empath",
     "can_work_tile": false,
+    "player_assignable": true,
     "tile_multipliers": {
       "nutrients": 0.0,
       "energy": 0.0,
@@ -152,6 +159,7 @@
     "id": "Engineer",
     "name": "Engineer",
     "can_work_tile": false,
+    "player_assignable": true,
     "tile_multipliers": {
       "nutrients": 0.0,
       "energy": 0.0,
@@ -174,6 +182,7 @@
     "id": "Thinker",
     "name": "Thinker",
     "can_work_tile": false,
+    "player_assignable": true,
     "tile_multipliers": {
       "nutrients": 0.0,
       "energy": 0.0,
@@ -196,6 +205,7 @@
     "id": "Transcend",
     "name": "Transcend",
     "can_work_tile": false,
+    "player_assignable": true,
     "tile_multipliers": {
       "nutrients": 0.0,
       "energy": 0.0,

@@ -10,9 +10,10 @@ PlayerActions::PlayerActions(std::shared_ptr<HookContext> hookContext)
 {
 }
 
-void PlayerActions::Execute_(GameState* pGameState)
+void PlayerActions::Execute_(GameState* pGameState, Faction* pFaction)
 {
     (void)pGameState;
+    (void)pFaction;
     std::cout << "Executing PlayerActions stage\n";
 }
 

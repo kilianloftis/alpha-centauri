@@ -7,7 +7,7 @@ namespace ac
 {
 
 class Graphics;
-class BasePopulation;
+class PopulationManager;
 
 // Displays current population and updates when population changes
 class PopulationDisplay
@@ -26,13 +26,13 @@ public:
     void SetCurrentPop(int pop);
 
     // Provide a population to display per-pop type breakdown
-    void SetPopulation(const BasePopulation* pPopulation);
+    void SetPopulation(const PopulationManager* pPopulation);
 
 private:
     EventBus& m_rBus;
     Graphics& m_rGraphics;
     int m_currentPop;
-    const BasePopulation* m_pPopulation = nullptr;
+    const PopulationManager* m_pPopulation = nullptr;
     SubscriptionId m_subscriptionId;
 
     void OnPopGained_(const EvBaseGainedPop& event);

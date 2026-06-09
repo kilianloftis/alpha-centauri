@@ -11,7 +11,7 @@ public:
     TurnStart(std::shared_ptr<HookContext> hookContext);
     ~TurnStart() = default;
 
-    void Execute_(GameState* pGameState) override;
+    void Execute_(GameState* pGameState, Faction* pFaction = nullptr) override;
 };
 
 } // namespace ac

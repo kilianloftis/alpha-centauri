@@ -216,7 +216,10 @@ graph TB
 - **Components**:
   - `Base`: Main base class managing population, buildings, and resources
   - `Population`: Abstract base class for population implementations
-  - `BasePopulation`: Concrete implementation managing workers with different roles
+  - `PopulationManager`: API surface for the population component; manages pop composition, growth, and riot state for a single base
+  - `PopFactory`: Creates individual `Pop` instances from config (looked up via `PopTypeRegistry`)
+  - `RiotCalculator`: Tracks drone riot state and emits `will_riot`, `is_rioting`, and `riot_ended` signals
+  - `GrowthCalculator`: Accumulates nutrient surplus across turns and emits `on_growth` / `on_starvation` when thresholds are crossed
   - `WorkerRoles`: Enum defining worker roles (Worker, Lab, Psych, Econ, Drone, Talent)
   - `Buildings`: Collection of building IDs in the base
   - `TileResources`: Resources (nutrients, energy, minerals) from worked tiles
@@ -233,6 +236,10 @@ graph TB
     - Drones produce nothing
   - Manage trade routes for additional energy
   - Provide resource calculation methods (CalculateNutrients_, CalculateEnergyProduction_, CalculateMinerals_)
+  - Evaluate drone riot conditions and manage riot lifecycle via signals:
+    - `will_riot`: emitted during `AddPop()` when the new composition triggers drone riot but the base is not yet rioting
+    - `is_rioting`: emitted at end of turn (`CheckRiotEndOfTurn`) when riot conditions are still met; sets `m_bRioting = true`
+    - `riot_ended`: emitted at end of turn when riot conditions are no longer met and the base was previously rioting
 - **Rationale**: Bases are the primary source of resources and require complex management of population with specialized worker roles, buildings, and tile resources
 
 ## Integration with Engine

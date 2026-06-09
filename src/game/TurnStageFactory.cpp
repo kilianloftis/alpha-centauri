@@ -24,6 +24,11 @@ TurnStageFactory::TurnStageFactory()
 {
 }
 
+void TurnStageFactory::SetCompositionCalculator(PopCompositionCalculator* pCalculator)
+{
+    m_pCalculator = pCalculator;
+}
+
 bool TurnStageFactory::LoadConfig(const std::string& configPath)
 {
     TurnStageConfigParser parser;
@@ -77,7 +82,7 @@ std::unique_ptr<TurnStageBase> TurnStageFactory::CreateStageInstance(const TurnS
         case TurnStage::BaseProduction:
             return std::make_unique<BaseProduction>(config.hookContext);
         case TurnStage::Population:
-            return std::make_unique<Population>(config.hookContext);
+            return std::make_unique<Population>(config.hookContext, m_pCalculator);
         case TurnStage::Upkeep:
             return std::make_unique<Upkeep>(config.hookContext);
         case TurnStage::PlayerActions:

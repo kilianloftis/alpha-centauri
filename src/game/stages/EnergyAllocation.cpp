@@ -10,9 +10,10 @@ EnergyAllocation::EnergyAllocation(std::shared_ptr<HookContext> hookContext)
 {
 }
 
-void EnergyAllocation::Execute_(GameState* pGameState)
+void EnergyAllocation::Execute_(GameState* pGameState, Faction* pFaction)
 {
     (void)pGameState;
+    (void)pFaction;
     std::cout << "Executing EnergyAllocation stage\n";
 }
 

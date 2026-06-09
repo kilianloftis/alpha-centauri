@@ -10,9 +10,10 @@ BaseProduction::BaseProduction(std::shared_ptr<HookContext> hookContext)
 {
 }
 
-void BaseProduction::Execute_(GameState* pGameState)
+void BaseProduction::Execute_(GameState* pGameState, Faction* pFaction)
 {
     (void)pGameState;
+    (void)pFaction;
     std::cout << "Executing BaseProduction stage\n";
 }
 

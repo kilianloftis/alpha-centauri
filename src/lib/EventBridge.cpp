@@ -2,7 +2,7 @@
 #include "lib/EventBus.h"
 #include "game/GameState.h"
 #include "game/faction/Base.h"
-#include "game/faction/population/BasePopulation.h"
+#include "game/faction/population/PopulationManager.h"
 
 namespace ac
 {
@@ -21,7 +21,7 @@ EventBridge::EventBridge(GameState& rState, EventBus& rBus)
 
 void EventBridge::WireBase(Base& rBase)
 {
-    BasePopulation* pPop = rBase.GetPopulation();
+    PopulationManager* pPop = rBase.GetPopulation();
     if (!pPop)
     {
         return;

@@ -10,9 +10,10 @@ TurnEnd::TurnEnd(std::shared_ptr<HookContext> hookContext)
 {
 }
 
-void TurnEnd::Execute_(GameState* pGameState)
+void TurnEnd::Execute_(GameState* pGameState, Faction* pFaction)
 {
     (void)pGameState;
+    (void)pFaction;
     std::cout << "Executing TurnEnd stage\n";
 }
 

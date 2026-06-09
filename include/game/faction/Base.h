@@ -10,7 +10,7 @@ namespace ac
 
 using FactionId = int;
 
-class BasePopulation;
+class PopulationManager;
 
 struct TradeRoute_t
 {
@@ -33,8 +33,8 @@ public:
     ~Base();
 
     // Population management
-    BasePopulation* GetPopulation();
-    const BasePopulation* GetPopulation() const;
+    PopulationManager* GetPopulation();
+    const PopulationManager* GetPopulation() const;
     void AddPop();
 
     // Building management
@@ -51,6 +51,7 @@ public:
     void RemoveTradeRoute(int targetFactionId);
     const std::vector<TradeRoute_t>& GetTradeRoutes() const;
 
+    int GetNutrientProduction() const;
     int GetEnergyProduction() const;
     
     // Base identity
@@ -74,7 +75,7 @@ private:
     void ApplyNutrition_();
     void ApplyPsych_();
     
-    std::unique_ptr<BasePopulation> m_pPopulation;
+    std::unique_ptr<PopulationManager> m_pPopulation;
     std::vector<std::string> m_buildings;
     TileResources_t m_workedTiles;
     std::vector<TradeRoute_t> m_tradeRoutes;

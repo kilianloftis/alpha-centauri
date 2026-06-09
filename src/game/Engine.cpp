@@ -10,7 +10,7 @@
 #include "lib/EventBridge.h"
 #include "lib/GameEvent.h"
 #include "game/faction/Base.h"
-#include "game/faction/population/BasePopulation.h"
+#include "game/faction/population/PopulationManager.h"
 #include "game/faction/population/PopTypeRegistry.h"
 #include "game/faction/population/PopCompositionConfigParser.h"
 #include "game/faction/population/PopCompositionCalculator.h"
@@ -18,6 +18,7 @@
 #include "ui/PopulationDisplay.h"
 #include <iostream>
 #include <stdexcept>
+#include <magic_enum.hpp>
 
 namespace ac
 {
@@ -142,9 +143,19 @@ void Engine::Initialize_()
         }
     }
 
+    m_turnStageFactory->SetCompositionCalculator(m_popCompositionCalculator.get());
     m_turnStageFactory->LoadConfig("config/turn_stages.json");
     auto registry = m_turnStageFactory->CreateStages();
-    m_turnProcessor = std::make_unique<TurnProcessor>(std::move(registry));
+    TurnStageRepeatFlags_t repeatFlags;
+    for (const auto& config : m_turnStageFactory->GetStageConfigs())
+    {
+        auto stageEnum = magic_enum::enum_cast<TurnStage>(config.id);
+        if (stageEnum.has_value())
+        {
+            repeatFlags[stageEnum.value()] = config.repeat_for_each_faction;
+        }
+    }
+    m_turnProcessor = std::make_unique<TurnProcessor>(std::move(registry), std::move(repeatFlags));
     CheckInitialized_();
 }
 

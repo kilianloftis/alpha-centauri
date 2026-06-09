@@ -10,9 +10,10 @@ IncomeCollection::IncomeCollection(std::shared_ptr<HookContext> hookContext)
 {
 }
 
-void IncomeCollection::Execute_(GameState* pGameState)
+void IncomeCollection::Execute_(GameState* pGameState, Faction* pFaction)
 {
     (void)pGameState;
+    (void)pFaction;
     std::cout << "Executing IncomeCollection stage\n";
 }
 

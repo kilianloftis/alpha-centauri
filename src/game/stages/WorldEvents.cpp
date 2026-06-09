@@ -10,9 +10,10 @@ WorldEvents::WorldEvents(std::shared_ptr<HookContext> hookContext)
 {
 }
 
-void WorldEvents::Execute_(GameState* pGameState)
+void WorldEvents::Execute_(GameState* pGameState, Faction* pFaction)
 {
     (void)pGameState;
+    (void)pFaction;
     std::cout << "Executing WorldEvents stage\n";
 }
 

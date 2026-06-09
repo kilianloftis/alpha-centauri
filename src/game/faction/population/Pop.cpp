@@ -35,6 +35,11 @@ bool Pop::IsSpecialist() const
     return !m_pConfig->bCanWorkTile && m_pConfig->riotContribution == 0;
 }
 
+bool Pop::IsPlayerAssignable() const
+{
+    return m_pConfig->bPlayerAssignable;
+}
+
 int Pop::GetRiotContribution() const
 {
     return m_pConfig->riotContribution;

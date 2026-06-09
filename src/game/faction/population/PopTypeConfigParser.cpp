@@ -56,7 +56,8 @@ PopTypeConfig PopTypeConfigParser::ParsePopTypeConfig(const nlohmann::json& popJ
     PopTypeConfig config;
     config.id = popJson["id"];
     config.name = popJson.value("name", config.id);
-    config.bCanWorkTile = popJson.value("can_work_tile", false);
+    config.bCanWorkTile       = popJson.value("can_work_tile",       false);
+    config.bPlayerAssignable  = popJson.value("player_assignable",   false);
 
     if (popJson.contains("tile_multipliers"))
     {

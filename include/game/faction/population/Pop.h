@@ -35,6 +35,9 @@ public:
     // True if this pop is a specialist (!can_work_tile && !IsDrone())
     bool IsSpecialist() const;
 
+    // True if the player can manually assign this pop type
+    bool IsPlayerAssignable() const;
+
     // Riot and golden age contribution values from config
     int GetRiotContribution() const;
     int GetGoldenAgeContribution() const;

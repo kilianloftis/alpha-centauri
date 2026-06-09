@@ -10,9 +10,10 @@ Upkeep::Upkeep(std::shared_ptr<HookContext> hookContext)
 {
 }
 
-void Upkeep::Execute_(GameState* pGameState)
+void Upkeep::Execute_(GameState* pGameState, Faction* pFaction)
 {
     (void)pGameState;
+    (void)pFaction;
     std::cout << "Executing Upkeep stage\n";
 }
 

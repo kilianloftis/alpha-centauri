@@ -10,9 +10,10 @@ TurnStart::TurnStart(std::shared_ptr<HookContext> hookContext)
 {
 }
 
-void TurnStart::Execute_(GameState* pGameState)
+void TurnStart::Execute_(GameState* pGameState, Faction* pFaction)
 {
     (void)pGameState;
+    (void)pFaction;
     std::cout << "Executing TurnStart stage\n";
 }
 

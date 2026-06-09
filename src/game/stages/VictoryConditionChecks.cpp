@@ -10,9 +10,10 @@ VictoryConditionChecks::VictoryConditionChecks(std::shared_ptr<HookContext> hook
 {
 }
 
-void VictoryConditionChecks::Execute_(GameState* pGameState)
+void VictoryConditionChecks::Execute_(GameState* pGameState, Faction* pFaction)
 {
     (void)pGameState;
+    (void)pFaction;
     std::cout << "Executing VictoryConditionChecks stage\n";
 }
 

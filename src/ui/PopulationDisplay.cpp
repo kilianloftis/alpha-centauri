@@ -1,6 +1,6 @@
 #include "ui/PopulationDisplay.h"
 #include "graphics/Graphics.h"
-#include "game/faction/population/BasePopulation.h"
+#include "game/faction/population/PopulationManager.h"
 #include <sstream>
 
 namespace ac
@@ -24,7 +24,7 @@ PopulationDisplay::~PopulationDisplay()
     m_rBus.unsubscribe(m_subscriptionId);
 }
 
-void PopulationDisplay::SetPopulation(const BasePopulation* pPopulation)
+void PopulationDisplay::SetPopulation(const PopulationManager* pPopulation)
 {
     m_pPopulation = pPopulation;
 }

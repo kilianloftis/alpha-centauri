@@ -10,9 +10,10 @@ NewYearBegins::NewYearBegins(std::shared_ptr<HookContext> hookContext)
 {
 }
 
-void NewYearBegins::Execute_(GameState* pGameState)
+void NewYearBegins::Execute_(GameState* pGameState, Faction* pFaction)
 {
     (void)pGameState;
+    (void)pFaction;
     std::cout << "Executing NewYearBegins stage\n";
 }
 
