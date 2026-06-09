@@ -1,0 +1,217 @@
+[
+  {
+    "id": "Worker",
+    "name": "Worker",
+    "can_work_tile": true,
+    "tile_multipliers": {
+      "nutrients": 1.0,
+      "energy": 1.0,
+      "minerals": 1.0
+    },
+    "generation": {
+      "nutrients": 0,
+      "energy": 0,
+      "minerals": 0,
+      "econ": 0,
+      "labs": 0,
+      "psych": 0
+    },
+    "riot_contribution": 0,
+    "golden_age_contribution": 0,
+    "obsoletes": []
+  },
+  {
+    "id": "Drone",
+    "name": "Drone",
+    "can_work_tile": false,
+    "tile_multipliers": {
+      "nutrients": 0.0,
+      "energy": 0.0,
+      "minerals": 0.0
+    },
+    "generation": {
+      "nutrients": 0,
+      "energy": 0,
+      "minerals": 0,
+      "econ": 0,
+      "labs": 0,
+      "psych": 0
+    },
+    "riot_contribution": 1,
+    "golden_age_contribution": 0,
+    "obsoletes": []
+  },
+  {
+    "id": "Talent",
+    "name": "Talent",
+    "can_work_tile": true,
+    "tile_multipliers": {
+      "nutrients": 1.0,
+      "energy": 1.0,
+      "minerals": 1.0
+    },
+    "generation": {
+      "nutrients": 0,
+      "energy": 0,
+      "minerals": 0,
+      "econ": 0,
+      "labs": 0,
+      "psych": 0
+    },
+    "riot_contribution": 0,
+    "golden_age_contribution": 1,
+    "obsoletes": []
+  },
+  {
+    "id": "Doctor",
+    "name": "Doctor",
+    "can_work_tile": false,
+    "tile_multipliers": {
+      "nutrients": 0.0,
+      "energy": 0.0,
+      "minerals": 0.0
+    },
+    "generation": {
+      "nutrients": 0,
+      "energy": 0,
+      "minerals": 0,
+      "econ": 0,
+      "labs": 0,
+      "psych": 2
+    },
+    "riot_contribution": 0,
+    "golden_age_contribution": 0,
+    "obsoletes": []
+  },
+  {
+    "id": "Technician",
+    "name": "Technician",
+    "can_work_tile": false,
+    "tile_multipliers": {
+      "nutrients": 0.0,
+      "energy": 0.0,
+      "minerals": 0.0
+    },
+    "generation": {
+      "nutrients": 0,
+      "energy": 0,
+      "minerals": 0,
+      "econ": 3,
+      "labs": 0,
+      "psych": 0
+    },
+    "riot_contribution": 0,
+    "golden_age_contribution": 0,
+    "obsoletes": []
+  },
+  {
+    "id": "Librarian",
+    "name": "Librarian",
+    "can_work_tile": false,
+    "tile_multipliers": {
+      "nutrients": 0.0,
+      "energy": 0.0,
+      "minerals": 0.0
+    },
+    "generation": {
+      "nutrients": 0,
+      "energy": 0,
+      "minerals": 0,
+      "econ": 0,
+      "labs": 3,
+      "psych": 0
+    },
+    "riot_contribution": 0,
+    "golden_age_contribution": 0,
+    "required_tech": "Planetary Networks",
+    "obsoletes": []
+  },
+  {
+    "id": "Empath",
+    "name": "Empath",
+    "can_work_tile": false,
+    "tile_multipliers": {
+      "nutrients": 0.0,
+      "energy": 0.0,
+      "minerals": 0.0
+    },
+    "generation": {
+      "nutrients": 0,
+      "energy": 0,
+      "minerals": 0,
+      "econ": 2,
+      "labs": 0,
+      "psych": 2
+    },
+    "riot_contribution": 0,
+    "golden_age_contribution": 0,
+    "required_tech": "Centauri Meditation",
+    "obsoletes": ["Doctor"]
+  },
+  {
+    "id": "Engineer",
+    "name": "Engineer",
+    "can_work_tile": false,
+    "tile_multipliers": {
+      "nutrients": 0.0,
+      "energy": 0.0,
+      "minerals": 0.0
+    },
+    "generation": {
+      "nutrients": 0,
+      "energy": 0,
+      "minerals": 0,
+      "econ": 3,
+      "labs": 2,
+      "psych": 0
+    },
+    "riot_contribution": 0,
+    "golden_age_contribution": 0,
+    "required_tech": "Fusion Power",
+    "obsoletes": ["Technician"]
+  },
+  {
+    "id": "Thinker",
+    "name": "Thinker",
+    "can_work_tile": false,
+    "tile_multipliers": {
+      "nutrients": 0.0,
+      "energy": 0.0,
+      "minerals": 0.0
+    },
+    "generation": {
+      "nutrients": 0,
+      "energy": 0,
+      "minerals": 0,
+      "econ": 0,
+      "labs": 3,
+      "psych": 1
+    },
+    "riot_contribution": 0,
+    "golden_age_contribution": 0,
+    "required_tech": "Mind/Machine Interface",
+    "obsoletes": ["Librarian"]
+  },
+  {
+    "id": "Transcend",
+    "name": "Transcend",
+    "can_work_tile": false,
+    "tile_multipliers": {
+      "nutrients": 0.0,
+      "energy": 0.0,
+      "minerals": 0.0
+    },
+    "generation": {
+      "nutrients": 0,
+      "energy": 0,
+      "minerals": 0,
+      "econ": 2,
+      "labs": 4,
+      "psych": 2
+    },
+    "riot_contribution": 0,
+    "golden_age_contribution": 0,
+    "required_tech": "Secrets of Alpha Centauri",
+    "obsoletes": ["Empath", "Thinker"]
+  }
+]

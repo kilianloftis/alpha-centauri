@@ -13,10 +13,15 @@ add_executable(alpha-centauri
     game/faction/population/BasePopulation.cpp
     game/faction/population/Pop.cpp
     game/faction/population/PopManager.cpp
+    game/faction/population/PopTypeConfigParser.cpp
+    game/faction/population/PopTypeRegistry.cpp
+    game/faction/population/PopCompositionConfigParser.cpp
+    game/faction/population/PopCompositionCalculator.cpp
     game/faction/Specialist.cpp
     game/TurnProcessor.cpp
     lib/EventBus.cpp
     lib/EventBridge.cpp
+    lib/LuaRuntime.cpp
     game/TurnStageFactory.cpp
     game/TurnStageConfigParser.cpp
     game/HookContext.cpp
@@ -61,6 +66,45 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(magic_enum)
 target_link_libraries(alpha-centauri PRIVATE magic_enum::magic_enum)
+
+# Add Lua 5.4
+FetchContent_Declare(
+    lua
+    URL https://www.lua.org/ftp/lua-5.4.7.tar.gz
+    URL_HASH SHA256=9fbf5e28ef86c69858f6d3d34eccc32e911c1a28b4120ff3e84aaa70cfbf1e30
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
+FetchContent_GetProperties(lua)
+if(NOT lua_POPULATED)
+    FetchContent_Populate(lua)
+    set(LUA_SRC ${lua_SOURCE_DIR}/src)
+    file(GLOB LUA_SOURCES
+        ${LUA_SRC}/lapi.c ${LUA_SRC}/lcode.c ${LUA_SRC}/lctype.c
+        ${LUA_SRC}/ldebug.c ${LUA_SRC}/ldo.c ${LUA_SRC}/ldump.c
+        ${LUA_SRC}/lfunc.c ${LUA_SRC}/lgc.c ${LUA_SRC}/linit.c
+        ${LUA_SRC}/llex.c ${LUA_SRC}/lmem.c ${LUA_SRC}/lobject.c
+        ${LUA_SRC}/lopcodes.c ${LUA_SRC}/lparser.c ${LUA_SRC}/lstate.c
+        ${LUA_SRC}/lstring.c ${LUA_SRC}/ltable.c ${LUA_SRC}/ltm.c
+        ${LUA_SRC}/lundump.c ${LUA_SRC}/lvm.c ${LUA_SRC}/lzio.c
+        ${LUA_SRC}/lauxlib.c ${LUA_SRC}/lbaselib.c ${LUA_SRC}/lcorolib.c
+        ${LUA_SRC}/ldblib.c ${LUA_SRC}/liolib.c ${LUA_SRC}/lmathlib.c
+        ${LUA_SRC}/loadlib.c ${LUA_SRC}/loslib.c ${LUA_SRC}/lstrlib.c
+        ${LUA_SRC}/ltablib.c ${LUA_SRC}/lutf8lib.c
+    )
+    add_library(lua54 STATIC ${LUA_SOURCES})
+    target_include_directories(lua54 PUBLIC ${LUA_SRC})
+    set_target_properties(lua54 PROPERTIES POSITION_INDEPENDENT_CODE ON)
+endif()
+target_link_libraries(alpha-centauri PRIVATE lua54)
+
+# Add sol2 (header-only)
+FetchContent_Declare(
+    sol2
+    GIT_REPOSITORY https://github.com/ThePhD/sol2.git
+    GIT_TAG v3.3.0
+)
+FetchContent_MakeAvailable(sol2)
+target_link_libraries(alpha-centauri PRIVATE sol2)
 
 option(USE_SFML "Enable SFML rendering" ON)
 if(USE_SFML)

@@ -13,6 +13,10 @@ class GameState;
 class EventBus;
 class EventBridge;
 class PopulationDisplay;
+class PopTypeRegistry;
+class PopCompositionCalculator;
+struct PopCompositionConfig;
+class LuaRuntime;
 
 class Engine
 {
@@ -37,6 +41,10 @@ private:
     std::unique_ptr<EventBus> m_eventBus;
     std::unique_ptr<EventBridge> m_eventBridge;
     std::unique_ptr<PopulationDisplay> m_popDisplay;
+    std::unique_ptr<PopTypeRegistry> m_popTypeRegistry;
+    std::unique_ptr<LuaRuntime> m_luaRuntime;
+    std::unique_ptr<PopCompositionConfig> m_popCompositionConfig;
+    std::unique_ptr<PopCompositionCalculator> m_popCompositionCalculator;
 };
 
 } // namespace ac

@@ -1,5 +1,5 @@
 #include "game/faction/population/BasePopulation.h"
-#include "game/faction/Specialist.h"
+#include "game/faction/population/PopTypeRegistry.h"
 
 namespace ac
 {
@@ -10,8 +10,6 @@ BasePopulation::BasePopulation()
     , m_maxSize(8)
     , m_growthRate(1)
 {
-    // Start with one worker via PopManager
-    m_pops.push_back(m_pPopManager->CreatePop());
 }
 
 BasePopulation::BasePopulation(int initialSize)
@@ -20,11 +18,6 @@ BasePopulation::BasePopulation(int initialSize)
     , m_maxSize(8)
     , m_growthRate(1)
 {
-    // Initialize with pops via PopManager
-    for (int i = 0; i < m_size; i++)
-    {
-        m_pops.push_back(m_pPopManager->CreatePop());
-    }
 }
 
 BasePopulation::~BasePopulation()
@@ -87,17 +80,7 @@ int BasePopulation::GetWorkerCount() const
 
 int BasePopulation::GetTalentCount() const
 {
-    // Talents are workers that are also marked as talents
-    int count = 0;
-    for (const auto& pPop : m_pops)
-    {
-        // Dynamic cast to check if it's specifically a TalentPop
-        if (dynamic_cast<TalentPop*>(pPop.get()) != nullptr)
-        {
-            count++;
-        }
-    }
-    return count;
+    return CountPops_([](const Pop* p) { return p->IsWorker() && p->GetGoldenAgeContribution() > 0; });
 }
 
 int BasePopulation::GetDroneCount() const
@@ -131,45 +114,37 @@ void BasePopulation::RemovePop()
     }
 }
 
-void BasePopulation::ConvertToWorker(size_t index)
+void BasePopulation::ConvertTo(size_t index, const std::string& typeId)
 {
-    if (index < m_pops.size())
+    if (index >= m_pops.size())
     {
-        int tileId = m_pops[index]->IsWorker() ? dynamic_cast<WorkerPop*>(m_pops[index].get())->GetTileId() : -1;
-        m_pops[index] = std::make_unique<WorkerPop>();
-        if (WorkerPop* pWorker = dynamic_cast<WorkerPop*>(m_pops[index].get()))
+        return;
+    }
+    int tileId = m_pops[index]->GetTileId();
+    auto pNewPop = m_pPopManager->CreatePop(typeId);
+    if (pNewPop)
+    {
+        pNewPop->SetTileId(tileId);
+        m_pops[index] = std::move(pNewPop);
+    }
+}
+
+void BasePopulation::SetRegistry(const PopTypeRegistry* pRegistry)
+{
+    m_pPopManager->SetRegistry(pRegistry);
+
+    // Populate initial pops now that the registry is available
+    if (m_pops.empty())
+    {
+        for (int i = 0; i < m_size; i++)
         {
-            pWorker->SetTileId(tileId);
+            auto pPop = m_pPopManager->CreatePop();
+            if (pPop)
+            {
+                m_pops.push_back(std::move(pPop));
+            }
         }
-    }
-}
-
-void BasePopulation::ConvertToTalent(size_t index)
-{
-    if (index < m_pops.size())
-    {
-        int tileId = m_pops[index]->IsWorker() ? dynamic_cast<WorkerPop*>(m_pops[index].get())->GetTileId() : -1;
-        m_pops[index] = std::make_unique<TalentPop>();
-        if (WorkerPop* pWorker = dynamic_cast<WorkerPop*>(m_pops[index].get()))
-        {
-            pWorker->SetTileId(tileId);
-        }
-    }
-}
-
-void BasePopulation::ConvertToDrone(size_t index)
-{
-    if (index < m_pops.size())
-    {
-        m_pops[index] = std::make_unique<DronePop>();
-    }
-}
-
-void BasePopulation::ConvertToSpecialist(size_t index, std::unique_ptr<Specialist> pSpecialist)
-{
-    if (index < m_pops.size() && pSpecialist)
-    {
-        m_pops[index] = std::make_unique<SpecialistPop>(std::move(pSpecialist));
+        m_size = static_cast<int>(m_pops.size());
     }
 }
 
@@ -195,20 +170,6 @@ void BasePopulation::SetMaxSize(int maxSize)
     }
 }
 
-int BasePopulation::CalculateDroneCount(int basePopulation, int psychOutput, int factionDroneModifier) const
-{
-    // Formula: Drones = basePopulation / 4 - psychOutput / 4 + factionDroneModifier
-    int droneCount = (basePopulation / 4) - (psychOutput / 4) + factionDroneModifier;
-    return droneCount > 0 ? droneCount : 0;
-}
-
-int BasePopulation::CalculateTalentCount(int basePopulation, int psychOutput, int factionTalentModifier) const
-{
-    // Formula: Talents = psychOutput / 4 + factionTalentModifier
-    int talentCount = (psychOutput / 4) + factionTalentModifier;
-    return talentCount > 0 ? talentCount : 0;
-}
-
 bool BasePopulation::HasDroneRiot() const
 {
     return GetDroneCount() > GetTalentCount();
@@ -219,85 +180,22 @@ bool BasePopulation::IsDestroyed() const
     return m_pops.empty();
 }
 
-void BasePopulation::AddRandomDrone()
+void BasePopulation::AddDrone()
 {
     // Convert a random worker to a drone
     for (size_t i = 0; i < m_pops.size(); i++)
     {
         if (m_pops[i]->IsWorker() && !m_pops[i]->IsSpecialist())
         {
-            ConvertToDrone(i);
+            ConvertTo(i, "Drone");
             return;
         }
     }
 }
 
-void BasePopulation::RecalculateDronesAndTalents(int psychOutput, int factionDroneModifier, int factionTalentModifier)
+void BasePopulation::SetCompositionCalculator(PopCompositionCalculator* pCalculator)
 {
-    int currentSize = static_cast<int>(m_pops.size());
-    int targetDrones = CalculateDroneCount(currentSize, psychOutput, factionDroneModifier);
-    int targetTalents = CalculateTalentCount(currentSize, psychOutput, factionTalentModifier);
-
-    int currentDrones = GetDroneCount();
-    int currentTalents = GetTalentCount();
-
-    // First pass: convert excess drones back to workers
-    if (currentDrones > targetDrones)
-    {
-        int toConvert = currentDrones - targetDrones;
-        for (size_t i = 0; i < m_pops.size() && toConvert > 0; i++)
-        {
-            if (m_pops[i]->IsDrone())
-            {
-                ConvertToWorker(i);
-                toConvert--;
-            }
-        }
-    }
-
-    // Second pass: convert excess talents back to workers
-    if (currentTalents > targetTalents)
-    {
-        int toConvert = currentTalents - targetTalents;
-        for (size_t i = 0; i < m_pops.size() && toConvert > 0; i++)
-        {
-            if (dynamic_cast<TalentPop*>(m_pops[i].get()) != nullptr)
-            {
-                ConvertToWorker(i);
-                toConvert--;
-            }
-        }
-    }
-
-    // Third pass: convert workers to drones as needed
-    if (currentDrones < targetDrones)
-    {
-        int toConvert = targetDrones - currentDrones;
-        for (size_t i = 0; i < m_pops.size() && toConvert > 0; i++)
-        {
-            // Only convert regular workers, not talents or specialists
-            if (m_pops[i]->IsWorker() && !dynamic_cast<TalentPop*>(m_pops[i].get()) && !m_pops[i]->IsSpecialist())
-            {
-                ConvertToDrone(i);
-                toConvert--;
-            }
-        }
-    }
-
-    // Fourth pass: convert workers to talents as needed
-    if (currentTalents < targetTalents)
-    {
-        int toConvert = targetTalents - currentTalents;
-        for (size_t i = 0; i < m_pops.size() && toConvert > 0; i++)
-        {
-            // Only convert regular workers, not specialists
-            if (m_pops[i]->IsWorker() && !dynamic_cast<TalentPop*>(m_pops[i].get()) && !m_pops[i]->IsSpecialist())
-            {
-                ConvertToTalent(i);
-                toConvert--;
-            }
-        }
-    }
+    m_pCompositionCalculator = pCalculator;
 }
 
 int BasePopulation::CountPops_(bool (*predicate)(const Pop*)) const

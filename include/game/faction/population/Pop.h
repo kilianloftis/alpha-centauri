@@ -1,13 +1,9 @@
 #pragma once
 
-#include <memory>
-
 namespace ac
 {
 
-// Forward declarations
-struct SpecialistOutput_t;
-class Specialist;
+struct PopTypeConfig;
 
 // Production output from a pop
 struct PopProduction_t
@@ -15,108 +11,45 @@ struct PopProduction_t
     int nutrients;
     int energy;
     int minerals;
+    int econ;   // Economic output (mainly from specialists)
     int labs;   // Research output (mainly from specialists)
     int psych;  // Psych output (mainly from talents/specialists)
 };
 
-// Abstract base class for all population units
+// A single population unit. Behaviour is entirely driven by its PopTypeConfig.
 class Pop
 {
 public:
-    Pop();
-    virtual ~Pop();
+    explicit Pop(const PopTypeConfig& rConfig);
+    ~Pop();
 
-    // Get the type identifier for this pop
-    virtual const char* GetPopType() const = 0;
+    // Type id string matching the config (e.g. "Worker", "Librarian")
+    const char* GetPopType() const;
 
-    // Check if this pop works a tile
-    virtual bool IsWorker() const = 0;
+    // True if this pop can work a tile (can_work_tile in config)
+    bool IsWorker() const;
 
-    // Check if this pop is a drone (does nothing)
-    virtual bool IsDrone() const = 0;
+    // True if this pop contributes to riot (riot_contribution > 0)
+    bool IsDrone() const;
 
-    // Check if this pop is a specialist
-    virtual bool IsSpecialist() const = 0;
+    // True if this pop is a specialist (!can_work_tile && !IsDrone())
+    bool IsSpecialist() const;
 
-    // Get production from this pop (tile resources provided for workers)
-    virtual PopProduction_t GetProduction(const PopProduction_t& tileResources) const = 0;
+    // Riot and golden age contribution values from config
+    int GetRiotContribution() const;
+    int GetGoldenAgeContribution() const;
 
-protected:
-    int m_tileId;  // Tile assignment (-1 if none)
-};
-
-// Worker - works a tile to collect resources
-class WorkerPop : public Pop
-{
-public:
-    WorkerPop();
-    ~WorkerPop() override;
-
-    const char* GetPopType() const override;
-    bool IsWorker() const override;
-    bool IsDrone() const override;
-    bool IsSpecialist() const override;
-
-    // Tile assignment
+    // Tile assignment (only meaningful when IsWorker() is true)
     void SetTileId(int tileId);
     int GetTileId() const;
 
-    // Get production from worked tile
-    PopProduction_t GetProduction(const PopProduction_t& tileResources) const override;
+    // Compute production for this pop.
+    // tileResources is multiplied by tile_multipliers then added to generation values.
+    PopProduction_t GetProduction(const PopProduction_t& tileResources) const;
 
-protected:
-    bool m_bIsTalent;
-};
-
-// Talent - works a tile like a worker, also contributes to psych stability
-class TalentPop : public WorkerPop
-{
-public:
-    TalentPop();
-    ~TalentPop() override;
-
-    const char* GetPopType() const override;
-
-    // Get production from worked tile + talent psych bonus
-    PopProduction_t GetProduction(const PopProduction_t& tileResources) const override;
-};
-
-// Drone - does nothing, causes unrest
-class DronePop : public Pop
-{
-public:
-    DronePop();
-    ~DronePop() override;
-
-    const char* GetPopType() const override;
-    bool IsWorker() const override;
-    bool IsDrone() const override;
-    bool IsSpecialist() const override;
-
-    // Drones produce nothing
-    PopProduction_t GetProduction(const PopProduction_t& tileResources) const override;
-};
-
-// Specialist - produces resources directly, not from tiles
-class SpecialistPop : public Pop
-{
-public:
-    SpecialistPop(std::unique_ptr<Specialist> pSpecialist);
-    ~SpecialistPop() override;
-
-    const char* GetPopType() const override;
-    bool IsWorker() const override;
-    bool IsDrone() const override;
-    bool IsSpecialist() const override;
-
-    // Get the specialist type for output calculation
-    const Specialist* GetSpecialist() const;
-
-    // Get production from specialist abilities (tile resources ignored)
-    PopProduction_t GetProduction(const PopProduction_t& tileResources) const override;
-
-protected:
-    std::unique_ptr<Specialist> m_pSpecialist;
+private:
+    const PopTypeConfig* m_pConfig;
+    int m_tileId;
 };
 
 } // namespace ac

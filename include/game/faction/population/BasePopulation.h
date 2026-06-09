@@ -2,12 +2,16 @@
 
 #include "game/faction/population/Pop.h"
 #include "game/faction/population/PopManager.h"
+#include "game/faction/population/PopCompositionCalculator.h"
 #include "lib/Signal.h"
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace ac
 {
+
+class PopTypeRegistry;
 
 class BasePopulation
 {
@@ -36,23 +40,21 @@ public:
     void AddPop();
     void RemovePop();
 
-    // Convert a pop from one type to another
-    void ConvertToWorker(size_t index);
-    void ConvertToTalent(size_t index);
-    void ConvertToDrone(size_t index);
-    void ConvertToSpecialist(size_t index, std::unique_ptr<Specialist> pSpecialist);
+    // Convert a pop to any type by config id (e.g. "Worker", "Drone", "Talent", "Librarian")
+    void ConvertTo(size_t index, const std::string& typeId);
 
     // Drone and talent calculations
-    int CalculateDroneCount(int basePopulation, int psychOutput, int factionDroneModifier) const;
-    int CalculateTalentCount(int basePopulation, int psychOutput, int factionTalentModifier) const;
     bool HasDroneRiot() const;
     bool IsDestroyed() const;
 
     // Add a drone (for faction base count mechanic)
-    void AddRandomDrone();
+    void AddDrone();
 
-    // Recalculate drones and talents based on current conditions
-    void RecalculateDronesAndTalents(int psychOutput, int factionDroneModifier, int factionTalentModifier);
+    // Registry injection — forwarded to the internal PopManager
+    void SetRegistry(const PopTypeRegistry* pRegistry);
+
+    // Composition calculator injection
+    void SetCompositionCalculator(PopCompositionCalculator* pCalculator);
 
     // Population limits
     int GetMaxSize() const;
@@ -65,6 +67,7 @@ public:
 private:
     std::vector<std::unique_ptr<Pop>> m_pops;
     std::unique_ptr<PopManager> m_pPopManager;
+    PopCompositionCalculator* m_pCompositionCalculator = nullptr;
     int m_size;
     int m_maxSize;
     int m_growthRate;

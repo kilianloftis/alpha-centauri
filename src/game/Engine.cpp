@@ -11,6 +11,10 @@
 #include "lib/GameEvent.h"
 #include "game/faction/Base.h"
 #include "game/faction/population/BasePopulation.h"
+#include "game/faction/population/PopTypeRegistry.h"
+#include "game/faction/population/PopCompositionConfigParser.h"
+#include "game/faction/population/PopCompositionCalculator.h"
+#include "lib/LuaRuntime.h"
 #include "ui/PopulationDisplay.h"
 #include <iostream>
 #include <stdexcept>
@@ -94,6 +98,15 @@ void Engine::Initialize_()
         }
     });
 
+    m_popTypeRegistry = std::make_unique<PopTypeRegistry>();
+    m_popTypeRegistry->Load("config/pop_types.json");
+
+    m_luaRuntime = std::make_unique<LuaRuntime>();
+
+    PopCompositionConfigParser compositionParser;
+    m_popCompositionConfig     = std::make_unique<PopCompositionConfig>(compositionParser.ParseConfig("config/pop_composition.lua", *m_luaRuntime));
+    m_popCompositionCalculator = std::make_unique<PopCompositionCalculator>(*m_popCompositionConfig, *m_luaRuntime);
+
     // Create test faction with a base
     auto pFaction = std::make_unique<Faction>();
     auto pBase = std::make_unique<Base>();
@@ -102,6 +115,10 @@ void Engine::Initialize_()
     pBase->SetName("Test Base");
 
     std::cout << "Created test base with initial population: " << pBase->GetPopulation()->GetSize() << "\n";
+
+    // Inject pop type registry and composition calculator into base population
+    pBase->GetPopulation()->SetRegistry(m_popTypeRegistry.get());
+    pBase->GetPopulation()->SetCompositionCalculator(m_popCompositionCalculator.get());
 
     // Wire base signals to EventBus
     m_eventBridge->WireBase(*pBase);
@@ -121,6 +138,7 @@ void Engine::Initialize_()
         if (pBase && pBase->GetPopulation())
         {
             m_popDisplay->SetCurrentPop(pBase->GetPopulation()->GetSize());
+            m_popDisplay->SetPopulation(pBase->GetPopulation());
         }
     }
 

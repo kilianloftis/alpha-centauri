@@ -1,5 +1,6 @@
 #include "ui/PopulationDisplay.h"
 #include "graphics/Graphics.h"
+#include "game/faction/population/BasePopulation.h"
 #include <sstream>
 
 namespace ac
@@ -23,11 +24,29 @@ PopulationDisplay::~PopulationDisplay()
     m_rBus.unsubscribe(m_subscriptionId);
 }
 
+void PopulationDisplay::SetPopulation(const BasePopulation* pPopulation)
+{
+    m_pPopulation = pPopulation;
+}
+
 void PopulationDisplay::Render(float x, float y)
 {
     std::ostringstream oss;
     oss << "Population: " << m_currentPop;
     m_rGraphics.DrawText(oss.str(), x, y, 24);
+
+    if (!m_pPopulation)
+    {
+        return;
+    }
+
+    const float lineHeight = 28.0f;
+    float offsetY = lineHeight;
+    for (const auto& pPop : m_pPopulation->GetPops())
+    {
+        m_rGraphics.DrawText(pPop->GetPopType(), x, y + offsetY, 20);
+        offsetY += lineHeight;
+    }
 }
 
 int PopulationDisplay::GetCurrentPop() const
