@@ -12,6 +12,7 @@ class TurnProcessor;
 class GameState;
 class EventBus;
 class EventBridge;
+class PopulationDisplay;
 
 class Engine
 {
@@ -26,6 +27,7 @@ private:
     void PrintWelcome_() const;
     void GameLoop_();
     void ProcessTurn_();
+    void Render_();
 
     std::unique_ptr<Graphics> m_graphics;
     std::unique_ptr<Input> m_input;
@@ -34,6 +36,7 @@ private:
     std::unique_ptr<GameState> m_gameState;
     std::unique_ptr<EventBus> m_eventBus;
     std::unique_ptr<EventBridge> m_eventBridge;
+    std::unique_ptr<PopulationDisplay> m_popDisplay;
 };
 
 } // namespace ac

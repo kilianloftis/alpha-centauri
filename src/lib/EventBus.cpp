@@ -12,14 +12,6 @@ SubscriptionId EventBus::subscribe(Handler handler)
     return id;
 }
 
-template<typename T>
-SubscriptionId EventBus::subscribe(std::function<void(const T&)> handler)
-{
-    return subscribe([h = std::move(handler)](const GameEvent& e) {
-        if (auto* p = std::get_if<T>(&e)) h(*p);
-    });
-}
-
 void EventBus::unsubscribe(SubscriptionId id)
 {
     m_handlers.erase(

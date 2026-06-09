@@ -35,6 +35,7 @@ add_executable(alpha-centauri
     game/stages/Save.cpp
     game/stages/CustomTurnStage.cpp
     input/KeyMapping.cpp
+    ui/PopulationDisplay.cpp
 )
 
 target_include_directories(alpha-centauri PRIVATE

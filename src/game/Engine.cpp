@@ -11,6 +11,7 @@
 #include "lib/GameEvent.h"
 #include "game/faction/Base.h"
 #include "game/faction/population/BasePopulation.h"
+#include "ui/PopulationDisplay.h"
 #include <iostream>
 #include <stdexcept>
 
@@ -46,8 +47,7 @@ void Engine::GameLoop_()
     {
         // Display current game state
         m_graphics->Clear();
-        m_graphics->DrawText("Mission Year: " + std::to_string(m_gameState->GetMissionYear()), 20.f, 20.f, 24);
-        m_graphics->DrawText("Press Enter to continue or Esc to quit.", 20.f, 80.f, 20);
+        Render_();
         m_graphics->Display();
 
         // Wait for player input
@@ -113,6 +113,17 @@ void Engine::Initialize_()
     std::cout << "Test setup complete. " << m_gameState->GetNumFactions() << " faction(s), "
               << m_gameState->GetFactions()[0]->GetBaseCount() << " base(s)\n";
 
+    // Create population display and initialize with current population
+    m_popDisplay = std::make_unique<PopulationDisplay>(*m_eventBus, *m_graphics);
+    if (m_gameState->GetNumFactions() > 0 && m_gameState->GetFactions()[0]->GetBaseCount() > 0)
+    {
+        Base* pBase = m_gameState->GetFactions()[0]->GetBase(0);
+        if (pBase && pBase->GetPopulation())
+        {
+            m_popDisplay->SetCurrentPop(pBase->GetPopulation()->GetSize());
+        }
+    }
+
     m_turnStageFactory->LoadConfig("config/turn_stages.json");
     auto registry = m_turnStageFactory->CreateStages();
     m_turnProcessor = std::make_unique<TurnProcessor>(std::move(registry));
@@ -136,6 +147,18 @@ if (!m_input)
 void Engine::PrintWelcome_() const
 {
     std::cout << "Welcome to Alpha Centauri (C++ rebuild)!\n";
+}
+
+void Engine::Render_()
+{
+    m_graphics->DrawText("Mission Year: " + std::to_string(m_gameState->GetMissionYear()), 20.f, 20.f, 24);
+    
+    if (m_popDisplay)
+    {
+        m_popDisplay->Render(20.f, 50.f);
+    }
+    
+    m_graphics->DrawText("Press Enter to continue or Esc to quit.", 20.f, 80.f, 20);
 }
 
 } // namespace ac

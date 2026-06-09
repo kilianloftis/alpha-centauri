@@ -63,12 +63,7 @@ public:
     void SetBaseId(int baseId);
     int GetBaseId() const;
 
-    // Signals (wired from BasePopulation)
-    Signal<FactionId, int, int> on_pop_gained;  // factionId, baseId, newSize
-    Signal<FactionId, int, int> on_pop_lost;  // factionId, baseId, newSize
-
 private:
-    void WirePopulationSignals_();
     FactionId m_factionId;
     int m_baseId;
     int CalculateNutrients_() const;

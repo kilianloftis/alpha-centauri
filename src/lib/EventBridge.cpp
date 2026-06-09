@@ -2,6 +2,7 @@
 #include "lib/EventBus.h"
 #include "game/GameState.h"
 #include "game/faction/Base.h"
+#include "game/faction/population/BasePopulation.h"
 
 namespace ac
 {
@@ -20,14 +21,20 @@ EventBridge::EventBridge(GameState& rState, EventBus& rBus)
 
 void EventBridge::WireBase(Base& rBase)
 {
-    // Wire population gained signal
-    rBase.on_pop_gained.connect([this](FactionId factionId, int baseId, int newSize) {
-        m_rBus.publish(EvBaseGainedPop{ factionId, baseId, newSize });
+    BasePopulation* pPop = rBase.GetPopulation();
+    if (!pPop)
+    {
+        return;
+    }
+
+    // Wire population gained signal - capture base reference for context
+    pPop->on_pop_gained.connect([this, &rBase](int newSize) {
+        m_rBus.publish(EvBaseGainedPop{ rBase.GetFactionId(), rBase.GetBaseId(), newSize });
     });
 
-    // Wire population lost signal
-    rBase.on_pop_lost.connect([this](FactionId factionId, int baseId, int newSize) {
-        m_rBus.publish(EvBaseLostPop{ factionId, baseId, newSize });
+    // Wire population lost signal - capture base reference for context
+    pPop->on_pop_lost.connect([this, &rBase](int newSize) {
+        m_rBus.publish(EvBaseLostPop{ rBase.GetFactionId(), rBase.GetBaseId(), newSize });
     });
 }
 

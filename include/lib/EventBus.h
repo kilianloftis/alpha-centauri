@@ -19,7 +19,12 @@ public:
 
     // Subscribe to a specific event type only.
     template<typename T>
-    SubscriptionId subscribe(std::function<void(const T&)> handler);
+    SubscriptionId subscribe(std::function<void(const T&)> handler)
+    {
+        return subscribe([h = std::move(handler)](const GameEvent& e) {
+            if (auto* p = std::get_if<T>(&e)) h(*p);
+        });
+    }
 
     void unsubscribe(SubscriptionId id);
     void publish(GameEvent event);   // synchronous dispatch

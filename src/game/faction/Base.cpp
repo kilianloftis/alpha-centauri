@@ -11,7 +11,6 @@ Base::Base()
     , m_factionId(-1)
     , m_baseId(-1)
 {
-    WirePopulationSignals_();
 }
 
 Base::~Base()
@@ -186,24 +185,6 @@ void Base::ApplyNutrition_()
 void Base::ApplyPsych_()
 {
     // TODO: Apply psych to faction
-}
-
-void Base::WirePopulationSignals_()
-{
-    // Wire BasePopulation signals to Base signals with context
-    m_pPopulation->on_pop_gained.connect([this](int newSize) {
-        if (m_factionId >= 0 && m_baseId >= 0)
-        {
-            on_pop_gained.emit(m_factionId, m_baseId, newSize);
-        }
-    });
-
-    m_pPopulation->on_pop_lost.connect([this](int newSize) {
-        if (m_factionId >= 0 && m_baseId >= 0)
-        {
-            on_pop_lost.emit(m_factionId, m_baseId, newSize);
-        }
-    });
 }
 
 } // namespace ac
