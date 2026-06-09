@@ -1,8 +1,8 @@
 #pragma once
 
+#include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
-#include <nlohmann/json.hpp>
 
 namespace ac
 {
@@ -16,12 +16,12 @@ struct PopTileMultipliers_t
 
 struct PopGeneration_t
 {
-    int nutrients;
-    int energy;
-    int minerals;
-    int econ;
-    int labs;
-    int psych;
+    int nutrients;  // Bonus added to tile nutrient production
+    int energy;     // Bonus added to tile energy production
+    int minerals;   // Bonus added to tile mineral production
+    int econ;       // Direct economic output (specialists)
+    int labs;       // Direct research output (specialists)
+    int psych;      // Direct psych output (specialists)
 };
 
 struct PopTypeConfig

@@ -27,11 +27,18 @@ graph TB
         KeyFromSfKey[KeyFromSfKey()]
     end
 
-    subgraph "Event Queue"
+    subgraph "Key Event Queue"
         SFMLKeyEventQueue[SFMLKeyEventQueue]
         PushPending[PushPendingKeyEvent()]
         PopPending[PopPendingKeyEvent()]
-        Queue[Internal event queue]
+        Queue[Internal key event queue]
+    end
+
+    subgraph "Mouse Event Queue"
+        SFMLMouseEventQueue[SFMLMouseEventQueue]
+        PushPendingMouse[PushPendingMouseEvent()]
+        PopPendingMouse[PopPendingMouseEvent()]
+        MouseQueue[Internal mouse event queue]
     end
 
     subgraph "Factory"
@@ -56,6 +63,7 @@ graph TB
 
     SFMLInput --> KeyMapping
     SFMLInput --> SFMLKeyEventQueue
+    SFMLInput --> SFMLMouseEventQueue
 
     KeyMapping --> KeyFromAscii
     KeyMapping --> KeyToAscii
@@ -65,6 +73,10 @@ graph TB
     SFMLKeyEventQueue --> PushPending
     SFMLKeyEventQueue --> PopPending
     SFMLKeyEventQueue --> Queue
+
+    SFMLMouseEventQueue --> PushPendingMouse
+    SFMLMouseEventQueue --> PopPendingMouse
+    SFMLMouseEventQueue --> MouseQueue
 
     Factory -->|if USE_SFML defined| SFMLInput
     Factory -->|if USE_SFML not defined| NullInput
@@ -83,6 +95,7 @@ graph TB
     style NullInput fill:#fbb,stroke:#333,stroke-width:2px
     style KeyMapping fill:#ff9,stroke:#333,stroke-width:2px
     style SFMLKeyEventQueue fill:#ff9,stroke:#333,stroke-width:2px
+    style SFMLMouseEventQueue fill:#ff9,stroke:#333,stroke-width:2px
     style Factory fill:#ff9,stroke:#333,stroke-width:2px
 ```
 
@@ -133,6 +146,14 @@ graph TB
   - `PopPendingKeyEvent()`: Remove and return key event from queue
 - **Integration**: Called by SFMLGraphics during event processing
 - **Flow**: SFML window events → SFMLGraphics → SFMLKeyEventQueue → SFMLInput
+
+### SFMLMouseEventQueue
+- **Purpose**: Queues mouse click events from SFML graphics system
+- **Functions**:
+  - `PushPendingMouseEvent(MouseEvent)`: Add mouse event to queue
+  - `PopPendingMouseEvent()`: Remove and return mouse event from queue
+- **Integration**: Called by SFMLGraphics during event processing
+- **Flow**: SFML window events → SFMLGraphics → SFMLMouseEventQueue → SFMLInput
 
 ### CreateInput() Factory
 - **Purpose**: Factory function to create appropriate input implementation

@@ -1,6 +1,8 @@
 #include "game/faction/Base.h"
 #include "game/faction/population/PopulationManager.h"
+#include "game/faction/population/PopContainer.h"
 #include <algorithm>
+#include <cmath>
 
 namespace ac
 {
@@ -10,7 +12,16 @@ Base::Base()
     , m_workedTiles{0, 0, 0}
     , m_factionId(-1)
     , m_baseId(-1)
+    , m_x(0)
+    , m_y(0)
 {
+    m_pPopulation->on_pop_gained.connect([this](int) {
+        m_workerAssignments.OnPopulationChanged(m_pPopulation->GetContainer());
+        AutoAssignUnassignedWorkers_();
+    });
+    m_pPopulation->on_pop_lost.connect([this](int) {
+        m_workerAssignments.OnPopulationChanged(m_pPopulation->GetContainer());
+    });
 }
 
 Base::~Base()
@@ -167,6 +178,54 @@ int Base::GetBaseId() const
     return m_baseId;
 }
 
+WorkerAssignmentManager& Base::GetWorkerAssignments()
+{
+    return m_workerAssignments;
+}
+
+const WorkerAssignmentManager& Base::GetWorkerAssignments() const
+{
+    return m_workerAssignments;
+}
+
+void Base::SetPosition(int x, int y)
+{
+    m_x = x;
+    m_y = y;
+}
+
+int Base::GetX() const
+{
+    return m_x;
+}
+
+int Base::GetY() const
+{
+    return m_y;
+}
+
+std::vector<std::pair<int, int>> Base::GetWorkableTilePositions() const
+{
+    static constexpr int kGridHalfExtent = 2;   // [-2, 2] bounding box
+    static constexpr int kManhattanLimit  = 3;   // excludes corners (|dx|+|dy|==4)
+    std::vector<std::pair<int, int>> tiles;
+    for (int dy = -kGridHalfExtent; dy <= kGridHalfExtent; ++dy)
+    {
+        for (int dx = -kGridHalfExtent; dx <= kGridHalfExtent; ++dx)
+        {
+            if (dx == 0 && dy == 0)
+            {
+                continue;
+            }
+            if (std::abs(dx) + std::abs(dy) <= kManhattanLimit)
+            {
+                tiles.emplace_back(m_x + dx, m_y + dy);
+            }
+        }
+    }
+    return tiles;
+}
+
 int Base::GetNutrientProduction() const
 {
     return CalculateNutrients_();
@@ -175,6 +234,35 @@ int Base::GetNutrientProduction() const
 int Base::GetEnergyProduction() const
 {
     return CalculateEnergyProduction_();
+}
+
+void Base::AutoAssignUnassignedWorkers_()
+{
+    const PopContainer& rPops = m_pPopulation->GetContainer();
+    const std::vector<std::pair<int, int>> workableTiles = GetWorkableTilePositions();
+
+    for (const auto& pPop : rPops.GetPops())
+    {
+        if (!pPop->IsWorker())
+        {
+            continue;
+        }
+
+        const int popId = pPop->GetId();
+        if (m_workerAssignments.GetAssignedTile(popId).first != -1)
+        {
+            continue;
+        }
+
+        for (const auto& rTile : workableTiles)
+        {
+            if (!m_workerAssignments.IsTileAssigned(rTile.first, rTile.second))
+            {
+                m_workerAssignments.AssignWorker(popId, rTile.first, rTile.second, rPops);
+                break;
+            }
+        }
+    }
 }
 
 void Base::ApplyProduction_()

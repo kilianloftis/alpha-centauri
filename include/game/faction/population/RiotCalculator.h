@@ -5,32 +5,42 @@
 namespace ac
 {
 
+// Inputs for calculating drone riot condition.
+// If targetTalents >= 0, condition is: droneCount > targetTalents
+// Otherwise, condition is: droneCount > talentCount (fallback)
+struct RiotConditionInputs
+{
+    int droneCount = 0;
+    int talentCount = 0;
+    int targetTalents = -1;  // -1 means use talentCount as fallback
+};
+
 // Tracks drone riot state for a base population.
-// Call NotifyPopGrown(bCondition) when the population grows to emit will_riot if conditions are newly met.
-// Call Update(bCondition) at end of turn to drive is_rioting / riot_ended.
+// Call NotifyPopGrown(inputs) when the population grows to emit will_riot if conditions are newly met.
+// Call Update(inputs) at end of turn to drive is_rioting / riot_ended.
 class RiotCalculator
 {
 public:
-    RiotCalculator() = default;
+    RiotCalculator(Signal<>& rWillRiot, Signal<>& rIsRioting, Signal<>& rRiotEnded);
     ~RiotCalculator() = default;
 
     // Call after a pop is added. Emits will_riot if conditions are met but riot is not yet active.
-    void NotifyPopGrown(bool bDroneRiotCondition);
+    void NotifyPopGrown(const RiotConditionInputs& inputs);
 
     // Call at end of turn. Emits is_rioting if conditions are met (activates riot),
     // or riot_ended if conditions are no longer met and base was rioting.
-    void Update(bool bDroneRiotCondition);
+    void Update(const RiotConditionInputs& inputs);
 
     // True if base is currently in an active drone riot.
     bool IsRioting() const;
 
-    // Signals
-    Signal<> will_riot;   // conditions met after growth, riot not yet active
-    Signal<> is_rioting;  // end-of-turn: conditions still met, riot now active
-    Signal<> riot_ended;  // end-of-turn: conditions no longer met, riot was active
-
 private:
+    Signal<>& m_rWillRiot;
+    Signal<>& m_rIsRioting;
+    Signal<>& m_rRiotEnded;
     bool m_bRioting = false;
+
+    static bool ComputeCondition_(const RiotConditionInputs& inputs);
 };
 
 } // namespace ac

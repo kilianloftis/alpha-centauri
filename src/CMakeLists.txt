@@ -10,7 +10,9 @@ add_executable(alpha-centauri
     game/faction/Research.cpp
     game/faction/Diplomacy.cpp
     game/faction/Base.cpp
+    game/faction/WorkerAssignmentManager.cpp
     game/faction/population/PopulationManager.cpp
+    game/faction/population/PopContainer.cpp
     game/faction/population/Pop.cpp
     game/faction/population/PopFactory.cpp
     game/faction/population/PopTypeConfigParser.cpp
@@ -28,6 +30,11 @@ add_executable(alpha-centauri
     game/TurnStageFactory.cpp
     game/TurnStageConfigParser.cpp
     game/HookContext.cpp
+    game/map/Tile.cpp
+    game/map/TileBonusConfigParser.cpp
+    game/map/TileBonusRegistry.cpp
+    game/map/WorldMap.cpp
+    game/map/WorldGenerator.cpp
     game/stages/TurnStart.cpp
     game/stages/NewYearBegins.cpp
     game/stages/IncomeCollection.cpp
@@ -44,6 +51,9 @@ add_executable(alpha-centauri
     game/stages/CustomTurnStage.cpp
     input/KeyMapping.cpp
     ui/PopulationDisplay.cpp
+    ui/WorldDisplay.cpp
+    ui/BaseWorkableAreaDisplay.cpp
+    ui/TileHitTester.cpp
 )
 
 target_include_directories(alpha-centauri PRIVATE
@@ -114,7 +124,7 @@ option(USE_SFML "Enable SFML rendering" ON)
 if(USE_SFML)
     find_package(SFML 3.0.1 COMPONENTS Graphics Window System REQUIRED)
     target_compile_definitions(alpha-centauri PRIVATE USE_SFML)
-    target_sources(alpha-centauri PRIVATE graphics/SFMLGraphics.cpp input/SFMLInput.cpp input/SFMLKeyEventQueue.cpp)
+    target_sources(alpha-centauri PRIVATE graphics/SFMLGraphics.cpp input/SFMLInput.cpp input/SFMLKeyEventQueue.cpp input/SFMLMouseEventQueue.cpp)
     target_link_libraries(alpha-centauri PRIVATE sfml-graphics sfml-window sfml-system)
 else()
     target_sources(alpha-centauri PRIVATE graphics/NullGraphics.cpp input/NullInput.cpp)

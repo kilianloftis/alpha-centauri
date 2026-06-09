@@ -27,7 +27,7 @@ struct GrowthState_t
 class GrowthCalculator
 {
 public:
-    GrowthCalculator() = default;
+    GrowthCalculator(Signal<>& rOnGrowth, Signal<>& rOnStarvation);
     ~GrowthCalculator() = default;
 
     // Advance one turn: accumulate surplus, check thresholds.
@@ -42,11 +42,9 @@ public:
     // Nutrients required to grow given the provided inputs (does not mutate state).
     static int ComputeNutrientsRequired(int baseSize, int growthRateModifier);
 
-    // Signals
-    Signal<> on_growth;     // nutrient bank reached threshold; base may grow
-    Signal<> on_starvation; // nutrient bank went negative; base may shrink
-
 private:
+    Signal<>& m_rOnGrowth;
+    Signal<>& m_rOnStarvation;
     int m_nutrientBank = 0;
 };
 

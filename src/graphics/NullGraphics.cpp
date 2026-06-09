@@ -37,9 +37,13 @@ bool DrawSprite(const std::string& textureId, float x, float y) override
         return false;
     }
 
-void DrawText(const std::string& text, float x, float y, unsigned int size = 24) override
+void DrawText(const std::string& text, float x, float y, unsigned int size = 24, const Color& color = Color::White()) override
     {
         std::cout << "[Graphics] Skipping draw text: '" << text << "'\n";
+    }
+
+void DrawRect(float x, float y, float width, float height, const Color& color = Color::White(), float thickness = 1.0f) override
+    {
     }
 };
 

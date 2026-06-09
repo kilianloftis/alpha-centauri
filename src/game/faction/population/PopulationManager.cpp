@@ -7,25 +7,25 @@ namespace ac
 {
 
 PopulationManager::PopulationManager()
-    : m_pPopFactory(std::make_unique<PopFactory>())
-    , m_maxSize(8)
-    , m_growthRate(1)
+    : PopulationManager(3)
 {
-    m_growth.on_growth.connect([this]() { AddPop(); });
-    m_growth.on_starvation.connect([this]() { RemovePop(); });
 }
 
 PopulationManager::PopulationManager(int initialSize)
-    : m_pPopFactory(std::make_unique<PopFactory>())
-    , m_maxSize(8)
+    : m_maxSize(8)
     , m_growthRate(1)
+    , m_riot(on_will_riot, on_is_rioting, on_riot_ended)
+    , m_growth(on_growth, on_starvation)
+    , m_golden_age(on_golden_age_started, on_golden_age_ended)
 {
-    m_growth.on_growth.connect([this]() { AddPop(); });
-    m_growth.on_starvation.connect([this]() { RemovePop(); });
+    on_growth.connect([this]() { AddPop(); });
+    on_starvation.connect([this]() { RemovePop(); });
 
     if (initialSize > 0)
     {
-        m_pops.reserve(static_cast<size_t>(initialSize));
+        // Reserve capacity in container for initial population
+        // Actual pops created when registry is set
+        m_container.Reserve(initialSize);
     }
 }
 
@@ -35,7 +35,7 @@ PopulationManager::~PopulationManager()
 
 int PopulationManager::GetSize() const
 {
-    return static_cast<int>(m_pops.size());
+    return m_container.GetSize();
 }
 
 const std::string& PopulationManager::GetDefaultPopType_() const
@@ -48,37 +48,6 @@ const std::string& PopulationManager::GetDefaultPopType_() const
     return kFallback;
 }
 
-int PopulationManager::ComputePsychOutput_() const
-{
-    static const PopProduction_t kNoTile = {};
-    int total = 0;
-    for (const auto& pPop : m_pops)
-    {
-        total += pPop->GetProduction(kNoTile).psych;
-    }
-    return total;
-}
-
-void PopulationManager::SetSize(int size)
-{
-    if (size > GetSize())
-    {
-        // Add pops
-        while (GetSize() < size)
-        {
-            AddPop();
-        }
-    }
-    else if (size < GetSize())
-    {
-        // Remove pops
-        while (GetSize() > size)
-        {
-            RemovePop();
-        }
-    }
-}
-
 int PopulationManager::GetGrowthRate() const
 {
     return m_growthRate;
@@ -86,94 +55,28 @@ int PopulationManager::GetGrowthRate() const
 
 bool PopulationManager::CanGrow() const
 {
-    return static_cast<int>(m_pops.size()) < m_maxSize;
-}
-
-const std::vector<std::unique_ptr<Pop>>& PopulationManager::GetPops() const
-{
-    return m_pops;
-}
-
-Pop* PopulationManager::GetPop(size_t index)
-{
-    if (index < m_pops.size())
-    {
-        return m_pops[index].get();
-    }
-    return nullptr;
-}
-
-int PopulationManager::GetWorkerCount() const
-{
-    return CountPops_([](const Pop* p) { return p->IsWorker() && !p->IsSpecialist(); });
-}
-
-int PopulationManager::GetTalentCount() const
-{
-    return CountPops_([](const Pop* p) { return p->IsWorker() && p->GetGoldenAgeContribution() > 0; });
-}
-
-int PopulationManager::GetDroneCount() const
-{
-    return CountPops_([](const Pop* p) { return p->IsDrone(); });
-}
-
-int PopulationManager::GetSpecialistCount() const
-{
-    return CountPops_([](const Pop* p) { return p->IsSpecialist(); });
+    return m_container.GetSize() < m_maxSize;
 }
 
 void PopulationManager::AddPop()
 {
     if (CanGrow())
     {
-        m_pops.push_back(m_pPopFactory->CreatePop(GetDefaultPopType_()));
+        m_container.AddPop(GetDefaultPopType_());
         NotifyPopGained_();
-        m_riot.NotifyPopGrown(HasDroneRiot());
+        m_riot.NotifyPopGrown(BuildRiotInputs_());
     }
 }
 
 void PopulationManager::RemovePop()
 {
-    if (!m_pops.empty())
-    {
-        m_pops.pop_back();
-        NotifyPopLost_();
-    }
+    m_container.RemovePop();
+    NotifyPopLost_();
 }
 
 void PopulationManager::ConvertTo(size_t index, const std::string& typeId)
 {
-    if (index >= m_pops.size())
-    {
-        return;
-    }
-    int tileId = m_pops[index]->GetTileId();
-    auto pNewPop = m_pPopFactory->CreatePop(typeId);
-    if (pNewPop)
-    {
-        pNewPop->SetTileId(tileId);
-        m_pops[index] = std::move(pNewPop);
-    }
-}
-
-void PopulationManager::SetRegistry(const PopTypeRegistry* pRegistry)
-{
-    m_pPopFactory->SetRegistry(pRegistry);
-
-    // Populate reserved pops now that the registry is available
-    if (m_pops.empty() && m_pops.capacity() > 0)
-    {
-        const size_t target = m_pops.capacity();
-        for (size_t i = 0; i < target; i++)
-        {
-            auto pPop = m_pPopFactory->CreatePop(GetDefaultPopType_());
-            if (pPop)
-            {
-                m_pops.push_back(std::move(pPop));
-            }
-        }
-    }
+    m_container.ConvertTo(index, typeId);
 }
 
 int PopulationManager::GetMaxSize() const
@@ -185,47 +88,44 @@ void PopulationManager::SetMaxSize(int maxSize)
 {
     m_maxSize = maxSize;
     // Trim excess pops if max size decreased
-    bool bLostPop = false;
-    while (static_cast<int>(m_pops.size()) > m_maxSize)
+    while (m_container.GetSize() > m_maxSize)
     {
-        m_pops.pop_back();
-        bLostPop = true;
-    }
-    if (bLostPop)
-    {
-        NotifyPopLost_();
+        RemovePop();
     }
 }
 
-bool PopulationManager::HasDroneRiot() const
+bool PopulationManager::IsRioting() const
 {
-    if (m_pCompositionCalculator)
-    {
-        PopCompositionInputs inputs;
-        inputs.baseSize   = GetSize();
-        inputs.psychOutput = ComputePsychOutput_();
-        // TODO: supply faction drone/talent modifiers once faction modifiers are accessible here
-        const PopCompositionResult result = m_pCompositionCalculator->Calculate(inputs);
-        return GetDroneCount() > result.targetTalents;
-    }
-    return GetDroneCount() > GetTalentCount();
+    return m_riot.IsRioting();
 }
 
 bool PopulationManager::IsDestroyed() const
 {
-    return m_pops.empty();
+    return m_container.GetSize() == 0;
 }
 
-void PopulationManager::AddDrone()
+RiotConditionInputs PopulationManager::BuildRiotInputs_() const
 {
-    // Convert a random worker to a drone
-    for (size_t i = 0; i < m_pops.size(); i++)
+    RiotConditionInputs inputs;
+    inputs.droneCount = m_container.GetDroneCount();
+    inputs.talentCount = m_container.GetTalentCount();
+    if (m_pCompositionCalculator)
     {
-        if (m_pops[i]->IsWorker() && !m_pops[i]->IsSpecialist())
-        {
-            ConvertTo(i, "Drone");
-            return;
-        }
+        PopCompositionInputs compInputs;
+        compInputs.baseSize = m_container.GetSize();
+        compInputs.psychOutput = m_container.ComputePsychOutput();
+        const PopCompositionResult result = m_pCompositionCalculator->Calculate(compInputs);
+        inputs.targetTalents = result.targetTalents;
+    }
+    return inputs;
+}
+
+void PopulationManager::SetRegistry(const PopTypeRegistry* pRegistry)
+{
+    const int popsCreated = m_container.SetRegistry(pRegistry);
+    for (int i = 0; i < popsCreated; ++i)
+    {
+        NotifyPopGained_();
     }
 }
 
@@ -242,91 +142,41 @@ void PopulationManager::RecalculateComposition()
     }
 
     PopCompositionInputs inputs;
-    inputs.baseSize    = GetSize();
-    inputs.psychOutput = ComputePsychOutput_();
+    inputs.baseSize = m_container.GetSize();
+    inputs.psychOutput = m_container.ComputePsychOutput();
     // TODO: supply faction drone/talent modifiers once faction modifiers are accessible here
     const PopCompositionResult targets = m_pCompositionCalculator->Calculate(inputs);
 
-    // Convert excess drones back to workers first
-    int currentDrones = GetDroneCount();
-    for (size_t i = 0; i < m_pops.size() && currentDrones > targets.targetDrones; i++)
-    {
-        if (m_pops[i]->IsDrone())
-        {
-            ConvertTo(i, GetDefaultPopType_());
-            currentDrones--;
-        }
-    }
-
-    // Convert excess talents back to workers
-    int currentTalents = GetTalentCount();
-    for (size_t i = 0; i < m_pops.size() && currentTalents > targets.targetTalents; i++)
-    {
-        if (m_pops[i]->IsWorker() && m_pops[i]->GetGoldenAgeContribution() > 0)
-        {
-            ConvertTo(i, GetDefaultPopType_());
-            currentTalents--;
-        }
-    }
-
-    // Convert workers to drones to reach target
-    currentDrones = GetDroneCount();
-    for (size_t i = 0; i < m_pops.size() && currentDrones < targets.targetDrones; i++)
-    {
-        if (m_pops[i]->IsWorker() && !m_pops[i]->IsSpecialist() && m_pops[i]->GetGoldenAgeContribution() == 0)
-        {
-            ConvertTo(i, "Drone");
-            currentDrones++;
-        }
-    }
-
-    // Convert workers to talents to reach target
-    currentTalents = GetTalentCount();
-    for (size_t i = 0; i < m_pops.size() && currentTalents < targets.targetTalents; i++)
-    {
-        if (m_pops[i]->IsWorker() && !m_pops[i]->IsSpecialist() && m_pops[i]->GetGoldenAgeContribution() == 0)
-        {
-            ConvertTo(i, "Talent");
-            currentTalents++;
-        }
-    }
-}
-
-int PopulationManager::CountPops_(bool (*predicate)(const Pop*)) const
-{
-    int count = 0;
-    for (const auto& pPop : m_pops)
-    {
-        if (predicate(pPop.get()))
-        {
-            count++;
-        }
-    }
-    return count;
+    m_container.ApplyCompositionTargets(targets, GetDefaultPopType_());
 }
 
 void PopulationManager::AccumulateGrowth(int nutrientsPerTurn)
 {
     GrowthInputs_t inputs;
-    inputs.baseSize           = GetSize();
-    inputs.nutrientsPerTurn   = nutrientsPerTurn;
+    inputs.baseSize = m_container.GetSize();
+    inputs.nutrientsPerTurn = nutrientsPerTurn;
     inputs.growthRateModifier = m_growthRate;
     m_growth.Accumulate(inputs);
 }
 
 void PopulationManager::CheckRiotEndOfTurn()
 {
-    m_riot.Update(HasDroneRiot());
+    m_riot.Update(BuildRiotInputs_());
 }
 
 void PopulationManager::CheckGoldenAgeEndOfTurn()
 {
     GoldenAgeCalculator::Inputs_t inputs;
-    inputs.droneCount      = GetDroneCount();
-    inputs.talentCount     = GetTalentCount();
-    inputs.workerCount     = GetWorkerCount();
-    inputs.specialistCount = GetSpecialistCount();
+    inputs.droneCount = m_container.GetDroneCount();
+    inputs.talentCount = m_container.GetTalentCount();
+    inputs.workerCount = m_container.GetWorkerCount();
+    inputs.specialistCount = m_container.GetSpecialistCount();
     m_golden_age.Update(inputs);
+}
+
+int PopulationManager::GetNutrientBank() const
+{
+    return m_growth.GetNutrientBank();
 }
 
 void PopulationManager::NotifyPopGained_()
@@ -337,21 +187,6 @@ void PopulationManager::NotifyPopGained_()
 void PopulationManager::NotifyPopLost_()
 {
     on_pop_lost.emit(GetSize());
-}
-
-const RiotCalculator& PopulationManager::GetRiot() const
-{
-    return m_riot;
-}
-
-const GrowthCalculator& PopulationManager::GetGrowth() const
-{
-    return m_growth;
-}
-
-const GoldenAgeCalculator& PopulationManager::GetGoldenAge() const
-{
-    return m_golden_age;
 }
 
 } // namespace ac

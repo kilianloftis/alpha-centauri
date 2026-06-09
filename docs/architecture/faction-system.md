@@ -45,6 +45,12 @@ graph TB
         BaseManager[BaseManager]
     end
 
+    subgraph "Base Subsystem"
+        Base[Base]
+        WorkerAssignmentManager[WorkerAssignmentManager<br/>popId→tileCoord map]
+        PopulationManager[PopulationManager]
+    end
+
     subgraph "Research Subsystem"
         Research[Research]
         TechTree[TechTree]
@@ -113,6 +119,9 @@ graph TB
     
     Military --> Unit
     Military --> Base
+    Base --> WorkerAssignmentManager
+    Base --> PopulationManager
+    PopulationManager --> WorkerAssignmentManager
     Research --> Tech
     Diplomacy --> Treaty
     Diplomacy --> Relation
@@ -217,15 +226,21 @@ graph TB
   - `Base`: Main base class managing population, buildings, and resources
   - `Population`: Abstract base class for population implementations
   - `PopulationManager`: API surface for the population component; manages pop composition, growth, and riot state for a single base
+  - `WorkerAssignmentManager`: Maps stable pop IDs to workable tile coordinates; prunes stale assignments when population changes; computes aggregate worked resources via a tile-lookup callable
   - `PopFactory`: Creates individual `Pop` instances from config (looked up via `PopTypeRegistry`)
   - `RiotCalculator`: Tracks drone riot state and emits `will_riot`, `is_rioting`, and `riot_ended` signals
   - `GrowthCalculator`: Accumulates nutrient surplus across turns and emits `on_growth` / `on_starvation` when thresholds are crossed
   - `WorkerRoles`: Enum defining worker roles (Worker, Lab, Psych, Econ, Drone, Talent)
   - `Buildings`: Collection of building IDs in the base
   - `TileResources`: Resources (nutrients, energy, minerals) from worked tiles
+  - `Position`: Map coordinates (x, y) used to calculate the workable tile radius
+  - `StablePopId`: Each `Pop` carries a monotonically assigned integer ID (set by `PopContainer`), preserved across `ConvertTo()` type changes
   - `TradeRoutes`: Collection of trade routes providing additional energy
 - **Responsibilities**:
   - Manage population growth and size (1-8 initially, expandable with buildings)
+  - Expose the set of workable tiles via `GetWorkableTilePositions()` (5×5 grid minus corners, Manhattan distance ≤ 3 within [-2,2] offsets, 20 tiles, excluding own tile). Tiles already worked by another base or occupied by an enemy unit cannot be worked (enemy-unit check is TODO pending unit implementation).
+  - Delegate worker-to-tile assignment tracking to `WorkerAssignmentManager` (owned as `m_workerAssignments`)
+  - Connect `PopulationManager::on_pop_gained` and `on_pop_lost` to `WorkerAssignmentManager::OnPopulationChanged()` to automatically prune invalid assignments
   - Assign workers to different roles (tiles, labs, psych, econ, drones, talents)
   - Track buildings constructed in the base
   - Calculate resource output based on worker assignments:

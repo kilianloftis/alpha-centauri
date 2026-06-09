@@ -31,6 +31,13 @@ graph TB
         TurnStages[TurnStages.h<br/>TurnStage enum<br/>TurnStageBase]
     end
 
+    subgraph "Map System"
+        Tile[Tile]
+        TileMap[(TileMap<br/>future)]
+        TileBonusRegistry[TileBonusRegistry]
+        TileBonusConfig[TileBonusConfig]
+    end
+
     subgraph "Faction System"
         GameState[GameState]
         FactionVector[FactionVector<br/>vector<unique_ptr<Faction>>]
@@ -47,7 +54,14 @@ graph TB
     end
 
     subgraph "Configuration"
-        Config[config/turn_stages.json]
+        TurnStagesConfig[config/turn_stages.json]
+        TileBonusConfigFile[config/tile_bonuses.json]
+    end
+
+    subgraph "UI Components"
+        PopulationDisplay[PopulationDisplay]
+        WorldDisplay[WorldDisplay]
+        BaseWorkableAreaDisplay[BaseWorkableAreaDisplay]
     end
 
     main --> Engine
@@ -68,20 +82,33 @@ graph TB
 
     TurnProcessor --> HookSystem
     TurnProcessor --> GameState
-    HookSystem --> Config
+    HookSystem --> TurnStagesConfig
     TurnStageFactory --> HookSystem
-    TurnStageFactory --> Config
+    TurnStageFactory --> TurnStagesConfig
+    TileBonusRegistry --> TileBonusConfigFile
     TurnStageFactory --> TurnStages
+    TileMap --> Tile
+    TileBonusRegistry --> TileBonusConfig
+    Tile --> TileBonusConfig
     GameState --> FactionVector
     FactionFactory --> Faction
     FactionVector --> Faction
     Faction --> FactionSubsystems
+    FactionSubsystems --> Tile
 
     EventBridge --> GameState
     EventBridge --> EventBus
     EventBus --> GameEvent
     Faction --> Signal
     TurnProcessor --> Signal
+
+    PopulationDisplay --> Graphics
+    PopulationDisplay --> EventBus
+    WorldDisplay --> Graphics
+    WorldDisplay --> Tile
+    BaseWorkableAreaDisplay --> Graphics
+    BaseWorkableAreaDisplay --> Tile
+    BaseWorkableAreaDisplay --> Base
 
     style Engine fill:#f9f,stroke:#333,stroke-width:4px
     style Graphics fill:#bbf,stroke:#333,stroke-width:2px
@@ -95,8 +122,15 @@ graph TB
     style FactionFactory fill:#ff9,stroke:#333,stroke-width:2px
     style Faction fill:#f9f,stroke:#333,stroke-width:2px
     style Signal fill:#f9f,stroke:#333,stroke-width:2px
+    style Tile fill:#fbf,stroke:#333,stroke-width:2px
+    style TileMap fill:#fbf,stroke:#333,stroke-width:2px
+    style TileBonusRegistry fill:#fbf,stroke:#333,stroke-width:2px
+    style TileBonusConfig fill:#ff9,stroke:#333,stroke-width:2px
     style EventBus fill:#bbf,stroke:#333,stroke-width:3px
     style EventBridge fill:#fbf,stroke:#333,stroke-width:2px
+    style PopulationDisplay fill:#bfb,stroke:#333,stroke-width:2px
+    style WorldDisplay fill:#bfb,stroke:#333,stroke-width:2px
+    style BaseWorkableAreaDisplay fill:#bfb,stroke:#333,stroke-width:2px
 ```
 
 ## Component Overview
@@ -154,10 +188,21 @@ graph TB
   - Each Faction owns its subsystems
 - **Details**: See `docs/architecture/faction-system.md` for detailed architecture
 
+### Map System
+- **Purpose**: Manages game world terrain and tile-based resource production
+- **Components**:
+  - `Tile`: Represents a single map tile with position (x,y), terrain characteristics (Moisture, Rockiness, Elevation), Rivers, Landmarks, Improvements, Bonus, and Worker assignment tracking
+  - `TileMap`: (Future) Container for the 2D grid of tiles
+  - `TileBonusRegistry`: Loads and provides access to tile bonus definitions
+  - `TileBonusConfig`: Data structure for bonus definitions (resource bonuses + sprite path)
+- **Dependencies**:
+  - Faction subsystems (particularly Military with Bases) work tiles for resources
+  - TileBonusRegistry loads from config/tile_bonuses.json
+- **Details**: See `docs/architecture/map-system.md` for detailed architecture
+
 ### Configuration
-- **Purpose**: Stores turn stage configuration for the hook system
-- **File**: `config/turn_stages.json`
-- **Usage**: Loaded by HookSystem to define turn stages and hooks
+- **Turn Stages Config**: `config/turn_stages.json` - Loaded by HookSystem to define turn stages and hooks
+- **Tile Bonus Config**: `config/tile_bonuses.json` - Loaded by TileBonusRegistry to define tile bonus types and their resource bonuses
 
 ### Event System
 - **Purpose**: Two-layer event system for internal engine communication and mod interface
@@ -171,3 +216,15 @@ graph TB
   - EventBridge depends on GameState and EventBus
   - Faction and TurnProcessor use Signal<T> for internal communication
 - **Details**: See `docs/architecture/event-system.md` for detailed architecture
+
+### UI Components
+- **Purpose**: Display components that render game information using the Graphics interface
+- **Components**:
+  - `PopulationDisplay`: Displays current population and per-pop type breakdown
+  - `WorldDisplay`: Displays the world map as a grid of tiles with terrain info
+  - `BaseWorkableAreaDisplay`: Displays the 21-tile workable area around a base with resource production
+- **Dependencies**:
+  - All UI components depend on Graphics for rendering
+  - PopulationDisplay subscribes to EventBus for population change events
+  - WorldDisplay reads from Tile objects for terrain data
+- **Details**: See `docs/architecture/graphics-system.md` for detailed UI component documentation

@@ -3,6 +3,7 @@
 #include "input/Input.h"
 #include "input/KeyMapping.h"
 #include "input/SFMLKeyEventQueue.h"
+#include "input/SFMLMouseEventQueue.h"
 #include <SFML/Window/Keyboard.hpp>
 #include <SFML/Window/Mouse.hpp>
 #include <chrono>
@@ -56,34 +57,14 @@ if (auto key = CaptureKey())
 
 std::optional<MouseEvent> CaptureMouse() override
 {
-    std::cout << "Waiting for mouse click in window...\n";
-
-while (true)
-    {
-for (auto b : buttons)
-        {
-if (sf::Mouse::isButtonPressed(b))
-            {
-                auto pos = sf::Mouse::getPosition();
-                MouseButton mb = MouseButton::None;
-                if (b == sf::Mouse::Button::Left) mb = MouseButton::Left;
-                else if (b == sf::Mouse::Button::Right) mb = MouseButton::Right;
-                else if (b == sf::Mouse::Button::Middle) mb = MouseButton::Middle;
-                return MouseEvent{mb, pos.x, pos.y};
-            }
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
+    return PopPendingMouseEvent();
 }
 
 void CaptureMouseAsync(std::function<void(MouseEvent)> callback) override
 {
-if (auto m = CaptureMouse())
+    if (auto m = CaptureMouse())
     {
         callback(*m);
-} else
-    {
-        callback(MouseEvent{MouseButton::None, 0, 0});
     }
 }
 };

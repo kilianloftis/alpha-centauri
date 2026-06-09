@@ -3,31 +3,44 @@
 namespace ac
 {
 
-void RiotCalculator::NotifyPopGrown(bool bDroneRiotCondition)
+RiotCalculator::RiotCalculator(Signal<>& rWillRiot, Signal<>& rIsRioting, Signal<>& rRiotEnded)
+    : m_rWillRiot(rWillRiot)
+    , m_rIsRioting(rIsRioting)
+    , m_rRiotEnded(rRiotEnded)
 {
-    if (!m_bRioting && bDroneRiotCondition)
+}
+
+void RiotCalculator::NotifyPopGrown(const RiotConditionInputs& inputs)
+{
+    if (!m_bRioting && ComputeCondition_(inputs))
     {
-        will_riot.emit();
+        m_rWillRiot.emit();
     }
 }
 
-void RiotCalculator::Update(bool bDroneRiotCondition)
+void RiotCalculator::Update(const RiotConditionInputs& inputs)
 {
-    if (bDroneRiotCondition)
+    if (ComputeCondition_(inputs))
     {
         m_bRioting = true;
-        is_rioting.emit();
+        m_rIsRioting.emit();
     }
     else if (m_bRioting)
     {
         m_bRioting = false;
-        riot_ended.emit();
+        m_rRiotEnded.emit();
     }
 }
 
 bool RiotCalculator::IsRioting() const
 {
     return m_bRioting;
+}
+
+bool RiotCalculator::ComputeCondition_(const RiotConditionInputs& inputs)
+{
+    int threshold = (inputs.targetTalents >= 0) ? inputs.targetTalents : inputs.talentCount;
+    return inputs.droneCount > threshold;
 }
 
 } // namespace ac

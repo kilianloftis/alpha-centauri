@@ -15,7 +15,10 @@
 #include "game/faction/population/PopCompositionConfigParser.h"
 #include "game/faction/population/PopCompositionCalculator.h"
 #include "lib/LuaRuntime.h"
-#include "ui/PopulationDisplay.h"
+#include "ui/WorldDisplay.h"
+#include "ui/BaseWorkableAreaDisplay.h"
+#include "ui/TileHitTester.h"
+#include "game/map/WorldGenerator.h"
 #include <iostream>
 #include <stdexcept>
 #include <magic_enum.hpp>
@@ -50,24 +53,12 @@ void Engine::GameLoop_()
 {
     while (!m_gameState->ShouldExit())
     {
-        // Display current game state
         m_graphics->Clear();
         Render_();
         m_graphics->Display();
 
-        // Wait for player input
-        m_input->CaptureKeyAsync([this](KeyEvent event)
-        {
-            if (event.key == Key::Enter)
-            {
-                // Process the turn when Enter is pressed
-                this->ProcessTurn_();
-            }
-            else if (event.key == Key::Escape)
-            {
-                this->m_gameState->SetShouldExit(true);
-            }
-        });
+        HandleMouseInput_();
+        HandleKeyInput_();
     }
 }
 
@@ -81,6 +72,12 @@ void Engine::ProcessTurn_()
 void Engine::Initialize_()
 {
     std::cout << "Initializing game engine...\n";
+
+    // Initialize graphics backend
+    if (!m_graphics->Initialize())
+    {
+        throw std::runtime_error("Failed to initialize graphics backend");
+    }
 
     // Create EventBridge
     m_eventBridge = std::make_unique<EventBridge>(*m_gameState, *m_eventBus);
@@ -108,12 +105,23 @@ void Engine::Initialize_()
     m_popCompositionConfig     = std::make_unique<PopCompositionConfig>(compositionParser.ParseConfig("config/pop_composition.lua", *m_luaRuntime));
     m_popCompositionCalculator = std::make_unique<PopCompositionCalculator>(*m_popCompositionConfig, *m_luaRuntime);
 
+    // Generate world map
+    WorldGenerator worldGen;
+    WorldGenConfig worldConfig;
+    worldConfig.width = 12;
+    worldConfig.height = 8;
+    worldConfig.minElevation = -1000;
+    worldConfig.maxElevation = 2000;
+    m_worldMap = worldGen.Generate(worldConfig);
+    std::cout << "Generated world map: " << m_worldMap->GetWidth() << "x" << m_worldMap->GetHeight() << "\n";
+
     // Create test faction with a base
     auto pFaction = std::make_unique<Faction>();
     auto pBase = std::make_unique<Base>();
     pBase->SetFactionId(1);  // Test faction ID
     pBase->SetBaseId(1);     // Test base ID
     pBase->SetName("Test Base");
+    pBase->SetPosition(6, 4);  // Center of 12x8 world
 
     std::cout << "Created test base with initial population: " << pBase->GetPopulation()->GetSize() << "\n";
 
@@ -131,17 +139,26 @@ void Engine::Initialize_()
     std::cout << "Test setup complete. " << m_gameState->GetNumFactions() << " faction(s), "
               << m_gameState->GetFactions()[0]->GetBaseCount() << " base(s)\n";
 
-    // Create population display and initialize with current population
-    m_popDisplay = std::make_unique<PopulationDisplay>(*m_eventBus, *m_graphics);
-    if (m_gameState->GetNumFactions() > 0 && m_gameState->GetFactions()[0]->GetBaseCount() > 0)
+    // Create UI displays
+    m_worldDisplay = std::make_unique<WorldDisplay>(*m_graphics);
+    m_worldDisplay->SetWorldMap(m_worldMap.get());
+
+    // Collect base positions for the world display
+    std::vector<std::pair<int, int>> basePositions;
+    for (const auto& pFaction : m_gameState->GetFactions())
     {
-        Base* pBase = m_gameState->GetFactions()[0]->GetBase(0);
-        if (pBase && pBase->GetPopulation())
+        for (size_t i = 0; i < pFaction->GetBaseCount(); ++i)
         {
-            m_popDisplay->SetCurrentPop(pBase->GetPopulation()->GetSize());
-            m_popDisplay->SetPopulation(pBase->GetPopulation());
+            const Base* pB = pFaction->GetBase(i);
+            if (pB)
+            {
+                basePositions.emplace_back(pB->GetX(), pB->GetY());
+            }
         }
     }
+    m_worldDisplay->SetBasePositions(basePositions);
+
+    m_workableAreaDisplay = std::make_unique<BaseWorkableAreaDisplay>(*m_graphics, *m_worldMap);
 
     m_turnStageFactory->SetCompositionCalculator(m_popCompositionCalculator.get());
     m_turnStageFactory->LoadConfig("config/turn_stages.json");
@@ -178,16 +195,200 @@ void Engine::PrintWelcome_() const
     std::cout << "Welcome to Alpha Centauri (C++ rebuild)!\n";
 }
 
+void Engine::HandleMouseInput_()
+{
+    m_input->CaptureMouseAsync([this](MouseEvent event)
+    {
+        if (event.button == MouseButton::None)
+        {
+            return;
+        }
+
+        switch (m_activeView)
+        {
+            case ViewMode::World:
+                HandleWorldViewMouse_(event.x, event.y);
+                break;
+            case ViewMode::Base:
+                HandleBaseViewMouse_(event.x, event.y);
+                break;
+        }
+    });
+}
+
+void Engine::HandleKeyInput_()
+{
+    m_input->CaptureKeyAsync([this](KeyEvent event)
+    {
+        if (event.key == Key::Escape)
+        {
+            if (m_activeView == ViewMode::Base)
+            {
+                ReturnToWorldView_();
+            }
+            else
+            {
+                m_gameState->SetShouldExit(true);
+            }
+        }
+        else if (event.key == Key::Enter && m_activeView == ViewMode::World)
+        {
+            ProcessTurn_();
+        }
+    });
+}
+
 void Engine::Render_()
 {
     m_graphics->DrawText("Mission Year: " + std::to_string(m_gameState->GetMissionYear()), 20.f, 20.f, 24);
-    
-    if (m_popDisplay)
+
+    switch (m_activeView)
     {
-        m_popDisplay->Render(20.f, 50.f);
+        case ViewMode::World:
+            RenderWorldView_();
+            break;
+        case ViewMode::Base:
+            RenderBaseView_();
+            break;
     }
-    
-    m_graphics->DrawText("Press Enter to continue or Esc to quit.", 20.f, 80.f, 20);
+
+    // Show last-clicked tile info at the bottom of the screen
+    if (!m_lastClickedTileText.empty())
+    {
+        m_graphics->DrawText(m_lastClickedTileText, 20.f, 570.f, 18, Color::Yellow());
+    }
+}
+
+void Engine::RenderWorldView_()
+{
+    if (m_worldDisplay)
+    {
+        m_worldDisplay->Render(kWorldOriginX, kWorldOriginY, kWorldTileSize);
+    }
+}
+
+void Engine::RenderBaseView_()
+{
+    if (m_pActiveBase && m_workableAreaDisplay)
+    {
+        m_graphics->DrawText(m_pActiveBase->GetName(), 20.f, 40.f, 20, Color::Yellow());
+        m_workableAreaDisplay->Render(kBaseAreaCenterX, kBaseAreaCenterY, kBaseTileSize);
+    }
+}
+
+void Engine::HandleWorldViewMouse_(int mouseX, int mouseY)
+{
+    auto tile = TileHitTester::HitTestWorldGrid(
+        static_cast<float>(mouseX), static_cast<float>(mouseY),
+        kWorldOriginX, kWorldOriginY, kWorldTileSize,
+        m_worldMap->GetWidth(), m_worldMap->GetHeight());
+
+    if (tile)
+    {
+        m_lastClickedTile = tile;
+        m_lastClickedTileText = "Clicked tile: (" + std::to_string(tile->first) + ", " + std::to_string(tile->second) + ")";
+
+        Base* pBase = FindBaseAtTile_(tile->first, tile->second);
+        if (pBase)
+        {
+            OpenBaseView_(pBase);
+        }
+    }
+    else
+    {
+        m_lastClickedTile = std::nullopt;
+        m_lastClickedTileText = "Clicked: (" + std::to_string(mouseX) + ", " + std::to_string(mouseY) + ") - no tile";
+    }
+}
+
+void Engine::HandleBaseViewMouse_(int mouseX, int mouseY)
+{
+    if (!m_pActiveBase)
+    {
+        return;
+    }
+
+    auto tile = TileHitTester::HitTestBaseWorkableArea(
+        static_cast<float>(mouseX), static_cast<float>(mouseY),
+        kBaseAreaCenterX, kBaseAreaCenterY, kBaseTileSize,
+        m_pActiveBase->GetX(), m_pActiveBase->GetY());
+
+    if (!tile)
+    {
+        m_lastClickedTile = std::nullopt;
+        m_lastClickedTileText = "Clicked: (" + std::to_string(mouseX) + ", " + std::to_string(mouseY) + ") - no tile";
+        return;
+    }
+
+    m_lastClickedTile = tile;
+    int tileX = tile->first;
+    int tileY = tile->second;
+    auto& rAssignments = m_pActiveBase->GetWorkerAssignments();
+    const auto& rPops = m_pActiveBase->GetPopulation()->GetContainer();
+
+    if (rAssignments.IsTileAssigned(tileX, tileY))
+    {
+        // Unassign the worker from this tile
+        for (const auto& rEntry : rAssignments.GetAssignments())
+        {
+            if (rEntry.second.first == tileX && rEntry.second.second == tileY)
+            {
+                rAssignments.UnassignWorker(rEntry.first);
+                m_lastClickedTileText = "Unassigned worker from (" + std::to_string(tileX) + ", " + std::to_string(tileY) + ")";
+                return;
+            }
+        }
+    }
+    else
+    {
+        // Reassign the last worker in the pop list to this tile
+        const auto& pops = rPops.GetPops();
+        for (int i = static_cast<int>(pops.size()) - 1; i >= 0; --i)
+        {
+            const Pop* pPop = pops[i].get();
+            if (pPop->IsWorker() && rAssignments.GetAssignedTile(pPop->GetId()).first != -1)
+            {
+                rAssignments.UnassignWorker(pPop->GetId());
+                if (rAssignments.AssignWorker(pPop->GetId(), tileX, tileY, rPops))
+                {
+                    m_lastClickedTileText = "Reassigned worker to (" + std::to_string(tileX) + ", " + std::to_string(tileY) + ")";
+                    return;
+                }
+            }
+        }
+        m_lastClickedTileText = "No workers available to reassign";
+    }
+}
+
+Base* Engine::FindBaseAtTile_(int tileX, int tileY) const
+{
+    for (const auto& pFaction : m_gameState->GetFactions())
+    {
+        for (size_t i = 0; i < pFaction->GetBaseCount(); ++i)
+        {
+            Base* pBase = pFaction->GetBase(i);
+            if (pBase && pBase->GetX() == tileX && pBase->GetY() == tileY)
+            {
+                return pBase;
+            }
+        }
+    }
+    return nullptr;
+}
+
+void Engine::OpenBaseView_(Base* pBase)
+{
+    m_pActiveBase = pBase;
+    m_activeView = ViewMode::Base;
+    m_workableAreaDisplay->SetBase(pBase);
+    m_lastClickedTileText = "Base: " + pBase->GetName();
+}
+
+void Engine::ReturnToWorldView_()
+{
+    m_activeView = ViewMode::World;
+    m_pActiveBase = nullptr;
+    m_lastClickedTileText.clear();
 }
 
 } // namespace ac

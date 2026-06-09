@@ -34,9 +34,9 @@ void Population::Execute_(GameState* pGameState, Faction* pFaction)
             PopulationManager* pPop = pBase->GetPopulation();
             pPop->SetCompositionCalculator(m_pCalculator);
 
-            std::cout << "  Accumulating growth for base '" << pBase->GetName() << "' (bank: " << pPop->GetGrowth().GetNutrientBank() << " -> ";
+            std::cout << "  Accumulating growth for base '" << pBase->GetName() << "' (bank: " << pPop->GetNutrientBank() << " -> ";
             pPop->AccumulateGrowth(pBase->GetNutrientProduction());
-            std::cout << pPop->GetGrowth().GetNutrientBank() << ", size: " << pPop->GetSize() << ")\n";
+            std::cout << pPop->GetNutrientBank() << ", size: " << pPop->GetSize() << ")\n";
 
             pPop->RecalculateComposition();
             pPop->CheckRiotEndOfTurn();

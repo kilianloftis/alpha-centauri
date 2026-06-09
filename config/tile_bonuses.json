@@ -1,0 +1,38 @@
+[
+  {
+    "id": "Nutrients",
+    "name": "Nutrients",
+    "description": "Exceptionally fertile soil provides extra nutrients",
+    "bonuses": {
+      "nutrients": 2,
+      "minerals": 0,
+      "energy": 0
+    },
+    "frequency": 10,
+    "sprite_path": "assets/sprites/tile_bonuses/nutrient_rich_soil.png"
+  },
+  {
+    "id": "Minerals",
+    "name": "Minerals",
+    "description": "Rich mineral veins near the surface",
+    "bonuses": {
+      "nutrients": 0,
+      "minerals": 2,
+      "energy": 0
+    },
+    "frequency": 10,
+    "sprite_path": "assets/sprites/tile_bonuses/mineral_deposit.png"
+  },
+  {
+    "id": "Energy",
+    "name": "Energy",
+    "description": "Natural energy source provides energy",
+    "bonuses": {
+      "nutrients": 0,
+      "minerals": 0,
+      "energy": 2
+    },
+    "frequency": 10,
+    "sprite_path": "assets/sprites/tile_bonuses/energy_vein.png"
+  }
+]

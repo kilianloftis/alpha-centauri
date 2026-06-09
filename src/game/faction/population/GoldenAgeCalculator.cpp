@@ -3,6 +3,12 @@
 namespace ac
 {
 
+GoldenAgeCalculator::GoldenAgeCalculator(Signal<>& rGoldenAgeStarted, Signal<>& rGoldenAgeEnded)
+    : m_rGoldenAgeStarted(rGoldenAgeStarted)
+    , m_rGoldenAgeEnded(rGoldenAgeEnded)
+{
+}
+
 bool GoldenAgeCalculator::EvaluateCondition_(const Inputs_t& inputs)
 {
     if (inputs.droneCount > 0)
@@ -18,12 +24,12 @@ void GoldenAgeCalculator::Update(const Inputs_t& inputs)
     if (bCondition && !m_bInGoldenAge)
     {
         m_bInGoldenAge = true;
-        golden_age_started.emit();
+        m_rGoldenAgeStarted.emit();
     }
     else if (!bCondition && m_bInGoldenAge)
     {
         m_bInGoldenAge = false;
-        golden_age_ended.emit();
+        m_rGoldenAgeEnded.emit();
     }
 }
 

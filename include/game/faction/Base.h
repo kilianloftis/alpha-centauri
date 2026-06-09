@@ -1,9 +1,12 @@
 #pragma once
 
 #include "lib/Signal.h"
+#include "game/faction/WorkerAssignmentManager.h"
+#include <functional>
 #include <memory>
 #include <vector>
 #include <string>
+#include <utility>
 
 namespace ac
 {
@@ -54,6 +57,21 @@ public:
     int GetNutrientProduction() const;
     int GetEnergyProduction() const;
     
+    // Position on the map
+    void SetPosition(int x, int y);
+    int GetX() const;
+    int GetY() const;
+
+    // Worker assignment subcomponent
+    WorkerAssignmentManager& GetWorkerAssignments();
+    const WorkerAssignmentManager& GetWorkerAssignments() const;
+
+    // Returns the set of (x,y) tile coordinates this base can assign workers to.
+    // Produces a 5x5 grid with the four corners removed (Manhattan distance <= 3
+    // within the [-2,2] bounding box), excluding the base's own tile.
+    // Does not filter for enemy units (TODO: when units exist).
+    std::vector<std::pair<int, int>> GetWorkableTilePositions() const;
+
     // Base identity
     void SetName(const std::string& name);
     const std::string& GetName() const;
@@ -67,9 +85,14 @@ public:
 private:
     FactionId m_factionId;
     int m_baseId;
+    int m_x;
+    int m_y;
+    WorkerAssignmentManager m_workerAssignments;
     int CalculateNutrients_() const;
     int CalculateEnergyProduction_() const;
     int CalculateMinerals_() const;
+
+    void AutoAssignUnassignedWorkers_();
 
     void ApplyProduction_();
     void ApplyNutrition_();

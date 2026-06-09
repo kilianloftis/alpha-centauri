@@ -12,7 +12,7 @@ namespace ac
 class GoldenAgeCalculator
 {
 public:
-    GoldenAgeCalculator() = default;
+    GoldenAgeCalculator(Signal<>& rGoldenAgeStarted, Signal<>& rGoldenAgeEnded);
     ~GoldenAgeCalculator() = default;
 
     struct Inputs_t
@@ -30,11 +30,9 @@ public:
     // Returns true if the base is currently in a golden age.
     bool IsInGoldenAge() const;
 
-    // Signals
-    Signal<> golden_age_started;  // conditions newly met
-    Signal<> golden_age_ended;    // conditions no longer met
-
 private:
+    Signal<>& m_rGoldenAgeStarted;
+    Signal<>& m_rGoldenAgeEnded;
     bool m_bInGoldenAge = false;
 
     static bool EvaluateCondition_(const Inputs_t& inputs);

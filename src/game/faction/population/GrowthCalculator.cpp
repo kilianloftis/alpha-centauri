@@ -4,6 +4,12 @@
 namespace ac
 {
 
+GrowthCalculator::GrowthCalculator(Signal<>& rOnGrowth, Signal<>& rOnStarvation)
+    : m_rOnGrowth(rOnGrowth)
+    , m_rOnStarvation(rOnStarvation)
+{
+}
+
 // TODO: confirm exact nutrient threshold formula from game rules
 int GrowthCalculator::ComputeNutrientsRequired(int baseSize, int growthRateModifier)
 {
@@ -20,12 +26,12 @@ void GrowthCalculator::Accumulate(const GrowthInputs_t& inputs)
     if (m_nutrientBank >= required)
     {
         m_nutrientBank = 0;
-        on_growth.emit();
+        m_rOnGrowth.emit();
     }
     else if (m_nutrientBank < 0)
     {
         m_nutrientBank = 0;
-        on_starvation.emit();
+        m_rOnStarvation.emit();
     }
 }
 

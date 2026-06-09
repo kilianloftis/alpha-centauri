@@ -3,6 +3,7 @@
 #include "graphics/Graphics.h"
 #include "input/KeyMapping.h"
 #include "input/SFMLKeyEventQueue.h"
+#include "input/SFMLMouseEventQueue.h"
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <memory>
@@ -21,19 +22,24 @@ public:
     SFMLGraphics()
 : m_window(sf::VideoMode(sf::Vector2u(800, 600)), "Alpha Centauri")
         {
+        std::cout << "[SFMLGraphics] Creating window...\n";
         m_window.setFramerateLimit(60);
         m_window.setKeyRepeatEnabled(false);
+        m_window.setVisible(true);
+        m_window.requestFocus();
+        std::cout << "[SFMLGraphics] Window created, isOpen=" << m_window.isOpen() << "\n";
 if (!m_font.openFromFile(k_fontPath1))
         {
 if (!m_font.openFromFile(k_fontPath2))
             {
-                // Font loading failed; text rendering will be skipped.
+                std::cerr << "[SFMLGraphics] Font loading failed.\n";
             }
         }
     }
 
 bool Initialize() override
     {
+        std::cout << "[SFMLGraphics] Initialize() called, isOpen=" << m_window.isOpen() << "\n";
 if (!m_window.isOpen())
         {
             std::cerr << "[Graphics] Failed to create SFML render window.\n";
@@ -80,16 +86,26 @@ if (it == m_textures.end())
         return true;
     }
 
-void DrawText(const std::string& text, float x, float y, unsigned int size = 24) override
+void DrawText(const std::string& text, float x, float y, unsigned int size = 24, const Color& color = Color::White()) override
     {
 if (m_font.getInfo().family.empty())
         {
             return;
         }
         sf::Text drawable(m_font, text, size);
-        drawable.setFillColor(sf::Color::White);
+        drawable.setFillColor(sf::Color(color.r, color.g, color.b, color.a));
         drawable.setPosition({x, y});
         m_window.draw(drawable);
+    }
+
+void DrawRect(float x, float y, float width, float height, const Color& color = Color::White(), float thickness = 1.0f) override
+    {
+        sf::RectangleShape rect(sf::Vector2f(width, height));
+        rect.setPosition(sf::Vector2f(x, y));
+        rect.setFillColor(sf::Color::Transparent);
+        rect.setOutlineColor(sf::Color(color.r, color.g, color.b, color.a));
+        rect.setOutlineThickness(thickness);
+        m_window.draw(rect);
     }
 
 private:
@@ -109,6 +125,15 @@ if (auto mapped = KeyFromSfKey(keyEvent->code))
                 {
                     PushPendingKeyEvent(*mapped);
                 }
+            }
+
+if (auto mouseEvent = event->getIf<sf::Event::MouseButtonPressed>())
+            {
+                MouseButton mb = MouseButton::None;
+                if (mouseEvent->button == sf::Mouse::Button::Left) mb = MouseButton::Left;
+                else if (mouseEvent->button == sf::Mouse::Button::Right) mb = MouseButton::Right;
+                else if (mouseEvent->button == sf::Mouse::Button::Middle) mb = MouseButton::Middle;
+                PushPendingMouseEvent(MouseEvent{mb, static_cast<int>(mouseEvent->position.x), static_cast<int>(mouseEvent->position.y)});
             }
         }
     }
