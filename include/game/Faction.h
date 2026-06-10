@@ -29,7 +29,9 @@ public:
     void AddBase(std::unique_ptr<BaseManager> pBase);
     BaseManager* GetBase(size_t index);
     const BaseManager* GetBase(size_t index) const;
-    size_t GetBaseCount() const;
+    std::vector<std::shared_ptr<BaseManager>>& GetBases() { return m_bases; }
+    const std::vector<std::shared_ptr<BaseManager>>& GetBases() const { return m_bases; }
+    size_t GetBaseCount() const { return m_bases.size(); }
 
     // Subsystem accessors
     FactionIdentity* GetIdentity();
@@ -57,7 +59,7 @@ private:
     std::unique_ptr<Military> m_pMilitary;
     std::unique_ptr<Research> m_pResearch;
     std::unique_ptr<Diplomacy> m_pDiplomacy;
-    std::vector<std::unique_ptr<BaseManager>> m_bases;
+    std::vector<std::shared_ptr<BaseManager>> m_bases;
 };
 
 } // namespace ac

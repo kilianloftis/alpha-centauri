@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/faction/base/BaseTypes.h"
+#include "game/faction/base/population/calculators/GrowthCalculator.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -42,6 +43,17 @@ public:
     // Collect resources from worked tiles and allocate energy to stockpiles.
     // Called once per turn per base during ResourceCollection stage.
     void CollectResources(class BaseEconomyManager* pEconomy);
+
+    // Convenience accessors for Population stage
+    int GetNutrientStockpile() const;
+    void SetNutrientStockpile(int amount);
+    int GetBaseSize() const;
+    int GetGrowthRate() const;
+
+    // Apply growth result from Population stage growth calculation.
+    // Handles AddPop() on Growth, RemovePop() on Starvation.
+    // Updates nutrient stockpile with the post-growth bank value.
+    void ApplyGrowthResult(GrowthResult result, int newNutrientBank);
 
     // Position on the map
     void SetPosition(int x, int y);

@@ -44,8 +44,9 @@ public:
     int GetMineralProduction() const;
 
     // Stockpile accessors.
-    // Note: Nutrient stockpile is separate from the GrowthCalculator bank.
+    // Note: Nutrient stockpile is separate from the growth nutrient bank.
     //       The stockpile is for spending (e.g., rushing production).
+    //       The nutrient bank is accumulated toward population growth.
     int GetNutrientStockpile() const;
     int GetMineralStockpile() const;
 
@@ -55,11 +56,6 @@ public:
 
     // Allocate energy to stockpiles based on economy manager settings
     void AllocateEnergy(int totalEnergy);
-
-    // Accumulate this turn's production into base stockpiles (nutrients, minerals).
-    // Call once per turn from the appropriate turn stage (BaseProduction).
-    // Note: Energy is not accumulated here - it flows directly to faction-level allocation.
-    void AccumulateStockpiles();
 
     // Consume resources from stockpiles. Returns actual amount consumed.
     int ConsumeNutrients(int amount);
@@ -80,10 +76,10 @@ private:
     std::function<const Tile*(int x, int y)> m_tileLookup;
     std::vector<std::string> m_buildings;
     std::vector<TradeRoute_t> m_tradeRoutes;
-    int m_nutrientStockpile;
-    int m_mineralStockpile;
-    int m_econStockpile;
-    int m_labsStockpile;
+    int m_nutrientStockpile = 0;
+    int m_mineralStockpile = 0;
+    int m_econStockpile = 0;
+    int m_labsStockpile = 0;
 
     BaseEconomyManager* m_pEconomy;
 

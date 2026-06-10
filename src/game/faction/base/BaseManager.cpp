@@ -84,6 +84,45 @@ void BaseManager::CollectResources(BaseEconomyManager* pEconomy)
     }
 }
 
+int BaseManager::GetNutrientStockpile() const
+{
+    return m_pResources ? m_pResources->GetNutrientStockpile() : 0;
+}
+
+void BaseManager::SetNutrientStockpile(int amount)
+{
+    // TODO: Add setter to ResourceManager
+    // For now, this is a placeholder - nutrients are accumulated in CollectResources
+    (void)amount;
+}
+
+int BaseManager::GetBaseSize() const
+{
+    return m_pPopulation ? m_pPopulation->GetSize() : 0;
+}
+
+int BaseManager::GetGrowthRate() const
+{
+    // TODO: Implement growth rate calculation
+    // For now, return arbitrary value as placeholder
+    return 0;
+}
+
+void BaseManager::ApplyGrowthResult(GrowthResult result, int newNutrientBank)
+{
+    if (result == GrowthResult::Growth)
+    {
+        AddPop();
+    }
+    else if (result == GrowthResult::Starvation)
+    {
+        RemovePop();
+    }
+
+    // Update nutrient stockpile with new bank value
+    SetNutrientStockpile(newNutrientBank);
+}
+
 void BaseManager::SetPosition(int x, int y)
 {
     m_x = x;

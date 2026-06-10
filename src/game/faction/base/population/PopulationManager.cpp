@@ -15,7 +15,6 @@ PopulationManager::PopulationManager(int initialSize)
     : m_maxSize(8)
     , m_growthRate(1)
     , m_riot(on_will_riot, on_is_rioting, on_riot_ended)
-    , m_growth(on_growth, on_starvation)
     , m_golden_age(on_golden_age_started, on_golden_age_ended)
 {
     on_growth.connect([this]() { AddPop(); });
@@ -150,15 +149,6 @@ void PopulationManager::RecalculateComposition()
     m_container.ApplyCompositionTargets(targets, GetDefaultPopType_());
 }
 
-void PopulationManager::AccumulateGrowth(int nutrientsPerTurn)
-{
-    GrowthInputs_t inputs;
-    inputs.baseSize = m_container.GetSize();
-    inputs.nutrientsPerTurn = nutrientsPerTurn;
-    inputs.growthRateModifier = m_growthRate;
-    m_growth.Accumulate(inputs);
-}
-
 void PopulationManager::CheckRiotEndOfTurn()
 {
     m_riot.Update(BuildRiotInputs_());
@@ -172,11 +162,6 @@ void PopulationManager::CheckGoldenAgeEndOfTurn()
     inputs.workerCount = m_container.GetWorkerCount();
     inputs.specialistCount = m_container.GetSpecialistCount();
     m_golden_age.Update(inputs);
-}
-
-int PopulationManager::GetNutrientBank() const
-{
-    return m_growth.GetNutrientBank();
 }
 
 void PopulationManager::NotifyPopGained_()

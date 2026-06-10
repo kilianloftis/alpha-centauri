@@ -13,10 +13,6 @@ namespace ac
 ResourceManager::ResourceManager(PopulationManager* pPopulation, WorkerAssignmentManager* pWorkerAssignments)
     : m_pPopulation(pPopulation)
     , m_pWorkerAssignments(pWorkerAssignments)
-    , m_nutrientStockpile(0)
-    , m_mineralStockpile(0)
-    , m_econStockpile(0)
-    , m_labsStockpile(0)
     , m_pEconomy(nullptr)
 {
 }
@@ -195,15 +191,6 @@ void ResourceManager::CollectResources(BaseEconomyManager* pEconomy)
     // Calculate and allocate energy
     int totalEnergy = CalculateEnergyProduction_();
     AllocateEnergy(totalEnergy);
-}
-
-void ResourceManager::AccumulateStockpiles()
-{
-    // Nutrients and minerals are now collected in CollectResources()
-    // This method kept for backward compatibility or additional accumulation
-    m_nutrientStockpile += CalculateNutrients_();
-    m_mineralStockpile  += CalculateMinerals_();
-    // Energy is allocated in CollectResources via AllocateEnergy()
 }
 
 int ResourceManager::ConsumeNutrients(int amount)

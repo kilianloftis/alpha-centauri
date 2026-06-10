@@ -1,0 +1,17 @@
+[
+  {
+    "id": "Nutrient_Bank",
+    "name": "Nutrient Bank",
+    "nutrients_bonus": 2,
+    "improvement_bonuses": {
+      "Farm": { "nutrients": 1 },
+      "Condenser": { "nutrients": 2 }
+    }
+  },
+  {
+    "id": "Recycling_Tanks",
+    "name": "Recycling Tanks",
+    "nutrients_bonus": 1,
+    "improvement_bonuses": {}
+  }
+]

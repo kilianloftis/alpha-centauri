@@ -59,11 +59,6 @@ const BaseManager* Faction::GetBase(size_t index) const
     return nullptr;
 }
 
-size_t Faction::GetBaseCount() const
-{
-    return m_bases.size();
-}
-
 FactionIdentity* Faction::GetIdentity()
 {
     return m_pIdentity.get();

@@ -10,13 +10,11 @@ class PopCompositionCalculator;
 class Population : public TurnStageBase
 {
 public:
-    Population(std::shared_ptr<HookContext> hookContext, PopCompositionCalculator* pCalculator);
+    Population(std::shared_ptr<HookContext> hookContext);
     ~Population() = default;
 
-    void Execute_(GameState* pGameState, Faction* pFaction = nullptr) override;
-
 private:
-    PopCompositionCalculator* m_pCalculator;
+    void Execute_(GameState* pGameState, Faction* pFaction = nullptr) override;
 };
 
 } // namespace ac

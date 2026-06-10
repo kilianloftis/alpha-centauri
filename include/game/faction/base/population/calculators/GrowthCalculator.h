@@ -1,15 +1,20 @@
 #pragma once
 
-#include "lib/Signal.h"
-
 namespace ac
 {
 
 struct GrowthInputs_t
 {
     int baseSize;               // current population size
-    int nutrientsPerTurn;       // net nutrients produced per turn (after consumption)
     int growthRateModifier;     // percentage modifier on required nutrients (e.g. -25 = 25% faster growth)
+    int nutrientBank;           // current nutrients accumulated toward next growth
+};
+
+enum class GrowthResult
+{
+    None,       // No state change, nutrient bank updated
+    Growth,     // Nutrient threshold reached
+    Starvation  // Nutrient bank went negative
 };
 
 struct GrowthState_t
@@ -19,33 +24,24 @@ struct GrowthState_t
     int nutrientSurplus;        // nutrientsPerTurn minus per-turn upkeep (nutrients leftover each turn)
 };
 
-// Accumulates nutrient surplus each turn and fires growth/starvation signals when thresholds are crossed.
-// Call Accumulate(inputs) once per turn during the Population stage.
+// Stateless helper class for population growth calculations.
+// Computes nutrient requirements and determines growth/starvation state.
 // The required nutrient threshold is:
 //   TODO: confirm exact formula from game rules
 //   Currently: baseSize * 10, modified by growthRateModifier as a percentage
 class GrowthCalculator
 {
 public:
-    GrowthCalculator(Signal<>& rOnGrowth, Signal<>& rOnStarvation);
+    GrowthCalculator() = default;
     ~GrowthCalculator() = default;
 
-    // Advance one turn: accumulate surplus, check thresholds.
-    // Emits on_growth if the bank reaches nutrientsRequired.
-    // Emits on_starvation if the bank falls below zero.
-    // Resets the bank on growth or starvation.
-    void Accumulate(const GrowthInputs_t& inputs);
+    // Advance one turn: compute new bank, check thresholds.
+    // Returns GrowthResult indicating state change.
+    // nutrientBank in inputs is the current bank, output bank is returned via outNewBank.
+    static GrowthResult CalculateGrowh(const GrowthInputs_t& inputs, int& outNewBank);
 
-    // Current accumulated nutrients toward next growth.
-    int GetNutrientBank() const;
-
-    // Nutrients required to grow given the provided inputs (does not mutate state).
+    // Nutrients required to grow given the provided inputs (stateless calculation).
     static int ComputeNutrientsRequired(int baseSize, int growthRateModifier);
-
-private:
-    Signal<>& m_rOnGrowth;
-    Signal<>& m_rOnStarvation;
-    int m_nutrientBank = 0;
 };
 
 } // namespace ac

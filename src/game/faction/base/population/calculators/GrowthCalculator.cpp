@@ -4,12 +4,6 @@
 namespace ac
 {
 
-GrowthCalculator::GrowthCalculator(Signal<>& rOnGrowth, Signal<>& rOnStarvation)
-    : m_rOnGrowth(rOnGrowth)
-    , m_rOnStarvation(rOnStarvation)
-{
-}
-
 // TODO: confirm exact nutrient threshold formula from game rules
 int GrowthCalculator::ComputeNutrientsRequired(int baseSize, int growthRateModifier)
 {
@@ -18,26 +12,23 @@ int GrowthCalculator::ComputeNutrientsRequired(int baseSize, int growthRateModif
     return std::max(1, modified);
 }
 
-void GrowthCalculator::Accumulate(const GrowthInputs_t& inputs)
+GrowthResult GrowthCalculator::CalculateGrowh(const GrowthInputs_t& inputs, int& outNewBank)
 {
     const int required = ComputeNutrientsRequired(inputs.baseSize, inputs.growthRateModifier);
-    m_nutrientBank += inputs.nutrientsPerTurn;
+    outNewBank = inputs.nutrientBank + inputs.nutrientsPerTurn;
 
-    if (m_nutrientBank >= required)
+    if (outNewBank >= required)
     {
-        m_nutrientBank = 0;
-        m_rOnGrowth.emit();
+        outNewBank = 0;
+        return GrowthResult::Growth;
     }
-    else if (m_nutrientBank < 0)
+    else if (outNewBank < 0)
     {
-        m_nutrientBank = 0;
-        m_rOnStarvation.emit();
+        outNewBank = 0;
+        return GrowthResult::Starvation;
     }
-}
 
-int GrowthCalculator::GetNutrientBank() const
-{
-    return m_nutrientBank;
+    return GrowthResult::None;
 }
 
 } // namespace ac

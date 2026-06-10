@@ -31,6 +31,10 @@ add_executable(alpha-centauri
     game/TurnStageFactory.cpp
     game/TurnStageConfigParser.cpp
     game/HookContext.cpp
+    game/buildings/Building.cpp
+    game/buildings/BuildingConfigParser.cpp
+    game/buildings/BuildingRegistry.cpp
+    game/buildings/BuildingFactory.cpp
     game/map/Tile.cpp
     game/map/TileBonusConfigParser.cpp
     game/map/TileBonusRegistry.cpp

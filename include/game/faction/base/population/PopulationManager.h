@@ -3,7 +3,6 @@
 #include "game/faction/base/population/PopContainer.h"
 #include "game/faction/base/population/calculators/PopCompositionCalculator.h"
 #include "game/faction/base/population/calculators/RiotCalculator.h"
-#include "game/faction/base/population/calculators/GrowthCalculator.h"
 #include "game/faction/base/population/calculators/GoldenAgeCalculator.h"
 
 #include <memory>
@@ -69,11 +68,6 @@ public:
     // Check golden age conditions at end of turn. Delegates to m_golden_age.Update(...).
     void CheckGoldenAgeEndOfTurn();
 
-    // Advance growth accumulation by one turn.
-    // nutrientsPerTurn is the net nutrient output of the base this turn.
-    // Delegates to m_growth.Accumulate(); on_growth triggers AddPop, on_starvation triggers RemovePop.
-    void AccumulateGrowth(int nutrientsPerTurn);
-
     // Registry injection — forwarded to PopContainer.
     // Fires on_pop_gained once per initial pop created from reserved capacity.
     void SetRegistry(const PopTypeRegistry* pRegistry);
@@ -85,8 +79,6 @@ public:
     int GetMaxSize() const;
     void SetMaxSize(int maxSize);
 
-    // Current nutrients accumulated toward next growth.
-    int GetNutrientBank() const;
 
     // Signals
     Signal<int> on_pop_gained;   // new size
@@ -98,8 +90,8 @@ public:
     Signal<> on_riot_ended;   // end-of-turn: conditions no longer met, riot was active
 
     // Growth signals
-    Signal<> on_growth;       // nutrient bank reached threshold; base may grow
-    Signal<> on_starvation;   // nutrient bank went negative; base may shrink
+    Signal<> on_growth;       // base has gained a pop
+    Signal<> on_starvation;   // base has lost a pop
 
     // Golden age signals
     Signal<> on_golden_age_started;
@@ -112,7 +104,6 @@ private:
     int m_growthRate;
 
     RiotCalculator m_riot;
-    GrowthCalculator m_growth;
     GoldenAgeCalculator m_golden_age;
 
     const std::string& GetDefaultPopType_() const;
