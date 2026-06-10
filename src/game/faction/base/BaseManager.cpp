@@ -1,7 +1,8 @@
 #include "game/faction/base/BaseManager.h"
-#include "game/faction/base/WorkerAssignmentManager.h"
-#include "game/faction/population/PopulationManager.h"
-#include "game/faction/population/PopContainer.h"
+#include "game/faction/base/resources/ResourceManager.h"
+#include "game/faction/base/resources/WorkerAssignmentManager.h"
+#include "game/faction/base/population/PopulationManager.h"
+#include "game/faction/base/population/PopContainer.h"
 #include <cmath>
 
 namespace ac
@@ -14,7 +15,11 @@ BaseManager::BaseManager()
     , m_y(0)
     , m_pPopulation(std::make_unique<PopulationManager>())
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>())
+    , m_pResources(nullptr)
 {
+    // Create ResourceManager after population and worker assignments are set up
+    m_pResources = std::make_unique<ResourceManager>(m_pPopulation.get(), m_pWorkerAssignments.get());
+
     m_pPopulation->on_pop_gained.connect([this](int) {
         m_pWorkerAssignments->OnPopulationChanged(m_pPopulation->GetContainer());
     });
@@ -23,9 +28,7 @@ BaseManager::BaseManager()
     });
 }
 
-BaseManager::~BaseManager()
-{
-}
+BaseManager::~BaseManager() = default;
 
 PopulationManager* BaseManager::GetPopulation()
 {
@@ -57,12 +60,12 @@ const WorkerAssignmentManager& BaseManager::GetWorkerAssignments() const
 
 ResourceManager* BaseManager::GetResourceManager()
 {
-    return nullptr;
+    return m_pResources.get();
 }
 
 const ResourceManager* BaseManager::GetResourceManager() const
 {
-    return nullptr;
+    return m_pResources.get();
 }
 
 void BaseManager::SetPosition(int x, int y)

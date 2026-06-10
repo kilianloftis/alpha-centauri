@@ -5,7 +5,7 @@
 #include <utility>
 #include <string>
 
-#include "game/faction/base/ResourceManager.h"
+#include "game/faction/base/BaseManager.h"
 
 namespace ac
 {
@@ -47,8 +47,8 @@ private:
     void HandleWorldViewMouse_(int mouseX, int mouseY);
     void HandleBaseViewMouse_(int mouseX, int mouseY);
 
-    ResourceManager* FindBaseAtTile_(int tileX, int tileY) const;
-    void OpenBaseView_(ResourceManager* pBase);
+    BaseManager* FindBaseAtTile_(int tileX, int tileY) const;
+    void OpenBaseView_(BaseManager* pBase);
     void ReturnToWorldView_();
 
     std::unique_ptr<Graphics> m_graphics;
@@ -73,7 +73,7 @@ private:
     };
 
     ViewMode m_activeView = ViewMode::World;
-    ResourceManager* m_pActiveBase = nullptr;
+    BaseManager* m_pActiveBase = nullptr;
 
     std::optional<std::pair<int, int>> m_lastClickedTile;
     std::string m_lastClickedTileText;

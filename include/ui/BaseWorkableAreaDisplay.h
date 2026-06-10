@@ -2,7 +2,7 @@
 
 #include "graphics/Graphics.h"
 #include "game/map/WorldMap.h"
-#include "game/faction/base/ResourceManager.h"
+#include "game/faction/base/BaseManager.h"
 
 namespace ac
 {
@@ -16,7 +16,7 @@ public:
     BaseWorkableAreaDisplay(Graphics& rGraphics, const WorldMap& rWorldMap);
 
     // Set the base to display workable area for
-    void SetBase(const ResourceManager* pBase);
+    void SetBase(const BaseManager* pBase);
 
     // Render the workable area at specified position
     // tileSize: pixel size of each tile
@@ -25,7 +25,7 @@ public:
 private:
     Graphics& m_rGraphics;
     const WorldMap& m_rWorldMap;
-    const ResourceManager* m_pBase = nullptr;
+    const BaseManager* m_pBase = nullptr;
 
     // Render a single workable tile
     void RenderTile_(const Tile& rTile, float x, float y, float size, bool bIsWorked);

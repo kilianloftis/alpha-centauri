@@ -1,7 +1,7 @@
 #include "game/stages/ResearchAccumulation.h"
 #include "game/GameState.h"
 #include "game/Faction.h"
-#include "game/faction/base/Economy.h"
+#include "game/faction/base/resources/BaseEconomyManager.h"
 #include "game/faction/Research.h"
 #include <iostream>
 
@@ -27,7 +27,7 @@ void ResearchAccumulation::Execute_(GameState* pGameState, Faction* pFaction)
 
     // Energy allocated to Labs is set by the EnergyAllocation stage.
     // We convert that energy to research points.
-    if (Economy* pEconomy = pFaction->GetEconomy())
+    if (BaseEconomyManager* pEconomy = pFaction->GetEconomy())
     {
         int labsEnergy = pEconomy->GetEnergyForLabs();
 

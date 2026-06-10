@@ -1,9 +1,9 @@
 #include "game/stages/Population.h"
 #include "game/GameState.h"
 #include "game/Faction.h"
-#include "game/faction/base/ResourceManager.h"
-#include "game/faction/population/PopulationManager.h"
-#include "game/faction/population/PopCompositionCalculator.h"
+#include "game/faction/base/resources/ResourceManager.h"
+#include "game/faction/base/population/PopulationManager.h"
+#include "game/faction/base/population/calculators/PopCompositionCalculator.h"
 #include <iostream>
 
 namespace ac
@@ -28,7 +28,7 @@ void Population::Execute_(GameState* pGameState, Faction* pFaction)
 
     for (size_t i = 0; i < pFaction->GetBaseCount(); ++i)
     {
-        ResourceManager* pBase = pFaction->GetBase(i);
+        BaseManager* pBase = pFaction->GetBase(i);
         if (pBase && pBase->GetPopulation())
         {
             PopulationManager* pPop = pBase->GetPopulation();
@@ -38,7 +38,9 @@ void Population::Execute_(GameState* pGameState, Faction* pFaction)
             // The nutrient stockpile (for spending on production rushing, etc.) is separate
             // and is accumulated during the BaseProduction stage.
             std::cout << "  Accumulating growth for base '" << pBase->GetName() << "' (bank: " << pPop->GetNutrientBank() << " -> ";
-            pPop->AccumulateGrowth(pBase->GetNutrientProduction());
+            ResourceManager* pResources = pBase->GetResourceManager();
+            int nutrientProduction = pResources ? pResources->GetNutrientProduction() : 0;
+            pPop->AccumulateGrowth(nutrientProduction);
             std::cout << pPop->GetNutrientBank() << ", size: " << pPop->GetSize() << ")\n";
 
             pPop->RecalculateComposition();

@@ -1,7 +1,7 @@
 #include "game/stages/IncomeCollection.h"
 #include "game/GameState.h"
 #include "game/Faction.h"
-#include "game/faction/base/Economy.h"
+#include "game/faction/base/resources/BaseEconomyManager.h"
 #include <iostream>
 
 namespace ac
@@ -26,7 +26,7 @@ void IncomeCollection::Execute_(GameState* pGameState, Faction* pFaction)
 
     // Energy allocated to Econ is set by the EnergyAllocation stage.
     // We add that allocated amount to the faction's energy reserve.
-    if (Economy* pEconomy = pFaction->GetEconomy())
+    if (BaseEconomyManager* pEconomy = pFaction->GetEconomy())
     {
         int econEnergy = pEconomy->GetEnergyForEcon();
         pEconomy->AddEnergyReserve(econEnergy);

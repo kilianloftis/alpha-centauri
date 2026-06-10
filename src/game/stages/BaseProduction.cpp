@@ -1,7 +1,8 @@
 #include "game/stages/BaseProduction.h"
 #include "game/GameState.h"
 #include "game/Faction.h"
-#include "game/faction/base/ResourceManager.h"
+#include "game/faction/base/BaseManager.h"
+#include "game/faction/base/resources/ResourceManager.h"
 #include <iostream>
 
 namespace ac
@@ -26,8 +27,14 @@ void BaseProduction::Execute_(GameState* pGameState, Faction* pFaction)
 
     for (size_t i = 0; i < pFaction->GetBaseCount(); ++i)
     {
-        ResourceManager* pBase = pFaction->GetBase(i);
+        BaseManager* pBase = pFaction->GetBase(i);
         if (!pBase)
+        {
+            continue;
+        }
+
+        ResourceManager* pResources = pBase->GetResourceManager();
+        if (!pResources)
         {
             continue;
         }
@@ -35,14 +42,14 @@ void BaseProduction::Execute_(GameState* pGameState, Faction* pFaction)
         // Accumulate this base's production into its stockpiles
         // Note: Energy is NOT stockpiled - it flows directly to faction-level allocation
         std::cout << "  Collecting resources at base '" << pBase->GetName() << "'"
-                  << " (nutrients: " << pBase->GetNutrientProduction()
-                  << ", minerals: " << pBase->GetMineralProduction()
-                  << ", energy: " << pBase->GetEnergyProduction() << " -> to faction allocation)\n";
+                  << " (nutrients: " << pResources->GetNutrientProduction()
+                  << ", minerals: " << pResources->GetMineralProduction()
+                  << ", energy: " << pResources->GetEnergyProduction() << " -> to faction allocation)\n";
 
-        pBase->AccumulateStockpiles();
+        pResources->AccumulateStockpiles();
 
-        std::cout << "  Stockpiles now: nutrients=" << pBase->GetNutrientStockpile()
-                  << ", minerals=" << pBase->GetMineralStockpile()
+        std::cout << "  Stockpiles now: nutrients=" << pResources->GetNutrientStockpile()
+                  << ", minerals=" << pResources->GetMineralStockpile()
                   << " (energy not stockpiled)\n";
     }
 }

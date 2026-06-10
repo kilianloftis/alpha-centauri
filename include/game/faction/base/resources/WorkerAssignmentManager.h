@@ -1,7 +1,7 @@
 #pragma once
 
 #include "game/faction/base/BaseTypes.h"
-#include "game/faction/population/Pop.h"
+#include "game/faction/base/population/pop-types/Pop.h"
 #include <functional>
 #include <unordered_map>
 #include <utility>

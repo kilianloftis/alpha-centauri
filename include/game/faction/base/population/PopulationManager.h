@@ -1,10 +1,10 @@
 #pragma once
 
-#include "game/faction/population/PopContainer.h"
-#include "game/faction/population/PopCompositionCalculator.h"
-#include "game/faction/population/RiotCalculator.h"
-#include "game/faction/population/GrowthCalculator.h"
-#include "game/faction/population/GoldenAgeCalculator.h"
+#include "game/faction/base/population/PopContainer.h"
+#include "game/faction/base/population/calculators/PopCompositionCalculator.h"
+#include "game/faction/base/population/calculators/RiotCalculator.h"
+#include "game/faction/base/population/calculators/GrowthCalculator.h"
+#include "game/faction/base/population/calculators/GoldenAgeCalculator.h"
 
 #include <memory>
 #include <string>

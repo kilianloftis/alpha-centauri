@@ -1,6 +1,6 @@
 #include "ui/PopulationDisplay.h"
 #include "graphics/Graphics.h"
-#include "game/faction/population/PopulationManager.h"
+#include "game/faction/base/population/PopulationManager.h"
 #include <sstream>
 
 namespace ac

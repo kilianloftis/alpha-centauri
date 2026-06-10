@@ -1,8 +1,9 @@
 #include "game/stages/EnergyAllocation.h"
 #include "game/GameState.h"
 #include "game/Faction.h"
-#include "game/faction/base/ResourceManager.h"
-#include "game/faction/base/Economy.h"
+#include "game/faction/base/BaseManager.h"
+#include "game/faction/base/resources/ResourceManager.h"
+#include "game/faction/base/resources/BaseEconomyManager.h"
 #include <iostream>
 
 namespace ac
@@ -29,17 +30,21 @@ void EnergyAllocation::Execute_(GameState* pGameState, Faction* pFaction)
     int totalEnergy = 0;
     for (size_t i = 0; i < pFaction->GetBaseCount(); ++i)
     {
-        ResourceManager* pBase = pFaction->GetBase(i);
+        BaseManager* pBase = pFaction->GetBase(i);
         if (pBase)
         {
-            totalEnergy += pBase->GetEnergyProduction();
+            ResourceManager* pResources = pBase->GetResourceManager();
+            if (pResources)
+            {
+                totalEnergy += pResources->GetEnergyProduction();
+            }
         }
     }
 
     std::cout << "  Total energy produced: " << totalEnergy << "\n";
 
     // Set up default allocation: 40% Econ, 50% Labs, 10% Psych
-    if (Economy* pEconomy = pFaction->GetEconomy())
+    if (BaseEconomyManager* pEconomy = pFaction->GetEconomy())
     {
         EnergyAllocation_t allocation;
         allocation.econPercent = 40;

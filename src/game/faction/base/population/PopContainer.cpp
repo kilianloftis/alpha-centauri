@@ -1,7 +1,7 @@
-#include "game/faction/population/PopContainer.h"
-#include "game/faction/population/PopCompositionCalculator.h"
-#include "game/faction/population/PopTypeConfigParser.h"
-#include "game/faction/population/PopTypeRegistry.h"
+#include "game/faction/base/population/PopContainer.h"
+#include "game/faction/base/population/calculators/PopCompositionCalculator.h"
+#include "game/faction/base/population/pop-types/PopTypeConfigParser.h"
+#include "game/faction/base/population/pop-types/PopTypeRegistry.h"
 
 namespace ac
 {

@@ -1,9 +1,8 @@
 #pragma once
 
-#include "game/faction/base/BaseManager.h"
 #include "game/faction/base/BaseTypes.h"
-#include "game/faction/base/WorkerAssignmentManager.h"
 #include <functional>
+#include <memory>
 #include <vector>
 
 namespace ac
@@ -11,29 +10,22 @@ namespace ac
 
 class Tile;
 class PopContainer;
+class PopulationManager;
+class WorkerAssignmentManager;
 
-// ResourceManager is a subclass of BaseManager that handles resource
-// production, stockpiling, buildings, and trade routes.
-// This extracts the resource-related functionality from the old Base class.
-class ResourceManager : public BaseManager
+// ResourceManager handles resource production, stockpiling, buildings, and trade routes.
+// It is owned by BaseManager and receives PopulationManager and WorkerAssignmentManager
+// references to calculate resource production from worked tiles.
+class ResourceManager
 {
 public:
-    ResourceManager();
-    ~ResourceManager() override;
-
-    // Override to return self as resource manager
-    ResourceManager* GetResourceManager() override;
-    const ResourceManager* GetResourceManager() const override;
-
-    // Building management
-    void AddBuilding(const std::string& buildingId);
-    void RemoveBuilding(const std::string& buildingId);
-    const std::vector<std::string>& GetBuildings() const;
+    ResourceManager(PopulationManager* pPopulation, WorkerAssignmentManager* pWorkerAssignments);
+    ~ResourceManager();
 
     // Tile lookup used by resource calculations. Must be set before calling
     // GetNutrientProduction() / GetEnergyProduction() / GetMineralProduction().
     // If not set, all tile-derived resource values return 0.
-    void SetTileLookup(WorkerAssignmentManager::TileLookup tileLookup);
+    void SetTileLookup(std::function<const Tile*(int x, int y)> tileLookup);
 
     // Trade route management
     void AddTradeRoute(const TradeRoute_t& tradeRoute);
@@ -60,8 +52,15 @@ public:
     int ConsumeNutrients(int amount);
     int ConsumeMinerals(int amount);
 
+    // Building management
+    void AddBuilding(const std::string& buildingId);
+    void RemoveBuilding(const std::string& buildingId);
+    const std::vector<std::string>& GetBuildings() const;
+
 private:
-    WorkerAssignmentManager::TileLookup m_tileLookup;
+    PopulationManager* m_pPopulation;
+    WorkerAssignmentManager* m_pWorkerAssignments;
+    std::function<const Tile*(int x, int y)> m_tileLookup;
     std::vector<std::string> m_buildings;
     std::vector<TradeRoute_t> m_tradeRoutes;
     int m_nutrientStockpile;

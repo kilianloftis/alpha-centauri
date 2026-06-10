@@ -1,7 +1,7 @@
-#include "game/faction/base/ResourceManager.h"
-#include "game/faction/base/WorkerAssignmentManager.h"
-#include "game/faction/population/PopulationManager.h"
-#include "game/faction/population/PopContainer.h"
+#include "game/faction/base/resources/ResourceManager.h"
+#include "game/faction/base/resources/WorkerAssignmentManager.h"
+#include "game/faction/base/population/PopulationManager.h"
+#include "game/faction/base/population/PopContainer.h"
 #include "game/map/Tile.h"
 #include <algorithm>
 #include <cmath>
@@ -9,8 +9,9 @@
 namespace ac
 {
 
-ResourceManager::ResourceManager()
-    : BaseManager()
+ResourceManager::ResourceManager(PopulationManager* pPopulation, WorkerAssignmentManager* pWorkerAssignments)
+    : m_pPopulation(pPopulation)
+    , m_pWorkerAssignments(pWorkerAssignments)
     , m_nutrientStockpile(0)
     , m_mineralStockpile(0)
 {
@@ -18,16 +19,6 @@ ResourceManager::ResourceManager()
 
 ResourceManager::~ResourceManager()
 {
-}
-
-ResourceManager* ResourceManager::GetResourceManager()
-{
-    return this;
-}
-
-const ResourceManager* ResourceManager::GetResourceManager() const
-{
-    return this;
 }
 
 void ResourceManager::AddBuilding(const std::string& buildingId)
@@ -49,7 +40,7 @@ const std::vector<std::string>& ResourceManager::GetBuildings() const
     return m_buildings;
 }
 
-void ResourceManager::SetTileLookup(WorkerAssignmentManager::TileLookup tileLookup)
+void ResourceManager::SetTileLookup(std::function<const Tile*(int x, int y)> tileLookup)
 {
     m_tileLookup = std::move(tileLookup);
 }

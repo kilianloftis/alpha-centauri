@@ -1,7 +1,7 @@
 #pragma once
 
-#include "game/faction/population/Pop.h"
-#include "game/faction/population/PopFactory.h"
+#include "game/faction/base/population/pop-types/Pop.h"
+#include "game/faction/base/population/pop-types/PopFactory.h"
 #include <memory>
 #include <string>
 #include <vector>

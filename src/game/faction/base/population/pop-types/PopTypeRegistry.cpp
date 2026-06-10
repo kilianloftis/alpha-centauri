@@ -1,5 +1,5 @@
-#include "game/faction/population/PopTypeRegistry.h"
-#include "game/faction/population/PopTypeConfigParser.h"
+#include "game/faction/base/population/pop-types/PopTypeRegistry.h"
+#include "game/faction/base/population/pop-types/PopTypeConfigParser.h"
 
 namespace ac
 {

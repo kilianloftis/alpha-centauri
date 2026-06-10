@@ -1,8 +1,7 @@
 #include "lib/EventBridge.h"
 #include "lib/EventBus.h"
 #include "game/GameState.h"
-#include "game/faction/base/ResourceManager.h"
-#include "game/faction/population/PopulationManager.h"
+#include "game/faction/base/population/PopulationManager.h"
 
 namespace ac
 {
@@ -19,7 +18,7 @@ EventBridge::EventBridge(GameState& rState, EventBus& rBus)
     // once Faction gains a FactionId and those signals are added.
 }
 
-void EventBridge::WireBase(ResourceManager& rBase)
+void EventBridge::WireBase(BaseManager& rBase)
 {
     PopulationManager* pPop = rBase.GetPopulation();
     if (!pPop)

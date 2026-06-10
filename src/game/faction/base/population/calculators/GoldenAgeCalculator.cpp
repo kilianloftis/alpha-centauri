@@ -1,4 +1,4 @@
-#include "game/faction/population/GoldenAgeCalculator.h"
+#include "game/faction/base/population/calculators/GoldenAgeCalculator.h"
 
 namespace ac
 {

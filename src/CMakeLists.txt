@@ -9,20 +9,20 @@ add_executable(alpha-centauri
     game/faction/Research.cpp
     game/faction/Diplomacy.cpp
     game/faction/base/BaseManager.cpp
-    game/faction/base/ResourceManager.cpp
-    game/faction/base/WorkerAssignmentManager.cpp
-    game/faction/base/Economy.cpp
-    game/faction/population/PopulationManager.cpp
-    game/faction/population/PopContainer.cpp
-    game/faction/population/Pop.cpp
-    game/faction/population/PopFactory.cpp
-    game/faction/population/PopTypeConfigParser.cpp
-    game/faction/population/PopTypeRegistry.cpp
-    game/faction/population/PopCompositionConfigParser.cpp
-    game/faction/population/PopCompositionCalculator.cpp
-    game/faction/population/RiotCalculator.cpp
-    game/faction/population/GrowthCalculator.cpp
-    game/faction/population/GoldenAgeCalculator.cpp
+    game/faction/base/resources/ResourceManager.cpp
+    game/faction/base/resources/WorkerAssignmentManager.cpp
+    game/faction/base/resources/BaseEconomyManager.cpp
+    game/faction/base/population/PopulationManager.cpp
+    game/faction/base/population/PopContainer.cpp
+    game/faction/base/population/pop-types/Pop.cpp
+    game/faction/base/population/pop-types/PopFactory.cpp
+    game/faction/base/population/pop-types/PopTypeConfigParser.cpp
+    game/faction/base/population/pop-types/PopTypeRegistry.cpp
+    game/faction/base/population/pop-types/PopCompositionConfigParser.cpp
+    game/faction/base/population/calculators/PopCompositionCalculator.cpp
+    game/faction/base/population/calculators/RiotCalculator.cpp
+    game/faction/base/population/calculators/GrowthCalculator.cpp
+    game/faction/base/population/calculators/GoldenAgeCalculator.cpp
     game/faction/Specialist.cpp
     game/TurnProcessor.cpp
     lib/EventBus.cpp

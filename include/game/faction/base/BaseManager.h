@@ -3,6 +3,7 @@
 #include "game/faction/base/BaseTypes.h"
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace ac
 {
@@ -12,27 +13,27 @@ class PopulationManager;
 class WorkerAssignmentManager;
 class ResourceManager;
 
-// Thin interface class for base management.
+// BaseManager coordinates base management subsystems.
 // Provides identity, position, and access to sub-managers.
-// Resource management functionality is delegated to ResourceManager subclass.
+// Routes API calls to PopulationManager, ResourceManager, and WorkerAssignmentManager.
 class BaseManager
 {
 public:
     BaseManager();
-    virtual ~BaseManager();
+    ~BaseManager();
 
-    // Population management
+    // Population management - delegated to PopulationManager
     PopulationManager* GetPopulation();
     const PopulationManager* GetPopulation() const;
     void AddPop();
 
-    // Worker assignment subcomponent
+    // Worker assignment - delegated to WorkerAssignmentManager
     WorkerAssignmentManager& GetWorkerAssignments();
     const WorkerAssignmentManager& GetWorkerAssignments() const;
 
-    // Resource management subcomponent (may be null if not using ResourceManager)
-    virtual ResourceManager* GetResourceManager();
-    virtual const ResourceManager* GetResourceManager() const;
+    // Resource management - delegated to ResourceManager
+    ResourceManager* GetResourceManager();
+    const ResourceManager* GetResourceManager() const;
 
     // Position on the map
     void SetPosition(int x, int y);
@@ -62,6 +63,7 @@ protected:
     int m_y;
     std::unique_ptr<PopulationManager> m_pPopulation;
     std::unique_ptr<WorkerAssignmentManager> m_pWorkerAssignments;
+    std::unique_ptr<ResourceManager> m_pResources;
     std::string m_name;
 };
 

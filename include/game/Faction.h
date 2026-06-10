@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include "game/faction/base/ResourceManager.h"
+#include "game/faction/base/BaseManager.h"
 
 namespace ac
 {
@@ -11,7 +11,7 @@ namespace ac
 // Forward declarations
 class FactionIdentity;
 class AIProfile;
-class Economy;
+class BaseEconomyManager;
 class Military;
 class Research;
 class Diplomacy;
@@ -26,9 +26,9 @@ public:
     void ProcessTurn();
 
     // Base management
-    void AddBase(std::unique_ptr<ResourceManager> pBase);
-    ResourceManager* GetBase(size_t index);
-    const ResourceManager* GetBase(size_t index) const;
+    void AddBase(std::unique_ptr<BaseManager> pBase);
+    BaseManager* GetBase(size_t index);
+    const BaseManager* GetBase(size_t index) const;
     size_t GetBaseCount() const;
 
     // Subsystem accessors
@@ -38,8 +38,8 @@ public:
     AIProfile* GetAIProfile();
     const AIProfile* GetAIProfile() const;
     
-    Economy* GetEconomy();
-    const Economy* GetEconomy() const;
+    BaseEconomyManager* GetEconomy();
+    const BaseEconomyManager* GetEconomy() const;
     
     Military* GetMilitary();
     const Military* GetMilitary() const;
@@ -53,11 +53,11 @@ public:
 private:
     std::unique_ptr<FactionIdentity> m_pIdentity;
     std::unique_ptr<AIProfile> m_pAIProfile;
-    std::unique_ptr<Economy> m_pEconomy;
+    std::unique_ptr<BaseEconomyManager> m_pEconomy;
     std::unique_ptr<Military> m_pMilitary;
     std::unique_ptr<Research> m_pResearch;
     std::unique_ptr<Diplomacy> m_pDiplomacy;
-    std::vector<std::unique_ptr<ResourceManager>> m_bases;
+    std::vector<std::unique_ptr<BaseManager>> m_bases;
 };
 
 } // namespace ac

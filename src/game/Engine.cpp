@@ -9,11 +9,13 @@
 #include "lib/EventBus.h"
 #include "lib/EventBridge.h"
 #include "lib/GameEvent.h"
-#include "game/faction/base/ResourceManager.h"
-#include "game/faction/population/PopulationManager.h"
-#include "game/faction/population/PopTypeRegistry.h"
-#include "game/faction/population/PopCompositionConfigParser.h"
-#include "game/faction/population/PopCompositionCalculator.h"
+#include "game/faction/base/BaseManager.h"
+#include "game/faction/base/resources/ResourceManager.h"
+#include "game/faction/base/resources/WorkerAssignmentManager.h"
+#include "game/faction/base/population/PopulationManager.h"
+#include "game/faction/base/population/pop-types/PopTypeRegistry.h"
+#include "game/faction/base/population/pop-types/PopCompositionConfigParser.h"
+#include "game/faction/base/population/calculators/PopCompositionCalculator.h"
 #include "lib/LuaRuntime.h"
 #include "ui/WorldDisplay.h"
 #include "ui/BaseWorkableAreaDisplay.h"
@@ -117,7 +119,7 @@ void Engine::Initialize_()
 
     // Create test faction with a base
     auto pFaction = std::make_unique<Faction>();
-    auto pBase = std::make_unique<ResourceManager>();
+    auto pBase = std::make_unique<BaseManager>();
     pBase->SetFactionId(1);  // Test faction ID
     pBase->SetBaseId(1);     // Test base ID
     pBase->SetName("Test Base");
@@ -149,7 +151,7 @@ void Engine::Initialize_()
     {
         for (size_t i = 0; i < pFaction->GetBaseCount(); ++i)
         {
-            const ResourceManager* pB = pFaction->GetBase(i);
+            const BaseManager* pB = pFaction->GetBase(i);
             if (pB)
             {
                 basePositions.emplace_back(pB->GetX(), pB->GetY());
@@ -273,12 +275,16 @@ void Engine::RenderBaseView_()
     {
         m_graphics->DrawText(m_pActiveBase->GetName(), 20.f, 40.f, 20, Color::Yellow());
 
-        const std::string nutrientText = "Nutrients: " + std::to_string(m_pActiveBase->GetNutrientStockpile());
-        const std::string mineralText  = "Minerals:  " + std::to_string(m_pActiveBase->GetMineralStockpile());
-        const std::string energyText   = "Energy:    " + std::to_string(m_pActiveBase->GetEnergyProduction()) + "/turn";
-        m_graphics->DrawText(nutrientText, 20.f, 70.f, 16, Color::White());
-        m_graphics->DrawText(mineralText,  20.f, 90.f, 16, Color::White());
-        m_graphics->DrawText(energyText,   20.f, 110.f, 16, Color::White());
+        ResourceManager* pResources = m_pActiveBase->GetResourceManager();
+        if (pResources)
+        {
+            const std::string nutrientText = "Nutrients: " + std::to_string(pResources->GetNutrientStockpile());
+            const std::string mineralText  = "Minerals:  " + std::to_string(pResources->GetMineralStockpile());
+            const std::string energyText   = "Energy:    " + std::to_string(pResources->GetEnergyProduction()) + "/turn";
+            m_graphics->DrawText(nutrientText, 20.f, 70.f, 16, Color::White());
+            m_graphics->DrawText(mineralText,  20.f, 90.f, 16, Color::White());
+            m_graphics->DrawText(energyText,   20.f, 110.f, 16, Color::White());
+        }
 
         m_workableAreaDisplay->Render(kBaseAreaCenterX, kBaseAreaCenterY, kBaseTileSize);
     }
@@ -296,7 +302,7 @@ void Engine::HandleWorldViewMouse_(int mouseX, int mouseY)
         m_lastClickedTile = tile;
         m_lastClickedTileText = "Clicked tile: (" + std::to_string(tile->first) + ", " + std::to_string(tile->second) + ")";
 
-        ResourceManager* pBase = FindBaseAtTile_(tile->first, tile->second);
+        BaseManager* pBase = FindBaseAtTile_(tile->first, tile->second);
         if (pBase)
         {
             OpenBaseView_(pBase);
@@ -368,13 +374,13 @@ void Engine::HandleBaseViewMouse_(int mouseX, int mouseY)
     }
 }
 
-ResourceManager* Engine::FindBaseAtTile_(int tileX, int tileY) const
+BaseManager* Engine::FindBaseAtTile_(int tileX, int tileY) const
 {
     for (const auto& pFaction : m_gameState->GetFactions())
     {
         for (size_t i = 0; i < pFaction->GetBaseCount(); ++i)
         {
-            ResourceManager* pBase = pFaction->GetBase(i);
+            BaseManager* pBase = pFaction->GetBase(i);
             if (pBase && pBase->GetX() == tileX && pBase->GetY() == tileY)
             {
                 return pBase;
@@ -384,7 +390,7 @@ ResourceManager* Engine::FindBaseAtTile_(int tileX, int tileY) const
     return nullptr;
 }
 
-void Engine::OpenBaseView_(ResourceManager* pBase)
+void Engine::OpenBaseView_(BaseManager* pBase)
 {
     m_pActiveBase = pBase;
     m_activeView = ViewMode::Base;

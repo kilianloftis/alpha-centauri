@@ -1,6 +1,6 @@
-#include "game/faction/population/Pop.h"
-#include "game/faction/population/PopTypeConfigParser.h"
-#include "game/faction/base/ResourceManager.h"
+#include "game/faction/base/population/pop-types/Pop.h"
+#include "game/faction/base/population/pop-types/PopTypeConfigParser.h"
+#include "game/faction/base/resources/ResourceManager.h"
 #include <cmath>
 
 namespace ac

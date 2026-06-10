@@ -16,11 +16,11 @@ struct EnergyAllocation_t
     int psychPercent = 10;
 };
 
-class Economy
+class BaseEconomyManager
 {
 public:
-    Economy();
-    ~Economy();
+    BaseEconomyManager();
+    ~BaseEconomyManager();
 
     int GetEnergyIncome(std::vector<BaseManager*> bases) const;
 

@@ -1,16 +1,16 @@
-#include "game/faction/base/Economy.h"
+#include "game/faction/base/resources/BaseEconomyManager.h"
 #include "game/faction/base/BaseManager.h"
-#include "game/faction/base/ResourceManager.h"
+#include "game/faction/base/resources/ResourceManager.h"
 #include <vector>
 
 namespace ac
 {
 
-Economy::Economy()
+BaseEconomyManager::BaseEconomyManager()
 {
 }
 
-int Economy::GetEnergyIncome(std::vector<BaseManager*> bases) const
+int BaseEconomyManager::GetEnergyIncome(std::vector<BaseManager*> bases) const
 {
     int total = 0;
     for (auto& pBase : bases)
@@ -28,57 +28,57 @@ int Economy::GetEnergyIncome(std::vector<BaseManager*> bases) const
     return total;
 }
 
-int Economy::GetCurrentEnergyReserve() const
+int BaseEconomyManager::GetCurrentEnergyReserve() const
 {
     return m_energyReserve;
 }
 
-void Economy::SetEnergyReserve(int reserve)
+void BaseEconomyManager::SetEnergyReserve(int reserve)
 {
     m_energyReserve = reserve;
 }
 
-void Economy::AddEnergyReserve(int amount)
+void BaseEconomyManager::AddEnergyReserve(int amount)
 {
     m_energyReserve += amount;
 }
 
-void Economy::SetEnergyAllocation(const EnergyAllocation_t& allocation)
+void BaseEconomyManager::SetEnergyAllocation(const EnergyAllocation_t& allocation)
 {
     m_allocation = allocation;
 }
 
-EnergyAllocation_t Economy::GetEnergyAllocation() const
+EnergyAllocation_t BaseEconomyManager::GetEnergyAllocation() const
 {
     return m_allocation;
 }
 
-void Economy::SetTotalEnergyProduced(int amount)
+void BaseEconomyManager::SetTotalEnergyProduced(int amount)
 {
     m_totalEnergyProduced = amount;
 }
 
-int Economy::GetTotalEnergyProduced() const
+int BaseEconomyManager::GetTotalEnergyProduced() const
 {
     return m_totalEnergyProduced;
 }
 
-int Economy::GetEnergyForEcon() const
+int BaseEconomyManager::GetEnergyForEcon() const
 {
     return (m_totalEnergyProduced * m_allocation.econPercent) / 100;
 }
 
-int Economy::GetEnergyForLabs() const
+int BaseEconomyManager::GetEnergyForLabs() const
 {
     return (m_totalEnergyProduced * m_allocation.labsPercent) / 100;
 }
 
-int Economy::GetEnergyForPsych() const
+int BaseEconomyManager::GetEnergyForPsych() const
 {
     return (m_totalEnergyProduced * m_allocation.psychPercent) / 100;
 }
 
-Economy::~Economy()
+BaseEconomyManager::~BaseEconomyManager()
 {
 }
 

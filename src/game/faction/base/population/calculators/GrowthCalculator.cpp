@@ -1,4 +1,4 @@
-#include "game/faction/population/GrowthCalculator.h"
+#include "game/faction/base/population/calculators/GrowthCalculator.h"
 #include <algorithm>
 
 namespace ac

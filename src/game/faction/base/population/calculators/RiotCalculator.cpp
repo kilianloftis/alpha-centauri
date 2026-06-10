@@ -1,4 +1,4 @@
-#include "game/faction/population/RiotCalculator.h"
+#include "game/faction/base/population/calculators/RiotCalculator.h"
 
 namespace ac
 {

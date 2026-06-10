@@ -1,4 +1,4 @@
-#include "game/faction/population/PopCompositionConfigParser.h"
+#include "game/faction/base/population/pop-types/PopCompositionConfigParser.h"
 #include "lib/LuaRuntime.h"
 #include <iostream>
 

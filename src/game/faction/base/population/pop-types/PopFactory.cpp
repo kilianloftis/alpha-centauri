@@ -1,6 +1,6 @@
-#include "game/faction/population/PopFactory.h"
-#include "game/faction/population/Pop.h"
-#include "game/faction/population/PopTypeRegistry.h"
+#include "game/faction/base/population/pop-types/PopFactory.h"
+#include "game/faction/base/population/pop-types/Pop.h"
+#include "game/faction/base/population/pop-types/PopTypeRegistry.h"
 #include <iostream>
 
 namespace ac

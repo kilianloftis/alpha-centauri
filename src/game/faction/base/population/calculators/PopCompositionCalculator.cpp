@@ -1,4 +1,4 @@
-#include "game/faction/population/PopCompositionCalculator.h"
+#include "game/faction/base/population/calculators/PopCompositionCalculator.h"
 #include "lib/LuaRuntime.h"
 
 namespace ac

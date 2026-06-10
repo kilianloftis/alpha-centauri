@@ -2,11 +2,10 @@
 
 #include "game/faction/FactionIdentity.h"
 #include "game/faction/AIProfile.h"
-#include "game/faction/base/Economy.h"
+#include "game/faction/base/resources/BaseEconomyManager.h"
 #include "game/faction/Military.h"
 #include "game/faction/Research.h"
 #include "game/faction/Diplomacy.h"
-#include "game/faction/base/ResourceManager.h"
 
 namespace ac
 {
@@ -34,7 +33,7 @@ void Faction::ProcessTurn()
     // m_pDiplomacy->UpdateRelations();
 }
 
-void Faction::AddBase(std::unique_ptr<ResourceManager> pBase)
+void Faction::AddBase(std::unique_ptr<BaseManager> pBase)
 {
     if (pBase)
     {
@@ -42,7 +41,7 @@ void Faction::AddBase(std::unique_ptr<ResourceManager> pBase)
     }
 }
 
-ResourceManager* Faction::GetBase(size_t index)
+BaseManager* Faction::GetBase(size_t index)
 {
     if (index < m_bases.size())
     {
@@ -51,7 +50,7 @@ ResourceManager* Faction::GetBase(size_t index)
     return nullptr;
 }
 
-const ResourceManager* Faction::GetBase(size_t index) const
+const BaseManager* Faction::GetBase(size_t index) const
 {
     if (index < m_bases.size())
     {
@@ -85,12 +84,12 @@ const AIProfile* Faction::GetAIProfile() const
     return m_pAIProfile.get();
 }
 
-Economy* Faction::GetEconomy()
+BaseEconomyManager* Faction::GetEconomy()
 {
     return m_pEconomy.get();
 }
 
-const Economy* Faction::GetEconomy() const
+const BaseEconomyManager* Faction::GetEconomy() const
 {
     return m_pEconomy.get();
 }
