@@ -117,6 +117,55 @@ void WorkerAssignmentManager::OnPopulationChanged(const PopContainer& rPops)
     }
 }
 
+void WorkerAssignmentManager::AutoAssignWorkers(const PopContainer& rPops,
+                                                const std::vector<TileCoord>& workableTiles)
+{
+    // Find all unassigned workers
+    std::vector<int> unassignedWorkerIds;
+    for (const auto& pPop : rPops.GetPops())
+    {
+        if (pPop->IsWorker() && GetAssignedTile(pPop->GetId()).first == -1)
+        {
+            unassignedWorkerIds.push_back(pPop->GetId());
+        }
+    }
+
+    if (unassignedWorkerIds.empty())
+    {
+        return;
+    }
+
+    // Find available (unassigned) tiles
+    std::vector<TileCoord> availableTiles;
+    for (const auto& tile : workableTiles)
+    {
+        if (!IsTileAssigned(tile.first, tile.second))
+        {
+            availableTiles.push_back(tile);
+        }
+    }
+
+    // Assign workers to available tiles
+    size_t workerIndex = 0;
+    size_t tileIndex = 0;
+    while (workerIndex < unassignedWorkerIds.size() && tileIndex < availableTiles.size())
+    {
+        int popId = unassignedWorkerIds[workerIndex];
+        const auto& tile = availableTiles[tileIndex];
+
+        if (AssignWorker(popId, tile.first, tile.second, rPops))
+        {
+            ++workerIndex;
+            ++tileIndex;
+        }
+        else
+        {
+            // If assignment failed, try next tile
+            ++tileIndex;
+        }
+    }
+}
+
 const Pop* WorkerAssignmentManager::FindPop_(int popId, const PopContainer& rPops) const
 {
     for (const auto& pPop : rPops.GetPops())

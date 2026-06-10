@@ -125,11 +125,24 @@ void Engine::Initialize_()
     pBase->SetName("Test Base");
     pBase->SetPosition(6, 4);  // Center of 12x8 world
 
-    std::cout << "Created test base with initial population: " << pBase->GetPopulation()->GetSize() << "\n";
-
     // Inject pop type registry and composition calculator into base population
     pBase->GetPopulation()->SetRegistry(m_popTypeRegistry.get());
     pBase->GetPopulation()->SetCompositionCalculator(m_popCompositionCalculator.get());
+
+    // Auto-assign initial workers to tiles
+    pBase->AutoAssignWorkers();
+
+    // Set up tile lookup for resource calculations
+    ResourceManager* pResources = pBase->GetResourceManager();
+    if (pResources && m_worldMap)
+    {
+        pResources->SetTileLookup([this](int x, int y) -> const Tile* {
+            return m_worldMap->GetTile(x, y);
+        });
+    }
+
+    std::cout << "Created test base with population: " << pBase->GetPopulation()->GetSize()
+              << " (workers: " << pBase->GetPopulation()->GetWorkerCount() << ")\n";
 
     // Wire base signals to EventBus
     m_eventBridge->WireBase(*pBase);
@@ -355,12 +368,12 @@ void Engine::HandleBaseViewMouse_(int mouseX, int mouseY)
     }
     else
     {
-        // Reassign the last worker in the pop list to this tile
+        // Assign an unassigned worker to this tile
         const auto& pops = rPops.GetPops();
         for (int i = static_cast<int>(pops.size()) - 1; i >= 0; --i)
         {
             const Pop* pPop = pops[i].get();
-            if (pPop->IsWorker() && rAssignments.GetAssignedTile(pPop->GetId()).first != -1)
+            if (pPop->IsWorker() && rAssignments.GetAssignedTile(pPop->GetId()).first == -1)
             {
                 rAssignments.UnassignWorker(pPop->GetId());
                 if (rAssignments.AssignWorker(pPop->GetId(), tileX, tileY, rPops))

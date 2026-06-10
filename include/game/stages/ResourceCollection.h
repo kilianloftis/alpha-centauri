@@ -5,11 +5,11 @@
 namespace ac
 {
 
-class IncomeCollection : public TurnStageBase
+class ResourceCollection : public TurnStageBase
 {
 public:
-    IncomeCollection(std::shared_ptr<HookContext> hookContext);
-    ~IncomeCollection() = default;
+    ResourceCollection(std::shared_ptr<HookContext> hookContext);
+    ~ResourceCollection() = default;
 
     void Execute_(GameState* pGameState, Faction* pFaction = nullptr) override;
 };

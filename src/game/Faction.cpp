@@ -13,7 +13,7 @@ namespace ac
 Faction::Faction()
     : m_pIdentity(nullptr)
     , m_pAIProfile(nullptr)
-    , m_pEconomy(nullptr)
+    , m_pEconomy(std::make_unique<BaseEconomyManager>())
     , m_pMilitary(nullptr)
     , m_pResearch(nullptr)
     , m_pDiplomacy(nullptr)

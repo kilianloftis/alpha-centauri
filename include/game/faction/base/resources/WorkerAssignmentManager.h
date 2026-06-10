@@ -60,6 +60,12 @@ public:
     // Call this after any population change (pop gained, lost, or converted).
     void OnPopulationChanged(const PopContainer& rPops);
 
+    // Auto-assign any unassigned workers to available workable tiles.
+    // Iterates through workers and assigns each unassigned one to the first
+    // available unassigned tile from the provided workable tiles list.
+    void AutoAssignWorkers(const PopContainer& rPops,
+                           const std::vector<TileCoord>& workableTiles);
+
 private:
     std::unordered_map<int, TileCoord> m_assignments;  // popId -> (x, y)
 

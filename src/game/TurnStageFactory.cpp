@@ -2,8 +2,7 @@
 #include "game/TurnStageConfigParser.h"
 #include "game/stages/TurnStart.h"
 #include "game/stages/NewYearBegins.h"
-#include "game/stages/IncomeCollection.h"
-#include "game/stages/EnergyAllocation.h"
+#include "game/stages/ResourceCollection.h"
 #include "game/stages/ResearchAccumulation.h"
 #include "game/stages/BaseProduction.h"
 #include "game/stages/Population.h"
@@ -73,10 +72,8 @@ std::unique_ptr<TurnStageBase> TurnStageFactory::CreateStageInstance(const TurnS
             return std::make_unique<TurnStart>(config.hookContext);
         case TurnStage::NewYearBegins:
             return std::make_unique<NewYearBegins>(config.hookContext);
-        case TurnStage::IncomeCollection:
-            return std::make_unique<IncomeCollection>(config.hookContext);
-        case TurnStage::EnergyAllocation:
-            return std::make_unique<EnergyAllocation>(config.hookContext);
+        case TurnStage::ResourceCollection:
+            return std::make_unique<ResourceCollection>(config.hookContext);
         case TurnStage::ResearchAccumulation:
             return std::make_unique<ResearchAccumulation>(config.hookContext);
         case TurnStage::BaseProduction:

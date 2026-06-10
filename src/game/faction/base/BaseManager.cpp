@@ -13,7 +13,7 @@ BaseManager::BaseManager()
     , m_baseId(-1)
     , m_x(0)
     , m_y(0)
-    , m_pPopulation(std::make_unique<PopulationManager>())
+    , m_pPopulation(std::make_unique<PopulationManager>(3))
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>())
     , m_pResources(nullptr)
 {
@@ -22,6 +22,8 @@ BaseManager::BaseManager()
 
     m_pPopulation->on_pop_gained.connect([this](int) {
         m_pWorkerAssignments->OnPopulationChanged(m_pPopulation->GetContainer());
+        m_pWorkerAssignments->AutoAssignWorkers(m_pPopulation->GetContainer(),
+                                               GetWorkableTilePositions());
     });
     m_pPopulation->on_pop_lost.connect([this](int) {
         m_pWorkerAssignments->OnPopulationChanged(m_pPopulation->GetContainer());
@@ -58,6 +60,12 @@ const WorkerAssignmentManager& BaseManager::GetWorkerAssignments() const
     return *m_pWorkerAssignments;
 }
 
+void BaseManager::AutoAssignWorkers()
+{
+    m_pWorkerAssignments->AutoAssignWorkers(m_pPopulation->GetContainer(),
+                                           GetWorkableTilePositions());
+}
+
 ResourceManager* BaseManager::GetResourceManager()
 {
     return m_pResources.get();
@@ -66,6 +74,14 @@ ResourceManager* BaseManager::GetResourceManager()
 const ResourceManager* BaseManager::GetResourceManager() const
 {
     return m_pResources.get();
+}
+
+void BaseManager::CollectResources(BaseEconomyManager* pEconomy)
+{
+    if (m_pResources)
+    {
+        m_pResources->CollectResources(pEconomy);
+    }
 }
 
 void BaseManager::SetPosition(int x, int y)

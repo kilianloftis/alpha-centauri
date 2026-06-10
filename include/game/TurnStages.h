@@ -17,12 +17,11 @@ enum class TurnStage
 {
     TurnStart,
     NewYearBegins,
-    IncomeCollection,
+    ResourceCollection,
     // Income_Nutrients,
     // Income_Minerals,
     // Income_Energy,
     // Income_Commerce,
-    EnergyAllocation,
     // EnergyAllocation_Economy,
     // EnergyAllocation_Labs,
     // EnergyAllocation_Psych,

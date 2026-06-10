@@ -22,20 +22,9 @@
     }
   },
   {
-    "id": "IncomeCollection",
-    "name": "Income Collection",
-    "description": "Collects income for all factions",
-    "repeat_for_each_faction": true,
-    "hooks": {
-      "pre": [],
-      "post": [],
-      "replace": []
-    }
-  },
-  {
-    "id": "EnergyAllocation",
-    "name": "Energy Allocation",
-    "description": "Allocates energy to economy, labs, and psych",
+    "id": "ResourceCollection",
+    "name": "Resource Collection",
+    "description": "Collects resources from all bases for each faction",
     "repeat_for_each_faction": true,
     "hooks": {
       "pre": [],

@@ -13,6 +13,9 @@ class PopContainer;
 class PopulationManager;
 class WorkerAssignmentManager;
 
+// Forward declaration
+class BaseEconomyManager;
+
 // ResourceManager handles resource production, stockpiling, buildings, and trade routes.
 // It is owned by BaseManager and receives PopulationManager and WorkerAssignmentManager
 // references to calculate resource production from worked tiles.
@@ -21,6 +24,9 @@ class ResourceManager
 public:
     ResourceManager(PopulationManager* pPopulation, WorkerAssignmentManager* pWorkerAssignments);
     ~ResourceManager();
+
+    // Set the BaseEconomyManager reference for energy allocation
+    void SetEconomyManager(BaseEconomyManager* pEconomy);
 
     // Tile lookup used by resource calculations. Must be set before calling
     // GetNutrientProduction() / GetEnergyProduction() / GetMineralProduction().
@@ -43,6 +49,13 @@ public:
     int GetNutrientStockpile() const;
     int GetMineralStockpile() const;
 
+    // Energy stockpiles
+    int GetEconStockpile() const;
+    int GetLabsStockpile() const;
+
+    // Allocate energy to stockpiles based on economy manager settings
+    void AllocateEnergy(int totalEnergy);
+
     // Accumulate this turn's production into base stockpiles (nutrients, minerals).
     // Call once per turn from the appropriate turn stage (BaseProduction).
     // Note: Energy is not accumulated here - it flows directly to faction-level allocation.
@@ -51,6 +64,10 @@ public:
     // Consume resources from stockpiles. Returns actual amount consumed.
     int ConsumeNutrients(int amount);
     int ConsumeMinerals(int amount);
+
+    // Collect resources from worked tiles and allocate energy.
+    // Called once per turn per base from ResourceCollection stage.
+    void CollectResources(BaseEconomyManager* pEconomy);
 
     // Building management
     void AddBuilding(const std::string& buildingId);
@@ -65,6 +82,10 @@ private:
     std::vector<TradeRoute_t> m_tradeRoutes;
     int m_nutrientStockpile;
     int m_mineralStockpile;
+    int m_econStockpile;
+    int m_labsStockpile;
+
+    BaseEconomyManager* m_pEconomy;
 
     int CalculateNutrients_() const;
     int CalculateEnergyProduction_() const;

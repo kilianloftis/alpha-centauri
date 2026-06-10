@@ -31,9 +31,17 @@ public:
     WorkerAssignmentManager& GetWorkerAssignments();
     const WorkerAssignmentManager& GetWorkerAssignments() const;
 
+    // Auto-assign all unassigned workers to available workable tiles.
+    // Should be called after initial population setup or when new workers need assignment.
+    void AutoAssignWorkers();
+
     // Resource management - delegated to ResourceManager
     ResourceManager* GetResourceManager();
     const ResourceManager* GetResourceManager() const;
+
+    // Collect resources from worked tiles and allocate energy to stockpiles.
+    // Called once per turn per base during ResourceCollection stage.
+    void CollectResources(class BaseEconomyManager* pEconomy);
 
     // Position on the map
     void SetPosition(int x, int y);

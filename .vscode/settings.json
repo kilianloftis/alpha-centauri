@@ -1,3 +1,8 @@
 {
-    "cmake.sourceDirectory": "/home/martok/alpha-centauri"
+    "cmake.sourceDirectory": "/home/martok/alpha-centauri",
+    "cmake.configureOnOpen": false,
+    "cmake.buildTask": true,
+    "cmake.automaticReconfigure": false,
+    "cmake.skipConfigureIfCachePresent": true,
+    "cmake.buildBeforeRun": false
 }

@@ -1,4 +1,5 @@
 #include "game/faction/base/resources/ResourceManager.h"
+#include "game/faction/base/resources/BaseEconomyManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/population/PopContainer.h"
@@ -14,7 +15,15 @@ ResourceManager::ResourceManager(PopulationManager* pPopulation, WorkerAssignmen
     , m_pWorkerAssignments(pWorkerAssignments)
     , m_nutrientStockpile(0)
     , m_mineralStockpile(0)
+    , m_econStockpile(0)
+    , m_labsStockpile(0)
+    , m_pEconomy(nullptr)
 {
+}
+
+void ResourceManager::SetEconomyManager(BaseEconomyManager* pEconomy)
+{
+    m_pEconomy = pEconomy;
 }
 
 ResourceManager::~ResourceManager()
@@ -145,11 +154,56 @@ int ResourceManager::GetMineralStockpile() const
     return m_mineralStockpile;
 }
 
+int ResourceManager::GetEconStockpile() const
+{
+    return m_econStockpile;
+}
+
+int ResourceManager::GetLabsStockpile() const
+{
+    return m_labsStockpile;
+}
+
+void ResourceManager::AllocateEnergy(int totalEnergy)
+{
+    if (!m_pEconomy)
+    {
+        // No economy manager set, allocate all to econ
+        m_econStockpile += totalEnergy;
+        return;
+    }
+
+    // Set total energy collected by this base for allocation
+    m_pEconomy->SetTotalEnergyCollected(totalEnergy);
+
+    // Allocate energy according to the economy manager's allocation settings
+    m_econStockpile += m_pEconomy->GetEnergyForEcon();
+    m_labsStockpile += m_pEconomy->GetEnergyForLabs();
+    // Psych energy is not stored - it's applied immediately to drone control
+    // m_pEconomy->GetEnergyForPsych() would be used for drone reduction
+}
+
+void ResourceManager::CollectResources(BaseEconomyManager* pEconomy)
+{
+    // Store reference for energy allocation
+    SetEconomyManager(pEconomy);
+
+    // Collect nutrients and minerals from worked tiles
+    m_nutrientStockpile += CalculateNutrients_();
+    m_mineralStockpile += CalculateMinerals_();
+
+    // Calculate and allocate energy
+    int totalEnergy = CalculateEnergyProduction_();
+    AllocateEnergy(totalEnergy);
+}
+
 void ResourceManager::AccumulateStockpiles()
 {
+    // Nutrients and minerals are now collected in CollectResources()
+    // This method kept for backward compatibility or additional accumulation
     m_nutrientStockpile += CalculateNutrients_();
     m_mineralStockpile  += CalculateMinerals_();
-    // Energy is not accumulated - it flows directly to faction-level allocation
+    // Energy is allocated in CollectResources via AllocateEnergy()
 }
 
 int ResourceManager::ConsumeNutrients(int amount)

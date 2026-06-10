@@ -39,16 +39,14 @@ void BaseProduction::Execute_(GameState* pGameState, Faction* pFaction)
             continue;
         }
 
-        // Accumulate this base's production into its stockpiles
+        // Resources already collected in ResourceCollection stage
         // Note: Energy is NOT stockpiled - it flows directly to faction-level allocation
-        std::cout << "  Collecting resources at base '" << pBase->GetName() << "'"
-                  << " (nutrients: " << pResources->GetNutrientProduction()
-                  << ", minerals: " << pResources->GetMineralProduction()
-                  << ", energy: " << pResources->GetEnergyProduction() << " -> to faction allocation)\n";
+        std::cout << "  Base '" << pBase->GetName() << "' resource production:"
+                  << " nutrients=" << pResources->GetNutrientProduction()
+                  << " minerals=" << pResources->GetMineralProduction()
+                  << " energy=" << pResources->GetEnergyProduction() << "\n";
 
-        pResources->AccumulateStockpiles();
-
-        std::cout << "  Stockpiles now: nutrients=" << pResources->GetNutrientStockpile()
+        std::cout << "  Stockpiles: nutrients=" << pResources->GetNutrientStockpile()
                   << ", minerals=" << pResources->GetMineralStockpile()
                   << " (energy not stockpiled)\n";
     }
