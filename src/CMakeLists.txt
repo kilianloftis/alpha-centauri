@@ -9,6 +9,7 @@ add_executable(alpha-centauri
     game/faction/Research.cpp
     game/faction/Diplomacy.cpp
     game/faction/base/BaseManager.cpp
+    game/faction/base/BuildingManager.cpp
     game/faction/base/resources/ResourceManager.cpp
     game/faction/base/resources/WorkerAssignmentManager.cpp
     game/faction/base/resources/BaseEconomyManager.cpp

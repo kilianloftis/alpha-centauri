@@ -24,6 +24,8 @@ class PopTypeRegistry;
 class PopCompositionCalculator;
 struct PopCompositionConfig;
 class LuaRuntime;
+class BuildingRegistry;
+class BuildingFactory;
 
 class Engine
 {
@@ -65,6 +67,8 @@ private:
     std::unique_ptr<LuaRuntime> m_luaRuntime;
     std::unique_ptr<PopCompositionConfig> m_popCompositionConfig;
     std::unique_ptr<PopCompositionCalculator> m_popCompositionCalculator;
+    std::unique_ptr<BuildingRegistry> m_buildingRegistry;
+    std::unique_ptr<BuildingFactory> m_buildingFactory;
 
     enum class ViewMode
     {

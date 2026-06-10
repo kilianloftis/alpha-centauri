@@ -2,7 +2,6 @@
 #include "game/GameState.h"
 #include "game/Faction.h"
 #include "game/faction/base/BaseManager.h"
-#include "game/faction/base/resources/ResourceManager.h"
 #include <iostream>
 
 namespace ac
@@ -33,21 +32,15 @@ void BaseProduction::Execute_(GameState* pGameState, Faction* pFaction)
             continue;
         }
 
-        ResourceManager* pResources = pBase->GetResourceManager();
-        if (!pResources)
-        {
-            continue;
-        }
-
         // Resources already collected in ResourceCollection stage
         // Note: Energy is NOT stockpiled - it flows directly to faction-level allocation
         std::cout << "  Base '" << pBase->GetName() << "' resource production:"
-                  << " nutrients=" << pResources->GetNutrientProduction()
-                  << " minerals=" << pResources->GetMineralProduction()
-                  << " energy=" << pResources->GetEnergyProduction() << "\n";
+                  << " nutrients=" << pBase->GetNutrientProduction()
+                  << " minerals=" << pBase->GetMineralProduction()
+                  << " energy=" << pBase->GetEnergyProduction() << "\n";
 
-        std::cout << "  Stockpiles: nutrients=" << pResources->GetNutrientStockpile()
-                  << ", minerals=" << pResources->GetMineralStockpile()
+        std::cout << "  Stockpiles: nutrients=" << pBase->GetNutrientStockpile()
+                  << ", minerals=" << pBase->GetMineralStockpile()
                   << " (energy not stockpiled)\n";
     }
 }

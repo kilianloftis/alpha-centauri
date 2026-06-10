@@ -10,7 +10,8 @@
 #include "lib/EventBridge.h"
 #include "lib/GameEvent.h"
 #include "game/faction/base/BaseManager.h"
-#include "game/faction/base/resources/ResourceManager.h"
+#include "game/buildings/BuildingRegistry.h"
+#include "game/buildings/BuildingFactory.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/population/pop-types/PopTypeRegistry.h"
@@ -101,6 +102,11 @@ void Engine::Initialize_()
     m_popTypeRegistry = std::make_unique<PopTypeRegistry>();
     m_popTypeRegistry->Load("config/pop_types.json");
 
+    m_buildingRegistry = std::make_unique<BuildingRegistry>();
+    m_buildingRegistry->Load("config/buildings.json");
+    m_buildingFactory = std::make_unique<BuildingFactory>();
+    m_buildingFactory->SetRegistry(m_buildingRegistry.get());
+
     m_luaRuntime = std::make_unique<LuaRuntime>();
 
     PopCompositionConfigParser compositionParser;
@@ -119,7 +125,7 @@ void Engine::Initialize_()
 
     // Create test faction with a base
     auto pFaction = std::make_unique<Faction>();
-    auto pBase = std::make_unique<BaseManager>();
+    auto pBase = std::make_unique<BaseManager>(m_buildingFactory.get());
     pBase->SetFactionId(1);  // Test faction ID
     pBase->SetBaseId(1);     // Test base ID
     pBase->SetName("Test Base");
@@ -133,10 +139,9 @@ void Engine::Initialize_()
     pBase->AutoAssignWorkers();
 
     // Set up tile lookup for resource calculations
-    ResourceManager* pResources = pBase->GetResourceManager();
-    if (pResources && m_worldMap)
+    if (m_worldMap)
     {
-        pResources->SetTileLookup([this](int x, int y) -> const Tile* {
+        pBase->SetTileLookup([this](int x, int y) -> const Tile* {
             return m_worldMap->GetTile(x, y);
         });
     }
@@ -288,16 +293,12 @@ void Engine::RenderBaseView_()
     {
         m_graphics->DrawText(m_pActiveBase->GetName(), 20.f, 40.f, 20, Color::Yellow());
 
-        ResourceManager* pResources = m_pActiveBase->GetResourceManager();
-        if (pResources)
-        {
-            const std::string nutrientText = "Nutrients: " + std::to_string(pResources->GetNutrientStockpile());
-            const std::string mineralText  = "Minerals:  " + std::to_string(pResources->GetMineralStockpile());
-            const std::string energyText   = "Energy:    " + std::to_string(pResources->GetEnergyProduction()) + "/turn";
-            m_graphics->DrawText(nutrientText, 20.f, 70.f, 16, Color::White());
-            m_graphics->DrawText(mineralText,  20.f, 90.f, 16, Color::White());
-            m_graphics->DrawText(energyText,   20.f, 110.f, 16, Color::White());
-        }
+        const std::string nutrientText = "Nutrients: " + std::to_string(m_pActiveBase->GetNutrientStockpile());
+        const std::string mineralText  = "Minerals:  " + std::to_string(m_pActiveBase->GetMineralStockpile());
+        const std::string energyText   = "Energy:    " + std::to_string(m_pActiveBase->GetEnergyProduction()) + "/turn";
+        m_graphics->DrawText(nutrientText, 20.f, 70.f, 16, Color::White());
+        m_graphics->DrawText(mineralText,  20.f, 90.f, 16, Color::White());
+        m_graphics->DrawText(energyText,   20.f, 110.f, 16, Color::White());
 
         m_workableAreaDisplay->Render(kBaseAreaCenterX, kBaseAreaCenterY, kBaseTileSize);
     }

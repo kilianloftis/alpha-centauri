@@ -1,14 +1,16 @@
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/BuildingManager.h"
 #include "game/faction/base/resources/ResourceManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/population/PopContainer.h"
+#include "game/buildings/BuildingFactory.h"
 #include <cmath>
 
 namespace ac
 {
 
-BaseManager::BaseManager()
+BaseManager::BaseManager(const BuildingFactory* pBuildingFactory)
     : m_factionId(-1)
     , m_baseId(-1)
     , m_x(0)
@@ -16,6 +18,7 @@ BaseManager::BaseManager()
     , m_pPopulation(std::make_unique<PopulationManager>(3))
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>())
     , m_pResources(nullptr)
+    , m_pBuildings(std::make_unique<BuildingManager>(pBuildingFactory))
 {
     // Create ResourceManager after population and worker assignments are set up
     m_pResources = std::make_unique<ResourceManager>(m_pPopulation.get(), m_pWorkerAssignments.get());
@@ -66,14 +69,48 @@ void BaseManager::AutoAssignWorkers()
                                            GetWorkableTilePositions());
 }
 
-ResourceManager* BaseManager::GetResourceManager()
+void BaseManager::SetTileLookup(std::function<const Tile*(int x, int y)> tileLookup)
 {
-    return m_pResources.get();
+    if (m_pResources)
+    {
+        m_pResources->SetTileLookup(std::move(tileLookup));
+    }
 }
 
-const ResourceManager* BaseManager::GetResourceManager() const
+int BaseManager::GetNutrientProduction() const
 {
-    return m_pResources.get();
+    return m_pResources ? m_pResources->GetNutrientProduction() : 0;
+}
+
+int BaseManager::GetMineralProduction() const
+{
+    return m_pResources ? m_pResources->GetMineralProduction() : 0;
+}
+
+int BaseManager::GetEnergyProduction() const
+{
+    return m_pResources ? m_pResources->GetEnergyProduction() : 0;
+}
+
+int BaseManager::GetMineralStockpile() const
+{
+    return m_pResources ? m_pResources->GetMineralStockpile() : 0;
+}
+
+void BaseManager::AddBuilding(const std::string& buildingId)
+{
+    if (m_pBuildings)
+    {
+        m_pBuildings->AddBuilding(buildingId);
+    }
+}
+
+void BaseManager::DestroyBuilding(const std::string& buildingId)
+{
+    if (m_pBuildings)
+    {
+        m_pBuildings->DestroyBuilding(buildingId);
+    }
 }
 
 void BaseManager::CollectResources(BaseEconomyManager* pEconomy)

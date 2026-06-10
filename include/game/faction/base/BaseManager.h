@@ -2,6 +2,7 @@
 
 #include "game/faction/base/BaseTypes.h"
 #include "game/faction/base/population/calculators/GrowthCalculator.h"
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -13,6 +14,9 @@ namespace ac
 class PopulationManager;
 class WorkerAssignmentManager;
 class ResourceManager;
+class BuildingManager;
+class BuildingFactory;
+class Tile;
 
 // BaseManager coordinates base management subsystems.
 // Provides identity, position, and access to sub-managers.
@@ -20,7 +24,7 @@ class ResourceManager;
 class BaseManager
 {
 public:
-    BaseManager();
+    explicit BaseManager(const BuildingFactory* pBuildingFactory);
     ~BaseManager();
 
     // Population management - delegated to PopulationManager
@@ -37,8 +41,15 @@ public:
     void AutoAssignWorkers();
 
     // Resource management - delegated to ResourceManager
-    ResourceManager* GetResourceManager();
-    const ResourceManager* GetResourceManager() const;
+    void SetTileLookup(std::function<const class Tile*(int x, int y)> tileLookup);
+    int GetNutrientProduction() const;
+    int GetMineralProduction() const;
+    int GetEnergyProduction() const;
+    int GetMineralStockpile() const;
+
+    // Building management - delegated to BuildingManager
+    void AddBuilding(const std::string& buildingId);
+    void DestroyBuilding(const std::string& buildingId);
 
     // Collect resources from worked tiles and allocate energy to stockpiles.
     // Called once per turn per base during ResourceCollection stage.
@@ -84,6 +95,7 @@ protected:
     std::unique_ptr<PopulationManager> m_pPopulation;
     std::unique_ptr<WorkerAssignmentManager> m_pWorkerAssignments;
     std::unique_ptr<ResourceManager> m_pResources;
+    std::unique_ptr<BuildingManager> m_pBuildings;
     std::string m_name;
 };
 
