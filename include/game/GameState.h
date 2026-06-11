@@ -1,7 +1,7 @@
 #pragma once
 
 #include "game/Faction.h"
-#include "lib/Signal.h"
+#include "game/map/WorldMap.h"
 #include <vector>
 #include <memory>
 
@@ -19,23 +19,21 @@ public:
     void SetMissionYear(int year);
     void IncrementMissionYear();
 
-    // Exit flag
-    bool ShouldExit() const;
-    void SetShouldExit(bool bShouldExit);
-
     // Factions
     std::vector<std::unique_ptr<Faction>>& GetFactions();
     const std::vector<std::unique_ptr<Faction>>& GetFactions() const;
     void AddFaction(std::unique_ptr<Faction> pFaction);
     int GetNumFactions() const;
 
-    // Signals
-    Signal<int> on_turn_started;
+    // World map
+    WorldMap* GetWorldMap();
+    const WorldMap* GetWorldMap() const;
+    void SetWorldMap(std::unique_ptr<WorldMap> pWorldMap);
 
 private:
     int m_missionYear;
-    bool m_bShouldExit;
     std::vector<std::unique_ptr<Faction>> m_factions;
+    std::unique_ptr<WorldMap> m_worldMap;
 };
 
 } // namespace ac

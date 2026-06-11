@@ -15,7 +15,7 @@ class PopulationManager;
 class WorkerAssignmentManager;
 class ResourceManager;
 class BuildingManager;
-class BuildingFactory;
+class BuildingRegistry;
 class Tile;
 
 // BaseManager coordinates base management subsystems.
@@ -24,13 +24,14 @@ class Tile;
 class BaseManager
 {
 public:
-    explicit BaseManager(const BuildingFactory* pBuildingFactory);
+    explicit BaseManager(const BuildingRegistry* pBuildingRegistry);
     ~BaseManager();
 
     // Population management - delegated to PopulationManager
     PopulationManager* GetPopulation();
     const PopulationManager* GetPopulation() const;
     void AddPop();
+    void RemovePop();
 
     // Worker assignment - delegated to WorkerAssignmentManager
     WorkerAssignmentManager& GetWorkerAssignments();

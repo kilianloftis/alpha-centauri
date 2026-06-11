@@ -19,13 +19,7 @@ class EventBus;
 class EventBridge;
 class BaseWorkableAreaDisplay;
 class WorldDisplay;
-class WorldMap;
-class PopTypeRegistry;
-class PopCompositionCalculator;
-struct PopCompositionConfig;
-class LuaRuntime;
-class BuildingRegistry;
-class BuildingFactory;
+class GameDataContext;
 
 class Engine
 {
@@ -62,13 +56,7 @@ private:
     std::unique_ptr<EventBridge> m_eventBridge;
     std::unique_ptr<WorldDisplay> m_worldDisplay;
     std::unique_ptr<BaseWorkableAreaDisplay> m_workableAreaDisplay;
-    std::unique_ptr<WorldMap> m_worldMap;
-    std::unique_ptr<PopTypeRegistry> m_popTypeRegistry;
-    std::unique_ptr<LuaRuntime> m_luaRuntime;
-    std::unique_ptr<PopCompositionConfig> m_popCompositionConfig;
-    std::unique_ptr<PopCompositionCalculator> m_popCompositionCalculator;
-    std::unique_ptr<BuildingRegistry> m_buildingRegistry;
-    std::unique_ptr<BuildingFactory> m_buildingFactory;
+    std::unique_ptr<GameDataContext> m_gameDataContext;
 
     enum class ViewMode
     {
@@ -76,6 +64,7 @@ private:
         Base,
     };
 
+    bool m_bShouldExit = false;
     ViewMode m_activeView = ViewMode::World;
     BaseManager* m_pActiveBase = nullptr;
 

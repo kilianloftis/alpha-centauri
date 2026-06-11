@@ -1,12 +1,15 @@
 #pragma once
 
 #include "game/buildings/BuildingConfigParser.h"
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
 namespace ac
 {
+
+class Building;
 
 // Holds all BuildingConfig entries loaded from config, keyed by id.
 // Loaded once at startup via Load(); queried at runtime via Find().
@@ -24,6 +27,10 @@ public:
 
     // All loaded configs in definition order.
     const std::vector<BuildingConfig>& GetAll() const;
+
+    // Create a Building instance for the given id.
+    // Throws std::runtime_error if id is not found.
+    std::unique_ptr<Building> CreateBuilding(const std::string& id) const;
 
 private:
     std::vector<BuildingConfig> m_configs;

@@ -10,8 +10,8 @@
 #include "lib/EventBridge.h"
 #include "lib/GameEvent.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
-#include "game/buildings/BuildingFactory.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/population/pop-types/PopTypeRegistry.h"
@@ -35,6 +35,7 @@ Engine::Engine()
     , m_turnStageFactory(std::make_unique<TurnStageFactory>())
     , m_gameState(std::make_unique<GameState>())
     , m_eventBus(std::make_unique<EventBus>())
+    , m_gameDataContext(std::make_unique<GameDataContext>())
     {}
 
 Engine::~Engine() = default;
@@ -54,7 +55,7 @@ void Engine::Run()
 
 void Engine::GameLoop_()
 {
-    while (!m_gameState->ShouldExit())
+    while (!m_bShouldExit)
     {
         m_graphics->Clear();
         Render_();
@@ -67,7 +68,7 @@ void Engine::GameLoop_()
 
 void Engine::ProcessTurn_()
 {
-    m_gameState->on_turn_started.emit(m_gameState->GetMissionYear());
+    m_eventBus->publish(EvTurnStarted{ m_gameState->GetMissionYear() });
     m_turnProcessor->ProcessTurn(m_gameState->GetMissionYear(), m_gameState->GetNumFactions(), *m_gameState);
     m_gameState->IncrementMissionYear();
 }
@@ -83,7 +84,7 @@ void Engine::Initialize_()
     }
 
     // Create EventBridge
-    m_eventBridge = std::make_unique<EventBridge>(*m_gameState, *m_eventBus);
+    m_eventBridge = std::make_unique<EventBridge>(*m_eventBus);
 
     // Subscribe to population events for testing
     m_eventBus->subscribe([](const GameEvent& event) {
@@ -99,19 +100,21 @@ void Engine::Initialize_()
         }
     });
 
-    m_popTypeRegistry = std::make_unique<PopTypeRegistry>();
-    m_popTypeRegistry->Load("config/pop_types.json");
+    m_gameDataContext->popTypeRegistry = std::make_unique<PopTypeRegistry>();
+    m_gameDataContext->popTypeRegistry->Load("config/pop_types.json");
 
-    m_buildingRegistry = std::make_unique<BuildingRegistry>();
-    m_buildingRegistry->Load("config/buildings.json");
-    m_buildingFactory = std::make_unique<BuildingFactory>();
-    m_buildingFactory->SetRegistry(m_buildingRegistry.get());
+    m_gameDataContext->buildingRegistry = std::make_unique<BuildingRegistry>();
+    m_gameDataContext->buildingRegistry->Load("config/buildings.json");
 
-    m_luaRuntime = std::make_unique<LuaRuntime>();
+    m_gameDataContext->luaRuntime = std::make_unique<LuaRuntime>();
 
     PopCompositionConfigParser compositionParser;
-    m_popCompositionConfig     = std::make_unique<PopCompositionConfig>(compositionParser.ParseConfig("config/pop_composition.lua", *m_luaRuntime));
-    m_popCompositionCalculator = std::make_unique<PopCompositionCalculator>(*m_popCompositionConfig, *m_luaRuntime);
+    m_gameDataContext->popCompositionConfig =
+        std::make_unique<PopCompositionConfig>(
+            compositionParser.ParseConfig("config/pop_composition.lua", *m_gameDataContext->luaRuntime));
+    m_gameDataContext->popCompositionCalculator =
+        std::make_unique<PopCompositionCalculator>(
+            *m_gameDataContext->popCompositionConfig, *m_gameDataContext->luaRuntime);
 
     // Generate world map
     WorldGenerator worldGen;
@@ -120,29 +123,29 @@ void Engine::Initialize_()
     worldConfig.height = 8;
     worldConfig.minElevation = -1000;
     worldConfig.maxElevation = 2000;
-    m_worldMap = worldGen.Generate(worldConfig);
-    std::cout << "Generated world map: " << m_worldMap->GetWidth() << "x" << m_worldMap->GetHeight() << "\n";
+    m_gameState->SetWorldMap(worldGen.Generate(worldConfig));
+    std::cout << "Generated world map: " << m_gameState->GetWorldMap()->GetWidth() << "x" << m_gameState->GetWorldMap()->GetHeight() << "\n";
 
     // Create test faction with a base
     auto pFaction = std::make_unique<Faction>();
-    auto pBase = std::make_unique<BaseManager>(m_buildingFactory.get());
+    auto pBase = std::make_unique<BaseManager>(m_gameDataContext->buildingRegistry.get());
     pBase->SetFactionId(1);  // Test faction ID
     pBase->SetBaseId(1);     // Test base ID
     pBase->SetName("Test Base");
     pBase->SetPosition(6, 4);  // Center of 12x8 world
 
     // Inject pop type registry and composition calculator into base population
-    pBase->GetPopulation()->SetRegistry(m_popTypeRegistry.get());
-    pBase->GetPopulation()->SetCompositionCalculator(m_popCompositionCalculator.get());
+    pBase->GetPopulation()->SetRegistry(m_gameDataContext->popTypeRegistry.get());
+    pBase->GetPopulation()->SetCompositionCalculator(m_gameDataContext->popCompositionCalculator.get());
 
     // Auto-assign initial workers to tiles
     pBase->AutoAssignWorkers();
 
     // Set up tile lookup for resource calculations
-    if (m_worldMap)
+    if (m_gameState->GetWorldMap())
     {
         pBase->SetTileLookup([this](int x, int y) -> const Tile* {
-            return m_worldMap->GetTile(x, y);
+            return m_gameState->GetWorldMap()->GetTile(x, y);
         });
     }
 
@@ -161,7 +164,7 @@ void Engine::Initialize_()
 
     // Create UI displays
     m_worldDisplay = std::make_unique<WorldDisplay>(*m_graphics);
-    m_worldDisplay->SetWorldMap(m_worldMap.get());
+    m_worldDisplay->SetWorldMap(m_gameState->GetWorldMap());
 
     // Collect base positions for the world display
     std::vector<std::pair<int, int>> basePositions;
@@ -178,9 +181,9 @@ void Engine::Initialize_()
     }
     m_worldDisplay->SetBasePositions(basePositions);
 
-    m_workableAreaDisplay = std::make_unique<BaseWorkableAreaDisplay>(*m_graphics, *m_worldMap);
+    m_workableAreaDisplay = std::make_unique<BaseWorkableAreaDisplay>(*m_graphics, *m_gameState->GetWorldMap());
 
-    m_turnStageFactory->SetCompositionCalculator(m_popCompositionCalculator.get());
+    m_turnStageFactory->SetCompositionCalculator(m_gameDataContext->popCompositionCalculator.get());
     m_turnStageFactory->LoadConfig("config/turn_stages.json");
     auto registry = m_turnStageFactory->CreateStages();
     TurnStageRepeatFlags_t repeatFlags;
@@ -248,7 +251,7 @@ void Engine::HandleKeyInput_()
             }
             else
             {
-                m_gameState->SetShouldExit(true);
+                m_bShouldExit = true;
             }
         }
         else if (event.key == Key::Enter && m_activeView == ViewMode::World)
@@ -309,7 +312,7 @@ void Engine::HandleWorldViewMouse_(int mouseX, int mouseY)
     auto tile = TileHitTester::HitTestWorldGrid(
         static_cast<float>(mouseX), static_cast<float>(mouseY),
         kWorldOriginX, kWorldOriginY, kWorldTileSize,
-        m_worldMap->GetWidth(), m_worldMap->GetHeight());
+        m_gameState->GetWorldMap()->GetWidth(), m_gameState->GetWorldMap()->GetHeight());
 
     if (tile)
     {

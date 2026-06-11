@@ -7,7 +7,7 @@ struct GrowthInputs_t
 {
     int baseSize;               // current population size
     int growthRateModifier;     // percentage modifier on required nutrients (e.g. -25 = 25% faster growth)
-    int nutrientBank;           // current nutrients accumulated toward next growth
+    int nutrientBank;           // nutrients already accumulated this turn (caller adds production before calling)
 };
 
 enum class GrowthResult

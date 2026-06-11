@@ -6,13 +6,12 @@
 namespace ac
 {
 
-class GameState;
 class EventBus;
 
 class EventBridge
 {
 public:
-    EventBridge(GameState& rState, EventBus& rBus);
+    explicit EventBridge(EventBus& rBus);
 
     // Wire a base's signals to the EventBus (call when base is added to faction)
     void WireBase(BaseManager& rBase);

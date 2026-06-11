@@ -2,12 +2,13 @@
 #include "game/faction/base/population/calculators/PopCompositionCalculator.h"
 #include "game/faction/base/population/pop-types/PopTypeConfigParser.h"
 #include "game/faction/base/population/pop-types/PopTypeRegistry.h"
+#include <stdexcept>
 
 namespace ac
 {
 
 PopContainer::PopContainer()
-    : m_pPopFactory(std::make_unique<PopFactory>())
+    : m_pRegistry(nullptr)
     , m_nextPopId(0)
 {
 }
@@ -58,12 +59,13 @@ void PopContainer::Reserve(int count)
 
 void PopContainer::AddPop(const std::string& typeId)
 {
-    auto pPop = m_pPopFactory->CreatePop(typeId);
-    if (pPop)
+    if (!m_pRegistry)
     {
-        pPop->SetId(m_nextPopId++);
-        m_pops.push_back(std::move(pPop));
+        throw std::runtime_error("PopContainer has no registry");
     }
+    auto pPop = m_pRegistry->CreatePop(typeId);
+    pPop->SetId(m_nextPopId++);
+    m_pops.push_back(std::move(pPop));
 }
 
 void PopContainer::RemovePop()
@@ -80,15 +82,16 @@ void PopContainer::ConvertTo(size_t index, const std::string& typeId)
     {
         return;
     }
+    if (!m_pRegistry)
+    {
+        throw std::runtime_error("PopContainer has no registry");
+    }
     int popId  = m_pops[index]->GetId();
     int tileId = m_pops[index]->GetTileId();
-    auto pNewPop = m_pPopFactory->CreatePop(typeId);
-    if (pNewPop)
-    {
-        pNewPop->SetId(popId);
-        pNewPop->SetTileId(tileId);
-        m_pops[index] = std::move(pNewPop);
-    }
+    auto pNewPop = m_pRegistry->CreatePop(typeId);
+    pNewPop->SetId(popId);
+    pNewPop->SetTileId(tileId);
+    m_pops[index] = std::move(pNewPop);
 }
 
 void PopContainer::PromoteWorkerToDrone()
@@ -152,7 +155,7 @@ void PopContainer::ApplyCompositionTargets(const PopCompositionResult& targets, 
 
 int PopContainer::SetRegistry(const PopTypeRegistry* pRegistry)
 {
-    m_pPopFactory->SetRegistry(pRegistry);
+    m_pRegistry = pRegistry;
 
     int popsCreated = 0;
 
@@ -162,14 +165,10 @@ int PopContainer::SetRegistry(const PopTypeRegistry* pRegistry)
         const size_t target = m_pops.capacity();
         for (size_t i = 0; i < target; i++)
         {
-            // Default type will be resolved when needed
-            auto pPop = m_pPopFactory->CreatePop("Worker");
-            if (pPop)
-            {
-                pPop->SetId(m_nextPopId++);
-                m_pops.push_back(std::move(pPop));
-                ++popsCreated;
-            }
+            auto pPop = m_pRegistry->CreatePop("Worker");
+            pPop->SetId(m_nextPopId++);
+            m_pops.push_back(std::move(pPop));
+            ++popsCreated;
         }
     }
 

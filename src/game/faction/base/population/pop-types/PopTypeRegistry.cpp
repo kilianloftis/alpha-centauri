@@ -1,5 +1,7 @@
 #include "game/faction/base/population/pop-types/PopTypeRegistry.h"
+#include "game/faction/base/population/pop-types/Pop.h"
 #include "game/faction/base/population/pop-types/PopTypeConfigParser.h"
+#include <stdexcept>
 
 namespace ac
 {
@@ -39,6 +41,16 @@ const PopTypeConfig* PopTypeRegistry::Find(const std::string& id) const
 const std::vector<PopTypeConfig>& PopTypeRegistry::GetAll() const
 {
     return m_configs;
+}
+
+std::unique_ptr<Pop> PopTypeRegistry::CreatePop(const std::string& typeId) const
+{
+    const PopTypeConfig* pConfig = Find(typeId);
+    if (!pConfig)
+    {
+        throw std::runtime_error("Unknown pop type '" + typeId + "'");
+    }
+    return std::make_unique<Pop>(*pConfig);
 }
 
 } // namespace ac

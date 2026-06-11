@@ -38,9 +38,18 @@ graph TB
         TileBonusConfig[TileBonusConfig]
     end
 
+    subgraph "GameDataContext (immutable definition data)"
+        PopTypeRegistry[PopTypeRegistry]
+        BuildingRegistry[BuildingRegistry]
+        PopCompositionConfig[PopCompositionConfig]
+        PopCompositionCalculator[PopCompositionCalculator]
+        LuaRuntime[LuaRuntime]
+    end
+
     subgraph "Faction System"
-        GameState[GameState]
-        FactionVector[FactionVector<br/>vector<unique_ptr<Faction>>]
+        GameState[GameState<br/>(mutable save-game data)]
+        WorldMap[WorldMap]
+        FactionVector[FactionVector<br/>vector&lt;unique_ptr&lt;Faction&gt;&gt;]
         FactionFactory[FactionFactory]
         Faction[Faction]
         FactionSubsystems[Faction Subsystems:<br/>FactionIdentity, AIProfile,<br/>Economy, Military,<br/>Research, Diplomacy]
@@ -66,6 +75,7 @@ graph TB
 
     main --> Engine
     Engine --> GameState
+    Engine --> GameDataContext
     Engine --> Graphics
     Engine --> Input
     Engine --> HookSystem
@@ -91,12 +101,17 @@ graph TB
     TileBonusRegistry --> TileBonusConfig
     Tile --> TileBonusConfig
     GameState --> FactionVector
+    GameState --> WorldMap
+    GameDataContext --> PopTypeRegistry
+    GameDataContext --> BuildingRegistry
+    GameDataContext --> PopCompositionConfig
+    GameDataContext --> PopCompositionCalculator
+    GameDataContext --> LuaRuntime
     FactionFactory --> Faction
     FactionVector --> Faction
     Faction --> FactionSubsystems
     FactionSubsystems --> Tile
 
-    EventBridge --> GameState
     EventBridge --> EventBus
     EventBus --> GameEvent
     Faction --> Signal
@@ -118,6 +133,13 @@ graph TB
     style TurnStageFactory fill:#fbf,stroke:#333,stroke-width:2px
     style TurnStages fill:#ff9,stroke:#333,stroke-width:2px
     style GameState fill:#fbf,stroke:#333,stroke-width:3px
+    style GameDataContext fill:#ffd,stroke:#333,stroke-width:3px
+    style WorldMap fill:#fbf,stroke:#333,stroke-width:2px
+    style PopTypeRegistry fill:#ffd,stroke:#333,stroke-width:2px
+    style BuildingRegistry fill:#ffd,stroke:#333,stroke-width:2px
+    style PopCompositionConfig fill:#ffd,stroke:#333,stroke-width:2px
+    style PopCompositionCalculator fill:#ffd,stroke:#333,stroke-width:2px
+    style LuaRuntime fill:#ffd,stroke:#333,stroke-width:2px
     style FactionVector fill:#fbf,stroke:#333,stroke-width:2px
     style FactionFactory fill:#ff9,stroke:#333,stroke-width:2px
     style Faction fill:#f9f,stroke:#333,stroke-width:2px
@@ -140,7 +162,7 @@ graph TB
 - **Responsibilities**:
   - Initialize and manage game loop
   - Own and coordinate Graphics, Input, HookSystem, TurnProcessor, EventBridge, and GameState
-  - Delegates all game state to GameState; emits `on_turn_started` before each turn
+  - Owns `m_bShouldExit`; publishes `EvTurnStarted` directly to `EventBus` each turn
 
 ### Graphics System
 - **Purpose**: Abstract graphics rendering interface
@@ -172,10 +194,20 @@ graph TB
   - TurnStageFactory depends on HookSystem and TurnStages
   - Both HookSystem and TurnStageFactory load from config/turn_stages.json
 
-### Faction System
-- **Purpose**: Manages all factions and their game state
+### GameDataContext
+- **Purpose**: Holds all immutable definition data loaded once at startup; never serialised
 - **Components**:
-  - `GameState`: Owns FactionVector, missionYear, bShouldExit, and `on_turn_started` signal
+  - `BuildingRegistry`: All building definitions loaded from `config/buildings.json`
+  - `PopTypeRegistry`: All pop type definitions loaded from `config/pop_types.json`
+  - `PopCompositionConfig`: Composition formula config loaded via Lua
+  - `PopCompositionCalculator`: Evaluates composition formulas at runtime
+  - `LuaRuntime`: Shared Lua state used to load and evaluate config scripts
+- **Note**: Implemented as a plain struct with public `unique_ptr` members (no getters/setters needed)
+
+### Faction System
+- **Purpose**: Manages all factions and their mutable save-game state
+- **Components**:
+  - `GameState`: Owns FactionVector, missionYear, and WorldMap — mutable data written to and read from disk; no registries or calculators
   - `FactionVector`: Vector of unique_ptr<Faction> stored inside GameState
   - `FactionFactory`: Creates Faction instances from configuration
   - `Faction`: Represents a single faction with all its subsystems
@@ -213,7 +245,7 @@ graph TB
   - `GameEvent`: std::variant type containing all mod-accessible events
 - **Dependencies**:
   - Engine owns EventBridge
-  - EventBridge depends on GameState and EventBus
+  - EventBridge depends on EventBus only (GameState wiring added per-subsystem via `WireBase` etc.)
   - Faction and TurnProcessor use Signal<T> for internal communication
 - **Details**: See `docs/architecture/event-system.md` for detailed architecture
 

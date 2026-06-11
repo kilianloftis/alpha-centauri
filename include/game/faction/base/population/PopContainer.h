@@ -1,7 +1,6 @@
 #pragma once
 
 #include "game/faction/base/population/pop-types/Pop.h"
-#include "game/faction/base/population/pop-types/PopFactory.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -46,8 +45,7 @@ public:
     // then promotes workers to match targets.
     void ApplyCompositionTargets(const PopCompositionResult& targets, const std::string& defaultTypeId);
 
-    // Registry injection — forwarded to the internal PopFactory.
-    // Returns the number of initial pops created from reserved capacity.
+    // Registry injection. Returns the number of initial pops created from reserved capacity.
     int SetRegistry(const PopTypeRegistry* pRegistry);
 
     // Compute total psych output across all pops
@@ -55,7 +53,7 @@ public:
 
 private:
     std::vector<std::unique_ptr<Pop>> m_pops;
-    std::unique_ptr<PopFactory> m_pPopFactory;
+    const PopTypeRegistry* m_pRegistry;
     int m_nextPopId;
 
     int CountPops_(bool (*predicate)(const Pop*)) const;

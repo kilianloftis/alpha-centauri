@@ -15,7 +15,7 @@ int GrowthCalculator::ComputeNutrientsRequired(int baseSize, int growthRateModif
 GrowthResult GrowthCalculator::CalculateGrowh(const GrowthInputs_t& inputs, int& outNewBank)
 {
     const int required = ComputeNutrientsRequired(inputs.baseSize, inputs.growthRateModifier);
-    outNewBank = inputs.nutrientBank + inputs.nutrientsPerTurn;
+    outNewBank = inputs.nutrientBank;
 
     if (outNewBank >= required)
     {

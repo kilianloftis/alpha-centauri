@@ -1,13 +1,13 @@
 #include "game/faction/base/BuildingManager.h"
 #include "game/buildings/Building.h"
-#include "game/buildings/BuildingFactory.h"
+#include "game/buildings/BuildingRegistry.h"
 #include <algorithm>
 
 namespace ac
 {
 
-BuildingManager::BuildingManager(const BuildingFactory* pFactory)
-    : m_pFactory(pFactory)
+BuildingManager::BuildingManager(const BuildingRegistry* pRegistry)
+    : m_pRegistry(pRegistry)
 {
 }
 
@@ -17,7 +17,7 @@ BuildingManager::~BuildingManager()
 
 void BuildingManager::AddBuilding(const std::string& buildingId)
 {
-    m_buildings.push_back(m_pFactory->CreateBuilding(buildingId));
+    m_buildings.push_back(m_pRegistry->CreateBuilding(buildingId));
 }
 
 void BuildingManager::DestroyBuilding(const std::string& buildingId)

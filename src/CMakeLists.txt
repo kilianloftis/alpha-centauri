@@ -2,6 +2,7 @@ add_executable(alpha-centauri
     main.cpp
     game/Engine.cpp
     game/GameState.cpp
+    game/GameDataContext.cpp
     game/Faction.cpp
     game/faction/FactionIdentity.cpp
     game/faction/AIProfile.cpp
@@ -16,7 +17,6 @@ add_executable(alpha-centauri
     game/faction/base/population/PopulationManager.cpp
     game/faction/base/population/PopContainer.cpp
     game/faction/base/population/pop-types/Pop.cpp
-    game/faction/base/population/pop-types/PopFactory.cpp
     game/faction/base/population/pop-types/PopTypeConfigParser.cpp
     game/faction/base/population/pop-types/PopTypeRegistry.cpp
     game/faction/base/population/pop-types/PopCompositionConfigParser.cpp
@@ -35,7 +35,6 @@ add_executable(alpha-centauri
     game/buildings/Building.cpp
     game/buildings/BuildingConfigParser.cpp
     game/buildings/BuildingRegistry.cpp
-    game/buildings/BuildingFactory.cpp
     game/map/Tile.cpp
     game/map/TileBonusConfigParser.cpp
     game/map/TileBonusRegistry.cpp

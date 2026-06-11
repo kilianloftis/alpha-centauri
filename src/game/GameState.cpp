@@ -6,13 +6,13 @@
 #include "game/faction/Military.h"
 #include "game/faction/Research.h"
 #include "game/faction/Diplomacy.h"
+#include "game/map/WorldMap.h"
 
 namespace ac
 {
 
 GameState::GameState()
     : m_missionYear(2100)
-    , m_bShouldExit(false)
 {
 }
 
@@ -33,16 +33,6 @@ void GameState::IncrementMissionYear()
     ++m_missionYear;
 }
 
-bool GameState::ShouldExit() const
-{
-    return m_bShouldExit;
-}
-
-void GameState::SetShouldExit(bool bShouldExit)
-{
-    m_bShouldExit = bShouldExit;
-}
-
 std::vector<std::unique_ptr<Faction>>& GameState::GetFactions()
 {
     return m_factions;
@@ -61,6 +51,21 @@ void GameState::AddFaction(std::unique_ptr<Faction> pFaction)
 int GameState::GetNumFactions() const
 {
     return static_cast<int>(m_factions.size());
+}
+
+WorldMap* GameState::GetWorldMap()
+{
+    return m_worldMap.get();
+}
+
+const WorldMap* GameState::GetWorldMap() const
+{
+    return m_worldMap.get();
+}
+
+void GameState::SetWorldMap(std::unique_ptr<WorldMap> pWorldMap)
+{
+    m_worldMap = std::move(pWorldMap);
 }
 
 } // namespace ac

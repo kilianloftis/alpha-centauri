@@ -1,5 +1,7 @@
 #include "game/buildings/BuildingRegistry.h"
+#include "game/buildings/Building.h"
 #include "game/buildings/BuildingConfigParser.h"
+#include <stdexcept>
 
 namespace ac
 {
@@ -39,6 +41,16 @@ const BuildingConfig* BuildingRegistry::Find(const std::string& id) const
 const std::vector<BuildingConfig>& BuildingRegistry::GetAll() const
 {
     return m_configs;
+}
+
+std::unique_ptr<Building> BuildingRegistry::CreateBuilding(const std::string& id) const
+{
+    const BuildingConfig* pConfig = Find(id);
+    if (!pConfig)
+    {
+        throw std::runtime_error("Unknown building id '" + id + "'");
+    }
+    return std::make_unique<Building>(*pConfig);
 }
 
 } // namespace ac

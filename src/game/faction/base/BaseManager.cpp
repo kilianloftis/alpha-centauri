@@ -4,13 +4,13 @@
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/population/PopContainer.h"
-#include "game/buildings/BuildingFactory.h"
+#include "game/buildings/BuildingRegistry.h"
 #include <cmath>
 
 namespace ac
 {
 
-BaseManager::BaseManager(const BuildingFactory* pBuildingFactory)
+BaseManager::BaseManager(const BuildingRegistry* pBuildingRegistry)
     : m_factionId(-1)
     , m_baseId(-1)
     , m_x(0)
@@ -18,7 +18,7 @@ BaseManager::BaseManager(const BuildingFactory* pBuildingFactory)
     , m_pPopulation(std::make_unique<PopulationManager>(3))
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>())
     , m_pResources(nullptr)
-    , m_pBuildings(std::make_unique<BuildingManager>(pBuildingFactory))
+    , m_pBuildings(std::make_unique<BuildingManager>(pBuildingRegistry))
 {
     // Create ResourceManager after population and worker assignments are set up
     m_pResources = std::make_unique<ResourceManager>(m_pPopulation.get(), m_pWorkerAssignments.get());
@@ -50,6 +50,14 @@ void BaseManager::AddPop()
     if (m_pPopulation)
     {
         m_pPopulation->AddPop();
+    }
+}
+
+void BaseManager::RemovePop()
+{
+    if (m_pPopulation)
+    {
+        m_pPopulation->RemovePop();
     }
 }
 

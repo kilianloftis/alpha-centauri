@@ -1,19 +1,13 @@
 #include "lib/EventBridge.h"
 #include "lib/EventBus.h"
-#include "game/GameState.h"
 #include "game/faction/base/population/PopulationManager.h"
 
 namespace ac
 {
 
-EventBridge::EventBridge(GameState& rState, EventBus& rBus)
+EventBridge::EventBridge(EventBus& rBus)
     : m_rBus(rBus)
 {
-    // Wire turn started signal
-    rState.on_turn_started.connect([this](int turn) {
-        m_rBus.publish(EvTurnStarted{ turn });
-    });
-
     // TODO: Wire faction signals (on_tech_discovered, on_base_built, on_eliminated)
     // once Faction gains a FactionId and those signals are added.
 }

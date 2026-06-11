@@ -8,15 +8,15 @@ namespace ac
 {
 
 class Building;
-class BuildingFactory;
+class BuildingRegistry;
 
 // BuildingManager owns all Building instances for a single base.
-// Buildings are added by id (looked up via BuildingFactory) and destroyed by id.
+// Buildings are added by id (looked up via BuildingRegistry) and destroyed by id.
 // Provides aggregate bonus queries that sum across all held buildings.
 class BuildingManager
 {
 public:
-    explicit BuildingManager(const BuildingFactory* pFactory);
+    explicit BuildingManager(const BuildingRegistry* pRegistry);
     ~BuildingManager();
 
     // Add a building by id. Throws if the factory cannot find the id.
@@ -35,7 +35,7 @@ public:
     int GetTotalImprovementNutrientsBonus(const std::string& improvementName) const;
 
 private:
-    const BuildingFactory* m_pFactory;
+    const BuildingRegistry* m_pRegistry;
     std::vector<std::unique_ptr<Building>> m_buildings;
 };
 

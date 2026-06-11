@@ -39,7 +39,6 @@ void Population::Execute_(GameState* pGameState, Faction* pFaction)
 
             GrowthInputs_t inputs;
             inputs.baseSize = pBase->GetBaseSize();
-            inputs.nutrientsPerTurn = pBase->GetNutrientStockpile();
             inputs.growthRateModifier = pBase->GetGrowthRate();
             inputs.nutrientBank = pBase->GetNutrientStockpile();
 
