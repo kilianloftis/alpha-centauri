@@ -145,6 +145,11 @@ int ResourceManager::GetNutrientStockpile() const
     return m_nutrientStockpile;
 }
 
+void ResourceManager::SetNutrientStockpile(int amount)
+{
+    m_nutrientStockpile = amount;
+}
+
 int ResourceManager::GetMineralStockpile() const
 {
     return m_mineralStockpile;
@@ -191,6 +196,20 @@ void ResourceManager::CollectResources(BaseEconomyManager* pEconomy)
     // Calculate and allocate energy
     int totalEnergy = CalculateEnergyProduction_();
     AllocateEnergy(totalEnergy);
+}
+
+int ResourceManager::CollectIncome()
+{
+    int income = m_econStockpile;
+    m_econStockpile = 0;
+    return income;
+}
+
+int ResourceManager::CollectLabs()
+{
+    int labs = m_labsStockpile;
+    m_labsStockpile = 0;
+    return labs;
 }
 
 int ResourceManager::ConsumeNutrients(int amount)

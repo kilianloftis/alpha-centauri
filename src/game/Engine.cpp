@@ -10,6 +10,7 @@
 #include "lib/EventBridge.h"
 #include "lib/GameEvent.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/Research.h"
 #include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
@@ -26,7 +27,6 @@
 #include "game/map/WorldGenerator.h"
 #include <iostream>
 #include <stdexcept>
-#include <magic_enum.hpp>
 
 namespace ac
 {
@@ -198,15 +198,13 @@ void Engine::Initialize_()
     m_turnStageFactory->LoadConfig("config/turn_stages.json");
     auto registry = m_turnStageFactory->CreateStages();
     TurnStageRepeatFlags_t repeatFlags;
+    std::vector<std::string> stageOrder;
     for (const auto& config : m_turnStageFactory->GetStageConfigs())
     {
-        auto stageEnum = magic_enum::enum_cast<TurnStage>(config.id);
-        if (stageEnum.has_value())
-        {
-            repeatFlags[stageEnum.value()] = config.repeat_for_each_faction;
-        }
+        repeatFlags[config.id] = config.repeat_for_each_faction;
+        stageOrder.push_back(config.id);
     }
-    m_turnProcessor = std::make_unique<TurnProcessor>(std::move(registry), std::move(repeatFlags));
+    m_turnProcessor = std::make_unique<TurnProcessor>(std::move(registry), std::move(repeatFlags), std::move(stageOrder));
     CheckInitialized_();
 }
 
@@ -275,6 +273,17 @@ void Engine::HandleKeyInput_()
 void Engine::Render_()
 {
     m_graphics->DrawText("Mission Year: " + std::to_string(m_gameState->GetMissionYear()), 20.f, 20.f, 24);
+
+    const auto& factions = m_gameState->GetFactions();
+    if (!factions.empty())
+    {
+        const Faction* pPlayerFaction = factions[0].get();
+        m_graphics->DrawText("Energy: " + std::to_string(pPlayerFaction->GetEnergy()), 350.f, 20.f, 24, Color::Yellow());
+        if (const Research* pResearch = pPlayerFaction->GetResearch())
+        {
+            m_graphics->DrawText("Research: " + std::to_string(pResearch->GetResearchPoints()), 560.f, 20.f, 24, Color{100, 200, 255, 255});
+        }
+    }
 
     switch (m_activeView)
     {

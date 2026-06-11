@@ -3,6 +3,7 @@
 #include "game/stages/TurnStart.h"
 #include "game/stages/NewYearBegins.h"
 #include "game/stages/ResourceCollection.h"
+#include "game/stages/IncomeCollection.h"
 #include "game/stages/ResearchAccumulation.h"
 #include "game/stages/BaseProduction.h"
 #include "game/stages/Population.h"
@@ -46,17 +47,11 @@ TurnStageRegistry_t TurnStageFactory::CreateStages()
     TurnStageRegistry_t registry;
     for (const auto& config : m_stageConfigs)
     {
-        // Create and register the stage instance
         auto pStageInstance = CreateStageInstance(config);
         if (pStageInstance)
         {
-            // Convert string id to TurnStage enum if valid
-            auto stageEnum = magic_enum::enum_cast<TurnStage>(config.id);
-            if (stageEnum.has_value())
-            {
-                registry[stageEnum.value()] = std::move(pStageInstance);
-                std::cout << "Registered stage: " << config.id << "\n";
-            }
+            registry[config.id] = std::move(pStageInstance);
+            std::cout << "Registered stage: " << config.id << "\n";
         }
     }
     return registry;
@@ -79,6 +74,8 @@ std::unique_ptr<TurnStageBase> TurnStageFactory::CreateStageInstance(const TurnS
             return std::make_unique<NewYearBegins>(config.hookContext);
         case TurnStage::ResourceCollection:
             return std::make_unique<ResourceCollection>(config.hookContext);
+        case TurnStage::IncomeCollection:
+            return std::make_unique<IncomeCollection>(config.hookContext);
         case TurnStage::ResearchAccumulation:
             return std::make_unique<ResearchAccumulation>(config.hookContext);
         case TurnStage::BaseProduction:

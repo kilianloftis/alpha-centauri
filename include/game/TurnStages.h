@@ -18,6 +18,7 @@ enum class TurnStage
     TurnStart,
     NewYearBegins,
     ResourceCollection,
+    IncomeCollection,
     // Income_Nutrients,
     // Income_Minerals,
     // Income_Energy,
@@ -105,6 +106,6 @@ protected:
     std::shared_ptr<HookContext> m_pHookContext;
 };
 
-using TurnStageRegistry_t = std::map<TurnStage, std::unique_ptr<TurnStageBase>>;
+using TurnStageRegistry_t = std::map<std::string, std::unique_ptr<TurnStageBase>>;
 
 } // namespace ac

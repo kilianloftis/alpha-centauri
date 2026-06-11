@@ -129,6 +129,16 @@ void BaseManager::CollectResources(BaseEconomyManager* pEconomy)
     }
 }
 
+int BaseManager::CollectIncome()
+{
+    return m_pResources ? m_pResources->CollectIncome() : 0;
+}
+
+int BaseManager::CollectLabs()
+{
+    return m_pResources ? m_pResources->CollectLabs() : 0;
+}
+
 int BaseManager::GetNutrientStockpile() const
 {
     return m_pResources ? m_pResources->GetNutrientStockpile() : 0;
@@ -136,9 +146,10 @@ int BaseManager::GetNutrientStockpile() const
 
 void BaseManager::SetNutrientStockpile(int amount)
 {
-    // TODO: Add setter to ResourceManager
-    // For now, this is a placeholder - nutrients are accumulated in CollectResources
-    (void)amount;
+    if (m_pResources)
+    {
+        m_pResources->SetNutrientStockpile(amount);
+    }
 }
 
 int BaseManager::GetBaseSize() const

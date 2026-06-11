@@ -55,6 +55,14 @@ public:
     // Called once per turn per base during ResourceCollection stage.
     void CollectResources(class BaseEconomyManager* pEconomy);
 
+    // Returns the accumulated econ stockpile and resets it to 0.
+    // Called during IncomeCollection stage to transfer income to the faction.
+    int CollectIncome();
+
+    // Returns the accumulated labs stockpile and resets it to 0.
+    // Called during ResearchAccumulation stage to transfer research to the faction.
+    int CollectLabs();
+
     // Convenience accessors for Population stage
     int GetNutrientStockpile() const;
     void SetNutrientStockpile(int amount);
@@ -82,7 +90,7 @@ public:
     void SetBaseId(int baseId);
     int GetBaseId() const;
 
-protected:
+private:
     FactionId m_factionId;
     int m_baseId;
     int m_x;

@@ -48,11 +48,20 @@ public:
     //       The stockpile is for spending (e.g., rushing production).
     //       The nutrient bank is accumulated toward population growth.
     int GetNutrientStockpile() const;
+    void SetNutrientStockpile(int amount);
     int GetMineralStockpile() const;
 
     // Energy stockpiles
     int GetEconStockpile() const;
     int GetLabsStockpile() const;
+
+    // Returns the accumulated econ stockpile and resets it to 0.
+    // Called during IncomeCollection stage to transfer income to the faction.
+    int CollectIncome();
+
+    // Returns the accumulated labs stockpile and resets it to 0.
+    // Called during ResearchAccumulation stage to transfer research to the faction.
+    int CollectLabs();
 
     // Allocate energy to stockpiles based on economy manager settings
     void AllocateEnergy(int totalEnergy);

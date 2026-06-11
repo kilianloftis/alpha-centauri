@@ -1,7 +1,7 @@
 #include "game/stages/ResearchAccumulation.h"
 #include "game/GameState.h"
 #include "game/Faction.h"
-#include "game/faction/base/resources/BaseEconomyManager.h"
+#include "game/faction/base/BaseManager.h"
 #include "game/faction/Research.h"
 #include <iostream>
 
@@ -25,22 +25,27 @@ void ResearchAccumulation::Execute_(GameState* pGameState, Faction* pFaction)
 
     std::cout << "Executing ResearchAccumulation stage for faction\n";
 
-    // Energy allocated to Labs is set by the EnergyAllocation stage.
-    // We convert that energy to research points.
-    if (BaseEconomyManager* pEconomy = pFaction->GetEconomy())
+    int totalLabs = 0;
+
+    for (size_t i = 0; i < pFaction->GetBaseCount(); ++i)
     {
-        int labsEnergy = pEconomy->GetEnergyForLabs();
-
-        if (Research* pResearch = pFaction->GetResearch())
+        BaseManager* pBase = pFaction->GetBase(i);
+        if (!pBase)
         {
-            // TODO: Apply any modifiers (e.g., from facilities, techs, etc.)
-            int researchPoints = labsEnergy;
-            pResearch->AddResearchPoints(researchPoints);
-
-            std::cout << "  Energy allocated to Labs: " << labsEnergy
-                      << " -> " << researchPoints << " research points\n";
+            continue;
         }
+
+        int baseLabs = pBase->CollectLabs();
+        totalLabs += baseLabs;
+
+        std::cout << "  Base '" << pBase->GetName() << "' labs: " << baseLabs << "\n";
     }
+
+    Research* pResearch = pFaction->GetResearch();
+    // TODO: Apply any modifiers (e.g., from facilities, techs, etc.)
+    pResearch->AddResearchPoints(totalLabs);
+
+    std::cout << "  Faction total research points: " << pResearch->GetResearchPoints() << "\n";
 }
 
 } // namespace ac

@@ -15,13 +15,23 @@ Faction::Faction()
     , m_pAIProfile(nullptr)
     , m_pEconomy(std::make_unique<BaseEconomyManager>())
     , m_pMilitary(nullptr)
-    , m_pResearch(nullptr)
+    , m_pResearch(std::make_unique<Research>())
     , m_pDiplomacy(nullptr)
 {
 }
 
 Faction::~Faction()
 {
+}
+
+void Faction::AddEnergy(int amount)
+{
+    m_energy += amount;
+}
+
+int Faction::GetEnergy() const
+{
+    return m_energy;
 }
 
 void Faction::ProcessTurn()

@@ -44,6 +44,7 @@ add_executable(alpha-centauri
     game/stages/TurnStart.cpp
     game/stages/NewYearBegins.cpp
     game/stages/ResourceCollection.cpp
+    game/stages/IncomeCollection.cpp
     game/stages/ResearchAccumulation.cpp
     game/stages/BaseProduction.cpp
     game/stages/Population.cpp

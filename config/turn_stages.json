@@ -33,6 +33,17 @@
     }
   },
   {
+    "id": "IncomeCollection",
+    "name": "Income Collection",
+    "description": "Collects econ stockpile from all bases and transfers income to the faction energy pool",
+    "repeat_for_each_faction": true,
+    "hooks": {
+      "pre": [],
+      "post": [],
+      "replace": []
+    }
+  },
+  {
     "id": "ResearchAccumulation",
     "name": "Research Accumulation",
     "description": "Accumulates research points from labs",
