@@ -229,7 +229,8 @@ graph TB
   - `WorkerAssignmentManager`: Maps stable pop IDs to workable tile coordinates; prunes stale assignments when population changes; computes aggregate worked resources via a tile-lookup callable
   - `PopFactory`: Creates individual `Pop` instances from config (looked up via `PopTypeRegistry`)
   - `RiotCalculator`: Tracks drone riot state and emits `will_riot`, `is_rioting`, and `riot_ended` signals
-  - `GrowthCalculator`: Accumulates nutrient surplus across turns and emits `on_growth` / `on_starvation` when thresholds are crossed
+  - `GrowthCalculator`: Computes the nutrient threshold required for a base to grow one population. Stateful; accepts a `GrowthConfig` (loaded from `config/pop_growth.lua` via `GrowthConfigParser`) and a `LuaRuntime`. Growth/starvation decisions (stockpile ≥ required → grow; stockpile < 0 → starve) are made in the `Population` turn stage.
+  - `GrowthConfigParser`: Loads `config/pop_growth.lua` and produces a `GrowthConfig` holding the `threshold_formula` Lua expression (variables: `base_size`, `growth_rating`)
   - `WorkerRoles`: Enum defining worker roles (Worker, Lab, Psych, Econ, Drone, Talent)
   - `Buildings`: Collection of building IDs in the base
   - `TileResources`: Resources (nutrients, energy, minerals) from worked tiles

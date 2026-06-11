@@ -2,7 +2,9 @@
 #include "game/buildings/BuildingRegistry.h"
 #include "game/faction/base/population/pop-types/PopTypeRegistry.h"
 #include "game/faction/base/population/pop-types/PopCompositionConfigParser.h"
+#include "game/faction/base/population/pop-types/GrowthConfigParser.h"
 #include "game/faction/base/population/calculators/PopCompositionCalculator.h"
+#include "game/faction/base/population/calculators/GrowthCalculator.h"
 #include "lib/LuaRuntime.h"
 
 namespace ac

@@ -20,6 +20,7 @@ add_executable(alpha-centauri
     game/faction/base/population/pop-types/PopTypeConfigParser.cpp
     game/faction/base/population/pop-types/PopTypeRegistry.cpp
     game/faction/base/population/pop-types/PopCompositionConfigParser.cpp
+    game/faction/base/population/pop-types/GrowthConfigParser.cpp
     game/faction/base/population/calculators/PopCompositionCalculator.cpp
     game/faction/base/population/calculators/RiotCalculator.cpp
     game/faction/base/population/calculators/GrowthCalculator.cpp

@@ -4,14 +4,14 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/population/calculators/GrowthCalculator.h"
-#include "game/faction/base/population/calculators/PopCompositionCalculator.h"
 #include <iostream>
 
 namespace ac
 {
 
-Population::Population(std::shared_ptr<HookContext> hookContext)
+Population::Population(std::shared_ptr<HookContext> hookContext, GrowthCalculator* pGrowthCalculator)
     : TurnStageBase(hookContext)
+    , m_pGrowthCalculator(pGrowthCalculator)
 {
 }
 
@@ -32,22 +32,27 @@ void Population::Execute_(GameState* pGameState, Faction* pFaction)
         {
             PopulationManager* pPop = pBase->GetPopulation();
 
-            // Population growth uses nutrients directly from production (for the growth bank).
-            // The nutrient stockpile (for spending on production rushing, etc.) is separate
-            // and is accumulated during the BaseProduction stage.
-            std::cout << "  Accumulating growth for base '" << pBase->GetName() << "' (bank: " << pBase->GetNutrientStockpile() << " -> ";
+            const int stockpile = pBase->GetNutrientStockpile();
+            std::cout << "  Accumulating growth for base '" << pBase->GetName() << "' (bank: " << stockpile << " -> ";
 
-            GrowthInputs_t inputs;
-            inputs.baseSize = pBase->GetBaseSize();
-            inputs.growthRateModifier = pBase->GetGrowthRate();
-            inputs.nutrientBank = pBase->GetNutrientStockpile();
+            if (m_pGrowthCalculator)
+            {
+                const int required = m_pGrowthCalculator->ComputeNutrientsRequired(
+                    pBase->GetBaseSize(), pBase->GetGrowthRate());
 
-            int newNutrientBank = 0;
-            const GrowthResult result = GrowthCalculator::CalculateGrowh(inputs, newNutrientBank);
+                if (stockpile >= required)
+                {
+                    pBase->AddPop();
+                    pBase->SetNutrientStockpile(stockpile - required);
+                }
+                else if (stockpile < 0)
+                {
+                    pBase->RemovePop();
+                    pBase->SetNutrientStockpile(0);
+                }
+            }
 
-            pBase->ApplyGrowthResult(result, newNutrientBank);
-
-            std::cout << newNutrientBank << ", size: " << pPop->GetSize() << ")\n";
+            std::cout << pBase->GetNutrientStockpile() << ", size: " << pPop->GetSize() << ")\n";
 
             pPop->RecalculateComposition();
         }

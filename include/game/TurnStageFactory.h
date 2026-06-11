@@ -10,6 +10,7 @@ namespace ac
 {
 
 class PopCompositionCalculator;
+class GrowthCalculator;
 
 class TurnStageFactory
 {
@@ -18,6 +19,7 @@ public:
     ~TurnStageFactory() = default;
 
     void SetCompositionCalculator(PopCompositionCalculator* pCalculator);
+    void SetGrowthCalculator(GrowthCalculator* pCalculator);
 
     bool LoadConfig(const std::string& configPath);
     TurnStageRegistry_t CreateStages();
@@ -30,6 +32,7 @@ private:
 
     std::vector<TurnStageConfig> m_stageConfigs;
     PopCompositionCalculator* m_pCalculator = nullptr;
+    GrowthCalculator* m_pGrowthCalculator = nullptr;
 };
 
 } // namespace ac

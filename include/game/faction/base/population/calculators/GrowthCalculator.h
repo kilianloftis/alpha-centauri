@@ -3,45 +3,24 @@
 namespace ac
 {
 
-struct GrowthInputs_t
-{
-    int baseSize;               // current population size
-    int growthRateModifier;     // percentage modifier on required nutrients (e.g. -25 = 25% faster growth)
-    int nutrientBank;           // nutrients already accumulated this turn (caller adds production before calling)
-};
+struct GrowthConfig;
+class LuaRuntime;
 
-enum class GrowthResult
-{
-    None,       // No state change, nutrient bank updated
-    Growth,     // Nutrient threshold reached
-    Starvation  // Nutrient bank went negative
-};
-
-struct GrowthState_t
-{
-    int nutrientBank;           // nutrients accumulated toward next growth
-    int nutrientsRequired;      // total nutrients needed to grow (recomputed each turn)
-    int nutrientSurplus;        // nutrientsPerTurn minus per-turn upkeep (nutrients leftover each turn)
-};
-
-// Stateless helper class for population growth calculations.
-// Computes nutrient requirements and determines growth/starvation state.
-// The required nutrient threshold is:
-//   TODO: confirm exact formula from game rules
-//   Currently: baseSize * 10, modified by growthRateModifier as a percentage
+// Calculates the nutrient threshold required for a base to grow one population.
+// The formula is provided via a GrowthConfig loaded from Lua (see pop_growth.lua).
+// Variables available to the formula: base_size, growth_rating
 class GrowthCalculator
 {
 public:
-    GrowthCalculator() = default;
+    GrowthCalculator(const GrowthConfig& rConfig, LuaRuntime& rLua);
     ~GrowthCalculator() = default;
 
-    // Advance one turn: compute new bank, check thresholds.
-    // Returns GrowthResult indicating state change.
-    // nutrientBank in inputs is the current bank, output bank is returned via outNewBank.
-    static GrowthResult CalculateGrowh(const GrowthInputs_t& inputs, int& outNewBank);
+    // Returns the nutrient threshold required to grow given base size and growth rating.
+    int ComputeNutrientsRequired(int baseSize, int growthRating) const;
 
-    // Nutrients required to grow given the provided inputs (stateless calculation).
-    static int ComputeNutrientsRequired(int baseSize, int growthRateModifier);
+private:
+    const GrowthConfig* m_pConfig;
+    LuaRuntime* m_pLua;
 };
 
 } // namespace ac

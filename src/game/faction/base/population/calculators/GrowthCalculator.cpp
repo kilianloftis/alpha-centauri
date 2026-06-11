@@ -1,34 +1,30 @@
 #include "game/faction/base/population/calculators/GrowthCalculator.h"
+#include "game/faction/base/population/pop-types/GrowthConfigParser.h"
+#include "lib/LuaRuntime.h"
 #include <algorithm>
+#include <unordered_map>
 
 namespace ac
 {
 
-// TODO: confirm exact nutrient threshold formula from game rules
-int GrowthCalculator::ComputeNutrientsRequired(int baseSize, int growthRateModifier)
+GrowthCalculator::GrowthCalculator(const GrowthConfig& rConfig, LuaRuntime& rLua)
+    : m_pConfig(&rConfig)
+    , m_pLua(&rLua)
 {
-    const int base = baseSize * 10;
-    const int modified = base - (base * growthRateModifier / 100);
-    return std::max(1, modified);
 }
 
-GrowthResult GrowthCalculator::CalculateGrowh(const GrowthInputs_t& inputs, int& outNewBank)
+int GrowthCalculator::ComputeNutrientsRequired(int baseSize, int growthRating) const
 {
-    const int required = ComputeNutrientsRequired(inputs.baseSize, inputs.growthRateModifier);
-    outNewBank = inputs.nutrientBank;
-
-    if (outNewBank >= required)
+    const std::unordered_map<std::string, int> vars = {
+        {"base_size",    baseSize},
+        {"growth_rating", growthRating},
+    };
+    const int result = m_pLua->EvalInt(m_pConfig->thresholdFormula, vars);
+    if (result < 0)
     {
-        outNewBank = 0;
-        return GrowthResult::Growth;
+        throw std::runtime_error("Growth threshold formula returned negative value");
     }
-    else if (outNewBank < 0)
-    {
-        outNewBank = 0;
-        return GrowthResult::Starvation;
-    }
-
-    return GrowthResult::None;
+    return result;
 }
 
 } // namespace ac

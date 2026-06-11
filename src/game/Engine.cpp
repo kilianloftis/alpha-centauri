@@ -16,7 +16,9 @@
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/population/pop-types/PopTypeRegistry.h"
 #include "game/faction/base/population/pop-types/PopCompositionConfigParser.h"
+#include "game/faction/base/population/pop-types/GrowthConfigParser.h"
 #include "game/faction/base/population/calculators/PopCompositionCalculator.h"
+#include "game/faction/base/population/calculators/GrowthCalculator.h"
 #include "lib/LuaRuntime.h"
 #include "ui/WorldDisplay.h"
 #include "ui/BaseWorkableAreaDisplay.h"
@@ -116,6 +118,14 @@ void Engine::Initialize_()
         std::make_unique<PopCompositionCalculator>(
             *m_gameDataContext->popCompositionConfig, *m_gameDataContext->luaRuntime);
 
+    GrowthConfigParser growthParser;
+    m_gameDataContext->growthConfig =
+        std::make_unique<GrowthConfig>(
+            growthParser.ParseConfig("config/pop_growth.lua", *m_gameDataContext->luaRuntime));
+    m_gameDataContext->growthCalculator =
+        std::make_unique<GrowthCalculator>(
+            *m_gameDataContext->growthConfig, *m_gameDataContext->luaRuntime);
+
     // Generate world map
     WorldGenerator worldGen;
     WorldGenConfig worldConfig;
@@ -184,6 +194,7 @@ void Engine::Initialize_()
     m_workableAreaDisplay = std::make_unique<BaseWorkableAreaDisplay>(*m_graphics, *m_gameState->GetWorldMap());
 
     m_turnStageFactory->SetCompositionCalculator(m_gameDataContext->popCompositionCalculator.get());
+    m_turnStageFactory->SetGrowthCalculator(m_gameDataContext->growthCalculator.get());
     m_turnStageFactory->LoadConfig("config/turn_stages.json");
     auto registry = m_turnStageFactory->CreateStages();
     TurnStageRepeatFlags_t repeatFlags;

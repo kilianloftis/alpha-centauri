@@ -9,6 +9,8 @@ class BuildingRegistry;
 class PopTypeRegistry;
 struct PopCompositionConfig;
 class PopCompositionCalculator;
+struct GrowthConfig;
+class GrowthCalculator;
 class LuaRuntime;
 
 // Holds all immutable definition data loaded once at startup.
@@ -22,6 +24,8 @@ struct GameDataContext
     std::unique_ptr<PopTypeRegistry> popTypeRegistry;
     std::unique_ptr<PopCompositionConfig> popCompositionConfig;
     std::unique_ptr<PopCompositionCalculator> popCompositionCalculator;
+    std::unique_ptr<GrowthConfig> growthConfig;
+    std::unique_ptr<GrowthCalculator> growthCalculator;
     std::unique_ptr<LuaRuntime> luaRuntime;
 };
 

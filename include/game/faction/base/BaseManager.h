@@ -1,7 +1,6 @@
 #pragma once
 
 #include "game/faction/base/BaseTypes.h"
-#include "game/faction/base/population/calculators/GrowthCalculator.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -61,11 +60,6 @@ public:
     void SetNutrientStockpile(int amount);
     int GetBaseSize() const;
     int GetGrowthRate() const;
-
-    // Apply growth result from Population stage growth calculation.
-    // Handles AddPop() on Growth, RemovePop() on Starvation.
-    // Updates nutrient stockpile with the post-growth bank value.
-    void ApplyGrowthResult(GrowthResult result, int newNutrientBank);
 
     // Position on the map
     void SetPosition(int x, int y);

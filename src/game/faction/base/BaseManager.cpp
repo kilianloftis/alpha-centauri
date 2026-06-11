@@ -153,21 +153,6 @@ int BaseManager::GetGrowthRate() const
     return 0;
 }
 
-void BaseManager::ApplyGrowthResult(GrowthResult result, int newNutrientBank)
-{
-    if (result == GrowthResult::Growth)
-    {
-        AddPop();
-    }
-    else if (result == GrowthResult::Starvation)
-    {
-        RemovePop();
-    }
-
-    // Update nutrient stockpile with new bank value
-    SetNutrientStockpile(newNutrientBank);
-}
-
 void BaseManager::SetPosition(int x, int y)
 {
     m_x = x;
