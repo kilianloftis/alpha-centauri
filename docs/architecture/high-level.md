@@ -24,6 +24,13 @@ graph TB
         SFMLKeyEventQueue[SFMLKeyEventQueue]
     end
 
+    subgraph "UI System"
+        UIManager[UIManager<br/>(abstract)]
+        SFMLUIManager[SFMLUIManager]
+        NullUIManager[NullUIManager]
+        UIElements[UIWorldMap, UIPanel, UIPopup]
+    end
+
     subgraph "Turn System"
         TurnProcessor[TurnProcessor]
         HookSystem[HookSystem]
@@ -80,7 +87,13 @@ graph TB
     Engine --> Input
     Engine --> HookSystem
     Engine --> TurnProcessor
+    Engine --> UIManager
     Engine --> EventBridge
+
+    UIManager --> SFMLUIManager
+    UIManager --> NullUIManager
+    UIManager --> UIElements
+    SFMLUIManager --> Graphics
 
     Graphics --> SFMLGraphics
     Graphics --> NullGraphics
@@ -153,6 +166,7 @@ graph TB
     style PopulationDisplay fill:#bfb,stroke:#333,stroke-width:2px
     style WorldDisplay fill:#bfb,stroke:#333,stroke-width:2px
     style BaseWorkableAreaDisplay fill:#bfb,stroke:#333,stroke-width:2px
+    style UIManager fill:#bbf,stroke:#333,stroke-width:2px
 ```
 
 ## Component Overview
@@ -231,6 +245,19 @@ graph TB
   - Faction subsystems (particularly Military with Bases) work tiles for resources
   - TileBonusRegistry loads from config/tile_bonuses.json
 - **Details**: See `docs/architecture/map-system.md` for detailed architecture
+
+### UI System
+- **Purpose**: Abstract UI management with layered rendering
+- **Components**:
+  - `UIManager`: Abstract base class managing UI elements
+  - `SFMLUIManager`: SFML-based implementation
+  - `NullUIManager`: Null implementation for testing/headless mode
+  - `UIElement`: Abstract base for all UI elements (position, size, visibility)
+  - `UIWorldMap`: World map layer (bottom)
+  - `UIPanel`: Information panel at screen bottom
+  - `UIPopup`: Modal popup with dismiss button
+- **Factory**: `CreateUIManager()` function creates appropriate implementation
+- **Details**: See `docs/architecture/ui-system.md` for detailed architecture
 
 ### Configuration
 - **Turn Stages Config**: `config/turn_stages.json` - Loaded by HookSystem to define turn stages and hooks

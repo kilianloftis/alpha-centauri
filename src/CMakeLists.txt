@@ -7,7 +7,10 @@ add_executable(alpha-centauri
     game/faction/FactionIdentity.cpp
     game/faction/AIProfile.cpp
     game/faction/Military.cpp
-    game/faction/Research.cpp
+    game/research/Tech.cpp
+    game/research/TechRegistry.cpp
+    game/research/TechCostCalculator.cpp
+    game/research/ResearchManager.cpp
     game/faction/Diplomacy.cpp
     game/faction/base/BaseManager.cpp
     game/faction/base/BuildingManager.cpp
@@ -130,8 +133,8 @@ option(USE_SFML "Enable SFML rendering" ON)
 if(USE_SFML)
     find_package(SFML 3.0.1 COMPONENTS Graphics Window System REQUIRED)
     target_compile_definitions(alpha-centauri PRIVATE USE_SFML)
-    target_sources(alpha-centauri PRIVATE graphics/SFMLGraphics.cpp input/SFMLInput.cpp input/SFMLKeyEventQueue.cpp input/SFMLMouseEventQueue.cpp)
-    target_link_libraries(alpha-centauri PRIVATE sfml-graphics sfml-window sfml-system)
+    target_sources(alpha-centauri PRIVATE graphics/SFMLGraphics.cpp input/SFMLInput.cpp input/SFMLKeyEventQueue.cpp input/SFMLMouseEventQueue.cpp ui/SFMLUIManager.cpp)
+    target_link_libraries(alpha-centauri PRIVATE SFML::Graphics SFML::Window SFML::System)
 else()
-    target_sources(alpha-centauri PRIVATE graphics/NullGraphics.cpp input/NullInput.cpp)
+    target_sources(alpha-centauri PRIVATE graphics/NullGraphics.cpp input/NullInput.cpp ui/NullUIManager.cpp)
 endif()

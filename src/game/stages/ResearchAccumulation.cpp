@@ -41,7 +41,7 @@ void ResearchAccumulation::Execute_(GameState* pGameState, Faction* pFaction)
         std::cout << "  Base '" << pBase->GetName() << "' labs: " << baseLabs << "\n";
     }
 
-    Research* pResearch = pFaction->GetResearch();
+    ResearchManager* pResearch = pFaction->GetResearch();
     // TODO: Apply any modifiers (e.g., from facilities, techs, etc.)
     pResearch->AddResearchPoints(totalLabs);
 

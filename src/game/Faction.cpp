@@ -4,7 +4,7 @@
 #include "game/faction/AIProfile.h"
 #include "game/faction/base/resources/BaseEconomyManager.h"
 #include "game/faction/Military.h"
-#include "game/faction/Research.h"
+#include "game/research/ResearchManager.h"
 #include "game/faction/Diplomacy.h"
 
 namespace ac
@@ -109,15 +109,17 @@ const Military* Faction::GetMilitary() const
     return m_pMilitary.get();
 }
 
-Research* Faction::GetResearch()
+ResearchManager* Faction::GetResearch()
 {
     return m_pResearch.get();
 }
 
-const Research* Faction::GetResearch() const
+const ResearchManager* Faction::GetResearch() const
 {
     return m_pResearch.get();
 }
+
+
 
 Diplomacy* Faction::GetDiplomacy()
 {

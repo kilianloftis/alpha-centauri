@@ -13,7 +13,7 @@ class FactionIdentity;
 class AIProfile;
 class BaseEconomyManager;
 class Military;
-class Research;
+class ResearchManager;
 class Diplomacy;
 
 class Faction
@@ -50,8 +50,8 @@ public:
     Military* GetMilitary();
     const Military* GetMilitary() const;
     
-    Research* GetResearch();
-    const Research* GetResearch() const;
+    ResearchManager* GetResearch();
+    const ResearchManager* GetResearch() const;
     
     Diplomacy* GetDiplomacy();
     const Diplomacy* GetDiplomacy() const;
@@ -62,7 +62,7 @@ private:
     std::unique_ptr<AIProfile> m_pAIProfile;
     std::unique_ptr<BaseEconomyManager> m_pEconomy;
     std::unique_ptr<Military> m_pMilitary;
-    std::unique_ptr<Research> m_pResearch;
+    std::unique_ptr<ResearchManager> m_pResearch;
     std::unique_ptr<Diplomacy> m_pDiplomacy;
     std::vector<std::shared_ptr<BaseManager>> m_bases;
 };

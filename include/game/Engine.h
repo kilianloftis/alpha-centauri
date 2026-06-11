@@ -20,6 +20,7 @@ class EventBridge;
 class BaseWorkableAreaDisplay;
 class WorldDisplay;
 class GameDataContext;
+class UIManager;
 
 class Engine
 {
@@ -77,6 +78,7 @@ private:
     static constexpr float kBaseAreaCenterX = 400.f;
     static constexpr float kBaseAreaCenterY = 300.f;
     static constexpr float kBaseTileSize = 50.f;
+    std::unique_ptr<UIManager> m_uiManager;
 };
 
 } // namespace ac

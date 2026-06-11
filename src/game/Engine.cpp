@@ -10,7 +10,7 @@
 #include "lib/EventBridge.h"
 #include "lib/GameEvent.h"
 #include "game/faction/base/BaseManager.h"
-#include "game/faction/Research.h"
+#include "game/research/ResearchManager.h"
 #include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
@@ -25,6 +25,7 @@
 #include "ui/BaseWorkableAreaDisplay.h"
 #include "ui/TileHitTester.h"
 #include "game/map/WorldGenerator.h"
+#include "ui/UIManager.h"
 #include <iostream>
 #include <stdexcept>
 
@@ -38,6 +39,7 @@ Engine::Engine()
     , m_gameState(std::make_unique<GameState>())
     , m_eventBus(std::make_unique<EventBus>())
     , m_gameDataContext(std::make_unique<GameDataContext>())
+    , m_uiManager(CreateUIManager())
     {}
 
 Engine::~Engine() = default;
@@ -61,6 +63,18 @@ void Engine::GameLoop_()
     {
         m_graphics->Clear();
         Render_();
+        // Update UI
+        m_uiManager->Update(0.f);
+
+        // Display current game state
+        m_graphics->Clear();
+
+        // Draw UI layers (world map -> info panel -> popups)
+        m_uiManager->Draw(*m_graphics);
+
+        // Draw HUD text on top
+        m_graphics->DrawText("Mission Year: " + std::to_string(m_gameState->GetMissionYear()), 20.f, 20.f, 24);
+        m_graphics->DrawText("Press Enter to continue or Esc to quit.", 20.f, 80.f, 20);
         m_graphics->Display();
 
         HandleMouseInput_();
@@ -205,6 +219,11 @@ void Engine::Initialize_()
         stageOrder.push_back(config.id);
     }
     m_turnProcessor = std::make_unique<TurnProcessor>(std::move(registry), std::move(repeatFlags), std::move(stageOrder));
+
+    if (m_uiManager)
+    {
+        m_uiManager->Initialize(*m_graphics);
+    }
     CheckInitialized_();
 }
 
@@ -279,7 +298,7 @@ void Engine::Render_()
     {
         const Faction* pPlayerFaction = factions[0].get();
         m_graphics->DrawText("Energy: " + std::to_string(pPlayerFaction->GetEnergy()), 350.f, 20.f, 24, Color::Yellow());
-        if (const Research* pResearch = pPlayerFaction->GetResearch())
+        if (const ResearchManager* pResearch = pPlayerFaction->GetResearch())
         {
             m_graphics->DrawText("Research: " + std::to_string(pResearch->GetResearchPoints()), 560.f, 20.f, 24, Color{100, 200, 255, 255});
         }

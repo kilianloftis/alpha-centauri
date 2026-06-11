@@ -70,6 +70,7 @@ graph TB
         Unit[Unit]
         Base[Base]
         Tech[Tech]
+        TechId[TechId<br/>int alias]
         Treaty[Treaty]
         Relation[Relation]
     end
@@ -85,7 +86,7 @@ graph TB
     Faction --> AIProfile
     Faction --> Economy
     Faction --> Military
-    Faction --> Research
+    Faction --> ResearchManager
     Faction --> Diplomacy
     
     FactionIdentity --> FactionName
@@ -108,10 +109,12 @@ graph TB
     Military --> UnitFactory
     Military --> BaseManager
     
-    Research --> TechTree
-    Research --> CurrentTechs
-    Research --> ResearchQueue
-    Research --> ResearchProgress
+    ResearchManager --> TechRegistry
+    ResearchManager --> TechCostCalculator
+    ResearchManager --> DiscoveredTechs
+    ResearchManager --> CurrentTarget
+    ResearchManager --> AccumulatedPoints
+    ResearchManager --> PointsNeeded
     
     Diplomacy --> Relations
     Diplomacy --> Treaties
@@ -119,10 +122,10 @@ graph TB
     
     Military --> Unit
     Military --> Base
-    Base --> WorkerAssignmentManager
-    Base --> PopulationManager
-    PopulationManager --> WorkerAssignmentManager
-    Research --> Tech
+    ResearchManager --> Tech
+    ResearchManager --> TechId
+    TechRegistry --> Tech
+    TechRegistry --> TechId
     Diplomacy --> Treaty
     Diplomacy --> Relation
 
@@ -132,7 +135,7 @@ graph TB
     style AIProfile fill:#bbf,stroke:#333,stroke-width:2px
     style Economy fill:#bfb,stroke:#333,stroke-width:2px
     style Military fill:#bfb,stroke:#333,stroke-width:2px
-    style Research fill:#bfb,stroke:#333,stroke-width:2px
+    style ResearchManager fill:#bfb,stroke:#333,stroke-width:2px
     style Diplomacy fill:#bfb,stroke:#333,stroke-width:2px
 ```
 
@@ -202,13 +205,15 @@ graph TB
   - Provide base management via BaseManager
 - **Rationale**: Military logic is substantial and benefits from separation
 
-### Research
+### ResearchManager
 - **Purpose**: Manages faction's technological progress
 - **Responsibilities**:
-  - Track discovered technologies
-  - Manage research queue
-  - Track research progress for current techs
-  - Interact with TechTree for tech dependencies
+  - Track discovered technologies (vector<TechId>)
+  - Manage current research target (TechId)
+  - Track accumulated research points
+  - Calculate points needed for current tech via TechCostCalculator
+  - Reference TechRegistry for tech definitions
+- **Composition**: Uses TechCostCalculator, references TechRegistry
 - **Rationale**: Research system is complex with its own data structures
 
 ### Diplomacy
