@@ -1,9 +1,11 @@
 #include "game/faction/base/BaseManager.h"
-#include "game/faction/base/BuildingManager.h"
+#include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/resources/ResourceManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/population/PopContainer.h"
+#include "game/faction/base/population/pop-types/PopTypeRegistry.h"
+#include "game/faction/base/population/calculators/PopCompositionCalculator.h"
 #include "game/buildings/BuildingRegistry.h"
 #include <cmath>
 
@@ -23,26 +25,52 @@ BaseManager::BaseManager(const BuildingRegistry* pBuildingRegistry)
     // Create ResourceManager after population and worker assignments are set up
     m_pResources = std::make_unique<ResourceManager>(m_pPopulation.get(), m_pWorkerAssignments.get());
 
-    m_pPopulation->on_pop_gained.connect([this](int) {
+    m_pPopulation->on_pop_gained.connect([this](int newSize) {
         m_pWorkerAssignments->OnPopulationChanged(m_pPopulation->GetContainer());
         m_pWorkerAssignments->AutoAssignWorkers(m_pPopulation->GetContainer(),
                                                GetWorkableTilePositions());
+        on_pop_gained.emit(newSize);
     });
-    m_pPopulation->on_pop_lost.connect([this](int) {
+    m_pPopulation->on_pop_lost.connect([this](int newSize) {
         m_pWorkerAssignments->OnPopulationChanged(m_pPopulation->GetContainer());
+        on_pop_lost.emit(newSize);
     });
 }
 
 BaseManager::~BaseManager() = default;
 
-PopulationManager* BaseManager::GetPopulation()
+void BaseManager::SetPopRegistry(const PopTypeRegistry* pRegistry)
 {
-    return m_pPopulation.get();
+    if (m_pPopulation)
+    {
+        m_pPopulation->SetRegistry(pRegistry);
+    }
 }
 
-const PopulationManager* BaseManager::GetPopulation() const
+void BaseManager::SetPopCompositionCalculator(PopCompositionCalculator* pCalculator)
 {
-    return m_pPopulation.get();
+    if (m_pPopulation)
+    {
+        m_pPopulation->SetCompositionCalculator(pCalculator);
+    }
+}
+
+void BaseManager::RecalculatePopComposition()
+{
+    if (m_pPopulation)
+    {
+        m_pPopulation->RecalculateComposition();
+    }
+}
+
+const PopContainer& BaseManager::GetPopContainer() const
+{
+    return m_pPopulation->GetContainer();
+}
+
+int BaseManager::GetPopWorkerCount() const
+{
+    return m_pPopulation ? m_pPopulation->GetWorkerCount() : 0;
 }
 
 void BaseManager::AddPop()

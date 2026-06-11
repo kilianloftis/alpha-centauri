@@ -1,4 +1,4 @@
-#include "game/research/ResearchManager.h"
+#include "game/faction/ResearchManager.h"
 
 namespace ac
 {

@@ -2,7 +2,6 @@
 #include "game/GameState.h"
 #include "game/Faction.h"
 #include "game/faction/base/BaseManager.h"
-#include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/population/calculators/GrowthCalculator.h"
 #include <iostream>
 
@@ -26,36 +25,37 @@ void Population::Execute_(GameState* pGameState, Faction* pFaction)
         return;
     }
 
-    for (auto& pBase : pFaction->GetBases())
+    for (size_t i = 0; i < pFaction->GetBaseCount(); ++i)
     {
-        if (pBase && pBase->GetPopulation())
+        BaseManager* pBase = pFaction->GetBase(i);
+        if (!pBase)
         {
-            PopulationManager* pPop = pBase->GetPopulation();
-
-            const int stockpile = pBase->GetNutrientStockpile();
-            std::cout << "  Accumulating growth for base '" << pBase->GetName() << "' (bank: " << stockpile << " -> ";
-
-            if (m_pGrowthCalculator)
-            {
-                const int required = m_pGrowthCalculator->ComputeNutrientsRequired(
-                    pBase->GetBaseSize(), pBase->GetGrowthRate());
-
-                if (stockpile >= required)
-                {
-                    pBase->AddPop();
-                    pBase->SetNutrientStockpile(stockpile - required);
-                }
-                else if (stockpile < 0)
-                {
-                    pBase->RemovePop();
-                    pBase->SetNutrientStockpile(0);
-                }
-            }
-
-            std::cout << pBase->GetNutrientStockpile() << ", size: " << pPop->GetSize() << ")\n";
-
-            pPop->RecalculateComposition();
+            continue;
         }
+
+        const int stockpile = pBase->GetNutrientStockpile();
+        std::cout << "  Accumulating growth for base '" << pBase->GetName() << "' (bank: " << stockpile << " -> ";
+
+        if (m_pGrowthCalculator)
+        {
+            const int required = m_pGrowthCalculator->ComputeNutrientsRequired(
+                pBase->GetBaseSize(), pBase->GetGrowthRate());
+
+            if (stockpile >= required)
+            {
+                pBase->AddPop();
+                pBase->SetNutrientStockpile(stockpile - required);
+            }
+            else if (stockpile < 0)
+            {
+                pBase->RemovePop();
+                pBase->SetNutrientStockpile(0);
+            }
+        }
+
+        std::cout << pBase->GetNutrientStockpile() << ", size: " << pBase->GetBaseSize() << ")\n";
+
+        pBase->RecalculatePopComposition();
     }
 }
 

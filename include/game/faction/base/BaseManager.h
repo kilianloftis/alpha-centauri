@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/faction/base/BaseTypes.h"
+#include "lib/Signal.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -11,6 +12,9 @@ namespace ac
 
 // Forward declarations
 class PopulationManager;
+class PopContainer;
+class PopTypeRegistry;
+class PopCompositionCalculator;
 class WorkerAssignmentManager;
 class ResourceManager;
 class BuildingManager;
@@ -27,10 +31,17 @@ public:
     ~BaseManager();
 
     // Population management - delegated to PopulationManager
-    PopulationManager* GetPopulation();
-    const PopulationManager* GetPopulation() const;
+    void SetPopRegistry(const PopTypeRegistry* pRegistry);
+    void SetPopCompositionCalculator(PopCompositionCalculator* pCalculator);
+    void RecalculatePopComposition();
+    const PopContainer& GetPopContainer() const;
+    int GetPopWorkerCount() const;
     void AddPop();
     void RemovePop();
+
+    // Signals forwarded from PopulationManager
+    Signal<int> on_pop_gained;
+    Signal<int> on_pop_lost;
 
     // Worker assignment - delegated to WorkerAssignmentManager
     WorkerAssignmentManager& GetWorkerAssignments();

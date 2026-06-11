@@ -10,10 +10,10 @@ add_executable(alpha-centauri
     game/research/Tech.cpp
     game/research/TechRegistry.cpp
     game/research/TechCostCalculator.cpp
-    game/research/ResearchManager.cpp
+    game/faction/ResearchManager.cpp
     game/faction/Diplomacy.cpp
     game/faction/base/BaseManager.cpp
-    game/faction/base/BuildingManager.cpp
+    game/faction/base/buildings/BuildingManager.cpp
     game/faction/base/resources/ResourceManager.cpp
     game/faction/base/resources/WorkerAssignmentManager.cpp
     game/faction/base/resources/BaseEconomyManager.cpp

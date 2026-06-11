@@ -5,6 +5,9 @@ trigger: always_on
 # Coding Guidelines
 
 Do not make up game rules or mechanics. Leave TODOs instead.
+Use references whenever possible.
+Use smart pointers if you are unable to use a reference.
+Use range-based for loops whenever possible.
 
 ## SOLID Principles
 All code must adhere to SOLID principles:

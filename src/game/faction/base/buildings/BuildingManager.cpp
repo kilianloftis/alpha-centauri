@@ -1,4 +1,4 @@
-#include "game/faction/base/BuildingManager.h"
+#include "game/faction/base/buildings/BuildingManager.h"
 #include "game/buildings/Building.h"
 #include "game/buildings/BuildingRegistry.h"
 #include <algorithm>

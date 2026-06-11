@@ -4,7 +4,7 @@
 #include "game/faction/AIProfile.h"
 #include "game/faction/base/resources/BaseEconomyManager.h"
 #include "game/faction/Military.h"
-#include "game/research/ResearchManager.h"
+#include "game/faction/ResearchManager.h"
 #include "game/faction/Diplomacy.h"
 
 namespace ac
@@ -15,7 +15,7 @@ Faction::Faction()
     , m_pAIProfile(nullptr)
     , m_pEconomy(std::make_unique<BaseEconomyManager>())
     , m_pMilitary(nullptr)
-    , m_pResearch(std::make_unique<Research>())
+    , m_pResearch(std::make_unique<ResearchManager>())
     , m_pDiplomacy(nullptr)
 {
 }
@@ -69,66 +69,28 @@ const BaseManager* Faction::GetBase(size_t index) const
     return nullptr;
 }
 
-FactionIdentity* Faction::GetIdentity()
+void Faction::CollectBaseResources()
 {
-    return m_pIdentity.get();
+    for (const auto& pBase : m_bases)
+    {
+        if (pBase)
+        {
+            pBase->CollectResources(m_pEconomy.get());
+        }
+    }
 }
 
-const FactionIdentity* Faction::GetIdentity() const
+void Faction::AddResearchPoints(int points)
 {
-    return m_pIdentity.get();
+    if (m_pResearch)
+    {
+        m_pResearch->AddResearchPoints(points);
+    }
 }
 
-AIProfile* Faction::GetAIProfile()
+int Faction::GetResearchPoints() const
 {
-    return m_pAIProfile.get();
-}
-
-const AIProfile* Faction::GetAIProfile() const
-{
-    return m_pAIProfile.get();
-}
-
-BaseEconomyManager* Faction::GetEconomy()
-{
-    return m_pEconomy.get();
-}
-
-const BaseEconomyManager* Faction::GetEconomy() const
-{
-    return m_pEconomy.get();
-}
-
-Military* Faction::GetMilitary()
-{
-    return m_pMilitary.get();
-}
-
-const Military* Faction::GetMilitary() const
-{
-    return m_pMilitary.get();
-}
-
-ResearchManager* Faction::GetResearch()
-{
-    return m_pResearch.get();
-}
-
-const ResearchManager* Faction::GetResearch() const
-{
-    return m_pResearch.get();
-}
-
-
-
-Diplomacy* Faction::GetDiplomacy()
-{
-    return m_pDiplomacy.get();
-}
-
-const Diplomacy* Faction::GetDiplomacy() const
-{
-    return m_pDiplomacy.get();
+    return m_pResearch ? m_pResearch->GetAccumulatedPoints() : 0;
 }
 
 } // namespace ac

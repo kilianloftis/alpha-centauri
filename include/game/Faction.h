@@ -29,32 +29,18 @@ public:
     void AddBase(std::unique_ptr<BaseManager> pBase);
     BaseManager* GetBase(size_t index);
     const BaseManager* GetBase(size_t index) const;
-    std::vector<std::shared_ptr<BaseManager>>& GetBases() { return m_bases; }
-    const std::vector<std::shared_ptr<BaseManager>>& GetBases() const { return m_bases; }
     size_t GetBaseCount() const { return m_bases.size(); }
 
     // Energy tracking
     void AddEnergy(int amount);
     int GetEnergy() const;
 
-    // Subsystem accessors
-    FactionIdentity* GetIdentity();
-    const FactionIdentity* GetIdentity() const;
-    
-    AIProfile* GetAIProfile();
-    const AIProfile* GetAIProfile() const;
-    
-    BaseEconomyManager* GetEconomy();
-    const BaseEconomyManager* GetEconomy() const;
-    
-    Military* GetMilitary();
-    const Military* GetMilitary() const;
-    
-    ResearchManager* GetResearch();
-    const ResearchManager* GetResearch() const;
-    
-    Diplomacy* GetDiplomacy();
-    const Diplomacy* GetDiplomacy() const;
+    // Resource collection - routes to all bases and faction economy manager
+    void CollectBaseResources();
+
+    // Research - delegated to ResearchManager
+    void AddResearchPoints(int points);
+    int GetResearchPoints() const;
 
 private:
     int m_energy = 0;

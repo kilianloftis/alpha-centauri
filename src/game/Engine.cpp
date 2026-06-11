@@ -10,11 +10,9 @@
 #include "lib/EventBridge.h"
 #include "lib/GameEvent.h"
 #include "game/faction/base/BaseManager.h"
-#include "game/research/ResearchManager.h"
 #include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
-#include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/population/pop-types/PopTypeRegistry.h"
 #include "game/faction/base/population/pop-types/PopCompositionConfigParser.h"
 #include "game/faction/base/population/pop-types/GrowthConfigParser.h"
@@ -159,8 +157,8 @@ void Engine::Initialize_()
     pBase->SetPosition(6, 4);  // Center of 12x8 world
 
     // Inject pop type registry and composition calculator into base population
-    pBase->GetPopulation()->SetRegistry(m_gameDataContext->popTypeRegistry.get());
-    pBase->GetPopulation()->SetCompositionCalculator(m_gameDataContext->popCompositionCalculator.get());
+    pBase->SetPopRegistry(m_gameDataContext->popTypeRegistry.get());
+    pBase->SetPopCompositionCalculator(m_gameDataContext->popCompositionCalculator.get());
 
     // Auto-assign initial workers to tiles
     pBase->AutoAssignWorkers();
@@ -173,8 +171,8 @@ void Engine::Initialize_()
         });
     }
 
-    std::cout << "Created test base with population: " << pBase->GetPopulation()->GetSize()
-              << " (workers: " << pBase->GetPopulation()->GetWorkerCount() << ")\n";
+    std::cout << "Created test base with population: " << pBase->GetBaseSize()
+              << " (workers: " << pBase->GetPopWorkerCount() << ")\n";
 
     // Wire base signals to EventBus
     m_eventBridge->WireBase(*pBase);
@@ -298,10 +296,7 @@ void Engine::Render_()
     {
         const Faction* pPlayerFaction = factions[0].get();
         m_graphics->DrawText("Energy: " + std::to_string(pPlayerFaction->GetEnergy()), 350.f, 20.f, 24, Color::Yellow());
-        if (const ResearchManager* pResearch = pPlayerFaction->GetResearch())
-        {
-            m_graphics->DrawText("Research: " + std::to_string(pResearch->GetResearchPoints()), 560.f, 20.f, 24, Color{100, 200, 255, 255});
-        }
+        m_graphics->DrawText("Research: " + std::to_string(pPlayerFaction->GetResearchPoints()), 560.f, 20.f, 24, Color{100, 200, 255, 255});
     }
 
     switch (m_activeView)
@@ -394,7 +389,7 @@ void Engine::HandleBaseViewMouse_(int mouseX, int mouseY)
     int tileX = tile->first;
     int tileY = tile->second;
     auto& rAssignments = m_pActiveBase->GetWorkerAssignments();
-    const auto& rPops = m_pActiveBase->GetPopulation()->GetContainer();
+    const auto& rPops = m_pActiveBase->GetPopContainer();
 
     if (rAssignments.IsTileAssigned(tileX, tileY))
     {
