@@ -42,11 +42,11 @@ void DrawText(const std::string& text, float x, float y, unsigned int size = 24,
         std::cout << "[Graphics] Skipping draw text: '" << text << "'\n";
     }
 
-void DrawRect(float x, float y, float width, float height, unsigned int r, unsigned int g, unsigned int b, unsigned int a = 255) override
+void DrawRect(float x, float y, float width, float height, const Color& color, float thickness) override
     {
     }
 
-void DrawFilledRect(float x, float y, float width, float height, unsigned int r, unsigned int g, unsigned int b, unsigned int a = 255) override
+void DrawFilledRect(float x, float y, float width, float height, const Color& color) override
     {
     }
 };

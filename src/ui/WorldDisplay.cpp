@@ -55,6 +55,25 @@ void WorldDisplay::Render(float x, float y, float tileSize)
     }
 }
 
+void WorldDisplay::Render(float x, float y, float w, float h)
+{
+    if (!m_pWorldMap)
+    {
+        return;
+    }
+
+    const float mapWidth = static_cast<float>(m_pWorldMap->GetWidth());
+    const float mapHeight = static_cast<float>(m_pWorldMap->GetHeight());
+
+    if (mapWidth <= 0.f || mapHeight <= 0.f)
+    {
+        return;
+    }
+
+    const float tileSize = std::min(w / mapWidth, h / mapHeight);
+    Render(x, y, tileSize);
+}
+
 int WorldDisplay::MoistureToInt_(Moisture moisture) const
 {
     switch (moisture)

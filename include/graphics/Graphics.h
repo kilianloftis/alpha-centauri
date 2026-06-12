@@ -32,9 +32,9 @@ public:
     virtual void Display() = 0;
     virtual bool LoadTexture(const std::string& id, const std::string& path) = 0;
     virtual bool DrawSprite(const std::string& textureId, float x, float y) = 0;
-    virtual void DrawText(const std::string& text, float x, float y, unsigned int size = 24, Color color = Color::White()) = 0;
-    virtual void DrawRect(float x, float y, float width, float height, unsigned int r, unsigned int g, unsigned int b, unsigned int a = 255) = 0;
-    virtual void DrawFilledRect(float x, float y, float width, float height, unsigned int r, unsigned int g, unsigned int b, unsigned int a = 255) = 0;
+    virtual void DrawText(const std::string& text, float x, float y, unsigned int size = 24, const Color& color = Color::White()) = 0;
+    virtual void DrawRect(float x, float y, float width, float height, const Color& color, float thickness = 1.0f) = 0;
+    virtual void DrawFilledRect(float x, float y, float width, float height, const Color& color) = 0;
 };
 
 std::unique_ptr<Graphics> CreateGraphics();

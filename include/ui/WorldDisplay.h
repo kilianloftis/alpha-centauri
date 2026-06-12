@@ -25,6 +25,9 @@ public:
     // tileSize: pixel size of each tile
     void Render(float x, float y, float tileSize = 40.0f);
 
+    // Render the world map grid filling the given bounds, auto-computing tile size
+    void Render(float x, float y, float w, float h);
+
 private:
     Graphics& m_rGraphics;
     const WorldMap* m_pWorldMap = nullptr;

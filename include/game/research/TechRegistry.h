@@ -3,6 +3,7 @@
 #include "game/research/Tech.h"
 #include <map>
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace ac
@@ -13,6 +14,9 @@ class TechRegistry
 public:
     TechRegistry();
     ~TechRegistry();
+
+    // Load all techs from a config file. Returns false on failure.
+    bool Load(const std::string& configPath);
 
     void RegisterTech(std::unique_ptr<Tech> pTech);
     Tech* GetTech(TechId techId);

@@ -1,4 +1,6 @@
 #include "game/research/TechRegistry.h"
+#include "game/research/TechConfigParser.h"
+#include <iostream>
 
 namespace ac
 {
@@ -10,6 +12,29 @@ TechRegistry::TechRegistry()
 
 TechRegistry::~TechRegistry()
 {
+}
+
+bool TechRegistry::Load(const std::string& configPath)
+{
+    TechConfigParser parser;
+    auto configs = parser.ParseConfig(configPath);
+    if (configs.empty())
+    {
+        return false;
+    }
+
+    Clear();
+    for (size_t i = 0; i < configs.size(); ++i)
+    {
+        const TechConfig& rConfig = configs[i];
+        TechId techId = static_cast<TechId>(i + 1);
+        auto pTech = std::make_unique<Tech>(techId, rConfig.name, std::string{});
+        pTech->SetBaseCost(rConfig.cost);
+        m_techs[techId] = std::move(pTech);
+    }
+
+    std::cout << "Registered " << m_techs.size() << " techs\n";
+    return true;
 }
 
 void TechRegistry::RegisterTech(std::unique_ptr<Tech> pTech)

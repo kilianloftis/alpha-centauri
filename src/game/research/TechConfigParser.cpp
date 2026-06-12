@@ -57,7 +57,6 @@ TechConfig TechConfigParser::ParseTechConfig(const nlohmann::json& techJson)
     config.id = techJson["id"];
     config.name = techJson.value("name", config.id);
     config.cost = techJson.value("cost", 0);
-
     return config;
 }
 

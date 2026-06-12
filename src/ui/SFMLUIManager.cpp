@@ -4,6 +4,7 @@
 #include "ui/UIWorldMap.h"
 #include "ui/UIPanel.h"
 #include "ui/UIPopup.h"
+#include "ui/WorldDisplay.h"
 #include "graphics/Graphics.h"
 #include "input/Input.h"
 #include <iostream>
@@ -23,6 +24,11 @@ public:
         m_bVisible = true;
     }
 
+    void SetWorldDisplay(WorldDisplay* pWorldDisplay) override
+    {
+        m_pWorldDisplay = pWorldDisplay;
+    }
+
     void Draw(Graphics& rGraphics) override
     {
         if (!m_bVisible)
@@ -30,15 +36,23 @@ public:
             return;
         }
 
-        // Placeholder: draw a dark green rectangle representing the world map
-        // Once sprites are available, this will render actual terrain tiles.
-        rGraphics.DrawFilledRect(m_x, m_y, m_width, m_height, 0, 40, 0);
-        rGraphics.DrawText("[ World Map ]", m_x + 10.f, m_y + 10.f, 20);
+        if (m_pWorldDisplay)
+        {
+            m_pWorldDisplay->Render(m_x, m_y, m_width, m_height);
+        }
+        else
+        {
+            rGraphics.DrawFilledRect(m_x, m_y, m_width, m_height, Color{0, 40, 0});
+            rGraphics.DrawText("[ World Map ]", m_x + 10.f, m_y + 10.f, 20);
+        }
     }
 
     void Update(float /*deltaTime*/) override
     {
     }
+
+private:
+    WorldDisplay* m_pWorldDisplay = nullptr;
 };
 
 // ---------------------------------------------------------------------------
@@ -61,8 +75,8 @@ public:
         }
 
         // Draw a dark bar at the configured position
-        rGraphics.DrawFilledRect(m_x, m_y, m_width, m_height, 20, 20, 40);
-        rGraphics.DrawRect(m_x, m_y, m_width, m_height, 100, 100, 160);
+        rGraphics.DrawFilledRect(m_x, m_y, m_width, m_height, Color{20, 20, 40});
+        rGraphics.DrawRect(m_x, m_y, m_width, m_height, Color{100, 100, 160});
         rGraphics.DrawText(m_title, m_x + 10.f, m_y + 5.f, 16);
     }
 
@@ -90,16 +104,16 @@ public:
         }
 
         // Draw popup background with border
-        rGraphics.DrawFilledRect(m_x, m_y, m_width, m_height, 30, 30, 60, 230);
-        rGraphics.DrawRect(m_x, m_y, m_width, m_height, 180, 180, 220);
+        rGraphics.DrawFilledRect(m_x, m_y, m_width, m_height, Color{30, 30, 60, 230});
+        rGraphics.DrawRect(m_x, m_y, m_width, m_height, Color{180, 180, 220});
 
         rGraphics.DrawText(m_text, m_x + 20.f, m_y + 20.f, 18);
 
         // Dismiss button area
         float btnX = m_x + (m_width - 160.f) / 2.f;
         float btnY = m_y + m_height - 45.f;
-        rGraphics.DrawFilledRect(btnX, btnY, 160.f, 30.f, 60, 60, 100);
-        rGraphics.DrawRect(btnX, btnY, 160.f, 30.f, 180, 180, 220);
+        rGraphics.DrawFilledRect(btnX, btnY, 160.f, 30.f, Color{60, 60, 100});
+        rGraphics.DrawRect(btnX, btnY, 160.f, 30.f, Color{180, 180, 220});
         rGraphics.DrawText("[Enter] Dismiss", btnX + 10.f, btnY + 5.f, 14);
     }
 

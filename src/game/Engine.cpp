@@ -14,6 +14,7 @@
 #include "game/buildings/BuildingRegistry.h"
 #include "game/research/TechRegistry.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
+#include "game/faction/base/population/PopContainer.h"
 #include "game/faction/base/population/pop-types/PopTypeRegistry.h"
 #include "game/faction/base/population/pop-types/PopCompositionConfigParser.h"
 #include "game/faction/base/population/pop-types/GrowthConfigParser.h"
@@ -25,6 +26,7 @@
 #include "ui/TileHitTester.h"
 #include "game/map/WorldGenerator.h"
 #include "ui/UIManager.h"
+#include "ui/UIWorldMap.h"
 #include <iostream>
 #include <stdexcept>
 
@@ -225,6 +227,7 @@ void Engine::Initialize_()
     if (m_uiManager)
     {
         m_uiManager->Initialize(*m_graphics);
+        m_uiManager->GetWorldMap().SetWorldDisplay(m_worldDisplay.get());
     }
     CheckInitialized_();
 }
@@ -347,10 +350,21 @@ void Engine::RenderBaseView_()
 
 void Engine::HandleWorldViewMouse_(int mouseX, int mouseY)
 {
+    const WorldMap* pWorldMap = m_gameState->GetWorldMap();
+    if (!pWorldMap)
+    {
+        return;
+    }
+
+    const UIWorldMap& rWorldMapUI = m_uiManager->GetWorldMap();
+    const float tileSize = std::min(
+        rWorldMapUI.GetWidth()  / static_cast<float>(pWorldMap->GetWidth()),
+        rWorldMapUI.GetHeight() / static_cast<float>(pWorldMap->GetHeight()));
+
     auto tile = TileHitTester::HitTestWorldGrid(
         static_cast<float>(mouseX), static_cast<float>(mouseY),
-        kWorldOriginX, kWorldOriginY, kWorldTileSize,
-        m_gameState->GetWorldMap()->GetWidth(), m_gameState->GetWorldMap()->GetHeight());
+        rWorldMapUI.GetX(), rWorldMapUI.GetY(), tileSize,
+        pWorldMap->GetWidth(), pWorldMap->GetHeight());
 
     if (tile)
     {

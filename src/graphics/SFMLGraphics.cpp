@@ -98,21 +98,21 @@ if (m_font.getInfo().family.empty())
         m_window.draw(drawable);
     }
 
-void DrawRect(float x, float y, float width, float height, unsigned int r, unsigned int g, unsigned int b, unsigned int a = 255) override
+void DrawRect(float x, float y, float width, float height, const Color& color, float thickness) override
     {
         sf::RectangleShape rect(sf::Vector2f(width, height));
         rect.setPosition(sf::Vector2f(x, y));
         rect.setFillColor(sf::Color::Transparent);
-        rect.setOutlineColor(sf::Color(static_cast<uint8_t>(r), static_cast<uint8_t>(g), static_cast<uint8_t>(b), static_cast<uint8_t>(a)));
-        rect.setOutlineThickness(1.f);
+        rect.setOutlineColor(sf::Color(color.r, color.g, color.b, color.a));
+        rect.setOutlineThickness(thickness);
         m_window.draw(rect);
     }
 
-void DrawFilledRect(float x, float y, float width, float height, unsigned int r, unsigned int g, unsigned int b, unsigned int a = 255) override
+void DrawFilledRect(float x, float y, float width, float height, const Color& color) override
     {
         sf::RectangleShape rect(sf::Vector2f(width, height));
         rect.setPosition(sf::Vector2f(x, y));
-        rect.setFillColor(sf::Color(static_cast<uint8_t>(r), static_cast<uint8_t>(g), static_cast<uint8_t>(b), static_cast<uint8_t>(a)));
+        rect.setFillColor(sf::Color(color.r, color.g, color.b, color.a));
         m_window.draw(rect);
     }
 
