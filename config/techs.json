@@ -1,0 +1,12 @@
+[
+  {
+    "id": "test_tech_1",
+    "name": "Test Tech 1",
+    "cost": 10
+  },
+  {
+    "id": "test_tech_2",
+    "name": "Test Tech 2",
+    "cost": 20
+  }
+]

@@ -7,6 +7,7 @@ namespace ac
 
 class BuildingRegistry;
 class PopTypeRegistry;
+class TechRegistry;
 struct PopCompositionConfig;
 class PopCompositionCalculator;
 struct GrowthConfig;
@@ -21,6 +22,7 @@ struct GameDataContext
     ~GameDataContext();
 
     std::unique_ptr<BuildingRegistry> buildingRegistry;
+    std::unique_ptr<TechRegistry> techRegistry;
     std::unique_ptr<PopTypeRegistry> popTypeRegistry;
     std::unique_ptr<PopCompositionConfig> popCompositionConfig;
     std::unique_ptr<PopCompositionCalculator> popCompositionCalculator;

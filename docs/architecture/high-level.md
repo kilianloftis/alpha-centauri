@@ -48,6 +48,7 @@ graph TB
     subgraph "GameDataContext (immutable definition data)"
         PopTypeRegistry[PopTypeRegistry]
         BuildingRegistry[BuildingRegistry]
+        TechRegistry[TechRegistry]
         PopCompositionConfig[PopCompositionConfig]
         PopCompositionCalculator[PopCompositionCalculator]
         LuaRuntime[LuaRuntime]
@@ -117,6 +118,7 @@ graph TB
     GameState --> WorldMap
     GameDataContext --> PopTypeRegistry
     GameDataContext --> BuildingRegistry
+    GameDataContext --> TechRegistry
     GameDataContext --> PopCompositionConfig
     GameDataContext --> PopCompositionCalculator
     GameDataContext --> LuaRuntime
@@ -150,6 +152,7 @@ graph TB
     style WorldMap fill:#fbf,stroke:#333,stroke-width:2px
     style PopTypeRegistry fill:#ffd,stroke:#333,stroke-width:2px
     style BuildingRegistry fill:#ffd,stroke:#333,stroke-width:2px
+    style TechRegistry fill:#ffd,stroke:#333,stroke-width:2px
     style PopCompositionConfig fill:#ffd,stroke:#333,stroke-width:2px
     style PopCompositionCalculator fill:#ffd,stroke:#333,stroke-width:2px
     style LuaRuntime fill:#ffd,stroke:#333,stroke-width:2px
@@ -212,6 +215,7 @@ graph TB
 - **Purpose**: Holds all immutable definition data loaded once at startup; never serialised
 - **Components**:
   - `BuildingRegistry`: All building definitions loaded from `config/buildings.json`
+  - `TechRegistry`: All tech definitions loaded from `config/techs.json`
   - `PopTypeRegistry`: All pop type definitions loaded from `config/pop_types.json`
   - `PopCompositionConfig`: Composition formula config loaded via Lua
   - `PopCompositionCalculator`: Evaluates composition formulas at runtime
@@ -262,6 +266,7 @@ graph TB
 ### Configuration
 - **Turn Stages Config**: `config/turn_stages.json` - Loaded by HookSystem to define turn stages and hooks
 - **Tile Bonus Config**: `config/tile_bonuses.json` - Loaded by TileBonusRegistry to define tile bonus types and their resource bonuses
+- **Tech Config**: `config/techs.json` - Loaded by TechRegistry to define available technologies, their costs, and unlock chains
 
 ### Event System
 - **Purpose**: Two-layer event system for internal engine communication and mod interface

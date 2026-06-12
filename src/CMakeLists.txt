@@ -39,6 +39,8 @@ add_executable(alpha-centauri
     game/buildings/Building.cpp
     game/buildings/BuildingConfigParser.cpp
     game/buildings/BuildingRegistry.cpp
+    game/research/TechConfigParser.cpp
+    game/research/TechRegistry.cpp
     game/map/Tile.cpp
     game/map/TileBonusConfigParser.cpp
     game/map/TileBonusRegistry.cpp

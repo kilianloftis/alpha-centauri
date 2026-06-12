@@ -1,5 +1,6 @@
 #include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/research/TechRegistry.h"
 #include "game/faction/base/population/pop-types/PopTypeRegistry.h"
 #include "game/faction/base/population/pop-types/PopCompositionConfigParser.h"
 #include "game/faction/base/population/pop-types/GrowthConfigParser.h"

@@ -12,6 +12,7 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/research/TechRegistry.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/pop-types/PopTypeRegistry.h"
 #include "game/faction/base/population/pop-types/PopCompositionConfigParser.h"
@@ -119,6 +120,9 @@ void Engine::Initialize_()
 
     m_gameDataContext->buildingRegistry = std::make_unique<BuildingRegistry>();
     m_gameDataContext->buildingRegistry->Load("config/buildings.json");
+
+    m_gameDataContext->techRegistry = std::make_unique<TechRegistry>();
+    m_gameDataContext->techRegistry->Load("config/techs.json");
 
     m_gameDataContext->luaRuntime = std::make_unique<LuaRuntime>();
 
