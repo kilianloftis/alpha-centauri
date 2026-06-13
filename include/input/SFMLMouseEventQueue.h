@@ -6,7 +6,7 @@
 namespace ac
 {
 
-void PushPendingMouseEvent(MouseEvent event);
-std::optional<MouseEvent> PopPendingMouseEvent();
+void PushPendingMouseEvent_t(MouseEvent_t event);
+std::optional<MouseEvent_t> PopPendingMouseEvent();
 
 } // namespace ac

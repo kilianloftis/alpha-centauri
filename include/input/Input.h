@@ -7,7 +7,7 @@
 namespace ac
 {
 
-enum class Key
+enum class Key_t
 {
     Unknown,
     A, B, C, D, E, F, G, H, I, J, K, L, M,
@@ -18,12 +18,27 @@ enum class Key
     Enter,
 };
 
-struct KeyEvent
+struct KeyEvent_t
 {
-    Key key;
+    Key_t key;
 };
 
-enum class MouseButton
+enum class Modifier_t
+{
+    None,
+    Ctrl,
+    Alt,
+    Shift,
+};
+
+struct ModifierState_t
+{
+    bool bCtrl = false;
+    bool bAlt = false;
+    bool bShift = false;
+};
+
+enum class MouseButton_t
 {
     None,
     Left,
@@ -31,11 +46,12 @@ enum class MouseButton
     Middle,
 };
 
-struct MouseEvent
+struct MouseEvent_t
 {
-    MouseButton button;
+    MouseButton_t button;
     int x;
     int y;
+    ModifierState_t modifier;
 };
 
 class Input
@@ -44,11 +60,11 @@ public:
     virtual ~Input() = default;
 
     virtual bool Initialize() = 0;
-    virtual void CaptureKeyAsync(std::function<void(KeyEvent)> callback) = 0;
-    virtual std::optional<Key> CaptureKey() = 0;
+    virtual void CaptureKeyAsync(std::function<void(KeyEvent_t)> callback) = 0;
+    virtual std::optional<Key_t>CaptureKey() = 0;
 
-    virtual void CaptureMouseAsync(std::function<void(MouseEvent)> callback) = 0;
-    virtual std::optional<MouseEvent> CaptureMouse() = 0;
+    virtual void CaptureMouseAsync(std::function<void(MouseEvent_t)> callback) = 0;
+    virtual std::optional<MouseEvent_t> CaptureMouse() = 0;
 };
 
 std::unique_ptr<Input> CreateInput();

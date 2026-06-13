@@ -118,38 +118,39 @@ void DrawFilledRect(float x, float y, float width, float height, const Color& co
 
 private:
 void ProcessEvents_()
+{
+    while (auto event = m_window.pollEvent())
     {
-while (auto event = m_window.pollEvent())
+        if (event->is<sf::Event::Closed>())
         {
-if (event->is<sf::Event::Closed>())
-            {
-                // Ignore the close button: only Enter should close the window.
-                continue;
-            }
+            // Ignore the close button: only Enter should close the window.
+            continue;
+        }
 
-if (auto keyEvent = event->getIf<sf::Event::KeyPressed>())
+        if (auto KeyEvent_t = event->getIf<sf::Event::KeyPressed>())
+        {
+            if (auto mapped = KeyFromSfKey(KeyEvent_t->code))
             {
-if (auto mapped = KeyFromSfKey(keyEvent->code))
-                {
-                    PushPendingKeyEvent(*mapped);
-                }
+                PushPendingKeyEvent_t(*mapped);
             }
+        }
 
-if (auto mouseEvent = event->getIf<sf::Event::MouseButtonPressed>())
+        if (auto mouseEvent = event->getIf<sf::Event::MouseButtonPressed>())
+        {
+            if (auto mappedKey = MouseButtonFromSfButton(mouseEvent->button))
             {
-                MouseButton mb = MouseButton::None;
-                if (mouseEvent->button == sf::Mouse::Button::Left) mb = MouseButton::Left;
-                else if (mouseEvent->button == sf::Mouse::Button::Right) mb = MouseButton::Right;
-                else if (mouseEvent->button == sf::Mouse::Button::Middle) mb = MouseButton::Middle;
-                PushPendingMouseEvent(MouseEvent{mb, static_cast<int>(mouseEvent->position.x), static_cast<int>(mouseEvent->position.y)});
+                auto modifier = GetModifierState();
+                PushPendingMouseEvent_t({*mappedKey, static_cast<int>(mouseEvent->position.x), static_cast<int>(mouseEvent->position.y), modifier});
             }
         }
     }
+}
 
     sf::RenderWindow m_window;
     sf::Font m_font;
     std::unordered_map<std::string, sf::Texture> m_textures;
 };
+
 
 std::unique_ptr<Graphics> CreateGraphics()
 {

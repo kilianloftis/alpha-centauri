@@ -6,14 +6,14 @@
 namespace ac
 {
 
-static std::deque<Key> g_pendingKeyEvents;
+static std::deque<Key_t>g_pendingKeyEvents;
 
-void PushPendingKeyEvent(Key key)
+void PushPendingKeyEvent_t(Key_t key)
 {
     g_pendingKeyEvents.push_back(key);
 }
 
-std::optional<Key> PopPendingKeyEvent()
+std::optional<Key_t>PopPendingKeyEvent()
 {
 if (g_pendingKeyEvents.empty())
     {

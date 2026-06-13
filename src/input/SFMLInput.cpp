@@ -13,7 +13,7 @@
 
 namespace ac
 {
-static const std::vector<sf::Keyboard::Key> keys =
+static const std::vector<sf::Keyboard::Key> Key_ts =
 {
     sf::Keyboard::Key::A, sf::Keyboard::Key::B, sf::Keyboard::Key::C, sf::Keyboard::Key::D,
     sf::Keyboard::Key::E, sf::Keyboard::Key::F, sf::Keyboard::Key::G, sf::Keyboard::Key::H,
@@ -26,7 +26,10 @@ static const std::vector<sf::Keyboard::Key> keys =
     sf::Keyboard::Key::Num3, sf::Keyboard::Key::Num4, sf::Keyboard::Key::Num5,
     sf::Keyboard::Key::Num6, sf::Keyboard::Key::Num7, sf::Keyboard::Key::Num8,
     sf::Keyboard::Key::Num9, sf::Keyboard::Key::Space,
-    sf::Keyboard::Key::Escape, sf::Keyboard::Key::Enter
+    sf::Keyboard::Key::Escape, sf::Keyboard::Key::Enter,
+    sf::Keyboard::Key::LControl, sf::Keyboard::Key::RControl,
+    sf::Keyboard::Key::LAlt, sf::Keyboard::Key::RAlt,
+    sf::Keyboard::Key::LShift, sf::Keyboard::Key::RShift
 };
 
 static const std::vector<sf::Mouse::Button> buttons =
@@ -42,25 +45,25 @@ bool Initialize() override
     return true;
 }
 
-std::optional<Key> CaptureKey() override
+std::optional<Key_t>CaptureKey() override
 {
     return PopPendingKeyEvent();
 }
 
-void CaptureKeyAsync(std::function<void(KeyEvent)> callback) override
+void CaptureKeyAsync(std::function<void(KeyEvent_t)> callback) override
 {
 if (auto key = CaptureKey())
     {
-        callback(KeyEvent{*key});
+        callback(KeyEvent_t{*key});
     }
 }
 
-std::optional<MouseEvent> CaptureMouse() override
+std::optional<MouseEvent_t> CaptureMouse() override
 {
     return PopPendingMouseEvent();
 }
 
-void CaptureMouseAsync(std::function<void(MouseEvent)> callback) override
+void CaptureMouseAsync(std::function<void(MouseEvent_t)> callback) override
 {
     if (auto m = CaptureMouse())
     {

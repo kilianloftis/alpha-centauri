@@ -26,6 +26,7 @@
 #include "ui/TileHitTester.h"
 #include "game/map/WorldGenerator.h"
 #include "ui/UIManager.h"
+#include "ui/UIPanel.h"
 #include "ui/UIWorldMap.h"
 #include <iostream>
 #include <stdexcept>
@@ -70,12 +71,22 @@ void Engine::GameLoop_()
         // Display current game state
         m_graphics->Clear();
 
+        // Populate info panel with current game state
+        {
+            std::vector<UIPanel::InfoLine> infoLines;
+            infoLines.push_back({"Mission Year: " + std::to_string(m_gameState->GetMissionYear()), Color::White()});
+            const auto& factions = m_gameState->GetFactions();
+            if (!factions.empty())
+            {
+                const Faction* pPlayerFaction = factions[0].get();
+                infoLines.push_back({"Energy: " + std::to_string(pPlayerFaction->GetEnergy()), Color::Yellow()});
+                infoLines.push_back({"Research: " + std::to_string(pPlayerFaction->GetResearchPoints()), Color{100, 200, 255, 255}});
+            }
+            m_uiManager->GetInfoPanel().SetInfoLines(infoLines);
+        }
+
         // Draw UI layers (world map -> info panel -> popups)
         m_uiManager->Draw(*m_graphics);
-
-        // Draw HUD text on top
-        m_graphics->DrawText("Mission Year: " + std::to_string(m_gameState->GetMissionYear()), 20.f, 20.f, 24);
-        m_graphics->DrawText("Press Enter to continue or Esc to quit.", 20.f, 80.f, 20);
         m_graphics->Display();
 
         HandleMouseInput_();
@@ -253,9 +264,9 @@ void Engine::PrintWelcome_() const
 
 void Engine::HandleMouseInput_()
 {
-    m_input->CaptureMouseAsync([this](MouseEvent event)
+    m_input->CaptureMouseAsync([this](MouseEvent_t event)
     {
-        if (event.button == MouseButton::None)
+        if (event.button == MouseButton_t::None)
         {
             return;
         }
@@ -274,9 +285,9 @@ void Engine::HandleMouseInput_()
 
 void Engine::HandleKeyInput_()
 {
-    m_input->CaptureKeyAsync([this](KeyEvent event)
+    m_input->CaptureKeyAsync([this](KeyEvent_t event)
     {
-        if (event.key == Key::Escape)
+        if (event.key == Key_t::Escape)
         {
             if (m_activeView == ViewMode::Base)
             {
@@ -287,7 +298,7 @@ void Engine::HandleKeyInput_()
                 m_bShouldExit = true;
             }
         }
-        else if (event.key == Key::Enter && m_activeView == ViewMode::World)
+        else if (event.key == Key_t::Enter && m_activeView == ViewMode::World)
         {
             ProcessTurn_();
         }
@@ -296,16 +307,6 @@ void Engine::HandleKeyInput_()
 
 void Engine::Render_()
 {
-    m_graphics->DrawText("Mission Year: " + std::to_string(m_gameState->GetMissionYear()), 20.f, 20.f, 24);
-
-    const auto& factions = m_gameState->GetFactions();
-    if (!factions.empty())
-    {
-        const Faction* pPlayerFaction = factions[0].get();
-        m_graphics->DrawText("Energy: " + std::to_string(pPlayerFaction->GetEnergy()), 350.f, 20.f, 24, Color::Yellow());
-        m_graphics->DrawText("Research: " + std::to_string(pPlayerFaction->GetResearchPoints()), 560.f, 20.f, 24, Color{100, 200, 255, 255});
-    }
-
     switch (m_activeView)
     {
         case ViewMode::World:

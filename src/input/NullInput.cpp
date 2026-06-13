@@ -16,7 +16,7 @@ bool Initialize() override
         return true;
     }
 
-std::optional<Key> CaptureKey() override
+std::optional<Key_t>CaptureKey() override
     {
         std::cout << "Press a key and press Enter: ";
         char raw = 0;
@@ -28,18 +28,18 @@ if (!(std::cin >> raw))
         return KeyFromAscii(raw);
     }
 
-void CaptureKeyAsync(std::function<void(KeyEvent)> callback) override
+void CaptureKeyAsync(std::function<void(KeyEvent_t)> callback) override
     {
 if (auto key = CaptureKey())
         {
-            callback(KeyEvent{*key});
+            callback(KeyEvent_t{*key});
 } else
         {
-            callback(KeyEvent{Key::Unknown});
+            callback(KeyEvent_t{Key_t::Unknown});
         }
     }
 
-std::optional<MouseEvent> CaptureMouse() override
+std::optional<MouseEvent_t> CaptureMouse() override
     {
         std::cout << "Enter mouse click as 'x y' (or 'n' to skip): ";
         std::string line;
@@ -53,19 +53,19 @@ if (line.empty())
         int x = 0, y = 0;
 if (sscanf(line.c_str(), "%d %d", &x, &y) == 2)
         {
-            return MouseEvent{MouseButton::Left, x, y};
+            return MouseEvent_t{MouseButton_t::Left, x, y};
         }
         return std::nullopt;
     }
 
-void CaptureMouseAsync(std::function<void(MouseEvent)> callback) override
+void CaptureMouseAsync(std::function<void(MouseEvent_t)> callback) override
     {
 if (auto m = CaptureMouse())
         {
             callback(*m);
 } else
         {
-            callback(MouseEvent{MouseButton::None, 0, 0});
+            callback(MouseEvent_t{MouseButton_t::None, 0, 0});
         }
     }
 

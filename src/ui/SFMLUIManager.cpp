@@ -77,7 +77,22 @@ public:
         // Draw a dark bar at the configured position
         rGraphics.DrawFilledRect(m_x, m_y, m_width, m_height, Color{20, 20, 40});
         rGraphics.DrawRect(m_x, m_y, m_width, m_height, Color{100, 100, 160});
-        rGraphics.DrawText(m_title, m_x + 10.f, m_y + 5.f, 16);
+
+        const auto& lines = m_infoLines;
+        if (!lines.empty())
+        {
+            const float colWidth = m_width / static_cast<float>(lines.size());
+            const float textY = m_y + (m_height - 20.f) / 2.f;
+            for (size_t i = 0; i < lines.size(); ++i)
+            {
+                const float textX = m_x + static_cast<float>(i) * colWidth + 10.f;
+                rGraphics.DrawText(lines[i].text, textX, textY, 18, lines[i].color);
+            }
+        }
+        else
+        {
+            rGraphics.DrawText(m_title, m_x + 10.f, m_y + 5.f, 16);
+        }
     }
 
     void Update(float /*deltaTime*/) override
@@ -197,7 +212,7 @@ public:
 
         // If a popup is active, consume Enter to dismiss it
         auto key = rInput.CaptureKey();
-        if (key.has_value() && *key == Key::Enter)
+        if (key.has_value() && *key == Key_t::Enter)
         {
             m_pPopup->Dismiss();
         }
