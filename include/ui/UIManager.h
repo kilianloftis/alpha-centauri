@@ -1,34 +1,35 @@
 #pragma once
 
-#include <functional>
+#include "ui/IGameView.h"
 #include <memory>
-#include <string>
+#include <vector>
 
 namespace ac
 {
 
 class Graphics;
 class Input;
-class UIWorldMap;
-class UIPanel;
-class UIPopup;
 
 class UIManager
 {
 public:
-    virtual ~UIManager() = default;
+    bool Initialize(Graphics& rGraphics, Input& rInput);
+    void Update(float deltaTime);
+    void ProcessInput();
+    void Render();
 
-    virtual bool Initialize(Graphics& rGraphics) = 0;
-    virtual void Draw(Graphics& rGraphics) = 0;
-    virtual void Update(float deltaTime) = 0;
-    virtual void HandleInput(Input& rInput) = 0;
+    void PushView(std::unique_ptr<IGameView> pView);
+    void PopView();
+    bool HasViews() const;
 
-    virtual UIWorldMap& GetWorldMap() = 0;
-    virtual UIPanel& GetInfoPanel() = 0;
+    bool ShouldExit() const;
+    void RequestExit();
 
-    virtual void ShowPopup(const std::string& text, std::function<void()> onDismiss = nullptr) = 0;
-    virtual void DismissPopup() = 0;
-    virtual bool HasActivePopup() const = 0;
+private:
+    Graphics* m_pGraphics = nullptr;
+    Input* m_pInput = nullptr;
+    std::vector<std::unique_ptr<IGameView>> m_viewStack;
+    bool m_bShouldExit = false;
 };
 
 std::unique_ptr<UIManager> CreateUIManager();

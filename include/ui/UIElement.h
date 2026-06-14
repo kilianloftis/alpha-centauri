@@ -6,6 +6,8 @@ namespace ac
 {
 
 class Graphics;
+struct KeyEvent_t;
+struct MouseEvent_t;
 
 class UIElement
 {
@@ -14,6 +16,14 @@ public:
 
     virtual void Draw(Graphics& rGraphics) = 0;
     virtual void Update(float deltaTime) = 0;
+
+    virtual bool HandleKey(const KeyEvent_t& rEvent) { return false; }
+    virtual bool HandleMouse(const MouseEvent_t& rEvent) { return false; }
+
+    bool Contains(float x, float y) const
+    {
+        return x >= m_x && x < m_x + m_width && y >= m_y && y < m_y + m_height;
+    }
 
     bool IsVisible() const { return m_bVisible; }
     void SetVisible(bool bVisible) { m_bVisible = bVisible; }

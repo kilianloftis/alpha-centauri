@@ -1,11 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <optional>
-#include <utility>
-#include <string>
-
-#include "game/faction/base/BaseManager.h"
 
 namespace ac
 {
@@ -35,18 +30,6 @@ private:
     void PrintWelcome_() const;
     void GameLoop_();
     void ProcessTurn_();
-    void Render_();
-    void HandleMouseInput_();
-    void HandleKeyInput_();
-
-    void RenderWorldView_();
-    void RenderBaseView_();
-    void HandleWorldViewMouse_(int mouseX, int mouseY);
-    void HandleBaseViewMouse_(int mouseX, int mouseY);
-
-    BaseManager* FindBaseAtTile_(int tileX, int tileY) const;
-    void OpenBaseView_(BaseManager* pBase);
-    void ReturnToWorldView_();
 
     std::unique_ptr<Graphics> m_graphics;
     std::unique_ptr<Input> m_input;
@@ -58,26 +41,6 @@ private:
     std::unique_ptr<WorldDisplay> m_worldDisplay;
     std::unique_ptr<BaseWorkableAreaDisplay> m_workableAreaDisplay;
     std::unique_ptr<GameDataContext> m_gameDataContext;
-
-    enum class ViewMode
-    {
-        World,
-        Base,
-    };
-
-    bool m_bShouldExit = false;
-    ViewMode m_activeView = ViewMode::World;
-    BaseManager* m_pActiveBase = nullptr;
-
-    std::optional<std::pair<int, int>> m_lastClickedTile;
-    std::string m_lastClickedTileText;
-
-    static constexpr float kWorldTileSize = 50.f;
-    static constexpr float kWorldOriginX = 20.f;
-    static constexpr float kWorldOriginY = 60.f;
-    static constexpr float kBaseAreaCenterX = 400.f;
-    static constexpr float kBaseAreaCenterY = 300.f;
-    static constexpr float kBaseTileSize = 50.f;
     std::unique_ptr<UIManager> m_uiManager;
 };
 

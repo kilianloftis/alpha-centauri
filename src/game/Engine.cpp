@@ -26,10 +26,12 @@
 #include "ui/TileHitTester.h"
 #include "game/map/WorldGenerator.h"
 #include "ui/UIManager.h"
-#include "ui/UIPanel.h"
-#include "ui/UIWorldMap.h"
+#include "game/WorldView.h"
+#include "game/BaseView.h"
+#include <functional>
 #include <iostream>
 #include <stdexcept>
+#include <utility>
 
 namespace ac
 {
@@ -61,36 +63,11 @@ void Engine::Run()
 
 void Engine::GameLoop_()
 {
-    while (!m_bShouldExit)
+    while (!m_uiManager->ShouldExit())
     {
-        m_graphics->Clear();
-        Render_();
-        // Update UI
+        m_uiManager->ProcessInput();
         m_uiManager->Update(0.f);
-
-        // Display current game state
-        m_graphics->Clear();
-
-        // Populate info panel with current game state
-        {
-            std::vector<UIPanel::InfoLine> infoLines;
-            infoLines.push_back({"Mission Year: " + std::to_string(m_gameState->GetMissionYear()), Color::White()});
-            const auto& factions = m_gameState->GetFactions();
-            if (!factions.empty())
-            {
-                const Faction* pPlayerFaction = factions[0].get();
-                infoLines.push_back({"Energy: " + std::to_string(pPlayerFaction->GetEnergy()), Color::Yellow()});
-                infoLines.push_back({"Research: " + std::to_string(pPlayerFaction->GetResearchPoints()), Color{100, 200, 255, 255}});
-            }
-            m_uiManager->GetInfoPanel().SetInfoLines(infoLines);
-        }
-
-        // Draw UI layers (world map -> info panel -> popups)
-        m_uiManager->Draw(*m_graphics);
-        m_graphics->Display();
-
-        HandleMouseInput_();
-        HandleKeyInput_();
+        m_uiManager->Render();
     }
 }
 
@@ -235,22 +212,28 @@ void Engine::Initialize_()
     }
     m_turnProcessor = std::make_unique<TurnProcessor>(std::move(registry), std::move(repeatFlags), std::move(stageOrder));
 
-    if (m_uiManager)
-    {
-        m_uiManager->Initialize(*m_graphics);
-        m_uiManager->GetWorldMap().SetWorldDisplay(m_worldDisplay.get());
-    }
+    m_uiManager->Initialize(*m_graphics, *m_input);
+    m_uiManager->PushView(std::make_unique<WorldView>(
+        *m_gameState,
+        *m_worldDisplay,
+        *m_uiManager,
+        [this]() { ProcessTurn_(); },
+        [this](BaseManager* pBase) -> std::unique_ptr<IGameView>
+        {
+            return std::make_unique<BaseView>(*pBase, *m_workableAreaDisplay, *m_uiManager);
+        }
+    ));
     CheckInitialized_();
 }
 
 void Engine::CheckInitialized_() const
 {
-if (!m_graphics)
+    if (!m_graphics)
     {
         std::cout << "No graphics backend available\n";
         throw std::runtime_error("Failed to create graphics backend");
     }
-if (!m_input)
+    if (!m_input)
     {
         std::cout << "No input backend available\n";
         throw std::runtime_error("Failed to create input backend");
@@ -260,219 +243,6 @@ if (!m_input)
 void Engine::PrintWelcome_() const
 {
     std::cout << "Welcome to Alpha Centauri (C++ rebuild)!\n";
-}
-
-void Engine::HandleMouseInput_()
-{
-    m_input->CaptureMouseAsync([this](MouseEvent_t event)
-    {
-        if (event.button == MouseButton_t::None)
-        {
-            return;
-        }
-
-        switch (m_activeView)
-        {
-            case ViewMode::World:
-                HandleWorldViewMouse_(event.x, event.y);
-                break;
-            case ViewMode::Base:
-                HandleBaseViewMouse_(event.x, event.y);
-                break;
-        }
-    });
-}
-
-void Engine::HandleKeyInput_()
-{
-    m_input->CaptureKeyAsync([this](KeyEvent_t event)
-    {
-        if (event.key == Key_t::Escape)
-        {
-            if (m_activeView == ViewMode::Base)
-            {
-                ReturnToWorldView_();
-            }
-            else
-            {
-                m_bShouldExit = true;
-            }
-        }
-        else if (event.key == Key_t::Enter && m_activeView == ViewMode::World)
-        {
-            ProcessTurn_();
-        }
-    });
-}
-
-void Engine::Render_()
-{
-    switch (m_activeView)
-    {
-        case ViewMode::World:
-            RenderWorldView_();
-            break;
-        case ViewMode::Base:
-            RenderBaseView_();
-            break;
-    }
-
-    // Show last-clicked tile info at the bottom of the screen
-    if (!m_lastClickedTileText.empty())
-    {
-        m_graphics->DrawText(m_lastClickedTileText, 20.f, 570.f, 18, Color::Yellow());
-    }
-}
-
-void Engine::RenderWorldView_()
-{
-    if (m_worldDisplay)
-    {
-        m_worldDisplay->Render(kWorldOriginX, kWorldOriginY, kWorldTileSize);
-    }
-}
-
-void Engine::RenderBaseView_()
-{
-    if (m_pActiveBase && m_workableAreaDisplay)
-    {
-        m_graphics->DrawText(m_pActiveBase->GetName(), 20.f, 40.f, 20, Color::Yellow());
-
-        const std::string nutrientText = "Nutrients: " + std::to_string(m_pActiveBase->GetNutrientStockpile());
-        const std::string mineralText  = "Minerals:  " + std::to_string(m_pActiveBase->GetMineralStockpile());
-        const std::string energyText   = "Energy:    " + std::to_string(m_pActiveBase->GetEnergyProduction()) + "/turn";
-        m_graphics->DrawText(nutrientText, 20.f, 70.f, 16, Color::White());
-        m_graphics->DrawText(mineralText,  20.f, 90.f, 16, Color::White());
-        m_graphics->DrawText(energyText,   20.f, 110.f, 16, Color::White());
-
-        m_workableAreaDisplay->Render(kBaseAreaCenterX, kBaseAreaCenterY, kBaseTileSize);
-    }
-}
-
-void Engine::HandleWorldViewMouse_(int mouseX, int mouseY)
-{
-    const WorldMap* pWorldMap = m_gameState->GetWorldMap();
-    if (!pWorldMap)
-    {
-        return;
-    }
-
-    const UIWorldMap& rWorldMapUI = m_uiManager->GetWorldMap();
-    const float tileSize = std::min(
-        rWorldMapUI.GetWidth()  / static_cast<float>(pWorldMap->GetWidth()),
-        rWorldMapUI.GetHeight() / static_cast<float>(pWorldMap->GetHeight()));
-
-    auto tile = TileHitTester::HitTestWorldGrid(
-        static_cast<float>(mouseX), static_cast<float>(mouseY),
-        rWorldMapUI.GetX(), rWorldMapUI.GetY(), tileSize,
-        pWorldMap->GetWidth(), pWorldMap->GetHeight());
-
-    if (tile)
-    {
-        m_lastClickedTile = tile;
-        m_lastClickedTileText = "Clicked tile: (" + std::to_string(tile->first) + ", " + std::to_string(tile->second) + ")";
-
-        BaseManager* pBase = FindBaseAtTile_(tile->first, tile->second);
-        if (pBase)
-        {
-            OpenBaseView_(pBase);
-        }
-    }
-    else
-    {
-        m_lastClickedTile = std::nullopt;
-        m_lastClickedTileText = "Clicked: (" + std::to_string(mouseX) + ", " + std::to_string(mouseY) + ") - no tile";
-    }
-}
-
-void Engine::HandleBaseViewMouse_(int mouseX, int mouseY)
-{
-    if (!m_pActiveBase)
-    {
-        return;
-    }
-
-    auto tile = TileHitTester::HitTestBaseWorkableArea(
-        static_cast<float>(mouseX), static_cast<float>(mouseY),
-        kBaseAreaCenterX, kBaseAreaCenterY, kBaseTileSize,
-        m_pActiveBase->GetX(), m_pActiveBase->GetY());
-
-    if (!tile)
-    {
-        m_lastClickedTile = std::nullopt;
-        m_lastClickedTileText = "Clicked: (" + std::to_string(mouseX) + ", " + std::to_string(mouseY) + ") - no tile";
-        return;
-    }
-
-    m_lastClickedTile = tile;
-    int tileX = tile->first;
-    int tileY = tile->second;
-    auto& rAssignments = m_pActiveBase->GetWorkerAssignments();
-    const auto& rPops = m_pActiveBase->GetPopContainer();
-
-    if (rAssignments.IsTileAssigned(tileX, tileY))
-    {
-        // Unassign the worker from this tile
-        for (const auto& rEntry : rAssignments.GetAssignments())
-        {
-            if (rEntry.second.first == tileX && rEntry.second.second == tileY)
-            {
-                rAssignments.UnassignWorker(rEntry.first);
-                m_lastClickedTileText = "Unassigned worker from (" + std::to_string(tileX) + ", " + std::to_string(tileY) + ")";
-                return;
-            }
-        }
-    }
-    else
-    {
-        // Assign an unassigned worker to this tile
-        const auto& pops = rPops.GetPops();
-        for (int i = static_cast<int>(pops.size()) - 1; i >= 0; --i)
-        {
-            const Pop* pPop = pops[i].get();
-            if (pPop->IsWorker() && rAssignments.GetAssignedTile(pPop->GetId()).first == -1)
-            {
-                rAssignments.UnassignWorker(pPop->GetId());
-                if (rAssignments.AssignWorker(pPop->GetId(), tileX, tileY, rPops))
-                {
-                    m_lastClickedTileText = "Reassigned worker to (" + std::to_string(tileX) + ", " + std::to_string(tileY) + ")";
-                    return;
-                }
-            }
-        }
-        m_lastClickedTileText = "No workers available to reassign";
-    }
-}
-
-BaseManager* Engine::FindBaseAtTile_(int tileX, int tileY) const
-{
-    for (const auto& pFaction : m_gameState->GetFactions())
-    {
-        for (size_t i = 0; i < pFaction->GetBaseCount(); ++i)
-        {
-            BaseManager* pBase = pFaction->GetBase(i);
-            if (pBase && pBase->GetX() == tileX && pBase->GetY() == tileY)
-            {
-                return pBase;
-            }
-        }
-    }
-    return nullptr;
-}
-
-void Engine::OpenBaseView_(BaseManager* pBase)
-{
-    m_pActiveBase = pBase;
-    m_activeView = ViewMode::Base;
-    m_workableAreaDisplay->SetBase(pBase);
-    m_lastClickedTileText = "Base: " + pBase->GetName();
-}
-
-void Engine::ReturnToWorldView_()
-{
-    m_activeView = ViewMode::World;
-    m_pActiveBase = nullptr;
-    m_lastClickedTileText.clear();
 }
 
 } // namespace ac

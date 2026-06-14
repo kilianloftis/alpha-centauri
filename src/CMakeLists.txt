@@ -1,6 +1,8 @@
 add_executable(alpha-centauri
     main.cpp
     game/Engine.cpp
+    game/WorldView.cpp
+    game/BaseView.cpp
     game/GameState.cpp
     game/GameDataContext.cpp
     game/Faction.cpp
@@ -64,6 +66,9 @@ add_executable(alpha-centauri
     ui/WorldDisplay.cpp
     ui/BaseWorkableAreaDisplay.cpp
     ui/TileHitTester.cpp
+    ui/UIManager.cpp
+    ui/WorldMapElement.cpp
+    ui/InfoPanelElement.cpp
 )
 
 target_include_directories(alpha-centauri PRIVATE
@@ -134,8 +139,8 @@ option(USE_SFML "Enable SFML rendering" ON)
 if(USE_SFML)
     find_package(SFML 3.0.1 COMPONENTS Graphics Window System REQUIRED)
     target_compile_definitions(alpha-centauri PRIVATE USE_SFML)
-    target_sources(alpha-centauri PRIVATE graphics/SFMLGraphics.cpp input/SFMLInput.cpp input/SFMLKeyEventQueue.cpp input/SFMLMouseEventQueue.cpp ui/SFMLUIManager.cpp)
+    target_sources(alpha-centauri PRIVATE graphics/SFMLGraphics.cpp input/SFMLInput.cpp input/SFMLKeyEventQueue.cpp input/SFMLMouseEventQueue.cpp)
     target_link_libraries(alpha-centauri PRIVATE SFML::Graphics SFML::Window SFML::System)
 else()
-    target_sources(alpha-centauri PRIVATE graphics/NullGraphics.cpp input/NullInput.cpp ui/NullUIManager.cpp)
+    target_sources(alpha-centauri PRIVATE graphics/NullGraphics.cpp input/NullInput.cpp)
 endif()

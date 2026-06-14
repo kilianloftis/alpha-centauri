@@ -26,9 +26,10 @@ graph TB
 
     subgraph "UI System"
         UIManager[UIManager<br/>(abstract)]
-        SFMLUIManager[SFMLUIManager]
-        NullUIManager[NullUIManager]
-        UIElements[UIWorldMap, UIPanel, UIPopup]
+        UIManagerImpl[UIManagerImpl]
+        IGameView[IGameView<br/>(interface)]
+        UIElements[UIWorldMap, UIPanel, UIPopup<br/>extends UIElement]
+        Views[WorldView, BaseView<br/>implement IGameView]
     end
 
     subgraph "Turn System"
@@ -91,10 +92,12 @@ graph TB
     Engine --> UIManager
     Engine --> EventBridge
 
-    UIManager --> SFMLUIManager
-    UIManager --> NullUIManager
-    UIManager --> UIElements
-    SFMLUIManager --> Graphics
+    UIManagerImpl -.->|implements| UIManager
+    UIManager -->|manages stack of| IGameView
+    IGameView --> UIElements
+    Views -.->|implement| IGameView
+    UIManagerImpl --> Graphics
+    UIManagerImpl --> Input
 
     Graphics --> SFMLGraphics
     Graphics --> NullGraphics
