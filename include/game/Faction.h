@@ -9,17 +9,19 @@ namespace ac
 {
 
 // Forward declarations
+class TechRegistry;
 class FactionIdentity;
 class AIProfile;
 class BaseEconomyManager;
 class Military;
 class ResearchManager;
 class Diplomacy;
+struct GameDataContext;
 
 class Faction
 {
 public:
-    Faction();
+    explicit Faction(const TechRegistry* pTechRegistry);
     ~Faction();
 
     // Turn processing
@@ -27,6 +29,9 @@ public:
 
     // Base management
     void AddBase(std::unique_ptr<BaseManager> pBase);
+    BaseManager* CreateBase(FactionId factionId, int baseId, const std::string& name, int x, int y,
+                            const GameDataContext& rDataContext,
+                            std::function<const Tile*(int x, int y)> tileLookup);
     BaseManager* GetBase(size_t index);
     const BaseManager* GetBase(size_t index) const;
     size_t GetBaseCount() const { return m_bases.size(); }

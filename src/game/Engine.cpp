@@ -15,11 +15,11 @@
 #include "game/research/TechRegistry.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopContainer.h"
-#include "game/faction/base/population/pop-types/PopTypeRegistry.h"
-#include "game/faction/base/population/pop-types/PopCompositionConfigParser.h"
-#include "game/faction/base/population/pop-types/GrowthConfigParser.h"
-#include "game/faction/base/population/calculators/PopCompositionCalculator.h"
-#include "game/faction/base/population/calculators/GrowthCalculator.h"
+#include "game/population/pop-types/PopTypeRegistry.h"
+#include "game/population/pop-types/PopCompositionConfigParser.h"
+#include "game/population/pop-types/GrowthConfigParser.h"
+#include "game/population/calculators/PopCompositionCalculator.h"
+#include "game/population/calculators/GrowthCalculator.h"
 #include "lib/LuaRuntime.h"
 #include "ui/world/WorldDisplay.h"
 #include "ui/base/BaseWorkableAreaDisplay.h"
@@ -39,7 +39,6 @@ namespace ac
 Engine::Engine()
     : m_graphics(CreateGraphics())
     , m_input(CreateInput())
-    , m_turnStageFactory(std::make_unique<TurnStageFactory>())
     , m_gameState(std::make_unique<GameState>())
     , m_eventBus(std::make_unique<EventBus>())
     , m_gameDataContext(std::make_unique<GameDataContext>())
@@ -143,36 +142,17 @@ void Engine::Initialize_()
     std::cout << "Generated world map: " << m_gameState->GetWorldMap()->GetWidth() << "x" << m_gameState->GetWorldMap()->GetHeight() << "\n";
 
     // Create test faction with a base
-    auto pFaction = std::make_unique<Faction>();
-    auto pBase = std::make_unique<BaseManager>(m_gameDataContext->buildingRegistry.get());
-    pBase->SetFactionId(1);  // Test faction ID
-    pBase->SetBaseId(1);     // Test base ID
-    pBase->SetName("Test Base");
-    pBase->SetPosition(6, 4);  // Center of 12x8 world
-
-    // Inject pop type registry and composition calculator into base population
-    pBase->SetPopRegistry(m_gameDataContext->popTypeRegistry.get());
-    pBase->SetPopCompositionCalculator(m_gameDataContext->popCompositionCalculator.get());
-
-    // Auto-assign initial workers to tiles
-    pBase->AutoAssignWorkers();
-
-    // Set up tile lookup for resource calculations
-    if (m_gameState->GetWorldMap())
-    {
-        pBase->SetTileLookup([this](int x, int y) -> const Tile* {
+    auto pFaction = std::make_unique<Faction>(m_gameDataContext->techRegistry.get());
+    BaseManager* pBase = pFaction->CreateBase(
+        1, 1, "Test Base", 6, 4,  // factionId, baseId, name, x, y (center of 12x8 world)
+        *m_gameDataContext,
+        [this](int x, int y) -> const Tile* {
             return m_gameState->GetWorldMap()->GetTile(x, y);
         });
-    }
-
-    std::cout << "Created test base with population: " << pBase->GetBaseSize()
-              << " (workers: " << pBase->GetPopWorkerCount() << ")\n";
 
     // Wire base signals to EventBus
     m_eventBridge->WireBase(*pBase);
 
-    // Add base to faction
-    pFaction->AddBase(std::move(pBase));
     m_gameState->AddFaction(std::move(pFaction));
 
     std::cout << "Test setup complete. " << m_gameState->GetNumFactions() << " faction(s), "
@@ -199,8 +179,9 @@ void Engine::Initialize_()
 
     m_workableAreaDisplay = std::make_unique<BaseWorkableAreaDisplay>(*m_graphics, *m_gameState->GetWorldMap());
 
-    m_turnStageFactory->SetCompositionCalculator(m_gameDataContext->popCompositionCalculator.get());
-    m_turnStageFactory->SetGrowthCalculator(m_gameDataContext->growthCalculator.get());
+    m_turnStageFactory = std::make_unique<TurnStageFactory>(
+        m_gameDataContext->popCompositionCalculator.get(),
+        m_gameDataContext->growthCalculator.get());
     m_turnStageFactory->LoadConfig("config/turn_stages.json");
     auto registry = m_turnStageFactory->CreateStages();
     TurnStageRepeatFlags_t repeatFlags;

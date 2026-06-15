@@ -15,11 +15,8 @@ class GrowthCalculator;
 class TurnStageFactory
 {
 public:
-    TurnStageFactory();
+    TurnStageFactory(PopCompositionCalculator* pCalculator, GrowthCalculator* pGrowthCalculator);
     ~TurnStageFactory() = default;
-
-    void SetCompositionCalculator(PopCompositionCalculator* pCalculator);
-    void SetGrowthCalculator(GrowthCalculator* pCalculator);
 
     bool LoadConfig(const std::string& configPath);
     TurnStageRegistry_t CreateStages();

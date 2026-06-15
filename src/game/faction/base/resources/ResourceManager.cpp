@@ -92,11 +92,6 @@ int ResourceManager::CalculateEnergyProduction_() const
         totalEnergy += worked.energy;
     }
 
-    // Energy from specialists
-    // TODO: When specialist types are implemented, calculate actual energy contribution
-    int specialistCount = m_pPopulation->GetSpecialistCount();
-    (void)specialistCount;
-
     // Energy from trade routes
     for (const auto& route : m_tradeRoutes)
     {

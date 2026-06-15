@@ -1,7 +1,7 @@
 #pragma once
 
 #include "game/faction/base/BaseTypes.h"
-#include "game/faction/base/population/pop-types/Pop.h"
+#include "game/population/pop-types/Pop.h"
 #include <functional>
 #include <unordered_map>
 #include <utility>
@@ -27,6 +27,7 @@ public:
 
     using TileCoord = std::pair<int, int>;
     using TileLookup = std::function<const Tile*(int x, int y)>;
+    using TileScorer = std::function<float(const Tile&)>;
 
     // Assign a worker pop to a tile coordinate.
     // Returns false if:
@@ -56,15 +57,31 @@ public:
     TileResources_t ComputeWorkedResources(const PopContainer& rPops,
                                            const TileLookup& tileAt) const;
 
-
     // Auto-assign any unassigned workers to available workable tiles.
-    // Iterates through workers and assigns each unassigned one to the first
-    // available unassigned tile from the provided workable tiles list.
+    // Tiles are sorted by score (descending) before assignment if a TileLookup
+    // has been set via SetTileLookup(). Otherwise, order is unspecified.
     void AutoAssignWorkers(const PopContainer& rPops,
                            const std::vector<TileCoord>& workableTiles);
 
+    // Set the tile lookup used to resolve coordinates during AutoAssignWorkers().
+    // If not set, tile scoring is skipped and assignment order is unspecified.
+    void SetTileLookup(TileLookup tileLookup);
+
+    // Set the tile scoring function used to prioritize tiles during AutoAssignWorkers().
+    // Default scorer sums all three resource yields. May be replaced at runtime.
+    void SetTileScorer(TileScorer scorer);
+
 private:
+    std::vector<int> GetUnassignedWorkers_(const PopContainer& rPops) const;
+    std::vector<TileCoord> GetAvailableTiles_(const std::vector<TileCoord>& workableTiles) const;
+    std::vector<TileCoord> PrioritizeAvailableTiles_(const std::vector<TileCoord>& availableTiles) const;
+    void AutoAssignWorkers_(const std::vector<int>& unassignedWorkerIds,
+                            const std::vector<TileCoord>& availableTiles,
+                            const PopContainer& rPops);
+
     std::unordered_map<int, TileCoord> m_assignments;  // popId -> (x, y)
+    TileLookup m_tileLookup;
+    TileScorer m_scorer;
 
     const Pop* FindPop_(int popId, const PopContainer& rPops) const;
 };

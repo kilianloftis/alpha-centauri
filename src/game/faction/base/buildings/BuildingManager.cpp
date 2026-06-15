@@ -49,14 +49,26 @@ int BuildingManager::GetTotalNutrientsBonus() const
     return total;
 }
 
-int BuildingManager::GetTotalImprovementNutrientsBonus(const std::string& improvementName) const
+std::vector<std::string> BuildingManager::GetBuildingsAvailableForConstruction(const std::vector<std::string>& discoveredTechs) const
 {
-    int total = 0;
-    for (const auto& pBuilding : m_buildings)
+    std::vector<std::string> availableBuildings;
+    for (const auto& config : m_pRegistry->GetAll())
     {
-        total += pBuilding->GetImprovementNutrientsBonus(improvementName);
+        if (config.IsDiscovered(discoveredTechs) && (config.allowMultiple || !DoesBuildingExist_(config.id)))
+        {
+            availableBuildings.push_back(config.id);
+        }
     }
-    return total;
+    return availableBuildings;
+}
+
+bool BuildingManager::DoesBuildingExist_(const std::string& buildingId) const
+{
+    return std::find_if(m_buildings.begin(), m_buildings.end(),
+        [&buildingId](const std::unique_ptr<Building>& pBuilding)
+        {
+            return buildingId == pBuilding->GetBuildingId();
+        }) != m_buildings.end();
 }
 
 } // namespace ac

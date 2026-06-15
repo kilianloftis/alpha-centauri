@@ -2,7 +2,7 @@
 #include "game/GameState.h"
 #include "game/Faction.h"
 #include "game/faction/base/BaseManager.h"
-#include "game/faction/base/population/calculators/GrowthCalculator.h"
+#include "game/population/calculators/GrowthCalculator.h"
 #include <iostream>
 
 namespace ac

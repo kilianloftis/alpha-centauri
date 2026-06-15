@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/faction/base/population/pop-types/PopCompositionConfigParser.h"
+#include "game/population/pop-types/PopCompositionConfigParser.h"
 #include <string>
 #include <unordered_map>
 

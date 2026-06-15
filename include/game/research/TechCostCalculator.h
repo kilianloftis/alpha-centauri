@@ -11,11 +11,8 @@ class TechRegistry;
 class TechCostCalculator
 {
 public:
-    TechCostCalculator();
     explicit TechCostCalculator(const TechRegistry* pTechRegistry);
     ~TechCostCalculator();
-
-    void SetTechRegistry(const TechRegistry* pTechRegistry);
 
     int CalculateCost(TechId techId, const std::vector<TechId>& discoveredTechs) const;
     int CalculateCost(const Tech* pTech, const std::vector<TechId>& discoveredTechs) const;

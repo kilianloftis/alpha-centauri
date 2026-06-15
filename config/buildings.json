@@ -6,12 +6,24 @@
     "improvement_bonuses": {
       "Farm": { "nutrients": 1 },
       "Condenser": { "nutrients": 2 }
-    }
+    },
+    "mineral_cost": 10,
+    "required_techs": ["test_tech_1"]
   },
   {
     "id": "Recycling_Tanks",
     "name": "Recycling Tanks",
     "nutrients_bonus": 1,
-    "improvement_bonuses": {}
+    "improvement_bonuses": {},
+    "mineral_cost": 5,
+    "required_techs": ["test_tech_2"]
+  },
+  {
+    "id": "sattelite",
+    "name": "Sattelite",
+    "power_bonus": 1,
+    "mineral_cost": 8,
+    "allow_multiple": true,
+    "required_techs": ["test_tech_1"]
   }
 ]

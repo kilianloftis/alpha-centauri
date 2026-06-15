@@ -4,7 +4,7 @@
 namespace ac
 {
 
-Building::Building(const BuildingConfig& rConfig)
+Building::Building(const BuildingConfig_t& rConfig)
     : m_pConfig(&rConfig)
 {
 }

@@ -1,4 +1,4 @@
-#include "game/faction/base/population/pop-types/PopTypeConfigParser.h"
+#include "game/population/pop-types/PopTypeConfigParser.h"
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <iostream>

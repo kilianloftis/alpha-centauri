@@ -1,11 +1,18 @@
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopContainer.h"
 #include "game/map/Tile.h"
+#include <algorithm>
 
 namespace ac
 {
 
 WorkerAssignmentManager::WorkerAssignmentManager()
+    : m_scorer([](const Tile& rTile) -> float
+      {
+          return static_cast<float>(rTile.GetNutrientProduction()
+                                   + rTile.GetEnergyProduction()
+                                   + rTile.GetMineralProduction());
+      })
 {
 }
 
@@ -100,10 +107,32 @@ TileResources_t WorkerAssignmentManager::ComputeWorkedResources(
     return total;
 }
 
+void WorkerAssignmentManager::SetTileLookup(TileLookup tileLookup)
+{
+    m_tileLookup = std::move(tileLookup);
+}
+
+void WorkerAssignmentManager::SetTileScorer(TileScorer scorer)
+{
+    m_scorer = std::move(scorer);
+}
+
 void WorkerAssignmentManager::AutoAssignWorkers(const PopContainer& rPops,
                                                 const std::vector<TileCoord>& workableTiles)
 {
-    // Find all unassigned workers
+    auto unassignedWorkerIds = GetUnassignedWorkers_(rPops);
+    if (unassignedWorkerIds.empty())
+    {
+        return;
+    }
+
+    auto availableTiles = GetAvailableTiles_(workableTiles);
+    auto prioritizedTiles = PrioritizeAvailableTiles_(availableTiles);
+    AutoAssignWorkers_(unassignedWorkerIds, prioritizedTiles, rPops);
+}
+
+std::vector<int> WorkerAssignmentManager::GetUnassignedWorkers_(const PopContainer& rPops) const
+{
     std::vector<int> unassignedWorkerIds;
     for (const auto& pPop : rPops.GetPops())
     {
@@ -112,13 +141,11 @@ void WorkerAssignmentManager::AutoAssignWorkers(const PopContainer& rPops,
             unassignedWorkerIds.push_back(pPop->GetId());
         }
     }
+    return unassignedWorkerIds;
+}
 
-    if (unassignedWorkerIds.empty())
-    {
-        return;
-    }
-
-    // Find available (unassigned) tiles
+std::vector<WorkerAssignmentManager::TileCoord> WorkerAssignmentManager::GetAvailableTiles_(const std::vector<TileCoord>& workableTiles) const
+{
     std::vector<TileCoord> availableTiles;
     for (const auto& tile : workableTiles)
     {
@@ -127,8 +154,36 @@ void WorkerAssignmentManager::AutoAssignWorkers(const PopContainer& rPops,
             availableTiles.push_back(tile);
         }
     }
+    return availableTiles;
+}
 
-    // Assign workers to available tiles
+std::vector<WorkerAssignmentManager::TileCoord> WorkerAssignmentManager::PrioritizeAvailableTiles_(
+    const std::vector<TileCoord>& availableTiles) const
+{
+    std::vector<TileCoord> prioritizedTiles = availableTiles;
+
+    if (!m_tileLookup)
+    {
+        return prioritizedTiles;
+    }
+
+    std::sort(prioritizedTiles.begin(), prioritizedTiles.end(),
+        [this](const TileCoord& rA, const TileCoord& rB)
+        {
+            const Tile* pTileA = m_tileLookup(rA.first, rA.second);
+            const Tile* pTileB = m_tileLookup(rB.first, rB.second);
+            const float scoreA = pTileA ? m_scorer(*pTileA) : 0.0f;
+            const float scoreB = pTileB ? m_scorer(*pTileB) : 0.0f;
+            return scoreA > scoreB;
+        });
+
+    return prioritizedTiles;
+}
+
+void WorkerAssignmentManager::AutoAssignWorkers_(const std::vector<int>& unassignedWorkerIds,
+                                                 const std::vector<TileCoord>& availableTiles,
+                                                 const PopContainer& rPops)
+{
     size_t workerIndex = 0;
     size_t tileIndex = 0;
     while (workerIndex < unassignedWorkerIds.size() && tileIndex < availableTiles.size())

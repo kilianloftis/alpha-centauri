@@ -5,13 +5,13 @@
 namespace ac
 {
 
-struct BuildingConfig;
+struct BuildingConfig_t;
 
-// A single building instance. Behaviour is entirely driven by its BuildingConfig.
+// A single building instance. Behaviour is entirely driven by its BuildingConfig_t.
 class Building
 {
 public:
-    explicit Building(const BuildingConfig& rConfig);
+    explicit Building(const BuildingConfig_t& rConfig);
     ~Building();
 
     // Type id string matching the config (e.g. "Nutrient_Bank")
@@ -25,7 +25,7 @@ public:
     int GetImprovementNutrientsBonus(const std::string& improvementName) const;
 
 private:
-    const BuildingConfig* m_pConfig;
+    const BuildingConfig_t* m_pConfig;
 };
 
 } // namespace ac

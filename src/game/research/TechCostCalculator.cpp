@@ -4,13 +4,6 @@
 namespace ac
 {
 
-TechCostCalculator::TechCostCalculator()
-    : m_pTechRegistry(nullptr)
-    , m_costMultiplier(1.0f)
-    , m_minCost(10)
-{
-}
-
 TechCostCalculator::TechCostCalculator(const TechRegistry* pTechRegistry)
     : m_pTechRegistry(pTechRegistry)
     , m_costMultiplier(1.0f)
@@ -20,11 +13,6 @@ TechCostCalculator::TechCostCalculator(const TechRegistry* pTechRegistry)
 
 TechCostCalculator::~TechCostCalculator()
 {
-}
-
-void TechCostCalculator::SetTechRegistry(const TechRegistry* pTechRegistry)
-{
-    m_pTechRegistry = pTechRegistry;
 }
 
 int TechCostCalculator::CalculateCost(TechId techId, const std::vector<TechId>& discoveredTechs) const

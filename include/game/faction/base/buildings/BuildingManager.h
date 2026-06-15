@@ -31,10 +31,12 @@ public:
     // Sum of GetNutrientsBonus() across all buildings.
     int GetTotalNutrientsBonus() const;
 
-    // Sum of GetImprovementNutrientsBonus(improvementName) across all buildings.
-    int GetTotalImprovementNutrientsBonus(const std::string& improvementName) const;
+    // Get a list of available buildings based on discovered technologies.
+    std::vector<std::string> GetBuildingsAvailableForConstruction(const std::vector<std::string>& discoveredTechs) const;
 
 private:
+    bool DoesBuildingExist_(const std::string& buildingId) const;
+
     const BuildingRegistry* m_pRegistry;
     std::vector<std::unique_ptr<Building>> m_buildings;
 };

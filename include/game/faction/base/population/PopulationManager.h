@@ -1,9 +1,9 @@
 #pragma once
 
 #include "game/faction/base/population/PopContainer.h"
-#include "game/faction/base/population/calculators/PopCompositionCalculator.h"
-#include "game/faction/base/population/calculators/RiotCalculator.h"
-#include "game/faction/base/population/calculators/GoldenAgeCalculator.h"
+#include "game/population/calculators/PopCompositionCalculator.h"
+#include "game/population/calculators/RiotCalculator.h"
+#include "game/population/calculators/GoldenAgeCalculator.h"
 
 #include <memory>
 #include <string>
@@ -21,8 +21,7 @@ class PopTypeRegistry;
 class PopulationManager
 {
 public:
-    PopulationManager();
-    explicit PopulationManager(int initialSize);
+    explicit PopulationManager(const PopTypeRegistry* pReg, PopCompositionCalculator* pCalc, int initialSize = 3);
     ~PopulationManager();
 
     // Population size management
@@ -67,13 +66,6 @@ public:
 
     // Check golden age conditions at end of turn. Delegates to m_golden_age.Update(...).
     void CheckGoldenAgeEndOfTurn();
-
-    // Registry injection — forwarded to PopContainer.
-    // Fires on_pop_gained once per initial pop created from reserved capacity.
-    void SetRegistry(const PopTypeRegistry* pRegistry);
-
-    // Composition calculator injection
-    void SetCompositionCalculator(PopCompositionCalculator* pCalculator);
 
     // Population limits
     int GetMaxSize() const;

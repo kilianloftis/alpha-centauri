@@ -27,12 +27,10 @@ class Tile;
 class BaseManager
 {
 public:
-    explicit BaseManager(const BuildingRegistry* pBuildingRegistry);
+    BaseManager(const BuildingRegistry* pBuildingRegistry, const PopTypeRegistry* pPopRegistry, PopCompositionCalculator* pCompositionCalculator);
     ~BaseManager();
 
     // Population management - delegated to PopulationManager
-    void SetPopRegistry(const PopTypeRegistry* pRegistry);
-    void SetPopCompositionCalculator(PopCompositionCalculator* pCalculator);
     void RecalculatePopComposition();
     const PopContainer& GetPopContainer() const;
     int GetPopWorkerCount() const;

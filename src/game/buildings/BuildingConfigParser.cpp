@@ -12,11 +12,11 @@ BuildingConfigParser::BuildingConfigParser()
 {
 }
 
-std::vector<BuildingConfig> BuildingConfigParser::ParseConfig(const std::string& configPath)
+std::vector<BuildingConfig_t> BuildingConfigParser::ParseConfig(const std::string& configPath)
 {
     std::cout << "Loading building configuration from: " << configPath << "\n";
 
-    std::vector<BuildingConfig> configs;
+    std::vector<BuildingConfig_t> configs;
 
     try
     {
@@ -51,12 +51,22 @@ std::vector<BuildingConfig> BuildingConfigParser::ParseConfig(const std::string&
     }
 }
 
-BuildingConfig BuildingConfigParser::ParseBuildingConfig(const nlohmann::json& buildingJson)
+BuildingConfig_t BuildingConfigParser::ParseBuildingConfig(const nlohmann::json& buildingJson)
 {
-    BuildingConfig config;
+    BuildingConfig_t config;
     config.id = buildingJson["id"];
     config.name = buildingJson.value("name", config.id);
     config.nutrientsBonus = buildingJson.value("nutrients_bonus", 0);
+    config.mineralCost = buildingJson.value("mineral_cost", 0);
+    config.allowMultiple = buildingJson.value("allow_multiple", false);
+    
+    if (buildingJson.contains("required_techs"))
+    {
+        for (const auto& tech : buildingJson["required_techs"])
+        {
+            config.requiredTechs.push_back(tech);
+        }
+    }
 
     if (buildingJson.contains("improvement_bonuses"))
     {

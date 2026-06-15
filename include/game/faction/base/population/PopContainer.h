@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/faction/base/population/pop-types/Pop.h"
+#include "game/population/pop-types/Pop.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -16,7 +16,7 @@ struct PopCompositionResult;
 class PopContainer
 {
 public:
-    PopContainer();
+    PopContainer(const PopTypeRegistry* pReg, int initialSize);
     ~PopContainer() = default;
 
     // Container access
@@ -31,7 +31,6 @@ public:
     int GetSpecialistCount() const;
 
     // Container operations
-    void Reserve(int count);  // Reserve capacity for pops (created when registry is set)
     void AddPop(const std::string& typeId);
     void RemovePop();
 
@@ -44,9 +43,6 @@ public:
     // Apply composition targets: converts excess drones/talents to workers,
     // then promotes workers to match targets.
     void ApplyCompositionTargets(const PopCompositionResult& targets, const std::string& defaultTypeId);
-
-    // Registry injection. Returns the number of initial pops created from reserved capacity.
-    int SetRegistry(const PopTypeRegistry* pRegistry);
 
     // Compute total psych output across all pops
     int ComputePsychOutput() const;

@@ -1,5 +1,5 @@
-#include "game/faction/base/population/pop-types/Pop.h"
-#include "game/faction/base/population/pop-types/PopTypeConfigParser.h"
+#include "game/population/pop-types/Pop.h"
+#include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/faction/base/resources/ResourceManager.h"
 #include <cmath>
 

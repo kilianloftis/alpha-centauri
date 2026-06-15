@@ -3,17 +3,6 @@
 namespace ac
 {
 
-ResearchManager::ResearchManager()
-    : m_pTechRegistry(nullptr)
-    , m_pTechCostCalculator(std::make_unique<TechCostCalculator>())
-    , m_discoveredTechs()
-    , m_currentResearchTarget(0)
-    , m_accumulatedPoints(0)
-    , m_pointsNeededForCurrentTech(0)
-    , m_bHasResearchTarget(false)
-{
-}
-
 ResearchManager::ResearchManager(const TechRegistry* pTechRegistry)
     : m_pTechRegistry(pTechRegistry)
     , m_pTechCostCalculator(std::make_unique<TechCostCalculator>(pTechRegistry))
@@ -27,15 +16,6 @@ ResearchManager::ResearchManager(const TechRegistry* pTechRegistry)
 
 ResearchManager::~ResearchManager()
 {
-}
-
-void ResearchManager::SetTechRegistry(const TechRegistry* pTechRegistry)
-{
-    m_pTechRegistry = pTechRegistry;
-    if (m_pTechCostCalculator)
-    {
-        m_pTechCostCalculator->SetTechRegistry(pTechRegistry);
-    }
 }
 
 void ResearchManager::SetResearchTarget(TechId techId)

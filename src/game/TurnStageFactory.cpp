@@ -20,18 +20,10 @@
 namespace ac
 {
 
-TurnStageFactory::TurnStageFactory()
+TurnStageFactory::TurnStageFactory(PopCompositionCalculator* pCalculator, GrowthCalculator* pGrowthCalculator)
+    : m_pCalculator(pCalculator)
+    , m_pGrowthCalculator(pGrowthCalculator)
 {
-}
-
-void TurnStageFactory::SetCompositionCalculator(PopCompositionCalculator* pCalculator)
-{
-    m_pCalculator = pCalculator;
-}
-
-void TurnStageFactory::SetGrowthCalculator(GrowthCalculator* pCalculator)
-{
-    m_pGrowthCalculator = pCalculator;
 }
 
 bool TurnStageFactory::LoadConfig(const std::string& configPath)

@@ -28,7 +28,7 @@ bool BuildingRegistry::Load(const std::string& configPath)
     return true;
 }
 
-const BuildingConfig* BuildingRegistry::Find(const std::string& id) const
+const BuildingConfig_t* BuildingRegistry::Find(const std::string& id) const
 {
     auto it = m_indexById.find(id);
     if (it == m_indexById.end())
@@ -38,14 +38,14 @@ const BuildingConfig* BuildingRegistry::Find(const std::string& id) const
     return &m_configs[it->second];
 }
 
-const std::vector<BuildingConfig>& BuildingRegistry::GetAll() const
+const std::vector<BuildingConfig_t>& BuildingRegistry::GetAll() const
 {
     return m_configs;
 }
 
 std::unique_ptr<Building> BuildingRegistry::CreateBuilding(const std::string& id) const
 {
-    const BuildingConfig* pConfig = Find(id);
+    const BuildingConfig_t* pConfig = Find(id);
     if (!pConfig)
     {
         throw std::runtime_error("Unknown building id '" + id + "'");

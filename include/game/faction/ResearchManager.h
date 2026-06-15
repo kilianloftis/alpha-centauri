@@ -12,11 +12,8 @@ namespace ac
 class ResearchManager
 {
 public:
-    ResearchManager();
     explicit ResearchManager(const TechRegistry* pTechRegistry);
     ~ResearchManager();
-
-    void SetTechRegistry(const TechRegistry* pTechRegistry);
 
     void SetResearchTarget(TechId techId);
     TechId GetResearchTarget() const;

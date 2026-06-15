@@ -1,16 +1,25 @@
 #include "game/faction/base/population/PopContainer.h"
-#include "game/faction/base/population/calculators/PopCompositionCalculator.h"
-#include "game/faction/base/population/pop-types/PopTypeConfigParser.h"
-#include "game/faction/base/population/pop-types/PopTypeRegistry.h"
+#include "game/population/calculators/PopCompositionCalculator.h"
+#include "game/population/pop-types/PopTypeConfigParser.h"
+#include "game/population/pop-types/PopTypeRegistry.h"
 #include <stdexcept>
 
 namespace ac
 {
 
-PopContainer::PopContainer()
-    : m_pRegistry(nullptr)
+PopContainer::PopContainer(const PopTypeRegistry* pReg, int initialSize)
+    : m_pRegistry(pReg)
     , m_nextPopId(0)
 {
+    if (m_pRegistry && initialSize > 0)
+    {
+        for (int i = 0; i < initialSize; ++i)
+        {
+            auto pPop = m_pRegistry->CreatePop("Worker");
+            pPop->SetId(m_nextPopId++);
+            m_pops.push_back(std::move(pPop));
+        }
+    }
 }
 
 int PopContainer::GetSize() const
@@ -50,11 +59,6 @@ int PopContainer::GetDroneCount() const
 int PopContainer::GetSpecialistCount() const
 {
     return CountPops_([](const Pop* p) { return p->IsSpecialist(); });
-}
-
-void PopContainer::Reserve(int count)
-{
-    m_pops.reserve(count);
 }
 
 void PopContainer::AddPop(const std::string& typeId)
@@ -151,28 +155,6 @@ void PopContainer::ApplyCompositionTargets(const PopCompositionResult& targets, 
             currentTalents++;
         }
     }
-}
-
-int PopContainer::SetRegistry(const PopTypeRegistry* pRegistry)
-{
-    m_pRegistry = pRegistry;
-
-    int popsCreated = 0;
-
-    // Populate reserved pops now that the registry is available
-    if (m_pops.empty() && m_pops.capacity() > 0)
-    {
-        const size_t target = m_pops.capacity();
-        for (size_t i = 0; i < target; i++)
-        {
-            auto pPop = m_pRegistry->CreatePop("Worker");
-            pPop->SetId(m_nextPopId++);
-            m_pops.push_back(std::move(pPop));
-            ++popsCreated;
-        }
-    }
-
-    return popsCreated;
 }
 
 int PopContainer::ComputePsychOutput() const

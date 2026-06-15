@@ -4,20 +4,20 @@
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/population/PopContainer.h"
-#include "game/faction/base/population/pop-types/PopTypeRegistry.h"
-#include "game/faction/base/population/calculators/PopCompositionCalculator.h"
+#include "game/population/pop-types/PopTypeRegistry.h"
+#include "game/population/calculators/PopCompositionCalculator.h"
 #include "game/buildings/BuildingRegistry.h"
 #include <cmath>
 
 namespace ac
 {
 
-BaseManager::BaseManager(const BuildingRegistry* pBuildingRegistry)
+BaseManager::BaseManager(const BuildingRegistry* pBuildingRegistry, const PopTypeRegistry* pPopRegistry, PopCompositionCalculator* pCompositionCalculator)
     : m_factionId(-1)
     , m_baseId(-1)
     , m_x(0)
     , m_y(0)
-    , m_pPopulation(std::make_unique<PopulationManager>(3))
+    , m_pPopulation(std::make_unique<PopulationManager>(pPopRegistry, pCompositionCalculator))
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>())
     , m_pResources(nullptr)
     , m_pBuildings(std::make_unique<BuildingManager>(pBuildingRegistry))
@@ -36,22 +36,6 @@ BaseManager::BaseManager(const BuildingRegistry* pBuildingRegistry)
 }
 
 BaseManager::~BaseManager() = default;
-
-void BaseManager::SetPopRegistry(const PopTypeRegistry* pRegistry)
-{
-    if (m_pPopulation)
-    {
-        m_pPopulation->SetRegistry(pRegistry);
-    }
-}
-
-void BaseManager::SetPopCompositionCalculator(PopCompositionCalculator* pCalculator)
-{
-    if (m_pPopulation)
-    {
-        m_pPopulation->SetCompositionCalculator(pCalculator);
-    }
-}
 
 void BaseManager::RecalculatePopComposition()
 {
@@ -105,6 +89,10 @@ void BaseManager::AutoAssignWorkers()
 
 void BaseManager::SetTileLookup(std::function<const Tile*(int x, int y)> tileLookup)
 {
+    if (m_pWorkerAssignments)
+    {
+        m_pWorkerAssignments->SetTileLookup(tileLookup);
+    }
     if (m_pResources)
     {
         m_pResources->SetTileLookup(std::move(tileLookup));

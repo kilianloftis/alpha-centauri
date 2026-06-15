@@ -1,4 +1,4 @@
-#include "game/faction/base/population/pop-types/GrowthConfigParser.h"
+#include "game/population/pop-types/GrowthConfigParser.h"
 #include "lib/LuaRuntime.h"
 #include <iostream>
 

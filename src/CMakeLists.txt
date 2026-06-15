@@ -19,15 +19,15 @@ add_executable(alpha-centauri
     game/faction/base/resources/BaseEconomyManager.cpp
     game/faction/base/population/PopulationManager.cpp
     game/faction/base/population/PopContainer.cpp
-    game/faction/base/population/pop-types/Pop.cpp
-    game/faction/base/population/pop-types/PopTypeConfigParser.cpp
-    game/faction/base/population/pop-types/PopTypeRegistry.cpp
-    game/faction/base/population/pop-types/PopCompositionConfigParser.cpp
-    game/faction/base/population/pop-types/GrowthConfigParser.cpp
-    game/faction/base/population/calculators/PopCompositionCalculator.cpp
-    game/faction/base/population/calculators/RiotCalculator.cpp
-    game/faction/base/population/calculators/GrowthCalculator.cpp
-    game/faction/base/population/calculators/GoldenAgeCalculator.cpp
+    game/population/pop-types/Pop.cpp
+    game/population/pop-types/PopTypeConfigParser.cpp
+    game/population/pop-types/PopTypeRegistry.cpp
+    game/population/pop-types/PopCompositionConfigParser.cpp
+    game/population/pop-types/GrowthConfigParser.cpp
+    game/population/calculators/PopCompositionCalculator.cpp
+    game/population/calculators/RiotCalculator.cpp
+    game/population/calculators/GrowthCalculator.cpp
+    game/population/calculators/GoldenAgeCalculator.cpp
     game/faction/Specialist.cpp
     game/TurnProcessor.cpp
     lib/EventBus.cpp
