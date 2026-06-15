@@ -1,8 +1,8 @@
 #pragma once
 
 #include "ui/IGameView.h"
-#include "ui/WorldMapElement.h"
-#include "ui/InfoPanelElement.h"
+#include "ui/world/WorldMapElement.h"
+#include "ui/world/InfoPanelElement.h"
 #include <functional>
 #include <memory>
 #include <optional>
@@ -34,9 +34,8 @@ public:
 
     void Render(Graphics& rGraphics) override;
     void Update(float deltaTime) override;
-    bool HandleKey(const KeyEvent_t& rEvent) override;
-    bool HandleMouse(const MouseEvent_t& rEvent) override;
-    std::vector<UIElement*> GetElements() override;
+    void HandleKey(const KeyEvent_t& rEvent) override;
+    void HandleMouse(const MouseEvent_t& rEvent) override;
 
 private:
     BaseManager* FindBaseAtTile_(int tileX, int tileY) const;

@@ -1,4 +1,4 @@
-#include "ui/WorldDisplay.h"
+#include "ui/world/WorldDisplay.h"
 #include <algorithm>
 #include <sstream>
 

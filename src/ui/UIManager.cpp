@@ -27,50 +27,26 @@ void UIManager::Update(float deltaTime)
 
 void UIManager::ProcessInput()
 {
-    if (m_viewStack.empty())
+    if (!m_viewStack.empty())
     {
-        return;
+        ProcessKeys_();
+        ProcessMouse_();
     }
+}
 
+void UIManager::ProcessKeys_()
+{
     m_pInput->CaptureKeyAsync([this](KeyEvent_t event)
     {
-        if (m_viewStack.empty())
-        {
-            return;
-        }
         m_viewStack.back()->HandleKey(event);
     });
+}
 
+void UIManager::ProcessMouse_()
+{
     m_pInput->CaptureMouseAsync([this](MouseEvent_t event)
     {
-        if (m_viewStack.empty())
-        {
-            return;
-        }
-        if (event.button == MouseButton_t::None)
-        {
-            return;
-        }
-
-        IGameView& rTopView = *m_viewStack.back();
-
-        for (UIElement* pElement : rTopView.GetElements())
-        {
-            if (!pElement || !pElement->IsVisible())
-            {
-                continue;
-            }
-            if (pElement->Contains(static_cast<float>(event.x), static_cast<float>(event.y)))
-            {
-                if (pElement->HandleMouse(event))
-                {
-                    return;
-                }
-                break;
-            }
-        }
-
-        rTopView.HandleMouse(event);
+        m_viewStack.back()->HandleMouse(event);
     });
 }
 

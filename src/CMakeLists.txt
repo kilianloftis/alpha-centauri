@@ -1,8 +1,6 @@
 add_executable(alpha-centauri
     main.cpp
     game/Engine.cpp
-    game/WorldView.cpp
-    game/BaseView.cpp
     game/GameState.cpp
     game/GameDataContext.cpp
     game/Faction.cpp
@@ -62,13 +60,17 @@ add_executable(alpha-centauri
     game/stages/Save.cpp
     game/stages/CustomTurnStage.cpp
     input/KeyMapping.cpp
-    ui/PopulationDisplay.cpp
-    ui/WorldDisplay.cpp
-    ui/BaseWorkableAreaDisplay.cpp
+    input/KeyEventQueue.cpp
+    input/MouseEventQueue.cpp
+    ui/base/BaseView.cpp
+    ui/base/PopulationDisplay.cpp
+    ui/base/BaseWorkableAreaDisplay.cpp
     ui/TileHitTester.cpp
     ui/UIManager.cpp
-    ui/WorldMapElement.cpp
-    ui/InfoPanelElement.cpp
+    ui/world/WorldDisplay.cpp
+    ui/world/WorldMapElement.cpp
+    ui/world/WorldView.cpp
+    ui/world/InfoPanelElement.cpp
 )
 
 target_include_directories(alpha-centauri PRIVATE
@@ -139,7 +141,7 @@ option(USE_SFML "Enable SFML rendering" ON)
 if(USE_SFML)
     find_package(SFML 3.0.1 COMPONENTS Graphics Window System REQUIRED)
     target_compile_definitions(alpha-centauri PRIVATE USE_SFML)
-    target_sources(alpha-centauri PRIVATE graphics/SFMLGraphics.cpp input/SFMLInput.cpp input/SFMLKeyEventQueue.cpp input/SFMLMouseEventQueue.cpp)
+    target_sources(alpha-centauri PRIVATE graphics/SFMLGraphics.cpp input/SFMLInput.cpp)
     target_link_libraries(alpha-centauri PRIVATE SFML::Graphics SFML::Window SFML::System)
 else()
     target_sources(alpha-centauri PRIVATE graphics/NullGraphics.cpp input/NullInput.cpp)

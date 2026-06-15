@@ -1,10 +1,10 @@
-#include "game/WorldView.h"
+#include "ui/world/WorldView.h"
 #include "game/GameState.h"
 #include "game/Faction.h"
 #include "game/faction/base/BaseManager.h"
 #include "ui/UIManager.h"
 #include "ui/TileHitTester.h"
-#include "ui/WorldDisplay.h"
+#include "ui/world/WorldDisplay.h"
 #include "graphics/Graphics.h"
 #include <string>
 
@@ -60,27 +60,24 @@ void WorldView::Update(float deltaTime)
     m_pInfoPanel->Update(deltaTime);
 }
 
-bool WorldView::HandleKey(const KeyEvent_t& rEvent)
+void WorldView::HandleKey(const KeyEvent_t& rEvent)
 {
     if (rEvent.key == Key_t::Escape)
     {
         m_rUIManager.RequestExit();
-        return true;
     }
-    if (rEvent.key == Key_t::Enter)
+    else if (rEvent.key == Key_t::Enter)
     {
         m_onProcessTurn();
-        return true;
     }
-    return false;
 }
 
-bool WorldView::HandleMouse(const MouseEvent_t& rEvent)
+void WorldView::HandleMouse(const MouseEvent_t& rEvent)
 {
     const WorldMap* pWorldMap = m_rGameState.GetWorldMap();
     if (!pWorldMap)
     {
-        return false;
+        return;
     }
     const float tileSize = std::min(
         m_pWorldMap->GetWidth()  / static_cast<float>(pWorldMap->GetWidth()),
@@ -110,12 +107,6 @@ bool WorldView::HandleMouse(const MouseEvent_t& rEvent)
         m_lastClickedTile = std::nullopt;
         m_lastClickedTileText = "Clicked: (" + std::to_string(rEvent.x) + ", " + std::to_string(rEvent.y) + ") - no tile";
     }
-    return true;
-}
-
-std::vector<UIElement*> WorldView::GetElements()
-{
-    return {m_pWorldMap.get(), m_pInfoPanel.get()};
 }
 
 BaseManager* WorldView::FindBaseAtTile_(int tileX, int tileY) const

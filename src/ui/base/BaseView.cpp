@@ -1,8 +1,8 @@
-#include "game/BaseView.h"
+#include "ui/base/BaseView.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopContainer.h"
-#include "ui/BaseWorkableAreaDisplay.h"
+#include "ui/base/BaseWorkableAreaDisplay.h"
 #include "ui/UIManager.h"
 #include "ui/TileHitTester.h"
 #include "graphics/Graphics.h"
@@ -45,17 +45,15 @@ void BaseView::Update(float /*deltaTime*/)
 {
 }
 
-bool BaseView::HandleKey(const KeyEvent_t& rEvent)
+void BaseView::HandleKey(const KeyEvent_t& rEvent)
 {
     if (rEvent.key == Key_t::Escape)
     {
         m_rUIManager.PopView();
-        return true;
     }
-    return false;
 }
 
-bool BaseView::HandleMouse(const MouseEvent_t& rEvent)
+void BaseView::HandleMouse(const MouseEvent_t& rEvent)
 {
     auto tile = TileHitTester::HitTestBaseWorkableArea(
         static_cast<float>(rEvent.x), static_cast<float>(rEvent.y),
@@ -66,7 +64,7 @@ bool BaseView::HandleMouse(const MouseEvent_t& rEvent)
     {
         m_lastClickedTile = std::nullopt;
         m_lastClickedTileText = "Clicked: (" + std::to_string(rEvent.x) + ", " + std::to_string(rEvent.y) + ") - no tile";
-        return false;
+        return;
     }
 
     m_lastClickedTile = tile;
@@ -83,7 +81,7 @@ bool BaseView::HandleMouse(const MouseEvent_t& rEvent)
             {
                 rAssignments.UnassignWorker(rEntry.first);
                 m_lastClickedTileText = "Unassigned worker from (" + std::to_string(tileX) + ", " + std::to_string(tileY) + ")";
-                return true;
+                return;
             }
         }
     }
@@ -99,18 +97,12 @@ bool BaseView::HandleMouse(const MouseEvent_t& rEvent)
                 if (rAssignments.AssignWorker(pPop->GetId(), tileX, tileY, rPops))
                 {
                     m_lastClickedTileText = "Reassigned worker to (" + std::to_string(tileX) + ", " + std::to_string(tileY) + ")";
-                    return true;
+                    return;
                 }
             }
         }
         m_lastClickedTileText = "No workers available to reassign";
     }
-    return true;
-}
-
-std::vector<UIElement*> BaseView::GetElements()
-{
-    return {};
 }
 
 } // namespace ac

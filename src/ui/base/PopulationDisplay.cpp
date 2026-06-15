@@ -1,4 +1,4 @@
-#include "ui/PopulationDisplay.h"
+#include "ui/base/PopulationDisplay.h"
 #include "graphics/Graphics.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include <sstream>

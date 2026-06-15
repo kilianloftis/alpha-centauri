@@ -1,4 +1,4 @@
-#include "ui/BaseWorkableAreaDisplay.h"
+#include "ui/base/BaseWorkableAreaDisplay.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include <sstream>
 

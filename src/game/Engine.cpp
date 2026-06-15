@@ -21,13 +21,13 @@
 #include "game/faction/base/population/calculators/PopCompositionCalculator.h"
 #include "game/faction/base/population/calculators/GrowthCalculator.h"
 #include "lib/LuaRuntime.h"
-#include "ui/WorldDisplay.h"
-#include "ui/BaseWorkableAreaDisplay.h"
+#include "ui/world/WorldDisplay.h"
+#include "ui/base/BaseWorkableAreaDisplay.h"
 #include "ui/TileHitTester.h"
 #include "game/map/WorldGenerator.h"
 #include "ui/UIManager.h"
-#include "game/WorldView.h"
-#include "game/BaseView.h"
+#include "ui/world/WorldView.h"
+#include "ui/base/BaseView.h"
 #include <functional>
 #include <iostream>
 #include <stdexcept>

@@ -1,6 +1,4 @@
-#ifdef USE_SFML
-
-#include "input/SFMLKeyEventQueue.h"
+#include "input/KeyEventQueue.h"
 #include <deque>
 
 namespace ac
@@ -26,5 +24,3 @@ if (g_pendingKeyEvents.empty())
 }
 
 } // namespace ac
-
-#endif // USE_SFML

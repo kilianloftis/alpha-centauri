@@ -2,8 +2,8 @@
 
 #include "graphics/Graphics.h"
 #include "input/KeyMapping.h"
-#include "input/SFMLKeyEventQueue.h"
-#include "input/SFMLMouseEventQueue.h"
+#include "input/KeyEventQueue.h"
+#include "input/MouseEventQueue.h"
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <memory>
@@ -20,27 +20,26 @@ class SFMLGraphics : public Graphics
 {
 public:
     SFMLGraphics()
-: m_window(sf::VideoMode(sf::Vector2u(800, 600)), "Alpha Centauri")
-        {
+        : m_window(sf::VideoMode(sf::Vector2u(800, 600)), "Alpha Centauri")
+    {
         std::cout << "[SFMLGraphics] Creating window...\n";
         m_window.setFramerateLimit(60);
         m_window.setKeyRepeatEnabled(false);
-        m_window.setVisible(true);
         m_window.requestFocus();
         std::cout << "[SFMLGraphics] Window created, isOpen=" << m_window.isOpen() << "\n";
-if (!m_font.openFromFile(k_fontPath1))
+        if (!m_font.openFromFile(k_fontPath1))
         {
-if (!m_font.openFromFile(k_fontPath2))
+            if (!m_font.openFromFile(k_fontPath2))
             {
                 std::cerr << "[SFMLGraphics] Font loading failed.\n";
             }
         }
     }
 
-bool Initialize() override
+    bool Initialize() override
     {
         std::cout << "[SFMLGraphics] Initialize() called, isOpen=" << m_window.isOpen() << "\n";
-if (!m_window.isOpen())
+        if (!m_window.isOpen())
         {
             std::cerr << "[Graphics] Failed to create SFML render window.\n";
             return false;
@@ -48,21 +47,21 @@ if (!m_window.isOpen())
         return true;
     }
 
-void Clear() override
+    void Clear() override
     {
         m_window.clear(sf::Color::Black);
     }
 
-void Display() override
+    void Display() override
     {
         ProcessEvents_();
         m_window.display();
     }
 
-bool LoadTexture(const std::string& id, const std::string& path) override
+    bool LoadTexture(const std::string& id, const std::string& path) override
     {
         sf::Texture texture;
-if (!texture.loadFromFile(path))
+        if (!texture.loadFromFile(path))
         {
             std::cerr << "[Graphics] Failed to load texture '" << path << "'.\n";
             return false;
@@ -71,10 +70,10 @@ if (!texture.loadFromFile(path))
         return true;
     }
 
-bool DrawSprite(const std::string& textureId, float x, float y) override
+    bool DrawSprite(const std::string& textureId, float x, float y) override
     {
         auto it = m_textures.find(textureId);
-if (it == m_textures.end())
+        if (it == m_textures.end())
         {
             std::cerr << "[Graphics] Texture '" << textureId << "' is not loaded.\n";
             return false;
@@ -86,9 +85,9 @@ if (it == m_textures.end())
         return true;
     }
 
-void DrawText(const std::string& text, float x, float y, unsigned int size = 24, const Color& color = Color::White()) override
+    void DrawText(const std::string& text, float x, float y, unsigned int size = 24, const Color& color = Color::White()) override
     {
-if (m_font.getInfo().family.empty())
+        if (m_font.getInfo().family.empty())
         {
             return;
         }
@@ -98,7 +97,7 @@ if (m_font.getInfo().family.empty())
         m_window.draw(drawable);
     }
 
-void DrawRect(float x, float y, float width, float height, const Color& color, float thickness) override
+    void DrawRect(float x, float y, float width, float height, const Color& color, float thickness) override
     {
         sf::RectangleShape rect(sf::Vector2f(width, height));
         rect.setPosition(sf::Vector2f(x, y));
@@ -108,7 +107,7 @@ void DrawRect(float x, float y, float width, float height, const Color& color, f
         m_window.draw(rect);
     }
 
-void DrawFilledRect(float x, float y, float width, float height, const Color& color) override
+    void DrawFilledRect(float x, float y, float width, float height, const Color& color) override
     {
         sf::RectangleShape rect(sf::Vector2f(width, height));
         rect.setPosition(sf::Vector2f(x, y));
@@ -117,34 +116,34 @@ void DrawFilledRect(float x, float y, float width, float height, const Color& co
     }
 
 private:
-void ProcessEvents_()
-{
-    while (auto event = m_window.pollEvent())
+    void ProcessEvents_()
     {
-        if (event->is<sf::Event::Closed>())
+        while (auto event = m_window.pollEvent())
         {
-            // Ignore the close button: only Enter should close the window.
-            continue;
-        }
-
-        if (auto KeyEvent_t = event->getIf<sf::Event::KeyPressed>())
-        {
-            if (auto mapped = KeyFromSfKey(KeyEvent_t->code))
+            if (event->is<sf::Event::Closed>())
             {
-                PushPendingKeyEvent_t(*mapped);
+                // Ignore the close button: only Enter should close the window.
+                continue;
             }
-        }
 
-        if (auto mouseEvent = event->getIf<sf::Event::MouseButtonPressed>())
-        {
-            if (auto mappedKey = MouseButtonFromSfButton(mouseEvent->button))
+            if (auto KeyEvent_t = event->getIf<sf::Event::KeyPressed>())
             {
-                auto modifier = GetModifierState();
-                PushPendingMouseEvent_t({*mappedKey, static_cast<int>(mouseEvent->position.x), static_cast<int>(mouseEvent->position.y), modifier});
+                if (auto mapped = KeyFromSfKey(KeyEvent_t->code))
+                {
+                    PushPendingKeyEvent_t(*mapped);
+                }
+            }
+
+            if (auto mouseEvent = event->getIf<sf::Event::MouseButtonPressed>())
+            {
+                if (auto mappedKey = MouseButtonFromSfButton(mouseEvent->button))
+                {
+                    auto modifier = GetModifierState();
+                    PushPendingMouseEvent_t({*mappedKey, static_cast<int>(mouseEvent->position.x), static_cast<int>(mouseEvent->position.y), modifier});
+                }
             }
         }
     }
-}
 
     sf::RenderWindow m_window;
     sf::Font m_font;

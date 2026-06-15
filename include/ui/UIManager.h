@@ -26,6 +26,9 @@ public:
     void RequestExit();
 
 private:
+    void ProcessKeys_();
+    void ProcessMouse_();
+
     Graphics* m_pGraphics = nullptr;
     Input* m_pInput = nullptr;
     std::vector<std::unique_ptr<IGameView>> m_viewStack;

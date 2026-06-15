@@ -1,4 +1,4 @@
-#include "ui/InfoPanelElement.h"
+#include "ui/world/InfoPanelElement.h"
 #include "graphics/Graphics.h"
 
 namespace ac
@@ -6,10 +6,6 @@ namespace ac
 
 void InfoPanelElement::Draw(Graphics& rGraphics)
 {
-    if (!m_bVisible)
-    {
-        return;
-    }
     rGraphics.DrawFilledRect(m_x, m_y, m_width, m_height, Color{20, 20, 40});
     rGraphics.DrawRect(m_x, m_y, m_width, m_height, Color{100, 100, 160});
     const auto& rLines = m_infoLines;

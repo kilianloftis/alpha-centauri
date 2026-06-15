@@ -1,6 +1,4 @@
-#ifdef USE_SFML
-
-#include "input/SFMLMouseEventQueue.h"
+#include "input/MouseEventQueue.h"
 #include <deque>
 
 namespace ac
@@ -15,7 +13,7 @@ void PushPendingMouseEvent_t(MouseEvent_t event)
 
 std::optional<MouseEvent_t> PopPendingMouseEvent()
 {
-    if (g_pendingMouseEvents.empty())
+    if (g_pendingMouseEvents.empty() || g_pendingMouseEvents.front().button == MouseButton_t::None)
     {
         return std::nullopt;
     }
@@ -26,5 +24,3 @@ std::optional<MouseEvent_t> PopPendingMouseEvent()
 }
 
 } // namespace ac
-
-#endif // USE_SFML

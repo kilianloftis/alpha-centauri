@@ -29,9 +29,8 @@ public:
     void OnPopped() override;
     void Render(Graphics& rGraphics) override;
     void Update(float deltaTime) override;
-    bool HandleKey(const KeyEvent_t& rEvent) override;
-    bool HandleMouse(const MouseEvent_t& rEvent) override;
-    std::vector<UIElement*> GetElements() override;
+    void HandleKey(const KeyEvent_t& rEvent) override;
+    void HandleMouse(const MouseEvent_t& rEvent) override;
 
 private:
     BaseManager& m_rBase;
