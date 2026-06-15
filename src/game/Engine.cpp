@@ -220,7 +220,7 @@ void Engine::Initialize_()
         [this]() { ProcessTurn_(); },
         [this](BaseManager* pBase) -> std::unique_ptr<IGameView>
         {
-            return std::make_unique<BaseView>(*pBase, *m_workableAreaDisplay, *m_uiManager);
+            return std::make_unique<BaseView>(*pBase, *m_workableAreaDisplay, *m_eventBus, *m_graphics, *m_uiManager);
         }
     ));
     CheckInitialized_();

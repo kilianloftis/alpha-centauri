@@ -1,6 +1,6 @@
 #include "ui/base/PopulationDisplay.h"
 #include "graphics/Graphics.h"
-#include "game/faction/base/population/PopulationManager.h"
+#include "game/faction/base/population/PopContainer.h"
 #include <sstream>
 
 namespace ac
@@ -24,9 +24,20 @@ PopulationDisplay::~PopulationDisplay()
     m_rBus.unsubscribe(m_subscriptionId);
 }
 
-void PopulationDisplay::SetPopulation(const PopulationManager* pPopulation)
+void PopulationDisplay::SetRenderPosition(float x, float y)
 {
-    m_pPopulation = pPopulation;
+    m_renderX = x;
+    m_renderY = y;
+}
+
+void PopulationDisplay::SetPopulation(const PopContainer* pPopContainer)
+{
+    m_pPopulation = pPopContainer;
+}
+
+void PopulationDisplay::Render(Graphics& /*rGraphics*/)
+{
+    Render(m_renderX, m_renderY);
 }
 
 void PopulationDisplay::Render(float x, float y)

@@ -100,23 +100,6 @@ TileResources_t WorkerAssignmentManager::ComputeWorkedResources(
     return total;
 }
 
-void WorkerAssignmentManager::OnPopulationChanged(const PopContainer& rPops)
-{
-    std::vector<int> toRemove;
-    for (const auto& rEntry : m_assignments)
-    {
-        const Pop* pPop = FindPop_(rEntry.first, rPops);
-        if (!pPop || !pPop->IsWorker())
-        {
-            toRemove.push_back(rEntry.first);
-        }
-    }
-    for (int popId : toRemove)
-    {
-        m_assignments.erase(popId);
-    }
-}
-
 void WorkerAssignmentManager::AutoAssignWorkers(const PopContainer& rPops,
                                                 const std::vector<TileCoord>& workableTiles)
 {

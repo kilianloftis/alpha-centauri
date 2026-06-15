@@ -1,8 +1,11 @@
 #include "ui/base/BaseView.h"
+#include "ui/base/BaseDisplay.h"
+#include "ui/base/BaseWorkableAreaDisplay.h"
+#include "ui/base/PopulationDisplay.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopContainer.h"
-#include "ui/base/BaseWorkableAreaDisplay.h"
+#include "lib/EventBus.h"
 #include "ui/UIManager.h"
 #include "ui/TileHitTester.h"
 #include "graphics/Graphics.h"
@@ -14,30 +17,39 @@ namespace ac
 BaseView::BaseView(
     BaseManager& rBase,
     BaseWorkableAreaDisplay& rWorkableAreaDisplay,
+    EventBus& rBus,
+    Graphics& rGraphics,
     UIManager& rUIManager
 )
 : m_rBase(rBase)
 , m_rWorkableAreaDisplay(rWorkableAreaDisplay)
 , m_rUIManager(rUIManager)
+, m_pBaseDisplay(std::make_unique<BaseDisplay>(rBase, rGraphics))
+, m_pPopDisplay(std::make_unique<PopulationDisplay>(rBus, rGraphics))
 {
     m_rWorkableAreaDisplay.SetBase(&rBase);
+    m_pPopDisplay->SetCurrentPop(rBase.GetBaseSize());
+    m_pPopDisplay->SetPopulation(&rBase.GetPopContainer());
+    m_pPopDisplay->SetRenderPosition(620.f, 40.f);
+    m_panels.push_back(&m_rWorkableAreaDisplay);
+    m_panels.push_back(m_pBaseDisplay.get());
+    m_panels.push_back(m_pPopDisplay.get());
 }
+
+BaseView::~BaseView() = default;
 
 void BaseView::OnPopped()
 {
     m_rWorkableAreaDisplay.SetBase(nullptr);
+    m_pPopDisplay->SetPopulation(nullptr);
 }
 
 void BaseView::Render(Graphics& rGraphics)
 {
-    rGraphics.DrawText(m_rBase.GetName(), 20.f, 40.f, 20, Color::Yellow());
-    rGraphics.DrawText("Nutrients: " + std::to_string(m_rBase.GetNutrientStockpile()), 20.f, 70.f, 16, Color::White());
-    rGraphics.DrawText("Minerals:  " + std::to_string(m_rBase.GetMineralStockpile()), 20.f, 90.f, 16, Color::White());
-    rGraphics.DrawText("Energy:    " + std::to_string(m_rBase.GetEnergyProduction()) + "/turn", 20.f, 110.f, 16, Color::White());
-    m_rWorkableAreaDisplay.Render(kBaseAreaCenterX, kBaseAreaCenterY, kBaseTileSize);
-    if (!m_lastClickedTileText.empty())
+    rGraphics.DrawFilledRect(0.f, 0.f, kScreenWidth, kScreenHeight, Color{20, 20, 30, 255});
+    for (IBasePanel* pPanel : m_panels)
     {
-        rGraphics.DrawText(m_lastClickedTileText, 20.f, 570.f, 18, Color::Yellow());
+        pPanel->Render(rGraphics);
     }
 }
 
@@ -57,13 +69,15 @@ void BaseView::HandleMouse(const MouseEvent_t& rEvent)
 {
     auto tile = TileHitTester::HitTestBaseWorkableArea(
         static_cast<float>(rEvent.x), static_cast<float>(rEvent.y),
-        kBaseAreaCenterX, kBaseAreaCenterY, kBaseTileSize,
+        BaseWorkableAreaDisplay::kBaseAreaCenterX,
+        BaseWorkableAreaDisplay::kBaseAreaCenterY,
+        BaseWorkableAreaDisplay::kBaseTileSize,
         m_rBase.GetX(), m_rBase.GetY());
 
     if (!tile)
     {
         m_lastClickedTile = std::nullopt;
-        m_lastClickedTileText = "Clicked: (" + std::to_string(rEvent.x) + ", " + std::to_string(rEvent.y) + ") - no tile";
+        m_pBaseDisplay->SetLastClickedTileText("Clicked: (" + std::to_string(rEvent.x) + ", " + std::to_string(rEvent.y) + ") - no tile");
         return;
     }
 
@@ -80,7 +94,7 @@ void BaseView::HandleMouse(const MouseEvent_t& rEvent)
             if (rEntry.second.first == tileX && rEntry.second.second == tileY)
             {
                 rAssignments.UnassignWorker(rEntry.first);
-                m_lastClickedTileText = "Unassigned worker from (" + std::to_string(tileX) + ", " + std::to_string(tileY) + ")";
+                m_pBaseDisplay->SetLastClickedTileText("Unassigned worker from (" + std::to_string(tileX) + ", " + std::to_string(tileY) + ")");
                 return;
             }
         }
@@ -96,12 +110,12 @@ void BaseView::HandleMouse(const MouseEvent_t& rEvent)
                 rAssignments.UnassignWorker(pPop->GetId());
                 if (rAssignments.AssignWorker(pPop->GetId(), tileX, tileY, rPops))
                 {
-                    m_lastClickedTileText = "Reassigned worker to (" + std::to_string(tileX) + ", " + std::to_string(tileY) + ")";
+                    m_pBaseDisplay->SetLastClickedTileText("Reassigned worker to (" + std::to_string(tileX) + ", " + std::to_string(tileY) + ")");
                     return;
                 }
             }
         }
-        m_lastClickedTileText = "No workers available to reassign";
+        m_pBaseDisplay->SetLastClickedTileText("No workers available to reassign");
     }
 }
 

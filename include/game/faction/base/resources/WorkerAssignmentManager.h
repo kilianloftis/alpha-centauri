@@ -56,9 +56,6 @@ public:
     TileResources_t ComputeWorkedResources(const PopContainer& rPops,
                                            const TileLookup& tileAt) const;
 
-    // Drop assignments for pops that no longer exist or are no longer workers.
-    // Call this after any population change (pop gained, lost, or converted).
-    void OnPopulationChanged(const PopContainer& rPops);
 
     // Auto-assign any unassigned workers to available workable tiles.
     // Iterates through workers and assigns each unassigned one to the first

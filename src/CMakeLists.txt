@@ -63,6 +63,7 @@ add_executable(alpha-centauri
     input/KeyEventQueue.cpp
     input/MouseEventQueue.cpp
     ui/base/BaseView.cpp
+    ui/base/BaseDisplay.cpp
     ui/base/PopulationDisplay.cpp
     ui/base/BaseWorkableAreaDisplay.cpp
     ui/TileHitTester.cpp

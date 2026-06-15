@@ -16,6 +16,11 @@ void BaseWorkableAreaDisplay::SetBase(const BaseManager* pBase)
     m_pBase = pBase;
 }
 
+void BaseWorkableAreaDisplay::Render(Graphics& /*rGraphics*/)
+{
+    Render(kBaseAreaCenterX, kBaseAreaCenterY, kBaseTileSize);
+}
+
 void BaseWorkableAreaDisplay::Render(float x, float y, float tileSize)
 {
     if (!m_pBase)

@@ -18,9 +18,16 @@ graph TB
 
     subgraph "Views (in Engine.cpp)"
         WorldView[WorldView<br/>implements IGameView]
-        BaseView[BaseView<br/>implements IGameView]
+        BaseView[BaseView<br/>implements IGameView<br/>coordinates panels]
         WorldMapElement[WorldMapElement<br/>implements UIWorldMap]
         InfoPanelElement[InfoPanelElement<br/>implements UIPanel]
+    end
+
+    subgraph "Base Panels"
+        IBasePanel[IBasePanel<br/>interface]
+        BaseDisplay[BaseDisplay<br/>implements IBasePanel]
+        BaseWorkableAreaDisplay[BaseWorkableAreaDisplay<br/>implements IBasePanel]
+        PopulationDisplay[PopulationDisplay<br/>implements IBasePanel]
     end
 
     subgraph "Dependencies"
@@ -32,6 +39,14 @@ graph TB
     Engine -->|owns| UIManager
     Engine -->|creates & pushes| WorldView
     Engine -->|creates & pushes| BaseView
+
+    BaseView -->|owns| BaseDisplay
+    BaseView -->|owns| PopulationDisplay
+    BaseView -->|refs| BaseWorkableAreaDisplay
+    BaseView -->|coordinates via| IBasePanel
+    BaseDisplay -.->|implements| IBasePanel
+    BaseWorkableAreaDisplay -.->|implements| IBasePanel
+    PopulationDisplay -.->|implements| IBasePanel
 
     UIManager -->|manages stack of| IGameView
     UIManagerImpl -.->|implements| UIManager
@@ -60,6 +75,10 @@ graph TB
     style WorldView fill:#bfb,stroke:#333,stroke-width:2px
     style BaseView fill:#bfb,stroke:#333,stroke-width:2px
     style Factory fill:#ff9,stroke:#333,stroke-width:2px
+    style IBasePanel fill:#bbf,stroke:#333,stroke-width:2px
+    style BaseDisplay fill:#bfb,stroke:#333,stroke-width:2px
+    style BaseWorkableAreaDisplay fill:#bfb,stroke:#333,stroke-width:2px
+    style PopulationDisplay fill:#bfb,stroke:#333,stroke-width:2px
 ```
 
 ## Component Overview

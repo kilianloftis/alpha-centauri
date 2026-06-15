@@ -26,13 +26,11 @@ BaseManager::BaseManager(const BuildingRegistry* pBuildingRegistry)
     m_pResources = std::make_unique<ResourceManager>(m_pPopulation.get(), m_pWorkerAssignments.get());
 
     m_pPopulation->on_pop_gained.connect([this](int newSize) {
-        m_pWorkerAssignments->OnPopulationChanged(m_pPopulation->GetContainer());
         m_pWorkerAssignments->AutoAssignWorkers(m_pPopulation->GetContainer(),
                                                GetWorkableTilePositions());
         on_pop_gained.emit(newSize);
     });
     m_pPopulation->on_pop_lost.connect([this](int newSize) {
-        m_pWorkerAssignments->OnPopulationChanged(m_pPopulation->GetContainer());
         on_pop_lost.emit(newSize);
     });
 }

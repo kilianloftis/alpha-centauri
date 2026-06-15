@@ -30,6 +30,8 @@ graph TB
         IGameView[IGameView<br/>(interface)]
         UIElements[UIWorldMap, UIPanel, UIPopup<br/>extends UIElement]
         Views[WorldView, BaseView<br/>implement IGameView]
+        IBasePanel[IBasePanel<br/>interface for base panels]
+        BasePanels[BaseDisplay, BaseWorkableAreaDisplay,<br/>PopulationDisplay<br/>implement IBasePanel]
     end
 
     subgraph "Turn System"
@@ -77,6 +79,7 @@ graph TB
     end
 
     subgraph "UI Components"
+        BaseDisplay[BaseDisplay]
         PopulationDisplay[PopulationDisplay]
         WorldDisplay[WorldDisplay]
         BaseWorkableAreaDisplay[BaseWorkableAreaDisplay]
@@ -135,6 +138,8 @@ graph TB
     Faction --> Signal
     TurnProcessor --> Signal
 
+    BaseDisplay --> Graphics
+    BaseDisplay --> Base
     PopulationDisplay --> Graphics
     PopulationDisplay --> EventBus
     WorldDisplay --> Graphics
@@ -142,6 +147,8 @@ graph TB
     BaseWorkableAreaDisplay --> Graphics
     BaseWorkableAreaDisplay --> Tile
     BaseWorkableAreaDisplay --> Base
+    Views --> IBasePanel
+    BasePanels -.->|implement| IBasePanel
 
     style Engine fill:#f9f,stroke:#333,stroke-width:4px
     style Graphics fill:#bbf,stroke:#333,stroke-width:2px
@@ -169,9 +176,11 @@ graph TB
     style TileBonusConfig fill:#ff9,stroke:#333,stroke-width:2px
     style EventBus fill:#bbf,stroke:#333,stroke-width:3px
     style EventBridge fill:#fbf,stroke:#333,stroke-width:2px
+    style BaseDisplay fill:#bfb,stroke:#333,stroke-width:2px
     style PopulationDisplay fill:#bfb,stroke:#333,stroke-width:2px
     style WorldDisplay fill:#bfb,stroke:#333,stroke-width:2px
     style BaseWorkableAreaDisplay fill:#bfb,stroke:#333,stroke-width:2px
+    style IBasePanel fill:#bbf,stroke:#333,stroke-width:2px
     style UIManager fill:#bbf,stroke:#333,stroke-width:2px
 ```
 
@@ -287,6 +296,8 @@ graph TB
 ### UI Components
 - **Purpose**: Display components that render game information using the Graphics interface
 - **Components**:
+  - `IBasePanel`: Interface for panels coordinated by `BaseView`
+  - `BaseDisplay`: Displays base name, resource stockpiles, and click status text
   - `PopulationDisplay`: Displays current population and per-pop type breakdown
   - `WorldDisplay`: Displays the world map as a grid of tiles with terrain info
   - `BaseWorkableAreaDisplay`: Displays the 21-tile workable area around a base with resource production
@@ -294,4 +305,5 @@ graph TB
   - All UI components depend on Graphics for rendering
   - PopulationDisplay subscribes to EventBus for population change events
   - WorldDisplay reads from Tile objects for terrain data
+  - `BaseView` coordinates `BaseDisplay`, `BaseWorkableAreaDisplay`, and `PopulationDisplay` via `IBasePanel`
 - **Details**: See `docs/architecture/graphics-system.md` for detailed UI component documentation

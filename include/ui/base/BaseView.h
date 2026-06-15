@@ -1,30 +1,37 @@
 #pragma once
 
 #include "ui/IGameView.h"
+#include "ui/base/IBasePanel.h"
 #include <memory>
 #include <optional>
-#include <string>
 #include <utility>
+#include <vector>
 
 namespace ac
 {
 
+class BaseDisplay;
 class BaseManager;
 class BaseWorkableAreaDisplay;
+class EventBus;
+class Graphics;
+class PopulationDisplay;
 class UIManager;
 
 class BaseView : public IGameView
 {
 public:
-    static constexpr float kBaseAreaCenterX = 400.f;
-    static constexpr float kBaseAreaCenterY = 300.f;
-    static constexpr float kBaseTileSize = 50.f;
+    static constexpr float kScreenWidth = 800.f;
+    static constexpr float kScreenHeight = 600.f;
 
     BaseView(
         BaseManager& rBase,
         BaseWorkableAreaDisplay& rWorkableAreaDisplay,
+        EventBus& rBus,
+        Graphics& rGraphics,
         UIManager& rUIManager
     );
+    ~BaseView();
 
     void OnPopped() override;
     void Render(Graphics& rGraphics) override;
@@ -36,8 +43,10 @@ private:
     BaseManager& m_rBase;
     BaseWorkableAreaDisplay& m_rWorkableAreaDisplay;
     UIManager& m_rUIManager;
+    std::unique_ptr<BaseDisplay> m_pBaseDisplay;
+    std::unique_ptr<PopulationDisplay> m_pPopDisplay;
+    std::vector<IBasePanel*> m_panels;
     std::optional<std::pair<int, int>> m_lastClickedTile;
-    std::string m_lastClickedTileText;
 };
 
 } // namespace ac
