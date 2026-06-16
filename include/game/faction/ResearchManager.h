@@ -4,7 +4,6 @@
 #include "game/research/TechRegistry.h"
 #include "game/research/TechCostCalculator.h"
 #include <vector>
-#include <memory>
 
 namespace ac
 {
@@ -12,7 +11,7 @@ namespace ac
 class ResearchManager
 {
 public:
-    explicit ResearchManager(const TechRegistry* pTechRegistry);
+    ResearchManager(const TechRegistry* pTechRegistry, TechCostCalculator* pTechCostCalculator);
     ~ResearchManager();
 
     void SetResearchTarget(TechId techId);
@@ -36,12 +35,9 @@ public:
 
     std::vector<TechId> GetAvailableResearchTargets() const;
 
-    void SetTechCostCalculator(std::unique_ptr<TechCostCalculator> pCalculator);
-    TechCostCalculator* GetTechCostCalculator();
-
 private:
     const TechRegistry* m_pTechRegistry;
-    std::unique_ptr<TechCostCalculator> m_pTechCostCalculator;
+    TechCostCalculator* m_pTechCostCalculator;
 
     std::vector<TechId> m_discoveredTechs;
     TechId m_currentResearchTarget;

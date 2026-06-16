@@ -1,0 +1,60 @@
+Politics
+These models determine how your faction governs itself.
+
+Frontier: This model is the system of informal and ad-hoc governing arrangements before a faction requires a more deliberate system. Alternatively it could be a degradation of a more established government system to when society needs to meet particular challenges and doesn't spend the effort to maintain an established system.
+Prerequisite: None
+Effects: None
+Police State: (Wikipedia article) represents a society in which governing decisions are made by a select group of people and others have no choice but to go along with it.
+Pre-requisite: Doctrine: Loyalty
+Effects: +2 Support, +2 Police, -2 Efficiency
+Democratic: (Wikipedia article) represents a society in which a faction's citizens have some direct input into its governing decisions.
+Pre-requisite: Ethical Calculus
+Effects: +2 Efficiency, +2 Growth, -2 Support
+Fundamentalist: (Wikipedia article) represents a society in which governing decisions are made with respect to a particular religion's dogma.
+Pre-requisite: Secrets of the Human Brain
+Effects: +2 Probe, +1 Morale, -2 Research
+Economics
+These models determine how much a faction's economy is regulated and to what purpose.
+
+Simple: This model is the system of informal and ad-hoc economic arrangements before a faction requires established norms and rules. Alternatively it could be a degradation of a more established economic system to when society needs to meet particular challenges and doesn't spend the effort to maintain an established system.
+Prerequisite: None
+Effects: None
+Free Market: (Wikipedia article) represents an economy which has few regulations allowing individual actors wide range to do as they please.
+Pre-requisite: Industrial Economics
+Effects: +2 Energy, -3 Planet, -5 Police
+Planned: (Wikipedia article) represents an economy in which economic decisions are made entirely by or in large part by those governing society.
+Pre-requisite: Planetary Networks
+Effects: +2 Growth, +1 Industry, -2 Efficiency
+Green: (Wikipedia article) represents an economy that is regulated heavily to minimize the faction's impact on Planet and to promote social welfare.
+Pre-requisite: Centauri Empathy
+Effects: +2 Efficiency, +2 Planet, -2 Growth
+Values
+These models determine what social values a faction's culture holds in high regard.
+
+Survival: This faction places its survival over all other goals.
+Prerequisite: None
+Effects: None
+Power: (Wikipedia article) represents a faction that values military service and command.
+Pre-requisite: Advanced Military Algorithms
+Effects: +2 Support, +2 Morale, -2 Industry
+Knowledge: (Wikipedia article) represents a faction that values intelligence and knowledge.
+Pre-requisite: Cyberethics
+Effects: +2 Research, +1 Efficiency, -2 Probe
+Wealth: (Wikipedia article) represents a faction that values the accumulation of monetary wealth.
+Pre-requisite: Industrial Automation
+Effects: +1 Economy, +1 Industry, -2 Morale
+Future Society
+These models determine what type of society exists.
+
+None: This faction does not apply any of the other models for this catagory.
+Prerequisite: None
+Effects: None
+Cybernetic: (Wikipedia article) represents a society in which a faction has turned over much of its governance and management to expert systems while still maintaining high level control respective to the other models it uses.
+Pre-requisite: Digital Sentience
+Effects: +2 Efficiency, +2 Planet, +2 Research, -3 Police
+Eudaimonic: (Wikipedia article) represents a society that is like that presented in Star Trek's: Federation.
+Pre-requisite: Eudaimonia
+Effects: +2 Economy, +2 Growth, +2 Industry, -2 Morale
+Thought Control: (Wikipedia article) represents a society in which individuals share a group consciousness that is structured according to what other models are being used.
+Pre-requisite: The Will to Power
+Effects: +2 Morale, +2 Police, +2 Probe, -3 Support

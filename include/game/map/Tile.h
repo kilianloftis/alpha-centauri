@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -99,5 +100,7 @@ private:
     int CalculateMinerals_() const;
     int CalculateEnergy_() const;
 };
+
+using TilePtr_t = std::shared_ptr<Tile>;
 
 } // namespace ac

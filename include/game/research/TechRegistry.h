@@ -15,10 +15,9 @@ public:
     TechRegistry();
     ~TechRegistry();
 
-    // Load all techs from a config file. Returns false on failure.
-    bool Load(const std::string& configPath);
+    // Load all techs from a config file. Throws on failure.
+    void Load(const std::string& configPath);
 
-    void RegisterTech(std::unique_ptr<Tech> pTech);
     Tech* GetTech(TechId techId);
     const Tech* GetTech(TechId techId) const;
 
@@ -30,6 +29,9 @@ public:
     void Clear();
 
 private:
+    void ValidatePrerequisites_(const TechConfig& config, const std::vector<TechConfig>& configs);
+    void ValidateUniqueIds_(const TechConfig& config, const std::vector<TechConfig>& configs);
+
     std::map<TechId, std::unique_ptr<Tech>> m_techs;
 };
 

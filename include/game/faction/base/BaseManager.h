@@ -20,6 +20,7 @@ class ResourceManager;
 class BuildingManager;
 class BuildingRegistry;
 class Tile;
+class WorldMap;
 
 // BaseManager coordinates base management subsystems.
 // Provides identity, position, and access to sub-managers.
@@ -27,7 +28,7 @@ class Tile;
 class BaseManager
 {
 public:
-    BaseManager(const BuildingRegistry* pBuildingRegistry, const PopTypeRegistry* pPopRegistry, PopCompositionCalculator* pCompositionCalculator);
+    BaseManager(const BuildingRegistry* pBuildingRegistry, const PopTypeRegistry* pPopRegistry, PopCompositionCalculator* pCompositionCalculator, const WorldMap& rWorldMap);
     ~BaseManager();
 
     // Population management - delegated to PopulationManager
@@ -50,7 +51,6 @@ public:
     void AutoAssignWorkers();
 
     // Resource management - delegated to ResourceManager
-    void SetTileLookup(std::function<const class Tile*(int x, int y)> tileLookup);
     int GetNutrientProduction() const;
     int GetMineralProduction() const;
     int GetEnergyProduction() const;
@@ -83,11 +83,11 @@ public:
     int GetX() const;
     int GetY() const;
 
-    // Returns the set of (x,y) tile coordinates this base can assign workers to.
+    // Returns the set of workable tiles this base can assign workers to.
     // Produces a 5x5 grid with the four corners removed (Manhattan distance <= 3
     // within the [-2,2] bounding box), excluding the base's own tile.
     // Does not filter for enemy units (TODO: when units exist).
-    std::vector<std::pair<int, int>> GetWorkableTilePositions() const;
+    std::vector<const Tile*> GetWorkableTilePositions() const;
 
     // Base identity
     void SetName(const std::string& name);
@@ -104,6 +104,7 @@ private:
     int m_baseId;
     int m_x;
     int m_y;
+    const WorldMap* m_pWorldMap;
     std::unique_ptr<PopulationManager> m_pPopulation;
     std::unique_ptr<WorkerAssignmentManager> m_pWorkerAssignments;
     std::unique_ptr<ResourceManager> m_pResources;

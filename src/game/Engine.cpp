@@ -20,6 +20,8 @@
 #include "game/population/pop-types/GrowthConfigParser.h"
 #include "game/population/calculators/PopCompositionCalculator.h"
 #include "game/population/calculators/GrowthCalculator.h"
+#include "game/research/TechCostConfig.h"
+#include "game/research/TechCostCalculator.h"
 #include "lib/LuaRuntime.h"
 #include "ui/world/WorldDisplay.h"
 #include "ui/base/BaseWorkableAreaDisplay.h"
@@ -131,6 +133,14 @@ void Engine::Initialize_()
         std::make_unique<GrowthCalculator>(
             *m_gameDataContext->growthConfig, *m_gameDataContext->luaRuntime);
 
+    TechCostConfigParser techCostParser;
+    m_gameDataContext->techCostConfig =
+        std::make_unique<TechCostConfig>(
+            techCostParser.ParseConfig("config/tech_cost.lua", *m_gameDataContext->luaRuntime));
+    m_gameDataContext->techCostCalculator =
+        std::make_unique<TechCostCalculator>(
+            *m_gameDataContext->techCostConfig, *m_gameDataContext->luaRuntime);
+
     // Generate world map
     WorldGenerator worldGen;
     WorldGenConfig worldConfig;
@@ -142,13 +152,13 @@ void Engine::Initialize_()
     std::cout << "Generated world map: " << m_gameState->GetWorldMap()->GetWidth() << "x" << m_gameState->GetWorldMap()->GetHeight() << "\n";
 
     // Create test faction with a base
-    auto pFaction = std::make_unique<Faction>(m_gameDataContext->techRegistry.get());
+    auto pFaction = std::make_unique<Faction>(m_gameDataContext->techRegistry.get(),
+                                              m_gameDataContext->socialPolicyRegistry.get(),
+                                              m_gameDataContext->techCostCalculator.get());
     BaseManager* pBase = pFaction->CreateBase(
         1, 1, "Test Base", 6, 4,  // factionId, baseId, name, x, y (center of 12x8 world)
         *m_gameDataContext,
-        [this](int x, int y) -> const Tile* {
-            return m_gameState->GetWorldMap()->GetTile(x, y);
-        });
+        *m_gameState->GetWorldMap());
 
     // Wire base signals to EventBus
     m_eventBridge->WireBase(*pBase);

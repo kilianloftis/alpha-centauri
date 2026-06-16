@@ -23,8 +23,7 @@ std::vector<TechConfig> TechConfigParser::ParseConfig(const std::string& configP
         std::ifstream configFile(configPath);
         if (!configFile.is_open())
         {
-            std::cout << "Warning: Could not open " << configPath << "\n";
-            return configs;
+            throw std::runtime_error("Could not open " + configPath);
         }
 
         json configJson;
@@ -32,8 +31,7 @@ std::vector<TechConfig> TechConfigParser::ParseConfig(const std::string& configP
 
         if (!configJson.is_array())
         {
-            std::cout << "Error: Expected array of techs in config\n";
-            return configs;
+            throw std::runtime_error("Expected array of techs in config");
         }
 
         for (const auto& techJson : configJson)
@@ -56,7 +54,17 @@ TechConfig TechConfigParser::ParseTechConfig(const nlohmann::json& techJson)
     TechConfig config;
     config.id = techJson["id"];
     config.name = techJson.value("name", config.id);
+    config.category = techJson.value("category", std::string{});
     config.cost = techJson.value("cost", 0);
+
+    if (techJson.contains("prerequisites") && techJson["prerequisites"].is_array())
+    {
+        for (const auto& prereq : techJson["prerequisites"])
+        {
+            config.prerequisites.push_back(prereq.get<std::string>());
+        }
+    }
+
     return config;
 }
 

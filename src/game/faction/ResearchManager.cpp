@@ -1,13 +1,15 @@
 #include "game/faction/ResearchManager.h"
+#include "game/research/TechCostConfig.h"
 
 namespace ac
 {
 
-ResearchManager::ResearchManager(const TechRegistry* pTechRegistry)
+ResearchManager::ResearchManager(const TechRegistry* pTechRegistry,
+                                 TechCostCalculator* pTechCostCalculator)
     : m_pTechRegistry(pTechRegistry)
-    , m_pTechCostCalculator(std::make_unique<TechCostCalculator>(pTechRegistry))
+    , m_pTechCostCalculator(pTechCostCalculator)
     , m_discoveredTechs()
-    , m_currentResearchTarget(0)
+    , m_currentResearchTarget()
     , m_accumulatedPoints(0)
     , m_pointsNeededForCurrentTech(0)
     , m_bHasResearchTarget(false)
@@ -33,7 +35,7 @@ TechId ResearchManager::GetResearchTarget() const
 void ResearchManager::ClearResearchTarget()
 {
     m_bHasResearchTarget = false;
-    m_currentResearchTarget = 0;
+    m_currentResearchTarget.clear();
 }
 
 bool ResearchManager::HasResearchTarget() const
@@ -63,13 +65,23 @@ int ResearchManager::GetPointsNeededForCurrentTech() const
 
 void ResearchManager::RecalculatePointsNeeded()
 {
-    if (!m_bHasResearchTarget || !m_pTechCostCalculator)
+    if (!m_bHasResearchTarget || !m_pTechCostCalculator || !m_pTechRegistry)
     {
-        m_pointsNeededForCurrentTech = 0;
-        return;
+        throw std::runtime_error("ResearchManager::RecalculatePointsNeeded: Invalid state");
     }
 
-    m_pointsNeededForCurrentTech = m_pTechCostCalculator->CalculateCost(m_currentResearchTarget, m_discoveredTechs);
+    const Tech* pTech = m_pTechRegistry->GetTech(m_currentResearchTarget);
+    if (!pTech)
+    {
+        throw std::runtime_error("ResearchManager::RecalculatePointsNeeded: Tech not found");
+    }
+
+    TechCostInputs_t inputs;
+    inputs.techs      = static_cast<int>(m_discoveredTechs.size()); // TODO: subtract starting techs; add unknownVarA - unknownVarB
+    inputs.mostTechs  = inputs.techs;                               // TODO: max across all factions + unknownVarA
+    // All other fields are placeholder defaults (diff=1, turns=0, bIsAI=false, etc.)
+
+    m_pointsNeededForCurrentTech = m_pTechCostCalculator->CalculateCost(*pTech, inputs);
 }
 
 bool ResearchManager::CanDiscoverTech() const
@@ -114,10 +126,11 @@ bool ResearchManager::HasDiscoveredTech(TechId techId) const
 
 void ResearchManager::AddDiscoveredTech(TechId techId)
 {
-    if (!HasDiscoveredTech(techId))
+    if (HasDiscoveredTech(techId))
     {
-        m_discoveredTechs.push_back(techId);
+        throw std::invalid_argument("ResearchManager::AddDiscoveredTech: Tech already discovered");
     }
+    m_discoveredTechs.push_back(techId);
 }
 
 std::vector<TechId> ResearchManager::GetAvailableResearchTargets() const
@@ -128,16 +141,6 @@ std::vector<TechId> ResearchManager::GetAvailableResearchTargets() const
     }
 
     return m_pTechRegistry->GetAvailableTechs(m_discoveredTechs);
-}
-
-void ResearchManager::SetTechCostCalculator(std::unique_ptr<TechCostCalculator> pCalculator)
-{
-    m_pTechCostCalculator = std::move(pCalculator);
-}
-
-TechCostCalculator* ResearchManager::GetTechCostCalculator()
-{
-    return m_pTechCostCalculator.get();
 }
 
 void ResearchManager::ResetAccumulatedPoints_()

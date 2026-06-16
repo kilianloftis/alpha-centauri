@@ -2,11 +2,20 @@
   {
     "id": "test_tech_1",
     "name": "Test Tech 1",
+    "category": "build",
     "cost": 10
   },
   {
     "id": "test_tech_2",
     "name": "Test Tech 2",
+    "category": "grow",
     "cost": 20
+  },
+  {
+    "id": "test_tech_3",
+    "name": "Advanced Tech",
+    "category": "discover",
+    "cost": 50,
+    "prerequisites": ["test_tech_1", "test_tech_2"]
   }
 ]

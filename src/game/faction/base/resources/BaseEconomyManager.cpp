@@ -2,6 +2,7 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/resources/ResourceManager.h"
 #include <vector>
+#include <cmath>
 
 namespace ac
 {
@@ -27,17 +28,17 @@ void BaseEconomyManager::SetTotalEnergyCollected(int amount)
 
 int BaseEconomyManager::GetEnergyForEcon() const
 {
-    return (m_totalEnergyCollected * m_allocation.econPercent) / 100;
+    return std::round((m_totalEnergyCollected * m_allocation.econPercent) / 100.0);
 }
 
 int BaseEconomyManager::GetEnergyForLabs() const
 {
-    return (m_totalEnergyCollected * m_allocation.labsPercent) / 100;
+    return std::round((m_totalEnergyCollected * m_allocation.labsPercent) / 100.0);
 }
 
 int BaseEconomyManager::GetEnergyForPsych() const
 {
-    return (m_totalEnergyCollected * m_allocation.psychPercent) / 100;
+    return std::round((m_totalEnergyCollected * m_allocation.psychPercent) / 100.0);
 }
 
 BaseEconomyManager::~BaseEconomyManager()

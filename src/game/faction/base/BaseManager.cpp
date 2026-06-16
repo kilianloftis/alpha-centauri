@@ -7,27 +7,31 @@
 #include "game/population/pop-types/PopTypeRegistry.h"
 #include "game/population/calculators/PopCompositionCalculator.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/map/WorldMap.h"
 #include <cmath>
 
 namespace ac
 {
 
-BaseManager::BaseManager(const BuildingRegistry* pBuildingRegistry, const PopTypeRegistry* pPopRegistry, PopCompositionCalculator* pCompositionCalculator)
+BaseManager::BaseManager(const BuildingRegistry* pBuildingRegistry, const PopTypeRegistry* pPopRegistry, PopCompositionCalculator* pCompositionCalculator, const WorldMap& rWorldMap)
     : m_factionId(-1)
     , m_baseId(-1)
     , m_x(0)
     , m_y(0)
+    , m_pWorldMap(&rWorldMap)
     , m_pPopulation(std::make_unique<PopulationManager>(pPopRegistry, pCompositionCalculator))
-    , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>())
+    , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(std::vector<const Tile*>{}))
     , m_pResources(nullptr)
     , m_pBuildings(std::make_unique<BuildingManager>(pBuildingRegistry))
 {
     // Create ResourceManager after population and worker assignments are set up
     m_pResources = std::make_unique<ResourceManager>(m_pPopulation.get(), m_pWorkerAssignments.get());
+    m_pResources->SetTileLookup([this](int x, int y) -> const Tile* {
+        return m_pWorldMap ? m_pWorldMap->GetTile(x, y) : nullptr;
+    });
 
     m_pPopulation->on_pop_gained.connect([this](int newSize) {
-        m_pWorkerAssignments->AutoAssignWorkers(m_pPopulation->GetContainer(),
-                                               GetWorkableTilePositions());
+        m_pWorkerAssignments->AutoAssignWorkers(m_pPopulation->GetContainer());
         on_pop_gained.emit(newSize);
     });
     m_pPopulation->on_pop_lost.connect([this](int newSize) {
@@ -83,20 +87,7 @@ const WorkerAssignmentManager& BaseManager::GetWorkerAssignments() const
 
 void BaseManager::AutoAssignWorkers()
 {
-    m_pWorkerAssignments->AutoAssignWorkers(m_pPopulation->GetContainer(),
-                                           GetWorkableTilePositions());
-}
-
-void BaseManager::SetTileLookup(std::function<const Tile*(int x, int y)> tileLookup)
-{
-    if (m_pWorkerAssignments)
-    {
-        m_pWorkerAssignments->SetTileLookup(tileLookup);
-    }
-    if (m_pResources)
-    {
-        m_pResources->SetTileLookup(std::move(tileLookup));
-    }
+    m_pWorkerAssignments->AutoAssignWorkers(m_pPopulation->GetContainer());
 }
 
 int BaseManager::GetNutrientProduction() const
@@ -182,6 +173,7 @@ void BaseManager::SetPosition(int x, int y)
 {
     m_x = x;
     m_y = y;
+    m_pWorkerAssignments->SetWorkableTiles(GetWorkableTilePositions());
 }
 
 int BaseManager::GetX() const
@@ -194,11 +186,11 @@ int BaseManager::GetY() const
     return m_y;
 }
 
-std::vector<std::pair<int, int>> BaseManager::GetWorkableTilePositions() const
+std::vector<const Tile*> BaseManager::GetWorkableTilePositions() const
 {
     static constexpr int kGridHalfExtent = 2;   // [-2, 2] bounding box
     static constexpr int kManhattanLimit  = 3;   // excludes corners (|dx|+|dy|==4)
-    std::vector<std::pair<int, int>> tiles;
+    std::vector<const Tile*> tiles;
     for (int dy = -kGridHalfExtent; dy <= kGridHalfExtent; ++dy)
     {
         for (int dx = -kGridHalfExtent; dx <= kGridHalfExtent; ++dx)
@@ -209,7 +201,11 @@ std::vector<std::pair<int, int>> BaseManager::GetWorkableTilePositions() const
             }
             if (std::abs(dx) + std::abs(dy) <= kManhattanLimit)
             {
-                tiles.emplace_back(m_x + dx, m_y + dy);
+                const Tile* pTile = m_pWorldMap ? m_pWorldMap->GetTile(m_x + dx, m_y + dy) : nullptr;
+                if (pTile)
+                {
+                    tiles.push_back(pTile);
+                }
             }
         }
     }

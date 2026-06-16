@@ -1,11 +1,11 @@
 #pragma once
 
+#include "game/research/Tech.h"
 #include <variant>
 
 namespace ac
 {
 
-using TechId = int;
 using FactionId = int;
 
 struct EvTurnStarted

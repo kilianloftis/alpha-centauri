@@ -10,8 +10,10 @@ add_executable(alpha-centauri
     game/research/Tech.cpp
     game/research/TechRegistry.cpp
     game/research/TechCostCalculator.cpp
+    game/research/TechCostConfigParser.cpp
     game/faction/ResearchManager.cpp
     game/faction/Diplomacy.cpp
+    game/faction/SocialEngineeringManager.cpp
     game/faction/base/BaseManager.cpp
     game/faction/base/buildings/BuildingManager.cpp
     game/faction/base/resources/ResourceManager.cpp
@@ -40,6 +42,8 @@ add_executable(alpha-centauri
     game/buildings/BuildingConfigParser.cpp
     game/buildings/BuildingRegistry.cpp
     game/research/TechConfigParser.cpp
+    game/social-engineering/SocialPolicyConfigParser.cpp
+    game/social-engineering/SocialPolicyRegistry.cpp
     game/map/Tile.cpp
     game/map/TileBonusConfigParser.cpp
     game/map/TileBonusRegistry.cpp

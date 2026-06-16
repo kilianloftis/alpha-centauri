@@ -17,12 +17,12 @@ class Tile;
 // Workers are identified by stable pop IDs (set by PopContainer at creation).
 // Tile coordinates are (x, y) pairs matching BaseManager::GetWorkableTilePositions().
 //
-// This class does NOT own tiles. Resource computation requires a tile-lookup
-// callable supplied at call-site; this decouples the manager from the future TileMap.
+// This class does NOT own tiles. The set of workable tiles is provided at construction
+// and can be updated via SetWorkableTiles() when the base position changes.
 class WorkerAssignmentManager
 {
 public:
-    WorkerAssignmentManager();
+    explicit WorkerAssignmentManager(std::vector<const Tile*> workableTiles);
     ~WorkerAssignmentManager() = default;
 
     using TileCoord = std::pair<int, int>;
@@ -57,15 +57,12 @@ public:
     TileResources_t ComputeWorkedResources(const PopContainer& rPops,
                                            const TileLookup& tileAt) const;
 
-    // Auto-assign any unassigned workers to available workable tiles.
-    // Tiles are sorted by score (descending) before assignment if a TileLookup
-    // has been set via SetTileLookup(). Otherwise, order is unspecified.
-    void AutoAssignWorkers(const PopContainer& rPops,
-                           const std::vector<TileCoord>& workableTiles);
+    // Update the set of workable tiles. Should be called when the base position changes.
+    void SetWorkableTiles(std::vector<const Tile*> workableTiles);
 
-    // Set the tile lookup used to resolve coordinates during AutoAssignWorkers().
-    // If not set, tile scoring is skipped and assignment order is unspecified.
-    void SetTileLookup(TileLookup tileLookup);
+    // Auto-assign any unassigned workers to the stored workable tiles.
+    // Tiles are sorted by score (descending) before assignment.
+    void AutoAssignWorkers(const PopContainer& rPops);
 
     // Set the tile scoring function used to prioritize tiles during AutoAssignWorkers().
     // Default scorer sums all three resource yields. May be replaced at runtime.
@@ -73,14 +70,14 @@ public:
 
 private:
     std::vector<int> GetUnassignedWorkers_(const PopContainer& rPops) const;
-    std::vector<TileCoord> GetAvailableTiles_(const std::vector<TileCoord>& workableTiles) const;
-    std::vector<TileCoord> PrioritizeAvailableTiles_(const std::vector<TileCoord>& availableTiles) const;
+    std::vector<const Tile*> GetAvailableTiles_() const;
+    std::vector<const Tile*> PrioritizeAvailableTiles_(const std::vector<const Tile*>& availableTiles) const;
     void AutoAssignWorkers_(const std::vector<int>& unassignedWorkerIds,
-                            const std::vector<TileCoord>& availableTiles,
+                            const std::vector<const Tile*>& availableTiles,
                             const PopContainer& rPops);
 
     std::unordered_map<int, TileCoord> m_assignments;  // popId -> (x, y)
-    TileLookup m_tileLookup;
+    std::vector<const Tile*> m_workableTiles;
     TileScorer m_scorer;
 
     const Pop* FindPop_(int popId, const PopContainer& rPops) const;

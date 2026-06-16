@@ -24,12 +24,12 @@
   {
     "id": "Drone",
     "name": "Drone",
-    "can_work_tile": false,
+    "can_work_tile": true,
     "player_assignable": false,
     "tile_multipliers": {
-      "nutrients": 0.0,
-      "energy": 0.0,
-      "minerals": 0.0
+      "nutrients": 1.0,
+      "energy": 1.0,
+      "minerals": 1.0
     },
     "generation": {
       "nutrients": 0,

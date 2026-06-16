@@ -1,10 +1,11 @@
 #include "game/research/Tech.h"
+#include "game/research/TechConfigParser.h"
 
 namespace ac
 {
 
 Tech::Tech()
-    : m_id(0)
+    : m_id()
     , m_name()
     , m_description()
     , m_prerequisites()
@@ -12,12 +13,13 @@ Tech::Tech()
 {
 }
 
-Tech::Tech(TechId id, std::string name, std::string description)
-    : m_id(id)
-    , m_name(std::move(name))
-    , m_description(std::move(description))
-    , m_prerequisites()
-    , m_baseCost(100)
+Tech::Tech(const TechConfig& rConfig)
+    : m_id(rConfig.id)
+    , m_name(rConfig.name)
+    , m_description()
+    , m_category(rConfig.category)
+    , m_prerequisites(rConfig.prerequisites)
+    , m_baseCost(rConfig.cost)
 {
 }
 
@@ -38,6 +40,11 @@ const std::string& Tech::GetName() const
 const std::string& Tech::GetDescription() const
 {
     return m_description;
+}
+
+const std::string& Tech::GetCategory() const
+{
+    return m_category;
 }
 
 void Tech::AddPrerequisite(TechId techId)

@@ -1,13 +1,13 @@
 #include "game/research/TechCostCalculator.h"
-#include "game/research/TechRegistry.h"
+#include "lib/LuaRuntime.h"
+#include <unordered_map>
 
 namespace ac
 {
 
-TechCostCalculator::TechCostCalculator(const TechRegistry* pTechRegistry)
-    : m_pTechRegistry(pTechRegistry)
-    , m_costMultiplier(1.0f)
-    , m_minCost(10)
+TechCostCalculator::TechCostCalculator(const TechCostConfig& rConfig, LuaRuntime& rLua)
+    : m_pConfig(&rConfig)
+    , m_pLua(&rLua)
 {
 }
 
@@ -15,88 +15,25 @@ TechCostCalculator::~TechCostCalculator()
 {
 }
 
-int TechCostCalculator::CalculateCost(TechId techId, const std::vector<TechId>& discoveredTechs) const
+int TechCostCalculator::CalculateCost(const Tech& rTech, const TechCostInputs_t& rInputs) const
 {
-    if (!m_pTechRegistry)
-    {
-        return m_minCost;
-    }
+    std::unordered_map<std::string, int> vars = {
+        {"techs",               rInputs.techs},
+        {"most_techs",          rInputs.mostTechs},
+        {"diff",                rInputs.diff},
+        {"turns",               rInputs.turns},
+        {"is_ai",               rInputs.bIsAI ? 1 : 0},
+        {"tech_stagnation",     rInputs.bTechStagnation ? 1 : 0},
+        {"research_modifier",   rInputs.researchModifier},
+        {"world_size_modifier", rInputs.worldSizeModifier},
+        {"faction_modifier",    rInputs.factionTechCostModifier},
+        {"alphax_modifier",     rInputs.alphaxTechCostModifier},
+        {"base_cost",           rTech.GetBaseCost()},
+    };
 
-    const Tech* pTech = m_pTechRegistry->GetTech(techId);
-    if (!pTech)
-    {
-        return m_minCost;
-    }
+    int cost = m_pLua->EvalInt(m_pConfig->costFormula, vars);
 
-    return CalculateCost(pTech, discoveredTechs);
-}
-
-int TechCostCalculator::CalculateCost(const Tech* pTech, const std::vector<TechId>& discoveredTechs) const
-{
-    if (!pTech)
-    {
-        return m_minCost;
-    }
-
-    int baseCost = pTech->GetBaseCost();
-    int missingPrereqs = CountMissingPrerequisites_(pTech, discoveredTechs);
-
-    float cost = static_cast<float>(baseCost);
-    cost *= (1.0f + 0.5f * missingPrereqs);
-    cost *= m_costMultiplier;
-
-    int finalCost = static_cast<int>(cost);
-    if (finalCost < m_minCost)
-    {
-        finalCost = m_minCost;
-    }
-
-    return finalCost;
-}
-
-void TechCostCalculator::SetCostMultiplier(float multiplier)
-{
-    m_costMultiplier = multiplier;
-}
-
-float TechCostCalculator::GetCostMultiplier() const
-{
-    return m_costMultiplier;
-}
-
-void TechCostCalculator::SetMinCost(int minCost)
-{
-    m_minCost = minCost;
-}
-
-int TechCostCalculator::GetMinCost() const
-{
-    return m_minCost;
-}
-
-int TechCostCalculator::CountMissingPrerequisites_(const Tech* pTech, const std::vector<TechId>& discoveredTechs) const
-{
-    int missing = 0;
-    for (TechId prereq : pTech->GetPrerequisites())
-    {
-        if (!IsTechDiscovered_(prereq, discoveredTechs))
-        {
-            missing++;
-        }
-    }
-    return missing;
-}
-
-bool TechCostCalculator::IsTechDiscovered_(TechId techId, const std::vector<TechId>& discoveredTechs) const
-{
-    for (TechId discovered : discoveredTechs)
-    {
-        if (discovered == techId)
-        {
-            return true;
-        }
-    }
-    return false;
+    return std::max(1, cost);
 }
 
 } // namespace ac

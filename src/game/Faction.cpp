@@ -1,6 +1,7 @@
 #include "game/Faction.h"
 
 #include "game/GameDataContext.h"
+#include "game/map/WorldMap.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/FactionIdentity.h"
 #include <iostream>
@@ -9,17 +10,20 @@
 #include "game/faction/Military.h"
 #include "game/faction/ResearchManager.h"
 #include "game/faction/Diplomacy.h"
+#include "game/faction/SocialEngineeringManager.h"
 
 namespace ac
 {
 
-Faction::Faction(const TechRegistry* pTechRegistry)
+Faction::Faction(const TechRegistry* pTechRegistry, const SocialPolicyRegistry* pSocialPolicyRegistry,
+                 TechCostCalculator* pTechCostCalculator)
     : m_pIdentity(nullptr)
     , m_pAIProfile(nullptr)
     , m_pEconomy(std::make_unique<BaseEconomyManager>())
     , m_pMilitary(nullptr)
-    , m_pResearch(std::make_unique<ResearchManager>(pTechRegistry))
+    , m_pResearch(std::make_unique<ResearchManager>(pTechRegistry, pTechCostCalculator))
     , m_pDiplomacy(nullptr)
+    , m_pSocialEngineering(std::make_unique<SocialEngineeringManager>(pSocialPolicyRegistry))
 {
 }
 
@@ -56,21 +60,17 @@ void Faction::AddBase(std::unique_ptr<BaseManager> pBase)
 
 BaseManager* Faction::CreateBase(FactionId factionId, int baseId, const std::string& name, int x, int y,
                                   const GameDataContext& rDataContext,
-                                  std::function<const Tile*(int tileX, int tileY)> tileLookup)
+                                  const WorldMap& rWorldMap)
 {
     auto pBase = std::make_unique<BaseManager>(
         rDataContext.buildingRegistry.get(),
         rDataContext.popTypeRegistry.get(),
-        rDataContext.popCompositionCalculator.get());
+        rDataContext.popCompositionCalculator.get(),
+        rWorldMap);
     pBase->SetFactionId(factionId);
     pBase->SetBaseId(baseId);
     pBase->SetName(name);
     pBase->SetPosition(x, y);
-
-    if (tileLookup)
-    {
-        pBase->SetTileLookup(std::move(tileLookup));
-    }
 
     pBase->GetWorkerAssignments().UnassignAll();
     pBase->AutoAssignWorkers();
@@ -123,6 +123,30 @@ void Faction::AddResearchPoints(int points)
 int Faction::GetResearchPoints() const
 {
     return m_pResearch ? m_pResearch->GetAccumulatedPoints() : 0;
+}
+
+bool Faction::SetSocialPolicy(SocialCategory category, const std::string& policyId)
+{
+    return m_pSocialEngineering ? m_pSocialEngineering->SetActivePolicy(category, policyId) : false;
+}
+
+const SocialPolicyConfig* Faction::GetSocialPolicy(SocialCategory category) const
+{
+    return m_pSocialEngineering ? m_pSocialEngineering->GetActivePolicy(category) : nullptr;
+}
+
+SocialScores Faction::GetSocialScores() const
+{
+    return m_pSocialEngineering ? m_pSocialEngineering->GetCombinedScores() : SocialScores{};
+}
+
+std::vector<const SocialPolicyConfig*> Faction::GetAvailableSocialPolicies(
+    SocialCategory category,
+    const std::vector<std::string>& rDiscoveredTechIds) const
+{
+    return m_pSocialEngineering
+        ? m_pSocialEngineering->GetAvailablePolicies(category, rDiscoveredTechIds)
+        : std::vector<const SocialPolicyConfig*>{};
 }
 
 } // namespace ac

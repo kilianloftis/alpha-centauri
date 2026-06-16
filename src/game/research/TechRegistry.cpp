@@ -1,5 +1,6 @@
 #include "game/research/TechRegistry.h"
 #include "game/research/TechConfigParser.h"
+#include <algorithm>
 #include <iostream>
 
 namespace ac
@@ -14,37 +15,61 @@ TechRegistry::~TechRegistry()
 {
 }
 
-bool TechRegistry::Load(const std::string& configPath)
+void TechRegistry::Load(const std::string& configPath)
 {
     TechConfigParser parser;
     auto configs = parser.ParseConfig(configPath);
-    if (configs.empty())
-    {
-        return false;
-    }
 
     Clear();
-    for (size_t i = 0; i < configs.size(); ++i)
+
+    
+    for (const TechConfig& rConfig : configs)
     {
-        const TechConfig& rConfig = configs[i];
-        TechId techId = static_cast<TechId>(i + 1);
-        auto pTech = std::make_unique<Tech>(techId, rConfig.name, std::string{});
-        pTech->SetBaseCost(rConfig.cost);
-        m_techs[techId] = std::move(pTech);
+        ValidateUniqueIds_(rConfig, configs);
+        ValidatePrerequisites_(rConfig, configs);
+        auto pTech = std::make_unique<Tech>(rConfig);
+        m_techs[rConfig.id] = std::move(pTech);
     }
 
     std::cout << "Registered " << m_techs.size() << " techs\n";
-    return true;
 }
 
-void TechRegistry::RegisterTech(std::unique_ptr<Tech> pTech)
+void TechRegistry::ValidatePrerequisites_(const TechConfig& config, const std::vector<TechConfig>& configs)
 {
-    if (pTech)
+    // Check for self-reference
+    if (std::find(config.prerequisites.begin(), config.prerequisites.end(), config.id) != config.prerequisites.end())
     {
-        TechId id = pTech->GetId();
-        m_techs[id] = std::move(pTech);
+        throw std::runtime_error("Tech '" + config.id + "' cannot have itself as a prerequisite");
+    }
+
+    // Check all prerequisites exist
+    for (const std::string& prereqId : config.prerequisites)
+    {
+        auto it = std::find_if(configs.begin(), configs.end(),
+            [&prereqId](const TechConfig& c) { return c.id == prereqId; });
+        if (it == configs.end())
+        {
+            throw std::runtime_error("Prerequisite '" + prereqId + "' not found for tech '" + config.id + "'");
+        }
     }
 }
+
+void TechRegistry::ValidateUniqueIds_(const TechConfig& config, const std::vector<TechConfig>& configs)
+{
+    int count = 0;
+    for (const TechConfig& c : configs)
+    {
+        if (c.id == config.id)
+        {
+            ++count;
+        }
+        if (count > 1)
+        {
+            throw std::runtime_error("Tech '" + config.id + "' has duplicate ID");
+        }
+    }
+}
+
 
 Tech* TechRegistry::GetTech(TechId techId)
 {

@@ -44,30 +44,28 @@ void BaseWorkableAreaDisplay::Render(float x, float y, float tileSize)
     float startX = x - (gridWidth / 2) + (tileSize / 2);
     float startY = y - (gridHeight / 2) + (tileSize / 2);
 
-    for (const auto& tileCoord : workableTiles)
+    for (const Tile* pTile : workableTiles)
     {
-        int tileX = tileCoord.first;
-        int tileY = tileCoord.second;
-        
+        if (!pTile)
+        {
+            continue;
+        }
+
+        int tileX = pTile->GetX();
+        int tileY = pTile->GetY();
+
         // Calculate relative position from base (-2 to +2)
         int relX = tileX - baseX;
         int relY = tileY - baseY;
-        
-        // Skip center (base position itself, already excluded by GetWorkableTilePositions)
-        // and corners (Manhattan distance > 3, already excluded)
-        
-        const Tile* pTile = m_rWorldMap.GetTile(tileX, tileY);
-        if (pTile)
-        {
-            // Calculate screen position (relX, relY range from -2 to +2)
-            float screenX = startX + (relX + 2) * tileSize;
-            float screenY = startY + (relY + 2) * tileSize;
-            
-            // Check if tile is being worked
-            bool bIsWorked = m_pBase->GetWorkerAssignments().IsTileAssigned(tileX, tileY);
-            
-            RenderTile_(*pTile, screenX, screenY, tileSize, bIsWorked);
-        }
+
+        // Calculate screen position (relX, relY range from -2 to +2)
+        float screenX = startX + (relX + 2) * tileSize;
+        float screenY = startY + (relY + 2) * tileSize;
+
+        // Check if tile is being worked
+        bool bIsWorked = m_pBase->GetWorkerAssignments().IsTileAssigned(tileX, tileY);
+
+        RenderTile_(*pTile, screenX, screenY, tileSize, bIsWorked);
     }
     
     // Draw the base itself at center
