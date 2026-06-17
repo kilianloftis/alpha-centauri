@@ -5,9 +5,9 @@
 namespace ac
 {
 
-BaseWorkableAreaDisplay::BaseWorkableAreaDisplay(Graphics& rGraphics, const WorldMap& rWorldMap, const BaseManager* pBase)
-    : m_rGraphics(rGraphics)
-    , m_rWorldMap(rWorldMap)
+BaseWorkableAreaDisplay::BaseWorkableAreaDisplay(Graphics& rGraphics, const BaseManager* pBase, ResolvedLayout_t layout)
+    : m_layout(layout)
+    , m_rGraphics(rGraphics)
     , m_pBase(pBase)
 {}
 
@@ -15,7 +15,7 @@ void BaseWorkableAreaDisplay::Render()
 {
     if (!m_pBase)
     {
-        return;
+        throw std::runtime_error("BaseWorkableAreaDisplay: BaseManager is null");
     }
 
     // Get the workable tiles (5x5 grid with corners removed, excluding center)
@@ -32,8 +32,8 @@ void BaseWorkableAreaDisplay::Render()
     const float gridHeight = 5 * tileSize;
     
     // Offset to center the grid at the render position
-    float startX = GetCenterX_() - (gridWidth / 2) + (tileSize / 2);
-    float startY = GetCenterY_() - (gridHeight / 2) + (tileSize / 2);
+    float startX = m_layout.x - (gridWidth / 2) + (tileSize / 2);
+    float startY = m_layout.y - (gridHeight / 2) + (tileSize / 2);
 
     for (const Tile* pTile : workableTiles)
     {
@@ -89,34 +89,57 @@ void BaseWorkableAreaDisplay::RenderTile_(const Tile& rTile, float x, float y, f
     m_rGraphics.DrawText(oss.str(), x + textOffsetX, y + textOffsetY, fontSize, textColor);
 }
 
-float BaseWorkableAreaDisplay::GetCenterX() const
-{
-    return GetCenterX_();
-}
-
-float BaseWorkableAreaDisplay::GetCenterY() const
-{
-    return GetCenterY_();
-}
-
-float BaseWorkableAreaDisplay::GetTileSize() const
-{
-    return GetTileSize_();
-}
-
-float BaseWorkableAreaDisplay::GetCenterX_() const
-{
-    return static_cast<float>(m_rGraphics.GetWindowWidth()) * kCenterXRatio;
-}
-
-float BaseWorkableAreaDisplay::GetCenterY_() const
-{
-    return static_cast<float>(m_rGraphics.GetWindowHeight()) * kCenterYRatio;
-}
-
 float BaseWorkableAreaDisplay::GetTileSize_() const
 {
-    return static_cast<float>(m_rGraphics.GetWindowWidth()) * kTileSizeRatio;
+    return static_cast<float>(m_layout.width) * kTileSizeRatio;
 }
 
+void BaseWorkableAreaDisplay::HandleMouse(const MouseEvent_t& rEvent)
+{
+    auto tile = TileHitTester::HitTestBaseWorkableArea(
+        static_cast<float>(rEvent.x), static_cast<float>(rEvent.y),
+        m_layout.x + m_layout.width / 2, m_layout.y + m_layout.height / 2,
+        GetTileSize_(),
+        m_pBase->GetX(), m_pBase->GetY());
+
+    if (!tile)
+    {
+        m_lastClickedTile = std::nullopt;
+        return;
+    }
+
+    m_lastClickedTile = tile;
+    int tileX = tile->first;
+    int tileY = tile->second;
+    auto& rAssignments = m_pBase->GetWorkerAssignments();
+    const auto& rPops = m_pBase->GetPopContainer();
+
+    if (rAssignments.IsTileAssigned(tileX, tileY))
+    {
+        for (const auto& rEntry : rAssignments.GetAssignments())
+        {
+            if (rEntry.second.first == tileX && rEntry.second.second == tileY)
+            {
+                rAssignments.UnassignWorker(rEntry.first);
+                return;
+            }
+        }
+    }
+    else
+    {
+        const auto& rPopsVec = rPops.GetPops();
+        for (int i = static_cast<int>(rPopsVec.size()) - 1; i >= 0; --i)
+        {
+            const Pop* pPop = rPopsVec[i].get();
+            if (pPop->IsWorker() && rAssignments.GetAssignedTile(pPop->GetId()).first == -1)
+            {
+                rAssignments.UnassignWorker(pPop->GetId());
+                if (rAssignments.AssignWorker(pPop->GetId(), tileX, tileY, rPops))
+                {
+                    return;
+                }
+            }
+        }
+    }
+}
 } // namespace ac

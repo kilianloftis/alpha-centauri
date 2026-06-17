@@ -68,6 +68,8 @@ add_executable(alpha-centauri
     input/MouseEventQueue.cpp
     ui/TileHitTester.cpp
     ui/UIManager.cpp
+    ui/base/PopButton.cpp
+    ui/base/PopulationDisplay.cpp
     ui/base/PopTypeSelectorPopup.cpp
 )
 

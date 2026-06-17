@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ui/IGameView.h"
+#include "ui/UIGroup.h"
 #include "ui/research/ResearchDisplay.h"
 #include "graphics/Graphics.h"
 #include "input/Input.h"
@@ -10,7 +10,7 @@ namespace ac
 
 class UIManager;
 
-class ResearchView : public IGameView
+class ResearchView : public UIGroup
 {
 public:
     static constexpr float kWindowWidth = 600.f;
@@ -18,7 +18,7 @@ public:
 
     explicit ResearchView(UIManager& rUIManager);
 
-    void Render(Graphics& rGraphics) override;
+    void Render() override;
     void Update(float deltaTime) override;
     void HandleKey(const KeyEvent_t& rEvent) override;
     void HandleMouse(const MouseEvent_t& rEvent) override;

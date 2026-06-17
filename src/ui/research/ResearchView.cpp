@@ -12,10 +12,10 @@ ResearchView::ResearchView(UIManager& rUIManager)
 {
 }
 
-void ResearchView::Render(Graphics& rGraphics)
+void ResearchView::Render()
 {
     m_pDisplay->SetResearchView(this);
-    m_pDisplay->Draw(rGraphics);
+    m_pDisplay->Draw();
 }
 
 void ResearchView::Update(float deltaTime)

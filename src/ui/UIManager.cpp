@@ -1,5 +1,5 @@
 #include "ui/UIManager.h"
-#include "ui/IGameView.h"
+#include "ui/UIGroup.h"
 #include "ui/UIElement.h"
 #include "graphics/Graphics.h"
 #include "input/Input.h"
@@ -64,12 +64,12 @@ void UIManager::Render()
             m_viewStack.pop_back();
             continue;
         }
-        pView->Render(*m_pGraphics);
+        pView->Render();
     }
     m_pGraphics->Display();
 }
 
-void UIManager::PushView(std::unique_ptr<IGameView> pView)
+void UIManager::PushView(std::unique_ptr<UIGroup> pView)
 {
     pView->OnPushed();
     m_viewStack.push_back(std::move(pView));

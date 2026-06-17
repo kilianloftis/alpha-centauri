@@ -26,7 +26,7 @@ public:
 
     ~PopTypeSelectorPopup() override = default;
 
-    void Render(Graphics& rGraphics) override;
+    void Render() override;
     void Update() override {}
 
     void HandleMouseClick(const MouseEvent_t& rEvent) override;
@@ -41,11 +41,7 @@ private:
     static constexpr float kPaddingRatio        = 0.02f;
 
     const Faction& m_rFaction;
-    Graphics& m_rGraphics;
-    PanelLayout_t m_layout;
     std::function<void(const PopTypeConfig&)> m_onPopTypeSelected;
-
-    bool m_bVisible = true;
 };
 
 } // namespace ac

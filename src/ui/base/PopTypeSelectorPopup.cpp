@@ -10,7 +10,7 @@ namespace ac
 PopTypeSelectorPopup::PopTypeSelectorPopup(
     const Faction& rFaction,
     Graphics& rGraphics,
-    PanelLayout_t layout,
+    ResolvedLayout_t layout,
     std::function<void(const PopTypeConfig&)> onPopTypeSelected
 )
     : m_rFaction(rFaction)
@@ -25,40 +25,35 @@ std::vector<const PopTypeConfig*> PopTypeSelectorPopup::GetAvailablePopTypes() c
     return m_rFaction.GetAvailablePopTypes();
 }
 
-void PopTypeSelectorPopup::Render(Graphics& rGraphics)
+void PopTypeSelectorPopup::Render()
 {
     if (!m_bVisible)
     {
         return;
     }
-
-    const auto [x, y, width, height] = m_layout.Resolve(
-        static_cast<float>(rGraphics.GetWindowWidth()),
-        static_cast<float>(rGraphics.GetWindowHeight())
-    );
     const float padding = kPaddingRatio * static_cast<float>(rGraphics.GetWindowWidth());
 
-    const unsigned int headerFontSize = static_cast<unsigned int>(height * kHeaderFontSizeRatio);
-    const unsigned int entryFontSize  = static_cast<unsigned int>(height * kEntryFontSizeRatio);
-    const float        lineHeight     = height * kLineHeightRatio;
+    const unsigned int headerFontSize = static_cast<unsigned int>(m_layout.height * kHeaderFontSizeRatio);
+    const unsigned int entryFontSize  = static_cast<unsigned int>(m_layout.height * kEntryFontSizeRatio);
+    const float        lineHeight     = m_layout.height * kLineHeightRatio;
 
-    rGraphics.DrawFilledRect(x, y, width, height, Color{20, 20, 40, 230});
-    rGraphics.DrawRect(x, y, width, height, Color::Yellow());
+    m_rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color{20, 20, 40, 230});
+    m_rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color::Yellow());
 
-    rGraphics.DrawText("Select Pop Type", x + padding, y + padding, headerFontSize, Color::Yellow());
+    m_rGraphics.DrawText("Select Pop Type", m_layout.x + padding, m_layout.y + padding, headerFontSize, Color::Yellow());
 
     const auto pAvailableTypes = GetAvailablePopTypes();
 
     if (pAvailableTypes.empty())
     {
-        rGraphics.DrawText("No pop types available", x + padding, y + lineHeight * 2.f, entryFontSize, Color::White());
+        m_rGraphics.DrawText("No pop types available", m_layout.x + padding, m_layout.y + lineHeight * 2.f, entryFontSize, Color::White());
         return;
     }
 
     float offsetY = lineHeight * 2.f;
     for (const PopTypeConfig* pConfig : pAvailableTypes)
     {
-        rGraphics.DrawText(pConfig->name, x + padding, y + offsetY, entryFontSize, Color::White());
+        m_rGraphics.DrawText(pConfig->name, m_layout.x + padding, m_layout.y + offsetY, entryFontSize, Color::White());
         offsetY += lineHeight;
     }
 }
@@ -70,16 +65,12 @@ void PopTypeSelectorPopup::HandleMouseClick(const MouseEvent_t& rEvent)
         return;
     }
 
-    const auto [x, y, width, height] = m_layout.Resolve(
-        static_cast<float>(m_rGraphics.GetWindowWidth()),
-        static_cast<float>(m_rGraphics.GetWindowHeight())
-    );
-    const float lineHeight = height * kLineHeightRatio;
+    const float lineHeight = m_layout.height * kLineHeightRatio;
 
     const float clickX = static_cast<float>(rEvent.x);
     const float clickY = static_cast<float>(rEvent.y);
 
-    if (clickX < x || clickX > x + width)
+    if (clickX < m_layout.x || clickX > m_layout.x + m_layout.width)
     {
         return;
     }
@@ -89,7 +80,7 @@ void PopTypeSelectorPopup::HandleMouseClick(const MouseEvent_t& rEvent)
     float offsetY = lineHeight * 2.f;
     for (const PopTypeConfig* pConfig : pAvailableTypes)
     {
-        const float entryTop    = y + offsetY;
+        const float entryTop    = m_layout.y + offsetY;
         const float entryBottom = entryTop + lineHeight;
 
         if (clickY >= entryTop && clickY < entryBottom)
