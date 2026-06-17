@@ -5,23 +5,13 @@
 namespace ac
 {
 
-BaseWorkableAreaDisplay::BaseWorkableAreaDisplay(Graphics& rGraphics, const WorldMap& rWorldMap)
+BaseWorkableAreaDisplay::BaseWorkableAreaDisplay(Graphics& rGraphics, const WorldMap& rWorldMap, const BaseManager* pBase)
     : m_rGraphics(rGraphics)
     , m_rWorldMap(rWorldMap)
-{
-}
+    , m_pBase(pBase)
+{}
 
-void BaseWorkableAreaDisplay::SetBase(const BaseManager* pBase)
-{
-    m_pBase = pBase;
-}
-
-void BaseWorkableAreaDisplay::Render(Graphics& /*rGraphics*/)
-{
-    Render(kBaseAreaCenterX, kBaseAreaCenterY, kBaseTileSize);
-}
-
-void BaseWorkableAreaDisplay::Render(float x, float y, float tileSize)
+void BaseWorkableAreaDisplay::Render()
 {
     if (!m_pBase)
     {
@@ -37,12 +27,13 @@ void BaseWorkableAreaDisplay::Render(float x, float y, float tileSize)
 
     // Grid is centered around base (relative coords from -2 to +2)
     // We'll lay it out in a 5x5 visual grid
+    const float tileSize = GetTileSize_();
     const float gridWidth = 5 * tileSize;
     const float gridHeight = 5 * tileSize;
     
     // Offset to center the grid at the render position
-    float startX = x - (gridWidth / 2) + (tileSize / 2);
-    float startY = y - (gridHeight / 2) + (tileSize / 2);
+    float startX = GetCenterX_() - (gridWidth / 2) + (tileSize / 2);
+    float startY = GetCenterY_() - (gridHeight / 2) + (tileSize / 2);
 
     for (const Tile* pTile : workableTiles)
     {
@@ -96,6 +87,36 @@ void BaseWorkableAreaDisplay::RenderTile_(const Tile& rTile, float x, float y, f
     Color textColor = bIsWorked ? Color::Green() : Color::White();
     
     m_rGraphics.DrawText(oss.str(), x + textOffsetX, y + textOffsetY, fontSize, textColor);
+}
+
+float BaseWorkableAreaDisplay::GetCenterX() const
+{
+    return GetCenterX_();
+}
+
+float BaseWorkableAreaDisplay::GetCenterY() const
+{
+    return GetCenterY_();
+}
+
+float BaseWorkableAreaDisplay::GetTileSize() const
+{
+    return GetTileSize_();
+}
+
+float BaseWorkableAreaDisplay::GetCenterX_() const
+{
+    return static_cast<float>(m_rGraphics.GetWindowWidth()) * kCenterXRatio;
+}
+
+float BaseWorkableAreaDisplay::GetCenterY_() const
+{
+    return static_cast<float>(m_rGraphics.GetWindowHeight()) * kCenterYRatio;
+}
+
+float BaseWorkableAreaDisplay::GetTileSize_() const
+{
+    return static_cast<float>(m_rGraphics.GetWindowWidth()) * kTileSizeRatio;
 }
 
 } // namespace ac

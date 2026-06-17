@@ -16,13 +16,13 @@ bool UIManager::Initialize(Graphics& rGraphics, Input& rInput)
     return true;
 }
 
-void UIManager::Update(float deltaTime)
+void UIManager::Update()
 {
     if (m_viewStack.empty())
     {
         return;
     }
-    m_viewStack.back()->Update(deltaTime);
+    m_viewStack.back()->Update();
 }
 
 void UIManager::ProcessInput()
@@ -59,6 +59,11 @@ void UIManager::Render()
     m_pGraphics->Clear();
     for (auto& pView : m_viewStack)
     {
+        if (pView->ShouldClose())
+        {
+            m_viewStack.pop_back();
+            continue;
+        }
         pView->Render(*m_pGraphics);
     }
     m_pGraphics->Display();

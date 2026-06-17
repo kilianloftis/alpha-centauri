@@ -11,13 +11,16 @@
 #include "game/faction/ResearchManager.h"
 #include "game/faction/Diplomacy.h"
 #include "game/faction/SocialEngineeringManager.h"
+#include "game/population/pop-types/PopTypeRegistry.h"
+#include "game/population/pop-types/PopTypeConfigParser.h"
 
 namespace ac
 {
 
 Faction::Faction(const TechRegistry* pTechRegistry, const SocialPolicyRegistry* pSocialPolicyRegistry,
-                 TechCostCalculator* pTechCostCalculator)
-    : m_pIdentity(nullptr)
+                 TechCostCalculator* pTechCostCalculator, const PopTypeRegistry* pPopTypeRegistry)
+    : m_pPopTypeRegistry(pPopTypeRegistry)
+    , m_pIdentity(nullptr)
     , m_pAIProfile(nullptr)
     , m_pEconomy(std::make_unique<BaseEconomyManager>())
     , m_pMilitary(nullptr)
@@ -138,6 +141,31 @@ const SocialPolicyConfig* Faction::GetSocialPolicy(SocialCategory category) cons
 SocialScores Faction::GetSocialScores() const
 {
     return m_pSocialEngineering ? m_pSocialEngineering->GetCombinedScores() : SocialScores{};
+}
+
+std::vector<const PopTypeConfig*> Faction::GetAvailablePopTypes() const
+{
+    if (!m_pPopTypeRegistry || !m_pResearch)
+    {
+        throw std::runtime_error("Faction::GetAvailablePopTypes: Missing registry or research manager");
+    }
+
+    std::vector<const PopTypeConfig*> pAvailable;
+    for (const PopTypeConfig& rConfig : m_pPopTypeRegistry->GetAll())
+    {
+        if (!rConfig.bPlayerAssignable)
+        {
+            continue;
+        }
+
+        if (!rConfig.requiredTech.empty() && !m_pResearch->HasDiscoveredTech(rConfig.requiredTech))
+        {
+            continue;
+        }
+
+        pAvailable.push_back(&rConfig);
+    }
+    return pAvailable;
 }
 
 std::vector<const SocialPolicyConfig*> Faction::GetAvailableSocialPolicies(

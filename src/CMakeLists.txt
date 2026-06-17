@@ -66,19 +66,9 @@ add_executable(alpha-centauri
     input/KeyMapping.cpp
     input/KeyEventQueue.cpp
     input/MouseEventQueue.cpp
-    ui/base/BaseView.cpp
-    ui/base/BaseDisplay.cpp
-    ui/base/PopulationDisplay.cpp
-    ui/base/BaseWorkableAreaDisplay.cpp
     ui/TileHitTester.cpp
     ui/UIManager.cpp
-    ui/world/WorldDisplay.cpp
-    ui/world/WorldMapElement.cpp
-    ui/world/WorldView.cpp
-    ui/world/InfoPanelElement.cpp
-    ui/research/ResearchView.cpp
-    ui/research/ResearchDisplay.cpp
-    ui/research/CurrentResearchPanel.cpp
+    ui/base/PopTypeSelectorPopup.cpp
 )
 
 target_include_directories(alpha-centauri PRIVATE
@@ -140,7 +130,7 @@ target_link_libraries(alpha-centauri PRIVATE lua54)
 FetchContent_Declare(
     sol2
     GIT_REPOSITORY https://github.com/ThePhD/sol2.git
-    GIT_TAG v3.3.0
+    GIT_TAG v3.5.0
 )
 FetchContent_MakeAvailable(sol2)
 target_link_libraries(alpha-centauri PRIVATE sol2)

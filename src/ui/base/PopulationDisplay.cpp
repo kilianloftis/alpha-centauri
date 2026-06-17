@@ -6,73 +6,44 @@
 namespace ac
 {
 
-PopulationDisplay::PopulationDisplay(EventBus& rBus, Graphics& rGraphics)
-    : m_rBus(rBus)
+static constexpr float k_headerFontSizeRatio = 0.04f;
+static constexpr float k_entryFontSizeRatio  = 0.03f;
+static constexpr float k_lineHeightRatio     = 0.05f;
+
+PopulationDisplay::PopulationDisplay(const Graphics& rGraphics, const PopContainer* pPopContainer, PanelLayout_t layout)
+    : UIPanel(layout)
     , m_rGraphics(rGraphics)
-    , m_currentPop(0)
+    , m_pPopulation(pPopContainer)
 {
     // Subscribe to population gained events
-    m_subscriptionId = m_rBus.subscribe<EvBaseGainedPop>(
-        [this](const EvBaseGainedPop& event) {
-            OnPopGained_(event);
-        }
-    );
 }
 
-PopulationDisplay::~PopulationDisplay()
+void PopulationDisplay::Render()
 {
-    m_rBus.unsubscribe(m_subscriptionId);
-}
-
-void PopulationDisplay::SetRenderPosition(float x, float y)
-{
-    m_renderX = x;
-    m_renderY = y;
-}
-
-void PopulationDisplay::SetPopulation(const PopContainer* pPopContainer)
-{
-    m_pPopulation = pPopContainer;
-}
-
-void PopulationDisplay::Render(Graphics& /*rGraphics*/)
-{
-    Render(m_renderX, m_renderY);
-}
-
-void PopulationDisplay::Render(float x, float y)
-{
-    std::ostringstream oss;
-    oss << "Population: " << m_currentPop;
-    m_rGraphics.DrawText(oss.str(), x, y, 24);
-
     if (!m_pPopulation)
     {
-        return;
+        throw std::runtime_error("PopulationDisplay: No population container set");
     }
 
-    const float lineHeight = 28.0f;
+    const auto [x, y, width, height] = m_layout.Resolve(
+        static_cast<float>(rGraphics.GetWindowWidth()),
+        static_cast<float>(rGraphics.GetWindowHeight())
+    );
+
+    const unsigned int headerFontSize = static_cast<unsigned int>(height * k_headerFontSizeRatio);
+    const unsigned int entryFontSize  = static_cast<unsigned int>(height * k_entryFontSizeRatio);
+    const float        lineHeight     = height * k_lineHeightRatio;
+
+    std::ostringstream oss;
+    oss << "Population: " << m_pPopulation->GetSize();
+    m_rGraphics.DrawText(oss.str(), x, y, headerFontSize);
+
     float offsetY = lineHeight;
     for (const auto& pPop : m_pPopulation->GetPops())
     {
-        m_rGraphics.DrawText(pPop->GetPopType(), x, y + offsetY, 20);
+        m_rGraphics.DrawText(pPop->GetPopType(), x, y + offsetY, entryFontSize);
         offsetY += lineHeight;
     }
-}
-
-int PopulationDisplay::GetCurrentPop() const
-{
-    return m_currentPop;
-}
-
-void PopulationDisplay::SetCurrentPop(int pop)
-{
-    m_currentPop = pop;
-}
-
-void PopulationDisplay::OnPopGained_(const EvBaseGainedPop& event)
-{
-    m_currentPop = event.newSize;
 }
 
 } // namespace ac

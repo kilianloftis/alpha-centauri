@@ -20,6 +20,8 @@ class Military;
 class ResearchManager;
 class Diplomacy;
 class SocialEngineeringManager;
+class PopTypeRegistry;
+struct PopTypeConfig;
 struct GameDataContext;
 class WorldMap;
 
@@ -27,7 +29,7 @@ class Faction
 {
 public:
     Faction(const TechRegistry* pTechRegistry, const SocialPolicyRegistry* pSocialPolicyRegistry,
-             TechCostCalculator* pTechCostCalculator);
+             TechCostCalculator* pTechCostCalculator, const PopTypeRegistry* pPopTypeRegistry);
     ~Faction();
 
     // Turn processing
@@ -62,8 +64,12 @@ public:
         SocialCategory category,
         const std::vector<std::string>& rDiscoveredTechIds) const;
 
+    // Pop types
+    std::vector<const PopTypeConfig*> GetAvailablePopTypes() const;
+
 private:
     int m_energy = 0;
+    const PopTypeRegistry* m_pPopTypeRegistry;
     std::unique_ptr<FactionIdentity> m_pIdentity;
     std::unique_ptr<AIProfile> m_pAIProfile;
     std::unique_ptr<BaseEconomyManager> m_pEconomy;

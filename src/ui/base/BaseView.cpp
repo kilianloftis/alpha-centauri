@@ -18,20 +18,15 @@ namespace ac
 BaseView::BaseView(
     BaseManager& rBase,
     const WorldMap& rWorldMap,
-    EventBus& rBus,
     Graphics& rGraphics,
-    UIManager& rUIManager
+    std::function<void()> onClose
 )
-: m_rBase(rBase)
+: IGameView(onClose)
+, m_rBase(rBase)
 , m_pWorkableAreaDisplay(std::make_unique<BaseWorkableAreaDisplay>(rGraphics, rWorldMap))
-, m_rUIManager(rUIManager)
-, m_pBaseDisplay(std::make_unique<BaseDisplay>(rBase, rGraphics))
-, m_pPopDisplay(std::make_unique<PopulationDisplay>(rBus, rGraphics))
+, m_pBaseDisplay(std::make_unique<BaseDisplay>(rGraphics))
+, m_pPopDisplay(std::make_unique<PopulationDisplay>(rGraphics, &rBase.GetPopContainer(), kTopPanelLayout))
 {
-    m_pWorkableAreaDisplay->SetBase(&rBase);
-    m_pPopDisplay->SetCurrentPop(rBase.GetBaseSize());
-    m_pPopDisplay->SetPopulation(&rBase.GetPopContainer());
-    m_pPopDisplay->SetRenderPosition(620.f, 40.f);
     m_panels.push_back(m_pWorkableAreaDisplay.get());
     m_panels.push_back(m_pBaseDisplay.get());
     m_panels.push_back(m_pPopDisplay.get());
@@ -41,13 +36,10 @@ BaseView::~BaseView() = default;
 
 void BaseView::OnPopped()
 {
-    m_pWorkableAreaDisplay->SetBase(nullptr);
-    m_pPopDisplay->SetPopulation(nullptr);
 }
 
 void BaseView::Render(Graphics& rGraphics)
 {
-    rGraphics.DrawFilledRect(0.f, 0.f, kScreenWidth, kScreenHeight, Color{20, 20, 30, 255});
     for (IBasePanel* pPanel : m_panels)
     {
         pPanel->Render(rGraphics);
@@ -62,7 +54,7 @@ void BaseView::HandleKey(const KeyEvent_t& rEvent)
 {
     if (rEvent.key == Key_t::Escape)
     {
-        m_rUIManager.PopView();
+        OnClose();
     }
 }
 
@@ -70,9 +62,9 @@ void BaseView::HandleMouse(const MouseEvent_t& rEvent)
 {
     auto tile = TileHitTester::HitTestBaseWorkableArea(
         static_cast<float>(rEvent.x), static_cast<float>(rEvent.y),
-        BaseWorkableAreaDisplay::kBaseAreaCenterX,
-        BaseWorkableAreaDisplay::kBaseAreaCenterY,
-        BaseWorkableAreaDisplay::kBaseTileSize,
+        m_pWorkableAreaDisplay->GetCenterX(),
+        m_pWorkableAreaDisplay->GetCenterY(),
+        m_pWorkableAreaDisplay->GetTileSize(),
         m_rBase.GetX(), m_rBase.GetY());
 
     if (!tile)

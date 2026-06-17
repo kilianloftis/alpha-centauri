@@ -30,6 +30,10 @@ graph TB
         PopulationDisplay[PopulationDisplay<br/>implements IBasePanel]
     end
 
+    subgraph "Base Popups"
+        PopTypeSelectorPopup[PopTypeSelectorPopup<br/>extends UIPopup<br/>lists available pop types]
+    end
+
     subgraph "Dependencies"
         Graphics[Graphics]
         Input[Input]
@@ -53,13 +57,6 @@ graph TB
     Factory -->|returns| UIManagerImpl
 
     IGameView -->|owns| UIElement
-    WorldView -.->|implements| IGameView
-    BaseView -.->|implements| IGameView
-
-    WorldView -->|owns| WorldMapElement
-    WorldView -->|owns| InfoPanelElement
-    WorldMapElement -.->|implements| UIWorldMap
-    InfoPanelElement -.->|implements| UIPanel
 
     UIWorldMap --> UIElement
     UIPanel --> UIElement
@@ -79,6 +76,8 @@ graph TB
     style BaseDisplay fill:#bfb,stroke:#333,stroke-width:2px
     style BaseWorkableAreaDisplay fill:#bfb,stroke:#333,stroke-width:2px
     style PopulationDisplay fill:#bfb,stroke:#333,stroke-width:2px
+    PopTypeSelectorPopup -.->|extends| UIPopup
+    style PopTypeSelectorPopup fill:#bfb,stroke:#333,stroke-width:2px
 ```
 
 ## Component Overview
@@ -88,7 +87,7 @@ graph TB
 - **Properties**: position (x, y), size (width, height), visibility
 - **Virtual Methods**:
   - `Draw(Graphics&)`: Render the element
-  - `Update(float deltaTime)`: Update element state
+  - `Update(`: Update element state
   - `HandleKey(KeyEvent_t&)`: Handle key input; returns true to consume
   - `HandleMouse(MouseEvent_t&)`: Handle mouse input; returns true to consume
 - **Helper**: `Contains(x, y)`: True if the point is within element bounds

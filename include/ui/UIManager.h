@@ -14,7 +14,7 @@ class UIManager
 {
 public:
     bool Initialize(Graphics& rGraphics, Input& rInput);
-    void Update(float deltaTime);
+    void Update();
     void ProcessInput();
     void Render();
 

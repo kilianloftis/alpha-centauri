@@ -22,32 +22,24 @@ class WorldMap;
 class BaseView : public IGameView
 {
 public:
-    static constexpr float kScreenWidth = 800.f;
-    static constexpr float kScreenHeight = 600.f;
-
     BaseView(
         BaseManager& rBase,
         const WorldMap& rWorldMap,
-        EventBus& rBus,
         Graphics& rGraphics,
-        UIManager& rUIManager
+        std::function<void()> onClose
     );
     ~BaseView();
 
-    void OnPopped() override;
     void Render(Graphics& rGraphics) override;
-    void Update(float deltaTime) override;
+    void Update() override;
     void HandleKey(const KeyEvent_t& rEvent) override;
     void HandleMouse(const MouseEvent_t& rEvent) override;
 
 private:
     BaseManager& m_rBase;
     std::unique_ptr<BaseWorkableAreaDisplay> m_pWorkableAreaDisplay;
-    UIManager& m_rUIManager;
     std::unique_ptr<BaseDisplay> m_pBaseDisplay;
     std::unique_ptr<PopulationDisplay> m_pPopDisplay;
-    std::vector<IBasePanel*> m_panels;
-    std::optional<std::pair<int, int>> m_lastClickedTile;
 };
 
 } // namespace ac

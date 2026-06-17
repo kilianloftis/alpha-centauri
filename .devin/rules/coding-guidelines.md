@@ -1,10 +1,12 @@
 ---
 trigger: always_on
+description: Coding guidelines for the project
 ---
 
 # Coding Guidelines
 
 Do not make up game rules or mechanics. Leave TODOs instead.
+Only create functions if they are needed for the current implementation. Do not add functinos, getters, or setters, without an immediate requirement.
 Use references whenever possible.
 Use smart pointers if you are unable to use a reference.
 Use range-based for loops whenever possible.

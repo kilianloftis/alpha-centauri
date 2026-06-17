@@ -26,8 +26,6 @@
 #include "ui/TileHitTester.h"
 #include "game/map/WorldGenerator.h"
 #include "ui/UIManager.h"
-#include "ui/world/WorldView.h"
-#include "ui/base/BaseView.h"
 #include <functional>
 #include <iostream>
 #include <stdexcept>
@@ -65,7 +63,7 @@ void Engine::GameLoop_()
     while (!m_uiManager->ShouldExit())
     {
         m_uiManager->ProcessInput();
-        m_uiManager->Update(0.f);
+        m_uiManager->Update();
         m_uiManager->Render();
     }
 }
@@ -152,7 +150,8 @@ void Engine::Initialize_()
     // Create test faction with a base
     auto pFaction = std::make_unique<Faction>(m_gameDataContext->techRegistry.get(),
                                               m_gameDataContext->socialPolicyRegistry.get(),
-                                              m_gameDataContext->techCostCalculator.get());
+                                              m_gameDataContext->techCostCalculator.get(),
+                                              m_gameDataContext->popTypeRegistry.get());
     BaseManager* pBase = pFaction->CreateBase(
         1, 1, "Test Base", 6, 4,  // factionId, baseId, name, x, y (center of 12x8 world)
         *m_gameDataContext,
@@ -181,17 +180,7 @@ void Engine::Initialize_()
     m_turnProcessor = std::make_unique<TurnProcessor>(std::move(registry), std::move(repeatFlags), std::move(stageOrder));
 
     m_uiManager->Initialize(*m_graphics, *m_input);
-    m_uiManager->PushView(std::make_unique<WorldView>(
-        *m_gameState,
-        *m_graphics,
-        *m_gameState->GetWorldMap(),
-        *m_uiManager,
-        [this]() { ProcessTurn_(); },
-        [this](BaseManager* pBase) -> std::unique_ptr<IGameView>
-        {
-            return std::make_unique<BaseView>(*pBase, *m_gameState->GetWorldMap(), *m_eventBus, *m_graphics, *m_uiManager);
-        }
-    ));
+    m_uiManager->PushView();
     CheckInitialized_();
 }
 

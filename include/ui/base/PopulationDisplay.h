@@ -11,38 +11,19 @@ class Graphics;
 class PopContainer;
 
 // Displays current population and updates when population changes
-class PopulationDisplay : public IBasePanel
+class PopulationDisplay : public UIPanel
 {
 public:
-    PopulationDisplay(EventBus& rBus, Graphics& rGraphics);
+    PopulationDisplay(const Graphics& rGraphics, const PopContainer* pPopContainer, PanelLayout_t layout);
     ~PopulationDisplay();
 
-    // Set the screen position for IBasePanel rendering
-    void SetRenderPosition(float x, float y);
-
-    // Set the population directly (for initialization)
-    void SetCurrentPop(int pop);
-
-    // Provide a population container to display per-pop type breakdown
-    void SetPopulation(const PopContainer* pPopContainer);
-
-    // Get current displayed population
-    int GetCurrentPop() const;
-
-    // IBasePanel: renders at the stored position
-    void Render(Graphics& rGraphics) override;
 
     // Render the population display at specified position
-    void Render(float x, float y);
+    void Render();
 
 private:
-    EventBus& m_rBus;
-    Graphics& m_rGraphics;
-    int m_currentPop;
+    const Graphics& m_rGraphics;
     const PopContainer* m_pPopulation = nullptr;
-    SubscriptionId m_subscriptionId;
-    float m_renderX = 620.f;
-    float m_renderY = 40.f;
 
     void OnPopGained_(const EvBaseGainedPop& event);
 };
