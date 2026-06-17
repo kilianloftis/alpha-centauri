@@ -23,8 +23,6 @@
 #include "game/research/TechCostConfig.h"
 #include "game/research/TechCostCalculator.h"
 #include "lib/LuaRuntime.h"
-#include "ui/world/WorldDisplay.h"
-#include "ui/base/BaseWorkableAreaDisplay.h"
 #include "ui/TileHitTester.h"
 #include "game/map/WorldGenerator.h"
 #include "ui/UIManager.h"
@@ -44,7 +42,7 @@ Engine::Engine()
     , m_gameState(std::make_unique<GameState>())
     , m_eventBus(std::make_unique<EventBus>())
     , m_gameDataContext(std::make_unique<GameDataContext>())
-    , m_uiManager(CreateUIManager())
+    , m_uiManager(std::make_unique<UIManager>())
     {}
 
 Engine::~Engine() = default;
@@ -168,27 +166,6 @@ void Engine::Initialize_()
     std::cout << "Test setup complete. " << m_gameState->GetNumFactions() << " faction(s), "
               << m_gameState->GetFactions()[0]->GetBaseCount() << " base(s)\n";
 
-    // Create UI displays
-    m_worldDisplay = std::make_unique<WorldDisplay>(*m_graphics);
-    m_worldDisplay->SetWorldMap(m_gameState->GetWorldMap());
-
-    // Collect base positions for the world display
-    std::vector<std::pair<int, int>> basePositions;
-    for (const auto& pFaction : m_gameState->GetFactions())
-    {
-        for (size_t i = 0; i < pFaction->GetBaseCount(); ++i)
-        {
-            const BaseManager* pB = pFaction->GetBase(i);
-            if (pB)
-            {
-                basePositions.emplace_back(pB->GetX(), pB->GetY());
-            }
-        }
-    }
-    m_worldDisplay->SetBasePositions(basePositions);
-
-    m_workableAreaDisplay = std::make_unique<BaseWorkableAreaDisplay>(*m_graphics, *m_gameState->GetWorldMap());
-
     m_turnStageFactory = std::make_unique<TurnStageFactory>(
         m_gameDataContext->popCompositionCalculator.get(),
         m_gameDataContext->growthCalculator.get());
@@ -206,12 +183,13 @@ void Engine::Initialize_()
     m_uiManager->Initialize(*m_graphics, *m_input);
     m_uiManager->PushView(std::make_unique<WorldView>(
         *m_gameState,
-        *m_worldDisplay,
+        *m_graphics,
+        *m_gameState->GetWorldMap(),
         *m_uiManager,
         [this]() { ProcessTurn_(); },
         [this](BaseManager* pBase) -> std::unique_ptr<IGameView>
         {
-            return std::make_unique<BaseView>(*pBase, *m_workableAreaDisplay, *m_eventBus, *m_graphics, *m_uiManager);
+            return std::make_unique<BaseView>(*pBase, *m_gameState->GetWorldMap(), *m_eventBus, *m_graphics, *m_uiManager);
         }
     ));
     CheckInitialized_();

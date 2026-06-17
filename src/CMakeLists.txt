@@ -76,6 +76,9 @@ add_executable(alpha-centauri
     ui/world/WorldMapElement.cpp
     ui/world/WorldView.cpp
     ui/world/InfoPanelElement.cpp
+    ui/research/ResearchView.cpp
+    ui/research/ResearchDisplay.cpp
+    ui/research/CurrentResearchPanel.cpp
 )
 
 target_include_directories(alpha-centauri PRIVATE

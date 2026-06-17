@@ -8,6 +8,8 @@ Do not make up game rules or mechanics. Leave TODOs instead.
 Use references whenever possible.
 Use smart pointers if you are unable to use a reference.
 Use range-based for loops whenever possible.
+Constructors should accept all arguments required to make the object valid
+If a class owns a resource, if possible, the class should construct that resource itself
 
 ## SOLID Principles
 All code must adhere to SOLID principles:
@@ -32,6 +34,7 @@ All code should be written with moddability and customization in mind:
 - **Pointers**: prefix with 'p' (e.g., `pEngine`, `pGraphics`)
 - **References**: prefix with 'r' (e.g., `rEngine`, `rGraphics`)
 - **Member variables**: prefix with 'm_' (e.g., `m_engine`, `m_pGraphics`)
+- **Structs and Enums**: postfix with _t (e.g., `KeyEvent_t`, `MouseEvent_t`)
 
 ### Brace Style
 Opening braces should be on their own line:

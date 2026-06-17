@@ -35,6 +35,8 @@ public:
     virtual void DrawText(const std::string& text, float x, float y, unsigned int size = 24, const Color& color = Color::White()) = 0;
     virtual void DrawRect(float x, float y, float width, float height, const Color& color, float thickness = 1.0f) = 0;
     virtual void DrawFilledRect(float x, float y, float width, float height, const Color& color) = 0;
+    virtual unsigned int GetWindowWidth() const = 0;
+    virtual unsigned int GetWindowHeight() const = 0;
 };
 
 std::unique_ptr<Graphics> CreateGraphics();

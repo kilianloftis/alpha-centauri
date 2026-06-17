@@ -186,6 +186,18 @@ switch (key)
     case sf::Keyboard::Key::Space: return Key_t::Space;
     case sf::Keyboard::Key::Escape: return Key_t::Escape;
     case sf::Keyboard::Key::Enter: return Key_t::Enter;
+    case sf::Keyboard::Key::F1: return Key_t::F1;
+    case sf::Keyboard::Key::F2: return Key_t::F2;
+    case sf::Keyboard::Key::F3: return Key_t::F3;
+    case sf::Keyboard::Key::F4: return Key_t::F4;
+    case sf::Keyboard::Key::F5: return Key_t::F5;
+    case sf::Keyboard::Key::F6: return Key_t::F6;
+    case sf::Keyboard::Key::F7: return Key_t::F7;
+    case sf::Keyboard::Key::F8: return Key_t::F8;
+    case sf::Keyboard::Key::F9: return Key_t::F9;
+    case sf::Keyboard::Key::F10: return Key_t::F10;
+    case sf::Keyboard::Key::F11: return Key_t::F11;
+    case sf::Keyboard::Key::F12: return Key_t::F12;
     default: return Key_t::Unknown;
 }
 }

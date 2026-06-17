@@ -18,10 +18,6 @@ void InfoPanelElement::Draw(Graphics& rGraphics)
             rGraphics.DrawText(rLines[i].text, m_x + static_cast<float>(i) * colWidth + 10.f, textY, 18, rLines[i].color);
         }
     }
-    else
-    {
-        rGraphics.DrawText(m_title, m_x + 10.f, m_y + 5.f, 16);
-    }
 }
 
 void InfoPanelElement::Update(float /*deltaTime*/)

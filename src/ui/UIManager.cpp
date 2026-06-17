@@ -95,9 +95,4 @@ void UIManager::RequestExit()
     m_bShouldExit = true;
 }
 
-std::unique_ptr<UIManager> CreateUIManager()
-{
-    return std::make_unique<UIManager>();
-}
-
 } // namespace ac

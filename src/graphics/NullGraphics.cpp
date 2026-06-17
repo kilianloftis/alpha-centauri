@@ -49,6 +49,16 @@ void DrawRect(float x, float y, float width, float height, const Color& color, f
 void DrawFilledRect(float x, float y, float width, float height, const Color& color) override
     {
     }
+
+unsigned int GetWindowWidth() const override
+    {
+        return 800;
+    }
+
+unsigned int GetWindowHeight() const override
+    {
+        return 600;
+    }
 };
 
 } // namespace

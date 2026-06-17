@@ -12,8 +12,6 @@ class TurnProcessor;
 class GameState;
 class EventBus;
 class EventBridge;
-class BaseWorkableAreaDisplay;
-class WorldDisplay;
 class GameDataContext;
 class UIManager;
 
@@ -38,8 +36,6 @@ private:
     std::unique_ptr<GameState> m_gameState;
     std::unique_ptr<EventBus> m_eventBus;
     std::unique_ptr<EventBridge> m_eventBridge;
-    std::unique_ptr<WorldDisplay> m_worldDisplay;
-    std::unique_ptr<BaseWorkableAreaDisplay> m_workableAreaDisplay;
     std::unique_ptr<GameDataContext> m_gameDataContext;
     std::unique_ptr<UIManager> m_uiManager;
 };

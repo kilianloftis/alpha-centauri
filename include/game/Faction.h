@@ -40,6 +40,7 @@ public:
                             const WorldMap& rWorldMap);
     BaseManager* GetBase(size_t index);
     const BaseManager* GetBase(size_t index) const;
+    const std::vector<std::shared_ptr<BaseManager>>& GetBases() const { return m_bases; }
     size_t GetBaseCount() const { return m_bases.size(); }
 
     // Energy tracking

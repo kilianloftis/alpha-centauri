@@ -115,6 +115,16 @@ public:
         m_window.draw(rect);
     }
 
+    unsigned int GetWindowWidth() const override
+    {
+        return m_window.getSize().x;
+    }
+
+    unsigned int GetWindowHeight() const override
+    {
+        return m_window.getSize().y;
+    }
+
 private:
     void ProcessEvents_()
     {

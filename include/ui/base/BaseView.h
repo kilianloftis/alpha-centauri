@@ -2,6 +2,7 @@
 
 #include "ui/IGameView.h"
 #include "ui/base/IBasePanel.h"
+#include "ui/base/BaseWorkableAreaDisplay.h"
 #include <memory>
 #include <optional>
 #include <utility>
@@ -12,11 +13,11 @@ namespace ac
 
 class BaseDisplay;
 class BaseManager;
-class BaseWorkableAreaDisplay;
 class EventBus;
 class Graphics;
 class PopulationDisplay;
 class UIManager;
+class WorldMap;
 
 class BaseView : public IGameView
 {
@@ -26,7 +27,7 @@ public:
 
     BaseView(
         BaseManager& rBase,
-        BaseWorkableAreaDisplay& rWorkableAreaDisplay,
+        const WorldMap& rWorldMap,
         EventBus& rBus,
         Graphics& rGraphics,
         UIManager& rUIManager
@@ -41,7 +42,7 @@ public:
 
 private:
     BaseManager& m_rBase;
-    BaseWorkableAreaDisplay& m_rWorkableAreaDisplay;
+    std::unique_ptr<BaseWorkableAreaDisplay> m_pWorkableAreaDisplay;
     UIManager& m_rUIManager;
     std::unique_ptr<BaseDisplay> m_pBaseDisplay;
     std::unique_ptr<PopulationDisplay> m_pPopDisplay;

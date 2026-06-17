@@ -5,6 +5,7 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopContainer.h"
+#include "game/map/WorldMap.h"
 #include "lib/EventBus.h"
 #include "ui/UIManager.h"
 #include "ui/TileHitTester.h"
@@ -16,22 +17,22 @@ namespace ac
 
 BaseView::BaseView(
     BaseManager& rBase,
-    BaseWorkableAreaDisplay& rWorkableAreaDisplay,
+    const WorldMap& rWorldMap,
     EventBus& rBus,
     Graphics& rGraphics,
     UIManager& rUIManager
 )
 : m_rBase(rBase)
-, m_rWorkableAreaDisplay(rWorkableAreaDisplay)
+, m_pWorkableAreaDisplay(std::make_unique<BaseWorkableAreaDisplay>(rGraphics, rWorldMap))
 , m_rUIManager(rUIManager)
 , m_pBaseDisplay(std::make_unique<BaseDisplay>(rBase, rGraphics))
 , m_pPopDisplay(std::make_unique<PopulationDisplay>(rBus, rGraphics))
 {
-    m_rWorkableAreaDisplay.SetBase(&rBase);
+    m_pWorkableAreaDisplay->SetBase(&rBase);
     m_pPopDisplay->SetCurrentPop(rBase.GetBaseSize());
     m_pPopDisplay->SetPopulation(&rBase.GetPopContainer());
     m_pPopDisplay->SetRenderPosition(620.f, 40.f);
-    m_panels.push_back(&m_rWorkableAreaDisplay);
+    m_panels.push_back(m_pWorkableAreaDisplay.get());
     m_panels.push_back(m_pBaseDisplay.get());
     m_panels.push_back(m_pPopDisplay.get());
 }
@@ -40,7 +41,7 @@ BaseView::~BaseView() = default;
 
 void BaseView::OnPopped()
 {
-    m_rWorkableAreaDisplay.SetBase(nullptr);
+    m_pWorkableAreaDisplay->SetBase(nullptr);
     m_pPopDisplay->SetPopulation(nullptr);
 }
 

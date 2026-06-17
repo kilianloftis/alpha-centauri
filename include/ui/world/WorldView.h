@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ui/IGameView.h"
+#include "ui/world/WorldDisplay.h"
 #include "ui/world/WorldMapElement.h"
 #include "ui/world/InfoPanelElement.h"
 #include <functional>
@@ -13,9 +14,10 @@ namespace ac
 {
 
 class GameState;
-class WorldDisplay;
 class UIManager;
 class BaseManager;
+class Graphics;
+class WorldMap;
 
 class WorldView : public IGameView
 {
@@ -26,7 +28,8 @@ public:
 
     WorldView(
         GameState& rGameState,
-        WorldDisplay& rWorldDisplay,
+        Graphics& rGraphics,
+        const WorldMap& rWorldMap,
         UIManager& rUIManager,
         std::function<void()> onProcessTurn,
         std::function<std::unique_ptr<IGameView>(BaseManager*)> onOpenBase
@@ -41,7 +44,7 @@ private:
     BaseManager* FindBaseAtTile_(int tileX, int tileY) const;
 
     GameState& m_rGameState;
-    WorldDisplay& m_rWorldDisplay;
+    std::unique_ptr<WorldDisplay> m_pWorldDisplay;
     UIManager& m_rUIManager;
     std::function<void()> m_onProcessTurn;
     std::function<std::unique_ptr<IGameView>(BaseManager*)> m_onOpenBase;

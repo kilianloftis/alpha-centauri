@@ -34,7 +34,4 @@ private:
     std::vector<std::unique_ptr<IGameView>> m_viewStack;
     bool m_bShouldExit = false;
 };
-
-std::unique_ptr<UIManager> CreateUIManager();
-
 } // namespace ac

@@ -108,17 +108,24 @@ UI components use the Graphics interface to render game information.
   - `SetCurrentPop()`: Set population directly
 
 ### WorldDisplay
-- **Purpose**: Displays the world map as a grid of tiles
+- **Purpose**: Displays the world map as a grid of tiles with base markers
 - **File**: `ui/WorldDisplay.h`, `ui/WorldDisplay.cpp`
 - **Dependencies**: Graphics, WorldMap
 - **Methods**:
   - `Render(x, y, tileSize)`: Render the grid at position with given tile size
   - `SetWorldMap()`: Set the world map to display
-  - `SetBasePositions()`: Set positions to overlay yellow "BASE" labels
+  - `SetBaseInfo(baseInfo)`: Set base information (position, owner, population) for rendering
 - **Tile Display Format**: Each tile shows `moisture rockiness elevation(km)` as integers
   - Moisture: 0=Arid, 1=Moist, 2=Wet
   - Rockiness: 0=Flat, 1=Rolling, 2=Rocky
   - Elevation: Integer km (elevation in meters / 1000)
+- **BaseInfo_t Structure**:
+  - `x, y`: Tile coordinates
+  - `name`: Base name (e.g., "Gaia's Landing")
+  - `factionId`: Current owner
+  - `previousFactionId`: Previous owner (for capture animations/history)
+  - `populationSize`: Current base population
+- **Architecture Note**: `WorldDisplay` is a pure rendering component. `WorldView` (the `IGameView` coordinator) queries `GameState` during `Update()` and pushes base info via `SetBaseInfo()`, following the same pattern as `InfoPanelElement`.
 
 ### BaseWorkableAreaDisplay
 - **Purpose**: Displays the workable area of a base (21 tiles in 5x5 diamond pattern)

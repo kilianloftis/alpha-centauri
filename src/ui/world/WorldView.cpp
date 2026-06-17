@@ -1,42 +1,47 @@
 #include "ui/world/WorldView.h"
+#include "ui/research/ResearchView.h"
 #include "game/GameState.h"
 #include "game/Faction.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/map/WorldMap.h"
 #include "ui/UIManager.h"
 #include "ui/TileHitTester.h"
-#include "ui/world/WorldDisplay.h"
+#include "ui/UIPanel.h"
 #include "graphics/Graphics.h"
 #include <string>
+#include <memory>
 
 namespace ac
 {
 
 WorldView::WorldView(
     GameState& rGameState,
-    WorldDisplay& rWorldDisplay,
+    Graphics& rGraphics,
+    const WorldMap& rWorldMap,
     UIManager& rUIManager,
     std::function<void()> onProcessTurn,
     std::function<std::unique_ptr<IGameView>(BaseManager*)> onOpenBase
 )
 : m_rGameState(rGameState)
-, m_rWorldDisplay(rWorldDisplay)
+, m_pWorldDisplay(std::make_unique<WorldDisplay>(rGraphics))
 , m_rUIManager(rUIManager)
 , m_onProcessTurn(std::move(onProcessTurn))
 , m_onOpenBase(std::move(onOpenBase))
 {
+    m_pWorldDisplay->SetWorldMap(&rWorldMap);
+
     m_pWorldMap = std::make_unique<WorldMapElement>();
     m_pWorldMap->SetPosition(0.f, 0.f);
     m_pWorldMap->SetSize(kWindowWidth, kWindowHeight - kInfoPanelHeight);
-    m_pWorldMap->SetWorldDisplay(&rWorldDisplay);
+    m_pWorldMap->SetWorldDisplay(m_pWorldDisplay.get());
 
     m_pInfoPanel = std::make_unique<InfoPanelElement>();
-    m_pInfoPanel->SetPosition(0.f, kWindowHeight - kInfoPanelHeight);
-    m_pInfoPanel->SetSize(kWindowWidth, kInfoPanelHeight);
 }
 
 void WorldView::Render(Graphics& rGraphics)
 {
     m_pWorldMap->Draw(rGraphics);
+    m_pInfoPanel->UpdateLayout(rGraphics);
     m_pInfoPanel->Draw(rGraphics);
     if (!m_lastClickedTileText.empty())
     {
@@ -46,7 +51,7 @@ void WorldView::Render(Graphics& rGraphics)
 
 void WorldView::Update(float deltaTime)
 {
-    std::vector<UIPanel::InfoLine> infoLines;
+    std::vector<InfoPanelElement::InfoLine> infoLines;
     infoLines.push_back({"Mission Year: " + std::to_string(m_rGameState.GetMissionYear()), Color::White()});
     const auto& rFactions = m_rGameState.GetFactions();
     if (!rFactions.empty())
@@ -56,6 +61,29 @@ void WorldView::Update(float deltaTime)
         infoLines.push_back({"Research: " + std::to_string(pPlayerFaction->GetResearchPoints()), Color{100, 200, 255, 255}});
     }
     m_pInfoPanel->SetInfoLines(infoLines);
+
+    // Query current base info from GameState and update WorldDisplay
+    std::vector<BaseInfo_t> baseInfo;
+    for (const auto& pFaction : m_rGameState.GetFactions())
+    {
+        for (const auto& pBase : pFaction->GetBases())
+        {
+            if (pBase)
+            {
+                // TODO: Track previousFactionId when base capture is implemented
+                baseInfo.push_back({
+                    pBase->GetX(),
+                    pBase->GetY(),
+                    pBase->GetName(),
+                    pBase->GetFactionId(),
+                    std::nullopt,  // previousFactionId - set when base is captured
+                    pBase->GetBaseSize()
+                });
+            }
+        }
+    }
+    m_pWorldDisplay->SetBaseInfo(baseInfo);
+
     m_pWorldMap->Update(deltaTime);
     m_pInfoPanel->Update(deltaTime);
 }
@@ -69,6 +97,11 @@ void WorldView::HandleKey(const KeyEvent_t& rEvent)
     else if (rEvent.key == Key_t::Enter)
     {
         m_onProcessTurn();
+    }
+    else if (rEvent.key == Key_t::F2)
+    {
+        auto pResearchView = std::make_unique<ResearchView>(m_rUIManager);
+        m_rUIManager.PushView(std::move(pResearchView));
     }
 }
 
@@ -113,12 +146,11 @@ BaseManager* WorldView::FindBaseAtTile_(int tileX, int tileY) const
 {
     for (const auto& pFaction : m_rGameState.GetFactions())
     {
-        for (size_t i = 0; i < pFaction->GetBaseCount(); ++i)
+        for (const auto& pBase : pFaction->GetBases())
         {
-            BaseManager* pBase = pFaction->GetBase(i);
             if (pBase && pBase->GetX() == tileX && pBase->GetY() == tileY)
             {
-                return pBase;
+                return pBase.get();
             }
         }
     }

@@ -1,6 +1,7 @@
 #include "ui/world/WorldDisplay.h"
 #include <algorithm>
 #include <sstream>
+#include <string>
 
 namespace ac
 {
@@ -15,9 +16,9 @@ void WorldDisplay::SetWorldMap(const WorldMap* pWorldMap)
     m_pWorldMap = pWorldMap;
 }
 
-void WorldDisplay::SetBasePositions(const std::vector<std::pair<int, int>>& basePositions)
+void WorldDisplay::SetBaseInfo(const std::vector<BaseInfo_t>& baseInfo)
 {
-    m_basePositions = basePositions;
+    m_baseInfo = baseInfo;
 }
 
 void WorldDisplay::Render(float x, float y, float tileSize)
@@ -44,14 +45,41 @@ void WorldDisplay::Render(float x, float y, float tileSize)
         }
     }
 
-    // Draw BASE labels on tiles that contain a base
-    for (const auto& pos : m_basePositions)
+    RenderBases_(x, y, tileSize);
+}
+
+void WorldDisplay::RenderBases_(float originX, float originY, float tileSize)
+{
+    // Calculate font size to fit within tile (roughly 30% of tile height)
+    const unsigned int fontSize = static_cast<unsigned int>(tileSize * 0.25f);
+    // if (fontSize < 8) return;  // Too small to render legibly
+
+    const float textOffsetX = tileSize * 0.1f;
+
+    for (const auto& base : m_baseInfo)
     {
-        float baseX = x + (pos.first * tileSize);
-        float baseY = y + (pos.second * tileSize);
-        float textOffsetX = tileSize * 0.1f;
-        float textOffsetY = tileSize * 0.05f;
-        m_rGraphics.DrawText("BASE", baseX + textOffsetX, baseY + textOffsetY, 14, Color::Yellow());
+        float baseX = originX + (base.x * tileSize);
+        float baseY = originY + (base.y * tileSize);
+
+        // Abbreviate name to fit within tile width (approx 3 chars per line at this font size)
+        const size_t maxChars = static_cast<size_t>((tileSize * 0.8f) / (fontSize * 0.5f));
+        std::string displayName = base.name;
+        if (displayName.length() > maxChars && maxChars > 3)
+        {
+            displayName = displayName.substr(0, maxChars - 1) + ".";
+        }
+        else if (displayName.length() > maxChars)
+        {
+            displayName = displayName.substr(0, maxChars);
+        }
+
+        // Render name centered vertically in upper portion of tile
+        float textOffsetY = tileSize * 0.1f;
+
+        // TODO: Use faction color for base marker based on base.factionId
+        // TODO: Show capture animation if base.previousFactionId.has_value()
+        // TODO: Show population size (base.populationSize) below name
+        m_rGraphics.DrawText(displayName, baseX + textOffsetX, baseY + textOffsetY, fontSize, Color::Yellow());
     }
 }
 
