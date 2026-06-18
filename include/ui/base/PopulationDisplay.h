@@ -1,32 +1,49 @@
 #pragma once
 
 #include "ui/UIGroup.h"
-#include "ui/base/PopButton.h"
+#include "ui/UIElement.h"
+#include <functional>
 
 namespace ac
 {
 
 class Graphics;
 class PopContainer;
+class Pop;
+
+using PopClickCallback_t = std::function<void(const Pop*)>;
 
 // Displays current population as clickable buttons
-class PopulationDisplay : public UIGroup
+class PopulationDisplay : public UIElement
 {
 public:
-    PopulationDisplay(const Graphics& rGraphics, const PopContainer* pPopContainer, ResolvedLayout_t layout, PopButton::OnClickCallback_t onPopClick);
+    PopulationDisplay(const PopContainer* pPopContainer, WindowLayout_t layout, PopClickCallback_t onPopClick);
     ~PopulationDisplay() override = default;
 
     void Update() override;
-    void Render() override;
-    void HandleKey(const KeyEvent_t& rEvent) override;
+    void Render(Graphics& rGraphics) override;
+    void HandleMouse(const MouseEvent_t& rEvent) override;
 
 private:
-    const PopContainer* m_pPopulation = nullptr;
-    PopButton::OnClickCallback_t m_onPopClick;
+    struct PopBox_t
+    {
+        WindowLayout_t bounds;
+        const Pop* pPop;
+    };
 
-    static constexpr float kHeaderFontSizeRatio = 0.04f;
-    static constexpr float kEntryFontSizeRatio  = 0.03f;
-    static constexpr float kLineHeightRatio     = 0.05f;
+    const PopContainer* m_pPopulation = nullptr;
+    PopClickCallback_t m_onPopClick;
+    std::vector<PopBox_t> m_popBoxes;
+
+    static constexpr float k_HeaderFontSizeRatio    = 0.04f;
+    static constexpr float k_EntryFontSizeRatio     = 0.03f;
+    static constexpr float k_LineHeightRatio        = 0.05f;
+    static constexpr float k_PopBoxSizeRatio        = 0.08f;
+    static constexpr float k_PopBoxSpacingRatio     = 0.02f;
+    static constexpr float k_PopBoxFontSizeRatio    = 0.6f;
+    static constexpr float k_PopRowYOffsetRatio     = 0.02f;
+    static constexpr float k_PopBoxTextXOffsetRatio = 0.35f;
+    static constexpr float k_PopBoxTextYOffsetRatio = 0.2f;
 };
 
 } // namespace ac

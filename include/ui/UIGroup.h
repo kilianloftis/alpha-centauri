@@ -12,14 +12,17 @@ class Graphics;
 class UIGroup : public UIElement
 {
 public:
-virtual ~UIGroup() = default;
+    explicit UIGroup(WindowLayout_t layout)
+        : UIElement(layout)
+    {}
+    virtual ~UIGroup() = default;
 
-void Render() override
-{
-    for (const auto& element : m_elements) {
-        element->Render();
+    void Render(Graphics& rGraphics) override
+    {
+        for (const auto& element : m_elements) {
+            element->Render(rGraphics);
+        }
     }
-}
 void Update() override
 {
     for (const auto& element : m_elements) {
@@ -33,7 +36,7 @@ virtual void HandleKey(const KeyEvent_t& rEvent) {
     }
 }
 
-void HandleMouse(const MouseEvent_t& rEvent) {
+virtual void HandleMouse(const MouseEvent_t& rEvent) {
     for (const auto& element : m_elements) {
         if (element->Contains(rEvent.x, rEvent.y)) {
             element->HandleMouseClick(rEvent);

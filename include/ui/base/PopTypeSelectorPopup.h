@@ -1,6 +1,7 @@
 #pragma once
 
-#include "ui/UIPopup.h"
+#include "ui/UIElement.h"
+#include "input/Input.h"
 #include <functional>
 #include <vector>
 
@@ -14,19 +15,18 @@ struct PopTypeConfig;
 // Popup that lists the pop types currently available for a faction.
 // "Available" means: bPlayerAssignable is true, and requiredTech is either
 // empty or has been discovered by the faction.
-class PopTypeSelectorPopup : public UIPopup
+class PopTypeSelectorPopup : public UIElement
 {
 public:
     PopTypeSelectorPopup(
         const Faction& rFaction,
-        Graphics& rGraphics,
-        PanelLayout_t layout,
+        WindowLayout_t layout,
         std::function<void(const PopTypeConfig&)> onPopTypeSelected
     );
 
     ~PopTypeSelectorPopup() override = default;
 
-    void Render() override;
+    void Render(Graphics& rGraphics) override;
     void Update() override {}
 
     void HandleMouseClick(const MouseEvent_t& rEvent) override;

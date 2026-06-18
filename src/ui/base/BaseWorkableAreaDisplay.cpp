@@ -1,17 +1,18 @@
 #include "ui/base/BaseWorkableAreaDisplay.h"
+#include "game/faction/base/BaseManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
+#include "ui/TileHitTester.h"
 #include <sstream>
 
 namespace ac
 {
 
-BaseWorkableAreaDisplay::BaseWorkableAreaDisplay(Graphics& rGraphics, const BaseManager* pBase, ResolvedLayout_t layout)
-    : m_layout(layout)
-    , m_rGraphics(rGraphics)
+BaseWorkableAreaDisplay::BaseWorkableAreaDisplay(const BaseManager* pBase, WindowLayout_t layout)
+    : UIElement(layout)
     , m_pBase(pBase)
 {}
 
-void BaseWorkableAreaDisplay::Render()
+void BaseWorkableAreaDisplay::Render(Graphics& rGraphics)
 {
     if (!m_pBase)
     {
@@ -56,20 +57,20 @@ void BaseWorkableAreaDisplay::Render()
         // Check if tile is being worked
         bool bIsWorked = m_pBase->GetWorkerAssignments().IsTileAssigned(tileX, tileY);
 
-        RenderTile_(*pTile, screenX, screenY, tileSize, bIsWorked);
+        RenderTile_(rGraphics, *pTile, screenX, screenY, tileSize, bIsWorked);
     }
     
     // Draw the base itself at center
     float centerX = startX + 2 * tileSize;
     float centerY = startY + 2 * tileSize;
-    m_rGraphics.DrawRect(centerX, centerY, tileSize, tileSize, Color{80, 80, 80, 255}, -1.0f);
-    m_rGraphics.DrawText("BASE", centerX, centerY, 14, Color::Yellow());
+    rGraphics.DrawRect(centerX, centerY, tileSize, tileSize, Color{80, 80, 80, 255}, -1.0f);
+    rGraphics.DrawText("BASE", centerX, centerY, 14, Color::Yellow());
 }
 
-void BaseWorkableAreaDisplay::RenderTile_(const Tile& rTile, float x, float y, float size, bool bIsWorked)
+void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, const Tile& rTile, float x, float y, float size, bool bIsWorked)
 {
     // Draw tile border (negative thickness draws inward for shared borders)
-    m_rGraphics.DrawRect(x, y, size, size, Color{80, 80, 80, 255}, -1.0f);
+    rGraphics.DrawRect(x, y, size, size, Color{80, 80, 80, 255}, -1.0f);
 
     int nutrients = rTile.GetNutrientProduction();
     int minerals = rTile.GetMineralProduction();
@@ -86,7 +87,7 @@ void BaseWorkableAreaDisplay::RenderTile_(const Tile& rTile, float x, float y, f
     // Use green for worked tiles, white for unworked
     Color textColor = bIsWorked ? Color::Green() : Color::White();
     
-    m_rGraphics.DrawText(oss.str(), x + textOffsetX, y + textOffsetY, fontSize, textColor);
+    rGraphics.DrawText(oss.str(), x + textOffsetX, y + textOffsetY, fontSize, textColor);
 }
 
 float BaseWorkableAreaDisplay::GetTileSize_() const

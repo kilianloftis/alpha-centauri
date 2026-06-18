@@ -9,13 +9,11 @@ namespace ac
 
 PopTypeSelectorPopup::PopTypeSelectorPopup(
     const Faction& rFaction,
-    Graphics& rGraphics,
-    ResolvedLayout_t layout,
+    WindowLayout_t layout,
     std::function<void(const PopTypeConfig&)> onPopTypeSelected
 )
-    : m_rFaction(rFaction)
-    , m_rGraphics(rGraphics)
-    , m_layout(layout)
+    : UIElement(layout)
+    , m_rFaction(rFaction)
     , m_onPopTypeSelected(std::move(onPopTypeSelected))
 {
 }
@@ -25,9 +23,9 @@ std::vector<const PopTypeConfig*> PopTypeSelectorPopup::GetAvailablePopTypes() c
     return m_rFaction.GetAvailablePopTypes();
 }
 
-void PopTypeSelectorPopup::Render()
+void PopTypeSelectorPopup::Render(Graphics& rGraphics)
 {
-    if (!m_bVisible)
+    if (m_bShouldClose)
     {
         return;
     }
@@ -37,30 +35,30 @@ void PopTypeSelectorPopup::Render()
     const unsigned int entryFontSize  = static_cast<unsigned int>(m_layout.height * kEntryFontSizeRatio);
     const float        lineHeight     = m_layout.height * kLineHeightRatio;
 
-    m_rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color{20, 20, 40, 230});
-    m_rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color::Yellow());
+    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color{20, 20, 40, 230});
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color::Yellow());
 
-    m_rGraphics.DrawText("Select Pop Type", m_layout.x + padding, m_layout.y + padding, headerFontSize, Color::Yellow());
+    rGraphics.DrawText("Select Pop Type", m_layout.x + padding, m_layout.y + padding, headerFontSize, Color::Yellow());
 
     const auto pAvailableTypes = GetAvailablePopTypes();
 
     if (pAvailableTypes.empty())
     {
-        m_rGraphics.DrawText("No pop types available", m_layout.x + padding, m_layout.y + lineHeight * 2.f, entryFontSize, Color::White());
+        rGraphics.DrawText("No pop types available", m_layout.x + padding, m_layout.y + lineHeight * 2.f, entryFontSize, Color::White());
         return;
     }
 
     float offsetY = lineHeight * 2.f;
     for (const PopTypeConfig* pConfig : pAvailableTypes)
     {
-        m_rGraphics.DrawText(pConfig->name, m_layout.x + padding, m_layout.y + offsetY, entryFontSize, Color::White());
+        rGraphics.DrawText(pConfig->name, m_layout.x + padding, m_layout.y + offsetY, entryFontSize, Color::White());
         offsetY += lineHeight;
     }
 }
 
 void PopTypeSelectorPopup::HandleMouseClick(const MouseEvent_t& rEvent)
 {
-    if (!m_bVisible || rEvent.button != MouseButton_t::Left)
+    if (m_bShouldClose || rEvent.button != MouseButton_t::Left)
     {
         return;
     }

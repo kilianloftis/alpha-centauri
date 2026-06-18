@@ -1,30 +1,27 @@
 #pragma once
 
-#include "ui/UIPanel.h"
-#include "ui/research/ResearchView.h"
+#include "ui/UIElement.h"
+#include "game/faction/ResearchManager.h"
 #include <string>
 
 namespace ac
 {
 
-class CurrentResearchPanel : public UIPanel
+inline constexpr RatioLayout_t k_CurrentResearchLabelLayout {0.0f, 0.0f,  1.0f, 0.35f};
+inline constexpr RatioLayout_t k_CurrentResearchTargetLayout{0.0f, 0.35f, 1.0f, 0.4f};
+inline constexpr RatioLayout_t k_CurrentResearchProgressLayout{0.0f, 0.75f, 1.0f, 0.25f};
+
+class CurrentResearchPanel : public UIElement
 {
 public:
-    CurrentResearchPanel()
-        : UIPanel(kCenterPanelLayout)
-    {
-        SetPosition(20.f, 50.f);
-        SetSize(560.f, 60.f);
-    }
+    CurrentResearchPanel(ResearchManager* pResearch, WindowLayout_t layout);
 
-    void SetResearchView(const ResearchView* pResearchView) { m_pResearchView = pResearchView; }
-
-    void Draw(Graphics& rGraphics) override;
-    void Update(float deltaTime) override;
-    void HandleMouse(const MouseEvent_t& rEvent) override;
+    void Render(Graphics& rGraphics) override;
+    void Update() override;
+    virtual void HandleMouseClick(const MouseEvent_t& rEvent) override {}
 
 private:
-    const ResearchView* m_pResearchView = nullptr;
+    ResearchManager* m_pResearch = nullptr;
 };
 
 } // namespace ac

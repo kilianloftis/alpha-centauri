@@ -15,12 +15,14 @@ struct Rectangle_t
     float height;
 };
 
-using ResolvedLayout_t = Rectangle_t;
 using RatioLayout_t = Rectangle_t;
 using WindowLayout_t = Rectangle_t;
 
-inline ResolvedLayout_t Resolve(const WindowLayout_t& windowLayout, const RatioLayout_t& ratioLayout)
+inline WindowLayout_t Resolve(const WindowLayout_t& windowLayout, const RatioLayout_t& ratioLayout)
 {
+    if (ratioLayout.width > 1.0f || ratioLayout.height > 1.0f || ratioLayout.x > 1.0f || ratioLayout.y > 1.0f) {
+        throw std::runtime_error("Invalid ratio layout");
+    }
     return {
             ratioLayout.x      * windowLayout.width,
             ratioLayout.y      * windowLayout.height,
@@ -38,13 +40,12 @@ inline constexpr RatioLayout_t k_PopupLayout      {0.5f,  0.75f,  0.25f, 0.125f}
 class UIElement
 {
 public:
-    UIElement(ResolvedLayout_t layout, const Graphics& rGraphics)
+    explicit UIElement(WindowLayout_t layout)
         : m_layout(layout)
-        , m_rGraphics(rGraphics)
     {}
     virtual ~UIElement() = default;
 
-    virtual void Render() = 0;
+    virtual void Render(Graphics& rGraphics) = 0;
     virtual void Update() = 0;
 
     bool Contains(float x, float y) const
@@ -55,11 +56,13 @@ public:
     virtual void HandleMouseClick(const MouseEvent_t& rEvent) {}
     virtual void HandleKey(const KeyEvent_t& rEvent) {}
 
+    virtual void OnPushed(Graphics& /*rGraphics*/) {}
+    virtual void OnPopped() {}
+
     bool ShouldClose() const { return m_bShouldClose; }
 
 protected:
-    const ResolvedLayout_t m_layout;
-    const Graphics& m_rGraphics;
+    const WindowLayout_t m_layout;
     bool m_bShouldClose = false;
 };
 

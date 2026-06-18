@@ -3,7 +3,7 @@
     "id": "Worker",
     "name": "Worker",
     "can_work_tile": true,
-    "player_assignable": false,
+    "player_assignable": true,
     "tile_multipliers": {
       "nutrients": 1.0,
       "energy": 1.0,

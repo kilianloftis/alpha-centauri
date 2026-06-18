@@ -20,9 +20,7 @@ class BaseView : public UIGroup
 public:
     BaseView(
         BaseManager& rBase,
-        const WorldMap& rWorldMap,
-        Graphics& rGraphics,
-        std::function<void()> onClose
+        const WorldMap& rWorldMap
     );
     ~BaseView();
 

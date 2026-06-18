@@ -64,14 +64,14 @@ void UIManager::Render()
             m_viewStack.pop_back();
             continue;
         }
-        pView->Render();
+        pView->Render(*m_pGraphics);
     }
     m_pGraphics->Display();
 }
 
 void UIManager::PushView(std::unique_ptr<UIGroup> pView)
 {
-    pView->OnPushed();
+    pView->OnPushed(*m_pGraphics);
     m_viewStack.push_back(std::move(pView));
 }
 

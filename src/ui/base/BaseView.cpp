@@ -1,6 +1,7 @@
 #include "ui/base/BaseView.h"
 #include "ui/base/BaseWorkableAreaDisplay.h"
 #include "ui/base/PopulationDisplay.h"
+#include "game/population/pop-types/Pop.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopContainer.h"
@@ -16,16 +17,15 @@ namespace ac
 
 BaseView::BaseView(
     BaseManager& rBase,
-    Graphics& rGraphics
+    const WorldMap& /*rWorldMap*/,
 )
+    : UIGroup(WindowLayout_t{0, 0, 0, 0})  // Layout will be resolved from ratios in Update
 {
-    WindowLayout_t window = {static_cast<int>(rGraphics.getSize().x), static_cast<int>(rGraphics.getSize().y)};
-    m_elements.push_back(std::make_unique<BaseWorkableAreaDisplay>(rGraphics, rBase, Resolve(k_WorkableAreaLayout, window)));
-    m_elements.push_back(std::make_unique<PopulationDisplay>(rGraphics, &rBase.GetPopContainer(), Resolve(k_TopPanelLayout, window)));
+    m_elements.push_back(std::make_unique<BaseWorkableAreaDisplay>(&rBase, WindowLayout_t{0, 0, 0, 0}));
+    m_elements.push_back(std::make_unique<PopulationDisplay>(&rBase.GetPopContainer(), k_BottomPanelLayout, std::bind(&BaseView::HandlePopClick, this, std::placeholders::_1)));
 }
 
 BaseView::~BaseView() = default;
-
 
 void BaseView::HandleKey(const KeyEvent_t& rEvent)
 {
@@ -34,4 +34,10 @@ void BaseView::HandleKey(const KeyEvent_t& rEvent)
         m_bShouldClose = true;
     }
 }
+
+void BaseView::HandlePopClick(const Pop& rPop)
+{
+
+}
+
 } // namespace ac
