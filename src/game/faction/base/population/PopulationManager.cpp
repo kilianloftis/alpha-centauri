@@ -63,9 +63,9 @@ void PopulationManager::RemovePop()
     NotifyPopLost_();
 }
 
-void PopulationManager::ConvertTo(size_t index, const std::string& typeId)
+void PopulationManager::ConvertTo(Pop& rPop, const std::string& typeId)
 {
-    m_container.ConvertTo(index, typeId);
+    m_container.ConvertTo(rPop, typeId);
 }
 
 int PopulationManager::GetMaxSize() const

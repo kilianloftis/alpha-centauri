@@ -27,12 +27,9 @@ public:
     ~PopTypeSelectorPopup() override = default;
 
     void Render(Graphics& rGraphics) override;
-    void Update() override {}
 
+    void HandleKey(const KeyEvent_t& rEvent) override;
     void HandleMouseClick(const MouseEvent_t& rEvent) override;
-
-    // Returns pop type configs visible to the player given current research.
-    std::vector<const PopTypeConfig*> GetAvailablePopTypes() const;
 
 private:
     static constexpr float kHeaderFontSizeRatio = 0.04f;
@@ -42,6 +39,8 @@ private:
 
     const Faction& m_rFaction;
     std::function<void(const PopTypeConfig&)> m_onPopTypeSelected;
+    
+    std::vector<const PopTypeConfig*> GetAvailablePopTypes_() const;
 };
 
 } // namespace ac

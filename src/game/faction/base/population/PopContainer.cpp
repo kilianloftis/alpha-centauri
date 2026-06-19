@@ -32,15 +32,6 @@ const std::vector<std::unique_ptr<Pop>>& PopContainer::GetPops() const
     return m_pops;
 }
 
-Pop* PopContainer::GetPop(size_t index)
-{
-    if (index < m_pops.size())
-    {
-        return m_pops[index].get();
-    }
-    return nullptr;
-}
-
 int PopContainer::GetWorkerCount() const
 {
     return CountPops_([](const Pop* p) { return p->IsWorker() && !p->IsSpecialist(); });
@@ -80,31 +71,27 @@ void PopContainer::RemovePop()
     }
 }
 
-void PopContainer::ConvertTo(size_t index, const std::string& typeId)
+void PopContainer::ConvertTo(Pop& rPop, const std::string& typeId)
 {
-    if (index >= m_pops.size())
-    {
-        return;
-    }
     if (!m_pRegistry)
     {
         throw std::runtime_error("PopContainer has no registry");
     }
-    int popId  = m_pops[index]->GetId();
-    int tileId = m_pops[index]->GetTileId();
-    auto pNewPop = m_pRegistry->CreatePop(typeId);
-    pNewPop->SetId(popId);
-    pNewPop->SetTileId(tileId);
-    m_pops[index] = std::move(pNewPop);
+    const PopTypeConfig* pConfig = m_pRegistry->Find(typeId);
+    if (!pConfig)
+    {
+        throw std::runtime_error("Unknown pop type: " + typeId);
+    }
+    rPop.Reinitialize(*pConfig);
 }
 
 void PopContainer::PromoteWorkerToDrone()
 {
-    for (size_t i = 0; i < m_pops.size(); i++)
+    for (const auto& pPop : m_pops)
     {
-        if (m_pops[i]->IsWorker() && !m_pops[i]->IsSpecialist())
+        if (pPop->IsWorker() && !pPop->IsSpecialist())
         {
-            ConvertTo(i, "Drone");
+            ConvertTo(*pPop, "Drone");
             return;
         }
     }
@@ -114,44 +101,51 @@ void PopContainer::ApplyCompositionTargets(const PopCompositionResult& targets, 
 {
     // Convert excess drones back to workers first
     int currentDrones = GetDroneCount();
-    for (size_t i = 0; i < m_pops.size() && currentDrones > targets.targetDrones; i++)
+    for (auto& pPop : m_pops)
     {
-        if (m_pops[i]->IsDrone())
+        if (currentDrones <= targets.targetDrones)
         {
-            ConvertTo(i, defaultTypeId);
+            break;
+        }
+        if (pPop->IsDrone())
+        {
+            ConvertTo(*pPop, defaultTypeId);
             currentDrones--;
         }
     }
 
     // Convert excess talents back to workers
     int currentTalents = GetTalentCount();
-    for (size_t i = 0; i < m_pops.size() && currentTalents > targets.targetTalents; i++)
+    for (auto& pPop : m_pops)
     {
-        if (m_pops[i]->IsWorker() && m_pops[i]->GetGoldenAgeContribution() > 0)
+        if (currentTalents <= targets.targetTalents) break;
+        if (pPop->IsWorker() && pPop->GetGoldenAgeContribution() > 0)
         {
-            ConvertTo(i, defaultTypeId);
+            ConvertTo(*pPop, defaultTypeId);
             currentTalents--;
         }
     }
 
     // Convert workers to drones to reach target
     currentDrones = GetDroneCount();
-    for (size_t i = 0; i < m_pops.size() && currentDrones < targets.targetDrones; i++)
+    for (auto& pPop : m_pops)
     {
-        if (m_pops[i]->IsWorker() && !m_pops[i]->IsSpecialist() && m_pops[i]->GetGoldenAgeContribution() == 0)
+        if (currentDrones >= targets.targetDrones) break;
+        if (pPop->IsWorker() && !pPop->IsSpecialist() && pPop->GetGoldenAgeContribution() == 0)
         {
-            ConvertTo(i, "Drone");
+            ConvertTo(*pPop, "Drone");
             currentDrones++;
         }
     }
 
     // Convert workers to talents to reach target
     currentTalents = GetTalentCount();
-    for (size_t i = 0; i < m_pops.size() && currentTalents < targets.targetTalents; i++)
+    for (auto& pPop : m_pops)
     {
-        if (m_pops[i]->IsWorker() && !m_pops[i]->IsSpecialist() && m_pops[i]->GetGoldenAgeContribution() == 0)
+        if (currentTalents >= targets.targetTalents) break;
+        if (pPop->IsWorker() && !pPop->IsSpecialist() && pPop->GetGoldenAgeContribution() == 0)
         {
-            ConvertTo(i, "Talent");
+            ConvertTo(*pPop, "Talent");
             currentTalents++;
         }
     }

@@ -75,6 +75,24 @@ void BaseManager::RemovePop()
     }
 }
 
+void BaseManager::ConvertPop(Pop& rPop, const std::string& typeId)
+{
+    if (!m_pPopulation)
+    {
+        return;
+    }
+    const int popId = rPop.GetId();
+    if (rPop.IsWorker())
+    {
+        m_pWorkerAssignments->UnassignWorker(popId);
+    }
+    m_pPopulation->ConvertTo(rPop, typeId);
+    if (rPop.IsWorker())
+    {
+        m_pWorkerAssignments->AutoAssignWorkers(m_pPopulation->GetContainer());
+    }
+}
+
 WorkerAssignmentManager& BaseManager::GetWorkerAssignments()
 {
     return *m_pWorkerAssignments;

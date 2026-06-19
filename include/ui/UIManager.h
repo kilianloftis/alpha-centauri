@@ -14,7 +14,6 @@ class UIManager
 {
 public:
     bool Initialize(Graphics& rGraphics, Input& rInput);
-    void Update();
     void ProcessInput();
     void Render();
 

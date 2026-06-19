@@ -26,6 +26,8 @@
 #include "ui/TileHitTester.h"
 #include "game/map/WorldGenerator.h"
 #include "ui/UIManager.h"
+#include "ui/world/WorldView.h"
+#include "ui/base/BaseView.h"
 #include <functional>
 #include <iostream>
 #include <stdexcept>
@@ -63,7 +65,6 @@ void Engine::GameLoop_()
     while (!m_uiManager->ShouldExit())
     {
         m_uiManager->ProcessInput();
-        m_uiManager->Update();
         m_uiManager->Render();
     }
 }
@@ -180,7 +181,24 @@ void Engine::Initialize_()
     m_turnProcessor = std::make_unique<TurnProcessor>(std::move(registry), std::move(repeatFlags), std::move(stageOrder));
 
     m_uiManager->Initialize(*m_graphics, *m_input);
-    m_uiManager->PushView();
+    const WindowLayout_t fullscreen{
+        0.f, 0.f,
+        static_cast<float>(m_graphics->GetWindowWidth()),
+        static_cast<float>(m_graphics->GetWindowHeight())
+    };
+    auto pWorldView = std::make_unique<WorldView>(
+        *m_gameState,
+        *m_gameState->GetWorldMap(),
+        *m_uiManager,
+        fullscreen,
+        [this]() { ProcessTurn_(); },
+        [this, fullscreen](BaseManager* pBase) -> std::unique_ptr<UIGroup> {
+            const Faction* pFaction = m_gameState->GetFactions().empty() ? nullptr : m_gameState->GetFactions()[0].get();
+            if (!pBase || !pFaction) { return nullptr; }
+            return std::make_unique<BaseView>(*pBase, *m_gameState->GetWorldMap(), *pFaction, fullscreen);
+        }
+    );
+    m_uiManager->PushView(std::move(pWorldView));
     CheckInitialized_();
 }
 

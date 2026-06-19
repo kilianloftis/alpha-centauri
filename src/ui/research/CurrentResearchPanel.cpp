@@ -14,9 +14,9 @@ void CurrentResearchPanel::Render(Graphics& rGraphics)
     rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color{30, 30, 50});
     rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color{80, 80, 120});
 
-    const WindowLayout_t labelArea    = Resolve(m_layout, k_CurrentResearchLabelLayout);
-    const WindowLayout_t targetArea   = Resolve(m_layout, k_CurrentResearchTargetLayout);
-    const WindowLayout_t progressArea = Resolve(m_layout, k_CurrentResearchProgressLayout);
+    const WindowLayout_t labelArea    = ResolveLayout(m_layout, k_CurrentResearchLabelLayout);
+    const WindowLayout_t targetArea   = ResolveLayout(m_layout, k_CurrentResearchTargetLayout);
+    const WindowLayout_t progressArea = ResolveLayout(m_layout, k_CurrentResearchProgressLayout);
 
     rGraphics.DrawText("Current Research Target:", labelArea.x, labelArea.y, 14, Color::White());
 
@@ -33,10 +33,6 @@ void CurrentResearchPanel::Render(Graphics& rGraphics)
     {
         rGraphics.DrawText("None", targetArea.x, targetArea.y, 16, Color::Yellow());
     }
-}
-
-void CurrentResearchPanel::Update()
-{
 }
 
 } // namespace ac

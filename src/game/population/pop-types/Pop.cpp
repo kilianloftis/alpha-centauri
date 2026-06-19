@@ -52,6 +52,15 @@ int Pop::GetGoldenAgeContribution() const
     return m_pConfig->goldenAgeContribution;
 }
 
+void Pop::Convert(const PopTypeConfig& rConfig)
+{
+    m_pConfig = &rConfig;
+    if (!m_pConfig->bCanWorkTile)
+    {
+        m_tileId = -1;
+    }
+}
+
 int Pop::GetId() const
 {
     return m_id;

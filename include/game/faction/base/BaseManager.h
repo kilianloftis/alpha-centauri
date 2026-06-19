@@ -11,6 +11,7 @@ namespace ac
 {
 
 // Forward declarations
+class Pop;
 class PopulationManager;
 class PopContainer;
 class PopTypeRegistry;
@@ -37,6 +38,7 @@ public:
     int GetPopWorkerCount() const;
     void AddPop();
     void RemovePop();
+    void ConvertPop(Pop& rPop, const std::string& typeId);
 
     // Signals forwarded from PopulationManager
     Signal<int> on_pop_gained;

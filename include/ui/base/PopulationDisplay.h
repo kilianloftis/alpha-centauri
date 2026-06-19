@@ -11,7 +11,7 @@ class Graphics;
 class PopContainer;
 class Pop;
 
-using PopClickCallback_t = std::function<void(const Pop*)>;
+using PopClickCallback_t = std::function<void(Pop&)>;
 
 // Displays current population as clickable buttons
 class PopulationDisplay : public UIElement
@@ -20,7 +20,6 @@ public:
     PopulationDisplay(const PopContainer* pPopContainer, WindowLayout_t layout, PopClickCallback_t onPopClick);
     ~PopulationDisplay() override = default;
 
-    void Update() override;
     void Render(Graphics& rGraphics) override;
     void HandleMouse(const MouseEvent_t& rEvent) override;
 
@@ -28,7 +27,7 @@ private:
     struct PopBox_t
     {
         WindowLayout_t bounds;
-        const Pop* pPop;
+        Pop* pPop;
     };
 
     const PopContainer* m_pPopulation = nullptr;

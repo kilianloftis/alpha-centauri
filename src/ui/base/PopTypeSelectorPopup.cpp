@@ -18,7 +18,7 @@ PopTypeSelectorPopup::PopTypeSelectorPopup(
 {
 }
 
-std::vector<const PopTypeConfig*> PopTypeSelectorPopup::GetAvailablePopTypes() const
+std::vector<const PopTypeConfig*> PopTypeSelectorPopup::GetAvailablePopTypes_() const
 {
     return m_rFaction.GetAvailablePopTypes();
 }
@@ -40,7 +40,7 @@ void PopTypeSelectorPopup::Render(Graphics& rGraphics)
 
     rGraphics.DrawText("Select Pop Type", m_layout.x + padding, m_layout.y + padding, headerFontSize, Color::Yellow());
 
-    const auto pAvailableTypes = GetAvailablePopTypes();
+    const auto pAvailableTypes = GetAvailablePopTypes_();
 
     if (pAvailableTypes.empty())
     {
@@ -53,6 +53,14 @@ void PopTypeSelectorPopup::Render(Graphics& rGraphics)
     {
         rGraphics.DrawText(pConfig->name, m_layout.x + padding, m_layout.y + offsetY, entryFontSize, Color::White());
         offsetY += lineHeight;
+    }
+}
+
+void PopTypeSelectorPopup::HandleKey(const KeyEvent_t& rEvent)
+{
+    if (rEvent.key == Key_t::Escape)
+    {
+        m_bShouldClose = true;
     }
 }
 
@@ -73,7 +81,7 @@ void PopTypeSelectorPopup::HandleMouseClick(const MouseEvent_t& rEvent)
         return;
     }
 
-    const auto pAvailableTypes = GetAvailablePopTypes();
+    const auto pAvailableTypes = GetAvailablePopTypes_();
 
     float offsetY = lineHeight * 2.f;
     for (const PopTypeConfig* pConfig : pAvailableTypes)

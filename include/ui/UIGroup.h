@@ -23,12 +23,6 @@ public:
             element->Render(rGraphics);
         }
     }
-void Update() override
-{
-    for (const auto& element : m_elements) {
-        element->Update();
-    }
-}
 
 virtual void HandleKey(const KeyEvent_t& rEvent) {
     for (const auto& element : m_elements) {

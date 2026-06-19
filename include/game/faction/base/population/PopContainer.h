@@ -22,7 +22,6 @@ public:
     // Container access
     int GetSize() const;
     const std::vector<std::unique_ptr<Pop>>& GetPops() const;
-    Pop* GetPop(size_t index);
 
     // Population counts by type
     int GetWorkerCount() const;
@@ -35,7 +34,7 @@ public:
     void RemovePop();
 
     // Convert a pop to any type by config id
-    void ConvertTo(size_t index, const std::string& typeId);
+    void ConvertTo(Pop& rPop, const std::string& typeId);
 
     // Convert a worker to a drone (for faction base count mechanic)
     void PromoteWorkerToDrone();

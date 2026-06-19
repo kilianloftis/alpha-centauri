@@ -34,7 +34,6 @@ public:
 
     // Pop access - delegated to PopContainer
     const std::vector<std::unique_ptr<Pop>>& GetPops() const { return m_container.GetPops(); }
-    Pop* GetPop(size_t index) { return m_container.GetPop(index); }
 
     // Pop counts by type - delegated to PopContainer
     int GetWorkerCount() const { return m_container.GetWorkerCount(); }
@@ -47,14 +46,11 @@ public:
     void RemovePop();
 
     // Convert a pop to any type by config id (e.g. "Worker", "Drone", "Talent", "Librarian")
-    void ConvertTo(size_t index, const std::string& typeId);
+    void ConvertTo(Pop& rPop, const std::string& typeId);
 
     // Drone and talent calculations
     bool IsRioting() const;
     bool IsDestroyed() const;
-
-    // Add a drone (for faction base count mechanic) - delegated to PopContainer
-    void AddDrone() { m_container.PromoteWorkerToDrone(); }
 
     // Reconcile actual pop composition against calculator targets.
     // Converts workers to drones/talents (or back) to match targetDrones/targetTalents.

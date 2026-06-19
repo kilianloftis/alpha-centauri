@@ -18,7 +18,7 @@ struct Rectangle_t
 using RatioLayout_t = Rectangle_t;
 using WindowLayout_t = Rectangle_t;
 
-inline WindowLayout_t Resolve(const WindowLayout_t& windowLayout, const RatioLayout_t& ratioLayout)
+inline WindowLayout_t ResolveLayout(const WindowLayout_t& windowLayout, const RatioLayout_t& ratioLayout)
 {
     if (ratioLayout.width > 1.0f || ratioLayout.height > 1.0f || ratioLayout.x > 1.0f || ratioLayout.y > 1.0f) {
         throw std::runtime_error("Invalid ratio layout");
@@ -46,7 +46,6 @@ public:
     virtual ~UIElement() = default;
 
     virtual void Render(Graphics& rGraphics) = 0;
-    virtual void Update() = 0;
 
     bool Contains(float x, float y) const
     {

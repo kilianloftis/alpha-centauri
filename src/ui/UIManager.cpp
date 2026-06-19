@@ -16,15 +16,6 @@ bool UIManager::Initialize(Graphics& rGraphics, Input& rInput)
     return true;
 }
 
-void UIManager::Update()
-{
-    if (m_viewStack.empty())
-    {
-        return;
-    }
-    m_viewStack.back()->Update();
-}
-
 void UIManager::ProcessInput()
 {
     if (!m_viewStack.empty())

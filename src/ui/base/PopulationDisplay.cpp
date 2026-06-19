@@ -13,10 +13,6 @@ PopulationDisplay::PopulationDisplay(const PopContainer* pPopContainer, WindowLa
     , m_onPopClick(std::move(onPopClick))
 {}
 
-void PopulationDisplay::Update()
-{
-}
-
 void PopulationDisplay::Render(Graphics& rGraphics)
 {
     if (!m_pPopulation)
@@ -52,7 +48,7 @@ void PopulationDisplay::Render(Graphics& rGraphics)
         rGraphics.DrawFilledRect(boxX, boxY, boxSize, boxSize, Color::Blue());
         rGraphics.DrawRect(boxX, boxY, boxSize, boxSize, Color::White(), 2.0f);
 
-        m_popBoxes.push_back(PopBox_t{{boxX, boxY, boxSize, boxSize}, pops[i].get()});
+        m_popBoxes.push_back(PopBox_t{{boxX, boxY, boxSize, boxSize}, const_cast<Pop*>(pops[i].get())});
 
         const char* popType = pops[i]->GetPopType();
         char firstLetter = popType && popType[0] ? popType[0] : '?';
@@ -78,7 +74,7 @@ void PopulationDisplay::HandleMouse(const MouseEvent_t& rEvent)
         {
             if (m_onPopClick)
             {
-                m_onPopClick(it->pPop);
+                m_onPopClick(*it->pPop);
             }
             break;
         }

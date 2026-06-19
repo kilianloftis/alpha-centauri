@@ -42,6 +42,10 @@ public:
     int GetRiotContribution() const;
     int GetGoldenAgeContribution() const;
 
+    // Swap this pop's type config in-place, preserving id.
+    // Clears tileId if the new type is not a worker.
+    void Convert(const PopTypeConfig& rConfig);
+
     // Stable identity — assigned by PopContainer at creation, survives ConvertTo
     int GetId() const;
     void SetId(int id);
