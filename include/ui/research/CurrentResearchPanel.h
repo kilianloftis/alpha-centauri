@@ -17,7 +17,7 @@ public:
     CurrentResearchPanel(ResearchManager* pResearch, WindowLayout_t layout);
 
     void Render(Graphics& rGraphics) override;
-    virtual void HandleMouseClick(const MouseEvent_t& rEvent) override {}
+    void HandleMouseClick(const MouseEvent_t& rEvent) override {}
 
 private:
     ResearchManager* m_pResearch = nullptr;

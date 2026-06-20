@@ -3,6 +3,7 @@
 #include "ui/base/PopulationDisplay.h"
 #include "ui/base/PopTypeSelectorPopup.h"
 #include "game/population/pop-types/Pop.h"
+#include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopContainer.h"
@@ -27,7 +28,11 @@ BaseView::BaseView(
     , m_rBase(rBase)
     , m_rFaction(rFaction)
 {
-    m_elements.push_back(std::make_unique<BaseWorkableAreaDisplay>(&m_rBase, ResolveLayout(m_layout, k_WorkableAreaLayout)));
+    m_elements.push_back(std::make_unique<BaseWorkableAreaDisplay>(
+        &m_rBase,
+        ResolveLayout(m_layout, k_WorkableAreaLayout),
+        [this](int tileX, int tileY) { HandleTileClick_(tileX, tileY); }
+    ));
     m_elements.push_back(std::make_unique<PopulationDisplay>(
         &m_rBase.GetPopContainer(),
         ResolveLayout(m_layout, k_BottomPanelLayout),
@@ -36,6 +41,36 @@ BaseView::BaseView(
 }
 
 BaseView::~BaseView() = default;
+
+void BaseView::HandleTileClick_(int tileX, int tileY)
+{
+    auto& rAssignments = m_rBase.GetWorkerAssignments();
+    const auto& rPops = m_rBase.GetPopContainer();
+
+    if (rAssignments.IsTileAssigned(tileX, tileY))
+    {
+        for (const auto& rEntry : rAssignments.GetAssignments())
+        {
+            if (rEntry.second.first == tileX && rEntry.second.second == tileY)
+            {
+                rAssignments.UnassignWorker(rEntry.first);
+                return;
+            }
+        }
+    }
+    else
+    {
+        for (int i = static_cast<int>(rPops.GetPops().size()) - 1; i >= 0; --i)
+        {
+            const Pop* pPop = rPops.GetPops()[i].get();
+            if (pPop->IsWorker() && rAssignments.GetAssignedTile(pPop->GetId()).first == -1)
+            {
+                rAssignments.AssignWorker(pPop->GetId(), tileX, tileY, rPops);
+                return;
+            }
+        }
+    }
+}
 
 void BaseView::HandleKey(const KeyEvent_t& rEvent)
 {

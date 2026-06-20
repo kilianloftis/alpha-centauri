@@ -60,7 +60,7 @@ void PopulationDisplay::Render(Graphics& rGraphics)
     }
 }
 
-void PopulationDisplay::HandleMouse(const MouseEvent_t& rEvent)
+void PopulationDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
 {
     if (rEvent.button != MouseButton_t::Left)
     {

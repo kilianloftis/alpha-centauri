@@ -136,6 +136,11 @@ private:
                 continue;
             }
 
+            if (const auto* resized = event->getIf<sf::Event::Resized>())
+            {
+                m_window.setView(sf::View(sf::FloatRect({0.f, 0.f}, {static_cast<float>(resized->size.x), static_cast<float>(resized->size.y)})));
+            }
+
             if (auto KeyEvent_t = event->getIf<sf::Event::KeyPressed>())
             {
                 if (auto mapped = KeyFromSfKey(KeyEvent_t->code))

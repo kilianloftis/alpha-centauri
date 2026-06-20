@@ -29,7 +29,7 @@ void PopTypeSelectorPopup::Render(Graphics& rGraphics)
     {
         return;
     }
-    const float padding = kPaddingRatio * static_cast<float>(rGraphics.GetWindowWidth());
+    const float padding = kPaddingRatio * m_layout.width;
 
     const unsigned int headerFontSize = static_cast<unsigned int>(m_layout.height * kHeaderFontSizeRatio);
     const unsigned int entryFontSize  = static_cast<unsigned int>(m_layout.height * kEntryFontSizeRatio);

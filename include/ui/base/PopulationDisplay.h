@@ -21,7 +21,7 @@ public:
     ~PopulationDisplay() override = default;
 
     void Render(Graphics& rGraphics) override;
-    void HandleMouse(const MouseEvent_t& rEvent) override;
+    void HandleMouseClick(const MouseEvent_t& rEvent) override;
 
 private:
     struct PopBox_t

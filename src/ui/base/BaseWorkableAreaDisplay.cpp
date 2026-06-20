@@ -1,15 +1,17 @@
 #include "ui/base/BaseWorkableAreaDisplay.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
+#include "graphics/Graphics.h"
 #include "ui/TileHitTester.h"
 #include <sstream>
 
 namespace ac
 {
 
-BaseWorkableAreaDisplay::BaseWorkableAreaDisplay(const BaseManager* pBase, WindowLayout_t layout)
+BaseWorkableAreaDisplay::BaseWorkableAreaDisplay(const BaseManager* pBase, WindowLayout_t layout, TileClickCallback_t onTileClicked)
     : UIElement(layout)
     , m_pBase(pBase)
+    , m_onTileClicked(std::move(onTileClicked))
 {}
 
 void BaseWorkableAreaDisplay::Render(Graphics& rGraphics)
@@ -92,10 +94,10 @@ void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, const Tile& rTile
 
 float BaseWorkableAreaDisplay::GetTileSize_() const
 {
-    return static_cast<float>(m_layout.width) * kTileSizeRatio;
+    return m_layout.width * kTileSizeRatio;
 }
 
-void BaseWorkableAreaDisplay::HandleMouse(const MouseEvent_t& rEvent)
+void BaseWorkableAreaDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
 {
     auto tile = TileHitTester::HitTestBaseWorkableArea(
         static_cast<float>(rEvent.x), static_cast<float>(rEvent.y),
@@ -105,42 +107,12 @@ void BaseWorkableAreaDisplay::HandleMouse(const MouseEvent_t& rEvent)
 
     if (!tile)
     {
-        m_lastClickedTile = std::nullopt;
         return;
     }
 
-    m_lastClickedTile = tile;
-    int tileX = tile->first;
-    int tileY = tile->second;
-    auto& rAssignments = m_pBase->GetWorkerAssignments();
-    const auto& rPops = m_pBase->GetPopContainer();
-
-    if (rAssignments.IsTileAssigned(tileX, tileY))
+    if (m_onTileClicked)
     {
-        for (const auto& rEntry : rAssignments.GetAssignments())
-        {
-            if (rEntry.second.first == tileX && rEntry.second.second == tileY)
-            {
-                rAssignments.UnassignWorker(rEntry.first);
-                return;
-            }
-        }
-    }
-    else
-    {
-        const auto& rPopsVec = rPops.GetPops();
-        for (int i = static_cast<int>(rPopsVec.size()) - 1; i >= 0; --i)
-        {
-            const Pop* pPop = rPopsVec[i].get();
-            if (pPop->IsWorker() && rAssignments.GetAssignedTile(pPop->GetId()).first == -1)
-            {
-                rAssignments.UnassignWorker(pPop->GetId());
-                if (rAssignments.AssignWorker(pPop->GetId(), tileX, tileY, rPops))
-                {
-                    return;
-                }
-            }
-        }
+        m_onTileClicked(tile->first, tile->second);
     }
 }
 } // namespace ac

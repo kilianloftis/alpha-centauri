@@ -6,7 +6,6 @@
 #include "game/Faction.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/map/WorldMap.h"
-#include "ui/UIManager.h"
 #include "ui/TileHitTester.h"
 #include "graphics/Graphics.h"
 #include <string>
@@ -18,16 +17,18 @@ namespace ac
 WorldView::WorldView(
     GameState& rGameState,
     const WorldMap& rWorldMap,
-    UIManager& rUIManager,
     WindowLayout_t layout,
     std::function<void()> onProcessTurn,
+    std::function<void()> onRequestExit,
+    PushViewCallback_t onPushView,
     std::function<std::unique_ptr<UIGroup>(BaseManager*)> onOpenBase
 )
 : UIGroup(layout)
 , m_rGameState(rGameState)
 , m_pWorldDisplay(std::make_unique<WorldDisplay>())
-, m_rUIManager(rUIManager)
 , m_onProcessTurn(std::move(onProcessTurn))
+, m_onRequestExit(std::move(onRequestExit))
+, m_onPushView(std::move(onPushView))
 , m_onOpenBase(std::move(onOpenBase))
 {
     m_pWorldDisplay->SetWorldMap(&rWorldMap);
@@ -43,10 +44,6 @@ void WorldView::Render(Graphics& rGraphics)
 {
     Update_();
     UIGroup::Render(rGraphics);
-    if (!m_lastClickedTileText.empty())
-    {
-        rGraphics.DrawText(m_lastClickedTileText, m_layout.x + 20.f, m_layout.y + m_layout.height - 30.f, 18, Color::Yellow());
-    }
 }
 
 void WorldView::Update_()
@@ -88,7 +85,7 @@ void WorldView::HandleKey(const KeyEvent_t& rEvent)
 {
     if (rEvent.key == Key_t::Escape)
     {
-        m_rUIManager.RequestExit();
+        m_onRequestExit();
     }
     else if (rEvent.key == Key_t::Enter)
     {
@@ -97,7 +94,7 @@ void WorldView::HandleKey(const KeyEvent_t& rEvent)
     else if (rEvent.key == Key_t::F2)
     {
         // TODO: pass ResearchManager once available on GameState
-        m_rUIManager.PushView(std::make_unique<ResearchView>(nullptr, m_layout));
+        m_onPushView(std::make_unique<ResearchView>(nullptr, ResolveLayout(m_layout, k_CenterPanelLayout)));
     }
 }
 
@@ -120,22 +117,15 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
 
     if (tile)
     {
-        m_lastClickedTile = tile;
-        m_lastClickedTileText = "Clicked tile: (" + std::to_string(tile->first) + ", " + std::to_string(tile->second) + ")";
         BaseManager* pBase = FindBaseAtTile_(tile->first, tile->second);
         if (pBase)
         {
             auto pBaseView = m_onOpenBase(pBase);
             if (pBaseView)
             {
-                m_rUIManager.PushView(std::move(pBaseView));
+                m_onPushView(std::move(pBaseView));
             }
         }
-    }
-    else
-    {
-        m_lastClickedTile = std::nullopt;
-        m_lastClickedTileText = "Clicked: (" + std::to_string(rEvent.x) + ", " + std::to_string(rEvent.y) + ") - no tile";
     }
 }
 

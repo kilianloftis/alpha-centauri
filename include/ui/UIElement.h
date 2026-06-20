@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdexcept>
+
 namespace ac
 {
 
@@ -24,13 +26,14 @@ inline WindowLayout_t ResolveLayout(const WindowLayout_t& windowLayout, const Ra
         throw std::runtime_error("Invalid ratio layout");
     }
     return {
-            ratioLayout.x      * windowLayout.width,
-            ratioLayout.y      * windowLayout.height,
+            windowLayout.x + ratioLayout.x * windowLayout.width,
+            windowLayout.y + ratioLayout.y * windowLayout.height,
             ratioLayout.width  * windowLayout.width,
             ratioLayout.height * windowLayout.height
         };
 }
 
+inline constexpr RatioLayout_t k_FullscreenLayout {0.0f,  0.0f,  1.0f,  1.0f};
 inline constexpr RatioLayout_t k_LeftPanelLayout  {0.25f, 0.25f, 0.0f,  0.75f};
 inline constexpr RatioLayout_t k_CenterPanelLayout{0.5f,  0.25f, 0.25f, 0.75f};
 inline constexpr RatioLayout_t k_RightPanelLayout {0.25f, 0.25f, 0.75f, 0.75f};
@@ -49,14 +52,12 @@ public:
 
     bool Contains(float x, float y) const
     {
-        return x >= m_layout.x && x < m_layout.x + m_layout.width && y >= m_layout.y && y < m_layout.y + m_layout.height;
+        return x >= m_layout.x && x < m_layout.x + m_layout.width
+            && y >= m_layout.y && y < m_layout.y + m_layout.height;
     }
 
     virtual void HandleMouseClick(const MouseEvent_t& rEvent) {}
     virtual void HandleKey(const KeyEvent_t& rEvent) {}
-
-    virtual void OnPushed(Graphics& /*rGraphics*/) {}
-    virtual void OnPopped() {}
 
     bool ShouldClose() const { return m_bShouldClose; }
 

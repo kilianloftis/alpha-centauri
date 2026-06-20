@@ -82,7 +82,7 @@ void PopContainer::ConvertTo(Pop& rPop, const std::string& typeId)
     {
         throw std::runtime_error("Unknown pop type: " + typeId);
     }
-    rPop.Reinitialize(*pConfig);
+    rPop.Convert(*pConfig);
 }
 
 void PopContainer::PromoteWorkerToDrone()

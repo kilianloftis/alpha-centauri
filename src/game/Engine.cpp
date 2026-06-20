@@ -189,13 +189,19 @@ void Engine::Initialize_()
     auto pWorldView = std::make_unique<WorldView>(
         *m_gameState,
         *m_gameState->GetWorldMap(),
-        *m_uiManager,
         fullscreen,
         [this]() { ProcessTurn_(); },
-        [this, fullscreen](BaseManager* pBase) -> std::unique_ptr<UIGroup> {
+        [this]() { m_uiManager->RequestExit(); },
+        [this](std::unique_ptr<UIGroup> pView) { m_uiManager->PushView(std::move(pView)); },
+        [this](BaseManager* pBase) -> std::unique_ptr<UIGroup> {
             const Faction* pFaction = m_gameState->GetFactions().empty() ? nullptr : m_gameState->GetFactions()[0].get();
             if (!pBase || !pFaction) { return nullptr; }
-            return std::make_unique<BaseView>(*pBase, *m_gameState->GetWorldMap(), *pFaction, fullscreen);
+            const WindowLayout_t fs{
+                0.f, 0.f,
+                static_cast<float>(m_graphics->GetWindowWidth()),
+                static_cast<float>(m_graphics->GetWindowHeight())
+            };
+            return std::make_unique<BaseView>(*pBase, *m_gameState->GetWorldMap(), *pFaction, ResolveLayout(fs, k_CenterPanelLayout));
         }
     );
     m_uiManager->PushView(std::move(pWorldView));

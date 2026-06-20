@@ -68,8 +68,16 @@ add_executable(alpha-centauri
     input/MouseEventQueue.cpp
     ui/TileHitTester.cpp
     ui/UIManager.cpp
+    ui/world/WorldView.cpp
+    ui/world/WorldDisplay.cpp
+    ui/world/WorldMapElement.cpp
+    ui/world/InfoPanelElement.cpp
+    ui/base/BaseView.cpp
+    ui/base/BaseWorkableAreaDisplay.cpp
     ui/base/PopulationDisplay.cpp
     ui/base/PopTypeSelectorPopup.cpp
+    ui/research/ResearchView.cpp
+    ui/research/CurrentResearchPanel.cpp
 )
 
 target_include_directories(alpha-centauri PRIVATE
