@@ -128,6 +128,11 @@ int Faction::GetResearchPoints() const
     return m_pResearch ? m_pResearch->GetAccumulatedPoints() : 0;
 }
 
+ResearchManager* Faction::GetResearchManager() const
+{
+    return m_pResearch.get();
+}
+
 bool Faction::SetSocialPolicy(SocialCategory category, const std::string& policyId)
 {
     return m_pSocialEngineering ? m_pSocialEngineering->SetActivePolicy(category, policyId) : false;

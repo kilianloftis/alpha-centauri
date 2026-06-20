@@ -1,7 +1,6 @@
 #include "ui/world/WorldView.h"
 #include "ui/world/WorldMapElement.h"
 #include "ui/world/InfoPanelElement.h"
-#include "ui/research/ResearchView.h"
 #include "game/GameState.h"
 #include "game/Faction.h"
 #include "game/faction/base/BaseManager.h"
@@ -20,15 +19,13 @@ WorldView::WorldView(
     WindowLayout_t layout,
     std::function<void()> onProcessTurn,
     std::function<void()> onRequestExit,
-    PushViewCallback_t onPushView,
-    std::function<std::unique_ptr<UIGroup>(BaseManager*)> onOpenBase
+    OpenBaseCallback_t onOpenBase
 )
-: UIGroup(layout)
+: IGameView(layout)
 , m_rGameState(rGameState)
 , m_pWorldDisplay(std::make_unique<WorldDisplay>())
 , m_onProcessTurn(std::move(onProcessTurn))
 , m_onRequestExit(std::move(onRequestExit))
-, m_onPushView(std::move(onPushView))
 , m_onOpenBase(std::move(onOpenBase))
 {
     m_pWorldDisplay->SetWorldMap(&rWorldMap);
@@ -43,7 +40,7 @@ WorldView::WorldView(
 void WorldView::Render(Graphics& rGraphics)
 {
     Update_();
-    UIGroup::Render(rGraphics);
+    IGameView::Render(rGraphics);
 }
 
 void WorldView::Update_()
@@ -81,21 +78,19 @@ void WorldView::Update_()
     m_pWorldDisplay->SetBaseInfo(baseInfo);
 }
 
-void WorldView::HandleKey(const KeyEvent_t& rEvent)
+bool WorldView::HandleKey(const KeyEvent_t& rEvent)
 {
     if (rEvent.key == Key_t::Escape)
     {
         m_onRequestExit();
+        return true;
     }
     else if (rEvent.key == Key_t::Enter)
     {
         m_onProcessTurn();
+        return true;
     }
-    else if (rEvent.key == Key_t::F2)
-    {
-        // TODO: pass ResearchManager once available on GameState
-        m_onPushView(std::make_unique<ResearchView>(nullptr, ResolveLayout(m_layout, k_CenterPanelLayout)));
-    }
+    return false;
 }
 
 void WorldView::HandleMouse(const MouseEvent_t& rEvent)
@@ -120,11 +115,7 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
         BaseManager* pBase = FindBaseAtTile_(tile->first, tile->second);
         if (pBase)
         {
-            auto pBaseView = m_onOpenBase(pBase);
-            if (pBaseView)
-            {
-                m_onPushView(std::move(pBaseView));
-            }
+            m_onOpenBase(*pBase);
         }
     }
 }

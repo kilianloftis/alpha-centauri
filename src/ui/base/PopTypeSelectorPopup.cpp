@@ -56,12 +56,14 @@ void PopTypeSelectorPopup::Render(Graphics& rGraphics)
     }
 }
 
-void PopTypeSelectorPopup::HandleKey(const KeyEvent_t& rEvent)
+bool PopTypeSelectorPopup::HandleKey(const KeyEvent_t& rEvent)
 {
     if (rEvent.key == Key_t::Escape)
     {
         m_bShouldClose = true;
+        return true;
     }
+    return false;
 }
 
 void PopTypeSelectorPopup::HandleMouseClick(const MouseEvent_t& rEvent)

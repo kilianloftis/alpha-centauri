@@ -29,7 +29,8 @@ graph TB
         UIManagerImpl[UIManagerImpl]
         IGameView[IGameView<br/>(interface)]
         UIElements[UIWorldMap, UIPanel, UIPopup<br/>extends UIElement]
-        Views[WorldView, BaseView<br/>implement IGameView]
+        Views[WorldView, BaseView, ResearchView<br/>implement IGameView]
+        ViewFactory[ViewFactory]
         IBasePanel[IBasePanel<br/>interface for base panels]
         BasePanels[BaseDisplay, BaseWorkableAreaDisplay,<br/>PopulationDisplay<br/>implement IBasePanel]
     end
@@ -93,12 +94,14 @@ graph TB
     Engine --> HookSystem
     Engine --> TurnProcessor
     Engine --> UIManager
+    Engine --> ViewFactory
     Engine --> EventBridge
 
     UIManagerImpl -.->|implements| UIManager
     UIManager -->|manages stack of| IGameView
     IGameView --> UIElements
     Views -.->|implement| IGameView
+    ViewFactory -->|creates| Views
     UIManagerImpl --> Graphics
     UIManagerImpl --> Input
 
@@ -182,6 +185,7 @@ graph TB
     style BaseWorkableAreaDisplay fill:#bfb,stroke:#333,stroke-width:2px
     style IBasePanel fill:#bbf,stroke:#333,stroke-width:2px
     style UIManager fill:#bbf,stroke:#333,stroke-width:2px
+    style ViewFactory fill:#ff9,stroke:#333,stroke-width:2px
 ```
 
 ## Component Overview
@@ -190,7 +194,7 @@ graph TB
 - **Purpose**: Main game engine that coordinates all subsystems
 - **Responsibilities**:
   - Initialize and manage game loop
-  - Own and coordinate Graphics, Input, HookSystem, TurnProcessor, EventBridge, and GameState
+  - Own and coordinate Graphics, Input, HookSystem, TurnProcessor, EventBridge, GameState, and ViewFactory
   - Owns `m_bShouldExit`; publishes `EvTurnStarted` directly to `EventBus` each turn
 
 ### Graphics System
@@ -272,6 +276,8 @@ graph TB
   - `UIWorldMap`: World map layer (bottom)
   - `UIPanel`: Information panel at screen bottom
   - `UIPopup`: Modal popup with dismiss button
+  - `ViewFactory`: Creates game views from game state and graphics context
+  - `ResearchView`: Research overlay view
 - **Factory**: `CreateUIManager()` function creates appropriate implementation
 - **Details**: See `docs/architecture/ui-system.md` for detailed architecture
 

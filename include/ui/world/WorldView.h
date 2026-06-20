@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ui/UIGroup.h"
+#include "ui/IGameView.h"
 #include "ui/world/WorldDisplay.h"
 #include "input/Input.h"
 #include <functional>
@@ -15,13 +15,13 @@ class BaseManager;
 class Graphics;
 class WorldMap;
 
-class WorldView : public UIGroup
+class WorldView : public IGameView
 {
 public:
     static constexpr RatioLayout_t k_MapLayout      {0.0f, 0.0f, 1.0f, 0.867f};
     static constexpr RatioLayout_t k_InfoPanelLayout{0.0f, 0.867f, 1.0f, 0.133f};
 
-    using PushViewCallback_t = std::function<void(std::unique_ptr<UIGroup>)>;
+    using OpenBaseCallback_t = std::function<void(BaseManager&)>;
 
     WorldView(
         GameState& rGameState,
@@ -29,12 +29,11 @@ public:
         WindowLayout_t layout,
         std::function<void()> onProcessTurn,
         std::function<void()> onRequestExit,
-        PushViewCallback_t onPushView,
-        std::function<std::unique_ptr<UIGroup>(BaseManager*)> onOpenBase
+        OpenBaseCallback_t onOpenBase
     );
 
     void Render(Graphics& rGraphics) override;
-    void HandleKey(const KeyEvent_t& rEvent) override;
+    bool HandleKey(const KeyEvent_t& rEvent) override;
     void HandleMouse(const MouseEvent_t& rEvent) override;
 
 private:
@@ -45,8 +44,7 @@ private:
     std::unique_ptr<WorldDisplay> m_pWorldDisplay;
     std::function<void()> m_onProcessTurn;
     std::function<void()> m_onRequestExit;
-    PushViewCallback_t m_onPushView;
-    std::function<std::unique_ptr<UIGroup>(BaseManager*)> m_onOpenBase;
+    OpenBaseCallback_t m_onOpenBase;
 };
 
 } // namespace ac

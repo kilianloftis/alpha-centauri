@@ -23,11 +23,11 @@
 #include "game/research/TechCostConfig.h"
 #include "game/research/TechCostCalculator.h"
 #include "lib/LuaRuntime.h"
+#include "ui/IGameView.h"
 #include "ui/TileHitTester.h"
 #include "game/map/WorldGenerator.h"
 #include "ui/UIManager.h"
-#include "ui/world/WorldView.h"
-#include "ui/base/BaseView.h"
+#include "ui/ViewFactory.h"
 #include <functional>
 #include <iostream>
 #include <stdexcept>
@@ -164,7 +164,7 @@ void Engine::Initialize_()
     m_gameState->AddFaction(std::move(pFaction));
 
     std::cout << "Test setup complete. " << m_gameState->GetNumFactions() << " faction(s), "
-              << m_gameState->GetFactions()[0]->GetBaseCount() << " base(s)\n";
+              << m_gameState->GetPlayerFaction()->GetBaseCount() << " base(s)\n";
 
     m_turnStageFactory = std::make_unique<TurnStageFactory>(
         m_gameDataContext->popCompositionCalculator.get(),
@@ -180,31 +180,24 @@ void Engine::Initialize_()
     }
     m_turnProcessor = std::make_unique<TurnProcessor>(std::move(registry), std::move(repeatFlags), std::move(stageOrder));
 
-    m_uiManager->Initialize(*m_graphics, *m_input);
-    const WindowLayout_t fullscreen{
-        0.f, 0.f,
-        static_cast<float>(m_graphics->GetWindowWidth()),
-        static_cast<float>(m_graphics->GetWindowHeight())
-    };
-    auto pWorldView = std::make_unique<WorldView>(
+    m_viewFactory = std::make_unique<ViewFactory>(
         *m_gameState,
-        *m_gameState->GetWorldMap(),
+        *m_gameDataContext,
+        *m_graphics);
+
+    m_uiManager->Initialize(*m_graphics, *m_input);
+    const WindowLayout_t fullscreen = m_viewFactory->GetFullscreenLayout();
+
+    auto pWorldView = m_viewFactory->CreateWorldView(
         fullscreen,
         [this]() { ProcessTurn_(); },
         [this]() { m_uiManager->RequestExit(); },
-        [this](std::unique_ptr<UIGroup> pView) { m_uiManager->PushView(std::move(pView)); },
-        [this](BaseManager* pBase) -> std::unique_ptr<UIGroup> {
-            const Faction* pFaction = m_gameState->GetFactions().empty() ? nullptr : m_gameState->GetFactions()[0].get();
-            if (!pBase || !pFaction) { return nullptr; }
-            const WindowLayout_t fs{
-                0.f, 0.f,
-                static_cast<float>(m_graphics->GetWindowWidth()),
-                static_cast<float>(m_graphics->GetWindowHeight())
-            };
-            return std::make_unique<BaseView>(*pBase, *m_gameState->GetWorldMap(), *pFaction, ResolveLayout(fs, k_CenterPanelLayout));
-        }
+        [this](BaseManager& rBase) { m_uiManager->PushView(m_viewFactory->CreateBaseView(rBase)); }
     );
-    m_uiManager->PushView(std::move(pWorldView));
+    m_uiManager->RegisterViewShortcut(Key_t::F2, [this, fullscreen]() -> std::unique_ptr<IGameView> {
+        return m_viewFactory->CreateResearchView(fullscreen);
+    });
+    m_uiManager->SetWorldView(std::move(pWorldView));
     CheckInitialized_();
 }
 

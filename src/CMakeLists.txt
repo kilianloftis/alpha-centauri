@@ -68,6 +68,7 @@ add_executable(alpha-centauri
     input/MouseEventQueue.cpp
     ui/TileHitTester.cpp
     ui/UIManager.cpp
+    ui/ViewFactory.cpp
     ui/world/WorldView.cpp
     ui/world/WorldDisplay.cpp
     ui/world/WorldMapElement.cpp

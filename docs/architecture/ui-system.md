@@ -16,11 +16,16 @@ graph TB
         Factory[CreateUIManager()]
     end
 
-    subgraph "Views (in Engine.cpp)"
+    subgraph "Views"
         WorldView[WorldView<br/>implements IGameView]
         BaseView[BaseView<br/>implements IGameView<br/>coordinates panels]
+        ResearchView[ResearchView<br/>implements IGameView]
         WorldMapElement[WorldMapElement<br/>implements UIWorldMap]
         InfoPanelElement[InfoPanelElement<br/>implements UIPanel]
+    end
+
+    subgraph "View Factory"
+        ViewFactory[ViewFactory]
     end
 
     subgraph "Base Panels"
@@ -41,8 +46,11 @@ graph TB
     end
 
     Engine -->|owns| UIManager
-    Engine -->|creates & pushes| WorldView
-    Engine -->|creates & pushes| BaseView
+    Engine -->|owns| ViewFactory
+    Engine -->|sets world view on| UIManager
+    ViewFactory -->|creates| WorldView
+    ViewFactory -->|creates| BaseView
+    ViewFactory -->|creates| ResearchView
 
     BaseView -->|owns| BaseDisplay
     BaseView -->|owns| PopulationDisplay
@@ -71,7 +79,9 @@ graph TB
     style UIManagerImpl fill:#bfb,stroke:#333,stroke-width:2px
     style WorldView fill:#bfb,stroke:#333,stroke-width:2px
     style BaseView fill:#bfb,stroke:#333,stroke-width:2px
+    style ResearchView fill:#bfb,stroke:#333,stroke-width:2px
     style Factory fill:#ff9,stroke:#333,stroke-width:2px
+    style ViewFactory fill:#ff9,stroke:#333,stroke-width:2px
     style IBasePanel fill:#bbf,stroke:#333,stroke-width:2px
     style BaseDisplay fill:#bfb,stroke:#333,stroke-width:2px
     style BaseWorkableAreaDisplay fill:#bfb,stroke:#333,stroke-width:2px
@@ -119,6 +129,15 @@ graph TB
 
 ### Render Order
 Views are rendered bottom-to-top through the stack. Each view renders its own `UIElement`s in its `Render()` method.
+
+### ViewFactory
+- **Purpose**: Creates `IGameView` instances from game state and graphics context
+- **Dependencies**: `GameState`, `GameDataContext`, `Graphics`
+- **Owner**: `Engine` creates and owns it during initialization
+- **Methods**:
+  - `CreateWorldView(...)`: Builds the world view
+  - `CreateBaseView(...)`: Builds a base view for the selected base
+  - `CreateResearchView(...)`: Builds the research view for the player faction
 
 ### Factory: CreateUIManager()
 Returns `UIManagerImpl`, a platform-agnostic implementation (no compile-time flag needed).

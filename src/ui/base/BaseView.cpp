@@ -20,27 +20,40 @@ namespace ac
 
 BaseView::BaseView(
     BaseManager& rBase,
-    const WorldMap& /*rWorldMap*/,
     const Faction& rFaction,
     WindowLayout_t layout
 )
-    : UIGroup(layout)
+    : IGameView(layout)
     , m_rBase(rBase)
     , m_rFaction(rFaction)
 {
     m_elements.push_back(std::make_unique<BaseWorkableAreaDisplay>(
         &m_rBase,
-        ResolveLayout(m_layout, k_WorkableAreaLayout),
+        ResolveLayout(m_layout, k_TopPanelLayout),
         [this](int tileX, int tileY) { HandleTileClick_(tileX, tileY); }
     ));
     m_elements.push_back(std::make_unique<PopulationDisplay>(
         &m_rBase.GetPopContainer(),
-        ResolveLayout(m_layout, k_BottomPanelLayout),
+        ResolveLayout(m_layout, k_CenterPanelLayout),
         [this](Pop& rPop) { HandlePopClick(rPop); }
     ));
 }
 
 BaseView::~BaseView() = default;
+
+bool BaseView::HandleKey(const KeyEvent_t& rEvent)
+{
+    if (IGameView::HandleKey(rEvent))
+    {
+        return true;
+    }
+    if (rEvent.key == Key_t::Escape)
+    {
+        m_bShouldClose = true;
+        return true;
+    }
+    return false;
+}
 
 void BaseView::HandleTileClick_(int tileX, int tileY)
 {
@@ -72,19 +85,11 @@ void BaseView::HandleTileClick_(int tileX, int tileY)
     }
 }
 
-void BaseView::HandleKey(const KeyEvent_t& rEvent)
-{
-    if (rEvent.key == Key_t::Escape)
-    {
-        m_bShouldClose = true;
-    }
-}
-
 void BaseView::HandlePopClick(Pop& rPop)
 {
     m_elements.push_back(std::make_unique<PopTypeSelectorPopup>(
         m_rFaction,
-        ResolveLayout(m_layout, k_PopupLayout),
+        ResolveLayout(m_layout, k_PopupLayoutSmall),
         [this, &rPop](const PopTypeConfig& rConfig) {
             HandlePopTypeSelected(rPop, rConfig);
         }

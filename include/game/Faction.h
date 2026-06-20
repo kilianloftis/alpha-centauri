@@ -55,6 +55,7 @@ public:
     // Research - delegated to ResearchManager
     void AddResearchPoints(int points);
     int GetResearchPoints() const;
+    ResearchManager* GetResearchManager() const;
 
     // Social engineering
     bool SetSocialPolicy(SocialCategory category, const std::string& policyId);

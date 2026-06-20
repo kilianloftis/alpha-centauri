@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ui/UIGroup.h"
+#include "ui/IGameView.h"
 #include "ui/UIElement.h"
 #include <functional>
 
@@ -37,8 +37,9 @@ private:
     static constexpr float k_HeaderFontSizeRatio    = 0.04f;
     static constexpr float k_EntryFontSizeRatio     = 0.03f;
     static constexpr float k_LineHeightRatio        = 0.05f;
-    static constexpr float k_PopBoxSizeRatio        = 0.08f;
+    static constexpr float k_PopBoxSizeRatio        = 0.6f;
     static constexpr float k_PopBoxSpacingRatio     = 0.02f;
+    static constexpr float k_LeftPaddingRatio        = 0.02f;
     static constexpr float k_PopBoxFontSizeRatio    = 0.6f;
     static constexpr float k_PopRowYOffsetRatio     = 0.02f;
     static constexpr float k_PopBoxTextXOffsetRatio = 0.35f;

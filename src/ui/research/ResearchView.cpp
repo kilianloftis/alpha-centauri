@@ -6,18 +6,20 @@ namespace ac
 {
 
 ResearchView::ResearchView(ResearchManager* pResearch, WindowLayout_t layout)
-    : UIGroup(layout)
+    : IGameView(layout)
     , m_pResearch(pResearch)
 {
     m_elements.push_back(std::make_unique<CurrentResearchPanel>(pResearch, ResolveLayout(m_layout, k_TopPanelLayout)));
 }
 
-void ResearchView::HandleKey(const KeyEvent_t& rEvent)
+bool ResearchView::HandleKey(const KeyEvent_t& rEvent)
 {
     if (rEvent.key == Key_t::Escape)
     {
         m_bShouldClose = true;
+        return true;
     }
+    return false;
 }
 
 } // namespace ac

@@ -11,7 +11,7 @@ CurrentResearchPanel::CurrentResearchPanel(ResearchManager* pResearch, WindowLay
 
 void CurrentResearchPanel::Render(Graphics& rGraphics)
 {
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color{30, 30, 50});
+    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color{30, 30, 50, 255});
     rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color{80, 80, 120});
 
     const WindowLayout_t labelArea    = ResolveLayout(m_layout, k_CurrentResearchLabelLayout);

@@ -1,6 +1,7 @@
 #include "ui/UIManager.h"
-#include "ui/UIGroup.h"
+#include "ui/IGameView.h"
 #include "ui/UIElement.h"
+#include "ui/world/WorldView.h"
 #include "graphics/Graphics.h"
 #include "input/Input.h"
 #include <memory>
@@ -16,9 +17,23 @@ bool UIManager::Initialize(Graphics& rGraphics, Input& rInput)
     return true;
 }
 
+void UIManager::SetWorldView(std::unique_ptr<WorldView> pWorldView)
+{
+    m_pWorldView = std::move(pWorldView);
+}
+
+IGameView* UIManager::GetActiveView_()
+{
+    if (!m_overlayStack.empty())
+    {
+        return m_overlayStack.back().get();
+    }
+    return m_pWorldView.get();
+}
+
 void UIManager::ProcessInput()
 {
-    if (!m_viewStack.empty())
+    if (GetActiveView_())
     {
         ProcessKeys_();
         ProcessMouse_();
@@ -29,15 +44,43 @@ void UIManager::ProcessKeys_()
 {
     m_pInput->CaptureKeyAsync([this](KeyEvent_t event)
     {
-        m_viewStack.back()->HandleKey(event);
+        IGameView* pActive = GetActiveView_();
+        if (pActive && pActive->HandleKey(event))
+        {
+            return;
+        }
+        HandleGlobalShortcut_(event.key);
     });
+}
+
+void UIManager::RegisterViewShortcut(Key_t key, ViewFactory_t factory)
+{
+    m_shortcutMap[key] = std::move(factory);
+}
+
+void UIManager::HandleGlobalShortcut_(Key_t key)
+{
+    auto it = m_shortcutMap.find(key);
+    if (it == m_shortcutMap.end())
+    {
+        return;
+    }
+
+    if (auto pView = it->second())
+    {
+        PushView(std::move(pView));
+    }
 }
 
 void UIManager::ProcessMouse_()
 {
     m_pInput->CaptureMouseAsync([this](MouseEvent_t event)
     {
-        m_viewStack.back()->HandleMouse(event);
+        IGameView* pActive = GetActiveView_();
+        if (pActive)
+        {
+            pActive->HandleMouse(event);
+        }
     });
 }
 
@@ -48,37 +91,44 @@ void UIManager::Render()
         return;
     }
     m_pGraphics->Clear();
-    for (auto& pView : m_viewStack)
+    if (m_pWorldView)
     {
-        if (pView->ShouldClose())
+        m_pWorldView->Render(*m_pGraphics);
+    }
+    for (int i = static_cast<int>(m_overlayStack.size()) - 1; i >= 0; --i)
+    {
+        if (m_overlayStack[i]->ShouldClose())
         {
-            m_viewStack.pop_back();
-            continue;
+            m_overlayStack[i]->OnPopped();
+            m_overlayStack.erase(m_overlayStack.begin() + i);
         }
+    }
+    for (const auto& pView : m_overlayStack)
+    {
         pView->Render(*m_pGraphics);
     }
     m_pGraphics->Display();
 }
 
-void UIManager::PushView(std::unique_ptr<UIGroup> pView)
+void UIManager::PushView(std::unique_ptr<IGameView> pView)
 {
     pView->OnPushed(*m_pGraphics);
-    m_viewStack.push_back(std::move(pView));
+    m_overlayStack.push_back(std::move(pView));
 }
 
 void UIManager::PopView()
 {
-    if (m_viewStack.empty())
+    if (m_overlayStack.empty())
     {
         return;
     }
-    m_viewStack.back()->OnPopped();
-    m_viewStack.pop_back();
+    m_overlayStack.back()->OnPopped();
+    m_overlayStack.pop_back();
 }
 
 bool UIManager::HasViews() const
 {
-    return !m_viewStack.empty();
+    return m_pWorldView != nullptr;
 }
 
 bool UIManager::ShouldExit() const

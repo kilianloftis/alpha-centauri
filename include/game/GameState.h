@@ -24,6 +24,7 @@ public:
     const std::vector<std::unique_ptr<Faction>>& GetFactions() const;
     void AddFaction(std::unique_ptr<Faction> pFaction);
     int GetNumFactions() const;
+    const Faction* GetPlayerFaction() const;
 
     // World map
     WorldMap* GetWorldMap();

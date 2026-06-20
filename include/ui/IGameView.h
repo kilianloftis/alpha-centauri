@@ -10,13 +10,13 @@ namespace ac
 
 class Graphics;
 
-class UIGroup
+class IGameView
 {
 public:
-    explicit UIGroup(WindowLayout_t layout)
+    explicit IGameView(WindowLayout_t layout)
         : m_layout(layout)
     {}
-    virtual ~UIGroup() = default;
+    virtual ~IGameView() = default;
 
     virtual void Render(Graphics& rGraphics)
     {
@@ -26,12 +26,16 @@ public:
         }
     }
 
-    virtual void HandleKey(const KeyEvent_t& rEvent)
+    virtual bool HandleKey(const KeyEvent_t& rEvent)
     {
         for (const auto& pElement : m_elements)
         {
-            pElement->HandleKey(rEvent);
+            if (pElement->HandleKey(rEvent))
+            {
+                return true;
+            }
         }
+        return false;
     }
 
     virtual void HandleMouse(const MouseEvent_t& rEvent)

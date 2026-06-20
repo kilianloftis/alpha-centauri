@@ -28,7 +28,7 @@ public:
 
     void Render(Graphics& rGraphics) override;
 
-    void HandleKey(const KeyEvent_t& rEvent) override;
+    bool HandleKey(const KeyEvent_t& rEvent) override;
     void HandleMouseClick(const MouseEvent_t& rEvent) override;
 
 private:

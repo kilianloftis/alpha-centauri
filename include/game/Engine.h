@@ -13,6 +13,7 @@ class GameState;
 class EventBus;
 class EventBridge;
 class GameDataContext;
+class ViewFactory;
 class UIManager;
 
 class Engine
@@ -37,6 +38,7 @@ private:
     std::unique_ptr<EventBus> m_eventBus;
     std::unique_ptr<EventBridge> m_eventBridge;
     std::unique_ptr<GameDataContext> m_gameDataContext;
+    std::unique_ptr<ViewFactory> m_viewFactory;
     std::unique_ptr<UIManager> m_uiManager;
 };
 

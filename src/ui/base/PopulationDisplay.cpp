@@ -20,11 +20,14 @@ void PopulationDisplay::Render(Graphics& rGraphics)
         throw std::runtime_error("PopulationDisplay: No population container set");
     }
 
+    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color{20, 20, 20, 255});
+
     const unsigned int headerFontSize = static_cast<unsigned int>(m_layout.height * k_HeaderFontSizeRatio);
 
     std::ostringstream oss;
     oss << "Population: " << m_pPopulation->GetSize();
-    rGraphics.DrawText(oss.str(), m_layout.x, m_layout.y, headerFontSize);
+    const float leftPadding = m_layout.width * k_LeftPaddingRatio;
+    rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y, headerFontSize);
 
     const float boxSize = m_layout.height * k_PopBoxSizeRatio;
     const float popFontSize = static_cast<unsigned int>(boxSize * k_PopBoxFontSizeRatio);
@@ -42,7 +45,7 @@ void PopulationDisplay::Render(Graphics& rGraphics)
 
     for (size_t i = 0; i < pops.size(); ++i)
     {
-        const float boxX = m_layout.x + i * (boxSize + boxSpacing);
+        const float boxX = m_layout.x + leftPadding + i * (boxSize + boxSpacing);
         const float boxY = startY;
 
         rGraphics.DrawFilledRect(boxX, boxY, boxSize, boxSize, Color::Blue());

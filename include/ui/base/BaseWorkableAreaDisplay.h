@@ -18,8 +18,6 @@ class BaseManager;
 class BaseWorkableAreaDisplay : public UIElement
 {
 public:
-    static constexpr float kTileSizeRatio = 0.05f;  // Tile size is 5% of window width
-
     using TileClickCallback_t = std::function<void(int tileX, int tileY)>;
 
     BaseWorkableAreaDisplay(const BaseManager* pBase, WindowLayout_t layout, TileClickCallback_t onTileClicked);

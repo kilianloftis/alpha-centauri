@@ -35,10 +35,12 @@ inline WindowLayout_t ResolveLayout(const WindowLayout_t& windowLayout, const Ra
 
 inline constexpr RatioLayout_t k_FullscreenLayout {0.0f,  0.0f,  1.0f,  1.0f};
 inline constexpr RatioLayout_t k_LeftPanelLayout  {0.25f, 0.25f, 0.0f,  0.75f};
-inline constexpr RatioLayout_t k_CenterPanelLayout{0.5f,  0.25f, 0.25f, 0.75f};
+inline constexpr RatioLayout_t k_TopPanelLayout   {0.2f, 0.1f, 0.6f, 0.6f};
+inline constexpr RatioLayout_t k_CenterPanelLayout{0.2f, 0.7f, 0.6f, 0.3f};
 inline constexpr RatioLayout_t k_RightPanelLayout {0.25f, 0.25f, 0.75f, 0.75f};
-inline constexpr RatioLayout_t k_TopPanelLayout   {0.5f,  0.75f, 0.25f, 0.0f};
 inline constexpr RatioLayout_t k_PopupLayout      {0.5f,  0.75f,  0.25f, 0.125f};
+inline constexpr RatioLayout_t k_PopupLayoutSmall {0.3f, 0.3f, 0.4f, 0.4f};
+
 
 class UIElement
 {
@@ -57,7 +59,7 @@ public:
     }
 
     virtual void HandleMouseClick(const MouseEvent_t& rEvent) {}
-    virtual void HandleKey(const KeyEvent_t& rEvent) {}
+    virtual bool HandleKey(const KeyEvent_t& rEvent) { return false; }
 
     bool ShouldClose() const { return m_bShouldClose; }
 

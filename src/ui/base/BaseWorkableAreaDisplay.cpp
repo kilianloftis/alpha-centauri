@@ -21,6 +21,7 @@ void BaseWorkableAreaDisplay::Render(Graphics& rGraphics)
         throw std::runtime_error("BaseWorkableAreaDisplay: BaseManager is null");
     }
 
+    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color{20, 20, 20, 255});
     // Get the workable tiles (5x5 grid with corners removed, excluding center)
     auto workableTiles = m_pBase->GetWorkableTilePositions();
     
@@ -34,9 +35,9 @@ void BaseWorkableAreaDisplay::Render(Graphics& rGraphics)
     const float gridWidth = 5 * tileSize;
     const float gridHeight = 5 * tileSize;
     
-    // Offset to center the grid at the render position
-    float startX = m_layout.x - (gridWidth / 2) + (tileSize / 2);
-    float startY = m_layout.y - (gridHeight / 2) + (tileSize / 2);
+    // Center the grid within the layout rectangle
+    float startX = m_layout.x + (m_layout.width - gridWidth) / 2.f;
+    float startY = m_layout.y + (m_layout.height - gridHeight) / 2.f;
 
     for (const Tile* pTile : workableTiles)
     {
@@ -94,7 +95,7 @@ void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, const Tile& rTile
 
 float BaseWorkableAreaDisplay::GetTileSize_() const
 {
-    return m_layout.width * kTileSizeRatio;
+    return std::min(m_layout.width, m_layout.height) / 5.f;
 }
 
 void BaseWorkableAreaDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
