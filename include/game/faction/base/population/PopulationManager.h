@@ -31,6 +31,7 @@ public:
 
     // Container access (for systems that need to iterate pops by stable ID)
     const PopContainer& GetContainer() const { return m_container; }
+    PopContainer& GetContainer() { return m_container; }
 
     // Pop access - delegated to PopContainer
     const std::vector<std::unique_ptr<Pop>>& GetPops() const { return m_container.GetPops(); }

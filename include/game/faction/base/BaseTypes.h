@@ -23,4 +23,8 @@ struct TileResources_t
     int minerals;
 };
 
+// (x, y) map coordinate used for tile assignments.
+// {-1, -1} means unassigned.
+using TileCoord = std::pair<int, int>;
+
 } // namespace ac

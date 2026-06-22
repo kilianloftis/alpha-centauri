@@ -9,14 +9,12 @@ namespace ac
 
 PopContainer::PopContainer(const PopTypeRegistry* pReg, int initialSize)
     : m_pRegistry(pReg)
-    , m_nextPopId(0)
 {
     if (m_pRegistry && initialSize > 0)
     {
         for (int i = 0; i < initialSize; ++i)
         {
             auto pPop = m_pRegistry->CreatePop("Worker");
-            pPop->SetId(m_nextPopId++);
             m_pops.push_back(std::move(pPop));
         }
     }
@@ -28,6 +26,11 @@ int PopContainer::GetSize() const
 }
 
 const std::vector<std::unique_ptr<Pop>>& PopContainer::GetPops() const
+{
+    return m_pops;
+}
+
+std::vector<std::unique_ptr<Pop>>& PopContainer::GetPops()
 {
     return m_pops;
 }
@@ -59,7 +62,6 @@ void PopContainer::AddPop(const std::string& typeId)
         throw std::runtime_error("PopContainer has no registry");
     }
     auto pPop = m_pRegistry->CreatePop(typeId);
-    pPop->SetId(m_nextPopId++);
     m_pops.push_back(std::move(pPop));
 }
 

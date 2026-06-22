@@ -6,6 +6,16 @@
 namespace ac
 {
 
+namespace
+{
+
+constexpr bool IsUnassignedTile(const TileCoord& rCoord)
+{
+    return rCoord.first == -1 && rCoord.second == -1;
+}
+
+} // namespace
+
 WorkerAssignmentManager::WorkerAssignmentManager(std::vector<const Tile*> workableTiles)
     : m_workableTiles(std::move(workableTiles))
     , m_scorer([](const Tile& rTile) -> float
@@ -17,78 +27,63 @@ WorkerAssignmentManager::WorkerAssignmentManager(std::vector<const Tile*> workab
 {
 }
 
-bool WorkerAssignmentManager::AssignWorker(int popId, int x, int y, const PopContainer& rPops)
+bool WorkerAssignmentManager::AssignWorker(Pop& rPop, int x, int y, PopContainer& rPops)
 {
-    const Pop* pPop = FindPop_(popId, rPops);
-    if (!pPop || !pPop->IsWorker())
+    if (!rPop.IsWorker())
     {
         return false;
     }
 
-    if (IsTileAssigned(x, y))
+    if (!IsTileWorkable_(x, y))
     {
         return false;
     }
 
-    m_assignments[popId] = {x, y};
+    if (IsTileAssigned_(x, y, rPops))
+    {
+        return false;
+    }
+
+    rPop.SetTileCoord(x, y);
     return true;
 }
 
-void WorkerAssignmentManager::UnassignWorker(int popId)
+void WorkerAssignmentManager::UnassignWorker(Pop& rPop)
 {
-    m_assignments.erase(popId);
+    rPop.SetTileCoord(-1, -1);
 }
 
-void WorkerAssignmentManager::UnassignAll()
+void WorkerAssignmentManager::UnassignAll(PopContainer& rPops)
 {
-    m_assignments.clear();
-}
-
-bool WorkerAssignmentManager::IsTileAssigned(int x, int y) const
-{
-    for (const auto& rEntry : m_assignments)
+    for (auto& pPop : rPops.GetPops())
     {
-        if (rEntry.second.first == x && rEntry.second.second == y)
-        {
-            return true;
-        }
+        pPop->SetTileCoord(-1, -1);
     }
-    return false;
 }
 
-WorkerAssignmentManager::TileCoord WorkerAssignmentManager::GetAssignedTile(int popId) const
+bool WorkerAssignmentManager::IsTileAssigned(int x, int y, const PopContainer& rPops) const
 {
-    auto it = m_assignments.find(popId);
-    if (it != m_assignments.end())
-    {
-        return it->second;
-    }
-    return {-1, -1};
-}
-
-const std::unordered_map<int, WorkerAssignmentManager::TileCoord>&
-WorkerAssignmentManager::GetAssignments() const
-{
-    return m_assignments;
+    return IsTileAssigned_(x, y, rPops);
 }
 
 TileResources_t WorkerAssignmentManager::ComputeWorkedResources(
     const PopContainer& rPops, const TileLookup& tileAt) const
 {
     TileResources_t total{0, 0, 0};
-    for (const auto& rEntry : m_assignments)
+    for (const auto& pPop : rPops.GetPops())
     {
-        const int popId = rEntry.first;
-        const int x     = rEntry.second.first;
-        const int y     = rEntry.second.second;
-
-        const Pop* pPop = FindPop_(popId, rPops);
-        if (!pPop || !pPop->IsWorker())
+        if (!pPop->IsWorker())
         {
             continue;
         }
 
-        const Tile* pTile = tileAt(x, y);
+        const TileCoord coord = pPop->GetTileCoord();
+        if (IsUnassignedTile(coord))
+        {
+            continue;
+        }
+
+        const Tile* pTile = tileAt(coord.first, coord.second);
         if (!pTile)
         {
             continue;
@@ -108,9 +103,18 @@ TileResources_t WorkerAssignmentManager::ComputeWorkedResources(
     return total;
 }
 
-void WorkerAssignmentManager::SetWorkableTiles(std::vector<const Tile*> workableTiles)
+void WorkerAssignmentManager::SetWorkableTiles(std::vector<const Tile*> workableTiles, PopContainer& rPops)
 {
     m_workableTiles = std::move(workableTiles);
+
+    for (auto& pPop : rPops.GetPops())
+    {
+        const TileCoord coord = pPop->GetTileCoord();
+        if (!IsUnassignedTile(coord) && !IsTileWorkable_(coord.first, coord.second))
+        {
+            pPop->SetTileCoord(-1, -1);
+        }
+    }
 }
 
 void WorkerAssignmentManager::SetTileScorer(TileScorer scorer)
@@ -118,38 +122,43 @@ void WorkerAssignmentManager::SetTileScorer(TileScorer scorer)
     m_scorer = std::move(scorer);
 }
 
-void WorkerAssignmentManager::AutoAssignWorkers(const PopContainer& rPops)
+const std::vector<const Tile*>& WorkerAssignmentManager::GetWorkableTiles() const
 {
-    auto unassignedWorkerIds = GetUnassignedWorkers_(rPops);
-    if (unassignedWorkerIds.empty())
+    return m_workableTiles;
+}
+
+void WorkerAssignmentManager::AutoAssignWorkers(PopContainer& rPops)
+{
+    auto unassignedWorkers = GetUnassignedWorkers_(rPops);
+    if (unassignedWorkers.empty())
     {
         return;
     }
 
-    auto availableTiles = GetAvailableTiles_();
+    auto availableTiles = GetAvailableTiles_(rPops);
     auto prioritizedTiles = PrioritizeAvailableTiles_(availableTiles);
-    AutoAssignWorkers_(unassignedWorkerIds, prioritizedTiles, rPops);
+    AutoAssignWorkers_(unassignedWorkers, prioritizedTiles, rPops);
 }
 
-std::vector<int> WorkerAssignmentManager::GetUnassignedWorkers_(const PopContainer& rPops) const
+std::vector<Pop*> WorkerAssignmentManager::GetUnassignedWorkers_(const PopContainer& rPops) const
 {
-    std::vector<int> unassignedWorkerIds;
+    std::vector<Pop*> unassignedWorkers;
     for (const auto& pPop : rPops.GetPops())
     {
-        if (pPop->IsWorker() && GetAssignedTile(pPop->GetId()).first == -1)
+        if (pPop->IsWorker() && IsUnassignedTile(pPop->GetTileCoord()))
         {
-            unassignedWorkerIds.push_back(pPop->GetId());
+            unassignedWorkers.push_back(pPop.get());
         }
     }
-    return unassignedWorkerIds;
+    return unassignedWorkers;
 }
 
-std::vector<const Tile*> WorkerAssignmentManager::GetAvailableTiles_() const
+std::vector<const Tile*> WorkerAssignmentManager::GetAvailableTiles_(const PopContainer& rPops) const
 {
     std::vector<const Tile*> availableTiles;
     for (const Tile* pTile : m_workableTiles)
     {
-        if (pTile && !IsTileAssigned(pTile->GetX(), pTile->GetY()))
+        if (pTile && !IsTileAssigned_(pTile->GetX(), pTile->GetY(), rPops))
         {
             availableTiles.push_back(pTile);
         }
@@ -173,18 +182,18 @@ std::vector<const Tile*> WorkerAssignmentManager::PrioritizeAvailableTiles_(
     return prioritizedTiles;
 }
 
-void WorkerAssignmentManager::AutoAssignWorkers_(const std::vector<int>& unassignedWorkerIds,
+void WorkerAssignmentManager::AutoAssignWorkers_(const std::vector<Pop*>& unassignedWorkers,
                                                  const std::vector<const Tile*>& availableTiles,
-                                                 const PopContainer& rPops)
+                                                 PopContainer& rPops)
 {
     size_t workerIndex = 0;
     size_t tileIndex = 0;
-    while (workerIndex < unassignedWorkerIds.size() && tileIndex < availableTiles.size())
+    while (workerIndex < unassignedWorkers.size() && tileIndex < availableTiles.size())
     {
-        int popId = unassignedWorkerIds[workerIndex];
+        Pop* pPop = unassignedWorkers[workerIndex];
         const Tile* pTile = availableTiles[tileIndex];
 
-        if (pTile && AssignWorker(popId, pTile->GetX(), pTile->GetY(), rPops))
+        if (pPop && pTile && AssignWorker(*pPop, pTile->GetX(), pTile->GetY(), rPops))
         {
             ++workerIndex;
             ++tileIndex;
@@ -197,16 +206,32 @@ void WorkerAssignmentManager::AutoAssignWorkers_(const std::vector<int>& unassig
     }
 }
 
-const Pop* WorkerAssignmentManager::FindPop_(int popId, const PopContainer& rPops) const
+bool WorkerAssignmentManager::IsTileAssigned_(int x, int y, const PopContainer& rPops) const
 {
     for (const auto& pPop : rPops.GetPops())
     {
-        if (pPop->GetId() == popId)
+        if (pPop->IsWorker())
         {
-            return pPop.get();
+            const TileCoord coord = pPop->GetTileCoord();
+            if (coord.first == x && coord.second == y)
+            {
+                return true;
+            }
         }
     }
-    return nullptr;
+    return false;
+}
+
+bool WorkerAssignmentManager::IsTileWorkable_(int x, int y) const
+{
+    for (const Tile* pTile : m_workableTiles)
+    {
+        if (pTile && pTile->GetX() == x && pTile->GetY() == y)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 } // namespace ac

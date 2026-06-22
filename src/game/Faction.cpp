@@ -75,7 +75,7 @@ BaseManager* Faction::CreateBase(FactionId factionId, int baseId, const std::str
     pBase->SetName(name);
     pBase->SetPosition(x, y);
 
-    pBase->GetWorkerAssignments().UnassignAll();
+    pBase->GetWorkerAssignments().UnassignAll(pBase->GetPopContainer());
     pBase->AutoAssignWorkers();
 
     std::cout << "Created base '" << name << "' with population: " << pBase->GetBaseSize()

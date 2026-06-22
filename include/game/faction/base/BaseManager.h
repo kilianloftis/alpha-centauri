@@ -35,6 +35,7 @@ public:
     // Population management - delegated to PopulationManager
     void RecalculatePopComposition();
     const PopContainer& GetPopContainer() const;
+    PopContainer& GetPopContainer();
     int GetPopWorkerCount() const;
     void AddPop();
     void RemovePop();

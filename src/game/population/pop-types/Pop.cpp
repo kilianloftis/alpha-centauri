@@ -6,10 +6,9 @@
 namespace ac
 {
 
-Pop::Pop(const PopTypeConfig& rConfig, int id)
+Pop::Pop(const PopTypeConfig& rConfig)
     : m_pConfig(&rConfig)
-    , m_id(id)
-    , m_tileId(-1)
+    , m_tileCoord(-1, -1)
 {
 }
 
@@ -57,28 +56,23 @@ void Pop::Convert(const PopTypeConfig& rConfig)
     m_pConfig = &rConfig;
     if (!m_pConfig->bCanWorkTile)
     {
-        m_tileId = -1;
+        m_tileCoord = {-1, -1};
     }
 }
 
-int Pop::GetId() const
+void Pop::SetTileCoord(int x, int y)
 {
-    return m_id;
+    m_tileCoord = {x, y};
 }
 
-void Pop::SetId(int id)
+void Pop::SetTileCoord(const TileCoord& coord)
 {
-    m_id = id;
+    m_tileCoord = coord;
 }
 
-void Pop::SetTileId(int tileId)
+TileCoord Pop::GetTileCoord() const
 {
-    m_tileId = tileId;
-}
-
-int Pop::GetTileId() const
-{
-    return m_tileId;
+    return m_tileCoord;
 }
 
 TileResources_t Pop::ApplyTileMultipliers(const TileResources_t& resources) const

@@ -34,6 +34,8 @@ BaseManager::BaseManager(const BuildingRegistry* pBuildingRegistry, const PopTyp
         m_pWorkerAssignments->AutoAssignWorkers(m_pPopulation->GetContainer());
         on_pop_gained.emit(newSize);
     });
+    // Newly created pops start unassigned; auto-assign once after construction.
+    m_pWorkerAssignments->AutoAssignWorkers(m_pPopulation->GetContainer());
     m_pPopulation->on_pop_lost.connect([this](int newSize) {
         on_pop_lost.emit(newSize);
     });
@@ -50,6 +52,11 @@ void BaseManager::RecalculatePopComposition()
 }
 
 const PopContainer& BaseManager::GetPopContainer() const
+{
+    return m_pPopulation->GetContainer();
+}
+
+PopContainer& BaseManager::GetPopContainer()
 {
     return m_pPopulation->GetContainer();
 }
@@ -81,10 +88,9 @@ void BaseManager::ConvertPop(Pop& rPop, const std::string& typeId)
     {
         return;
     }
-    const int popId = rPop.GetId();
     if (rPop.IsWorker())
     {
-        m_pWorkerAssignments->UnassignWorker(popId);
+        m_pWorkerAssignments->UnassignWorker(rPop);
     }
     m_pPopulation->ConvertTo(rPop, typeId);
     if (rPop.IsWorker())
@@ -191,7 +197,7 @@ void BaseManager::SetPosition(int x, int y)
 {
     m_x = x;
     m_y = y;
-    m_pWorkerAssignments->SetWorkableTiles(GetWorkableTilePositions());
+    m_pWorkerAssignments->SetWorkableTiles(GetWorkableTilePositions(), m_pPopulation->GetContainer());
 }
 
 int BaseManager::GetX() const

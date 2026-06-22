@@ -1,12 +1,11 @@
 #pragma once
 
+#include "game/faction/base/BaseTypes.h"
+
 namespace ac
 {
 
 struct PopTypeConfig;
-
-// Forward declaration - defined in game/faction/Base.h
-struct TileResources_t;
 
 // Specialist generation output (not tile-based)
 struct SpecialistOutput_t
@@ -20,7 +19,7 @@ struct SpecialistOutput_t
 class Pop
 {
 public:
-    explicit Pop(const PopTypeConfig& rConfig, int id = -1);
+    explicit Pop(const PopTypeConfig& rConfig);
     ~Pop();
 
     // Type id string matching the config (e.g. "Worker", "Librarian")
@@ -42,17 +41,15 @@ public:
     int GetRiotContribution() const;
     int GetGoldenAgeContribution() const;
 
-    // Swap this pop's type config in-place, preserving id.
-    // Clears tileId if the new type is not a worker.
+    // Swap this pop's type config in-place.
+    // Clears tileCoord if the new type is not a worker.
     void Convert(const PopTypeConfig& rConfig);
 
-    // Stable identity — assigned by PopContainer at creation, survives ConvertTo
-    int GetId() const;
-    void SetId(int id);
-
     // Tile assignment (only meaningful when IsWorker() is true)
-    void SetTileId(int tileId);
-    int GetTileId() const;
+    // {-1, -1} means unassigned.
+    void SetTileCoord(int x, int y);
+    void SetTileCoord(const TileCoord& coord);
+    TileCoord GetTileCoord() const;
 
     // Apply this pop's tile multipliers to raw tile resources.
     // Returns modified resources based on pop type's tile_multipliers config.
@@ -65,8 +62,7 @@ public:
 
 private:
     const PopTypeConfig* m_pConfig;
-    int m_id;
-    int m_tileId;
+    TileCoord m_tileCoord;
 };
 
 } // namespace ac

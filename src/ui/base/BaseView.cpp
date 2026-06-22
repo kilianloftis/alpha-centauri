@@ -58,15 +58,16 @@ bool BaseView::HandleKey(const KeyEvent_t& rEvent)
 void BaseView::HandleTileClick_(int tileX, int tileY)
 {
     auto& rAssignments = m_rBase.GetWorkerAssignments();
-    const auto& rPops = m_rBase.GetPopContainer();
+    auto& rPops = m_rBase.GetPopContainer();
 
-    if (rAssignments.IsTileAssigned(tileX, tileY))
+    if (rAssignments.IsTileAssigned(tileX, tileY, rPops))
     {
-        for (const auto& rEntry : rAssignments.GetAssignments())
+        for (const auto& pPop : rPops.GetPops())
         {
-            if (rEntry.second.first == tileX && rEntry.second.second == tileY)
+            const TileCoord coord = pPop->GetTileCoord();
+            if (pPop->IsWorker() && coord.first == tileX && coord.second == tileY)
             {
-                rAssignments.UnassignWorker(rEntry.first);
+                rAssignments.UnassignWorker(*pPop);
                 return;
             }
         }
@@ -75,10 +76,11 @@ void BaseView::HandleTileClick_(int tileX, int tileY)
     {
         for (int i = static_cast<int>(rPops.GetPops().size()) - 1; i >= 0; --i)
         {
-            const Pop* pPop = rPops.GetPops()[i].get();
-            if (pPop->IsWorker() && rAssignments.GetAssignedTile(pPop->GetId()).first == -1)
+            Pop* pPop = rPops.GetPops()[i].get();
+            const TileCoord coord = pPop->GetTileCoord();
+            if (pPop->IsWorker() && coord.first == -1 && coord.second == -1)
             {
-                rAssignments.AssignWorker(pPop->GetId(), tileX, tileY, rPops);
+                rAssignments.AssignWorker(*pPop, tileX, tileY, rPops);
                 return;
             }
         }

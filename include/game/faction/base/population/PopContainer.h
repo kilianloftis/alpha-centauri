@@ -22,6 +22,7 @@ public:
     // Container access
     int GetSize() const;
     const std::vector<std::unique_ptr<Pop>>& GetPops() const;
+    std::vector<std::unique_ptr<Pop>>& GetPops();
 
     // Population counts by type
     int GetWorkerCount() const;
@@ -49,7 +50,6 @@ public:
 private:
     std::vector<std::unique_ptr<Pop>> m_pops;
     const PopTypeRegistry* m_pRegistry;
-    int m_nextPopId;
 
     int CountPops_(bool (*predicate)(const Pop*)) const;
 };
