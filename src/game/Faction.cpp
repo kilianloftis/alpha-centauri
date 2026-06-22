@@ -1,5 +1,6 @@
 #include "game/Faction.h"
 
+#include "game/buildings/BuildingRegistry.h"
 #include "game/GameDataContext.h"
 #include "game/map/WorldMap.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
@@ -17,9 +18,11 @@
 namespace ac
 {
 
-Faction::Faction(const TechRegistry* pTechRegistry, const SocialPolicyRegistry* pSocialPolicyRegistry,
+Faction::Faction(const BuildingRegistry* pBuildingRegistry, const TechRegistry* pTechRegistry,
+                 const SocialPolicyRegistry* pSocialPolicyRegistry,
                  TechCostCalculator* pTechCostCalculator, const PopTypeRegistry* pPopTypeRegistry)
-    : m_pPopTypeRegistry(pPopTypeRegistry)
+    : m_pBuildingRegistry(pBuildingRegistry)
+    , m_pPopTypeRegistry(pPopTypeRegistry)
     , m_pIdentity(nullptr)
     , m_pAIProfile(nullptr)
     , m_pEconomy(std::make_unique<BaseEconomyManager>())
@@ -131,6 +134,25 @@ int Faction::GetResearchPoints() const
 ResearchManager* Faction::GetResearchManager() const
 {
     return m_pResearch.get();
+}
+
+std::vector<const BuildingConfig_t*> Faction::GetDiscoveredBuildings() const
+{
+    if (!m_pBuildingRegistry || !m_pResearch)
+    {
+        return {};
+    }
+
+    const std::vector<std::string>& discoveredTechs = m_pResearch->GetDiscoveredTechs();
+    std::vector<const BuildingConfig_t*> discovered;
+    for (const auto& config : m_pBuildingRegistry->GetAll())
+    {
+        if (config.IsDiscovered(discoveredTechs))
+        {
+            discovered.push_back(&config);
+        }
+    }
+    return discovered;
 }
 
 bool Faction::SetSocialPolicy(SocialCategory category, const std::string& policyId)

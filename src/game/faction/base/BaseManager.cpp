@@ -157,6 +157,11 @@ void BaseManager::DestroyBuilding(const std::string& buildingId)
     }
 }
 
+std::vector<const BuildingConfig_t*> BaseManager::GetBuildingsAvailableForConstruction(const std::vector<const BuildingConfig_t*>& discoveredBuildings) const
+{
+    return m_pBuildings ? m_pBuildings->GetBuildingsAvailableForConstruction(discoveredBuildings) : std::vector<const BuildingConfig_t*>{};
+}
+
 void BaseManager::SetProduction(const std::string& itemId)
 {
     if (m_pProduction)
@@ -171,19 +176,9 @@ const std::string& BaseManager::GetProduction() const
     return m_pProduction ? m_pProduction->GetProduction() : kEmpty;
 }
 
-int BaseManager::GetProductionAccumulatedMinerals() const
-{
-    return m_pProduction ? m_pProduction->GetAccumulatedMinerals() : 0;
-}
-
 int BaseManager::GetProductionMineralCost() const
 {
     return m_pProduction ? m_pProduction->GetMineralCost() : 0;
-}
-
-bool BaseManager::CanCompleteProduction() const
-{
-    return m_pProduction ? m_pProduction->CanComplete() : false;
 }
 
 std::string BaseManager::CompleteProduction()
@@ -191,12 +186,9 @@ std::string BaseManager::CompleteProduction()
     return m_pProduction ? m_pProduction->CompleteProduction() : std::string();
 }
 
-void BaseManager::ProcessProduction()
+int BaseManager::ConsumeMinerals(int amount)
 {
-    if (m_pProduction && m_pResources)
-    {
-        m_pProduction->ProgressProduction(m_pResources->GetMineralProduction());
-    }
+    return m_pResources ? m_pResources->ConsumeMinerals(amount) : 0;
 }
 
 void BaseManager::CollectResources(BaseEconomyManager* pEconomy)

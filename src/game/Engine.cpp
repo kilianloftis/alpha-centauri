@@ -149,7 +149,8 @@ void Engine::Initialize_()
     std::cout << "Generated world map: " << m_gameState->GetWorldMap()->GetWidth() << "x" << m_gameState->GetWorldMap()->GetHeight() << "\n";
 
     // Create test faction with a base
-    auto pFaction = std::make_unique<Faction>(m_gameDataContext->techRegistry.get(),
+    auto pFaction = std::make_unique<Faction>(m_gameDataContext->buildingRegistry.get(),
+                                              m_gameDataContext->techRegistry.get(),
                                               m_gameDataContext->socialPolicyRegistry.get(),
                                               m_gameDataContext->techCostCalculator.get(),
                                               m_gameDataContext->popTypeRegistry.get());

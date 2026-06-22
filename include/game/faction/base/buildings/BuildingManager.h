@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/buildings/BuildingConfigParser.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -31,8 +32,10 @@ public:
     // Sum of GetNutrientsBonus() across all buildings.
     int GetTotalNutrientsBonus() const;
 
-    // Get a list of available buildings based on discovered technologies.
-    std::vector<std::string> GetBuildingsAvailableForConstruction(const std::vector<std::string>& discoveredTechs) const;
+    // Get a list of buildings that can be constructed at this base.
+    // discoveredBuildings is the faction-level list of tech-unlocked building configs.
+    // Base-local rules (allowMultiple, already built) are applied here.
+    std::vector<const BuildingConfig_t*> GetBuildingsAvailableForConstruction(const std::vector<const BuildingConfig_t*>& discoveredBuildings) const;
 
 private:
     bool DoesBuildingExist_(const std::string& buildingId) const;

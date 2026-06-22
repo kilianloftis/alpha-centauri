@@ -17,6 +17,7 @@ add_executable(alpha-centauri
     game/faction/base/BaseManager.cpp
     game/faction/base/buildings/BuildingManager.cpp
     game/faction/base/production/ProductionManager.cpp
+    game/faction/base/production/ProductionCostCalculator.cpp
     game/faction/base/resources/ResourceManager.cpp
     game/faction/base/resources/WorkerAssignmentManager.cpp
     game/faction/base/resources/BaseEconomyManager.cpp
@@ -73,6 +74,8 @@ add_executable(alpha-centauri
     ui/base/BaseView.cpp
     ui/base/BaseWorkableAreaDisplay.cpp
     ui/base/GrowthDisplay.cpp
+    ui/base/ProductionDisplay.cpp
+    ui/base/ProductionSelectorPopup.cpp
     ui/base/PopulationDisplay.cpp
     ui/base/PopTypeSelectorPopup.cpp
     ui/research/ResearchView.cpp

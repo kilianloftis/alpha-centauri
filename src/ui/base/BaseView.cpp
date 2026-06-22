@@ -1,6 +1,8 @@
 #include "ui/base/BaseView.h"
 #include "ui/base/BaseWorkableAreaDisplay.h"
 #include "ui/base/GrowthDisplay.h"
+#include "ui/base/ProductionDisplay.h"
+#include "ui/base/ProductionSelectorPopup.h"
 #include "ui/base/PopulationDisplay.h"
 #include "ui/base/PopTypeSelectorPopup.h"
 #include "game/population/pop-types/Pop.h"
@@ -38,6 +40,11 @@ BaseView::BaseView(
         &m_rBase,
         ResolveLayout(m_layout, k_TopPanelLayout),
         [this](int tileX, int tileY) { HandleTileClick_(tileX, tileY); }
+    ));
+    m_elements.push_back(std::make_unique<ProductionDisplay>(
+        &m_rBase,
+        ResolveLayout(m_layout, k_BottomLeftPanelLayout),
+        [this]() { HandleProductionDisplayClicked_(); }
     ));
     m_elements.push_back(std::make_unique<PopulationDisplay>(
         &m_rBase.GetPopContainer(),
@@ -108,6 +115,18 @@ void BaseView::HandlePopClick(Pop& rPop)
 void BaseView::HandlePopTypeSelected(Pop& rPop, const PopTypeConfig& rConfig)
 {
     m_rBase.ConvertPop(rPop, rConfig.id);
+}
+
+void BaseView::HandleProductionDisplayClicked_()
+{
+    const std::vector<const BuildingConfig_t*> discovered = m_rFaction.GetDiscoveredBuildings();
+    std::vector<const BuildingConfig_t*> available = m_rBase.GetBuildingsAvailableForConstruction(discovered);
+
+    m_elements.push_back(std::make_unique<ProductionSelectorPopup>(
+        std::move(available),
+        ResolveLayout(m_layout, k_TopPanelLayout),
+        [this](const BuildingConfig_t& rConfig) { m_rBase.SetProduction(rConfig.id); }
+    ));
 }
 
 } // namespace ac

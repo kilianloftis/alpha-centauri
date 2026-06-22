@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/buildings/BuildingConfigParser.h"
 #include "game/faction/base/BaseTypes.h"
 #include "lib/Signal.h"
 #include <functional>
@@ -66,15 +67,16 @@ public:
     // Building management - delegated to BuildingManager
     void AddBuilding(const std::string& buildingId);
     void DestroyBuilding(const std::string& buildingId);
+    std::vector<const BuildingConfig_t*> GetBuildingsAvailableForConstruction(const std::vector<const BuildingConfig_t*>& discoveredBuildings) const;
 
     // Production management - delegated to ProductionManager
     void SetProduction(const std::string& itemId);
     const std::string& GetProduction() const;
-    int GetProductionAccumulatedMinerals() const;
     int GetProductionMineralCost() const;
-    bool CanCompleteProduction() const;
     std::string CompleteProduction();
-    void ProcessProduction();
+
+    // Consume minerals from the resource stockpile. Returns actual amount consumed.
+    int ConsumeMinerals(int amount);
 
     // Collect resources from worked tiles and allocate energy to stockpiles.
     // Called once per turn per base during ResourceCollection stage.

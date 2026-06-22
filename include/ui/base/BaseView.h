@@ -36,6 +36,7 @@ private:
     void HandleTileClick_(int tileX, int tileY);
     void HandlePopClick(Pop& rPop);
     void HandlePopTypeSelected(Pop& rPop, const PopTypeConfig& rConfig);
+    void HandleProductionDisplayClicked_();
 
     BaseManager& m_rBase;
     const Faction& m_rFaction;

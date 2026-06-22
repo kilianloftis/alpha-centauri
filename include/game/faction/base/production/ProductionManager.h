@@ -19,7 +19,7 @@ public:
     explicit ProductionManager(const BuildingRegistry* pBuildingRegistry);
     ~ProductionManager();
 
-    // Set the item being produced. Clears accumulated minerals.
+    // Set the item being produced.
     // Throws if the item is unknown or has no associated cost registry.
     void SetProduction(const std::string& itemId);
 
@@ -29,18 +29,8 @@ public:
     // True if a production item is currently set.
     bool HasProduction() const;
 
-    // Minerals accumulated toward the current production item.
-    int GetAccumulatedMinerals() const;
-
     // Total mineral cost of the current production item.
     int GetMineralCost() const;
-
-    // True if the accumulated minerals meet or exceed the cost.
-    bool CanComplete() const;
-
-    // Add minerals toward production. If the accumulated total reaches the cost,
-    // completes the item and returns its id. Otherwise returns an empty string.
-    std::string ProgressProduction(int minerals);
 
     // Complete the current production immediately and return its id.
     std::string CompleteProduction();
@@ -54,7 +44,6 @@ public:
 private:
     const BuildingRegistry* m_pBuildingRegistry;
     std::string m_currentItemId;
-    int m_accumulatedMinerals;
 
     void ResetProduction_();
     const BuildingConfig_t* FindConfig_() const;

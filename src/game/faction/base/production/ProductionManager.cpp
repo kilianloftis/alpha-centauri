@@ -7,7 +7,6 @@ namespace ac
 ProductionManager::ProductionManager(const BuildingRegistry* pBuildingRegistry)
     : m_pBuildingRegistry(pBuildingRegistry)
     , m_currentItemId()
-    , m_accumulatedMinerals(0)
 {
 }
 
@@ -27,7 +26,6 @@ void ProductionManager::SetProduction(const std::string& itemId)
     }
 
     m_currentItemId = itemId;
-    m_accumulatedMinerals = 0;
     on_production_changed.emit();
 }
 
@@ -41,36 +39,10 @@ bool ProductionManager::HasProduction() const
     return !m_currentItemId.empty();
 }
 
-int ProductionManager::GetAccumulatedMinerals() const
-{
-    return m_accumulatedMinerals;
-}
-
 int ProductionManager::GetMineralCost() const
 {
     const BuildingConfig_t* pConfig = FindConfig_();
     return pConfig ? pConfig->mineralCost : 0;
-}
-
-bool ProductionManager::CanComplete() const
-{
-    return HasProduction() && m_accumulatedMinerals >= GetMineralCost();
-}
-
-std::string ProductionManager::ProgressProduction(int minerals)
-{
-    if (!HasProduction() || minerals <= 0)
-    {
-        return std::string();
-    }
-
-    m_accumulatedMinerals += minerals;
-    if (m_accumulatedMinerals >= GetMineralCost())
-    {
-        return CompleteProduction();
-    }
-
-    return std::string();
 }
 
 std::string ProductionManager::CompleteProduction()
@@ -90,7 +62,6 @@ void ProductionManager::ResetProduction_()
 {
     bool bHadProduction = HasProduction();
     m_currentItemId.clear();
-    m_accumulatedMinerals = 0;
     if (bHadProduction)
     {
         on_production_changed.emit();

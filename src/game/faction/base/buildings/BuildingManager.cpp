@@ -49,17 +49,17 @@ int BuildingManager::GetTotalNutrientsBonus() const
     return total;
 }
 
-std::vector<std::string> BuildingManager::GetBuildingsAvailableForConstruction(const std::vector<std::string>& discoveredTechs) const
+std::vector<const BuildingConfig_t*> BuildingManager::GetBuildingsAvailableForConstruction(const std::vector<const BuildingConfig_t*>& discoveredBuildings) const
 {
-    std::vector<std::string> availableBuildings;
-    for (const auto& config : m_pRegistry->GetAll())
+    std::vector<const BuildingConfig_t*> available;
+    for (const BuildingConfig_t* pConfig : discoveredBuildings)
     {
-        if (config.IsDiscovered(discoveredTechs) && (config.allowMultiple || !DoesBuildingExist_(config.id)))
+        if (pConfig && (pConfig->allowMultiple || !DoesBuildingExist_(pConfig->id)))
         {
-            availableBuildings.push_back(config.id);
+            available.push_back(pConfig);
         }
     }
-    return availableBuildings;
+    return available;
 }
 
 bool BuildingManager::DoesBuildingExist_(const std::string& buildingId) const

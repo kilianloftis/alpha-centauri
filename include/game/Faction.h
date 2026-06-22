@@ -10,6 +10,7 @@ namespace ac
 {
 
 // Forward declarations
+class BuildingRegistry;
 class TechRegistry;
 class SocialPolicyRegistry;
 class TechCostCalculator;
@@ -28,7 +29,8 @@ class WorldMap;
 class Faction
 {
 public:
-    Faction(const TechRegistry* pTechRegistry, const SocialPolicyRegistry* pSocialPolicyRegistry,
+    Faction(const BuildingRegistry* pBuildingRegistry, const TechRegistry* pTechRegistry,
+             const SocialPolicyRegistry* pSocialPolicyRegistry,
              TechCostCalculator* pTechCostCalculator, const PopTypeRegistry* pPopTypeRegistry);
     ~Faction();
 
@@ -44,6 +46,9 @@ public:
     const BaseManager* GetBase(size_t index) const;
     const std::vector<std::shared_ptr<BaseManager>>& GetBases() const { return m_bases; }
     size_t GetBaseCount() const { return m_bases.size(); }
+
+    // Returns configs for buildings the faction has the technology to build.
+    std::vector<const BuildingConfig_t*> GetDiscoveredBuildings() const;
 
     // Energy tracking
     void AddEnergy(int amount);
@@ -70,6 +75,7 @@ public:
 
 private:
     int m_energy = 0;
+    const BuildingRegistry* m_pBuildingRegistry;
     const PopTypeRegistry* m_pPopTypeRegistry;
     std::unique_ptr<FactionIdentity> m_pIdentity;
     std::unique_ptr<AIProfile> m_pAIProfile;
