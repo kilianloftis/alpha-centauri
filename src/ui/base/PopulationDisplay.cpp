@@ -72,8 +72,7 @@ void PopulationDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
 
     for (auto it = m_popBoxes.rbegin(); it != m_popBoxes.rend(); ++it)
     {
-        if (rEvent.x >= it->bounds.x && rEvent.x < it->bounds.x + it->bounds.width &&
-            rEvent.y >= it->bounds.y && rEvent.y < it->bounds.y + it->bounds.height)
+        if (ContainsMouseCoord(it->bounds, rEvent))
         {
             if (m_onPopClick)
             {

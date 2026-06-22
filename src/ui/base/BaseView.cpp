@@ -1,5 +1,6 @@
 #include "ui/base/BaseView.h"
 #include "ui/base/BaseWorkableAreaDisplay.h"
+#include "ui/base/GrowthDisplay.h"
 #include "ui/base/PopulationDisplay.h"
 #include "ui/base/PopTypeSelectorPopup.h"
 #include "game/population/pop-types/Pop.h"
@@ -21,12 +22,18 @@ namespace ac
 BaseView::BaseView(
     BaseManager& rBase,
     const Faction& rFaction,
+    GrowthCalculator* pGrowthCalculator,
     WindowLayout_t layout
 )
     : IGameView(layout)
     , m_rBase(rBase)
     , m_rFaction(rFaction)
 {
+    m_elements.push_back(std::make_unique<GrowthDisplay>(
+        &m_rBase,
+        pGrowthCalculator,
+        ResolveLayout(m_layout, k_LeftPanelLayout)
+    ));
     m_elements.push_back(std::make_unique<BaseWorkableAreaDisplay>(
         &m_rBase,
         ResolveLayout(m_layout, k_TopPanelLayout),
@@ -90,7 +97,7 @@ void BaseView::HandleTileClick_(int tileX, int tileY)
 void BaseView::HandlePopClick(Pop& rPop)
 {
     m_elements.push_back(std::make_unique<PopTypeSelectorPopup>(
-        m_rFaction,
+        m_rFaction.GetAvailablePopTypes(),
         ResolveLayout(m_layout, k_PopupLayoutSmall),
         [this, &rPop](const PopTypeConfig& rConfig) {
             HandlePopTypeSelected(rPop, rConfig);

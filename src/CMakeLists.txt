@@ -75,6 +75,7 @@ add_executable(alpha-centauri
     ui/world/InfoPanelElement.cpp
     ui/base/BaseView.cpp
     ui/base/BaseWorkableAreaDisplay.cpp
+    ui/base/GrowthDisplay.cpp
     ui/base/PopulationDisplay.cpp
     ui/base/PopTypeSelectorPopup.cpp
     ui/research/ResearchView.cpp

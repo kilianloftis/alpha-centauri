@@ -1,5 +1,7 @@
 #pragma once
 
+#include "input/Input.h"
+
 #include <stdexcept>
 
 namespace ac
@@ -7,7 +9,6 @@ namespace ac
 
 class Graphics;
 struct KeyEvent_t;
-struct MouseEvent_t;
 
 struct Rectangle_t
 {
@@ -19,6 +20,17 @@ struct Rectangle_t
 
 using RatioLayout_t = Rectangle_t;
 using WindowLayout_t = Rectangle_t;
+
+inline bool ContainsMouseCoord(const Rectangle_t& rRect, float x, float y)
+{
+    return x >= rRect.x && x < rRect.x + rRect.width
+        && y >= rRect.y && y < rRect.y + rRect.height;
+}
+
+inline bool ContainsMouseCoord(const Rectangle_t& rRect, const MouseEvent_t& rEvent)
+{
+    return ContainsMouseCoord(rRect, static_cast<float>(rEvent.x), static_cast<float>(rEvent.y));
+}
 
 inline WindowLayout_t ResolveLayout(const WindowLayout_t& windowLayout, const RatioLayout_t& ratioLayout)
 {
@@ -34,7 +46,7 @@ inline WindowLayout_t ResolveLayout(const WindowLayout_t& windowLayout, const Ra
 }
 
 inline constexpr RatioLayout_t k_FullscreenLayout {0.0f,  0.0f,  1.0f,  1.0f};
-inline constexpr RatioLayout_t k_LeftPanelLayout  {0.25f, 0.25f, 0.0f,  0.75f};
+inline constexpr RatioLayout_t k_LeftPanelLayout  {0.0f,  0.25f, 0.25f, 0.75f};
 inline constexpr RatioLayout_t k_TopPanelLayout   {0.2f, 0.1f, 0.6f, 0.6f};
 inline constexpr RatioLayout_t k_CenterPanelLayout{0.2f, 0.7f, 0.6f, 0.3f};
 inline constexpr RatioLayout_t k_RightPanelLayout {0.25f, 0.25f, 0.75f, 0.75f};

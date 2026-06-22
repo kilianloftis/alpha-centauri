@@ -1,5 +1,4 @@
 #include "ui/base/PopTypeSelectorPopup.h"
-#include "game/Faction.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "graphics/Graphics.h"
 #include "input/Input.h"
@@ -8,19 +7,32 @@ namespace ac
 {
 
 PopTypeSelectorPopup::PopTypeSelectorPopup(
-    const Faction& rFaction,
+    std::vector<const PopTypeConfig*> popTypes,
     WindowLayout_t layout,
     std::function<void(const PopTypeConfig&)> onPopTypeSelected
 )
     : UIElement(layout)
-    , m_rFaction(rFaction)
+    , m_popTypes(std::move(popTypes))
     , m_onPopTypeSelected(std::move(onPopTypeSelected))
 {
+    CacheEntryRects_();
 }
 
-std::vector<const PopTypeConfig*> PopTypeSelectorPopup::GetAvailablePopTypes_() const
+void PopTypeSelectorPopup::CacheEntryRects_()
 {
-    return m_rFaction.GetAvailablePopTypes();
+    const float lineHeight = m_layout.height * kLineHeightRatio;
+
+    float offsetY = lineHeight * 2.f;
+    for (size_t i = 0; i < m_popTypes.size(); ++i)
+    {
+        m_entryRects.push_back(Rectangle_t{
+            m_layout.x,
+            m_layout.y + offsetY,
+            m_layout.width,
+            lineHeight
+        });
+        offsetY += lineHeight;
+    }
 }
 
 void PopTypeSelectorPopup::Render(Graphics& rGraphics)
@@ -40,19 +52,16 @@ void PopTypeSelectorPopup::Render(Graphics& rGraphics)
 
     rGraphics.DrawText("Select Pop Type", m_layout.x + padding, m_layout.y + padding, headerFontSize, Color::Yellow());
 
-    const auto pAvailableTypes = GetAvailablePopTypes_();
-
-    if (pAvailableTypes.empty())
+    if (m_popTypes.empty())
     {
         rGraphics.DrawText("No pop types available", m_layout.x + padding, m_layout.y + lineHeight * 2.f, entryFontSize, Color::White());
         return;
     }
 
-    float offsetY = lineHeight * 2.f;
-    for (const PopTypeConfig* pConfig : pAvailableTypes)
+    for (size_t i = 0; i < m_popTypes.size(); ++i)
     {
-        rGraphics.DrawText(pConfig->name, m_layout.x + padding, m_layout.y + offsetY, entryFontSize, Color::White());
-        offsetY += lineHeight;
+        const Rectangle_t& rect = m_entryRects[i];
+        rGraphics.DrawText(m_popTypes[i]->name, rect.x + padding, rect.y, entryFontSize, Color::White());
     }
 }
 
@@ -73,35 +82,23 @@ void PopTypeSelectorPopup::HandleMouseClick(const MouseEvent_t& rEvent)
         return;
     }
 
-    const float lineHeight = m_layout.height * kLineHeightRatio;
-
-    const float clickX = static_cast<float>(rEvent.x);
-    const float clickY = static_cast<float>(rEvent.y);
-
-    if (clickX < m_layout.x || clickX > m_layout.x + m_layout.width)
+    if (!ContainsMouseCoord(m_layout, rEvent))
     {
         return;
     }
 
-    const auto pAvailableTypes = GetAvailablePopTypes_();
-
-    float offsetY = lineHeight * 2.f;
-    for (const PopTypeConfig* pConfig : pAvailableTypes)
+    for (size_t i = 0; i < m_entryRects.size(); ++i)
     {
-        const float entryTop    = m_layout.y + offsetY;
-        const float entryBottom = entryTop + lineHeight;
-
-        if (clickY >= entryTop && clickY < entryBottom)
+        const Rectangle_t& rect = m_entryRects[i];
+        if (ContainsMouseCoord(rect, rEvent))
         {
             if (m_onPopTypeSelected)
             {
-                m_onPopTypeSelected(*pConfig);
+                m_onPopTypeSelected(*m_popTypes[i]);
                 m_bShouldClose = true;
             }
             return;
         }
-
-        offsetY += lineHeight;
     }
 }
 

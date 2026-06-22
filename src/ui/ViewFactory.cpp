@@ -1,6 +1,7 @@
 #include "ui/ViewFactory.h"
 #include "game/GameState.h"
 #include "game/Faction.h"
+#include "game/GameDataContext.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/ResearchManager.h"
 #include "graphics/Graphics.h"
@@ -57,7 +58,7 @@ std::unique_ptr<BaseView> ViewFactory::CreateBaseView(
         return nullptr;
     }
 
-    return std::make_unique<BaseView>(rBase, *pFaction, layout);
+    return std::make_unique<BaseView>(rBase, *pFaction, m_rGameDataContext.growthCalculator.get(), layout);
 }
 
 std::unique_ptr<ResearchView> ViewFactory::CreateResearchView(

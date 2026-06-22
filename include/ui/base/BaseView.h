@@ -13,6 +13,7 @@ namespace ac
 class BaseManager;
 class Faction;
 class Graphics;
+class GrowthCalculator;
 class Pop;
 class PopulationDisplay;
 struct PopTypeConfig;
@@ -24,6 +25,7 @@ public:
     BaseView(
         BaseManager& rBase,
         const Faction& rFaction,
+        GrowthCalculator* pGrowthCalculator,
         WindowLayout_t layout
     );
     ~BaseView();

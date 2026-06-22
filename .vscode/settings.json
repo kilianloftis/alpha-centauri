@@ -4,5 +4,5 @@
     "cmake.buildTask": true,
     "cmake.automaticReconfigure": false,
     "cmake.skipConfigureIfCachePresent": true,
-    "cmake.buildBeforeRun": false
+    "cmake.buildBeforeRun": false,
 }

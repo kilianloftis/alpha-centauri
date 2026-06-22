@@ -39,7 +39,7 @@ private:
     static constexpr float k_LineHeightRatio        = 0.05f;
     static constexpr float k_PopBoxSizeRatio        = 0.6f;
     static constexpr float k_PopBoxSpacingRatio     = 0.02f;
-    static constexpr float k_LeftPaddingRatio        = 0.02f;
+    static constexpr float k_LeftPaddingRatio       = 0.02f;
     static constexpr float k_PopBoxFontSizeRatio    = 0.6f;
     static constexpr float k_PopRowYOffsetRatio     = 0.02f;
     static constexpr float k_PopBoxTextXOffsetRatio = 0.35f;

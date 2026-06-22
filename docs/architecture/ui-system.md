@@ -33,6 +33,7 @@ graph TB
         BaseDisplay[BaseDisplay<br/>implements IBasePanel]
         BaseWorkableAreaDisplay[BaseWorkableAreaDisplay<br/>implements IBasePanel]
         PopulationDisplay[PopulationDisplay<br/>implements IBasePanel]
+        GrowthDisplay[GrowthDisplay<br/>implements IBasePanel]
     end
 
     subgraph "Base Popups"
@@ -54,11 +55,13 @@ graph TB
 
     BaseView -->|owns| BaseDisplay
     BaseView -->|owns| PopulationDisplay
+    BaseView -->|owns| GrowthDisplay
     BaseView -->|refs| BaseWorkableAreaDisplay
     BaseView -->|coordinates via| IBasePanel
     BaseDisplay -.->|implements| IBasePanel
     BaseWorkableAreaDisplay -.->|implements| IBasePanel
     PopulationDisplay -.->|implements| IBasePanel
+    GrowthDisplay -.->|implements| IBasePanel
 
     UIManager -->|manages stack of| IGameView
     UIManagerImpl -.->|implements| UIManager
@@ -86,6 +89,7 @@ graph TB
     style BaseDisplay fill:#bfb,stroke:#333,stroke-width:2px
     style BaseWorkableAreaDisplay fill:#bfb,stroke:#333,stroke-width:2px
     style PopulationDisplay fill:#bfb,stroke:#333,stroke-width:2px
+    style GrowthDisplay fill:#bfb,stroke:#333,stroke-width:2px
     PopTypeSelectorPopup -.->|extends| UIPopup
     style PopTypeSelectorPopup fill:#bfb,stroke:#333,stroke-width:2px
 ```

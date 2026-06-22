@@ -8,18 +8,15 @@
 namespace ac
 {
 
-class Faction;
 class Graphics;
 struct PopTypeConfig;
 
-// Popup that lists the pop types currently available for a faction.
-// "Available" means: bPlayerAssignable is true, and requiredTech is either
-// empty or has been discovered by the faction.
+// Popup that lists a supplied set of pop types for the player to choose from.
 class PopTypeSelectorPopup : public UIElement
 {
 public:
     PopTypeSelectorPopup(
-        const Faction& rFaction,
+        std::vector<const PopTypeConfig*> popTypes,
         WindowLayout_t layout,
         std::function<void(const PopTypeConfig&)> onPopTypeSelected
     );
@@ -37,10 +34,11 @@ private:
     static constexpr float kLineHeightRatio     = 0.05f;
     static constexpr float kPaddingRatio        = 0.02f;
 
-    const Faction& m_rFaction;
+    std::vector<const PopTypeConfig*> m_popTypes;
+    std::vector<Rectangle_t> m_entryRects;
     std::function<void(const PopTypeConfig&)> m_onPopTypeSelected;
-    
-    std::vector<const PopTypeConfig*> GetAvailablePopTypes_() const;
+
+    void CacheEntryRects_();
 };
 
 } // namespace ac
