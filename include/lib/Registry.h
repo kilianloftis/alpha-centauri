@@ -3,6 +3,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <vector>
 
@@ -13,6 +14,8 @@ namespace ac
 // stores them keyed by TConfig::id, and exposes Find() / GetAll() / Create().
 // TParser must provide: std::vector<TConfig> ParseConfig(const std::string&)
 // TConfig must have: std::string id
+// When TCreated differs from TConfig, GetAllCreated() returns a stable vector of
+// TCreated prototypes (one per config), constructed via TCreated(const TConfig&).
 template<typename TConfig, typename TParser, typename TCreated = TConfig>
 class Registry
 {
@@ -35,6 +38,16 @@ public:
         {
             m_indexById[m_configs[i].id] = i;
         }
+
+        if constexpr (!std::is_same_v<TConfig, TCreated>)
+        {
+            m_prototypes.clear();
+            for (const auto& config : m_configs)
+            {
+                m_prototypes.emplace_back(config);
+            }
+        }
+
         return true;
     }
 
@@ -65,9 +78,20 @@ public:
         return std::make_unique<TCreated>(*pConfig);
     }
 
+    // Returns stable TCreated prototypes, one per config entry.
+    // Only available when TCreated differs from TConfig.
+    // Pointers are valid for the lifetime of this registry.
+    template<typename T = TCreated>
+    std::enable_if_t<!std::is_same_v<TConfig, T>, const std::vector<T>&>
+    GetAllCreated() const
+    {
+        return m_prototypes;
+    }
+
 protected:
     std::vector<TConfig> m_configs;
     std::unordered_map<std::string, size_t> m_indexById;
+    std::vector<TCreated> m_prototypes;
 };
 
 } // namespace ac

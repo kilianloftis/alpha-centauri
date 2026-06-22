@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/buildings/BuildingConfigParser.h"
+#include "game/buildings/Building.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -8,7 +8,6 @@
 namespace ac
 {
 
-class Building;
 class BuildingRegistry;
 
 // BuildingManager owns all Building instances for a single base.
@@ -33,9 +32,9 @@ public:
     int GetTotalNutrientsBonus() const;
 
     // Get a list of buildings that can be constructed at this base.
-    // discoveredBuildings is the faction-level list of tech-unlocked building configs.
+    // discoveredBuildings is the faction-level list of tech-unlocked buildings.
     // Base-local rules (allowMultiple, already built) are applied here.
-    std::vector<const BuildingConfig_t*> GetBuildingsAvailableForConstruction(const std::vector<const BuildingConfig_t*>& discoveredBuildings) const;
+    std::vector<const Building*> GetBuildingsAvailableForConstruction(const std::vector<const Building*>& discoveredBuildings) const;
 
 private:
     bool DoesBuildingExist_(const std::string& buildingId) const;

@@ -17,6 +17,15 @@ public:
     // Type id string matching the config (e.g. "Nutrient_Bank")
     const char* GetBuildingId() const;
 
+    // Display name of this building type.
+    const std::string& GetName() const;
+
+    // Mineral cost to construct this building.
+    int GetMineralCost() const;
+
+    // Whether multiple copies of this building can exist in the same base.
+    bool GetAllowMultiple() const;
+
     // Flat nutrients bonus this building provides to the base each turn.
     int GetNutrientsBonus() const;
 

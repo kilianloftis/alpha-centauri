@@ -3,7 +3,6 @@
 #include "game/buildings/Building.h"
 #include "game/buildings/BuildingConfigParser.h"
 #include "lib/Registry.h"
-#include <string>
 
 namespace ac
 {

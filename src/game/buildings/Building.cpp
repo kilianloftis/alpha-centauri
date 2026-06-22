@@ -18,6 +18,21 @@ const char* Building::GetBuildingId() const
     return m_pConfig->id.c_str();
 }
 
+const std::string& Building::GetName() const
+{
+    return m_pConfig->name;
+}
+
+int Building::GetMineralCost() const
+{
+    return m_pConfig->mineralCost;
+}
+
+bool Building::GetAllowMultiple() const
+{
+    return m_pConfig->allowMultiple;
+}
+
 int Building::GetNutrientsBonus() const
 {
     return m_pConfig->nutrientsBonus;

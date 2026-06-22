@@ -24,7 +24,7 @@ BaseManager::BaseManager(const BuildingRegistry* pBuildingRegistry, const PopTyp
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(std::vector<const Tile*>{}))
     , m_pResources(nullptr)
     , m_pBuildings(std::make_unique<BuildingManager>(pBuildingRegistry))
-    , m_pProduction(std::make_unique<ProductionManager>(pBuildingRegistry))
+    , m_pProduction(std::make_unique<ProductionManager>())
 {
     // Create ResourceManager after population and worker assignments are set up
     m_pResources = std::make_unique<ResourceManager>(m_pPopulation.get(), m_pWorkerAssignments.get());
@@ -157,17 +157,22 @@ void BaseManager::DestroyBuilding(const std::string& buildingId)
     }
 }
 
-std::vector<const BuildingConfig_t*> BaseManager::GetBuildingsAvailableForConstruction(const std::vector<const BuildingConfig_t*>& discoveredBuildings) const
+std::vector<const Building*> BaseManager::GetBuildingsAvailableForConstruction(const std::vector<const Building*>& discoveredBuildings) const
 {
-    return m_pBuildings ? m_pBuildings->GetBuildingsAvailableForConstruction(discoveredBuildings) : std::vector<const BuildingConfig_t*>{};
+    return m_pBuildings ? m_pBuildings->GetBuildingsAvailableForConstruction(discoveredBuildings) : std::vector<const Building*>{};
 }
 
-void BaseManager::SetProduction(const std::string& itemId)
+void BaseManager::SetProduction(const Building* pBuilding)
 {
     if (m_pProduction)
     {
-        m_pProduction->SetProduction(itemId);
+        m_pProduction->SetProduction(pBuilding);
     }
+}
+
+const Building* BaseManager::GetCurrentBuilding() const
+{
+    return m_pProduction ? m_pProduction->GetCurrentBuilding() : nullptr;
 }
 
 const std::string& BaseManager::GetProduction() const

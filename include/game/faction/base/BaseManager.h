@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/buildings/BuildingConfigParser.h"
+#include "game/buildings/Building.h"
 #include "game/faction/base/BaseTypes.h"
 #include "lib/Signal.h"
 #include <functional>
@@ -67,10 +67,11 @@ public:
     // Building management - delegated to BuildingManager
     void AddBuilding(const std::string& buildingId);
     void DestroyBuilding(const std::string& buildingId);
-    std::vector<const BuildingConfig_t*> GetBuildingsAvailableForConstruction(const std::vector<const BuildingConfig_t*>& discoveredBuildings) const;
+    std::vector<const Building*> GetBuildingsAvailableForConstruction(const std::vector<const Building*>& discoveredBuildings) const;
 
     // Production management - delegated to ProductionManager
-    void SetProduction(const std::string& itemId);
+    void SetProduction(const Building* pBuilding);
+    const Building* GetCurrentBuilding() const;
     const std::string& GetProduction() const;
     int GetProductionMineralCost() const;
     std::string CompleteProduction();

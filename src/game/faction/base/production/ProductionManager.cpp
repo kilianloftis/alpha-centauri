@@ -1,48 +1,51 @@
 #include "game/faction/base/production/ProductionManager.h"
-#include <stdexcept>
 
 namespace ac
 {
 
-ProductionManager::ProductionManager(const BuildingRegistry* pBuildingRegistry)
-    : m_pBuildingRegistry(pBuildingRegistry)
-    , m_currentItemId()
+static const std::string k_EmptyString;
+
+ProductionManager::ProductionManager()
+    : m_pCurrentBuilding(nullptr)
 {
 }
 
 ProductionManager::~ProductionManager() = default;
 
-void ProductionManager::SetProduction(const std::string& itemId)
+void ProductionManager::SetProduction(const Building* pBuilding)
 {
-    if (itemId.empty())
+    if (!pBuilding)
     {
         ResetProduction_();
         return;
     }
 
-    if (!m_pBuildingRegistry || !m_pBuildingRegistry->Find(itemId))
-    {
-        throw std::runtime_error("Unknown production item: " + itemId);
-    }
-
-    m_currentItemId = itemId;
+    m_pCurrentBuilding = pBuilding;
     on_production_changed.emit();
+}
+
+const Building* ProductionManager::GetCurrentBuilding() const
+{
+    return m_pCurrentBuilding;
 }
 
 const std::string& ProductionManager::GetProduction() const
 {
-    return m_currentItemId;
+    if (!m_pCurrentBuilding)
+    {
+        return k_EmptyString;
+    }
+    return m_pCurrentBuilding->GetName();
 }
 
 bool ProductionManager::HasProduction() const
 {
-    return !m_currentItemId.empty();
+    return m_pCurrentBuilding != nullptr;
 }
 
 int ProductionManager::GetMineralCost() const
 {
-    const BuildingConfig_t* pConfig = FindConfig_();
-    return pConfig ? pConfig->mineralCost : 0;
+    return m_pCurrentBuilding ? m_pCurrentBuilding->GetMineralCost() : 0;
 }
 
 std::string ProductionManager::CompleteProduction()
@@ -52,7 +55,7 @@ std::string ProductionManager::CompleteProduction()
         return std::string();
     }
 
-    std::string completed = m_currentItemId;
+    std::string completed = m_pCurrentBuilding->GetBuildingId();
     ResetProduction_();
     on_production_completed.emit(completed);
     return completed;
@@ -61,20 +64,11 @@ std::string ProductionManager::CompleteProduction()
 void ProductionManager::ResetProduction_()
 {
     bool bHadProduction = HasProduction();
-    m_currentItemId.clear();
+    m_pCurrentBuilding = nullptr;
     if (bHadProduction)
     {
         on_production_changed.emit();
     }
-}
-
-const BuildingConfig_t* ProductionManager::FindConfig_() const
-{
-    if (!m_pBuildingRegistry || m_currentItemId.empty())
-    {
-        return nullptr;
-    }
-    return m_pBuildingRegistry->Find(m_currentItemId);
 }
 
 } // namespace ac

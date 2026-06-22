@@ -136,20 +136,23 @@ ResearchManager* Faction::GetResearchManager() const
     return m_pResearch.get();
 }
 
-std::vector<const BuildingConfig_t*> Faction::GetDiscoveredBuildings() const
+std::vector<const Building*> Faction::GetDiscoveredBuildings() const
 {
     if (!m_pBuildingRegistry || !m_pResearch)
     {
-        return {};
+        throw std::runtime_error("BuildingRegistry or ResearchManager not initialized");
     }
 
     const std::vector<std::string>& discoveredTechs = m_pResearch->GetDiscoveredTechs();
-    std::vector<const BuildingConfig_t*> discovered;
-    for (const auto& config : m_pBuildingRegistry->GetAll())
+    const std::vector<BuildingConfig_t>& configs = m_pBuildingRegistry->GetAll();
+    const std::vector<Building>& prototypes = m_pBuildingRegistry->GetAllCreated();
+
+    std::vector<const Building*> discovered;
+    for (size_t i = 0; i < configs.size(); ++i)
     {
-        if (config.IsDiscovered(discoveredTechs))
+        if (configs[i].IsDiscovered(discoveredTechs))
         {
-            discovered.push_back(&config);
+            discovered.push_back(&prototypes[i]);
         }
     }
     return discovered;

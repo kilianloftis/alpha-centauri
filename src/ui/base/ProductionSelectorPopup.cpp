@@ -1,4 +1,5 @@
 #include "ui/base/ProductionSelectorPopup.h"
+#include "game/buildings/Building.h"
 #include "graphics/Graphics.h"
 #include "input/Input.h"
 
@@ -6,9 +7,9 @@ namespace ac
 {
 
 ProductionSelectorPopup::ProductionSelectorPopup(
-    std::vector<const BuildingConfig_t*> availableBuildings,
+    std::vector<const Building*> availableBuildings,
     WindowLayout_t layout,
-    std::function<void(const BuildingConfig_t&)> onBuildingSelected
+    std::function<void(const Building&)> onBuildingSelected
 )
     : UIElement(layout)
     , m_availableBuildings(std::move(availableBuildings))
@@ -59,7 +60,7 @@ void ProductionSelectorPopup::Render(Graphics& rGraphics)
     for (size_t i = 0; i < m_availableBuildings.size(); ++i)
     {
         const Rectangle_t& rect = m_entryRects[i];
-        rGraphics.DrawText(m_availableBuildings[i]->name, rect.x + padding, rect.y, entryFontSize, Color::White());
+        rGraphics.DrawText(m_availableBuildings[i]->GetName(), rect.x + padding, rect.y, entryFontSize, Color::White());
     }
 }
 

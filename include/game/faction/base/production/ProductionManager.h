@@ -1,29 +1,28 @@
 #pragma once
 
-#include "game/buildings/BuildingRegistry.h"
+#include "game/buildings/Building.h"
 #include "lib/Signal.h"
 #include <string>
 
 namespace ac
 {
 
-class BuildingRegistry;
-
 // ProductionManager is the API surface for the production component.
-// A base can build one item at a time. Items are identified by their config id
-// and must have a mineral cost (currently buildings via BuildingRegistry).
+// A base can build one item at a time.
 // TODO: Extend to unit production once unit definitions with mineral costs exist.
 class ProductionManager
 {
 public:
-    explicit ProductionManager(const BuildingRegistry* pBuildingRegistry);
+    ProductionManager();
     ~ProductionManager();
 
-    // Set the item being produced.
-    // Throws if the item is unknown or has no associated cost registry.
-    void SetProduction(const std::string& itemId);
+    // Set the building to produce. Pass nullptr to clear production.
+    void SetProduction(const Building* pBuilding);
 
-    // Get the id of the item currently being produced.
+    // The building currently being produced, or nullptr if none.
+    const Building* GetCurrentBuilding() const;
+
+    // Get the id of the item currently being produced, or empty string if none.
     const std::string& GetProduction() const;
 
     // True if a production item is currently set.
@@ -42,11 +41,9 @@ public:
     Signal<> on_production_changed;
 
 private:
-    const BuildingRegistry* m_pBuildingRegistry;
-    std::string m_currentItemId;
+    const Building* m_pCurrentBuilding = nullptr;
 
     void ResetProduction_();
-    const BuildingConfig_t* FindConfig_() const;
 };
 
 } // namespace ac

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/buildings/BuildingConfigParser.h"
+#include "game/buildings/Building.h"
 #include "ui/UIElement.h"
 #include "input/Input.h"
 #include <functional>
@@ -18,9 +18,9 @@ class ProductionSelectorPopup : public UIElement
 {
 public:
     ProductionSelectorPopup(
-        std::vector<const BuildingConfig_t*> availableBuildings,
+        std::vector<const Building*> availableBuildings,
         WindowLayout_t layout,
-        std::function<void(const BuildingConfig_t&)> onBuildingSelected
+        std::function<void(const Building&)> onBuildingSelected
     );
 
     ~ProductionSelectorPopup() override = default;
@@ -36,9 +36,9 @@ private:
     static constexpr float k_LineHeightRatio      = 0.05f;
     static constexpr float k_PaddingRatio         = 0.02f;
 
-    std::vector<const BuildingConfig_t*> m_availableBuildings;
+    std::vector<const Building*> m_availableBuildings;
     std::vector<Rectangle_t> m_entryRects;
-    std::function<void(const BuildingConfig_t&)> m_onBuildingSelected;
+    std::function<void(const Building&)> m_onBuildingSelected;
 
     void CacheEntryRects_();
 };

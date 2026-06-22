@@ -47,8 +47,8 @@ public:
     const std::vector<std::shared_ptr<BaseManager>>& GetBases() const { return m_bases; }
     size_t GetBaseCount() const { return m_bases.size(); }
 
-    // Returns configs for buildings the faction has the technology to build.
-    std::vector<const BuildingConfig_t*> GetDiscoveredBuildings() const;
+    // Returns buildings the faction has the technology to build.
+    std::vector<const Building*> GetDiscoveredBuildings() const;
 
     // Energy tracking
     void AddEnergy(int amount);
