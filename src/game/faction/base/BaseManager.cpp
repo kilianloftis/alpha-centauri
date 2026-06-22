@@ -1,5 +1,6 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/buildings/BuildingManager.h"
+#include "game/faction/base/production/ProductionManager.h"
 #include "game/faction/base/resources/ResourceManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopulationManager.h"
@@ -23,6 +24,7 @@ BaseManager::BaseManager(const BuildingRegistry* pBuildingRegistry, const PopTyp
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(std::vector<const Tile*>{}))
     , m_pResources(nullptr)
     , m_pBuildings(std::make_unique<BuildingManager>(pBuildingRegistry))
+    , m_pProduction(std::make_unique<ProductionManager>(pBuildingRegistry))
 {
     // Create ResourceManager after population and worker assignments are set up
     m_pResources = std::make_unique<ResourceManager>(m_pPopulation.get(), m_pWorkerAssignments.get());
@@ -38,6 +40,11 @@ BaseManager::BaseManager(const BuildingRegistry* pBuildingRegistry, const PopTyp
     m_pWorkerAssignments->AutoAssignWorkers(m_pPopulation->GetContainer());
     m_pPopulation->on_pop_lost.connect([this](int newSize) {
         on_pop_lost.emit(newSize);
+    });
+
+    m_pProduction->on_production_completed.connect([this](const std::string& itemId) {
+        m_pBuildings->AddBuilding(itemId);
+        on_production_completed.emit(itemId);
     });
 }
 
@@ -147,6 +154,48 @@ void BaseManager::DestroyBuilding(const std::string& buildingId)
     if (m_pBuildings)
     {
         m_pBuildings->DestroyBuilding(buildingId);
+    }
+}
+
+void BaseManager::SetProduction(const std::string& itemId)
+{
+    if (m_pProduction)
+    {
+        m_pProduction->SetProduction(itemId);
+    }
+}
+
+const std::string& BaseManager::GetProduction() const
+{
+    static const std::string kEmpty;
+    return m_pProduction ? m_pProduction->GetProduction() : kEmpty;
+}
+
+int BaseManager::GetProductionAccumulatedMinerals() const
+{
+    return m_pProduction ? m_pProduction->GetAccumulatedMinerals() : 0;
+}
+
+int BaseManager::GetProductionMineralCost() const
+{
+    return m_pProduction ? m_pProduction->GetMineralCost() : 0;
+}
+
+bool BaseManager::CanCompleteProduction() const
+{
+    return m_pProduction ? m_pProduction->CanComplete() : false;
+}
+
+std::string BaseManager::CompleteProduction()
+{
+    return m_pProduction ? m_pProduction->CompleteProduction() : std::string();
+}
+
+void BaseManager::ProcessProduction()
+{
+    if (m_pProduction && m_pResources)
+    {
+        m_pProduction->ProgressProduction(m_pResources->GetMineralProduction());
     }
 }
 

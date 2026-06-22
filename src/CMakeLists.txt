@@ -16,6 +16,7 @@ add_executable(alpha-centauri
     game/faction/SocialEngineeringManager.cpp
     game/faction/base/BaseManager.cpp
     game/faction/base/buildings/BuildingManager.cpp
+    game/faction/base/production/ProductionManager.cpp
     game/faction/base/resources/ResourceManager.cpp
     game/faction/base/resources/WorkerAssignmentManager.cpp
     game/faction/base/resources/BaseEconomyManager.cpp
@@ -23,7 +24,6 @@ add_executable(alpha-centauri
     game/faction/base/population/PopContainer.cpp
     game/population/pop-types/Pop.cpp
     game/population/pop-types/PopTypeConfigParser.cpp
-    game/population/pop-types/PopTypeRegistry.cpp
     game/population/pop-types/PopCompositionConfigParser.cpp
     game/population/pop-types/GrowthConfigParser.cpp
     game/population/calculators/PopCompositionCalculator.cpp
@@ -40,13 +40,10 @@ add_executable(alpha-centauri
     game/HookContext.cpp
     game/buildings/Building.cpp
     game/buildings/BuildingConfigParser.cpp
-    game/buildings/BuildingRegistry.cpp
     game/research/TechConfigParser.cpp
     game/social-engineering/SocialPolicyConfigParser.cpp
-    game/social-engineering/SocialPolicyRegistry.cpp
     game/map/Tile.cpp
     game/map/TileBonusConfigParser.cpp
-    game/map/TileBonusRegistry.cpp
     game/map/WorldMap.cpp
     game/map/WorldGenerator.cpp
     game/stages/TurnStart.cpp

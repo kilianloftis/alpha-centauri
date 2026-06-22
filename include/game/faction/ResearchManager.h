@@ -4,6 +4,7 @@
 #include "game/research/TechRegistry.h"
 #include "game/research/TechCostCalculator.h"
 #include <vector>
+#include <memory>
 
 namespace ac
 {
@@ -40,7 +41,7 @@ private:
     TechCostCalculator* m_pTechCostCalculator;
 
     std::vector<TechId> m_discoveredTechs;
-    TechId m_currentResearchTarget;
+    std::unique_ptr<Tech> m_pCurrentResearchTarget;
     int m_accumulatedPoints;
     int m_pointsNeededForCurrentTech;
 

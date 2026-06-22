@@ -1,38 +1,28 @@
 #include "game/research/TechRegistry.h"
-#include "game/research/TechConfigParser.h"
 #include <algorithm>
 #include <iostream>
 
 namespace ac
 {
 
-TechRegistry::TechRegistry()
-    : m_techs()
-{
-}
-
-TechRegistry::~TechRegistry()
-{
-}
-
 void TechRegistry::Load(const std::string& configPath)
 {
-    TechConfigParser parser;
-    auto configs = parser.ParseConfig(configPath);
-
-    Clear();
-
-    
+    // Validate configurations
+    const auto& configs = GetAll();
     for (const TechConfig& rConfig : configs)
     {
         ValidateUniqueIds_(rConfig, configs);
         ValidatePrerequisites_(rConfig, configs);
-        auto pTech = std::make_unique<Tech>(rConfig);
-        m_techs[rConfig.id] = std::move(pTech);
     }
+    
+    // Load configurations using Registry template (throws on failure)
+    TechRegistryBase::Load(configPath);
 
-    std::cout << "Registered " << m_techs.size() << " techs\n";
+    std::cout << "Loaded and validated " << configs.size() << " tech configurations\n";
 }
+
+
+
 
 void TechRegistry::ValidatePrerequisites_(const TechConfig& config, const std::vector<TechConfig>& configs)
 {
@@ -68,99 +58,6 @@ void TechRegistry::ValidateUniqueIds_(const TechConfig& config, const std::vecto
             throw std::runtime_error("Tech '" + config.id + "' has duplicate ID");
         }
     }
-}
-
-
-Tech* TechRegistry::GetTech(TechId techId)
-{
-    auto it = m_techs.find(techId);
-    if (it != m_techs.end())
-    {
-        return it->second.get();
-    }
-    return nullptr;
-}
-
-const Tech* TechRegistry::GetTech(TechId techId) const
-{
-    auto it = m_techs.find(techId);
-    if (it != m_techs.end())
-    {
-        return it->second.get();
-    }
-    return nullptr;
-}
-
-bool TechRegistry::HasTech(TechId techId) const
-{
-    return m_techs.find(techId) != m_techs.end();
-}
-
-std::vector<TechId> TechRegistry::GetAllTechIds() const
-{
-    std::vector<TechId> ids;
-    for (const auto& pair : m_techs)
-    {
-        ids.push_back(pair.first);
-    }
-    return ids;
-}
-
-std::vector<TechId> TechRegistry::GetAvailableTechs(const std::vector<TechId>& discoveredTechs) const
-{
-    std::vector<TechId> available;
-
-    for (const auto& pair : m_techs)
-    {
-        TechId techId = pair.first;
-        const Tech* pTech = pair.second.get();
-
-        bool bAlreadyDiscovered = false;
-        for (TechId discovered : discoveredTechs)
-        {
-            if (discovered == techId)
-            {
-                bAlreadyDiscovered = true;
-                break;
-            }
-        }
-
-        if (bAlreadyDiscovered)
-        {
-            continue;
-        }
-
-        bool bPrerequisitesMet = true;
-        for (TechId prereq : pTech->GetPrerequisites())
-        {
-            bool bHasPrereq = false;
-            for (TechId discovered : discoveredTechs)
-            {
-                if (discovered == prereq)
-                {
-                    bHasPrereq = true;
-                    break;
-                }
-            }
-            if (!bHasPrereq)
-            {
-                bPrerequisitesMet = false;
-                break;
-            }
-        }
-
-        if (bPrerequisitesMet)
-        {
-            available.push_back(techId);
-        }
-    }
-
-    return available;
-}
-
-void TechRegistry::Clear()
-{
-    m_techs.clear();
 }
 
 } // namespace ac

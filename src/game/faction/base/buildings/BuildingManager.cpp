@@ -17,7 +17,7 @@ BuildingManager::~BuildingManager()
 
 void BuildingManager::AddBuilding(const std::string& buildingId)
 {
-    m_buildings.push_back(m_pRegistry->CreateBuilding(buildingId));
+    m_buildings.push_back(m_pRegistry->Create(buildingId));
 }
 
 void BuildingManager::DestroyBuilding(const std::string& buildingId)

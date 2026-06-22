@@ -50,6 +50,7 @@ graph TB
         WorkerAssignmentManager[WorkerAssignmentManager<br/>validates & auto-assigns]
         Pop[Pop<br/>tileCoord (x,y)]
         PopulationManager[PopulationManager]
+        ProductionManager[ProductionManager]
     end
 
     subgraph "Research Subsystem"
@@ -126,6 +127,7 @@ graph TB
     BaseManager --> Base
     Base --> PopulationManager
     Base --> WorkerAssignmentManager
+    Base --> ProductionManager
     PopulationManager --> Pop
     WorkerAssignmentManager --> Pop
     ResearchManager --> Tech
@@ -238,6 +240,7 @@ graph TB
   - `Base`: Main base class managing population, buildings, and resources
   - `Population`: Abstract base class for population implementations
   - `PopulationManager`: API surface for the population component; manages pop composition, growth, and riot state for a single base
+  - `ProductionManager`: API surface for the production component; manages one active production item at a time, tracks accumulated minerals, and emits `on_production_completed` when the item is finished
   - `WorkerAssignmentManager`: Owns the set of workable tiles and the tile-scoring policy; validates worker-to-tile assignments and runs auto-assignment. The canonical tile coordinate is stored on each `Pop`.
   - `Pop`: Individual population unit; stores its own tile coordinate `(x, y)` when assigned as a worker
   - `PopFactory`: Creates individual `Pop` instances from config (looked up via `PopTypeRegistry`)
@@ -256,6 +259,7 @@ graph TB
   - Let `WorkerAssignmentManager` enforce uniqueness, validate tile coordinates against the workable tile set, and auto-assign idle workers
   - Assign workers to different roles (tiles, labs, psych, econ, drones, talents)
   - Track buildings constructed in the base
+  - Manage one active production item per base, accumulating minerals each turn until the item's mineral cost is paid; emits `on_production_completed` and adds the building to the base when finished
   - Calculate resource output based on worker assignments:
     - Workers/Talents work tiles (produce nutrients, energy, minerals)
     - Lab workers contribute to research

@@ -9,7 +9,7 @@ ResearchManager::ResearchManager(const TechRegistry* pTechRegistry,
     : m_pTechRegistry(pTechRegistry)
     , m_pTechCostCalculator(pTechCostCalculator)
     , m_discoveredTechs()
-    , m_currentResearchTarget()
+    , m_pCurrentResearchTarget(nullptr)
     , m_accumulatedPoints(0)
     , m_pointsNeededForCurrentTech(0)
     , m_bHasResearchTarget(false)
@@ -22,20 +22,20 @@ ResearchManager::~ResearchManager()
 
 void ResearchManager::SetResearchTarget(TechId techId)
 {
-    m_currentResearchTarget = techId;
+    m_pCurrentResearchTarget = m_pTechRegistry->Create(techId);
     m_bHasResearchTarget = true;
     RecalculatePointsNeeded();
 }
 
 TechId ResearchManager::GetResearchTarget() const
 {
-    return m_currentResearchTarget;
+    return m_pCurrentResearchTarget ? m_pCurrentResearchTarget->GetId() : TechId{};
 }
 
 void ResearchManager::ClearResearchTarget()
 {
     m_bHasResearchTarget = false;
-    m_currentResearchTarget.clear();
+    m_pCurrentResearchTarget = nullptr;
 }
 
 bool ResearchManager::HasResearchTarget() const
@@ -65,15 +65,9 @@ int ResearchManager::GetPointsNeededForCurrentTech() const
 
 void ResearchManager::RecalculatePointsNeeded()
 {
-    if (!m_bHasResearchTarget || !m_pTechCostCalculator || !m_pTechRegistry)
+    if (!m_bHasResearchTarget || !m_pTechCostCalculator || !m_pTechRegistry || !m_pCurrentResearchTarget)
     {
         throw std::runtime_error("ResearchManager::RecalculatePointsNeeded: Invalid state");
-    }
-
-    const Tech* pTech = m_pTechRegistry->GetTech(m_currentResearchTarget);
-    if (!pTech)
-    {
-        throw std::runtime_error("ResearchManager::RecalculatePointsNeeded: Tech not found");
     }
 
     TechCostInputs_t inputs;
@@ -81,7 +75,7 @@ void ResearchManager::RecalculatePointsNeeded()
     inputs.mostTechs  = inputs.techs;                               // TODO: max across all factions + unknownVarA
     // All other fields are placeholder defaults (diff=1, turns=0, bIsAI=false, etc.)
 
-    m_pointsNeededForCurrentTech = m_pTechCostCalculator->CalculateCost(*pTech, inputs);
+    m_pointsNeededForCurrentTech = m_pTechCostCalculator->CalculateCost(*m_pCurrentResearchTarget, inputs);
 }
 
 bool ResearchManager::CanDiscoverTech() const
@@ -100,8 +94,8 @@ bool ResearchManager::DiscoverTech()
         return false;
     }
 
-    AddDiscoveredTech(m_currentResearchTarget);
-    ResetAccumulatedPoints_();
+    AddDiscoveredTech(m_pCurrentResearchTarget->GetId());
+    m_accumulatedPoints = m_accumulatedPoints - m_pointsNeededForCurrentTech;
     ClearResearchTarget();
 
     return true;
@@ -140,7 +134,56 @@ std::vector<TechId> ResearchManager::GetAvailableResearchTargets() const
         return std::vector<TechId>();
     }
 
-    return m_pTechRegistry->GetAvailableTechs(m_discoveredTechs);
+    std::vector<TechId> available;
+    const auto& allConfigs = m_pTechRegistry->GetAll();
+
+    for (const auto& config : allConfigs)
+    {
+        TechId techId = config.id;
+
+        // Skip if already discovered
+        bool bAlreadyDiscovered = false;
+        for (TechId discovered : m_discoveredTechs)
+        {
+            if (discovered == techId)
+            {
+                bAlreadyDiscovered = true;
+                break;
+            }
+        }
+
+        if (bAlreadyDiscovered)
+        {
+            continue;
+        }
+
+        // Check if all prerequisites are met
+        bool bPrerequisitesMet = true;
+        for (TechId prereq : config.prerequisites)
+        {
+            bool bHasPrereq = false;
+            for (TechId discovered : m_discoveredTechs)
+            {
+                if (discovered == prereq)
+                {
+                    bHasPrereq = true;
+                    break;
+                }
+            }
+            if (!bHasPrereq)
+            {
+                bPrerequisitesMet = false;
+                break;
+            }
+        }
+
+        if (bPrerequisitesMet)
+        {
+            available.push_back(techId);
+        }
+    }
+
+    return available;
 }
 
 void ResearchManager::ResetAccumulatedPoints_()

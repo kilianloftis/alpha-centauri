@@ -42,6 +42,16 @@ void BaseProduction::Execute_(GameState* pGameState, Faction* pFaction)
         std::cout << "  Stockpiles: nutrients=" << pBase->GetNutrientStockpile()
                   << ", minerals=" << pBase->GetMineralStockpile()
                   << " (energy not stockpiled)\n";
+
+        pBase->ProcessProduction();
+
+        const std::string& currentProduction = pBase->GetProduction();
+        if (!currentProduction.empty())
+        {
+            std::cout << "  Producing: " << currentProduction
+                      << " (" << pBase->GetProductionAccumulatedMinerals()
+                      << "/" << pBase->GetProductionMineralCost() << " minerals)\n";
+        }
     }
 }
 

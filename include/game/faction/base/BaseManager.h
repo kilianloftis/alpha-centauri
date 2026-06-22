@@ -20,6 +20,7 @@ class WorkerAssignmentManager;
 class ResourceManager;
 class BuildingManager;
 class BuildingRegistry;
+class ProductionManager;
 class Tile;
 class WorldMap;
 
@@ -45,6 +46,9 @@ public:
     Signal<int> on_pop_gained;
     Signal<int> on_pop_lost;
 
+    // Signals forwarded from ProductionManager
+    Signal<std::string> on_production_completed;
+
     // Worker assignment - delegated to WorkerAssignmentManager
     WorkerAssignmentManager& GetWorkerAssignments();
     const WorkerAssignmentManager& GetWorkerAssignments() const;
@@ -62,6 +66,15 @@ public:
     // Building management - delegated to BuildingManager
     void AddBuilding(const std::string& buildingId);
     void DestroyBuilding(const std::string& buildingId);
+
+    // Production management - delegated to ProductionManager
+    void SetProduction(const std::string& itemId);
+    const std::string& GetProduction() const;
+    int GetProductionAccumulatedMinerals() const;
+    int GetProductionMineralCost() const;
+    bool CanCompleteProduction() const;
+    std::string CompleteProduction();
+    void ProcessProduction();
 
     // Collect resources from worked tiles and allocate energy to stockpiles.
     // Called once per turn per base during ResourceCollection stage.
@@ -112,6 +125,7 @@ private:
     std::unique_ptr<WorkerAssignmentManager> m_pWorkerAssignments;
     std::unique_ptr<ResourceManager> m_pResources;
     std::unique_ptr<BuildingManager> m_pBuildings;
+    std::unique_ptr<ProductionManager> m_pProduction;
     std::string m_name;
 };
 

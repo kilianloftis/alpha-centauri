@@ -14,7 +14,7 @@ PopContainer::PopContainer(const PopTypeRegistry* pReg, int initialSize)
     {
         for (int i = 0; i < initialSize; ++i)
         {
-            auto pPop = m_pRegistry->CreatePop("Worker");
+            auto pPop = m_pRegistry->Create("Worker");
             m_pops.push_back(std::move(pPop));
         }
     }
@@ -61,7 +61,7 @@ void PopContainer::AddPop(const std::string& typeId)
     {
         throw std::runtime_error("PopContainer has no registry");
     }
-    auto pPop = m_pRegistry->CreatePop(typeId);
+    auto pPop = m_pRegistry->Create(typeId);
     m_pops.push_back(std::move(pPop));
 }
 
