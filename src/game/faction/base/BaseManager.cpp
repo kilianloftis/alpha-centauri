@@ -2,6 +2,7 @@
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/production/ProductionManager.h"
 #include "game/faction/base/resources/ResourceManager.h"
+#include "game/faction/base/resources/BaseEconomyManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/population/PopContainer.h"
@@ -22,15 +23,20 @@ BaseManager::BaseManager(const BuildingRegistry* pBuildingRegistry, const PopTyp
     , m_pWorldMap(&rWorldMap)
     , m_pPopulation(std::make_unique<PopulationManager>(pPopRegistry, pCompositionCalculator))
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(std::vector<const Tile*>{}))
+    , m_pEconomy(std::make_unique<BaseEconomyManager>())
     , m_pResources(nullptr)
     , m_pBuildings(std::make_unique<BuildingManager>(pBuildingRegistry))
     , m_pProduction(std::make_unique<ProductionManager>())
 {
-    // Create ResourceManager after population and worker assignments are set up
-    m_pResources = std::make_unique<ResourceManager>(m_pPopulation.get(), m_pWorkerAssignments.get());
-    m_pResources->SetTileLookup([this](int x, int y) -> const Tile* {
-        return m_pWorldMap ? m_pWorldMap->GetTile(x, y) : nullptr;
-    });
+    // Create ResourceManager after all sub-managers are set up
+    m_pResources = std::make_unique<ResourceManager>(
+        m_pPopulation.get(),
+        m_pWorkerAssignments.get(),
+        m_pEconomy.get(),
+        m_pBuildings.get(),
+        [this](int x, int y) -> const Tile* {
+            return m_pWorldMap ? m_pWorldMap->GetTile(x, y) : nullptr;
+        });
 
     m_pPopulation->on_pop_gained.connect([this](int newSize) {
         m_pWorkerAssignments->AutoAssignWorkers(m_pPopulation->GetContainer());
@@ -131,14 +137,19 @@ int BaseManager::GetMineralProduction() const
     return m_pResources ? m_pResources->GetMineralProduction() : 0;
 }
 
-int BaseManager::GetEnergyProduction() const
+int BaseManager::GetEconProduction() const
 {
-    return m_pResources ? m_pResources->GetEnergyProduction() : 0;
+    return m_pResources ? m_pResources->GetEconProduction() : 0;
 }
 
-int BaseManager::GetMineralStockpile() const
+int BaseManager::GetLabsProduction() const
 {
-    return m_pResources ? m_pResources->GetMineralStockpile() : 0;
+    return m_pResources ? m_pResources->GetLabsProduction() : 0;
+}
+
+int BaseManager::GetPsychProduction() const
+{
+    return m_pResources ? m_pResources->GetPsychProduction() : 0;
 }
 
 void BaseManager::AddBuilding(const std::string& buildingId)
@@ -186,44 +197,59 @@ int BaseManager::GetProductionMineralCost() const
     return m_pProduction ? m_pProduction->GetMineralCost() : 0;
 }
 
+int BaseManager::GetMineralStockpile() const
+{
+    return m_pProduction ? m_pProduction->GetMineralStockpile() : 0;
+}
+
+int BaseManager::ConsumeMinerals(int amount)
+{
+    return m_pProduction ? m_pProduction->ConsumeMinerals(amount) : 0;
+}
+
 std::string BaseManager::CompleteProduction()
 {
     return m_pProduction ? m_pProduction->CompleteProduction() : std::string();
 }
 
-int BaseManager::ConsumeMinerals(int amount)
-{
-    return m_pResources ? m_pResources->ConsumeMinerals(amount) : 0;
-}
-
-void BaseManager::CollectResources(BaseEconomyManager* pEconomy)
+void BaseManager::CollectResources()
 {
     if (m_pResources)
     {
-        m_pResources->CollectResources(pEconomy);
+        m_pResources->CollectResources();
     }
 }
 
-int BaseManager::CollectIncome()
+int BaseManager::ConsumeNutrients()
 {
-    return m_pResources ? m_pResources->CollectIncome() : 0;
+    return m_pResources ? m_pResources->ConsumeNutrients() : 0;
 }
 
-int BaseManager::CollectLabs()
+int BaseManager::ConsumeEcon()
 {
-    return m_pResources ? m_pResources->CollectLabs() : 0;
+    return m_pResources ? m_pResources->ConsumeEcon() : 0;
+}
+
+int BaseManager::ConsumeLabs()
+{
+    return m_pResources ? m_pResources->ConsumeLabs() : 0;
+}
+
+int BaseManager::ConsumePsych()
+{
+    return m_pResources ? m_pResources->ConsumePsych() : 0;
 }
 
 int BaseManager::GetNutrientStockpile() const
 {
-    return m_pResources ? m_pResources->GetNutrientStockpile() : 0;
+    return m_pPopulation ? m_pPopulation->GetNutrientStockpile() : 0;
 }
 
 void BaseManager::SetNutrientStockpile(int amount)
 {
-    if (m_pResources)
+    if (m_pPopulation)
     {
-        m_pResources->SetNutrientStockpile(amount);
+        m_pPopulation->SetNutrientStockpile(amount);
     }
 }
 

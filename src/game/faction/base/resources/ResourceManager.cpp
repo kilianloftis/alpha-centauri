@@ -1,72 +1,30 @@
 #include "game/faction/base/resources/ResourceManager.h"
 #include "game/faction/base/resources/BaseEconomyManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
+#include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/population/PopContainer.h"
 #include "game/map/Tile.h"
-#include <algorithm>
-#include <cmath>
 
 namespace ac
 {
 
-ResourceManager::ResourceManager(PopulationManager* pPopulation, WorkerAssignmentManager* pWorkerAssignments)
+ResourceManager::ResourceManager(
+    const PopulationManager* pPopulation,
+    const WorkerAssignmentManager* pWorkerAssignments,
+    const BaseEconomyManager* pEconomy,
+    const BuildingManager* pBuildings,
+    std::function<const Tile*(int x, int y)> tileLookup)
     : m_pPopulation(pPopulation)
     , m_pWorkerAssignments(pWorkerAssignments)
-    , m_pEconomy(nullptr)
+    , m_pEconomy(pEconomy)
+    , m_pBuildings(pBuildings)
+    , m_tileLookup(std::move(tileLookup))
 {
-}
-
-void ResourceManager::SetEconomyManager(BaseEconomyManager* pEconomy)
-{
-    m_pEconomy = pEconomy;
 }
 
 ResourceManager::~ResourceManager()
 {
-}
-
-void ResourceManager::AddBuilding(const std::string& buildingId)
-{
-    m_buildings.push_back(buildingId);
-}
-
-void ResourceManager::RemoveBuilding(const std::string& buildingId)
-{
-    auto it = std::find(m_buildings.begin(), m_buildings.end(), buildingId);
-    if (it != m_buildings.end())
-    {
-        m_buildings.erase(it);
-    }
-}
-
-const std::vector<std::string>& ResourceManager::GetBuildings() const
-{
-    return m_buildings;
-}
-
-void ResourceManager::SetTileLookup(std::function<const Tile*(int x, int y)> tileLookup)
-{
-    m_tileLookup = std::move(tileLookup);
-}
-
-void ResourceManager::AddTradeRoute(const TradeRoute_t& tradeRoute)
-{
-    m_tradeRoutes.push_back(tradeRoute);
-}
-
-void ResourceManager::RemoveTradeRoute(int targetFactionId)
-{
-    auto it = std::remove_if(m_tradeRoutes.begin(), m_tradeRoutes.end(),
-        [targetFactionId](const TradeRoute_t& route) {
-            return route.targetFactionId == targetFactionId;
-        });
-    m_tradeRoutes.erase(it, m_tradeRoutes.end());
-}
-
-const std::vector<TradeRoute_t>& ResourceManager::GetTradeRoutes() const
-{
-    return m_tradeRoutes;
 }
 
 int ResourceManager::CalculateNutrients_() const
@@ -79,32 +37,6 @@ int ResourceManager::CalculateNutrients_() const
         m_pPopulation->GetContainer(), m_tileLookup);
     // TODO: Add nutrient bonuses from buildings
     return worked.nutrients;
-}
-
-int ResourceManager::CalculateEnergyProduction_() const
-{
-    int totalEnergy = 0;
-
-    if (m_tileLookup && m_pWorkerAssignments)
-    {
-        const TileResources_t worked = m_pWorkerAssignments->ComputeWorkedResources(
-            m_pPopulation->GetContainer(), m_tileLookup);
-        totalEnergy += worked.energy;
-    }
-
-    // Energy from trade routes
-    for (const auto& route : m_tradeRoutes)
-    {
-        totalEnergy += route.energyBonus;
-    }
-
-    // TODO: Add energy production from buildings
-    for (const auto& building : m_buildings)
-    {
-        (void)building;
-    }
-
-    return totalEnergy;
 }
 
 int ResourceManager::CalculateMinerals_() const
@@ -120,14 +52,21 @@ int ResourceManager::CalculateMinerals_() const
     return worked.minerals;
 }
 
+int ResourceManager::CalculateEnergy_() const
+{
+    if (!m_tileLookup || !m_pWorkerAssignments)
+    {
+        return 0;
+    }
+    const TileResources_t worked = m_pWorkerAssignments->ComputeWorkedResources(
+        m_pPopulation->GetContainer(), m_tileLookup);
+    // TODO: Add energy bonuses from buildings
+    return worked.energy;
+}
+
 int ResourceManager::GetNutrientProduction() const
 {
     return CalculateNutrients_();
-}
-
-int ResourceManager::GetEnergyProduction() const
-{
-    return CalculateEnergyProduction_();
 }
 
 int ResourceManager::GetMineralProduction() const
@@ -135,90 +74,107 @@ int ResourceManager::GetMineralProduction() const
     return CalculateMinerals_();
 }
 
-int ResourceManager::GetNutrientStockpile() const
-{
-    return m_nutrientStockpile;
-}
-
-void ResourceManager::SetNutrientStockpile(int amount)
-{
-    m_nutrientStockpile = amount;
-}
-
-int ResourceManager::GetMineralStockpile() const
-{
-    return m_mineralStockpile;
-}
-
-int ResourceManager::GetEconStockpile() const
-{
-    return m_econStockpile;
-}
-
-int ResourceManager::GetLabsStockpile() const
-{
-    return m_labsStockpile;
-}
-
-void ResourceManager::AllocateEnergy(int totalEnergy)
+int ResourceManager::GetEconProduction() const
 {
     if (!m_pEconomy)
     {
+        return CalculateEnergy_();
+    }
+    m_pEconomy->SetTotalEnergyCollected(CalculateEnergy_());
+    return m_pEconomy->GetEnergyForEcon();
+}
+
+int ResourceManager::GetLabsProduction() const
+{
+    if (!m_pEconomy)
+    {
+        return 0;
+    }
+    m_pEconomy->SetTotalEnergyCollected(CalculateEnergy_());
+    return m_pEconomy->GetEnergyForLabs();
+}
+
+int ResourceManager::GetPsychProduction() const
+{
+    if (!m_pEconomy)
+    {
+        return 0;
+    }
+    m_pEconomy->SetTotalEnergyCollected(CalculateEnergy_());
+    return m_pEconomy->GetEnergyForPsych();
+}
+
+int ResourceManager::ConsumeNutrients()
+{
+    int consumed = m_nutrients;
+    m_nutrients = 0;
+    return consumed;
+}
+
+int ResourceManager::ConsumeMinerals()
+{
+    int consumed = m_minerals;
+    m_minerals = 0;
+    return consumed;
+}
+
+int ResourceManager::ConsumeEcon()
+{
+    int consumed = m_econ;
+    m_econ = 0;
+    return consumed;
+}
+
+int ResourceManager::ConsumeLabs()
+{
+    int consumed = m_labs;
+    m_labs = 0;
+    return consumed;
+}
+
+int ResourceManager::ConsumePsych()
+{
+    int consumed = m_psych;
+    m_psych = 0;
+    return consumed;
+}
+
+void ResourceManager::ProduceNutrients_()
+{
+    m_nutrients += CalculateNutrients_();
+}
+
+void ResourceManager::ProduceMinerals_()
+{
+    m_minerals += CalculateMinerals_();
+}
+
+void ResourceManager::AllocateEnergy_()
+{
+    const int totalEnergy = CalculateEnergy_();
+    if (!m_pEconomy)
+    {
         // No economy manager set, allocate all to econ
-        m_econStockpile += totalEnergy;
+        m_econ += totalEnergy;
         return;
     }
 
-    // Set total energy collected by this base for allocation
     m_pEconomy->SetTotalEnergyCollected(totalEnergy);
-
-    // Allocate energy according to the economy manager's allocation settings
-    m_econStockpile += m_pEconomy->GetEnergyForEcon();
-    m_labsStockpile += m_pEconomy->GetEnergyForLabs();
-    // Psych energy is not stored - it's applied immediately to drone control
-    // m_pEconomy->GetEnergyForPsych() would be used for drone reduction
+    m_econ += m_pEconomy->GetEnergyForEcon();
+    m_labs += m_pEconomy->GetEnergyForLabs();
+    m_psych += m_pEconomy->GetEnergyForPsych();
 }
 
-void ResourceManager::CollectResources(BaseEconomyManager* pEconomy)
+void ResourceManager::ProduceResources_()
 {
-    // Store reference for energy allocation
-    SetEconomyManager(pEconomy);
-
-    // Collect nutrients and minerals from worked tiles
-    m_nutrientStockpile += CalculateNutrients_();
-    m_mineralStockpile += CalculateMinerals_();
-
-    // Calculate and allocate energy
-    int totalEnergy = CalculateEnergyProduction_();
-    AllocateEnergy(totalEnergy);
+    ProduceNutrients_();
+    ProduceMinerals_();
+    AllocateEnergy_();
 }
 
-int ResourceManager::CollectIncome()
+void ResourceManager::CollectResources()
 {
-    int income = m_econStockpile;
-    m_econStockpile = 0;
-    return income;
-}
-
-int ResourceManager::CollectLabs()
-{
-    int labs = m_labsStockpile;
-    m_labsStockpile = 0;
-    return labs;
-}
-
-int ResourceManager::ConsumeNutrients(int amount)
-{
-    int consumed = std::min(amount, m_nutrientStockpile);
-    m_nutrientStockpile -= consumed;
-    return consumed;
-}
-
-int ResourceManager::ConsumeMinerals(int amount)
-{
-    int consumed = std::min(amount, m_mineralStockpile);
-    m_mineralStockpile -= consumed;
-    return consumed;
+    ProduceResources_();
 }
 
 } // namespace ac

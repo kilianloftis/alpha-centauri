@@ -26,6 +26,7 @@ void BaseProduction::Execute_(GameState* pGameState, Faction* pFaction)
 
     for (const auto& pBase : pFaction->GetBases())
     {
+        
         const std::string& currentProduction = pBase->GetProduction();
         if (currentProduction.empty())
         {

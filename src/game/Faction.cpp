@@ -113,7 +113,7 @@ void Faction::CollectBaseResources()
     {
         if (pBase)
         {
-            pBase->CollectResources(m_pEconomy.get());
+            pBase->CollectResources();
         }
     }
 }

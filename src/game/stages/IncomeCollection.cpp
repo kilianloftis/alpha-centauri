@@ -34,7 +34,7 @@ void IncomeCollection::Execute_(GameState* pGameState, Faction* pFaction)
             continue;
         }
 
-        int baseIncome = pBase->CollectIncome();
+        int baseIncome = pBase->ConsumeEcon();
         totalIncome += baseIncome;
 
         std::cout << "  Base '" << pBase->GetName() << "' income: " << baseIncome << "\n";

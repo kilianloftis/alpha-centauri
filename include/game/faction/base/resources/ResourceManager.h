@@ -12,89 +12,62 @@ class Tile;
 class PopContainer;
 class PopulationManager;
 class WorkerAssignmentManager;
-
-// Forward declaration
 class BaseEconomyManager;
+class BuildingManager;
 
-// ResourceManager handles resource production, stockpiling, buildings, and trade routes.
-// It is owned by BaseManager and receives PopulationManager and WorkerAssignmentManager
-// references to calculate resource production from worked tiles.
+// ResourceManager calculates and caches resource production for a base.
+// It is owned by BaseManager and holds const pointers to the managers it reads from.
 class ResourceManager
 {
 public:
-    ResourceManager(PopulationManager* pPopulation, WorkerAssignmentManager* pWorkerAssignments);
+    ResourceManager(
+        const PopulationManager* pPopulation,
+        const WorkerAssignmentManager* pWorkerAssignments,
+        const BaseEconomyManager* pEconomy,
+        const BuildingManager* pBuildings,
+        std::function<const Tile*(int x, int y)> tileLookup);
     ~ResourceManager();
 
-    // Set the BaseEconomyManager reference for energy allocation
-    void SetEconomyManager(BaseEconomyManager* pEconomy);
-
-    // Tile lookup used by resource calculations. Must be set before calling
-    // GetNutrientProduction() / GetEnergyProduction() / GetMineralProduction().
-    // If not set, all tile-derived resource values return 0.
-    void SetTileLookup(std::function<const Tile*(int x, int y)> tileLookup);
-
-    // Trade route management
-    void AddTradeRoute(const TradeRoute_t& tradeRoute);
-    void RemoveTradeRoute(int targetFactionId);
-    const std::vector<TradeRoute_t>& GetTradeRoutes() const;
-
-    // Resource production calculation
+    // Resource production per turn (calculated live from current state).
+    // Safe to call at any time; used by the UI for display and estimates.
     int GetNutrientProduction() const;
-    int GetEnergyProduction() const;
     int GetMineralProduction() const;
+    int GetEconProduction() const;
+    int GetLabsProduction() const;
+    int GetPsychProduction() const;
 
-    // Stockpile accessors.
-    // Note: Nutrient stockpile is separate from the growth nutrient bank.
-    //       The stockpile is for spending (e.g., rushing production).
-    //       The nutrient bank is accumulated toward population growth.
-    int GetNutrientStockpile() const;
-    void SetNutrientStockpile(int amount);
-    int GetMineralStockpile() const;
+    // Consume the full accumulated stockpile, returning the amount consumed.
+    // Called by the appropriate turn stage (e.g. ConsumeMinerals during BaseProduction).
+    int ConsumeNutrients();
+    int ConsumeMinerals();
+    int ConsumeEcon();
+    int ConsumeLabs();
+    int ConsumePsych();
 
-    // Energy stockpiles
-    int GetEconStockpile() const;
-    int GetLabsStockpile() const;
-
-    // Returns the accumulated econ stockpile and resets it to 0.
-    // Called during IncomeCollection stage to transfer income to the faction.
-    int CollectIncome();
-
-    // Returns the accumulated labs stockpile and resets it to 0.
-    // Called during ResearchAccumulation stage to transfer research to the faction.
-    int CollectLabs();
-
-    // Allocate energy to stockpiles based on economy manager settings
-    void AllocateEnergy(int totalEnergy);
-
-    // Consume resources from stockpiles. Returns actual amount consumed.
-    int ConsumeNutrients(int amount);
-    int ConsumeMinerals(int amount);
-
-    // Collect resources from worked tiles and allocate energy.
-    // Called once per turn per base from ResourceCollection stage.
-    void CollectResources(BaseEconomyManager* pEconomy);
-
-    // Building management
-    void AddBuilding(const std::string& buildingId);
-    void RemoveBuilding(const std::string& buildingId);
-    const std::vector<std::string>& GetBuildings() const;
+    // Produce resources from worked tiles and allocate energy into stockpiles.
+    // Called once per turn per base from the ResourceCollection stage.
+    void CollectResources();
 
 private:
-    PopulationManager* m_pPopulation;
-    WorkerAssignmentManager* m_pWorkerAssignments;
+    const PopulationManager* m_pPopulation;
+    const WorkerAssignmentManager* m_pWorkerAssignments;
+    const BaseEconomyManager* m_pEconomy;
+    const BuildingManager* m_pBuildings;
     std::function<const Tile*(int x, int y)> m_tileLookup;
-    std::vector<std::string> m_buildings;
-    std::vector<TradeRoute_t> m_tradeRoutes;
-    int m_nutrientStockpile = 0;
-    int m_mineralStockpile = 0;
-    int m_econStockpile = 0;
-    int m_labsStockpile = 0;
-
-    BaseEconomyManager* m_pEconomy;
+    int m_nutrients = 0;
+    int m_minerals = 0;
+    int m_econ = 0;
+    int m_labs = 0;
+    int m_psych = 0;
 
     int CalculateNutrients_() const;
-    int CalculateEnergyProduction_() const;
     int CalculateMinerals_() const;
+    int CalculateEnergy_() const;
+
+    void ProduceNutrients_();
+    void ProduceMinerals_();
+    void AllocateEnergy_();
+    void ProduceResources_();
 };
 
 } // namespace ac

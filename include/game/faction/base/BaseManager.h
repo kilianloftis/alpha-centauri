@@ -18,6 +18,7 @@ class PopContainer;
 class PopTypeRegistry;
 class PopCompositionCalculator;
 class WorkerAssignmentManager;
+class BaseEconomyManager;
 class ResourceManager;
 class BuildingManager;
 class BuildingRegistry;
@@ -58,11 +59,18 @@ public:
     // Should be called after initial population setup or when new workers need assignment.
     void AutoAssignWorkers();
 
-    // Resource management - delegated to ResourceManager
+    // Resource production per turn (calculated live).
     int GetNutrientProduction() const;
     int GetMineralProduction() const;
-    int GetEnergyProduction() const;
-    int GetMineralStockpile() const;
+    int GetEconProduction() const;
+    int GetLabsProduction() const;
+    int GetPsychProduction() const;
+
+    // Consume the full accumulated resource stockpile, returning the amount consumed.
+    int ConsumeNutrients();
+    int ConsumeEcon();
+    int ConsumeLabs();
+    int ConsumePsych();
 
     // Building management - delegated to BuildingManager
     void AddBuilding(const std::string& buildingId);
@@ -74,22 +82,13 @@ public:
     const Building* GetCurrentBuilding() const;
     const std::string& GetProduction() const;
     int GetProductionMineralCost() const;
+    int GetMineralStockpile() const;
+    int ConsumeMinerals(int amount);
     std::string CompleteProduction();
 
-    // Consume minerals from the resource stockpile. Returns actual amount consumed.
-    int ConsumeMinerals(int amount);
-
-    // Collect resources from worked tiles and allocate energy to stockpiles.
+    // Collect resources from worked tiles and allocate energy to categories.
     // Called once per turn per base during ResourceCollection stage.
-    void CollectResources(class BaseEconomyManager* pEconomy);
-
-    // Returns the accumulated econ stockpile and resets it to 0.
-    // Called during IncomeCollection stage to transfer income to the faction.
-    int CollectIncome();
-
-    // Returns the accumulated labs stockpile and resets it to 0.
-    // Called during ResearchAccumulation stage to transfer research to the faction.
-    int CollectLabs();
+    void CollectResources();
 
     // Convenience accessors for Population stage
     int GetNutrientStockpile() const;
@@ -126,6 +125,7 @@ private:
     const WorldMap* m_pWorldMap;
     std::unique_ptr<PopulationManager> m_pPopulation;
     std::unique_ptr<WorkerAssignmentManager> m_pWorkerAssignments;
+    std::unique_ptr<BaseEconomyManager> m_pEconomy;
     std::unique_ptr<ResourceManager> m_pResources;
     std::unique_ptr<BuildingManager> m_pBuildings;
     std::unique_ptr<ProductionManager> m_pProduction;

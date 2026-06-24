@@ -68,6 +68,11 @@ public:
     int GetMaxSize() const;
     void SetMaxSize(int maxSize);
 
+    // Nutrient stockpile owned by this manager (growth bank).
+    int GetNutrientStockpile() const;
+    void SetNutrientStockpile(int amount);
+    void CollectNutrients(int amount);
+    int ConsumeNutrients(int amount);
 
     // Signals
     Signal<int> on_pop_gained;   // new size
@@ -91,6 +96,7 @@ private:
     PopCompositionCalculator* m_pCompositionCalculator = nullptr;
     int m_maxSize;
     int m_growthRate;
+    int m_nutrientStockpile = 0;
 
     RiotCalculator m_riot;
     GoldenAgeCalculator m_golden_age;

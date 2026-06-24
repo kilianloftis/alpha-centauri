@@ -1,5 +1,7 @@
 #include "game/faction/base/production/ProductionManager.h"
 
+#include <algorithm>
+
 namespace ac
 {
 
@@ -7,6 +9,7 @@ static const std::string k_EmptyString;
 
 ProductionManager::ProductionManager()
     : m_pCurrentBuilding(nullptr)
+    , m_mineralStockpile(0)
 {
 }
 
@@ -46,6 +49,28 @@ bool ProductionManager::HasProduction() const
 int ProductionManager::GetMineralCost() const
 {
     return m_pCurrentBuilding ? m_pCurrentBuilding->GetMineralCost() : 0;
+}
+
+int ProductionManager::GetMineralStockpile() const
+{
+    return m_mineralStockpile;
+}
+
+void ProductionManager::AddMinerals(int amount)
+{
+    m_mineralStockpile += amount;
+}
+
+int ProductionManager::ConsumeMinerals(int amount)
+{
+    int consumed = std::min(amount, m_mineralStockpile);
+    m_mineralStockpile -= consumed;
+    return consumed;
+}
+
+void ProductionManager::CollectMinerals(int amount)
+{
+    AddMinerals(amount);
 }
 
 std::string ProductionManager::CompleteProduction()

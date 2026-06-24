@@ -31,6 +31,15 @@ public:
     // Total mineral cost of the current production item.
     int GetMineralCost() const;
 
+    // Mineral stockpile owned by this manager.
+    int GetMineralStockpile() const;
+    void AddMinerals(int amount);
+    int ConsumeMinerals(int amount);
+
+    // Collect minerals produced this turn into the stockpile.
+    // Called during the BaseProduction stage before processing completion.
+    void CollectMinerals(int amount);
+
     // Complete the current production immediately and return its id.
     std::string CompleteProduction();
 
@@ -42,6 +51,7 @@ public:
 
 private:
     const Building* m_pCurrentBuilding = nullptr;
+    int m_mineralStockpile = 0;
 
     void ResetProduction_();
 };

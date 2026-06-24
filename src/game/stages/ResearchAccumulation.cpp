@@ -34,7 +34,7 @@ void ResearchAccumulation::Execute_(GameState* pGameState, Faction* pFaction)
             continue;
         }
 
-        int baseLabs = pBase->CollectLabs();
+        int baseLabs = pBase->ConsumeLabs();
         totalLabs += baseLabs;
 
         std::cout << "  Base '" << pBase->GetName() << "' labs: " << baseLabs << "\n";

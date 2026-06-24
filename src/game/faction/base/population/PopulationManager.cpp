@@ -3,6 +3,8 @@
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
 
+#include <algorithm>
+
 namespace ac
 {
 
@@ -11,6 +13,7 @@ PopulationManager::PopulationManager(const PopTypeRegistry* pReg, PopComposition
     , m_pCompositionCalculator(pCalc)
     , m_maxSize(8)
     , m_growthRate(1)
+    , m_nutrientStockpile(0)
     , m_riot(on_will_riot, on_is_rioting, on_riot_ended)
     , m_golden_age(on_golden_age_started, on_golden_age_ended)
 {
@@ -81,6 +84,28 @@ void PopulationManager::SetMaxSize(int maxSize)
     {
         RemovePop();
     }
+}
+
+int PopulationManager::GetNutrientStockpile() const
+{
+    return m_nutrientStockpile;
+}
+
+void PopulationManager::SetNutrientStockpile(int amount)
+{
+    m_nutrientStockpile = amount;
+}
+
+void PopulationManager::CollectNutrients(int amount)
+{
+    m_nutrientStockpile += amount;
+}
+
+int PopulationManager::ConsumeNutrients(int amount)
+{
+    int consumed = std::min(amount, m_nutrientStockpile);
+    m_nutrientStockpile -= consumed;
+    return consumed;
 }
 
 bool PopulationManager::IsRioting() const
