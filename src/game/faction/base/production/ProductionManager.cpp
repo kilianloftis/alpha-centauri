@@ -5,50 +5,39 @@
 namespace ac
 {
 
-static const std::string k_EmptyString;
-
 ProductionManager::ProductionManager()
-    : m_pCurrentBuilding(nullptr)
+    : m_pCurrentItem(nullptr)
     , m_mineralStockpile(0)
 {
 }
 
 ProductionManager::~ProductionManager() = default;
 
-void ProductionManager::SetProduction(const Building* pBuilding)
+void ProductionManager::SetProduction(const IConstructable* pItem)
 {
-    if (!pBuilding)
+    if (!pItem)
     {
         ResetProduction_();
         return;
     }
 
-    m_pCurrentBuilding = pBuilding;
+    m_pCurrentItem = pItem;
     on_production_changed.emit();
 }
 
-const Building* ProductionManager::GetCurrentBuilding() const
+const IConstructable* ProductionManager::GetCurrentProduction() const
 {
-    return m_pCurrentBuilding;
-}
-
-const std::string& ProductionManager::GetProduction() const
-{
-    if (!m_pCurrentBuilding)
-    {
-        return k_EmptyString;
-    }
-    return m_pCurrentBuilding->GetName();
+    return m_pCurrentItem;
 }
 
 bool ProductionManager::HasProduction() const
 {
-    return m_pCurrentBuilding != nullptr;
+    return m_pCurrentItem != nullptr;
 }
 
 int ProductionManager::GetMineralCost() const
 {
-    return m_pCurrentBuilding ? m_pCurrentBuilding->GetMineralCost() : 0;
+    return m_pCurrentItem ? m_pCurrentItem->GetMineralCost() : 0;
 }
 
 int ProductionManager::GetMineralStockpile() const
@@ -80,7 +69,7 @@ std::string ProductionManager::CompleteProduction()
         return std::string();
     }
 
-    std::string completed = m_pCurrentBuilding->GetBuildingId();
+    std::string completed = m_pCurrentItem->GetId();
     ResetProduction_();
     on_production_completed.emit(completed);
     return completed;
@@ -89,7 +78,7 @@ std::string ProductionManager::CompleteProduction()
 void ProductionManager::ResetProduction_()
 {
     bool bHadProduction = HasProduction();
-    m_pCurrentBuilding = nullptr;
+    m_pCurrentItem = nullptr;
     if (bHadProduction)
     {
         on_production_changed.emit();

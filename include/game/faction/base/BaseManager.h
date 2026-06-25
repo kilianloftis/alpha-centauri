@@ -1,6 +1,7 @@
 #pragma once
 
-#include "game/buildings/Building.h"
+#include "game/IConstructable.h"
+#include "game/buildings/BuildingConfigParser.h"
 #include "game/faction/base/BaseTypes.h"
 #include "lib/Signal.h"
 #include <functional>
@@ -23,6 +24,7 @@ class ResourceManager;
 class BuildingManager;
 class BuildingRegistry;
 class ProductionManager;
+class ResearchManager;
 class Tile;
 class WorldMap;
 
@@ -32,7 +34,7 @@ class WorldMap;
 class BaseManager
 {
 public:
-    BaseManager(const BuildingRegistry* pBuildingRegistry, const PopTypeRegistry* pPopRegistry, PopCompositionCalculator* pCompositionCalculator, const WorldMap& rWorldMap);
+    BaseManager(const BuildingRegistry* pBuildingRegistry, const PopTypeRegistry* pPopRegistry, PopCompositionCalculator* pCompositionCalculator, const WorldMap& rWorldMap, const ResearchManager* pResearchManager);
     ~BaseManager();
 
     // Population management - delegated to PopulationManager
@@ -75,12 +77,11 @@ public:
     // Building management - delegated to BuildingManager
     void AddBuilding(const std::string& buildingId);
     void DestroyBuilding(const std::string& buildingId);
-    std::vector<const Building*> GetBuildingsAvailableForConstruction(const std::vector<const Building*>& discoveredBuildings) const;
+    std::vector<const IConstructable*> GetConstructable() const;
 
     // Production management - delegated to ProductionManager
-    void SetProduction(const Building* pBuilding);
-    const Building* GetCurrentBuilding() const;
-    const std::string& GetProduction() const;
+    void SetProduction(const IConstructable* pItem);
+    const IConstructable* GetCurrentProduction() const;
     int GetProductionMineralCost() const;
     int GetMineralStockpile() const;
     int ConsumeMinerals(int amount);
@@ -123,6 +124,7 @@ private:
     int m_x;
     int m_y;
     const WorldMap* m_pWorldMap;
+    const ResearchManager* m_pResearch;
     std::unique_ptr<PopulationManager> m_pPopulation;
     std::unique_ptr<WorkerAssignmentManager> m_pWorkerAssignments;
     std::unique_ptr<BaseEconomyManager> m_pEconomy;

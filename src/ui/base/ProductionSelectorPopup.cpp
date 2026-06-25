@@ -1,5 +1,4 @@
 #include "ui/base/ProductionSelectorPopup.h"
-#include "game/buildings/Building.h"
 #include "graphics/Graphics.h"
 #include "input/Input.h"
 
@@ -7,13 +6,13 @@ namespace ac
 {
 
 ProductionSelectorPopup::ProductionSelectorPopup(
-    std::vector<const Building*> availableBuildings,
+    std::vector<const IConstructable*> availableItems,
     WindowLayout_t layout,
-    std::function<void(const Building&)> onBuildingSelected
+    std::function<void(const IConstructable&)> onItemSelected
 )
     : UIElement(layout)
-    , m_availableBuildings(std::move(availableBuildings))
-    , m_onBuildingSelected(std::move(onBuildingSelected))
+    , m_availableItems(std::move(availableItems))
+    , m_onItemSelected(std::move(onItemSelected))
 {
     CacheEntryRects_();
 }
@@ -22,7 +21,7 @@ void ProductionSelectorPopup::CacheEntryRects_()
 {
     const float lineHeight = m_layout.height * k_LineHeightRatio;
     float offsetY = lineHeight * 2.0f;
-    for (size_t i = 0; i < m_availableBuildings.size(); ++i)
+    for (size_t i = 0; i < m_availableItems.size(); ++i)
     {
         m_entryRects.push_back(Rectangle_t{
             m_layout.x,
@@ -51,16 +50,16 @@ void ProductionSelectorPopup::Render(Graphics& rGraphics)
 
     rGraphics.DrawText("Select Production", m_layout.x + padding, m_layout.y + padding, headerFontSize, Color::Yellow());
 
-    if (m_availableBuildings.empty())
+    if (m_availableItems.empty())
     {
         rGraphics.DrawText("Nothing available to build", m_layout.x + padding, m_layout.y + lineHeight * 2.0f, entryFontSize, Color::White());
         return;
     }
 
-    for (size_t i = 0; i < m_availableBuildings.size(); ++i)
+    for (size_t i = 0; i < m_availableItems.size(); ++i)
     {
         const Rectangle_t& rect = m_entryRects[i];
-        rGraphics.DrawText(m_availableBuildings[i]->GetName(), rect.x + padding, rect.y, entryFontSize, Color::White());
+        rGraphics.DrawText(m_availableItems[i]->GetName(), rect.x + padding, rect.y, entryFontSize, Color::White());
     }
 }
 
@@ -91,9 +90,9 @@ void ProductionSelectorPopup::HandleMouseClick(const MouseEvent_t& rEvent)
     {
         if (ContainsMouseCoord(m_entryRects[i], rEvent))
         {
-            if (m_onBuildingSelected && m_availableBuildings[i])
+            if (m_onItemSelected && m_availableItems[i])
             {
-                m_onBuildingSelected(*m_availableBuildings[i]);
+                m_onItemSelected(*m_availableItems[i]);
                 m_bShouldClose = true;
             }
             return;

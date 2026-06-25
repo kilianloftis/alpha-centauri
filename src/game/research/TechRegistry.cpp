@@ -7,16 +7,16 @@ namespace ac
 
 void TechRegistry::Load(const std::string& configPath)
 {
+    // Load configurations using Registry template (throws on failure)
+    Registry::Load(configPath);
+
     // Validate configurations
     const auto& configs = GetAll();
-    for (const TechConfig& rConfig : configs)
+    for (const TechConfig_t& rConfig : configs)
     {
         ValidateUniqueIds_(rConfig, configs);
         ValidatePrerequisites_(rConfig, configs);
     }
-    
-    // Load configurations using Registry template (throws on failure)
-    TechRegistryBase::Load(configPath);
 
     std::cout << "Loaded and validated " << configs.size() << " tech configurations\n";
 }
@@ -24,7 +24,7 @@ void TechRegistry::Load(const std::string& configPath)
 
 
 
-void TechRegistry::ValidatePrerequisites_(const TechConfig& config, const std::vector<TechConfig>& configs)
+void TechRegistry::ValidatePrerequisites_(const TechConfig_t& config, const std::vector<TechConfig_t>& configs)
 {
     // Check for self-reference
     if (std::find(config.prerequisites.begin(), config.prerequisites.end(), config.id) != config.prerequisites.end())
@@ -36,7 +36,7 @@ void TechRegistry::ValidatePrerequisites_(const TechConfig& config, const std::v
     for (const std::string& prereqId : config.prerequisites)
     {
         auto it = std::find_if(configs.begin(), configs.end(),
-            [&prereqId](const TechConfig& c) { return c.id == prereqId; });
+            [&prereqId](const TechConfig_t& c) { return c.id == prereqId; });
         if (it == configs.end())
         {
             throw std::runtime_error("Prerequisite '" + prereqId + "' not found for tech '" + config.id + "'");
@@ -44,10 +44,10 @@ void TechRegistry::ValidatePrerequisites_(const TechConfig& config, const std::v
     }
 }
 
-void TechRegistry::ValidateUniqueIds_(const TechConfig& config, const std::vector<TechConfig>& configs)
+void TechRegistry::ValidateUniqueIds_(const TechConfig_t& config, const std::vector<TechConfig_t>& configs)
 {
     int count = 0;
-    for (const TechConfig& c : configs)
+    for (const TechConfig_t& c : configs)
     {
         if (c.id == config.id)
         {

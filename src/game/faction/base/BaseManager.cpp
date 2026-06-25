@@ -15,17 +15,18 @@
 namespace ac
 {
 
-BaseManager::BaseManager(const BuildingRegistry* pBuildingRegistry, const PopTypeRegistry* pPopRegistry, PopCompositionCalculator* pCompositionCalculator, const WorldMap& rWorldMap)
+BaseManager::BaseManager(const BuildingRegistry* pBuildingRegistry, const PopTypeRegistry* pPopRegistry, PopCompositionCalculator* pCompositionCalculator, const WorldMap& rWorldMap, const ResearchManager* pResearchManager)
     : m_factionId(-1)
     , m_baseId(-1)
     , m_x(0)
     , m_y(0)
     , m_pWorldMap(&rWorldMap)
+    , m_pResearch(pResearchManager)
     , m_pPopulation(std::make_unique<PopulationManager>(pPopRegistry, pCompositionCalculator))
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(std::vector<const Tile*>{}))
     , m_pEconomy(std::make_unique<BaseEconomyManager>())
     , m_pResources(nullptr)
-    , m_pBuildings(std::make_unique<BuildingManager>(pBuildingRegistry))
+    , m_pBuildings(std::make_unique<BuildingManager>(pBuildingRegistry, pResearchManager))
     , m_pProduction(std::make_unique<ProductionManager>())
 {
     // Create ResourceManager after all sub-managers are set up
@@ -168,28 +169,31 @@ void BaseManager::DestroyBuilding(const std::string& buildingId)
     }
 }
 
-std::vector<const Building*> BaseManager::GetBuildingsAvailableForConstruction(const std::vector<const Building*>& discoveredBuildings) const
+std::vector<const IConstructable*> BaseManager::GetConstructable() const
 {
-    return m_pBuildings ? m_pBuildings->GetBuildingsAvailableForConstruction(discoveredBuildings) : std::vector<const Building*>{};
+    std::vector<const IConstructable*> available;
+    if (m_pBuildings)
+    {
+        std::vector<const BuildingConfig_t*> buildings = m_pBuildings->GetBuildingsAvailableForConstruction();
+        for (const BuildingConfig_t* pBuilding : buildings)
+        {
+            available.push_back(pBuilding);
+        }
+    }
+    return available;
 }
 
-void BaseManager::SetProduction(const Building* pBuilding)
+void BaseManager::SetProduction(const IConstructable* pItem)
 {
     if (m_pProduction)
     {
-        m_pProduction->SetProduction(pBuilding);
+        m_pProduction->SetProduction(pItem);
     }
 }
 
-const Building* BaseManager::GetCurrentBuilding() const
+const IConstructable* BaseManager::GetCurrentProduction() const
 {
-    return m_pProduction ? m_pProduction->GetCurrentBuilding() : nullptr;
-}
-
-const std::string& BaseManager::GetProduction() const
-{
-    static const std::string kEmpty;
-    return m_pProduction ? m_pProduction->GetProduction() : kEmpty;
+    return m_pProduction ? m_pProduction->GetCurrentProduction() : nullptr;
 }
 
 int BaseManager::GetProductionMineralCost() const

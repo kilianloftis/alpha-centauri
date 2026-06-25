@@ -2,16 +2,11 @@
 
 #include "lib/Registry.h"
 #include "game/research/TechConfigParser.h"
-#include "game/research/Tech.h"
-#include <map>
-#include <memory>
 
 namespace ac
 {
 
-using TechRegistryBase = Registry<TechConfig, TechConfigParser, Tech>;
-
-class TechRegistry : public TechRegistryBase
+class TechRegistry : public Registry<TechConfig_t, TechConfigParser>
 {
 public:
     TechRegistry() = default;
@@ -22,8 +17,8 @@ public:
 
 private:
     // Validation functions for tech configuration
-    void ValidatePrerequisites_(const TechConfig& config, const std::vector<TechConfig>& configs);
-    void ValidateUniqueIds_(const TechConfig& config, const std::vector<TechConfig>& configs);
+    void ValidatePrerequisites_(const TechConfig_t& config, const std::vector<TechConfig_t>& configs);
+    void ValidateUniqueIds_(const TechConfig_t& config, const std::vector<TechConfig_t>& configs);
 };
 
 } // namespace ac

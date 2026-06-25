@@ -12,11 +12,11 @@ TechConfigParser::TechConfigParser()
 {
 }
 
-std::vector<TechConfig> TechConfigParser::ParseConfig(const std::string& configPath)
+std::vector<TechConfig_t> TechConfigParser::ParseConfig(const std::string& configPath)
 {
     std::cout << "Loading tech configuration from: " << configPath << "\n";
 
-    std::vector<TechConfig> configs;
+    std::vector<TechConfig_t> configs;
 
     try
     {
@@ -49,9 +49,9 @@ std::vector<TechConfig> TechConfigParser::ParseConfig(const std::string& configP
     }
 }
 
-TechConfig TechConfigParser::ParseTechConfig(const nlohmann::json& techJson)
+TechConfig_t TechConfigParser::ParseTechConfig(const nlohmann::json& techJson)
 {
-    TechConfig config;
+    TechConfig_t config;
     config.id = techJson["id"];
     config.name = techJson.value("name", config.id);
     config.category = techJson.value("category", std::string{});

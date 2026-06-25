@@ -1,13 +1,15 @@
 #include "game/faction/base/buildings/BuildingManager.h"
-#include "game/buildings/Building.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/faction/ResearchManager.h"
 #include <algorithm>
+#include <stdexcept>
 
 namespace ac
 {
 
-BuildingManager::BuildingManager(const BuildingRegistry* pRegistry)
+BuildingManager::BuildingManager(const BuildingRegistry* pRegistry, const ResearchManager* pResearchManager)
     : m_pRegistry(pRegistry)
+    , m_pResearch(pResearchManager)
 {
 }
 
@@ -17,15 +19,20 @@ BuildingManager::~BuildingManager()
 
 void BuildingManager::AddBuilding(const std::string& buildingId)
 {
-    m_buildings.push_back(m_pRegistry->Create(buildingId));
+    const BuildingConfig_t* pConfig = m_pRegistry->Find(buildingId);
+    if (!pConfig)
+    {
+        throw std::runtime_error("Unknown building id '" + buildingId + "'");
+    }
+    m_buildings.push_back(pConfig);
 }
 
 void BuildingManager::DestroyBuilding(const std::string& buildingId)
 {
     auto it = std::find_if(m_buildings.begin(), m_buildings.end(),
-        [&buildingId](const std::unique_ptr<Building>& pBuilding)
+        [&buildingId](const BuildingConfig_t* pBuilding)
         {
-            return buildingId == pBuilding->GetBuildingId();
+            return buildingId == pBuilding->id;
         });
 
     if (it != m_buildings.end())
@@ -34,7 +41,7 @@ void BuildingManager::DestroyBuilding(const std::string& buildingId)
     }
 }
 
-const std::vector<std::unique_ptr<Building>>& BuildingManager::GetBuildings() const
+const std::vector<const BuildingConfig_t*>& BuildingManager::GetBuildings() const
 {
     return m_buildings;
 }
@@ -42,21 +49,27 @@ const std::vector<std::unique_ptr<Building>>& BuildingManager::GetBuildings() co
 int BuildingManager::GetTotalNutrientsBonus() const
 {
     int total = 0;
-    for (const auto& pBuilding : m_buildings)
+    for (const BuildingConfig_t* pBuilding : m_buildings)
     {
-        total += pBuilding->GetNutrientsBonus();
+        total += pBuilding->nutrientsBonus;
     }
     return total;
 }
 
-std::vector<const Building*> BuildingManager::GetBuildingsAvailableForConstruction(const std::vector<const Building*>& discoveredBuildings) const
+std::vector<const BuildingConfig_t*> BuildingManager::GetBuildingsAvailableForConstruction() const
 {
-    std::vector<const Building*> available;
-    for (const Building* pBuilding : discoveredBuildings)
+    std::vector<const BuildingConfig_t*> available;
+    if (!m_pResearch || !m_pRegistry)
     {
-        if (pBuilding && (pBuilding->GetAllowMultiple() || !DoesBuildingExist_(pBuilding->GetBuildingId())))
+        return available;
+    }
+
+    const std::vector<std::string>& discoveredTechs = m_pResearch->GetDiscoveredTechs();
+    for (const BuildingConfig_t& rBuilding : m_pRegistry->GetAll())
+    {
+        if (rBuilding.IsDiscovered(discoveredTechs) && (rBuilding.allowMultiple || !DoesBuildingExist_(rBuilding.id)))
         {
-            available.push_back(pBuilding);
+            available.push_back(&rBuilding);
         }
     }
     return available;
@@ -65,9 +78,9 @@ std::vector<const Building*> BuildingManager::GetBuildingsAvailableForConstructi
 bool BuildingManager::DoesBuildingExist_(const std::string& buildingId) const
 {
     return std::find_if(m_buildings.begin(), m_buildings.end(),
-        [&buildingId](const std::unique_ptr<Building>& pBuilding)
+        [&buildingId](const BuildingConfig_t* pBuilding)
         {
-            return buildingId == pBuilding->GetBuildingId();
+            return buildingId == pBuilding->id;
         }) != m_buildings.end();
 }
 

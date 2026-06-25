@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/buildings/Building.h"
+#include "game/IConstructable.h"
 #include "lib/Signal.h"
 #include <string>
 
@@ -16,14 +16,11 @@ public:
     ProductionManager();
     ~ProductionManager();
 
-    // Set the building to produce. Pass nullptr to clear production.
-    void SetProduction(const Building* pBuilding);
+    // Set the item to produce. Pass nullptr to clear production.
+    void SetProduction(const IConstructable* pItem);
 
-    // The building currently being produced, or nullptr if none.
-    const Building* GetCurrentBuilding() const;
-
-    // Get the id of the item currently being produced, or empty string if none.
-    const std::string& GetProduction() const;
+    // The item currently being produced, or nullptr if none.
+    const IConstructable* GetCurrentProduction() const;
 
     // True if a production item is currently set.
     bool HasProduction() const;
@@ -50,7 +47,7 @@ public:
     Signal<> on_production_changed;
 
 private:
-    const Building* m_pCurrentBuilding = nullptr;
+    const IConstructable* m_pCurrentItem = nullptr;
     int m_mineralStockpile = 0;
 
     void ResetProduction_();

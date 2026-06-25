@@ -35,8 +35,8 @@ void ProductionDisplay::Render(Graphics& rGraphics)
     const float lineHeight   = m_layout.height * k_LineHeightRatio;
     const float leftPadding  = m_layout.width  * k_LeftPaddingRatio;
 
-    const std::string& currentProduction = m_pBase->GetProduction();
-    const std::string header = currentProduction.empty() ? "Production: (none)" : "Production: " + currentProduction;
+    const IConstructable* pCurrentProduction = m_pBase->GetCurrentProduction();
+    const std::string header = pCurrentProduction ? "Production: " + pCurrentProduction->GetName() : "Production: (none)";
     rGraphics.DrawText(header, m_layout.x + leftPadding, m_layout.y, headerFontSize);
 
     std::ostringstream oss;
@@ -46,7 +46,7 @@ void ProductionDisplay::Render(Graphics& rGraphics)
 
     oss.str("");
     oss << "Required: ";
-    if (!currentProduction.empty())
+    if (pCurrentProduction)
     {
         oss << m_pBase->GetProductionMineralCost();
     }

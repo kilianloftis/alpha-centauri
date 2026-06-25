@@ -240,7 +240,8 @@ graph TB
   - `Base`: Main base class managing population, buildings, and resources
   - `Population`: Abstract base class for population implementations
   - `PopulationManager`: API surface for the population component; manages pop composition, growth, and riot state for a single base
-  - `ProductionManager`: API surface for the production component; manages one active production item at a time, tracks accumulated minerals, and emits `on_production_completed` when the item is finished
+  - `IConstructable`: Abstract interface for any entity that can be queued for production; exposes `GetId()`, `GetName()`, and `GetMineralCost()`
+  - `ProductionManager`: API surface for the production component; manages one active `IConstructable` at a time, tracks accumulated minerals, and emits `on_production_completed` when the item is finished
   - `WorkerAssignmentManager`: Owns the set of workable tiles and the tile-scoring policy; validates worker-to-tile assignments and runs auto-assignment. The canonical tile coordinate is stored on each `Pop`.
   - `Pop`: Individual population unit; stores its own tile coordinate `(x, y)` when assigned as a worker
   - `PopFactory`: Creates individual `Pop` instances from config (looked up via `PopTypeRegistry`)

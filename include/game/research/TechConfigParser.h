@@ -7,7 +7,9 @@
 namespace ac
 {
 
-struct TechConfig
+using TechId = std::string;
+
+struct TechConfig_t
 {
     std::string id;
     std::string name;
@@ -22,10 +24,10 @@ public:
     TechConfigParser();
     ~TechConfigParser() = default;
 
-    std::vector<TechConfig> ParseConfig(const std::string& configPath);
+    std::vector<TechConfig_t> ParseConfig(const std::string& configPath);
 
 private:
-    TechConfig ParseTechConfig(const nlohmann::json& techJson);
+    TechConfig_t ParseTechConfig(const nlohmann::json& techJson);
 };
 
 } // namespace ac

@@ -48,7 +48,7 @@ public:
     size_t GetBaseCount() const { return m_bases.size(); }
 
     // Returns buildings the faction has the technology to build.
-    std::vector<const Building*> GetDiscoveredBuildings() const;
+    std::vector<const BuildingConfig_t*> GetDiscoveredBuildings() const;
 
     // Energy tracking
     void AddEnergy(int amount);

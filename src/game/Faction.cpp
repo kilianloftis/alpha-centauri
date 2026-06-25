@@ -72,7 +72,8 @@ BaseManager* Faction::CreateBase(FactionId factionId, int baseId, const std::str
         rDataContext.buildingRegistry.get(),
         rDataContext.popTypeRegistry.get(),
         rDataContext.popCompositionCalculator.get(),
-        rWorldMap);
+        rWorldMap,
+        m_pResearch.get());
     pBase->SetFactionId(factionId);
     pBase->SetBaseId(baseId);
     pBase->SetName(name);
@@ -136,7 +137,7 @@ ResearchManager* Faction::GetResearchManager() const
     return m_pResearch.get();
 }
 
-std::vector<const Building*> Faction::GetDiscoveredBuildings() const
+std::vector<const BuildingConfig_t*> Faction::GetDiscoveredBuildings() const
 {
     if (!m_pBuildingRegistry || !m_pResearch)
     {
@@ -144,15 +145,13 @@ std::vector<const Building*> Faction::GetDiscoveredBuildings() const
     }
 
     const std::vector<std::string>& discoveredTechs = m_pResearch->GetDiscoveredTechs();
-    const std::vector<BuildingConfig_t>& configs = m_pBuildingRegistry->GetAll();
-    const std::vector<Building>& prototypes = m_pBuildingRegistry->GetAllCreated();
 
-    std::vector<const Building*> discovered;
-    for (size_t i = 0; i < configs.size(); ++i)
+    std::vector<const BuildingConfig_t*> discovered;
+    for (const BuildingConfig_t& rConfig : m_pBuildingRegistry->GetAll())
     {
-        if (configs[i].IsDiscovered(discoveredTechs))
+        if (rConfig.IsDiscovered(discoveredTechs))
         {
-            discovered.push_back(&prototypes[i]);
+            discovered.push_back(&rConfig);
         }
     }
     return discovered;

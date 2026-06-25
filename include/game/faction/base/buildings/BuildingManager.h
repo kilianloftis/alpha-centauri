@@ -1,7 +1,6 @@
 #pragma once
 
-#include "game/buildings/Building.h"
-#include <memory>
+#include "game/buildings/BuildingConfigParser.h"
 #include <string>
 #include <vector>
 
@@ -9,14 +8,15 @@ namespace ac
 {
 
 class BuildingRegistry;
+class ResearchManager;
 
-// BuildingManager owns all Building instances for a single base.
+// BuildingManager tracks all buildings present in a single base.
 // Buildings are added by id (looked up via BuildingRegistry) and destroyed by id.
 // Provides aggregate bonus queries that sum across all held buildings.
 class BuildingManager
 {
 public:
-    explicit BuildingManager(const BuildingRegistry* pRegistry);
+    BuildingManager(const BuildingRegistry* pRegistry, const ResearchManager* pResearchManager);
     ~BuildingManager();
 
     // Add a building by id. Throws if the factory cannot find the id.
@@ -26,21 +26,22 @@ public:
     void DestroyBuilding(const std::string& buildingId);
 
     // All currently held buildings.
-    const std::vector<std::unique_ptr<Building>>& GetBuildings() const;
+    const std::vector<const BuildingConfig_t*>& GetBuildings() const;
 
     // Sum of GetNutrientsBonus() across all buildings.
     int GetTotalNutrientsBonus() const;
 
     // Get a list of buildings that can be constructed at this base.
-    // discoveredBuildings is the faction-level list of tech-unlocked buildings.
+    // Discovered techs are read from the associated ResearchManager.
     // Base-local rules (allowMultiple, already built) are applied here.
-    std::vector<const Building*> GetBuildingsAvailableForConstruction(const std::vector<const Building*>& discoveredBuildings) const;
+    std::vector<const BuildingConfig_t*> GetBuildingsAvailableForConstruction() const;
 
 private:
     bool DoesBuildingExist_(const std::string& buildingId) const;
 
     const BuildingRegistry* m_pRegistry;
-    std::vector<std::unique_ptr<Building>> m_buildings;
+    const ResearchManager* m_pResearch;
+    std::vector<const BuildingConfig_t*> m_buildings;
 };
 
 } // namespace ac

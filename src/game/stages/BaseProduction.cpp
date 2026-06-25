@@ -26,9 +26,8 @@ void BaseProduction::Execute_(GameState* pGameState, Faction* pFaction)
 
     for (const auto& pBase : pFaction->GetBases())
     {
-        
-        const std::string& currentProduction = pBase->GetProduction();
-        if (currentProduction.empty())
+        const IConstructable* pCurrentProduction = pBase->GetCurrentProduction();
+        if (!pCurrentProduction)
         {
             continue;
         }
@@ -42,7 +41,7 @@ void BaseProduction::Execute_(GameState* pGameState, Faction* pFaction)
         }
         else
         {
-            std::cout << "  Base '" << pBase->GetName() << "' producing '" << currentProduction
+            std::cout << "  Base '" << pBase->GetName() << "' producing '" << pCurrentProduction->GetName()
                       << "' (" << pBase->GetMineralStockpile() << "/" << cost << " minerals)\n";
         }
     }

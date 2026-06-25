@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/IConstructable.h"
 #include <nlohmann/json.hpp>
 #include <string>
 #include <unordered_map>
@@ -13,7 +14,7 @@ struct BuildingImprovementBonus_t
     int nutrients;
 };
 
-struct BuildingConfig_t
+struct BuildingConfig_t : public IConstructable
 {
     std::string id;
     std::string name;
@@ -22,6 +23,10 @@ struct BuildingConfig_t
     int nutrientsBonus;
     bool allowMultiple;
     std::unordered_map<std::string, BuildingImprovementBonus_t> improvementBonuses;
+
+    const char* GetId() const override { return id.c_str(); }
+    const std::string& GetName() const override { return name; }
+    int GetMineralCost() const override { return mineralCost; }
 
     bool IsDiscovered(const std::vector<std::string>& discoveredTechs) const
     {

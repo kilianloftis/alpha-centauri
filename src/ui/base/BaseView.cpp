@@ -119,13 +119,12 @@ void BaseView::HandlePopTypeSelected(Pop& rPop, const PopTypeConfig& rConfig)
 
 void BaseView::HandleProductionDisplayClicked_()
 {
-    const std::vector<const Building*> discovered = m_rFaction.GetDiscoveredBuildings();
-    std::vector<const Building*> available = m_rBase.GetBuildingsAvailableForConstruction(discovered);
+    std::vector<const IConstructable*> available = m_rBase.GetConstructable();
 
     m_elements.push_back(std::make_unique<ProductionSelectorPopup>(
         std::move(available),
         ResolveLayout(m_layout, k_TopPanelLayout),
-        [this](const Building& rBuilding) { m_rBase.SetProduction(&rBuilding); }
+        [this](const IConstructable& rItem) { m_rBase.SetProduction(&rItem); }
     ));
 }
 

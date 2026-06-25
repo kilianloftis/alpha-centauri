@@ -15,7 +15,7 @@ TechCostCalculator::~TechCostCalculator()
 {
 }
 
-int TechCostCalculator::CalculateCost(const Tech& rTech, const TechCostInputs_t& rInputs) const
+int TechCostCalculator::CalculateCost(const TechConfig_t& rTech, const TechCostInputs_t& rInputs) const
 {
     std::unordered_map<std::string, int> vars = {
         {"techs",               rInputs.techs},
@@ -28,7 +28,7 @@ int TechCostCalculator::CalculateCost(const Tech& rTech, const TechCostInputs_t&
         {"world_size_modifier", rInputs.worldSizeModifier},
         {"faction_modifier",    rInputs.factionTechCostModifier},
         {"alphax_modifier",     rInputs.alphaxTechCostModifier},
-        {"base_cost",           rTech.GetBaseCost()},
+        {"base_cost",           rTech.cost},
     };
 
     int cost = m_pLua->EvalInt(m_pConfig->costFormula, vars);

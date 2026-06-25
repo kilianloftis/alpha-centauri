@@ -13,6 +13,7 @@
 #include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/research/TechRegistry.h"
+#include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopContainer.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
@@ -111,6 +112,9 @@ void Engine::Initialize_()
 
     m_gameDataContext->techRegistry = std::make_unique<TechRegistry>();
     m_gameDataContext->techRegistry->Load("config/techs.json");
+
+    m_gameDataContext->socialPolicyRegistry = std::make_unique<SocialPolicyRegistry>();
+    m_gameDataContext->socialPolicyRegistry->Load("config/social_policies.json");
 
     m_gameDataContext->luaRuntime = std::make_unique<LuaRuntime>();
 

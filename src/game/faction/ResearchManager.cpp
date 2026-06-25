@@ -22,14 +22,18 @@ ResearchManager::~ResearchManager()
 
 void ResearchManager::SetResearchTarget(TechId techId)
 {
-    m_pCurrentResearchTarget = m_pTechRegistry->Create(techId);
+    m_pCurrentResearchTarget = m_pTechRegistry->Find(techId);
+    if (!m_pCurrentResearchTarget)
+    {
+        throw std::runtime_error("Unknown tech id '" + techId + "'");
+    }
     m_bHasResearchTarget = true;
     RecalculatePointsNeeded();
 }
 
 TechId ResearchManager::GetResearchTarget() const
 {
-    return m_pCurrentResearchTarget ? m_pCurrentResearchTarget->GetId() : TechId{};
+    return m_pCurrentResearchTarget ? m_pCurrentResearchTarget->id : TechId{};
 }
 
 void ResearchManager::ClearResearchTarget()
@@ -94,7 +98,7 @@ bool ResearchManager::DiscoverTech()
         return false;
     }
 
-    AddDiscoveredTech(m_pCurrentResearchTarget->GetId());
+    AddDiscoveredTech(m_pCurrentResearchTarget->id);
     m_accumulatedPoints = m_accumulatedPoints - m_pointsNeededForCurrentTech;
     ClearResearchTarget();
 

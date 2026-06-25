@@ -127,6 +127,7 @@ graph TB
     GameState --> WorldMap
     GameDataContext --> PopTypeRegistry
     GameDataContext --> BuildingRegistry
+    Building -.->|implements| IConstructable
     GameDataContext --> TechRegistry
     GameDataContext --> PopCompositionConfig
     GameDataContext --> PopCompositionCalculator
@@ -230,6 +231,7 @@ graph TB
 ### GameDataContext
 - **Purpose**: Holds all immutable definition data loaded once at startup; never serialised
 - **Components**:
+  - `IConstructable`: Abstract interface for entities that can be constructed in a base; exposes `GetId()`, `GetName()`, and `GetMineralCost()`
   - `BuildingRegistry`: All building definitions loaded from `config/buildings.json`
   - `TechRegistry`: All tech definitions loaded from `config/techs.json`
   - `PopTypeRegistry`: All pop type definitions loaded from `config/pop_types.json`
