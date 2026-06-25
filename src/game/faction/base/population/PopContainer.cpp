@@ -79,7 +79,7 @@ void PopContainer::ConvertTo(Pop& rPop, const std::string& typeId)
     {
         throw std::runtime_error("PopContainer has no registry");
     }
-    const PopTypeConfig* pConfig = m_pRegistry->Find(typeId);
+    const PopTypeConfig_t* pConfig = m_pRegistry->Find(typeId);
     if (!pConfig)
     {
         throw std::runtime_error("Unknown pop type: " + typeId);

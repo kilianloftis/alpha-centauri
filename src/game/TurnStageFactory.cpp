@@ -20,9 +20,7 @@
 namespace ac
 {
 
-TurnStageFactory::TurnStageFactory(PopCompositionCalculator* pCalculator, GrowthCalculator* pGrowthCalculator)
-    : m_pCalculator(pCalculator)
-    , m_pGrowthCalculator(pGrowthCalculator)
+TurnStageFactory::TurnStageFactory()
 {
 }
 
@@ -73,7 +71,7 @@ std::unique_ptr<TurnStageBase> TurnStageFactory::CreateStageInstance(const TurnS
         case TurnStage::BaseProduction:
             return std::make_unique<BaseProduction>(config.hookContext);
         case TurnStage::Population:
-            return std::make_unique<Population>(config.hookContext, m_pGrowthCalculator);
+            return std::make_unique<Population>(config.hookContext);
         case TurnStage::Upkeep:
             return std::make_unique<Upkeep>(config.hookContext);
         case TurnStage::PlayerActions:

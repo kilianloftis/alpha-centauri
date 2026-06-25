@@ -26,23 +26,21 @@ void BaseProduction::Execute_(GameState* pGameState, Faction* pFaction)
 
     for (const auto& pBase : pFaction->GetBases())
     {
-        const IConstructable* pCurrentProduction = pBase->GetCurrentProduction();
-        if (!pCurrentProduction)
+        if (!pBase->GetCurrentProduction())
         {
             continue;
         }
 
-        const int cost = pBase->GetProductionMineralCost();
-        if (pBase->GetMineralStockpile() >= cost)
+        const std::string completed = pBase->ApplyProduction();
+        if (!completed.empty())
         {
-            pBase->ConsumeMinerals(cost);
-            const std::string completed = pBase->CompleteProduction();
             std::cout << "  Base '" << pBase->GetName() << "' completed production: " << completed << "\n";
         }
         else
         {
-            std::cout << "  Base '" << pBase->GetName() << "' producing '" << pCurrentProduction->GetName()
-                      << "' (" << pBase->GetMineralStockpile() << "/" << cost << " minerals)\n";
+            std::cout << "  Base '" << pBase->GetName() << "' producing '"
+                      << pBase->GetCurrentProduction()->GetName()
+                      << "' (" << pBase->GetMineralStockpile() << "/" << pBase->GetProductionMineralCost() << " minerals)\n";
         }
     }
 }

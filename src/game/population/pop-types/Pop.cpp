@@ -1,19 +1,25 @@
 #include "game/population/pop-types/Pop.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/faction/base/resources/ResourceManager.h"
+#include "game/map/Tile.h"
 #include <cmath>
 
 namespace ac
 {
 
-Pop::Pop(const PopTypeConfig& rConfig)
+Pop::Pop(const PopTypeConfig_t& rConfig)
     : m_pConfig(&rConfig)
-    , m_tileCoord(-1, -1)
+    , m_pTile(nullptr)
+    , m_bUserAssigned(false)
 {
 }
 
 Pop::~Pop()
 {
+    if (m_pTile)
+    {
+        m_pTile->SetWorked(false);
+    }
 }
 
 const char* Pop::GetPopType() const
@@ -51,28 +57,49 @@ int Pop::GetGoldenAgeContribution() const
     return m_pConfig->goldenAgeContribution;
 }
 
-void Pop::Convert(const PopTypeConfig& rConfig)
+void Pop::Convert(const PopTypeConfig_t& rConfig)
 {
     m_pConfig = &rConfig;
     if (!m_pConfig->bCanWorkTile)
     {
-        m_tileCoord = {-1, -1};
+        SetTile(nullptr);
     }
 }
 
-void Pop::SetTileCoord(int x, int y)
+void Pop::SetTile(const Tile* pTile)
 {
-    m_tileCoord = {x, y};
+    if (m_pTile == pTile)
+    {
+        return;
+    }
+    if (m_pTile)
+    {
+        m_pTile->SetWorked(false);
+    }
+    m_pTile = pTile;
+    if (m_pTile)
+    {
+        m_pTile->SetWorked(true);
+    }
+    else
+    {
+        m_bUserAssigned = false;
+    }
 }
 
-void Pop::SetTileCoord(const TileCoord& coord)
+const Tile* Pop::GetTile() const
 {
-    m_tileCoord = coord;
+    return m_pTile;
 }
 
-TileCoord Pop::GetTileCoord() const
+void Pop::SetUserAssigned(bool bUserAssigned)
 {
-    return m_tileCoord;
+    m_bUserAssigned = bUserAssigned;
+}
+
+bool Pop::IsUserAssigned() const
+{
+    return m_bUserAssigned;
 }
 
 TileResources_t Pop::ApplyTileMultipliers(const TileResources_t& resources) const

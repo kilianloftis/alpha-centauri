@@ -114,8 +114,8 @@ case "$command" in
     build "$@"
     ;;
   all)
-    build_dir="${1:-$DEFAULT_BUILD_DIR}"
-    if [[ "$build_dir" != --* ]]; then
+    if [[ $# -gt 0 && "$1" != --* ]]; then
+      build_dir="$1"
       shift
     else
       build_dir="$DEFAULT_BUILD_DIR"

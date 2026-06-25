@@ -19,7 +19,7 @@ add_executable(alpha-centauri
     game/faction/base/production/ProductionCostCalculator.cpp
     game/faction/base/resources/ResourceManager.cpp
     game/faction/base/resources/WorkerAssignmentManager.cpp
-    game/faction/base/resources/BaseEconomyManager.cpp
+    game/faction/EconomyManager.cpp
     game/faction/base/population/PopulationManager.cpp
     game/faction/base/population/PopContainer.cpp
     game/population/pop-types/Pop.cpp

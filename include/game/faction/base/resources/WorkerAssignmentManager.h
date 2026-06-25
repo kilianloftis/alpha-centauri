@@ -11,11 +11,11 @@ namespace ac
 class PopContainer;
 class Tile;
 
-// Manages the mapping of worker pops to workable tile coordinates for a single base.
+// Manages the mapping of worker pops to workable tiles for a single base.
 // Workers are Pop instances that return true from Pop::IsWorker().
-// Tile coordinates are (x, y) pairs matching BaseManager::GetWorkableTilePositions().
+// The public coordinate API still uses (x, y) pairs matching BaseManager::GetWorkableTilePositions().
 //
-// The canonical assignment is stored on each Pop (Pop::GetTileCoord()).
+// The canonical assignment is stored on each Pop as a const Tile* (Pop::GetTile()).
 // WorkerAssignmentManager validates assignments, owns the set of workable tiles,
 // and runs the auto-assignment algorithm. It does NOT own tiles.
 class WorkerAssignmentManager
@@ -24,7 +24,6 @@ public:
     explicit WorkerAssignmentManager(std::vector<const Tile*> workableTiles);
     ~WorkerAssignmentManager() = default;
 
-    using TileLookup = std::function<const Tile*(int x, int y)>;
     using TileScorer = std::function<float(const Tile&)>;
 
     // Assign a worker pop to a tile coordinate.
@@ -34,21 +33,32 @@ public:
     //   - the tile coordinate is not in the workable tile set
     bool AssignWorker(Pop& rPop, int x, int y, PopContainer& rPops);
 
+    // Assign a worker pop to a tile coordinate and mark it as user-assigned.
+    // User-assigned pops are not displaced by AutoAssignWorkers.
+    // Returns false under the same conditions as AssignWorker.
+    bool UserAssignWorker(Pop& rPop, int x, int y, PopContainer& rPops);
+
+    // Clear the user assignment for a given tile coordinate.
+    // If a pop is currently assigned to that tile, it is also unassigned.
+    void UserUnassignTile(int x, int y, PopContainer& rPops);
+
+    // Clear all user assignments and unassign the associated worker pops.
+    void UserUnassignAll(PopContainer& rPops);
+
     // Remove the assignment for the given pop. No-op if not assigned.
     void UnassignWorker(Pop& rPop);
 
-    // Remove all assignments.
+    // Remove all auto-assigned assignments. Does NOT clear user-assigned pops.
     void UnassignAll(PopContainer& rPops);
 
     // Returns true if the given tile coordinate already has a worker assigned.
     bool IsTileAssigned(int x, int y, const PopContainer& rPops) const;
 
     // Compute aggregate resources from all assigned workers.
-    // For each worker pop with a tile coordinate, looks up the tile via tileAt(x, y),
-    // reads raw resources, then applies the pop's tile multipliers.
+    // For each worker pop with an assigned tile, reads raw resources from the tile,
+    // then applies the pop's tile multipliers.
     // Pops or tiles that cannot be resolved are skipped.
-    TileResources_t ComputeWorkedResources(const PopContainer& rPops,
-                                           const TileLookup& tileAt) const;
+    TileResources_t ComputeWorkedResources(const PopContainer& rPops) const;
 
     // Update the set of workable tiles. Should be called when the base position changes.
     // Any pop assigned to a tile no longer in the workable set is unassigned.

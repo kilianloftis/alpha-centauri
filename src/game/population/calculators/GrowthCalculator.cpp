@@ -7,7 +7,7 @@
 namespace ac
 {
 
-GrowthCalculator::GrowthCalculator(const GrowthConfig& rConfig, LuaRuntime& rLua)
+GrowthCalculator::GrowthCalculator(const GrowthConfig_t& rConfig, LuaRuntime& rLua)
     : m_pConfig(&rConfig)
     , m_pLua(&rLua)
 {

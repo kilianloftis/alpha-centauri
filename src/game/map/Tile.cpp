@@ -12,6 +12,7 @@ Tile::Tile()
     , m_rockiness(Rockiness::Flat)
     , m_elevation(0)
     , m_bHasRiver(false)
+    , m_bWorked(false)
     , m_workedByBaseId(-1)
 {
 }
@@ -23,6 +24,7 @@ Tile::Tile(int x, int y)
     , m_rockiness(Rockiness::Flat)
     , m_elevation(0)
     , m_bHasRiver(false)
+    , m_bWorked(false)
     , m_workedByBaseId(-1)
 {
 }
@@ -166,19 +168,31 @@ const std::string& Tile::GetBonus() const
     return m_bonus;
 }
 
+void Tile::SetWorked(bool bWorked) const
+{
+    m_bWorked = bWorked;
+}
+
+bool Tile::IsWorked() const
+{
+    return m_bWorked;
+}
+
 void Tile::AssignWorker(int baseId)
 {
+    m_bWorked = true;
     m_workedByBaseId = baseId;
 }
 
 void Tile::UnassignWorker()
 {
+    m_bWorked = false;
     m_workedByBaseId = -1;
 }
 
 bool Tile::IsWorkerAssigned() const
 {
-    return m_workedByBaseId != -1;
+    return m_bWorked;
 }
 
 int Tile::GetWorkedByBaseId() const

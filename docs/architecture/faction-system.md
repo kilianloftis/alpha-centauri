@@ -29,7 +29,8 @@ graph TB
     end
 
     subgraph "Economy Subsystem"
-        Economy[Economy]
+        EconomyManager[EconomyManager]
+        EnergyAllocation[EnergyAllocation_t<br/>econ/labs/psych]
         Minerals[Minerals<br/>int]
         Energy[Energy<br/>int]
         Credits[Credits<br/>int]
@@ -48,7 +49,7 @@ graph TB
     subgraph "Base Subsystem"
         Base[Base]
         WorkerAssignmentManager[WorkerAssignmentManager<br/>validates & auto-assigns]
-        Pop[Pop<br/>tileCoord (x,y)]
+        Pop[Pop<br/>tile const*]
         PopulationManager[PopulationManager]
         ProductionManager[ProductionManager]
     end
@@ -86,10 +87,12 @@ graph TB
     
     Faction --> FactionIdentity
     Faction --> AIProfile
-    Faction --> Economy
+    Faction --> EconomyManager
     Faction --> Military
     Faction --> ResearchManager
     Faction --> Diplomacy
+    
+    EconomyManager --> EnergyAllocation
     
     FactionIdentity --> FactionName
     FactionIdentity --> FactionLeader
@@ -100,11 +103,11 @@ graph TB
     AIProfile --> Priorities
     AIProfile --> BehaviorModifiers
     
-    Economy --> Minerals
-    Economy --> Energy
-    Economy --> Credits
-    Economy --> TradeRoutes
-    Economy --> IncomeCalculator
+    EconomyManager --> Minerals
+    EconomyManager --> Energy
+    EconomyManager --> Credits
+    EconomyManager --> TradeRoutes
+    EconomyManager --> IncomeCalculator
     
     Military --> Units
     Military --> Bases
@@ -141,7 +144,7 @@ graph TB
     style FactionManager fill:#fbf,stroke:#333,stroke-width:3px
     style FactionIdentity fill:#bbf,stroke:#333,stroke-width:2px
     style AIProfile fill:#bbf,stroke:#333,stroke-width:2px
-    style Economy fill:#bfb,stroke:#333,stroke-width:2px
+    style EconomyManager fill:#bfb,stroke:#333,stroke-width:2px
     style Military fill:#bfb,stroke:#333,stroke-width:2px
     style ResearchManager fill:#bfb,stroke:#333,stroke-width:2px
     style Diplomacy fill:#bfb,stroke:#333,stroke-width:2px
@@ -203,6 +206,8 @@ graph TB
   - Manage trade routes
   - Calculate income per turn
   - Handle resource spending
+  - Own the faction-wide energy allocation split (`EconomyManager`)
+- **Implementation**: See `docs/architecture/economy-system.md` for the fine-grained economy subsystem design
 - **Rationale**: Economic logic is complex and should be isolated for testing
 
 ### Military
@@ -242,8 +247,8 @@ graph TB
   - `PopulationManager`: API surface for the population component; manages pop composition, growth, and riot state for a single base
   - `IConstructable`: Abstract interface for any entity that can be queued for production; exposes `GetId()`, `GetName()`, and `GetMineralCost()`
   - `ProductionManager`: API surface for the production component; manages one active `IConstructable` at a time, tracks accumulated minerals, and emits `on_production_completed` when the item is finished
-  - `WorkerAssignmentManager`: Owns the set of workable tiles and the tile-scoring policy; validates worker-to-tile assignments and runs auto-assignment. The canonical tile coordinate is stored on each `Pop`.
-  - `Pop`: Individual population unit; stores its own tile coordinate `(x, y)` when assigned as a worker
+  - `WorkerAssignmentManager`: Owns the set of workable tiles and the tile-scoring policy; validates worker-to-tile assignments and runs auto-assignment. The canonical assignment is stored on each `Pop` as a `const Tile*`; `Pop` also tracks whether the assignment was user-driven so the manager can skip user-assigned pops during auto-assignment.
+  - `Pop`: Individual population unit; stores a `const Tile*` when assigned as a worker and tracks whether the assignment was user-driven
   - `PopFactory`: Creates individual `Pop` instances from config (looked up via `PopTypeRegistry`)
   - `RiotCalculator`: Tracks drone riot state and emits `will_riot`, `is_rioting`, and `riot_ended` signals
   - `GrowthCalculator`: Computes the nutrient threshold required for a base to grow one population. Stateful; accepts a `GrowthConfig` (loaded from `config/pop_growth.lua` via `GrowthConfigParser`) and a `LuaRuntime`. Growth/starvation decisions (stockpile ≥ required → grow; stockpile < 0 → starve) are made in the `Population` turn stage.
@@ -256,7 +261,7 @@ graph TB
 - **Responsibilities**:
   - Manage population growth and size (1-8 initially, expandable with buildings)
   - Expose the set of workable tiles via `GetWorkableTilePositions()` (5×5 grid minus corners, Manhattan distance ≤ 3 within [-2,2] offsets, 20 tiles, excluding own tile). Tiles already worked by another base or occupied by an enemy unit cannot be worked (enemy-unit check is TODO pending unit implementation).
-  - Store the canonical worker-to-tile assignment on each `Pop` (as `Pop::GetTileCoord()`)
+  - Store the canonical worker-to-tile assignment on each `Pop` (as `Pop::GetTile()`)
   - Let `WorkerAssignmentManager` enforce uniqueness, validate tile coordinates against the workable tile set, and auto-assign idle workers
   - Assign workers to different roles (tiles, labs, psych, econ, drones, talents)
   - Track buildings constructed in the base

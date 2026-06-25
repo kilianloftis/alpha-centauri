@@ -8,52 +8,42 @@ using json = nlohmann::json;
 namespace ac
 {
 
-PopTypeConfigParser::PopTypeConfigParser()
+PopTypeConfig_tParser::PopTypeConfig_tParser()
 {
 }
 
-std::vector<PopTypeConfig> PopTypeConfigParser::ParseConfig(const std::string& configPath)
+std::vector<PopTypeConfig_t> PopTypeConfig_tParser::ParseConfig(const std::string& configPath)
 {
     std::cout << "Loading pop type configuration from: " << configPath << "\n";
 
-    std::vector<PopTypeConfig> configs;
+    std::vector<PopTypeConfig_t> configs;
 
-    try
+    std::ifstream configFile(configPath);
+    if (!configFile.is_open())
     {
-        std::ifstream configFile(configPath);
-        if (!configFile.is_open())
-        {
-            std::cout << "Warning: Could not open " << configPath << "\n";
-            return configs;
-        }
-
-        json configJson;
-        configFile >> configJson;
-
-        if (!configJson.is_array())
-        {
-            std::cout << "Error: Expected array of pop types in config\n";
-            return configs;
-        }
-
-        for (const auto& popJson : configJson)
-        {
-            configs.push_back(ParsePopTypeConfig(popJson));
-        }
-
-        std::cout << "Loaded " << configs.size() << " pop type configurations\n";
-        return configs;
+        throw std::runtime_error("Could not open " + configPath);
     }
-    catch (const std::exception& e)
+
+    json configJson;
+    configFile >> configJson;
+
+    if (!configJson.is_array())
     {
-        std::cout << "Error loading pop type config: " << e.what() << "\n";
-        return configs;
+        throw std::runtime_error("Expected array of pop types in '" + configPath + "'");
     }
+
+    for (const auto& popJson : configJson)
+    {
+        configs.push_back(ParsePopTypeConfig_t(popJson));
+    }
+
+    std::cout << "Loaded " << configs.size() << " pop type configurations\n";
+    return configs;
 }
 
-PopTypeConfig PopTypeConfigParser::ParsePopTypeConfig(const nlohmann::json& popJson)
+PopTypeConfig_t PopTypeConfig_tParser::ParsePopTypeConfig_t(const nlohmann::json& popJson)
 {
-    PopTypeConfig config;
+    PopTypeConfig_t config;
     config.id = popJson["id"];
     config.name = popJson.value("name", config.id);
     config.bCanWorkTile       = popJson.value("can_work_tile",       false);

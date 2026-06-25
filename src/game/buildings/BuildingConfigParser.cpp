@@ -18,37 +18,27 @@ std::vector<BuildingConfig_t> BuildingConfigParser::ParseConfig(const std::strin
 
     std::vector<BuildingConfig_t> configs;
 
-    try
+    std::ifstream configFile(configPath);
+    if (!configFile.is_open())
     {
-        std::ifstream configFile(configPath);
-        if (!configFile.is_open())
-        {
-            std::cout << "Warning: Could not open " << configPath << "\n";
-            return configs;
-        }
-
-        json configJson;
-        configFile >> configJson;
-
-        if (!configJson.is_array())
-        {
-            std::cout << "Error: Expected array of buildings in config\n";
-            return configs;
-        }
-
-        for (const auto& buildingJson : configJson)
-        {
-            configs.push_back(ParseBuildingConfig(buildingJson));
-        }
-
-        std::cout << "Loaded " << configs.size() << " building configurations\n";
-        return configs;
+        throw std::runtime_error("Could not open " + configPath);
     }
-    catch (const std::exception& e)
+
+    json configJson;
+    configFile >> configJson;
+
+    if (!configJson.is_array())
     {
-        std::cout << "Error loading building config: " << e.what() << "\n";
-        return configs;
+        throw std::runtime_error("Expected array of buildings in '" + configPath + "'");
     }
+
+    for (const auto& buildingJson : configJson)
+    {
+        configs.push_back(ParseBuildingConfig(buildingJson));
+    }
+
+    std::cout << "Loaded " << configs.size() << " building configurations\n";
+    return configs;
 }
 
 BuildingConfig_t BuildingConfigParser::ParseBuildingConfig(const nlohmann::json& buildingJson)

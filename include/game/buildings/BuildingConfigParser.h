@@ -26,7 +26,7 @@ struct BuildingConfig_t : public IConstructable
 
     const char* GetId() const override { return id.c_str(); }
     const std::string& GetName() const override { return name; }
-    int GetMineralCost() const override { return mineralCost; }
+    int GetBaseCost() const override { return mineralCost; }
 
     bool IsDiscovered(const std::vector<std::string>& discoveredTechs) const
     {

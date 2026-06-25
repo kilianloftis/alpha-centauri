@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/research/Tech.h"
+#include "game/research/TechConfigParser.h"
 #include <variant>
 
 namespace ac

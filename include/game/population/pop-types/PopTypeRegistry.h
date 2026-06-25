@@ -7,7 +7,7 @@
 namespace ac
 {
 
-class PopTypeRegistry : public Registry<PopTypeConfig, PopTypeConfigParser, Pop>
+class PopTypeRegistry : public Registry<PopTypeConfig_t, PopTypeConfig_tParser, Pop>
 {
 };
 

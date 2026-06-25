@@ -1,6 +1,5 @@
 #include "ui/base/GrowthDisplay.h"
 #include "game/faction/base/BaseManager.h"
-#include "game/population/calculators/GrowthCalculator.h"
 #include "graphics/Graphics.h"
 #include <sstream>
 #include <stdexcept>
@@ -10,12 +9,10 @@ namespace ac
 
 GrowthDisplay::GrowthDisplay(
     const BaseManager* pBase,
-    const GrowthCalculator* pGrowthCalculator,
     WindowLayout_t layout
 )
     : UIElement(layout)
     , m_pBase(pBase)
-    , m_pGrowthCalculator(pGrowthCalculator)
 {}
 
 void GrowthDisplay::Render(Graphics& rGraphics)
@@ -42,16 +39,7 @@ void GrowthDisplay::Render(Graphics& rGraphics)
     rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y + lineHeight, entryFontSize);
 
     oss.str("");
-    oss << "Required: ";
-    if (m_pGrowthCalculator)
-    {
-        oss << m_pGrowthCalculator->ComputeNutrientsRequired(
-            m_pBase->GetBaseSize(), m_pBase->GetGrowthRate());
-    }
-    else
-    {
-        oss << "-";
-    }
+    oss << "Required: " << m_pBase->GetNutrientsRequired();
     rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y + lineHeight * 2.0f, entryFontSize);
 
     oss.str("");

@@ -6,7 +6,7 @@
 namespace ac
 {
 
-ProductionCostCalculator::ProductionCostCalculator(const ProductionCostConfig& rConfig, LuaRuntime& rLua)
+ProductionCostCalculator::ProductionCostCalculator(const ProductionCostConfig_t& rConfig, LuaRuntime& rLua)
     : m_pConfig(&rConfig)
     , m_pLua(&rLua)
 {
@@ -21,9 +21,9 @@ int ProductionCostCalculator::ComputeCost(int baseCost, int industryRating) cons
     return m_pLua->EvalInt(m_pConfig->costFormula, vars);
 }
 
-ProductionCostConfig ProductionCostConfigParser::ParseConfig(const std::string& scriptPath, LuaRuntime& rLua)
+ProductionCostConfig_t ProductionCostConfig_tParser::ParseConfig(const std::string& scriptPath, LuaRuntime& rLua)
 {
-    ProductionCostConfig config;
+    ProductionCostConfig_t config;
     config.costFormula = "base_cost * (10 * industry_rating)";
 
     sol::state& lua = rLua.GetState();

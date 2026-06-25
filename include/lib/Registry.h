@@ -26,17 +26,15 @@ public:
     {
         TParser parser;
         auto configs = parser.ParseConfig(rConfigPath);
-        if (configs.empty())
-        {
-            return;
-        }
 
-        m_configs = std::move(configs);
         m_indexById.clear();
+        m_configs = std::move(configs);
         for (size_t i = 0; i < m_configs.size(); i++)
         {
             m_indexById[m_configs[i].id] = i;
         }
+
+        Validate_();
     }
 
     const TConfig* Find(const std::string& rId) const
@@ -67,6 +65,30 @@ public:
     }
 
 protected:
+    virtual void Validate_()
+    {
+        ValidateNoDuplicates_();
+    }
+
+    void ValidateNoDuplicates_() const
+    {
+        for (const TConfig& rConfig : m_configs)
+        {
+            int count = 0;
+            for (const TConfig& rOther : m_configs)
+            {
+                if (rOther.id == rConfig.id)
+                {
+                    ++count;
+                }
+                if (count > 1)
+                {
+                    throw std::runtime_error("Duplicate id '" + rConfig.id + "' in registry");
+                }
+            }
+        }
+    }
+
     std::vector<TConfig> m_configs;
     std::unordered_map<std::string, size_t> m_indexById;
 };

@@ -24,7 +24,6 @@ namespace ac
 BaseView::BaseView(
     BaseManager& rBase,
     const Faction& rFaction,
-    GrowthCalculator* pGrowthCalculator,
     WindowLayout_t layout
 )
     : IGameView(layout)
@@ -33,7 +32,6 @@ BaseView::BaseView(
 {
     m_elements.push_back(std::make_unique<GrowthDisplay>(
         &m_rBase,
-        pGrowthCalculator,
         ResolveLayout(m_layout, k_LeftPanelLayout)
     ));
     m_elements.push_back(std::make_unique<BaseWorkableAreaDisplay>(
@@ -76,25 +74,16 @@ void BaseView::HandleTileClick_(int tileX, int tileY)
 
     if (rAssignments.IsTileAssigned(tileX, tileY, rPops))
     {
-        for (const auto& pPop : rPops.GetPops())
-        {
-            const TileCoord coord = pPop->GetTileCoord();
-            if (pPop->IsWorker() && coord.first == tileX && coord.second == tileY)
-            {
-                rAssignments.UnassignWorker(*pPop);
-                return;
-            }
-        }
+        rAssignments.UserUnassignTile(tileX, tileY, rPops);
     }
     else
     {
         for (int i = static_cast<int>(rPops.GetPops().size()) - 1; i >= 0; --i)
         {
             Pop* pPop = rPops.GetPops()[i].get();
-            const TileCoord coord = pPop->GetTileCoord();
-            if (pPop->IsWorker() && coord.first == -1 && coord.second == -1)
+            if (pPop->IsWorker() && pPop->GetTile() == nullptr)
             {
-                rAssignments.AssignWorker(*pPop, tileX, tileY, rPops);
+                rAssignments.UserAssignWorker(*pPop, tileX, tileY, rPops);
                 return;
             }
         }
@@ -106,13 +95,13 @@ void BaseView::HandlePopClick(Pop& rPop)
     m_elements.push_back(std::make_unique<PopTypeSelectorPopup>(
         m_rFaction.GetAvailablePopTypes(),
         ResolveLayout(m_layout, k_PopupLayoutSmall),
-        [this, &rPop](const PopTypeConfig& rConfig) {
+        [this, &rPop](const PopTypeConfig_t& rConfig) {
             HandlePopTypeSelected(rPop, rConfig);
         }
     ));
 }
 
-void BaseView::HandlePopTypeSelected(Pop& rPop, const PopTypeConfig& rConfig)
+void BaseView::HandlePopTypeSelected(Pop& rPop, const PopTypeConfig_t& rConfig)
 {
     m_rBase.ConvertPop(rPop, rConfig.id);
 }

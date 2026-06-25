@@ -8,52 +8,42 @@ using json = nlohmann::json;
 namespace ac
 {
 
-TileBonusConfigParser::TileBonusConfigParser()
+TileBonusConfig_tParser::TileBonusConfig_tParser()
 {
 }
 
-std::vector<TileBonusConfig> TileBonusConfigParser::ParseConfig(const std::string& configPath)
+std::vector<TileBonusConfig_t> TileBonusConfig_tParser::ParseConfig(const std::string& configPath)
 {
     std::cout << "Loading tile bonus configuration from: " << configPath << "\n";
 
-    std::vector<TileBonusConfig> configs;
+    std::vector<TileBonusConfig_t> configs;
 
-    try
+    std::ifstream configFile(configPath);
+    if (!configFile.is_open())
     {
-        std::ifstream configFile(configPath);
-        if (!configFile.is_open())
-        {
-            std::cout << "Warning: Could not open " << configPath << "\n";
-            return configs;
-        }
-
-        json configJson;
-        configFile >> configJson;
-
-        if (!configJson.is_array())
-        {
-            std::cout << "Error: Expected array of tile bonuses in config\n";
-            return configs;
-        }
-
-        for (const auto& bonusJson : configJson)
-        {
-            configs.push_back(ParseTileBonusConfig(bonusJson));
-        }
-
-        std::cout << "Loaded " << configs.size() << " tile bonus configurations\n";
-        return configs;
+        throw std::runtime_error("Could not open " + configPath);
     }
-    catch (const std::exception& e)
+
+    json configJson;
+    configFile >> configJson;
+
+    if (!configJson.is_array())
     {
-        std::cout << "Error loading tile bonus config: " << e.what() << "\n";
-        return configs;
+        throw std::runtime_error("Expected array of tile bonuses in '" + configPath + "'");
     }
+
+    for (const auto& bonusJson : configJson)
+    {
+        configs.push_back(ParseTileBonusConfig_t(bonusJson));
+    }
+
+    std::cout << "Loaded " << configs.size() << " tile bonus configurations\n";
+    return configs;
 }
 
-TileBonusConfig TileBonusConfigParser::ParseTileBonusConfig(const nlohmann::json& bonusJson)
+TileBonusConfig_t TileBonusConfig_tParser::ParseTileBonusConfig_t(const nlohmann::json& bonusJson)
 {
-    TileBonusConfig config;
+    TileBonusConfig_t config;
     config.id = bonusJson["id"];
     config.name = bonusJson.value("name", config.id);
     config.description = bonusJson.value("description", "");

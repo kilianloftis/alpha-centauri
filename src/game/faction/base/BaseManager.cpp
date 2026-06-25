@@ -2,7 +2,7 @@
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/production/ProductionManager.h"
 #include "game/faction/base/resources/ResourceManager.h"
-#include "game/faction/base/resources/BaseEconomyManager.h"
+#include "game/faction/EconomyManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/population/PopContainer.h"
@@ -15,30 +15,40 @@
 namespace ac
 {
 
-BaseManager::BaseManager(const BuildingRegistry* pBuildingRegistry, const PopTypeRegistry* pPopRegistry, PopCompositionCalculator* pCompositionCalculator, const WorldMap& rWorldMap, const ResearchManager* pResearchManager)
+BaseManager::BaseManager(
+    const BuildingRegistry* pBuildingRegistry,
+    const PopTypeRegistry* pPopRegistry,
+    PopCompositionCalculator* pCompositionCalculator,
+    const WorldMap& rWorldMap,
+    const ResearchManager* pResearchManager,
+    const EconomyManager* pEconomyManager,
+    const ProductionCostCalculator* pProductionCostCalculator,
+    const GrowthCalculator* pGrowthCalculator)
     : m_factionId(-1)
     , m_baseId(-1)
     , m_x(0)
     , m_y(0)
     , m_pWorldMap(&rWorldMap)
     , m_pResearch(pResearchManager)
-    , m_pPopulation(std::make_unique<PopulationManager>(pPopRegistry, pCompositionCalculator))
+    , m_pPopulation(std::make_unique<PopulationManager>(pPopRegistry, pCompositionCalculator, pGrowthCalculator))
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(std::vector<const Tile*>{}))
-    , m_pEconomy(std::make_unique<BaseEconomyManager>())
     , m_pResources(nullptr)
     , m_pBuildings(std::make_unique<BuildingManager>(pBuildingRegistry, pResearchManager))
-    , m_pProduction(std::make_unique<ProductionManager>())
+    , m_pProduction(pProductionCostCalculator ? std::make_unique<ProductionManager>(*pProductionCostCalculator) : nullptr)
 {
     // Create ResourceManager after all sub-managers are set up
     m_pResources = std::make_unique<ResourceManager>(
         m_pPopulation.get(),
         m_pWorkerAssignments.get(),
-        m_pEconomy.get(),
-        m_pBuildings.get(),
-        [this](int x, int y) -> const Tile* {
-            return m_pWorldMap ? m_pWorldMap->GetTile(x, y) : nullptr;
-        });
+        pEconomyManager,
+        m_pBuildings.get());
 
+    m_pPopulation->on_growth.connect([this]() {
+        m_pPopulation->AddPop();
+    });
+    m_pPopulation->on_starvation.connect([this]() {
+        m_pPopulation->RemovePop();
+    });
     m_pPopulation->on_pop_gained.connect([this](int newSize) {
         m_pWorkerAssignments->AutoAssignWorkers(m_pPopulation->GetContainer());
         on_pop_gained.emit(newSize);
@@ -78,22 +88,6 @@ PopContainer& BaseManager::GetPopContainer()
 int BaseManager::GetPopWorkerCount() const
 {
     return m_pPopulation ? m_pPopulation->GetWorkerCount() : 0;
-}
-
-void BaseManager::AddPop()
-{
-    if (m_pPopulation)
-    {
-        m_pPopulation->AddPop();
-    }
-}
-
-void BaseManager::RemovePop()
-{
-    if (m_pPopulation)
-    {
-        m_pPopulation->RemovePop();
-    }
 }
 
 void BaseManager::ConvertPop(Pop& rPop, const std::string& typeId)
@@ -206,14 +200,14 @@ int BaseManager::GetMineralStockpile() const
     return m_pProduction ? m_pProduction->GetMineralStockpile() : 0;
 }
 
-int BaseManager::ConsumeMinerals(int amount)
+std::string BaseManager::ApplyProduction()
 {
-    return m_pProduction ? m_pProduction->ConsumeMinerals(amount) : 0;
-}
-
-std::string BaseManager::CompleteProduction()
-{
-    return m_pProduction ? m_pProduction->CompleteProduction() : std::string();
+    if (!m_pProduction)
+    {
+        return std::string();
+    }
+    const int minerals = m_pResources ? m_pResources->ConsumeMinerals() : 0;
+    return m_pProduction->ApplyProduction(minerals);
 }
 
 void BaseManager::CollectResources()
@@ -222,11 +216,6 @@ void BaseManager::CollectResources()
     {
         m_pResources->CollectResources();
     }
-}
-
-int BaseManager::ConsumeNutrients()
-{
-    return m_pResources ? m_pResources->ConsumeNutrients() : 0;
 }
 
 int BaseManager::ConsumeEcon()
@@ -244,17 +233,24 @@ int BaseManager::ConsumePsych()
     return m_pResources ? m_pResources->ConsumePsych() : 0;
 }
 
+void BaseManager::ApplyGrowth()
+{
+    if (!m_pPopulation)
+    {
+        return;
+    }
+    const int nutrients = m_pResources ? m_pResources->ConsumeNutrients() : 0;
+    m_pPopulation->ApplyGrowth(nutrients);
+}
+
 int BaseManager::GetNutrientStockpile() const
 {
     return m_pPopulation ? m_pPopulation->GetNutrientStockpile() : 0;
 }
 
-void BaseManager::SetNutrientStockpile(int amount)
+int BaseManager::GetNutrientsRequired() const
 {
-    if (m_pPopulation)
-    {
-        m_pPopulation->SetNutrientStockpile(amount);
-    }
+    return m_pPopulation ? m_pPopulation->GetNutrientsRequired() : 0;
 }
 
 int BaseManager::GetBaseSize() const

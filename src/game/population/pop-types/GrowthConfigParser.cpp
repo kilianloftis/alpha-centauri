@@ -5,9 +5,9 @@
 namespace ac
 {
 
-GrowthConfig GrowthConfigParser::ParseConfig(const std::string& scriptPath, LuaRuntime& rLua)
+GrowthConfig_t GrowthConfig_tParser::ParseConfig(const std::string& scriptPath, LuaRuntime& rLua)
 {
-    GrowthConfig config;
+    GrowthConfig_t config;
     config.thresholdFormula = "base_size * 10";
 
     sol::state& lua = rLua.GetState();

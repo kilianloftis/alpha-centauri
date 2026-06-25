@@ -19,37 +19,27 @@ std::vector<SocialPolicyConfig> SocialPolicyConfigParser::ParseConfig(const std:
 
     std::vector<SocialPolicyConfig> configs;
 
-    try
+    std::ifstream configFile(configPath);
+    if (!configFile.is_open())
     {
-        std::ifstream configFile(configPath);
-        if (!configFile.is_open())
-        {
-            std::cout << "Warning: Could not open " << configPath << "\n";
-            return configs;
-        }
-
-        json configJson;
-        configFile >> configJson;
-
-        if (!configJson.is_array())
-        {
-            std::cout << "Error: Expected array of social policies in config\n";
-            return configs;
-        }
-
-        for (const auto& policyJson : configJson)
-        {
-            configs.push_back(ParsePolicyConfig(policyJson));
-        }
-
-        std::cout << "Loaded " << configs.size() << " social policy configurations\n";
-        return configs;
+        throw std::runtime_error("Could not open " + configPath);
     }
-    catch (const std::exception& e)
+
+    json configJson;
+    configFile >> configJson;
+
+    if (!configJson.is_array())
     {
-        std::cout << "Error loading social policy config: " << e.what() << "\n";
-        return configs;
+        throw std::runtime_error("Expected array of social policies in '" + configPath + "'");
     }
+
+    for (const auto& policyJson : configJson)
+    {
+        configs.push_back(ParsePolicyConfig(policyJson));
+    }
+
+    std::cout << "Loaded " << configs.size() << " social policy configurations\n";
+    return configs;
 }
 
 SocialPolicyConfig SocialPolicyConfigParser::ParsePolicyConfig(const nlohmann::json& policyJson)

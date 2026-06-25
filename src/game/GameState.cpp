@@ -2,7 +2,6 @@
 
 #include "game/faction/FactionIdentity.h"
 #include "game/faction/AIProfile.h"
-#include "game/faction/base/resources/BaseEconomyManager.h"
 #include "game/faction/Military.h"
 #include "game/faction/Diplomacy.h"
 #include "game/map/WorldMap.h"

@@ -5,24 +5,18 @@
 namespace ac
 {
 
-void TechRegistry::Load(const std::string& configPath)
+void TechRegistry::Validate_()
 {
-    // Load configurations using Registry template (throws on failure)
-    Registry::Load(configPath);
+    Registry::Validate_();
 
-    // Validate configurations
     const auto& configs = GetAll();
     for (const TechConfig_t& rConfig : configs)
     {
-        ValidateUniqueIds_(rConfig, configs);
         ValidatePrerequisites_(rConfig, configs);
     }
 
     std::cout << "Loaded and validated " << configs.size() << " tech configurations\n";
 }
-
-
-
 
 void TechRegistry::ValidatePrerequisites_(const TechConfig_t& config, const std::vector<TechConfig_t>& configs)
 {
@@ -44,20 +38,5 @@ void TechRegistry::ValidatePrerequisites_(const TechConfig_t& config, const std:
     }
 }
 
-void TechRegistry::ValidateUniqueIds_(const TechConfig_t& config, const std::vector<TechConfig_t>& configs)
-{
-    int count = 0;
-    for (const TechConfig_t& c : configs)
-    {
-        if (c.id == config.id)
-        {
-            ++count;
-        }
-        if (count > 1)
-        {
-            throw std::runtime_error("Tech '" + config.id + "' has duplicate ID");
-        }
-    }
-}
 
 } // namespace ac

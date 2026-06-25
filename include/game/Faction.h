@@ -16,13 +16,13 @@ class SocialPolicyRegistry;
 class TechCostCalculator;
 class FactionIdentity;
 class AIProfile;
-class BaseEconomyManager;
+class EconomyManager;
 class Military;
 class ResearchManager;
 class Diplomacy;
 class SocialEngineeringManager;
 class PopTypeRegistry;
-struct PopTypeConfig;
+struct PopTypeConfig_t;
 struct GameDataContext;
 class WorldMap;
 
@@ -34,9 +34,6 @@ public:
              TechCostCalculator* pTechCostCalculator, const PopTypeRegistry* pPopTypeRegistry);
     ~Faction();
 
-    // Turn processing
-    void ProcessTurn();
-
     // Base management
     void AddBase(std::unique_ptr<BaseManager> pBase);
     BaseManager* CreateBase(FactionId factionId, int baseId, const std::string& name, int x, int y,
@@ -44,7 +41,7 @@ public:
                             const WorldMap& rWorldMap);
     BaseManager* GetBase(size_t index);
     const BaseManager* GetBase(size_t index) const;
-    const std::vector<std::shared_ptr<BaseManager>>& GetBases() const { return m_bases; }
+    const std::vector<std::unique_ptr<BaseManager>>& GetBases() const { return m_bases; }
     size_t GetBaseCount() const { return m_bases.size(); }
 
     // Returns buildings the faction has the technology to build.
@@ -53,6 +50,9 @@ public:
     // Energy tracking
     void AddEnergy(int amount);
     int GetEnergy() const;
+
+    // Economy manager owns the faction-wide energy allocation split.
+    EconomyManager* GetEconomyManager() const;
 
     // Resource collection - routes to all bases and faction economy manager
     void CollectBaseResources();
@@ -71,7 +71,7 @@ public:
         const std::vector<std::string>& rDiscoveredTechIds) const;
 
     // Pop types
-    std::vector<const PopTypeConfig*> GetAvailablePopTypes() const;
+    std::vector<const PopTypeConfig_t*> GetAvailablePopTypes() const;
 
 private:
     int m_energy = 0;
@@ -79,12 +79,12 @@ private:
     const PopTypeRegistry* m_pPopTypeRegistry;
     std::unique_ptr<FactionIdentity> m_pIdentity;
     std::unique_ptr<AIProfile> m_pAIProfile;
-    std::unique_ptr<BaseEconomyManager> m_pEconomy;
+    std::unique_ptr<EconomyManager> m_pEconomy;
     std::unique_ptr<Military> m_pMilitary;
     std::unique_ptr<ResearchManager> m_pResearch;
     std::unique_ptr<Diplomacy> m_pDiplomacy;
     std::unique_ptr<SocialEngineeringManager> m_pSocialEngineering;
-    std::vector<std::shared_ptr<BaseManager>> m_bases;
+    std::vector<std::unique_ptr<BaseManager>> m_bases;
 };
 
 } // namespace ac

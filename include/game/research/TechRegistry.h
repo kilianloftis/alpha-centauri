@@ -12,13 +12,11 @@ public:
     TechRegistry() = default;
     ~TechRegistry() = default;
 
-    // Load all techs from a config file. Throws on failure.
-    void Load(const std::string& configPath);
+protected:
+    void Validate_() override;
 
 private:
-    // Validation functions for tech configuration
-    void ValidatePrerequisites_(const TechConfig_t& config, const std::vector<TechConfig_t>& configs);
-    void ValidateUniqueIds_(const TechConfig_t& config, const std::vector<TechConfig_t>& configs);
+    void ValidatePrerequisites_(const TechConfig_t& rConfig, const std::vector<TechConfig_t>& rConfigs);
 };
 
 } // namespace ac

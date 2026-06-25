@@ -57,9 +57,8 @@ void BaseWorkableAreaDisplay::Render(Graphics& rGraphics)
         float screenX = startX + (relX + 2) * tileSize;
         float screenY = startY + (relY + 2) * tileSize;
 
-        // Check if tile is being worked
-        bool bIsWorked = m_pBase->GetWorkerAssignments().IsTileAssigned(
-            tileX, tileY, m_pBase->GetPopContainer());
+        // Check if tile is being worked via the tile's flag
+        bool bIsWorked = pTile->IsWorked();
 
         RenderTile_(rGraphics, *pTile, screenX, screenY, tileSize, bIsWorked);
     }

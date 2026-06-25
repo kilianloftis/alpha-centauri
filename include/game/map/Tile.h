@@ -76,6 +76,11 @@ public:
     bool IsWorkerAssigned() const;
     int GetWorkedByBaseId() const;
 
+    // Worked flag (set when a Pop is actively assigned to this tile).
+    // Declared const because it is updated through a const Tile* held by Pop.
+    void SetWorked(bool bWorked) const;
+    bool IsWorked() const;
+
 private:
     int m_x;
     int m_y;
@@ -90,6 +95,7 @@ private:
     std::vector<std::string> m_improvements;
     std::string m_bonus;
 
+    mutable bool m_bWorked;  // true when a Pop is assigned to this tile
     int m_workedByBaseId;  // -1 if unworked
 
     int CalculateBonusNutrients_() const;
@@ -100,7 +106,5 @@ private:
     int CalculateMinerals_() const;
     int CalculateEnergy_() const;
 };
-
-using TilePtr_t = std::shared_ptr<Tile>;
 
 } // namespace ac

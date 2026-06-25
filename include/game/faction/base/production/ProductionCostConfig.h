@@ -7,20 +7,20 @@ namespace ac
 
 class LuaRuntime;
 
-struct ProductionCostConfig
+struct ProductionCostConfig_t
 {
     std::string costFormula;
 };
 
-class ProductionCostConfigParser
+class ProductionCostConfig_tParser
 {
 public:
-    ProductionCostConfigParser() = default;
-    ~ProductionCostConfigParser() = default;
+    ProductionCostConfig_tParser() = default;
+    ~ProductionCostConfig_tParser() = default;
 
     // Load production_cost.lua via the shared Lua runtime.
     // Returns a default config on failure.
-    ProductionCostConfig ParseConfig(const std::string& scriptPath, LuaRuntime& rLua);
+    ProductionCostConfig_t ParseConfig(const std::string& scriptPath, LuaRuntime& rLua);
 };
 
 } // namespace ac

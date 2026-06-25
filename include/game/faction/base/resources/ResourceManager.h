@@ -1,18 +1,16 @@
 #pragma once
 
 #include "game/faction/base/BaseTypes.h"
-#include <functional>
 #include <memory>
 #include <vector>
 
 namespace ac
 {
 
-class Tile;
 class PopContainer;
 class PopulationManager;
 class WorkerAssignmentManager;
-class BaseEconomyManager;
+class EconomyManager;
 class BuildingManager;
 
 // ResourceManager calculates and caches resource production for a base.
@@ -23,9 +21,8 @@ public:
     ResourceManager(
         const PopulationManager* pPopulation,
         const WorkerAssignmentManager* pWorkerAssignments,
-        const BaseEconomyManager* pEconomy,
-        const BuildingManager* pBuildings,
-        std::function<const Tile*(int x, int y)> tileLookup);
+        const EconomyManager* pEconomy,
+        const BuildingManager* pBuildings);
     ~ResourceManager();
 
     // Resource production per turn (calculated live from current state).
@@ -51,9 +48,8 @@ public:
 private:
     const PopulationManager* m_pPopulation;
     const WorkerAssignmentManager* m_pWorkerAssignments;
-    const BaseEconomyManager* m_pEconomy;
+    const EconomyManager* m_pEconomy;
     const BuildingManager* m_pBuildings;
-    std::function<const Tile*(int x, int y)> m_tileLookup;
     int m_nutrients = 0;
     int m_minerals = 0;
     int m_econ = 0;

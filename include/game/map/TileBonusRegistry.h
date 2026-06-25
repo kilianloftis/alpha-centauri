@@ -6,7 +6,7 @@
 namespace ac
 {
 
-class TileBonusRegistry : public Registry<TileBonusConfig, TileBonusConfigParser>
+class TileBonusRegistry : public Registry<TileBonusConfig_t, TileBonusConfig_tParser>
 {
 };
 

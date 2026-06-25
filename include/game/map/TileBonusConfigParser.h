@@ -7,7 +7,7 @@
 namespace ac
 {
 
-struct TileBonusConfig
+struct TileBonusConfig_t
 {
     std::string id;
     std::string name;
@@ -19,16 +19,16 @@ struct TileBonusConfig
     std::string spritePath;
 };
 
-class TileBonusConfigParser
+class TileBonusConfig_tParser
 {
 public:
-    TileBonusConfigParser();
-    ~TileBonusConfigParser() = default;
+    TileBonusConfig_tParser();
+    ~TileBonusConfig_tParser() = default;
 
-    std::vector<TileBonusConfig> ParseConfig(const std::string& configPath);
+    std::vector<TileBonusConfig_t> ParseConfig(const std::string& configPath);
 
 private:
-    TileBonusConfig ParseTileBonusConfig(const nlohmann::json& bonusJson);
+    TileBonusConfig_t ParseTileBonusConfig_t(const nlohmann::json& bonusJson);
 };
 
 } // namespace ac

@@ -17,8 +17,8 @@ public:
     // Display name of this constructable.
     virtual const std::string& GetName() const = 0;
 
-    // Mineral cost to construct this entity.
-    virtual int GetMineralCost() const = 0;
+    // Base mineral cost to construct this entity (before industry modifiers).
+    virtual int GetBaseCost() const = 0;
 };
 
 } // namespace ac

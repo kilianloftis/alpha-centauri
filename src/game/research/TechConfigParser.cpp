@@ -18,35 +18,27 @@ std::vector<TechConfig_t> TechConfigParser::ParseConfig(const std::string& confi
 
     std::vector<TechConfig_t> configs;
 
-    try
+    std::ifstream configFile(configPath);
+    if (!configFile.is_open())
     {
-        std::ifstream configFile(configPath);
-        if (!configFile.is_open())
-        {
-            throw std::runtime_error("Could not open " + configPath);
-        }
-
-        json configJson;
-        configFile >> configJson;
-
-        if (!configJson.is_array())
-        {
-            throw std::runtime_error("Expected array of techs in config");
-        }
-
-        for (const auto& techJson : configJson)
-        {
-            configs.push_back(ParseTechConfig(techJson));
-        }
-
-        std::cout << "Loaded " << configs.size() << " tech configurations\n";
-        return configs;
+        throw std::runtime_error("Could not open " + configPath);
     }
-    catch (const std::exception& e)
+
+    json configJson;
+    configFile >> configJson;
+
+    if (!configJson.is_array())
     {
-        std::cout << "Error loading tech config: " << e.what() << "\n";
-        return configs;
+        throw std::runtime_error("Expected array of techs in '" + configPath + "'");
     }
+
+    for (const auto& techJson : configJson)
+    {
+        configs.push_back(ParseTechConfig(techJson));
+    }
+
+    std::cout << "Loaded " << configs.size() << " tech configurations\n";
+    return configs;
 }
 
 TechConfig_t TechConfigParser::ParseTechConfig(const nlohmann::json& techJson)

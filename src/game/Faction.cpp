@@ -2,12 +2,13 @@
 
 #include "game/buildings/BuildingRegistry.h"
 #include "game/GameDataContext.h"
+#include "game/faction/base/production/ProductionCostCalculator.h"
 #include "game/map/WorldMap.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/FactionIdentity.h"
 #include <iostream>
 #include "game/faction/AIProfile.h"
-#include "game/faction/base/resources/BaseEconomyManager.h"
+#include "game/faction/EconomyManager.h"
 #include "game/faction/Military.h"
 #include "game/faction/ResearchManager.h"
 #include "game/faction/Diplomacy.h"
@@ -25,7 +26,7 @@ Faction::Faction(const BuildingRegistry* pBuildingRegistry, const TechRegistry* 
     , m_pPopTypeRegistry(pPopTypeRegistry)
     , m_pIdentity(nullptr)
     , m_pAIProfile(nullptr)
-    , m_pEconomy(std::make_unique<BaseEconomyManager>())
+    , m_pEconomy(std::make_unique<EconomyManager>())
     , m_pMilitary(nullptr)
     , m_pResearch(std::make_unique<ResearchManager>(pTechRegistry, pTechCostCalculator))
     , m_pDiplomacy(nullptr)
@@ -47,13 +48,9 @@ int Faction::GetEnergy() const
     return m_energy;
 }
 
-void Faction::ProcessTurn()
+EconomyManager* Faction::GetEconomyManager() const
 {
-    // TODO: Delegate to subsystems
-    // m_pEconomy->CalculateIncome();
-    // m_pMilitary->UpdateUnits();
-    // m_pResearch->AdvanceResearch();
-    // m_pDiplomacy->UpdateRelations();
+    return m_pEconomy.get();
 }
 
 void Faction::AddBase(std::unique_ptr<BaseManager> pBase)
@@ -73,7 +70,10 @@ BaseManager* Faction::CreateBase(FactionId factionId, int baseId, const std::str
         rDataContext.popTypeRegistry.get(),
         rDataContext.popCompositionCalculator.get(),
         rWorldMap,
-        m_pResearch.get());
+        m_pResearch.get(),
+        m_pEconomy.get(),
+        rDataContext.productionCostCalculator.get(),
+        rDataContext.growthCalculator.get());
     pBase->SetFactionId(factionId);
     pBase->SetBaseId(baseId);
     pBase->SetName(name);
@@ -172,15 +172,15 @@ SocialScores Faction::GetSocialScores() const
     return m_pSocialEngineering ? m_pSocialEngineering->GetCombinedScores() : SocialScores{};
 }
 
-std::vector<const PopTypeConfig*> Faction::GetAvailablePopTypes() const
+std::vector<const PopTypeConfig_t*> Faction::GetAvailablePopTypes() const
 {
     if (!m_pPopTypeRegistry || !m_pResearch)
     {
         throw std::runtime_error("Faction::GetAvailablePopTypes: Missing registry or research manager");
     }
 
-    std::vector<const PopTypeConfig*> pAvailable;
-    for (const PopTypeConfig& rConfig : m_pPopTypeRegistry->GetAll())
+    std::vector<const PopTypeConfig_t*> pAvailable;
+    for (const PopTypeConfig_t& rConfig : m_pPopTypeRegistry->GetAll())
     {
         if (!rConfig.bPlayerAssignable)
         {

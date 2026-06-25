@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/faction/base/population/PopContainer.h"
+#include "game/population/calculators/GrowthCalculator.h"
 #include "game/population/calculators/PopCompositionCalculator.h"
 #include "game/population/calculators/RiotCalculator.h"
 #include "game/population/calculators/GoldenAgeCalculator.h"
@@ -21,7 +22,7 @@ class PopTypeRegistry;
 class PopulationManager
 {
 public:
-    explicit PopulationManager(const PopTypeRegistry* pReg, PopCompositionCalculator* pCalc, int initialSize = 3);
+    explicit PopulationManager(const PopTypeRegistry* pReg, PopCompositionCalculator* pCalc, const GrowthCalculator* pGrowthCalculator, int initialSize = 3);
     ~PopulationManager();
 
     // Population size management
@@ -70,9 +71,12 @@ public:
 
     // Nutrient stockpile owned by this manager (growth bank).
     int GetNutrientStockpile() const;
-    void SetNutrientStockpile(int amount);
-    void CollectNutrients(int amount);
-    int ConsumeNutrients(int amount);
+
+    // Nutrients required for the next population growth step.
+    int GetNutrientsRequired() const;
+
+    // Apply nutrients produced this turn: add to stockpile, grow or starve if threshold is met.
+    void ApplyGrowth(int nutrients);
 
     // Signals
     Signal<int> on_pop_gained;   // new size
@@ -93,6 +97,7 @@ public:
 
 private:
     PopContainer m_container;
+    const GrowthCalculator* m_pGrowthCalculator = nullptr;
     PopCompositionCalculator* m_pCompositionCalculator = nullptr;
     int m_maxSize;
     int m_growthRate;

@@ -1,10 +1,9 @@
 #include "game/faction/base/resources/ResourceManager.h"
-#include "game/faction/base/resources/BaseEconomyManager.h"
+#include "game/faction/EconomyManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/population/PopContainer.h"
-#include "game/map/Tile.h"
 
 namespace ac
 {
@@ -12,14 +11,12 @@ namespace ac
 ResourceManager::ResourceManager(
     const PopulationManager* pPopulation,
     const WorkerAssignmentManager* pWorkerAssignments,
-    const BaseEconomyManager* pEconomy,
-    const BuildingManager* pBuildings,
-    std::function<const Tile*(int x, int y)> tileLookup)
+    const EconomyManager* pEconomy,
+    const BuildingManager* pBuildings)
     : m_pPopulation(pPopulation)
     , m_pWorkerAssignments(pWorkerAssignments)
     , m_pEconomy(pEconomy)
     , m_pBuildings(pBuildings)
-    , m_tileLookup(std::move(tileLookup))
 {
 }
 
@@ -29,24 +26,24 @@ ResourceManager::~ResourceManager()
 
 int ResourceManager::CalculateNutrients_() const
 {
-    if (!m_tileLookup || !m_pWorkerAssignments)
+    if (!m_pWorkerAssignments)
     {
-        return 0;
+        throw std::runtime_error("WorkerAssignmentManager not set");
     }
     const TileResources_t worked = m_pWorkerAssignments->ComputeWorkedResources(
-        m_pPopulation->GetContainer(), m_tileLookup);
+        m_pPopulation->GetContainer());
     // TODO: Add nutrient bonuses from buildings
     return worked.nutrients;
 }
 
 int ResourceManager::CalculateMinerals_() const
 {
-    if (!m_tileLookup || !m_pWorkerAssignments)
+    if (!m_pWorkerAssignments)
     {
-        return 0;
+        throw std::runtime_error("WorkerAssignmentManager not set");
     }
     const TileResources_t worked = m_pWorkerAssignments->ComputeWorkedResources(
-        m_pPopulation->GetContainer(), m_tileLookup);
+        m_pPopulation->GetContainer());
     // TODO: Add mineral bonuses from buildings
     // TODO: Remove minerals from unit upkeep
     return worked.minerals;
@@ -54,12 +51,12 @@ int ResourceManager::CalculateMinerals_() const
 
 int ResourceManager::CalculateEnergy_() const
 {
-    if (!m_tileLookup || !m_pWorkerAssignments)
+    if (!m_pWorkerAssignments)
     {
-        return 0;
+        throw std::runtime_error("WorkerAssignmentManager not set");
     }
     const TileResources_t worked = m_pWorkerAssignments->ComputeWorkedResources(
-        m_pPopulation->GetContainer(), m_tileLookup);
+        m_pPopulation->GetContainer());
     // TODO: Add energy bonuses from buildings
     return worked.energy;
 }
@@ -78,30 +75,27 @@ int ResourceManager::GetEconProduction() const
 {
     if (!m_pEconomy)
     {
-        return CalculateEnergy_();
+        throw std::runtime_error("EconomyManager not set");
     }
-    m_pEconomy->SetTotalEnergyCollected(CalculateEnergy_());
-    return m_pEconomy->GetEnergyForEcon();
+    return m_pEconomy->CalculateEnergyForEcon(CalculateEnergy_());
 }
 
 int ResourceManager::GetLabsProduction() const
 {
     if (!m_pEconomy)
     {
-        return 0;
+        throw std::runtime_error("EconomyManager not set");
     }
-    m_pEconomy->SetTotalEnergyCollected(CalculateEnergy_());
-    return m_pEconomy->GetEnergyForLabs();
+    return m_pEconomy->CalculateEnergyForLabs(CalculateEnergy_());
 }
 
 int ResourceManager::GetPsychProduction() const
 {
     if (!m_pEconomy)
     {
-        return 0;
+        throw std::runtime_error("EconomyManager not set");
     }
-    m_pEconomy->SetTotalEnergyCollected(CalculateEnergy_());
-    return m_pEconomy->GetEnergyForPsych();
+    return m_pEconomy->CalculateEnergyForPsych(CalculateEnergy_());
 }
 
 int ResourceManager::ConsumeNutrients()
@@ -159,10 +153,9 @@ void ResourceManager::AllocateEnergy_()
         return;
     }
 
-    m_pEconomy->SetTotalEnergyCollected(totalEnergy);
-    m_econ += m_pEconomy->GetEnergyForEcon();
-    m_labs += m_pEconomy->GetEnergyForLabs();
-    m_psych += m_pEconomy->GetEnergyForPsych();
+    m_econ += m_pEconomy->CalculateEnergyForEcon(totalEnergy);
+    m_labs += m_pEconomy->CalculateEnergyForLabs(totalEnergy);
+    m_psych += m_pEconomy->CalculateEnergyForPsych(totalEnergy);
 }
 
 void ResourceManager::ProduceResources_()

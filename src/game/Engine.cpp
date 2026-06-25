@@ -23,6 +23,8 @@
 #include "game/population/calculators/GrowthCalculator.h"
 #include "game/research/TechCostConfig.h"
 #include "game/research/TechCostCalculator.h"
+#include "game/faction/base/production/ProductionCostConfig.h"
+#include "game/faction/base/production/ProductionCostCalculator.h"
 #include "lib/LuaRuntime.h"
 #include "ui/IGameView.h"
 #include "ui/TileHitTester.h"
@@ -126,9 +128,9 @@ void Engine::Initialize_()
         std::make_unique<PopCompositionCalculator>(
             *m_gameDataContext->popCompositionConfig, *m_gameDataContext->luaRuntime);
 
-    GrowthConfigParser growthParser;
+    GrowthConfig_tParser growthParser;
     m_gameDataContext->growthConfig =
-        std::make_unique<GrowthConfig>(
+        std::make_unique<GrowthConfig_t>(
             growthParser.ParseConfig("config/pop_growth.lua", *m_gameDataContext->luaRuntime));
     m_gameDataContext->growthCalculator =
         std::make_unique<GrowthCalculator>(
@@ -141,6 +143,14 @@ void Engine::Initialize_()
     m_gameDataContext->techCostCalculator =
         std::make_unique<TechCostCalculator>(
             *m_gameDataContext->techCostConfig, *m_gameDataContext->luaRuntime);
+
+    ProductionCostConfig_tParser productionCostParser;
+    m_gameDataContext->productionCostConfig =
+        std::make_unique<ProductionCostConfig_t>(
+            productionCostParser.ParseConfig("config/production_cost.lua", *m_gameDataContext->luaRuntime));
+    m_gameDataContext->productionCostCalculator =
+        std::make_unique<ProductionCostCalculator>(
+            *m_gameDataContext->productionCostConfig, *m_gameDataContext->luaRuntime);
 
     // Generate world map
     WorldGenerator worldGen;
@@ -171,9 +181,7 @@ void Engine::Initialize_()
     std::cout << "Test setup complete. " << m_gameState->GetNumFactions() << " faction(s), "
               << m_gameState->GetPlayerFaction()->GetBaseCount() << " base(s)\n";
 
-    m_turnStageFactory = std::make_unique<TurnStageFactory>(
-        m_gameDataContext->popCompositionCalculator.get(),
-        m_gameDataContext->growthCalculator.get());
+    m_turnStageFactory = std::make_unique<TurnStageFactory>();
     m_turnStageFactory->LoadConfig("config/turn_stages.json");
     auto registry = m_turnStageFactory->CreateStages();
     TurnStageRepeatFlags_t repeatFlags;

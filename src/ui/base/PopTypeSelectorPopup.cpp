@@ -7,9 +7,9 @@ namespace ac
 {
 
 PopTypeSelectorPopup::PopTypeSelectorPopup(
-    std::vector<const PopTypeConfig*> popTypes,
+    std::vector<const PopTypeConfig_t*> popTypes,
     WindowLayout_t layout,
-    std::function<void(const PopTypeConfig&)> onPopTypeSelected
+    std::function<void(const PopTypeConfig_t&)> onPopTypeSelected
 )
     : UIElement(layout)
     , m_popTypes(std::move(popTypes))

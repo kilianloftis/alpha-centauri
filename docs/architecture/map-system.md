@@ -79,6 +79,7 @@ graph TB
   - `Improvements`: Vector of built improvements (e.g., "Farm", "Mine", "Solar Collector")
   - `Bonus`: Optional tile bonus ID (e.g., "nutrient_rich_soil", "geothermal_vent")
   - `WorkerAssigned`: Integer base ID tracking which base has a worker on this tile (-1 if unworked; one worker per tile limit)
+  - `bWorked`: Mutable boolean flag set when a `Pop` is actively assigned to this tile; `Pop` clears it on destruction through its `const Tile*`
 - **Resource Calculation**:
   - `GetNutrientProduction()`: Derived from moisture (only produces if worked)
   - `GetMineralProduction()`: Derived from rockiness (only produces if worked)
@@ -88,6 +89,8 @@ graph TB
   - `UnassignWorker()`: Removes worker assignment (sets baseId to -1)
   - `IsWorkerAssigned()`: Check if tile already has a worker (enforces one worker per tile rule)
   - `GetWorkedByBaseId()`: Returns the base ID currently working this tile, or -1 if unworked
+  - `SetWorked(bWorked)`: Sets the worked flag directly (used by `Pop` assignment lifecycle)
+  - `IsWorked()`: Returns the worked flag
 
 ### Tile Bonus System
 - **Purpose**: Defines special resource bonuses that can be applied to individual tiles
@@ -117,7 +120,7 @@ graph TB
 ### Base System
 - Bases work tiles to extract resources
 - `Base::SetPosition(x, y)` / `Base::GetX()` / `Base::GetY()` track map position
-- `Base::GetWorkableTilePositions()` returns all (x,y) pairs in a 5×5 grid with the four corners removed (Manhattan distance ≤ 3 within `[-2,2]` offsets), excluding the base's own tile — 20 tiles total. Enemy-unit blocking is a TODO pending unit implementation.
+- `Base::GetWorkableTilePositions()` returns `const Tile*` pointers for all tiles in a 5×5 grid with the four corners removed (Manhattan distance ≤ 3 within `[-2,2]` offsets), excluding the base's own tile — 20 tiles total. Enemy-unit blocking is a TODO pending unit implementation.
 - `Base::SetWorkedTiles()` aggregates resources from worked tiles
 - `TileResources_t` struct used to pass resource totals
 - Each worker assigned to a tile contributes that tile's resource production

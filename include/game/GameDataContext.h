@@ -11,11 +11,13 @@ class TechRegistry;
 class SocialPolicyRegistry;
 struct PopCompositionConfig;
 class PopCompositionCalculator;
-struct GrowthConfig;
+struct GrowthConfig_t;
 class GrowthCalculator;
 class LuaRuntime;
 struct TechCostConfig;
 class TechCostCalculator;
+struct ProductionCostConfig_t;
+class ProductionCostCalculator;
 
 // Holds all immutable definition data loaded once at startup.
 // Never serialised — always reconstructible from config files.
@@ -30,11 +32,13 @@ struct GameDataContext
     std::unique_ptr<PopTypeRegistry> popTypeRegistry;
     std::unique_ptr<PopCompositionConfig> popCompositionConfig;
     std::unique_ptr<PopCompositionCalculator> popCompositionCalculator;
-    std::unique_ptr<GrowthConfig> growthConfig;
+    std::unique_ptr<GrowthConfig_t> growthConfig;
     std::unique_ptr<GrowthCalculator> growthCalculator;
     std::unique_ptr<LuaRuntime> luaRuntime;
     std::unique_ptr<TechCostConfig> techCostConfig;
     std::unique_ptr<TechCostCalculator> techCostCalculator;
+    std::unique_ptr<ProductionCostConfig_t> productionCostConfig;
+    std::unique_ptr<ProductionCostCalculator> productionCostCalculator;
 };
 
 } // namespace ac

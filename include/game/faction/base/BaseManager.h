@@ -19,10 +19,12 @@ class PopContainer;
 class PopTypeRegistry;
 class PopCompositionCalculator;
 class WorkerAssignmentManager;
-class BaseEconomyManager;
+class EconomyManager;
 class ResourceManager;
 class BuildingManager;
 class BuildingRegistry;
+class GrowthCalculator;
+class ProductionCostCalculator;
 class ProductionManager;
 class ResearchManager;
 class Tile;
@@ -34,7 +36,15 @@ class WorldMap;
 class BaseManager
 {
 public:
-    BaseManager(const BuildingRegistry* pBuildingRegistry, const PopTypeRegistry* pPopRegistry, PopCompositionCalculator* pCompositionCalculator, const WorldMap& rWorldMap, const ResearchManager* pResearchManager);
+    BaseManager(
+        const BuildingRegistry* pBuildingRegistry,
+        const PopTypeRegistry* pPopRegistry,
+        PopCompositionCalculator* pCompositionCalculator,
+        const WorldMap& rWorldMap,
+        const ResearchManager* pResearchManager,
+        const EconomyManager* pEconomyManager,
+        const ProductionCostCalculator* pProductionCostCalculator,
+        const GrowthCalculator* pGrowthCalculator);
     ~BaseManager();
 
     // Population management - delegated to PopulationManager
@@ -42,8 +52,6 @@ public:
     const PopContainer& GetPopContainer() const;
     PopContainer& GetPopContainer();
     int GetPopWorkerCount() const;
-    void AddPop();
-    void RemovePop();
     void ConvertPop(Pop& rPop, const std::string& typeId);
 
     // Signals forwarded from PopulationManager
@@ -69,7 +77,6 @@ public:
     int GetPsychProduction() const;
 
     // Consume the full accumulated resource stockpile, returning the amount consumed.
-    int ConsumeNutrients();
     int ConsumeEcon();
     int ConsumeLabs();
     int ConsumePsych();
@@ -84,16 +91,21 @@ public:
     const IConstructable* GetCurrentProduction() const;
     int GetProductionMineralCost() const;
     int GetMineralStockpile() const;
-    int ConsumeMinerals(int amount);
-    std::string CompleteProduction();
+
+    // Collect minerals from ResourceManager and apply to production this turn.
+    // Completes construction if the stockpile meets the cost.
+    // Returns the completed item id, or empty string if construction is ongoing.
+    std::string ApplyProduction();
 
     // Collect resources from worked tiles and allocate energy to categories.
     // Called once per turn per base during ResourceCollection stage.
     void CollectResources();
 
-    // Convenience accessors for Population stage
+    // Apply nutrients produced this turn: add to stockpile, grow or starve if threshold is met.
+    void ApplyGrowth();
+
     int GetNutrientStockpile() const;
-    void SetNutrientStockpile(int amount);
+    int GetNutrientsRequired() const;
     int GetBaseSize() const;
     int GetGrowthRate() const;
 
@@ -127,7 +139,6 @@ private:
     const ResearchManager* m_pResearch;
     std::unique_ptr<PopulationManager> m_pPopulation;
     std::unique_ptr<WorkerAssignmentManager> m_pWorkerAssignments;
-    std::unique_ptr<BaseEconomyManager> m_pEconomy;
     std::unique_ptr<ResourceManager> m_pResources;
     std::unique_ptr<BuildingManager> m_pBuildings;
     std::unique_ptr<ProductionManager> m_pProduction;

@@ -1,12 +1,11 @@
 #include "game/faction/base/production/ProductionManager.h"
 
-#include <algorithm>
-
 namespace ac
 {
 
-ProductionManager::ProductionManager()
-    : m_pCurrentItem(nullptr)
+ProductionManager::ProductionManager(const ProductionCostCalculator& rCostCalculator)
+    : m_pCostCalculator(&rCostCalculator)
+    , m_pCurrentItem(nullptr)
     , m_mineralStockpile(0)
 {
 }
@@ -37,7 +36,12 @@ bool ProductionManager::HasProduction() const
 
 int ProductionManager::GetMineralCost() const
 {
-    return m_pCurrentItem ? m_pCurrentItem->GetMineralCost() : 0;
+    if (!m_pCurrentItem || !m_pCostCalculator)
+    {
+        return 0;
+    }
+    // TODO: pass real industry_rating once base industry modifiers exist
+    return m_pCostCalculator->ComputeCost(m_pCurrentItem->GetBaseCost(), 0);
 }
 
 int ProductionManager::GetMineralStockpile() const
@@ -45,21 +49,21 @@ int ProductionManager::GetMineralStockpile() const
     return m_mineralStockpile;
 }
 
-void ProductionManager::AddMinerals(int amount)
+std::string ProductionManager::ApplyProduction(int minerals)
 {
-    m_mineralStockpile += amount;
-}
+    if (!HasProduction())
+    {
+        return std::string();
+    }
 
-int ProductionManager::ConsumeMinerals(int amount)
-{
-    int consumed = std::min(amount, m_mineralStockpile);
-    m_mineralStockpile -= consumed;
-    return consumed;
-}
+    m_mineralStockpile += minerals;
 
-void ProductionManager::CollectMinerals(int amount)
-{
-    AddMinerals(amount);
+    if (m_mineralStockpile >= GetMineralCost())
+    {
+        return CompleteProduction();
+    }
+
+    return std::string();
 }
 
 std::string ProductionManager::CompleteProduction()
@@ -70,6 +74,7 @@ std::string ProductionManager::CompleteProduction()
     }
 
     std::string completed = m_pCurrentItem->GetId();
+    m_mineralStockpile = 0;
     ResetProduction_();
     on_production_completed.emit(completed);
     return completed;

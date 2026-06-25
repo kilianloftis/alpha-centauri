@@ -13,10 +13,9 @@ namespace ac
 class BaseManager;
 class Faction;
 class Graphics;
-class GrowthCalculator;
 class Pop;
 class PopulationDisplay;
-struct PopTypeConfig;
+struct PopTypeConfig_t;
 class WorldMap;
 
 class BaseView : public IGameView
@@ -25,7 +24,6 @@ public:
     BaseView(
         BaseManager& rBase,
         const Faction& rFaction,
-        GrowthCalculator* pGrowthCalculator,
         WindowLayout_t layout
     );
     ~BaseView();
@@ -35,7 +33,7 @@ public:
 private:
     void HandleTileClick_(int tileX, int tileY);
     void HandlePopClick(Pop& rPop);
-    void HandlePopTypeSelected(Pop& rPop, const PopTypeConfig& rConfig);
+    void HandlePopTypeSelected(Pop& rPop, const PopTypeConfig_t& rConfig);
     void HandleProductionDisplayClicked_();
 
     BaseManager& m_rBase;

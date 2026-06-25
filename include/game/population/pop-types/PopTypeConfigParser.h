@@ -24,7 +24,7 @@ struct PopGeneration_t
     int psych;      // Direct psych output (specialists)
 };
 
-struct PopTypeConfig
+struct PopTypeConfig_t
 {
     std::string id;
     std::string name;
@@ -38,16 +38,16 @@ struct PopTypeConfig
     std::string requiredTech;
 };
 
-class PopTypeConfigParser
+class PopTypeConfig_tParser
 {
 public:
-    PopTypeConfigParser();
-    ~PopTypeConfigParser() = default;
+    PopTypeConfig_tParser();
+    ~PopTypeConfig_tParser() = default;
 
-    std::vector<PopTypeConfig> ParseConfig(const std::string& configPath);
+    std::vector<PopTypeConfig_t> ParseConfig(const std::string& configPath);
 
 private:
-    PopTypeConfig ParsePopTypeConfig(const nlohmann::json& popJson);
+    PopTypeConfig_t ParsePopTypeConfig_t(const nlohmann::json& popJson);
 };
 
 } // namespace ac

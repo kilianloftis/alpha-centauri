@@ -5,7 +5,8 @@
 namespace ac
 {
 
-struct PopTypeConfig;
+class Tile;
+struct PopTypeConfig_t;
 
 // Specialist generation output (not tile-based)
 struct SpecialistOutput_t
@@ -15,11 +16,11 @@ struct SpecialistOutput_t
     int psych;  // Psych output
 };
 
-// A single population unit. Behaviour is entirely driven by its PopTypeConfig.
+// A single population unit. Behaviour is entirely driven by its PopTypeConfig_t.
 class Pop
 {
 public:
-    explicit Pop(const PopTypeConfig& rConfig);
+    explicit Pop(const PopTypeConfig_t& rConfig);
     ~Pop();
 
     // Type id string matching the config (e.g. "Worker", "Librarian")
@@ -42,14 +43,18 @@ public:
     int GetGoldenAgeContribution() const;
 
     // Swap this pop's type config in-place.
-    // Clears tileCoord if the new type is not a worker.
-    void Convert(const PopTypeConfig& rConfig);
+    // Clears tile assignment if the new type is not a worker.
+    void Convert(const PopTypeConfig_t& rConfig);
 
     // Tile assignment (only meaningful when IsWorker() is true)
-    // {-1, -1} means unassigned.
-    void SetTileCoord(int x, int y);
-    void SetTileCoord(const TileCoord& coord);
-    TileCoord GetTileCoord() const;
+    // nullptr means unassigned.
+    void SetTile(const Tile* pTile);
+    const Tile* GetTile() const;
+
+    // User assignment flag (e.g., manually assigned by the player).
+    // Cleared automatically when the tile is unassigned.
+    void SetUserAssigned(bool bUserAssigned);
+    bool IsUserAssigned() const;
 
     // Apply this pop's tile multipliers to raw tile resources.
     // Returns modified resources based on pop type's tile_multipliers config.
@@ -61,8 +66,9 @@ public:
     SpecialistOutput_t GetSpecialistOutput() const;
 
 private:
-    const PopTypeConfig* m_pConfig;
-    TileCoord m_tileCoord;
+    const PopTypeConfig_t* m_pConfig;
+    const Tile* m_pTile;
+    bool m_bUserAssigned;
 };
 
 } // namespace ac
