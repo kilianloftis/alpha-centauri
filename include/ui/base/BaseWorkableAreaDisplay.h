@@ -6,6 +6,7 @@
 
 #include <functional>
 #include <utility>
+#include <vector>
 
 namespace ac
 {
@@ -18,17 +19,33 @@ class BaseManager;
 class BaseWorkableAreaDisplay : public UIElement
 {
 public:
-    using TileClickCallback_t = std::function<void(int tileX, int tileY)>;
+    using TileClickCallback_t = std::function<void(const Tile*)>;
+    using BaseClickCallback_t = std::function<void()>;
 
-    BaseWorkableAreaDisplay(const BaseManager* pBase, WindowLayout_t layout, TileClickCallback_t onTileClicked);
+    BaseWorkableAreaDisplay(const BaseManager* pBase,
+                            WindowLayout_t layout,
+                            TileClickCallback_t onTileClicked,
+                            BaseClickCallback_t onBaseClicked);
 
     void Render(Graphics& rGraphics) override;
     void HandleMouseClick(const MouseEvent_t& rEvent) override;
 
 private:
-    float GetTileSize_() const;
+    struct TileRect_t
+    {
+        Rectangle_t rect;
+        const Tile* pTile;
+    };
+
+    void CacheTileRects_();
     const BaseManager* m_pBase = nullptr;
     TileClickCallback_t m_onTileClicked;
+    BaseClickCallback_t m_onBaseClicked;
+
+    float m_tileSize = 0.f;
+    float m_startX = 0.f;
+    float m_startY = 0.f;
+    std::vector<TileRect_t> m_tileRects;
 
     // Render a single workable tile
     void RenderTile_(Graphics& rGraphics, const Tile& rTile, float x, float y, float size, bool bIsWorked);

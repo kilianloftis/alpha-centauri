@@ -3,7 +3,6 @@
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/population/PopulationManager.h"
-#include "game/faction/base/population/PopContainer.h"
 
 namespace ac
 {
@@ -30,8 +29,7 @@ int ResourceManager::CalculateNutrients_() const
     {
         throw std::runtime_error("WorkerAssignmentManager not set");
     }
-    const TileResources_t worked = m_pWorkerAssignments->ComputeWorkedResources(
-        m_pPopulation->GetContainer());
+    const TileResources_t worked = m_pWorkerAssignments->ComputeWorkedResources();
     // TODO: Add nutrient bonuses from buildings
     return worked.nutrients;
 }
@@ -42,8 +40,7 @@ int ResourceManager::CalculateMinerals_() const
     {
         throw std::runtime_error("WorkerAssignmentManager not set");
     }
-    const TileResources_t worked = m_pWorkerAssignments->ComputeWorkedResources(
-        m_pPopulation->GetContainer());
+    const TileResources_t worked = m_pWorkerAssignments->ComputeWorkedResources();
     // TODO: Add mineral bonuses from buildings
     // TODO: Remove minerals from unit upkeep
     return worked.minerals;
@@ -55,8 +52,7 @@ int ResourceManager::CalculateEnergy_() const
     {
         throw std::runtime_error("WorkerAssignmentManager not set");
     }
-    const TileResources_t worked = m_pWorkerAssignments->ComputeWorkedResources(
-        m_pPopulation->GetContainer());
+    const TileResources_t worked = m_pWorkerAssignments->ComputeWorkedResources();
     // TODO: Add energy bonuses from buildings
     return worked.energy;
 }

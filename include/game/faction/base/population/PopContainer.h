@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/population/pop-types/Pop.h"
+#include "game/population/pop-types/PopTypeConfigParser.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -37,6 +38,9 @@ public:
     // Convert a pop to any type by config id
     void ConvertTo(Pop& rPop, const std::string& typeId);
 
+    // Convert a pop to the first available non-worker specialist type.
+    void ConvertToSpecialist(Pop& rPop);
+
     // Convert a worker to a drone (for faction base count mechanic)
     void PromoteWorkerToDrone();
 
@@ -48,6 +52,8 @@ public:
     int ComputePsychOutput() const;
 
 private:
+    const PopTypeConfig_t* FindBestSpecialistConfig_() const;
+
     std::vector<std::unique_ptr<Pop>> m_pops;
     const PopTypeRegistry* m_pRegistry;
 

@@ -50,6 +50,9 @@ public:
     // Convert a pop to any type by config id (e.g. "Worker", "Drone", "Talent", "Librarian")
     void ConvertTo(Pop& rPop, const std::string& typeId);
 
+    // Default pop type used when growing or reverting a pop to a worker.
+    const std::string& GetDefaultPopType() const;
+
     // Drone and talent calculations
     bool IsRioting() const;
     bool IsDestroyed() const;
@@ -106,7 +109,6 @@ private:
     RiotCalculator m_riot;
     GoldenAgeCalculator m_golden_age;
 
-    const std::string& GetDefaultPopType_() const;
     RiotConditionInputs BuildRiotInputs_() const;
 
     void NotifyPopGained_();

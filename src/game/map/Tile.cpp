@@ -33,12 +33,6 @@ Tile::~Tile()
 {
 }
 
-void Tile::SetPosition(int x, int y)
-{
-    m_x = x;
-    m_y = y;
-}
-
 int Tile::GetX() const
 {
     return m_x;

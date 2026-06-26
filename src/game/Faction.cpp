@@ -61,11 +61,12 @@ void Faction::AddBase(std::unique_ptr<BaseManager> pBase)
     }
 }
 
-BaseManager* Faction::CreateBase(FactionId factionId, int baseId, const std::string& name, int x, int y,
+BaseManager* Faction::CreateBase(FactionId factionId, int baseId, const std::string& name, const Tile* pTile,
                                   const GameDataContext& rDataContext,
                                   const WorldMap& rWorldMap)
 {
     auto pBase = std::make_unique<BaseManager>(
+        *pTile,
         rDataContext.buildingRegistry.get(),
         rDataContext.popTypeRegistry.get(),
         rDataContext.popCompositionCalculator.get(),
@@ -77,9 +78,8 @@ BaseManager* Faction::CreateBase(FactionId factionId, int baseId, const std::str
     pBase->SetFactionId(factionId);
     pBase->SetBaseId(baseId);
     pBase->SetName(name);
-    pBase->SetPosition(x, y);
 
-    pBase->GetWorkerAssignments().UnassignAll(pBase->GetPopContainer());
+    pBase->GetWorkerAssignments().UnassignAll();
     pBase->AutoAssignWorkers();
 
     std::cout << "Created base '" << name << "' with population: " << pBase->GetBaseSize()

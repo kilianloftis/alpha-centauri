@@ -37,7 +37,8 @@ BaseView::BaseView(
     m_elements.push_back(std::make_unique<BaseWorkableAreaDisplay>(
         &m_rBase,
         ResolveLayout(m_layout, k_TopPanelLayout),
-        [this](int tileX, int tileY) { HandleTileClick_(tileX, tileY); }
+        [this](const Tile* pTile) { HandleTileClick_(pTile); },
+        [this]() { HandleBaseClicked_(); }
     ));
     m_elements.push_back(std::make_unique<ProductionDisplay>(
         &m_rBase,
@@ -67,14 +68,20 @@ bool BaseView::HandleKey(const KeyEvent_t& rEvent)
     return false;
 }
 
-void BaseView::HandleTileClick_(int tileX, int tileY)
+void BaseView::HandleBaseClicked_()
+{
+    auto& rAssignments = m_rBase.GetWorkerAssignments();
+    rAssignments.ResetAllAssignments(m_rBase.GetDefaultWorkerTypeId());
+}
+
+void BaseView::HandleTileClick_(const Tile* pTile)
 {
     auto& rAssignments = m_rBase.GetWorkerAssignments();
     auto& rPops = m_rBase.GetPopContainer();
 
-    if (rAssignments.IsTileAssigned(tileX, tileY, rPops))
+    if (rAssignments.IsTileAssigned(pTile))
     {
-        rAssignments.UserUnassignTile(tileX, tileY, rPops);
+        rAssignments.UserUnassignTile(pTile);
     }
     else
     {
@@ -83,7 +90,29 @@ void BaseView::HandleTileClick_(int tileX, int tileY)
             Pop* pPop = rPops.GetPops()[i].get();
             if (pPop->IsWorker() && pPop->GetTile() == nullptr)
             {
-                rAssignments.UserAssignWorker(*pPop, tileX, tileY, rPops);
+                rAssignments.UserAssignWorker(*pPop, pTile);
+                return;
+            }
+        }
+
+        for (int i = static_cast<int>(rPops.GetPops().size()) - 1; i >= 0; --i)
+        {
+            Pop* pPop = rPops.GetPops()[i].get();
+            if (pPop->IsSpecialist())
+            {
+                rPops.ConvertTo(*pPop, m_rBase.GetDefaultWorkerTypeId());
+                rAssignments.UserAssignWorker(*pPop, pTile);
+                return;
+            }
+        }
+
+        for (int i = static_cast<int>(rPops.GetPops().size()) - 1; i >= 0; --i)
+        {
+            Pop* pPop = rPops.GetPops()[i].get();
+            if (pPop->IsWorker())
+            {
+                rAssignments.UnassignWorker(*pPop);
+                rAssignments.UserAssignWorker(*pPop, pTile);
                 return;
             }
         }

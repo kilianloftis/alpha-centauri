@@ -7,7 +7,6 @@
 namespace ac
 {
 
-class PopContainer;
 class PopulationManager;
 class WorkerAssignmentManager;
 class EconomyManager;

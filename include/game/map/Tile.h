@@ -28,8 +28,6 @@ public:
     Tile(int x, int y);
     ~Tile();
 
-    // Position
-    void SetPosition(int x, int y);
     int GetX() const;
     int GetY() const;
 

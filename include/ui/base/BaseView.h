@@ -16,6 +16,7 @@ class Graphics;
 class Pop;
 class PopulationDisplay;
 struct PopTypeConfig_t;
+class Tile;
 class WorldMap;
 
 class BaseView : public IGameView
@@ -31,7 +32,8 @@ public:
     bool HandleKey(const KeyEvent_t& rEvent) override;
 
 private:
-    void HandleTileClick_(int tileX, int tileY);
+    void HandleTileClick_(const Tile* pTile);
+    void HandleBaseClicked_();
     void HandlePopClick(Pop& rPop);
     void HandlePopTypeSelected(Pop& rPop, const PopTypeConfig_t& rConfig);
     void HandleProductionDisplayClicked_();

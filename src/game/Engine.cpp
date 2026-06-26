@@ -168,8 +168,11 @@ void Engine::Initialize_()
                                               m_gameDataContext->socialPolicyRegistry.get(),
                                               m_gameDataContext->techCostCalculator.get(),
                                               m_gameDataContext->popTypeRegistry.get());
+    const int centerX = m_gameState->GetWorldMap()->GetWidth() / 2;
+    const int centerY = m_gameState->GetWorldMap()->GetHeight() / 2;
     BaseManager* pBase = pFaction->CreateBase(
-        1, 1, "Test Base", 6, 4,  // factionId, baseId, name, x, y (center of 12x8 world)
+        1, 1, "Test Base",
+        m_gameState->GetWorldMap()->GetTile(centerX, centerY),
         *m_gameDataContext,
         *m_gameState->GetWorldMap());
 

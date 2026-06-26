@@ -25,6 +25,6 @@ struct TileResources_t
 
 // (x, y) map coordinate used for tile assignments.
 // {-1, -1} means unassigned.
-using TileCoord = std::pair<int, int>;
+using TileCoord_t = std::pair<int, int>;
 
 } // namespace ac

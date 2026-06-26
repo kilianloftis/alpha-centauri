@@ -49,6 +49,7 @@ graph TB
     subgraph "Base Subsystem"
         Base[Base]
         WorkerAssignmentManager[WorkerAssignmentManager<br/>validates & auto-assigns]
+        PopContainer[PopContainer<br/>owns pop vector]
         Pop[Pop<br/>tile const*]
         PopulationManager[PopulationManager]
         ProductionManager[ProductionManager]
@@ -131,8 +132,9 @@ graph TB
     Base --> PopulationManager
     Base --> WorkerAssignmentManager
     Base --> ProductionManager
-    PopulationManager --> Pop
-    WorkerAssignmentManager --> Pop
+    PopulationManager --> PopContainer
+    PopContainer --> Pop
+    WorkerAssignmentManager --> PopContainer
     ResearchManager --> Tech
     ResearchManager --> TechId
     TechRegistry --> Tech
@@ -247,7 +249,8 @@ graph TB
   - `PopulationManager`: API surface for the population component; manages pop composition, growth, and riot state for a single base
   - `IConstructable`: Abstract interface for any entity that can be queued for production; exposes `GetId()`, `GetName()`, and `GetMineralCost()`
   - `ProductionManager`: API surface for the production component; manages one active `IConstructable` at a time, tracks accumulated minerals, and emits `on_production_completed` when the item is finished
-  - `WorkerAssignmentManager`: Owns the set of workable tiles and the tile-scoring policy; validates worker-to-tile assignments and runs auto-assignment. The canonical assignment is stored on each `Pop` as a `const Tile*`; `Pop` also tracks whether the assignment was user-driven so the manager can skip user-assigned pops during auto-assignment.
+  - `WorkerAssignmentManager`: Owns the set of workable tiles and the tile-scoring policy; holds a reference to the base's `PopContainer`; validates worker-to-tile assignments and runs auto-assignment. The canonical assignment is stored on each `Pop` as a `const Tile*`; `Pop` also tracks whether the assignment was user-driven so the manager can skip user-assigned pops during auto-assignment.
+  - `PopContainer`: Owns the vector of `Pop` instances for a single base and provides pop transformation operations
   - `Pop`: Individual population unit; stores a `const Tile*` when assigned as a worker and tracks whether the assignment was user-driven
   - `PopFactory`: Creates individual `Pop` instances from config (looked up via `PopTypeRegistry`)
   - `RiotCalculator`: Tracks drone riot state and emits `will_riot`, `is_rioting`, and `riot_ended` signals

@@ -28,7 +28,7 @@ int PopulationManager::GetSize() const
     return m_container.GetSize();
 }
 
-const std::string& PopulationManager::GetDefaultPopType_() const
+const std::string& PopulationManager::GetDefaultPopType() const
 {
     static const std::string kFallback = "Worker";
     if (m_pCompositionCalculator)
@@ -52,7 +52,7 @@ void PopulationManager::AddPop()
 {
     if (CanGrow())
     {
-        m_container.AddPop(GetDefaultPopType_());
+        m_container.AddPop(GetDefaultPopType());
         NotifyPopGained_();
         m_riot.NotifyPopGrown(BuildRiotInputs_());
     }
@@ -154,7 +154,7 @@ void PopulationManager::RecalculateComposition()
     // TODO: supply faction drone/talent modifiers once faction modifiers are accessible here
     const PopCompositionResult targets = m_pCompositionCalculator->Calculate(inputs);
 
-    m_container.ApplyCompositionTargets(targets, GetDefaultPopType_());
+    m_container.ApplyCompositionTargets(targets, GetDefaultPopType());
 }
 
 void PopulationManager::CheckRiotEndOfTurn()

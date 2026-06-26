@@ -87,6 +87,36 @@ void PopContainer::ConvertTo(Pop& rPop, const std::string& typeId)
     rPop.Convert(*pConfig);
 }
 
+void PopContainer::ConvertToSpecialist(Pop& rPop)
+{
+    if (!m_pRegistry)
+    {
+        throw std::runtime_error("PopContainer has no registry");
+    }
+    const PopTypeConfig_t* pBestConfig = FindBestSpecialistConfig_();
+    if (!pBestConfig)
+    {
+        throw std::runtime_error("No specialist pop type available in registry");
+    }
+    rPop.Convert(*pBestConfig);
+}
+
+const PopTypeConfig_t* PopContainer::FindBestSpecialistConfig_() const
+{
+    const PopTypeConfig_t* pBestConfig = nullptr;
+    for (const PopTypeConfig_t& rConfig : m_pRegistry->GetAll())
+    {
+        if (!rConfig.bCanWorkTile && rConfig.riotContribution == 0)
+        {
+            if (!pBestConfig || rConfig.generation.psych > pBestConfig->generation.psych)
+            {
+                pBestConfig = &rConfig;
+            }
+        }
+    }
+    return pBestConfig;
+}
+
 void PopContainer::PromoteWorkerToDrone()
 {
     for (const auto& pPop : m_pops)

@@ -37,6 +37,7 @@ class BaseManager
 {
 public:
     BaseManager(
+        const Tile& tile,
         const BuildingRegistry* pBuildingRegistry,
         const PopTypeRegistry* pPopRegistry,
         PopCompositionCalculator* pCompositionCalculator,
@@ -53,6 +54,7 @@ public:
     PopContainer& GetPopContainer();
     int GetPopWorkerCount() const;
     void ConvertPop(Pop& rPop, const std::string& typeId);
+    const std::string& GetDefaultWorkerTypeId() const;
 
     // Signals forwarded from PopulationManager
     Signal<int> on_pop_gained;
@@ -109,16 +111,11 @@ public:
     int GetBaseSize() const;
     int GetGrowthRate() const;
 
-    // Position on the map
-    void SetPosition(int x, int y);
     int GetX() const;
     int GetY() const;
 
     // Returns the set of workable tiles this base can assign workers to.
-    // Produces a 5x5 grid with the four corners removed (Manhattan distance <= 3
-    // within the [-2,2] bounding box), excluding the base's own tile.
-    // Does not filter for enemy units (TODO: when units exist).
-    std::vector<const Tile*> GetWorkableTilePositions() const;
+    const std::vector<const Tile*>& GetWorkableTilePositions() const;
 
     // Base identity
     void SetName(const std::string& name);
@@ -133,9 +130,7 @@ public:
 private:
     FactionId m_factionId;
     int m_baseId;
-    int m_x;
-    int m_y;
-    const WorldMap* m_pWorldMap;
+    const Tile& m_tile;
     const ResearchManager* m_pResearch;
     std::unique_ptr<PopulationManager> m_pPopulation;
     std::unique_ptr<WorkerAssignmentManager> m_pWorkerAssignments;

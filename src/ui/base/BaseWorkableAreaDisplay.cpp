@@ -2,71 +2,71 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "graphics/Graphics.h"
-#include "ui/TileHitTester.h"
 #include <sstream>
 
 namespace ac
 {
 
-BaseWorkableAreaDisplay::BaseWorkableAreaDisplay(const BaseManager* pBase, WindowLayout_t layout, TileClickCallback_t onTileClicked)
+BaseWorkableAreaDisplay::BaseWorkableAreaDisplay(const BaseManager* pBase,
+                                                 WindowLayout_t layout,
+                                                 TileClickCallback_t onTileClicked,
+                                                 BaseClickCallback_t onBaseClicked)
     : UIElement(layout)
     , m_pBase(pBase)
     , m_onTileClicked(std::move(onTileClicked))
-{}
+    , m_onBaseClicked(std::move(onBaseClicked))
+{
+    CacheTileRects_();
+}
 
-void BaseWorkableAreaDisplay::Render(Graphics& rGraphics)
+void BaseWorkableAreaDisplay::CacheTileRects_()
 {
     if (!m_pBase)
     {
         throw std::runtime_error("BaseWorkableAreaDisplay: BaseManager is null");
     }
 
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color{20, 20, 20, 255});
-    // Get the workable tiles (5x5 grid with corners removed, excluding center)
-    auto workableTiles = m_pBase->GetWorkableTilePositions();
-    
-    // Get the base position to center the grid
-    int baseX = m_pBase->GetX();
-    int baseY = m_pBase->GetY();
+    m_tileSize = std::min(m_layout.width, m_layout.height) / 5.f;
+    const float gridWidth  = 5 * m_tileSize;
+    const float gridHeight = 5 * m_tileSize;
+    m_startX = m_layout.x + (m_layout.width  - gridWidth)  / 2.f;
+    m_startY = m_layout.y + (m_layout.height - gridHeight) / 2.f;
 
-    // Grid is centered around base (relative coords from -2 to +2)
-    // We'll lay it out in a 5x5 visual grid
-    const float tileSize = GetTileSize_();
-    const float gridWidth = 5 * tileSize;
-    const float gridHeight = 5 * tileSize;
-    
-    // Center the grid within the layout rectangle
-    float startX = m_layout.x + (m_layout.width - gridWidth) / 2.f;
-    float startY = m_layout.y + (m_layout.height - gridHeight) / 2.f;
+    const int baseX = m_pBase->GetX();
+    const int baseY = m_pBase->GetY();
 
-    for (const Tile* pTile : workableTiles)
+    for (const Tile* pTile : m_pBase->GetWorkableTilePositions())
     {
         if (!pTile)
         {
             continue;
         }
 
-        int tileX = pTile->GetX();
-        int tileY = pTile->GetY();
+        const int relX = pTile->GetX() - baseX;
+        const int relY = pTile->GetY() - baseY;
+        const float screenX = m_startX + (relX + 2) * m_tileSize;
+        const float screenY = m_startY + (relY + 2) * m_tileSize;
 
-        // Calculate relative position from base (-2 to +2)
-        int relX = tileX - baseX;
-        int relY = tileY - baseY;
-
-        // Calculate screen position (relX, relY range from -2 to +2)
-        float screenX = startX + (relX + 2) * tileSize;
-        float screenY = startY + (relY + 2) * tileSize;
-
-        // Check if tile is being worked via the tile's flag
-        bool bIsWorked = pTile->IsWorked();
-
-        RenderTile_(rGraphics, *pTile, screenX, screenY, tileSize, bIsWorked);
+        m_tileRects.push_back(TileRect_t{
+            Rectangle_t{screenX, screenY, m_tileSize, m_tileSize},
+            pTile
+        });
     }
-    
+}
+
+void BaseWorkableAreaDisplay::Render(Graphics& rGraphics)
+{
+    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color{20, 20, 20, 255});
+
+    for (const TileRect_t& entry : m_tileRects)
+    {
+        RenderTile_(rGraphics, *entry.pTile, entry.rect.x, entry.rect.y, m_tileSize, entry.pTile->IsWorked());
+    }
+
     // Draw the base itself at center
-    float centerX = startX + 2 * tileSize;
-    float centerY = startY + 2 * tileSize;
-    rGraphics.DrawRect(centerX, centerY, tileSize, tileSize, Color{80, 80, 80, 255}, -1.0f);
+    const float centerX = m_startX + 2 * m_tileSize;
+    const float centerY = m_startY + 2 * m_tileSize;
+    rGraphics.DrawRect(centerX, centerY, m_tileSize, m_tileSize, Color{80, 80, 80, 255}, -1.0f);
     rGraphics.DrawText("BASE", centerX, centerY, 14, Color::Yellow());
 }
 
@@ -93,27 +93,33 @@ void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, const Tile& rTile
     rGraphics.DrawText(oss.str(), x + textOffsetX, y + textOffsetY, fontSize, textColor);
 }
 
-float BaseWorkableAreaDisplay::GetTileSize_() const
-{
-    return std::min(m_layout.width, m_layout.height) / 5.f;
-}
-
 void BaseWorkableAreaDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
 {
-    auto tile = TileHitTester::HitTestBaseWorkableArea(
-        static_cast<float>(rEvent.x), static_cast<float>(rEvent.y),
-        m_layout.x + m_layout.width / 2, m_layout.y + m_layout.height / 2,
-        GetTileSize_(),
-        m_pBase->GetX(), m_pBase->GetY());
+    const float mouseX = static_cast<float>(rEvent.x);
+    const float mouseY = static_cast<float>(rEvent.y);
 
-    if (!tile)
+    const float baseTileX = m_startX + 2 * m_tileSize;
+    const float baseTileY = m_startY + 2 * m_tileSize;
+
+    if (ContainsMouseCoord(Rectangle_t{baseTileX, baseTileY, m_tileSize, m_tileSize}, mouseX, mouseY))
     {
+        if (m_onBaseClicked)
+        {
+            m_onBaseClicked();
+        }
         return;
     }
 
-    if (m_onTileClicked)
+    for (const TileRect_t& entry : m_tileRects)
     {
-        m_onTileClicked(tile->first, tile->second);
+        if (ContainsMouseCoord(entry.rect, mouseX, mouseY))
+        {
+            if (m_onTileClicked)
+            {
+                m_onTileClicked(entry.pTile);
+            }
+            return;
+        }
     }
 }
 } // namespace ac

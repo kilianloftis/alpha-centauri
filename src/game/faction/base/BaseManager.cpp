@@ -15,7 +15,41 @@
 namespace ac
 {
 
+namespace
+{
+
+std::vector<const Tile*> ComputeWorkableTiles_(const WorldMap& rWorldMap, const Tile& tile)
+{
+    int baseX = tile.GetX();
+    int baseY = tile.GetY();
+    static constexpr int kGridHalfExtent = 2;
+    static constexpr int kManhattanLimit = 3;
+    std::vector<const Tile*> tiles;
+    for (int dy = -kGridHalfExtent; dy <= kGridHalfExtent; ++dy)
+    {
+        for (int dx = -kGridHalfExtent; dx <= kGridHalfExtent; ++dx)
+        {
+            if (dx == 0 && dy == 0)
+            {
+                continue;
+            }
+            if (std::abs(dx) + std::abs(dy) <= kManhattanLimit)
+            {
+                const Tile* pTile = rWorldMap.GetTile(baseX + dx, baseY + dy);
+                if (pTile)
+                {
+                    tiles.push_back(pTile);
+                }
+            }
+        }
+    }
+    return tiles;
+}
+
+} // namespace
+
 BaseManager::BaseManager(
+    const Tile& tile,
     const BuildingRegistry* pBuildingRegistry,
     const PopTypeRegistry* pPopRegistry,
     PopCompositionCalculator* pCompositionCalculator,
@@ -26,12 +60,10 @@ BaseManager::BaseManager(
     const GrowthCalculator* pGrowthCalculator)
     : m_factionId(-1)
     , m_baseId(-1)
-    , m_x(0)
-    , m_y(0)
-    , m_pWorldMap(&rWorldMap)
+    , m_tile(tile)
     , m_pResearch(pResearchManager)
     , m_pPopulation(std::make_unique<PopulationManager>(pPopRegistry, pCompositionCalculator, pGrowthCalculator))
-    , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(std::vector<const Tile*>{}))
+    , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(ComputeWorkableTiles_(rWorldMap, tile), m_pPopulation->GetContainer()))
     , m_pResources(nullptr)
     , m_pBuildings(std::make_unique<BuildingManager>(pBuildingRegistry, pResearchManager))
     , m_pProduction(pProductionCostCalculator ? std::make_unique<ProductionManager>(*pProductionCostCalculator) : nullptr)
@@ -50,11 +82,11 @@ BaseManager::BaseManager(
         m_pPopulation->RemovePop();
     });
     m_pPopulation->on_pop_gained.connect([this](int newSize) {
-        m_pWorkerAssignments->AutoAssignWorkers(m_pPopulation->GetContainer());
+        m_pWorkerAssignments->AutoAssignWorkers();
         on_pop_gained.emit(newSize);
     });
     // Newly created pops start unassigned; auto-assign once after construction.
-    m_pWorkerAssignments->AutoAssignWorkers(m_pPopulation->GetContainer());
+    m_pWorkerAssignments->AutoAssignWorkers();
     m_pPopulation->on_pop_lost.connect([this](int newSize) {
         on_pop_lost.emit(newSize);
     });
@@ -94,7 +126,7 @@ void BaseManager::ConvertPop(Pop& rPop, const std::string& typeId)
 {
     if (!m_pPopulation)
     {
-        return;
+        throw std::runtime_error("BaseManager::ConvertPop: m_pPopulation is null");
     }
     if (rPop.IsWorker())
     {
@@ -103,8 +135,17 @@ void BaseManager::ConvertPop(Pop& rPop, const std::string& typeId)
     m_pPopulation->ConvertTo(rPop, typeId);
     if (rPop.IsWorker())
     {
-        m_pWorkerAssignments->AutoAssignWorkers(m_pPopulation->GetContainer());
+        m_pWorkerAssignments->AutoAssignWorkers();
     }
+}
+
+const std::string& BaseManager::GetDefaultWorkerTypeId() const
+{
+    if (!m_pPopulation)
+    {
+        throw std::runtime_error("BaseManager::GetDefaultWorkerTypeId: m_pPopulation is null");
+    }
+    return m_pPopulation->GetDefaultPopType();
 }
 
 WorkerAssignmentManager& BaseManager::GetWorkerAssignments()
@@ -119,7 +160,7 @@ const WorkerAssignmentManager& BaseManager::GetWorkerAssignments() const
 
 void BaseManager::AutoAssignWorkers()
 {
-    m_pWorkerAssignments->AutoAssignWorkers(m_pPopulation->GetContainer());
+    m_pWorkerAssignments->AutoAssignWorkers();
 }
 
 int BaseManager::GetNutrientProduction() const
@@ -265,47 +306,19 @@ int BaseManager::GetGrowthRate() const
     return 0;
 }
 
-void BaseManager::SetPosition(int x, int y)
-{
-    m_x = x;
-    m_y = y;
-    m_pWorkerAssignments->SetWorkableTiles(GetWorkableTilePositions(), m_pPopulation->GetContainer());
-}
-
 int BaseManager::GetX() const
 {
-    return m_x;
+    return m_tile.GetX();
 }
 
 int BaseManager::GetY() const
 {
-    return m_y;
+    return m_tile.GetY();
 }
 
-std::vector<const Tile*> BaseManager::GetWorkableTilePositions() const
+const std::vector<const Tile*>& BaseManager::GetWorkableTilePositions() const
 {
-    static constexpr int kGridHalfExtent = 2;   // [-2, 2] bounding box
-    static constexpr int kManhattanLimit  = 3;   // excludes corners (|dx|+|dy|==4)
-    std::vector<const Tile*> tiles;
-    for (int dy = -kGridHalfExtent; dy <= kGridHalfExtent; ++dy)
-    {
-        for (int dx = -kGridHalfExtent; dx <= kGridHalfExtent; ++dx)
-        {
-            if (dx == 0 && dy == 0)
-            {
-                continue;
-            }
-            if (std::abs(dx) + std::abs(dy) <= kManhattanLimit)
-            {
-                const Tile* pTile = m_pWorldMap ? m_pWorldMap->GetTile(m_x + dx, m_y + dy) : nullptr;
-                if (pTile)
-                {
-                    tiles.push_back(pTile);
-                }
-            }
-        }
-    }
-    return tiles;
+    return m_pWorkerAssignments->GetWorkableTiles();
 }
 
 void BaseManager::SetName(const std::string& name)
