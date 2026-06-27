@@ -105,6 +105,7 @@ public:
 
 private:
     PopContainer m_container;
+    const PopTypeRegistry* m_pRegistry = nullptr;
     const GrowthCalculator* m_pGrowthCalculator = nullptr;
     PopCompositionCalculator* m_pCompositionCalculator = nullptr;
     int m_maxSize;

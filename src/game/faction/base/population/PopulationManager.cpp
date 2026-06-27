@@ -5,6 +5,7 @@
 #include "game/population/pop-types/PopTypeRegistry.h"
 #include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "game/faction/ResearchManager.h"
+#include <stdexcept>
 
 namespace ac
 {
@@ -16,6 +17,7 @@ PopulationManager::PopulationManager(const PopTypeRegistry* pReg,
                                      const GrowthCalculator* pGrowthCalculator,
                                      int initialSize)
     : m_container(pReg, pAvailabilityCalculator, pResearchManager, initialSize)
+    , m_pRegistry(pReg)
     , m_pGrowthCalculator(pGrowthCalculator)
     , m_pCompositionCalculator(pCalc)
     , m_maxSize(8)
@@ -37,11 +39,11 @@ int PopulationManager::GetSize() const
 
 const std::string& PopulationManager::GetDefaultPopType() const
 {
-    if (!m_pCompositionCalculator)
+    if (!m_pRegistry)
     {
-        throw std::runtime_error("No Pop Comp Calculator");
+        throw std::runtime_error("No PopTypeRegistry");
     }
-    return m_pCompositionCalculator->GetConfig().defaultType;
+    return m_pRegistry->GetDefault().id;
 }
 
 int PopulationManager::GetGrowthRate() const

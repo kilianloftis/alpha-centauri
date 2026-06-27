@@ -9,7 +9,6 @@ PopCompositionConfig PopCompositionConfigParser::ParseConfig(const std::string& 
                                                              LuaRuntime& rLua)
 {
     PopCompositionConfig config;
-    config.defaultType  = "Worker";
     config.precedence   = {"Talent", "Drone", "Worker"};
 
     sol::state& lua = rLua.GetState();
@@ -27,7 +26,6 @@ PopCompositionConfig PopCompositionConfigParser::ParseConfig(const std::string& 
 
     sol::table tbl = result;
 
-    config.defaultType  = tbl.get_or("default_type",  std::string("Worker"));
     config.droneFormula  = tbl.get_or("drone_formula",  std::string(""));
     config.talentFormula = tbl.get_or("talent_formula", std::string(""));
 

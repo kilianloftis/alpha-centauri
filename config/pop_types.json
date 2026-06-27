@@ -2,6 +2,7 @@
   {
     "id": "Worker",
     "name": "Worker",
+    "is_default": true,
     "can_work_tile": true,
     "player_assignable": true,
     "tile_multipliers": {

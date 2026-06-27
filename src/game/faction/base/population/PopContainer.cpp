@@ -19,10 +19,10 @@ PopContainer::PopContainer(const PopTypeRegistry* pReg,
 {
     if (m_pRegistry && initialSize > 0)
     {
+        const std::string& rDefaultId = m_pRegistry->GetDefault().id;
         for (int i = 0; i < initialSize; ++i)
         {
-            auto pPop = m_pRegistry->Create("Worker");
-            m_pops.push_back(std::move(pPop));
+            m_pops.push_back(m_pRegistry->Create(rDefaultId));
         }
     }
 }

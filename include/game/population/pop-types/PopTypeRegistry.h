@@ -3,12 +3,46 @@
 #include "game/population/pop-types/Pop.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "lib/Registry.h"
+#include <stdexcept>
 
 namespace ac
 {
 
-class PopTypeRegistry : public Registry<PopTypeConfig_t, PopTypeConfig_tParser, Pop>
+class PopTypeRegistry : public Registry<PopTypeConfig_t, PopTypeConfigtParser, Pop>
 {
+public:
+    const PopTypeConfig_t& GetDefault() const
+    {
+        for (const PopTypeConfig_t& rConfig : this->m_configs)
+        {
+            if (rConfig.bIsDefault)
+            {
+                return rConfig;
+            }
+        }
+        throw std::runtime_error("No pop type marked as is_default in pop_types config");
+    }
+
+protected:
+    void Validate_() override
+    {
+        Registry::Validate_();
+
+        int defaultCount = 0;
+        for (const PopTypeConfig_t& rConfig : this->m_configs)
+        {
+            if (rConfig.bIsDefault)
+            {
+                ++defaultCount;
+            }
+        }
+        if (defaultCount != 1)
+        {
+            throw std::runtime_error(
+                "pop_types config must have exactly one is_default entry, found " +
+                std::to_string(defaultCount));
+        }
+    }
 };
 
 } // namespace ac

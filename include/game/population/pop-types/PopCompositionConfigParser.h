@@ -10,7 +10,6 @@ class LuaRuntime;
 
 struct PopCompositionConfig
 {
-    std::string defaultType;             // Pop type id for unassigned pops (e.g. "Worker")
     std::string droneFormula;            // Lua expression: number of drones
     std::string talentFormula;           // Lua expression: number of talents
     std::vector<std::string> precedence; // Order in which types are assigned when recalculating

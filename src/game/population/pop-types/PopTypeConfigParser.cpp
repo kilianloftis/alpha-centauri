@@ -8,11 +8,11 @@ using json = nlohmann::json;
 namespace ac
 {
 
-PopTypeConfig_tParser::PopTypeConfig_tParser()
+PopTypeConfigtParser::PopTypeConfigtParser()
 {
 }
 
-std::vector<PopTypeConfig_t> PopTypeConfig_tParser::ParseConfig(const std::string& configPath)
+std::vector<PopTypeConfig_t> PopTypeConfigtParser::ParseConfig(const std::string& configPath)
 {
     std::cout << "Loading pop type configuration from: " << configPath << "\n";
 
@@ -41,11 +41,12 @@ std::vector<PopTypeConfig_t> PopTypeConfig_tParser::ParseConfig(const std::strin
     return configs;
 }
 
-PopTypeConfig_t PopTypeConfig_tParser::ParsePopTypeConfig_t(const nlohmann::json& popJson)
+PopTypeConfig_t PopTypeConfigtParser::ParsePopTypeConfig_t(const nlohmann::json& popJson)
 {
     PopTypeConfig_t config;
     config.id = popJson["id"];
     config.name = popJson.value("name", config.id);
+    config.bIsDefault         = popJson.value("is_default",          false);
     config.bCanWorkTile       = popJson.value("can_work_tile",       false);
     config.bPlayerAssignable  = popJson.value("player_assignable",   false);
 

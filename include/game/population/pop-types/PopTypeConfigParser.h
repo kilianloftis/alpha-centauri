@@ -28,6 +28,7 @@ struct PopTypeConfig_t
 {
     std::string id;
     std::string name;
+    bool bIsDefault;
     bool bCanWorkTile;
     bool bPlayerAssignable;
     PopTileMultipliers_t tileMultipliers;
@@ -39,11 +40,11 @@ struct PopTypeConfig_t
     std::string fallbackPopTypeId;
 };
 
-class PopTypeConfig_tParser
+class PopTypeConfigtParser
 {
 public:
-    PopTypeConfig_tParser();
-    ~PopTypeConfig_tParser() = default;
+    PopTypeConfigtParser();
+    ~PopTypeConfigtParser() = default;
 
     std::vector<PopTypeConfig_t> ParseConfig(const std::string& configPath);
 
