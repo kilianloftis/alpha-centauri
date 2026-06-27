@@ -37,14 +37,21 @@ public:
     // Returns false under the same conditions as AssignWorker.
     bool UserAssignWorker(Pop& rPop, const Tile* pTile);
 
-    // Clear the user assignment for a given tile.
-    // If a pop is currently assigned to that tile, it is also unassigned.
+    // Remove the worker from a tile and revert them to their fallback pop type.
+    // Use when the player explicitly removes a worker from a tile and no auto-assign follows.
     void UserUnassignTile(const Tile* pTile);
 
-    // Clear all user assignments and unassign the associated worker pops.
-    void UserUnassignAll();
+    // Release a pop from its user assignment without reverting to fallback.
+    // The pop remains a worker with its tile cleared, eligible for auto-assignment.
+    // Call AutoAssignWorkers() afterward to fill the vacancy.
+    void ReleaseUserAssignment(Pop& rPop);
 
-    // Remove the assignment for the given pop. No-op if not assigned.
+    // Release all user-assigned pops so they are eligible for auto-assignment.
+    // Does NOT convert pops to fallback — call AutoAssignWorkers() afterward.
+    void ReleaseAllUserAssignments();
+
+    // Remove the tile assignment for the given pop. No-op if not assigned.
+    // Does not convert to fallback; use when the pop will be immediately repositioned or converted.
     void UnassignWorker(Pop& rPop);
 
     // Remove all auto-assigned assignments. Does NOT clear user-assigned pops.
@@ -79,6 +86,7 @@ private:
     std::vector<const Tile*> PrioritizeAvailableTiles_(const std::vector<const Tile*>& availableTiles) const;
     void AutoAssignWorkers_(std::vector<const Tile*>& availableTiles);
 
+    void UnassignFromTile_(Pop& rPop);
     void ConvertToFallback_(Pop& rPop);
 
 

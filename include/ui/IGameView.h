@@ -20,6 +20,13 @@ public:
 
     virtual void Render(Graphics& rGraphics)
     {
+        for (int i = static_cast<int>(m_elements.size()) - 1; i >= 0; --i)
+        {
+            if (m_elements[i]->ShouldClose())
+            {
+                m_elements.erase(m_elements.begin() + i);
+            }
+        }
         for (const auto& pElement : m_elements)
         {
             pElement->Render(rGraphics);
@@ -28,9 +35,9 @@ public:
 
     virtual bool HandleKey(const KeyEvent_t& rEvent)
     {
-        for (const auto& pElement : m_elements)
+        for (int i = static_cast<int>(m_elements.size()) - 1; i >= 0; --i)
         {
-            if (pElement->HandleKey(rEvent))
+            if (m_elements[i]->HandleKey(rEvent))
             {
                 return true;
             }
@@ -40,11 +47,11 @@ public:
 
     virtual void HandleMouse(const MouseEvent_t& rEvent)
     {
-        for (const auto& pElement : m_elements)
+        for (int i = static_cast<int>(m_elements.size()) - 1; i >= 0; --i)
         {
-            if (pElement->Contains(static_cast<float>(rEvent.x), static_cast<float>(rEvent.y)))
+            if (m_elements[i]->Contains(static_cast<float>(rEvent.x), static_cast<float>(rEvent.y)))
             {
-                pElement->HandleMouseClick(rEvent);
+                m_elements[i]->HandleMouseClick(rEvent);
                 break;
             }
         }

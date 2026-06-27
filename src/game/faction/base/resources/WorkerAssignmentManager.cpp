@@ -44,21 +44,24 @@ void WorkerAssignmentManager::UserUnassignTile(const Tile* pTile)
     {
         if (pPop->IsWorker() && pPop->GetTile() == pTile)
         {
-            pPop->SetTile(nullptr);
-            ConvertToFallback_(*pPop);
+            UnassignFromTile_(*pPop);
             break;
         }
     }
 }
 
-void WorkerAssignmentManager::UserUnassignAll()
+void WorkerAssignmentManager::ReleaseUserAssignment(Pop& rPop)
+{
+    rPop.SetTile(nullptr);
+}
+
+void WorkerAssignmentManager::ReleaseAllUserAssignments()
 {
     for (auto& pPop : m_rPops.GetPops())
     {
         if (pPop->IsWorker() && pPop->IsUserAssigned())
         {
-            pPop->SetTile(nullptr);
-            ConvertToFallback_(*pPop);
+            ReleaseUserAssignment(*pPop);
         }
     }
 }
@@ -244,6 +247,12 @@ void WorkerAssignmentManager::AutoAssignWorkers_(std::vector<const Tile*>& avail
         AssignWorker(*rPop, availableTiles[0]);
         availableTiles.erase(availableTiles.begin());
     }
+}
+
+void WorkerAssignmentManager::UnassignFromTile_(Pop& rPop)
+{
+    rPop.SetTile(nullptr);
+    ConvertToFallback_(rPop);
 }
 
 void WorkerAssignmentManager::ConvertToFallback_(Pop& rPop)
