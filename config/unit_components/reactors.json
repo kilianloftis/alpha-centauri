@@ -1,0 +1,41 @@
+[
+  {
+    "id": "Fission_Plant",
+    "name": "Fission Plant",
+    "type": "reactor",
+    "required_tech": "",
+    "mineral_cost": 0,
+    "stats": {
+      "hit_points":     { "base": 10 },
+      "cost_multiplier": { "geometric_mult": 1.0 }
+    },
+    "flags": {},
+    "bonus_tables": {}
+  },
+  {
+    "id": "Fusion_Lab",
+    "name": "Fusion Lab",
+    "type": "reactor",
+    "required_tech": "test_tech_1",
+    "mineral_cost": 5,
+    "stats": {
+      "hit_points":     { "base": 20 },
+      "cost_multiplier": { "geometric_mult": 0.5 }
+    },
+    "flags": {},
+    "bonus_tables": {}
+  },
+  {
+    "id": "Quantum_Chambers",
+    "name": "Quantum Chambers",
+    "type": "reactor",
+    "required_tech": "test_tech_2",
+    "mineral_cost": 10,
+    "stats": {
+      "hit_points":     { "base": 30 },
+      "cost_multiplier": { "geometric_mult": 0.25 }
+    },
+    "flags": {},
+    "bonus_tables": {}
+  }
+]

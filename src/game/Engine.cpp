@@ -12,11 +12,7 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
-#include "game/units/chassis/ChassisRegistry.h"
-#include "game/units/weapon/WeaponRegistry.h"
-#include "game/units/armour/ArmourRegistry.h"
-#include "game/units/reactor/ReactorRegistry.h"
-#include "game/units/ability/AbilityRegistry.h"
+#include "game/units/UnitComponentRegistry.h"
 #include "game/research/TechRegistry.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
@@ -120,20 +116,8 @@ void Engine::Initialize_()
     m_gameDataContext->buildingRegistry = std::make_unique<BuildingRegistry>();
     m_gameDataContext->buildingRegistry->Load("config/buildings.json");
 
-    m_gameDataContext->chassisRegistry = std::make_unique<ChassisRegistry>();
-    m_gameDataContext->chassisRegistry->Load("config/unit_chassis.json");
-
-    m_gameDataContext->weaponRegistry = std::make_unique<WeaponRegistry>();
-    m_gameDataContext->weaponRegistry->Load("config/unit_weapons.json");
-
-    m_gameDataContext->armourRegistry = std::make_unique<ArmourRegistry>();
-    m_gameDataContext->armourRegistry->Load("config/unit_armour.json");
-
-    m_gameDataContext->reactorRegistry = std::make_unique<ReactorRegistry>();
-    m_gameDataContext->reactorRegistry->Load("config/unit_reactors.json");
-
-    m_gameDataContext->abilityRegistry = std::make_unique<AbilityRegistry>();
-    m_gameDataContext->abilityRegistry->Load("config/unit_abilities.json");
+    m_gameDataContext->unitComponentRegistry = std::make_unique<UnitComponentRegistry>();
+    m_gameDataContext->unitComponentRegistry->Load("config/unit_components");
 
     m_gameDataContext->techRegistry = std::make_unique<TechRegistry>();
     m_gameDataContext->techRegistry->Load("config/techs.json");

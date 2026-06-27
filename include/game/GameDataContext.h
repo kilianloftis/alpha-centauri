@@ -6,11 +6,7 @@ namespace ac
 {
 
 class BuildingRegistry;
-class ChassisRegistry;
-class WeaponRegistry;
-class ArmourRegistry;
-class ReactorRegistry;
-class AbilityRegistry;
+class UnitComponentRegistry;
 class PopTypeRegistry;
 class TechRegistry;
 class SocialPolicyRegistry;
@@ -33,11 +29,7 @@ struct GameDataContext
     ~GameDataContext();
 
     std::unique_ptr<BuildingRegistry> buildingRegistry;
-    std::unique_ptr<ChassisRegistry> chassisRegistry;
-    std::unique_ptr<WeaponRegistry> weaponRegistry;
-    std::unique_ptr<ArmourRegistry> armourRegistry;
-    std::unique_ptr<ReactorRegistry> reactorRegistry;
-    std::unique_ptr<AbilityRegistry> abilityRegistry;
+    std::unique_ptr<UnitComponentRegistry> unitComponentRegistry;
     std::unique_ptr<TechRegistry> techRegistry;
     std::unique_ptr<SocialPolicyRegistry> socialPolicyRegistry;
     std::unique_ptr<PopTypeRegistry> popTypeRegistry;
