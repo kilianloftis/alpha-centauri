@@ -95,6 +95,7 @@ private:
     std::vector<const Tile*> m_workableTiles;
     TileScorer m_scorer;
     PopContainer& m_rPops;
+    Pop* m_pLastAssigned = nullptr;
 };
 
 } // namespace ac

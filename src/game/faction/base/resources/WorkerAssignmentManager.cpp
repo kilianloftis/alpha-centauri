@@ -35,6 +35,7 @@ bool WorkerAssignmentManager::UserAssignWorker(Pop& rPop, const Tile* pTile)
         return false;
     }
     rPop.SetUserAssigned(true);
+    m_pLastAssigned = &rPop;
     return true;
 }
 
@@ -204,17 +205,12 @@ void WorkerAssignmentManager::UserAssignBestAvailableWorker(const Tile* pTile, c
         }
     }
 
-    for (int i = static_cast<int>(m_rPops.GetPops().size()) - 1; i >= 0; --i)
+    if (m_pLastAssigned && m_pLastAssigned->IsWorker())
     {
-        Pop* pPop = m_rPops.GetPops()[i].get();
-        if (pPop->IsWorker())
-        {
-            UnassignWorker(*pPop);
-            UserAssignWorker(*pPop, pTile);
-            return;
-        }
+        UnassignWorker(*m_pLastAssigned);
+        UserAssignWorker(*m_pLastAssigned, pTile);
     }
-    }
+}
 
 std::vector<Pop*> WorkerAssignmentManager::GetUnassignedWorkers_() const
 {
