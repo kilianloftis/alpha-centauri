@@ -41,6 +41,7 @@ add_executable(alpha-centauri
     game/HookContext.cpp
     game/buildings/BuildingConfigParser.cpp
     game/units/Unit.cpp
+    game/units/UnitDesign.cpp
     game/units/UnitComponentConfigParser.cpp
     game/research/TechConfigParser.cpp
     game/social-engineering/SocialPolicyConfigParser.cpp

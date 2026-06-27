@@ -1,29 +1,28 @@
 #pragma once
 
-#include "game/IConstructable.h"
-#include "game/units/UnitComponentConfig.h"
+#include "game/units/UnitDesign.h"
 #include <string>
 #include <unordered_map>
 
 namespace ac
 {
 
-class Unit : public IConstructable
+class Tile;
+class BaseManager;
+class Faction;
+
+class Unit
 {
 public:
-    Unit(const std::string& rName,
-         const UnitComponentConfig_t& rChassis,
-         const UnitComponentConfig_t& rWeapon,
-         const UnitComponentConfig_t& rArmour,
-         const UnitComponentConfig_t& rReactor,
-         const UnitComponentConfig_t* pAbility1 = nullptr,
-         const UnitComponentConfig_t* pAbility2 = nullptr);
+    Unit(const UnitDesign& rDesign,
+         Tile& rTile,
+         BaseManager* pHomeBase,
+         Faction& rFaction);
     ~Unit() = default;
 
-    const char* GetId() const override;
-    const std::string& GetName() const override;
-    int GetBaseCost() const override;
+    const UnitDesign& GetDesign() const;
 
+    int GetBaseCost() const;
     int GetAttack() const;
     int GetDefense() const;
     int GetMovement() const;
@@ -36,19 +35,32 @@ public:
     int GetDifficultTerrainCost() const;
     bool IsSingleUse() const;
     std::unordered_map<std::string, float> GetTerrainAttackBonus() const;
+    Tile& GetTile() const;
+    BaseManager* GetHomeBase() const;
+    Faction& GetFaction() const;
+
+    int GetCurrentHp() const;
+    int GetCurrentFuel() const;
+    int GetMovesRemaining() const;
+    int GetXp() const;
+
+    void SetCurrentHp(int hp);
+    void SetCurrentFuel(int fuel);
+    void SetMovesRemaining(int moves);
+    void SetXp(int xp);
+    void SetTile(Tile& rTile);
+    void SetHomeBase(BaseManager* pHomeBase);
 
 private:
-    float ResolveStat_(const std::string& rStatName) const;
-    bool ResolveFlag_(const std::string& rFlagName) const;
-    std::unordered_map<std::string, float> ResolveBonusTable_(const std::string& rTableName) const;
+    const UnitDesign& m_rDesign;
+    Tile* m_pTile;
+    BaseManager* m_pHomeBase;
+    Faction& m_rFaction;
 
-    std::string m_name;
-    const UnitComponentConfig_t& m_rChassis;
-    const UnitComponentConfig_t& m_rWeapon;
-    const UnitComponentConfig_t& m_rArmour;
-    const UnitComponentConfig_t& m_rReactor;
-    const UnitComponentConfig_t* m_pAbility1;
-    const UnitComponentConfig_t* m_pAbility2;
+    int m_currentHp;
+    int m_currentFuel;
+    int m_movesRemaining;
+    int m_xp;
 };
 
 } // namespace ac
