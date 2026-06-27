@@ -53,7 +53,6 @@ public:
     // Population management - delegated to PopulationManager
     void RecalculatePopComposition();
     const PopContainer& GetPopContainer() const;
-    PopContainer& GetPopContainer();
     int GetPopWorkerCount() const;
     void ConvertPop(Pop& rPop, const std::string& typeId);
     const std::string& GetDefaultWorkerTypeId() const;
@@ -68,6 +67,11 @@ public:
     // Worker assignment - delegated to WorkerAssignmentManager
     WorkerAssignmentManager& GetWorkerAssignments();
     const WorkerAssignmentManager& GetWorkerAssignments() const;
+
+    // Find the best available pop and user-assign them to the given tile.
+    // Priority: unassigned worker → specialist converted to worker → steal an assigned worker.
+    // No-op if the tile is not workable or no pop can be found.
+    void UserAssignBestAvailableWorker(const Tile* pTile);
 
     // Auto-assign all unassigned workers to available workable tiles.
     // Should be called after initial population setup or when new workers need assignment.

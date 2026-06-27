@@ -104,19 +104,11 @@ void WorkerAssignmentManager::UnassignAll()
     }
 }
 
-void WorkerAssignmentManager::ResetAllAssignments(const std::string& defaultWorkerTypeId)
+void WorkerAssignmentManager::ResetAllAssignments()
 {
     for (auto& pPop : m_rPops.GetPops())
     {
         UnassignWorker(*pPop);
-    }
-
-    for (auto& pPop : m_rPops.GetPops())
-    {
-        if (pPop->IsSpecialist())
-        {
-            m_rPops.ConvertTo(*pPop, defaultWorkerTypeId);
-        }
     }
 
     AutoAssignWorkers();
@@ -188,6 +180,41 @@ void WorkerAssignmentManager::AutoAssignWorkers()
         }
     }
 }
+
+void WorkerAssignmentManager::UserAssignBestAvailableWorker(const Tile* pTile, const std::string& defaultWorkerType)
+{
+    for (int i = static_cast<int>(m_rPops.GetPops().size()) - 1; i >= 0; --i)
+    {
+        Pop* pPop = m_rPops.GetPops()[i].get();
+        if (pPop->IsWorker() && pPop->GetTile() == nullptr)
+        {
+            UserAssignWorker(*pPop, pTile);
+            return;
+        }
+    }
+
+    for (int i = static_cast<int>(m_rPops.GetPops().size()) - 1; i >= 0; --i)
+    {
+        Pop* pPop = m_rPops.GetPops()[i].get();
+        if (pPop->IsSpecialist())
+        {
+            m_rPops.ConvertTo(*pPop, defaultWorkerType);
+            UserAssignWorker(*pPop, pTile);
+            return;
+        }
+    }
+
+    for (int i = static_cast<int>(m_rPops.GetPops().size()) - 1; i >= 0; --i)
+    {
+        Pop* pPop = m_rPops.GetPops()[i].get();
+        if (pPop->IsWorker())
+        {
+            UnassignWorker(*pPop);
+            UserAssignWorker(*pPop, pTile);
+            return;
+        }
+    }
+    }
 
 std::vector<Pop*> WorkerAssignmentManager::GetUnassignedWorkers_() const
 {

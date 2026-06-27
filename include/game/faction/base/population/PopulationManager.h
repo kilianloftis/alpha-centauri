@@ -15,8 +15,6 @@ namespace ac
 struct RiotConditionInputs;
 
 class PopTypeRegistry;
-class PopTypeAvailabilityCalculator;
-class ResearchManager;
 
 // PopulationManager is the API surface for the population component.
 // It manages pop counts, composition, growth, and riot state for a single base,
@@ -25,11 +23,11 @@ class PopulationManager
 {
 public:
     explicit PopulationManager(const PopTypeRegistry* pReg,
-                               const PopTypeAvailabilityCalculator* pAvailabilityCalculator,
-                               const ResearchManager* pResearchManager,
-                               PopCompositionCalculator* pCalc,
-                               const GrowthCalculator* pGrowthCalculator,
-                               int initialSize = 3);
+                                     const PopTypeAvailabilityCalculator* pAvailabilityCalculator,
+                                     const ResearchManager* pResearchManager,
+                                     PopCompositionCalculator* pCalc,
+                                     const GrowthCalculator* pGrowthCalculator,
+                                     int initialSize);
     ~PopulationManager();
 
     // Population size management

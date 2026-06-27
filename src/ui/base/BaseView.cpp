@@ -9,7 +9,6 @@
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
-#include "game/faction/base/population/PopContainer.h"
 #include "game/map/WorldMap.h"
 #include "game/Faction.h"
 #include "lib/EventBus.h"
@@ -71,13 +70,12 @@ bool BaseView::HandleKey(const KeyEvent_t& rEvent)
 void BaseView::HandleBaseClicked_()
 {
     auto& rAssignments = m_rBase.GetWorkerAssignments();
-    rAssignments.ResetAllAssignments(m_rBase.GetDefaultWorkerTypeId());
+    rAssignments.ResetAllAssignments();
 }
 
 void BaseView::HandleTileClick_(const Tile* pTile)
 {
     auto& rAssignments = m_rBase.GetWorkerAssignments();
-    auto& rPops = m_rBase.GetPopContainer();
 
     if (rAssignments.IsTileAssigned(pTile))
     {
@@ -85,37 +83,7 @@ void BaseView::HandleTileClick_(const Tile* pTile)
     }
     else
     {
-        for (int i = static_cast<int>(rPops.GetPops().size()) - 1; i >= 0; --i)
-        {
-            Pop* pPop = rPops.GetPops()[i].get();
-            if (pPop->IsWorker() && pPop->GetTile() == nullptr)
-            {
-                rAssignments.UserAssignWorker(*pPop, pTile);
-                return;
-            }
-        }
-
-        for (int i = static_cast<int>(rPops.GetPops().size()) - 1; i >= 0; --i)
-        {
-            Pop* pPop = rPops.GetPops()[i].get();
-            if (pPop->IsSpecialist())
-            {
-                rPops.ConvertTo(*pPop, m_rBase.GetDefaultWorkerTypeId());
-                rAssignments.UserAssignWorker(*pPop, pTile);
-                return;
-            }
-        }
-
-        for (int i = static_cast<int>(rPops.GetPops().size()) - 1; i >= 0; --i)
-        {
-            Pop* pPop = rPops.GetPops()[i].get();
-            if (pPop->IsWorker())
-            {
-                rAssignments.UnassignWorker(*pPop);
-                rAssignments.UserAssignWorker(*pPop, pTile);
-                return;
-            }
-        }
+        m_rBase.UserAssignBestAvailableWorker(pTile);
     }
 }
 

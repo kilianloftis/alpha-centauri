@@ -64,7 +64,7 @@ BaseManager::BaseManager(
     , m_baseId(-1)
     , m_tile(tile)
     , m_pResearch(pResearchManager)
-    , m_pPopulation(std::make_unique<PopulationManager>(pPopRegistry, pPopTypeAvailabilityCalculator, pResearchManager, pCompositionCalculator, pGrowthCalculator))
+    , m_pPopulation(std::make_unique<PopulationManager>(pPopRegistry, pPopTypeAvailabilityCalculator, pResearchManager, pCompositionCalculator, pGrowthCalculator, 3))
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(ComputeWorkableTiles_(rWorldMap, tile), m_pPopulation->GetContainer()))
     , m_pResources(nullptr)
     , m_pBuildings(std::make_unique<BuildingManager>(pBuildingRegistry, pResearchManager))
@@ -114,11 +114,6 @@ const PopContainer& BaseManager::GetPopContainer() const
     return m_pPopulation->GetContainer();
 }
 
-PopContainer& BaseManager::GetPopContainer()
-{
-    return m_pPopulation->GetContainer();
-}
-
 int BaseManager::GetPopWorkerCount() const
 {
     return m_pPopulation ? m_pPopulation->GetWorkerCount() : 0;
@@ -158,6 +153,11 @@ WorkerAssignmentManager& BaseManager::GetWorkerAssignments()
 const WorkerAssignmentManager& BaseManager::GetWorkerAssignments() const
 {
     return *m_pWorkerAssignments;
+}
+
+void BaseManager::UserAssignBestAvailableWorker(const Tile* pTile)
+{
+    m_pWorkerAssignments->UserAssignBestAvailableWorker(pTile, GetDefaultWorkerTypeId());
 }
 
 void BaseManager::AutoAssignWorkers()

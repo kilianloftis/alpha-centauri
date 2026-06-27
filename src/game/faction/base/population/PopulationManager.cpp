@@ -37,12 +37,11 @@ int PopulationManager::GetSize() const
 
 const std::string& PopulationManager::GetDefaultPopType() const
 {
-    static const std::string kFallback = "Worker";
-    if (m_pCompositionCalculator)
+    if (!m_pCompositionCalculator)
     {
-        return m_pCompositionCalculator->GetConfig().defaultType;
+        throw std::runtime_error("No Pop Comp Calculator");
     }
-    return kFallback;
+    return m_pCompositionCalculator->GetConfig().defaultType;
 }
 
 int PopulationManager::GetGrowthRate() const

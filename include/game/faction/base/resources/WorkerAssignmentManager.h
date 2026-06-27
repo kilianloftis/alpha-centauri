@@ -58,7 +58,7 @@ public:
     void UnassignAll();
 
     // Unassign all pops, revert specialists to workers, and re-run auto-assignment.
-    void ResetAllAssignments(const std::string& defaultWorkerTypeId);
+    void ResetAllAssignments();
 
     // Returns true if the given tile already has a worker assigned.
     bool IsTileAssigned(const Tile* pTile) const;
@@ -79,6 +79,8 @@ public:
 
     // Returns the set of workable tiles this manager can assign.
     const std::vector<const Tile*>& GetWorkableTiles() const;
+
+    void UserAssignBestAvailableWorker(const Tile* pTile, const std::string& defaultWorkerType);
 
 private:
     std::vector<Pop*> GetUnassignedWorkers_() const;
