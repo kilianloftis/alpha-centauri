@@ -21,6 +21,7 @@
 #include "game/population/pop-types/GrowthConfigParser.h"
 #include "game/population/calculators/PopCompositionCalculator.h"
 #include "game/population/calculators/GrowthCalculator.h"
+#include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "game/research/TechCostConfig.h"
 #include "game/research/TechCostCalculator.h"
 #include "game/faction/base/production/ProductionCostConfig.h"
@@ -108,6 +109,8 @@ void Engine::Initialize_()
 
     m_gameDataContext->popTypeRegistry = std::make_unique<PopTypeRegistry>();
     m_gameDataContext->popTypeRegistry->Load("config/pop_types.json");
+    m_gameDataContext->popTypeAvailabilityCalculator =
+        std::make_unique<PopTypeAvailabilityCalculator>(*m_gameDataContext->popTypeRegistry);
 
     m_gameDataContext->buildingRegistry = std::make_unique<BuildingRegistry>();
     m_gameDataContext->buildingRegistry->Load("config/buildings.json");
@@ -167,7 +170,7 @@ void Engine::Initialize_()
                                               m_gameDataContext->techRegistry.get(),
                                               m_gameDataContext->socialPolicyRegistry.get(),
                                               m_gameDataContext->techCostCalculator.get(),
-                                              m_gameDataContext->popTypeRegistry.get());
+                                              m_gameDataContext->popTypeAvailabilityCalculator.get());
     const int centerX = m_gameState->GetWorldMap()->GetWidth() / 2;
     const int centerY = m_gameState->GetWorldMap()->GetHeight() / 2;
     BaseManager* pBase = pFaction->CreateBase(

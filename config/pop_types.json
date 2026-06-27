@@ -19,6 +19,7 @@
     },
     "riot_contribution": 0,
     "golden_age_contribution": 0,
+    "fallback_pop_type": "Doctor",
     "obsoletes": []
   },
   {
@@ -41,6 +42,7 @@
     },
     "riot_contribution": 1,
     "golden_age_contribution": 0,
+    "fallback_pop_type": "Doctor",
     "obsoletes": []
   },
   {
@@ -61,8 +63,9 @@
       "labs": 0,
       "psych": 0
     },
-    "riot_contribution": -1,
+    "riot_contribution": 0,
     "golden_age_contribution": 1,
+    "fallback_pop_type": "Doctor",
     "obsoletes": []
   },
   {

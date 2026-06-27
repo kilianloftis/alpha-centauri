@@ -10,6 +10,8 @@ namespace ac
 {
 
 class PopTypeRegistry;
+class PopTypeAvailabilityCalculator;
+class ResearchManager;
 struct PopCompositionResult;
 
 // Manages the population vector and pop transformations.
@@ -17,7 +19,10 @@ struct PopCompositionResult;
 class PopContainer
 {
 public:
-    PopContainer(const PopTypeRegistry* pReg, int initialSize);
+    PopContainer(const PopTypeRegistry* pReg,
+                 const PopTypeAvailabilityCalculator* pAvailabilityCalculator,
+                 const ResearchManager* pResearchManager,
+                 int initialSize);
     ~PopContainer() = default;
 
     // Container access
@@ -38,11 +43,10 @@ public:
     // Convert a pop to any type by config id
     void ConvertTo(Pop& rPop, const std::string& typeId);
 
-    // Convert a pop to the first available non-worker specialist type.
-    void ConvertToSpecialist(Pop& rPop);
-
-    // Convert a worker to a drone (for faction base count mechanic)
-    void PromoteWorkerToDrone();
+    // Convert this pop to its configured fallback type, resolved through the obsolescence chain
+    // so the pop ends up as the most current non-obsoleted successor.
+    // Throws if the pop has no fallback configured or the resolved type is not in the registry.
+    void ConvertToFallback(Pop& rPop);
 
     // Apply composition targets: converts excess drones/talents to workers,
     // then promotes workers to match targets.
@@ -52,10 +56,10 @@ public:
     int ComputePsychOutput() const;
 
 private:
-    const PopTypeConfig_t* FindBestSpecialistConfig_() const;
-
     std::vector<std::unique_ptr<Pop>> m_pops;
     const PopTypeRegistry* m_pRegistry;
+    const PopTypeAvailabilityCalculator* m_pAvailabilityCalculator;
+    const ResearchManager* m_pResearchManager;
 
     int CountPops_(bool (*predicate)(const Pop*)) const;
 };

@@ -24,6 +24,7 @@ class ResourceManager;
 class BuildingManager;
 class BuildingRegistry;
 class GrowthCalculator;
+class PopTypeAvailabilityCalculator;
 class ProductionCostCalculator;
 class ProductionManager;
 class ResearchManager;
@@ -40,6 +41,7 @@ public:
         const Tile& tile,
         const BuildingRegistry* pBuildingRegistry,
         const PopTypeRegistry* pPopRegistry,
+        const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator,
         PopCompositionCalculator* pCompositionCalculator,
         const WorldMap& rWorldMap,
         const ResearchManager* pResearchManager,

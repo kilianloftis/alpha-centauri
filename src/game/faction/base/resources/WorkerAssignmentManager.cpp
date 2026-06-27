@@ -45,7 +45,7 @@ void WorkerAssignmentManager::UserUnassignTile(const Tile* pTile)
         if (pPop->IsWorker() && pPop->GetTile() == pTile)
         {
             pPop->SetTile(nullptr);
-            ConvertToSpecialist_(*pPop);
+            ConvertToFallback_(*pPop);
             break;
         }
     }
@@ -58,7 +58,7 @@ void WorkerAssignmentManager::UserUnassignAll()
         if (pPop->IsWorker() && pPop->IsUserAssigned())
         {
             pPop->SetTile(nullptr);
-            ConvertToSpecialist_(*pPop);
+            ConvertToFallback_(*pPop);
         }
     }
 }
@@ -181,7 +181,7 @@ void WorkerAssignmentManager::AutoAssignWorkers()
     {
         if (pPop && pPop->IsWorker() && pPop->GetTile() == nullptr)
         {
-            ConvertToSpecialist_(*pPop);
+            ConvertToFallback_(*pPop);
         }
     }
 }
@@ -246,9 +246,9 @@ void WorkerAssignmentManager::AutoAssignWorkers_(std::vector<const Tile*>& avail
     }
 }
 
-void WorkerAssignmentManager::ConvertToSpecialist_(Pop& rPop)
+void WorkerAssignmentManager::ConvertToFallback_(Pop& rPop)
 {
-    m_rPops.ConvertToSpecialist(rPop);
+    m_rPops.ConvertToFallback(rPop);
 }
 
 

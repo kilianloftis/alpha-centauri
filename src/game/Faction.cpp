@@ -13,7 +13,7 @@
 #include "game/faction/ResearchManager.h"
 #include "game/faction/Diplomacy.h"
 #include "game/faction/SocialEngineeringManager.h"
-#include "game/population/pop-types/PopTypeRegistry.h"
+#include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
 
 namespace ac
@@ -21,9 +21,10 @@ namespace ac
 
 Faction::Faction(const BuildingRegistry* pBuildingRegistry, const TechRegistry* pTechRegistry,
                  const SocialPolicyRegistry* pSocialPolicyRegistry,
-                 TechCostCalculator* pTechCostCalculator, const PopTypeRegistry* pPopTypeRegistry)
+                 TechCostCalculator* pTechCostCalculator,
+                 const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator)
     : m_pBuildingRegistry(pBuildingRegistry)
-    , m_pPopTypeRegistry(pPopTypeRegistry)
+    , m_pPopTypeAvailabilityCalculator(pPopTypeAvailabilityCalculator)
     , m_pIdentity(nullptr)
     , m_pAIProfile(nullptr)
     , m_pEconomy(std::make_unique<EconomyManager>())
@@ -69,6 +70,7 @@ BaseManager* Faction::CreateBase(FactionId factionId, int baseId, const std::str
         *pTile,
         rDataContext.buildingRegistry.get(),
         rDataContext.popTypeRegistry.get(),
+        rDataContext.popTypeAvailabilityCalculator.get(),
         rDataContext.popCompositionCalculator.get(),
         rWorldMap,
         m_pResearch.get(),
@@ -174,27 +176,12 @@ SocialScores Faction::GetSocialScores() const
 
 std::vector<const PopTypeConfig_t*> Faction::GetAvailablePopTypes() const
 {
-    if (!m_pPopTypeRegistry || !m_pResearch)
+    if (!m_pPopTypeAvailabilityCalculator || !m_pResearch)
     {
-        throw std::runtime_error("Faction::GetAvailablePopTypes: Missing registry or research manager");
+        throw std::runtime_error("Faction::GetAvailablePopTypes: Missing calculator or research manager");
     }
 
-    std::vector<const PopTypeConfig_t*> pAvailable;
-    for (const PopTypeConfig_t& rConfig : m_pPopTypeRegistry->GetAll())
-    {
-        if (!rConfig.bPlayerAssignable)
-        {
-            continue;
-        }
-
-        if (!rConfig.requiredTech.empty() && !m_pResearch->HasDiscoveredTech(rConfig.requiredTech))
-        {
-            continue;
-        }
-
-        pAvailable.push_back(&rConfig);
-    }
-    return pAvailable;
+    return m_pPopTypeAvailabilityCalculator->GetAvailable(m_pResearch->GetDiscoveredTechs());
 }
 
 std::vector<const SocialPolicyConfig*> Faction::GetAvailableSocialPolicies(

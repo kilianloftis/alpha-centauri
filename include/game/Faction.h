@@ -21,7 +21,7 @@ class Military;
 class ResearchManager;
 class Diplomacy;
 class SocialEngineeringManager;
-class PopTypeRegistry;
+class PopTypeAvailabilityCalculator;
 struct PopTypeConfig_t;
 struct GameDataContext;
 class WorldMap;
@@ -31,7 +31,8 @@ class Faction
 public:
     Faction(const BuildingRegistry* pBuildingRegistry, const TechRegistry* pTechRegistry,
              const SocialPolicyRegistry* pSocialPolicyRegistry,
-             TechCostCalculator* pTechCostCalculator, const PopTypeRegistry* pPopTypeRegistry);
+             TechCostCalculator* pTechCostCalculator,
+             const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator);
     ~Faction();
 
     // Base management
@@ -76,7 +77,7 @@ public:
 private:
     int m_energy = 0;
     const BuildingRegistry* m_pBuildingRegistry;
-    const PopTypeRegistry* m_pPopTypeRegistry;
+    const PopTypeAvailabilityCalculator* m_pPopTypeAvailabilityCalculator;
     std::unique_ptr<FactionIdentity> m_pIdentity;
     std::unique_ptr<AIProfile> m_pAIProfile;
     std::unique_ptr<EconomyManager> m_pEconomy;

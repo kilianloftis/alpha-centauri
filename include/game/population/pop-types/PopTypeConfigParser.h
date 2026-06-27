@@ -36,6 +36,7 @@ struct PopTypeConfig_t
     int goldenAgeContribution;
     std::vector<std::string> obsoletes;
     std::string requiredTech;
+    std::string fallbackPopTypeId;
 };
 
 class PopTypeConfig_tParser

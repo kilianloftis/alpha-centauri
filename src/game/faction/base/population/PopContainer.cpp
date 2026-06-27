@@ -1,5 +1,7 @@
 #include "game/faction/base/population/PopContainer.h"
+#include "game/faction/ResearchManager.h"
 #include "game/population/calculators/PopCompositionCalculator.h"
+#include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
 #include <stdexcept>
@@ -7,8 +9,13 @@
 namespace ac
 {
 
-PopContainer::PopContainer(const PopTypeRegistry* pReg, int initialSize)
+PopContainer::PopContainer(const PopTypeRegistry* pReg,
+                           const PopTypeAvailabilityCalculator* pAvailabilityCalculator,
+                           const ResearchManager* pResearchManager,
+                           int initialSize)
     : m_pRegistry(pReg)
+    , m_pAvailabilityCalculator(pAvailabilityCalculator)
+    , m_pResearchManager(pResearchManager)
 {
     if (m_pRegistry && initialSize > 0)
     {
@@ -87,46 +94,24 @@ void PopContainer::ConvertTo(Pop& rPop, const std::string& typeId)
     rPop.Convert(*pConfig);
 }
 
-void PopContainer::ConvertToSpecialist(Pop& rPop)
+void PopContainer::ConvertToFallback(Pop& rPop)
 {
-    if (!m_pRegistry)
+    if (!m_pRegistry || !m_pAvailabilityCalculator || !m_pResearchManager)
     {
-        throw std::runtime_error("PopContainer has no registry");
+        throw std::runtime_error("PopContainer missing registry, availability calculator, or research manager");
     }
-    const PopTypeConfig_t* pBestConfig = FindBestSpecialistConfig_();
-    if (!pBestConfig)
+    const PopTypeConfig_t* pCurrentConfig = m_pRegistry->Find(rPop.GetPopType());
+    if (!pCurrentConfig)
     {
-        throw std::runtime_error("No specialist pop type available in registry");
+        throw std::runtime_error("Current pop type not found in registry: " + std::string(rPop.GetPopType()));
     }
-    rPop.Convert(*pBestConfig);
-}
-
-const PopTypeConfig_t* PopContainer::FindBestSpecialistConfig_() const
-{
-    const PopTypeConfig_t* pBestConfig = nullptr;
-    for (const PopTypeConfig_t& rConfig : m_pRegistry->GetAll())
+    if (pCurrentConfig->fallbackPopTypeId.empty())
     {
-        if (!rConfig.bCanWorkTile && rConfig.riotContribution == 0)
-        {
-            if (!pBestConfig || rConfig.generation.psych > pBestConfig->generation.psych)
-            {
-                pBestConfig = &rConfig;
-            }
-        }
+        throw std::runtime_error("Pop has no fallback type configured");
     }
-    return pBestConfig;
-}
-
-void PopContainer::PromoteWorkerToDrone()
-{
-    for (const auto& pPop : m_pops)
-    {
-        if (pPop->IsWorker() && !pPop->IsSpecialist())
-        {
-            ConvertTo(*pPop, "Drone");
-            return;
-        }
-    }
+    const PopTypeConfig_t& rResolved = m_pAvailabilityCalculator->ResolveCurrentType(
+        pCurrentConfig->fallbackPopTypeId, m_pResearchManager->GetDiscoveredTechs());
+    rPop.Convert(rResolved);
 }
 
 void PopContainer::ApplyCompositionTargets(const PopCompositionResult& targets, const std::string& defaultTypeId)

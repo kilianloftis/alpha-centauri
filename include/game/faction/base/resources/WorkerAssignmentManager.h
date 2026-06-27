@@ -79,7 +79,7 @@ private:
     std::vector<const Tile*> PrioritizeAvailableTiles_(const std::vector<const Tile*>& availableTiles) const;
     void AutoAssignWorkers_(std::vector<const Tile*>& availableTiles);
 
-    void ConvertToSpecialist_(Pop& rPop);
+    void ConvertToFallback_(Pop& rPop);
 
 
     std::vector<const Tile*> m_workableTiles;

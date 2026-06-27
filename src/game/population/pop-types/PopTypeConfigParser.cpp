@@ -79,6 +79,7 @@ PopTypeConfig_t PopTypeConfig_tParser::ParsePopTypeConfig_t(const nlohmann::json
     config.riotContribution      = popJson.value("riot_contribution",       0);
     config.goldenAgeContribution = popJson.value("golden_age_contribution", 0);
     config.requiredTech          = popJson.value("required_tech",           "");
+    config.fallbackPopTypeId     = popJson.value("fallback_pop_type",       "");
 
     if (popJson.contains("obsoletes"))
     {

@@ -3,12 +3,19 @@
 #include "game/population/calculators/PopCompositionCalculator.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
+#include "game/population/calculators/PopTypeAvailabilityCalculator.h"
+#include "game/faction/ResearchManager.h"
 
 namespace ac
 {
 
-PopulationManager::PopulationManager(const PopTypeRegistry* pReg, PopCompositionCalculator* pCalc, const GrowthCalculator* pGrowthCalculator, int initialSize)
-    : m_container(pReg, initialSize)
+PopulationManager::PopulationManager(const PopTypeRegistry* pReg,
+                                     const PopTypeAvailabilityCalculator* pAvailabilityCalculator,
+                                     const ResearchManager* pResearchManager,
+                                     PopCompositionCalculator* pCalc,
+                                     const GrowthCalculator* pGrowthCalculator,
+                                     int initialSize)
+    : m_container(pReg, pAvailabilityCalculator, pResearchManager, initialSize)
     , m_pGrowthCalculator(pGrowthCalculator)
     , m_pCompositionCalculator(pCalc)
     , m_maxSize(8)

@@ -8,6 +8,7 @@
 #include "game/faction/base/population/PopContainer.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
 #include "game/population/calculators/PopCompositionCalculator.h"
+#include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/map/WorldMap.h"
 #include <cmath>
@@ -52,6 +53,7 @@ BaseManager::BaseManager(
     const Tile& tile,
     const BuildingRegistry* pBuildingRegistry,
     const PopTypeRegistry* pPopRegistry,
+    const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator,
     PopCompositionCalculator* pCompositionCalculator,
     const WorldMap& rWorldMap,
     const ResearchManager* pResearchManager,
@@ -62,7 +64,7 @@ BaseManager::BaseManager(
     , m_baseId(-1)
     , m_tile(tile)
     , m_pResearch(pResearchManager)
-    , m_pPopulation(std::make_unique<PopulationManager>(pPopRegistry, pCompositionCalculator, pGrowthCalculator))
+    , m_pPopulation(std::make_unique<PopulationManager>(pPopRegistry, pPopTypeAvailabilityCalculator, pResearchManager, pCompositionCalculator, pGrowthCalculator))
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(ComputeWorkableTiles_(rWorldMap, tile), m_pPopulation->GetContainer()))
     , m_pResources(nullptr)
     , m_pBuildings(std::make_unique<BuildingManager>(pBuildingRegistry, pResearchManager))

@@ -11,6 +11,7 @@
 #include "game/population/pop-types/GrowthConfigParser.h"
 #include "game/population/calculators/PopCompositionCalculator.h"
 #include "game/population/calculators/GrowthCalculator.h"
+#include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "lib/LuaRuntime.h"
 
 namespace ac
