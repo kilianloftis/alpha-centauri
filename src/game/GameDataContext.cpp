@@ -2,6 +2,7 @@
 #include "game/faction/base/production/ProductionCostConfig.h"
 #include "game/faction/base/production/ProductionCostCalculator.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/units/UnitComponentRegistry.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/research/TechRegistry.h"

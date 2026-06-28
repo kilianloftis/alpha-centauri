@@ -232,7 +232,8 @@ graph TB
 - **Purpose**: Holds all immutable definition data loaded once at startup; never serialised
 - **Components**:
   - `IConstructable`: Abstract interface for entities that can be constructed in a base; exposes `GetId()`, `GetName()`, and `GetMineralCost()`
-  - `BuildingRegistry`: All building definitions loaded from `config/buildings.json`
+  - `BuildingRegistry`: All building definitions loaded from `config/buildings.json`; each entry may have `secret_project: true` to mark it as a Secret Project
+  - `SecretProjectAvailabilityCalculator`: Holds a reference to the live factions vector; `IsCompleted(id)` scans all bases across all factions to determine if a secret project has already been built; injected into each `BuildingManager` so `GetBuildingsAvailableForConstruction` can suppress already-claimed secret projects
   - `TechRegistry`: All tech definitions loaded from `config/techs.json`
   - `PopTypeRegistry`: All pop type definitions loaded from `config/pop_types.json`
   - `PopCompositionConfig`: Composition formula config loaded via Lua

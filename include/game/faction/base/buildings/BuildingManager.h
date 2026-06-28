@@ -9,6 +9,7 @@ namespace ac
 
 class BuildingRegistry;
 class ResearchManager;
+class SecretProjectAvailabilityCalculator;
 
 // BuildingManager tracks all buildings present in a single base.
 // Buildings are added by id (looked up via BuildingRegistry) and destroyed by id.
@@ -16,7 +17,9 @@ class ResearchManager;
 class BuildingManager
 {
 public:
-    BuildingManager(const BuildingRegistry* pRegistry, const ResearchManager* pResearchManager);
+    BuildingManager(const BuildingRegistry* pRegistry,
+                    const ResearchManager* pResearchManager,
+                    const SecretProjectAvailabilityCalculator* pSecretProjectCalculator);
     ~BuildingManager();
 
     // Add a building by id. Throws if the factory cannot find the id.
@@ -41,6 +44,7 @@ private:
 
     const BuildingRegistry* m_pRegistry;
     const ResearchManager* m_pResearch;
+    const SecretProjectAvailabilityCalculator* m_pSecretProjectCalculator;
     std::vector<const BuildingConfig_t*> m_buildings;
 };
 

@@ -257,6 +257,7 @@ graph TB
   - `GrowthCalculator`: Computes the nutrient threshold required for a base to grow one population. Stateful; accepts a `GrowthConfig` (loaded from `config/pop_growth.lua` via `GrowthConfigParser`) and a `LuaRuntime`. Growth/starvation decisions (stockpile ≥ required → grow; stockpile < 0 → starve) are made in the `Population` turn stage.
   - `GrowthConfigParser`: Loads `config/pop_growth.lua` and produces a `GrowthConfig` holding the `threshold_formula` Lua expression (variables: `base_size`, `growth_rating`)
   - `WorkerRoles`: Enum defining worker roles (Worker, Lab, Psych, Econ, Drone, Talent)
+  - `SecretProjectAvailabilityCalculator`: Queries all bases across all factions to determine whether a secret project building has already been completed by any faction; injected into `BuildingManager` and consulted by `GetBuildingsAvailableForConstruction`
   - `Buildings`: Collection of building IDs in the base
   - `TileResources`: Resources (nutrients, energy, minerals) from worked tiles
   - `Position`: Map coordinates (x, y) used to calculate the workable tile radius

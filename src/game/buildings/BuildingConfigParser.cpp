@@ -49,6 +49,7 @@ BuildingConfig_t BuildingConfigParser::ParseBuildingConfig(const nlohmann::json&
     config.nutrientsBonus = buildingJson.value("nutrients_bonus", 0);
     config.mineralCost = buildingJson.value("mineral_cost", 0);
     config.allowMultiple = buildingJson.value("allow_multiple", false);
+    config.bIsSecretProject = buildingJson.value("secret_project", false);
     
     if (buildingJson.contains("required_techs"))
     {

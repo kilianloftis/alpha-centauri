@@ -41,6 +41,7 @@ add_executable(alpha-centauri
     game/TurnStageConfigParser.cpp
     game/HookContext.cpp
     game/buildings/BuildingConfigParser.cpp
+    game/buildings/SecretProjectAvailabilityCalculator.cpp
     game/units/Unit.cpp
     game/units/UnitDesign.cpp
     game/units/UnitOrderExecutor.cpp

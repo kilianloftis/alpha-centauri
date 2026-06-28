@@ -76,7 +76,8 @@ BaseManager* Faction::CreateBase(FactionId factionId, int baseId, const std::str
         m_pResearch.get(),
         m_pEconomy.get(),
         rDataContext.productionCostCalculator.get(),
-        rDataContext.growthCalculator.get());
+        rDataContext.growthCalculator.get(),
+        rDataContext.secretProjectAvailabilityCalculator.get());
     pBase->SetFactionId(factionId);
     pBase->SetBaseId(baseId);
     pBase->SetName(name);

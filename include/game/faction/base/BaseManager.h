@@ -24,6 +24,7 @@ class ResourceManager;
 class BuildingManager;
 class BuildingRegistry;
 class GrowthCalculator;
+class SecretProjectAvailabilityCalculator;
 class PopTypeAvailabilityCalculator;
 class ProductionCostCalculator;
 class ProductionManager;
@@ -47,7 +48,8 @@ public:
         const ResearchManager* pResearchManager,
         const EconomyManager* pEconomyManager,
         const ProductionCostCalculator* pProductionCostCalculator,
-        const GrowthCalculator* pGrowthCalculator);
+        const GrowthCalculator* pGrowthCalculator,
+        const SecretProjectAvailabilityCalculator* pSecretProjectCalculator);
     ~BaseManager();
 
     // Population management - delegated to PopulationManager
@@ -92,6 +94,7 @@ public:
     // Building management - delegated to BuildingManager
     void AddBuilding(const std::string& buildingId);
     void DestroyBuilding(const std::string& buildingId);
+    const std::vector<const BuildingConfig_t*>& GetBuildings() const;
     std::vector<const IConstructable*> GetConstructable() const;
 
     // Production management - delegated to ProductionManager

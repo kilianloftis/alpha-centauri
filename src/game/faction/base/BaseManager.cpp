@@ -10,6 +10,7 @@
 #include "game/population/calculators/PopCompositionCalculator.h"
 #include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/map/WorldMap.h"
 #include <cmath>
 
@@ -59,7 +60,8 @@ BaseManager::BaseManager(
     const ResearchManager* pResearchManager,
     const EconomyManager* pEconomyManager,
     const ProductionCostCalculator* pProductionCostCalculator,
-    const GrowthCalculator* pGrowthCalculator)
+    const GrowthCalculator* pGrowthCalculator,
+    const SecretProjectAvailabilityCalculator* pSecretProjectCalculator)
     : m_factionId(-1)
     , m_baseId(-1)
     , m_tile(tile)
@@ -67,7 +69,7 @@ BaseManager::BaseManager(
     , m_pPopulation(std::make_unique<PopulationManager>(pPopRegistry, pPopTypeAvailabilityCalculator, pResearchManager, pCompositionCalculator, pGrowthCalculator, 3))
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(ComputeWorkableTiles_(rWorldMap, tile), m_pPopulation->GetContainer()))
     , m_pResources(nullptr)
-    , m_pBuildings(std::make_unique<BuildingManager>(pBuildingRegistry, pResearchManager))
+    , m_pBuildings(std::make_unique<BuildingManager>(pBuildingRegistry, pResearchManager, pSecretProjectCalculator))
     , m_pProduction(pProductionCostCalculator ? std::make_unique<ProductionManager>(*pProductionCostCalculator) : nullptr)
 {
     // Create ResourceManager after all sub-managers are set up
@@ -204,6 +206,11 @@ void BaseManager::DestroyBuilding(const std::string& buildingId)
     {
         m_pBuildings->DestroyBuilding(buildingId);
     }
+}
+
+const std::vector<const BuildingConfig_t*>& BaseManager::GetBuildings() const
+{
+    return m_pBuildings->GetBuildings();
 }
 
 std::vector<const IConstructable*> BaseManager::GetConstructable() const

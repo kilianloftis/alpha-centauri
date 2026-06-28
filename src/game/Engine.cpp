@@ -23,6 +23,7 @@
 #include "game/population/calculators/PopCompositionCalculator.h"
 #include "game/population/calculators/GrowthCalculator.h"
 #include "game/population/calculators/PopTypeAvailabilityCalculator.h"
+#include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/research/TechCostConfig.h"
 #include "game/research/TechCostCalculator.h"
 #include "game/faction/base/production/ProductionCostConfig.h"
@@ -168,6 +169,9 @@ void Engine::Initialize_()
     worldConfig.maxElevation = 2000;
     m_gameState->SetWorldMap(worldGen.Generate(worldConfig));
     std::cout << "Generated world map: " << m_gameState->GetWorldMap()->GetWidth() << "x" << m_gameState->GetWorldMap()->GetHeight() << "\n";
+
+    m_gameDataContext->secretProjectAvailabilityCalculator =
+        std::make_unique<SecretProjectAvailabilityCalculator>(m_gameState->GetFactions());
 
     // Create test faction with a base
     auto pFaction = std::make_unique<Faction>(m_gameDataContext->buildingRegistry.get(),

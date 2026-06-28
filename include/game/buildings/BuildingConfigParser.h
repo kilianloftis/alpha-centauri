@@ -22,6 +22,7 @@ struct BuildingConfig_t : public IConstructable
     std::vector<std::string> requiredTechs;
     int nutrientsBonus;
     bool allowMultiple;
+    bool bIsSecretProject;
     std::unordered_map<std::string, BuildingImprovementBonus_t> improvementBonuses;
 
     const char* GetId() const override { return id.c_str(); }

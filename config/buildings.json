@@ -25,5 +25,12 @@
     "mineral_cost": 8,
     "allow_multiple": true,
     "required_techs": ["test_tech_1"]
+  },
+  {
+    "id": "Human_Genome_Project",
+    "name": "Human Genome Project",
+    "mineral_cost": 200,
+    "secret_project": true,
+    "required_techs": ["test_tech_1"]
   }
 ]
