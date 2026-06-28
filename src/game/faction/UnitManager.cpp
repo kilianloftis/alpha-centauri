@@ -43,4 +43,14 @@ const std::vector<std::unique_ptr<Unit>>& UnitManager::GetUnits() const
     return m_units;
 }
 
+Unit* UnitManager::GetNextAvailableUnit() const
+{
+    for (const std::unique_ptr<Unit>& pUnit : m_units)
+    {
+        if (!pUnit->GetOrder().has_value() && pUnit->GetMovesRemaining() > 0)
+            return pUnit.get();
+    }
+    return nullptr;
+}
+
 } // namespace ac

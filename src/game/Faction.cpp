@@ -28,7 +28,7 @@ Faction::Faction(const BuildingRegistry* pBuildingRegistry, const TechRegistry* 
     , m_pIdentity(nullptr)
     , m_pAIProfile(nullptr)
     , m_pEconomy(std::make_unique<EconomyManager>())
-    , m_pMilitary(nullptr)
+    , m_pMilitary(std::make_unique<Military>())
     , m_pResearch(std::make_unique<ResearchManager>(pTechRegistry, pTechCostCalculator))
     , m_pDiplomacy(nullptr)
     , m_pSocialEngineering(std::make_unique<SocialEngineeringManager>(pSocialPolicyRegistry))
@@ -132,6 +132,16 @@ void Faction::AddResearchPoints(int points)
 int Faction::GetResearchPoints() const
 {
     return m_pResearch ? m_pResearch->GetAccumulatedPoints() : 0;
+}
+
+Military& Faction::GetMilitary()
+{
+    return *m_pMilitary;
+}
+
+const Military& Faction::GetMilitary() const
+{
+    return *m_pMilitary;
 }
 
 ResearchManager* Faction::GetResearchManager() const

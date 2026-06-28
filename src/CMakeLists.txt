@@ -85,6 +85,12 @@ add_executable(alpha-centauri
     ui/base/PopTypeSelectorPopup.cpp
     ui/research/ResearchView.cpp
     ui/research/CurrentResearchPanel.cpp
+    ui/unit-designer/ComponentSlotDisplay.cpp
+    ui/unit-designer/ComponentSelectorPopup.cpp
+    ui/unit-designer/DesignStatsDisplay.cpp
+    ui/unit-designer/DesignListPanel.cpp
+    ui/unit-designer/UnitStatusPanel.cpp
+    ui/unit-designer/UnitDesignerView.cpp
 )
 
 target_include_directories(alpha-centauri PRIVATE

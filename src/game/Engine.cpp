@@ -220,6 +220,9 @@ void Engine::Initialize_()
     m_uiManager->RegisterViewShortcut(Key_t::F2, [this, fullscreen]() -> std::unique_ptr<IGameView> {
         return m_viewFactory->CreateResearchView(fullscreen);
     });
+    m_uiManager->RegisterViewShortcut(Key_t::U, [this, fullscreen]() -> std::unique_ptr<IGameView> {
+        return m_viewFactory->CreateUnitDesignerView(fullscreen);
+    });
     m_uiManager->SetWorldView(std::move(pWorldView));
     CheckInitialized_();
 }

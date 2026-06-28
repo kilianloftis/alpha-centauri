@@ -52,6 +52,7 @@ graph TB
     ViewFactory -->|creates| WorldView
     ViewFactory -->|creates| BaseView
     ViewFactory -->|creates| ResearchView
+    ViewFactory -->|creates| UnitDesignerView
 
     BaseView -->|owns| BaseDisplay
     BaseView -->|owns| PopulationDisplay
@@ -92,6 +93,34 @@ graph TB
     style GrowthDisplay fill:#bfb,stroke:#333,stroke-width:2px
     PopTypeSelectorPopup -.->|extends| UIPopup
     style PopTypeSelectorPopup fill:#bfb,stroke:#333,stroke-width:2px
+
+    subgraph "Unit Designer"
+        UnitDesignerView[UnitDesignerView<br/>implements IGameView]
+        ComponentSlotDisplay[ComponentSlotDisplay<br/>extends UIElement<br/>shows one component slot]
+        ComponentSelectorPopup[ComponentSelectorPopup<br/>extends UIElement<br/>pick component from list]
+        DesignStatsDisplay[DesignStatsDisplay<br/>extends UIElement<br/>shows combined stats]
+        DesignListPanel[DesignListPanel<br/>extends UIElement<br/>shows saved designs]
+        UnitStatusPanel[UnitStatusPanel<br/>extends UIElement<br/>shows active/in-prod counts]
+        UnitDesignerState[UnitDesignerState_t<br/>draft component selection]
+    end
+    UnitDesignerView -->|owns| ComponentSlotDisplay
+    UnitDesignerView -->|owns| DesignStatsDisplay
+    UnitDesignerView -->|owns| DesignListPanel
+    UnitDesignerView -->|owns| UnitStatusPanel
+    UnitDesignerView -->|spawns on click| ComponentSelectorPopup
+    UnitDesignerView -->|holds| UnitDesignerState
+    DesignStatsDisplay -->|reads| UnitDesignerState
+    ComponentSlotDisplay -->|reads via lambda| UnitDesignerState
+    UnitDesignerView -->|saves to| Military
+    DesignListPanel -->|reads| Military
+
+    style UnitDesignerView fill:#bfb,stroke:#333,stroke-width:2px
+    style ComponentSlotDisplay fill:#bfb,stroke:#333,stroke-width:2px
+    style ComponentSelectorPopup fill:#bfb,stroke:#333,stroke-width:2px
+    style DesignStatsDisplay fill:#bfb,stroke:#333,stroke-width:2px
+    style DesignListPanel fill:#bfb,stroke:#333,stroke-width:2px
+    style UnitStatusPanel fill:#bfb,stroke:#333,stroke-width:2px
+    style UnitDesignerState fill:#ffd,stroke:#333,stroke-width:2px
 ```
 
 ## Component Overview

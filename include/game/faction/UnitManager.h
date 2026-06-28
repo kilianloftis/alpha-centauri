@@ -22,6 +22,7 @@ public:
     void DestroyUnit(Unit& rUnit);
 
     const std::vector<std::unique_ptr<Unit>>& GetUnits() const;
+    Unit* GetNextAvailableUnit() const;
 
 private:
     Faction& m_rFaction;

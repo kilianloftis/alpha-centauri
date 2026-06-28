@@ -3,7 +3,9 @@
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/Military.h"
 #include "game/faction/ResearchManager.h"
+#include "game/units/UnitComponentRegistry.h"
 #include "graphics/Graphics.h"
 
 namespace ac
@@ -72,6 +74,25 @@ std::unique_ptr<ResearchView> ViewFactory::CreateResearchView(
     }
 
     return std::make_unique<ResearchView>(pFaction->GetResearchManager(), layout);
+}
+
+std::unique_ptr<UnitDesignerView> ViewFactory::CreateUnitDesignerView(
+    const WindowLayout_t& layout
+) const
+{
+    auto& rFactions = m_rGameState.GetFactions();
+    Faction* pFaction = rFactions.empty() ? nullptr : rFactions.front().get();
+    if (!pFaction)
+    {
+        return nullptr;
+    }
+
+    return std::make_unique<UnitDesignerView>(
+        pFaction->GetMilitary(),
+        *m_rGameDataContext.unitComponentRegistry,
+        nullptr, // TODO: pass UnitManager once wired into Faction
+        layout
+    );
 }
 
 WindowLayout_t ViewFactory::GetFullscreenLayout() const

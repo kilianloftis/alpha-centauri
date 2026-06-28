@@ -71,6 +71,10 @@ public:
         SocialCategory category,
         const std::vector<std::string>& rDiscoveredTechIds) const;
 
+    // Military (unit designs and units)
+    Military& GetMilitary();
+    const Military& GetMilitary() const;
+
     // Pop types
     std::vector<const PopTypeConfig_t*> GetAvailablePopTypes() const;
 

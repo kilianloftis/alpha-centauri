@@ -24,10 +24,30 @@ UnitDesign::UnitDesign(const UnitComponentConfig_t& rChassis,
     if (pAbility2 && pAbility2->type != UnitComponentType_t::Ability)
         throw std::runtime_error("Expected ability component for ability slot");
 
+    m_pChassis  = &rChassis;
+    m_pWeapon   = &rWeapon;
+    m_pArmour   = &rArmour;
+    m_pReactor  = &rReactor;
+    m_pAbility1 = pAbility1;
+    m_pAbility2 = pAbility2;
+
     m_components = { &rChassis, &rWeapon, &rArmour, &rReactor };
     if (pAbility1) m_components.push_back(pAbility1);
     if (pAbility2) m_components.push_back(pAbility2);
+
+    m_name = rChassis.name + " / " + rWeapon.name + " / " + rArmour.name + " / " + rReactor.name;
+    m_id   = rChassis.id + "_" + rWeapon.id + "_" + rArmour.id + "_" + rReactor.id;
 }
+
+const char* UnitDesign::GetId() const          { return m_id.c_str(); }
+const std::string& UnitDesign::GetName() const { return m_name; }
+
+const UnitComponentConfig_t& UnitDesign::GetChassis()  const { return *m_pChassis; }
+const UnitComponentConfig_t& UnitDesign::GetWeapon()   const { return *m_pWeapon; }
+const UnitComponentConfig_t& UnitDesign::GetArmour()   const { return *m_pArmour; }
+const UnitComponentConfig_t& UnitDesign::GetReactor()  const { return *m_pReactor; }
+const UnitComponentConfig_t* UnitDesign::GetAbility1() const { return m_pAbility1; }
+const UnitComponentConfig_t* UnitDesign::GetAbility2() const { return m_pAbility2; }
 
 int UnitDesign::GetBaseCost() const
 {
