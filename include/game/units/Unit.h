@@ -1,6 +1,8 @@
 #pragma once
 
 #include "game/units/UnitDesign.h"
+#include "game/units/UnitOrder.h"
+#include <optional>
 #include <string>
 #include <unordered_map>
 
@@ -51,6 +53,10 @@ public:
     void SetTile(Tile& rTile);
     void SetHomeBase(BaseManager* pHomeBase);
 
+    const std::optional<UnitOrder_t>& GetOrder() const;
+    void SetOrder(const UnitOrder_t& rOrder);
+    void ClearOrder();
+
 private:
     const UnitDesign& m_rDesign;
     Tile* m_pTile;
@@ -61,6 +67,7 @@ private:
     int m_currentFuel;
     int m_movesRemaining;
     int m_xp;
+    std::optional<UnitOrder_t> m_order;
 };
 
 } // namespace ac

@@ -49,4 +49,8 @@ void Unit::SetXp(int xp)                    { m_xp = xp; }
 void Unit::SetTile(Tile& rTile)             { m_pTile = &rTile; }
 void Unit::SetHomeBase(BaseManager* pHomeBase) { m_pHomeBase = pHomeBase; }
 
+const std::optional<UnitOrder_t>& Unit::GetOrder() const { return m_order; }
+void Unit::SetOrder(const UnitOrder_t& rOrder)            { m_order = rOrder; }
+void Unit::ClearOrder()                                   { m_order.reset(); }
+
 } // namespace ac

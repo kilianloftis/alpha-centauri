@@ -1,4 +1,5 @@
 #include "game/map/WorldMap.h"
+#include "game/units/Unit.h"
 
 namespace ac
 {
@@ -62,6 +63,28 @@ const std::vector<std::unique_ptr<Tile>>& WorldMap::GetTiles() const
 int WorldMap::GetTileIndex_(int x, int y) const
 {
     return y * m_width + x;
+}
+
+const std::vector<Unit*>& WorldMap::GetUnitsOnTile(const Tile& rTile) const
+{
+    return m_unitPositionIndex.GetUnitsOnTile(rTile);
+}
+
+void WorldMap::OnUnitPlaced(Unit& rUnit, Tile& rTile)
+{
+    m_unitPositionIndex.OnUnitPlaced(rUnit, rTile);
+    rUnit.SetTile(rTile);
+}
+
+void WorldMap::OnUnitRemoved(Unit& rUnit)
+{
+    m_unitPositionIndex.OnUnitRemoved(rUnit);
+}
+
+void WorldMap::OnUnitMoved(Unit& rUnit, Tile& rNewTile)
+{
+    m_unitPositionIndex.OnUnitMoved(rUnit, rNewTile);
+    rUnit.SetTile(rNewTile);
 }
 
 } // namespace ac

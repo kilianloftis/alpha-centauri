@@ -7,6 +7,7 @@ add_executable(alpha-centauri
     game/faction/FactionIdentity.cpp
     game/faction/AIProfile.cpp
     game/faction/Military.cpp
+    game/faction/UnitManager.cpp
     game/research/TechRegistry.cpp
     game/research/TechCostCalculator.cpp
     game/research/TechCostConfigParser.cpp
@@ -46,6 +47,7 @@ add_executable(alpha-centauri
     game/research/TechConfigParser.cpp
     game/social-engineering/SocialPolicyConfigParser.cpp
     game/map/Tile.cpp
+    game/map/UnitPositionIndex.cpp
     game/map/TileBonusConfigParser.cpp
     game/map/WorldMap.cpp
     game/map/WorldGenerator.cpp
