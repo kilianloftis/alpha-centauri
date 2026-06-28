@@ -71,4 +71,9 @@ void GameState::SetWorldMap(std::unique_ptr<WorldMap> pWorldMap)
     m_worldMap = std::move(pWorldMap);
 }
 
+UnitOrderExecutor& GameState::GetUnitOrderExecutor()
+{
+    return m_unitOrderExecutor;
+}
+
 } // namespace ac

@@ -53,6 +53,7 @@ public:
     void SetTile(Tile& rTile);
     void SetHomeBase(BaseManager* pHomeBase);
 
+    std::optional<UnitOrder_t>& GetOrder();
     const std::optional<UnitOrder_t>& GetOrder() const;
     void SetOrder(const UnitOrder_t& rOrder);
     void ClearOrder();

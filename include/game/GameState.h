@@ -2,8 +2,9 @@
 
 #include "game/Faction.h"
 #include "game/map/WorldMap.h"
-#include <vector>
+#include "game/units/UnitOrderExecutor.h"
 #include <memory>
+#include <vector>
 
 namespace ac
 {
@@ -31,10 +32,13 @@ public:
     const WorldMap* GetWorldMap() const;
     void SetWorldMap(std::unique_ptr<WorldMap> pWorldMap);
 
+    UnitOrderExecutor& GetUnitOrderExecutor();
+
 private:
     int m_missionYear;
     std::vector<std::unique_ptr<Faction>> m_factions;
     std::unique_ptr<WorldMap> m_worldMap;
+    UnitOrderExecutor m_unitOrderExecutor;
 };
 
 } // namespace ac
