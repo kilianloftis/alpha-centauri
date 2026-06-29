@@ -77,7 +77,8 @@ BaseManager::BaseManager(
         m_pPopulation.get(),
         m_pWorkerAssignments.get(),
         pEconomyManager,
-        m_pBuildings.get());
+        m_pBuildings.get(),
+        &m_tile);
 
     m_pPopulation->on_growth.connect([this]() {
         m_pPopulation->AddPop();
@@ -260,12 +261,14 @@ std::string BaseManager::ApplyProduction()
     return m_pProduction->ApplyProduction(minerals);
 }
 
-void BaseManager::CollectResources()
+void BaseManager::ProduceResources(const std::vector<ActiveEffect_t>& activeEffects)
 {
-    if (m_pResources)
+    if (!m_pResources)
     {
-        m_pResources->CollectResources();
+        throw std::runtime_error("BaseManager::ProduceResources: m_pResources is null");
     }
+
+    m_pResources->ProduceResources(FilterForBase(activeEffects, *this));
 }
 
 int BaseManager::ConsumeEcon()
@@ -287,7 +290,7 @@ void BaseManager::ApplyGrowth()
 {
     if (!m_pPopulation)
     {
-        return;
+        throw std::runtime_error("BaseManager::ApplyGrowth: m_pPopulation is null");
     }
     const int nutrients = m_pResources ? m_pResources->ConsumeNutrients() : 0;
     m_pPopulation->ApplyGrowth(nutrients);

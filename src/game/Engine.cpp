@@ -115,7 +115,7 @@ void Engine::Initialize_()
         std::make_unique<PopTypeAvailabilityCalculator>(*m_gameDataContext->popTypeRegistry);
 
     m_gameDataContext->buildingRegistry = std::make_unique<BuildingRegistry>();
-    m_gameDataContext->buildingRegistry->Load("config/buildings.json");
+    m_gameDataContext->buildingRegistry->Load("config/buildings");
 
     m_gameDataContext->unitComponentRegistry = std::make_unique<UnitComponentRegistry>();
     m_gameDataContext->unitComponentRegistry->Load("config/unit_components");

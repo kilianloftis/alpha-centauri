@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/IConstructable.h"
+#include "lib/effects/BonusEffect.h"
 #include <nlohmann/json.hpp>
 #include <string>
 #include <unordered_map>
@@ -24,6 +25,7 @@ struct BuildingConfig_t : public IConstructable
     bool allowMultiple;
     bool bIsSecretProject;
     std::unordered_map<std::string, BuildingImprovementBonus_t> improvementBonuses;
+    std::vector<EffectConfig_t> effects;
 
     const char* GetId() const override { return id.c_str(); }
     const std::string& GetName() const override { return name; }
@@ -51,7 +53,9 @@ public:
     std::vector<BuildingConfig_t> ParseConfig(const std::string& configPath);
 
 private:
+    std::vector<BuildingConfig_t> ParseFile_(const std::string& filePath);
     BuildingConfig_t ParseBuildingConfig(const nlohmann::json& buildingJson);
+    EffectConfig_t ParseBuildingEffect(const nlohmann::json& effectJson);
 };
 
 } // namespace ac

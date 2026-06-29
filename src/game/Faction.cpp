@@ -15,6 +15,7 @@
 #include "game/faction/SocialEngineeringManager.h"
 #include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
+#include "lib/effects/ActiveEffect.h"
 
 namespace ac
 {
@@ -111,13 +112,19 @@ const BaseManager* Faction::GetBase(size_t index) const
     return nullptr;
 }
 
-void Faction::CollectBaseResources()
+void Faction::ProduceBaseResources()
 {
+    std::vector<ActiveEffect_t> activeEffects;
+    if (m_pBuildingRegistry)
+    {
+        activeEffects = CollectActiveEffects(*this, *m_pBuildingRegistry);
+    }
+
     for (const auto& pBase : m_bases)
     {
         if (pBase)
         {
-            pBase->CollectResources();
+            pBase->ProduceResources(activeEffects);
         }
     }
 }

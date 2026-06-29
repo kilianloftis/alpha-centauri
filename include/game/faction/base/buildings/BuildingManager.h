@@ -28,7 +28,7 @@ public:
     // Destroy the first building with the given id. No-op if not present.
     void DestroyBuilding(const std::string& buildingId);
 
-    // All currently held buildings.
+    // All currently constructed buildings.
     const std::vector<const BuildingConfig_t*>& GetBuildings() const;
 
     // Sum of GetNutrientsBonus() across all buildings.

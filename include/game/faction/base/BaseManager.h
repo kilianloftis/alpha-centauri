@@ -3,6 +3,7 @@
 #include "game/IConstructable.h"
 #include "game/buildings/BuildingConfigParser.h"
 #include "game/faction/base/BaseTypes.h"
+#include "lib/effects/ActiveEffect.h"
 #include "lib/Signal.h"
 #include <functional>
 #include <memory>
@@ -110,7 +111,7 @@ public:
 
     // Collect resources from worked tiles and allocate energy to categories.
     // Called once per turn per base during ResourceCollection stage.
-    void CollectResources();
+    void ProduceResources(const std::vector<ActiveEffect_t>& activeEffects);
 
     // Apply nutrients produced this turn: add to stockpile, grow or starve if threshold is met.
     void ApplyGrowth();

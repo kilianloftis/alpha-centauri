@@ -55,8 +55,8 @@ public:
     // Economy manager owns the faction-wide energy allocation split.
     EconomyManager* GetEconomyManager() const;
 
-    // Resource collection - routes to all bases and faction economy manager
-    void CollectBaseResources();
+    // Resource production - routes to all bases and faction economy manager
+    void ProduceBaseResources();
 
     // Research - delegated to ResearchManager
     void AddResearchPoints(int points);

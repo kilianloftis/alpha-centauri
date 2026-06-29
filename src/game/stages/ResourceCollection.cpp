@@ -24,7 +24,7 @@ void ResourceCollection::Execute_(GameState* pGameState, Faction* pFaction)
 
     std::cout << "Executing ResourceCollection stage for faction\n";
 
-    pFaction->CollectBaseResources();
+    pFaction->ProduceBaseResources();
 }
 
 } // namespace ac

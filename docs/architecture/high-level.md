@@ -74,6 +74,12 @@ graph TB
         GameEvent[GameEvent<br/>std::variant]
     end
 
+    subgraph "Effects System"
+        EffectConfig[EffectConfig_t<br/>EffectVariant_t<br/>scope / persistence / condition]
+        ActiveEffect[ActiveEffect_t<br/>config*<br/>sourceId<br/>originBase*]
+        CollectActiveEffects[CollectActiveEffects]
+    end
+
     subgraph "Configuration"
         TurnStagesConfig[config/turn_stages.json]
         TileBonusConfigFile[config/tile_bonuses.json]
@@ -135,7 +141,10 @@ graph TB
     FactionFactory --> Faction
     FactionVector --> Faction
     Faction --> FactionSubsystems
+    Faction --> CollectActiveEffects
     FactionSubsystems --> Tile
+    GameDataContext --> EffectConfig
+    BuildingRegistry --> EffectConfig
 
     EventBridge --> EventBus
     EventBus --> GameEvent
@@ -180,6 +189,9 @@ graph TB
     style TileBonusConfig fill:#ff9,stroke:#333,stroke-width:2px
     style EventBus fill:#bbf,stroke:#333,stroke-width:3px
     style EventBridge fill:#fbf,stroke:#333,stroke-width:2px
+    style EffectConfig fill:#ffd,stroke:#333,stroke-width:3px
+    style ActiveEffect fill:#fbf,stroke:#333,stroke-width:3px
+    style CollectActiveEffects fill:#bfb,stroke:#333,stroke-width:3px
     style BaseDisplay fill:#bfb,stroke:#333,stroke-width:2px
     style PopulationDisplay fill:#bfb,stroke:#333,stroke-width:2px
     style WorldDisplay fill:#bfb,stroke:#333,stroke-width:2px
@@ -301,6 +313,18 @@ graph TB
   - EventBridge depends on EventBus only (GameState wiring added per-subsystem via `WireBase` etc.)
   - Faction and TurnProcessor use Signal<T> for internal communication
 - **Details**: See `docs/architecture/event-system.md` for detailed architecture
+
+### Effects System
+- **Purpose**: Defines and collects active bonuses and modifiers from buildings and social engineering.
+- **Components**:
+  - `EffectConfig_t`: Static effect definition containing a typed variant, scope, persistence, and condition.
+  - `EffectVariant_t`: `std::variant` of all concrete effect structs such as `GrantBuildingEffect_t` and `StatModifierEffect_t`.
+  - `ActiveEffect_t`: Runtime instance pointing back to an `EffectConfig_t`, with a source id and optional origin base.
+  - `CollectActiveEffects`: Gathers all active effects for a faction by walking bases/buildings and social engineering selections.
+- **Dependencies**:
+  - `EffectConfig_t` is stored inside `BuildingConfig_t` and will eventually be stored in `SocialPolicyConfig`.
+  - `CollectActiveEffects` reads from `Faction` (bases and social engineering manager).
+- **Details**: See `docs/architecture/effects-system.md` for detailed architecture
 
 ### UI Components
 - **Purpose**: Display components that render game information using the Graphics interface
