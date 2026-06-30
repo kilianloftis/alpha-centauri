@@ -9,6 +9,9 @@
 namespace ac
 {
 
+class ImprovementRegistry;
+class TileEffectsContext;
+
 class GameState
 {
 public:
@@ -33,12 +36,19 @@ public:
     const WorldMap* GetWorldMap() const;
     void SetWorldMap(std::unique_ptr<WorldMap> pWorldMap);
 
+    // Tile effects context (WorldMap + ImprovementRegistry bundled for tile resolution).
+    // Must be initialized via InitTileEffects() after SetWorldMap() and registry loading.
+    void InitTileEffects(const ImprovementRegistry& rImprovements);
+    TileEffectsContext& GetTileEffects();
+    const TileEffectsContext& GetTileEffects() const;
+
     UnitOrderExecutor& GetUnitOrderExecutor();
 
 private:
     int m_missionYear;
     std::vector<std::unique_ptr<Faction>> m_factions;
     std::unique_ptr<WorldMap> m_worldMap;
+    std::unique_ptr<TileEffectsContext> m_pTileEffects;
     UnitOrderExecutor m_unitOrderExecutor;
 };
 

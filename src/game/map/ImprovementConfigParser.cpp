@@ -85,6 +85,7 @@ ImprovementConfig_t ImprovementConfigParser::ParseImprovementConfig(const nlohma
     config.name = improvementJson.value("name", config.id);
     config.mineralCost = improvementJson.value("mineral_cost", 0);
     config.requiredTech = improvementJson.value("required_tech", "");
+    config.radius = improvementJson.value("radius", 0);
 
     if (improvementJson.contains("excludes"))
     {

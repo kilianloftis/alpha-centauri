@@ -4,9 +4,9 @@
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/population/PopContainer.h"
-#include "game/map/ImprovementRegistry.h"
 #include "game/map/Tile.h"
 #include "game/population/pop-types/Pop.h"
+#include "lib/effects/TileEffectsContext.h"
 #include "lib/effects/BonusEffect.h"
 #include <algorithm>
 #include <iterator>
@@ -73,19 +73,19 @@ std::vector<ActiveEffect_t> FilterTileYieldModifiersBySelectorAndImprovement_(
     return matching;
 }
 
-TileResources_t ComputeBaseTileResources_(const Tile* pBaseTile, const ImprovementRegistry& rImprovements)
+TileResources_t ComputeBaseTileResources_(const Tile* pBaseTile, const TileEffectsContext& rTileEffects)
 {
     TileResources_t resources = {};
     if (pBaseTile)
     {
-        resources = ResolveTileYield(*pBaseTile, rImprovements);
+        resources = rTileEffects.ResolveTileYield(*pBaseTile);
     }
     return resources;
 }
 
-TileResources_t ComputeTileResourcesForPop_(const Tile& tile, const Pop& pop, const ImprovementRegistry& rImprovements)
+TileResources_t ComputeTileResourcesForPop_(const Tile& tile, const Pop& pop, const TileEffectsContext& rTileEffects)
 {
-    const TileResources_t raw = ResolveTileYield(tile, rImprovements);
+    const TileResources_t raw = rTileEffects.ResolveTileYield(tile);
     return pop.ApplyTileMultipliers(raw);
 }
 
@@ -134,7 +134,7 @@ int ComputeWorkedResourceForImprovement_(
     const PopContainer& pops,
     const std::string& improvementId,
     StatId resourceId,
-    const ImprovementRegistry& rImprovements)
+    const TileEffectsContext& rTileEffects)
 {
     int total = 0;
     for (const auto& pPop : pops.GetPops())
@@ -156,7 +156,7 @@ int ComputeWorkedResourceForImprovement_(
         {
             continue;
         }
-        total += GetResourceValue_(ComputeTileResourcesForPop_(*pTile, *pPop, rImprovements), resourceId);
+        total += GetResourceValue_(ComputeTileResourcesForPop_(*pTile, *pPop, rTileEffects), resourceId);
     }
     return total;
 }
@@ -220,10 +220,10 @@ int CalculateResourceWithTileYieldModifiers_(
     const WorkerAssignmentManager& workerAssignments,
     const PopContainer& pops,
     const Tile* pBaseTile,
-    const ImprovementRegistry& rImprovements)
+    const TileEffectsContext& rTileEffects)
 {
     const TileResources_t worked = workerAssignments.ComputeWorkedResources();
-    const TileResources_t baseTile = ComputeBaseTileResources_(pBaseTile, rImprovements);
+    const TileResources_t baseTile = ComputeBaseTileResources_(pBaseTile, rTileEffects);
 
     const int baseTileRaw = GetResourceValue_(baseTile, resourceId);
     const double baseTileModified = ResolveTileYieldModifiers_(
@@ -235,7 +235,7 @@ int CalculateResourceWithTileYieldModifiers_(
     {
         const std::string improvementId = ImprovementTypeToString_(improvement);
         const int count = CountWorkedTilesWithImprovement_(workerAssignments, pops, improvementId);
-        const int raw = ComputeWorkedResourceForImprovement_(workerAssignments, pops, improvementId, resourceId, rImprovements);
+        const int raw = ComputeWorkedResourceForImprovement_(workerAssignments, pops, improvementId, resourceId, rTileEffects);
         const double modified = ResolveTileYieldModifiers_(
             FilterTileYieldModifiersBySelectorAndImprovement_(activeEffects, resourceId, TileSelectorKind::HasImprovement, improvement),
             resourceId, raw, count);
@@ -253,13 +253,13 @@ ResourceManager::ResourceManager(
     const EconomyManager* pEconomy,
     const BuildingManager* pBuildings,
     const Tile* pBaseTile,
-    const ImprovementRegistry* pImprovements)
+    const TileEffectsContext* pTileEffects)
     : m_pPopulation(pPopulation)
     , m_pWorkerAssignments(pWorkerAssignments)
     , m_pEconomy(pEconomy)
     , m_pBuildings(pBuildings)
     , m_pBaseTile(pBaseTile)
-    , m_pImprovements(pImprovements)
+    , m_pTileEffects(pTileEffects)
 {
 }
 
@@ -269,12 +269,12 @@ ResourceManager::~ResourceManager()
 
 int ResourceManager::CalculateNutrients_(const std::vector<ActiveEffect_t>& activeEffects) const
 {
-    if (!m_pWorkerAssignments || !m_pPopulation || !m_pImprovements)
+    if (!m_pWorkerAssignments || !m_pPopulation || !m_pTileEffects)
     {
-        throw std::runtime_error("WorkerAssignmentManager, PopulationManager, or ImprovementRegistry not set");
+        throw std::runtime_error("WorkerAssignmentManager, PopulationManager, or TileEffectsContext not set");
     }
     double base = static_cast<double>(CalculateResourceWithTileYieldModifiers_(
-        activeEffects, StatId::Nutrients, *m_pWorkerAssignments, m_pPopulation->GetContainer(), m_pBaseTile, *m_pImprovements));
+        activeEffects, StatId::Nutrients, *m_pWorkerAssignments, m_pPopulation->GetContainer(), m_pBaseTile, *m_pTileEffects));
     const StatBreakdown_t statModifier = ResolveStatModifiers(
         FilterByStatId(activeEffects, StatId::Nutrients));
     base += statModifier.total;
@@ -284,12 +284,12 @@ int ResourceManager::CalculateNutrients_(const std::vector<ActiveEffect_t>& acti
 
 int ResourceManager::CalculateMinerals_(const std::vector<ActiveEffect_t>& activeEffects) const
 {
-    if (!m_pWorkerAssignments || !m_pPopulation || !m_pImprovements)
+    if (!m_pWorkerAssignments || !m_pPopulation || !m_pTileEffects)
     {
-        throw std::runtime_error("WorkerAssignmentManager, PopulationManager, or ImprovementRegistry not set");
+        throw std::runtime_error("WorkerAssignmentManager, PopulationManager, or TileEffectsContext not set");
     }
     double base = static_cast<double>(CalculateResourceWithTileYieldModifiers_(
-        activeEffects, StatId::Minerals, *m_pWorkerAssignments, m_pPopulation->GetContainer(), m_pBaseTile, *m_pImprovements));
+        activeEffects, StatId::Minerals, *m_pWorkerAssignments, m_pPopulation->GetContainer(), m_pBaseTile, *m_pTileEffects));
     const StatBreakdown_t statModifier = ResolveStatModifiers(
         FilterByStatId(activeEffects, StatId::Minerals));
     base += statModifier.total;
@@ -299,12 +299,12 @@ int ResourceManager::CalculateMinerals_(const std::vector<ActiveEffect_t>& activ
 
 int ResourceManager::CalculateEnergy_(const std::vector<ActiveEffect_t>& activeEffects) const
 {
-    if (!m_pWorkerAssignments || !m_pPopulation || !m_pImprovements)
+    if (!m_pWorkerAssignments || !m_pPopulation || !m_pTileEffects)
     {
-        throw std::runtime_error("WorkerAssignmentManager, PopulationManager, or ImprovementRegistry not set");
+        throw std::runtime_error("WorkerAssignmentManager, PopulationManager, or TileEffectsContext not set");
     }
     double base = static_cast<double>(CalculateResourceWithTileYieldModifiers_(
-        activeEffects, StatId::Energy, *m_pWorkerAssignments, m_pPopulation->GetContainer(), m_pBaseTile, *m_pImprovements));
+        activeEffects, StatId::Energy, *m_pWorkerAssignments, m_pPopulation->GetContainer(), m_pBaseTile, *m_pTileEffects));
     const StatBreakdown_t statModifier = ResolveStatModifiers(
         FilterByStatId(activeEffects, StatId::Energy));
     base += statModifier.total;

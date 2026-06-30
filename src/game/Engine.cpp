@@ -178,6 +178,8 @@ void Engine::Initialize_()
     m_gameState->SetWorldMap(worldGen.Generate(worldConfig));
     std::cout << "Generated world map: " << m_gameState->GetWorldMap()->GetWidth() << "x" << m_gameState->GetWorldMap()->GetHeight() << "\n";
 
+    m_gameState->InitTileEffects(*m_gameDataContext->improvementRegistry);
+
     m_gameDataContext->secretProjectAvailabilityCalculator =
         std::make_unique<SecretProjectAvailabilityCalculator>(m_gameState->GetFactions());
 
@@ -193,7 +195,7 @@ void Engine::Initialize_()
         1, 1, "Test Base",
         m_gameState->GetWorldMap()->GetTile(centerX, centerY),
         *m_gameDataContext,
-        *m_gameState->GetWorldMap());
+        m_gameState->GetTileEffects());
 
     // Wire base signals to EventBus
     m_eventBridge->WireBase(*pBase);

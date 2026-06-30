@@ -127,5 +127,44 @@
         "parameters": { "stat": "defense", "amount": 2.0, "op": "MultiplyArithmetic" }
       }
     ]
+  },
+  {
+    "id": "Sensor",
+    "name": "Sensor",
+    "mineral_cost": 10,
+    "radius": 2,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "defense", "amount": 1.25, "op": "MultiplyArithmetic" }
+      }
+    ]
+  },
+  {
+    "id": "Mirror",
+    "name": "Mirror",
+    "mineral_cost": 10,
+    "radius": 2,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "energy", "amount": 1, "op": "Add" }
+      }
+    ]
+  },
+  {
+    "id": "Condenser",
+    "name": "Condenser",
+    "mineral_cost": 10,
+    "radius": 1,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "moisture_tier", "amount": 1, "op": "Add" }
+      }
+    ]
   }
 ]

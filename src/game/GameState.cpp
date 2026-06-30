@@ -4,7 +4,10 @@
 #include "game/faction/AIProfile.h"
 #include "game/faction/Military.h"
 #include "game/faction/Diplomacy.h"
+#include "game/map/ImprovementRegistry.h"
 #include "game/map/WorldMap.h"
+#include "lib/effects/TileEffectsContext.h"
+#include <stdexcept>
 
 namespace ac
 {
@@ -74,6 +77,33 @@ const WorldMap* GameState::GetWorldMap() const
 void GameState::SetWorldMap(std::unique_ptr<WorldMap> pWorldMap)
 {
     m_worldMap = std::move(pWorldMap);
+}
+
+void GameState::InitTileEffects(const ImprovementRegistry& rImprovements)
+{
+    if (!m_worldMap)
+    {
+        throw std::runtime_error("GameState::InitTileEffects: WorldMap must be set before initializing tile effects");
+    }
+    m_pTileEffects = std::make_unique<TileEffectsContext>(*m_worldMap, rImprovements);
+}
+
+TileEffectsContext& GameState::GetTileEffects()
+{
+    if (!m_pTileEffects)
+    {
+        throw std::runtime_error("GameState::GetTileEffects: tile effects not initialized — call InitTileEffects first");
+    }
+    return *m_pTileEffects;
+}
+
+const TileEffectsContext& GameState::GetTileEffects() const
+{
+    if (!m_pTileEffects)
+    {
+        throw std::runtime_error("GameState::GetTileEffects: tile effects not initialized — call InitTileEffects first");
+    }
+    return *m_pTileEffects;
 }
 
 UnitOrderExecutor& GameState::GetUnitOrderExecutor()

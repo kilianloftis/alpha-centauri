@@ -23,7 +23,6 @@ namespace ac
 BaseView::BaseView(
     BaseManager& rBase,
     const Faction& rFaction,
-    const ImprovementRegistry& rImprovements,
     WindowLayout_t layout
 )
     : IGameView(layout)
@@ -36,7 +35,6 @@ BaseView::BaseView(
     ));
     m_elements.push_back(std::make_unique<BaseWorkableAreaDisplay>(
         &m_rBase,
-        rImprovements,
         ResolveLayout(m_layout, k_TopPanelLayout),
         [this](const Tile* pTile) { HandleTileClick_(pTile); },
         [this]() { HandleBaseClicked_(); }

@@ -61,7 +61,7 @@ std::unique_ptr<BaseView> ViewFactory::CreateBaseView(
         return nullptr;
     }
 
-    return std::make_unique<BaseView>(rBase, *pFaction, *m_rGameDataContext.improvementRegistry, layout);
+    return std::make_unique<BaseView>(rBase, *pFaction, layout);
 }
 
 std::unique_ptr<ResearchView> ViewFactory::CreateResearchView(

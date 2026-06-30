@@ -39,6 +39,7 @@ add_executable(alpha-centauri
     lib/LuaRuntime.cpp
     lib/effects/ActiveEffect.cpp
     lib/effects/BonusEffectParser.cpp
+    lib/effects/TileEffectsContext.cpp
     game/TurnStageFactory.cpp
     game/TurnStageConfigParser.cpp
     game/HookContext.cpp

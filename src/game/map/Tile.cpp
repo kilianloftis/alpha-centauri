@@ -31,6 +31,7 @@ Tile::Tile()
     : m_x(0)
     , m_y(0)
     , m_moisture(Moisture::Arid)
+    , m_baseMoisture(Moisture::Arid)
     , m_rockiness(Rockiness::Flat)
     , m_elevation(0)
     , m_bHasRiver(false)
@@ -44,6 +45,7 @@ Tile::Tile(int x, int y)
     : m_x(x)
     , m_y(y)
     , m_moisture(Moisture::Arid)
+    , m_baseMoisture(Moisture::Arid)
     , m_rockiness(Rockiness::Flat)
     , m_elevation(0)
     , m_bHasRiver(false)
@@ -75,6 +77,16 @@ void Tile::SetMoisture(Moisture moisture)
 Moisture Tile::GetMoisture() const
 {
     return m_moisture;
+}
+
+void Tile::SetBaseMoisture(Moisture moisture)
+{
+    m_baseMoisture = moisture;
+}
+
+Moisture Tile::GetBaseMoisture() const
+{
+    return m_baseMoisture;
 }
 
 void Tile::SetRockiness(Rockiness rockiness)

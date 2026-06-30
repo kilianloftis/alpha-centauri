@@ -1,22 +1,19 @@
 #include "ui/base/BaseWorkableAreaDisplay.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
-#include "game/map/ImprovementRegistry.h"
 #include "graphics/Graphics.h"
-#include "lib/effects/ActiveEffect.h"
+#include "lib/effects/TileEffectsContext.h"
 #include <sstream>
 
 namespace ac
 {
 
 BaseWorkableAreaDisplay::BaseWorkableAreaDisplay(const BaseManager* pBase,
-                                                 const ImprovementRegistry& rImprovements,
                                                  WindowLayout_t layout,
                                                  TileClickCallback_t onTileClicked,
                                                  BaseClickCallback_t onBaseClicked)
     : UIElement(layout)
     , m_pBase(pBase)
-    , m_rImprovements(rImprovements)
     , m_onTileClicked(std::move(onTileClicked))
     , m_onBaseClicked(std::move(onBaseClicked))
 {
@@ -76,10 +73,9 @@ void BaseWorkableAreaDisplay::Render(Graphics& rGraphics)
 
 void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, const Tile& rTile, float x, float y, float size, bool bIsWorked)
 {
-    // Draw tile border (negative thickness draws inward for shared borders)
     rGraphics.DrawRect(x, y, size, size, Color{80, 80, 80, 255}, -1.0f);
 
-    const TileResources_t yield = ResolveTileYield(rTile, m_rImprovements);
+    const TileResources_t yield = m_pBase->GetTileEffects().ResolveTileYield(rTile);
     int nutrients = yield.nutrients;
     int minerals = yield.minerals;
     int energy = yield.energy;
@@ -87,14 +83,11 @@ void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, const Tile& rTile
     std::ostringstream oss;
     oss << nutrients << " " << minerals << " " << energy;
 
-    // Center text in tile with smaller font
     const unsigned int fontSize = 12;
     float textOffsetX = size * 0.05f;
     float textOffsetY = size * 0.35f;
 
-    // Use green for worked tiles, white for unworked
     Color textColor = bIsWorked ? Color::Green() : Color::White();
-    
     rGraphics.DrawText(oss.str(), x + textOffsetX, y + textOffsetY, fontSize, textColor);
 }
 
@@ -127,4 +120,5 @@ void BaseWorkableAreaDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
         }
     }
 }
+
 } // namespace ac

@@ -25,7 +25,10 @@ enum class StatId
     DamageFromOutOfFuel,
     CargoCapacity,
     DifficultTerrainCost,
-    CostMultiplier
+    CostMultiplier,
+
+    // Tile terrain mutation (resolved back into Tile::SetMoisture, not a runtime-queried stat)
+    MoistureTier
     // TODO: add more stats as they are defined
 };
 

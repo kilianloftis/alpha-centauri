@@ -60,6 +60,7 @@ void WorldGenerator::GenerateMoisture_(WorldMap& world)
             if (pTile)
             {
                 int value = dist(m_rng);
+                pTile->SetBaseMoisture(static_cast<Moisture>(value));
                 pTile->SetMoisture(static_cast<Moisture>(value));
             }
         }

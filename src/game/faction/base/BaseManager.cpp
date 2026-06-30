@@ -11,9 +11,9 @@
 #include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
-#include "game/map/ImprovementRegistry.h"
+#include "game/map/MapUtils.h"
 #include "game/map/WorldMap.h"
-#include <cmath>
+#include "lib/effects/TileEffectsContext.h"
 
 namespace ac
 {
@@ -21,31 +21,15 @@ namespace ac
 namespace
 {
 
-std::vector<const Tile*> ComputeWorkableTiles_(const WorldMap& rWorldMap, const Tile& tile)
+std::vector<const Tile*> ComputeWorkableTiles_(const TileEffectsContext& rTileEffects, const Tile& tile)
 {
-    int baseX = tile.GetX();
-    int baseY = tile.GetY();
-    static constexpr int kGridHalfExtent = 2;
     static constexpr int kManhattanLimit = 3;
     std::vector<const Tile*> tiles;
-    for (int dy = -kGridHalfExtent; dy <= kGridHalfExtent; ++dy)
-    {
-        for (int dx = -kGridHalfExtent; dx <= kGridHalfExtent; ++dx)
+    ForEachTileInManhattanRadius(tile, rTileEffects.GetWorldMap(), kManhattanLimit, false,
+        [&tiles](const Tile* pTile, int /*distance*/)
         {
-            if (dx == 0 && dy == 0)
-            {
-                continue;
-            }
-            if (std::abs(dx) + std::abs(dy) <= kManhattanLimit)
-            {
-                const Tile* pTile = rWorldMap.GetTile(baseX + dx, baseY + dy);
-                if (pTile)
-                {
-                    tiles.push_back(pTile);
-                }
-            }
-        }
-    }
+            tiles.push_back(pTile);
+        });
     return tiles;
 }
 
@@ -57,26 +41,25 @@ BaseManager::BaseManager(
     const PopTypeRegistry* pPopRegistry,
     const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator,
     PopCompositionCalculator* pCompositionCalculator,
-    const WorldMap& rWorldMap,
+    TileEffectsContext& rTileEffects,
     const ResearchManager* pResearchManager,
     const EconomyManager* pEconomyManager,
     const ProductionCostCalculator* pProductionCostCalculator,
     const GrowthCalculator* pGrowthCalculator,
-    const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
-    const ImprovementRegistry* pImprovementRegistry)
+    const SecretProjectAvailabilityCalculator* pSecretProjectCalculator)
     : m_factionId(-1)
     , m_baseId(-1)
     , m_tile(tile)
+    , m_rTileEffects(rTileEffects)
     , m_pResearch(pResearchManager)
-    , m_pImprovementRegistry(pImprovementRegistry)
     , m_pPopulation(std::make_unique<PopulationManager>(pPopRegistry, pPopTypeAvailabilityCalculator, pResearchManager, pCompositionCalculator, pGrowthCalculator, 3))
-    , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(ComputeWorkableTiles_(rWorldMap, tile), m_pPopulation->GetContainer(), *pImprovementRegistry))
+    , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(ComputeWorkableTiles_(rTileEffects, tile), m_pPopulation->GetContainer(), rTileEffects))
     , m_pResources(nullptr)
     , m_pBuildings(std::make_unique<BuildingManager>(pBuildingRegistry, pResearchManager, pSecretProjectCalculator))
     , m_pProduction(pProductionCostCalculator ? std::make_unique<ProductionManager>(*pProductionCostCalculator) : nullptr)
 {
     // A base provides its own garrison defense bonus, modeled as the "Base" improvement.
-    m_tile.AddImprovement("Base");
+    m_rTileEffects.AddImprovementWithEffects(m_tile, "Base");
 
     // Create ResourceManager after all sub-managers are set up
     m_pResources = std::make_unique<ResourceManager>(
@@ -85,7 +68,7 @@ BaseManager::BaseManager(
         pEconomyManager,
         m_pBuildings.get(),
         &m_tile,
-        pImprovementRegistry);
+        &m_rTileEffects);
 
     m_pPopulation->on_growth.connect([this]() {
         m_pPopulation->AddPop();
@@ -122,6 +105,16 @@ void BaseManager::RecalculatePopComposition()
 const PopContainer& BaseManager::GetPopContainer() const
 {
     return m_pPopulation->GetContainer();
+}
+
+TileEffectsContext& BaseManager::GetTileEffects()
+{
+    return m_rTileEffects;
+}
+
+const TileEffectsContext& BaseManager::GetTileEffects() const
+{
+    return m_rTileEffects;
 }
 
 int BaseManager::GetPopWorkerCount() const

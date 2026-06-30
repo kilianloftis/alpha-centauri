@@ -36,9 +36,18 @@ public:
     int GetX() const;
     int GetY() const;
 
-    // Terrain characteristics
+    // Terrain characteristics. GetMoisture()/SetMoisture() are the CURRENT/effective value -
+    // what rendering and GetFeatureIds() see, and what a Condenser's MoistureTier effect
+    // mutates via RecomputeMoisture(). GetBaseMoisture()/SetBaseMoisture() are the natural,
+    // un-condensed terrain truth set once by world generation; RecomputeMoisture always
+    // re-derives the current value from the base plus whatever Condensers currently reach
+    // this tile, so the bonus disappears cleanly the moment a Condenser is removed - never
+    // mutated incrementally, to avoid drift from overlapping Condensers or add/remove order.
     void SetMoisture(Moisture moisture);
     Moisture GetMoisture() const;
+
+    void SetBaseMoisture(Moisture moisture);
+    Moisture GetBaseMoisture() const;
 
     void SetRockiness(Rockiness rockiness);
     Rockiness GetRockiness() const;
@@ -101,6 +110,7 @@ private:
     int m_y;
 
     Moisture m_moisture;
+    Moisture m_baseMoisture;
     Rockiness m_rockiness;
     int m_elevation;
 

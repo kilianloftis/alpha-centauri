@@ -4,6 +4,7 @@
 #include "game/buildings/BuildingConfigParser.h"
 #include "game/faction/base/BaseTypes.h"
 #include "lib/effects/ActiveEffect.h"
+#include "lib/effects/TileEffectsContext.h"
 #include "lib/Signal.h"
 #include <functional>
 #include <memory>
@@ -31,8 +32,6 @@ class ProductionCostCalculator;
 class ProductionManager;
 class ResearchManager;
 class Tile;
-class WorldMap;
-class ImprovementRegistry;
 
 // BaseManager coordinates base management subsystems.
 // Provides identity, position, and access to sub-managers.
@@ -46,13 +45,12 @@ public:
         const PopTypeRegistry* pPopRegistry,
         const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator,
         PopCompositionCalculator* pCompositionCalculator,
-        const WorldMap& rWorldMap,
+        TileEffectsContext& rTileEffects,
         const ResearchManager* pResearchManager,
         const EconomyManager* pEconomyManager,
         const ProductionCostCalculator* pProductionCostCalculator,
         const GrowthCalculator* pGrowthCalculator,
-        const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
-        const ImprovementRegistry* pImprovementRegistry);
+        const SecretProjectAvailabilityCalculator* pSecretProjectCalculator);
     ~BaseManager();
 
     // Population management - delegated to PopulationManager
@@ -129,6 +127,11 @@ public:
     // Returns the set of workable tiles this base can assign workers to.
     const std::vector<const Tile*>& GetWorkableTilePositions() const;
 
+    // Access to the tile-effects resolver (bundles WorldMap + ImprovementRegistry).
+    // Used by BaseWorkableAreaDisplay and any other system that needs to resolve tile yield or defense.
+    TileEffectsContext& GetTileEffects();
+    const TileEffectsContext& GetTileEffects() const;
+
     // Base identity
     void SetName(const std::string& name);
     const std::string& GetName() const;
@@ -143,8 +146,8 @@ private:
     FactionId m_factionId;
     int m_baseId;
     Tile& m_tile;
+    TileEffectsContext& m_rTileEffects;
     const ResearchManager* m_pResearch;
-    const ImprovementRegistry* m_pImprovementRegistry;
     std::unique_ptr<PopulationManager> m_pPopulation;
     std::unique_ptr<WorkerAssignmentManager> m_pWorkerAssignments;
     std::unique_ptr<ResourceManager> m_pResources;

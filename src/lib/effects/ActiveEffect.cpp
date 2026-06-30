@@ -15,6 +15,7 @@
 #include "game/units/UnitComponentConfig.h"
 #include "lib/effects/BonusEffect.h"
 #include <algorithm>
+#include <cmath>
 #include <set>
 
 namespace ac
@@ -321,28 +322,6 @@ std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile, const Improvem
         }
     }
     return result;
-}
-
-double ResolveTileDefenseMultiplier(const Tile& rTile, const ImprovementRegistry& rImprovements)
-{
-    const std::vector<ActiveEffect_t> effects = CollectTileEffects(rTile, rImprovements);
-    return ResolveStatModifiers(FilterByStatId(effects, StatId::Defense), 1.0).total;
-}
-
-TileResources_t ResolveTileYield(const Tile& rTile, const ImprovementRegistry& rImprovements)
-{
-    const std::vector<ActiveEffect_t> effects = CollectTileEffects(rTile, rImprovements);
-
-    const double nutrients = ResolveStatModifiers(FilterByStatId(effects, StatId::Nutrients)).total;
-    const double minerals = ResolveStatModifiers(FilterByStatId(effects, StatId::Minerals)).total;
-    const double energy = ResolveStatModifiers(
-        FilterByStatId(effects, StatId::Energy), static_cast<double>(rTile.GetElevationEnergySeed())).total;
-
-    return TileResources_t{
-        static_cast<int>(nutrients),
-        static_cast<int>(energy),
-        static_cast<int>(minerals)
-    };
 }
 
 } // namespace ac
