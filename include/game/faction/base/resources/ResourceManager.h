@@ -63,6 +63,9 @@ private:
     int CalculateNutrients_(const std::vector<ActiveEffect_t>& activeEffects) const;
     int CalculateMinerals_(const std::vector<ActiveEffect_t>& activeEffects) const;
     int CalculateEnergy_(const std::vector<ActiveEffect_t>& activeEffects) const;
+    int CalculateEcon_(const std::vector<ActiveEffect_t>& activeEffects) const;
+    int CalculateLabs_(const std::vector<ActiveEffect_t>& activeEffects) const;
+    int CalculatePsych_(const std::vector<ActiveEffect_t>& activeEffects) const;
 
     void ProduceNutrients_(const std::vector<ActiveEffect_t>& activeEffects);
     void ProduceMinerals_(const std::vector<ActiveEffect_t>& activeEffects);

@@ -9,7 +9,6 @@
       {
         "type": "RuleFlag",
         "scope": "FactionGlobal",
-        "persistence": "Continuous",
         "parameters": { "flag": "population_boom" }
       }
     ]

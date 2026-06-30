@@ -10,6 +10,11 @@ enum class StatId
     Minerals,
     Energy,
 
+    // Base output, allocated directly (specialists) rather than via energy allocation
+    Econ,
+    Labs,
+    Psych,
+
     // Unit stats
     Attack,
     Defense,

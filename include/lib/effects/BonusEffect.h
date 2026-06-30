@@ -24,6 +24,9 @@ enum class EffectScope_t
     FactionUnits,
     FactionGlobal,
     WorldGlobal,
+    // Only the specific pop instance the effect belongs to. Resolved locally by Pop
+    // (e.g. ApplyTileMultipliers) and must never enter the base-wide active effects pool.
+    ThisPop,
 };
 
 enum class EffectPersistence_t

@@ -8,13 +8,11 @@
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "persistence": "Continuous",
         "parameters": { "stat": "nutrients", "amount": "2" }
       },
       {
         "type": "TileYieldModifier",
         "scope": "ThisBase",
-        "persistence": "Continuous",
         "parameters": {
           "resource": "nutrients",
           "selector": { "kind": "HasImprovement", "improvement": "Farm" },
@@ -25,7 +23,6 @@
       {
         "type": "TileYieldModifier",
         "scope": "ThisBase",
-        "persistence": "Continuous",
         "parameters": {
           "resource": "nutrients",
           "selector": { "kind": "HasImprovement", "improvement": "Condenser" },
@@ -44,7 +41,6 @@
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "persistence": "Continuous",
         "parameters": { "stat": "nutrients", "amount": "1" }
       }
     ]
@@ -59,7 +55,6 @@
       {
         "type": "StatModifier",
         "scope": "FactionGlobal",
-        "persistence": "Continuous",
         "parameters": { "stat": "energy", "amount": "1" }
       }
     ]

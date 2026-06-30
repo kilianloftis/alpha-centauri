@@ -26,6 +26,9 @@ public:
     // Type id string matching the config (e.g. "Worker", "Librarian")
     const char* GetPopType() const;
 
+    // The full config backing this pop's current type.
+    const PopTypeConfig_t& GetConfig() const;
+
     // True if this pop can work a tile (can_work_tile in config)
     bool IsWorker() const;
 

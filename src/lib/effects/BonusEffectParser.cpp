@@ -12,6 +12,9 @@ StatId ParseStatId(const std::string& rStat)
     if (rStat == "nutrients")               return StatId::Nutrients;
     if (rStat == "minerals")                return StatId::Minerals;
     if (rStat == "energy")                  return StatId::Energy;
+    if (rStat == "econ")                    return StatId::Econ;
+    if (rStat == "labs")                    return StatId::Labs;
+    if (rStat == "psych")                   return StatId::Psych;
     if (rStat == "attack")                  return StatId::Attack;
     if (rStat == "defense")                 return StatId::Defense;
     if (rStat == "movement")                return StatId::Movement;
@@ -49,6 +52,7 @@ EffectScope_t ParseEffectScope(const std::string& rScope)
     if (rScope == "FactionUnits")    return EffectScope_t::FactionUnits;
     if (rScope == "FactionGlobal")   return EffectScope_t::FactionGlobal;
     if (rScope == "WorldGlobal")     return EffectScope_t::WorldGlobal;
+    if (rScope == "ThisPop")         return EffectScope_t::ThisPop;
     throw std::runtime_error("Unknown effect scope: '" + rScope + "'");
 }
 

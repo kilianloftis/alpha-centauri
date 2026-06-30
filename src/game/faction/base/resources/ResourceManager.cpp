@@ -322,31 +322,52 @@ int ResourceManager::GetMineralProduction() const
     return CalculateMinerals_(m_activeEffects);
 }
 
-int ResourceManager::GetEconProduction() const
+int ResourceManager::CalculateEcon_(const std::vector<ActiveEffect_t>& activeEffects) const
 {
     if (!m_pEconomy)
     {
         throw std::runtime_error("EconomyManager not set");
     }
-    return m_pEconomy->CalculateEnergyForEcon(CalculateEnergy_(m_activeEffects));
+    const int fromEnergy = m_pEconomy->CalculateEnergyForEcon(CalculateEnergy_(activeEffects));
+    const StatBreakdown_t fromPops = ResolveStatModifiers(FilterByStatId(activeEffects, StatId::Econ));
+    return fromEnergy + static_cast<int>(fromPops.total);
+}
+
+int ResourceManager::CalculateLabs_(const std::vector<ActiveEffect_t>& activeEffects) const
+{
+    if (!m_pEconomy)
+    {
+        throw std::runtime_error("EconomyManager not set");
+    }
+    const int fromEnergy = m_pEconomy->CalculateEnergyForLabs(CalculateEnergy_(activeEffects));
+    const StatBreakdown_t fromPops = ResolveStatModifiers(FilterByStatId(activeEffects, StatId::Labs));
+    return fromEnergy + static_cast<int>(fromPops.total);
+}
+
+int ResourceManager::CalculatePsych_(const std::vector<ActiveEffect_t>& activeEffects) const
+{
+    if (!m_pEconomy)
+    {
+        throw std::runtime_error("EconomyManager not set");
+    }
+    const int fromEnergy = m_pEconomy->CalculateEnergyForPsych(CalculateEnergy_(activeEffects));
+    const StatBreakdown_t fromPops = ResolveStatModifiers(FilterByStatId(activeEffects, StatId::Psych));
+    return fromEnergy + static_cast<int>(fromPops.total);
+}
+
+int ResourceManager::GetEconProduction() const
+{
+    return CalculateEcon_(m_activeEffects);
 }
 
 int ResourceManager::GetLabsProduction() const
 {
-    if (!m_pEconomy)
-    {
-        throw std::runtime_error("EconomyManager not set");
-    }
-    return m_pEconomy->CalculateEnergyForLabs(CalculateEnergy_(m_activeEffects));
+    return CalculateLabs_(m_activeEffects);
 }
 
 int ResourceManager::GetPsychProduction() const
 {
-    if (!m_pEconomy)
-    {
-        throw std::runtime_error("EconomyManager not set");
-    }
-    return m_pEconomy->CalculateEnergyForPsych(CalculateEnergy_(m_activeEffects));
+    return CalculatePsych_(m_activeEffects);
 }
 
 int ResourceManager::ConsumeNutrients()
@@ -396,17 +417,16 @@ void ResourceManager::ProduceMinerals_(const std::vector<ActiveEffect_t>& active
 
 void ResourceManager::AllocateEnergy_(const std::vector<ActiveEffect_t>& activeEffects)
 {
-    const int totalEnergy = CalculateEnergy_(activeEffects);
     if (!m_pEconomy)
     {
-        // No economy manager set, allocate all to econ
-        m_econ += totalEnergy;
+        // No economy manager set, allocate all energy to econ
+        m_econ += CalculateEnergy_(activeEffects);
         return;
     }
 
-    m_econ += m_pEconomy->CalculateEnergyForEcon(totalEnergy);
-    m_labs += m_pEconomy->CalculateEnergyForLabs(totalEnergy);
-    m_psych += m_pEconomy->CalculateEnergyForPsych(totalEnergy);
+    m_econ += CalculateEcon_(activeEffects);
+    m_labs += CalculateLabs_(activeEffects);
+    m_psych += CalculatePsych_(activeEffects);
 }
 
 void ResourceManager::ProduceResourcesInternal_(const std::vector<ActiveEffect_t>& activeEffects)

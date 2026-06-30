@@ -77,13 +77,16 @@ Each entry in `effects` describes a single gameplay effect applied when the buil
 | `FactionUnits` | Every unit the owning faction controls |
 | `FactionGlobal` | A faction-wide capability, not tied to a specific base or unit |
 | `WorldGlobal` | Affects every faction, not just the owner |
+| `ThisPop` | Only the specific pop instance the effect belongs to (pop type tile-multiplier effects only) |
 
 ### Persistence
 
 | Value | Description |
 |---|---|
-| `Continuous` | Active as long as the building exists |
+| `Continuous` (default) | Active as long as the building exists |
 | `Instantaneous` | Fires once when the building is first completed |
+
+`persistence` may be omitted entirely when `Continuous` — it's the default, so config files only need to write it for `Instantaneous` effects.
 
 ---
 
@@ -101,7 +104,6 @@ Each entry in `effects` describes a single gameplay effect applied when the buil
     {
       "type": "StatModifier",
       "scope": "ThisBase",
-      "persistence": "Continuous",
       "parameters": { "stat": "nutrients", "amount": "1" }
     }
   ]
@@ -121,7 +123,6 @@ Each entry in `effects` describes a single gameplay effect applied when the buil
     {
       "type": "RuleFlag",
       "scope": "FactionGlobal",
-      "persistence": "Continuous",
       "parameters": { "flag": "population_boom" }
     }
   ]

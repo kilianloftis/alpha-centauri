@@ -9,25 +9,21 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "persistence": "Continuous",
         "parameters": { "stat": "movement", "amount": 1, "op": "Add" }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "persistence": "Continuous",
         "parameters": { "stat": "difficult_terrain_cost", "amount": 2, "op": "Add" }
       },
       {
         "type": "UnitBonusTable",
         "scope": "ThisUnit",
-        "persistence": "Continuous",
         "parameters": { "table_name": "terrain_attack", "key": "Forest", "value": 25 }
       },
       {
         "type": "UnitBonusTable",
         "scope": "ThisUnit",
-        "persistence": "Continuous",
         "parameters": { "table_name": "terrain_attack", "key": "Hill", "value": 10 }
       }
     ]
@@ -42,19 +38,16 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "persistence": "Continuous",
         "parameters": { "stat": "movement", "amount": 2, "op": "Add" }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "persistence": "Continuous",
         "parameters": { "stat": "disengage_chance", "amount": 25, "op": "Add" }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "persistence": "Continuous",
         "parameters": { "stat": "difficult_terrain_cost", "amount": 3, "op": "Add" }
       }
     ]
@@ -69,19 +62,16 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "persistence": "Continuous",
         "parameters": { "stat": "movement", "amount": 2, "op": "Add" }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "persistence": "Continuous",
         "parameters": { "stat": "cargo_capacity", "amount": 2, "op": "Add" }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "persistence": "Continuous",
         "parameters": { "stat": "difficult_terrain_cost", "amount": 1, "op": "Add" }
       }
     ]

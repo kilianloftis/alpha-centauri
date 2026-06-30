@@ -5,6 +5,9 @@
 #include "game/buildings/BuildingRegistry.h"
 #include "game/faction/SocialEngineeringManager.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/population/PopContainer.h"
+#include "game/population/pop-types/Pop.h"
+#include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/social-engineering/SocialPolicyConfig.h"
 #include "game/units/UnitComponentConfig.h"
 #include "lib/effects/BonusEffect.h"
@@ -217,8 +220,22 @@ std::vector<ActiveEffect_t> FilterForBase(const std::vector<ActiveEffect_t>& eff
                 break;
             case EffectScope_t::ThisUnit:
             case EffectScope_t::FactionUnits:
-                // Unit-scoped effects never apply to base-level calculations.
+            case EffectScope_t::ThisPop:
+                // Unit- and pop-scoped effects never apply to base-level calculations.
                 break;
+        }
+    }
+    return matching;
+}
+
+std::vector<ActiveEffect_t> FilterByScope(const std::vector<ActiveEffect_t>& effects, EffectScope_t scope)
+{
+    std::vector<ActiveEffect_t> matching;
+    for (const ActiveEffect_t& effect : effects)
+    {
+        if (effect.config && effect.config->scope == scope)
+        {
+            matching.push_back(effect);
         }
     }
     return matching;
@@ -238,6 +255,42 @@ std::vector<ActiveEffect_t> CollectUnitEffects(const std::vector<const UnitCompo
             ActiveEffect_t active;
             active.config = &rEffect;
             active.sourceId = pComp->id;
+            result.push_back(active);
+        }
+    }
+    return result;
+}
+
+std::vector<ActiveEffect_t> CollectPopEffects(const PopTypeConfig_t& rConfig)
+{
+    std::vector<ActiveEffect_t> result;
+    for (const EffectConfig_t& rEffect : rConfig.effects)
+    {
+        ActiveEffect_t active;
+        active.config = &rEffect;
+        active.sourceId = rConfig.id;
+        result.push_back(active);
+    }
+    return result;
+}
+
+std::vector<ActiveEffect_t> CollectFromPops(const PopContainer& rPops, const BaseManager& rOriginBase)
+{
+    std::vector<ActiveEffect_t> result;
+    for (const auto& pPop : rPops.GetPops())
+    {
+        if (!pPop)
+        {
+            continue;
+        }
+
+        const std::vector<ActiveEffect_t> flatEffects =
+            FilterByScope(CollectPopEffects(pPop->GetConfig()), EffectScope_t::ThisBase);
+
+        for (const ActiveEffect_t& effect : flatEffects)
+        {
+            ActiveEffect_t active = effect;
+            active.originBase = &rOriginBase;
             result.push_back(active);
         }
     }

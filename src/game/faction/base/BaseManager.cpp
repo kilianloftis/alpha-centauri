@@ -263,12 +263,17 @@ std::string BaseManager::ApplyProduction()
 
 void BaseManager::ProduceResources(const std::vector<ActiveEffect_t>& activeEffects)
 {
-    if (!m_pResources)
+    if (!m_pResources || !m_pPopulation)
     {
-        throw std::runtime_error("BaseManager::ProduceResources: m_pResources is null");
+        throw std::runtime_error("BaseManager::ProduceResources: m_pResources or m_pPopulation is null");
     }
 
-    m_pResources->ProduceResources(FilterForBase(activeEffects, *this));
+    std::vector<ActiveEffect_t> baseEffects = FilterForBase(activeEffects, *this);
+
+    const std::vector<ActiveEffect_t> popEffects = CollectFromPops(GetPopContainer(), *this);
+    baseEffects.insert(baseEffects.end(), popEffects.begin(), popEffects.end());
+
+    m_pResources->ProduceResources(baseEffects);
 }
 
 int BaseManager::ConsumeEcon()

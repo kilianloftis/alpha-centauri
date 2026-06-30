@@ -126,6 +126,7 @@ graph TB
   - `FactionUnits` — all units owned by the faction.
   - `FactionGlobal` — the whole faction.
   - `WorldGlobal` — all factions.
+  - `ThisPop` — only the specific pop instance the effect belongs to (pop type tile-multiplier effects use this scope). Resolved locally by `Pop::ApplyTileMultipliers` and never enters the base-wide active effects pool — `FilterForBase` always excludes it, same as `ThisUnit`/`FactionUnits`.
 
 ### ActiveEffect_t
 - **Purpose**: A runtime instance of an effect tied to a specific source.
@@ -155,11 +156,16 @@ graph TB
 - **Purpose**: Filters active effects to only `StatModifierEffect_t` instances targeting a given `StatId`.
 - **Returns**: A vector of matching `ActiveEffect_t` instances.
 
+### FilterByScope
+- **Purpose**: Filters active effects to only those with an exact `EffectScope_t` match.
+- **Used by**: `Pop::ApplyTileMultipliers`/`Pop::GetSpecialistOutput` to split a pop type's own effects into the `ThisPop` (tile multiplier) and `ThisBase` (flat generation) subsets before resolving each separately — see Pop Type Effects below.
+
 ### FilterForBase
 - **Purpose**: Filters active effects to only those that apply to a specific base.
 - **Responsibilities**:
   - Includes `ThisBase` effects whose `originBase` is the given base.
   - Includes `AllOwnerBases`, `FactionGlobal`, and `WorldGlobal` effects.
+  - Excludes `ThisUnit`, `FactionUnits`, and `ThisPop` effects — these are resolved locally by their own owning instance (unit design or pop) and never apply at the base level.
 - **Returns**: A vector of relevant `ActiveEffect_t` instances.
 
 ### CollectActiveEffects
@@ -177,10 +183,11 @@ graph TB
 - **Purpose**: Applies active effects to base resource production.
 - **Responsibilities**:
   - `Faction::ProduceBaseResources()` collects active effects once per faction and passes them to each base.
-  - `BaseManager::ProduceResources()` uses `FilterForBase` to keep only effects relevant to this base.
+  - `BaseManager::ProduceResources()` uses `FilterForBase` to keep only effects relevant to this base, then appends this base's own pop-generated effects via `CollectFromPops(GetPopContainer(), *this)` (see Pop Type Effects above) before handing the combined list to `ResourceManager`.
   - `ResourceManager::ProduceResources()` stores the effects and uses them when calculating nutrients, minerals, and energy:
     - `StatModifierEffect_t` matching `StatId::Nutrients`, `StatId::Minerals`, or `StatId::Energy` are filtered with `FilterByStatId`, resolved via `ResolveStatModifiers`, and added to the total.
     - `TileYieldModifierEffect_t` with `BaseTile` or `HasImprovement` selectors are resolved via `ResolveStatModifiers`. The raw tile yield is injected as an `Add` contribution so multipliers apply to the actual yield, and `Add` amounts for `HasImprovement` are multiplied by the number of matching worked tiles.
+    - `StatId::Econ`/`Labs`/`Psych` are not produced from tiles — `CalculateEcon_`/`CalculateLabs_`/`CalculatePsych_` take the percentage-of-energy split from `EconomyManager` and add any flat `StatModifier` contributions (e.g. specialist pop output) on top via `FilterByStatId`/`ResolveStatModifiers`, the same pattern used by `AllocateEnergy_` when stockpiling each turn.
   - Stored effects are also used by the live `Get*Production()` queries.
 
 ### BuildingManager / BaseManager Constructed Buildings
@@ -209,6 +216,21 @@ graph TB
 - A stat with a flat bonus (e.g. a weapon's base attack) is a `StatModifier` effect with `op: "Add"`. A percentage/multiplicative bonus uses `op: "MultiplyArithmetic"` or `op: "MultiplyGeometric"`.
 - A terrain/unit bonus table entry (e.g. `terrain_attack: Forest -> 25`) is a `UnitBonusTable` effect: `parameters: { table_name, key, value }`.
 - A unit rule flag (e.g. `flight`) is a `RuleFlag` effect; flags that don't apply are simply omitted rather than written as `false`.
+
+### Pop Type Effects
+
+Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlike buildings/units, a `Pop` has exactly one `PopTypeConfig_t` at a time — there's no stacking of multiple sources — so pop effects are resolved locally rather than through `CollectActiveEffects`/`FilterForBase`. Two distinct scopes are used, resolved differently:
+
+- **`ThisBase` effects (flat output)** — e.g. a Doctor's `+2 psych`, a Technician's `+3 econ`. These are `StatModifier`/`Add` effects targeting `StatId::Nutrients`/`Minerals`/`Energy`/`Econ`/`Labs`/`Psych`. `CollectFromPops(popContainer, base)` gathers the `ThisBase`-scoped effects from every pop in a base (filtered via `FilterByScope`), tags them with `originBase`, and `BaseManager::ProduceResources` merges them into the base's active effects alongside building effects — so one Doctor contributes `+2` psych, three Doctors contribute `+6`. `Pop::GetSpecialistOutput()` (used by `PopContainer::ComputePsychOutput()` for riot/golden-age composition math, and by the population UI) resolves the same `ThisBase` subset independently, per-pop.
+- **`ThisPop` effects (tile multipliers)** — e.g. "this pop type's worked-tile nutrient yield is scaled by 1.5×". These are `StatModifier` effects with `op: "MultiplyArithmetic"`/`"MultiplyGeometric"` targeting `StatId::Nutrients`/`Energy`/`Minerals`. `Pop::ApplyTileMultipliers(rawTileYield)` resolves only the `ThisPop` subset of its own config's effects, seeding `ResolveStatModifiers` with the raw tile value as `baseValue` so the multiplier scales that pop's own worked tile. **`ThisPop` effects must never be added to `ThisBase`/flat resolution in the same call** — `ResolveStatModifiers` sums `Add` contributions into the seeded base *before* applying multiplicative factors, so mixing a flat `Add` bonus into a raw-seeded multiplier resolve would incorrectly scale the flat bonus too. This is why `Pop` always splits by `FilterByScope` first instead of resolving a pop type's whole effect list in one call. No current pop type uses a non-1.0 tile multiplier; the mechanism exists for future use (e.g. a Worker variant with a +50% mineral tile bonus):
+  ```json
+  {
+    "type": "StatModifier",
+    "scope": "ThisPop",
+    "persistence": "Continuous",
+    "parameters": { "stat": "minerals", "amount": 1.5, "op": "MultiplyArithmetic" }
+  }
+  ```
 
 ## Design Rationale
 

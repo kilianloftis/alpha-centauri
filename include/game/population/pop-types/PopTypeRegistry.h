@@ -8,7 +8,7 @@
 namespace ac
 {
 
-class PopTypeRegistry : public Registry<PopTypeConfig_t, PopTypeConfigtParser, Pop>
+class PopTypeRegistry : public Registry<PopTypeConfig_t, PopTypeConfigParser, Pop>
 {
 public:
     const PopTypeConfig_t& GetDefault() const

@@ -2,6 +2,7 @@
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/faction/base/resources/ResourceManager.h"
 #include "game/map/Tile.h"
+#include "lib/effects/ActiveEffect.h"
 #include <cmath>
 
 namespace ac
@@ -25,6 +26,11 @@ Pop::~Pop()
 const char* Pop::GetPopType() const
 {
     return m_pConfig->id.c_str();
+}
+
+const PopTypeConfig_t& Pop::GetConfig() const
+{
+    return *m_pConfig;
 }
 
 bool Pop::IsWorker() const
@@ -104,24 +110,39 @@ bool Pop::IsUserAssigned() const
 
 TileResources_t Pop::ApplyTileMultipliers(const TileResources_t& resources) const
 {
-    const PopTileMultipliers_t& m = m_pConfig->tileMultipliers;
-    const PopGeneration_t& g = m_pConfig->generation;
+    // Only ThisPop-scoped effects (tile multipliers) apply here — ThisBase-scoped flat
+    // generation bonuses are resolved separately via CollectFromPops/ResourceManager.
+    const std::vector<ActiveEffect_t> tileEffects =
+        FilterByScope(CollectPopEffects(*m_pConfig), EffectScope_t::ThisPop);
+
+    auto scaleByMultiplier = [&](StatId statId, int rawValue) -> int
+    {
+        const StatBreakdown_t breakdown =
+            ResolveStatModifiers(FilterByStatId(tileEffects, statId), static_cast<double>(rawValue));
+        return static_cast<int>(std::round(breakdown.total));
+    };
 
     return TileResources_t{
-        static_cast<int>(std::round(resources.nutrients * m.nutrients)) + g.nutrients,
-        static_cast<int>(std::round(resources.energy    * m.energy))    + g.energy,
-        static_cast<int>(std::round(resources.minerals  * m.minerals))  + g.minerals
+        scaleByMultiplier(StatId::Nutrients, resources.nutrients),
+        scaleByMultiplier(StatId::Energy, resources.energy),
+        scaleByMultiplier(StatId::Minerals, resources.minerals)
     };
 }
 
 SpecialistOutput_t Pop::GetSpecialistOutput() const
 {
-    const PopGeneration_t& g = m_pConfig->generation;
+    const std::vector<ActiveEffect_t> flatEffects =
+        FilterByScope(CollectPopEffects(*m_pConfig), EffectScope_t::ThisBase);
+
+    auto resolveFlat = [&](StatId statId) -> int
+    {
+        return static_cast<int>(ResolveStatModifiers(FilterByStatId(flatEffects, statId)).total);
+    };
 
     return SpecialistOutput_t{
-        g.econ,
-        g.labs,
-        g.psych
+        resolveFlat(StatId::Econ),
+        resolveFlat(StatId::Labs),
+        resolveFlat(StatId::Psych)
     };
 }
 

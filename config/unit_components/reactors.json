@@ -9,7 +9,6 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "persistence": "Continuous",
         "parameters": { "stat": "hit_points", "amount": 10, "op": "Add" }
       }
     ]
@@ -24,13 +23,11 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "persistence": "Continuous",
         "parameters": { "stat": "hit_points", "amount": 20, "op": "Add" }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "persistence": "Continuous",
         "parameters": { "stat": "cost_multiplier", "amount": 0.5, "op": "MultiplyGeometric" }
       }
     ]
@@ -45,13 +42,11 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "persistence": "Continuous",
         "parameters": { "stat": "hit_points", "amount": 30, "op": "Add" }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "persistence": "Continuous",
         "parameters": { "stat": "cost_multiplier", "amount": 0.25, "op": "MultiplyGeometric" }
       }
     ]

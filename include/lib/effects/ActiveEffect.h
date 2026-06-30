@@ -11,7 +11,9 @@ namespace ac
 class BaseManager;
 class BuildingRegistry;
 class Faction;
+class PopContainer;
 struct UnitComponentConfig_t;
+struct PopTypeConfig_t;
 
 struct ActiveEffect_t
 {
@@ -50,7 +52,20 @@ std::vector<ActiveEffect_t> FilterByStatId(const std::vector<ActiveEffect_t>& ef
 // Includes ThisBase effects originating from this base, plus all AllOwnerBases, FactionGlobal, and WorldGlobal effects.
 std::vector<ActiveEffect_t> FilterForBase(const std::vector<ActiveEffect_t>& effects, const BaseManager& rBase);
 
+// Returns effects whose scope matches exactly.
+std::vector<ActiveEffect_t> FilterByScope(const std::vector<ActiveEffect_t>& effects, EffectScope_t scope);
+
 // Collects all effects from a list of unit components as ActiveEffect_t instances.
 std::vector<ActiveEffect_t> CollectUnitEffects(const std::vector<const UnitComponentConfig_t*>& components);
+
+// Collects a single pop type's own effects (both ThisPop-scoped tile multipliers and
+// ThisBase-scoped flat generation bonuses). sourceId is the pop type's id.
+std::vector<ActiveEffect_t> CollectPopEffects(const PopTypeConfig_t& rConfig);
+
+// Collects the ThisBase-scoped flat generation effects from every pop in rPops, tagged
+// with rOriginBase so they can be merged into a base's active effects before resolving
+// production. ThisPop-scoped tile multiplier effects are excluded — those are resolved
+// locally by Pop::ApplyTileMultipliers and never enter the base-wide pool.
+std::vector<ActiveEffect_t> CollectFromPops(const PopContainer& rPops, const BaseManager& rOriginBase);
 
 } // namespace ac
