@@ -164,36 +164,6 @@ int ComputeWorkedResourceForImprovement_(
     return total;
 }
 
-int CalculateResourceWithTileYieldModifiers_(
-    const std::vector<ActiveEffect_t>& activeEffects,
-    StatId resourceId,
-    const WorkerAssignmentManager& workerAssignments,
-    const PopContainer& pops,
-    const Tile* pBaseTile)
-{
-    const TileResources_t worked = workerAssignments.ComputeWorkedResources();
-    const TileResources_t baseTile = ComputeBaseTileResources_(pBaseTile);
-
-    const int baseTileRaw = GetResourceValue_(baseTile, resourceId);
-    const double baseTileModified = ResolveTileYieldModifiers_(
-        FilterTileYieldModifiersBySelector_(activeEffects, resourceId, TileSelectorKind::BaseTile),
-        resourceId, baseTileRaw, 1);
-
-    int workedModifiedDelta = 0;
-    for (const ImprovementType improvement : {ImprovementType::Farm, ImprovementType::Condenser})
-    {
-        const std::string improvementId = ImprovementTypeToString_(improvement);
-        const int count = CountWorkedTilesWithImprovement_(workerAssignments, pops, improvementId);
-        const int raw = ComputeWorkedResourceForImprovement_(workerAssignments, pops, improvementId, resourceId);
-        const double modified = ResolveTileYieldModifiers_(
-            FilterTileYieldModifiersBySelectorAndImprovement_(activeEffects, resourceId, TileSelectorKind::HasImprovement, improvement),
-            resourceId, raw, count);
-        workedModifiedDelta += static_cast<int>(modified) - raw;
-    }
-
-    return GetResourceValue_(worked, resourceId) + static_cast<int>(baseTileModified) + workedModifiedDelta;
-}
-
 double ResolveTileYieldModifiers_(
     const std::vector<ActiveEffect_t>& effects,
     StatId resourceId,
@@ -245,6 +215,36 @@ double ResolveTileYieldModifiers_(
     }
 
     return ResolveStatModifiers(resolvedEffects).total;
+}
+
+int CalculateResourceWithTileYieldModifiers_(
+    const std::vector<ActiveEffect_t>& activeEffects,
+    StatId resourceId,
+    const WorkerAssignmentManager& workerAssignments,
+    const PopContainer& pops,
+    const Tile* pBaseTile)
+{
+    const TileResources_t worked = workerAssignments.ComputeWorkedResources();
+    const TileResources_t baseTile = ComputeBaseTileResources_(pBaseTile);
+
+    const int baseTileRaw = GetResourceValue_(baseTile, resourceId);
+    const double baseTileModified = ResolveTileYieldModifiers_(
+        FilterTileYieldModifiersBySelector_(activeEffects, resourceId, TileSelectorKind::BaseTile),
+        resourceId, baseTileRaw, 1);
+
+    int workedModifiedDelta = 0;
+    for (const ImprovementType improvement : {ImprovementType::Farm, ImprovementType::Condenser})
+    {
+        const std::string improvementId = ImprovementTypeToString_(improvement);
+        const int count = CountWorkedTilesWithImprovement_(workerAssignments, pops, improvementId);
+        const int raw = ComputeWorkedResourceForImprovement_(workerAssignments, pops, improvementId, resourceId);
+        const double modified = ResolveTileYieldModifiers_(
+            FilterTileYieldModifiersBySelectorAndImprovement_(activeEffects, resourceId, TileSelectorKind::HasImprovement, improvement),
+            resourceId, raw, count);
+        workedModifiedDelta += static_cast<int>(modified) - raw;
+    }
+
+    return GetResourceValue_(worked, resourceId) + static_cast<int>(baseTileModified) + workedModifiedDelta;
 }
 
 } // namespace

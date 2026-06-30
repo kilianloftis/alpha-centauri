@@ -5,12 +5,14 @@
     "type": "reactor",
     "required_tech": "",
     "mineral_cost": 0,
-    "stats": {
-      "hit_points":     { "base": 10 },
-      "cost_multiplier": { "geometric_mult": 1.0 }
-    },
-    "flags": {},
-    "bonus_tables": {}
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "persistence": "Continuous",
+        "parameters": { "stat": "hit_points", "amount": 10, "op": "Add" }
+      }
+    ]
   },
   {
     "id": "Fusion_Lab",
@@ -18,12 +20,20 @@
     "type": "reactor",
     "required_tech": "test_tech_1",
     "mineral_cost": 5,
-    "stats": {
-      "hit_points":     { "base": 20 },
-      "cost_multiplier": { "geometric_mult": 0.5 }
-    },
-    "flags": {},
-    "bonus_tables": {}
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "persistence": "Continuous",
+        "parameters": { "stat": "hit_points", "amount": 20, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "persistence": "Continuous",
+        "parameters": { "stat": "cost_multiplier", "amount": 0.5, "op": "MultiplyGeometric" }
+      }
+    ]
   },
   {
     "id": "Quantum_Chambers",
@@ -31,11 +41,19 @@
     "type": "reactor",
     "required_tech": "test_tech_2",
     "mineral_cost": 10,
-    "stats": {
-      "hit_points":     { "base": 30 },
-      "cost_multiplier": { "geometric_mult": 0.25 }
-    },
-    "flags": {},
-    "bonus_tables": {}
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "persistence": "Continuous",
+        "parameters": { "stat": "hit_points", "amount": 30, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "persistence": "Continuous",
+        "parameters": { "stat": "cost_multiplier", "amount": 0.25, "op": "MultiplyGeometric" }
+      }
+    ]
   }
 ]

@@ -79,7 +79,7 @@ int UnitDesign::GetBaseCost() const
     }
 
     const std::vector<ActiveEffect_t> allEffects = CollectUnitEffects(m_components);
-    const StatBreakdown_t breakdown = ResolveStatModifiers(FilterByStatId(allEffects, StatId::CostMultiplier));
+    const StatBreakdown_t breakdown = ResolveStatModifiers(FilterByStatId(allEffects, StatId::CostMultiplier), 1.0);
     const float costMult = breakdown.contributions.empty() ? 1.0f : static_cast<float>(breakdown.total);
 
     return static_cast<int>(rawCost * costMult);

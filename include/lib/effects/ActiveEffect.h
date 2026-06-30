@@ -37,7 +37,10 @@ struct StatBreakdown_t
 std::vector<ActiveEffect_t> CollectActiveEffects(const Faction& rFaction,
                                                   const BuildingRegistry& rBuildingRegistry);
 
-StatBreakdown_t ResolveStatModifiers(const std::vector<ActiveEffect_t>& matching);
+// baseValue seeds the additive total before contributions are summed — required for stats
+// that are resolved purely through multiplicative modifiers (e.g. CostMultiplier, which has
+// no Add contributions of its own and needs a base of 1.0 for MultiplyGeometric to act on).
+StatBreakdown_t ResolveStatModifiers(const std::vector<ActiveEffect_t>& matching, double baseValue = 0.0);
 
 // Returns effects whose target stat matches the given StatId.
 // Only includes StatModifierEffect_t instances.

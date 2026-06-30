@@ -105,7 +105,7 @@ std::vector<ActiveEffect_t> CollectActiveEffects(const Faction& rFaction,
     return result;
 }
 
-StatBreakdown_t ResolveStatModifiers(const std::vector<ActiveEffect_t>& matching)
+StatBreakdown_t ResolveStatModifiers(const std::vector<ActiveEffect_t>& matching, double baseValue)
 {
     StatBreakdown_t breakdown;
     breakdown.total = 0.0;
@@ -150,7 +150,7 @@ StatBreakdown_t ResolveStatModifiers(const std::vector<ActiveEffect_t>& matching
                   return a.sourceId < b.sourceId;
               });
 
-    double addTotal = 0.0;
+    double addTotal = baseValue;
     double arithmeticFactor = 1.0;
     double geometricFactor = 1.0;
 
@@ -201,11 +201,25 @@ std::vector<ActiveEffect_t> FilterForBase(const std::vector<ActiveEffect_t>& eff
         {
             continue;
         }
-        if (effect.config->scope == EffectScope_t::ThisBase && effect.originBase != &rBase)
+
+        switch (effect.config->scope)
         {
-            continue;
+            case EffectScope_t::ThisBase:
+                if (effect.originBase == &rBase)
+                {
+                    matching.push_back(effect);
+                }
+                break;
+            case EffectScope_t::AllOwnerBases:
+            case EffectScope_t::FactionGlobal:
+            case EffectScope_t::WorldGlobal:
+                matching.push_back(effect);
+                break;
+            case EffectScope_t::ThisUnit:
+            case EffectScope_t::FactionUnits:
+                // Unit-scoped effects never apply to base-level calculations.
+                break;
         }
-        matching.push_back(effect);
     }
     return matching;
 }

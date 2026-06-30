@@ -31,9 +31,6 @@ public:
     // All currently constructed buildings.
     const std::vector<const BuildingConfig_t*>& GetBuildings() const;
 
-    // Sum of GetNutrientsBonus() across all buildings.
-    int GetTotalNutrientsBonus() const;
-
     // Get a list of buildings that can be constructed at this base.
     // Discovered techs are read from the associated ResearchManager.
     // Base-local rules (allowMultiple, already built) are applied here.

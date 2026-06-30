@@ -5,11 +5,14 @@
     "type": "weapon",
     "required_tech": "",
     "mineral_cost": 0,
-    "stats": {
-      "attack": { "base": 1 }
-    },
-    "flags": {},
-    "bonus_tables": {}
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "persistence": "Continuous",
+        "parameters": { "stat": "attack", "amount": 1, "op": "Add" }
+      }
+    ]
   },
   {
     "id": "Laser",
@@ -17,11 +20,14 @@
     "type": "weapon",
     "required_tech": "test_tech_1",
     "mineral_cost": 5,
-    "stats": {
-      "attack": { "base": 2 }
-    },
-    "flags": {},
-    "bonus_tables": {}
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "persistence": "Continuous",
+        "parameters": { "stat": "attack", "amount": 2, "op": "Add" }
+      }
+    ]
   },
   {
     "id": "Missile_Weapons",
@@ -29,10 +35,13 @@
     "type": "weapon",
     "required_tech": "test_tech_2",
     "mineral_cost": 10,
-    "stats": {
-      "attack": { "base": 3 }
-    },
-    "flags": {},
-    "bonus_tables": {}
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "persistence": "Continuous",
+        "parameters": { "stat": "attack", "amount": 3, "op": "Add" }
+      }
+    ]
   }
 ]

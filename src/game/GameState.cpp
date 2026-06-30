@@ -56,7 +56,7 @@ const Faction* GameState::GetPlayerFaction() const
     return m_factions.empty() ? nullptr : m_factions[0].get();
 }
 
-Faction* GameState::GetPlayerFaction() const
+Faction* GameState::GetPlayerFaction()
 {
     return m_factions.empty() ? nullptr : m_factions[0].get();
 }

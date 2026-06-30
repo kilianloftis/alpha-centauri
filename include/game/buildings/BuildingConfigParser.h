@@ -4,16 +4,10 @@
 #include "lib/effects/BonusEffect.h"
 #include <nlohmann/json.hpp>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace ac
 {
-
-struct BuildingImprovementBonus_t
-{
-    int nutrients;
-};
 
 struct BuildingConfig_t : public IConstructable
 {
@@ -21,10 +15,8 @@ struct BuildingConfig_t : public IConstructable
     std::string name;
     int mineralCost;
     std::vector<std::string> requiredTechs;
-    int nutrientsBonus;
     bool allowMultiple;
     bool bIsSecretProject;
-    std::unordered_map<std::string, BuildingImprovementBonus_t> improvementBonuses;
     std::vector<EffectConfig_t> effects;
 
     const char* GetId() const override { return id.c_str(); }
@@ -55,7 +47,6 @@ public:
 private:
     std::vector<BuildingConfig_t> ParseFile_(const std::string& filePath);
     BuildingConfig_t ParseBuildingConfig(const nlohmann::json& buildingJson);
-    EffectConfig_t ParseBuildingEffect(const nlohmann::json& effectJson);
 };
 
 } // namespace ac

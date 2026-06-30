@@ -190,8 +190,35 @@ graph TB
   - `AddBuilding()` and `DestroyBuilding()` only mutate constructed buildings.
   - Granted buildings are not stored; they are discovered dynamically by the effects system.
 
+### BonusEffectParser
+
+- **Purpose**: Single shared implementation of the JSON `effects` array schema, used by every config parser that defines `EffectConfig_t` entries.
+- **Location**: `include/lib/effects/BonusEffectParser.h` / `src/lib/effects/BonusEffectParser.cpp`.
+- **Responsibilities**:
+  - `ParseStatId`, `ParseRuleFlagId`, `ParseModifierOp`, `ParseEffectScope`, `ParseEffectPersistence`, `ParseImprovementType` — the canonical string&lt;-&gt;enum mappings. These previously existed as separate, drifting copies in `BuildingConfigParser` and `UnitComponentConfigParser`.
+  - `ParseNumber` — reads a JSON field as either a number or a numeric string (used for `amount` and `value`).
+  - `ParseTileSelector` — parses a `TileSelector_t` from a `selector` JSON object.
+  - `ParseEffectConfig` — parses one entry of an `effects` array (`type`/`scope`/`persistence`/`condition`/`parameters`) into an `EffectConfig_t`. Covers every `EffectVariant_t` alternative, including `UnitBonusTableEffect_t` via the `UnitBonusTable` type.
+  - `ParseEffects` — parses the `effects` array of a containing JSON object, returning `{}` if absent.
+- **Consumers**: `BuildingConfigParser` and `UnitComponentConfigParser` both call `BonusEffectParser::ParseEffects` directly on the building/component JSON object — there is no per-domain effect schema anymore. Adding a new effect source (e.g. a future social-engineering or diplomacy parser) means calling the same function.
+
+### Unit Component Effects
+
+- Unit components (`config/unit_components/*.json`) use the exact same `effects` array shape as buildings — no more `stats`/`flags`/`bonus_tables` shorthand.
+- Every unit component effect uses `"scope": "ThisUnit"` explicitly.
+- A stat with a flat bonus (e.g. a weapon's base attack) is a `StatModifier` effect with `op: "Add"`. A percentage/multiplicative bonus uses `op: "MultiplyArithmetic"` or `op: "MultiplyGeometric"`.
+- A terrain/unit bonus table entry (e.g. `terrain_attack: Forest -> 25`) is a `UnitBonusTable` effect: `parameters: { table_name, key, value }`.
+- A unit rule flag (e.g. `flight`) is a `RuleFlag` effect; flags that don't apply are simply omitted rather than written as `false`.
+
 ## Design Rationale
 
 - **Typed effect structs**: Replace the previous string-keyed parameter map with strongly typed structs, making effect consumers type-safe and easier to extend.
 - **Static config vs. runtime instances**: `EffectConfig_t` lives in immutable configuration data; `ActiveEffect_t` records the runtime context (source, origin base).
-- **Moddability**: New effect types can be added by extending `EffectVariant_t` and adding a corresponding parser branch.
+- **Moddability**: New effect types can be added by extending `EffectVariant_t` and adding a corresponding parser branch in `BonusEffectParser`.
+- **One parser, every source**: `BonusEffectParser` is the single place that knows how to turn JSON into `EffectConfig_t`. Buildings and unit components only differ in which top-level fields they read (`mineral_cost`, `required_techs`, etc.) — the `effects` array itself is parsed identically everywhere.
+
+## Known Gaps
+
+- **`ResolveStatModifiers` needs a seeded base for pure-multiplier stats**: the formula `total = addTotal * arithmeticFactor * geometricFactor` starts `addTotal` at the caller-supplied `baseValue` (default `0.0`). Stats that are only ever modified via `MultiplyGeometric`/`MultiplyArithmetic` (no `Add` contribution) must pass `baseValue = 1.0`, or `total` resolves to `0`. `UnitDesign::GetBaseCost()` does this for `StatId::CostMultiplier`; any future pure-multiplier stat needs the same care.
+- **`FactionGlobal`/`WorldGlobal`-scoped `GrantBuildingEffect_t` loses per-base attribution**: when a faction-wide effect grants a building, the granted building's `ThisBase`-scoped effects inherit `originBase = nullptr` (since the granting effect has no origin base of its own) and are then dropped by `FilterForBase` for every base. Not exercised by current data, but will silently no-op the first secret project that grants a building with a per-base bonus.
+- **`BuildingConfig_t::IsDiscovered()` uses OR semantics**: a building becomes available once *any* listed `required_techs` entry is discovered, not all of them. May be intentional (alternate prerequisites) but is worth confirming against design intent.

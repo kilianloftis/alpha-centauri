@@ -50,16 +50,6 @@ const std::vector<const BuildingConfig_t*>& BuildingManager::GetBuildings() cons
     return m_buildings;
 }
 
-int BuildingManager::GetTotalNutrientsBonus() const
-{
-    int total = 0;
-    for (const BuildingConfig_t* pBuilding : m_buildings)
-    {
-        total += pBuilding->nutrientsBonus;
-    }
-    return total;
-}
-
 std::vector<const BuildingConfig_t*> BuildingManager::GetBuildingsAvailableForConstruction() const
 {
     std::vector<const BuildingConfig_t*> available;

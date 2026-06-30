@@ -20,26 +20,15 @@ Each file must be a JSON array of building objects. Any number of files may coex
 | `required_techs` | string[] | No | `[]` | Building is available when **any** listed tech is discovered |
 | `allow_multiple` | bool | No | `false` | If true, a base may build more than one copy |
 | `secret_project` | bool | No | `false` | If true, only one faction in the world may own this building |
-| `nutrients_bonus` | int | No | `0` | Flat nutrients added to this base each turn |
-| `improvement_bonuses` | object | No | `{}` | Per-improvement nutrient bonuses (see below) |
 | `effects` | Effect[] | No | `[]` | Structured list of gameplay effects (see below) |
 
-### `improvement_bonuses`
-
-Keys are improvement type names (e.g. `"Farm"`, `"Condenser"`). Each value is an object with a `nutrients` int.
-
-```json
-"improvement_bonuses": {
-  "Farm":      { "nutrients": 1 },
-  "Condenser": { "nutrients": 2 }
-}
-```
+A flat per-turn bonus (the old `nutrients_bonus`) is a `StatModifier` effect with `scope: "ThisBase"`. A per-improvement bonus (the old `improvement_bonuses`) is a `TileYieldModifier` effect with a `HasImprovement` selector — see Effect Types below.
 
 ---
 
 ## Effects
 
-Each entry in `effects` describes a single gameplay effect applied when the building is present.
+Each entry in `effects` describes a single gameplay effect applied when the building is present. All `effects` arrays — for buildings, unit components, and any future effect source — are parsed by the single shared `BonusEffectParser` (`include/lib/effects/BonusEffectParser.h`), so the schema below applies everywhere, not just to buildings.
 
 | Field | Type | Required | Default | Description |
 |---|---|---|---|---|
@@ -56,10 +45,27 @@ Each entry in `effects` describes a single gameplay effect applied when the buil
 | `GrantBuilding` | Instantly grants another building by ID (`parameters.building_id`) |
 | `GrantTech` | Instantly grants a technology by ID (`parameters.tech_id`) |
 | `GrantUnit` | Spawns a unit (`parameters.unit_design_id`) |
-| `StatModifier` | Adds or multiplies a named stat (`parameters.stat`, `parameters.amount`) |
+| `StatModifier` | Adds or multiplies a named stat (`parameters.stat`, `parameters.amount`, `parameters.op`) |
 | `RuleFlag` | Enables a named gameplay rule (`parameters.flag`) |
 | `SocialEngineeringOverride` | Forces a social engineering value (`parameters.category`, `parameters.value`) |
-| `DiplomaticModifier` | Adjusts diplomatic standing (`parameters.target`, `parameters.amount`) |
+| `DiplomaticModifier` | Adjusts diplomatic standing (`parameters.target_faction_id`, `parameters.value`) |
+| `TileYieldModifier` | Modifies the yield of selected tiles (`parameters.resource`, `parameters.selector`, `parameters.amount`, `parameters.op`) — see below |
+| `UnitBonusTable` | Adds an entry to a named unit bonus table (`parameters.table_name`, `parameters.key`, `parameters.value`) — used by unit components |
+
+`amount`/`value` accept either a JSON number or a numeric string. `op` is one of `Add`, `MultiplyArithmetic`, `MultiplyGeometric` (defaults to `Add`).
+
+#### `TileYieldModifier` selector
+
+```json
+"parameters": {
+  "resource": "nutrients",
+  "selector": { "kind": "HasImprovement", "improvement": "Farm" },
+  "amount": 1,
+  "op": "Add"
+}
+```
+
+`selector.kind` is `BaseTile` (the base's own tile; no `improvement` needed) or `HasImprovement` (any worked tile with the given `selector.improvement`, e.g. `Farm`/`Condenser`).
 
 ### Scopes
 
@@ -67,6 +73,7 @@ Each entry in `effects` describes a single gameplay effect applied when the buil
 |---|---|
 | `ThisBase` | Only the base that built this building |
 | `AllOwnerBases` | Every base the owning faction controls |
+| `ThisUnit` | Only the unit the component belongs to (unit component effects only) |
 | `FactionUnits` | Every unit the owning faction controls |
 | `FactionGlobal` | A faction-wide capability, not tied to a specific base or unit |
 | `WorldGlobal` | Affects every faction, not just the owner |

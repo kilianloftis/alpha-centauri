@@ -2,11 +2,6 @@
   {
     "id": "Nutrient_Bank",
     "name": "Nutrient Bank",
-    "nutrients_bonus": 2,
-    "improvement_bonuses": {
-      "Farm": { "nutrients": 1 },
-      "Condenser": { "nutrients": 2 }
-    },
     "mineral_cost": 10,
     "required_techs": ["test_tech_1"],
     "effects": [
@@ -15,14 +10,34 @@
         "scope": "ThisBase",
         "persistence": "Continuous",
         "parameters": { "stat": "nutrients", "amount": "2" }
+      },
+      {
+        "type": "TileYieldModifier",
+        "scope": "ThisBase",
+        "persistence": "Continuous",
+        "parameters": {
+          "resource": "nutrients",
+          "selector": { "kind": "HasImprovement", "improvement": "Farm" },
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "TileYieldModifier",
+        "scope": "ThisBase",
+        "persistence": "Continuous",
+        "parameters": {
+          "resource": "nutrients",
+          "selector": { "kind": "HasImprovement", "improvement": "Condenser" },
+          "amount": 2,
+          "op": "Add"
+        }
       }
     ]
   },
   {
     "id": "Recycling_Tanks",
     "name": "Recycling Tanks",
-    "nutrients_bonus": 1,
-    "improvement_bonuses": {},
     "mineral_cost": 5,
     "required_techs": ["test_tech_2"],
     "effects": [
