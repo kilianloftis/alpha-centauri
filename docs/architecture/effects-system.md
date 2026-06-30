@@ -71,16 +71,19 @@ graph TB
   - `SocialEngineeringOverrideEffect_t`
   - `DiplomaticModifierEffect_t`
   - `TileYieldModifierEffect_t`
+  - `UnitBonusTableEffect_t`
 
 ### StatModifierEffect_t
-- **Purpose**: Modifies a base stat (e.g. `Nutrients`, `Minerals`, `Energy`, `Power`).
+- **Purpose**: Modifies any stat identified by `StatId` — both base resources and unit stats.
 - **Responsibilities**:
   - Identifies the target stat via `StatId`.
   - Stores an `amount` and a `ModifierOp`.
 
 ### StatId
-- **Purpose**: Identifies a stat or resource. Defined in `include/lib/effects/StatId.h` so it can be shared across the game and effects systems.
-- **Values**: `Nutrients`, `Minerals`, `Energy`, `Power` (extend as more stats are defined).
+- **Purpose**: Identifies a stat or resource. Defined in `include/lib/effects/EffectEnums.h` so it can be shared across the game and effects systems.
+- **Values**:
+  - Base resources: `Nutrients`, `Minerals`, `Energy`.
+  - Unit stats: `Attack`, `Defense`, `Movement`, `HitPoints`, `DisengageChance`, `Fuel`, `DamageFromOutOfFuel`, `CargoCapacity`, `DifficultTerrainCost`, `CostMultiplier`.
 - **Consumers**: `StatModifierEffect_t::stat` and `TileYieldModifierEffect_t::resource`.
 
 ### ImprovementType
@@ -100,12 +103,29 @@ graph TB
   - Selects target tiles via `TileSelector_t`.
   - Applies an `amount` with a `ModifierOp`.
 
+### UnitBonusTableEffect_t
+- **Purpose**: Adds an entry to a named bonus table for a unit (e.g. terrain attack bonuses).
+- **Responsibilities**:
+  - Identifies the table by `tableName` (e.g. `terrain_attack`).
+  - Specifies the `key` within the table (e.g. `Forest`).
+  - Contributes a `value` that is summed with other matching entries.
+
 ### ModifierOp
 - **Purpose**: Describes how a stat modifier combines with the running total.
 - **Values**:
   - `Add` — adds the amount to the additive base.
   - `MultiplyArithmetic` — treats the amount as a percentage factor relative to the additive base; all arithmetic factors are summed before the geometric step.
   - `MultiplyGeometric` — multiplies the running total by the amount.
+
+### EffectScope_t
+- **Purpose**: Describes which entities an effect applies to.
+- **Values**:
+  - `ThisBase` — only the base the building is constructed in.
+  - `AllOwnerBases` — every base owned by the faction.
+  - `ThisUnit` — only the unit the component belongs to (all unit component effects use this scope).
+  - `FactionUnits` — all units owned by the faction.
+  - `FactionGlobal` — the whole faction.
+  - `WorldGlobal` — all factions.
 
 ### ActiveEffect_t
 - **Purpose**: A runtime instance of an effect tied to a specific source.

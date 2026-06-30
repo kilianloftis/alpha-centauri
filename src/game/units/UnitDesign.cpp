@@ -1,4 +1,6 @@
 #include "game/units/UnitDesign.h"
+#include "lib/effects/ActiveEffect.h"
+#include "lib/effects/BonusEffect.h"
 #include <stdexcept>
 #include <sstream>
 
@@ -70,49 +72,30 @@ const UnitComponentConfig_t* UnitDesign::GetComponentForSlot(const std::string& 
 int UnitDesign::GetBaseCost() const
 {
     int rawCost = 0;
-    float costMult = 1.0f;
-
     for (const auto& [rSlot, pComp] : m_slotComponents)
     {
         if (!pComp) continue;
         rawCost += static_cast<int>(pComp->mineralCost * rSlot.costModifier);
-
-        auto it = pComp->stats.find("cost_multiplier");
-        if (it != pComp->stats.end())
-        {
-            costMult *= it->second.geometricMult;
-        }
     }
+
+    const std::vector<ActiveEffect_t> allEffects = CollectUnitEffects(m_components);
+    const StatBreakdown_t breakdown = ResolveStatModifiers(FilterByStatId(allEffects, StatId::CostMultiplier));
+    const float costMult = breakdown.contributions.empty() ? 1.0f : static_cast<float>(breakdown.total);
 
     return static_cast<int>(rawCost * costMult);
 }
 
-float UnitDesign::ResolveStat_(const std::string& rStatName) const
+float UnitDesign::ResolveStat_(StatId statId) const
 {
-    float base = 0.0f;
-    float additive = 0.0f;
-    float geometric = 1.0f;
-
-    for (const UnitComponentConfig_t* pComp : m_components)
-    {
-        auto it = pComp->stats.find(rStatName);
-        if (it != pComp->stats.end())
-        {
-            base     += it->second.base;
-            additive += it->second.additiveMult;
-            geometric *= it->second.geometricMult;
-        }
-    }
-
-    return base * (1.0f + additive) * geometric;
+    return static_cast<float>(ResolveStatModifiers(FilterByStatId(CollectUnitEffects(m_components), statId)).total);
 }
 
-bool UnitDesign::ResolveFlag_(const std::string& rFlagName) const
+bool UnitDesign::ResolveFlag_(RuleFlagId flagId) const
 {
-    for (const UnitComponentConfig_t* pComp : m_components)
+    for (const ActiveEffect_t& rEffect : CollectUnitEffects(m_components))
     {
-        auto it = pComp->flags.find(rFlagName);
-        if (it != pComp->flags.end() && it->second)
+        const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.config->effect);
+        if (pFlag && pFlag->flag == flagId)
         {
             return true;
         }
@@ -123,33 +106,28 @@ bool UnitDesign::ResolveFlag_(const std::string& rFlagName) const
 std::unordered_map<std::string, float> UnitDesign::ResolveBonusTable_(const std::string& rTableName) const
 {
     std::unordered_map<std::string, float> result;
-
-    for (const UnitComponentConfig_t* pComp : m_components)
+    for (const ActiveEffect_t& rEffect : CollectUnitEffects(m_components))
     {
-        auto tableIt = pComp->bonusTables.find(rTableName);
-        if (tableIt != pComp->bonusTables.end())
+        const UnitBonusTableEffect_t* pBonus = std::get_if<UnitBonusTableEffect_t>(&rEffect.config->effect);
+        if (pBonus && pBonus->tableName == rTableName)
         {
-            for (const auto& [key, val] : tableIt->second)
-            {
-                result[key] += val;
-            }
+            result[pBonus->key] += pBonus->value;
         }
     }
-
     return result;
 }
 
-int UnitDesign::GetAttack() const               { return static_cast<int>(ResolveStat_("attack")); }
-int UnitDesign::GetDefense() const              { return static_cast<int>(ResolveStat_("defense")); }
-int UnitDesign::GetMovement() const             { return static_cast<int>(ResolveStat_("movement")); }
-int UnitDesign::GetHitPoints() const            { return static_cast<int>(ResolveStat_("hit_points")); }
-int UnitDesign::GetDisengageChance() const      { return static_cast<int>(ResolveStat_("disengage_chance")); }
-int UnitDesign::GetFuel() const                 { return static_cast<int>(ResolveStat_("fuel")); }
-int UnitDesign::GetDamageFromOutOfFuel() const  { return static_cast<int>(ResolveStat_("damage_from_out_of_fuel")); }
-bool UnitDesign::IsFlight() const               { return ResolveFlag_("flight"); }
-int UnitDesign::GetCargoCapacity() const        { return static_cast<int>(ResolveStat_("cargo_capacity")); }
-int UnitDesign::GetDifficultTerrainCost() const { return static_cast<int>(ResolveStat_("difficult_terrain_cost")); }
-bool UnitDesign::IsSingleUse() const            { return ResolveFlag_("single_use"); }
+int UnitDesign::GetAttack() const               { return static_cast<int>(ResolveStat_(StatId::Attack)); }
+int UnitDesign::GetDefense() const              { return static_cast<int>(ResolveStat_(StatId::Defense)); }
+int UnitDesign::GetMovement() const             { return static_cast<int>(ResolveStat_(StatId::Movement)); }
+int UnitDesign::GetHitPoints() const            { return static_cast<int>(ResolveStat_(StatId::HitPoints)); }
+int UnitDesign::GetDisengageChance() const      { return static_cast<int>(ResolveStat_(StatId::DisengageChance)); }
+int UnitDesign::GetFuel() const                 { return static_cast<int>(ResolveStat_(StatId::Fuel)); }
+int UnitDesign::GetDamageFromOutOfFuel() const  { return static_cast<int>(ResolveStat_(StatId::DamageFromOutOfFuel)); }
+bool UnitDesign::IsFlight() const               { return ResolveFlag_(RuleFlagId::Flight); }
+int UnitDesign::GetCargoCapacity() const        { return static_cast<int>(ResolveStat_(StatId::CargoCapacity)); }
+int UnitDesign::GetDifficultTerrainCost() const { return static_cast<int>(ResolveStat_(StatId::DifficultTerrainCost)); }
+bool UnitDesign::IsSingleUse() const            { return ResolveFlag_(RuleFlagId::SingleUse); }
 
 std::unordered_map<std::string, float> UnitDesign::GetTerrainAttackBonus() const
 {

@@ -3,6 +3,7 @@
 #include "game/IConstructable.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitSlotConfig.h"
+#include "lib/effects/EffectEnums.h"
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -40,8 +41,8 @@ public:
     std::unordered_map<std::string, float> GetTerrainAttackBonus() const;
 
 private:
-    float ResolveStat_(const std::string& rStatName) const;
-    bool ResolveFlag_(const std::string& rFlagName) const;
+    float ResolveStat_(StatId statId) const;
+    bool ResolveFlag_(RuleFlagId flagId) const;
     std::unordered_map<std::string, float> ResolveBonusTable_(const std::string& rTableName) const;
 
     std::string m_id;

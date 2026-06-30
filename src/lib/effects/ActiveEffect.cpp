@@ -6,6 +6,7 @@
 #include "game/faction/SocialEngineeringManager.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/social-engineering/SocialPolicyConfig.h"
+#include "game/units/UnitComponentConfig.h"
 #include "lib/effects/BonusEffect.h"
 #include <algorithm>
 #include <set>
@@ -207,6 +208,26 @@ std::vector<ActiveEffect_t> FilterForBase(const std::vector<ActiveEffect_t>& eff
         matching.push_back(effect);
     }
     return matching;
+}
+
+std::vector<ActiveEffect_t> CollectUnitEffects(const std::vector<const UnitComponentConfig_t*>& components)
+{
+    std::vector<ActiveEffect_t> result;
+    for (const UnitComponentConfig_t* pComp : components)
+    {
+        if (!pComp)
+        {
+            continue;
+        }
+        for (const EffectConfig_t& rEffect : pComp->effects)
+        {
+            ActiveEffect_t active;
+            active.config = &rEffect;
+            active.sourceId = pComp->id;
+            result.push_back(active);
+        }
+    }
+    return result;
 }
 
 } // namespace ac

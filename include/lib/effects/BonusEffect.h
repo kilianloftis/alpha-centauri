@@ -1,6 +1,6 @@
 #pragma once
 
-#include "lib/effects/StatId.h"
+#include "lib/effects/EffectEnums.h"
 
 #include <optional>
 #include <string>
@@ -20,6 +20,7 @@ enum class EffectScope_t
 {
     ThisBase,
     AllOwnerBases,
+    ThisUnit,
     FactionUnits,
     FactionGlobal,
     WorldGlobal,
@@ -62,7 +63,7 @@ struct StatModifierEffect_t
 
 struct RuleFlagEffect_t
 {
-    std::string flag;
+    RuleFlagId flag;
 };
 
 struct SocialEngineeringOverrideEffect_t
@@ -99,6 +100,13 @@ struct TileYieldModifierEffect_t
     ModifierOp op;
 };
 
+struct UnitBonusTableEffect_t
+{
+    std::string tableName;
+    std::string key;
+    float value = 0.0f;
+};
+
 using EffectVariant_t = std::variant<
     GrantBuildingEffect_t,
     GrantTechEffect_t,
@@ -107,7 +115,8 @@ using EffectVariant_t = std::variant<
     RuleFlagEffect_t,
     SocialEngineeringOverrideEffect_t,
     DiplomaticModifierEffect_t,
-    TileYieldModifierEffect_t
+    TileYieldModifierEffect_t,
+    UnitBonusTableEffect_t
 >;
 
 struct EffectConfig_t

@@ -11,6 +11,7 @@ namespace ac
 class BaseManager;
 class BuildingRegistry;
 class Faction;
+struct UnitComponentConfig_t;
 
 struct ActiveEffect_t
 {
@@ -45,5 +46,8 @@ std::vector<ActiveEffect_t> FilterByStatId(const std::vector<ActiveEffect_t>& ef
 // Returns effects that apply to the given base.
 // Includes ThisBase effects originating from this base, plus all AllOwnerBases, FactionGlobal, and WorldGlobal effects.
 std::vector<ActiveEffect_t> FilterForBase(const std::vector<ActiveEffect_t>& effects, const BaseManager& rBase);
+
+// Collects all effects from a list of unit components as ActiveEffect_t instances.
+std::vector<ActiveEffect_t> CollectUnitEffects(const std::vector<const UnitComponentConfig_t*>& components);
 
 } // namespace ac

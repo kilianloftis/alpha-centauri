@@ -25,6 +25,14 @@ StatId ParseStatId(const std::string& statStr)
     throw std::runtime_error("Unknown stat id: '" + statStr + "'");
 }
 
+RuleFlagId ParseRuleFlagId(const std::string& rFlag)
+{
+    if (rFlag == "population_boom") return RuleFlagId::PopulationBoom;
+    if (rFlag == "flight")          return RuleFlagId::Flight;
+    if (rFlag == "single_use")      return RuleFlagId::SingleUse;
+    throw std::runtime_error("Unknown rule flag id: '" + rFlag + "'");
+}
+
 } // namespace
 
 BuildingConfigParser::BuildingConfigParser()
@@ -192,7 +200,7 @@ EffectConfig_t BuildingConfigParser::ParseBuildingEffect(const nlohmann::json& e
     else if (typeStr == "RuleFlag")
     {
         RuleFlagEffect_t ruleFlag;
-        ruleFlag.flag = parameters.value("flag", "");
+        ruleFlag.flag = ParseRuleFlagId(parameters.at("flag").get<std::string>());
         effect.effect = ruleFlag;
     }
     else if (typeStr == "SocialEngineeringOverride")
