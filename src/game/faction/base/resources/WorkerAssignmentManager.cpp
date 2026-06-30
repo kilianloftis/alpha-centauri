@@ -1,6 +1,8 @@
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopContainer.h"
+#include "game/map/ImprovementRegistry.h"
 #include "game/map/Tile.h"
+#include "lib/effects/ActiveEffect.h"
 #include <algorithm>
 
 namespace ac
@@ -16,15 +18,16 @@ constexpr bool IsUnassignedTile(const Tile* pTile)
 
 } // namespace
 
-WorkerAssignmentManager::WorkerAssignmentManager(std::vector<const Tile*> workableTiles, PopContainer& rPops)
+WorkerAssignmentManager::WorkerAssignmentManager(std::vector<const Tile*> workableTiles, PopContainer& rPops,
+                                                 const ImprovementRegistry& rImprovements)
     : m_workableTiles(std::move(workableTiles))
-    , m_scorer([](const Tile& rTile) -> float
+    , m_scorer([this](const Tile& rTile) -> float
       {
-          return static_cast<float>(rTile.GetNutrientProduction()
-                                   + rTile.GetEnergyProduction()
-                                   + rTile.GetMineralProduction());
+          const TileResources_t yield = ResolveTileYield(rTile, m_rImprovements);
+          return static_cast<float>(yield.nutrients + yield.energy + yield.minerals);
       })
     , m_rPops(rPops)
+    , m_rImprovements(rImprovements)
 {
 }
 
@@ -143,11 +146,7 @@ TileResources_t WorkerAssignmentManager::ComputeWorkedResources() const
             continue;
         }
 
-        const TileResources_t raw{
-            pTile->GetNutrientProduction(),
-            pTile->GetEnergyProduction(),
-            pTile->GetMineralProduction()
-        };
+        const TileResources_t raw = ResolveTileYield(*pTile, m_rImprovements);
         const TileResources_t modified = pPop->ApplyTileMultipliers(raw);
 
         total.nutrients += modified.nutrients;

@@ -1,0 +1,131 @@
+[
+  {
+    "id": "Flat",
+    "name": "Flat",
+    "effects": []
+  },
+  {
+    "id": "Rolling",
+    "name": "Rolling",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "minerals", "amount": 1, "op": "Add" }
+      }
+    ]
+  },
+  {
+    "id": "Rocky",
+    "name": "Rocky",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "minerals", "amount": 2, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "defense", "amount": 1.25, "op": "MultiplyArithmetic" }
+      }
+    ]
+  },
+  {
+    "id": "Arid",
+    "name": "Arid",
+    "effects": []
+  },
+  {
+    "id": "Moist",
+    "name": "Moist",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" }
+      }
+    ]
+  },
+  {
+    "id": "Wet",
+    "name": "Wet",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "nutrients", "amount": 2, "op": "Add" }
+      }
+    ]
+  },
+  {
+    "id": "River",
+    "name": "River",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "energy", "amount": 1, "op": "Add" }
+      }
+    ]
+  },
+  {
+    "id": "Fungus",
+    "name": "Fungus",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "defense", "amount": 1.25, "op": "MultiplyArithmetic" }
+      }
+    ]
+  },
+  {
+    "id": "Farm",
+    "name": "Farm",
+    "mineral_cost": 5,
+    "excludes": ["Rocky"],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" }
+      }
+    ]
+  },
+  {
+    "id": "Mine",
+    "name": "Mine",
+    "mineral_cost": 10,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "minerals", "amount": 2, "op": "Add" }
+      }
+    ]
+  },
+  {
+    "id": "Bunker",
+    "name": "Bunker",
+    "mineral_cost": 10,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "defense", "amount": 1.25, "op": "MultiplyArithmetic" }
+      }
+    ]
+  },
+  {
+    "id": "Base",
+    "name": "Base",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "defense", "amount": 2.0, "op": "MultiplyArithmetic" }
+      }
+    ]
+  }
+]

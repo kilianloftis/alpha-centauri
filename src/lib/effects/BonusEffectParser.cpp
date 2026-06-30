@@ -53,6 +53,7 @@ EffectScope_t ParseEffectScope(const std::string& rScope)
     if (rScope == "FactionGlobal")   return EffectScope_t::FactionGlobal;
     if (rScope == "WorldGlobal")     return EffectScope_t::WorldGlobal;
     if (rScope == "ThisPop")         return EffectScope_t::ThisPop;
+    if (rScope == "ThisTile")        return EffectScope_t::ThisTile;
     throw std::runtime_error("Unknown effect scope: '" + rScope + "'");
 }
 

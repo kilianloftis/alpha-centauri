@@ -27,6 +27,10 @@ enum class EffectScope_t
     // Only the specific pop instance the effect belongs to. Resolved locally by Pop
     // (e.g. ApplyTileMultipliers) and must never enter the base-wide active effects pool.
     ThisPop,
+    // Only the specific tile the effect belongs to (terrain classification, river, fungus,
+    // landmark, or improvement). Resolved locally via CollectTileEffects/ResolveTileYield/
+    // ResolveTileDefenseMultiplier and must never enter the base-wide active effects pool.
+    ThisTile,
 };
 
 enum class EffectPersistence_t

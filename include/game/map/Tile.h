@@ -21,6 +21,11 @@ enum class Moisture
     Wet
 };
 
+// String ids matching ImprovementConfig_t::id entries in config/improvements.json,
+// used to look up effects/exclusivity for these terrain classifications.
+std::string ToString(Rockiness rockiness);
+std::string ToString(Moisture moisture);
+
 class Tile
 {
 public:
@@ -41,14 +46,18 @@ public:
     void SetElevation(int elevation);  // in meters, range -4000 to 4000
     int GetElevation() const;
 
-    // Resource production calculated from terrain
-    int GetNutrientProduction() const;
-    int GetMineralProduction() const;
-    int GetEnergyProduction() const;
+    // Raw energy seed derived purely from elevation. River/Fungus/improvement bonuses are
+    // resolved separately via the effects system (see CollectTileEffects/ResolveTileYield)
+    // and layered on top of this seed.
+    int GetElevationEnergySeed() const;
 
     // Rivers
     void SetHasRiver(bool bHasRiver);
     bool GetHasRiver() const;
+
+    // Fungus (alien vegetation; presence-only for now, spreading is a future enhancement)
+    void SetHasFungus(bool bHasFungus);
+    bool GetHasFungus() const;
 
     // Landmarks
     void SetLandmark(const std::string& landmarkId);
@@ -56,7 +65,8 @@ public:
     bool HasLandmark() const;
     const std::string& GetLandmark() const;
 
-    // Improvements
+    // Improvements (player-built, e.g. "Farm", "Mine", "Bunker" - also gains "Base" when a
+    // base is founded here, see BaseManager)
     void AddImprovement(const std::string& improvementId);
     void RemoveImprovement(const std::string& improvementId);
     bool HasImprovement(const std::string& improvementId) const;
@@ -79,6 +89,13 @@ public:
     void SetWorked(bool bWorked) const;
     bool IsWorked() const;
 
+    // Every feature id active on this tile: rockiness, moisture, river, fungus, landmark,
+    // and improvements. Used by CollectTileEffects/CanBuildImprovement to look entries up
+    // in the ImprovementRegistry - rockiness/moisture/river/fungus are properties of the
+    // terrain itself, but for effects/exclusivity purposes they're looked up the exact same
+    // way as a player-built improvement.
+    std::vector<std::string> GetFeatureIds() const;
+
 private:
     int m_x;
     int m_y;
@@ -88,6 +105,7 @@ private:
     int m_elevation;
 
     bool m_bHasRiver;
+    bool m_bHasFungus;
 
     std::string m_landmark;
     std::vector<std::string> m_improvements;
@@ -95,14 +113,6 @@ private:
 
     mutable bool m_bWorked;  // true when a Pop is assigned to this tile
     int m_workedByBaseId;  // -1 if unworked
-
-    int CalculateBonusNutrients_() const;
-    int CalculateBonusMinerals_() const;
-    int CalculateBonusEnergy_() const;
-
-    int CalculateNutrients_() const;
-    int CalculateMinerals_() const;
-    int CalculateEnergy_() const;
 };
 
 } // namespace ac

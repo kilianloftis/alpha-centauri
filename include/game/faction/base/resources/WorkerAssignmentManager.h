@@ -10,6 +10,7 @@ namespace ac
 
 class PopContainer;
 class Tile;
+class ImprovementRegistry;
 
 // Manages the mapping of worker pops to workable tiles for a single base.
 // Workers are Pop instances that return true from Pop::IsWorker().
@@ -20,7 +21,8 @@ class Tile;
 class WorkerAssignmentManager
 {
 public:
-    explicit WorkerAssignmentManager(std::vector<const Tile*> workableTiles, PopContainer& rPops);
+    WorkerAssignmentManager(std::vector<const Tile*> workableTiles, PopContainer& rPops,
+                             const ImprovementRegistry& rImprovements);
     ~WorkerAssignmentManager() = default;
 
     using TileScorer = std::function<float(const Tile&)>;
@@ -95,6 +97,7 @@ private:
     std::vector<const Tile*> m_workableTiles;
     TileScorer m_scorer;
     PopContainer& m_rPops;
+    const ImprovementRegistry& m_rImprovements;
     Pop* m_pLastAssigned = nullptr;
 };
 

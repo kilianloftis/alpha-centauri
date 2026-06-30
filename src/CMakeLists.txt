@@ -52,8 +52,10 @@ add_executable(alpha-centauri
     game/research/TechConfigParser.cpp
     game/social-engineering/SocialPolicyConfigParser.cpp
     game/map/Tile.cpp
+    game/map/TileLayerResolver.cpp
     game/map/UnitPositionIndex.cpp
     game/map/TileBonusConfigParser.cpp
+    game/map/ImprovementConfigParser.cpp
     game/map/WorldMap.cpp
     game/map/WorldGenerator.cpp
     game/stages/TurnStart.cpp

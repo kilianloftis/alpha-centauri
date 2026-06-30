@@ -63,7 +63,7 @@ void Faction::AddBase(std::unique_ptr<BaseManager> pBase)
     }
 }
 
-BaseManager* Faction::CreateBase(FactionId factionId, int baseId, const std::string& name, const Tile* pTile,
+BaseManager* Faction::CreateBase(FactionId factionId, int baseId, const std::string& name, Tile* pTile,
                                   const GameDataContext& rDataContext,
                                   const WorldMap& rWorldMap)
 {
@@ -78,7 +78,8 @@ BaseManager* Faction::CreateBase(FactionId factionId, int baseId, const std::str
         m_pEconomy.get(),
         rDataContext.productionCostCalculator.get(),
         rDataContext.growthCalculator.get(),
-        rDataContext.secretProjectAvailabilityCalculator.get());
+        rDataContext.secretProjectAvailabilityCalculator.get(),
+        rDataContext.improvementRegistry.get());
     pBase->SetFactionId(factionId);
     pBase->SetBaseId(baseId);
     pBase->SetName(name);

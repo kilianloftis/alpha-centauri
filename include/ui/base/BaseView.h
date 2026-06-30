@@ -18,6 +18,7 @@ class PopulationDisplay;
 struct PopTypeConfig_t;
 class Tile;
 class WorldMap;
+class ImprovementRegistry;
 
 class BaseView : public IGameView
 {
@@ -25,6 +26,7 @@ public:
     BaseView(
         BaseManager& rBase,
         const Faction& rFaction,
+        const ImprovementRegistry& rImprovements,
         WindowLayout_t layout
     );
     ~BaseView();

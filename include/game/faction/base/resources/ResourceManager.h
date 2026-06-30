@@ -13,6 +13,7 @@ class WorkerAssignmentManager;
 class EconomyManager;
 class BuildingManager;
 class Tile;
+class ImprovementRegistry;
 
 // ResourceManager calculates and caches resource production for a base.
 // It is owned by BaseManager and holds const pointers to the managers it reads from.
@@ -24,7 +25,8 @@ public:
         const WorkerAssignmentManager* pWorkerAssignments,
         const EconomyManager* pEconomy,
         const BuildingManager* pBuildings,
-        const Tile* pBaseTile);
+        const Tile* pBaseTile,
+        const ImprovementRegistry* pImprovements);
     ~ResourceManager();
 
     // Resource production per turn (calculated live from current state).
@@ -53,6 +55,7 @@ private:
     const EconomyManager* m_pEconomy;
     const BuildingManager* m_pBuildings;
     const Tile* m_pBaseTile;
+    const ImprovementRegistry* m_pImprovements;
     std::vector<ActiveEffect_t> m_activeEffects;
     int m_nutrients = 0;
     int m_minerals = 0;

@@ -37,7 +37,7 @@ public:
 
     // Base management
     void AddBase(std::unique_ptr<BaseManager> pBase);
-    BaseManager* CreateBase(FactionId factionId, int baseId, const std::string& name, const Tile* pTile,
+    BaseManager* CreateBase(FactionId factionId, int baseId, const std::string& name, Tile* pTile,
                             const GameDataContext& rDataContext,
                             const WorldMap& rWorldMap);
     BaseManager* GetBase(size_t index);

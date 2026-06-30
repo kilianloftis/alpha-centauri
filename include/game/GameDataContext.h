@@ -22,6 +22,7 @@ struct ProductionCostConfig_t;
 class ProductionCostCalculator;
 class PopTypeAvailabilityCalculator;
 class SecretProjectAvailabilityCalculator;
+class ImprovementRegistry;
 
 // Holds all immutable definition data loaded once at startup.
 // Never serialised — always reconstructible from config files.
@@ -47,6 +48,7 @@ struct GameDataContext
     std::unique_ptr<ProductionCostCalculator> productionCostCalculator;
     std::unique_ptr<PopTypeAvailabilityCalculator> popTypeAvailabilityCalculator;
     std::unique_ptr<SecretProjectAvailabilityCalculator> secretProjectAvailabilityCalculator;
+    std::unique_ptr<ImprovementRegistry> improvementRegistry;
 };
 
 } // namespace ac

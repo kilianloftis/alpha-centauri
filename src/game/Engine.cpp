@@ -12,6 +12,7 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/map/ImprovementRegistry.h"
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitSlotRegistry.h"
 #include "game/research/TechRegistry.h"
@@ -117,6 +118,9 @@ void Engine::Initialize_()
 
     m_gameDataContext->buildingRegistry = std::make_unique<BuildingRegistry>();
     m_gameDataContext->buildingRegistry->Load("config/buildings");
+
+    m_gameDataContext->improvementRegistry = std::make_unique<ImprovementRegistry>();
+    m_gameDataContext->improvementRegistry->Load("config/improvements.json");
 
     m_gameDataContext->unitComponentRegistry = std::make_unique<UnitComponentRegistry>();
     m_gameDataContext->unitComponentRegistry->Load("config/unit_components");

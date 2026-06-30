@@ -5,6 +5,28 @@
 namespace ac
 {
 
+std::string ToString(Rockiness rockiness)
+{
+    switch (rockiness)
+    {
+        case Rockiness::Flat:    return "Flat";
+        case Rockiness::Rolling: return "Rolling";
+        case Rockiness::Rocky:   return "Rocky";
+    }
+    return "";
+}
+
+std::string ToString(Moisture moisture)
+{
+    switch (moisture)
+    {
+        case Moisture::Arid:  return "Arid";
+        case Moisture::Moist: return "Moist";
+        case Moisture::Wet:   return "Wet";
+    }
+    return "";
+}
+
 Tile::Tile()
     : m_x(0)
     , m_y(0)
@@ -12,6 +34,7 @@ Tile::Tile()
     , m_rockiness(Rockiness::Flat)
     , m_elevation(0)
     , m_bHasRiver(false)
+    , m_bHasFungus(false)
     , m_bWorked(false)
     , m_workedByBaseId(-1)
 {
@@ -24,6 +47,7 @@ Tile::Tile(int x, int y)
     , m_rockiness(Rockiness::Flat)
     , m_elevation(0)
     , m_bHasRiver(false)
+    , m_bHasFungus(false)
     , m_bWorked(false)
     , m_workedByBaseId(-1)
 {
@@ -73,19 +97,13 @@ int Tile::GetElevation() const
     return m_elevation;
 }
 
-int Tile::GetNutrientProduction() const
+int Tile::GetElevationEnergySeed() const
 {
-    return CalculateNutrients_() + CalculateBonusNutrients_();
-}
-
-int Tile::GetMineralProduction() const
-{
-    return CalculateMinerals_() + CalculateBonusMinerals_();
-}
-
-int Tile::GetEnergyProduction() const
-{
-    return CalculateEnergy_() + CalculateBonusEnergy_();
+    if (m_elevation < 0)
+    {
+        return 0;
+    }
+    return static_cast<int>(std::floor(m_elevation / 1000.0));
 }
 
 void Tile::SetHasRiver(bool bHasRiver)
@@ -96,6 +114,16 @@ void Tile::SetHasRiver(bool bHasRiver)
 bool Tile::GetHasRiver() const
 {
     return m_bHasRiver;
+}
+
+void Tile::SetHasFungus(bool bHasFungus)
+{
+    m_bHasFungus = bHasFungus;
+}
+
+bool Tile::GetHasFungus() const
+{
+    return m_bHasFungus;
 }
 
 void Tile::SetLandmark(const std::string& landmarkId)
@@ -194,70 +222,25 @@ int Tile::GetWorkedByBaseId() const
     return m_workedByBaseId;
 }
 
-int Tile::CalculateBonusNutrients_() const
+std::vector<std::string> Tile::GetFeatureIds() const
 {
-    // TODO: Look up bonus in TileBonusRegistry when registry is available at this level
-    // For now, bonus values are calculated at the Base level where registry is accessible
-    return 0;
-}
-
-int Tile::CalculateBonusMinerals_() const
-{
-    // TODO: Look up bonus in TileBonusRegistry when registry is available at this level
-    return 0;
-}
-
-int Tile::CalculateBonusEnergy_() const
-{
-    // TODO: Look up bonus in TileBonusRegistry when registry is available at this level
-    return 0;
-}
-
-int Tile::CalculateNutrients_() const
-{
-    // TODO: Define game rules for nutrient calculation from moisture
-    switch (m_moisture)
-    {
-        case Moisture::Wet:
-            return 2;
-        case Moisture::Moist:
-            return 1;
-        case Moisture::Arid:
-        default:
-            return 0;
-    }
-}
-
-int Tile::CalculateMinerals_() const
-{
-    // TODO: Define game rules for mineral calculation from rockiness
-    switch (m_rockiness)
-    {
-        case Rockiness::Rocky:
-            return 2;
-        case Rockiness::Rolling:
-            return 1;
-        case Rockiness::Flat:
-        default:
-            return 0;
-    }
-}
-
-int Tile::CalculateEnergy_() const
-{
-    // TODO: Define game rules for energy calculation from elevation
-    // Elevation in meters (-4000 to 4000), normalize to 0-4 range
-    // Rivers may provide energy bonus
-    if (m_elevation < 0) {
-        return 0;
-    }
-    
-    int baseEnergy = static_cast<int>(floor(m_elevation / 1000.0));
+    std::vector<std::string> ids;
+    ids.push_back(ToString(m_rockiness));
+    ids.push_back(ToString(m_moisture));
     if (m_bHasRiver)
     {
-        baseEnergy += 1;
+        ids.push_back("River");
     }
-    return baseEnergy;
+    if (m_bHasFungus)
+    {
+        ids.push_back("Fungus");
+    }
+    if (HasLandmark())
+    {
+        ids.push_back(m_landmark);
+    }
+    ids.insert(ids.end(), m_improvements.begin(), m_improvements.end());
+    return ids;
 }
 
 } // namespace ac

@@ -6,6 +6,9 @@
 #include "game/faction/SocialEngineeringManager.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/population/PopContainer.h"
+#include "game/map/ImprovementConfigParser.h"
+#include "game/map/ImprovementRegistry.h"
+#include "game/map/Tile.h"
 #include "game/population/pop-types/Pop.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/social-engineering/SocialPolicyConfig.h"
@@ -221,7 +224,8 @@ std::vector<ActiveEffect_t> FilterForBase(const std::vector<ActiveEffect_t>& eff
             case EffectScope_t::ThisUnit:
             case EffectScope_t::FactionUnits:
             case EffectScope_t::ThisPop:
-                // Unit- and pop-scoped effects never apply to base-level calculations.
+            case EffectScope_t::ThisTile:
+                // Unit-, pop-, and tile-scoped effects never apply to base-level calculations.
                 break;
         }
     }
@@ -295,6 +299,50 @@ std::vector<ActiveEffect_t> CollectFromPops(const PopContainer& rPops, const Bas
         }
     }
     return result;
+}
+
+std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile, const ImprovementRegistry& rImprovements)
+{
+    std::vector<ActiveEffect_t> result;
+    for (const std::string& featureId : rTile.GetFeatureIds())
+    {
+        const ImprovementConfig_t* pFeature = rImprovements.Find(featureId);
+        if (!pFeature)
+        {
+            continue;
+        }
+
+        for (const EffectConfig_t& rEffect : pFeature->effects)
+        {
+            ActiveEffect_t active;
+            active.config = &rEffect;
+            active.sourceId = pFeature->id;
+            result.push_back(active);
+        }
+    }
+    return result;
+}
+
+double ResolveTileDefenseMultiplier(const Tile& rTile, const ImprovementRegistry& rImprovements)
+{
+    const std::vector<ActiveEffect_t> effects = CollectTileEffects(rTile, rImprovements);
+    return ResolveStatModifiers(FilterByStatId(effects, StatId::Defense), 1.0).total;
+}
+
+TileResources_t ResolveTileYield(const Tile& rTile, const ImprovementRegistry& rImprovements)
+{
+    const std::vector<ActiveEffect_t> effects = CollectTileEffects(rTile, rImprovements);
+
+    const double nutrients = ResolveStatModifiers(FilterByStatId(effects, StatId::Nutrients)).total;
+    const double minerals = ResolveStatModifiers(FilterByStatId(effects, StatId::Minerals)).total;
+    const double energy = ResolveStatModifiers(
+        FilterByStatId(effects, StatId::Energy), static_cast<double>(rTile.GetElevationEnergySeed())).total;
+
+    return TileResources_t{
+        static_cast<int>(nutrients),
+        static_cast<int>(energy),
+        static_cast<int>(minerals)
+    };
 }
 
 } // namespace ac

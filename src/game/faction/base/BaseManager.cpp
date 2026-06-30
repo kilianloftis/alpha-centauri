@@ -11,6 +11,7 @@
 #include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
+#include "game/map/ImprovementRegistry.h"
 #include "game/map/WorldMap.h"
 #include <cmath>
 
@@ -51,7 +52,7 @@ std::vector<const Tile*> ComputeWorkableTiles_(const WorldMap& rWorldMap, const 
 } // namespace
 
 BaseManager::BaseManager(
-    const Tile& tile,
+    Tile& tile,
     const BuildingRegistry* pBuildingRegistry,
     const PopTypeRegistry* pPopRegistry,
     const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator,
@@ -61,24 +62,30 @@ BaseManager::BaseManager(
     const EconomyManager* pEconomyManager,
     const ProductionCostCalculator* pProductionCostCalculator,
     const GrowthCalculator* pGrowthCalculator,
-    const SecretProjectAvailabilityCalculator* pSecretProjectCalculator)
+    const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
+    const ImprovementRegistry* pImprovementRegistry)
     : m_factionId(-1)
     , m_baseId(-1)
     , m_tile(tile)
     , m_pResearch(pResearchManager)
+    , m_pImprovementRegistry(pImprovementRegistry)
     , m_pPopulation(std::make_unique<PopulationManager>(pPopRegistry, pPopTypeAvailabilityCalculator, pResearchManager, pCompositionCalculator, pGrowthCalculator, 3))
-    , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(ComputeWorkableTiles_(rWorldMap, tile), m_pPopulation->GetContainer()))
+    , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(ComputeWorkableTiles_(rWorldMap, tile), m_pPopulation->GetContainer(), *pImprovementRegistry))
     , m_pResources(nullptr)
     , m_pBuildings(std::make_unique<BuildingManager>(pBuildingRegistry, pResearchManager, pSecretProjectCalculator))
     , m_pProduction(pProductionCostCalculator ? std::make_unique<ProductionManager>(*pProductionCostCalculator) : nullptr)
 {
+    // A base provides its own garrison defense bonus, modeled as the "Base" improvement.
+    m_tile.AddImprovement("Base");
+
     // Create ResourceManager after all sub-managers are set up
     m_pResources = std::make_unique<ResourceManager>(
         m_pPopulation.get(),
         m_pWorkerAssignments.get(),
         pEconomyManager,
         m_pBuildings.get(),
-        &m_tile);
+        &m_tile,
+        pImprovementRegistry);
 
     m_pPopulation->on_growth.connect([this]() {
         m_pPopulation->AddPop();

@@ -15,6 +15,7 @@ namespace ac
 // Each tile shows: nutrients minerals energy
 // Worked tiles are shown in green
 class BaseManager;
+class ImprovementRegistry;
 
 class BaseWorkableAreaDisplay : public UIElement
 {
@@ -23,6 +24,7 @@ public:
     using BaseClickCallback_t = std::function<void()>;
 
     BaseWorkableAreaDisplay(const BaseManager* pBase,
+                            const ImprovementRegistry& rImprovements,
                             WindowLayout_t layout,
                             TileClickCallback_t onTileClicked,
                             BaseClickCallback_t onBaseClicked);
@@ -39,6 +41,7 @@ private:
 
     void CacheTileRects_();
     const BaseManager* m_pBase = nullptr;
+    const ImprovementRegistry& m_rImprovements;
     TileClickCallback_t m_onTileClicked;
     BaseClickCallback_t m_onBaseClicked;
 

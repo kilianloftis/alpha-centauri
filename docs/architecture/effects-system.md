@@ -83,8 +83,9 @@ graph TB
 - **Purpose**: Identifies a stat or resource. Defined in `include/lib/effects/EffectEnums.h` so it can be shared across the game and effects systems.
 - **Values**:
   - Base resources: `Nutrients`, `Minerals`, `Energy`.
+  - Base output allocated directly rather than via energy split: `Econ`, `Labs`, `Psych`.
   - Unit stats: `Attack`, `Defense`, `Movement`, `HitPoints`, `DisengageChance`, `Fuel`, `DamageFromOutOfFuel`, `CargoCapacity`, `DifficultTerrainCost`, `CostMultiplier`.
-- **Consumers**: `StatModifierEffect_t::stat` and `TileYieldModifierEffect_t::resource`.
+- **Consumers**: `StatModifierEffect_t::stat` and `TileYieldModifierEffect_t::resource`. `Defense` is also the target stat for tile-granted combat bonuses (rockiness, fungus, improvements) — see Tile Improvement Effects below.
 
 ### ImprovementType
 - **Purpose**: Identifies a tile improvement type for `TileSelector_t`.
@@ -127,6 +128,7 @@ graph TB
   - `FactionGlobal` — the whole faction.
   - `WorldGlobal` — all factions.
   - `ThisPop` — only the specific pop instance the effect belongs to (pop type tile-multiplier effects use this scope). Resolved locally by `Pop::ApplyTileMultipliers` and never enters the base-wide active effects pool — `FilterForBase` always excludes it, same as `ThisUnit`/`FactionUnits`.
+  - `ThisTile` — only the specific tile the effect belongs to (terrain classification, river, fungus, landmark, or improvement). Resolved locally via `CollectTileEffects`/`ResolveTileYield`/`ResolveTileDefenseMultiplier` and never enters the base-wide active effects pool — `FilterForBase` always excludes it too. See Tile Improvement Effects below.
 
 ### ActiveEffect_t
 - **Purpose**: A runtime instance of an effect tied to a specific source.
@@ -165,7 +167,7 @@ graph TB
 - **Responsibilities**:
   - Includes `ThisBase` effects whose `originBase` is the given base.
   - Includes `AllOwnerBases`, `FactionGlobal`, and `WorldGlobal` effects.
-  - Excludes `ThisUnit`, `FactionUnits`, and `ThisPop` effects — these are resolved locally by their own owning instance (unit design or pop) and never apply at the base level.
+  - Excludes `ThisUnit`, `FactionUnits`, `ThisPop`, and `ThisTile` effects — these are resolved locally by their own owning instance (unit design, pop, or tile) and never apply at the base level.
 - **Returns**: A vector of relevant `ActiveEffect_t` instances.
 
 ### CollectActiveEffects
@@ -232,6 +234,18 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
   }
   ```
 
+### Tile Improvement Effects
+
+- **Purpose**: Unifies every "thing on a tile" — terrain classification (Rockiness, Moisture), natural features (River, Fungus), Landmarks, player-built improvements (Farm, Mine, Bunker), and a founded Base — behind one config type and one lookup, since they all answer the same two questions: what effects do they grant, and what do they exclude. Defined in `include/game/map/ImprovementConfigParser.h` / `config/improvements.json`.
+- **`ImprovementConfig_t`**: `id`, `name`, `mineralCost`, `requiredTech`, `excludes` (other feature ids that can't coexist with this one on a tile), `effects` (the standard `EffectConfig_t` vector, parsed via `BonusEffectParser::ParseEffects`).
+- **`Tile::GetFeatureIds()`**: returns every feature id active on a tile — `ToString(GetRockiness())`, `ToString(GetMoisture())`, `"River"`/`"Fungus"` if present, the landmark id if any, and every entry in `GetImprovements()`. Rockiness/Moisture stay typed enums on `Tile` (world-gen and rendering need the exhaustive/exclusive guarantee — every tile is *exactly one* of Flat/Rolling/Rocky), but for effects/exclusivity purposes they're looked up exactly like any improvement.
+- **`CollectTileEffects(tile, improvementRegistry)`**: looks up every id from `GetFeatureIds()` in the registry and collects their `ThisTile`-scoped effects into a flat `ActiveEffect_t` list, sourceId = the feature's id. Mirrors `CollectPopEffects`/`CollectUnitEffects`.
+- **`ResolveTileDefenseMultiplier(tile, improvementRegistry)`**: `ResolveStatModifiers(FilterByStatId(effects, StatId::Defense), 1.0).total` — the combined defense multiplier for a unit defending on this tile (1.25 for Rocky alone, 1.5 for Rocky+Fungus stacked, etc.). Exposed as a resolver only — no combat system exists yet to consume it.
+- **`ResolveTileYield(tile, improvementRegistry)`**: resolves `Nutrients`/`Minerals`/`Energy` from the same effects. Nutrients/Minerals have no continuous base (purely effects-driven — Moisture/Rockiness/improvements); Energy is seeded from `Tile::GetElevationEnergySeed()` (the elevation-derived raw value) before resolving, so River/improvement `Add` effects layer on top of elevation the same way building `TileYieldModifier` effects layer on top of `ComputeBaseTileResources_` elsewhere. Replaces the old hardcoded `Tile::CalculateNutrients_`/`CalculateMinerals_`/`CalculateEnergy_` switch statements — `WorkerAssignmentManager`, `ResourceManager`, and `BaseWorkableAreaDisplay` all call this instead of the (now-removed) `Tile::GetNutrientProduction()`/etc.
+- **`CanBuildImprovement(tile, candidateConfig)`**: returns false if any id in `candidateConfig.excludes` is present in `tile.GetFeatureIds()` (e.g. Farm excludes Rocky). Exposed as a resolver only — no improvement-construction UI/flow exists yet to enforce it.
+- **"Base" as an improvement**: `BaseManager`'s constructor calls `m_tile.AddImprovement("Base")`, so a founded base grants its own `ThisTile` defense bonus (`config/improvements.json`'s `Base` entry, currently a placeholder `+100%`) through the exact same mechanism as Bunker/Rocky/Fungus. This is also why `BaseManager` now holds a non-const `Tile&` (previously `const Tile&`) and `Faction::CreateBase` takes a non-const `Tile*`.
+- **Known overlap**: the pre-existing `ImprovementType` enum (`Farm`/`Condenser` only) used by `TileSelector_t::improvement` for the building-side `TileYieldModifier`/`HasImprovement` selector is a *separate*, narrower mechanism — it lets a building say "give a bonus to worked tiles that have Farm," which is conceptually different from a tile's own intrinsic improvement effects. The two systems aren't unified; `ImprovementConfig_t`'s `Farm`/`Condenser` entries just use matching string ids so both stay consistent.
+
 ## Design Rationale
 
 - **Typed effect structs**: Replace the previous string-keyed parameter map with strongly typed structs, making effect consumers type-safe and easier to extend.
@@ -244,3 +258,6 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
 - **`ResolveStatModifiers` needs a seeded base for pure-multiplier stats**: the formula `total = addTotal * arithmeticFactor * geometricFactor` starts `addTotal` at the caller-supplied `baseValue` (default `0.0`). Stats that are only ever modified via `MultiplyGeometric`/`MultiplyArithmetic` (no `Add` contribution) must pass `baseValue = 1.0`, or `total` resolves to `0`. `UnitDesign::GetBaseCost()` does this for `StatId::CostMultiplier`; any future pure-multiplier stat needs the same care.
 - **`FactionGlobal`/`WorldGlobal`-scoped `GrantBuildingEffect_t` loses per-base attribution**: when a faction-wide effect grants a building, the granted building's `ThisBase`-scoped effects inherit `originBase = nullptr` (since the granting effect has no origin base of its own) and are then dropped by `FilterForBase` for every base. Not exercised by current data, but will silently no-op the first secret project that grants a building with a per-base bonus.
 - **`BuildingConfig_t::IsDiscovered()` uses OR semantics**: a building becomes available once *any* listed `required_techs` entry is discovered, not all of them. May be intentional (alternate prerequisites) but is worth confirming against design intent.
+- **No combat system consumes `ResolveTileDefenseMultiplier` yet**: `Unit::GetDefense()` still returns only the unit's own design stat. Wiring an actual attack/defense resolution (and deciding how/whether it multiplies the attacker's tile bonus too) is a separate, larger feature.
+- **No improvement-construction flow consumes `CanBuildImprovement` yet**: `Tile::AddImprovement()` has no caller besides `BaseManager`'s `"Base"` wiring — there's no UI/production path for the player to actually build Farm/Mine/Bunker, so the `excludes` exclusivity check is unenforced in practice today.
+- **`Base`'s defense bonus value (+100%) is an unconfirmed placeholder**, same as the other round test-data numbers (`test_tech_1`, etc.) in this repo — needs real balance input.

@@ -32,6 +32,7 @@ class ProductionManager;
 class ResearchManager;
 class Tile;
 class WorldMap;
+class ImprovementRegistry;
 
 // BaseManager coordinates base management subsystems.
 // Provides identity, position, and access to sub-managers.
@@ -40,7 +41,7 @@ class BaseManager
 {
 public:
     BaseManager(
-        const Tile& tile,
+        Tile& tile,
         const BuildingRegistry* pBuildingRegistry,
         const PopTypeRegistry* pPopRegistry,
         const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator,
@@ -50,7 +51,8 @@ public:
         const EconomyManager* pEconomyManager,
         const ProductionCostCalculator* pProductionCostCalculator,
         const GrowthCalculator* pGrowthCalculator,
-        const SecretProjectAvailabilityCalculator* pSecretProjectCalculator);
+        const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
+        const ImprovementRegistry* pImprovementRegistry);
     ~BaseManager();
 
     // Population management - delegated to PopulationManager
@@ -140,8 +142,9 @@ public:
 private:
     FactionId m_factionId;
     int m_baseId;
-    const Tile& m_tile;
+    Tile& m_tile;
     const ResearchManager* m_pResearch;
+    const ImprovementRegistry* m_pImprovementRegistry;
     std::unique_ptr<PopulationManager> m_pPopulation;
     std::unique_ptr<WorkerAssignmentManager> m_pWorkerAssignments;
     std::unique_ptr<ResourceManager> m_pResources;

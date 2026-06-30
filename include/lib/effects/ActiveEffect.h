@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/faction/base/BaseTypes.h"
 #include "lib/effects/BonusEffect.h"
 #include <string>
 #include <vector>
@@ -12,6 +13,8 @@ class BaseManager;
 class BuildingRegistry;
 class Faction;
 class PopContainer;
+class Tile;
+class ImprovementRegistry;
 struct UnitComponentConfig_t;
 struct PopTypeConfig_t;
 
@@ -67,5 +70,21 @@ std::vector<ActiveEffect_t> CollectPopEffects(const PopTypeConfig_t& rConfig);
 // production. ThisPop-scoped tile multiplier effects are excluded — those are resolved
 // locally by Pop::ApplyTileMultipliers and never enter the base-wide pool.
 std::vector<ActiveEffect_t> CollectFromPops(const PopContainer& rPops, const BaseManager& rOriginBase);
+
+// Collects every ThisTile-scoped effect from a tile's own feature ids (rockiness, moisture,
+// river, fungus, landmark, improvements), each looked up in rImprovements. sourceId is the
+// matching feature's id. Resolved locally by ResolveTileYield/ResolveTileDefenseMultiplier —
+// never enters the base-wide active effects pool (FilterForBase always excludes ThisTile).
+std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile, const ImprovementRegistry& rImprovements);
+
+// Resolves the combined defense multiplier for a unit defending on rTile (e.g. 1.25 for a
+// single +25% source, 1.5 for two stacked +25% sources). 1.0 if the tile grants no bonus.
+double ResolveTileDefenseMultiplier(const Tile& rTile, const ImprovementRegistry& rImprovements);
+
+// Resolves this tile's intrinsic nutrient/mineral/energy yield from its own ThisTile-scoped
+// effects. Energy is seeded from GetElevationEnergySeed() before resolving so River/Fungus/
+// improvement Add effects layer on top of the elevation-derived value; Nutrients/Minerals
+// have no continuous seed and are purely effects-driven (Moisture/Rockiness/improvements).
+TileResources_t ResolveTileYield(const Tile& rTile, const ImprovementRegistry& rImprovements);
 
 } // namespace ac

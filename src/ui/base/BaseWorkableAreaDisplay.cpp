@@ -1,18 +1,22 @@
 #include "ui/base/BaseWorkableAreaDisplay.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
+#include "game/map/ImprovementRegistry.h"
 #include "graphics/Graphics.h"
+#include "lib/effects/ActiveEffect.h"
 #include <sstream>
 
 namespace ac
 {
 
 BaseWorkableAreaDisplay::BaseWorkableAreaDisplay(const BaseManager* pBase,
+                                                 const ImprovementRegistry& rImprovements,
                                                  WindowLayout_t layout,
                                                  TileClickCallback_t onTileClicked,
                                                  BaseClickCallback_t onBaseClicked)
     : UIElement(layout)
     , m_pBase(pBase)
+    , m_rImprovements(rImprovements)
     , m_onTileClicked(std::move(onTileClicked))
     , m_onBaseClicked(std::move(onBaseClicked))
 {
@@ -75,9 +79,10 @@ void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, const Tile& rTile
     // Draw tile border (negative thickness draws inward for shared borders)
     rGraphics.DrawRect(x, y, size, size, Color{80, 80, 80, 255}, -1.0f);
 
-    int nutrients = rTile.GetNutrientProduction();
-    int minerals = rTile.GetMineralProduction();
-    int energy = rTile.GetEnergyProduction();
+    const TileResources_t yield = ResolveTileYield(rTile, m_rImprovements);
+    int nutrients = yield.nutrients;
+    int minerals = yield.minerals;
+    int energy = yield.energy;
 
     std::ostringstream oss;
     oss << nutrients << " " << minerals << " " << energy;
