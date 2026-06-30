@@ -26,6 +26,7 @@ public:
     void AddFaction(std::unique_ptr<Faction> pFaction);
     int GetNumFactions() const;
     const Faction* GetPlayerFaction() const;
+    Faction* GetPlayerFaction() const;
 
     // World map
     WorldMap* GetWorldMap();

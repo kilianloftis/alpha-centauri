@@ -6,6 +6,7 @@
 #include "game/faction/Military.h"
 #include "game/faction/ResearchManager.h"
 #include "game/units/UnitComponentRegistry.h"
+#include "game/units/UnitSlotRegistry.h"
 #include "graphics/Graphics.h"
 
 namespace ac
@@ -80,8 +81,7 @@ std::unique_ptr<UnitDesignerView> ViewFactory::CreateUnitDesignerView(
     const WindowLayout_t& layout
 ) const
 {
-    auto& rFactions = m_rGameState.GetFactions();
-    Faction* pFaction = rFactions.empty() ? nullptr : rFactions.front().get();
+    Faction* pFaction = m_rGameState.GetPlayerFaction();
     if (!pFaction)
     {
         return nullptr;
@@ -90,6 +90,7 @@ std::unique_ptr<UnitDesignerView> ViewFactory::CreateUnitDesignerView(
     return std::make_unique<UnitDesignerView>(
         pFaction->GetMilitary(),
         *m_rGameDataContext.unitComponentRegistry,
+        *m_rGameDataContext.unitSlotRegistry,
         nullptr, // TODO: pass UnitManager once wired into Faction
         layout
     );

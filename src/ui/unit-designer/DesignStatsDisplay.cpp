@@ -10,11 +10,13 @@ namespace ac
 
 DesignStatsDisplay::DesignStatsDisplay(
     const UnitDesignerState_t* pState,
+    const std::vector<UnitSlotConfig_t>* pSlots,
     WindowLayout_t layout,
     std::function<void()> onSaveDesign
 )
     : UIElement(layout)
     , m_pState(pState)
+    , m_pSlots(pSlots)
     , m_onSaveDesign(std::move(onSaveDesign))
 {}
 
@@ -23,17 +25,17 @@ void DesignStatsDisplay::Render(Graphics& rGraphics)
     rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color{15, 15, 25, 255});
     rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color{60, 60, 110, 255});
 
-    const float padding          = m_layout.height * k_PaddingRatio;
+    const float padding           = m_layout.height * k_PaddingRatio;
     const unsigned int headerSize = static_cast<unsigned int>(m_layout.height * k_HeaderFontSizeRatio);
     const unsigned int statSize   = static_cast<unsigned int>(m_layout.height * k_StatFontSizeRatio);
-    const float lineH            = m_layout.height * k_LineHeightRatio;
+    const float lineH             = m_layout.height * k_LineHeightRatio;
 
     rGraphics.DrawText("Design Stats", m_layout.x + padding, m_layout.y + padding, headerSize, Color::Yellow());
 
-    if (!m_pState->HasAllMandatory())
+    if (!m_pState->HasAllMandatory(*m_pSlots))
     {
         rGraphics.DrawText(
-            "Select chassis, weapon, armour, and reactor",
+            "Fill all required slots",
             m_layout.x + padding,
             m_layout.y + padding + lineH,
             statSize,
@@ -42,14 +44,7 @@ void DesignStatsDisplay::Render(Graphics& rGraphics)
         return;
     }
 
-    const UnitDesign design(
-        *m_pState->pChassis,
-        *m_pState->pWeapon,
-        *m_pState->pArmour,
-        *m_pState->pReactor,
-        m_pState->pAbility1,
-        m_pState->pAbility2
-    );
+    const UnitDesign design(*m_pSlots, m_pState->components);
 
     float y = m_layout.y + padding + lineH;
     auto drawStat = [&](const std::string& rLabel, int value)
@@ -95,7 +90,7 @@ void DesignStatsDisplay::Render(Graphics& rGraphics)
 
 void DesignStatsDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
 {
-    if (rEvent.button != MouseButton_t::Left || !m_pState->HasAllMandatory())
+    if (rEvent.button != MouseButton_t::Left || !m_pState->HasAllMandatory(*m_pSlots))
     {
         return;
     }

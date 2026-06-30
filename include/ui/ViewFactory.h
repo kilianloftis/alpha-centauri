@@ -16,6 +16,7 @@ class GameState;
 class GameDataContext;
 class Graphics;
 class BaseManager;
+class UnitSlotRegistry;
 
 class ViewFactory
 {

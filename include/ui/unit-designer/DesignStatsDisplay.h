@@ -2,7 +2,9 @@
 
 #include "ui/UIElement.h"
 #include "ui/unit-designer/UnitDesignerState.h"
+#include "game/units/UnitSlotConfig.h"
 #include <functional>
+#include <vector>
 
 namespace ac
 {
@@ -12,6 +14,7 @@ class DesignStatsDisplay : public UIElement
 public:
     DesignStatsDisplay(
         const UnitDesignerState_t* pState,
+        const std::vector<UnitSlotConfig_t>* pSlots,
         WindowLayout_t layout,
         std::function<void()> onSaveDesign = nullptr
     );
@@ -22,6 +25,7 @@ public:
 
 private:
     const UnitDesignerState_t* m_pState;
+    const std::vector<UnitSlotConfig_t>* m_pSlots;
     std::function<void()> m_onSaveDesign;
     Rectangle_t m_saveButtonRect{};
 

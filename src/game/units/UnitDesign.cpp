@@ -1,66 +1,87 @@
 #include "game/units/UnitDesign.h"
 #include <stdexcept>
+#include <sstream>
 
 namespace ac
 {
 
-UnitDesign::UnitDesign(const UnitComponentConfig_t& rChassis,
-           const UnitComponentConfig_t& rWeapon,
-           const UnitComponentConfig_t& rArmour,
-           const UnitComponentConfig_t& rReactor,
-           const UnitComponentConfig_t* pAbility1,
-           const UnitComponentConfig_t* pAbility2)
+UnitDesign::UnitDesign(
+    const std::vector<UnitSlotConfig_t>& rSlots,
+    const std::unordered_map<std::string, const UnitComponentConfig_t*>& rComponents
+)
 {
-    if (rChassis.type != UnitComponentType_t::Chassis)
-        throw std::runtime_error("Expected chassis component for chassis slot");
-    if (rWeapon.type != UnitComponentType_t::Weapon)
-        throw std::runtime_error("Expected weapon component for weapon slot");
-    if (rArmour.type != UnitComponentType_t::Armour)
-        throw std::runtime_error("Expected armour component for armour slot");
-    if (rReactor.type != UnitComponentType_t::Reactor)
-        throw std::runtime_error("Expected reactor component for reactor slot");
-    if (pAbility1 && pAbility1->type != UnitComponentType_t::Ability)
-        throw std::runtime_error("Expected ability component for ability slot");
-    if (pAbility2 && pAbility2->type != UnitComponentType_t::Ability)
-        throw std::runtime_error("Expected ability component for ability slot");
+    for (const auto& rSlot : rSlots)
+    {
+        const UnitComponentConfig_t* pComp = nullptr;
+        auto it = rComponents.find(rSlot.id);
+        if (it != rComponents.end())
+        {
+            pComp = it->second;
+        }
 
-    m_pChassis  = &rChassis;
-    m_pWeapon   = &rWeapon;
-    m_pArmour   = &rArmour;
-    m_pReactor  = &rReactor;
-    m_pAbility1 = pAbility1;
-    m_pAbility2 = pAbility2;
+        if (rSlot.required && !pComp)
+        {
+            throw std::runtime_error("Required slot '" + rSlot.id + "' has no component assigned");
+        }
 
-    m_components = { &rChassis, &rWeapon, &rArmour, &rReactor };
-    if (pAbility1) m_components.push_back(pAbility1);
-    if (pAbility2) m_components.push_back(pAbility2);
+        if (pComp && pComp->type != rSlot.componentType)
+        {
+            throw std::runtime_error(
+                "Type mismatch for slot '" + rSlot.id +
+                "': expected '" + rSlot.componentType + "', got '" + pComp->type + "'"
+            );
+        }
 
-    m_name = rChassis.name + " / " + rWeapon.name + " / " + rArmour.name + " / " + rReactor.name;
-    m_id   = rChassis.id + "_" + rWeapon.id + "_" + rArmour.id + "_" + rReactor.id;
+        m_slotComponents.push_back({rSlot, pComp});
+        if (pComp)
+        {
+            m_components.push_back(pComp);
+        }
+    }
+
+    bool bFirst = true;
+    for (const auto& [rSlot, pComp] : m_slotComponents)
+    {
+        if (rSlot.required && pComp)
+        {
+            if (!bFirst) { m_name += " / "; m_id += "_"; }
+            m_name += pComp->name;
+            m_id   += pComp->id;
+            bFirst = false;
+        }
+    }
 }
 
-const char* UnitDesign::GetId() const          { return m_id.c_str(); }
+const char* UnitDesign::GetId() const   { return m_id.c_str(); }
 const std::string& UnitDesign::GetName() const { return m_name; }
 
-const UnitComponentConfig_t& UnitDesign::GetChassis()  const { return *m_pChassis; }
-const UnitComponentConfig_t& UnitDesign::GetWeapon()   const { return *m_pWeapon; }
-const UnitComponentConfig_t& UnitDesign::GetArmour()   const { return *m_pArmour; }
-const UnitComponentConfig_t& UnitDesign::GetReactor()  const { return *m_pReactor; }
-const UnitComponentConfig_t* UnitDesign::GetAbility1() const { return m_pAbility1; }
-const UnitComponentConfig_t* UnitDesign::GetAbility2() const { return m_pAbility2; }
+const UnitComponentConfig_t* UnitDesign::GetComponentForSlot(const std::string& rSlotId) const
+{
+    for (const auto& [rSlot, pComp] : m_slotComponents)
+    {
+        if (rSlot.id == rSlotId)
+        {
+            return pComp;
+        }
+    }
+    return nullptr;
+}
 
 int UnitDesign::GetBaseCost() const
 {
     int rawCost = 0;
     float costMult = 1.0f;
 
-    for (const UnitComponentConfig_t* pComp : m_components)
+    for (const auto& [rSlot, pComp] : m_slotComponents)
     {
-        rawCost += pComp->mineralCost;
+        if (!pComp) continue;
+        rawCost += static_cast<int>(pComp->mineralCost * rSlot.costModifier);
 
         auto it = pComp->stats.find("cost_multiplier");
         if (it != pComp->stats.end())
+        {
             costMult *= it->second.geometricMult;
+        }
     }
 
     return static_cast<int>(rawCost * costMult);
@@ -77,7 +98,7 @@ float UnitDesign::ResolveStat_(const std::string& rStatName) const
         auto it = pComp->stats.find(rStatName);
         if (it != pComp->stats.end())
         {
-            base += it->second.base;
+            base     += it->second.base;
             additive += it->second.additiveMult;
             geometric *= it->second.geometricMult;
         }
@@ -92,7 +113,9 @@ bool UnitDesign::ResolveFlag_(const std::string& rFlagName) const
     {
         auto it = pComp->flags.find(rFlagName);
         if (it != pComp->flags.end() && it->second)
+        {
             return true;
+        }
     }
     return false;
 }
@@ -107,7 +130,9 @@ std::unordered_map<std::string, float> UnitDesign::ResolveBonusTable_(const std:
         if (tableIt != pComp->bonusTables.end())
         {
             for (const auto& [key, val] : tableIt->second)
+            {
                 result[key] += val;
+            }
         }
     }
 

@@ -1,0 +1,56 @@
+[
+    {
+        "id": "chassis",
+        "display_name": "Chassis",
+        "component_type": "chassis",
+        "required": true,
+        "column": "left",
+        "cost_modifier": 1.0,
+        "required_tech": ""
+    },
+    {
+        "id": "weapon",
+        "display_name": "Weapon",
+        "component_type": "weapon",
+        "required": true,
+        "column": "left",
+        "cost_modifier": 1.0,
+        "required_tech": ""
+    },
+    {
+        "id": "armour",
+        "display_name": "Armour",
+        "component_type": "armour",
+        "required": true,
+        "column": "left",
+        "cost_modifier": 1.0,
+        "required_tech": ""
+    },
+    {
+        "id": "reactor",
+        "display_name": "Reactor",
+        "component_type": "reactor",
+        "required": true,
+        "column": "right",
+        "cost_modifier": 1.0,
+        "required_tech": ""
+    },
+    {
+        "id": "ability_1",
+        "display_name": "Ability 1",
+        "component_type": "ability",
+        "required": false,
+        "column": "right",
+        "cost_modifier": 1.0,
+        "required_tech": ""
+    },
+    {
+        "id": "ability_2",
+        "display_name": "Ability 2",
+        "component_type": "ability",
+        "required": false,
+        "column": "right",
+        "cost_modifier": 1.0,
+        "required_tech": ""
+    }
+]

@@ -20,7 +20,6 @@ private:
     std::vector<UnitComponentConfig_t> ParseFile_(const std::string& rFilePath);
     UnitComponentConfig_t ParseComponentConfig(const nlohmann::json& rComponentJson);
     StatBlock_t ParseStatBlock(const nlohmann::json& rStatJson);
-    static UnitComponentType_t ParseComponentType(const std::string& rTypeStr);
 };
 
 } // namespace ac

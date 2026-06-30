@@ -1,11 +1,12 @@
 #include "ui/unit-designer/UnitDesignerView.h"
-#include "ui/unit-designer/ComponentSlotDisplay.h"
+#include "ui/unit-designer/SlotColumnPanel.h"
 #include "ui/unit-designer/ComponentSelectorPopup.h"
 #include "ui/unit-designer/DesignStatsDisplay.h"
 #include "ui/unit-designer/DesignListPanel.h"
 #include "ui/unit-designer/UnitStatusPanel.h"
 #include "game/faction/Military.h"
 #include "game/units/UnitComponentRegistry.h"
+#include "game/units/UnitSlotRegistry.h"
 #include "game/units/UnitDesign.h"
 #include "input/Input.h"
 
@@ -14,13 +15,15 @@ namespace ac
 
 UnitDesignerView::UnitDesignerView(
     Military& rMilitary,
-    const UnitComponentRegistry& rRegistry,
+    const UnitComponentRegistry& rComponentRegistry,
+    const UnitSlotRegistry& rSlotRegistry,
     const UnitManager* pUnitManager,
     WindowLayout_t layout
 )
     : IGameView(layout)
     , m_rMilitary(rMilitary)
-    , m_rRegistry(rRegistry)
+    , m_rComponentRegistry(rComponentRegistry)
+    , m_rSlotRegistry(rSlotRegistry)
 {
     const WindowLayout_t statusLayout  = ResolveLayout(m_layout, k_StatusPanelRatio);
     const WindowLayout_t topLayout     = ResolveLayout(m_layout, k_TopDesignerPanelRatio);
@@ -30,54 +33,47 @@ UnitDesignerView::UnitDesignerView(
     const WindowLayout_t centerColLayout = ResolveLayout(topLayout, k_CenterColumnRatio);
     const WindowLayout_t rightColLayout  = ResolveLayout(topLayout, k_RightColumnRatio);
 
-    // Left column: Chassis, Weapon, Armour (top to bottom)
-    m_elements.push_back(std::make_unique<ComponentSlotDisplay>(
-        "Chassis",
-        [this]() { return m_state.pChassis; },
-        ResolveLayout(leftColLayout, k_SlotRow0Ratio),
-        [this]() { ShowComponentSelector_(UnitComponentType_t::Chassis, [this](const UnitComponentConfig_t& rComp) { m_state.pChassis = &rComp; }); }
-    ));
-    m_elements.push_back(std::make_unique<ComponentSlotDisplay>(
-        "Weapon",
-        [this]() { return m_state.pWeapon; },
-        ResolveLayout(leftColLayout, k_SlotRow1Ratio),
-        [this]() { ShowComponentSelector_(UnitComponentType_t::Weapon, [this](const UnitComponentConfig_t& rComp) { m_state.pWeapon = &rComp; }); }
-    ));
-    m_elements.push_back(std::make_unique<ComponentSlotDisplay>(
-        "Armour",
-        [this]() { return m_state.pArmour; },
-        ResolveLayout(leftColLayout, k_SlotRow2Ratio),
-        [this]() { ShowComponentSelector_(UnitComponentType_t::Armour, [this](const UnitComponentConfig_t& rComp) { m_state.pArmour = &rComp; }); }
-    ));
+    std::vector<SlotColumnPanel::SlotEntry_t> leftSlots;
+    std::vector<SlotColumnPanel::SlotEntry_t> rightSlots;
 
-    // Center column: design stats and save button
+    for (const auto& rSlot : m_rSlotRegistry.GetAll())
+    {
+        SlotColumnPanel::SlotEntry_t entry;
+        entry.pSlotConfig = &rSlot;
+        entry.getComponent = [this, slotId = rSlot.id]() -> const UnitComponentConfig_t*
+        {
+            auto it = m_state.components.find(slotId);
+            return it != m_state.components.end() ? it->second : nullptr;
+        };
+        entry.onClicked = [this, slotId = rSlot.id, compType = rSlot.componentType]()
+        {
+            ShowComponentSelector_(compType, [this, slotId](const UnitComponentConfig_t& rComp)
+            {
+                m_state.components[slotId] = &rComp;
+            });
+        };
+
+        if (rSlot.column == "right")
+        {
+            rightSlots.push_back(std::move(entry));
+        }
+        else
+        {
+            leftSlots.push_back(std::move(entry));
+        }
+    }
+
+    m_elements.push_back(std::make_unique<SlotColumnPanel>(std::move(leftSlots), leftColLayout));
+
     m_elements.push_back(std::make_unique<DesignStatsDisplay>(
         &m_state,
+        &m_rSlotRegistry.GetAll(),
         centerColLayout,
         [this]() { HandleSaveDesign_(); }
     ));
 
-    // Right column: Reactor, Ability 1, Ability 2 (top to bottom)
-    m_elements.push_back(std::make_unique<ComponentSlotDisplay>(
-        "Reactor",
-        [this]() { return m_state.pReactor; },
-        ResolveLayout(rightColLayout, k_SlotRow0Ratio),
-        [this]() { ShowComponentSelector_(UnitComponentType_t::Reactor, [this](const UnitComponentConfig_t& rComp) { m_state.pReactor = &rComp; }); }
-    ));
-    m_elements.push_back(std::make_unique<ComponentSlotDisplay>(
-        "Ability 1",
-        [this]() { return m_state.pAbility1; },
-        ResolveLayout(rightColLayout, k_SlotRow1Ratio),
-        [this]() { ShowComponentSelector_(UnitComponentType_t::Ability, [this](const UnitComponentConfig_t& rComp) { m_state.pAbility1 = &rComp; }); }
-    ));
-    m_elements.push_back(std::make_unique<ComponentSlotDisplay>(
-        "Ability 2",
-        [this]() { return m_state.pAbility2; },
-        ResolveLayout(rightColLayout, k_SlotRow2Ratio),
-        [this]() { ShowComponentSelector_(UnitComponentType_t::Ability, [this](const UnitComponentConfig_t& rComp) { m_state.pAbility2 = &rComp; }); }
-    ));
+    m_elements.push_back(std::make_unique<SlotColumnPanel>(std::move(rightSlots), rightColLayout));
 
-    // Bottom: list of all saved designs
     m_elements.push_back(std::make_unique<DesignListPanel>(
         &m_rMilitary,
         bottomLayout,
@@ -86,17 +82,14 @@ UnitDesignerView::UnitDesignerView(
             m_pSelectedDesign = pDesign;
             if (pDesign)
             {
-                m_state.pChassis  = &pDesign->GetChassis();
-                m_state.pWeapon   = &pDesign->GetWeapon();
-                m_state.pArmour   = &pDesign->GetArmour();
-                m_state.pReactor  = &pDesign->GetReactor();
-                m_state.pAbility1 = pDesign->GetAbility1();
-                m_state.pAbility2 = pDesign->GetAbility2();
+                for (const auto& rSlot : m_rSlotRegistry.GetAll())
+                {
+                    m_state.components[rSlot.id] = pDesign->GetComponentForSlot(rSlot.id);
+                }
             }
         }
     ));
 
-    // Left: unit status for the selected design
     m_elements.push_back(std::make_unique<UnitStatusPanel>(
         [this]() { return m_pSelectedDesign; },
         pUnitManager,
@@ -119,14 +112,14 @@ bool UnitDesignerView::HandleKey(const KeyEvent_t& rEvent)
 }
 
 void UnitDesignerView::ShowComponentSelector_(
-    UnitComponentType_t type,
+    const std::string& rComponentType,
     std::function<void(const UnitComponentConfig_t&)> onSelected
 )
 {
     std::vector<const UnitComponentConfig_t*> available;
-    for (const auto& rConfig : m_rRegistry.GetAll())
+    for (const auto& rConfig : m_rComponentRegistry.GetAll())
     {
-        if (rConfig.type == type)
+        if (rConfig.type == rComponentType)
         {
             available.push_back(&rConfig);
         }
@@ -141,18 +134,14 @@ void UnitDesignerView::ShowComponentSelector_(
 
 void UnitDesignerView::HandleSaveDesign_()
 {
-    if (!m_state.HasAllMandatory())
+    if (!m_state.HasAllMandatory(m_rSlotRegistry.GetAll()))
     {
         return;
     }
 
     m_rMilitary.AddDesign(std::make_unique<UnitDesign>(
-        *m_state.pChassis,
-        *m_state.pWeapon,
-        *m_state.pArmour,
-        *m_state.pReactor,
-        m_state.pAbility1,
-        m_state.pAbility2
+        m_rSlotRegistry.GetAll(),
+        m_state.components
     ));
 }
 

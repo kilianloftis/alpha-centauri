@@ -7,6 +7,7 @@ namespace ac
 
 class BuildingRegistry;
 class UnitComponentRegistry;
+class UnitSlotRegistry;
 class PopTypeRegistry;
 class TechRegistry;
 class SocialPolicyRegistry;
@@ -31,6 +32,7 @@ struct GameDataContext
 
     std::unique_ptr<BuildingRegistry> buildingRegistry;
     std::unique_ptr<UnitComponentRegistry> unitComponentRegistry;
+    std::unique_ptr<UnitSlotRegistry> unitSlotRegistry;
     std::unique_ptr<TechRegistry> techRegistry;
     std::unique_ptr<SocialPolicyRegistry> socialPolicyRegistry;
     std::unique_ptr<PopTypeRegistry> popTypeRegistry;

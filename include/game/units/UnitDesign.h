@@ -2,8 +2,10 @@
 
 #include "game/IConstructable.h"
 #include "game/units/UnitComponentConfig.h"
+#include "game/units/UnitSlotConfig.h"
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace ac
@@ -12,24 +14,17 @@ namespace ac
 class UnitDesign : public IConstructable
 {
 public:
-    UnitDesign(const UnitComponentConfig_t& rChassis,
-         const UnitComponentConfig_t& rWeapon,
-         const UnitComponentConfig_t& rArmour,
-         const UnitComponentConfig_t& rReactor,
-         const UnitComponentConfig_t* pAbility1 = nullptr,
-         const UnitComponentConfig_t* pAbility2 = nullptr);
+    UnitDesign(
+        const std::vector<UnitSlotConfig_t>& rSlots,
+        const std::unordered_map<std::string, const UnitComponentConfig_t*>& rComponents
+    );
     ~UnitDesign() = default;
 
     const char* GetId() const override;
     const std::string& GetName() const override;
     int GetBaseCost() const override;
 
-    const UnitComponentConfig_t& GetChassis() const;
-    const UnitComponentConfig_t& GetWeapon() const;
-    const UnitComponentConfig_t& GetArmour() const;
-    const UnitComponentConfig_t& GetReactor() const;
-    const UnitComponentConfig_t* GetAbility1() const;
-    const UnitComponentConfig_t* GetAbility2() const;
+    const UnitComponentConfig_t* GetComponentForSlot(const std::string& rSlotId) const;
 
     int GetAttack() const;
     int GetDefense() const;
@@ -51,13 +46,8 @@ private:
 
     std::string m_id;
     std::string m_name;
-    const UnitComponentConfig_t* m_pChassis;
-    const UnitComponentConfig_t* m_pWeapon;
-    const UnitComponentConfig_t* m_pArmour;
-    const UnitComponentConfig_t* m_pReactor;
-    const UnitComponentConfig_t* m_pAbility1;
-    const UnitComponentConfig_t* m_pAbility2;
-    std::vector<const UnitComponentConfig_t*> m_components;
+    std::vector<std::pair<UnitSlotConfig_t, const UnitComponentConfig_t*>> m_slotComponents;
+    std::vector<const UnitComponentConfig_t*> m_components; // non-null only, for stat resolution
 };
 
 } // namespace ac

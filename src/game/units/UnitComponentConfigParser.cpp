@@ -67,7 +67,7 @@ UnitComponentConfig_t UnitComponentConfigParser::ParseComponentConfig(const nloh
     UnitComponentConfig_t config;
     config.id = rComponentJson["id"];
     config.name = rComponentJson.value("name", config.id);
-    config.type = ParseComponentType(rComponentJson["type"].get<std::string>());
+    config.type = rComponentJson["type"].get<std::string>();
     config.requiredTech = rComponentJson.value("required_tech", std::string(""));
     config.mineralCost = rComponentJson.value("mineral_cost", 0);
 
@@ -110,14 +110,5 @@ StatBlock_t UnitComponentConfigParser::ParseStatBlock(const nlohmann::json& rSta
     return stat;
 }
 
-UnitComponentType_t UnitComponentConfigParser::ParseComponentType(const std::string& rTypeStr)
-{
-    if (rTypeStr == "chassis") return UnitComponentType_t::Chassis;
-    if (rTypeStr == "weapon")  return UnitComponentType_t::Weapon;
-    if (rTypeStr == "armour")  return UnitComponentType_t::Armour;
-    if (rTypeStr == "reactor") return UnitComponentType_t::Reactor;
-    if (rTypeStr == "ability") return UnitComponentType_t::Ability;
-    throw std::runtime_error("Unknown unit component type: '" + rTypeStr + "'");
-}
 
 } // namespace ac

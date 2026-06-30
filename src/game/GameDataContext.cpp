@@ -4,6 +4,7 @@
 #include "game/buildings/BuildingRegistry.h"
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/units/UnitComponentRegistry.h"
+#include "game/units/UnitSlotRegistry.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/research/TechRegistry.h"
 #include "game/research/TechCostConfig.h"

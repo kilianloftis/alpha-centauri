@@ -6,15 +6,6 @@
 namespace ac
 {
 
-enum class UnitComponentType_t
-{
-    Chassis,
-    Weapon,
-    Armour,
-    Reactor,
-    Ability
-};
-
 struct StatBlock_t
 {
     float base = 0.0f;
@@ -26,7 +17,7 @@ struct UnitComponentConfig_t
 {
     std::string id;
     std::string name;
-    UnitComponentType_t type;
+    std::string type; // e.g. "chassis", "weapon" — matches component_type in unit_slot_config.json
     std::string requiredTech;
     int mineralCost;
     std::unordered_map<std::string, StatBlock_t> stats;

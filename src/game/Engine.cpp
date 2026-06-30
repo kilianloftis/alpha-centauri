@@ -13,6 +13,7 @@
 #include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/units/UnitComponentRegistry.h"
+#include "game/units/UnitSlotRegistry.h"
 #include "game/research/TechRegistry.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
@@ -119,6 +120,9 @@ void Engine::Initialize_()
 
     m_gameDataContext->unitComponentRegistry = std::make_unique<UnitComponentRegistry>();
     m_gameDataContext->unitComponentRegistry->Load("config/unit_components");
+
+    m_gameDataContext->unitSlotRegistry = std::make_unique<UnitSlotRegistry>();
+    m_gameDataContext->unitSlotRegistry->Load("config/unit_slot_config.json");
 
     m_gameDataContext->techRegistry = std::make_unique<TechRegistry>();
     m_gameDataContext->techRegistry->Load("config/techs.json");

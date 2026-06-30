@@ -47,6 +47,7 @@ add_executable(alpha-centauri
     game/units/UnitDesign.cpp
     game/units/UnitOrderExecutor.cpp
     game/units/UnitComponentConfigParser.cpp
+    game/units/UnitSlotConfigParser.cpp
     game/research/TechConfigParser.cpp
     game/social-engineering/SocialPolicyConfigParser.cpp
     game/map/Tile.cpp
@@ -87,6 +88,7 @@ add_executable(alpha-centauri
     ui/base/PopTypeSelectorPopup.cpp
     ui/research/ResearchView.cpp
     ui/research/CurrentResearchPanel.cpp
+    ui/unit-designer/SlotColumnPanel.cpp
     ui/unit-designer/ComponentSlotDisplay.cpp
     ui/unit-designer/ComponentSelectorPopup.cpp
     ui/unit-designer/DesignStatsDisplay.cpp

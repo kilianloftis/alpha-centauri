@@ -1,5 +1,10 @@
 #pragma once
 
+#include "game/units/UnitSlotConfig.h"
+#include <string>
+#include <unordered_map>
+#include <vector>
+
 namespace ac
 {
 
@@ -7,16 +12,22 @@ struct UnitComponentConfig_t;
 
 struct UnitDesignerState_t
 {
-    const UnitComponentConfig_t* pChassis = nullptr;
-    const UnitComponentConfig_t* pWeapon  = nullptr;
-    const UnitComponentConfig_t* pArmour  = nullptr;
-    const UnitComponentConfig_t* pReactor = nullptr;
-    const UnitComponentConfig_t* pAbility1 = nullptr;
-    const UnitComponentConfig_t* pAbility2 = nullptr;
+    std::unordered_map<std::string, const UnitComponentConfig_t*> components; // slotId → component
 
-    bool HasAllMandatory() const
+    bool HasAllMandatory(const std::vector<UnitSlotConfig_t>& rSlots) const
     {
-        return pChassis && pWeapon && pArmour && pReactor;
+        for (const auto& rSlot : rSlots)
+        {
+            if (rSlot.required)
+            {
+                auto it = components.find(rSlot.id);
+                if (it == components.end() || !it->second)
+                {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 };
 
