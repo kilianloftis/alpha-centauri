@@ -4,7 +4,6 @@
 #include "game/units/UnitOrder.h"
 #include <optional>
 #include <string>
-#include <unordered_map>
 
 namespace ac
 {
@@ -26,6 +25,10 @@ public:
 
     int GetBaseCost() const;
     int GetAttack() const;
+    // Attack against a specific defender, applying any conditional modifiers that match the
+    // defender's tile (e.g. a bonus vs bases or vs a terrain type). GetAttack() is the
+    // context-free base value.
+    int GetAttackAgainst(const Unit& rDefender) const;
     int GetDefense() const;
     int GetMovement() const;
     int GetHitPoints() const;
@@ -36,7 +39,6 @@ public:
     int GetCargoCapacity() const;
     int GetDifficultTerrainCost() const;
     bool IsSingleUse() const;
-    std::unordered_map<std::string, double> GetTerrainAttackBonus() const;
     Tile& GetTile() const;
     BaseManager* GetHomeBase() const;
     Faction& GetFaction() const;

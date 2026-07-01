@@ -42,6 +42,38 @@ void AppendAreaEffectsFromNeighbors_(const Tile& rOrigin, const WorldMap& rWorld
         });
 }
 
+bool TileMatchesSelector_(const TileSelector_t& selector, const Tile& rTile, bool isBaseTile)
+{
+    switch (selector.kind)
+    {
+        case TileSelectorKind::BaseTile:
+            return isBaseTile;
+        case TileSelectorKind::HasImprovement:
+            return selector.improvement && rTile.HasImprovement(*selector.improvement);
+    }
+    return false;
+}
+
+// Appends every base-wide StatModifier that carries a tile selector matching rTile.
+// Non-selector StatModifiers (flat base bonuses) are left for base-level resolution.
+void AppendMatchingTileModifiers_(const std::vector<ActiveEffect_t>& baseEffects,
+                                  const Tile& rTile, bool isBaseTile,
+                                  std::vector<ActiveEffect_t>& rOut)
+{
+    for (const ActiveEffect_t& effect : baseEffects)
+    {
+        if (!effect.config)
+        {
+            continue;
+        }
+        const StatModifierEffect_t* pModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
+        if (pModifier && pModifier->selector && TileMatchesSelector_(*pModifier->selector, rTile, isBaseTile))
+        {
+            rOut.push_back(effect);
+        }
+    }
+}
+
 void RecomputeMoistureInRadius_(const Tile& rChangedTile, int radius, const TileEffectsContext& rCtx,
                                  WorldMap& rWorldMap)
 {
@@ -89,8 +121,20 @@ std::vector<ActiveEffect_t> TileEffectsContext::CollectAreaEffects(const Tile& r
 
 TileResources_t TileEffectsContext::ResolveTileYield(const Tile& rTile) const
 {
-    const std::vector<ActiveEffect_t> effects = CollectAreaEffects(rTile);
+    return ResolveYieldFromEffects_(rTile, CollectAreaEffects(rTile));
+}
 
+TileResources_t TileEffectsContext::ResolveTileYield(const Tile& rTile, bool isBaseTile,
+                                                     const std::vector<ActiveEffect_t>& baseEffects) const
+{
+    std::vector<ActiveEffect_t> effects = CollectAreaEffects(rTile);
+    AppendMatchingTileModifiers_(baseEffects, rTile, isBaseTile, effects);
+    return ResolveYieldFromEffects_(rTile, effects);
+}
+
+TileResources_t TileEffectsContext::ResolveYieldFromEffects_(const Tile& rTile,
+                                                             const std::vector<ActiveEffect_t>& effects) const
+{
     const double nutrients = ResolveStatModifiers(FilterByStatId(effects, StatId::Nutrients)).total;
     const double minerals  = ResolveStatModifiers(FilterByStatId(effects, StatId::Minerals)).total;
     const double energy    = ResolveStatModifiers(

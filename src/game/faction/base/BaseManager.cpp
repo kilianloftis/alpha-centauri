@@ -66,7 +66,6 @@ BaseManager::BaseManager(
 
     // Create ResourceManager after all sub-managers are set up
     m_pResources = std::make_unique<ResourceManager>(
-        m_pPopulation.get(),
         m_pWorkerAssignments.get(),
         pEconomyManager,
         m_pBuildings.get(),

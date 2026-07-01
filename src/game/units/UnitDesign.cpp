@@ -101,20 +101,6 @@ bool UnitDesign::ResolveFlag_(RuleFlagId flagId) const
     return false;
 }
 
-std::unordered_map<std::string, double> UnitDesign::ResolveBonusTable_(const std::string& rTableName) const
-{
-    std::unordered_map<std::string, double> result;
-    for (const ActiveEffect_t& rEffect : CollectUnitEffects(m_components))
-    {
-        const UnitBonusTableEffect_t* pBonus = std::get_if<UnitBonusTableEffect_t>(&rEffect.config->effect);
-        if (pBonus && pBonus->tableName == rTableName)
-        {
-            result[pBonus->key] += pBonus->value;
-        }
-    }
-    return result;
-}
-
 int UnitDesign::GetAttack() const               { return static_cast<int>(ResolveStat_(StatId::Attack)); }
 int UnitDesign::GetDefense() const              { return static_cast<int>(ResolveStat_(StatId::Defense)); }
 int UnitDesign::GetMovement() const             { return static_cast<int>(ResolveStat_(StatId::Movement)); }
@@ -127,9 +113,10 @@ int UnitDesign::GetCargoCapacity() const        { return static_cast<int>(Resolv
 int UnitDesign::GetDifficultTerrainCost() const { return static_cast<int>(ResolveStat_(StatId::DifficultTerrainCost)); }
 bool UnitDesign::IsSingleUse() const            { return ResolveFlag_(RuleFlagId::SingleUse); }
 
-std::unordered_map<std::string, double> UnitDesign::GetTerrainAttackBonus() const
+int UnitDesign::GetAttackAgainst(const EffectContext_t& ctx) const
 {
-    return ResolveBonusTable_("terrain_attack");
+    const std::vector<ActiveEffect_t> effects = CollectUnitEffects(m_components);
+    return static_cast<int>(ResolveStatModifiers(FilterByStatIdInContext(effects, StatId::Attack, ctx)).total);
 }
 
 } // namespace ac

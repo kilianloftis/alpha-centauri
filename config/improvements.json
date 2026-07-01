@@ -27,7 +27,7 @@
       {
         "type": "StatModifier",
         "scope": "ThisTile",
-        "parameters": { "stat": "defense", "amount": 1.25, "op": "MultiplyArithmetic" }
+        "parameters": { "stat": "defense", "amount": 25, "op": "AddPercent" }
       }
     ]
   },
@@ -76,7 +76,7 @@
       {
         "type": "StatModifier",
         "scope": "ThisTile",
-        "parameters": { "stat": "defense", "amount": 1.25, "op": "MultiplyArithmetic" }
+        "parameters": { "stat": "defense", "amount": 25, "op": "AddPercent" }
       }
     ]
   },
@@ -112,7 +112,7 @@
       {
         "type": "StatModifier",
         "scope": "ThisTile",
-        "parameters": { "stat": "defense", "amount": 1.25, "op": "MultiplyArithmetic" }
+        "parameters": { "stat": "defense", "amount": 25, "op": "AddPercent" }
       }
     ]
   },
@@ -123,7 +123,7 @@
       {
         "type": "StatModifier",
         "scope": "ThisTile",
-        "parameters": { "stat": "defense", "amount": 2.0, "op": "MultiplyArithmetic" }
+        "parameters": { "stat": "defense", "amount": 100, "op": "AddPercent" }
       }
     ]
   },
@@ -135,7 +135,7 @@
       {
         "type": "StatModifier",
         "scope": "ThisTile",
-        "parameters": { "stat": "defense", "amount": 1.25, "op": "MultiplyArithmetic" }
+        "parameters": { "stat": "defense", "amount": 25, "op": "AddPercent" }
       }
     ]
   },

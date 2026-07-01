@@ -26,6 +26,17 @@ struct ActiveEffect_t
     const BaseManager* originBase = nullptr; // only set for ThisBase-scoped effects
 };
 
+// Runtime context an effect's condition is evaluated against. Fields are optional; a
+// condition that references an absent field evaluates false. Combat sets targetTile to the
+// defender's tile so TargetTileHas conditions can inspect it.
+struct EffectContext_t
+{
+    const Tile* targetTile = nullptr;
+};
+
+// True if config carries no condition, or its condition is satisfied by ctx.
+bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx);
+
 struct StatBreakdown_t
 {
     double total = 0.0;
@@ -44,7 +55,7 @@ std::vector<ActiveEffect_t> CollectActiveEffects(const Faction& rFaction,
                                                   const BuildingRegistry& rBuildingRegistry);
 
 // Apply a stack of modifier contributions to a base value using the standard formula:
-//   result = (base + sumOfAdds) * (1 + sumOf(arithmetic-1)) * productOfGeometric
+//   result = (base + sumOfAdds) * (1 + sumOf(percent/100)) * productOfGeometric
 // Each pair is {amount, op}. Contributions are applied in the order given.
 double ApplyModifierStack(double base, const std::vector<std::pair<double, ModifierOp>>& contributions);
 
@@ -54,8 +65,20 @@ double ApplyModifierStack(double base, const std::vector<std::pair<double, Modif
 StatBreakdown_t ResolveStatModifiers(const std::vector<ActiveEffect_t>& matching, double baseValue = 0.0);
 
 // Returns effects whose target stat matches the given StatId.
-// Only includes StatModifierEffect_t instances.
+// Only includes StatModifierEffect_t instances. Condition-carrying effects are excluded:
+// they only apply through a matching runtime context (see FilterByStatIdInContext).
 std::vector<ActiveEffect_t> FilterByStatId(const std::vector<ActiveEffect_t>& effects, StatId statId);
+
+// Like FilterByStatId, but for a specific runtime context: includes unconditional effects
+// plus any condition-carrying effect whose condition is satisfied by ctx. This is the entry
+// point for context-dependent resolution such as combat (attack/defense vs a given target).
+std::vector<ActiveEffect_t> FilterByStatIdInContext(const std::vector<ActiveEffect_t>& effects,
+                                                    StatId statId, const EffectContext_t& ctx);
+
+// Like FilterByStatId, but excludes per-tile modifiers (StatModifiers carrying a tile
+// selector). Used for base-level resolution, where selector-carrying modifiers have
+// already been applied per worked tile and must not be counted a second time.
+std::vector<ActiveEffect_t> FilterFlatByStatId(const std::vector<ActiveEffect_t>& effects, StatId statId);
 
 // Returns effects that apply to the given base.
 // Includes ThisBase effects originating from this base, plus all AllOwnerBases, FactionGlobal, and WorldGlobal effects.

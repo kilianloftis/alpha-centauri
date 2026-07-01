@@ -2,6 +2,7 @@
 
 #include "game/faction/base/BaseTypes.h"
 #include "game/population/pop-types/Pop.h"
+#include "lib/effects/ActiveEffect.h"
 #include <functional>
 #include <vector>
 
@@ -66,10 +67,12 @@ public:
     bool IsTileAssigned(const Tile* pTile) const;
 
     // Compute aggregate resources from all assigned workers.
-    // For each worker pop with an assigned tile, reads raw resources from the tile,
-    // then applies the pop's tile multipliers.
+    // For each worker pop with an assigned tile, resolves the tile's full yield (intrinsic +
+    // area effects + any base-wide per-tile modifier in baseEffects matching the tile), then
+    // applies the pop's tile multipliers so those multipliers scale the whole tile yield.
+    // Does NOT include the base center tile — that is a pop-less tile owned by ResourceManager.
     // Pops or tiles that cannot be resolved are skipped.
-    TileResources_t ComputeWorkedResources() const;
+    TileResources_t ComputeWorkedResources(const std::vector<ActiveEffect_t>& baseEffects) const;
 
     // Auto-assign any unassigned workers to the stored workable tiles.
     // Tiles are sorted by score (descending) before assignment.

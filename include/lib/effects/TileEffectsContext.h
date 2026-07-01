@@ -34,7 +34,15 @@ public:
     std::vector<ActiveEffect_t> CollectAreaEffects(const Tile& rTile) const;
 
     // Combined nutrient/mineral/energy yield including aura effects (e.g. nearby Mirror).
+    // Intrinsic (terrain/improvement/river) plus area effects only — no base-wide modifiers.
     TileResources_t ResolveTileYield(const Tile& rTile) const;
+
+    // As above, but also folds in any per-tile StatModifier from baseEffects whose selector
+    // matches this tile (e.g. a building's "+1 mineral to every worked Mine"). isBaseTile
+    // distinguishes the base center tile so BaseTile-selector modifiers resolve correctly.
+    // This is the single entry point for a worked tile's full pre-pop-multiplier yield.
+    TileResources_t ResolveTileYield(const Tile& rTile, bool isBaseTile,
+                                     const std::vector<ActiveEffect_t>& baseEffects) const;
 
     // Combined defense multiplier including aura effects (e.g. nearby Sensor, Rocky terrain).
     double ResolveTileDefenseMultiplier(const Tile& rTile) const;
@@ -54,6 +62,11 @@ public:
     void RemoveImprovementWithEffects(Tile& rTile, const std::string& improvementId) const;
 
 private:
+    // Resolves nutrient/mineral/energy from an already-collected effect list (energy seeded
+    // from the tile's elevation). Shared by both ResolveTileYield overloads.
+    TileResources_t ResolveYieldFromEffects_(const Tile& rTile,
+                                             const std::vector<ActiveEffect_t>& effects) const;
+
     WorldMap& m_rWorldMap;
     const ImprovementRegistry& m_rImprovements;
     int m_maxRadius;  // max improvement radius across all configs; cached in constructor

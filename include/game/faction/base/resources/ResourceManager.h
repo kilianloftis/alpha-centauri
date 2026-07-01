@@ -8,7 +8,6 @@
 namespace ac
 {
 
-class PopulationManager;
 class WorkerAssignmentManager;
 class EconomyManager;
 class BuildingManager;
@@ -21,7 +20,6 @@ class ResourceManager
 {
 public:
     ResourceManager(
-        const PopulationManager* pPopulation,
         const WorkerAssignmentManager* pWorkerAssignments,
         const EconomyManager* pEconomy,
         const BuildingManager* pBuildings,
@@ -50,7 +48,6 @@ public:
     void ProduceResources(const std::vector<ActiveEffect_t>& activeEffects);
 
 private:
-    const PopulationManager* m_pPopulation;
     const WorkerAssignmentManager* m_pWorkerAssignments;
     const EconomyManager* m_pEconomy;
     const BuildingManager* m_pBuildings;
@@ -63,15 +60,18 @@ private:
     int m_labs = 0;
     int m_psych = 0;
 
-    int CalculateResource_(StatId stat, const std::vector<ActiveEffect_t>& activeEffects, const TileResources_t& worked) const;
-    int CalculateEcon_(const std::vector<ActiveEffect_t>& activeEffects, int energy) const;
-    int CalculateLabs_(const std::vector<ActiveEffect_t>& activeEffects, int energy) const;
-    int CalculatePsych_(const std::vector<ActiveEffect_t>& activeEffects, int energy) const;
+    // Aggregate worked-tile resources: all worker pops (via WorkerAssignmentManager) plus the
+    // free base center tile, each resolved against m_activeEffects so per-tile modifiers apply.
+    TileResources_t ComputeWorked_() const;
 
-    void ProduceNutrients_(const std::vector<ActiveEffect_t>& activeEffects, const TileResources_t& worked);
-    void ProduceMinerals_(const std::vector<ActiveEffect_t>& activeEffects, const TileResources_t& worked);
-    void AllocateEnergy_(const std::vector<ActiveEffect_t>& activeEffects, const TileResources_t& worked);
-    void ProduceResourcesInternal_(const std::vector<ActiveEffect_t>& activeEffects);
+    int CalculateResource_(StatId stat, const TileResources_t& worked) const;
+    int CalculateEcon_(int energy) const;
+    int CalculateLabs_(int energy) const;
+    int CalculatePsych_(int energy) const;
+
+    void ProduceNutrients_(const TileResources_t& worked);
+    void ProduceMinerals_(const TileResources_t& worked);
+    void AllocateEnergy_(const TileResources_t& worked);
 };
 
 } // namespace ac

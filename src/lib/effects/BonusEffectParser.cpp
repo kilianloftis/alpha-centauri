@@ -1,6 +1,5 @@
 #include "lib/effects/BonusEffectParser.h"
 
-#include <iostream>
 #include <stdexcept>
 
 namespace ac
@@ -41,8 +40,8 @@ RuleFlagId ParseRuleFlagId(const std::string& rFlag)
 ModifierOp ParseModifierOp(const std::string& rOp)
 {
     if (rOp == "Add")                 return ModifierOp::Add;
+    if (rOp == "AddPercent")          return ModifierOp::AddPercent;
     if (rOp == "MultiplyGeometric")   return ModifierOp::MultiplyGeometric;
-    if (rOp == "MultiplyArithmetic")  return ModifierOp::MultiplyArithmetic;
     throw std::runtime_error("Unknown modifier op: '" + rOp + "'");
 }
 
@@ -68,16 +67,32 @@ EffectPersistence_t ParseEffectPersistence(const std::string& rPersistence)
 
 double ParseNumber(const nlohmann::json& parameters, const std::string& key, double defaultValue)
 {
-    const auto& valueJson = parameters.value(key, nlohmann::json(defaultValue));
-    if (valueJson.is_number())
+    const auto it = parameters.find(key);
+    if (it == parameters.end())
+        return defaultValue;
+    if (it->is_number())
+        return it->get<double>();
+    if (it->is_string())
+        return std::stod(it->get<std::string>());
+    throw std::runtime_error("Expected a number or numeric string for parameter '" + key + "'");
+}
+
+ConditionKind ParseConditionKind(const std::string& rKind)
+{
+    if (rKind == "TargetTileHas") return ConditionKind::TargetTileHas;
+    throw std::runtime_error("Unknown condition kind: '" + rKind + "'");
+}
+
+Condition_t ParseCondition(const nlohmann::json& conditionJson)
+{
+    Condition_t condition;
+    condition.kind = ParseConditionKind(conditionJson.value("kind", ""));
+    condition.value = conditionJson.value("value", "");
+    if (condition.value.empty())
     {
-        return valueJson.get<double>();
+        throw std::runtime_error("Condition requires a non-empty 'value'");
     }
-    if (valueJson.is_string())
-    {
-        return std::stod(valueJson.get<std::string>());
-    }
-    return defaultValue;
+    return condition;
 }
 
 TileSelector_t ParseTileSelector(const nlohmann::json& selectorJson)
@@ -118,29 +133,33 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
 
     effect.scope = ParseEffectScope(scopeStr);
     effect.persistence = ParseEffectPersistence(persistenceStr);
-    effect.condition = effectJson.value("condition", "");
-    if (!effect.condition.empty())
+    if (effectJson.contains("condition"))
     {
-        std::cerr << "Warning: effect condition '" << effect.condition
-                  << "' is set but conditions are not yet evaluated — effect will always apply.\n";
+        effect.condition = ParseCondition(effectJson.at("condition"));
     }
 
     if (typeStr == "GrantBuilding")
     {
         GrantBuildingEffect_t grantBuilding;
         grantBuilding.buildingId = parameters.value("building_id", "");
+        if (grantBuilding.buildingId.empty())
+            throw std::runtime_error("GrantBuilding effect missing required 'building_id'");
         effect.effect = grantBuilding;
     }
     else if (typeStr == "GrantTech")
     {
         GrantTechEffect_t grantTech;
         grantTech.techId = parameters.value("tech_id", "");
+        if (grantTech.techId.empty())
+            throw std::runtime_error("GrantTech effect missing required 'tech_id'");
         effect.effect = grantTech;
     }
     else if (typeStr == "GrantUnit")
     {
         GrantUnitEffect_t grantUnit;
         grantUnit.unitId = parameters.value("unit_id", "");
+        if (grantUnit.unitId.empty())
+            throw std::runtime_error("GrantUnit effect missing required 'unit_id'");
         effect.effect = grantUnit;
     }
     else if (typeStr == "StatModifier")
@@ -149,12 +168,21 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
         statModifier.stat = ParseStatId(parameters.value("stat", ""));
         statModifier.amount = ParseNumber(parameters, "amount", 0.0);
         statModifier.op = ParseModifierOp(parameters.value("op", "Add"));
+        // Optional per-tile selector: when present, this modifier applies to each worked
+        // tile satisfying the selector instead of once at the base level.
+        if (parameters.contains("selector"))
+        {
+            statModifier.selector = ParseTileSelector(parameters.at("selector"));
+        }
         effect.effect = statModifier;
     }
     else if (typeStr == "RuleFlag")
     {
         RuleFlagEffect_t ruleFlag;
-        ruleFlag.flag = ParseRuleFlagId(parameters.at("flag").get<std::string>());
+        const std::string flagStr = parameters.value("flag", "");
+        if (flagStr.empty())
+            throw std::runtime_error("RuleFlag effect missing required 'flag'");
+        ruleFlag.flag = ParseRuleFlagId(flagStr);
         effect.effect = ruleFlag;
     }
     else if (typeStr == "SocialEngineeringOverride")
@@ -172,23 +200,6 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
         diplomatic.targetFactionId = parameters.value("target_faction_id", "");
         diplomatic.value = static_cast<int>(ParseNumber(parameters, "value", 0.0));
         effect.effect = diplomatic;
-    }
-    else if (typeStr == "TileYieldModifier")
-    {
-        TileYieldModifierEffect_t tileModifier;
-        tileModifier.resource = ParseStatId(parameters.value("resource", "nutrients"));
-        tileModifier.selector = ParseTileSelector(parameters.value("selector", nlohmann::json::object()));
-        tileModifier.amount = ParseNumber(parameters, "amount", 0.0);
-        tileModifier.op = ParseModifierOp(parameters.value("op", "Add"));
-        effect.effect = tileModifier;
-    }
-    else if (typeStr == "UnitBonusTable")
-    {
-        UnitBonusTableEffect_t bonusTable;
-        bonusTable.tableName = parameters.value("table_name", "");
-        bonusTable.key = parameters.value("key", "");
-        bonusTable.value = ParseNumber(parameters, "value", 0.0);
-        effect.effect = bonusTable;
     }
     else
     {

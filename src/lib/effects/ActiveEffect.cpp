@@ -137,9 +137,9 @@ double ApplyModifierStack(double base, const std::vector<std::pair<double, Modif
     {
         switch (op)
         {
-            case ModifierOp::Add:                addTotal += amount; break;
-            case ModifierOp::MultiplyArithmetic: arithmeticFactor += amount - 1.0; break;
-            case ModifierOp::MultiplyGeometric:  geometricFactor *= amount; break;
+            case ModifierOp::Add:               addTotal += amount; break;
+            case ModifierOp::AddPercent:        arithmeticFactor += amount / 100.0; break;
+            case ModifierOp::MultiplyGeometric: geometricFactor *= amount; break;
         }
     }
     return addTotal * arithmeticFactor * geometricFactor;
@@ -195,6 +195,21 @@ StatBreakdown_t ResolveStatModifiers(const std::vector<ActiveEffect_t>& matching
     return breakdown;
 }
 
+bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx)
+{
+    if (!config.condition)
+    {
+        return true;
+    }
+    const Condition_t& condition = *config.condition;
+    switch (condition.kind)
+    {
+        case ConditionKind::TargetTileHas:
+            return ctx.targetTile != nullptr && ctx.targetTile->HasFeature(condition.value);
+    }
+    return false;
+}
+
 std::vector<ActiveEffect_t> FilterByStatId(const std::vector<ActiveEffect_t>& effects, StatId statId)
 {
     std::vector<ActiveEffect_t> matching;
@@ -205,7 +220,46 @@ std::vector<ActiveEffect_t> FilterByStatId(const std::vector<ActiveEffect_t>& ef
             continue;
         }
         const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
-        if (pStatModifier && pStatModifier->stat == statId)
+        // Conditional effects are excluded from context-free resolution — they only apply
+        // through FilterByStatIdInContext with a context that satisfies the condition.
+        if (pStatModifier && pStatModifier->stat == statId && !effect.config->condition)
+        {
+            matching.push_back(effect);
+        }
+    }
+    return matching;
+}
+
+std::vector<ActiveEffect_t> FilterByStatIdInContext(const std::vector<ActiveEffect_t>& effects,
+                                                    StatId statId, const EffectContext_t& ctx)
+{
+    std::vector<ActiveEffect_t> matching;
+    for (const ActiveEffect_t& effect : effects)
+    {
+        if (!effect.config)
+        {
+            continue;
+        }
+        const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
+        if (pStatModifier && pStatModifier->stat == statId && ConditionSatisfied(*effect.config, ctx))
+        {
+            matching.push_back(effect);
+        }
+    }
+    return matching;
+}
+
+std::vector<ActiveEffect_t> FilterFlatByStatId(const std::vector<ActiveEffect_t>& effects, StatId statId)
+{
+    std::vector<ActiveEffect_t> matching;
+    for (const ActiveEffect_t& effect : effects)
+    {
+        if (!effect.config)
+        {
+            continue;
+        }
+        const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
+        if (pStatModifier && pStatModifier->stat == statId && !pStatModifier->selector && !effect.config->condition)
         {
             matching.push_back(effect);
         }
@@ -271,6 +325,8 @@ std::vector<ActiveEffect_t> CollectUnitEffects(const std::vector<const UnitCompo
         }
         for (const EffectConfig_t& rEffect : pComp->effects)
         {
+            if (rEffect.persistence == EffectPersistence_t::Instantaneous)
+                continue;
             ActiveEffect_t active;
             active.config = &rEffect;
             active.sourceId = pComp->id;
@@ -285,6 +341,8 @@ std::vector<ActiveEffect_t> CollectPopEffects(const PopTypeConfig_t& rConfig)
     std::vector<ActiveEffect_t> result;
     for (const EffectConfig_t& rEffect : rConfig.effects)
     {
+        if (rEffect.persistence == EffectPersistence_t::Instantaneous)
+            continue;
         ActiveEffect_t active;
         active.config = &rEffect;
         active.sourceId = rConfig.id;
@@ -329,6 +387,8 @@ std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile, const Improvem
 
         for (const EffectConfig_t& rEffect : pFeature->effects)
         {
+            if (rEffect.scope != EffectScope_t::ThisTile)
+                continue;
             ActiveEffect_t active;
             active.config = &rEffect;
             active.sourceId = pFeature->id;

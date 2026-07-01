@@ -50,9 +50,21 @@ Each entry in `effects` describes a single gameplay effect applied when the buil
 | `SocialEngineeringOverride` | Forces a social engineering value (`parameters.category`, `parameters.value`) |
 | `DiplomaticModifier` | Adjusts diplomatic standing (`parameters.target_faction_id`, `parameters.value`) |
 | `TileYieldModifier` | Modifies the yield of selected tiles (`parameters.resource`, `parameters.selector`, `parameters.amount`, `parameters.op`) — see below |
-| `UnitBonusTable` | Adds an entry to a named unit bonus table (`parameters.table_name`, `parameters.key`, `parameters.value`) — used by unit components |
 
-`amount`/`value` accept either a JSON number or a numeric string. `op` is one of `Add`, `MultiplyArithmetic`, `MultiplyGeometric` (defaults to `Add`).
+`amount`/`value` accept either a JSON number or a numeric string. `op` is one of `Add`, `AddPercent` (amount in percent points, e.g. `25` = +25%), `MultiplyGeometric` (factor form, e.g. `0.5`) — defaults to `Add`.
+
+Any effect may carry an optional top-level `condition` object making it situational, e.g. a combat bonus that only applies against certain targets:
+
+```json
+{
+  "type": "StatModifier",
+  "scope": "ThisUnit",
+  "parameters": { "stat": "attack", "amount": 25, "op": "AddPercent" },
+  "condition": { "kind": "TargetTileHas", "value": "Base" }
+}
+```
+
+`TargetTileHas` matches `value` against the target tile's features via `Tile::HasFeature` — terrain (`Rocky`), `River`/`Fungus`, landmark, bonus, or any improvement id including `Base`. Conditional effects are excluded from context-free resolution and only apply through a matching runtime context (e.g. `Unit::GetAttackAgainst`).
 
 #### `TileYieldModifier` selector
 

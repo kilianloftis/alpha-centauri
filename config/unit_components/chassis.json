@@ -17,14 +17,10 @@
         "parameters": { "stat": "difficult_terrain_cost", "amount": 2, "op": "Add" }
       },
       {
-        "type": "UnitBonusTable",
+        "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "table_name": "terrain_attack", "key": "Forest", "value": 25 }
-      },
-      {
-        "type": "UnitBonusTable",
-        "scope": "ThisUnit",
-        "parameters": { "table_name": "terrain_attack", "key": "Hill", "value": 10 }
+        "parameters": { "stat": "attack", "amount": 25, "op": "AddPercent" },
+        "condition": { "kind": "TargetTileHas", "value": "Base" }
       }
     ]
   },

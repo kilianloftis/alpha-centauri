@@ -23,6 +23,12 @@ EffectPersistence_t ParseEffectPersistence(const std::string& rPersistence);
 // Reads parameters[key] as either a JSON number or a numeric string. Returns defaultValue if absent.
 double ParseNumber(const nlohmann::json& parameters, const std::string& key, double defaultValue);
 
+ConditionKind ParseConditionKind(const std::string& rKind);
+
+// Parses a Condition_t from a condition JSON object ({ "kind": ..., "value": ... }).
+// Called by ParseEffectConfig when an effect entry carries a "condition" field.
+Condition_t ParseCondition(const nlohmann::json& conditionJson);
+
 TileSelector_t ParseTileSelector(const nlohmann::json& selectorJson);
 
 // Parses a single entry of an "effects" JSON array (type/scope/persistence/condition/parameters).

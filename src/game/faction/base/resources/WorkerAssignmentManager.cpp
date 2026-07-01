@@ -119,17 +119,13 @@ void WorkerAssignmentManager::ResetAllAssignments()
 
 bool WorkerAssignmentManager::IsTileAssigned(const Tile* pTile) const
 {
-    for (const auto& pPop : m_rPops.GetPops())
-    {
-        if (pPop->IsWorker() && pPop->GetTile() == pTile)
-        {
-            return true;
-        }
-    }
-    return false;
+    // The worked flag is the single source of truth, maintained by Pop::SetTile. Reading it
+    // (rather than scanning this base's pops) also prevents two adjacent bases from both
+    // working a shared tile, and is the hook a future enemy unit would clear to free the tile.
+    return pTile && pTile->IsWorked();
 }
 
-TileResources_t WorkerAssignmentManager::ComputeWorkedResources() const
+TileResources_t WorkerAssignmentManager::ComputeWorkedResources(const std::vector<ActiveEffect_t>& baseEffects) const
 {
     TileResources_t total{0, 0, 0};
     for (const auto& pPop : m_rPops.GetPops())
@@ -145,8 +141,8 @@ TileResources_t WorkerAssignmentManager::ComputeWorkedResources() const
             continue;
         }
 
-        const TileResources_t raw = m_rTileEffects.ResolveTileYield(*pTile);
-        const TileResources_t modified = pPop->ApplyTileMultipliers(raw);
+        const TileResources_t yield = m_rTileEffects.ResolveTileYield(*pTile, /*isBaseTile*/false, baseEffects);
+        const TileResources_t modified = pPop->ApplyTileMultipliers(yield);
 
         total.nutrients += modified.nutrients;
         total.energy    += modified.energy;

@@ -1,5 +1,8 @@
 #include "game/units/Unit.h"
 
+#include "game/map/Tile.h"
+#include "lib/effects/ActiveEffect.h"
+
 namespace ac
 {
 
@@ -22,6 +25,12 @@ const UnitDesign& Unit::GetDesign() const                              { return 
 
 int Unit::GetBaseCost() const                                          { return m_rDesign.GetBaseCost(); }
 int Unit::GetAttack() const                                            { return m_rDesign.GetAttack(); }
+int Unit::GetAttackAgainst(const Unit& rDefender) const
+{
+    EffectContext_t ctx;
+    ctx.targetTile = &rDefender.GetTile();
+    return m_rDesign.GetAttackAgainst(ctx);
+}
 int Unit::GetDefense() const                                           { return m_rDesign.GetDefense(); }
 int Unit::GetMovement() const                                          { return m_rDesign.GetMovement(); }
 int Unit::GetHitPoints() const                                         { return m_rDesign.GetHitPoints(); }
@@ -32,7 +41,6 @@ bool Unit::IsFlight() const                                            { return 
 int Unit::GetCargoCapacity() const                                     { return m_rDesign.GetCargoCapacity(); }
 int Unit::GetDifficultTerrainCost() const                              { return m_rDesign.GetDifficultTerrainCost(); }
 bool Unit::IsSingleUse() const                                         { return m_rDesign.IsSingleUse(); }
-std::unordered_map<std::string, double> Unit::GetTerrainAttackBonus() const { return m_rDesign.GetTerrainAttackBonus(); }
 Tile& Unit::GetTile() const                 { return *m_pTile; }
 BaseManager* Unit::GetHomeBase() const      { return m_pHomeBase; }
 Faction& Unit::GetFaction() const           { return m_rFaction; }

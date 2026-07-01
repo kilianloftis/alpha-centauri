@@ -12,6 +12,8 @@
 namespace ac
 {
 
+struct EffectContext_t;
+
 class UnitDesign : public IConstructable
 {
 public:
@@ -28,6 +30,9 @@ public:
     const UnitComponentConfig_t* GetComponentForSlot(const std::string& rSlotId) const;
 
     int GetAttack() const;
+    // Attack including conditional modifiers whose condition is satisfied by ctx (e.g. a
+    // terrain- or target-specific attack bonus). GetAttack() is the context-free value.
+    int GetAttackAgainst(const EffectContext_t& ctx) const;
     int GetDefense() const;
     int GetMovement() const;
     int GetHitPoints() const;
@@ -38,12 +43,10 @@ public:
     int GetCargoCapacity() const;
     int GetDifficultTerrainCost() const;
     bool IsSingleUse() const;
-    std::unordered_map<std::string, double> GetTerrainAttackBonus() const;
 
 private:
     float ResolveStat_(StatId statId) const;
     bool ResolveFlag_(RuleFlagId flagId) const;
-    std::unordered_map<std::string, double> ResolveBonusTable_(const std::string& rTableName) const;
 
     std::string m_id;
     std::string m_name;

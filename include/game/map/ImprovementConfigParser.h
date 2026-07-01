@@ -25,8 +25,9 @@ struct ImprovementConfig_t
     std::vector<std::string> excludes; // feature ids that can't coexist with this one on a tile
     // How far (in Manhattan tiles) this improvement's effects reach beyond its own tile.
     // 0 (default) = this tile only, e.g. Bunker/Rocky. >0 = also affects any tile within
-    // that distance, e.g. Sensor (radius 2) projects its defense bonus outward. Only
-    // ResolveTileDefenseMultiplier currently honors radius - ResolveTileYield does not.
+    // that distance, e.g. Sensor (radius 2) projects its defense bonus outward.
+    // All three resolvers (ResolveTileYield, ResolveTileDefenseMultiplier, RecomputeMoisture)
+    // honour radius via TileEffectsContext::CollectAreaEffects.
     int radius = 0;
     int frequency = 0;                 // world-gen spawn weight; 0 = not randomly placed
     std::string spritePath;            // optional sprite override (used for tile bonuses)
