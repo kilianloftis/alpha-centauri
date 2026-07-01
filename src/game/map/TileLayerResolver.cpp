@@ -1,5 +1,7 @@
 #include "game/map/TileLayerResolver.h"
 
+#include "game/map/ImprovementConfigParser.h"
+
 namespace ac
 {
 
@@ -79,8 +81,9 @@ std::optional<std::string> ResolveImprovementLayer_(const Tile& rTile)
     // TODO: Define improvement rendering priority, exclusion rules, and monolith/landmark handling.
     // This layer is intended for the single most visually dominant non-road, non-vegetation
     // improvement on the tile (e.g., Borehole, Solar Collector, Monolith).
-    for (const std::string& improvementId : rTile.GetImprovements())
+    for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
     {
+        const std::string& improvementId = pImprovement->id;
         if (improvementId == TileLayerContent::k_farm
             || improvementId == TileLayerContent::k_forest
             || improvementId == TileLayerContent::k_road)

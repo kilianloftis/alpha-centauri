@@ -100,9 +100,10 @@ std::vector<ActiveEffect_t> CollectPopEffects(const PopTypeConfig_t& rConfig);
 // locally by Pop::ApplyTileMultipliers and never enter the base-wide pool.
 std::vector<ActiveEffect_t> CollectFromPops(const PopContainer& rPops, const BaseManager& rOriginBase);
 
-// Collects every ThisTile-scoped effect from rTile's own feature ids only (rockiness,
-// moisture, river, fungus, landmark, improvements), each looked up in rImprovements.
-// sourceId is the matching feature's id. Does NOT include aura effects from nearby tiles —
+// Collects every ThisTile-scoped effect from rTile's own features only: terrain feature ids
+// (rockiness, moisture, river, fungus) looked up in rImprovements, plus each improvement
+// config held directly on the tile. sourceId is the matching feature's id. Does NOT include
+// aura effects from nearby tiles —
 // use TileEffectsContext::CollectAreaEffects for that (which needs WorldMap).
 // Never enters the base-wide active effects pool (FilterForBase always excludes ThisTile).
 std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile, const ImprovementRegistry& rImprovements);

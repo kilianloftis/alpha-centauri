@@ -1,4 +1,5 @@
 #include "game/map/Tile.h"
+#include "game/map/ImprovementConfigParser.h"
 #include <algorithm>
 #include <cmath>
 #include <string_view>
@@ -137,68 +138,36 @@ bool Tile::GetHasFungus() const
     return m_bHasFungus;
 }
 
-void Tile::SetLandmark(const std::string& landmarkId)
+void Tile::AddImprovement(const ImprovementConfig_t& rConfig)
 {
-    m_landmark = landmarkId;
-}
-
-void Tile::RemoveLandmark()
-{
-    m_landmark.clear();
-}
-
-bool Tile::HasLandmark() const
-{
-    return !m_landmark.empty();
-}
-
-const std::string& Tile::GetLandmark() const
-{
-    return m_landmark;
-}
-
-void Tile::AddImprovement(const std::string& improvementId)
-{
-    if (!HasImprovement(improvementId))
+    if (!HasImprovement(rConfig.id))
     {
-        m_improvements.push_back(improvementId);
+        m_improvements.push_back(&rConfig);
     }
 }
 
-void Tile::RemoveImprovement(const std::string& improvementId)
+void Tile::RemoveImprovement(std::string_view improvementId)
 {
-    auto it = std::remove(m_improvements.begin(), m_improvements.end(), improvementId);
+    auto it = std::remove_if(m_improvements.begin(), m_improvements.end(),
+                             [&](const ImprovementConfig_t* pConfig)
+                             {
+                                 return pConfig->id == improvementId;
+                             });
     m_improvements.erase(it, m_improvements.end());
 }
 
-bool Tile::HasImprovement(const std::string& improvementId) const
+bool Tile::HasImprovement(std::string_view improvementId) const
 {
-    return std::find(m_improvements.begin(), m_improvements.end(), improvementId) != m_improvements.end();
+    return std::any_of(m_improvements.begin(), m_improvements.end(),
+                       [&](const ImprovementConfig_t* pConfig)
+                       {
+                           return pConfig->id == improvementId;
+                       });
 }
 
-const std::vector<std::string>& Tile::GetImprovements() const
+const std::vector<const ImprovementConfig_t*>& Tile::GetImprovements() const
 {
     return m_improvements;
-}
-
-void Tile::SetBonus(const std::string& bonusId)
-{
-    m_bonus = bonusId;
-}
-
-void Tile::RemoveBonus()
-{
-    m_bonus.clear();
-}
-
-bool Tile::HasBonus() const
-{
-    return !m_bonus.empty();
-}
-
-const std::string& Tile::GetBonus() const
-{
-    return m_bonus;
 }
 
 void Tile::SetWorked(bool bWorked) const
@@ -222,16 +191,10 @@ bool Tile::HasFeature(std::string_view featureId) const
     if (ToString(m_moisture)  == featureId) return true;
     if (m_bHasRiver  && featureId == "River")  return true;
     if (m_bHasFungus && featureId == "Fungus") return true;
-    if (!m_landmark.empty() && m_landmark == featureId) return true;
-    if (!m_bonus.empty()    && m_bonus    == featureId) return true;
-    for (const std::string& id : m_improvements)
-    {
-        if (id == featureId) return true;
-    }
-    return false;
+    return HasImprovement(featureId);
 }
 
-std::vector<std::string> Tile::GetFeatureIds() const
+std::vector<std::string> Tile::GetTerrainFeatureIds() const
 {
     std::vector<std::string> ids;
     ids.push_back(ToString(m_rockiness));
@@ -244,15 +207,6 @@ std::vector<std::string> Tile::GetFeatureIds() const
     {
         ids.push_back("Fungus");
     }
-    if (HasLandmark())
-    {
-        ids.push_back(m_landmark);
-    }
-    if (HasBonus())
-    {
-        ids.push_back(m_bonus);
-    }
-    ids.insert(ids.end(), m_improvements.begin(), m_improvements.end());
     return ids;
 }
 

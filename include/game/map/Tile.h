@@ -8,6 +8,8 @@
 namespace ac
 {
 
+struct ImprovementConfig_t;
+
 enum class Rockiness
 {
     Flat,
@@ -38,7 +40,7 @@ public:
     int GetY() const;
 
     // Terrain characteristics. GetMoisture()/SetMoisture() are the CURRENT/effective value -
-    // what rendering and GetFeatureIds() see, and what a Condenser's MoistureTier effect
+    // what rendering and GetTerrainFeatureIds() see, and what a Condenser's MoistureTier effect
     // mutates via RecomputeMoisture(). GetBaseMoisture()/SetBaseMoisture() are the natural,
     // un-condensed terrain truth set once by world generation; RecomputeMoisture always
     // re-derives the current value from the base plus whatever Condensers currently reach
@@ -69,24 +71,17 @@ public:
     void SetHasFungus(bool bHasFungus);
     bool GetHasFungus() const;
 
-    // Landmarks
-    void SetLandmark(const std::string& landmarkId);
-    void RemoveLandmark();
-    bool HasLandmark() const;
-    const std::string& GetLandmark() const;
-
-    // Improvements (player-built, e.g. "Farm", "Mine", "Bunker" - also gains "Base" when a
-    // base is founded here, see BaseManager)
-    void AddImprovement(const std::string& improvementId);
-    void RemoveImprovement(const std::string& improvementId);
-    bool HasImprovement(const std::string& improvementId) const;
-    const std::vector<std::string>& GetImprovements() const;
-
-    // Bonus
-    void SetBonus(const std::string& bonusId);
-    void RemoveBonus();
-    bool HasBonus() const;
-    const std::string& GetBonus() const;
+    // Improvements: every non-terrain feature on this tile, held as non-owning pointers into
+    // ImprovementRegistry (the same way BuildingManager holds BuildingConfig_t*). This one
+    // collection covers player-built improvements (Farm, Mine, Bunker), the "Base" marker
+    // added when a base is founded here (see BaseManager), and what were formerly separate
+    // "bonus"/"landmark" slots - for the map they are all just improvements, with coexistence
+    // governed by ImprovementConfig_t::excludes. Configs are resolved by the caller (the
+    // registry funnel is TileEffectsContext); Tile never looks them up itself.
+    void AddImprovement(const ImprovementConfig_t& rConfig);
+    void RemoveImprovement(std::string_view improvementId);
+    bool HasImprovement(std::string_view improvementId) const;
+    const std::vector<const ImprovementConfig_t*>& GetImprovements() const;
 
     // Worked flag (set when a Pop is actively assigned to this tile).
     // Declared const because it is updated through a const Tile* held by Pop.
@@ -94,15 +89,16 @@ public:
     bool IsWorked() const;
     bool IsWorkerAssigned() const;
 
-    // Every feature id active on this tile: rockiness, moisture, river, fungus, landmark,
-    // and improvements. Used by CollectTileEffects/CanBuildImprovement to look entries up
-    // in the ImprovementRegistry - rockiness/moisture/river/fungus are properties of the
-    // terrain itself, but for effects/exclusivity purposes they're looked up the exact same
-    // way as a player-built improvement.
-    std::vector<std::string> GetFeatureIds() const;
+    // Terrain-only feature ids: rockiness, moisture, river, fungus. These are intrinsic
+    // terrain properties (enums/bools), but for effects/exclusivity they're looked up in the
+    // ImprovementRegistry by string id, exactly like an improvement. Improvements are NOT
+    // included here - effect collectors iterate GetImprovements() for those config pointers
+    // directly (no registry lookup needed).
+    std::vector<std::string> GetTerrainFeatureIds() const;
 
-    // Returns true if featureId matches any active feature on this tile (terrain, flags,
-    // landmark, bonus, or improvement). Avoids vector allocation vs GetFeatureIds().
+    // Returns true if featureId matches any active feature on this tile: a terrain feature
+    // (rockiness/moisture/river/fungus) or an improvement id. Used by conditions/selectors
+    // and CanBuildImprovement, which reference features by string id.
     bool HasFeature(std::string_view featureId) const;
 
 private:
@@ -117,9 +113,7 @@ private:
     bool m_bHasRiver;
     bool m_bHasFungus;
 
-    std::string m_landmark;
-    std::vector<std::string> m_improvements;
-    std::string m_bonus;
+    std::vector<const ImprovementConfig_t*> m_improvements;
 
     mutable bool m_bWorked;  // true when a Pop is assigned to this tile
 };

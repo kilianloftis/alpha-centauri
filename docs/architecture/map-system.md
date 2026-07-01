@@ -20,9 +20,7 @@ graph TB
     subgraph "Tile Features"
         River[River<br/>bool]
         Fungus[Fungus<br/>bool]
-        Landmark[Landmark<br/>string]
-        Improvements[Improvements<br/>vector<string>]
-        Bonus[Bonus<br/>string]
+        Improvements[Improvements<br/>vector const ImprovementConfig_t*]
         WorkerAssigned[WorkerAssigned<br/>baseId int, -1=unworked]
     end
 
@@ -45,9 +43,7 @@ graph TB
     Tile --> Elevation
     Tile --> River
     Tile --> Fungus
-    Tile --> Landmark
     Tile --> Improvements
-    Tile --> Bonus
     Tile --> WorkerAssigned
     Tile --> CollectTileEffects
     CollectTileEffects --> ImprovementRegistry
@@ -73,8 +69,8 @@ graph TB
     - Moisture (enum: Arid, Moist, Wet)
     - Rockiness (enum: Flat, Rolling, Rocky)
     - Elevation (int: -4000 to 4000 meters)
-  - Track tile features (Rivers, Fungus, Landmarks, Improvements)
-  - Expose `GetFeatureIds()` so the effects system can resolve yield/defense from terrain and improvements through one mechanism — see Tile Improvement Effects below
+  - Track tile features (Rivers, Fungus, Improvements)
+  - Expose `GetTerrainFeatureIds()` (terrain ids) and `GetImprovements()` (config pointers) so the effects system can resolve yield/defense from terrain and improvements through one mechanism — see Tile Improvement Effects below
 - **Composition**:
   - `Position`: x,y coordinates on the map grid
   - `Moisture`: Enum (Arid, Moist, Wet) - affects nutrient production via its `Moist`/`Wet` entry in `config/improvements.json`
@@ -82,9 +78,7 @@ graph TB
   - `Elevation`: Integer in meters, range -4000 to 4000 - the raw seed for energy production (`GetElevationEnergySeed()`); River/improvement bonuses layer on top via effects
   - `River`: Boolean flag for river presence (grants an energy bonus via its improvements.json entry)
   - `Fungus`: Boolean flag for alien fungus presence (grants a defense bonus via its improvements.json entry). Presence-only for now — spreading fungus turn-over-turn is a separate future enhancement, not implemented.
-  - `Landmark`: Optional landmark identifier (e.g., "Monsoon Jungle", "Fungal Tower")
-  - `Improvements`: Vector of built improvements (e.g., "Farm", "Mine", "Bunker") — also gains `"Base"` automatically when a `BaseManager` is founded on the tile
-  - `Bonus`: Optional tile bonus ID (e.g., "nutrient_rich_soil", "geothermal_vent") — a separate, not-yet-wired-up system, see Tile Bonus System below
+  - `Improvements`: Vector of non-owning `const ImprovementConfig_t*` into `ImprovementRegistry` (like `BuildingManager`'s `BuildingConfig_t*`). Covers player-built improvements (e.g. "Farm", "Mine", "Bunker"), the `"Base"` marker added automatically when a `BaseManager` is founded on the tile, and tile specials that were formerly separate "bonus"/"landmark" slots (e.g. "Monsoon Jungle", "nutrient_rich_soil") — for the map all three are just improvements, with coexistence governed by `ImprovementConfig_t::excludes`
   - `WorkerAssigned`: Integer base ID tracking which base has a worker on this tile (-1 if unworked; one worker per tile limit)
   - `bWorked`: Mutable boolean flag set when a `Pop` is actively assigned to this tile; `Pop` clears it on destruction through its `const Tile*`
 - **Worker Assignment**:
@@ -142,29 +136,19 @@ graph TB
   - Improvement rendering priority and monolith/landmark handling
 
 ### Tile Improvement Effects
-- **Purpose**: Unifies terrain classification, natural features, landmarks, player-built improvements, and a founded base behind one config type (`ImprovementConfig_t`) and one lookup (`Tile::GetFeatureIds()` → `ImprovementRegistry::Find(id)`), since all of them answer the same two questions: what effects do they grant, and what do they exclude. Full details (scope semantics, the `ThisTile` resolution pattern, the seeded-energy pattern) are in `docs/architecture/effects-system.md`'s "Tile Improvement Effects" section — this is the map-system-facing summary.
+- **Purpose**: Unifies terrain classification, natural features, player-built improvements, tile specials (formerly "bonus"/"landmark"), and a founded base behind one config type (`ImprovementConfig_t`), since all of them answer the same two questions: what effects do they grant, and what do they exclude. Terrain is resolved by string id (`Tile::GetTerrainFeatureIds()` → `ImprovementRegistry::Find(id)`); improvements are held directly as `const ImprovementConfig_t*` on the tile (`Tile::GetImprovements()`). Full details (scope semantics, the `ThisTile` resolution pattern, the seeded-energy pattern) are in `docs/architecture/effects-system.md`'s "Tile Improvement Effects" section — this is the map-system-facing summary.
 - **Components**:
   - `ImprovementConfig_t` / `ImprovementConfigParser` / `ImprovementRegistry` (`include/game/map/ImprovementConfigParser.h`, `ImprovementRegistry.h`) — id, name, mineral cost, required tech, `excludes` (incompatible feature ids), and an `effects` array.
   - `CollectTileEffects`, `ResolveTileYield`, `ResolveTileDefenseMultiplier` (`include/lib/effects/ActiveEffect.h`) — gather and resolve a tile's own effects.
   - `CanBuildImprovement(tile, candidate)` (`include/game/map/ImprovementConfigParser.h`) — exclusivity check (e.g. Farm excludes Rocky). Not wired into any UI yet; there's no improvement-construction flow to call it from.
 - **Configuration**: `config/improvements.json` — one array covering terrain values (`Flat`/`Rolling`/`Rocky`, `Arid`/`Moist`/`Wet`), natural features (`River`, `Fungus`), and improvements (`Farm`, `Mine`, `Bunker`, `Base`).
 - **Combat bonus example**: `Rocky`, `Fungus`, and `Bunker` each grant a `StatModifier` effect on `StatId::Defense` with `op: AddPercent, amount: 25` (+25%, stacking additively per `ResolveStatModifiers`'s arithmetic-factor formula). `Base` grants a larger placeholder bonus the same way. No combat system exists yet to consume `ResolveTileDefenseMultiplier` — it's exposed as a ready-to-call resolver.
-- **Aura example**: `Sensor` (`radius: 2`) projects its `+25%` defense bonus to every tile within 2 tiles (Manhattan), not just its own — `ResolveTileDefenseMultiplier` takes a `WorldMap` specifically to scan for these. This is the one tile resolver that needs map access; `ResolveTileYield`/`CollectTileEffects` only ever look at a tile's own feature ids.
+- **Aura example**: `Sensor` (`radius: 2`) projects its `+25%` defense bonus to every tile within 2 tiles (Manhattan), not just its own — `ResolveTileDefenseMultiplier` takes a `WorldMap` specifically to scan for these. This is the one tile resolver that needs map access; `ResolveTileYield`/`CollectTileEffects` only ever look at a tile's own terrain features and improvements.
 
-### Tile Bonus System
-- **Purpose**: Defines special resource bonuses that can be applied to individual tiles
-- **Components**:
-  - `TileBonusConfig`: Data structure holding bonus definition (id, name, description, nutrient/mineral/energy bonuses, frequency, sprite path)
-  - `TileBonusConfigParser`: Parses tile bonus definitions from JSON config
-  - `TileBonusRegistry`: Loads and provides access to all tile bonuses at runtime
-- **Configuration**: `config/tile_bonuses.json` - defines available bonuses and their effects
-- **Example Bonuses**:
-  - `nutrient_rich_soil`: +2 nutrients, frequency 100 (common)
-  - `mineral_deposit`: +2 minerals, frequency 100 (common)
-  - `geothermal_vent`: +2 energy, frequency 50 (uncommon)
-  - `bounty`: +2 to all resources, frequency 10 (rare)
-  - `rare_earth_deposit`: +2 nutrients, +2 minerals, frequency 30 (uncommon)
-- **Frequency System**: Higher values = more common during map generation. Used by world generator to weight bonus placement probability.
+### Tile Bonuses (special resources)
+- **Purpose**: Special resource bonuses on individual tiles (e.g. a nutrient-rich or mineral deposit).
+- **Modeling**: These are **not a separate system** — a tile bonus is just an `ImprovementConfig_t` entry in `config/improvements.json` like any other improvement. It grants resources via `ThisTile` `StatModifier` effects, sets `frequency` > 0 for world-gen placement weighting, and may carry a `spritePath`/`description` for rendering and lore. It lives in the tile's single improvements collection (`Tile::GetImprovements()`), with coexistence governed by `excludes`.
+- **Frequency System**: Higher `frequency` = more common during map generation; used by the world generator to weight placement. (World-gen does not yet place bonuses — it currently sets only terrain.)
 
 ### TileMap (Future)
 - **Purpose**: Container managing all tiles on the game map
@@ -202,12 +186,12 @@ graph TB
 
 ### Extensibility
 - Improvements system allows extending tile functionality without modifying Tile class
-- Landmark system supports special terrain features
+- A single improvements collection covers player-built improvements, tile specials, landmarks, and the Base marker — new kinds are added as `config/improvements.json` entries, not new C++ types
 - Resource and defense calculation are entirely effects-driven via `config/improvements.json` — adding a new improvement, or changing what Rocky/Fungus grant, never touches `Tile` or its consumers' C++
 
 ### Moddability
 - Terrain characteristics use semantically meaningful types (enums for moisture/rockiness, actual meters for elevation) for world-gen and rendering, but resolve through the same string-id effects lookup as improvements for yield/defense purposes
-- Improvements and Landmarks use string IDs for easy content addition
+- Improvements are referenced by string ID in config for easy content addition; on a tile they're held as resolved `ImprovementConfig_t` pointers
 - Resource and defense formulas live in `config/improvements.json`, not in code
 
 ## Future Enhancements

@@ -8,12 +8,30 @@
 #include "lib/effects/ActiveEffect.h"
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 
 namespace ac
 {
 
 namespace
 {
+
+// Appends every effect from a nearby feature that reaches `distance` tiles (radius >= distance).
+void AppendReachingEffects_(const ImprovementConfig_t& rFeature, int distance,
+                            std::vector<ActiveEffect_t>& rOut)
+{
+    if (rFeature.radius < distance)
+    {
+        return;
+    }
+    for (const EffectConfig_t& rEffect : rFeature.effects)
+    {
+        ActiveEffect_t active;
+        active.config = &rEffect;
+        active.sourceId = rFeature.id;
+        rOut.push_back(active);
+    }
+}
 
 void AppendAreaEffectsFromNeighbors_(const Tile& rOrigin, const WorldMap& rWorldMap,
                                       const ImprovementRegistry& rImprovements,
@@ -23,21 +41,18 @@ void AppendAreaEffectsFromNeighbors_(const Tile& rOrigin, const WorldMap& rWorld
     ForEachTileInManhattanRadius(rOrigin, rWorldMap, maxRadius, false,
         [&](const Tile* pNearby, int distance)
         {
-            for (const std::string& featureId : pNearby->GetFeatureIds())
+            // Terrain features resolve by id via the registry; improvements are already configs.
+            for (const std::string& featureId : pNearby->GetTerrainFeatureIds())
             {
-                const ImprovementConfig_t* pFeature = rImprovements.Find(featureId);
-                if (!pFeature || pFeature->radius < distance)
+                if (const ImprovementConfig_t* pFeature = rImprovements.Find(featureId))
                 {
-                    continue;
+                    AppendReachingEffects_(*pFeature, distance, rOut);
                 }
+            }
 
-                for (const EffectConfig_t& rEffect : pFeature->effects)
-                {
-                    ActiveEffect_t active;
-                    active.config = &rEffect;
-                    active.sourceId = pFeature->id;
-                    rOut.push_back(active);
-                }
+            for (const ImprovementConfig_t* pImprovement : pNearby->GetImprovements())
+            {
+                AppendReachingEffects_(*pImprovement, distance, rOut);
             }
         });
 }
@@ -167,13 +182,16 @@ void TileEffectsContext::RecomputeMoisture(Tile& rTile) const
 
 void TileEffectsContext::AddImprovementWithEffects(Tile& rTile, const std::string& improvementId) const
 {
-    rTile.AddImprovement(improvementId);
-
     const ImprovementConfig_t* pConfig = m_rImprovements.Find(improvementId);
-    if (pConfig)
+    if (!pConfig)
     {
-        RecomputeMoistureInRadius_(rTile, pConfig->radius, *this, m_rWorldMap);
+        std::cerr << "[TileEffectsContext] Unknown improvement id '" << improvementId
+                  << "' - not added.\n";
+        return;
     }
+
+    rTile.AddImprovement(*pConfig);
+    RecomputeMoistureInRadius_(rTile, pConfig->radius, *this, m_rWorldMap);
 }
 
 void TileEffectsContext::RemoveImprovementWithEffects(Tile& rTile, const std::string& improvementId) const

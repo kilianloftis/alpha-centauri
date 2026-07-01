@@ -374,27 +374,43 @@ std::vector<ActiveEffect_t> CollectFromPops(const PopContainer& rPops, const Bas
     return result;
 }
 
+namespace
+{
+
+void AppendThisTileEffects_(const ImprovementConfig_t& rFeature, std::vector<ActiveEffect_t>& rOut)
+{
+    for (const EffectConfig_t& rEffect : rFeature.effects)
+    {
+        if (rEffect.scope != EffectScope_t::ThisTile)
+            continue;
+        ActiveEffect_t active;
+        active.config = &rEffect;
+        active.sourceId = rFeature.id;
+        rOut.push_back(active);
+    }
+}
+
+} // namespace
+
 std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile, const ImprovementRegistry& rImprovements)
 {
     std::vector<ActiveEffect_t> result;
-    for (const std::string& featureId : rTile.GetFeatureIds())
-    {
-        const ImprovementConfig_t* pFeature = rImprovements.Find(featureId);
-        if (!pFeature)
-        {
-            continue;
-        }
 
-        for (const EffectConfig_t& rEffect : pFeature->effects)
+    // Terrain features (rockiness/moisture/river/fungus) are resolved by string id against
+    // the registry; improvements are already held as config pointers, so iterate them directly.
+    for (const std::string& featureId : rTile.GetTerrainFeatureIds())
+    {
+        if (const ImprovementConfig_t* pFeature = rImprovements.Find(featureId))
         {
-            if (rEffect.scope != EffectScope_t::ThisTile)
-                continue;
-            ActiveEffect_t active;
-            active.config = &rEffect;
-            active.sourceId = pFeature->id;
-            result.push_back(active);
+            AppendThisTileEffects_(*pFeature, result);
         }
     }
+
+    for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
+    {
+        AppendThisTileEffects_(*pImprovement, result);
+    }
+
     return result;
 }
 

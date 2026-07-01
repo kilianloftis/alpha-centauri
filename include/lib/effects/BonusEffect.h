@@ -21,7 +21,7 @@ enum class EffectScope_t
     // (e.g. ApplyTileMultipliers) and must never enter the base-wide active effects pool.
     ThisPop,
     // Only the specific tile the effect belongs to (terrain classification, river, fungus,
-    // landmark, or improvement). Resolved locally via CollectTileEffects/ResolveTileYield/
+    // or improvement). Resolved locally via CollectTileEffects/ResolveTileYield/
     // ResolveTileDefenseMultiplier and must never enter the base-wide active effects pool.
     ThisTile,
 };
@@ -113,7 +113,7 @@ enum class ConditionKind
 {
     // The tile targeted by this effect has the named feature id. Evaluated via
     // Tile::HasFeature, so a single kind covers terrain classification (e.g. "Rocky"),
-    // river/fungus, landmark, bonus, and any improvement id — including "Base", which a
+    // river/fungus, and any improvement id — including "Base", which a
     // founded base registers as an improvement. In combat the target is the defender's tile,
     // so this expresses both "+X% attacking into Forest" and "+X% attacking a Base".
     TargetTileHas,

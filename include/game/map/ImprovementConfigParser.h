@@ -11,10 +11,12 @@ namespace ac
 class Tile;
 
 // A single tile feature definition: a terrain classification (Flat/Rolling/Rocky,
-// Arid/Moist/Wet), a natural feature (River, Fungus), a landmark, or a player-built
-// improvement (Farm, Mine, Bunker, ...). All of these are looked up the same way via
-// Tile::GetFeatureIds() - terrain and improvements differ in how they're set on a Tile,
-// not in how their effects/exclusivity are resolved.
+// Arid/Moist/Wet), a natural feature (River, Fungus), or an improvement (Farm, Mine, Bunker,
+// Base, and what were formerly "bonus"/"landmark" specials - all just improvements now).
+// Terrain and improvements share this type and resolve effects/exclusivity identically; they
+// differ only in how they live on a Tile: terrain is intrinsic (enums/bools, listed by
+// Tile::GetTerrainFeatureIds() and looked up by id), while improvements are held directly as
+// ImprovementConfig_t pointers in Tile::GetImprovements().
 struct ImprovementConfig_t
 {
     std::string id;
