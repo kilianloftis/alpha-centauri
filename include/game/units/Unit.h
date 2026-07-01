@@ -36,7 +36,7 @@ public:
     int GetCargoCapacity() const;
     int GetDifficultTerrainCost() const;
     bool IsSingleUse() const;
-    std::unordered_map<std::string, float> GetTerrainAttackBonus() const;
+    std::unordered_map<std::string, double> GetTerrainAttackBonus() const;
     Tile& GetTile() const;
     BaseManager* GetHomeBase() const;
     Faction& GetFaction() const;

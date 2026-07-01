@@ -15,6 +15,7 @@ class Faction;
 class PopContainer;
 class Tile;
 class ImprovementRegistry;
+struct BuildingConfig_t;
 struct UnitComponentConfig_t;
 struct PopTypeConfig_t;
 
@@ -41,6 +42,11 @@ struct StatBreakdown_t
 
 std::vector<ActiveEffect_t> CollectActiveEffects(const Faction& rFaction,
                                                   const BuildingRegistry& rBuildingRegistry);
+
+// Apply a stack of modifier contributions to a base value using the standard formula:
+//   result = (base + sumOfAdds) * (1 + sumOf(arithmetic-1)) * productOfGeometric
+// Each pair is {amount, op}. Contributions are applied in the order given.
+double ApplyModifierStack(double base, const std::vector<std::pair<double, ModifierOp>>& contributions);
 
 // baseValue seeds the additive total before contributions are summed — required for stats
 // that are resolved purely through multiplicative modifiers (e.g. CostMultiplier, which has
@@ -77,5 +83,11 @@ std::vector<ActiveEffect_t> CollectFromPops(const PopContainer& rPops, const Bas
 // use TileEffectsContext::CollectAreaEffects for that (which needs WorldMap).
 // Never enters the base-wide active effects pool (FilterForBase always excludes ThisTile).
 std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile, const ImprovementRegistry& rImprovements);
+
+// Fire all Instantaneous effects declared on rBuilding against rBase.
+// GrantBuilding: calls rBase.AddBuilding immediately.
+// GrantTech / GrantUnit: logged as TODO stubs until those systems are wired.
+// Call this right after a building is added to the base (e.g. from on_production_completed).
+void DispatchInstantaneousEffects(const BuildingConfig_t& rBuilding, BaseManager& rBase);
 
 } // namespace ac

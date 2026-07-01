@@ -9,10 +9,12 @@
 #include "game/population/pop-types/PopTypeRegistry.h"
 #include "game/population/calculators/PopCompositionCalculator.h"
 #include "game/population/calculators/PopTypeAvailabilityCalculator.h"
+#include "game/buildings/BuildingConfigParser.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/map/MapUtils.h"
 #include "game/map/WorldMap.h"
+#include "lib/effects/ActiveEffect.h"
 #include "lib/effects/TileEffectsContext.h"
 
 namespace ac
@@ -51,6 +53,7 @@ BaseManager::BaseManager(
     , m_baseId(-1)
     , m_tile(tile)
     , m_rTileEffects(rTileEffects)
+    , m_pBuildingRegistry(pBuildingRegistry)
     , m_pResearch(pResearchManager)
     , m_pPopulation(std::make_unique<PopulationManager>(pPopRegistry, pPopTypeAvailabilityCalculator, pResearchManager, pCompositionCalculator, pGrowthCalculator, 3))
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(ComputeWorkableTiles_(rTileEffects, tile), m_pPopulation->GetContainer(), rTileEffects))
@@ -88,6 +91,14 @@ BaseManager::BaseManager(
 
     m_pProduction->on_production_completed.connect([this](const std::string& itemId) {
         m_pBuildings->AddBuilding(itemId);
+        if (m_pBuildingRegistry)
+        {
+            const BuildingConfig_t* pConfig = m_pBuildingRegistry->Find(itemId);
+            if (pConfig)
+            {
+                DispatchInstantaneousEffects(*pConfig, *this);
+            }
+        }
         on_production_completed.emit(itemId);
     });
 }

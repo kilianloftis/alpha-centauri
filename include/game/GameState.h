@@ -46,9 +46,12 @@ public:
 
 private:
     int m_missionYear;
-    std::vector<std::unique_ptr<Faction>> m_factions;
+    // WorldMap and TileEffectsContext are declared before m_factions so they outlive all
+    // BaseManagers (which hold TileEffectsContext& references). Members are destroyed in
+    // reverse declaration order, so m_factions is destroyed before these two.
     std::unique_ptr<WorldMap> m_worldMap;
     std::unique_ptr<TileEffectsContext> m_pTileEffects;
+    std::vector<std::unique_ptr<Faction>> m_factions;
     UnitOrderExecutor m_unitOrderExecutor;
 };
 

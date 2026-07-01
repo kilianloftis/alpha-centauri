@@ -9,13 +9,6 @@
 namespace ac
 {
 
-enum class ImprovementType
-{
-    Farm,
-    Condenser
-    // TODO: add more improvement types as they are defined
-};
-
 enum class EffectScope_t
 {
     ThisBase,
@@ -96,7 +89,7 @@ enum class TileSelectorKind
 struct TileSelector_t
 {
     TileSelectorKind kind;
-    std::optional<ImprovementType> improvement; // set only when kind == HasImprovement
+    std::optional<std::string> improvement; // improvement id, set only when kind == HasImprovement
 };
 
 struct TileYieldModifierEffect_t
@@ -111,7 +104,7 @@ struct UnitBonusTableEffect_t
 {
     std::string tableName;
     std::string key;
-    float value = 0.0f;
+    double value = 0.0;
 };
 
 using EffectVariant_t = std::variant<

@@ -63,16 +63,14 @@ private:
     int m_labs = 0;
     int m_psych = 0;
 
-    int CalculateNutrients_(const std::vector<ActiveEffect_t>& activeEffects) const;
-    int CalculateMinerals_(const std::vector<ActiveEffect_t>& activeEffects) const;
-    int CalculateEnergy_(const std::vector<ActiveEffect_t>& activeEffects) const;
-    int CalculateEcon_(const std::vector<ActiveEffect_t>& activeEffects) const;
-    int CalculateLabs_(const std::vector<ActiveEffect_t>& activeEffects) const;
-    int CalculatePsych_(const std::vector<ActiveEffect_t>& activeEffects) const;
+    int CalculateResource_(StatId stat, const std::vector<ActiveEffect_t>& activeEffects, const TileResources_t& worked) const;
+    int CalculateEcon_(const std::vector<ActiveEffect_t>& activeEffects, int energy) const;
+    int CalculateLabs_(const std::vector<ActiveEffect_t>& activeEffects, int energy) const;
+    int CalculatePsych_(const std::vector<ActiveEffect_t>& activeEffects, int energy) const;
 
-    void ProduceNutrients_(const std::vector<ActiveEffect_t>& activeEffects);
-    void ProduceMinerals_(const std::vector<ActiveEffect_t>& activeEffects);
-    void AllocateEnergy_(const std::vector<ActiveEffect_t>& activeEffects);
+    void ProduceNutrients_(const std::vector<ActiveEffect_t>& activeEffects, const TileResources_t& worked);
+    void ProduceMinerals_(const std::vector<ActiveEffect_t>& activeEffects, const TileResources_t& worked);
+    void AllocateEnergy_(const std::vector<ActiveEffect_t>& activeEffects, const TileResources_t& worked);
     void ProduceResourcesInternal_(const std::vector<ActiveEffect_t>& activeEffects);
 };
 

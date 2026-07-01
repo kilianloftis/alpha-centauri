@@ -1,5 +1,6 @@
 #include "lib/effects/BonusEffectParser.h"
 
+#include <iostream>
 #include <stdexcept>
 
 namespace ac
@@ -65,13 +66,6 @@ EffectPersistence_t ParseEffectPersistence(const std::string& rPersistence)
     throw std::runtime_error("Unknown effect persistence: '" + rPersistence + "'");
 }
 
-ImprovementType ParseImprovementType(const std::string& rImprovement)
-{
-    if (rImprovement == "Farm")      return ImprovementType::Farm;
-    if (rImprovement == "Condenser") return ImprovementType::Condenser;
-    throw std::runtime_error("Unknown tile improvement type: '" + rImprovement + "'");
-}
-
 double ParseNumber(const nlohmann::json& parameters, const std::string& key, double defaultValue)
 {
     const auto& valueJson = parameters.value(key, nlohmann::json(defaultValue));
@@ -98,7 +92,12 @@ TileSelector_t ParseTileSelector(const nlohmann::json& selectorJson)
     else if (kindStr == "HasImprovement")
     {
         selector.kind = TileSelectorKind::HasImprovement;
-        selector.improvement = ParseImprovementType(selectorJson.value("improvement", ""));
+        const std::string improvementId = selectorJson.value("improvement", "");
+        if (improvementId.empty())
+        {
+            throw std::runtime_error("HasImprovement selector requires a non-empty 'improvement' id");
+        }
+        selector.improvement = improvementId;
     }
     else
     {
@@ -120,6 +119,11 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
     effect.scope = ParseEffectScope(scopeStr);
     effect.persistence = ParseEffectPersistence(persistenceStr);
     effect.condition = effectJson.value("condition", "");
+    if (!effect.condition.empty())
+    {
+        std::cerr << "Warning: effect condition '" << effect.condition
+                  << "' is set but conditions are not yet evaluated — effect will always apply.\n";
+    }
 
     if (typeStr == "GrantBuilding")
     {
@@ -183,7 +187,7 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
         UnitBonusTableEffect_t bonusTable;
         bonusTable.tableName = parameters.value("table_name", "");
         bonusTable.key = parameters.value("key", "");
-        bonusTable.value = static_cast<float>(ParseNumber(parameters, "value", 0.0));
+        bonusTable.value = ParseNumber(parameters, "value", 0.0);
         effect.effect = bonusTable;
     }
     else

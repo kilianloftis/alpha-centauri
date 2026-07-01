@@ -36,9 +36,7 @@ UnitDesign::UnitDesign(
 
         m_slotComponents.push_back({rSlot, pComp});
         if (pComp)
-        {
             m_components.push_back(pComp);
-        }
     }
 
     bool bFirst = true;
@@ -103,9 +101,9 @@ bool UnitDesign::ResolveFlag_(RuleFlagId flagId) const
     return false;
 }
 
-std::unordered_map<std::string, float> UnitDesign::ResolveBonusTable_(const std::string& rTableName) const
+std::unordered_map<std::string, double> UnitDesign::ResolveBonusTable_(const std::string& rTableName) const
 {
-    std::unordered_map<std::string, float> result;
+    std::unordered_map<std::string, double> result;
     for (const ActiveEffect_t& rEffect : CollectUnitEffects(m_components))
     {
         const UnitBonusTableEffect_t* pBonus = std::get_if<UnitBonusTableEffect_t>(&rEffect.config->effect);
@@ -129,7 +127,7 @@ int UnitDesign::GetCargoCapacity() const        { return static_cast<int>(Resolv
 int UnitDesign::GetDifficultTerrainCost() const { return static_cast<int>(ResolveStat_(StatId::DifficultTerrainCost)); }
 bool UnitDesign::IsSingleUse() const            { return ResolveFlag_(RuleFlagId::SingleUse); }
 
-std::unordered_map<std::string, float> UnitDesign::GetTerrainAttackBonus() const
+std::unordered_map<std::string, double> UnitDesign::GetTerrainAttackBonus() const
 {
     return ResolveBonusTable_("terrain_attack");
 }

@@ -147,6 +147,7 @@ private:
     int m_baseId;
     Tile& m_tile;
     TileEffectsContext& m_rTileEffects;
+    const BuildingRegistry* m_pBuildingRegistry;
     const ResearchManager* m_pResearch;
     std::unique_ptr<PopulationManager> m_pPopulation;
     std::unique_ptr<WorkerAssignmentManager> m_pWorkerAssignments;

@@ -55,7 +55,6 @@ add_executable(alpha-centauri
     game/map/Tile.cpp
     game/map/TileLayerResolver.cpp
     game/map/UnitPositionIndex.cpp
-    game/map/TileBonusConfigParser.cpp
     game/map/ImprovementConfigParser.cpp
     game/map/WorldMap.cpp
     game/map/WorldGenerator.cpp

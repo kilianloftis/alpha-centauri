@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace ac
@@ -87,16 +88,11 @@ public:
     bool HasBonus() const;
     const std::string& GetBonus() const;
 
-    // Worker assignment (one worker per tile, tracked by base ID)
-    void AssignWorker(int baseId);
-    void UnassignWorker();
-    bool IsWorkerAssigned() const;
-    int GetWorkedByBaseId() const;
-
     // Worked flag (set when a Pop is actively assigned to this tile).
     // Declared const because it is updated through a const Tile* held by Pop.
     void SetWorked(bool bWorked) const;
     bool IsWorked() const;
+    bool IsWorkerAssigned() const;
 
     // Every feature id active on this tile: rockiness, moisture, river, fungus, landmark,
     // and improvements. Used by CollectTileEffects/CanBuildImprovement to look entries up
@@ -104,6 +100,10 @@ public:
     // terrain itself, but for effects/exclusivity purposes they're looked up the exact same
     // way as a player-built improvement.
     std::vector<std::string> GetFeatureIds() const;
+
+    // Returns true if featureId matches any active feature on this tile (terrain, flags,
+    // landmark, bonus, or improvement). Avoids vector allocation vs GetFeatureIds().
+    bool HasFeature(std::string_view featureId) const;
 
 private:
     int m_x;
@@ -122,7 +122,6 @@ private:
     std::string m_bonus;
 
     mutable bool m_bWorked;  // true when a Pop is assigned to this tile
-    int m_workedByBaseId;  // -1 if unworked
 };
 
 } // namespace ac

@@ -17,14 +17,9 @@ namespace
 
 void AppendAreaEffectsFromNeighbors_(const Tile& rOrigin, const WorldMap& rWorldMap,
                                       const ImprovementRegistry& rImprovements,
+                                      int maxRadius,
                                       std::vector<ActiveEffect_t>& rOut)
 {
-    int maxRadius = 0;
-    for (const ImprovementConfig_t& rConfig : rImprovements.GetAll())
-    {
-        maxRadius = std::max(maxRadius, rConfig.radius);
-    }
-
     ForEachTileInManhattanRadius(rOrigin, rWorldMap, maxRadius, false,
         [&](const Tile* pNearby, int distance)
         {
@@ -62,7 +57,12 @@ void RecomputeMoistureInRadius_(const Tile& rChangedTile, int radius, const Tile
 TileEffectsContext::TileEffectsContext(WorldMap& rWorldMap, const ImprovementRegistry& rImprovements)
     : m_rWorldMap(rWorldMap)
     , m_rImprovements(rImprovements)
+    , m_maxRadius(0)
 {
+    for (const ImprovementConfig_t& rConfig : rImprovements.GetAll())
+    {
+        m_maxRadius = std::max(m_maxRadius, rConfig.radius);
+    }
 }
 
 std::vector<ActiveEffect_t> TileEffectsContext::CollectTileEffects(const Tile& rTile) const
@@ -83,7 +83,7 @@ const WorldMap& TileEffectsContext::GetWorldMap() const
 std::vector<ActiveEffect_t> TileEffectsContext::CollectAreaEffects(const Tile& rTile) const
 {
     std::vector<ActiveEffect_t> effects = ac::CollectTileEffects(rTile, m_rImprovements);
-    AppendAreaEffectsFromNeighbors_(rTile, m_rWorldMap, m_rImprovements, effects);
+    AppendAreaEffectsFromNeighbors_(rTile, m_rWorldMap, m_rImprovements, m_maxRadius, effects);
     return effects;
 }
 

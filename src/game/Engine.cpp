@@ -202,6 +202,13 @@ void Engine::Initialize_()
 
     m_gameState->AddFaction(std::move(pFaction));
 
+    // Prime ResourceManager's m_activeEffects so Get*Production() UI queries return correct
+    // values before the first ResourceCollection turn stage runs.
+    for (auto& pF : m_gameState->GetFactions())
+    {
+        if (pF) pF->ProduceBaseResources();
+    }
+
     std::cout << "Test setup complete. " << m_gameState->GetNumFactions() << " faction(s), "
               << m_gameState->GetPlayerFaction()->GetBaseCount() << " base(s)\n";
 

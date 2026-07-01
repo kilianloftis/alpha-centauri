@@ -32,7 +32,7 @@ bool Unit::IsFlight() const                                            { return 
 int Unit::GetCargoCapacity() const                                     { return m_rDesign.GetCargoCapacity(); }
 int Unit::GetDifficultTerrainCost() const                              { return m_rDesign.GetDifficultTerrainCost(); }
 bool Unit::IsSingleUse() const                                         { return m_rDesign.IsSingleUse(); }
-std::unordered_map<std::string, float> Unit::GetTerrainAttackBonus() const { return m_rDesign.GetTerrainAttackBonus(); }
+std::unordered_map<std::string, double> Unit::GetTerrainAttackBonus() const { return m_rDesign.GetTerrainAttackBonus(); }
 Tile& Unit::GetTile() const                 { return *m_pTile; }
 BaseManager* Unit::GetHomeBase() const      { return m_pHomeBase; }
 Faction& Unit::GetFaction() const           { return m_rFaction; }

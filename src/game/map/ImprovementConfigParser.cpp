@@ -15,13 +15,10 @@ namespace ac
 
 bool CanBuildImprovement(const Tile& rTile, const ImprovementConfig_t& rCandidate)
 {
-    const std::vector<std::string> featureIds = rTile.GetFeatureIds();
     for (const std::string& excludedId : rCandidate.excludes)
     {
-        if (std::find(featureIds.begin(), featureIds.end(), excludedId) != featureIds.end())
-        {
+        if (rTile.HasFeature(excludedId))
             return false;
-        }
     }
     return true;
 }
@@ -83,9 +80,12 @@ ImprovementConfig_t ImprovementConfigParser::ParseImprovementConfig(const nlohma
     ImprovementConfig_t config;
     config.id = improvementJson["id"];
     config.name = improvementJson.value("name", config.id);
+    config.description = improvementJson.value("description", "");
     config.mineralCost = improvementJson.value("mineral_cost", 0);
     config.requiredTech = improvementJson.value("required_tech", "");
     config.radius = improvementJson.value("radius", 0);
+    config.frequency = improvementJson.value("frequency", 0);
+    config.spritePath = improvementJson.value("sprite_path", "");
 
     if (improvementJson.contains("excludes"))
     {

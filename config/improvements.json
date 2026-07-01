@@ -96,7 +96,6 @@
   {
     "id": "Mine",
     "name": "Mine",
-    "mineral_cost": 10,
     "effects": [
       {
         "type": "StatModifier",
@@ -131,7 +130,6 @@
   {
     "id": "Sensor",
     "name": "Sensor",
-    "mineral_cost": 10,
     "radius": 2,
     "effects": [
       {
@@ -144,7 +142,6 @@
   {
     "id": "Mirror",
     "name": "Mirror",
-    "mineral_cost": 10,
     "radius": 2,
     "effects": [
       {
@@ -157,13 +154,54 @@
   {
     "id": "Condenser",
     "name": "Condenser",
-    "mineral_cost": 10,
     "radius": 1,
     "effects": [
       {
         "type": "StatModifier",
         "scope": "ThisTile",
         "parameters": { "stat": "moisture_tier", "amount": 1, "op": "Add" }
+      }
+    ]
+  },
+  {
+    "id": "Nutrients",
+    "name": "Nutrients",
+    "description": "Exceptionally fertile soil provides extra nutrients",
+    "frequency": 10,
+    "sprite_path": "assets/sprites/tile_bonuses/nutrient_rich_soil.png",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "nutrients", "amount": 2, "op": "Add" }
+      }
+    ]
+  },
+  {
+    "id": "Minerals",
+    "name": "Minerals",
+    "description": "Rich mineral veins near the surface",
+    "frequency": 10,
+    "sprite_path": "assets/sprites/tile_bonuses/mineral_deposit.png",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "minerals", "amount": 2, "op": "Add" }
+      }
+    ]
+  },
+  {
+    "id": "Energy",
+    "name": "Energy",
+    "description": "Natural energy source provides energy",
+    "frequency": 10,
+    "sprite_path": "assets/sprites/tile_bonuses/energy_vein.png",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "energy", "amount": 2, "op": "Add" }
       }
     ]
   }

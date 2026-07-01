@@ -1,6 +1,7 @@
 #include "game/map/Tile.h"
 #include <algorithm>
 #include <cmath>
+#include <string_view>
 
 namespace ac
 {
@@ -37,7 +38,6 @@ Tile::Tile()
     , m_bHasRiver(false)
     , m_bHasFungus(false)
     , m_bWorked(false)
-    , m_workedByBaseId(-1)
 {
 }
 
@@ -51,7 +51,6 @@ Tile::Tile(int x, int y)
     , m_bHasRiver(false)
     , m_bHasFungus(false)
     , m_bWorked(false)
-    , m_workedByBaseId(-1)
 {
 }
 
@@ -212,26 +211,24 @@ bool Tile::IsWorked() const
     return m_bWorked;
 }
 
-void Tile::AssignWorker(int baseId)
-{
-    m_bWorked = true;
-    m_workedByBaseId = baseId;
-}
-
-void Tile::UnassignWorker()
-{
-    m_bWorked = false;
-    m_workedByBaseId = -1;
-}
-
 bool Tile::IsWorkerAssigned() const
 {
     return m_bWorked;
 }
 
-int Tile::GetWorkedByBaseId() const
+bool Tile::HasFeature(std::string_view featureId) const
 {
-    return m_workedByBaseId;
+    if (ToString(m_rockiness) == featureId) return true;
+    if (ToString(m_moisture)  == featureId) return true;
+    if (m_bHasRiver  && featureId == "River")  return true;
+    if (m_bHasFungus && featureId == "Fungus") return true;
+    if (!m_landmark.empty() && m_landmark == featureId) return true;
+    if (!m_bonus.empty()    && m_bonus    == featureId) return true;
+    for (const std::string& id : m_improvements)
+    {
+        if (id == featureId) return true;
+    }
+    return false;
 }
 
 std::vector<std::string> Tile::GetFeatureIds() const
@@ -250,6 +247,10 @@ std::vector<std::string> Tile::GetFeatureIds() const
     if (HasLandmark())
     {
         ids.push_back(m_landmark);
+    }
+    if (HasBonus())
+    {
+        ids.push_back(m_bonus);
     }
     ids.insert(ids.end(), m_improvements.begin(), m_improvements.end());
     return ids;

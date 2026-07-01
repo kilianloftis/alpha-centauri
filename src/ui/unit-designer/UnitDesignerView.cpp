@@ -139,10 +139,16 @@ void UnitDesignerView::HandleSaveDesign_()
         return;
     }
 
-    m_rMilitary.AddDesign(std::make_unique<UnitDesign>(
+    const bool added = m_rMilitary.AddDesign(std::make_unique<UnitDesign>(
         m_rSlotRegistry.GetAll(),
         m_state.components
     ));
+    if (!added)
+    {
+        // A design with this component combination already exists — no-op for now.
+        // TODO: surface a status message in the UI once a notification system exists.
+        return;
+    }
 }
 
 } // namespace ac

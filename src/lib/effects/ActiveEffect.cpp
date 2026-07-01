@@ -16,6 +16,7 @@
 #include "lib/effects/BonusEffect.h"
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 #include <set>
 
 namespace ac
@@ -31,6 +32,10 @@ void AppendEffects(const std::vector<EffectConfig_t>& rEffects,
 {
     for (const EffectConfig_t& rEffect : rEffects)
     {
+        // Instantaneous effects fire at construction time via DispatchInstantaneousEffects;
+        // they must not enter the continuous active-effect pool.
+        if (rEffect.persistence == EffectPersistence_t::Instantaneous)
+            continue;
         ActiveEffect_t activeEffect;
         activeEffect.config = &rEffect;
         activeEffect.sourceId = sourceId;
@@ -61,6 +66,9 @@ void CollectFromBuildings(const Faction& rFaction,
         }
     }
 
+    // Key: (originBase*, grantedBuildingId). Pointer identity is intentional — two different
+    // bases granting the same building must each expand independently. Pointers are always
+    // valid here because rFaction owns the bases and outlives this stack frame.
     std::set<std::pair<const BaseManager*, std::string>> processedGrantedIds;
     for (size_t i = 0; i < rOut.size(); ++i)
     {
@@ -76,20 +84,37 @@ void CollectFromBuildings(const Faction& rFaction,
             continue;
         }
 
-        const std::pair<const BaseManager*, std::string> key = {rOut[i].originBase, pGrant->buildingId};
-        if (processedGrantedIds.count(key))
-        {
-            continue;
-        }
-        processedGrantedIds.insert(key);
-
         const BuildingConfig_t* pGranted = rBuildingRegistry.Find(pGrant->buildingId);
         if (!pGranted)
         {
             continue;
         }
 
-        AppendEffects(pGranted->effects, rOut[i].originBase, rOut[i].sourceId + " -> " + pGranted->id, rOut);
+        if (rOut[i].originBase != nullptr)
+        {
+            // ThisBase-scoped grant: expand effects once, attributed to the originating base.
+            const std::pair<const BaseManager*, std::string> key = {rOut[i].originBase, pGrant->buildingId};
+            if (!processedGrantedIds.count(key))
+            {
+                processedGrantedIds.insert(key);
+                AppendEffects(pGranted->effects, rOut[i].originBase, rOut[i].sourceId + " -> " + pGranted->id, rOut);
+            }
+        }
+        else
+        {
+            // AllOwnerBases / FactionGlobal grant: clone the granted building's effects once
+            // per faction base so that ThisBase-scoped sub-effects are correctly attributed.
+            for (const auto& pBase : rFaction.GetBases())
+            {
+                if (!pBase) continue;
+                const std::pair<const BaseManager*, std::string> key = {pBase.get(), pGrant->buildingId};
+                if (!processedGrantedIds.count(key))
+                {
+                    processedGrantedIds.insert(key);
+                    AppendEffects(pGranted->effects, pBase.get(), rOut[i].sourceId + " -> " + pGranted->id, rOut);
+                }
+            }
+        }
     }
 }
 
@@ -102,6 +127,23 @@ void CollectFromSocialEngineering(const Faction& rFaction, std::vector<ActiveEff
 }
 
 } // namespace
+
+double ApplyModifierStack(double base, const std::vector<std::pair<double, ModifierOp>>& contributions)
+{
+    double addTotal = base;
+    double arithmeticFactor = 1.0;
+    double geometricFactor = 1.0;
+    for (const auto& [amount, op] : contributions)
+    {
+        switch (op)
+        {
+            case ModifierOp::Add:                addTotal += amount; break;
+            case ModifierOp::MultiplyArithmetic: arithmeticFactor += amount - 1.0; break;
+            case ModifierOp::MultiplyGeometric:  geometricFactor *= amount; break;
+        }
+    }
+    return addTotal * arithmeticFactor * geometricFactor;
+}
 
 std::vector<ActiveEffect_t> CollectActiveEffects(const Faction& rFaction,
                                                  const BuildingRegistry& rBuildingRegistry)
@@ -124,30 +166,16 @@ StatBreakdown_t ResolveStatModifiers(const std::vector<ActiveEffect_t>& matching
             continue;
         }
 
-        double amount = 0.0;
-        ModifierOp op = ModifierOp::Add;
-
         const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&active.config->effect);
-        const TileYieldModifierEffect_t* pTileModifier = std::get_if<TileYieldModifierEffect_t>(&active.config->effect);
-        if (pStatModifier)
-        {
-            amount = pStatModifier->amount;
-            op = pStatModifier->op;
-        }
-        else if (pTileModifier)
-        {
-            amount = pTileModifier->amount;
-            op = pTileModifier->op;
-        }
-        else
+        if (!pStatModifier)
         {
             continue;
         }
 
         StatBreakdown_t::Contribution contribution;
         contribution.sourceId = active.sourceId;
-        contribution.amount = amount;
-        contribution.op = op;
+        contribution.amount = pStatModifier->amount;
+        contribution.op = pStatModifier->op;
         breakdown.contributions.push_back(contribution);
     }
 
@@ -157,27 +185,13 @@ StatBreakdown_t ResolveStatModifiers(const std::vector<ActiveEffect_t>& matching
                   return a.sourceId < b.sourceId;
               });
 
-    double addTotal = baseValue;
-    double arithmeticFactor = 1.0;
-    double geometricFactor = 1.0;
-
-    for (const StatBreakdown_t::Contribution& contribution : breakdown.contributions)
+    std::vector<std::pair<double, ModifierOp>> stack;
+    stack.reserve(breakdown.contributions.size());
+    for (const StatBreakdown_t::Contribution& c : breakdown.contributions)
     {
-        if (contribution.op == ModifierOp::Add)
-        {
-            addTotal += contribution.amount;
-        }
-        else if (contribution.op == ModifierOp::MultiplyArithmetic)
-        {
-            arithmeticFactor += contribution.amount - 1.0;
-        }
-        else if (contribution.op == ModifierOp::MultiplyGeometric)
-        {
-            geometricFactor *= contribution.amount;
-        }
+        stack.emplace_back(c.amount, c.op);
     }
-
-    breakdown.total = addTotal * arithmeticFactor * geometricFactor;
+    breakdown.total = ApplyModifierStack(baseValue, stack);
     return breakdown;
 }
 
@@ -322,6 +336,28 @@ std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile, const Improvem
         }
     }
     return result;
+}
+
+void DispatchInstantaneousEffects(const BuildingConfig_t& rBuilding, BaseManager& rBase)
+{
+    for (const EffectConfig_t& effect : rBuilding.effects)
+    {
+        if (effect.persistence != EffectPersistence_t::Instantaneous)
+            continue;
+
+        if (const GrantBuildingEffect_t* pGrant = std::get_if<GrantBuildingEffect_t>(&effect.effect))
+        {
+            rBase.AddBuilding(pGrant->buildingId);
+        }
+        else if (std::get_if<GrantTechEffect_t>(&effect.effect))
+        {
+            std::cerr << "[TODO] Instantaneous GrantTech from '" << rBuilding.id << "' not yet implemented\n";
+        }
+        else if (std::get_if<GrantUnitEffect_t>(&effect.effect))
+        {
+            std::cerr << "[TODO] Instantaneous GrantUnit from '" << rBuilding.id << "' not yet implemented\n";
+        }
+    }
 }
 
 } // namespace ac

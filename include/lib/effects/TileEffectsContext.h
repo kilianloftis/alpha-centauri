@@ -56,6 +56,7 @@ public:
 private:
     WorldMap& m_rWorldMap;
     const ImprovementRegistry& m_rImprovements;
+    int m_maxRadius;  // max improvement radius across all configs; cached in constructor
 };
 
 } // namespace ac

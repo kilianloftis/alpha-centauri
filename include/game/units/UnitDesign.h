@@ -38,17 +38,17 @@ public:
     int GetCargoCapacity() const;
     int GetDifficultTerrainCost() const;
     bool IsSingleUse() const;
-    std::unordered_map<std::string, float> GetTerrainAttackBonus() const;
+    std::unordered_map<std::string, double> GetTerrainAttackBonus() const;
 
 private:
     float ResolveStat_(StatId statId) const;
     bool ResolveFlag_(RuleFlagId flagId) const;
-    std::unordered_map<std::string, float> ResolveBonusTable_(const std::string& rTableName) const;
+    std::unordered_map<std::string, double> ResolveBonusTable_(const std::string& rTableName) const;
 
     std::string m_id;
     std::string m_name;
     std::vector<std::pair<UnitSlotConfig_t, const UnitComponentConfig_t*>> m_slotComponents;
-    std::vector<const UnitComponentConfig_t*> m_components; // non-null only, for stat resolution
+    std::vector<const UnitComponentConfig_t*> m_components; // non-null only; stable after construction
 };
 
 } // namespace ac

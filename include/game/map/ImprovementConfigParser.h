@@ -19,6 +19,7 @@ struct ImprovementConfig_t
 {
     std::string id;
     std::string name;
+    std::string description;           // optional flavour text (used for tile bonuses)
     int mineralCost = 0;               // 0 for terrain/natural features (not buildable)
     std::string requiredTech;          // empty if not tech-gated
     std::vector<std::string> excludes; // feature ids that can't coexist with this one on a tile
@@ -27,6 +28,8 @@ struct ImprovementConfig_t
     // that distance, e.g. Sensor (radius 2) projects its defense bonus outward. Only
     // ResolveTileDefenseMultiplier currently honors radius - ResolveTileYield does not.
     int radius = 0;
+    int frequency = 0;                 // world-gen spawn weight; 0 = not randomly placed
+    std::string spritePath;            // optional sprite override (used for tile bonuses)
     std::vector<EffectConfig_t> effects;
 };
 

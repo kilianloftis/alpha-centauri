@@ -6,26 +6,18 @@
 #include "game/faction/base/population/PopContainer.h"
 #include "game/map/Tile.h"
 #include "game/population/pop-types/Pop.h"
+#include "lib/effects/ActiveEffect.h"
 #include "lib/effects/TileEffectsContext.h"
 #include "lib/effects/BonusEffect.h"
 #include <algorithm>
 #include <iterator>
+#include <set>
 
 namespace ac
 {
 
 namespace
 {
-
-std::string ImprovementTypeToString_(ImprovementType type)
-{
-    switch (type)
-    {
-        case ImprovementType::Farm: return "Farm";
-        case ImprovementType::Condenser: return "Condenser";
-    }
-    return "";
-}
 
 std::vector<ActiveEffect_t> FilterTileYieldModifiersBySelector_(
     const std::vector<ActiveEffect_t>& effects,
@@ -50,12 +42,11 @@ std::vector<ActiveEffect_t> FilterTileYieldModifiersBySelector_(
 std::vector<ActiveEffect_t> FilterTileYieldModifiersBySelectorAndImprovement_(
     const std::vector<ActiveEffect_t>& effects,
     StatId resourceId,
-    TileSelectorKind selectorKind,
-    ImprovementType improvementType)
+    const std::string& improvementId)
 {
     std::vector<ActiveEffect_t> matching;
     std::copy_if(effects.begin(), effects.end(), std::back_inserter(matching),
-                 [resourceId, selectorKind, improvementType](const ActiveEffect_t& effect)
+                 [resourceId, &improvementId](const ActiveEffect_t& effect)
                  {
                      if (!effect.config)
                      {
@@ -63,14 +54,31 @@ std::vector<ActiveEffect_t> FilterTileYieldModifiersBySelectorAndImprovement_(
                      }
                      const TileYieldModifierEffect_t* pTileModifier = std::get_if<TileYieldModifierEffect_t>(&effect.config->effect);
                      if (!pTileModifier || pTileModifier->resource != resourceId ||
-                         pTileModifier->selector.kind != selectorKind)
+                         pTileModifier->selector.kind != TileSelectorKind::HasImprovement)
                      {
                          return false;
                      }
                      return pTileModifier->selector.improvement &&
-                            *pTileModifier->selector.improvement == improvementType;
+                            *pTileModifier->selector.improvement == improvementId;
                  });
     return matching;
+}
+
+// Collects the unique improvement ids referenced by HasImprovement TileYieldModifier effects.
+// Used to iterate only improvements that any active building effect cares about.
+std::set<std::string> CollectHasImprovementIds_(const std::vector<ActiveEffect_t>& effects)
+{
+    std::set<std::string> ids;
+    for (const ActiveEffect_t& effect : effects)
+    {
+        if (!effect.config) continue;
+        const TileYieldModifierEffect_t* p = std::get_if<TileYieldModifierEffect_t>(&effect.config->effect);
+        if (p && p->selector.kind == TileSelectorKind::HasImprovement && p->selector.improvement)
+        {
+            ids.insert(*p->selector.improvement);
+        }
+    }
+    return ids;
 }
 
 TileResources_t ComputeBaseTileResources_(const Tile* pBaseTile, const TileEffectsContext& rTileEffects)
@@ -163,82 +171,52 @@ int ComputeWorkedResourceForImprovement_(
 
 double ResolveTileYieldModifiers_(
     const std::vector<ActiveEffect_t>& effects,
-    StatId resourceId,
     int baseYield,
     int count)
 {
-    std::vector<ActiveEffect_t> resolvedEffects;
-
-    EffectConfig_t baseEffectConfig;
-    baseEffectConfig.effect = StatModifierEffect_t{resourceId, static_cast<double>(baseYield), ModifierOp::Add};
-    baseEffectConfig.scope = EffectScope_t::FactionGlobal;
-    baseEffectConfig.persistence = EffectPersistence_t::Continuous;
-
-    ActiveEffect_t baseEffect;
-    baseEffect.config = &baseEffectConfig;
-    baseEffect.sourceId = "base_tile_yield";
-    baseEffect.originBase = nullptr;
-    resolvedEffects.push_back(baseEffect);
-
+    std::vector<std::pair<double, ModifierOp>> stack;
     for (const ActiveEffect_t& effect : effects)
     {
         if (!effect.config)
-        {
             continue;
-        }
-        const TileYieldModifierEffect_t* pTileModifier = std::get_if<TileYieldModifierEffect_t>(&effect.config->effect);
-        if (!pTileModifier || pTileModifier->resource != resourceId)
-        {
+        const TileYieldModifierEffect_t* pTileModifier =
+            std::get_if<TileYieldModifierEffect_t>(&effect.config->effect);
+        if (!pTileModifier)
             continue;
-        }
 
         double amount = pTileModifier->amount;
-        ModifierOp op = pTileModifier->op;
-        if (op == ModifierOp::Add && count > 0)
-        {
-            amount *= count;
-        }
-
-        EffectConfig_t modifierConfig;
-        modifierConfig.effect = StatModifierEffect_t{resourceId, amount, op};
-        modifierConfig.scope = EffectScope_t::FactionGlobal;
-        modifierConfig.persistence = EffectPersistence_t::Continuous;
-
-        ActiveEffect_t modifierEffect;
-        modifierEffect.config = &modifierConfig;
-        modifierEffect.sourceId = effect.sourceId;
-        modifierEffect.originBase = nullptr;
-        resolvedEffects.push_back(modifierEffect);
+        // Add-type bonuses scale with matched-tile count; count=0 → zero contribution.
+        if (pTileModifier->op == ModifierOp::Add)
+            amount *= static_cast<double>(count);
+        stack.emplace_back(amount, pTileModifier->op);
     }
-
-    return ResolveStatModifiers(resolvedEffects).total;
+    return ApplyModifierStack(static_cast<double>(baseYield), stack);
 }
 
 int CalculateResourceWithTileYieldModifiers_(
     const std::vector<ActiveEffect_t>& activeEffects,
     StatId resourceId,
+    const TileResources_t& worked,
     const WorkerAssignmentManager& workerAssignments,
     const PopContainer& pops,
     const Tile* pBaseTile,
     const TileEffectsContext& rTileEffects)
 {
-    const TileResources_t worked = workerAssignments.ComputeWorkedResources();
     const TileResources_t baseTile = ComputeBaseTileResources_(pBaseTile, rTileEffects);
 
     const int baseTileRaw = GetResourceValue_(baseTile, resourceId);
     const double baseTileModified = ResolveTileYieldModifiers_(
         FilterTileYieldModifiersBySelector_(activeEffects, resourceId, TileSelectorKind::BaseTile),
-        resourceId, baseTileRaw, 1);
+        baseTileRaw, 1);
 
     int workedModifiedDelta = 0;
-    for (const ImprovementType improvement : {ImprovementType::Farm, ImprovementType::Condenser})
+    for (const std::string& improvementId : CollectHasImprovementIds_(activeEffects))
     {
-        const std::string improvementId = ImprovementTypeToString_(improvement);
         const int count = CountWorkedTilesWithImprovement_(workerAssignments, pops, improvementId);
         const int raw = ComputeWorkedResourceForImprovement_(workerAssignments, pops, improvementId, resourceId, rTileEffects);
         const double modified = ResolveTileYieldModifiers_(
-            FilterTileYieldModifiersBySelectorAndImprovement_(activeEffects, resourceId, TileSelectorKind::HasImprovement, improvement),
-            resourceId, raw, count);
+            FilterTileYieldModifiersBySelectorAndImprovement_(activeEffects, resourceId, improvementId),
+            raw, count);
         workedModifiedDelta += static_cast<int>(modified) - raw;
     }
 
@@ -267,107 +245,70 @@ ResourceManager::~ResourceManager()
 {
 }
 
-int ResourceManager::CalculateNutrients_(const std::vector<ActiveEffect_t>& activeEffects) const
+int ResourceManager::CalculateResource_(StatId stat, const std::vector<ActiveEffect_t>& activeEffects, const TileResources_t& worked) const
 {
     if (!m_pWorkerAssignments || !m_pPopulation || !m_pTileEffects)
     {
         throw std::runtime_error("WorkerAssignmentManager, PopulationManager, or TileEffectsContext not set");
     }
     double base = static_cast<double>(CalculateResourceWithTileYieldModifiers_(
-        activeEffects, StatId::Nutrients, *m_pWorkerAssignments, m_pPopulation->GetContainer(), m_pBaseTile, *m_pTileEffects));
-    const StatBreakdown_t statModifier = ResolveStatModifiers(
-        FilterByStatId(activeEffects, StatId::Nutrients));
-    base += statModifier.total;
-
-    return static_cast<int>(base);
-}
-
-int ResourceManager::CalculateMinerals_(const std::vector<ActiveEffect_t>& activeEffects) const
-{
-    if (!m_pWorkerAssignments || !m_pPopulation || !m_pTileEffects)
-    {
-        throw std::runtime_error("WorkerAssignmentManager, PopulationManager, or TileEffectsContext not set");
-    }
-    double base = static_cast<double>(CalculateResourceWithTileYieldModifiers_(
-        activeEffects, StatId::Minerals, *m_pWorkerAssignments, m_pPopulation->GetContainer(), m_pBaseTile, *m_pTileEffects));
-    const StatBreakdown_t statModifier = ResolveStatModifiers(
-        FilterByStatId(activeEffects, StatId::Minerals));
-    base += statModifier.total;
-
-    return static_cast<int>(base);
-}
-
-int ResourceManager::CalculateEnergy_(const std::vector<ActiveEffect_t>& activeEffects) const
-{
-    if (!m_pWorkerAssignments || !m_pPopulation || !m_pTileEffects)
-    {
-        throw std::runtime_error("WorkerAssignmentManager, PopulationManager, or TileEffectsContext not set");
-    }
-    double base = static_cast<double>(CalculateResourceWithTileYieldModifiers_(
-        activeEffects, StatId::Energy, *m_pWorkerAssignments, m_pPopulation->GetContainer(), m_pBaseTile, *m_pTileEffects));
-    const StatBreakdown_t statModifier = ResolveStatModifiers(
-        FilterByStatId(activeEffects, StatId::Energy));
-    base += statModifier.total;
-
+        activeEffects, stat, worked, *m_pWorkerAssignments, m_pPopulation->GetContainer(), m_pBaseTile, *m_pTileEffects));
+    base += ResolveStatModifiers(FilterByStatId(activeEffects, stat)).total;
     return static_cast<int>(base);
 }
 
 int ResourceManager::GetNutrientProduction() const
 {
-    return CalculateNutrients_(m_activeEffects);
+    if (!m_pWorkerAssignments) return 0;
+    return CalculateResource_(StatId::Nutrients, m_activeEffects, m_pWorkerAssignments->ComputeWorkedResources());
 }
 
 int ResourceManager::GetMineralProduction() const
 {
-    return CalculateMinerals_(m_activeEffects);
+    if (!m_pWorkerAssignments) return 0;
+    return CalculateResource_(StatId::Minerals, m_activeEffects, m_pWorkerAssignments->ComputeWorkedResources());
 }
 
-int ResourceManager::CalculateEcon_(const std::vector<ActiveEffect_t>& activeEffects) const
+int ResourceManager::CalculateEcon_(const std::vector<ActiveEffect_t>& activeEffects, int energy) const
 {
     if (!m_pEconomy)
-    {
         throw std::runtime_error("EconomyManager not set");
-    }
-    const int fromEnergy = m_pEconomy->CalculateEnergyForEcon(CalculateEnergy_(activeEffects));
-    const StatBreakdown_t fromPops = ResolveStatModifiers(FilterByStatId(activeEffects, StatId::Econ));
-    return fromEnergy + static_cast<int>(fromPops.total);
+    return m_pEconomy->CalculateEnergyForEcon(energy)
+         + static_cast<int>(ResolveStatModifiers(FilterByStatId(activeEffects, StatId::Econ)).total);
 }
 
-int ResourceManager::CalculateLabs_(const std::vector<ActiveEffect_t>& activeEffects) const
+int ResourceManager::CalculateLabs_(const std::vector<ActiveEffect_t>& activeEffects, int energy) const
 {
     if (!m_pEconomy)
-    {
         throw std::runtime_error("EconomyManager not set");
-    }
-    const int fromEnergy = m_pEconomy->CalculateEnergyForLabs(CalculateEnergy_(activeEffects));
-    const StatBreakdown_t fromPops = ResolveStatModifiers(FilterByStatId(activeEffects, StatId::Labs));
-    return fromEnergy + static_cast<int>(fromPops.total);
+    return m_pEconomy->CalculateEnergyForLabs(energy)
+         + static_cast<int>(ResolveStatModifiers(FilterByStatId(activeEffects, StatId::Labs)).total);
 }
 
-int ResourceManager::CalculatePsych_(const std::vector<ActiveEffect_t>& activeEffects) const
+int ResourceManager::CalculatePsych_(const std::vector<ActiveEffect_t>& activeEffects, int energy) const
 {
     if (!m_pEconomy)
-    {
         throw std::runtime_error("EconomyManager not set");
-    }
-    const int fromEnergy = m_pEconomy->CalculateEnergyForPsych(CalculateEnergy_(activeEffects));
-    const StatBreakdown_t fromPops = ResolveStatModifiers(FilterByStatId(activeEffects, StatId::Psych));
-    return fromEnergy + static_cast<int>(fromPops.total);
+    return m_pEconomy->CalculateEnergyForPsych(energy)
+         + static_cast<int>(ResolveStatModifiers(FilterByStatId(activeEffects, StatId::Psych)).total);
 }
 
 int ResourceManager::GetEconProduction() const
 {
-    return CalculateEcon_(m_activeEffects);
+    if (!m_pWorkerAssignments) return 0;
+    return CalculateEcon_(m_activeEffects, CalculateResource_(StatId::Energy, m_activeEffects, m_pWorkerAssignments->ComputeWorkedResources()));
 }
 
 int ResourceManager::GetLabsProduction() const
 {
-    return CalculateLabs_(m_activeEffects);
+    if (!m_pWorkerAssignments) return 0;
+    return CalculateLabs_(m_activeEffects, CalculateResource_(StatId::Energy, m_activeEffects, m_pWorkerAssignments->ComputeWorkedResources()));
 }
 
 int ResourceManager::GetPsychProduction() const
 {
-    return CalculatePsych_(m_activeEffects);
+    if (!m_pWorkerAssignments) return 0;
+    return CalculatePsych_(m_activeEffects, CalculateResource_(StatId::Energy, m_activeEffects, m_pWorkerAssignments->ComputeWorkedResources()));
 }
 
 int ResourceManager::ConsumeNutrients()
@@ -405,35 +346,39 @@ int ResourceManager::ConsumePsych()
     return consumed;
 }
 
-void ResourceManager::ProduceNutrients_(const std::vector<ActiveEffect_t>& activeEffects)
+void ResourceManager::ProduceNutrients_(const std::vector<ActiveEffect_t>& activeEffects, const TileResources_t& worked)
 {
-    m_nutrients += CalculateNutrients_(activeEffects);
+    m_nutrients += CalculateResource_(StatId::Nutrients, activeEffects, worked);
 }
 
-void ResourceManager::ProduceMinerals_(const std::vector<ActiveEffect_t>& activeEffects)
+void ResourceManager::ProduceMinerals_(const std::vector<ActiveEffect_t>& activeEffects, const TileResources_t& worked)
 {
-    m_minerals += CalculateMinerals_(activeEffects);
+    m_minerals += CalculateResource_(StatId::Minerals, activeEffects, worked);
 }
 
-void ResourceManager::AllocateEnergy_(const std::vector<ActiveEffect_t>& activeEffects)
+void ResourceManager::AllocateEnergy_(const std::vector<ActiveEffect_t>& activeEffects, const TileResources_t& worked)
 {
+    const int energy = CalculateResource_(StatId::Energy, activeEffects, worked);
     if (!m_pEconomy)
     {
-        // No economy manager set, allocate all energy to econ
-        m_econ += CalculateEnergy_(activeEffects);
+        m_econ += energy;
         return;
     }
-
-    m_econ += CalculateEcon_(activeEffects);
-    m_labs += CalculateLabs_(activeEffects);
-    m_psych += CalculatePsych_(activeEffects);
+    m_econ  += CalculateEcon_(activeEffects, energy);
+    m_labs  += CalculateLabs_(activeEffects, energy);
+    m_psych += CalculatePsych_(activeEffects, energy);
 }
 
 void ResourceManager::ProduceResourcesInternal_(const std::vector<ActiveEffect_t>& activeEffects)
 {
-    ProduceNutrients_(activeEffects);
-    ProduceMinerals_(activeEffects);
-    AllocateEnergy_(activeEffects);
+    if (!m_pWorkerAssignments)
+    {
+        throw std::runtime_error("WorkerAssignmentManager not set");
+    }
+    const TileResources_t worked = m_pWorkerAssignments->ComputeWorkedResources();
+    ProduceNutrients_(activeEffects, worked);
+    ProduceMinerals_(activeEffects, worked);
+    AllocateEnergy_(activeEffects, worked);
 }
 
 void ResourceManager::ProduceResources(const std::vector<ActiveEffect_t>& activeEffects)

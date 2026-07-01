@@ -19,7 +19,6 @@ RuleFlagId ParseRuleFlagId(const std::string& rFlag);
 ModifierOp ParseModifierOp(const std::string& rOp);
 EffectScope_t ParseEffectScope(const std::string& rScope);
 EffectPersistence_t ParseEffectPersistence(const std::string& rPersistence);
-ImprovementType ParseImprovementType(const std::string& rImprovement);
 
 // Reads parameters[key] as either a JSON number or a numeric string. Returns defaultValue if absent.
 double ParseNumber(const nlohmann::json& parameters, const std::string& key, double defaultValue);

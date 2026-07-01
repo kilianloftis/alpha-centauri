@@ -265,6 +265,10 @@ void WorkerAssignmentManager::AutoAssignWorkers_(std::vector<const Tile*>& avail
         {
             continue;
         }
+        if (availableTiles.empty())
+        {
+            break;
+        }
         AssignWorker(*rPop, availableTiles[0]);
         availableTiles.erase(availableTiles.begin());
     }
