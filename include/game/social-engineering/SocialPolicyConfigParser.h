@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/social-engineering/SocialPolicyConfig.h"
+#include "lib/effects/BonusEffectParser.h"
 #include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
@@ -19,7 +20,6 @@ public:
 private:
     SocialPolicyConfig ParsePolicyConfig(const nlohmann::json& policyJson);
     SocialCategory ParseCategory(const std::string& category);
-    SocialScores ParseEffects(const nlohmann::json& effectsJson);
 };
 
 } // namespace ac

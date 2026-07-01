@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/social-engineering/SocialPolicyConfig.h"
+#include "lib/effects/ActiveEffect.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -9,11 +10,13 @@ namespace ac
 {
 
 class SocialPolicyRegistry;
+class SocialRatingRegistry;
 
 class SocialEngineeringManager
 {
 public:
-    explicit SocialEngineeringManager(const SocialPolicyRegistry* pRegistry);
+    SocialEngineeringManager(const SocialPolicyRegistry* pRegistry,
+                              const SocialRatingRegistry* pRatingRegistry);
     ~SocialEngineeringManager();
 
     // Set the active policy for a category. Returns false if the id is not found.
@@ -22,8 +25,10 @@ public:
     // Get the active policy config for a category. Returns nullptr if none is set.
     const SocialPolicyConfig* GetActivePolicy(SocialCategory category) const;
 
-    // Compute the aggregate SocialScores from all active policies.
-    SocialScores GetCombinedScores() const;
+    // Collect all active effects from the current policy selections.
+    // SocialRatingModifier effects are accumulated per-rating axis and expanded
+    // through the SocialRatingRegistry into their final gameplay EffectConfig_t entries.
+    std::vector<ActiveEffect_t> CollectEffects() const;
 
     // All policies in a category that the faction may currently adopt,
     // given the faction's discovered tech string ids.
@@ -33,6 +38,7 @@ public:
 
 private:
     const SocialPolicyRegistry* m_pRegistry;
+    const SocialRatingRegistry* m_pRatingRegistry;
     std::map<SocialCategory, std::string> m_activePolicyIds;
 };
 

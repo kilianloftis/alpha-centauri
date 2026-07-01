@@ -40,6 +40,7 @@ add_executable(alpha-centauri
     lib/effects/ActiveEffect.cpp
     lib/effects/BonusEffectParser.cpp
     lib/effects/TileEffectsContext.cpp
+    lib/config/ConfigFields.cpp
     game/TurnStageFactory.cpp
     game/TurnStageConfigParser.cpp
     game/HookContext.cpp
@@ -52,6 +53,7 @@ add_executable(alpha-centauri
     game/units/UnitSlotConfigParser.cpp
     game/research/TechConfigParser.cpp
     game/social-engineering/SocialPolicyConfigParser.cpp
+    game/social-engineering/SocialRatingConfigParser.cpp
     game/map/Tile.cpp
     game/map/TileLayerResolver.cpp
     game/map/UnitPositionIndex.cpp

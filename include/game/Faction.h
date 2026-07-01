@@ -5,6 +5,7 @@
 
 #include "game/faction/base/BaseManager.h"
 #include "game/social-engineering/SocialPolicyConfig.h"
+#include "lib/effects/ActiveEffect.h"
 
 namespace ac
 {
@@ -13,6 +14,7 @@ namespace ac
 class BuildingRegistry;
 class TechRegistry;
 class SocialPolicyRegistry;
+class SocialRatingRegistry;
 class TechCostCalculator;
 class FactionIdentity;
 class AIProfile;
@@ -31,6 +33,7 @@ class Faction
 public:
     Faction(const BuildingRegistry* pBuildingRegistry, const TechRegistry* pTechRegistry,
              const SocialPolicyRegistry* pSocialPolicyRegistry,
+             const SocialRatingRegistry* pSocialRatingRegistry,
              TechCostCalculator* pTechCostCalculator,
              const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator);
     ~Faction();
@@ -66,7 +69,7 @@ public:
     // Social engineering
     bool SetSocialPolicy(SocialCategory category, const std::string& policyId);
     const SocialPolicyConfig* GetSocialPolicy(SocialCategory category) const;
-    SocialScores GetSocialScores() const;
+    std::vector<ActiveEffect_t> CollectSocialEffects() const;
     std::vector<const SocialPolicyConfig*> GetAvailableSocialPolicies(
         SocialCategory category,
         const std::vector<std::string>& rDiscoveredTechIds) const;

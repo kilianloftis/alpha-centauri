@@ -17,6 +17,7 @@
 #include "game/units/UnitSlotRegistry.h"
 #include "game/research/TechRegistry.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
+#include "game/social-engineering/SocialRatingRegistry.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopContainer.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
@@ -134,6 +135,9 @@ void Engine::Initialize_()
     m_gameDataContext->socialPolicyRegistry = std::make_unique<SocialPolicyRegistry>();
     m_gameDataContext->socialPolicyRegistry->Load("config/social_policies.json");
 
+    m_gameDataContext->socialRatingRegistry = std::make_unique<SocialRatingRegistry>();
+    m_gameDataContext->socialRatingRegistry->Load("config/social_rating_effects.json");
+
     m_gameDataContext->luaRuntime = std::make_unique<LuaRuntime>();
 
     PopCompositionConfigParser compositionParser;
@@ -187,6 +191,7 @@ void Engine::Initialize_()
     auto pFaction = std::make_unique<Faction>(m_gameDataContext->buildingRegistry.get(),
                                               m_gameDataContext->techRegistry.get(),
                                               m_gameDataContext->socialPolicyRegistry.get(),
+                                              m_gameDataContext->socialRatingRegistry.get(),
                                               m_gameDataContext->techCostCalculator.get(),
                                               m_gameDataContext->popTypeAvailabilityCalculator.get());
     const int centerX = m_gameState->GetWorldMap()->GetWidth() / 2;

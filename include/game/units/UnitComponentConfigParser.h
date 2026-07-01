@@ -17,7 +17,6 @@ public:
     std::vector<UnitComponentConfig_t> ParseConfig(const std::string& rConfigPath);
 
 private:
-    std::vector<UnitComponentConfig_t> ParseFile_(const std::string& rFilePath);
     UnitComponentConfig_t ParseComponentConfig(const nlohmann::json& rComponentJson);
 };
 

@@ -1,11 +1,16 @@
 #include "game/faction/SocialEngineeringManager.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
+#include "game/social-engineering/SocialRatingConfig.h"
+#include "game/social-engineering/SocialRatingRegistry.h"
+#include <map>
 
 namespace ac
 {
 
-SocialEngineeringManager::SocialEngineeringManager(const SocialPolicyRegistry* pRegistry)
+SocialEngineeringManager::SocialEngineeringManager(const SocialPolicyRegistry* pRegistry,
+                                                   const SocialRatingRegistry* pRatingRegistry)
     : m_pRegistry(pRegistry)
+    , m_pRatingRegistry(pRatingRegistry)
     , m_activePolicyIds({
         { SocialCategory::Politics,      "frontier"     },
         { SocialCategory::Economics,     "simple"       },
@@ -39,9 +44,11 @@ const SocialPolicyConfig* SocialEngineeringManager::GetActivePolicy(SocialCatego
     return m_pRegistry->Find(it->second);
 }
 
-SocialScores SocialEngineeringManager::GetCombinedScores() const
+std::vector<ActiveEffect_t> SocialEngineeringManager::CollectEffects() const
 {
-    SocialScores combined;
+    std::vector<ActiveEffect_t> result;
+    std::map<SocialRatingId, int> ratingTotals;
+
     for (const auto& [category, id] : m_activePolicyIds)
     {
         const SocialPolicyConfig* pPolicy = m_pRegistry ? m_pRegistry->Find(id) : nullptr;
@@ -49,19 +56,54 @@ SocialScores SocialEngineeringManager::GetCombinedScores() const
         {
             continue;
         }
-        const SocialScores& rFx = pPolicy->effects;
-        combined.economy    += rFx.economy;
-        combined.efficiency += rFx.efficiency;
-        combined.support    += rFx.support;
-        combined.police     += rFx.police;
-        combined.morale     += rFx.morale;
-        combined.growth     += rFx.growth;
-        combined.planet     += rFx.planet;
-        combined.research   += rFx.research;
-        combined.industry   += rFx.industry;
-        combined.probe      += rFx.probe;
+
+        for (const auto& rEffect : pPolicy->effects)
+        {
+            if (const auto* pRatingMod = std::get_if<SocialRatingModifierEffect_t>(&rEffect.effect))
+            {
+                ratingTotals[pRatingMod->rating] += pRatingMod->amount;
+            }
+            else
+            {
+                result.push_back({ &rEffect, id, nullptr });
+            }
+        }
     }
-    return combined;
+
+    if (!m_pRatingRegistry)
+    {
+        return result;
+    }
+
+    for (const auto& [rating, total] : ratingTotals)
+    {
+        if (total == 0)
+        {
+            continue;
+        }
+
+        const SocialRatingConfig* pRatingConfig = m_pRatingRegistry->Find(
+            SocialRatingIdToString(rating));
+        if (!pRatingConfig)
+        {
+            continue;
+        }
+
+        const auto it = pRatingConfig->levelEffects.find(total);
+        if (it == pRatingConfig->levelEffects.end())
+        {
+            continue;
+        }
+
+        const std::string sourceId = "se_rating_" + SocialRatingIdToString(rating)
+                                     + "_" + std::to_string(total);
+        for (const auto& rEffect : it->second)
+        {
+            result.push_back({ &rEffect, sourceId, nullptr });
+        }
+    }
+
+    return result;
 }
 
 std::vector<const SocialPolicyConfig*> SocialEngineeringManager::GetAvailablePolicies(

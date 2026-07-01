@@ -120,10 +120,8 @@ void CollectFromBuildings(const Faction& rFaction,
 
 void CollectFromSocialEngineering(const Faction& rFaction, std::vector<ActiveEffect_t>& rResult)
 {
-    // TODO: SocialPolicyConfig currently stores SocialScores, not EffectConfig_t.
-    // Once SE selections carry EffectConfig_t effects, iterate them here.
-    (void)rFaction;
-    (void)rResult;
+    const std::vector<ActiveEffect_t> seEffects = rFaction.CollectSocialEffects();
+    rResult.insert(rResult.end(), seEffects.begin(), seEffects.end());
 }
 
 } // namespace

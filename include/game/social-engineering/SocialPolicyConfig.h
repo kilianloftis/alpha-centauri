@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/social-engineering/SocialEffects.h"
+#include "lib/effects/BonusEffect.h"
 #include <algorithm>
 #include <string>
 #include <vector>
@@ -22,7 +22,7 @@ struct SocialPolicyConfig
     std::string name;
     SocialCategory category;
     std::string prerequisiteTech;  // empty if none
-    SocialScores effects;
+    std::vector<EffectConfig_t> effects;
 
     bool IsAvailable(const std::vector<std::string>& rDiscoveredTechIds) const
     {

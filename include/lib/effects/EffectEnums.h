@@ -27,9 +27,26 @@ enum class StatId
     DifficultTerrainCost,
     CostMultiplier,
 
+    // Population growth rate modifier (AddPercent, base = 100%)
+    GrowthRate,
+
     // Tile terrain mutation (resolved back into Tile::SetMoisture, not a runtime-queried stat)
     MoistureTier
     // TODO: add more stats as they are defined
+};
+
+enum class SocialRatingId
+{
+    Economy,
+    Efficiency,
+    Support,
+    Police,
+    Morale,
+    Growth,
+    Planet,
+    Research,
+    Industry,
+    Probe
 };
 
 enum class RuleFlagId
@@ -39,7 +56,8 @@ enum class RuleFlagId
     SingleUse,
 
     // Faction/global flags
-    PopulationBoom
+    PopulationBoom,
+    NearZeroGrowth
     // TODO: add more flags as they are defined
 };
 

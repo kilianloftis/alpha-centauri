@@ -92,6 +92,15 @@ struct SocialEngineeringOverrideEffect_t
     std::string choice;
 };
 
+// Modifies one of the ten social engineering rating axes by an integer amount.
+// The total accumulated rating for each axis is then looked up in social_rating_effects.json
+// to produce the final gameplay effects (non-linear mapping).
+struct SocialRatingModifierEffect_t
+{
+    SocialRatingId rating;
+    int amount = 0;
+};
+
 struct DiplomaticModifierEffect_t
 {
     // TODO: define parameters when diplomatic modifier rules are finalized
@@ -106,7 +115,8 @@ using EffectVariant_t = std::variant<
     StatModifierEffect_t,
     RuleFlagEffect_t,
     SocialEngineeringOverrideEffect_t,
-    DiplomaticModifierEffect_t
+    DiplomaticModifierEffect_t,
+    SocialRatingModifierEffect_t
 >;
 
 enum class ConditionKind

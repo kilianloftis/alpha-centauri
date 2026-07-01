@@ -13,6 +13,7 @@
 #include "game/faction/ResearchManager.h"
 #include "game/faction/Diplomacy.h"
 #include "game/faction/SocialEngineeringManager.h"
+#include "game/social-engineering/SocialRatingRegistry.h"
 #include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "lib/effects/ActiveEffect.h"
@@ -22,6 +23,7 @@ namespace ac
 
 Faction::Faction(const BuildingRegistry* pBuildingRegistry, const TechRegistry* pTechRegistry,
                  const SocialPolicyRegistry* pSocialPolicyRegistry,
+                 const SocialRatingRegistry* pSocialRatingRegistry,
                  TechCostCalculator* pTechCostCalculator,
                  const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator)
     : m_pBuildingRegistry(pBuildingRegistry)
@@ -32,7 +34,8 @@ Faction::Faction(const BuildingRegistry* pBuildingRegistry, const TechRegistry* 
     , m_pMilitary(std::make_unique<Military>())
     , m_pResearch(std::make_unique<ResearchManager>(pTechRegistry, pTechCostCalculator))
     , m_pDiplomacy(nullptr)
-    , m_pSocialEngineering(std::make_unique<SocialEngineeringManager>(pSocialPolicyRegistry))
+    , m_pSocialEngineering(std::make_unique<SocialEngineeringManager>(pSocialPolicyRegistry,
+                                                                        pSocialRatingRegistry))
 {
 }
 
@@ -187,9 +190,9 @@ const SocialPolicyConfig* Faction::GetSocialPolicy(SocialCategory category) cons
     return m_pSocialEngineering ? m_pSocialEngineering->GetActivePolicy(category) : nullptr;
 }
 
-SocialScores Faction::GetSocialScores() const
+std::vector<ActiveEffect_t> Faction::CollectSocialEffects() const
 {
-    return m_pSocialEngineering ? m_pSocialEngineering->GetCombinedScores() : SocialScores{};
+    return m_pSocialEngineering ? m_pSocialEngineering->CollectEffects() : std::vector<ActiveEffect_t>{};
 }
 
 std::vector<const PopTypeConfig_t*> Faction::GetAvailablePopTypes() const

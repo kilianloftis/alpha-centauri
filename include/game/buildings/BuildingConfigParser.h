@@ -45,7 +45,6 @@ public:
     std::vector<BuildingConfig_t> ParseConfig(const std::string& configPath);
 
 private:
-    std::vector<BuildingConfig_t> ParseFile_(const std::string& filePath);
     BuildingConfig_t ParseBuildingConfig(const nlohmann::json& buildingJson);
 };
 

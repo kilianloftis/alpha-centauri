@@ -1,4 +1,5 @@
 #include "game/social-engineering/SocialPolicyConfigParser.h"
+#include "lib/effects/BonusEffectParser.h"
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <iostream>
@@ -52,7 +53,11 @@ SocialPolicyConfig SocialPolicyConfigParser::ParsePolicyConfig(const nlohmann::j
 
     if (policyJson.contains("effects"))
     {
-        config.effects = ParseEffects(policyJson["effects"]);
+        const auto& rEffectsJson = policyJson["effects"];
+        for (const auto& rEffectJson : rEffectsJson)
+        {
+            config.effects.push_back(BonusEffectParser::ParseEffectConfig(rEffectJson));
+        }
     }
 
     return config;
@@ -66,22 +71,6 @@ SocialCategory SocialPolicyConfigParser::ParseCategory(const std::string& catego
     if (category == "future_society") return SocialCategory::FutureSociety;
 
     throw std::runtime_error("Unknown social policy category: '" + category + "'");
-}
-
-SocialScores SocialPolicyConfigParser::ParseEffects(const nlohmann::json& effectsJson)
-{
-    SocialScores scores;
-    scores.economy    = effectsJson.value("economy",    0);
-    scores.efficiency = effectsJson.value("efficiency", 0);
-    scores.support    = effectsJson.value("support",    0);
-    scores.police     = effectsJson.value("police",     0);
-    scores.morale     = effectsJson.value("morale",     0);
-    scores.growth     = effectsJson.value("growth",     0);
-    scores.planet     = effectsJson.value("planet",     0);
-    scores.research   = effectsJson.value("research",   0);
-    scores.industry   = effectsJson.value("industry",   0);
-    scores.probe      = effectsJson.value("probe",      0);
-    return scores;
 }
 
 } // namespace ac

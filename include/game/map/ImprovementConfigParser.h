@@ -49,7 +49,6 @@ public:
     std::vector<ImprovementConfig_t> ParseConfig(const std::string& configPath);
 
 private:
-    std::vector<ImprovementConfig_t> ParseFile_(const std::string& filePath);
     ImprovementConfig_t ParseImprovementConfig(const nlohmann::json& improvementJson);
 };
 

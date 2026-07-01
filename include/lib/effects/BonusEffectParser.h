@@ -16,6 +16,7 @@ namespace BonusEffectParser
 
 StatId ParseStatId(const std::string& rStat);
 RuleFlagId ParseRuleFlagId(const std::string& rFlag);
+SocialRatingId ParseSocialRatingId(const std::string& rRating);
 ModifierOp ParseModifierOp(const std::string& rOp);
 EffectScope_t ParseEffectScope(const std::string& rScope);
 EffectPersistence_t ParseEffectPersistence(const std::string& rPersistence);

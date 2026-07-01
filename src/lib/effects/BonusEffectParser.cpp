@@ -25,16 +25,33 @@ StatId ParseStatId(const std::string& rStat)
     if (rStat == "cargo_capacity")          return StatId::CargoCapacity;
     if (rStat == "difficult_terrain_cost")  return StatId::DifficultTerrainCost;
     if (rStat == "cost_multiplier")         return StatId::CostMultiplier;
+    if (rStat == "growth_rate")             return StatId::GrowthRate;
     if (rStat == "moisture_tier")           return StatId::MoistureTier;
     throw std::runtime_error("Unknown stat id: '" + rStat + "'");
 }
 
 RuleFlagId ParseRuleFlagId(const std::string& rFlag)
 {
-    if (rFlag == "population_boom") return RuleFlagId::PopulationBoom;
-    if (rFlag == "flight")          return RuleFlagId::Flight;
-    if (rFlag == "single_use")      return RuleFlagId::SingleUse;
+    if (rFlag == "population_boom")  return RuleFlagId::PopulationBoom;
+    if (rFlag == "near_zero_growth") return RuleFlagId::NearZeroGrowth;
+    if (rFlag == "flight")           return RuleFlagId::Flight;
+    if (rFlag == "single_use")       return RuleFlagId::SingleUse;
     throw std::runtime_error("Unknown rule flag id: '" + rFlag + "'");
+}
+
+SocialRatingId ParseSocialRatingId(const std::string& rRating)
+{
+    if (rRating == "economy")    return SocialRatingId::Economy;
+    if (rRating == "efficiency") return SocialRatingId::Efficiency;
+    if (rRating == "support")    return SocialRatingId::Support;
+    if (rRating == "police")     return SocialRatingId::Police;
+    if (rRating == "morale")     return SocialRatingId::Morale;
+    if (rRating == "growth")     return SocialRatingId::Growth;
+    if (rRating == "planet")     return SocialRatingId::Planet;
+    if (rRating == "research")   return SocialRatingId::Research;
+    if (rRating == "industry")   return SocialRatingId::Industry;
+    if (rRating == "probe")      return SocialRatingId::Probe;
+    throw std::runtime_error("Unknown social rating id: '" + rRating + "'");
 }
 
 ModifierOp ParseModifierOp(const std::string& rOp)
@@ -200,6 +217,16 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
         diplomatic.targetFactionId = parameters.value("target_faction_id", "");
         diplomatic.value = static_cast<int>(ParseNumber(parameters, "value", 0.0));
         effect.effect = diplomatic;
+    }
+    else if (typeStr == "SocialRatingModifier")
+    {
+        SocialRatingModifierEffect_t ratingMod;
+        const std::string ratingStr = parameters.value("rating", "");
+        if (ratingStr.empty())
+            throw std::runtime_error("SocialRatingModifier effect missing required 'rating'");
+        ratingMod.rating = ParseSocialRatingId(ratingStr);
+        ratingMod.amount = static_cast<int>(ParseNumber(parameters, "amount", 0.0));
+        effect.effect = ratingMod;
     }
     else
     {

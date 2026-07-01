@@ -1,9 +1,7 @@
 #include "game/research/TechConfigParser.h"
+#include "lib/config/ConfigFields.h"
+#include "lib/config/JsonConfigLoader.h"
 #include <nlohmann/json.hpp>
-#include <fstream>
-#include <iostream>
-
-using json = nlohmann::json;
 
 namespace ac
 {
@@ -14,48 +12,19 @@ TechConfigParser::TechConfigParser()
 
 std::vector<TechConfig_t> TechConfigParser::ParseConfig(const std::string& configPath)
 {
-    std::cout << "Loading tech configuration from: " << configPath << "\n";
-
-    std::vector<TechConfig_t> configs;
-
-    std::ifstream configFile(configPath);
-    if (!configFile.is_open())
-    {
-        throw std::runtime_error("Could not open " + configPath);
-    }
-
-    json configJson;
-    configFile >> configJson;
-
-    if (!configJson.is_array())
-    {
-        throw std::runtime_error("Expected array of techs in '" + configPath + "'");
-    }
-
-    for (const auto& techJson : configJson)
-    {
-        configs.push_back(ParseTechConfig(techJson));
-    }
-
-    std::cout << "Loaded " << configs.size() << " tech configurations\n";
-    return configs;
+    return JsonConfigLoader::LoadFile<TechConfig_t>(
+        configPath, "tech",
+        [this](const nlohmann::json& rJson) { return ParseTechConfig(rJson); });
 }
 
 TechConfig_t TechConfigParser::ParseTechConfig(const nlohmann::json& techJson)
 {
     TechConfig_t config;
-    config.id = techJson["id"];
-    config.name = techJson.value("name", config.id);
+    config.id = ConfigFields::ParseId(techJson);
+    config.name = ConfigFields::ParseName(techJson, config.id);
     config.category = techJson.value("category", std::string{});
     config.cost = techJson.value("cost", 0);
-
-    if (techJson.contains("prerequisites") && techJson["prerequisites"].is_array())
-    {
-        for (const auto& prereq : techJson["prerequisites"])
-        {
-            config.prerequisites.push_back(prereq.get<std::string>());
-        }
-    }
+    config.prerequisites = ConfigFields::ParseStringArray(techJson, "prerequisites");
 
     return config;
 }
