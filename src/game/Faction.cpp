@@ -1,6 +1,7 @@
 #include "game/Faction.h"
 
 #include "game/buildings/BuildingRegistry.h"
+#include <set>
 #include "game/GameDataContext.h"
 #include "game/faction/base/production/ProductionCostCalculator.h"
 #include "game/map/WorldMap.h"
@@ -80,7 +81,7 @@ BaseManager* Faction::CreateBase(FactionId factionId, int baseId, const std::str
         m_pResearch.get(),
         m_pEconomy.get(),
         rDataContext.productionCostCalculator.get(),
-        rDataContext.growthCalculator.get(),
+        *rDataContext.growthConfig,
         rDataContext.secretProjectAvailabilityCalculator.get());
     pBase->SetFactionId(factionId);
     pBase->SetBaseId(baseId);
@@ -117,17 +118,26 @@ const BaseManager* Faction::GetBase(size_t index) const
 
 void Faction::ProduceBaseResources()
 {
-    std::vector<ActiveEffect_t> activeEffects;
-    if (m_pBuildingRegistry)
-    {
-        activeEffects = CollectActiveEffects(*this, *m_pBuildingRegistry);
-    }
+    const std::vector<ActiveEffect_t> activeEffects = CollectActiveEffects(*this);
 
     for (const auto& pBase : m_bases)
     {
         if (pBase)
         {
             pBase->ProduceResources(activeEffects);
+        }
+    }
+}
+
+void Faction::ApplyBaseGrowth()
+{
+    const std::vector<ActiveEffect_t> activeEffects = CollectActiveEffects(*this);
+
+    for (const auto& pBase : m_bases)
+    {
+        if (pBase)
+        {
+            pBase->ApplyGrowth(activeEffects);
         }
     }
 }
@@ -182,12 +192,92 @@ std::vector<const BuildingConfig_t*> Faction::GetDiscoveredBuildings() const
 
 bool Faction::SetSocialPolicy(SocialCategory category, const std::string& policyId)
 {
-    return m_pSocialEngineering ? m_pSocialEngineering->SetActivePolicy(category, policyId) : false;
+    if (!m_pSocialEngineering)
+    {
+        return false;
+    }
+    return m_pSocialEngineering->SetActivePolicy(category, policyId);
 }
 
 const SocialPolicyConfig* Faction::GetSocialPolicy(SocialCategory category) const
 {
-    return m_pSocialEngineering ? m_pSocialEngineering->GetActivePolicy(category) : nullptr;
+    if (!m_pSocialEngineering)
+    {
+        return nullptr;
+    }
+    return m_pSocialEngineering->GetActivePolicy(category);
+}
+
+std::vector<ActiveEffect_t> Faction::CollectBuildingEffects() const
+{
+    std::vector<ActiveEffect_t> result;
+    for (const auto& pBase : m_bases)
+    {
+        if (!pBase)
+        {
+            continue;
+        }
+        const std::vector<ActiveEffect_t> baseEffects = pBase->CollectBuildingEffects();
+        result.insert(result.end(), baseEffects.begin(), baseEffects.end());
+    }
+
+    if (!m_pBuildingRegistry)
+    {
+        return result;
+    }
+
+    // Key: (originBase*, grantedBuildingId). Pointer identity is intentional — two different
+    // bases granting the same building must each expand independently. Pointers are always
+    // valid here because this Faction owns the bases and outlives this stack frame.
+    std::set<std::pair<const BaseManager*, std::string>> processedGrantedIds;
+    for (size_t i = 0; i < result.size(); ++i)
+    {
+        const EffectConfig_t* pEffect = result[i].config;
+        if (!pEffect)
+        {
+            continue;
+        }
+
+        const GrantBuildingEffect_t* pGrant = std::get_if<GrantBuildingEffect_t>(&pEffect->effect);
+        if (!pGrant)
+        {
+            continue;
+        }
+
+        const BuildingConfig_t* pGranted = m_pBuildingRegistry->Find(pGrant->buildingId);
+        if (!pGranted)
+        {
+            continue;
+        }
+
+        if (result[i].originBase != nullptr)
+        {
+            // ThisBase-scoped grant: expand effects once, attributed to the originating base.
+            const std::pair<const BaseManager*, std::string> key = {result[i].originBase, pGrant->buildingId};
+            if (!processedGrantedIds.count(key))
+            {
+                processedGrantedIds.insert(key);
+                AppendActiveEffects(pGranted->effects, result[i].originBase, result[i].sourceId + " -> " + pGranted->id, result);
+            }
+        }
+        else
+        {
+            // AllOwnerBases / FactionGlobal grant: clone the granted building's effects once
+            // per faction base so that ThisBase-scoped sub-effects are correctly attributed.
+            for (const auto& pBase : m_bases)
+            {
+                if (!pBase) continue;
+                const std::pair<const BaseManager*, std::string> key = {pBase.get(), pGrant->buildingId};
+                if (!processedGrantedIds.count(key))
+                {
+                    processedGrantedIds.insert(key);
+                    AppendActiveEffects(pGranted->effects, pBase.get(), result[i].sourceId + " -> " + pGranted->id, result);
+                }
+            }
+        }
+    }
+
+    return result;
 }
 
 std::vector<ActiveEffect_t> Faction::CollectSocialEffects() const
@@ -209,9 +299,11 @@ std::vector<const SocialPolicyConfig*> Faction::GetAvailableSocialPolicies(
     SocialCategory category,
     const std::vector<std::string>& rDiscoveredTechIds) const
 {
-    return m_pSocialEngineering
-        ? m_pSocialEngineering->GetAvailablePolicies(category, rDiscoveredTechIds)
-        : std::vector<const SocialPolicyConfig*>{};
+    if (!m_pSocialEngineering)
+    {
+        return std::vector<const SocialPolicyConfig*>{};
+    }
+    return m_pSocialEngineering->GetAvailablePolicies(category, rDiscoveredTechIds);
 }
 
 } // namespace ac

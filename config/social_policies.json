@@ -9,7 +9,7 @@
     "id": "police_state",
     "name": "Police State",
     "category": "politics",
-    "prerequisite_tech": "doctrine_loyalty",
+    "required_tech": "doctrine_loyalty",
     "effects": [
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "support",    "amount":  2 } },
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "police",     "amount":  2 } },
@@ -20,7 +20,7 @@
     "id": "democratic",
     "name": "Democratic",
     "category": "politics",
-    "prerequisite_tech": "ethical_calculus",
+    "required_tech": "ethical_calculus",
     "effects": [
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "efficiency", "amount":  2 } },
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "growth",     "amount":  2 } },
@@ -31,7 +31,7 @@
     "id": "fundamentalist",
     "name": "Fundamentalist",
     "category": "politics",
-    "prerequisite_tech": "secrets_of_the_human_brain",
+    "required_tech": "secrets_of_the_human_brain",
     "effects": [
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "probe",    "amount":  2 } },
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "morale",   "amount":  1 } },
@@ -48,7 +48,7 @@
     "id": "free_market",
     "name": "Free Market",
     "category": "economics",
-    "prerequisite_tech": "industrial_economics",
+    "required_tech": "industrial_economics",
     "effects": [
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "economy", "amount":  2 } },
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "planet",  "amount": -3 } },
@@ -59,7 +59,7 @@
     "id": "planned",
     "name": "Planned",
     "category": "economics",
-    "prerequisite_tech": "planetary_networks",
+    "required_tech": "planetary_networks",
     "effects": [
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "growth",     "amount":  2 } },
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "industry",   "amount":  1 } },
@@ -70,7 +70,7 @@
     "id": "green",
     "name": "Green",
     "category": "economics",
-    "prerequisite_tech": "centauri_empathy",
+    "required_tech": "centauri_empathy",
     "effects": [
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "efficiency", "amount":  2 } },
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "planet",     "amount":  2 } },
@@ -87,7 +87,7 @@
     "id": "power",
     "name": "Power",
     "category": "values",
-    "prerequisite_tech": "advanced_military_algorithms",
+    "required_tech": "advanced_military_algorithms",
     "effects": [
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "support",  "amount":  2 } },
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "morale",   "amount":  2 } },
@@ -98,7 +98,7 @@
     "id": "knowledge",
     "name": "Knowledge",
     "category": "values",
-    "prerequisite_tech": "cyberethics",
+    "required_tech": "cyberethics",
     "effects": [
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "research",   "amount":  2 } },
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "efficiency", "amount":  1 } },
@@ -109,7 +109,7 @@
     "id": "wealth",
     "name": "Wealth",
     "category": "values",
-    "prerequisite_tech": "industrial_automation",
+    "required_tech": "industrial_automation",
     "effects": [
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "economy",  "amount":  1 } },
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "industry", "amount":  1 } },
@@ -126,7 +126,7 @@
     "id": "cybernetic",
     "name": "Cybernetic",
     "category": "future_society",
-    "prerequisite_tech": "digital_sentience",
+    "required_tech": "digital_sentience",
     "effects": [
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "efficiency", "amount":  2 } },
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "planet",     "amount":  2 } },
@@ -138,7 +138,7 @@
     "id": "eudaimonic",
     "name": "Eudaimonic",
     "category": "future_society",
-    "prerequisite_tech": "eudaimonia",
+    "required_tech": "eudaimonia",
     "effects": [
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "economy",  "amount":  2 } },
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "growth",   "amount":  2 } },
@@ -150,7 +150,7 @@
     "id": "thought_control",
     "name": "Thought Control",
     "category": "future_society",
-    "prerequisite_tech": "the_will_to_power",
+    "required_tech": "the_will_to_power",
     "effects": [
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "morale",  "amount":  2 } },
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "police",  "amount":  2 } },

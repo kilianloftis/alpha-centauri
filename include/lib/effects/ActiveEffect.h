@@ -10,7 +10,6 @@ namespace ac
 
 // Forward declarations
 class BaseManager;
-class BuildingRegistry;
 class Faction;
 class PopContainer;
 class Tile;
@@ -37,6 +36,14 @@ struct EffectContext_t
 // True if config carries no condition, or its condition is satisfied by ctx.
 bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx);
 
+// Appends non-Instantaneous effects from a config list as ActiveEffect_t instances.
+// Used by building, pop, unit, and tile effect collection; pOriginBase is set only
+// when the effect's scope is ThisBase.
+void AppendActiveEffects(const std::vector<EffectConfig_t>& rEffects,
+                         const BaseManager* pOriginBase,
+                         const std::string& sourceId,
+                         std::vector<ActiveEffect_t>& rOut);
+
 struct StatBreakdown_t
 {
     double total = 0.0;
@@ -51,8 +58,7 @@ struct StatBreakdown_t
     std::vector<Contribution> contributions;
 };
 
-std::vector<ActiveEffect_t> CollectActiveEffects(const Faction& rFaction,
-                                                  const BuildingRegistry& rBuildingRegistry);
+std::vector<ActiveEffect_t> CollectActiveEffects(const Faction& rFaction);
 
 // Apply a stack of modifier contributions to a base value using the standard formula:
 //   result = (base + sumOfAdds) * (1 + sumOf(percent/100)) * productOfGeometric

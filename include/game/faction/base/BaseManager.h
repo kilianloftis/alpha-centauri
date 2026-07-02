@@ -25,7 +25,7 @@ class EconomyManager;
 class ResourceManager;
 class BuildingManager;
 class BuildingRegistry;
-class GrowthCalculator;
+struct GrowthConfig_t;
 class SecretProjectAvailabilityCalculator;
 class PopTypeAvailabilityCalculator;
 class ProductionCostCalculator;
@@ -49,7 +49,7 @@ public:
         const ResearchManager* pResearchManager,
         const EconomyManager* pEconomyManager,
         const ProductionCostCalculator* pProductionCostCalculator,
-        const GrowthCalculator* pGrowthCalculator,
+        const GrowthConfig_t& rGrowthConfig,
         const SecretProjectAvailabilityCalculator* pSecretProjectCalculator);
     ~BaseManager();
 
@@ -96,6 +96,7 @@ public:
     void AddBuilding(const std::string& buildingId);
     void DestroyBuilding(const std::string& buildingId);
     const std::vector<const BuildingConfig_t*>& GetBuildings() const;
+    std::vector<ActiveEffect_t> CollectBuildingEffects() const;
     std::vector<const IConstructable*> GetConstructable() const;
 
     // Production management - delegated to ProductionManager
@@ -114,10 +115,11 @@ public:
     void ProduceResources(const std::vector<ActiveEffect_t>& activeEffects);
 
     // Apply nutrients produced this turn: add to stockpile, grow or starve if threshold is met.
-    void ApplyGrowth();
+    // activeEffects is the faction-wide pool; GrowthRate modifiers are resolved per base.
+    void ApplyGrowth(const std::vector<ActiveEffect_t>& activeEffects);
 
     int GetNutrientStockpile() const;
-    int GetNutrientsRequired() const;
+    int GetNutrientsRequired(const std::vector<ActiveEffect_t>& activeEffects = {}) const;
     int GetBaseSize() const;
     int GetGrowthRate() const;
 

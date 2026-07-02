@@ -2,6 +2,8 @@
 
 #include "game/faction/base/population/PopContainer.h"
 #include "game/population/calculators/GrowthCalculator.h"
+#include "game/population/pop-types/GrowthConfigParser.h"
+#include "lib/effects/ActiveEffect.h"
 #include "game/population/calculators/PopCompositionCalculator.h"
 #include "game/population/calculators/RiotCalculator.h"
 #include "game/population/calculators/GoldenAgeCalculator.h"
@@ -26,13 +28,12 @@ public:
                                      const PopTypeAvailabilityCalculator* pAvailabilityCalculator,
                                      const ResearchManager* pResearchManager,
                                      PopCompositionCalculator* pCalc,
-                                     const GrowthCalculator* pGrowthCalculator,
+                                     const GrowthConfig_t& rGrowthConfig,
                                      int initialSize);
     ~PopulationManager();
 
     // Population size management
     int GetSize() const;
-    int GetGrowthRate() const;
     bool CanGrow() const;
 
     // Container access (for systems that need to iterate pops by stable ID)
@@ -81,10 +82,10 @@ public:
     int GetNutrientStockpile() const;
 
     // Nutrients required for the next population growth step.
-    int GetNutrientsRequired() const;
+    int GetNutrientsRequired(const std::vector<ActiveEffect_t>& activeEffects) const;
 
     // Apply nutrients produced this turn: add to stockpile, grow or starve if threshold is met.
-    void ApplyGrowth(int nutrients);
+    void ApplyGrowth(int nutrients, const std::vector<ActiveEffect_t>& activeEffects);
 
     // Signals
     Signal<int> on_pop_gained;   // new size
@@ -106,10 +107,9 @@ public:
 private:
     PopContainer m_container;
     const PopTypeRegistry* m_pRegistry = nullptr;
-    const GrowthCalculator* m_pGrowthCalculator = nullptr;
+    const GrowthConfig_t& m_rGrowthConfig;
     PopCompositionCalculator* m_pCompositionCalculator = nullptr;
     int m_maxSize;
-    int m_growthRate;
     int m_nutrientStockpile = 0;
 
     RiotCalculator m_riot;

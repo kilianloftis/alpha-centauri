@@ -1,11 +1,9 @@
 #include "game/social-engineering/SocialPolicyConfigParser.h"
+#include "lib/config/ConfigFields.h"
+#include "lib/config/JsonConfigLoader.h"
 #include "lib/effects/BonusEffectParser.h"
 #include <nlohmann/json.hpp>
-#include <fstream>
-#include <iostream>
 #include <stdexcept>
-
-using json = nlohmann::json;
 
 namespace ac
 {
@@ -16,49 +14,19 @@ SocialPolicyConfigParser::SocialPolicyConfigParser()
 
 std::vector<SocialPolicyConfig> SocialPolicyConfigParser::ParseConfig(const std::string& configPath)
 {
-    std::cout << "Loading social policy configuration from: " << configPath << "\n";
-
-    std::vector<SocialPolicyConfig> configs;
-
-    std::ifstream configFile(configPath);
-    if (!configFile.is_open())
-    {
-        throw std::runtime_error("Could not open " + configPath);
-    }
-
-    json configJson;
-    configFile >> configJson;
-
-    if (!configJson.is_array())
-    {
-        throw std::runtime_error("Expected array of social policies in '" + configPath + "'");
-    }
-
-    for (const auto& policyJson : configJson)
-    {
-        configs.push_back(ParsePolicyConfig(policyJson));
-    }
-
-    std::cout << "Loaded " << configs.size() << " social policy configurations\n";
-    return configs;
+    return JsonConfigLoader::LoadFile<SocialPolicyConfig>(
+        configPath, "social policy",
+        [this](const nlohmann::json& rJson) { return ParsePolicyConfig(rJson); });
 }
 
 SocialPolicyConfig SocialPolicyConfigParser::ParsePolicyConfig(const nlohmann::json& policyJson)
 {
     SocialPolicyConfig config;
-    config.id = policyJson["id"];
-    config.name = policyJson.value("name", config.id);
-    config.category = ParseCategory(policyJson["category"]);
-    config.prerequisiteTech = policyJson.value("prerequisite_tech", "");
-
-    if (policyJson.contains("effects"))
-    {
-        const auto& rEffectsJson = policyJson["effects"];
-        for (const auto& rEffectJson : rEffectsJson)
-        {
-            config.effects.push_back(BonusEffectParser::ParseEffectConfig(rEffectJson));
-        }
-    }
+    config.id = ConfigFields::ParseId(policyJson);
+    config.name = ConfigFields::ParseName(policyJson, config.id);
+    config.category = ParseCategory(policyJson.at("category"));
+    config.requiredTech = ConfigFields::ParseRequiredTech(policyJson);
+    config.effects = BonusEffectParser::ParseEffects(policyJson);
 
     return config;
 }

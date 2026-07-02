@@ -2,7 +2,6 @@
 
 #include "game/Faction.h"
 #include "game/buildings/BuildingConfigParser.h"
-#include "game/buildings/BuildingRegistry.h"
 #include "game/faction/SocialEngineeringManager.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/population/PopContainer.h"
@@ -17,18 +16,14 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
-#include <set>
 
 namespace ac
 {
 
-namespace
-{
-
-void AppendEffects(const std::vector<EffectConfig_t>& rEffects,
-                   const BaseManager* pOriginBase,
-                   const std::string& sourceId,
-                   std::vector<ActiveEffect_t>& rOut)
+void AppendActiveEffects(const std::vector<EffectConfig_t>& rEffects,
+                         const BaseManager* pOriginBase,
+                         const std::string& sourceId,
+                         std::vector<ActiveEffect_t>& rOut)
 {
     for (const EffectConfig_t& rEffect : rEffects)
     {
@@ -44,78 +39,13 @@ void AppendEffects(const std::vector<EffectConfig_t>& rEffects,
     }
 }
 
-void CollectFromBuildings(const Faction& rFaction,
-                          const BuildingRegistry& rBuildingRegistry,
-                          std::vector<ActiveEffect_t>& rOut)
+namespace
 {
-    for (const auto& pBase : rFaction.GetBases())
-    {
-        if (!pBase)
-        {
-            continue;
-        }
 
-        for (const BuildingConfig_t* pBuilding : pBase->GetBuildings())
-        {
-            if (!pBuilding)
-            {
-                continue;
-            }
-
-            AppendEffects(pBuilding->effects, pBase.get(), pBuilding->id, rOut);
-        }
-    }
-
-    // Key: (originBase*, grantedBuildingId). Pointer identity is intentional — two different
-    // bases granting the same building must each expand independently. Pointers are always
-    // valid here because rFaction owns the bases and outlives this stack frame.
-    std::set<std::pair<const BaseManager*, std::string>> processedGrantedIds;
-    for (size_t i = 0; i < rOut.size(); ++i)
-    {
-        const EffectConfig_t* pEffect = rOut[i].config;
-        if (!pEffect)
-        {
-            continue;
-        }
-
-        const GrantBuildingEffect_t* pGrant = std::get_if<GrantBuildingEffect_t>(&pEffect->effect);
-        if (!pGrant)
-        {
-            continue;
-        }
-
-        const BuildingConfig_t* pGranted = rBuildingRegistry.Find(pGrant->buildingId);
-        if (!pGranted)
-        {
-            continue;
-        }
-
-        if (rOut[i].originBase != nullptr)
-        {
-            // ThisBase-scoped grant: expand effects once, attributed to the originating base.
-            const std::pair<const BaseManager*, std::string> key = {rOut[i].originBase, pGrant->buildingId};
-            if (!processedGrantedIds.count(key))
-            {
-                processedGrantedIds.insert(key);
-                AppendEffects(pGranted->effects, rOut[i].originBase, rOut[i].sourceId + " -> " + pGranted->id, rOut);
-            }
-        }
-        else
-        {
-            // AllOwnerBases / FactionGlobal grant: clone the granted building's effects once
-            // per faction base so that ThisBase-scoped sub-effects are correctly attributed.
-            for (const auto& pBase : rFaction.GetBases())
-            {
-                if (!pBase) continue;
-                const std::pair<const BaseManager*, std::string> key = {pBase.get(), pGrant->buildingId};
-                if (!processedGrantedIds.count(key))
-                {
-                    processedGrantedIds.insert(key);
-                    AppendEffects(pGranted->effects, pBase.get(), rOut[i].sourceId + " -> " + pGranted->id, rOut);
-                }
-            }
-        }
-    }
+void CollectFromBuildings(const Faction& rFaction, std::vector<ActiveEffect_t>& rOut)
+{
+    const std::vector<ActiveEffect_t> buildingEffects = rFaction.CollectBuildingEffects();
+    rOut.insert(rOut.end(), buildingEffects.begin(), buildingEffects.end());
 }
 
 void CollectFromSocialEngineering(const Faction& rFaction, std::vector<ActiveEffect_t>& rResult)
@@ -143,11 +73,10 @@ double ApplyModifierStack(double base, const std::vector<std::pair<double, Modif
     return addTotal * arithmeticFactor * geometricFactor;
 }
 
-std::vector<ActiveEffect_t> CollectActiveEffects(const Faction& rFaction,
-                                                 const BuildingRegistry& rBuildingRegistry)
+std::vector<ActiveEffect_t> CollectActiveEffects(const Faction& rFaction)
 {
     std::vector<ActiveEffect_t> result;
-    CollectFromBuildings(rFaction, rBuildingRegistry, result);
+    CollectFromBuildings(rFaction, result);
     CollectFromSocialEngineering(rFaction, result);
     return result;
 }

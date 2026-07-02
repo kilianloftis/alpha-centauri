@@ -15,7 +15,6 @@ class SocialRatingRegistry;
 struct PopCompositionConfig;
 class PopCompositionCalculator;
 struct GrowthConfig_t;
-class GrowthCalculator;
 class LuaRuntime;
 struct TechCostConfig;
 class TechCostCalculator;
@@ -42,7 +41,6 @@ struct GameDataContext
     std::unique_ptr<PopCompositionConfig> popCompositionConfig;
     std::unique_ptr<PopCompositionCalculator> popCompositionCalculator;
     std::unique_ptr<GrowthConfig_t> growthConfig;
-    std::unique_ptr<GrowthCalculator> growthCalculator;
     std::unique_ptr<LuaRuntime> luaRuntime;
     std::unique_ptr<TechCostConfig> techCostConfig;
     std::unique_ptr<TechCostCalculator> techCostCalculator;

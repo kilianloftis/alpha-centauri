@@ -1,30 +1,17 @@
 #include "game/population/calculators/GrowthCalculator.h"
 #include "game/population/pop-types/GrowthConfigParser.h"
-#include "lib/LuaRuntime.h"
-#include <algorithm>
-#include <unordered_map>
+#include "lib/effects/ActiveEffect.h"
+#include "lib/effects/EffectEnums.h"
 
 namespace ac
 {
 
-GrowthCalculator::GrowthCalculator(const GrowthConfig_t& rConfig, LuaRuntime& rLua)
-    : m_pConfig(&rConfig)
-    , m_pLua(&rLua)
+int GrowthCalculator::ComputeNutrientsRequired(const GrowthConfig_t& rConfig, int baseSize, const std::vector<ActiveEffect_t>& activeEffects)
 {
-}
-
-int GrowthCalculator::ComputeNutrientsRequired(int baseSize, int growthRating) const
-{
-    const std::unordered_map<std::string, int> vars = {
-        {"base_size",    baseSize},
-        {"growth_rating", growthRating},
-    };
-    const int result = m_pLua->EvalInt(m_pConfig->thresholdFormula, vars);
-    if (result < 0)
-    {
-        throw std::runtime_error("Growth threshold formula returned negative value");
-    }
-    return result;
+    const double growthRate =
+        ResolveStatModifiers(FilterFlatByStatId(activeEffects, StatId::GrowthRate), 100.0).total;
+    const double multiplier = (growthRate > 0.0) ? growthRate / 100.0 : 1.0;
+    return static_cast<int>(baseSize * rConfig.nutrientsPerPop / multiplier);
 }
 
 } // namespace ac

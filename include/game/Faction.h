@@ -61,10 +61,16 @@ public:
     // Resource production - routes to all bases and faction economy manager
     void ProduceBaseResources();
 
+    // Apply growth to all bases, incorporating GrowthRate stat effects.
+    void ApplyBaseGrowth();
+
     // Research - delegated to ResearchManager
     void AddResearchPoints(int points);
     int GetResearchPoints() const;
     ResearchManager* GetResearchManager() const;
+
+    // Building effects
+    std::vector<ActiveEffect_t> CollectBuildingEffects() const;
 
     // Social engineering
     bool SetSocialPolicy(SocialCategory category, const std::string& policyId);

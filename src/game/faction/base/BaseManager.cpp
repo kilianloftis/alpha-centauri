@@ -47,7 +47,7 @@ BaseManager::BaseManager(
     const ResearchManager* pResearchManager,
     const EconomyManager* pEconomyManager,
     const ProductionCostCalculator* pProductionCostCalculator,
-    const GrowthCalculator* pGrowthCalculator,
+    const GrowthConfig_t& rGrowthConfig,
     const SecretProjectAvailabilityCalculator* pSecretProjectCalculator)
     : m_factionId(-1)
     , m_baseId(-1)
@@ -55,7 +55,7 @@ BaseManager::BaseManager(
     , m_rTileEffects(rTileEffects)
     , m_pBuildingRegistry(pBuildingRegistry)
     , m_pResearch(pResearchManager)
-    , m_pPopulation(std::make_unique<PopulationManager>(pPopRegistry, pPopTypeAvailabilityCalculator, pResearchManager, pCompositionCalculator, pGrowthCalculator, 3))
+    , m_pPopulation(std::make_unique<PopulationManager>(pPopRegistry, pPopTypeAvailabilityCalculator, pResearchManager, pCompositionCalculator, rGrowthConfig, 3))
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(ComputeWorkableTiles_(rTileEffects, tile), m_pPopulation->GetContainer(), rTileEffects))
     , m_pResources(nullptr)
     , m_pBuildings(std::make_unique<BuildingManager>(pBuildingRegistry, pResearchManager, pSecretProjectCalculator))
@@ -224,6 +224,22 @@ const std::vector<const BuildingConfig_t*>& BaseManager::GetBuildings() const
     return m_pBuildings->GetBuildings();
 }
 
+std::vector<ActiveEffect_t> BaseManager::CollectBuildingEffects() const
+{
+    std::vector<ActiveEffect_t> result = m_pBuildings
+        ? m_pBuildings->CollectEffects()
+        : std::vector<ActiveEffect_t>{};
+
+    for (ActiveEffect_t& effect : result)
+    {
+        if (effect.config && effect.config->scope == EffectScope_t::ThisBase)
+        {
+            effect.originBase = this;
+        }
+    }
+    return result;
+}
+
 std::vector<const IConstructable*> BaseManager::GetConstructable() const
 {
     std::vector<const IConstructable*> available;
@@ -301,14 +317,15 @@ int BaseManager::ConsumePsych()
     return m_pResources ? m_pResources->ConsumePsych() : 0;
 }
 
-void BaseManager::ApplyGrowth()
+void BaseManager::ApplyGrowth(const std::vector<ActiveEffect_t>& activeEffects)
 {
     if (!m_pPopulation)
     {
         throw std::runtime_error("BaseManager::ApplyGrowth: m_pPopulation is null");
     }
     const int nutrients = m_pResources ? m_pResources->ConsumeNutrients() : 0;
-    m_pPopulation->ApplyGrowth(nutrients);
+    const std::vector<ActiveEffect_t> baseEffects = FilterForBase(activeEffects, *this);
+    m_pPopulation->ApplyGrowth(nutrients, baseEffects);
 }
 
 int BaseManager::GetNutrientStockpile() const
@@ -316,9 +333,14 @@ int BaseManager::GetNutrientStockpile() const
     return m_pPopulation ? m_pPopulation->GetNutrientStockpile() : 0;
 }
 
-int BaseManager::GetNutrientsRequired() const
+int BaseManager::GetNutrientsRequired(const std::vector<ActiveEffect_t>& activeEffects) const
 {
-    return m_pPopulation ? m_pPopulation->GetNutrientsRequired() : 0;
+    if (!m_pPopulation)
+    {
+        throw std::runtime_error("BaseManager::GetNutrientsRequired: m_pPopulation is null");
+    }
+    const std::vector<ActiveEffect_t> baseEffects = FilterForBase(activeEffects, *this);
+    return m_pPopulation->GetNutrientsRequired(baseEffects);
 }
 
 int BaseManager::GetBaseSize() const

@@ -21,16 +21,16 @@ struct SocialPolicyConfig
     std::string id;
     std::string name;
     SocialCategory category;
-    std::string prerequisiteTech;  // empty if none
+    std::string requiredTech;  // empty if none
     std::vector<EffectConfig_t> effects;
 
     bool IsAvailable(const std::vector<std::string>& rDiscoveredTechIds) const
     {
-        if (prerequisiteTech.empty())
+        if (requiredTech.empty())
         {
             return true;
         }
-        return std::find(rDiscoveredTechIds.begin(), rDiscoveredTechIds.end(), prerequisiteTech)
+        return std::find(rDiscoveredTechIds.begin(), rDiscoveredTechIds.end(), requiredTech)
                != rDiscoveredTechIds.end();
     }
 };

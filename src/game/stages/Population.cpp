@@ -23,20 +23,17 @@ void Population::Execute_(GameState* pGameState, Faction* pFaction)
         return;
     }
 
-    for (size_t i = 0; i < pFaction->GetBaseCount(); ++i)
+    pFaction->ApplyBaseGrowth();
+
+    for (auto& pBase : pFaction->GetBases())
     {
-        BaseManager* pBase = pFaction->GetBase(i);
         if (!pBase)
         {
             continue;
         }
-
-        std::cout << "  Accumulating growth for base '" << pBase->GetName() << "' (bank: " << pBase->GetNutrientStockpile() << " -> ";
-
-        pBase->ApplyGrowth();
-
-        std::cout << pBase->GetNutrientStockpile() << ", size: " << pBase->GetBaseSize() << ")\n";
-
+        std::cout << "  Growth applied for base '" << pBase->GetName()
+                  << "' (bank: " << pBase->GetNutrientStockpile()
+                  << ", size: " << pBase->GetBaseSize() << ")\n";
         pBase->RecalculatePopComposition();
     }
 }

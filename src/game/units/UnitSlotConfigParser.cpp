@@ -1,48 +1,27 @@
 #include "game/units/UnitSlotConfigParser.h"
+#include "lib/config/ConfigFields.h"
+#include "lib/config/JsonConfigLoader.h"
 #include <nlohmann/json.hpp>
-#include <fstream>
-#include <iostream>
-#include <stdexcept>
-
-using json = nlohmann::json;
 
 namespace ac
 {
 
 std::vector<UnitSlotConfig_t> UnitSlotConfigParser::ParseConfig(const std::string& rConfigPath) const
 {
-    std::cout << "Loading unit slot configuration from: " << rConfigPath << "\n";
-
-    std::ifstream file(rConfigPath);
-    if (!file.is_open())
-    {
-        throw std::runtime_error("Could not open " + rConfigPath);
-    }
-
-    json data;
-    file >> data;
-
-    if (!data.is_array())
-    {
-        throw std::runtime_error("Expected array in " + rConfigPath);
-    }
-
-    std::vector<UnitSlotConfig_t> slots;
-    for (const auto& rSlotJson : data)
-    {
-        UnitSlotConfig_t slot;
-        slot.id            = rSlotJson["id"].get<std::string>();
-        slot.displayName   = rSlotJson.value("display_name", slot.id);
-        slot.componentType = rSlotJson["component_type"].get<std::string>();
-        slot.required      = rSlotJson.value("required", true);
-        slot.column        = rSlotJson.value("column", std::string("left"));
-        slot.costModifier  = rSlotJson.value("cost_modifier", 1.0f);
-        slot.requiredTech  = rSlotJson.value("required_tech", std::string(""));
-        slots.push_back(std::move(slot));
-    }
-
-    std::cout << "Loaded " << slots.size() << " unit slot configurations\n";
-    return slots;
+    return JsonConfigLoader::LoadFile<UnitSlotConfig_t>(
+        rConfigPath, "unit slot",
+        [](const nlohmann::json& rSlotJson)
+        {
+            UnitSlotConfig_t slot;
+            slot.id            = ConfigFields::ParseId(rSlotJson);
+            slot.displayName   = ConfigFields::ParseName(rSlotJson, slot.id, "display_name");
+            slot.componentType = rSlotJson.at("component_type").get<std::string>();
+            slot.required      = rSlotJson.value("required", true);
+            slot.column        = rSlotJson.value("column", std::string("left"));
+            slot.costModifier  = rSlotJson.value("cost_modifier", 1.0f);
+            slot.requiredTech  = ConfigFields::ParseRequiredTech(rSlotJson);
+            return slot;
+        });
 }
 
 } // namespace ac

@@ -24,7 +24,6 @@
 #include "game/population/pop-types/PopCompositionConfigParser.h"
 #include "game/population/pop-types/GrowthConfigParser.h"
 #include "game/population/calculators/PopCompositionCalculator.h"
-#include "game/population/calculators/GrowthCalculator.h"
 #include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/research/TechCostConfig.h"
@@ -151,11 +150,7 @@ void Engine::Initialize_()
     GrowthConfig_tParser growthParser;
     m_gameDataContext->growthConfig =
         std::make_unique<GrowthConfig_t>(
-            growthParser.ParseConfig("config/pop_growth.lua", *m_gameDataContext->luaRuntime));
-    m_gameDataContext->growthCalculator =
-        std::make_unique<GrowthCalculator>(
-            *m_gameDataContext->growthConfig, *m_gameDataContext->luaRuntime);
-
+            growthParser.ParseConfig("config/pop_growth.json"));
     TechCostConfigParser techCostParser;
     m_gameDataContext->techCostConfig =
         std::make_unique<TechCostConfig>(

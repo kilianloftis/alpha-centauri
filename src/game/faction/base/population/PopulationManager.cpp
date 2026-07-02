@@ -14,14 +14,13 @@ PopulationManager::PopulationManager(const PopTypeRegistry* pReg,
                                      const PopTypeAvailabilityCalculator* pAvailabilityCalculator,
                                      const ResearchManager* pResearchManager,
                                      PopCompositionCalculator* pCalc,
-                                     const GrowthCalculator* pGrowthCalculator,
+                                     const GrowthConfig_t& rGrowthConfig,
                                      int initialSize)
     : m_container(pReg, pAvailabilityCalculator, pResearchManager, initialSize)
     , m_pRegistry(pReg)
-    , m_pGrowthCalculator(pGrowthCalculator)
+    , m_rGrowthConfig(rGrowthConfig)
     , m_pCompositionCalculator(pCalc)
     , m_maxSize(8)
-    , m_growthRate(1)
     , m_nutrientStockpile(0)
     , m_riot(on_will_riot, on_is_rioting, on_riot_ended)
     , m_golden_age(on_golden_age_started, on_golden_age_ended)
@@ -44,11 +43,6 @@ const std::string& PopulationManager::GetDefaultPopType() const
         throw std::runtime_error("No PopTypeRegistry");
     }
     return m_pRegistry->GetDefault().id;
-}
-
-int PopulationManager::GetGrowthRate() const
-{
-    return m_growthRate;
 }
 
 bool PopulationManager::CanGrow() const
@@ -97,20 +91,16 @@ int PopulationManager::GetNutrientStockpile() const
     return m_nutrientStockpile;
 }
 
-int PopulationManager::GetNutrientsRequired() const
+int PopulationManager::GetNutrientsRequired(const std::vector<ActiveEffect_t>& activeEffects) const
 {
-    if (!m_pGrowthCalculator)
-    {
-        return 0;
-    }
-    return m_pGrowthCalculator->ComputeNutrientsRequired(GetSize(), m_growthRate);
+    return GrowthCalculator::ComputeNutrientsRequired(m_rGrowthConfig, GetSize(), activeEffects);
 }
 
-void PopulationManager::ApplyGrowth(int nutrients)
+void PopulationManager::ApplyGrowth(int nutrients, const std::vector<ActiveEffect_t>& activeEffects)
 {
     m_nutrientStockpile += nutrients;
 
-    const int required = GetNutrientsRequired();
+    const int required = GrowthCalculator::ComputeNutrientsRequired(m_rGrowthConfig, GetSize(), activeEffects);
     if (m_nutrientStockpile >= required)
     {
         m_nutrientStockpile -= required;

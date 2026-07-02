@@ -1,7 +1,7 @@
 #include "game/TurnStageConfigParser.h"
+#include "lib/config/ConfigFields.h"
+#include "lib/config/JsonConfigLoader.h"
 #include <nlohmann/json.hpp>
-#include <fstream>
-#include <iostream>
 
 using json = nlohmann::json;
 
@@ -14,39 +14,16 @@ TurnStageConfigParser::TurnStageConfigParser()
 
 std::vector<TurnStageConfig> TurnStageConfigParser::ParseConfig(const std::string& configPath)
 {
-    std::cout << "Loading turn stage configuration from: " << configPath << "\n";
-    
-    std::vector<TurnStageConfig> configs;
-    
-    std::ifstream configFile(configPath);
-    if (!configFile.is_open())
-    {
-        throw std::runtime_error("Could not open " + configPath);
-    }
-
-    json configJson;
-    configFile >> configJson;
-
-    if (!configJson.is_array())
-    {
-        throw std::runtime_error("Expected array of turn stages in '" + configPath + "'");
-    }
-
-    for (const auto& stageJson : configJson)
-    {
-        TurnStageConfig config = ParseStageConfig(stageJson);
-        configs.push_back(config);
-    }
-
-    std::cout << "Loaded " << configs.size() << " turn stage configurations\n";
-    return configs;
+    return JsonConfigLoader::LoadFile<TurnStageConfig>(
+        configPath, "turn stage",
+        [this](const nlohmann::json& rJson) { return ParseStageConfig(rJson); });
 }
 
 TurnStageConfig TurnStageConfigParser::ParseStageConfig(const nlohmann::json& stageJson)
 {
     TurnStageConfig config;
-    config.id = stageJson["id"];
-    config.name = stageJson.value("name", config.id);
+    config.id = ConfigFields::ParseId(stageJson);
+    config.name = ConfigFields::ParseName(stageJson, config.id);
     config.description = stageJson.value("description", "");
     config.repeat_for_each_faction = stageJson.value("repeat_for_each_faction", false);
     
