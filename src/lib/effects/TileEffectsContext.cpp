@@ -16,7 +16,9 @@ namespace ac
 namespace
 {
 
-// Appends every effect from a nearby feature that reaches `distance` tiles (radius >= distance).
+// Appends a nearby feature's effects when its radius reaches `distance` tiles
+// (radius >= distance). Same filtering as a tile's own features (CollectTileEffects):
+// only continuous ThisTile-scoped effects take part in tile-level resolution.
 void AppendReachingEffects_(const ImprovementConfig_t& rFeature, int distance,
                             std::vector<ActiveEffect_t>& rOut)
 {
@@ -26,6 +28,14 @@ void AppendReachingEffects_(const ImprovementConfig_t& rFeature, int distance,
     }
     for (const EffectConfig_t& rEffect : rFeature.effects)
     {
+        if (rEffect.scope != EffectScope_t::ThisTile)
+        {
+            continue;
+        }
+        if (rEffect.persistence == EffectPersistence_t::Instantaneous)
+        {
+            continue;
+        }
         ActiveEffect_t active;
         active.config = &rEffect;
         active.sourceId = rFeature.id;

@@ -1,6 +1,8 @@
-add_executable(alpha-centauri
-    main.cpp
-    game/Engine.cpp
+# ---------------------------------------------------------------------------
+# ac-core: all game/engine logic, free of rendering/input backends, UI, and
+# the engine loop. Shared between the game executable and the test suite.
+# ---------------------------------------------------------------------------
+add_library(ac-core STATIC
     game/GameState.cpp
     game/GameDataContext.cpp
     game/Faction.cpp
@@ -74,36 +76,9 @@ add_executable(alpha-centauri
     game/stages/TurnEnd.cpp
     game/stages/Save.cpp
     game/stages/CustomTurnStage.cpp
-    input/KeyMapping.cpp
-    input/KeyEventQueue.cpp
-    input/MouseEventQueue.cpp
-    ui/TileHitTester.cpp
-    ui/UIManager.cpp
-    ui/ViewFactory.cpp
-    ui/world/WorldView.cpp
-    ui/world/CameraInputController.cpp
-    ui/world/UnitOrderInputController.cpp
-    ui/world/WorldDisplay.cpp
-    ui/world/InfoPanelElement.cpp
-    ui/base/BaseView.cpp
-    ui/base/BaseWorkableAreaDisplay.cpp
-    ui/base/GrowthDisplay.cpp
-    ui/base/ProductionDisplay.cpp
-    ui/base/ProductionSelectorPopup.cpp
-    ui/base/PopulationDisplay.cpp
-    ui/base/PopTypeSelectorPopup.cpp
-    ui/research/ResearchView.cpp
-    ui/research/CurrentResearchPanel.cpp
-    ui/unit-designer/SlotColumnPanel.cpp
-    ui/unit-designer/ComponentSlotDisplay.cpp
-    ui/unit-designer/ComponentSelectorPopup.cpp
-    ui/unit-designer/DesignStatsDisplay.cpp
-    ui/unit-designer/DesignListPanel.cpp
-    ui/unit-designer/UnitStatusPanel.cpp
-    ui/unit-designer/UnitDesignerView.cpp
 )
 
-target_include_directories(alpha-centauri PRIVATE
+target_include_directories(ac-core PUBLIC
     ${CMAKE_SOURCE_DIR}/include
 )
 
@@ -116,7 +91,7 @@ FetchContent_Declare(
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 FetchContent_MakeAvailable(json)
-target_link_libraries(alpha-centauri PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(ac-core PUBLIC nlohmann_json::nlohmann_json)
 
 # Add magic_enum library
 FetchContent_Declare(
@@ -125,7 +100,7 @@ FetchContent_Declare(
     GIT_TAG v0.9.6
 )
 FetchContent_MakeAvailable(magic_enum)
-target_link_libraries(alpha-centauri PRIVATE magic_enum::magic_enum)
+target_link_libraries(ac-core PUBLIC magic_enum::magic_enum)
 
 # Add Lua 5.4
 FetchContent_Declare(
@@ -156,7 +131,7 @@ if(NOT lua_POPULATED)
     target_include_directories(lua54 PUBLIC ${LUA_SRC})
     set_target_properties(lua54 PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
-target_link_libraries(alpha-centauri PRIVATE lua54)
+target_link_libraries(ac-core PUBLIC lua54)
 
 # Add sol2 (header-only)
 FetchContent_Declare(
@@ -165,7 +140,45 @@ FetchContent_Declare(
     GIT_TAG v3.5.0
 )
 FetchContent_MakeAvailable(sol2)
-target_link_libraries(alpha-centauri PRIVATE sol2)
+target_link_libraries(ac-core PUBLIC sol2)
+
+# ---------------------------------------------------------------------------
+# alpha-centauri: the game executable — engine loop, UI, and the selected
+# rendering/input backend on top of ac-core.
+# ---------------------------------------------------------------------------
+add_executable(alpha-centauri
+    main.cpp
+    game/Engine.cpp
+    input/KeyMapping.cpp
+    input/KeyEventQueue.cpp
+    input/MouseEventQueue.cpp
+    ui/TileHitTester.cpp
+    ui/UIManager.cpp
+    ui/ViewFactory.cpp
+    ui/world/WorldView.cpp
+    ui/world/CameraInputController.cpp
+    ui/world/UnitOrderInputController.cpp
+    ui/world/WorldDisplay.cpp
+    ui/world/InfoPanelElement.cpp
+    ui/base/BaseView.cpp
+    ui/base/BaseWorkableAreaDisplay.cpp
+    ui/base/GrowthDisplay.cpp
+    ui/base/ProductionDisplay.cpp
+    ui/base/ProductionSelectorPopup.cpp
+    ui/base/PopulationDisplay.cpp
+    ui/base/PopTypeSelectorPopup.cpp
+    ui/research/ResearchView.cpp
+    ui/research/CurrentResearchPanel.cpp
+    ui/unit-designer/SlotColumnPanel.cpp
+    ui/unit-designer/ComponentSlotDisplay.cpp
+    ui/unit-designer/ComponentSelectorPopup.cpp
+    ui/unit-designer/DesignStatsDisplay.cpp
+    ui/unit-designer/DesignListPanel.cpp
+    ui/unit-designer/UnitStatusPanel.cpp
+    ui/unit-designer/UnitDesignerView.cpp
+)
+
+target_link_libraries(alpha-centauri PRIVATE ac-core)
 
 option(USE_SFML "Enable SFML rendering" ON)
 if(USE_SFML)

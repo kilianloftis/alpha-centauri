@@ -1,0 +1,110 @@
+[
+  {
+    "id": "granted_hall",
+    "name": "Granted Hall",
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisBase", "parameters": { "stat": "minerals", "amount": 3, "op": "Add" } },
+      { "type": "StatModifier", "scope": "FactionGlobal", "parameters": { "stat": "energy", "amount": 1, "op": "Add" } },
+      { "type": "GrantTech", "scope": "FactionGlobal", "persistence": "Instantaneous", "parameters": { "tech_id": "some_tech" } }
+    ]
+  },
+  {
+    "id": "grantor_local",
+    "name": "Grantor (ThisBase scope)",
+    "effects": [
+      { "type": "GrantBuilding", "scope": "ThisBase", "parameters": { "building_id": "granted_hall" } },
+      { "type": "StatModifier", "scope": "ThisBase", "parameters": { "stat": "nutrients", "amount": 2, "op": "Add" } }
+    ]
+  },
+  {
+    "id": "grantor_global",
+    "name": "Grantor (FactionGlobal scope)",
+    "effects": [
+      { "type": "GrantBuilding", "scope": "FactionGlobal", "parameters": { "building_id": "granted_hall" } }
+    ]
+  },
+  {
+    "id": "grantor_unknown",
+    "name": "Grantor of a nonexistent building",
+    "effects": [
+      { "type": "GrantBuilding", "scope": "ThisBase", "parameters": { "building_id": "does_not_exist" } }
+    ]
+  },
+  {
+    "id": "nested_outer",
+    "name": "Nested Grantor (outer)",
+    "effects": [
+      { "type": "GrantBuilding", "scope": "ThisBase", "parameters": { "building_id": "nested_middle" } }
+    ]
+  },
+  {
+    "id": "nested_middle",
+    "name": "Nested Grantor (middle)",
+    "effects": [
+      { "type": "GrantBuilding", "scope": "ThisBase", "parameters": { "building_id": "granted_hall" } },
+      { "type": "StatModifier", "scope": "ThisBase", "parameters": { "stat": "energy", "amount": 4, "op": "Add" } }
+    ]
+  },
+  {
+    "id": "cycle_a",
+    "name": "Cycle A",
+    "effects": [
+      { "type": "GrantBuilding", "scope": "ThisBase", "parameters": { "building_id": "cycle_b" } },
+      { "type": "StatModifier", "scope": "ThisBase", "parameters": { "stat": "minerals", "amount": 1, "op": "Add" } }
+    ]
+  },
+  {
+    "id": "cycle_b",
+    "name": "Cycle B",
+    "effects": [
+      { "type": "GrantBuilding", "scope": "ThisBase", "parameters": { "building_id": "cycle_a" } },
+      { "type": "StatModifier", "scope": "ThisBase", "parameters": { "stat": "minerals", "amount": 10, "op": "Add" } }
+    ]
+  },
+  {
+    "id": "instant_grantor",
+    "name": "Instantaneous Grantor",
+    "effects": [
+      { "type": "GrantBuilding", "scope": "ThisBase", "persistence": "Instantaneous", "parameters": { "building_id": "flat_nutrient" } }
+    ]
+  },
+  {
+    "id": "flat_nutrient",
+    "name": "Flat Nutrient Building",
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisBase", "parameters": { "stat": "nutrients", "amount": 2, "op": "Add" } }
+    ]
+  },
+  {
+    "id": "farm_booster",
+    "name": "Farm Booster",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 1,
+          "op": "Add",
+          "selector": { "kind": "HasImprovement", "improvement": "Farm" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "center_booster",
+    "name": "Base Center Tile Booster",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "energy",
+          "amount": 2,
+          "op": "Add",
+          "selector": { "kind": "BaseTile" }
+        }
+      }
+    ]
+  }
+]

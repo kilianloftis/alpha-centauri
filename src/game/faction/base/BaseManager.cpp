@@ -87,18 +87,21 @@ BaseManager::BaseManager(
         on_pop_lost.emit(newSize);
     });
 
-    m_pProduction->on_production_completed.connect([this](const std::string& itemId) {
-        m_pBuildings->AddBuilding(itemId);
-        if (m_pBuildingRegistry)
-        {
-            const BuildingConfig_t* pConfig = m_pBuildingRegistry->Find(itemId);
-            if (pConfig)
+    if (m_pProduction)
+    {
+        m_pProduction->on_production_completed.connect([this](const std::string& itemId) {
+            m_pBuildings->AddBuilding(itemId);
+            if (m_pBuildingRegistry)
             {
-                DispatchInstantaneousEffects(*pConfig, *this);
+                const BuildingConfig_t* pConfig = m_pBuildingRegistry->Find(itemId);
+                if (pConfig)
+                {
+                    DispatchInstantaneousEffects(*pConfig, *this);
+                }
             }
-        }
-        on_production_completed.emit(itemId);
-    });
+            on_production_completed.emit(itemId);
+        });
+    }
 }
 
 BaseManager::~BaseManager() = default;

@@ -18,6 +18,7 @@
 #include <cmath>
 #include <iostream>
 #include <set>
+#include <string_view>
 
 namespace ac
 {
@@ -40,6 +41,36 @@ void AppendActiveEffects(const std::vector<EffectConfig_t>& rEffects,
         rOut.push_back(activeEffect);
     }
 }
+
+namespace
+{
+
+// True if buildingId appears as a segment of a chained sourceId ("a -> b -> c").
+// Used to break grant cycles: a grant whose target is already an ancestor in its own
+// chain (the constructed root or an earlier grant) is already contributing its effects,
+// so expanding it again would duplicate them.
+bool GrantChainContains_(const std::string& rSourceChain, const std::string& rBuildingId)
+{
+    const std::string_view chain(rSourceChain);
+    const std::string_view separator(" -> ");
+    size_t pos = 0;
+    while (true)
+    {
+        const size_t next = chain.find(separator, pos);
+        const std::string_view segment = chain.substr(pos, (next == std::string_view::npos ? chain.size() : next) - pos);
+        if (segment == rBuildingId)
+        {
+            return true;
+        }
+        if (next == std::string_view::npos)
+        {
+            return false;
+        }
+        pos = next + separator.size();
+    }
+}
+
+} // namespace
 
 std::vector<ActiveEffect_t> ExpandGrantBuildingEffects(
     std::vector<ActiveEffect_t> effects,
@@ -66,6 +97,11 @@ std::vector<ActiveEffect_t> ExpandGrantBuildingEffects(
 
         const BuildingConfig_t* pGranted = rRegistry.Find(pGrant->buildingId);
         if (!pGranted)
+        {
+            continue;
+        }
+
+        if (GrantChainContains_(effects[i].sourceId, pGrant->buildingId))
         {
             continue;
         }
@@ -399,6 +435,10 @@ void AppendThisTileEffects_(const ImprovementConfig_t& rFeature, std::vector<Act
     for (const EffectConfig_t& rEffect : rFeature.effects)
     {
         if (rEffect.scope != EffectScope_t::ThisTile)
+            continue;
+        // Instantaneous effects fire once when applied; they must not be re-applied every
+        // time the tile's continuous effects are resolved.
+        if (rEffect.persistence == EffectPersistence_t::Instantaneous)
             continue;
         ActiveEffect_t active;
         active.config = &rEffect;

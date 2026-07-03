@@ -4,26 +4,40 @@
 graph TB
     subgraph "Effect Definitions"
         BuildingConfig[BuildingConfig_t]
+        ImprovementConfig[ImprovementConfig_t]
+        PopTypeConfig[PopTypeConfig_t]
+        UnitComponentConfig[UnitComponentConfig_t]
+        SocialPolicyConfig[SocialPolicyConfig]
         EffectConfig[EffectConfig_t<br/>EffectVariant_t<br/>scope<br/>persistence<br/>condition]
-        EffectStructs[Effect Structs<br/>GrantBuildingEffect_t<br/>GrantTechEffect_t<br/>GrantUnitEffect_t<br/>StatModifierEffect_t<br/>RuleFlagEffect_t<br/>SocialEngineeringOverrideEffect_t<br/>DiplomaticModifierEffect_t]
+        EffectStructs[Effect Structs<br/>GrantBuildingEffect_t<br/>GrantTechEffect_t<br/>GrantUnitEffect_t<br/>StatModifierEffect_t<br/>RuleFlagEffect_t<br/>SocialEngineeringOverrideEffect_t<br/>SocialRatingModifierEffect_t<br/>DiplomaticModifierEffect_t]
     end
 
     subgraph "Active Effect Instances"
         ActiveEffect[ActiveEffect_t<br/>config*<br/>sourceId<br/>originBase*]
         CollectActiveEffects[CollectActiveEffects]
-        CollectFromBuildings[CollectFromBuildings]
+        CollectBuildingEffects[Faction::CollectBuildingEffects<br/>BaseManager::CollectBuildingEffects]
+        ExpandGrantBuilding[ExpandGrantBuildingEffects]
         CollectFromSocialEngineering[CollectFromSocialEngineering]
+        CollectFromPops[CollectFromPops]
+        CollectTileEffects[CollectTileEffects]
+        CollectAreaEffects[TileEffectsContext::CollectAreaEffects]
     end
 
     subgraph "Effect Sources"
         BaseManager[BaseManager]
         BuildingManager[BuildingManager]
+        BuildingRegistry[BuildingRegistry]
         Faction[Faction]
         SocialEngineeringManager[SocialEngineeringManager]
-        SocialPolicyConfig[SocialPolicyConfig]
+        PopContainer[PopContainer]
+        TileEffectsContext[TileEffectsContext]
     end
 
     BuildingConfig --> EffectConfig
+    ImprovementConfig --> EffectConfig
+    PopTypeConfig --> EffectConfig
+    UnitComponentConfig --> EffectConfig
+    SocialPolicyConfig --> EffectConfig
     EffectConfig --> EffectStructs
     BuildingManager --> BuildingConfig
     BaseManager --> BuildingManager
@@ -31,24 +45,39 @@ graph TB
     Faction --> SocialEngineeringManager
     SocialEngineeringManager --> SocialPolicyConfig
 
-    CollectFromBuildings --> BaseManager
+    CollectBuildingEffects --> BaseManager
+    CollectBuildingEffects --> ExpandGrantBuilding
+    ExpandGrantBuilding --> BuildingRegistry
     CollectFromSocialEngineering --> SocialEngineeringManager
-    CollectActiveEffects --> CollectFromBuildings
+    CollectActiveEffects --> CollectBuildingEffects
     CollectActiveEffects --> CollectFromSocialEngineering
     CollectActiveEffects --> ActiveEffect
+    CollectFromPops --> PopContainer
+    CollectAreaEffects --> TileEffectsContext
+    CollectTileEffects --> ImprovementConfig
 
     style BuildingConfig fill:#ffd,stroke:#333,stroke-width:2px
+    style ImprovementConfig fill:#ffd,stroke:#333,stroke-width:2px
+    style PopTypeConfig fill:#ffd,stroke:#333,stroke-width:2px
+    style UnitComponentConfig fill:#ffd,stroke:#333,stroke-width:2px
+    style SocialPolicyConfig fill:#ffd,stroke:#333,stroke-width:2px
     style EffectConfig fill:#ffd,stroke:#333,stroke-width:3px
     style EffectStructs fill:#ffd,stroke:#333,stroke-width:2px
     style ActiveEffect fill:#fbf,stroke:#333,stroke-width:3px
     style CollectActiveEffects fill:#bfb,stroke:#333,stroke-width:3px
-    style CollectFromBuildings fill:#bfb,stroke:#333,stroke-width:2px
+    style CollectBuildingEffects fill:#bfb,stroke:#333,stroke-width:2px
+    style ExpandGrantBuilding fill:#bfb,stroke:#333,stroke-width:2px
     style CollectFromSocialEngineering fill:#bfb,stroke:#333,stroke-width:2px
+    style CollectFromPops fill:#bfb,stroke:#333,stroke-width:2px
+    style CollectTileEffects fill:#bfb,stroke:#333,stroke-width:2px
+    style CollectAreaEffects fill:#bfb,stroke:#333,stroke-width:2px
     style BaseManager fill:#f9f,stroke:#333,stroke-width:2px
     style BuildingManager fill:#f9f,stroke:#333,stroke-width:2px
+    style BuildingRegistry fill:#f9f,stroke:#333,stroke-width:2px
     style Faction fill:#f9f,stroke:#333,stroke-width:3px
     style SocialEngineeringManager fill:#f9f,stroke:#333,stroke-width:2px
-    style SocialPolicyConfig fill:#ffd,stroke:#333,stroke-width:2px
+    style PopContainer fill:#f9f,stroke:#333,stroke-width:2px
+    style TileEffectsContext fill:#f9f,stroke:#333,stroke-width:2px
 ```
 
 ## Component Overview
@@ -69,6 +98,7 @@ graph TB
   - `StatModifierEffect_t`
   - `RuleFlagEffect_t`
   - `SocialEngineeringOverrideEffect_t`
+  - `SocialRatingModifierEffect_t`
   - `DiplomaticModifierEffect_t`
 
 ### StatModifierEffect_t
@@ -84,6 +114,8 @@ graph TB
   - Base resources: `Nutrients`, `Minerals`, `Energy`.
   - Base output allocated directly rather than via energy split: `Econ`, `Labs`, `Psych`.
   - Unit stats: `Attack`, `Defense`, `Movement`, `HitPoints`, `DisengageChance`, `Fuel`, `DamageFromOutOfFuel`, `CargoCapacity`, `DifficultTerrainCost`, `CostMultiplier`.
+  - Population modifier: `GrowthRate` (`AddPercent`, base = 100%) — modifies the faction-wide population growth rate.
+  - Terrain mutation: `MoistureTier` — resolved back into `Tile::SetMoisture` by `RecomputeMoisture`; not a runtime-queried stat (see Tile Improvement Effects).
 - **Consumers**: `StatModifierEffect_t::stat`. `Defense` is also the target stat for tile-granted combat bonuses (rockiness, fungus, improvements) — see Tile Improvement Effects below.
 
 ### TileSelectorKind / TileSelector_t
@@ -164,12 +196,9 @@ graph TB
 ### CollectActiveEffects
 - **Purpose**: Gathers all active effects for a faction.
 - **Responsibilities**:
-  - Takes a `Faction` and the `BuildingRegistry` (from `GameDataContext`) as parameters.
-  - Calls `CollectFromBuildings` to gather effects from buildings in all bases.
-  - `CollectFromBuildings` uses a two-pass approach:
-    1. Append effects from constructed buildings.
-    2. Iterate over the collected effects, expanding any `GrantBuildingEffect_t` by looking up the granted building in the passed `BuildingRegistry` and appending its effects. The `sourceId` is chained (e.g., `command_nexus -> network_node`).
-  - Calls `CollectFromSocialEngineering` to gather effects from current social engineering selections.
+  - Takes only a `const Faction&` as a parameter.
+  - Calls `Faction::CollectBuildingEffects`, which calls `BaseManager::CollectBuildingEffects` on every base to collect raw building effects, then passes the combined list to `ExpandGrantBuildingEffects` (along with the faction's `BuildingRegistry` and base list) to expand any `GrantBuildingEffect_t` entries. The `sourceId` is chained (e.g., `command_nexus -> network_node`). `ThisBase`-scoped sub-effects of a faction-wide grant are cloned once per base with the correct `originBase`.
+  - Calls `CollectFromSocialEngineering` (delegating to `Faction::CollectSocialEffects`) to gather effects from current social engineering selections.
 - **Returns**: A vector of `ActiveEffect_t` instances.
 
 ### ResourceManager Integration
@@ -253,7 +282,6 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
 ## Known Gaps
 
 - **`ResolveStatModifiers` needs a seeded base for pure-multiplier stats**: the formula `total = addTotal * arithmeticFactor * geometricFactor` starts `addTotal` at the caller-supplied `baseValue` (default `0.0`). Stats that are only ever modified via `MultiplyGeometric`/`AddPercent` (no `Add` contribution) must pass `baseValue = 1.0`, or `total` resolves to `0`. `UnitDesign::GetBaseCost()` does this for `StatId::CostMultiplier`; any future pure-multiplier stat needs the same care.
-- **`FactionGlobal`/`WorldGlobal`-scoped `GrantBuildingEffect_t` loses per-base attribution**: when a faction-wide effect grants a building, the granted building's `ThisBase`-scoped effects inherit `originBase = nullptr` (since the granting effect has no origin base of its own) and are then dropped by `FilterForBase` for every base. Not exercised by current data, but will silently no-op the first secret project that grants a building with a per-base bonus.
 - **`BuildingConfig_t::IsDiscovered()` uses OR semantics**: a building becomes available once *any* listed `required_techs` entry is discovered, not all of them. May be intentional (alternate prerequisites) but is worth confirming against design intent.
 - **No combat system consumes `ResolveTileDefenseMultiplier` yet**: `Unit::GetDefense()` still returns only the unit's own design stat. Wiring an actual attack/defense resolution (and deciding how/whether it multiplies the attacker's tile bonus too) is a separate, larger feature.
 - **No improvement-construction flow consumes `CanBuildImprovement` yet**: `Tile::AddImprovement()` has no caller besides `BaseManager`'s `"Base"` wiring — there's no UI/production path for the player to actually build Farm/Mine/Bunker, so the `excludes` exclusivity check is unenforced in practice today.

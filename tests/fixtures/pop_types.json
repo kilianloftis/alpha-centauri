@@ -1,0 +1,50 @@
+[
+  {
+    "id": "Worker",
+    "name": "Worker",
+    "is_default": true,
+    "can_work_tile": true,
+    "player_assignable": true,
+    "riot_contribution": 0,
+    "golden_age_contribution": 0,
+    "obsoletes": [],
+    "effects": []
+  },
+  {
+    "id": "Doctor",
+    "name": "Doctor",
+    "can_work_tile": false,
+    "player_assignable": true,
+    "riot_contribution": 0,
+    "golden_age_contribution": 0,
+    "obsoletes": [],
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisBase", "parameters": { "stat": "psych", "amount": 2, "op": "Add" } }
+    ]
+  },
+  {
+    "id": "Technician",
+    "name": "Technician",
+    "can_work_tile": false,
+    "player_assignable": true,
+    "riot_contribution": 0,
+    "golden_age_contribution": 0,
+    "obsoletes": [],
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisBase", "parameters": { "stat": "econ", "amount": 3, "op": "Add" } }
+    ]
+  },
+  {
+    "id": "FungalFarmer",
+    "name": "Fungal Farmer (worker with a ThisPop tile multiplier plus a ThisBase flat bonus)",
+    "can_work_tile": true,
+    "player_assignable": true,
+    "riot_contribution": 0,
+    "golden_age_contribution": 0,
+    "obsoletes": [],
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisPop", "parameters": { "stat": "nutrients", "amount": 50, "op": "AddPercent" } },
+      { "type": "StatModifier", "scope": "ThisBase", "parameters": { "stat": "econ", "amount": 1, "op": "Add" } }
+    ]
+  }
+]

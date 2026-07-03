@@ -19,6 +19,9 @@ Commands:
   all [build-dir] [--config <Debug|Release>] [--no-sfml] [--sfml-dir <dir>] [-- <cmake-args>...]
       Configure and build in one step.
 
+  test [build-dir] [--config <Debug|Release>]
+      Build the test suite and run it via ctest.
+
   clean [build-dir]
       Remove the build directory.
 
@@ -92,6 +95,31 @@ function build() {
   cmake --build "$build_dir" --config "$config"
 }
 
+function run_tests() {
+  local build_dir="$DEFAULT_BUILD_DIR"
+  local config="$DEFAULT_CONFIG"
+
+  if [[ $# -gt 0 && "$1" != --* ]]; then
+    build_dir="$1"
+    shift
+  fi
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --config)
+        config="$2"
+        shift 2
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+
+  cmake --build "$build_dir" --config "$config" --target effects-tests
+  ctest --test-dir "$build_dir" --output-on-failure
+}
+
 function clean() {
   local build_dir="${1:-$DEFAULT_BUILD_DIR}"
   rm -rf "$build_dir"
@@ -152,6 +180,9 @@ case "$command" in
     mkdir -p "$build_dir"
     cmake -S "$ROOT_DIR" -B "$build_dir" -DCMAKE_BUILD_TYPE="$config" "${cmake_args[@]}"
     cmake --build "$build_dir" --config "$config"
+    ;;
+  test)
+    run_tests "$@"
     ;;
   clean)
     clean "$@"

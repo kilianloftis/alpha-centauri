@@ -1,0 +1,113 @@
+[
+  { "id": "Flat", "name": "Flat", "effects": [] },
+  {
+    "id": "Rolling",
+    "name": "Rolling",
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "minerals", "amount": 1, "op": "Add" } }
+    ]
+  },
+  {
+    "id": "Rocky",
+    "name": "Rocky",
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "minerals", "amount": 2, "op": "Add" } },
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "defense", "amount": 25, "op": "AddPercent" } }
+    ]
+  },
+  { "id": "Arid", "name": "Arid", "effects": [] },
+  {
+    "id": "Moist",
+    "name": "Moist",
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" } }
+    ]
+  },
+  {
+    "id": "Wet",
+    "name": "Wet",
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 2, "op": "Add" } }
+    ]
+  },
+  {
+    "id": "River",
+    "name": "River",
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "energy", "amount": 1, "op": "Add" } }
+    ]
+  },
+  {
+    "id": "Fungus",
+    "name": "Fungus",
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "defense", "amount": 25, "op": "AddPercent" } }
+    ]
+  },
+  {
+    "id": "Farm",
+    "name": "Farm",
+    "mineral_cost": 5,
+    "excludes": ["Rocky"],
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" } }
+    ]
+  },
+  {
+    "id": "Mine",
+    "name": "Mine",
+    "mineral_cost": 5,
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "minerals", "amount": 2, "op": "Add" } }
+    ]
+  },
+  {
+    "id": "Bunker",
+    "name": "Bunker",
+    "mineral_cost": 10,
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "defense", "amount": 50, "op": "AddPercent" } }
+    ]
+  },
+  {
+    "id": "Base",
+    "name": "Base",
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "defense", "amount": 100, "op": "AddPercent" } }
+    ]
+  },
+  {
+    "id": "Sensor",
+    "name": "Sensor",
+    "radius": 2,
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "defense", "amount": 25, "op": "AddPercent" } }
+    ]
+  },
+  {
+    "id": "Mirror",
+    "name": "Mirror",
+    "radius": 2,
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "energy", "amount": 1, "op": "Add" } }
+    ]
+  },
+  {
+    "id": "Condenser",
+    "name": "Condenser",
+    "radius": 1,
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "moisture_tier", "amount": 1, "op": "Add" } }
+    ]
+  },
+  {
+    "id": "WeirdAura",
+    "name": "Weird Aura (probe: non-ThisTile / Instantaneous effects on an improvement)",
+    "radius": 1,
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "energy", "amount": 1, "op": "Add" } },
+      { "type": "StatModifier", "scope": "ThisBase", "parameters": { "stat": "nutrients", "amount": 5, "op": "Add" } },
+      { "type": "StatModifier", "scope": "ThisTile", "persistence": "Instantaneous", "parameters": { "stat": "minerals", "amount": 7, "op": "Add" } }
+    ]
+  }
+]
