@@ -44,6 +44,17 @@ void AppendActiveEffects(const std::vector<EffectConfig_t>& rEffects,
                          const std::string& sourceId,
                          std::vector<ActiveEffect_t>& rOut);
 
+class BuildingRegistry;
+
+// Expands any GrantBuildingEffect_t entries in `effects`, appending the granted
+// building's own effects. rBases is used to attribute ThisBase-scoped sub-effects
+// to the correct base when the grant itself has no originBase (faction-global scope).
+// Returns the expanded vector by value.
+std::vector<ActiveEffect_t> ExpandGrantBuildingEffects(
+    std::vector<ActiveEffect_t> effects,
+    const BuildingRegistry& rRegistry,
+    const std::vector<const BaseManager*>& rBases);
+
 struct StatBreakdown_t
 {
     double total = 0.0;

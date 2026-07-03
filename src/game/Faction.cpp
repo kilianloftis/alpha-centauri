@@ -1,7 +1,6 @@
 #include "game/Faction.h"
 
 #include "game/buildings/BuildingRegistry.h"
-#include <set>
 #include "game/GameDataContext.h"
 #include "game/faction/base/production/ProductionCostCalculator.h"
 #include "game/map/WorldMap.h"
@@ -194,7 +193,7 @@ bool Faction::SetSocialPolicy(SocialCategory category, const std::string& policy
 {
     if (!m_pSocialEngineering)
     {
-        return false;
+        throw std::runtime_error("SocialEngineeringManager not initialized");
     }
     return m_pSocialEngineering->SetActivePolicy(category, policyId);
 }
@@ -203,7 +202,7 @@ const SocialPolicyConfig* Faction::GetSocialPolicy(SocialCategory category) cons
 {
     if (!m_pSocialEngineering)
     {
-        return nullptr;
+        throw std::runtime_error("SocialEngineeringManager not initialized");
     }
     return m_pSocialEngineering->GetActivePolicy(category);
 }
@@ -213,11 +212,8 @@ std::vector<ActiveEffect_t> Faction::CollectBuildingEffects() const
     std::vector<ActiveEffect_t> result;
     for (const auto& pBase : m_bases)
     {
-        if (!pBase)
-        {
-            continue;
-        }
-        const std::vector<ActiveEffect_t> baseEffects = pBase->CollectBuildingEffects();
+        if (!pBase) continue;
+        const auto baseEffects = pBase->CollectBuildingEffects();
         result.insert(result.end(), baseEffects.begin(), baseEffects.end());
     }
 
@@ -226,58 +222,13 @@ std::vector<ActiveEffect_t> Faction::CollectBuildingEffects() const
         return result;
     }
 
-    // Key: (originBase*, grantedBuildingId). Pointer identity is intentional — two different
-    // bases granting the same building must each expand independently. Pointers are always
-    // valid here because this Faction owns the bases and outlives this stack frame.
-    std::set<std::pair<const BaseManager*, std::string>> processedGrantedIds;
-    for (size_t i = 0; i < result.size(); ++i)
+    std::vector<const BaseManager*> bases;
+    for (const auto& pBase : m_bases)
     {
-        const EffectConfig_t* pEffect = result[i].config;
-        if (!pEffect)
-        {
-            continue;
-        }
-
-        const GrantBuildingEffect_t* pGrant = std::get_if<GrantBuildingEffect_t>(&pEffect->effect);
-        if (!pGrant)
-        {
-            continue;
-        }
-
-        const BuildingConfig_t* pGranted = m_pBuildingRegistry->Find(pGrant->buildingId);
-        if (!pGranted)
-        {
-            continue;
-        }
-
-        if (result[i].originBase != nullptr)
-        {
-            // ThisBase-scoped grant: expand effects once, attributed to the originating base.
-            const std::pair<const BaseManager*, std::string> key = {result[i].originBase, pGrant->buildingId};
-            if (!processedGrantedIds.count(key))
-            {
-                processedGrantedIds.insert(key);
-                AppendActiveEffects(pGranted->effects, result[i].originBase, result[i].sourceId + " -> " + pGranted->id, result);
-            }
-        }
-        else
-        {
-            // AllOwnerBases / FactionGlobal grant: clone the granted building's effects once
-            // per faction base so that ThisBase-scoped sub-effects are correctly attributed.
-            for (const auto& pBase : m_bases)
-            {
-                if (!pBase) continue;
-                const std::pair<const BaseManager*, std::string> key = {pBase.get(), pGrant->buildingId};
-                if (!processedGrantedIds.count(key))
-                {
-                    processedGrantedIds.insert(key);
-                    AppendActiveEffects(pGranted->effects, pBase.get(), result[i].sourceId + " -> " + pGranted->id, result);
-                }
-            }
-        }
+        bases.push_back(pBase.get());
     }
 
-    return result;
+    return ExpandGrantBuildingEffects(std::move(result), *m_pBuildingRegistry, bases);
 }
 
 std::vector<ActiveEffect_t> Faction::CollectSocialEffects() const

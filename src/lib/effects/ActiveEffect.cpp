@@ -2,6 +2,7 @@
 
 #include "game/Faction.h"
 #include "game/buildings/BuildingConfigParser.h"
+#include "game/buildings/BuildingRegistry.h"
 #include "game/faction/SocialEngineeringManager.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/population/PopContainer.h"
@@ -16,6 +17,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <set>
 
 namespace ac
 {
@@ -37,6 +39,94 @@ void AppendActiveEffects(const std::vector<EffectConfig_t>& rEffects,
         activeEffect.originBase = (rEffect.scope == EffectScope_t::ThisBase) ? pOriginBase : nullptr;
         rOut.push_back(activeEffect);
     }
+}
+
+std::vector<ActiveEffect_t> ExpandGrantBuildingEffects(
+    std::vector<ActiveEffect_t> effects,
+    const BuildingRegistry& rRegistry,
+    const std::vector<const BaseManager*>& rBases)
+{
+    // Key: (originBase*, grantedBuildingId). Pointer identity is intentional — two
+    // different bases granting the same building must each expand independently.
+    std::set<std::pair<const BaseManager*, std::string>> processedGrantedIds;
+
+    for (size_t i = 0; i < effects.size(); ++i)
+    {
+        const EffectConfig_t* pEffect = effects[i].config;
+        if (!pEffect)
+        {
+            continue;
+        }
+
+        const GrantBuildingEffect_t* pGrant = std::get_if<GrantBuildingEffect_t>(&pEffect->effect);
+        if (!pGrant)
+        {
+            continue;
+        }
+
+        const BuildingConfig_t* pGranted = rRegistry.Find(pGrant->buildingId);
+        if (!pGranted)
+        {
+            continue;
+        }
+
+        const std::string sourceId = effects[i].sourceId + " -> " + pGranted->id;
+
+        if (effects[i].originBase != nullptr)
+        {
+            // ThisBase-scoped grant: expand effects once, attributed to the originating base.
+            const std::pair<const BaseManager*, std::string> key = {effects[i].originBase, pGrant->buildingId};
+            if (!processedGrantedIds.count(key))
+            {
+                processedGrantedIds.insert(key);
+                AppendActiveEffects(pGranted->effects, effects[i].originBase, sourceId, effects);
+            }
+        }
+        else
+        {
+            // AllOwnerBases / FactionGlobal grant: non-ThisBase effects apply once globally;
+            // ThisBase-scoped sub-effects are cloned once per base.
+            const std::pair<const BaseManager*, std::string> globalKey = {nullptr, pGrant->buildingId};
+            if (!processedGrantedIds.count(globalKey))
+            {
+                processedGrantedIds.insert(globalKey);
+                for (const EffectConfig_t& rEffect : pGranted->effects)
+                {
+                    if (rEffect.persistence == EffectPersistence_t::Instantaneous)
+                    {
+                        continue;
+                    }
+                    if (rEffect.scope != EffectScope_t::ThisBase)
+                    {
+                        effects.push_back({&rEffect, sourceId, nullptr});
+                    }
+                }
+            }
+
+            for (const BaseManager* pBase : rBases)
+            {
+                if (!pBase) continue;
+                const std::pair<const BaseManager*, std::string> key = {pBase, pGrant->buildingId};
+                if (!processedGrantedIds.count(key))
+                {
+                    processedGrantedIds.insert(key);
+                    for (const EffectConfig_t& rEffect : pGranted->effects)
+                    {
+                        if (rEffect.persistence == EffectPersistence_t::Instantaneous)
+                        {
+                            continue;
+                        }
+                        if (rEffect.scope == EffectScope_t::ThisBase)
+                        {
+                            effects.push_back({&rEffect, sourceId, pBase});
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return effects;
 }
 
 namespace
