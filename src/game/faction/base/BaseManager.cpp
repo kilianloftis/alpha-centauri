@@ -25,10 +25,9 @@ namespace
 
 std::vector<const Tile*> ComputeWorkableTiles_(const TileEffectsContext& rTileEffects, const Tile& tile)
 {
-    static constexpr int kManhattanLimit = 3;
     std::vector<const Tile*> tiles;
-    ForEachTileInManhattanRadius(tile, rTileEffects.GetWorldMap(), kManhattanLimit, false,
-        [&tiles](const Tile* pTile, int /*distance*/)
+    ForEachTileInWorkableArea(tile, rTileEffects.GetWorldMap(),
+        [&tiles](const Tile* pTile)
         {
             tiles.push_back(pTile);
         });

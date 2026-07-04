@@ -1,4 +1,5 @@
 #include "ui/world/WorldView.h"
+#include <algorithm>
 #include "ui/world/WorldMapElement.h"
 #include "ui/world/InfoPanelElement.h"
 #include "game/GameState.h"
@@ -90,6 +91,49 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
         m_onProcessTurn();
         return true;
     }
+
+    return HandleCameraKey_(rEvent);
+}
+
+bool WorldView::HandleCameraKey_(const KeyEvent_t& rEvent)
+{
+    const WorldMap* pWorldMap = m_rGameState.GetWorldMap();
+    if (!pWorldMap)
+    {
+        return false;
+    }
+
+    const WindowLayout_t mapLayout = ResolveLayout(m_layout, k_MapLayout);
+    const float tileSize = m_pWorldDisplay->GetEffectiveTileSize();
+    const int visibleCols = static_cast<int>(mapLayout.width  / tileSize);
+    const int visibleRows = static_cast<int>(mapLayout.height / tileSize);
+    const int maxCamX = std::max(0, pWorldMap->GetWidth()  - visibleCols);
+    const int maxCamY = std::max(0, pWorldMap->GetHeight() - visibleRows);
+
+    int camX = m_pWorldDisplay->GetCameraX();
+    int camY = m_pWorldDisplay->GetCameraY();
+
+    if (rEvent.key == Key_t::ArrowLeft)
+    {
+        m_pWorldDisplay->SetCameraOffset(std::max(0, camX - 1), camY);
+        return true;
+    }
+    else if (rEvent.key == Key_t::ArrowRight)
+    {
+        m_pWorldDisplay->SetCameraOffset(std::min(maxCamX, camX + 1), camY);
+        return true;
+    }
+    else if (rEvent.key == Key_t::ArrowUp)
+    {
+        m_pWorldDisplay->SetCameraOffset(camX, std::max(0, camY - 1));
+        return true;
+    }
+    else if (rEvent.key == Key_t::ArrowDown)
+    {
+        m_pWorldDisplay->SetCameraOffset(camX, std::min(maxCamY, camY + 1));
+        return true;
+    }
+
     return false;
 }
 
@@ -101,18 +145,23 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
         return;
     }
     const WindowLayout_t mapLayout = ResolveLayout(m_layout, k_MapLayout);
-    const float tileSize = std::min(
-        mapLayout.width  / static_cast<float>(pWorldMap->GetWidth()),
-        mapLayout.height / static_cast<float>(pWorldMap->GetHeight()));
+    const float tileSize = m_pWorldDisplay->GetEffectiveTileSize();
+    const int camX = m_pWorldDisplay->GetCameraX();
+    const int camY = m_pWorldDisplay->GetCameraY();
+
+    const int visibleCols = static_cast<int>(mapLayout.width  / tileSize);
+    const int visibleRows = static_cast<int>(mapLayout.height / tileSize);
 
     auto tile = TileHitTester::HitTestWorldGrid(
         static_cast<float>(rEvent.x), static_cast<float>(rEvent.y),
         mapLayout.x, mapLayout.y, tileSize,
-        pWorldMap->GetWidth(), pWorldMap->GetHeight());
+        visibleCols, visibleRows);
 
     if (tile)
     {
-        BaseManager* pBase = FindBaseAtTile_(tile->first, tile->second);
+        const int worldX = tile->first  + camX;
+        const int worldY = tile->second + camY;
+        BaseManager* pBase = FindBaseAtTile_(worldX, worldY);
         if (pBase)
         {
             m_onOpenBase(*pBase);

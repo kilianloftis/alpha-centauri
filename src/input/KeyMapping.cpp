@@ -138,6 +138,10 @@ switch (key)
     case Key_t::Space: return "Space";
     case Key_t::Escape: return "Escape";
     case Key_t::Enter: return "Enter";
+    case Key_t::ArrowUp:    return "ArrowUp";
+    case Key_t::ArrowDown:  return "ArrowDown";
+    case Key_t::ArrowLeft:  return "ArrowLeft";
+    case Key_t::ArrowRight: return "ArrowRight";
     default: return "Unknown";
 }
 }
@@ -198,6 +202,10 @@ switch (key)
     case sf::Keyboard::Key::F10: return Key_t::F10;
     case sf::Keyboard::Key::F11: return Key_t::F11;
     case sf::Keyboard::Key::F12: return Key_t::F12;
+    case sf::Keyboard::Key::Up:    return Key_t::ArrowUp;
+    case sf::Keyboard::Key::Down:  return Key_t::ArrowDown;
+    case sf::Keyboard::Key::Left:  return Key_t::ArrowLeft;
+    case sf::Keyboard::Key::Right: return Key_t::ArrowRight;
     default: return Key_t::Unknown;
 }
 }

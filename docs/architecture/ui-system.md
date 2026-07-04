@@ -163,6 +163,13 @@ graph TB
 ### Render Order
 Views are rendered bottom-to-top through the stack. Each view renders its own `UIElement`s in its `Render()` method.
 
+### WorldDisplay Viewport
+- **Purpose**: Controls which portion of the world map is visible on screen.
+- **State**: `m_tileSize` (pixel size per tile), `m_cameraX`/`m_cameraY` (top-left tile coordinates of the viewport).
+- **Rendering**: `Render(x, y, w, h)` computes how many tiles fit in the given pixel area from `m_tileSize`, then renders only the tile range `[cameraX, cameraX + tilesWide) x [cameraY, cameraY + tilesHigh)`.
+- **Configurability**: `SetTileSize()` and `SetCameraOffset()` are the sole control points. Tile size is intentionally configurable to support zoom and per-platform tuning.
+- **Mouse hit-testing**: `WorldView::HandleMouse` reads the viewport state from `WorldDisplay` and translates screen-relative tile indices back to world tile coordinates by adding the camera offset.
+
 ### ViewFactory
 - **Purpose**: Creates `IGameView` instances from game state and graphics context
 - **Dependencies**: `GameState`, `GameDataContext`, `Graphics`

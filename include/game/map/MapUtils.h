@@ -38,4 +38,27 @@ void ForEachTileInManhattanRadius(const Tile& rOrigin, WorldMapT& rWorldMap,
     }
 }
 
+// Calls fn(tile_ptr) for every tile in the base workable area: a 5x5 square centred on
+// rOrigin with the 4 corner tiles removed (20 tiles total). rOrigin itself is excluded.
+// WorldMapT can be WorldMap or const WorldMap.
+template<typename WorldMapT, typename Fn>
+void ForEachTileInWorkableArea(const Tile& rOrigin, WorldMapT& rWorldMap, Fn&& fn)
+{
+    static constexpr int kRadius = 2;
+    for (int dy = -kRadius; dy <= kRadius; ++dy)
+    {
+        for (int dx = -kRadius; dx <= kRadius; ++dx)
+        {
+            if (dx == 0 && dy == 0) continue;
+            if (std::abs(dx) == kRadius && std::abs(dy) == kRadius) continue;
+
+            auto* pTile = rWorldMap.GetTile(rOrigin.GetX() + dx, rOrigin.GetY() + dy);
+            if (pTile)
+            {
+                fn(pTile);
+            }
+        }
+    }
+}
+
 } // namespace ac

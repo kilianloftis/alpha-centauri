@@ -3,6 +3,7 @@
 #include "game/map/Tile.h"
 #include "lib/effects/TileEffectsContext.h"
 #include <algorithm>
+#include <limits>
 
 namespace ac
 {
@@ -37,7 +38,6 @@ bool WorkerAssignmentManager::UserAssignWorker(Pop& rPop, const Tile* pTile)
         return false;
     }
     rPop.SetUserAssigned(true);
-    m_pLastAssigned = &rPop;
     return true;
 }
 
@@ -199,11 +199,46 @@ void WorkerAssignmentManager::UserAssignBestAvailableWorker(const Tile* pTile, c
         }
     }
 
-    if (m_pLastAssigned && m_pLastAssigned->IsWorker())
+    Pop* pWorker = FindLowestYieldAssignedWorker_();
+    if (pWorker)
     {
-        UnassignWorker(*m_pLastAssigned);
-        UserAssignWorker(*m_pLastAssigned, pTile);
+        UnassignWorker(*pWorker);
+        UserAssignWorker(*pWorker, pTile);
     }
+}
+
+Pop* WorkerAssignmentManager::FindLowestYieldAssignedWorker_() const
+{
+    Pop* pBestAuto = nullptr;
+    Pop* pBestOverall = nullptr;
+    float bestAutoScore = std::numeric_limits<float>::infinity();
+    float bestOverallScore = std::numeric_limits<float>::infinity();
+
+    for (const auto& pPop : m_rPops.GetPops())
+    {
+        if (!pPop || !pPop->IsWorker())
+        {
+            continue;
+        }
+        const Tile* pTile = pPop->GetTile();
+        if (!pTile)
+        {
+            continue;
+        }
+        const float score = m_scorer(*pTile);
+        if (!pPop->IsUserAssigned() && score < bestAutoScore)
+        {
+            bestAutoScore = score;
+            pBestAuto = pPop.get();
+        }
+        if (score < bestOverallScore)
+        {
+            bestOverallScore = score;
+            pBestOverall = pPop.get();
+        }
+    }
+
+    return pBestAuto ? pBestAuto : pBestOverall;
 }
 
 std::vector<Pop*> WorkerAssignmentManager::GetUnassignedWorkers_() const

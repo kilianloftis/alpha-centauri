@@ -95,13 +95,13 @@ private:
 
     void UnassignFromTile_(Pop& rPop);
     void ConvertToFallback_(Pop& rPop);
+    Pop* FindLowestYieldAssignedWorker_() const;
 
 
     std::vector<const Tile*> m_workableTiles;
     TileScorer m_scorer;
     PopContainer& m_rPops;
     const TileEffectsContext& m_rTileEffects;
-    Pop* m_pLastAssigned = nullptr;
 };
 
 } // namespace ac

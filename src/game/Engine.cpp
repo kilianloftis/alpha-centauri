@@ -170,10 +170,10 @@ void Engine::Initialize_()
     // Generate world map
     WorldGenerator worldGen;
     WorldGenConfig worldConfig;
-    worldConfig.width = 12;
-    worldConfig.height = 8;
+    worldConfig.width = 30;
+    worldConfig.height = 20;
     worldConfig.minElevation = -1000;
-    worldConfig.maxElevation = 2000;
+    worldConfig.maxElevation = 4000;
     m_gameState->SetWorldMap(worldGen.Generate(worldConfig));
     std::cout << "Generated world map: " << m_gameState->GetWorldMap()->GetWidth() << "x" << m_gameState->GetWorldMap()->GetHeight() << "\n";
 

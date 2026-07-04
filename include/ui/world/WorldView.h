@@ -38,6 +38,7 @@ public:
 
 private:
     void Update_();
+    bool HandleCameraKey_(const KeyEvent_t& rEvent);
     BaseManager* FindBaseAtTile_(int tileX, int tileY) const;
 
     GameState& m_rGameState;

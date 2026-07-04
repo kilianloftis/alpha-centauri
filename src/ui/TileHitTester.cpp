@@ -66,7 +66,7 @@ std::optional<std::pair<int, int>> TileHitTester::HitTestBaseWorkableArea(
 
 bool TileHitTester::IsInWorkableDiamond_(int dx, int dy)
 {
-    // 5x5 grid with corners removed: |dx|+|dy| <= 3, and exclude center (0,0)
+    // 5x5 grid with corners removed: |dx| <= 2 and |dy| <= 2, excluding center and exact corners
     if (dx == 0 && dy == 0)
     {
         return false;
@@ -75,7 +75,7 @@ bool TileHitTester::IsInWorkableDiamond_(int dx, int dy)
     {
         return false;
     }
-    return (std::abs(dx) + std::abs(dy)) <= 3;
+    return !(std::abs(dx) == 2 && std::abs(dy) == 2);
 }
 
 } // namespace ac
