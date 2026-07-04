@@ -12,6 +12,8 @@ namespace ac
 
 using FactionId = int;
 
+class Unit;
+
 static constexpr float k_DefaultTileScale = 1.0f / 10.0f;
 
 struct BaseInfo_t
@@ -37,6 +39,9 @@ public:
     // Set base info to display bases on the map
     void SetBaseInfo(const std::vector<BaseInfo_t>& baseInfo);
 
+    // Set the unit currently selected by the player (highlighted on the map)
+    void SetSelectedUnit(const Unit* pUnit);
+
     // Set the pixel size of each tile. Pass 0 to restore the window-size-based default.
     void SetTileSize(float tileSize);
 
@@ -56,6 +61,7 @@ private:
     const WorldMap* m_pWorldMap = nullptr;
     const Graphics* m_pGraphics = nullptr;
     std::vector<BaseInfo_t> m_baseInfo;
+    const Unit* m_pSelectedUnit = nullptr;
 
     float m_tileSize = 0.0f;
     int m_cameraX = 0;
@@ -70,6 +76,9 @@ private:
 
     // Render base markers with owner color and population info
     void RenderBases_(Graphics& rGraphics, float originX, float originY, float tileSize, int camX, int camY, int camXEnd, int camYEnd);
+
+    // Render unit markers on top of bases
+    void RenderUnits_(Graphics& rGraphics, float originX, float originY, float tileSize, int camX, int camY, int camXEnd, int camYEnd);
 };
 
 } // namespace ac

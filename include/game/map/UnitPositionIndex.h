@@ -17,9 +17,9 @@ public:
 
     const std::vector<Unit*>& GetUnitsOnTile(const Tile& rTile) const;
 
-    void OnUnitPlaced(Unit& rUnit, Tile& rTile);
+    void OnUnitPlaced(Unit& rUnit, const Tile& rTile);
     void OnUnitRemoved(Unit& rUnit);
-    void OnUnitMoved(Unit& rUnit, Tile& rNewTile);
+    void OnUnitMoved(Unit& rUnit, const Tile& rNewTile);
 
 private:
     std::unordered_map<const Tile*, std::vector<Unit*>> m_index;

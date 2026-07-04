@@ -16,7 +16,7 @@ class Unit
 {
 public:
     Unit(const UnitDesign& rDesign,
-         Tile& rTile,
+         const Tile& rTile,
          BaseManager* pHomeBase,
          Faction& rFaction);
     ~Unit() = default;
@@ -39,7 +39,7 @@ public:
     int GetCargoCapacity() const;
     int GetDifficultTerrainCost() const;
     bool IsSingleUse() const;
-    Tile& GetTile() const;
+    const Tile& GetTile() const;
     BaseManager* GetHomeBase() const;
     Faction& GetFaction() const;
 
@@ -52,7 +52,7 @@ public:
     void SetCurrentFuel(int fuel);
     void SetMovesRemaining(int moves);
     void SetXp(int xp);
-    void SetTile(Tile& rTile);
+    void SetTile(const Tile& rTile);
     void SetHomeBase(BaseManager* pHomeBase);
 
     std::optional<UnitOrder_t>& GetOrder();
@@ -62,7 +62,7 @@ public:
 
 private:
     const UnitDesign& m_rDesign;
-    Tile* m_pTile;
+    const Tile* m_pTile;
     BaseManager* m_pHomeBase;
     Faction& m_rFaction;
 

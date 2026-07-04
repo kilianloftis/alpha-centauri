@@ -12,7 +12,7 @@ const std::vector<Unit*>& UnitPositionIndex::GetUnitsOnTile(const Tile& rTile) c
     return it != m_index.end() ? it->second : empty;
 }
 
-void UnitPositionIndex::OnUnitPlaced(Unit& rUnit, Tile& rTile)
+void UnitPositionIndex::OnUnitPlaced(Unit& rUnit, const Tile& rTile)
 {
     m_index[&rTile].push_back(&rUnit);
 }
@@ -27,7 +27,7 @@ void UnitPositionIndex::OnUnitRemoved(Unit& rUnit)
     rVec.erase(std::remove(rVec.begin(), rVec.end(), &rUnit), rVec.end());
 }
 
-void UnitPositionIndex::OnUnitMoved(Unit& rUnit, Tile& rNewTile)
+void UnitPositionIndex::OnUnitMoved(Unit& rUnit, const Tile& rNewTile)
 {
     OnUnitRemoved(rUnit);
     OnUnitPlaced(rUnit, rNewTile);

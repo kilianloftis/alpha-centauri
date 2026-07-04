@@ -50,7 +50,7 @@ graph TB
         KeyEnum[Key enum<br/>A-Z, 0-9, Space, Escape, Enter]
         KeyEvent[KeyEvent struct<br/>Key key]
         MouseButtonEnum[MouseButton enum<br/>Left, Right, Middle]
-        MouseEvent[MouseEvent struct<br/>MouseButton button<br/>int x, int y]
+        MouseEvent[MouseEvent struct<br/>MouseButton button<br/>int x, int y<br/>bool bPressed]
     end
 
     Input --> Methods
@@ -148,10 +148,11 @@ graph TB
 - **Flow**: SFML window events → SFMLGraphics → SFMLKeyEventQueue → SFMLInput
 
 ### SFMLMouseEventQueue
-- **Purpose**: Queues mouse click events from SFML graphics system
+- **Purpose**: Queues mouse press and release events from SFML graphics system
 - **Functions**:
   - `PushPendingMouseEvent(MouseEvent)`: Add mouse event to queue
   - `PopPendingMouseEvent()`: Remove and return mouse event from queue
+- **MouseEvent_t**: Includes `bool bPressed` (`true` for `MouseButtonPressed`, `false` for `MouseButtonReleased`)
 - **Integration**: Called by SFMLGraphics during event processing
 - **Flow**: SFML window events → SFMLGraphics → SFMLMouseEventQueue → SFMLInput
 
@@ -165,4 +166,4 @@ graph TB
 - **Key enum**: Represents keyboard keys (A-Z, 0-9, Space, Escape, Enter, Unknown)
 - **KeyEvent struct**: Contains a Key field
 - **MouseButton enum**: Represents mouse buttons (Left, Right, Middle, None)
-- **MouseEvent struct**: Contains MouseButton and x, y coordinates
+- **MouseEvent struct**: Contains MouseButton, x, y coordinates, modifier state, and `bPressed` flag indicating press vs. release

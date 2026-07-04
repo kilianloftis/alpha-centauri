@@ -121,6 +121,22 @@ graph TB
     style DesignListPanel fill:#bfb,stroke:#333,stroke-width:2px
     style UnitStatusPanel fill:#bfb,stroke:#333,stroke-width:2px
     style UnitDesignerState fill:#ffd,stroke:#333,stroke-width:2px
+
+    subgraph "WorldDisplay"
+        WorldDisplayNode[WorldDisplay]
+        TileLayer[Tile Layer]
+        BaseLayer[Base Layer]
+        UnitLayer[Unit Layer]
+    end
+    WorldMapElement -->|renders via| WorldDisplayNode
+    WorldDisplayNode --> TileLayer
+    WorldDisplayNode --> BaseLayer
+    WorldDisplayNode --> UnitLayer
+
+    style WorldDisplayNode fill:#f9f,stroke:#333,stroke-width:3px
+    style TileLayer fill:#bbf,stroke:#333,stroke-width:2px
+    style BaseLayer fill:#bbf,stroke:#333,stroke-width:2px
+    style UnitLayer fill:#bbf,stroke:#333,stroke-width:2px
 ```
 
 ## Component Overview
@@ -166,9 +182,13 @@ Views are rendered bottom-to-top through the stack. Each view renders its own `U
 ### WorldDisplay Viewport
 - **Purpose**: Controls which portion of the world map is visible on screen.
 - **State**: `m_tileSize` (pixel size per tile), `m_cameraX`/`m_cameraY` (top-left tile coordinates of the viewport).
-- **Rendering**: `Render(x, y, w, h)` computes how many tiles fit in the given pixel area from `m_tileSize`, then renders only the tile range `[cameraX, cameraX + tilesWide) x [cameraY, cameraY + tilesHigh)`.
+- **Rendering**: `Render(x, y, w, h)` computes how many tiles fit in the given pixel area from `m_tileSize`, then renders only the tile range `[cameraX, cameraX + tilesWide) x [cameraY, cameraY + tilesHigh)`. Layers are drawn in this order: tiles, bases, then units.
 - **Configurability**: `SetTileSize()` and `SetCameraOffset()` are the sole control points. Tile size is intentionally configurable to support zoom and per-platform tuning.
 - **Mouse hit-testing**: `WorldView::HandleMouse` reads the viewport state from `WorldDisplay` and translates screen-relative tile indices back to world tile coordinates by adding the camera offset.
+- **Unit Layer**: Unit markers are rendered on top of bases by querying `WorldMap::GetUnitsOnTile()` for each visible tile. Multiple units on the same tile are drawn side-by-side; faction coloring is a future TODO.
+- **Unit Selection**: Left-clicking a tile with units selects the first unit on that tile (`WorldView::SelectUnitAtTile_`). The selected unit is highlighted with a yellow border and is passed to `WorldDisplay` via `SetSelectedUnit()`. If the tile has no units, the click falls back to opening a base.
+- **Unit Orders**: With a selected unit, the `H` key issues a `HoldOrder_t` (`WorldView::HandleKey`). Order execution is delegated to the turn-processing `UnitOrderExecutor`.
+- **Move Orders**: Right-clicking and holding for one second, then releasing, assigns a `MoveOrder_t` to the selected unit for the tile under the cursor on release. Short right-clicks are ignored. `MouseEvent_t::bPressed` is used to distinguish press and release events.
 
 ### ViewFactory
 - **Purpose**: Creates `IGameView` instances from game state and graphics context

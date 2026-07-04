@@ -6,6 +6,8 @@
 #include "game/Faction.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/map/WorldMap.h"
+#include "game/units/Unit.h"
+#include "game/units/UnitOrder.h"
 #include "ui/TileHitTester.h"
 #include "graphics/Graphics.h"
 #include <string>
@@ -77,6 +79,7 @@ void WorldView::Update_()
         }
     }
     m_pWorldDisplay->SetBaseInfo(baseInfo);
+    m_pWorldDisplay->SetSelectedUnit(m_pSelectedUnit);
 }
 
 bool WorldView::HandleKey(const KeyEvent_t& rEvent)
@@ -89,6 +92,15 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
     else if (rEvent.key == Key_t::Enter)
     {
         m_onProcessTurn();
+        return true;
+    }
+    else if (rEvent.key == Key_t::H)
+    {
+        if (m_pSelectedUnit)
+        {
+            // TODO: Verify the selected unit still belongs to the player faction.
+            m_pSelectedUnit->SetOrder(HoldOrder_t{});
+        }
         return true;
     }
 
@@ -157,14 +169,53 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
         mapLayout.x, mapLayout.y, tileSize,
         visibleCols, visibleRows);
 
-    if (tile)
+    const int worldX = tile ? tile->first + camX : -1;
+    const int worldY = tile ? tile->second + camY : -1;
+
+    if (rEvent.button == MouseButton_t::Left)
     {
-        const int worldX = tile->first  + camX;
-        const int worldY = tile->second + camY;
-        BaseManager* pBase = FindBaseAtTile_(worldX, worldY);
-        if (pBase)
+        if (!rEvent.bPressed || !tile)
         {
-            m_onOpenBase(*pBase);
+            return;
+        }
+
+        SelectUnitAtTile_(worldX, worldY);
+
+        if (!m_pSelectedUnit)
+        {
+            BaseManager* pBase = FindBaseAtTile_(worldX, worldY);
+            if (pBase)
+            {
+                m_onOpenBase(*pBase);
+            }
+        }
+    }
+    else if (rEvent.button == MouseButton_t::Right)
+    {
+        if (rEvent.bPressed)
+        {
+            m_bRightButtonHeld = true;
+            m_rightButtonPressTime = std::chrono::steady_clock::now();
+        }
+        else if (m_bRightButtonHeld)
+        {
+            m_bRightButtonHeld = false;
+
+            if (!tile)
+            {
+                return;
+            }
+
+            const auto elapsed = std::chrono::steady_clock::now() - m_rightButtonPressTime;
+            const bool bLongHold = elapsed >= std::chrono::seconds(1);
+            if (bLongHold && m_pSelectedUnit)
+            {
+                const Tile* pDestination = pWorldMap->GetTile(worldX, worldY);
+                if (pDestination)
+                {
+                    m_pSelectedUnit->SetOrder(MoveOrder_t{pDestination});
+                }
+            }
         }
     }
 }
@@ -182,6 +233,32 @@ BaseManager* WorldView::FindBaseAtTile_(int tileX, int tileY) const
         }
     }
     return nullptr;
+}
+
+void WorldView::SelectUnitAtTile_(int tileX, int tileY)
+{
+    const WorldMap* pWorldMap = m_rGameState.GetWorldMap();
+    if (!pWorldMap)
+    {
+        m_pSelectedUnit = nullptr;
+        return;
+    }
+
+    const Tile* pTile = pWorldMap->GetTile(tileX, tileY);
+    if (!pTile)
+    {
+        m_pSelectedUnit = nullptr;
+        return;
+    }
+
+    const std::vector<Unit*>& units = pWorldMap->GetUnitsOnTile(*pTile);
+    if (units.empty())
+    {
+        m_pSelectedUnit = nullptr;
+        return;
+    }
+
+    m_pSelectedUnit = units[0];
 }
 
 } // namespace ac

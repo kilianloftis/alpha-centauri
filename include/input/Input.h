@@ -54,6 +54,7 @@ struct MouseEvent_t
     int x;
     int y;
     ModifierState_t modifier;
+    bool bPressed = true;
 };
 
 class Input

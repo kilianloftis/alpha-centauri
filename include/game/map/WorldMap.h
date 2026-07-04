@@ -30,9 +30,9 @@ public:
 
     // Unit position tracking
     const std::vector<Unit*>& GetUnitsOnTile(const Tile& rTile) const;
-    void OnUnitPlaced(Unit& rUnit, Tile& rTile);
+    void OnUnitPlaced(Unit& rUnit, const Tile& rTile);
     void OnUnitRemoved(Unit& rUnit);
-    void OnUnitMoved(Unit& rUnit, Tile& rNewTile);
+    void OnUnitMoved(Unit& rUnit, const Tile& rNewTile);
 
 private:
     int m_width;

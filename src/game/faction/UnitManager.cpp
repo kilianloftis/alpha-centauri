@@ -14,7 +14,7 @@ UnitManager::UnitManager(Faction& rFaction)
 {
 }
 
-Unit& UnitManager::CreateUnit(const UnitDesign& rDesign, Tile& rTile, BaseManager* pHomeBase)
+Unit& UnitManager::CreateUnit(const UnitDesign& rDesign, const Tile& rTile, BaseManager* pHomeBase)
 {
     auto pUnit = std::make_unique<Unit>(rDesign, rTile, pHomeBase, m_rFaction);
     Unit& rUnit = *pUnit;

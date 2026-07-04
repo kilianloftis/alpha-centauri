@@ -154,7 +154,16 @@ private:
                 if (auto mappedKey = MouseButtonFromSfButton(mouseEvent->button))
                 {
                     auto modifier = GetModifierState();
-                    PushPendingMouseEvent_t({*mappedKey, static_cast<int>(mouseEvent->position.x), static_cast<int>(mouseEvent->position.y), modifier});
+                    PushPendingMouseEvent_t({*mappedKey, static_cast<int>(mouseEvent->position.x), static_cast<int>(mouseEvent->position.y), modifier, true});
+                }
+            }
+
+            if (auto mouseEvent = event->getIf<sf::Event::MouseButtonReleased>())
+            {
+                if (auto mappedKey = MouseButtonFromSfButton(mouseEvent->button))
+                {
+                    auto modifier = GetModifierState();
+                    PushPendingMouseEvent_t({*mappedKey, static_cast<int>(mouseEvent->position.x), static_cast<int>(mouseEvent->position.y), modifier, false});
                 }
             }
         }

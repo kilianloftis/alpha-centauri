@@ -18,7 +18,7 @@ public:
     explicit UnitManager(Faction& rFaction);
     ~UnitManager() = default;
 
-    Unit& CreateUnit(const UnitDesign& rDesign, Tile& rTile, BaseManager* pHomeBase = nullptr);
+    Unit& CreateUnit(const UnitDesign& rDesign, const Tile& rTile, BaseManager* pHomeBase = nullptr);
     void DestroyUnit(Unit& rUnit);
 
     const std::vector<std::unique_ptr<Unit>>& GetUnits() const;

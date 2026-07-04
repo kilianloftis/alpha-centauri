@@ -47,6 +47,11 @@ public:
 
     virtual void HandleMouse(const MouseEvent_t& rEvent)
     {
+        if (!rEvent.bPressed)
+        {
+            return;
+        }
+
         for (int i = static_cast<int>(m_elements.size()) - 1; i >= 0; --i)
         {
             if (m_elements[i]->Contains(static_cast<float>(rEvent.x), static_cast<float>(rEvent.y)))

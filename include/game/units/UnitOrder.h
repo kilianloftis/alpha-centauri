@@ -9,7 +9,7 @@ class Tile;
 
 struct MoveOrder_t
 {
-    Tile* pDestination;
+    const Tile* pDestination;
 };
 
 struct HoldOrder_t {};

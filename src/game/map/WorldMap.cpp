@@ -70,7 +70,7 @@ const std::vector<Unit*>& WorldMap::GetUnitsOnTile(const Tile& rTile) const
     return m_unitPositionIndex.GetUnitsOnTile(rTile);
 }
 
-void WorldMap::OnUnitPlaced(Unit& rUnit, Tile& rTile)
+void WorldMap::OnUnitPlaced(Unit& rUnit, const Tile& rTile)
 {
     m_unitPositionIndex.OnUnitPlaced(rUnit, rTile);
     rUnit.SetTile(rTile);
@@ -81,7 +81,7 @@ void WorldMap::OnUnitRemoved(Unit& rUnit)
     m_unitPositionIndex.OnUnitRemoved(rUnit);
 }
 
-void WorldMap::OnUnitMoved(Unit& rUnit, Tile& rNewTile)
+void WorldMap::OnUnitMoved(Unit& rUnit, const Tile& rNewTile)
 {
     m_unitPositionIndex.OnUnitMoved(rUnit, rNewTile);
     rUnit.SetTile(rNewTile);

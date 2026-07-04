@@ -7,7 +7,7 @@ namespace ac
 {
 
 Unit::Unit(const UnitDesign& rDesign,
-           Tile& rTile,
+           const Tile& rTile,
            BaseManager* pHomeBase,
            Faction& rFaction)
     : m_rDesign(rDesign)
@@ -41,7 +41,7 @@ bool Unit::IsFlight() const                                            { return 
 int Unit::GetCargoCapacity() const                                     { return m_rDesign.GetCargoCapacity(); }
 int Unit::GetDifficultTerrainCost() const                              { return m_rDesign.GetDifficultTerrainCost(); }
 bool Unit::IsSingleUse() const                                         { return m_rDesign.IsSingleUse(); }
-Tile& Unit::GetTile() const                 { return *m_pTile; }
+const Tile& Unit::GetTile() const           { return *m_pTile; }
 BaseManager* Unit::GetHomeBase() const      { return m_pHomeBase; }
 Faction& Unit::GetFaction() const           { return m_rFaction; }
 
@@ -54,7 +54,7 @@ void Unit::SetCurrentHp(int hp)             { m_currentHp = hp; }
 void Unit::SetCurrentFuel(int fuel)         { m_currentFuel = fuel; }
 void Unit::SetMovesRemaining(int moves)     { m_movesRemaining = moves; }
 void Unit::SetXp(int xp)                    { m_xp = xp; }
-void Unit::SetTile(Tile& rTile)             { m_pTile = &rTile; }
+void Unit::SetTile(const Tile& rTile)       { m_pTile = &rTile; }
 void Unit::SetHomeBase(BaseManager* pHomeBase) { m_pHomeBase = pHomeBase; }
 
 std::optional<UnitOrder_t>& Unit::GetOrder()             { return m_order; }

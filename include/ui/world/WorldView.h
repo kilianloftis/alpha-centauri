@@ -3,6 +3,7 @@
 #include "ui/IGameView.h"
 #include "ui/world/WorldDisplay.h"
 #include "input/Input.h"
+#include <chrono>
 #include <functional>
 #include <memory>
 #include <utility>
@@ -13,6 +14,7 @@ namespace ac
 class GameState;
 class BaseManager;
 class Graphics;
+class Unit;
 class WorldMap;
 
 class WorldView : public IGameView
@@ -40,12 +42,18 @@ private:
     void Update_();
     bool HandleCameraKey_(const KeyEvent_t& rEvent);
     BaseManager* FindBaseAtTile_(int tileX, int tileY) const;
+    void SelectUnitAtTile_(int tileX, int tileY);
 
     GameState& m_rGameState;
     std::unique_ptr<WorldDisplay> m_pWorldDisplay;
     std::function<void()> m_onProcessTurn;
     std::function<void()> m_onRequestExit;
     OpenBaseCallback_t m_onOpenBase;
+
+    Unit* m_pSelectedUnit = nullptr;
+
+    bool m_bRightButtonHeld = false;
+    std::chrono::steady_clock::time_point m_rightButtonPressTime;
 };
 
 } // namespace ac

@@ -1,4 +1,6 @@
 #include "ui/world/WorldDisplay.h"
+#include "game/units/Unit.h"
+#include "game/units/UnitDesign.h"
 #include <algorithm>
 #include <sstream>
 #include <string>
@@ -14,6 +16,11 @@ void WorldDisplay::SetWorldMap(const WorldMap* pWorldMap)
 void WorldDisplay::SetBaseInfo(const std::vector<BaseInfo_t>& baseInfo)
 {
     m_baseInfo = baseInfo;
+}
+
+void WorldDisplay::SetSelectedUnit(const Unit* pUnit)
+{
+    m_pSelectedUnit = pUnit;
 }
 
 void WorldDisplay::SetTileSize(float tileSize)
@@ -95,6 +102,78 @@ void WorldDisplay::RenderBases_(Graphics& rGraphics, float originX, float origin
     }
 }
 
+void WorldDisplay::RenderUnits_(Graphics& rGraphics, float originX, float originY, float tileSize,
+                                int camX, int camY, int camXEnd, int camYEnd)
+{
+    const unsigned int fontSize = static_cast<unsigned int>(tileSize * 0.2f);
+    const float markerWidth = tileSize * 0.22f;
+    const float markerHeight = tileSize * 0.22f;
+    const float spacing = tileSize * 0.03f;
+
+    for (int row = camY; row < camYEnd; ++row)
+    {
+        for (int col = camX; col < camXEnd; ++col)
+        {
+            const Tile* pTile = m_pWorldMap->GetTile(col, row);
+            if (!pTile)
+            {
+                continue;
+            }
+
+            const std::vector<Unit*>& units = m_pWorldMap->GetUnitsOnTile(*pTile);
+            if (units.empty())
+            {
+                continue;
+            }
+
+            const float tileX = originX + ((col - camX) * tileSize);
+            const float tileY = originY + ((row - camY) * tileSize);
+
+            for (size_t i = 0; i < units.size(); ++i)
+            {
+                const Unit* pUnit = units[i];
+                if (!pUnit)
+                {
+                    continue;
+                }
+
+                const float offsetX = spacing + (i * (markerWidth + spacing));
+                const float offsetY = tileSize - markerHeight - spacing;
+
+                // TODO: Use faction color based on pUnit->GetFaction().
+                rGraphics.DrawFilledRect(
+                    tileX + offsetX,
+                    tileY + offsetY,
+                    markerWidth,
+                    markerHeight,
+                    Color{0, 220, 255, 255});
+
+                if (pUnit == m_pSelectedUnit)
+                {
+                    rGraphics.DrawRect(
+                        tileX + offsetX - 1.0f,
+                        tileY + offsetY - 1.0f,
+                        markerWidth + 2.0f,
+                        markerHeight + 2.0f,
+                        Color::Yellow(),
+                        2.0f);
+                }
+
+                const std::string& unitName = pUnit->GetDesign().GetName();
+                if (!unitName.empty())
+                {
+                    rGraphics.DrawText(
+                        unitName.substr(0, 1),
+                        tileX + offsetX + spacing,
+                        tileY + offsetY + spacing,
+                        fontSize,
+                        Color::Black());
+                }
+            }
+        }
+    }
+}
+
 void WorldDisplay::Render(Graphics& rGraphics, float x, float y, float w, float h)
 {
     m_pGraphics = &rGraphics;
@@ -136,6 +215,7 @@ void WorldDisplay::Render(Graphics& rGraphics, float x, float y, float w, float 
     }
 
     RenderBases_(rGraphics, x, y, effectiveTileSize, colStart, rowStart, colEnd, rowEnd);
+    RenderUnits_(rGraphics, x, y, effectiveTileSize, colStart, rowStart, colEnd, rowEnd);
 }
 
 int WorldDisplay::MoistureToInt_(Moisture moisture) const
