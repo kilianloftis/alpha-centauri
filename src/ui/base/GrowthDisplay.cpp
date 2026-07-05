@@ -7,6 +7,20 @@
 namespace ac
 {
 
+namespace
+{
+
+constexpr Color k_BackgroundColor      {20, 20, 20, 255};
+constexpr float k_HeaderFontSizeRatio  = 0.04f;
+constexpr float k_EntryFontSizeRatio   = 0.03f;
+constexpr float k_LineHeightRatio      = 0.05f;
+constexpr float k_LeftPaddingRatio     = 0.02f;
+constexpr float k_StockpileLineIndex     = 1.0f;
+constexpr float k_RequiredLineIndex      = 2.0f;
+constexpr float k_ProductionLineIndex    = 3.0f;
+
+} // namespace
+
 GrowthDisplay::GrowthDisplay(
     const BaseManager* pBase,
     WindowLayout_t layout
@@ -24,7 +38,7 @@ void GrowthDisplay::Render(Graphics& rGraphics)
 
     rGraphics.DrawFilledRect(
         m_layout.x, m_layout.y, m_layout.width, m_layout.height,
-        Color{20, 20, 20, 255}
+        k_BackgroundColor
     );
 
     const unsigned int headerFontSize = static_cast<unsigned int>(m_layout.height * k_HeaderFontSizeRatio);
@@ -36,15 +50,15 @@ void GrowthDisplay::Render(Graphics& rGraphics)
 
     std::ostringstream oss;
     oss << "Stockpile: " << m_pBase->GetNutrientStockpile();
-    rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y + lineHeight, entryFontSize);
+    rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y + lineHeight * k_StockpileLineIndex, entryFontSize);
 
     oss.str("");
     oss << "Required: " << m_pBase->GetNutrientsRequired();
-    rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y + lineHeight * 2.0f, entryFontSize);
+    rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y + lineHeight * k_RequiredLineIndex, entryFontSize);
 
     oss.str("");
     oss << "Production: " << m_pBase->GetNutrientProduction();
-    rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y + lineHeight * 3.0f, entryFontSize);
+    rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y + lineHeight * k_ProductionLineIndex, entryFontSize);
 }
 
 } // namespace ac

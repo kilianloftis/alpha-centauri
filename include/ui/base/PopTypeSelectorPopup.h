@@ -29,11 +29,6 @@ public:
     void HandleMouseClick(const MouseEvent_t& rEvent) override;
 
 private:
-    static constexpr float kHeaderFontSizeRatio = 0.04f;
-    static constexpr float kEntryFontSizeRatio  = 0.03f;
-    static constexpr float kLineHeightRatio     = 0.05f;
-    static constexpr float kPaddingRatio        = 0.02f;
-
     std::vector<const PopTypeConfig_t*> m_popTypes;
     std::vector<Rectangle_t> m_entryRects;
     std::function<void(const PopTypeConfig_t&)> m_onPopTypeSelected;

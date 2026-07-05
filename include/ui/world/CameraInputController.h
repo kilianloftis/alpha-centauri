@@ -32,7 +32,7 @@ private:
     int m_lastMouseY = 0;
     float m_edgeScrollAccumulatorX = 0.0f;
     float m_edgeScrollAccumulatorY = 0.0f;
-    float m_edgeScrollSpeed = 0.02f;
+    float m_edgeScrollSpeed;
 };
 
 } // namespace ac

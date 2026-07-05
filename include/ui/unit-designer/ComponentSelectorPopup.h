@@ -29,11 +29,6 @@ private:
     std::vector<const UnitComponentConfig_t*> m_components;
     std::function<void(const UnitComponentConfig_t&)> m_onSelected;
     std::vector<Rectangle_t> m_entryRects;
-
-    static constexpr float k_TitleFontSizeRatio = 0.05f;
-    static constexpr float k_EntryFontSizeRatio = 0.04f;
-    static constexpr float k_EntryHeightRatio   = 0.07f;
-    static constexpr float k_PaddingRatio        = 0.03f;
 };
 
 } // namespace ac

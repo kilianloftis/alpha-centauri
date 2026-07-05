@@ -16,8 +16,6 @@ public:
     bool HandleKey(const KeyEvent_t& rEvent) override;
 private:
     ResearchManager* m_pResearch;
-
-    static constexpr RatioLayout_t k_CurrentResearchLayout{0.0f, 0.0f, 1.0f, 1.0f};
 };
 
 } // namespace ac

@@ -28,12 +28,6 @@ private:
     const std::vector<UnitSlotConfig_t>* m_pSlots;
     std::function<void()> m_onSaveDesign;
     Rectangle_t m_saveButtonRect{};
-
-    static constexpr float k_HeaderFontSizeRatio   = 0.04f;
-    static constexpr float k_StatFontSizeRatio     = 0.032f;
-    static constexpr float k_LineHeightRatio        = 0.055f;
-    static constexpr float k_PaddingRatio           = 0.02f;
-    static constexpr float k_SaveButtonHeightRatio  = 0.07f;
 };
 
 } // namespace ac

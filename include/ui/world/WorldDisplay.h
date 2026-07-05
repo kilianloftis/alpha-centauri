@@ -15,8 +15,6 @@ using FactionId = int;
 
 class Unit;
 
-static constexpr float k_DefaultTileScale = 1.0f / 10.0f;
-
 struct BaseInfo_t
 {
     int x;

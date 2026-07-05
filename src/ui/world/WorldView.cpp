@@ -15,6 +15,19 @@
 namespace ac
 {
 
+namespace
+{
+
+constexpr RatioLayout_t k_MapLayout      {0.0f, 0.0f, 1.0f, 0.867f};
+constexpr RatioLayout_t k_InfoPanelLayout{0.0f, 0.867f, 1.0f, 0.133f};
+constexpr Color k_ResearchTextColor      {100, 200, 255, 255};
+constexpr size_t k_InfoPanelElementIndex = 0;
+constexpr size_t k_PlayerFactionIndex    = 0;
+constexpr size_t k_FirstUnitIndex        = 0;
+constexpr int    k_InvalidTileCoord      = -1;
+
+} // namespace
+
 WorldView::WorldView(
     GameState& rGameState,
     const WorldMap& rWorldMap,
@@ -52,11 +65,11 @@ void WorldView::Update_()
     const auto& rFactions = m_rGameState.GetFactions();
     if (!rFactions.empty())
     {
-        const Faction* pPlayerFaction = rFactions[0].get();
+        const Faction* pPlayerFaction = rFactions[k_PlayerFactionIndex].get();
         infoLines.push_back({"Energy: " + std::to_string(pPlayerFaction->GetEnergy()), Color::Yellow()});
-        infoLines.push_back({"Research: " + std::to_string(pPlayerFaction->GetResearchPoints()), Color{100, 200, 255, 255}});
+        infoLines.push_back({"Research: " + std::to_string(pPlayerFaction->GetResearchPoints()), k_ResearchTextColor});
     }
-    static_cast<InfoPanelElement*>(m_elements[1].get())->SetInfoLines(infoLines);
+    static_cast<InfoPanelElement*>(m_elements[k_InfoPanelElementIndex].get())->SetInfoLines(infoLines);
 
     std::vector<BaseInfo_t> baseInfo;
     for (const auto& pFaction : m_rGameState.GetFactions())
@@ -124,8 +137,8 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
         m_pWorldDisplay->GetVisibleCols(),
         m_pWorldDisplay->GetVisibleRows());
 
-    const int worldX = tile ? tile->first + camX : -1;
-    const int worldY = tile ? tile->second + camY : -1;
+    const int worldX = tile ? tile->first + camX : k_InvalidTileCoord;
+    const int worldY = tile ? tile->second + camY : k_InvalidTileCoord;
     const Tile* pClickedTile = pWorldMap->GetTile(worldX, worldY);
 
     if (m_pUnitOrderInputController->HandleMouse(rEvent, m_pSelectedUnit, pClickedTile))
@@ -196,7 +209,7 @@ void WorldView::SelectUnitAtTile_(int tileX, int tileY)
         return;
     }
 
-    m_pSelectedUnit = units[0];
+    m_pSelectedUnit = units[k_FirstUnitIndex];
 }
 
 } // namespace ac

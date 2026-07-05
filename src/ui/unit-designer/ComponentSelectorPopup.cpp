@@ -6,6 +6,20 @@
 namespace ac
 {
 
+namespace
+{
+
+constexpr Color k_BackgroundColor       {20, 20, 40, 255};
+constexpr Color k_BorderColor           {100, 100, 180, 255};
+constexpr float k_BorderWidth           = 2.0f;
+constexpr float k_TitleFontSizeRatio    = 0.05f;
+constexpr float k_EntryFontSizeRatio    = 0.04f;
+constexpr float k_EntryHeightRatio      = 0.07f;
+constexpr float k_PaddingRatio          = 0.03f;
+constexpr float k_TitleHeightMultiplier = 2.0f;
+
+} // namespace
+
 ComponentSelectorPopup::ComponentSelectorPopup(
     std::vector<const UnitComponentConfig_t*> components,
     WindowLayout_t layout,
@@ -22,7 +36,7 @@ void ComponentSelectorPopup::CacheEntryRects_()
 {
     const float padding     = m_layout.height * k_PaddingRatio;
     const float entryHeight = m_layout.height * k_EntryHeightRatio;
-    const float titleHeight = m_layout.height * k_TitleFontSizeRatio * 2.0f;
+    const float titleHeight = m_layout.height * k_TitleFontSizeRatio * k_TitleHeightMultiplier;
 
     m_entryRects.clear();
     float y = m_layout.y + padding + titleHeight;
@@ -35,8 +49,8 @@ void ComponentSelectorPopup::CacheEntryRects_()
 
 void ComponentSelectorPopup::Render(Graphics& rGraphics)
 {
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color{20, 20, 40, 255});
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color{100, 100, 180, 255}, 2.0f);
+    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, k_BackgroundColor);
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, k_BorderColor, k_BorderWidth);
 
     const float padding          = m_layout.height * k_PaddingRatio;
     const unsigned int titleSize = static_cast<unsigned int>(m_layout.height * k_TitleFontSizeRatio);

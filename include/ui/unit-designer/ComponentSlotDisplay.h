@@ -27,10 +27,6 @@ private:
     std::string m_label;
     std::function<const UnitComponentConfig_t*()> m_getComponent;
     std::function<void()> m_onClicked;
-
-    static constexpr float k_LabelFontSizeRatio = 0.08f;
-    static constexpr float k_NameFontSizeRatio  = 0.07f;
-    static constexpr float k_PaddingRatio        = 0.04f;
 };
 
 } // namespace ac

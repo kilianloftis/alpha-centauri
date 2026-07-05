@@ -5,6 +5,18 @@
 namespace ac
 {
 
+namespace
+{
+
+constexpr float k_HeaderFontSizeRatio  = 0.04f;
+constexpr float k_EntryFontSizeRatio   = 0.03f;
+constexpr float k_LineHeightRatio      = 0.05f;
+constexpr float k_PaddingRatio         = 0.02f;
+constexpr float k_HeaderLineOffset     = 2.0f;
+constexpr Color k_BackgroundColor      {20, 20, 40, 230};
+
+} // namespace
+
 ProductionSelectorPopup::ProductionSelectorPopup(
     std::vector<const IConstructable*> availableItems,
     WindowLayout_t layout,
@@ -20,7 +32,7 @@ ProductionSelectorPopup::ProductionSelectorPopup(
 void ProductionSelectorPopup::CacheEntryRects_()
 {
     const float lineHeight = m_layout.height * k_LineHeightRatio;
-    float offsetY = lineHeight * 2.0f;
+    float offsetY = lineHeight * k_HeaderLineOffset;
     for (size_t i = 0; i < m_availableItems.size(); ++i)
     {
         m_entryRects.push_back(Rectangle_t{
@@ -45,14 +57,20 @@ void ProductionSelectorPopup::Render(Graphics& rGraphics)
     const unsigned int entryFontSize  = static_cast<unsigned int>(m_layout.height * k_EntryFontSizeRatio);
     const float lineHeight = m_layout.height * k_LineHeightRatio;
 
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color{20, 20, 40, 230});
+    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, k_BackgroundColor);
     rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color::Yellow());
 
     rGraphics.DrawText("Select Production", m_layout.x + padding, m_layout.y + padding, headerFontSize, Color::Yellow());
 
     if (m_availableItems.empty())
     {
-        rGraphics.DrawText("Nothing available to build", m_layout.x + padding, m_layout.y + lineHeight * 2.0f, entryFontSize, Color::White());
+        rGraphics.DrawText(
+            "Nothing available to build",
+            m_layout.x + padding,
+            m_layout.y + lineHeight * k_HeaderLineOffset,
+            entryFontSize,
+            Color::White()
+        );
         return;
     }
 

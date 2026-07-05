@@ -25,14 +25,6 @@ UnitDesignerView::UnitDesignerView(
     , m_rComponentRegistry(rComponentRegistry)
     , m_rSlotRegistry(rSlotRegistry)
 {
-    const WindowLayout_t statusLayout  = ResolveLayout(m_layout, k_StatusPanelRatio);
-    const WindowLayout_t topLayout     = ResolveLayout(m_layout, k_TopDesignerPanelRatio);
-    const WindowLayout_t bottomLayout  = ResolveLayout(m_layout, k_BottomDesignListRatio);
-
-    const WindowLayout_t leftColLayout   = ResolveLayout(topLayout, k_LeftColumnRatio);
-    const WindowLayout_t centerColLayout = ResolveLayout(topLayout, k_CenterColumnRatio);
-    const WindowLayout_t rightColLayout  = ResolveLayout(topLayout, k_RightColumnRatio);
-
     std::vector<SlotColumnPanel::SlotEntry_t> leftSlots;
     std::vector<SlotColumnPanel::SlotEntry_t> rightSlots;
 
@@ -63,20 +55,32 @@ UnitDesignerView::UnitDesignerView(
         }
     }
 
-    m_elements.push_back(std::make_unique<SlotColumnPanel>(std::move(leftSlots), leftColLayout));
+    m_elements.push_back(std::make_unique<UnitStatusPanel>(
+        [this]() { return m_pSelectedDesign; },
+        pUnitManager,
+        ResolveLayout(m_layout, k_LeftPanelLayout)
+    ));
+
+    m_elements.push_back(std::make_unique<SlotColumnPanel>(
+        std::move(leftSlots),
+        ResolveLayout(m_layout, k_BottomLeftPanelLayout)
+    ));
 
     m_elements.push_back(std::make_unique<DesignStatsDisplay>(
         &m_state,
         &m_rSlotRegistry.GetAll(),
-        centerColLayout,
+        ResolveLayout(m_layout, k_TopPanelLayout),
         [this]() { HandleSaveDesign_(); }
     ));
 
-    m_elements.push_back(std::make_unique<SlotColumnPanel>(std::move(rightSlots), rightColLayout));
+    m_elements.push_back(std::make_unique<SlotColumnPanel>(
+        std::move(rightSlots),
+        ResolveLayout(m_layout, k_RightPanelLayout)
+    ));
 
     m_elements.push_back(std::make_unique<DesignListPanel>(
         &m_rMilitary,
-        bottomLayout,
+        ResolveLayout(m_layout, k_CenterPanelLayout),
         [this](const UnitDesign* pDesign)
         {
             m_pSelectedDesign = pDesign;
@@ -88,12 +92,6 @@ UnitDesignerView::UnitDesignerView(
                 }
             }
         }
-    ));
-
-    m_elements.push_back(std::make_unique<UnitStatusPanel>(
-        [this]() { return m_pSelectedDesign; },
-        pUnitManager,
-        statusLayout
     ));
 }
 
@@ -127,7 +125,7 @@ void UnitDesignerView::ShowComponentSelector_(
 
     m_elements.push_back(std::make_unique<ComponentSelectorPopup>(
         std::move(available),
-        ResolveLayout(m_layout, k_SelectorPopupRatio),
+        ResolveLayout(m_layout, k_PopupLayoutSmall),
         std::move(onSelected)
     ));
 }

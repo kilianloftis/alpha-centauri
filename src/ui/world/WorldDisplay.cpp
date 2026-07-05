@@ -8,6 +8,39 @@
 namespace ac
 {
 
+namespace
+{
+
+constexpr float k_DefaultTileScale              = 1.0f / 10.0f;
+constexpr float k_BaseNameFontSizeRatio         = 0.25f;
+constexpr float k_BaseTextOffsetRatio           = 0.1f;
+constexpr float k_BaseNameWidthRatio            = 0.8f;
+constexpr float k_BaseNameCharWidthRatio        = 0.5f;
+constexpr size_t k_BaseNameMinTruncChars        = 3;
+constexpr float k_UnitMarkerFontSizeRatio       = 0.2f;
+constexpr float k_UnitMarkerWidthRatio          = 0.22f;
+constexpr float k_UnitMarkerHeightRatio         = 0.22f;
+constexpr float k_UnitMarkerSpacingRatio        = 0.03f;
+constexpr Color k_UnitMarkerColor               {0, 220, 255, 255};
+constexpr float k_SelectionBorderOffset         = 1.0f;
+constexpr float k_SelectionBorderExpansion      = 2.0f;
+constexpr float k_SelectionBorderWidth          = 2.0f;
+constexpr size_t k_UnitNameFirstCharCount       = 1;
+constexpr int   k_MoistureWetValue              = 2;
+constexpr int   k_MoistureMoistValue            = 1;
+constexpr int   k_MoistureAridValue             = 0;
+constexpr int   k_RockinessRockyValue           = 2;
+constexpr int   k_RockinessRollingValue         = 1;
+constexpr int   k_RockinessFlatValue            = 0;
+constexpr Color k_TileBorderColor               {80, 80, 80, 255};
+constexpr float k_TileBorderWidth               = -1.0f;
+constexpr int   k_ElevationMetersPerKm          = 1000;
+constexpr unsigned int k_TileFontSize           = 14;
+constexpr float k_TileTextOffsetXRatio          = 0.1f;
+constexpr float k_TileTextOffsetYRatio          = 0.3f;
+
+} // namespace
+
 WorldDisplay::WorldDisplay(WindowLayout_t layout)
     : m_layout(layout)
 {
@@ -65,11 +98,8 @@ void WorldDisplay::RenderBases_(Graphics& rGraphics, int colStart, int rowStart,
 {
     const float tileSize = GetEffectiveTileSize();
 
-    // Calculate font size to fit within tile (roughly 30% of tile height)
-    const unsigned int fontSize = static_cast<unsigned int>(tileSize * 0.25f);
-    // if (fontSize < 8) return;  // Too small to render legibly
-
-    const float textOffsetX = tileSize * 0.1f;
+    const unsigned int fontSize = static_cast<unsigned int>(tileSize * k_BaseNameFontSizeRatio);
+    const float textOffsetX = tileSize * k_BaseTextOffsetRatio;
 
     for (const auto& base : m_baseInfo)
     {
@@ -81,10 +111,9 @@ void WorldDisplay::RenderBases_(Graphics& rGraphics, int colStart, int rowStart,
         float baseX = m_layout.x + ((base.x - colStart) * tileSize);
         float baseY = m_layout.y + ((base.y - rowStart) * tileSize);
 
-        // Abbreviate name to fit within tile width (approx 3 chars per line at this font size)
-        const size_t maxChars = static_cast<size_t>((tileSize * 0.8f) / (fontSize * 0.5f));
+        const size_t maxChars = static_cast<size_t>((tileSize * k_BaseNameWidthRatio) / (fontSize * k_BaseNameCharWidthRatio));
         std::string displayName = base.name;
-        if (displayName.length() > maxChars && maxChars > 3)
+        if (displayName.length() > maxChars && maxChars > k_BaseNameMinTruncChars)
         {
             displayName = displayName.substr(0, maxChars - 1) + ".";
         }
@@ -93,8 +122,7 @@ void WorldDisplay::RenderBases_(Graphics& rGraphics, int colStart, int rowStart,
             displayName = displayName.substr(0, maxChars);
         }
 
-        // Render name centered vertically in upper portion of tile
-        float textOffsetY = tileSize * 0.1f;
+        float textOffsetY = tileSize * k_BaseTextOffsetRatio;
 
         // TODO: Use faction color for base marker based on base.factionId
         // TODO: Show capture animation if base.previousFactionId.has_value()
@@ -107,10 +135,10 @@ void WorldDisplay::RenderUnits_(Graphics& rGraphics, int colStart, int rowStart,
 {
     const float tileSize = GetEffectiveTileSize();
 
-    const unsigned int fontSize = static_cast<unsigned int>(tileSize * 0.2f);
-    const float markerWidth = tileSize * 0.22f;
-    const float markerHeight = tileSize * 0.22f;
-    const float spacing = tileSize * 0.03f;
+    const unsigned int fontSize = static_cast<unsigned int>(tileSize * k_UnitMarkerFontSizeRatio);
+    const float markerWidth = tileSize * k_UnitMarkerWidthRatio;
+    const float markerHeight = tileSize * k_UnitMarkerHeightRatio;
+    const float spacing = tileSize * k_UnitMarkerSpacingRatio;
 
     for (int row = rowStart; row < rowEnd; ++row)
     {
@@ -148,24 +176,24 @@ void WorldDisplay::RenderUnits_(Graphics& rGraphics, int colStart, int rowStart,
                     tileY + offsetY,
                     markerWidth,
                     markerHeight,
-                    Color{0, 220, 255, 255});
+                    k_UnitMarkerColor);
 
                 if (pUnit == m_pSelectedUnit)
                 {
                     rGraphics.DrawRect(
-                        tileX + offsetX - 1.0f,
-                        tileY + offsetY - 1.0f,
-                        markerWidth + 2.0f,
-                        markerHeight + 2.0f,
+                        tileX + offsetX - k_SelectionBorderOffset,
+                        tileY + offsetY - k_SelectionBorderOffset,
+                        markerWidth + k_SelectionBorderExpansion,
+                        markerHeight + k_SelectionBorderExpansion,
                         Color::Yellow(),
-                        2.0f);
+                        k_SelectionBorderWidth);
                 }
 
                 const std::string& unitName = pUnit->GetDesign().GetName();
                 if (!unitName.empty())
                 {
                     rGraphics.DrawText(
-                        unitName.substr(0, 1),
+                        unitName.substr(0, k_UnitNameFirstCharCount),
                         tileX + offsetX + spacing,
                         tileY + offsetY + spacing,
                         fontSize,
@@ -219,12 +247,12 @@ int WorldDisplay::MoistureToInt_(Moisture moisture) const
     switch (moisture)
     {
         case Moisture::Wet:
-            return 2;
+            return k_MoistureWetValue;
         case Moisture::Moist:
-            return 1;
+            return k_MoistureMoistValue;
         case Moisture::Arid:
         default:
-            return 0;
+            return k_MoistureAridValue;
     }
 }
 
@@ -233,33 +261,30 @@ int WorldDisplay::RockinessToInt_(Rockiness rockiness) const
     switch (rockiness)
     {
         case Rockiness::Rocky:
-            return 2;
+            return k_RockinessRockyValue;
         case Rockiness::Rolling:
-            return 1;
+            return k_RockinessRollingValue;
         case Rockiness::Flat:
         default:
-            return 0;
+            return k_RockinessFlatValue;
     }
 }
 
 void WorldDisplay::RenderTile_(Graphics& rGraphics, const Tile& rTile, float x, float y, float size)
 {
-    // Draw tile border (negative thickness draws inward for shared borders)
-    rGraphics.DrawRect(x, y, size, size, Color{80, 80, 80, 255}, -1.0f);
+    rGraphics.DrawRect(x, y, size, size, k_TileBorderColor, k_TileBorderWidth);
 
     int moisture = MoistureToInt_(rTile.GetMoisture());
     int rockiness = RockinessToInt_(rTile.GetRockiness());
-    int elevationKm = rTile.GetElevation() / 1000;
+    int elevationKm = rTile.GetElevation() / k_ElevationMetersPerKm;
 
     std::ostringstream oss;
     oss << moisture << " " << rockiness << " " << elevationKm;
 
-    // Center text in tile (approximate with font size 14)
-    const unsigned int fontSize = 14;
-    float textOffsetX = size * 0.1f;
-    float textOffsetY = size * 0.3f;
+    float textOffsetX = size * k_TileTextOffsetXRatio;
+    float textOffsetY = size * k_TileTextOffsetYRatio;
 
-    rGraphics.DrawText(oss.str(), x + textOffsetX, y + textOffsetY, fontSize);
+    rGraphics.DrawText(oss.str(), x + textOffsetX, y + textOffsetY, k_TileFontSize);
 }
 
 } // namespace ac

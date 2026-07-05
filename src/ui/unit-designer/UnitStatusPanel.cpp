@@ -8,6 +8,22 @@
 namespace ac
 {
 
+namespace
+{
+
+constexpr Color k_BackgroundColor      {20, 20, 20, 255};
+constexpr Color k_BorderColor          {80, 80, 80, 255};
+constexpr Color k_MutedTextColor       {100, 100, 100, 255};
+constexpr float k_HeaderFontSizeRatio  = 0.08f;
+constexpr float k_StatFontSizeRatio    = 0.07f;
+constexpr float k_LineHeightRatio      = 0.10f;
+constexpr float k_PaddingRatio         = 0.04f;
+constexpr float k_DesignNameLineIndex  = 1.0f;
+constexpr float k_ActiveCountLineIndex = 2.0f;
+constexpr float k_InProdLineIndex      = 3.0f;
+
+} // namespace
+
 UnitStatusPanel::UnitStatusPanel(
     std::function<const UnitDesign*()> getSelectedDesign,
     const UnitManager* pUnitManager,
@@ -20,8 +36,8 @@ UnitStatusPanel::UnitStatusPanel(
 
 void UnitStatusPanel::Render(Graphics& rGraphics)
 {
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color{20, 20, 20, 255});
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color{80, 80, 80, 255});
+    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, k_BackgroundColor);
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, k_BorderColor);
 
     const float padding          = m_layout.width * k_PaddingRatio;
     const unsigned int headerSize = static_cast<unsigned int>(m_layout.width * k_HeaderFontSizeRatio);
@@ -38,12 +54,12 @@ void UnitStatusPanel::Render(Graphics& rGraphics)
             m_layout.x + padding,
             m_layout.y + padding + lineH,
             statSize,
-            Color{100, 100, 100, 255}
+            k_MutedTextColor
         );
         return;
     }
 
-    rGraphics.DrawText(pDesign->GetName(), m_layout.x + padding, m_layout.y + padding + lineH, statSize);
+    rGraphics.DrawText(pDesign->GetName(), m_layout.x + padding, m_layout.y + padding + lineH * k_DesignNameLineIndex, statSize);
 
     int activeCount = 0;
     if (m_pUnitManager)
@@ -59,15 +75,15 @@ void UnitStatusPanel::Render(Graphics& rGraphics)
 
     std::ostringstream oss;
     oss << "Active: " << activeCount;
-    rGraphics.DrawText(oss.str(), m_layout.x + padding, m_layout.y + padding + lineH * 2.0f, statSize);
+    rGraphics.DrawText(oss.str(), m_layout.x + padding, m_layout.y + padding + lineH * k_ActiveCountLineIndex, statSize);
 
     // TODO: count in-production once base production integrates with UnitDesign
     rGraphics.DrawText(
         "In Prod: -",
         m_layout.x + padding,
-        m_layout.y + padding + lineH * 3.0f,
+        m_layout.y + padding + lineH * k_InProdLineIndex,
         statSize,
-        Color{100, 100, 100, 255}
+        k_MutedTextColor
     );
 }
 

@@ -8,6 +8,24 @@
 namespace ac
 {
 
+namespace
+{
+
+constexpr Color k_BackgroundColor          {15, 15, 25, 255};
+constexpr Color k_BorderColor              {60, 60, 110, 255};
+constexpr Color k_IncompleteTextColor      {120, 120, 120, 255};
+constexpr Color k_SaveButtonFillColor      {30, 60, 30, 255};
+constexpr float k_HeaderFontSizeRatio      = 0.04f;
+constexpr float k_StatFontSizeRatio        = 0.032f;
+constexpr float k_LineHeightRatio          = 0.055f;
+constexpr float k_PaddingRatio             = 0.02f;
+constexpr float k_SaveButtonHeightRatio    = 0.07f;
+constexpr float k_SaveButtonTextYOffsetRatio = 0.2f;
+constexpr float k_HorizontalPaddingMultiplier = 2.0f;
+constexpr int   k_NoFuel                   = 0;
+
+} // namespace
+
 DesignStatsDisplay::DesignStatsDisplay(
     const UnitDesignerState_t* pState,
     const std::vector<UnitSlotConfig_t>* pSlots,
@@ -22,8 +40,8 @@ DesignStatsDisplay::DesignStatsDisplay(
 
 void DesignStatsDisplay::Render(Graphics& rGraphics)
 {
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color{15, 15, 25, 255});
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color{60, 60, 110, 255});
+    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, k_BackgroundColor);
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, k_BorderColor);
 
     const float padding           = m_layout.height * k_PaddingRatio;
     const unsigned int headerSize = static_cast<unsigned int>(m_layout.height * k_HeaderFontSizeRatio);
@@ -39,7 +57,7 @@ void DesignStatsDisplay::Render(Graphics& rGraphics)
             m_layout.x + padding,
             m_layout.y + padding + lineH,
             statSize,
-            Color{120, 120, 120, 255}
+            k_IncompleteTextColor
         );
         return;
     }
@@ -59,7 +77,7 @@ void DesignStatsDisplay::Render(Graphics& rGraphics)
     drawStat("Defense",  design.GetDefense());
     drawStat("Movement", design.GetMovement());
     drawStat("HP",       design.GetHitPoints());
-    if (design.GetFuel() > 0)
+    if (design.GetFuel() > k_NoFuel)
     {
         drawStat("Fuel", design.GetFuel());
     }
@@ -67,12 +85,12 @@ void DesignStatsDisplay::Render(Graphics& rGraphics)
 
     const float saveButtonH = m_layout.height * k_SaveButtonHeightRatio;
     const float saveButtonY = m_layout.y + m_layout.height - saveButtonH - padding;
-    m_saveButtonRect = {m_layout.x + padding, saveButtonY, m_layout.width - padding * 2.0f, saveButtonH};
+    m_saveButtonRect = {m_layout.x + padding, saveButtonY, m_layout.width - padding * k_HorizontalPaddingMultiplier, saveButtonH};
 
     rGraphics.DrawFilledRect(
         m_saveButtonRect.x, m_saveButtonRect.y,
         m_saveButtonRect.width, m_saveButtonRect.height,
-        Color{30, 60, 30, 255}
+        k_SaveButtonFillColor
     );
     rGraphics.DrawRect(
         m_saveButtonRect.x, m_saveButtonRect.y,
@@ -82,7 +100,7 @@ void DesignStatsDisplay::Render(Graphics& rGraphics)
     rGraphics.DrawText(
         "Save Design",
         m_saveButtonRect.x + padding,
-        m_saveButtonRect.y + saveButtonH * 0.2f,
+        m_saveButtonRect.y + saveButtonH * k_SaveButtonTextYOffsetRatio,
         statSize,
         Color::Green()
     );

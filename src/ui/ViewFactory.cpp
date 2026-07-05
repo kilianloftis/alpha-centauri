@@ -12,6 +12,14 @@
 namespace ac
 {
 
+namespace
+{
+
+constexpr float k_FullscreenOriginX = 0.0f;
+constexpr float k_FullscreenOriginY = 0.0f;
+
+} // namespace
+
 ViewFactory::ViewFactory(
     GameState& rGameState,
     GameDataContext& rGameDataContext,
@@ -99,8 +107,8 @@ std::unique_ptr<UnitDesignerView> ViewFactory::CreateUnitDesignerView(
 WindowLayout_t ViewFactory::GetFullscreenLayout() const
 {
     return {
-        0.0f,
-        0.0f,
+        k_FullscreenOriginX,
+        k_FullscreenOriginY,
         static_cast<float>(m_rGraphics.GetWindowWidth()),
         static_cast<float>(m_rGraphics.GetWindowHeight())
     };

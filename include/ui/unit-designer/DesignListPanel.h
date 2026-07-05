@@ -28,11 +28,6 @@ private:
     const Military* m_pMilitary;
     std::function<void(const UnitDesign*)> m_onDesignSelected;
     const UnitDesign* m_pSelectedDesign = nullptr;
-
-    static constexpr float k_BoxWidthRatio   = 0.15f;
-    static constexpr float k_BoxPaddingRatio = 0.005f;
-    static constexpr float k_FontSizeRatio   = 0.07f;
-    static constexpr float k_LabelFontRatio  = 0.05f;
 };
 
 } // namespace ac

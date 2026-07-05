@@ -11,16 +11,33 @@ namespace ac
 namespace
 {
 
-// Returns sort group: 0=drones, 1=workers, 2=golden-age contributors, 3=specialists
+constexpr int k_DroneGroupOrder              = 0;
+constexpr int k_WorkerGroupOrder             = 1;
+constexpr int k_GoldenAgeGroupOrder          = 2;
+constexpr int k_SpecialistGroupOrder         = 3;
+constexpr int k_NoGoldenAgeContribution      = 0;
+constexpr Color k_BackgroundColor            {20, 20, 20, 255};
+constexpr float k_HeaderFontSizeRatio        = 0.04f;
+constexpr float k_PopBoxSizeRatio            = 0.6f;
+constexpr float k_PopBoxSpacingRatio         = 0.02f;
+constexpr float k_LeftPaddingRatio           = 0.02f;
+constexpr float k_PopBoxFontSizeRatio        = 0.6f;
+constexpr float k_PopRowYOffsetRatio         = 0.02f;
+constexpr float k_PopBoxTextXOffsetRatio     = 0.35f;
+constexpr float k_PopBoxTextYOffsetRatio     = 0.2f;
+constexpr float k_PopBoxBorderWidth          = 2.0f;
+constexpr size_t k_MinPopCountForSpacing     = 2;
+constexpr char k_UnknownPopLetter            = '?';
+
 int PopGroupOrder(const Pop& rPop)
 {
     if (rPop.IsDrone())
-        return 0;
-    if (rPop.IsWorker() && rPop.GetGoldenAgeContribution() == 0)
-        return 1;
-    if (rPop.GetGoldenAgeContribution() > 0)
-        return 2;
-    return 3;
+        return k_DroneGroupOrder;
+    if (rPop.IsWorker() && rPop.GetGoldenAgeContribution() == k_NoGoldenAgeContribution)
+        return k_WorkerGroupOrder;
+    if (rPop.GetGoldenAgeContribution() > k_NoGoldenAgeContribution)
+        return k_GoldenAgeGroupOrder;
+    return k_SpecialistGroupOrder;
 }
 
 int SpecialistTotalOutput(const Pop& rPop)
@@ -44,7 +61,7 @@ void PopulationDisplay::Render(Graphics& rGraphics)
         throw std::runtime_error("PopulationDisplay: No population container set");
     }
 
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color{20, 20, 20, 255});
+    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, k_BackgroundColor);
 
     const unsigned int headerFontSize = static_cast<unsigned int>(m_layout.height * k_HeaderFontSizeRatio);
 
@@ -72,7 +89,7 @@ void PopulationDisplay::Render(Graphics& rGraphics)
             const int groupB = PopGroupOrder(*pB);
             if (groupA != groupB)
                 return groupA < groupB;
-            if (groupA == 3)
+            if (groupA == k_SpecialistGroupOrder)
             {
                 const int outA = SpecialistTotalOutput(*pA);
                 const int outB = SpecialistTotalOutput(*pB);
@@ -84,7 +101,7 @@ void PopulationDisplay::Render(Graphics& rGraphics)
 
     const float totalBoxWidth = sortedPops.size() * boxSize;
     float boxSpacing = m_layout.height * k_PopBoxSpacingRatio;
-    if (sortedPops.size() > 1 && totalBoxWidth > m_layout.width)
+    if (sortedPops.size() >= k_MinPopCountForSpacing && totalBoxWidth > m_layout.width)
     {
         boxSpacing = (m_layout.width - totalBoxWidth) / (sortedPops.size() - 1);
     }
@@ -95,12 +112,12 @@ void PopulationDisplay::Render(Graphics& rGraphics)
         const float boxY = startY;
 
         rGraphics.DrawFilledRect(boxX, boxY, boxSize, boxSize, Color::Blue());
-        rGraphics.DrawRect(boxX, boxY, boxSize, boxSize, Color::White(), 2.0f);
+        rGraphics.DrawRect(boxX, boxY, boxSize, boxSize, Color::White(), k_PopBoxBorderWidth);
 
         m_popBoxes.push_back(PopBox_t{{boxX, boxY, boxSize, boxSize}, sortedPops[i]});
 
         const char* popType = sortedPops[i]->GetPopType();
-        char firstLetter = popType && popType[0] ? popType[0] : '?';
+        char firstLetter = popType && popType[0] ? popType[0] : k_UnknownPopLetter;
         std::string letterStr(1, firstLetter);
 
         const float textX = boxX + boxSize * k_PopBoxTextXOffsetRatio;

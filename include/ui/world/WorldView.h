@@ -21,9 +21,6 @@ class WorldMap;
 class WorldView : public IGameView
 {
 public:
-    static constexpr RatioLayout_t k_MapLayout      {0.0f, 0.0f, 1.0f, 0.867f};
-    static constexpr RatioLayout_t k_InfoPanelLayout{0.0f, 0.867f, 1.0f, 0.133f};
-
     using OpenBaseCallback_t = std::function<void(BaseManager&)>;
 
     WorldView(

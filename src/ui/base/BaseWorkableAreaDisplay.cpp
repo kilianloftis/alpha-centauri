@@ -8,6 +8,21 @@
 namespace ac
 {
 
+namespace
+{
+
+constexpr int   k_GridDimension             = 5;
+constexpr float k_GridCenterOffset          = 2.0f;
+constexpr Color k_BackgroundColor           {20, 20, 20, 255};
+constexpr Color k_TileBorderColor           {80, 80, 80, 255};
+constexpr float k_TileBorderWidth           = -1.0f;
+constexpr unsigned int k_BaseLabelFontSize  = 14;
+constexpr unsigned int k_TileFontSize         = 12;
+constexpr float k_TileTextOffsetXRatio      = 0.05f;
+constexpr float k_TileTextOffsetYRatio      = 0.35f;
+
+} // namespace
+
 BaseWorkableAreaDisplay::BaseWorkableAreaDisplay(const BaseManager* pBase,
                                                  WindowLayout_t layout,
                                                  TileClickCallback_t onTileClicked,
@@ -27,11 +42,11 @@ void BaseWorkableAreaDisplay::CacheTileRects_()
         throw std::runtime_error("BaseWorkableAreaDisplay: BaseManager is null");
     }
 
-    m_tileSize = std::min(m_layout.width, m_layout.height) / 5.f;
-    const float gridWidth  = 5 * m_tileSize;
-    const float gridHeight = 5 * m_tileSize;
-    m_startX = m_layout.x + (m_layout.width  - gridWidth)  / 2.f;
-    m_startY = m_layout.y + (m_layout.height - gridHeight) / 2.f;
+    m_tileSize = std::min(m_layout.width, m_layout.height) / static_cast<float>(k_GridDimension);
+    const float gridWidth  = static_cast<float>(k_GridDimension) * m_tileSize;
+    const float gridHeight = static_cast<float>(k_GridDimension) * m_tileSize;
+    m_startX = m_layout.x + (m_layout.width  - gridWidth)  / k_GridCenterOffset;
+    m_startY = m_layout.y + (m_layout.height - gridHeight) / k_GridCenterOffset;
 
     const int baseX = m_pBase->GetX();
     const int baseY = m_pBase->GetY();
@@ -45,8 +60,8 @@ void BaseWorkableAreaDisplay::CacheTileRects_()
 
         const int relX = pTile->GetX() - baseX;
         const int relY = pTile->GetY() - baseY;
-        const float screenX = m_startX + (relX + 2) * m_tileSize;
-        const float screenY = m_startY + (relY + 2) * m_tileSize;
+        const float screenX = m_startX + (static_cast<float>(relX) + k_GridCenterOffset) * m_tileSize;
+        const float screenY = m_startY + (static_cast<float>(relY) + k_GridCenterOffset) * m_tileSize;
 
         m_tileRects.push_back(TileRect_t{
             Rectangle_t{screenX, screenY, m_tileSize, m_tileSize},
@@ -57,23 +72,22 @@ void BaseWorkableAreaDisplay::CacheTileRects_()
 
 void BaseWorkableAreaDisplay::Render(Graphics& rGraphics)
 {
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color{20, 20, 20, 255});
+    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, k_BackgroundColor);
 
     for (const TileRect_t& entry : m_tileRects)
     {
         RenderTile_(rGraphics, *entry.pTile, entry.rect.x, entry.rect.y, m_tileSize, entry.pTile->IsWorked());
     }
 
-    // Draw the base itself at center
-    const float centerX = m_startX + 2 * m_tileSize;
-    const float centerY = m_startY + 2 * m_tileSize;
-    rGraphics.DrawRect(centerX, centerY, m_tileSize, m_tileSize, Color{80, 80, 80, 255}, -1.0f);
-    rGraphics.DrawText("BASE", centerX, centerY, 14, Color::Yellow());
+    const float centerX = m_startX + k_GridCenterOffset * m_tileSize;
+    const float centerY = m_startY + k_GridCenterOffset * m_tileSize;
+    rGraphics.DrawRect(centerX, centerY, m_tileSize, m_tileSize, k_TileBorderColor, k_TileBorderWidth);
+    rGraphics.DrawText("BASE", centerX, centerY, k_BaseLabelFontSize, Color::Yellow());
 }
 
 void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, const Tile& rTile, float x, float y, float size, bool bIsWorked)
 {
-    rGraphics.DrawRect(x, y, size, size, Color{80, 80, 80, 255}, -1.0f);
+    rGraphics.DrawRect(x, y, size, size, k_TileBorderColor, k_TileBorderWidth);
 
     const TileResources_t yield = m_pBase->GetTileEffects().ResolveTileYield(rTile);
     int nutrients = yield.nutrients;
@@ -83,12 +97,11 @@ void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, const Tile& rTile
     std::ostringstream oss;
     oss << nutrients << " " << minerals << " " << energy;
 
-    const unsigned int fontSize = 12;
-    float textOffsetX = size * 0.05f;
-    float textOffsetY = size * 0.35f;
+    float textOffsetX = size * k_TileTextOffsetXRatio;
+    float textOffsetY = size * k_TileTextOffsetYRatio;
 
     Color textColor = bIsWorked ? Color::Green() : Color::White();
-    rGraphics.DrawText(oss.str(), x + textOffsetX, y + textOffsetY, fontSize, textColor);
+    rGraphics.DrawText(oss.str(), x + textOffsetX, y + textOffsetY, k_TileFontSize, textColor);
 }
 
 void BaseWorkableAreaDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
@@ -96,8 +109,8 @@ void BaseWorkableAreaDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
     const float mouseX = static_cast<float>(rEvent.x);
     const float mouseY = static_cast<float>(rEvent.y);
 
-    const float baseTileX = m_startX + 2 * m_tileSize;
-    const float baseTileY = m_startY + 2 * m_tileSize;
+    const float baseTileX = m_startX + k_GridCenterOffset * m_tileSize;
+    const float baseTileY = m_startY + k_GridCenterOffset * m_tileSize;
 
     if (ContainsMouseCoord(Rectangle_t{baseTileX, baseTileY, m_tileSize, m_tileSize}, mouseX, mouseY))
     {

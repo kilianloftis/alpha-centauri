@@ -5,6 +5,13 @@
 namespace ac
 {
 
+namespace
+{
+
+constexpr int k_MoveOrderHoldDurationSeconds = 1;
+
+} // namespace
+
 bool UnitOrderInputController::HandleKey(const KeyEvent_t& rEvent, Unit* pSelectedUnit)
 {
     if (!pSelectedUnit)
@@ -49,7 +56,7 @@ bool UnitOrderInputController::HandleMouse(const MouseEvent_t& rEvent, Unit* pSe
     }
 
     const auto elapsed = std::chrono::steady_clock::now() - m_rightButtonPressTime;
-    const bool bLongHold = elapsed >= std::chrono::seconds(1);
+    const bool bLongHold = elapsed >= std::chrono::seconds(k_MoveOrderHoldDurationSeconds);
     if (bLongHold)
     {
         pSelectedUnit->SetOrder(MoveOrder_t{pClickedTile});

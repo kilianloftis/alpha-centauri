@@ -31,11 +31,6 @@ public:
     void HandleMouseClick(const MouseEvent_t& rEvent) override;
 
 private:
-    static constexpr float k_HeaderFontSizeRatio = 0.04f;
-    static constexpr float k_EntryFontSizeRatio  = 0.03f;
-    static constexpr float k_LineHeightRatio      = 0.05f;
-    static constexpr float k_PaddingRatio         = 0.02f;
-
     std::vector<const IConstructable*> m_availableItems;
     std::vector<Rectangle_t> m_entryRects;
     std::function<void(const IConstructable&)> m_onItemSelected;
