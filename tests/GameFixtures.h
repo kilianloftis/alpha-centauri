@@ -3,6 +3,7 @@
 #include "TestHelpers.h"
 
 #include "game/Faction.h"
+#include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/faction/EconomyManager.h"
 #include "game/faction/UnitManager.h"
@@ -63,26 +64,28 @@ struct WorldFixture
 // and registers the "Base" improvement on its tile, exactly as in the game.
 struct BaseFixture : WorldFixture
 {
-    ac::BuildingRegistry buildings;
-    ac::PopTypeRegistry popTypes;
-    ac::GrowthConfig_t growth{};
+    ac::GameDataContext dataContext;
     ac::EconomyManager economy; // default 40/50/10 energy split
     std::vector<std::unique_ptr<ac::BaseManager>> bases;
 
     BaseFixture()
     {
-        buildings.Load(FixturePath("buildings.json"));
-        popTypes.Load(FixturePath("pop_types.json"));
+        dataContext.buildingRegistry = std::make_unique<ac::BuildingRegistry>();
+        dataContext.buildingRegistry->Load(FixturePath("buildings.json"));
+        dataContext.popTypeRegistry = std::make_unique<ac::PopTypeRegistry>();
+        dataContext.popTypeRegistry->Load(FixturePath("pop_types.json"));
+        dataContext.growthConfig = std::make_unique<ac::GrowthConfig_t>();
     }
+
+    ac::BuildingRegistry& buildings() { return *dataContext.buildingRegistry; }
+    const ac::BuildingRegistry& buildings() const { return *dataContext.buildingRegistry; }
+    ac::PopTypeRegistry& popTypes() { return *dataContext.popTypeRegistry; }
+    const ac::PopTypeRegistry& popTypes() const { return *dataContext.popTypeRegistry; }
 
     ac::BaseManager& MakeBase(int x, int y)
     {
         bases.push_back(std::make_unique<ac::BaseManager>(
-            At(x, y), &buildings, &popTypes,
-            /*popTypeAvailability*/ nullptr, /*compositionCalculator*/ nullptr,
-            *ctx,
-            /*research*/ nullptr, &economy, /*productionCost*/ nullptr,
-            growth, /*secretProjects*/ nullptr, /*socialRatings*/ nullptr));
+            At(x, y), dataContext, *ctx, /*research*/ nullptr, &economy));
         return *bases.back();
     }
 };
@@ -93,21 +96,27 @@ struct BaseFixture : WorldFixture
 // so per-base social rating expansion is active.
 struct FactionFixture : BaseFixture
 {
-    ac::SocialPolicyRegistry socialPolicies;
-    ac::SocialRatingRegistry socialRatings;
     std::vector<std::unique_ptr<ac::Faction>> factions;
     std::deque<ac::UnitDesign> designs; // deque: Units hold UnitDesign& references
 
     FactionFixture()
     {
-        socialPolicies.Load(FixturePath("social_policies.json"));
-        socialRatings.Load(FixturePath("social_rating_effects.json"));
+        dataContext.socialPolicyRegistry = std::make_unique<ac::SocialPolicyRegistry>();
+        dataContext.socialPolicyRegistry->Load(FixturePath("social_policies.json"));
+        dataContext.socialRatingRegistry = std::make_unique<ac::SocialRatingRegistry>();
+        dataContext.socialRatingRegistry->Load(FixturePath("social_rating_effects.json"));
     }
+
+    ac::SocialPolicyRegistry& socialPolicies() { return *dataContext.socialPolicyRegistry; }
+    const ac::SocialPolicyRegistry& socialPolicies() const { return *dataContext.socialPolicyRegistry; }
+    ac::SocialRatingRegistry& socialRatings() { return *dataContext.socialRatingRegistry; }
+    const ac::SocialRatingRegistry& socialRatings() const { return *dataContext.socialRatingRegistry; }
 
     ac::Faction& MakeFaction()
     {
         factions.push_back(std::make_unique<ac::Faction>(
-            &buildings, /*techRegistry*/ nullptr, &socialPolicies, &socialRatings,
+            dataContext.buildingRegistry.get(), /*techRegistry*/ nullptr,
+            dataContext.socialPolicyRegistry.get(), dataContext.socialRatingRegistry.get(),
             /*techCost*/ nullptr, /*popTypeAvailability*/ nullptr));
         return *factions.back();
     }
@@ -115,9 +124,7 @@ struct FactionFixture : BaseFixture
     ac::BaseManager& MakeFactionBase(ac::Faction& rFaction, int x, int y)
     {
         auto pBase = std::make_unique<ac::BaseManager>(
-            At(x, y), &buildings, &popTypes,
-            nullptr, nullptr, *ctx, nullptr, &economy, nullptr,
-            growth, nullptr, &socialRatings);
+            At(x, y), dataContext, *ctx, nullptr, &economy);
         ac::BaseManager& rBase = *pBase;
         rFaction.AddBase(std::move(pBase));
         return rBase;

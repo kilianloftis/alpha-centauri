@@ -100,10 +100,10 @@ TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other fact
     actest::FactionFixture fixture;
     GameState state;
 
-    state.AddFaction(std::make_unique<Faction>(&fixture.buildings, nullptr, &fixture.socialPolicies,
-                                               &fixture.socialRatings, nullptr, nullptr));
-    state.AddFaction(std::make_unique<Faction>(&fixture.buildings, nullptr, &fixture.socialPolicies,
-                                               &fixture.socialRatings, nullptr, nullptr));
+    state.AddFaction(std::make_unique<Faction>(&fixture.buildings(), nullptr, &fixture.socialPolicies(),
+                                               &fixture.socialRatings(), nullptr, nullptr));
+    state.AddFaction(std::make_unique<Faction>(&fixture.buildings(), nullptr, &fixture.socialPolicies(),
+                                               &fixture.socialRatings(), nullptr, nullptr));
     Faction& factionA = *state.GetFactions()[0];
     Faction& factionB = *state.GetFactions()[1];
 

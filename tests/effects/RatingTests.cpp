@@ -42,7 +42,7 @@ TEST_CASE("ExpandSocialRatingEffects: maps accumulated levels through the rating
         std::vector<ActiveEffect_t> effects = {
             Active(pool.RatingMod(SocialRatingId::Growth, 2), "policy"),
         };
-        ExpandSocialRatingEffects(effects, fixture.socialRatings);
+        ExpandSocialRatingEffects(effects, fixture.socialRatings());
 
         // Fixture: growth level 2 -> +1 nutrients (AllOwnerBases).
         CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Nutrients), 0.0).total == Approx(1.0));
@@ -62,7 +62,7 @@ TEST_CASE("ExpandSocialRatingEffects: maps accumulated levels through the rating
         std::vector<ActiveEffect_t> effects = {
             Active(pool.RatingMod(SocialRatingId::Growth, 1), "policy"), // no level 1 in fixture
         };
-        ExpandSocialRatingEffects(effects, fixture.socialRatings);
+        ExpandSocialRatingEffects(effects, fixture.socialRatings());
         CHECK(FilterByStatId(effects, StatId::Nutrients).empty());
     }
 
@@ -72,7 +72,7 @@ TEST_CASE("ExpandSocialRatingEffects: maps accumulated levels through the rating
             Active(pool.RatingMod(SocialRatingId::Growth, 2), "policy"),
             Active(pool.RatingMod(SocialRatingId::Growth, -2), "malus"),
         };
-        ExpandSocialRatingEffects(effects, fixture.socialRatings);
+        ExpandSocialRatingEffects(effects, fixture.socialRatings());
         CHECK(FilterByStatId(effects, StatId::Nutrients).empty());
     }
 }

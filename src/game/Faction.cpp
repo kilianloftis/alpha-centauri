@@ -73,22 +73,10 @@ void Faction::AddBase(std::unique_ptr<BaseManager> pBase)
 
 BaseManager* Faction::CreateBase(FactionId factionId, int baseId, const std::string& name, Tile* pTile,
                                   const GameDataContext& rDataContext,
-                                  TileEffectsContext& rTileEffects,
-                                  const SocialRatingRegistry* pSocialRatings)
+                                  TileEffectsContext& rTileEffects)
 {
     auto pBase = std::make_unique<BaseManager>(
-        *pTile,
-        rDataContext.buildingRegistry.get(),
-        rDataContext.popTypeRegistry.get(),
-        rDataContext.popTypeAvailabilityCalculator.get(),
-        rDataContext.popCompositionCalculator.get(),
-        rTileEffects,
-        m_pResearch.get(),
-        m_pEconomy.get(),
-        rDataContext.productionCostCalculator.get(),
-        *rDataContext.growthConfig,
-        rDataContext.secretProjectAvailabilityCalculator.get(),
-        pSocialRatings);
+        *pTile, rDataContext, rTileEffects, m_pResearch.get(), m_pEconomy.get());
     pBase->SetFactionId(factionId);
     pBase->SetBaseId(baseId);
     pBase->SetName(name);

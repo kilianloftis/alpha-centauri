@@ -18,21 +18,16 @@ namespace ac
 class Pop;
 class PopulationManager;
 class PopContainer;
-class PopTypeRegistry;
-class PopCompositionCalculator;
 class WorkerAssignmentManager;
 class EconomyManager;
 class ResourceManager;
 class BuildingManager;
 class BuildingRegistry;
-struct GrowthConfig_t;
-class SecretProjectAvailabilityCalculator;
-class PopTypeAvailabilityCalculator;
-class ProductionCostCalculator;
 class ProductionManager;
 class ResearchManager;
 class SocialRatingRegistry;
 class Tile;
+struct GameDataContext;
 
 // BaseManager coordinates base management subsystems.
 // Provides identity, position, and access to sub-managers.
@@ -42,17 +37,10 @@ class BaseManager
 public:
     BaseManager(
         Tile& tile,
-        const BuildingRegistry* pBuildingRegistry,
-        const PopTypeRegistry* pPopRegistry,
-        const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator,
-        PopCompositionCalculator* pCompositionCalculator,
+        const GameDataContext& rDataContext,
         TileEffectsContext& rTileEffects,
         const ResearchManager* pResearchManager,
-        const EconomyManager* pEconomyManager,
-        const ProductionCostCalculator* pProductionCostCalculator,
-        const GrowthConfig_t& rGrowthConfig,
-        const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
-        const SocialRatingRegistry* pSocialRatings);
+        const EconomyManager* pEconomyManager);
     ~BaseManager();
 
     // Population management - delegated to PopulationManager

@@ -51,7 +51,7 @@ TEST_CASE("ExpandGrantBuildingEffects: a ThisBase-scoped grant expands the grant
 
     baseA.AddBuilding("grantor_local");
     const auto expanded = ExpandGrantBuildingEffects(
-        baseA.CollectBuildingEffects(), fixture.buildings, {&baseA});
+        baseA.CollectBuildingEffects(), fixture.buildings(), {&baseA});
 
     // grantor_local's own +2 nutrients.
     CHECK(TotalFor(expanded, StatId::Nutrients, &baseA) == 2.0);
@@ -70,7 +70,7 @@ TEST_CASE("ExpandGrantBuildingEffects: Instantaneous effects of the granted buil
 
     baseA.AddBuilding("grantor_local");
     const auto expanded = ExpandGrantBuildingEffects(
-        baseA.CollectBuildingEffects(), fixture.buildings, {&baseA});
+        baseA.CollectBuildingEffects(), fixture.buildings(), {&baseA});
 
     // granted_hall declares an Instantaneous GrantTech; it must not appear in the pool.
     for (const ActiveEffect_t& effect : expanded)
@@ -88,7 +88,7 @@ TEST_CASE("ExpandGrantBuildingEffects: an unknown granted building id is skipped
 
     baseA.AddBuilding("grantor_unknown");
     const auto collected = baseA.CollectBuildingEffects();
-    const auto expanded = ExpandGrantBuildingEffects(collected, fixture.buildings, {&baseA});
+    const auto expanded = ExpandGrantBuildingEffects(collected, fixture.buildings(), {&baseA});
 
     // Nothing added beyond the collected effects (the grant itself is still in the list).
     CHECK(expanded.size() == collected.size());
@@ -104,7 +104,7 @@ TEST_CASE("ExpandGrantBuildingEffects: the same building granted twice in one ba
     baseA.AddBuilding("grantor_local");
     baseA.AddBuilding("nested_middle");
     const auto expanded = ExpandGrantBuildingEffects(
-        baseA.CollectBuildingEffects(), fixture.buildings, {&baseA});
+        baseA.CollectBuildingEffects(), fixture.buildings(), {&baseA});
 
     // granted_hall's +3 minerals must be counted once, not twice.
     CHECK(TotalFor(expanded, StatId::Minerals, &baseA) == 3.0);
@@ -124,7 +124,7 @@ TEST_CASE("ExpandGrantBuildingEffects: two bases granting the same building expa
     const auto fromB = baseB.CollectBuildingEffects();
     collected.insert(collected.end(), fromB.begin(), fromB.end());
 
-    const auto expanded = ExpandGrantBuildingEffects(std::move(collected), fixture.buildings,
+    const auto expanded = ExpandGrantBuildingEffects(std::move(collected), fixture.buildings(),
                                                      {&baseA, &baseB});
 
     CHECK(TotalFor(expanded, StatId::Minerals, &baseA) == 3.0);
@@ -145,7 +145,7 @@ TEST_CASE("ExpandGrantBuildingEffects: a faction-global grant clones ThisBase su
     const auto fromB = baseB.CollectBuildingEffects();
     collected.insert(collected.end(), fromB.begin(), fromB.end());
 
-    const auto expanded = ExpandGrantBuildingEffects(std::move(collected), fixture.buildings,
+    const auto expanded = ExpandGrantBuildingEffects(std::move(collected), fixture.buildings(),
                                                      {&baseA, &baseB});
 
     // granted_hall's ThisBase +3 minerals lands on every base...
@@ -164,7 +164,7 @@ TEST_CASE("ExpandGrantBuildingEffects: nested grants expand recursively with a c
     // nested_outer grants nested_middle (+4 energy), which grants granted_hall (+3 minerals).
     baseA.AddBuilding("nested_outer");
     const auto expanded = ExpandGrantBuildingEffects(
-        baseA.CollectBuildingEffects(), fixture.buildings, {&baseA});
+        baseA.CollectBuildingEffects(), fixture.buildings(), {&baseA});
 
     CHECK(TotalFor(expanded, StatId::Energy, &baseA) == 4.0);
     CHECK(TotalFor(expanded, StatId::Minerals, &baseA) == 3.0);
@@ -180,7 +180,7 @@ TEST_CASE("ExpandGrantBuildingEffects: mutually-granting buildings terminate", "
     // cycle_a grants cycle_b; cycle_b grants cycle_a. The expansion must not loop forever.
     baseA.AddBuilding("cycle_a");
     const auto expanded = ExpandGrantBuildingEffects(
-        baseA.CollectBuildingEffects(), fixture.buildings, {&baseA});
+        baseA.CollectBuildingEffects(), fixture.buildings(), {&baseA});
 
     // cycle_b's +10 minerals is granted exactly once.
     int cycleBEffects = 0;
@@ -206,7 +206,7 @@ TEST_CASE("ExpandGrantBuildingEffects: a cycle does not duplicate the originatin
 
     baseA.AddBuilding("cycle_a");
     const auto expanded = ExpandGrantBuildingEffects(
-        baseA.CollectBuildingEffects(), fixture.buildings, {&baseA});
+        baseA.CollectBuildingEffects(), fixture.buildings(), {&baseA});
 
     CHECK(TotalFor(expanded, StatId::Minerals, &baseA) == 11.0);
 }
@@ -219,7 +219,7 @@ TEST_CASE("Instantaneous GrantBuilding effects never enter the active pool, so t
 
     baseA.AddBuilding("instant_grantor");
     const auto expanded = ExpandGrantBuildingEffects(
-        baseA.CollectBuildingEffects(), fixture.buildings, {&baseA});
+        baseA.CollectBuildingEffects(), fixture.buildings(), {&baseA});
 
     // instant_grantor's only effect is an Instantaneous GrantBuilding(flat_nutrient); it is
     // dispatched at construction time (DispatchInstantaneousEffects), not collected here.

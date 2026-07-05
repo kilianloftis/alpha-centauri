@@ -2,9 +2,7 @@
 
 #include "game/faction/base/population/PopContainer.h"
 #include "game/population/calculators/GrowthCalculator.h"
-#include "game/population/pop-types/GrowthConfigParser.h"
 #include "lib/effects/ActiveEffect.h"
-#include "game/population/calculators/PopCompositionCalculator.h"
 #include "game/population/calculators/RiotCalculator.h"
 #include "game/population/calculators/GoldenAgeCalculator.h"
 
@@ -15,8 +13,10 @@ namespace ac
 {
 
 struct RiotConditionInputs;
-
+struct GrowthConfig_t;
+struct GameDataContext;
 class PopTypeRegistry;
+class ResearchManager;
 
 // PopulationManager is the API surface for the population component.
 // It manages pop counts, composition, growth, and riot state for a single base,
@@ -24,12 +24,9 @@ class PopTypeRegistry;
 class PopulationManager
 {
 public:
-    explicit PopulationManager(const PopTypeRegistry* pReg,
-                                     const PopTypeAvailabilityCalculator* pAvailabilityCalculator,
-                                     const ResearchManager* pResearchManager,
-                                     PopCompositionCalculator* pCalc,
-                                     const GrowthConfig_t& rGrowthConfig,
-                                     int initialSize);
+    explicit PopulationManager(const GameDataContext& rDataContext,
+                               const ResearchManager* pResearchManager,
+                               int initialSize);
     ~PopulationManager();
 
     // Population size management
@@ -107,8 +104,8 @@ public:
 private:
     PopContainer m_container;
     const PopTypeRegistry* m_pRegistry = nullptr;
-    const GrowthConfig_t& m_rGrowthConfig;
-    PopCompositionCalculator* m_pCompositionCalculator = nullptr;
+    const GrowthConfig_t* m_pGrowthConfig = nullptr;
+    class PopCompositionCalculator* m_pCompositionCalculator = nullptr;
     int m_maxSize;
     int m_nutrientStockpile = 0;
 

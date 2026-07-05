@@ -8,6 +8,7 @@
 namespace ac
 {
 
+struct GameDataContext;
 class BuildingRegistry;
 class ResearchManager;
 class SecretProjectAvailabilityCalculator;
@@ -18,9 +19,8 @@ class SecretProjectAvailabilityCalculator;
 class BuildingManager
 {
 public:
-    BuildingManager(const BuildingRegistry* pRegistry,
-                    const ResearchManager* pResearchManager,
-                    const SecretProjectAvailabilityCalculator* pSecretProjectCalculator);
+    BuildingManager(const GameDataContext& rDataContext,
+                    const ResearchManager* pResearchManager);
     ~BuildingManager();
 
     // Add a building by id. Throws if the factory cannot find the id.

@@ -43,8 +43,7 @@ public:
     void AddBase(std::unique_ptr<BaseManager> pBase);
     BaseManager* CreateBase(FactionId factionId, int baseId, const std::string& name, Tile* pTile,
                             const GameDataContext& rDataContext,
-                            TileEffectsContext& rTileEffects,
-                            const SocialRatingRegistry* pSocialRatings);
+                            TileEffectsContext& rTileEffects);
     BaseManager* GetBase(size_t index);
     const BaseManager* GetBase(size_t index) const;
     const std::vector<std::unique_ptr<BaseManager>>& GetBases() const { return m_bases; }

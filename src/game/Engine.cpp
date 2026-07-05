@@ -201,8 +201,7 @@ void Engine::Initialize_()
         1, 1, "Test Base",
         m_gameState->GetWorldMap()->GetTile(centerX, centerY),
         *m_gameDataContext,
-        m_gameState->GetTileEffects(),
-        m_gameDataContext->socialRatingRegistry.get());
+        m_gameState->GetTileEffects());
 
     // Wire base signals to EventBus
     m_eventBridge->WireBase(*pBase);

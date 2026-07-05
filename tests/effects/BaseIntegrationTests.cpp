@@ -115,7 +115,7 @@ TEST_CASE("DispatchInstantaneousEffects: Instantaneous GrantBuilding constructs 
     actest::BaseFixture fixture;
     BaseManager& base = fixture.MakeBase(4, 4);
 
-    const BuildingConfig_t* pGrantor = fixture.buildings.Find("instant_grantor");
+    const BuildingConfig_t* pGrantor = fixture.buildings().Find("instant_grantor");
     REQUIRE(pGrantor != nullptr);
 
     // Simulate on_production_completed for instant_grantor.

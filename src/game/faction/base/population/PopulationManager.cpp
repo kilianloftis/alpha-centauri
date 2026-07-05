@@ -1,25 +1,26 @@
 #include "game/faction/base/population/PopulationManager.h"
+#include "game/GameDataContext.h"
 #include "game/population/calculators/GrowthCalculator.h"
 #include "game/population/calculators/PopCompositionCalculator.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
-#include "game/population/calculators/PopTypeAvailabilityCalculator.h"
+#include "game/population/pop-types/GrowthConfigParser.h"
 #include "game/faction/ResearchManager.h"
 #include <stdexcept>
 
 namespace ac
 {
 
-PopulationManager::PopulationManager(const PopTypeRegistry* pReg,
-                                     const PopTypeAvailabilityCalculator* pAvailabilityCalculator,
+PopulationManager::PopulationManager(const GameDataContext& rDataContext,
                                      const ResearchManager* pResearchManager,
-                                     PopCompositionCalculator* pCalc,
-                                     const GrowthConfig_t& rGrowthConfig,
                                      int initialSize)
-    : m_container(pReg, pAvailabilityCalculator, pResearchManager, initialSize)
-    , m_pRegistry(pReg)
-    , m_rGrowthConfig(rGrowthConfig)
-    , m_pCompositionCalculator(pCalc)
+    : m_container(rDataContext.popTypeRegistry.get(),
+                  rDataContext.popTypeAvailabilityCalculator.get(),
+                  pResearchManager,
+                  initialSize)
+    , m_pRegistry(rDataContext.popTypeRegistry.get())
+    , m_pGrowthConfig(rDataContext.growthConfig.get())
+    , m_pCompositionCalculator(rDataContext.popCompositionCalculator.get())
     , m_maxSize(8)
     , m_nutrientStockpile(0)
     , m_riot(on_will_riot, on_is_rioting, on_riot_ended)
@@ -93,14 +94,14 @@ int PopulationManager::GetNutrientStockpile() const
 
 int PopulationManager::GetNutrientsRequired(const std::vector<ActiveEffect_t>& activeEffects) const
 {
-    return GrowthCalculator::ComputeNutrientsRequired(m_rGrowthConfig, GetSize(), activeEffects);
+    return GrowthCalculator::ComputeNutrientsRequired(*m_pGrowthConfig, GetSize(), activeEffects);
 }
 
 void PopulationManager::ApplyGrowth(int nutrients, const std::vector<ActiveEffect_t>& activeEffects)
 {
     m_nutrientStockpile += nutrients;
 
-    const int required = GrowthCalculator::ComputeNutrientsRequired(m_rGrowthConfig, GetSize(), activeEffects);
+    const int required = GrowthCalculator::ComputeNutrientsRequired(*m_pGrowthConfig, GetSize(), activeEffects);
     if (m_nutrientStockpile >= required)
     {
         m_nutrientStockpile -= required;

@@ -1,4 +1,5 @@
 #include "game/faction/base/BaseManager.h"
+#include "game/GameDataContext.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/production/ProductionManager.h"
 #include "game/faction/base/resources/ResourceManager.h"
@@ -6,12 +7,8 @@
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/population/PopContainer.h"
-#include "game/population/pop-types/PopTypeRegistry.h"
-#include "game/population/calculators/PopCompositionCalculator.h"
-#include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "game/buildings/BuildingConfigParser.h"
 #include "game/buildings/BuildingRegistry.h"
-#include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/map/MapUtils.h"
 #include "game/map/WorldMap.h"
 #include "game/social-engineering/SocialRatingResolver.h"
@@ -39,29 +36,24 @@ std::vector<const Tile*> ComputeWorkableTiles_(const TileEffectsContext& rTileEf
 
 BaseManager::BaseManager(
     Tile& tile,
-    const BuildingRegistry* pBuildingRegistry,
-    const PopTypeRegistry* pPopRegistry,
-    const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator,
-    PopCompositionCalculator* pCompositionCalculator,
+    const GameDataContext& rDataContext,
     TileEffectsContext& rTileEffects,
     const ResearchManager* pResearchManager,
-    const EconomyManager* pEconomyManager,
-    const ProductionCostCalculator* pProductionCostCalculator,
-    const GrowthConfig_t& rGrowthConfig,
-    const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
-    const SocialRatingRegistry* pSocialRatings)
+    const EconomyManager* pEconomyManager)
     : m_factionId(-1)
     , m_baseId(-1)
     , m_tile(tile)
     , m_rTileEffects(rTileEffects)
-    , m_pBuildingRegistry(pBuildingRegistry)
-    , m_pSocialRatings(pSocialRatings)
+    , m_pBuildingRegistry(rDataContext.buildingRegistry.get())
+    , m_pSocialRatings(rDataContext.socialRatingRegistry.get())
     , m_pResearch(pResearchManager)
-    , m_pPopulation(std::make_unique<PopulationManager>(pPopRegistry, pPopTypeAvailabilityCalculator, pResearchManager, pCompositionCalculator, rGrowthConfig, 3))
+    , m_pPopulation(std::make_unique<PopulationManager>(rDataContext, pResearchManager, 3))
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(ComputeWorkableTiles_(rTileEffects, tile), m_pPopulation->GetContainer(), rTileEffects))
     , m_pResources(nullptr)
-    , m_pBuildings(std::make_unique<BuildingManager>(pBuildingRegistry, pResearchManager, pSecretProjectCalculator))
-    , m_pProduction(pProductionCostCalculator ? std::make_unique<ProductionManager>(*pProductionCostCalculator) : nullptr)
+    , m_pBuildings(std::make_unique<BuildingManager>(rDataContext, pResearchManager))
+    , m_pProduction(rDataContext.productionCostCalculator
+                        ? std::make_unique<ProductionManager>(*rDataContext.productionCostCalculator)
+                        : nullptr)
 {
     // A base provides its own garrison defense bonus, modeled as the "Base" improvement.
     m_rTileEffects.AddImprovementWithEffects(m_tile, "Base");

@@ -1,4 +1,5 @@
 #include "game/faction/base/buildings/BuildingManager.h"
+#include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/faction/ResearchManager.h"
@@ -8,12 +9,11 @@
 namespace ac
 {
 
-BuildingManager::BuildingManager(const BuildingRegistry* pRegistry,
-                                 const ResearchManager* pResearchManager,
-                                 const SecretProjectAvailabilityCalculator* pSecretProjectCalculator)
-    : m_pRegistry(pRegistry)
+BuildingManager::BuildingManager(const GameDataContext& rDataContext,
+                                 const ResearchManager* pResearchManager)
+    : m_pRegistry(rDataContext.buildingRegistry.get())
     , m_pResearch(pResearchManager)
-    , m_pSecretProjectCalculator(pSecretProjectCalculator)
+    , m_pSecretProjectCalculator(rDataContext.secretProjectAvailabilityCalculator.get())
 {
 }
 

@@ -376,6 +376,78 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
 - **"Base" as an improvement**: `BaseManager`'s constructor calls `AddImprovementWithEffects(m_tile, "Base", worldMap, registry)`, so a founded base grants its own `ThisTile` defense bonus (`config/improvements.json`'s `Base` entry, currently a placeholder `+100%`) through the exact same mechanism as Bunker/Rocky/Fungus. This is also why `BaseManager` now holds a non-const `Tile&` (previously `const Tile&`), `Faction::CreateBase` takes a non-const `Tile*`, and `Faction::CreateBase` takes a non-const `WorldMap&`.
 - **Building bonuses to worked improvements**: a building can boost worked tiles that have a given improvement by attaching a `HasImprovement` `selector` to a `StatModifier` (e.g. Nutrient Bank's "+1 nutrients to worked Farms"). The selector's `improvement` is the plain `ImprovementConfig_t::id` string and is matched against `Tile::HasImprovement()` during the per-tile yield resolve — the same string-id lookup used everywhere else, with no separate improvement-type enum.
 
+## How to add a new producer or consumer
+
+### A new producer (a config type that declares effects)
+
+Producers only differ in which top-level JSON fields they read; the `effects` array itself is
+parsed and collected identically everywhere.
+
+1. **Parse**: add an `EffectSourceKind` enumerator (`BonusEffect.h`) and call
+   `config.effects = BonusEffectParser::ParseEffects(json, EffectSourceKind::X, config.id);`
+   in the config parser — exactly what `BuildingConfigParser`, `PopTypeConfigParser`, etc.
+   do. Only add a `ValidateScopeForSource` rejection if a scope is *certainly impossible*
+   for the source; scopes whose anchor concept is pending stay legal-but-inert (see
+   Universal scope routing).
+2. **Collect**: never hand-roll the config→`ActiveEffect_t` loop — use a collection helper,
+   which owns the Instantaneous exclusion and `originBase` tagging (see Collection helpers):
+   - Faction-anchored source (policy-like): `AppendActiveEffects(effects, nullptr, id, out)`
+     from a collector wired into `CollectActiveEffects`.
+   - Base-anchored source (building-like): `AppendActiveEffects(effects, pBase, id, out)` so
+     `ThisBase` effects are attributed to their base, then feed the faction pool.
+   - Source whose local scopes are resolved elsewhere (pop/unit-like):
+     `AppendFactionLaneEffects(effects, id, out)` for the pool, and resolve the local lanes
+     at their owner (the way `Pop::ApplyTileMultipliers` and `CollectUnitEffects` do).
+   - Tile-anchored source: `AppendTileEffects(effects, id, distance, out)` — the same filter
+     all tile/aura resolution uses.
+3. **Validate**: add the new registry to the `ValidateEffectReferences(GameDataContext)`
+   walker so the source's id references (grant targets, selector improvements, condition
+   features) fail at startup instead of loading as silent no-ops.
+4. **Test**: add a fixture config under `tests/fixtures/` and a collection test asserting
+   the effect lands in the right lane (`UniversalRoutingTests.cpp` has the pattern).
+
+That's it — routing is scope-driven, so the new source's effects automatically reach bases,
+units, pops, or tiles according to each entry's `scope`.
+
+### A new consumer
+
+**A new stat** (the most common case):
+
+1. Add the `StatId` enumerator (`EffectEnums.h`) and its string mapping in `ParseStatId`
+   (`BonusEffectParser.cpp`); extend the mapping test in `ParserTests.cpp`.
+2. Resolve it where the value is needed, choosing the filter by context:
+   - `FilterFlatByStatId` for **base-level** resolution — excludes per-tile selector
+     modifiers and conditional effects; always the right choice at base level.
+   - `FilterByStatId` for tile and unit resolution (selector effects are folded in
+     deliberately during the tile pass; conditional effects are still excluded).
+   - `FilterByStatIdInContext` when a runtime target exists (e.g. combat vs a defender's
+     tile).
+3. Pass the seed to `ResolveStatModifiers` **explicitly** — it has no default. `0.0` for
+   additive stats, `1.0` for pure-multiplier stats (`CostMultiplier`, the tile defense
+   multiplier), or the raw value the modifiers scale (a tile yield, `GrowthRate`'s `100.0`).
+   A pure-multiplier stat seeded with `0.0` resolves to 0.
+
+**A new rule flag**: add the `RuleFlagId` enumerator and its `ParseRuleFlagId` string, then
+check it with a `std::get_if<RuleFlagEffect_t>` scan over the relevant pool — see
+`Unit::ResolveFlag_` for the pattern.
+
+**A new effect type** (a new `EffectVariant_t` alternative):
+
+1. Define the struct in `BonusEffect.h` and add it to `EffectVariant_t`.
+2. Add the parser branch in `ParseEffectConfig`, validating required parameters there
+   (throw on missing/empty ids — don't parse permissively).
+3. If it references other configs by id, add the check to `ValidateEffectReferences`.
+4. Consume it with `std::get_if<YourEffect_t>` wherever it applies (`SocialRatingResolver`
+   is the model for a type-specific consumer). If it can be `Instantaneous`, it also needs a
+   branch in `DispatchInstantaneousEffects`.
+
+**A new resolution site** (consuming existing effects somewhere new): fetch the right pool
+rather than building a parallel collection path — the faction pool via
+`CollectActiveEffects(faction)`, a base's final list via `BaseManager::BuildBaseEffects_`
+(already includes pop effects and rating expansion), a live unit's via its design's
+`ThisUnit` effects plus the pool's `FactionUnits` (see `CollectLiveUnitEffects_` in
+`Unit.cpp`), a tile's via `TileEffectsContext`.
+
 ## Design Rationale
 
 - **Typed effect structs**: Replace the previous string-keyed parameter map with strongly typed structs, making effect consumers type-safe and easier to extend.

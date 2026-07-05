@@ -120,7 +120,7 @@ TEST_CASE("CollectFromPops: only ThisBase-scoped pop effects enter the base pool
     actest::BaseFixture fixture;
     const BaseManager& base = fixture.MakeBase(4, 4);
 
-    PopContainer pops(&fixture.popTypes, nullptr, nullptr, 0);
+    PopContainer pops(&fixture.popTypes(), nullptr, nullptr, 0);
     pops.AddPop("Doctor");
     pops.AddPop("Doctor");
     pops.AddPop("Technician");
