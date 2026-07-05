@@ -81,8 +81,9 @@ add_executable(alpha-centauri
     ui/UIManager.cpp
     ui/ViewFactory.cpp
     ui/world/WorldView.cpp
+    ui/world/CameraInputController.cpp
+    ui/world/UnitOrderInputController.cpp
     ui/world/WorldDisplay.cpp
-    ui/world/WorldMapElement.cpp
     ui/world/InfoPanelElement.cpp
     ui/base/BaseView.cpp
     ui/base/BaseWorkableAreaDisplay.cpp

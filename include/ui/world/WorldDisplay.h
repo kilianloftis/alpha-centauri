@@ -2,6 +2,7 @@
 
 #include "graphics/Graphics.h"
 #include "game/map/WorldMap.h"
+#include "ui/UIElement.h"
 #include <string>
 #include <vector>
 #include <utility>
@@ -31,7 +32,7 @@ struct BaseInfo_t
 class WorldDisplay
 {
 public:
-    WorldDisplay() = default;
+    explicit WorldDisplay(WindowLayout_t layout);
 
     // Set the world map to display
     void SetWorldMap(const WorldMap* pWorldMap);
@@ -42,30 +43,31 @@ public:
     // Set the unit currently selected by the player (highlighted on the map)
     void SetSelectedUnit(const Unit* pUnit);
 
-    // Set the pixel size of each tile. Pass 0 to restore the window-size-based default.
-    void SetTileSize(float tileSize);
-
     // Set the top-left tile coordinate of the visible viewport
     void SetCameraOffset(int tileX, int tileY);
 
-    float GetTileSize() const;
     float GetEffectiveTileSize() const;
     int GetCameraX() const;
     int GetCameraY() const;
+    int GetVisibleCols() const;
+    int GetVisibleRows() const;
 
-    // Render the world map showing only the tiles that fit within [x,y,w,h]
-    // using the current tile size and camera offset.
-    void Render(Graphics& rGraphics, float x, float y, float w, float h);
+    // Render the world map using the stored layout.
+    void Render(Graphics& rGraphics);
 
 private:
     const WorldMap* m_pWorldMap = nullptr;
-    const Graphics* m_pGraphics = nullptr;
     std::vector<BaseInfo_t> m_baseInfo;
     const Unit* m_pSelectedUnit = nullptr;
 
+    WindowLayout_t m_layout;
     float m_tileSize = 0.0f;
+    float m_effectiveTileSize = 40.0f;
+    int m_visibleCols = 0;
+    int m_visibleRows = 0;
     int m_cameraX = 0;
     int m_cameraY = 0;
+
 
     // Convert terrain enums to display integers
     int MoistureToInt_(Moisture moisture) const;
@@ -75,10 +77,10 @@ private:
     void RenderTile_(Graphics& rGraphics, const Tile& rTile, float x, float y, float size);
 
     // Render base markers with owner color and population info
-    void RenderBases_(Graphics& rGraphics, float originX, float originY, float tileSize, int camX, int camY, int camXEnd, int camYEnd);
+    void RenderBases_(Graphics& rGraphics, int colStart, int rowStart, int colEnd, int rowEnd);
 
     // Render unit markers on top of bases
-    void RenderUnits_(Graphics& rGraphics, float originX, float originY, float tileSize, int camX, int camY, int camXEnd, int camYEnd);
+    void RenderUnits_(Graphics& rGraphics, int colStart, int rowStart, int colEnd, int rowEnd);
 };
 
 } // namespace ac

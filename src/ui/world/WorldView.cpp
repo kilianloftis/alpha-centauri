@@ -1,6 +1,5 @@
 #include "ui/world/WorldView.h"
 #include <algorithm>
-#include "ui/world/WorldMapElement.h"
 #include "ui/world/InfoPanelElement.h"
 #include "game/GameState.h"
 #include "game/Faction.h"
@@ -26,16 +25,15 @@ WorldView::WorldView(
 )
 : IGameView(layout)
 , m_rGameState(rGameState)
-, m_pWorldDisplay(std::make_unique<WorldDisplay>())
+, m_mapLayout(ResolveLayout(layout, k_MapLayout))
+, m_pWorldDisplay(std::make_unique<WorldDisplay>(m_mapLayout))
 , m_onProcessTurn(std::move(onProcessTurn))
 , m_onRequestExit(std::move(onRequestExit))
 , m_onOpenBase(std::move(onOpenBase))
+, m_pCameraInputController(std::make_unique<CameraInputController>(*m_pWorldDisplay, rWorldMap, m_mapLayout))
+, m_pUnitOrderInputController(std::make_unique<UnitOrderInputController>())
 {
     m_pWorldDisplay->SetWorldMap(&rWorldMap);
-
-    auto pWorldMap = std::make_unique<WorldMapElement>(ResolveLayout(m_layout, k_MapLayout));
-    pWorldMap->SetWorldDisplay(m_pWorldDisplay.get());
-    m_elements.push_back(std::move(pWorldMap));
 
     m_elements.push_back(std::make_unique<InfoPanelElement>(ResolveLayout(m_layout, k_InfoPanelLayout)));
 }
@@ -43,6 +41,7 @@ WorldView::WorldView(
 void WorldView::Render(Graphics& rGraphics)
 {
     Update_();
+    m_pWorldDisplay->Render(rGraphics);
     IGameView::Render(rGraphics);
 }
 
@@ -84,6 +83,16 @@ void WorldView::Update_()
 
 bool WorldView::HandleKey(const KeyEvent_t& rEvent)
 {
+    if (m_pUnitOrderInputController->HandleKey(rEvent, m_pSelectedUnit))
+    {
+        return true;
+    }
+
+    if (m_pCameraInputController->HandleKey(rEvent))
+    {
+        return true;
+    }
+
     if (rEvent.key == Key_t::Escape)
     {
         m_onRequestExit();
@@ -92,57 +101,6 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
     else if (rEvent.key == Key_t::Enter)
     {
         m_onProcessTurn();
-        return true;
-    }
-    else if (rEvent.key == Key_t::H)
-    {
-        if (m_pSelectedUnit)
-        {
-            // TODO: Verify the selected unit still belongs to the player faction.
-            m_pSelectedUnit->SetOrder(HoldOrder_t{});
-        }
-        return true;
-    }
-
-    return HandleCameraKey_(rEvent);
-}
-
-bool WorldView::HandleCameraKey_(const KeyEvent_t& rEvent)
-{
-    const WorldMap* pWorldMap = m_rGameState.GetWorldMap();
-    if (!pWorldMap)
-    {
-        return false;
-    }
-
-    const WindowLayout_t mapLayout = ResolveLayout(m_layout, k_MapLayout);
-    const float tileSize = m_pWorldDisplay->GetEffectiveTileSize();
-    const int visibleCols = static_cast<int>(mapLayout.width  / tileSize);
-    const int visibleRows = static_cast<int>(mapLayout.height / tileSize);
-    const int maxCamX = std::max(0, pWorldMap->GetWidth()  - visibleCols);
-    const int maxCamY = std::max(0, pWorldMap->GetHeight() - visibleRows);
-
-    int camX = m_pWorldDisplay->GetCameraX();
-    int camY = m_pWorldDisplay->GetCameraY();
-
-    if (rEvent.key == Key_t::ArrowLeft)
-    {
-        m_pWorldDisplay->SetCameraOffset(std::max(0, camX - 1), camY);
-        return true;
-    }
-    else if (rEvent.key == Key_t::ArrowRight)
-    {
-        m_pWorldDisplay->SetCameraOffset(std::min(maxCamX, camX + 1), camY);
-        return true;
-    }
-    else if (rEvent.key == Key_t::ArrowUp)
-    {
-        m_pWorldDisplay->SetCameraOffset(camX, std::max(0, camY - 1));
-        return true;
-    }
-    else if (rEvent.key == Key_t::ArrowDown)
-    {
-        m_pWorldDisplay->SetCameraOffset(camX, std::min(maxCamY, camY + 1));
         return true;
     }
 
@@ -156,21 +114,29 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
     {
         return;
     }
-    const WindowLayout_t mapLayout = ResolveLayout(m_layout, k_MapLayout);
     const float tileSize = m_pWorldDisplay->GetEffectiveTileSize();
     const int camX = m_pWorldDisplay->GetCameraX();
     const int camY = m_pWorldDisplay->GetCameraY();
 
-    const int visibleCols = static_cast<int>(mapLayout.width  / tileSize);
-    const int visibleRows = static_cast<int>(mapLayout.height / tileSize);
-
     auto tile = TileHitTester::HitTestWorldGrid(
         static_cast<float>(rEvent.x), static_cast<float>(rEvent.y),
-        mapLayout.x, mapLayout.y, tileSize,
-        visibleCols, visibleRows);
+        m_mapLayout.x, m_mapLayout.y, tileSize,
+        m_pWorldDisplay->GetVisibleCols(),
+        m_pWorldDisplay->GetVisibleRows());
 
     const int worldX = tile ? tile->first + camX : -1;
     const int worldY = tile ? tile->second + camY : -1;
+    const Tile* pClickedTile = pWorldMap->GetTile(worldX, worldY);
+
+    if (m_pUnitOrderInputController->HandleMouse(rEvent, m_pSelectedUnit, pClickedTile))
+    {
+        return;
+    }
+
+    if (m_pCameraInputController->HandleMouse(rEvent))
+    {
+        return;
+    }
 
     if (rEvent.button == MouseButton_t::Left)
     {
@@ -187,34 +153,6 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
             if (pBase)
             {
                 m_onOpenBase(*pBase);
-            }
-        }
-    }
-    else if (rEvent.button == MouseButton_t::Right)
-    {
-        if (rEvent.bPressed)
-        {
-            m_bRightButtonHeld = true;
-            m_rightButtonPressTime = std::chrono::steady_clock::now();
-        }
-        else if (m_bRightButtonHeld)
-        {
-            m_bRightButtonHeld = false;
-
-            if (!tile)
-            {
-                return;
-            }
-
-            const auto elapsed = std::chrono::steady_clock::now() - m_rightButtonPressTime;
-            const bool bLongHold = elapsed >= std::chrono::seconds(1);
-            if (bLongHold && m_pSelectedUnit)
-            {
-                const Tile* pDestination = pWorldMap->GetTile(worldX, worldY);
-                if (pDestination)
-                {
-                    m_pSelectedUnit->SetOrder(MoveOrder_t{pDestination});
-                }
             }
         }
     }

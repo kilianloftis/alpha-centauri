@@ -8,6 +8,13 @@
 namespace ac
 {
 
+WorldDisplay::WorldDisplay(WindowLayout_t layout)
+    : m_layout(layout)
+{
+    m_effectiveTileSize = m_tileSize > 0.0f ? m_tileSize : m_layout.height * k_DefaultTileScale;
+    m_visibleCols = static_cast<int>(m_layout.width  / m_effectiveTileSize);
+    m_visibleRows = static_cast<int>(m_layout.height / m_effectiveTileSize);}
+
 void WorldDisplay::SetWorldMap(const WorldMap* pWorldMap)
 {
     m_pWorldMap = pWorldMap;
@@ -22,34 +29,16 @@ void WorldDisplay::SetSelectedUnit(const Unit* pUnit)
 {
     m_pSelectedUnit = pUnit;
 }
-
-void WorldDisplay::SetTileSize(float tileSize)
-{
-    m_tileSize = tileSize;
-}
-
 void WorldDisplay::SetCameraOffset(int tileX, int tileY)
 {
     m_cameraX = tileX;
     m_cameraY = tileY;
 }
 
-float WorldDisplay::GetTileSize() const
-{
-    return m_tileSize;
-}
 
 float WorldDisplay::GetEffectiveTileSize() const
 {
-    if (m_tileSize > 0.0f)
-    {
-        return m_tileSize;
-    }
-    if (m_pGraphics)
-    {
-        return static_cast<float>(m_pGraphics->GetWindowHeight()) * k_DefaultTileScale;
-    }
-    return 40.0f;
+    return m_effectiveTileSize;
 }
 
 int WorldDisplay::GetCameraX() const
@@ -62,8 +51,20 @@ int WorldDisplay::GetCameraY() const
     return m_cameraY;
 }
 
-void WorldDisplay::RenderBases_(Graphics& rGraphics, float originX, float originY, float tileSize, int camX, int camY, int camXEnd, int camYEnd)
+int WorldDisplay::GetVisibleCols() const
 {
+    return m_visibleCols;
+}
+
+int WorldDisplay::GetVisibleRows() const
+{
+    return m_visibleRows;
+}
+
+void WorldDisplay::RenderBases_(Graphics& rGraphics, int colStart, int rowStart, int colEnd, int rowEnd)
+{
+    const float tileSize = GetEffectiveTileSize();
+
     // Calculate font size to fit within tile (roughly 30% of tile height)
     const unsigned int fontSize = static_cast<unsigned int>(tileSize * 0.25f);
     // if (fontSize < 8) return;  // Too small to render legibly
@@ -72,13 +73,13 @@ void WorldDisplay::RenderBases_(Graphics& rGraphics, float originX, float origin
 
     for (const auto& base : m_baseInfo)
     {
-        if (base.x < camX || base.x >= camXEnd || base.y < camY || base.y >= camYEnd)
+        if (base.x < colStart || base.x >= colEnd || base.y < rowStart || base.y >= rowEnd)
         {
             continue;
         }
 
-        float baseX = originX + ((base.x - camX) * tileSize);
-        float baseY = originY + ((base.y - camY) * tileSize);
+        float baseX = m_layout.x + ((base.x - colStart) * tileSize);
+        float baseY = m_layout.y + ((base.y - rowStart) * tileSize);
 
         // Abbreviate name to fit within tile width (approx 3 chars per line at this font size)
         const size_t maxChars = static_cast<size_t>((tileSize * 0.8f) / (fontSize * 0.5f));
@@ -102,17 +103,18 @@ void WorldDisplay::RenderBases_(Graphics& rGraphics, float originX, float origin
     }
 }
 
-void WorldDisplay::RenderUnits_(Graphics& rGraphics, float originX, float originY, float tileSize,
-                                int camX, int camY, int camXEnd, int camYEnd)
+void WorldDisplay::RenderUnits_(Graphics& rGraphics, int colStart, int rowStart, int colEnd, int rowEnd)
 {
+    const float tileSize = GetEffectiveTileSize();
+
     const unsigned int fontSize = static_cast<unsigned int>(tileSize * 0.2f);
     const float markerWidth = tileSize * 0.22f;
     const float markerHeight = tileSize * 0.22f;
     const float spacing = tileSize * 0.03f;
 
-    for (int row = camY; row < camYEnd; ++row)
+    for (int row = rowStart; row < rowEnd; ++row)
     {
-        for (int col = camX; col < camXEnd; ++col)
+        for (int col = colStart; col < colEnd; ++col)
         {
             const Tile* pTile = m_pWorldMap->GetTile(col, row);
             if (!pTile)
@@ -126,8 +128,8 @@ void WorldDisplay::RenderUnits_(Graphics& rGraphics, float originX, float origin
                 continue;
             }
 
-            const float tileX = originX + ((col - camX) * tileSize);
-            const float tileY = originY + ((row - camY) * tileSize);
+            const float tileX = m_layout.x + ((col - colStart) * tileSize);
+            const float tileY = m_layout.y + ((row - rowStart) * tileSize);
 
             for (size_t i = 0; i < units.size(); ++i)
             {
@@ -174,9 +176,8 @@ void WorldDisplay::RenderUnits_(Graphics& rGraphics, float originX, float origin
     }
 }
 
-void WorldDisplay::Render(Graphics& rGraphics, float x, float y, float w, float h)
+void WorldDisplay::Render(Graphics& rGraphics)
 {
-    m_pGraphics = &rGraphics;
     if (!m_pWorldMap)
     {
         return;
@@ -190,15 +191,10 @@ void WorldDisplay::Render(Graphics& rGraphics, float x, float y, float w, float 
         return;
     }
 
-    const float effectiveTileSize = GetEffectiveTileSize();
-
-    const int tilesWide = static_cast<int>(w / effectiveTileSize);
-    const int tilesHigh = static_cast<int>(h / effectiveTileSize);
-
     const int colStart = std::max(0, m_cameraX);
     const int rowStart = std::max(0, m_cameraY);
-    const int colEnd   = std::min(mapWidth,  colStart + tilesWide);
-    const int rowEnd   = std::min(mapHeight, rowStart + tilesHigh);
+    const int colEnd   = std::min(mapWidth,  colStart + m_visibleCols);
+    const int rowEnd   = std::min(mapHeight, rowStart + m_visibleRows);
 
     for (int row = rowStart; row < rowEnd; ++row)
     {
@@ -207,15 +203,15 @@ void WorldDisplay::Render(Graphics& rGraphics, float x, float y, float w, float 
             const Tile* pTile = m_pWorldMap->GetTile(col, row);
             if (pTile)
             {
-                float tileX = x + ((col - colStart) * effectiveTileSize);
-                float tileY = y + ((row - rowStart) * effectiveTileSize);
-                RenderTile_(rGraphics, *pTile, tileX, tileY, effectiveTileSize);
+                float tileX = m_layout.x + ((col - colStart) * m_effectiveTileSize);
+                float tileY = m_layout.y + ((row - rowStart) * m_effectiveTileSize);
+                RenderTile_(rGraphics, *pTile, tileX, tileY, m_effectiveTileSize);
             }
         }
     }
 
-    RenderBases_(rGraphics, x, y, effectiveTileSize, colStart, rowStart, colEnd, rowEnd);
-    RenderUnits_(rGraphics, x, y, effectiveTileSize, colStart, rowStart, colEnd, rowEnd);
+    RenderBases_(rGraphics, colStart, rowStart, colEnd, rowEnd);
+    RenderUnits_(rGraphics, colStart, rowStart, colEnd, rowEnd);
 }
 
 int WorldDisplay::MoistureToInt_(Moisture moisture) const

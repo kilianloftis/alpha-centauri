@@ -166,6 +166,11 @@ private:
                     PushPendingMouseEvent_t({*mappedKey, static_cast<int>(mouseEvent->position.x), static_cast<int>(mouseEvent->position.y), modifier, false});
                 }
             }
+
+            if (auto mouseEvent = event->getIf<sf::Event::MouseMoved>())
+            {
+                PushPendingMouseEvent_t({MouseButton_t::None, static_cast<int>(mouseEvent->position.x), static_cast<int>(mouseEvent->position.y), {}, false});
+            }
         }
     }
 

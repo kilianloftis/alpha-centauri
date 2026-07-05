@@ -187,8 +187,14 @@ Views are rendered bottom-to-top through the stack. Each view renders its own `U
 - **Mouse hit-testing**: `WorldView::HandleMouse` reads the viewport state from `WorldDisplay` and translates screen-relative tile indices back to world tile coordinates by adding the camera offset.
 - **Unit Layer**: Unit markers are rendered on top of bases by querying `WorldMap::GetUnitsOnTile()` for each visible tile. Multiple units on the same tile are drawn side-by-side; faction coloring is a future TODO.
 - **Unit Selection**: Left-clicking a tile with units selects the first unit on that tile (`WorldView::SelectUnitAtTile_`). The selected unit is highlighted with a yellow border and is passed to `WorldDisplay` via `SetSelectedUnit()`. If the tile has no units, the click falls back to opening a base.
-- **Unit Orders**: With a selected unit, the `H` key issues a `HoldOrder_t` (`WorldView::HandleKey`). Order execution is delegated to the turn-processing `UnitOrderExecutor`.
+- **Unit Orders**: With a selected unit, the `H` key issues a `HoldOrder_t` via `UnitOrderInputController`. Order execution is delegated to the turn-processing `UnitOrderExecutor`.
 - **Move Orders**: Right-clicking and holding for one second, then releasing, assigns a `MoveOrder_t` to the selected unit for the tile under the cursor on release. Short right-clicks are ignored. `MouseEvent_t::bPressed` is used to distinguish press and release events.
+
+### WorldView Input Routing
+- **Coordinator**: `WorldView::HandleKey` and `WorldView::HandleMouse` are thin coordinators that dispatch to owned sub-controllers before handling view-lifecycle input themselves.
+- **CameraInputController**: Owned by `WorldView`; constructed with `WorldDisplay&` and `WorldMap&`. Handles arrow-key camera panning and will later own mouse edge-scroll state (last mouse position, scroll accumulator).
+- **UnitOrderInputController**: Owned by `WorldView`; constructed with no dependencies. Dispatches hotkeys to unit orders through a `Key_t` → `std::function<void(Unit&)>` table (`H` → `HoldOrder_t`). Also handles right-click-and-hold for `MoveOrder_t`.
+- **Dispatch order**: `HandleKey` tries the order controller, then the camera controller, then handles `Escape` and `Enter` directly. `HandleMouse` tries the order controller, then the camera controller, then handles left-click unit selection and base opening.
 
 ### ViewFactory
 - **Purpose**: Creates `IGameView` instances from game state and graphics context

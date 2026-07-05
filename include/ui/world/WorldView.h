@@ -1,9 +1,10 @@
 #pragma once
 
 #include "ui/IGameView.h"
+#include "ui/world/CameraInputController.h"
+#include "ui/world/UnitOrderInputController.h"
 #include "ui/world/WorldDisplay.h"
 #include "input/Input.h"
-#include <chrono>
 #include <functional>
 #include <memory>
 #include <utility>
@@ -40,11 +41,11 @@ public:
 
 private:
     void Update_();
-    bool HandleCameraKey_(const KeyEvent_t& rEvent);
     BaseManager* FindBaseAtTile_(int tileX, int tileY) const;
     void SelectUnitAtTile_(int tileX, int tileY);
 
     GameState& m_rGameState;
+    const WindowLayout_t m_mapLayout;
     std::unique_ptr<WorldDisplay> m_pWorldDisplay;
     std::function<void()> m_onProcessTurn;
     std::function<void()> m_onRequestExit;
@@ -52,8 +53,8 @@ private:
 
     Unit* m_pSelectedUnit = nullptr;
 
-    bool m_bRightButtonHeld = false;
-    std::chrono::steady_clock::time_point m_rightButtonPressTime;
+    std::unique_ptr<CameraInputController> m_pCameraInputController;
+    std::unique_ptr<UnitOrderInputController> m_pUnitOrderInputController;
 };
 
 } // namespace ac
