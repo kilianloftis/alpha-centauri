@@ -64,6 +64,16 @@ public:
         return Add(std::move(config));
     }
 
+    const ac::EffectConfig_t& RatingMod(ac::SocialRatingId rating, int amount,
+                                        ac::EffectScope_t scope = ac::EffectScope_t::FactionGlobal)
+    {
+        ac::EffectConfig_t config;
+        config.effect = ac::SocialRatingModifierEffect_t{rating, amount};
+        config.scope = scope;
+        config.persistence = ac::EffectPersistence_t::Continuous;
+        return Add(std::move(config));
+    }
+
 private:
     std::deque<ac::EffectConfig_t> m_configs;
 };

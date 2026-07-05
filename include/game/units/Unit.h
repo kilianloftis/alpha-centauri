@@ -61,6 +61,12 @@ public:
     void ClearOrder();
 
 private:
+    // Live-unit stat resolution: the design's own ThisUnit effects plus any FactionUnits
+    // effects active in the owning faction's pool (buildings, policies, pops, ...).
+    // UnitDesign's getters stay context-free (intrinsic values, e.g. for the designer UI).
+    int ResolveStat_(StatId statId) const;
+    bool ResolveFlag_(RuleFlagId flagId) const;
+
     const UnitDesign& m_rDesign;
     const Tile* m_pTile;
     BaseManager* m_pHomeBase;

@@ -27,7 +27,7 @@ BuildingConfig_t BuildingConfigParser::ParseBuildingConfig(const nlohmann::json&
     config.allowMultiple = buildingJson.value("allow_multiple", false);
     config.bIsSecretProject = buildingJson.value("secret_project", false);
     config.requiredTechs = ConfigFields::ParseStringArray(buildingJson, "required_techs");
-    config.effects = BonusEffectParser::ParseEffects(buildingJson);
+    config.effects = BonusEffectParser::ParseEffects(buildingJson, EffectSourceKind::Building, config.id);
 
     return config;
 }

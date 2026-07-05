@@ -23,16 +23,24 @@
 namespace ac
 {
 
-void AppendActiveEffects(const std::vector<EffectConfig_t>& rEffects,
-                         const BaseManager* pOriginBase,
-                         const std::string& sourceId,
-                         std::vector<ActiveEffect_t>& rOut)
+namespace
+{
+
+// The one config->ActiveEffect_t loop. Every public collect/append helper funnels through
+// here so the Instantaneous exclusion (those fire once via DispatchInstantaneousEffects)
+// and the ThisBase origin tagging can never be forgotten by an individual collector.
+template <typename IncludePred>
+void AppendActiveEffectsIf_(const std::vector<EffectConfig_t>& rEffects,
+                            const BaseManager* pOriginBase,
+                            const std::string& sourceId,
+                            IncludePred include,
+                            std::vector<ActiveEffect_t>& rOut)
 {
     for (const EffectConfig_t& rEffect : rEffects)
     {
-        // Instantaneous effects fire at construction time via DispatchInstantaneousEffects;
-        // they must not enter the continuous active-effect pool.
         if (rEffect.persistence == EffectPersistence_t::Instantaneous)
+            continue;
+        if (!include(rEffect))
             continue;
         ActiveEffect_t activeEffect;
         activeEffect.config = &rEffect;
@@ -40,6 +48,44 @@ void AppendActiveEffects(const std::vector<EffectConfig_t>& rEffects,
         activeEffect.originBase = (rEffect.scope == EffectScope_t::ThisBase) ? pOriginBase : nullptr;
         rOut.push_back(activeEffect);
     }
+}
+
+} // namespace
+
+void AppendActiveEffects(const std::vector<EffectConfig_t>& rEffects,
+                         const BaseManager* pOriginBase,
+                         const std::string& sourceId,
+                         std::vector<ActiveEffect_t>& rOut)
+{
+    AppendActiveEffectsIf_(rEffects, pOriginBase, sourceId,
+                           [](const EffectConfig_t&) { return true; }, rOut);
+}
+
+void AppendFactionLaneEffects(const std::vector<EffectConfig_t>& rEffects,
+                              const std::string& sourceId,
+                              std::vector<ActiveEffect_t>& rOut)
+{
+    AppendActiveEffectsIf_(rEffects, nullptr, sourceId,
+                           [](const EffectConfig_t& rEffect) { return IsFactionLane(rEffect.scope); },
+                           rOut);
+}
+
+bool TileEffectReaches(const EffectConfig_t& rEffect, int distance)
+{
+    return LaneFor(rEffect.scope) == EffectLane::TileLocal
+        && rEffect.persistence != EffectPersistence_t::Instantaneous
+        && rEffect.radius >= distance;
+}
+
+void AppendTileEffects(const std::vector<EffectConfig_t>& rEffects,
+                       const std::string& sourceId,
+                       int distance,
+                       std::vector<ActiveEffect_t>& rOut)
+{
+    AppendActiveEffectsIf_(rEffects, nullptr, sourceId,
+                           [distance](const EffectConfig_t& rEffect)
+                           { return TileEffectReaches(rEffect, distance); },
+                           rOut);
 }
 
 namespace
@@ -126,17 +172,10 @@ std::vector<ActiveEffect_t> ExpandGrantBuildingEffects(
             if (!processedGrantedIds.count(globalKey))
             {
                 processedGrantedIds.insert(globalKey);
-                for (const EffectConfig_t& rEffect : pGranted->effects)
-                {
-                    if (rEffect.persistence == EffectPersistence_t::Instantaneous)
-                    {
-                        continue;
-                    }
-                    if (rEffect.scope != EffectScope_t::ThisBase)
-                    {
-                        effects.push_back({&rEffect, sourceId, nullptr});
-                    }
-                }
+                AppendActiveEffectsIf_(pGranted->effects, nullptr, sourceId,
+                                       [](const EffectConfig_t& rEffect)
+                                       { return rEffect.scope != EffectScope_t::ThisBase; },
+                                       effects);
             }
 
             for (const BaseManager* pBase : rBases)
@@ -146,17 +185,10 @@ std::vector<ActiveEffect_t> ExpandGrantBuildingEffects(
                 if (!processedGrantedIds.count(key))
                 {
                     processedGrantedIds.insert(key);
-                    for (const EffectConfig_t& rEffect : pGranted->effects)
-                    {
-                        if (rEffect.persistence == EffectPersistence_t::Instantaneous)
-                        {
-                            continue;
-                        }
-                        if (rEffect.scope == EffectScope_t::ThisBase)
-                        {
-                            effects.push_back({&rEffect, sourceId, pBase});
-                        }
-                    }
+                    AppendActiveEffectsIf_(pGranted->effects, pBase, sourceId,
+                                           [](const EffectConfig_t& rEffect)
+                                           { return rEffect.scope == EffectScope_t::ThisBase; },
+                                           effects);
                 }
             }
         }
@@ -204,6 +236,15 @@ std::vector<ActiveEffect_t> CollectActiveEffects(const Faction& rFaction)
     std::vector<ActiveEffect_t> result;
     CollectFromBuildings(rFaction, result);
     CollectFromSocialEngineering(rFaction, result);
+
+    // Faction-lane effects from the remaining sources: pops (scopes other than the
+    // locally-resolved ThisPop/ThisBase) and live units' components (other than
+    // ThisUnit/ThisTile). Routing is scope-driven — any config can contribute here.
+    const std::vector<ActiveEffect_t> popEffects = rFaction.CollectPopFactionEffects();
+    result.insert(result.end(), popEffects.begin(), popEffects.end());
+    const std::vector<ActiveEffect_t> unitEffects = rFaction.CollectUnitFactionEffects();
+    result.insert(result.end(), unitEffects.begin(), unitEffects.end());
+
     return result;
 }
 
@@ -330,24 +371,22 @@ std::vector<ActiveEffect_t> FilterForBase(const std::vector<ActiveEffect_t>& eff
             continue;
         }
 
-        switch (effect.config->scope)
+        switch (LaneFor(effect.config->scope))
         {
-            case EffectScope_t::ThisBase:
+            case EffectLane::Base:
                 if (effect.originBase == &rBase)
                 {
                     matching.push_back(effect);
                 }
                 break;
-            case EffectScope_t::AllOwnerBases:
-            case EffectScope_t::FactionGlobal:
-            case EffectScope_t::WorldGlobal:
+            case EffectLane::FactionWide:
                 matching.push_back(effect);
                 break;
-            case EffectScope_t::ThisUnit:
-            case EffectScope_t::FactionUnits:
-            case EffectScope_t::ThisPop:
-            case EffectScope_t::ThisTile:
-                // Unit-, pop-, and tile-scoped effects never apply to base-level calculations.
+            case EffectLane::FactionUnits:
+            case EffectLane::UnitLocal:
+            case EffectLane::PopLocal:
+            case EffectLane::TileLocal:
+                // Resolved by their own unit/pop/tile; never apply to base-level calculations.
                 break;
         }
     }
@@ -372,18 +411,9 @@ std::vector<ActiveEffect_t> CollectUnitEffects(const std::vector<const UnitCompo
     std::vector<ActiveEffect_t> result;
     for (const UnitComponentConfig_t* pComp : components)
     {
-        if (!pComp)
+        if (pComp)
         {
-            continue;
-        }
-        for (const EffectConfig_t& rEffect : pComp->effects)
-        {
-            if (rEffect.persistence == EffectPersistence_t::Instantaneous)
-                continue;
-            ActiveEffect_t active;
-            active.config = &rEffect;
-            active.sourceId = pComp->id;
-            result.push_back(active);
+            AppendActiveEffects(pComp->effects, nullptr, pComp->id, result);
         }
     }
     return result;
@@ -392,15 +422,7 @@ std::vector<ActiveEffect_t> CollectUnitEffects(const std::vector<const UnitCompo
 std::vector<ActiveEffect_t> CollectPopEffects(const PopTypeConfig_t& rConfig)
 {
     std::vector<ActiveEffect_t> result;
-    for (const EffectConfig_t& rEffect : rConfig.effects)
-    {
-        if (rEffect.persistence == EffectPersistence_t::Instantaneous)
-            continue;
-        ActiveEffect_t active;
-        active.config = &rEffect;
-        active.sourceId = rConfig.id;
-        result.push_back(active);
-    }
+    AppendActiveEffects(rConfig.effects, nullptr, rConfig.id, result);
     return result;
 }
 
@@ -427,45 +449,24 @@ std::vector<ActiveEffect_t> CollectFromPops(const PopContainer& rPops, const Bas
     return result;
 }
 
-namespace
-{
-
-void AppendThisTileEffects_(const ImprovementConfig_t& rFeature, std::vector<ActiveEffect_t>& rOut)
-{
-    for (const EffectConfig_t& rEffect : rFeature.effects)
-    {
-        if (rEffect.scope != EffectScope_t::ThisTile)
-            continue;
-        // Instantaneous effects fire once when applied; they must not be re-applied every
-        // time the tile's continuous effects are resolved.
-        if (rEffect.persistence == EffectPersistence_t::Instantaneous)
-            continue;
-        ActiveEffect_t active;
-        active.config = &rEffect;
-        active.sourceId = rFeature.id;
-        rOut.push_back(active);
-    }
-}
-
-} // namespace
-
 std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile, const ImprovementRegistry& rImprovements)
 {
     std::vector<ActiveEffect_t> result;
 
     // Terrain features (rockiness/moisture/river/fungus) are resolved by string id against
     // the registry; improvements are already held as config pointers, so iterate them directly.
+    // Own-tile collection is the distance-0 case of the shared tile-reach filter.
     for (const std::string& featureId : rTile.GetTerrainFeatureIds())
     {
         if (const ImprovementConfig_t* pFeature = rImprovements.Find(featureId))
         {
-            AppendThisTileEffects_(*pFeature, result);
+            AppendTileEffects(pFeature->effects, pFeature->id, 0, result);
         }
     }
 
     for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
     {
-        AppendThisTileEffects_(*pImprovement, result);
+        AppendTileEffects(pImprovement->effects, pImprovement->id, 0, result);
     }
 
     return result;

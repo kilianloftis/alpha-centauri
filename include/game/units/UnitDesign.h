@@ -3,6 +3,7 @@
 #include "game/IConstructable.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitSlotConfig.h"
+#include "lib/effects/ActiveEffect.h"
 #include "lib/effects/EffectEnums.h"
 #include <string>
 #include <unordered_map>
@@ -28,6 +29,12 @@ public:
     int GetBaseCost() const override;
 
     const UnitComponentConfig_t* GetComponentForSlot(const std::string& rSlotId) const;
+
+    // All continuous effects attached to this design's components, as ActiveEffect_t
+    // instances (sourceId = component id). The single way anything outside UnitDesign
+    // consumes component effects — live-unit stat resolution, faction-lane collection,
+    // and tile aura scans all work on this list; the component set stays private.
+    std::vector<ActiveEffect_t> CollectEffects() const;
 
     int GetAttack() const;
     // Attack including conditional modifiers whose condition is satisfied by ctx (e.g. a

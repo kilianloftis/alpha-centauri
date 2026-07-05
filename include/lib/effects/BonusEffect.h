@@ -32,6 +32,56 @@ enum class EffectPersistence_t
     Continuous,
 };
 
+// Where an effect is resolved — its scope's "lane". This is the single source of truth for
+// scope routing: collectors and filters derive their decisions from LaneFor instead of
+// hand-maintained scope lists. Adding a value to EffectScope_t forces an update to LaneFor's
+// exhaustive switch, and every collector/filter picks up the new scope's routing from there.
+enum class EffectLane
+{
+    // Resolved by the owning base: lives in the faction pool tagged with originBase,
+    // included per base by FilterForBase (pop ThisBase effects merge via CollectFromPops
+    // instead, so they never enter the pool).
+    Base,
+    // Resolved at every base of the faction (WorldGlobal additionally crosses factions via
+    // GameState::CollectWorldEffects). Lives in the faction pool; FilterForBase includes it.
+    FactionWide,
+    // Merged into every live unit's stat resolution. Lives in the faction pool; consumed by
+    // Unit::Get* via FilterByScope(FactionUnits), never applies at base level.
+    FactionUnits,
+    // Resolved by the unit's own design (intrinsic component stats). Never enters the pool.
+    UnitLocal,
+    // Resolved by the pop itself (tile multipliers). Never enters the pool.
+    PopLocal,
+    // Resolved by the tile resolvers (CollectTileEffects/CollectAreaEffects). Never enters
+    // the pool.
+    TileLocal,
+};
+
+constexpr EffectLane LaneFor(EffectScope_t scope)
+{
+    switch (scope)
+    {
+        case EffectScope_t::ThisBase:      return EffectLane::Base;
+        case EffectScope_t::AllOwnerBases:
+        case EffectScope_t::FactionGlobal:
+        case EffectScope_t::WorldGlobal:   return EffectLane::FactionWide;
+        case EffectScope_t::FactionUnits:  return EffectLane::FactionUnits;
+        case EffectScope_t::ThisUnit:      return EffectLane::UnitLocal;
+        case EffectScope_t::ThisPop:       return EffectLane::PopLocal;
+        case EffectScope_t::ThisTile:      return EffectLane::TileLocal;
+    }
+    return EffectLane::FactionWide; // unreachable; all enumerators handled above
+}
+
+// True for scopes resolved faction-wide through the pool (at bases or units) rather than
+// locally by a specific base/pop/unit/tile. This is what Faction's pop/unit collectors feed
+// into CollectActiveEffects.
+constexpr bool IsFactionLane(EffectScope_t scope)
+{
+    const EffectLane lane = LaneFor(scope);
+    return lane == EffectLane::FactionWide || lane == EffectLane::FactionUnits;
+}
+
 enum class ModifierOp
 {
     Add,
@@ -146,6 +196,23 @@ struct EffectConfig_t
     // context that satisfies the condition (see ConditionSatisfied / EffectContext_t). Such
     // effects are excluded from context-free resolution (base economy, intrinsic unit stats).
     std::optional<Condition_t> condition;
+    // For ThisTile-scoped effects: how far (Manhattan tiles) beyond the host tile the effect
+    // reaches. 0 (default) = the host tile only. Parsed from the effect entry's own "radius"
+    // field; an improvement-level "radius" acts as the default for its effects (back-compat).
+    int radius = 0;
+};
+
+// Which kind of config declared an effects array. Used for the minimal load-time scope
+// validation: scopes that can only ever be resolved against one source kind (a specific pop,
+// a specific unit) are rejected on any other source instead of silently doing nothing.
+enum class EffectSourceKind
+{
+    Building,
+    UnitComponent,
+    PopType,
+    Improvement,
+    SocialPolicy,
+    SocialRating,
 };
 
 } // namespace ac

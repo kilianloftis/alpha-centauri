@@ -1,0 +1,24 @@
+[
+  {
+    "id": "frontier",
+    "name": "Frontier",
+    "category": "politics",
+    "effects": []
+  },
+  {
+    "id": "growth_policy",
+    "name": "Growth Policy (+2 Growth rating, faction-wide)",
+    "category": "politics",
+    "effects": [
+      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "growth", "amount": 2 } }
+    ]
+  },
+  {
+    "id": "wealth_policy",
+    "name": "Wealth Policy (+1 energy in every base)",
+    "category": "economics",
+    "effects": [
+      { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "energy", "amount": 1 } }
+    ]
+  }
+]

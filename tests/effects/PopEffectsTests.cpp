@@ -90,7 +90,7 @@ TEST_CASE("ThisPop effects must never be resolved together with flat Add effects
 
     // Correct: multiplier scales the raw tile yield, flat bonus added separately.
     const double correct = ResolveStatModifiers({multiplier}, rawTileYield).total
-                         + ResolveStatModifiers({flatBonus}).total; // 6 + 2 = 8
+                         + ResolveStatModifiers({flatBonus}, 0.0).total; // 6 + 2 = 8
 
     // Wrong: one combined resolve scales the flat bonus too: (4 + 2) * 1.5 = 9.
     const double combined = ResolveStatModifiers({multiplier, flatBonus}, rawTileYield).total;

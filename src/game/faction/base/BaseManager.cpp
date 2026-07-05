@@ -14,6 +14,7 @@
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/map/MapUtils.h"
 #include "game/map/WorldMap.h"
+#include "game/social-engineering/SocialRatingResolver.h"
 #include "lib/effects/ActiveEffect.h"
 #include "lib/effects/TileEffectsContext.h"
 
@@ -47,12 +48,14 @@ BaseManager::BaseManager(
     const EconomyManager* pEconomyManager,
     const ProductionCostCalculator* pProductionCostCalculator,
     const GrowthConfig_t& rGrowthConfig,
-    const SecretProjectAvailabilityCalculator* pSecretProjectCalculator)
+    const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
+    const SocialRatingRegistry* pSocialRatings)
     : m_factionId(-1)
     , m_baseId(-1)
     , m_tile(tile)
     , m_rTileEffects(rTileEffects)
     , m_pBuildingRegistry(pBuildingRegistry)
+    , m_pSocialRatings(pSocialRatings)
     , m_pResearch(pResearchManager)
     , m_pPopulation(std::make_unique<PopulationManager>(pPopRegistry, pPopTypeAvailabilityCalculator, pResearchManager, pCompositionCalculator, rGrowthConfig, 3))
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(ComputeWorkableTiles_(rTileEffects, tile), m_pPopulation->GetContainer(), rTileEffects))
@@ -289,6 +292,38 @@ std::string BaseManager::ApplyProduction()
     return m_pProduction->ApplyProduction(minerals);
 }
 
+std::vector<ActiveEffect_t> BaseManager::CollectBaseLocalEffects_(const std::vector<ActiveEffect_t>& activeEffects) const
+{
+    std::vector<ActiveEffect_t> baseEffects = FilterForBase(activeEffects, *this);
+
+    const std::vector<ActiveEffect_t> popEffects = CollectFromPops(GetPopContainer(), *this);
+    baseEffects.insert(baseEffects.end(), popEffects.begin(), popEffects.end());
+
+    return baseEffects;
+}
+
+std::vector<ActiveEffect_t> BaseManager::BuildBaseEffects_(const std::vector<ActiveEffect_t>& activeEffects) const
+{
+    std::vector<ActiveEffect_t> baseEffects = CollectBaseLocalEffects_(activeEffects);
+
+    // Map this base's effective social rating levels (faction-wide modifiers + any
+    // ThisBase-scoped ones that survived FilterForBase) to their gameplay effects.
+    if (m_pSocialRatings)
+    {
+        ExpandSocialRatingEffects(baseEffects, *m_pSocialRatings);
+    }
+
+    return baseEffects;
+}
+
+int BaseManager::GetEffectiveSocialRating(SocialRatingId rating, const std::vector<ActiveEffect_t>& activeEffects) const
+{
+    const std::map<SocialRatingId, int> totals =
+        AccumulateSocialRatings(CollectBaseLocalEffects_(activeEffects));
+    const auto it = totals.find(rating);
+    return it == totals.end() ? 0 : it->second;
+}
+
 void BaseManager::ProduceResources(const std::vector<ActiveEffect_t>& activeEffects)
 {
     if (!m_pResources || !m_pPopulation)
@@ -296,12 +331,7 @@ void BaseManager::ProduceResources(const std::vector<ActiveEffect_t>& activeEffe
         throw std::runtime_error("BaseManager::ProduceResources: m_pResources or m_pPopulation is null");
     }
 
-    std::vector<ActiveEffect_t> baseEffects = FilterForBase(activeEffects, *this);
-
-    const std::vector<ActiveEffect_t> popEffects = CollectFromPops(GetPopContainer(), *this);
-    baseEffects.insert(baseEffects.end(), popEffects.begin(), popEffects.end());
-
-    m_pResources->ProduceResources(baseEffects);
+    m_pResources->ProduceResources(BuildBaseEffects_(activeEffects));
 }
 
 int BaseManager::ConsumeEcon()
@@ -326,8 +356,7 @@ void BaseManager::ApplyGrowth(const std::vector<ActiveEffect_t>& activeEffects)
         throw std::runtime_error("BaseManager::ApplyGrowth: m_pPopulation is null");
     }
     const int nutrients = m_pResources ? m_pResources->ConsumeNutrients() : 0;
-    const std::vector<ActiveEffect_t> baseEffects = FilterForBase(activeEffects, *this);
-    m_pPopulation->ApplyGrowth(nutrients, baseEffects);
+    m_pPopulation->ApplyGrowth(nutrients, BuildBaseEffects_(activeEffects));
 }
 
 int BaseManager::GetNutrientStockpile() const
@@ -341,8 +370,7 @@ int BaseManager::GetNutrientsRequired(const std::vector<ActiveEffect_t>& activeE
     {
         throw std::runtime_error("BaseManager::GetNutrientsRequired: m_pPopulation is null");
     }
-    const std::vector<ActiveEffect_t> baseEffects = FilterForBase(activeEffects, *this);
-    return m_pPopulation->GetNutrientsRequired(baseEffects);
+    return m_pPopulation->GetNutrientsRequired(BuildBaseEffects_(activeEffects));
 }
 
 int BaseManager::GetBaseSize() const

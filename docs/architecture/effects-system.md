@@ -82,11 +82,48 @@ graph TB
 
 ## Component Overview
 
+### Universal scope routing
+
+The system is **scope-routed, source-agnostic**: an effect declared on *any* config (building,
+improvement, unit component, pop type, social policy, rating table) is routed by its `scope`,
+not by which config declared it. Each scope has one "lane":
+
+| Scope | Resolved by | Collected via |
+|---|---|---|
+| `ThisBase` | owning base | source collector tags `originBase`; `FilterForBase` |
+| `AllOwnerBases` / `FactionGlobal` | every base of the faction | faction pool (`CollectActiveEffects`) |
+| `WorldGlobal` | every base of every faction | own pool + `GameState::CollectWorldEffects` (other factions' contributions, passed into `ProduceBaseResources`/`ApplyBaseGrowth` by the turn stages) |
+| `FactionUnits` | every live unit of the faction | faction pool, merged into `Unit::Get*` stat/flag resolution |
+| `ThisUnit` | the unit itself | `CollectUnitEffects` (design components) |
+| `ThisPop` | the pop itself | `Pop::ApplyTileMultipliers` |
+| `ThisTile` | tile resolvers | `CollectTileEffects`/`CollectAreaEffects` — features on the tile, radius-reaching features nearby, and units projecting component effects |
+
+In code, this table is a single constexpr function: `LaneFor(EffectScope_t) -> EffectLane`
+in `BonusEffect.h`, with the derived predicate `IsFactionLane`. Every collector/filter
+routes through it (`FilterForBase`, `AppendFactionLaneEffects`,
+`AppendTileEffects`/`TileEffectReaches`), so adding a scope means the compiler forces one
+routing decision in `LaneFor`'s exhaustive switch and every collector follows automatically.
+`tests/effects/ValidationTests.cpp` pins each scope's lane with `static_assert`s.
+
+Load-time validation (`BonusEffectParser::ValidateScopeForSource`) rejects only the
+certainly-impossible combinations — `ThisPop` off a pop type, `ThisUnit` off a unit
+component — with a clear error. Every other combination loads; combinations whose anchor
+concept doesn't exist yet are **legal but inert**:
+
+- **Faction-lane scopes on improvements** (e.g. a monolith granting `FactionGlobal` energy):
+  improvements will be faction-owned by territory, which isn't implemented yet. The config
+  loads; no collector picks it up until territory lands.
+- **`ThisTile` on buildings**: use a `selector: BaseTile` `StatModifier` instead (already
+  supported) — a building-projected tile aura would need a base-tile anchor.
+
 ### EffectConfig_t
 - **Purpose**: A single static effect definition loaded from configuration.
 - **Responsibilities**:
   - Holds the typed effect variant via `EffectVariant_t`.
-  - Stores metadata: `scope`, `persistence`, and `condition`.
+  - Stores metadata: `scope`, `persistence`, `condition`, and `radius`.
+  - `radius` (default `0`) applies to `ThisTile`-scoped effects: how far (Manhattan tiles)
+    beyond the host tile the effect reaches. Parsed from the effect entry's own `"radius"`
+    field; an improvement-level `"radius"` acts as the parse-time default for its effects.
 - **Lifetime**: Lives inside static configuration data such as `BuildingConfig_t`.
 
 ### EffectVariant_t
@@ -140,12 +177,16 @@ graph TB
 ### EffectScope_t
 - **Purpose**: Describes which entities an effect applies to.
 - **Values**:
-  - `ThisBase` — only the base the building is constructed in.
+  - `ThisBase` — only the base the effect originates in (a constructed building, a pop
+    living there, or — via `FilterForBase` — any source that tagged `originBase`).
   - `AllOwnerBases` — every base owned by the faction.
-  - `ThisUnit` — only the unit the component belongs to (all unit component effects use this scope).
-  - `FactionUnits` — all units owned by the faction.
+  - `ThisUnit` — only the unit the component belongs to (intrinsic component stats).
+  - `FactionUnits` — all live units owned by the faction. Consumed by `Unit::Get*` /
+    `Is*` resolution, which merges the design's own `ThisUnit` effects with the faction
+    pool's `FactionUnits` effects (so a building or policy can boost every unit).
   - `FactionGlobal` — the whole faction.
-  - `WorldGlobal` — all factions.
+  - `WorldGlobal` — all factions. A faction's own pool carries its own `WorldGlobal`
+    effects; turn stages add other factions' via `GameState::CollectWorldEffects`.
   - `ThisPop` — only the specific pop instance the effect belongs to (pop type tile-multiplier effects use this scope). Resolved locally by `Pop::ApplyTileMultipliers` and never enters the base-wide active effects pool — `FilterForBase` always excludes it, same as `ThisUnit`/`FactionUnits`.
   - `ThisTile` — only the specific tile the effect belongs to (terrain classification, river, fungus, or improvement). Resolved locally via `CollectTileEffects`/`ResolveTileYield`/`ResolveTileDefenseMultiplier` and never enters the base-wide active effects pool — `FilterForBase` always excludes it too. See Tile Improvement Effects below.
 
@@ -164,6 +205,10 @@ graph TB
 
 ### ResolveStatModifiers
 - **Purpose**: Resolves a set of `ActiveEffect_t` instances into a `StatBreakdown_t`.
+- **Signature**: `ResolveStatModifiers(matching, baseValue)` — `baseValue` is deliberately
+  **not defaulted**. Pure-multiplier stats (CostMultiplier, tile defense) collapse to 0 from
+  a 0 base, so every caller states its seed: `0.0` for additive stats, `1.0` for pure
+  multipliers, or a raw value the modifiers scale (tile yield, GrowthRate's `100.0`).
 - **Responsibilities**:
   - Collects `StatModifierEffect_t` effects from the input list.
   - Sorts contributions by `sourceId` for deterministic order.
@@ -187,28 +232,62 @@ graph TB
 
 ### FilterForBase
 - **Purpose**: Filters active effects to only those that apply to a specific base.
-- **Responsibilities**:
-  - Includes `ThisBase` effects whose `originBase` is the given base.
-  - Includes `AllOwnerBases`, `FactionGlobal`, and `WorldGlobal` effects.
-  - Excludes `ThisUnit`, `FactionUnits`, `ThisPop`, and `ThisTile` effects — these are resolved locally by their own owning instance (unit design, pop, or tile) and never apply at the base level.
+- **Responsibilities** (switching on `LaneFor(scope)`):
+  - `EffectLane::Base`: includes `ThisBase` effects whose `originBase` is the given base.
+  - `EffectLane::FactionWide`: includes `AllOwnerBases`, `FactionGlobal`, and `WorldGlobal` effects.
+  - All other lanes (`FactionUnits`, `UnitLocal`, `PopLocal`, `TileLocal`) are excluded — resolved by their own owning instance (unit, pop, or tile) and never apply at the base level.
 - **Returns**: A vector of relevant `ActiveEffect_t` instances.
 
+### Collection helpers (AppendActiveEffects and variants)
+- **Purpose**: The single config→`ActiveEffect_t` conversion. One core loop owns the two
+  universal rules — `Instantaneous` effects never enter the continuous pool (they fire once
+  via `DispatchInstantaneousEffects`), and `ThisBase` effects get their `originBase` tag.
+- **Variants** (all in `ActiveEffect.h`):
+  - `AppendActiveEffects(effects, pOriginBase, sourceId, out)` — every continuous effect.
+    `CollectUnitEffects`/`CollectPopEffects`, `BuildingManager::CollectEffects`, and
+    `SocialEngineeringManager` collect through this.
+  - `AppendFactionLaneEffects(effects, sourceId, out)` — only `IsFactionLane` scopes; what a
+    source contributes to the faction pool when its local scopes are resolved elsewhere.
+    Used by `Faction::CollectPopFactionEffects`.
+  - `AppendTileEffects(effects, sourceId, distance, out)` — only effects satisfying
+    `TileEffectReaches(e, distance)` (ThisTile lane, continuous, `radius >= distance`).
+    Used by own-tile collection (`distance` 0), neighbor auras, and unit auras alike.
+- **Adding a new effect source** is therefore two calls: `BonusEffectParser::ParseEffects`
+  at load time, and one of these at collection time — no hand-rolled loops.
+
 ### CollectActiveEffects
-- **Purpose**: Gathers all active effects for a faction.
+- **Purpose**: Gathers all active effects for a faction — the faction pool.
 - **Responsibilities**:
   - Takes only a `const Faction&` as a parameter.
-  - Calls `Faction::CollectBuildingEffects`, which calls `BaseManager::CollectBuildingEffects` on every base to collect raw building effects, then passes the combined list to `ExpandGrantBuildingEffects` (along with the faction's `BuildingRegistry` and base list) to expand any `GrantBuildingEffect_t` entries. The `sourceId` is chained (e.g., `command_nexus -> network_node`). `ThisBase`-scoped sub-effects of a faction-wide grant are cloned once per base with the correct `originBase`.
-  - Calls `CollectFromSocialEngineering` (delegating to `Faction::CollectSocialEffects`) to gather effects from current social engineering selections.
+  - Calls `Faction::CollectBuildingEffects`, which calls `BaseManager::CollectBuildingEffects` on every base to collect raw building effects, then passes the combined list to `ExpandGrantBuildingEffects` (along with the faction's `BuildingRegistry` and base list) to expand any `GrantBuildingEffect_t` entries. The `sourceId` is chained (e.g., `command_nexus -> network_node`). `ThisBase`-scoped sub-effects of a faction-wide grant are cloned once per base with the correct `originBase`. A grant whose target already appears in its own source chain is skipped (cycle guard).
+  - Calls `CollectFromSocialEngineering` (delegating to `Faction::CollectSocialEffects`) to gather the active social policies' effects — including `SocialRatingModifier` entries, which pass through as ordinary effects (see Social Ratings below).
+  - Calls `Faction::CollectPopFactionEffects` — pop effects on the faction lanes (`IsFactionLane`); the locally-resolved `ThisPop`/`ThisBase` stay with `Pop::ApplyTileMultipliers` and `CollectFromPops` respectively.
+  - Calls `Faction::CollectUnitFactionEffects` — live units' component effects on the faction lanes (e.g. a component that generates faction-wide energy while a unit carrying it exists); `ThisUnit`/`ThisTile` are resolved by the unit design and the tile resolvers.
 - **Returns**: A vector of `ActiveEffect_t` instances.
+
+### Social Ratings (two-level)
+- `SocialRatingModifier` effects are ordinary effects and can come from **any** source: a
+  policy's faction-wide `+2 Growth`, a building's `ThisBase` `+1 Growth`, etc.
+- `SocialRatingResolver` (`game/social-engineering/SocialRatingResolver.h`):
+  - `AccumulateSocialRatings(effects)` sums modifier contributions per rating axis.
+  - `ExpandSocialRatingEffects(effects, ratingRegistry)` maps each non-zero accumulated
+    level through `SocialRatingConfig::levelEffects` (exact-level match; unlisted levels
+    produce nothing) and appends the resulting gameplay effects with sourceId
+    `se_rating_<axis>_<total>`.
+- **Per-base effective ratings fall out automatically**: `BaseManager::BuildBaseEffects_`
+  runs the expansion *after* `FilterForBase` + pop merge, so faction-wide modifiers reach
+  every base while `ThisBase` modifiers shift only their own base — a `+2 Growth` policy
+  plus a `+1 Growth` shrine resolves that base at level 3 and every other base at level 2.
+  `BaseManager::GetEffectiveSocialRating(rating, pool)` exposes the per-axis total.
 
 ### ResourceManager Integration
 - **Purpose**: Applies active effects to base resource production.
 - **Responsibilities**:
   - `Faction::ProduceBaseResources()` collects active effects once per faction and passes them to each base.
-  - `BaseManager::ProduceResources()` uses `FilterForBase` to keep only effects relevant to this base, then appends this base's own pop-generated effects via `CollectFromPops(GetPopContainer(), *this)` (see Pop Type Effects above) before handing the combined list to `ResourceManager`.
+  - `BaseManager::ProduceResources()` builds the base's final effect list via `BuildBaseEffects_`: `FilterForBase` over the faction pool, plus this base's own pop-generated effects via `CollectFromPops(GetPopContainer(), *this)` (see Pop Type Effects above), plus the gameplay effects of this base's effective social rating levels via `ExpandSocialRatingEffects` (see Social Ratings above). `ApplyGrowth` and `GetNutrientsRequired` use the same helper.
   - `ResourceManager::ProduceResources()` stores the effects and uses them when calculating nutrients, minerals, and energy. There is a **single per-tile pass**: `ResourceManager::ComputeWorked_` sums `WorkerAssignmentManager::ComputeWorkedResources(baseEffects)` (every worker pop's tile) plus the base center tile (worked for free, no pop). Each tile's full yield is resolved once by `TileEffectsContext::ResolveTileYield(tile, isBaseTile, baseEffects)`, which folds in every selector-matching `StatModifier` from `baseEffects`; the pop's tile multipliers then scale that whole yield. Per-tile `Add`/`Multiply` modifiers summed across tiles are mathematically equivalent to the old aggregate-with-counts approach, so no separate delta pass is needed.
     - `CalculateResource_` then adds only **flat** (non-selector) `StatModifier` contributions for `StatId::Nutrients`/`Minerals`/`Energy` via `FilterFlatByStatId`/`ResolveStatModifiers` — selector-carrying modifiers are excluded here because they were already applied per tile.
-    - `StatId::Econ`/`Labs`/`Psych` are not produced from tiles — `CalculateEcon_`/`CalculateLabs_`/`CalculatePsych_` take the percentage-of-energy split from `EconomyManager` and add any flat `StatModifier` contributions (e.g. specialist pop output) on top via `FilterByStatId`/`ResolveStatModifiers`, the same pattern used by `AllocateEnergy_` when stockpiling each turn.
+    - `StatId::Econ`/`Labs`/`Psych` are not produced from tiles — `CalculateEcon_`/`CalculateLabs_`/`CalculatePsych_` take the percentage-of-energy split from `EconomyManager` and add any flat `StatModifier` contributions (e.g. specialist pop output) on top via `FilterFlatByStatId`/`ResolveStatModifiers`, the same pattern used by `AllocateEnergy_` when stockpiling each turn. **All base-level resolution uses `FilterFlatByStatId`** — selector-carrying modifiers belong exclusively to the per-tile pass (and parse-time validation restricts selectors to tile-resource stats anyway).
   - Stored effects are also used by the live `Get*Production()` queries.
 
 ### BuildingManager / BaseManager Constructed Buildings
@@ -225,15 +304,39 @@ graph TB
 - **Responsibilities**:
   - `ParseStatId`, `ParseRuleFlagId`, `ParseModifierOp`, `ParseEffectScope`, `ParseEffectPersistence` — the canonical string&lt;-&gt;enum mappings. These previously existed as separate, drifting copies in `BuildingConfigParser` and `UnitComponentConfigParser`.
   - `ParseNumber` — reads a JSON field as either a number or a numeric string (used for `amount` and `value`).
-  - `ParseTileSelector` — parses a `TileSelector_t` from a `selector` JSON object. Called by the `StatModifier` branch when a `selector` field is present, making that modifier a per-tile yield modifier.
+  - `ParseTileSelector` — parses a `TileSelector_t` from a `selector` JSON object. Called by the `StatModifier` branch when a `selector` field is present, making that modifier a per-tile yield modifier. A `selector` on any stat other than `nutrients`/`minerals`/`energy` is rejected at parse time — selectors only take part in tile-yield resolution, so such a modifier would silently never apply.
   - `ParseEffectConfig` — parses one entry of an `effects` array (`type`/`scope`/`persistence`/`condition`/`parameters`) into an `EffectConfig_t`. Covers every `EffectVariant_t` alternative, and parses the optional typed `condition` object via `ParseCondition`.
   - `ParseEffects` — parses the `effects` array of a containing JSON object, returning `{}` if absent.
 - **Consumers**: `BuildingConfigParser` and `UnitComponentConfigParser` both call `BonusEffectParser::ParseEffects` directly on the building/component JSON object — there is no per-domain effect schema anymore. Adding a new effect source (e.g. a future social-engineering or diplomacy parser) means calling the same function.
 
+### EffectReferenceValidator (post-load id validation)
+
+- **Location**: `include/game/EffectReferenceValidator.h` / `src/game/EffectReferenceValidator.cpp`.
+- **Purpose**: catches config typos at startup instead of as silent no-op effects. Individual
+  parsers can't do this — an effect may legitimately reference a config that loads later —
+  so it runs once from `Engine` after **all** registries are loaded:
+  `ValidateEffectReferences(*m_gameDataContext)`.
+- **Checks** (throws naming the source config and the bad id): `GrantBuilding` targets
+  against `BuildingRegistry`, `GrantTech` targets against `TechRegistry`, `HasImprovement`
+  selector ids against `ImprovementRegistry`, and `TargetTileHas` condition values against
+  improvement ids plus `AllTerrainFeatureIds()` (the `Tile.h` list of everything
+  `Tile::HasFeature` can match). `GrantUnit` is not validated — unit designs are runtime
+  data with no config registry.
+- **Coverage**: every effect-declaring config — buildings, improvements, pop types, unit
+  components, social policies, and each rating level's effect list.
+- Deliberately **not** part of `Registry::Validate_`: test fixtures intentionally contain
+  dangling grant ids (to test that expansion skips unknown targets), and single registries
+  can't see cross-registry references anyway.
+
 ### Unit Component Effects
 
 - Unit components (`config/unit_components/*.json`) use the exact same `effects` array shape as buildings — no more `stats`/`flags`/`bonus_tables` shorthand.
-- Every unit component effect uses `"scope": "ThisUnit"` explicitly.
+- Intrinsic unit stats use `"scope": "ThisUnit"`. Components can also declare other scopes:
+  `ThisTile` (+ `radius`) makes the component a mobile tile aura (see Unit auras above), and
+  faction-lane scopes (e.g. `FactionGlobal`) apply while a unit carrying the component exists
+  (collected by `Faction::CollectUnitFactionEffects`).
+- A live `Unit`'s stat getters resolve `ThisUnit` component effects **plus** the faction
+  pool's `FactionUnits` effects; `UnitDesign`'s getters stay intrinsic (designer UI).
 - A stat with a flat bonus (e.g. a weapon's base attack) is a `StatModifier` effect with `op: "Add"`. A percentage bonus uses `op: "AddPercent"` (amount in percent points, e.g. `25`); a compounding factor uses `op: "MultiplyGeometric"`.
 - A situational combat bonus (e.g. "+25% attack into Forest" or "+25% attack vs a Base") is a `StatModifier` on `attack`/`defense` with `op: "AddPercent"`, `amount: 25`, plus a `condition` (e.g. `{ "kind": "TargetTileHas", "value": "Forest" }`). It is resolved per-combat via `Unit::GetAttackAgainst`, not through the context-free `GetAttack`.
 - A unit rule flag (e.g. `flight`) is a `RuleFlag` effect; flags that don't apply are simply omitted rather than written as `false`.
@@ -259,15 +362,16 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
 - **`ImprovementConfig_t`**: `id`, `name`, `description`, `mineralCost`, `requiredTech`, `excludes` (other feature ids that can't coexist with this one on a tile), `radius` (default `0`), `frequency`, `spritePath`, `effects` (the standard `EffectConfig_t` vector, parsed via `BonusEffectParser::ParseEffects`).
 - **How a tile holds features**: improvements are stored directly as non-owning `const ImprovementConfig_t*` in `Tile::GetImprovements()` (the same pattern `BuildingManager` uses for `BuildingConfig_t*`); the caller resolves the id via `ImprovementRegistry` (the funnel is `TileEffectsContext`). Terrain stays as typed enums/bools on `Tile` — world-gen and rendering need the exhaustive/exclusive guarantee (every tile is *exactly one* of Flat/Rolling/Rocky) — and is exposed for effect resolution as string ids via `Tile::GetTerrainFeatureIds()` (Rockiness, Moisture, River, Fungus). `Tile::HasFeature(id)` answers "is this feature present?" across both (terrain strings + improvement ids) for conditions/selectors/`CanBuildImprovement`.
 - **`CollectTileEffects(tile, improvementRegistry)`**: collects a tile's own `ThisTile`-scoped effects into a flat `ActiveEffect_t` list (sourceId = the feature's id) in two passes — terrain ids from `GetTerrainFeatureIds()` looked up via `registry.Find`, plus each `GetImprovements()` config read directly (no lookup). Mirrors `CollectPopEffects`/`CollectUnitEffects`. Only ever resolves a tile's *own* effects (radius 0) — it has no `WorldMap` to look at neighbors.
-- **`radius` (aura effects)**: most improvements only affect their own tile (`radius = 0`, e.g. Bunker/Rocky/Fungus/Base). An improvement with `radius > 0` also affects any tile within that many tiles (Manhattan distance) — e.g. `Sensor` (`radius: 2`) projects its `+25%` defense bonus, `Mirror` (`radius: 2`) projects its `+1 energy` bonus, and `Condenser` (`radius: 1`) projects its `+1 moisture_tier` shift to their respective radiuses. `CollectAreaEffects(tile, worldMap, registry)` is the shared implementation: it starts from `CollectTileEffects(tile, registry)` (the tile's own features) and then scans every tile within the registry's max configured `radius`, appending any improvement whose `radius` reaches the target tile.
-- **`CollectAreaEffects(tile, worldMap, registry)`**: the single function powering all three radius-aware resolvers (defense, yield, and moisture recompute). `WorldMap` is needed to look up neighboring tiles.
+- **`radius` (aura effects)**: radius is a **per-effect** property (`EffectConfig_t::radius`, default `0` = the host tile only). An improvement-level `"radius"` in JSON acts as the parse-time default for that improvement's effects, so existing configs keep working — e.g. `Sensor` (`radius: 2`) projects its `+25%` defense bonus, `Mirror` (`radius: 2`) its `+1 energy`, `Condenser` (`radius: 1`) its `+1 moisture_tier`. An individual effect can declare its own `"radius"` to differ from its siblings. Only continuous `ThisTile`-scoped effects take part in aura resolution — neighbor collection applies the exact same scope/persistence filter as own-tile collection.
+- **Unit auras**: unit components can carry `ThisTile`-scoped effects with a radius (e.g. a sensor pod granting `+25%` defense within 2 tiles). `CollectAreaEffects` scans `WorldMap::GetUnitsOnTile` over the aura radius — including units standing on the resolved tile itself — so the aura follows the unit as it moves. `TileEffectsContext` takes the `UnitComponentRegistry` at construction to size its scan bound.
+- **`CollectAreaEffects(tile, worldMap, registry)`**: the single function powering all three radius-aware resolvers (defense, yield, and moisture recompute). `WorldMap` is needed to look up neighboring tiles and units.
 - **`ResolveTileDefenseMultiplier(tile, worldMap, improvementRegistry)`**: `ResolveStatModifiers(FilterByStatId(CollectAreaEffects(...), Defense), 1.0).total`.
 - **`ResolveTileYield(tile)`**: resolves `Nutrients`/`Minerals`/`Energy` from `CollectAreaEffects` (so a nearby Mirror's energy aura IS included). Energy is seeded from `GetElevationEnergySeed()` before resolving so River/improvement `Add` effects layer on top. Used where only intrinsic + area yield is wanted (e.g. the auto-assign tile scorer, `BaseWorkableAreaDisplay`).
 - **`ResolveTileYield(tile, isBaseTile, baseEffects)`**: the full worked-tile yield. Starts from `CollectAreaEffects`, then appends every `baseEffects` `StatModifier` whose `selector` matches this tile (`BaseTile` matches iff `isBaseTile`; `HasImprovement` matches iff `tile.HasImprovement(id)`), and resolves each resource over the combined list. This is the single entry point `WorkerAssignmentManager::ComputeWorkedResources` and `ResourceManager::ComputeWorked_` use for a tile's pre-pop-multiplier yield.
 - **`StatId::MoistureTier`** (`"moisture_tier"` in JSON): integer tile tier (Arid=0, Moist=1, Wet=2), used exclusively by `RecomputeMoisture` as a terrain-mutation target. Not queryable at runtime — it is a seed for `SetMoisture()`, not a cached stat. `Condenser`'s `+1 moisture_tier Add` effect flows through `RecomputeMoisture` to actually call `Tile::SetMoisture()`, making the change visible in rendering and tile-yield resolution.
 - **`Tile::m_baseMoisture`/`GetBaseMoisture()`/`SetBaseMoisture()`**: the natural, un-condensed terrain truth set once by `WorldGenerator`. `m_moisture`/`GetMoisture()`/`SetMoisture()` is the current/effective value (what rendering and `GetTerrainFeatureIds()` see), mutated by `RecomputeMoisture` from the base + nearby Condensers. World-gen sets both to the same initial random value; `RecomputeMoisture` derives `m_moisture` from `m_baseMoisture` fresh each time — never increments/decrements in place — so overlapping Condensers and add/remove order can never cause drift.
 - **`RecomputeMoisture(tile, worldMap, registry)`**: re-derives `tile`'s effective moisture from `tile.GetBaseMoisture()` + any `moisture_tier` `Add` effects from `CollectAreaEffects`, clamps to `[Arid, Wet]`, calls `tile.SetMoisture()`. Single function, always called from the current live world state — idempotent, consistent with any number of overlapping Condensers.
-- **`AddImprovementWithEffects` / `RemoveImprovementWithEffects`**: the single safe entry point for adding/removing any improvement. After the raw `Tile::AddImprovement/RemoveImprovement`, calls `RecomputeMoisture` for every tile within the improvement's own `radius` (including the host tile) — so a Condenser addition immediately updates moisture on itself and 8 neighbors, and removal automatically reverts them. `BaseManager` uses this for `"Base"` (radius 0, a no-op recompute, but consistent). When a future improvement-construction UI is added, it must go through these functions.
+- **`AddImprovementWithEffects` / `RemoveImprovementWithEffects`**: the single safe entry point for adding/removing any improvement. After the raw `Tile::AddImprovement/RemoveImprovement`, calls `RecomputeMoisture` for every tile within the improvement's maximum effect reach (improvement-level radius or any larger per-effect radius, including the host tile) — so a Condenser addition immediately updates moisture on itself and 8 neighbors, and removal automatically reverts them. `BaseManager` uses this for `"Base"` (radius 0, a no-op recompute, but consistent). When a future improvement-construction UI is added, it must go through these functions.
 - **`CanBuildImprovement(tile, candidateConfig)`**: returns false if any id in `candidateConfig.excludes` is present on the tile per `tile.HasFeature(id)` (e.g. Farm excludes Rocky). Exposed as a resolver only — no improvement-construction UI/flow exists yet to enforce it.
 - **"Base" as an improvement**: `BaseManager`'s constructor calls `AddImprovementWithEffects(m_tile, "Base", worldMap, registry)`, so a founded base grants its own `ThisTile` defense bonus (`config/improvements.json`'s `Base` entry, currently a placeholder `+100%`) through the exact same mechanism as Bunker/Rocky/Fungus. This is also why `BaseManager` now holds a non-const `Tile&` (previously `const Tile&`), `Faction::CreateBase` takes a non-const `Tile*`, and `Faction::CreateBase` takes a non-const `WorldMap&`.
 - **Building bonuses to worked improvements**: a building can boost worked tiles that have a given improvement by attaching a `HasImprovement` `selector` to a `StatModifier` (e.g. Nutrient Bank's "+1 nutrients to worked Farms"). The selector's `improvement` is the plain `ImprovementConfig_t::id` string and is matched against `Tile::HasImprovement()` during the per-tile yield resolve — the same string-id lookup used everywhere else, with no separate improvement-type enum.
@@ -281,7 +385,19 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
 
 ## Known Gaps
 
-- **`ResolveStatModifiers` needs a seeded base for pure-multiplier stats**: the formula `total = addTotal * arithmeticFactor * geometricFactor` starts `addTotal` at the caller-supplied `baseValue` (default `0.0`). Stats that are only ever modified via `MultiplyGeometric`/`AddPercent` (no `Add` contribution) must pass `baseValue = 1.0`, or `total` resolves to `0`. `UnitDesign::GetBaseCost()` does this for `StatId::CostMultiplier`; any future pure-multiplier stat needs the same care.
+- **Unit `MoistureTier` auras don't retrigger `RecomputeMoisture` on movement**: moisture
+  recompute is event-driven from improvement add/remove (`AddImprovementWithEffects`). A unit
+  component with a `moisture_tier` effect would be collected by `CollectAreaEffects` but the
+  recompute isn't hooked to `WorldMap::OnUnitMoved` yet. Yield/defense unit auras are
+  resolved on demand and unaffected.
+- **Improvement faction-lane effects are inert pending territory**: legal to declare (see
+  Universal scope routing), but no collector attributes an improvement to a faction until
+  territory ownership exists.
+- **Faction pools are collected on demand, uncached**: `CollectActiveEffects` runs per query
+  (production, growth, each live-unit stat read). Fine at current scale; a per-turn cache
+  with explicit invalidation is a future optimization if profiling warrants it.
+
+- **Pure-multiplier stats still need the right seed value**: `ResolveStatModifiers` now takes `baseValue` as a required parameter (no default), so a caller can no longer *forget* to seed — but it can still pass the wrong seed (`0.0` where a pure-multiplier stat needs `1.0`). `UnitDesign::GetBaseCost()` passes `1.0` for `StatId::CostMultiplier`; any future pure-multiplier stat needs the same care at its resolve site.
 - **`BuildingConfig_t::IsDiscovered()` uses OR semantics**: a building becomes available once *any* listed `required_techs` entry is discovered, not all of them. May be intentional (alternate prerequisites) but is worth confirming against design intent.
 - **No combat system consumes `ResolveTileDefenseMultiplier` yet**: `Unit::GetDefense()` still returns only the unit's own design stat. Wiring an actual attack/defense resolution (and deciding how/whether it multiplies the attacker's tile bonus too) is a separate, larger feature.
 - **No improvement-construction flow consumes `CanBuildImprovement` yet**: `Tile::AddImprovement()` has no caller besides `BaseManager`'s `"Base"` wiring — there's no UI/production path for the player to actually build Farm/Mine/Bunker, so the `excludes` exclusivity check is unenforced in practice today.

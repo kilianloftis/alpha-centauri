@@ -90,10 +90,10 @@ TEST_CASE("FilterForBase: scope rules with real base identities", "[effects][bas
     // For base A: its own ThisBase effect plus the three base-applicable global scopes.
     // The distinct powers of two make any wrong inclusion identifiable from the total.
     const auto forA = FilterForBase(effects, baseA);
-    CHECK(ResolveStatModifiers(FilterByStatId(forA, StatId::Nutrients)).total == Approx(1.0 + 4.0 + 8.0 + 16.0));
+    CHECK(ResolveStatModifiers(FilterByStatId(forA, StatId::Nutrients), 0.0).total == Approx(1.0 + 4.0 + 8.0 + 16.0));
 
     const auto forB = FilterForBase(effects, baseB);
-    CHECK(ResolveStatModifiers(FilterByStatId(forB, StatId::Nutrients)).total == Approx(2.0 + 4.0 + 8.0 + 16.0));
+    CHECK(ResolveStatModifiers(FilterByStatId(forB, StatId::Nutrients), 0.0).total == Approx(2.0 + 4.0 + 8.0 + 16.0));
 }
 
 TEST_CASE("FilterForBase: a ThisBase effect with no origin base applies to no base", "[effects][base][filter]")
@@ -134,7 +134,7 @@ TEST_CASE("DispatchInstantaneousEffects: Instantaneous GrantBuilding constructs 
 
     // The granted building is a real constructed building: its continuous effects collect.
     const auto effects = base.CollectBuildingEffects();
-    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Nutrients)).total == 2.0);
+    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Nutrients), 0.0).total == 2.0);
 }
 
 TEST_CASE("Full pipeline: building and pop bonuses land in base resource production",

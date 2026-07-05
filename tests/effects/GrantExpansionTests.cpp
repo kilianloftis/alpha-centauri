@@ -25,7 +25,7 @@ double TotalFor(const std::vector<ActiveEffect_t>& effects, StatId stat, const B
             subset.push_back(effect);
         }
     }
-    return ResolveStatModifiers(subset).total;
+    return ResolveStatModifiers(subset, 0.0).total;
 }
 
 int CountBySource(const std::vector<ActiveEffect_t>& effects, const std::string& sourceId)

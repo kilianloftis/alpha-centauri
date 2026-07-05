@@ -29,6 +29,11 @@ enum class Moisture
 std::string ToString(Rockiness rockiness);
 std::string ToString(Moisture moisture);
 
+// Every terrain feature id Tile::HasFeature can match (all rockiness/moisture tiers plus
+// River and Fungus). Together with improvement ids, these are the valid feature references
+// for effect conditions/selectors — used by ValidateEffectReferences.
+const std::vector<std::string>& AllTerrainFeatureIds();
+
 class Tile
 {
 public:

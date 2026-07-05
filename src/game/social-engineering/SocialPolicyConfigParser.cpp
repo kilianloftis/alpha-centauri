@@ -26,7 +26,7 @@ SocialPolicyConfig SocialPolicyConfigParser::ParsePolicyConfig(const nlohmann::j
     config.name = ConfigFields::ParseName(policyJson, config.id);
     config.category = ParseCategory(policyJson.at("category"));
     config.requiredTech = ConfigFields::ParseRequiredTech(policyJson);
-    config.effects = BonusEffectParser::ParseEffects(policyJson);
+    config.effects = BonusEffectParser::ParseEffects(policyJson, EffectSourceKind::SocialPolicy, config.id);
 
     return config;
 }

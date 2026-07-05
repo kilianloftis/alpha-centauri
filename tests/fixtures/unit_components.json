@@ -1,0 +1,35 @@
+[
+  {
+    "id": "test_chassis",
+    "name": "Test Chassis",
+    "type": "chassis",
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "movement", "amount": 2 } },
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "hit_points", "amount": 10 } }
+    ]
+  },
+  {
+    "id": "test_weapon",
+    "name": "Test Weapon",
+    "type": "weapon",
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "attack", "amount": 4 } }
+    ]
+  },
+  {
+    "id": "sensor_pod",
+    "name": "Sensor Pod (mobile ThisTile aura, radius 2)",
+    "type": "special",
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisTile", "radius": 2, "parameters": { "stat": "defense", "amount": 25, "op": "AddPercent" } }
+    ]
+  },
+  {
+    "id": "energy_siphon",
+    "name": "Energy Siphon (faction-lane effect on a component)",
+    "type": "special",
+    "effects": [
+      { "type": "StatModifier", "scope": "FactionGlobal", "parameters": { "stat": "energy", "amount": 1 } }
+    ]
+  }
+]

@@ -10,6 +10,7 @@ namespace ac
 
 class ImprovementRegistry;
 class Tile;
+class UnitComponentRegistry;
 class WorldMap;
 
 // Bundles WorldMap and ImprovementRegistry into a single dependency that knows how to resolve
@@ -19,7 +20,11 @@ class WorldMap;
 class TileEffectsContext
 {
 public:
-    TileEffectsContext(WorldMap& rWorldMap, const ImprovementRegistry& rImprovements);
+    // pUnitComponents is only used to size the aura scan radius: unit components can carry
+    // ThisTile-scoped effects with a radius (mobile auras, e.g. a sensor pod), and the scan
+    // bound must cover the largest such radius. Pass nullptr if units never project auras.
+    TileEffectsContext(WorldMap& rWorldMap, const ImprovementRegistry& rImprovements,
+                       const UnitComponentRegistry* pUnitComponents);
 
     // WorldMap access — used by callers (e.g. BaseManager) that need the map for spatial
     // queries like computing workable tile positions.
@@ -29,8 +34,10 @@ public:
     // Collects this tile's own ThisTile-scoped effects (radius 0 only). No neighbor scan.
     std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile) const;
 
-    // Collects this tile's own effects plus any radius-extending effects from nearby tiles
-    // (e.g. a Sensor or Mirror whose radius reaches rTile). Used by all three resolvers below.
+    // Collects this tile's own effects plus any radius-extending effects from nearby tiles —
+    // improvements/terrain (e.g. a Sensor or Mirror whose effect radius reaches rTile) and
+    // units whose components project ThisTile effects (including units standing on rTile
+    // itself). Used by all three resolvers below.
     std::vector<ActiveEffect_t> CollectAreaEffects(const Tile& rTile) const;
 
     // Combined nutrient/mineral/energy yield including aura effects (e.g. nearby Mirror).
@@ -69,7 +76,9 @@ private:
 
     WorldMap& m_rWorldMap;
     const ImprovementRegistry& m_rImprovements;
-    int m_maxRadius;  // max improvement radius across all configs; cached in constructor
+    // Max per-effect radius across all improvement configs and unit-component ThisTile
+    // effects; bounds the aura scan. Cached in the constructor.
+    int m_maxRadius;
 };
 
 } // namespace ac

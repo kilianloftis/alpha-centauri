@@ -5,6 +5,9 @@
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/units/Unit.h"
+#include "game/units/UnitComponentRegistry.h"
+#include "game/units/UnitDesign.h"
 #include "lib/effects/ActiveEffect.h"
 #include <algorithm>
 #include <cmath>
@@ -16,31 +19,43 @@ namespace ac
 namespace
 {
 
-// Appends a nearby feature's effects when its radius reaches `distance` tiles
-// (radius >= distance). Same filtering as a tile's own features (CollectTileEffects):
-// only continuous ThisTile-scoped effects take part in tile-level resolution.
-void AppendReachingEffects_(const ImprovementConfig_t& rFeature, int distance,
+// Appends ThisTile-scoped effects projected by units within maxRadius of rOrigin — a unit
+// component with a radius effect is a mobile aura (e.g. a sensor pod). Units standing on
+// rOrigin itself project at distance 0. TileEffectReaches is the same filter improvements
+// and terrain use.
+void AppendUnitAuraEffects_(const Tile& rOrigin, const WorldMap& rWorldMap, int maxRadius,
                             std::vector<ActiveEffect_t>& rOut)
 {
-    if (rFeature.radius < distance)
-    {
-        return;
-    }
-    for (const EffectConfig_t& rEffect : rFeature.effects)
-    {
-        if (rEffect.scope != EffectScope_t::ThisTile)
+    ForEachTileInManhattanRadius(rOrigin, rWorldMap, maxRadius, true,
+        [&](const Tile* pNearby, int distance)
         {
-            continue;
-        }
-        if (rEffect.persistence == EffectPersistence_t::Instantaneous)
-        {
-            continue;
-        }
-        ActiveEffect_t active;
-        active.config = &rEffect;
-        active.sourceId = rFeature.id;
-        rOut.push_back(active);
+            for (const Unit* pUnit : rWorldMap.GetUnitsOnTile(*pNearby))
+            {
+                if (!pUnit)
+                {
+                    continue;
+                }
+                for (ActiveEffect_t& rActive : pUnit->GetDesign().CollectEffects())
+                {
+                    if (TileEffectReaches(*rActive.config, distance))
+                    {
+                        rOut.push_back(std::move(rActive));
+                    }
+                }
+            }
+        });
+}
+
+// How far an improvement's effects can reach: the improvement-level radius (kept as the
+// parse-time default) or any larger per-effect radius.
+int MaxEffectReach_(const ImprovementConfig_t& rConfig)
+{
+    int reach = rConfig.radius;
+    for (const EffectConfig_t& rEffect : rConfig.effects)
+    {
+        reach = std::max(reach, rEffect.radius);
     }
+    return reach;
 }
 
 void AppendAreaEffectsFromNeighbors_(const Tile& rOrigin, const WorldMap& rWorldMap,
@@ -56,13 +71,13 @@ void AppendAreaEffectsFromNeighbors_(const Tile& rOrigin, const WorldMap& rWorld
             {
                 if (const ImprovementConfig_t* pFeature = rImprovements.Find(featureId))
                 {
-                    AppendReachingEffects_(*pFeature, distance, rOut);
+                    AppendTileEffects(pFeature->effects, pFeature->id, distance, rOut);
                 }
             }
 
             for (const ImprovementConfig_t* pImprovement : pNearby->GetImprovements())
             {
-                AppendReachingEffects_(*pImprovement, distance, rOut);
+                AppendTileEffects(pImprovement->effects, pImprovement->id, distance, rOut);
             }
         });
 }
@@ -111,14 +126,28 @@ void RecomputeMoistureInRadius_(const Tile& rChangedTile, int radius, const Tile
 
 } // namespace
 
-TileEffectsContext::TileEffectsContext(WorldMap& rWorldMap, const ImprovementRegistry& rImprovements)
+TileEffectsContext::TileEffectsContext(WorldMap& rWorldMap, const ImprovementRegistry& rImprovements,
+                                       const UnitComponentRegistry* pUnitComponents)
     : m_rWorldMap(rWorldMap)
     , m_rImprovements(rImprovements)
     , m_maxRadius(0)
 {
     for (const ImprovementConfig_t& rConfig : rImprovements.GetAll())
     {
-        m_maxRadius = std::max(m_maxRadius, rConfig.radius);
+        m_maxRadius = std::max(m_maxRadius, MaxEffectReach_(rConfig));
+    }
+    if (pUnitComponents)
+    {
+        for (const UnitComponentConfig_t& rComponent : pUnitComponents->GetAll())
+        {
+            for (const EffectConfig_t& rEffect : rComponent.effects)
+            {
+                if (rEffect.scope == EffectScope_t::ThisTile)
+                {
+                    m_maxRadius = std::max(m_maxRadius, rEffect.radius);
+                }
+            }
+        }
     }
 }
 
@@ -141,6 +170,7 @@ std::vector<ActiveEffect_t> TileEffectsContext::CollectAreaEffects(const Tile& r
 {
     std::vector<ActiveEffect_t> effects = ac::CollectTileEffects(rTile, m_rImprovements);
     AppendAreaEffectsFromNeighbors_(rTile, m_rWorldMap, m_rImprovements, m_maxRadius, effects);
+    AppendUnitAuraEffects_(rTile, m_rWorldMap, m_maxRadius, effects);
     return effects;
 }
 
@@ -160,8 +190,8 @@ TileResources_t TileEffectsContext::ResolveTileYield(const Tile& rTile, bool isB
 TileResources_t TileEffectsContext::ResolveYieldFromEffects_(const Tile& rTile,
                                                              const std::vector<ActiveEffect_t>& effects) const
 {
-    const double nutrients = ResolveStatModifiers(FilterByStatId(effects, StatId::Nutrients)).total;
-    const double minerals  = ResolveStatModifiers(FilterByStatId(effects, StatId::Minerals)).total;
+    const double nutrients = ResolveStatModifiers(FilterByStatId(effects, StatId::Nutrients), 0.0).total;
+    const double minerals  = ResolveStatModifiers(FilterByStatId(effects, StatId::Minerals), 0.0).total;
     const double energy    = ResolveStatModifiers(
         FilterByStatId(effects, StatId::Energy), static_cast<double>(rTile.GetElevationEnergySeed())).total;
 
@@ -201,13 +231,13 @@ void TileEffectsContext::AddImprovementWithEffects(Tile& rTile, const std::strin
     }
 
     rTile.AddImprovement(*pConfig);
-    RecomputeMoistureInRadius_(rTile, pConfig->radius, *this, m_rWorldMap);
+    RecomputeMoistureInRadius_(rTile, MaxEffectReach_(*pConfig), *this, m_rWorldMap);
 }
 
 void TileEffectsContext::RemoveImprovementWithEffects(Tile& rTile, const std::string& improvementId) const
 {
     const ImprovementConfig_t* pConfig = m_rImprovements.Find(improvementId);
-    const int radius = pConfig ? pConfig->radius : 0;
+    const int radius = pConfig ? MaxEffectReach_(*pConfig) : 0;
 
     rTile.RemoveImprovement(improvementId);
     RecomputeMoistureInRadius_(rTile, radius, *this, m_rWorldMap);

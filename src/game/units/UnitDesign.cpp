@@ -67,6 +67,11 @@ const UnitComponentConfig_t* UnitDesign::GetComponentForSlot(const std::string& 
     return nullptr;
 }
 
+std::vector<ActiveEffect_t> UnitDesign::CollectEffects() const
+{
+    return CollectUnitEffects(m_components);
+}
+
 int UnitDesign::GetBaseCost() const
 {
     int rawCost = 0;
@@ -76,7 +81,7 @@ int UnitDesign::GetBaseCost() const
         rawCost += static_cast<int>(pComp->mineralCost * rSlot.costModifier);
     }
 
-    const std::vector<ActiveEffect_t> allEffects = CollectUnitEffects(m_components);
+    const std::vector<ActiveEffect_t> allEffects = CollectEffects();
     const StatBreakdown_t breakdown = ResolveStatModifiers(FilterByStatId(allEffects, StatId::CostMultiplier), 1.0);
     const float costMult = breakdown.contributions.empty() ? 1.0f : static_cast<float>(breakdown.total);
 
@@ -85,7 +90,7 @@ int UnitDesign::GetBaseCost() const
 
 float UnitDesign::ResolveStat_(StatId statId) const
 {
-    return static_cast<float>(ResolveStatModifiers(FilterByStatId(CollectUnitEffects(m_components), statId)).total);
+    return static_cast<float>(ResolveStatModifiers(FilterByStatId(CollectUnitEffects(m_components), statId), 0.0).total);
 }
 
 bool UnitDesign::ResolveFlag_(RuleFlagId flagId) const
@@ -116,7 +121,7 @@ bool UnitDesign::IsSingleUse() const            { return ResolveFlag_(RuleFlagId
 int UnitDesign::GetAttackAgainst(const EffectContext_t& ctx) const
 {
     const std::vector<ActiveEffect_t> effects = CollectUnitEffects(m_components);
-    return static_cast<int>(ResolveStatModifiers(FilterByStatIdInContext(effects, StatId::Attack, ctx)).total);
+    return static_cast<int>(ResolveStatModifiers(FilterByStatIdInContext(effects, StatId::Attack, ctx), 0.0).total);
 }
 
 } // namespace ac

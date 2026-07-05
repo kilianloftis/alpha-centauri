@@ -139,8 +139,8 @@ TEST_CASE("CollectFromPops: only ThisBase-scoped pop effects enter the base pool
     }
 
     // Stacking: two Doctors contribute +4 psych in total.
-    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Psych)).total == 4.0);
-    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Econ)).total == 4.0);
+    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Psych), 0.0).total == 4.0);
+    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Econ), 0.0).total == 4.0);
     CHECK(CountBySource(effects, "Doctor") == 2);
 }
 
@@ -162,7 +162,7 @@ TEST_CASE("CollectTileEffects: terrain features resolve by string id through the
         const auto effects = CollectTileEffects(tile, world.improvements);
         REQUIRE(effects.size() == 2);
         CHECK(effects[0].sourceId == "Rocky");
-        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Minerals)).total == 2.0);
+        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Minerals), 0.0).total == 2.0);
     }
 
     SECTION("river and moisture stack with rockiness")
@@ -171,9 +171,9 @@ TEST_CASE("CollectTileEffects: terrain features resolve by string id through the
         tile.SetMoisture(Moisture::Wet);       // +2 nutrients
         tile.SetHasRiver(true);                // +1 energy
         const auto effects = CollectTileEffects(tile, world.improvements);
-        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Minerals)).total == 1.0);
-        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Nutrients)).total == 2.0);
-        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Energy)).total == 1.0);
+        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Minerals), 0.0).total == 1.0);
+        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Nutrients), 0.0).total == 2.0);
+        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Energy), 0.0).total == 1.0);
     }
 }
 
@@ -192,8 +192,8 @@ TEST_CASE("CollectTileEffects: improvements contribute directly from their held 
     tile.AddImprovement(*pMine);
 
     const auto effects = CollectTileEffects(tile, world.improvements);
-    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Nutrients)).total == 1.0);
-    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Minerals)).total == 2.0);
+    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Nutrients), 0.0).total == 1.0);
+    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Minerals), 0.0).total == 2.0);
     CHECK(CountBySource(effects, "Farm") == 1);
     CHECK(CountBySource(effects, "Mine") == 1);
 }
@@ -211,7 +211,7 @@ TEST_CASE("CollectTileEffects: only ThisTile-scoped effects are collected from a
     {
         CHECK(effect.config->scope == EffectScope_t::ThisTile);
     }
-    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Nutrients)).total == 0.0);
+    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Nutrients), 0.0).total == 0.0);
 }
 
 TEST_CASE("CollectTileEffects: Instantaneous effects do not enter the continuous tile pool",
@@ -225,5 +225,5 @@ TEST_CASE("CollectTileEffects: Instantaneous effects do not enter the continuous
     tile.AddImprovement(*world.improvements.Find("WeirdAura"));
 
     const auto effects = CollectTileEffects(tile, world.improvements);
-    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Minerals)).total == 0.0);
+    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Minerals), 0.0).total == 0.0);
 }

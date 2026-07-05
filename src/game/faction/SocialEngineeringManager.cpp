@@ -46,9 +46,12 @@ const SocialPolicyConfig* SocialEngineeringManager::GetActivePolicy(SocialCatego
 
 std::vector<ActiveEffect_t> SocialEngineeringManager::CollectEffects() const
 {
+    // Policy effects pass through as ordinary active effects — including SocialRatingModifier
+    // entries. Rating accumulation and the rating-level -> gameplay-effects mapping happen
+    // later, per base, in ExpandSocialRatingEffects (SocialRatingResolver): rating modifiers
+    // can come from any source (buildings, pops, ...), and ThisBase-scoped ones shift a
+    // single base's effective rating.
     std::vector<ActiveEffect_t> result;
-    std::map<SocialRatingId, int> ratingTotals;
-
     for (const auto& [category, id] : m_activePolicyIds)
     {
         const SocialPolicyConfig* pPolicy = m_pRegistry ? m_pRegistry->Find(id) : nullptr;
@@ -56,53 +59,8 @@ std::vector<ActiveEffect_t> SocialEngineeringManager::CollectEffects() const
         {
             continue;
         }
-
-        for (const auto& rEffect : pPolicy->effects)
-        {
-            if (const auto* pRatingMod = std::get_if<SocialRatingModifierEffect_t>(&rEffect.effect))
-            {
-                ratingTotals[pRatingMod->rating] += pRatingMod->amount;
-            }
-            else
-            {
-                result.push_back({ &rEffect, id, nullptr });
-            }
-        }
+        AppendActiveEffects(pPolicy->effects, nullptr, id, result);
     }
-
-    if (!m_pRatingRegistry)
-    {
-        return result;
-    }
-
-    for (const auto& [rating, total] : ratingTotals)
-    {
-        if (total == 0)
-        {
-            continue;
-        }
-
-        const SocialRatingConfig* pRatingConfig = m_pRatingRegistry->Find(
-            SocialRatingIdToString(rating));
-        if (!pRatingConfig)
-        {
-            continue;
-        }
-
-        const auto it = pRatingConfig->levelEffects.find(total);
-        if (it == pRatingConfig->levelEffects.end())
-        {
-            continue;
-        }
-
-        const std::string sourceId = "se_rating_" + SocialRatingIdToString(rating)
-                                     + "_" + std::to_string(total);
-        for (const auto& rEffect : it->second)
-        {
-            result.push_back({ &rEffect, sourceId, nullptr });
-        }
-    }
-
     return result;
 }
 

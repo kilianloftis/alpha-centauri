@@ -11,6 +11,7 @@
 #include "lib/GameEvent.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/GameDataContext.h"
+#include "game/EffectReferenceValidator.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/units/UnitComponentRegistry.h"
@@ -137,6 +138,10 @@ void Engine::Initialize_()
     m_gameDataContext->socialRatingRegistry = std::make_unique<SocialRatingRegistry>();
     m_gameDataContext->socialRatingRegistry->Load("config/social_rating_effects.json");
 
+    // All effect-declaring registries are loaded; fail startup on any effect that
+    // references a nonexistent building/tech/improvement/feature id.
+    ValidateEffectReferences(*m_gameDataContext);
+
     m_gameDataContext->luaRuntime = std::make_unique<LuaRuntime>();
 
     PopCompositionConfigParser compositionParser;
@@ -177,7 +182,8 @@ void Engine::Initialize_()
     m_gameState->SetWorldMap(worldGen.Generate(worldConfig));
     std::cout << "Generated world map: " << m_gameState->GetWorldMap()->GetWidth() << "x" << m_gameState->GetWorldMap()->GetHeight() << "\n";
 
-    m_gameState->InitTileEffects(*m_gameDataContext->improvementRegistry);
+    m_gameState->InitTileEffects(*m_gameDataContext->improvementRegistry,
+                                 m_gameDataContext->unitComponentRegistry.get());
 
     m_gameDataContext->secretProjectAvailabilityCalculator =
         std::make_unique<SecretProjectAvailabilityCalculator>(m_gameState->GetFactions());
@@ -195,19 +201,13 @@ void Engine::Initialize_()
         1, 1, "Test Base",
         m_gameState->GetWorldMap()->GetTile(centerX, centerY),
         *m_gameDataContext,
-        m_gameState->GetTileEffects());
+        m_gameState->GetTileEffects(),
+        m_gameDataContext->socialRatingRegistry.get());
 
     // Wire base signals to EventBus
     m_eventBridge->WireBase(*pBase);
 
     m_gameState->AddFaction(std::move(pFaction));
-
-    // Prime ResourceManager's m_activeEffects so Get*Production() UI queries return correct
-    // values before the first ResourceCollection turn stage runs.
-    for (auto& pF : m_gameState->GetFactions())
-    {
-        if (pF) pF->ProduceBaseResources();
-    }
 
     std::cout << "Test setup complete. " << m_gameState->GetNumFactions() << " faction(s), "
               << m_gameState->GetPlayerFaction()->GetBaseCount() << " base(s)\n";

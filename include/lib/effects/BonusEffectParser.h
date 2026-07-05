@@ -32,11 +32,24 @@ Condition_t ParseCondition(const nlohmann::json& conditionJson);
 
 TileSelector_t ParseTileSelector(const nlohmann::json& selectorJson);
 
-// Parses a single entry of an "effects" JSON array (type/scope/persistence/condition/parameters).
+// Parses a single entry of an "effects" JSON array
+// (type/scope/persistence/condition/radius/parameters).
 EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson);
+
+// Throws if scope can never be resolved for the given source kind (ThisPop off a pop type,
+// ThisUnit off a unit component). Deliberately minimal: every other combination loads —
+// routing is scope-driven, and combinations whose anchor concept doesn't exist yet (e.g.
+// faction-lane effects on improvements, pending territory) stay legal-but-inert.
+void ValidateScopeForSource(EffectScope_t scope, EffectSourceKind sourceKind,
+                            const std::string& rSourceId);
 
 // Parses the "effects" array of rContainerJson, if present. Returns {} otherwise.
 std::vector<EffectConfig_t> ParseEffects(const nlohmann::json& rContainerJson);
+
+// As above, plus scope-vs-source validation. rSourceId appears in error messages only.
+std::vector<EffectConfig_t> ParseEffects(const nlohmann::json& rContainerJson,
+                                         EffectSourceKind sourceKind,
+                                         const std::string& rSourceId);
 
 } // namespace BonusEffectParser
 

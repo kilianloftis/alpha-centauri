@@ -44,6 +44,22 @@ const std::vector<std::unique_ptr<Faction>>& GameState::GetFactions() const
     return m_factions;
 }
 
+std::vector<ActiveEffect_t> GameState::CollectWorldEffects(const Faction& rExclude) const
+{
+    std::vector<ActiveEffect_t> result;
+    for (const auto& pFaction : m_factions)
+    {
+        if (!pFaction || pFaction.get() == &rExclude)
+        {
+            continue;
+        }
+        const std::vector<ActiveEffect_t> worldEffects =
+            FilterByScope(CollectActiveEffects(*pFaction), EffectScope_t::WorldGlobal);
+        result.insert(result.end(), worldEffects.begin(), worldEffects.end());
+    }
+    return result;
+}
+
 void GameState::AddFaction(std::unique_ptr<Faction> pFaction)
 {
     m_factions.push_back(std::move(pFaction));
@@ -79,13 +95,14 @@ void GameState::SetWorldMap(std::unique_ptr<WorldMap> pWorldMap)
     m_worldMap = std::move(pWorldMap);
 }
 
-void GameState::InitTileEffects(const ImprovementRegistry& rImprovements)
+void GameState::InitTileEffects(const ImprovementRegistry& rImprovements,
+                                const UnitComponentRegistry* pUnitComponents)
 {
     if (!m_worldMap)
     {
         throw std::runtime_error("GameState::InitTileEffects: WorldMap must be set before initializing tile effects");
     }
-    m_pTileEffects = std::make_unique<TileEffectsContext>(*m_worldMap, rImprovements);
+    m_pTileEffects = std::make_unique<TileEffectsContext>(*m_worldMap, rImprovements, pUnitComponents);
 }
 
 TileEffectsContext& GameState::GetTileEffects()

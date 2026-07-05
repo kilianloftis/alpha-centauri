@@ -195,6 +195,24 @@ TEST_CASE("ParseEffectConfig: StatModifier tile selectors", "[effects][parser]")
         const json selectorJson = json::parse(R"({ "kind": "Everything" })");
         CHECK_THROWS(BonusEffectParser::ParseTileSelector(selectorJson));
     }
+
+    SECTION("selector on a non-tile-resource stat throws")
+    {
+        // Selectors are resolved only during tile-yield resolution (nutrients/minerals/
+        // energy); on any other stat the modifier would silently never apply.
+        for (const char* stat : {"econ", "defense", "growth_rate"})
+        {
+            const json effectJson = json::parse(std::string(R"({
+                "type": "StatModifier",
+                "scope": "ThisBase",
+                "parameters": {
+                    "stat": ")") + stat + R"(", "amount": 1,
+                    "selector": { "kind": "BaseTile" }
+                }
+            })");
+            CHECK_THROWS(BonusEffectParser::ParseEffectConfig(effectJson));
+        }
+    }
 }
 
 TEST_CASE("ParseEffectConfig: conditions", "[effects][parser][condition]")
@@ -290,6 +308,69 @@ TEST_CASE("ParseEffectConfig: unknown effect type throws", "[effects][parser]")
 {
     CHECK_THROWS(BonusEffectParser::ParseEffectConfig(
         json::parse(R"({ "type": "MindControl", "scope": "WorldGlobal", "parameters": {} })")));
+}
+
+TEST_CASE("ParseEffectConfig: per-effect radius", "[effects][parser][radius]")
+{
+    SECTION("parsed from the effect entry, default 0")
+    {
+        const json withRadius = json::parse(R"({
+            "type": "StatModifier", "scope": "ThisTile", "radius": 2,
+            "parameters": { "stat": "energy", "amount": 1 }
+        })");
+        CHECK(BonusEffectParser::ParseEffectConfig(withRadius).radius == 2);
+
+        const json withoutRadius = json::parse(R"({
+            "type": "StatModifier", "scope": "ThisTile",
+            "parameters": { "stat": "energy", "amount": 1 }
+        })");
+        CHECK(BonusEffectParser::ParseEffectConfig(withoutRadius).radius == 0);
+    }
+
+    SECTION("negative radius throws")
+    {
+        const json negative = json::parse(R"({
+            "type": "StatModifier", "scope": "ThisTile", "radius": -1,
+            "parameters": { "stat": "energy", "amount": 1 }
+        })");
+        CHECK_THROWS(BonusEffectParser::ParseEffectConfig(negative));
+    }
+}
+
+TEST_CASE("ValidateScopeForSource: rejects only the certainly-impossible combinations",
+          "[effects][parser][validation]")
+{
+    // ThisPop can only ever resolve against a pop type; ThisUnit against a unit component.
+    CHECK_THROWS(BonusEffectParser::ValidateScopeForSource(
+        EffectScope_t::ThisPop, EffectSourceKind::Building, "some_building"));
+    CHECK_THROWS(BonusEffectParser::ValidateScopeForSource(
+        EffectScope_t::ThisUnit, EffectSourceKind::PopType, "some_pop"));
+
+    CHECK_NOTHROW(BonusEffectParser::ValidateScopeForSource(
+        EffectScope_t::ThisPop, EffectSourceKind::PopType, "some_pop"));
+    CHECK_NOTHROW(BonusEffectParser::ValidateScopeForSource(
+        EffectScope_t::ThisUnit, EffectSourceKind::UnitComponent, "some_component"));
+
+    // Everything else loads — including combinations whose anchor concept doesn't exist yet
+    // (e.g. a faction-lane effect on an improvement, pending territory ownership).
+    CHECK_NOTHROW(BonusEffectParser::ValidateScopeForSource(
+        EffectScope_t::FactionGlobal, EffectSourceKind::Improvement, "monolith"));
+    CHECK_NOTHROW(BonusEffectParser::ValidateScopeForSource(
+        EffectScope_t::ThisTile, EffectSourceKind::UnitComponent, "sensor_pod"));
+    CHECK_NOTHROW(BonusEffectParser::ValidateScopeForSource(
+        EffectScope_t::WorldGlobal, EffectSourceKind::Building, "beacon"));
+}
+
+TEST_CASE("ParseEffects with a source kind validates every entry", "[effects][parser][validation]")
+{
+    const json badContainer = json::parse(R"({
+        "id": "bad_building",
+        "effects": [
+            { "type": "StatModifier", "scope": "ThisPop", "parameters": { "stat": "econ", "amount": 1 } }
+        ]
+    })");
+    CHECK_THROWS(BonusEffectParser::ParseEffects(badContainer, EffectSourceKind::Building, "bad_building"));
+    CHECK_NOTHROW(BonusEffectParser::ParseEffects(badContainer, EffectSourceKind::PopType, "fine_as_pop"));
 }
 
 TEST_CASE("ParseEffects: absent effects array yields empty vector; entries parse in order", "[effects][parser]")

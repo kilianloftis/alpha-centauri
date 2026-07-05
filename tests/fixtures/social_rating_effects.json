@@ -1,0 +1,13 @@
+[
+  {
+    "id": "growth",
+    "levels": {
+      "2": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "nutrients", "amount": 1 } }
+      ],
+      "3": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "nutrients", "amount": 3 } }
+      ]
+    }
+  }
+]

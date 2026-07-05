@@ -1,10 +1,27 @@
 #include "game/units/Unit.h"
 
+#include "game/Faction.h"
 #include "game/map/Tile.h"
 #include "lib/effects/ActiveEffect.h"
 
 namespace ac
 {
+
+namespace
+{
+
+// A live unit's full effect list: its design's own component effects (ThisUnit lane)
+// plus the owning faction's FactionUnits-scoped effects.
+std::vector<ActiveEffect_t> CollectLiveUnitEffects_(const UnitDesign& rDesign, const Faction& rFaction)
+{
+    std::vector<ActiveEffect_t> effects = rDesign.CollectEffects();
+    const std::vector<ActiveEffect_t> factionEffects =
+        FilterByScope(CollectActiveEffects(rFaction), EffectScope_t::FactionUnits);
+    effects.insert(effects.end(), factionEffects.begin(), factionEffects.end());
+    return effects;
+}
+
+} // namespace
 
 Unit::Unit(const UnitDesign& rDesign,
            const Tile& rTile,
@@ -23,25 +40,46 @@ Unit::Unit(const UnitDesign& rDesign,
 
 const UnitDesign& Unit::GetDesign() const                              { return m_rDesign; }
 
+int Unit::ResolveStat_(StatId statId) const
+{
+    const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects_(m_rDesign, m_rFaction);
+    return static_cast<int>(ResolveStatModifiers(FilterByStatId(effects, statId), 0.0).total);
+}
+
+bool Unit::ResolveFlag_(RuleFlagId flagId) const
+{
+    for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects_(m_rDesign, m_rFaction))
+    {
+        const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.config->effect);
+        if (pFlag && pFlag->flag == flagId)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 int Unit::GetBaseCost() const                                          { return m_rDesign.GetBaseCost(); }
-int Unit::GetAttack() const                                            { return m_rDesign.GetAttack(); }
+int Unit::GetAttack() const                                            { return ResolveStat_(StatId::Attack); }
 int Unit::GetAttackAgainst(const Unit& rDefender) const
 {
     EffectContext_t ctx;
     ctx.targetTile = &rDefender.GetTile();
-    return m_rDesign.GetAttackAgainst(ctx);
+    const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects_(m_rDesign, m_rFaction);
+    return static_cast<int>(
+        ResolveStatModifiers(FilterByStatIdInContext(effects, StatId::Attack, ctx), 0.0).total);
 }
-int Unit::GetDefense() const                                           { return m_rDesign.GetDefense(); }
-int Unit::GetMovement() const                                          { return m_rDesign.GetMovement(); }
-int Unit::GetHitPoints() const                                         { return m_rDesign.GetHitPoints(); }
-int Unit::GetDisengageChance() const                                   { return m_rDesign.GetDisengageChance(); }
-int Unit::GetFuel() const                                              { return m_rDesign.GetFuel(); }
-int Unit::GetDamageFromOutOfFuel() const                               { return m_rDesign.GetDamageFromOutOfFuel(); }
-bool Unit::IsFlight() const                                            { return m_rDesign.IsFlight(); }
-int Unit::GetCargoCapacity() const                                     { return m_rDesign.GetCargoCapacity(); }
-int Unit::GetDifficultTerrainCost() const                              { return m_rDesign.GetDifficultTerrainCost(); }
-bool Unit::IsSingleUse() const                                         { return m_rDesign.IsSingleUse(); }
-const Tile& Unit::GetTile() const           { return *m_pTile; }
+int Unit::GetDefense() const                                           { return ResolveStat_(StatId::Defense); }
+int Unit::GetMovement() const                                          { return ResolveStat_(StatId::Movement); }
+int Unit::GetHitPoints() const                                         { return ResolveStat_(StatId::HitPoints); }
+int Unit::GetDisengageChance() const                                   { return ResolveStat_(StatId::DisengageChance); }
+int Unit::GetFuel() const                                              { return ResolveStat_(StatId::Fuel); }
+int Unit::GetDamageFromOutOfFuel() const                               { return ResolveStat_(StatId::DamageFromOutOfFuel); }
+bool Unit::IsFlight() const                                            { return ResolveFlag_(RuleFlagId::Flight); }
+int Unit::GetCargoCapacity() const                                     { return ResolveStat_(StatId::CargoCapacity); }
+int Unit::GetDifficultTerrainCost() const                              { return ResolveStat_(StatId::DifficultTerrainCost); }
+bool Unit::IsSingleUse() const                                         { return ResolveFlag_(RuleFlagId::SingleUse); }
+const Tile& Unit::GetTile() const                                      { return *m_pTile; }
 BaseManager* Unit::GetHomeBase() const      { return m_pHomeBase; }
 Faction& Unit::GetFaction() const           { return m_rFaction; }
 

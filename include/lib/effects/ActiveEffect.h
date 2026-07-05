@@ -38,11 +38,32 @@ bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx
 
 // Appends non-Instantaneous effects from a config list as ActiveEffect_t instances.
 // Used by building, pop, unit, and tile effect collection; pOriginBase is set only
-// when the effect's scope is ThisBase.
+// when the effect's scope is ThisBase. This (and its filtered variants below) is the
+// single config->ActiveEffect_t conversion — new effect sources should collect through
+// one of these rather than hand-rolling the loop.
 void AppendActiveEffects(const std::vector<EffectConfig_t>& rEffects,
                          const BaseManager* pOriginBase,
                          const std::string& sourceId,
                          std::vector<ActiveEffect_t>& rOut);
+
+// As AppendActiveEffects, but keeps only faction-lane scopes (see IsFactionLane): what a
+// source contributes to the faction pool when its base/pop/unit/tile-local scopes are
+// resolved elsewhere. Used by Faction's pop and unit collectors.
+void AppendFactionLaneEffects(const std::vector<EffectConfig_t>& rEffects,
+                              const std::string& sourceId,
+                              std::vector<ActiveEffect_t>& rOut);
+
+// True if rEffect projects onto a tile `distance` tiles from its host: ThisTile lane,
+// Continuous, and radius >= distance. distance 0 = the host tile itself. The single
+// filter for a tile's own effects, neighboring improvement/terrain auras, and
+// unit-projected auras.
+bool TileEffectReaches(const EffectConfig_t& rEffect, int distance);
+
+// As AppendActiveEffects, but keeps only effects satisfying TileEffectReaches(e, distance).
+void AppendTileEffects(const std::vector<EffectConfig_t>& rEffects,
+                       const std::string& sourceId,
+                       int distance,
+                       std::vector<ActiveEffect_t>& rOut);
 
 class BuildingRegistry;
 
@@ -76,10 +97,12 @@ std::vector<ActiveEffect_t> CollectActiveEffects(const Faction& rFaction);
 // Each pair is {amount, op}. Contributions are applied in the order given.
 double ApplyModifierStack(double base, const std::vector<std::pair<double, ModifierOp>>& contributions);
 
-// baseValue seeds the additive total before contributions are summed — required for stats
-// that are resolved purely through multiplicative modifiers (e.g. CostMultiplier, which has
-// no Add contributions of its own and needs a base of 1.0 for MultiplyGeometric to act on).
-StatBreakdown_t ResolveStatModifiers(const std::vector<ActiveEffect_t>& matching, double baseValue = 0.0);
+// baseValue seeds the additive total before contributions are summed. It is deliberately
+// NOT defaulted: stats resolved purely through multiplicative modifiers (e.g.
+// CostMultiplier, tile defense) silently resolve to 0 from a 0 base, so every caller must
+// state its seed — 0.0 for additive stats, 1.0 for pure multipliers, or a raw value the
+// modifiers scale (tile yield, growth rate's 100).
+StatBreakdown_t ResolveStatModifiers(const std::vector<ActiveEffect_t>& matching, double baseValue);
 
 // Returns effects whose target stat matches the given StatId.
 // Only includes StatModifierEffect_t instances. Condition-carrying effects are excluded:

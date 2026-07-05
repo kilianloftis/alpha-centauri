@@ -11,6 +11,7 @@ namespace ac
 
 class ImprovementRegistry;
 class TileEffectsContext;
+class UnitComponentRegistry;
 
 class GameState
 {
@@ -36,9 +37,18 @@ public:
     const WorldMap* GetWorldMap() const;
     void SetWorldMap(std::unique_ptr<WorldMap> pWorldMap);
 
+    // WorldGlobal lane: every faction's WorldGlobal-scoped active effects, excluding
+    // rExclude's own (a faction's own pool already contains its WorldGlobal effects).
+    // Turn stages pass this into Faction::ProduceBaseResources / ApplyBaseGrowth so a
+    // WorldGlobal effect declared by one faction reaches all of them.
+    std::vector<ActiveEffect_t> CollectWorldEffects(const Faction& rExclude) const;
+
     // Tile effects context (WorldMap + ImprovementRegistry bundled for tile resolution).
     // Must be initialized via InitTileEffects() after SetWorldMap() and registry loading.
-    void InitTileEffects(const ImprovementRegistry& rImprovements);
+    // pUnitComponents sizes the aura scan for unit-projected ThisTile effects; may be null
+    // if units never project auras.
+    void InitTileEffects(const ImprovementRegistry& rImprovements,
+                         const UnitComponentRegistry* pUnitComponents);
     TileEffectsContext& GetTileEffects();
     const TileEffectsContext& GetTileEffects() const;
 

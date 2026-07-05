@@ -21,7 +21,7 @@ UnitComponentConfig_t UnitComponentConfigParser::ParseComponentConfig(const nloh
     config.type = rComponentJson.at("type").get<std::string>();
     config.requiredTech = ConfigFields::ParseRequiredTech(rComponentJson);
     config.mineralCost = rComponentJson.value("mineral_cost", 0);
-    config.effects = BonusEffectParser::ParseEffects(rComponentJson);
+    config.effects = BonusEffectParser::ParseEffects(rComponentJson, EffectSourceKind::UnitComponent, config.id);
 
     return config;
 }

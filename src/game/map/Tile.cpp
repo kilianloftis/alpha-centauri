@@ -29,6 +29,18 @@ std::string ToString(Moisture moisture)
     return "";
 }
 
+const std::vector<std::string>& AllTerrainFeatureIds()
+{
+    // Built from the same ToString mappings HasFeature matches against, so the list can't
+    // drift from the actual matching logic.
+    static const std::vector<std::string> ids = {
+        ToString(Rockiness::Flat), ToString(Rockiness::Rolling), ToString(Rockiness::Rocky),
+        ToString(Moisture::Arid), ToString(Moisture::Moist), ToString(Moisture::Wet),
+        "River", "Fungus",
+    };
+    return ids;
+}
+
 Tile::Tile()
     : m_x(0)
     , m_y(0)

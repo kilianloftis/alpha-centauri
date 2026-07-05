@@ -305,6 +305,39 @@ TEST_CASE("CanBuildImprovement: excludes-list features block construction", "[ef
     CHECK(CanBuildImprovement(tile, *pFarm));
 }
 
+TEST_CASE("Per-effect radius: an effect's own radius grants reach beyond the improvement's",
+          "[effects][tile][aura][radius]")
+{
+    // EffectRadiusBeacon: improvement radius 0, but its energy effect declares radius 2.
+    actest::WorldFixture world;
+    world.ctx->AddImprovementWithEffects(world.At(4, 4), "EffectRadiusBeacon");
+
+    CHECK(world.ctx->ResolveTileYield(world.At(6, 4)).energy == 1); // distance 2
+    CHECK(world.ctx->ResolveTileYield(world.At(7, 4)).energy == 0); // distance 3
+}
+
+TEST_CASE("Per-effect radius: improvement-level radius is the default, per-effect values override",
+          "[effects][tile][aura][radius]")
+{
+    // MixedRadius: improvement radius 2; energy effect inherits it, minerals effect says 1.
+    actest::WorldFixture world;
+    world.ctx->AddImprovementWithEffects(world.At(4, 4), "MixedRadius");
+
+    const TileResources_t atOne = world.ctx->ResolveTileYield(world.At(5, 4));
+    CHECK(atOne.energy == 1);
+    CHECK(atOne.minerals == 1);
+
+    const TileResources_t atTwo = world.ctx->ResolveTileYield(world.At(6, 4));
+    CHECK(atTwo.energy == 1);
+    CHECK(atTwo.minerals == 0);
+
+    // Parse-time default check: Sensor's effect inherited the improvement's radius 2.
+    const ImprovementConfig_t* pSensor = world.improvements.Find("Sensor");
+    REQUIRE(pSensor != nullptr);
+    REQUIRE(pSensor->effects.size() == 1);
+    CHECK(pSensor->effects[0].radius == 2);
+}
+
 TEST_CASE("Aura collection: non-ThisTile and Instantaneous effects do not leak into neighbors",
           "[effects][tile][aura]")
 {

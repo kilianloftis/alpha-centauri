@@ -92,6 +92,41 @@
     ]
   },
   {
+    "id": "unit_attack_array",
+    "name": "Unit Attack Array (+25% attack to all faction units)",
+    "effects": [
+      { "type": "StatModifier", "scope": "FactionUnits", "parameters": { "stat": "attack", "amount": 25, "op": "AddPercent" } }
+    ]
+  },
+  {
+    "id": "flight_grantor",
+    "name": "Flight Grantor (grants flight to all faction units)",
+    "effects": [
+      { "type": "RuleFlag", "scope": "FactionUnits", "parameters": { "flag": "flight" } }
+    ]
+  },
+  {
+    "id": "world_beacon",
+    "name": "World Beacon (+10 energy to every base of every faction)",
+    "effects": [
+      { "type": "StatModifier", "scope": "WorldGlobal", "parameters": { "stat": "energy", "amount": 10 } }
+    ]
+  },
+  {
+    "id": "growth_shrine",
+    "name": "Growth Shrine (+1 Growth rating in this base only)",
+    "effects": [
+      { "type": "SocialRatingModifier", "scope": "ThisBase", "parameters": { "rating": "growth", "amount": 1 } }
+    ]
+  },
+  {
+    "id": "faction_growth_shrine",
+    "name": "Faction Growth Shrine (+2 Growth rating faction-wide)",
+    "effects": [
+      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "growth", "amount": 2 } }
+    ]
+  },
+  {
     "id": "center_booster",
     "name": "Base Center Tile Booster",
     "effects": [

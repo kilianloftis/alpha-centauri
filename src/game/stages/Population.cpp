@@ -16,14 +16,15 @@ void Population::Execute_(GameState* pGameState, Faction* pFaction)
 {
     std::cout << "Executing Population stage\n";
 
-    (void)pGameState;
-
     if (!pFaction)
     {
         return;
     }
 
-    pFaction->ApplyBaseGrowth();
+    // Other factions' WorldGlobal effects apply to growth too.
+    const std::vector<ActiveEffect_t> worldEffects =
+        pGameState ? pGameState->CollectWorldEffects(*pFaction) : std::vector<ActiveEffect_t>{};
+    pFaction->ApplyBaseGrowth(worldEffects);
 
     for (auto& pBase : pFaction->GetBases())
     {

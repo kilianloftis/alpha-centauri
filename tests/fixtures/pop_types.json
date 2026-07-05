@@ -35,6 +35,18 @@
     ]
   },
   {
+    "id": "Networker",
+    "name": "Networker (faction-lane effect on a pop type)",
+    "can_work_tile": false,
+    "player_assignable": true,
+    "riot_contribution": 0,
+    "golden_age_contribution": 0,
+    "obsoletes": [],
+    "effects": [
+      { "type": "StatModifier", "scope": "FactionGlobal", "parameters": { "stat": "labs", "amount": 1 } }
+    ]
+  },
+  {
     "id": "FungalFarmer",
     "name": "Fungal Farmer (worker with a ThisPop tile multiplier plus a ThisBase flat bonus)",
     "can_work_tile": true,

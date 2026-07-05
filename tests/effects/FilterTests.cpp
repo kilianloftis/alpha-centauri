@@ -151,7 +151,7 @@ TEST_CASE("FilterByStatIdInContext: unconditional effects plus satisfied conditi
     CHECK(matching[1].sourceId == "vs_rocky");
 
     // Combat math sanity: 4 attack, +25% vs rocky -> 5.
-    CHECK(ResolveStatModifiers(matching).total == 5.0);
+    CHECK(ResolveStatModifiers(matching, 0.0).total == 5.0);
 }
 
 TEST_CASE("FilterByStatIdInContext: with an empty context only unconditional effects survive",

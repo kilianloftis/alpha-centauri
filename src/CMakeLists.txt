@@ -5,6 +5,7 @@
 add_library(ac-core STATIC
     game/GameState.cpp
     game/GameDataContext.cpp
+    game/EffectReferenceValidator.cpp
     game/Faction.cpp
     game/faction/FactionIdentity.cpp
     game/faction/AIProfile.cpp
@@ -56,6 +57,7 @@ add_library(ac-core STATIC
     game/research/TechConfigParser.cpp
     game/social-engineering/SocialPolicyConfigParser.cpp
     game/social-engineering/SocialRatingConfigParser.cpp
+    game/social-engineering/SocialRatingResolver.cpp
     game/map/Tile.cpp
     game/map/TileLayerResolver.cpp
     game/map/UnitPositionIndex.cpp

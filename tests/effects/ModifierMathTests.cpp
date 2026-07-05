@@ -93,9 +93,9 @@ TEST_CASE("ApplyModifierStack: result does not depend on contribution order", "[
 
 TEST_CASE("ResolveStatModifiers: empty input resolves to the base value", "[effects][math]")
 {
-    CHECK(ResolveStatModifiers({}).total == Approx(0.0));
+    CHECK(ResolveStatModifiers({}, 0.0).total == Approx(0.0));
     CHECK(ResolveStatModifiers({}, 7.0).total == Approx(7.0));
-    CHECK(ResolveStatModifiers({}).contributions.empty());
+    CHECK(ResolveStatModifiers({}, 0.0).contributions.empty());
 }
 
 TEST_CASE("ResolveStatModifiers: sums Add contributions from active effects", "[effects][math]")
@@ -106,24 +106,23 @@ TEST_CASE("ResolveStatModifiers: sums Add contributions from active effects", "[
         Active(pool.StatMod(StatId::Nutrients, 3.0), "building_b"),
     };
 
-    const StatBreakdown_t breakdown = ResolveStatModifiers(effects);
+    const StatBreakdown_t breakdown = ResolveStatModifiers(effects, 0.0);
     CHECK(breakdown.total == Approx(5.0));
     REQUIRE(breakdown.contributions.size() == 2);
 }
 
-TEST_CASE("ResolveStatModifiers: pure-multiplier stats resolve to zero without a seeded base (known gap)",
+TEST_CASE("ResolveStatModifiers: pure-multiplier stats require an explicit non-zero seed",
           "[effects][math]")
 {
-    // Documented gap: a stat that only ever receives AddPercent/MultiplyGeometric contributions
-    // MUST be resolved with baseValue = 1.0 by the caller (as UnitDesign::GetBaseCost does for
-    // CostMultiplier). With the default base of 0.0 the total collapses to 0. This test pins
-    // that footgun so any change to it is deliberate.
+    // A stat that only ever receives AddPercent/MultiplyGeometric contributions collapses to
+    // 0 from a 0 base — which is why baseValue has no default and every caller must state
+    // its seed (as UnitDesign::GetBaseCost does with 1.0 for CostMultiplier).
     actest::EffectPool pool;
     const std::vector<ActiveEffect_t> effects = {
         Active(pool.StatMod(StatId::CostMultiplier, 1.25, ModifierOp::MultiplyGeometric), "component"),
     };
 
-    CHECK(ResolveStatModifiers(effects).total == Approx(0.0));
+    CHECK(ResolveStatModifiers(effects, 0.0).total == Approx(0.0));
     CHECK(ResolveStatModifiers(effects, 1.0).total == Approx(1.25));
 }
 
@@ -147,7 +146,7 @@ TEST_CASE("ResolveStatModifiers: contributions are sorted by sourceId for determ
         Active(pool.StatMod(StatId::Energy, 3.0), "midway"),
     };
 
-    const StatBreakdown_t breakdown = ResolveStatModifiers(effects);
+    const StatBreakdown_t breakdown = ResolveStatModifiers(effects, 0.0);
     REQUIRE(breakdown.contributions.size() == 3);
     CHECK(breakdown.contributions[0].sourceId == "alpha");
     CHECK(breakdown.contributions[1].sourceId == "midway");
@@ -161,7 +160,7 @@ TEST_CASE("ResolveStatModifiers: breakdown records amount and op per contributio
         Active(pool.StatMod(StatId::Minerals, 25.0, ModifierOp::AddPercent), "bonus"),
     };
 
-    const StatBreakdown_t breakdown = ResolveStatModifiers(effects);
+    const StatBreakdown_t breakdown = ResolveStatModifiers(effects, 0.0);
     REQUIRE(breakdown.contributions.size() == 1);
     CHECK(breakdown.contributions[0].amount == Approx(25.0));
     CHECK(breakdown.contributions[0].op == ModifierOp::AddPercent);
@@ -177,7 +176,7 @@ TEST_CASE("ResolveStatModifiers: non-StatModifier effects and null configs are i
     };
     effects.push_back(ActiveEffect_t{nullptr, "null_config", nullptr});
 
-    const StatBreakdown_t breakdown = ResolveStatModifiers(effects);
+    const StatBreakdown_t breakdown = ResolveStatModifiers(effects, 0.0);
     CHECK(breakdown.total == Approx(4.0));
     CHECK(breakdown.contributions.size() == 1);
 }
@@ -192,5 +191,5 @@ TEST_CASE("ResolveStatModifiers: does NOT itself filter by stat — callers must
         Active(pool.StatMod(StatId::Nutrients, 2.0), "a"),
         Active(pool.StatMod(StatId::Minerals, 3.0), "b"),
     };
-    CHECK(ResolveStatModifiers(effects).total == Approx(5.0));
+    CHECK(ResolveStatModifiers(effects, 0.0).total == Approx(5.0));
 }

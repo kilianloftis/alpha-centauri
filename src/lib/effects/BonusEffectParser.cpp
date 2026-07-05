@@ -150,6 +150,11 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
 
     effect.scope = ParseEffectScope(scopeStr);
     effect.persistence = ParseEffectPersistence(persistenceStr);
+    effect.radius = effectJson.value("radius", 0);
+    if (effect.radius < 0)
+    {
+        throw std::runtime_error("Effect 'radius' must be >= 0");
+    }
     if (effectJson.contains("condition"))
     {
         effect.condition = ParseCondition(effectJson.at("condition"));
@@ -186,9 +191,17 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
         statModifier.amount = ParseNumber(parameters, "amount", 0.0);
         statModifier.op = ParseModifierOp(parameters.value("op", "Add"));
         // Optional per-tile selector: when present, this modifier applies to each worked
-        // tile satisfying the selector instead of once at the base level.
+        // tile satisfying the selector instead of once at the base level. Selectors are
+        // resolved only during tile-yield resolution, so they are rejected on any stat
+        // that isn't a tile resource — such a modifier would silently never apply.
         if (parameters.contains("selector"))
         {
+            if (statModifier.stat != StatId::Nutrients && statModifier.stat != StatId::Minerals
+                && statModifier.stat != StatId::Energy)
+            {
+                throw std::runtime_error("StatModifier 'selector' is only valid on tile resource "
+                    "stats (nutrients/minerals/energy), got '" + parameters.value("stat", "") + "'");
+            }
             statModifier.selector = ParseTileSelector(parameters.at("selector"));
         }
         effect.effect = statModifier;
@@ -236,6 +249,21 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
     return effect;
 }
 
+void ValidateScopeForSource(EffectScope_t scope, EffectSourceKind sourceKind,
+                            const std::string& rSourceId)
+{
+    if (scope == EffectScope_t::ThisPop && sourceKind != EffectSourceKind::PopType)
+    {
+        throw std::runtime_error("Effect on '" + rSourceId
+            + "': scope ThisPop is only meaningful on a pop type config");
+    }
+    if (scope == EffectScope_t::ThisUnit && sourceKind != EffectSourceKind::UnitComponent)
+    {
+        throw std::runtime_error("Effect on '" + rSourceId
+            + "': scope ThisUnit is only meaningful on a unit component config");
+    }
+}
+
 std::vector<EffectConfig_t> ParseEffects(const nlohmann::json& rContainerJson)
 {
     std::vector<EffectConfig_t> effects;
@@ -245,6 +273,18 @@ std::vector<EffectConfig_t> ParseEffects(const nlohmann::json& rContainerJson)
         {
             effects.push_back(ParseEffectConfig(rEffectJson));
         }
+    }
+    return effects;
+}
+
+std::vector<EffectConfig_t> ParseEffects(const nlohmann::json& rContainerJson,
+                                         EffectSourceKind sourceKind,
+                                         const std::string& rSourceId)
+{
+    std::vector<EffectConfig_t> effects = ParseEffects(rContainerJson);
+    for (const EffectConfig_t& rEffect : effects)
+    {
+        ValidateScopeForSource(rEffect.scope, sourceKind, rSourceId);
     }
     return effects;
 }

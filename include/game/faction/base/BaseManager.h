@@ -31,6 +31,7 @@ class PopTypeAvailabilityCalculator;
 class ProductionCostCalculator;
 class ProductionManager;
 class ResearchManager;
+class SocialRatingRegistry;
 class Tile;
 
 // BaseManager coordinates base management subsystems.
@@ -50,7 +51,8 @@ public:
         const EconomyManager* pEconomyManager,
         const ProductionCostCalculator* pProductionCostCalculator,
         const GrowthConfig_t& rGrowthConfig,
-        const SecretProjectAvailabilityCalculator* pSecretProjectCalculator);
+        const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
+        const SocialRatingRegistry* pSocialRatings);
     ~BaseManager();
 
     // Population management - delegated to PopulationManager
@@ -118,6 +120,11 @@ public:
     // activeEffects is the faction-wide pool; GrowthRate modifiers are resolved per base.
     void ApplyGrowth(const std::vector<ActiveEffect_t>& activeEffects);
 
+    // This base's effective social rating on one axis: faction-wide SocialRatingModifier
+    // contributions plus any ThisBase-scoped ones originating here (e.g. a building's
+    // +1 Growth). activeEffects is the faction-wide pool.
+    int GetEffectiveSocialRating(SocialRatingId rating, const std::vector<ActiveEffect_t>& activeEffects) const;
+
     int GetNutrientStockpile() const;
     int GetNutrientsRequired(const std::vector<ActiveEffect_t>& activeEffects = {}) const;
     int GetBaseSize() const;
@@ -145,11 +152,23 @@ public:
     int GetBaseId() const;
 
 private:
+    // FilterForBase over the faction-wide pool, plus this base's own pop-generated ThisBase
+    // effects — everything that applies to this base, before rating expansion. Shared by
+    // BuildBaseEffects_ (which expands ratings into gameplay effects) and GetEffectiveSocialRating
+    // (which only accumulates the rating totals).
+    std::vector<ActiveEffect_t> CollectBaseLocalEffects_(const std::vector<ActiveEffect_t>& activeEffects) const;
+
+    // The final effect list this base resolves against: CollectBaseLocalEffects_ plus the
+    // gameplay effects of this base's effective social rating levels
+    // (ExpandSocialRatingEffects).
+    std::vector<ActiveEffect_t> BuildBaseEffects_(const std::vector<ActiveEffect_t>& activeEffects) const;
+
     FactionId m_factionId;
     int m_baseId;
     Tile& m_tile;
     TileEffectsContext& m_rTileEffects;
     const BuildingRegistry* m_pBuildingRegistry;
+    const SocialRatingRegistry* m_pSocialRatings;
     const ResearchManager* m_pResearch;
     std::unique_ptr<PopulationManager> m_pPopulation;
     std::unique_ptr<WorkerAssignmentManager> m_pWorkerAssignments;

@@ -67,7 +67,7 @@ int ResourceManager::CalculateResource_(StatId stat, const TileResources_t& work
     // Per-tile yield modifiers are already folded into `worked`; only flat (non-selector)
     // stat modifiers remain to be applied once at the base level.
     double base = static_cast<double>(GetResourceValue_(worked, stat));
-    base += ResolveStatModifiers(FilterFlatByStatId(m_activeEffects, stat)).total;
+    base += ResolveStatModifiers(FilterFlatByStatId(m_activeEffects, stat), 0.0).total;
     return static_cast<int>(base);
 }
 
@@ -87,8 +87,10 @@ int ResourceManager::CalculateEcon_(int energy) const
 {
     if (!m_pEconomy)
         throw std::runtime_error("EconomyManager not set");
+    // FilterFlat, not FilterByStatId: base-level resolution must never pick up
+    // selector-carrying (per-tile) modifiers, even on stats where none make sense today.
     return m_pEconomy->CalculateEnergyForEcon(energy)
-         + static_cast<int>(ResolveStatModifiers(FilterByStatId(m_activeEffects, StatId::Econ)).total);
+         + static_cast<int>(ResolveStatModifiers(FilterFlatByStatId(m_activeEffects, StatId::Econ), 0.0).total);
 }
 
 int ResourceManager::CalculateLabs_(int energy) const
@@ -96,7 +98,7 @@ int ResourceManager::CalculateLabs_(int energy) const
     if (!m_pEconomy)
         throw std::runtime_error("EconomyManager not set");
     return m_pEconomy->CalculateEnergyForLabs(energy)
-         + static_cast<int>(ResolveStatModifiers(FilterByStatId(m_activeEffects, StatId::Labs)).total);
+         + static_cast<int>(ResolveStatModifiers(FilterFlatByStatId(m_activeEffects, StatId::Labs), 0.0).total);
 }
 
 int ResourceManager::CalculatePsych_(int energy) const
@@ -104,7 +106,7 @@ int ResourceManager::CalculatePsych_(int energy) const
     if (!m_pEconomy)
         throw std::runtime_error("EconomyManager not set");
     return m_pEconomy->CalculateEnergyForPsych(energy)
-         + static_cast<int>(ResolveStatModifiers(FilterByStatId(m_activeEffects, StatId::Psych)).total);
+         + static_cast<int>(ResolveStatModifiers(FilterFlatByStatId(m_activeEffects, StatId::Psych), 0.0).total);
 }
 
 int ResourceManager::GetEconProduction() const
