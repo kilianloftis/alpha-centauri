@@ -82,7 +82,8 @@ int UnitDesign::GetBaseCost() const
     }
 
     const std::vector<ActiveEffect_t> allEffects = CollectEffects();
-    const StatBreakdown_t breakdown = ResolveStatModifiers(FilterByStatId(allEffects, StatId::CostMultiplier), 1.0);
+    const StatBreakdown_t breakdown =
+        ResolveStatModifiers(FilterByStatId(allEffects, StatId::CostMultiplier), SeedFor(StatId::CostMultiplier));
     const float costMult = breakdown.contributions.empty() ? 1.0f : static_cast<float>(breakdown.total);
 
     return static_cast<int>(rawCost * costMult);
@@ -90,7 +91,7 @@ int UnitDesign::GetBaseCost() const
 
 float UnitDesign::ResolveStat_(StatId statId) const
 {
-    return static_cast<float>(ResolveStatModifiers(FilterByStatId(CollectUnitEffects(m_components), statId), 0.0).total);
+    return static_cast<float>(ResolveStatModifiers(FilterByStatId(CollectUnitEffects(m_components), statId), SeedFor(statId)).total);
 }
 
 bool UnitDesign::ResolveFlag_(RuleFlagId flagId) const
@@ -121,7 +122,7 @@ bool UnitDesign::IsSingleUse() const            { return ResolveFlag_(RuleFlagId
 int UnitDesign::GetAttackAgainst(const EffectContext_t& ctx) const
 {
     const std::vector<ActiveEffect_t> effects = CollectUnitEffects(m_components);
-    return static_cast<int>(ResolveStatModifiers(FilterByStatIdInContext(effects, StatId::Attack, ctx), 0.0).total);
+    return static_cast<int>(ResolveStatModifiers(FilterByStatIdInContext(effects, StatId::Attack, ctx), SeedFor(StatId::Attack)).total);
 }
 
 } // namespace ac

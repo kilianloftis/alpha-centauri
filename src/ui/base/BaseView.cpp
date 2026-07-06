@@ -29,9 +29,16 @@ BaseView::BaseView(
     , m_rBase(rBase)
     , m_rFaction(rFaction)
 {
+    const WindowLayout_t leftColumn = ResolveLayout(m_layout, {
+        k_LeftPanelLayout.x,
+        0.25f,
+        k_LeftPanelLayout.width,
+        k_LeftPanelLayout.height + k_BottomLeftPanelLayout.height
+    });
+
     m_elements.push_back(std::make_unique<GrowthDisplay>(
         &m_rBase,
-        ResolveLayout(m_layout, k_LeftPanelLayout)
+        ResolveLayout(leftColumn, {0.0f, 0.0f, 1.0f, 0.5f})
     ));
     m_elements.push_back(std::make_unique<BaseWorkableAreaDisplay>(
         &m_rBase,
@@ -41,7 +48,7 @@ BaseView::BaseView(
     ));
     m_elements.push_back(std::make_unique<ProductionDisplay>(
         &m_rBase,
-        ResolveLayout(m_layout, k_BottomLeftPanelLayout),
+        ResolveLayout(leftColumn, {0.0f, 0.5f, 1.0f, 0.5f}),
         [this]() { HandleProductionDisplayClicked_(); }
     ));
     m_elements.push_back(std::make_unique<PopulationDisplay>(

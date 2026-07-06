@@ -66,7 +66,7 @@ TEST_CASE("FilterForBase: scope rules with real base identities", "[effects][bas
     BaseManager& baseB = fixture.MakeBase(6, 6);
 
     actest::EffectPool pool;
-    const std::vector<ActiveEffect_t> effects = {
+    const FactionEffects_t factionEffects{{
         actest::Active(pool.StatMod(StatId::Nutrients, 1.0, ModifierOp::Add, EffectScope_t::ThisBase),
                        "mine_a", &baseA),
         actest::Active(pool.StatMod(StatId::Nutrients, 2.0, ModifierOp::Add, EffectScope_t::ThisBase),
@@ -85,15 +85,15 @@ TEST_CASE("FilterForBase: scope rules with real base identities", "[effects][bas
                        "pop"),
         actest::Active(pool.StatMod(StatId::Nutrients, 256.0, ModifierOp::Add, EffectScope_t::ThisTile),
                        "tile"),
-    };
+    }};
 
     // For base A: its own ThisBase effect plus the three base-applicable global scopes.
     // The distinct powers of two make any wrong inclusion identifiable from the total.
-    const auto forA = FilterForBase(effects, baseA);
-    CHECK(ResolveStatModifiers(FilterByStatId(forA, StatId::Nutrients), 0.0).total == Approx(1.0 + 4.0 + 8.0 + 16.0));
+    const BaseEffects_t forA = FilterForBase(factionEffects, baseA);
+    CHECK(ResolveStatModifiers(FilterByStatId(forA.effects, StatId::Nutrients), 0.0).total == Approx(1.0 + 4.0 + 8.0 + 16.0));
 
-    const auto forB = FilterForBase(effects, baseB);
-    CHECK(ResolveStatModifiers(FilterByStatId(forB, StatId::Nutrients), 0.0).total == Approx(2.0 + 4.0 + 8.0 + 16.0));
+    const BaseEffects_t forB = FilterForBase(factionEffects, baseB);
+    CHECK(ResolveStatModifiers(FilterByStatId(forB.effects, StatId::Nutrients), 0.0).total == Approx(2.0 + 4.0 + 8.0 + 16.0));
 }
 
 TEST_CASE("FilterForBase: a ThisBase effect with no origin base applies to no base", "[effects][base][filter]")
@@ -102,11 +102,11 @@ TEST_CASE("FilterForBase: a ThisBase effect with no origin base applies to no ba
     BaseManager& baseA = fixture.MakeBase(2, 2);
 
     actest::EffectPool pool;
-    const std::vector<ActiveEffect_t> effects = {
+    const FactionEffects_t factionEffects{{
         actest::Active(pool.StatMod(StatId::Nutrients, 1.0, ModifierOp::Add, EffectScope_t::ThisBase),
                        "orphan", nullptr),
-    };
-    CHECK(FilterForBase(effects, baseA).empty());
+    }};
+    CHECK(FilterForBase(factionEffects, baseA).effects.empty());
 }
 
 TEST_CASE("DispatchInstantaneousEffects: Instantaneous GrantBuilding constructs the building immediately",
@@ -171,7 +171,8 @@ TEST_CASE("Full pipeline: building and pop bonuses land in base resource product
     REQUIRE(pOtherWorker != nullptr);
     base.ConvertPop(*pOtherWorker, "Doctor");
 
-    base.ProduceResources(base.CollectBuildingEffects());
+    // The building effects stand in for the full faction pool (no faction in this fixture).
+    base.ProduceResources(FactionEffects_t{base.CollectBuildingEffects()});
 
     // Nutrients: farm tile (2 Wet + 1 Farm + 1 booster) + base center tile (0) + flat 2 = 6.
     CHECK(base.GetNutrientProduction() == 6);

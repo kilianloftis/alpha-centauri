@@ -68,11 +68,11 @@ public:
 
     // Compute aggregate resources from all assigned workers.
     // For each worker pop with an assigned tile, resolves the tile's full yield (intrinsic +
-    // area effects + any base-wide per-tile modifier in baseEffects matching the tile), then
+    // area effects + any base-wide per-tile modifier in rBaseEffects matching the tile), then
     // applies the pop's tile multipliers so those multipliers scale the whole tile yield.
     // Does NOT include the base center tile — that is a pop-less tile owned by ResourceManager.
     // Pops or tiles that cannot be resolved are skipped.
-    TileResources_t ComputeWorkedResources(const std::vector<ActiveEffect_t>& baseEffects) const;
+    TileResources_t ComputeWorkedResources(const BaseEffects_t& rBaseEffects) const;
 
     // Auto-assign any unassigned workers to the stored workable tiles.
     // Tiles are sorted by score (descending) before assignment.

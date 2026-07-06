@@ -14,6 +14,8 @@ graph TB
 
     subgraph "Active Effect Instances"
         ActiveEffect[ActiveEffect_t<br/>config*<br/>sourceId<br/>originBase*]
+        FactionEffects[FactionEffects_t<br/>faction-wide pool]
+        BaseEffects[BaseEffects_t<br/>one base's final effect list]
         CollectActiveEffects[CollectActiveEffects]
         CollectBuildingEffects[Faction::CollectBuildingEffects<br/>BaseManager::CollectBuildingEffects]
         ExpandGrantBuilding[ExpandGrantBuildingEffects]
@@ -21,6 +23,8 @@ graph TB
         CollectFromPops[CollectFromPops]
         CollectTileEffects[CollectTileEffects]
         CollectAreaEffects[TileEffectsContext::CollectAreaEffects]
+        FilterForBase[FilterForBase]
+        ExpandRatingEffects[ExpandSocialRatingEffects]
     end
 
     subgraph "Effect Sources"
@@ -52,6 +56,11 @@ graph TB
     CollectActiveEffects --> CollectBuildingEffects
     CollectActiveEffects --> CollectFromSocialEngineering
     CollectActiveEffects --> ActiveEffect
+    CollectActiveEffects --> FactionEffects
+    FactionEffects --> FilterForBase
+    FilterForBase --> BaseEffects
+    CollectFromPops --> BaseEffects
+    ExpandRatingEffects --> BaseEffects
     CollectFromPops --> PopContainer
     CollectAreaEffects --> TileEffectsContext
     CollectTileEffects --> ImprovementConfig
@@ -64,6 +73,10 @@ graph TB
     style EffectConfig fill:#ffd,stroke:#333,stroke-width:3px
     style EffectStructs fill:#ffd,stroke:#333,stroke-width:2px
     style ActiveEffect fill:#fbf,stroke:#333,stroke-width:3px
+    style FactionEffects fill:#fbf,stroke:#333,stroke-width:2px
+    style BaseEffects fill:#fbf,stroke:#333,stroke-width:2px
+    style FilterForBase fill:#bfb,stroke:#333,stroke-width:2px
+    style ExpandRatingEffects fill:#bfb,stroke:#333,stroke-width:2px
     style CollectActiveEffects fill:#bfb,stroke:#333,stroke-width:3px
     style CollectBuildingEffects fill:#bfb,stroke:#333,stroke-width:2px
     style ExpandGrantBuilding fill:#bfb,stroke:#333,stroke-width:2px
@@ -155,6 +168,23 @@ concept doesn't exist yet are **legal but inert**:
   - Terrain mutation: `MoistureTier` — resolved back into `Tile::SetMoisture` by `RecomputeMoisture`; not a runtime-queried stat (see Tile Improvement Effects).
 - **Consumers**: `StatModifierEffect_t::stat`. `Defense` is also the target stat for tile-granted combat bonuses (rockiness, fungus, improvements) — see Tile Improvement Effects below.
 
+### StatKind / KindFor / SeedFor
+- **Purpose**: The seed-semantics single source of truth, mirroring `LaneFor`. Defined next
+  to `StatId` in `EffectEnums.h`.
+- **`StatKind`**: `Additive` (contributions add onto an empty base; seed `0.0`),
+  `PureMultiplier` (the stat *is* a multiplier, resolved purely through
+  `AddPercent`/`MultiplyGeometric`; seed `1.0` — a `0.0` seed silently collapses to 0), or
+  `RawScaled` (modifiers scale a raw value only the resolve site knows: `GrowthRate`'s 100%
+  baseline, `MoistureTier`'s base tier).
+- **`constexpr KindFor(StatId) -> StatKind`**: exhaustive switch — adding a `StatId` forces a
+  seed-semantics decision the same way adding a scope forces a routing decision in `LaneFor`.
+  `tests/effects/ValidationTests.cpp` pins every stat's kind with `static_assert`s.
+- **`constexpr SeedFor(StatId) -> double`**: derives the context-free seed from the kind
+  (`0.0`/`1.0`); throws for `RawScaled`, forcing those sites to pass their raw value
+  explicitly. Sites that deliberately resolve an Additive stat against a raw base (tile
+  yield's elevation energy seed, pop tile multipliers, the tile defense multiplier) also
+  pass their seed explicitly and say so in a comment.
+
 ### TileSelectorKind / TileSelector_t
 - **Purpose**: On a `StatModifierEffect_t`, selects which worked tiles the modifier applies to. A tile improvement is identified by its plain string id (`ImprovementConfig_t::id`), matching `Tile::HasImprovement()` — there is no separate improvement-type enum.
 - **Values** (`TileSelectorKind`):
@@ -197,6 +227,23 @@ concept doesn't exist yet are **legal but inert**:
   - Records the source id (e.g., building id or social policy id) for UI breakdowns.
   - Records the originating `BaseManager` for `ThisBase`-scoped effects.
 
+### FactionEffects_t / BaseEffects_t (typed pools)
+- **Purpose**: Make the two consumer-side pipeline stages distinct types instead of two
+  `std::vector<ActiveEffect_t>`s that happen to share a shape, so using the wrong list at
+  the wrong stage is a compile error — the consumer-side counterpart of `LaneFor` making
+  scope routing compiler-enforced.
+- **`FactionEffects_t`**: what `CollectActiveEffects` returns (plus other factions' WorldGlobal
+  contributions appended by turn stages). Still contains every base's `ThisBase` effects and
+  the `FactionUnits` lane, so it must never be resolved against directly at base level.
+- **`BaseEffects_t`**: one base's final effect list — produced only by `FilterForBase`, then
+  extended by the pop merge (`CollectFromPops`) and rating expansion
+  (`ExpandSocialRatingEffects`) inside `BaseManager::BuildBaseEffects_`. This is the type
+  `FilterFlatByStatId`, `ResolveTileYield(tile, isBaseTile, baseEffects)`,
+  `ResourceManager::ProduceResources`, and the growth path accept.
+- Both are thin structs holding a `std::vector<ActiveEffect_t> effects;`. Pre-pool source
+  collections (a building's effects, a pop's effects, grant expansion input) remain raw
+  vectors — the typing guards the pool→base narrowing, not collection.
+
 ### StatBreakdown_t
 - **Purpose**: A resolved view of stat modifiers for a single stat.
 - **Responsibilities**:
@@ -206,9 +253,10 @@ concept doesn't exist yet are **legal but inert**:
 ### ResolveStatModifiers
 - **Purpose**: Resolves a set of `ActiveEffect_t` instances into a `StatBreakdown_t`.
 - **Signature**: `ResolveStatModifiers(matching, baseValue)` — `baseValue` is deliberately
-  **not defaulted**. Pure-multiplier stats (CostMultiplier, tile defense) collapse to 0 from
-  a 0 base, so every caller states its seed: `0.0` for additive stats, `1.0` for pure
-  multipliers, or a raw value the modifiers scale (tile yield, GrowthRate's `100.0`).
+  **not defaulted**. Context-free resolve sites derive it from the stat via
+  `SeedFor(statId)` (see StatKind above), so a pure-multiplier stat can no longer be seeded
+  `0.0` by habit; raw-scaled sites pass the raw value the modifiers scale (tile yield,
+  GrowthRate's `100.0`).
 - **Responsibilities**:
   - Collects `StatModifierEffect_t` effects from the input list.
   - Sorts contributions by `sourceId` for deterministic order.
@@ -224,6 +272,7 @@ concept doesn't exist yet are **legal but inert**:
 
 ### FilterFlatByStatId
 - **Purpose**: Like `FilterByStatId`, but **excludes** selector-carrying modifiers (i.e. keeps only flat, non-per-tile stat modifiers). Used for base-level resolution, where per-tile modifiers have already been applied to each worked tile and must not be counted a second time.
+- **Signature**: Accepts only a `BaseEffects_t` — never a raw vector or the faction pool — so running the flat filter at any stage other than base-level resolution is a compile error.
 - **Returns**: A vector of matching `ActiveEffect_t` instances.
 
 ### FilterByScope
@@ -231,12 +280,13 @@ concept doesn't exist yet are **legal but inert**:
 - **Used by**: `Pop::ApplyTileMultipliers`/`Pop::GetSpecialistOutput` to split a pop type's own effects into the `ThisPop` (tile multiplier) and `ThisBase` (flat generation) subsets before resolving each separately — see Pop Type Effects below.
 
 ### FilterForBase
-- **Purpose**: Filters active effects to only those that apply to a specific base.
+- **Purpose**: Narrows the faction pool to the effects that apply to a specific base — the
+  only constructor of a `BaseEffects_t` from a `FactionEffects_t`.
 - **Responsibilities** (switching on `LaneFor(scope)`):
   - `EffectLane::Base`: includes `ThisBase` effects whose `originBase` is the given base.
   - `EffectLane::FactionWide`: includes `AllOwnerBases`, `FactionGlobal`, and `WorldGlobal` effects.
   - All other lanes (`FactionUnits`, `UnitLocal`, `PopLocal`, `TileLocal`) are excluded — resolved by their own owning instance (unit, pop, or tile) and never apply at the base level.
-- **Returns**: A vector of relevant `ActiveEffect_t` instances.
+- **Returns**: A `BaseEffects_t`.
 
 ### Collection helpers (AppendActiveEffects and variants)
 - **Purpose**: The single config→`ActiveEffect_t` conversion. One core loop owns the two
@@ -258,7 +308,7 @@ concept doesn't exist yet are **legal but inert**:
 ### CollectActiveEffects
 - **Purpose**: Gathers all active effects for a faction — the faction pool.
 - **Responsibilities**:
-  - Takes only a `const Faction&` as a parameter.
+  - Takes only a `const Faction&` as a parameter; returns a `FactionEffects_t`.
   - Calls `Faction::CollectBuildingEffects`, which calls `BaseManager::CollectBuildingEffects` on every base to collect raw building effects, then passes the combined list to `ExpandGrantBuildingEffects` (along with the faction's `BuildingRegistry` and base list) to expand any `GrantBuildingEffect_t` entries. The `sourceId` is chained (e.g., `command_nexus -> network_node`). `ThisBase`-scoped sub-effects of a faction-wide grant are cloned once per base with the correct `originBase`. A grant whose target already appears in its own source chain is skipped (cycle guard).
   - Calls `CollectFromSocialEngineering` (delegating to `Faction::CollectSocialEffects`) to gather the active social policies' effects — including `SocialRatingModifier` entries, which pass through as ordinary effects (see Social Ratings below).
   - Calls `Faction::CollectPopFactionEffects` — pop effects on the faction lanes (`IsFactionLane`); the locally-resolved `ThisPop`/`ThisBase` stay with `Pop::ApplyTileMultipliers` and `CollectFromPops` respectively.
@@ -268,9 +318,11 @@ concept doesn't exist yet are **legal but inert**:
 ### Social Ratings (two-level)
 - `SocialRatingModifier` effects are ordinary effects and can come from **any** source: a
   policy's faction-wide `+2 Growth`, a building's `ThisBase` `+1 Growth`, etc.
-- `SocialRatingResolver` (`game/social-engineering/SocialRatingResolver.h`):
-  - `AccumulateSocialRatings(effects)` sums modifier contributions per rating axis.
-  - `ExpandSocialRatingEffects(effects, ratingRegistry)` maps each non-zero accumulated
+- `SocialRatingResolver` (`game/social-engineering/SocialRatingResolver.h`). Both functions
+  take `BaseEffects_t` — accumulation is only meaningful after the list is filtered to its
+  final base context, and the type makes running it on the raw pool a compile error:
+  - `AccumulateSocialRatings(baseEffects)` sums modifier contributions per rating axis.
+  - `ExpandSocialRatingEffects(baseEffects, ratingRegistry)` maps each non-zero accumulated
     level through `SocialRatingConfig::levelEffects` (exact-level match; unlisted levels
     produce nothing) and appends the resulting gameplay effects with sourceId
     `se_rating_<axis>_<total>`.
@@ -415,17 +467,19 @@ units, pops, or tiles according to each entry's `scope`.
 
 1. Add the `StatId` enumerator (`EffectEnums.h`) and its string mapping in `ParseStatId`
    (`BonusEffectParser.cpp`); extend the mapping test in `ParserTests.cpp`.
-2. Resolve it where the value is needed, choosing the filter by context:
+2. Classify its seed semantics in `KindFor` (`EffectEnums.h`) — the compiler forces this via
+   the exhaustive switch — and pin it in `ValidationTests.cpp` alongside the others.
+3. Resolve it where the value is needed, choosing the filter by context:
    - `FilterFlatByStatId` for **base-level** resolution — excludes per-tile selector
-     modifiers and conditional effects; always the right choice at base level.
+     modifiers and conditional effects, and only accepts a `BaseEffects_t`; always the
+     right choice at base level.
    - `FilterByStatId` for tile and unit resolution (selector effects are folded in
      deliberately during the tile pass; conditional effects are still excluded).
    - `FilterByStatIdInContext` when a runtime target exists (e.g. combat vs a defender's
      tile).
-3. Pass the seed to `ResolveStatModifiers` **explicitly** — it has no default. `0.0` for
-   additive stats, `1.0` for pure-multiplier stats (`CostMultiplier`, the tile defense
-   multiplier), or the raw value the modifiers scale (a tile yield, `GrowthRate`'s `100.0`).
-   A pure-multiplier stat seeded with `0.0` resolves to 0.
+4. Seed `ResolveStatModifiers` with `SeedFor(statId)` — it derives `0.0`/`1.0` from the
+   stat's kind and throws for `RawScaled` stats, whose sites pass the raw value the
+   modifiers scale (a tile yield, `GrowthRate`'s `100.0`) explicitly.
 
 **A new rule flag**: add the `RuleFlagId` enumerator and its `ParseRuleFlagId` string, then
 check it with a `std::get_if<RuleFlagEffect_t>` scan over the relevant pool — see
@@ -443,10 +497,12 @@ check it with a `std::get_if<RuleFlagEffect_t>` scan over the relevant pool — 
 
 **A new resolution site** (consuming existing effects somewhere new): fetch the right pool
 rather than building a parallel collection path — the faction pool via
-`CollectActiveEffects(faction)`, a base's final list via `BaseManager::BuildBaseEffects_`
-(already includes pop effects and rating expansion), a live unit's via its design's
-`ThisUnit` effects plus the pool's `FactionUnits` (see `CollectLiveUnitEffects_` in
-`Unit.cpp`), a tile's via `TileEffectsContext`.
+`CollectActiveEffects(faction)` (a `FactionEffects_t`), a base's final list via
+`BaseManager::BuildBaseEffects_` (a `BaseEffects_t`, already including pop effects and
+rating expansion), a live unit's via its design's `ThisUnit` effects plus the pool's
+`FactionUnits` (see `CollectLiveUnitEffects_` in `Unit.cpp`), a tile's via
+`TileEffectsContext`. The pool types enforce the stage: base-level filters and the per-tile
+selector pass won't compile against the raw pool.
 
 ## Design Rationale
 
@@ -469,7 +525,6 @@ rather than building a parallel collection path — the faction pool via
   (production, growth, each live-unit stat read). Fine at current scale; a per-turn cache
   with explicit invalidation is a future optimization if profiling warrants it.
 
-- **Pure-multiplier stats still need the right seed value**: `ResolveStatModifiers` now takes `baseValue` as a required parameter (no default), so a caller can no longer *forget* to seed — but it can still pass the wrong seed (`0.0` where a pure-multiplier stat needs `1.0`). `UnitDesign::GetBaseCost()` passes `1.0` for `StatId::CostMultiplier`; any future pure-multiplier stat needs the same care at its resolve site.
 - **`BuildingConfig_t::IsDiscovered()` uses OR semantics**: a building becomes available once *any* listed `required_techs` entry is discovered, not all of them. May be intentional (alternate prerequisites) but is worth confirming against design intent.
 - **No combat system consumes `ResolveTileDefenseMultiplier` yet**: `Unit::GetDefense()` still returns only the unit's own design stat. Wiring an actual attack/defense resolution (and deciding how/whether it multiplies the attacker's tile bonus too) is a separate, larger feature.
 - **No improvement-construction flow consumes `CanBuildImprovement` yet**: `Tile::AddImprovement()` has no caller besides `BaseManager`'s `"Base"` wiring — there's no UI/production path for the player to actually build Farm/Mine/Bunker, so the `excludes` exclusivity check is unenforced in practice today.

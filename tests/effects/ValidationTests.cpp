@@ -1,5 +1,6 @@
 // Tests for post-load effect reference validation (EffectReferenceValidator) and the
-// parse-time scope routing single source of truth (LaneFor/IsFactionLane).
+// compile-time single sources of truth: scope routing (LaneFor/IsFactionLane) and stat
+// seed semantics (KindFor/SeedFor).
 
 #include "game/EffectReferenceValidator.h"
 #include "game/buildings/BuildingRegistry.h"
@@ -47,6 +48,34 @@ static_assert(IsFactionLane(EffectScope_t::FactionUnits));
 static_assert(!IsFactionLane(EffectScope_t::ThisUnit));
 static_assert(!IsFactionLane(EffectScope_t::ThisPop));
 static_assert(!IsFactionLane(EffectScope_t::ThisTile));
+
+// KindFor is the same single-source-of-truth pattern for stat seed semantics: pin every
+// stat's kind so a new StatId (which the compiler forces into KindFor's switch) gets a
+// deliberate seed decision here too.
+static_assert(KindFor(StatId::Nutrients) == StatKind::Additive);
+static_assert(KindFor(StatId::Minerals) == StatKind::Additive);
+static_assert(KindFor(StatId::Energy) == StatKind::Additive);
+static_assert(KindFor(StatId::Econ) == StatKind::Additive);
+static_assert(KindFor(StatId::Labs) == StatKind::Additive);
+static_assert(KindFor(StatId::Psych) == StatKind::Additive);
+static_assert(KindFor(StatId::Attack) == StatKind::Additive);
+static_assert(KindFor(StatId::Defense) == StatKind::Additive);
+static_assert(KindFor(StatId::Movement) == StatKind::Additive);
+static_assert(KindFor(StatId::HitPoints) == StatKind::Additive);
+static_assert(KindFor(StatId::DisengageChance) == StatKind::Additive);
+static_assert(KindFor(StatId::Fuel) == StatKind::Additive);
+static_assert(KindFor(StatId::DamageFromOutOfFuel) == StatKind::Additive);
+static_assert(KindFor(StatId::CargoCapacity) == StatKind::Additive);
+static_assert(KindFor(StatId::DifficultTerrainCost) == StatKind::Additive);
+static_assert(KindFor(StatId::CostMultiplier) == StatKind::PureMultiplier);
+static_assert(KindFor(StatId::GrowthRate) == StatKind::RawScaled);
+static_assert(KindFor(StatId::MoistureTier) == StatKind::RawScaled);
+
+// SeedFor derives the context-free seed from the kind; RawScaled stats have none (SeedFor
+// throws for them, which is not constexpr-evaluable, so no pin here).
+static_assert(SeedFor(StatId::Nutrients) == 0.0);
+static_assert(SeedFor(StatId::Attack) == 0.0);
+static_assert(SeedFor(StatId::CostMultiplier) == 1.0);
 
 TEST_CASE("ValidateEffectReferences: GrantBuilding targets must exist", "[effects][validation]")
 {

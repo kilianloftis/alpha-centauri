@@ -54,7 +54,7 @@ std::vector<ActiveEffect_t> GameState::CollectWorldEffects(const Faction& rExclu
             continue;
         }
         const std::vector<ActiveEffect_t> worldEffects =
-            FilterByScope(CollectActiveEffects(*pFaction), EffectScope_t::WorldGlobal);
+            FilterByScope(CollectActiveEffects(*pFaction).effects, EffectScope_t::WorldGlobal);
         result.insert(result.end(), worldEffects.begin(), worldEffects.end());
     }
     return result;

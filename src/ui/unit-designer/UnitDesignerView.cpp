@@ -58,24 +58,26 @@ UnitDesignerView::UnitDesignerView(
     m_elements.push_back(std::make_unique<UnitStatusPanel>(
         [this]() { return m_pSelectedDesign; },
         pUnitManager,
-        ResolveLayout(m_layout, k_LeftPanelLayout)
+        ResolveLayout(m_layout, k_BottomLeftPanelLayout)
     ));
+
+    const WindowLayout_t topPanel = ResolveLayout(m_layout, k_TopPanelLayout);
 
     m_elements.push_back(std::make_unique<SlotColumnPanel>(
         std::move(leftSlots),
-        ResolveLayout(m_layout, k_BottomLeftPanelLayout)
+        ResolveLayout(topPanel, {0.0f, 0.0f, 0.2f, 1.0f})
     ));
 
     m_elements.push_back(std::make_unique<DesignStatsDisplay>(
         &m_state,
         &m_rSlotRegistry.GetAll(),
-        ResolveLayout(m_layout, k_TopPanelLayout),
+        ResolveLayout(topPanel, {0.2f, 0.0f, 0.6f, 1.0f}),
         [this]() { HandleSaveDesign_(); }
     ));
 
     m_elements.push_back(std::make_unique<SlotColumnPanel>(
         std::move(rightSlots),
-        ResolveLayout(m_layout, k_RightPanelLayout)
+        ResolveLayout(topPanel, {0.8f, 0.0f, 0.2f, 1.0f})
     ));
 
     m_elements.push_back(std::make_unique<DesignListPanel>(

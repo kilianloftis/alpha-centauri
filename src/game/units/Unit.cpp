@@ -16,7 +16,7 @@ std::vector<ActiveEffect_t> CollectLiveUnitEffects_(const UnitDesign& rDesign, c
 {
     std::vector<ActiveEffect_t> effects = rDesign.CollectEffects();
     const std::vector<ActiveEffect_t> factionEffects =
-        FilterByScope(CollectActiveEffects(rFaction), EffectScope_t::FactionUnits);
+        FilterByScope(CollectActiveEffects(rFaction).effects, EffectScope_t::FactionUnits);
     effects.insert(effects.end(), factionEffects.begin(), factionEffects.end());
     return effects;
 }
@@ -43,7 +43,7 @@ const UnitDesign& Unit::GetDesign() const                              { return 
 int Unit::ResolveStat_(StatId statId) const
 {
     const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects_(m_rDesign, m_rFaction);
-    return static_cast<int>(ResolveStatModifiers(FilterByStatId(effects, statId), 0.0).total);
+    return static_cast<int>(ResolveStatModifiers(FilterByStatId(effects, statId), SeedFor(statId)).total);
 }
 
 bool Unit::ResolveFlag_(RuleFlagId flagId) const
@@ -67,7 +67,7 @@ int Unit::GetAttackAgainst(const Unit& rDefender) const
     ctx.targetTile = &rDefender.GetTile();
     const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects_(m_rDesign, m_rFaction);
     return static_cast<int>(
-        ResolveStatModifiers(FilterByStatIdInContext(effects, StatId::Attack, ctx), 0.0).total);
+        ResolveStatModifiers(FilterByStatIdInContext(effects, StatId::Attack, ctx), SeedFor(StatId::Attack)).total);
 }
 int Unit::GetDefense() const                                           { return ResolveStat_(StatId::Defense); }
 int Unit::GetMovement() const                                          { return ResolveStat_(StatId::Movement); }

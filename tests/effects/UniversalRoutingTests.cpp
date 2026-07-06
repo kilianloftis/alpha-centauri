@@ -30,12 +30,12 @@ TEST_CASE("Faction pool: a pop type's FactionGlobal effect is collected faction-
     const_cast<PopContainer&>(base.GetPopContainer()).AddPop("Networker");
 
     const auto pool = CollectActiveEffects(faction);
-    CHECK(ResolveStatModifiers(FilterByStatId(pool, StatId::Labs), 0.0).total == Approx(1.0));
+    CHECK(ResolveStatModifiers(FilterByStatId(pool.effects, StatId::Labs), 0.0).total == Approx(1.0));
 
     // Two Networkers stack.
     const_cast<PopContainer&>(base.GetPopContainer()).AddPop("Networker");
     const auto pool2 = CollectActiveEffects(faction);
-    CHECK(ResolveStatModifiers(FilterByStatId(pool2, StatId::Labs), 0.0).total == Approx(2.0));
+    CHECK(ResolveStatModifiers(FilterByStatId(pool2.effects, StatId::Labs), 0.0).total == Approx(2.0));
 }
 
 TEST_CASE("Faction pool: a unit component's FactionGlobal effect applies while the unit lives",
@@ -44,18 +44,18 @@ TEST_CASE("Faction pool: a unit component's FactionGlobal effect applies while t
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
 
-    CHECK(ResolveStatModifiers(FilterByStatId(CollectActiveEffects(faction), StatId::Energy), 0.0).total
+    CHECK(ResolveStatModifiers(FilterByStatId(CollectActiveEffects(faction).effects, StatId::Energy), 0.0).total
           == Approx(0.0));
 
     // energy_siphon: "+1 energy, FactionGlobal" on a component.
     Unit& unit = fixture.MakeUnit(faction, 0, 0, {"energy_siphon"});
-    CHECK(ResolveStatModifiers(FilterByStatId(CollectActiveEffects(faction), StatId::Energy), 0.0).total
+    CHECK(ResolveStatModifiers(FilterByStatId(CollectActiveEffects(faction).effects, StatId::Energy), 0.0).total
           == Approx(1.0));
 
     // The effect disappears with the unit.
     fixture.map.OnUnitRemoved(unit);
     faction.GetUnitManager().DestroyUnit(unit);
-    CHECK(ResolveStatModifiers(FilterByStatId(CollectActiveEffects(faction), StatId::Energy), 0.0).total
+    CHECK(ResolveStatModifiers(FilterByStatId(CollectActiveEffects(faction).effects, StatId::Energy), 0.0).total
           == Approx(0.0));
 }
 
@@ -146,7 +146,7 @@ TEST_CASE("Social policy stat effects flow through the standard pool (no special
     REQUIRE(faction.SetSocialPolicy(SocialCategory::Economics, "wealth_policy"));
 
     const auto pool = CollectActiveEffects(faction);
-    CHECK(ResolveStatModifiers(FilterByStatId(pool, StatId::Energy), 0.0).total == Approx(1.0));
+    CHECK(ResolveStatModifiers(FilterByStatId(pool.effects, StatId::Energy), 0.0).total == Approx(1.0));
 }
 
 TEST_CASE("Unit aura: a sensor-pod unit projects its ThisTile defense bonus within its radius",

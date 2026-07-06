@@ -44,12 +44,14 @@ public:
     // Intrinsic (terrain/improvement/river) plus area effects only — no base-wide modifiers.
     TileResources_t ResolveTileYield(const Tile& rTile) const;
 
-    // As above, but also folds in any per-tile StatModifier from baseEffects whose selector
+    // As above, but also folds in any per-tile StatModifier from rBaseEffects whose selector
     // matches this tile (e.g. a building's "+1 mineral to every worked Mine"). isBaseTile
     // distinguishes the base center tile so BaseTile-selector modifiers resolve correctly.
     // This is the single entry point for a worked tile's full pre-pop-multiplier yield.
+    // Takes BaseEffects_t: only a base's final effect list may drive the selector pass —
+    // handing it the raw faction pool would apply other bases' per-tile modifiers here.
     TileResources_t ResolveTileYield(const Tile& rTile, bool isBaseTile,
-                                     const std::vector<ActiveEffect_t>& baseEffects) const;
+                                     const BaseEffects_t& rBaseEffects) const;
 
     // Combined defense multiplier including aura effects (e.g. nearby Sensor, Rocky terrain).
     double ResolveTileDefenseMultiplier(const Tile& rTile) const;

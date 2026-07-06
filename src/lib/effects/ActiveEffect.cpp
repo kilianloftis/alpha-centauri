@@ -231,21 +231,21 @@ double ApplyModifierStack(double base, const std::vector<std::pair<double, Modif
     return addTotal * arithmeticFactor * geometricFactor;
 }
 
-std::vector<ActiveEffect_t> CollectActiveEffects(const Faction& rFaction)
+FactionEffects_t CollectActiveEffects(const Faction& rFaction)
 {
-    std::vector<ActiveEffect_t> result;
-    CollectFromBuildings(rFaction, result);
-    CollectFromSocialEngineering(rFaction, result);
+    FactionEffects_t factionEffects;
+    CollectFromBuildings(rFaction, factionEffects.effects);
+    CollectFromSocialEngineering(rFaction, factionEffects.effects);
 
     // Faction-lane effects from the remaining sources: pops (scopes other than the
     // locally-resolved ThisPop/ThisBase) and live units' components (other than
     // ThisUnit/ThisTile). Routing is scope-driven — any config can contribute here.
     const std::vector<ActiveEffect_t> popEffects = rFaction.CollectPopFactionEffects();
-    result.insert(result.end(), popEffects.begin(), popEffects.end());
+    factionEffects.effects.insert(factionEffects.effects.end(), popEffects.begin(), popEffects.end());
     const std::vector<ActiveEffect_t> unitEffects = rFaction.CollectUnitFactionEffects();
-    result.insert(result.end(), unitEffects.begin(), unitEffects.end());
+    factionEffects.effects.insert(factionEffects.effects.end(), unitEffects.begin(), unitEffects.end());
 
-    return result;
+    return factionEffects;
 }
 
 StatBreakdown_t ResolveStatModifiers(const std::vector<ActiveEffect_t>& matching, double baseValue)
@@ -343,10 +343,10 @@ std::vector<ActiveEffect_t> FilterByStatIdInContext(const std::vector<ActiveEffe
     return matching;
 }
 
-std::vector<ActiveEffect_t> FilterFlatByStatId(const std::vector<ActiveEffect_t>& effects, StatId statId)
+std::vector<ActiveEffect_t> FilterFlatByStatId(const BaseEffects_t& rBaseEffects, StatId statId)
 {
     std::vector<ActiveEffect_t> matching;
-    for (const ActiveEffect_t& effect : effects)
+    for (const ActiveEffect_t& effect : rBaseEffects.effects)
     {
         if (!effect.config)
         {
@@ -361,10 +361,10 @@ std::vector<ActiveEffect_t> FilterFlatByStatId(const std::vector<ActiveEffect_t>
     return matching;
 }
 
-std::vector<ActiveEffect_t> FilterForBase(const std::vector<ActiveEffect_t>& effects, const BaseManager& rBase)
+BaseEffects_t FilterForBase(const FactionEffects_t& rFactionEffects, const BaseManager& rBase)
 {
-    std::vector<ActiveEffect_t> matching;
-    for (const ActiveEffect_t& effect : effects)
+    BaseEffects_t matching;
+    for (const ActiveEffect_t& effect : rFactionEffects.effects)
     {
         if (!effect.config)
         {
@@ -376,11 +376,11 @@ std::vector<ActiveEffect_t> FilterForBase(const std::vector<ActiveEffect_t>& eff
             case EffectLane::Base:
                 if (effect.originBase == &rBase)
                 {
-                    matching.push_back(effect);
+                    matching.effects.push_back(effect);
                 }
                 break;
             case EffectLane::FactionWide:
-                matching.push_back(effect);
+                matching.effects.push_back(effect);
                 break;
             case EffectLane::FactionUnits:
             case EffectLane::UnitLocal:

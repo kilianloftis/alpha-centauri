@@ -112,28 +112,28 @@ const BaseManager* Faction::GetBase(size_t index) const
 
 void Faction::ProduceBaseResources(const std::vector<ActiveEffect_t>& rExternalEffects)
 {
-    std::vector<ActiveEffect_t> activeEffects = CollectActiveEffects(*this);
-    activeEffects.insert(activeEffects.end(), rExternalEffects.begin(), rExternalEffects.end());
+    FactionEffects_t factionEffects = CollectActiveEffects(*this);
+    factionEffects.effects.insert(factionEffects.effects.end(), rExternalEffects.begin(), rExternalEffects.end());
 
     for (const auto& pBase : m_bases)
     {
         if (pBase)
         {
-            pBase->ProduceResources(activeEffects);
+            pBase->ProduceResources(factionEffects);
         }
     }
 }
 
 void Faction::ApplyBaseGrowth(const std::vector<ActiveEffect_t>& rExternalEffects)
 {
-    std::vector<ActiveEffect_t> activeEffects = CollectActiveEffects(*this);
-    activeEffects.insert(activeEffects.end(), rExternalEffects.begin(), rExternalEffects.end());
+    FactionEffects_t factionEffects = CollectActiveEffects(*this);
+    factionEffects.effects.insert(factionEffects.effects.end(), rExternalEffects.begin(), rExternalEffects.end());
 
     for (const auto& pBase : m_bases)
     {
         if (pBase)
         {
-            pBase->ApplyGrowth(activeEffects);
+            pBase->ApplyGrowth(factionEffects);
         }
     }
 }

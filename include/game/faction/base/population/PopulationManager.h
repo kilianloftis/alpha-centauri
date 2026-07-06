@@ -79,10 +79,11 @@ public:
     int GetNutrientStockpile() const;
 
     // Nutrients required for the next population growth step.
-    int GetNutrientsRequired(const std::vector<ActiveEffect_t>& activeEffects) const;
+    // rBaseEffects is this base's final effect list (BaseManager::BuildBaseEffects_).
+    int GetNutrientsRequired(const BaseEffects_t& rBaseEffects) const;
 
     // Apply nutrients produced this turn: add to stockpile, grow or starve if threshold is met.
-    void ApplyGrowth(int nutrients, const std::vector<ActiveEffect_t>& activeEffects);
+    void ApplyGrowth(int nutrients, const BaseEffects_t& rBaseEffects);
 
     // Signals
     Signal<int> on_pop_gained;   // new size

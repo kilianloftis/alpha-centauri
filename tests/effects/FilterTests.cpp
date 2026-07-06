@@ -60,15 +60,15 @@ TEST_CASE("FilterFlatByStatId: excludes both selector-carrying and condition-car
           "[effects][filter]")
 {
     actest::EffectPool pool;
-    const std::vector<ActiveEffect_t> effects = {
+    const BaseEffects_t baseEffects{{
         Active(pool.StatMod(StatId::Nutrients, 2.0), "flat"),
         Active(pool.StatMod(StatId::Nutrients, 1.0, ModifierOp::Add, EffectScope_t::ThisBase,
                             actest::ImprovementSelector("Farm")), "per_tile"),
         Active(pool.StatMod(StatId::Nutrients, 1.0, ModifierOp::Add, EffectScope_t::ThisBase,
                             std::nullopt, actest::TargetTileHas("River")), "conditional"),
-    };
+    }};
 
-    const auto matching = FilterFlatByStatId(effects, StatId::Nutrients);
+    const auto matching = FilterFlatByStatId(baseEffects, StatId::Nutrients);
     REQUIRE(matching.size() == 1);
     CHECK(matching[0].sourceId == "flat");
 }
@@ -195,7 +195,7 @@ TEST_CASE("Filters tolerate null configs", "[effects][filter]")
     effects.push_back(ActiveEffect_t{nullptr, "broken", nullptr});
 
     CHECK(FilterByStatId(effects, StatId::Energy).empty());
-    CHECK(FilterFlatByStatId(effects, StatId::Energy).empty());
+    CHECK(FilterFlatByStatId(BaseEffects_t{effects}, StatId::Energy).empty());
     CHECK(FilterByStatIdInContext(effects, StatId::Energy, EffectContext_t{}).empty());
     CHECK(FilterByScope(effects, EffectScope_t::ThisBase).empty());
 }

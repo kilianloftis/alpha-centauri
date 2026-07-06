@@ -180,18 +180,20 @@ TileResources_t TileEffectsContext::ResolveTileYield(const Tile& rTile) const
 }
 
 TileResources_t TileEffectsContext::ResolveTileYield(const Tile& rTile, bool isBaseTile,
-                                                     const std::vector<ActiveEffect_t>& baseEffects) const
+                                                     const BaseEffects_t& rBaseEffects) const
 {
     std::vector<ActiveEffect_t> effects = CollectAreaEffects(rTile);
-    AppendMatchingTileModifiers_(baseEffects, rTile, isBaseTile, effects);
+    AppendMatchingTileModifiers_(rBaseEffects.effects, rTile, isBaseTile, effects);
     return ResolveYieldFromEffects_(rTile, effects);
 }
 
 TileResources_t TileEffectsContext::ResolveYieldFromEffects_(const Tile& rTile,
                                                              const std::vector<ActiveEffect_t>& effects) const
 {
-    const double nutrients = ResolveStatModifiers(FilterByStatId(effects, StatId::Nutrients), 0.0).total;
-    const double minerals  = ResolveStatModifiers(FilterByStatId(effects, StatId::Minerals), 0.0).total;
+    // Energy deliberately bypasses SeedFor: it is an Additive stat, but this site scales a
+    // raw base — the tile's elevation energy seed.
+    const double nutrients = ResolveStatModifiers(FilterByStatId(effects, StatId::Nutrients), SeedFor(StatId::Nutrients)).total;
+    const double minerals  = ResolveStatModifiers(FilterByStatId(effects, StatId::Minerals), SeedFor(StatId::Minerals)).total;
     const double energy    = ResolveStatModifiers(
         FilterByStatId(effects, StatId::Energy), static_cast<double>(rTile.GetElevationEnergySeed())).total;
 
@@ -205,6 +207,9 @@ TileResources_t TileEffectsContext::ResolveYieldFromEffects_(const Tile& rTile,
 double TileEffectsContext::ResolveTileDefenseMultiplier(const Tile& rTile) const
 {
     const std::vector<ActiveEffect_t> effects = CollectAreaEffects(rTile);
+    // Explicit 1.0, not SeedFor: Defense is Additive as a unit stat (armor rating), but the
+    // tile lane resolves a different quantity — a multiplier composed of the tile's percent
+    // effects, seeded at identity.
     return ResolveStatModifiers(FilterByStatId(effects, StatId::Defense), 1.0).total;
 }
 

@@ -146,28 +146,22 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
         return;
     }
 
-    if (m_pCameraInputController->HandleMouse(rEvent))
+    if (rEvent.button == MouseButton_t::Left && rEvent.bPressed && tile)
     {
-        return;
-    }
-
-    if (rEvent.button == MouseButton_t::Left)
-    {
-        if (!rEvent.bPressed || !tile)
+        BaseManager* pBase = FindBaseAtTile_(worldX, worldY);
+        if (pBase)
         {
+            m_onOpenBase(*pBase);
             return;
         }
 
         SelectUnitAtTile_(worldX, worldY);
+        return;
+    }
 
-        if (!m_pSelectedUnit)
-        {
-            BaseManager* pBase = FindBaseAtTile_(worldX, worldY);
-            if (pBase)
-            {
-                m_onOpenBase(*pBase);
-            }
-        }
+    if (m_pCameraInputController->HandleMouse(rEvent))
+    {
+        return;
     }
 }
 

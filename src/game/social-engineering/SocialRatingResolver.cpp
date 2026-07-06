@@ -9,10 +9,10 @@
 namespace ac
 {
 
-std::map<SocialRatingId, int> AccumulateSocialRatings(const std::vector<ActiveEffect_t>& rEffects)
+std::map<SocialRatingId, int> AccumulateSocialRatings(const BaseEffects_t& rBaseEffects)
 {
     std::map<SocialRatingId, int> totals;
-    for (const ActiveEffect_t& rEffect : rEffects)
+    for (const ActiveEffect_t& rEffect : rBaseEffects.effects)
     {
         if (!rEffect.config)
         {
@@ -26,10 +26,10 @@ std::map<SocialRatingId, int> AccumulateSocialRatings(const std::vector<ActiveEf
     return totals;
 }
 
-void ExpandSocialRatingEffects(std::vector<ActiveEffect_t>& rEffects,
+void ExpandSocialRatingEffects(BaseEffects_t& rBaseEffects,
                                const SocialRatingRegistry& rRatings)
 {
-    const std::map<SocialRatingId, int> totals = AccumulateSocialRatings(rEffects);
+    const std::map<SocialRatingId, int> totals = AccumulateSocialRatings(rBaseEffects);
 
     for (const auto& [rating, total] : totals)
     {
@@ -56,7 +56,7 @@ void ExpandSocialRatingEffects(std::vector<ActiveEffect_t>& rEffects,
                                      + "_" + std::to_string(total);
         for (const auto& rEffect : it->second)
         {
-            rEffects.push_back({&rEffect, sourceId, nullptr});
+            rBaseEffects.effects.push_back({&rEffect, sourceId, nullptr});
         }
     }
 }

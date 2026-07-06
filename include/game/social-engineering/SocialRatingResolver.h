@@ -20,14 +20,15 @@ class SocialRatingRegistry;
 // building's ThisBase +1 Growth passes only for its own base — that base totals 3,
 // every other base totals 2.
 
-// Sums SocialRatingModifier contributions per rating axis over rEffects.
-std::map<SocialRatingId, int> AccumulateSocialRatings(const std::vector<ActiveEffect_t>& rEffects);
+// Sums SocialRatingModifier contributions per rating axis over rBaseEffects.
+std::map<SocialRatingId, int> AccumulateSocialRatings(const BaseEffects_t& rBaseEffects);
 
 // Appends the gameplay effects each accumulated rating level maps to (via the rating
-// registry's levelEffects table, exact-level match as before) to rEffects, with sourceId
-// "se_rating_<axis>_<total>". Call after the list has been filtered to its final context
-// (e.g. after FilterForBase) so ThisBase-scoped rating modifiers are attributed correctly.
-void ExpandSocialRatingEffects(std::vector<ActiveEffect_t>& rEffects,
+// registry's levelEffects table, exact-level match as before) to rBaseEffects, with sourceId
+// "se_rating_<axis>_<total>". Both functions take BaseEffects_t because accumulation is only
+// meaningful after the list has been filtered to its final base context (FilterForBase +
+// pop merge) — that is what attributes ThisBase-scoped rating modifiers correctly.
+void ExpandSocialRatingEffects(BaseEffects_t& rBaseEffects,
                                const SocialRatingRegistry& rRatings);
 
 } // namespace ac

@@ -25,6 +25,27 @@ struct ActiveEffect_t
     const BaseManager* originBase = nullptr; // only set for ThisBase-scoped effects
 };
 
+// The faction-wide effect pool: what CollectActiveEffects gathers (buildings with grants
+// expanded, social policies, pop/unit faction-lane effects), plus other factions' WorldGlobal
+// contributions appended by the turn stages. Deliberately a distinct type from BaseEffects_t:
+// the pool still holds every base's ThisBase effects and the FactionUnits lane, so resolving
+// base stats directly against it would count effects that don't apply — FilterForBase is the
+// only path from a pool to a base's effect list.
+struct FactionEffects_t
+{
+    std::vector<ActiveEffect_t> effects;
+};
+
+// One base's effect list: FilterForBase over the faction pool, then the base's pop-generated
+// ThisBase effects (CollectFromPops) and expanded social-rating effects
+// (ExpandSocialRatingEffects) merged in — see BaseManager::BuildBaseEffects_. Every entry
+// applies to that single base, which is the precondition for flat base-level resolution
+// (FilterFlatByStatId) and the per-tile selector pass (TileEffectsContext::ResolveTileYield).
+struct BaseEffects_t
+{
+    std::vector<ActiveEffect_t> effects;
+};
+
 // Runtime context an effect's condition is evaluated against. Fields are optional; a
 // condition that references an absent field evaluates false. Combat sets targetTile to the
 // defender's tile so TargetTileHas conditions can inspect it.
@@ -90,7 +111,7 @@ struct StatBreakdown_t
     std::vector<Contribution> contributions;
 };
 
-std::vector<ActiveEffect_t> CollectActiveEffects(const Faction& rFaction);
+FactionEffects_t CollectActiveEffects(const Faction& rFaction);
 
 // Apply a stack of modifier contributions to a base value using the standard formula:
 //   result = (base + sumOfAdds) * (1 + sumOf(percent/100)) * productOfGeometric
@@ -116,13 +137,16 @@ std::vector<ActiveEffect_t> FilterByStatIdInContext(const std::vector<ActiveEffe
                                                     StatId statId, const EffectContext_t& ctx);
 
 // Like FilterByStatId, but excludes per-tile modifiers (StatModifiers carrying a tile
-// selector). Used for base-level resolution, where selector-carrying modifiers have
-// already been applied per worked tile and must not be counted a second time.
-std::vector<ActiveEffect_t> FilterFlatByStatId(const std::vector<ActiveEffect_t>& effects, StatId statId);
+// selector). Base-level resolution only: selector-carrying modifiers have already been
+// applied per worked tile and must not be counted a second time. Accepting BaseEffects_t
+// (never a raw vector or the pool) makes running this filter at any other stage a compile
+// error instead of a doc violation.
+std::vector<ActiveEffect_t> FilterFlatByStatId(const BaseEffects_t& rBaseEffects, StatId statId);
 
-// Returns effects that apply to the given base.
-// Includes ThisBase effects originating from this base, plus all AllOwnerBases, FactionGlobal, and WorldGlobal effects.
-std::vector<ActiveEffect_t> FilterForBase(const std::vector<ActiveEffect_t>& effects, const BaseManager& rBase);
+// Narrows the faction pool to the effects that apply to the given base: ThisBase effects
+// originating from it, plus all AllOwnerBases, FactionGlobal, and WorldGlobal effects.
+// The only constructor of a BaseEffects_t from a pool.
+BaseEffects_t FilterForBase(const FactionEffects_t& rFactionEffects, const BaseManager& rBase);
 
 // Returns effects whose scope matches exactly.
 std::vector<ActiveEffect_t> FilterByScope(const std::vector<ActiveEffect_t>& effects, EffectScope_t scope);

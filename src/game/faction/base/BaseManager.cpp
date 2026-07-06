@@ -284,19 +284,19 @@ std::string BaseManager::ApplyProduction()
     return m_pProduction->ApplyProduction(minerals);
 }
 
-std::vector<ActiveEffect_t> BaseManager::CollectBaseLocalEffects_(const std::vector<ActiveEffect_t>& activeEffects) const
+BaseEffects_t BaseManager::CollectBaseLocalEffects_(const FactionEffects_t& rFactionEffects) const
 {
-    std::vector<ActiveEffect_t> baseEffects = FilterForBase(activeEffects, *this);
+    BaseEffects_t baseEffects = FilterForBase(rFactionEffects, *this);
 
     const std::vector<ActiveEffect_t> popEffects = CollectFromPops(GetPopContainer(), *this);
-    baseEffects.insert(baseEffects.end(), popEffects.begin(), popEffects.end());
+    baseEffects.effects.insert(baseEffects.effects.end(), popEffects.begin(), popEffects.end());
 
     return baseEffects;
 }
 
-std::vector<ActiveEffect_t> BaseManager::BuildBaseEffects_(const std::vector<ActiveEffect_t>& activeEffects) const
+BaseEffects_t BaseManager::BuildBaseEffects_(const FactionEffects_t& rFactionEffects) const
 {
-    std::vector<ActiveEffect_t> baseEffects = CollectBaseLocalEffects_(activeEffects);
+    BaseEffects_t baseEffects = CollectBaseLocalEffects_(rFactionEffects);
 
     // Map this base's effective social rating levels (faction-wide modifiers + any
     // ThisBase-scoped ones that survived FilterForBase) to their gameplay effects.
@@ -308,22 +308,22 @@ std::vector<ActiveEffect_t> BaseManager::BuildBaseEffects_(const std::vector<Act
     return baseEffects;
 }
 
-int BaseManager::GetEffectiveSocialRating(SocialRatingId rating, const std::vector<ActiveEffect_t>& activeEffects) const
+int BaseManager::GetEffectiveSocialRating(SocialRatingId rating, const FactionEffects_t& rFactionEffects) const
 {
     const std::map<SocialRatingId, int> totals =
-        AccumulateSocialRatings(CollectBaseLocalEffects_(activeEffects));
+        AccumulateSocialRatings(CollectBaseLocalEffects_(rFactionEffects));
     const auto it = totals.find(rating);
     return it == totals.end() ? 0 : it->second;
 }
 
-void BaseManager::ProduceResources(const std::vector<ActiveEffect_t>& activeEffects)
+void BaseManager::ProduceResources(const FactionEffects_t& rFactionEffects)
 {
     if (!m_pResources || !m_pPopulation)
     {
         throw std::runtime_error("BaseManager::ProduceResources: m_pResources or m_pPopulation is null");
     }
 
-    m_pResources->ProduceResources(BuildBaseEffects_(activeEffects));
+    m_pResources->ProduceResources(BuildBaseEffects_(rFactionEffects));
 }
 
 int BaseManager::ConsumeEcon()
@@ -341,14 +341,14 @@ int BaseManager::ConsumePsych()
     return m_pResources ? m_pResources->ConsumePsych() : 0;
 }
 
-void BaseManager::ApplyGrowth(const std::vector<ActiveEffect_t>& activeEffects)
+void BaseManager::ApplyGrowth(const FactionEffects_t& rFactionEffects)
 {
     if (!m_pPopulation)
     {
         throw std::runtime_error("BaseManager::ApplyGrowth: m_pPopulation is null");
     }
     const int nutrients = m_pResources ? m_pResources->ConsumeNutrients() : 0;
-    m_pPopulation->ApplyGrowth(nutrients, BuildBaseEffects_(activeEffects));
+    m_pPopulation->ApplyGrowth(nutrients, BuildBaseEffects_(rFactionEffects));
 }
 
 int BaseManager::GetNutrientStockpile() const
@@ -356,13 +356,13 @@ int BaseManager::GetNutrientStockpile() const
     return m_pPopulation ? m_pPopulation->GetNutrientStockpile() : 0;
 }
 
-int BaseManager::GetNutrientsRequired(const std::vector<ActiveEffect_t>& activeEffects) const
+int BaseManager::GetNutrientsRequired(const FactionEffects_t& rFactionEffects) const
 {
     if (!m_pPopulation)
     {
         throw std::runtime_error("BaseManager::GetNutrientsRequired: m_pPopulation is null");
     }
-    return m_pPopulation->GetNutrientsRequired(BuildBaseEffects_(activeEffects));
+    return m_pPopulation->GetNutrientsRequired(BuildBaseEffects_(rFactionEffects));
 }
 
 int BaseManager::GetBaseSize() const

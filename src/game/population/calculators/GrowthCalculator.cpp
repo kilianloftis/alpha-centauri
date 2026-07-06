@@ -6,10 +6,11 @@
 namespace ac
 {
 
-int GrowthCalculator::ComputeNutrientsRequired(const GrowthConfig_t& rConfig, int baseSize, const std::vector<ActiveEffect_t>& activeEffects)
+int GrowthCalculator::ComputeNutrientsRequired(const GrowthConfig_t& rConfig, int baseSize, const BaseEffects_t& rBaseEffects)
 {
+    // GrowthRate is RawScaled (see KindFor): modifiers scale the 100% baseline seed.
     const double growthRate =
-        ResolveStatModifiers(FilterFlatByStatId(activeEffects, StatId::GrowthRate), 100.0).total;
+        ResolveStatModifiers(FilterFlatByStatId(rBaseEffects, StatId::GrowthRate), 100.0).total;
     const double multiplier = (growthRate > 0.0) ? growthRate / 100.0 : 1.0;
     return static_cast<int>(baseSize * rConfig.nutrientsPerPop / multiplier);
 }

@@ -92,16 +92,16 @@ int PopulationManager::GetNutrientStockpile() const
     return m_nutrientStockpile;
 }
 
-int PopulationManager::GetNutrientsRequired(const std::vector<ActiveEffect_t>& activeEffects) const
+int PopulationManager::GetNutrientsRequired(const BaseEffects_t& rBaseEffects) const
 {
-    return GrowthCalculator::ComputeNutrientsRequired(*m_pGrowthConfig, GetSize(), activeEffects);
+    return GrowthCalculator::ComputeNutrientsRequired(*m_pGrowthConfig, GetSize(), rBaseEffects);
 }
 
-void PopulationManager::ApplyGrowth(int nutrients, const std::vector<ActiveEffect_t>& activeEffects)
+void PopulationManager::ApplyGrowth(int nutrients, const BaseEffects_t& rBaseEffects)
 {
     m_nutrientStockpile += nutrients;
 
-    const int required = GrowthCalculator::ComputeNutrientsRequired(*m_pGrowthConfig, GetSize(), activeEffects);
+    const int required = GrowthCalculator::ComputeNutrientsRequired(*m_pGrowthConfig, GetSize(), rBaseEffects);
     if (m_nutrientStockpile >= required)
     {
         m_nutrientStockpile -= required;

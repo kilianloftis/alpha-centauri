@@ -151,10 +151,10 @@ TEST_CASE("ResolveTileYield with base effects: selector-carrying modifiers apply
     world.ctx->AddImprovementWithEffects(farmTile, "Farm");
 
     actest::EffectPool pool;
-    const std::vector<ActiveEffect_t> baseEffects = {
+    const BaseEffects_t baseEffects{{
         actest::Active(pool.StatMod(StatId::Nutrients, 1.0, ModifierOp::Add, EffectScope_t::ThisBase,
                                     actest::ImprovementSelector("Farm")), "farm_booster"),
-    };
+    }};
 
     // Farm tile: 1 (Farm) + 1 (booster). Plain tile: unaffected.
     CHECK(world.ctx->ResolveTileYield(farmTile, false, baseEffects).nutrients == 2);
@@ -168,10 +168,10 @@ TEST_CASE("ResolveTileYield with base effects: BaseTile selector applies only to
     Tile& tile = world.At(4, 4);
 
     actest::EffectPool pool;
-    const std::vector<ActiveEffect_t> baseEffects = {
+    const BaseEffects_t baseEffects{{
         actest::Active(pool.StatMod(StatId::Energy, 2.0, ModifierOp::Add, EffectScope_t::ThisBase,
                                     actest::BaseTileSelector()), "center_booster"),
-    };
+    }};
 
     CHECK(world.ctx->ResolveTileYield(tile, true, baseEffects).energy == 2);
     CHECK(world.ctx->ResolveTileYield(tile, false, baseEffects).energy == 0);
@@ -186,10 +186,10 @@ TEST_CASE("ResolveTileYield with base effects: flat (non-selector) modifiers are
     Tile& tile = world.At(4, 4);
 
     actest::EffectPool pool;
-    const std::vector<ActiveEffect_t> baseEffects = {
+    const BaseEffects_t baseEffects{{
         actest::Active(pool.StatMod(StatId::Nutrients, 2.0, ModifierOp::Add, EffectScope_t::ThisBase),
                        "flat_nutrient"),
-    };
+    }};
 
     CHECK(world.ctx->ResolveTileYield(tile, true, baseEffects).nutrients == 0);
     CHECK(world.ctx->ResolveTileYield(tile, false, baseEffects).nutrients == 0);
@@ -206,10 +206,10 @@ TEST_CASE("ResolveTileYield: percentage modifiers scale a tile's own yield", "[e
     world.ctx->AddImprovementWithEffects(tile, "Farm"); // +1 nutrients
 
     actest::EffectPool pool;
-    const std::vector<ActiveEffect_t> baseEffects = {
+    const BaseEffects_t baseEffects{{
         actest::Active(pool.StatMod(StatId::Nutrients, 50.0, ModifierOp::AddPercent, EffectScope_t::ThisBase,
                                     actest::ImprovementSelector("Farm")), "gene_splicer"),
-    };
+    }};
 
     // (2 + 1) * 1.5 = 4.5, truncated to 4 by the int cast.
     CHECK(world.ctx->ResolveTileYield(tile, false, baseEffects).nutrients == 4);

@@ -18,14 +18,14 @@ using Catch::Approx;
 TEST_CASE("AccumulateSocialRatings: sums per axis across sources", "[effects][rating]")
 {
     actest::EffectPool pool;
-    const std::vector<ActiveEffect_t> effects = {
+    const BaseEffects_t baseEffects{{
         Active(pool.RatingMod(SocialRatingId::Growth, 2), "policy"),
         Active(pool.RatingMod(SocialRatingId::Growth, 1), "building"),
         Active(pool.RatingMod(SocialRatingId::Police, -2), "policy"),
         Active(pool.StatMod(StatId::Energy, 1.0), "unrelated"),
-    };
+    }};
 
-    const auto totals = AccumulateSocialRatings(effects);
+    const auto totals = AccumulateSocialRatings(baseEffects);
     CHECK(totals.at(SocialRatingId::Growth) == 3);
     CHECK(totals.at(SocialRatingId::Police) == -2);
     CHECK(totals.count(SocialRatingId::Economy) == 0);
@@ -39,15 +39,15 @@ TEST_CASE("ExpandSocialRatingEffects: maps accumulated levels through the rating
 
     SECTION("a defined level appends its gameplay effects")
     {
-        std::vector<ActiveEffect_t> effects = {
+        BaseEffects_t baseEffects{{
             Active(pool.RatingMod(SocialRatingId::Growth, 2), "policy"),
-        };
-        ExpandSocialRatingEffects(effects, fixture.socialRatings());
+        }};
+        ExpandSocialRatingEffects(baseEffects, fixture.socialRatings());
 
         // Fixture: growth level 2 -> +1 nutrients (AllOwnerBases).
-        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Nutrients), 0.0).total == Approx(1.0));
+        CHECK(ResolveStatModifiers(FilterByStatId(baseEffects.effects, StatId::Nutrients), 0.0).total == Approx(1.0));
         bool foundRatingSource = false;
-        for (const ActiveEffect_t& rEffect : effects)
+        for (const ActiveEffect_t& rEffect : baseEffects.effects)
         {
             if (rEffect.sourceId == "se_rating_growth_2")
             {
@@ -59,21 +59,21 @@ TEST_CASE("ExpandSocialRatingEffects: maps accumulated levels through the rating
 
     SECTION("an undefined level produces no effects")
     {
-        std::vector<ActiveEffect_t> effects = {
+        BaseEffects_t baseEffects{{
             Active(pool.RatingMod(SocialRatingId::Growth, 1), "policy"), // no level 1 in fixture
-        };
-        ExpandSocialRatingEffects(effects, fixture.socialRatings());
-        CHECK(FilterByStatId(effects, StatId::Nutrients).empty());
+        }};
+        ExpandSocialRatingEffects(baseEffects, fixture.socialRatings());
+        CHECK(FilterByStatId(baseEffects.effects, StatId::Nutrients).empty());
     }
 
     SECTION("modifiers that cancel to zero produce no effects")
     {
-        std::vector<ActiveEffect_t> effects = {
+        BaseEffects_t baseEffects{{
             Active(pool.RatingMod(SocialRatingId::Growth, 2), "policy"),
             Active(pool.RatingMod(SocialRatingId::Growth, -2), "malus"),
-        };
-        ExpandSocialRatingEffects(effects, fixture.socialRatings());
-        CHECK(FilterByStatId(effects, StatId::Nutrients).empty());
+        }};
+        ExpandSocialRatingEffects(baseEffects, fixture.socialRatings());
+        CHECK(FilterByStatId(baseEffects.effects, StatId::Nutrients).empty());
     }
 }
 

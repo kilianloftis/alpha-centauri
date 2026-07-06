@@ -45,7 +45,8 @@ public:
 
     // Produce resources from worked tiles and allocate energy into stockpiles.
     // Called once per turn per base from the ResourceCollection stage.
-    void ProduceResources(const std::vector<ActiveEffect_t>& activeEffects);
+    // rBaseEffects is this base's final effect list (BaseManager::BuildBaseEffects_).
+    void ProduceResources(const BaseEffects_t& rBaseEffects);
 
 private:
     const WorkerAssignmentManager* m_pWorkerAssignments;
@@ -53,7 +54,7 @@ private:
     const BuildingManager* m_pBuildings;
     const Tile* m_pBaseTile;
     const TileEffectsContext* m_pTileEffects;
-    std::vector<ActiveEffect_t> m_activeEffects;
+    BaseEffects_t m_baseEffects;
     int m_nutrients = 0;
     int m_minerals = 0;
     int m_econ = 0;
@@ -61,7 +62,7 @@ private:
     int m_psych = 0;
 
     // Aggregate worked-tile resources: all worker pops (via WorkerAssignmentManager) plus the
-    // free base center tile, each resolved against m_activeEffects so per-tile modifiers apply.
+    // free base center tile, each resolved against m_baseEffects so per-tile modifiers apply.
     TileResources_t ComputeWorked_() const;
 
     int CalculateResource_(StatId stat, const TileResources_t& worked) const;

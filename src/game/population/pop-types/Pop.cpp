@@ -136,7 +136,7 @@ SpecialistOutput_t Pop::GetSpecialistOutput() const
 
     auto resolveFlat = [&](StatId statId) -> int
     {
-        return static_cast<int>(ResolveStatModifiers(FilterByStatId(flatEffects, statId), 0.0).total);
+        return static_cast<int>(ResolveStatModifiers(FilterByStatId(flatEffects, statId), SeedFor(statId)).total);
     };
 
     return SpecialistOutput_t{

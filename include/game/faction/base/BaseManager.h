@@ -102,19 +102,19 @@ public:
 
     // Collect resources from worked tiles and allocate energy to categories.
     // Called once per turn per base during ResourceCollection stage.
-    void ProduceResources(const std::vector<ActiveEffect_t>& activeEffects);
+    void ProduceResources(const FactionEffects_t& rFactionEffects);
 
     // Apply nutrients produced this turn: add to stockpile, grow or starve if threshold is met.
-    // activeEffects is the faction-wide pool; GrowthRate modifiers are resolved per base.
-    void ApplyGrowth(const std::vector<ActiveEffect_t>& activeEffects);
+    // rFactionEffects is the faction-wide pool; GrowthRate modifiers are resolved per base.
+    void ApplyGrowth(const FactionEffects_t& rFactionEffects);
 
     // This base's effective social rating on one axis: faction-wide SocialRatingModifier
     // contributions plus any ThisBase-scoped ones originating here (e.g. a building's
-    // +1 Growth). activeEffects is the faction-wide pool.
-    int GetEffectiveSocialRating(SocialRatingId rating, const std::vector<ActiveEffect_t>& activeEffects) const;
+    // +1 Growth). rFactionEffects is the faction-wide pool.
+    int GetEffectiveSocialRating(SocialRatingId rating, const FactionEffects_t& rFactionEffects) const;
 
     int GetNutrientStockpile() const;
-    int GetNutrientsRequired(const std::vector<ActiveEffect_t>& activeEffects = {}) const;
+    int GetNutrientsRequired(const FactionEffects_t& rFactionEffects = {}) const;
     int GetBaseSize() const;
     int GetGrowthRate() const;
 
@@ -144,12 +144,12 @@ private:
     // effects — everything that applies to this base, before rating expansion. Shared by
     // BuildBaseEffects_ (which expands ratings into gameplay effects) and GetEffectiveSocialRating
     // (which only accumulates the rating totals).
-    std::vector<ActiveEffect_t> CollectBaseLocalEffects_(const std::vector<ActiveEffect_t>& activeEffects) const;
+    BaseEffects_t CollectBaseLocalEffects_(const FactionEffects_t& rFactionEffects) const;
 
     // The final effect list this base resolves against: CollectBaseLocalEffects_ plus the
     // gameplay effects of this base's effective social rating levels
     // (ExpandSocialRatingEffects).
-    std::vector<ActiveEffect_t> BuildBaseEffects_(const std::vector<ActiveEffect_t>& activeEffects) const;
+    BaseEffects_t BuildBaseEffects_(const FactionEffects_t& rFactionEffects) const;
 
     FactionId m_factionId;
     int m_baseId;

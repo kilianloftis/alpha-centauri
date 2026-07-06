@@ -125,7 +125,7 @@ bool WorkerAssignmentManager::IsTileAssigned(const Tile* pTile) const
     return pTile && pTile->IsWorked();
 }
 
-TileResources_t WorkerAssignmentManager::ComputeWorkedResources(const std::vector<ActiveEffect_t>& baseEffects) const
+TileResources_t WorkerAssignmentManager::ComputeWorkedResources(const BaseEffects_t& rBaseEffects) const
 {
     TileResources_t total{0, 0, 0};
     for (const auto& pPop : m_rPops.GetPops())
@@ -141,7 +141,7 @@ TileResources_t WorkerAssignmentManager::ComputeWorkedResources(const std::vecto
             continue;
         }
 
-        const TileResources_t yield = m_rTileEffects.ResolveTileYield(*pTile, /*isBaseTile*/false, baseEffects);
+        const TileResources_t yield = m_rTileEffects.ResolveTileYield(*pTile, /*isBaseTile*/false, rBaseEffects);
         const TileResources_t modified = pPop->ApplyTileMultipliers(yield);
 
         total.nutrients += modified.nutrients;
