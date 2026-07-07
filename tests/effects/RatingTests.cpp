@@ -100,6 +100,27 @@ TEST_CASE("Two-level ratings: faction-wide policy rating plus a base-local build
     CHECK(plainBase.GetNutrientProduction() == 1);
 }
 
+TEST_CASE("Growth rating affects the growth threshold via GrowthRate modifiers",
+          "[effects][rating][growth]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& baseWithShrine = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& plainBase = fixture.MakeFactionBase(faction, 6, 6);
+
+    // No rating: 3 starting pops * 10 nutrients per pop.
+    CHECK(plainBase.GetNutrientsRequired(CollectActiveEffects(faction)) == 30);
+
+    // Policy: +2 Growth faction-wide (fixture level 2 -> +20% growth rate). Shrine: +1
+    // Growth in its base only (level 3 -> +30%). The threshold shrinks per base.
+    REQUIRE(faction.SetSocialPolicy(SocialCategory::Politics, "growth_policy"));
+    baseWithShrine.AddBuilding("growth_shrine");
+
+    const FactionEffects_t pool = CollectActiveEffects(faction);
+    CHECK(plainBase.GetNutrientsRequired(pool) == 25);      // 30 / 1.2
+    CHECK(baseWithShrine.GetNutrientsRequired(pool) == 23); // 30 / 1.3
+}
+
 TEST_CASE("Rating modifiers are honored from any source: a building's FactionGlobal rating",
           "[effects][rating]")
 {

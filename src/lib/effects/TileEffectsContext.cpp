@@ -151,11 +151,6 @@ TileEffectsContext::TileEffectsContext(WorldMap& rWorldMap, const ImprovementReg
     }
 }
 
-std::vector<ActiveEffect_t> TileEffectsContext::CollectTileEffects(const Tile& rTile) const
-{
-    return ac::CollectTileEffects(rTile, m_rImprovements);
-}
-
 WorldMap& TileEffectsContext::GetWorldMap()
 {
     return m_rWorldMap;

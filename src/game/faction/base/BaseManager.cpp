@@ -370,13 +370,6 @@ int BaseManager::GetBaseSize() const
     return m_pPopulation ? m_pPopulation->GetSize() : 0;
 }
 
-int BaseManager::GetGrowthRate() const
-{
-    // TODO: Implement growth rate calculation
-    // For now, return arbitrary value as placeholder
-    return 0;
-}
-
 int BaseManager::GetX() const
 {
     return m_tile.GetX();

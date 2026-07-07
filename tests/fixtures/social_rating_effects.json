@@ -3,10 +3,12 @@
     "id": "growth",
     "levels": {
       "2": [
-        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "nutrients", "amount": 1 } }
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "nutrients", "amount": 1 } },
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "growth_rate", "amount": 20, "op": "AddPercent" } }
       ],
       "3": [
-        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "nutrients", "amount": 3 } }
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "nutrients", "amount": 3 } },
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "growth_rate", "amount": 30, "op": "AddPercent" } }
       ]
     }
   }

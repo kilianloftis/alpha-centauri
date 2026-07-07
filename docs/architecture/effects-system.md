@@ -331,6 +331,12 @@ concept doesn't exist yet are **legal but inert**:
   every base while `ThisBase` modifiers shift only their own base — a `+2 Growth` policy
   plus a `+1 Growth` shrine resolves that base at level 3 and every other base at level 2.
   `BaseManager::GetEffectiveSocialRating(rating, pool)` exposes the per-axis total.
+- **Growth rating → growth rate**: the growth axis's levels map to `GrowthRate`
+  `AddPercent` modifiers (`config/social_rating_effects.json`, ±10% per level), which
+  `GrowthCalculator::ComputeNutrientsRequired` resolves per base — so the SE Growth score
+  directly scales each base's growth threshold, both at turn end (`ApplyGrowth`) and in the
+  UI (`GrowthDisplay` passes the faction pool to `GetNutrientsRequired`). The extreme
+  levels emit `NearZeroGrowth` / `PopulationBoom` rule flags instead (see Known Gaps).
 
 ### ResourceManager Integration
 - **Purpose**: Applies active effects to base resource production.
@@ -525,6 +531,10 @@ selector pass won't compile against the raw pool.
   (production, growth, each live-unit stat read). Fine at current scale; a per-turn cache
   with explicit invalidation is a future optimization if profiling warrants it.
 
+- **`NearZeroGrowth` / `PopulationBoom` rule flags are emitted but not consumed**: the growth
+  rating's extreme levels (and the `population_boom` project) declare them, and they reach the
+  base pool, but `GrowthCalculator` doesn't check them yet — their gameplay rules are undefined
+  (TODO at the resolve site).
 - **`BuildingConfig_t::IsDiscovered()` uses OR semantics**: a building becomes available once *any* listed `required_techs` entry is discovered, not all of them. May be intentional (alternate prerequisites) but is worth confirming against design intent.
 - **No combat system consumes `ResolveTileDefenseMultiplier` yet**: `Unit::GetDefense()` still returns only the unit's own design stat. Wiring an actual attack/defense resolution (and deciding how/whether it multiplies the attacker's tile bonus too) is a separate, larger feature.
 - **No improvement-construction flow consumes `CanBuildImprovement` yet**: `Tile::AddImprovement()` has no caller besides `BaseManager`'s `"Base"` wiring — there's no UI/production path for the player to actually build Farm/Mine/Bunker, so the `excludes` exclusivity check is unenforced in practice today.

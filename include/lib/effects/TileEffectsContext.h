@@ -31,9 +31,6 @@ public:
     WorldMap& GetWorldMap();
     const WorldMap& GetWorldMap() const;
 
-    // Collects this tile's own ThisTile-scoped effects (radius 0 only). No neighbor scan.
-    std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile) const;
-
     // Collects this tile's own effects plus any radius-extending effects from nearby tiles —
     // improvements/terrain (e.g. a Sensor or Mirror whose effect radius reaches rTile) and
     // units whose components project ThisTile effects (including units standing on rTile

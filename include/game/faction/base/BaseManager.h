@@ -114,9 +114,11 @@ public:
     int GetEffectiveSocialRating(SocialRatingId rating, const FactionEffects_t& rFactionEffects) const;
 
     int GetNutrientStockpile() const;
-    int GetNutrientsRequired(const FactionEffects_t& rFactionEffects = {}) const;
+    // rFactionEffects is the faction-wide pool — deliberately no default: an empty pool
+    // resolves the threshold without GrowthRate modifiers and silently diverges from
+    // what ApplyGrowth will actually require.
+    int GetNutrientsRequired(const FactionEffects_t& rFactionEffects) const;
     int GetBaseSize() const;
-    int GetGrowthRate() const;
 
     int GetX() const;
     int GetY() const;

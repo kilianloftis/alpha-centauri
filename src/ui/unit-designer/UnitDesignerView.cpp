@@ -13,6 +13,15 @@
 namespace ac
 {
 
+namespace
+{
+
+constexpr RatioLayout_t k_LeftSlotColumnLayout  {0.0f, 0.0f, 0.2f, 1.0f};
+constexpr RatioLayout_t k_DesignStatsLayout     {0.2f, 0.0f, 0.6f, 1.0f};
+constexpr RatioLayout_t k_RightSlotColumnLayout {0.8f, 0.0f, 0.2f, 1.0f};
+
+} // namespace
+
 UnitDesignerView::UnitDesignerView(
     Military& rMilitary,
     const UnitComponentRegistry& rComponentRegistry,
@@ -24,6 +33,22 @@ UnitDesignerView::UnitDesignerView(
     , m_rMilitary(rMilitary)
     , m_rComponentRegistry(rComponentRegistry)
     , m_rSlotRegistry(rSlotRegistry)
+{
+    BuildUnitStatusPanel_(pUnitManager);
+    BuildTopPanelElements_();
+    BuildDesignListPanel_();
+}
+
+void UnitDesignerView::BuildUnitStatusPanel_(const UnitManager* pUnitManager)
+{
+    m_elements.push_back(std::make_unique<UnitStatusPanel>(
+        [this]() { return m_pSelectedDesign; },
+        pUnitManager,
+        ResolveLayout(m_layout, k_BottomLeftPanelLayout)
+    ));
+}
+
+void UnitDesignerView::BuildTopPanelElements_()
 {
     std::vector<SlotColumnPanel::SlotEntry_t> leftSlots;
     std::vector<SlotColumnPanel::SlotEntry_t> rightSlots;
@@ -55,46 +80,47 @@ UnitDesignerView::UnitDesignerView(
         }
     }
 
-    m_elements.push_back(std::make_unique<UnitStatusPanel>(
-        [this]() { return m_pSelectedDesign; },
-        pUnitManager,
-        ResolveLayout(m_layout, k_BottomLeftPanelLayout)
-    ));
-
     const WindowLayout_t topPanel = ResolveLayout(m_layout, k_TopPanelLayout);
 
     m_elements.push_back(std::make_unique<SlotColumnPanel>(
         std::move(leftSlots),
-        ResolveLayout(topPanel, {0.0f, 0.0f, 0.2f, 1.0f})
+        ResolveLayout(topPanel, k_LeftSlotColumnLayout)
     ));
 
     m_elements.push_back(std::make_unique<DesignStatsDisplay>(
         &m_state,
         &m_rSlotRegistry.GetAll(),
-        ResolveLayout(topPanel, {0.2f, 0.0f, 0.6f, 1.0f}),
+        ResolveLayout(topPanel, k_DesignStatsLayout),
         [this]() { HandleSaveDesign_(); }
     ));
 
     m_elements.push_back(std::make_unique<SlotColumnPanel>(
         std::move(rightSlots),
-        ResolveLayout(topPanel, {0.8f, 0.0f, 0.2f, 1.0f})
+        ResolveLayout(topPanel, k_RightSlotColumnLayout)
     ));
+}
 
+void UnitDesignerView::BuildDesignListPanel_()
+{
     m_elements.push_back(std::make_unique<DesignListPanel>(
         &m_rMilitary,
         ResolveLayout(m_layout, k_CenterPanelLayout),
-        [this](const UnitDesign* pDesign)
-        {
-            m_pSelectedDesign = pDesign;
-            if (pDesign)
-            {
-                for (const auto& rSlot : m_rSlotRegistry.GetAll())
-                {
-                    m_state.components[rSlot.id] = pDesign->GetComponentForSlot(rSlot.id);
-                }
-            }
-        }
+        [this](const UnitDesign* pDesign) { OnDesignSelected_(pDesign); }
     ));
+}
+
+void UnitDesignerView::OnDesignSelected_(const UnitDesign* pDesign)
+{
+    m_pSelectedDesign = pDesign;
+    if (!pDesign)
+    {
+        return;
+    }
+
+    for (const auto& rSlot : m_rSlotRegistry.GetAll())
+    {
+        m_state.components[rSlot.id] = pDesign->GetComponentForSlot(rSlot.id);
+    }
 }
 
 bool UnitDesignerView::HandleKey(const KeyEvent_t& rEvent)

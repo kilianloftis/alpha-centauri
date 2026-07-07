@@ -28,6 +28,11 @@ public:
     bool HandleKey(const KeyEvent_t& rEvent) override;
 
 private:
+    void BuildUnitStatusPanel_(const UnitManager* pUnitManager);
+    void BuildTopPanelElements_();
+    void BuildDesignListPanel_();
+    void OnDesignSelected_(const UnitDesign* pDesign);
+
     void ShowComponentSelector_(
         const std::string& rComponentType,
         std::function<void(const UnitComponentConfig_t&)> onSelected
