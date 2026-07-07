@@ -32,6 +32,9 @@ enum class StatId
     // Population growth rate modifier (AddPercent, base = 100%)
     GrowthRate,
 
+    // Research tech cost percentage modifier (Add, base = 0; negative = cheaper)
+    TechCost,
+
     // Tile terrain mutation (resolved back into Tile::SetMoisture, not a runtime-queried stat)
     MoistureTier
     // TODO: add more stats as they are defined
@@ -73,7 +76,8 @@ constexpr StatKind KindFor(StatId stat)
         case StatId::Fuel:
         case StatId::DamageFromOutOfFuel:
         case StatId::CargoCapacity:
-        case StatId::DifficultTerrainCost: return StatKind::Additive;
+        case StatId::DifficultTerrainCost:
+        case StatId::TechCost:             return StatKind::Additive;
         case StatId::CostMultiplier:       return StatKind::PureMultiplier;
         case StatId::GrowthRate:
         case StatId::MoistureTier:         return StatKind::RawScaled;

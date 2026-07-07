@@ -55,6 +55,7 @@ add_library(ac-core STATIC
     game/units/UnitComponentConfigParser.cpp
     game/units/UnitSlotConfigParser.cpp
     game/research/TechConfigParser.cpp
+    game/faction/FactionConfigParser.cpp
     game/social-engineering/SocialPolicyConfigParser.cpp
     game/social-engineering/SocialRatingConfigParser.cpp
     game/social-engineering/SocialRatingResolver.cpp

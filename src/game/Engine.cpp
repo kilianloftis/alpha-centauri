@@ -19,6 +19,8 @@
 #include "game/research/TechRegistry.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/social-engineering/SocialRatingRegistry.h"
+#include "game/faction/FactionRegistry.h"
+#include "game/faction/FactionConfig.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopContainer.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
@@ -138,6 +140,9 @@ void Engine::Initialize_()
     m_gameDataContext->socialRatingRegistry = std::make_unique<SocialRatingRegistry>();
     m_gameDataContext->socialRatingRegistry->Load("config/social_rating_effects.json");
 
+    m_gameDataContext->factionRegistry = std::make_unique<FactionRegistry>();
+    m_gameDataContext->factionRegistry->Load("config/factions.json");
+
     // All effect-declaring registries are loaded; fail startup on any effect that
     // references a nonexistent building/tech/improvement/feature id.
     ValidateEffectReferences(*m_gameDataContext);
@@ -188,25 +193,42 @@ void Engine::Initialize_()
     m_gameDataContext->secretProjectAvailabilityCalculator =
         std::make_unique<SecretProjectAvailabilityCalculator>(m_gameState->GetFactions());
 
-    // Create test faction with a base
-    auto pFaction = std::make_unique<Faction>(m_gameDataContext->buildingRegistry.get(),
-                                              m_gameDataContext->techRegistry.get(),
-                                              m_gameDataContext->socialPolicyRegistry.get(),
-                                              m_gameDataContext->socialRatingRegistry.get(),
-                                              m_gameDataContext->techCostCalculator.get(),
-                                              m_gameDataContext->popTypeAvailabilityCalculator.get());
+    // Create factions from config with a starting base each.
     const int centerX = m_gameState->GetWorldMap()->GetWidth() / 2;
     const int centerY = m_gameState->GetWorldMap()->GetHeight() / 2;
-    BaseManager* pBase = pFaction->CreateBase(
-        1, 1, "Test Base",
-        m_gameState->GetWorldMap()->GetTile(centerX, centerY),
-        *m_gameDataContext,
-        m_gameState->GetTileEffects());
+    const std::vector<std::pair<int, int>> startPositions = {
+        {centerX, centerY},
+        {centerX + 3, centerY + 3},
+    };
 
-    // Wire base signals to EventBus
-    m_eventBridge->WireBase(*pBase);
+    int factionId = 1;
+    int baseId = 1;
+    size_t positionIndex = 0;
+    for (const FactionConfig_t& rFactionConfig : m_gameDataContext->factionRegistry->GetAll())
+    {
+        auto pFaction = std::make_unique<Faction>(
+            m_gameDataContext->buildingRegistry.get(),
+            m_gameDataContext->techRegistry.get(),
+            m_gameDataContext->socialPolicyRegistry.get(),
+            m_gameDataContext->socialRatingRegistry.get(),
+            m_gameDataContext->techCostCalculator.get(),
+            m_gameDataContext->popTypeAvailabilityCalculator.get(),
+            &rFactionConfig);
 
-    m_gameState->AddFaction(std::move(pFaction));
+        const auto& [startX, startY] = startPositions[positionIndex % startPositions.size()];
+        BaseManager* pBase = pFaction->CreateBase(
+            factionId, baseId, rFactionConfig.name + " HQ",
+            m_gameState->GetWorldMap()->GetTile(startX, startY),
+            *m_gameDataContext,
+            m_gameState->GetTileEffects());
+
+        m_eventBridge->WireBase(*pBase);
+        m_gameState->AddFaction(std::move(pFaction));
+
+        ++factionId;
+        ++baseId;
+        ++positionIndex;
+    }
 
     std::cout << "Test setup complete. " << m_gameState->GetNumFactions() << " faction(s), "
               << m_gameState->GetPlayerFaction()->GetBaseCount() << " base(s)\n";

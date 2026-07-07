@@ -12,6 +12,7 @@ class PopTypeRegistry;
 class TechRegistry;
 class SocialPolicyRegistry;
 class SocialRatingRegistry;
+class FactionRegistry;
 struct PopCompositionConfig;
 class PopCompositionCalculator;
 struct GrowthConfig_t;
@@ -37,6 +38,7 @@ struct GameDataContext
     std::unique_ptr<TechRegistry> techRegistry;
     std::unique_ptr<SocialPolicyRegistry> socialPolicyRegistry;
     std::unique_ptr<SocialRatingRegistry> socialRatingRegistry;
+    std::unique_ptr<FactionRegistry> factionRegistry;
     std::unique_ptr<PopTypeRegistry> popTypeRegistry;
     std::unique_ptr<PopCompositionConfig> popCompositionConfig;
     std::unique_ptr<PopCompositionCalculator> popCompositionCalculator;

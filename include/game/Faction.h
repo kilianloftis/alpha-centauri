@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/FactionConfig.h"
 #include "game/social-engineering/SocialPolicyConfig.h"
 #include "lib/effects/ActiveEffect.h"
 
@@ -36,8 +37,12 @@ public:
              const SocialPolicyRegistry* pSocialPolicyRegistry,
              const SocialRatingRegistry* pSocialRatingRegistry,
              TechCostCalculator* pTechCostCalculator,
-             const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator);
+             const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator,
+             const FactionConfig_t* pDefinition = nullptr);
     ~Faction();
+
+    const FactionConfig_t* GetDefinition() const { return m_pDefinition; }
+    const std::string& GetDefinitionId() const;
 
     // Base management
     void AddBase(std::unique_ptr<BaseManager> pBase);
@@ -85,6 +90,9 @@ public:
     // faction-wide energy while a unit carrying it exists.
     std::vector<ActiveEffect_t> CollectUnitFactionEffects() const;
 
+    // Permanent bonuses from the faction definition config.
+    std::vector<ActiveEffect_t> CollectDefinitionEffects() const;
+
     // Social engineering
     bool SetSocialPolicy(SocialCategory category, const std::string& policyId);
     const SocialPolicyConfig* GetSocialPolicy(SocialCategory category) const;
@@ -106,6 +114,7 @@ public:
 
 private:
     int m_energy = 0;
+    const FactionConfig_t* m_pDefinition = nullptr;
     const BuildingRegistry* m_pBuildingRegistry;
     const PopTypeAvailabilityCalculator* m_pPopTypeAvailabilityCalculator;
     std::unique_ptr<FactionIdentity> m_pIdentity;

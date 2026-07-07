@@ -8,6 +8,7 @@
 #include "game/units/UnitSlotRegistry.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/social-engineering/SocialRatingRegistry.h"
+#include "game/faction/FactionRegistry.h"
 #include "game/research/TechRegistry.h"
 #include "game/research/TechCostConfig.h"
 #include "game/research/TechCostCalculator.h"

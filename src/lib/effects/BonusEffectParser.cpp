@@ -26,6 +26,7 @@ StatId ParseStatId(const std::string& rStat)
     if (rStat == "difficult_terrain_cost")  return StatId::DifficultTerrainCost;
     if (rStat == "cost_multiplier")         return StatId::CostMultiplier;
     if (rStat == "growth_rate")             return StatId::GrowthRate;
+    if (rStat == "tech_cost")               return StatId::TechCost;
     if (rStat == "moisture_tier")           return StatId::MoistureTier;
     throw std::runtime_error("Unknown stat id: '" + rStat + "'");
 }

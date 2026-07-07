@@ -7,6 +7,8 @@
 namespace ac
 {
 
+class Faction;
+
 class ResearchManager
 {
 public:
@@ -25,6 +27,8 @@ public:
     int GetPointsNeededForCurrentTech() const;
     void RecalculatePointsNeeded();
 
+    void SetFaction(const Faction* pFaction);
+
     bool CanDiscoverTech() const;
     bool DiscoverTech();
 
@@ -37,6 +41,7 @@ public:
 private:
     const TechRegistry* m_pTechRegistry;
     TechCostCalculator* m_pTechCostCalculator;
+    const Faction* m_pFaction = nullptr;
 
     std::vector<TechId> m_discoveredTechs;
     const TechConfig_t* m_pCurrentResearchTarget;

@@ -9,7 +9,7 @@
 --   tech_stagnation      : 1 if tech stagnation is active, 0 otherwise
 --   research_modifier    : -1=natural bonus, 0=neutral, +1=natural penalty
 --   world_size_modifier  : percentage modifier from world size (0 = no change)
---   faction_modifier     : percentage modifier from faction definition
+--   faction_modifier     : percentage modifier from TechCost bonus effects
 --   alphax_modifier      : percentage modifier from alpha(x).txt
 --   base_cost            : per-tech base cost scalar from Tech definition
 

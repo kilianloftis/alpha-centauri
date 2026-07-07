@@ -213,6 +213,7 @@ enum class EffectSourceKind
     Improvement,
     SocialPolicy,
     SocialRating,
+    Faction,
 };
 
 } // namespace ac

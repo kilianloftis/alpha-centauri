@@ -1,5 +1,8 @@
 #include "game/faction/ResearchManager.h"
+
+#include "game/Faction.h"
 #include "game/research/TechCostConfig.h"
+#include "lib/effects/ActiveEffect.h"
 
 namespace ac
 {
@@ -77,9 +80,20 @@ void ResearchManager::RecalculatePointsNeeded()
     TechCostInputs_t inputs;
     inputs.techs      = static_cast<int>(m_discoveredTechs.size()); // TODO: subtract starting techs; add unknownVarA - unknownVarB
     inputs.mostTechs  = inputs.techs;                               // TODO: max across all factions + unknownVarA
+    if (m_pFaction)
+    {
+        const FactionEffects_t factionEffects = CollectActiveEffects(*m_pFaction);
+        inputs.factionTechCostModifier = static_cast<int>(
+            ResolveStatModifiers(FilterByStatId(factionEffects.effects, StatId::TechCost), 0.0).total);
+    }
     // All other fields are placeholder defaults (diff=1, turns=0, bIsAI=false, etc.)
 
     m_pointsNeededForCurrentTech = m_pTechCostCalculator->CalculateCost(*m_pCurrentResearchTarget, inputs);
+}
+
+void ResearchManager::SetFaction(const Faction* pFaction)
+{
+    m_pFaction = pFaction;
 }
 
 bool ResearchManager::CanDiscoverTech() const

@@ -29,8 +29,10 @@ Faction::Faction(const BuildingRegistry* pBuildingRegistry, const TechRegistry* 
                  const SocialPolicyRegistry* pSocialPolicyRegistry,
                  const SocialRatingRegistry* pSocialRatingRegistry,
                  TechCostCalculator* pTechCostCalculator,
-                 const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator)
-    : m_pBuildingRegistry(pBuildingRegistry)
+                 const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator,
+                 const FactionConfig_t* pDefinition)
+    : m_pDefinition(pDefinition)
+    , m_pBuildingRegistry(pBuildingRegistry)
     , m_pPopTypeAvailabilityCalculator(pPopTypeAvailabilityCalculator)
     , m_pIdentity(nullptr)
     , m_pAIProfile(nullptr)
@@ -42,10 +44,26 @@ Faction::Faction(const BuildingRegistry* pBuildingRegistry, const TechRegistry* 
                                                                         pSocialRatingRegistry))
     , m_pUnits(std::make_unique<UnitManager>(*this))
 {
+    if (m_pResearch)
+    {
+        m_pResearch->SetFaction(this);
+    }
+    if (m_pDefinition)
+    {
+        m_pIdentity = std::make_unique<FactionIdentity>();
+        m_pIdentity->SetName(m_pDefinition->name);
+        m_pIdentity->SetLeader(m_pDefinition->leader);
+    }
 }
 
 Faction::~Faction()
 {
+}
+
+const std::string& Faction::GetDefinitionId() const
+{
+    static const std::string kEmpty;
+    return m_pDefinition ? m_pDefinition->id : kEmpty;
 }
 
 void Faction::AddEnergy(int amount)
@@ -231,6 +249,16 @@ std::vector<ActiveEffect_t> Faction::CollectBuildingEffects() const
 std::vector<ActiveEffect_t> Faction::CollectSocialEffects() const
 {
     return m_pSocialEngineering ? m_pSocialEngineering->CollectEffects() : std::vector<ActiveEffect_t>{};
+}
+
+std::vector<ActiveEffect_t> Faction::CollectDefinitionEffects() const
+{
+    std::vector<ActiveEffect_t> result;
+    if (m_pDefinition)
+    {
+        AppendActiveEffects(m_pDefinition->effects, nullptr, m_pDefinition->id, result);
+    }
+    return result;
 }
 
 std::vector<ActiveEffect_t> Faction::CollectPopFactionEffects() const

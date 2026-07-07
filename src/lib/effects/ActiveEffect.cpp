@@ -212,6 +212,12 @@ void CollectFromSocialEngineering(const Faction& rFaction, std::vector<ActiveEff
     rResult.insert(rResult.end(), seEffects.begin(), seEffects.end());
 }
 
+void CollectFromFactionDefinition(const Faction& rFaction, std::vector<ActiveEffect_t>& rResult)
+{
+    const std::vector<ActiveEffect_t> defEffects = rFaction.CollectDefinitionEffects();
+    rResult.insert(rResult.end(), defEffects.begin(), defEffects.end());
+}
+
 } // namespace
 
 double ApplyModifierStack(double base, const std::vector<std::pair<double, ModifierOp>>& contributions)
@@ -234,6 +240,7 @@ double ApplyModifierStack(double base, const std::vector<std::pair<double, Modif
 FactionEffects_t CollectActiveEffects(const Faction& rFaction)
 {
     FactionEffects_t factionEffects;
+    CollectFromFactionDefinition(rFaction, factionEffects.effects);
     CollectFromBuildings(rFaction, factionEffects.effects);
     CollectFromSocialEngineering(rFaction, factionEffects.effects);
 

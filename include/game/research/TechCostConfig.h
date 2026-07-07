@@ -18,7 +18,7 @@ struct TechCostInputs_t
     bool bTechStagnation = false;
     int researchModifier = 0;        // -1=natural bonus, 0=neutral, +1=natural penalty
     int worldSizeModifier = 0;       // Percentage modifier from world size (0 = no change)
-    int factionTechCostModifier = 0; // Percentage modifier from faction definition
+    int factionTechCostModifier = 0; // Percentage modifier from TechCost bonus effects
     int alphaxTechCostModifier = 0;  // Percentage modifier from alpha(x).txt
 };
 
