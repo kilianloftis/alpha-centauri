@@ -1,6 +1,7 @@
 #include "ui/world/CameraInputController.h"
 
 #include "game/map/WorldMap.h"
+#include "input/MouseEventQueue.h"
 #include "ui/world/WorldDisplay.h"
 
 #include <algorithm>
@@ -71,20 +72,32 @@ bool CameraInputController::HandleKey(const KeyEvent_t& rEvent)
     return false;
 }
 
-bool CameraInputController::HandleMouse(const MouseEvent_t& rEvent)
+void CameraInputController::Update(bool bEnabled)
 {
-    m_lastMouseX = rEvent.x;
-    m_lastMouseY = rEvent.y;
+    if (!bEnabled || !HasLastMousePosition())
+    {
+        m_edgeScrollAccumulatorX = 0.0f;
+        m_edgeScrollAccumulatorY = 0.0f;
+        return;
+    }
 
+    const LastMousePosition_t mousePos = GetLastMousePosition();
+    ApplyEdgeScroll_(mousePos.x, mousePos.y);
+}
+
+void CameraInputController::ApplyEdgeScroll_(int mouseX, int mouseY)
+{
     const auto [maxCamX, maxCamY] = ComputeMaxCamera_();
 
-    const float relX = static_cast<float>(rEvent.x - m_mapLayout.x) / m_mapLayout.width;
-    const float relY = static_cast<float>(rEvent.y - m_mapLayout.y) / m_mapLayout.height;
+    const float relX = static_cast<float>(mouseX - m_mapLayout.x) / m_mapLayout.width;
+    const float relY = static_cast<float>(mouseY - m_mapLayout.y) / m_mapLayout.height;
 
     const bool bInMap = relX >= k_RelativeMin && relX <= k_RelativeMax && relY >= k_RelativeMin && relY <= k_RelativeMax;
     if (!bInMap)
     {
-        return false;
+        m_edgeScrollAccumulatorX = 0.0f;
+        m_edgeScrollAccumulatorY = 0.0f;
+        return;
     }
 
     float scrollDirX = k_RelativeMin;
@@ -100,6 +113,13 @@ bool CameraInputController::HandleMouse(const MouseEvent_t& rEvent)
     else if (relY > k_RelativeMax - k_EdgeZone)
         scrollDirY = k_ScrollDirectionDown;
 
+    if (scrollDirX == k_RelativeMin && scrollDirY == k_RelativeMin)
+    {
+        m_edgeScrollAccumulatorX = 0.0f;
+        m_edgeScrollAccumulatorY = 0.0f;
+        return;
+    }
+
     m_edgeScrollAccumulatorX += scrollDirX * m_edgeScrollSpeed;
     m_edgeScrollAccumulatorY += scrollDirY * m_edgeScrollSpeed;
 
@@ -114,10 +134,7 @@ bool CameraInputController::HandleMouse(const MouseEvent_t& rEvent)
         const int newCamX = std::clamp(m_rWorldDisplay.GetCameraX() + deltaX, k_InitialCameraOffset, maxCamX);
         const int newCamY = std::clamp(m_rWorldDisplay.GetCameraY() + deltaY, k_InitialCameraOffset, maxCamY);
         m_rWorldDisplay.SetCameraOffset(newCamX, newCamY);
-        return true;
     }
-
-    return false;
 }
 
 } // namespace ac

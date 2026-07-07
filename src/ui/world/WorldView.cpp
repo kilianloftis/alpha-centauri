@@ -58,6 +58,11 @@ void WorldView::Render(Graphics& rGraphics)
     IGameView::Render(rGraphics);
 }
 
+void WorldView::UpdateCameraInput(bool bEnabled)
+{
+    m_pCameraInputController->Update(bEnabled);
+}
+
 void WorldView::Update_()
 {
     std::vector<InfoPanelElement::InfoLine> infoLines;
@@ -142,11 +147,6 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
     const Tile* pClickedTile = pWorldMap->GetTile(worldX, worldY);
 
     if (m_pUnitOrderInputController->HandleMouse(rEvent, m_pSelectedUnit, pClickedTile))
-    {
-        return;
-    }
-
-    if (m_pCameraInputController->HandleMouse(rEvent))
     {
         return;
     }

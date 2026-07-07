@@ -74,14 +74,14 @@ void UIManager::HandleGlobalShortcut_(Key_t key)
 
 void UIManager::ProcessMouse_()
 {
-    m_pInput->CaptureMouseAsync([this](MouseEvent_t event)
+    while (auto event = m_pInput->CaptureMouse())
     {
         IGameView* pActive = GetActiveView_();
         if (pActive)
         {
-            pActive->HandleMouse(event);
+            pActive->HandleMouse(*event);
         }
-    });
+    }
 }
 
 void UIManager::Render()
@@ -93,6 +93,7 @@ void UIManager::Render()
     m_pGraphics->Clear();
     if (m_pWorldView)
     {
+        m_pWorldView->UpdateCameraInput(m_overlayStack.empty());
         m_pWorldView->Render(*m_pGraphics);
     }
     for (int i = static_cast<int>(m_overlayStack.size()) - 1; i >= 0; --i)

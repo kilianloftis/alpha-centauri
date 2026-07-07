@@ -35,6 +35,7 @@ public:
     void Render(Graphics& rGraphics) override;
     bool HandleKey(const KeyEvent_t& rEvent) override;
     void HandleMouse(const MouseEvent_t& rEvent) override;
+    void UpdateCameraInput(bool bEnabled);
 
 private:
     void Update_();
