@@ -89,10 +89,12 @@ void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, const Tile& rTile
 {
     rGraphics.DrawRect(x, y, size, size, k_TileBorderColor, k_TileBorderWidth);
 
-    const TileResources_t yield = m_pBase->GetTileEffects().ResolveTileYield(rTile);
-    int nutrients = yield.nutrients;
-    int minerals = yield.minerals;
-    int energy = yield.energy;
+    const TileResources_t yield = bIsWorked
+        ? m_pBase->GetWorkedTileYield(rTile)
+        : m_pBase->GetTileEffects().ResolveTileYield(rTile);
+    const int nutrients = yield.nutrients;
+    const int minerals = yield.minerals;
+    const int energy = yield.energy;
 
     std::ostringstream oss;
     oss << nutrients << " " << minerals << " " << energy;

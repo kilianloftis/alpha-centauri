@@ -1,8 +1,10 @@
 #include "game/faction/ResearchManager.h"
 
-#include "game/Faction.h"
+#include "game/IEffectsProvider.h"
 #include "game/research/TechCostConfig.h"
 #include "lib/effects/ActiveEffect.h"
+
+#include <algorithm>
 
 namespace ac
 {
@@ -70,6 +72,32 @@ int ResearchManager::GetPointsNeededForCurrentTech() const
     return m_pointsNeededForCurrentTech;
 }
 
+int ResearchManager::BreakthroughRate(int researchPerTurn) const
+{
+    if (!m_bHasResearchTarget || researchPerTurn <= 0)
+    {
+        return -1;
+    }
+
+    return (m_pointsNeededForCurrentTech + researchPerTurn - 1) / researchPerTurn;
+}
+
+int ResearchManager::GetTurnsUntilBreakthrough(int researchPerTurn) const
+{
+    if (!m_bHasResearchTarget || researchPerTurn <= 0)
+    {
+        return -1;
+    }
+
+    const int remainingPoints = std::max(0, m_pointsNeededForCurrentTech - m_accumulatedPoints);
+    if (remainingPoints == 0)
+    {
+        return 0;
+    }
+
+    return (remainingPoints + researchPerTurn - 1) / researchPerTurn;
+}
+
 void ResearchManager::RecalculatePointsNeeded()
 {
     if (!m_bHasResearchTarget || !m_pTechCostCalculator || !m_pTechRegistry || !m_pCurrentResearchTarget)
@@ -80,9 +108,9 @@ void ResearchManager::RecalculatePointsNeeded()
     TechCostInputs_t inputs;
     inputs.techs      = static_cast<int>(m_discoveredTechs.size()); // TODO: subtract starting techs; add unknownVarA - unknownVarB
     inputs.mostTechs  = inputs.techs;                               // TODO: max across all factions + unknownVarA
-    if (m_pFaction)
+    if (m_pEffectsProvider)
     {
-        const FactionEffects_t factionEffects = CollectActiveEffects(*m_pFaction);
+        const FactionEffects_t factionEffects = m_pEffectsProvider->GetActiveEffects();
         inputs.factionTechCostModifier = static_cast<int>(
             ResolveStatModifiers(FilterByStatId(factionEffects.effects, StatId::TechCost), 0.0).total);
     }
@@ -91,9 +119,9 @@ void ResearchManager::RecalculatePointsNeeded()
     m_pointsNeededForCurrentTech = m_pTechCostCalculator->CalculateCost(*m_pCurrentResearchTarget, inputs);
 }
 
-void ResearchManager::SetFaction(const Faction* pFaction)
+void ResearchManager::SetEffectsProvider(const IEffectsProvider* pEffectsProvider)
 {
-    m_pFaction = pFaction;
+    m_pEffectsProvider = pEffectsProvider;
 }
 
 bool ResearchManager::CanDiscoverTech() const

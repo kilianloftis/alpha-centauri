@@ -124,7 +124,7 @@ struct FactionFixture : BaseFixture
     ac::BaseManager& MakeFactionBase(ac::Faction& rFaction, int x, int y)
     {
         auto pBase = std::make_unique<ac::BaseManager>(
-            At(x, y), dataContext, *ctx, nullptr, &economy);
+            At(x, y), dataContext, *ctx, nullptr, &economy, &rFaction);
         ac::BaseManager& rBase = *pBase;
         rFaction.AddBase(std::move(pBase));
         return rBase;

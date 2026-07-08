@@ -38,7 +38,6 @@ BaseView::BaseView(
 
     m_elements.push_back(std::make_unique<GrowthDisplay>(
         &m_rBase,
-        &m_rFaction,
         ResolveLayout(leftColumn, {0.0f, 0.0f, 1.0f, 0.5f})
     ));
     m_elements.push_back(std::make_unique<BaseWorkableAreaDisplay>(

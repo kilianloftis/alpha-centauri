@@ -4,6 +4,7 @@
 #include "ui/IGameView.h"
 #include "ui/base/BaseView.h"
 #include "ui/research/ResearchView.h"
+#include "ui/social-engineering/SocialEngineeringView.h"
 #include "ui/unit-designer/UnitDesignerView.h"
 #include "ui/world/WorldView.h"
 #include <functional>
@@ -42,6 +43,10 @@ public:
     ) const;
 
     std::unique_ptr<ResearchView> CreateResearchView(
+        const WindowLayout_t& layout
+    ) const;
+
+    std::unique_ptr<SocialEngineeringView> CreateSocialEngineeringView(
         const WindowLayout_t& layout
     ) const;
 

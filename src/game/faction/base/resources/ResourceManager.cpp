@@ -45,16 +45,16 @@ ResourceManager::~ResourceManager()
 
 // Total worked resources: every worker pop's fully-modified tile yield (from
 // WorkerAssignmentManager) plus the base center tile, which is worked for free (no pop).
-TileResources_t ResourceManager::ComputeWorked_() const
+TileResources_t ResourceManager::ComputeWorked_(const BaseEffects_t& rBaseEffects) const
 {
     if (!m_pWorkerAssignments || !m_pTileEffects)
     {
         throw std::runtime_error("WorkerAssignmentManager or TileEffectsContext not set");
     }
-    TileResources_t total = m_pWorkerAssignments->ComputeWorkedResources(m_baseEffects);
+    TileResources_t total = m_pWorkerAssignments->ComputeWorkedResources(rBaseEffects);
     if (m_pBaseTile)
     {
-        const TileResources_t baseTile = m_pTileEffects->ResolveTileYield(*m_pBaseTile, /*isBaseTile*/true, m_baseEffects);
+        const TileResources_t baseTile = m_pTileEffects->ResolveTileYield(*m_pBaseTile, /*isBaseTile*/true, rBaseEffects);
         total.nutrients += baseTile.nutrients;
         total.energy    += baseTile.energy;
         total.minerals  += baseTile.minerals;
@@ -62,69 +62,70 @@ TileResources_t ResourceManager::ComputeWorked_() const
     return total;
 }
 
-int ResourceManager::CalculateResource_(StatId stat, const TileResources_t& worked) const
+int ResourceManager::CalculateResource_(StatId stat, const TileResources_t& worked,
+                                        const BaseEffects_t& rBaseEffects) const
 {
     // Per-tile yield modifiers are already folded into `worked`; only flat (non-selector)
     // stat modifiers remain to be applied once at the base level.
     double base = static_cast<double>(GetResourceValue_(worked, stat));
-    base += ResolveStatModifiers(FilterFlatByStatId(m_baseEffects, stat), SeedFor(stat)).total;
+    base += ResolveStatModifiers(FilterFlatByStatId(rBaseEffects, stat), SeedFor(stat)).total;
     return static_cast<int>(base);
 }
 
-int ResourceManager::GetNutrientProduction() const
+int ResourceManager::GetNutrientProduction(const BaseEffects_t& rBaseEffects) const
 {
     if (!m_pWorkerAssignments) return 0;
-    return CalculateResource_(StatId::Nutrients, ComputeWorked_());
+    return CalculateResource_(StatId::Nutrients, ComputeWorked_(rBaseEffects), rBaseEffects);
 }
 
-int ResourceManager::GetMineralProduction() const
+int ResourceManager::GetMineralProduction(const BaseEffects_t& rBaseEffects) const
 {
     if (!m_pWorkerAssignments) return 0;
-    return CalculateResource_(StatId::Minerals, ComputeWorked_());
+    return CalculateResource_(StatId::Minerals, ComputeWorked_(rBaseEffects), rBaseEffects);
 }
 
-int ResourceManager::CalculateEcon_(int energy) const
+int ResourceManager::CalculateEcon_(int energy, const BaseEffects_t& rBaseEffects) const
 {
     if (!m_pEconomy)
         throw std::runtime_error("EconomyManager not set");
     // FilterFlat, not FilterByStatId: base-level resolution must never pick up
     // selector-carrying (per-tile) modifiers, even on stats where none make sense today.
     return m_pEconomy->CalculateEnergyForEcon(energy)
-         + static_cast<int>(ResolveStatModifiers(FilterFlatByStatId(m_baseEffects, StatId::Econ), SeedFor(StatId::Econ)).total);
+         + static_cast<int>(ResolveStatModifiers(FilterFlatByStatId(rBaseEffects, StatId::Econ), SeedFor(StatId::Econ)).total);
 }
 
-int ResourceManager::CalculateLabs_(int energy) const
+int ResourceManager::CalculateLabs_(int energy, const BaseEffects_t& rBaseEffects) const
 {
     if (!m_pEconomy)
         throw std::runtime_error("EconomyManager not set");
     return m_pEconomy->CalculateEnergyForLabs(energy)
-         + static_cast<int>(ResolveStatModifiers(FilterFlatByStatId(m_baseEffects, StatId::Labs), SeedFor(StatId::Labs)).total);
+         + static_cast<int>(ResolveStatModifiers(FilterFlatByStatId(rBaseEffects, StatId::Labs), SeedFor(StatId::Labs)).total);
 }
 
-int ResourceManager::CalculatePsych_(int energy) const
+int ResourceManager::CalculatePsych_(int energy, const BaseEffects_t& rBaseEffects) const
 {
     if (!m_pEconomy)
         throw std::runtime_error("EconomyManager not set");
     return m_pEconomy->CalculateEnergyForPsych(energy)
-         + static_cast<int>(ResolveStatModifiers(FilterFlatByStatId(m_baseEffects, StatId::Psych), SeedFor(StatId::Psych)).total);
+         + static_cast<int>(ResolveStatModifiers(FilterFlatByStatId(rBaseEffects, StatId::Psych), SeedFor(StatId::Psych)).total);
 }
 
-int ResourceManager::GetEconProduction() const
+int ResourceManager::GetEconProduction(const BaseEffects_t& rBaseEffects) const
 {
     if (!m_pWorkerAssignments) return 0;
-    return CalculateEcon_(CalculateResource_(StatId::Energy, ComputeWorked_()));
+    return CalculateEcon_(CalculateResource_(StatId::Energy, ComputeWorked_(rBaseEffects), rBaseEffects), rBaseEffects);
 }
 
-int ResourceManager::GetLabsProduction() const
+int ResourceManager::GetLabsProduction(const BaseEffects_t& rBaseEffects) const
 {
     if (!m_pWorkerAssignments) return 0;
-    return CalculateLabs_(CalculateResource_(StatId::Energy, ComputeWorked_()));
+    return CalculateLabs_(CalculateResource_(StatId::Energy, ComputeWorked_(rBaseEffects), rBaseEffects), rBaseEffects);
 }
 
-int ResourceManager::GetPsychProduction() const
+int ResourceManager::GetPsychProduction(const BaseEffects_t& rBaseEffects) const
 {
     if (!m_pWorkerAssignments) return 0;
-    return CalculatePsych_(CalculateResource_(StatId::Energy, ComputeWorked_()));
+    return CalculatePsych_(CalculateResource_(StatId::Energy, ComputeWorked_(rBaseEffects), rBaseEffects), rBaseEffects);
 }
 
 int ResourceManager::ConsumeNutrients()
@@ -162,33 +163,31 @@ int ResourceManager::ConsumePsych()
     return consumed;
 }
 
-void ResourceManager::ProduceNutrients_(const TileResources_t& worked)
+void ResourceManager::ProduceNutrients_(const TileResources_t& worked, const BaseEffects_t& rBaseEffects)
 {
-    m_nutrients += CalculateResource_(StatId::Nutrients, worked);
+    m_nutrients += CalculateResource_(StatId::Nutrients, worked, rBaseEffects);
 }
 
-void ResourceManager::ProduceMinerals_(const TileResources_t& worked)
+void ResourceManager::ProduceMinerals_(const TileResources_t& worked, const BaseEffects_t& rBaseEffects)
 {
-    m_minerals += CalculateResource_(StatId::Minerals, worked);
+    m_minerals += CalculateResource_(StatId::Minerals, worked, rBaseEffects);
 }
 
-void ResourceManager::AllocateEnergy_(const TileResources_t& worked)
+void ResourceManager::AllocateEnergy_(const TileResources_t& worked, const BaseEffects_t& rBaseEffects)
 {
-    const int energy = CalculateResource_(StatId::Energy, worked);
+    const int energy = CalculateResource_(StatId::Energy, worked, rBaseEffects);
 
-    m_econ  += CalculateEcon_(energy);
-    m_labs  += CalculateLabs_(energy);
-    m_psych += CalculatePsych_(energy);
+    m_econ  += CalculateEcon_(energy, rBaseEffects);
+    m_labs  += CalculateLabs_(energy, rBaseEffects);
+    m_psych += CalculatePsych_(energy, rBaseEffects);
 }
 
 void ResourceManager::ProduceResources(const BaseEffects_t& rBaseEffects)
 {
-    m_baseEffects = rBaseEffects;
-
-    const TileResources_t worked = ComputeWorked_();
-    ProduceNutrients_(worked);
-    ProduceMinerals_(worked);
-    AllocateEnergy_(worked);
+    const TileResources_t worked = ComputeWorked_(rBaseEffects);
+    ProduceNutrients_(worked, rBaseEffects);
+    ProduceMinerals_(worked, rBaseEffects);
+    AllocateEnergy_(worked, rBaseEffects);
 }
 
 } // namespace ac

@@ -9,6 +9,7 @@ add_library(ac-core STATIC
     game/Faction.cpp
     game/faction/FactionIdentity.cpp
     game/faction/AIProfile.cpp
+    game/faction/FactionFlavor.cpp
     game/faction/Military.cpp
     game/faction/UnitManager.cpp
     game/research/TechRegistry.cpp
@@ -172,6 +173,9 @@ add_executable(alpha-centauri
     ui/base/PopTypeSelectorPopup.cpp
     ui/research/ResearchView.cpp
     ui/research/CurrentResearchPanel.cpp
+    ui/social-engineering/SocialEngineeringView.cpp
+    ui/social-engineering/SocialEngineeringDisplay.cpp
+    ui/social-engineering/SocialEngineeringBottomPanel.cpp
     ui/unit-designer/SlotColumnPanel.cpp
     ui/unit-designer/ComponentSlotDisplay.cpp
     ui/unit-designer/ComponentSelectorPopup.cpp

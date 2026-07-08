@@ -7,7 +7,7 @@
 namespace ac
 {
 
-class Faction;
+class IEffectsProvider;
 
 class ResearchManager
 {
@@ -27,7 +27,15 @@ public:
     int GetPointsNeededForCurrentTech() const;
     void RecalculatePointsNeeded();
 
-    void SetFaction(const Faction* pFaction);
+    // Full turns to complete the current target at researchPerTurn, ignoring accumulated
+    // progress. Returns -1 when there is no target or researchPerTurn <= 0.
+    int BreakthroughRate(int researchPerTurn) const;
+
+    // Turns remaining until the current target is discovered at researchPerTurn.
+    // Returns -1 when there is no target or researchPerTurn <= 0.
+    int GetTurnsUntilBreakthrough(int researchPerTurn) const;
+
+    void SetEffectsProvider(const IEffectsProvider* pEffectsProvider);
 
     bool CanDiscoverTech() const;
     bool DiscoverTech();
@@ -41,7 +49,7 @@ public:
 private:
     const TechRegistry* m_pTechRegistry;
     TechCostCalculator* m_pTechCostCalculator;
-    const Faction* m_pFaction = nullptr;
+    const IEffectsProvider* m_pEffectsProvider = nullptr;
 
     std::vector<TechId> m_discoveredTechs;
     const TechConfig_t* m_pCurrentResearchTarget;

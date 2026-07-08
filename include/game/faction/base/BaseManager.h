@@ -26,6 +26,7 @@ class BuildingRegistry;
 class ProductionManager;
 class ResearchManager;
 class SocialRatingRegistry;
+class IEffectsProvider;
 class Tile;
 struct GameDataContext;
 
@@ -40,7 +41,8 @@ public:
         const GameDataContext& rDataContext,
         TileEffectsContext& rTileEffects,
         const ResearchManager* pResearchManager,
-        const EconomyManager* pEconomyManager);
+        const EconomyManager* pEconomyManager,
+        const IEffectsProvider* pEffectsProvider = nullptr);
     ~BaseManager();
 
     // Population management - delegated to PopulationManager
@@ -110,14 +112,11 @@ public:
 
     // This base's effective social rating on one axis: faction-wide SocialRatingModifier
     // contributions plus any ThisBase-scoped ones originating here (e.g. a building's
-    // +1 Growth). rFactionEffects is the faction-wide pool.
-    int GetEffectiveSocialRating(SocialRatingId rating, const FactionEffects_t& rFactionEffects) const;
+    // +1 Growth).
+    int GetEffectiveSocialRating(SocialRatingId rating) const;
 
     int GetNutrientStockpile() const;
-    // rFactionEffects is the faction-wide pool — deliberately no default: an empty pool
-    // resolves the threshold without GrowthRate modifiers and silently diverges from
-    // what ApplyGrowth will actually require.
-    int GetNutrientsRequired(const FactionEffects_t& rFactionEffects) const;
+    int GetNutrientsRequired() const;
     int GetBaseSize() const;
 
     int GetX() const;
@@ -125,6 +124,10 @@ public:
 
     // Returns the set of workable tiles this base can assign workers to.
     const std::vector<const Tile*>& GetWorkableTilePositions() const;
+
+    // Effective yield from a worked tile after base-wide and pop tile effects.
+    // Unworked tiles should use TileEffectsContext::ResolveTileYield for intrinsic preview.
+    TileResources_t GetWorkedTileYield(const Tile& rTile) const;
 
     // Access to the tile-effects resolver (bundles WorldMap + ImprovementRegistry).
     // Used by BaseWorkableAreaDisplay and any other system that needs to resolve tile yield or defense.
@@ -152,6 +155,7 @@ private:
     // gameplay effects of this base's effective social rating levels
     // (ExpandSocialRatingEffects).
     BaseEffects_t BuildBaseEffects_(const FactionEffects_t& rFactionEffects) const;
+    BaseEffects_t BuildBaseEffects_() const;
 
     FactionId m_factionId;
     int m_baseId;
@@ -160,6 +164,7 @@ private:
     const BuildingRegistry* m_pBuildingRegistry;
     const SocialRatingRegistry* m_pSocialRatings;
     const ResearchManager* m_pResearch;
+    const IEffectsProvider* m_pEffectsProvider = nullptr;
     std::unique_ptr<PopulationManager> m_pPopulation;
     std::unique_ptr<WorkerAssignmentManager> m_pWorkerAssignments;
     std::unique_ptr<ResourceManager> m_pResources;

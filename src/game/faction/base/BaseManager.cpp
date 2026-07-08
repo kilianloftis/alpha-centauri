@@ -1,5 +1,6 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/GameDataContext.h"
+#include "game/IEffectsProvider.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/production/ProductionManager.h"
 #include "game/faction/base/resources/ResourceManager.h"
@@ -39,7 +40,8 @@ BaseManager::BaseManager(
     const GameDataContext& rDataContext,
     TileEffectsContext& rTileEffects,
     const ResearchManager* pResearchManager,
-    const EconomyManager* pEconomyManager)
+    const EconomyManager* pEconomyManager,
+    const IEffectsProvider* pEffectsProvider)
     : m_factionId(-1)
     , m_baseId(-1)
     , m_tile(tile)
@@ -47,6 +49,7 @@ BaseManager::BaseManager(
     , m_pBuildingRegistry(rDataContext.buildingRegistry.get())
     , m_pSocialRatings(rDataContext.socialRatingRegistry.get())
     , m_pResearch(pResearchManager)
+    , m_pEffectsProvider(pEffectsProvider)
     , m_pPopulation(std::make_unique<PopulationManager>(rDataContext, pResearchManager, 3))
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(ComputeWorkableTiles_(rTileEffects, tile), m_pPopulation->GetContainer(), rTileEffects))
     , m_pResources(nullptr)
@@ -177,27 +180,47 @@ void BaseManager::AutoAssignWorkers()
 
 int BaseManager::GetNutrientProduction() const
 {
-    return m_pResources ? m_pResources->GetNutrientProduction() : 0;
+    if (!m_pResources)
+    {
+        throw std::runtime_error("BaseManager::GetNutrientProduction: m_pResources is null");
+    }
+    return m_pResources->GetNutrientProduction(BuildBaseEffects_());
 }
 
 int BaseManager::GetMineralProduction() const
 {
-    return m_pResources ? m_pResources->GetMineralProduction() : 0;
+    if (!m_pResources)
+    {
+        throw std::runtime_error("BaseManager::GetMineralProduction: m_pResources is null");
+    }
+    return m_pResources->GetMineralProduction(BuildBaseEffects_());
 }
 
 int BaseManager::GetEconProduction() const
 {
-    return m_pResources ? m_pResources->GetEconProduction() : 0;
+    if (!m_pResources)
+    {
+        throw std::runtime_error("BaseManager::GetEconProduction: m_pResources is null");
+    }
+    return m_pResources->GetEconProduction(BuildBaseEffects_());
 }
 
 int BaseManager::GetLabsProduction() const
 {
-    return m_pResources ? m_pResources->GetLabsProduction() : 0;
+    if (!m_pResources)
+    {
+        throw std::runtime_error("BaseManager::GetLabsProduction: m_pResources is null");
+    }
+    return m_pResources->GetLabsProduction(BuildBaseEffects_());
 }
 
 int BaseManager::GetPsychProduction() const
 {
-    return m_pResources ? m_pResources->GetPsychProduction() : 0;
+    if (!m_pResources)
+    {
+        throw std::runtime_error("BaseManager::GetPsychProduction: m_pResources is null");
+    }
+    return m_pResources->GetPsychProduction(BuildBaseEffects_());
 }
 
 void BaseManager::AddBuilding(const std::string& buildingId)
@@ -308,10 +331,23 @@ BaseEffects_t BaseManager::BuildBaseEffects_(const FactionEffects_t& rFactionEff
     return baseEffects;
 }
 
-int BaseManager::GetEffectiveSocialRating(SocialRatingId rating, const FactionEffects_t& rFactionEffects) const
+BaseEffects_t BaseManager::BuildBaseEffects_() const
 {
+    if (!m_pEffectsProvider)
+    {
+        throw std::runtime_error("BaseManager::BuildBaseEffects_: m_pEffectsProvider is null");
+    }
+    return BuildBaseEffects_(m_pEffectsProvider->GetActiveEffects());
+}
+
+int BaseManager::GetEffectiveSocialRating(SocialRatingId rating) const
+{
+    if (!m_pEffectsProvider)
+    {
+        throw std::runtime_error("BaseManager::GetEffectiveSocialRating: m_pEffectsProvider is null");
+    }
     const std::map<SocialRatingId, int> totals =
-        AccumulateSocialRatings(CollectBaseLocalEffects_(rFactionEffects));
+        AccumulateSocialRatings(CollectBaseLocalEffects_(m_pEffectsProvider->GetActiveEffects()));
     const auto it = totals.find(rating);
     return it == totals.end() ? 0 : it->second;
 }
@@ -356,13 +392,13 @@ int BaseManager::GetNutrientStockpile() const
     return m_pPopulation ? m_pPopulation->GetNutrientStockpile() : 0;
 }
 
-int BaseManager::GetNutrientsRequired(const FactionEffects_t& rFactionEffects) const
+int BaseManager::GetNutrientsRequired() const
 {
     if (!m_pPopulation)
     {
         throw std::runtime_error("BaseManager::GetNutrientsRequired: m_pPopulation is null");
     }
-    return m_pPopulation->GetNutrientsRequired(BuildBaseEffects_(rFactionEffects));
+    return m_pPopulation->GetNutrientsRequired(BuildBaseEffects_());
 }
 
 int BaseManager::GetBaseSize() const
@@ -383,6 +419,11 @@ int BaseManager::GetY() const
 const std::vector<const Tile*>& BaseManager::GetWorkableTilePositions() const
 {
     return m_pWorkerAssignments->GetWorkableTiles();
+}
+
+TileResources_t BaseManager::GetWorkedTileYield(const Tile& rTile) const
+{
+    return m_pWorkerAssignments->GetWorkedTileYield(rTile, BuildBaseEffects_());
 }
 
 void BaseManager::SetName(const std::string& name)

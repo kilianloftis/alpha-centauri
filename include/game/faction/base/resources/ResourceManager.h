@@ -14,8 +14,8 @@ class BuildingManager;
 class Tile;
 class TileEffectsContext;
 
-// ResourceManager calculates and caches resource production for a base.
-// It is owned by BaseManager and holds const pointers to the managers it reads from.
+// ResourceManager calculates resource production for a base and accumulates per-turn
+// stockpiles. It is owned by BaseManager and holds const pointers to the managers it reads from.
 class ResourceManager
 {
 public:
@@ -27,13 +27,13 @@ public:
         const TileEffectsContext* pTileEffects);
     ~ResourceManager();
 
-    // Resource production per turn (calculated live from current state).
-    // Safe to call at any time; used by the UI for display and estimates.
-    int GetNutrientProduction() const;
-    int GetMineralProduction() const;
-    int GetEconProduction() const;
-    int GetLabsProduction() const;
-    int GetPsychProduction() const;
+    // Resource production per turn.
+    // rBaseEffects is this base's final effect list (BaseManager::BuildBaseEffects_).
+    int GetNutrientProduction(const BaseEffects_t& rBaseEffects) const;
+    int GetMineralProduction(const BaseEffects_t& rBaseEffects) const;
+    int GetEconProduction(const BaseEffects_t& rBaseEffects) const;
+    int GetLabsProduction(const BaseEffects_t& rBaseEffects) const;
+    int GetPsychProduction(const BaseEffects_t& rBaseEffects) const;
 
     // Consume the full accumulated stockpile, returning the amount consumed.
     // Called by the appropriate turn stage (e.g. ConsumeMinerals during BaseProduction).
@@ -45,7 +45,6 @@ public:
 
     // Produce resources from worked tiles and allocate energy into stockpiles.
     // Called once per turn per base from the ResourceCollection stage.
-    // rBaseEffects is this base's final effect list (BaseManager::BuildBaseEffects_).
     void ProduceResources(const BaseEffects_t& rBaseEffects);
 
 private:
@@ -54,25 +53,22 @@ private:
     const BuildingManager* m_pBuildings;
     const Tile* m_pBaseTile;
     const TileEffectsContext* m_pTileEffects;
-    BaseEffects_t m_baseEffects;
     int m_nutrients = 0;
     int m_minerals = 0;
     int m_econ = 0;
     int m_labs = 0;
     int m_psych = 0;
 
-    // Aggregate worked-tile resources: all worker pops (via WorkerAssignmentManager) plus the
-    // free base center tile, each resolved against m_baseEffects so per-tile modifiers apply.
-    TileResources_t ComputeWorked_() const;
+    TileResources_t ComputeWorked_(const BaseEffects_t& rBaseEffects) const;
 
-    int CalculateResource_(StatId stat, const TileResources_t& worked) const;
-    int CalculateEcon_(int energy) const;
-    int CalculateLabs_(int energy) const;
-    int CalculatePsych_(int energy) const;
+    int CalculateResource_(StatId stat, const TileResources_t& worked, const BaseEffects_t& rBaseEffects) const;
+    int CalculateEcon_(int energy, const BaseEffects_t& rBaseEffects) const;
+    int CalculateLabs_(int energy, const BaseEffects_t& rBaseEffects) const;
+    int CalculatePsych_(int energy, const BaseEffects_t& rBaseEffects) const;
 
-    void ProduceNutrients_(const TileResources_t& worked);
-    void ProduceMinerals_(const TileResources_t& worked);
-    void AllocateEnergy_(const TileResources_t& worked);
+    void ProduceNutrients_(const TileResources_t& worked, const BaseEffects_t& rBaseEffects);
+    void ProduceMinerals_(const TileResources_t& worked, const BaseEffects_t& rBaseEffects);
+    void AllocateEnergy_(const TileResources_t& worked, const BaseEffects_t& rBaseEffects);
 };
 
 } // namespace ac

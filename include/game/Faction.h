@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 
+#include "game/IEffectsProvider.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/FactionConfig.h"
 #include "game/social-engineering/SocialPolicyConfig.h"
@@ -19,6 +20,7 @@ class SocialRatingRegistry;
 class TechCostCalculator;
 class FactionIdentity;
 class AIProfile;
+class FactionFlavor;
 class EconomyManager;
 class Military;
 class ResearchManager;
@@ -30,7 +32,7 @@ struct PopTypeConfig_t;
 struct GameDataContext;
 class WorldMap;
 
-class Faction
+class Faction : public IEffectsProvider
 {
 public:
     Faction(const BuildingRegistry* pBuildingRegistry, const TechRegistry* pTechRegistry,
@@ -43,6 +45,8 @@ public:
 
     const FactionConfig_t* GetDefinition() const { return m_pDefinition; }
     const std::string& GetDefinitionId() const;
+
+    std::string SuggestBaseName();
 
     // Base management
     void AddBase(std::unique_ptr<BaseManager> pBase);
@@ -63,6 +67,11 @@ public:
 
     // Economy manager owns the faction-wide energy allocation split.
     EconomyManager* GetEconomyManager() const;
+
+    // Projected per-turn outputs summed across all bases.
+    int GetNetIncomePerTurn() const;
+    int GetBreakthroughRate() const;
+    int GetTurnsUntilBreakthrough() const;
 
     // Resource production - routes to all bases and faction economy manager.
     // rExternalEffects are effects from outside this faction (other factions' WorldGlobal
@@ -112,13 +121,19 @@ public:
     // Pop types
     std::vector<const PopTypeConfig_t*> GetAvailablePopTypes() const;
 
+    // IEffectsProvider
+    FactionEffects_t GetActiveEffects() const override;
+
 private:
+    int GetResearchPerTurn_() const;
+
     int m_energy = 0;
     const FactionConfig_t* m_pDefinition = nullptr;
     const BuildingRegistry* m_pBuildingRegistry;
     const PopTypeAvailabilityCalculator* m_pPopTypeAvailabilityCalculator;
     std::unique_ptr<FactionIdentity> m_pIdentity;
     std::unique_ptr<AIProfile> m_pAIProfile;
+    std::unique_ptr<FactionFlavor> m_pFlavor;
     std::unique_ptr<EconomyManager> m_pEconomy;
     std::unique_ptr<Military> m_pMilitary;
     std::unique_ptr<ResearchManager> m_pResearch;

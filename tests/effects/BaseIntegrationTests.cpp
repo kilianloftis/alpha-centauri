@@ -140,8 +140,9 @@ TEST_CASE("DispatchInstantaneousEffects: Instantaneous GrantBuilding constructs 
 TEST_CASE("Full pipeline: building and pop bonuses land in base resource production",
           "[effects][base][pipeline]")
 {
-    actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
 
     // A wet farm tile next door: Wet(+2) + Farm(+1) nutrients.
     Tile& farmTile = fixture.At(5, 4);
@@ -170,9 +171,6 @@ TEST_CASE("Full pipeline: building and pop bonuses land in base resource product
     }
     REQUIRE(pOtherWorker != nullptr);
     base.ConvertPop(*pOtherWorker, "Doctor");
-
-    // The building effects stand in for the full faction pool (no faction in this fixture).
-    base.ProduceResources(FactionEffects_t{base.CollectBuildingEffects()});
 
     // Nutrients: farm tile (2 Wet + 1 Farm + 1 booster) + base center tile (0) + flat 2 = 6.
     CHECK(base.GetNutrientProduction() == 6);

@@ -16,7 +16,7 @@ std::vector<ActiveEffect_t> CollectLiveUnitEffects_(const UnitDesign& rDesign, c
 {
     std::vector<ActiveEffect_t> effects = rDesign.CollectEffects();
     const std::vector<ActiveEffect_t> factionEffects =
-        FilterByScope(CollectActiveEffects(rFaction).effects, EffectScope_t::FactionUnits);
+        FilterByScope(rFaction.GetActiveEffects().effects, EffectScope_t::FactionUnits);
     effects.insert(effects.end(), factionEffects.begin(), factionEffects.end());
     return effects;
 }

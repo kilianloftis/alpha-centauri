@@ -151,6 +151,22 @@ TileResources_t WorkerAssignmentManager::ComputeWorkedResources(const BaseEffect
     return total;
 }
 
+TileResources_t WorkerAssignmentManager::GetWorkedTileYield(const Tile& rTile,
+                                                            const BaseEffects_t& rBaseEffects) const
+{
+    for (const auto& pPop : m_rPops.GetPops())
+    {
+        if (!pPop->IsWorker() || pPop->GetTile() != &rTile)
+        {
+            continue;
+        }
+
+        const TileResources_t yield = m_rTileEffects.ResolveTileYield(rTile, /*isBaseTile*/false, rBaseEffects);
+        return pPop->ApplyTileMultipliers(yield);
+    }
+    return TileResources_t{0, 0, 0};
+}
+
 void WorkerAssignmentManager::SetTileScorer(TileScorer scorer)
 {
     m_scorer = std::move(scorer);

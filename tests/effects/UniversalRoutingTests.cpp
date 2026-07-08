@@ -126,7 +126,7 @@ TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other fact
     {
         factionB.ProduceBaseResources(state.CollectWorldEffects(factionB));
         // 10 energy split 40/50/10 -> econ 4.
-        CHECK(factionB.GetBases()[0]->GetEconProduction() == 4);
+        CHECK(factionB.GetBases()[0]->ConsumeEcon() == 4);
     }
 
     SECTION("faction A's own base gets its own WorldGlobal effect through its own pool")

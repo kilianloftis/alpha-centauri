@@ -85,6 +85,24 @@ std::unique_ptr<ResearchView> ViewFactory::CreateResearchView(
     return std::make_unique<ResearchView>(pFaction->GetResearchManager(), layout);
 }
 
+std::unique_ptr<SocialEngineeringView> ViewFactory::CreateSocialEngineeringView(
+    const WindowLayout_t& layout
+) const
+{
+    Faction* pFaction = m_rGameState.GetPlayerFaction();
+    if (!pFaction)
+    {
+        return nullptr;
+    }
+
+    return std::make_unique<SocialEngineeringView>(
+        pFaction,
+        m_rGameDataContext.socialPolicyRegistry.get(),
+        m_rGameDataContext.socialRatingRegistry.get(),
+        layout
+    );
+}
+
 std::unique_ptr<UnitDesignerView> ViewFactory::CreateUnitDesignerView(
     const WindowLayout_t& layout
 ) const

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/faction/FactionConfig.h"
 #include <string>
 
 namespace ac
@@ -8,18 +9,23 @@ namespace ac
 class FactionIdentity
 {
 public:
-    FactionIdentity();
+    FactionIdentity(const FactionIdentityConfig& rIdentity, const LeaderConfig& rLeader);
     ~FactionIdentity();
 
     const std::string& GetName() const;
-    void SetName(const std::string& rName);
-
+    const std::string& GetDescriptiveName() const;
+    const std::string& GetNoun() const;
+    const std::string& GetAdjective() const;
     const std::string& GetLeader() const;
-    void SetLeader(const std::string& rLeader);
+    const std::string& GetLeaderTitle() const;
 
 private:
     std::string m_name;
+    std::string m_descriptiveName;
+    std::string m_noun;
+    std::string m_adjective;
     std::string m_leader;
+    std::string m_leaderTitle;
 };
 
 } // namespace ac

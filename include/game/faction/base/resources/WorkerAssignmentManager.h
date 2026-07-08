@@ -74,6 +74,10 @@ public:
     // Pops or tiles that cannot be resolved are skipped.
     TileResources_t ComputeWorkedResources(const BaseEffects_t& rBaseEffects) const;
 
+    // Full yield from one assigned worker tile: intrinsic + area + matching base-wide per-tile
+    // modifiers, then the working pop's tile multipliers. Returns zeros if no worker is on rTile.
+    TileResources_t GetWorkedTileYield(const Tile& rTile, const BaseEffects_t& rBaseEffects) const;
+
     // Auto-assign any unassigned workers to the stored workable tiles.
     // Tiles are sorted by score (descending) before assignment.
     void AutoAssignWorkers();

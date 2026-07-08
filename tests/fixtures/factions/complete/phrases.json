@@ -1,0 +1,6 @@
+{
+  "greeting": [
+    "{leader} of the {faction.noun} greets you.",
+    "Welcome from {faction.descriptive_name}."
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "effects": [
+    {
+      "type": "StatModifier",
+      "scope": "FactionGlobal",
+      "parameters": { "stat": "energy", "amount": 1, "op": "Add" }
+    }
+  ]
+}

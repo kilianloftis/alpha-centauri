@@ -9,7 +9,6 @@
     "id": "police_state",
     "name": "Police State",
     "category": "politics",
-    "required_tech": "doctrine_loyalty",
     "effects": [
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "support",    "amount":  2 } },
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "police",     "amount":  2 } },
@@ -48,7 +47,6 @@
     "id": "free_market",
     "name": "Free Market",
     "category": "economics",
-    "required_tech": "industrial_economics",
     "effects": [
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "economy", "amount":  2 } },
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "planet",  "amount": -3 } },
@@ -87,7 +85,6 @@
     "id": "power",
     "name": "Power",
     "category": "values",
-    "required_tech": "advanced_military_algorithms",
     "effects": [
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "support",  "amount":  2 } },
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "morale",   "amount":  2 } },
@@ -126,7 +123,6 @@
     "id": "cybernetic",
     "name": "Cybernetic",
     "category": "future_society",
-    "required_tech": "digital_sentience",
     "effects": [
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "efficiency", "amount":  2 } },
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "persistence": "Continuous", "parameters": { "rating": "planet",     "amount":  2 } },

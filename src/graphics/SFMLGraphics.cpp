@@ -20,7 +20,7 @@ class SFMLGraphics : public Graphics
 {
 public:
     SFMLGraphics()
-        : m_window(sf::VideoMode(sf::Vector2u(800, 600)), "Alpha Centauri")
+        : m_window(sf::VideoMode(sf::Vector2u(1280, 900)), "Alpha Centauri")
     {
         std::cout << "[SFMLGraphics] Creating window...\n";
         m_window.setFramerateLimit(60);

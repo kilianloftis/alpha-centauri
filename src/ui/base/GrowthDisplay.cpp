@@ -1,8 +1,6 @@
 #include "ui/base/GrowthDisplay.h"
-#include "game/Faction.h"
 #include "game/faction/base/BaseManager.h"
 #include "graphics/Graphics.h"
-#include "lib/effects/ActiveEffect.h"
 #include <sstream>
 #include <stdexcept>
 
@@ -25,19 +23,17 @@ constexpr float k_ProductionLineIndex    = 3.0f;
 
 GrowthDisplay::GrowthDisplay(
     const BaseManager* pBase,
-    const Faction* pFaction,
     WindowLayout_t layout
 )
     : UIElement(layout)
     , m_pBase(pBase)
-    , m_pFaction(pFaction)
 {}
 
 void GrowthDisplay::Render(Graphics& rGraphics)
 {
-    if (!m_pBase || !m_pFaction)
+    if (!m_pBase)
     {
-        throw std::runtime_error("GrowthDisplay: No base manager or faction set");
+        throw std::runtime_error("GrowthDisplay: No base manager set");
     }
 
     rGraphics.DrawFilledRect(
@@ -57,7 +53,7 @@ void GrowthDisplay::Render(Graphics& rGraphics)
     rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y + lineHeight * k_StockpileLineIndex, entryFontSize);
 
     oss.str("");
-    oss << "Required: " << m_pBase->GetNutrientsRequired(CollectActiveEffects(*m_pFaction));
+    oss << "Required: " << m_pBase->GetNutrientsRequired();
     rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y + lineHeight * k_RequiredLineIndex, entryFontSize);
 
     oss.str("");

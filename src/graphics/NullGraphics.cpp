@@ -52,12 +52,12 @@ void DrawFilledRect(float x, float y, float width, float height, const Color& co
 
 unsigned int GetWindowWidth() const override
     {
-        return 800;
+        return 1280;
     }
 
 unsigned int GetWindowHeight() const override
     {
-        return 600;
+        return 900;
     }
 };
 

@@ -141,7 +141,7 @@ void Engine::Initialize_()
     m_gameDataContext->socialRatingRegistry->Load("config/social_rating_effects.json");
 
     m_gameDataContext->factionRegistry = std::make_unique<FactionRegistry>();
-    m_gameDataContext->factionRegistry->Load("config/factions.json");
+    m_gameDataContext->factionRegistry->Load("config/factions");
 
     // All effect-declaring registries are loaded; fail startup on any effect that
     // references a nonexistent building/tech/improvement/feature id.
@@ -217,7 +217,7 @@ void Engine::Initialize_()
 
         const auto& [startX, startY] = startPositions[positionIndex % startPositions.size()];
         BaseManager* pBase = pFaction->CreateBase(
-            factionId, baseId, rFactionConfig.name + " HQ",
+            factionId, baseId, pFaction->SuggestBaseName(),
             m_gameState->GetWorldMap()->GetTile(startX, startY),
             *m_gameDataContext,
             m_gameState->GetTileEffects());
@@ -261,6 +261,9 @@ void Engine::Initialize_()
     );
     m_uiManager->RegisterViewShortcut(Key_t::F2, [this, fullscreen]() -> std::unique_ptr<IGameView> {
         return m_viewFactory->CreateResearchView(fullscreen);
+    });
+    m_uiManager->RegisterViewShortcut(Key_t::E, [this, fullscreen]() -> std::unique_ptr<IGameView> {
+        return m_viewFactory->CreateSocialEngineeringView(fullscreen);
     });
     m_uiManager->RegisterViewShortcut(Key_t::U, [this, fullscreen]() -> std::unique_ptr<IGameView> {
         return m_viewFactory->CreateUnitDesignerView(fullscreen);

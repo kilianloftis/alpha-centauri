@@ -9,7 +9,13 @@
     "golden_age_contribution": 0,
     "fallback_pop_type": "Doctor",
     "obsoletes": [],
-    "effects": []
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisPop",
+        "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" }
+      }
+    ]
   },
   {
     "id": "Drone",

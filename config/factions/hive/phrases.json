@@ -1,0 +1,9 @@
+{
+  "greeting": [
+    "The {faction.noun} acknowledges your presence.",
+    "{leader.title} observes your faction with interest."
+  ],
+  "war_declaration": [
+    "{leader} proclaims the superiority of the {faction.adjective}."
+  ]
+}

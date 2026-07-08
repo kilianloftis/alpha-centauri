@@ -1,5 +1,6 @@
 #include "lib/effects/ActiveEffect.h"
 
+#include "game/IEffectsProvider.h"
 #include "game/Faction.h"
 #include "game/buildings/BuildingConfigParser.h"
 #include "game/buildings/BuildingRegistry.h"
@@ -197,29 +198,6 @@ std::vector<ActiveEffect_t> ExpandGrantBuildingEffects(
     return effects;
 }
 
-namespace
-{
-
-void CollectFromBuildings(const Faction& rFaction, std::vector<ActiveEffect_t>& rOut)
-{
-    const std::vector<ActiveEffect_t> buildingEffects = rFaction.CollectBuildingEffects();
-    rOut.insert(rOut.end(), buildingEffects.begin(), buildingEffects.end());
-}
-
-void CollectFromSocialEngineering(const Faction& rFaction, std::vector<ActiveEffect_t>& rResult)
-{
-    const std::vector<ActiveEffect_t> seEffects = rFaction.CollectSocialEffects();
-    rResult.insert(rResult.end(), seEffects.begin(), seEffects.end());
-}
-
-void CollectFromFactionDefinition(const Faction& rFaction, std::vector<ActiveEffect_t>& rResult)
-{
-    const std::vector<ActiveEffect_t> defEffects = rFaction.CollectDefinitionEffects();
-    rResult.insert(rResult.end(), defEffects.begin(), defEffects.end());
-}
-
-} // namespace
-
 double ApplyModifierStack(double base, const std::vector<std::pair<double, ModifierOp>>& contributions)
 {
     double addTotal = base;
@@ -237,22 +215,9 @@ double ApplyModifierStack(double base, const std::vector<std::pair<double, Modif
     return addTotal * arithmeticFactor * geometricFactor;
 }
 
-FactionEffects_t CollectActiveEffects(const Faction& rFaction)
+FactionEffects_t CollectActiveEffects(const IEffectsProvider& rProvider)
 {
-    FactionEffects_t factionEffects;
-    CollectFromFactionDefinition(rFaction, factionEffects.effects);
-    CollectFromBuildings(rFaction, factionEffects.effects);
-    CollectFromSocialEngineering(rFaction, factionEffects.effects);
-
-    // Faction-lane effects from the remaining sources: pops (scopes other than the
-    // locally-resolved ThisPop/ThisBase) and live units' components (other than
-    // ThisUnit/ThisTile). Routing is scope-driven — any config can contribute here.
-    const std::vector<ActiveEffect_t> popEffects = rFaction.CollectPopFactionEffects();
-    factionEffects.effects.insert(factionEffects.effects.end(), popEffects.begin(), popEffects.end());
-    const std::vector<ActiveEffect_t> unitEffects = rFaction.CollectUnitFactionEffects();
-    factionEffects.effects.insert(factionEffects.effects.end(), unitEffects.begin(), unitEffects.end());
-
-    return factionEffects;
+    return rProvider.GetActiveEffects();
 }
 
 StatBreakdown_t ResolveStatModifiers(const std::vector<ActiveEffect_t>& matching, double baseValue)

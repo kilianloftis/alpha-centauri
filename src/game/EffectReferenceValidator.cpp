@@ -11,6 +11,8 @@
 #include "game/research/TechRegistry.h"
 #include "game/social-engineering/SocialPolicyConfig.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
+#include "game/faction/FactionConfig.h"
+#include "game/faction/FactionRegistry.h"
 #include "game/social-engineering/SocialRatingConfig.h"
 #include "game/social-engineering/SocialRatingRegistry.h"
 #include "game/units/UnitComponentConfig.h"
@@ -139,6 +141,13 @@ void ValidateEffectReferences(const GameDataContext& rData)
             {
                 validate(rEffects, rConfig.id + " level " + std::to_string(level));
             }
+        }
+    }
+    if (rData.factionRegistry)
+    {
+        for (const FactionConfig_t& rConfig : rData.factionRegistry->GetAll())
+        {
+            validate(rConfig.effects, rConfig.id);
         }
     }
 }
