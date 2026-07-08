@@ -1,6 +1,6 @@
 {
-  "wealth": 1.5,
-  "power": -0.2,
-  "growth": 0.3,
-  "tech": 0.9
+  "wealth": true,
+  "power": false,
+  "growth": true,
+  "tech": true
 }

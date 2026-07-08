@@ -16,6 +16,8 @@ add_library(ac-core STATIC
     game/research/TechCostCalculator.cpp
     game/research/TechCostConfigParser.cpp
     game/faction/ResearchManager.cpp
+    game/faction/ResearchSelector.cpp
+    game/GameCategory.cpp
     game/faction/Diplomacy.cpp
     game/faction/SocialEngineeringManager.cpp
     game/faction/base/BaseManager.cpp

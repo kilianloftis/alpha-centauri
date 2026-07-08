@@ -173,50 +173,27 @@ void ResearchManager::AddDiscoveredTech(TechId techId)
     m_discoveredTechs.push_back(techId);
 }
 
-std::vector<TechId> ResearchManager::GetAvailableResearchTargets() const
+std::vector<const TechConfig_t*> ResearchManager::GetAvailableTechs() const
 {
     if (!m_pTechRegistry)
     {
-        return std::vector<TechId>();
+        return {};
     }
 
-    std::vector<TechId> available;
+    std::vector<const TechConfig_t*> available;
     const auto& allConfigs = m_pTechRegistry->GetAll();
 
-    for (const auto& config : allConfigs)
+    for (const TechConfig_t& rConfig : allConfigs)
     {
-        TechId techId = config.id;
-
-        // Skip if already discovered
-        bool bAlreadyDiscovered = false;
-        for (TechId discovered : m_discoveredTechs)
-        {
-            if (discovered == techId)
-            {
-                bAlreadyDiscovered = true;
-                break;
-            }
-        }
-
-        if (bAlreadyDiscovered)
+        if (HasDiscoveredTech(rConfig.id))
         {
             continue;
         }
 
-        // Check if all prerequisites are met
         bool bPrerequisitesMet = true;
-        for (TechId prereq : config.prerequisites)
+        for (const TechId& rPrereq : rConfig.prerequisites)
         {
-            bool bHasPrereq = false;
-            for (TechId discovered : m_discoveredTechs)
-            {
-                if (discovered == prereq)
-                {
-                    bHasPrereq = true;
-                    break;
-                }
-            }
-            if (!bHasPrereq)
+            if (!HasDiscoveredTech(rPrereq))
             {
                 bPrerequisitesMet = false;
                 break;
@@ -225,7 +202,7 @@ std::vector<TechId> ResearchManager::GetAvailableResearchTargets() const
 
         if (bPrerequisitesMet)
         {
-            available.push_back(techId);
+            available.push_back(&rConfig);
         }
     }
 

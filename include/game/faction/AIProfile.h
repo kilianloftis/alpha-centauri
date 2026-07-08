@@ -12,10 +12,10 @@ public:
     explicit AIProfile(const AITendenciesConfig& rConfig);
     ~AIProfile();
 
-    float GetWealth() const { return m_tendencies.wealth; }
-    float GetPower() const { return m_tendencies.power; }
-    float GetGrowth() const { return m_tendencies.growth; }
-    float GetTech() const { return m_tendencies.tech; }
+    bool InterestedInWealth() const { return m_tendencies.wealth; }
+    bool InterestedInPower() const { return m_tendencies.power; }
+    bool InterestedInGrowth() const { return m_tendencies.growth; }
+    bool InterestedInTech() const { return m_tendencies.tech; }
 
 private:
     AITendenciesConfig m_tendencies;

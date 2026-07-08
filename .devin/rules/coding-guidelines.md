@@ -13,6 +13,7 @@ Use range-based for loops whenever possible.
 Constructors should accept all arguments required to make the object valid
 If a class owns a resource, if possible, the class should construct that resource itself
 Prefer throwing exceptions over returning default values
+Throw errors if expected pointers are null
 
 ## SOLID Principles
 All code must adhere to SOLID principles:

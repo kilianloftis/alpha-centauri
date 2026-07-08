@@ -1,0 +1,308 @@
+# Project Code Review — Architecture, Maintainability, Scalability
+
+**Date:** July 2026
+**Scope:** Full project (`include/`, `src/`, `tests/`, `config/`, `docs/`, build system). All source files were read; key claims were re-verified against the code before recording.
+**Ground rules for this review:** Missing features are *not* findings — this is a game under construction. Findings are limited to structural problems: patterns that will not scale, designs that fight the stated guidelines, state that can desync, and decisions made silently that should have been explicit. Existing patterns were not given the benefit of the doubt just because they are applied consistently. No fixes are proposed here; this document only identifies issues.
+
+Severity tags: **[H]** structural problem that compounds as the codebase grows · **[M]** localized design flaw or trap · **[L]** hygiene/consistency issue.
+
+Related prior review: `docs/architecture/effects-system-review.md` (effects subsystem only; this document covers the whole project and does not repeat its items).
+
+---
+
+## 1. Systemic architecture
+
+### 1.1 [H] No strategy for derived state: everything is recomputed from scratch on every read
+
+The single biggest scalability issue in the codebase, and it is a *pattern*, not an isolated slip:
+
+- `Faction::GetActiveEffects()` (`src/game/Faction.cpp:430`) rebuilds the entire faction effect pool on every call: walks all bases → all buildings → expands grant chains (`ExpandGrantBuildingEffects`) → all pops → all units, allocating vectors of `ActiveEffect_t` (each holding a `std::string sourceId`) at every stage.
+- `BaseManager::BuildBaseEffects_()` (`src/game/faction/base/BaseManager.cpp:334`) calls `GetActiveEffects()` — and it is invoked by **every single stat getter**: `GetNutrientProduction`, `GetMineralProduction`, `GetEconProduction`, `GetLabsProduction`, `GetPsychProduction`, `GetNutrientsRequired`, `GetWorkedTileYield` (per tile!), `GetEffectiveSocialRating` (per rating!).
+- `ResourceManager` compounds it: the five production getters each independently call `ComputeWorked_` (`src/game/faction/base/resources/ResourceManager.cpp`), which re-resolves every worked tile. Reading all five stats = five full worked-tile passes plus five pool rebuilds.
+- `TileEffectsContext::CollectAreaEffects` (`src/lib/effects/TileEffectsContext.cpp`) scans a `(2·maxRadius+1)²` neighborhood per tile query, where `m_maxRadius` is the **global maximum** radius across all improvement and unit-component configs. One modded improvement with radius 5 makes every tile yield query in the game scan 121 tiles, each allocating `std::vector<std::string>` from `Tile::GetTerrainFeatureIds()` and doing registry lookups.
+- `Unit::ResolveStat_` (`src/game/units/Unit.cpp`) rebuilds the faction pool per stat read. A combat preview reading attack/defense/HP of two units = 6 full pool rebuilds.
+- The UI drives these paths **per frame** (60 FPS cap set in `SFMLGraphics`): `GrowthDisplay::Render` makes 2 pool rebuilds/frame (`src/ui/base/GrowthDisplay.cpp:56,60`), `BaseWorkableAreaDisplay::RenderTile_` does it for each of 20 tiles/frame (`src/ui/base/BaseWorkableAreaDisplay.cpp:93`), `SocialEngineeringDisplay` does it 10× per frame — once per rating axis (`src/ui/social-engineering/SocialEngineeringDisplay.cpp:188`). Order of magnitude: several hundred to >1000 full faction-pool rebuilds per second while the base screen is open, with two factions and one base each.
+
+The problem is not today's frame time — it is that **no architectural seam exists to ever fix this**. There is no snapshot object, no dirty flag, no "effects changed" signal, no per-turn cache. Every consumer calls the recompute entry points directly, so introducing caching later means touching every call site and re-auditing every invariant. The one existing cache (`ResearchManager::m_pointsNeededForCurrentTech`) demonstrates the missing invalidation story: it is computed when the target is set and goes stale if a `TechCost`-modifying effect appears mid-research.
+
+Related: every filter in the effects pipeline (`FilterByStatId`, `FilterForBase`, `FilterByScope`, …) returns a **copied** `std::vector<ActiveEffect_t>`; a typical resolution chains 2–3 filters, copying `std::string` per element per stage. `GameState::CollectWorldEffects` copies per faction per stage per turn (O(F²) per turn).
+
+### 1.2 [H] The `lib/` layer depends on `game/` — the layering is fictional
+
+`lib/` presents itself as generic infrastructure, but:
+
+- `include/lib/GameEvent.h:3` includes `game/research/TechConfigParser.h` (to get `TechId`) — the "stable ABI mod-facing" event header depends on a config parser.
+- `include/lib/EventBridge.h:4` includes `game/faction/base/BaseManager.h`.
+- `include/lib/effects/ActiveEffect.h` and `TileEffectsContext.h` include `game/faction/base/BaseTypes.h`; their `.cpp` files include 15+ game headers (`Faction`, `BaseManager`, `Tile`, `PopContainer`, `SocialEngineeringManager`, …).
+
+`lib/effects` is game logic in a `lib` costume. Consequences: `lib` cannot be reused or tested standalone, the include graph has no enforceable direction, and the "mod-facing stable ABI" claim of `EventBus`/`GameEvent` is hollow while its types are transitively defined by internal game headers. Either the boundary means something or it should not exist; right now it misleads.
+
+### 1.3 [H] `GameDataContext` is a service locator whose own invariant is already broken
+
+`include/game/GameDataContext.h` documents itself as "immutable definition data loaded once at startup; never serialised — always reconstructible from config files." In reality it holds:
+
+- `LuaRuntime` — a mutable interpreter whose global state is shared and mutated by every formula evaluation (see 3.6).
+- Seven calculators — *services*, not data.
+- `SecretProjectAvailabilityCalculator` — which holds a pointer **into `GameState`'s live faction vector** (`src/game/Engine.cpp:193`), i.e., the "immutable definition data" object references mutable save-game state. It must be constructed mid-initialization after the world exists, and would dangle across any future load-game/new-game that rebuilds `GameState`.
+
+The struct is also a flat grab-bag: 19 `unique_ptr` members with no grouping, passed around wholesale (`BaseManager`, `PopulationManager` take the whole context and pluck what they need — hidden dependencies, DIP in letter but not spirit).
+
+`GameState` has the mirror-image problem: documented as "mutable save-game data" (and `docs/architecture/high-level.md` claims "no registries or calculators"), it owns `TileEffectsContext` (a resolver over a registry) and `UnitOrderExecutor` (a service). The save/load boundary that both classes exist to define is blurred from both sides.
+
+### 1.4 [H] The composition root is a 190-line hard-coded script
+
+`Engine::Initialize_` (`src/game/Engine.cpp:90-273`) sequentially: loads 10 registries in a fragile implicit order, builds Lua configs, generates a hard-coded 30×20 world, hard-codes two start positions, allocates faction/base IDs from local counter variables, creates factions, wires the event bridge, builds the turn pipeline, and registers UI shortcuts. It also contains test scaffolding in the production path: an EventBus subscription labeled "for testing" (`Engine.cpp:103-115`) and a "Test setup complete" log.
+
+Every new subsystem requires editing this method (OCP violation at the root). There is no distinction between "start application", "start new game", and "load game" — the three lifecycles this architecture will inevitably need — and no way to construct a game world for tests without replicating this sequence by hand (which `tests/GameFixtures.h` indeed does, partially and divergently: bases there get "no research/production/composition calculators", so tests exercise a different object graph than the game).
+
+### 1.5 [H] Identity and ID allocation have no owner
+
+- `factionId`/`baseId` are local counter variables in `Engine::Initialize_` (`Engine.cpp:204-205`); nothing else can allocate a unique ID after init.
+- `Faction` does not know its own ID. The caller passes `factionId` into `Faction::CreateBase(...)` (`include/game/Faction.h:54`) and it is stored **per base** via post-construction setters (`SetFactionId`/`SetBaseId`, initialized to `-1` in the meantime — `BaseManager.cpp:45-46`).
+- `GameState::GetPlayerFaction()` is defined as `m_factions[0]` (`src/game/GameState.cpp:73-81`), and the same index-0 convention is re-derived independently in `WorldView` (`k_PlayerFactionIndex = 0`) and `ViewFactory`.
+
+Denormalized identity plus convention-based "player = first" will produce subtle bugs the moment factions can be eliminated, reordered, or hot-joined, and makes serialization identity a retrofit.
+
+### 1.6 [H] Signal/event wiring is manual, lifetime-unsafe, and non-reentrant
+
+- `Signal<T>` (`include/lib/Signal.h`) has `connect` but **no disconnect** and no connection lifetime management. Slots capture raw references: `EventBridge::WireBase` captures `&rBase` (`src/lib/EventBridge.cpp:16-22`). Destroying any base (razing, capture) leaves dangling closures in signals that outlive it. The same applies to any future subscriber.
+- `EventBus::publish` iterates `m_handlers` directly (`src/lib/EventBus.cpp:23-26`); a handler that calls `subscribe`/`unsubscribe` during dispatch invalidates the iterator (vector reallocation) — undefined behavior on a bus explicitly intended for third-party mod handlers.
+- Wiring is opt-in and only the composition root does it: `EventBridge::WireBase` is called exactly once, in `Engine::Initialize_`. `Faction::CreateBase` does not wire; any base created through gameplay (colony pods) will silently emit no events. A pattern that requires every future call site to remember a manual step is a defect factory.
+- Signal chains also create hidden control flow *within* one object: `BaseManager`'s constructor connects `m_pPopulation->on_growth` back into `m_pPopulation->AddPop()` (`BaseManager.cpp:72-77`) — a self-call routed through the owner via a signal, invisible to a reader of `PopulationManager`.
+
+### 1.7 [M] Two incompatible ownership models for factions coexist
+
+`GameState` owns `std::vector<std::unique_ptr<Faction>>`. `Diplomacy` (`include/game/faction/Diplomacy.h`) is written against `std::shared_ptr<std::vector<std::shared_ptr<Faction>>>` — a type that exists nowhere else. It is never constructed (`Faction.cpp:47` sets `m_pDiplomacy(nullptr)`), so the codebase currently carries a dead subsystem with an ownership design that contradicts the live one. Whichever is intended, one of them is wrong.
+
+### 1.8 [H] UI holds unmanaged references to mutable game objects
+
+- `BaseView` stores `BaseManager&` for its whole life; `GrowthDisplay`/`ProductionDisplay` store `const BaseManager*`.
+- `WorldView::m_pSelectedUnit` is a raw `Unit*` (`include/ui/world/WorldView.h:57`); `UnitManager::DestroyUnit` erases the owning `unique_ptr` — the selection dangles the moment unit death exists.
+- `BaseView::HandlePopClick` captures `Pop& rPop` in a lambda stored inside a popup element (`src/ui/base/BaseView.cpp:104-112`); pops are destroyed by starvation (`PopContainer::RemovePop`) while the popup can still be open.
+
+There is no invalidation protocol (weak handle, generation ID, close-on-destroy signal) between views and game objects. Combined with 1.6, object destruction is currently unsafe almost everywhere it could occur; it "works" only because nothing dies yet.
+
+### 1.9 [H] Turn-stage interface: nullable-pointer contract, and stages do other objects' work
+
+- `TurnStageBase::Execute(GameState* = nullptr, Faction* = nullptr)` (`include/game/TurnStages.h:73`): default arguments on a virtual (statically bound, re-declared inconsistently in every override), forcing every stage to null-check both parameters. Per-faction and global stages share one signature — stages that ignore `pFaction` still receive it, stages that require it can be called without it (ISP/LSP smell rooted in the interface, not the implementations).
+- `Execute_` is declared `private` in the base, redeclared `public` in most stages, `private` in `Population` — the NVI pattern applied inconsistently.
+- Stage bodies do faction-internal bookkeeping: `IncomeCollection` and `ResearchAccumulation` contain the same loop (iterate bases by index, `ConsumeX`, sum, `AddY`) duplicated with different nouns (`src/game/stages/IncomeCollection.cpp`, `ResearchAccumulation.cpp`) — aggregation logic that belongs behind `Faction`, living in the orchestration layer, twice.
+- `TurnProcessor::ProcessTurn` silently skips stage IDs present in `m_stageOrder` but missing from the registry (`src/game/TurnProcessor.cpp:24-26`) — a typo in `turn_stages.json` silently removes a stage from the game. Its `numFactions` parameter is unused, and `m_missionYear` is stored as a member only for a log line.
+- `TurnStage` enum carries ~20 commented-out future values (`TurnStages.h:22-50`) and duplicates identity with config string IDs; `TurnStageFactory::CreateStageInstance` is a 13-case switch that must be extended for every stage (OCP): enum + switch + class + config all have to change together.
+
+### 1.10 [H] The moddability infrastructure does not actually reach mods
+
+Moddability is a stated core guideline, and scaffolding exists — but none of it is load-bearing:
+
+- Hooks are parsed from `turn_stages.json` (`mod_id`, `script_path`) but `Hook::callback` is never populated from a script, and its type is `std::function<void()>` (`include/game/HookContext.h:14`) — a hook that receives no `GameState`, no faction, and no stage context could not do anything even if it were wired. Replace-hooks replace an entire stage wholesale.
+- `EventBus` is the "mod-facing" API, but there is no Lua-side subscription, and `GameEvent` covers 7 event types.
+- `LuaRuntime` is used solely for three cost/composition formulas.
+- Player actions (set production, convert pop, assign worker, change policy) are direct method calls from UI handlers into managers (`BaseView.cpp`), bypassing anything a mod could observe or intercept; there is no command/action layer.
+
+Individually each is "not implemented yet"; collectively they show the extension points are being built without a consumer, and the interfaces (contextless hooks, tiny event variant) would not survive first contact with a real mod. Designing them against a concrete consumer (even a sample mod) would prevent rework.
+
+### 1.11 [M] Config validation is thorough exactly once, absent everywhere else
+
+`ValidateEffectReferences` (`src/game/EffectReferenceValidator.cpp`) is the right idea: fail startup on any effect referencing an unknown building/tech/improvement/feature. But the standard it sets is not applied to the rest of the config surface:
+
+- `required_techs` on buildings are never checked against `TechRegistry`.
+- `SocialEngineeringManager`'s constructor hard-codes default policy IDs (`"frontier"`, `"simple"`, `"survival"`, `"none_future"` — `src/game/faction/SocialEngineeringManager.cpp:14-19`); if the config lacks them, `GetActivePolicy` silently returns `nullptr` forever.
+- `BaseManager`'s constructor requires an improvement with ID `"Base"` to exist (`BaseManager.cpp:62`); if missing, `AddImprovementWithEffects` prints to `stderr` and continues — bases silently lose their tile marker.
+- Tech `category` strings are validated **per query, via try/catch** in `ResearchSelector::IsTechInSelectedCategory_` (`src/game/faction/ResearchSelector.cpp:123-133`) — exceptions as control flow, and a typo'd category silently degrades selection behavior instead of failing at load.
+- `SetActivePolicy(category, policyId)` never checks that the policy belongs to the category (`SocialEngineeringManager.cpp:27-35`) — any policy can be installed into any slot.
+- `EnergyAllocation_t` documents "must sum to 100" and never enforces it.
+- Unknown IDs in `turn_stages.json` become hook-only `CustomTurnStage`s or are silently dropped (1.9).
+
+---
+
+## 2. State integrity — multiple sources of truth
+
+### 2.1 [H] Worker assignment state is spread across three classes
+
+The canonical assignment is a `const Tile*` on `Pop`; the "is worked" flag is a `mutable bool` on `Tile` (maintained by `Pop::SetTile` and `Pop::~Pop`); the workable set and the algorithms live in `WorkerAssignmentManager`. The one-worker-per-tile invariant is maintained by convention across all three (`WorkerAssignmentManager::IsTileAssigned` reads the tile flag; the comment at `WorkerAssignmentManager.cpp:120-126` explains the choice). Additional subtlety: clearing a pop's tile silently resets its user-assigned flag as a side effect inside `Pop::SetTile` (`Pop.cpp:88-93`) — behavior callers must know but cannot see. This state model has no single owner to enforce or repair invariants (e.g., what clears assignments when a tile becomes hostile, who reconciles after load).
+
+### 2.2 [H] Unit position is stored twice with a public bypass
+
+`Unit::m_pTile` and `UnitPositionIndex` both record where a unit is. `Unit::SetTile` is public; calling it directly (instead of `WorldMap::OnUnitMoved`) desyncs the index, and `UnitPositionIndex::OnUnitRemoved` then fails silently because it looks the unit up **by its current tile** (`src/game/map/UnitPositionIndex.cpp:16-24`), leaving a dangling `Unit*` in the index. The invariant "always move units through WorldMap" exists only in convention.
+
+### 2.3 [M] Redundant flags that can desync
+
+- `ResearchManager`: `m_bHasResearchTarget` duplicates `m_pCurrentResearchTarget != nullptr`; `SetResearchTarget` assigns the pointer **before** validating (`ResearchManager.cpp:28-37`), so a failed lookup throws with `m_pCurrentResearchTarget == nullptr` while `m_bHasResearchTarget` retains its old value — `HasResearchTarget() == true` with no target; `RecalculatePointsNeeded` then throws "Invalid state".
+- `Military`: `m_designs` vector plus `m_designMap` raw-pointer map — dual bookkeeping with no removal API yet; the first removal feature will have to remember both.
+- `Faction::m_energy` lives on Faction while the class comment says the economy split is owned by `EconomyManager` — faction-level economy state is split across two objects.
+- `Tile::IsWorked()` and `Tile::IsWorkerAssigned()` are two names for the same field.
+
+### 2.4 [H] Const-correctness is systematically subverted
+
+- `Tile::SetWorked(bool) const` mutates a `mutable` member, openly documented as "declared const because it is updated through a const Tile* held by Pop" (`include/game/map/Tile.h:96-99`).
+- `TileEffectsContext::AddImprovementWithEffects` / `RemoveImprovementWithEffects` / `RecomputeMoisture` are `const` methods that mutate tiles and trigger area-wide terrain recomputation (`include/lib/effects/TileEffectsContext.h:60-73`).
+- `Faction`'s `GetEconomyManager() const`, `GetResearchManager() const`, `GetResearchSelector() const` return **non-const pointers** to internals (`Faction.cpp:99-102, 248-256`); `ViewFactory::CreateResearchView` extracts a mutable `ResearchManager*` from a `const Faction*`.
+
+Individually each has a rationale; collectively they mean `const` no longer communicates immutability anywhere in the object graph — a `const GameState&` can rewrite terrain. That erases the main tool C++ gives you for reasoning about mutation, exactly the thing a growing simulation needs most.
+
+---
+
+## 3. Silent rule decisions and inconsistent failure handling
+
+The coding guidelines say "Do not make up game rules or mechanics. Leave TODOs instead" and "Prefer throwing exceptions over returning default values." Several places quietly violate both:
+
+### 3.1 [H] Energy allocation does not conserve energy
+
+`EconomyManager::CalculateEnergyForEcon/Labs/Psych` each independently `std::round` their percentage share (`src/game/faction/EconomyManager.cpp:22-35`). With 5 energy at the default 40/50/10 split: econ=2, labs=3 (round 2.5), psych=1 (round 0.5) → **6 energy allocated from 5 collected**. Rounding direction is a real game rule (SMAC defined one); here it is an emergent artifact that mints or destroys energy every turn at every base.
+
+### 3.2 [M] Production cost of 0 today: stub value × real formula
+
+`ProductionManager::GetMineralCost` passes a hard-coded `industry_rating = 0` ("TODO: pass real industry_rating") into the shipped formula `base_cost * (10 * industry_rating)` (`config/production_cost.lua`) — every item costs **0 minerals** and completes the turn it is selected. Unlike `TechCostCalculator`, which clamps to `std::max(1, cost)`, `ProductionCostCalculator::ComputeCost` has no floor, and nothing validates formula output. Two half-finished pieces compose into degenerate live behavior with no warning anywhere.
+
+### 3.3 [M] Growth mechanics contain three silent decisions
+
+- A growth-rate multiplier ≤ 0 is silently replaced by 1.0 (normal growth) in `GrowthCalculator::ComputeNutrientsRequired` (`src/game/population/calculators/GrowthCalculator.cpp:15-17`) — a heavy negative-growth effect stack silently does nothing.
+- `PopulationManager::ApplyGrowth` deducts the nutrient threshold and emits `on_growth` *before* anyone checks whether growth is possible; `AddPop` then silently does nothing at max size (`PopulationManager.cpp:54-62, 100-115`) — nutrients are consumed for a pop that never appears, and the decision is invisible because it is split across a signal round-trip through `BaseManager`.
+- Max base size is a hard-coded `m_maxSize(8)` (`PopulationManager.cpp:24`); `SetMaxSize` is never called by anything.
+
+### 3.4 [M] Population composition hard-codes pop-type IDs
+
+`PopContainer::ApplyCompositionTargets` converts pops to `"Drone"` and `"Talent"` by string literal (`src/game/faction/base/population/PopContainer.cpp:153, 165`), while everything else about pop types is config-driven. A mod that renames these types gets runtime throws from `ConvertTo`. Role predicates are also scattered: `IsDrone` lives on `Pop`, "is talent" is an inline expression duplicated in `PopContainer` (three places), "worker but not specialist" another.
+
+### 3.5 [M] Tech gating semantics differ by config type and have a trap
+
+`BuildingConfig_t::IsDiscovered` implements **OR** over `required_techs` (any one tech unlocks — surprising for a field named "required") and returns **false for an empty list** — a building with no tech requirement can never be built (`include/game/buildings/BuildingConfigParser.h:26-36`). `SocialPolicyConfig::IsAvailable` uses a *singular* `requiredTech` where empty means always available. Two config schemas, two semantics, one of them inverted for the empty case. Current data never has an empty list, so the trap is latent.
+
+### 3.6 [M] Lua evaluation: errors return 0, "scoped" globals leak
+
+`LuaRuntime::EvalInt` returns 0 with a console warning on any formula error (`src/lib/LuaRuntime.cpp:36-70`) — a typo in a modded formula silently zeroes tech costs or production costs. The comment says variables are "scoped to this call", but they are written as persistent globals and never cleared — formula A's variables remain visible to formula B, so a missing input in one formula silently reads a stale value from another instead of failing. Both behaviors directly contradict the project's own error-handling guideline, in the most modder-facing component.
+
+### 3.7 [M] Social rating expansion: exact-level match silently drops out-of-table totals
+
+`ExpandSocialRatingEffects` looks up the accumulated rating with `levelEffects.find(total)`; totals outside the configured levels produce no effects at all (`src/game/social-engineering/SocialRatingResolver.cpp:47-52`). Whether ratings clamp at the extremes is a rules decision that has been made implicitly (they vanish), without a TODO.
+
+### 3.8 [H] Failure handling is a different style in every method
+
+Within `BaseManager` alone: null sub-manager → throw (`GetNutrientProduction`), return 0 (`ConsumeEcon`), silent no-op (`AddBuilding`), or unchecked deref (`GetPopContainer`). Elsewhere: `Registry::Find` returns nullptr while `Registry::Create` throws; `TurnStageFactory::LoadConfig` returns `bool`; `TileEffectsContext::AddImprovementWithEffects` logs to stderr and continues; JSON parsers throw; Lua parsers warn and fall back to defaults (`ProductionCostConfig_tParser::ParseConfig`); `Faction::AddResearchPoints` silently drops points if research is null; `GetBreakthroughRate` returns `-1` sentinels; `GetDefinitionId` returns a static empty string. Callers cannot predict any failure mode without reading the callee. This is the most pervasive maintainability issue after 1.1.
+
+---
+
+## 4. Class design / SOLID
+
+### 4.1 [H] `Faction` and `BaseManager` are delegation shells with god-facade interfaces
+
+`Faction` owns 12 subsystems and exposes a mix of three API styles simultaneously: pass-through methods (`AddEnergy`, `AddResearchPoints`), exposed managers (`GetResearchManager()` → callers do manager surgery), and exposed containers (`GetBases()` returning the `unique_ptr` vector). `BaseManager` repeats the shape one level down (40+ methods routing to 5 sub-managers), and `PopulationManager` repeats it again over `PopContainer` — the same population API surface exists at **three levels** (`GetWorkerCount` et al. on PopContainer, PopulationManager, and via BaseManager). Every new population feature costs three signatures plus call-site choices about which level to use; stages already use both (`GetBase(i)->ConsumeEcon()` vs `GetBases()` range loops).
+
+SRP is satisfied by the leaf classes but the facades have become the change amplifiers. Meanwhile encapsulation is broken *around* them: `GameState::GetFactions()` and `PopContainer::GetPops()` return mutable references to owning containers, so any caller can steal or destroy objects without the facades noticing.
+
+### 4.2 [H] Constructor-validity guideline is widely violated by two-phase initialization
+
+The project's own rule: "Constructors should accept all arguments required to make the object valid." In practice:
+
+- `Faction`'s definition is a defaulted-null parameter; identity/AI/flavor subsystems are then conditionally null, and null-checks for them (and for always-constructed managers) spread through every method (`Faction.cpp` passim).
+- `BaseManager` is born with `m_factionId = -1`, `m_baseId = -1`, then mutated by `SetFactionId`/`SetBaseId`/`SetName` (`Faction::CreateBase`).
+- `GameState` requires `SetWorldMap` then `InitTileEffects` in order, throwing at runtime if misused.
+- `ResearchManager` gets its `IEffectsProvider` via setter after construction (`Faction.cpp:52-55`).
+- `SFMLGraphics` creates the window in its constructor while a vestigial `Initialize()` re-checks it afterwards; `Engine::CheckInitialized_` validates members at the **end** of `Initialize_`, after they have already been dereferenced.
+
+Each instance forces defensive null/state checks downstream — which is exactly where the codebase's inconsistent failure handling (3.8) comes from.
+
+### 4.3 [M] Interface hygiene
+
+- `IGameView` is named an interface but is a concrete base with state (`m_elements`, `m_bShouldClose`) and default behavior; its `Update()` virtual is **never called by anything** (dead API implying a lifecycle that does not exist). Element-lifecycle management (erasing closed elements) happens inside `Render`.
+- `IConstructable` mixes `const char* GetId()` with `const std::string& GetName()`.
+- `Registry<>` has a `protected virtual Validate_` but a non-virtual public destructor — designed for inheritance and unsafe to delete polymorphically; currently safe only because all registries are held by concrete type.
+- `BuildingConfig_t` (a config data struct) inherits `IConstructable`, giving every config entry a vtable and identity via `id.c_str()`; config structs also carry rule logic (`IsDiscovered`, `IsAvailable` — see 3.5). Data definitions and behavior are fused.
+- `Unit` is anemic: all mutable state has public unchecked setters (`SetCurrentHp(-5)` is fine); current-vs-max semantics are undefined when faction effects change resolved `HitPoints` after spawn (`m_currentHp` snapshots the design value at construction).
+- `WorkerAssignmentManager::UserAssignBestAvailableWorker` and several loops iterate by index with C-style reverse loops and duplicate their bodies (`WorkerAssignmentManager.cpp:195-224`) despite the range-based-loop guideline.
+
+### 4.4 [M] Effects pipeline: strong core, but key invariants live in comments, and one lives in a display string
+
+The lane/seed design (`LaneFor`, `KindFor`, `SeedFor` with exhaustive switches) is genuinely good — compile-time routing that new scopes/stats cannot dodge. But:
+
+- Grant-cycle detection parses the **UI breakdown string**: `sourceId` chains like `"a -> b -> c"` are split on `" -> "` to decide whether a building was already expanded (`GrantChainContains_`, `src/lib/effects/ActiveEffect.cpp:95-118`). A human-readable label is doing double duty as the graph-traversal data structure; any building ID containing the separator (or colliding with a segment) breaks expansion. Presentation and algorithm state must not share one string.
+- The "must never enter the pool" routing rules are enforced by one wrapper type (`BaseEffects_t` — good) plus a large number of doc comments; `CollectActiveEffects(rProvider)` is a one-line passthrough adding only indirection.
+- `ActiveEffect_t::config` is a raw pointer into registry storage — correct today, but nothing prevents a future registry reload (mod hot-reload) from dangling every live effect; defensive `if (!effect.config)` checks are sprinkled through consumers instead, which hides bugs rather than surfacing them.
+
+### 4.5 [M] UI computes game values and duplicates model logic
+
+- `GetFactionSocialRating` in the social engineering display defines a faction's rating as *base 0's* rating, with a hand-rolled fallback accumulation when no bases exist (`SocialEngineeringDisplay.cpp:184-199`) — a model concept (faction-level rating) that does not exist in the model, invented in a render file.
+- `WorldView::FindBaseAtTile_` linearly scans all factions × bases per click; `Update_` rebuilds all base info structs (string copies) per frame.
+- `SocialEngineeringDisplay` is 595 lines mixing layout math, display-name switch tables (`CategoryDisplayName` throwing on unknown), effect formatting, and hit-testing; `k_PoliciesPerCategory = 4` silently truncates config-driven policy lists to the UI grid size.
+- Style constants (background colors, font ratios) are redefined per display file with slightly different values — no shared theme.
+- `k_LeftPanelLayout` and `k_BottomLeftPanelLayout` are identical constants (`include/ui/UIElement.h:49-50`).
+- Window resize rescales the SFML view, but all layouts were resolved to pixels once at startup (`ViewFactory::GetFullscreenLayout`) — post-resize hit-testing and layout drift apart.
+- `UnitDesignerView` receives `nullptr /* TODO: pass UnitManager once wired into Faction */` (`ViewFactory.cpp:120`) although `Faction::GetUnitManager()` already exists — stale TODO masking an available dependency.
+
+### 4.6 [H] Input flows through global mutable state, pumped by the graphics backend
+
+Key/mouse events are stored in file-scope `static std::deque` globals with free push/pop functions (`src/input/KeyEventQueue.cpp:8`), **filled by `SFMLGraphics::Display() → ProcessEvents_()`** and drained by `SFMLInput`. Consequences: the Graphics and Input abstractions are secretly one system (pairing `NullGraphics` with `SFMLInput` yields dead input — the backends are not actually interchangeable, which was their entire purpose); globals preclude multiple windows and clean tests; `NullInput` blocks on `std::cin`, so the "headless" mode stalls the loop per keystroke. Also `CaptureKeyAsync` is synchronous (misnamed), and `PushPendingKeyEvent_t` applies the `_t` *type* suffix to a function. The window close button is deliberately swallowed (`SFMLGraphics.cpp` ProcessEvents_: "Ignore the close button") — an interaction decision buried in the backend.
+
+---
+
+## 5. Dead, unwired, and vestigial structure
+
+Not "unimplemented features" — these are pieces that exist and are silently disconnected, which misleads readers about what the system does:
+
+- **Tech discovery never happens in-game**: `ResearchAccumulation` adds points, but no stage or UI path ever calls `Faction::DiscoverCurrentResearch`/`ResearchManager::DiscoverTech` — points accumulate forever. The stage exists, the manager exists, the selector auto-picks targets; the loop is simply never closed.
+- `PopulationManager::CheckRiotEndOfTurn` / `CheckGoldenAgeEndOfTurn` are called by nothing; `RiotCalculator`/`GoldenAgeCalculator` and their six signals are fully implemented dead code.
+- `IGameView::Update()` — no caller. `ResearchManager::ResetAccumulatedPoints_` — no caller. `SetAccumulatedPoints`/`SetMaxSize` — no callers (public mutation APIs with no consumers).
+- `ResourceManager` takes and stores `const BuildingManager* m_pBuildings` and never uses it.
+- `Diplomacy` — dead class with incompatible ownership (1.7). `Specialist.cpp/h` — an empty placeholder file compiled into the target.
+- `Engine::m_turnStageFactory` is a member kept alive for the whole game but used only during `Initialize_`.
+- `EventBus` handler for pop events in `Engine` is test scaffolding in production.
+
+---
+
+## 6. Conventions, naming, and style drift
+
+The project defines unusually specific conventions (`.devin/rules/coding-guidelines.md`); they are applied inconsistently enough that they no longer predict what code looks like:
+
+- **`_t` postfix rule** ("Structs and Enums: postfix with _t"): roughly half comply. `FactionConfig_t`, `EnergyAllocation_t`, `Key_t` vs `TurnStageConfig`, `TurnStageInfo`, `Hook`, `WorldGenConfig`, `Color`, `SocialPolicyConfig`, `SocialRatingConfig`, all `Ev*` events, and ~14 enums (`StatId`, `TurnStage`, `ModifierOp`, `SocialCategory`, …). Worse, mechanical application produced mangled *class* names: `GrowthConfig_tParser`, `ProductionCostConfig_tParser`.
+- **Function casing**: `EventBus::subscribe/publish/unsubscribe`, `Signal::connect/emit` are lowercase in a PascalCase codebase; public signal members are snake_case (`on_pop_gained`, `m_golden_age`).
+- **Private-method underscore suffix** is inconsistent even within one class (`BaseView::HandlePopClick` vs `HandleTileClick_`).
+- **Enum↔string mapping** is hand-rolled in at least six places (`BonusEffectParser` ×5, `ResearchCategory`, `Tile::ToString`, `SocialRatingIdToString`, UI display names) while `magic_enum` is already a dependency used by `TurnStageFactory`. Each hand map is a drift risk against its enum.
+- **Config schema casing is mixed for modders**: stats snake_case (`"hit_points"`), scopes/ops PascalCase (`"ThisBase"`, `"AddPercent"`), categories lowercase (`"build"`), and numeric amounts accepted as numbers *or* strings (`"amount": "2"` in `buildings.json`, via `ParseNumber`'s `std::stod` branch) — laxity that will fragment mod configs.
+- `config/buildings/buildings.json` ships a typo ID `"sattelite"` — IDs are forever once saves/mods reference them.
+- 54 `std::cout`/`std::cerr` call sites in `src/game` + `src/lib` as the only diagnostics — no levels, no sink, interleaved with gameplay ("[TODO] … not yet implemented" printed to stderr at runtime from `DispatchInstantaneousEffects`). For a moddable game this will need to be an actual logging seam eventually; every new `cout` deepens the migration.
+- Guideline "use references whenever possible" vs practice: constructor parameter lists of raw pointers (`Faction` takes six pointers + defaulted config; `BaseManager`, `PopContainer`, `ResourceManager` similar), `GrowthDisplay(const BaseManager*)` where the caller always has a reference. Pointers here also encode "maybe null" that then must be checked (see 4.2).
+
+---
+
+## 7. Documentation and build drift
+
+- **`docs/architecture/` describes a different codebase.** `high-level.md` and `faction-system.md` reference `FactionFactory`, `HookSystem`, `TileBonusRegistry`/`config/tile_bonuses.json`, `SFMLUIManager`/`NullUIManager`, `UIWorldMap`/`UIPanel`/`UIPopup`, `BaseDisplay`, and claim Military owns Bases/BaseManager/UnitFactory — none of these exist (bases hang off `Faction`; `Military` holds only designs; the UI classes are `UIManager`/`IGameView`/`ViewFactory`). The architecting rule ("update the architecture diagrams when adding components") is not being followed; the diagrams now actively mislead, which is worse than their absence.
+- `docs/game-rules/turn-structure.md` vs `TurnStages.h` commented-out enum values duplicate the same future-stage list in two places.
+- `.devin/rules/build.md` says the binary is at `./build/alpha-centauri`; `CMakeLists.txt` sets `CMAKE_RUNTIME_OUTPUT_DIRECTORY` to the **source root**, so it lands at `./alpha-centauri`.
+- The workable area is "21 tiles" in docs/comments and 20 (+ free center handled separately) in `MapUtils.h` — the number is right in code, the prose contradicts it.
+
+---
+
+## 8. Testing posture
+
+- Coverage is effectively one subsystem deep: `lib/effects` is well tested (11 files, good fixtures), plus faction config parsing/flavor and the new `ResearchSelector`. **Zero tests** exist for: the turn pipeline (`TurnProcessor`/stages), `ResourceManager` (where the rounding and seed rules live), `EconomyManager` (3.1 would be caught by a 3-line test), `WorkerAssignmentManager` (the most intricate mutable-state logic in the project), `PopulationManager`/`PopContainer` composition churn, `ProductionManager`, `BuildingManager`, `Registry`, `EventBus` (reentrancy), `WorldMap`/`Tile`, Lua calculators.
+- The single test binary is named `effects-tests` while housing non-effects suites — the name will get more wrong as coverage grows.
+- `tests/GameFixtures.h` constructs bases "with the minimum viable dependency set: no research/production/composition calculators" — tests run a permanently degraded object graph that the game never runs (a direct consequence of finding 4.2's optional dependencies), so integration-level behavior differences (e.g., null-production bases) are baked into the fixtures.
+
+---
+
+## 9. Smaller items (recorded for completeness)
+
+- `Registry::ValidateNoDuplicates_` is O(n²) while `m_indexById` already detects collisions during build.
+- `ResearchManager` stores discovered techs as `vector<string>` with linear `HasDiscoveredTech`/prereq scans (O(T·D·P) in `GetAvailableResearchTargets`); `TechId` (a `std::string` alias) is passed and iterated **by value** in several loops.
+- `Tile::HasFeature` builds two `std::string`s (via `ToString`) per call; `GetTerrainFeatureIds` allocates a vector of strings per call — both sit inside the per-tile hot paths of 1.1.
+- `WorldMap` stores tiles as `vector<unique_ptr<Tile>>` (needed for address stability given `BaseManager` holds `Tile&`, but heap-per-tile for a dense grid) and exposes the owning vector mutably via `GetTiles()`.
+- `ExpandGrantBuildingEffects` takes and returns the whole effects vector by value and mutates it while index-iterating (correct but fragile; growth during iteration is load-bearing).
+- `ResolveStatModifiers` sorts contributions by `sourceId` purely for display determinism on every resolution, even when the breakdown is discarded.
+- `AutoAssignWorkers_` erases from the front of a vector in a loop (O(n²)).
+- `UserAssignBestAvailableWorker` ignores `UserAssignWorker`'s failure return — a failed steal silently does nothing.
+- `NullGraphics`/`NullInput` log "Console … backend selected" — they are console backends, not null objects; naming misleads about headless capability.
+- Hard-coded SFML details: window 1280×900, two distro-specific font paths, font failure degrades silently to no text.
+- `include/game/faction/base/BaseTypes.h` defines `FactionId` — duplicated by the `using FactionId = int` in `lib/GameEvent.h` (two definitions of the same alias in different layers).
+- `EffectContext_t` supports only `targetTile`; `ConditionSatisfied` returns false for future condition kinds via unreachable default — fine now, but the context struct will accrete fields with no versioning story for mods.
+- `bd` script duplicates configure/build argument parsing between `configure`, `build`, and `all` (three copies to keep in sync).
+
+---
+
+## Recurring themes (the patterns behind the findings)
+
+1. **Compute-on-read with no invalidation seam** (1.1) — the architecture has implicitly committed to "always live, always recomputed" without deciding it.
+2. **Invariants by convention**: manual wiring steps (WireBase), magic config IDs ("Base", "Drone", default policies), index-0 player, "call AutoAssignWorkers after", "move units via WorldMap" — each is a rule that exists only in comments and future contributors' memories.
+3. **Two-phase construction + nullable dependencies** → defensive null checks → inconsistent failure styles (4.2 → 3.8): one root cause producing the two noisiest code smells.
+4. **Boundaries declared but not enforced**: lib/game, data/state (GameDataContext/GameState), Null/SFML backends, "mod-facing" bus, docs vs code — in each case the stated boundary and the real dependency graph disagree.
+5. **Guidelines exist but drift freely** (naming, references-over-pointers, exceptions-over-defaults, diagram upkeep) — either the rules or the code should change, but agreement is currently absent.

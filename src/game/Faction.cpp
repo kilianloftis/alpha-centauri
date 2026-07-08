@@ -13,6 +13,7 @@
 #include "game/faction/EconomyManager.h"
 #include "game/faction/Military.h"
 #include "game/faction/ResearchManager.h"
+#include "game/faction/ResearchSelector.h"
 #include "game/faction/Diplomacy.h"
 #include "game/faction/SocialEngineeringManager.h"
 #include "game/faction/UnitManager.h"
@@ -42,6 +43,7 @@ Faction::Faction(const BuildingRegistry* pBuildingRegistry, const TechRegistry* 
     , m_pEconomy(std::make_unique<EconomyManager>())
     , m_pMilitary(std::make_unique<Military>())
     , m_pResearch(std::make_unique<ResearchManager>(pTechRegistry, pTechCostCalculator))
+    , m_pResearchSelector(std::make_unique<ResearchSelector>(m_pResearch.get()))
     , m_pDiplomacy(nullptr)
     , m_pSocialEngineering(std::make_unique<SocialEngineeringManager>(pSocialPolicyRegistry,
                                                                         pSocialRatingRegistry))
@@ -57,6 +59,11 @@ Faction::Faction(const BuildingRegistry* pBuildingRegistry, const TechRegistry* 
 
         m_pAIProfile = std::make_unique<AIProfile>(m_pDefinition->ai);
         m_pFlavor = std::make_unique<FactionFlavor>(m_pDefinition->flavor, *m_pIdentity);
+    }
+
+    if (m_pResearchSelector)
+    {
+        m_pResearchSelector->EnsureResearchTarget();
     }
 }
 
@@ -241,6 +248,26 @@ const Military& Faction::GetMilitary() const
 ResearchManager* Faction::GetResearchManager() const
 {
     return m_pResearch.get();
+}
+
+ResearchSelector* Faction::GetResearchSelector() const
+{
+    return m_pResearchSelector.get();
+}
+
+bool Faction::DiscoverCurrentResearch()
+{
+    if (!m_pResearch || !m_pResearch->DiscoverTech())
+    {
+        return false;
+    }
+
+    if (m_pResearchSelector)
+    {
+        m_pResearchSelector->EnsureResearchTarget();
+    }
+
+    return true;
 }
 
 std::vector<const BuildingConfig_t*> Faction::GetDiscoveredBuildings() const

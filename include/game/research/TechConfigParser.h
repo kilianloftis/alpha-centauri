@@ -1,5 +1,7 @@
 #pragma once
 
+#include "game/GameCategory.h"
+
 #include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
@@ -13,7 +15,7 @@ struct TechConfig_t
 {
     std::string id;
     std::string name;
-    std::string category;  // build, grow, discover, conquer, or modder-defined
+    GameCategory category;
     int cost;
     std::vector<std::string> prerequisites;
 };

@@ -24,10 +24,10 @@ struct LeaderConfig
 
 struct AITendenciesConfig
 {
-    float wealth = 0.5f;
-    float power = 0.5f;
-    float growth = 0.5f;
-    float tech = 0.5f;
+    bool wealth = false;
+    bool power = false;
+    bool growth = false;
+    bool tech = false;
 };
 
 struct FactionFlavorConfig

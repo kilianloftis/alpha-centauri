@@ -24,6 +24,7 @@ class FactionFlavor;
 class EconomyManager;
 class Military;
 class ResearchManager;
+class ResearchSelector;
 class Diplomacy;
 class SocialEngineeringManager;
 class PopTypeAvailabilityCalculator;
@@ -85,6 +86,8 @@ public:
     void AddResearchPoints(int points);
     int GetResearchPoints() const;
     ResearchManager* GetResearchManager() const;
+    ResearchSelector* GetResearchSelector() const;
+    bool DiscoverCurrentResearch();
 
     // Building effects
     std::vector<ActiveEffect_t> CollectBuildingEffects() const;
@@ -137,6 +140,7 @@ private:
     std::unique_ptr<EconomyManager> m_pEconomy;
     std::unique_ptr<Military> m_pMilitary;
     std::unique_ptr<ResearchManager> m_pResearch;
+    std::unique_ptr<ResearchSelector> m_pResearchSelector;
     std::unique_ptr<Diplomacy> m_pDiplomacy;
     std::unique_ptr<SocialEngineeringManager> m_pSocialEngineering;
     std::unique_ptr<UnitManager> m_pUnits;

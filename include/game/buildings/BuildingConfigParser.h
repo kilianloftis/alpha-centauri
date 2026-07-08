@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/GameCategory.h"
 #include "game/IConstructable.h"
 #include "lib/effects/BonusEffect.h"
 #include <nlohmann/json.hpp>
@@ -13,6 +14,7 @@ struct BuildingConfig_t : public IConstructable
 {
     std::string id;
     std::string name;
+    GameCategory category;
     int mineralCost;
     std::vector<std::string> requiredTechs;
     bool allowMultiple;

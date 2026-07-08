@@ -1,12 +1,10 @@
 #include "game/faction/FactionConfigParser.h"
 
-#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <filesystem>
 #include <fstream>
 
 using namespace ac;
-using Catch::Approx;
 
 namespace
 {
@@ -46,10 +44,10 @@ TEST_CASE("FactionConfigParser loads per-faction directory layout", "[faction][p
     CHECK(pComplete->identity.adjective == "Testers");
     CHECK(pComplete->leader.name == "Test Leader");
     CHECK(pComplete->leader.title == "Chief Tester");
-    CHECK(pComplete->ai.wealth == Approx(1.0f));
-    CHECK(pComplete->ai.power == Approx(0.0f));
-    CHECK(pComplete->ai.growth == Approx(0.3f));
-    CHECK(pComplete->ai.tech == Approx(0.9f));
+    CHECK(pComplete->ai.wealth);
+    CHECK_FALSE(pComplete->ai.power);
+    CHECK(pComplete->ai.growth);
+    CHECK(pComplete->ai.tech);
     REQUIRE(pComplete->effects.size() == 1);
     CHECK(pComplete->flavor.baseNames == std::vector<std::string>{"Alpha Base", "Beta Base",
                                                                   "Gamma Base"});
@@ -63,7 +61,10 @@ TEST_CASE("FactionConfigParser loads per-faction directory layout", "[faction][p
     CHECK(pMinimal->identity.adjective == "Minimal");
     CHECK(pMinimal->leader.name == "Leader");
     CHECK(pMinimal->leader.title.empty());
-    CHECK(pMinimal->ai.wealth == Approx(0.5f));
+    CHECK_FALSE(pMinimal->ai.wealth);
+    CHECK_FALSE(pMinimal->ai.power);
+    CHECK_FALSE(pMinimal->ai.growth);
+    CHECK_FALSE(pMinimal->ai.tech);
     CHECK(pMinimal->effects.empty());
     CHECK(pMinimal->flavor.baseNames.empty());
     CHECK(pMinimal->flavor.phrases.empty());

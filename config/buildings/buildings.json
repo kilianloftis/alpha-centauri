@@ -3,19 +3,27 @@
     "id": "Nutrient_Bank",
     "name": "Nutrient Bank",
     "mineral_cost": 10,
-    "required_techs": ["test_tech_1"],
+    "required_techs": [
+      "test_tech_1"
+    ],
     "effects": [
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "parameters": { "stat": "nutrients", "amount": "2" }
+        "parameters": {
+          "stat": "nutrients",
+          "amount": "2"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisBase",
         "parameters": {
           "stat": "nutrients",
-          "selector": { "kind": "HasImprovement", "improvement": "Farm" },
+          "selector": {
+            "kind": "HasImprovement",
+            "improvement": "Farm"
+          },
           "amount": 1,
           "op": "Add"
         }
@@ -25,38 +33,54 @@
         "scope": "ThisBase",
         "parameters": {
           "stat": "nutrients",
-          "selector": { "kind": "HasImprovement", "improvement": "Condenser" },
+          "selector": {
+            "kind": "HasImprovement",
+            "improvement": "Condenser"
+          },
           "amount": 2,
           "op": "Add"
         }
       }
-    ]
+    ],
+    "category": "grow"
   },
   {
     "id": "Recycling_Tanks",
     "name": "Recycling Tanks",
     "mineral_cost": 5,
-    "required_techs": ["test_tech_2"],
+    "required_techs": [
+      "test_tech_2"
+    ],
     "effects": [
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "parameters": { "stat": "nutrients", "amount": "1" }
+        "parameters": {
+          "stat": "nutrients",
+          "amount": "1"
+        }
       }
-    ]
+    ],
+    "category": "grow"
   },
   {
     "id": "sattelite",
     "name": "Sattelite",
     "mineral_cost": 8,
     "allow_multiple": true,
-    "required_techs": ["test_tech_1"],
+    "required_techs": [
+      "test_tech_1"
+    ],
     "effects": [
       {
         "type": "StatModifier",
         "scope": "FactionGlobal",
-        "parameters": { "stat": "energy", "amount": "1" }
+        "parameters": {
+          "stat": "energy",
+          "amount": "1"
+        }
       }
-    ]
+    ],
+    "category": "discover"
   }
 ]

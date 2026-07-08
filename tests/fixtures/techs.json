@@ -1,0 +1,33 @@
+[
+  {
+    "id": "build_tech",
+    "name": "Build Tech",
+    "category": "build",
+    "cost": 10
+  },
+  {
+    "id": "grow_tech",
+    "name": "Grow Tech",
+    "category": "grow",
+    "cost": 10
+  },
+  {
+    "id": "discover_tech",
+    "name": "Discover Tech",
+    "category": "discover",
+    "cost": 10
+  },
+  {
+    "id": "conquer_tech",
+    "name": "Conquer Tech",
+    "category": "conquer",
+    "cost": 10
+  },
+  {
+    "id": "advanced_build",
+    "name": "Advanced Build",
+    "category": "build",
+    "cost": 20,
+    "prerequisites": ["build_tech"]
+  }
+]

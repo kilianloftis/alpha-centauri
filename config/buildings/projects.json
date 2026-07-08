@@ -4,13 +4,18 @@
     "name": "Human Genome Project",
     "mineral_cost": 200,
     "secret_project": true,
-    "required_techs": ["test_tech_1"],
+    "required_techs": [
+      "test_tech_1"
+    ],
     "effects": [
       {
         "type": "RuleFlag",
         "scope": "FactionGlobal",
-        "parameters": { "flag": "population_boom" }
+        "parameters": {
+          "flag": "population_boom"
+        }
       }
-    ]
+    ],
+    "category": "grow"
   }
 ]

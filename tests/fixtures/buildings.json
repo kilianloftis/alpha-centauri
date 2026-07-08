@@ -3,77 +3,199 @@
     "id": "granted_hall",
     "name": "Granted Hall",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisBase", "parameters": { "stat": "minerals", "amount": 3, "op": "Add" } },
-      { "type": "StatModifier", "scope": "FactionGlobal", "parameters": { "stat": "energy", "amount": 1, "op": "Add" } },
-      { "type": "GrantTech", "scope": "FactionGlobal", "persistence": "Instantaneous", "parameters": { "tech_id": "some_tech" } }
-    ]
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "minerals",
+          "amount": 3,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "energy",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "GrantTech",
+        "scope": "FactionGlobal",
+        "persistence": "Instantaneous",
+        "parameters": {
+          "tech_id": "some_tech"
+        }
+      }
+    ],
+    "category": "discover"
   },
   {
     "id": "grantor_local",
     "name": "Grantor (ThisBase scope)",
     "effects": [
-      { "type": "GrantBuilding", "scope": "ThisBase", "parameters": { "building_id": "granted_hall" } },
-      { "type": "StatModifier", "scope": "ThisBase", "parameters": { "stat": "nutrients", "amount": 2, "op": "Add" } }
-    ]
+      {
+        "type": "GrantBuilding",
+        "scope": "ThisBase",
+        "parameters": {
+          "building_id": "granted_hall"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 2,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "build"
   },
   {
     "id": "grantor_global",
     "name": "Grantor (FactionGlobal scope)",
     "effects": [
-      { "type": "GrantBuilding", "scope": "FactionGlobal", "parameters": { "building_id": "granted_hall" } }
-    ]
+      {
+        "type": "GrantBuilding",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "building_id": "granted_hall"
+        }
+      }
+    ],
+    "category": "build"
   },
   {
     "id": "grantor_unknown",
     "name": "Grantor of a nonexistent building",
     "effects": [
-      { "type": "GrantBuilding", "scope": "ThisBase", "parameters": { "building_id": "does_not_exist" } }
-    ]
+      {
+        "type": "GrantBuilding",
+        "scope": "ThisBase",
+        "parameters": {
+          "building_id": "does_not_exist"
+        }
+      }
+    ],
+    "category": "build"
   },
   {
     "id": "nested_outer",
     "name": "Nested Grantor (outer)",
     "effects": [
-      { "type": "GrantBuilding", "scope": "ThisBase", "parameters": { "building_id": "nested_middle" } }
-    ]
+      {
+        "type": "GrantBuilding",
+        "scope": "ThisBase",
+        "parameters": {
+          "building_id": "nested_middle"
+        }
+      }
+    ],
+    "category": "build"
   },
   {
     "id": "nested_middle",
     "name": "Nested Grantor (middle)",
     "effects": [
-      { "type": "GrantBuilding", "scope": "ThisBase", "parameters": { "building_id": "granted_hall" } },
-      { "type": "StatModifier", "scope": "ThisBase", "parameters": { "stat": "energy", "amount": 4, "op": "Add" } }
-    ]
+      {
+        "type": "GrantBuilding",
+        "scope": "ThisBase",
+        "parameters": {
+          "building_id": "granted_hall"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "energy",
+          "amount": 4,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "build"
   },
   {
     "id": "cycle_a",
     "name": "Cycle A",
     "effects": [
-      { "type": "GrantBuilding", "scope": "ThisBase", "parameters": { "building_id": "cycle_b" } },
-      { "type": "StatModifier", "scope": "ThisBase", "parameters": { "stat": "minerals", "amount": 1, "op": "Add" } }
-    ]
+      {
+        "type": "GrantBuilding",
+        "scope": "ThisBase",
+        "parameters": {
+          "building_id": "cycle_b"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "minerals",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "build"
   },
   {
     "id": "cycle_b",
     "name": "Cycle B",
     "effects": [
-      { "type": "GrantBuilding", "scope": "ThisBase", "parameters": { "building_id": "cycle_a" } },
-      { "type": "StatModifier", "scope": "ThisBase", "parameters": { "stat": "minerals", "amount": 10, "op": "Add" } }
-    ]
+      {
+        "type": "GrantBuilding",
+        "scope": "ThisBase",
+        "parameters": {
+          "building_id": "cycle_a"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "minerals",
+          "amount": 10,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "build"
   },
   {
     "id": "instant_grantor",
     "name": "Instantaneous Grantor",
     "effects": [
-      { "type": "GrantBuilding", "scope": "ThisBase", "persistence": "Instantaneous", "parameters": { "building_id": "flat_nutrient" } }
-    ]
+      {
+        "type": "GrantBuilding",
+        "scope": "ThisBase",
+        "persistence": "Instantaneous",
+        "parameters": {
+          "building_id": "flat_nutrient"
+        }
+      }
+    ],
+    "category": "build"
   },
   {
     "id": "flat_nutrient",
     "name": "Flat Nutrient Building",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisBase", "parameters": { "stat": "nutrients", "amount": 2, "op": "Add" } }
-    ]
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 2,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "grow"
   },
   {
     "id": "farm_booster",
@@ -86,45 +208,89 @@
           "stat": "nutrients",
           "amount": 1,
           "op": "Add",
-          "selector": { "kind": "HasImprovement", "improvement": "Farm" }
+          "selector": {
+            "kind": "HasImprovement",
+            "improvement": "Farm"
+          }
         }
       }
-    ]
+    ],
+    "category": "grow"
   },
   {
     "id": "unit_attack_array",
     "name": "Unit Attack Array (+25% attack to all faction units)",
     "effects": [
-      { "type": "StatModifier", "scope": "FactionUnits", "parameters": { "stat": "attack", "amount": 25, "op": "AddPercent" } }
-    ]
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "parameters": {
+          "stat": "attack",
+          "amount": 25,
+          "op": "AddPercent"
+        }
+      }
+    ],
+    "category": "conquer"
   },
   {
     "id": "flight_grantor",
     "name": "Flight Grantor (grants flight to all faction units)",
     "effects": [
-      { "type": "RuleFlag", "scope": "FactionUnits", "parameters": { "flag": "flight" } }
-    ]
+      {
+        "type": "RuleFlag",
+        "scope": "FactionUnits",
+        "parameters": {
+          "flag": "flight"
+        }
+      }
+    ],
+    "category": "conquer"
   },
   {
     "id": "world_beacon",
     "name": "World Beacon (+10 energy to every base of every faction)",
     "effects": [
-      { "type": "StatModifier", "scope": "WorldGlobal", "parameters": { "stat": "energy", "amount": 10 } }
-    ]
+      {
+        "type": "StatModifier",
+        "scope": "WorldGlobal",
+        "parameters": {
+          "stat": "energy",
+          "amount": 10
+        }
+      }
+    ],
+    "category": "discover"
   },
   {
     "id": "growth_shrine",
     "name": "Growth Shrine (+1 Growth rating in this base only)",
     "effects": [
-      { "type": "SocialRatingModifier", "scope": "ThisBase", "parameters": { "rating": "growth", "amount": 1 } }
-    ]
+      {
+        "type": "SocialRatingModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "rating": "growth",
+          "amount": 1
+        }
+      }
+    ],
+    "category": "grow"
   },
   {
     "id": "faction_growth_shrine",
     "name": "Faction Growth Shrine (+2 Growth rating faction-wide)",
     "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "growth", "amount": 2 } }
-    ]
+      {
+        "type": "SocialRatingModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "rating": "growth",
+          "amount": 2
+        }
+      }
+    ],
+    "category": "grow"
   },
   {
     "id": "center_booster",
@@ -137,9 +303,12 @@
           "stat": "energy",
           "amount": 2,
           "op": "Add",
-          "selector": { "kind": "BaseTile" }
+          "selector": {
+            "kind": "BaseTile"
+          }
         }
       }
-    ]
+    ],
+    "category": "build"
   }
 ]

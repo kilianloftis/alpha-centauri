@@ -44,7 +44,7 @@ public:
     bool HasDiscoveredTech(TechId techId) const;
     void AddDiscoveredTech(TechId techId);
 
-    std::vector<TechId> GetAvailableResearchTargets() const;
+    std::vector<const TechConfig_t*> GetAvailableTechs() const;
 
 private:
     const TechRegistry* m_pTechRegistry;

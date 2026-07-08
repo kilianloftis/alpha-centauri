@@ -22,11 +22,6 @@ constexpr const char* kEffectsFile = "effects.json";
 constexpr const char* kBaseNamesFile = "base_names.json";
 constexpr const char* kPhrasesFile = "phrases.json";
 
-float ClampAITendency_(float value)
-{
-    return std::clamp(value, 0.0f, 1.0f);
-}
-
 } // namespace
 
 std::vector<FactionConfig_t> FactionConfigParser::ParseConfig(const std::string& configPath)
@@ -108,10 +103,10 @@ LeaderConfig FactionConfigParser::ParseLeader(const nlohmann::json& j)
 AITendenciesConfig FactionConfigParser::ParseAITendencies(const nlohmann::json& j)
 {
     AITendenciesConfig ai;
-    ai.wealth = ClampAITendency_(j.value("wealth", 0.5f));
-    ai.power = ClampAITendency_(j.value("power", 0.5f));
-    ai.growth = ClampAITendency_(j.value("growth", 0.5f));
-    ai.tech = ClampAITendency_(j.value("tech", 0.5f));
+    ai.wealth = j.value("wealth", false);
+    ai.power = j.value("power", false);
+    ai.growth = j.value("growth", false);
+    ai.tech = j.value("tech", false);
     return ai;
 }
 
