@@ -1,5 +1,7 @@
 #pragma once
 
+#include "lib/DerefView.h"
+#include "lib/Revision.h"
 #include <memory>
 #include <vector>
 
@@ -21,12 +23,18 @@ public:
     Unit& CreateUnit(const UnitDesign& rDesign, const Tile& rTile, BaseManager* pHomeBase = nullptr);
     void DestroyUnit(Unit& rUnit);
 
-    const std::vector<std::unique_ptr<Unit>>& GetUnits() const;
+    // Iterate units by reference without exposing the owning unique_ptrs.
+    auto Units() { return DerefView(m_units); }
+    auto Units() const { return DerefView(m_units); }
     Unit* GetNextAvailableUnit() const;
+
+    // Bumped on every unit creation/destruction; consumed by effect-pool caches.
+    uint64_t GetRevision() const { return m_revision.Get(); }
 
 private:
     Faction& m_rFaction;
     std::vector<std::unique_ptr<Unit>> m_units;
+    Revision m_revision;
 };
 
 } // namespace ac

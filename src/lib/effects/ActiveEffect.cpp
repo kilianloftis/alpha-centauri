@@ -216,7 +216,7 @@ double ApplyModifierStack(double base, const std::vector<std::pair<double, Modif
     return addTotal * arithmeticFactor * geometricFactor;
 }
 
-FactionEffects_t CollectActiveEffects(const IEffectsProvider& rProvider)
+const FactionEffects_t& CollectActiveEffects(const IEffectsProvider& rProvider)
 {
     return rProvider.GetActiveEffects();
 }

@@ -18,6 +18,7 @@
 #include "game/faction/Diplomacy.h"
 #include "game/faction/SocialEngineeringManager.h"
 #include "game/faction/UnitManager.h"
+#include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/population/pop-types/Pop.h"
 #include "game/social-engineering/SocialRatingRegistry.h"
@@ -49,6 +50,7 @@ Faction::Faction(const FactionConfig_t& rDefinition,
     , m_pSocialEngineering(std::make_unique<SocialEngineeringManager>(pSocialPolicyRegistry,
                                                                         pSocialRatingRegistry))
     , m_pUnits(std::make_unique<UnitManager>(*this))
+    , m_effectsPool(pBuildingRegistry, m_baseListRevision)
 {
     m_pResearchSelector->EnsureResearchTarget();
 }
@@ -137,6 +139,7 @@ void Faction::AddBase(std::unique_ptr<BaseManager> pBase)
         throw std::invalid_argument("Faction::AddBase: pBase is null");
     }
     m_bases.push_back(std::move(pBase));
+    m_baseListRevision.Bump();
 }
 
 BaseManager* Faction::CreateBase(FactionId factionId, int baseId, const std::string& name, Tile* pTile,
@@ -251,82 +254,6 @@ const SocialEngineeringManager& Faction::GetSocialEngineering() const
     return *m_pSocialEngineering;
 }
 
-std::vector<ActiveEffect_t> Faction::CollectBuildingEffects() const
-{
-    std::vector<ActiveEffect_t> result;
-    for (const auto& pBase : m_bases)
-    {
-        if (!pBase) continue;
-        const auto baseEffects = pBase->CollectBuildingEffects();
-        result.insert(result.end(), baseEffects.begin(), baseEffects.end());
-    }
-
-    if (!m_pBuildingRegistry)
-    {
-        return result;
-    }
-
-    std::vector<const BaseManager*> bases;
-    for (const auto& pBase : m_bases)
-    {
-        bases.push_back(pBase.get());
-    }
-
-    return ExpandGrantBuildingEffects(std::move(result), *m_pBuildingRegistry, bases);
-}
-
-std::vector<ActiveEffect_t> Faction::CollectDefinitionEffects() const
-{
-    std::vector<ActiveEffect_t> result;
-    AppendActiveEffects(m_rDefinition.effects, nullptr, m_rDefinition.id, result);
-    return result;
-}
-
-std::vector<ActiveEffect_t> Faction::CollectPopFactionEffects() const
-{
-    std::vector<ActiveEffect_t> result;
-    for (const auto& pBase : m_bases)
-    {
-        if (!pBase)
-        {
-            continue;
-        }
-        for (const Pop& rPop : pBase->GetPopulation().Pops())
-        {
-            // ThisPop is resolved by the pop itself; ThisBase merges per base via
-            // CollectFromPops. Only faction-lane scopes enter the pool.
-            AppendFactionLaneEffects(rPop.GetConfig().effects, rPop.GetConfig().id, result);
-        }
-    }
-    return result;
-}
-
-std::vector<ActiveEffect_t> Faction::CollectUnitFactionEffects() const
-{
-    std::vector<ActiveEffect_t> result;
-    if (!m_pUnits)
-    {
-        return result;
-    }
-    for (const auto& pUnit : m_pUnits->GetUnits())
-    {
-        if (!pUnit)
-        {
-            continue;
-        }
-        for (const ActiveEffect_t& rEffect : pUnit->GetDesign().CollectEffects())
-        {
-            // ThisUnit is resolved by the unit itself; ThisTile by the tile resolvers
-            // scanning units on the map. Only faction-lane scopes enter the pool.
-            if (IsFactionLane(rEffect.config->scope))
-            {
-                result.push_back(rEffect);
-            }
-        }
-    }
-    return result;
-}
-
 UnitManager& Faction::GetUnitManager()
 {
     return *m_pUnits;
@@ -347,25 +274,14 @@ std::vector<const PopTypeConfig_t*> Faction::GetAvailablePopTypes() const
     return m_pPopTypeAvailabilityCalculator->GetAvailable(m_pResearch->GetDiscoveredTechs());
 }
 
-FactionEffects_t Faction::GetActiveEffects() const
+const FactionEffects_t& Faction::GetActiveEffects() const
 {
-    FactionEffects_t factionEffects;
-    const std::vector<ActiveEffect_t> defEffects = CollectDefinitionEffects();
-    factionEffects.effects.insert(factionEffects.effects.end(), defEffects.begin(), defEffects.end());
+    return m_effectsPool.Get(*this);
+}
 
-    const std::vector<ActiveEffect_t> buildingEffects = CollectBuildingEffects();
-    factionEffects.effects.insert(factionEffects.effects.end(), buildingEffects.begin(), buildingEffects.end());
-
-    const std::vector<ActiveEffect_t> seEffects = m_pSocialEngineering->CollectEffects();
-    factionEffects.effects.insert(factionEffects.effects.end(), seEffects.begin(), seEffects.end());
-
-    const std::vector<ActiveEffect_t> popEffects = CollectPopFactionEffects();
-    factionEffects.effects.insert(factionEffects.effects.end(), popEffects.begin(), popEffects.end());
-
-    const std::vector<ActiveEffect_t> unitEffects = CollectUnitFactionEffects();
-    factionEffects.effects.insert(factionEffects.effects.end(), unitEffects.begin(), unitEffects.end());
-
-    return factionEffects;
+uint64_t Faction::GetEffectsVersion() const
+{
+    return m_effectsPool.GetVersion(*this);
 }
 
 } // namespace ac

@@ -64,9 +64,9 @@ void UnitStatusPanel::Render(Graphics& rGraphics)
     int activeCount = 0;
     if (m_pUnitManager)
     {
-        for (const auto& pUnit : m_pUnitManager->GetUnits())
+        for (const Unit& rUnit : m_pUnitManager->Units())
         {
-            if (&pUnit->GetDesign() == pDesign)
+            if (&rUnit.GetDesign() == pDesign)
             {
                 ++activeCount;
             }

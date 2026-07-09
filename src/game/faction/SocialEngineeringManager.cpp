@@ -31,6 +31,7 @@ bool SocialEngineeringManager::SetActivePolicy(SocialCategory category, const st
         return false;
     }
     m_activePolicyIds[category] = policyId;
+    m_revision.Bump();
     return true;
 }
 

@@ -29,6 +29,7 @@ void BuildingManager::AddBuilding(const std::string& buildingId)
         throw std::runtime_error("Unknown building id '" + buildingId + "'");
     }
     m_buildings.push_back(pConfig);
+    m_revision.Bump();
 }
 
 void BuildingManager::DestroyBuilding(const std::string& buildingId)
@@ -42,6 +43,7 @@ void BuildingManager::DestroyBuilding(const std::string& buildingId)
     if (it != m_buildings.end())
     {
         m_buildings.erase(it);
+        m_revision.Bump();
     }
 }
 

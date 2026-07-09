@@ -43,6 +43,9 @@ public:
     int GetDroneCount() const { return m_container.GetDroneCount(); }
     int GetSpecialistCount() const { return m_container.GetSpecialistCount(); }
 
+    // Bumped on every pop mutation (add/remove/convert); consumed by effect-pool caches.
+    uint64_t GetRevision() const { return m_container.GetRevision(); }
+
     // Add a pop of the default type (growth) or of an explicit type.
     // No-op when the base is at max size.
     void AddPop();

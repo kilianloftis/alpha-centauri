@@ -14,6 +14,41 @@ Related prior review: `docs/architecture/effects-system-review.md` (effects subs
 
 ### 1.1 [H] No strategy for derived state: everything is recomputed from scratch on every read
 
+> **Status (2026-07-09): the invalidation seam exists and the dominant recompute paths are
+> memoized.** Deliberately deferred sub-items listed at the end of this note.
+>
+> Mechanism — pull-based revision counters (`lib/Revision.h`) plus a two-level cache:
+> - Every pool contributor owns a `Revision` and bumps it in its own mutators (a *local*
+>   invariant — no cross-object wiring, avoiding 1.6's manual-signal fragility):
+>   `BuildingManager` (add/destroy), `PopContainer` (add/remove/convert, exposed via
+>   `PopulationManager`), `UnitManager` (create/destroy), `SocialEngineeringManager`
+>   (policy set), and `Faction`'s base-list (`AddBase`).
+> - `IEffectsProvider` now returns `const FactionEffects_t&` plus a monotonic
+>   `GetEffectsVersion()`. Pool assembly + memoization live in a dedicated component,
+>   `FactionEffectsPool` (`game/faction/FactionEffectsPool.{h,cpp}`), which validates a
+>   stamp of contributor revisions (a handful of integer compares) and rebuilds only on
+>   mismatch; `Faction` implements `IEffectsProvider` by delegating to it. UI frames and
+>   unit stat reads no longer rebuild the pool.
+> - `BaseManager::BuildBaseEffects_()` (no-arg) memoizes the filtered+expanded base list
+>   keyed on the provider's pool version, so the five production getters,
+>   `GetNutrientsRequired`, and `GetWorkedTileYield` (20×/frame) stop re-filtering. The
+>   explicit-pool overload used by the per-turn stages stays uncached by design.
+> - The review's named stale-cache example is fixed: `ResearchManager` revalidates
+>   `m_pointsNeededForCurrentTech` against the provider version, so a `TechCost` effect
+>   appearing mid-research is reflected on the next read (regression-tested).
+> - Guarded by `tests/effects/EffectsCacheTests.cpp` (version stability, per-contributor
+>   invalidation incl. content checks, mid-research cost change) — plus the existing
+>   routing/integration tests, which assert post-mutation values and therefore fail loudly
+>   on any missed bump. Enabling fix: `UnitManager::GetUnits()` (last leaked owning
+>   container) replaced by a `Units()` reference range.
+>
+> Deferred (still open under this finding): `TileEffectsContext::CollectAreaEffects`'s
+> (2r+1)² per-tile neighborhood scan (needs an incremental aura index keyed on unit
+> moves/improvement changes); filter-chain copy elimination (`FilterByStatId` et al. return
+> copies — cheap now that the pool is cached); `ResourceManager::ComputeWorked_` ×5 per
+> full stat read (≤21-tile pass, entangled with 2.1); `GameState::CollectWorldEffects`'s
+> O(F²)-shaped per-turn pass (each term is now a filter over a cached pool, not a rebuild).
+
 The single biggest scalability issue in the codebase, and it is a *pattern*, not an isolated slip:
 
 - `Faction::GetActiveEffects()` (`src/game/Faction.cpp:430`) rebuilds the entire faction effect pool on every call: walks all bases → all buildings → expands grant chains (`ExpandGrantBuildingEffects`) → all pops → all units, allocating vectors of `ActiveEffect_t` (each holding a `std::string sourceId`) at every stage.
@@ -404,7 +439,7 @@ The project defines unusually specific conventions (`.devin/rules/coding-guideli
 
 ## Recurring themes (the patterns behind the findings)
 
-1. **Compute-on-read with no invalidation seam** (1.1) — the architecture has implicitly committed to "always live, always recomputed" without deciding it.
+1. **Compute-on-read with no invalidation seam** (1.1) — the architecture has implicitly committed to "always live, always recomputed" without deciding it. *(Addressed 2026-07-09: the decision is now explicit — revision-validated memoization; see 1.1's status note.)*
 2. **Invariants by convention**: manual wiring steps (WireBase), magic config IDs ("Base", "Drone", default policies), index-0 player, "call AutoAssignWorkers after", "move units via WorldMap" — each is a rule that exists only in comments and future contributors' memories.
 3. **Two-phase construction + nullable dependencies** → defensive null checks → inconsistent failure styles (4.2 → 3.8): one root cause producing the two noisiest code smells.
 4. **Boundaries declared but not enforced**: lib/game, data/state (GameDataContext/GameState), Null/SFML backends, "mod-facing" bus, docs vs code — in each case the stated boundary and the real dependency graph disagree.

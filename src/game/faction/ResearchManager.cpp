@@ -71,6 +71,7 @@ void ResearchManager::SetAccumulatedPoints(int points)
 
 int ResearchManager::GetPointsNeededForCurrentTech() const
 {
+    RevalidatePointsNeeded_();
     return m_pointsNeededForCurrentTech;
 }
 
@@ -81,6 +82,7 @@ int ResearchManager::BreakthroughRate(int researchPerTurn) const
         return -1;
     }
 
+    RevalidatePointsNeeded_();
     return (m_pointsNeededForCurrentTech + researchPerTurn - 1) / researchPerTurn;
 }
 
@@ -91,6 +93,7 @@ int ResearchManager::GetTurnsUntilBreakthrough(int researchPerTurn) const
         return -1;
     }
 
+    RevalidatePointsNeeded_();
     const int remainingPoints = std::max(0, m_pointsNeededForCurrentTech - m_accumulatedPoints);
     if (remainingPoints == 0)
     {
@@ -106,19 +109,36 @@ void ResearchManager::RecalculatePointsNeeded()
     {
         throw std::runtime_error("ResearchManager::RecalculatePointsNeeded: Invalid state");
     }
+    ComputePointsNeeded_();
+}
 
+void ResearchManager::ComputePointsNeeded_() const
+{
     TechCostInputs_t inputs;
     inputs.techs      = static_cast<int>(m_discoveredTechs.size()); // TODO: subtract starting techs; add unknownVarA - unknownVarB
     inputs.mostTechs  = inputs.techs;                               // TODO: max across all factions + unknownVarA
     if (m_pEffectsProvider)
     {
-        const FactionEffects_t factionEffects = m_pEffectsProvider->GetActiveEffects();
+        const FactionEffects_t& rFactionEffects = m_pEffectsProvider->GetActiveEffects();
         inputs.factionTechCostModifier = static_cast<int>(
-            ResolveStatModifiers(FilterByStatId(factionEffects.effects, StatId::TechCost), 0.0).total);
+            ResolveStatModifiers(FilterByStatId(rFactionEffects.effects, StatId::TechCost), 0.0).total);
+        m_costEffectsVersion = m_pEffectsProvider->GetEffectsVersion();
     }
     // All other fields are placeholder defaults (diff=1, turns=0, bIsAI=false, etc.)
 
     m_pointsNeededForCurrentTech = m_pTechCostCalculator->CalculateCost(*m_pCurrentResearchTarget, inputs);
+}
+
+void ResearchManager::RevalidatePointsNeeded_() const
+{
+    if (!m_bHasResearchTarget || !m_pEffectsProvider)
+    {
+        return;
+    }
+    if (m_pEffectsProvider->GetEffectsVersion() != m_costEffectsVersion)
+    {
+        ComputePointsNeeded_();
+    }
 }
 
 bool ResearchManager::CanDiscoverTech() const
@@ -127,6 +147,7 @@ bool ResearchManager::CanDiscoverTech() const
     {
         return false;
     }
+    RevalidatePointsNeeded_();
     return m_accumulatedPoints >= m_pointsNeededForCurrentTech;
 }
 

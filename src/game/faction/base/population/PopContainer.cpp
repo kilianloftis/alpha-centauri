@@ -60,6 +60,7 @@ void PopContainer::AddPop(const std::string& typeId)
     }
     auto pPop = m_pRegistry->Create(typeId);
     m_pops.push_back(std::move(pPop));
+    m_revision.Bump();
 }
 
 void PopContainer::RemovePop()
@@ -67,6 +68,7 @@ void PopContainer::RemovePop()
     if (!m_pops.empty())
     {
         m_pops.pop_back();
+        m_revision.Bump();
     }
 }
 
@@ -82,6 +84,7 @@ void PopContainer::ConvertTo(Pop& rPop, const std::string& typeId)
         throw std::runtime_error("Unknown pop type: " + typeId);
     }
     rPop.Convert(*pConfig);
+    m_revision.Bump();
 }
 
 void PopContainer::ConvertToFallback(Pop& rPop)
@@ -102,6 +105,7 @@ void PopContainer::ConvertToFallback(Pop& rPop)
     const PopTypeConfig_t& rResolved = m_pAvailabilityCalculator->ResolveCurrentType(
         pCurrentConfig->fallbackPopTypeId, m_pResearchManager->GetDiscoveredTechs());
     rPop.Convert(rResolved);
+    m_revision.Bump();
 }
 
 void PopContainer::ApplyCompositionTargets(const PopCompositionResult& targets, const std::string& defaultTypeId)

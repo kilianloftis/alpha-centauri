@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/buildings/BuildingConfigParser.h"
+#include "lib/Revision.h"
 #include "lib/effects/ActiveEffect.h"
 #include <string>
 #include <vector>
@@ -41,6 +42,9 @@ public:
     // Base-local rules (allowMultiple, already built) are applied here.
     std::vector<const BuildingConfig_t*> GetBuildingsAvailableForConstruction() const;
 
+    // Bumped on every building mutation; consumed by effect-pool caches.
+    uint64_t GetRevision() const { return m_revision.Get(); }
+
 private:
     bool DoesBuildingExist_(const std::string& buildingId) const;
 
@@ -48,6 +52,7 @@ private:
     const ResearchManager* m_pResearch;
     const SecretProjectAvailabilityCalculator* m_pSecretProjectCalculator;
     std::vector<const BuildingConfig_t*> m_buildings;
+    Revision m_revision;
 };
 
 } // namespace ac

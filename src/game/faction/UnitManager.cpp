@@ -19,6 +19,7 @@ Unit& UnitManager::CreateUnit(const UnitDesign& rDesign, const Tile& rTile, Base
     auto pUnit = std::make_unique<Unit>(rDesign, rTile, pHomeBase, m_rFaction);
     Unit& rUnit = *pUnit;
     m_units.push_back(std::move(pUnit));
+    m_revision.Bump();
     return rUnit;
 }
 
@@ -36,11 +37,7 @@ void UnitManager::DestroyUnit(Unit& rUnit)
     }
 
     m_units.erase(it);
-}
-
-const std::vector<std::unique_ptr<Unit>>& UnitManager::GetUnits() const
-{
-    return m_units;
+    m_revision.Bump();
 }
 
 Unit* UnitManager::GetNextAvailableUnit() const

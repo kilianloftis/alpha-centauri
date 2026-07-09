@@ -112,7 +112,7 @@ struct StatBreakdown_t
     std::vector<Contribution> contributions;
 };
 
-FactionEffects_t CollectActiveEffects(const IEffectsProvider& rProvider);
+const FactionEffects_t& CollectActiveEffects(const IEffectsProvider& rProvider);
 
 // Apply a stack of modifier contributions to a base value using the standard formula:
 //   result = (base + sumOfAdds) * (1 + sumOf(percent/100)) * productOfGeometric

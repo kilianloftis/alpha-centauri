@@ -1,6 +1,7 @@
 #pragma once
 
 #include "lib/effects/ActiveEffect.h"
+#include <cstdint>
 
 namespace ac
 {
@@ -13,7 +14,14 @@ class IEffectsProvider
 public:
     virtual ~IEffectsProvider() = default;
 
-    virtual FactionEffects_t GetActiveEffects() const = 0;
+    // The current pool. The returned reference is valid until the next mutation of any
+    // effect source (building/pop/unit/policy/base-list change); do not hold it across
+    // mutations. Implementations may memoize — both methods self-validate.
+    virtual const FactionEffects_t& GetActiveEffects() const = 0;
+
+    // Monotonic version of the pool; changes iff the pool content changed. Consumers can
+    // memoize derived state keyed on this value (see BaseManager::BuildBaseEffects_).
+    virtual uint64_t GetEffectsVersion() const = 0;
 };
 
 } // namespace ac

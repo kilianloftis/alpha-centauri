@@ -3,6 +3,7 @@
 #include "game/population/pop-types/Pop.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "lib/DerefView.h"
+#include "lib/Revision.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -57,8 +58,12 @@ public:
     // Compute total psych output across all pops
     int ComputePsychOutput() const;
 
+    // Bumped on every pop mutation (add/remove/convert); consumed by effect-pool caches.
+    uint64_t GetRevision() const { return m_revision.Get(); }
+
 private:
     std::vector<std::unique_ptr<Pop>> m_pops;
+    Revision m_revision;
     const PopTypeRegistry* m_pRegistry;
     const PopTypeAvailabilityCalculator* m_pAvailabilityCalculator;
     const ResearchManager* m_pResearchManager;

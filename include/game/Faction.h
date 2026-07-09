@@ -6,8 +6,10 @@
 #include "game/IEffectsProvider.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/FactionConfig.h"
+#include "game/faction/FactionEffectsPool.h"
 #include "game/social-engineering/SocialPolicyConfig.h"
 #include "lib/DerefView.h"
+#include "lib/Revision.h"
 #include "lib/effects/ActiveEffect.h"
 
 namespace ac
@@ -96,22 +98,6 @@ public:
     // Discover the current research target and auto-select the next one.
     bool DiscoverCurrentResearch();
 
-    // Building effects
-    std::vector<ActiveEffect_t> CollectBuildingEffects() const;
-
-    // Faction-lane effects (any scope except the locally-resolved ThisPop/ThisBase) declared
-    // by pops living in this faction's bases. ThisBase pop effects merge per base via
-    // CollectFromPops; ThisPop effects are resolved by the pop itself.
-    std::vector<ActiveEffect_t> CollectPopFactionEffects() const;
-
-    // Faction-lane effects (any scope except the locally-resolved ThisUnit/ThisTile) declared
-    // by the components of this faction's live units — e.g. a component that generates +1
-    // faction-wide energy while a unit carrying it exists.
-    std::vector<ActiveEffect_t> CollectUnitFactionEffects() const;
-
-    // Permanent bonuses from the faction definition config.
-    std::vector<ActiveEffect_t> CollectDefinitionEffects() const;
-
     // Social engineering subsystem.
     SocialEngineeringManager& GetSocialEngineering();
     const SocialEngineeringManager& GetSocialEngineering() const;
@@ -127,8 +113,9 @@ public:
     // Pop types
     std::vector<const PopTypeConfig_t*> GetAvailablePopTypes() const;
 
-    // IEffectsProvider
-    FactionEffects_t GetActiveEffects() const override;
+    // IEffectsProvider — delegates to the memoized FactionEffectsPool component.
+    const FactionEffects_t& GetActiveEffects() const override;
+    uint64_t GetEffectsVersion() const override;
 
 private:
     int GetResearchPerTurn_() const;
@@ -147,6 +134,9 @@ private:
     std::unique_ptr<SocialEngineeringManager> m_pSocialEngineering;
     std::unique_ptr<UnitManager> m_pUnits;
     std::vector<std::unique_ptr<BaseManager>> m_bases;
+    Revision m_baseListRevision; // bumped when a base is added (later: removed/captured)
+    // Declared after m_baseListRevision, which its constructor binds a reference to.
+    FactionEffectsPool m_effectsPool;
 };
 
 } // namespace ac

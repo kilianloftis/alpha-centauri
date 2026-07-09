@@ -251,13 +251,20 @@ BaseEffects_t BaseManager::BuildBaseEffects_(const FactionEffects_t& rFactionEff
     return baseEffects;
 }
 
-BaseEffects_t BaseManager::BuildBaseEffects_() const
+const BaseEffects_t& BaseManager::BuildBaseEffects_() const
 {
     if (!m_pEffectsProvider)
     {
         throw std::runtime_error("BaseManager::BuildBaseEffects_: m_pEffectsProvider is null");
     }
-    return BuildBaseEffects_(m_pEffectsProvider->GetActiveEffects());
+    const FactionEffects_t& rPool = m_pEffectsProvider->GetActiveEffects();
+    const uint64_t poolVersion = m_pEffectsProvider->GetEffectsVersion();
+    if (poolVersion != m_cachedPoolVersion)
+    {
+        m_cachedBaseEffects = BuildBaseEffects_(rPool);
+        m_cachedPoolVersion = poolVersion;
+    }
+    return m_cachedBaseEffects;
 }
 
 int BaseManager::GetEffectiveSocialRating(SocialRatingId rating) const

@@ -15,6 +15,7 @@ add_executable(effects-tests
     effects/TileEffectsTests.cpp
     effects/PopEffectsTests.cpp
     effects/BaseIntegrationTests.cpp
+    effects/EffectsCacheTests.cpp
     effects/UniversalRoutingTests.cpp
     effects/RatingTests.cpp
     effects/ValidationTests.cpp

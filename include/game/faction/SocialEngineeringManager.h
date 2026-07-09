@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/social-engineering/SocialPolicyConfig.h"
+#include "lib/Revision.h"
 #include "lib/effects/ActiveEffect.h"
 #include <map>
 #include <string>
@@ -36,10 +37,14 @@ public:
         SocialCategory category,
         const std::vector<std::string>& rDiscoveredTechIds) const;
 
+    // Bumped on every policy change; consumed by effect-pool caches.
+    uint64_t GetRevision() const { return m_revision.Get(); }
+
 private:
     const SocialPolicyRegistry* m_pRegistry;
     const SocialRatingRegistry* m_pRatingRegistry;
     std::map<SocialCategory, std::string> m_activePolicyIds;
+    Revision m_revision;
 };
 
 } // namespace ac

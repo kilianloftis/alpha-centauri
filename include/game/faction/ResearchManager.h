@@ -2,6 +2,7 @@
 
 #include "game/research/TechRegistry.h"
 #include "game/research/TechCostCalculator.h"
+#include <cstdint>
 #include <vector>
 
 namespace ac
@@ -28,6 +29,8 @@ public:
     void AddResearchPoints(int points);
     void SetAccumulatedPoints(int points);
 
+    // Cost of the current target. Revalidated against the effects provider's version, so a
+    // TechCost-modifying effect appearing mid-research is reflected on the next read.
     int GetPointsNeededForCurrentTech() const;
     void RecalculatePointsNeeded();
 
@@ -56,11 +59,20 @@ private:
     std::vector<TechId> m_discoveredTechs;
     const TechConfig_t* m_pCurrentResearchTarget;
     int m_accumulatedPoints;
-    int m_pointsNeededForCurrentTech;
+    mutable int m_pointsNeededForCurrentTech;
+    // Provider effects version the cost was computed against (0 = no provider involved).
+    mutable uint64_t m_costEffectsVersion = 0;
 
     bool m_bHasResearchTarget;
 
     void ResetAccumulatedPoints_();
+
+    // Compute the cost of the current target and record the provider version it used.
+    void ComputePointsNeeded_() const;
+
+    // Recompute m_pointsNeededForCurrentTech if the provider's effect pool changed since
+    // the last computation. No-op without a target or provider.
+    void RevalidatePointsNeeded_() const;
 };
 
 } // namespace ac

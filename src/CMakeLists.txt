@@ -7,6 +7,7 @@ add_library(ac-core STATIC
     game/GameDataContext.cpp
     game/EffectReferenceValidator.cpp
     game/Faction.cpp
+    game/faction/FactionEffectsPool.cpp
     game/faction/FactionIdentity.cpp
     game/faction/AIProfile.cpp
     game/faction/FactionFlavor.cpp

@@ -8,6 +8,7 @@
 #include "lib/Signal.h"
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -149,7 +150,10 @@ private:
     // gameplay effects of this base's effective social rating levels
     // (ExpandSocialRatingEffects).
     BaseEffects_t BuildBaseEffects_(const FactionEffects_t& rFactionEffects) const;
-    BaseEffects_t BuildBaseEffects_() const;
+
+    // Memoized variant over the provider's pool: rebuilt only when the provider's effects
+    // version changed. The reference is valid until the next effect-source mutation.
+    const BaseEffects_t& BuildBaseEffects_() const;
 
     FactionId m_factionId;
     int m_baseId;
@@ -167,6 +171,11 @@ private:
     std::unique_ptr<ResourceManager> m_pResources;
     std::unique_ptr<ProductionManager> m_pProduction;
     std::string m_name;
+
+    // Memoized BuildBaseEffects_ result, keyed on the provider's pool version
+    // (empty = never built).
+    mutable BaseEffects_t m_cachedBaseEffects;
+    mutable std::optional<uint64_t> m_cachedPoolVersion;
 };
 
 } // namespace ac
