@@ -4,7 +4,7 @@
 #include "GameFixtures.h"
 #include "TestHelpers.h"
 
-#include "game/faction/base/population/PopContainer.h"
+#include "game/faction/base/population/PopulationManager.h"
 #include "game/map/Tile.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
 #include "game/units/UnitComponentConfig.h"
@@ -120,7 +120,7 @@ TEST_CASE("CollectFromPops: only ThisBase-scoped pop effects enter the base pool
     actest::BaseFixture fixture;
     const BaseManager& base = fixture.MakeBase(4, 4);
 
-    PopContainer pops(&fixture.popTypes(), nullptr, nullptr, 0);
+    PopulationManager pops(fixture.dataContext, nullptr, 0);
     pops.AddPop("Doctor");
     pops.AddPop("Doctor");
     pops.AddPop("Technician");

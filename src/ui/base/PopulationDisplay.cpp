@@ -1,6 +1,6 @@
 #include "ui/base/PopulationDisplay.h"
 #include "graphics/Graphics.h"
-#include "game/faction/base/population/PopContainer.h"
+#include "game/faction/base/population/PopulationManager.h"
 #include "game/population/pop-types/Pop.h"
 #include <algorithm>
 #include <sstream>
@@ -48,9 +48,9 @@ int SpecialistTotalOutput(const Pop& rPop)
 
 } // namespace
 
-PopulationDisplay::PopulationDisplay(const PopContainer* pPopContainer, WindowLayout_t layout, PopClickCallback_t onPopClick)
+PopulationDisplay::PopulationDisplay(PopulationManager* pPopulation, WindowLayout_t layout, PopClickCallback_t onPopClick)
     : UIElement(layout)
-    , m_pPopulation(pPopContainer)
+    , m_pPopulation(pPopulation)
     , m_onPopClick(std::move(onPopClick))
 {}
 
@@ -75,12 +75,11 @@ void PopulationDisplay::Render(Graphics& rGraphics)
     const float startY = m_layout.y + headerFontSize + m_layout.height * k_PopRowYOffsetRatio;
 
     m_popBoxes.clear();
-    const auto& pops = m_pPopulation->GetPops();
 
     std::vector<Pop*> sortedPops;
-    sortedPops.reserve(pops.size());
-    for (const auto& pPop : pops)
-        sortedPops.push_back(pPop.get());
+    sortedPops.reserve(m_pPopulation->GetSize());
+    for (Pop& rPop : m_pPopulation->Pops())
+        sortedPops.push_back(&rPop);
 
     std::stable_sort(sortedPops.begin(), sortedPops.end(),
         [](const Pop* pA, const Pop* pB)

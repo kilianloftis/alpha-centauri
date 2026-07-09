@@ -8,7 +8,7 @@ namespace ac
 {
 
 class Graphics;
-class PopContainer;
+class PopulationManager;
 class Pop;
 
 using PopClickCallback_t = std::function<void(Pop&)>;
@@ -17,7 +17,7 @@ using PopClickCallback_t = std::function<void(Pop&)>;
 class PopulationDisplay : public UIElement
 {
 public:
-    PopulationDisplay(const PopContainer* pPopContainer, WindowLayout_t layout, PopClickCallback_t onPopClick);
+    PopulationDisplay(PopulationManager* pPopulation, WindowLayout_t layout, PopClickCallback_t onPopClick);
     ~PopulationDisplay() override = default;
 
     void Render(Graphics& rGraphics) override;
@@ -30,7 +30,7 @@ private:
         Pop* pPop;
     };
 
-    const PopContainer* m_pPopulation = nullptr;
+    PopulationManager* m_pPopulation = nullptr;
     PopClickCallback_t m_onPopClick;
     std::vector<PopBox_t> m_popBoxes;
 };

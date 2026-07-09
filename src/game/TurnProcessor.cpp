@@ -31,9 +31,9 @@ void TurnProcessor::ProcessTurn(int missionYear, int numFactions, GameState& rGa
             stage->OnEnter();
             if (bRepeatForEachFaction)
             {
-                for (auto& pFaction : rGameState.GetFactions())
+                for (Faction& rFaction : rGameState.Factions())
                 {
-                    stage->Execute(&rGameState, pFaction.get());
+                    stage->Execute(&rGameState, &rFaction);
                 }
             }
             else

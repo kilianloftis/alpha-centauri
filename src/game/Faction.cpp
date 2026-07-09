@@ -17,7 +17,7 @@
 #include "game/faction/Diplomacy.h"
 #include "game/faction/SocialEngineeringManager.h"
 #include "game/faction/UnitManager.h"
-#include "game/faction/base/population/PopContainer.h"
+#include "game/faction/base/population/PopulationManager.h"
 #include "game/population/pop-types/Pop.h"
 #include "game/social-engineering/SocialRatingRegistry.h"
 #include "game/population/calculators/PopTypeAvailabilityCalculator.h"
@@ -149,10 +149,11 @@ int Faction::GetTurnsUntilBreakthrough() const
 
 void Faction::AddBase(std::unique_ptr<BaseManager> pBase)
 {
-    if (pBase)
+    if (!pBase)
     {
-        m_bases.push_back(std::move(pBase));
+        throw std::invalid_argument("Faction::AddBase: pBase is null");
     }
+    m_bases.push_back(std::move(pBase));
 }
 
 BaseManager* Faction::CreateBase(FactionId factionId, int baseId, const std::string& name, Tile* pTile,
@@ -166,32 +167,14 @@ BaseManager* Faction::CreateBase(FactionId factionId, int baseId, const std::str
     pBase->SetName(name);
 
     pBase->GetWorkerAssignments().UnassignAll();
-    pBase->AutoAssignWorkers();
+    pBase->GetWorkerAssignments().AutoAssignWorkers();
 
-    std::cout << "Created base '" << name << "' with population: " << pBase->GetBaseSize()
-              << " (workers: " << pBase->GetPopWorkerCount() << ")\n";
+    std::cout << "Created base '" << name << "' with population: " << pBase->GetPopulation().GetSize()
+              << " (workers: " << pBase->GetPopulation().GetWorkerCount() << ")\n";
 
     BaseManager* pRawBase = pBase.get();
     AddBase(std::move(pBase));
     return pRawBase;
-}
-
-BaseManager* Faction::GetBase(size_t index)
-{
-    if (index < m_bases.size())
-    {
-        return m_bases[index].get();
-    }
-    return nullptr;
-}
-
-const BaseManager* Faction::GetBase(size_t index) const
-{
-    if (index < m_bases.size())
-    {
-        return m_bases[index].get();
-    }
-    return nullptr;
 }
 
 void Faction::ProduceBaseResources(const std::vector<ActiveEffect_t>& rExternalEffects)
@@ -356,15 +339,11 @@ std::vector<ActiveEffect_t> Faction::CollectPopFactionEffects() const
         {
             continue;
         }
-        for (const auto& pPop : pBase->GetPopContainer().GetPops())
+        for (const Pop& rPop : pBase->GetPopulation().Pops())
         {
-            if (!pPop)
-            {
-                continue;
-            }
             // ThisPop is resolved by the pop itself; ThisBase merges per base via
             // CollectFromPops. Only faction-lane scopes enter the pool.
-            AppendFactionLaneEffects(pPop->GetConfig().effects, pPop->GetConfig().id, result);
+            AppendFactionLaneEffects(rPop.GetConfig().effects, rPop.GetConfig().id, result);
         }
     }
     return result;

@@ -2,6 +2,7 @@
 
 #include "game/population/pop-types/Pop.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
+#include "lib/DerefView.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -27,8 +28,9 @@ public:
 
     // Container access
     int GetSize() const;
-    const std::vector<std::unique_ptr<Pop>>& GetPops() const;
-    std::vector<std::unique_ptr<Pop>>& GetPops();
+    // Iterate pops by reference without exposing the owning unique_ptrs.
+    auto Pops() { return DerefView(m_pops); }
+    auto Pops() const { return DerefView(m_pops); }
 
     // Population counts by type
     int GetWorkerCount() const;

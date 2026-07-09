@@ -5,7 +5,7 @@
 #include "TestHelpers.h"
 
 #include "game/buildings/BuildingConfigParser.h"
-#include "game/faction/base/population/PopContainer.h"
+#include "game/faction/base/population/PopulationManager.h"
 #include "game/map/Tile.h"
 #include "lib/effects/ActiveEffect.h"
 
@@ -158,14 +158,14 @@ TEST_CASE("Full pipeline: building and pop bonuses land in base resource product
     // (+2 psych). Workers are auto-assigned at base construction, so pick any pop that is
     // not working the farm — the tiles the others work are all barren (zero yield).
     base.UserAssignBestAvailableWorker(&farmTile);
-    auto& pops = const_cast<PopContainer&>(base.GetPopContainer()).GetPops();
-    REQUIRE(pops.size() == 3);
+    PopulationManager& rPopulation = base.GetPopulation();
+    REQUIRE(rPopulation.GetSize() == 3);
     Pop* pOtherWorker = nullptr;
-    for (auto& pPop : pops)
+    for (Pop& rPop : rPopulation.Pops())
     {
-        if (pPop->GetTile() != &farmTile)
+        if (rPop.GetTile() != &farmTile)
         {
-            pOtherWorker = pPop.get();
+            pOtherWorker = &rPop;
             break;
         }
     }

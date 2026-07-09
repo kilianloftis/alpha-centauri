@@ -59,7 +59,7 @@ Every new subsystem requires editing this method (OCP violation at the root). Th
 
 - `factionId`/`baseId` are local counter variables in `Engine::Initialize_` (`Engine.cpp:204-205`); nothing else can allocate a unique ID after init.
 - `Faction` does not know its own ID. The caller passes `factionId` into `Faction::CreateBase(...)` (`include/game/Faction.h:54`) and it is stored **per base** via post-construction setters (`SetFactionId`/`SetBaseId`, initialized to `-1` in the meantime — `BaseManager.cpp:45-46`).
-- `GameState::GetPlayerFaction()` is defined as `m_factions[0]` (`src/game/GameState.cpp:73-81`), and the same index-0 convention is re-derived independently in `WorldView` (`k_PlayerFactionIndex = 0`) and `ViewFactory`.
+- `GameState::GetPlayerFaction()` is defined as `m_factions[0]` (`src/game/GameState.cpp:73-81`), and the same index-0 convention is re-derived independently in `WorldView` (`k_PlayerFactionIndex = 0`) and `ViewFactory`. *(Partially addressed 2026-07-08: `WorldView` now calls `GetPlayerFaction()` and its `k_PlayerFactionIndex` is deleted; the convention is now funneled through the single `GetPlayerFaction()` definition. The denormalized-identity core — player = `m_factions[0]`, no ID owner — is untouched.)*
 
 Denormalized identity plus convention-based "player = first" will produce subtle bugs the moment factions can be eliminated, reordered, or hot-joined, and makes serialization identity a retrofit.
 
@@ -186,6 +186,54 @@ Within `BaseManager` alone: null sub-manager → throw (`GetNutrientProduction`)
 
 ### 4.1 [H] `Faction` and `BaseManager` are delegation shells with god-facade interfaces
 
+> **Status (2026-07-08): partially fixed.** The population level of the stack and the
+> owning-container leaks are resolved; the Research/Economy/SocialEngineering facades on
+> `Faction` still expose managers and remain to be migrated to the same idiom.
+>
+> Adopted rule: *a method lives on `Faction`/`BaseManager` only if it coordinates two or
+> more subsystems or enforces a cross-subsystem invariant; everything else lives on the
+> subsystem, reached through a reference accessor.*
+>
+> Done in this pass:
+> - **Population API collapsed from three levels to one.** `BaseManager` no longer mirrors
+>   the population surface (`GetPopContainer`, `GetPopWorkerCount`, `GetBaseSize`,
+>   `GetNutrientStockpile`, `RecalculatePopComposition`, `GetDefaultWorkerTypeId`,
+>   `AutoAssignWorkers` all deleted). It now exposes `PopulationManager& GetPopulation()`
+>   (const/non-const) and keeps only the genuinely cross-subsystem `ConvertPop` (population
+>   + worker-assignment) and `UserAssignBestAvailableWorker`. `PopulationManager` is the
+>   single public surface; `PopContainer` is now an implementation detail that never escapes
+>   it (`GetContainer()` removed; `WorkerAssignmentManager` and `CollectFromPops` take
+>   `PopulationManager&`).
+> - **Owning-container leaks closed, and positional access retired.** `GameState::GetFactions()`,
+>   `Faction::GetBases()`, and both `PopContainer::GetPops()` overloads (plus
+>   `PopulationManager::GetPops()`) are gone. After a short-lived interim in which they became
+>   bounds-checked index accessors, the collection-level ones are now **reference ranges** —
+>   `GameState::Factions()` / `Faction::Bases()` yield `Faction&` / `BaseManager&` (const
+>   overloads yield `const&`) via a generic `lib/DerefView.h` adaptor over
+>   `vector<unique_ptr<T>>`. A range yields references, so callers can read and mutate elements
+>   but cannot reseat, move out, or destroy them — the leak stays closed while iteration reads
+>   as a plain range-based `for`. There is deliberately **no** by-index accessor: an audit found
+>   every caller was either iterating, asking for "the player" (now `GetPlayerFaction()`;
+>   `WorldView`'s duplicate `k_PlayerFactionIndex` deleted), or the finding-4.5 first-base hack —
+>   none needed random access by position, and any future by-*identity* lookup (base capture,
+>   etc.) should key on the stable id, not a position that shifts when a faction is removed.
+>   The same treatment was extended to pops: `PopContainer`/`PopulationManager` expose
+>   `Pops()` reference ranges and `GetPop(int)` is gone. The audit confirmed no pop caller used
+>   the index either — every one was forward or reverse iteration — so `WorkerAssignmentManager`
+>   is now fully range-based, with the deliberate reverse pick in `UserAssignBestAvailableWorker`
+>   expressed as `std::views::reverse(Pops())` to preserve which pop it selects. (This wasn't a
+>   leak fix — `GetPop(int)` already returned `Pop&`, not the owning ptr — but it clears the
+>   C-style-loop item in 4.3 and unifies the idiom.)
+> - `AddFaction` now returns `Faction&` so callers bind the object at creation instead of
+>   re-fetching it.
+> - `SecretProjectAvailabilityCalculator` now takes `const GameState&` instead of borrowing
+>   the raw faction vector.
+>
+> Still open: `GetResearchManager`/`GetResearchSelector`/`GetEconomyManager` and the
+> `AddEnergy`/`AddResearchPoints`/social-policy pass-throughs on `Faction` (and the rest of
+> 2.4's non-const-from-const manager getters); the resources/production/buildings surface on
+> `BaseManager`; and moving the stage aggregation loops (1.9) behind `Faction`.
+
 `Faction` owns 12 subsystems and exposes a mix of three API styles simultaneously: pass-through methods (`AddEnergy`, `AddResearchPoints`), exposed managers (`GetResearchManager()` → callers do manager surgery), and exposed containers (`GetBases()` returning the `unique_ptr` vector). `BaseManager` repeats the shape one level down (40+ methods routing to 5 sub-managers), and `PopulationManager` repeats it again over `PopContainer` — the same population API surface exists at **three levels** (`GetWorkerCount` et al. on PopContainer, PopulationManager, and via BaseManager). Every new population feature costs three signatures plus call-site choices about which level to use; stages already use both (`GetBase(i)->ConsumeEcon()` vs `GetBases()` range loops).
 
 SRP is satisfied by the leaf classes but the facades have become the change amplifiers. Meanwhile encapsulation is broken *around* them: `GameState::GetFactions()` and `PopContainer::GetPops()` return mutable references to owning containers, so any caller can steal or destroy objects without the facades noticing.
@@ -209,7 +257,7 @@ Each instance forces defensive null/state checks downstream — which is exactly
 - `Registry<>` has a `protected virtual Validate_` but a non-virtual public destructor — designed for inheritance and unsafe to delete polymorphically; currently safe only because all registries are held by concrete type.
 - `BuildingConfig_t` (a config data struct) inherits `IConstructable`, giving every config entry a vtable and identity via `id.c_str()`; config structs also carry rule logic (`IsDiscovered`, `IsAvailable` — see 3.5). Data definitions and behavior are fused.
 - `Unit` is anemic: all mutable state has public unchecked setters (`SetCurrentHp(-5)` is fine); current-vs-max semantics are undefined when faction effects change resolved `HitPoints` after spawn (`m_currentHp` snapshots the design value at construction).
-- `WorkerAssignmentManager::UserAssignBestAvailableWorker` and several loops iterate by index with C-style reverse loops and duplicate their bodies (`WorkerAssignmentManager.cpp:195-224`) despite the range-based-loop guideline.
+- `WorkerAssignmentManager::UserAssignBestAvailableWorker` and several loops iterate by index with C-style reverse loops and duplicate their bodies (`WorkerAssignmentManager.cpp:195-224`) despite the range-based-loop guideline. *(Addressed 2026-07-08: all loops are now range-based over `PopulationManager::Pops()`, the reverse ones via `std::views::reverse`. The two remaining loops in `UserAssignBestAvailableWorker` are kept separate because their predicates and actions differ — worker-vs-specialist, one converts before assigning — not duplicated bodies.)*
 
 ### 4.4 [M] Effects pipeline: strong core, but key invariants live in comments, and one lives in a display string
 

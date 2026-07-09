@@ -7,6 +7,7 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/FactionConfig.h"
 #include "game/social-engineering/SocialPolicyConfig.h"
+#include "lib/DerefView.h"
 #include "lib/effects/ActiveEffect.h"
 
 namespace ac
@@ -54,9 +55,9 @@ public:
     BaseManager* CreateBase(FactionId factionId, int baseId, const std::string& name, Tile* pTile,
                             const GameDataContext& rDataContext,
                             TileEffectsContext& rTileEffects);
-    BaseManager* GetBase(size_t index);
-    const BaseManager* GetBase(size_t index) const;
-    const std::vector<std::unique_ptr<BaseManager>>& GetBases() const { return m_bases; }
+    // Iterate bases by reference without exposing the owning unique_ptrs.
+    auto Bases() { return DerefView(m_bases); }
+    auto Bases() const { return DerefView(m_bases); }
     size_t GetBaseCount() const { return m_bases.size(); }
 
     // Returns buildings the faction has the technology to build.

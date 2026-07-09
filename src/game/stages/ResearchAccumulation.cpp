@@ -27,18 +27,12 @@ void ResearchAccumulation::Execute_(GameState* pGameState, Faction* pFaction)
 
     int totalLabs = 0;
 
-    for (size_t i = 0; i < pFaction->GetBaseCount(); ++i)
+    for (BaseManager& rBase : pFaction->Bases())
     {
-        BaseManager* pBase = pFaction->GetBase(i);
-        if (!pBase)
-        {
-            continue;
-        }
-
-        int baseLabs = pBase->ConsumeLabs();
+        int baseLabs = rBase.ConsumeLabs();
         totalLabs += baseLabs;
 
-        std::cout << "  Base '" << pBase->GetName() << "' labs: " << baseLabs << "\n";
+        std::cout << "  Base '" << rBase.GetName() << "' labs: " << baseLabs << "\n";
     }
 
     pFaction->AddResearchPoints(totalLabs);

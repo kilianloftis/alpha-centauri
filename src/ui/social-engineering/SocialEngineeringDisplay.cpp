@@ -183,9 +183,10 @@ std::string GetFactionDisplayName(const Faction& rFaction)
 
 int GetFactionSocialRating(const Faction& rFaction, SocialRatingId rating)
 {
-    if (rFaction.GetBaseCount() > 0)
+    // TODO (findings 4.5): faction-level rating is faked as the first base's rating.
+    for (const BaseManager& rBase : rFaction.Bases())
     {
-        return rFaction.GetBase(0)->GetEffectiveSocialRating(rating);
+        return rBase.GetEffectiveSocialRating(rating);
     }
 
     BaseEffects_t baseEffects;

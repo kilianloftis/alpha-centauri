@@ -17,7 +17,6 @@ namespace ac
 // Forward declarations
 class Pop;
 class PopulationManager;
-class PopContainer;
 class WorkerAssignmentManager;
 class EconomyManager;
 class ResourceManager;
@@ -31,8 +30,9 @@ class Tile;
 struct GameDataContext;
 
 // BaseManager coordinates base management subsystems.
-// Provides identity, position, and access to sub-managers.
-// Routes API calls to PopulationManager, ResourceManager, and WorkerAssignmentManager.
+// Provides identity, position, and access to sub-managers. Sub-managers own their full
+// API surface; a method lives here only when it coordinates two or more subsystems
+// (e.g. production consuming resources, growth resolving faction effects).
 class BaseManager
 {
 public:
@@ -45,12 +45,14 @@ public:
         const IEffectsProvider* pEffectsProvider = nullptr);
     ~BaseManager();
 
-    // Population management - delegated to PopulationManager
-    void RecalculatePopComposition();
-    const PopContainer& GetPopContainer() const;
-    int GetPopWorkerCount() const;
+    // Population subsystem. Pure population queries and mutations go through this reference;
+    // BaseManager only keeps operations that coordinate population with other subsystems.
+    PopulationManager& GetPopulation();
+    const PopulationManager& GetPopulation() const;
+
+    // Convert a pop while keeping worker-tile assignments consistent: unassigns the pop's
+    // tile before converting and re-runs auto-assignment if it is a worker afterwards.
     void ConvertPop(Pop& rPop, const std::string& typeId);
-    const std::string& GetDefaultWorkerTypeId() const;
 
     // Signals forwarded from PopulationManager
     Signal<int> on_pop_gained;
@@ -67,10 +69,6 @@ public:
     // Priority: unassigned worker → specialist converted to worker → steal an assigned worker.
     // No-op if the tile is not workable or no pop can be found.
     void UserAssignBestAvailableWorker(const Tile* pTile);
-
-    // Auto-assign all unassigned workers to available workable tiles.
-    // Should be called after initial population setup or when new workers need assignment.
-    void AutoAssignWorkers();
 
     // Resource production per turn (calculated live).
     int GetNutrientProduction() const;
@@ -115,9 +113,7 @@ public:
     // +1 Growth).
     int GetEffectiveSocialRating(SocialRatingId rating) const;
 
-    int GetNutrientStockpile() const;
     int GetNutrientsRequired() const;
-    int GetBaseSize() const;
 
     int GetX() const;
     int GetY() const;

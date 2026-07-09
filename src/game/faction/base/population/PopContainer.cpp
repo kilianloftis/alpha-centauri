@@ -32,16 +32,6 @@ int PopContainer::GetSize() const
     return static_cast<int>(m_pops.size());
 }
 
-const std::vector<std::unique_ptr<Pop>>& PopContainer::GetPops() const
-{
-    return m_pops;
-}
-
-std::vector<std::unique_ptr<Pop>>& PopContainer::GetPops()
-{
-    return m_pops;
-}
-
 int PopContainer::GetWorkerCount() const
 {
     return CountPops_([](const Pop* p) { return p->IsWorker() && !p->IsSpecialist(); });

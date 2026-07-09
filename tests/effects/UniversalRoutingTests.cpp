@@ -9,7 +9,8 @@
 #include "TestHelpers.h"
 
 #include "game/GameState.h"
-#include "game/faction/base/population/PopContainer.h"
+#include "game/faction/base/BaseManager.h"
+#include "game/faction/base/population/PopulationManager.h"
 #include "game/units/Unit.h"
 #include "lib/effects/ActiveEffect.h"
 
@@ -27,13 +28,13 @@ TEST_CASE("Faction pool: a pop type's FactionGlobal effect is collected faction-
     BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
 
     // A Networker pop carries "+1 labs, FactionGlobal".
-    const_cast<PopContainer&>(base.GetPopContainer()).AddPop("Networker");
+    base.GetPopulation().AddPop("Networker");
 
     const auto pool = CollectActiveEffects(faction);
     CHECK(ResolveStatModifiers(FilterByStatId(pool.effects, StatId::Labs), 0.0).total == Approx(1.0));
 
     // Two Networkers stack.
-    const_cast<PopContainer&>(base.GetPopContainer()).AddPop("Networker");
+    base.GetPopulation().AddPop("Networker");
     const auto pool2 = CollectActiveEffects(faction);
     CHECK(ResolveStatModifiers(FilterByStatId(pool2.effects, StatId::Labs), 0.0).total == Approx(2.0));
 }
@@ -100,15 +101,13 @@ TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other fact
     actest::FactionFixture fixture;
     GameState state;
 
-    state.AddFaction(std::make_unique<Faction>(&fixture.buildings(), nullptr, &fixture.socialPolicies(),
+    Faction& factionA = state.AddFaction(std::make_unique<Faction>(&fixture.buildings(), nullptr, &fixture.socialPolicies(),
                                                &fixture.socialRatings(), nullptr, nullptr));
-    state.AddFaction(std::make_unique<Faction>(&fixture.buildings(), nullptr, &fixture.socialPolicies(),
+    Faction& factionB = state.AddFaction(std::make_unique<Faction>(&fixture.buildings(), nullptr, &fixture.socialPolicies(),
                                                &fixture.socialRatings(), nullptr, nullptr));
-    Faction& factionA = *state.GetFactions()[0];
-    Faction& factionB = *state.GetFactions()[1];
 
     BaseManager& baseA = fixture.MakeFactionBase(factionA, 2, 2);
-    fixture.MakeFactionBase(factionB, 6, 6);
+    BaseManager& baseB = fixture.MakeFactionBase(factionB, 6, 6);
 
     baseA.AddBuilding("world_beacon"); // +10 energy, WorldGlobal
 
@@ -126,13 +125,13 @@ TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other fact
     {
         factionB.ProduceBaseResources(state.CollectWorldEffects(factionB));
         // 10 energy split 40/50/10 -> econ 4.
-        CHECK(factionB.GetBases()[0]->ConsumeEcon() == 4);
+        CHECK(baseB.ConsumeEcon() == 4);
     }
 
     SECTION("faction A's own base gets its own WorldGlobal effect through its own pool")
     {
         factionA.ProduceBaseResources(state.CollectWorldEffects(factionA));
-        CHECK(factionA.GetBases()[0]->GetEconProduction() == 4);
+        CHECK(baseA.GetEconProduction() == 4);
     }
 }
 

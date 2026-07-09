@@ -34,22 +34,12 @@ void GameState::IncrementMissionYear()
     ++m_missionYear;
 }
 
-std::vector<std::unique_ptr<Faction>>& GameState::GetFactions()
-{
-    return m_factions;
-}
-
-const std::vector<std::unique_ptr<Faction>>& GameState::GetFactions() const
-{
-    return m_factions;
-}
-
 std::vector<ActiveEffect_t> GameState::CollectWorldEffects(const Faction& rExclude) const
 {
     std::vector<ActiveEffect_t> result;
     for (const auto& pFaction : m_factions)
     {
-        if (!pFaction || pFaction.get() == &rExclude)
+        if (pFaction.get() == &rExclude)
         {
             continue;
         }
@@ -60,9 +50,14 @@ std::vector<ActiveEffect_t> GameState::CollectWorldEffects(const Faction& rExclu
     return result;
 }
 
-void GameState::AddFaction(std::unique_ptr<Faction> pFaction)
+Faction& GameState::AddFaction(std::unique_ptr<Faction> pFaction)
 {
+    if (!pFaction)
+    {
+        throw std::invalid_argument("GameState::AddFaction: pFaction is null");
+    }
     m_factions.push_back(std::move(pFaction));
+    return *m_factions.back();
 }
 
 int GameState::GetNumFactions() const

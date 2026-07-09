@@ -26,18 +26,12 @@ void IncomeCollection::Execute_(GameState* pGameState, Faction* pFaction)
 
     int totalIncome = 0;
 
-    for (size_t i = 0; i < pFaction->GetBaseCount(); ++i)
+    for (BaseManager& rBase : pFaction->Bases())
     {
-        BaseManager* pBase = pFaction->GetBase(i);
-        if (!pBase)
-        {
-            continue;
-        }
-
-        int baseIncome = pBase->ConsumeEcon();
+        int baseIncome = rBase.ConsumeEcon();
         totalIncome += baseIncome;
 
-        std::cout << "  Base '" << pBase->GetName() << "' income: " << baseIncome << "\n";
+        std::cout << "  Base '" << rBase.GetName() << "' income: " << baseIncome << "\n";
     }
 
     pFaction->AddEnergy(totalIncome);

@@ -33,25 +33,27 @@ public:
     int GetSize() const;
     bool CanGrow() const;
 
-    // Container access (for systems that need to iterate pops by stable ID)
-    const PopContainer& GetContainer() const { return m_container; }
-    PopContainer& GetContainer() { return m_container; }
+    // Iterate pops by reference without exposing the owning unique_ptrs.
+    auto Pops() { return m_container.Pops(); }
+    auto Pops() const { return m_container.Pops(); }
 
-    // Pop access - delegated to PopContainer
-    const std::vector<std::unique_ptr<Pop>>& GetPops() const { return m_container.GetPops(); }
-
-    // Pop counts by type - delegated to PopContainer
+    // Pop counts by type
     int GetWorkerCount() const { return m_container.GetWorkerCount(); }
     int GetTalentCount() const { return m_container.GetTalentCount(); }
     int GetDroneCount() const { return m_container.GetDroneCount(); }
     int GetSpecialistCount() const { return m_container.GetSpecialistCount(); }
 
-    // Pop manipulation - no arguments, uses PopFactory internally
+    // Add a pop of the default type (growth) or of an explicit type.
+    // No-op when the base is at max size.
     void AddPop();
+    void AddPop(const std::string& typeId);
     void RemovePop();
 
     // Convert a pop to any type by config id (e.g. "Worker", "Drone", "Talent", "Librarian")
     void ConvertTo(Pop& rPop, const std::string& typeId);
+
+    // Convert a pop to its configured fallback type, resolved through the obsolescence chain.
+    void ConvertToFallback(Pop& rPop);
 
     // Default pop type used when growing or reverting a pop to a worker.
     const std::string& GetDefaultPopType() const;

@@ -6,7 +6,7 @@
 #include "game/buildings/BuildingRegistry.h"
 #include "game/faction/SocialEngineeringManager.h"
 #include "game/faction/base/BaseManager.h"
-#include "game/faction/base/population/PopContainer.h"
+#include "game/faction/base/population/PopulationManager.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/Tile.h"
@@ -398,18 +398,13 @@ std::vector<ActiveEffect_t> CollectPopEffects(const PopTypeConfig_t& rConfig)
     return result;
 }
 
-std::vector<ActiveEffect_t> CollectFromPops(const PopContainer& rPops, const BaseManager& rOriginBase)
+std::vector<ActiveEffect_t> CollectFromPops(const PopulationManager& rPops, const BaseManager& rOriginBase)
 {
     std::vector<ActiveEffect_t> result;
-    for (const auto& pPop : rPops.GetPops())
+    for (const Pop& rPop : rPops.Pops())
     {
-        if (!pPop)
-        {
-            continue;
-        }
-
         const std::vector<ActiveEffect_t> flatEffects =
-            FilterByScope(CollectPopEffects(pPop->GetConfig()), EffectScope_t::ThisBase);
+            FilterByScope(CollectPopEffects(rPop.GetConfig()), EffectScope_t::ThisBase);
 
         for (const ActiveEffect_t& effect : flatEffects)
         {

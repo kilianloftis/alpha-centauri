@@ -52,7 +52,7 @@ BaseView::BaseView(
         [this]() { HandleProductionDisplayClicked_(); }
     ));
     m_elements.push_back(std::make_unique<PopulationDisplay>(
-        &m_rBase.GetPopContainer(),
+        &m_rBase.GetPopulation(),
         ResolveLayout(m_layout, k_CenterPanelLayout),
         [this](Pop& rPop) { HandlePopClick(rPop); }
     ));

@@ -1,5 +1,6 @@
 #include "ui/base/GrowthDisplay.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/population/PopulationManager.h"
 #include "graphics/Graphics.h"
 #include <sstream>
 #include <stdexcept>
@@ -49,7 +50,7 @@ void GrowthDisplay::Render(Graphics& rGraphics)
     rGraphics.DrawText("Growth", m_layout.x + leftPadding, m_layout.y, headerFontSize);
 
     std::ostringstream oss;
-    oss << "Stockpile: " << m_pBase->GetNutrientStockpile();
+    oss << "Stockpile: " << m_pBase->GetPopulation().GetNutrientStockpile();
     rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y + lineHeight * k_StockpileLineIndex, entryFontSize);
 
     oss.str("");

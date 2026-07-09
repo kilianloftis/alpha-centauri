@@ -24,23 +24,23 @@ void BaseProduction::Execute_(GameState* pGameState, Faction* pFaction)
 
     std::cout << "Executing BaseProduction stage for faction\n";
 
-    for (const auto& pBase : pFaction->GetBases())
+    for (BaseManager& rBase : pFaction->Bases())
     {
-        if (!pBase->GetCurrentProduction())
+        if (!rBase.GetCurrentProduction())
         {
             continue;
         }
 
-        const std::string completed = pBase->ApplyProduction();
+        const std::string completed = rBase.ApplyProduction();
         if (!completed.empty())
         {
-            std::cout << "  Base '" << pBase->GetName() << "' completed production: " << completed << "\n";
+            std::cout << "  Base '" << rBase.GetName() << "' completed production: " << completed << "\n";
         }
         else
         {
-            std::cout << "  Base '" << pBase->GetName() << "' producing '"
-                      << pBase->GetCurrentProduction()->GetName()
-                      << "' (" << pBase->GetMineralStockpile() << "/" << pBase->GetProductionMineralCost() << " minerals)\n";
+            std::cout << "  Base '" << rBase.GetName() << "' producing '"
+                      << rBase.GetCurrentProduction()->GetName()
+                      << "' (" << rBase.GetMineralStockpile() << "/" << rBase.GetProductionMineralCost() << " minerals)\n";
         }
     }
 }

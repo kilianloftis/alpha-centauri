@@ -9,7 +9,7 @@
 namespace ac
 {
 
-class PopContainer;
+class PopulationManager;
 class Tile;
 class TileEffectsContext;
 
@@ -22,7 +22,7 @@ class TileEffectsContext;
 class WorkerAssignmentManager
 {
 public:
-    WorkerAssignmentManager(std::vector<const Tile*> workableTiles, PopContainer& rPops,
+    WorkerAssignmentManager(std::vector<const Tile*> workableTiles, PopulationManager& rPops,
                              const TileEffectsContext& rTileEffects);
     ~WorkerAssignmentManager() = default;
 
@@ -104,7 +104,7 @@ private:
 
     std::vector<const Tile*> m_workableTiles;
     TileScorer m_scorer;
-    PopContainer& m_rPops;
+    PopulationManager& m_rPops;
     const TileEffectsContext& m_rTileEffects;
 };
 

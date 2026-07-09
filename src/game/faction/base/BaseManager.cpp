@@ -7,7 +7,6 @@
 #include "game/faction/EconomyManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopulationManager.h"
-#include "game/faction/base/population/PopContainer.h"
 #include "game/buildings/BuildingConfigParser.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/map/MapUtils.h"
@@ -51,7 +50,7 @@ BaseManager::BaseManager(
     , m_pResearch(pResearchManager)
     , m_pEffectsProvider(pEffectsProvider)
     , m_pPopulation(std::make_unique<PopulationManager>(rDataContext, pResearchManager, 3))
-    , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(ComputeWorkableTiles_(rTileEffects, tile), m_pPopulation->GetContainer(), rTileEffects))
+    , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(ComputeWorkableTiles_(rTileEffects, tile), *m_pPopulation, rTileEffects))
     , m_pResources(nullptr)
     , m_pBuildings(std::make_unique<BuildingManager>(rDataContext, pResearchManager))
     , m_pProduction(rDataContext.productionCostCalculator
@@ -104,17 +103,14 @@ BaseManager::BaseManager(
 
 BaseManager::~BaseManager() = default;
 
-void BaseManager::RecalculatePopComposition()
+PopulationManager& BaseManager::GetPopulation()
 {
-    if (m_pPopulation)
-    {
-        m_pPopulation->RecalculateComposition();
-    }
+    return *m_pPopulation;
 }
 
-const PopContainer& BaseManager::GetPopContainer() const
+const PopulationManager& BaseManager::GetPopulation() const
 {
-    return m_pPopulation->GetContainer();
+    return *m_pPopulation;
 }
 
 TileEffectsContext& BaseManager::GetTileEffects()
@@ -127,17 +123,8 @@ const TileEffectsContext& BaseManager::GetTileEffects() const
     return m_rTileEffects;
 }
 
-int BaseManager::GetPopWorkerCount() const
-{
-    return m_pPopulation ? m_pPopulation->GetWorkerCount() : 0;
-}
-
 void BaseManager::ConvertPop(Pop& rPop, const std::string& typeId)
 {
-    if (!m_pPopulation)
-    {
-        throw std::runtime_error("BaseManager::ConvertPop: m_pPopulation is null");
-    }
     if (rPop.IsWorker())
     {
         m_pWorkerAssignments->UnassignWorker(rPop);
@@ -147,15 +134,6 @@ void BaseManager::ConvertPop(Pop& rPop, const std::string& typeId)
     {
         m_pWorkerAssignments->AutoAssignWorkers();
     }
-}
-
-const std::string& BaseManager::GetDefaultWorkerTypeId() const
-{
-    if (!m_pPopulation)
-    {
-        throw std::runtime_error("BaseManager::GetDefaultWorkerTypeId: m_pPopulation is null");
-    }
-    return m_pPopulation->GetDefaultPopType();
 }
 
 WorkerAssignmentManager& BaseManager::GetWorkerAssignments()
@@ -170,12 +148,7 @@ const WorkerAssignmentManager& BaseManager::GetWorkerAssignments() const
 
 void BaseManager::UserAssignBestAvailableWorker(const Tile* pTile)
 {
-    m_pWorkerAssignments->UserAssignBestAvailableWorker(pTile, GetDefaultWorkerTypeId());
-}
-
-void BaseManager::AutoAssignWorkers()
-{
-    m_pWorkerAssignments->AutoAssignWorkers();
+    m_pWorkerAssignments->UserAssignBestAvailableWorker(pTile, m_pPopulation->GetDefaultPopType());
 }
 
 int BaseManager::GetNutrientProduction() const
@@ -311,7 +284,7 @@ BaseEffects_t BaseManager::CollectBaseLocalEffects_(const FactionEffects_t& rFac
 {
     BaseEffects_t baseEffects = FilterForBase(rFactionEffects, *this);
 
-    const std::vector<ActiveEffect_t> popEffects = CollectFromPops(GetPopContainer(), *this);
+    const std::vector<ActiveEffect_t> popEffects = CollectFromPops(*m_pPopulation, *this);
     baseEffects.effects.insert(baseEffects.effects.end(), popEffects.begin(), popEffects.end());
 
     return baseEffects;
@@ -387,11 +360,6 @@ void BaseManager::ApplyGrowth(const FactionEffects_t& rFactionEffects)
     m_pPopulation->ApplyGrowth(nutrients, BuildBaseEffects_(rFactionEffects));
 }
 
-int BaseManager::GetNutrientStockpile() const
-{
-    return m_pPopulation ? m_pPopulation->GetNutrientStockpile() : 0;
-}
-
 int BaseManager::GetNutrientsRequired() const
 {
     if (!m_pPopulation)
@@ -399,11 +367,6 @@ int BaseManager::GetNutrientsRequired() const
         throw std::runtime_error("BaseManager::GetNutrientsRequired: m_pPopulation is null");
     }
     return m_pPopulation->GetNutrientsRequired(BuildBaseEffects_());
-}
-
-int BaseManager::GetBaseSize() const
-{
-    return m_pPopulation ? m_pPopulation->GetSize() : 0;
 }
 
 int BaseManager::GetX() const

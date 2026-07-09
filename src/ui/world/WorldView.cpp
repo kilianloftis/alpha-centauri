@@ -4,6 +4,7 @@
 #include "game/GameState.h"
 #include "game/Faction.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/population/PopulationManager.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitOrder.h"
@@ -22,7 +23,6 @@ constexpr RatioLayout_t k_MapLayout      {0.0f, 0.0f, 1.0f, 0.867f};
 constexpr RatioLayout_t k_InfoPanelLayout{0.0f, 0.867f, 1.0f, 0.133f};
 constexpr Color k_ResearchTextColor      {100, 200, 255, 255};
 constexpr size_t k_InfoPanelElementIndex = 0;
-constexpr size_t k_PlayerFactionIndex    = 0;
 constexpr size_t k_FirstUnitIndex        = 0;
 constexpr int    k_InvalidTileCoord      = -1;
 
@@ -67,32 +67,27 @@ void WorldView::Update_()
 {
     std::vector<InfoPanelElement::InfoLine> infoLines;
     infoLines.push_back({"Mission Year: " + std::to_string(m_rGameState.GetMissionYear()), Color::White()});
-    const auto& rFactions = m_rGameState.GetFactions();
-    if (!rFactions.empty())
+    if (const Faction* pPlayerFaction = m_rGameState.GetPlayerFaction())
     {
-        const Faction* pPlayerFaction = rFactions[k_PlayerFactionIndex].get();
         infoLines.push_back({"Energy: " + std::to_string(pPlayerFaction->GetEnergy()), Color::Yellow()});
         infoLines.push_back({"Research: " + std::to_string(pPlayerFaction->GetResearchPoints()), k_ResearchTextColor});
     }
     static_cast<InfoPanelElement*>(m_elements[k_InfoPanelElementIndex].get())->SetInfoLines(infoLines);
 
     std::vector<BaseInfo_t> baseInfo;
-    for (const auto& pFaction : m_rGameState.GetFactions())
+    for (const Faction& rFaction : m_rGameState.Factions())
     {
-        for (const auto& pBase : pFaction->GetBases())
+        for (const BaseManager& rBase : rFaction.Bases())
         {
-            if (pBase)
-            {
-                // TODO: Track previousFactionId when base capture is implemented
-                baseInfo.push_back({
-                    pBase->GetX(),
-                    pBase->GetY(),
-                    pBase->GetName(),
-                    pBase->GetFactionId(),
-                    std::nullopt,  // previousFactionId - set when base is captured
-                    pBase->GetBaseSize()
-                });
-            }
+            // TODO: Track previousFactionId when base capture is implemented
+            baseInfo.push_back({
+                rBase.GetX(),
+                rBase.GetY(),
+                rBase.GetName(),
+                rBase.GetFactionId(),
+                std::nullopt,  // previousFactionId - set when base is captured
+                rBase.GetPopulation().GetSize()
+            });
         }
     }
     m_pWorldDisplay->SetBaseInfo(baseInfo);
@@ -166,13 +161,13 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
 
 BaseManager* WorldView::FindBaseAtTile_(int tileX, int tileY) const
 {
-    for (const auto& pFaction : m_rGameState.GetFactions())
+    for (Faction& rFaction : m_rGameState.Factions())
     {
-        for (const auto& pBase : pFaction->GetBases())
+        for (BaseManager& rBase : rFaction.Bases())
         {
-            if (pBase && pBase->GetX() == tileX && pBase->GetY() == tileY)
+            if (rBase.GetX() == tileX && rBase.GetY() == tileY)
             {
-                return pBase.get();
+                return &rBase;
             }
         }
     }

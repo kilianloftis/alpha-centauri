@@ -191,7 +191,7 @@ void Engine::Initialize_()
                                  m_gameDataContext->unitComponentRegistry.get());
 
     m_gameDataContext->secretProjectAvailabilityCalculator =
-        std::make_unique<SecretProjectAvailabilityCalculator>(m_gameState->GetFactions());
+        std::make_unique<SecretProjectAvailabilityCalculator>(*m_gameState);
 
     // Create factions from config with a starting base each.
     const int centerX = m_gameState->GetWorldMap()->GetWidth() / 2;

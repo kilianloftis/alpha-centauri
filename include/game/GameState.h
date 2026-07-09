@@ -3,6 +3,7 @@
 #include "game/Faction.h"
 #include "game/map/WorldMap.h"
 #include "game/units/UnitOrderExecutor.h"
+#include "lib/DerefView.h"
 #include <memory>
 #include <vector>
 
@@ -25,10 +26,11 @@ public:
     void IncrementMissionYear();
 
     // Factions
-    std::vector<std::unique_ptr<Faction>>& GetFactions();
-    const std::vector<std::unique_ptr<Faction>>& GetFactions() const;
-    void AddFaction(std::unique_ptr<Faction> pFaction);
+    Faction& AddFaction(std::unique_ptr<Faction> pFaction);
     int GetNumFactions() const;
+    // Iterate factions by reference without exposing the owning unique_ptrs.
+    auto Factions() { return DerefView(m_factions); }
+    auto Factions() const { return DerefView(m_factions); }
     const Faction* GetPlayerFaction() const;
     Faction* GetPlayerFaction();
 

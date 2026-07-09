@@ -53,9 +53,14 @@ bool PopulationManager::CanGrow() const
 
 void PopulationManager::AddPop()
 {
+    AddPop(GetDefaultPopType());
+}
+
+void PopulationManager::AddPop(const std::string& typeId)
+{
     if (CanGrow())
     {
-        m_container.AddPop(GetDefaultPopType());
+        m_container.AddPop(typeId);
         NotifyPopGained_();
         m_riot.NotifyPopGrown(BuildRiotInputs_());
     }
@@ -70,6 +75,11 @@ void PopulationManager::RemovePop()
 void PopulationManager::ConvertTo(Pop& rPop, const std::string& typeId)
 {
     m_container.ConvertTo(rPop, typeId);
+}
+
+void PopulationManager::ConvertToFallback(Pop& rPop)
+{
+    m_container.ConvertToFallback(rPop);
 }
 
 int PopulationManager::GetMaxSize() const

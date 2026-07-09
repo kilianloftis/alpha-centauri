@@ -12,7 +12,7 @@ namespace ac
 class BaseManager;
 class Faction;
 class IEffectsProvider;
-class PopContainer;
+class PopulationManager;
 class Tile;
 class ImprovementRegistry;
 struct BuildingConfig_t;
@@ -163,7 +163,7 @@ std::vector<ActiveEffect_t> CollectPopEffects(const PopTypeConfig_t& rConfig);
 // with rOriginBase so they can be merged into a base's active effects before resolving
 // production. ThisPop-scoped tile multiplier effects are excluded — those are resolved
 // locally by Pop::ApplyTileMultipliers and never enter the base-wide pool.
-std::vector<ActiveEffect_t> CollectFromPops(const PopContainer& rPops, const BaseManager& rOriginBase);
+std::vector<ActiveEffect_t> CollectFromPops(const PopulationManager& rPops, const BaseManager& rOriginBase);
 
 // Collects every ThisTile-scoped effect from rTile's own features only: terrain feature ids
 // (rockiness, moisture, river, fungus) looked up in rImprovements, plus each improvement

@@ -1,9 +1,10 @@
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
-#include "game/faction/base/population/PopContainer.h"
+#include "game/faction/base/population/PopulationManager.h"
 #include "game/map/Tile.h"
 #include "lib/effects/TileEffectsContext.h"
 #include <algorithm>
 #include <limits>
+#include <ranges>
 
 namespace ac
 {
@@ -18,7 +19,7 @@ constexpr bool IsUnassignedTile(const Tile* pTile)
 
 } // namespace
 
-WorkerAssignmentManager::WorkerAssignmentManager(std::vector<const Tile*> workableTiles, PopContainer& rPops,
+WorkerAssignmentManager::WorkerAssignmentManager(std::vector<const Tile*> workableTiles, PopulationManager& rPops,
                                                  const TileEffectsContext& rTileEffects)
     : m_workableTiles(std::move(workableTiles))
     , m_scorer([this](const Tile& rTile) -> float
@@ -43,11 +44,11 @@ bool WorkerAssignmentManager::UserAssignWorker(Pop& rPop, const Tile* pTile)
 
 void WorkerAssignmentManager::UserUnassignTile(const Tile* pTile)
 {
-    for (auto& pPop : m_rPops.GetPops())
+    for (Pop& rPop : m_rPops.Pops())
     {
-        if (pPop->IsWorker() && pPop->GetTile() == pTile)
+        if (rPop.IsWorker() && rPop.GetTile() == pTile)
         {
-            UnassignFromTile_(*pPop);
+            UnassignFromTile_(rPop);
             break;
         }
     }
@@ -60,11 +61,11 @@ void WorkerAssignmentManager::ReleaseUserAssignment(Pop& rPop)
 
 void WorkerAssignmentManager::ReleaseAllUserAssignments()
 {
-    for (auto& pPop : m_rPops.GetPops())
+    for (Pop& rPop : m_rPops.Pops())
     {
-        if (pPop->IsWorker() && pPop->IsUserAssigned())
+        if (rPop.IsWorker() && rPop.IsUserAssigned())
         {
-            ReleaseUserAssignment(*pPop);
+            ReleaseUserAssignment(rPop);
         }
     }
 }
@@ -97,21 +98,21 @@ void WorkerAssignmentManager::UnassignWorker(Pop& rPop)
 
 void WorkerAssignmentManager::UnassignAll()
 {
-    for (auto& pPop : m_rPops.GetPops())
+    for (Pop& rPop : m_rPops.Pops())
     {
-        const Tile* pTile = pPop->GetTile();
-        if (pTile && !pPop->IsUserAssigned())
+        const Tile* pTile = rPop.GetTile();
+        if (pTile && !rPop.IsUserAssigned())
         {
-            pPop->SetTile(nullptr);
+            rPop.SetTile(nullptr);
         }
     }
 }
 
 void WorkerAssignmentManager::ResetAllAssignments()
 {
-    for (auto& pPop : m_rPops.GetPops())
+    for (Pop& rPop : m_rPops.Pops())
     {
-        UnassignWorker(*pPop);
+        UnassignWorker(rPop);
     }
 
     AutoAssignWorkers();
@@ -128,21 +129,21 @@ bool WorkerAssignmentManager::IsTileAssigned(const Tile* pTile) const
 TileResources_t WorkerAssignmentManager::ComputeWorkedResources(const BaseEffects_t& rBaseEffects) const
 {
     TileResources_t total{0, 0, 0};
-    for (const auto& pPop : m_rPops.GetPops())
+    for (const Pop& rPop : m_rPops.Pops())
     {
-        if (!pPop->IsWorker())
+        if (!rPop.IsWorker())
         {
             continue;
         }
 
-        const Tile* pTile = pPop->GetTile();
+        const Tile* pTile = rPop.GetTile();
         if (!pTile)
         {
             continue;
         }
 
         const TileResources_t yield = m_rTileEffects.ResolveTileYield(*pTile, /*isBaseTile*/false, rBaseEffects);
-        const TileResources_t modified = pPop->ApplyTileMultipliers(yield);
+        const TileResources_t modified = rPop.ApplyTileMultipliers(yield);
 
         total.nutrients += modified.nutrients;
         total.energy    += modified.energy;
@@ -154,15 +155,15 @@ TileResources_t WorkerAssignmentManager::ComputeWorkedResources(const BaseEffect
 TileResources_t WorkerAssignmentManager::GetWorkedTileYield(const Tile& rTile,
                                                             const BaseEffects_t& rBaseEffects) const
 {
-    for (const auto& pPop : m_rPops.GetPops())
+    for (const Pop& rPop : m_rPops.Pops())
     {
-        if (!pPop->IsWorker() || pPop->GetTile() != &rTile)
+        if (!rPop.IsWorker() || rPop.GetTile() != &rTile)
         {
             continue;
         }
 
         const TileResources_t yield = m_rTileEffects.ResolveTileYield(rTile, /*isBaseTile*/false, rBaseEffects);
-        return pPop->ApplyTileMultipliers(yield);
+        return rPop.ApplyTileMultipliers(yield);
     }
     return TileResources_t{0, 0, 0};
 }
@@ -194,23 +195,22 @@ void WorkerAssignmentManager::AutoAssignWorkers()
 
 void WorkerAssignmentManager::UserAssignBestAvailableWorker(const Tile* pTile, const std::string& defaultWorkerType)
 {
-    for (int i = static_cast<int>(m_rPops.GetPops().size()) - 1; i >= 0; --i)
+    // Reverse order: prefer the most recently added pop when several are eligible.
+    for (Pop& rPop : std::views::reverse(m_rPops.Pops()))
     {
-        Pop* pPop = m_rPops.GetPops()[i].get();
-        if (pPop->IsWorker() && pPop->GetTile() == nullptr)
+        if (rPop.IsWorker() && rPop.GetTile() == nullptr)
         {
-            UserAssignWorker(*pPop, pTile);
+            UserAssignWorker(rPop, pTile);
             return;
         }
     }
 
-    for (int i = static_cast<int>(m_rPops.GetPops().size()) - 1; i >= 0; --i)
+    for (Pop& rPop : std::views::reverse(m_rPops.Pops()))
     {
-        Pop* pPop = m_rPops.GetPops()[i].get();
-        if (pPop->IsSpecialist())
+        if (rPop.IsSpecialist())
         {
-            m_rPops.ConvertTo(*pPop, defaultWorkerType);
-            UserAssignWorker(*pPop, pTile);
+            m_rPops.ConvertTo(rPop, defaultWorkerType);
+            UserAssignWorker(rPop, pTile);
             return;
         }
     }
@@ -230,27 +230,27 @@ Pop* WorkerAssignmentManager::FindLowestYieldAssignedWorker_() const
     float bestAutoScore = std::numeric_limits<float>::infinity();
     float bestOverallScore = std::numeric_limits<float>::infinity();
 
-    for (const auto& pPop : m_rPops.GetPops())
+    for (Pop& rPop : m_rPops.Pops())
     {
-        if (!pPop || !pPop->IsWorker())
+        if (!rPop.IsWorker())
         {
             continue;
         }
-        const Tile* pTile = pPop->GetTile();
+        const Tile* pTile = rPop.GetTile();
         if (!pTile)
         {
             continue;
         }
         const float score = m_scorer(*pTile);
-        if (!pPop->IsUserAssigned() && score < bestAutoScore)
+        if (!rPop.IsUserAssigned() && score < bestAutoScore)
         {
             bestAutoScore = score;
-            pBestAuto = pPop.get();
+            pBestAuto = &rPop;
         }
         if (score < bestOverallScore)
         {
             bestOverallScore = score;
-            pBestOverall = pPop.get();
+            pBestOverall = &rPop;
         }
     }
 
@@ -260,16 +260,16 @@ Pop* WorkerAssignmentManager::FindLowestYieldAssignedWorker_() const
 std::vector<Pop*> WorkerAssignmentManager::GetUnassignedWorkers_() const
 {
     std::vector<Pop*> unassignedWorkers;
-    for (const auto& rPop : m_rPops.GetPops())
+    for (Pop& rPop : m_rPops.Pops())
     {
-        if (!rPop->IsWorker())
+        if (!rPop.IsWorker())
         {
             continue;
         }
-        const Tile* pTile = rPop->GetTile();
-        if (IsUnassignedTile(pTile) && !rPop->IsUserAssigned())
+        const Tile* pTile = rPop.GetTile();
+        if (IsUnassignedTile(pTile) && !rPop.IsUserAssigned())
         {
-            unassignedWorkers.push_back(rPop.get());
+            unassignedWorkers.push_back(&rPop);
         }
     }
     return unassignedWorkers;
@@ -306,9 +306,9 @@ std::vector<const Tile*> WorkerAssignmentManager::PrioritizeAvailableTiles_(
 
 void WorkerAssignmentManager::AutoAssignWorkers_(std::vector<const Tile*>& availableTiles)
 {
-    for (const auto& rPop : m_rPops.GetPops())
+    for (Pop& rPop : m_rPops.Pops())
     {
-        if (!rPop || !rPop->IsWorker() || rPop->IsUserAssigned())
+        if (!rPop.IsWorker() || rPop.IsUserAssigned())
         {
             continue;
         }
@@ -316,7 +316,7 @@ void WorkerAssignmentManager::AutoAssignWorkers_(std::vector<const Tile*>& avail
         {
             break;
         }
-        AssignWorker(*rPop, availableTiles[0]);
+        AssignWorker(rPop, availableTiles[0]);
         availableTiles.erase(availableTiles.begin());
     }
 }
