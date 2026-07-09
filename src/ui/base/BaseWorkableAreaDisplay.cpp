@@ -51,7 +51,7 @@ void BaseWorkableAreaDisplay::CacheTileRects_()
     const int baseX = m_pBase->GetX();
     const int baseY = m_pBase->GetY();
 
-    for (const Tile* pTile : m_pBase->GetWorkableTilePositions())
+    for (const Tile* pTile : m_pBase->GetWorkerAssignments().GetWorkableTiles())
     {
         if (!pTile)
         {

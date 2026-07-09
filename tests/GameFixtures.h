@@ -6,9 +6,15 @@
 #include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/faction/EconomyManager.h"
+#include "game/faction/SocialEngineeringManager.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/buildings/BuildingManager.h"
+#include "game/faction/base/production/ProductionCostCalculator.h"
+#include "game/faction/base/production/ProductionCostConfig.h"
+#include "game/faction/base/resources/ResourceManager.h"
 #include "game/map/ImprovementRegistry.h"
+#include "lib/LuaRuntime.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/population/pop-types/GrowthConfigParser.h"
@@ -59,14 +65,17 @@ struct WorldFixture
 };
 
 // WorldFixture plus the building/pop-type registries and the ability to found real bases.
-// Bases are created with the minimum viable dependency set: no research/production/composition
-// calculators. Each base starts with 3 default Worker pops (BaseManager's built-in initial size)
-// and registers the "Base" improvement on its tile, exactly as in the game.
+// Bases are created with the minimum viable dependency set: no research/composition
+// calculators. The production cost calculator is required by BaseManager, so a default
+// (empty-formula) one is provided. Each base starts with 3 default Worker pops
+// (BaseManager's built-in initial size) and registers the "Base" improvement on its tile,
+// exactly as in the game.
 struct BaseFixture : WorldFixture
 {
     ac::GameDataContext dataContext;
     ac::EconomyManager economy; // default 40/50/10 energy split
     std::vector<std::unique_ptr<ac::BaseManager>> bases;
+    int nextBaseId = 1;
 
     BaseFixture()
     {
@@ -75,6 +84,10 @@ struct BaseFixture : WorldFixture
         dataContext.popTypeRegistry = std::make_unique<ac::PopTypeRegistry>();
         dataContext.popTypeRegistry->Load(FixturePath("pop_types.json"));
         dataContext.growthConfig = std::make_unique<ac::GrowthConfig_t>();
+        dataContext.luaRuntime = std::make_unique<ac::LuaRuntime>();
+        dataContext.productionCostConfig = std::make_unique<ac::ProductionCostConfig_t>();
+        dataContext.productionCostCalculator = std::make_unique<ac::ProductionCostCalculator>(
+            *dataContext.productionCostConfig, *dataContext.luaRuntime);
     }
 
     ac::BuildingRegistry& buildings() { return *dataContext.buildingRegistry; }
@@ -85,7 +98,8 @@ struct BaseFixture : WorldFixture
     ac::BaseManager& MakeBase(int x, int y)
     {
         bases.push_back(std::make_unique<ac::BaseManager>(
-            At(x, y), dataContext, *ctx, /*research*/ nullptr, &economy));
+            /*factionId*/ 1, nextBaseId++, "TestBase", At(x, y), dataContext, *ctx,
+            /*research*/ nullptr, &economy, /*effectsProvider*/ nullptr));
         return *bases.back();
     }
 };
@@ -96,11 +110,13 @@ struct BaseFixture : WorldFixture
 // so per-base social rating expansion is active.
 struct FactionFixture : BaseFixture
 {
+    ac::FactionConfig_t factionDefinition; // minimal shared definition for test factions
     std::vector<std::unique_ptr<ac::Faction>> factions;
     std::deque<ac::UnitDesign> designs; // deque: Units hold UnitDesign& references
 
     FactionFixture()
     {
+        factionDefinition.id = "test_faction";
         dataContext.socialPolicyRegistry = std::make_unique<ac::SocialPolicyRegistry>();
         dataContext.socialPolicyRegistry->Load(FixturePath("social_policies.json"));
         dataContext.socialRatingRegistry = std::make_unique<ac::SocialRatingRegistry>();
@@ -115,6 +131,7 @@ struct FactionFixture : BaseFixture
     ac::Faction& MakeFaction()
     {
         factions.push_back(std::make_unique<ac::Faction>(
+            factionDefinition,
             dataContext.buildingRegistry.get(), /*techRegistry*/ nullptr,
             dataContext.socialPolicyRegistry.get(), dataContext.socialRatingRegistry.get(),
             /*techCost*/ nullptr, /*popTypeAvailability*/ nullptr));
@@ -124,7 +141,8 @@ struct FactionFixture : BaseFixture
     ac::BaseManager& MakeFactionBase(ac::Faction& rFaction, int x, int y)
     {
         auto pBase = std::make_unique<ac::BaseManager>(
-            At(x, y), dataContext, *ctx, nullptr, &economy, &rFaction);
+            /*factionId*/ 1, nextBaseId++, "TestBase", At(x, y), dataContext, *ctx,
+            /*research*/ nullptr, &economy, &rFaction);
         ac::BaseManager& rBase = *pBase;
         rFaction.AddBase(std::move(pBase));
         return rBase;

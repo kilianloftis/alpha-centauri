@@ -2,6 +2,7 @@
 #include "game/GameState.h"
 #include "game/Faction.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/production/ProductionManager.h"
 #include <iostream>
 
 namespace ac
@@ -26,7 +27,8 @@ void BaseProduction::Execute_(GameState* pGameState, Faction* pFaction)
 
     for (BaseManager& rBase : pFaction->Bases())
     {
-        if (!rBase.GetCurrentProduction())
+        const ProductionManager& rProduction = rBase.GetProduction();
+        if (!rProduction.GetCurrentProduction())
         {
             continue;
         }
@@ -39,8 +41,8 @@ void BaseProduction::Execute_(GameState* pGameState, Faction* pFaction)
         else
         {
             std::cout << "  Base '" << rBase.GetName() << "' producing '"
-                      << rBase.GetCurrentProduction()->GetName()
-                      << "' (" << rBase.GetMineralStockpile() << "/" << rBase.GetProductionMineralCost() << " minerals)\n";
+                      << rProduction.GetCurrentProduction()->GetName()
+                      << "' (" << rProduction.GetMineralStockpile() << "/" << rProduction.GetMineralCost() << " minerals)\n";
         }
     }
 }

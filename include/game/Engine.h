@@ -25,13 +25,12 @@ public:
 
 private:
     void Initialize_();
-    void CheckInitialized_() const;
     void PrintWelcome_() const;
     void GameLoop_();
     void ProcessTurn_();
 
-    std::unique_ptr<Graphics> m_graphics;
-    std::unique_ptr<Input> m_input;
+    std::unique_ptr<Graphics> m_pGraphics;
+    std::unique_ptr<Input> m_pInput;
     std::unique_ptr<TurnStageFactory> m_turnStageFactory;
     std::unique_ptr<TurnProcessor> m_turnProcessor;
     std::unique_ptr<GameState> m_gameState;

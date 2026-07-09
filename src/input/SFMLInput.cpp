@@ -15,10 +15,10 @@ namespace ac
 {
 class SFMLInput : public Input
 {
-bool Initialize() override
+public:
+SFMLInput()
 {
     std::cout << "[Input] SFML input backend selected.\n";
-    return true;
 }
 
 std::optional<Key_t>CaptureKey() override

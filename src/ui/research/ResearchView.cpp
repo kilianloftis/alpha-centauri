@@ -5,7 +5,7 @@
 namespace ac
 {
 
-ResearchView::ResearchView(ResearchManager* pResearch, WindowLayout_t layout)
+ResearchView::ResearchView(const ResearchManager* pResearch, WindowLayout_t layout)
     : IGameView(layout)
     , m_pResearch(pResearch)
 {

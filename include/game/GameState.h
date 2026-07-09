@@ -17,7 +17,11 @@ class UnitComponentRegistry;
 class GameState
 {
 public:
-    GameState();
+    // pUnitComponents sizes the aura scan for unit-projected ThisTile effects; may be null
+    // if units never project auras. Throws if pWorldMap is null.
+    GameState(std::unique_ptr<WorldMap> pWorldMap,
+              const ImprovementRegistry& rImprovements,
+              const UnitComponentRegistry* pUnitComponents);
     ~GameState();
 
     // Mission year
@@ -35,9 +39,8 @@ public:
     Faction* GetPlayerFaction();
 
     // World map
-    WorldMap* GetWorldMap();
-    const WorldMap* GetWorldMap() const;
-    void SetWorldMap(std::unique_ptr<WorldMap> pWorldMap);
+    WorldMap& GetWorldMap();
+    const WorldMap& GetWorldMap() const;
 
     // WorldGlobal lane: every faction's WorldGlobal-scoped active effects, excluding
     // rExclude's own (a faction's own pool already contains its WorldGlobal effects).
@@ -46,11 +49,6 @@ public:
     std::vector<ActiveEffect_t> CollectWorldEffects(const Faction& rExclude) const;
 
     // Tile effects context (WorldMap + ImprovementRegistry bundled for tile resolution).
-    // Must be initialized via InitTileEffects() after SetWorldMap() and registry loading.
-    // pUnitComponents sizes the aura scan for unit-projected ThisTile effects; may be null
-    // if units never project auras.
-    void InitTileEffects(const ImprovementRegistry& rImprovements,
-                         const UnitComponentRegistry* pUnitComponents);
     TileEffectsContext& GetTileEffects();
     const TileEffectsContext& GetTileEffects() const;
 

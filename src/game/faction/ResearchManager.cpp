@@ -10,9 +10,11 @@ namespace ac
 {
 
 ResearchManager::ResearchManager(const TechRegistry* pTechRegistry,
-                                 TechCostCalculator* pTechCostCalculator)
+                                 const TechCostCalculator* pTechCostCalculator,
+                                 const IEffectsProvider* pEffectsProvider)
     : m_pTechRegistry(pTechRegistry)
     , m_pTechCostCalculator(pTechCostCalculator)
+    , m_pEffectsProvider(pEffectsProvider)
     , m_discoveredTechs()
     , m_pCurrentResearchTarget(nullptr)
     , m_accumulatedPoints(0)
@@ -117,11 +119,6 @@ void ResearchManager::RecalculatePointsNeeded()
     // All other fields are placeholder defaults (diff=1, turns=0, bIsAI=false, etc.)
 
     m_pointsNeededForCurrentTech = m_pTechCostCalculator->CalculateCost(*m_pCurrentResearchTarget, inputs);
-}
-
-void ResearchManager::SetEffectsProvider(const IEffectsProvider* pEffectsProvider)
-{
-    m_pEffectsProvider = pEffectsProvider;
 }
 
 bool ResearchManager::CanDiscoverTech() const

@@ -62,7 +62,6 @@ class Input
 public:
     virtual ~Input() = default;
 
-    virtual bool Initialize() = 0;
     virtual void CaptureKeyAsync(std::function<void(KeyEvent_t)> callback) = 0;
     virtual std::optional<Key_t>CaptureKey() = 0;
 

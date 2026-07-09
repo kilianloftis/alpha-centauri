@@ -10,10 +10,9 @@ namespace ac
 class NullInput : public Input
 {
 public:
-    bool Initialize() override
+    NullInput()
     {
         std::cout << "[Input] Console input backend selected.\n";
-        return true;
     }
 
     std::optional<Key_t> CaptureKey() override

@@ -18,7 +18,7 @@ bool SecretProjectAvailabilityCalculator::IsCompleted(const std::string& rBuildi
     {
         for (const BaseManager& rBase : rFaction.Bases())
         {
-            for (const BuildingConfig_t* pBuilding : rBase.GetBuildings())
+            for (const BuildingConfig_t* pBuilding : rBase.GetBuildingManager().GetBuildings())
             {
                 if (pBuilding->id == rBuildingId)
                 {

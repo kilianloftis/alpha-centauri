@@ -12,9 +12,19 @@
 namespace ac
 {
 
-GameState::GameState()
-    : m_missionYear(2100)
+static constexpr int k_startingMissionYear = 2100;
+
+GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
+                     const ImprovementRegistry& rImprovements,
+                     const UnitComponentRegistry* pUnitComponents)
+    : m_missionYear(k_startingMissionYear)
+    , m_worldMap(std::move(pWorldMap))
 {
+    if (!m_worldMap)
+    {
+        throw std::invalid_argument("GameState: pWorldMap is null");
+    }
+    m_pTileEffects = std::make_unique<TileEffectsContext>(*m_worldMap, rImprovements, pUnitComponents);
 }
 
 GameState::~GameState() = default;
@@ -75,46 +85,23 @@ Faction* GameState::GetPlayerFaction()
     return m_factions.empty() ? nullptr : m_factions[0].get();
 }
 
-WorldMap* GameState::GetWorldMap()
+WorldMap& GameState::GetWorldMap()
 {
-    return m_worldMap.get();
+    return *m_worldMap;
 }
 
-const WorldMap* GameState::GetWorldMap() const
+const WorldMap& GameState::GetWorldMap() const
 {
-    return m_worldMap.get();
-}
-
-void GameState::SetWorldMap(std::unique_ptr<WorldMap> pWorldMap)
-{
-    m_worldMap = std::move(pWorldMap);
-}
-
-void GameState::InitTileEffects(const ImprovementRegistry& rImprovements,
-                                const UnitComponentRegistry* pUnitComponents)
-{
-    if (!m_worldMap)
-    {
-        throw std::runtime_error("GameState::InitTileEffects: WorldMap must be set before initializing tile effects");
-    }
-    m_pTileEffects = std::make_unique<TileEffectsContext>(*m_worldMap, rImprovements, pUnitComponents);
+    return *m_worldMap;
 }
 
 TileEffectsContext& GameState::GetTileEffects()
 {
-    if (!m_pTileEffects)
-    {
-        throw std::runtime_error("GameState::GetTileEffects: tile effects not initialized — call InitTileEffects first");
-    }
     return *m_pTileEffects;
 }
 
 const TileEffectsContext& GameState::GetTileEffects() const
 {
-    if (!m_pTileEffects)
-    {
-        throw std::runtime_error("GameState::GetTileEffects: tile effects not initialized — call InitTileEffects first");
-    }
     return *m_pTileEffects;
 }
 

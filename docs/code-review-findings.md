@@ -86,7 +86,7 @@ There is no invalidation protocol (weak handle, generation ID, close-on-destroy 
 
 - `TurnStageBase::Execute(GameState* = nullptr, Faction* = nullptr)` (`include/game/TurnStages.h:73`): default arguments on a virtual (statically bound, re-declared inconsistently in every override), forcing every stage to null-check both parameters. Per-faction and global stages share one signature — stages that ignore `pFaction` still receive it, stages that require it can be called without it (ISP/LSP smell rooted in the interface, not the implementations).
 - `Execute_` is declared `private` in the base, redeclared `public` in most stages, `private` in `Population` — the NVI pattern applied inconsistently.
-- Stage bodies do faction-internal bookkeeping: `IncomeCollection` and `ResearchAccumulation` contain the same loop (iterate bases by index, `ConsumeX`, sum, `AddY`) duplicated with different nouns (`src/game/stages/IncomeCollection.cpp`, `ResearchAccumulation.cpp`) — aggregation logic that belongs behind `Faction`, living in the orchestration layer, twice.
+- Stage bodies do faction-internal bookkeeping: `IncomeCollection` and `ResearchAccumulation` contain the same loop (iterate bases by index, `ConsumeX`, sum, `AddY`) duplicated with different nouns (`src/game/stages/IncomeCollection.cpp`, `ResearchAccumulation.cpp`) — aggregation logic that belongs behind `Faction`, living in the orchestration layer, twice. *(Addressed 2026-07-09: the loops moved into `Faction::CollectIncome()`/`CollectResearch()`; the stages are now thin orchestration. The interface-level items in this finding — nullable-pointer `Execute` contract, NVI inconsistency, silent stage-ID skips, enum+switch factory — remain.)*
 - `TurnProcessor::ProcessTurn` silently skips stage IDs present in `m_stageOrder` but missing from the registry (`src/game/TurnProcessor.cpp:24-26`) — a typo in `turn_stages.json` silently removes a stage from the game. Its `numFactions` parameter is unused, and `m_missionYear` is stored as a member only for a log line.
 - `TurnStage` enum carries ~20 commented-out future values (`TurnStages.h:22-50`) and duplicates identity with config string IDs; `TurnStageFactory::CreateStageInstance` is a 13-case switch that must be extended for every stage (OCP): enum + switch + class + config all have to change together.
 
@@ -129,14 +129,14 @@ The canonical assignment is a `const Tile*` on `Pop`; the "is worked" flag is a 
 
 - `ResearchManager`: `m_bHasResearchTarget` duplicates `m_pCurrentResearchTarget != nullptr`; `SetResearchTarget` assigns the pointer **before** validating (`ResearchManager.cpp:28-37`), so a failed lookup throws with `m_pCurrentResearchTarget == nullptr` while `m_bHasResearchTarget` retains its old value — `HasResearchTarget() == true` with no target; `RecalculatePointsNeeded` then throws "Invalid state".
 - `Military`: `m_designs` vector plus `m_designMap` raw-pointer map — dual bookkeeping with no removal API yet; the first removal feature will have to remember both.
-- `Faction::m_energy` lives on Faction while the class comment says the economy split is owned by `EconomyManager` — faction-level economy state is split across two objects.
+- `Faction::m_energy` lives on Faction while the class comment says the economy split is owned by `EconomyManager` — faction-level economy state is split across two objects. *(Addressed 2026-07-09: the treasury moved into `EconomyManager`; `Faction` holds no economy state.)*
 - `Tile::IsWorked()` and `Tile::IsWorkerAssigned()` are two names for the same field.
 
 ### 2.4 [H] Const-correctness is systematically subverted
 
 - `Tile::SetWorked(bool) const` mutates a `mutable` member, openly documented as "declared const because it is updated through a const Tile* held by Pop" (`include/game/map/Tile.h:96-99`).
 - `TileEffectsContext::AddImprovementWithEffects` / `RemoveImprovementWithEffects` / `RecomputeMoisture` are `const` methods that mutate tiles and trigger area-wide terrain recomputation (`include/lib/effects/TileEffectsContext.h:60-73`).
-- `Faction`'s `GetEconomyManager() const`, `GetResearchManager() const`, `GetResearchSelector() const` return **non-const pointers** to internals (`Faction.cpp:99-102, 248-256`); `ViewFactory::CreateResearchView` extracts a mutable `ResearchManager*` from a `const Faction*`.
+- `Faction`'s `GetEconomyManager() const`, `GetResearchManager() const`, `GetResearchSelector() const` return **non-const pointers** to internals (`Faction.cpp:99-102, 248-256`); `ViewFactory::CreateResearchView` extracts a mutable `ResearchManager*` from a `const Faction*`. *(Addressed 2026-07-09: replaced by const-correct reference accessors `GetEconomy()`/`GetResearch()`/`GetSocialEngineering()`; `GetResearchSelector` deleted (no callers); `ResearchView`/`CurrentResearchPanel` now take `const ResearchManager*`. The `Tile`/`TileEffectsContext` rows of this finding are untouched.)*
 
 Individually each has a rationale; collectively they mean `const` no longer communicates immutability anywhere in the object graph — a `const GameState&` can rewrite terrain. That erases the main tool C++ gives you for reasoning about mutation, exactly the thing a growing simulation needs most.
 
@@ -186,9 +186,9 @@ Within `BaseManager` alone: null sub-manager → throw (`GetNutrientProduction`)
 
 ### 4.1 [H] `Faction` and `BaseManager` are delegation shells with god-facade interfaces
 
-> **Status (2026-07-08): partially fixed.** The population level of the stack and the
-> owning-container leaks are resolved; the Research/Economy/SocialEngineering facades on
-> `Faction` still expose managers and remain to be migrated to the same idiom.
+> **Status (2026-07-08 → 2026-07-09): fixed** (residual pieces tracked under 4.2/1.5/1.6).
+> The population level of the stack, the owning-container leaks, and the manager facades on
+> both `Faction` and `BaseManager` are resolved.
 >
 > Adopted rule: *a method lives on `Faction`/`BaseManager` only if it coordinates two or
 > more subsystems or enforces a cross-subsystem invariant; everything else lives on the
@@ -229,16 +229,71 @@ Within `BaseManager` alone: null sub-manager → throw (`GetNutrientProduction`)
 > - `SecretProjectAvailabilityCalculator` now takes `const GameState&` instead of borrowing
 >   the raw faction vector.
 >
-> Still open: `GetResearchManager`/`GetResearchSelector`/`GetEconomyManager` and the
-> `AddEnergy`/`AddResearchPoints`/social-policy pass-throughs on `Faction` (and the rest of
-> 2.4's non-const-from-const manager getters); the resources/production/buildings surface on
-> `BaseManager`; and moving the stage aggregation loops (1.9) behind `Faction`.
+> Done 2026-07-09 (manager facades):
+> - **`Faction` subsystem accessors are const-correct references**: `GetEconomy()`,
+>   `GetResearch()`, `GetSocialEngineering()` (const overloads return `const&`), replacing the
+>   non-const-pointer-from-const-method getters — the `Faction` rows of 2.4 are fixed, and
+>   `ViewFactory::CreateResearchView` no longer extracts a mutable `ResearchManager*` from a
+>   const `Faction` (`ResearchView`/`CurrentResearchPanel` now take `const ResearchManager*`).
+> - **Pass-throughs deleted**: `AddEnergy`/`GetEnergy`, `AddResearchPoints`/`GetResearchPoints`,
+>   `SetSocialPolicy`/`GetSocialPolicy`/`CollectSocialEffects`; dead accessors
+>   `GetResearchSelector()` and `GetAvailableSocialPolicies()` (zero callers) removed outright.
+>   `m_energy` moved into `EconomyManager` (the treasury now lives with the allocation split —
+>   closes 2.3's split-economy-state bullet).
+> - **`BaseManager` subsystem accessors**: `GetResources()` and `GetBuildingManager()`
+>   (references), `GetProduction()` (nullable pointer — see below). Deleted pass-throughs:
+>   `ConsumeEcon/Labs/Psych`, `AddBuilding`/`DestroyBuilding`/`GetBuildings`,
+>   `SetProduction`/`GetCurrentProduction`/`GetProductionMineralCost`/`GetMineralStockpile`,
+>   `GetWorkableTilePositions`. Kept (genuine coordination): `ApplyProduction`, the
+>   effects-injecting production getters, `GetConstructable`, `CollectBuildingEffects`,
+>   `ConvertPop`, `UserAssignBestAvailableWorker`, `GetNutrientsRequired`, `ApplyGrowth`,
+>   `ProduceResources`, `GetEffectiveSocialRating`, `GetWorkedTileYield`.
+> - **1.9's duplicated stage loops moved behind `Faction`**: `CollectIncome()` /
+>   `CollectResearch()` consume base stockpiles and credit the treasury / research points;
+>   `IncomeCollection` and `ResearchAccumulation` are now thin orchestration. (Per-base
+>   income/labs log lines were dropped in the move; stages log faction totals.)
+>
+> Still open / deliberate residue: ~~`GetProduction()` stays a nullable pointer~~ *(resolved
+> 2026-07-09 with 4.2: production is always constructed and `GetProduction()` returns a
+> reference)*. Signal forwarding on `BaseManager` (1.6) and player-index-0 (1.5) remain under
+> their own findings.
 
 `Faction` owns 12 subsystems and exposes a mix of three API styles simultaneously: pass-through methods (`AddEnergy`, `AddResearchPoints`), exposed managers (`GetResearchManager()` → callers do manager surgery), and exposed containers (`GetBases()` returning the `unique_ptr` vector). `BaseManager` repeats the shape one level down (40+ methods routing to 5 sub-managers), and `PopulationManager` repeats it again over `PopContainer` — the same population API surface exists at **three levels** (`GetWorkerCount` et al. on PopContainer, PopulationManager, and via BaseManager). Every new population feature costs three signatures plus call-site choices about which level to use; stages already use both (`GetBase(i)->ConsumeEcon()` vs `GetBases()` range loops).
 
 SRP is satisfied by the leaf classes but the facades have become the change amplifiers. Meanwhile encapsulation is broken *around* them: `GameState::GetFactions()` and `PopContainer::GetPops()` return mutable references to owning containers, so any caller can steal or destroy objects without the facades noticing.
 
 ### 4.2 [H] Constructor-validity guideline is widely violated by two-phase initialization
+
+> **Status (2026-07-09): fixed** for every instance listed below.
+>
+> - `Faction` now requires its definition as `const FactionConfig_t&` (no defaulted-null);
+>   identity/AI/flavor are always constructed, `GetDefinition()` returns a reference, and the
+>   `GetDefinitionId` empty-string sentinel is gone. `CreateBase` throws on a null tile.
+> - `BaseManager` takes `factionId`/`baseId`/`name` in its constructor;
+>   `SetFactionId`/`SetBaseId`/`SetName` are deleted. `ResourceManager` moved from a
+>   constructor-body assignment into the init list (member order = dependency order), and
+>   `ProductionManager` is always constructed — the constructor throws if `GameDataContext`
+>   lacks a production cost calculator, and `GetProduction()` is now a **reference** (closing
+>   4.1's deliberate residue). The dead defensive null checks on always-present sub-managers
+>   (`m_pResources`/`m_pPopulation`/`m_pBuildings`/`m_pProduction`) are purged. The one
+>   *deliberately* nullable dependency left is `pEffectsProvider` (standalone test bases),
+>   now explicit at every call site instead of defaulted.
+> - `GameState` is constructed with its world map + tile-effects registries;
+>   `SetWorldMap`/`InitTileEffects` and their ordering throws are deleted, `GetWorldMap()`
+>   returns a reference (null checks died in `ViewFactory`/`WorldView`), and `GetTileEffects()`
+>   no longer needs its not-yet-initialized guard. `Engine` builds `GameState` after world gen.
+> - `ResearchManager` receives its `IEffectsProvider` at construction; `SetEffectsProvider`
+>   deleted.
+> - `SFMLGraphics` throws from its constructor if the window failed; the vestigial
+>   `Graphics::Initialize()` (and the parallel never-called `Input::Initialize()`) are removed
+>   from the interfaces; `Engine::CheckInitialized_` is deleted (the constructor now validates
+>   the backend factories before first use). Same treatment for `UIManager`: it takes
+>   `Graphics&`/`Input&` in its constructor and its `Initialize()` two-phase setter is gone.
+>
+> Test fixtures now construct a real (empty-formula) `ProductionCostCalculator` over a
+> `LuaRuntime`, so fixture bases run the same production-capable object graph as the game
+> (partially addressing finding 8's degraded-fixture note; research/composition calculators
+> are still absent there).
 
 The project's own rule: "Constructors should accept all arguments required to make the object valid." In practice:
 
@@ -248,7 +303,7 @@ The project's own rule: "Constructors should accept all arguments required to ma
 - `ResearchManager` gets its `IEffectsProvider` via setter after construction (`Faction.cpp:52-55`).
 - `SFMLGraphics` creates the window in its constructor while a vestigial `Initialize()` re-checks it afterwards; `Engine::CheckInitialized_` validates members at the **end** of `Initialize_`, after they have already been dereferenced.
 
-Each instance forces defensive null/state checks downstream — which is exactly where the codebase's inconsistent failure handling (3.8) comes from.
+Each instance forces defensive null/state checks downstream — which is exactly where the codebase's inconsistent failure handling (3.8) comes from. *(With the 2026-07-09 fix, several of 3.8's listed symptoms died with their causes: `GetDefinitionId`'s static empty string, `Faction`'s null-research/-flavor branches, and `BaseManager`'s throw-vs-0-vs-no-op split across always-present sub-managers.)*
 
 ### 4.3 [M] Interface hygiene
 
@@ -287,7 +342,7 @@ Key/mouse events are stored in file-scope `static std::deque` globals with free 
 
 Not "unimplemented features" — these are pieces that exist and are silently disconnected, which misleads readers about what the system does:
 
-- **Tech discovery never happens in-game**: `ResearchAccumulation` adds points, but no stage or UI path ever calls `Faction::DiscoverCurrentResearch`/`ResearchManager::DiscoverTech` — points accumulate forever. The stage exists, the manager exists, the selector auto-picks targets; the loop is simply never closed.
+- **Tech discovery never happens in-game**: `ResearchAccumulation` adds points, but no stage or UI path ever calls `Faction::DiscoverCurrentResearch`/`ResearchManager::DiscoverTech` — points accumulate forever. The stage exists, the manager exists, the selector auto-picks targets; the loop is simply never closed. *(Stale as of 2026-07-09: `ResearchAccumulation` now runs a discover loop after collection — this predates the facade refactor and the finding should be re-verified/closed on its own.)*
 - `PopulationManager::CheckRiotEndOfTurn` / `CheckGoldenAgeEndOfTurn` are called by nothing; `RiotCalculator`/`GoldenAgeCalculator` and their six signals are fully implemented dead code.
 - `IGameView::Update()` — no caller. `ResearchManager::ResetAccumulatedPoints_` — no caller. `SetAccumulatedPoints`/`SetMaxSize` — no callers (public mutation APIs with no consumers).
 - `ResourceManager` takes and stores `const BuildingManager* m_pBuildings` and never uses it.
@@ -325,7 +380,7 @@ The project defines unusually specific conventions (`.devin/rules/coding-guideli
 
 - Coverage is effectively one subsystem deep: `lib/effects` is well tested (11 files, good fixtures), plus faction config parsing/flavor and the new `ResearchSelector`. **Zero tests** exist for: the turn pipeline (`TurnProcessor`/stages), `ResourceManager` (where the rounding and seed rules live), `EconomyManager` (3.1 would be caught by a 3-line test), `WorkerAssignmentManager` (the most intricate mutable-state logic in the project), `PopulationManager`/`PopContainer` composition churn, `ProductionManager`, `BuildingManager`, `Registry`, `EventBus` (reentrancy), `WorldMap`/`Tile`, Lua calculators.
 - The single test binary is named `effects-tests` while housing non-effects suites — the name will get more wrong as coverage grows.
-- `tests/GameFixtures.h` constructs bases "with the minimum viable dependency set: no research/production/composition calculators" — tests run a permanently degraded object graph that the game never runs (a direct consequence of finding 4.2's optional dependencies), so integration-level behavior differences (e.g., null-production bases) are baked into the fixtures.
+- `tests/GameFixtures.h` constructs bases "with the minimum viable dependency set: no research/production/composition calculators" — tests run a permanently degraded object graph that the game never runs (a direct consequence of finding 4.2's optional dependencies), so integration-level behavior differences (e.g., null-production bases) are baked into the fixtures. *(Partially addressed 2026-07-09: fixture bases now carry a real, empty-formula `ProductionCostCalculator` — production is no longer optional anywhere. Research and composition calculators are still absent from fixtures.)*
 
 ---
 

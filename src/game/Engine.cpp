@@ -48,13 +48,21 @@ namespace ac
 {
 
 Engine::Engine()
-    : m_graphics(CreateGraphics())
-    , m_input(CreateInput())
-    , m_gameState(std::make_unique<GameState>())
+    : m_pGraphics(CreateGraphics())
+    , m_pInput(CreateInput())
     , m_eventBus(std::make_unique<EventBus>())
     , m_gameDataContext(std::make_unique<GameDataContext>())
-    , m_uiManager(std::make_unique<UIManager>())
-    {}
+{
+    if (!m_pGraphics)
+    {
+        throw std::runtime_error("Failed to create graphics backend");
+    }
+    if (!m_pInput)
+    {
+        throw std::runtime_error("Failed to create input backend");
+    }
+    m_uiManager = std::make_unique<UIManager>(*m_pGraphics, *m_pInput);
+}
 
 Engine::~Engine() = default;
 
@@ -90,12 +98,6 @@ void Engine::ProcessTurn_()
 void Engine::Initialize_()
 {
     std::cout << "Initializing game engine...\n";
-
-    // Initialize graphics backend
-    if (!m_graphics->Initialize())
-    {
-        throw std::runtime_error("Failed to initialize graphics backend");
-    }
 
     // Create EventBridge
     m_eventBridge = std::make_unique<EventBridge>(*m_eventBus);
@@ -177,25 +179,24 @@ void Engine::Initialize_()
         std::make_unique<ProductionCostCalculator>(
             *m_gameDataContext->productionCostConfig, *m_gameDataContext->luaRuntime);
 
-    // Generate world map
+    // Generate world map and build the save-game state around it.
     WorldGenerator worldGen;
     WorldGenConfig worldConfig;
     worldConfig.width = 30;
     worldConfig.height = 20;
     worldConfig.minElevation = -1000;
     worldConfig.maxElevation = 4000;
-    m_gameState->SetWorldMap(worldGen.Generate(worldConfig));
-    std::cout << "Generated world map: " << m_gameState->GetWorldMap()->GetWidth() << "x" << m_gameState->GetWorldMap()->GetHeight() << "\n";
-
-    m_gameState->InitTileEffects(*m_gameDataContext->improvementRegistry,
-                                 m_gameDataContext->unitComponentRegistry.get());
+    m_gameState = std::make_unique<GameState>(worldGen.Generate(worldConfig),
+                                              *m_gameDataContext->improvementRegistry,
+                                              m_gameDataContext->unitComponentRegistry.get());
+    std::cout << "Generated world map: " << m_gameState->GetWorldMap().GetWidth() << "x" << m_gameState->GetWorldMap().GetHeight() << "\n";
 
     m_gameDataContext->secretProjectAvailabilityCalculator =
         std::make_unique<SecretProjectAvailabilityCalculator>(*m_gameState);
 
     // Create factions from config with a starting base each.
-    const int centerX = m_gameState->GetWorldMap()->GetWidth() / 2;
-    const int centerY = m_gameState->GetWorldMap()->GetHeight() / 2;
+    const int centerX = m_gameState->GetWorldMap().GetWidth() / 2;
+    const int centerY = m_gameState->GetWorldMap().GetHeight() / 2;
     const std::vector<std::pair<int, int>> startPositions = {
         {centerX, centerY},
         {centerX + 3, centerY + 3},
@@ -207,18 +208,18 @@ void Engine::Initialize_()
     for (const FactionConfig_t& rFactionConfig : m_gameDataContext->factionRegistry->GetAll())
     {
         auto pFaction = std::make_unique<Faction>(
+            rFactionConfig,
             m_gameDataContext->buildingRegistry.get(),
             m_gameDataContext->techRegistry.get(),
             m_gameDataContext->socialPolicyRegistry.get(),
             m_gameDataContext->socialRatingRegistry.get(),
             m_gameDataContext->techCostCalculator.get(),
-            m_gameDataContext->popTypeAvailabilityCalculator.get(),
-            &rFactionConfig);
+            m_gameDataContext->popTypeAvailabilityCalculator.get());
 
         const auto& [startX, startY] = startPositions[positionIndex % startPositions.size()];
         BaseManager* pBase = pFaction->CreateBase(
             factionId, baseId, pFaction->SuggestBaseName(),
-            m_gameState->GetWorldMap()->GetTile(startX, startY),
+            m_gameState->GetWorldMap().GetTile(startX, startY),
             *m_gameDataContext,
             m_gameState->GetTileEffects());
 
@@ -248,9 +249,8 @@ void Engine::Initialize_()
     m_viewFactory = std::make_unique<ViewFactory>(
         *m_gameState,
         *m_gameDataContext,
-        *m_graphics);
+        *m_pGraphics);
 
-    m_uiManager->Initialize(*m_graphics, *m_input);
     const WindowLayout_t fullscreen = m_viewFactory->GetFullscreenLayout();
 
     auto pWorldView = m_viewFactory->CreateWorldView(
@@ -269,21 +269,6 @@ void Engine::Initialize_()
         return m_viewFactory->CreateUnitDesignerView(fullscreen);
     });
     m_uiManager->SetWorldView(std::move(pWorldView));
-    CheckInitialized_();
-}
-
-void Engine::CheckInitialized_() const
-{
-    if (!m_graphics)
-    {
-        std::cout << "No graphics backend available\n";
-        throw std::runtime_error("Failed to create graphics backend");
-    }
-    if (!m_input)
-    {
-        std::cout << "No input backend available\n";
-        throw std::runtime_error("Failed to create input backend");
-    }
 }
 
 void Engine::PrintWelcome_() const

@@ -2,7 +2,6 @@
 #include "game/GameState.h"
 #include "game/Faction.h"
 #include "game/faction/ResearchManager.h"
-#include "game/faction/base/BaseManager.h"
 #include <iostream>
 
 namespace ac
@@ -25,24 +24,15 @@ void ResearchAccumulation::Execute_(GameState* pGameState, Faction* pFaction)
 
     std::cout << "Executing ResearchAccumulation stage for faction\n";
 
-    int totalLabs = 0;
+    const int totalLabs = pFaction->CollectResearch();
 
-    for (BaseManager& rBase : pFaction->Bases())
+    ResearchManager& rResearch = pFaction->GetResearch();
+    std::cout << "  Faction labs collected: " << totalLabs
+              << ", total research points: " << rResearch.GetAccumulatedPoints() << "\n";
+
+    while (rResearch.CanDiscoverTech())
     {
-        int baseLabs = rBase.ConsumeLabs();
-        totalLabs += baseLabs;
-
-        std::cout << "  Base '" << rBase.GetName() << "' labs: " << baseLabs << "\n";
-    }
-
-    pFaction->AddResearchPoints(totalLabs);
-
-    std::cout << "  Faction total research points: " << pFaction->GetResearchPoints() << "\n";
-
-    ResearchManager* pResearch = pFaction->GetResearchManager();
-    while (pResearch && pResearch->CanDiscoverTech())
-    {
-        const TechId techId = pResearch->GetResearchTarget();
+        const TechId techId = rResearch.GetResearchTarget();
         if (!pFaction->DiscoverCurrentResearch())
         {
             break;

@@ -9,6 +9,16 @@ EconomyManager::EconomyManager() = default;
 
 EconomyManager::~EconomyManager() = default;
 
+void EconomyManager::AddEnergy(int amount)
+{
+    m_energy += amount;
+}
+
+int EconomyManager::GetEnergy() const
+{
+    return m_energy;
+}
+
 void EconomyManager::SetEnergyAllocation(const EnergyAllocation_t& allocation)
 {
     m_allocation = allocation;

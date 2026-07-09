@@ -10,11 +10,10 @@
 namespace ac
 {
 
-bool UIManager::Initialize(Graphics& rGraphics, Input& rInput)
+UIManager::UIManager(Graphics& rGraphics, Input& rInput)
+    : m_rGraphics(rGraphics)
+    , m_rInput(rInput)
 {
-    m_pGraphics = &rGraphics;
-    m_pInput = &rInput;
-    return true;
 }
 
 void UIManager::SetWorldView(std::unique_ptr<WorldView> pWorldView)
@@ -42,7 +41,7 @@ void UIManager::ProcessInput()
 
 void UIManager::ProcessKeys_()
 {
-    m_pInput->CaptureKeyAsync([this](KeyEvent_t event)
+    m_rInput.CaptureKeyAsync([this](KeyEvent_t event)
     {
         IGameView* pActive = GetActiveView_();
         if (pActive && pActive->HandleKey(event))
@@ -74,7 +73,7 @@ void UIManager::HandleGlobalShortcut_(Key_t key)
 
 void UIManager::ProcessMouse_()
 {
-    while (auto event = m_pInput->CaptureMouse())
+    while (auto event = m_rInput.CaptureMouse())
     {
         IGameView* pActive = GetActiveView_();
         if (pActive)
@@ -86,15 +85,11 @@ void UIManager::ProcessMouse_()
 
 void UIManager::Render()
 {
-    if (!m_pGraphics)
-    {
-        return;
-    }
-    m_pGraphics->Clear();
+    m_rGraphics.Clear();
     if (m_pWorldView)
     {
         m_pWorldView->UpdateCameraInput(m_overlayStack.empty());
-        m_pWorldView->Render(*m_pGraphics);
+        m_pWorldView->Render(m_rGraphics);
     }
     for (int i = static_cast<int>(m_overlayStack.size()) - 1; i >= 0; --i)
     {
@@ -106,14 +101,14 @@ void UIManager::Render()
     }
     for (const auto& pView : m_overlayStack)
     {
-        pView->Render(*m_pGraphics);
+        pView->Render(m_rGraphics);
     }
-    m_pGraphics->Display();
+    m_rGraphics.Display();
 }
 
 void UIManager::PushView(std::unique_ptr<IGameView> pView)
 {
-    pView->OnPushed(*m_pGraphics);
+    pView->OnPushed(m_rGraphics);
     m_overlayStack.push_back(std::move(pView));
 }
 

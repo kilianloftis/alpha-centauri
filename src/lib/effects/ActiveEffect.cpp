@@ -6,6 +6,7 @@
 #include "game/buildings/BuildingRegistry.h"
 #include "game/faction/SocialEngineeringManager.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
@@ -448,7 +449,7 @@ void DispatchInstantaneousEffects(const BuildingConfig_t& rBuilding, BaseManager
 
         if (const GrantBuildingEffect_t* pGrant = std::get_if<GrantBuildingEffect_t>(&effect.effect))
         {
-            rBase.AddBuilding(pGrant->buildingId);
+            rBase.GetBuildingManager().AddBuilding(pGrant->buildingId);
         }
         else if (std::get_if<GrantTechEffect_t>(&effect.effect))
         {

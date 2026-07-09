@@ -12,13 +12,17 @@ struct EnergyAllocation_t
     int psychPercent = 10;
 };
 
-// Manages faction-wide economic configuration.
-// The energy allocation split is owned here and used by each base's ResourceManager.
+// Manages faction-wide economic state: the energy treasury and the allocation split
+// used by each base's ResourceManager.
 class EconomyManager
 {
 public:
     EconomyManager();
     ~EconomyManager();
+
+    // Faction energy treasury.
+    void AddEnergy(int amount);
+    int GetEnergy() const;
 
     // Set the faction-wide energy allocation percentages.
     // Caller must ensure the three percentages sum to 100.
@@ -31,6 +35,7 @@ public:
     int CalculateEnergyForPsych(int totalEnergy) const;
 
 private:
+    int m_energy = 0;
     EnergyAllocation_t m_allocation;
 };
 

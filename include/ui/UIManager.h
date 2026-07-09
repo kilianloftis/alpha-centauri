@@ -16,7 +16,8 @@ class UIManager
 public:
     using ViewFactory_t = std::function<std::unique_ptr<IGameView>()>;
 
-    bool Initialize(Graphics& rGraphics, Input& rInput);
+    UIManager(Graphics& rGraphics, Input& rInput);
+
     void ProcessInput();
     void Render();
 
@@ -35,8 +36,8 @@ private:
     IGameView* GetActiveView_();
     void HandleGlobalShortcut_(Key_t key);
 
-    Graphics* m_pGraphics = nullptr;
-    Input* m_pInput = nullptr;
+    Graphics& m_rGraphics;
+    Input& m_rInput;
     std::unique_ptr<WorldView> m_pWorldView;
     std::vector<std::unique_ptr<IGameView>> m_overlayStack;
     std::unordered_map<Key_t, ViewFactory_t> m_shortcutMap;

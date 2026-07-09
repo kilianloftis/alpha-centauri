@@ -12,7 +12,11 @@ class IEffectsProvider;
 class ResearchManager
 {
 public:
-    ResearchManager(const TechRegistry* pTechRegistry, TechCostCalculator* pTechCostCalculator);
+    // pEffectsProvider supplies the faction effect pool for TechCost modifiers; may be null
+    // when no effects should influence research cost.
+    ResearchManager(const TechRegistry* pTechRegistry,
+                    const TechCostCalculator* pTechCostCalculator,
+                    const IEffectsProvider* pEffectsProvider);
     ~ResearchManager();
 
     void SetResearchTarget(TechId techId);
@@ -35,8 +39,6 @@ public:
     // Returns -1 when there is no target or researchPerTurn <= 0.
     int GetTurnsUntilBreakthrough(int researchPerTurn) const;
 
-    void SetEffectsProvider(const IEffectsProvider* pEffectsProvider);
-
     bool CanDiscoverTech() const;
     bool DiscoverTech();
 
@@ -48,8 +50,8 @@ public:
 
 private:
     const TechRegistry* m_pTechRegistry;
-    TechCostCalculator* m_pTechCostCalculator;
-    const IEffectsProvider* m_pEffectsProvider = nullptr;
+    const TechCostCalculator* m_pTechCostCalculator;
+    const IEffectsProvider* m_pEffectsProvider;
 
     std::vector<TechId> m_discoveredTechs;
     const TechConfig_t* m_pCurrentResearchTarget;

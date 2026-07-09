@@ -4,6 +4,7 @@
 #include "game/GameDataContext.h"
 #include "game/faction/base/production/ProductionCostCalculator.h"
 #include "game/map/WorldMap.h"
+#include "game/faction/base/resources/ResourceManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/FactionIdentity.h"
 #include <iostream>
@@ -28,77 +29,69 @@
 namespace ac
 {
 
-Faction::Faction(const BuildingRegistry* pBuildingRegistry, const TechRegistry* pTechRegistry,
+Faction::Faction(const FactionConfig_t& rDefinition,
+                 const BuildingRegistry* pBuildingRegistry, const TechRegistry* pTechRegistry,
                  const SocialPolicyRegistry* pSocialPolicyRegistry,
                  const SocialRatingRegistry* pSocialRatingRegistry,
                  TechCostCalculator* pTechCostCalculator,
-                 const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator,
-                 const FactionConfig_t* pDefinition)
-    : m_pDefinition(pDefinition)
+                 const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator)
+    : m_rDefinition(rDefinition)
     , m_pBuildingRegistry(pBuildingRegistry)
     , m_pPopTypeAvailabilityCalculator(pPopTypeAvailabilityCalculator)
-    , m_pIdentity(nullptr)
-    , m_pAIProfile(nullptr)
-    , m_pFlavor(nullptr)
+    , m_pIdentity(std::make_unique<FactionIdentity>(rDefinition.identity, rDefinition.leader))
+    , m_pAIProfile(std::make_unique<AIProfile>(rDefinition.ai))
+    , m_pFlavor(std::make_unique<FactionFlavor>(rDefinition.flavor, *m_pIdentity))
     , m_pEconomy(std::make_unique<EconomyManager>())
     , m_pMilitary(std::make_unique<Military>())
-    , m_pResearch(std::make_unique<ResearchManager>(pTechRegistry, pTechCostCalculator))
+    , m_pResearch(std::make_unique<ResearchManager>(pTechRegistry, pTechCostCalculator, this))
     , m_pResearchSelector(std::make_unique<ResearchSelector>(m_pResearch.get()))
     , m_pDiplomacy(nullptr)
     , m_pSocialEngineering(std::make_unique<SocialEngineeringManager>(pSocialPolicyRegistry,
                                                                         pSocialRatingRegistry))
     , m_pUnits(std::make_unique<UnitManager>(*this))
 {
-    if (m_pResearch)
-    {
-        m_pResearch->SetEffectsProvider(this);
-    }
-    if (m_pDefinition)
-    {
-        m_pIdentity = std::make_unique<FactionIdentity>(m_pDefinition->identity, m_pDefinition->leader);
-
-        m_pAIProfile = std::make_unique<AIProfile>(m_pDefinition->ai);
-        m_pFlavor = std::make_unique<FactionFlavor>(m_pDefinition->flavor, *m_pIdentity);
-    }
-
-    if (m_pResearchSelector)
-    {
-        m_pResearchSelector->EnsureResearchTarget();
-    }
+    m_pResearchSelector->EnsureResearchTarget();
 }
 
 Faction::~Faction()
 {
 }
 
-const std::string& Faction::GetDefinitionId() const
-{
-    static const std::string kEmpty;
-    return m_pDefinition ? m_pDefinition->id : kEmpty;
-}
-
 std::string Faction::SuggestBaseName()
 {
-    if (!m_pFlavor)
-    {
-        throw std::runtime_error("Faction has no flavor configuration");
-    }
     return m_pFlavor->PickBaseName();
 }
 
-void Faction::AddEnergy(int amount)
+EconomyManager& Faction::GetEconomy()
 {
-    m_energy += amount;
+    return *m_pEconomy;
 }
 
-int Faction::GetEnergy() const
+const EconomyManager& Faction::GetEconomy() const
 {
-    return m_energy;
+    return *m_pEconomy;
 }
 
-EconomyManager* Faction::GetEconomyManager() const
+int Faction::CollectIncome()
 {
-    return m_pEconomy.get();
+    int total = 0;
+    for (const auto& pBase : m_bases)
+    {
+        total += pBase->GetResources().ConsumeEcon();
+    }
+    m_pEconomy->AddEnergy(total);
+    return total;
+}
+
+int Faction::CollectResearch()
+{
+    int total = 0;
+    for (const auto& pBase : m_bases)
+    {
+        total += pBase->GetResources().ConsumeLabs();
+    }
+    m_pResearch->AddResearchPoints(total);
+    return total;
 }
 
 int Faction::GetNetIncomePerTurn() const
@@ -129,21 +122,11 @@ int Faction::GetResearchPerTurn_() const
 
 int Faction::GetBreakthroughRate() const
 {
-    if (!m_pResearch)
-    {
-        return -1;
-    }
-
     return m_pResearch->BreakthroughRate(GetResearchPerTurn_());
 }
 
 int Faction::GetTurnsUntilBreakthrough() const
 {
-    if (!m_pResearch)
-    {
-        return -1;
-    }
-
     return m_pResearch->GetTurnsUntilBreakthrough(GetResearchPerTurn_());
 }
 
@@ -160,11 +143,13 @@ BaseManager* Faction::CreateBase(FactionId factionId, int baseId, const std::str
                                   const GameDataContext& rDataContext,
                                   TileEffectsContext& rTileEffects)
 {
+    if (!pTile)
+    {
+        throw std::invalid_argument("Faction::CreateBase: pTile is null");
+    }
     auto pBase = std::make_unique<BaseManager>(
-        *pTile, rDataContext, rTileEffects, m_pResearch.get(), m_pEconomy.get(), this);
-    pBase->SetFactionId(factionId);
-    pBase->SetBaseId(baseId);
-    pBase->SetName(name);
+        factionId, baseId, name, *pTile, rDataContext, rTileEffects,
+        m_pResearch.get(), m_pEconomy.get(), this);
 
     pBase->GetWorkerAssignments().UnassignAll();
     pBase->GetWorkerAssignments().AutoAssignWorkers();
@@ -205,19 +190,6 @@ void Faction::ApplyBaseGrowth(const std::vector<ActiveEffect_t>& rExternalEffect
     }
 }
 
-void Faction::AddResearchPoints(int points)
-{
-    if (m_pResearch)
-    {
-        m_pResearch->AddResearchPoints(points);
-    }
-}
-
-int Faction::GetResearchPoints() const
-{
-    return m_pResearch ? m_pResearch->GetAccumulatedPoints() : 0;
-}
-
 Military& Faction::GetMilitary()
 {
     return *m_pMilitary;
@@ -228,28 +200,24 @@ const Military& Faction::GetMilitary() const
     return *m_pMilitary;
 }
 
-ResearchManager* Faction::GetResearchManager() const
+ResearchManager& Faction::GetResearch()
 {
-    return m_pResearch.get();
+    return *m_pResearch;
 }
 
-ResearchSelector* Faction::GetResearchSelector() const
+const ResearchManager& Faction::GetResearch() const
 {
-    return m_pResearchSelector.get();
+    return *m_pResearch;
 }
 
 bool Faction::DiscoverCurrentResearch()
 {
-    if (!m_pResearch || !m_pResearch->DiscoverTech())
+    if (!m_pResearch->DiscoverTech())
     {
         return false;
     }
 
-    if (m_pResearchSelector)
-    {
-        m_pResearchSelector->EnsureResearchTarget();
-    }
-
+    m_pResearchSelector->EnsureResearchTarget();
     return true;
 }
 
@@ -273,22 +241,14 @@ std::vector<const BuildingConfig_t*> Faction::GetDiscoveredBuildings() const
     return discovered;
 }
 
-bool Faction::SetSocialPolicy(SocialCategory category, const std::string& policyId)
+SocialEngineeringManager& Faction::GetSocialEngineering()
 {
-    if (!m_pSocialEngineering)
-    {
-        throw std::runtime_error("SocialEngineeringManager not initialized");
-    }
-    return m_pSocialEngineering->SetActivePolicy(category, policyId);
+    return *m_pSocialEngineering;
 }
 
-const SocialPolicyConfig* Faction::GetSocialPolicy(SocialCategory category) const
+const SocialEngineeringManager& Faction::GetSocialEngineering() const
 {
-    if (!m_pSocialEngineering)
-    {
-        throw std::runtime_error("SocialEngineeringManager not initialized");
-    }
-    return m_pSocialEngineering->GetActivePolicy(category);
+    return *m_pSocialEngineering;
 }
 
 std::vector<ActiveEffect_t> Faction::CollectBuildingEffects() const
@@ -315,18 +275,10 @@ std::vector<ActiveEffect_t> Faction::CollectBuildingEffects() const
     return ExpandGrantBuildingEffects(std::move(result), *m_pBuildingRegistry, bases);
 }
 
-std::vector<ActiveEffect_t> Faction::CollectSocialEffects() const
-{
-    return m_pSocialEngineering ? m_pSocialEngineering->CollectEffects() : std::vector<ActiveEffect_t>{};
-}
-
 std::vector<ActiveEffect_t> Faction::CollectDefinitionEffects() const
 {
     std::vector<ActiveEffect_t> result;
-    if (m_pDefinition)
-    {
-        AppendActiveEffects(m_pDefinition->effects, nullptr, m_pDefinition->id, result);
-    }
+    AppendActiveEffects(m_rDefinition.effects, nullptr, m_rDefinition.id, result);
     return result;
 }
 
@@ -395,17 +347,6 @@ std::vector<const PopTypeConfig_t*> Faction::GetAvailablePopTypes() const
     return m_pPopTypeAvailabilityCalculator->GetAvailable(m_pResearch->GetDiscoveredTechs());
 }
 
-std::vector<const SocialPolicyConfig*> Faction::GetAvailableSocialPolicies(
-    SocialCategory category,
-    const std::vector<std::string>& rDiscoveredTechIds) const
-{
-    if (!m_pSocialEngineering)
-    {
-        return std::vector<const SocialPolicyConfig*>{};
-    }
-    return m_pSocialEngineering->GetAvailablePolicies(category, rDiscoveredTechIds);
-}
-
 FactionEffects_t Faction::GetActiveEffects() const
 {
     FactionEffects_t factionEffects;
@@ -415,7 +356,7 @@ FactionEffects_t Faction::GetActiveEffects() const
     const std::vector<ActiveEffect_t> buildingEffects = CollectBuildingEffects();
     factionEffects.effects.insert(factionEffects.effects.end(), buildingEffects.begin(), buildingEffects.end());
 
-    const std::vector<ActiveEffect_t> seEffects = CollectSocialEffects();
+    const std::vector<ActiveEffect_t> seEffects = m_pSocialEngineering->CollectEffects();
     factionEffects.effects.insert(factionEffects.effects.end(), seEffects.begin(), seEffects.end());
 
     const std::vector<ActiveEffect_t> popEffects = CollectPopFactionEffects();

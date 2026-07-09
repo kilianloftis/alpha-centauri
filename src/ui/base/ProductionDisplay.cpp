@@ -1,5 +1,6 @@
 #include "ui/base/ProductionDisplay.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/production/ProductionManager.h"
 #include "graphics/Graphics.h"
 #include <functional>
 #include <sstream>
@@ -49,20 +50,21 @@ void ProductionDisplay::Render(Graphics& rGraphics)
     const float lineHeight   = m_layout.height * k_LineHeightRatio;
     const float leftPadding  = m_layout.width  * k_LeftPaddingRatio;
 
-    const IConstructable* pCurrentProduction = m_pBase->GetCurrentProduction();
+    const ProductionManager& rProduction = m_pBase->GetProduction();
+    const IConstructable* pCurrentProduction = rProduction.GetCurrentProduction();
     const std::string header = pCurrentProduction ? "Production: " + pCurrentProduction->GetName() : "Production: (none)";
     rGraphics.DrawText(header, m_layout.x + leftPadding, m_layout.y, headerFontSize);
 
     std::ostringstream oss;
 
-    oss << "Stockpile: " << m_pBase->GetMineralStockpile();
+    oss << "Stockpile: " << rProduction.GetMineralStockpile();
     rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y + lineHeight * k_StockpileLineIndex, entryFontSize);
 
     oss.str("");
     oss << "Required: ";
     if (pCurrentProduction)
     {
-        oss << m_pBase->GetProductionMineralCost();
+        oss << rProduction.GetMineralCost();
     }
     else
     {

@@ -36,13 +36,19 @@ struct GameDataContext;
 class BaseManager
 {
 public:
+    // pEffectsProvider is the owning faction's effect pool; may be null for a base that
+    // resolves no faction effects (standalone test bases). All other dependencies are
+    // required; throws if rDataContext lacks a production cost calculator.
     BaseManager(
+        FactionId factionId,
+        int baseId,
+        std::string name,
         Tile& tile,
         const GameDataContext& rDataContext,
         TileEffectsContext& rTileEffects,
         const ResearchManager* pResearchManager,
         const EconomyManager* pEconomyManager,
-        const IEffectsProvider* pEffectsProvider = nullptr);
+        const IEffectsProvider* pEffectsProvider);
     ~BaseManager();
 
     // Population subsystem. Pure population queries and mutations go through this reference;
@@ -77,23 +83,23 @@ public:
     int GetLabsProduction() const;
     int GetPsychProduction() const;
 
-    // Consume the full accumulated resource stockpile, returning the amount consumed.
-    int ConsumeEcon();
-    int ConsumeLabs();
-    int ConsumePsych();
+    // Resource subsystem: per-turn stockpiles and their consumption.
+    ResourceManager& GetResources();
+    const ResourceManager& GetResources() const;
 
-    // Building management - delegated to BuildingManager
-    void AddBuilding(const std::string& buildingId);
-    void DestroyBuilding(const std::string& buildingId);
-    const std::vector<const BuildingConfig_t*>& GetBuildings() const;
+    // Building subsystem.
+    BuildingManager& GetBuildingManager();
+    const BuildingManager& GetBuildingManager() const;
+
+    // This base's building effects, with ThisBase-scoped ones stamped with this base's identity.
     std::vector<ActiveEffect_t> CollectBuildingEffects() const;
+
+    // Items this base can currently construct.
     std::vector<const IConstructable*> GetConstructable() const;
 
-    // Production management - delegated to ProductionManager
-    void SetProduction(const IConstructable* pItem);
-    const IConstructable* GetCurrentProduction() const;
-    int GetProductionMineralCost() const;
-    int GetMineralStockpile() const;
+    // Production subsystem.
+    ProductionManager& GetProduction();
+    const ProductionManager& GetProduction() const;
 
     // Collect minerals from ResourceManager and apply to production this turn.
     // Completes construction if the stockpile meets the cost.
@@ -118,9 +124,6 @@ public:
     int GetX() const;
     int GetY() const;
 
-    // Returns the set of workable tiles this base can assign workers to.
-    const std::vector<const Tile*>& GetWorkableTilePositions() const;
-
     // Effective yield from a worked tile after base-wide and pop tile effects.
     // Unworked tiles should use TileEffectsContext::ResolveTileYield for intrinsic preview.
     TileResources_t GetWorkedTileYield(const Tile& rTile) const;
@@ -131,13 +134,8 @@ public:
     const TileEffectsContext& GetTileEffects() const;
 
     // Base identity
-    void SetName(const std::string& name);
     const std::string& GetName() const;
-
-    // Ownership
-    void SetFactionId(FactionId factionId);
     FactionId GetFactionId() const;
-    void SetBaseId(int baseId);
     int GetBaseId() const;
 
 private:
@@ -161,10 +159,12 @@ private:
     const SocialRatingRegistry* m_pSocialRatings;
     const ResearchManager* m_pResearch;
     const IEffectsProvider* m_pEffectsProvider = nullptr;
+    // Declaration order is construction order: resources depends on worker assignments
+    // and buildings, so it is declared after both.
     std::unique_ptr<PopulationManager> m_pPopulation;
     std::unique_ptr<WorkerAssignmentManager> m_pWorkerAssignments;
-    std::unique_ptr<ResourceManager> m_pResources;
     std::unique_ptr<BuildingManager> m_pBuildings;
+    std::unique_ptr<ResourceManager> m_pResources;
     std::unique_ptr<ProductionManager> m_pProduction;
     std::string m_name;
 };

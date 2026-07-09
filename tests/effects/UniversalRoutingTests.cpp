@@ -70,13 +70,13 @@ TEST_CASE("FactionUnits lane: a building's FactionUnits stat modifier boosts liv
     Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_weapon"}); // 4 attack intrinsic
     CHECK(unit.GetAttack() == 4);
 
-    base.AddBuilding("unit_attack_array"); // +25% attack, FactionUnits
+    base.GetBuildingManager().AddBuilding("unit_attack_array"); // +25% attack, FactionUnits
     CHECK(unit.GetAttack() == 5); // 4 * 1.25
 
     // The design (unit-designer view) keeps showing intrinsic values.
     CHECK(unit.GetDesign().GetAttack() == 4);
 
-    base.DestroyBuilding("unit_attack_array");
+    base.GetBuildingManager().DestroyBuilding("unit_attack_array");
     CHECK(unit.GetAttack() == 4);
 }
 
@@ -90,7 +90,7 @@ TEST_CASE("FactionUnits lane: a building's FactionUnits rule flag applies to liv
     Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
     CHECK_FALSE(unit.IsFlight());
 
-    base.AddBuilding("flight_grantor"); // RuleFlag flight, FactionUnits
+    base.GetBuildingManager().AddBuilding("flight_grantor"); // RuleFlag flight, FactionUnits
     CHECK(unit.IsFlight());
     CHECK_FALSE(unit.GetDesign().IsFlight()); // intrinsic design unchanged
 }
@@ -99,17 +99,19 @@ TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other fact
           "[effects][routing][world]")
 {
     actest::FactionFixture fixture;
-    GameState state;
+    GameState state(std::make_unique<WorldMap>(9, 9), fixture.improvements, &fixture.unitComponents);
 
-    Faction& factionA = state.AddFaction(std::make_unique<Faction>(&fixture.buildings(), nullptr, &fixture.socialPolicies(),
+    Faction& factionA = state.AddFaction(std::make_unique<Faction>(fixture.factionDefinition,
+                                               &fixture.buildings(), nullptr, &fixture.socialPolicies(),
                                                &fixture.socialRatings(), nullptr, nullptr));
-    Faction& factionB = state.AddFaction(std::make_unique<Faction>(&fixture.buildings(), nullptr, &fixture.socialPolicies(),
+    Faction& factionB = state.AddFaction(std::make_unique<Faction>(fixture.factionDefinition,
+                                               &fixture.buildings(), nullptr, &fixture.socialPolicies(),
                                                &fixture.socialRatings(), nullptr, nullptr));
 
     BaseManager& baseA = fixture.MakeFactionBase(factionA, 2, 2);
     BaseManager& baseB = fixture.MakeFactionBase(factionB, 6, 6);
 
-    baseA.AddBuilding("world_beacon"); // +10 energy, WorldGlobal
+    baseA.GetBuildingManager().AddBuilding("world_beacon"); // +10 energy, WorldGlobal
 
     SECTION("CollectWorldEffects gathers the other faction's WorldGlobal effects only")
     {
@@ -125,7 +127,7 @@ TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other fact
     {
         factionB.ProduceBaseResources(state.CollectWorldEffects(factionB));
         // 10 energy split 40/50/10 -> econ 4.
-        CHECK(baseB.ConsumeEcon() == 4);
+        CHECK(baseB.GetResources().ConsumeEcon() == 4);
     }
 
     SECTION("faction A's own base gets its own WorldGlobal effect through its own pool")
@@ -142,7 +144,7 @@ TEST_CASE("Social policy stat effects flow through the standard pool (no special
     Faction& faction = fixture.MakeFaction();
     fixture.MakeFactionBase(faction, 2, 2);
 
-    REQUIRE(faction.SetSocialPolicy(SocialCategory::Economics, "wealth_policy"));
+    REQUIRE(faction.GetSocialEngineering().SetActivePolicy(SocialCategory::Economics, "wealth_policy"));
 
     const auto pool = CollectActiveEffects(faction);
     CHECK(ResolveStatModifiers(FilterByStatId(pool.effects, StatId::Energy), 0.0).total == Approx(1.0));

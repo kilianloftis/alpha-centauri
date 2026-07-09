@@ -38,15 +38,9 @@ std::unique_ptr<WorldView> ViewFactory::CreateWorldView(
     std::function<void(BaseManager&)> onOpenBase
 ) const
 {
-    const WorldMap* pWorldMap = m_rGameState.GetWorldMap();
-    if (!pWorldMap)
-    {
-        return nullptr;
-    }
-
     return std::make_unique<WorldView>(
         m_rGameState,
-        *pWorldMap,
+        m_rGameState.GetWorldMap(),
         layout,
         std::move(onProcessTurn),
         std::move(onRequestExit),
@@ -82,7 +76,7 @@ std::unique_ptr<ResearchView> ViewFactory::CreateResearchView(
         return nullptr;
     }
 
-    return std::make_unique<ResearchView>(pFaction->GetResearchManager(), layout);
+    return std::make_unique<ResearchView>(&pFaction->GetResearch(), layout);
 }
 
 std::unique_ptr<SocialEngineeringView> ViewFactory::CreateSocialEngineeringView(

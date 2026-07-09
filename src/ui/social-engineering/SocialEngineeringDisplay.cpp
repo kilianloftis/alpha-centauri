@@ -3,6 +3,7 @@
 #include "game/Faction.h"
 #include "game/faction/FactionConfig.h"
 #include "game/faction/ResearchManager.h"
+#include "game/faction/SocialEngineeringManager.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/social-engineering/SocialPolicyConfig.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
@@ -169,14 +170,14 @@ std::string FormatStatModifier(const StatModifierEffect_t& rModifier)
 
 std::string GetFactionDisplayName(const Faction& rFaction)
 {
-    const FactionConfig_t* pDefinition = rFaction.GetDefinition();
-    if (pDefinition && !pDefinition->identity.name.empty())
+    const FactionConfig_t& rDefinition = rFaction.GetDefinition();
+    if (!rDefinition.identity.name.empty())
     {
-        return pDefinition->identity.name;
+        return rDefinition.identity.name;
     }
-    if (pDefinition && !pDefinition->id.empty())
+    if (!rDefinition.id.empty())
     {
-        return CapitalizeFirst(pDefinition->id);
+        return CapitalizeFirst(rDefinition.id);
     }
     return "Unknown";
 }
@@ -190,7 +191,7 @@ int GetFactionSocialRating(const Faction& rFaction, SocialRatingId rating)
     }
 
     BaseEffects_t baseEffects;
-    for (const ActiveEffect_t& rEffect : rFaction.CollectSocialEffects())
+    for (const ActiveEffect_t& rEffect : rFaction.GetSocialEngineering().CollectEffects())
     {
         baseEffects.effects.push_back(rEffect);
     }
@@ -397,12 +398,7 @@ void SocialEngineeringDisplay::Render(Graphics& rGraphics)
     const float horizontalPadding = policyGridLayout.width * k_HorizontalPaddingRatio;
     const float verticalPadding   = policyGridLayout.height * k_VerticalPaddingRatio;
 
-    const ResearchManager* pResearch = m_pFaction->GetResearchManager();
-    if (!pResearch)
-    {
-        throw std::runtime_error("SocialEngineeringDisplay: No research manager set");
-    }
-    const std::vector<std::string>& discoveredTechIds = pResearch->GetDiscoveredTechs();
+    const std::vector<std::string>& discoveredTechIds = m_pFaction->GetResearch().GetDiscoveredTechs();
 
     for (size_t categoryIndex = 0; categoryIndex < k_Categories.size(); ++categoryIndex)
     {
@@ -430,7 +426,7 @@ void SocialEngineeringDisplay::Render(Graphics& rGraphics)
         );
 
         const std::vector<const SocialPolicyConfig*> policies = m_pPolicyRegistry->GetByCategory(category);
-        const SocialPolicyConfig* pActivePolicy = m_pFaction->GetSocialPolicy(category);
+        const SocialPolicyConfig* pActivePolicy = m_pFaction->GetSocialEngineering().GetActivePolicy(category);
 
         const WindowLayout_t policyRowsBand = ResolveLayout(categoryBand, {
             0.0f,
@@ -554,12 +550,7 @@ void SocialEngineeringDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
         return;
     }
 
-    const ResearchManager* pResearch = m_pFaction->GetResearchManager();
-    if (!pResearch)
-    {
-        throw std::runtime_error("SocialEngineeringDisplay: No research manager set");
-    }
-    const std::vector<std::string>& discoveredTechIds = pResearch->GetDiscoveredTechs();
+    const std::vector<std::string>& discoveredTechIds = m_pFaction->GetResearch().GetDiscoveredTechs();
 
     const float clickX = static_cast<float>(rEvent.x);
     const float clickY = static_cast<float>(rEvent.y);
@@ -587,7 +578,7 @@ void SocialEngineeringDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
                 return;
             }
 
-            m_pFaction->SetSocialPolicy(category, pPolicy->id);
+            m_pFaction->GetSocialEngineering().SetActivePolicy(category, pPolicy->id);
             return;
         }
     }

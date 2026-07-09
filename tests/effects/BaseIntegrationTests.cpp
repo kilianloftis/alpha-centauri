@@ -35,8 +35,8 @@ TEST_CASE("BaseManager::CollectBuildingEffects tags ThisBase effects with the ow
     BaseManager& baseA = fixture.MakeBase(2, 2);
     BaseManager& baseB = fixture.MakeBase(6, 6);
 
-    baseA.AddBuilding("flat_nutrient");
-    baseB.AddBuilding("granted_hall");
+    baseA.GetBuildingManager().AddBuilding("flat_nutrient");
+    baseB.GetBuildingManager().AddBuilding("granted_hall");
 
     const auto effectsA = baseA.CollectBuildingEffects();
     REQUIRE(effectsA.size() == 1);
@@ -119,11 +119,11 @@ TEST_CASE("DispatchInstantaneousEffects: Instantaneous GrantBuilding constructs 
     REQUIRE(pGrantor != nullptr);
 
     // Simulate on_production_completed for instant_grantor.
-    base.AddBuilding(pGrantor->id);
+    base.GetBuildingManager().AddBuilding(pGrantor->id);
     DispatchInstantaneousEffects(*pGrantor, base);
 
     bool hasGranted = false;
-    for (const BuildingConfig_t* pBuilding : base.GetBuildings())
+    for (const BuildingConfig_t* pBuilding : base.GetBuildingManager().GetBuildings())
     {
         if (pBuilding->id == "flat_nutrient")
         {
@@ -151,8 +151,8 @@ TEST_CASE("Full pipeline: building and pop bonuses land in base resource product
     fixture.ctx->AddImprovementWithEffects(farmTile, "Farm");
 
     // Buildings: +2 flat nutrients, +1 nutrients on each worked Farm.
-    base.AddBuilding("flat_nutrient");
-    base.AddBuilding("farm_booster");
+    base.GetBuildingManager().AddBuilding("flat_nutrient");
+    base.GetBuildingManager().AddBuilding("farm_booster");
 
     // One of the three starting Workers works the farm tile; another becomes a Doctor
     // (+2 psych). Workers are auto-assigned at base construction, so pick any pop that is

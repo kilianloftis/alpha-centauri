@@ -8,6 +8,7 @@
 #include "game/population/pop-types/Pop.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/production/ProductionManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/map/WorldMap.h"
 #include "game/Faction.h"
@@ -117,7 +118,7 @@ void BaseView::HandleProductionDisplayClicked_()
     m_elements.push_back(std::make_unique<ProductionSelectorPopup>(
         std::move(available),
         ResolveLayout(m_layout, k_TopPanelLayout),
-        [this](const IConstructable& rItem) { m_rBase.SetProduction(&rItem); }
+        [this](const IConstructable& rItem) { m_rBase.GetProduction().SetProduction(&rItem); }
     ));
 }
 

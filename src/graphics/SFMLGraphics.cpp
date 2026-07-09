@@ -8,6 +8,7 @@
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <unordered_map>
 
 namespace ac
@@ -23,10 +24,14 @@ public:
         : m_window(sf::VideoMode(sf::Vector2u(1280, 900)), "Alpha Centauri")
     {
         std::cout << "[SFMLGraphics] Creating window...\n";
+        if (!m_window.isOpen())
+        {
+            throw std::runtime_error("[SFMLGraphics] Failed to create SFML render window");
+        }
         m_window.setFramerateLimit(60);
         m_window.setKeyRepeatEnabled(false);
         m_window.requestFocus();
-        std::cout << "[SFMLGraphics] Window created, isOpen=" << m_window.isOpen() << "\n";
+        std::cout << "[SFMLGraphics] Window created.\n";
         if (!m_font.openFromFile(k_fontPath1))
         {
             if (!m_font.openFromFile(k_fontPath2))
@@ -34,17 +39,6 @@ public:
                 std::cerr << "[SFMLGraphics] Font loading failed.\n";
             }
         }
-    }
-
-    bool Initialize() override
-    {
-        std::cout << "[SFMLGraphics] Initialize() called, isOpen=" << m_window.isOpen() << "\n";
-        if (!m_window.isOpen())
-        {
-            std::cerr << "[Graphics] Failed to create SFML render window.\n";
-            return false;
-        }
-        return true;
     }
 
     void Clear() override

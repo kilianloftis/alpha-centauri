@@ -174,7 +174,7 @@ std::vector<ActiveEffect_t> CollectFromPops(const PopulationManager& rPops, cons
 std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile, const ImprovementRegistry& rImprovements);
 
 // Fire all Instantaneous effects declared on rBuilding against rBase.
-// GrantBuilding: calls rBase.AddBuilding immediately.
+// GrantBuilding: adds the granted building to the base immediately.
 // GrantTech / GrantUnit: logged as TODO stubs until those systems are wired.
 // Call this right after a building is added to the base (e.g. from on_production_completed).
 void DispatchInstantaneousEffects(const BuildingConfig_t& rBuilding, BaseManager& rBase);

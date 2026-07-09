@@ -5,6 +5,8 @@
 #include "game/Faction.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/population/PopulationManager.h"
+#include "game/faction/EconomyManager.h"
+#include "game/faction/ResearchManager.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitOrder.h"
@@ -69,8 +71,8 @@ void WorldView::Update_()
     infoLines.push_back({"Mission Year: " + std::to_string(m_rGameState.GetMissionYear()), Color::White()});
     if (const Faction* pPlayerFaction = m_rGameState.GetPlayerFaction())
     {
-        infoLines.push_back({"Energy: " + std::to_string(pPlayerFaction->GetEnergy()), Color::Yellow()});
-        infoLines.push_back({"Research: " + std::to_string(pPlayerFaction->GetResearchPoints()), k_ResearchTextColor});
+        infoLines.push_back({"Energy: " + std::to_string(pPlayerFaction->GetEconomy().GetEnergy()), Color::Yellow()});
+        infoLines.push_back({"Research: " + std::to_string(pPlayerFaction->GetResearch().GetAccumulatedPoints()), k_ResearchTextColor});
     }
     static_cast<InfoPanelElement*>(m_elements[k_InfoPanelElementIndex].get())->SetInfoLines(infoLines);
 
@@ -122,11 +124,6 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
 
 void WorldView::HandleMouse(const MouseEvent_t& rEvent)
 {
-    const WorldMap* pWorldMap = m_rGameState.GetWorldMap();
-    if (!pWorldMap)
-    {
-        return;
-    }
     const float tileSize = m_pWorldDisplay->GetEffectiveTileSize();
     const int camX = m_pWorldDisplay->GetCameraX();
     const int camY = m_pWorldDisplay->GetCameraY();
@@ -139,7 +136,7 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
 
     const int worldX = tile ? tile->first + camX : k_InvalidTileCoord;
     const int worldY = tile ? tile->second + camY : k_InvalidTileCoord;
-    const Tile* pClickedTile = pWorldMap->GetTile(worldX, worldY);
+    const Tile* pClickedTile = m_rGameState.GetWorldMap().GetTile(worldX, worldY);
 
     if (m_pUnitOrderInputController->HandleMouse(rEvent, m_pSelectedUnit, pClickedTile))
     {
@@ -176,21 +173,15 @@ BaseManager* WorldView::FindBaseAtTile_(int tileX, int tileY) const
 
 void WorldView::SelectUnitAtTile_(int tileX, int tileY)
 {
-    const WorldMap* pWorldMap = m_rGameState.GetWorldMap();
-    if (!pWorldMap)
-    {
-        m_pSelectedUnit = nullptr;
-        return;
-    }
-
-    const Tile* pTile = pWorldMap->GetTile(tileX, tileY);
+    const WorldMap& rWorldMap = m_rGameState.GetWorldMap();
+    const Tile* pTile = rWorldMap.GetTile(tileX, tileY);
     if (!pTile)
     {
         m_pSelectedUnit = nullptr;
         return;
     }
 
-    const std::vector<Unit*>& units = pWorldMap->GetUnitsOnTile(*pTile);
+    const std::vector<Unit*>& units = rWorldMap.GetUnitsOnTile(*pTile);
     if (units.empty())
     {
         m_pSelectedUnit = nullptr;

@@ -86,8 +86,8 @@ TEST_CASE("Two-level ratings: faction-wide policy rating plus a base-local build
     BaseManager& plainBase = fixture.MakeFactionBase(faction, 6, 6);
 
     // Policy: +2 Growth faction-wide. Shrine: +1 Growth in its base only.
-    REQUIRE(faction.SetSocialPolicy(SocialCategory::Politics, "growth_policy"));
-    baseWithShrine.AddBuilding("growth_shrine");
+    REQUIRE(faction.GetSocialEngineering().SetActivePolicy(SocialCategory::Politics, "growth_policy"));
+    baseWithShrine.GetBuildingManager().AddBuilding("growth_shrine");
 
     CHECK(baseWithShrine.GetEffectiveSocialRating(SocialRatingId::Growth) == 3);
     CHECK(plainBase.GetEffectiveSocialRating(SocialRatingId::Growth) == 2);
@@ -112,8 +112,8 @@ TEST_CASE("Growth rating affects the growth threshold via GrowthRate modifiers",
 
     // Policy: +2 Growth faction-wide (fixture level 2 -> +20% growth rate). Shrine: +1
     // Growth in its base only (level 3 -> +30%). The threshold shrinks per base.
-    REQUIRE(faction.SetSocialPolicy(SocialCategory::Politics, "growth_policy"));
-    baseWithShrine.AddBuilding("growth_shrine");
+    REQUIRE(faction.GetSocialEngineering().SetActivePolicy(SocialCategory::Politics, "growth_policy"));
+    baseWithShrine.GetBuildingManager().AddBuilding("growth_shrine");
 
     CHECK(plainBase.GetNutrientsRequired() == 25);      // 30 / 1.2
     CHECK(baseWithShrine.GetNutrientsRequired() == 23); // 30 / 1.3
@@ -128,7 +128,7 @@ TEST_CASE("Rating modifiers are honored from any source: a building's FactionGlo
     BaseManager& baseB = fixture.MakeFactionBase(faction, 6, 6);
 
     // No policy involved: the building alone raises the faction-wide Growth score.
-    baseA.AddBuilding("faction_growth_shrine"); // +2 Growth, FactionGlobal
+    baseA.GetBuildingManager().AddBuilding("faction_growth_shrine"); // +2 Growth, FactionGlobal
 
     CHECK(baseA.GetEffectiveSocialRating(SocialRatingId::Growth) == 2);
     CHECK(baseB.GetEffectiveSocialRating(SocialRatingId::Growth) == 2);

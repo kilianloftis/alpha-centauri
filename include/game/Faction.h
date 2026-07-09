@@ -37,16 +37,17 @@ class WorldMap;
 class Faction : public IEffectsProvider
 {
 public:
-    Faction(const BuildingRegistry* pBuildingRegistry, const TechRegistry* pTechRegistry,
+    Faction(const FactionConfig_t& rDefinition,
+             const BuildingRegistry* pBuildingRegistry,
+             const TechRegistry* pTechRegistry,
              const SocialPolicyRegistry* pSocialPolicyRegistry,
              const SocialRatingRegistry* pSocialRatingRegistry,
              TechCostCalculator* pTechCostCalculator,
-             const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator,
-             const FactionConfig_t* pDefinition = nullptr);
+             const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator);
     ~Faction();
 
-    const FactionConfig_t* GetDefinition() const { return m_pDefinition; }
-    const std::string& GetDefinitionId() const;
+    const FactionConfig_t& GetDefinition() const { return m_rDefinition; }
+    const std::string& GetDefinitionId() const { return m_rDefinition.id; }
 
     std::string SuggestBaseName();
 
@@ -63,12 +64,17 @@ public:
     // Returns buildings the faction has the technology to build.
     std::vector<const BuildingConfig_t*> GetDiscoveredBuildings() const;
 
-    // Energy tracking
-    void AddEnergy(int amount);
-    int GetEnergy() const;
+    // Economy subsystem: energy treasury and allocation split.
+    EconomyManager& GetEconomy();
+    const EconomyManager& GetEconomy() const;
 
-    // Economy manager owns the faction-wide energy allocation split.
-    EconomyManager* GetEconomyManager() const;
+    // Consume every base's accumulated econ stockpile into the treasury.
+    // Returns the amount collected this call.
+    int CollectIncome();
+
+    // Consume every base's accumulated labs stockpile into research points.
+    // Returns the amount collected this call.
+    int CollectResearch();
 
     // Projected per-turn outputs summed across all bases.
     int GetNetIncomePerTurn() const;
@@ -83,11 +89,11 @@ public:
     // Apply growth to all bases, incorporating GrowthRate stat effects.
     void ApplyBaseGrowth(const std::vector<ActiveEffect_t>& rExternalEffects);
 
-    // Research - delegated to ResearchManager
-    void AddResearchPoints(int points);
-    int GetResearchPoints() const;
-    ResearchManager* GetResearchManager() const;
-    ResearchSelector* GetResearchSelector() const;
+    // Research subsystem.
+    ResearchManager& GetResearch();
+    const ResearchManager& GetResearch() const;
+
+    // Discover the current research target and auto-select the next one.
     bool DiscoverCurrentResearch();
 
     // Building effects
@@ -106,13 +112,9 @@ public:
     // Permanent bonuses from the faction definition config.
     std::vector<ActiveEffect_t> CollectDefinitionEffects() const;
 
-    // Social engineering
-    bool SetSocialPolicy(SocialCategory category, const std::string& policyId);
-    const SocialPolicyConfig* GetSocialPolicy(SocialCategory category) const;
-    std::vector<ActiveEffect_t> CollectSocialEffects() const;
-    std::vector<const SocialPolicyConfig*> GetAvailableSocialPolicies(
-        SocialCategory category,
-        const std::vector<std::string>& rDiscoveredTechIds) const;
+    // Social engineering subsystem.
+    SocialEngineeringManager& GetSocialEngineering();
+    const SocialEngineeringManager& GetSocialEngineering() const;
 
     // Military (unit designs and units)
     Military& GetMilitary();
@@ -131,8 +133,7 @@ public:
 private:
     int GetResearchPerTurn_() const;
 
-    int m_energy = 0;
-    const FactionConfig_t* m_pDefinition = nullptr;
+    const FactionConfig_t& m_rDefinition;
     const BuildingRegistry* m_pBuildingRegistry;
     const PopTypeAvailabilityCalculator* m_pPopTypeAvailabilityCalculator;
     std::unique_ptr<FactionIdentity> m_pIdentity;

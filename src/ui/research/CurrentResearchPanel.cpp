@@ -18,7 +18,7 @@ constexpr unsigned int k_ProgressFontSize               = 13;
 
 } // namespace
 
-CurrentResearchPanel::CurrentResearchPanel(ResearchManager* pResearch, WindowLayout_t layout)
+CurrentResearchPanel::CurrentResearchPanel(const ResearchManager* pResearch, WindowLayout_t layout)
     : UIElement(layout)
     , m_pResearch(pResearch)
 {}

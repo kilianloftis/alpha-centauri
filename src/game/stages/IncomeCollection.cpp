@@ -1,7 +1,7 @@
 #include "game/stages/IncomeCollection.h"
 #include "game/GameState.h"
 #include "game/Faction.h"
-#include "game/faction/base/BaseManager.h"
+#include "game/faction/EconomyManager.h"
 #include <iostream>
 
 namespace ac
@@ -24,19 +24,10 @@ void IncomeCollection::Execute_(GameState* pGameState, Faction* pFaction)
 
     std::cout << "Executing IncomeCollection stage for faction\n";
 
-    int totalIncome = 0;
+    const int totalIncome = pFaction->CollectIncome();
 
-    for (BaseManager& rBase : pFaction->Bases())
-    {
-        int baseIncome = rBase.ConsumeEcon();
-        totalIncome += baseIncome;
-
-        std::cout << "  Base '" << rBase.GetName() << "' income: " << baseIncome << "\n";
-    }
-
-    pFaction->AddEnergy(totalIncome);
-
-    std::cout << "  Faction total energy: " << pFaction->GetEnergy() << "\n";
+    std::cout << "  Faction income: " << totalIncome
+              << ", total energy: " << pFaction->GetEconomy().GetEnergy() << "\n";
 }
 
 } // namespace ac

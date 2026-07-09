@@ -92,7 +92,7 @@ function build() {
     esac
   done
 
-  cmake --build "$build_dir" --config "$config"
+  cmake --build "$build_dir" --config "$config" -j16
 }
 
 function run_tests() {

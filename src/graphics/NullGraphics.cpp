@@ -11,10 +11,9 @@ namespace
 class NullGraphics : public Graphics
 {
 public:
-bool Initialize() override
+NullGraphics()
     {
         std::cout << "[Graphics] Null graphics backend selected. No rendering will occur.\n";
-        return true;
     }
 
 void Clear() override

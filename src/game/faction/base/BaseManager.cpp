@@ -14,6 +14,7 @@
 #include "game/social-engineering/SocialRatingResolver.h"
 #include "lib/effects/ActiveEffect.h"
 #include "lib/effects/TileEffectsContext.h"
+#include <stdexcept>
 
 namespace ac
 {
@@ -32,17 +33,29 @@ std::vector<const Tile*> ComputeWorkableTiles_(const TileEffectsContext& rTileEf
     return tiles;
 }
 
+const ProductionCostCalculator& RequireProductionCostCalculator_(const GameDataContext& rDataContext)
+{
+    if (!rDataContext.productionCostCalculator)
+    {
+        throw std::invalid_argument("BaseManager: rDataContext has no production cost calculator");
+    }
+    return *rDataContext.productionCostCalculator;
+}
+
 } // namespace
 
 BaseManager::BaseManager(
+    FactionId factionId,
+    int baseId,
+    std::string name,
     Tile& tile,
     const GameDataContext& rDataContext,
     TileEffectsContext& rTileEffects,
     const ResearchManager* pResearchManager,
     const EconomyManager* pEconomyManager,
     const IEffectsProvider* pEffectsProvider)
-    : m_factionId(-1)
-    , m_baseId(-1)
+    : m_factionId(factionId)
+    , m_baseId(baseId)
     , m_tile(tile)
     , m_rTileEffects(rTileEffects)
     , m_pBuildingRegistry(rDataContext.buildingRegistry.get())
@@ -51,22 +64,14 @@ BaseManager::BaseManager(
     , m_pEffectsProvider(pEffectsProvider)
     , m_pPopulation(std::make_unique<PopulationManager>(rDataContext, pResearchManager, 3))
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(ComputeWorkableTiles_(rTileEffects, tile), *m_pPopulation, rTileEffects))
-    , m_pResources(nullptr)
     , m_pBuildings(std::make_unique<BuildingManager>(rDataContext, pResearchManager))
-    , m_pProduction(rDataContext.productionCostCalculator
-                        ? std::make_unique<ProductionManager>(*rDataContext.productionCostCalculator)
-                        : nullptr)
+    , m_pResources(std::make_unique<ResourceManager>(
+          m_pWorkerAssignments.get(), pEconomyManager, m_pBuildings.get(), &m_tile, &m_rTileEffects))
+    , m_pProduction(std::make_unique<ProductionManager>(RequireProductionCostCalculator_(rDataContext)))
+    , m_name(std::move(name))
 {
     // A base provides its own garrison defense bonus, modeled as the "Base" improvement.
     m_rTileEffects.AddImprovementWithEffects(m_tile, "Base");
-
-    // Create ResourceManager after all sub-managers are set up
-    m_pResources = std::make_unique<ResourceManager>(
-        m_pWorkerAssignments.get(),
-        pEconomyManager,
-        m_pBuildings.get(),
-        &m_tile,
-        &m_rTileEffects);
 
     m_pPopulation->on_growth.connect([this]() {
         m_pPopulation->AddPop();
@@ -84,21 +89,18 @@ BaseManager::BaseManager(
         on_pop_lost.emit(newSize);
     });
 
-    if (m_pProduction)
-    {
-        m_pProduction->on_production_completed.connect([this](const std::string& itemId) {
-            m_pBuildings->AddBuilding(itemId);
-            if (m_pBuildingRegistry)
+    m_pProduction->on_production_completed.connect([this](const std::string& itemId) {
+        m_pBuildings->AddBuilding(itemId);
+        if (m_pBuildingRegistry)
+        {
+            const BuildingConfig_t* pConfig = m_pBuildingRegistry->Find(itemId);
+            if (pConfig)
             {
-                const BuildingConfig_t* pConfig = m_pBuildingRegistry->Find(itemId);
-                if (pConfig)
-                {
-                    DispatchInstantaneousEffects(*pConfig, *this);
-                }
+                DispatchInstantaneousEffects(*pConfig, *this);
             }
-            on_production_completed.emit(itemId);
-        });
-    }
+        }
+        on_production_completed.emit(itemId);
+    });
 }
 
 BaseManager::~BaseManager() = default;
@@ -153,75 +155,42 @@ void BaseManager::UserAssignBestAvailableWorker(const Tile* pTile)
 
 int BaseManager::GetNutrientProduction() const
 {
-    if (!m_pResources)
-    {
-        throw std::runtime_error("BaseManager::GetNutrientProduction: m_pResources is null");
-    }
     return m_pResources->GetNutrientProduction(BuildBaseEffects_());
 }
 
 int BaseManager::GetMineralProduction() const
 {
-    if (!m_pResources)
-    {
-        throw std::runtime_error("BaseManager::GetMineralProduction: m_pResources is null");
-    }
     return m_pResources->GetMineralProduction(BuildBaseEffects_());
 }
 
 int BaseManager::GetEconProduction() const
 {
-    if (!m_pResources)
-    {
-        throw std::runtime_error("BaseManager::GetEconProduction: m_pResources is null");
-    }
     return m_pResources->GetEconProduction(BuildBaseEffects_());
 }
 
 int BaseManager::GetLabsProduction() const
 {
-    if (!m_pResources)
-    {
-        throw std::runtime_error("BaseManager::GetLabsProduction: m_pResources is null");
-    }
     return m_pResources->GetLabsProduction(BuildBaseEffects_());
 }
 
 int BaseManager::GetPsychProduction() const
 {
-    if (!m_pResources)
-    {
-        throw std::runtime_error("BaseManager::GetPsychProduction: m_pResources is null");
-    }
     return m_pResources->GetPsychProduction(BuildBaseEffects_());
 }
 
-void BaseManager::AddBuilding(const std::string& buildingId)
+BuildingManager& BaseManager::GetBuildingManager()
 {
-    if (m_pBuildings)
-    {
-        m_pBuildings->AddBuilding(buildingId);
-    }
+    return *m_pBuildings;
 }
 
-void BaseManager::DestroyBuilding(const std::string& buildingId)
+const BuildingManager& BaseManager::GetBuildingManager() const
 {
-    if (m_pBuildings)
-    {
-        m_pBuildings->DestroyBuilding(buildingId);
-    }
-}
-
-const std::vector<const BuildingConfig_t*>& BaseManager::GetBuildings() const
-{
-    return m_pBuildings->GetBuildings();
+    return *m_pBuildings;
 }
 
 std::vector<ActiveEffect_t> BaseManager::CollectBuildingEffects() const
 {
-    std::vector<ActiveEffect_t> result = m_pBuildings
-        ? m_pBuildings->CollectEffects()
-        : std::vector<ActiveEffect_t>{};
+    std::vector<ActiveEffect_t> result = m_pBuildings->CollectEffects();
 
     for (ActiveEffect_t& effect : result)
     {
@@ -236,48 +205,26 @@ std::vector<ActiveEffect_t> BaseManager::CollectBuildingEffects() const
 std::vector<const IConstructable*> BaseManager::GetConstructable() const
 {
     std::vector<const IConstructable*> available;
-    if (m_pBuildings)
+    for (const BuildingConfig_t* pBuilding : m_pBuildings->GetBuildingsAvailableForConstruction())
     {
-        std::vector<const BuildingConfig_t*> buildings = m_pBuildings->GetBuildingsAvailableForConstruction();
-        for (const BuildingConfig_t* pBuilding : buildings)
-        {
-            available.push_back(pBuilding);
-        }
+        available.push_back(pBuilding);
     }
     return available;
 }
 
-void BaseManager::SetProduction(const IConstructable* pItem)
+ProductionManager& BaseManager::GetProduction()
 {
-    if (m_pProduction)
-    {
-        m_pProduction->SetProduction(pItem);
-    }
+    return *m_pProduction;
 }
 
-const IConstructable* BaseManager::GetCurrentProduction() const
+const ProductionManager& BaseManager::GetProduction() const
 {
-    return m_pProduction ? m_pProduction->GetCurrentProduction() : nullptr;
-}
-
-int BaseManager::GetProductionMineralCost() const
-{
-    return m_pProduction ? m_pProduction->GetMineralCost() : 0;
-}
-
-int BaseManager::GetMineralStockpile() const
-{
-    return m_pProduction ? m_pProduction->GetMineralStockpile() : 0;
+    return *m_pProduction;
 }
 
 std::string BaseManager::ApplyProduction()
 {
-    if (!m_pProduction)
-    {
-        return std::string();
-    }
-    const int minerals = m_pResources ? m_pResources->ConsumeMinerals() : 0;
-    return m_pProduction->ApplyProduction(minerals);
+    return m_pProduction->ApplyProduction(m_pResources->ConsumeMinerals());
 }
 
 BaseEffects_t BaseManager::CollectBaseLocalEffects_(const FactionEffects_t& rFactionEffects) const
@@ -327,45 +274,26 @@ int BaseManager::GetEffectiveSocialRating(SocialRatingId rating) const
 
 void BaseManager::ProduceResources(const FactionEffects_t& rFactionEffects)
 {
-    if (!m_pResources || !m_pPopulation)
-    {
-        throw std::runtime_error("BaseManager::ProduceResources: m_pResources or m_pPopulation is null");
-    }
-
     m_pResources->ProduceResources(BuildBaseEffects_(rFactionEffects));
 }
 
-int BaseManager::ConsumeEcon()
+ResourceManager& BaseManager::GetResources()
 {
-    return m_pResources ? m_pResources->ConsumeEcon() : 0;
+    return *m_pResources;
 }
 
-int BaseManager::ConsumeLabs()
+const ResourceManager& BaseManager::GetResources() const
 {
-    return m_pResources ? m_pResources->ConsumeLabs() : 0;
-}
-
-int BaseManager::ConsumePsych()
-{
-    return m_pResources ? m_pResources->ConsumePsych() : 0;
+    return *m_pResources;
 }
 
 void BaseManager::ApplyGrowth(const FactionEffects_t& rFactionEffects)
 {
-    if (!m_pPopulation)
-    {
-        throw std::runtime_error("BaseManager::ApplyGrowth: m_pPopulation is null");
-    }
-    const int nutrients = m_pResources ? m_pResources->ConsumeNutrients() : 0;
-    m_pPopulation->ApplyGrowth(nutrients, BuildBaseEffects_(rFactionEffects));
+    m_pPopulation->ApplyGrowth(m_pResources->ConsumeNutrients(), BuildBaseEffects_(rFactionEffects));
 }
 
 int BaseManager::GetNutrientsRequired() const
 {
-    if (!m_pPopulation)
-    {
-        throw std::runtime_error("BaseManager::GetNutrientsRequired: m_pPopulation is null");
-    }
     return m_pPopulation->GetNutrientsRequired(BuildBaseEffects_());
 }
 
@@ -379,19 +307,9 @@ int BaseManager::GetY() const
     return m_tile.GetY();
 }
 
-const std::vector<const Tile*>& BaseManager::GetWorkableTilePositions() const
-{
-    return m_pWorkerAssignments->GetWorkableTiles();
-}
-
 TileResources_t BaseManager::GetWorkedTileYield(const Tile& rTile) const
 {
     return m_pWorkerAssignments->GetWorkedTileYield(rTile, BuildBaseEffects_());
-}
-
-void BaseManager::SetName(const std::string& name)
-{
-    m_name = name;
 }
 
 const std::string& BaseManager::GetName() const
@@ -399,19 +317,9 @@ const std::string& BaseManager::GetName() const
     return m_name;
 }
 
-void BaseManager::SetFactionId(FactionId factionId)
-{
-    m_factionId = factionId;
-}
-
 FactionId BaseManager::GetFactionId() const
 {
     return m_factionId;
-}
-
-void BaseManager::SetBaseId(int baseId)
-{
-    m_baseId = baseId;
 }
 
 int BaseManager::GetBaseId() const

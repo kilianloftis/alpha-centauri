@@ -27,7 +27,6 @@ class Graphics
 public:
     virtual ~Graphics() = default;
 
-    virtual bool Initialize() = 0;
     virtual void Clear() = 0;
     virtual void Display() = 0;
     virtual bool LoadTexture(const std::string& id, const std::string& path) = 0;
