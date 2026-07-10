@@ -11,7 +11,6 @@
 #include "game/effects/ActiveEffect.h"
 #include <algorithm>
 #include <cmath>
-#include <iostream>
 
 namespace ac
 {
@@ -222,16 +221,9 @@ void TileEffectsContext::RecomputeMoisture(Tile& rTile)
 
 void TileEffectsContext::AddImprovementWithEffects(Tile& rTile, const std::string& improvementId)
 {
-    const ImprovementConfig_t* pConfig = m_rImprovements.Find(improvementId);
-    if (!pConfig)
-    {
-        std::cerr << "[TileEffectsContext] Unknown improvement id '" << improvementId
-                  << "' - not added.\n";
-        return;
-    }
-
-    rTile.AddImprovement(*pConfig);
-    RecomputeMoistureInRadius_(rTile, MaxEffectReach_(*pConfig), *this, m_rWorldMap);
+    const ImprovementConfig_t& rConfig = m_rImprovements.Get(improvementId);
+    rTile.AddImprovement(rConfig);
+    RecomputeMoistureInRadius_(rTile, MaxEffectReach_(rConfig), *this, m_rWorldMap);
 }
 
 void TileEffectsContext::RemoveImprovementWithEffects(Tile& rTile, const std::string& improvementId)

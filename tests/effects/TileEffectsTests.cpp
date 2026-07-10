@@ -272,14 +272,14 @@ TEST_CASE("RecomputeMoisture: the moisture shift feeds back into tile yield", "[
     CHECK(world.ctx->ResolveTileYield(tile).nutrients == 1);
 }
 
-TEST_CASE("AddImprovementWithEffects: unknown improvement ids are rejected without crashing",
+TEST_CASE("AddImprovementWithEffects: unknown improvement ids throw",
           "[effects][tile]")
 {
     actest::WorldFixture world;
     Tile& tile = world.At(4, 4);
-    world.ctx->AddImprovementWithEffects(tile, "OrbitalLaser");
+    CHECK_THROWS_AS(world.ctx->AddImprovementWithEffects(tile, "OrbitalLaser"), std::runtime_error);
     CHECK(tile.GetImprovements().empty());
-    world.ctx->RemoveImprovementWithEffects(tile, "OrbitalLaser"); // also a safe no-op
+    world.ctx->RemoveImprovementWithEffects(tile, "OrbitalLaser"); // safe no-op for absent id
 }
 
 TEST_CASE("Aura effects at the map edge are collected without crashing", "[effects][tile][aura]")

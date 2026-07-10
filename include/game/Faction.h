@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "game/IEffectsProvider.h"
@@ -94,8 +95,8 @@ public:
 
     // Projected per-turn outputs summed across all bases.
     int GetNetIncomePerTurn() const;
-    int GetBreakthroughRate() const;
-    int GetTurnsUntilBreakthrough() const;
+    std::optional<int> GetBreakthroughRate() const;
+    std::optional<int> GetTurnsUntilBreakthrough() const;
 
     // Resource production - routes to all bases and faction economy manager.
     // rExternalEffects are effects from outside this faction (other factions' WorldGlobal

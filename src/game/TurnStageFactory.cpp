@@ -16,6 +16,7 @@
 #include "game/stages/CustomTurnStage.h"
 #include <iostream>
 #include <magic_enum.hpp>
+#include <stdexcept>
 
 namespace ac
 {
@@ -24,12 +25,14 @@ TurnStageFactory::TurnStageFactory()
 {
 }
 
-bool TurnStageFactory::LoadConfig(const std::string& configPath)
+void TurnStageFactory::LoadConfig(const std::string& configPath)
 {
     TurnStageConfigParser parser;
     m_stageConfigs = parser.ParseConfig(configPath);
-    
-    return !m_stageConfigs.empty();
+    if (m_stageConfigs.empty())
+    {
+        throw std::runtime_error("Turn stage config '" + configPath + "' produced no stages");
+    }
 }
 
 TurnStageRegistry_t TurnStageFactory::CreateStages()
@@ -37,12 +40,8 @@ TurnStageRegistry_t TurnStageFactory::CreateStages()
     TurnStageRegistry_t registry;
     for (const auto& config : m_stageConfigs)
     {
-        auto pStageInstance = CreateStageInstance(config);
-        if (pStageInstance)
-        {
-            registry[config.id] = std::move(pStageInstance);
-            std::cout << "Registered stage: " << config.id << "\n";
-        }
+        registry[config.id] = CreateStageInstance(config);
+        std::cout << "Registered stage: " << config.id << "\n";
     }
     return registry;
 }
@@ -85,7 +84,7 @@ std::unique_ptr<TurnStageBase> TurnStageFactory::CreateStageInstance(const TurnS
         case TurnStage::Save:
             return std::make_unique<Save>(config.hookContext);
         default:
-            return nullptr;
+            throw std::runtime_error("Unhandled turn stage id '" + config.id + "'");
     }
 }
 

@@ -3,6 +3,7 @@
 #include "game/social-engineering/SocialRatingConfig.h"
 #include "game/social-engineering/SocialRatingRegistry.h"
 #include <map>
+#include <stdexcept>
 
 namespace ac
 {
@@ -24,15 +25,15 @@ SocialEngineeringManager::~SocialEngineeringManager()
 {
 }
 
-bool SocialEngineeringManager::SetActivePolicy(SocialCategory category, const std::string& policyId)
+void SocialEngineeringManager::SetActivePolicy(SocialCategory category, const std::string& policyId)
 {
-    if (!m_pRegistry || !m_pRegistry->Find(policyId))
+    if (!m_pRegistry)
     {
-        return false;
+        throw std::runtime_error("SocialEngineeringManager::SetActivePolicy: policy registry is null");
     }
+    m_pRegistry->Get(policyId); // throws if unknown
     m_activePolicyIds[category] = policyId;
     m_revision.Bump();
-    return true;
 }
 
 const SocialPolicyConfig* SocialEngineeringManager::GetActivePolicy(SocialCategory category) const

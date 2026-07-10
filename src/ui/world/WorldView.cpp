@@ -7,6 +7,7 @@
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/EconomyManager.h"
 #include "game/faction/ResearchManager.h"
+#include "game/faction/UnitManager.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitOrder.h"
@@ -51,6 +52,19 @@ WorldView::WorldView(
     m_pWorldDisplay->SetWorldMap(&rWorldMap);
 
     m_elements.push_back(std::make_unique<InfoPanelElement>(ResolveLayout(m_layout, k_InfoPanelLayout)));
+
+    // Every faction exists by the time WorldView is constructed (Engine::Initialize_ creates
+    // them all up front) and none are added later, so wiring here covers unit death for the
+    // whole game: without this, m_pSelectedUnit would dangle the moment a unit dies.
+    for (Faction& rFaction : m_rGameState.Factions())
+    {
+        rFaction.GetUnitManager().on_unit_destroyed.connect([this](Unit& rDestroyed) {
+            if (m_pSelectedUnit == &rDestroyed)
+            {
+                m_pSelectedUnit = nullptr;
+            }
+        });
+    }
 }
 
 void WorldView::Render(Graphics& rGraphics)

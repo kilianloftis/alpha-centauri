@@ -20,8 +20,8 @@ public:
                               const SocialRatingRegistry* pRatingRegistry);
     ~SocialEngineeringManager();
 
-    // Set the active policy for a category. Returns false if the id is not found.
-    bool SetActivePolicy(SocialCategory category, const std::string& policyId);
+    // Set the active policy for a category. Throws if the id is not found.
+    void SetActivePolicy(SocialCategory category, const std::string& policyId);
 
     // Get the active policy config for a category. Returns nullptr if none is set.
     const SocialPolicyConfig* GetActivePolicy(SocialCategory category) const;

@@ -207,3 +207,28 @@ Views are rendered bottom-to-top through the stack. Each view renders its own `U
 
 ### Factory: CreateUIManager()
 Returns `UIManagerImpl`, a platform-agnostic implementation (no compile-time flag needed).
+
+### Object Lifetime / Invalidation (code-review 1.8)
+Views hold live references/pointers into mutable game state with no generic weak-handle system.
+Two of the three cases the review flagged are closed; the third is deliberately deferred:
+
+- **`BaseView::HandlePopClick`'s captured `Pop&`** is safe by construction rather than by a
+  runtime handle: the only thing that erases a `Pop` (`PopulationManager::RemovePop`, via
+  starvation) runs inside `TurnProcessor::ProcessTurn`, reachable only through
+  `WorldView::HandleKey`'s `Enter` case — and `UIManager::GetActiveView_()` routes all input to
+  the top of the overlay stack, so `WorldView::HandleKey` cannot fire while `BaseView` (or a
+  popup it owns) is pushed. `Engine::ProcessTurn_` asserts this invariant explicitly via
+  `UIManager::HasOverlayView()` (throws `std::logic_error` if an overlay is active) so a future
+  caller that bypasses view-stack routing fails loudly instead of corrupting a popup's captured
+  reference. A future mid-turn-stage popup (prompting for input before a stage continues, not
+  implemented yet) will need to preserve this same "no destructive mutation while a popup holding
+  live references is open" invariant.
+- **`WorldView::m_pSelectedUnit`** (a raw `Unit*`) is kept valid via `UnitManager::on_unit_destroyed`,
+  a `Signal<Unit&>` emitted in `DestroyUnit` before the unit is erased (mirroring
+  `PopulationManager`'s `on_growth`/`on_starvation` pattern). `WorldView` connects to every
+  faction's `UnitManager` at construction (all factions exist by then; none are added later) and
+  clears `m_pSelectedUnit` when it matches the destroyed unit.
+- **Deferred**: `BaseView`/`GrowthDisplay`/`ProductionDisplay` hold `BaseManager&`/`const
+  BaseManager*` for their whole life with no invalidation path. No code destroys a `BaseManager`
+  today — base capture/destruction doesn't exist as a feature — so there is nothing to guard
+  against yet; revisit once that feature lands.

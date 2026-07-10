@@ -2,6 +2,7 @@
 
 #include "lib/DerefView.h"
 #include "lib/Revision.h"
+#include "lib/Signal.h"
 #include <memory>
 #include <vector>
 
@@ -34,6 +35,10 @@ public:
 
     // Bumped on every unit creation/destruction; consumed by effect-pool caches.
     uint64_t GetRevision() const { return m_revision.Get(); }
+
+    // Fired from DestroyUnit before the unit is erased, so observers (e.g. WorldView's unit
+    // selection) can drop any reference to it while it is still valid.
+    Signal<Unit&> on_unit_destroyed;
 
 private:
     Faction& m_rFaction;

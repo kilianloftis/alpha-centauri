@@ -80,7 +80,7 @@ TEST_CASE("ExpandGrantBuildingEffects: Instantaneous effects of the granted buil
     }
 }
 
-TEST_CASE("ExpandGrantBuildingEffects: an unknown granted building id is skipped gracefully",
+TEST_CASE("ExpandGrantBuildingEffects: an unknown granted building id throws",
           "[effects][grant]")
 {
     actest::BaseFixture fixture;
@@ -88,10 +88,8 @@ TEST_CASE("ExpandGrantBuildingEffects: an unknown granted building id is skipped
 
     baseA.GetBuildingManager().AddBuilding("grantor_unknown");
     const auto collected = baseA.CollectBuildingEffects();
-    const auto expanded = ExpandGrantBuildingEffects(collected, fixture.buildings(), {&baseA});
-
-    // Nothing added beyond the collected effects (the grant itself is still in the list).
-    CHECK(expanded.size() == collected.size());
+    CHECK_THROWS_AS(ExpandGrantBuildingEffects(collected, fixture.buildings(), {&baseA}),
+                    std::runtime_error);
 }
 
 TEST_CASE("ExpandGrantBuildingEffects: the same building granted twice in one base expands once",

@@ -167,11 +167,30 @@ Denormalized identity plus convention-based "player = first" will produce subtle
 
 ### 1.8 [H] UI holds unmanaged references to mutable game objects
 
-- `BaseView` stores `BaseManager&` for its whole life; `GrowthDisplay`/`ProductionDisplay` store `const BaseManager*`.
-- `WorldView::m_pSelectedUnit` is a raw `Unit*` (`include/ui/world/WorldView.h:57`); `UnitManager::DestroyUnit` erases the owning `unique_ptr` — the selection dangles the moment unit death exists.
-- `BaseView::HandlePopClick` captures `Pop& rPop` in a lambda stored inside a popup element (`src/ui/base/BaseView.cpp:104-112`); pops are destroyed by starvation (`PopContainer::RemovePop`) while the popup can still be open.
+> **Status (2026-07-10): pop-popup and selected-unit races closed; base-reference row deferred.**
+>
+> - `BaseView::HandlePopClick`'s captured `Pop& rPop` turned out to be safe by construction, not
+>   by luck: the only thing that erases a `Pop` (`PopulationManager::RemovePop`, via starvation)
+>   runs exclusively inside `TurnProcessor::ProcessTurn`, itself reachable only through
+>   `WorldView::HandleKey`'s `Enter` case — and `UIManager::GetActiveView_()` routes all input to
+>   the top of the overlay stack, so `WorldView::HandleKey` cannot fire while `BaseView` (or a
+>   popup it owns) is pushed. That made the invariant implicit rather than enforced;
+>   `Engine::ProcessTurn_` now asserts it directly (`UIManager::HasOverlayView()` throws
+>   `std::logic_error` if set), so a future caller that bypasses view-stack routing (a
+>   scripted/auto turn, say) fails loudly instead of dangling a popup's captured reference. Once
+>   turn processing itself needs to pause for player input mid-stage (not implemented yet), that
+>   pause has to preserve this same invariant.
+> - `WorldView::m_pSelectedUnit` dangling on unit death: `UnitManager` now exposes
+>   `on_unit_destroyed` (mirroring `PopulationManager`'s existing `on_growth`/`on_starvation`
+>   signals), emitted in `DestroyUnit` before the unit is erased. `WorldView` connects to every
+>   faction's `UnitManager` at construction and clears `m_pSelectedUnit` on a match. Guarded by
+>   a new case in `tests/game/UnitPositionTests.cpp`.
+> - Out of scope, deferred: `BaseView`/`GrowthDisplay`/`ProductionDisplay` holding
+>   `BaseManager&`/`const BaseManager*` for their whole life. No code path anywhere (production
+>   or tests) destroys a `BaseManager` — base capture/destruction isn't a feature yet — so there
+>   is nothing to invalidate against. Revisit when that feature lands.
 
-There is no invalidation protocol (weak handle, generation ID, close-on-destroy signal) between views and game objects. Combined with 1.6, object destruction is currently unsafe almost everywhere it could occur; it "works" only because nothing dies yet.
+Combined with 1.6, object destruction is otherwise still unsafe almost everywhere it could occur beyond the two rows closed above; it "works" only because nothing else dies yet.
 
 ### 1.9 [H] Turn-stage interface: nullable-pointer contract, and stages do other objects' work
 
@@ -389,6 +408,32 @@ The coding guidelines say "Do not make up game rules or mechanics. Leave TODOs i
 `ExpandSocialRatingEffects` looks up the accumulated rating with `levelEffects.find(total)`; totals outside the configured levels produce no effects at all (`src/game/social-engineering/SocialRatingResolver.cpp:47-52`). Whether ratings clamp at the extremes is a rules decision that has been made implicitly (they vanish), without a TODO.
 
 ### 3.8 [H] Failure handling is a different style in every method
+
+> **Status (2026-07-10): fixed.** Adopted rule: *required dependencies and known-must-exist
+> ids throw; optional probes use `Find`/`optional`; config load failures throw; no
+> sentinel returns (`-1`, empty static string) and no warn-and-default parsers.*
+>
+> Closed in this pass:
+> - `Registry::Get` for required lookups; `Find` remains the optional probe; `Create`
+>   delegates to `Get`.
+> - `TileEffectsContext::AddImprovementWithEffects` throws on unknown improvement id
+>   (founding a base without a `"Base"` improvement fails loudly).
+> - `TurnStageFactory::LoadConfig` is `void` and throws on an empty stage list;
+>   unknown built-in stage ids throw instead of returning null.
+> - `GrowthConfig_tParser` / `PopCompositionConfigParser` throw on load failure
+>   (matching `TechCostConfigParser` / `JsonConfigLoader`).
+> - `BreakthroughRate` / `GetTurnsUntilBreakthrough` return `std::optional<int>`
+>   instead of `-1`; SE UI formats empty as `"N/A"`.
+> - `SocialEngineeringManager::SetActivePolicy` throws on unknown policy id.
+> - `ExpandGrantBuildingEffects` throws on unknown grant targets.
+> - `ResourceManager` production getters no longer soft-return `0` for a missing
+>   worker manager (they share `ComputeWorked_`'s throw).
+> - `BaseManager` production-complete / mineral-cost / apply-production paths no
+>   longer soft-skip a null building registry or effects provider.
+>
+> Already closed earlier via 4.2: BaseManager sub-manager throw/0/no-op split,
+> `GetDefinitionId` empty-string sentinel, `Faction::AddResearchPoints` null-research
+> drop. `LuaRuntime::EvalInt` warn-and-zero remains under finding 3.6.
 
 Within `BaseManager` alone: null sub-manager → throw (`GetNutrientProduction`), return 0 (`ConsumeEcon`), silent no-op (`AddBuilding`), or unchecked deref (`GetPopContainer`). Elsewhere: `Registry::Find` returns nullptr while `Registry::Create` throws; `TurnStageFactory::LoadConfig` returns `bool`; `TileEffectsContext::AddImprovementWithEffects` logs to stderr and continues; JSON parsers throw; Lua parsers warn and fall back to defaults (`ProductionCostConfig_tParser::ParseConfig`); `Faction::AddResearchPoints` silently drops points if research is null; `GetBreakthroughRate` returns `-1` sentinels; `GetDefinitionId` returns a static empty string. Callers cannot predict any failure mode without reading the callee. This is the most pervasive maintainability issue after 1.1.
 
@@ -618,6 +663,6 @@ The project defines unusually specific conventions (`.devin/rules/coding-guideli
 
 1. **Compute-on-read with no invalidation seam** (1.1) — the architecture has implicitly committed to "always live, always recomputed" without deciding it. *(Addressed 2026-07-09: the decision is now explicit — revision-validated memoization; see 1.1's status note.)*
 2. **Invariants by convention**: manual wiring steps (WireBase), magic config IDs ("Base", "Drone", default policies), index-0 player, "call AutoAssignWorkers after", "move units via WorldMap" — each is a rule that exists only in comments and future contributors' memories.
-3. **Two-phase construction + nullable dependencies** → defensive null checks → inconsistent failure styles (4.2 → 3.8): one root cause producing the two noisiest code smells.
+3. **Two-phase construction + nullable dependencies** → defensive null checks → inconsistent failure styles (4.2 → 3.8): one root cause producing the two noisiest code smells. *(Both closed 2026-07-09/10: construction is single-phase for the listed types, and failure handling follows the 3.8 throw/optional/Find rule.)*
 4. **Boundaries declared but not enforced**: lib/game, data/state (GameDataContext/GameState), Null/SFML backends, "mod-facing" bus, docs vs code — in each case the stated boundary and the real dependency graph disagree.
 5. **Guidelines exist but drift freely** (naming, references-over-pointers, exceptions-over-defaults, diagram upkeep) — either the rules or the code should change, but agreement is currently absent.

@@ -127,6 +127,11 @@ bool UIManager::HasViews() const
     return m_pWorldView != nullptr;
 }
 
+bool UIManager::HasOverlayView() const
+{
+    return !m_overlayStack.empty();
+}
+
 bool UIManager::ShouldExit() const
 {
     return m_bShouldExit;

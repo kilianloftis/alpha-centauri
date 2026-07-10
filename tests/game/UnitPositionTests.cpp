@@ -42,6 +42,22 @@ TEST_CASE("Unit creation and destruction maintain the position index", "[unit][i
     CHECK(fixture.map.GetUnitsOnTile(fixture.At(4, 4)).empty());
 }
 
+TEST_CASE("DestroyUnit emits on_unit_destroyed before the unit is removed", "[unit][signal]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+
+    Unit* pDestroyed = nullptr;
+    faction.GetUnitManager().on_unit_destroyed.connect([&pDestroyed](Unit& rUnit) {
+        pDestroyed = &rUnit;
+    });
+
+    faction.GetUnitManager().DestroyUnit(unit);
+
+    CHECK(pDestroyed == &unit);
+}
+
 TEST_CASE("Moving a unit keeps its tile pointer and the index in sync", "[unit][index]")
 {
     actest::FactionFixture fixture;

@@ -1,6 +1,6 @@
 #include "game/population/pop-types/PopCompositionConfigParser.h"
 #include "lib/LuaRuntime.h"
-#include <iostream>
+#include <stdexcept>
 
 namespace ac
 {
@@ -9,7 +9,6 @@ PopCompositionConfig PopCompositionConfigParser::ParseConfig(const std::string& 
                                                              LuaRuntime& rLua)
 {
     PopCompositionConfig config;
-    config.precedence   = {"Talent", "Drone", "Worker"};
 
     sol::state& lua = rLua.GetState();
 
@@ -19,9 +18,8 @@ PopCompositionConfig PopCompositionConfigParser::ParseConfig(const std::string& 
     if (!result.valid())
     {
         sol::error err = result;
-        std::cout << "Warning: Failed to load pop composition script '" << scriptPath
-                  << "': " << err.what() << "\n";
-        return config;
+        throw std::runtime_error("Failed to load pop composition script '" + scriptPath
+                                 + "': " + err.what());
     }
 
     sol::table tbl = result;
@@ -32,7 +30,6 @@ PopCompositionConfig PopCompositionConfigParser::ParseConfig(const std::string& 
     sol::optional<sol::table> precedence = tbl["precedence"];
     if (precedence)
     {
-        config.precedence.clear();
         for (const auto& [key, val] : *precedence)
         {
             if (val.is<std::string>())

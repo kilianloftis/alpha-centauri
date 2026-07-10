@@ -18,6 +18,7 @@
 #include "game/effects/BonusEffect.h"
 #include <algorithm>
 #include <cmath>
+#include <stdexcept>
 #include <iostream>
 #include <set>
 #include <string_view>
@@ -146,7 +147,7 @@ std::vector<ActiveEffect_t> ExpandGrantBuildingEffects(
         const BuildingConfig_t* pGranted = rRegistry.Find(pGrant->buildingId);
         if (!pGranted)
         {
-            continue;
+            throw std::runtime_error("Unknown granted building id '" + pGrant->buildingId + "'");
         }
 
         if (GrantChainContains_(effects[i].sourceId, pGrant->buildingId))

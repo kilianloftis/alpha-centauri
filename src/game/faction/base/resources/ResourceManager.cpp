@@ -74,13 +74,11 @@ int ResourceManager::CalculateResource_(StatId stat, const TileResources_t& work
 
 int ResourceManager::GetNutrientProduction(const BaseEffects_t& rBaseEffects) const
 {
-    if (!m_pWorkerAssignments) return 0;
     return CalculateResource_(StatId::Nutrients, ComputeWorked_(rBaseEffects), rBaseEffects);
 }
 
 int ResourceManager::GetMineralProduction(const BaseEffects_t& rBaseEffects) const
 {
-    if (!m_pWorkerAssignments) return 0;
     return CalculateResource_(StatId::Minerals, ComputeWorked_(rBaseEffects), rBaseEffects);
 }
 
@@ -112,19 +110,16 @@ int ResourceManager::CalculatePsych_(int energy, const BaseEffects_t& rBaseEffec
 
 int ResourceManager::GetEconProduction(const BaseEffects_t& rBaseEffects) const
 {
-    if (!m_pWorkerAssignments) return 0;
     return CalculateEcon_(CalculateResource_(StatId::Energy, ComputeWorked_(rBaseEffects), rBaseEffects), rBaseEffects);
 }
 
 int ResourceManager::GetLabsProduction(const BaseEffects_t& rBaseEffects) const
 {
-    if (!m_pWorkerAssignments) return 0;
     return CalculateLabs_(CalculateResource_(StatId::Energy, ComputeWorked_(rBaseEffects), rBaseEffects), rBaseEffects);
 }
 
 int ResourceManager::GetPsychProduction(const BaseEffects_t& rBaseEffects) const
 {
-    if (!m_pWorkerAssignments) return 0;
     return CalculatePsych_(CalculateResource_(StatId::Energy, ComputeWorked_(rBaseEffects), rBaseEffects), rBaseEffects);
 }
 

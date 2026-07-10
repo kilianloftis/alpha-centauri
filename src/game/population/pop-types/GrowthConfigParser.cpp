@@ -1,7 +1,7 @@
 #include "game/population/pop-types/GrowthConfigParser.h"
 #include <nlohmann/json.hpp>
 #include <fstream>
-#include <iostream>
+#include <stdexcept>
 
 namespace ac
 {
@@ -13,8 +13,7 @@ GrowthConfig_t GrowthConfig_tParser::ParseConfig(const std::string& configPath)
     std::ifstream file(configPath);
     if (!file.is_open())
     {
-        std::cout << "Warning: Could not open '" << configPath << "', using default growth config\n";
-        return config;
+        throw std::runtime_error("Could not open growth config '" + configPath + "'");
     }
 
     const nlohmann::json json = nlohmann::json::parse(file);

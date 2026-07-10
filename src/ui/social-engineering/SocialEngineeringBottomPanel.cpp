@@ -3,6 +3,7 @@
 #include "game/Faction.h"
 #include "graphics/Graphics.h"
 
+#include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -22,15 +23,15 @@ constexpr float k_HorizontalPaddingRatio   = 0.02f;
 constexpr float k_VerticalPaddingRatio     = 0.08f;
 constexpr float k_ValueFontSizeRatio       = 0.07f;
 
-std::string FormatTurnCount(int turns)
+std::string FormatTurnCount(std::optional<int> turns)
 {
-    if (turns < 0)
+    if (!turns.has_value())
     {
         return "N/A";
     }
 
     std::ostringstream oss;
-    oss << turns << (turns == 1 ? " turn" : " turns");
+    oss << *turns << (*turns == 1 ? " turn" : " turns");
     return oss.str();
 }
 

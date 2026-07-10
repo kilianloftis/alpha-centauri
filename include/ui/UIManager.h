@@ -26,6 +26,7 @@ public:
     void PushView(std::unique_ptr<IGameView> pView);
     void PopView();
     bool HasViews() const;
+    bool HasOverlayView() const;
 
     bool ShouldExit() const;
     void RequestExit();

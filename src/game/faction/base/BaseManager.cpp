@@ -100,14 +100,11 @@ BaseManager::BaseManager(
 
     m_pProduction->on_production_completed.connect([this](const std::string& itemId) {
         m_pBuildings->AddBuilding(itemId);
-        if (m_pBuildingRegistry)
+        if (!m_pBuildingRegistry)
         {
-            const BuildingConfig_t* pConfig = m_pBuildingRegistry->Find(itemId);
-            if (pConfig)
-            {
-                DispatchInstantaneousEffects(*pConfig, *this);
-            }
+            throw std::runtime_error("BaseManager: building registry is null after production");
         }
+        DispatchInstantaneousEffects(m_pBuildingRegistry->Get(itemId), *this);
         on_production_completed.emit(itemId);
     });
 }
@@ -233,19 +230,11 @@ const ProductionManager& BaseManager::GetProduction() const
 
 std::string BaseManager::ApplyProduction()
 {
-    if (!m_pEffectsProvider)
-    {
-        return m_pProduction->ApplyProduction(m_pResources->ConsumeMinerals(), BaseEffects_t{});
-    }
     return m_pProduction->ApplyProduction(m_pResources->ConsumeMinerals(), BuildBaseEffects_());
 }
 
 int BaseManager::GetMineralCost() const
 {
-    if (!m_pEffectsProvider)
-    {
-        return m_pProduction->GetMineralCost(BaseEffects_t{});
-    }
     return m_pProduction->GetMineralCost(BuildBaseEffects_());
 }
 

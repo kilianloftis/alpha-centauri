@@ -5,6 +5,7 @@
 #include "game/effects/ActiveEffect.h"
 
 #include <algorithm>
+#include <optional>
 
 namespace ac
 {
@@ -73,22 +74,22 @@ int ResearchManager::GetPointsNeededForCurrentTech() const
     return m_pointsNeededForCurrentTech;
 }
 
-int ResearchManager::BreakthroughRate(int researchPerTurn) const
+std::optional<int> ResearchManager::BreakthroughRate(int researchPerTurn) const
 {
     if (!m_pCurrentResearchTarget || researchPerTurn <= 0)
     {
-        return -1;
+        return std::nullopt;
     }
 
     RevalidatePointsNeeded_();
     return (m_pointsNeededForCurrentTech + researchPerTurn - 1) / researchPerTurn;
 }
 
-int ResearchManager::GetTurnsUntilBreakthrough(int researchPerTurn) const
+std::optional<int> ResearchManager::GetTurnsUntilBreakthrough(int researchPerTurn) const
 {
     if (!m_pCurrentResearchTarget || researchPerTurn <= 0)
     {
-        return -1;
+        return std::nullopt;
     }
 
     RevalidatePointsNeeded_();

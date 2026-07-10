@@ -121,7 +121,7 @@ TEST_CASE("Two-level ratings: faction-wide policy rating plus a base-local build
     BaseManager& plainBase = fixture.MakeFactionBase(faction, 6, 6);
 
     // Policy: +2 Growth faction-wide. Shrine: +1 Growth in its base only.
-    REQUIRE(faction.GetSocialEngineering().SetActivePolicy(SocialCategory::Politics, "growth_policy"));
+    faction.GetSocialEngineering().SetActivePolicy(SocialCategory::Politics, "growth_policy");
     baseWithShrine.GetBuildingManager().AddBuilding("growth_shrine");
 
     CHECK(baseWithShrine.GetEffectiveSocialRating(SocialRatingId::Growth) == 3);
@@ -147,7 +147,7 @@ TEST_CASE("Growth rating affects the growth threshold via GrowthRate modifiers",
 
     // Policy: +2 Growth faction-wide (fixture level 2 -> +20% growth rate). Shrine: +1
     // Growth in its base only (level 3 -> +30%). The threshold shrinks per base.
-    REQUIRE(faction.GetSocialEngineering().SetActivePolicy(SocialCategory::Politics, "growth_policy"));
+    faction.GetSocialEngineering().SetActivePolicy(SocialCategory::Politics, "growth_policy");
     baseWithShrine.GetBuildingManager().AddBuilding("growth_shrine");
 
     CHECK(plainBase.GetNutrientsRequired() == 25);      // 30 / 1.2
@@ -173,7 +173,7 @@ TEST_CASE("Industry rating affects production cost via CostMultiplier modifiers"
     CHECK(base.GetMineralCost() == 100); // Industry 0 → multiplier 1.0
 
     // Policy: +2 Industry → level 2 → CostMultiplier -20% → 0.8
-    REQUIRE(faction.GetSocialEngineering().SetActivePolicy(SocialCategory::Economics, "industry_policy"));
+    faction.GetSocialEngineering().SetActivePolicy(SocialCategory::Economics, "industry_policy");
     CHECK(base.GetEffectiveSocialRating(SocialRatingId::Industry) == 2);
     CHECK(base.GetMineralCost() == 80);
 }

@@ -10,7 +10,8 @@ namespace ac
 {
 
 // Generic config registry: loads TConfig entries via TParser::ParseConfig(),
-// stores them keyed by TConfig::id, and exposes Find() / GetAll() / Create().
+// stores them keyed by TConfig::id, and exposes Find() / Get() / GetAll() / Create().
+// Find() is the optional probe (nullptr on miss); Get()/Create() throw on unknown ids.
 // TParser must provide: std::vector<TConfig> ParseConfig(const std::string&)
 // TConfig must have: std::string id
 // TInstance defaults to TConfig. When overridden, Create() constructs a
@@ -37,6 +38,7 @@ public:
         Validate_();
     }
 
+    // Optional lookup: nullptr when the id is absent. Prefer Get() when the id must exist.
     const TConfig* Find(const std::string& rId) const
     {
         auto it = m_indexById.find(rId);
@@ -45,6 +47,17 @@ public:
             return nullptr;
         }
         return &m_configs[it->second];
+    }
+
+    // Required lookup: throws std::runtime_error if the id is not found.
+    const TConfig& Get(const std::string& rId) const
+    {
+        const TConfig* pConfig = Find(rId);
+        if (!pConfig)
+        {
+            throw std::runtime_error("Unknown id '" + rId + "'");
+        }
+        return *pConfig;
     }
 
     const std::vector<TConfig>& GetAll() const
@@ -56,12 +69,7 @@ public:
     // Throws std::runtime_error if id is not found.
     std::unique_ptr<TInstance> Create(const std::string& rId) const
     {
-        const TConfig* pConfig = Find(rId);
-        if (!pConfig)
-        {
-            throw std::runtime_error("Unknown id '" + rId + "'");
-        }
-        return std::make_unique<TInstance>(*pConfig);
+        return std::make_unique<TInstance>(Get(rId));
     }
 
 protected:

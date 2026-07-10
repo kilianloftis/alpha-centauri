@@ -22,7 +22,7 @@ public:
     ~PopCompositionConfigParser() = default;
 
     // Load pop_composition.lua via the shared Lua runtime.
-    // Returns a default config on failure.
+    // Throws if the script cannot be loaded.
     PopCompositionConfig ParseConfig(const std::string& scriptPath, LuaRuntime& rLua);
 };
 

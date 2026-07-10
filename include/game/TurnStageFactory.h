@@ -15,7 +15,8 @@ public:
     TurnStageFactory();
     ~TurnStageFactory() = default;
 
-    bool LoadConfig(const std::string& configPath);
+    // Throws if the config cannot be loaded or yields no stages.
+    void LoadConfig(const std::string& configPath);
     TurnStageRegistry_t CreateStages();
     const std::vector<TurnStageConfig>& GetStageConfigs() const { return m_stageConfigs; }
 

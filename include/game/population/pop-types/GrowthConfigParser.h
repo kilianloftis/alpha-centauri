@@ -17,8 +17,7 @@ public:
     GrowthConfig_tParser() = default;
     ~GrowthConfig_tParser() = default;
 
-    // Load pop_growth.json.
-    // Returns a default config on failure.
+    // Load pop_growth.json. Throws if the file cannot be opened or parsed.
     GrowthConfig_t ParseConfig(const std::string& configPath);
 };
 

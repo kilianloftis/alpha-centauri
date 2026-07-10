@@ -3,6 +3,7 @@
 #include "game/research/TechRegistry.h"
 #include "game/research/TechCostCalculator.h"
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 namespace ac
@@ -35,12 +36,12 @@ public:
     void RecalculatePointsNeeded();
 
     // Full turns to complete the current target at researchPerTurn, ignoring accumulated
-    // progress. Returns -1 when there is no target or researchPerTurn <= 0.
-    int BreakthroughRate(int researchPerTurn) const;
+    // progress. Empty when there is no target or researchPerTurn <= 0.
+    std::optional<int> BreakthroughRate(int researchPerTurn) const;
 
     // Turns remaining until the current target is discovered at researchPerTurn.
-    // Returns -1 when there is no target or researchPerTurn <= 0.
-    int GetTurnsUntilBreakthrough(int researchPerTurn) const;
+    // Empty when there is no target or researchPerTurn <= 0.
+    std::optional<int> GetTurnsUntilBreakthrough(int researchPerTurn) const;
 
     bool CanDiscoverTech() const;
     bool DiscoverTech();

@@ -87,6 +87,18 @@ void Engine::GameLoop_()
 
 void Engine::ProcessTurn_()
 {
+    // Turn processing can mutate/destroy pops (starvation) and other base state that
+    // base-level popups (e.g. PopTypeSelectorPopup) hold live references to. Input routing
+    // already makes this unreachable in practice - UIManager only routes input to the top of
+    // the overlay stack, and this callback is only ever wired to WorldView's Enter handler -
+    // but that makes it an implicit invariant. Assert it explicitly so a future caller that
+    // bypasses view-stack routing (a scripted/auto turn, say) fails loudly instead of silently
+    // dangling a popup's captured reference.
+    if (m_uiManager->HasOverlayView())
+    {
+        throw std::logic_error("Engine::ProcessTurn_ called while an overlay view is active");
+    }
+
     m_eventBus->publish(EvTurnStarted{ m_gameState->GetMissionYear() });
     m_turnProcessor->ProcessTurn(m_gameState->GetMissionYear(), m_gameState->GetNumFactions(), *m_gameState);
     m_gameState->IncrementMissionYear();

@@ -23,12 +23,11 @@ BuildingManager::~BuildingManager()
 
 void BuildingManager::AddBuilding(const std::string& buildingId)
 {
-    const BuildingConfig_t* pConfig = m_pRegistry->Find(buildingId);
-    if (!pConfig)
+    if (!m_pRegistry)
     {
-        throw std::runtime_error("Unknown building id '" + buildingId + "'");
+        throw std::runtime_error("BuildingManager::AddBuilding: building registry is null");
     }
-    m_buildings.push_back(pConfig);
+    m_buildings.push_back(&m_pRegistry->Get(buildingId));
     m_revision.Bump();
 }
 
