@@ -9,8 +9,8 @@ namespace ac
 namespace
 {
 
-constexpr Color k_BackgroundColor       {20, 20, 40, 255};
-constexpr Color k_BorderColor           {100, 100, 180, 255};
+constexpr Color_t k_BackgroundColor       {20, 20, 40, 255};
+constexpr Color_t k_BorderColor           {100, 100, 180, 255};
 constexpr float k_BorderWidth           = 2.0f;
 constexpr float k_TitleFontSizeRatio    = 0.05f;
 constexpr float k_EntryFontSizeRatio    = 0.04f;
@@ -56,7 +56,7 @@ void ComponentSelectorPopup::Render(Graphics& rGraphics)
     const unsigned int titleSize = static_cast<unsigned int>(m_layout.height * k_TitleFontSizeRatio);
     const unsigned int entrySize = static_cast<unsigned int>(m_layout.height * k_EntryFontSizeRatio);
 
-    rGraphics.DrawText("Select Component", m_layout.x + padding, m_layout.y + padding, titleSize, Color::Yellow());
+    rGraphics.DrawText("Select Component", m_layout.x + padding, m_layout.y + padding, titleSize, Color_t::Yellow());
 
     for (size_t i = 0; i < m_components.size() && i < m_entryRects.size(); ++i)
     {

@@ -14,8 +14,8 @@ graph TB
     end
 
     subgraph "Tile Characteristics"
-        Moisture[Moisture<br/>enum: Arid/Moist/Wet]
-        Rockiness[Rockiness<br/>enum: Flat/Rolling/Rocky]
+        Moisture_t[Moisture_t<br/>enum: Arid/Moist/Wet]
+        Rockiness_t[Rockiness_t<br/>enum: Flat/Rolling/Rocky]
         Elevation[Elevation<br/>int -4000 to 4000 meters]
     end
 
@@ -41,8 +41,8 @@ graph TB
     TileMap --> WorkedTileIndex
     TileMap --> UnitPositionIndex
     Tile --> Position
-    Tile --> Moisture
-    Tile --> Rockiness
+    Tile --> Moisture_t
+    Tile --> Rockiness_t
     Tile --> Elevation
     Tile --> River
     Tile --> Fungus
@@ -69,15 +69,15 @@ graph TB
 - **Purpose**: Represents a single tile on the game map with all its characteristics. `Tile` itself stays a plain data holder — it has no knowledge of the effects system or `ImprovementRegistry`; all effects-based resolution (yield, defense) lives in free functions that take a `Tile` and a registry, the same pattern used elsewhere in the effects system (e.g. `CollectFromBuildings` takes a `Faction` and a `BuildingRegistry`).
 - **Responsibilities**:
   - Store terrain characteristics:
-    - Moisture (enum: Arid, Moist, Wet)
-    - Rockiness (enum: Flat, Rolling, Rocky)
+    - Moisture_t (enum: Arid, Moist, Wet)
+    - Rockiness_t (enum: Flat, Rolling, Rocky)
     - Elevation (int: -4000 to 4000 meters)
   - Track tile features (Rivers, Fungus, Improvements)
   - Expose `GetTerrainFeatureIds()` (terrain ids) and `GetImprovements()` (config pointers) so the effects system can resolve yield/defense from terrain and improvements through one mechanism — see Tile Improvement Effects below
 - **Composition**:
   - `Position`: x,y coordinates on the map grid
-  - `Moisture`: Enum (Arid, Moist, Wet) - affects nutrient production via its `Moist`/`Wet` entry in `config/improvements.json`
-  - `Rockiness`: Enum (Flat, Rolling, Rocky) - affects mineral production and (for Rocky) grants a defense bonus, via its entry in `config/improvements.json`
+  - `Moisture_t`: Enum (Arid, Moist, Wet) - affects nutrient production via its `Moist`/`Wet` entry in `config/improvements.json`
+  - `Rockiness_t`: Enum (Flat, Rolling, Rocky) - affects mineral production and (for Rocky) grants a defense bonus, via its entry in `config/improvements.json`
   - `Elevation`: Integer in meters, range -4000 to 4000 - the raw seed for energy production (`GetElevationEnergySeed()`); River/improvement bonuses layer on top via effects
   - `River`: Boolean flag for river presence (grants an energy bonus via its improvements.json entry)
   - `Fungus`: Boolean flag for alien fungus presence (grants a defense bonus via its improvements.json entry). Presence-only for now — spreading fungus turn-over-turn is a separate future enhancement, not implemented.
@@ -107,8 +107,8 @@ graph TB
         Resolver[TileLayerResolver]
         Layers[std::array&lt;TileLayer_t&gt;]
         Landform[Landform<br/>water / flat / rolling]
-        Moisture[Moisture<br/>arid / moist / wet]
-        Rockiness[Rockiness<br/>rocky / empty]
+        Moisture_t[Moisture_t<br/>arid / moist / wet]
+        Rockiness_t[Rockiness_t<br/>rocky / empty]
         Vegetation[Vegetation<br/>farm / forest / empty]
         Road[Road<br/>road / empty]
         Improvement[Improvement<br/>dominant other / empty]
@@ -117,8 +117,8 @@ graph TB
     Tile[Tile] --> Resolver
     Resolver --> Layers
     Layers --> Landform
-    Layers --> Moisture
-    Layers --> Rockiness
+    Layers --> Moisture_t
+    Layers --> Rockiness_t
     Layers --> Vegetation
     Layers --> Road
     Layers --> Improvement
@@ -129,14 +129,14 @@ graph TB
 
 - **Purpose**: Provides an ordered, render-only representation of a tile's visual contents
 - **Components**:
-  - `TileLayerType_t`: Enum defining the visual layer order (Landform, Moisture, Rockiness, Vegetation, Road, Improvement)
+  - `TileLayerType_t`: Enum defining the visual layer order (Landform, Moisture_t, Rockiness_t, Vegetation, Road, Improvement)
   - `TileLayer_t`: Pair of layer type and optional content ID string (`std::optional<std::string>`)
   - `ResolveTileLayers(const Tile&)`: Free function that maps a `Tile`'s gameplay data to the layer array
 - **Rationale**: Separates tile gameplay data from rendering data, so changes to visuals do not affect resource calculation or other systems
 - **Layer Order** (bottom to top):
   1. `Landform`: water, flat, or rolling
-  2. `Moisture`: arid, moist, or wet
-  3. `Rockiness`: rocky overlay (empty if not rocky)
+  2. `Moisture_t`: arid, moist, or wet
+  3. `Rockiness_t`: rocky overlay (empty if not rocky)
   4. `Vegetation`: farm or forest
   5. `Road`: road
   6. `Improvement`: dominant non-vegetation, non-road improvement (e.g., Borehole, Monolith)
@@ -152,7 +152,7 @@ graph TB
   - `CollectTileEffects`, `ResolveTileYield`, `ResolveTileDefenseMultiplier` (`include/lib/effects/ActiveEffect.h`) — gather and resolve a tile's own effects.
   - `CanBuildImprovement(tile, candidate)` (`include/game/map/ImprovementConfigParser.h`) — exclusivity check (e.g. Farm excludes Rocky). Not wired into any UI yet; there's no improvement-construction flow to call it from.
 - **Configuration**: `config/improvements.json` — one array covering terrain values (`Flat`/`Rolling`/`Rocky`, `Arid`/`Moist`/`Wet`), natural features (`River`, `Fungus`), and improvements (`Farm`, `Mine`, `Bunker`, `Base`).
-- **Combat bonus example**: `Rocky`, `Fungus`, and `Bunker` each grant a `StatModifier` effect on `StatId::Defense` with `op: AddPercent, amount: 25` (+25%, stacking additively per `ResolveStatModifiers`'s arithmetic-factor formula). `Base` grants a larger placeholder bonus the same way. No combat system exists yet to consume `ResolveTileDefenseMultiplier` — it's exposed as a ready-to-call resolver.
+- **Combat bonus example**: `Rocky`, `Fungus`, and `Bunker` each grant a `StatModifier` effect on `StatId_t::Defense` with `op: AddPercent, amount: 25` (+25%, stacking additively per `ResolveStatModifiers`'s arithmetic-factor formula). `Base` grants a larger placeholder bonus the same way. No combat system exists yet to consume `ResolveTileDefenseMultiplier` — it's exposed as a ready-to-call resolver.
 - **Aura example**: `Sensor` (`radius: 2`) projects its `+25%` defense bonus to every tile within 2 tiles (Manhattan), not just its own — `ResolveTileDefenseMultiplier` takes a `WorldMap` specifically to scan for these. This is the one tile resolver that needs map access; `ResolveTileYield`/`CollectTileEffects` only ever look at a tile's own terrain features and improvements.
 
 ### Tile Bonuses (special resources)

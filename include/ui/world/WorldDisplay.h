@@ -68,8 +68,8 @@ private:
 
 
     // Convert terrain enums to display integers
-    int MoistureToInt_(Moisture moisture) const;
-    int RockinessToInt_(Rockiness rockiness) const;
+    int MoistureToInt_(Moisture_t moisture) const;
+    int RockinessToInt_(Rockiness_t rockiness) const;
 
     // Render a single tile
     void RenderTile_(Graphics& rGraphics, const Tile& rTile, float x, float y, float size);

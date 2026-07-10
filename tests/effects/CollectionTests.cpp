@@ -36,8 +36,8 @@ TEST_CASE("AppendActiveEffects: skips Instantaneous effects", "[effects][collect
 {
     actest::EffectPool pool;
     std::vector<EffectConfig_t> configs = {
-        pool.StatMod(StatId::Nutrients, 1.0, ModifierOp::Add, EffectScope_t::ThisBase),
-        pool.StatMod(StatId::Nutrients, 5.0, ModifierOp::Add, EffectScope_t::ThisBase,
+        pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase),
+        pool.StatMod(StatId_t::Nutrients, 5.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
                      std::nullopt, std::nullopt, EffectPersistence_t::Instantaneous),
     };
 
@@ -56,9 +56,9 @@ TEST_CASE("AppendActiveEffects: originBase is recorded only for ThisBase-scoped 
 
     actest::EffectPool pool;
     std::vector<EffectConfig_t> configs = {
-        pool.StatMod(StatId::Nutrients, 1.0, ModifierOp::Add, EffectScope_t::ThisBase),
-        pool.StatMod(StatId::Energy, 1.0, ModifierOp::Add, EffectScope_t::FactionGlobal),
-        pool.StatMod(StatId::Minerals, 1.0, ModifierOp::Add, EffectScope_t::AllOwnerBases),
+        pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase),
+        pool.StatMod(StatId_t::Energy, 1.0, ModifierOp_t::Add, EffectScope_t::FactionGlobal),
+        pool.StatMod(StatId_t::Minerals, 1.0, ModifierOp_t::Add, EffectScope_t::AllOwnerBases),
     };
 
     std::vector<ActiveEffect_t> out;
@@ -77,13 +77,13 @@ TEST_CASE("CollectUnitEffects: gathers component effects, tagged with the compon
 
     UnitComponentConfig_t weapon;
     weapon.id = "laser";
-    weapon.effects = {pool.StatMod(StatId::Attack, 4.0, ModifierOp::Add, EffectScope_t::ThisUnit)};
+    weapon.effects = {pool.StatMod(StatId_t::Attack, 4.0, ModifierOp_t::Add, EffectScope_t::ThisUnit)};
 
     UnitComponentConfig_t chassis;
     chassis.id = "speeder";
     chassis.effects = {
-        pool.StatMod(StatId::Movement, 2.0, ModifierOp::Add, EffectScope_t::ThisUnit),
-        pool.StatMod(StatId::Attack, 25.0, ModifierOp::AddPercent, EffectScope_t::ThisUnit,
+        pool.StatMod(StatId_t::Movement, 2.0, ModifierOp_t::Add, EffectScope_t::ThisUnit),
+        pool.StatMod(StatId_t::Attack, 25.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit,
                      std::nullopt, std::nullopt, EffectPersistence_t::Instantaneous),
     };
 
@@ -143,8 +143,8 @@ TEST_CASE("CollectFromPops: only ThisBase-scoped pop effects enter the base pool
     }
 
     // Stacking: two Doctors contribute +4 psych in total.
-    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Psych), 0.0).total == 4.0);
-    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Econ), 0.0).total == 4.0);
+    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Psych), 0.0).total == 4.0);
+    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Econ), 0.0).total == 4.0);
     CHECK(CountBySource(effects, "Doctor") == 2);
 }
 
@@ -162,22 +162,22 @@ TEST_CASE("CollectTileEffects: terrain features resolve by string id through the
 
     SECTION("Rocky contributes its mineral and defense effects, sourceId = feature id")
     {
-        tile.SetRockiness(Rockiness::Rocky);
+        tile.SetRockiness(Rockiness_t::Rocky);
         const auto effects = CollectTileEffects(tile, world.improvements);
         REQUIRE(effects.size() == 2);
         CHECK(effects[0].sourceId == "Rocky");
-        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Minerals), 0.0).total == 2.0);
+        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Minerals), 0.0).total == 2.0);
     }
 
     SECTION("river and moisture stack with rockiness")
     {
-        tile.SetRockiness(Rockiness::Rolling); // +1 mineral
-        tile.SetMoisture(Moisture::Wet);       // +2 nutrients
+        tile.SetRockiness(Rockiness_t::Rolling); // +1 mineral
+        tile.SetMoisture(Moisture_t::Wet);       // +2 nutrients
         tile.SetHasRiver(true);                // +1 energy
         const auto effects = CollectTileEffects(tile, world.improvements);
-        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Minerals), 0.0).total == 1.0);
-        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Nutrients), 0.0).total == 2.0);
-        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Energy), 0.0).total == 1.0);
+        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Minerals), 0.0).total == 1.0);
+        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Nutrients), 0.0).total == 2.0);
+        CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Energy), 0.0).total == 1.0);
     }
 }
 
@@ -196,8 +196,8 @@ TEST_CASE("CollectTileEffects: improvements contribute directly from their held 
     tile.AddImprovement(*pMine);
 
     const auto effects = CollectTileEffects(tile, world.improvements);
-    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Nutrients), 0.0).total == 1.0);
-    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Minerals), 0.0).total == 2.0);
+    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Nutrients), 0.0).total == 1.0);
+    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Minerals), 0.0).total == 2.0);
     CHECK(CountBySource(effects, "Farm") == 1);
     CHECK(CountBySource(effects, "Mine") == 1);
 }
@@ -215,7 +215,7 @@ TEST_CASE("CollectTileEffects: only ThisTile-scoped effects are collected from a
     {
         CHECK(effect.config->scope == EffectScope_t::ThisTile);
     }
-    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Nutrients), 0.0).total == 0.0);
+    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Nutrients), 0.0).total == 0.0);
 }
 
 TEST_CASE("CollectTileEffects: Instantaneous effects do not enter the continuous tile pool",
@@ -229,5 +229,5 @@ TEST_CASE("CollectTileEffects: Instantaneous effects do not enter the continuous
     tile.AddImprovement(*world.improvements.Find("WeirdAura"));
 
     const auto effects = CollectTileEffects(tile, world.improvements);
-    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Minerals), 0.0).total == 0.0);
+    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Minerals), 0.0).total == 0.0);
 }

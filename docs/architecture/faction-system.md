@@ -257,7 +257,7 @@ graph TB
   - `Population`: Abstract base class for population implementations
   - `PopulationManager`: API surface for the population component; manages pop composition, growth, and riot state for a single base
   - `IConstructable`: Abstract interface for any entity that can be queued for production; exposes `GetId()`, `GetName()`, and `GetMineralCost()`
-  - `ProductionManager`: API surface for the production component; manages one active `IConstructable` at a time, tracks accumulated minerals, and emits `on_production_completed` when the item is finished
+  - `ProductionManager`: API surface for the production component; manages one active `IConstructable` at a time, tracks accumulated minerals, and emits `OnProductionCompleted` when the item is finished
   - `WorkerAssignmentManager`: Owns the set of workable tiles and the tile-scoring policy; holds a reference to the base's `PopulationManager` and to the world-scoped `WorkedTileIndex`; validates worker-to-tile assignments and runs auto-assignment. An assignment is a `WorkedTileClaim` minted by `WorkedTileIndex::TryClaim` and held by the `Pop`; the claim also carries the user-assigned flag, so the manager can skip user-assigned pops during auto-assignment and the flag can never outlive the assignment (see `docs/architecture/map-system.md`, "WorkedTileIndex").
   - `PopContainer`: Owns the vector of `Pop` instances for a single base and provides pop transformation operations
   - `Pop`: Individual population unit; holds a `WorkedTileClaim` when assigned as a worker (`GetTile()` reads it), which releases the tile automatically when the pop dies, converts to a non-worker type, or is reassigned
@@ -278,7 +278,7 @@ graph TB
   - Let `WorkerAssignmentManager` validate tiles against the workable set and auto-assign idle workers; one-worker-per-tile uniqueness is enforced structurally by `WorkedTileIndex::TryClaim`
   - Assign workers to different roles (tiles, labs, psych, econ, drones, talents)
   - Track buildings constructed in the base
-  - Manage one active production item per base, accumulating minerals each turn until the item's mineral cost is paid; emits `on_production_completed` and adds the building to the base when finished
+  - Manage one active production item per base, accumulating minerals each turn until the item's mineral cost is paid; emits `OnProductionCompleted` and adds the building to the base when finished
   - Calculate resource output based on worker assignments:
     - Workers/Talents work tiles (produce nutrients, energy, minerals)
     - Lab workers contribute to research

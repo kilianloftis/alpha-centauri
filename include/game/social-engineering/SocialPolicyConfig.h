@@ -8,7 +8,7 @@
 namespace ac
 {
 
-enum class SocialCategory
+enum class SocialCategory_t
 {
     Politics,
     Economics,
@@ -16,11 +16,11 @@ enum class SocialCategory
     FutureSociety
 };
 
-struct SocialPolicyConfig
+struct SocialPolicyConfig_t
 {
     std::string id;
     std::string name;
-    SocialCategory category;
+    SocialCategory_t category;
     std::string requiredTech;  // empty if none
     std::vector<EffectConfig_t> effects;
 

@@ -77,7 +77,7 @@ public:
     // Check riot conditions at end of turn. Delegates to m_riot.Update(inputs).
     void CheckRiotEndOfTurn();
 
-    // Check golden age conditions at end of turn. Delegates to m_golden_age.Update(...).
+    // Check golden age conditions at end of turn. Delegates to m_goldenAge.Update(...).
     void CheckGoldenAgeEndOfTurn();
 
     // Population limits (initial value from GrowthConfig_t::maxBaseSize).
@@ -97,21 +97,21 @@ public:
     void ApplyGrowth(int nutrients, const BaseEffects_t& rBaseEffects);
 
     // Signals
-    Signal<int> on_pop_gained;   // new size
-    Signal<int> on_pop_lost;     // new size
+    Signal<int> OnPopGained;   // new size
+    Signal<int> OnPopLost;     // new size
 
     // Riot signals
-    Signal<> on_will_riot;    // conditions met after growth, riot not yet active
-    Signal<> on_is_rioting;   // end-of-turn: conditions still met, riot now active
-    Signal<> on_riot_ended;   // end-of-turn: conditions no longer met, riot was active
+    Signal<> OnWillRiot;    // conditions met after growth, riot not yet active
+    Signal<> OnIsRioting;   // end-of-turn: conditions still met, riot now active
+    Signal<> OnRiotEnded;   // end-of-turn: conditions no longer met, riot was active
 
     // Growth signals
-    Signal<> on_growth;       // base has gained a pop
-    Signal<> on_starvation;   // base has lost a pop
+    Signal<> OnGrowth;       // base has gained a pop
+    Signal<> OnStarvation;   // base has lost a pop
 
     // Golden age signals
-    Signal<> on_golden_age_started;
-    Signal<> on_golden_age_ended;
+    Signal<> OnGoldenAgeStarted;
+    Signal<> OnGoldenAgeEnded;
 
 private:
     PopContainer m_container;
@@ -122,7 +122,7 @@ private:
     int m_nutrientStockpile = 0;
 
     RiotCalculator m_riot;
-    GoldenAgeCalculator m_golden_age;
+    GoldenAgeCalculator m_goldenAge;
 
     RiotConditionInputs BuildRiotInputs_() const;
 

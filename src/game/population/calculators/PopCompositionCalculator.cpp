@@ -4,14 +4,14 @@
 namespace ac
 {
 
-PopCompositionCalculator::PopCompositionCalculator(const PopCompositionConfig& rConfig,
+PopCompositionCalculator::PopCompositionCalculator(const PopCompositionConfig_t& rConfig,
                                                    LuaRuntime& rLua)
     : m_pConfig(&rConfig)
     , m_pLua(&rLua)
 {
 }
 
-const PopCompositionConfig& PopCompositionCalculator::GetConfig() const
+const PopCompositionConfig_t& PopCompositionCalculator::GetConfig() const
 {
     return *m_pConfig;
 }

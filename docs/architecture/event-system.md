@@ -74,10 +74,10 @@ graph TB
   - Subscription-based handler management
   - Synchronous dispatch
 - **API**:
-  - `subscribe(Handler)`: Subscribe to all events with a single handler
-  - `subscribe<T>(Handler)`: Subscribe to specific event type only
-  - `unsubscribe(SubscriptionId)`: Remove a subscription
-  - `publish(GameEvent)`: Publish an event to all handlers
+  - `Subscribe(Handler)`: Subscribe to all events with a single handler
+  - `Subscribe<T>(Handler)`: Subscribe to specific event type only
+  - `Unsubscribe(SubscriptionId)`: Remove a subscription
+  - `Publish(GameEvent)`: Publish an event to all handlers
 - **Mod Access**: Full - this is the primary mod interface for events
 
 ### EventBridge
@@ -91,7 +91,7 @@ graph TB
   - `faction.on_base_built` → `EvBaseBuilt`
   - `faction.on_eliminated` → `EvFactionElim`
   - `turn_loop.on_turn_started` → `EvTurnStarted`
-- **Pattern**: One-way bridge from internal signals to EventBus (mods publish, don't receive internal signals)
+- **Pattern**: One-way bridge from internal signals to EventBus (mods Publish, don't receive internal signals)
 
 ## Design Rationale
 
@@ -129,8 +129,8 @@ graph TB
 At startup, engine modules connect directly to each other:
 ```cpp
 // Example: Combat resolver wiring
-combatResolver.on_unit_destroyed.connect([](UnitId id) {
-    faction.on_unit_lost.emit(id);
+combatResolver.OnUnitDestroyed.Connect([](UnitId id) {
+    faction.on_unit_lost.Emit(id);
 });
 ```
 
@@ -142,9 +142,9 @@ EventBridge bridge(gameState, eventBus);
 ```
 
 ### Mod Subscription
-Mods subscribe to EventBus for events:
+Mods Subscribe to EventBus for events:
 ```cpp
-auto id = eventBus.subscribe<EvTechDiscovered>(
+auto id = eventBus.Subscribe<EvTechDiscovered>(
     [](const EvTechDiscovered& e) {
         // Handle tech discovery
     }
@@ -154,7 +154,7 @@ auto id = eventBus.subscribe<EvTechDiscovered>(
 ## Event Flow
 
 ### Internal Signal Flow
-1. Engine module emits signal: `faction.on_tech_discovered.emit(techId)`
+1. Engine module emits signal: `faction.on_tech_discovered.Emit(techId)`
 2. Direct call to all connected slots
 3. Slots execute immediately (synchronous)
 4. No heap allocation, no variant boxing
@@ -176,7 +176,7 @@ auto id = eventBus.subscribe<EvTechDiscovered>(
 
 ### Event Filtering
 - Add event filtering support to reduce handler calls
-- Allow mods to subscribe to filtered event streams
+- Allow mods to Subscribe to filtered event streams
 - Consider event priority levels
 
 ### Event History

@@ -110,7 +110,7 @@ struct StatBreakdown_t
     {
         std::string sourceId;
         double amount;
-        ModifierOp op;
+        ModifierOp_t op;
     };
 
     std::vector<Contribution> contributions;
@@ -121,7 +121,7 @@ const FactionEffects_t& CollectActiveEffects(const IEffectsProvider& rProvider);
 // Apply a stack of modifier contributions to a base value using the standard formula:
 //   result = (base + sumOfAdds) * (1 + sumOf(percent/100)) * productOfGeometric
 // Each pair is {amount, op}. Contributions are applied in the order given.
-double ApplyModifierStack(double base, const std::vector<std::pair<double, ModifierOp>>& contributions);
+double ApplyModifierStack(double base, const std::vector<std::pair<double, ModifierOp_t>>& contributions);
 
 // baseValue seeds the additive total before contributions are summed. It is deliberately
 // NOT defaulted: stats resolved purely through multiplicative modifiers (e.g.
@@ -161,7 +161,7 @@ StatBreakdown_t ResolveStatModifiers(Range&& matching, double baseValue)
                   return a.sourceId < b.sourceId;
               });
 
-    std::vector<std::pair<double, ModifierOp>> stack;
+    std::vector<std::pair<double, ModifierOp_t>> stack;
     stack.reserve(breakdown.contributions.size());
     for (const StatBreakdown_t::Contribution& c : breakdown.contributions)
     {
@@ -171,13 +171,13 @@ StatBreakdown_t ResolveStatModifiers(Range&& matching, double baseValue)
     return breakdown;
 }
 
-// Returns a lazy view of effects whose target stat matches the given StatId.
+// Returns a lazy view of effects whose target stat matches the given StatId_t.
 // Only includes StatModifierEffect_t instances. Condition-carrying effects are excluded:
 // they only apply through a matching runtime context (see FilterByStatIdInContext).
 // The view borrows `effects` — consume it within the statement/expression that creates it
 // (e.g. pass it straight into ResolveStatModifiers), or materialize explicitly (the vector
 // iterator-pair constructor) if the result must outlive that statement.
-inline auto FilterByStatId(const std::vector<ActiveEffect_t>& effects, StatId statId)
+inline auto FilterByStatId(const std::vector<ActiveEffect_t>& effects, StatId_t statId)
 {
     return effects | std::views::filter([statId](const ActiveEffect_t& effect)
     {
@@ -197,7 +197,7 @@ inline auto FilterByStatId(const std::vector<ActiveEffect_t>& effects, StatId st
 // point for context-dependent resolution such as combat (attack/defense vs a given target).
 // Same borrowing rule as FilterByStatId.
 inline auto FilterByStatIdInContext(const std::vector<ActiveEffect_t>& effects,
-                                    StatId statId, const EffectContext_t& ctx)
+                                    StatId_t statId, const EffectContext_t& ctx)
 {
     return effects | std::views::filter([statId, ctx](const ActiveEffect_t& effect)
     {
@@ -215,7 +215,7 @@ inline auto FilterByStatIdInContext(const std::vector<ActiveEffect_t>& effects,
 // applied per worked tile and must not be counted a second time. Accepting BaseEffects_t
 // (never a raw vector or the pool) makes running this filter at any other stage a compile
 // error instead of a doc violation. Same borrowing rule as FilterByStatId.
-inline auto FilterFlatByStatId(const BaseEffects_t& rBaseEffects, StatId statId)
+inline auto FilterFlatByStatId(const BaseEffects_t& rBaseEffects, StatId_t statId)
 {
     return rBaseEffects.effects | std::views::filter([statId](const ActiveEffect_t& effect)
     {
@@ -268,7 +268,7 @@ std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile, const Improvem
 // Fire all Instantaneous effects declared on rBuilding against rBase.
 // GrantBuilding: adds the granted building to the base immediately.
 // GrantTech / GrantUnit: logged as TODO stubs until those systems are wired.
-// Call this right after a building is added to the base (e.g. from on_production_completed).
+// Call this right after a building is added to the base (e.g. from OnProductionCompleted).
 void DispatchInstantaneousEffects(const BuildingConfig_t& rBuilding, BaseManager& rBase);
 
 } // namespace ac

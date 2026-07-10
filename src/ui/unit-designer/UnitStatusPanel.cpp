@@ -11,9 +11,9 @@ namespace ac
 namespace
 {
 
-constexpr Color k_BackgroundColor      {20, 20, 20, 255};
-constexpr Color k_BorderColor          {80, 80, 80, 255};
-constexpr Color k_MutedTextColor       {100, 100, 100, 255};
+constexpr Color_t k_BackgroundColor      {20, 20, 20, 255};
+constexpr Color_t k_BorderColor          {80, 80, 80, 255};
+constexpr Color_t k_MutedTextColor       {100, 100, 100, 255};
 constexpr float k_HeaderFontSizeRatio  = 0.08f;
 constexpr float k_StatFontSizeRatio    = 0.07f;
 constexpr float k_LineHeightRatio      = 0.10f;
@@ -44,7 +44,7 @@ void UnitStatusPanel::Render(Graphics& rGraphics)
     const unsigned int statSize   = static_cast<unsigned int>(m_layout.width * k_StatFontSizeRatio);
     const float lineH            = m_layout.width * k_LineHeightRatio;
 
-    rGraphics.DrawText("Unit Status", m_layout.x + padding, m_layout.y + padding, headerSize, Color::Yellow());
+    rGraphics.DrawText("Unit Status", m_layout.x + padding, m_layout.y + padding, headerSize, Color_t::Yellow());
 
     const UnitDesign* pDesign = m_getSelectedDesign();
     if (!pDesign)

@@ -35,7 +35,7 @@ BuildingConfig_t BuildingConfigParser::ParseBuildingConfig(const nlohmann::json&
             "use singular 'required_tech' (omit or \"\" = always available)");
     }
     config.requiredTech = ConfigFields::ParseRequiredTech(buildingJson);
-    config.effects = BonusEffectParser::ParseEffects(buildingJson, EffectSourceKind::Building, config.id);
+    config.effects = BonusEffectParser::ParseEffects(buildingJson, EffectSourceKind_t::Building, config.id);
 
     return config;
 }

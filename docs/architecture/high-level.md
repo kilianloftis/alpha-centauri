@@ -53,7 +53,7 @@ graph TB
         PopTypeRegistry[PopTypeRegistry]
         BuildingRegistry[BuildingRegistry]
         TechRegistry[TechRegistry]
-        PopCompositionConfig[PopCompositionConfig]
+        PopCompositionConfig_t[PopCompositionConfig_t]
         PopCompositionCalculator[PopCompositionCalculator]
         LuaRuntime[LuaRuntime]
     end
@@ -134,7 +134,7 @@ graph TB
     GameDataContext --> BuildingRegistry
     Building -.->|implements| IConstructable
     GameDataContext --> TechRegistry
-    GameDataContext --> PopCompositionConfig
+    GameDataContext --> PopCompositionConfig_t
     GameDataContext --> PopCompositionCalculator
     GameDataContext --> LuaRuntime
     FactionFactory --> Faction
@@ -174,7 +174,7 @@ graph TB
     style PopTypeRegistry fill:#ffd,stroke:#333,stroke-width:2px
     style BuildingRegistry fill:#ffd,stroke:#333,stroke-width:2px
     style TechRegistry fill:#ffd,stroke:#333,stroke-width:2px
-    style PopCompositionConfig fill:#ffd,stroke:#333,stroke-width:2px
+    style PopCompositionConfig_t fill:#ffd,stroke:#333,stroke-width:2px
     style PopCompositionCalculator fill:#ffd,stroke:#333,stroke-width:2px
     style LuaRuntime fill:#ffd,stroke:#333,stroke-width:2px
     style FactionVector fill:#fbf,stroke:#333,stroke-width:2px
@@ -238,7 +238,7 @@ graph TB
     `CustomPerFactionTurnStage` for mod-defined ids
   - `TurnStages`: Defines `TurnStageBase` (hook lifecycle) and the two stage interfaces,
     `GlobalTurnStage` and `PerFactionTurnStage`
-  - `HookContext`/`Hook`: Per-stage pre/post/replace hooks, parsed from config
+  - `HookContext`/`Hook_t`: Per-stage pre/post/replace hooks, parsed from config
 - **Dependencies**:
   - TurnProcessor depends on TurnStages and GameState
   - TurnStageFactory depends on TurnStages and config/turn_stages.json
@@ -250,7 +250,7 @@ graph TB
   - `BuildingRegistry`: All building definitions loaded from `config/buildings.json`; each entry may have `secret_project: true` to mark it as a Secret Project
   - `TechRegistry`: All tech definitions loaded from `config/techs.json`
   - `PopTypeRegistry`: All pop type definitions loaded from `config/pop_types.json`
-  - `PopCompositionConfig`: Composition formula config loaded via Lua
+  - `PopCompositionConfig_t`: Composition formula config loaded via Lua
   - `PopCompositionCalculator`: Evaluates composition formulas at runtime
   - `LuaRuntime`: Shared Lua state used to load and evaluate config scripts
 - **Note**: Implemented as a plain struct with public `unique_ptr` members (no getters/setters needed)
@@ -274,7 +274,7 @@ graph TB
 ### Map System
 - **Purpose**: Manages game world terrain and tile-based resource production
 - **Components**:
-  - `Tile`: Represents a single map tile with position (x,y), terrain characteristics (Moisture, Rockiness, Elevation), Rivers, Landmarks, Improvements, Bonus, and Worker assignment tracking
+  - `Tile`: Represents a single map tile with position (x,y), terrain characteristics (Moisture_t, Rockiness_t, Elevation), Rivers, Landmarks, Improvements, Bonus, and Worker assignment tracking
   - `TileMap`: (Future) Container for the 2D grid of tiles
   - `TileBonusRegistry`: Loads and provides access to tile bonus definitions
   - `TileBonusConfig`: Data structure for bonus definitions (resource bonuses + sprite path)
@@ -324,7 +324,7 @@ graph TB
   - `ActiveEffect_t`: Runtime instance pointing back to an `EffectConfig_t`, with a source id and optional origin base.
   - `CollectActiveEffects`: Gathers all active effects for a faction by walking bases/buildings and social engineering selections.
 - **Dependencies**:
-  - `EffectConfig_t` is stored inside `BuildingConfig_t` and will eventually be stored in `SocialPolicyConfig`.
+  - `EffectConfig_t` is stored inside `BuildingConfig_t` and will eventually be stored in `SocialPolicyConfig_t`.
   - `CollectActiveEffects` reads from `Faction` (bases and social engineering manager).
 - **Details**: See `docs/architecture/effects-system.md` for detailed architecture
 

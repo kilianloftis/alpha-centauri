@@ -7,59 +7,59 @@ namespace ac
 namespace BonusEffectParser
 {
 
-StatId ParseStatId(const std::string& rStat)
+StatId_t ParseStatId(const std::string& rStat)
 {
-    if (rStat == "nutrients")               return StatId::Nutrients;
-    if (rStat == "minerals")                return StatId::Minerals;
-    if (rStat == "energy")                  return StatId::Energy;
-    if (rStat == "econ")                    return StatId::Econ;
-    if (rStat == "labs")                    return StatId::Labs;
-    if (rStat == "psych")                   return StatId::Psych;
-    if (rStat == "attack")                  return StatId::Attack;
-    if (rStat == "defense")                 return StatId::Defense;
-    if (rStat == "movement")                return StatId::Movement;
-    if (rStat == "hit_points")              return StatId::HitPoints;
-    if (rStat == "disengage_chance")        return StatId::DisengageChance;
-    if (rStat == "fuel")                    return StatId::Fuel;
-    if (rStat == "damage_from_out_of_fuel") return StatId::DamageFromOutOfFuel;
-    if (rStat == "cargo_capacity")          return StatId::CargoCapacity;
-    if (rStat == "difficult_terrain_cost")  return StatId::DifficultTerrainCost;
-    if (rStat == "cost_multiplier")         return StatId::CostMultiplier;
-    if (rStat == "growth_rate")             return StatId::GrowthRate;
-    if (rStat == "tech_cost")               return StatId::TechCost;
-    if (rStat == "moisture_tier")           return StatId::MoistureTier;
+    if (rStat == "nutrients")               return StatId_t::Nutrients;
+    if (rStat == "minerals")                return StatId_t::Minerals;
+    if (rStat == "energy")                  return StatId_t::Energy;
+    if (rStat == "econ")                    return StatId_t::Econ;
+    if (rStat == "labs")                    return StatId_t::Labs;
+    if (rStat == "psych")                   return StatId_t::Psych;
+    if (rStat == "attack")                  return StatId_t::Attack;
+    if (rStat == "defense")                 return StatId_t::Defense;
+    if (rStat == "movement")                return StatId_t::Movement;
+    if (rStat == "hit_points")              return StatId_t::HitPoints;
+    if (rStat == "disengage_chance")        return StatId_t::DisengageChance;
+    if (rStat == "fuel")                    return StatId_t::Fuel;
+    if (rStat == "damage_from_out_of_fuel") return StatId_t::DamageFromOutOfFuel;
+    if (rStat == "cargo_capacity")          return StatId_t::CargoCapacity;
+    if (rStat == "difficult_terrain_cost")  return StatId_t::DifficultTerrainCost;
+    if (rStat == "cost_multiplier")         return StatId_t::CostMultiplier;
+    if (rStat == "growth_rate")             return StatId_t::GrowthRate;
+    if (rStat == "tech_cost")               return StatId_t::TechCost;
+    if (rStat == "moisture_tier")           return StatId_t::MoistureTier;
     throw std::runtime_error("Unknown stat id: '" + rStat + "'");
 }
 
-RuleFlagId ParseRuleFlagId(const std::string& rFlag)
+RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
 {
-    if (rFlag == "population_boom")  return RuleFlagId::PopulationBoom;
-    if (rFlag == "near_zero_growth") return RuleFlagId::NearZeroGrowth;
-    if (rFlag == "flight")           return RuleFlagId::Flight;
-    if (rFlag == "single_use")       return RuleFlagId::SingleUse;
+    if (rFlag == "population_boom")  return RuleFlagId_t::PopulationBoom;
+    if (rFlag == "near_zero_growth") return RuleFlagId_t::NearZeroGrowth;
+    if (rFlag == "flight")           return RuleFlagId_t::Flight;
+    if (rFlag == "single_use")       return RuleFlagId_t::SingleUse;
     throw std::runtime_error("Unknown rule flag id: '" + rFlag + "'");
 }
 
-SocialRatingId ParseSocialRatingId(const std::string& rRating)
+SocialRatingId_t ParseSocialRatingId(const std::string& rRating)
 {
-    if (rRating == "economy")    return SocialRatingId::Economy;
-    if (rRating == "efficiency") return SocialRatingId::Efficiency;
-    if (rRating == "support")    return SocialRatingId::Support;
-    if (rRating == "police")     return SocialRatingId::Police;
-    if (rRating == "morale")     return SocialRatingId::Morale;
-    if (rRating == "growth")     return SocialRatingId::Growth;
-    if (rRating == "planet")     return SocialRatingId::Planet;
-    if (rRating == "research")   return SocialRatingId::Research;
-    if (rRating == "industry")   return SocialRatingId::Industry;
-    if (rRating == "probe")      return SocialRatingId::Probe;
+    if (rRating == "economy")    return SocialRatingId_t::Economy;
+    if (rRating == "efficiency") return SocialRatingId_t::Efficiency;
+    if (rRating == "support")    return SocialRatingId_t::Support;
+    if (rRating == "police")     return SocialRatingId_t::Police;
+    if (rRating == "morale")     return SocialRatingId_t::Morale;
+    if (rRating == "growth")     return SocialRatingId_t::Growth;
+    if (rRating == "planet")     return SocialRatingId_t::Planet;
+    if (rRating == "research")   return SocialRatingId_t::Research;
+    if (rRating == "industry")   return SocialRatingId_t::Industry;
+    if (rRating == "probe")      return SocialRatingId_t::Probe;
     throw std::runtime_error("Unknown social rating id: '" + rRating + "'");
 }
 
-ModifierOp ParseModifierOp(const std::string& rOp)
+ModifierOp_t ParseModifierOp(const std::string& rOp)
 {
-    if (rOp == "Add")                 return ModifierOp::Add;
-    if (rOp == "AddPercent")          return ModifierOp::AddPercent;
-    if (rOp == "MultiplyGeometric")   return ModifierOp::MultiplyGeometric;
+    if (rOp == "Add")                 return ModifierOp_t::Add;
+    if (rOp == "AddPercent")          return ModifierOp_t::AddPercent;
+    if (rOp == "MultiplyGeometric")   return ModifierOp_t::MultiplyGeometric;
     throw std::runtime_error("Unknown modifier op: '" + rOp + "'");
 }
 
@@ -95,9 +95,9 @@ double ParseNumber(const nlohmann::json& parameters, const std::string& key, dou
     throw std::runtime_error("Expected a number or numeric string for parameter '" + key + "'");
 }
 
-ConditionKind ParseConditionKind(const std::string& rKind)
+ConditionKind_t ParseConditionKind(const std::string& rKind)
 {
-    if (rKind == "TargetTileHas") return ConditionKind::TargetTileHas;
+    if (rKind == "TargetTileHas") return ConditionKind_t::TargetTileHas;
     throw std::runtime_error("Unknown condition kind: '" + rKind + "'");
 }
 
@@ -120,11 +120,11 @@ TileSelector_t ParseTileSelector(const nlohmann::json& selectorJson)
     const std::string kindStr = selectorJson.value("kind", "BaseTile");
     if (kindStr == "BaseTile")
     {
-        selector.kind = TileSelectorKind::BaseTile;
+        selector.kind = TileSelectorKind_t::BaseTile;
     }
     else if (kindStr == "HasImprovement")
     {
-        selector.kind = TileSelectorKind::HasImprovement;
+        selector.kind = TileSelectorKind_t::HasImprovement;
         const std::string improvementId = selectorJson.value("improvement", "");
         if (improvementId.empty())
         {
@@ -197,8 +197,8 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
         // that isn't a tile resource — such a modifier would silently never apply.
         if (parameters.contains("selector"))
         {
-            if (statModifier.stat != StatId::Nutrients && statModifier.stat != StatId::Minerals
-                && statModifier.stat != StatId::Energy)
+            if (statModifier.stat != StatId_t::Nutrients && statModifier.stat != StatId_t::Minerals
+                && statModifier.stat != StatId_t::Energy)
             {
                 throw std::runtime_error("StatModifier 'selector' is only valid on tile resource "
                     "stats (nutrients/minerals/energy), got '" + parameters.value("stat", "") + "'");
@@ -250,15 +250,15 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
     return effect;
 }
 
-void ValidateScopeForSource(EffectScope_t scope, EffectSourceKind sourceKind,
+void ValidateScopeForSource(EffectScope_t scope, EffectSourceKind_t sourceKind,
                             const std::string& rSourceId)
 {
-    if (scope == EffectScope_t::ThisPop && sourceKind != EffectSourceKind::PopType)
+    if (scope == EffectScope_t::ThisPop && sourceKind != EffectSourceKind_t::PopType)
     {
         throw std::runtime_error("Effect on '" + rSourceId
             + "': scope ThisPop is only meaningful on a pop type config");
     }
-    if (scope == EffectScope_t::ThisUnit && sourceKind != EffectSourceKind::UnitComponent)
+    if (scope == EffectScope_t::ThisUnit && sourceKind != EffectSourceKind_t::UnitComponent)
     {
         throw std::runtime_error("Effect on '" + rSourceId
             + "': scope ThisUnit is only meaningful on a unit component config");
@@ -279,7 +279,7 @@ std::vector<EffectConfig_t> ParseEffects(const nlohmann::json& rContainerJson)
 }
 
 std::vector<EffectConfig_t> ParseEffects(const nlohmann::json& rContainerJson,
-                                         EffectSourceKind sourceKind,
+                                         EffectSourceKind_t sourceKind,
                                          const std::string& rSourceId)
 {
     std::vector<EffectConfig_t> effects = ParseEffects(rContainerJson);

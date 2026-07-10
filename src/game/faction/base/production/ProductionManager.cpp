@@ -21,7 +21,7 @@ void ProductionManager::SetProduction(const IConstructable* pItem)
     }
 
     m_pCurrentItem = pItem;
-    on_production_changed.emit();
+    OnProductionChanged.Emit();
 }
 
 const IConstructable* ProductionManager::GetCurrentProduction() const
@@ -75,7 +75,7 @@ std::string ProductionManager::CompleteProduction()
     std::string completed = m_pCurrentItem->GetId();
     m_mineralStockpile = 0;
     ResetProduction_();
-    on_production_completed.emit(completed);
+    OnProductionCompleted.Emit(completed);
     return completed;
 }
 
@@ -85,7 +85,7 @@ void ProductionManager::ResetProduction_()
     m_pCurrentItem = nullptr;
     if (bHadProduction)
     {
-        on_production_changed.emit();
+        OnProductionChanged.Emit();
     }
 }
 

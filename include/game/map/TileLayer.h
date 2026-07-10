@@ -20,7 +20,7 @@ enum class TileLayerType_t
     Count
 };
 
-inline constexpr size_t k_tileLayerCount = static_cast<size_t>(TileLayerType_t::Count);
+inline constexpr size_t k_TileLayerCount = static_cast<size_t>(TileLayerType_t::Count);
 
 struct TileLayer_t
 {
@@ -39,24 +39,24 @@ struct TileLayer_t
 namespace TileLayerContent
 {
     // Landform layer (Layer 0)
-    inline const std::string k_water = "water";
-    inline const std::string k_flat = "flat";
-    inline const std::string k_rolling = "rolling";
+    inline const std::string k_Water = "water";
+    inline const std::string k_Flat = "flat";
+    inline const std::string k_Rolling = "rolling";
 
     // Moisture layer (Layer 1)
-    inline const std::string k_arid = "arid";
-    inline const std::string k_moist = "moist";
-    inline const std::string k_wet = "wet";
+    inline const std::string k_Arid = "arid";
+    inline const std::string k_Moist = "moist";
+    inline const std::string k_Wet = "wet";
 
     // Rockiness layer (Layer 2)
-    inline const std::string k_rocky = "rocky";
+    inline const std::string k_Rocky = "rocky";
 
     // Vegetation layer (Layer 3)
-    inline const std::string k_farm = "farm";
-    inline const std::string k_forest = "forest";
+    inline const std::string k_Farm = "farm";
+    inline const std::string k_Forest = "forest";
 
     // Road layer (Layer 4)
-    inline const std::string k_road = "road";
+    inline const std::string k_Road = "road";
 } // namespace TileLayerContent
 
 } // namespace ac

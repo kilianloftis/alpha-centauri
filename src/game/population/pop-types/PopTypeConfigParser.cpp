@@ -31,7 +31,7 @@ PopTypeConfig_t PopTypeConfigParser::ParsePopTypeConfig(const nlohmann::json& po
     config.requiredTech          = ConfigFields::ParseRequiredTech(popJson);
     config.fallbackPopTypeId     = popJson.value("fallback_pop_type",       "");
     config.obsoletes             = ConfigFields::ParseStringArray(popJson, "obsoletes");
-    config.effects               = BonusEffectParser::ParseEffects(popJson, EffectSourceKind::PopType, config.id);
+    config.effects               = BonusEffectParser::ParseEffects(popJson, EffectSourceKind_t::PopType, config.id);
 
     return config;
 }

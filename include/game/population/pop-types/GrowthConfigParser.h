@@ -11,11 +11,11 @@ struct GrowthConfig_t
     int maxBaseSize = 7;       // SMAC population limit without a Hab Complex
 };
 
-class GrowthConfig_tParser
+class GrowthConfigParser
 {
 public:
-    GrowthConfig_tParser() = default;
-    ~GrowthConfig_tParser() = default;
+    GrowthConfigParser() = default;
+    ~GrowthConfigParser() = default;
 
     // Load pop_growth.json. Throws if the file cannot be opened or parsed.
     GrowthConfig_t ParseConfig(const std::string& configPath);

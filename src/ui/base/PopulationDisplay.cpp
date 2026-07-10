@@ -16,7 +16,7 @@ constexpr int k_WorkerGroupOrder             = 1;
 constexpr int k_GoldenAgeGroupOrder          = 2;
 constexpr int k_SpecialistGroupOrder         = 3;
 constexpr int k_NoGoldenAgeContribution      = 0;
-constexpr Color k_BackgroundColor            {20, 20, 20, 255};
+constexpr Color_t k_BackgroundColor            {20, 20, 20, 255};
 constexpr float k_HeaderFontSizeRatio        = 0.04f;
 constexpr float k_PopBoxSizeRatio            = 0.6f;
 constexpr float k_PopBoxSpacingRatio         = 0.02f;
@@ -110,8 +110,8 @@ void PopulationDisplay::Render(Graphics& rGraphics)
         const float boxX = m_layout.x + leftPadding + i * (boxSize + boxSpacing);
         const float boxY = startY;
 
-        rGraphics.DrawFilledRect(boxX, boxY, boxSize, boxSize, Color::Blue());
-        rGraphics.DrawRect(boxX, boxY, boxSize, boxSize, Color::White(), k_PopBoxBorderWidth);
+        rGraphics.DrawFilledRect(boxX, boxY, boxSize, boxSize, Color_t::Blue());
+        rGraphics.DrawRect(boxX, boxY, boxSize, boxSize, Color_t::White(), k_PopBoxBorderWidth);
 
         m_popBoxes.push_back(PopBox_t{{boxX, boxY, boxSize, boxSize}, sortedPops[i]});
 
@@ -121,7 +121,7 @@ void PopulationDisplay::Render(Graphics& rGraphics)
 
         const float textX = boxX + boxSize * k_PopBoxTextXOffsetRatio;
         const float textY = boxY + boxSize * k_PopBoxTextYOffsetRatio;
-        rGraphics.DrawText(letterStr, textX, textY, popFontSize, Color::White());
+        rGraphics.DrawText(letterStr, textX, textY, popFontSize, Color_t::White());
     }
 }
 

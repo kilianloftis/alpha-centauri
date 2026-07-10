@@ -2,6 +2,9 @@
 
 #include "game/effects/BonusEffect.h"
 #include "game/effects/EffectEnums.h"
+#include <magic_enum.hpp>
+#include <algorithm>
+#include <cctype>
 #include <map>
 #include <stdexcept>
 #include <string>
@@ -14,29 +17,25 @@ namespace ac
 // Maps integer rating levels (positive and negative) to lists of gameplay effects.
 // Totals outside [min, max] of this table clamp to the extreme (SMAC rule); levels
 // inside the range but not listed (including typical absent 0) produce no effects.
-struct SocialRatingConfig
+struct SocialRatingConfig_t
 {
-    std::string id;          // matches SocialRatingId string ("economy", "morale", …)
-    SocialRatingId rating;
+    std::string id;          // matches SocialRatingId_t string ("economy", "morale", …)
+    SocialRatingId_t rating;
     std::map<int, std::vector<EffectConfig_t>> levelEffects;
 };
 
-inline std::string SocialRatingIdToString(SocialRatingId rating)
+// Config/wire form is lowercase enumerator name (economy, morale, …).
+inline std::string SocialRatingIdToString(SocialRatingId_t rating)
 {
-    switch (rating)
+    const auto name = magic_enum::enum_name(rating);
+    if (name.empty())
     {
-        case SocialRatingId::Economy:    return "economy";
-        case SocialRatingId::Efficiency: return "efficiency";
-        case SocialRatingId::Support:    return "support";
-        case SocialRatingId::Police:     return "police";
-        case SocialRatingId::Morale:     return "morale";
-        case SocialRatingId::Growth:     return "growth";
-        case SocialRatingId::Planet:     return "planet";
-        case SocialRatingId::Research:   return "research";
-        case SocialRatingId::Industry:   return "industry";
-        case SocialRatingId::Probe:      return "probe";
+        throw std::runtime_error("Unknown SocialRatingId_t");
     }
-    throw std::runtime_error("Unknown SocialRatingId");
+    std::string result(name);
+    std::transform(result.begin(), result.end(), result.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return result;
 }
 
 } // namespace ac

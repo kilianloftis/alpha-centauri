@@ -5,9 +5,9 @@
 namespace ac
 {
 
-TechCostConfig TechCostConfigParser::ParseConfig(const std::string& scriptPath, LuaRuntime& rLua)
+TechCostConfig_t TechCostConfigParser::ParseConfig(const std::string& scriptPath, LuaRuntime& rLua)
 {
-    TechCostConfig config;
+    TechCostConfig_t config;
 
     sol::state& lua = rLua.GetState();
 

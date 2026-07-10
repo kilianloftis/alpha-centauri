@@ -25,24 +25,24 @@ struct PopCompositionResult
     int targetTalents = 0;
 };
 
-// Evaluates pop composition formulas from a PopCompositionConfig via Lua.
+// Evaluates pop composition formulas from a PopCompositionConfig_t via Lua.
 // Formula variables available: base_size, psych_output,
 //                              faction_drone_modifier, faction_talent_modifier
 // Formulas are standard Lua expressions (math library available).
 class PopCompositionCalculator
 {
 public:
-    PopCompositionCalculator(const PopCompositionConfig& rConfig, LuaRuntime& rLua);
+    PopCompositionCalculator(const PopCompositionConfig_t& rConfig, LuaRuntime& rLua);
     ~PopCompositionCalculator() = default;
 
     // Calculate target drone and talent counts given runtime inputs.
     PopCompositionResult Calculate(const PopCompositionInputs& inputs);
 
     // Access the underlying config (drone/talent type ids, formulas, etc.)
-    const PopCompositionConfig& GetConfig() const;
+    const PopCompositionConfig_t& GetConfig() const;
 
 private:
-    const PopCompositionConfig* m_pConfig;
+    const PopCompositionConfig_t* m_pConfig;
     LuaRuntime* m_pLua;
 };
 

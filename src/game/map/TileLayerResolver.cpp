@@ -13,37 +13,37 @@ std::optional<std::string> ResolveLandformLayer_(const Tile& rTile)
     // TODO: Define formal water threshold and landform generation rules.
     if (rTile.GetElevation() < 0)
     {
-        return TileLayerContent::k_water;
+        return TileLayerContent::k_Water;
     }
 
-    // Rolling is part of the landform layer; rocky terrain is handled by the Rockiness layer.
-    if (rTile.GetRockiness() == Rockiness::Rolling)
+    // Rolling is part of the landform layer; rocky terrain is handled by the Rockiness_t layer.
+    if (rTile.GetRockiness() == Rockiness_t::Rolling)
     {
-        return TileLayerContent::k_rolling;
+        return TileLayerContent::k_Rolling;
     }
 
-    return TileLayerContent::k_flat;
+    return TileLayerContent::k_Flat;
 }
 
 std::optional<std::string> ResolveMoistureLayer_(const Tile& rTile)
 {
     switch (rTile.GetMoisture())
     {
-        case Moisture::Wet:
-            return TileLayerContent::k_wet;
-        case Moisture::Moist:
-            return TileLayerContent::k_moist;
-        case Moisture::Arid:
+        case Moisture_t::Wet:
+            return TileLayerContent::k_Wet;
+        case Moisture_t::Moist:
+            return TileLayerContent::k_Moist;
+        case Moisture_t::Arid:
         default:
-            return TileLayerContent::k_arid;
+            return TileLayerContent::k_Arid;
     }
 }
 
 std::optional<std::string> ResolveRockinessLayer_(const Tile& rTile)
 {
-    if (rTile.GetRockiness() == Rockiness::Rocky)
+    if (rTile.GetRockiness() == Rockiness_t::Rocky)
     {
-        return TileLayerContent::k_rocky;
+        return TileLayerContent::k_Rocky;
     }
 
     return std::nullopt;
@@ -53,14 +53,14 @@ std::optional<std::string> ResolveVegetationLayer_(const Tile& rTile)
 {
     // TODO: Define vegetation placement rules and mutual exclusivity (farm vs forest).
     // Boreholes and bases should exclude this layer via placement rules, not here.
-    if (rTile.HasImprovement(TileLayerContent::k_farm))
+    if (rTile.HasImprovement(TileLayerContent::k_Farm))
     {
-        return TileLayerContent::k_farm;
+        return TileLayerContent::k_Farm;
     }
 
-    if (rTile.HasImprovement(TileLayerContent::k_forest))
+    if (rTile.HasImprovement(TileLayerContent::k_Forest))
     {
-        return TileLayerContent::k_forest;
+        return TileLayerContent::k_Forest;
     }
 
     return std::nullopt;
@@ -68,9 +68,9 @@ std::optional<std::string> ResolveVegetationLayer_(const Tile& rTile)
 
 std::optional<std::string> ResolveRoadLayer_(const Tile& rTile)
 {
-    if (rTile.HasImprovement(TileLayerContent::k_road))
+    if (rTile.HasImprovement(TileLayerContent::k_Road))
     {
-        return TileLayerContent::k_road;
+        return TileLayerContent::k_Road;
     }
 
     return std::nullopt;
@@ -84,9 +84,9 @@ std::optional<std::string> ResolveImprovementLayer_(const Tile& rTile)
     for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
     {
         const std::string& improvementId = pImprovement->id;
-        if (improvementId == TileLayerContent::k_farm
-            || improvementId == TileLayerContent::k_forest
-            || improvementId == TileLayerContent::k_road)
+        if (improvementId == TileLayerContent::k_Farm
+            || improvementId == TileLayerContent::k_Forest
+            || improvementId == TileLayerContent::k_Road)
         {
             continue;
         }
@@ -99,9 +99,9 @@ std::optional<std::string> ResolveImprovementLayer_(const Tile& rTile)
 
 } // namespace
 
-std::array<TileLayer_t, k_tileLayerCount> ResolveTileLayers(const Tile& rTile)
+std::array<TileLayer_t, k_TileLayerCount> ResolveTileLayers(const Tile& rTile)
 {
-    return std::array<TileLayer_t, k_tileLayerCount>{
+    return std::array<TileLayer_t, k_TileLayerCount>{
         TileLayer_t(TileLayerType_t::Landform, ResolveLandformLayer_(rTile)),
         TileLayer_t(TileLayerType_t::Moisture, ResolveMoistureLayer_(rTile)),
         TileLayer_t(TileLayerType_t::Rockiness, ResolveRockinessLayer_(rTile)),

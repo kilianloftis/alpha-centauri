@@ -9,12 +9,12 @@ namespace ac
 namespace
 {
 
-constexpr Color k_BackgroundColor           {10, 10, 15, 255};
-constexpr Color k_BorderColor               {60, 60, 80, 255};
-constexpr Color k_EmptyListTextColor        {100, 100, 100, 255};
-constexpr Color k_SelectedBoxFillColor      {50, 50, 90, 255};
-constexpr Color k_UnselectedBoxFillColor    {25, 25, 40, 255};
-constexpr Color k_UnselectedBoxBorderColor  {80, 80, 110, 255};
+constexpr Color_t k_BackgroundColor           {10, 10, 15, 255};
+constexpr Color_t k_BorderColor               {60, 60, 80, 255};
+constexpr Color_t k_EmptyListTextColor        {100, 100, 100, 255};
+constexpr Color_t k_SelectedBoxFillColor      {50, 50, 90, 255};
+constexpr Color_t k_UnselectedBoxFillColor    {25, 25, 40, 255};
+constexpr Color_t k_UnselectedBoxBorderColor  {80, 80, 110, 255};
 constexpr float k_BoxWidthRatio             = 0.15f;
 constexpr float k_BoxPaddingRatio           = 0.005f;
 constexpr float k_FontSizeRatio             = 0.07f;
@@ -71,8 +71,8 @@ void DesignListPanel::Render(Graphics& rGraphics)
     for (const auto& pDesign : rDesigns)
     {
         const bool bSelected   = pDesign.get() == m_pSelectedDesign;
-        const Color fillColor  = bSelected ? k_SelectedBoxFillColor : k_UnselectedBoxFillColor;
-        const Color borderColor = bSelected ? Color::Yellow() : k_UnselectedBoxBorderColor;
+        const Color_t fillColor  = bSelected ? k_SelectedBoxFillColor : k_UnselectedBoxFillColor;
+        const Color_t borderColor = bSelected ? Color_t::Yellow() : k_UnselectedBoxBorderColor;
 
         rGraphics.DrawFilledRect(x, m_layout.y + boxPad, boxWidth, boxHeight, fillColor);
         rGraphics.DrawRect(x, m_layout.y + boxPad, boxWidth, boxHeight, borderColor);

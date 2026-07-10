@@ -83,18 +83,18 @@ int UnitDesign::GetBaseCost() const
 
     const std::vector<ActiveEffect_t> allEffects = CollectEffects();
     const StatBreakdown_t breakdown =
-        ResolveStatModifiers(FilterByStatId(allEffects, StatId::CostMultiplier), SeedFor(StatId::CostMultiplier));
+        ResolveStatModifiers(FilterByStatId(allEffects, StatId_t::CostMultiplier), SeedFor(StatId_t::CostMultiplier));
     const float costMult = breakdown.contributions.empty() ? 1.0f : static_cast<float>(breakdown.total);
 
     return static_cast<int>(rawCost * costMult);
 }
 
-float UnitDesign::ResolveStat_(StatId statId) const
+float UnitDesign::ResolveStat_(StatId_t statId) const
 {
     return static_cast<float>(ResolveStatModifiers(FilterByStatId(CollectUnitEffects(m_components), statId), SeedFor(statId)).total);
 }
 
-bool UnitDesign::ResolveFlag_(RuleFlagId flagId) const
+bool UnitDesign::ResolveFlag_(RuleFlagId_t flagId) const
 {
     for (const ActiveEffect_t& rEffect : CollectUnitEffects(m_components))
     {
@@ -107,22 +107,22 @@ bool UnitDesign::ResolveFlag_(RuleFlagId flagId) const
     return false;
 }
 
-int UnitDesign::GetAttack() const               { return static_cast<int>(ResolveStat_(StatId::Attack)); }
-int UnitDesign::GetDefense() const              { return static_cast<int>(ResolveStat_(StatId::Defense)); }
-int UnitDesign::GetMovement() const             { return static_cast<int>(ResolveStat_(StatId::Movement)); }
-int UnitDesign::GetHitPoints() const            { return static_cast<int>(ResolveStat_(StatId::HitPoints)); }
-int UnitDesign::GetDisengageChance() const      { return static_cast<int>(ResolveStat_(StatId::DisengageChance)); }
-int UnitDesign::GetFuel() const                 { return static_cast<int>(ResolveStat_(StatId::Fuel)); }
-int UnitDesign::GetDamageFromOutOfFuel() const  { return static_cast<int>(ResolveStat_(StatId::DamageFromOutOfFuel)); }
-bool UnitDesign::IsFlight() const               { return ResolveFlag_(RuleFlagId::Flight); }
-int UnitDesign::GetCargoCapacity() const        { return static_cast<int>(ResolveStat_(StatId::CargoCapacity)); }
-int UnitDesign::GetDifficultTerrainCost() const { return static_cast<int>(ResolveStat_(StatId::DifficultTerrainCost)); }
-bool UnitDesign::IsSingleUse() const            { return ResolveFlag_(RuleFlagId::SingleUse); }
+int UnitDesign::GetAttack() const               { return static_cast<int>(ResolveStat_(StatId_t::Attack)); }
+int UnitDesign::GetDefense() const              { return static_cast<int>(ResolveStat_(StatId_t::Defense)); }
+int UnitDesign::GetMovement() const             { return static_cast<int>(ResolveStat_(StatId_t::Movement)); }
+int UnitDesign::GetHitPoints() const            { return static_cast<int>(ResolveStat_(StatId_t::HitPoints)); }
+int UnitDesign::GetDisengageChance() const      { return static_cast<int>(ResolveStat_(StatId_t::DisengageChance)); }
+int UnitDesign::GetFuel() const                 { return static_cast<int>(ResolveStat_(StatId_t::Fuel)); }
+int UnitDesign::GetDamageFromOutOfFuel() const  { return static_cast<int>(ResolveStat_(StatId_t::DamageFromOutOfFuel)); }
+bool UnitDesign::IsFlight() const               { return ResolveFlag_(RuleFlagId_t::Flight); }
+int UnitDesign::GetCargoCapacity() const        { return static_cast<int>(ResolveStat_(StatId_t::CargoCapacity)); }
+int UnitDesign::GetDifficultTerrainCost() const { return static_cast<int>(ResolveStat_(StatId_t::DifficultTerrainCost)); }
+bool UnitDesign::IsSingleUse() const            { return ResolveFlag_(RuleFlagId_t::SingleUse); }
 
 int UnitDesign::GetAttackAgainst(const EffectContext_t& ctx) const
 {
     const std::vector<ActiveEffect_t> effects = CollectUnitEffects(m_components);
-    return static_cast<int>(ResolveStatModifiers(FilterByStatIdInContext(effects, StatId::Attack, ctx), SeedFor(StatId::Attack)).total);
+    return static_cast<int>(ResolveStatModifiers(FilterByStatIdInContext(effects, StatId_t::Attack, ctx), SeedFor(StatId_t::Attack)).total);
 }
 
 } // namespace ac

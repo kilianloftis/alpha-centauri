@@ -13,11 +13,11 @@ class TechRegistry;
 class SocialPolicyRegistry;
 class SocialRatingRegistry;
 class FactionRegistry;
-struct PopCompositionConfig;
+struct PopCompositionConfig_t;
 class PopCompositionCalculator;
 struct GrowthConfig_t;
 class LuaRuntime;
-struct TechCostConfig;
+struct TechCostConfig_t;
 class TechCostCalculator;
 class PopTypeAvailabilityCalculator;
 class ImprovementRegistry;
@@ -43,9 +43,9 @@ struct GameDataContext
     std::unique_ptr<SocialRatingRegistry> socialRatingRegistry;
     std::unique_ptr<FactionRegistry> factionRegistry;
     std::unique_ptr<PopTypeRegistry> popTypeRegistry;
-    std::unique_ptr<PopCompositionConfig> popCompositionConfig;
+    std::unique_ptr<PopCompositionConfig_t> popCompositionConfig;
     std::unique_ptr<GrowthConfig_t> growthConfig;
-    std::unique_ptr<TechCostConfig> techCostConfig;
+    std::unique_ptr<TechCostConfig_t> techCostConfig;
     std::unique_ptr<ImprovementRegistry> improvementRegistry;
 
     // --- Calculators / services (built from the data above) ---

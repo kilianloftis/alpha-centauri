@@ -7,7 +7,7 @@
 namespace ac
 {
 
-class SocialRatingRegistry : public Registry<SocialRatingConfig, SocialRatingConfigParser>
+class SocialRatingRegistry : public Registry<SocialRatingConfig_t, SocialRatingConfigParser>
 {
 };
 

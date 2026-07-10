@@ -29,7 +29,7 @@ struct StubConstructable : IConstructable
 BaseEffects_t WithCostPercent(actest::EffectPool& rPool, double addPercent)
 {
     return BaseEffects_t{{
-        Active(rPool.StatMod(StatId::CostMultiplier, addPercent, ModifierOp::AddPercent), "industry"),
+        Active(rPool.StatMod(StatId_t::CostMultiplier, addPercent, ModifierOp_t::AddPercent), "industry"),
     }};
 }
 

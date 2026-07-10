@@ -15,12 +15,12 @@ namespace ac
 namespace
 {
 
-constexpr const char* kIdentityFile = "identity.json";
-constexpr const char* kLeaderFile = "leader.json";
-constexpr const char* kAIFile = "ai.json";
-constexpr const char* kEffectsFile = "effects.json";
-constexpr const char* kBaseNamesFile = "base_names.json";
-constexpr const char* kPhrasesFile = "phrases.json";
+constexpr const char* k_IdentityFile = "identity.json";
+constexpr const char* k_LeaderFile = "leader.json";
+constexpr const char* k_AIFile = "ai.json";
+constexpr const char* k_EffectsFile = "effects.json";
+constexpr const char* k_BaseNamesFile = "base_names.json";
+constexpr const char* k_PhrasesFile = "phrases.json";
 
 } // namespace
 
@@ -69,14 +69,14 @@ FactionConfig_t FactionConfigParser::ParseFactionDirectory(const std::string& id
     FactionConfig_t config;
     config.id = id;
 
-    config.identity = ParseIdentity(ReadRequiredJsonFile(dirPath + "/" + kIdentityFile), id);
-    config.leader = ParseLeader(ReadRequiredJsonFile(dirPath + "/" + kLeaderFile));
-    config.ai = ParseAITendencies(ReadRequiredJsonFile(dirPath + "/" + kAIFile));
+    config.identity = ParseIdentity(ReadRequiredJsonFile(dirPath + "/" + k_IdentityFile), id);
+    config.leader = ParseLeader(ReadRequiredJsonFile(dirPath + "/" + k_LeaderFile));
+    config.ai = ParseAITendencies(ReadRequiredJsonFile(dirPath + "/" + k_AIFile));
     config.effects = BonusEffectParser::ParseEffects(
-        ReadRequiredJsonFile(dirPath + "/" + kEffectsFile), EffectSourceKind::Faction, config.id);
+        ReadRequiredJsonFile(dirPath + "/" + k_EffectsFile), EffectSourceKind_t::Faction, config.id);
     config.flavor.baseNames =
-        ParseBaseNames(ReadRequiredJsonFile(dirPath + "/" + kBaseNamesFile));
-    config.flavor.phrases = ParsePhrases(ReadRequiredJsonFile(dirPath + "/" + kPhrasesFile));
+        ParseBaseNames(ReadRequiredJsonFile(dirPath + "/" + k_BaseNamesFile));
+    config.flavor.phrases = ParsePhrases(ReadRequiredJsonFile(dirPath + "/" + k_PhrasesFile));
 
     return config;
 }

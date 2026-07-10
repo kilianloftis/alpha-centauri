@@ -22,7 +22,7 @@ struct ResearchTestFixture
 {
     TechRegistry techRegistry;
     std::unique_ptr<LuaRuntime> luaRuntime;
-    std::unique_ptr<TechCostConfig> techCostConfig;
+    std::unique_ptr<TechCostConfig_t> techCostConfig;
     std::unique_ptr<TechCostCalculator> techCostCalculator;
     std::unique_ptr<ResearchManager> research;
     std::unique_ptr<ResearchSelector> selector;
@@ -32,7 +32,7 @@ struct ResearchTestFixture
         techRegistry.Load(FixturePath("techs.json"));
         luaRuntime = std::make_unique<LuaRuntime>();
         TechCostConfigParser techCostParser;
-        techCostConfig = std::make_unique<TechCostConfig>(
+        techCostConfig = std::make_unique<TechCostConfig_t>(
             techCostParser.ParseConfig(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/tech_cost.lua",
                                        *luaRuntime));
         techCostCalculator = std::make_unique<TechCostCalculator>(*techCostConfig, *luaRuntime);
@@ -43,26 +43,26 @@ struct ResearchTestFixture
 
 } // namespace
 
-TEST_CASE("GameCategory parses canonical category strings", "[research][selector]")
+TEST_CASE("GameCategory_t parses canonical category strings", "[research][selector]")
 {
-    CHECK(GameCategoryToString(GameCategory::Build) == "build");
-    CHECK(GameCategoryToString(GameCategory::Grow) == "grow");
-    CHECK(GameCategoryToString(GameCategory::Discover) == "discover");
-    CHECK(GameCategoryToString(GameCategory::Conquer) == "conquer");
+    CHECK(GameCategoryToString(GameCategory_t::Build) == "build");
+    CHECK(GameCategoryToString(GameCategory_t::Grow) == "grow");
+    CHECK(GameCategoryToString(GameCategory_t::Discover) == "discover");
+    CHECK(GameCategoryToString(GameCategory_t::Conquer) == "conquer");
 
-    CHECK(ParseGameCategory("build") == GameCategory::Build);
-    CHECK(ParseGameCategory("GROW") == GameCategory::Grow);
-    CHECK(ParseGameCategory("Discover") == GameCategory::Discover);
-    CHECK(ParseGameCategory("conquer") == GameCategory::Conquer);
+    CHECK(ParseGameCategory("build") == GameCategory_t::Build);
+    CHECK(ParseGameCategory("GROW") == GameCategory_t::Grow);
+    CHECK(ParseGameCategory("Discover") == GameCategory_t::Discover);
+    CHECK(ParseGameCategory("conquer") == GameCategory_t::Conquer);
 }
 
 TEST_CASE("ResearchSelector prefers selected categories", "[research][selector]")
 {
     ResearchTestFixture fixture;
-    fixture.selector->SetCategoryEnabled(GameCategory::Build, true);
-    fixture.selector->SetCategoryEnabled(GameCategory::Grow, false);
-    fixture.selector->SetCategoryEnabled(GameCategory::Discover, false);
-    fixture.selector->SetCategoryEnabled(GameCategory::Conquer, false);
+    fixture.selector->SetCategoryEnabled(GameCategory_t::Build, true);
+    fixture.selector->SetCategoryEnabled(GameCategory_t::Grow, false);
+    fixture.selector->SetCategoryEnabled(GameCategory_t::Discover, false);
+    fixture.selector->SetCategoryEnabled(GameCategory_t::Conquer, false);
 
     const std::vector<const TechConfig_t*> candidates = fixture.selector->GetCandidateTargets();
     REQUIRE(candidates.size() == 1);
@@ -77,10 +77,10 @@ TEST_CASE("ResearchSelector falls back when selected categories have no availabl
     fixture.research->AddDiscoveredTech("grow_tech");
     fixture.research->AddDiscoveredTech("discover_tech");
 
-    fixture.selector->SetCategoryEnabled(GameCategory::Build, false);
-    fixture.selector->SetCategoryEnabled(GameCategory::Grow, true);
-    fixture.selector->SetCategoryEnabled(GameCategory::Discover, false);
-    fixture.selector->SetCategoryEnabled(GameCategory::Conquer, false);
+    fixture.selector->SetCategoryEnabled(GameCategory_t::Build, false);
+    fixture.selector->SetCategoryEnabled(GameCategory_t::Grow, true);
+    fixture.selector->SetCategoryEnabled(GameCategory_t::Discover, false);
+    fixture.selector->SetCategoryEnabled(GameCategory_t::Conquer, false);
 
     const std::vector<const TechConfig_t*> candidates = fixture.selector->GetCandidateTargets();
     REQUIRE(candidates.size() == 2);
@@ -96,10 +96,10 @@ TEST_CASE("ResearchSelector falls back when selected categories have no availabl
 TEST_CASE("ResearchSelector assigns a target from the selected pool", "[research][selector]")
 {
     ResearchTestFixture fixture(1234);
-    fixture.selector->SetCategoryEnabled(GameCategory::Build, false);
-    fixture.selector->SetCategoryEnabled(GameCategory::Grow, true);
-    fixture.selector->SetCategoryEnabled(GameCategory::Discover, false);
-    fixture.selector->SetCategoryEnabled(GameCategory::Conquer, false);
+    fixture.selector->SetCategoryEnabled(GameCategory_t::Build, false);
+    fixture.selector->SetCategoryEnabled(GameCategory_t::Grow, true);
+    fixture.selector->SetCategoryEnabled(GameCategory_t::Discover, false);
+    fixture.selector->SetCategoryEnabled(GameCategory_t::Conquer, false);
 
     REQUIRE(fixture.selector->AssignResearchTarget());
     CHECK(fixture.research->HasResearchTarget());
@@ -125,19 +125,19 @@ TEST_CASE("ResearchSelector ensure always assigns when techs remain", "[research
 TEST_CASE("ResearchSelector random assignment stays within selected categories", "[research][selector]")
 {
     ResearchTestFixture fixture(7);
-    fixture.selector->SetCategoryEnabled(GameCategory::Build, true);
-    fixture.selector->SetCategoryEnabled(GameCategory::Grow, true);
-    fixture.selector->SetCategoryEnabled(GameCategory::Discover, false);
-    fixture.selector->SetCategoryEnabled(GameCategory::Conquer, false);
+    fixture.selector->SetCategoryEnabled(GameCategory_t::Build, true);
+    fixture.selector->SetCategoryEnabled(GameCategory_t::Grow, true);
+    fixture.selector->SetCategoryEnabled(GameCategory_t::Discover, false);
+    fixture.selector->SetCategoryEnabled(GameCategory_t::Conquer, false);
 
     std::unordered_set<TechId> seen;
     for (int i = 0; i < 20; ++i)
     {
         ResearchSelector selector(fixture.research.get(), static_cast<uint32_t>(i));
-        selector.SetCategoryEnabled(GameCategory::Build, true);
-        selector.SetCategoryEnabled(GameCategory::Grow, true);
-        selector.SetCategoryEnabled(GameCategory::Discover, false);
-        selector.SetCategoryEnabled(GameCategory::Conquer, false);
+        selector.SetCategoryEnabled(GameCategory_t::Build, true);
+        selector.SetCategoryEnabled(GameCategory_t::Grow, true);
+        selector.SetCategoryEnabled(GameCategory_t::Discover, false);
+        selector.SetCategoryEnabled(GameCategory_t::Conquer, false);
         REQUIRE(selector.AssignResearchTarget());
         seen.insert(fixture.research->GetResearchTarget());
         fixture.research->ClearResearchTarget();

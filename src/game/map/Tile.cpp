@@ -1,32 +1,22 @@
 #include "game/map/Tile.h"
 #include "game/map/ImprovementConfigParser.h"
+#include <magic_enum.hpp>
 #include <algorithm>
 #include <cmath>
+#include <string>
 #include <string_view>
 
 namespace ac
 {
 
-std::string ToString(Rockiness rockiness)
+std::string ToString(Rockiness_t rockiness)
 {
-    switch (rockiness)
-    {
-        case Rockiness::Flat:    return "Flat";
-        case Rockiness::Rolling: return "Rolling";
-        case Rockiness::Rocky:   return "Rocky";
-    }
-    return "";
+    return std::string(magic_enum::enum_name(rockiness));
 }
 
-std::string ToString(Moisture moisture)
+std::string ToString(Moisture_t moisture)
 {
-    switch (moisture)
-    {
-        case Moisture::Arid:  return "Arid";
-        case Moisture::Moist: return "Moist";
-        case Moisture::Wet:   return "Wet";
-    }
-    return "";
+    return std::string(magic_enum::enum_name(moisture));
 }
 
 const std::vector<std::string>& AllTerrainFeatureIds()
@@ -34,8 +24,8 @@ const std::vector<std::string>& AllTerrainFeatureIds()
     // Built from the same ToString mappings HasFeature matches against, so the list can't
     // drift from the actual matching logic.
     static const std::vector<std::string> ids = {
-        ToString(Rockiness::Flat), ToString(Rockiness::Rolling), ToString(Rockiness::Rocky),
-        ToString(Moisture::Arid), ToString(Moisture::Moist), ToString(Moisture::Wet),
+        ToString(Rockiness_t::Flat), ToString(Rockiness_t::Rolling), ToString(Rockiness_t::Rocky),
+        ToString(Moisture_t::Arid), ToString(Moisture_t::Moist), ToString(Moisture_t::Wet),
         "River", "Fungus",
     };
     return ids;
@@ -44,9 +34,9 @@ const std::vector<std::string>& AllTerrainFeatureIds()
 Tile::Tile()
     : m_x(0)
     , m_y(0)
-    , m_moisture(Moisture::Arid)
-    , m_baseMoisture(Moisture::Arid)
-    , m_rockiness(Rockiness::Flat)
+    , m_moisture(Moisture_t::Arid)
+    , m_baseMoisture(Moisture_t::Arid)
+    , m_rockiness(Rockiness_t::Flat)
     , m_elevation(0)
     , m_bHasRiver(false)
     , m_bHasFungus(false)
@@ -56,9 +46,9 @@ Tile::Tile()
 Tile::Tile(int x, int y)
     : m_x(x)
     , m_y(y)
-    , m_moisture(Moisture::Arid)
-    , m_baseMoisture(Moisture::Arid)
-    , m_rockiness(Rockiness::Flat)
+    , m_moisture(Moisture_t::Arid)
+    , m_baseMoisture(Moisture_t::Arid)
+    , m_rockiness(Rockiness_t::Flat)
     , m_elevation(0)
     , m_bHasRiver(false)
     , m_bHasFungus(false)
@@ -79,32 +69,32 @@ int Tile::GetY() const
     return m_y;
 }
 
-void Tile::SetMoisture(Moisture moisture)
+void Tile::SetMoisture(Moisture_t moisture)
 {
     m_moisture = moisture;
 }
 
-Moisture Tile::GetMoisture() const
+Moisture_t Tile::GetMoisture() const
 {
     return m_moisture;
 }
 
-void Tile::SetBaseMoisture(Moisture moisture)
+void Tile::SetBaseMoisture(Moisture_t moisture)
 {
     m_baseMoisture = moisture;
 }
 
-Moisture Tile::GetBaseMoisture() const
+Moisture_t Tile::GetBaseMoisture() const
 {
     return m_baseMoisture;
 }
 
-void Tile::SetRockiness(Rockiness rockiness)
+void Tile::SetRockiness(Rockiness_t rockiness)
 {
     m_rockiness = rockiness;
 }
 
-Rockiness Tile::GetRockiness() const
+Rockiness_t Tile::GetRockiness() const
 {
     return m_rockiness;
 }

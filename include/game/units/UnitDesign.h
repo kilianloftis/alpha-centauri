@@ -52,8 +52,8 @@ public:
     bool IsSingleUse() const;
 
 private:
-    float ResolveStat_(StatId statId) const;
-    bool ResolveFlag_(RuleFlagId flagId) const;
+    float ResolveStat_(StatId_t statId) const;
+    bool ResolveFlag_(RuleFlagId_t flagId) const;
 
     std::string m_id;
     std::string m_name;

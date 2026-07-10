@@ -7,7 +7,7 @@ graph TB
         ImprovementConfig[ImprovementConfig_t]
         PopTypeConfig[PopTypeConfig_t]
         UnitComponentConfig[UnitComponentConfig_t]
-        SocialPolicyConfig[SocialPolicyConfig]
+        SocialPolicyConfig_t[SocialPolicyConfig_t]
         EffectConfig[EffectConfig_t<br/>EffectVariant_t<br/>scope<br/>persistence<br/>condition]
         EffectStructs[Effect Structs<br/>GrantBuildingEffect_t<br/>GrantTechEffect_t<br/>GrantUnitEffect_t<br/>StatModifierEffect_t<br/>RuleFlagEffect_t<br/>SocialEngineeringOverrideEffect_t<br/>SocialRatingModifierEffect_t<br/>DiplomaticModifierEffect_t]
     end
@@ -41,13 +41,13 @@ graph TB
     ImprovementConfig --> EffectConfig
     PopTypeConfig --> EffectConfig
     UnitComponentConfig --> EffectConfig
-    SocialPolicyConfig --> EffectConfig
+    SocialPolicyConfig_t --> EffectConfig
     EffectConfig --> EffectStructs
     BuildingManager --> BuildingConfig
     BaseManager --> BuildingManager
     Faction --> BaseManager
     Faction --> SocialEngineeringManager
-    SocialEngineeringManager --> SocialPolicyConfig
+    SocialEngineeringManager --> SocialPolicyConfig_t
 
     CollectBuildingEffects --> BaseManager
     CollectBuildingEffects --> ExpandGrantBuilding
@@ -69,7 +69,7 @@ graph TB
     style ImprovementConfig fill:#ffd,stroke:#333,stroke-width:2px
     style PopTypeConfig fill:#ffd,stroke:#333,stroke-width:2px
     style UnitComponentConfig fill:#ffd,stroke:#333,stroke-width:2px
-    style SocialPolicyConfig fill:#ffd,stroke:#333,stroke-width:2px
+    style SocialPolicyConfig_t fill:#ffd,stroke:#333,stroke-width:2px
     style EffectConfig fill:#ffd,stroke:#333,stroke-width:3px
     style EffectStructs fill:#ffd,stroke:#333,stroke-width:2px
     style ActiveEffect fill:#fbf,stroke:#333,stroke-width:3px
@@ -111,7 +111,7 @@ not by which config declared it. Each scope has one "lane":
 | `ThisPop` | the pop itself | `Pop::ApplyTileMultipliers` |
 | `ThisTile` | tile resolvers | `CollectTileEffects`/`CollectAreaEffects` — features on the tile, radius-reaching features nearby, and units projecting component effects |
 
-In code, this table is a single constexpr function: `LaneFor(EffectScope_t) -> EffectLane`
+In code, this table is a single constexpr function: `LaneFor(EffectScope_t) -> EffectLane_t`
 in `BonusEffect.h`, with the derived predicate `IsFactionLane`. Every collector/filter
 routes through it (`FilterForBase`, `AppendFactionLaneEffects`,
 `AppendTileEffects`/`TileEffectReaches`), so adding a scope means the compiler forces one
@@ -152,13 +152,13 @@ concept doesn't exist yet are **legal but inert**:
   - `DiplomaticModifierEffect_t`
 
 ### StatModifierEffect_t
-- **Purpose**: Modifies any stat identified by `StatId` — both base resources and unit stats. Also expresses **per-tile yield modifiers** via its optional `selector` (see below); there is no separate tile-yield effect type.
+- **Purpose**: Modifies any stat identified by `StatId_t` — both base resources and unit stats. Also expresses **per-tile yield modifiers** via its optional `selector` (see below); there is no separate tile-yield effect type.
 - **Responsibilities**:
-  - Identifies the target stat via `StatId`.
-  - Stores an `amount` and a `ModifierOp`.
+  - Identifies the target stat via `StatId_t`.
+  - Stores an `amount` and a `ModifierOp_t`.
   - Optionally carries a `TileSelector_t selector`. When **absent**, the modifier is either an intrinsic tile yield (`ThisTile` scope) or a flat base/unit modifier (resolved once). When **present**, the modifier applies to each worked tile whose features satisfy the selector — e.g. a building's "+1 mineral to every worked Mine".
 
-### StatId
+### StatId_t
 - **Purpose**: Identifies a stat or resource. Defined in `include/game/effects/EffectEnums.h` so it can be shared across the game and effects systems.
 - **Values**:
   - Base resources: `Nutrients`, `Minerals`, `Energy`.
@@ -168,36 +168,36 @@ concept doesn't exist yet are **legal but inert**:
   - Terrain mutation: `MoistureTier` — resolved back into `Tile::SetMoisture` by `RecomputeMoisture`; not a runtime-queried stat (see Tile Improvement Effects).
 - **Consumers**: `StatModifierEffect_t::stat`. `Defense` is also the target stat for tile-granted combat bonuses (rockiness, fungus, improvements) — see Tile Improvement Effects below.
 
-### StatKind / KindFor / SeedFor
+### StatKind_t / KindFor / SeedFor
 - **Purpose**: The seed-semantics single source of truth, mirroring `LaneFor`. Defined next
-  to `StatId` in `EffectEnums.h`.
-- **`StatKind`**: `Additive` (contributions add onto an empty base; seed `0.0`),
+  to `StatId_t` in `EffectEnums.h`.
+- **`StatKind_t`**: `Additive` (contributions add onto an empty base; seed `0.0`),
   `PureMultiplier` (the stat *is* a multiplier, resolved purely through
   `AddPercent`/`MultiplyGeometric`; seed `1.0` — a `0.0` seed silently collapses to 0), or
   `RawScaled` (modifiers scale a raw value only the resolve site knows: `GrowthRate`'s 100%
   baseline, `MoistureTier`'s base tier).
-- **`constexpr KindFor(StatId) -> StatKind`**: exhaustive switch — adding a `StatId` forces a
+- **`constexpr KindFor(StatId_t) -> StatKind_t`**: exhaustive switch — adding a `StatId_t` forces a
   seed-semantics decision the same way adding a scope forces a routing decision in `LaneFor`.
   `tests/effects/ValidationTests.cpp` pins every stat's kind with `static_assert`s.
-- **`constexpr SeedFor(StatId) -> double`**: derives the context-free seed from the kind
+- **`constexpr SeedFor(StatId_t) -> double`**: derives the context-free seed from the kind
   (`0.0`/`1.0`); throws for `RawScaled`, forcing those sites to pass their raw value
   explicitly. Sites that deliberately resolve an Additive stat against a raw base (tile
   yield's elevation energy seed, pop tile multipliers, the tile defense multiplier) also
   pass their seed explicitly and say so in a comment.
 
-### TileSelectorKind / TileSelector_t
+### TileSelectorKind_t / TileSelector_t
 - **Purpose**: On a `StatModifierEffect_t`, selects which worked tiles the modifier applies to. A tile improvement is identified by its plain string id (`ImprovementConfig_t::id`), matching `Tile::HasImprovement()` — there is no separate improvement-type enum.
-- **Values** (`TileSelectorKind`):
+- **Values** (`TileSelectorKind_t`):
   - `BaseTile` — the base's own center tile.
   - `HasImprovement` — any tile that has the improvement named in `selector.improvement` (`std::optional<std::string>`).
 
-### ConditionKind / Condition_t
+### ConditionKind_t / Condition_t
 - **Purpose**: An optional runtime predicate on `EffectConfig_t` (`std::optional<Condition_t> condition`). When present, the effect only applies in a context that satisfies the condition, and is excluded from context-free resolution (base economy, intrinsic unit stats). This is how situational modifiers — e.g. "+25% attack vs a Base", "+25% attack into Forest" — are expressed, replacing the former `UnitBonusTableEffect_t`.
-- **Values** (`ConditionKind`):
+- **Values** (`ConditionKind_t`):
   - `TargetTileHas` — the targeted tile has the feature id in `condition.value`, matched via `Tile::HasFeature`. One kind covers terrain classification (`Rocky`), river/fungus, and any improvement id — including `Base` (a founded base registers itself as the `Base` improvement) and tile specials (formerly "bonus"/"landmark"). In combat the target is the defender's tile.
 - **Evaluation**: `ConditionSatisfied(config, EffectContext_t)` in `ActiveEffect`. `EffectContext_t` carries the runtime target (`targetTile`); combat builds one from the defender. `FilterByStatIdInContext` includes unconditional effects plus condition-satisfied ones; `FilterByStatId`/`FilterFlatByStatId` exclude all condition-carrying effects.
 
-### ModifierOp
+### ModifierOp_t
 - **Purpose**: Describes how a stat modifier combines with the running total.
 - **Values**:
   - `Add` — adds the amount to the additive base.
@@ -254,7 +254,7 @@ concept doesn't exist yet are **legal but inert**:
 - **Purpose**: Resolves a set of `ActiveEffect_t` instances into a `StatBreakdown_t`.
 - **Signature**: `ResolveStatModifiers(matching, baseValue)` — `baseValue` is deliberately
   **not defaulted**. Context-free resolve sites derive it from the stat via
-  `SeedFor(statId)` (see StatKind above), so a pure-multiplier stat can no longer be seeded
+  `SeedFor(statId)` (see StatKind_t above), so a pure-multiplier stat can no longer be seeded
   `0.0` by habit; raw-scaled sites pass the raw value the modifiers scale (tile yield,
   GrowthRate's `100.0`).
 - **Responsibilities**:
@@ -267,7 +267,7 @@ concept doesn't exist yet are **legal but inert**:
 - **Returns**: A `StatBreakdown_t` with `total` and `contributions`.
 
 ### FilterByStatId
-- **Purpose**: Filters active effects to only `StatModifierEffect_t` instances targeting a given `StatId` (including any that carry a tile `selector`).
+- **Purpose**: Filters active effects to only `StatModifierEffect_t` instances targeting a given `StatId_t` (including any that carry a tile `selector`).
 - **Returns**: A vector of matching `ActiveEffect_t` instances.
 
 ### FilterFlatByStatId
@@ -283,8 +283,8 @@ concept doesn't exist yet are **legal but inert**:
 - **Purpose**: Narrows the faction pool to the effects that apply to a specific base — the
   only constructor of a `BaseEffects_t` from a `FactionEffects_t`.
 - **Responsibilities** (switching on `LaneFor(scope)`):
-  - `EffectLane::Base`: includes `ThisBase` effects whose `originBase` is the given base.
-  - `EffectLane::FactionWide`: includes `AllOwnerBases`, `FactionGlobal`, and `WorldGlobal` effects.
+  - `EffectLane_t::Base`: includes `ThisBase` effects whose `originBase` is the given base.
+  - `EffectLane_t::FactionWide`: includes `AllOwnerBases`, `FactionGlobal`, and `WorldGlobal` effects.
   - All other lanes (`FactionUnits`, `UnitLocal`, `PopLocal`, `TileLocal`) are excluded — resolved by their own owning instance (unit, pop, or tile) and never apply at the base level.
 - **Returns**: A `BaseEffects_t`.
 
@@ -323,7 +323,7 @@ concept doesn't exist yet are **legal but inert**:
   final base context, and the type makes running it on the raw pool a compile error:
   - `AccumulateSocialRatings(baseEffects)` sums modifier contributions per rating axis.
   - `ExpandSocialRatingEffects(baseEffects, ratingRegistry)` maps each non-zero accumulated
-    level through `SocialRatingConfig::levelEffects` (SMAC clamp-at-extremes: totals outside
+    level through `SocialRatingConfig_t::levelEffects` (SMAC clamp-at-extremes: totals outside
     `[min, max]` of the table use that extreme; in-range missing keys, including typical
     absent 0, still produce nothing) and appends the resulting gameplay effects with sourceId
     `se_rating_<axis>_<level>` (clamped level).
@@ -350,8 +350,8 @@ concept doesn't exist yet are **legal but inert**:
   - `Faction::ProduceBaseResources()` collects active effects once per faction and passes them to each base.
   - `BaseManager::ProduceResources()` builds the base's final effect list via `BuildBaseEffects_`: `FilterForBase` over the faction pool, plus this base's own pop-generated effects via `CollectFromPops(GetPopContainer(), *this)` (see Pop Type Effects above), plus the gameplay effects of this base's effective social rating levels via `ExpandSocialRatingEffects` (see Social Ratings above). `ApplyGrowth` and `GetNutrientsRequired` use the same helper.
   - `ResourceManager::ProduceResources()` stores the effects and uses them when calculating nutrients, minerals, and energy. There is a **single per-tile pass**: `ResourceManager::ComputeWorked_` sums `WorkerAssignmentManager::ComputeWorkedResources(baseEffects)` (every worker pop's tile) plus the base center tile (worked for free, no pop). Each tile's full yield is resolved once by `TileEffectsContext::ResolveTileYield(tile, isBaseTile, baseEffects)`, which folds in every selector-matching `StatModifier` from `baseEffects`; the pop's tile multipliers then scale that whole yield. Per-tile `Add`/`Multiply` modifiers summed across tiles are mathematically equivalent to the old aggregate-with-counts approach, so no separate delta pass is needed.
-    - `CalculateResource_` then adds only **flat** (non-selector) `StatModifier` contributions for `StatId::Nutrients`/`Minerals`/`Energy` via `FilterFlatByStatId`/`ResolveStatModifiers` — selector-carrying modifiers are excluded here because they were already applied per tile.
-    - `StatId::Econ`/`Labs`/`Psych` are not produced from tiles — `CalculateEcon_`/`CalculateLabs_`/`CalculatePsych_` take the percentage-of-energy split from `EconomyManager` and add any flat `StatModifier` contributions (e.g. specialist pop output) on top via `FilterFlatByStatId`/`ResolveStatModifiers`, the same pattern used by `AllocateEnergy_` when stockpiling each turn. **All base-level resolution uses `FilterFlatByStatId`** — selector-carrying modifiers belong exclusively to the per-tile pass (and parse-time validation restricts selectors to tile-resource stats anyway).
+    - `CalculateResource_` then adds only **flat** (non-selector) `StatModifier` contributions for `StatId_t::Nutrients`/`Minerals`/`Energy` via `FilterFlatByStatId`/`ResolveStatModifiers` — selector-carrying modifiers are excluded here because they were already applied per tile.
+    - `StatId_t::Econ`/`Labs`/`Psych` are not produced from tiles — `CalculateEcon_`/`CalculateLabs_`/`CalculatePsych_` take the percentage-of-energy split from `EconomyManager` and add any flat `StatModifier` contributions (e.g. specialist pop output) on top via `FilterFlatByStatId`/`ResolveStatModifiers`, the same pattern used by `AllocateEnergy_` when stockpiling each turn. **All base-level resolution uses `FilterFlatByStatId`** — selector-carrying modifiers belong exclusively to the per-tile pass (and parse-time validation restricts selectors to tile-resource stats anyway).
   - Stored effects are also used by the live `Get*Production()` queries.
 
 ### BuildingManager / BaseManager Constructed Buildings
@@ -392,6 +392,23 @@ concept doesn't exist yet are **legal but inert**:
   dangling grant ids (to test that expansion skips unknown targets), and single registries
   can't see cross-registry references anyway.
 
+### RequiredTechValidator (post-load required_tech validation)
+
+- **Location**: `include/game/RequiredTechValidator.h` / `src/game/RequiredTechValidator.cpp`.
+- **Purpose**: same fail-at-startup standard as `EffectReferenceValidator`, applied to the
+  separate `requiredTech` scalar field (not an effect list) that buildings, improvements,
+  unit components, unit slots, social policies, and pop types all carry. Kept as its own
+  component rather than folded into `EffectReferenceValidator` — same lifecycle point and
+  `GameDataContext`-shaped entry point, but a distinct concern. Runs once from `Engine` right
+  after `ValidateEffectReferences`: `ValidateRequiredTechReferences(*m_gameDataContext)`.
+- **Checks**: for every config in each of the six registries, if `requiredTech` is non-empty
+  it must be a known id in `TechRegistry`; throws naming the source config and the bad tech
+  id otherwise. A null registry (including a null `TechRegistry`) skips the checks that need
+  it, matching `EffectReferenceValidator`'s convention.
+- **Coverage**: `BuildingRegistry`, `ImprovementRegistry`, `UnitComponentRegistry`,
+  `UnitSlotRegistry`, `SocialPolicyRegistry`, `PopTypeRegistry` — every registry whose config
+  struct declares a `requiredTech` field.
+
 ### Unit Component Effects
 
 - Unit components (`config/unit_components/*.json`) use the exact same `effects` array shape as buildings — no more `stats`/`flags`/`bonus_tables` shorthand.
@@ -409,8 +426,8 @@ concept doesn't exist yet are **legal but inert**:
 
 Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlike buildings/units, a `Pop` has exactly one `PopTypeConfig_t` at a time — there's no stacking of multiple sources — so pop effects are resolved locally rather than through `CollectActiveEffects`/`FilterForBase`. Two distinct scopes are used, resolved differently:
 
-- **`ThisBase` effects (flat output)** — e.g. a Doctor's `+2 psych`, a Technician's `+3 econ`. These are `StatModifier`/`Add` effects targeting `StatId::Nutrients`/`Minerals`/`Energy`/`Econ`/`Labs`/`Psych`. `CollectFromPops(popContainer, base)` gathers the `ThisBase`-scoped effects from every pop in a base (filtered via `FilterByScope`), tags them with `originBase`, and `BaseManager::ProduceResources` merges them into the base's active effects alongside building effects — so one Doctor contributes `+2` psych, three Doctors contribute `+6`. `Pop::GetSpecialistOutput()` (used by `PopContainer::ComputePsychOutput()` for riot/golden-age composition math, and by the population UI) resolves the same `ThisBase` subset independently, per-pop.
-- **`ThisPop` effects (tile multipliers)** — e.g. "this pop type's worked-tile nutrient yield is scaled by +50%". These are `StatModifier` effects with `op: "AddPercent"`/`"MultiplyGeometric"` targeting `StatId::Nutrients`/`Energy`/`Minerals`. `Pop::ApplyTileMultipliers(rawTileYield)` resolves only the `ThisPop` subset of its own config's effects, seeding `ResolveStatModifiers` with the raw tile value as `baseValue` so the multiplier scales that pop's own worked tile. **`ThisPop` effects must never be added to `ThisBase`/flat resolution in the same call** — `ResolveStatModifiers` sums `Add` contributions into the seeded base *before* applying multiplicative factors, so mixing a flat `Add` bonus into a raw-seeded multiplier resolve would incorrectly scale the flat bonus too. This is why `Pop` always splits by `FilterByScope` first instead of resolving a pop type's whole effect list in one call. No current pop type uses a non-1.0 tile multiplier; the mechanism exists for future use (e.g. a Worker variant with a +50% mineral tile bonus):
+- **`ThisBase` effects (flat output)** — e.g. a Doctor's `+2 psych`, a Technician's `+3 econ`. These are `StatModifier`/`Add` effects targeting `StatId_t::Nutrients`/`Minerals`/`Energy`/`Econ`/`Labs`/`Psych`. `CollectFromPops(popContainer, base)` gathers the `ThisBase`-scoped effects from every pop in a base (filtered via `FilterByScope`), tags them with `originBase`, and `BaseManager::ProduceResources` merges them into the base's active effects alongside building effects — so one Doctor contributes `+2` psych, three Doctors contribute `+6`. `Pop::GetSpecialistOutput()` (used by `PopContainer::ComputePsychOutput()` for riot/golden-age composition math, and by the population UI) resolves the same `ThisBase` subset independently, per-pop.
+- **`ThisPop` effects (tile multipliers)** — e.g. "this pop type's worked-tile nutrient yield is scaled by +50%". These are `StatModifier` effects with `op: "AddPercent"`/`"MultiplyGeometric"` targeting `StatId_t::Nutrients`/`Energy`/`Minerals`. `Pop::ApplyTileMultipliers(rawTileYield)` resolves only the `ThisPop` subset of its own config's effects, seeding `ResolveStatModifiers` with the raw tile value as `baseValue` so the multiplier scales that pop's own worked tile. **`ThisPop` effects must never be added to `ThisBase`/flat resolution in the same call** — `ResolveStatModifiers` sums `Add` contributions into the seeded base *before* applying multiplicative factors, so mixing a flat `Add` bonus into a raw-seeded multiplier resolve would incorrectly scale the flat bonus too. This is why `Pop` always splits by `FilterByScope` first instead of resolving a pop type's whole effect list in one call. No current pop type uses a non-1.0 tile multiplier; the mechanism exists for future use (e.g. a Worker variant with a +50% mineral tile bonus):
   ```json
   {
     "type": "StatModifier",
@@ -422,9 +439,9 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
 
 ### Tile Improvement Effects
 
-- **Purpose**: Unifies every "thing on a tile" — terrain classification (Rockiness, Moisture), natural features (River, Fungus), player-built improvements (Farm, Mine, Bunker), tile specials that were formerly separate "bonus"/"landmark" slots, and a founded Base — behind one config type, since they all answer the same two questions: what effects do they grant, and what do they exclude. Defined in `include/game/map/ImprovementConfigParser.h` / `config/improvements.json`.
+- **Purpose**: Unifies every "thing on a tile" — terrain classification (Rockiness_t, Moisture_t), natural features (River, Fungus), player-built improvements (Farm, Mine, Bunker), tile specials that were formerly separate "bonus"/"landmark" slots, and a founded Base — behind one config type, since they all answer the same two questions: what effects do they grant, and what do they exclude. Defined in `include/game/map/ImprovementConfigParser.h` / `config/improvements.json`.
 - **`ImprovementConfig_t`**: `id`, `name`, `description`, `mineralCost`, `requiredTech`, `excludes` (other feature ids that can't coexist with this one on a tile), `radius` (default `0`), `frequency`, `spritePath`, `effects` (the standard `EffectConfig_t` vector, parsed via `BonusEffectParser::ParseEffects`).
-- **How a tile holds features**: improvements are stored directly as non-owning `const ImprovementConfig_t*` in `Tile::GetImprovements()` (the same pattern `BuildingManager` uses for `BuildingConfig_t*`); the caller resolves the id via `ImprovementRegistry` (the funnel is `TileEffectsContext`). Terrain stays as typed enums/bools on `Tile` — world-gen and rendering need the exhaustive/exclusive guarantee (every tile is *exactly one* of Flat/Rolling/Rocky) — and is exposed for effect resolution as string ids via `Tile::GetTerrainFeatureIds()` (Rockiness, Moisture, River, Fungus). `Tile::HasFeature(id)` answers "is this feature present?" across both (terrain strings + improvement ids) for conditions/selectors/`CanBuildImprovement`.
+- **How a tile holds features**: improvements are stored directly as non-owning `const ImprovementConfig_t*` in `Tile::GetImprovements()` (the same pattern `BuildingManager` uses for `BuildingConfig_t*`); the caller resolves the id via `ImprovementRegistry` (the funnel is `TileEffectsContext`). Terrain stays as typed enums/bools on `Tile` — world-gen and rendering need the exhaustive/exclusive guarantee (every tile is *exactly one* of Flat/Rolling/Rocky) — and is exposed for effect resolution as string ids via `Tile::GetTerrainFeatureIds()` (Rockiness_t, Moisture_t, River, Fungus). `Tile::HasFeature(id)` answers "is this feature present?" across both (terrain strings + improvement ids) for conditions/selectors/`CanBuildImprovement`.
 - **`CollectTileEffects(tile, improvementRegistry)`**: collects a tile's own `ThisTile`-scoped effects into a flat `ActiveEffect_t` list (sourceId = the feature's id) in two passes — terrain ids from `GetTerrainFeatureIds()` looked up via `registry.Find`, plus each `GetImprovements()` config read directly (no lookup). Mirrors `CollectPopEffects`/`CollectUnitEffects`. Only ever resolves a tile's *own* effects (radius 0) — it has no `WorldMap` to look at neighbors.
 - **`radius` (aura effects)**: radius is a **per-effect** property (`EffectConfig_t::radius`, default `0` = the host tile only). An improvement-level `"radius"` in JSON acts as the parse-time default for that improvement's effects, so existing configs keep working — e.g. `Sensor` (`radius: 2`) projects its `+25%` defense bonus, `Mirror` (`radius: 2`) its `+1 energy`, `Condenser` (`radius: 1`) its `+1 moisture_tier`. An individual effect can declare its own `"radius"` to differ from its siblings. Only continuous `ThisTile`-scoped effects take part in aura resolution — neighbor collection applies the exact same scope/persistence filter as own-tile collection.
 - **Unit auras**: unit components can carry `ThisTile`-scoped effects with a radius (e.g. a sensor pod granting `+25%` defense within 2 tiles). `CollectAreaEffects` scans `WorldMap::GetUnitsOnTile` over the aura radius — including units standing on the resolved tile itself — so the aura follows the unit as it moves. `TileEffectsContext` takes the `UnitComponentRegistry` at construction to size its scan bound.
@@ -432,7 +449,7 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
 - **`ResolveTileDefenseMultiplier(tile, worldMap, improvementRegistry)`**: `ResolveStatModifiers(FilterByStatId(CollectAreaEffects(...), Defense), 1.0).total`.
 - **`ResolveTileYield(tile)`**: resolves `Nutrients`/`Minerals`/`Energy` from `CollectAreaEffects` (so a nearby Mirror's energy aura IS included). Energy is seeded from `GetElevationEnergySeed()` before resolving so River/improvement `Add` effects layer on top. Used where only intrinsic + area yield is wanted (e.g. the auto-assign tile scorer, `BaseWorkableAreaDisplay`).
 - **`ResolveTileYield(tile, isBaseTile, baseEffects)`**: the full worked-tile yield. Starts from `CollectAreaEffects`, then appends every `baseEffects` `StatModifier` whose `selector` matches this tile (`BaseTile` matches iff `isBaseTile`; `HasImprovement` matches iff `tile.HasImprovement(id)`), and resolves each resource over the combined list. This is the single entry point `WorkerAssignmentManager::ComputeWorkedResources` and `ResourceManager::ComputeWorked_` use for a tile's pre-pop-multiplier yield.
-- **`StatId::MoistureTier`** (`"moisture_tier"` in JSON): integer tile tier (Arid=0, Moist=1, Wet=2), used exclusively by `RecomputeMoisture` as a terrain-mutation target. Not queryable at runtime — it is a seed for `SetMoisture()`, not a cached stat. `Condenser`'s `+1 moisture_tier Add` effect flows through `RecomputeMoisture` to actually call `Tile::SetMoisture()`, making the change visible in rendering and tile-yield resolution.
+- **`StatId_t::MoistureTier`** (`"moisture_tier"` in JSON): integer tile tier (Arid=0, Moist=1, Wet=2), used exclusively by `RecomputeMoisture` as a terrain-mutation target. Not queryable at runtime — it is a seed for `SetMoisture()`, not a cached stat. `Condenser`'s `+1 moisture_tier Add` effect flows through `RecomputeMoisture` to actually call `Tile::SetMoisture()`, making the change visible in rendering and tile-yield resolution.
 - **`Tile::m_baseMoisture`/`GetBaseMoisture()`/`SetBaseMoisture()`**: the natural, un-condensed terrain truth set once by `WorldGenerator`. `m_moisture`/`GetMoisture()`/`SetMoisture()` is the current/effective value (what rendering and `GetTerrainFeatureIds()` see), mutated by `RecomputeMoisture` from the base + nearby Condensers. World-gen sets both to the same initial random value; `RecomputeMoisture` derives `m_moisture` from `m_baseMoisture` fresh each time — never increments/decrements in place — so overlapping Condensers and add/remove order can never cause drift.
 - **`RecomputeMoisture(tile, worldMap, registry)`**: re-derives `tile`'s effective moisture from `tile.GetBaseMoisture()` + any `moisture_tier` `Add` effects from `CollectAreaEffects`, clamps to `[Arid, Wet]`, calls `tile.SetMoisture()`. Single function, always called from the current live world state — idempotent, consistent with any number of overlapping Condensers.
 - **`AddImprovementWithEffects` / `RemoveImprovementWithEffects`**: the single safe entry point for adding/removing any improvement. After the raw `Tile::AddImprovement/RemoveImprovement`, calls `RecomputeMoisture` for every tile within the improvement's maximum effect reach (improvement-level radius or any larger per-effect radius, including the host tile) — so a Condenser addition immediately updates moisture on itself and 8 neighbors, and removal automatically reverts them. `BaseManager` uses this for `"Base"` (radius 0, a no-op recompute, but consistent). When a future improvement-construction UI is added, it must go through these functions.
@@ -447,8 +464,8 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
 Producers only differ in which top-level JSON fields they read; the `effects` array itself is
 parsed and collected identically everywhere.
 
-1. **Parse**: add an `EffectSourceKind` enumerator (`BonusEffect.h`) and call
-   `config.effects = BonusEffectParser::ParseEffects(json, EffectSourceKind::X, config.id);`
+1. **Parse**: add an `EffectSourceKind_t` enumerator (`BonusEffect.h`) and call
+   `config.effects = BonusEffectParser::ParseEffects(json, EffectSourceKind_t::X, config.id);`
    in the config parser — exactly what `BuildingConfigParser`, `PopTypeConfigParser`, etc.
    do. Only add a `ValidateScopeForSource` rejection if a scope is *certainly impossible*
    for the source; scopes whose anchor concept is pending stay legal-but-inert (see
@@ -477,7 +494,7 @@ units, pops, or tiles according to each entry's `scope`.
 
 **A new stat** (the most common case):
 
-1. Add the `StatId` enumerator (`EffectEnums.h`) and its string mapping in `ParseStatId`
+1. Add the `StatId_t` enumerator (`EffectEnums.h`) and its string mapping in `ParseStatId`
    (`BonusEffectParser.cpp`); extend the mapping test in `ParserTests.cpp`.
 2. Classify its seed semantics in `KindFor` (`EffectEnums.h`) — the compiler forces this via
    the exhaustive switch — and pin it in `ValidationTests.cpp` alongside the others.
@@ -493,7 +510,7 @@ units, pops, or tiles according to each entry's `scope`.
    stat's kind and throws for `RawScaled` stats, whose sites pass the raw value the
    modifiers scale (a tile yield, `GrowthRate`'s `100.0`) explicitly.
 
-**A new rule flag**: add the `RuleFlagId` enumerator and its `ParseRuleFlagId` string, then
+**A new rule flag**: add the `RuleFlagId_t` enumerator and its `ParseRuleFlagId` string, then
 check it with a `std::get_if<RuleFlagEffect_t>` scan over the relevant pool — see
 `Unit::ResolveFlag_` for the pattern.
 

@@ -12,12 +12,12 @@
 namespace ac
 {
 
-static constexpr int k_startingMissionYear = 2100;
+static constexpr int k_StartingMissionYear = 2100;
 
 GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
                      const ImprovementRegistry& rImprovements,
                      const UnitComponentRegistry* pUnitComponents)
-    : m_missionYear(k_startingMissionYear)
+    : m_missionYear(k_StartingMissionYear)
     , m_worldMap(std::move(pWorldMap))
     , m_secretProjectAvailability(*this)
 {

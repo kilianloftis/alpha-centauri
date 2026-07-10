@@ -1,5 +1,6 @@
 #include "game/GameCategory.h"
 
+#include <magic_enum.hpp>
 #include <algorithm>
 #include <cctype>
 #include <stdexcept>
@@ -19,31 +20,31 @@ std::string ToLower_(std::string value)
 
 } // namespace
 
-std::string GameCategoryToString(GameCategory category)
+std::string GameCategoryToString(GameCategory_t category)
 {
-    switch (category)
+    const auto name = magic_enum::enum_name(category);
+    if (name.empty())
     {
-    case GameCategory::Build:    return "build";
-    case GameCategory::Grow:     return "grow";
-    case GameCategory::Discover: return "discover";
-    case GameCategory::Conquer:  return "conquer";
+        throw std::runtime_error("Unknown game category");
     }
-
-    throw std::runtime_error("Unknown game category");
+    return ToLower_(std::string(name));
 }
 
-GameCategory ParseGameCategory(const std::string& category)
+GameCategory_t ParseGameCategory(const std::string& category)
 {
     const std::string normalized = ToLower_(category);
-    if (normalized == "build")    return GameCategory::Build;
-    if (normalized == "grow")     return GameCategory::Grow;
-    if (normalized == "discover") return GameCategory::Discover;
-    if (normalized == "conquer")  return GameCategory::Conquer;
+    for (const GameCategory_t value : magic_enum::enum_values<GameCategory_t>())
+    {
+        if (ToLower_(std::string(magic_enum::enum_name(value))) == normalized)
+        {
+            return value;
+        }
+    }
 
     throw std::runtime_error("Unknown game category: '" + category + "'");
 }
 
-GameCategory ParseGameCategoryField(const nlohmann::json& j, const char* key)
+GameCategory_t ParseGameCategoryField(const nlohmann::json& j, const char* key)
 {
     return ParseGameCategory(j.at(key).get<std::string>());
 }

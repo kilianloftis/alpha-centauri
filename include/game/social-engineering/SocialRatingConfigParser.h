@@ -14,10 +14,10 @@ public:
     SocialRatingConfigParser();
     ~SocialRatingConfigParser() = default;
 
-    std::vector<SocialRatingConfig> ParseConfig(const std::string& rConfigPath);
+    std::vector<SocialRatingConfig_t> ParseConfig(const std::string& rConfigPath);
 
 private:
-    SocialRatingConfig ParseRatingConfig(const nlohmann::json& rRatingJson);
+    SocialRatingConfig_t ParseRatingConfig(const nlohmann::json& rRatingJson);
 };
 
 } // namespace ac

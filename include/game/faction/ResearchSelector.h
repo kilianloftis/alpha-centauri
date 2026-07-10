@@ -19,8 +19,8 @@ public:
     explicit ResearchSelector(ResearchManager* pResearchManager);
     ResearchSelector(ResearchManager* pResearchManager, uint32_t seed);
 
-    void SetCategoryEnabled(GameCategory category, bool enabled);
-    bool IsCategoryEnabled(GameCategory category) const;
+    void SetCategoryEnabled(GameCategory_t category, bool enabled);
+    bool IsCategoryEnabled(GameCategory_t category) const;
 
     // Available techs in selected categories, or all available techs when none match.
     std::vector<const TechConfig_t*> GetCandidateTargets() const;

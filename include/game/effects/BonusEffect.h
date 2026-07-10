@@ -36,7 +36,7 @@ enum class EffectPersistence_t
 // scope routing: collectors and filters derive their decisions from LaneFor instead of
 // hand-maintained scope lists. Adding a value to EffectScope_t forces an update to LaneFor's
 // exhaustive switch, and every collector/filter picks up the new scope's routing from there.
-enum class EffectLane
+enum class EffectLane_t
 {
     // Resolved by the owning base: lives in the faction pool tagged with originBase,
     // included per base by FilterForBase (pop ThisBase effects merge via CollectFromPops
@@ -57,20 +57,20 @@ enum class EffectLane
     TileLocal,
 };
 
-constexpr EffectLane LaneFor(EffectScope_t scope)
+constexpr EffectLane_t LaneFor(EffectScope_t scope)
 {
     switch (scope)
     {
-        case EffectScope_t::ThisBase:      return EffectLane::Base;
+        case EffectScope_t::ThisBase:      return EffectLane_t::Base;
         case EffectScope_t::AllOwnerBases:
         case EffectScope_t::FactionGlobal:
-        case EffectScope_t::WorldGlobal:   return EffectLane::FactionWide;
-        case EffectScope_t::FactionUnits:  return EffectLane::FactionUnits;
-        case EffectScope_t::ThisUnit:      return EffectLane::UnitLocal;
-        case EffectScope_t::ThisPop:       return EffectLane::PopLocal;
-        case EffectScope_t::ThisTile:      return EffectLane::TileLocal;
+        case EffectScope_t::WorldGlobal:   return EffectLane_t::FactionWide;
+        case EffectScope_t::FactionUnits:  return EffectLane_t::FactionUnits;
+        case EffectScope_t::ThisUnit:      return EffectLane_t::UnitLocal;
+        case EffectScope_t::ThisPop:       return EffectLane_t::PopLocal;
+        case EffectScope_t::ThisTile:      return EffectLane_t::TileLocal;
     }
-    return EffectLane::FactionWide; // unreachable; all enumerators handled above
+    return EffectLane_t::FactionWide; // unreachable; all enumerators handled above
 }
 
 // True for scopes resolved faction-wide through the pool (at bases or units) rather than
@@ -78,11 +78,11 @@ constexpr EffectLane LaneFor(EffectScope_t scope)
 // into CollectActiveEffects.
 constexpr bool IsFactionLane(EffectScope_t scope)
 {
-    const EffectLane lane = LaneFor(scope);
-    return lane == EffectLane::FactionWide || lane == EffectLane::FactionUnits;
+    const EffectLane_t lane = LaneFor(scope);
+    return lane == EffectLane_t::FactionWide || lane == EffectLane_t::FactionUnits;
 }
 
-enum class ModifierOp
+enum class ModifierOp_t
 {
     Add,
     // amount is in percent points (25 = +25%, -25 = -25%), matching the UI's bonus display.
@@ -106,7 +106,7 @@ struct GrantUnitEffect_t
     std::string unitId;
 };
 
-enum class TileSelectorKind
+enum class TileSelectorKind_t
 {
     BaseTile,
     HasImprovement
@@ -114,15 +114,15 @@ enum class TileSelectorKind
 
 struct TileSelector_t
 {
-    TileSelectorKind kind;
+    TileSelectorKind_t kind;
     std::optional<std::string> improvement; // improvement id, set only when kind == HasImprovement
 };
 
 struct StatModifierEffect_t
 {
-    StatId stat = StatId::Nutrients;
+    StatId_t stat = StatId_t::Nutrients;
     double amount = 0.0;
-    ModifierOp op = ModifierOp::Add;
+    ModifierOp_t op = ModifierOp_t::Add;
     // When set, this modifier is a per-tile yield modifier: it applies to each worked tile
     // whose features satisfy the selector (e.g. "+1 mineral to every worked Mine"), rather
     // than once at the base level. Absent selector: intrinsic tile yield (ThisTile scope) or
@@ -132,7 +132,7 @@ struct StatModifierEffect_t
 
 struct RuleFlagEffect_t
 {
-    RuleFlagId flag;
+    RuleFlagId_t flag;
 };
 
 struct SocialEngineeringOverrideEffect_t
@@ -147,7 +147,7 @@ struct SocialEngineeringOverrideEffect_t
 // to produce the final gameplay effects (non-linear mapping).
 struct SocialRatingModifierEffect_t
 {
-    SocialRatingId rating;
+    SocialRatingId_t rating;
     int amount = 0;
 };
 
@@ -169,7 +169,7 @@ using EffectVariant_t = std::variant<
     SocialRatingModifierEffect_t
 >;
 
-enum class ConditionKind
+enum class ConditionKind_t
 {
     // The tile targeted by this effect has the named feature id. Evaluated via
     // Tile::HasFeature, so a single kind covers terrain classification (e.g. "Rocky"),
@@ -181,7 +181,7 @@ enum class ConditionKind
 
 struct Condition_t
 {
-    ConditionKind kind;
+    ConditionKind_t kind;
     // Parameter for the condition. For TargetTileHas this is the feature id passed to
     // Tile::HasFeature (e.g. "Base", "Forest", "Rocky").
     std::string value;
@@ -205,7 +205,7 @@ struct EffectConfig_t
 // Which kind of config declared an effects array. Used for the minimal load-time scope
 // validation: scopes that can only ever be resolved against one source kind (a specific pop,
 // a specific unit) are rejected on any other source instead of silently doing nothing.
-enum class EffectSourceKind
+enum class EffectSourceKind_t
 {
     Building,
     UnitComponent,

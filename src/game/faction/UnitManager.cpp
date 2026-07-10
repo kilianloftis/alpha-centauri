@@ -37,7 +37,7 @@ void UnitManager::DestroyUnit(Unit& rUnit)
         throw std::runtime_error("Unit not found in UnitManager");
     }
 
-    on_unit_destroyed.emit(rUnit);
+    OnUnitDestroyed.Emit(rUnit);
     m_units.erase(it);
     m_revision.Bump();
 }

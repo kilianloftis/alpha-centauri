@@ -11,14 +11,14 @@ namespace ac
 namespace
 {
 
-size_t CategoryIndex_(GameCategory category)
+size_t CategoryIndex_(GameCategory_t category)
 {
     switch (category)
     {
-    case GameCategory::Build:    return 0;
-    case GameCategory::Grow:     return 1;
-    case GameCategory::Discover: return 2;
-    case GameCategory::Conquer:  return 3;
+    case GameCategory_t::Build:    return 0;
+    case GameCategory_t::Grow:     return 1;
+    case GameCategory_t::Discover: return 2;
+    case GameCategory_t::Conquer:  return 3;
     }
 
     throw std::runtime_error("Unknown game category");
@@ -38,12 +38,12 @@ ResearchSelector::ResearchSelector(ResearchManager* pResearchManager, uint32_t s
 {
 }
 
-void ResearchSelector::SetCategoryEnabled(GameCategory category, bool enabled)
+void ResearchSelector::SetCategoryEnabled(GameCategory_t category, bool enabled)
 {
     m_categoryEnabled[CategoryIndex_(category)] = enabled;
 }
 
-bool ResearchSelector::IsCategoryEnabled(GameCategory category) const
+bool ResearchSelector::IsCategoryEnabled(GameCategory_t category) const
 {
     return m_categoryEnabled[CategoryIndex_(category)];
 }

@@ -21,10 +21,10 @@ public:
     ~SocialEngineeringManager();
 
     // Set the active policy for a category. Throws if the id is not found.
-    void SetActivePolicy(SocialCategory category, const std::string& policyId);
+    void SetActivePolicy(SocialCategory_t category, const std::string& policyId);
 
     // Get the active policy config for a category. Returns nullptr if none is set.
-    const SocialPolicyConfig* GetActivePolicy(SocialCategory category) const;
+    const SocialPolicyConfig_t* GetActivePolicy(SocialCategory_t category) const;
 
     // Collect all active effects from the current policy selections.
     // SocialRatingModifier effects are accumulated per-rating axis and expanded
@@ -33,8 +33,8 @@ public:
 
     // All policies in a category that the faction may currently adopt,
     // given the faction's discovered tech string ids.
-    std::vector<const SocialPolicyConfig*> GetAvailablePolicies(
-        SocialCategory category,
+    std::vector<const SocialPolicyConfig_t*> GetAvailablePolicies(
+        SocialCategory_t category,
         const std::vector<std::string>& rDiscoveredTechIds) const;
 
     // Bumped on every policy change; consumed by effect-pool caches.
@@ -43,7 +43,7 @@ public:
 private:
     const SocialPolicyRegistry* m_pRegistry;
     const SocialRatingRegistry* m_pRatingRegistry;
-    std::map<SocialCategory, std::string> m_activePolicyIds;
+    std::map<SocialCategory_t, std::string> m_activePolicyIds;
     Revision m_revision;
 };
 

@@ -14,12 +14,12 @@ EventBridge::EventBridge(EventBus& rBus)
 
 void EventBridge::WireBase(BaseManager& rBase)
 {
-    rBase.on_pop_gained.connect([this, &rBase](int newSize) {
-        m_rBus.publish(EvBaseGainedPop{ rBase.GetFactionId(), rBase.GetBaseId(), newSize });
+    rBase.OnPopGained.Connect([this, &rBase](int newSize) {
+        m_rBus.Publish(EvBaseGainedPop{ rBase.GetFactionId(), rBase.GetBaseId(), newSize });
     });
 
-    rBase.on_pop_lost.connect([this, &rBase](int newSize) {
-        m_rBus.publish(EvBaseLostPop{ rBase.GetFactionId(), rBase.GetBaseId(), newSize });
+    rBase.OnPopLost.Connect([this, &rBase](int newSize) {
+        m_rBus.Publish(EvBaseLostPop{ rBase.GetFactionId(), rBase.GetBaseId(), newSize });
     });
 }
 

@@ -42,23 +42,23 @@ void TurnStageConfigParser::ParseHooks(const nlohmann::json& hooksJson, std::sha
 {
     for (const auto& hookId : hooksJson.value("pre", json::array()))
     {
-        Hook hook;
-        hook.mod_id = hookId.value("mod_id", "");
-        hook.script_path = hookId.value("script_path", "");
+        Hook_t hook;
+        hook.modId = hookId.value("mod_id", "");
+        hook.scriptPath = hookId.value("script_path", "");
         hookContext->AddPreHook(hook);
     }
     for (const auto& hookId : hooksJson.value("post", json::array()))
     {
-        Hook hook;
-        hook.mod_id = hookId.value("mod_id", "");
-        hook.script_path = hookId.value("script_path", "");
+        Hook_t hook;
+        hook.modId = hookId.value("mod_id", "");
+        hook.scriptPath = hookId.value("script_path", "");
         hookContext->AddPostHook(hook);
     }
     for (const auto& hookId : hooksJson.value("replace", json::array()))
     {
-        Hook hook;
-        hook.mod_id = hookId.value("mod_id", "");
-        hook.script_path = hookId.value("script_path", "");
+        Hook_t hook;
+        hook.modId = hookId.value("mod_id", "");
+        hook.scriptPath = hookId.value("script_path", "");
         hookContext->AddReplaceHook(hook);
     }
 }

@@ -24,7 +24,7 @@ namespace
 
 constexpr RatioLayout_t k_MapLayout      {0.0f, 0.0f, 1.0f, 0.867f};
 constexpr RatioLayout_t k_InfoPanelLayout{0.0f, 0.867f, 1.0f, 0.133f};
-constexpr Color k_ResearchTextColor      {100, 200, 255, 255};
+constexpr Color_t k_ResearchTextColor      {100, 200, 255, 255};
 constexpr size_t k_InfoPanelElementIndex = 0;
 constexpr size_t k_FirstUnitIndex        = 0;
 constexpr int    k_InvalidTileCoord      = -1;
@@ -58,7 +58,7 @@ WorldView::WorldView(
     // whole game: without this, m_pSelectedUnit would dangle the moment a unit dies.
     for (Faction& rFaction : m_rGameState.Factions())
     {
-        rFaction.GetUnitManager().on_unit_destroyed.connect([this](Unit& rDestroyed) {
+        rFaction.GetUnitManager().OnUnitDestroyed.Connect([this](Unit& rDestroyed) {
             if (m_pSelectedUnit == &rDestroyed)
             {
                 m_pSelectedUnit = nullptr;
@@ -82,10 +82,10 @@ void WorldView::UpdateCameraInput(bool bEnabled)
 void WorldView::Update_()
 {
     std::vector<InfoPanelElement::InfoLine> infoLines;
-    infoLines.push_back({"Mission Year: " + std::to_string(m_rGameState.GetMissionYear()), Color::White()});
+    infoLines.push_back({"Mission Year: " + std::to_string(m_rGameState.GetMissionYear()), Color_t::White()});
     if (const Faction* pPlayerFaction = m_rGameState.GetPlayerFaction())
     {
-        infoLines.push_back({"Energy: " + std::to_string(pPlayerFaction->GetEconomy().GetEnergy()), Color::Yellow()});
+        infoLines.push_back({"Energy: " + std::to_string(pPlayerFaction->GetEconomy().GetEnergy()), Color_t::Yellow()});
         infoLines.push_back({"Research: " + std::to_string(pPlayerFaction->GetResearch().GetAccumulatedPoints()), k_ResearchTextColor});
     }
     static_cast<InfoPanelElement*>(m_elements[k_InfoPanelElementIndex].get())->SetInfoLines(infoLines);

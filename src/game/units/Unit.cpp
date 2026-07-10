@@ -53,13 +53,13 @@ Unit::~Unit()
 
 const UnitDesign& Unit::GetDesign() const                              { return m_rDesign; }
 
-int Unit::ResolveStat_(StatId statId) const
+int Unit::ResolveStat_(StatId_t statId) const
 {
     const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects_(m_rDesign, m_rFaction);
     return static_cast<int>(ResolveStatModifiers(FilterByStatId(effects, statId), SeedFor(statId)).total);
 }
 
-bool Unit::ResolveFlag_(RuleFlagId flagId) const
+bool Unit::ResolveFlag_(RuleFlagId_t flagId) const
 {
     for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects_(m_rDesign, m_rFaction))
     {
@@ -73,25 +73,25 @@ bool Unit::ResolveFlag_(RuleFlagId flagId) const
 }
 
 int Unit::GetBaseCost() const                                          { return m_rDesign.GetBaseCost(); }
-int Unit::GetAttack() const                                            { return ResolveStat_(StatId::Attack); }
+int Unit::GetAttack() const                                            { return ResolveStat_(StatId_t::Attack); }
 int Unit::GetAttackAgainst(const Unit& rDefender) const
 {
     EffectContext_t ctx;
     ctx.targetTile = &rDefender.GetTile();
     const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects_(m_rDesign, m_rFaction);
     return static_cast<int>(
-        ResolveStatModifiers(FilterByStatIdInContext(effects, StatId::Attack, ctx), SeedFor(StatId::Attack)).total);
+        ResolveStatModifiers(FilterByStatIdInContext(effects, StatId_t::Attack, ctx), SeedFor(StatId_t::Attack)).total);
 }
-int Unit::GetDefense() const                                           { return ResolveStat_(StatId::Defense); }
-int Unit::GetMovement() const                                          { return ResolveStat_(StatId::Movement); }
-int Unit::GetHitPoints() const                                         { return ResolveStat_(StatId::HitPoints); }
-int Unit::GetDisengageChance() const                                   { return ResolveStat_(StatId::DisengageChance); }
-int Unit::GetFuel() const                                              { return ResolveStat_(StatId::Fuel); }
-int Unit::GetDamageFromOutOfFuel() const                               { return ResolveStat_(StatId::DamageFromOutOfFuel); }
-bool Unit::IsFlight() const                                            { return ResolveFlag_(RuleFlagId::Flight); }
-int Unit::GetCargoCapacity() const                                     { return ResolveStat_(StatId::CargoCapacity); }
-int Unit::GetDifficultTerrainCost() const                              { return ResolveStat_(StatId::DifficultTerrainCost); }
-bool Unit::IsSingleUse() const                                         { return ResolveFlag_(RuleFlagId::SingleUse); }
+int Unit::GetDefense() const                                           { return ResolveStat_(StatId_t::Defense); }
+int Unit::GetMovement() const                                          { return ResolveStat_(StatId_t::Movement); }
+int Unit::GetHitPoints() const                                         { return ResolveStat_(StatId_t::HitPoints); }
+int Unit::GetDisengageChance() const                                   { return ResolveStat_(StatId_t::DisengageChance); }
+int Unit::GetFuel() const                                              { return ResolveStat_(StatId_t::Fuel); }
+int Unit::GetDamageFromOutOfFuel() const                               { return ResolveStat_(StatId_t::DamageFromOutOfFuel); }
+bool Unit::IsFlight() const                                            { return ResolveFlag_(RuleFlagId_t::Flight); }
+int Unit::GetCargoCapacity() const                                     { return ResolveStat_(StatId_t::CargoCapacity); }
+int Unit::GetDifficultTerrainCost() const                              { return ResolveStat_(StatId_t::DifficultTerrainCost); }
+bool Unit::IsSingleUse() const                                         { return ResolveFlag_(RuleFlagId_t::SingleUse); }
 const Tile& Unit::GetTile() const                                      { return *m_pTile; }
 BaseManager* Unit::GetHomeBase() const      { return m_pHomeBase; }
 Faction& Unit::GetFaction() const           { return m_rFaction; }

@@ -116,8 +116,8 @@ UI components use the Graphics interface to render game information.
   - `SetWorldMap()`: Set the world map to display
   - `SetBaseInfo(baseInfo)`: Set base information (position, owner, population) for rendering
 - **Tile Display Format**: Each tile shows `moisture rockiness elevation(km)` as integers
-  - Moisture: 0=Arid, 1=Moist, 2=Wet
-  - Rockiness: 0=Flat, 1=Rolling, 2=Rocky
+  - Moisture_t: 0=Arid, 1=Moist, 2=Wet
+  - Rockiness_t: 0=Flat, 1=Rolling, 2=Rocky
   - Elevation: Integer km (elevation in meters / 1000)
 - **BaseInfo_t Structure**:
   - `x, y`: Tile coordinates

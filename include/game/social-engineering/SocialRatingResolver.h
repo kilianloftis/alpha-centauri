@@ -22,18 +22,18 @@ class SocialRatingRegistry;
 // every other base totals 2.
 
 // Sums SocialRatingModifier contributions per rating axis over rBaseEffects.
-std::map<SocialRatingId, int> AccumulateSocialRatings(const BaseEffects_t& rBaseEffects);
+std::map<SocialRatingId_t, int> AccumulateSocialRatings(const BaseEffects_t& rBaseEffects);
 
 // SMAC rule: totals below the lowest / above the highest configured level use that
 // extreme's effects. Returns the level key to look up in levelEffects after clamping
 // into [min, max] of the table. Caller must ensure levelEffects is non-empty.
-int ClampSocialRatingTotal(const SocialRatingConfig& rConfig, int total);
+int ClampSocialRatingTotal(const SocialRatingConfig_t& rConfig, int total);
 
 // Clamps `total` into the configured range, then exact-matches. Returns nullptr when the
 // table is empty or the (possibly clamped) level has no entry — typical for absent 0, or
 // sparse in-range gaps in incomplete tables.
 const std::vector<EffectConfig_t>* FindSocialRatingLevelEffects(
-    const SocialRatingConfig& rConfig, int total);
+    const SocialRatingConfig_t& rConfig, int total);
 
 // Appends the gameplay effects each accumulated rating level maps to (via the rating
 // registry's levelEffects table, SMAC clamp-at-extremes) to rBaseEffects, with sourceId

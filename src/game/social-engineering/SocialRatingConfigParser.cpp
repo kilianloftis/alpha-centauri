@@ -14,7 +14,7 @@ SocialRatingConfigParser::SocialRatingConfigParser()
 {
 }
 
-std::vector<SocialRatingConfig> SocialRatingConfigParser::ParseConfig(const std::string& rConfigPath)
+std::vector<SocialRatingConfig_t> SocialRatingConfigParser::ParseConfig(const std::string& rConfigPath)
 {
     std::cout << "Loading social rating configuration from: " << rConfigPath << "\n";
 
@@ -32,7 +32,7 @@ std::vector<SocialRatingConfig> SocialRatingConfigParser::ParseConfig(const std:
         throw std::runtime_error("Expected array of social rating configs in '" + rConfigPath + "'");
     }
 
-    std::vector<SocialRatingConfig> configs;
+    std::vector<SocialRatingConfig_t> configs;
     for (const auto& rRatingJson : configJson)
     {
         configs.push_back(ParseRatingConfig(rRatingJson));
@@ -42,9 +42,9 @@ std::vector<SocialRatingConfig> SocialRatingConfigParser::ParseConfig(const std:
     return configs;
 }
 
-SocialRatingConfig SocialRatingConfigParser::ParseRatingConfig(const nlohmann::json& rRatingJson)
+SocialRatingConfig_t SocialRatingConfigParser::ParseRatingConfig(const nlohmann::json& rRatingJson)
 {
-    SocialRatingConfig config;
+    SocialRatingConfig_t config;
     config.id = rRatingJson["id"];
     config.rating = BonusEffectParser::ParseSocialRatingId(config.id);
 
@@ -56,7 +56,7 @@ SocialRatingConfig SocialRatingConfigParser::ParseRatingConfig(const nlohmann::j
         for (const auto& rEffectJson : it.value())
         {
             EffectConfig_t effect = BonusEffectParser::ParseEffectConfig(rEffectJson);
-            BonusEffectParser::ValidateScopeForSource(effect.scope, EffectSourceKind::SocialRating,
+            BonusEffectParser::ValidateScopeForSource(effect.scope, EffectSourceKind_t::SocialRating,
                                                       config.id + " level " + it.key());
             effects.push_back(std::move(effect));
         }

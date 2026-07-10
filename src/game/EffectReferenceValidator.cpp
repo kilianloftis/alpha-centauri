@@ -128,14 +128,14 @@ void ValidateEffectReferences(const GameDataContext& rData)
     }
     if (rData.socialPolicyRegistry)
     {
-        for (const SocialPolicyConfig& rConfig : rData.socialPolicyRegistry->GetAll())
+        for (const SocialPolicyConfig_t& rConfig : rData.socialPolicyRegistry->GetAll())
         {
             validate(rConfig.effects, rConfig.id);
         }
     }
     if (rData.socialRatingRegistry)
     {
-        for (const SocialRatingConfig& rConfig : rData.socialRatingRegistry->GetAll())
+        for (const SocialRatingConfig_t& rConfig : rData.socialRatingRegistry->GetAll())
         {
             for (const auto& [level, rEffects] : rConfig.levelEffects)
             {

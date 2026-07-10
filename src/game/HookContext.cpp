@@ -8,17 +8,17 @@ HookContext::HookContext()
 {
 }
 
-void HookContext::AddPreHook(const Hook& hook)
+void HookContext::AddPreHook(const Hook_t& hook)
 {
     m_preHooks.push_back(hook);
 }
 
-void HookContext::AddPostHook(const Hook& hook)
+void HookContext::AddPostHook(const Hook_t& hook)
 {
     m_postHooks.push_back(hook);
 }
 
-void HookContext::AddReplaceHook(const Hook& hook)
+void HookContext::AddReplaceHook(const Hook_t& hook)
 {
     m_replaceHooks.push_back(hook);
 }
@@ -27,7 +27,7 @@ void HookContext::ExecutePreHooks()
 {
     for (const auto& hook : m_preHooks)
     {
-        std::cout << "  Executing pre hook from mod: " << hook.mod_id << "\n";
+        std::cout << "  Executing pre hook from mod: " << hook.modId << "\n";
         if (hook.callback)
         {
             hook.callback();
@@ -39,7 +39,7 @@ void HookContext::ExecutePostHooks()
 {
     for (const auto& hook : m_postHooks)
     {
-        std::cout << "  Executing post hook from mod: " << hook.mod_id << "\n";
+        std::cout << "  Executing post hook from mod: " << hook.modId << "\n";
         if (hook.callback)
         {
             hook.callback();
@@ -51,7 +51,7 @@ void HookContext::ExecuteReplaceHooks()
 {
     for (const auto& hook : m_replaceHooks)
     {
-        std::cout << "  Executing replace hook from mod: " << hook.mod_id << "\n";
+        std::cout << "  Executing replace hook from mod: " << hook.modId << "\n";
         if (hook.callback)
         {
             hook.callback();

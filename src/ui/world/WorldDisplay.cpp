@@ -21,7 +21,7 @@ constexpr float k_UnitMarkerFontSizeRatio       = 0.2f;
 constexpr float k_UnitMarkerWidthRatio          = 0.22f;
 constexpr float k_UnitMarkerHeightRatio         = 0.22f;
 constexpr float k_UnitMarkerSpacingRatio        = 0.03f;
-constexpr Color k_UnitMarkerColor               {0, 220, 255, 255};
+constexpr Color_t k_UnitMarkerColor               {0, 220, 255, 255};
 constexpr float k_SelectionBorderOffset         = 1.0f;
 constexpr float k_SelectionBorderExpansion      = 2.0f;
 constexpr float k_SelectionBorderWidth          = 2.0f;
@@ -32,7 +32,7 @@ constexpr int   k_MoistureAridValue             = 0;
 constexpr int   k_RockinessRockyValue           = 2;
 constexpr int   k_RockinessRollingValue         = 1;
 constexpr int   k_RockinessFlatValue            = 0;
-constexpr Color k_TileBorderColor               {80, 80, 80, 255};
+constexpr Color_t k_TileBorderColor               {80, 80, 80, 255};
 constexpr float k_TileBorderWidth               = -1.0f;
 constexpr int   k_ElevationMetersPerKm          = 1000;
 constexpr unsigned int k_TileFontSize           = 14;
@@ -127,7 +127,7 @@ void WorldDisplay::RenderBases_(Graphics& rGraphics, int colStart, int rowStart,
         // TODO: Use faction color for base marker based on base.factionId
         // TODO: Show capture animation if base.previousFactionId.has_value()
         // TODO: Show population size (base.populationSize) below name
-        rGraphics.DrawText(displayName, baseX + textOffsetX, baseY + textOffsetY, fontSize, Color::Yellow());
+        rGraphics.DrawText(displayName, baseX + textOffsetX, baseY + textOffsetY, fontSize, Color_t::Yellow());
     }
 }
 
@@ -185,7 +185,7 @@ void WorldDisplay::RenderUnits_(Graphics& rGraphics, int colStart, int rowStart,
                         tileY + offsetY - k_SelectionBorderOffset,
                         markerWidth + k_SelectionBorderExpansion,
                         markerHeight + k_SelectionBorderExpansion,
-                        Color::Yellow(),
+                        Color_t::Yellow(),
                         k_SelectionBorderWidth);
                 }
 
@@ -197,7 +197,7 @@ void WorldDisplay::RenderUnits_(Graphics& rGraphics, int colStart, int rowStart,
                         tileX + offsetX + spacing,
                         tileY + offsetY + spacing,
                         fontSize,
-                        Color::Black());
+                        Color_t::Black());
                 }
             }
         }
@@ -242,29 +242,29 @@ void WorldDisplay::Render(Graphics& rGraphics)
     RenderUnits_(rGraphics, colStart, rowStart, colEnd, rowEnd);
 }
 
-int WorldDisplay::MoistureToInt_(Moisture moisture) const
+int WorldDisplay::MoistureToInt_(Moisture_t moisture) const
 {
     switch (moisture)
     {
-        case Moisture::Wet:
+        case Moisture_t::Wet:
             return k_MoistureWetValue;
-        case Moisture::Moist:
+        case Moisture_t::Moist:
             return k_MoistureMoistValue;
-        case Moisture::Arid:
+        case Moisture_t::Arid:
         default:
             return k_MoistureAridValue;
     }
 }
 
-int WorldDisplay::RockinessToInt_(Rockiness rockiness) const
+int WorldDisplay::RockinessToInt_(Rockiness_t rockiness) const
 {
     switch (rockiness)
     {
-        case Rockiness::Rocky:
+        case Rockiness_t::Rocky:
             return k_RockinessRockyValue;
-        case Rockiness::Rolling:
+        case Rockiness_t::Rolling:
             return k_RockinessRollingValue;
-        case Rockiness::Flat:
+        case Rockiness_t::Flat:
         default:
             return k_RockinessFlatValue;
     }

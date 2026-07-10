@@ -15,7 +15,7 @@ struct TechConfig_t
 {
     std::string id;
     std::string name;
-    GameCategory category;
+    GameCategory_t category;
     int cost;
     std::vector<std::string> prerequisites;
 };

@@ -5,14 +5,14 @@
 namespace ac
 {
 
-SubscriptionId EventBus::subscribe(Handler handler)
+SubscriptionId EventBus::Subscribe(Handler handler)
 {
     auto id = m_nextId++;
     m_handlers.emplace_back(id, std::move(handler));
     return id;
 }
 
-void EventBus::unsubscribe(SubscriptionId id)
+void EventBus::Unsubscribe(SubscriptionId id)
 {
     m_handlers.erase(
         std::remove_if(m_handlers.begin(), m_handlers.end(),
@@ -20,7 +20,7 @@ void EventBus::unsubscribe(SubscriptionId id)
         m_handlers.end());
 }
 
-void EventBus::publish(GameEvent event)
+void EventBus::Publish(GameEvent event)
 {
     for (const auto& [_, h] : m_handlers) h(event);
 }

@@ -24,12 +24,12 @@ void GoldenAgeCalculator::Update(const Inputs_t& inputs)
     if (bCondition && !m_bInGoldenAge)
     {
         m_bInGoldenAge = true;
-        m_rGoldenAgeStarted.emit();
+        m_rGoldenAgeStarted.Emit();
     }
     else if (!bCondition && m_bInGoldenAge)
     {
         m_bInGoldenAge = false;
-        m_rGoldenAgeEnded.emit();
+        m_rGoldenAgeEnded.Emit();
     }
 }
 

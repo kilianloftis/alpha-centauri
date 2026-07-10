@@ -75,7 +75,7 @@ void AppendFactionLaneEffects(const std::vector<EffectConfig_t>& rEffects,
 
 bool TileEffectReaches(const EffectConfig_t& rEffect, int distance)
 {
-    return LaneFor(rEffect.scope) == EffectLane::TileLocal
+    return LaneFor(rEffect.scope) == EffectLane_t::TileLocal
         && rEffect.persistence != EffectPersistence_t::Instantaneous
         && rEffect.radius >= distance;
 }
@@ -200,7 +200,7 @@ std::vector<ActiveEffect_t> ExpandGrantBuildingEffects(
     return effects;
 }
 
-double ApplyModifierStack(double base, const std::vector<std::pair<double, ModifierOp>>& contributions)
+double ApplyModifierStack(double base, const std::vector<std::pair<double, ModifierOp_t>>& contributions)
 {
     double addTotal = base;
     double arithmeticFactor = 1.0;
@@ -209,9 +209,9 @@ double ApplyModifierStack(double base, const std::vector<std::pair<double, Modif
     {
         switch (op)
         {
-            case ModifierOp::Add:               addTotal += amount; break;
-            case ModifierOp::AddPercent:        arithmeticFactor += amount / 100.0; break;
-            case ModifierOp::MultiplyGeometric: geometricFactor *= amount; break;
+            case ModifierOp_t::Add:               addTotal += amount; break;
+            case ModifierOp_t::AddPercent:        arithmeticFactor += amount / 100.0; break;
+            case ModifierOp_t::MultiplyGeometric: geometricFactor *= amount; break;
         }
     }
     return addTotal * arithmeticFactor * geometricFactor;
@@ -231,7 +231,7 @@ bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx
     const Condition_t& condition = *config.condition;
     switch (condition.kind)
     {
-        case ConditionKind::TargetTileHas:
+        case ConditionKind_t::TargetTileHas:
             return ctx.targetTile != nullptr && ctx.targetTile->HasFeature(condition.value);
     }
     return false;
@@ -249,19 +249,19 @@ BaseEffects_t FilterForBase(const FactionEffects_t& rFactionEffects, const BaseM
 
         switch (LaneFor(effect.config->scope))
         {
-            case EffectLane::Base:
+            case EffectLane_t::Base:
                 if (effect.originBase == &rBase)
                 {
                     matching.effects.push_back(effect);
                 }
                 break;
-            case EffectLane::FactionWide:
+            case EffectLane_t::FactionWide:
                 matching.effects.push_back(effect);
                 break;
-            case EffectLane::FactionUnits:
-            case EffectLane::UnitLocal:
-            case EffectLane::PopLocal:
-            case EffectLane::TileLocal:
+            case EffectLane_t::FactionUnits:
+            case EffectLane_t::UnitLocal:
+            case EffectLane_t::PopLocal:
+            case EffectLane_t::TileLocal:
                 // Resolved by their own unit/pop/tile; never apply to base-level calculations.
                 break;
         }

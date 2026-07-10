@@ -67,33 +67,33 @@ TEST_CASE("FilterForBase: scope rules with real base identities", "[effects][bas
 
     actest::EffectPool pool;
     const FactionEffects_t factionEffects{{
-        actest::Active(pool.StatMod(StatId::Nutrients, 1.0, ModifierOp::Add, EffectScope_t::ThisBase),
+        actest::Active(pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase),
                        "mine_a", &baseA),
-        actest::Active(pool.StatMod(StatId::Nutrients, 2.0, ModifierOp::Add, EffectScope_t::ThisBase),
+        actest::Active(pool.StatMod(StatId_t::Nutrients, 2.0, ModifierOp_t::Add, EffectScope_t::ThisBase),
                        "theirs_b", &baseB),
-        actest::Active(pool.StatMod(StatId::Nutrients, 4.0, ModifierOp::Add, EffectScope_t::AllOwnerBases),
+        actest::Active(pool.StatMod(StatId_t::Nutrients, 4.0, ModifierOp_t::Add, EffectScope_t::AllOwnerBases),
                        "all_bases"),
-        actest::Active(pool.StatMod(StatId::Nutrients, 8.0, ModifierOp::Add, EffectScope_t::FactionGlobal),
+        actest::Active(pool.StatMod(StatId_t::Nutrients, 8.0, ModifierOp_t::Add, EffectScope_t::FactionGlobal),
                        "faction"),
-        actest::Active(pool.StatMod(StatId::Nutrients, 16.0, ModifierOp::Add, EffectScope_t::WorldGlobal),
+        actest::Active(pool.StatMod(StatId_t::Nutrients, 16.0, ModifierOp_t::Add, EffectScope_t::WorldGlobal),
                        "world"),
-        actest::Active(pool.StatMod(StatId::Nutrients, 32.0, ModifierOp::Add, EffectScope_t::ThisUnit),
+        actest::Active(pool.StatMod(StatId_t::Nutrients, 32.0, ModifierOp_t::Add, EffectScope_t::ThisUnit),
                        "unit"),
-        actest::Active(pool.StatMod(StatId::Nutrients, 64.0, ModifierOp::Add, EffectScope_t::FactionUnits),
+        actest::Active(pool.StatMod(StatId_t::Nutrients, 64.0, ModifierOp_t::Add, EffectScope_t::FactionUnits),
                        "faction_units"),
-        actest::Active(pool.StatMod(StatId::Nutrients, 128.0, ModifierOp::Add, EffectScope_t::ThisPop),
+        actest::Active(pool.StatMod(StatId_t::Nutrients, 128.0, ModifierOp_t::Add, EffectScope_t::ThisPop),
                        "pop"),
-        actest::Active(pool.StatMod(StatId::Nutrients, 256.0, ModifierOp::Add, EffectScope_t::ThisTile),
+        actest::Active(pool.StatMod(StatId_t::Nutrients, 256.0, ModifierOp_t::Add, EffectScope_t::ThisTile),
                        "tile"),
     }};
 
     // For base A: its own ThisBase effect plus the three base-applicable global scopes.
     // The distinct powers of two make any wrong inclusion identifiable from the total.
     const BaseEffects_t forA = FilterForBase(factionEffects, baseA);
-    CHECK(ResolveStatModifiers(FilterByStatId(forA.effects, StatId::Nutrients), 0.0).total == Approx(1.0 + 4.0 + 8.0 + 16.0));
+    CHECK(ResolveStatModifiers(FilterByStatId(forA.effects, StatId_t::Nutrients), 0.0).total == Approx(1.0 + 4.0 + 8.0 + 16.0));
 
     const BaseEffects_t forB = FilterForBase(factionEffects, baseB);
-    CHECK(ResolveStatModifiers(FilterByStatId(forB.effects, StatId::Nutrients), 0.0).total == Approx(2.0 + 4.0 + 8.0 + 16.0));
+    CHECK(ResolveStatModifiers(FilterByStatId(forB.effects, StatId_t::Nutrients), 0.0).total == Approx(2.0 + 4.0 + 8.0 + 16.0));
 }
 
 TEST_CASE("FilterForBase: a ThisBase effect with no origin base applies to no base", "[effects][base][filter]")
@@ -103,7 +103,7 @@ TEST_CASE("FilterForBase: a ThisBase effect with no origin base applies to no ba
 
     actest::EffectPool pool;
     const FactionEffects_t factionEffects{{
-        actest::Active(pool.StatMod(StatId::Nutrients, 1.0, ModifierOp::Add, EffectScope_t::ThisBase),
+        actest::Active(pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase),
                        "orphan", nullptr),
     }};
     CHECK(FilterForBase(factionEffects, baseA).effects.empty());
@@ -118,7 +118,7 @@ TEST_CASE("DispatchInstantaneousEffects: Instantaneous GrantBuilding constructs 
     const BuildingConfig_t* pGrantor = fixture.buildings().Find("instant_grantor");
     REQUIRE(pGrantor != nullptr);
 
-    // Simulate on_production_completed for instant_grantor.
+    // Simulate OnProductionCompleted for instant_grantor.
     base.GetBuildingManager().AddBuilding(pGrantor->id);
     DispatchInstantaneousEffects(*pGrantor, base);
 
@@ -134,7 +134,7 @@ TEST_CASE("DispatchInstantaneousEffects: Instantaneous GrantBuilding constructs 
 
     // The granted building is a real constructed building: its continuous effects collect.
     const auto effects = base.CollectBuildingEffects();
-    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId::Nutrients), 0.0).total == 2.0);
+    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Nutrients), 0.0).total == 2.0);
 }
 
 TEST_CASE("Full pipeline: building and pop bonuses land in base resource production",
@@ -146,8 +146,8 @@ TEST_CASE("Full pipeline: building and pop bonuses land in base resource product
 
     // A wet farm tile next door: Wet(+2) + Farm(+1) nutrients.
     Tile& farmTile = fixture.At(5, 4);
-    farmTile.SetBaseMoisture(Moisture::Wet);
-    farmTile.SetMoisture(Moisture::Wet);
+    farmTile.SetBaseMoisture(Moisture_t::Wet);
+    farmTile.SetMoisture(Moisture_t::Wet);
     fixture.ctx->AddImprovementWithEffects(farmTile, "Farm");
 
     // Buildings: +2 flat nutrients, +1 nutrients on each worked Farm.

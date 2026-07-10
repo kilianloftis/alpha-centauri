@@ -35,8 +35,8 @@ public:
         return m_configs.back();
     }
 
-    const ac::EffectConfig_t& StatMod(ac::StatId stat, double amount,
-                                      ac::ModifierOp op = ac::ModifierOp::Add,
+    const ac::EffectConfig_t& StatMod(ac::StatId_t stat, double amount,
+                                      ac::ModifierOp_t op = ac::ModifierOp_t::Add,
                                       ac::EffectScope_t scope = ac::EffectScope_t::FactionGlobal,
                                       std::optional<ac::TileSelector_t> selector = std::nullopt,
                                       std::optional<ac::Condition_t> condition = std::nullopt,
@@ -56,7 +56,7 @@ public:
         return Add(std::move(config));
     }
 
-    const ac::EffectConfig_t& RuleFlag(ac::RuleFlagId flag,
+    const ac::EffectConfig_t& RuleFlag(ac::RuleFlagId_t flag,
                                        ac::EffectScope_t scope = ac::EffectScope_t::FactionGlobal)
     {
         ac::EffectConfig_t config;
@@ -66,7 +66,7 @@ public:
         return Add(std::move(config));
     }
 
-    const ac::EffectConfig_t& RatingMod(ac::SocialRatingId rating, int amount,
+    const ac::EffectConfig_t& RatingMod(ac::SocialRatingId_t rating, int amount,
                                         ac::EffectScope_t scope = ac::EffectScope_t::FactionGlobal)
     {
         ac::EffectConfig_t config;
@@ -98,17 +98,17 @@ std::vector<ac::ActiveEffect_t> Materialize(Range&& range)
 
 inline ac::TileSelector_t BaseTileSelector()
 {
-    return ac::TileSelector_t{ac::TileSelectorKind::BaseTile, std::nullopt};
+    return ac::TileSelector_t{ac::TileSelectorKind_t::BaseTile, std::nullopt};
 }
 
 inline ac::TileSelector_t ImprovementSelector(std::string improvementId)
 {
-    return ac::TileSelector_t{ac::TileSelectorKind::HasImprovement, std::move(improvementId)};
+    return ac::TileSelector_t{ac::TileSelectorKind_t::HasImprovement, std::move(improvementId)};
 }
 
 inline ac::Condition_t TargetTileHas(std::string featureId)
 {
-    return ac::Condition_t{ac::ConditionKind::TargetTileHas, std::move(featureId)};
+    return ac::Condition_t{ac::ConditionKind_t::TargetTileHas, std::move(featureId)};
 }
 
 } // namespace actest

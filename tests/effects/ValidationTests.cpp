@@ -31,14 +31,14 @@ EffectConfig_t GrantBuilding_(std::string buildingId)
 // LaneFor is the compile-time single source of truth for scope routing; pin every scope's
 // lane so a new scope (which the compiler forces into LaneFor's switch) gets a deliberate
 // routing decision here too.
-static_assert(LaneFor(EffectScope_t::ThisBase) == EffectLane::Base);
-static_assert(LaneFor(EffectScope_t::AllOwnerBases) == EffectLane::FactionWide);
-static_assert(LaneFor(EffectScope_t::FactionGlobal) == EffectLane::FactionWide);
-static_assert(LaneFor(EffectScope_t::WorldGlobal) == EffectLane::FactionWide);
-static_assert(LaneFor(EffectScope_t::FactionUnits) == EffectLane::FactionUnits);
-static_assert(LaneFor(EffectScope_t::ThisUnit) == EffectLane::UnitLocal);
-static_assert(LaneFor(EffectScope_t::ThisPop) == EffectLane::PopLocal);
-static_assert(LaneFor(EffectScope_t::ThisTile) == EffectLane::TileLocal);
+static_assert(LaneFor(EffectScope_t::ThisBase) == EffectLane_t::Base);
+static_assert(LaneFor(EffectScope_t::AllOwnerBases) == EffectLane_t::FactionWide);
+static_assert(LaneFor(EffectScope_t::FactionGlobal) == EffectLane_t::FactionWide);
+static_assert(LaneFor(EffectScope_t::WorldGlobal) == EffectLane_t::FactionWide);
+static_assert(LaneFor(EffectScope_t::FactionUnits) == EffectLane_t::FactionUnits);
+static_assert(LaneFor(EffectScope_t::ThisUnit) == EffectLane_t::UnitLocal);
+static_assert(LaneFor(EffectScope_t::ThisPop) == EffectLane_t::PopLocal);
+static_assert(LaneFor(EffectScope_t::ThisTile) == EffectLane_t::TileLocal);
 
 static_assert(!IsFactionLane(EffectScope_t::ThisBase));
 static_assert(IsFactionLane(EffectScope_t::AllOwnerBases));
@@ -50,32 +50,32 @@ static_assert(!IsFactionLane(EffectScope_t::ThisPop));
 static_assert(!IsFactionLane(EffectScope_t::ThisTile));
 
 // KindFor is the same single-source-of-truth pattern for stat seed semantics: pin every
-// stat's kind so a new StatId (which the compiler forces into KindFor's switch) gets a
+// stat's kind so a new StatId_t (which the compiler forces into KindFor's switch) gets a
 // deliberate seed decision here too.
-static_assert(KindFor(StatId::Nutrients) == StatKind::Additive);
-static_assert(KindFor(StatId::Minerals) == StatKind::Additive);
-static_assert(KindFor(StatId::Energy) == StatKind::Additive);
-static_assert(KindFor(StatId::Econ) == StatKind::Additive);
-static_assert(KindFor(StatId::Labs) == StatKind::Additive);
-static_assert(KindFor(StatId::Psych) == StatKind::Additive);
-static_assert(KindFor(StatId::Attack) == StatKind::Additive);
-static_assert(KindFor(StatId::Defense) == StatKind::Additive);
-static_assert(KindFor(StatId::Movement) == StatKind::Additive);
-static_assert(KindFor(StatId::HitPoints) == StatKind::Additive);
-static_assert(KindFor(StatId::DisengageChance) == StatKind::Additive);
-static_assert(KindFor(StatId::Fuel) == StatKind::Additive);
-static_assert(KindFor(StatId::DamageFromOutOfFuel) == StatKind::Additive);
-static_assert(KindFor(StatId::CargoCapacity) == StatKind::Additive);
-static_assert(KindFor(StatId::DifficultTerrainCost) == StatKind::Additive);
-static_assert(KindFor(StatId::CostMultiplier) == StatKind::PureMultiplier);
-static_assert(KindFor(StatId::GrowthRate) == StatKind::RawScaled);
-static_assert(KindFor(StatId::MoistureTier) == StatKind::RawScaled);
+static_assert(KindFor(StatId_t::Nutrients) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::Minerals) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::Energy) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::Econ) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::Labs) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::Psych) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::Attack) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::Defense) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::Movement) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::HitPoints) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::DisengageChance) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::Fuel) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::DamageFromOutOfFuel) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::CargoCapacity) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::DifficultTerrainCost) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::CostMultiplier) == StatKind_t::PureMultiplier);
+static_assert(KindFor(StatId_t::GrowthRate) == StatKind_t::RawScaled);
+static_assert(KindFor(StatId_t::MoistureTier) == StatKind_t::RawScaled);
 
 // SeedFor derives the context-free seed from the kind; RawScaled stats have none (SeedFor
 // throws for them, which is not constexpr-evaluable, so no pin here).
-static_assert(SeedFor(StatId::Nutrients) == 0.0);
-static_assert(SeedFor(StatId::Attack) == 0.0);
-static_assert(SeedFor(StatId::CostMultiplier) == 1.0);
+static_assert(SeedFor(StatId_t::Nutrients) == 0.0);
+static_assert(SeedFor(StatId_t::Attack) == 0.0);
+static_assert(SeedFor(StatId_t::CostMultiplier) == 1.0);
 
 TEST_CASE("ValidateEffectReferences: GrantBuilding targets must exist", "[effects][validation]")
 {
@@ -100,12 +100,12 @@ TEST_CASE("ValidateEffectReferences: selector improvement ids must exist", "[eff
 
     actest::EffectPool pool;
     const std::vector<EffectConfig_t> good = {
-        pool.StatMod(StatId::Nutrients, 1.0, ModifierOp::Add, EffectScope_t::ThisBase,
+        pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
                      actest::ImprovementSelector("Farm"))};
     CHECK_NOTHROW(ValidateEffectReferences(good, "src", nullptr, &improvements, nullptr));
 
     const std::vector<EffectConfig_t> bad = {
-        pool.StatMod(StatId::Nutrients, 1.0, ModifierOp::Add, EffectScope_t::ThisBase,
+        pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
                      actest::ImprovementSelector("Fram"))};
     CHECK_THROWS_WITH(ValidateEffectReferences(bad, "src", nullptr, &improvements, nullptr),
                       Catch::Matchers::ContainsSubstring("Fram"));
@@ -120,14 +120,14 @@ TEST_CASE("ValidateEffectReferences: condition features accept terrain ids and i
     actest::EffectPool pool;
     // "Rocky" is a terrain feature id; "Base" is an improvement id — both valid.
     const std::vector<EffectConfig_t> good = {
-        pool.StatMod(StatId::Attack, 25.0, ModifierOp::AddPercent, EffectScope_t::ThisUnit,
+        pool.StatMod(StatId_t::Attack, 25.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit,
                      std::nullopt, actest::TargetTileHas("Rocky")),
-        pool.StatMod(StatId::Attack, 25.0, ModifierOp::AddPercent, EffectScope_t::ThisUnit,
+        pool.StatMod(StatId_t::Attack, 25.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit,
                      std::nullopt, actest::TargetTileHas("Base"))};
     CHECK_NOTHROW(ValidateEffectReferences(good, "src", nullptr, &improvements, nullptr));
 
     const std::vector<EffectConfig_t> bad = {
-        pool.StatMod(StatId::Attack, 25.0, ModifierOp::AddPercent, EffectScope_t::ThisUnit,
+        pool.StatMod(StatId_t::Attack, 25.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit,
                      std::nullopt, actest::TargetTileHas("Swamp"))};
     CHECK_THROWS_WITH(ValidateEffectReferences(bad, "src", nullptr, &improvements, nullptr),
                       Catch::Matchers::ContainsSubstring("Swamp"));

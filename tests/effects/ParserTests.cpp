@@ -14,24 +14,24 @@ using nlohmann::json;
 
 TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
 {
-    CHECK(BonusEffectParser::ParseStatId("nutrients") == StatId::Nutrients);
-    CHECK(BonusEffectParser::ParseStatId("minerals") == StatId::Minerals);
-    CHECK(BonusEffectParser::ParseStatId("energy") == StatId::Energy);
-    CHECK(BonusEffectParser::ParseStatId("econ") == StatId::Econ);
-    CHECK(BonusEffectParser::ParseStatId("labs") == StatId::Labs);
-    CHECK(BonusEffectParser::ParseStatId("psych") == StatId::Psych);
-    CHECK(BonusEffectParser::ParseStatId("attack") == StatId::Attack);
-    CHECK(BonusEffectParser::ParseStatId("defense") == StatId::Defense);
-    CHECK(BonusEffectParser::ParseStatId("movement") == StatId::Movement);
-    CHECK(BonusEffectParser::ParseStatId("hit_points") == StatId::HitPoints);
-    CHECK(BonusEffectParser::ParseStatId("disengage_chance") == StatId::DisengageChance);
-    CHECK(BonusEffectParser::ParseStatId("fuel") == StatId::Fuel);
-    CHECK(BonusEffectParser::ParseStatId("damage_from_out_of_fuel") == StatId::DamageFromOutOfFuel);
-    CHECK(BonusEffectParser::ParseStatId("cargo_capacity") == StatId::CargoCapacity);
-    CHECK(BonusEffectParser::ParseStatId("difficult_terrain_cost") == StatId::DifficultTerrainCost);
-    CHECK(BonusEffectParser::ParseStatId("cost_multiplier") == StatId::CostMultiplier);
-    CHECK(BonusEffectParser::ParseStatId("growth_rate") == StatId::GrowthRate);
-    CHECK(BonusEffectParser::ParseStatId("moisture_tier") == StatId::MoistureTier);
+    CHECK(BonusEffectParser::ParseStatId("nutrients") == StatId_t::Nutrients);
+    CHECK(BonusEffectParser::ParseStatId("minerals") == StatId_t::Minerals);
+    CHECK(BonusEffectParser::ParseStatId("energy") == StatId_t::Energy);
+    CHECK(BonusEffectParser::ParseStatId("econ") == StatId_t::Econ);
+    CHECK(BonusEffectParser::ParseStatId("labs") == StatId_t::Labs);
+    CHECK(BonusEffectParser::ParseStatId("psych") == StatId_t::Psych);
+    CHECK(BonusEffectParser::ParseStatId("attack") == StatId_t::Attack);
+    CHECK(BonusEffectParser::ParseStatId("defense") == StatId_t::Defense);
+    CHECK(BonusEffectParser::ParseStatId("movement") == StatId_t::Movement);
+    CHECK(BonusEffectParser::ParseStatId("hit_points") == StatId_t::HitPoints);
+    CHECK(BonusEffectParser::ParseStatId("disengage_chance") == StatId_t::DisengageChance);
+    CHECK(BonusEffectParser::ParseStatId("fuel") == StatId_t::Fuel);
+    CHECK(BonusEffectParser::ParseStatId("damage_from_out_of_fuel") == StatId_t::DamageFromOutOfFuel);
+    CHECK(BonusEffectParser::ParseStatId("cargo_capacity") == StatId_t::CargoCapacity);
+    CHECK(BonusEffectParser::ParseStatId("difficult_terrain_cost") == StatId_t::DifficultTerrainCost);
+    CHECK(BonusEffectParser::ParseStatId("cost_multiplier") == StatId_t::CostMultiplier);
+    CHECK(BonusEffectParser::ParseStatId("growth_rate") == StatId_t::GrowthRate);
+    CHECK(BonusEffectParser::ParseStatId("moisture_tier") == StatId_t::MoistureTier);
 
     CHECK_THROWS(BonusEffectParser::ParseStatId("not_a_stat"));
     CHECK_THROWS(BonusEffectParser::ParseStatId(""));
@@ -41,9 +41,9 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
 
 TEST_CASE("ParseModifierOp / ParseEffectScope / ParseEffectPersistence mappings", "[effects][parser]")
 {
-    CHECK(BonusEffectParser::ParseModifierOp("Add") == ModifierOp::Add);
-    CHECK(BonusEffectParser::ParseModifierOp("AddPercent") == ModifierOp::AddPercent);
-    CHECK(BonusEffectParser::ParseModifierOp("MultiplyGeometric") == ModifierOp::MultiplyGeometric);
+    CHECK(BonusEffectParser::ParseModifierOp("Add") == ModifierOp_t::Add);
+    CHECK(BonusEffectParser::ParseModifierOp("AddPercent") == ModifierOp_t::AddPercent);
+    CHECK(BonusEffectParser::ParseModifierOp("MultiplyGeometric") == ModifierOp_t::MultiplyGeometric);
     CHECK_THROWS(BonusEffectParser::ParseModifierOp("Multiply"));
 
     CHECK(BonusEffectParser::ParseEffectScope("ThisBase") == EffectScope_t::ThisBase);
@@ -63,22 +63,22 @@ TEST_CASE("ParseModifierOp / ParseEffectScope / ParseEffectPersistence mappings"
 
 TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]")
 {
-    CHECK(BonusEffectParser::ParseRuleFlagId("flight") == RuleFlagId::Flight);
-    CHECK(BonusEffectParser::ParseRuleFlagId("single_use") == RuleFlagId::SingleUse);
-    CHECK(BonusEffectParser::ParseRuleFlagId("population_boom") == RuleFlagId::PopulationBoom);
-    CHECK(BonusEffectParser::ParseRuleFlagId("near_zero_growth") == RuleFlagId::NearZeroGrowth);
+    CHECK(BonusEffectParser::ParseRuleFlagId("flight") == RuleFlagId_t::Flight);
+    CHECK(BonusEffectParser::ParseRuleFlagId("single_use") == RuleFlagId_t::SingleUse);
+    CHECK(BonusEffectParser::ParseRuleFlagId("population_boom") == RuleFlagId_t::PopulationBoom);
+    CHECK(BonusEffectParser::ParseRuleFlagId("near_zero_growth") == RuleFlagId_t::NearZeroGrowth);
     CHECK_THROWS(BonusEffectParser::ParseRuleFlagId("hover"));
 
-    CHECK(BonusEffectParser::ParseSocialRatingId("economy") == SocialRatingId::Economy);
-    CHECK(BonusEffectParser::ParseSocialRatingId("efficiency") == SocialRatingId::Efficiency);
-    CHECK(BonusEffectParser::ParseSocialRatingId("support") == SocialRatingId::Support);
-    CHECK(BonusEffectParser::ParseSocialRatingId("police") == SocialRatingId::Police);
-    CHECK(BonusEffectParser::ParseSocialRatingId("morale") == SocialRatingId::Morale);
-    CHECK(BonusEffectParser::ParseSocialRatingId("growth") == SocialRatingId::Growth);
-    CHECK(BonusEffectParser::ParseSocialRatingId("planet") == SocialRatingId::Planet);
-    CHECK(BonusEffectParser::ParseSocialRatingId("research") == SocialRatingId::Research);
-    CHECK(BonusEffectParser::ParseSocialRatingId("industry") == SocialRatingId::Industry);
-    CHECK(BonusEffectParser::ParseSocialRatingId("probe") == SocialRatingId::Probe);
+    CHECK(BonusEffectParser::ParseSocialRatingId("economy") == SocialRatingId_t::Economy);
+    CHECK(BonusEffectParser::ParseSocialRatingId("efficiency") == SocialRatingId_t::Efficiency);
+    CHECK(BonusEffectParser::ParseSocialRatingId("support") == SocialRatingId_t::Support);
+    CHECK(BonusEffectParser::ParseSocialRatingId("police") == SocialRatingId_t::Police);
+    CHECK(BonusEffectParser::ParseSocialRatingId("morale") == SocialRatingId_t::Morale);
+    CHECK(BonusEffectParser::ParseSocialRatingId("growth") == SocialRatingId_t::Growth);
+    CHECK(BonusEffectParser::ParseSocialRatingId("planet") == SocialRatingId_t::Planet);
+    CHECK(BonusEffectParser::ParseSocialRatingId("research") == SocialRatingId_t::Research);
+    CHECK(BonusEffectParser::ParseSocialRatingId("industry") == SocialRatingId_t::Industry);
+    CHECK(BonusEffectParser::ParseSocialRatingId("probe") == SocialRatingId_t::Probe);
     CHECK_THROWS(BonusEffectParser::ParseSocialRatingId("karma"));
 }
 
@@ -109,9 +109,9 @@ TEST_CASE("ParseEffectConfig: StatModifier with explicit fields", "[effects][par
 
     const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
     REQUIRE(pMod != nullptr);
-    CHECK(pMod->stat == StatId::Minerals);
+    CHECK(pMod->stat == StatId_t::Minerals);
     CHECK(pMod->amount == Approx(3.0));
-    CHECK(pMod->op == ModifierOp::AddPercent);
+    CHECK(pMod->op == ModifierOp_t::AddPercent);
     CHECK_FALSE(pMod->selector.has_value());
 }
 
@@ -128,7 +128,7 @@ TEST_CASE("ParseEffectConfig: defaults — persistence Continuous, op Add, amoun
 
     const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
     REQUIRE(pMod != nullptr);
-    CHECK(pMod->op == ModifierOp::Add);
+    CHECK(pMod->op == ModifierOp_t::Add);
     CHECK(pMod->amount == Approx(0.0));
 }
 
@@ -163,7 +163,7 @@ TEST_CASE("ParseEffectConfig: StatModifier tile selectors", "[effects][parser]")
         const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
         REQUIRE(pMod != nullptr);
         REQUIRE(pMod->selector.has_value());
-        CHECK(pMod->selector->kind == TileSelectorKind::HasImprovement);
+        CHECK(pMod->selector->kind == TileSelectorKind_t::HasImprovement);
         REQUIRE(pMod->selector->improvement.has_value());
         CHECK(*pMod->selector->improvement == "Farm");
     }
@@ -180,7 +180,7 @@ TEST_CASE("ParseEffectConfig: StatModifier tile selectors", "[effects][parser]")
         const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
         REQUIRE(pMod != nullptr);
         REQUIRE(pMod->selector.has_value());
-        CHECK(pMod->selector->kind == TileSelectorKind::BaseTile);
+        CHECK(pMod->selector->kind == TileSelectorKind_t::BaseTile);
         CHECK_FALSE(pMod->selector->improvement.has_value());
     }
 
@@ -228,7 +228,7 @@ TEST_CASE("ParseEffectConfig: conditions", "[effects][parser][condition]")
 
         const EffectConfig_t config = BonusEffectParser::ParseEffectConfig(effectJson);
         REQUIRE(config.condition.has_value());
-        CHECK(config.condition->kind == ConditionKind::TargetTileHas);
+        CHECK(config.condition->kind == ConditionKind_t::TargetTileHas);
         CHECK(config.condition->value == "Forest");
     }
 
@@ -282,7 +282,7 @@ TEST_CASE("ParseEffectConfig: RuleFlag requires a valid flag", "[effects][parser
     const EffectConfig_t flagConfig = BonusEffectParser::ParseEffectConfig(flagJson);
     const auto* pFlag = std::get_if<RuleFlagEffect_t>(&flagConfig.effect);
     REQUIRE(pFlag != nullptr);
-    CHECK(pFlag->flag == RuleFlagId::Flight);
+    CHECK(pFlag->flag == RuleFlagId_t::Flight);
 
     CHECK_THROWS(BonusEffectParser::ParseEffectConfig(
         json::parse(R"({ "type": "RuleFlag", "scope": "ThisUnit", "parameters": {} })")));
@@ -297,7 +297,7 @@ TEST_CASE("ParseEffectConfig: SocialRatingModifier", "[effects][parser]")
     const EffectConfig_t ratingConfig = BonusEffectParser::ParseEffectConfig(ratingJson);
     const auto* pRating = std::get_if<SocialRatingModifierEffect_t>(&ratingConfig.effect);
     REQUIRE(pRating != nullptr);
-    CHECK(pRating->rating == SocialRatingId::Police);
+    CHECK(pRating->rating == SocialRatingId_t::Police);
     CHECK(pRating->amount == -2);
 
     CHECK_THROWS(BonusEffectParser::ParseEffectConfig(
@@ -342,23 +342,23 @@ TEST_CASE("ValidateScopeForSource: rejects only the certainly-impossible combina
 {
     // ThisPop can only ever resolve against a pop type; ThisUnit against a unit component.
     CHECK_THROWS(BonusEffectParser::ValidateScopeForSource(
-        EffectScope_t::ThisPop, EffectSourceKind::Building, "some_building"));
+        EffectScope_t::ThisPop, EffectSourceKind_t::Building, "some_building"));
     CHECK_THROWS(BonusEffectParser::ValidateScopeForSource(
-        EffectScope_t::ThisUnit, EffectSourceKind::PopType, "some_pop"));
+        EffectScope_t::ThisUnit, EffectSourceKind_t::PopType, "some_pop"));
 
     CHECK_NOTHROW(BonusEffectParser::ValidateScopeForSource(
-        EffectScope_t::ThisPop, EffectSourceKind::PopType, "some_pop"));
+        EffectScope_t::ThisPop, EffectSourceKind_t::PopType, "some_pop"));
     CHECK_NOTHROW(BonusEffectParser::ValidateScopeForSource(
-        EffectScope_t::ThisUnit, EffectSourceKind::UnitComponent, "some_component"));
+        EffectScope_t::ThisUnit, EffectSourceKind_t::UnitComponent, "some_component"));
 
     // Everything else loads — including combinations whose anchor concept doesn't exist yet
     // (e.g. a faction-lane effect on an improvement, pending territory ownership).
     CHECK_NOTHROW(BonusEffectParser::ValidateScopeForSource(
-        EffectScope_t::FactionGlobal, EffectSourceKind::Improvement, "monolith"));
+        EffectScope_t::FactionGlobal, EffectSourceKind_t::Improvement, "monolith"));
     CHECK_NOTHROW(BonusEffectParser::ValidateScopeForSource(
-        EffectScope_t::ThisTile, EffectSourceKind::UnitComponent, "sensor_pod"));
+        EffectScope_t::ThisTile, EffectSourceKind_t::UnitComponent, "sensor_pod"));
     CHECK_NOTHROW(BonusEffectParser::ValidateScopeForSource(
-        EffectScope_t::WorldGlobal, EffectSourceKind::Building, "beacon"));
+        EffectScope_t::WorldGlobal, EffectSourceKind_t::Building, "beacon"));
 }
 
 TEST_CASE("ParseEffects with a source kind validates every entry", "[effects][parser][validation]")
@@ -369,8 +369,8 @@ TEST_CASE("ParseEffects with a source kind validates every entry", "[effects][pa
             { "type": "StatModifier", "scope": "ThisPop", "parameters": { "stat": "econ", "amount": 1 } }
         ]
     })");
-    CHECK_THROWS(BonusEffectParser::ParseEffects(badContainer, EffectSourceKind::Building, "bad_building"));
-    CHECK_NOTHROW(BonusEffectParser::ParseEffects(badContainer, EffectSourceKind::PopType, "fine_as_pop"));
+    CHECK_THROWS(BonusEffectParser::ParseEffects(badContainer, EffectSourceKind_t::Building, "bad_building"));
+    CHECK_NOTHROW(BonusEffectParser::ParseEffects(badContainer, EffectSourceKind_t::PopType, "fine_as_pop"));
 }
 
 TEST_CASE("ParseEffects: absent effects array yields empty vector; entries parse in order", "[effects][parser]")

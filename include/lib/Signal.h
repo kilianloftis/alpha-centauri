@@ -12,12 +12,12 @@ class Signal
 public:
     using Slot = std::function<void(Args...)>;
 
-    void connect(Slot slot)
+    void Connect(Slot slot)
     {
         m_slots.push_back(std::move(slot));
     }
 
-    void emit(Args... args) const
+    void Emit(Args... args) const
     {
         for (auto& slot : m_slots) slot(args...);
     }

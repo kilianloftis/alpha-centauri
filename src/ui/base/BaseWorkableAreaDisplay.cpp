@@ -13,8 +13,8 @@ namespace
 
 constexpr int   k_GridDimension             = 5;
 constexpr float k_GridCenterOffset          = 2.0f;
-constexpr Color k_BackgroundColor           {20, 20, 20, 255};
-constexpr Color k_TileBorderColor           {80, 80, 80, 255};
+constexpr Color_t k_BackgroundColor           {20, 20, 20, 255};
+constexpr Color_t k_TileBorderColor           {80, 80, 80, 255};
 constexpr float k_TileBorderWidth           = -1.0f;
 constexpr unsigned int k_BaseLabelFontSize  = 14;
 constexpr unsigned int k_TileFontSize         = 12;
@@ -83,7 +83,7 @@ void BaseWorkableAreaDisplay::Render(Graphics& rGraphics)
     const float centerX = m_startX + k_GridCenterOffset * m_tileSize;
     const float centerY = m_startY + k_GridCenterOffset * m_tileSize;
     rGraphics.DrawRect(centerX, centerY, m_tileSize, m_tileSize, k_TileBorderColor, k_TileBorderWidth);
-    rGraphics.DrawText("BASE", centerX, centerY, k_BaseLabelFontSize, Color::Yellow());
+    rGraphics.DrawText("BASE", centerX, centerY, k_BaseLabelFontSize, Color_t::Yellow());
 }
 
 void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, const Tile& rTile, float x, float y, float size, bool bIsWorked)
@@ -103,7 +103,7 @@ void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, const Tile& rTile
     float textOffsetX = size * k_TileTextOffsetXRatio;
     float textOffsetY = size * k_TileTextOffsetYRatio;
 
-    Color textColor = bIsWorked ? Color::Green() : Color::White();
+    Color_t textColor = bIsWorked ? Color_t::Green() : Color_t::White();
     rGraphics.DrawText(oss.str(), x + textOffsetX, y + textOffsetY, k_TileFontSize, textColor);
 }
 

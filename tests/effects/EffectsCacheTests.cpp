@@ -50,11 +50,11 @@ TEST_CASE("Effect pool cache: stable across reads, invalidated by every contribu
     base.GetPopulation().AddPop("Networker");
     const uint64_t v3 = faction.GetEffectsVersion();
     CHECK(v3 != v2);
-    CHECK(ResolveStatModifiers(FilterByStatId(faction.GetActiveEffects().effects, StatId::Labs), 0.0).total
+    CHECK(ResolveStatModifiers(FilterByStatId(faction.GetActiveEffects().effects, StatId_t::Labs), 0.0).total
           == Approx(1.0));
 
     // Social policies invalidate.
-    faction.GetSocialEngineering().SetActivePolicy(SocialCategory::Economics, "wealth_policy");
+    faction.GetSocialEngineering().SetActivePolicy(SocialCategory_t::Economics, "wealth_policy");
     const uint64_t v4 = faction.GetEffectsVersion();
     CHECK(v4 != v3);
 
@@ -110,7 +110,7 @@ TEST_CASE("ResearchManager: a TechCost effect appearing mid-research updates the
     techRegistry.Load(actest::FixturePath("techs.json"));
     LuaRuntime lua;
     TechCostConfigParser parser;
-    const TechCostConfig config =
+    const TechCostConfig_t config =
         parser.ParseConfig(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/tech_cost.lua", lua);
     TechCostCalculator calculator(config, lua);
 
@@ -123,7 +123,7 @@ TEST_CASE("ResearchManager: a TechCost effect appearing mid-research updates the
     // A +50% TechCost modifier appears mid-research (e.g. from a newly built project).
     actest::EffectPool effectPool;
     provider.pool.effects.push_back(actest::Active(
-        effectPool.StatMod(StatId::TechCost, 50.0, ModifierOp::Add), "tech_tax"));
+        effectPool.StatMod(StatId_t::TechCost, 50.0, ModifierOp_t::Add), "tech_tax"));
     ++provider.version;
 
     const int raisedCost = research.GetPointsNeededForCurrentTech();

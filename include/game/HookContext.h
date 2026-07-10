@@ -7,10 +7,10 @@
 namespace ac
 {
 
-struct Hook
+struct Hook_t
 {
-    std::string mod_id;
-    std::string script_path;
+    std::string modId;
+    std::string scriptPath;
     std::function<void()> callback;
 };
 
@@ -20,9 +20,9 @@ public:
     HookContext();
     ~HookContext() = default;
 
-    void AddPreHook(const Hook& hook);
-    void AddPostHook(const Hook& hook);
-    void AddReplaceHook(const Hook& hook);
+    void AddPreHook(const Hook_t& hook);
+    void AddPostHook(const Hook_t& hook);
+    void AddReplaceHook(const Hook_t& hook);
 
     void ExecutePreHooks();
     void ExecutePostHooks();
@@ -33,9 +33,9 @@ public:
     bool HasPostHooks() const;
 
 private:
-    std::vector<Hook> m_preHooks;
-    std::vector<Hook> m_postHooks;
-    std::vector<Hook> m_replaceHooks;
+    std::vector<Hook_t> m_preHooks;
+    std::vector<Hook_t> m_postHooks;
+    std::vector<Hook_t> m_replaceHooks;
 };
 
 } // namespace ac

@@ -42,10 +42,10 @@ public:
     std::string CompleteProduction();
 
     // Emitted when a production item is completed, with the completed item id.
-    Signal<std::string> on_production_completed;
+    Signal<std::string> OnProductionCompleted;
 
     // Emitted when the current production item changes (including on clear).
-    Signal<> on_production_changed;
+    Signal<> OnProductionChanged;
 
 private:
     const IConstructable* m_pCurrentItem = nullptr;

@@ -24,7 +24,7 @@ TEST_CASE("GrowthRate <= 0 blocks nutrient-threshold growth instead of silently 
     actest::EffectPool pool;
     // -100% on the 100 baseline → GrowthRate 0.
     BaseEffects_t effects{{
-        Active(pool.StatMod(StatId::GrowthRate, -100.0, ModifierOp::AddPercent), "crush"),
+        Active(pool.StatMod(StatId_t::GrowthRate, -100.0, ModifierOp_t::AddPercent), "crush"),
     }};
 
     CHECK(GrowthCalculator::ComputeNutrientsRequired(config, 3, effects)

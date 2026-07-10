@@ -5,7 +5,7 @@
 namespace ac
 {
 
-TechCostCalculator::TechCostCalculator(const TechCostConfig& rConfig, LuaRuntime& rLua)
+TechCostCalculator::TechCostCalculator(const TechCostConfig_t& rConfig, LuaRuntime& rLua)
     : m_pConfig(&rConfig)
     , m_pLua(&rLua)
 {

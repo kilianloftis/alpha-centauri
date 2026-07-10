@@ -82,7 +82,7 @@ TEST_CASE("PopCompositionConfigParser requires drone_type and talent_type",
     LuaRuntime lua;
     PopCompositionConfigParser parser;
 
-    const PopCompositionConfig config =
+    const PopCompositionConfig_t config =
         parser.ParseConfig(actest::FixturePath("pop_composition.lua"), lua);
     CHECK(config.droneTypeId == "Drone");
     CHECK(config.talentTypeId == "Talent");

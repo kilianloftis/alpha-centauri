@@ -19,7 +19,7 @@ public:
     struct InfoLine
     {
         std::string text;
-        Color color = Color::White();
+        Color_t color = Color_t::White();
     };
 
     void Render(Graphics& rGraphics) override;

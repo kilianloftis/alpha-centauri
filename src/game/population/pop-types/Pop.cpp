@@ -104,7 +104,7 @@ TileResources_t Pop::ApplyTileMultipliers(const TileResources_t& resources) cons
     auto tileEffectsView = FilterByScope(popEffects, EffectScope_t::ThisPop);
     const std::vector<ActiveEffect_t> tileEffects(tileEffectsView.begin(), tileEffectsView.end());
 
-    auto scaleByMultiplier = [&](StatId statId, int rawValue) -> int
+    auto scaleByMultiplier = [&](StatId_t statId, int rawValue) -> int
     {
         const StatBreakdown_t breakdown =
             ResolveStatModifiers(FilterByStatId(tileEffects, statId), static_cast<double>(rawValue));
@@ -112,9 +112,9 @@ TileResources_t Pop::ApplyTileMultipliers(const TileResources_t& resources) cons
     };
 
     return TileResources_t{
-        scaleByMultiplier(StatId::Nutrients, resources.nutrients),
-        scaleByMultiplier(StatId::Energy, resources.energy),
-        scaleByMultiplier(StatId::Minerals, resources.minerals)
+        scaleByMultiplier(StatId_t::Nutrients, resources.nutrients),
+        scaleByMultiplier(StatId_t::Energy, resources.energy),
+        scaleByMultiplier(StatId_t::Minerals, resources.minerals)
     };
 }
 
@@ -125,15 +125,15 @@ SpecialistOutput_t Pop::GetSpecialistOutput() const
     auto flatEffectsView = FilterByScope(popEffects, EffectScope_t::ThisBase);
     const std::vector<ActiveEffect_t> flatEffects(flatEffectsView.begin(), flatEffectsView.end());
 
-    auto resolveFlat = [&](StatId statId) -> int
+    auto resolveFlat = [&](StatId_t statId) -> int
     {
         return static_cast<int>(ResolveStatModifiers(FilterByStatId(flatEffects, statId), SeedFor(statId)).total);
     };
 
     return SpecialistOutput_t{
-        resolveFlat(StatId::Econ),
-        resolveFlat(StatId::Labs),
-        resolveFlat(StatId::Psych)
+        resolveFlat(StatId_t::Econ),
+        resolveFlat(StatId_t::Labs),
+        resolveFlat(StatId_t::Psych)
     };
 }
 

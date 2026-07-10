@@ -38,7 +38,7 @@ public:
 
     // Fired from DestroyUnit before the unit is erased, so observers (e.g. WorldView's unit
     // selection) can drop any reference to it while it is still valid.
-    Signal<Unit&> on_unit_destroyed;
+    Signal<Unit&> OnUnitDestroyed;
 
 private:
     Faction& m_rFaction;

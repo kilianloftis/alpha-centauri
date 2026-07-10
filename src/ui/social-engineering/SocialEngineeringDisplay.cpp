@@ -25,12 +25,12 @@ namespace ac
 namespace
 {
 
-constexpr Color k_BackgroundColor           {20, 20, 30, 255};
-constexpr Color k_BorderColor               {80, 80, 120, 255};
-constexpr Color k_ActivePolicyColor         {255, 220, 80, 255};
-constexpr Color k_InactivePolicyColor       {200, 200, 200, 255};
-constexpr Color k_CategoryColor             {160, 180, 255, 255};
-constexpr Color k_ScoreHeaderColor          {160, 180, 255, 255};
+constexpr Color_t k_BackgroundColor           {20, 20, 30, 255};
+constexpr Color_t k_BorderColor               {80, 80, 120, 255};
+constexpr Color_t k_ActivePolicyColor         {255, 220, 80, 255};
+constexpr Color_t k_InactivePolicyColor       {200, 200, 200, 255};
+constexpr Color_t k_CategoryColor             {160, 180, 255, 255};
+constexpr Color_t k_ScoreHeaderColor          {160, 180, 255, 255};
 
 constexpr float k_ScoresPanelWidthRatio     = 0.2f;
 constexpr float k_CategoryRowHeightRatio    = 0.25f;
@@ -51,26 +51,26 @@ constexpr float k_FactionNameFontSizeRatio  = 0.034f;
 constexpr float k_FactionBonusFontSizeRatio = 0.024f;
 constexpr size_t k_PoliciesPerCategory        = 4;
 
-constexpr Color k_HiddenPolicySlotColor       {50, 50, 65, 255};
+constexpr Color_t k_HiddenPolicySlotColor       {50, 50, 65, 255};
 
-constexpr std::array<SocialCategory, 4> k_Categories = {
-    SocialCategory::Politics,
-    SocialCategory::Economics,
-    SocialCategory::Values,
-    SocialCategory::FutureSociety
+constexpr std::array<SocialCategory_t, 4> k_Categories = {
+    SocialCategory_t::Politics,
+    SocialCategory_t::Economics,
+    SocialCategory_t::Values,
+    SocialCategory_t::FutureSociety
 };
 
-constexpr std::array<SocialRatingId, 10> k_AllRatings = {
-    SocialRatingId::Economy,
-    SocialRatingId::Efficiency,
-    SocialRatingId::Support,
-    SocialRatingId::Police,
-    SocialRatingId::Morale,
-    SocialRatingId::Growth,
-    SocialRatingId::Planet,
-    SocialRatingId::Research,
-    SocialRatingId::Industry,
-    SocialRatingId::Probe
+constexpr std::array<SocialRatingId_t, 10> k_AllRatings = {
+    SocialRatingId_t::Economy,
+    SocialRatingId_t::Efficiency,
+    SocialRatingId_t::Support,
+    SocialRatingId_t::Police,
+    SocialRatingId_t::Morale,
+    SocialRatingId_t::Growth,
+    SocialRatingId_t::Planet,
+    SocialRatingId_t::Research,
+    SocialRatingId_t::Industry,
+    SocialRatingId_t::Probe
 };
 
 std::string CapitalizeFirst(std::string text)
@@ -82,24 +82,25 @@ std::string CapitalizeFirst(std::string text)
     return text;
 }
 
-std::string CategoryDisplayName(SocialCategory category)
+std::string CategoryDisplayName(SocialCategory_t category)
 {
     switch (category)
     {
-        case SocialCategory::Politics:       return "Politics";
-        case SocialCategory::Economics:      return "Economics";
-        case SocialCategory::Values:         return "Values";
-        case SocialCategory::FutureSociety:  return "Future Society";
+        case SocialCategory_t::Politics:       return "Politics";
+        case SocialCategory_t::Economics:      return "Economics";
+        case SocialCategory_t::Values:         return "Values";
+        // Display label differs from enumerator name (space inserted).
+        case SocialCategory_t::FutureSociety:  return "Future Society";
     }
-    throw std::runtime_error("Unknown SocialCategory");
+    throw std::runtime_error("Unknown SocialCategory_t");
 }
 
-std::string RatingDisplayName(SocialRatingId rating)
+std::string RatingDisplayName(SocialRatingId_t rating)
 {
     return CapitalizeFirst(SocialRatingIdToString(rating));
 }
 
-std::string FormatPolicyBonuses(const SocialPolicyConfig& rPolicy)
+std::string FormatPolicyBonuses(const SocialPolicyConfig_t& rPolicy)
 {
     std::ostringstream oss;
     bool first = true;
@@ -120,31 +121,31 @@ std::string FormatPolicyBonuses(const SocialPolicyConfig& rPolicy)
     return first ? "None" : oss.str();
 }
 
-std::string StatIdDisplayName(StatId stat)
+std::string StatIdDisplayName(StatId_t stat)
 {
     switch (stat)
     {
-        case StatId::Nutrients:             return "Nutrients";
-        case StatId::Minerals:              return "Minerals";
-        case StatId::Energy:                return "Energy";
-        case StatId::Econ:                  return "Econ";
-        case StatId::Labs:                  return "Labs";
-        case StatId::Psych:                 return "Psych";
-        case StatId::Attack:                return "Attack";
-        case StatId::Defense:               return "Defense";
-        case StatId::Movement:              return "Movement";
-        case StatId::HitPoints:             return "Hit Points";
-        case StatId::DisengageChance:       return "Disengage Chance";
-        case StatId::Fuel:                  return "Fuel";
-        case StatId::DamageFromOutOfFuel:   return "Out-of-Fuel Damage";
-        case StatId::CargoCapacity:         return "Cargo Capacity";
-        case StatId::DifficultTerrainCost:  return "Difficult Terrain Cost";
-        case StatId::CostMultiplier:        return "Cost Multiplier";
-        case StatId::GrowthRate:            return "Growth Rate";
-        case StatId::TechCost:              return "Tech Cost";
-        case StatId::MoistureTier:          return "Moisture Tier";
+        case StatId_t::Nutrients:             return "Nutrients";
+        case StatId_t::Minerals:              return "Minerals";
+        case StatId_t::Energy:                return "Energy";
+        case StatId_t::Econ:                  return "Econ";
+        case StatId_t::Labs:                  return "Labs";
+        case StatId_t::Psych:                 return "Psych";
+        case StatId_t::Attack:                return "Attack";
+        case StatId_t::Defense:               return "Defense";
+        case StatId_t::Movement:              return "Movement";
+        case StatId_t::HitPoints:             return "Hit Points";
+        case StatId_t::DisengageChance:       return "Disengage Chance";
+        case StatId_t::Fuel:                  return "Fuel";
+        case StatId_t::DamageFromOutOfFuel:   return "Out-of-Fuel Damage";
+        case StatId_t::CargoCapacity:         return "Cargo Capacity";
+        case StatId_t::DifficultTerrainCost:  return "Difficult Terrain Cost";
+        case StatId_t::CostMultiplier:        return "Cost Multiplier";
+        case StatId_t::GrowthRate:            return "Growth Rate";
+        case StatId_t::TechCost:              return "Tech Cost";
+        case StatId_t::MoistureTier:          return "Moisture Tier";
     }
-    throw std::runtime_error("Unknown StatId");
+    throw std::runtime_error("Unknown StatId_t");
 }
 
 std::string FormatStatModifier(const StatModifierEffect_t& rModifier)
@@ -154,13 +155,13 @@ std::string FormatStatModifier(const StatModifierEffect_t& rModifier)
 
     switch (rModifier.op)
     {
-        case ModifierOp::AddPercent:
+        case ModifierOp_t::AddPercent:
             oss << (amount >= 0 ? "+" : "") << amount << "% " << StatIdDisplayName(rModifier.stat);
             break;
-        case ModifierOp::Add:
+        case ModifierOp_t::Add:
             oss << (amount >= 0 ? "+" : "") << amount << " " << StatIdDisplayName(rModifier.stat);
             break;
-        case ModifierOp::MultiplyGeometric:
+        case ModifierOp_t::MultiplyGeometric:
             oss << "x" << rModifier.amount << " " << StatIdDisplayName(rModifier.stat);
             break;
     }
@@ -182,7 +183,7 @@ std::string GetFactionDisplayName(const Faction& rFaction)
     return "Unknown";
 }
 
-int GetFactionSocialRating(const Faction& rFaction, SocialRatingId rating)
+int GetFactionSocialRating(const Faction& rFaction, SocialRatingId_t rating)
 {
     // TODO (findings 4.5): faction-level rating is faked as the first base's rating.
     for (const BaseManager& rBase : rFaction.Bases())
@@ -196,7 +197,7 @@ int GetFactionSocialRating(const Faction& rFaction, SocialRatingId rating)
         baseEffects.effects.push_back(rEffect);
     }
 
-    const std::map<SocialRatingId, int> totals = AccumulateSocialRatings(baseEffects);
+    const std::map<SocialRatingId_t, int> totals = AccumulateSocialRatings(baseEffects);
     const auto it = totals.find(rating);
     return it == totals.end() ? 0 : it->second;
 }
@@ -209,7 +210,7 @@ std::string FormatFactionBonuses(
     std::ostringstream oss;
     bool first = true;
 
-    for (const SocialRatingId rating : k_AllRatings)
+    for (const SocialRatingId_t rating : k_AllRatings)
     {
         const int level = GetFactionSocialRating(rFaction, rating);
         if (level == 0)
@@ -217,7 +218,7 @@ std::string FormatFactionBonuses(
             continue;
         }
 
-        const SocialRatingConfig* pRatingConfig = rRegistry.Find(SocialRatingIdToString(rating));
+        const SocialRatingConfig_t* pRatingConfig = rRegistry.Find(SocialRatingIdToString(rating));
         if (!pRatingConfig)
         {
             continue;
@@ -250,7 +251,7 @@ std::string FormatFactionBonuses(
 void RenderPolicyCell(
     Graphics& rGraphics,
     const WindowLayout_t& rCell,
-    const SocialPolicyConfig& rPolicy,
+    const SocialPolicyConfig_t& rPolicy,
     bool isActive,
     unsigned int policyFontSize,
     unsigned int bonusFontSize,
@@ -258,7 +259,7 @@ void RenderPolicyCell(
     float nameRowHeight
 )
 {
-    const Color policyColor = isActive ? k_ActivePolicyColor : k_InactivePolicyColor;
+    const Color_t policyColor = isActive ? k_ActivePolicyColor : k_InactivePolicyColor;
 
     rGraphics.DrawText(
         rPolicy.name,
@@ -320,20 +321,20 @@ WindowLayout_t GetPolicyCellLayout(
     });
 }
 
-const SocialPolicyConfig* FindAvailablePolicyAt(
+const SocialPolicyConfig_t* FindAvailablePolicyAt(
     const SocialPolicyRegistry& rRegistry,
     const std::vector<std::string>& rDiscoveredTechIds,
-    SocialCategory category,
+    SocialCategory_t category,
     size_t policyIndex
 )
 {
-    const std::vector<const SocialPolicyConfig*> policies = rRegistry.GetByCategory(category);
+    const std::vector<const SocialPolicyConfig_t*> policies = rRegistry.GetByCategory(category);
     if (policyIndex >= policies.size())
     {
         return nullptr;
     }
 
-    const SocialPolicyConfig* pPolicy = policies[policyIndex];
+    const SocialPolicyConfig_t* pPolicy = policies[policyIndex];
     if (!pPolicy || !pPolicy->IsAvailable(rDiscoveredTechIds))
     {
         return nullptr;
@@ -403,7 +404,7 @@ void SocialEngineeringDisplay::Render(Graphics& rGraphics)
 
     for (size_t categoryIndex = 0; categoryIndex < k_Categories.size(); ++categoryIndex)
     {
-        const SocialCategory category = k_Categories[categoryIndex];
+        const SocialCategory_t category = k_Categories[categoryIndex];
         const WindowLayout_t categoryBand = ResolveLayout(policyGridLayout, {
             0.0f,
             static_cast<float>(categoryIndex) * k_CategoryRowHeightRatio,
@@ -426,8 +427,8 @@ void SocialEngineeringDisplay::Render(Graphics& rGraphics)
             k_CategoryColor
         );
 
-        const std::vector<const SocialPolicyConfig*> policies = m_pPolicyRegistry->GetByCategory(category);
-        const SocialPolicyConfig* pActivePolicy = m_pFaction->GetSocialEngineering().GetActivePolicy(category);
+        const std::vector<const SocialPolicyConfig_t*> policies = m_pPolicyRegistry->GetByCategory(category);
+        const SocialPolicyConfig_t* pActivePolicy = m_pFaction->GetSocialEngineering().GetActivePolicy(category);
 
         const WindowLayout_t policyRowsBand = ResolveLayout(categoryBand, {
             0.0f,
@@ -447,7 +448,7 @@ void SocialEngineeringDisplay::Render(Graphics& rGraphics)
                 continue;
             }
 
-            const SocialPolicyConfig* pPolicy = policies[policyIndex];
+            const SocialPolicyConfig_t* pPolicy = policies[policyIndex];
             if (!pPolicy || !pPolicy->IsAvailable(discoveredTechIds))
             {
                 rGraphics.DrawRect(policyCell.x, policyCell.y, policyCell.width, policyCell.height, k_HiddenPolicySlotColor);
@@ -492,7 +493,7 @@ void SocialEngineeringDisplay::Render(Graphics& rGraphics)
     const float scoreLineHeight = scoresListLayout.height / static_cast<float>(k_AllRatings.size() + 1);
     for (size_t ratingIndex = 0; ratingIndex < k_AllRatings.size(); ++ratingIndex)
     {
-        const SocialRatingId rating = k_AllRatings[ratingIndex];
+        const SocialRatingId_t rating = k_AllRatings[ratingIndex];
         const int score = GetFactionSocialRating(*m_pFaction, rating);
 
         std::ostringstream oss;
@@ -502,7 +503,7 @@ void SocialEngineeringDisplay::Render(Graphics& rGraphics)
             scoresListLayout.x + horizontalPadding,
             scoresListLayout.y + scoreLineHeight * static_cast<float>(ratingIndex + 1),
             scoreFontSize,
-            Color::White()
+            Color_t::White()
         );
     }
 
@@ -540,7 +541,7 @@ void SocialEngineeringDisplay::Render(Graphics& rGraphics)
         factionBonusRow.x + horizontalPadding,
         factionBonusRow.y + verticalPadding,
         factionBonusFontSize,
-        Color::White()
+        Color_t::White()
     );
 }
 
@@ -558,7 +559,7 @@ void SocialEngineeringDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
 
     for (size_t categoryIndex = 0; categoryIndex < k_Categories.size(); ++categoryIndex)
     {
-        const SocialCategory category = k_Categories[categoryIndex];
+        const SocialCategory_t category = k_Categories[categoryIndex];
 
         for (size_t policyIndex = 0; policyIndex < k_PoliciesPerCategory; ++policyIndex)
         {
@@ -568,7 +569,7 @@ void SocialEngineeringDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
                 continue;
             }
 
-            const SocialPolicyConfig* pPolicy = FindAvailablePolicyAt(
+            const SocialPolicyConfig_t* pPolicy = FindAvailablePolicyAt(
                 *m_pPolicyRegistry,
                 discoveredTechIds,
                 category,

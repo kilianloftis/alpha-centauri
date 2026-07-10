@@ -80,10 +80,10 @@ TEST_CASE("ThisPop effects must never be resolved together with flat Add effects
     // the correct split resolution.
     actest::EffectPool pool;
     const ActiveEffect_t multiplier =
-        actest::Active(pool.StatMod(StatId::Nutrients, 50.0, ModifierOp::AddPercent,
+        actest::Active(pool.StatMod(StatId_t::Nutrients, 50.0, ModifierOp_t::AddPercent,
                                     EffectScope_t::ThisPop), "tile_mult");
     const ActiveEffect_t flatBonus =
-        actest::Active(pool.StatMod(StatId::Nutrients, 2.0, ModifierOp::Add,
+        actest::Active(pool.StatMod(StatId_t::Nutrients, 2.0, ModifierOp_t::Add,
                                     EffectScope_t::ThisBase), "flat");
 
     const double rawTileYield = 4.0;

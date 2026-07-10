@@ -15,9 +15,9 @@ struct BuildingConfig_t : public IConstructable
 {
     std::string id;
     std::string name;
-    GameCategory category;
+    GameCategory_t category;
     int mineralCost;
-    std::string requiredTech;  // empty if none — same convention as SocialPolicyConfig, etc.
+    std::string requiredTech;  // empty if none — same convention as SocialPolicyConfig_t, etc.
     bool allowMultiple;
     bool bIsSecretProject;
     std::vector<EffectConfig_t> effects;
@@ -26,7 +26,7 @@ struct BuildingConfig_t : public IConstructable
     const std::string& GetName() const override { return name; }
     int GetBaseCost() const override { return mineralCost; }
 
-    // Empty requiredTech = always available (matches SocialPolicyConfig::IsAvailable).
+    // Empty requiredTech = always available (matches SocialPolicyConfig_t::IsAvailable).
     bool IsAvailable(const std::vector<std::string>& discoveredTechs) const
     {
         if (requiredTech.empty())

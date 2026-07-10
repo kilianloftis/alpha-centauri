@@ -12,7 +12,7 @@ WorldGenerator::~WorldGenerator()
 {
 }
 
-std::unique_ptr<WorldMap> WorldGenerator::Generate(const WorldGenConfig& config)
+std::unique_ptr<WorldMap> WorldGenerator::Generate(const WorldGenConfig_t& config)
 {
     // Initialize RNG
     unsigned int seed = config.seed == 0 
@@ -32,7 +32,7 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const WorldGenConfig& config)
     return pWorld;
 }
 
-void WorldGenerator::GenerateElevation_(WorldMap& world, const WorldGenConfig& config)
+void WorldGenerator::GenerateElevation_(WorldMap& world, const WorldGenConfig_t& config)
 {
     for (int y = 0; y < world.GetHeight(); ++y)
     {
@@ -60,8 +60,8 @@ void WorldGenerator::GenerateMoisture_(WorldMap& world)
             if (pTile)
             {
                 int value = dist(m_rng);
-                pTile->SetBaseMoisture(static_cast<Moisture>(value));
-                pTile->SetMoisture(static_cast<Moisture>(value));
+                pTile->SetBaseMoisture(static_cast<Moisture_t>(value));
+                pTile->SetMoisture(static_cast<Moisture_t>(value));
             }
         }
     }
@@ -79,13 +79,13 @@ void WorldGenerator::GenerateRockiness_(WorldMap& world)
             if (pTile)
             {
                 int value = dist(m_rng);
-                pTile->SetRockiness(static_cast<Rockiness>(value));
+                pTile->SetRockiness(static_cast<Rockiness_t>(value));
             }
         }
     }
 }
 
-void WorldGenerator::GenerateRivers_(WorldMap& world, const WorldGenConfig& config)
+void WorldGenerator::GenerateRivers_(WorldMap& world, const WorldGenConfig_t& config)
 {
     std::uniform_real_distribution<float> dist(0.0f, 1.0f);
     

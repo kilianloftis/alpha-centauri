@@ -60,8 +60,8 @@
     "required_tech": "test_tech_2"
   },
   {
-    "id": "sattelite",
-    "name": "Sattelite",
+    "id": "satellite",
+    "name": "Satellite",
     "mineral_cost": 8,
     "allow_multiple": true,
     "effects": [

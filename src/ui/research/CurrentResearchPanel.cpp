@@ -10,8 +10,8 @@ namespace
 constexpr RatioLayout_t k_CurrentResearchLabelLayout    {0.0f, 0.0f,  1.0f, 0.35f};
 constexpr RatioLayout_t k_CurrentResearchTargetLayout   {0.0f, 0.35f, 1.0f, 0.4f};
 constexpr RatioLayout_t k_CurrentResearchProgressLayout {0.0f, 0.75f, 1.0f, 0.25f};
-constexpr Color k_BackgroundColor                       {30, 30, 50, 255};
-constexpr Color k_BorderColor                           {80, 80, 120, 255};
+constexpr Color_t k_BackgroundColor                       {30, 30, 50, 255};
+constexpr Color_t k_BorderColor                           {80, 80, 120, 255};
 constexpr unsigned int k_LabelFontSize                  = 14;
 constexpr unsigned int k_TargetFontSize                 = 16;
 constexpr unsigned int k_ProgressFontSize               = 13;
@@ -32,20 +32,20 @@ void CurrentResearchPanel::Render(Graphics& rGraphics)
     const WindowLayout_t targetArea   = ResolveLayout(m_layout, k_CurrentResearchTargetLayout);
     const WindowLayout_t progressArea = ResolveLayout(m_layout, k_CurrentResearchProgressLayout);
 
-    rGraphics.DrawText("Current Research Target:", labelArea.x, labelArea.y, k_LabelFontSize, Color::White());
+    rGraphics.DrawText("Current Research Target:", labelArea.x, labelArea.y, k_LabelFontSize, Color_t::White());
 
     if (m_pResearch && m_pResearch->HasResearchTarget())
     {
-        rGraphics.DrawText(m_pResearch->GetResearchTarget(), targetArea.x, targetArea.y, k_TargetFontSize, Color::Yellow());
+        rGraphics.DrawText(m_pResearch->GetResearchTarget(), targetArea.x, targetArea.y, k_TargetFontSize, Color_t::Yellow());
 
         const int accumulated = m_pResearch->GetAccumulatedPoints();
         const int needed      = m_pResearch->GetPointsNeededForCurrentTech();
         const std::string progressText = std::to_string(accumulated) + " / " + std::to_string(needed) + " RP";
-        rGraphics.DrawText(progressText, progressArea.x, progressArea.y, k_ProgressFontSize, Color::Green());
+        rGraphics.DrawText(progressText, progressArea.x, progressArea.y, k_ProgressFontSize, Color_t::Green());
     }
     else
     {
-        rGraphics.DrawText("None", targetArea.x, targetArea.y, k_TargetFontSize, Color::Yellow());
+        rGraphics.DrawText("None", targetArea.x, targetArea.y, k_TargetFontSize, Color_t::Yellow());
     }
 }
 

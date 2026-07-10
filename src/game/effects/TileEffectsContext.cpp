@@ -85,9 +85,9 @@ bool TileMatchesSelector_(const TileSelector_t& selector, const Tile& rTile, boo
 {
     switch (selector.kind)
     {
-        case TileSelectorKind::BaseTile:
+        case TileSelectorKind_t::BaseTile:
             return isBaseTile;
-        case TileSelectorKind::HasImprovement:
+        case TileSelectorKind_t::HasImprovement:
             return selector.improvement && rTile.HasImprovement(*selector.improvement);
     }
     return false;
@@ -186,10 +186,10 @@ TileResources_t TileEffectsContext::ResolveYieldFromEffects_(const Tile& rTile,
 {
     // Energy deliberately bypasses SeedFor: it is an Additive stat, but this site scales a
     // raw base — the tile's elevation energy seed.
-    const double nutrients = ResolveStatModifiers(FilterByStatId(effects, StatId::Nutrients), SeedFor(StatId::Nutrients)).total;
-    const double minerals  = ResolveStatModifiers(FilterByStatId(effects, StatId::Minerals), SeedFor(StatId::Minerals)).total;
+    const double nutrients = ResolveStatModifiers(FilterByStatId(effects, StatId_t::Nutrients), SeedFor(StatId_t::Nutrients)).total;
+    const double minerals  = ResolveStatModifiers(FilterByStatId(effects, StatId_t::Minerals), SeedFor(StatId_t::Minerals)).total;
     const double energy    = ResolveStatModifiers(
-        FilterByStatId(effects, StatId::Energy), static_cast<double>(rTile.GetElevationEnergySeed())).total;
+        FilterByStatId(effects, StatId_t::Energy), static_cast<double>(rTile.GetElevationEnergySeed())).total;
 
     return TileResources_t{
         static_cast<int>(nutrients),
@@ -204,19 +204,19 @@ double TileEffectsContext::ResolveTileDefenseMultiplier(const Tile& rTile) const
     // Explicit 1.0, not SeedFor: Defense is Additive as a unit stat (armor rating), but the
     // tile lane resolves a different quantity — a multiplier composed of the tile's percent
     // effects, seeded at identity.
-    return ResolveStatModifiers(FilterByStatId(effects, StatId::Defense), 1.0).total;
+    return ResolveStatModifiers(FilterByStatId(effects, StatId_t::Defense), 1.0).total;
 }
 
 void TileEffectsContext::RecomputeMoisture(Tile& rTile)
 {
     const std::vector<ActiveEffect_t> effects = CollectAreaEffects(rTile);
     const double tier = ResolveStatModifiers(
-        FilterByStatId(effects, StatId::MoistureTier),
+        FilterByStatId(effects, StatId_t::MoistureTier),
         static_cast<double>(rTile.GetBaseMoisture())).total;
 
     const int clamped = std::clamp(static_cast<int>(std::lround(tier)),
-                                    static_cast<int>(Moisture::Arid), static_cast<int>(Moisture::Wet));
-    rTile.SetMoisture(static_cast<Moisture>(clamped));
+                                    static_cast<int>(Moisture_t::Arid), static_cast<int>(Moisture_t::Wet));
+    rTile.SetMoisture(static_cast<Moisture_t>(clamped));
 }
 
 void TileEffectsContext::AddImprovementWithEffects(Tile& rTile, const std::string& improvementId)

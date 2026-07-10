@@ -6,7 +6,7 @@
 namespace ac
 {
 
-struct WorldGenConfig
+struct WorldGenConfig_t
 {
     int width = 10;
     int height = 10;
@@ -23,15 +23,15 @@ public:
     ~WorldGenerator();
 
     // Generate a new world map with the given configuration
-    std::unique_ptr<WorldMap> Generate(const WorldGenConfig& config);
+    std::unique_ptr<WorldMap> Generate(const WorldGenConfig_t& config);
 
 private:
     std::mt19937 m_rng;
 
-    void GenerateElevation_(WorldMap& world, const WorldGenConfig& config);
+    void GenerateElevation_(WorldMap& world, const WorldGenConfig_t& config);
     void GenerateMoisture_(WorldMap& world);
     void GenerateRockiness_(WorldMap& world);
-    void GenerateRivers_(WorldMap& world, const WorldGenConfig& config);
+    void GenerateRivers_(WorldMap& world, const WorldGenConfig_t& config);
 
     int RandomInt_(int min, int max);
     float RandomFloat_();

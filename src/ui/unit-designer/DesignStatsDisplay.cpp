@@ -11,10 +11,10 @@ namespace ac
 namespace
 {
 
-constexpr Color k_BackgroundColor          {15, 15, 25, 255};
-constexpr Color k_BorderColor              {60, 60, 110, 255};
-constexpr Color k_IncompleteTextColor      {120, 120, 120, 255};
-constexpr Color k_SaveButtonFillColor      {30, 60, 30, 255};
+constexpr Color_t k_BackgroundColor          {15, 15, 25, 255};
+constexpr Color_t k_BorderColor              {60, 60, 110, 255};
+constexpr Color_t k_IncompleteTextColor      {120, 120, 120, 255};
+constexpr Color_t k_SaveButtonFillColor      {30, 60, 30, 255};
 constexpr float k_HeaderFontSizeRatio      = 0.04f;
 constexpr float k_StatFontSizeRatio        = 0.032f;
 constexpr float k_LineHeightRatio          = 0.055f;
@@ -48,7 +48,7 @@ void DesignStatsDisplay::Render(Graphics& rGraphics)
     const unsigned int statSize   = static_cast<unsigned int>(m_layout.height * k_StatFontSizeRatio);
     const float lineH             = m_layout.height * k_LineHeightRatio;
 
-    rGraphics.DrawText("Design Stats", m_layout.x + padding, m_layout.y + padding, headerSize, Color::Yellow());
+    rGraphics.DrawText("Design Stats", m_layout.x + padding, m_layout.y + padding, headerSize, Color_t::Yellow());
 
     if (!m_pState->HasAllMandatory(*m_pSlots))
     {
@@ -95,14 +95,14 @@ void DesignStatsDisplay::Render(Graphics& rGraphics)
     rGraphics.DrawRect(
         m_saveButtonRect.x, m_saveButtonRect.y,
         m_saveButtonRect.width, m_saveButtonRect.height,
-        Color::Green()
+        Color_t::Green()
     );
     rGraphics.DrawText(
         "Save Design",
         m_saveButtonRect.x + padding,
         m_saveButtonRect.y + saveButtonH * k_SaveButtonTextYOffsetRatio,
         statSize,
-        Color::Green()
+        Color_t::Green()
     );
 }
 

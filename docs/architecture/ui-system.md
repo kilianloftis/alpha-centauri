@@ -223,9 +223,9 @@ Two of the three cases the review flagged are closed; the third is deliberately 
   reference. A future mid-turn-stage popup (prompting for input before a stage continues, not
   implemented yet) will need to preserve this same "no destructive mutation while a popup holding
   live references is open" invariant.
-- **`WorldView::m_pSelectedUnit`** (a raw `Unit*`) is kept valid via `UnitManager::on_unit_destroyed`,
+- **`WorldView::m_pSelectedUnit`** (a raw `Unit*`) is kept valid via `UnitManager::OnUnitDestroyed`,
   a `Signal<Unit&>` emitted in `DestroyUnit` before the unit is erased (mirroring
-  `PopulationManager`'s `on_growth`/`on_starvation` pattern). `WorldView` connects to every
+  `PopulationManager`'s `OnGrowth`/`OnStarvation` pattern). `WorldView` connects to every
   faction's `UnitManager` at construction (all factions exist by then; none are added later) and
   clears `m_pSelectedUnit` when it matches the destroyed unit.
 - **Deferred**: `BaseView`/`GrowthDisplay`/`ProductionDisplay` hold `BaseManager&`/`const

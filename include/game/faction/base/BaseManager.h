@@ -77,11 +77,11 @@ public:
     void ConvertPop(Pop& rPop, const std::string& typeId);
 
     // Signals forwarded from PopulationManager
-    Signal<int> on_pop_gained;
-    Signal<int> on_pop_lost;
+    Signal<int> OnPopGained;
+    Signal<int> OnPopLost;
 
     // Signals forwarded from ProductionManager
-    Signal<std::string> on_production_completed;
+    Signal<std::string> OnProductionCompleted;
 
     // Worker assignment - delegated to WorkerAssignmentManager
     WorkerAssignmentManager& GetWorkerAssignments();
@@ -138,7 +138,7 @@ public:
     // This base's effective social rating on one axis: faction-wide SocialRatingModifier
     // contributions plus any ThisBase-scoped ones originating here (e.g. a building's
     // +1 Growth).
-    int GetEffectiveSocialRating(SocialRatingId rating) const;
+    int GetEffectiveSocialRating(SocialRatingId_t rating) const;
 
     int GetNutrientsRequired() const;
 

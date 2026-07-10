@@ -12,6 +12,7 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/GameDataContext.h"
 #include "game/EffectReferenceValidator.h"
+#include "game/RequiredTechValidator.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/units/UnitComponentRegistry.h"
@@ -99,7 +100,7 @@ void Engine::ProcessTurn_()
         throw std::logic_error("Engine::ProcessTurn_ called while an overlay view is active");
     }
 
-    m_eventBus->publish(EvTurnStarted{ m_gameState->GetMissionYear() });
+    m_eventBus->Publish(EvTurnStarted{ m_gameState->GetMissionYear() });
     m_turnProcessor->ProcessTurn(*m_gameState);
     m_gameState->IncrementMissionYear();
 }
@@ -112,7 +113,7 @@ void Engine::Initialize_()
     m_eventBridge = std::make_unique<EventBridge>(*m_eventBus);
 
     // Subscribe to population events for testing
-    m_eventBus->subscribe([](const GameEvent& event) {
+    m_eventBus->Subscribe([](const GameEvent& event) {
         if (auto* pGained = std::get_if<EvBaseGainedPop>(&event))
         {
             std::cout << "[EVENT] Base " << pGained->baseId << " (Faction " << pGained->factionId
@@ -158,14 +159,19 @@ void Engine::Initialize_()
     // references a nonexistent building/tech/improvement/feature id.
     ValidateEffectReferences(*m_gameDataContext);
 
+    // Same standard, applied to the requiredTech field every one of those config types also
+    // carries: fail startup on a typo'd required_tech instead of leaving the entry
+    // permanently unavailable.
+    ValidateRequiredTechReferences(*m_gameDataContext);
+
     m_gameDataContext->luaRuntime = std::make_unique<LuaRuntime>();
 
     PopCompositionConfigParser compositionParser;
     m_gameDataContext->popCompositionConfig =
-        std::make_unique<PopCompositionConfig>(
+        std::make_unique<PopCompositionConfig_t>(
             compositionParser.ParseConfig("config/pop_composition.lua", *m_gameDataContext->luaRuntime));
     {
-        const PopCompositionConfig& rComposition = *m_gameDataContext->popCompositionConfig;
+        const PopCompositionConfig_t& rComposition = *m_gameDataContext->popCompositionConfig;
         if (!m_gameDataContext->popTypeRegistry->Find(rComposition.droneTypeId))
         {
             throw std::runtime_error(
@@ -183,13 +189,13 @@ void Engine::Initialize_()
         std::make_unique<PopCompositionCalculator>(
             *m_gameDataContext->popCompositionConfig, *m_gameDataContext->luaRuntime);
 
-    GrowthConfig_tParser growthParser;
+    GrowthConfigParser growthParser;
     m_gameDataContext->growthConfig =
         std::make_unique<GrowthConfig_t>(
             growthParser.ParseConfig("config/pop_growth.json"));
     TechCostConfigParser techCostParser;
     m_gameDataContext->techCostConfig =
-        std::make_unique<TechCostConfig>(
+        std::make_unique<TechCostConfig_t>(
             techCostParser.ParseConfig("config/tech_cost.lua", *m_gameDataContext->luaRuntime));
     m_gameDataContext->techCostCalculator =
         std::make_unique<TechCostCalculator>(
@@ -197,7 +203,7 @@ void Engine::Initialize_()
 
     // Generate world map and build the save-game state around it.
     WorldGenerator worldGen;
-    WorldGenConfig worldConfig;
+    WorldGenConfig_t worldConfig;
     worldConfig.width = 30;
     worldConfig.height = 20;
     worldConfig.minElevation = -1000;

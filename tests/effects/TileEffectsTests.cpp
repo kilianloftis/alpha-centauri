@@ -59,7 +59,7 @@ TEST_CASE("ResolveTileDefenseMultiplier: terrain and improvement bonuses combine
     // Base multiplier for a featureless tile is 1.0.
     CHECK(world.ctx->ResolveTileDefenseMultiplier(tile) == Approx(1.0));
 
-    tile.SetRockiness(Rockiness::Rocky); // +25%
+    tile.SetRockiness(Rockiness_t::Rocky); // +25%
     CHECK(world.ctx->ResolveTileDefenseMultiplier(tile) == Approx(1.25));
 
     world.ctx->AddImprovementWithEffects(tile, "Bunker"); // +50%
@@ -99,7 +99,7 @@ TEST_CASE("ResolveTileYield: energy is seeded from elevation, other resources st
     }
 }
 
-TEST_CASE("ResolveTileYield: each resource resolves from the matching StatId (field-order sanity)",
+TEST_CASE("ResolveTileYield: each resource resolves from the matching StatId_t (field-order sanity)",
           "[effects][tile][yield]")
 {
     actest::WorldFixture world;
@@ -121,8 +121,8 @@ TEST_CASE("ResolveTileYield: terrain classification contributes through the same
 {
     actest::WorldFixture world;
     Tile& tile = world.At(4, 4);
-    tile.SetMoisture(Moisture::Wet);       // +2 nutrients
-    tile.SetRockiness(Rockiness::Rolling); // +1 mineral
+    tile.SetMoisture(Moisture_t::Wet);       // +2 nutrients
+    tile.SetRockiness(Rockiness_t::Rolling); // +1 mineral
 
     const TileResources_t yield = world.ctx->ResolveTileYield(tile);
     CHECK(yield.nutrients == 2);
@@ -152,7 +152,7 @@ TEST_CASE("ResolveTileYield with base effects: selector-carrying modifiers apply
 
     actest::EffectPool pool;
     const BaseEffects_t baseEffects{{
-        actest::Active(pool.StatMod(StatId::Nutrients, 1.0, ModifierOp::Add, EffectScope_t::ThisBase,
+        actest::Active(pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
                                     actest::ImprovementSelector("Farm")), "farm_booster"),
     }};
 
@@ -169,7 +169,7 @@ TEST_CASE("ResolveTileYield with base effects: BaseTile selector applies only to
 
     actest::EffectPool pool;
     const BaseEffects_t baseEffects{{
-        actest::Active(pool.StatMod(StatId::Energy, 2.0, ModifierOp::Add, EffectScope_t::ThisBase,
+        actest::Active(pool.StatMod(StatId_t::Energy, 2.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
                                     actest::BaseTileSelector()), "center_booster"),
     }};
 
@@ -187,7 +187,7 @@ TEST_CASE("ResolveTileYield with base effects: flat (non-selector) modifiers are
 
     actest::EffectPool pool;
     const BaseEffects_t baseEffects{{
-        actest::Active(pool.StatMod(StatId::Nutrients, 2.0, ModifierOp::Add, EffectScope_t::ThisBase),
+        actest::Active(pool.StatMod(StatId_t::Nutrients, 2.0, ModifierOp_t::Add, EffectScope_t::ThisBase),
                        "flat_nutrient"),
     }};
 
@@ -201,13 +201,13 @@ TEST_CASE("ResolveTileYield: percentage modifiers scale a tile's own yield", "[e
     Tile& tile = world.At(4, 4);
     // Base moisture must be set too: AddImprovementWithEffects triggers RecomputeMoisture,
     // which re-derives the effective value from the base value (world-gen sets both).
-    tile.SetBaseMoisture(Moisture::Wet);
-    tile.SetMoisture(Moisture::Wet); // +2 nutrients
+    tile.SetBaseMoisture(Moisture_t::Wet);
+    tile.SetMoisture(Moisture_t::Wet); // +2 nutrients
     world.ctx->AddImprovementWithEffects(tile, "Farm"); // +1 nutrients
 
     actest::EffectPool pool;
     const BaseEffects_t baseEffects{{
-        actest::Active(pool.StatMod(StatId::Nutrients, 50.0, ModifierOp::AddPercent, EffectScope_t::ThisBase,
+        actest::Active(pool.StatMod(StatId_t::Nutrients, 50.0, ModifierOp_t::AddPercent, EffectScope_t::ThisBase,
                                     actest::ImprovementSelector("Farm")), "gene_splicer"),
     }};
 
@@ -220,42 +220,42 @@ TEST_CASE("RecomputeMoisture: Condenser aura raises effective moisture, derived 
 {
     actest::WorldFixture world;
     Tile& dryTile = world.At(4, 4);
-    dryTile.SetBaseMoisture(Moisture::Arid);
-    dryTile.SetMoisture(Moisture::Arid);
+    dryTile.SetBaseMoisture(Moisture_t::Arid);
+    dryTile.SetMoisture(Moisture_t::Arid);
 
     // Condenser (radius 1) next door.
     world.ctx->AddImprovementWithEffects(world.At(5, 4), "Condenser");
 
-    CHECK(dryTile.GetMoisture() == Moisture::Moist);     // effective value shifted
-    CHECK(dryTile.GetBaseMoisture() == Moisture::Arid);  // terrain truth untouched
+    CHECK(dryTile.GetMoisture() == Moisture_t::Moist);     // effective value shifted
+    CHECK(dryTile.GetBaseMoisture() == Moisture_t::Arid);  // terrain truth untouched
 
     SECTION("recompute is idempotent")
     {
         world.ctx->RecomputeMoisture(dryTile);
         world.ctx->RecomputeMoisture(dryTile);
-        CHECK(dryTile.GetMoisture() == Moisture::Moist);
+        CHECK(dryTile.GetMoisture() == Moisture_t::Moist);
     }
 
     SECTION("overlapping condensers stack and clamp at Wet")
     {
         world.ctx->AddImprovementWithEffects(world.At(3, 4), "Condenser");
-        CHECK(dryTile.GetMoisture() == Moisture::Wet); // Arid + 2
+        CHECK(dryTile.GetMoisture() == Moisture_t::Wet); // Arid + 2
 
         world.ctx->AddImprovementWithEffects(world.At(4, 5), "Condenser");
-        CHECK(dryTile.GetMoisture() == Moisture::Wet); // clamped, no overflow
+        CHECK(dryTile.GetMoisture() == Moisture_t::Wet); // clamped, no overflow
     }
 
     SECTION("removal reverts cleanly")
     {
         world.ctx->RemoveImprovementWithEffects(world.At(5, 4), "Condenser");
-        CHECK(dryTile.GetMoisture() == Moisture::Arid);
+        CHECK(dryTile.GetMoisture() == Moisture_t::Arid);
     }
 
     SECTION("removal with another condenser still in range keeps the remaining bonus")
     {
         world.ctx->AddImprovementWithEffects(world.At(3, 4), "Condenser");
         world.ctx->RemoveImprovementWithEffects(world.At(5, 4), "Condenser");
-        CHECK(dryTile.GetMoisture() == Moisture::Moist);
+        CHECK(dryTile.GetMoisture() == Moisture_t::Moist);
     }
 }
 
@@ -263,8 +263,8 @@ TEST_CASE("RecomputeMoisture: the moisture shift feeds back into tile yield", "[
 {
     actest::WorldFixture world;
     Tile& tile = world.At(4, 4);
-    tile.SetBaseMoisture(Moisture::Arid);
-    tile.SetMoisture(Moisture::Arid);
+    tile.SetBaseMoisture(Moisture_t::Arid);
+    tile.SetMoisture(Moisture_t::Arid);
     CHECK(world.ctx->ResolveTileYield(tile).nutrients == 0);
 
     world.ctx->AddImprovementWithEffects(tile, "Condenser");
@@ -299,9 +299,9 @@ TEST_CASE("CanBuildImprovement: excludes-list features block construction", "[ef
     REQUIRE(pFarm != nullptr);
 
     CHECK(CanBuildImprovement(tile, *pFarm));
-    tile.SetRockiness(Rockiness::Rocky);
+    tile.SetRockiness(Rockiness_t::Rocky);
     CHECK_FALSE(CanBuildImprovement(tile, *pFarm)); // Farm excludes Rocky
-    tile.SetRockiness(Rockiness::Rolling);
+    tile.SetRockiness(Rockiness_t::Rolling);
     CHECK(CanBuildImprovement(tile, *pFarm));
 }
 

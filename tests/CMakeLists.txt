@@ -27,10 +27,12 @@ add_executable(effects-tests
     faction/BuildingTechGateTests.cpp
     faction/PopCompositionTests.cpp
     faction/ResearchSelectorTests.cpp
+    faction/SocialEngineeringManagerTests.cpp
     game/GameCategoryParserTests.cpp
     game/UnitPositionTests.cpp
     game/WorkerAssignmentTests.cpp
     game/TurnProcessorTests.cpp
+    game/RequiredTechValidatorTests.cpp
 )
 
 target_link_libraries(effects-tests PRIVATE ac-core Catch2::Catch2WithMain)

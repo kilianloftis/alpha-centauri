@@ -31,14 +31,24 @@ All code should be written with moddability and customization in mind:
 ## Code Formatting
 
 ### Naming Conventions
-- **Classes**: PascalCase (e.g., `GameEngine`, `GraphicsSystem`)
-- **Functions**: PascalCase (e.g., `Initialize()`, `RenderFrame()`)
-- **Variables**: camelCase (e.g., `playerPosition`, `frameCount`)
-- **Boolean variables**: Prefix with 'b' (e.g., `bIsActive`, `bHasCompleted`)
-- **Pointers**: prefix with 'p' (e.g., `pEngine`, `pGraphics`)
-- **References**: prefix with 'r' (e.g., `rEngine`, `rGraphics`)
-- **Member variables**: prefix with 'm_' (e.g., `m_engine`, `m_pGraphics`)
-- **Structs and Enums**: postfix with _t (e.g., `KeyEvent_t`, `MouseEvent_t`)
+- **Classes**: PascalCase (e.g., `GameEngine`, `GraphicsSystem`). Never postfix classes with `_t`.
+- **Data structs** (config, POD, DTOs): PascalCase + `_t` (e.g., `KeyEvent_t`, `SocialPolicyConfig_t`).
+- **Event structs**: `Ev` prefix is the type marker (e.g., `EvTurnStarted`); do not also add `_t`.
+- **Enum classes**: PascalCase + `_t` (e.g., `StatId_t`, `GameCategory_t`, `Key_t`). Always — including names that already end in `Id`/`Kind`/`Op`.
+- **Constants**: `k_` prefix + PascalCase remainder (e.g., `k_MaxPlayers`, `k_FullscreenLayout`). Applies to `constexpr` / `const` values at namespace or class scope.
+- **Parser classes** for a `Foo_t` struct: name them `FooParser`, never `Foo_tParser`.
+- **Functions / methods**: PascalCase (e.g., `Initialize()`, `EventBus::Subscribe`, `Signal::Connect` / `Emit`).
+- **Public Signal members**: PascalCase with an `On` prefix (e.g., `OnGrowth`, `OnPopGained`).
+- **Private methods**: trailing underscore (e.g., `HandleClick_`).
+- **Variables**: camelCase (e.g., `playerPosition`, `frameCount`).
+- **Boolean variables**: Prefix with 'b' (e.g., `bIsActive`, `bHasCompleted`).
+- **Pointers**: prefix with 'p' (e.g., `pEngine`, `pGraphics`).
+- **References**: prefix with 'r' (e.g., `rEngine`, `rGraphics`).
+- **Member variables**: prefix with 'm_' then camelCase (e.g., `m_engine`, `m_pGraphics`, `m_goldenAge`).
+
+### Enum ↔ string
+- When the wire/config form matches the enumerator name (possibly only by case), use `magic_enum` rather than a hand-rolled switch.
+- When the wire form differs (e.g. `StatId_t::HitPoints` ↔ `"hit_points"`, or a display label with spaces), keep **one** explicit map next to the enum — do not duplicate maps across call sites.
 
 ### Brace Style
 Opening braces should be on their own line:

@@ -13,7 +13,7 @@ constexpr float k_EntryFontSizeRatio   = 0.03f;
 constexpr float k_LineHeightRatio      = 0.05f;
 constexpr float k_PaddingRatio         = 0.02f;
 constexpr float k_HeaderLineOffset     = 2.0f;
-constexpr Color k_BackgroundColor      {20, 20, 40, 230};
+constexpr Color_t k_BackgroundColor      {20, 20, 40, 230};
 
 } // namespace
 
@@ -58,9 +58,9 @@ void ProductionSelectorPopup::Render(Graphics& rGraphics)
     const float lineHeight = m_layout.height * k_LineHeightRatio;
 
     rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, k_BackgroundColor);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color::Yellow());
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color_t::Yellow());
 
-    rGraphics.DrawText("Select Production", m_layout.x + padding, m_layout.y + padding, headerFontSize, Color::Yellow());
+    rGraphics.DrawText("Select Production", m_layout.x + padding, m_layout.y + padding, headerFontSize, Color_t::Yellow());
 
     if (m_availableItems.empty())
     {
@@ -69,7 +69,7 @@ void ProductionSelectorPopup::Render(Graphics& rGraphics)
             m_layout.x + padding,
             m_layout.y + lineHeight * k_HeaderLineOffset,
             entryFontSize,
-            Color::White()
+            Color_t::White()
         );
         return;
     }
@@ -77,7 +77,7 @@ void ProductionSelectorPopup::Render(Graphics& rGraphics)
     for (size_t i = 0; i < m_availableItems.size(); ++i)
     {
         const Rectangle_t& rect = m_entryRects[i];
-        rGraphics.DrawText(m_availableItems[i]->GetName(), rect.x + padding, rect.y, entryFontSize, Color::White());
+        rGraphics.DrawText(m_availableItems[i]->GetName(), rect.x + padding, rect.y, entryFontSize, Color_t::White());
     }
 }
 

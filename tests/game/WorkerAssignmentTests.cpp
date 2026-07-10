@@ -111,8 +111,8 @@ TEST_CASE("Founding a base displaces the tile's worker onto its base's best free
     // The only tile in A's radius with a non-zero yield — where the displaced worker
     // must end up (Wet grants +2 nutrients; every other tile is barren).
     Tile& bestTile = fixture.At(1, 2);
-    bestTile.SetBaseMoisture(Moisture::Wet);
-    bestTile.SetMoisture(Moisture::Wet);
+    bestTile.SetBaseMoisture(Moisture_t::Wet);
+    bestTile.SetMoisture(Moisture_t::Wet);
 
     Pop& rWorker = FirstPop(baseA);
     Tile& target = fixture.At(4, 3);

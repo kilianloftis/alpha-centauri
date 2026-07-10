@@ -22,7 +22,7 @@ struct TechCostInputs_t
     int alphaxTechCostModifier = 0;  // Percentage modifier from alpha(x).txt
 };
 
-struct TechCostConfig
+struct TechCostConfig_t
 {
     std::string costFormula;
 };
@@ -33,7 +33,7 @@ public:
     TechCostConfigParser() = default;
     ~TechCostConfigParser() = default;
 
-    TechCostConfig ParseConfig(const std::string& scriptPath, LuaRuntime& rLua);
+    TechCostConfig_t ParseConfig(const std::string& scriptPath, LuaRuntime& rLua);
 };
 
 } // namespace ac

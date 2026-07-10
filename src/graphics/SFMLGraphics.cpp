@@ -14,8 +14,8 @@
 namespace ac
 {
 
-static const std::string k_fontPath1 = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
-static const std::string k_fontPath2 = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf";
+static const std::string k_FontPath1 = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
+static const std::string k_FontPath2 = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf";
 
 class SFMLGraphics : public Graphics
 {
@@ -32,9 +32,9 @@ public:
         m_window.setKeyRepeatEnabled(false);
         m_window.requestFocus();
         std::cout << "[SFMLGraphics] Window created.\n";
-        if (!m_font.openFromFile(k_fontPath1))
+        if (!m_font.openFromFile(k_FontPath1))
         {
-            if (!m_font.openFromFile(k_fontPath2))
+            if (!m_font.openFromFile(k_FontPath2))
             {
                 std::cerr << "[SFMLGraphics] Font loading failed.\n";
             }
@@ -79,7 +79,7 @@ public:
         return true;
     }
 
-    void DrawText(const std::string& text, float x, float y, unsigned int size = 24, const Color& color = Color::White()) override
+    void DrawText(const std::string& text, float x, float y, unsigned int size = 24, const Color_t& color = Color_t::White()) override
     {
         if (m_font.getInfo().family.empty())
         {
@@ -91,7 +91,7 @@ public:
         m_window.draw(drawable);
     }
 
-    void DrawRect(float x, float y, float width, float height, const Color& color, float thickness) override
+    void DrawRect(float x, float y, float width, float height, const Color_t& color, float thickness) override
     {
         sf::RectangleShape rect(sf::Vector2f(width, height));
         rect.setPosition(sf::Vector2f(x, y));
@@ -101,7 +101,7 @@ public:
         m_window.draw(rect);
     }
 
-    void DrawFilledRect(float x, float y, float width, float height, const Color& color) override
+    void DrawFilledRect(float x, float y, float width, float height, const Color_t& color) override
     {
         sf::RectangleShape rect(sf::Vector2f(width, height));
         rect.setPosition(sf::Vector2f(x, y));

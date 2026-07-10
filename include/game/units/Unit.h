@@ -69,8 +69,8 @@ private:
     // Live-unit stat resolution: the design's own ThisUnit effects plus any FactionUnits
     // effects active in the owning faction's pool (buildings, policies, pops, ...).
     // UnitDesign's getters stay context-free (intrinsic values, e.g. for the designer UI).
-    int ResolveStat_(StatId statId) const;
-    bool ResolveFlag_(RuleFlagId flagId) const;
+    int ResolveStat_(StatId_t statId) const;
+    bool ResolveFlag_(RuleFlagId_t flagId) const;
 
     // The index maintains m_pTile alongside its occupancy lists (TryMoveUnit).
     friend class UnitPositionIndex;

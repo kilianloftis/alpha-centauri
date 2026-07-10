@@ -18,7 +18,7 @@ using Catch::Approx;
 
 namespace
 {
-std::vector<std::pair<double, ModifierOp>> Stack(std::initializer_list<std::pair<double, ModifierOp>> init)
+std::vector<std::pair<double, ModifierOp_t>> Stack(std::initializer_list<std::pair<double, ModifierOp_t>> init)
 {
     return {init};
 }
@@ -33,61 +33,61 @@ TEST_CASE("ApplyModifierStack: empty stack returns the base value", "[effects][m
 
 TEST_CASE("ApplyModifierStack: Add contributions sum onto the base", "[effects][math]")
 {
-    CHECK(ApplyModifierStack(0.0, Stack({{2.0, ModifierOp::Add}})) == Approx(2.0));
-    CHECK(ApplyModifierStack(1.0, Stack({{2.0, ModifierOp::Add}, {3.0, ModifierOp::Add}})) == Approx(6.0));
-    CHECK(ApplyModifierStack(4.0, Stack({{-1.0, ModifierOp::Add}})) == Approx(3.0));
+    CHECK(ApplyModifierStack(0.0, Stack({{2.0, ModifierOp_t::Add}})) == Approx(2.0));
+    CHECK(ApplyModifierStack(1.0, Stack({{2.0, ModifierOp_t::Add}, {3.0, ModifierOp_t::Add}})) == Approx(6.0));
+    CHECK(ApplyModifierStack(4.0, Stack({{-1.0, ModifierOp_t::Add}})) == Approx(3.0));
 }
 
 TEST_CASE("ApplyModifierStack: AddPercent is percent points on top of 100%", "[effects][math]")
 {
     // 25 means +25%, matching the UI display.
-    CHECK(ApplyModifierStack(4.0, Stack({{25.0, ModifierOp::AddPercent}})) == Approx(5.0));
-    CHECK(ApplyModifierStack(4.0, Stack({{-25.0, ModifierOp::AddPercent}})) == Approx(3.0));
+    CHECK(ApplyModifierStack(4.0, Stack({{25.0, ModifierOp_t::AddPercent}})) == Approx(5.0));
+    CHECK(ApplyModifierStack(4.0, Stack({{-25.0, ModifierOp_t::AddPercent}})) == Approx(3.0));
 }
 
 TEST_CASE("ApplyModifierStack: multiple AddPercent contributions combine arithmetically, not geometrically",
           "[effects][math]")
 {
     // +25% and +25% must be x1.5 (1 + 0.25 + 0.25), NOT x1.5625 (1.25 * 1.25).
-    CHECK(ApplyModifierStack(4.0, Stack({{25.0, ModifierOp::AddPercent}, {25.0, ModifierOp::AddPercent}}))
+    CHECK(ApplyModifierStack(4.0, Stack({{25.0, ModifierOp_t::AddPercent}, {25.0, ModifierOp_t::AddPercent}}))
           == Approx(6.0));
     // +50% and -50% cancel exactly.
-    CHECK(ApplyModifierStack(8.0, Stack({{50.0, ModifierOp::AddPercent}, {-50.0, ModifierOp::AddPercent}}))
+    CHECK(ApplyModifierStack(8.0, Stack({{50.0, ModifierOp_t::AddPercent}, {-50.0, ModifierOp_t::AddPercent}}))
           == Approx(8.0));
 }
 
 TEST_CASE("ApplyModifierStack: -100% floors the arithmetic factor at zero output", "[effects][math]")
 {
-    CHECK(ApplyModifierStack(10.0, Stack({{-100.0, ModifierOp::AddPercent}})) == Approx(0.0));
+    CHECK(ApplyModifierStack(10.0, Stack({{-100.0, ModifierOp_t::AddPercent}})) == Approx(0.0));
 }
 
 TEST_CASE("ApplyModifierStack: MultiplyGeometric factors multiply the running total", "[effects][math]")
 {
     // Factor form: 0.5 halves.
-    CHECK(ApplyModifierStack(8.0, Stack({{0.5, ModifierOp::MultiplyGeometric}})) == Approx(4.0));
-    CHECK(ApplyModifierStack(8.0, Stack({{0.5, ModifierOp::MultiplyGeometric}, {0.5, ModifierOp::MultiplyGeometric}}))
+    CHECK(ApplyModifierStack(8.0, Stack({{0.5, ModifierOp_t::MultiplyGeometric}})) == Approx(4.0));
+    CHECK(ApplyModifierStack(8.0, Stack({{0.5, ModifierOp_t::MultiplyGeometric}, {0.5, ModifierOp_t::MultiplyGeometric}}))
           == Approx(2.0));
-    CHECK(ApplyModifierStack(3.0, Stack({{2.0, ModifierOp::MultiplyGeometric}})) == Approx(6.0));
+    CHECK(ApplyModifierStack(3.0, Stack({{2.0, ModifierOp_t::MultiplyGeometric}})) == Approx(6.0));
 }
 
 TEST_CASE("ApplyModifierStack: combined ops follow (base+adds) * arithmetic * geometric", "[effects][math]")
 {
     // (2 + 4) * (1 + 0.5) * 0.5 = 4.5
-    const auto stack = Stack({{4.0, ModifierOp::Add},
-                              {50.0, ModifierOp::AddPercent},
-                              {0.5, ModifierOp::MultiplyGeometric}});
+    const auto stack = Stack({{4.0, ModifierOp_t::Add},
+                              {50.0, ModifierOp_t::AddPercent},
+                              {0.5, ModifierOp_t::MultiplyGeometric}});
     CHECK(ApplyModifierStack(2.0, stack) == Approx(4.5));
 }
 
 TEST_CASE("ApplyModifierStack: result does not depend on contribution order", "[effects][math]")
 {
     // An Add listed after a percent/geometric contribution still lands in the additive pool.
-    const auto ordered  = Stack({{4.0, ModifierOp::Add},
-                                 {50.0, ModifierOp::AddPercent},
-                                 {0.5, ModifierOp::MultiplyGeometric}});
-    const auto reversed = Stack({{0.5, ModifierOp::MultiplyGeometric},
-                                 {50.0, ModifierOp::AddPercent},
-                                 {4.0, ModifierOp::Add}});
+    const auto ordered  = Stack({{4.0, ModifierOp_t::Add},
+                                 {50.0, ModifierOp_t::AddPercent},
+                                 {0.5, ModifierOp_t::MultiplyGeometric}});
+    const auto reversed = Stack({{0.5, ModifierOp_t::MultiplyGeometric},
+                                 {50.0, ModifierOp_t::AddPercent},
+                                 {4.0, ModifierOp_t::Add}});
     CHECK(ApplyModifierStack(2.0, ordered) == Approx(ApplyModifierStack(2.0, reversed)));
 }
 
@@ -102,8 +102,8 @@ TEST_CASE("ResolveStatModifiers: sums Add contributions from active effects", "[
 {
     actest::EffectPool pool;
     const std::vector<ActiveEffect_t> effects = {
-        Active(pool.StatMod(StatId::Nutrients, 2.0), "building_a"),
-        Active(pool.StatMod(StatId::Nutrients, 3.0), "building_b"),
+        Active(pool.StatMod(StatId_t::Nutrients, 2.0), "building_a"),
+        Active(pool.StatMod(StatId_t::Nutrients, 3.0), "building_b"),
     };
 
     const StatBreakdown_t breakdown = ResolveStatModifiers(effects, 0.0);
@@ -119,7 +119,7 @@ TEST_CASE("ResolveStatModifiers: pure-multiplier stats require an explicit non-z
     // its seed (as UnitDesign::GetBaseCost does with 1.0 for CostMultiplier).
     actest::EffectPool pool;
     const std::vector<ActiveEffect_t> effects = {
-        Active(pool.StatMod(StatId::CostMultiplier, 1.25, ModifierOp::MultiplyGeometric), "component"),
+        Active(pool.StatMod(StatId_t::CostMultiplier, 1.25, ModifierOp_t::MultiplyGeometric), "component"),
     };
 
     CHECK(ResolveStatModifiers(effects, 0.0).total == Approx(0.0));
@@ -131,7 +131,7 @@ TEST_CASE("ResolveStatModifiers: seeded base value participates in percent scali
     // GrowthRate-style usage: base 100 (percent), +10% modifier -> 110.
     actest::EffectPool pool;
     const std::vector<ActiveEffect_t> effects = {
-        Active(pool.StatMod(StatId::GrowthRate, 10.0, ModifierOp::AddPercent), "policy"),
+        Active(pool.StatMod(StatId_t::GrowthRate, 10.0, ModifierOp_t::AddPercent), "policy"),
     };
     CHECK(ResolveStatModifiers(effects, 100.0).total == Approx(110.0));
 }
@@ -141,9 +141,9 @@ TEST_CASE("ResolveStatModifiers: contributions are sorted by sourceId for determ
 {
     actest::EffectPool pool;
     const std::vector<ActiveEffect_t> effects = {
-        Active(pool.StatMod(StatId::Energy, 1.0), "zeta"),
-        Active(pool.StatMod(StatId::Energy, 2.0), "alpha"),
-        Active(pool.StatMod(StatId::Energy, 3.0), "midway"),
+        Active(pool.StatMod(StatId_t::Energy, 1.0), "zeta"),
+        Active(pool.StatMod(StatId_t::Energy, 2.0), "alpha"),
+        Active(pool.StatMod(StatId_t::Energy, 3.0), "midway"),
     };
 
     const StatBreakdown_t breakdown = ResolveStatModifiers(effects, 0.0);
@@ -157,13 +157,13 @@ TEST_CASE("ResolveStatModifiers: breakdown records amount and op per contributio
 {
     actest::EffectPool pool;
     const std::vector<ActiveEffect_t> effects = {
-        Active(pool.StatMod(StatId::Minerals, 25.0, ModifierOp::AddPercent), "bonus"),
+        Active(pool.StatMod(StatId_t::Minerals, 25.0, ModifierOp_t::AddPercent), "bonus"),
     };
 
     const StatBreakdown_t breakdown = ResolveStatModifiers(effects, 0.0);
     REQUIRE(breakdown.contributions.size() == 1);
     CHECK(breakdown.contributions[0].amount == Approx(25.0));
-    CHECK(breakdown.contributions[0].op == ModifierOp::AddPercent);
+    CHECK(breakdown.contributions[0].op == ModifierOp_t::AddPercent);
     CHECK(breakdown.contributions[0].sourceId == "bonus");
 }
 
@@ -171,8 +171,8 @@ TEST_CASE("ResolveStatModifiers: non-StatModifier effects and null configs are i
 {
     actest::EffectPool pool;
     std::vector<ActiveEffect_t> effects = {
-        Active(pool.RuleFlag(RuleFlagId::Flight), "flag_source"),
-        Active(pool.StatMod(StatId::Energy, 4.0), "real"),
+        Active(pool.RuleFlag(RuleFlagId_t::Flight), "flag_source"),
+        Active(pool.StatMod(StatId_t::Energy, 4.0), "real"),
     };
     effects.push_back(ActiveEffect_t{nullptr, "null_config", nullptr});
 
@@ -188,8 +188,8 @@ TEST_CASE("ResolveStatModifiers: does NOT itself filter by stat — callers must
     // an unfiltered list double-counts across stats.
     actest::EffectPool pool;
     const std::vector<ActiveEffect_t> effects = {
-        Active(pool.StatMod(StatId::Nutrients, 2.0), "a"),
-        Active(pool.StatMod(StatId::Minerals, 3.0), "b"),
+        Active(pool.StatMod(StatId_t::Nutrients, 2.0), "a"),
+        Active(pool.StatMod(StatId_t::Minerals, 3.0), "b"),
     };
     CHECK(ResolveStatModifiers(effects, 0.0).total == Approx(5.0));
 }

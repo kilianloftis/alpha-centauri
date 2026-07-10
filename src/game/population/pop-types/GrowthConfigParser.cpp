@@ -6,7 +6,7 @@
 namespace ac
 {
 
-GrowthConfig_t GrowthConfig_tParser::ParseConfig(const std::string& configPath)
+GrowthConfig_t GrowthConfigParser::ParseConfig(const std::string& configPath)
 {
     GrowthConfig_t config;
 

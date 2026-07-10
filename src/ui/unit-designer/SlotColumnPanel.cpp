@@ -18,13 +18,13 @@ constexpr float k_ArrowAreaMultiplier        = 2.0f;
 constexpr float k_ArrowFontSizeRatio         = 0.6f;
 constexpr float k_ArrowPadXRatio             = 0.4f;
 constexpr float k_NameLabelSpacingMultiplier = 1.4f;
-constexpr Color k_ArrowFillColor             {30, 30, 40, 255};
-constexpr Color k_ArrowBorderColor           {60, 60, 80, 255};
-constexpr Color k_DisabledArrowColor         {60, 60, 60, 255};
-constexpr Color k_SlotFillColor              {30, 30, 35, 255};
-constexpr Color k_SlotBorderColor            {80, 80, 100, 255};
-constexpr Color k_LabelTextColor             {150, 150, 170, 255};
-constexpr Color k_EmptyNameColor             {80, 80, 80, 255};
+constexpr Color_t k_ArrowFillColor             {30, 30, 40, 255};
+constexpr Color_t k_ArrowBorderColor           {60, 60, 80, 255};
+constexpr Color_t k_DisabledArrowColor         {60, 60, 60, 255};
+constexpr Color_t k_SlotFillColor              {30, 30, 35, 255};
+constexpr Color_t k_SlotBorderColor            {80, 80, 100, 255};
+constexpr Color_t k_LabelTextColor             {150, 150, 170, 255};
+constexpr Color_t k_EmptyNameColor             {80, 80, 80, 255};
 
 } // namespace
 
@@ -88,8 +88,8 @@ void SlotColumnPanel::Render(Graphics& rGraphics)
         const bool bCanScrollUp   = m_scrollOffset > 0;
         const bool bCanScrollDown = m_scrollOffset + k_VisibleSlots < static_cast<int>(m_slots.size());
 
-        const Color upColor   = bCanScrollUp   ? Color::White() : k_DisabledArrowColor;
-        const Color downColor = bCanScrollDown ? Color::White() : k_DisabledArrowColor;
+        const Color_t upColor   = bCanScrollUp   ? Color_t::White() : k_DisabledArrowColor;
+        const Color_t downColor = bCanScrollDown ? Color_t::White() : k_DisabledArrowColor;
 
         rGraphics.DrawFilledRect(
             m_upArrowRect.x, m_upArrowRect.y,
@@ -140,7 +140,7 @@ void SlotColumnPanel::Render(Graphics& rGraphics)
 
         const UnitComponentConfig_t* pComp = rEntry.getComponent();
         const std::string& rName = pComp ? pComp->name : "(none)";
-        const Color nameColor    = pComp ? Color::White() : k_EmptyNameColor;
+        const Color_t nameColor    = pComp ? Color_t::White() : k_EmptyNameColor;
         rGraphics.DrawText(
             rName,
             rRect.x + padding,

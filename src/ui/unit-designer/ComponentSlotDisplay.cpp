@@ -8,10 +8,10 @@ namespace ac
 namespace
 {
 
-constexpr Color k_BackgroundColor              {30, 30, 35, 255};
-constexpr Color k_BorderColor                  {80, 80, 100, 255};
-constexpr Color k_LabelTextColor               {150, 150, 170, 255};
-constexpr Color k_EmptyNameColor               {80, 80, 80, 255};
+constexpr Color_t k_BackgroundColor              {30, 30, 35, 255};
+constexpr Color_t k_BorderColor                  {80, 80, 100, 255};
+constexpr Color_t k_LabelTextColor               {150, 150, 170, 255};
+constexpr Color_t k_EmptyNameColor               {80, 80, 80, 255};
 constexpr float k_LabelFontSizeRatio           = 0.08f;
 constexpr float k_NameFontSizeRatio            = 0.07f;
 constexpr float k_PaddingRatio                 = 0.04f;
@@ -44,7 +44,7 @@ void ComponentSlotDisplay::Render(Graphics& rGraphics)
 
     const UnitComponentConfig_t* pComponent = m_getComponent();
     const std::string& rName = pComponent ? pComponent->name : "(none)";
-    const Color nameColor    = pComponent ? Color::White() : k_EmptyNameColor;
+    const Color_t nameColor    = pComponent ? Color_t::White() : k_EmptyNameColor;
     rGraphics.DrawText(
         rName,
         m_layout.x + padding,

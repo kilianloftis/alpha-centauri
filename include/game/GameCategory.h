@@ -8,7 +8,7 @@
 namespace ac
 {
 
-enum class GameCategory
+enum class GameCategory_t
 {
     Build,
     Grow,
@@ -18,20 +18,20 @@ enum class GameCategory
 
 constexpr size_t k_GameCategoryCount = 4;
 
-constexpr std::array<GameCategory, k_GameCategoryCount> k_AllGameCategories = {
-    GameCategory::Build,
-    GameCategory::Grow,
-    GameCategory::Discover,
-    GameCategory::Conquer,
+constexpr std::array<GameCategory_t, k_GameCategoryCount> k_AllGameCategories = {
+    GameCategory_t::Build,
+    GameCategory_t::Grow,
+    GameCategory_t::Discover,
+    GameCategory_t::Conquer,
 };
 
-std::string GameCategoryToString(GameCategory category);
-GameCategory ParseGameCategory(const std::string& category);
+std::string GameCategoryToString(GameCategory_t category);
+GameCategory_t ParseGameCategory(const std::string& category);
 
 // Required game category at j[key] (default key "category"). Named distinctly from
 // ParseGameCategory(const std::string&) — a same-named overload would be ambiguous for any
 // call passing a string literal, since both a std::string and a nlohmann::json can be
 // constructed from one via an implicit conversion.
-GameCategory ParseGameCategoryField(const nlohmann::json& j, const char* key = "category");
+GameCategory_t ParseGameCategoryField(const nlohmann::json& j, const char* key = "category");
 
 } // namespace ac

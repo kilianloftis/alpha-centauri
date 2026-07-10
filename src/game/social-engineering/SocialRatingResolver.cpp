@@ -10,9 +10,9 @@
 namespace ac
 {
 
-std::map<SocialRatingId, int> AccumulateSocialRatings(const BaseEffects_t& rBaseEffects)
+std::map<SocialRatingId_t, int> AccumulateSocialRatings(const BaseEffects_t& rBaseEffects)
 {
-    std::map<SocialRatingId, int> totals;
+    std::map<SocialRatingId_t, int> totals;
     for (const ActiveEffect_t& rEffect : rBaseEffects.effects)
     {
         if (!rEffect.config)
@@ -27,7 +27,7 @@ std::map<SocialRatingId, int> AccumulateSocialRatings(const BaseEffects_t& rBase
     return totals;
 }
 
-int ClampSocialRatingTotal(const SocialRatingConfig& rConfig, int total)
+int ClampSocialRatingTotal(const SocialRatingConfig_t& rConfig, int total)
 {
     const int minLevel = rConfig.levelEffects.begin()->first;
     const int maxLevel = rConfig.levelEffects.rbegin()->first;
@@ -35,7 +35,7 @@ int ClampSocialRatingTotal(const SocialRatingConfig& rConfig, int total)
 }
 
 const std::vector<EffectConfig_t>* FindSocialRatingLevelEffects(
-    const SocialRatingConfig& rConfig, int total)
+    const SocialRatingConfig_t& rConfig, int total)
 {
     if (rConfig.levelEffects.empty())
     {
@@ -54,7 +54,7 @@ const std::vector<EffectConfig_t>* FindSocialRatingLevelEffects(
 void ExpandSocialRatingEffects(BaseEffects_t& rBaseEffects,
                                const SocialRatingRegistry& rRatings)
 {
-    const std::map<SocialRatingId, int> totals = AccumulateSocialRatings(rBaseEffects);
+    const std::map<SocialRatingId_t, int> totals = AccumulateSocialRatings(rBaseEffects);
 
     for (const auto& [rating, total] : totals)
     {
@@ -63,7 +63,7 @@ void ExpandSocialRatingEffects(BaseEffects_t& rBaseEffects,
             continue;
         }
 
-        const SocialRatingConfig* pRatingConfig = rRatings.Find(SocialRatingIdToString(rating));
+        const SocialRatingConfig_t* pRatingConfig = rRatings.Find(SocialRatingIdToString(rating));
         if (!pRatingConfig || pRatingConfig->levelEffects.empty())
         {
             continue;

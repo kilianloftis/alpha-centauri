@@ -36,7 +36,7 @@ ImprovementConfig_t ImprovementConfigParser::ParseImprovementConfig(const nlohma
     config.frequency = improvementJson.value("frequency", 0);
     config.spritePath = improvementJson.value("sprite_path", "");
     config.excludes = ConfigFields::ParseStringArray(improvementJson, "excludes");
-    config.effects = BonusEffectParser::ParseEffects(improvementJson, EffectSourceKind::Improvement, config.id);
+    config.effects = BonusEffectParser::ParseEffects(improvementJson, EffectSourceKind_t::Improvement, config.id);
 
     // Back-compat: an improvement-level "radius" is the default reach for its effects.
     // Effects that declare their own radius keep it; resolution is per-effect.

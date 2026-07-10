@@ -107,7 +107,7 @@ Related: every filter in the effects pipeline (`FilterByStatId`, `FilterForBase`
 - `include/lib/EventBridge.h:4` includes `game/faction/base/BaseManager.h`. *(Addressed 2026-07-10: `EventBridge` moved to `include/game/EventBridge.h` / `src/game/EventBridge.cpp` — it exists solely to translate `BaseManager`'s signals into bus events, so it belongs with the thing it wires, not with the generic bus.)*
 - `include/lib/effects/ActiveEffect.h` and `TileEffectsContext.h` include `game/faction/base/BaseTypes.h`; their `.cpp` files include 15+ game headers (`Faction`, `BaseManager`, `Tile`, `PopContainer`, `SocialEngineeringManager`, …). *(Addressed 2026-07-10: the whole `lib/effects` directory moved to `include/game/effects` / `src/game/effects` — per this finding's own conclusion, it's game logic, not reusable engine infra, so the honest fix is to stop pretending otherwise.)*
 
-`lib/effects` is game logic in a `lib` costume. Consequences: `lib` cannot be reused or tested standalone, the include graph has no enforceable direction, and the "mod-facing stable ABI" claim of `EventBus`/`GameEvent` is hollow while its types are transitively defined by internal game headers. Either the boundary means something or it should not exist; right now it misleads. *(Also found and fixed while closing this out: `src/lib/config/ConfigFields.cpp` pulled in `game/GameCategory.h` for one JSON-parsing overload — moved to `game/GameCategory.h`/`.cpp` as `ParseGameCategoryField`, renamed to avoid an overload ambiguity with the existing `ParseGameCategory(const std::string&)` when called with a string literal. `lib/` now has zero `game/` includes anywhere, header or `.cpp`.)*
+`lib/effects` is game logic in a `lib` costume. Consequences: `lib` cannot be reused or tested standalone, the include graph has no enforceable direction, and the "mod-facing stable ABI" claim of `EventBus`/`GameEvent` is hollow while its types are transitively defined by internal game headers. Either the boundary means something or it should not exist; right now it misleads. *(Also found and fixed while closing this out: `src/lib/config/ConfigFields.cpp` pulled in `game/GameCategory_t.h` for one JSON-parsing overload — moved to `game/GameCategory_t.h`/`.cpp` as `ParseGameCategoryField`, renamed to avoid an overload ambiguity with the existing `ParseGameCategory(const std::string&)` when called with a string literal. `lib/` now has zero `game/` includes anywhere, header or `.cpp`.)*
 
 ### 1.3 [H] `GameDataContext` is a service locator whose own invariant is already broken
 
@@ -157,9 +157,9 @@ Denormalized identity plus convention-based "player = first" will produce subtle
 ### 1.6 [H] Signal/event wiring is manual, lifetime-unsafe, and non-reentrant
 
 - `Signal<T>` (`include/lib/Signal.h`) has `connect` but **no disconnect** and no connection lifetime management. Slots capture raw references: `EventBridge::WireBase` captures `&rBase` (`src/lib/EventBridge.cpp:16-22`). Destroying any base (razing, capture) leaves dangling closures in signals that outlive it. The same applies to any future subscriber.
-- `EventBus::publish` iterates `m_handlers` directly (`src/lib/EventBus.cpp:23-26`); a handler that calls `subscribe`/`unsubscribe` during dispatch invalidates the iterator (vector reallocation) — undefined behavior on a bus explicitly intended for third-party mod handlers.
+- `EventBus::Publish` iterates `m_handlers` directly (`src/lib/EventBus.cpp:23-26`); a handler that calls `Subscribe`/`Unsubscribe` during dispatch invalidates the iterator (vector reallocation) — undefined behavior on a bus explicitly intended for third-party mod handlers.
 - Wiring is opt-in and only the composition root does it: `EventBridge::WireBase` is called exactly once, in `Engine::Initialize_`. `Faction::CreateBase` does not wire; any base created through gameplay (colony pods) will silently emit no events. A pattern that requires every future call site to remember a manual step is a defect factory.
-- Signal chains also create hidden control flow *within* one object: `BaseManager`'s constructor connects `m_pPopulation->on_growth` back into `m_pPopulation->AddPop()` (`BaseManager.cpp:72-77`) — a self-call routed through the owner via a signal, invisible to a reader of `PopulationManager`.
+- Signal chains also create hidden control flow *within* one object: `BaseManager`'s constructor connects `m_pPopulation->OnGrowth` back into `m_pPopulation->AddPop()` (`BaseManager.cpp:72-77`) — a self-call routed through the owner via a signal, invisible to a reader of `PopulationManager`.
 
 ### 1.7 [M] Two incompatible ownership models for factions coexist
 
@@ -181,7 +181,7 @@ Denormalized identity plus convention-based "player = first" will produce subtle
 >   turn processing itself needs to pause for player input mid-stage (not implemented yet), that
 >   pause has to preserve this same invariant.
 > - `WorldView::m_pSelectedUnit` dangling on unit death: `UnitManager` now exposes
->   `on_unit_destroyed` (mirroring `PopulationManager`'s existing `on_growth`/`on_starvation`
+>   `OnUnitDestroyed` (mirroring `PopulationManager`'s existing `OnGrowth`/`OnStarvation`
 >   signals), emitted in `DestroyUnit` before the unit is erased. `WorldView` connects to every
 >   faction's `UnitManager` at construction and clears `m_pSelectedUnit` on a match. Guarded by
 >   a new case in `tests/game/UnitPositionTests.cpp`.
@@ -229,7 +229,7 @@ Combined with 1.6, object destruction is otherwise still unsafe almost everywher
 
 Moddability is a stated core guideline, and scaffolding exists — but none of it is load-bearing:
 
-- Hooks are parsed from `turn_stages.json` (`mod_id`, `script_path`) but `Hook::callback` is never populated from a script, and its type is `std::function<void()>` (`include/game/HookContext.h:14`) — a hook that receives no `GameState`, no faction, and no stage context could not do anything even if it were wired. Replace-hooks replace an entire stage wholesale.
+- Hooks are parsed from `turn_stages.json` (`mod_id`, `script_path`) but `Hook_t::callback` is never populated from a script, and its type is `std::function<void()>` (`include/game/HookContext.h:14`) — a hook that receives no `GameState`, no faction, and no stage context could not do anything even if it were wired. Replace-hooks replace an entire stage wholesale.
 - `EventBus` is the "mod-facing" API, but there is no Lua-side subscription, and `GameEvent` covers 7 event types.
 - `LuaRuntime` is used solely for three cost/composition formulas.
 - Player actions (set production, convert pop, assign worker, change policy) are direct method calls from UI handlers into managers (`BaseView.cpp`), bypassing anything a mod could observe or intercept; there is no command/action layer.
@@ -237,6 +237,44 @@ Moddability is a stated core guideline, and scaffolding exists — but none of i
 Individually each is "not implemented yet"; collectively they show the extension points are being built without a consumer, and the interfaces (contextless hooks, tiny event variant) would not survive first contact with a real mod. Designing them against a concrete consumer (even a sample mod) would prevent rework.
 
 ### 1.11 [M] Config validation is thorough exactly once, absent everywhere else
+
+> **Status (2026-07-10): the required_tech and social-policy-defaults gaps are closed; three
+> bullets below were already fixed by prior, unrelated work; one is a deliberate design
+> tradeoff, not a bug.**
+>
+> - `required_tech` is now validated for every registry that carries the field — buildings,
+>   improvements, unit components, unit slots, social policies, pop types — not just buildings.
+>   New `RequiredTechValidator.{h,cpp}` (kept separate from `EffectReferenceValidator`: same
+>   lifecycle point and GameDataContext-shaped call, but a different concern — effect-list
+>   references vs. this one scalar field every one of those config types also carries) walks
+>   each registry's `GetAll()` and throws naming the source id and the offending tech id if
+>   `requiredTech` is non-empty and unknown to `TechRegistry`. Called from `Engine::Initialize_`
+>   right after `ValidateEffectReferences`. Guarded by
+>   `tests/game/RequiredTechValidatorTests.cpp`.
+> - `SocialEngineeringManager`'s constructor now validates its four hardcoded default policy
+>   ids against the registry when one is supplied: each must exist and belong to its assigned
+>   `SocialCategory_t`, or construction throws — instead of `GetActivePolicy` silently returning
+>   `nullptr` for that category for the rest of the game. `SetActivePolicy` gained the same
+>   category check the finding named directly (a policy from another category is now rejected,
+>   not silently installed into an unrelated slot). The test fixture
+>   (`tests/fixtures/social_policies.json`) needed the three defaults it was missing
+>   (`simple`/`survival`/`none_future`) added to keep faction construction in tests passing —
+>   the production config already had all four. Guarded by
+>   `tests/faction/SocialEngineeringManagerTests.cpp`.
+> - Already fixed by prior work, unrelated to this pass: the `"Base"` improvement bullet
+>   (`TileEffectsContext::AddImprovementWithEffects` now calls the throwing `Registry::Get`,
+>   not `Find` + `stderr`+continue — see "1.8 and Error handling"); the tech-category bullet
+>   (`TechConfig_t::category` is a `GameCategory_t` enum parsed once at config load via
+>   `ParseGameCategoryField`, which throws on an unknown string — `ResearchSelector` now just
+>   switches on the enum, no try/catch, no per-query parsing); `EnergyAllocation_t`
+>   (`EconomyManager::SetEnergyAllocation` already throws if the three percentages don't sum
+>   to 100).
+> - Left as-is, deliberately: unknown ids in `turn_stages.json` becoming hook-only
+>   `CustomGlobalTurnStage`/`CustomPerFactionTurnStage` instances is the moddability extension
+>   point 1.10 discusses, not a validation gap — rejecting unknown stage ids up front would
+>   defeat the mechanism's purpose. The soft spot is real (a typo'd id silently becomes a
+>   no-op custom stage instead of a startup failure) but the fix belongs with 1.10's "hooks
+>   don't reach mods" work, not here.
 
 `ValidateEffectReferences` (`src/game/EffectReferenceValidator.cpp`) is the right idea: fail startup on any effect referencing an unknown building/tech/improvement/feature. But the standard it sets is not applied to the rest of the config surface:
 
@@ -390,7 +428,7 @@ The coding guidelines say "Do not make up game rules or mechanics. Leave TODOs i
 >   growth is blocked (`numeric_limits<int>::max()`); NearZeroGrowth / PopulationBoom
 >   remain an explicit TODO (they are rule flags in SMAC, not a zero multiplier).
 > - `ApplyGrowth` checks `CanGrow()` before spending the nutrient threshold / emitting
->   `on_growth`, so nutrients bank at the cap instead of paying for a phantom pop.
+>   `OnGrowth`, so nutrients bank at the cap instead of paying for a phantom pop.
 >   `AddPop` now throws at max size instead of silently no-oping.
 > - Max base size comes from `GrowthConfig_t::maxBaseSize` (default 7, SMAC limit
 >   without Hab Complex; configured in `pop_growth.json`). `SetMaxSize` remains for
@@ -398,7 +436,7 @@ The coding guidelines say "Do not make up game rules or mechanics. Leave TODOs i
 > Covered by `tests/faction/GrowthTests.cpp`.
 
 - A growth-rate multiplier ≤ 0 is silently replaced by 1.0 (normal growth) in `GrowthCalculator::ComputeNutrientsRequired` (`src/game/population/calculators/GrowthCalculator.cpp:15-17`) — a heavy negative-growth effect stack silently does nothing.
-- `PopulationManager::ApplyGrowth` deducts the nutrient threshold and emits `on_growth` *before* anyone checks whether growth is possible; `AddPop` then silently does nothing at max size (`PopulationManager.cpp:54-62, 100-115`) — nutrients are consumed for a pop that never appears, and the decision is invisible because it is split across a signal round-trip through `BaseManager`.
+- `PopulationManager::ApplyGrowth` deducts the nutrient threshold and emits `OnGrowth` *before* anyone checks whether growth is possible; `AddPop` then silently does nothing at max size (`PopulationManager.cpp:54-62, 100-115`) — nutrients are consumed for a pop that never appears, and the decision is invisible because it is split across a signal round-trip through `BaseManager`.
 - Max base size is a hard-coded `m_maxSize(8)` (`PopulationManager.cpp:24`); `SetMaxSize` is never called by anything.
 
 ### 3.4 [M] Population composition hard-codes pop-type IDs
@@ -417,12 +455,12 @@ The coding guidelines say "Do not make up game rules or mechanics. Leave TODOs i
 > **Status (2026-07-10): fixed.** Buildings use the same singular `required_tech`
 > convention as social policies, improvements, pop types, and unit components:
 > omit or `""` = always available; otherwise the named tech must be discovered.
-> `BuildingConfig_t::IsAvailable` mirrors `SocialPolicyConfig::IsAvailable`. The
+> `BuildingConfig_t::IsAvailable` mirrors `SocialPolicyConfig_t::IsAvailable`. The
 > old plural `required_techs` key is rejected at parse time with a clear error so
 > a leftover array cannot silently unlock (or lock) a building. Covered by
 > `tests/faction/BuildingTechGateTests.cpp`.
 
-`BuildingConfig_t::IsDiscovered` implements **OR** over `required_techs` (any one tech unlocks — surprising for a field named "required") and returns **false for an empty list** — a building with no tech requirement can never be built (`include/game/buildings/BuildingConfigParser.h:26-36`). `SocialPolicyConfig::IsAvailable` uses a *singular* `requiredTech` where empty means always available. Two config schemas, two semantics, one of them inverted for the empty case. Current data never has an empty list, so the trap is latent.
+`BuildingConfig_t::IsDiscovered` implements **OR** over `required_techs` (any one tech unlocks — surprising for a field named "required") and returns **false for an empty list** — a building with no tech requirement can never be built (`include/game/buildings/BuildingConfigParser.h:26-36`). `SocialPolicyConfig_t::IsAvailable` uses a *singular* `requiredTech` where empty means always available. Two config schemas, two semantics, one of them inverted for the empty case. Current data never has an empty list, so the trap is latent.
 
 ### 3.6 [M] Lua evaluation: errors return 0, "scoped" globals leak
 
@@ -452,7 +490,7 @@ The coding guidelines say "Do not make up game rules or mechanics. Leave TODOs i
 >   (founding a base without a `"Base"` improvement fails loudly).
 > - `TurnStageFactory::LoadConfig` is `void` and throws on an empty stage list;
 >   unknown built-in stage ids throw instead of returning null.
-> - `GrowthConfig_tParser` / `PopCompositionConfigParser` throw on load failure
+> - `GrowthConfigParser` / `PopCompositionConfigParser` throw on load failure
 >   (matching `TechCostConfigParser` / `JsonConfigLoader`).
 > - `BreakthroughRate` / `GetTurnsUntilBreakthrough` return `std::optional<int>`
 >   instead of `-1`; SE UI formats empty as `"N/A"`.
@@ -643,9 +681,46 @@ Not "unimplemented features" — these are pieces that exist and are silently di
 
 ## 6. Conventions, naming, and style drift
 
+> **Status (2026-07-10): fixed** for the naming/API drift that made the guidelines
+> unpredictable; a few bullets deliberately deferred (see end of this note).
+>
+> Adopted rule (now in `.devin/rules/coding-guidelines.md`):
+> - Data structs → `_t`; classes never `_t`; `Ev*` events use the prefix as their marker;
+>   **enum classes always end in `_t`** (e.g. `StatId_t`, `GameCategory_t`).
+>   Parser classes are `FooParser`, never `Foo_tParser`.
+> - Constants use a `k_` prefix with PascalCase remainder (`k_MaxPlayers`,
+>   `k_IdentityFile`).
+> - Methods are PascalCase (`EventBus::Subscribe`/`Publish`/`Unsubscribe`,
+>   `Signal::Connect`/`Emit`). Public signals are `On…` (`OnGrowth`, `OnPopGained`).
+>   Members after `m_` are camelCase (`m_goldenAge`). Private methods end in `_`.
+> - Enum↔string: prefer `magic_enum` when the wire form matches the enumerator (case
+>   folding allowed); keep one explicit map only when the wire form truly differs
+>   (`StatId_t` ↔ snake_case, display labels with spaces).
+>
+> Closed in this pass:
+> - Mangled `GrowthConfig_tParser` → `GrowthConfigParser`.
+> - Missing `_t` on the named data structs: `Hook_t`, `WorldGenConfig_t`, `Color_t`,
+>   `SocialPolicyConfig_t`, `SocialRatingConfig_t`, `PopCompositionConfig_t`,
+>   `TechCostConfig_t` (and `Hook_t` fields → `modId`/`scriptPath`).
+> - `EventBus` / `Signal` method casing and all public signal member renames.
+> - `Tile::ToString(Rockiness_t/Moisture_t)`, `SocialRatingIdToString`, and
+>   `GameCategoryToString`/`ParseGameCategory` now go through `magic_enum`
+>   (`StatId_t` and `CategoryDisplayName(FutureSociety)` stay explicit — wire/display
+>   forms differ from enumerator names).
+> - Building id typo `"sattelite"` → `"satellite"` (no saves/mods reference it yet).
+>
+> Deliberately deferred:
+> - Config schema casing unification (snake_case stats vs PascalCase scopes) — a
+>   mod-facing schema decision, not a C++ rename.
+> - A real logging seam replacing the ~54 `cout`/`cerr` sites — called out as future
+>   work in the original finding; not a naming fix.
+> - Exhaustive private-method `_` audit and residual pointer→reference cleanups —
+>   rule restated; 4.2 already removed the worst constructor nullability. Fix
+>   opportunistically when touching those call sites.
+
 The project defines unusually specific conventions (`.devin/rules/coding-guidelines.md`); they are applied inconsistently enough that they no longer predict what code looks like:
 
-- **`_t` postfix rule** ("Structs and Enums: postfix with _t"): roughly half comply. `FactionConfig_t`, `EnergyAllocation_t`, `Key_t` vs `TurnStageConfig`, `TurnStageInfo`, `Hook`, `WorldGenConfig`, `Color`, `SocialPolicyConfig`, `SocialRatingConfig`, all `Ev*` events, and ~14 enums (`StatId`, `TurnStage`, `ModifierOp`, `SocialCategory`, …). Worse, mechanical application produced mangled *class* names: `GrowthConfig_tParser`, `ProductionCostConfig_tParser`.
+- **`_t` postfix rule** ("Structs and Enums: postfix with _t"): roughly half comply. `FactionConfig_t`, `EnergyAllocation_t`, `Key_t` vs `TurnStageConfig`, `TurnStageInfo`, `Hook`, `WorldGenConfig`, `Color`, `SocialPolicyConfig`, `SocialRatingConfig`, all `Ev*` events, and ~14 enums (`StatId_t`, `TurnStage`, `ModifierOp_t`, `SocialCategory_t`, …). Worse, mechanical application produced mangled *class* names: `GrowthConfig_tParser`, `ProductionCostConfig_tParser`.
 - **Function casing**: `EventBus::subscribe/publish/unsubscribe`, `Signal::connect/emit` are lowercase in a PascalCase codebase; public signal members are snake_case (`on_pop_gained`, `m_golden_age`).
 - **Private-method underscore suffix** is inconsistent even within one class (`BaseView::HandlePopClick` vs `HandleTileClick_`).
 - **Enum↔string mapping** is hand-rolled in at least six places (`BonusEffectParser` ×5, `ResearchCategory`, `Tile::ToString`, `SocialRatingIdToString`, UI display names) while `magic_enum` is already a dependency used by `TurnStageFactory`. Each hand map is a drift risk against its enum.
@@ -697,4 +772,4 @@ The project defines unusually specific conventions (`.devin/rules/coding-guideli
 2. **Invariants by convention**: manual wiring steps (WireBase), magic config IDs ("Base", "Drone", default policies), index-0 player, "call AutoAssignWorkers after", "move units via WorldMap" — each is a rule that exists only in comments and future contributors' memories.
 3. **Two-phase construction + nullable dependencies** → defensive null checks → inconsistent failure styles (4.2 → 3.8): one root cause producing the two noisiest code smells. *(Both closed 2026-07-09/10: construction is single-phase for the listed types, and failure handling follows the 3.8 throw/optional/Find rule.)*
 4. **Boundaries declared but not enforced**: lib/game, data/state (GameDataContext/GameState), Null/SFML backends, "mod-facing" bus, docs vs code — in each case the stated boundary and the real dependency graph disagree.
-5. **Guidelines exist but drift freely** (naming, references-over-pointers, exceptions-over-defaults, diagram upkeep) — either the rules or the code should change, but agreement is currently absent.
+5. **Guidelines exist but drift freely** (naming, references-over-pointers, exceptions-over-defaults, diagram upkeep) — either the rules or the code should change, but agreement is currently absent. *(Addressed 2026-07-10 for naming: guidelines rewritten and the named offenders brought in line; see finding 6. Diagram upkeep remains under finding 7.)*

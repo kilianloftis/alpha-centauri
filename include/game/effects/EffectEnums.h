@@ -5,7 +5,7 @@
 namespace ac
 {
 
-enum class StatId
+enum class StatId_t
 {
     // Base resources
     Nutrients,
@@ -41,11 +41,11 @@ enum class StatId
 };
 
 // How a stat's modifier stack is seeded — the seed-semantics counterpart of LaneFor's scope
-// routing (BonusEffect.h). Adding a StatId forces a kind decision in KindFor's exhaustive
+// routing (BonusEffect.h). Adding a StatId_t forces a kind decision in KindFor's exhaustive
 // switch, and SeedFor derives the context-free seed from it, so a resolve site can no longer
 // default a pure-multiplier stat to a 0.0 seed (which silently resolves to 0 — see
 // ResolveStatModifiers).
-enum class StatKind
+enum class StatKind_t
 {
     // Contributions add onto an empty base; the context-free seed is 0.0.
     Additive,
@@ -58,31 +58,31 @@ enum class StatKind
     RawScaled,
 };
 
-constexpr StatKind KindFor(StatId stat)
+constexpr StatKind_t KindFor(StatId_t stat)
 {
     switch (stat)
     {
-        case StatId::Nutrients:
-        case StatId::Minerals:
-        case StatId::Energy:
-        case StatId::Econ:
-        case StatId::Labs:
-        case StatId::Psych:
-        case StatId::Attack:
-        case StatId::Defense:
-        case StatId::Movement:
-        case StatId::HitPoints:
-        case StatId::DisengageChance:
-        case StatId::Fuel:
-        case StatId::DamageFromOutOfFuel:
-        case StatId::CargoCapacity:
-        case StatId::DifficultTerrainCost:
-        case StatId::TechCost:             return StatKind::Additive;
-        case StatId::CostMultiplier:       return StatKind::PureMultiplier;
-        case StatId::GrowthRate:
-        case StatId::MoistureTier:         return StatKind::RawScaled;
+        case StatId_t::Nutrients:
+        case StatId_t::Minerals:
+        case StatId_t::Energy:
+        case StatId_t::Econ:
+        case StatId_t::Labs:
+        case StatId_t::Psych:
+        case StatId_t::Attack:
+        case StatId_t::Defense:
+        case StatId_t::Movement:
+        case StatId_t::HitPoints:
+        case StatId_t::DisengageChance:
+        case StatId_t::Fuel:
+        case StatId_t::DamageFromOutOfFuel:
+        case StatId_t::CargoCapacity:
+        case StatId_t::DifficultTerrainCost:
+        case StatId_t::TechCost:             return StatKind_t::Additive;
+        case StatId_t::CostMultiplier:       return StatKind_t::PureMultiplier;
+        case StatId_t::GrowthRate:
+        case StatId_t::MoistureTier:         return StatKind_t::RawScaled;
     }
-    return StatKind::Additive; // unreachable; all enumerators handled above
+    return StatKind_t::Additive; // unreachable; all enumerators handled above
 }
 
 // The ResolveStatModifiers seed for a context-free resolve of `stat`: 0.0 for Additive,
@@ -90,19 +90,19 @@ constexpr StatKind KindFor(StatId stat)
 // being scaled instead. A site that deliberately resolves an Additive stat against a raw
 // base (tile yield's elevation energy seed, pop tile multipliers, the tile defense
 // multiplier) also passes its seed explicitly rather than calling this.
-constexpr double SeedFor(StatId stat)
+constexpr double SeedFor(StatId_t stat)
 {
     switch (KindFor(stat))
     {
-        case StatKind::Additive:       return 0.0;
-        case StatKind::PureMultiplier: return 1.0;
-        case StatKind::RawScaled:
+        case StatKind_t::Additive:       return 0.0;
+        case StatKind_t::PureMultiplier: return 1.0;
+        case StatKind_t::RawScaled:
             throw std::logic_error("SeedFor: RawScaled stat has no universal seed - pass the raw value it scales");
     }
     return 0.0; // unreachable; all enumerators handled above
 }
 
-enum class SocialRatingId
+enum class SocialRatingId_t
 {
     Economy,
     Efficiency,
@@ -116,7 +116,7 @@ enum class SocialRatingId
     Probe
 };
 
-enum class RuleFlagId
+enum class RuleFlagId_t
 {
     // Unit flags
     Flight,

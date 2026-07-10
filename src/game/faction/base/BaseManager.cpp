@@ -82,30 +82,30 @@ BaseManager::BaseManager(
     // A base provides its own garrison defense bonus, modeled as the "Base" improvement.
     m_rTileEffects.AddImprovementWithEffects(m_tile, "Base");
 
-    m_pPopulation->on_growth.connect([this]() {
+    m_pPopulation->OnGrowth.Connect([this]() {
         m_pPopulation->AddPop();
     });
-    m_pPopulation->on_starvation.connect([this]() {
+    m_pPopulation->OnStarvation.Connect([this]() {
         m_pPopulation->RemovePop();
     });
-    m_pPopulation->on_pop_gained.connect([this](int newSize) {
+    m_pPopulation->OnPopGained.Connect([this](int newSize) {
         m_pWorkerAssignments->AutoAssignWorkers();
-        on_pop_gained.emit(newSize);
+        OnPopGained.Emit(newSize);
     });
     // Newly created pops start unassigned; auto-assign once after construction.
     m_pWorkerAssignments->AutoAssignWorkers();
-    m_pPopulation->on_pop_lost.connect([this](int newSize) {
-        on_pop_lost.emit(newSize);
+    m_pPopulation->OnPopLost.Connect([this](int newSize) {
+        OnPopLost.Emit(newSize);
     });
 
-    m_pProduction->on_production_completed.connect([this](const std::string& itemId) {
+    m_pProduction->OnProductionCompleted.Connect([this](const std::string& itemId) {
         m_pBuildings->AddBuilding(itemId);
         if (!m_pBuildingRegistry)
         {
             throw std::runtime_error("BaseManager: building registry is null after production");
         }
         DispatchInstantaneousEffects(m_pBuildingRegistry->Get(itemId), *this);
-        on_production_completed.emit(itemId);
+        OnProductionCompleted.Emit(itemId);
     });
 }
 
@@ -278,13 +278,13 @@ const BaseEffects_t& BaseManager::BuildBaseEffects_() const
     return m_cachedBaseEffects;
 }
 
-int BaseManager::GetEffectiveSocialRating(SocialRatingId rating) const
+int BaseManager::GetEffectiveSocialRating(SocialRatingId_t rating) const
 {
     if (!m_pEffectsProvider)
     {
         throw std::runtime_error("BaseManager::GetEffectiveSocialRating: m_pEffectsProvider is null");
     }
-    const std::map<SocialRatingId, int> totals =
+    const std::map<SocialRatingId_t, int> totals =
         AccumulateSocialRatings(CollectBaseLocalEffects_(m_pEffectsProvider->GetActiveEffects()));
     const auto it = totals.find(rating);
     return it == totals.end() ? 0 : it->second;

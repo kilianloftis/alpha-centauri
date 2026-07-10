@@ -18,15 +18,15 @@ TEST_CASE("FilterByStatId: keeps only StatModifiers targeting the requested stat
 {
     actest::EffectPool pool;
     const std::vector<ActiveEffect_t> effects = {
-        Active(pool.StatMod(StatId::Nutrients, 1.0), "nut"),
-        Active(pool.StatMod(StatId::Minerals, 2.0), "min"),
-        Active(pool.RuleFlag(RuleFlagId::Flight), "flag"),
+        Active(pool.StatMod(StatId_t::Nutrients, 1.0), "nut"),
+        Active(pool.StatMod(StatId_t::Minerals, 2.0), "min"),
+        Active(pool.RuleFlag(RuleFlagId_t::Flight), "flag"),
     };
 
-    const std::vector<ActiveEffect_t> matching = actest::Materialize(FilterByStatId(effects, StatId::Nutrients));
+    const std::vector<ActiveEffect_t> matching = actest::Materialize(FilterByStatId(effects, StatId_t::Nutrients));
     REQUIRE(matching.size() == 1);
     CHECK(matching[0].sourceId == "nut");
-    CHECK(FilterByStatId(effects, StatId::Energy).empty());
+    CHECK(FilterByStatId(effects, StatId_t::Energy).empty());
 }
 
 TEST_CASE("FilterByStatId: includes selector-carrying (per-tile) modifiers", "[effects][filter]")
@@ -34,10 +34,10 @@ TEST_CASE("FilterByStatId: includes selector-carrying (per-tile) modifiers", "[e
     // Documented: FilterByStatId keeps per-tile modifiers; only FilterFlatByStatId drops them.
     actest::EffectPool pool;
     const std::vector<ActiveEffect_t> effects = {
-        Active(pool.StatMod(StatId::Nutrients, 1.0, ModifierOp::Add, EffectScope_t::ThisBase,
+        Active(pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
                             actest::ImprovementSelector("Farm")), "farm_booster"),
     };
-    CHECK(std::ranges::distance(FilterByStatId(effects, StatId::Nutrients)) == 1);
+    CHECK(std::ranges::distance(FilterByStatId(effects, StatId_t::Nutrients)) == 1);
 }
 
 TEST_CASE("FilterByStatId: excludes condition-carrying effects from context-free resolution",
@@ -46,12 +46,12 @@ TEST_CASE("FilterByStatId: excludes condition-carrying effects from context-free
     // A "+25% attack vs Base" style effect must never leak into context-free totals.
     actest::EffectPool pool;
     const std::vector<ActiveEffect_t> effects = {
-        Active(pool.StatMod(StatId::Attack, 25.0, ModifierOp::AddPercent, EffectScope_t::ThisUnit,
+        Active(pool.StatMod(StatId_t::Attack, 25.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit,
                             std::nullopt, actest::TargetTileHas("Base")), "vs_base"),
-        Active(pool.StatMod(StatId::Attack, 4.0, ModifierOp::Add, EffectScope_t::ThisUnit), "weapon"),
+        Active(pool.StatMod(StatId_t::Attack, 4.0, ModifierOp_t::Add, EffectScope_t::ThisUnit), "weapon"),
     };
 
-    const std::vector<ActiveEffect_t> matching = actest::Materialize(FilterByStatId(effects, StatId::Attack));
+    const std::vector<ActiveEffect_t> matching = actest::Materialize(FilterByStatId(effects, StatId_t::Attack));
     REQUIRE(matching.size() == 1);
     CHECK(matching[0].sourceId == "weapon");
 }
@@ -61,14 +61,14 @@ TEST_CASE("FilterFlatByStatId: excludes both selector-carrying and condition-car
 {
     actest::EffectPool pool;
     const BaseEffects_t baseEffects{{
-        Active(pool.StatMod(StatId::Nutrients, 2.0), "flat"),
-        Active(pool.StatMod(StatId::Nutrients, 1.0, ModifierOp::Add, EffectScope_t::ThisBase,
+        Active(pool.StatMod(StatId_t::Nutrients, 2.0), "flat"),
+        Active(pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
                             actest::ImprovementSelector("Farm")), "per_tile"),
-        Active(pool.StatMod(StatId::Nutrients, 1.0, ModifierOp::Add, EffectScope_t::ThisBase,
+        Active(pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
                             std::nullopt, actest::TargetTileHas("River")), "conditional"),
     }};
 
-    const std::vector<ActiveEffect_t> matching = actest::Materialize(FilterFlatByStatId(baseEffects, StatId::Nutrients));
+    const std::vector<ActiveEffect_t> matching = actest::Materialize(FilterFlatByStatId(baseEffects, StatId_t::Nutrients));
     REQUIRE(matching.size() == 1);
     CHECK(matching[0].sourceId == "flat");
 }
@@ -76,7 +76,7 @@ TEST_CASE("FilterFlatByStatId: excludes both selector-carrying and condition-car
 TEST_CASE("ConditionSatisfied: no condition always applies", "[effects][condition]")
 {
     actest::EffectPool pool;
-    const EffectConfig_t& config = pool.StatMod(StatId::Attack, 1.0);
+    const EffectConfig_t& config = pool.StatMod(StatId_t::Attack, 1.0);
 
     CHECK(ConditionSatisfied(config, EffectContext_t{}));
     Tile tile(3, 3);
@@ -86,22 +86,22 @@ TEST_CASE("ConditionSatisfied: no condition always applies", "[effects][conditio
 TEST_CASE("ConditionSatisfied: TargetTileHas matches terrain features via string id", "[effects][condition]")
 {
     actest::EffectPool pool;
-    const EffectConfig_t& vsRocky = pool.StatMod(StatId::Attack, 25.0, ModifierOp::AddPercent,
+    const EffectConfig_t& vsRocky = pool.StatMod(StatId_t::Attack, 25.0, ModifierOp_t::AddPercent,
                                                  EffectScope_t::ThisUnit, std::nullopt,
                                                  actest::TargetTileHas("Rocky"));
 
     Tile tile(0, 0);
-    tile.SetRockiness(Rockiness::Flat);
+    tile.SetRockiness(Rockiness_t::Flat);
     CHECK_FALSE(ConditionSatisfied(vsRocky, EffectContext_t{&tile}));
 
-    tile.SetRockiness(Rockiness::Rocky);
+    tile.SetRockiness(Rockiness_t::Rocky);
     CHECK(ConditionSatisfied(vsRocky, EffectContext_t{&tile}));
 }
 
 TEST_CASE("ConditionSatisfied: TargetTileHas matches improvements, including Base", "[effects][condition]")
 {
     actest::EffectPool pool;
-    const EffectConfig_t& vsBase = pool.StatMod(StatId::Attack, 25.0, ModifierOp::AddPercent,
+    const EffectConfig_t& vsBase = pool.StatMod(StatId_t::Attack, 25.0, ModifierOp_t::AddPercent,
                                                 EffectScope_t::ThisUnit, std::nullopt,
                                                 actest::TargetTileHas("Base"));
 
@@ -122,7 +122,7 @@ TEST_CASE("ConditionSatisfied: a conditional effect with no target tile in conte
           "[effects][condition]")
 {
     actest::EffectPool pool;
-    const EffectConfig_t& conditional = pool.StatMod(StatId::Attack, 25.0, ModifierOp::AddPercent,
+    const EffectConfig_t& conditional = pool.StatMod(StatId_t::Attack, 25.0, ModifierOp_t::AddPercent,
                                                      EffectScope_t::ThisUnit, std::nullopt,
                                                      actest::TargetTileHas("Forest"));
     CHECK_FALSE(ConditionSatisfied(conditional, EffectContext_t{}));
@@ -132,19 +132,19 @@ TEST_CASE("FilterByStatIdInContext: unconditional effects plus satisfied conditi
 {
     actest::EffectPool pool;
     Tile rockyTile(0, 0);
-    rockyTile.SetRockiness(Rockiness::Rocky);
+    rockyTile.SetRockiness(Rockiness_t::Rocky);
 
     const std::vector<ActiveEffect_t> effects = {
-        Active(pool.StatMod(StatId::Attack, 4.0, ModifierOp::Add, EffectScope_t::ThisUnit), "weapon"),
-        Active(pool.StatMod(StatId::Attack, 25.0, ModifierOp::AddPercent, EffectScope_t::ThisUnit,
+        Active(pool.StatMod(StatId_t::Attack, 4.0, ModifierOp_t::Add, EffectScope_t::ThisUnit), "weapon"),
+        Active(pool.StatMod(StatId_t::Attack, 25.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit,
                             std::nullopt, actest::TargetTileHas("Rocky")), "vs_rocky"),
-        Active(pool.StatMod(StatId::Attack, 25.0, ModifierOp::AddPercent, EffectScope_t::ThisUnit,
+        Active(pool.StatMod(StatId_t::Attack, 25.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit,
                             std::nullopt, actest::TargetTileHas("Base")), "vs_base"),
-        Active(pool.StatMod(StatId::Defense, 2.0, ModifierOp::Add, EffectScope_t::ThisUnit), "armor"),
+        Active(pool.StatMod(StatId_t::Defense, 2.0, ModifierOp_t::Add, EffectScope_t::ThisUnit), "armor"),
     };
 
     const EffectContext_t ctx{&rockyTile};
-    const std::vector<ActiveEffect_t> matching = actest::Materialize(FilterByStatIdInContext(effects, StatId::Attack, ctx));
+    const std::vector<ActiveEffect_t> matching = actest::Materialize(FilterByStatIdInContext(effects, StatId_t::Attack, ctx));
 
     REQUIRE(matching.size() == 2);
     CHECK(matching[0].sourceId == "weapon");
@@ -159,13 +159,13 @@ TEST_CASE("FilterByStatIdInContext: with an empty context only unconditional eff
 {
     actest::EffectPool pool;
     const std::vector<ActiveEffect_t> effects = {
-        Active(pool.StatMod(StatId::Attack, 4.0, ModifierOp::Add, EffectScope_t::ThisUnit), "weapon"),
-        Active(pool.StatMod(StatId::Attack, 25.0, ModifierOp::AddPercent, EffectScope_t::ThisUnit,
+        Active(pool.StatMod(StatId_t::Attack, 4.0, ModifierOp_t::Add, EffectScope_t::ThisUnit), "weapon"),
+        Active(pool.StatMod(StatId_t::Attack, 25.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit,
                             std::nullopt, actest::TargetTileHas("Rocky")), "vs_rocky"),
     };
 
     const std::vector<ActiveEffect_t> matching =
-        actest::Materialize(FilterByStatIdInContext(effects, StatId::Attack, EffectContext_t{}));
+        actest::Materialize(FilterByStatIdInContext(effects, StatId_t::Attack, EffectContext_t{}));
     REQUIRE(matching.size() == 1);
     CHECK(matching[0].sourceId == "weapon");
 }
@@ -174,9 +174,9 @@ TEST_CASE("FilterByScope: exact scope match only", "[effects][filter]")
 {
     actest::EffectPool pool;
     const std::vector<ActiveEffect_t> effects = {
-        Active(pool.StatMod(StatId::Econ, 1.0, ModifierOp::Add, EffectScope_t::ThisBase), "flat"),
-        Active(pool.StatMod(StatId::Nutrients, 50.0, ModifierOp::AddPercent, EffectScope_t::ThisPop), "mult"),
-        Active(pool.StatMod(StatId::Energy, 1.0, ModifierOp::Add, EffectScope_t::FactionGlobal), "global"),
+        Active(pool.StatMod(StatId_t::Econ, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase), "flat"),
+        Active(pool.StatMod(StatId_t::Nutrients, 50.0, ModifierOp_t::AddPercent, EffectScope_t::ThisPop), "mult"),
+        Active(pool.StatMod(StatId_t::Energy, 1.0, ModifierOp_t::Add, EffectScope_t::FactionGlobal), "global"),
     };
 
     const std::vector<ActiveEffect_t> thisPop = actest::Materialize(FilterByScope(effects, EffectScope_t::ThisPop));
@@ -195,8 +195,8 @@ TEST_CASE("Filters tolerate null configs", "[effects][filter]")
     std::vector<ActiveEffect_t> effects;
     effects.push_back(ActiveEffect_t{nullptr, "broken", nullptr});
 
-    CHECK(FilterByStatId(effects, StatId::Energy).empty());
-    CHECK(FilterFlatByStatId(BaseEffects_t{effects}, StatId::Energy).empty());
-    CHECK(FilterByStatIdInContext(effects, StatId::Energy, EffectContext_t{}).empty());
+    CHECK(FilterByStatId(effects, StatId_t::Energy).empty());
+    CHECK(FilterFlatByStatId(BaseEffects_t{effects}, StatId_t::Energy).empty());
+    CHECK(FilterByStatIdInContext(effects, StatId_t::Energy, EffectContext_t{}).empty());
     CHECK(FilterByScope(effects, EffectScope_t::ThisBase).empty());
 }

@@ -53,9 +53,9 @@ graph TB
         StageOrder["m_stageOrder<br/>vector&lt;id&gt;"]
     end
 
-    subgraph "Hook System"
+    subgraph "Hook_t System"
         HookContext[HookContext]
-        Hook[Hook<br/>mod_id, script_path, callback]
+        Hook_t[Hook_t<br/>mod_id, script_path, callback]
     end
 
     Engine --> TurnStageFactory
@@ -64,7 +64,7 @@ graph TB
     ConfigFile --> TurnStageConfigParser
     TurnStageConfigParser --> TurnStageConfig
     TurnStageConfig --> HookContext
-    HookContext --> Hook
+    HookContext --> Hook_t
 
     TurnStageFactory --> TurnStageConfigParser
     TurnStageRegistrar -.->|registers at static init| CreatorRegistry
@@ -175,9 +175,9 @@ present in `turn_stages.json` but with no matching built-in C++ class (e.g.
 `CustomModStage` in the sample config). Both require at least one hook (pre/post/replace)
 at construction, or they would silently do nothing.
 
-### HookContext / Hook (`HookContext.h`)
+### HookContext / Hook_t (`HookContext.h`)
 Unchanged: `pre`, `post`, and `replace` hook lists per stage, parsed from the stage's
-`hooks` object in config. `Hook::callback` is still `std::function<void()>` — not yet
+`hooks` object in config. `Hook_t::callback` is still `std::function<void()>` — not yet
 wired to any script runtime (see the moddability finding in
 `docs/code-review-findings.md` §1.10; hooks receive no `GameState`/`Faction` context, so a
 real mod script could not act on one yet even though the plumbing to invoke a callback

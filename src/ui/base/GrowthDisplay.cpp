@@ -11,7 +11,7 @@ namespace ac
 namespace
 {
 
-constexpr Color k_BackgroundColor      {20, 20, 20, 255};
+constexpr Color_t k_BackgroundColor      {20, 20, 20, 255};
 constexpr float k_HeaderFontSizeRatio  = 0.04f;
 constexpr float k_EntryFontSizeRatio   = 0.03f;
 constexpr float k_LineHeightRatio      = 0.05f;

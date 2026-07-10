@@ -14,11 +14,11 @@ TEST_CASE("TechConfigParser parses game categories", "[game][category][parser]")
     const std::vector<TechConfig_t> configs = parser.ParseConfig(FixturePath("techs.json"));
 
     REQUIRE(configs.size() == 5);
-    CHECK(configs[0].category == GameCategory::Build);
-    CHECK(configs[1].category == GameCategory::Grow);
-    CHECK(configs[2].category == GameCategory::Discover);
-    CHECK(configs[3].category == GameCategory::Conquer);
-    CHECK(configs[4].category == GameCategory::Build);
+    CHECK(configs[0].category == GameCategory_t::Build);
+    CHECK(configs[1].category == GameCategory_t::Grow);
+    CHECK(configs[2].category == GameCategory_t::Discover);
+    CHECK(configs[3].category == GameCategory_t::Conquer);
+    CHECK(configs[4].category == GameCategory_t::Build);
 }
 
 TEST_CASE("BuildingConfigParser parses game categories", "[game][category][parser]")
@@ -38,5 +38,5 @@ TEST_CASE("BuildingConfigParser parses game categories", "[game][category][parse
     }
 
     REQUIRE(pGrantedHall != nullptr);
-    CHECK(pGrantedHall->category == GameCategory::Discover);
+    CHECK(pGrantedHall->category == GameCategory_t::Discover);
 }

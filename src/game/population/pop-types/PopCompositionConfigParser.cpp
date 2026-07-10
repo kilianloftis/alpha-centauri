@@ -5,10 +5,10 @@
 namespace ac
 {
 
-PopCompositionConfig PopCompositionConfigParser::ParseConfig(const std::string& scriptPath,
+PopCompositionConfig_t PopCompositionConfigParser::ParseConfig(const std::string& scriptPath,
                                                              LuaRuntime& rLua)
 {
-    PopCompositionConfig config;
+    PopCompositionConfig_t config;
 
     sol::state& lua = rLua.GetState();
 

@@ -10,14 +10,14 @@ namespace ac
 
 struct ImprovementConfig_t;
 
-enum class Rockiness
+enum class Rockiness_t
 {
     Flat,
     Rolling,
     Rocky
 };
 
-enum class Moisture
+enum class Moisture_t
 {
     Arid,
     Moist,
@@ -26,8 +26,8 @@ enum class Moisture
 
 // String ids matching ImprovementConfig_t::id entries in config/improvements.json,
 // used to look up effects/exclusivity for these terrain classifications.
-std::string ToString(Rockiness rockiness);
-std::string ToString(Moisture moisture);
+std::string ToString(Rockiness_t rockiness);
+std::string ToString(Moisture_t moisture);
 
 // Every terrain feature id Tile::HasFeature can match (all rockiness/moisture tiers plus
 // River and Fungus). Together with improvement ids, these are the valid feature references
@@ -51,14 +51,14 @@ public:
     // re-derives the current value from the base plus whatever Condensers currently reach
     // this tile, so the bonus disappears cleanly the moment a Condenser is removed - never
     // mutated incrementally, to avoid drift from overlapping Condensers or add/remove order.
-    void SetMoisture(Moisture moisture);
-    Moisture GetMoisture() const;
+    void SetMoisture(Moisture_t moisture);
+    Moisture_t GetMoisture() const;
 
-    void SetBaseMoisture(Moisture moisture);
-    Moisture GetBaseMoisture() const;
+    void SetBaseMoisture(Moisture_t moisture);
+    Moisture_t GetBaseMoisture() const;
 
-    void SetRockiness(Rockiness rockiness);
-    Rockiness GetRockiness() const;
+    void SetRockiness(Rockiness_t rockiness);
+    Rockiness_t GetRockiness() const;
 
     void SetElevation(int elevation);  // in meters, range -4000 to 4000
     int GetElevation() const;
@@ -104,9 +104,9 @@ private:
     int m_x;
     int m_y;
 
-    Moisture m_moisture;
-    Moisture m_baseMoisture;
-    Rockiness m_rockiness;
+    Moisture_t m_moisture;
+    Moisture_t m_baseMoisture;
+    Rockiness_t m_rockiness;
     int m_elevation;
 
     bool m_bHasRiver;

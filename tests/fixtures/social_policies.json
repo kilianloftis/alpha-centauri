@@ -28,5 +28,23 @@
     "effects": [
       { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "industry", "amount": 2 } }
     ]
+  },
+  {
+    "id": "simple",
+    "name": "Simple",
+    "category": "economics",
+    "effects": []
+  },
+  {
+    "id": "survival",
+    "name": "Survival",
+    "category": "values",
+    "effects": []
+  },
+  {
+    "id": "none_future",
+    "name": "None",
+    "category": "future_society",
+    "effects": []
   }
 ]

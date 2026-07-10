@@ -44,13 +44,13 @@ void ForEachTileInManhattanRadius(const Tile& rOrigin, WorldMapT& rWorldMap,
 template<typename WorldMapT, typename Fn>
 void ForEachTileInWorkableArea(const Tile& rOrigin, WorldMapT& rWorldMap, Fn&& fn)
 {
-    static constexpr int kRadius = 2;
-    for (int dy = -kRadius; dy <= kRadius; ++dy)
+    static constexpr int k_Radius = 2;
+    for (int dy = -k_Radius; dy <= k_Radius; ++dy)
     {
-        for (int dx = -kRadius; dx <= kRadius; ++dx)
+        for (int dx = -k_Radius; dx <= k_Radius; ++dx)
         {
             if (dx == 0 && dy == 0) continue;
-            if (std::abs(dx) == kRadius && std::abs(dy) == kRadius) continue;
+            if (std::abs(dx) == k_Radius && std::abs(dy) == k_Radius) continue;
 
             auto* pTile = rWorldMap.GetTile(rOrigin.GetX() + dx, rOrigin.GetY() + dy);
             if (pTile)

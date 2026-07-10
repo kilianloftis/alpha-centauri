@@ -14,9 +14,9 @@ namespace ac
 namespace
 {
 
-constexpr Color k_BackgroundColor          {20, 20, 30, 255};
-constexpr Color k_BorderColor              {80, 80, 120, 255};
-constexpr Color k_ValueColor               {255, 255, 255, 255};
+constexpr Color_t k_BackgroundColor          {20, 20, 30, 255};
+constexpr Color_t k_BorderColor              {80, 80, 120, 255};
+constexpr Color_t k_ValueColor               {255, 255, 255, 255};
 
 constexpr float k_RowHeightRatio           = 0.5f;
 constexpr float k_HorizontalPaddingRatio   = 0.02f;

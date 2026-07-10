@@ -26,8 +26,8 @@ PopulationManager::PopulationManager(const PopTypeRegistry* pPopTypeRegistry,
     , m_pCompositionCalculator(pCompositionCalculator)
     , m_maxSize(pGrowthConfig ? pGrowthConfig->maxBaseSize : 7)
     , m_nutrientStockpile(0)
-    , m_riot(on_will_riot, on_is_rioting, on_riot_ended)
-    , m_golden_age(on_golden_age_started, on_golden_age_ended)
+    , m_riot(OnWillRiot, OnIsRioting, OnRiotEnded)
+    , m_goldenAge(OnGoldenAgeStarted, OnGoldenAgeEnded)
 {
 }
 
@@ -120,7 +120,7 @@ void PopulationManager::ApplyGrowth(int nutrients, const BaseEffects_t& rBaseEff
     if (m_nutrientStockpile < 0)
     {
         m_nutrientStockpile = 0;
-        on_starvation.emit();
+        OnStarvation.Emit();
         return;
     }
 
@@ -135,7 +135,7 @@ void PopulationManager::ApplyGrowth(int nutrients, const BaseEffects_t& rBaseEff
     if (m_nutrientStockpile >= required)
     {
         m_nutrientStockpile -= required;
-        on_growth.emit();
+        OnGrowth.Emit();
     }
 }
 
@@ -177,7 +177,7 @@ void PopulationManager::RecalculateComposition()
     inputs.psychOutput = m_container.ComputePsychOutput();
     // TODO: supply faction drone/talent modifiers once faction modifiers are accessible here
     const PopCompositionResult targets = m_pCompositionCalculator->Calculate(inputs);
-    const PopCompositionConfig& rConfig = m_pCompositionCalculator->GetConfig();
+    const PopCompositionConfig_t& rConfig = m_pCompositionCalculator->GetConfig();
 
     m_container.ApplyCompositionTargets(targets, GetDefaultPopType(),
                                         rConfig.droneTypeId, rConfig.talentTypeId);
@@ -195,17 +195,17 @@ void PopulationManager::CheckGoldenAgeEndOfTurn()
     inputs.talentCount = m_container.GetTalentCount();
     inputs.workerCount = m_container.GetWorkerCount();
     inputs.specialistCount = m_container.GetSpecialistCount();
-    m_golden_age.Update(inputs);
+    m_goldenAge.Update(inputs);
 }
 
 void PopulationManager::NotifyPopGained_()
 {
-    on_pop_gained.emit(GetSize());
+    OnPopGained.Emit(GetSize());
 }
 
 void PopulationManager::NotifyPopLost_()
 {
-    on_pop_lost.emit(GetSize());
+    OnPopLost.Emit(GetSize());
 }
 
 } // namespace ac

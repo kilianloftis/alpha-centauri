@@ -120,7 +120,7 @@ void ResearchManager::ComputePointsNeeded_() const
     {
         const FactionEffects_t& rFactionEffects = m_pEffectsProvider->GetActiveEffects();
         inputs.factionTechCostModifier = static_cast<int>(
-            ResolveStatModifiers(FilterByStatId(rFactionEffects.effects, StatId::TechCost), 0.0).total);
+            ResolveStatModifiers(FilterByStatId(rFactionEffects.effects, StatId_t::TechCost), 0.0).total);
         m_costEffectsVersion = m_pEffectsProvider->GetEffectsVersion();
     }
     // All other fields are placeholder defaults (diff=1, turns=0, bIsAI=false, etc.)

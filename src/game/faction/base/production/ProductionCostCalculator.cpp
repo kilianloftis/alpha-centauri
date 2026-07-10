@@ -12,8 +12,8 @@ int ProductionCostCalculator::ComputeCost(int baseCost, const BaseEffects_t& rBa
     // CostMultiplier is PureMultiplier (seed 1.0). Industry rating levels emit AddPercent
     // contributions here via ExpandSocialRatingEffects — same seam as GrowthRate.
     const double multiplier = ResolveStatModifiers(
-        FilterFlatByStatId(rBaseEffects, StatId::CostMultiplier),
-        SeedFor(StatId::CostMultiplier)).total;
+        FilterFlatByStatId(rBaseEffects, StatId_t::CostMultiplier),
+        SeedFor(StatId_t::CostMultiplier)).total;
 
     return std::max(1, static_cast<int>(std::lround(baseCost * k_MineralsPerRow * multiplier)));
 }

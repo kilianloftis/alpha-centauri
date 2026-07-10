@@ -61,7 +61,7 @@ private:
 
     TileResources_t ComputeWorked_(const BaseEffects_t& rBaseEffects) const;
 
-    int CalculateResource_(StatId stat, const TileResources_t& worked, const BaseEffects_t& rBaseEffects) const;
+    int CalculateResource_(StatId_t stat, const TileResources_t& worked, const BaseEffects_t& rBaseEffects) const;
     int CalculateEcon_(int energy, const BaseEffects_t& rBaseEffects) const;
     int CalculateLabs_(int energy, const BaseEffects_t& rBaseEffects) const;
     int CalculatePsych_(int energy, const BaseEffects_t& rBaseEffects) const;

@@ -7,8 +7,8 @@ namespace ac
 namespace
 {
 
-constexpr Color k_BackgroundColor           {20, 20, 40, 255};
-constexpr Color k_BorderColor               {100, 100, 160, 255};
+constexpr Color_t k_BackgroundColor           {20, 20, 40, 255};
+constexpr Color_t k_BorderColor               {100, 100, 160, 255};
 constexpr float k_TextHeightEstimate        = 20.0f;
 constexpr float k_TextVerticalCenterRatio     = 0.5f;
 constexpr float k_TextHorizontalPadding       = 10.0f;

@@ -14,7 +14,7 @@ void RiotCalculator::NotifyPopGrown(const RiotConditionInputs& inputs)
 {
     if (!m_bRioting && ComputeCondition_(inputs))
     {
-        m_rWillRiot.emit();
+        m_rWillRiot.Emit();
     }
 }
 
@@ -23,12 +23,12 @@ void RiotCalculator::Update(const RiotConditionInputs& inputs)
     if (ComputeCondition_(inputs))
     {
         m_bRioting = true;
-        m_rIsRioting.emit();
+        m_rIsRioting.Emit();
     }
     else if (m_bRioting)
     {
         m_bRioting = false;
-        m_rRiotEnded.emit();
+        m_rRiotEnded.Emit();
     }
 }
 

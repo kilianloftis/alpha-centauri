@@ -8,7 +8,7 @@ namespace ac
 
 class LuaRuntime;
 
-struct PopCompositionConfig
+struct PopCompositionConfig_t
 {
     std::string droneFormula;            // Lua expression: number of drones
     std::string talentFormula;           // Lua expression: number of talents
@@ -25,7 +25,7 @@ public:
 
     // Load pop_composition.lua via the shared Lua runtime.
     // Throws if the script cannot be loaded.
-    PopCompositionConfig ParseConfig(const std::string& scriptPath, LuaRuntime& rLua);
+    PopCompositionConfig_t ParseConfig(const std::string& scriptPath, LuaRuntime& rLua);
 };
 
 } // namespace ac
