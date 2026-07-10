@@ -15,7 +15,9 @@ namespace
 std::vector<ActiveEffect_t> CollectLiveUnitEffects_(const UnitDesign& rDesign, const Faction& rFaction)
 {
     std::vector<ActiveEffect_t> effects = rDesign.CollectEffects();
-    const std::vector<ActiveEffect_t> factionEffects =
+    // Lazy view, not a copy: the source is Faction's cached pool (long-lived), and this is
+    // its only use, right below.
+    auto factionEffects =
         FilterByScope(rFaction.GetActiveEffects().effects, EffectScope_t::FactionUnits);
     effects.insert(effects.end(), factionEffects.begin(), factionEffects.end());
     return effects;

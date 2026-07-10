@@ -2,7 +2,11 @@
 
 #include "game/faction/base/BaseTypes.h"
 #include "lib/effects/BonusEffect.h"
+#include <algorithm>
+#include <ranges>
 #include <string>
+#include <utility>
+#include <variant>
 #include <vector>
 
 namespace ac
@@ -123,34 +127,122 @@ double ApplyModifierStack(double base, const std::vector<std::pair<double, Modif
 // NOT defaulted: stats resolved purely through multiplicative modifiers (e.g.
 // CostMultiplier, tile defense) silently resolve to 0 from a 0 base, so every caller must
 // state its seed — 0.0 for additive stats, 1.0 for pure multipliers, or a raw value the
-// modifiers scale (tile yield, growth rate's 100).
-StatBreakdown_t ResolveStatModifiers(const std::vector<ActiveEffect_t>& matching, double baseValue);
+// modifiers scale (tile yield, growth rate's 100). Templated on the input range so it
+// accepts both an owned vector and a lazy Filter* view below without materializing one.
+template <std::ranges::input_range Range>
+StatBreakdown_t ResolveStatModifiers(Range&& matching, double baseValue)
+{
+    StatBreakdown_t breakdown;
+    breakdown.total = 0.0;
 
-// Returns effects whose target stat matches the given StatId.
+    for (const ActiveEffect_t& active : matching)
+    {
+        if (!active.config)
+        {
+            continue;
+        }
+
+        const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&active.config->effect);
+        if (!pStatModifier)
+        {
+            continue;
+        }
+
+        StatBreakdown_t::Contribution contribution;
+        contribution.sourceId = active.sourceId;
+        contribution.amount = pStatModifier->amount;
+        contribution.op = pStatModifier->op;
+        breakdown.contributions.push_back(contribution);
+    }
+
+    std::sort(breakdown.contributions.begin(), breakdown.contributions.end(),
+              [](const StatBreakdown_t::Contribution& a, const StatBreakdown_t::Contribution& b)
+              {
+                  return a.sourceId < b.sourceId;
+              });
+
+    std::vector<std::pair<double, ModifierOp>> stack;
+    stack.reserve(breakdown.contributions.size());
+    for (const StatBreakdown_t::Contribution& c : breakdown.contributions)
+    {
+        stack.emplace_back(c.amount, c.op);
+    }
+    breakdown.total = ApplyModifierStack(baseValue, stack);
+    return breakdown;
+}
+
+// Returns a lazy view of effects whose target stat matches the given StatId.
 // Only includes StatModifierEffect_t instances. Condition-carrying effects are excluded:
 // they only apply through a matching runtime context (see FilterByStatIdInContext).
-std::vector<ActiveEffect_t> FilterByStatId(const std::vector<ActiveEffect_t>& effects, StatId statId);
+// The view borrows `effects` — consume it within the statement/expression that creates it
+// (e.g. pass it straight into ResolveStatModifiers), or materialize explicitly (the vector
+// iterator-pair constructor) if the result must outlive that statement.
+inline auto FilterByStatId(const std::vector<ActiveEffect_t>& effects, StatId statId)
+{
+    return effects | std::views::filter([statId](const ActiveEffect_t& effect)
+    {
+        if (!effect.config)
+        {
+            return false;
+        }
+        const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
+        // Conditional effects are excluded from context-free resolution — they only apply
+        // through FilterByStatIdInContext with a context that satisfies the condition.
+        return pStatModifier && pStatModifier->stat == statId && !effect.config->condition;
+    });
+}
 
 // Like FilterByStatId, but for a specific runtime context: includes unconditional effects
 // plus any condition-carrying effect whose condition is satisfied by ctx. This is the entry
 // point for context-dependent resolution such as combat (attack/defense vs a given target).
-std::vector<ActiveEffect_t> FilterByStatIdInContext(const std::vector<ActiveEffect_t>& effects,
-                                                    StatId statId, const EffectContext_t& ctx);
+// Same borrowing rule as FilterByStatId.
+inline auto FilterByStatIdInContext(const std::vector<ActiveEffect_t>& effects,
+                                    StatId statId, const EffectContext_t& ctx)
+{
+    return effects | std::views::filter([statId, ctx](const ActiveEffect_t& effect)
+    {
+        if (!effect.config)
+        {
+            return false;
+        }
+        const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
+        return pStatModifier && pStatModifier->stat == statId && ConditionSatisfied(*effect.config, ctx);
+    });
+}
 
 // Like FilterByStatId, but excludes per-tile modifiers (StatModifiers carrying a tile
 // selector). Base-level resolution only: selector-carrying modifiers have already been
 // applied per worked tile and must not be counted a second time. Accepting BaseEffects_t
 // (never a raw vector or the pool) makes running this filter at any other stage a compile
-// error instead of a doc violation.
-std::vector<ActiveEffect_t> FilterFlatByStatId(const BaseEffects_t& rBaseEffects, StatId statId);
+// error instead of a doc violation. Same borrowing rule as FilterByStatId.
+inline auto FilterFlatByStatId(const BaseEffects_t& rBaseEffects, StatId statId)
+{
+    return rBaseEffects.effects | std::views::filter([statId](const ActiveEffect_t& effect)
+    {
+        if (!effect.config)
+        {
+            return false;
+        }
+        const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
+        return pStatModifier && pStatModifier->stat == statId && !pStatModifier->selector && !effect.config->condition;
+    });
+}
 
 // Narrows the faction pool to the effects that apply to the given base: ThisBase effects
 // originating from it, plus all AllOwnerBases, FactionGlobal, and WorldGlobal effects.
-// The only constructor of a BaseEffects_t from a pool.
+// The only constructor of a BaseEffects_t from a pool. Eager, not a view: the result is an
+// independently-owned collection meant to be cached (see BaseManager::BuildBaseEffects_).
 BaseEffects_t FilterForBase(const FactionEffects_t& rFactionEffects, const BaseManager& rBase);
 
-// Returns effects whose scope matches exactly.
-std::vector<ActiveEffect_t> FilterByScope(const std::vector<ActiveEffect_t>& effects, EffectScope_t scope);
+// Returns a lazy view of effects whose scope matches exactly. Same borrowing rule as
+// FilterByStatId.
+inline auto FilterByScope(const std::vector<ActiveEffect_t>& effects, EffectScope_t scope)
+{
+    return effects | std::views::filter([scope](const ActiveEffect_t& effect)
+    {
+        return effect.config && effect.config->scope == scope;
+    });
+}
 
 // Collects all effects from a list of unit components as ActiveEffect_t instances.
 std::vector<ActiveEffect_t> CollectUnitEffects(const std::vector<const UnitComponentConfig_t*>& components);

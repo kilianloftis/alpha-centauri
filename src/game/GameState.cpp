@@ -53,7 +53,9 @@ std::vector<ActiveEffect_t> GameState::CollectWorldEffects(const Faction& rExclu
         {
             continue;
         }
-        const std::vector<ActiveEffect_t> worldEffects =
+        // Lazy view, not a copy: the source is Faction's cached pool (long-lived), and this
+        // is its only use, right below.
+        auto worldEffects =
             FilterByScope(pFaction->GetActiveEffects().effects, EffectScope_t::WorldGlobal);
         result.insert(result.end(), worldEffects.begin(), worldEffects.end());
     }

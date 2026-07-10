@@ -221,47 +221,6 @@ const FactionEffects_t& CollectActiveEffects(const IEffectsProvider& rProvider)
     return rProvider.GetActiveEffects();
 }
 
-StatBreakdown_t ResolveStatModifiers(const std::vector<ActiveEffect_t>& matching, double baseValue)
-{
-    StatBreakdown_t breakdown;
-    breakdown.total = 0.0;
-
-    for (const ActiveEffect_t& active : matching)
-    {
-        if (!active.config)
-        {
-            continue;
-        }
-
-        const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&active.config->effect);
-        if (!pStatModifier)
-        {
-            continue;
-        }
-
-        StatBreakdown_t::Contribution contribution;
-        contribution.sourceId = active.sourceId;
-        contribution.amount = pStatModifier->amount;
-        contribution.op = pStatModifier->op;
-        breakdown.contributions.push_back(contribution);
-    }
-
-    std::sort(breakdown.contributions.begin(), breakdown.contributions.end(),
-              [](const StatBreakdown_t::Contribution& a, const StatBreakdown_t::Contribution& b)
-              {
-                  return a.sourceId < b.sourceId;
-              });
-
-    std::vector<std::pair<double, ModifierOp>> stack;
-    stack.reserve(breakdown.contributions.size());
-    for (const StatBreakdown_t::Contribution& c : breakdown.contributions)
-    {
-        stack.emplace_back(c.amount, c.op);
-    }
-    breakdown.total = ApplyModifierStack(baseValue, stack);
-    return breakdown;
-}
-
 bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx)
 {
     if (!config.condition)
@@ -275,63 +234,6 @@ bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx
             return ctx.targetTile != nullptr && ctx.targetTile->HasFeature(condition.value);
     }
     return false;
-}
-
-std::vector<ActiveEffect_t> FilterByStatId(const std::vector<ActiveEffect_t>& effects, StatId statId)
-{
-    std::vector<ActiveEffect_t> matching;
-    for (const ActiveEffect_t& effect : effects)
-    {
-        if (!effect.config)
-        {
-            continue;
-        }
-        const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
-        // Conditional effects are excluded from context-free resolution — they only apply
-        // through FilterByStatIdInContext with a context that satisfies the condition.
-        if (pStatModifier && pStatModifier->stat == statId && !effect.config->condition)
-        {
-            matching.push_back(effect);
-        }
-    }
-    return matching;
-}
-
-std::vector<ActiveEffect_t> FilterByStatIdInContext(const std::vector<ActiveEffect_t>& effects,
-                                                    StatId statId, const EffectContext_t& ctx)
-{
-    std::vector<ActiveEffect_t> matching;
-    for (const ActiveEffect_t& effect : effects)
-    {
-        if (!effect.config)
-        {
-            continue;
-        }
-        const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
-        if (pStatModifier && pStatModifier->stat == statId && ConditionSatisfied(*effect.config, ctx))
-        {
-            matching.push_back(effect);
-        }
-    }
-    return matching;
-}
-
-std::vector<ActiveEffect_t> FilterFlatByStatId(const BaseEffects_t& rBaseEffects, StatId statId)
-{
-    std::vector<ActiveEffect_t> matching;
-    for (const ActiveEffect_t& effect : rBaseEffects.effects)
-    {
-        if (!effect.config)
-        {
-            continue;
-        }
-        const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
-        if (pStatModifier && pStatModifier->stat == statId && !pStatModifier->selector && !effect.config->condition)
-        {
-            matching.push_back(effect);
-        }
-    }
-    return matching;
 }
 
 BaseEffects_t FilterForBase(const FactionEffects_t& rFactionEffects, const BaseManager& rBase)
@@ -366,19 +268,6 @@ BaseEffects_t FilterForBase(const FactionEffects_t& rFactionEffects, const BaseM
     return matching;
 }
 
-std::vector<ActiveEffect_t> FilterByScope(const std::vector<ActiveEffect_t>& effects, EffectScope_t scope)
-{
-    std::vector<ActiveEffect_t> matching;
-    for (const ActiveEffect_t& effect : effects)
-    {
-        if (effect.config && effect.config->scope == scope)
-        {
-            matching.push_back(effect);
-        }
-    }
-    return matching;
-}
-
 std::vector<ActiveEffect_t> CollectUnitEffects(const std::vector<const UnitComponentConfig_t*>& components)
 {
     std::vector<ActiveEffect_t> result;
@@ -404,8 +293,12 @@ std::vector<ActiveEffect_t> CollectFromPops(const PopulationManager& rPops, cons
     std::vector<ActiveEffect_t> result;
     for (const Pop& rPop : rPops.Pops())
     {
-        const std::vector<ActiveEffect_t> flatEffects =
-            FilterByScope(CollectPopEffects(rPop.GetConfig()), EffectScope_t::ThisBase);
+        // Bind the source to a named local before filtering it: CollectPopEffects(...) is
+        // otherwise a temporary destroyed at the end of its statement, and the range-for
+        // below needs flatEffects to survive past that statement.
+        const std::vector<ActiveEffect_t> popEffects = CollectPopEffects(rPop.GetConfig());
+        auto flatEffectsView = FilterByScope(popEffects, EffectScope_t::ThisBase);
+        const std::vector<ActiveEffect_t> flatEffects(flatEffectsView.begin(), flatEffectsView.end());
 
         for (const ActiveEffect_t& effect : flatEffects)
         {

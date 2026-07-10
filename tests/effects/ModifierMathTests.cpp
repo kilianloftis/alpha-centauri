@@ -93,9 +93,9 @@ TEST_CASE("ApplyModifierStack: result does not depend on contribution order", "[
 
 TEST_CASE("ResolveStatModifiers: empty input resolves to the base value", "[effects][math]")
 {
-    CHECK(ResolveStatModifiers({}, 0.0).total == Approx(0.0));
-    CHECK(ResolveStatModifiers({}, 7.0).total == Approx(7.0));
-    CHECK(ResolveStatModifiers({}, 0.0).contributions.empty());
+    CHECK(ResolveStatModifiers(std::vector<ActiveEffect_t>{}, 0.0).total == Approx(0.0));
+    CHECK(ResolveStatModifiers(std::vector<ActiveEffect_t>{}, 7.0).total == Approx(7.0));
+    CHECK(ResolveStatModifiers(std::vector<ActiveEffect_t>{}, 0.0).contributions.empty());
 }
 
 TEST_CASE("ResolveStatModifiers: sums Add contributions from active effects", "[effects][math]")

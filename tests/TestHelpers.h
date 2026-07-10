@@ -5,8 +5,10 @@
 
 #include <deque>
 #include <optional>
+#include <ranges>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace ac
 {
@@ -82,6 +84,16 @@ inline ac::ActiveEffect_t Active(const ac::EffectConfig_t& rConfig, std::string 
                                  const ac::BaseManager* pOriginBase = nullptr)
 {
     return ac::ActiveEffect_t{&rConfig, std::move(sourceId), pOriginBase};
+}
+
+// Materializes a lazy Filter*(...) result into an owned, indexable vector — needed
+// wherever a test checks .size()/operator[] on the result, since filter_view (unlike a
+// vector) supports neither. Prefer std::ranges::distance(...) instead when a test only
+// needs a count and never indexes the result.
+template <std::ranges::input_range Range>
+std::vector<ac::ActiveEffect_t> Materialize(Range&& range)
+{
+    return std::vector<ac::ActiveEffect_t>(range.begin(), range.end());
 }
 
 inline ac::TileSelector_t BaseTileSelector()

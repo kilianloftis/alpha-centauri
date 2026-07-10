@@ -23,7 +23,7 @@ TEST_CASE("FilterByStatId: keeps only StatModifiers targeting the requested stat
         Active(pool.RuleFlag(RuleFlagId::Flight), "flag"),
     };
 
-    const auto matching = FilterByStatId(effects, StatId::Nutrients);
+    const std::vector<ActiveEffect_t> matching = actest::Materialize(FilterByStatId(effects, StatId::Nutrients));
     REQUIRE(matching.size() == 1);
     CHECK(matching[0].sourceId == "nut");
     CHECK(FilterByStatId(effects, StatId::Energy).empty());
@@ -37,7 +37,7 @@ TEST_CASE("FilterByStatId: includes selector-carrying (per-tile) modifiers", "[e
         Active(pool.StatMod(StatId::Nutrients, 1.0, ModifierOp::Add, EffectScope_t::ThisBase,
                             actest::ImprovementSelector("Farm")), "farm_booster"),
     };
-    CHECK(FilterByStatId(effects, StatId::Nutrients).size() == 1);
+    CHECK(std::ranges::distance(FilterByStatId(effects, StatId::Nutrients)) == 1);
 }
 
 TEST_CASE("FilterByStatId: excludes condition-carrying effects from context-free resolution",
@@ -51,7 +51,7 @@ TEST_CASE("FilterByStatId: excludes condition-carrying effects from context-free
         Active(pool.StatMod(StatId::Attack, 4.0, ModifierOp::Add, EffectScope_t::ThisUnit), "weapon"),
     };
 
-    const auto matching = FilterByStatId(effects, StatId::Attack);
+    const std::vector<ActiveEffect_t> matching = actest::Materialize(FilterByStatId(effects, StatId::Attack));
     REQUIRE(matching.size() == 1);
     CHECK(matching[0].sourceId == "weapon");
 }
@@ -68,7 +68,7 @@ TEST_CASE("FilterFlatByStatId: excludes both selector-carrying and condition-car
                             std::nullopt, actest::TargetTileHas("River")), "conditional"),
     }};
 
-    const auto matching = FilterFlatByStatId(baseEffects, StatId::Nutrients);
+    const std::vector<ActiveEffect_t> matching = actest::Materialize(FilterFlatByStatId(baseEffects, StatId::Nutrients));
     REQUIRE(matching.size() == 1);
     CHECK(matching[0].sourceId == "flat");
 }
@@ -144,7 +144,7 @@ TEST_CASE("FilterByStatIdInContext: unconditional effects plus satisfied conditi
     };
 
     const EffectContext_t ctx{&rockyTile};
-    const auto matching = FilterByStatIdInContext(effects, StatId::Attack, ctx);
+    const std::vector<ActiveEffect_t> matching = actest::Materialize(FilterByStatIdInContext(effects, StatId::Attack, ctx));
 
     REQUIRE(matching.size() == 2);
     CHECK(matching[0].sourceId == "weapon");
@@ -164,7 +164,8 @@ TEST_CASE("FilterByStatIdInContext: with an empty context only unconditional eff
                             std::nullopt, actest::TargetTileHas("Rocky")), "vs_rocky"),
     };
 
-    const auto matching = FilterByStatIdInContext(effects, StatId::Attack, EffectContext_t{});
+    const std::vector<ActiveEffect_t> matching =
+        actest::Materialize(FilterByStatIdInContext(effects, StatId::Attack, EffectContext_t{}));
     REQUIRE(matching.size() == 1);
     CHECK(matching[0].sourceId == "weapon");
 }
@@ -178,11 +179,11 @@ TEST_CASE("FilterByScope: exact scope match only", "[effects][filter]")
         Active(pool.StatMod(StatId::Energy, 1.0, ModifierOp::Add, EffectScope_t::FactionGlobal), "global"),
     };
 
-    const auto thisPop = FilterByScope(effects, EffectScope_t::ThisPop);
+    const std::vector<ActiveEffect_t> thisPop = actest::Materialize(FilterByScope(effects, EffectScope_t::ThisPop));
     REQUIRE(thisPop.size() == 1);
     CHECK(thisPop[0].sourceId == "mult");
 
-    const auto thisBase = FilterByScope(effects, EffectScope_t::ThisBase);
+    const std::vector<ActiveEffect_t> thisBase = actest::Materialize(FilterByScope(effects, EffectScope_t::ThisBase));
     REQUIRE(thisBase.size() == 1);
     CHECK(thisBase[0].sourceId == "flat");
 

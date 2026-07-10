@@ -110,8 +110,8 @@ TEST_CASE("CollectPopEffects: gathers all scopes of a pop type's effects, tagged
     // the split happens later via FilterByScope.
     REQUIRE(effects.size() == 2);
     CHECK(effects[0].sourceId == "FungalFarmer");
-    CHECK(FilterByScope(effects, EffectScope_t::ThisPop).size() == 1);
-    CHECK(FilterByScope(effects, EffectScope_t::ThisBase).size() == 1);
+    CHECK(std::ranges::distance(FilterByScope(effects, EffectScope_t::ThisPop)) == 1);
+    CHECK(std::ranges::distance(FilterByScope(effects, EffectScope_t::ThisBase)) == 1);
 }
 
 TEST_CASE("CollectFromPops: only ThisBase-scoped pop effects enter the base pool, tagged with the base",

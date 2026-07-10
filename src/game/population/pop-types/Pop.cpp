@@ -112,8 +112,12 @@ TileResources_t Pop::ApplyTileMultipliers(const TileResources_t& resources) cons
 {
     // Only ThisPop-scoped effects (tile multipliers) apply here — ThisBase-scoped flat
     // generation bonuses are resolved separately via CollectFromPops/ResourceManager.
-    const std::vector<ActiveEffect_t> tileEffects =
-        FilterByScope(CollectPopEffects(*m_pConfig), EffectScope_t::ThisPop);
+    // Bind the source to a named local before filtering: CollectPopEffects(...) is
+    // otherwise a temporary, and tileEffects must survive past this statement (used by
+    // the lambda below, invoked once per resource).
+    const std::vector<ActiveEffect_t> popEffects = CollectPopEffects(*m_pConfig);
+    auto tileEffectsView = FilterByScope(popEffects, EffectScope_t::ThisPop);
+    const std::vector<ActiveEffect_t> tileEffects(tileEffectsView.begin(), tileEffectsView.end());
 
     auto scaleByMultiplier = [&](StatId statId, int rawValue) -> int
     {
@@ -131,8 +135,10 @@ TileResources_t Pop::ApplyTileMultipliers(const TileResources_t& resources) cons
 
 SpecialistOutput_t Pop::GetSpecialistOutput() const
 {
-    const std::vector<ActiveEffect_t> flatEffects =
-        FilterByScope(CollectPopEffects(*m_pConfig), EffectScope_t::ThisBase);
+    // Same reasoning as ApplyTileMultipliers above: materialize before the lambda reuses it.
+    const std::vector<ActiveEffect_t> popEffects = CollectPopEffects(*m_pConfig);
+    auto flatEffectsView = FilterByScope(popEffects, EffectScope_t::ThisBase);
+    const std::vector<ActiveEffect_t> flatEffects(flatEffectsView.begin(), flatEffectsView.end());
 
     auto resolveFlat = [&](StatId statId) -> int
     {

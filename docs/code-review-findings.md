@@ -42,12 +42,45 @@ Related prior review: `docs/architecture/effects-system-review.md` (effects subs
 >   on any missed bump. Enabling fix: `UnitManager::GetUnits()` (last leaked owning
 >   container) replaced by a `Units()` reference range.
 >
-> Deferred (still open under this finding): `TileEffectsContext::CollectAreaEffects`'s
-> (2r+1)² per-tile neighborhood scan (needs an incremental aura index keyed on unit
-> moves/improvement changes); filter-chain copy elimination (`FilterByStatId` et al. return
-> copies — cheap now that the pool is cached); `ResourceManager::ComputeWorked_` ×5 per
-> full stat read (≤21-tile pass, entangled with 2.1); `GameState::CollectWorldEffects`'s
-> O(F²)-shaped per-turn pass (each term is now a filter over a cached pool, not a rebuild).
+> Done 2026-07-09 (filter-chain copies): the "cheap now that the pool is cached" note above
+> undersold this — investigation found the actual chain worse than assumed: each of
+> `BaseManager`'s 5 stat getters independently resolves every worked tile via
+> `TileEffectsContext::ResolveTileYield`, which called `FilterByStatId` 3× per tile, i.e.
+> `15×(W+1)` copying filter calls (W = worked tiles) every time all 5 stats are read — every
+> frame the base screen is open. `FilterByStatId`, `FilterByStatIdInContext`,
+> `FilterFlatByStatId`, `FilterByScope` (`lib/effects/ActiveEffect.h`) now return a lazy
+> `std::views::filter` range instead of an allocated copy — non-template functions with a
+> deduced `auto` return type must be `inline` and defined where used, so their bodies moved
+> from the `.cpp` into the header, matching the `DerefView` pattern already used for
+> `Faction::Bases()` etc. `ResolveStatModifiers` became a function template over
+> `std::ranges::input_range` for the same reason, absorbing ~24 `Filter*(...) →
+> ResolveStatModifiers(...)` call sites with no call-site changes. `FilterForBase` was
+> deliberately left eager — its result is cached and mutated by `BaseManager`, so laziness
+> would relocate the allocation, not remove it. Three call sites (`Pop.cpp` ×2,
+> `CollectFromPops`) bind a filtered result to a name reused across *later* statements (a
+> lambda invoked repeatedly, a following loop); since C++ destroys a temporary at the end of
+> its full expression, these needed forced eager materialization to avoid a dangling view —
+> found by reading each site directly, not assumed. Two sites (`Unit.cpp`, `GameState.cpp`)
+> were safe to go fully lazy and had their now-unnecessary copy removed. Full test suite
+> (541 assertions) passes unchanged — pure copy elimination, no predicate/behavior change.
+>
+> Also settled while investigating (no code change):
+> - `GameState::CollectWorldEffects`'s O(F²) shape: **not a real problem** — 2 calls per
+>   faction per *turn* (not per frame), each already filtering a cached pool. Closing with
+>   no action; the doc's earlier "deferred" framing overstated this.
+> - `ResourceManager::ComputeWorked_`'s 5× redundant call per stat-read cycle: **confirmed
+>   blocked on finding 2.1**, not merely "entangled" — there is currently zero revision
+>   tracking anywhere on worker-tile assignment (`Pop::SetTile`/`Tile::m_bWorked` are bare
+>   mutations) to key a cache on. Building that is 2.1's job (worker state ownership),
+>   not a tag-along here.
+>
+> Still deferred: `TileEffectsContext::CollectAreaEffects`'s (2r+1)² per-tile neighborhood
+> scan — confirmed hotter than originally described (it runs inside the sort comparator in
+> `WorkerAssignmentManager::PrioritizeAvailableTiles_`, so every auto-assign re-scans
+> neighborhoods per tile per comparison, not just the UI display path). Needs an actual
+> incremental spatial index (what invalidates on a unit move vs. an improvement change) —
+> a different mechanism from the revision-counter seam used everywhere else in this finding,
+> not a variant of it. Deliberately not attempted as a tag-on; would need its own scoping.
 
 The single biggest scalability issue in the codebase, and it is a *pattern*, not an isolated slip:
 
@@ -60,7 +93,7 @@ The single biggest scalability issue in the codebase, and it is a *pattern*, not
 
 The problem is not today's frame time — it is that **no architectural seam exists to ever fix this**. There is no snapshot object, no dirty flag, no "effects changed" signal, no per-turn cache. Every consumer calls the recompute entry points directly, so introducing caching later means touching every call site and re-auditing every invariant. The one existing cache (`ResearchManager::m_pointsNeededForCurrentTech`) demonstrates the missing invalidation story: it is computed when the target is set and goes stale if a `TechCost`-modifying effect appears mid-research.
 
-Related: every filter in the effects pipeline (`FilterByStatId`, `FilterForBase`, `FilterByScope`, …) returns a **copied** `std::vector<ActiveEffect_t>`; a typical resolution chains 2–3 filters, copying `std::string` per element per stage. `GameState::CollectWorldEffects` copies per faction per stage per turn (O(F²) per turn).
+Related: every filter in the effects pipeline (`FilterByStatId`, `FilterForBase`, `FilterByScope`, …) returns a **copied** `std::vector<ActiveEffect_t>`; a typical resolution chains 2–3 filters, copying `std::string` per element per stage. `GameState::CollectWorldEffects` copies per faction per stage per turn (O(F²) per turn). *(Addressed 2026-07-09, see the status block above: all filters but `FilterForBase` are now lazy views; `CollectWorldEffects`'s O(F²) shape was investigated and found to not be a real problem at turn cadence.)*
 
 ### 1.2 [H] The `lib/` layer depends on `game/` — the layering is fictional
 
