@@ -268,18 +268,22 @@ The canonical assignment is a `const Tile*` on `Pop`; the "is worked" flag is a 
 
 ### 2.3 [M] Redundant flags that can desync
 
-- `ResearchManager`: `m_bHasResearchTarget` duplicates `m_pCurrentResearchTarget != nullptr`; `SetResearchTarget` assigns the pointer **before** validating (`ResearchManager.cpp:28-37`), so a failed lookup throws with `m_pCurrentResearchTarget == nullptr` while `m_bHasResearchTarget` retains its old value — `HasResearchTarget() == true` with no target; `RecalculatePointsNeeded` then throws "Invalid state".
-- `Military`: `m_designs` vector plus `m_designMap` raw-pointer map — dual bookkeeping with no removal API yet; the first removal feature will have to remember both.
+> **Status (2026-07-10): fixed.** All four bullets closed.
+
+- `ResearchManager`: `m_bHasResearchTarget` duplicates `m_pCurrentResearchTarget != nullptr`; `SetResearchTarget` assigns the pointer **before** validating (`ResearchManager.cpp:28-37`), so a failed lookup throws with `m_pCurrentResearchTarget == nullptr` while `m_bHasResearchTarget` retains its old value — `HasResearchTarget() == true` with no target; `RecalculatePointsNeeded` then throws "Invalid state". *(Addressed 2026-07-10: `m_bHasResearchTarget` deleted; `HasResearchTarget()` derives from `m_pCurrentResearchTarget != nullptr`. `SetResearchTarget` now resolves into a local `pTarget` and only assigns the member after the lookup succeeds, so a failed `SetResearchTarget` on an established target leaves the prior target and flag state intact — covered by two new tests in `tests/faction/ResearchSelectorTests.cpp`.)*
+- `Military`: `m_designs` vector plus `m_designMap` raw-pointer map — dual bookkeeping with no removal API yet; the first removal feature will have to remember both. *(Addressed 2026-07-10: `m_designMap` deleted. `AddDesign`/`GetDesign` both scan `m_designs` directly — a single source of truth, at the cost of O(n) lookup instead of O(1); revisit if design-list size ever makes that matter.)*
 - `Faction::m_energy` lives on Faction while the class comment says the economy split is owned by `EconomyManager` — faction-level economy state is split across two objects. *(Addressed 2026-07-09: the treasury moved into `EconomyManager`; `Faction` holds no economy state.)*
 - `Tile::IsWorked()` and `Tile::IsWorkerAssigned()` are two names for the same field. *(Addressed 2026-07-09 with 2.1: both methods and the field are deleted; occupancy lives in `WorkedTileIndex`.)*
 
 ### 2.4 [H] Const-correctness is systematically subverted
 
-- `Tile::SetWorked(bool) const` mutates a `mutable` member, openly documented as "declared const because it is updated through a const Tile* held by Pop" (`include/game/map/Tile.h:96-99`). *(Addressed 2026-07-09 with 2.1: `SetWorked` and the `mutable` member are deleted; `Tile` has no mutable state left.)*
-- `TileEffectsContext::AddImprovementWithEffects` / `RemoveImprovementWithEffects` / `RecomputeMoisture` are `const` methods that mutate tiles and trigger area-wide terrain recomputation (`include/lib/effects/TileEffectsContext.h:60-73`).
-- `Faction`'s `GetEconomyManager() const`, `GetResearchManager() const`, `GetResearchSelector() const` return **non-const pointers** to internals (`Faction.cpp:99-102, 248-256`); `ViewFactory::CreateResearchView` extracts a mutable `ResearchManager*` from a `const Faction*`. *(Addressed 2026-07-09: replaced by const-correct reference accessors `GetEconomy()`/`GetResearch()`/`GetSocialEngineering()`; `GetResearchSelector` deleted (no callers); `ResearchView`/`CurrentResearchPanel` now take `const ResearchManager*`. The `Tile`/`TileEffectsContext` rows of this finding are untouched.)*
+> **Status (2026-07-10): fixed.** All three bullets closed.
 
-Individually each has a rationale; collectively they mean `const` no longer communicates immutability anywhere in the object graph — a `const GameState&` can rewrite terrain. That erases the main tool C++ gives you for reasoning about mutation, exactly the thing a growing simulation needs most.
+- `Tile::SetWorked(bool) const` mutates a `mutable` member, openly documented as "declared const because it is updated through a const Tile* held by Pop" (`include/game/map/Tile.h:96-99`). *(Addressed 2026-07-09 with 2.1: `SetWorked` and the `mutable` member are deleted; `Tile` has no mutable state left.)*
+- `TileEffectsContext::AddImprovementWithEffects` / `RemoveImprovementWithEffects` / `RecomputeMoisture` are `const` methods that mutate tiles and trigger area-wide terrain recomputation (`include/lib/effects/TileEffectsContext.h:60-73`). *(Addressed 2026-07-10: the `const` qualifier is dropped from all three methods, and from the private `RecomputeMoistureInRadius_` helper's `TileEffectsContext&` parameter. Every call site already held a non-const `TileEffectsContext&`/reference — `BaseManager::m_rTileEffects` and the test fixtures' `ctx` — so no ripple changes were needed.)*
+- `Faction`'s `GetEconomyManager() const`, `GetResearchManager() const`, `GetResearchSelector() const` return **non-const pointers** to internals (`Faction.cpp:99-102, 248-256`); `ViewFactory::CreateResearchView` extracts a mutable `ResearchManager*` from a `const Faction*`. *(Addressed 2026-07-09: replaced by const-correct reference accessors `GetEconomy()`/`GetResearch()`/`GetSocialEngineering()`; `GetResearchSelector` deleted (no callers); `ResearchView`/`CurrentResearchPanel` now take `const ResearchManager*`.)*
+
+Individually each had a rationale; collectively they meant `const` no longer communicated immutability anywhere in the object graph. With all rows now closed, a `const` reference to any of these types can no longer be used to mutate through it.
 
 ---
 
