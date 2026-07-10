@@ -19,7 +19,6 @@ ResearchManager::ResearchManager(const TechRegistry* pTechRegistry,
     , m_pCurrentResearchTarget(nullptr)
     , m_accumulatedPoints(0)
     , m_pointsNeededForCurrentTech(0)
-    , m_bHasResearchTarget(false)
 {
 }
 
@@ -29,12 +28,12 @@ ResearchManager::~ResearchManager()
 
 void ResearchManager::SetResearchTarget(TechId techId)
 {
-    m_pCurrentResearchTarget = m_pTechRegistry->Find(techId);
-    if (!m_pCurrentResearchTarget)
+    const TechConfig_t* pTarget = m_pTechRegistry->Find(techId);
+    if (!pTarget)
     {
         throw std::runtime_error("Unknown tech id '" + techId + "'");
     }
-    m_bHasResearchTarget = true;
+    m_pCurrentResearchTarget = pTarget;
     RecalculatePointsNeeded();
 }
 
@@ -45,13 +44,12 @@ TechId ResearchManager::GetResearchTarget() const
 
 void ResearchManager::ClearResearchTarget()
 {
-    m_bHasResearchTarget = false;
     m_pCurrentResearchTarget = nullptr;
 }
 
 bool ResearchManager::HasResearchTarget() const
 {
-    return m_bHasResearchTarget;
+    return m_pCurrentResearchTarget != nullptr;
 }
 
 int ResearchManager::GetAccumulatedPoints() const
@@ -77,7 +75,7 @@ int ResearchManager::GetPointsNeededForCurrentTech() const
 
 int ResearchManager::BreakthroughRate(int researchPerTurn) const
 {
-    if (!m_bHasResearchTarget || researchPerTurn <= 0)
+    if (!m_pCurrentResearchTarget || researchPerTurn <= 0)
     {
         return -1;
     }
@@ -88,7 +86,7 @@ int ResearchManager::BreakthroughRate(int researchPerTurn) const
 
 int ResearchManager::GetTurnsUntilBreakthrough(int researchPerTurn) const
 {
-    if (!m_bHasResearchTarget || researchPerTurn <= 0)
+    if (!m_pCurrentResearchTarget || researchPerTurn <= 0)
     {
         return -1;
     }
@@ -105,7 +103,7 @@ int ResearchManager::GetTurnsUntilBreakthrough(int researchPerTurn) const
 
 void ResearchManager::RecalculatePointsNeeded()
 {
-    if (!m_bHasResearchTarget || !m_pTechCostCalculator || !m_pTechRegistry || !m_pCurrentResearchTarget)
+    if (!m_pCurrentResearchTarget || !m_pTechCostCalculator || !m_pTechRegistry)
     {
         throw std::runtime_error("ResearchManager::RecalculatePointsNeeded: Invalid state");
     }
@@ -131,7 +129,7 @@ void ResearchManager::ComputePointsNeeded_() const
 
 void ResearchManager::RevalidatePointsNeeded_() const
 {
-    if (!m_bHasResearchTarget || !m_pEffectsProvider)
+    if (!m_pCurrentResearchTarget || !m_pEffectsProvider)
     {
         return;
     }
@@ -143,7 +141,7 @@ void ResearchManager::RevalidatePointsNeeded_() const
 
 bool ResearchManager::CanDiscoverTech() const
 {
-    if (!m_bHasResearchTarget)
+    if (!m_pCurrentResearchTarget)
     {
         return false;
     }

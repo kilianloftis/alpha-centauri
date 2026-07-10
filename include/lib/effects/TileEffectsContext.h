@@ -56,16 +56,16 @@ public:
     // Re-derives rTile's effective moisture from its stored base moisture plus any Condenser
     // aura in range, then calls Tile::SetMoisture(). Always recomputed from scratch so
     // multiple overlapping Condensers and add/remove order never cause drift.
-    void RecomputeMoisture(Tile& rTile) const;
+    void RecomputeMoisture(Tile& rTile);
 
     // Adds improvementId to rTile, then re-runs RecomputeMoisture for every tile within
     // that improvement's radius so any terrain-mutating effect (e.g. Condenser) takes effect
     // immediately. Always use this instead of Tile::AddImprovement directly.
-    void AddImprovementWithEffects(Tile& rTile, const std::string& improvementId) const;
+    void AddImprovementWithEffects(Tile& rTile, const std::string& improvementId);
 
     // Removes improvementId from rTile, then re-runs RecomputeMoisture over the same radius
     // so the bonus reverts cleanly even when other Condensers still cover some of those tiles.
-    void RemoveImprovementWithEffects(Tile& rTile, const std::string& improvementId) const;
+    void RemoveImprovementWithEffects(Tile& rTile, const std::string& improvementId);
 
 private:
     // Resolves nutrient/mineral/energy from an already-collected effect list (energy seeded

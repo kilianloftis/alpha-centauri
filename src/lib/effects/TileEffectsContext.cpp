@@ -114,7 +114,7 @@ void AppendMatchingTileModifiers_(const std::vector<ActiveEffect_t>& baseEffects
     }
 }
 
-void RecomputeMoistureInRadius_(const Tile& rChangedTile, int radius, const TileEffectsContext& rCtx,
+void RecomputeMoistureInRadius_(const Tile& rChangedTile, int radius, TileEffectsContext& rCtx,
                                  WorldMap& rWorldMap)
 {
     ForEachTileInManhattanRadius(rChangedTile, rWorldMap, radius, true,
@@ -208,7 +208,7 @@ double TileEffectsContext::ResolveTileDefenseMultiplier(const Tile& rTile) const
     return ResolveStatModifiers(FilterByStatId(effects, StatId::Defense), 1.0).total;
 }
 
-void TileEffectsContext::RecomputeMoisture(Tile& rTile) const
+void TileEffectsContext::RecomputeMoisture(Tile& rTile)
 {
     const std::vector<ActiveEffect_t> effects = CollectAreaEffects(rTile);
     const double tier = ResolveStatModifiers(
@@ -220,7 +220,7 @@ void TileEffectsContext::RecomputeMoisture(Tile& rTile) const
     rTile.SetMoisture(static_cast<Moisture>(clamped));
 }
 
-void TileEffectsContext::AddImprovementWithEffects(Tile& rTile, const std::string& improvementId) const
+void TileEffectsContext::AddImprovementWithEffects(Tile& rTile, const std::string& improvementId)
 {
     const ImprovementConfig_t* pConfig = m_rImprovements.Find(improvementId);
     if (!pConfig)
@@ -234,7 +234,7 @@ void TileEffectsContext::AddImprovementWithEffects(Tile& rTile, const std::strin
     RecomputeMoistureInRadius_(rTile, MaxEffectReach_(*pConfig), *this, m_rWorldMap);
 }
 
-void TileEffectsContext::RemoveImprovementWithEffects(Tile& rTile, const std::string& improvementId) const
+void TileEffectsContext::RemoveImprovementWithEffects(Tile& rTile, const std::string& improvementId)
 {
     const ImprovementConfig_t* pConfig = m_rImprovements.Find(improvementId);
     const int radius = pConfig ? MaxEffectReach_(*pConfig) : 0;

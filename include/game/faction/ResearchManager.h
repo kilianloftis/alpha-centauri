@@ -63,8 +63,6 @@ private:
     // Provider effects version the cost was computed against (0 = no provider involved).
     mutable uint64_t m_costEffectsVersion = 0;
 
-    bool m_bHasResearchTarget;
-
     void ResetAccumulatedPoints_();
 
     // Compute the cost of the current target and record the provider version it used.

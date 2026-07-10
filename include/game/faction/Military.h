@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <unordered_map>
 #include <vector>
 
 namespace ac
@@ -21,7 +20,6 @@ public:
 
 private:
     std::vector<std::unique_ptr<UnitDesign>> m_designs;
-    std::unordered_map<std::string, UnitDesign*> m_designMap;
 };
 
 } // namespace ac

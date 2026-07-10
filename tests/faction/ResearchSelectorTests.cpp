@@ -148,3 +148,21 @@ TEST_CASE("ResearchSelector random assignment stays within selected categories",
     CHECK(seen.count("discover_tech") == 0);
     CHECK(seen.count("conquer_tech") == 0);
 }
+
+TEST_CASE("ResearchManager: unknown SetResearchTarget leaves prior target intact", "[research]")
+{
+    ResearchTestFixture fixture;
+    fixture.research->SetResearchTarget("build_tech");
+    REQUIRE(fixture.research->HasResearchTarget());
+
+    REQUIRE_THROWS_AS(fixture.research->SetResearchTarget("not_a_tech"), std::runtime_error);
+    CHECK(fixture.research->HasResearchTarget());
+    CHECK(fixture.research->GetResearchTarget() == "build_tech");
+}
+
+TEST_CASE("ResearchManager: unknown SetResearchTarget with no prior target stays empty", "[research]")
+{
+    ResearchTestFixture fixture;
+    REQUIRE_THROWS_AS(fixture.research->SetResearchTarget("not_a_tech"), std::runtime_error);
+    CHECK_FALSE(fixture.research->HasResearchTarget());
+}
