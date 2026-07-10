@@ -87,4 +87,14 @@ void WorldMap::OnUnitMoved(Unit& rUnit, const Tile& rNewTile)
     rUnit.SetTile(rNewTile);
 }
 
+WorkedTileIndex& WorldMap::GetWorkedTiles()
+{
+    return m_workedTiles;
+}
+
+const WorkedTileIndex& WorldMap::GetWorkedTiles() const
+{
+    return m_workedTiles;
+}
+
 } // namespace ac

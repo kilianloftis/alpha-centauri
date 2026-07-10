@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/faction/base/BaseTypes.h"
+#include "game/map/WorkedTileIndex.h"
 
 namespace ac
 {
@@ -21,7 +22,6 @@ class Pop
 {
 public:
     explicit Pop(const PopTypeConfig_t& rConfig);
-    ~Pop();
 
     // Type id string matching the config (e.g. "Worker", "Librarian")
     const char* GetPopType() const;
@@ -49,14 +49,16 @@ public:
     // Clears tile assignment if the new type is not a worker.
     void Convert(const PopTypeConfig_t& rConfig);
 
-    // Tile assignment (only meaningful when IsWorker() is true)
-    // nullptr means unassigned.
-    void SetTile(const Tile* pTile);
+    // Tile assignment (only meaningful when IsWorker() is true).
+    // The claim is minted by WorkedTileIndex::TryClaim (reached through
+    // WorkerAssignmentManager) and releases its tile automatically when this pop dies,
+    // converts to a non-worker type, or is reassigned. Pass an empty claim to unassign.
+    // Throws if a non-empty claim is given to a pop type that cannot work tiles.
+    void SetTileClaim(WorkedTileClaim claim);
     const Tile* GetTile() const;
 
-    // User assignment flag (e.g., manually assigned by the player).
-    // Cleared automatically when the tile is unassigned.
-    void SetUserAssigned(bool bUserAssigned);
+    // True if the player assigned this pop's tile (protected from auto-assignment).
+    // Stored on the claim, so it cannot outlive the assignment.
     bool IsUserAssigned() const;
 
     // Apply this pop's tile multipliers to raw tile resources.
@@ -70,8 +72,7 @@ public:
 
 private:
     const PopTypeConfig_t* m_pConfig;
-    const Tile* m_pTile;
-    bool m_bUserAssigned;
+    WorkedTileClaim m_tileClaim;
 };
 
 } // namespace ac

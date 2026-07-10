@@ -1,6 +1,7 @@
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/map/Tile.h"
+#include "game/map/WorkedTileIndex.h"
 #include "lib/effects/TileEffectsContext.h"
 #include <algorithm>
 #include <limits>
@@ -20,7 +21,7 @@ constexpr bool IsUnassignedTile(const Tile* pTile)
 } // namespace
 
 WorkerAssignmentManager::WorkerAssignmentManager(std::vector<const Tile*> workableTiles, PopulationManager& rPops,
-                                                 const TileEffectsContext& rTileEffects)
+                                                 const TileEffectsContext& rTileEffects, WorkedTileIndex& rWorkedTiles)
     : m_workableTiles(std::move(workableTiles))
     , m_scorer([this](const Tile& rTile) -> float
       {
@@ -29,17 +30,13 @@ WorkerAssignmentManager::WorkerAssignmentManager(std::vector<const Tile*> workab
       })
     , m_rPops(rPops)
     , m_rTileEffects(rTileEffects)
+    , m_rWorkedTiles(rWorkedTiles)
 {
 }
 
 bool WorkerAssignmentManager::UserAssignWorker(Pop& rPop, const Tile* pTile)
 {
-    if (!AssignWorker(rPop, pTile))
-    {
-        return false;
-    }
-    rPop.SetUserAssigned(true);
-    return true;
+    return Assign_(rPop, pTile, /*bUserAssigned*/true);
 }
 
 void WorkerAssignmentManager::UserUnassignTile(const Tile* pTile)
@@ -56,7 +53,7 @@ void WorkerAssignmentManager::UserUnassignTile(const Tile* pTile)
 
 void WorkerAssignmentManager::ReleaseUserAssignment(Pop& rPop)
 {
-    rPop.SetTile(nullptr);
+    rPop.SetTileClaim(WorkedTileClaim{});
 }
 
 void WorkerAssignmentManager::ReleaseAllUserAssignments()
@@ -72,6 +69,11 @@ void WorkerAssignmentManager::ReleaseAllUserAssignments()
 
 bool WorkerAssignmentManager::AssignWorker(Pop& rPop, const Tile* pTile)
 {
+    return Assign_(rPop, pTile, /*bUserAssigned*/false);
+}
+
+bool WorkerAssignmentManager::Assign_(Pop& rPop, const Tile* pTile, bool bUserAssigned)
+{
     if (!rPop.IsWorker())
     {
         return false;
@@ -82,18 +84,23 @@ bool WorkerAssignmentManager::AssignWorker(Pop& rPop, const Tile* pTile)
         return false;
     }
 
-    if (IsTileAssigned(pTile))
+    // TryClaim is the atomic check-and-claim: it fails if the tile is worked by anyone,
+    // including another base or faction. If a base is later founded on the tile, the
+    // handler re-runs auto-assignment so the displaced worker moves to the best free tile.
+    WorkedTileClaim claim = m_rWorkedTiles.TryClaim(*pTile, bUserAssigned,
+        [this]() { AutoAssignWorkers(); });
+    if (!claim.GetTile())
     {
         return false;
     }
 
-    rPop.SetTile(pTile);
+    rPop.SetTileClaim(std::move(claim));
     return true;
 }
 
 void WorkerAssignmentManager::UnassignWorker(Pop& rPop)
 {
-    rPop.SetTile(nullptr);
+    rPop.SetTileClaim(WorkedTileClaim{});
 }
 
 void WorkerAssignmentManager::UnassignAll()
@@ -103,7 +110,7 @@ void WorkerAssignmentManager::UnassignAll()
         const Tile* pTile = rPop.GetTile();
         if (pTile && !rPop.IsUserAssigned())
         {
-            rPop.SetTile(nullptr);
+            rPop.SetTileClaim(WorkedTileClaim{});
         }
     }
 }
@@ -120,10 +127,10 @@ void WorkerAssignmentManager::ResetAllAssignments()
 
 bool WorkerAssignmentManager::IsTileAssigned(const Tile* pTile) const
 {
-    // The worked flag is the single source of truth, maintained by Pop::SetTile. Reading it
-    // (rather than scanning this base's pops) also prevents two adjacent bases from both
-    // working a shared tile, and is the hook a future enemy unit would clear to free the tile.
-    return pTile && pTile->IsWorked();
+    // WorkedTileIndex is the world-wide single source of truth, so this also reports tiles
+    // worked by other bases — including other factions' — and is where a future mechanic
+    // (e.g. an enemy unit occupying the tile) would revoke assignments.
+    return pTile && m_rWorkedTiles.IsWorked(*pTile);
 }
 
 TileResources_t WorkerAssignmentManager::ComputeWorkedResources(const BaseEffects_t& rBaseEffects) const
@@ -323,7 +330,7 @@ void WorkerAssignmentManager::AutoAssignWorkers_(std::vector<const Tile*>& avail
 
 void WorkerAssignmentManager::UnassignFromTile_(Pop& rPop)
 {
-    rPop.SetTile(nullptr);
+    rPop.SetTileClaim(WorkedTileClaim{});
     ConvertToFallback_(rPop);
 }
 

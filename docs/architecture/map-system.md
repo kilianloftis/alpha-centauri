@@ -5,6 +5,7 @@ graph TB
     subgraph "Map System"
         TileMap[TileMap]
         Tile[Tile]
+        WorkedTileIndex[WorkedTileIndex<br/>one worker per tile, world-scoped]
     end
 
     subgraph "Tile Identity"
@@ -21,7 +22,6 @@ graph TB
         River[River<br/>bool]
         Fungus[Fungus<br/>bool]
         Improvements[Improvements<br/>vector const ImprovementConfig_t*]
-        WorkerAssigned[WorkerAssigned<br/>baseId int, -1=unworked]
     end
 
     subgraph "Effects (config/improvements.json)"
@@ -37,6 +37,7 @@ graph TB
     end
 
     TileMap --> Tile
+    TileMap --> WorkedTileIndex
     Tile --> Position
     Tile --> Moisture
     Tile --> Rockiness
@@ -44,7 +45,6 @@ graph TB
     Tile --> River
     Tile --> Fungus
     Tile --> Improvements
-    Tile --> WorkerAssigned
     Tile --> CollectTileEffects
     CollectTileEffects --> ImprovementRegistry
     CollectTileEffects --> ResolveTileYield
@@ -55,7 +55,7 @@ graph TB
     style Tile fill:#f9f,stroke:#333,stroke-width:4px
     style TileMap fill:#fbf,stroke:#333,stroke-width:3px
     style Position fill:#bbf,stroke:#333,stroke-width:2px
-    style WorkerAssigned fill:#bbf,stroke:#333,stroke-width:2px
+    style WorkedTileIndex fill:#fbf,stroke:#333,stroke-width:3px
     style ImprovementRegistry fill:#ffd,stroke:#333,stroke-width:2px
     style CollectTileEffects fill:#bfb,stroke:#333,stroke-width:3px
 ```
@@ -79,15 +79,17 @@ graph TB
   - `River`: Boolean flag for river presence (grants an energy bonus via its improvements.json entry)
   - `Fungus`: Boolean flag for alien fungus presence (grants a defense bonus via its improvements.json entry). Presence-only for now — spreading fungus turn-over-turn is a separate future enhancement, not implemented.
   - `Improvements`: Vector of non-owning `const ImprovementConfig_t*` into `ImprovementRegistry` (like `BuildingManager`'s `BuildingConfig_t*`). Covers player-built improvements (e.g. "Farm", "Mine", "Bunker"), the `"Base"` marker added automatically when a `BaseManager` is founded on the tile, and tile specials that were formerly separate "bonus"/"landmark" slots (e.g. "Monsoon Jungle", "nutrient_rich_soil") — for the map all three are just improvements, with coexistence governed by `ImprovementConfig_t::excludes`
-  - `WorkerAssigned`: Integer base ID tracking which base has a worker on this tile (-1 if unworked; one worker per tile limit)
-  - `bWorked`: Mutable boolean flag set when a `Pop` is actively assigned to this tile; `Pop` clears it on destruction through its `const Tile*`
-- **Worker Assignment**:
-  - `AssignWorker(baseId)`: Marks tile as worked by the given base
-  - `UnassignWorker()`: Removes worker assignment (sets baseId to -1)
-  - `IsWorkerAssigned()`: Check if tile already has a worker (enforces one worker per tile rule)
-  - `GetWorkedByBaseId()`: Returns the base ID currently working this tile, or -1 if unworked
-  - `SetWorked(bWorked)`: Sets the worked flag directly (used by `Pop` assignment lifecycle)
-  - `IsWorked()`: Returns the worked flag
+  - Note: `Tile` holds **no** worked/worker-assignment state — that lives in `WorkedTileIndex` (below), so `Tile` needs no `mutable` members and a `const Tile&` really is immutable
+
+### WorkedTileIndex (worked-tile occupancy)
+- **Purpose**: The single owner of the "which tiles are currently worked" state and the one enforcement point of the **one-worker-per-tile rule across all bases and factions** — two nearby bases, friendly or enemy, may never work the same tile. Owned by `WorldMap`, next to `UnitPositionIndex`.
+- **Model**: An assignment is a move-only RAII `WorkedTileClaim` minted exclusively by `WorkedTileIndex::TryClaim(tile, bUserAssigned, onDisplaced)`, which atomically checks-and-claims (returns an empty claim if the tile is already worked by anyone). The claim is held by the working `Pop` and releases the tile automatically when the pop dies, converts to a non-worker type, or is reassigned — the invariant is structural, not a convention. The player-assignment flag lives on the claim, so it cannot outlive the assignment. Worker claims carry a `DisplacedWorkerHandler` so a base founding can displace them (see Base tiles below); base-tile claims carry none and can never be displaced.
+- **Components**:
+  - `WorkedTileIndex` / `WorkedTileClaim` (`include/game/map/WorkedTileIndex.h`)
+  - `WorldMap::GetWorkedTiles()` — accessor used by every base's `WorkerAssignmentManager`
+  - `WorkedTileIndex::GetRevision()` — monotonic change counter (see `lib/Revision.h`) bumped on every claim/release, for derived-state caches over worked-tile resources
+- **Base tiles**: the base center tile is worked for free (no pop), and `BaseManager` claims it in the index for the base's entire life (`m_centerTileClaim`, via `WorkedTileIndex::ClaimDisplacing`) — a base can never work another base's own tile. Founding a base on a tile currently worked by a neighboring base's pop **displaces** that worker: its claim is emptied and its `DisplacedWorkerHandler` (registered by its `WorkerAssignmentManager` at claim time) re-runs auto-assignment, moving the worker to the best free tile in its own base's radius. The handler fires only after the founding base's claim is registered, so the displaced worker can never be reassigned back onto the founding tile. Founding on another base's *own* tile throws — a founding flow must never allow it.
+- **Future seams**: revoking assignments when a tile turns hostile (e.g. enemy unit occupies it) and reconciling after save-game load both have exactly one place to live.
 
 ### Tile Visual Layer System
 
@@ -163,11 +165,11 @@ graph TB
 ### Base System
 - Bases work tiles to extract resources
 - `Base::SetPosition(x, y)` / `Base::GetX()` / `Base::GetY()` track map position
-- `Base::GetWorkableTilePositions()` returns `const Tile*` pointers for all tiles in a 5×5 grid with the four corners removed (Manhattan distance ≤ 3 within `[-2,2]` offsets), excluding the base's own tile — 20 tiles total. Enemy-unit blocking is a TODO pending unit implementation.
-- `Base::SetWorkedTiles()` aggregates resources from worked tiles
+- `WorkerAssignmentManager::GetWorkableTiles()` returns `const Tile*` pointers for all tiles in a 5×5 grid with the four corners removed (Manhattan distance ≤ 3 within `[-2,2]` offsets), excluding the base's own tile — 20 tiles total (`ForEachTileInWorkableArea` in `MapUtils.h`). Enemy-unit blocking is a TODO pending unit implementation.
+- `WorkerAssignmentManager::ComputeWorkedResources()` aggregates resources from worked tiles
 - `TileResources_t` struct used to pass resource totals
 - Each worker assigned to a tile contributes that tile's resource production
-- `Tile::AssignWorker(baseId)` records which base is working the tile; prevents double-assignment by checking `IsWorkerAssigned()` before assigning
+- Assignment claims the tile in `WorkedTileIndex` (see above); the atomic `TryClaim` prevents double-assignment, including by another faction's base
 - `BaseManager`'s constructor adds `"Base"` to its tile's improvements, so the base's own garrison defense bonus flows through the same `ImprovementRegistry` lookup as Bunker/Rocky/Fungus (see Tile Improvement Effects above). This is also why `BaseManager` holds a non-const `Tile&` rather than `const Tile&`.
 
 ### Faction Economy

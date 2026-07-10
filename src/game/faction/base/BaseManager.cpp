@@ -42,6 +42,16 @@ const ProductionCostCalculator& RequireProductionCostCalculator_(const GameDataC
     return *rDataContext.productionCostCalculator;
 }
 
+WorkedTileClaim ClaimCenterTile_(TileEffectsContext& rTileEffects, const Tile& tile)
+{
+    // The base tile is worked for free by this base alone, so it is claimed in the world
+    // index for the base's lifetime — another base can never work it. A worker currently
+    // on the tile is displaced, and its own base auto-reassigns it to the best free tile
+    // in its radius. Throws only if the tile is another base's own tile, which a founding
+    // flow must never allow.
+    return rTileEffects.GetWorldMap().GetWorkedTiles().ClaimDisplacing(tile, /*bUserAssigned*/false);
+}
+
 } // namespace
 
 BaseManager::BaseManager(
@@ -58,12 +68,13 @@ BaseManager::BaseManager(
     , m_baseId(baseId)
     , m_tile(tile)
     , m_rTileEffects(rTileEffects)
+    , m_centerTileClaim(ClaimCenterTile_(rTileEffects, tile))
     , m_pBuildingRegistry(rDataContext.buildingRegistry.get())
     , m_pSocialRatings(rDataContext.socialRatingRegistry.get())
     , m_pResearch(pResearchManager)
     , m_pEffectsProvider(pEffectsProvider)
     , m_pPopulation(std::make_unique<PopulationManager>(rDataContext, pResearchManager, 3))
-    , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(ComputeWorkableTiles_(rTileEffects, tile), *m_pPopulation, rTileEffects))
+    , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(ComputeWorkableTiles_(rTileEffects, tile), *m_pPopulation, rTileEffects, rTileEffects.GetWorldMap().GetWorkedTiles()))
     , m_pBuildings(std::make_unique<BuildingManager>(rDataContext, pResearchManager))
     , m_pResources(std::make_unique<ResourceManager>(
           m_pWorkerAssignments.get(), pEconomyManager, m_pBuildings.get(), &m_tile, &m_rTileEffects))

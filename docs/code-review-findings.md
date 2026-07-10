@@ -72,7 +72,8 @@ Related prior review: `docs/architecture/effects-system-review.md` (effects subs
 >   blocked on finding 2.1**, not merely "entangled" — there is currently zero revision
 >   tracking anywhere on worker-tile assignment (`Pop::SetTile`/`Tile::m_bWorked` are bare
 >   mutations) to key a cache on. Building that is 2.1's job (worker state ownership),
->   not a tag-along here.
+>   not a tag-along here. *(Unblocked 2026-07-09: 2.1's fix added `WorkedTileIndex` with a
+>   `GetRevision()` bumped on every claim/release; the memoization itself is still to do.)*
 >
 > Still deferred: `TileEffectsContext::CollectAreaEffects`'s (2r+1)² per-tile neighborhood
 > scan — confirmed hotter than originally described (it runs inside the sort comparator in
@@ -187,6 +188,48 @@ Individually each is "not implemented yet"; collectively they show the extension
 
 ### 2.1 [H] Worker assignment state is spread across three classes
 
+> **Status (2026-07-09): fixed.** Worker-assignment state now has a single owner: a
+> world-scoped `WorkedTileIndex` owned by `WorldMap` (next to `UnitPositionIndex`,
+> `game/map/WorkedTileIndex.{h,cpp}`), reached by every base's `WorkerAssignmentManager`
+> via `WorldMap::GetWorkedTiles()`.
+>
+> - An assignment is a move-only RAII `WorkedTileClaim` minted exclusively by
+>   `WorkedTileIndex::TryClaim(tile, bUserAssigned)` — an atomic check-and-claim that fails
+>   if the tile is worked by *anyone*, so one-worker-per-tile holds across all bases and
+>   **all factions** (the cross-base visibility the old `Tile` flag provided, now behind one
+>   owner instead of a distributed convention). The claim releases the tile when destroyed,
+>   overwritten, or cleared, so an assignment structurally cannot leak: pop death
+>   (`PopContainer::RemovePop`), convert-to-non-worker (`Pop::Convert`), and reassignment
+>   all free the tile with no cooperation from the call site.
+> - `Pop` holds the claim instead of a bare `const Tile*` + `bool`: `SetTile`/`SetUserAssigned`
+>   are gone (replaced by `SetTileClaim`, which throws if a non-empty claim is handed to a
+>   non-worker type), and the user-assigned flag lives **on the claim**, so the old hidden
+>   side effect ("clearing a pop's tile silently resets its user flag inside `Pop::SetTile`")
+>   became a structural property: the flag cannot outlive the assignment.
+> - `Tile::SetWorked/IsWorked/IsWorkerAssigned` and `mutable bool m_bWorked` are deleted —
+>   this also closes 2.4's `Tile` row (the "const method mutates a mutable member" hack) and
+>   2.3's "two names for the same field" bullet. `BaseWorkableAreaDisplay` now asks the base's
+>   `WorkerAssignmentManager::IsTileAssigned` instead of the tile.
+> - `WorkedTileIndex` owns a `Revision` bumped on every claim/release — the invalidation
+>   hook 1.1 said was missing for caching `ResourceManager::ComputeWorked_` (that memoization
+>   itself remains follow-up work, but is no longer blocked).
+> - Guarded by `tests/game/WorkerAssignmentTests.cpp`: cross-base exclusion + release/re-claim,
+>   tile freed on pop death and on convert-through-`PopulationManager` (the path that bypasses
+>   `BaseManager::ConvertPop`), user-flag lifetime, workable-set/non-worker refusal, revision
+>   bumps (including no bump on a failed claim).
+> - Rule decided 2026-07-09 (same day, follow-up): a base may never work another base's own
+>   tile. `BaseManager` claims its center tile in the index for its whole life
+>   (`m_centerTileClaim`, released on base destruction). Founding a base on a tile currently
+>   worked by a neighboring base's pop **displaces** the worker: the index keeps a
+>   tile→claim back-map, `ClaimDisplacing` empties the worker's claim and invokes its
+>   `DisplacedWorkerHandler` (registered by the owning `WorkerAssignmentManager` at claim
+>   time) *after* the new claim is registered, so the worker is auto-reassigned to the best
+>   free tile in its own base's radius and can never take the founding tile back. Founding
+>   on another base's own tile throws (base-tile claims carry no handler). Covered by three
+>   more tests in `tests/game/WorkerAssignmentTests.cpp`, including yield-based "best free
+>   tile" reassignment. Repair flows (tile turns hostile, reconcile after load) remain
+>   unimplemented, but displacement established the pattern they will reuse.
+
 The canonical assignment is a `const Tile*` on `Pop`; the "is worked" flag is a `mutable bool` on `Tile` (maintained by `Pop::SetTile` and `Pop::~Pop`); the workable set and the algorithms live in `WorkerAssignmentManager`. The one-worker-per-tile invariant is maintained by convention across all three (`WorkerAssignmentManager::IsTileAssigned` reads the tile flag; the comment at `WorkerAssignmentManager.cpp:120-126` explains the choice). Additional subtlety: clearing a pop's tile silently resets its user-assigned flag as a side effect inside `Pop::SetTile` (`Pop.cpp:88-93`) — behavior callers must know but cannot see. This state model has no single owner to enforce or repair invariants (e.g., what clears assignments when a tile becomes hostile, who reconciles after load).
 
 ### 2.2 [H] Unit position is stored twice with a public bypass
@@ -198,11 +241,11 @@ The canonical assignment is a `const Tile*` on `Pop`; the "is worked" flag is a 
 - `ResearchManager`: `m_bHasResearchTarget` duplicates `m_pCurrentResearchTarget != nullptr`; `SetResearchTarget` assigns the pointer **before** validating (`ResearchManager.cpp:28-37`), so a failed lookup throws with `m_pCurrentResearchTarget == nullptr` while `m_bHasResearchTarget` retains its old value — `HasResearchTarget() == true` with no target; `RecalculatePointsNeeded` then throws "Invalid state".
 - `Military`: `m_designs` vector plus `m_designMap` raw-pointer map — dual bookkeeping with no removal API yet; the first removal feature will have to remember both.
 - `Faction::m_energy` lives on Faction while the class comment says the economy split is owned by `EconomyManager` — faction-level economy state is split across two objects. *(Addressed 2026-07-09: the treasury moved into `EconomyManager`; `Faction` holds no economy state.)*
-- `Tile::IsWorked()` and `Tile::IsWorkerAssigned()` are two names for the same field.
+- `Tile::IsWorked()` and `Tile::IsWorkerAssigned()` are two names for the same field. *(Addressed 2026-07-09 with 2.1: both methods and the field are deleted; occupancy lives in `WorkedTileIndex`.)*
 
 ### 2.4 [H] Const-correctness is systematically subverted
 
-- `Tile::SetWorked(bool) const` mutates a `mutable` member, openly documented as "declared const because it is updated through a const Tile* held by Pop" (`include/game/map/Tile.h:96-99`).
+- `Tile::SetWorked(bool) const` mutates a `mutable` member, openly documented as "declared const because it is updated through a const Tile* held by Pop" (`include/game/map/Tile.h:96-99`). *(Addressed 2026-07-09 with 2.1: `SetWorked` and the `mutable` member are deleted; `Tile` has no mutable state left.)*
 - `TileEffectsContext::AddImprovementWithEffects` / `RemoveImprovementWithEffects` / `RecomputeMoisture` are `const` methods that mutate tiles and trigger area-wide terrain recomputation (`include/lib/effects/TileEffectsContext.h:60-73`).
 - `Faction`'s `GetEconomyManager() const`, `GetResearchManager() const`, `GetResearchSelector() const` return **non-const pointers** to internals (`Faction.cpp:99-102, 248-256`); `ViewFactory::CreateResearchView` extracts a mutable `ResearchManager*` from a `const Faction*`. *(Addressed 2026-07-09: replaced by const-correct reference accessors `GetEconomy()`/`GetResearch()`/`GetSocialEngineering()`; `GetResearchSelector` deleted (no callers); `ResearchView`/`CurrentResearchPanel` now take `const ResearchManager*`. The `Tile`/`TileEffectsContext` rows of this finding are untouched.)*
 

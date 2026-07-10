@@ -12,18 +12,20 @@ namespace ac
 class PopulationManager;
 class Tile;
 class TileEffectsContext;
+class WorkedTileIndex;
 
 // Manages the mapping of worker pops to workable tiles for a single base.
 // Workers are Pop instances that return true from Pop::IsWorker().
 //
-// The canonical assignment is stored on each Pop as a const Tile* (Pop::GetTile()).
-// WorkerAssignmentManager validates assignments, owns the set of workable tiles,
-// and runs the auto-assignment algorithm. It does NOT own tiles.
+// An assignment is a WorkedTileClaim held by the Pop (Pop::GetTile()), minted by the
+// world-scoped WorkedTileIndex — the single owner of the one-worker-per-tile rule across
+// all bases and factions. WorkerAssignmentManager validates assignments against its
+// workable tile set and runs the auto-assignment algorithm. It does NOT own tiles.
 class WorkerAssignmentManager
 {
 public:
     WorkerAssignmentManager(std::vector<const Tile*> workableTiles, PopulationManager& rPops,
-                             const TileEffectsContext& rTileEffects);
+                             const TileEffectsContext& rTileEffects, WorkedTileIndex& rWorkedTiles);
     ~WorkerAssignmentManager() = default;
 
     using TileScorer = std::function<float(const Tile&)>;
@@ -31,7 +33,7 @@ public:
     // Assign a worker pop to a tile.
     // Returns false if:
     //   - the pop is not a worker
-    //   - the tile is already assigned to another pop
+    //   - the tile is already worked (by any base of any faction)
     //   - the tile is not in the workable tile set
     bool AssignWorker(Pop& rPop, const Tile* pTile);
 
@@ -63,7 +65,8 @@ public:
     // Unassign all pops, revert specialists to workers, and re-run auto-assignment.
     void ResetAllAssignments();
 
-    // Returns true if the given tile already has a worker assigned.
+    // Returns true if the given tile already has a worker assigned — by this base or any
+    // other, including other factions' (queried from the world-scoped WorkedTileIndex).
     bool IsTileAssigned(const Tile* pTile) const;
 
     // Compute aggregate resources from all assigned workers.
@@ -92,6 +95,7 @@ public:
     void UserAssignBestAvailableWorker(const Tile* pTile, const std::string& defaultWorkerType);
 
 private:
+    bool Assign_(Pop& rPop, const Tile* pTile, bool bUserAssigned);
     std::vector<Pop*> GetUnassignedWorkers_() const;
     std::vector<const Tile*> GetAvailableTiles_() const;
     std::vector<const Tile*> PrioritizeAvailableTiles_(const std::vector<const Tile*>& availableTiles) const;
@@ -106,6 +110,7 @@ private:
     TileScorer m_scorer;
     PopulationManager& m_rPops;
     const TileEffectsContext& m_rTileEffects;
+    WorkedTileIndex& m_rWorkedTiles;
 };
 
 } // namespace ac

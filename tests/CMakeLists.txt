@@ -23,6 +23,7 @@ add_executable(effects-tests
     faction/FactionFlavorTests.cpp
     faction/ResearchSelectorTests.cpp
     game/GameCategoryParserTests.cpp
+    game/WorkerAssignmentTests.cpp
 )
 
 target_link_libraries(effects-tests PRIVATE ac-core Catch2::Catch2WithMain)

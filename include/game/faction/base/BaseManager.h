@@ -3,6 +3,7 @@
 #include "game/IConstructable.h"
 #include "game/buildings/BuildingConfigParser.h"
 #include "game/faction/base/BaseTypes.h"
+#include "game/map/WorkedTileIndex.h"
 #include "lib/effects/ActiveEffect.h"
 #include "lib/effects/TileEffectsContext.h"
 #include "lib/Signal.h"
@@ -159,6 +160,10 @@ private:
     int m_baseId;
     Tile& m_tile;
     TileEffectsContext& m_rTileEffects;
+    // The base works its own tile for free (no pop), so it holds the tile's claim in the
+    // world WorkedTileIndex for its whole life — no other base, friendly or enemy, can
+    // ever work another base's tile. Released automatically when the base is destroyed.
+    WorkedTileClaim m_centerTileClaim;
     const BuildingRegistry* m_pBuildingRegistry;
     const SocialRatingRegistry* m_pSocialRatings;
     const ResearchManager* m_pResearch;

@@ -50,7 +50,6 @@ Tile::Tile()
     , m_elevation(0)
     , m_bHasRiver(false)
     , m_bHasFungus(false)
-    , m_bWorked(false)
 {
 }
 
@@ -63,7 +62,6 @@ Tile::Tile(int x, int y)
     , m_elevation(0)
     , m_bHasRiver(false)
     , m_bHasFungus(false)
-    , m_bWorked(false)
 {
 }
 
@@ -180,21 +178,6 @@ bool Tile::HasImprovement(std::string_view improvementId) const
 const std::vector<const ImprovementConfig_t*>& Tile::GetImprovements() const
 {
     return m_improvements;
-}
-
-void Tile::SetWorked(bool bWorked) const
-{
-    m_bWorked = bWorked;
-}
-
-bool Tile::IsWorked() const
-{
-    return m_bWorked;
-}
-
-bool Tile::IsWorkerAssigned() const
-{
-    return m_bWorked;
 }
 
 bool Tile::HasFeature(std::string_view featureId) const

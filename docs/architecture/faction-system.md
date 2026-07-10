@@ -50,7 +50,7 @@ graph TB
         Base[Base]
         WorkerAssignmentManager[WorkerAssignmentManager<br/>validates & auto-assigns]
         PopContainer[PopContainer<br/>owns pop vector]
-        Pop[Pop<br/>tile const*]
+        Pop[Pop<br/>WorkedTileClaim]
         PopulationManager[PopulationManager]
         ProductionManager[ProductionManager]
     end
@@ -134,7 +134,8 @@ graph TB
     Base --> ProductionManager
     PopulationManager --> PopContainer
     PopContainer --> Pop
-    WorkerAssignmentManager --> PopContainer
+    WorkerAssignmentManager --> PopulationManager
+    WorkerAssignmentManager --> WorkedTileIndex[WorkedTileIndex<br/>world-scoped, on WorldMap]
     ResearchManager --> Tech
     ResearchManager --> TechId
     TechRegistry --> Tech
@@ -249,9 +250,9 @@ graph TB
   - `PopulationManager`: API surface for the population component; manages pop composition, growth, and riot state for a single base
   - `IConstructable`: Abstract interface for any entity that can be queued for production; exposes `GetId()`, `GetName()`, and `GetMineralCost()`
   - `ProductionManager`: API surface for the production component; manages one active `IConstructable` at a time, tracks accumulated minerals, and emits `on_production_completed` when the item is finished
-  - `WorkerAssignmentManager`: Owns the set of workable tiles and the tile-scoring policy; holds a reference to the base's `PopContainer`; validates worker-to-tile assignments and runs auto-assignment. The canonical assignment is stored on each `Pop` as a `const Tile*`; `Pop` also tracks whether the assignment was user-driven so the manager can skip user-assigned pops during auto-assignment.
+  - `WorkerAssignmentManager`: Owns the set of workable tiles and the tile-scoring policy; holds a reference to the base's `PopulationManager` and to the world-scoped `WorkedTileIndex`; validates worker-to-tile assignments and runs auto-assignment. An assignment is a `WorkedTileClaim` minted by `WorkedTileIndex::TryClaim` and held by the `Pop`; the claim also carries the user-assigned flag, so the manager can skip user-assigned pops during auto-assignment and the flag can never outlive the assignment (see `docs/architecture/map-system.md`, "WorkedTileIndex").
   - `PopContainer`: Owns the vector of `Pop` instances for a single base and provides pop transformation operations
-  - `Pop`: Individual population unit; stores a `const Tile*` when assigned as a worker and tracks whether the assignment was user-driven
+  - `Pop`: Individual population unit; holds a `WorkedTileClaim` when assigned as a worker (`GetTile()` reads it), which releases the tile automatically when the pop dies, converts to a non-worker type, or is reassigned
   - `PopFactory`: Creates individual `Pop` instances from config (looked up via `PopTypeRegistry`)
   - `RiotCalculator`: Tracks drone riot state and emits `will_riot`, `is_rioting`, and `riot_ended` signals
   - `GrowthCalculator`: Computes the nutrient threshold required for a base to grow one population. Stateful; accepts a `GrowthConfig` (loaded from `config/pop_growth.lua` via `GrowthConfigParser`) and a `LuaRuntime`. Growth/starvation decisions (stockpile ≥ required → grow; stockpile < 0 → starve) are made in the `Population` turn stage.
@@ -264,9 +265,9 @@ graph TB
   - `TradeRoutes`: Collection of trade routes providing additional energy
 - **Responsibilities**:
   - Manage population growth and size (1-8 initially, expandable with buildings)
-  - Expose the set of workable tiles via `GetWorkableTilePositions()` (5×5 grid minus corners, Manhattan distance ≤ 3 within [-2,2] offsets, 20 tiles, excluding own tile). Tiles already worked by another base or occupied by an enemy unit cannot be worked (enemy-unit check is TODO pending unit implementation).
-  - Store the canonical worker-to-tile assignment on each `Pop` (as `Pop::GetTile()`)
-  - Let `WorkerAssignmentManager` enforce uniqueness, validate tile coordinates against the workable tile set, and auto-assign idle workers
+  - Expose the set of workable tiles via `WorkerAssignmentManager::GetWorkableTiles()` (5×5 grid minus corners, Manhattan distance ≤ 3 within [-2,2] offsets, 20 tiles, excluding own tile). Tiles already worked by another base — including another faction's — cannot be worked (enforced by `WorkedTileIndex`); enemy-unit blocking is a TODO pending unit implementation.
+  - Hold the worker-to-tile assignment on each `Pop` as a `WorkedTileClaim` (read via `Pop::GetTile()`)
+  - Let `WorkerAssignmentManager` validate tiles against the workable set and auto-assign idle workers; one-worker-per-tile uniqueness is enforced structurally by `WorkedTileIndex::TryClaim`
   - Assign workers to different roles (tiles, labs, psych, econ, drones, talents)
   - Track buildings constructed in the base
   - Manage one active production item per base, accumulating minerals each turn until the item's mineral cost is paid; emits `on_production_completed` and adds the building to the base when finished

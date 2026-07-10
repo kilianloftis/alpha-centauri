@@ -76,7 +76,8 @@ void BaseWorkableAreaDisplay::Render(Graphics& rGraphics)
 
     for (const TileRect_t& entry : m_tileRects)
     {
-        RenderTile_(rGraphics, *entry.pTile, entry.rect.x, entry.rect.y, m_tileSize, entry.pTile->IsWorked());
+        RenderTile_(rGraphics, *entry.pTile, entry.rect.x, entry.rect.y, m_tileSize,
+                    m_pBase->GetWorkerAssignments().IsTileAssigned(entry.pTile));
     }
 
     const float centerX = m_startX + k_GridCenterOffset * m_tileSize;

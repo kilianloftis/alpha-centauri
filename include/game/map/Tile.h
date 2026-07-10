@@ -88,12 +88,6 @@ public:
     bool HasImprovement(std::string_view improvementId) const;
     const std::vector<const ImprovementConfig_t*>& GetImprovements() const;
 
-    // Worked flag (set when a Pop is actively assigned to this tile).
-    // Declared const because it is updated through a const Tile* held by Pop.
-    void SetWorked(bool bWorked) const;
-    bool IsWorked() const;
-    bool IsWorkerAssigned() const;
-
     // Terrain-only feature ids: rockiness, moisture, river, fungus. These are intrinsic
     // terrain properties (enums/bools), but for effects/exclusivity they're looked up in the
     // ImprovementRegistry by string id, exactly like an improvement. Improvements are NOT
@@ -119,8 +113,6 @@ private:
     bool m_bHasFungus;
 
     std::vector<const ImprovementConfig_t*> m_improvements;
-
-    mutable bool m_bWorked;  // true when a Pop is assigned to this tile
 };
 
 } // namespace ac

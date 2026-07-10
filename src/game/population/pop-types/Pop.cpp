@@ -4,23 +4,14 @@
 #include "game/map/Tile.h"
 #include "lib/effects/ActiveEffect.h"
 #include <cmath>
+#include <stdexcept>
 
 namespace ac
 {
 
 Pop::Pop(const PopTypeConfig_t& rConfig)
     : m_pConfig(&rConfig)
-    , m_pTile(nullptr)
-    , m_bUserAssigned(false)
 {
-}
-
-Pop::~Pop()
-{
-    if (m_pTile)
-    {
-        m_pTile->SetWorked(false);
-    }
 }
 
 const char* Pop::GetPopType() const
@@ -68,44 +59,28 @@ void Pop::Convert(const PopTypeConfig_t& rConfig)
     m_pConfig = &rConfig;
     if (!m_pConfig->bCanWorkTile)
     {
-        SetTile(nullptr);
+        // A non-worker holds no claim; releasing it frees the tile in WorkedTileIndex.
+        m_tileClaim = WorkedTileClaim{};
     }
 }
 
-void Pop::SetTile(const Tile* pTile)
+void Pop::SetTileClaim(WorkedTileClaim claim)
 {
-    if (m_pTile == pTile)
+    if (claim.GetTile() && !IsWorker())
     {
-        return;
+        throw std::logic_error("Pop::SetTileClaim: pop type cannot work tiles");
     }
-    if (m_pTile)
-    {
-        m_pTile->SetWorked(false);
-    }
-    m_pTile = pTile;
-    if (m_pTile)
-    {
-        m_pTile->SetWorked(true);
-    }
-    else
-    {
-        m_bUserAssigned = false;
-    }
+    m_tileClaim = std::move(claim);
 }
 
 const Tile* Pop::GetTile() const
 {
-    return m_pTile;
-}
-
-void Pop::SetUserAssigned(bool bUserAssigned)
-{
-    m_bUserAssigned = bUserAssigned;
+    return m_tileClaim.GetTile();
 }
 
 bool Pop::IsUserAssigned() const
 {
-    return m_bUserAssigned;
+    return m_tileClaim.IsUserAssigned();
 }
 
 TileResources_t Pop::ApplyTileMultipliers(const TileResources_t& resources) const
