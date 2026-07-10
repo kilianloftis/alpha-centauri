@@ -5,7 +5,7 @@
 #include "game/EffectReferenceValidator.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/map/ImprovementRegistry.h"
-#include "lib/effects/BonusEffect.h"
+#include "game/effects/BonusEffect.h"
 
 #include "TestHelpers.h"
 

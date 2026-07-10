@@ -2,7 +2,7 @@
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/faction/base/resources/ResourceManager.h"
 #include "game/map/Tile.h"
-#include "lib/effects/ActiveEffect.h"
+#include "game/effects/ActiveEffect.h"
 #include <cmath>
 #include <stdexcept>
 

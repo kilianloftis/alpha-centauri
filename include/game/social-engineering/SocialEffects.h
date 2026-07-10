@@ -13,7 +13,7 @@ struct SocialScores
     int growth     = 0;  // → population growth rate modifier
     int planet     = 0;  // → native life interaction
     int research   = 0;  // → research output modifier
-    int industry   = 0;  // → production output modifier
+    int industry   = 0;  // → production cost modifier (CostMultiplier effects)
     int probe      = 0;  // → probe effectiveness
 };
 

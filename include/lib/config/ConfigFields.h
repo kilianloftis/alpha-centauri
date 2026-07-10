@@ -7,8 +7,6 @@
 namespace ac
 {
 
-enum class GameCategory;
-
 // Shared parsing for the fields that nearly every config entry carries (id, display name,
 // tech prerequisite, string lists). Keeps the string<->key conventions in one place so the
 // individual ConfigParsers don't each re-implement the same nlohmann accessors.
@@ -27,9 +25,6 @@ std::string ParseRequiredTech(const nlohmann::json& j);
 
 // Reads a string array at j[key]. Returns {} if the key is absent (missing == empty list).
 std::vector<std::string> ParseStringArray(const nlohmann::json& j, const std::string& key);
-
-// Required game category at j[key] (default key "category").
-GameCategory ParseGameCategory(const nlohmann::json& j, const char* key = "category");
 
 } // namespace ConfigFields
 

@@ -1,4 +1,5 @@
-#include "lib/EventBridge.h"
+#include "game/EventBridge.h"
+#include "game/faction/base/BaseManager.h"
 #include "lib/EventBus.h"
 
 namespace ac

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "lib/effects/BonusEffect.h"
+#include "game/effects/BonusEffect.h"
 #include <algorithm>
 #include <string>
 #include <vector>

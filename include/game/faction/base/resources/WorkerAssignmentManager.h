@@ -2,7 +2,7 @@
 
 #include "game/faction/base/BaseTypes.h"
 #include "game/population/pop-types/Pop.h"
-#include "lib/effects/ActiveEffect.h"
+#include "game/effects/ActiveEffect.h"
 #include <functional>
 #include <vector>
 

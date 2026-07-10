@@ -7,7 +7,7 @@
 #include "game/buildings/BuildingConfigParser.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/map/Tile.h"
-#include "lib/effects/ActiveEffect.h"
+#include "game/effects/ActiveEffect.h"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>

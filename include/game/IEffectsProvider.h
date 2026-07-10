@@ -1,6 +1,6 @@
 #pragma once
 
-#include "lib/effects/ActiveEffect.h"
+#include "game/effects/ActiveEffect.h"
 #include <cstdint>
 
 namespace ac

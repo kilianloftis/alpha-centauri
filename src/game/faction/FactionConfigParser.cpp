@@ -1,7 +1,7 @@
 #include "game/faction/FactionConfigParser.h"
 
 #include "lib/config/ConfigFields.h"
-#include "lib/effects/BonusEffectParser.h"
+#include "game/effects/BonusEffectParser.h"
 #include <algorithm>
 #include <filesystem>
 #include <fstream>

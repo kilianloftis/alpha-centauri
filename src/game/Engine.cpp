@@ -7,7 +7,7 @@
 #include "input/Input.h"
 #include "input/KeyMapping.h"
 #include "lib/EventBus.h"
-#include "lib/EventBridge.h"
+#include "game/EventBridge.h"
 #include "lib/GameEvent.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/GameDataContext.h"
@@ -28,11 +28,8 @@
 #include "game/population/pop-types/GrowthConfigParser.h"
 #include "game/population/calculators/PopCompositionCalculator.h"
 #include "game/population/calculators/PopTypeAvailabilityCalculator.h"
-#include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/research/TechCostConfig.h"
 #include "game/research/TechCostCalculator.h"
-#include "game/faction/base/production/ProductionCostConfig.h"
-#include "game/faction/base/production/ProductionCostCalculator.h"
 #include "lib/LuaRuntime.h"
 #include "ui/IGameView.h"
 #include "ui/TileHitTester.h"
@@ -171,14 +168,6 @@ void Engine::Initialize_()
         std::make_unique<TechCostCalculator>(
             *m_gameDataContext->techCostConfig, *m_gameDataContext->luaRuntime);
 
-    ProductionCostConfig_tParser productionCostParser;
-    m_gameDataContext->productionCostConfig =
-        std::make_unique<ProductionCostConfig_t>(
-            productionCostParser.ParseConfig("config/production_cost.lua", *m_gameDataContext->luaRuntime));
-    m_gameDataContext->productionCostCalculator =
-        std::make_unique<ProductionCostCalculator>(
-            *m_gameDataContext->productionCostConfig, *m_gameDataContext->luaRuntime);
-
     // Generate world map and build the save-game state around it.
     WorldGenerator worldGen;
     WorldGenConfig worldConfig;
@@ -190,9 +179,6 @@ void Engine::Initialize_()
                                               *m_gameDataContext->improvementRegistry,
                                               m_gameDataContext->unitComponentRegistry.get());
     std::cout << "Generated world map: " << m_gameState->GetWorldMap().GetWidth() << "x" << m_gameState->GetWorldMap().GetHeight() << "\n";
-
-    m_gameDataContext->secretProjectAvailabilityCalculator =
-        std::make_unique<SecretProjectAvailabilityCalculator>(*m_gameState);
 
     // Create factions from config with a starting base each.
     const int centerX = m_gameState->GetWorldMap().GetWidth() / 2;
@@ -221,7 +207,8 @@ void Engine::Initialize_()
             factionId, baseId, pFaction->SuggestBaseName(),
             m_gameState->GetWorldMap().GetTile(startX, startY),
             *m_gameDataContext,
-            m_gameState->GetTileEffects());
+            m_gameState->GetTileEffects(),
+            m_gameState->GetSecretProjectAvailability());
 
         m_eventBridge->WireBase(*pBase);
         m_gameState->AddFaction(std::move(pFaction));

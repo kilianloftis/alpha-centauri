@@ -1,12 +1,13 @@
 #pragma once
 
-#include "game/research/TechConfigParser.h"
+#include <string>
 #include <variant>
 
 namespace ac
 {
 
 using FactionId = int;
+using TechId = std::string;
 
 struct EvTurnStarted
 {

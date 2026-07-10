@@ -159,11 +159,11 @@ concept doesn't exist yet are **legal but inert**:
   - Optionally carries a `TileSelector_t selector`. When **absent**, the modifier is either an intrinsic tile yield (`ThisTile` scope) or a flat base/unit modifier (resolved once). When **present**, the modifier applies to each worked tile whose features satisfy the selector — e.g. a building's "+1 mineral to every worked Mine".
 
 ### StatId
-- **Purpose**: Identifies a stat or resource. Defined in `include/lib/effects/EffectEnums.h` so it can be shared across the game and effects systems.
+- **Purpose**: Identifies a stat or resource. Defined in `include/game/effects/EffectEnums.h` so it can be shared across the game and effects systems.
 - **Values**:
   - Base resources: `Nutrients`, `Minerals`, `Energy`.
   - Base output allocated directly rather than via energy split: `Econ`, `Labs`, `Psych`.
-  - Unit stats: `Attack`, `Defense`, `Movement`, `HitPoints`, `DisengageChance`, `Fuel`, `DamageFromOutOfFuel`, `CargoCapacity`, `DifficultTerrainCost`, `CostMultiplier`.
+  - Unit stats: `Attack`, `Defense`, `Movement`, `HitPoints`, `DisengageChance`, `Fuel`, `DamageFromOutOfFuel`, `CargoCapacity`, `DifficultTerrainCost`, `CostMultiplier` (also used for base production cost after Industry rating expansion).
   - Population modifier: `GrowthRate` (`AddPercent`, base = 100%) — modifies the faction-wide population growth rate.
   - Terrain mutation: `MoistureTier` — resolved back into `Tile::SetMoisture` by `RecomputeMoisture`; not a runtime-queried stat (see Tile Improvement Effects).
 - **Consumers**: `StatModifierEffect_t::stat`. `Defense` is also the target stat for tile-granted combat bonuses (rockiness, fungus, improvements) — see Tile Improvement Effects below.
@@ -337,6 +337,11 @@ concept doesn't exist yet are **legal but inert**:
   directly scales each base's growth threshold, both at turn end (`ApplyGrowth`) and in the
   UI (`GrowthDisplay` passes the faction pool to `GetNutrientsRequired`). The extreme
   levels emit `NearZeroGrowth` / `PopulationBoom` rule flags instead (see Known Gaps).
+- **Industry rating → production cost**: the industry axis's levels map to `CostMultiplier`
+  `AddPercent` modifiers (±10% per level, matching SMAC's ±10% mineral-cost change), which
+  `ProductionCostCalculator::ComputeCost` resolves from the base effect list
+  (`baseCost * 10 * CostMultiplier`). Same seam as Growth: the rating table defines the
+  gameplay effects; the calculator never sees the raw Industry score.
 
 ### ResourceManager Integration
 - **Purpose**: Applies active effects to base resource production.
@@ -358,7 +363,7 @@ concept doesn't exist yet are **legal but inert**:
 ### BonusEffectParser
 
 - **Purpose**: Single shared implementation of the JSON `effects` array schema, used by every config parser that defines `EffectConfig_t` entries.
-- **Location**: `include/lib/effects/BonusEffectParser.h` / `src/lib/effects/BonusEffectParser.cpp`.
+- **Location**: `include/game/effects/BonusEffectParser.h` / `src/game/effects/BonusEffectParser.cpp`.
 - **Responsibilities**:
   - `ParseStatId`, `ParseRuleFlagId`, `ParseModifierOp`, `ParseEffectScope`, `ParseEffectPersistence` — the canonical string&lt;-&gt;enum mappings. These previously existed as separate, drifting copies in `BuildingConfigParser` and `UnitComponentConfigParser`.
   - `ParseNumber` — reads a JSON field as either a number or a numeric string (used for `amount` and `value`).

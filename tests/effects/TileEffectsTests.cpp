@@ -6,8 +6,8 @@
 
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/Tile.h"
-#include "lib/effects/ActiveEffect.h"
-#include "lib/effects/TileEffectsContext.h"
+#include "game/effects/ActiveEffect.h"
+#include "game/effects/TileEffectsContext.h"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>

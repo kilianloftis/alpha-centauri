@@ -1,5 +1,5 @@
 #include "game/social-engineering/SocialRatingConfigParser.h"
-#include "lib/effects/BonusEffectParser.h"
+#include "game/effects/BonusEffectParser.h"
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <iostream>

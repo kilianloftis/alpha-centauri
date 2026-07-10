@@ -1,7 +1,7 @@
 #pragma once
 
-#include "lib/effects/ActiveEffect.h"
-#include "lib/effects/EffectEnums.h"
+#include "game/effects/ActiveEffect.h"
+#include "game/effects/EffectEnums.h"
 
 #include <map>
 #include <vector>

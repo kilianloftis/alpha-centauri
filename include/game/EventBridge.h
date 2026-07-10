@@ -1,12 +1,12 @@
 #pragma once
 
 #include "lib/GameEvent.h"
-#include "game/faction/base/BaseManager.h"
 
 namespace ac
 {
 
 class EventBus;
+class BaseManager;
 
 class EventBridge
 {

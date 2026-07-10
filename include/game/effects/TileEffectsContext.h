@@ -1,7 +1,7 @@
 #pragma once
 
 #include "game/faction/base/BaseTypes.h"
-#include "lib/effects/ActiveEffect.h"
+#include "game/effects/ActiveEffect.h"
 #include <string>
 #include <vector>
 

@@ -43,4 +43,9 @@ GameCategory ParseGameCategory(const std::string& category)
     throw std::runtime_error("Unknown game category: '" + category + "'");
 }
 
+GameCategory ParseGameCategoryField(const nlohmann::json& j, const char* key)
+{
+    return ParseGameCategory(j.at(key).get<std::string>());
+}
+
 } // namespace ac

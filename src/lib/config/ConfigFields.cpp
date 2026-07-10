@@ -1,7 +1,5 @@
 #include "lib/config/ConfigFields.h"
 
-#include "game/GameCategory.h"
-
 namespace ac
 {
 namespace ConfigFields
@@ -34,11 +32,6 @@ std::vector<std::string> ParseStringArray(const nlohmann::json& j, const std::st
         }
     }
     return values;
-}
-
-GameCategory ParseGameCategory(const nlohmann::json& j, const char* key)
-{
-    return ac::ParseGameCategory(j.at(key).get<std::string>());
 }
 
 } // namespace ConfigFields

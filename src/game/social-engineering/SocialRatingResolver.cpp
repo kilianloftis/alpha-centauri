@@ -2,7 +2,7 @@
 
 #include "game/social-engineering/SocialRatingConfig.h"
 #include "game/social-engineering/SocialRatingRegistry.h"
-#include "lib/effects/BonusEffect.h"
+#include "game/effects/BonusEffect.h"
 
 #include <string>
 

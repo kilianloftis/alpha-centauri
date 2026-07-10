@@ -21,6 +21,9 @@ add_executable(effects-tests
     effects/ValidationTests.cpp
     faction/FactionConfigParserTests.cpp
     faction/FactionFlavorTests.cpp
+    faction/EconomyManagerTests.cpp
+    faction/ProductionCostTests.cpp
+    faction/GrowthTests.cpp
     faction/ResearchSelectorTests.cpp
     game/GameCategoryParserTests.cpp
     game/UnitPositionTests.cpp

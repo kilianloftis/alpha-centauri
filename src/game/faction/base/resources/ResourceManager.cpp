@@ -2,9 +2,9 @@
 #include "game/faction/EconomyManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/map/Tile.h"
-#include "lib/effects/ActiveEffect.h"
-#include "lib/effects/TileEffectsContext.h"
-#include "lib/effects/BonusEffect.h"
+#include "game/effects/ActiveEffect.h"
+#include "game/effects/TileEffectsContext.h"
+#include "game/effects/BonusEffect.h"
 
 namespace ac
 {

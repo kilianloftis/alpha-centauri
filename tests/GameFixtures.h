@@ -10,8 +10,6 @@
 #include "game/faction/UnitManager.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/buildings/BuildingManager.h"
-#include "game/faction/base/production/ProductionCostCalculator.h"
-#include "game/faction/base/production/ProductionCostConfig.h"
 #include "game/faction/base/resources/ResourceManager.h"
 #include "game/map/ImprovementRegistry.h"
 #include "lib/LuaRuntime.h"
@@ -25,7 +23,7 @@
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitSlotConfig.h"
-#include "lib/effects/TileEffectsContext.h"
+#include "game/effects/TileEffectsContext.h"
 
 #include <deque>
 #include <memory>
@@ -85,9 +83,6 @@ struct BaseFixture : WorldFixture
         dataContext.popTypeRegistry->Load(FixturePath("pop_types.json"));
         dataContext.growthConfig = std::make_unique<ac::GrowthConfig_t>();
         dataContext.luaRuntime = std::make_unique<ac::LuaRuntime>();
-        dataContext.productionCostConfig = std::make_unique<ac::ProductionCostConfig_t>();
-        dataContext.productionCostCalculator = std::make_unique<ac::ProductionCostCalculator>(
-            *dataContext.productionCostConfig, *dataContext.luaRuntime);
     }
 
     ac::BuildingRegistry& buildings() { return *dataContext.buildingRegistry; }
@@ -98,7 +93,15 @@ struct BaseFixture : WorldFixture
     ac::BaseManager& MakeBase(int x, int y)
     {
         bases.push_back(std::make_unique<ac::BaseManager>(
-            /*factionId*/ 1, nextBaseId++, "TestBase", At(x, y), dataContext, *ctx,
+            /*factionId*/ 1, nextBaseId++, "TestBase", At(x, y),
+            dataContext.buildingRegistry.get(),
+            dataContext.socialRatingRegistry.get(),
+            dataContext.popTypeRegistry.get(),
+            dataContext.popTypeAvailabilityCalculator.get(),
+            dataContext.growthConfig.get(),
+            dataContext.popCompositionCalculator.get(),
+            /*secretProjectCalculator*/ nullptr,
+            *ctx,
             /*research*/ nullptr, &economy, /*effectsProvider*/ nullptr));
         return *bases.back();
     }
@@ -141,7 +144,15 @@ struct FactionFixture : BaseFixture
     ac::BaseManager& MakeFactionBase(ac::Faction& rFaction, int x, int y)
     {
         auto pBase = std::make_unique<ac::BaseManager>(
-            /*factionId*/ 1, nextBaseId++, "TestBase", At(x, y), dataContext, *ctx,
+            /*factionId*/ 1, nextBaseId++, "TestBase", At(x, y),
+            dataContext.buildingRegistry.get(),
+            dataContext.socialRatingRegistry.get(),
+            dataContext.popTypeRegistry.get(),
+            dataContext.popTypeAvailabilityCalculator.get(),
+            dataContext.growthConfig.get(),
+            dataContext.popCompositionCalculator.get(),
+            /*secretProjectCalculator*/ nullptr,
+            *ctx,
             /*research*/ nullptr, &economy, &rFaction);
         ac::BaseManager& rBase = *pBase;
         rFaction.AddBase(std::move(pBase));

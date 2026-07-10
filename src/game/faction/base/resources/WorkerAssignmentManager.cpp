@@ -2,7 +2,7 @@
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/map/Tile.h"
 #include "game/map/WorkedTileIndex.h"
-#include "lib/effects/TileEffectsContext.h"
+#include "game/effects/TileEffectsContext.h"
 #include <algorithm>
 #include <limits>
 #include <ranges>

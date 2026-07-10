@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/Faction.h"
+#include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/map/WorldMap.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "lib/DerefView.h"
@@ -54,6 +55,13 @@ public:
 
     UnitOrderExecutor& GetUnitOrderExecutor();
 
+    // Scans all bases of all factions to check whether a secret project has already been
+    // built. Owned here (rather than GameDataContext) because it queries this live,
+    // mutable faction data — an "immutable definition data" object referencing it would be
+    // constructible only after GameState exists, and would dangle if GameState were ever
+    // rebuilt (new game / load game).
+    const SecretProjectAvailabilityCalculator& GetSecretProjectAvailability() const;
+
 private:
     int m_missionYear;
     // WorldMap and TileEffectsContext are declared before m_factions so they outlive all
@@ -63,6 +71,9 @@ private:
     std::unique_ptr<TileEffectsContext> m_pTileEffects;
     std::vector<std::unique_ptr<Faction>> m_factions;
     UnitOrderExecutor m_unitOrderExecutor;
+    // Constructed with *this: only stores the reference, never dereferences it during
+    // GameState's own construction, so binding it before m_factions is populated is safe.
+    SecretProjectAvailabilityCalculator m_secretProjectAvailability;
 };
 
 } // namespace ac

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "lib/effects/BonusEffect.h"
-#include "lib/effects/EffectEnums.h"
+#include "game/effects/BonusEffect.h"
+#include "game/effects/EffectEnums.h"
 #include <map>
 #include <stdexcept>
 #include <string>

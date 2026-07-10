@@ -1,7 +1,7 @@
 #pragma once
 
 #include "lib/Revision.h"
-#include "lib/effects/ActiveEffect.h"
+#include "game/effects/ActiveEffect.h"
 #include <cstdint>
 #include <vector>
 

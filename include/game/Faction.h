@@ -10,7 +10,7 @@
 #include "game/social-engineering/SocialPolicyConfig.h"
 #include "lib/DerefView.h"
 #include "lib/Revision.h"
-#include "lib/effects/ActiveEffect.h"
+#include "game/effects/ActiveEffect.h"
 
 namespace ac
 {
@@ -31,6 +31,7 @@ class ResearchSelector;
 class Diplomacy;
 class SocialEngineeringManager;
 class PopTypeAvailabilityCalculator;
+class SecretProjectAvailabilityCalculator;
 class UnitManager;
 struct PopTypeConfig_t;
 struct GameDataContext;
@@ -55,9 +56,13 @@ public:
 
     // Base management
     void AddBase(std::unique_ptr<BaseManager> pBase);
+    // Factory method: unpacks the individual registries/calculators BaseManager needs from
+    // rDataContext (a composition-root-supplied bag) so BaseManager itself can declare narrow,
+    // named dependencies instead of taking the whole context.
     BaseManager* CreateBase(FactionId factionId, int baseId, const std::string& name, Tile* pTile,
                             const GameDataContext& rDataContext,
-                            TileEffectsContext& rTileEffects);
+                            TileEffectsContext& rTileEffects,
+                            const SecretProjectAvailabilityCalculator& rSecretProjectAvailability);
     // Iterate bases by reference without exposing the owning unique_ptrs.
     auto Bases() { return DerefView(m_bases); }
     auto Bases() const { return DerefView(m_bases); }

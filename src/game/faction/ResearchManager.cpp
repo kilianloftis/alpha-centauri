@@ -2,7 +2,7 @@
 
 #include "game/IEffectsProvider.h"
 #include "game/research/TechCostConfig.h"
-#include "lib/effects/ActiveEffect.h"
+#include "game/effects/ActiveEffect.h"
 
 #include <algorithm>
 

@@ -1,48 +1,21 @@
 #include "game/faction/base/production/ProductionCostCalculator.h"
-#include "lib/LuaRuntime.h"
-#include <iostream>
-#include <unordered_map>
+#include "game/effects/ActiveEffect.h"
+#include "game/effects/EffectEnums.h"
+#include <algorithm>
+#include <cmath>
 
 namespace ac
 {
 
-ProductionCostCalculator::ProductionCostCalculator(const ProductionCostConfig_t& rConfig, LuaRuntime& rLua)
-    : m_pConfig(&rConfig)
-    , m_pLua(&rLua)
+int ProductionCostCalculator::ComputeCost(int baseCost, const BaseEffects_t& rBaseEffects)
 {
-}
+    // CostMultiplier is PureMultiplier (seed 1.0). Industry rating levels emit AddPercent
+    // contributions here via ExpandSocialRatingEffects — same seam as GrowthRate.
+    const double multiplier = ResolveStatModifiers(
+        FilterFlatByStatId(rBaseEffects, StatId::CostMultiplier),
+        SeedFor(StatId::CostMultiplier)).total;
 
-int ProductionCostCalculator::ComputeCost(int baseCost, int industryRating) const
-{
-    const std::unordered_map<std::string, int> vars = {
-        {"base_cost",       baseCost},
-        {"industry_rating", industryRating},
-    };
-    return m_pLua->EvalInt(m_pConfig->costFormula, vars);
-}
-
-ProductionCostConfig_t ProductionCostConfig_tParser::ParseConfig(const std::string& scriptPath, LuaRuntime& rLua)
-{
-    ProductionCostConfig_t config;
-    config.costFormula = "base_cost * (10 * industry_rating)";
-
-    sol::state& lua = rLua.GetState();
-
-    sol::protected_function_result result =
-        lua.safe_script_file(scriptPath, sol::script_pass_on_error);
-
-    if (!result.valid())
-    {
-        sol::error err = result;
-        std::cout << "Warning: Failed to load production cost script '" << scriptPath
-                  << "': " << err.what() << "\n";
-        return config;
-    }
-
-    sol::table tbl = result;
-    config.costFormula = tbl.get_or("cost_formula", std::string("base_cost * (10 * industry_rating)"));
-
-    return config;
+    return std::max(1, static_cast<int>(std::lround(baseCost * k_MineralsPerRow * multiplier)));
 }
 
 } // namespace ac

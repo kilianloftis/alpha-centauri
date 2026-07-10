@@ -7,7 +7,9 @@ struct BaseEffects_t;
 struct GrowthConfig_t;
 
 // Calculates the nutrient threshold required for a base to grow one population.
-// Formula: baseSize * nutrientsPerPop (configured in pop_growth.json).
+// Formula: baseSize * nutrientsPerPop / (GrowthRate/100), with GrowthRate seeded at 100.
+// GrowthRate ≤ 0 blocks threshold growth (returns INT_MAX); NearZeroGrowth / PopulationBoom
+// rule flags are not consumed yet (TODO).
 class GrowthCalculator
 {
 public:

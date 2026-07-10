@@ -5,8 +5,10 @@
 #include "GameFixtures.h"
 #include "TestHelpers.h"
 
+#include "game/IConstructable.h"
+#include "game/faction/base/production/ProductionManager.h"
 #include "game/social-engineering/SocialRatingResolver.h"
-#include "lib/effects/ActiveEffect.h"
+#include "game/effects/ActiveEffect.h"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -117,6 +119,30 @@ TEST_CASE("Growth rating affects the growth threshold via GrowthRate modifiers",
 
     CHECK(plainBase.GetNutrientsRequired() == 25);      // 30 / 1.2
     CHECK(baseWithShrine.GetNutrientsRequired() == 23); // 30 / 1.3
+}
+
+TEST_CASE("Industry rating affects production cost via CostMultiplier modifiers",
+          "[effects][rating][industry][production]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+
+    struct StubItem : IConstructable
+    {
+        std::string name = "Stub";
+        const char* GetId() const override { return "stub"; }
+        const std::string& GetName() const override { return name; }
+        int GetBaseCost() const override { return 10; }
+    } item;
+
+    base.GetProduction().SetProduction(&item);
+    CHECK(base.GetMineralCost() == 100); // Industry 0 → multiplier 1.0
+
+    // Policy: +2 Industry → level 2 → CostMultiplier -20% → 0.8
+    REQUIRE(faction.GetSocialEngineering().SetActivePolicy(SocialCategory::Economics, "industry_policy"));
+    CHECK(base.GetEffectiveSocialRating(SocialRatingId::Industry) == 2);
+    CHECK(base.GetMineralCost() == 80);
 }
 
 TEST_CASE("Rating modifiers are honored from any source: a building's FactionGlobal rating",

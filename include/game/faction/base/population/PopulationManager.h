@@ -2,7 +2,7 @@
 
 #include "game/faction/base/population/PopContainer.h"
 #include "game/population/calculators/GrowthCalculator.h"
-#include "lib/effects/ActiveEffect.h"
+#include "game/effects/ActiveEffect.h"
 #include "game/population/calculators/RiotCalculator.h"
 #include "game/population/calculators/GoldenAgeCalculator.h"
 
@@ -14,8 +14,9 @@ namespace ac
 
 struct RiotConditionInputs;
 struct GrowthConfig_t;
-struct GameDataContext;
 class PopTypeRegistry;
+class PopTypeAvailabilityCalculator;
+class PopCompositionCalculator;
 class ResearchManager;
 
 // PopulationManager is the API surface for the population component.
@@ -24,9 +25,12 @@ class ResearchManager;
 class PopulationManager
 {
 public:
-    explicit PopulationManager(const GameDataContext& rDataContext,
-                               const ResearchManager* pResearchManager,
-                               int initialSize);
+    PopulationManager(const PopTypeRegistry* pPopTypeRegistry,
+                      const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator,
+                      const GrowthConfig_t* pGrowthConfig,
+                      PopCompositionCalculator* pCompositionCalculator,
+                      const ResearchManager* pResearchManager,
+                      int initialSize);
     ~PopulationManager();
 
     // Population size management
@@ -47,7 +51,7 @@ public:
     uint64_t GetRevision() const { return m_container.GetRevision(); }
 
     // Add a pop of the default type (growth) or of an explicit type.
-    // No-op when the base is at max size.
+    // Throws if the base is at max size.
     void AddPop();
     void AddPop(const std::string& typeId);
     void RemovePop();
@@ -76,7 +80,8 @@ public:
     // Check golden age conditions at end of turn. Delegates to m_golden_age.Update(...).
     void CheckGoldenAgeEndOfTurn();
 
-    // Population limits
+    // Population limits (initial value from GrowthConfig_t::maxBaseSize).
+    // Hab Complex / Habitation Dome should raise this via SetMaxSize (TODO).
     int GetMaxSize() const;
     void SetMaxSize(int maxSize);
 
@@ -88,6 +93,7 @@ public:
     int GetNutrientsRequired(const BaseEffects_t& rBaseEffects) const;
 
     // Apply nutrients produced this turn: add to stockpile, grow or starve if threshold is met.
+    // At max size, nutrients bank but the growth threshold is not spent.
     void ApplyGrowth(int nutrients, const BaseEffects_t& rBaseEffects);
 
     // Signals
@@ -111,7 +117,7 @@ private:
     PopContainer m_container;
     const PopTypeRegistry* m_pRegistry = nullptr;
     const GrowthConfig_t* m_pGrowthConfig = nullptr;
-    class PopCompositionCalculator* m_pCompositionCalculator = nullptr;
+    PopCompositionCalculator* m_pCompositionCalculator = nullptr;
     int m_maxSize;
     int m_nutrientStockpile = 0;
 

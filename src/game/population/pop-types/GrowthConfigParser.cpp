@@ -19,6 +19,7 @@ GrowthConfig_t GrowthConfig_tParser::ParseConfig(const std::string& configPath)
 
     const nlohmann::json json = nlohmann::json::parse(file);
     config.nutrientsPerPop = json.value("nutrients_per_pop", config.nutrientsPerPop);
+    config.maxBaseSize = json.value("max_base_size", config.maxBaseSize);
 
     return config;
 }

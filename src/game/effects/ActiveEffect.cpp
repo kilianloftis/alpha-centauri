@@ -1,4 +1,4 @@
-#include "lib/effects/ActiveEffect.h"
+#include "game/effects/ActiveEffect.h"
 
 #include "game/IEffectsProvider.h"
 #include "game/Faction.h"
@@ -15,7 +15,7 @@
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/social-engineering/SocialPolicyConfig.h"
 #include "game/units/UnitComponentConfig.h"
-#include "lib/effects/BonusEffect.h"
+#include "game/effects/BonusEffect.h"
 #include <algorithm>
 #include <cmath>
 #include <iostream>

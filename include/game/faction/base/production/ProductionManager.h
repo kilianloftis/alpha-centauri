@@ -1,7 +1,7 @@
 #pragma once
 
 #include "game/IConstructable.h"
-#include "game/faction/base/production/ProductionCostCalculator.h"
+#include "game/effects/ActiveEffect.h"
 #include "lib/Signal.h"
 #include <string>
 
@@ -14,7 +14,7 @@ namespace ac
 class ProductionManager
 {
 public:
-    explicit ProductionManager(const ProductionCostCalculator& rCostCalculator);
+    ProductionManager();
     ~ProductionManager();
 
     // Set the item to produce. Pass nullptr to clear production.
@@ -26,15 +26,17 @@ public:
     // True if a production item is currently set.
     bool HasProduction() const;
 
-    // Effective mineral cost of the current production item (after calculator modifiers).
-    int GetMineralCost() const;
+    // Effective mineral cost of the current production item after CostMultiplier effects
+    // in rBaseEffects (e.g. Industry social-rating levels). Returns 0 when nothing is queued.
+    int GetMineralCost(const BaseEffects_t& rBaseEffects) const;
 
     // Mineral stockpile owned by this manager.
     int GetMineralStockpile() const;
 
     // Apply minerals produced this turn: add to stockpile, complete if cost is met.
-    // Returns the completed item id, or empty string if construction is ongoing.
-    std::string ApplyProduction(int minerals);
+    // rBaseEffects is forwarded to GetMineralCost. Returns the completed item id,
+    // or empty string if construction is ongoing.
+    std::string ApplyProduction(int minerals, const BaseEffects_t& rBaseEffects);
 
     // Complete the current production immediately and return its id.
     std::string CompleteProduction();
@@ -46,7 +48,6 @@ public:
     Signal<> on_production_changed;
 
 private:
-    const ProductionCostCalculator* m_pCostCalculator = nullptr;
     const IConstructable* m_pCurrentItem = nullptr;
     int m_mineralStockpile = 0;
 

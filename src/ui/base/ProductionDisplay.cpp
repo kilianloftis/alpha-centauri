@@ -64,7 +64,7 @@ void ProductionDisplay::Render(Graphics& rGraphics)
     oss << "Required: ";
     if (pCurrentProduction)
     {
-        oss << rProduction.GetMineralCost();
+        oss << m_pBase->GetMineralCost();
     }
     else
     {

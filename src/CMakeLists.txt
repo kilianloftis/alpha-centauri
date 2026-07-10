@@ -42,12 +42,12 @@ add_library(ac-core STATIC
     game/faction/Specialist.cpp
     game/TurnProcessor.cpp
     lib/EventBus.cpp
-    lib/EventBridge.cpp
     lib/LuaRuntime.cpp
-    lib/effects/ActiveEffect.cpp
-    lib/effects/BonusEffectParser.cpp
-    lib/effects/TileEffectsContext.cpp
     lib/config/ConfigFields.cpp
+    game/EventBridge.cpp
+    game/effects/ActiveEffect.cpp
+    game/effects/BonusEffectParser.cpp
+    game/effects/TileEffectsContext.cpp
     game/TurnStageFactory.cpp
     game/TurnStageConfigParser.cpp
     game/HookContext.cpp

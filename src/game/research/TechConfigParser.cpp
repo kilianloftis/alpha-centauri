@@ -22,7 +22,7 @@ TechConfig_t TechConfigParser::ParseTechConfig(const nlohmann::json& techJson)
     TechConfig_t config;
     config.id = ConfigFields::ParseId(techJson);
     config.name = ConfigFields::ParseName(techJson, config.id);
-    config.category = ConfigFields::ParseGameCategory(techJson);
+    config.category = ParseGameCategoryField(techJson);
     config.cost = techJson.value("cost", 0);
     config.prerequisites = ConfigFields::ParseStringArray(techJson, "prerequisites");
 

@@ -1,6 +1,6 @@
 # Effects System Review
 
-This document records findings from a deep review of `lib/effects` and how it is wired into the
+This document records findings from a deep review of `game/effects` and how it is wired into the
 rest of the game.  Items are divided into **bugs already fixed**, **bugs that need attention**, and
 **design decisions that require input**.
 

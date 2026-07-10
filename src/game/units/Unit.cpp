@@ -3,7 +3,7 @@
 #include "game/Faction.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
-#include "lib/effects/ActiveEffect.h"
+#include "game/effects/ActiveEffect.h"
 
 namespace ac
 {

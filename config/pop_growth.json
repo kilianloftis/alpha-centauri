@@ -1,3 +1,4 @@
 {
-  "nutrients_per_pop": 10
+  "nutrients_per_pop": 10,
+  "max_base_size": 7
 }

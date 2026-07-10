@@ -8,7 +8,7 @@
 #include "game/map/Tile.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
 #include "game/units/UnitComponentConfig.h"
-#include "lib/effects/ActiveEffect.h"
+#include "game/effects/ActiveEffect.h"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -120,7 +120,11 @@ TEST_CASE("CollectFromPops: only ThisBase-scoped pop effects enter the base pool
     actest::BaseFixture fixture;
     const BaseManager& base = fixture.MakeBase(4, 4);
 
-    PopulationManager pops(fixture.dataContext, nullptr, 0);
+    PopulationManager pops(fixture.dataContext.popTypeRegistry.get(),
+                           fixture.dataContext.popTypeAvailabilityCalculator.get(),
+                           fixture.dataContext.growthConfig.get(),
+                           fixture.dataContext.popCompositionCalculator.get(),
+                           /*research*/ nullptr, 0);
     pops.AddPop("Doctor");
     pops.AddPop("Doctor");
     pops.AddPop("Technician");

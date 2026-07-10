@@ -241,11 +241,10 @@ graph TB
   - Both HookSystem and TurnStageFactory load from config/turn_stages.json
 
 ### GameDataContext
-- **Purpose**: Holds all immutable definition data loaded once at startup; never serialised
+- **Purpose**: Holds the definition data loaded once at startup (registries, config structs) plus the calculators/services built from it. Deliberately excludes anything that reads live save-game state — see `SecretProjectAvailabilityCalculator` below, which lives on `GameState` instead.
 - **Components**:
   - `IConstructable`: Abstract interface for entities that can be constructed in a base; exposes `GetId()`, `GetName()`, and `GetMineralCost()`
   - `BuildingRegistry`: All building definitions loaded from `config/buildings.json`; each entry may have `secret_project: true` to mark it as a Secret Project
-  - `SecretProjectAvailabilityCalculator`: Holds a reference to the live factions vector; `IsCompleted(id)` scans all bases across all factions to determine if a secret project has already been built; injected into each `BuildingManager` so `GetBuildingsAvailableForConstruction` can suppress already-claimed secret projects
   - `TechRegistry`: All tech definitions loaded from `config/techs.json`
   - `PopTypeRegistry`: All pop type definitions loaded from `config/pop_types.json`
   - `PopCompositionConfig`: Composition formula config loaded via Lua
@@ -256,7 +255,7 @@ graph TB
 ### Faction System
 - **Purpose**: Manages all factions and their mutable save-game state
 - **Components**:
-  - `GameState`: Owns FactionVector, missionYear, and WorldMap — mutable data written to and read from disk; no registries or calculators
+  - `GameState`: Owns FactionVector, missionYear, and WorldMap — mutable data written to and read from disk. Also owns two world-scoped resolvers that must share the map's lifetime rather than GameDataContext's: `TileEffectsContext` (bundles the live WorldMap with the immutable ImprovementRegistry to resolve tile effects) and the stateless `UnitOrderExecutor`. `SecretProjectAvailabilityCalculator` lives here too, since it scans the live faction vector — as an owned member of the object it queries, it cannot dangle the way a `GameDataContext`-owned reference into it could.
   - `FactionVector`: Vector of unique_ptr<Faction> stored inside GameState
   - `FactionFactory`: Creates Faction instances from configuration
   - `Faction`: Represents a single faction with all its subsystems

@@ -8,6 +8,7 @@ namespace ac
 struct GrowthConfig_t
 {
     int nutrientsPerPop = 10;  // nutrients required per current population size to grow
+    int maxBaseSize = 7;       // SMAC population limit without a Hab Complex
 };
 
 class GrowthConfig_tParser

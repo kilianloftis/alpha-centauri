@@ -42,7 +42,8 @@ void BaseProduction::Execute_(GameState* pGameState, Faction* pFaction)
         {
             std::cout << "  Base '" << rBase.GetName() << "' producing '"
                       << rProduction.GetCurrentProduction()->GetName()
-                      << "' (" << rProduction.GetMineralStockpile() << "/" << rProduction.GetMineralCost() << " minerals)\n";
+                      << "' (" << rProduction.GetMineralStockpile() << "/"
+                      << rBase.GetMineralCost() << " minerals)\n";
         }
     }
 }

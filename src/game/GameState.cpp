@@ -6,7 +6,7 @@
 #include "game/faction/Diplomacy.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/WorldMap.h"
-#include "lib/effects/TileEffectsContext.h"
+#include "game/effects/TileEffectsContext.h"
 #include <stdexcept>
 
 namespace ac
@@ -19,6 +19,7 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
                      const UnitComponentRegistry* pUnitComponents)
     : m_missionYear(k_startingMissionYear)
     , m_worldMap(std::move(pWorldMap))
+    , m_secretProjectAvailability(*this)
 {
     if (!m_worldMap)
     {
@@ -110,6 +111,11 @@ const TileEffectsContext& GameState::GetTileEffects() const
 UnitOrderExecutor& GameState::GetUnitOrderExecutor()
 {
     return m_unitOrderExecutor;
+}
+
+const SecretProjectAvailabilityCalculator& GameState::GetSecretProjectAvailability() const
+{
+    return m_secretProjectAvailability;
 }
 
 } // namespace ac

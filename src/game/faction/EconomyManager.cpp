@@ -1,6 +1,6 @@
 #include "game/faction/EconomyManager.h"
 
-#include <cmath>
+#include <stdexcept>
 
 namespace ac
 {
@@ -21,6 +21,10 @@ int EconomyManager::GetEnergy() const
 
 void EconomyManager::SetEnergyAllocation(const EnergyAllocation_t& allocation)
 {
+    if (allocation.econPercent + allocation.labsPercent + allocation.psychPercent != 100)
+    {
+        throw std::runtime_error("Energy allocation percentages must sum to 100");
+    }
     m_allocation = allocation;
 }
 
@@ -29,19 +33,26 @@ EnergyAllocation_t EconomyManager::GetEnergyAllocation() const
     return m_allocation;
 }
 
-int EconomyManager::CalculateEnergyForEcon(int totalEnergy) const
-{
-    return std::round((totalEnergy * m_allocation.econPercent) / 100.0);
-}
-
 int EconomyManager::CalculateEnergyForLabs(int totalEnergy) const
 {
-    return std::round((totalEnergy * m_allocation.labsPercent) / 100.0);
+    // Integer division (floor). Matches SMAC: labs take their exact percentage share.
+    return (totalEnergy * m_allocation.labsPercent) / 100;
 }
 
 int EconomyManager::CalculateEnergyForPsych(int totalEnergy) const
 {
-    return std::round((totalEnergy * m_allocation.psychPercent) / 100.0);
+    // Integer division (floor). Matches SMAC: psych takes its exact percentage share.
+    return (totalEnergy * m_allocation.psychPercent) / 100;
+}
+
+int EconomyManager::CalculateEnergyForEcon(int totalEnergy) const
+{
+    // Economy is the residual bucket (SMAC): whatever remains after labs and psych
+    // receive their floored shares. This conserves energy — the three categories
+    // always sum to totalEnergy — and absorbs all rounding leftovers into econ.
+    return totalEnergy
+         - CalculateEnergyForLabs(totalEnergy)
+         - CalculateEnergyForPsych(totalEnergy);
 }
 
 } // namespace ac

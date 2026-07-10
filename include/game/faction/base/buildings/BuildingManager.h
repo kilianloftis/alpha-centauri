@@ -2,14 +2,13 @@
 
 #include "game/buildings/BuildingConfigParser.h"
 #include "lib/Revision.h"
-#include "lib/effects/ActiveEffect.h"
+#include "game/effects/ActiveEffect.h"
 #include <string>
 #include <vector>
 
 namespace ac
 {
 
-struct GameDataContext;
 class BuildingRegistry;
 class ResearchManager;
 class SecretProjectAvailabilityCalculator;
@@ -20,7 +19,8 @@ class SecretProjectAvailabilityCalculator;
 class BuildingManager
 {
 public:
-    BuildingManager(const GameDataContext& rDataContext,
+    BuildingManager(const BuildingRegistry* pBuildingRegistry,
+                    const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
                     const ResearchManager* pResearchManager);
     ~BuildingManager();
 

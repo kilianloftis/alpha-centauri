@@ -4,8 +4,8 @@
 #include "game/buildings/BuildingConfigParser.h"
 #include "game/faction/base/BaseTypes.h"
 #include "game/map/WorkedTileIndex.h"
-#include "lib/effects/ActiveEffect.h"
-#include "lib/effects/TileEffectsContext.h"
+#include "game/effects/ActiveEffect.h"
+#include "game/effects/TileEffectsContext.h"
 #include "lib/Signal.h"
 #include <functional>
 #include <memory>
@@ -29,7 +29,11 @@ class ResearchManager;
 class SocialRatingRegistry;
 class IEffectsProvider;
 class Tile;
-struct GameDataContext;
+class PopTypeRegistry;
+class PopTypeAvailabilityCalculator;
+struct GrowthConfig_t;
+class PopCompositionCalculator;
+class SecretProjectAvailabilityCalculator;
 
 // BaseManager coordinates base management subsystems.
 // Provides identity, position, and access to sub-managers. Sub-managers own their full
@@ -39,14 +43,24 @@ class BaseManager
 {
 public:
     // pEffectsProvider is the owning faction's effect pool; may be null for a base that
-    // resolves no faction effects (standalone test bases). All other dependencies are
-    // required; throws if rDataContext lacks a production cost calculator.
+    // resolves no faction effects (standalone test bases). pPopTypeRegistry,
+    // pPopTypeAvailabilityCalculator, pGrowthConfig, and pCompositionCalculator are forwarded
+    // to the population subsystem; pSecretProjectCalculator is forwarded to the building
+    // subsystem. All are named individually (rather than taking a whole GameDataContext) so
+    // this leaf class's real dependencies are visible at the call site; the caller (a factory
+    // such as Faction::CreateBase) is responsible for unpacking them.
     BaseManager(
         FactionId factionId,
         int baseId,
         std::string name,
         Tile& tile,
-        const GameDataContext& rDataContext,
+        const BuildingRegistry* pBuildingRegistry,
+        const SocialRatingRegistry* pSocialRatingRegistry,
+        const PopTypeRegistry* pPopTypeRegistry,
+        const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator,
+        const GrowthConfig_t* pGrowthConfig,
+        PopCompositionCalculator* pCompositionCalculator,
+        const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
         TileEffectsContext& rTileEffects,
         const ResearchManager* pResearchManager,
         const EconomyManager* pEconomyManager,
@@ -107,6 +121,11 @@ public:
     // Completes construction if the stockpile meets the cost.
     // Returns the completed item id, or empty string if construction is ongoing.
     std::string ApplyProduction();
+
+    // Effective mineral cost of the current production item after CostMultiplier effects
+    // (e.g. Industry social-rating levels expanded into the base effect list).
+    // Returns 0 when nothing is queued.
+    int GetMineralCost() const;
 
     // Collect resources from worked tiles and allocate energy to categories.
     // Called once per turn per base during ResourceCollection stage.

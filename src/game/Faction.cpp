@@ -1,8 +1,8 @@
 #include "game/Faction.h"
 
 #include "game/buildings/BuildingRegistry.h"
+#include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/GameDataContext.h"
-#include "game/faction/base/production/ProductionCostCalculator.h"
 #include "game/map/WorldMap.h"
 #include "game/faction/base/resources/ResourceManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
@@ -25,7 +25,7 @@
 #include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/units/Unit.h"
-#include "lib/effects/ActiveEffect.h"
+#include "game/effects/ActiveEffect.h"
 
 namespace ac
 {
@@ -144,14 +144,23 @@ void Faction::AddBase(std::unique_ptr<BaseManager> pBase)
 
 BaseManager* Faction::CreateBase(FactionId factionId, int baseId, const std::string& name, Tile* pTile,
                                   const GameDataContext& rDataContext,
-                                  TileEffectsContext& rTileEffects)
+                                  TileEffectsContext& rTileEffects,
+                                  const SecretProjectAvailabilityCalculator& rSecretProjectAvailability)
 {
     if (!pTile)
     {
         throw std::invalid_argument("Faction::CreateBase: pTile is null");
     }
     auto pBase = std::make_unique<BaseManager>(
-        factionId, baseId, name, *pTile, rDataContext, rTileEffects,
+        factionId, baseId, name, *pTile,
+        rDataContext.buildingRegistry.get(),
+        rDataContext.socialRatingRegistry.get(),
+        rDataContext.popTypeRegistry.get(),
+        rDataContext.popTypeAvailabilityCalculator.get(),
+        rDataContext.growthConfig.get(),
+        rDataContext.popCompositionCalculator.get(),
+        &rSecretProjectAvailability,
+        rTileEffects,
         m_pResearch.get(), m_pEconomy.get(), this);
 
     pBase->GetWorkerAssignments().UnassignAll();

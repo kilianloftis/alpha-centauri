@@ -1,4 +1,4 @@
-#include "lib/effects/BonusEffectParser.h"
+#include "game/effects/BonusEffectParser.h"
 
 #include <stdexcept>
 

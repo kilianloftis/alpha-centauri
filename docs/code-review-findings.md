@@ -98,25 +98,34 @@ Related: every filter in the effects pipeline (`FilterByStatId`, `FilterForBase`
 
 ### 1.2 [H] The `lib/` layer depends on `game/` — the layering is fictional
 
+> **Status (2026-07-10): fixed.** `grep -rn '#include "game/' include/lib src/lib` is now
+> empty.
+
 `lib/` presents itself as generic infrastructure, but:
 
-- `include/lib/GameEvent.h:3` includes `game/research/TechConfigParser.h` (to get `TechId`) — the "stable ABI mod-facing" event header depends on a config parser.
-- `include/lib/EventBridge.h:4` includes `game/faction/base/BaseManager.h`.
-- `include/lib/effects/ActiveEffect.h` and `TileEffectsContext.h` include `game/faction/base/BaseTypes.h`; their `.cpp` files include 15+ game headers (`Faction`, `BaseManager`, `Tile`, `PopContainer`, `SocialEngineeringManager`, …).
+- `include/lib/GameEvent.h:3` includes `game/research/TechConfigParser.h` (to get `TechId`) — the "stable ABI mod-facing" event header depends on a config parser. *(Addressed 2026-07-10: dropped the include; `GameEvent.h` now declares `using TechId = std::string;` locally, mirroring the `FactionId` alias it already declared locally in the same file — an already-precedented duplication, see finding 9.)*
+- `include/lib/EventBridge.h:4` includes `game/faction/base/BaseManager.h`. *(Addressed 2026-07-10: `EventBridge` moved to `include/game/EventBridge.h` / `src/game/EventBridge.cpp` — it exists solely to translate `BaseManager`'s signals into bus events, so it belongs with the thing it wires, not with the generic bus.)*
+- `include/lib/effects/ActiveEffect.h` and `TileEffectsContext.h` include `game/faction/base/BaseTypes.h`; their `.cpp` files include 15+ game headers (`Faction`, `BaseManager`, `Tile`, `PopContainer`, `SocialEngineeringManager`, …). *(Addressed 2026-07-10: the whole `lib/effects` directory moved to `include/game/effects` / `src/game/effects` — per this finding's own conclusion, it's game logic, not reusable engine infra, so the honest fix is to stop pretending otherwise.)*
 
-`lib/effects` is game logic in a `lib` costume. Consequences: `lib` cannot be reused or tested standalone, the include graph has no enforceable direction, and the "mod-facing stable ABI" claim of `EventBus`/`GameEvent` is hollow while its types are transitively defined by internal game headers. Either the boundary means something or it should not exist; right now it misleads.
+`lib/effects` is game logic in a `lib` costume. Consequences: `lib` cannot be reused or tested standalone, the include graph has no enforceable direction, and the "mod-facing stable ABI" claim of `EventBus`/`GameEvent` is hollow while its types are transitively defined by internal game headers. Either the boundary means something or it should not exist; right now it misleads. *(Also found and fixed while closing this out: `src/lib/config/ConfigFields.cpp` pulled in `game/GameCategory.h` for one JSON-parsing overload — moved to `game/GameCategory.h`/`.cpp` as `ParseGameCategoryField`, renamed to avoid an overload ambiguity with the existing `ParseGameCategory(const std::string&)` when called with a string literal. `lib/` now has zero `game/` includes anywhere, header or `.cpp`.)*
 
 ### 1.3 [H] `GameDataContext` is a service locator whose own invariant is already broken
+
+> **Status (2026-07-10): fixed**, scoped per direction: composition roots/factories
+> (`Engine`, `Faction::CreateBase`, the `tests/GameFixtures.h` test harness) still pass
+> `GameDataContext` around wholesale; the leaf classes it feeds (`BaseManager`,
+> `PopulationManager`, `BuildingManager`) now declare narrow, named dependencies instead of
+> taking the whole struct.
 
 `include/game/GameDataContext.h` documents itself as "immutable definition data loaded once at startup; never serialised — always reconstructible from config files." In reality it holds:
 
 - `LuaRuntime` — a mutable interpreter whose global state is shared and mutated by every formula evaluation (see 3.6).
 - Seven calculators — *services*, not data.
-- `SecretProjectAvailabilityCalculator` — which holds a pointer **into `GameState`'s live faction vector** (`src/game/Engine.cpp:193`), i.e., the "immutable definition data" object references mutable save-game state. It must be constructed mid-initialization after the world exists, and would dangle across any future load-game/new-game that rebuilds `GameState`.
+- `SecretProjectAvailabilityCalculator` — which holds a pointer **into `GameState`'s live faction vector** (`src/game/Engine.cpp:193`), i.e., the "immutable definition data" object references mutable save-game state. It must be constructed mid-initialization after the world exists, and would dangle across any future load-game/new-game that rebuilds `GameState`. *(Addressed 2026-07-10: moved to `GameState` as an owned-by-value member, constructed with `*this` in `GameState`'s own constructor — the same self-referential idiom already used elsewhere. It's now an owned member of the object it queries instead of an external object holding a reference into it, so the "constructed after GameState exists" ordering problem and the future-rebuild dangling risk are both closed by construction. `Faction::CreateBase` threads it through the same way `TileEffectsContext` already was, via a new `const SecretProjectAvailabilityCalculator&` parameter sourced from `GameState::GetSecretProjectAvailability()`.)*
 
-The struct is also a flat grab-bag: 19 `unique_ptr` members with no grouping, passed around wholesale (`BaseManager`, `PopulationManager` take the whole context and pluck what they need — hidden dependencies, DIP in letter but not spirit).
+The struct is also a flat grab-bag: 19 `unique_ptr` members with no grouping, passed around wholesale (`BaseManager`, `PopulationManager` take the whole context and pluck what they need — hidden dependencies, DIP in letter but not spirit). *(Addressed 2026-07-10, scoped: `BaseManager`, `PopulationManager`, and `BuildingManager` constructors now take the specific registries/calculators they use as named parameters instead of `const GameDataContext&`; `Faction::CreateBase` (a factory method) is the unpacking point, pulling ~8 fields out of `rDataContext` to pass individually into `BaseManager`'s constructor. `Engine` and `GameFixtures.h` — the composition roots/factories — still hold and pass `GameDataContext` wholesale, per the agreed scope boundary. Separately, the struct's members are now grouped under `// --- Registries and config structs ---` / `// --- Calculators / services ---` section comments, and its class comment no longer claims blanket immutability — it now states plainly that `LuaRuntime` carries mutable interpreter state (see 3.6) and that anything reading live save-game state, like `SecretProjectAvailabilityCalculator`, deliberately lives elsewhere.)*
 
-`GameState` has the mirror-image problem: documented as "mutable save-game data" (and `docs/architecture/high-level.md` claims "no registries or calculators"), it owns `TileEffectsContext` (a resolver over a registry) and `UnitOrderExecutor` (a service). The save/load boundary that both classes exist to define is blurred from both sides.
+`GameState` has the mirror-image problem: documented as "mutable save-game data" (and `docs/architecture/high-level.md` claims "no registries or calculators"), it owns `TileEffectsContext` (a resolver over a registry) and `UnitOrderExecutor` (a service). The save/load boundary that both classes exist to define is blurred from both sides. *(Addressed 2026-07-10: this claim was simply inaccurate, not a design flaw to fix by moving `TileEffectsContext`/`UnitOrderExecutor` elsewhere — both are correctly scoped to the `WorldMap`'s lifetime, and moving them would reintroduce the same class of dangling-reference risk this finding flags elsewhere. Corrected `docs/architecture/high-level.md`'s `GameState` bullet to describe what it actually owns and why, and updated its `GameDataContext` bullet to drop the now-relocated `SecretProjectAvailabilityCalculator` line. The diagram itself is left untouched — already inaccurate in many unrelated ways per finding 7, out of scope here.)*
 
 ### 1.4 [H] The composition root is a 190-line hard-coded script
 
@@ -293,13 +302,43 @@ The coding guidelines say "Do not make up game rules or mechanics. Leave TODOs i
 
 ### 3.1 [H] Energy allocation does not conserve energy
 
+> **Status (2026-07-10): fixed.** Labs and psych take floored percentage shares;
+> economy receives the remainder (SMAC residual-economy rule), so the three
+> categories always sum to `totalEnergy`. `SetEnergyAllocation` now throws if the
+> percentages do not sum to 100. Covered by `tests/faction/EconomyManagerTests.cpp`
+> (including the 5-energy / 40-50-10 counterexample that previously minted a 6th
+> energy under independent `std::round`).
+
 `EconomyManager::CalculateEnergyForEcon/Labs/Psych` each independently `std::round` their percentage share (`src/game/faction/EconomyManager.cpp:22-35`). With 5 energy at the default 40/50/10 split: econ=2, labs=3 (round 2.5), psych=1 (round 0.5) → **6 energy allocated from 5 collected**. Rounding direction is a real game rule (SMAC defined one); here it is an emergent artifact that mints or destroys energy every turn at every base.
 
 ### 3.2 [M] Production cost of 0 today: stub value × real formula
 
+> **Status (2026-07-10): fixed.** Three cooperating mistakes closed together:
+> - Row cost is `baseCost * 10` in `ProductionCostCalculator` (static, no Lua — the
+>   formula is trivial once Industry is an effect). Industry no longer appears in a formula.
+> - Industry works like Growth: rating levels in `social_rating_effects.json` emit
+>   `CostMultiplier` `AddPercent` effects (±10%/level), and
+>   `ProductionCostCalculator::ComputeCost` resolves them from the base effect list
+>   (via `BaseManager::GetMineralCost` / `ApplyProduction` → `BuildBaseEffects_`).
+> - `ComputeCost` floors at `std::max(1, cost)`, matching `TechCostCalculator`.
+> Covered by `tests/faction/ProductionCostTests.cpp` and the Industry rating test in
+> `tests/effects/RatingTests.cpp`.
+
 `ProductionManager::GetMineralCost` passes a hard-coded `industry_rating = 0` ("TODO: pass real industry_rating") into the shipped formula `base_cost * (10 * industry_rating)` (`config/production_cost.lua`) — every item costs **0 minerals** and completes the turn it is selected. Unlike `TechCostCalculator`, which clamps to `std::max(1, cost)`, `ProductionCostCalculator::ComputeCost` has no floor, and nothing validates formula output. Two half-finished pieces compose into degenerate live behavior with no warning anywhere.
 
 ### 3.3 [M] Growth mechanics contain three silent decisions
+
+> **Status (2026-07-10): fixed.** All three bullets closed:
+> - `GrowthCalculator`: GrowthRate ≤ 0 no longer silently becomes 1.0. Threshold-based
+>   growth is blocked (`numeric_limits<int>::max()`); NearZeroGrowth / PopulationBoom
+>   remain an explicit TODO (they are rule flags in SMAC, not a zero multiplier).
+> - `ApplyGrowth` checks `CanGrow()` before spending the nutrient threshold / emitting
+>   `on_growth`, so nutrients bank at the cap instead of paying for a phantom pop.
+>   `AddPop` now throws at max size instead of silently no-oping.
+> - Max base size comes from `GrowthConfig_t::maxBaseSize` (default 7, SMAC limit
+>   without Hab Complex; configured in `pop_growth.json`). `SetMaxSize` remains for
+>   Hab Complex / Hab Dome (TODO on the setter).
+> Covered by `tests/faction/GrowthTests.cpp`.
 
 - A growth-rate multiplier ≤ 0 is silently replaced by 1.0 (normal growth) in `GrowthCalculator::ComputeNutrientsRequired` (`src/game/population/calculators/GrowthCalculator.cpp:15-17`) — a heavy negative-growth effect stack silently does nothing.
 - `PopulationManager::ApplyGrowth` deducts the nutrient threshold and emits `on_growth` *before* anyone checks whether growth is possible; `AddPop` then silently does nothing at max size (`PopulationManager.cpp:54-62, 100-115`) — nutrients are consumed for a pop that never appears, and the decision is invisible because it is split across a signal round-trip through `BaseManager`.
@@ -523,7 +562,7 @@ The project defines unusually specific conventions (`.devin/rules/coding-guideli
 
 ## 8. Testing posture
 
-- Coverage is effectively one subsystem deep: `lib/effects` is well tested (11 files, good fixtures), plus faction config parsing/flavor and the new `ResearchSelector`. **Zero tests** exist for: the turn pipeline (`TurnProcessor`/stages), `ResourceManager` (where the rounding and seed rules live), `EconomyManager` (3.1 would be caught by a 3-line test), `WorkerAssignmentManager` (the most intricate mutable-state logic in the project), `PopulationManager`/`PopContainer` composition churn, `ProductionManager`, `BuildingManager`, `Registry`, `EventBus` (reentrancy), `WorldMap`/`Tile`, Lua calculators.
+- Coverage is effectively one subsystem deep: `lib/effects` is well tested (11 files, good fixtures), plus faction config parsing/flavor, `ResearchSelector`, and `EconomyManager` (3.1 conservation). **Zero tests** exist for: the turn pipeline (`TurnProcessor`/stages), `ResourceManager` (where the rounding and seed rules live), `WorkerAssignmentManager` (the most intricate mutable-state logic in the project), `PopulationManager`/`PopContainer` composition churn, `ProductionManager`, `BuildingManager`, `Registry`, `EventBus` (reentrancy), `WorldMap`/`Tile`, Lua calculators.
 - The single test binary is named `effects-tests` while housing non-effects suites — the name will get more wrong as coverage grows.
 - `tests/GameFixtures.h` constructs bases "with the minimum viable dependency set: no research/production/composition calculators" — tests run a permanently degraded object graph that the game never runs (a direct consequence of finding 4.2's optional dependencies), so integration-level behavior differences (e.g., null-production bases) are baked into the fixtures. *(Partially addressed 2026-07-09: fixture bases now carry a real, empty-formula `ProductionCostCalculator` — production is no longer optional anywhere. Research and composition calculators are still absent from fixtures.)*
 

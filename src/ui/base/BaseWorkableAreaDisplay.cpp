@@ -2,7 +2,7 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "graphics/Graphics.h"
-#include "lib/effects/TileEffectsContext.h"
+#include "game/effects/TileEffectsContext.h"
 #include <sstream>
 
 namespace ac

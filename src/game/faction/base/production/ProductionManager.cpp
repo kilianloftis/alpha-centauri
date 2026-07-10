@@ -1,11 +1,11 @@
 #include "game/faction/base/production/ProductionManager.h"
+#include "game/faction/base/production/ProductionCostCalculator.h"
 
 namespace ac
 {
 
-ProductionManager::ProductionManager(const ProductionCostCalculator& rCostCalculator)
-    : m_pCostCalculator(&rCostCalculator)
-    , m_pCurrentItem(nullptr)
+ProductionManager::ProductionManager()
+    : m_pCurrentItem(nullptr)
     , m_mineralStockpile(0)
 {
 }
@@ -34,14 +34,13 @@ bool ProductionManager::HasProduction() const
     return m_pCurrentItem != nullptr;
 }
 
-int ProductionManager::GetMineralCost() const
+int ProductionManager::GetMineralCost(const BaseEffects_t& rBaseEffects) const
 {
-    if (!m_pCurrentItem || !m_pCostCalculator)
+    if (!m_pCurrentItem)
     {
         return 0;
     }
-    // TODO: pass real industry_rating once base industry modifiers exist
-    return m_pCostCalculator->ComputeCost(m_pCurrentItem->GetBaseCost(), 0);
+    return ProductionCostCalculator::ComputeCost(m_pCurrentItem->GetBaseCost(), rBaseEffects);
 }
 
 int ProductionManager::GetMineralStockpile() const
@@ -49,7 +48,7 @@ int ProductionManager::GetMineralStockpile() const
     return m_mineralStockpile;
 }
 
-std::string ProductionManager::ApplyProduction(int minerals)
+std::string ProductionManager::ApplyProduction(int minerals, const BaseEffects_t& rBaseEffects)
 {
     if (!HasProduction())
     {
@@ -58,7 +57,7 @@ std::string ProductionManager::ApplyProduction(int minerals)
 
     m_mineralStockpile += minerals;
 
-    if (m_mineralStockpile >= GetMineralCost())
+    if (m_mineralStockpile >= GetMineralCost(rBaseEffects))
     {
         return CompleteProduction();
     }

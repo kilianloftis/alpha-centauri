@@ -17,7 +17,7 @@
 #include "game/social-engineering/SocialRatingRegistry.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitComponentRegistry.h"
-#include "lib/effects/BonusEffect.h"
+#include "game/effects/BonusEffect.h"
 
 #include <algorithm>
 #include <stdexcept>

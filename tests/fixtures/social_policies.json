@@ -20,5 +20,13 @@
     "effects": [
       { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "energy", "amount": 1 } }
     ]
+  },
+  {
+    "id": "industry_policy",
+    "name": "Industry Policy (+2 Industry rating, faction-wide)",
+    "category": "economics",
+    "effects": [
+      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "industry", "amount": 2 } }
+    ]
   }
 ]

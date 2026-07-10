@@ -2,7 +2,7 @@
 
 #include "game/GameCategory.h"
 #include "game/IConstructable.h"
-#include "lib/effects/BonusEffect.h"
+#include "game/effects/BonusEffect.h"
 #include <nlohmann/json.hpp>
 #include <string>
 #include <vector>

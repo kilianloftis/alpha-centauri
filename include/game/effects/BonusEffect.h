@@ -1,6 +1,6 @@
 #pragma once
 
-#include "lib/effects/EffectEnums.h"
+#include "game/effects/EffectEnums.h"
 
 #include <optional>
 #include <string>

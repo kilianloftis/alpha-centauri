@@ -7,7 +7,7 @@
 
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/Tile.h"
-#include "lib/effects/ActiveEffect.h"
+#include "game/effects/ActiveEffect.h"
 
 #include <catch2/catch_test_macros.hpp>
 

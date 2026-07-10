@@ -1,7 +1,7 @@
 #include "game/faction/base/population/PopulationManager.h"
-#include "game/GameDataContext.h"
 #include "game/population/calculators/GrowthCalculator.h"
 #include "game/population/calculators/PopCompositionCalculator.h"
+#include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
 #include "game/population/pop-types/GrowthConfigParser.h"
@@ -11,17 +11,20 @@
 namespace ac
 {
 
-PopulationManager::PopulationManager(const GameDataContext& rDataContext,
+PopulationManager::PopulationManager(const PopTypeRegistry* pPopTypeRegistry,
+                                     const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator,
+                                     const GrowthConfig_t* pGrowthConfig,
+                                     PopCompositionCalculator* pCompositionCalculator,
                                      const ResearchManager* pResearchManager,
                                      int initialSize)
-    : m_container(rDataContext.popTypeRegistry.get(),
-                  rDataContext.popTypeAvailabilityCalculator.get(),
+    : m_container(pPopTypeRegistry,
+                  pPopTypeAvailabilityCalculator,
                   pResearchManager,
                   initialSize)
-    , m_pRegistry(rDataContext.popTypeRegistry.get())
-    , m_pGrowthConfig(rDataContext.growthConfig.get())
-    , m_pCompositionCalculator(rDataContext.popCompositionCalculator.get())
-    , m_maxSize(8)
+    , m_pRegistry(pPopTypeRegistry)
+    , m_pGrowthConfig(pGrowthConfig)
+    , m_pCompositionCalculator(pCompositionCalculator)
+    , m_maxSize(pGrowthConfig ? pGrowthConfig->maxBaseSize : 7)
     , m_nutrientStockpile(0)
     , m_riot(on_will_riot, on_is_rioting, on_riot_ended)
     , m_golden_age(on_golden_age_started, on_golden_age_ended)
@@ -58,12 +61,13 @@ void PopulationManager::AddPop()
 
 void PopulationManager::AddPop(const std::string& typeId)
 {
-    if (CanGrow())
+    if (!CanGrow())
     {
-        m_container.AddPop(typeId);
-        NotifyPopGained_();
-        m_riot.NotifyPopGrown(BuildRiotInputs_());
+        throw std::runtime_error("Cannot add pop: base is at max size");
     }
+    m_container.AddPop(typeId);
+    NotifyPopGained_();
+    m_riot.NotifyPopGrown(BuildRiotInputs_());
 }
 
 void PopulationManager::RemovePop()
@@ -89,6 +93,8 @@ int PopulationManager::GetMaxSize() const
 
 void PopulationManager::SetMaxSize(int maxSize)
 {
+    // TODO: Hab Complex / Habitation Dome buildings should call this to raise the
+    // population cap (SMAC: 7 without Hab Complex, 14 without Hab Dome).
     m_maxSize = maxSize;
     // Trim excess pops if max size decreased
     while (m_container.GetSize() > m_maxSize)
@@ -111,16 +117,25 @@ void PopulationManager::ApplyGrowth(int nutrients, const BaseEffects_t& rBaseEff
 {
     m_nutrientStockpile += nutrients;
 
+    if (m_nutrientStockpile < 0)
+    {
+        m_nutrientStockpile = 0;
+        on_starvation.emit();
+        return;
+    }
+
+    // At the population cap, bank nutrients but do not spend the growth threshold
+    // on a pop that cannot appear. Hab buildings raise the cap via SetMaxSize.
+    if (!CanGrow())
+    {
+        return;
+    }
+
     const int required = GrowthCalculator::ComputeNutrientsRequired(*m_pGrowthConfig, GetSize(), rBaseEffects);
     if (m_nutrientStockpile >= required)
     {
         m_nutrientStockpile -= required;
         on_growth.emit();
-    }
-    else if (m_nutrientStockpile < 0)
-    {
-        m_nutrientStockpile = 0;
-        on_starvation.emit();
     }
 }
 

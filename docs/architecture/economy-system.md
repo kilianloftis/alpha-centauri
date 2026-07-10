@@ -38,14 +38,15 @@ graph TB
 - **Purpose**: Owns the faction-wide energy allocation split.
 - **Responsibilities**:
   - Store the `EnergyAllocation_t` percentages for econ, labs, and psych.
-  - Provide `SetEnergyAllocation()` / `GetEnergyAllocation()` for configuration.
+  - Provide `SetEnergyAllocation()` / `GetEnergyAllocation()` for configuration (`SetEnergyAllocation` throws if the percentages do not sum to 100).
   - Calculate how much of a given base's collected energy goes to each category via `CalculateEnergyForEcon()`, `CalculateEnergyForLabs()`, and `CalculateEnergyForPsych()`.
+- **Rounding rule**: Labs and psych receive floored percentage shares; economy receives the remainder (SMAC residual-economy rule). The three results always sum to the input energy.
 - **Lifetime**: Owned by `Faction` and shared by every base belonging to that faction.
 - **Rationale**: Centralizing the allocation split keeps the split consistent across all bases and makes it easy to change from a single UI or AI decision point.
 
 ### EnergyAllocation_t
 - **Purpose**: Plain data structure holding the three allocation percentages.
-- **Invariant**: The three percentages should always sum to 100.
+- **Invariant**: The three percentages must always sum to 100 (enforced by `SetEnergyAllocation`).
 - **Defaults**: 40% econ, 50% labs, 10% psych.
 
 ### ResourceManager

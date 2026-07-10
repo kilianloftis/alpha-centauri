@@ -25,11 +25,13 @@ public:
     int GetEnergy() const;
 
     // Set the faction-wide energy allocation percentages.
-    // Caller must ensure the three percentages sum to 100.
+    // Throws if the three percentages do not sum to 100.
     void SetEnergyAllocation(const EnergyAllocation_t& allocation);
     EnergyAllocation_t GetEnergyAllocation() const;
 
-    // Calculate how much of a base's total collected energy goes to each category.
+    // Split a base's collected energy into econ / labs / psych.
+    // Labs and psych use floored percentage shares; economy receives the remainder
+    // (SMAC residual-economy rule). The three results always sum to totalEnergy.
     int CalculateEnergyForEcon(int totalEnergy) const;
     int CalculateEnergyForLabs(int totalEnergy) const;
     int CalculateEnergyForPsych(int totalEnergy) const;

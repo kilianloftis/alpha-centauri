@@ -3,8 +3,8 @@
 #include "game/IConstructable.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitSlotConfig.h"
-#include "lib/effects/ActiveEffect.h"
-#include "lib/effects/EffectEnums.h"
+#include "game/effects/ActiveEffect.h"
+#include "game/effects/EffectEnums.h"
 #include <string>
 #include <unordered_map>
 #include <utility>

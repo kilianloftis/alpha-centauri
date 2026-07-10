@@ -11,7 +11,7 @@
 #include "game/social-engineering/SocialRatingRegistry.h"
 #include "game/social-engineering/SocialRatingResolver.h"
 #include "graphics/Graphics.h"
-#include "lib/effects/BonusEffect.h"
+#include "game/effects/BonusEffect.h"
 
 #include <array>
 #include <cctype>

@@ -1,7 +1,7 @@
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
-#include "lib/effects/BonusEffectParser.h"
+#include "game/effects/BonusEffectParser.h"
 #include <nlohmann/json.hpp>
 
 namespace ac

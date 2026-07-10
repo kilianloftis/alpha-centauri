@@ -11,5 +11,19 @@
         { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "growth_rate", "amount": 30, "op": "AddPercent" } }
       ]
     }
+  },
+  {
+    "id": "industry",
+    "levels": {
+      "-1": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "cost_multiplier", "amount": 10, "op": "AddPercent" } }
+      ],
+      "1": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "cost_multiplier", "amount": -10, "op": "AddPercent" } }
+      ],
+      "2": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "cost_multiplier", "amount": -20, "op": "AddPercent" } }
+      ]
+    }
   }
 ]

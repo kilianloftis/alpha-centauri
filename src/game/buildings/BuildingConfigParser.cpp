@@ -1,7 +1,7 @@
 #include "game/buildings/BuildingConfigParser.h"
 #include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
-#include "lib/effects/BonusEffectParser.h"
+#include "game/effects/BonusEffectParser.h"
 #include <nlohmann/json.hpp>
 
 namespace ac
@@ -23,7 +23,7 @@ BuildingConfig_t BuildingConfigParser::ParseBuildingConfig(const nlohmann::json&
     BuildingConfig_t config;
     config.id = ConfigFields::ParseId(buildingJson);
     config.name = ConfigFields::ParseName(buildingJson, config.id);
-    config.category = ConfigFields::ParseGameCategory(buildingJson);
+    config.category = ParseGameCategoryField(buildingJson);
     config.mineralCost = buildingJson.value("mineral_cost", 0);
     config.allowMultiple = buildingJson.value("allow_multiple", false);
     config.bIsSecretProject = buildingJson.value("secret_project", false);

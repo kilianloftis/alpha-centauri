@@ -2,7 +2,7 @@
 
 #include "game/social-engineering/SocialPolicyConfig.h"
 #include "lib/Revision.h"
-#include "lib/effects/ActiveEffect.h"
+#include "game/effects/ActiveEffect.h"
 #include <map>
 #include <string>
 #include <vector>

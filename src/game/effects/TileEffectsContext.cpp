@@ -1,4 +1,4 @@
-#include "lib/effects/TileEffectsContext.h"
+#include "game/effects/TileEffectsContext.h"
 
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
@@ -8,7 +8,7 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitDesign.h"
-#include "lib/effects/ActiveEffect.h"
+#include "game/effects/ActiveEffect.h"
 #include <algorithm>
 #include <cmath>
 #include <iostream>

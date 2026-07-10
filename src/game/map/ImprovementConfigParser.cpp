@@ -2,7 +2,7 @@
 #include "game/map/Tile.h"
 #include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
-#include "lib/effects/BonusEffectParser.h"
+#include "game/effects/BonusEffectParser.h"
 
 namespace ac
 {

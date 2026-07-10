@@ -7,7 +7,7 @@
 #include "game/faction/base/BaseTypes.h"
 #include "game/population/pop-types/Pop.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
-#include "lib/effects/ActiveEffect.h"
+#include "game/effects/ActiveEffect.h"
 
 #include <catch2/catch_test_macros.hpp>
 

@@ -1,5 +1,4 @@
 #include "game/faction/base/BaseManager.h"
-#include "game/GameDataContext.h"
 #include "game/IEffectsProvider.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/production/ProductionManager.h"
@@ -12,8 +11,8 @@
 #include "game/map/MapUtils.h"
 #include "game/map/WorldMap.h"
 #include "game/social-engineering/SocialRatingResolver.h"
-#include "lib/effects/ActiveEffect.h"
-#include "lib/effects/TileEffectsContext.h"
+#include "game/effects/ActiveEffect.h"
+#include "game/effects/TileEffectsContext.h"
 #include <stdexcept>
 
 namespace ac
@@ -33,15 +32,6 @@ std::vector<const Tile*> ComputeWorkableTiles_(const TileEffectsContext& rTileEf
     return tiles;
 }
 
-const ProductionCostCalculator& RequireProductionCostCalculator_(const GameDataContext& rDataContext)
-{
-    if (!rDataContext.productionCostCalculator)
-    {
-        throw std::invalid_argument("BaseManager: rDataContext has no production cost calculator");
-    }
-    return *rDataContext.productionCostCalculator;
-}
-
 WorkedTileClaim ClaimCenterTile_(TileEffectsContext& rTileEffects, const Tile& tile)
 {
     // The base tile is worked for free by this base alone, so it is claimed in the world
@@ -59,7 +49,13 @@ BaseManager::BaseManager(
     int baseId,
     std::string name,
     Tile& tile,
-    const GameDataContext& rDataContext,
+    const BuildingRegistry* pBuildingRegistry,
+    const SocialRatingRegistry* pSocialRatingRegistry,
+    const PopTypeRegistry* pPopTypeRegistry,
+    const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator,
+    const GrowthConfig_t* pGrowthConfig,
+    PopCompositionCalculator* pCompositionCalculator,
+    const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
     TileEffectsContext& rTileEffects,
     const ResearchManager* pResearchManager,
     const EconomyManager* pEconomyManager,
@@ -69,16 +65,18 @@ BaseManager::BaseManager(
     , m_tile(tile)
     , m_rTileEffects(rTileEffects)
     , m_centerTileClaim(ClaimCenterTile_(rTileEffects, tile))
-    , m_pBuildingRegistry(rDataContext.buildingRegistry.get())
-    , m_pSocialRatings(rDataContext.socialRatingRegistry.get())
+    , m_pBuildingRegistry(pBuildingRegistry)
+    , m_pSocialRatings(pSocialRatingRegistry)
     , m_pResearch(pResearchManager)
     , m_pEffectsProvider(pEffectsProvider)
-    , m_pPopulation(std::make_unique<PopulationManager>(rDataContext, pResearchManager, 3))
+    , m_pPopulation(std::make_unique<PopulationManager>(
+          pPopTypeRegistry, pPopTypeAvailabilityCalculator, pGrowthConfig, pCompositionCalculator,
+          pResearchManager, 3))
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(ComputeWorkableTiles_(rTileEffects, tile), *m_pPopulation, rTileEffects, rTileEffects.GetWorldMap().GetWorkedTiles()))
-    , m_pBuildings(std::make_unique<BuildingManager>(rDataContext, pResearchManager))
+    , m_pBuildings(std::make_unique<BuildingManager>(pBuildingRegistry, pSecretProjectCalculator, pResearchManager))
     , m_pResources(std::make_unique<ResourceManager>(
           m_pWorkerAssignments.get(), pEconomyManager, m_pBuildings.get(), &m_tile, &m_rTileEffects))
-    , m_pProduction(std::make_unique<ProductionManager>(RequireProductionCostCalculator_(rDataContext)))
+    , m_pProduction(std::make_unique<ProductionManager>())
     , m_name(std::move(name))
 {
     // A base provides its own garrison defense bonus, modeled as the "Base" improvement.
@@ -235,7 +233,20 @@ const ProductionManager& BaseManager::GetProduction() const
 
 std::string BaseManager::ApplyProduction()
 {
-    return m_pProduction->ApplyProduction(m_pResources->ConsumeMinerals());
+    if (!m_pEffectsProvider)
+    {
+        return m_pProduction->ApplyProduction(m_pResources->ConsumeMinerals(), BaseEffects_t{});
+    }
+    return m_pProduction->ApplyProduction(m_pResources->ConsumeMinerals(), BuildBaseEffects_());
+}
+
+int BaseManager::GetMineralCost() const
+{
+    if (!m_pEffectsProvider)
+    {
+        return m_pProduction->GetMineralCost(BaseEffects_t{});
+    }
+    return m_pProduction->GetMineralCost(BuildBaseEffects_());
 }
 
 BaseEffects_t BaseManager::CollectBaseLocalEffects_(const FactionEffects_t& rFactionEffects) const

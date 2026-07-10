@@ -16,7 +16,7 @@
 #include "game/research/TechRegistry.h"
 #include "game/units/Unit.h"
 #include "lib/LuaRuntime.h"
-#include "lib/effects/ActiveEffect.h"
+#include "game/effects/ActiveEffect.h"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
