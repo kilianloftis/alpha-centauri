@@ -39,7 +39,7 @@ int PopContainer::GetWorkerCount() const
 
 int PopContainer::GetTalentCount() const
 {
-    return CountPops_([](const Pop* p) { return p->IsWorker() && p->GetGoldenAgeContribution() > 0; });
+    return CountPops_([](const Pop* p) { return p->IsTalent(); });
 }
 
 int PopContainer::GetDroneCount() const
@@ -108,7 +108,10 @@ void PopContainer::ConvertToFallback(Pop& rPop)
     m_revision.Bump();
 }
 
-void PopContainer::ApplyCompositionTargets(const PopCompositionResult& targets, const std::string& defaultTypeId)
+void PopContainer::ApplyCompositionTargets(const PopCompositionResult& targets,
+                                           const std::string& defaultTypeId,
+                                           const std::string& droneTypeId,
+                                           const std::string& talentTypeId)
 {
     // Convert excess drones back to workers first
     int currentDrones = GetDroneCount();
@@ -130,33 +133,33 @@ void PopContainer::ApplyCompositionTargets(const PopCompositionResult& targets, 
     for (auto& pPop : m_pops)
     {
         if (currentTalents <= targets.targetTalents) break;
-        if (pPop->IsWorker() && pPop->GetGoldenAgeContribution() > 0)
+        if (pPop->IsTalent())
         {
             ConvertTo(*pPop, defaultTypeId);
             currentTalents--;
         }
     }
 
-    // Convert workers to drones to reach target
+    // Convert plain workers to drones to reach target
     currentDrones = GetDroneCount();
     for (auto& pPop : m_pops)
     {
         if (currentDrones >= targets.targetDrones) break;
-        if (pPop->IsWorker() && !pPop->IsSpecialist() && pPop->GetGoldenAgeContribution() == 0)
+        if (pPop->IsPlainWorker())
         {
-            ConvertTo(*pPop, "Drone");
+            ConvertTo(*pPop, droneTypeId);
             currentDrones++;
         }
     }
 
-    // Convert workers to talents to reach target
+    // Convert plain workers to talents to reach target
     currentTalents = GetTalentCount();
     for (auto& pPop : m_pops)
     {
         if (currentTalents >= targets.targetTalents) break;
-        if (pPop->IsWorker() && !pPop->IsSpecialist() && pPop->GetGoldenAgeContribution() == 0)
+        if (pPop->IsPlainWorker())
         {
-            ConvertTo(*pPop, "Talent");
+            ConvertTo(*pPop, talentTypeId);
             currentTalents++;
         }
     }

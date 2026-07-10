@@ -1,8 +1,6 @@
 #pragma once
 
 #include "game/TurnStages.h"
-#include <memory>
-#include <map>
 #include <string>
 #include <vector>
 
@@ -11,20 +9,19 @@ namespace ac
 
 class GameState;
 
-using TurnStageRepeatFlags_t = std::map<std::string, bool>;
-
 class TurnProcessor
 {
 public:
-    TurnProcessor(TurnStageRegistry_t registry, TurnStageRepeatFlags_t repeatFlags, std::vector<std::string> stageOrder);
+    TurnProcessor(GlobalTurnStageRegistry_t globalRegistry,
+                  PerFactionTurnStageRegistry_t perFactionRegistry,
+                  std::vector<std::string> stageOrder);
     ~TurnProcessor() = default;
 
-    void ProcessTurn(int missionYear, int numFactions, GameState& rGameState);
+    void ProcessTurn(GameState& rGameState);
 
 private:
-    int m_missionYear;
-    TurnStageRegistry_t m_registry;
-    TurnStageRepeatFlags_t m_repeatFlags;
+    GlobalTurnStageRegistry_t m_globalRegistry;
+    PerFactionTurnStageRegistry_t m_perFactionRegistry;
     std::vector<std::string> m_stageOrder;
 };
 

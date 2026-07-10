@@ -5,13 +5,14 @@
 namespace ac
 {
 
-class VictoryConditionChecks : public TurnStageBase
+class VictoryConditionChecks : public GlobalTurnStage
 {
 public:
-    VictoryConditionChecks(std::shared_ptr<HookContext> hookContext);
+    explicit VictoryConditionChecks(std::shared_ptr<HookContext> pHookContext);
     ~VictoryConditionChecks() = default;
 
-    void Execute_(GameState* pGameState, Faction* pFaction = nullptr) override;
+protected:
+    void ExecuteImpl(GameState& rGameState) override;
 };
 
 } // namespace ac

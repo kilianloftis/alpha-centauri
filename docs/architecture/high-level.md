@@ -37,9 +37,9 @@ graph TB
 
     subgraph "Turn System"
         TurnProcessor[TurnProcessor]
-        HookSystem[HookSystem]
-        TurnStageFactory[TurnStageFactory]
-        TurnStages[TurnStages.h<br/>TurnStage enum<br/>TurnStageBase]
+        TurnStageFactory[TurnStageFactory<br/>self-registering creators]
+        TurnStages[TurnStages.h<br/>GlobalTurnStage<br/>PerFactionTurnStage]
+        HookContext[HookContext<br/>per-stage pre/post/replace hooks]
     end
 
     subgraph "Map System"
@@ -97,7 +97,7 @@ graph TB
     Engine --> GameDataContext
     Engine --> Graphics
     Engine --> Input
-    Engine --> HookSystem
+    Engine --> TurnStageFactory
     Engine --> TurnProcessor
     Engine --> UIManager
     Engine --> ViewFactory
@@ -119,13 +119,12 @@ graph TB
     SFMLInput --> KeyMapping
     SFMLInput --> SFMLKeyEventQueue
 
-    TurnProcessor --> HookSystem
+    TurnProcessor --> TurnStages
     TurnProcessor --> GameState
-    HookSystem --> TurnStagesConfig
-    TurnStageFactory --> HookSystem
     TurnStageFactory --> TurnStagesConfig
-    TileBonusRegistry --> TileBonusConfigFile
     TurnStageFactory --> TurnStages
+    TurnStages --> HookContext
+    TileBonusRegistry --> TileBonusConfigFile
     TileMap --> Tile
     TileBonusRegistry --> TileBonusConfig
     Tile --> TileBonusConfig
@@ -167,7 +166,6 @@ graph TB
     style Graphics fill:#bbf,stroke:#333,stroke-width:2px
     style Input fill:#bbf,stroke:#333,stroke-width:2px
     style TurnProcessor fill:#bfb,stroke:#333,stroke-width:2px
-    style HookSystem fill:#bfb,stroke:#333,stroke-width:2px
     style TurnStageFactory fill:#fbf,stroke:#333,stroke-width:2px
     style TurnStages fill:#ff9,stroke:#333,stroke-width:2px
     style GameState fill:#fbf,stroke:#333,stroke-width:3px
@@ -229,16 +227,21 @@ graph TB
 - **Factory**: `CreateInput()` function creates appropriate implementation
 
 ### Turn System
-- **Purpose**: Manages turn-based game logic and modding hooks
+- **Purpose**: Manages turn-based game logic and modding hooks. See
+  `docs/architecture/turn-system.md` for the detailed diagram.
 - **Components**:
-  - `TurnProcessor`: Processes game turns, manages faction turns
-  - `HookSystem`: Manages mod hooks and stage execution
-  - `TurnStageFactory`: Creates and validates turn stage instances from configuration
-  - `TurnStages`: Defines TurnStage enum and TurnStageBase interface
+  - `TurnProcessor`: Dispatches each configured stage in order — once for `GlobalTurnStage`s,
+    once per faction for `PerFactionTurnStage`s — and throws if a stage id has no
+    registered instance
+  - `TurnStageFactory`: Builds stage instances from parsed config via a self-registering
+    creator registry (`TurnStageRegistrar<T>`), falling back to `CustomGlobalTurnStage`/
+    `CustomPerFactionTurnStage` for mod-defined ids
+  - `TurnStages`: Defines `TurnStageBase` (hook lifecycle) and the two stage interfaces,
+    `GlobalTurnStage` and `PerFactionTurnStage`
+  - `HookContext`/`Hook`: Per-stage pre/post/replace hooks, parsed from config
 - **Dependencies**:
-  - TurnProcessor depends on HookSystem and GameState
-  - TurnStageFactory depends on HookSystem and TurnStages
-  - Both HookSystem and TurnStageFactory load from config/turn_stages.json
+  - TurnProcessor depends on TurnStages and GameState
+  - TurnStageFactory depends on TurnStages and config/turn_stages.json
 
 ### GameDataContext
 - **Purpose**: Holds the definition data loaded once at startup (registries, config structs) plus the calculators/services built from it. Deliberately excludes anything that reads live save-game state — see `SecretProjectAvailabilityCalculator` below, which lives on `GameState` instead.

@@ -1,28 +1,44 @@
 #include "game/TurnStageFactory.h"
 #include "game/TurnStageConfigParser.h"
-#include "game/stages/TurnStart.h"
-#include "game/stages/NewYearBegins.h"
-#include "game/stages/ResourceCollection.h"
-#include "game/stages/IncomeCollection.h"
-#include "game/stages/ResearchAccumulation.h"
-#include "game/stages/BaseProduction.h"
-#include "game/stages/Population.h"
-#include "game/stages/Upkeep.h"
-#include "game/stages/PlayerActions.h"
-#include "game/stages/WorldEvents.h"
-#include "game/stages/VictoryConditionChecks.h"
-#include "game/stages/TurnEnd.h"
-#include "game/stages/Save.h"
 #include "game/stages/CustomTurnStage.h"
 #include <iostream>
-#include <magic_enum.hpp>
 #include <stdexcept>
+#include <unordered_map>
 
 namespace ac
 {
 
+namespace
+{
+
+std::unordered_map<std::string, TurnStageFactory::Creator_t>& CreatorRegistry()
+{
+    static std::unordered_map<std::string, TurnStageFactory::Creator_t> registry;
+    return registry;
+}
+
+// unique_ptr equivalent of std::dynamic_pointer_cast: on success, transfers ownership
+// into the returned pointer; on failure, leaves pBase untouched and returns nullptr.
+template <typename Derived>
+std::unique_ptr<Derived> DynamicUniquePtrCast(std::unique_ptr<TurnStageBase>& pBase)
+{
+    if (auto* pDerived = dynamic_cast<Derived*>(pBase.get()))
+    {
+        pBase.release();
+        return std::unique_ptr<Derived>(pDerived);
+    }
+    return nullptr;
+}
+
+} // namespace
+
 TurnStageFactory::TurnStageFactory()
 {
+}
+
+void TurnStageFactory::RegisterCreator(const std::string& id, Creator_t creator)
+{
+    CreatorRegistry()[id] = std::move(creator);
 }
 
 void TurnStageFactory::LoadConfig(const std::string& configPath)
@@ -35,57 +51,45 @@ void TurnStageFactory::LoadConfig(const std::string& configPath)
     }
 }
 
-TurnStageRegistry_t TurnStageFactory::CreateStages()
+TurnStageRegistries_t TurnStageFactory::CreateStages()
 {
-    TurnStageRegistry_t registry;
+    TurnStageRegistries_t registries;
     for (const auto& config : m_stageConfigs)
     {
-        registry[config.id] = CreateStageInstance(config);
+        std::unique_ptr<TurnStageBase> pStage = CreateStageInstance(config);
         std::cout << "Registered stage: " << config.id << "\n";
+
+        if (auto pGlobal = DynamicUniquePtrCast<GlobalTurnStage>(pStage))
+        {
+            registries.global[config.id] = std::move(pGlobal);
+        }
+        else if (auto pPerFaction = DynamicUniquePtrCast<PerFactionTurnStage>(pStage))
+        {
+            registries.perFaction[config.id] = std::move(pPerFaction);
+        }
+        else
+        {
+            throw std::runtime_error(
+                "Turn stage '" + config.id + "' is neither a GlobalTurnStage nor a PerFactionTurnStage");
+        }
     }
-    return registry;
+    return registries;
 }
 
-std::unique_ptr<TurnStageBase> TurnStageFactory::CreateStageInstance(const TurnStageConfig& config)
+std::unique_ptr<TurnStageBase> TurnStageFactory::CreateStageInstance(const TurnStageConfig_t& config)
 {
-    auto stageEnum = magic_enum::enum_cast<TurnStage>(config.id);
-    
-    if (!stageEnum.has_value())
+    const auto& registry = CreatorRegistry();
+    auto it = registry.find(config.id);
+    if (it != registry.end())
     {
-        return std::make_unique<CustomTurnStage>(config.hookContext, config.name);
+        return it->second(config.hookContext);
     }
-    
-    switch (stageEnum.value())
+
+    if (config.repeat_for_each_faction)
     {
-        case TurnStage::TurnStart:
-            return std::make_unique<TurnStart>(config.hookContext);
-        case TurnStage::NewYearBegins:
-            return std::make_unique<NewYearBegins>(config.hookContext);
-        case TurnStage::ResourceCollection:
-            return std::make_unique<ResourceCollection>(config.hookContext);
-        case TurnStage::IncomeCollection:
-            return std::make_unique<IncomeCollection>(config.hookContext);
-        case TurnStage::ResearchAccumulation:
-            return std::make_unique<ResearchAccumulation>(config.hookContext);
-        case TurnStage::BaseProduction:
-            return std::make_unique<BaseProduction>(config.hookContext);
-        case TurnStage::Population:
-            return std::make_unique<Population>(config.hookContext);
-        case TurnStage::Upkeep:
-            return std::make_unique<Upkeep>(config.hookContext);
-        case TurnStage::PlayerActions:
-            return std::make_unique<PlayerActions>(config.hookContext);
-        case TurnStage::WorldEvents:
-            return std::make_unique<WorldEvents>(config.hookContext);
-        case TurnStage::VictoryConditionChecks:
-            return std::make_unique<VictoryConditionChecks>(config.hookContext);
-        case TurnStage::TurnEnd:
-            return std::make_unique<TurnEnd>(config.hookContext);
-        case TurnStage::Save:
-            return std::make_unique<Save>(config.hookContext);
-        default:
-            throw std::runtime_error("Unhandled turn stage id '" + config.id + "'");
+        return std::make_unique<CustomPerFactionTurnStage>(config.hookContext, config.name);
     }
+    return std::make_unique<CustomGlobalTurnStage>(config.hookContext, config.name);
 }
 
 } // namespace ac

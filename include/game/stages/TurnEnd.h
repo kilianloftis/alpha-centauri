@@ -5,13 +5,14 @@
 namespace ac
 {
 
-class TurnEnd : public TurnStageBase
+class TurnEnd : public GlobalTurnStage
 {
 public:
-    TurnEnd(std::shared_ptr<HookContext> hookContext);
+    explicit TurnEnd(std::shared_ptr<HookContext> pHookContext);
     ~TurnEnd() = default;
 
-    void Execute_(GameState* pGameState, Faction* pFaction = nullptr) override;
+protected:
+    void ExecuteImpl(GameState& rGameState) override;
 };
 
 } // namespace ac

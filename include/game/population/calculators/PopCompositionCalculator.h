@@ -38,7 +38,7 @@ public:
     // Calculate target drone and talent counts given runtime inputs.
     PopCompositionResult Calculate(const PopCompositionInputs& inputs);
 
-    // Access the underlying config (e.g. to read defaultType)
+    // Access the underlying config (drone/talent type ids, formulas, etc.)
     const PopCompositionConfig& GetConfig() const;
 
 private:

@@ -100,7 +100,7 @@ void Engine::ProcessTurn_()
     }
 
     m_eventBus->publish(EvTurnStarted{ m_gameState->GetMissionYear() });
-    m_turnProcessor->ProcessTurn(m_gameState->GetMissionYear(), m_gameState->GetNumFactions(), *m_gameState);
+    m_turnProcessor->ProcessTurn(*m_gameState);
     m_gameState->IncrementMissionYear();
 }
 
@@ -164,6 +164,21 @@ void Engine::Initialize_()
     m_gameDataContext->popCompositionConfig =
         std::make_unique<PopCompositionConfig>(
             compositionParser.ParseConfig("config/pop_composition.lua", *m_gameDataContext->luaRuntime));
+    {
+        const PopCompositionConfig& rComposition = *m_gameDataContext->popCompositionConfig;
+        if (!m_gameDataContext->popTypeRegistry->Find(rComposition.droneTypeId))
+        {
+            throw std::runtime_error(
+                "pop composition drone_type '" + rComposition.droneTypeId
+                + "' is not a known pop type");
+        }
+        if (!m_gameDataContext->popTypeRegistry->Find(rComposition.talentTypeId))
+        {
+            throw std::runtime_error(
+                "pop composition talent_type '" + rComposition.talentTypeId
+                + "' is not a known pop type");
+        }
+    }
     m_gameDataContext->popCompositionCalculator =
         std::make_unique<PopCompositionCalculator>(
             *m_gameDataContext->popCompositionConfig, *m_gameDataContext->luaRuntime);
@@ -237,15 +252,14 @@ void Engine::Initialize_()
 
     m_turnStageFactory = std::make_unique<TurnStageFactory>();
     m_turnStageFactory->LoadConfig("config/turn_stages.json");
-    auto registry = m_turnStageFactory->CreateStages();
-    TurnStageRepeatFlags_t repeatFlags;
+    auto registries = m_turnStageFactory->CreateStages();
     std::vector<std::string> stageOrder;
     for (const auto& config : m_turnStageFactory->GetStageConfigs())
     {
-        repeatFlags[config.id] = config.repeat_for_each_faction;
         stageOrder.push_back(config.id);
     }
-    m_turnProcessor = std::make_unique<TurnProcessor>(std::move(registry), std::move(repeatFlags), std::move(stageOrder));
+    m_turnProcessor = std::make_unique<TurnProcessor>(
+        std::move(registries.global), std::move(registries.perFaction), std::move(stageOrder));
 
     m_viewFactory = std::make_unique<ViewFactory>(
         *m_gameState,

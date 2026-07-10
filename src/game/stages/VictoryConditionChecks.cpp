@@ -1,19 +1,21 @@
 #include "game/stages/VictoryConditionChecks.h"
 #include "game/GameState.h"
+#include "game/TurnStageRegistrar.h"
 #include <iostream>
 
 namespace ac
 {
 
-VictoryConditionChecks::VictoryConditionChecks(std::shared_ptr<HookContext> hookContext)
-    : TurnStageBase(hookContext)
+namespace { TurnStageRegistrar<VictoryConditionChecks> g_registrar("VictoryConditionChecks"); }
+
+VictoryConditionChecks::VictoryConditionChecks(std::shared_ptr<HookContext> pHookContext)
+    : GlobalTurnStage(pHookContext)
 {
 }
 
-void VictoryConditionChecks::Execute_(GameState* pGameState, Faction* pFaction)
+void VictoryConditionChecks::ExecuteImpl(GameState& rGameState)
 {
-    (void)pGameState;
-    (void)pFaction;
+    (void)rGameState;
     std::cout << "Executing VictoryConditionChecks stage\n";
 }
 

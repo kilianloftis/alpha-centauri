@@ -12,29 +12,29 @@ TurnStageConfigParser::TurnStageConfigParser()
 {
 }
 
-std::vector<TurnStageConfig> TurnStageConfigParser::ParseConfig(const std::string& configPath)
+std::vector<TurnStageConfig_t> TurnStageConfigParser::ParseConfig(const std::string& configPath)
 {
-    return JsonConfigLoader::LoadFile<TurnStageConfig>(
+    return JsonConfigLoader::LoadFile<TurnStageConfig_t>(
         configPath, "turn stage",
         [this](const nlohmann::json& rJson) { return ParseStageConfig(rJson); });
 }
 
-TurnStageConfig TurnStageConfigParser::ParseStageConfig(const nlohmann::json& stageJson)
+TurnStageConfig_t TurnStageConfigParser::ParseStageConfig(const nlohmann::json& stageJson)
 {
-    TurnStageConfig config;
+    TurnStageConfig_t config;
     config.id = ConfigFields::ParseId(stageJson);
     config.name = ConfigFields::ParseName(stageJson, config.id);
     config.description = stageJson.value("description", "");
     config.repeat_for_each_faction = stageJson.value("repeat_for_each_faction", false);
-    
+
     config.hookContext = std::make_shared<HookContext>();
-    
+
     if (stageJson.contains("hooks"))
     {
         json hooksJson = stageJson["hooks"];
         ParseHooks(hooksJson, config.hookContext);
     }
-    
+
     return config;
 }
 

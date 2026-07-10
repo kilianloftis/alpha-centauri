@@ -1,16 +1,32 @@
 #include "game/stages/CustomTurnStage.h"
-#include <iostream>
+#include <stdexcept>
 
 namespace ac
 {
 
-CustomTurnStage::CustomTurnStage(std::shared_ptr<HookContext> hookContext, const std::string& name)
-    : TurnStageBase(hookContext)
-    , m_name(name)
+namespace
 {
-    if (!m_pHookContext || (!m_pHookContext->HasReplaceHooks() && !m_pHookContext->HasPreHooks() && !m_pHookContext->HasPostHooks()))
+void RequireAtLeastOneHook(const HookContext* pHookContext, const std::string& name)
+{
+    if (!pHookContext || (!pHookContext->HasReplaceHooks() && !pHookContext->HasPreHooks() && !pHookContext->HasPostHooks()))
     {
-        throw std::runtime_error("CustomTurnStage '" + m_name + "' requires at least one hook to be defined");
+        throw std::runtime_error("Custom turn stage '" + name + "' requires at least one hook to be defined");
     }
 }
+} // namespace
+
+CustomGlobalTurnStage::CustomGlobalTurnStage(std::shared_ptr<HookContext> pHookContext, const std::string& name)
+    : GlobalTurnStage(pHookContext)
+    , m_name(name)
+{
+    RequireAtLeastOneHook(pHookContext.get(), m_name);
+}
+
+CustomPerFactionTurnStage::CustomPerFactionTurnStage(std::shared_ptr<HookContext> pHookContext, const std::string& name)
+    : PerFactionTurnStage(pHookContext)
+    , m_name(name)
+{
+    RequireAtLeastOneHook(pHookContext.get(), m_name);
+}
+
 } // namespace ac

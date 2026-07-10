@@ -2,31 +2,27 @@
 #include "game/GameState.h"
 #include "game/Faction.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/TurnStageRegistrar.h"
 #include <iostream>
 
 namespace ac
 {
 
-ResourceCollection::ResourceCollection(std::shared_ptr<HookContext> hookContext)
-    : TurnStageBase(hookContext)
+namespace { TurnStageRegistrar<ResourceCollection> g_registrar("ResourceCollection"); }
+
+ResourceCollection::ResourceCollection(std::shared_ptr<HookContext> pHookContext)
+    : PerFactionTurnStage(pHookContext)
 {
 }
 
-void ResourceCollection::Execute_(GameState* pGameState, Faction* pFaction)
+void ResourceCollection::ExecuteImpl(GameState& rGameState, Faction& rFaction)
 {
-    if (!pFaction)
-    {
-        std::cout << "Executing ResourceCollection stage (no faction)\n";
-        return;
-    }
-
     std::cout << "Executing ResourceCollection stage for faction\n";
 
     // Other factions' WorldGlobal effects apply here too (the faction's own pool
     // already includes its own).
-    const std::vector<ActiveEffect_t> worldEffects =
-        pGameState ? pGameState->CollectWorldEffects(*pFaction) : std::vector<ActiveEffect_t>{};
-    pFaction->ProduceBaseResources(worldEffects);
+    const std::vector<ActiveEffect_t> worldEffects = rGameState.CollectWorldEffects(rFaction);
+    rFaction.ProduceBaseResources(worldEffects);
 }
 
 } // namespace ac

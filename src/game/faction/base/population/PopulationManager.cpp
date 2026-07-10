@@ -177,8 +177,10 @@ void PopulationManager::RecalculateComposition()
     inputs.psychOutput = m_container.ComputePsychOutput();
     // TODO: supply faction drone/talent modifiers once faction modifiers are accessible here
     const PopCompositionResult targets = m_pCompositionCalculator->Calculate(inputs);
+    const PopCompositionConfig& rConfig = m_pCompositionCalculator->GetConfig();
 
-    m_container.ApplyCompositionTargets(targets, GetDefaultPopType());
+    m_container.ApplyCompositionTargets(targets, GetDefaultPopType(),
+                                        rConfig.droneTypeId, rConfig.talentTypeId);
 }
 
 void PopulationManager::CheckRiotEndOfTurn()

@@ -10,7 +10,7 @@
 namespace ac
 {
 
-struct TurnStageConfig
+struct TurnStageConfig_t
 {
     std::string id;
     std::string name;
@@ -25,10 +25,10 @@ public:
     TurnStageConfigParser();
     ~TurnStageConfigParser() = default;
 
-    std::vector<TurnStageConfig> ParseConfig(const std::string& configPath);
+    std::vector<TurnStageConfig_t> ParseConfig(const std::string& configPath);
 
 private:
-    TurnStageConfig ParseStageConfig(const nlohmann::json& stageJson);
+    TurnStageConfig_t ParseStageConfig(const nlohmann::json& stageJson);
     void ParseHooks(const nlohmann::json& hooksJson, std::shared_ptr<HookContext> hookContext);
 };
 

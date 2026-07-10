@@ -1,19 +1,22 @@
 #include "game/stages/PlayerActions.h"
 #include "game/GameState.h"
+#include "game/TurnStageRegistrar.h"
 #include <iostream>
 
 namespace ac
 {
 
-PlayerActions::PlayerActions(std::shared_ptr<HookContext> hookContext)
-    : TurnStageBase(hookContext)
+namespace { TurnStageRegistrar<PlayerActions> g_registrar("PlayerActions"); }
+
+PlayerActions::PlayerActions(std::shared_ptr<HookContext> pHookContext)
+    : PerFactionTurnStage(pHookContext)
 {
 }
 
-void PlayerActions::Execute_(GameState* pGameState, Faction* pFaction)
+void PlayerActions::ExecuteImpl(GameState& rGameState, Faction& rFaction)
 {
-    (void)pGameState;
-    (void)pFaction;
+    (void)rGameState;
+    (void)rFaction;
     std::cout << "Executing PlayerActions stage\n";
 }
 

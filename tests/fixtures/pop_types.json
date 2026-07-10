@@ -11,6 +11,26 @@
     "effects": []
   },
   {
+    "id": "Drone",
+    "name": "Drone",
+    "can_work_tile": true,
+    "player_assignable": false,
+    "riot_contribution": 1,
+    "golden_age_contribution": 0,
+    "obsoletes": [],
+    "effects": []
+  },
+  {
+    "id": "Talent",
+    "name": "Talent",
+    "can_work_tile": true,
+    "player_assignable": false,
+    "riot_contribution": 0,
+    "golden_age_contribution": 1,
+    "obsoletes": [],
+    "effects": []
+  },
+  {
     "id": "Doctor",
     "name": "Doctor",
     "can_work_tile": false,

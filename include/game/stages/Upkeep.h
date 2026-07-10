@@ -5,13 +5,14 @@
 namespace ac
 {
 
-class Upkeep : public TurnStageBase
+class Upkeep : public PerFactionTurnStage
 {
 public:
-    Upkeep(std::shared_ptr<HookContext> hookContext);
+    explicit Upkeep(std::shared_ptr<HookContext> pHookContext);
     ~Upkeep() = default;
 
-    void Execute_(GameState* pGameState, Faction* pFaction = nullptr) override;
+protected:
+    void ExecuteImpl(GameState& rGameState, Faction& rFaction) override;
 };
 
 } // namespace ac

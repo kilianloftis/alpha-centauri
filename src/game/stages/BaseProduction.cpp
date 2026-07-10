@@ -3,29 +3,26 @@
 #include "game/Faction.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/production/ProductionManager.h"
+#include "game/TurnStageRegistrar.h"
 #include <iostream>
 
 namespace ac
 {
 
-BaseProduction::BaseProduction(std::shared_ptr<HookContext> hookContext)
-    : TurnStageBase(hookContext)
+namespace { TurnStageRegistrar<BaseProduction> g_registrar("BaseProduction"); }
+
+BaseProduction::BaseProduction(std::shared_ptr<HookContext> pHookContext)
+    : PerFactionTurnStage(pHookContext)
 {
 }
 
-void BaseProduction::Execute_(GameState* pGameState, Faction* pFaction)
+void BaseProduction::ExecuteImpl(GameState& rGameState, Faction& rFaction)
 {
-    (void)pGameState;
-
-    if (!pFaction)
-    {
-        std::cout << "Executing BaseProduction stage (no faction)\n";
-        return;
-    }
+    (void)rGameState;
 
     std::cout << "Executing BaseProduction stage for faction\n";
 
-    for (BaseManager& rBase : pFaction->Bases())
+    for (BaseManager& rBase : rFaction.Bases())
     {
         const ProductionManager& rProduction = rBase.GetProduction();
         if (!rProduction.GetCurrentProduction())

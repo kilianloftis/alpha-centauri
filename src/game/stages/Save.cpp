@@ -1,19 +1,21 @@
 #include "game/stages/Save.h"
 #include "game/GameState.h"
+#include "game/TurnStageRegistrar.h"
 #include <iostream>
 
 namespace ac
 {
 
-Save::Save(std::shared_ptr<HookContext> hookContext)
-    : TurnStageBase(hookContext)
+namespace { TurnStageRegistrar<Save> g_registrar("Save"); }
+
+Save::Save(std::shared_ptr<HookContext> pHookContext)
+    : GlobalTurnStage(pHookContext)
 {
 }
 
-void Save::Execute_(GameState* pGameState, Faction* pFaction)
+void Save::ExecuteImpl(GameState& rGameState)
 {
-    (void)pGameState;
-    (void)pFaction;
+    (void)rGameState;
     std::cout << "Executing Save stage\n";
 }
 

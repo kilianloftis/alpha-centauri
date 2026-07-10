@@ -1,47 +1,50 @@
 #include "game/TurnProcessor.h"
-#include "game/TurnStages.h"
 #include "game/GameState.h"
 #include "game/Faction.h"
 #include <iostream>
+#include <stdexcept>
 
 namespace ac
 {
 
-TurnProcessor::TurnProcessor(TurnStageRegistry_t registry, TurnStageRepeatFlags_t repeatFlags, std::vector<std::string> stageOrder)
-    : m_missionYear(0)
-    , m_registry(std::move(registry))
-    , m_repeatFlags(std::move(repeatFlags))
+TurnProcessor::TurnProcessor(GlobalTurnStageRegistry_t globalRegistry,
+                              PerFactionTurnStageRegistry_t perFactionRegistry,
+                              std::vector<std::string> stageOrder)
+    : m_globalRegistry(std::move(globalRegistry))
+    , m_perFactionRegistry(std::move(perFactionRegistry))
     , m_stageOrder(std::move(stageOrder))
 {}
 
-void TurnProcessor::ProcessTurn(int missionYear, int numFactions, GameState& rGameState)
+void TurnProcessor::ProcessTurn(GameState& rGameState)
 {
-    m_missionYear = missionYear;
-    std::cout << "\n--- Mission Year " << m_missionYear << " ---\n";
+    std::cout << "\n--- Mission Year " << rGameState.GetMissionYear() << " ---\n";
 
     for (const auto& stageId : m_stageOrder)
     {
-        auto it = m_registry.find(stageId);
-        if (it != m_registry.end())
+        auto globalIt = m_globalRegistry.find(stageId);
+        if (globalIt != m_globalRegistry.end())
         {
-            auto& stage = it->second;
-            auto flagIt = m_repeatFlags.find(stageId);
-            bool bRepeatForEachFaction = (flagIt != m_repeatFlags.end()) && flagIt->second;
-
+            auto& stage = globalIt->second;
             stage->OnEnter();
-            if (bRepeatForEachFaction)
+            stage->Execute(rGameState);
+            stage->OnExit();
+            continue;
+        }
+
+        auto perFactionIt = m_perFactionRegistry.find(stageId);
+        if (perFactionIt != m_perFactionRegistry.end())
+        {
+            auto& stage = perFactionIt->second;
+            stage->OnEnter();
+            for (Faction& rFaction : rGameState.Factions())
             {
-                for (Faction& rFaction : rGameState.Factions())
-                {
-                    stage->Execute(&rGameState, &rFaction);
-                }
-            }
-            else
-            {
-                stage->Execute(&rGameState);
+                stage->Execute(rGameState, rFaction);
             }
             stage->OnExit();
+            continue;
         }
+
+        throw std::runtime_error("Turn stage '" + stageId + "' is in the stage order but not registered");
     }
 }
 } // namespace ac

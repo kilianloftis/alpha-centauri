@@ -5,13 +5,14 @@
 namespace ac
 {
 
-class BaseProduction : public TurnStageBase
+class BaseProduction : public PerFactionTurnStage
 {
 public:
-    BaseProduction(std::shared_ptr<HookContext> hookContext);
+    explicit BaseProduction(std::shared_ptr<HookContext> pHookContext);
     ~BaseProduction() = default;
 
-    void Execute_(GameState* pGameState, Faction* pFaction = nullptr) override;
+protected:
+    void ExecuteImpl(GameState& rGameState, Faction& rFaction) override;
 };
 
 } // namespace ac

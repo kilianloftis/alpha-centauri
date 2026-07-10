@@ -34,9 +34,19 @@ bool Pop::IsDrone() const
     return m_pConfig->riotContribution > 0;
 }
 
+bool Pop::IsTalent() const
+{
+    return m_pConfig->goldenAgeContribution > 0;
+}
+
 bool Pop::IsSpecialist() const
 {
     return !m_pConfig->bCanWorkTile && m_pConfig->riotContribution == 0;
+}
+
+bool Pop::IsPlainWorker() const
+{
+    return IsWorker() && !IsDrone() && !IsTalent();
 }
 
 bool Pop::IsPlayerAssignable() const

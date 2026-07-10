@@ -2,32 +2,29 @@
 #include "game/GameState.h"
 #include "game/Faction.h"
 #include "game/faction/EconomyManager.h"
+#include "game/TurnStageRegistrar.h"
 #include <iostream>
 
 namespace ac
 {
 
-IncomeCollection::IncomeCollection(std::shared_ptr<HookContext> hookContext)
-    : TurnStageBase(hookContext)
+namespace { TurnStageRegistrar<IncomeCollection> g_registrar("IncomeCollection"); }
+
+IncomeCollection::IncomeCollection(std::shared_ptr<HookContext> pHookContext)
+    : PerFactionTurnStage(pHookContext)
 {
 }
 
-void IncomeCollection::Execute_(GameState* pGameState, Faction* pFaction)
+void IncomeCollection::ExecuteImpl(GameState& rGameState, Faction& rFaction)
 {
-    (void)pGameState;
-
-    if (!pFaction)
-    {
-        std::cout << "Executing IncomeCollection stage (no faction)\n";
-        return;
-    }
+    (void)rGameState;
 
     std::cout << "Executing IncomeCollection stage for faction\n";
 
-    const int totalIncome = pFaction->CollectIncome();
+    const int totalIncome = rFaction.CollectIncome();
 
     std::cout << "  Faction income: " << totalIncome
-              << ", total energy: " << pFaction->GetEconomy().GetEnergy() << "\n";
+              << ", total energy: " << rFaction.GetEconomy().GetEnergy() << "\n";
 }
 
 } // namespace ac

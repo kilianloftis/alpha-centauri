@@ -35,8 +35,14 @@ public:
     // True if this pop contributes to riot (riot_contribution > 0)
     bool IsDrone() const;
 
+    // True if this pop contributes to golden age (golden_age_contribution > 0)
+    bool IsTalent() const;
+
     // True if this pop is a specialist (!can_work_tile && !IsDrone())
     bool IsSpecialist() const;
+
+    // Worker that is neither drone nor talent — the pool composition converts to/from.
+    bool IsPlainWorker() const;
 
     // True if the player can manually assign this pop type
     bool IsPlayerAssignable() const;

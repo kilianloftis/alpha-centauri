@@ -194,6 +194,31 @@ Combined with 1.6, object destruction is otherwise still unsafe almost everywher
 
 ### 1.9 [H] Turn-stage interface: nullable-pointer contract, and stages do other objects' work
 
+> **Status (2026-07-10): fixed.** `TurnStageBase` no longer declares an `Execute` contract
+> at all — it only carries the hook lifecycle (`OnEnter`/`OnExit` and the protected
+> `HasReplaceHooks`/`ExecuteReplaceHooks` helpers). Two narrow interfaces replace it:
+> `GlobalTurnStage::Execute(GameState&)` and `PerFactionTurnStage::Execute(GameState&,
+> Faction&)` (`include/game/TurnStages.h`). Every built-in stage derives from exactly one,
+> so a stage never receives (or null-checks) a parameter it cannot use, and `ExecuteImpl`
+> is declared `protected` consistently in the base and every override (the
+> private-in-base/public-in-`Population` mismatch is gone). `TurnProcessor` now holds two
+> registries (`GlobalTurnStageRegistry_t`, `PerFactionTurnStageRegistry_t`) keyed by stage
+> id, populated by `TurnStageFactory::CreateStages()` via a `dynamic_cast` bucketing step,
+> and dispatches by registry membership instead of a `repeat_for_each_faction` bool passed
+> alongside a nullable-`Faction*` `Execute` call. A stage id present in `m_stageOrder` but
+> in neither registry now **throws** `std::runtime_error` instead of being silently
+> skipped; the unused `numFactions` parameter and the `m_missionYear` member are gone —
+> `ProcessTurn(GameState&)` reads `rGameState.GetMissionYear()` directly. The `TurnStage`
+> enum is deleted; `TurnStageFactory::CreateStageInstance` no longer switches over it —
+> built-in stages self-register with `TurnStageFactory::RegisterCreator` via a file-scope
+> `TurnStageRegistrar<T>` instance in each stage's `.cpp` (OCP: adding a stage never
+> touches `TurnStageFactory.cpp`). Ids with no registered creator fall back to
+> `CustomGlobalTurnStage`/`CustomPerFactionTurnStage`, chosen by
+> `config.repeat_for_each_faction` since mod-defined stages have no static C++ type to
+> derive it from. See `docs/architecture/turn-system.md` for the current design. Covered
+> by `tests/game/TurnProcessorTests.cpp` (unknown-id throw, global-vs-per-faction dispatch
+> counts).
+
 - `TurnStageBase::Execute(GameState* = nullptr, Faction* = nullptr)` (`include/game/TurnStages.h:73`): default arguments on a virtual (statically bound, re-declared inconsistently in every override), forcing every stage to null-check both parameters. Per-faction and global stages share one signature — stages that ignore `pFaction` still receive it, stages that require it can be called without it (ISP/LSP smell rooted in the interface, not the implementations).
 - `Execute_` is declared `private` in the base, redeclared `public` in most stages, `private` in `Population` — the NVI pattern applied inconsistently.
 - Stage bodies do faction-internal bookkeeping: `IncomeCollection` and `ResearchAccumulation` contain the same loop (iterate bases by index, `ConsumeX`, sum, `AddY`) duplicated with different nouns (`src/game/stages/IncomeCollection.cpp`, `ResearchAccumulation.cpp`) — aggregation logic that belongs behind `Faction`, living in the orchestration layer, twice. *(Addressed 2026-07-09: the loops moved into `Faction::CollectIncome()`/`CollectResearch()`; the stages are now thin orchestration. The interface-level items in this finding — nullable-pointer `Execute` contract, NVI inconsistency, silent stage-ID skips, enum+switch factory — remain.)*
@@ -221,7 +246,7 @@ Individually each is "not implemented yet"; collectively they show the extension
 - Tech `category` strings are validated **per query, via try/catch** in `ResearchSelector::IsTechInSelectedCategory_` (`src/game/faction/ResearchSelector.cpp:123-133`) — exceptions as control flow, and a typo'd category silently degrades selection behavior instead of failing at load.
 - `SetActivePolicy(category, policyId)` never checks that the policy belongs to the category (`SocialEngineeringManager.cpp:27-35`) — any policy can be installed into any slot.
 - `EnergyAllocation_t` documents "must sum to 100" and never enforces it.
-- Unknown IDs in `turn_stages.json` become hook-only `CustomTurnStage`s or are silently dropped (1.9).
+- Unknown IDs in `turn_stages.json` become hook-only `CustomGlobalTurnStage`/`CustomPerFactionTurnStage` instances rather than failing config validation — still not rejected up front, though a stage id that fails to construct (e.g. a custom stage with no hooks) now throws at startup instead of surfacing later (1.9).
 
 ---
 
@@ -377,6 +402,13 @@ The coding guidelines say "Do not make up game rules or mechanics. Leave TODOs i
 - Max base size is a hard-coded `m_maxSize(8)` (`PopulationManager.cpp:24`); `SetMaxSize` is never called by anything.
 
 ### 3.4 [M] Population composition hard-codes pop-type IDs
+
+> **Status (2026-07-10): fixed.** `pop_composition.lua` names the conversion targets via
+> `drone_type` / `talent_type` (required at parse time; validated against `PopTypeRegistry`
+> at Engine load). `ApplyCompositionTargets` takes those ids instead of `"Drone"`/`"Talent"`
+> literals. Role checks live on `Pop` (`IsDrone`, `IsTalent`, `IsPlainWorker`) so talent /
+> plain-worker predicates are no longer duplicated inline — and promoting to drones no longer
+> matches existing drones. Covered by `tests/faction/PopCompositionTests.cpp`.
 
 `PopContainer::ApplyCompositionTargets` converts pops to `"Drone"` and `"Talent"` by string literal (`src/game/faction/base/population/PopContainer.cpp:153, 165`), while everything else about pop types is config-driven. A mod that renames these types gets runtime throws from `ConvertTo`. Role predicates are also scattered: `IsDrone` lives on `Pop`, "is talent" is an inline expression duplicated in `PopContainer` (three places), "worker but not specialist" another.
 

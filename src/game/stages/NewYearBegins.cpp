@@ -1,19 +1,21 @@
 #include "game/stages/NewYearBegins.h"
 #include "game/GameState.h"
+#include "game/TurnStageRegistrar.h"
 #include <iostream>
 
 namespace ac
 {
 
-NewYearBegins::NewYearBegins(std::shared_ptr<HookContext> hookContext)
-    : TurnStageBase(hookContext)
+namespace { TurnStageRegistrar<NewYearBegins> g_registrar("NewYearBegins"); }
+
+NewYearBegins::NewYearBegins(std::shared_ptr<HookContext> pHookContext)
+    : GlobalTurnStage(pHookContext)
 {
 }
 
-void NewYearBegins::Execute_(GameState* pGameState, Faction* pFaction)
+void NewYearBegins::ExecuteImpl(GameState& rGameState)
 {
-    (void)pGameState;
-    (void)pFaction;
+    (void)rGameState;
     std::cout << "Executing NewYearBegins stage\n";
 }
 

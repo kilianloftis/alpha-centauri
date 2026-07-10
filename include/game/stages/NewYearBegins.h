@@ -5,13 +5,14 @@
 namespace ac
 {
 
-class NewYearBegins : public TurnStageBase
+class NewYearBegins : public GlobalTurnStage
 {
 public:
-    NewYearBegins(std::shared_ptr<HookContext> hookContext);
+    explicit NewYearBegins(std::shared_ptr<HookContext> pHookContext);
     ~NewYearBegins() = default;
 
-    void Execute_(GameState* pGameState, Faction* pFaction = nullptr) override;
+protected:
+    void ExecuteImpl(GameState& rGameState) override;
 };
 
 } // namespace ac

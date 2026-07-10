@@ -26,6 +26,19 @@ PopCompositionConfig PopCompositionConfigParser::ParseConfig(const std::string& 
 
     config.droneFormula  = tbl.get_or("drone_formula",  std::string(""));
     config.talentFormula = tbl.get_or("talent_formula", std::string(""));
+    config.droneTypeId   = tbl.get_or("drone_type",     std::string(""));
+    config.talentTypeId  = tbl.get_or("talent_type",    std::string(""));
+
+    if (config.droneTypeId.empty())
+    {
+        throw std::runtime_error("pop composition script '" + scriptPath
+                                 + "' must set drone_type to a pop type id");
+    }
+    if (config.talentTypeId.empty())
+    {
+        throw std::runtime_error("pop composition script '" + scriptPath
+                                 + "' must set talent_type to a pop type id");
+    }
 
     sol::optional<sol::table> precedence = tbl["precedence"];
     if (precedence)

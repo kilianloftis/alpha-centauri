@@ -2,38 +2,35 @@
 #include "game/GameState.h"
 #include "game/Faction.h"
 #include "game/faction/ResearchManager.h"
+#include "game/TurnStageRegistrar.h"
 #include <iostream>
 
 namespace ac
 {
 
-ResearchAccumulation::ResearchAccumulation(std::shared_ptr<HookContext> hookContext)
-    : TurnStageBase(hookContext)
+namespace { TurnStageRegistrar<ResearchAccumulation> g_registrar("ResearchAccumulation"); }
+
+ResearchAccumulation::ResearchAccumulation(std::shared_ptr<HookContext> pHookContext)
+    : PerFactionTurnStage(pHookContext)
 {
 }
 
-void ResearchAccumulation::Execute_(GameState* pGameState, Faction* pFaction)
+void ResearchAccumulation::ExecuteImpl(GameState& rGameState, Faction& rFaction)
 {
-    (void)pGameState;
-
-    if (!pFaction)
-    {
-        std::cout << "Executing ResearchAccumulation stage (no faction)\n";
-        return;
-    }
+    (void)rGameState;
 
     std::cout << "Executing ResearchAccumulation stage for faction\n";
 
-    const int totalLabs = pFaction->CollectResearch();
+    const int totalLabs = rFaction.CollectResearch();
 
-    ResearchManager& rResearch = pFaction->GetResearch();
+    ResearchManager& rResearch = rFaction.GetResearch();
     std::cout << "  Faction labs collected: " << totalLabs
               << ", total research points: " << rResearch.GetAccumulatedPoints() << "\n";
 
     while (rResearch.CanDiscoverTech())
     {
         const TechId techId = rResearch.GetResearchTarget();
-        if (!pFaction->DiscoverCurrentResearch())
+        if (!rFaction.DiscoverCurrentResearch())
         {
             break;
         }

@@ -5,13 +5,14 @@
 namespace ac
 {
 
-class WorldEvents : public TurnStageBase
+class WorldEvents : public GlobalTurnStage
 {
 public:
-    WorldEvents(std::shared_ptr<HookContext> hookContext);
+    explicit WorldEvents(std::shared_ptr<HookContext> pHookContext);
     ~WorldEvents() = default;
 
-    void Execute_(GameState* pGameState, Faction* pFaction = nullptr) override;
+protected:
+    void ExecuteImpl(GameState& rGameState) override;
 };
 
 } // namespace ac

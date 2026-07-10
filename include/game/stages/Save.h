@@ -5,13 +5,14 @@
 namespace ac
 {
 
-class Save : public TurnStageBase
+class Save : public GlobalTurnStage
 {
 public:
-    Save(std::shared_ptr<HookContext> hookContext);
+    explicit Save(std::shared_ptr<HookContext> pHookContext);
     ~Save() = default;
 
-    void Execute_(GameState* pGameState, Faction* pFaction = nullptr) override;
+protected:
+    void ExecuteImpl(GameState& rGameState) override;
 };
 
 } // namespace ac

@@ -52,8 +52,11 @@ public:
     void ConvertToFallback(Pop& rPop);
 
     // Apply composition targets: converts excess drones/talents to workers,
-    // then promotes workers to match targets.
-    void ApplyCompositionTargets(const PopCompositionResult& targets, const std::string& defaultTypeId);
+    // then promotes plain workers to the configured drone/talent type ids.
+    void ApplyCompositionTargets(const PopCompositionResult& targets,
+                                 const std::string& defaultTypeId,
+                                 const std::string& droneTypeId,
+                                 const std::string& talentTypeId);
 
     // Compute total psych output across all pops
     int ComputePsychOutput() const;

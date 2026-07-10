@@ -1,11 +1,9 @@
 #pragma once
 
 #include "game/HookContext.h"
-#include <string>
-#include <vector>
 #include <map>
 #include <memory>
-#include <magic_enum.hpp>
+#include <string>
 
 namespace ac
 {
@@ -13,75 +11,18 @@ namespace ac
 class GameState;
 class Faction;
 
-enum class TurnStage
-{
-    TurnStart,
-    NewYearBegins,
-    ResourceCollection,
-    IncomeCollection,
-    // Income_Nutrients,
-    // Income_Minerals,
-    // Income_Energy,
-    // Income_Commerce,
-    // EnergyAllocation_Economy,
-    // EnergyAllocation_Labs,
-    // EnergyAllocation_Psych,
-    ResearchAccumulation,
-    // Research_LabOutput,
-    // Research_TechDiscovery,
-    BaseProduction,
-    // Production_Facilities,
-    // Production_Units,
-    // Production_Terraforming,
-    // Production_SecretProjects,
-    Population,
-    // Population_SurplusDeficit,
-    // Population_DroneTalentBalance,
-    Upkeep,
-    // Upkeep_UnitSupport,
-    // Upkeep_FacilityCosts,
-    PlayerActions,
-    WorldEvents,
-    // WorldEvents_Mindworms,
-    // WorldEvents_Fungus,
-    // WorldEvents_Disasters,
-    // WorldEvents_MonolithEffects,
-    VictoryConditionChecks,
-    // Victory_ConditionChecks,
-    TurnEnd,
-    Save,
-    
-    Count
-};
-
-struct TurnStageInfo
-{
-    std::string id;
-    std::string description;
-    bool repeat_for_each_faction;
-};
-
+// Shared hook lifecycle for every turn stage. Carries no Execute contract of its own:
+// concrete stages implement exactly one of GlobalTurnStage or PerFactionTurnStage below,
+// so a stage never receives a parameter it cannot use.
 class TurnStageBase
 {
 public:
-    TurnStageBase(std::shared_ptr<HookContext> pHookContext)
+    explicit TurnStageBase(std::shared_ptr<HookContext> pHookContext)
     : m_pHookContext(pHookContext)
     {}
-    
+
     virtual ~TurnStageBase() = default;
-    
-    virtual void Execute(GameState* pGameState = nullptr, Faction* pFaction = nullptr)
-    {
-        if (m_pHookContext && m_pHookContext->HasReplaceHooks())
-        {
-            m_pHookContext->ExecuteReplaceHooks();
-        }
-        else
-        {
-            Execute_(pGameState, pFaction);
-        }
-    }
-    
+
     void OnEnter()
     {
         if (m_pHookContext)
@@ -89,7 +30,7 @@ public:
             m_pHookContext->ExecutePreHooks();
         }
     }
-    
+
     void OnExit()
     {
         if (m_pHookContext)
@@ -98,14 +39,65 @@ public:
         }
     }
 
-private:
-
-    virtual void Execute_(GameState* pGameState = nullptr, Faction* pFaction = nullptr) = 0;
-
 protected:
+    bool HasReplaceHooks() const
+    {
+        return m_pHookContext && m_pHookContext->HasReplaceHooks();
+    }
+
+    void ExecuteReplaceHooks()
+    {
+        m_pHookContext->ExecuteReplaceHooks();
+    }
+
     std::shared_ptr<HookContext> m_pHookContext;
 };
 
-using TurnStageRegistry_t = std::map<std::string, std::unique_ptr<TurnStageBase>>;
+// A stage that runs once per turn, independent of any faction (e.g. TurnStart, Save).
+class GlobalTurnStage : public TurnStageBase
+{
+public:
+    using TurnStageBase::TurnStageBase;
+
+    void Execute(GameState& rGameState)
+    {
+        if (HasReplaceHooks())
+        {
+            ExecuteReplaceHooks();
+        }
+        else
+        {
+            ExecuteImpl(rGameState);
+        }
+    }
+
+protected:
+    virtual void ExecuteImpl(GameState& rGameState) = 0;
+};
+
+// A stage that runs once per faction per turn (e.g. IncomeCollection, BaseProduction).
+class PerFactionTurnStage : public TurnStageBase
+{
+public:
+    using TurnStageBase::TurnStageBase;
+
+    void Execute(GameState& rGameState, Faction& rFaction)
+    {
+        if (HasReplaceHooks())
+        {
+            ExecuteReplaceHooks();
+        }
+        else
+        {
+            ExecuteImpl(rGameState, rFaction);
+        }
+    }
+
+protected:
+    virtual void ExecuteImpl(GameState& rGameState, Faction& rFaction) = 0;
+};
+
+using GlobalTurnStageRegistry_t = std::map<std::string, std::unique_ptr<GlobalTurnStage>>;
+using PerFactionTurnStageRegistry_t = std::map<std::string, std::unique_ptr<PerFactionTurnStage>>;
 
 } // namespace ac

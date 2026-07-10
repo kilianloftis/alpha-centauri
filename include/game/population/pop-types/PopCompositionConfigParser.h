@@ -12,6 +12,8 @@ struct PopCompositionConfig
 {
     std::string droneFormula;            // Lua expression: number of drones
     std::string talentFormula;           // Lua expression: number of talents
+    std::string droneTypeId;             // Pop type id to convert into for drones
+    std::string talentTypeId;            // Pop type id to convert into for talents
     std::vector<std::string> precedence; // Order in which types are assigned when recalculating
 };
 
