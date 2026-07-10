@@ -522,8 +522,8 @@ selector pass won't compile against the raw pool.
 - **Unit `MoistureTier` auras don't retrigger `RecomputeMoisture` on movement**: moisture
   recompute is event-driven from improvement add/remove (`AddImprovementWithEffects`). A unit
   component with a `moisture_tier` effect would be collected by `CollectAreaEffects` but the
-  recompute isn't hooked to `WorldMap::OnUnitMoved` yet. Yield/defense unit auras are
-  resolved on demand and unaffected.
+  recompute isn't hooked to `UnitPositionIndex::TryMoveUnit` yet. Yield/defense unit auras
+  are resolved on demand and unaffected.
 - **Improvement faction-lane effects are inert pending territory**: legal to declare (see
   Universal scope routing), but no collector attributes an improvement to a faction until
   territory ownership exists.

@@ -23,6 +23,7 @@ add_executable(effects-tests
     faction/FactionFlavorTests.cpp
     faction/ResearchSelectorTests.cpp
     game/GameCategoryParserTests.cpp
+    game/UnitPositionTests.cpp
     game/WorkerAssignmentTests.cpp
 )
 

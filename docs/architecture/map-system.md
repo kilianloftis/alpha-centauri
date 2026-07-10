@@ -6,6 +6,7 @@ graph TB
         TileMap[TileMap]
         Tile[Tile]
         WorkedTileIndex[WorkedTileIndex<br/>one worker per tile, world-scoped]
+        UnitPositionIndex[UnitPositionIndex<br/>unit occupancy + stacking rule]
     end
 
     subgraph "Tile Identity"
@@ -38,6 +39,7 @@ graph TB
 
     TileMap --> Tile
     TileMap --> WorkedTileIndex
+    TileMap --> UnitPositionIndex
     Tile --> Position
     Tile --> Moisture
     Tile --> Rockiness
@@ -56,6 +58,7 @@ graph TB
     style TileMap fill:#fbf,stroke:#333,stroke-width:3px
     style Position fill:#bbf,stroke:#333,stroke-width:2px
     style WorkedTileIndex fill:#fbf,stroke:#333,stroke-width:3px
+    style UnitPositionIndex fill:#fbf,stroke:#333,stroke-width:3px
     style ImprovementRegistry fill:#ffd,stroke:#333,stroke-width:2px
     style CollectTileEffects fill:#bfb,stroke:#333,stroke-width:3px
 ```
@@ -90,6 +93,11 @@ graph TB
   - `WorkedTileIndex::GetRevision()` — monotonic change counter (see `lib/Revision.h`) bumped on every claim/release, for derived-state caches over worked-tile resources
 - **Base tiles**: the base center tile is worked for free (no pop), and `BaseManager` claims it in the index for the base's entire life (`m_centerTileClaim`, via `WorkedTileIndex::ClaimDisplacing`) — a base can never work another base's own tile. Founding a base on a tile currently worked by a neighboring base's pop **displaces** that worker: its claim is emptied and its `DisplacedWorkerHandler` (registered by its `WorkerAssignmentManager` at claim time) re-runs auto-assignment, moving the worker to the best free tile in its own base's radius. The handler fires only after the founding base's claim is registered, so the displaced worker can never be reassigned back onto the founding tile. Founding on another base's *own* tile throws — a founding flow must never allow it.
 - **Future seams**: revoking assignments when a tile turns hostile (e.g. enemy unit occupies it) and reconciling after save-game load both have exactly one place to live.
+
+### UnitPositionIndex (unit occupancy)
+- **Purpose**: The single owner of unit-position state, mirroring `WorkedTileIndex`'s ownership model. Owned by `WorldMap` (`WorldMap::GetUnitPositions()`; `GetUnitsOnTile()` remains as a convenience forward).
+- **Model**: A `Unit` registers itself in its constructor and unregisters in its destructor (RAII — a destroyed unit can never linger in the index), and every move goes through `UnitPositionIndex::TryMoveUnit`, which updates the per-tile occupancy and the unit's own tile pointer together. Only the index writes either side, so `Unit::GetTile()` and `GetUnitsOnTile()` structurally cannot desync; `Unit` has no public position setter.
+- **Stacking rule**: the original game allows any number of units per tile (the default). `UnitPositionIndex::SetSingleUnitPerTile(true)` restricts every tile to at most one unit: unit creation on an occupied tile throws, and `TryMoveUnit` onto an occupied tile returns `false` (a `MoveOrder` then stays pending and retries next turn; reroute/cancel rules are a TODO in `UnitOrderExecutor`). The static accessor pair is a stand-in until a real game-configuration system exists.
 
 ### Tile Visual Layer System
 

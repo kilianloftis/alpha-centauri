@@ -54,7 +54,6 @@ TEST_CASE("Faction pool: a unit component's FactionGlobal effect applies while t
           == Approx(1.0));
 
     // The effect disappears with the unit.
-    fixture.map.OnUnitRemoved(unit);
     faction.GetUnitManager().DestroyUnit(unit);
     CHECK(ResolveStatModifiers(FilterByStatId(CollectActiveEffects(faction).effects, StatId::Energy), 0.0).total
           == Approx(0.0));
@@ -171,8 +170,7 @@ TEST_CASE("Unit aura: a sensor-pod unit projects its ThisTile defense bonus with
 
     SECTION("the aura disappears with the unit")
     {
-        fixture.map.OnUnitRemoved(unit);
-        faction.GetUnitManager().DestroyUnit(unit);
+            faction.GetUnitManager().DestroyUnit(unit);
         CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(4, 4)) == Approx(1.0));
     }
 }

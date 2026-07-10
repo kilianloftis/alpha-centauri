@@ -2,6 +2,7 @@
 
 #include "game/Faction.h"
 #include "game/map/Tile.h"
+#include "game/map/UnitPositionIndex.h"
 #include "lib/effects/ActiveEffect.h"
 
 namespace ac
@@ -26,10 +27,12 @@ std::vector<ActiveEffect_t> CollectLiveUnitEffects_(const UnitDesign& rDesign, c
 } // namespace
 
 Unit::Unit(const UnitDesign& rDesign,
+           UnitPositionIndex& rPositions,
            const Tile& rTile,
            BaseManager* pHomeBase,
            Faction& rFaction)
     : m_rDesign(rDesign)
+    , m_rPositions(rPositions)
     , m_pTile(&rTile)
     , m_pHomeBase(pHomeBase)
     , m_rFaction(rFaction)
@@ -38,6 +41,14 @@ Unit::Unit(const UnitDesign& rDesign,
     , m_movesRemaining(rDesign.GetMovement())
     , m_xp(0)
 {
+    // Throws if the stacking rule forbids rTile; the destructor is not run for a unit
+    // whose constructor throws, so no unregistration is needed on that path.
+    m_rPositions.Register_(*this, rTile);
+}
+
+Unit::~Unit()
+{
+    m_rPositions.Unregister_(*this);
 }
 
 const UnitDesign& Unit::GetDesign() const                              { return m_rDesign; }
@@ -94,7 +105,6 @@ void Unit::SetCurrentHp(int hp)             { m_currentHp = hp; }
 void Unit::SetCurrentFuel(int fuel)         { m_currentFuel = fuel; }
 void Unit::SetMovesRemaining(int moves)     { m_movesRemaining = moves; }
 void Unit::SetXp(int xp)                    { m_xp = xp; }
-void Unit::SetTile(const Tile& rTile)       { m_pTile = &rTile; }
 void Unit::SetHomeBase(BaseManager* pHomeBase) { m_pHomeBase = pHomeBase; }
 
 std::optional<UnitOrder_t>& Unit::GetOrder()             { return m_order; }

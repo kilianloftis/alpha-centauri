@@ -11,15 +11,21 @@ namespace ac
 class Tile;
 class BaseManager;
 class Faction;
+class UnitPositionIndex;
 
 class Unit
 {
 public:
+    // Registers the unit on rTile in rPositions for its whole life (unregistered in the
+    // destructor). The index is the single owner of unit-position state: it keeps
+    // GetTile() in sync on every move (UnitPositionIndex::TryMoveUnit) and there is no
+    // other way to change a unit's position. Throws if the stacking rule forbids rTile.
     Unit(const UnitDesign& rDesign,
+         UnitPositionIndex& rPositions,
          const Tile& rTile,
          BaseManager* pHomeBase,
          Faction& rFaction);
-    ~Unit() = default;
+    ~Unit();
 
     const UnitDesign& GetDesign() const;
 
@@ -52,7 +58,6 @@ public:
     void SetCurrentFuel(int fuel);
     void SetMovesRemaining(int moves);
     void SetXp(int xp);
-    void SetTile(const Tile& rTile);
     void SetHomeBase(BaseManager* pHomeBase);
 
     std::optional<UnitOrder_t>& GetOrder();
@@ -67,7 +72,11 @@ private:
     int ResolveStat_(StatId statId) const;
     bool ResolveFlag_(RuleFlagId flagId) const;
 
+    // The index maintains m_pTile alongside its occupancy lists (TryMoveUnit).
+    friend class UnitPositionIndex;
+
     const UnitDesign& m_rDesign;
+    UnitPositionIndex& m_rPositions;
     const Tile* m_pTile;
     BaseManager* m_pHomeBase;
     Faction& m_rFaction;

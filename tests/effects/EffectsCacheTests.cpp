@@ -62,7 +62,6 @@ TEST_CASE("Effect pool cache: stable across reads, invalidated by every contribu
     Unit& unit = fixture.MakeUnit(faction, 4, 4, {"energy_siphon"});
     const uint64_t v5 = faction.GetEffectsVersion();
     CHECK(v5 != v4);
-    fixture.map.OnUnitRemoved(unit);
     faction.GetUnitManager().DestroyUnit(unit);
     const uint64_t v6 = faction.GetEffectsVersion();
     CHECK(v6 != v5);

@@ -234,6 +234,36 @@ The canonical assignment is a `const Tile*` on `Pop`; the "is worked" flag is a 
 
 ### 2.2 [H] Unit position is stored twice with a public bypass
 
+> **Status (2026-07-09): fixed**, with the same ownership model as 2.1: `UnitPositionIndex`
+> is the single owner of unit-position state.
+>
+> - **Registration is RAII**: `Unit`'s constructor takes `UnitPositionIndex&` and registers
+>   the unit on its tile; the destructor unregisters. `UnitManager::DestroyUnit` (and the
+>   tests that previously had to remember a manual `map.OnUnitRemoved(...)` before it) can
+>   no longer leave a dangling `Unit*` in the index — the manual calls are deleted.
+> - **The bypass is gone**: `Unit::SetTile` is deleted. The only way to move a unit is
+>   `UnitPositionIndex::TryMoveUnit`, which updates the occupancy lists and the unit's own
+>   tile pointer together (the index is a friend of `Unit`); since only the index writes
+>   either side, the two representations structurally cannot desync — `m_pTile` is now a
+>   cache the owner maintains, not a second source of truth. `WorldMap`'s three `OnUnit*`
+>   forwarders are replaced by a `GetUnitPositions()` accessor (per 4.1's facade rule);
+>   `GetUnitsOnTile` remains as a convenience forward. The old `OnUnitRemoved`
+>   lookup-by-current-tile is now a `logic_error` throw if it ever misses, instead of a
+>   silent no-op.
+> - **Stacking rule**: the index enforces units-per-tile capacity at both entry points —
+>   creation (throws) and `TryMoveUnit` (returns false; a blocked `MoveOrder` stays pending
+>   and retries next turn, reroute/cancel TODO). Default is the original game's unlimited
+>   stacking; `UnitPositionIndex::SetSingleUnitPerTile(true)` switches to one unit per
+>   tile. The static accessor pair is an explicit stand-in until a real game-configuration
+>   system exists (marked TODO).
+> - Guarded by `tests/game/UnitPositionTests.cpp`: create/destroy maintain the index with
+>   no manual bookkeeping, move keeps `GetTile()` and occupancy in sync, default stacking,
+>   and the single-unit rule (placement throws, blocked move changes nothing, own-tile
+>   move is a no-op success, destroying the blocker frees the tile) — with an RAII guard
+>   resetting the static config.
+> - Out of scope, still open elsewhere: `WorldView::m_pSelectedUnit` dangling on unit death
+>   is 1.8 (UI invalidation protocol); `Unit`'s remaining unchecked stat setters are 4.3.
+
 `Unit::m_pTile` and `UnitPositionIndex` both record where a unit is. `Unit::SetTile` is public; calling it directly (instead of `WorldMap::OnUnitMoved`) desyncs the index, and `UnitPositionIndex::OnUnitRemoved` then fails silently because it looks the unit up **by its current tile** (`src/game/map/UnitPositionIndex.cpp:16-24`), leaving a dangling `Unit*` in the index. The invariant "always move units through WorldMap" exists only in convention.
 
 ### 2.3 [M] Redundant flags that can desync

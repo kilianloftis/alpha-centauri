@@ -29,11 +29,12 @@ public:
     std::vector<std::unique_ptr<Tile>>& GetTiles();
     const std::vector<std::unique_ptr<Tile>>& GetTiles() const;
 
-    // Unit position tracking
+    // Unit occupancy: the single owner of unit-position state. Units register/unregister
+    // themselves at construction/destruction; movement goes through
+    // UnitPositionIndex::TryMoveUnit (see UnitPositionIndex).
+    UnitPositionIndex& GetUnitPositions();
+    const UnitPositionIndex& GetUnitPositions() const;
     const std::vector<Unit*>& GetUnitsOnTile(const Tile& rTile) const;
-    void OnUnitPlaced(Unit& rUnit, const Tile& rTile);
-    void OnUnitRemoved(Unit& rUnit);
-    void OnUnitMoved(Unit& rUnit, const Tile& rNewTile);
 
     // Worked-tile occupancy: the single owner of the one-worker-per-tile rule, shared by
     // every base of every faction (see WorkedTileIndex).

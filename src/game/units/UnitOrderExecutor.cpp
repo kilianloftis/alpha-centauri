@@ -24,7 +24,13 @@ void UnitOrderExecutor::Execute_(Unit& rUnit, WorldMap& rWorldMap, MoveOrder_t& 
         throw std::runtime_error("MoveOrder has null destination");
 
     // TODO: Implement step-by-step pathfinding toward destination
-    rWorldMap.OnUnitMoved(rUnit, *rOrder.pDestination);
+    if (!rWorldMap.GetUnitPositions().TryMoveUnit(rUnit, *rOrder.pDestination))
+    {
+        // Destination blocked under the single-unit-per-tile rule; keep the order so the
+        // move is retried next turn. TODO: blocked-move rules (reroute, cancel, notify
+        // the player) are undecided.
+        return;
+    }
     rUnit.ClearOrder();
 }
 

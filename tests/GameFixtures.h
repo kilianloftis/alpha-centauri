@@ -173,17 +173,17 @@ struct FactionFixture : BaseFixture
         }
         designs.emplace_back(slots, assigned);
 
-        ac::Unit& rUnit = rFaction.GetUnitManager().CreateUnit(designs.back(), At(x, y), nullptr);
-        map.OnUnitPlaced(rUnit, At(x, y));
-        return rUnit;
+        // The unit registers itself in the map's position index for its lifetime.
+        return rFaction.GetUnitManager().CreateUnit(designs.back(), map.GetUnitPositions(),
+                                                    At(x, y), nullptr);
     }
 
     void MoveUnit(ac::Unit& rUnit, int x, int y)
     {
-        // Order matters: the position index removes the unit from its CURRENT tile,
-        // so the map must be told before the unit's tile pointer changes.
-        map.OnUnitMoved(rUnit, At(x, y));
-        rUnit.SetTile(At(x, y));
+        if (!map.GetUnitPositions().TryMoveUnit(rUnit, At(x, y)))
+        {
+            throw std::runtime_error("MoveUnit: destination blocked by the stacking rule");
+        }
     }
 };
 

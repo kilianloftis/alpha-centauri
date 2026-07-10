@@ -13,6 +13,7 @@ class UnitDesign;
 class Tile;
 class BaseManager;
 class Faction;
+class UnitPositionIndex;
 
 class UnitManager
 {
@@ -20,7 +21,10 @@ public:
     explicit UnitManager(Faction& rFaction);
     ~UnitManager() = default;
 
-    Unit& CreateUnit(const UnitDesign& rDesign, const Tile& rTile, BaseManager* pHomeBase = nullptr);
+    // The unit registers itself on rTile in rPositions for its lifetime (see Unit's
+    // constructor); throws if the stacking rule forbids the tile.
+    Unit& CreateUnit(const UnitDesign& rDesign, UnitPositionIndex& rPositions,
+                     const Tile& rTile, BaseManager* pHomeBase = nullptr);
     void DestroyUnit(Unit& rUnit);
 
     // Iterate units by reference without exposing the owning unique_ptrs.
