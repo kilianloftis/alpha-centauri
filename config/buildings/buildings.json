@@ -3,9 +3,6 @@
     "id": "Nutrient_Bank",
     "name": "Nutrient Bank",
     "mineral_cost": 10,
-    "required_techs": [
-      "test_tech_1"
-    ],
     "effects": [
       {
         "type": "StatModifier",
@@ -42,15 +39,13 @@
         }
       }
     ],
-    "category": "grow"
+    "category": "grow",
+    "required_tech": "test_tech_1"
   },
   {
     "id": "Recycling_Tanks",
     "name": "Recycling Tanks",
     "mineral_cost": 5,
-    "required_techs": [
-      "test_tech_2"
-    ],
     "effects": [
       {
         "type": "StatModifier",
@@ -61,16 +56,14 @@
         }
       }
     ],
-    "category": "grow"
+    "category": "grow",
+    "required_tech": "test_tech_2"
   },
   {
     "id": "sattelite",
     "name": "Sattelite",
     "mineral_cost": 8,
     "allow_multiple": true,
-    "required_techs": [
-      "test_tech_1"
-    ],
     "effects": [
       {
         "type": "StatModifier",
@@ -81,6 +74,7 @@
         }
       }
     ],
-    "category": "discover"
+    "category": "discover",
+    "required_tech": "test_tech_1"
   }
 ]

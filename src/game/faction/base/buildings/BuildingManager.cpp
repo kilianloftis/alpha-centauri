@@ -79,7 +79,7 @@ std::vector<const BuildingConfig_t*> BuildingManager::GetBuildingsAvailableForCo
     {
         const bool bSecretProjectCompleted = rBuilding.bIsSecretProject
                 && m_pSecretProjectCalculator->IsCompleted(rBuilding.id);
-        if (rBuilding.IsDiscovered(discoveredTechs)
+        if (rBuilding.IsAvailable(discoveredTechs)
                 && (rBuilding.allowMultiple || !DoesBuildingExist_(rBuilding.id))
                 && !bSecretProjectCompleted)
         {

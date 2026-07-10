@@ -3,6 +3,7 @@
 #include "game/GameCategory.h"
 #include "game/IConstructable.h"
 #include "game/effects/BonusEffect.h"
+#include <algorithm>
 #include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
@@ -16,7 +17,7 @@ struct BuildingConfig_t : public IConstructable
     std::string name;
     GameCategory category;
     int mineralCost;
-    std::vector<std::string> requiredTechs;
+    std::string requiredTech;  // empty if none — same convention as SocialPolicyConfig, etc.
     bool allowMultiple;
     bool bIsSecretProject;
     std::vector<EffectConfig_t> effects;
@@ -25,16 +26,15 @@ struct BuildingConfig_t : public IConstructable
     const std::string& GetName() const override { return name; }
     int GetBaseCost() const override { return mineralCost; }
 
-    bool IsDiscovered(const std::vector<std::string>& discoveredTechs) const
+    // Empty requiredTech = always available (matches SocialPolicyConfig::IsAvailable).
+    bool IsAvailable(const std::vector<std::string>& discoveredTechs) const
     {
-        for (const auto& tech : requiredTechs)
+        if (requiredTech.empty())
         {
-            if (std::find(discoveredTechs.begin(), discoveredTechs.end(), tech) != discoveredTechs.end())
-            {
-                return true;
-            }
+            return true;
         }
-        return false;
+        return std::find(discoveredTechs.begin(), discoveredTechs.end(), requiredTech)
+               != discoveredTechs.end();
     }
 };
 

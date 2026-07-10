@@ -4,6 +4,7 @@
 #include "game/social-engineering/SocialRatingRegistry.h"
 #include "game/effects/BonusEffect.h"
 
+#include <algorithm>
 #include <string>
 
 namespace ac
@@ -26,6 +27,30 @@ std::map<SocialRatingId, int> AccumulateSocialRatings(const BaseEffects_t& rBase
     return totals;
 }
 
+int ClampSocialRatingTotal(const SocialRatingConfig& rConfig, int total)
+{
+    const int minLevel = rConfig.levelEffects.begin()->first;
+    const int maxLevel = rConfig.levelEffects.rbegin()->first;
+    return std::clamp(total, minLevel, maxLevel);
+}
+
+const std::vector<EffectConfig_t>* FindSocialRatingLevelEffects(
+    const SocialRatingConfig& rConfig, int total)
+{
+    if (rConfig.levelEffects.empty())
+    {
+        return nullptr;
+    }
+
+    const int level = ClampSocialRatingTotal(rConfig, total);
+    const auto it = rConfig.levelEffects.find(level);
+    if (it == rConfig.levelEffects.end())
+    {
+        return nullptr;
+    }
+    return &it->second;
+}
+
 void ExpandSocialRatingEffects(BaseEffects_t& rBaseEffects,
                                const SocialRatingRegistry& rRatings)
 {
@@ -39,21 +64,22 @@ void ExpandSocialRatingEffects(BaseEffects_t& rBaseEffects,
         }
 
         const SocialRatingConfig* pRatingConfig = rRatings.Find(SocialRatingIdToString(rating));
-        if (!pRatingConfig)
+        if (!pRatingConfig || pRatingConfig->levelEffects.empty())
         {
             continue;
         }
 
-        // Exact-level match, same semantics as the previous SocialEngineeringManager
-        // implementation: levels not listed in the config produce no effects.
-        const auto it = pRatingConfig->levelEffects.find(total);
+        // SMAC: out-of-range totals use the extreme configured level's effects. In-range
+        // missing keys (including typical absent 0) still produce nothing.
+        const int level = ClampSocialRatingTotal(*pRatingConfig, total);
+        const auto it = pRatingConfig->levelEffects.find(level);
         if (it == pRatingConfig->levelEffects.end())
         {
             continue;
         }
 
         const std::string sourceId = "se_rating_" + SocialRatingIdToString(rating)
-                                     + "_" + std::to_string(total);
+                                     + "_" + std::to_string(level);
         for (const auto& rEffect : it->second)
         {
             rBaseEffects.effects.push_back({&rEffect, sourceId, nullptr});

@@ -116,6 +116,7 @@ struct FactionFixture : BaseFixture
     ac::FactionConfig_t factionDefinition; // minimal shared definition for test factions
     std::vector<std::unique_ptr<ac::Faction>> factions;
     std::deque<ac::UnitDesign> designs; // deque: Units hold UnitDesign& references
+    int nextFactionId = 1;
 
     FactionFixture()
     {
@@ -133,7 +134,11 @@ struct FactionFixture : BaseFixture
 
     ac::Faction& MakeFaction()
     {
+        // Only the first fixture faction is player-controlled; tests needing a second
+        // faction (e.g. WorldGlobal routing between two factions) get an AI one.
+        const bool bIsPlayerControlled = factions.empty();
         factions.push_back(std::make_unique<ac::Faction>(
+            nextFactionId++, bIsPlayerControlled,
             factionDefinition,
             dataContext.buildingRegistry.get(), /*techRegistry*/ nullptr,
             dataContext.socialPolicyRegistry.get(), dataContext.socialRatingRegistry.get(),

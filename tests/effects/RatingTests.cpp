@@ -59,13 +59,46 @@ TEST_CASE("ExpandSocialRatingEffects: maps accumulated levels through the rating
         CHECK(foundRatingSource);
     }
 
-    SECTION("an undefined level produces no effects")
+    SECTION("totals above the highest configured level clamp to that extreme")
     {
+        // Fixture growth levels: {2, 3}. Total 5 clamps to 3 -> +3 nutrients.
         BaseEffects_t baseEffects{{
-            Active(pool.RatingMod(SocialRatingId::Growth, 1), "policy"), // no level 1 in fixture
+            Active(pool.RatingMod(SocialRatingId::Growth, 5), "policy"),
         }};
         ExpandSocialRatingEffects(baseEffects, fixture.socialRatings());
-        CHECK(FilterByStatId(baseEffects.effects, StatId::Nutrients).empty());
+        CHECK(ResolveStatModifiers(FilterByStatId(baseEffects.effects, StatId::Nutrients), 0.0).total == Approx(3.0));
+
+        bool foundClampedSource = false;
+        for (const ActiveEffect_t& rEffect : baseEffects.effects)
+        {
+            if (rEffect.sourceId == "se_rating_growth_3")
+            {
+                foundClampedSource = true;
+            }
+        }
+        CHECK(foundClampedSource);
+    }
+
+    SECTION("totals below the lowest configured level clamp to that extreme")
+    {
+        // Fixture industry levels: {-1, 1, 2}. Total -5 clamps to -1 -> CostMultiplier +10%.
+        BaseEffects_t baseEffects{{
+            Active(pool.RatingMod(SocialRatingId::Industry, -5), "policy"),
+        }};
+        ExpandSocialRatingEffects(baseEffects, fixture.socialRatings());
+        CHECK(ResolveStatModifiers(FilterByStatId(baseEffects.effects, StatId::CostMultiplier), 100.0).total
+              == Approx(110.0));
+    }
+
+    SECTION("in-range missing levels still produce no effects")
+    {
+        // Fixture industry levels: {-1, 1, 2}. Total 0 is inside [-1, 2] but unlisted.
+        BaseEffects_t baseEffects{{
+            Active(pool.RatingMod(SocialRatingId::Industry, 1), "policy"),
+            Active(pool.RatingMod(SocialRatingId::Industry, -1), "malus"),
+        }};
+        ExpandSocialRatingEffects(baseEffects, fixture.socialRatings());
+        CHECK(FilterByStatId(baseEffects.effects, StatId::CostMultiplier).empty());
     }
 
     SECTION("modifiers that cancel to zero produce no effects")

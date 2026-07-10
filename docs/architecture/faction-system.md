@@ -175,6 +175,14 @@ graph TB
 
 ### Faction
 - **Purpose**: Represents a single faction in the game (player or AI)
+- **Identity**: Constructed with a `FactionId` (minted by `GameState::AllocateFactionId()`, the sole
+  allocator for this ID namespace) and a `bIsPlayerControlled` flag, both required constructor
+  arguments so a `Faction` always knows its own identity — it is never assigned after the fact.
+  `Faction::CreateBase` threads `m_factionId` into each `BaseManager` it creates, so callers no
+  longer pass a faction ID in from outside. `bIsPlayerControlled` is what
+  `GameState::GetPlayerFaction()` searches for (not an index-0 convention); not used for
+  multiplayer yet, but generalizes to more than one human-controlled faction without a
+  representation change.
 - **Responsibilities**:
   - Coordinate all faction subsystems
   - Provide unified interface for faction operations

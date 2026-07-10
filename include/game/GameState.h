@@ -5,6 +5,7 @@
 #include "game/map/WorldMap.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "lib/DerefView.h"
+#include "lib/IdAllocator.h"
 #include <memory>
 #include <vector>
 
@@ -36,8 +37,15 @@ public:
     // Iterate factions by reference without exposing the owning unique_ptrs.
     auto Factions() { return DerefView(m_factions); }
     auto Factions() const { return DerefView(m_factions); }
+    // Returns the faction with IsPlayerControlled() set, or nullptr if none has been added yet.
     const Faction* GetPlayerFaction() const;
     Faction* GetPlayerFaction();
+
+    // Sole owners of faction/base ID allocation: nothing else may mint one of these IDs, so
+    // any runtime faction or base creation (not just the composition root) has a place to get
+    // a unique ID from.
+    FactionId AllocateFactionId();
+    int AllocateBaseId();
 
     // World map
     WorldMap& GetWorldMap();
@@ -70,6 +78,8 @@ private:
     std::unique_ptr<WorldMap> m_worldMap;
     std::unique_ptr<TileEffectsContext> m_pTileEffects;
     std::vector<std::unique_ptr<Faction>> m_factions;
+    IdAllocator m_factionIdAllocator;
+    IdAllocator m_baseIdAllocator;
     UnitOrderExecutor m_unitOrderExecutor;
     // Constructed with *this: only stores the reference, never dereferences it during
     // GameState's own construction, so binding it before m_factions is populated is safe.

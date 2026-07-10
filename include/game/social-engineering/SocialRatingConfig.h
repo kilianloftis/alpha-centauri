@@ -12,7 +12,8 @@ namespace ac
 
 // Configuration for one social engineering rating axis (e.g. "economy", "morale").
 // Maps integer rating levels (positive and negative) to lists of gameplay effects.
-// Levels not listed in the config produce no effects.
+// Totals outside [min, max] of this table clamp to the extreme (SMAC rule); levels
+// inside the range but not listed (including typical absent 0) produce no effects.
 struct SocialRatingConfig
 {
     std::string id;          // matches SocialRatingId string ("economy", "morale", …)

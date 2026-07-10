@@ -80,12 +80,36 @@ int GameState::GetNumFactions() const
 
 const Faction* GameState::GetPlayerFaction() const
 {
-    return m_factions.empty() ? nullptr : m_factions[0].get();
+    for (const auto& pFaction : m_factions)
+    {
+        if (pFaction->IsPlayerControlled())
+        {
+            return pFaction.get();
+        }
+    }
+    return nullptr;
 }
 
 Faction* GameState::GetPlayerFaction()
 {
-    return m_factions.empty() ? nullptr : m_factions[0].get();
+    for (const auto& pFaction : m_factions)
+    {
+        if (pFaction->IsPlayerControlled())
+        {
+            return pFaction.get();
+        }
+    }
+    return nullptr;
+}
+
+FactionId GameState::AllocateFactionId()
+{
+    return m_factionIdAllocator.Allocate();
+}
+
+int GameState::AllocateBaseId()
+{
+    return m_baseIdAllocator.Allocate();
 }
 
 WorldMap& GameState::GetWorldMap()

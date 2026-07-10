@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "game/IEffectsProvider.h"
+#include "game/faction/base/BaseTypes.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/FactionConfig.h"
 #include "game/faction/FactionEffectsPool.h"
@@ -40,7 +41,9 @@ class WorldMap;
 class Faction : public IEffectsProvider
 {
 public:
-    Faction(const FactionConfig_t& rDefinition,
+    Faction(FactionId factionId,
+             bool bIsPlayerControlled,
+             const FactionConfig_t& rDefinition,
              const BuildingRegistry* pBuildingRegistry,
              const TechRegistry* pTechRegistry,
              const SocialPolicyRegistry* pSocialPolicyRegistry,
@@ -48,6 +51,12 @@ public:
              TechCostCalculator* pTechCostCalculator,
              const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator);
     ~Faction();
+
+    FactionId GetFactionId() const { return m_factionId; }
+    // Not multiplayer yet, but the flag (rather than an index-0 convention) is what
+    // GameState::GetPlayerFaction() searches for, so it generalizes to multiple
+    // human-controlled factions without a representation change.
+    bool IsPlayerControlled() const { return m_bIsPlayerControlled; }
 
     const FactionConfig_t& GetDefinition() const { return m_rDefinition; }
     const std::string& GetDefinitionId() const { return m_rDefinition.id; }
@@ -59,7 +68,7 @@ public:
     // Factory method: unpacks the individual registries/calculators BaseManager needs from
     // rDataContext (a composition-root-supplied bag) so BaseManager itself can declare narrow,
     // named dependencies instead of taking the whole context.
-    BaseManager* CreateBase(FactionId factionId, int baseId, const std::string& name, Tile* pTile,
+    BaseManager* CreateBase(int baseId, const std::string& name, Tile* pTile,
                             const GameDataContext& rDataContext,
                             TileEffectsContext& rTileEffects,
                             const SecretProjectAvailabilityCalculator& rSecretProjectAvailability);
@@ -125,6 +134,8 @@ public:
 private:
     int GetResearchPerTurn_() const;
 
+    FactionId m_factionId;
+    bool m_bIsPlayerControlled;
     const FactionConfig_t& m_rDefinition;
     const BuildingRegistry* m_pBuildingRegistry;
     const PopTypeAvailabilityCalculator* m_pPopTypeAvailabilityCalculator;

@@ -30,13 +30,16 @@
 namespace ac
 {
 
-Faction::Faction(const FactionConfig_t& rDefinition,
+Faction::Faction(FactionId factionId, bool bIsPlayerControlled,
+                 const FactionConfig_t& rDefinition,
                  const BuildingRegistry* pBuildingRegistry, const TechRegistry* pTechRegistry,
                  const SocialPolicyRegistry* pSocialPolicyRegistry,
                  const SocialRatingRegistry* pSocialRatingRegistry,
                  TechCostCalculator* pTechCostCalculator,
                  const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator)
-    : m_rDefinition(rDefinition)
+    : m_factionId(factionId)
+    , m_bIsPlayerControlled(bIsPlayerControlled)
+    , m_rDefinition(rDefinition)
     , m_pBuildingRegistry(pBuildingRegistry)
     , m_pPopTypeAvailabilityCalculator(pPopTypeAvailabilityCalculator)
     , m_pIdentity(std::make_unique<FactionIdentity>(rDefinition.identity, rDefinition.leader))
@@ -142,7 +145,7 @@ void Faction::AddBase(std::unique_ptr<BaseManager> pBase)
     m_baseListRevision.Bump();
 }
 
-BaseManager* Faction::CreateBase(FactionId factionId, int baseId, const std::string& name, Tile* pTile,
+BaseManager* Faction::CreateBase(int baseId, const std::string& name, Tile* pTile,
                                   const GameDataContext& rDataContext,
                                   TileEffectsContext& rTileEffects,
                                   const SecretProjectAvailabilityCalculator& rSecretProjectAvailability)
@@ -152,7 +155,7 @@ BaseManager* Faction::CreateBase(FactionId factionId, int baseId, const std::str
         throw std::invalid_argument("Faction::CreateBase: pTile is null");
     }
     auto pBase = std::make_unique<BaseManager>(
-        factionId, baseId, name, *pTile,
+        m_factionId, baseId, name, *pTile,
         rDataContext.buildingRegistry.get(),
         rDataContext.socialRatingRegistry.get(),
         rDataContext.popTypeRegistry.get(),
@@ -245,7 +248,7 @@ std::vector<const BuildingConfig_t*> Faction::GetDiscoveredBuildings() const
     std::vector<const BuildingConfig_t*> discovered;
     for (const BuildingConfig_t& rConfig : m_pBuildingRegistry->GetAll())
     {
-        if (rConfig.IsDiscovered(discoveredTechs))
+        if (rConfig.IsAvailable(discoveredTechs))
         {
             discovered.push_back(&rConfig);
         }

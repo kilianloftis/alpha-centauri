@@ -24,6 +24,7 @@ add_executable(effects-tests
     faction/EconomyManagerTests.cpp
     faction/ProductionCostTests.cpp
     faction/GrowthTests.cpp
+    faction/BuildingTechGateTests.cpp
     faction/ResearchSelectorTests.cpp
     game/GameCategoryParserTests.cpp
     game/UnitPositionTests.cpp

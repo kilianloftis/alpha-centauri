@@ -135,9 +135,22 @@ Every new subsystem requires editing this method (OCP violation at the root). Th
 
 ### 1.5 [H] Identity and ID allocation have no owner
 
-- `factionId`/`baseId` are local counter variables in `Engine::Initialize_` (`Engine.cpp:204-205`); nothing else can allocate a unique ID after init.
-- `Faction` does not know its own ID. The caller passes `factionId` into `Faction::CreateBase(...)` (`include/game/Faction.h:54`) and it is stored **per base** via post-construction setters (`SetFactionId`/`SetBaseId`, initialized to `-1` in the meantime — `BaseManager.cpp:45-46`).
-- `GameState::GetPlayerFaction()` is defined as `m_factions[0]` (`src/game/GameState.cpp:73-81`), and the same index-0 convention is re-derived independently in `WorldView` (`k_PlayerFactionIndex = 0`) and `ViewFactory`. *(Partially addressed 2026-07-08: `WorldView` now calls `GetPlayerFaction()` and its `k_PlayerFactionIndex` is deleted; the convention is now funneled through the single `GetPlayerFaction()` definition. The denormalized-identity core — player = `m_factions[0]`, no ID owner — is untouched.)*
+> **Status (2026-07-10): fixed.** `factionId`/`baseId` are no longer local counters: `GameState`
+> owns one `IdAllocator` (`include/lib/IdAllocator.h`, a small monotonic-counter class) per ID
+> namespace, exposed as `AllocateFactionId()`/`AllocateBaseId()` — the only place either ID is
+> minted, so any future runtime faction/base creation (not just `Engine::Initialize_`) has
+> somewhere to get a unique one. `Faction` now takes `FactionId` as a required constructor
+> argument and stores it (`m_factionId`); `Faction::CreateBase` threads it into `BaseManager`
+> internally instead of taking it as a parameter from the caller. `GameState::GetPlayerFaction()`
+> now searches for the `Faction` with `IsPlayerControlled() == true` (also a required constructor
+> argument, set by `Engine::Initialize_` for the first faction created) instead of indexing
+> `m_factions[0]`; the flag generalizes to more than one human-controlled faction without a
+> representation change, which matters if multiplayer/hot-seat is ever added, though it isn't
+> planned now.
+
+- ~~`factionId`/`baseId` are local counter variables in `Engine::Initialize_` (`Engine.cpp:204-205`); nothing else can allocate a unique ID after init.~~
+- ~~`Faction` does not know its own ID. The caller passes `factionId` into `Faction::CreateBase(...)` (`include/game/Faction.h:54`) and it is stored **per base** via post-construction setters (`SetFactionId`/`SetBaseId`, initialized to `-1` in the meantime — `BaseManager.cpp:45-46`).~~ *(This description was already stale by 2026-07-10: `BaseManager`'s constructor had come to take `factionId`/`baseId` directly, no setters involved — but `Faction` itself still didn't have its own ID, which is what this pass fixed.)*
+- ~~`GameState::GetPlayerFaction()` is defined as `m_factions[0]` (`src/game/GameState.cpp:73-81`), and the same index-0 convention is re-derived independently in `WorldView` (`k_PlayerFactionIndex = 0`) and `ViewFactory`.~~ *(Partially addressed 2026-07-08: `WorldView` now calls `GetPlayerFaction()` and its `k_PlayerFactionIndex` is deleted; the convention was funneled through the single `GetPlayerFaction()` definition, then fully replaced 2026-07-10 per above.)*
 
 Denormalized identity plus convention-based "player = first" will produce subtle bugs the moment factions can be eliminated, reordered, or hot-joined, and makes serialization identity a retrofit.
 
@@ -183,7 +196,7 @@ Individually each is "not implemented yet"; collectively they show the extension
 
 `ValidateEffectReferences` (`src/game/EffectReferenceValidator.cpp`) is the right idea: fail startup on any effect referencing an unknown building/tech/improvement/feature. But the standard it sets is not applied to the rest of the config surface:
 
-- `required_techs` on buildings are never checked against `TechRegistry`.
+- `required_tech` on buildings are never checked against `TechRegistry`.
 - `SocialEngineeringManager`'s constructor hard-codes default policy IDs (`"frontier"`, `"simple"`, `"survival"`, `"none_future"` — `src/game/faction/SocialEngineeringManager.cpp:14-19`); if the config lacks them, `GetActivePolicy` silently returns `nullptr` forever.
 - `BaseManager`'s constructor requires an improvement with ID `"Base"` to exist (`BaseManager.cpp:62`); if missing, `AddImprovementWithEffects` prints to `stderr` and continues — bases silently lose their tile marker.
 - Tech `category` strings are validated **per query, via try/catch** in `ResearchSelector::IsTechInSelectedCategory_` (`src/game/faction/ResearchSelector.cpp:123-133`) — exceptions as control flow, and a typo'd category silently degrades selection behavior instead of failing at load.
@@ -350,6 +363,14 @@ The coding guidelines say "Do not make up game rules or mechanics. Leave TODOs i
 
 ### 3.5 [M] Tech gating semantics differ by config type and have a trap
 
+> **Status (2026-07-10): fixed.** Buildings use the same singular `required_tech`
+> convention as social policies, improvements, pop types, and unit components:
+> omit or `""` = always available; otherwise the named tech must be discovered.
+> `BuildingConfig_t::IsAvailable` mirrors `SocialPolicyConfig::IsAvailable`. The
+> old plural `required_techs` key is rejected at parse time with a clear error so
+> a leftover array cannot silently unlock (or lock) a building. Covered by
+> `tests/faction/BuildingTechGateTests.cpp`.
+
 `BuildingConfig_t::IsDiscovered` implements **OR** over `required_techs` (any one tech unlocks — surprising for a field named "required") and returns **false for an empty list** — a building with no tech requirement can never be built (`include/game/buildings/BuildingConfigParser.h:26-36`). `SocialPolicyConfig::IsAvailable` uses a *singular* `requiredTech` where empty means always available. Two config schemas, two semantics, one of them inverted for the empty case. Current data never has an empty list, so the trap is latent.
 
 ### 3.6 [M] Lua evaluation: errors return 0, "scoped" globals leak
@@ -357,6 +378,13 @@ The coding guidelines say "Do not make up game rules or mechanics. Leave TODOs i
 `LuaRuntime::EvalInt` returns 0 with a console warning on any formula error (`src/lib/LuaRuntime.cpp:36-70`) — a typo in a modded formula silently zeroes tech costs or production costs. The comment says variables are "scoped to this call", but they are written as persistent globals and never cleared — formula A's variables remain visible to formula B, so a missing input in one formula silently reads a stale value from another instead of failing. Both behaviors directly contradict the project's own error-handling guideline, in the most modder-facing component.
 
 ### 3.7 [M] Social rating expansion: exact-level match silently drops out-of-table totals
+
+> **Status (2026-07-10): fixed.** `ExpandSocialRatingEffects` (and the SE UI bonus
+> lookup via `FindSocialRatingLevelEffects`) now follows the SMAC rule: totals below
+> the lowest / above the highest configured level use that extreme's effects.
+> In-range missing keys (including typical absent 0) still produce nothing — that is
+> intentional sparse-table behavior, not a silent drop of out-of-range totals.
+> Covered by clamp / in-range-gap sections in `tests/effects/RatingTests.cpp`.
 
 `ExpandSocialRatingEffects` looks up the accumulated rating with `levelEffects.find(total)`; totals outside the configured levels produce no effects at all (`src/game/social-engineering/SocialRatingResolver.cpp:47-52`). Whether ratings clamp at the extremes is a rules decision that has been made implicitly (they vanish), without a TODO.
 
@@ -494,7 +522,7 @@ Each instance forces defensive null/state checks downstream — which is exactly
 - `IGameView` is named an interface but is a concrete base with state (`m_elements`, `m_bShouldClose`) and default behavior; its `Update()` virtual is **never called by anything** (dead API implying a lifecycle that does not exist). Element-lifecycle management (erasing closed elements) happens inside `Render`.
 - `IConstructable` mixes `const char* GetId()` with `const std::string& GetName()`.
 - `Registry<>` has a `protected virtual Validate_` but a non-virtual public destructor — designed for inheritance and unsafe to delete polymorphically; currently safe only because all registries are held by concrete type.
-- `BuildingConfig_t` (a config data struct) inherits `IConstructable`, giving every config entry a vtable and identity via `id.c_str()`; config structs also carry rule logic (`IsDiscovered`, `IsAvailable` — see 3.5). Data definitions and behavior are fused.
+- `BuildingConfig_t` (a config data struct) inherits `IConstructable`, giving every config entry a vtable and identity via `id.c_str()`; config structs also carry rule logic (`IsAvailable` — see 3.5). Data definitions and behavior are fused.
 - `Unit` is anemic: all mutable state has public unchecked setters (`SetCurrentHp(-5)` is fine); current-vs-max semantics are undefined when faction effects change resolved `HitPoints` after spawn (`m_currentHp` snapshots the design value at construction).
 - `WorkerAssignmentManager::UserAssignBestAvailableWorker` and several loops iterate by index with C-style reverse loops and duplicate their bodies (`WorkerAssignmentManager.cpp:195-224`) despite the range-based-loop guideline. *(Addressed 2026-07-08: all loops are now range-based over `PopulationManager::Pops()`, the reverse ones via `std::views::reverse`. The two remaining loops in `UserAssignBestAvailableWorker` are kept separate because their predicates and actions differ — worker-vs-specialist, one converts before assigning — not duplicated bodies.)*
 

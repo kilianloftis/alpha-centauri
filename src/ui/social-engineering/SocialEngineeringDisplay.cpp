@@ -223,13 +223,14 @@ std::string FormatFactionBonuses(
             continue;
         }
 
-        const auto levelIt = pRatingConfig->levelEffects.find(level);
-        if (levelIt == pRatingConfig->levelEffects.end())
+        const std::vector<EffectConfig_t>* pLevelEffects =
+            FindSocialRatingLevelEffects(*pRatingConfig, level);
+        if (!pLevelEffects)
         {
             continue;
         }
 
-        for (const EffectConfig_t& rEffect : levelIt->second)
+        for (const EffectConfig_t& rEffect : *pLevelEffects)
         {
             if (const auto* pModifier = std::get_if<StatModifierEffect_t>(&rEffect.effect))
             {

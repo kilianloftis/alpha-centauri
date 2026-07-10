@@ -3,6 +3,7 @@
 #include "lib/config/JsonConfigLoader.h"
 #include "game/effects/BonusEffectParser.h"
 #include <nlohmann/json.hpp>
+#include <stdexcept>
 
 namespace ac
 {
@@ -27,7 +28,13 @@ BuildingConfig_t BuildingConfigParser::ParseBuildingConfig(const nlohmann::json&
     config.mineralCost = buildingJson.value("mineral_cost", 0);
     config.allowMultiple = buildingJson.value("allow_multiple", false);
     config.bIsSecretProject = buildingJson.value("secret_project", false);
-    config.requiredTechs = ConfigFields::ParseStringArray(buildingJson, "required_techs");
+    if (buildingJson.contains("required_techs"))
+    {
+        throw std::runtime_error(
+            "Building '" + config.id + "': 'required_techs' is no longer supported; "
+            "use singular 'required_tech' (omit or \"\" = always available)");
+    }
+    config.requiredTech = ConfigFields::ParseRequiredTech(buildingJson);
     config.effects = BonusEffectParser::ParseEffects(buildingJson, EffectSourceKind::Building, config.id);
 
     return config;

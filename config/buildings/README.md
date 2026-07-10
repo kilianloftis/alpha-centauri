@@ -17,7 +17,7 @@ Each file must be a JSON array of building objects. Any number of files may coex
 | `id` | string | Yes | — | Unique identifier used in code and save files |
 | `name` | string | No | `id` | Display name shown in the UI |
 | `mineral_cost` | int | No | `0` | Minerals required to construct |
-| `required_techs` | string[] | No | `[]` | Building is available when **any** listed tech is discovered |
+| `required_tech` | string | No | `""` | Tech that must be discovered before the building is available; omit or empty = always available |
 | `allow_multiple` | bool | No | `false` | If true, a base may build more than one copy |
 | `secret_project` | bool | No | `false` | If true, only one faction in the world may own this building |
 | `effects` | Effect[] | No | `[]` | Structured list of gameplay effects (see below) |
@@ -111,7 +111,7 @@ Any effect may carry an optional top-level `condition` object making it situatio
   "id": "Recycling_Tanks",
   "name": "Recycling Tanks",
   "mineral_cost": 5,
-  "required_techs": ["ecology"],
+  "required_tech": "ecology",
   "effects": [
     {
       "type": "StatModifier",
@@ -130,7 +130,7 @@ Any effect may carry an optional top-level `condition` object making it situatio
   "name": "Human Genome Project",
   "mineral_cost": 200,
   "secret_project": true,
-  "required_techs": ["biogenetics"],
+  "required_tech": "biogenetics",
   "effects": [
     {
       "type": "RuleFlag",
@@ -149,7 +149,7 @@ Any effect may carry an optional top-level `condition` object making it situatio
   "name": "Merchant Exchange",
   "mineral_cost": 80,
   "secret_project": true,
-  "required_techs": ["industrial_economics"],
+  "required_tech": "industrial_economics",
   "effects": [
     {
       "type": "GrantBuilding",

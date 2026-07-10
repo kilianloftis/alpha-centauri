@@ -323,9 +323,10 @@ concept doesn't exist yet are **legal but inert**:
   final base context, and the type makes running it on the raw pool a compile error:
   - `AccumulateSocialRatings(baseEffects)` sums modifier contributions per rating axis.
   - `ExpandSocialRatingEffects(baseEffects, ratingRegistry)` maps each non-zero accumulated
-    level through `SocialRatingConfig::levelEffects` (exact-level match; unlisted levels
-    produce nothing) and appends the resulting gameplay effects with sourceId
-    `se_rating_<axis>_<total>`.
+    level through `SocialRatingConfig::levelEffects` (SMAC clamp-at-extremes: totals outside
+    `[min, max]` of the table use that extreme; in-range missing keys, including typical
+    absent 0, still produce nothing) and appends the resulting gameplay effects with sourceId
+    `se_rating_<axis>_<level>` (clamped level).
 - **Per-base effective ratings fall out automatically**: `BaseManager::BuildBaseEffects_`
   runs the expansion *after* `FilterForBase` + pop merge, so faction-wide modifiers reach
   every base while `ThisBase` modifiers shift only their own base — a `+2 Growth` policy
@@ -520,7 +521,7 @@ selector pass won't compile against the raw pool.
 - **Typed effect structs**: Replace the previous string-keyed parameter map with strongly typed structs, making effect consumers type-safe and easier to extend.
 - **Static config vs. runtime instances**: `EffectConfig_t` lives in immutable configuration data; `ActiveEffect_t` records the runtime context (source, origin base).
 - **Moddability**: New effect types can be added by extending `EffectVariant_t` and adding a corresponding parser branch in `BonusEffectParser`.
-- **One parser, every source**: `BonusEffectParser` is the single place that knows how to turn JSON into `EffectConfig_t`. Buildings and unit components only differ in which top-level fields they read (`mineral_cost`, `required_techs`, etc.) — the `effects` array itself is parsed identically everywhere.
+- **One parser, every source**: `BonusEffectParser` is the single place that knows how to turn JSON into `EffectConfig_t`. Buildings and unit components only differ in which top-level fields they read (`mineral_cost`, `required_tech`, etc.) — the `effects` array itself is parsed identically everywhere.
 
 ## Known Gaps
 
@@ -540,7 +541,6 @@ selector pass won't compile against the raw pool.
   rating's extreme levels (and the `population_boom` project) declare them, and they reach the
   base pool, but `GrowthCalculator` doesn't check them yet — their gameplay rules are undefined
   (TODO at the resolve site).
-- **`BuildingConfig_t::IsDiscovered()` uses OR semantics**: a building becomes available once *any* listed `required_techs` entry is discovered, not all of them. May be intentional (alternate prerequisites) but is worth confirming against design intent.
 - **No combat system consumes `ResolveTileDefenseMultiplier` yet**: `Unit::GetDefense()` still returns only the unit's own design stat. Wiring an actual attack/defense resolution (and deciding how/whether it multiplies the attacker's tile bonus too) is a separate, larger feature.
 - **No improvement-construction flow consumes `CanBuildImprovement` yet**: `Tile::AddImprovement()` has no caller besides `BaseManager`'s `"Base"` wiring — there's no UI/production path for the player to actually build Farm/Mine/Bunker, so the `excludes` exclusivity check is unenforced in practice today.
 - **`Base`'s defense bonus value (+100%) is an unconfirmed placeholder**, same as the other round test-data numbers (`test_tech_1`, etc.) in this repo — needs real balance input.

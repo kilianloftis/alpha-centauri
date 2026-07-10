@@ -4,9 +4,6 @@
     "name": "Human Genome Project",
     "mineral_cost": 200,
     "secret_project": true,
-    "required_techs": [
-      "test_tech_1"
-    ],
     "effects": [
       {
         "type": "RuleFlag",
@@ -16,6 +13,7 @@
         }
       }
     ],
-    "category": "grow"
+    "category": "grow",
+    "required_tech": "test_tech_1"
   }
 ]

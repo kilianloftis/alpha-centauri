@@ -188,12 +188,16 @@ void Engine::Initialize_()
         {centerX + 3, centerY + 3},
     };
 
-    int factionId = 1;
-    int baseId = 1;
     size_t positionIndex = 0;
     for (const FactionConfig_t& rFactionConfig : m_gameDataContext->factionRegistry->GetAll())
     {
+        // Single-player for now: the first faction created is the human player, the rest are
+        // AI-controlled. IsPlayerControlled() (rather than an index-0 convention) is what
+        // GameState::GetPlayerFaction() searches for.
+        const bool bIsPlayerControlled = (positionIndex == 0);
         auto pFaction = std::make_unique<Faction>(
+            m_gameState->AllocateFactionId(),
+            bIsPlayerControlled,
             rFactionConfig,
             m_gameDataContext->buildingRegistry.get(),
             m_gameDataContext->techRegistry.get(),
@@ -204,7 +208,7 @@ void Engine::Initialize_()
 
         const auto& [startX, startY] = startPositions[positionIndex % startPositions.size()];
         BaseManager* pBase = pFaction->CreateBase(
-            factionId, baseId, pFaction->SuggestBaseName(),
+            m_gameState->AllocateBaseId(), pFaction->SuggestBaseName(),
             m_gameState->GetWorldMap().GetTile(startX, startY),
             *m_gameDataContext,
             m_gameState->GetTileEffects(),
@@ -213,8 +217,6 @@ void Engine::Initialize_()
         m_eventBridge->WireBase(*pBase);
         m_gameState->AddFaction(std::move(pFaction));
 
-        ++factionId;
-        ++baseId;
         ++positionIndex;
     }
 
