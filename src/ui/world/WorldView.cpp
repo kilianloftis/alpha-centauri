@@ -3,7 +3,8 @@
 #include "ui/world/InfoPanelElement.h"
 #include "game/GameState.h"
 #include "game/Faction.h"
-#include "game/faction/FactionVisibilityMap.h"
+#include "game/faction/FactionExploredMap.h"
+#include "game/faction/FactionVisibleMap.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/EconomyManager.h"
 #include "game/faction/ResearchManager.h"
@@ -141,10 +142,12 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
     if (rEvent.button == MouseButton_t::Left && rEvent.bPressed && tile)
     {
         const Faction* pPlayer = m_rGameState.GetPlayerFaction();
-        const FactionVisibilityMap* pVisibility =
-            (pPlayer && pPlayer->GetVisibility().IsSized()) ? &pPlayer->GetVisibility() : nullptr;
+        const FactionExploredMap* pExplored =
+            (pPlayer && pPlayer->GetExploredMap().IsSized()) ? &pPlayer->GetExploredMap() : nullptr;
+        const FactionVisibleMap* pVisible =
+            (pPlayer && pPlayer->GetVisibleMap().IsSized()) ? &pPlayer->GetVisibleMap() : nullptr;
 
-        if (pVisibility && !pVisibility->IsExplored(worldX, worldY))
+        if (pExplored && !pExplored->IsExplored(worldX, worldY))
         {
             return;
         }
@@ -155,7 +158,7 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
             return;
         }
 
-        if (!pVisibility || pVisibility->IsVisible(worldX, worldY))
+        if (!pVisible || pVisible->IsVisible(worldX, worldY))
         {
             SelectUnitAtTile_(worldX, worldY);
         }

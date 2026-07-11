@@ -277,20 +277,33 @@ const UnitManager& Faction::GetUnitManager() const
     return *m_pUnits;
 }
 
-FactionVisibilityMap& Faction::GetVisibility()
+FactionExploredMap& Faction::GetExploredMap()
 {
-    return m_visibility;
+    return m_explored;
 }
 
-const FactionVisibilityMap& Faction::GetVisibility() const
+const FactionExploredMap& Faction::GetExploredMap() const
 {
-    return m_visibility;
+    return m_explored;
+}
+
+FactionVisibleMap& Faction::GetVisibleMap()
+{
+    return m_visible;
+}
+
+const FactionVisibleMap& Faction::GetVisibleMap() const
+{
+    return m_visible;
 }
 
 void Faction::BindWorldMap(WorldMap& rWorldMap)
 {
     m_pWorldMap = &rWorldMap;
-    m_visibility.Reset(rWorldMap.GetWidth(), rWorldMap.GetHeight());
+    const int width = rWorldMap.GetWidth();
+    const int height = rWorldMap.GetHeight();
+    m_explored.Reset(width, height);
+    m_visible.Reset(width, height);
     RebuildVisibility();
 }
 
@@ -300,7 +313,7 @@ void Faction::RebuildVisibility()
     {
         return;
     }
-    m_visibility.RebuildFromSources(*this, *m_pWorldMap);
+    m_visible.RebuildFromSources(*this, *m_pWorldMap, m_explored);
 }
 
 std::vector<const PopTypeConfig_t*> Faction::GetAvailablePopTypes() const

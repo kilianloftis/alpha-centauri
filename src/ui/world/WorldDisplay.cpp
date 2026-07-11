@@ -1,7 +1,8 @@
 #include "ui/world/WorldDisplay.h"
 #include "game/GameState.h"
 #include "game/Faction.h"
-#include "game/faction/FactionVisibilityMap.h"
+#include "game/faction/FactionExploredMap.h"
+#include "game/faction/FactionVisibleMap.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
@@ -46,14 +47,20 @@ constexpr unsigned int k_TileFontSize           = 14;
 constexpr float k_TileTextOffsetXRatio          = 0.1f;
 constexpr float k_TileTextOffsetYRatio          = 0.3f;
 
-const FactionVisibilityMap* PlayerVisibility_(const GameState& rGameState)
+struct PlayerFogMaps_t
+{
+    const FactionExploredMap* explored = nullptr;
+    const FactionVisibleMap* visible = nullptr;
+};
+
+PlayerFogMaps_t PlayerFog_(const GameState& rGameState)
 {
     const Faction* pPlayer = rGameState.GetPlayerFaction();
-    if (!pPlayer || !pPlayer->GetVisibility().IsSized())
+    if (!pPlayer || !pPlayer->GetExploredMap().IsSized() || !pPlayer->GetVisibleMap().IsSized())
     {
-        return nullptr;
+        return {};
     }
-    return &pPlayer->GetVisibility();
+    return {&pPlayer->GetExploredMap(), &pPlayer->GetVisibleMap()};
 }
 
 } // namespace
@@ -111,7 +118,7 @@ int WorldDisplay::GetVisibleRows() const
 void WorldDisplay::RenderBases_(Graphics& rGraphics, int colStart, int rowStart, int colEnd, int rowEnd)
 {
     const float tileSize = GetEffectiveTileSize();
-    const FactionVisibilityMap* pVisibility = PlayerVisibility_(m_rGameState);
+    const PlayerFogMaps_t fog = PlayerFog_(m_rGameState);
 
     const unsigned int fontSize = static_cast<unsigned int>(tileSize * k_BaseNameFontSizeRatio);
     const float textOffsetX = tileSize * k_BaseTextOffsetRatio;
@@ -129,7 +136,7 @@ void WorldDisplay::RenderBases_(Graphics& rGraphics, int colStart, int rowStart,
             }
 
             // Shroud hides bases entirely; fog still shows last-known bases.
-            if (pVisibility && !pVisibility->IsExplored(baseXTile, baseYTile))
+            if (fog.explored && !fog.explored->IsExplored(baseXTile, baseYTile))
             {
                 continue;
             }
@@ -163,7 +170,7 @@ void WorldDisplay::RenderUnits_(Graphics& rGraphics, int colStart, int rowStart,
 {
     const WorldMap& rWorldMap = GetWorldMap_();
     const float tileSize = GetEffectiveTileSize();
-    const FactionVisibilityMap* pVisibility = PlayerVisibility_(m_rGameState);
+    const PlayerFogMaps_t fog = PlayerFog_(m_rGameState);
 
     const unsigned int fontSize = static_cast<unsigned int>(tileSize * k_UnitMarkerFontSizeRatio);
     const float markerWidth = tileSize * k_UnitMarkerWidthRatio;
@@ -181,7 +188,7 @@ void WorldDisplay::RenderUnits_(Graphics& rGraphics, int colStart, int rowStart,
             }
 
             // Units only appear on currently-visible tiles (fog hides them).
-            if (pVisibility && !pVisibility->IsVisible(*pTile))
+            if (fog.visible && !fog.visible->IsVisible(*pTile))
             {
                 continue;
             }
@@ -255,7 +262,7 @@ void WorldDisplay::Render(Graphics& rGraphics)
     const int rowStart = std::max(0, m_cameraY);
     const int colEnd   = std::min(mapWidth,  colStart + m_visibleCols);
     const int rowEnd   = std::min(mapHeight, rowStart + m_visibleRows);
-    const FactionVisibilityMap* pVisibility = PlayerVisibility_(m_rGameState);
+    const PlayerFogMaps_t fog = PlayerFog_(m_rGameState);
 
     for (int row = rowStart; row < rowEnd; ++row)
     {
@@ -270,13 +277,13 @@ void WorldDisplay::Render(Graphics& rGraphics)
             float tileX = m_layout.x + ((col - colStart) * m_effectiveTileSize);
             float tileY = m_layout.y + ((row - rowStart) * m_effectiveTileSize);
 
-            if (pVisibility && !pVisibility->IsExplored(*pTile))
+            if (fog.explored && !fog.explored->IsExplored(*pTile))
             {
                 rGraphics.DrawFilledRect(tileX, tileY, m_effectiveTileSize, m_effectiveTileSize, k_ShroudColor);
                 continue;
             }
 
-            const bool bFogged = pVisibility && !pVisibility->IsVisible(*pTile);
+            const bool bFogged = fog.visible && !fog.visible->IsVisible(*pTile);
             RenderTile_(rGraphics, *pTile, tileX, tileY, m_effectiveTileSize, bFogged);
         }
     }
