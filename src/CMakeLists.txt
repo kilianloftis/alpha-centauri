@@ -57,6 +57,7 @@ add_library(ac-core STATIC
     game/units/Unit.cpp
     game/units/UnitDesign.cpp
     game/units/UnitOrderExecutor.cpp
+    game/units/MovementRules.cpp
     game/units/UnitComponentConfigParser.cpp
     game/units/UnitSlotConfigParser.cpp
     game/research/TechConfigParser.cpp

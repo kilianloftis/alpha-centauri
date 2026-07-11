@@ -48,6 +48,9 @@ public:
     int GetFuel() const;
     int GetDamageFromOutOfFuel() const;
     bool IsFlight() const;
+    bool IsSea() const;
+    bool IsLandUnit() const;
+    bool IgnoresZoneOfControl() const;
     int GetCargoCapacity() const;
     int GetDifficultTerrainCost() const;
     bool IsSingleUse() const;

@@ -96,6 +96,12 @@ int Unit::GetDisengageChance() const                                   { return 
 int Unit::GetFuel() const                                              { return ResolveStat_(StatId_t::Fuel); }
 int Unit::GetDamageFromOutOfFuel() const                               { return ResolveStat_(StatId_t::DamageFromOutOfFuel); }
 bool Unit::IsFlight() const                                            { return ResolveFlag_(RuleFlagId_t::Flight); }
+bool Unit::IsSea() const                                               { return ResolveFlag_(RuleFlagId_t::Sea); }
+bool Unit::IsLandUnit() const                                          { return !IsFlight() && !IsSea(); }
+bool Unit::IgnoresZoneOfControl() const
+{
+    return IsFlight() || ResolveFlag_(RuleFlagId_t::IgnoreZoneOfControl);
+}
 int Unit::GetCargoCapacity() const                                     { return ResolveStat_(StatId_t::CargoCapacity); }
 int Unit::GetDifficultTerrainCost() const                              { return ResolveStat_(StatId_t::DifficultTerrainCost); }
 bool Unit::IsSingleUse() const                                         { return ResolveFlag_(RuleFlagId_t::SingleUse); }

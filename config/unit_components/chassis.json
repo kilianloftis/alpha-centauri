@@ -66,6 +66,11 @@
     "mineral_cost": 30,
     "effects": [
       {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "sea" }
+      },
+      {
         "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": { "stat": "movement", "amount": 2, "op": "Add" }

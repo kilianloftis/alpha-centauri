@@ -34,10 +34,12 @@ StatId_t ParseStatId(const std::string& rStat)
 
 RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
 {
-    if (rFlag == "population_boom")  return RuleFlagId_t::PopulationBoom;
-    if (rFlag == "near_zero_growth") return RuleFlagId_t::NearZeroGrowth;
-    if (rFlag == "flight")           return RuleFlagId_t::Flight;
-    if (rFlag == "single_use")       return RuleFlagId_t::SingleUse;
+    if (rFlag == "population_boom")         return RuleFlagId_t::PopulationBoom;
+    if (rFlag == "near_zero_growth")        return RuleFlagId_t::NearZeroGrowth;
+    if (rFlag == "flight")                  return RuleFlagId_t::Flight;
+    if (rFlag == "single_use")              return RuleFlagId_t::SingleUse;
+    if (rFlag == "sea")                     return RuleFlagId_t::Sea;
+    if (rFlag == "ignore_zone_of_control")  return RuleFlagId_t::IgnoreZoneOfControl;
     throw std::runtime_error("Unknown rule flag id: '" + rFlag + "'");
 }
 

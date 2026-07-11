@@ -10,6 +10,36 @@
     ]
   },
   {
+    "id": "test_sea_chassis",
+    "name": "Test Sea Chassis",
+    "type": "chassis",
+    "effects": [
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "sea" } },
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "movement", "amount": 2 } },
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "vision", "amount": 1 } },
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "hit_points", "amount": 10 } }
+    ]
+  },
+  {
+    "id": "test_flight_chassis",
+    "name": "Test Flight Chassis",
+    "type": "chassis",
+    "effects": [
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "flight" } },
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "movement", "amount": 2 } },
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "vision", "amount": 1 } },
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "hit_points", "amount": 10 } }
+    ]
+  },
+  {
+    "id": "ignore_zoc",
+    "name": "Ignore Zone of Control",
+    "type": "ability",
+    "effects": [
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "ignore_zone_of_control" } }
+    ]
+  },
+  {
     "id": "test_weapon",
     "name": "Test Weapon",
     "type": "weapon",

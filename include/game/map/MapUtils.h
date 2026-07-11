@@ -16,6 +16,23 @@ inline bool InEuclideanRadius(int dx, int dy, int radius)
     return dx * dx + dy * dy <= radius * radius + 1;
 }
 
+// King-move / square distance: max(|dx|, |dy|). Used by vision, aura radii, ZOC, and
+// adjacent unit steps (see ForEachTileInChebyshevRadius).
+inline int ChebyshevDistance(int dx, int dy)
+{
+    return std::max(std::abs(dx), std::abs(dy));
+}
+
+inline int ChebyshevDistance(const Tile& rA, const Tile& rB)
+{
+    return ChebyshevDistance(rA.GetX() - rB.GetX(), rA.GetY() - rB.GetY());
+}
+
+inline bool AreChebyshevAdjacent(const Tile& rA, const Tile& rB)
+{
+    return ChebyshevDistance(rA, rB) == 1;
+}
+
 // Calls fn(tile_ptr, distance) for every tile within Chebyshev `radius` tiles of rOrigin
 // (square / king-move distance: max(|dx|, |dy|)). This is the metric for vision and for
 // all effect/improvement aura radii (Sensor, Condenser, unit auras, …).
@@ -36,7 +53,7 @@ void ForEachTileInChebyshevRadius(const Tile& rOrigin, WorldMapT& rWorldMap,
     {
         for (int dx = -radius; dx <= radius; ++dx)
         {
-            const int distance = std::max(std::abs(dx), std::abs(dy));
+            const int distance = ChebyshevDistance(dx, dy);
             if (distance > radius)
             {
                 continue;

@@ -1,6 +1,7 @@
 #include "game/units/UnitOrderExecutor.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitOrder.h"
+#include "game/units/MovementRules.h"
 #include "game/map/WorldMap.h"
 #include <stdexcept>
 
@@ -23,29 +24,57 @@ void UnitOrderExecutor::Execute_(Unit& rUnit, WorldMap& rWorldMap, MoveOrder_t& 
     if (!rOrder.pDestination)
         throw std::runtime_error("MoveOrder has null destination");
 
-    // TODO: Implement step-by-step pathfinding toward destination
-    if (!rWorldMap.GetUnitPositions().TryMoveUnit(rUnit, *rOrder.pDestination))
+    if (&rUnit.GetTile() == rOrder.pDestination)
     {
-        // Destination blocked under the single-unit-per-tile rule; keep the order so the
-        // move is retried next turn. TODO: blocked-move rules (reroute, cancel, notify
-        // the player) are undecided.
+        rUnit.ClearOrder();
         return;
     }
-    rUnit.ClearOrder();
+
+    if (rUnit.GetMovesRemaining() <= 0)
+    {
+        // Keep the order for the next turn when moves refresh.
+        return;
+    }
+
+    // Pathfinding is recalculated every step (fog / new info later). The greedy
+    // ProposeNextStep seam is temporary until a real pathfinder lands.
+    const Tile* pNext = ProposeNextStep(rUnit, *rOrder.pDestination, rWorldMap);
+    if (!pNext)
+    {
+        return;
+    }
+
+    if (!TryStep(rUnit, *pNext, rWorldMap))
+    {
+        return;
+    }
+
+    // Combat stub clears the order; otherwise clear when the destination is reached.
+    if (rUnit.GetOrder().has_value() && &rUnit.GetTile() == rOrder.pDestination)
+    {
+        rUnit.ClearOrder();
+    }
 }
 
 void UnitOrderExecutor::Execute_(Unit& rUnit, WorldMap& rWorldMap, HoldOrder_t& rOrder)
 {
     // Hold indefinitely — nothing to do each turn
+    (void)rUnit;
+    (void)rWorldMap;
+    (void)rOrder;
 }
 
 void UnitOrderExecutor::Execute_(Unit& rUnit, WorldMap& rWorldMap, HoldUntilHealedOrder_t& rOrder)
 {
     // TODO: Clear order when unit reaches full HP
+    (void)rUnit;
+    (void)rWorldMap;
+    (void)rOrder;
 }
 
 void UnitOrderExecutor::Execute_(Unit& rUnit, WorldMap& rWorldMap, HoldForTurnsOrder_t& rOrder)
 {
+    (void)rWorldMap;
     if (rOrder.turnsRemaining <= 0)
     {
         rUnit.ClearOrder();

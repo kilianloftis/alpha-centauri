@@ -66,6 +66,8 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
 {
     CHECK(BonusEffectParser::ParseRuleFlagId("flight") == RuleFlagId_t::Flight);
     CHECK(BonusEffectParser::ParseRuleFlagId("single_use") == RuleFlagId_t::SingleUse);
+    CHECK(BonusEffectParser::ParseRuleFlagId("sea") == RuleFlagId_t::Sea);
+    CHECK(BonusEffectParser::ParseRuleFlagId("ignore_zone_of_control") == RuleFlagId_t::IgnoreZoneOfControl);
     CHECK(BonusEffectParser::ParseRuleFlagId("population_boom") == RuleFlagId_t::PopulationBoom);
     CHECK(BonusEffectParser::ParseRuleFlagId("near_zero_growth") == RuleFlagId_t::NearZeroGrowth);
     CHECK_THROWS(BonusEffectParser::ParseRuleFlagId("hover"));

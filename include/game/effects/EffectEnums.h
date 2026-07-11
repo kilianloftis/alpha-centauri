@@ -123,6 +123,8 @@ enum class RuleFlagId_t
     // Unit flags
     Flight,
     SingleUse,
+    Sea,
+    IgnoreZoneOfControl,
 
     // Faction/global flags
     PopulationBoom,

@@ -43,6 +43,12 @@ public:
     int GetFuel() const;
     int GetDamageFromOutOfFuel() const;
     bool IsFlight() const;
+    bool IsSea() const;
+    // Neither flight nor sea.
+    bool IsLandUnit() const;
+    // True if the unit is not subject to hostile zone of control (flight, or the
+    // IgnoreZoneOfControl rule flag used by e.g. probe teams).
+    bool IgnoresZoneOfControl() const;
     int GetCargoCapacity() const;
     int GetDifficultTerrainCost() const;
     bool IsSingleUse() const;
