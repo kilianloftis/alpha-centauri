@@ -21,6 +21,7 @@ Unit& UnitManager::CreateUnit(const UnitDesign& rDesign, UnitPositionIndex& rPos
     Unit& rUnit = *pUnit;
     m_units.push_back(std::move(pUnit));
     m_revision.Bump();
+    m_rFaction.RebuildVisibility();
     return rUnit;
 }
 
@@ -40,6 +41,7 @@ void UnitManager::DestroyUnit(Unit& rUnit)
     OnUnitDestroyed.Emit(rUnit);
     m_units.erase(it);
     m_revision.Bump();
+    m_rFaction.RebuildVisibility();
 }
 
 Unit* UnitManager::GetNextAvailableUnit() const

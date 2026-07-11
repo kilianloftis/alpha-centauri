@@ -5,6 +5,7 @@
     "type": "chassis",
     "effects": [
       { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "movement", "amount": 2 } },
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "vision", "amount": 1 } },
       { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "hit_points", "amount": 10 } }
     ]
   },

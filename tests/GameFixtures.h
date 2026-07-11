@@ -143,7 +143,9 @@ struct FactionFixture : BaseFixture
             dataContext.buildingRegistry.get(), /*techRegistry*/ nullptr,
             dataContext.socialPolicyRegistry.get(), dataContext.socialRatingRegistry.get(),
             /*techCost*/ nullptr, /*popTypeAvailability*/ nullptr));
-        return *factions.back();
+        ac::Faction& rFaction = *factions.back();
+        rFaction.BindWorldMap(map);
+        return rFaction;
     }
 
     ac::BaseManager& MakeFactionBase(ac::Faction& rFaction, int x, int y)

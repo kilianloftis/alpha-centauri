@@ -3,6 +3,7 @@
 #include "ui/world/InfoPanelElement.h"
 #include "game/GameState.h"
 #include "game/Faction.h"
+#include "game/faction/FactionVisibilityMap.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/EconomyManager.h"
 #include "game/faction/ResearchManager.h"
@@ -92,7 +93,7 @@ void WorldView::Update_()
 
 bool WorldView::HandleKey(const KeyEvent_t& rEvent)
 {
-    if (m_pUnitOrderInputController->HandleKey(rEvent, m_pSelectedUnit))
+    if (m_pUnitOrderInputController->HandleKey(rEvent, GetControllableSelectedUnit_()))
     {
         return true;
     }
@@ -132,20 +133,32 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
     const int worldY = tile ? tile->second + camY : k_InvalidTileCoord;
     const Tile* pClickedTile = m_rGameState.GetWorldMap().GetTile(worldX, worldY);
 
-    if (m_pUnitOrderInputController->HandleMouse(rEvent, m_pSelectedUnit, pClickedTile))
+    if (m_pUnitOrderInputController->HandleMouse(rEvent, GetControllableSelectedUnit_(), pClickedTile))
     {
         return;
     }
 
     if (rEvent.button == MouseButton_t::Left && rEvent.bPressed && tile)
     {
+        const Faction* pPlayer = m_rGameState.GetPlayerFaction();
+        const FactionVisibilityMap* pVisibility =
+            (pPlayer && pPlayer->GetVisibility().IsSized()) ? &pPlayer->GetVisibility() : nullptr;
+
+        if (pVisibility && !pVisibility->IsExplored(worldX, worldY))
+        {
+            return;
+        }
+
         if (BaseManager* pBase = m_rGameState.FindBaseAt(worldX, worldY))
         {
             m_onOpenBase(*pBase);
             return;
         }
 
-        SelectUnitAtTile_(worldX, worldY);
+        if (!pVisibility || pVisibility->IsVisible(worldX, worldY))
+        {
+            SelectUnitAtTile_(worldX, worldY);
+        }
     }
 }
 
@@ -167,6 +180,15 @@ void WorldView::SelectUnitAtTile_(int tileX, int tileY)
     }
 
     m_pSelectedUnit = units[k_FirstUnitIndex];
+}
+
+Unit* WorldView::GetControllableSelectedUnit_() const
+{
+    if (m_pSelectedUnit && m_pSelectedUnit->GetFaction().IsPlayerControlled())
+    {
+        return m_pSelectedUnit;
+    }
+    return nullptr;
 }
 
 } // namespace ac

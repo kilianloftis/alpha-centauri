@@ -117,6 +117,16 @@ void PopulationDisplay::Render(Graphics& rGraphics)
 
         const char* popType = sortedPops[i]->GetPopType();
         char firstLetter = popType && popType[0] ? popType[0] : k_UnknownPopLetter;
+        // Letter collisions until pop types carry an explicit display glyph:
+        // Drone/Doctor both D → R (riot); Talent/Technician both T → A (tAlent).
+        if (sortedPops[i]->IsDrone())
+        {
+            firstLetter = 'R';
+        }
+        else if (sortedPops[i]->IsTalent())
+        {
+            firstLetter = 'A';
+        }
         std::string letterStr(1, firstLetter);
 
         const float textX = boxX + boxSize * k_PopBoxTextXOffsetRatio;

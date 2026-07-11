@@ -69,6 +69,7 @@ Faction& GameState::AddFaction(std::unique_ptr<Faction> pFaction)
     {
         throw std::invalid_argument("GameState::AddFaction: pFaction is null");
     }
+    pFaction->BindWorldMap(*m_worldMap);
     m_factions.push_back(std::move(pFaction));
     return *m_factions.back();
 }

@@ -24,11 +24,13 @@ namespace ac
 BaseView::BaseView(
     BaseManager& rBase,
     const Faction& rFaction,
-    WindowLayout_t layout
+    WindowLayout_t layout,
+    bool bEditable
 )
     : IGameView(layout)
     , m_rBase(rBase)
     , m_rFaction(rFaction)
+    , m_bEditable(bEditable)
 {
     const WindowLayout_t leftColumn = ResolveLayout(m_layout, {
         k_LeftPanelLayout.x,
@@ -37,6 +39,18 @@ BaseView::BaseView(
         2.0f * k_LeftPanelLayout.height
     });
 
+    BaseWorkableAreaDisplay::TileClickCallback_t onTileClick;
+    BaseWorkableAreaDisplay::BaseClickCallback_t onBaseClick;
+    std::function<void()> onProductionClick;
+    PopClickCallback_t onPopClick;
+    if (m_bEditable)
+    {
+        onTileClick = [this](const Tile* pTile) { HandleTileClick_(pTile); };
+        onBaseClick = [this]() { HandleBaseClicked_(); };
+        onProductionClick = [this]() { HandleProductionDisplayClicked_(); };
+        onPopClick = [this](Pop& rPop) { HandlePopClick(rPop); };
+    }
+
     m_elements.push_back(std::make_unique<GrowthDisplay>(
         &m_rBase,
         ResolveLayout(leftColumn, {0.0f, 0.0f, 1.0f, 0.5f})
@@ -44,18 +58,18 @@ BaseView::BaseView(
     m_elements.push_back(std::make_unique<BaseWorkableAreaDisplay>(
         &m_rBase,
         ResolveLayout(m_layout, k_TopPanelLayout),
-        [this](const Tile* pTile) { HandleTileClick_(pTile); },
-        [this]() { HandleBaseClicked_(); }
+        std::move(onTileClick),
+        std::move(onBaseClick)
     ));
     m_elements.push_back(std::make_unique<ProductionDisplay>(
         &m_rBase,
         ResolveLayout(leftColumn, {0.0f, 0.5f, 1.0f, 0.5f}),
-        [this]() { HandleProductionDisplayClicked_(); }
+        std::move(onProductionClick)
     ));
     m_elements.push_back(std::make_unique<PopulationDisplay>(
         &m_rBase.GetPopulation(),
         ResolveLayout(m_layout, k_CenterPanelLayout),
-        [this](Pop& rPop) { HandlePopClick(rPop); }
+        std::move(onPopClick)
     ));
 }
 
@@ -77,12 +91,22 @@ bool BaseView::HandleKey(const KeyEvent_t& rEvent)
 
 void BaseView::HandleBaseClicked_()
 {
+    if (!m_bEditable)
+    {
+        return;
+    }
+
     auto& rAssignments = m_rBase.GetWorkerAssignments();
     rAssignments.ResetAllAssignments();
 }
 
 void BaseView::HandleTileClick_(const Tile* pTile)
 {
+    if (!m_bEditable)
+    {
+        return;
+    }
+
     auto& rAssignments = m_rBase.GetWorkerAssignments();
 
     if (rAssignments.IsTileAssigned(pTile))
@@ -97,6 +121,11 @@ void BaseView::HandleTileClick_(const Tile* pTile)
 
 void BaseView::HandlePopClick(Pop& rPop)
 {
+    if (!m_bEditable)
+    {
+        return;
+    }
+
     m_elements.push_back(std::make_unique<PopTypeSelectorPopup>(
         m_rFaction.GetAvailablePopTypes(),
         ResolveLayout(m_layout, k_PopupLayoutSmall),
@@ -108,11 +137,21 @@ void BaseView::HandlePopClick(Pop& rPop)
 
 void BaseView::HandlePopTypeSelected(Pop& rPop, const PopTypeConfig_t& rConfig)
 {
+    if (!m_bEditable)
+    {
+        return;
+    }
+
     m_rBase.ConvertPop(rPop, rConfig.id);
 }
 
 void BaseView::HandleProductionDisplayClicked_()
 {
+    if (!m_bEditable)
+    {
+        return;
+    }
+
     std::vector<const IConstructable*> available = m_rBase.GetConstructable();
 
     m_elements.push_back(std::make_unique<ProductionSelectorPopup>(

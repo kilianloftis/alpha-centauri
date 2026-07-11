@@ -68,6 +68,7 @@ add_library(ac-core STATIC
     game/map/TileLayerResolver.cpp
     game/map/UnitPositionIndex.cpp
     game/map/WorkedTileIndex.cpp
+    game/faction/FactionVisibilityMap.cpp
     game/map/ImprovementConfigParser.cpp
     game/map/WorldMap.cpp
     game/map/WorldGenerator.cpp

@@ -37,6 +37,7 @@ public:
     int GetAttackAgainst(const Unit& rDefender) const;
     int GetDefense() const;
     int GetMovement() const;
+    int GetVision() const;
     int GetHitPoints() const;
     int GetDisengageChance() const;
     int GetFuel() const;

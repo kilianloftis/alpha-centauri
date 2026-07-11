@@ -90,6 +90,7 @@ int Unit::GetAttackAgainst(const Unit& rDefender) const
 }
 int Unit::GetDefense() const                                           { return ResolveStat_(StatId_t::Defense); }
 int Unit::GetMovement() const                                          { return ResolveStat_(StatId_t::Movement); }
+int Unit::GetVision() const                                            { return ResolveStat_(StatId_t::Vision); }
 int Unit::GetHitPoints() const                                         { return ResolveStat_(StatId_t::HitPoints); }
 int Unit::GetDisengageChance() const                                   { return ResolveStat_(StatId_t::DisengageChance); }
 int Unit::GetFuel() const                                              { return ResolveStat_(StatId_t::Fuel); }

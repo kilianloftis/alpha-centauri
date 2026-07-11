@@ -42,6 +42,7 @@ public:
     int GetAttackAgainst(const EffectContext_t& ctx) const;
     int GetDefense() const;
     int GetMovement() const;
+    int GetVision() const;
     int GetHitPoints() const;
     int GetDisengageChance() const;
     int GetFuel() const;

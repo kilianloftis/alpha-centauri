@@ -24,7 +24,8 @@ public:
     BaseView(
         BaseManager& rBase,
         const Faction& rFaction,
-        WindowLayout_t layout
+        WindowLayout_t layout,
+        bool bEditable
     );
     ~BaseView();
 
@@ -39,6 +40,7 @@ private:
 
     BaseManager& m_rBase;
     const Faction& m_rFaction;
+    bool m_bEditable;
 
 };
 

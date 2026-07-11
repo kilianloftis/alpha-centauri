@@ -1,6 +1,7 @@
 #include "ui/world/WorldDisplay.h"
 #include "game/GameState.h"
 #include "game/Faction.h"
+#include "game/faction/FactionVisibilityMap.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
@@ -37,11 +38,23 @@ constexpr int   k_RockinessRockyValue           = 2;
 constexpr int   k_RockinessRollingValue         = 1;
 constexpr int   k_RockinessFlatValue            = 0;
 constexpr Color_t k_TileBorderColor               {80, 80, 80, 255};
+constexpr Color_t k_ShroudColor                   {0, 0, 0, 255};
+constexpr Color_t k_FogTerrainColor               {110, 110, 110, 255};
 constexpr float k_TileBorderWidth               = -1.0f;
 constexpr int   k_ElevationMetersPerKm          = 1000;
 constexpr unsigned int k_TileFontSize           = 14;
 constexpr float k_TileTextOffsetXRatio          = 0.1f;
 constexpr float k_TileTextOffsetYRatio          = 0.3f;
+
+const FactionVisibilityMap* PlayerVisibility_(const GameState& rGameState)
+{
+    const Faction* pPlayer = rGameState.GetPlayerFaction();
+    if (!pPlayer || !pPlayer->GetVisibility().IsSized())
+    {
+        return nullptr;
+    }
+    return &pPlayer->GetVisibility();
+}
 
 } // namespace
 
@@ -98,6 +111,7 @@ int WorldDisplay::GetVisibleRows() const
 void WorldDisplay::RenderBases_(Graphics& rGraphics, int colStart, int rowStart, int colEnd, int rowEnd)
 {
     const float tileSize = GetEffectiveTileSize();
+    const FactionVisibilityMap* pVisibility = PlayerVisibility_(m_rGameState);
 
     const unsigned int fontSize = static_cast<unsigned int>(tileSize * k_BaseNameFontSizeRatio);
     const float textOffsetX = tileSize * k_BaseTextOffsetRatio;
@@ -110,6 +124,12 @@ void WorldDisplay::RenderBases_(Graphics& rGraphics, int colStart, int rowStart,
             const int baseYTile = rBase.GetY();
             if (baseXTile < colStart || baseXTile >= colEnd
                 || baseYTile < rowStart || baseYTile >= rowEnd)
+            {
+                continue;
+            }
+
+            // Shroud hides bases entirely; fog still shows last-known bases.
+            if (pVisibility && !pVisibility->IsExplored(baseXTile, baseYTile))
             {
                 continue;
             }
@@ -143,6 +163,7 @@ void WorldDisplay::RenderUnits_(Graphics& rGraphics, int colStart, int rowStart,
 {
     const WorldMap& rWorldMap = GetWorldMap_();
     const float tileSize = GetEffectiveTileSize();
+    const FactionVisibilityMap* pVisibility = PlayerVisibility_(m_rGameState);
 
     const unsigned int fontSize = static_cast<unsigned int>(tileSize * k_UnitMarkerFontSizeRatio);
     const float markerWidth = tileSize * k_UnitMarkerWidthRatio;
@@ -155,6 +176,12 @@ void WorldDisplay::RenderUnits_(Graphics& rGraphics, int colStart, int rowStart,
         {
             const Tile* pTile = rWorldMap.GetTile(col, row);
             if (!pTile)
+            {
+                continue;
+            }
+
+            // Units only appear on currently-visible tiles (fog hides them).
+            if (pVisibility && !pVisibility->IsVisible(*pTile))
             {
                 continue;
             }
@@ -228,18 +255,29 @@ void WorldDisplay::Render(Graphics& rGraphics)
     const int rowStart = std::max(0, m_cameraY);
     const int colEnd   = std::min(mapWidth,  colStart + m_visibleCols);
     const int rowEnd   = std::min(mapHeight, rowStart + m_visibleRows);
+    const FactionVisibilityMap* pVisibility = PlayerVisibility_(m_rGameState);
 
     for (int row = rowStart; row < rowEnd; ++row)
     {
         for (int col = colStart; col < colEnd; ++col)
         {
             const Tile* pTile = rWorldMap.GetTile(col, row);
-            if (pTile)
+            if (!pTile)
             {
-                float tileX = m_layout.x + ((col - colStart) * m_effectiveTileSize);
-                float tileY = m_layout.y + ((row - rowStart) * m_effectiveTileSize);
-                RenderTile_(rGraphics, *pTile, tileX, tileY, m_effectiveTileSize);
+                continue;
             }
+
+            float tileX = m_layout.x + ((col - colStart) * m_effectiveTileSize);
+            float tileY = m_layout.y + ((row - rowStart) * m_effectiveTileSize);
+
+            if (pVisibility && !pVisibility->IsExplored(*pTile))
+            {
+                rGraphics.DrawFilledRect(tileX, tileY, m_effectiveTileSize, m_effectiveTileSize, k_ShroudColor);
+                continue;
+            }
+
+            const bool bFogged = pVisibility && !pVisibility->IsVisible(*pTile);
+            RenderTile_(rGraphics, *pTile, tileX, tileY, m_effectiveTileSize, bFogged);
         }
     }
 
@@ -275,7 +313,8 @@ int WorldDisplay::RockinessToInt_(Rockiness_t rockiness) const
     }
 }
 
-void WorldDisplay::RenderTile_(Graphics& rGraphics, const Tile& rTile, float x, float y, float size)
+void WorldDisplay::RenderTile_(Graphics& rGraphics, const Tile& rTile, float x, float y, float size,
+                               bool bFogged)
 {
     rGraphics.DrawRect(x, y, size, size, k_TileBorderColor, k_TileBorderWidth);
 
@@ -289,7 +328,8 @@ void WorldDisplay::RenderTile_(Graphics& rGraphics, const Tile& rTile, float x, 
     float textOffsetX = size * k_TileTextOffsetXRatio;
     float textOffsetY = size * k_TileTextOffsetYRatio;
 
-    rGraphics.DrawText(oss.str(), x + textOffsetX, y + textOffsetY, k_TileFontSize);
+    const Color_t textColor = bFogged ? k_FogTerrainColor : Color_t::White();
+    rGraphics.DrawText(oss.str(), x + textOffsetX, y + textOffsetY, k_TileFontSize, textColor);
 }
 
 } // namespace ac

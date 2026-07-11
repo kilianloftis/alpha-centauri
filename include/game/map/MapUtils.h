@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/map/Tile.h"
+#include <algorithm>
 #include <cstdlib>
 #include <utility>
 
@@ -26,6 +27,31 @@ void ForEachTileInManhattanRadius(const Tile& rOrigin, WorldMapT& rWorldMap,
         for (int dx = -radius; dx <= radius; ++dx)
         {
             const int distance = std::abs(dx) + std::abs(dy);
+            if (distance > radius) continue;
+            if (!includeOrigin && distance == 0) continue;
+
+            auto* pTile = rWorldMap.GetTile(rOrigin.GetX() + dx, rOrigin.GetY() + dy);
+            if (pTile)
+            {
+                fn(pTile, distance);
+            }
+        }
+    }
+}
+
+// Calls fn(tile_ptr, distance) for every tile within Chebyshev `radius` tiles of rOrigin
+// (square / king-move distance: max(|dx|, |dy|)). Vision uses this so radius 1 includes
+// diagonals. `distance` is the Chebyshev distance from rOrigin (>= 0).
+// includeOrigin / null-tile behaviour matches ForEachTileInManhattanRadius.
+template<typename WorldMapT, typename Fn>
+void ForEachTileInChebyshevRadius(const Tile& rOrigin, WorldMapT& rWorldMap,
+                                   int radius, bool includeOrigin, Fn&& fn)
+{
+    for (int dy = -radius; dy <= radius; ++dy)
+    {
+        for (int dx = -radius; dx <= radius; ++dx)
+        {
+            const int distance = std::max(std::abs(dx), std::abs(dy));
             if (distance > radius) continue;
             if (!includeOrigin && distance == 0) continue;
 

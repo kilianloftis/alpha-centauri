@@ -63,7 +63,8 @@ std::unique_ptr<BaseView> ViewFactory::CreateBaseView(
         return nullptr;
     }
 
-    return std::make_unique<BaseView>(rBase, *pFaction, layout);
+    const bool bEditable = (rBase.GetFactionId() == pFaction->GetFactionId());
+    return std::make_unique<BaseView>(rBase, *pFaction, layout, bEditable);
 }
 
 std::unique_ptr<ResearchView> ViewFactory::CreateResearchView(

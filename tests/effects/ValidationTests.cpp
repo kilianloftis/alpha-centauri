@@ -61,6 +61,7 @@ static_assert(KindFor(StatId_t::Psych) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Attack) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Defense) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Movement) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::Vision) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::HitPoints) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::DisengageChance) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Fuel) == StatKind_t::Additive);

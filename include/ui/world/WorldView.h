@@ -40,6 +40,7 @@ public:
 private:
     void Update_();
     void SelectUnitAtTile_(int tileX, int tileY);
+    Unit* GetControllableSelectedUnit_() const;
 
     GameState& m_rGameState;
     const WindowLayout_t m_mapLayout;

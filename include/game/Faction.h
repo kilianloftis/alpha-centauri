@@ -9,6 +9,7 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/FactionConfig.h"
 #include "game/faction/FactionEffectsPool.h"
+#include "game/faction/FactionVisibilityMap.h"
 #include "game/social-engineering/SocialPolicyConfig.h"
 #include "lib/DerefView.h"
 #include "lib/Revision.h"
@@ -125,6 +126,15 @@ public:
     UnitManager& GetUnitManager();
     const UnitManager& GetUnitManager() const;
 
+    // Fog of war: per-faction explored memory and currently-visible tiles.
+    // BindWorldMap sizes the map from the shared WorldMap; RebuildVisibility refreshes
+    // current vision from units/bases. Callers that change vision sources (unit create/
+    // move/destroy, base founding) invoke RebuildVisibility.
+    FactionVisibilityMap& GetVisibility();
+    const FactionVisibilityMap& GetVisibility() const;
+    void BindWorldMap(WorldMap& rWorldMap);
+    void RebuildVisibility();
+
     // Pop types
     std::vector<const PopTypeConfig_t*> GetAvailablePopTypes() const;
 
@@ -154,6 +164,8 @@ private:
     Revision m_baseListRevision; // bumped when a base is added (later: removed/captured)
     // Declared after m_baseListRevision, which its constructor binds a reference to.
     FactionEffectsPool m_effectsPool;
+    FactionVisibilityMap m_visibility;
+    WorldMap* m_pWorldMap = nullptr; // set by BindWorldMap; used by RebuildVisibility
 };
 
 } // namespace ac

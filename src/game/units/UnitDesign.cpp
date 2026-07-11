@@ -110,6 +110,7 @@ bool UnitDesign::ResolveFlag_(RuleFlagId_t flagId) const
 int UnitDesign::GetAttack() const               { return static_cast<int>(ResolveStat_(StatId_t::Attack)); }
 int UnitDesign::GetDefense() const              { return static_cast<int>(ResolveStat_(StatId_t::Defense)); }
 int UnitDesign::GetMovement() const             { return static_cast<int>(ResolveStat_(StatId_t::Movement)); }
+int UnitDesign::GetVision() const               { return static_cast<int>(ResolveStat_(StatId_t::Vision)); }
 int UnitDesign::GetHitPoints() const            { return static_cast<int>(ResolveStat_(StatId_t::HitPoints)); }
 int UnitDesign::GetDisengageChance() const      { return static_cast<int>(ResolveStat_(StatId_t::DisengageChance)); }
 int UnitDesign::GetFuel() const                 { return static_cast<int>(ResolveStat_(StatId_t::Fuel)); }

@@ -21,6 +21,7 @@ enum class StatId_t
     Attack,
     Defense,
     Movement,
+    Vision,
     HitPoints,
     DisengageChance,
     Fuel,
@@ -71,6 +72,7 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::Attack:
         case StatId_t::Defense:
         case StatId_t::Movement:
+        case StatId_t::Vision:
         case StatId_t::HitPoints:
         case StatId_t::DisengageChance:
         case StatId_t::Fuel:

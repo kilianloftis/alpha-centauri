@@ -54,8 +54,9 @@ private:
     int MoistureToInt_(Moisture_t moisture) const;
     int RockinessToInt_(Rockiness_t rockiness) const;
 
-    // Render a single tile
-    void RenderTile_(Graphics& rGraphics, const Tile& rTile, float x, float y, float size);
+    // Render a single tile. Fogged tiles show terrain in muted color (explored memory).
+    void RenderTile_(Graphics& rGraphics, const Tile& rTile, float x, float y, float size,
+                     bool bFogged = false);
 
     // Render base markers with owner color and population info
     void RenderBases_(Graphics& rGraphics, int colStart, int rowStart, int colEnd, int rowEnd);

@@ -18,6 +18,7 @@ StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "attack")                  return StatId_t::Attack;
     if (rStat == "defense")                 return StatId_t::Defense;
     if (rStat == "movement")                return StatId_t::Movement;
+    if (rStat == "vision")                  return StatId_t::Vision;
     if (rStat == "hit_points")              return StatId_t::HitPoints;
     if (rStat == "disengage_chance")        return StatId_t::DisengageChance;
     if (rStat == "fuel")                    return StatId_t::Fuel;

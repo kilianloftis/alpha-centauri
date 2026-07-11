@@ -132,6 +132,7 @@ std::string StatIdDisplayName(StatId_t stat)
         case StatId_t::Attack:                return "Attack";
         case StatId_t::Defense:               return "Defense";
         case StatId_t::Movement:              return "Movement";
+        case StatId_t::Vision:                return "Vision";
         case StatId_t::HitPoints:             return "Hit Points";
         case StatId_t::DisengageChance:       return "Disengage Chance";
         case StatId_t::Fuel:                  return "Fuel";

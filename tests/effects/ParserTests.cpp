@@ -23,6 +23,7 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(BonusEffectParser::ParseStatId("attack") == StatId_t::Attack);
     CHECK(BonusEffectParser::ParseStatId("defense") == StatId_t::Defense);
     CHECK(BonusEffectParser::ParseStatId("movement") == StatId_t::Movement);
+    CHECK(BonusEffectParser::ParseStatId("vision") == StatId_t::Vision);
     CHECK(BonusEffectParser::ParseStatId("hit_points") == StatId_t::HitPoints);
     CHECK(BonusEffectParser::ParseStatId("disengage_chance") == StatId_t::DisengageChance);
     CHECK(BonusEffectParser::ParseStatId("fuel") == StatId_t::Fuel);
