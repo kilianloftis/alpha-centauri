@@ -25,7 +25,7 @@ struct ImprovementConfig_t
     int mineralCost = 0;               // 0 for terrain/natural features (not buildable)
     std::string requiredTech;          // empty if not tech-gated
     std::vector<std::string> excludes; // feature ids that can't coexist with this one on a tile
-    // How far (in Manhattan tiles) this improvement's effects reach beyond its own tile.
+    // How far (in Chebyshev tiles) this improvement's effects reach beyond its own tile.
     // 0 (default) = this tile only, e.g. Bunker/Rocky. >0 = also affects any tile within
     // that distance, e.g. Sensor (radius 2) projects its defense bonus outward.
     // All three resolvers (ResolveTileYield, ResolveTileDefenseMultiplier, RecomputeMoisture)

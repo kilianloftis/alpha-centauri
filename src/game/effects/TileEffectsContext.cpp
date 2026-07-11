@@ -25,7 +25,7 @@ namespace
 void AppendUnitAuraEffects_(const Tile& rOrigin, const WorldMap& rWorldMap, int maxRadius,
                             std::vector<ActiveEffect_t>& rOut)
 {
-    ForEachTileInManhattanRadius(rOrigin, rWorldMap, maxRadius, true,
+    ForEachTileInChebyshevRadius(rOrigin, rWorldMap, maxRadius, true,
         [&](const Tile* pNearby, int distance)
         {
             for (const Unit* pUnit : rWorldMap.GetUnitsOnTile(*pNearby))
@@ -62,7 +62,7 @@ void AppendAreaEffectsFromNeighbors_(const Tile& rOrigin, const WorldMap& rWorld
                                       int maxRadius,
                                       std::vector<ActiveEffect_t>& rOut)
 {
-    ForEachTileInManhattanRadius(rOrigin, rWorldMap, maxRadius, false,
+    ForEachTileInChebyshevRadius(rOrigin, rWorldMap, maxRadius, false,
         [&](const Tile* pNearby, int distance)
         {
             // Terrain features resolve by id via the registry; improvements are already configs.
@@ -116,7 +116,7 @@ void AppendMatchingTileModifiers_(const std::vector<ActiveEffect_t>& baseEffects
 void RecomputeMoistureInRadius_(const Tile& rChangedTile, int radius, TileEffectsContext& rCtx,
                                  WorldMap& rWorldMap)
 {
-    ForEachTileInManhattanRadius(rChangedTile, rWorldMap, radius, true,
+    ForEachTileInChebyshevRadius(rChangedTile, rWorldMap, radius, true,
         [&](Tile* pAffected, int /*distance*/)
         {
             rCtx.RecomputeMoisture(*pAffected);

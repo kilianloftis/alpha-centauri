@@ -160,8 +160,9 @@ TEST_CASE("Unit aura: a sensor-pod unit projects its ThisTile defense bonus with
     Unit& unit = fixture.MakeUnit(faction, 4, 4, {"sensor_pod"}); // +25% defense, radius 2
 
     CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(4, 4)) == Approx(1.25)); // own tile
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(6, 4)) == Approx(1.25)); // distance 2
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(7, 4)) == Approx(1.0));  // distance 3
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(6, 4)) == Approx(1.25)); // Chebyshev 2
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(6, 6)) == Approx(1.25)); // Chebyshev 2 diagonal
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(7, 4)) == Approx(1.0));  // Chebyshev 3
 
     SECTION("the aura moves with the unit")
     {

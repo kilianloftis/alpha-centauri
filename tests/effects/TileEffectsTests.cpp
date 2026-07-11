@@ -15,24 +15,25 @@
 using namespace ac;
 using Catch::Approx;
 
-TEST_CASE("CollectAreaEffects: radius improvements reach exactly their Manhattan radius",
+TEST_CASE("CollectAreaEffects: radius improvements reach exactly their Chebyshev radius",
           "[effects][tile][aura]")
 {
     actest::WorldFixture world;
     // Sensor (radius 2) at the center.
     world.ctx->AddImprovementWithEffects(world.At(4, 4), "Sensor");
 
-    SECTION("distance 1 and 2 are covered")
+    SECTION("distance 1 and 2 are covered, including diagonals")
     {
         CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(5, 4)) == Approx(1.25));
         CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(6, 4)) == Approx(1.25));
-        CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(5, 5)) == Approx(1.25)); // dist 2 diagonal
+        CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(5, 5)) == Approx(1.25)); // Chebyshev 1
+        CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(6, 6)) == Approx(1.25)); // Chebyshev 2
     }
 
     SECTION("distance 3 is not covered")
     {
         CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(7, 4)) == Approx(1.0));
-        CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(6, 6)) == Approx(1.0)); // dist 4
+        CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(7, 7)) == Approx(1.0)); // Chebyshev 3
     }
 
     SECTION("the sensor's own tile is covered")

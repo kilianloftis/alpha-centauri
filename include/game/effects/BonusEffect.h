@@ -196,7 +196,7 @@ struct EffectConfig_t
     // context that satisfies the condition (see ConditionSatisfied / EffectContext_t). Such
     // effects are excluded from context-free resolution (base economy, intrinsic unit stats).
     std::optional<Condition_t> condition;
-    // For ThisTile-scoped effects: how far (Manhattan tiles) beyond the host tile the effect
+    // For ThisTile-scoped effects: how far (Chebyshev tiles) beyond the host tile the effect
     // reaches. 0 (default) = the host tile only. Parsed from the effect entry's own "radius"
     // field; an improvement-level "radius" acts as the default for its effects (back-compat).
     int radius = 0;
