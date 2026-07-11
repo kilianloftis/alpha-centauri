@@ -71,6 +71,14 @@ add_library(ac-core STATIC
     game/map/ImprovementConfigParser.cpp
     game/map/WorldMap.cpp
     game/map/WorldGenerator.cpp
+    game/stages/CustomTurnStage.cpp
+)
+
+# Built-in turn stages self-register via file-scope TurnStageRegistrar<T> instances.
+# Those symbols are never named from outside their TUs, so a STATIC archive would
+# drop them at link time and every stage would fall through to Custom*TurnStage.
+# An OBJECT library is always pulled into the final link, so the registrars run.
+add_library(ac-turn-stages OBJECT
     game/stages/TurnStart.cpp
     game/stages/NewYearBegins.cpp
     game/stages/ResourceCollection.cpp
@@ -84,7 +92,10 @@ add_library(ac-core STATIC
     game/stages/VictoryConditionChecks.cpp
     game/stages/TurnEnd.cpp
     game/stages/Save.cpp
-    game/stages/CustomTurnStage.cpp
+)
+
+target_include_directories(ac-turn-stages PUBLIC
+    ${CMAKE_SOURCE_DIR}/include
 )
 
 target_include_directories(ac-core PUBLIC
@@ -101,6 +112,8 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(json)
 target_link_libraries(ac-core PUBLIC nlohmann_json::nlohmann_json)
+# Stages compile against the same public headers/deps as ac-core (HookContext, etc.).
+target_link_libraries(ac-turn-stages PUBLIC ac-core)
 
 # Add magic_enum library
 FetchContent_Declare(
@@ -190,7 +203,7 @@ add_executable(alpha-centauri
     ui/unit-designer/UnitDesignerView.cpp
 )
 
-target_link_libraries(alpha-centauri PRIVATE ac-core)
+target_link_libraries(alpha-centauri PRIVATE ac-core ac-turn-stages)
 
 option(USE_SFML "Enable SFML rendering" ON)
 if(USE_SFML)

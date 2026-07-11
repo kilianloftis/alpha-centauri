@@ -1,42 +1,25 @@
 #pragma once
 
 #include "graphics/Graphics.h"
-#include "game/map/WorldMap.h"
 #include "ui/UIElement.h"
-#include <string>
-#include <vector>
-#include <utility>
-#include <optional>
 
 namespace ac
 {
 
-using FactionId = int;
-
+class GameState;
 class Unit;
+class WorldMap;
+class Tile;
+enum class Moisture_t;
+enum class Rockiness_t;
 
-struct BaseInfo_t
-{
-    int x;
-    int y;
-    std::string name;              // Base name
-    FactionId factionId;           // Current owner
-    std::optional<FactionId> previousFactionId;  // For capture animations/history
-    int populationSize;            // Current base population
-};
-
-// Displays the world map as a grid of tiles
-// Each tile shows: moisture rockiness elevation(km)
+// Displays the world map as a grid of tiles.
+// Each tile shows: moisture rockiness elevation(km). Bases and units are read
+// live from GameState / WorldMap — no per-frame DTO rebuild.
 class WorldDisplay
 {
 public:
-    explicit WorldDisplay(WindowLayout_t layout);
-
-    // Set the world map to display
-    void SetWorldMap(const WorldMap* pWorldMap);
-
-    // Set base info to display bases on the map
-    void SetBaseInfo(const std::vector<BaseInfo_t>& baseInfo);
+    WorldDisplay(const GameState& rGameState, WindowLayout_t layout);
 
     // Set the unit currently selected by the player (highlighted on the map)
     void SetSelectedUnit(const Unit* pUnit);
@@ -54,8 +37,7 @@ public:
     void Render(Graphics& rGraphics);
 
 private:
-    const WorldMap* m_pWorldMap = nullptr;
-    std::vector<BaseInfo_t> m_baseInfo;
+    const GameState& m_rGameState;
     const Unit* m_pSelectedUnit = nullptr;
 
     WindowLayout_t m_layout;
@@ -66,6 +48,7 @@ private:
     int m_cameraX = 0;
     int m_cameraY = 0;
 
+    const WorldMap& GetWorldMap_() const;
 
     // Convert terrain enums to display integers
     int MoistureToInt_(Moisture_t moisture) const;

@@ -65,10 +65,10 @@ TileResources_t ResourceManager::ComputeWorked_(const BaseEffects_t& rBaseEffect
 int ResourceManager::CalculateResource_(StatId_t stat, const TileResources_t& worked,
                                         const BaseEffects_t& rBaseEffects) const
 {
-    // Per-tile yield modifiers are already folded into `worked`; only flat (non-selector)
-    // stat modifiers remain to be applied once at the base level.
+    // Per-tile yield modifiers are already folded into `worked`; only base-level
+    // (non-selector) stat modifiers remain to be applied once here.
     double base = static_cast<double>(GetResourceValue_(worked, stat));
-    base += ResolveStatModifiers(FilterFlatByStatId(rBaseEffects, stat), SeedFor(stat)).total;
+    base += ResolveStatModifiers(FilterBaseLevelByStatId(rBaseEffects, stat), SeedFor(stat)).total;
     return static_cast<int>(base);
 }
 
@@ -86,10 +86,10 @@ int ResourceManager::CalculateEcon_(int energy, const BaseEffects_t& rBaseEffect
 {
     if (!m_pEconomy)
         throw std::runtime_error("EconomyManager not set");
-    // FilterFlat, not FilterByStatId: base-level resolution must never pick up
+    // FilterBaseLevelByStatId, not FilterByStatId: base-level resolution must never pick up
     // selector-carrying (per-tile) modifiers, even on stats where none make sense today.
     return m_pEconomy->CalculateEnergyForEcon(energy)
-         + static_cast<int>(ResolveStatModifiers(FilterFlatByStatId(rBaseEffects, StatId_t::Econ), SeedFor(StatId_t::Econ)).total);
+         + static_cast<int>(ResolveStatModifiers(FilterBaseLevelByStatId(rBaseEffects, StatId_t::Econ), SeedFor(StatId_t::Econ)).total);
 }
 
 int ResourceManager::CalculateLabs_(int energy, const BaseEffects_t& rBaseEffects) const
@@ -97,7 +97,7 @@ int ResourceManager::CalculateLabs_(int energy, const BaseEffects_t& rBaseEffect
     if (!m_pEconomy)
         throw std::runtime_error("EconomyManager not set");
     return m_pEconomy->CalculateEnergyForLabs(energy)
-         + static_cast<int>(ResolveStatModifiers(FilterFlatByStatId(rBaseEffects, StatId_t::Labs), SeedFor(StatId_t::Labs)).total);
+         + static_cast<int>(ResolveStatModifiers(FilterBaseLevelByStatId(rBaseEffects, StatId_t::Labs), SeedFor(StatId_t::Labs)).total);
 }
 
 int ResourceManager::CalculatePsych_(int energy, const BaseEffects_t& rBaseEffects) const
@@ -105,7 +105,7 @@ int ResourceManager::CalculatePsych_(int energy, const BaseEffects_t& rBaseEffec
     if (!m_pEconomy)
         throw std::runtime_error("EconomyManager not set");
     return m_pEconomy->CalculateEnergyForPsych(energy)
-         + static_cast<int>(ResolveStatModifiers(FilterFlatByStatId(rBaseEffects, StatId_t::Psych), SeedFor(StatId_t::Psych)).total);
+         + static_cast<int>(ResolveStatModifiers(FilterBaseLevelByStatId(rBaseEffects, StatId_t::Psych), SeedFor(StatId_t::Psych)).total);
 }
 
 int ResourceManager::GetEconProduction(const BaseEffects_t& rBaseEffects) const

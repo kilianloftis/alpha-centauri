@@ -117,9 +117,21 @@ void WorkerAssignmentManager::UnassignAll()
 
 void WorkerAssignmentManager::ResetAllAssignments()
 {
+    PopulationManager::BatchCompositionUpdate batch(m_rPops);
+
     for (Pop& rPop : m_rPops.Pops())
     {
         UnassignWorker(rPop);
+    }
+
+    // Pull specialists back into the worker pool so free tiles are filled before any
+    // overflow is promoted to the fallback specialist again.
+    for (Pop& rPop : m_rPops.Pops())
+    {
+        if (rPop.IsSpecialist())
+        {
+            m_rPops.ConvertToDefaultPopType(rPop);
+        }
     }
 
     AutoAssignWorkers();
@@ -187,6 +199,8 @@ const std::vector<const Tile*>& WorkerAssignmentManager::GetWorkableTiles() cons
 
 void WorkerAssignmentManager::AutoAssignWorkers()
 {
+    PopulationManager::BatchCompositionUpdate batch(m_rPops);
+
     auto availableTiles = GetAvailableTiles_();
     auto prioritizedTiles = PrioritizeAvailableTiles_(availableTiles);
     AutoAssignWorkers_(prioritizedTiles);
@@ -200,7 +214,7 @@ void WorkerAssignmentManager::AutoAssignWorkers()
     }
 }
 
-void WorkerAssignmentManager::UserAssignBestAvailableWorker(const Tile* pTile, const std::string& defaultWorkerType)
+void WorkerAssignmentManager::UserAssignBestAvailableWorker(const Tile* pTile)
 {
     // Reverse order: prefer the most recently added pop when several are eligible.
     for (Pop& rPop : std::views::reverse(m_rPops.Pops()))
@@ -216,7 +230,7 @@ void WorkerAssignmentManager::UserAssignBestAvailableWorker(const Tile* pTile, c
     {
         if (rPop.IsSpecialist())
         {
-            m_rPops.ConvertTo(rPop, defaultWorkerType);
+            m_rPops.ConvertToDefaultPopType(rPop);
             UserAssignWorker(rPop, pTile);
             return;
         }

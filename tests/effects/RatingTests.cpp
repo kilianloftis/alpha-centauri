@@ -27,7 +27,7 @@ TEST_CASE("AccumulateSocialRatings: sums per axis across sources", "[effects][ra
         Active(pool.StatMod(StatId_t::Energy, 1.0), "unrelated"),
     }};
 
-    const auto totals = AccumulateSocialRatings(baseEffects);
+    const auto totals = AccumulateSocialRatings(baseEffects.effects);
     CHECK(totals.at(SocialRatingId_t::Growth) == 3);
     CHECK(totals.at(SocialRatingId_t::Police) == -2);
     CHECK(totals.count(SocialRatingId_t::Economy) == 0);
@@ -121,7 +121,7 @@ TEST_CASE("Two-level ratings: faction-wide policy rating plus a base-local build
     BaseManager& plainBase = fixture.MakeFactionBase(faction, 6, 6);
 
     // Policy: +2 Growth faction-wide. Shrine: +1 Growth in its base only.
-    faction.GetSocialEngineering().SetActivePolicy(SocialCategory_t::Politics, "growth_policy");
+    faction.GetSocialEngineering().SetActivePolicy(fixture.socialPolicies().Get("growth_policy"));
     baseWithShrine.GetBuildingManager().AddBuilding("growth_shrine");
 
     CHECK(baseWithShrine.GetEffectiveSocialRating(SocialRatingId_t::Growth) == 3);
@@ -147,7 +147,7 @@ TEST_CASE("Growth rating affects the growth threshold via GrowthRate modifiers",
 
     // Policy: +2 Growth faction-wide (fixture level 2 -> +20% growth rate). Shrine: +1
     // Growth in its base only (level 3 -> +30%). The threshold shrinks per base.
-    faction.GetSocialEngineering().SetActivePolicy(SocialCategory_t::Politics, "growth_policy");
+    faction.GetSocialEngineering().SetActivePolicy(fixture.socialPolicies().Get("growth_policy"));
     baseWithShrine.GetBuildingManager().AddBuilding("growth_shrine");
 
     CHECK(plainBase.GetNutrientsRequired() == 25);      // 30 / 1.2
@@ -163,8 +163,9 @@ TEST_CASE("Industry rating affects production cost via CostMultiplier modifiers"
 
     struct StubItem : IConstructable
     {
+        std::string id = "stub";
         std::string name = "Stub";
-        const char* GetId() const override { return "stub"; }
+        const std::string& GetId() const override { return id; }
         const std::string& GetName() const override { return name; }
         int GetBaseCost() const override { return 10; }
     } item;
@@ -173,7 +174,7 @@ TEST_CASE("Industry rating affects production cost via CostMultiplier modifiers"
     CHECK(base.GetMineralCost() == 100); // Industry 0 → multiplier 1.0
 
     // Policy: +2 Industry → level 2 → CostMultiplier -20% → 0.8
-    faction.GetSocialEngineering().SetActivePolicy(SocialCategory_t::Economics, "industry_policy");
+    faction.GetSocialEngineering().SetActivePolicy(fixture.socialPolicies().Get("industry_policy"));
     CHECK(base.GetEffectiveSocialRating(SocialRatingId_t::Industry) == 2);
     CHECK(base.GetMineralCost() == 80);
 }

@@ -5,6 +5,8 @@
 #include "game/map/UnitPositionIndex.h"
 #include "game/effects/ActiveEffect.h"
 
+#include <algorithm>
+
 namespace ac
 {
 
@@ -36,9 +38,13 @@ Unit::Unit(const UnitDesign& rDesign,
     , m_pTile(&rTile)
     , m_pHomeBase(pHomeBase)
     , m_rFaction(rFaction)
-    , m_currentHp(rDesign.GetHitPoints())
-    , m_currentFuel(rDesign.GetFuel())
-    , m_movesRemaining(rDesign.GetMovement())
+    // Seed current stats from the *live* resolved maxima (design effects + the faction's
+    // active FactionUnits effects), not the design's context-free values: GetHitPoints()
+    // and friends read only m_rDesign / m_rFaction, both already initialised above. A fresh
+    // unit therefore starts at its true max, so current-vs-max is well defined from spawn.
+    , m_currentHp(GetHitPoints())
+    , m_currentFuel(GetFuel())
+    , m_movesRemaining(GetMovement())
     , m_xp(0)
 {
     // Throws if the stacking rule forbids rTile; the destructor is not run for a unit
@@ -101,10 +107,13 @@ int Unit::GetCurrentFuel() const            { return m_currentFuel; }
 int Unit::GetMovesRemaining() const         { return m_movesRemaining; }
 int Unit::GetXp() const                     { return m_xp; }
 
-void Unit::SetCurrentHp(int hp)             { m_currentHp = hp; }
-void Unit::SetCurrentFuel(int fuel)         { m_currentFuel = fuel; }
-void Unit::SetMovesRemaining(int moves)     { m_movesRemaining = moves; }
-void Unit::SetXp(int xp)                    { m_xp = xp; }
+// Current stats are clamped to [0, live max] so the invariant 0 <= current <= max holds
+// regardless of caller arithmetic (overkill damage, refuel past capacity, ...). The maxima
+// are the live resolved values, so they track faction-effect changes made after spawn.
+void Unit::SetCurrentHp(int hp)             { m_currentHp = std::clamp(hp, 0, GetHitPoints()); }
+void Unit::SetCurrentFuel(int fuel)         { m_currentFuel = std::clamp(fuel, 0, GetFuel()); }
+void Unit::SetMovesRemaining(int moves)     { m_movesRemaining = std::clamp(moves, 0, GetMovement()); }
+void Unit::SetXp(int xp)                    { m_xp = std::max(xp, 0); }
 void Unit::SetHomeBase(BaseManager* pHomeBase) { m_pHomeBase = pHomeBase; }
 
 std::optional<UnitOrder_t>& Unit::GetOrder()             { return m_order; }

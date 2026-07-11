@@ -11,6 +11,12 @@
       "scope": "FactionGlobal",
       "persistence": "Continuous",
       "parameters": { "stat": "tech_cost", "amount": -10, "op": "Add" }
+    },
+    {
+      "type": "SocialRatingModifier",
+      "scope": "FactionGlobal",
+      "persistence": "Continuous",
+      "parameters": { "rating": "planet", "amount": 2 }
     }
   ]
 }

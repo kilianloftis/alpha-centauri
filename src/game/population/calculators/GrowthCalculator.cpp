@@ -13,7 +13,7 @@ int GrowthCalculator::ComputeNutrientsRequired(const GrowthConfig_t& rConfig, in
     // TODO: consume RuleFlagId_t::NearZeroGrowth / PopulationBoom (emitted by the growth
     // rating's extreme levels in config) once their gameplay rules are defined.
     const double growthRate =
-        ResolveStatModifiers(FilterFlatByStatId(rBaseEffects, StatId_t::GrowthRate), 100.0).total;
+        ResolveStatModifiers(FilterBaseLevelByStatId(rBaseEffects, StatId_t::GrowthRate), 100.0).total;
 
     // GrowthRate ≤ 0 is not a defined nutrient-threshold rule (SMAC uses the
     // NearZeroGrowth flag at the extreme instead of a zero/negative multiplier).

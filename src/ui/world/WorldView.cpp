@@ -4,7 +4,6 @@
 #include "game/GameState.h"
 #include "game/Faction.h"
 #include "game/faction/base/BaseManager.h"
-#include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/EconomyManager.h"
 #include "game/faction/ResearchManager.h"
 #include "game/faction/UnitManager.h"
@@ -42,15 +41,13 @@ WorldView::WorldView(
 : IGameView(layout)
 , m_rGameState(rGameState)
 , m_mapLayout(ResolveLayout(layout, k_MapLayout))
-, m_pWorldDisplay(std::make_unique<WorldDisplay>(m_mapLayout))
+, m_pWorldDisplay(std::make_unique<WorldDisplay>(rGameState, m_mapLayout))
 , m_onProcessTurn(std::move(onProcessTurn))
 , m_onRequestExit(std::move(onRequestExit))
 , m_onOpenBase(std::move(onOpenBase))
 , m_pCameraInputController(std::make_unique<CameraInputController>(*m_pWorldDisplay, rWorldMap, m_mapLayout))
 , m_pUnitOrderInputController(std::make_unique<UnitOrderInputController>())
 {
-    m_pWorldDisplay->SetWorldMap(&rWorldMap);
-
     m_elements.push_back(std::make_unique<InfoPanelElement>(ResolveLayout(m_layout, k_InfoPanelLayout)));
 
     // Every faction exists by the time WorldView is constructed (Engine::Initialize_ creates
@@ -90,23 +87,6 @@ void WorldView::Update_()
     }
     static_cast<InfoPanelElement*>(m_elements[k_InfoPanelElementIndex].get())->SetInfoLines(infoLines);
 
-    std::vector<BaseInfo_t> baseInfo;
-    for (const Faction& rFaction : m_rGameState.Factions())
-    {
-        for (const BaseManager& rBase : rFaction.Bases())
-        {
-            // TODO: Track previousFactionId when base capture is implemented
-            baseInfo.push_back({
-                rBase.GetX(),
-                rBase.GetY(),
-                rBase.GetName(),
-                rBase.GetFactionId(),
-                std::nullopt,  // previousFactionId - set when base is captured
-                rBase.GetPopulation().GetSize()
-            });
-        }
-    }
-    m_pWorldDisplay->SetBaseInfo(baseInfo);
     m_pWorldDisplay->SetSelectedUnit(m_pSelectedUnit);
 }
 
@@ -159,8 +139,7 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
 
     if (rEvent.button == MouseButton_t::Left && rEvent.bPressed && tile)
     {
-        BaseManager* pBase = FindBaseAtTile_(worldX, worldY);
-        if (pBase)
+        if (BaseManager* pBase = m_rGameState.FindBaseAt(worldX, worldY))
         {
             m_onOpenBase(*pBase);
             return;
@@ -168,21 +147,6 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
 
         SelectUnitAtTile_(worldX, worldY);
     }
-}
-
-BaseManager* WorldView::FindBaseAtTile_(int tileX, int tileY) const
-{
-    for (Faction& rFaction : m_rGameState.Factions())
-    {
-        for (BaseManager& rBase : rFaction.Bases())
-        {
-            if (rBase.GetX() == tileX && rBase.GetY() == tileY)
-            {
-                return &rBase;
-            }
-        }
-    }
-    return nullptr;
 }
 
 void WorldView::SelectUnitAtTile_(int tileX, int tileY)

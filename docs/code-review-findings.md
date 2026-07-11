@@ -48,7 +48,7 @@ Related prior review: `docs/architecture/effects-system-review.md` (effects subs
 > `TileEffectsContext::ResolveTileYield`, which called `FilterByStatId` 3× per tile, i.e.
 > `15×(W+1)` copying filter calls (W = worked tiles) every time all 5 stats are read — every
 > frame the base screen is open. `FilterByStatId`, `FilterByStatIdInContext`,
-> `FilterFlatByStatId`, `FilterByScope` (`lib/effects/ActiveEffect.h`) now return a lazy
+> `FilterBaseLevelByStatId`, `FilterByScope` (`lib/effects/ActiveEffect.h`) now return a lazy
 > `std::views::filter` range instead of an allocated copy — non-template functions with a
 > deduced `auto` return type must be `inline` and defined where used, so their bodies moved
 > from the `.cpp` into the header, matching the `DerefView` pattern already used for
@@ -634,6 +634,41 @@ Each instance forces defensive null/state checks downstream — which is exactly
 
 ### 4.3 [M] Interface hygiene
 
+> **Status (2026-07-10): partially fixed.** The self-contained hygiene defects are
+> closed; the two that are genuine refactors (the `IGameView` misnomer / render-time
+> element culling, and the config data-vs-behavior split) are deferred with rationale.
+>
+> Closed:
+> - **`IGameView::Update()` deleted** — it had no override and no caller (also listed dead
+>   in §5); a virtual implying a per-frame lifecycle that does not exist is worse than
+>   nothing. Removed from the base and from the §5 dead-code list.
+> - **`IConstructable` interface unified** — `GetId()` now returns `const std::string&`
+>   like `GetName()`, instead of `const char*`. `BuildingConfig_t`, `UnitDesign`, and the
+>   two test stubs updated; no caller relied on the raw pointer.
+> - **`Registry<>` destructor made virtual** — the class is a real inheritance point
+>   (`TechRegistry`, `PopTypeRegistry` override the protected virtual `Validate_`), so the
+>   base must be safe to delete through a base pointer. C.35 satisfied; a comment records
+>   why.
+> - **`Unit` current-vs-max is now well defined.** Current stats seed from the *live*
+>   resolved maxima (`GetHitPoints()`/`GetFuel()`/`GetMovement()` — design effects plus the
+>   faction's `FactionUnits` pool), not the design's context-free snapshot, so a fresh unit
+>   starts at its true max even when faction effects raised it. The setters clamp to
+>   `[0, live max]` (XP to `>= 0`), so `SetCurrentHp(-5)` floors at 0 and refuel/heal past
+>   capacity caps at max — the invariant `0 <= current <= max` holds regardless of caller
+>   arithmetic. Covered by `tests/game/UnitStatsTests.cpp`.
+>
+> Deliberately deferred:
+> - **`IGameView` is still a concrete base named like an interface, and still culls closed
+>   elements inside `Render`.** Renaming `IGameView` → `GameView` touches ~15 view/factory
+>   files and moving element-lifecycle out of `Render` into an explicit prune step is a
+>   design change, not a hygiene fix — worth doing when the view stack is next reworked.
+> - **`BuildingConfig_t` still inherits `IConstructable`** (vtable + identity on a config
+>   data struct) and still carries `IsAvailable` rule logic. Separating the config *data*
+>   from a constructable *entity* is one change with finding 3.5 (rule logic in config
+>   structs); the production/`GetConstructable` abstraction that consumes `IConstructable`
+>   would need to move to that entity type. Tracked jointly with 3.5.
+> - The `WorkerAssignmentManager` loop bullet was already addressed 2026-07-08 (see below).
+
 - `IGameView` is named an interface but is a concrete base with state (`m_elements`, `m_bShouldClose`) and default behavior; its `Update()` virtual is **never called by anything** (dead API implying a lifecycle that does not exist). Element-lifecycle management (erasing closed elements) happens inside `Render`.
 - `IConstructable` mixes `const char* GetId()` with `const std::string& GetName()`.
 - `Registry<>` has a `protected virtual Validate_` but a non-virtual public destructor — designed for inheritance and unsafe to delete polymorphically; currently safe only because all registries are held by concrete type.
@@ -650,6 +685,34 @@ The lane/seed design (`LaneFor`, `KindFor`, `SeedFor` with exhaustive switches) 
 - `ActiveEffect_t::config` is a raw pointer into registry storage — correct today, but nothing prevents a future registry reload (mod hot-reload) from dangling every live effect; defensive `if (!effect.config)` checks are sprinkled through consumers instead, which hides bugs rather than surfacing them.
 
 ### 4.5 [M] UI computes game values and duplicates model logic
+
+> **Status (2026-07-10): fixed** for the model/UI boundary and wiring items; shared
+> theme extraction and window-resize layout drift deliberately deferred.
+>
+> Closed in this pass:
+> - Faction-level social rating is now a model API:
+>   `SocialEngineeringManager::GetSocialRating` accumulates from active policies only
+>   (base-local modifiers stay on `BaseManager::GetEffectiveSocialRating`). The SE
+>   display no longer invents "first base's rating" / hand-rolled fallback logic.
+>   Covered by `tests/faction/SocialEngineeringManagerTests.cpp`.
+> - `GameState::FindBaseAt` owns base-at-tile lookup; `WorldView` no longer scans
+>   factions×bases itself. `WorldDisplay` reads bases live from `GameState` during
+>   render — the per-frame `BaseInfo_t` string-copy rebuild is gone.
+> - SE policy grid lays out from the config-driven policy list size instead of
+>   silently truncating at `k_PoliciesPerCategory = 4`.
+> - `k_BottomLeftPanelLayout` is an alias of `k_LeftPanelLayout` (they were identical
+>   duplicate constants); `BaseView` uses `2 * k_LeftPanelLayout.height` explicitly.
+> - `ViewFactory::CreateUnitDesignerView` passes `&Faction::GetUnitManager()` —
+>   the stale `nullptr /* TODO */` is gone.
+>
+> Still deferred:
+> - Shared UI theme (per-file color/font-ratio constants) — hygiene, not a model
+>   boundary bug; needs its own pass across all display files.
+> - Window resize vs. startup-resolved pixel layouts — needs a layout-invalidation
+>   seam in the view stack, not a tag-along here.
+> - Splitting the still-large `SocialEngineeringDisplay` into layout / formatting /
+>   hit-test helpers — the invented game logic is out; further SRP carve-up is
+>   optional cleanup.
 
 - `GetFactionSocialRating` in the social engineering display defines a faction's rating as *base 0's* rating, with a hand-rolled fallback accumulation when no bases exist (`SocialEngineeringDisplay.cpp:184-199`) — a model concept (faction-level rating) that does not exist in the model, invented in a render file.
 - `WorldView::FindBaseAtTile_` linearly scans all factions × bases per click; `Update_` rebuilds all base info structs (string copies) per frame.
@@ -671,7 +734,7 @@ Not "unimplemented features" — these are pieces that exist and are silently di
 
 - **Tech discovery never happens in-game**: `ResearchAccumulation` adds points, but no stage or UI path ever calls `Faction::DiscoverCurrentResearch`/`ResearchManager::DiscoverTech` — points accumulate forever. The stage exists, the manager exists, the selector auto-picks targets; the loop is simply never closed. *(Stale as of 2026-07-09: `ResearchAccumulation` now runs a discover loop after collection — this predates the facade refactor and the finding should be re-verified/closed on its own.)*
 - `PopulationManager::CheckRiotEndOfTurn` / `CheckGoldenAgeEndOfTurn` are called by nothing; `RiotCalculator`/`GoldenAgeCalculator` and their six signals are fully implemented dead code.
-- `IGameView::Update()` — no caller. `ResearchManager::ResetAccumulatedPoints_` — no caller. `SetAccumulatedPoints`/`SetMaxSize` — no callers (public mutation APIs with no consumers).
+- `IGameView::Update()` — no caller. *(Removed 2026-07-10, see 4.3.)* `ResearchManager::ResetAccumulatedPoints_` — no caller. `SetAccumulatedPoints`/`SetMaxSize` — no callers (public mutation APIs with no consumers).
 - `ResourceManager` takes and stores `const BuildingManager* m_pBuildings` and never uses it.
 - `Diplomacy` — dead class with incompatible ownership (1.7). `Specialist.cpp/h` — an empty placeholder file compiled into the target.
 - `Engine::m_turnStageFactory` is a member kept alive for the whole game but used only during `Initialize_`.

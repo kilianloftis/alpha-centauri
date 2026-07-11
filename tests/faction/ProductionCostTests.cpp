@@ -21,7 +21,7 @@ struct StubConstructable : IConstructable
     std::string name = "Stub Item";
     int baseCost = 10;
 
-    const char* GetId() const override { return id.c_str(); }
+    const std::string& GetId() const override { return id; }
     const std::string& GetName() const override { return name; }
     int GetBaseCost() const override { return baseCost; }
 };

@@ -22,7 +22,7 @@ struct BuildingConfig_t : public IConstructable
     bool bIsSecretProject;
     std::vector<EffectConfig_t> effects;
 
-    const char* GetId() const override { return id.c_str(); }
+    const std::string& GetId() const override { return id; }
     const std::string& GetName() const override { return name; }
     int GetBaseCost() const override { return mineralCost; }
 

@@ -122,6 +122,36 @@ const WorldMap& GameState::GetWorldMap() const
     return *m_worldMap;
 }
 
+BaseManager* GameState::FindBaseAt(int tileX, int tileY)
+{
+    for (Faction& rFaction : Factions())
+    {
+        for (BaseManager& rBase : rFaction.Bases())
+        {
+            if (rBase.GetX() == tileX && rBase.GetY() == tileY)
+            {
+                return &rBase;
+            }
+        }
+    }
+    return nullptr;
+}
+
+const BaseManager* GameState::FindBaseAt(int tileX, int tileY) const
+{
+    for (const Faction& rFaction : Factions())
+    {
+        for (const BaseManager& rBase : rFaction.Bases())
+        {
+            if (rBase.GetX() == tileX && rBase.GetY() == tileY)
+            {
+                return &rBase;
+            }
+        }
+    }
+    return nullptr;
+}
+
 TileEffectsContext& GameState::GetTileEffects()
 {
     return *m_pTileEffects;

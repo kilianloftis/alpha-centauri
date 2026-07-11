@@ -40,7 +40,7 @@ int PopulationManager::GetSize() const
     return m_container.GetSize();
 }
 
-const std::string& PopulationManager::GetDefaultPopType() const
+const std::string& PopulationManager::GetDefaultPopType_() const
 {
     if (!m_pRegistry)
     {
@@ -56,7 +56,7 @@ bool PopulationManager::CanGrow() const
 
 void PopulationManager::AddPop()
 {
-    AddPop(GetDefaultPopType());
+    AddPop(GetDefaultPopType_());
 }
 
 void PopulationManager::AddPop(const std::string& typeId)
@@ -78,12 +78,42 @@ void PopulationManager::RemovePop()
 
 void PopulationManager::ConvertTo(Pop& rPop, const std::string& typeId)
 {
+    const bool wasSpecialist = rPop.IsSpecialist();
     m_container.ConvertTo(rPop, typeId);
+    if (wasSpecialist || rPop.IsSpecialist())
+    {
+        MaybeRecalculateCompositionAfterSpecialistChange_();
+    }
+}
+
+void PopulationManager::ConvertToDefaultPopType(Pop& rPop)
+{
+    ConvertTo(rPop, GetDefaultPopType_());
 }
 
 void PopulationManager::ConvertToFallback(Pop& rPop)
 {
+    const bool wasSpecialist = rPop.IsSpecialist();
     m_container.ConvertToFallback(rPop);
+    if (wasSpecialist || rPop.IsSpecialist())
+    {
+        MaybeRecalculateCompositionAfterSpecialistChange_();
+    }
+}
+
+PopulationManager::BatchCompositionUpdate::BatchCompositionUpdate(PopulationManager& rPops)
+    : m_rPops(rPops)
+{
+    ++m_rPops.m_compositionBatchDepth;
+}
+
+PopulationManager::BatchCompositionUpdate::~BatchCompositionUpdate()
+{
+    if (--m_rPops.m_compositionBatchDepth == 0 && m_rPops.m_bCompositionDirty)
+    {
+        m_rPops.m_bCompositionDirty = false;
+        m_rPops.RecalculateComposition();
+    }
 }
 
 int PopulationManager::GetMaxSize() const
@@ -179,8 +209,18 @@ void PopulationManager::RecalculateComposition()
     const PopCompositionResult targets = m_pCompositionCalculator->Calculate(inputs);
     const PopCompositionConfig_t& rConfig = m_pCompositionCalculator->GetConfig();
 
-    m_container.ApplyCompositionTargets(targets, GetDefaultPopType(),
+    m_container.ApplyCompositionTargets(targets, GetDefaultPopType_(),
                                         rConfig.droneTypeId, rConfig.talentTypeId);
+}
+
+void PopulationManager::MaybeRecalculateCompositionAfterSpecialistChange_()
+{
+    if (m_compositionBatchDepth > 0)
+    {
+        m_bCompositionDirty = true;
+        return;
+    }
+    RecalculateComposition();
 }
 
 void PopulationManager::CheckRiotEndOfTurn()

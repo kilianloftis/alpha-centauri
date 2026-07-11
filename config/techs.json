@@ -17,5 +17,77 @@
     "category": "discover",
     "cost": 50,
     "prerequisites": ["test_tech_1", "test_tech_2"]
+  },
+  {
+    "id": "ethical_calculus",
+    "name": "Ethical Calculus",
+    "category": "grow",
+    "cost": 20
+  },
+  {
+    "id": "secrets_of_the_human_brain",
+    "name": "Secrets of the Human Brain",
+    "category": "discover",
+    "cost": 20
+  },
+  {
+    "id": "planetary_networks",
+    "name": "Planetary Networks",
+    "category": "discover",
+    "cost": 20
+  },
+  {
+    "id": "centauri_empathy",
+    "name": "Centauri Empathy",
+    "category": "grow",
+    "cost": 30
+  },
+  {
+    "id": "cyberethics",
+    "name": "Cyberethics",
+    "category": "build",
+    "cost": 40
+  },
+  {
+    "id": "industrial_automation",
+    "name": "Industrial Automation",
+    "category": "build",
+    "cost": 30
+  },
+  {
+    "id": "eudaimonia",
+    "name": "Eudaimonia",
+    "category": "grow",
+    "cost": 120
+  },
+  {
+    "id": "the_will_to_power",
+    "name": "The Will to Power",
+    "category": "grow",
+    "cost": 90
+  },
+  {
+    "id": "centauri_meditation",
+    "name": "Centauri Meditation",
+    "category": "grow",
+    "cost": 50
+  },
+  {
+    "id": "fusion_power",
+    "name": "Fusion Power",
+    "category": "discover",
+    "cost": 60
+  },
+  {
+    "id": "mind_machine_interface",
+    "name": "Mind/Machine Interface",
+    "category": "conquer",
+    "cost": 60
+  },
+  {
+    "id": "secrets_of_alpha_centauri",
+    "name": "Secrets of Alpha Centauri",
+    "category": "discover",
+    "cost": 120
   }
 ]

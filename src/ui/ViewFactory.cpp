@@ -111,7 +111,7 @@ std::unique_ptr<UnitDesignerView> ViewFactory::CreateUnitDesignerView(
         pFaction->GetMilitary(),
         *m_rGameDataContext.unitComponentRegistry,
         *m_rGameDataContext.unitSlotRegistry,
-        nullptr, // TODO: pass UnitManager once wired into Faction
+        &pFaction->GetUnitManager(),
         layout
     );
 }

@@ -156,6 +156,12 @@ namespace { TurnStageRegistrar<BaseProduction> g_registrar("BaseProduction"); }
 This runs at static-init time, before `main`. Adding a new built-in stage means adding its
 class and this one line — `TurnStageFactory.cpp` is never edited (Open/Closed).
 
+Built-in stage TUs live in the `ac-turn-stages` OBJECT library (not inside `ac-core.a`).
+Their registrar symbols are never named from outside their translation units, so a STATIC
+archive would drop those objects at link time and every config id would fall through to
+`Custom*TurnStage` (which then throws if it has no hooks). An OBJECT library is always
+pulled into the final link of `alpha-centauri` and `effects-tests`.
+
 ### TurnProcessor (`TurnProcessor.{h,cpp}`)
 - **State**: `m_globalRegistry`, `m_perFactionRegistry` (both populated once at
   construction), `m_stageOrder` (the ordered list of ids from config).

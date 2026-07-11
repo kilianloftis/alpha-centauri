@@ -156,7 +156,7 @@ const WorkerAssignmentManager& BaseManager::GetWorkerAssignments() const
 
 void BaseManager::UserAssignBestAvailableWorker(const Tile* pTile)
 {
-    m_pWorkerAssignments->UserAssignBestAvailableWorker(pTile, m_pPopulation->GetDefaultPopType());
+    m_pWorkerAssignments->UserAssignBestAvailableWorker(pTile);
 }
 
 int BaseManager::GetNutrientProduction() const
@@ -285,7 +285,7 @@ int BaseManager::GetEffectiveSocialRating(SocialRatingId_t rating) const
         throw std::runtime_error("BaseManager::GetEffectiveSocialRating: m_pEffectsProvider is null");
     }
     const std::map<SocialRatingId_t, int> totals =
-        AccumulateSocialRatings(CollectBaseLocalEffects_(m_pEffectsProvider->GetActiveEffects()));
+        AccumulateSocialRatings(CollectBaseLocalEffects_(m_pEffectsProvider->GetActiveEffects()).effects);
     const auto it = totals.find(rating);
     return it == totals.end() ? 0 : it->second;
 }

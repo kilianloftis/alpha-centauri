@@ -54,7 +54,7 @@ TEST_CASE("Effect pool cache: stable across reads, invalidated by every contribu
           == Approx(1.0));
 
     // Social policies invalidate.
-    faction.GetSocialEngineering().SetActivePolicy(SocialCategory_t::Economics, "wealth_policy");
+    faction.GetSocialEngineering().SetActivePolicy(fixture.socialPolicies().Get("wealth_policy"));
     const uint64_t v4 = faction.GetEffectsVersion();
     CHECK(v4 != v3);
 

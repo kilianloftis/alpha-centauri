@@ -62,7 +62,6 @@ public:
         }
     }
 
-    virtual void Update() {}
     virtual void OnPushed(Graphics& /*rGraphics*/) {}
     virtual void OnPopped() {}
 

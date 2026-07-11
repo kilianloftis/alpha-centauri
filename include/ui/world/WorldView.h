@@ -39,7 +39,6 @@ public:
 
 private:
     void Update_();
-    BaseManager* FindBaseAtTile_(int tileX, int tileY) const;
     void SelectUnitAtTile_(int tileX, int tileY);
 
     GameState& m_rGameState;

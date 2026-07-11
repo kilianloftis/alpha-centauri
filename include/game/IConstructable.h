@@ -12,7 +12,7 @@ public:
     virtual ~IConstructable() = default;
 
     // Unique identifier string for this constructable (e.g. "Nutrient_Bank").
-    virtual const char* GetId() const = 0;
+    virtual const std::string& GetId() const = 0;
 
     // Display name of this constructable.
     virtual const std::string& GetName() const = 0;

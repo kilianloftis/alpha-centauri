@@ -44,7 +44,7 @@ void UnitDesignerView::BuildUnitStatusPanel_(const UnitManager* pUnitManager)
     m_elements.push_back(std::make_unique<UnitStatusPanel>(
         [this]() { return m_pSelectedDesign; },
         pUnitManager,
-        ResolveLayout(m_layout, k_BottomLeftPanelLayout)
+        ResolveLayout(m_layout, k_LeftPanelLayout)
     ));
 }
 

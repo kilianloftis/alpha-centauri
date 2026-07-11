@@ -92,7 +92,7 @@ public:
     // Returns the set of workable tiles this manager can assign.
     const std::vector<const Tile*>& GetWorkableTiles() const;
 
-    void UserAssignBestAvailableWorker(const Tile* pTile, const std::string& defaultWorkerType);
+    void UserAssignBestAvailableWorker(const Tile* pTile);
 
 private:
     bool Assign_(Pop& rPop, const Tile* pTile, bool bUserAssigned);

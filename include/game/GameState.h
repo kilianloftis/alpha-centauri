@@ -51,6 +51,10 @@ public:
     WorldMap& GetWorldMap();
     const WorldMap& GetWorldMap() const;
 
+    // Base whose center tile is (tileX, tileY), or nullptr if none.
+    BaseManager* FindBaseAt(int tileX, int tileY);
+    const BaseManager* FindBaseAt(int tileX, int tileY) const;
+
     // WorldGlobal lane: every faction's WorldGlobal-scoped active effects, excluding
     // rExclude's own (a faction's own pool already contains its WorldGlobal effects).
     // Turn stages pass this into Faction::ProduceBaseResources / ApplyBaseGrowth so a

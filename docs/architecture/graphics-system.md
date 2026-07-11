@@ -109,23 +109,19 @@ UI components use the Graphics interface to render game information.
 
 ### WorldDisplay
 - **Purpose**: Displays the world map as a grid of tiles with base markers
-- **File**: `ui/WorldDisplay.h`, `ui/WorldDisplay.cpp`
-- **Dependencies**: Graphics, WorldMap
+- **File**: `ui/world/WorldDisplay.h`, `ui/world/WorldDisplay.cpp`
+- **Dependencies**: Graphics, GameState (WorldMap + factions/bases)
 - **Methods**:
-  - `Render(x, y, tileSize)`: Render the grid at position with given tile size
-  - `SetWorldMap()`: Set the world map to display
-  - `SetBaseInfo(baseInfo)`: Set base information (position, owner, population) for rendering
+  - `Render(rGraphics)`: Render the visible viewport from the stored layout/camera
+  - `SetSelectedUnit(pUnit)`: Highlight the player's selected unit
+  - `SetCameraOffset(tileX, tileY)`: Set the top-left tile of the viewport
 - **Tile Display Format**: Each tile shows `moisture rockiness elevation(km)` as integers
   - Moisture_t: 0=Arid, 1=Moist, 2=Wet
   - Rockiness_t: 0=Flat, 1=Rolling, 2=Rocky
   - Elevation: Integer km (elevation in meters / 1000)
-- **BaseInfo_t Structure**:
-  - `x, y`: Tile coordinates
-  - `name`: Base name (e.g., "Gaia's Landing")
-  - `factionId`: Current owner
-  - `previousFactionId`: Previous owner (for capture animations/history)
-  - `populationSize`: Current base population
-- **Architecture Note**: `WorldDisplay` is a pure rendering component. `WorldView` (the `IGameView` coordinator) queries `GameState` during `Update()` and pushes base info via `SetBaseInfo()`, following the same pattern as `InfoPanelElement`.
+- **Architecture Note**: `WorldDisplay` reads the map and bases live from `GameState` during
+  render (no per-frame base-info DTO). Base-at-tile clicks go through
+  `GameState::FindBaseAt`, owned by the model rather than `WorldView`.
 
 ### BaseWorkableAreaDisplay
 - **Purpose**: Displays the workable area of a base (21 tiles in 5x5 diamond pattern)

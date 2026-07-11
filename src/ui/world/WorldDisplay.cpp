@@ -1,4 +1,8 @@
 #include "ui/world/WorldDisplay.h"
+#include "game/GameState.h"
+#include "game/Faction.h"
+#include "game/faction/base/BaseManager.h"
+#include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 #include <algorithm>
@@ -41,33 +45,30 @@ constexpr float k_TileTextOffsetYRatio          = 0.3f;
 
 } // namespace
 
-WorldDisplay::WorldDisplay(WindowLayout_t layout)
-    : m_layout(layout)
+WorldDisplay::WorldDisplay(const GameState& rGameState, WindowLayout_t layout)
+    : m_rGameState(rGameState)
+    , m_layout(layout)
 {
     m_effectiveTileSize = m_tileSize > 0.0f ? m_tileSize : m_layout.height * k_DefaultTileScale;
     m_visibleCols = static_cast<int>(m_layout.width  / m_effectiveTileSize);
-    m_visibleRows = static_cast<int>(m_layout.height / m_effectiveTileSize);}
-
-void WorldDisplay::SetWorldMap(const WorldMap* pWorldMap)
-{
-    m_pWorldMap = pWorldMap;
+    m_visibleRows = static_cast<int>(m_layout.height / m_effectiveTileSize);
 }
 
-void WorldDisplay::SetBaseInfo(const std::vector<BaseInfo_t>& baseInfo)
+const WorldMap& WorldDisplay::GetWorldMap_() const
 {
-    m_baseInfo = baseInfo;
+    return m_rGameState.GetWorldMap();
 }
 
 void WorldDisplay::SetSelectedUnit(const Unit* pUnit)
 {
     m_pSelectedUnit = pUnit;
 }
+
 void WorldDisplay::SetCameraOffset(int tileX, int tileY)
 {
     m_cameraX = tileX;
     m_cameraY = tileY;
 }
-
 
 float WorldDisplay::GetEffectiveTileSize() const
 {
@@ -101,38 +102,46 @@ void WorldDisplay::RenderBases_(Graphics& rGraphics, int colStart, int rowStart,
     const unsigned int fontSize = static_cast<unsigned int>(tileSize * k_BaseNameFontSizeRatio);
     const float textOffsetX = tileSize * k_BaseTextOffsetRatio;
 
-    for (const auto& base : m_baseInfo)
+    for (const Faction& rFaction : m_rGameState.Factions())
     {
-        if (base.x < colStart || base.x >= colEnd || base.y < rowStart || base.y >= rowEnd)
+        for (const BaseManager& rBase : rFaction.Bases())
         {
-            continue;
+            const int baseXTile = rBase.GetX();
+            const int baseYTile = rBase.GetY();
+            if (baseXTile < colStart || baseXTile >= colEnd
+                || baseYTile < rowStart || baseYTile >= rowEnd)
+            {
+                continue;
+            }
+
+            const float baseX = m_layout.x + ((baseXTile - colStart) * tileSize);
+            const float baseY = m_layout.y + ((baseYTile - rowStart) * tileSize);
+
+            const size_t maxChars = static_cast<size_t>(
+                (tileSize * k_BaseNameWidthRatio) / (fontSize * k_BaseNameCharWidthRatio));
+            std::string displayName = rBase.GetName();
+            if (displayName.length() > maxChars && maxChars > k_BaseNameMinTruncChars)
+            {
+                displayName = displayName.substr(0, maxChars - 1) + ".";
+            }
+            else if (displayName.length() > maxChars)
+            {
+                displayName = displayName.substr(0, maxChars);
+            }
+
+            const float textOffsetY = tileSize * k_BaseTextOffsetRatio;
+
+            // TODO: Use faction color for base marker based on rBase.GetFactionId()
+            // TODO: Show capture animation when base capture is implemented
+            // TODO: Show population size below name
+            rGraphics.DrawText(displayName, baseX + textOffsetX, baseY + textOffsetY, fontSize, Color_t::Yellow());
         }
-
-        float baseX = m_layout.x + ((base.x - colStart) * tileSize);
-        float baseY = m_layout.y + ((base.y - rowStart) * tileSize);
-
-        const size_t maxChars = static_cast<size_t>((tileSize * k_BaseNameWidthRatio) / (fontSize * k_BaseNameCharWidthRatio));
-        std::string displayName = base.name;
-        if (displayName.length() > maxChars && maxChars > k_BaseNameMinTruncChars)
-        {
-            displayName = displayName.substr(0, maxChars - 1) + ".";
-        }
-        else if (displayName.length() > maxChars)
-        {
-            displayName = displayName.substr(0, maxChars);
-        }
-
-        float textOffsetY = tileSize * k_BaseTextOffsetRatio;
-
-        // TODO: Use faction color for base marker based on base.factionId
-        // TODO: Show capture animation if base.previousFactionId.has_value()
-        // TODO: Show population size (base.populationSize) below name
-        rGraphics.DrawText(displayName, baseX + textOffsetX, baseY + textOffsetY, fontSize, Color_t::Yellow());
     }
 }
 
 void WorldDisplay::RenderUnits_(Graphics& rGraphics, int colStart, int rowStart, int colEnd, int rowEnd)
 {
+    const WorldMap& rWorldMap = GetWorldMap_();
     const float tileSize = GetEffectiveTileSize();
 
     const unsigned int fontSize = static_cast<unsigned int>(tileSize * k_UnitMarkerFontSizeRatio);
@@ -144,13 +153,13 @@ void WorldDisplay::RenderUnits_(Graphics& rGraphics, int colStart, int rowStart,
     {
         for (int col = colStart; col < colEnd; ++col)
         {
-            const Tile* pTile = m_pWorldMap->GetTile(col, row);
+            const Tile* pTile = rWorldMap.GetTile(col, row);
             if (!pTile)
             {
                 continue;
             }
 
-            const std::vector<Unit*>& units = m_pWorldMap->GetUnitsOnTile(*pTile);
+            const std::vector<Unit*>& units = rWorldMap.GetUnitsOnTile(*pTile);
             if (units.empty())
             {
                 continue;
@@ -206,13 +215,9 @@ void WorldDisplay::RenderUnits_(Graphics& rGraphics, int colStart, int rowStart,
 
 void WorldDisplay::Render(Graphics& rGraphics)
 {
-    if (!m_pWorldMap)
-    {
-        return;
-    }
-
-    const int mapWidth = m_pWorldMap->GetWidth();
-    const int mapHeight = m_pWorldMap->GetHeight();
+    const WorldMap& rWorldMap = GetWorldMap_();
+    const int mapWidth = rWorldMap.GetWidth();
+    const int mapHeight = rWorldMap.GetHeight();
 
     if (mapWidth <= 0 || mapHeight <= 0)
     {
@@ -228,7 +233,7 @@ void WorldDisplay::Render(Graphics& rGraphics)
     {
         for (int col = colStart; col < colEnd; ++col)
         {
-            const Tile* pTile = m_pWorldMap->GetTile(col, row);
+            const Tile* pTile = rWorldMap.GetTile(col, row);
             if (pTile)
             {
                 float tileX = m_layout.x + ((col - colStart) * m_effectiveTileSize);

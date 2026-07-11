@@ -30,12 +30,13 @@ add_executable(effects-tests
     faction/SocialEngineeringManagerTests.cpp
     game/GameCategoryParserTests.cpp
     game/UnitPositionTests.cpp
+    game/UnitStatsTests.cpp
     game/WorkerAssignmentTests.cpp
     game/TurnProcessorTests.cpp
     game/RequiredTechValidatorTests.cpp
 )
 
-target_link_libraries(effects-tests PRIVATE ac-core Catch2::Catch2WithMain)
+target_link_libraries(effects-tests PRIVATE ac-core ac-turn-stages Catch2::Catch2WithMain)
 
 # For TestHelpers.h / GameFixtures.h.
 target_include_directories(effects-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

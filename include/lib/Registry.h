@@ -21,7 +21,10 @@ class Registry
 {
 public:
     Registry() = default;
-    ~Registry() = default;
+    // Virtual: subclasses override the protected virtual Validate_ (e.g. TechRegistry,
+    // PopTypeRegistry), so the base is an inheritance point and must be safe to delete
+    // through a base pointer.
+    virtual ~Registry() = default;
 
     void Load(const std::string& rConfigPath)
     {

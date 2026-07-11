@@ -4,6 +4,7 @@
 
 #include "game/faction/SocialEngineeringManager.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
+#include "game/effects/EffectEnums.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
@@ -83,7 +84,7 @@ TEST_CASE("SocialEngineeringManager: a null registry skips default-policy valida
     CHECK_NOTHROW(SocialEngineeringManager(nullptr, nullptr));
 }
 
-TEST_CASE("SocialEngineeringManager: SetActivePolicy rejects a policy from another category",
+TEST_CASE("SocialEngineeringManager: SetActivePolicy stores the policy under its own category",
           "[social-engineering][validation]")
 {
     const std::filesystem::path path = WriteTempJson_("ac_sem_set_active.json", k_ValidDefaults);
@@ -92,12 +93,43 @@ TEST_CASE("SocialEngineeringManager: SetActivePolicy rejects a policy from anoth
 
     SocialEngineeringManager manager(&registry, nullptr);
 
-    // "police_state" is Politics; assigning it into the Economics slot must be rejected.
-    CHECK_THROWS_WITH(manager.SetActivePolicy(SocialCategory_t::Economics, "police_state"),
-                      Catch::Matchers::ContainsSubstring("police_state"));
+    const SocialPolicyConfig_t& rPoliceState = registry.Get("police_state");
+    CHECK_NOTHROW(manager.SetActivePolicy(rPoliceState));
+    CHECK(manager.GetActivePolicy(SocialCategory_t::Politics) == &rPoliceState);
+    // Economics slot is unchanged (still the default "simple").
+    CHECK(manager.GetActivePolicy(SocialCategory_t::Economics)->id == "simple");
 
-    // Same policy into its actual category succeeds.
-    CHECK_NOTHROW(manager.SetActivePolicy(SocialCategory_t::Politics, "police_state"));
+    CHECK_THROWS_WITH(manager.SetActivePolicy(SocialPolicyConfig_t{
+                          .id = "not_in_registry",
+                          .name = "Missing",
+                          .category = SocialCategory_t::Politics}),
+                      Catch::Matchers::ContainsSubstring("not_in_registry"));
+
+    std::filesystem::remove(path);
+}
+
+TEST_CASE("SocialEngineeringManager: GetSocialRating sums active policy modifiers only",
+          "[social-engineering][rating]")
+{
+    const std::filesystem::path path = WriteTempJson_("ac_sem_rating.json", R"([
+        { "id": "frontier", "name": "Frontier", "category": "politics", "effects": [
+            { "type": "SocialRatingModifier", "scope": "FactionGlobal",
+              "parameters": { "rating": "growth", "amount": 2 } }
+        ]},
+        { "id": "simple", "name": "Simple", "category": "economics", "effects": [
+            { "type": "SocialRatingModifier", "scope": "FactionGlobal",
+              "parameters": { "rating": "growth", "amount": 1 } }
+        ]},
+        { "id": "survival", "name": "Survival", "category": "values", "effects": [] },
+        { "id": "none_future", "name": "None", "category": "future_society", "effects": [] }
+    ])");
+    SocialPolicyRegistry registry;
+    registry.Load(path.string());
+
+    SocialEngineeringManager manager(&registry, nullptr);
+
+    CHECK(manager.GetSocialRating(SocialRatingId_t::Growth) == 3);
+    CHECK(manager.GetSocialRating(SocialRatingId_t::Police) == 0);
 
     std::filesystem::remove(path);
 }

@@ -180,7 +180,7 @@ TEST_CASE("ResolveTileYield with base effects: BaseTile selector applies only to
 TEST_CASE("ResolveTileYield with base effects: flat (non-selector) modifiers are NOT applied per tile",
           "[effects][tile][yield][selector]")
 {
-    // Flat base bonuses resolve once at the base level (FilterFlatByStatId); applying them
+    // Flat base bonuses resolve once at the base level (FilterBaseLevelByStatId); applying them
     // per worked tile would multiply them by the number of workers.
     actest::WorldFixture world;
     Tile& tile = world.At(4, 4);

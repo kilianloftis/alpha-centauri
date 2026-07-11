@@ -24,7 +24,7 @@ public:
     );
     ~UnitDesign() = default;
 
-    const char* GetId() const override;
+    const std::string& GetId() const override;
     const std::string& GetName() const override;
     int GetBaseCost() const override;
 

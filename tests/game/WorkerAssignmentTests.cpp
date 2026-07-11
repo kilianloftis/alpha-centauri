@@ -227,3 +227,65 @@ TEST_CASE("WorkedTileIndex bumps its revision on claim and release", "[worker][i
     base.GetWorkerAssignments().UnassignWorker(rPop);
     CHECK(rIndex.GetRevision() > afterClaim);
 }
+
+TEST_CASE("ResetAllAssignments demotes specialists and fills free tiles", "[worker]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(2, 2);
+    auto& rAssignments = base.GetWorkerAssignments();
+
+    // Leave tiles empty and convert every pop to a specialist — the state a player reaches
+    // by manually promoting workers when tiles are still available.
+    rAssignments.UnassignAll();
+    for (Pop& rPop : base.GetPopulation().Pops())
+    {
+        base.GetPopulation().ConvertTo(rPop, "Doctor");
+        REQUIRE(rPop.IsSpecialist());
+        REQUIRE(rPop.GetTile() == nullptr);
+    }
+
+    rAssignments.ResetAllAssignments();
+
+    int assignedWorkers = 0;
+    int specialists = 0;
+    for (const Pop& rPop : base.GetPopulation().Pops())
+    {
+        if (rPop.IsWorker())
+        {
+            CHECK(rPop.GetTile() != nullptr);
+            ++assignedWorkers;
+        }
+        else
+        {
+            CHECK(rPop.IsSpecialist());
+            ++specialists;
+        }
+    }
+
+    // Three starting pops and plenty of free tiles: all should be workers on tiles.
+    CHECK(assignedWorkers == 3);
+    CHECK(specialists == 0);
+}
+
+TEST_CASE("ResetAllAssignments clears user locks and reassigns by yield", "[worker]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(2, 2);
+    auto& rAssignments = base.GetWorkerAssignments();
+    rAssignments.UnassignAll();
+
+    Tile& poorTile = fixture.At(1, 2);
+    Tile& richTile = fixture.At(3, 2);
+    richTile.SetBaseMoisture(Moisture_t::Wet);
+    richTile.SetMoisture(Moisture_t::Wet);
+
+    Pop& rPop = FirstPop(base);
+    REQUIRE(rAssignments.UserAssignWorker(rPop, &poorTile));
+    REQUIRE(rPop.IsUserAssigned());
+
+    rAssignments.ResetAllAssignments();
+
+    // User lock is gone; the worker should prefer the higher-yield tile.
+    CHECK_FALSE(rPop.IsUserAssigned());
+    CHECK(rPop.GetTile() == &richTile);
+}

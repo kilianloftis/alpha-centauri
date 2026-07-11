@@ -4,7 +4,9 @@
 #include "TestHelpers.h"
 
 #include "game/faction/base/population/PopContainer.h"
+#include "game/faction/base/population/PopulationManager.h"
 #include "game/population/calculators/PopCompositionCalculator.h"
+#include "game/population/pop-types/GrowthConfigParser.h"
 #include "game/population/pop-types/Pop.h"
 #include "game/population/pop-types/PopCompositionConfigParser.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
@@ -12,6 +14,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
+
+#include <string>
 
 using namespace ac;
 using Catch::Matchers::ContainsSubstring;
@@ -91,4 +95,48 @@ TEST_CASE("PopCompositionConfigParser requires drone_type and talent_type",
     CHECK_THROWS_WITH(
         parser.ParseConfig(actest::FixturePath("pop_composition_missing_types.lua"), lua),
         ContainsSubstring("drone_type"));
+}
+
+TEST_CASE("Converting to or from a specialist recalculates composition",
+          "[population][composition]")
+{
+    actest::PopTypeRegistryOnly reg;
+    LuaRuntime lua;
+    PopCompositionConfigParser parser;
+    const PopCompositionConfig_t config =
+        parser.ParseConfig(actest::FixturePath("pop_composition_psych.lua"), lua);
+    PopCompositionCalculator calculator(config, lua);
+    GrowthConfig_t growth;
+
+    PopulationManager pops(&reg.popTypes, nullptr, &growth, &calculator, nullptr, /*initialSize*/ 4);
+    REQUIRE(pops.GetTalentCount() == 0);
+
+    // Doctor contributes +2 psych → talent_formula floor(2/2) = 1 talent.
+    Pop* pWorker = nullptr;
+    for (Pop& rPop : pops.Pops())
+    {
+        if (rPop.IsPlainWorker())
+        {
+            pWorker = &rPop;
+            break;
+        }
+    }
+    REQUIRE(pWorker != nullptr);
+    pops.ConvertTo(*pWorker, "Doctor");
+    CHECK(pops.GetSpecialistCount() == 1);
+    CHECK(pops.GetTalentCount() == 1);
+
+    // Switching to a non-psych specialist drops the talent target immediately.
+    pops.ConvertTo(*pWorker, "Technician");
+    CHECK(std::string(pWorker->GetPopType()) == "Technician");
+    CHECK(pops.GetTalentCount() == 0);
+
+    // Restoring a Doctor brings the talent back.
+    pops.ConvertTo(*pWorker, "Doctor");
+    CHECK(pops.GetTalentCount() == 1);
+
+    // Demoting the specialist clears psych-driven talents.
+    pops.ConvertToDefaultPopType(*pWorker);
+    CHECK(pops.GetSpecialistCount() == 0);
+    CHECK(pops.GetTalentCount() == 0);
 }

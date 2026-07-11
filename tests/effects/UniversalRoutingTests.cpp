@@ -145,7 +145,7 @@ TEST_CASE("Social policy stat effects flow through the standard pool (no special
     Faction& faction = fixture.MakeFaction();
     fixture.MakeFactionBase(faction, 2, 2);
 
-    faction.GetSocialEngineering().SetActivePolicy(SocialCategory_t::Economics, "wealth_policy");
+    faction.GetSocialEngineering().SetActivePolicy(fixture.socialPolicies().Get("wealth_policy"));
 
     const auto pool = CollectActiveEffects(faction);
     CHECK(ResolveStatModifiers(FilterByStatId(pool.effects, StatId_t::Energy), 0.0).total == Approx(1.0));

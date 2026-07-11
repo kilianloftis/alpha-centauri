@@ -56,14 +56,17 @@ public:
     void AddPop(const std::string& typeId);
     void RemovePop();
 
-    // Convert a pop to any type by config id (e.g. "Worker", "Drone", "Talent", "Librarian")
+    // Convert a pop to any type by config id (e.g. "Worker", "Drone", "Talent", "Librarian").
+    // Recalculates drone/talent composition when the pop changes to or from a specialist,
+    // or between specialist types (psych output can change talent targets).
     void ConvertTo(Pop& rPop, const std::string& typeId);
 
-    // Convert a pop to its configured fallback type, resolved through the obsolescence chain.
-    void ConvertToFallback(Pop& rPop);
+    // Convert a pop to the registry default worker type (same composition rules as ConvertTo).
+    void ConvertToDefaultPopType(Pop& rPop);
 
-    // Default pop type used when growing or reverting a pop to a worker.
-    const std::string& GetDefaultPopType() const;
+    // Convert a pop to its configured fallback type, resolved through the obsolescence chain.
+    // Same composition recalculation rules as ConvertTo.
+    void ConvertToFallback(Pop& rPop);
 
     // Drone and talent calculations
     bool IsRioting() const;
@@ -73,6 +76,20 @@ public:
     // Converts workers to drones/talents (or back) to match targetDrones/targetTalents.
     // No-op if no composition calculator is set.
     void RecalculateComposition();
+
+    // Defers specialist-driven RecalculateComposition until the outermost batch ends, so
+    // multi-pop conversions (reset / auto-assign overflow) apply composition once.
+    class BatchCompositionUpdate
+    {
+    public:
+        explicit BatchCompositionUpdate(PopulationManager& rPops);
+        ~BatchCompositionUpdate();
+        BatchCompositionUpdate(const BatchCompositionUpdate&) = delete;
+        BatchCompositionUpdate& operator=(const BatchCompositionUpdate&) = delete;
+
+    private:
+        PopulationManager& m_rPops;
+    };
 
     // Check riot conditions at end of turn. Delegates to m_riot.Update(inputs).
     void CheckRiotEndOfTurn();
@@ -120,6 +137,8 @@ private:
     PopCompositionCalculator* m_pCompositionCalculator = nullptr;
     int m_maxSize;
     int m_nutrientStockpile = 0;
+    int m_compositionBatchDepth = 0;
+    bool m_bCompositionDirty = false;
 
     RiotCalculator m_riot;
     GoldenAgeCalculator m_goldenAge;
@@ -128,6 +147,8 @@ private:
 
     void NotifyPopGained_();
     void NotifyPopLost_();
+    void MaybeRecalculateCompositionAfterSpecialistChange_();
+    const std::string& GetDefaultPopType_() const;
 };
 
 } // namespace ac

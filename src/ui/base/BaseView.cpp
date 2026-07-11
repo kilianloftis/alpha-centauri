@@ -34,7 +34,7 @@ BaseView::BaseView(
         k_LeftPanelLayout.x,
         0.25f,
         k_LeftPanelLayout.width,
-        k_LeftPanelLayout.height + k_BottomLeftPanelLayout.height
+        2.0f * k_LeftPanelLayout.height
     });
 
     m_elements.push_back(std::make_unique<GrowthDisplay>(

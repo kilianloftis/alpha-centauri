@@ -10,10 +10,11 @@
 namespace ac
 {
 
-std::map<SocialRatingId_t, int> AccumulateSocialRatings(const BaseEffects_t& rBaseEffects)
+std::map<SocialRatingId_t, int> AccumulateSocialRatings(
+    const std::vector<ActiveEffect_t>& rEffects)
 {
     std::map<SocialRatingId_t, int> totals;
-    for (const ActiveEffect_t& rEffect : rBaseEffects.effects)
+    for (const ActiveEffect_t& rEffect : rEffects)
     {
         if (!rEffect.config)
         {
@@ -54,7 +55,7 @@ const std::vector<EffectConfig_t>* FindSocialRatingLevelEffects(
 void ExpandSocialRatingEffects(BaseEffects_t& rBaseEffects,
                                const SocialRatingRegistry& rRatings)
 {
-    const std::map<SocialRatingId_t, int> totals = AccumulateSocialRatings(rBaseEffects);
+    const std::map<SocialRatingId_t, int> totals = AccumulateSocialRatings(rBaseEffects.effects);
 
     for (const auto& [rating, total] : totals)
     {

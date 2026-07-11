@@ -78,7 +78,7 @@
     "player_assignable": true,
     "riot_contribution": 0,
     "golden_age_contribution": 0,
-    "required_tech": "Planetary Networks",
+    "required_tech": "planetary_networks",
     "obsoletes": [],
     "effects": [
       {
@@ -95,7 +95,7 @@
     "player_assignable": true,
     "riot_contribution": 0,
     "golden_age_contribution": 0,
-    "required_tech": "Centauri Meditation",
+    "required_tech": "centauri_meditation",
     "obsoletes": ["Doctor"],
     "effects": [
       {
@@ -117,7 +117,7 @@
     "player_assignable": true,
     "riot_contribution": 0,
     "golden_age_contribution": 0,
-    "required_tech": "Fusion Power",
+    "required_tech": "fusion_power",
     "obsoletes": ["Technician"],
     "effects": [
       {
@@ -139,7 +139,7 @@
     "player_assignable": true,
     "riot_contribution": 0,
     "golden_age_contribution": 0,
-    "required_tech": "Mind/Machine Interface",
+    "required_tech": "mind_machine_interface",
     "obsoletes": ["Librarian"],
     "effects": [
       {
@@ -161,7 +161,7 @@
     "player_assignable": true,
     "riot_contribution": 0,
     "golden_age_contribution": 0,
-    "required_tech": "Secrets of Alpha Centauri",
+    "required_tech": "secrets_of_alpha_centauri",
     "obsoletes": ["Empath", "Thinker"],
     "effects": [
       {

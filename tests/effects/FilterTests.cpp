@@ -1,4 +1,4 @@
-// Tests for effect filtering: FilterByStatId, FilterFlatByStatId, FilterByStatIdInContext,
+// Tests for effect filtering: FilterByStatId, FilterBaseLevelByStatId, FilterByStatIdInContext,
 // FilterByScope, and condition evaluation (ConditionSatisfied).
 //
 // FilterForBase requires real BaseManager identities and lives in BaseIntegrationTests.cpp.
@@ -31,7 +31,7 @@ TEST_CASE("FilterByStatId: keeps only StatModifiers targeting the requested stat
 
 TEST_CASE("FilterByStatId: includes selector-carrying (per-tile) modifiers", "[effects][filter]")
 {
-    // Documented: FilterByStatId keeps per-tile modifiers; only FilterFlatByStatId drops them.
+    // Documented: FilterByStatId keeps per-tile modifiers; only FilterBaseLevelByStatId drops them.
     actest::EffectPool pool;
     const std::vector<ActiveEffect_t> effects = {
         Active(pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
@@ -56,7 +56,7 @@ TEST_CASE("FilterByStatId: excludes condition-carrying effects from context-free
     CHECK(matching[0].sourceId == "weapon");
 }
 
-TEST_CASE("FilterFlatByStatId: excludes both selector-carrying and condition-carrying modifiers",
+TEST_CASE("FilterBaseLevelByStatId: excludes both selector-carrying and condition-carrying modifiers",
           "[effects][filter]")
 {
     actest::EffectPool pool;
@@ -68,7 +68,7 @@ TEST_CASE("FilterFlatByStatId: excludes both selector-carrying and condition-car
                             std::nullopt, actest::TargetTileHas("River")), "conditional"),
     }};
 
-    const std::vector<ActiveEffect_t> matching = actest::Materialize(FilterFlatByStatId(baseEffects, StatId_t::Nutrients));
+    const std::vector<ActiveEffect_t> matching = actest::Materialize(FilterBaseLevelByStatId(baseEffects, StatId_t::Nutrients));
     REQUIRE(matching.size() == 1);
     CHECK(matching[0].sourceId == "flat");
 }
@@ -196,7 +196,7 @@ TEST_CASE("Filters tolerate null configs", "[effects][filter]")
     effects.push_back(ActiveEffect_t{nullptr, "broken", nullptr});
 
     CHECK(FilterByStatId(effects, StatId_t::Energy).empty());
-    CHECK(FilterFlatByStatId(BaseEffects_t{effects}, StatId_t::Energy).empty());
+    CHECK(FilterBaseLevelByStatId(BaseEffects_t{effects}, StatId_t::Energy).empty());
     CHECK(FilterByStatIdInContext(effects, StatId_t::Energy, EffectContext_t{}).empty());
     CHECK(FilterByScope(effects, EffectScope_t::ThisBase).empty());
 }

@@ -4,7 +4,6 @@
 #include "game/faction/FactionConfig.h"
 #include "game/faction/ResearchManager.h"
 #include "game/faction/SocialEngineeringManager.h"
-#include "game/faction/base/BaseManager.h"
 #include "game/social-engineering/SocialPolicyConfig.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/social-engineering/SocialRatingConfig.h"
@@ -49,7 +48,6 @@ constexpr float k_FactionNameRowRatio       = 0.45f;
 constexpr float k_FactionBonusRowRatio      = 0.55f;
 constexpr float k_FactionNameFontSizeRatio  = 0.034f;
 constexpr float k_FactionBonusFontSizeRatio = 0.024f;
-constexpr size_t k_PoliciesPerCategory        = 4;
 
 constexpr Color_t k_HiddenPolicySlotColor       {50, 50, 65, 255};
 
@@ -183,25 +181,6 @@ std::string GetFactionDisplayName(const Faction& rFaction)
     return "Unknown";
 }
 
-int GetFactionSocialRating(const Faction& rFaction, SocialRatingId_t rating)
-{
-    // TODO (findings 4.5): faction-level rating is faked as the first base's rating.
-    for (const BaseManager& rBase : rFaction.Bases())
-    {
-        return rBase.GetEffectiveSocialRating(rating);
-    }
-
-    BaseEffects_t baseEffects;
-    for (const ActiveEffect_t& rEffect : rFaction.GetSocialEngineering().CollectEffects())
-    {
-        baseEffects.effects.push_back(rEffect);
-    }
-
-    const std::map<SocialRatingId_t, int> totals = AccumulateSocialRatings(baseEffects);
-    const auto it = totals.find(rating);
-    return it == totals.end() ? 0 : it->second;
-}
-
 std::string FormatFactionBonuses(
     const Faction& rFaction,
     const SocialRatingRegistry& rRegistry
@@ -212,7 +191,7 @@ std::string FormatFactionBonuses(
 
     for (const SocialRatingId_t rating : k_AllRatings)
     {
-        const int level = GetFactionSocialRating(rFaction, rating);
+        const int level = rFaction.GetSocialEngineering().GetSocialRating(rating);
         if (level == 0)
         {
             continue;
@@ -296,9 +275,15 @@ WindowLayout_t GetPolicyGridLayout(const WindowLayout_t& displayLayout)
 WindowLayout_t GetPolicyCellLayout(
     const WindowLayout_t& displayLayout,
     size_t categoryIndex,
-    size_t policyIndex
+    size_t policyIndex,
+    size_t policyCount
 )
 {
+    if (policyCount == 0)
+    {
+        throw std::runtime_error("GetPolicyCellLayout: policyCount must be > 0");
+    }
+
     const WindowLayout_t policyGridLayout = GetPolicyGridLayout(displayLayout);
     const WindowLayout_t categoryBand = ResolveLayout(policyGridLayout, {
         0.0f,
@@ -314,9 +299,9 @@ WindowLayout_t GetPolicyCellLayout(
     });
 
     return ResolveLayout(policyRowsBand, {
-        static_cast<float>(policyIndex) / static_cast<float>(k_PoliciesPerCategory),
+        static_cast<float>(policyIndex) / static_cast<float>(policyCount),
         0.0f,
-        1.0f / static_cast<float>(k_PoliciesPerCategory),
+        1.0f / static_cast<float>(policyCount),
         1.0f
     });
 }
@@ -438,15 +423,10 @@ void SocialEngineeringDisplay::Render(Graphics& rGraphics)
         });
         const float nameRowHeight = policyRowsBand.height * (k_PolicyNameRowRatio / (k_PolicyNameRowRatio + k_PolicyBonusRowRatio));
 
-        for (size_t policyIndex = 0; policyIndex < k_PoliciesPerCategory; ++policyIndex)
+        for (size_t policyIndex = 0; policyIndex < policies.size(); ++policyIndex)
         {
-            const WindowLayout_t policyCell = GetPolicyCellLayout(m_layout, categoryIndex, policyIndex);
-
-            if (policyIndex >= policies.size())
-            {
-                rGraphics.DrawRect(policyCell.x, policyCell.y, policyCell.width, policyCell.height, k_HiddenPolicySlotColor);
-                continue;
-            }
+            const WindowLayout_t policyCell = GetPolicyCellLayout(
+                m_layout, categoryIndex, policyIndex, policies.size());
 
             const SocialPolicyConfig_t* pPolicy = policies[policyIndex];
             if (!pPolicy || !pPolicy->IsAvailable(discoveredTechIds))
@@ -494,7 +474,7 @@ void SocialEngineeringDisplay::Render(Graphics& rGraphics)
     for (size_t ratingIndex = 0; ratingIndex < k_AllRatings.size(); ++ratingIndex)
     {
         const SocialRatingId_t rating = k_AllRatings[ratingIndex];
-        const int score = GetFactionSocialRating(*m_pFaction, rating);
+        const int score = m_pFaction->GetSocialEngineering().GetSocialRating(rating);
 
         std::ostringstream oss;
         oss << RatingDisplayName(rating) << ": " << score;
@@ -560,10 +540,17 @@ void SocialEngineeringDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
     for (size_t categoryIndex = 0; categoryIndex < k_Categories.size(); ++categoryIndex)
     {
         const SocialCategory_t category = k_Categories[categoryIndex];
-
-        for (size_t policyIndex = 0; policyIndex < k_PoliciesPerCategory; ++policyIndex)
+        const std::vector<const SocialPolicyConfig_t*> policies =
+            m_pPolicyRegistry->GetByCategory(category);
+        if (policies.empty())
         {
-            const WindowLayout_t policyCell = GetPolicyCellLayout(m_layout, categoryIndex, policyIndex);
+            continue;
+        }
+
+        for (size_t policyIndex = 0; policyIndex < policies.size(); ++policyIndex)
+        {
+            const WindowLayout_t policyCell = GetPolicyCellLayout(
+                m_layout, categoryIndex, policyIndex, policies.size());
             if (!ContainsMouseCoord(policyCell, clickX, clickY))
             {
                 continue;
@@ -580,7 +567,7 @@ void SocialEngineeringDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
                 return;
             }
 
-            m_pFaction->GetSocialEngineering().SetActivePolicy(category, pPolicy->id);
+            m_pFaction->GetSocialEngineering().SetActivePolicy(*pPolicy);
             return;
         }
     }

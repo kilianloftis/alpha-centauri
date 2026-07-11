@@ -44,8 +44,8 @@ struct FactionEffects_t
 // One base's effect list: FilterForBase over the faction pool, then the base's pop-generated
 // ThisBase effects (CollectFromPops) and expanded social-rating effects
 // (ExpandSocialRatingEffects) merged in — see BaseManager::BuildBaseEffects_. Every entry
-// applies to that single base, which is the precondition for flat base-level resolution
-// (FilterFlatByStatId) and the per-tile selector pass (TileEffectsContext::ResolveTileYield).
+// applies to that single base, which is the precondition for base-level resolution
+// (FilterBaseLevelByStatId) and the per-tile selector pass (TileEffectsContext::ResolveTileYield).
 struct BaseEffects_t
 {
     std::vector<ActiveEffect_t> effects;
@@ -210,12 +210,13 @@ inline auto FilterByStatIdInContext(const std::vector<ActiveEffect_t>& effects,
     });
 }
 
-// Like FilterByStatId, but excludes per-tile modifiers (StatModifiers carrying a tile
-// selector). Base-level resolution only: selector-carrying modifiers have already been
-// applied per worked tile and must not be counted a second time. Accepting BaseEffects_t
-// (never a raw vector or the pool) makes running this filter at any other stage a compile
-// error instead of a doc violation. Same borrowing rule as FilterByStatId.
-inline auto FilterFlatByStatId(const BaseEffects_t& rBaseEffects, StatId_t statId)
+// Like FilterByStatId, but for base-level resolution only: excludes per-tile modifiers
+// (StatModifiers carrying a tile selector) and condition-carrying effects. Selector
+// modifiers have already been applied per worked tile and must not be counted a second
+// time. Accepting BaseEffects_t (never a raw vector or the pool) makes running this
+// filter at any other stage a compile error instead of a doc violation. Same borrowing
+// rule as FilterByStatId.
+inline auto FilterBaseLevelByStatId(const BaseEffects_t& rBaseEffects, StatId_t statId)
 {
     return rBaseEffects.effects | std::views::filter([statId](const ActiveEffect_t& effect)
     {

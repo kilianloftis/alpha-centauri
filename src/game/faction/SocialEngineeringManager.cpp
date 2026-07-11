@@ -2,38 +2,53 @@
 #include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/social-engineering/SocialRatingConfig.h"
 #include "game/social-engineering/SocialRatingRegistry.h"
+#include "game/social-engineering/SocialRatingResolver.h"
 #include <map>
 #include <stdexcept>
 
 namespace ac
 {
 
+namespace
+{
+
+constexpr const char* k_DefaultPoliticsPolicyId      = "frontier";
+constexpr const char* k_DefaultEconomicsPolicyId     = "simple";
+constexpr const char* k_DefaultValuesPolicyId        = "survival";
+constexpr const char* k_DefaultFutureSocietyPolicyId = "none_future";
+
+} // namespace
+
 SocialEngineeringManager::SocialEngineeringManager(const SocialPolicyRegistry* pRegistry,
                                                    const SocialRatingRegistry* pRatingRegistry)
     : m_pRegistry(pRegistry)
     , m_pRatingRegistry(pRatingRegistry)
-    , m_activePolicyIds({
-        { SocialCategory_t::Politics,      "frontier"     },
-        { SocialCategory_t::Economics,     "simple"       },
-        { SocialCategory_t::Values,        "survival"     },
-        { SocialCategory_t::FutureSociety, "none_future"  }
-    })
 {
     // Fail fast if the config doesn't provide these hardcoded defaults: without this check
     // a missing/miscategorized default silently leaves GetActivePolicy() returning nullptr
     // for that category forever, instead of failing at faction construction.
-    if (m_pRegistry)
+    if (!m_pRegistry)
     {
-        for (const auto& [category, id] : m_activePolicyIds)
+        return;
+    }
+
+    const std::map<SocialCategory_t, const char*> defaults = {
+        { SocialCategory_t::Politics,      k_DefaultPoliticsPolicyId },
+        { SocialCategory_t::Economics,     k_DefaultEconomicsPolicyId },
+        { SocialCategory_t::Values,        k_DefaultValuesPolicyId },
+        { SocialCategory_t::FutureSociety, k_DefaultFutureSocietyPolicyId }
+    };
+
+    for (const auto& [category, id] : defaults)
+    {
+        const SocialPolicyConfig_t& rPolicy = m_pRegistry->Get(id); // throws if unknown
+        if (rPolicy.category != category)
         {
-            const SocialPolicyConfig_t& rPolicy = m_pRegistry->Get(id); // throws if unknown
-            if (rPolicy.category != category)
-            {
-                throw std::runtime_error(
-                    "SocialEngineeringManager: default policy '" + id
-                    + "' is not in its expected category");
-            }
+            throw std::runtime_error(
+                "SocialEngineeringManager: default policy '" + std::string(id)
+                + "' is not in its expected category");
         }
+        m_activePolicies[category] = &rPolicy;
     }
 }
 
@@ -41,31 +56,26 @@ SocialEngineeringManager::~SocialEngineeringManager()
 {
 }
 
-void SocialEngineeringManager::SetActivePolicy(SocialCategory_t category, const std::string& policyId)
+void SocialEngineeringManager::SetActivePolicy(const SocialPolicyConfig_t& rPolicy)
 {
     if (!m_pRegistry)
     {
         throw std::runtime_error("SocialEngineeringManager::SetActivePolicy: policy registry is null");
     }
-    const SocialPolicyConfig_t& rPolicy = m_pRegistry->Get(policyId); // throws if unknown
-    if (rPolicy.category != category)
-    {
-        throw std::runtime_error(
-            "SocialEngineeringManager::SetActivePolicy: policy '" + policyId
-            + "' does not belong to the requested category");
-    }
-    m_activePolicyIds[category] = policyId;
+    // Store the registry instance so the pointer outlives the caller's temporary.
+    const SocialPolicyConfig_t& rCanonical = m_pRegistry->Get(rPolicy.id);
+    m_activePolicies[rCanonical.category] = &rCanonical;
     m_revision.Bump();
 }
 
 const SocialPolicyConfig_t* SocialEngineeringManager::GetActivePolicy(SocialCategory_t category) const
 {
-    auto it = m_activePolicyIds.find(category);
-    if (it == m_activePolicyIds.end() || !m_pRegistry)
+    const auto it = m_activePolicies.find(category);
+    if (it == m_activePolicies.end())
     {
         return nullptr;
     }
-    return m_pRegistry->Find(it->second);
+    return it->second;
 }
 
 std::vector<ActiveEffect_t> SocialEngineeringManager::CollectEffects() const
@@ -76,16 +86,22 @@ std::vector<ActiveEffect_t> SocialEngineeringManager::CollectEffects() const
     // can come from any source (buildings, pops, ...), and ThisBase-scoped ones shift a
     // single base's effective rating.
     std::vector<ActiveEffect_t> result;
-    for (const auto& [category, id] : m_activePolicyIds)
+    for (const auto& [category, pPolicy] : m_activePolicies)
     {
-        const SocialPolicyConfig_t* pPolicy = m_pRegistry ? m_pRegistry->Find(id) : nullptr;
         if (!pPolicy)
         {
             continue;
         }
-        AppendActiveEffects(pPolicy->effects, nullptr, id, result);
+        AppendActiveEffects(pPolicy->effects, nullptr, pPolicy->id, result);
     }
     return result;
+}
+
+int SocialEngineeringManager::GetSocialRating(SocialRatingId_t rating) const
+{
+    const std::map<SocialRatingId_t, int> totals = AccumulateSocialRatings(CollectEffects());
+    const auto it = totals.find(rating);
+    return it == totals.end() ? 0 : it->second;
 }
 
 std::vector<const SocialPolicyConfig_t*> SocialEngineeringManager::GetAvailablePolicies(

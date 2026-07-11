@@ -21,8 +21,10 @@ class SocialRatingRegistry;
 // building's ThisBase +1 Growth passes only for its own base — that base totals 3,
 // every other base totals 2.
 
-// Sums SocialRatingModifier contributions per rating axis over rBaseEffects.
-std::map<SocialRatingId_t, int> AccumulateSocialRatings(const BaseEffects_t& rBaseEffects);
+// Sums SocialRatingModifier contributions per rating axis. Takes a plain effect list —
+// callers decide the context (faction policies only, or a base's filtered list).
+std::map<SocialRatingId_t, int> AccumulateSocialRatings(
+    const std::vector<ActiveEffect_t>& rEffects);
 
 // SMAC rule: totals below the lowest / above the highest configured level use that
 // extreme's effects. Returns the level key to look up in levelEffects after clamping
@@ -37,9 +39,9 @@ const std::vector<EffectConfig_t>* FindSocialRatingLevelEffects(
 
 // Appends the gameplay effects each accumulated rating level maps to (via the rating
 // registry's levelEffects table, SMAC clamp-at-extremes) to rBaseEffects, with sourceId
-// "se_rating_<axis>_<level>" using the clamped level. Both functions take BaseEffects_t
-// because accumulation is only meaningful after the list has been filtered to its final
-// base context (FilterForBase + pop merge) — that is what attributes ThisBase-scoped
+// "se_rating_<axis>_<level>" using the clamped level. Takes BaseEffects_t because
+// expansion is only meaningful after the list has been filtered to its final base
+// context (FilterForBase + pop merge) — that is what attributes ThisBase-scoped
 // rating modifiers correctly.
 void ExpandSocialRatingEffects(BaseEffects_t& rBaseEffects,
                                const SocialRatingRegistry& rRatings);

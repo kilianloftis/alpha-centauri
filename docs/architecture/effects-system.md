@@ -195,7 +195,7 @@ concept doesn't exist yet are **legal but inert**:
 - **Purpose**: An optional runtime predicate on `EffectConfig_t` (`std::optional<Condition_t> condition`). When present, the effect only applies in a context that satisfies the condition, and is excluded from context-free resolution (base economy, intrinsic unit stats). This is how situational modifiers — e.g. "+25% attack vs a Base", "+25% attack into Forest" — are expressed, replacing the former `UnitBonusTableEffect_t`.
 - **Values** (`ConditionKind_t`):
   - `TargetTileHas` — the targeted tile has the feature id in `condition.value`, matched via `Tile::HasFeature`. One kind covers terrain classification (`Rocky`), river/fungus, and any improvement id — including `Base` (a founded base registers itself as the `Base` improvement) and tile specials (formerly "bonus"/"landmark"). In combat the target is the defender's tile.
-- **Evaluation**: `ConditionSatisfied(config, EffectContext_t)` in `ActiveEffect`. `EffectContext_t` carries the runtime target (`targetTile`); combat builds one from the defender. `FilterByStatIdInContext` includes unconditional effects plus condition-satisfied ones; `FilterByStatId`/`FilterFlatByStatId` exclude all condition-carrying effects.
+- **Evaluation**: `ConditionSatisfied(config, EffectContext_t)` in `ActiveEffect`. `EffectContext_t` carries the runtime target (`targetTile`); combat builds one from the defender. `FilterByStatIdInContext` includes unconditional effects plus condition-satisfied ones; `FilterByStatId`/`FilterBaseLevelByStatId` exclude all condition-carrying effects.
 
 ### ModifierOp_t
 - **Purpose**: Describes how a stat modifier combines with the running total.
@@ -238,7 +238,7 @@ concept doesn't exist yet are **legal but inert**:
 - **`BaseEffects_t`**: one base's final effect list — produced only by `FilterForBase`, then
   extended by the pop merge (`CollectFromPops`) and rating expansion
   (`ExpandSocialRatingEffects`) inside `BaseManager::BuildBaseEffects_`. This is the type
-  `FilterFlatByStatId`, `ResolveTileYield(tile, isBaseTile, baseEffects)`,
+  `FilterBaseLevelByStatId`, `ResolveTileYield(tile, isBaseTile, baseEffects)`,
   `ResourceManager::ProduceResources`, and the growth path accept.
 - Both are thin structs holding a `std::vector<ActiveEffect_t> effects;`. Pre-pool source
   collections (a building's effects, a pop's effects, grant expansion input) remain raw
@@ -270,10 +270,14 @@ concept doesn't exist yet are **legal but inert**:
 - **Purpose**: Filters active effects to only `StatModifierEffect_t` instances targeting a given `StatId_t` (including any that carry a tile `selector`).
 - **Returns**: A vector of matching `ActiveEffect_t` instances.
 
-### FilterFlatByStatId
-- **Purpose**: Like `FilterByStatId`, but **excludes** selector-carrying modifiers (i.e. keeps only flat, non-per-tile stat modifiers). Used for base-level resolution, where per-tile modifiers have already been applied to each worked tile and must not be counted a second time.
-- **Signature**: Accepts only a `BaseEffects_t` — never a raw vector or the faction pool — so running the flat filter at any stage other than base-level resolution is a compile error.
-- **Returns**: A vector of matching `ActiveEffect_t` instances.
+### FilterBaseLevelByStatId
+- **Purpose**: Like `FilterByStatId`, but for **base-level** resolution: excludes
+  selector-carrying (per-tile) modifiers and condition-carrying effects. Per-tile
+  modifiers have already been applied to each worked tile and must not be counted a
+  second time.
+- **Signature**: Accepts only a `BaseEffects_t` — never a raw vector or the faction pool —
+  so running this filter at any other stage is a compile error.
+- **Returns**: A lazy view of matching `ActiveEffect_t` instances.
 
 ### FilterByScope
 - **Purpose**: Filters active effects to only those with an exact `EffectScope_t` match.
@@ -350,8 +354,8 @@ concept doesn't exist yet are **legal but inert**:
   - `Faction::ProduceBaseResources()` collects active effects once per faction and passes them to each base.
   - `BaseManager::ProduceResources()` builds the base's final effect list via `BuildBaseEffects_`: `FilterForBase` over the faction pool, plus this base's own pop-generated effects via `CollectFromPops(GetPopContainer(), *this)` (see Pop Type Effects above), plus the gameplay effects of this base's effective social rating levels via `ExpandSocialRatingEffects` (see Social Ratings above). `ApplyGrowth` and `GetNutrientsRequired` use the same helper.
   - `ResourceManager::ProduceResources()` stores the effects and uses them when calculating nutrients, minerals, and energy. There is a **single per-tile pass**: `ResourceManager::ComputeWorked_` sums `WorkerAssignmentManager::ComputeWorkedResources(baseEffects)` (every worker pop's tile) plus the base center tile (worked for free, no pop). Each tile's full yield is resolved once by `TileEffectsContext::ResolveTileYield(tile, isBaseTile, baseEffects)`, which folds in every selector-matching `StatModifier` from `baseEffects`; the pop's tile multipliers then scale that whole yield. Per-tile `Add`/`Multiply` modifiers summed across tiles are mathematically equivalent to the old aggregate-with-counts approach, so no separate delta pass is needed.
-    - `CalculateResource_` then adds only **flat** (non-selector) `StatModifier` contributions for `StatId_t::Nutrients`/`Minerals`/`Energy` via `FilterFlatByStatId`/`ResolveStatModifiers` — selector-carrying modifiers are excluded here because they were already applied per tile.
-    - `StatId_t::Econ`/`Labs`/`Psych` are not produced from tiles — `CalculateEcon_`/`CalculateLabs_`/`CalculatePsych_` take the percentage-of-energy split from `EconomyManager` and add any flat `StatModifier` contributions (e.g. specialist pop output) on top via `FilterFlatByStatId`/`ResolveStatModifiers`, the same pattern used by `AllocateEnergy_` when stockpiling each turn. **All base-level resolution uses `FilterFlatByStatId`** — selector-carrying modifiers belong exclusively to the per-tile pass (and parse-time validation restricts selectors to tile-resource stats anyway).
+    - `CalculateResource_` then adds only **flat** (non-selector) `StatModifier` contributions for `StatId_t::Nutrients`/`Minerals`/`Energy` via `FilterBaseLevelByStatId`/`ResolveStatModifiers` — selector-carrying modifiers are excluded here because they were already applied per tile.
+    - `StatId_t::Econ`/`Labs`/`Psych` are not produced from tiles — `CalculateEcon_`/`CalculateLabs_`/`CalculatePsych_` take the percentage-of-energy split from `EconomyManager` and add any flat `StatModifier` contributions (e.g. specialist pop output) on top via `FilterBaseLevelByStatId`/`ResolveStatModifiers`, the same pattern used by `AllocateEnergy_` when stockpiling each turn. **All base-level resolution uses `FilterBaseLevelByStatId`** — selector-carrying modifiers belong exclusively to the per-tile pass (and parse-time validation restricts selectors to tile-resource stats anyway).
   - Stored effects are also used by the live `Get*Production()` queries.
 
 ### BuildingManager / BaseManager Constructed Buildings
@@ -499,7 +503,7 @@ units, pops, or tiles according to each entry's `scope`.
 2. Classify its seed semantics in `KindFor` (`EffectEnums.h`) — the compiler forces this via
    the exhaustive switch — and pin it in `ValidationTests.cpp` alongside the others.
 3. Resolve it where the value is needed, choosing the filter by context:
-   - `FilterFlatByStatId` for **base-level** resolution — excludes per-tile selector
+   - `FilterBaseLevelByStatId` for **base-level** resolution — excludes per-tile selector
      modifiers and conditional effects, and only accepts a `BaseEffects_t`; always the
      right choice at base level.
    - `FilterByStatId` for tile and unit resolution (selector effects are folded in

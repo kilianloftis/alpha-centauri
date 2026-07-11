@@ -52,7 +52,7 @@ UnitDesign::UnitDesign(
     }
 }
 
-const char* UnitDesign::GetId() const   { return m_id.c_str(); }
+const std::string& UnitDesign::GetId() const   { return m_id; }
 const std::string& UnitDesign::GetName() const { return m_name; }
 
 const UnitComponentConfig_t* UnitDesign::GetComponentForSlot(const std::string& rSlotId) const
