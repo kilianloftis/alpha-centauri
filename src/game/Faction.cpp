@@ -144,6 +144,10 @@ void Faction::AddBase(std::unique_ptr<BaseManager> pBase)
     m_bases.push_back(std::move(pBase));
     m_baseListRevision.Bump();
     RebuildVisibility();
+    if (m_onBaseListChanged)
+    {
+        m_onBaseListChanged();
+    }
 }
 
 BaseManager* Faction::CreateBase(int baseId, const std::string& name, Tile* pTile,
@@ -314,6 +318,11 @@ void Faction::RebuildVisibility()
         return;
     }
     m_visible.RebuildFromSources(*this, *m_pWorldMap, m_explored);
+}
+
+void Faction::SetOnBaseListChanged(std::function<void()> handler)
+{
+    m_onBaseListChanged = std::move(handler);
 }
 
 std::vector<const PopTypeConfig_t*> Faction::GetAvailablePopTypes() const

@@ -10,8 +10,7 @@ namespace
 
 std::optional<std::string> ResolveLandformLayer_(const Tile& rTile)
 {
-    // TODO: Define formal water threshold and landform generation rules.
-    if (rTile.GetElevation() < 0)
+    if (rTile.IsWater())
     {
         return TileLayerContent::k_Water;
     }

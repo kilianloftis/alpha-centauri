@@ -3,6 +3,7 @@
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorkedTileIndex.h"
+#include "game/map/TerritoryMap.h"
 #include <memory>
 #include <vector>
 
@@ -41,12 +42,17 @@ public:
     WorkedTileIndex& GetWorkedTiles();
     const WorkedTileIndex& GetWorkedTiles() const;
 
+    // Faction territory: mutually exclusive ownership derived from bases (see TerritoryMap).
+    TerritoryMap& GetTerritory();
+    const TerritoryMap& GetTerritory() const;
+
 private:
     int m_width;
     int m_height;
     std::vector<std::unique_ptr<Tile>> m_tiles;
     UnitPositionIndex m_unitPositionIndex;
     WorkedTileIndex m_workedTiles;
+    TerritoryMap m_territory;
 
     int GetTileIndex_(int x, int y) const;
 };

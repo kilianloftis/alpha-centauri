@@ -8,6 +8,14 @@
 namespace ac
 {
 
+// Discrete Euclidean disk shared by base territory and the workable area:
+// dx^2 + dy^2 <= radius^2 + 1. Radius 2 yields the classic SMAC 5x5-minus-corners
+// workable cross (20 tiles around the base).
+inline bool InEuclideanRadius(int dx, int dy, int radius)
+{
+    return dx * dx + dy * dy <= radius * radius + 1;
+}
+
 // Calls fn(tile_ptr, distance) for every tile within Chebyshev `radius` tiles of rOrigin
 // (square / king-move distance: max(|dx|, |dy|)). This is the metric for vision and for
 // all effect/improvement aura radii (Sensor, Condenser, unit auras, …).
@@ -29,8 +37,14 @@ void ForEachTileInChebyshevRadius(const Tile& rOrigin, WorldMapT& rWorldMap,
         for (int dx = -radius; dx <= radius; ++dx)
         {
             const int distance = std::max(std::abs(dx), std::abs(dy));
-            if (distance > radius) continue;
-            if (!includeOrigin && distance == 0) continue;
+            if (distance > radius)
+            {
+                continue;
+            }
+            if (!includeOrigin && distance == 0)
+            {
+                continue;
+            }
 
             auto* pTile = rWorldMap.GetTile(rOrigin.GetX() + dx, rOrigin.GetY() + dy);
             if (pTile)
@@ -41,28 +55,43 @@ void ForEachTileInChebyshevRadius(const Tile& rOrigin, WorldMapT& rWorldMap,
     }
 }
 
-// The SMAC base workable cross: a 5×5 square centred on rOrigin with the 4 corner tiles
-// removed (21 tiles including the base center). This iterator skips rOrigin itself and
-// yields the 20 surrounding workable tiles. Not a Chebyshev/Manhattan disk — the cut
-// corners are intentional. WorldMapT can be WorldMap or const WorldMap.
+// Calls fn(tile_ptr, distSq) for every tile in the discrete Euclidean disk
+// dx^2 + dy^2 <= radius^2 + 1 (see InEuclideanRadius). `distSq` is dx^2 + dy^2.
 template<typename WorldMapT, typename Fn>
-void ForEachTileInWorkableArea(const Tile& rOrigin, WorldMapT& rWorldMap, Fn&& fn)
+void ForEachTileInEuclideanRadius(const Tile& rOrigin, WorldMapT& rWorldMap,
+                                  const int radius, bool includeOrigin, Fn&& fn)
 {
-    static constexpr int k_Radius = 2;
-    for (int dy = -k_Radius; dy <= k_Radius; ++dy)
+    for (int dy = -radius; dy <= radius; ++dy)
     {
-        for (int dx = -k_Radius; dx <= k_Radius; ++dx)
+        for (int dx = -radius; dx <= radius; ++dx)
         {
-            if (dx == 0 && dy == 0) continue;
-            if (std::abs(dx) == k_Radius && std::abs(dy) == k_Radius) continue;
+            if (!InEuclideanRadius(dx, dy, radius))
+            {
+                continue;
+            }
+            if (!includeOrigin && dx == 0 && dy == 0)
+            {
+                continue;
+            }
 
             auto* pTile = rWorldMap.GetTile(rOrigin.GetX() + dx, rOrigin.GetY() + dy);
             if (pTile)
             {
-                fn(pTile);
+                fn(pTile, dx * dx + dy * dy);
             }
         }
     }
+}
+
+// The SMAC base workable area: Euclidean radius 2 (dx^2 + dy^2 <= 5), which is a 5x5
+// square with the four corners removed. Skips rOrigin itself (20 surrounding tiles).
+// WorldMapT can be WorldMap or const WorldMap.
+template<typename WorldMapT, typename Fn>
+void ForEachTileInWorkableArea(const Tile& rOrigin, WorldMapT& rWorldMap, Fn&& fn)
+{
+    static constexpr int k_WorkableRadius = 2;
+    ForEachTileInEuclideanRadius(rOrigin, rWorldMap, k_WorkableRadius, /*includeOrigin=*/false,
+        [&](auto* pTile, int /*distSq*/) { fn(pTile); });
 }
 
 } // namespace ac

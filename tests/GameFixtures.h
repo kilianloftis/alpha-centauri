@@ -151,7 +151,7 @@ struct FactionFixture : BaseFixture
     ac::BaseManager& MakeFactionBase(ac::Faction& rFaction, int x, int y)
     {
         auto pBase = std::make_unique<ac::BaseManager>(
-            /*factionId*/ 1, nextBaseId++, "TestBase", At(x, y),
+            rFaction.GetFactionId(), nextBaseId++, "TestBase", At(x, y),
             dataContext.buildingRegistry.get(),
             dataContext.socialRatingRegistry.get(),
             dataContext.popTypeRegistry.get(),

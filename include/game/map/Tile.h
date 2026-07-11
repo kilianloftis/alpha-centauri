@@ -63,6 +63,10 @@ public:
     void SetElevation(int elevation);  // in meters, range -4000 to 4000
     int GetElevation() const;
 
+    // Water threshold shared by landform rendering and territory: elevation < 0 is sea.
+    bool IsWater() const;
+    bool IsLand() const;
+
     // Raw energy seed derived purely from elevation. River/Fungus/improvement bonuses are
     // resolved separately via the effects system (see CollectTileEffects/ResolveTileYield)
     // and layered on top of this seed.

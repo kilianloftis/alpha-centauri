@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <optional>
+#include <functional>
 #include <vector>
 
 #include "game/IEffectsProvider.h"
@@ -138,6 +139,10 @@ public:
     void BindWorldMap(WorldMap& rWorldMap);
     void RebuildVisibility();
 
+    // Invoked after AddBase (after visibility rebuild). GameState uses this to rebuild
+    // world territory; tests may leave it unset and call TerritoryMap::Rebuild directly.
+    void SetOnBaseListChanged(std::function<void()> handler);
+
     // Pop types
     std::vector<const PopTypeConfig_t*> GetAvailablePopTypes() const;
 
@@ -170,6 +175,7 @@ private:
     FactionExploredMap m_explored;
     FactionVisibleMap m_visible;
     WorldMap* m_pWorldMap = nullptr; // set by BindWorldMap; used by RebuildVisibility
+    std::function<void()> m_onBaseListChanged;
 };
 
 } // namespace ac

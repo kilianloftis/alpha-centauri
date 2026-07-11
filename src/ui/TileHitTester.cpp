@@ -1,4 +1,5 @@
 #include "ui/TileHitTester.h"
+#include "game/map/MapUtils.h"
 #include <cmath>
 #include <cstdlib>
 
@@ -76,11 +77,7 @@ bool TileHitTester::IsInWorkableDiamond_(int dx, int dy)
     {
         return false;
     }
-    if (std::abs(dx) > k_WorkableGridRadius || std::abs(dy) > k_WorkableGridRadius)
-    {
-        return false;
-    }
-    return !(std::abs(dx) == k_WorkableGridRadius && std::abs(dy) == k_WorkableGridRadius);
+    return InEuclideanRadius(dx, dy, k_WorkableGridRadius);
 }
 
 } // namespace ac

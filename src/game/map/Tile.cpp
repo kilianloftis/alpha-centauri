@@ -109,9 +109,19 @@ int Tile::GetElevation() const
     return m_elevation;
 }
 
+bool Tile::IsWater() const
+{
+    return m_elevation < 0;
+}
+
+bool Tile::IsLand() const
+{
+    return !IsWater();
+}
+
 int Tile::GetElevationEnergySeed() const
 {
-    if (m_elevation < 0)
+    if (IsWater())
     {
         return 0;
     }

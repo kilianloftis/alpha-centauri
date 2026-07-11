@@ -20,7 +20,7 @@ public:
         float tileSize,
         int mapWidth, int mapHeight);
 
-    // Hit-test the base workable area (5x5 diamond with corners removed).
+    // Hit-test the base workable area (Euclidean radius 2: dx^2+dy^2 <= 5).
     // renderCenterX/Y: the center pixel position passed to BaseWorkableAreaDisplay::Render.
     // baseX/baseY: the base's world tile coordinates.
     // Returns world tile coordinates, or nullopt if outside the workable area.
@@ -31,7 +31,7 @@ public:
         int baseX, int baseY);
 
 private:
-    // Check whether a relative offset (dx, dy from base) is within the workable diamond
+    // Check whether a relative offset (dx, dy from base) is within the workable disk
     static bool IsInWorkableDiamond_(int dx, int dy);
 };
 

@@ -53,8 +53,12 @@ void TileFlagMap::Set(int x, int y)
     {
         return;
     }
-    m_flags[Index_(x, y)] = 1;
-    m_revision.Bump();
+    
+    if (!m_flags[Index_(x, y)])
+    {
+        m_flags[Index_(x, y)] = 1;
+        m_revision.Bump();
+    }
 }
 
 void TileFlagMap::Set(const Tile& rTile)

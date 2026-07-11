@@ -70,6 +70,7 @@ Faction& GameState::AddFaction(std::unique_ptr<Faction> pFaction)
         throw std::invalid_argument("GameState::AddFaction: pFaction is null");
     }
     pFaction->BindWorldMap(*m_worldMap);
+    pFaction->SetOnBaseListChanged([this]() { RebuildTerritory(); });
     m_factions.push_back(std::move(pFaction));
     return *m_factions.back();
 }
@@ -166,6 +167,19 @@ const TileEffectsContext& GameState::GetTileEffects() const
 UnitOrderExecutor& GameState::GetUnitOrderExecutor()
 {
     return m_unitOrderExecutor;
+}
+
+void GameState::RebuildTerritory()
+{
+    std::vector<const BaseManager*> bases;
+    for (const Faction& rFaction : Factions())
+    {
+        for (const BaseManager& rBase : rFaction.Bases())
+        {
+            bases.push_back(&rBase);
+        }
+    }
+    m_worldMap->GetTerritory().Rebuild(*m_worldMap, bases);
 }
 
 const SecretProjectAvailabilityCalculator& GameState::GetSecretProjectAvailability() const

@@ -28,19 +28,20 @@ public:
     bool IsVisible(int x, int y) const { return m_flags.Test(x, y); }
     bool IsVisible(const Tile& rTile) const { return m_flags.Test(rTile); }
 
-    void Mark(const Tile& rTile) { m_flags.Set(rTile); }
-
+    
     // Clear current visibility, then reveal from every unit and base of rFaction.
     // Newly visible tiles are also marked on rExplored. No-op if this map is unsized.
     void RebuildFromSources(const Faction& rFaction, const WorldMap& rWorldMap,
-                            FactionExploredMap& rExplored);
-
+        FactionExploredMap& rExplored);
+        
     uint64_t GetRevision() const { return m_flags.GetRevision(); }
 
 private:
     void RevealAround_(const Tile& rOrigin, int radius, const WorldMap& rWorldMap,
-                       FactionExploredMap& rExplored);
+        FactionExploredMap& rExplored);
 
+    void Mark_(const Tile& rTile) { m_flags.Set(rTile); }
+            
     TileFlagMap m_flags;
 };
 

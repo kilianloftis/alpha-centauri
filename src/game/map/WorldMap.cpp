@@ -16,6 +16,7 @@ WorldMap::WorldMap(int width, int height)
             m_tiles.push_back(std::make_unique<Tile>(x, y));
         }
     }
+    m_territory.Reset(width, height);
 }
 
 WorldMap::~WorldMap()
@@ -88,6 +89,16 @@ WorkedTileIndex& WorldMap::GetWorkedTiles()
 const WorkedTileIndex& WorldMap::GetWorkedTiles() const
 {
     return m_workedTiles;
+}
+
+TerritoryMap& WorldMap::GetTerritory()
+{
+    return m_territory;
+}
+
+const TerritoryMap& WorldMap::GetTerritory() const
+{
+    return m_territory;
 }
 
 } // namespace ac

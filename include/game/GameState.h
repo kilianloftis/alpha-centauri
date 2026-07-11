@@ -67,6 +67,10 @@ public:
 
     UnitOrderExecutor& GetUnitOrderExecutor();
 
+    // Recompute world territory from every faction's bases. Also wired as each faction's
+    // OnBaseListChanged handler so founding a base keeps ownership current.
+    void RebuildTerritory();
+
     // Scans all bases of all factions to check whether a secret project has already been
     // built. Owned here (rather than GameDataContext) because it queries this live,
     // mutable faction data — an "immutable definition data" object referencing it would be
