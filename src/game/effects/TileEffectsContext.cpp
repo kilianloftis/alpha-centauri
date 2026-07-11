@@ -3,6 +3,7 @@
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/MapUtils.h"
+#include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
@@ -21,7 +22,7 @@ namespace
 // Appends ThisTile-scoped effects projected by units within maxRadius of rOrigin — a unit
 // component with a radius effect is a mobile aura (e.g. a sensor pod). Units standing on
 // rOrigin itself project at distance 0. TileEffectReaches is the same filter improvements
-// and terrain use.
+// and terrain use. Unit auras are not territory-owned.
 void AppendUnitAuraEffects_(const Tile& rOrigin, const WorldMap& rWorldMap, int maxRadius,
                             std::vector<ActiveEffect_t>& rOut)
 {
@@ -57,6 +58,23 @@ int MaxEffectReach_(const ImprovementConfig_t& rConfig)
     return reach;
 }
 
+void AppendOwnedImprovementEffects_(const Tile& rHostTile, const ImprovementConfig_t& rConfig,
+                                    int distance, const WorldMap& rWorldMap,
+                                    std::vector<ActiveEffect_t>& rOut)
+{
+    const size_t before = rOut.size();
+    AppendTileEffects(rConfig.effects, rConfig.id, distance, rOut);
+    if (!rConfig.ownedByTerritory)
+    {
+        return;
+    }
+    const FactionId owner = rWorldMap.GetTerritory().GetOwner(rHostTile);
+    for (size_t i = before; i < rOut.size(); ++i)
+    {
+        rOut[i].ownerFaction = owner;
+    }
+}
+
 void AppendAreaEffectsFromNeighbors_(const Tile& rOrigin, const WorldMap& rWorldMap,
                                       const ImprovementRegistry& rImprovements,
                                       int maxRadius,
@@ -76,9 +94,33 @@ void AppendAreaEffectsFromNeighbors_(const Tile& rOrigin, const WorldMap& rWorld
 
             for (const ImprovementConfig_t* pImprovement : pNearby->GetImprovements())
             {
-                AppendTileEffects(pImprovement->effects, pImprovement->id, distance, rOut);
+                AppendOwnedImprovementEffects_(*pNearby, *pImprovement, distance, rWorldMap, rOut);
             }
         });
+}
+
+void AppendOwnTileEffects_(const Tile& rTile, const WorldMap& rWorldMap,
+                           const ImprovementRegistry& rImprovements,
+                           std::vector<ActiveEffect_t>& rOut)
+{
+    for (const std::string& featureId : rTile.GetTerrainFeatureIds())
+    {
+        if (const ImprovementConfig_t* pFeature = rImprovements.Find(featureId))
+        {
+            AppendTileEffects(pFeature->effects, pFeature->id, 0, rOut);
+        }
+    }
+
+    for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
+    {
+        AppendOwnedImprovementEffects_(rTile, *pImprovement, 0, rWorldMap, rOut);
+    }
+}
+
+bool AppliesForFaction_(const ActiveEffect_t& rEffect, FactionId forFaction)
+{
+    // Territory-owned improvements (Sensor) only apply for their territory owner.
+    return !rEffect.ownerFaction.has_value() || *rEffect.ownerFaction == forFaction;
 }
 
 bool TileMatchesSelector_(const TileSelector_t& selector, const Tile& rTile, bool isBaseTile)
@@ -162,7 +204,8 @@ const WorldMap& TileEffectsContext::GetWorldMap() const
 
 std::vector<ActiveEffect_t> TileEffectsContext::CollectAreaEffects(const Tile& rTile) const
 {
-    std::vector<ActiveEffect_t> effects = ac::CollectTileEffects(rTile, m_rImprovements);
+    std::vector<ActiveEffect_t> effects;
+    AppendOwnTileEffects_(rTile, m_rWorldMap, m_rImprovements, effects);
     AppendAreaEffectsFromNeighbors_(rTile, m_rWorldMap, m_rImprovements, m_maxRadius, effects);
     AppendUnitAuraEffects_(rTile, m_rWorldMap, m_maxRadius, effects);
     return effects;
@@ -198,13 +241,22 @@ TileResources_t TileEffectsContext::ResolveYieldFromEffects_(const Tile& rTile,
     };
 }
 
-double TileEffectsContext::ResolveTileDefenseMultiplier(const Tile& rTile) const
+double TileEffectsContext::ResolveTileDefenseMultiplier(const Tile& rTile, FactionId forFaction) const
 {
     const std::vector<ActiveEffect_t> effects = CollectAreaEffects(rTile);
+    std::vector<ActiveEffect_t> applicable;
+    applicable.reserve(effects.size());
+    for (const ActiveEffect_t& rEffect : effects)
+    {
+        if (AppliesForFaction_(rEffect, forFaction))
+        {
+            applicable.push_back(rEffect);
+        }
+    }
     // Explicit 1.0, not SeedFor: Defense is Additive as a unit stat (armor rating), but the
     // tile lane resolves a different quantity — a multiplier composed of the tile's percent
     // effects, seeded at identity.
-    return ResolveStatModifiers(FilterByStatId(effects, StatId_t::Defense), 1.0).total;
+    return ResolveStatModifiers(FilterByStatId(applicable, StatId_t::Defense), 1.0).total;
 }
 
 void TileEffectsContext::RecomputeMoisture(Tile& rTile)

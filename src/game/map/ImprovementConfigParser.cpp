@@ -33,6 +33,7 @@ ImprovementConfig_t ImprovementConfigParser::ParseImprovementConfig(const nlohma
     config.mineralCost = improvementJson.value("mineral_cost", 0);
     config.requiredTech = ConfigFields::ParseRequiredTech(improvementJson);
     config.radius = improvementJson.value("radius", 0);
+    config.ownedByTerritory = improvementJson.value("owned_by_territory", false);
     config.frequency = improvementJson.value("frequency", 0);
     config.spritePath = improvementJson.value("sprite_path", "");
     config.excludes = ConfigFields::ParseStringArray(improvementJson, "excludes");

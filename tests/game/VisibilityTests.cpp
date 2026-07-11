@@ -102,3 +102,30 @@ TEST_CASE("A base reveals a Chebyshev radius-2 vision square", "[visibility][fog
     CHECK(rVisible.IsVisible(6, 6));
     CHECK_FALSE(rVisible.IsVisible(7, 4));
 }
+
+TEST_CASE("A Sensor reveals Chebyshev radius-2 for its territory owner only",
+          "[visibility][fog][territory]")
+{
+    actest::FactionFixture fixture;
+    Faction& owner = fixture.MakeFaction();
+    Faction& other = fixture.MakeFaction();
+    // Base claims the Sensor tile without stacking base vision over the Sensor checks:
+    // place Sensor at (6, 4) and base at (1, 4) so base vision (radius 2) does not reach
+    // the Sensor's far ring at (8, 4).
+    fixture.MakeFactionBase(owner, 1, 4);
+    fixture.ctx->AddImprovementWithEffects(fixture.At(6, 4), "Sensor");
+    owner.RebuildVisibility();
+    other.RebuildVisibility();
+
+    const FactionId ownerId = owner.GetFactionId();
+    REQUIRE(fixture.map.GetTerritory().GetOwner(6, 4) == ownerId);
+
+    CHECK(owner.GetVisibleMap().IsVisible(6, 4));
+    CHECK(owner.GetVisibleMap().IsVisible(8, 4)); // Chebyshev 2
+    CHECK(owner.GetVisibleMap().IsVisible(8, 6));
+    CHECK_FALSE(owner.GetVisibleMap().IsVisible(9, 4)); // Chebyshev 3
+    CHECK(owner.GetExploredMap().IsExplored(8, 4));
+
+    CHECK_FALSE(other.GetVisibleMap().IsVisible(6, 4));
+    CHECK_FALSE(other.GetVisibleMap().IsVisible(8, 4));
+}

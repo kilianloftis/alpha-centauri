@@ -14,7 +14,7 @@ enum class Moisture_t;
 enum class Rockiness_t;
 
 // Displays the world map as a grid of tiles.
-// Each tile shows: moisture rockiness elevation(km). Bases and units are read
+// Each tile shows: moisture rockiness elevation(km). Bases, Sensors, and units are read
 // live from GameState / WorldMap — no per-frame DTO rebuild.
 class WorldDisplay
 {
@@ -60,6 +60,9 @@ private:
 
     // Render base markers with owner color and population info
     void RenderBases_(Graphics& rGraphics, int colStart, int rowStart, int colEnd, int rowEnd);
+
+    // Render Sensor tower markers on explored tiles
+    void RenderSensors_(Graphics& rGraphics, int colStart, int rowStart, int colEnd, int rowEnd);
 
     // Render unit markers on top of bases
     void RenderUnits_(Graphics& rGraphics, int colStart, int rowStart, int colEnd, int rowEnd);

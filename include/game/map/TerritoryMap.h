@@ -18,10 +18,10 @@ inline constexpr FactionId k_NoFactionOwner = -1;
 // World-scoped ownership grid: mutually exclusive faction territory derived from bases.
 // Land bases claim a Euclidean disk of radius 7 (dx^2+dy^2 <= 50) of contiguous land;
 // sea bases claim radius 3 (dx^2+dy^2 <= 10) contiguous sea. Contested tiles go to the
-// nearest claiming base by Euclidean distance, then larger population, then lower FactionId.
+// nearest claiming base by Euclidean distance, then lower BaseId.
 //
-// Call Rebuild after any base-list change (GameState::RebuildTerritory does this via
-// Faction::SetOnBaseListChanged). Queries read the last rebuilt owners.
+// Rebuild when a base is created, destroyed, or changes hands (GameState::RebuildTerritory
+// via Faction::SetOnBaseListChanged). Queries read the last rebuilt owners.
 class TerritoryMap
 {
 public:

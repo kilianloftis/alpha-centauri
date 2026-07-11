@@ -4,6 +4,7 @@
 #include "game/faction/FactionExploredMap.h"
 #include "game/faction/FactionVisibleMap.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
@@ -28,6 +29,11 @@ constexpr float k_UnitMarkerWidthRatio          = 0.22f;
 constexpr float k_UnitMarkerHeightRatio         = 0.22f;
 constexpr float k_UnitMarkerSpacingRatio        = 0.03f;
 constexpr Color_t k_UnitMarkerColor               {0, 220, 255, 255};
+constexpr Color_t k_SensorMarkerColor             {40, 220, 120, 255};
+constexpr float k_SensorMarkerFontSizeRatio       = 0.22f;
+constexpr float k_SensorMarkerWidthRatio          = 0.28f;
+constexpr float k_SensorMarkerHeightRatio         = 0.28f;
+constexpr float k_SensorMarkerInsetRatio          = 0.04f;
 constexpr float k_SelectionBorderOffset         = 1.0f;
 constexpr float k_SelectionBorderExpansion      = 2.0f;
 constexpr float k_SelectionBorderWidth          = 2.0f;
@@ -166,6 +172,45 @@ void WorldDisplay::RenderBases_(Graphics& rGraphics, int colStart, int rowStart,
     }
 }
 
+void WorldDisplay::RenderSensors_(Graphics& rGraphics, int colStart, int rowStart, int colEnd, int rowEnd)
+{
+    const WorldMap& rWorldMap = GetWorldMap_();
+    const float tileSize = GetEffectiveTileSize();
+    const PlayerFogMaps_t fog = PlayerFog_(m_rGameState);
+
+    const unsigned int fontSize = static_cast<unsigned int>(tileSize * k_SensorMarkerFontSizeRatio);
+    const float markerWidth = tileSize * k_SensorMarkerWidthRatio;
+    const float markerHeight = tileSize * k_SensorMarkerHeightRatio;
+    const float inset = tileSize * k_SensorMarkerInsetRatio;
+
+    for (int row = rowStart; row < rowEnd; ++row)
+    {
+        for (int col = colStart; col < colEnd; ++col)
+        {
+            const Tile* pTile = rWorldMap.GetTile(col, row);
+            if (!pTile || !pTile->HasImprovement("Sensor"))
+            {
+                continue;
+            }
+
+            // Shroud hides sensors; fog still shows last-known towers (same as bases).
+            if (fog.explored && !fog.explored->IsExplored(*pTile))
+            {
+                continue;
+            }
+
+            const float tileX = m_layout.x + ((col - colStart) * tileSize);
+            const float tileY = m_layout.y + ((row - rowStart) * tileSize);
+            // Top-right corner so the marker stays clear of base names and unit chips.
+            const float markerX = tileX + tileSize - markerWidth - inset;
+            const float markerY = tileY + inset;
+
+            rGraphics.DrawFilledRect(markerX, markerY, markerWidth, markerHeight, k_SensorMarkerColor);
+            rGraphics.DrawText("S", markerX + inset, markerY + inset, fontSize, Color_t::Black());
+        }
+    }
+}
+
 void WorldDisplay::RenderUnits_(Graphics& rGraphics, int colStart, int rowStart, int colEnd, int rowEnd)
 {
     const WorldMap& rWorldMap = GetWorldMap_();
@@ -289,6 +334,7 @@ void WorldDisplay::Render(Graphics& rGraphics)
     }
 
     RenderBases_(rGraphics, colStart, rowStart, colEnd, rowEnd);
+    RenderSensors_(rGraphics, colStart, rowStart, colEnd, rowEnd);
     RenderUnits_(rGraphics, colStart, rowStart, colEnd, rowEnd);
 }
 

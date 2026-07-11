@@ -15,6 +15,11 @@
 #include "game/RequiredTechValidator.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/map/ImprovementRegistry.h"
+#include "game/map/TerritoryMap.h"
+#include "game/map/Tile.h"
+#include "game/map/UnitPositionIndex.h"
+#include "game/map/WorldMap.h"
+#include "game/effects/TileEffectsContext.h"
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitSlotRegistry.h"
 #include "game/research/TechRegistry.h"
@@ -31,6 +36,11 @@
 #include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "game/research/TechCostConfig.h"
 #include "game/research/TechCostCalculator.h"
+#include "game/faction/Military.h"
+#include "game/faction/UnitManager.h"
+#include "game/units/UnitComponentConfig.h"
+#include "game/units/UnitDesign.h"
+#include "game/units/UnitSlotConfig.h"
 #include "lib/LuaRuntime.h"
 #include "ui/IGameView.h"
 #include "ui/TileHitTester.h"
@@ -40,7 +50,9 @@
 #include <functional>
 #include <iostream>
 #include <stdexcept>
+#include <unordered_map>
 #include <utility>
+#include <vector>
 
 namespace ac
 {
@@ -248,9 +260,87 @@ void Engine::Initialize_()
             m_gameState->GetSecretProjectAvailability());
 
         m_eventBridge->WireBase(*pBase);
-        m_gameState->AddFaction(std::move(pFaction));
+        Faction& rFaction = m_gameState->AddFaction(std::move(pFaction));
+
+        // Temporary test units on the player faction so fog-of-war vision is easy to see.
+        if (bIsPlayerControlled)
+        {
+            const UnitComponentRegistry& rComponents = *m_gameDataContext->unitComponentRegistry;
+            const std::vector<UnitSlotConfig_t>& rSlots = m_gameDataContext->unitSlotRegistry->GetAll();
+
+            auto resolve = [&rComponents](const std::string& rId) -> const UnitComponentConfig_t*
+            {
+                const UnitComponentConfig_t* pComponent = rComponents.Find(rId);
+                if (!pComponent)
+                {
+                    throw std::runtime_error("Engine setup: unknown unit component '" + rId + "'");
+                }
+                return pComponent;
+            };
+
+            std::unordered_map<std::string, const UnitComponentConfig_t*> basicParts = {
+                {"chassis", resolve("Infantry")},
+                {"weapon",  resolve("Hand_Weapons")},
+                {"armour",  resolve("No_Armour")},
+                {"reactor", resolve("Fission_Plant")},
+            };
+            auto pBasicDesign = std::make_unique<UnitDesign>(rSlots, basicParts);
+            const UnitDesign& rBasicDesign = *pBasicDesign;
+            if (!rFaction.GetMilitary().AddDesign(std::move(pBasicDesign)))
+            {
+                throw std::runtime_error("Engine setup: failed to add basic scout design");
+            }
+
+            std::unordered_map<std::string, const UnitComponentConfig_t*> radarParts = basicParts;
+            radarParts["ability_1"] = resolve("Deep_Radar");
+            auto pRadarDesign = std::make_unique<UnitDesign>(rSlots, radarParts);
+            const UnitDesign& rRadarDesign = *pRadarDesign;
+            if (!rFaction.GetMilitary().AddDesign(std::move(pRadarDesign)))
+            {
+                throw std::runtime_error("Engine setup: failed to add deep-radar scout design");
+            }
+
+            WorldMap& rMap = m_gameState->GetWorldMap();
+            UnitPositionIndex& rPositions = rMap.GetUnitPositions();
+            // Basic vision-1 scout beside the base; deep-radar (vision 2) a little farther out.
+            rFaction.GetUnitManager().CreateUnit(
+                rBasicDesign, rPositions, *rMap.GetTile(startX + 1, startY), pBase);
+            rFaction.GetUnitManager().CreateUnit(
+                rRadarDesign, rPositions, *rMap.GetTile(startX + 2, startY), pBase);
+        }
 
         ++positionIndex;
+    }
+
+    // Bases were founded before AddFaction wired OnBaseListChanged, so rebuild once now.
+    m_gameState->RebuildTerritory();
+
+    // Temporary test Sensors: one in each faction's territory (south of their starting base).
+    {
+        WorldMap& rMap = m_gameState->GetWorldMap();
+        TileEffectsContext& rTileEffects = m_gameState->GetTileEffects();
+        for (Faction& rFaction : m_gameState->Factions())
+        {
+            for (BaseManager& rBase : rFaction.Bases())
+            {
+                Tile* pSensorTile = rMap.GetTile(rBase.GetX(), rBase.GetY() + 2);
+                if (!pSensorTile)
+                {
+                    throw std::runtime_error("Engine setup: Sensor tile out of bounds");
+                }
+                rTileEffects.AddImprovementWithEffects(*pSensorTile, "Sensor");
+                std::cout << "Placed Sensor for faction " << rFaction.GetFactionId()
+                          << " at (" << pSensorTile->GetX() << ", " << pSensorTile->GetY()
+                          << "), territory owner "
+                          << rMap.GetTerritory().GetOwner(*pSensorTile) << "\n";
+                break;
+            }
+        }
+        // Sensors are vision sources; rebuild fog after placing them.
+        for (Faction& rFaction : m_gameState->Factions())
+        {
+            rFaction.RebuildVisibility();
+        }
     }
 
     std::cout << "Test setup complete. " << m_gameState->GetNumFactions() << " faction(s), "

@@ -145,6 +145,19 @@ struct FactionFixture : BaseFixture
             /*techCost*/ nullptr, /*popTypeAvailability*/ nullptr));
         ac::Faction& rFaction = *factions.back();
         rFaction.BindWorldMap(map);
+        // Keep territory current when bases are founded (same hook GameState uses).
+        rFaction.SetOnBaseListChanged([this]()
+        {
+            std::vector<const ac::BaseManager*> bases;
+            for (const auto& pFaction : factions)
+            {
+                for (const ac::BaseManager& rBase : pFaction->Bases())
+                {
+                    bases.push_back(&rBase);
+                }
+            }
+            map.GetTerritory().Rebuild(map, bases);
+        });
         return rFaction;
     }
 

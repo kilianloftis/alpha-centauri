@@ -130,23 +130,30 @@
   {
     "id": "Sensor",
     "name": "Sensor",
-    "radius": 2,
+    "owned_by_territory": true,
     "effects": [
       {
         "type": "StatModifier",
         "scope": "ThisTile",
+        "radius": 2,
         "parameters": { "stat": "defense", "amount": 25, "op": "AddPercent" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "radius":2,
+        "parameters": { "stat": "vision", "amount": 0, "op": "Add" }
       }
     ]
   },
   {
     "id": "Mirror",
     "name": "Mirror",
-    "radius": 2,
     "effects": [
       {
         "type": "StatModifier",
         "scope": "ThisTile",
+        "radius": 1,
         "parameters": { "stat": "energy", "amount": 1, "op": "Add" }
       }
     ]
@@ -154,11 +161,11 @@
   {
     "id": "Condenser",
     "name": "Condenser",
-    "radius": 1,
     "effects": [
       {
         "type": "StatModifier",
         "scope": "ThisTile",
+        "radius": 1,
         "parameters": { "stat": "moisture_tier", "amount": 1, "op": "Add" }
       }
     ]

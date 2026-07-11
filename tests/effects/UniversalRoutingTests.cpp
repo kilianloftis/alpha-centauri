@@ -159,22 +159,22 @@ TEST_CASE("Unit aura: a sensor-pod unit projects its ThisTile defense bonus with
 
     Unit& unit = fixture.MakeUnit(faction, 4, 4, {"sensor_pod"}); // +25% defense, radius 2
 
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(4, 4)) == Approx(1.25)); // own tile
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(6, 4)) == Approx(1.25)); // Chebyshev 2
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(6, 6)) == Approx(1.25)); // Chebyshev 2 diagonal
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(7, 4)) == Approx(1.0));  // Chebyshev 3
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(4, 4), faction.GetFactionId()) == Approx(1.25)); // own tile
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(6, 4), faction.GetFactionId()) == Approx(1.25)); // Chebyshev 2
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(6, 6), faction.GetFactionId()) == Approx(1.25)); // Chebyshev 2 diagonal
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(7, 4), faction.GetFactionId()) == Approx(1.0));  // Chebyshev 3
 
     SECTION("the aura moves with the unit")
     {
         fixture.MoveUnit(unit, 0, 8);
-        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(6, 4)) == Approx(1.0));
-        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(1, 8)) == Approx(1.25));
+        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(6, 4), faction.GetFactionId()) == Approx(1.0));
+        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(1, 8), faction.GetFactionId()) == Approx(1.25));
     }
 
     SECTION("the aura disappears with the unit")
     {
             faction.GetUnitManager().DestroyUnit(unit);
-        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(4, 4)) == Approx(1.0));
+        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(4, 4), faction.GetFactionId()) == Approx(1.0));
     }
 }
 
@@ -186,7 +186,7 @@ TEST_CASE("Unit aura: ThisUnit effects on a unit's components never leak into ti
 
     fixture.MakeUnit(faction, 4, 4, {"test_weapon", "test_chassis"});
 
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(4, 4)) == Approx(1.0));
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(4, 4), faction.GetFactionId()) == Approx(1.0));
     const TileResources_t yield = fixture.ctx->ResolveTileYield(fixture.At(4, 4));
     CHECK(yield.nutrients == 0);
     CHECK(yield.minerals == 0);

@@ -25,7 +25,7 @@ TEST_CASE("Founding a base registers the Base improvement and its defense bonus 
     CHECK(tile.HasImprovement("Base"));
     CHECK(tile.HasFeature("Base"));
     // Fixture Base entry: +100% defense through the same mechanism as Bunker/Rocky.
-    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(tile) == Approx(2.0));
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(tile, /*forFaction*/ 1) == Approx(2.0));
 }
 
 TEST_CASE("BaseManager::CollectBuildingEffects tags ThisBase effects with the owning base",

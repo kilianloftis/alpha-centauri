@@ -143,11 +143,11 @@ void Faction::AddBase(std::unique_ptr<BaseManager> pBase)
     }
     m_bases.push_back(std::move(pBase));
     m_baseListRevision.Bump();
-    RebuildVisibility();
     if (m_onBaseListChanged)
     {
         m_onBaseListChanged();
     }
+    RebuildVisibility();
 }
 
 BaseManager* Faction::CreateBase(int baseId, const std::string& name, Tile* pTile,

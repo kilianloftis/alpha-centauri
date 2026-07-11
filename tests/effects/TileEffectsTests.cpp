@@ -15,31 +15,56 @@
 using namespace ac;
 using Catch::Approx;
 
-TEST_CASE("CollectAreaEffects: radius improvements reach exactly their Chebyshev radius",
-          "[effects][tile][aura]")
+TEST_CASE("CollectAreaEffects: Sensor reaches Chebyshev radius for its territory owner",
+          "[effects][tile][aura][territory]")
 {
-    actest::WorldFixture world;
-    // Sensor (radius 2) at the center.
-    world.ctx->AddImprovementWithEffects(world.At(4, 4), "Sensor");
+    actest::FactionFixture fixture;
+    Faction& owner = fixture.MakeFaction();
+    // Base off the Sensor tile so Base's +100% defense does not stack into these checks.
+    fixture.MakeFactionBase(owner, 1, 1);
+    fixture.ctx->AddImprovementWithEffects(fixture.At(4, 4), "Sensor");
+    const FactionId id = owner.GetFactionId();
 
     SECTION("distance 1 and 2 are covered, including diagonals")
     {
-        CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(5, 4)) == Approx(1.25));
-        CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(6, 4)) == Approx(1.25));
-        CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(5, 5)) == Approx(1.25)); // Chebyshev 1
-        CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(6, 6)) == Approx(1.25)); // Chebyshev 2
+        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(5, 4), id) == Approx(1.25));
+        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(6, 4), id) == Approx(1.25));
+        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(5, 5), id) == Approx(1.25));
+        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(6, 6), id) == Approx(1.25));
     }
 
     SECTION("distance 3 is not covered")
     {
-        CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(7, 4)) == Approx(1.0));
-        CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(7, 7)) == Approx(1.0)); // Chebyshev 3
+        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(7, 4), id) == Approx(1.0));
+        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(7, 7), id) == Approx(1.0));
     }
 
     SECTION("the sensor's own tile is covered")
     {
-        CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(4, 4)) == Approx(1.25));
+        CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(4, 4), id) == Approx(1.25));
     }
+}
+
+TEST_CASE("Sensor aura only benefits the faction that owns its territory",
+          "[effects][tile][aura][territory]")
+{
+    actest::FactionFixture fixture;
+    Faction& owner = fixture.MakeFaction();
+    Faction& other = fixture.MakeFaction();
+    fixture.MakeFactionBase(owner, 1, 1);
+    fixture.ctx->AddImprovementWithEffects(fixture.At(4, 4), "Sensor");
+
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(6, 4), owner.GetFactionId()) == Approx(1.25));
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(6, 4), other.GetFactionId()) == Approx(1.0));
+}
+
+TEST_CASE("Sensor on unowned territory benefits nobody", "[effects][tile][aura][territory]")
+{
+    actest::WorldFixture world;
+    world.ctx->AddImprovementWithEffects(world.At(4, 4), "Sensor");
+    // No bases -> territory unowned -> ownerFaction is k_NoFactionOwner.
+    CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(4, 4), /*forFaction*/ 1) == Approx(1.0));
+    CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(6, 4), /*forFaction*/ 1) == Approx(1.0));
 }
 
 TEST_CASE("CollectAreaEffects: radius-0 improvements never reach neighbors", "[effects][tile][aura]")
@@ -47,28 +72,31 @@ TEST_CASE("CollectAreaEffects: radius-0 improvements never reach neighbors", "[e
     actest::WorldFixture world;
     world.ctx->AddImprovementWithEffects(world.At(4, 4), "Bunker");
 
-    CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(4, 4)) == Approx(1.5));
-    CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(5, 4)) == Approx(1.0));
+    CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(4, 4), /*forFaction*/ 1) == Approx(1.5));
+    CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(5, 4), /*forFaction*/ 1) == Approx(1.0));
 }
 
 TEST_CASE("ResolveTileDefenseMultiplier: terrain and improvement bonuses combine arithmetically",
-          "[effects][tile][defense]")
+          "[effects][tile][defense][territory]")
 {
-    actest::WorldFixture world;
-    Tile& tile = world.At(4, 4);
+    actest::FactionFixture fixture;
+    Faction& owner = fixture.MakeFaction();
+    fixture.MakeFactionBase(owner, 1, 1); // owns Sensor territory without stacking Base on (4,4)
+    Tile& tile = fixture.At(4, 4);
+    const FactionId id = owner.GetFactionId();
 
     // Base multiplier for a featureless tile is 1.0.
-    CHECK(world.ctx->ResolveTileDefenseMultiplier(tile) == Approx(1.0));
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(tile, id) == Approx(1.0));
 
     tile.SetRockiness(Rockiness_t::Rocky); // +25%
-    CHECK(world.ctx->ResolveTileDefenseMultiplier(tile) == Approx(1.25));
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(tile, id) == Approx(1.25));
 
-    world.ctx->AddImprovementWithEffects(tile, "Bunker"); // +50%
+    fixture.ctx->AddImprovementWithEffects(tile, "Bunker"); // +50%
     // Arithmetic combination: 1 + 0.25 + 0.50, not 1.25 * 1.5.
-    CHECK(world.ctx->ResolveTileDefenseMultiplier(tile) == Approx(1.75));
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(tile, id) == Approx(1.75));
 
-    world.ctx->AddImprovementWithEffects(world.At(5, 4), "Sensor"); // +25% aura
-    CHECK(world.ctx->ResolveTileDefenseMultiplier(tile) == Approx(2.0));
+    fixture.ctx->AddImprovementWithEffects(fixture.At(5, 4), "Sensor"); // +25% aura
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(tile, id) == Approx(2.0));
 }
 
 TEST_CASE("ResolveTileYield: energy is seeded from elevation, other resources start at zero",
@@ -283,13 +311,17 @@ TEST_CASE("AddImprovementWithEffects: unknown improvement ids throw",
     world.ctx->RemoveImprovementWithEffects(tile, "OrbitalLaser"); // safe no-op for absent id
 }
 
-TEST_CASE("Aura effects at the map edge are collected without crashing", "[effects][tile][aura]")
+TEST_CASE("Aura effects at the map edge are collected without crashing", "[effects][tile][aura][territory]")
 {
-    actest::WorldFixture world;
-    world.ctx->AddImprovementWithEffects(world.At(0, 0), "Sensor");
-    CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(0, 0)) == Approx(1.25));
-    CHECK(world.ctx->ResolveTileDefenseMultiplier(world.At(1, 0)) == Approx(1.25));
-    CHECK(world.ctx->ResolveTileYield(world.At(0, 1)).nutrients == 0);
+    actest::FactionFixture fixture;
+    Faction& owner = fixture.MakeFaction();
+    fixture.MakeFactionBase(owner, 0, 0);
+    // Sensor beside the base so Base's +100% does not stack into the Sensor checks.
+    fixture.ctx->AddImprovementWithEffects(fixture.At(2, 0), "Sensor");
+    const FactionId id = owner.GetFactionId();
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(2, 0), id) == Approx(1.25));
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(1, 0), id) == Approx(1.25));
+    CHECK(fixture.ctx->ResolveTileYield(fixture.At(0, 1)).nutrients == 0);
 }
 
 TEST_CASE("CanBuildImprovement: excludes-list features block construction", "[effects][tile]")
@@ -332,11 +364,13 @@ TEST_CASE("Per-effect radius: improvement-level radius is the default, per-effec
     CHECK(atTwo.energy == 1);
     CHECK(atTwo.minerals == 0);
 
-    // Parse-time default check: Sensor's effect inherited the improvement's radius 2.
+    // Sensor declares radius on each effect entry (defense aura + vision sight).
     const ImprovementConfig_t* pSensor = world.improvements.Find("Sensor");
     REQUIRE(pSensor != nullptr);
-    REQUIRE(pSensor->effects.size() == 1);
-    CHECK(pSensor->effects[0].radius == 2);
+    REQUIRE(pSensor->effects.size() == 2);
+    CHECK(pSensor->effects[0].radius == 2); // defense aura
+    CHECK(pSensor->effects[1].radius == 2); // vision sight
+    CHECK(pSensor->ownedByTerritory);
 }
 
 TEST_CASE("Aura collection: non-ThisTile and Instantaneous effects do not leak into neighbors",

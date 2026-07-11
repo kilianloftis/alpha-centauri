@@ -10,9 +10,10 @@ class FactionExploredMap;
 class Tile;
 class WorldMap;
 
-// Per-faction currently-visible tiles: recomputed from units (Vision) and bases.
-// Lives on Faction (not Tile). Cleared and rebuilt whenever vision sources change;
-// each rebuild also marks those tiles on the faction's FactionExploredMap.
+// Per-faction currently-visible tiles: recomputed from units (Vision), bases, and
+// territory-owned vision improvements (e.g. Sensor). Lives on Faction (not Tile).
+// Cleared and rebuilt whenever vision sources change; each rebuild also marks those
+// tiles on the faction's FactionExploredMap.
 class FactionVisibleMap
 {
 public:
@@ -29,8 +30,9 @@ public:
     bool IsVisible(const Tile& rTile) const { return m_flags.Test(rTile); }
 
     
-    // Clear current visibility, then reveal from every unit and base of rFaction.
-    // Newly visible tiles are also marked on rExplored. No-op if this map is unsized.
+    // Clear current visibility, then reveal from every unit, base, and owned Sensor
+    // (vision improvements) of rFaction. Newly visible tiles are also marked on rExplored.
+    // No-op if this map is unsized.
     void RebuildFromSources(const Faction& rFaction, const WorldMap& rWorldMap,
         FactionExploredMap& rExplored);
         

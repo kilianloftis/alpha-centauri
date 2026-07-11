@@ -1,7 +1,6 @@
 #include "game/map/TerritoryMap.h"
 
 #include "game/faction/base/BaseManager.h"
-#include "game/faction/base/population/PopulationManager.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
@@ -23,7 +22,7 @@ struct ClaimCandidate_t
 {
     FactionId factionId = k_NoFactionOwner;
     int distSq = std::numeric_limits<int>::max();
-    int population = -1;
+    int baseId = std::numeric_limits<int>::max();
 };
 
 bool Beats_(const ClaimCandidate_t& rChallenger, const ClaimCandidate_t& rIncumbent)
@@ -32,11 +31,7 @@ bool Beats_(const ClaimCandidate_t& rChallenger, const ClaimCandidate_t& rIncumb
     {
         return rChallenger.distSq < rIncumbent.distSq;
     }
-    if (rChallenger.population != rIncumbent.population)
-    {
-        return rChallenger.population > rIncumbent.population;
-    }
-    return rChallenger.factionId < rIncumbent.factionId;
+    return rChallenger.baseId < rIncumbent.baseId;
 }
 
 int EuclideanDistSq_(int x0, int y0, int x1, int y1)
@@ -58,7 +53,7 @@ void ClaimFromBase_(const BaseManager& rBase, const WorldMap& rWorldMap,
     const bool bWantWater = pOrigin->IsWater();
     const int radius = bWantWater ? k_SeaTerritoryRadius : k_LandTerritoryRadius;
     const FactionId factionId = rBase.GetFactionId();
-    const int population = rBase.GetPopulation().GetSize();
+    const int baseId = rBase.GetBaseId();
     const int ox = pOrigin->GetX();
     const int oy = pOrigin->GetY();
 
@@ -79,7 +74,7 @@ void ClaimFromBase_(const BaseManager& rBase, const WorldMap& rWorldMap,
         const auto [x, y] = queue.front();
         queue.pop();
 
-        const ClaimCandidate_t challenger{factionId, EuclideanDistSq_(ox, oy, x, y), population};
+        const ClaimCandidate_t challenger{factionId, EuclideanDistSq_(ox, oy, x, y), baseId};
         ClaimCandidate_t& rIncumbent = rBest[index(x, y)];
         if (rIncumbent.factionId == k_NoFactionOwner || Beats_(challenger, rIncumbent))
         {

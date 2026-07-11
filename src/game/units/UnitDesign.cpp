@@ -36,19 +36,24 @@ UnitDesign::UnitDesign(
 
         m_slotComponents.push_back({rSlot, pComp});
         if (pComp)
+        {
             m_components.push_back(pComp);
+        }
     }
 
     bool bFirst = true;
     for (const auto& [rSlot, pComp] : m_slotComponents)
     {
-        if (rSlot.required && pComp)
+        // Include every filled slot (required and optional) so designs that differ only
+        // by ability get distinct ids — e.g. Infantry vs Infantry + Deep Radar.
+        if (!pComp)
         {
-            if (!bFirst) { m_name += " / "; m_id += "_"; }
-            m_name += pComp->name;
-            m_id   += pComp->id;
-            bFirst = false;
+            continue;
         }
+        if (!bFirst) { m_name += " / "; m_id += "_"; }
+        m_name += pComp->name;
+        m_id   += pComp->id;
+        bFirst = false;
     }
 }
 

@@ -51,7 +51,9 @@ public:
                                      const BaseEffects_t& rBaseEffects) const;
 
     // Combined defense multiplier including aura effects (e.g. nearby Sensor, Rocky terrain).
-    double ResolveTileDefenseMultiplier(const Tile& rTile) const;
+    // forFaction selects which territory-owned improvement auras apply (Sensor only benefits
+    // the faction that owns the Sensor's tile). Terrain and non-owned improvements always apply.
+    double ResolveTileDefenseMultiplier(const Tile& rTile, FactionId forFaction) const;
 
     // Re-derives rTile's effective moisture from its stored base moisture plus any Condenser
     // aura in range, then calls Tile::SetMoisture(). Always recomputed from scratch so

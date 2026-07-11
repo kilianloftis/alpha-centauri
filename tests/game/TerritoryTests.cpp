@@ -1,10 +1,9 @@
 // Faction territory: Euclidean claim disk (dx^2+dy^2 <= R^2+1) from bases with
-// same-terrain connectivity; contested tiles resolved by nearest base, then pop, then FactionId.
+// same-terrain connectivity; contested tiles resolved by nearest base, then lower BaseId.
 
 #include "GameFixtures.h"
 
 #include "game/faction/base/BaseManager.h"
-#include "game/faction/base/population/PopulationManager.h"
 #include "game/map/MapUtils.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
@@ -125,22 +124,20 @@ TEST_CASE("Contested tiles go to the nearer base by Euclidean distance", "[terri
     const TerritoryMap& rTerritory = fixture.map.GetTerritory();
     CHECK(rTerritory.GetOwner(2, 4) == a.GetFactionId());
     CHECK(rTerritory.GetOwner(6, 4) == b.GetFactionId());
-    // Midpoint (4,4) is equidistant; equal starting pop -> lower FactionId (a).
+    // Midpoint (4,4) is equidistant; A's base was founded first → lower BaseId.
     CHECK(rTerritory.GetOwner(4, 4) == a.GetFactionId());
 }
 
-TEST_CASE("Equidistant contested tiles prefer larger population then FactionId", "[territory]")
+TEST_CASE("Equidistant contested tiles prefer lower BaseId", "[territory]")
 {
     actest::FactionFixture fixture;
     Faction& a = fixture.MakeFaction();
     Faction& b = fixture.MakeFaction();
 
-    BaseManager& baseA = fixture.MakeFactionBase(a, 1, 4);
+    // B founds first → lower BaseId, wins the midpoint despite higher FactionId.
     BaseManager& baseB = fixture.MakeFactionBase(b, 7, 4);
-
-    // Grow B so it wins the equidistant midpoint despite higher FactionId.
-    baseB.GetPopulation().AddPop();
-    REQUIRE(baseB.GetPopulation().GetSize() > baseA.GetPopulation().GetSize());
+    BaseManager& baseA = fixture.MakeFactionBase(a, 1, 4);
+    REQUIRE(baseB.GetBaseId() < baseA.GetBaseId());
 
     RebuildTerritory_(fixture);
     CHECK(fixture.map.GetTerritory().GetOwner(4, 4) == b.GetFactionId());

@@ -30,7 +30,12 @@ struct ImprovementConfig_t
     // that distance, e.g. Sensor (radius 2) projects its defense bonus outward.
     // All three resolvers (ResolveTileYield, ResolveTileDefenseMultiplier, RecomputeMoisture)
     // honour radius via TileEffectsContext::CollectAreaEffects.
+    // An improvement-level "radius" is only a parse-time default for effects that omit their
+    // own radius; prefer declaring radius on each effect entry.
     int radius = 0;
+    // When true, this improvement's effects only apply for the faction that owns the
+    // host tile's territory (see TerritoryMap). Sensor is the canonical case.
+    bool ownedByTerritory = false;
     int frequency = 0;                 // world-gen spawn weight; 0 = not randomly placed
     std::string spritePath;            // optional sprite override (used for tile bonuses)
     std::vector<EffectConfig_t> effects;

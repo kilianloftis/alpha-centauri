@@ -3,10 +3,11 @@
 ```mermaid
 graph TB
     subgraph "Map System"
-        TileMap[TileMap]
+        WorldMap[WorldMap]
         Tile[Tile]
         WorkedTileIndex[WorkedTileIndex<br/>one worker per tile, world-scoped]
         UnitPositionIndex[UnitPositionIndex<br/>unit occupancy + stacking rule]
+        TerritoryMap[TerritoryMap<br/>faction ownership per tile]
     end
 
     subgraph "Tile Identity"
@@ -17,6 +18,7 @@ graph TB
         Moisture_t[Moisture_t<br/>enum: Arid/Moist/Wet]
         Rockiness_t[Rockiness_t<br/>enum: Flat/Rolling/Rocky]
         Elevation[Elevation<br/>int -4000 to 4000 meters]
+        LandSea[IsWater / IsLand<br/>elevation less than 0]
     end
 
     subgraph "Tile Features"
@@ -37,13 +39,15 @@ graph TB
         Faction[Faction]
     end
 
-    TileMap --> Tile
-    TileMap --> WorkedTileIndex
-    TileMap --> UnitPositionIndex
+    WorldMap --> Tile
+    WorldMap --> WorkedTileIndex
+    WorldMap --> UnitPositionIndex
+    WorldMap --> TerritoryMap
     Tile --> Position
     Tile --> Moisture_t
     Tile --> Rockiness_t
     Tile --> Elevation
+    Elevation --> LandSea
     Tile --> River
     Tile --> Fungus
     Tile --> Improvements
@@ -51,27 +55,41 @@ graph TB
     CollectTileEffects --> ImprovementRegistry
     CollectTileEffects --> ResolveTileYield
     CollectTileEffects --> ResolveTileDefenseMultiplier
+    TerritoryMap --> Base
     Base --> Tile
     Faction --> Base
 
     style Tile fill:#f9f,stroke:#333,stroke-width:4px
-    style TileMap fill:#fbf,stroke:#333,stroke-width:3px
+    style WorldMap fill:#fbf,stroke:#333,stroke-width:3px
     style Position fill:#bbf,stroke:#333,stroke-width:2px
     style WorkedTileIndex fill:#fbf,stroke:#333,stroke-width:3px
     style UnitPositionIndex fill:#fbf,stroke:#333,stroke-width:3px
+    style TerritoryMap fill:#fbf,stroke:#333,stroke-width:3px
     style ImprovementRegistry fill:#ffd,stroke:#333,stroke-width:2px
     style CollectTileEffects fill:#bfb,stroke:#333,stroke-width:3px
 ```
 
+## Distance Metrics
+
+Spatial helpers live in `include/game/map/MapUtils.h`. The map uses two coherent metrics:
+
+| Metric | Definition | Used for |
+|--------|------------|----------|
+| **Chebyshev** | `max(\|dx\|, \|dy\|)` (king-move / square) | Unit/base/Sensor **sight**, improvement **auras** (Sensor defense, Mirror, Condenser), unit ThisTile auras — `ForEachTileInChebyshevRadius` |
+| **Euclidean disk** | `dx² + dy² ≤ R² + 1` | **Base workable area** (`R = 2`), **territory claim radius** (land `R = 7`, sea `R = 3`) — `InEuclideanRadius` / `ForEachTileInEuclideanRadius` |
+
+Territory overlap between factions is broken by crow-flies distance (`dx² + dy²`) to the claiming base, then lower `BaseId` — not by Chebyshev.
+
 ## Component Overview
 
 ### Tile
-- **Purpose**: Represents a single tile on the game map with all its characteristics. `Tile` itself stays a plain data holder — it has no knowledge of the effects system or `ImprovementRegistry`; all effects-based resolution (yield, defense) lives in free functions that take a `Tile` and a registry, the same pattern used elsewhere in the effects system (e.g. `CollectFromBuildings` takes a `Faction` and a `BuildingRegistry`).
+- **Purpose**: Represents a single tile on the game map with all its characteristics. `Tile` itself stays a plain data holder — it has no knowledge of the effects system or `ImprovementRegistry`; all effects-based resolution (yield, defense) lives in free functions / `TileEffectsContext` that take a `Tile` and a registry, the same pattern used elsewhere in the effects system (e.g. `CollectFromBuildings` takes a `Faction` and a `BuildingRegistry`).
 - **Responsibilities**:
   - Store terrain characteristics:
     - Moisture_t (enum: Arid, Moist, Wet)
     - Rockiness_t (enum: Flat, Rolling, Rocky)
     - Elevation (int: -4000 to 4000 meters)
+  - Expose `IsWater()` / `IsLand()` — water is `elevation < 0` (same rule as landform rendering)
   - Track tile features (Rivers, Fungus, Improvements)
   - Expose `GetTerrainFeatureIds()` (terrain ids) and `GetImprovements()` (config pointers) so the effects system can resolve yield/defense from terrain and improvements through one mechanism — see Tile Improvement Effects below
 - **Composition**:
@@ -82,7 +100,7 @@ graph TB
   - `River`: Boolean flag for river presence (grants an energy bonus via its improvements.json entry)
   - `Fungus`: Boolean flag for alien fungus presence (grants a defense bonus via its improvements.json entry). Presence-only for now — spreading fungus turn-over-turn is a separate future enhancement, not implemented.
   - `Improvements`: Vector of non-owning `const ImprovementConfig_t*` into `ImprovementRegistry` (like `BuildingManager`'s `BuildingConfig_t*`). Covers player-built improvements (e.g. "Farm", "Mine", "Bunker"), the `"Base"` marker added automatically when a `BaseManager` is founded on the tile, and tile specials that were formerly separate "bonus"/"landmark" slots (e.g. "Monsoon Jungle", "nutrient_rich_soil") — for the map all three are just improvements, with coexistence governed by `ImprovementConfig_t::excludes`
-  - Note: `Tile` holds **no** worked/worker-assignment state — that lives in `WorkedTileIndex` (below), so `Tile` needs no `mutable` members and a `const Tile&` really is immutable
+  - Note: `Tile` holds **no** worked/worker-assignment state — that lives in `WorkedTileIndex` (below), so `Tile` needs no `mutable` members and a `const Tile&` really is immutable. Likewise `Tile` holds **no** political ownership — that lives in `TerritoryMap`.
 
 ### WorkedTileIndex (worked-tile occupancy)
 - **Purpose**: The single owner of the "which tiles are currently worked" state and the one enforcement point of the **one-worker-per-tile rule across all bases and factions** — two nearby bases, friendly or enemy, may never work the same tile. Owned by `WorldMap`, next to `UnitPositionIndex`.
@@ -98,6 +116,19 @@ graph TB
 - **Purpose**: The single owner of unit-position state, mirroring `WorkedTileIndex`'s ownership model. Owned by `WorldMap` (`WorldMap::GetUnitPositions()`; `GetUnitsOnTile()` remains as a convenience forward).
 - **Model**: A `Unit` registers itself in its constructor and unregisters in its destructor (RAII — a destroyed unit can never linger in the index), and every move goes through `UnitPositionIndex::TryMoveUnit`, which updates the per-tile occupancy and the unit's own tile pointer together. Only the index writes either side, so `Unit::GetTile()` and `GetUnitsOnTile()` structurally cannot desync; `Unit` has no public position setter.
 - **Stacking rule**: the original game allows any number of units per tile (the default). `UnitPositionIndex::SetSingleUnitPerTile(true)` restricts every tile to at most one unit: unit creation on an occupied tile throws, and `TryMoveUnit` onto an occupied tile returns `false` (a `MoveOrder` then stays pending and retries next turn; reroute/cancel rules are a TODO in `UnitOrderExecutor`). The static accessor pair is a stand-in until a real game-configuration system exists.
+
+### TerritoryMap (faction ownership)
+- **Purpose**: World-scoped mutually exclusive ownership of tiles — “whose territory is this?” Owned by `WorldMap` (`WorldMap::GetTerritory()`), same placement pattern as `WorkedTileIndex` / `UnitPositionIndex`. `Tile` stays free of political state.
+- **Components**:
+  - `TerritoryMap` (`include/game/map/TerritoryMap.h`) — dense `FactionId` grid; `k_NoFactionOwner` (-1) for unclaimed
+  - `GameState::RebuildTerritory()` — collects every base of every faction and calls `TerritoryMap::Rebuild`
+  - Wired via `Faction::SetOnBaseListChanged` when a faction is added to `GameState`, so founding a base rebuilds ownership. Rebuild whenever a base is **created, destroyed, or changes hands** — population size is not an input.
+- **Claim rules**:
+  - **Land base** (`Tile::IsLand()`): Euclidean disk radius 7 (`dx² + dy² ≤ 50`), only land tiles reachable by orthogonal BFS through contiguous land inside that disk
+  - **Sea base** (`Tile::IsWater()`): Euclidean disk radius 3 (`dx² + dy² ≤ 10`), only contiguous sea the same way
+  - Land bases never claim sea; sea bases never claim land
+- **Contested tiles**: among bases that can claim a tile, owner is the nearest base by Euclidean distance (`dx² + dy²`); ties go to the **lower `BaseId`**
+- **Consumers**: territory-owned improvements (`owned_by_territory: true`, e.g. Sensor) stamp `ActiveEffect_t::ownerFaction` from `GetOwner` and only apply for that faction (defense aura / fog vision — see effects and visibility docs)
 
 ### Tile Visual Layer System
 
@@ -134,46 +165,45 @@ graph TB
   - `ResolveTileLayers(const Tile&)`: Free function that maps a `Tile`'s gameplay data to the layer array
 - **Rationale**: Separates tile gameplay data from rendering data, so changes to visuals do not affect resource calculation or other systems
 - **Layer Order** (bottom to top):
-  1. `Landform`: water, flat, or rolling
+  1. `Landform`: water (`Tile::IsWater()`), flat, or rolling
   2. `Moisture_t`: arid, moist, or wet
   3. `Rockiness_t`: rocky overlay (empty if not rocky)
   4. `Vegetation`: farm or forest
   5. `Road`: road
   6. `Improvement`: dominant non-vegetation, non-road improvement (e.g., Borehole, Monolith)
 - **Open Questions / TODOs**:
-  - Water threshold and landform generation rules
+  - Landform generation rules beyond the elevation water threshold
   - Vegetation mutual exclusivity and placement rules (Borehole/Base vs Farm/Forest)
   - Improvement rendering priority and monolith/landmark handling
 
 ### Tile Improvement Effects
 - **Purpose**: Unifies terrain classification, natural features, player-built improvements, tile specials (formerly "bonus"/"landmark"), and a founded base behind one config type (`ImprovementConfig_t`), since all of them answer the same two questions: what effects do they grant, and what do they exclude. Terrain is resolved by string id (`Tile::GetTerrainFeatureIds()` → `ImprovementRegistry::Find(id)`); improvements are held directly as `const ImprovementConfig_t*` on the tile (`Tile::GetImprovements()`). Full details (scope semantics, the `ThisTile` resolution pattern, the seeded-energy pattern) are in `docs/architecture/effects-system.md`'s "Tile Improvement Effects" section — this is the map-system-facing summary.
 - **Components**:
-  - `ImprovementConfig_t` / `ImprovementConfigParser` / `ImprovementRegistry` (`include/game/map/ImprovementConfigParser.h`, `ImprovementRegistry.h`) — id, name, mineral cost, required tech, `excludes` (incompatible feature ids), and an `effects` array.
-  - `CollectTileEffects`, `ResolveTileYield`, `ResolveTileDefenseMultiplier` (`include/lib/effects/ActiveEffect.h`) — gather and resolve a tile's own effects.
+  - `ImprovementConfig_t` / `ImprovementConfigParser` / `ImprovementRegistry` (`include/game/map/ImprovementConfigParser.h`, `ImprovementRegistry.h`) — id, name, mineral cost, required tech, `excludes` (incompatible feature ids), per-effect `radius`, optional `owned_by_territory`, and an `effects` array.
+  - `TileEffectsContext::CollectAreaEffects` / `ResolveTileYield` / `ResolveTileDefenseMultiplier` — gather own-tile and neighbor aura effects (Chebyshev scan).
   - `CanBuildImprovement(tile, candidate)` (`include/game/map/ImprovementConfigParser.h`) — exclusivity check (e.g. Farm excludes Rocky). Not wired into any UI yet; there's no improvement-construction flow to call it from.
-- **Configuration**: `config/improvements.json` — one array covering terrain values (`Flat`/`Rolling`/`Rocky`, `Arid`/`Moist`/`Wet`), natural features (`River`, `Fungus`), and improvements (`Farm`, `Mine`, `Bunker`, `Base`).
-- **Combat bonus example**: `Rocky`, `Fungus`, and `Bunker` each grant a `StatModifier` effect on `StatId_t::Defense` with `op: AddPercent, amount: 25` (+25%, stacking additively per `ResolveStatModifiers`'s arithmetic-factor formula). `Base` grants a larger placeholder bonus the same way. No combat system exists yet to consume `ResolveTileDefenseMultiplier` — it's exposed as a ready-to-call resolver.
-- **Aura example**: `Sensor` (`radius: 2`) projects its `+25%` defense bonus to every tile within 2 tiles (Manhattan), not just its own — `ResolveTileDefenseMultiplier` takes a `WorldMap` specifically to scan for these. This is the one tile resolver that needs map access; `ResolveTileYield`/`CollectTileEffects` only ever look at a tile's own terrain features and improvements.
+- **Configuration**: `config/improvements.json` — one array covering terrain values (`Flat`/`Rolling`/`Rocky`, `Arid`/`Moist`/`Wet`), natural features (`River`, `Fungus`), and improvements (`Farm`, `Mine`, `Bunker`, `Base`, `Sensor`, …).
+- **Combat bonus example**: `Rocky`, `Fungus`, and `Bunker` each grant a `StatModifier` effect on `StatId_t::Defense` with `op: AddPercent, amount: 25` (+25%, stacking additively per `ResolveStatModifiers`'s arithmetic-factor formula). `Base` grants a larger placeholder bonus the same way. No combat system exists yet to consume `ResolveTileDefenseMultiplier` — it's exposed as a ready-to-call resolver (takes a defending `FactionId` so territory-owned Sensor auras only apply for the owner).
+- **Aura example**: `Sensor` declares `radius: 2` on its defense (and vision) effect entries and projects `+25%` defense to every tile within **Chebyshev** distance 2 — `AppendAreaEffectsFromNeighbors_` uses `ForEachTileInChebyshevRadius`. Prefer per-effect `"radius"` over the improvement-level default. `owned_by_territory: true` means only the faction that owns the Sensor's tile (via `TerritoryMap`) receives the aura and Sensor fog vision. `ResolveTileYield` / own-tile `CollectTileEffects` only look at a tile's own terrain features and improvements unless scanning neighbors for auras.
 
 ### Tile Bonuses (special resources)
 - **Purpose**: Special resource bonuses on individual tiles (e.g. a nutrient-rich or mineral deposit).
 - **Modeling**: These are **not a separate system** — a tile bonus is just an `ImprovementConfig_t` entry in `config/improvements.json` like any other improvement. It grants resources via `ThisTile` `StatModifier` effects, sets `frequency` > 0 for world-gen placement weighting, and may carry a `spritePath`/`description` for rendering and lore. It lives in the tile's single improvements collection (`Tile::GetImprovements()`), with coexistence governed by `excludes`.
 - **Frequency System**: Higher `frequency` = more common during map generation; used by the world generator to weight placement. (World-gen does not yet place bonuses — it currently sets only terrain.)
 
-### TileMap (Future)
-- **Purpose**: Container managing all tiles on the game map
+### WorldMap
+- **Purpose**: Container owning the tile grid plus world-scoped indexes (`WorkedTileIndex`, `UnitPositionIndex`, `TerritoryMap`).
 - **Responsibilities**:
-  - Store 2D grid of Tile instances
-  - Provide spatial queries and tile access
-  - Handle map generation and persistence
-- **Rationale**: Will be implemented when world generation and map persistence are added
+  - Store 2D grid of `Tile` instances; `GetTile(x, y)` (null out of bounds)
+  - Expose worked-tile, unit-position, and territory indexes
+- **Note**: Older docs called this `TileMap`; the live type is `WorldMap`.
 
 ## Integration with Game Systems
 
 ### Base System
 - Bases work tiles to extract resources
-- `Base::SetPosition(x, y)` / `Base::GetX()` / `Base::GetY()` track map position
-- `WorkerAssignmentManager::GetWorkableTiles()` returns `const Tile*` pointers for all tiles in a 5×5 grid with the four corners removed (Manhattan distance ≤ 3 within `[-2,2]` offsets), excluding the base's own tile — 20 tiles total (`ForEachTileInWorkableArea` in `MapUtils.h`). Enemy-unit blocking is a TODO pending unit implementation.
+- `BaseManager::GetX()` / `GetY()` track map position via the base's tile
+- `WorkerAssignmentManager::GetWorkableTiles()` / `ForEachTileInWorkableArea` yield the **Euclidean radius-2** disk (`dx² + dy² ≤ 5`) around the base — the classic SMAC 5×5 with corners cut — excluding the base's own tile (20 surrounding tiles). Enemy-unit blocking is a TODO pending combat.
 - `WorkerAssignmentManager::ComputeWorkedResources()` aggregates resources from worked tiles
 - `TileResources_t` struct used to pass resource totals
 - Each worker assigned to a tile contributes that tile's resource production
@@ -189,8 +219,9 @@ graph TB
 ## Design Rationale
 
 ### Separation of Concerns
-- Tile stores only its own state and calculates its own production
+- Tile stores only its own state
 - Bases manage which tiles are worked
+- `TerritoryMap` owns political ownership; `WorkedTileIndex` owns worker exclusivity
 - Economy aggregates at faction level
 - Follows Single Responsibility Principle
 
@@ -206,10 +237,10 @@ graph TB
 
 ## Future Enhancements
 
-- **TileMap**: 2D grid container with spatial queries
-- **World Generation**: Procedural map generation creating tiles with varied terrain
+- **World Generation**: richer placement (rivers, fungus, tile bonuses) beyond elevation/moisture/rockiness
 - **Terraforming**: Ability to modify tile characteristics (moisture, elevation)
 - **Fungal Spread**: `Tile::GetHasFungus()` is presence-only today (manually settable, never placed by `WorldGenerator`); having fungus actually spread turn-over-turn is still future work
 - **Weather System**: Dynamic moisture/river modifications based on climate
-- **Improvement construction**: no UI/production flow lets a player actually build Farm/Mine/Bunker yet — `Tile::AddImprovement()` and `CanBuildImprovement()` exist but are unconsumed outside the automatic `"Base"` improvement
-- **Combat system**: `ResolveTileDefenseMultiplier()` is ready to call but nothing resolves attacks yet
+- **Improvement construction**: no UI/production flow lets a player actually build Farm/Mine/Bunker yet — `Tile::AddImprovement()` and `CanBuildImprovement()` exist but are unconsumed outside the automatic `"Base"` improvement and Engine test Sensors
+- **Combat system**: `ResolveTileDefenseMultiplier(tile, forFaction)` is ready to call but nothing resolves attacks yet
+- **Territory UI**: WorldDisplay shows Sensor markers; border/ownership tint is not implemented yet
