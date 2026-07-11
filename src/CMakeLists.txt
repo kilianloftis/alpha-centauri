@@ -71,6 +71,7 @@ add_library(ac-core STATIC
     game/map/TileFlagMap.cpp
     game/map/TerritoryMap.cpp
     game/faction/FactionVisibleMap.cpp
+    game/faction/UnitVisibility.cpp
     game/map/ImprovementConfigParser.cpp
     game/map/WorldMap.cpp
     game/map/WorldGenerator.cpp

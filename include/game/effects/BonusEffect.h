@@ -158,6 +158,21 @@ struct DiplomaticModifierEffect_t
     int value;
 };
 
+// Hides a unit on an arbitrary detection channel (e.g. "cloak", "terrain"). Channel ids
+// are free-form strings defined in JSON — not enumerated in code. ThisUnit: the unit itself
+// is concealed. ThisTile: every unit standing on (or within radius of) the tile is concealed.
+struct ConcealEffect_t
+{
+    std::string channel;
+};
+
+// Pierces concealment on a matching channel. Typically ThisTile with a radius (e.g. Sensor
+// Detect "terrain" at radius 2). Territory-owned sources use ActiveEffect_t::ownerFaction.
+struct DetectEffect_t
+{
+    std::string channel;
+};
+
 using EffectVariant_t = std::variant<
     GrantBuildingEffect_t,
     GrantTechEffect_t,
@@ -166,7 +181,9 @@ using EffectVariant_t = std::variant<
     RuleFlagEffect_t,
     SocialEngineeringOverrideEffect_t,
     DiplomaticModifierEffect_t,
-    SocialRatingModifierEffect_t
+    SocialRatingModifierEffect_t,
+    ConcealEffect_t,
+    DetectEffect_t
 >;
 
 enum class ConditionKind_t

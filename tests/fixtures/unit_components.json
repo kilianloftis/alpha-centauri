@@ -26,6 +26,14 @@
     ]
   },
   {
+    "id": "Cloaking_Device",
+    "name": "Cloaking Device",
+    "type": "ability",
+    "effects": [
+      { "type": "Conceal", "scope": "ThisUnit", "parameters": { "channel": "cloak" } }
+    ]
+  },
+  {
     "id": "energy_siphon",
     "name": "Energy Siphon (faction-lane effect on a component)",
     "type": "special",

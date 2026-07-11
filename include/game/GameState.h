@@ -44,7 +44,7 @@ public:
     // Sole owners of faction/base ID allocation: nothing else may mint one of these IDs, so
     // any runtime faction or base creation (not just the composition root) has a place to get
     // a unique ID from.
-    FactionId AllocateFactionId();
+    FactionId_t AllocateFactionId();
     int AllocateBaseId();
 
     // World map

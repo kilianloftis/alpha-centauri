@@ -50,7 +50,7 @@ public:
     // this leaf class's real dependencies are visible at the call site; the caller (a factory
     // such as Faction::CreateBase) is responsible for unpacking them.
     BaseManager(
-        FactionId factionId,
+        FactionId_t factionId,
         int baseId,
         std::string name,
         Tile& tile,
@@ -156,7 +156,7 @@ public:
 
     // Base identity
     const std::string& GetName() const;
-    FactionId GetFactionId() const;
+    FactionId_t GetFactionId() const;
     int GetBaseId() const;
 
 private:
@@ -175,7 +175,7 @@ private:
     // version changed. The reference is valid until the next effect-source mutation.
     const BaseEffects_t& BuildBaseEffects_() const;
 
-    FactionId m_factionId;
+    FactionId_t m_factionId;
     int m_baseId;
     Tile& m_tile;
     TileEffectsContext& m_rTileEffects;

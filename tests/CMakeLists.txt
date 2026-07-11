@@ -32,6 +32,7 @@ add_executable(effects-tests
     game/UnitPositionTests.cpp
     game/UnitStatsTests.cpp
     game/VisibilityTests.cpp
+    game/UnitVisibilityTests.cpp
     game/TerritoryTests.cpp
     game/WorkerAssignmentTests.cpp
     game/TurnProcessorTests.cpp

@@ -117,7 +117,7 @@ TEST_CASE("A Sensor reveals Chebyshev radius-2 for its territory owner only",
     owner.RebuildVisibility();
     other.RebuildVisibility();
 
-    const FactionId ownerId = owner.GetFactionId();
+    const FactionId_t ownerId = owner.GetFactionId();
     REQUIRE(fixture.map.GetTerritory().GetOwner(6, 4) == ownerId);
 
     CHECK(owner.GetVisibleMap().IsVisible(6, 4));

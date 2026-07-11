@@ -29,10 +29,10 @@ struct ActiveEffect_t
     const EffectConfig_t* config;   // non-owning, points into static config data
     std::string sourceId;           // "command_nexus", "free_market", etc — for breakdown/UI
     const BaseManager* originBase = nullptr; // only set for ThisBase-scoped effects
-    // Set for improvements with owned_by_territory (e.g. Sensor): the FactionId that owns
+    // Set for improvements with owned_by_territory (e.g. Sensor): the FactionId_t that owns
     // the host tile's territory at collection time. When set, tile defense resolution only
     // applies the effect for that faction. Unowned territory stores k_NoFactionOwner.
-    std::optional<FactionId> ownerFaction;
+    std::optional<FactionId_t> ownerFaction;
 };
 
 // The faction-wide effect pool: what CollectActiveEffects gathers (buildings with grants

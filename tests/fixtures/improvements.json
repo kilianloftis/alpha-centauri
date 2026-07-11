@@ -41,7 +41,8 @@
     "id": "Fungus",
     "name": "Fungus",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "defense", "amount": 25, "op": "AddPercent" } }
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "defense", "amount": 25, "op": "AddPercent" } },
+      { "type": "Conceal", "scope": "ThisTile", "parameters": { "channel": "terrain" } }
     ]
   },
   {
@@ -92,6 +93,12 @@
         "scope": "ThisTile",
         "radius": 2,
         "parameters": { "stat": "vision", "amount": 0, "op": "Add" }
+      },
+      {
+        "type": "Detect",
+        "scope": "ThisTile",
+        "radius": 2,
+        "parameters": { "channel": "terrain" }
       }
     ]
   },

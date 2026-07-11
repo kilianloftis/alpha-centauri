@@ -23,7 +23,7 @@ TEST_CASE("CollectAreaEffects: Sensor reaches Chebyshev radius for its territory
     // Base off the Sensor tile so Base's +100% defense does not stack into these checks.
     fixture.MakeFactionBase(owner, 1, 1);
     fixture.ctx->AddImprovementWithEffects(fixture.At(4, 4), "Sensor");
-    const FactionId id = owner.GetFactionId();
+    const FactionId_t id = owner.GetFactionId();
 
     SECTION("distance 1 and 2 are covered, including diagonals")
     {
@@ -83,7 +83,7 @@ TEST_CASE("ResolveTileDefenseMultiplier: terrain and improvement bonuses combine
     Faction& owner = fixture.MakeFaction();
     fixture.MakeFactionBase(owner, 1, 1); // owns Sensor territory without stacking Base on (4,4)
     Tile& tile = fixture.At(4, 4);
-    const FactionId id = owner.GetFactionId();
+    const FactionId_t id = owner.GetFactionId();
 
     // Base multiplier for a featureless tile is 1.0.
     CHECK(fixture.ctx->ResolveTileDefenseMultiplier(tile, id) == Approx(1.0));
@@ -318,7 +318,7 @@ TEST_CASE("Aura effects at the map edge are collected without crashing", "[effec
     fixture.MakeFactionBase(owner, 0, 0);
     // Sensor beside the base so Base's +100% does not stack into the Sensor checks.
     fixture.ctx->AddImprovementWithEffects(fixture.At(2, 0), "Sensor");
-    const FactionId id = owner.GetFactionId();
+    const FactionId_t id = owner.GetFactionId();
     CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(2, 0), id) == Approx(1.25));
     CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(1, 0), id) == Approx(1.25));
     CHECK(fixture.ctx->ResolveTileYield(fixture.At(0, 1)).nutrients == 0);
@@ -364,12 +364,13 @@ TEST_CASE("Per-effect radius: improvement-level radius is the default, per-effec
     CHECK(atTwo.energy == 1);
     CHECK(atTwo.minerals == 0);
 
-    // Sensor declares radius on each effect entry (defense aura + vision sight).
+    // Sensor declares radius on each effect entry (defense aura + vision sight + Detect).
     const ImprovementConfig_t* pSensor = world.improvements.Find("Sensor");
     REQUIRE(pSensor != nullptr);
-    REQUIRE(pSensor->effects.size() == 2);
+    REQUIRE(pSensor->effects.size() == 3);
     CHECK(pSensor->effects[0].radius == 2); // defense aura
     CHECK(pSensor->effects[1].radius == 2); // vision sight
+    CHECK(pSensor->effects[2].radius == 2); // terrain Detect
     CHECK(pSensor->ownedByTerritory);
 }
 

@@ -9,7 +9,7 @@ EventBridge::EventBridge(EventBus& rBus)
     : m_rBus(rBus)
 {
     // TODO: Wire faction signals (on_tech_discovered, on_base_built, on_eliminated)
-    // once Faction gains a FactionId and those signals are added.
+    // once Faction gains a FactionId_t and those signals are added.
 }
 
 void EventBridge::WireBase(BaseManager& rBase)

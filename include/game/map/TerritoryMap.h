@@ -13,7 +13,7 @@ class WorldMap;
 class BaseManager;
 
 // Sentinel for an unclaimed tile. FactionIds from IdAllocator are non-negative.
-inline constexpr FactionId k_NoFactionOwner = -1;
+inline constexpr FactionId_t k_NoFactionOwner = -1;
 
 // World-scoped ownership grid: mutually exclusive faction territory derived from bases.
 // Land bases claim a Euclidean disk of radius 7 (dx^2+dy^2 <= 50) of contiguous land;
@@ -37,8 +37,8 @@ public:
     // Recompute ownership from every live base.
     void Rebuild(const WorldMap& rWorldMap, const std::vector<const BaseManager*>& rBases);
 
-    FactionId GetOwner(int x, int y) const;
-    FactionId GetOwner(const Tile& rTile) const;
+    FactionId_t GetOwner(int x, int y) const;
+    FactionId_t GetOwner(const Tile& rTile) const;
     bool HasOwner(int x, int y) const;
     bool HasOwner(const Tile& rTile) const;
 
@@ -50,7 +50,7 @@ private:
 
     int m_width = 0;
     int m_height = 0;
-    std::vector<FactionId> m_owners;
+    std::vector<FactionId_t> m_owners;
     Revision m_revision;
 };
 

@@ -68,7 +68,7 @@ void AppendOwnedImprovementEffects_(const Tile& rHostTile, const ImprovementConf
     {
         return;
     }
-    const FactionId owner = rWorldMap.GetTerritory().GetOwner(rHostTile);
+    const FactionId_t owner = rWorldMap.GetTerritory().GetOwner(rHostTile);
     for (size_t i = before; i < rOut.size(); ++i)
     {
         rOut[i].ownerFaction = owner;
@@ -117,7 +117,7 @@ void AppendOwnTileEffects_(const Tile& rTile, const WorldMap& rWorldMap,
     }
 }
 
-bool AppliesForFaction_(const ActiveEffect_t& rEffect, FactionId forFaction)
+bool AppliesForFaction_(const ActiveEffect_t& rEffect, FactionId_t forFaction)
 {
     // Territory-owned improvements (Sensor) only apply for their territory owner.
     return !rEffect.ownerFaction.has_value() || *rEffect.ownerFaction == forFaction;
@@ -241,7 +241,7 @@ TileResources_t TileEffectsContext::ResolveYieldFromEffects_(const Tile& rTile,
     };
 }
 
-double TileEffectsContext::ResolveTileDefenseMultiplier(const Tile& rTile, FactionId forFaction) const
+double TileEffectsContext::ResolveTileDefenseMultiplier(const Tile& rTile, FactionId_t forFaction) const
 {
     const std::vector<ActiveEffect_t> effects = CollectAreaEffects(rTile);
     std::vector<ActiveEffect_t> applicable;

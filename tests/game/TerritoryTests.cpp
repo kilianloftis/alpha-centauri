@@ -40,7 +40,7 @@ TEST_CASE("Land base claims a Euclidean disk of contiguous land", "[territory]")
     RebuildTerritory_(fixture);
 
     const TerritoryMap& rTerritory = fixture.map.GetTerritory();
-    const FactionId id = faction.GetFactionId();
+    const FactionId_t id = faction.GetFactionId();
 
     CHECK(rTerritory.GetOwner(0, 0) == id);
     // Cardinal tip: 7^2 = 49 <= 50.
@@ -71,7 +71,7 @@ TEST_CASE("Land territory does not cross water or claim sea tiles", "[territory]
     RebuildTerritory_(fixture);
 
     const TerritoryMap& rTerritory = fixture.map.GetTerritory();
-    const FactionId id = faction.GetFactionId();
+    const FactionId_t id = faction.GetFactionId();
 
     CHECK(rTerritory.GetOwner(1, 4) == id);
     CHECK(rTerritory.GetOwner(2, 4) == id);
@@ -99,7 +99,7 @@ TEST_CASE("Sea base claims Euclidean radius-3 contiguous sea only", "[territory]
     RebuildTerritory_(fixture);
 
     const TerritoryMap& rTerritory = fixture.map.GetTerritory();
-    const FactionId id = faction.GetFactionId();
+    const FactionId_t id = faction.GetFactionId();
 
     CHECK(rTerritory.GetOwner(4, 4) == id);
     // 3^2 = 9 <= 10; 3^2+1^2 = 10 <= 10.
@@ -134,7 +134,7 @@ TEST_CASE("Equidistant contested tiles prefer lower BaseId", "[territory]")
     Faction& a = fixture.MakeFaction();
     Faction& b = fixture.MakeFaction();
 
-    // B founds first → lower BaseId, wins the midpoint despite higher FactionId.
+    // B founds first → lower BaseId, wins the midpoint despite higher FactionId_t.
     BaseManager& baseB = fixture.MakeFactionBase(b, 7, 4);
     BaseManager& baseA = fixture.MakeFactionBase(a, 1, 4);
     REQUIRE(baseB.GetBaseId() < baseA.GetBaseId());

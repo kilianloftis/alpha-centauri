@@ -45,7 +45,7 @@ WorkedTileClaim ClaimCenterTile_(TileEffectsContext& rTileEffects, const Tile& t
 } // namespace
 
 BaseManager::BaseManager(
-    FactionId factionId,
+    FactionId_t factionId,
     int baseId,
     std::string name,
     Tile& tile,
@@ -335,7 +335,7 @@ const std::string& BaseManager::GetName() const
     return m_name;
 }
 
-FactionId BaseManager::GetFactionId() const
+FactionId_t BaseManager::GetFactionId() const
 {
     return m_factionId;
 }

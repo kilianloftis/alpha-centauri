@@ -20,7 +20,7 @@ constexpr int k_SeaTerritoryRadius = 3;
 
 struct ClaimCandidate_t
 {
-    FactionId factionId = k_NoFactionOwner;
+    FactionId_t factionId = k_NoFactionOwner;
     int distSq = std::numeric_limits<int>::max();
     int baseId = std::numeric_limits<int>::max();
 };
@@ -52,7 +52,7 @@ void ClaimFromBase_(const BaseManager& rBase, const WorldMap& rWorldMap,
 
     const bool bWantWater = pOrigin->IsWater();
     const int radius = bWantWater ? k_SeaTerritoryRadius : k_LandTerritoryRadius;
-    const FactionId factionId = rBase.GetFactionId();
+    const FactionId_t factionId = rBase.GetFactionId();
     const int baseId = rBase.GetBaseId();
     const int ox = pOrigin->GetX();
     const int oy = pOrigin->GetY();
@@ -155,7 +155,7 @@ size_t TerritoryMap::Index_(int x, int y) const
     return static_cast<size_t>(y) * static_cast<size_t>(m_width) + static_cast<size_t>(x);
 }
 
-FactionId TerritoryMap::GetOwner(int x, int y) const
+FactionId_t TerritoryMap::GetOwner(int x, int y) const
 {
     if (!IsSized() || !InBounds_(x, y))
     {
@@ -164,7 +164,7 @@ FactionId TerritoryMap::GetOwner(int x, int y) const
     return m_owners[Index_(x, y)];
 }
 
-FactionId TerritoryMap::GetOwner(const Tile& rTile) const
+FactionId_t TerritoryMap::GetOwner(const Tile& rTile) const
 {
     return GetOwner(rTile.GetX(), rTile.GetY());
 }

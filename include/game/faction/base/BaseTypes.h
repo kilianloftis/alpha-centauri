@@ -7,7 +7,7 @@
 namespace ac
 {
 
-using FactionId = int;
+using FactionId_t = int;
 
 struct TradeRoute_t
 {

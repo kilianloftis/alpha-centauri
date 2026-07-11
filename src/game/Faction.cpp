@@ -30,7 +30,7 @@
 namespace ac
 {
 
-Faction::Faction(FactionId factionId, bool bIsPlayerControlled,
+Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
                  const FactionConfig_t& rDefinition,
                  const BuildingRegistry* pBuildingRegistry, const TechRegistry* pTechRegistry,
                  const SocialPolicyRegistry* pSocialPolicyRegistry,

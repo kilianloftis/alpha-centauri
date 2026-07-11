@@ -243,6 +243,22 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
         ratingMod.amount = static_cast<int>(ParseNumber(parameters, "amount", 0.0));
         effect.effect = ratingMod;
     }
+    else if (typeStr == "Conceal")
+    {
+        ConcealEffect_t conceal;
+        conceal.channel = parameters.value("channel", "");
+        if (conceal.channel.empty())
+            throw std::runtime_error("Conceal effect missing required 'channel'");
+        effect.effect = conceal;
+    }
+    else if (typeStr == "Detect")
+    {
+        DetectEffect_t detect;
+        detect.channel = parameters.value("channel", "");
+        if (detect.channel.empty())
+            throw std::runtime_error("Detect effect missing required 'channel'");
+        effect.effect = detect;
+    }
     else
     {
         throw std::runtime_error("Unknown effect type: '" + typeStr + "'");

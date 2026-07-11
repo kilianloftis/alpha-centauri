@@ -45,7 +45,7 @@ class WorldMap;
 class Faction : public IEffectsProvider
 {
 public:
-    Faction(FactionId factionId,
+    Faction(FactionId_t factionId,
              bool bIsPlayerControlled,
              const FactionConfig_t& rDefinition,
              const BuildingRegistry* pBuildingRegistry,
@@ -56,7 +56,7 @@ public:
              const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator);
     ~Faction();
 
-    FactionId GetFactionId() const { return m_factionId; }
+    FactionId_t GetFactionId() const { return m_factionId; }
     // Not multiplayer yet, but the flag (rather than an index-0 convention) is what
     // GameState::GetPlayerFaction() searches for, so it generalizes to multiple
     // human-controlled factions without a representation change.
@@ -153,7 +153,7 @@ public:
 private:
     int GetResearchPerTurn_() const;
 
-    FactionId m_factionId;
+    FactionId_t m_factionId;
     bool m_bIsPlayerControlled;
     const FactionConfig_t& m_rDefinition;
     const BuildingRegistry* m_pBuildingRegistry;

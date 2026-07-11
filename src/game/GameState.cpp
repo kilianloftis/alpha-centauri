@@ -104,7 +104,7 @@ Faction* GameState::GetPlayerFaction()
     return nullptr;
 }
 
-FactionId GameState::AllocateFactionId()
+FactionId_t GameState::AllocateFactionId()
 {
     return m_factionIdAllocator.Allocate();
 }

@@ -305,6 +305,30 @@ TEST_CASE("ParseEffectConfig: SocialRatingModifier", "[effects][parser]")
         json::parse(R"({ "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": {} })")));
 }
 
+TEST_CASE("ParseEffectConfig: Conceal and Detect require a channel", "[effects][parser][detection]")
+{
+    const EffectConfig_t conceal = BonusEffectParser::ParseEffectConfig(json::parse(R"({
+        "type": "Conceal", "scope": "ThisUnit", "parameters": { "channel": "cloak" }
+    })"));
+    const auto* pConceal = std::get_if<ConcealEffect_t>(&conceal.effect);
+    REQUIRE(pConceal != nullptr);
+    CHECK(pConceal->channel == "cloak");
+
+    const EffectConfig_t detect = BonusEffectParser::ParseEffectConfig(json::parse(R"({
+        "type": "Detect", "scope": "ThisTile", "radius": 2,
+        "parameters": { "channel": "terrain" }
+    })"));
+    const auto* pDetect = std::get_if<DetectEffect_t>(&detect.effect);
+    REQUIRE(pDetect != nullptr);
+    CHECK(pDetect->channel == "terrain");
+    CHECK(detect.radius == 2);
+
+    CHECK_THROWS(BonusEffectParser::ParseEffectConfig(
+        json::parse(R"({ "type": "Conceal", "scope": "ThisUnit", "parameters": {} })")));
+    CHECK_THROWS(BonusEffectParser::ParseEffectConfig(
+        json::parse(R"({ "type": "Detect", "scope": "ThisTile", "parameters": {} })")));
+}
+
 TEST_CASE("ParseEffectConfig: unknown effect type throws", "[effects][parser]")
 {
     CHECK_THROWS(BonusEffectParser::ParseEffectConfig(

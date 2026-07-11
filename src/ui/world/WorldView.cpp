@@ -5,6 +5,7 @@
 #include "game/Faction.h"
 #include "game/faction/FactionExploredMap.h"
 #include "game/faction/FactionVisibleMap.h"
+#include "game/faction/UnitVisibility.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/EconomyManager.h"
 #include "game/faction/ResearchManager.h"
@@ -27,7 +28,6 @@ constexpr RatioLayout_t k_MapLayout      {0.0f, 0.0f, 1.0f, 0.867f};
 constexpr RatioLayout_t k_InfoPanelLayout{0.0f, 0.867f, 1.0f, 0.133f};
 constexpr Color_t k_ResearchTextColor      {100, 200, 255, 255};
 constexpr size_t k_InfoPanelElementIndex = 0;
-constexpr size_t k_FirstUnitIndex        = 0;
 constexpr int    k_InvalidTileCoord      = -1;
 
 } // namespace
@@ -182,7 +182,22 @@ void WorldView::SelectUnitAtTile_(int tileX, int tileY)
         return;
     }
 
-    m_pSelectedUnit = units[k_FirstUnitIndex];
+    const Faction* pPlayer = m_rGameState.GetPlayerFaction();
+    for (Unit* pUnit : units)
+    {
+        if (!pUnit)
+        {
+            continue;
+        }
+        if (pPlayer && !IsUnitVisibleTo(*pPlayer, *pUnit, m_rGameState.GetTileEffects()))
+        {
+            continue;
+        }
+        m_pSelectedUnit = pUnit;
+        return;
+    }
+
+    m_pSelectedUnit = nullptr;
 }
 
 Unit* WorldView::GetControllableSelectedUnit_() const

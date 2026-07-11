@@ -107,7 +107,7 @@ void FactionVisibleMap::RebuildFromSources(const Faction& rFaction, const WorldM
 
     // Vision ThisTile effects on improvements (e.g. Sensor): territory-owned improvements
     // only grant sight to the territory owner.
-    const FactionId factionId = rFaction.GetFactionId();
+    const FactionId_t factionId = rFaction.GetFactionId();
     const TerritoryMap& rTerritory = rWorldMap.GetTerritory();
     for (int y = 0; y < rWorldMap.GetHeight(); ++y)
     {

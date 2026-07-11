@@ -1,0 +1,18 @@
+#pragma once
+
+namespace ac
+{
+
+class Faction;
+class TileEffectsContext;
+class Unit;
+
+// Whether rObserver can see rSubject as a unit (distinct from tile fog-of-war).
+// Own units are always visible. Otherwise the subject's tile must be fog-visible to the
+// observer, and every active concealment channel on the unit must be covered by a matching
+// Detect effect that reaches that tile for the observer (territory-owned Detect uses the
+// same ownerFaction gate as Sensor defense/vision).
+bool IsUnitVisibleTo(const Faction& rObserver, const Unit& rSubject,
+                     const TileEffectsContext& rTileEffects);
+
+} // namespace ac

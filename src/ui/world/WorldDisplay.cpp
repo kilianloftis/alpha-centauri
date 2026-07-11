@@ -3,6 +3,7 @@
 #include "game/Faction.h"
 #include "game/faction/FactionExploredMap.h"
 #include "game/faction/FactionVisibleMap.h"
+#include "game/faction/UnitVisibility.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
@@ -247,6 +248,8 @@ void WorldDisplay::RenderUnits_(Graphics& rGraphics, int colStart, int rowStart,
             const float tileX = m_layout.x + ((col - colStart) * tileSize);
             const float tileY = m_layout.y + ((row - rowStart) * tileSize);
 
+            const Faction* pPlayer = m_rGameState.GetPlayerFaction();
+            size_t drawn = 0;
             for (size_t i = 0; i < units.size(); ++i)
             {
                 const Unit* pUnit = units[i];
@@ -254,9 +257,14 @@ void WorldDisplay::RenderUnits_(Graphics& rGraphics, int colStart, int rowStart,
                 {
                     continue;
                 }
+                if (pPlayer && !IsUnitVisibleTo(*pPlayer, *pUnit, m_rGameState.GetTileEffects()))
+                {
+                    continue;
+                }
 
-                const float offsetX = spacing + (i * (markerWidth + spacing));
+                const float offsetX = spacing + (drawn * (markerWidth + spacing));
                 const float offsetY = tileSize - markerHeight - spacing;
+                ++drawn;
 
                 // TODO: Use faction color based on pUnit->GetFaction().
                 rGraphics.DrawFilledRect(
