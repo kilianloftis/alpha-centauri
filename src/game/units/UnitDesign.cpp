@@ -94,47 +94,19 @@ int UnitDesign::GetBaseCost() const
     return static_cast<int>(rawCost * costMult);
 }
 
-float UnitDesign::ResolveStat_(StatId_t statId) const
+int UnitDesign::GetStat(StatId_t statId) const
 {
-    return static_cast<float>(ResolveStatModifiers(FilterByStatId(CollectUnitEffects(m_components), statId), SeedFor(statId)).total);
+    return ResolveStat(*this, statId);
 }
 
-bool UnitDesign::ResolveFlag_(RuleFlagId_t flagId) const
+int UnitDesign::GetStat(StatId_t statId, const EffectContext_t& rCtx) const
 {
-    for (const ActiveEffect_t& rEffect : CollectUnitEffects(m_components))
-    {
-        const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.config->effect);
-        if (pFlag && pFlag->flag == flagId)
-        {
-            return true;
-        }
-    }
-    return false;
+    return ResolveStat(*this, statId, rCtx);
 }
 
-int UnitDesign::GetAttack() const               { return static_cast<int>(ResolveStat_(StatId_t::Attack)); }
-int UnitDesign::GetDefense() const              { return static_cast<int>(ResolveStat_(StatId_t::Defense)); }
-int UnitDesign::GetMovement() const             { return static_cast<int>(ResolveStat_(StatId_t::Movement)); }
-int UnitDesign::GetVision() const               { return static_cast<int>(ResolveStat_(StatId_t::Vision)); }
-int UnitDesign::GetHitPoints() const            { return static_cast<int>(ResolveStat_(StatId_t::HitPoints)); }
-int UnitDesign::GetDisengageChance() const      { return static_cast<int>(ResolveStat_(StatId_t::DisengageChance)); }
-int UnitDesign::GetFuel() const                 { return static_cast<int>(ResolveStat_(StatId_t::Fuel)); }
-int UnitDesign::GetDamageFromOutOfFuel() const  { return static_cast<int>(ResolveStat_(StatId_t::DamageFromOutOfFuel)); }
-bool UnitDesign::IsFlight() const               { return ResolveFlag_(RuleFlagId_t::Flight); }
-bool UnitDesign::IsSea() const                  { return ResolveFlag_(RuleFlagId_t::Sea); }
-bool UnitDesign::IsLandUnit() const             { return !IsFlight() && !IsSea(); }
-bool UnitDesign::IgnoresZoneOfControl() const
+bool UnitDesign::GetFlag(RuleFlagId_t flagId) const
 {
-    return IsFlight() || ResolveFlag_(RuleFlagId_t::IgnoreZoneOfControl);
-}
-int UnitDesign::GetCargoCapacity() const        { return static_cast<int>(ResolveStat_(StatId_t::CargoCapacity)); }
-int UnitDesign::GetDifficultTerrainCost() const { return static_cast<int>(ResolveStat_(StatId_t::DifficultTerrainCost)); }
-bool UnitDesign::IsSingleUse() const            { return ResolveFlag_(RuleFlagId_t::SingleUse); }
-
-int UnitDesign::GetAttackAgainst(const EffectContext_t& ctx) const
-{
-    const std::vector<ActiveEffect_t> effects = CollectUnitEffects(m_components);
-    return static_cast<int>(ResolveStatModifiers(FilterByStatIdInContext(effects, StatId_t::Attack, ctx), SeedFor(StatId_t::Attack)).total);
+    return ResolveFlag(*this, flagId);
 }
 
 } // namespace ac

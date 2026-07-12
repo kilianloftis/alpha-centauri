@@ -5,6 +5,7 @@
 #include "game/units/UnitOrderExecutor.h"
 #include "game/map/MapUtils.h"
 #include "game/map/UnitPositionIndex.h"
+#include "game/effects/EffectEnums.h"
 
 using namespace ac;
 using namespace actest;
@@ -59,7 +60,7 @@ TEST_CASE("Land cannot enter water; sea cannot enter land", "[movement][domain]"
     MakeWater_(fixture.At(4, 5));
     MakeWater_(fixture.At(5, 5));
     Unit& sea = fixture.MakeUnit(faction, 4, 5, {"test_sea_chassis"});
-    CHECK(sea.IsSea());
+    CHECK(sea.GetFlag(RuleFlagId_t::Sea));
     CHECK_FALSE(CanStep(sea, fixture.At(4, 4), fixture.map));
     CHECK(CanStep(sea, fixture.At(5, 5), fixture.map));
 }
@@ -71,8 +72,9 @@ TEST_CASE("Flight can enter land or water", "[movement][domain]")
     MakeWater_(fixture.At(5, 4));
     Faction& faction = fixture.MakeFaction();
     Unit& flyer = fixture.MakeUnit(faction, 4, 4, {"test_flight_chassis"});
-    CHECK(flyer.IsFlight());
-    CHECK(flyer.IgnoresZoneOfControl());
+    CHECK(flyer.GetFlag(RuleFlagId_t::Flight));
+    CHECK((flyer.GetFlag(RuleFlagId_t::Flight)
+           || flyer.GetFlag(RuleFlagId_t::IgnoreZoneOfControl)));
     CHECK(CanStep(flyer, fixture.At(5, 4), fixture.map));
     CHECK(CanStep(flyer, fixture.At(4, 5), fixture.map));
 }
@@ -180,7 +182,8 @@ TEST_CASE("IgnoreZoneOfControl flag bypasses ZOC", "[movement][zoc]")
 
     fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
     Unit& probe = fixture.MakeUnit(player, 4, 4, {"test_chassis", "ignore_zoc"});
-    CHECK(probe.IgnoresZoneOfControl());
+    CHECK((probe.GetFlag(RuleFlagId_t::Flight)
+           || probe.GetFlag(RuleFlagId_t::IgnoreZoneOfControl)));
     CHECK_FALSE(IsTileInHostileZoc(probe, probe.GetTile(), fixture.map));
     CHECK(CanStep(probe, fixture.At(4, 5), fixture.map));
 }

@@ -1,6 +1,7 @@
 #include "ui/unit-designer/DesignStatsDisplay.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitComponentConfig.h"
+#include "game/effects/EffectEnums.h"
 #include "graphics/Graphics.h"
 #include "input/Input.h"
 #include <sstream>
@@ -73,13 +74,13 @@ void DesignStatsDisplay::Render(Graphics& rGraphics)
         y += lineH;
     };
 
-    drawStat("Attack",   design.GetAttack());
-    drawStat("Defense",  design.GetDefense());
-    drawStat("Movement", design.GetMovement());
-    drawStat("HP",       design.GetHitPoints());
-    if (design.GetFuel() > k_NoFuel)
+    drawStat("Attack",   design.GetStat(StatId_t::Attack));
+    drawStat("Defense",  design.GetStat(StatId_t::Defense));
+    drawStat("Movement", design.GetStat(StatId_t::Movement));
+    drawStat("HP",       design.GetStat(StatId_t::HitPoints));
+    if (design.GetStat(StatId_t::Fuel) > k_NoFuel)
     {
-        drawStat("Fuel", design.GetFuel());
+        drawStat("Fuel", design.GetStat(StatId_t::Fuel));
     }
     drawStat("Cost", design.GetBaseCost());
 

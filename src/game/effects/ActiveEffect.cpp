@@ -15,6 +15,8 @@
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/social-engineering/SocialPolicyConfig.h"
 #include "game/units/UnitComponentConfig.h"
+#include "game/units/Unit.h"
+#include "game/units/UnitDesign.h"
 #include "game/effects/BonusEffect.h"
 #include <algorithm>
 #include <cmath>
@@ -354,6 +356,74 @@ void DispatchInstantaneousEffects(const BuildingConfig_t& rBuilding, BaseManager
             std::cerr << "[TODO] Instantaneous GrantUnit from '" << rBuilding.id << "' not yet implemented\n";
         }
     }
+}
+
+namespace
+{
+
+// A live unit's full effect list: its design's own component effects (ThisUnit lane)
+// plus the owning faction's FactionUnits-scoped effects.
+std::vector<ActiveEffect_t> CollectLiveUnitEffects_(const Unit& rUnit)
+{
+    std::vector<ActiveEffect_t> effects = rUnit.GetDesign().CollectEffects();
+    auto factionEffects =
+        FilterByScope(rUnit.GetFaction().GetActiveEffects().effects, EffectScope_t::FactionUnits);
+    effects.insert(effects.end(), factionEffects.begin(), factionEffects.end());
+    return effects;
+}
+
+} // namespace
+
+int ResolveStat(const UnitDesign& rDesign, StatId_t statId)
+{
+    return static_cast<int>(
+        ResolveStatModifiers(FilterByStatId(rDesign.CollectEffects(), statId), SeedFor(statId)).total);
+}
+
+int ResolveStat(const UnitDesign& rDesign, StatId_t statId, const EffectContext_t& rCtx)
+{
+    return static_cast<int>(
+        ResolveStatModifiers(FilterByStatIdInContext(rDesign.CollectEffects(), statId, rCtx),
+                             SeedFor(statId)).total);
+}
+
+bool ResolveFlag(const UnitDesign& rDesign, RuleFlagId_t flagId)
+{
+    for (const ActiveEffect_t& rEffect : rDesign.CollectEffects())
+    {
+        const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.config->effect);
+        if (pFlag && pFlag->flag == flagId)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+int ResolveStat(const Unit& rUnit, StatId_t statId)
+{
+    const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects_(rUnit);
+    return static_cast<int>(ResolveStatModifiers(FilterByStatId(effects, statId), SeedFor(statId)).total);
+}
+
+int ResolveStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx)
+{
+    const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects_(rUnit);
+    return static_cast<int>(
+        ResolveStatModifiers(FilterByStatIdInContext(effects, statId, rCtx), SeedFor(statId)).total);
+}
+
+bool ResolveFlag(const Unit& rUnit, RuleFlagId_t flagId)
+{
+    for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects_(rUnit))
+    {
+        const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.config->effect);
+        if (pFlag && pFlag->flag == flagId)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 } // namespace ac

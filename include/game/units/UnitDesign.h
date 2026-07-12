@@ -13,8 +13,6 @@
 namespace ac
 {
 
-struct EffectContext_t;
-
 class UnitDesign : public IConstructable
 {
 public:
@@ -36,29 +34,13 @@ public:
     // and tile aura scans all work on this list; the component set stays private.
     std::vector<ActiveEffect_t> CollectEffects() const;
 
-    int GetAttack() const;
-    // Attack including conditional modifiers whose condition is satisfied by ctx (e.g. a
-    // terrain- or target-specific attack bonus). GetAttack() is the context-free value.
-    int GetAttackAgainst(const EffectContext_t& ctx) const;
-    int GetDefense() const;
-    int GetMovement() const;
-    int GetVision() const;
-    int GetHitPoints() const;
-    int GetDisengageChance() const;
-    int GetFuel() const;
-    int GetDamageFromOutOfFuel() const;
-    bool IsFlight() const;
-    bool IsSea() const;
-    bool IsLandUnit() const;
-    bool IgnoresZoneOfControl() const;
-    int GetCargoCapacity() const;
-    int GetDifficultTerrainCost() const;
-    bool IsSingleUse() const;
+    // Intrinsic (component-only) stat / flag resolution. Prefer the free ResolveStat /
+    // ResolveFlag overloads; these forward to them.
+    int GetStat(StatId_t statId) const;
+    int GetStat(StatId_t statId, const EffectContext_t& rCtx) const;
+    bool GetFlag(RuleFlagId_t flagId) const;
 
 private:
-    float ResolveStat_(StatId_t statId) const;
-    bool ResolveFlag_(RuleFlagId_t flagId) const;
-
     std::string m_id;
     std::string m_name;
     std::vector<std::pair<UnitSlotConfig_t, const UnitComponentConfig_t*>> m_slotComponents;

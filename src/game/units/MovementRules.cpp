@@ -6,9 +6,26 @@
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
+#include "game/effects/EffectEnums.h"
 
 namespace ac
 {
+
+namespace
+{
+
+bool IgnoresZoneOfControl_(const Unit& rUnit)
+{
+    return ResolveFlag(rUnit, RuleFlagId_t::Flight)
+        || ResolveFlag(rUnit, RuleFlagId_t::IgnoreZoneOfControl);
+}
+
+bool IsLandUnit_(const Unit& rUnit)
+{
+    return !ResolveFlag(rUnit, RuleFlagId_t::Flight) && !ResolveFlag(rUnit, RuleFlagId_t::Sea);
+}
+
+} // namespace
 
 bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject)
 {
@@ -16,26 +33,26 @@ bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject)
     {
         return false;
     }
-    if (rSubject.IgnoresZoneOfControl())
+    if (IgnoresZoneOfControl_(rSubject))
     {
         return false;
     }
 
-    if (rProjector.IsFlight())
+    if (ResolveFlag(rProjector, RuleFlagId_t::Flight))
     {
         // Flight exerts on land and sea units, not on other flight units.
-        return !rSubject.IsFlight();
+        return !ResolveFlag(rSubject, RuleFlagId_t::Flight);
     }
-    if (rProjector.IsSea())
+    if (ResolveFlag(rProjector, RuleFlagId_t::Sea))
     {
-        return rSubject.IsSea();
+        return ResolveFlag(rSubject, RuleFlagId_t::Sea);
     }
-    return rSubject.IsLandUnit();
+    return IsLandUnit_(rSubject);
 }
 
 bool IsTileInHostileZoc(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap)
 {
-    if (rMover.IgnoresZoneOfControl())
+    if (IgnoresZoneOfControl_(rMover))
     {
         return false;
     }
@@ -76,7 +93,7 @@ bool HasHostileUnit(const Unit& rMover, const Tile& rTile, const WorldMap& rWorl
 bool IsZocViolation(const Unit& rMover, const Tile& rFrom, const Tile& rTo,
                     const WorldMap& rWorldMap)
 {
-    if (rMover.IgnoresZoneOfControl())
+    if (IgnoresZoneOfControl_(rMover))
     {
         return false;
     }
@@ -89,11 +106,11 @@ bool IsZocViolation(const Unit& rMover, const Tile& rFrom, const Tile& rTo,
 
 bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile)
 {
-    if (rMover.IsFlight())
+    if (ResolveFlag(rMover, RuleFlagId_t::Flight))
     {
         return true;
     }
-    if (rMover.IsSea())
+    if (ResolveFlag(rMover, RuleFlagId_t::Sea))
     {
         return rTile.IsWater();
     }

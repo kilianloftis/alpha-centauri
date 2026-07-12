@@ -29,29 +29,12 @@ public:
 
     const UnitDesign& GetDesign() const;
 
-    int GetBaseCost() const;
-    int GetAttack() const;
-    // Attack against a specific defender, applying any conditional modifiers that match the
-    // defender's tile (e.g. a bonus vs bases or vs a terrain type). GetAttack() is the
-    // context-free base value.
-    int GetAttackAgainst(const Unit& rDefender) const;
-    int GetDefense() const;
-    int GetMovement() const;
-    int GetVision() const;
-    int GetHitPoints() const;
-    int GetDisengageChance() const;
-    int GetFuel() const;
-    int GetDamageFromOutOfFuel() const;
-    bool IsFlight() const;
-    bool IsSea() const;
-    // Neither flight nor sea.
-    bool IsLandUnit() const;
-    // True if the unit is not subject to hostile zone of control (flight, or the
-    // IgnoreZoneOfControl rule flag used by e.g. probe teams).
-    bool IgnoresZoneOfControl() const;
-    int GetCargoCapacity() const;
-    int GetDifficultTerrainCost() const;
-    bool IsSingleUse() const;
+    // Live-unit stat / flag resolution (design effects + FactionUnits). Prefer the free
+    // ResolveStat / ResolveFlag overloads; these forward to them.
+    int GetStat(StatId_t statId) const;
+    int GetStat(StatId_t statId, const EffectContext_t& rCtx) const;
+    bool GetFlag(RuleFlagId_t flagId) const;
+
     const Tile& GetTile() const;
     BaseManager* GetHomeBase() const;
     Faction& GetFaction() const;
@@ -73,12 +56,6 @@ public:
     void ClearOrder();
 
 private:
-    // Live-unit stat resolution: the design's own ThisUnit effects plus any FactionUnits
-    // effects active in the owning faction's pool (buildings, policies, pops, ...).
-    // UnitDesign's getters stay context-free (intrinsic values, e.g. for the designer UI).
-    int ResolveStat_(StatId_t statId) const;
-    bool ResolveFlag_(RuleFlagId_t flagId) const;
-
     // The index maintains m_pTile alongside its occupancy lists (TryMoveUnit).
     friend class UnitPositionIndex;
 

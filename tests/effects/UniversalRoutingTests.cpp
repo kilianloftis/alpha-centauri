@@ -67,16 +67,16 @@ TEST_CASE("FactionUnits lane: a building's FactionUnits stat modifier boosts liv
     BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
 
     Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_weapon"}); // 4 attack intrinsic
-    CHECK(unit.GetAttack() == 4);
+    CHECK(unit.GetStat(StatId_t::Attack) == 4);
 
     base.GetBuildingManager().AddBuilding("unit_attack_array"); // +25% attack, FactionUnits
-    CHECK(unit.GetAttack() == 5); // 4 * 1.25
+    CHECK(unit.GetStat(StatId_t::Attack) == 5); // 4 * 1.25
 
     // The design (unit-designer view) keeps showing intrinsic values.
-    CHECK(unit.GetDesign().GetAttack() == 4);
+    CHECK(unit.GetDesign().GetStat(StatId_t::Attack) == 4);
 
     base.GetBuildingManager().DestroyBuilding("unit_attack_array");
-    CHECK(unit.GetAttack() == 4);
+    CHECK(unit.GetStat(StatId_t::Attack) == 4);
 }
 
 TEST_CASE("FactionUnits lane: a building's FactionUnits rule flag applies to live units",
@@ -87,11 +87,11 @@ TEST_CASE("FactionUnits lane: a building's FactionUnits rule flag applies to liv
     BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
 
     Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
-    CHECK_FALSE(unit.IsFlight());
+    CHECK_FALSE(unit.GetFlag(RuleFlagId_t::Flight));
 
     base.GetBuildingManager().AddBuilding("flight_grantor"); // RuleFlag flight, FactionUnits
-    CHECK(unit.IsFlight());
-    CHECK_FALSE(unit.GetDesign().IsFlight()); // intrinsic design unchanged
+    CHECK(unit.GetFlag(RuleFlagId_t::Flight));
+    CHECK_FALSE(unit.GetDesign().GetFlag(RuleFlagId_t::Flight)); // intrinsic design unchanged
 }
 
 TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other factions' bases",

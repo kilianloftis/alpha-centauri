@@ -20,6 +20,8 @@ class IEffectsProvider;
 class PopulationManager;
 class Tile;
 class ImprovementRegistry;
+class Unit;
+class UnitDesign;
 struct BuildingConfig_t;
 struct UnitComponentConfig_t;
 struct PopTypeConfig_t;
@@ -252,6 +254,16 @@ inline auto FilterByScope(const std::vector<ActiveEffect_t>& effects, EffectScop
 
 // Collects all effects from a list of unit components as ActiveEffect_t instances.
 std::vector<ActiveEffect_t> CollectUnitEffects(const std::vector<const UnitComponentConfig_t*>& components);
+
+// Resolve a unit design's intrinsic (component-only) stats / flags — no faction pool.
+int ResolveStat(const UnitDesign& rDesign, StatId_t statId);
+int ResolveStat(const UnitDesign& rDesign, StatId_t statId, const EffectContext_t& rCtx);
+bool ResolveFlag(const UnitDesign& rDesign, RuleFlagId_t flagId);
+
+// Resolve a live unit's stats / flags: design effects plus FactionUnits from the owner.
+int ResolveStat(const Unit& rUnit, StatId_t statId);
+int ResolveStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx);
+bool ResolveFlag(const Unit& rUnit, RuleFlagId_t flagId);
 
 // Collects a single pop type's own effects (both ThisPop-scoped tile multipliers and
 // ThisBase-scoped flat generation bonuses). sourceId is the pop type's id.

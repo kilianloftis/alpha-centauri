@@ -93,7 +93,7 @@ void FactionVisibleMap::RebuildFromSources(const Faction& rFaction, const WorldM
 
     for (const Unit& rUnit : rFaction.GetUnitManager().Units())
     {
-        RevealAround_(rUnit.GetTile(), rUnit.GetVision(), rWorldMap, rExplored);
+        RevealAround_(rUnit.GetTile(), rUnit.GetStat(StatId_t::Vision), rWorldMap, rExplored);
     }
 
     for (const BaseManager& rBase : rFaction.Bases())

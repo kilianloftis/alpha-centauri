@@ -5,6 +5,7 @@
 #include "GameFixtures.h"
 
 #include "game/units/Unit.h"
+#include "game/effects/EffectEnums.h"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -16,9 +17,9 @@ TEST_CASE("A fresh unit starts at its live resolved maxima", "[unit][stats]")
     Faction& faction = fixture.MakeFaction();
     Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
 
-    CHECK(unit.GetCurrentHp() == unit.GetHitPoints());
-    CHECK(unit.GetCurrentFuel() == unit.GetFuel());
-    CHECK(unit.GetMovesRemaining() == unit.GetMovement());
+    CHECK(unit.GetCurrentHp() == unit.GetStat(StatId_t::HitPoints));
+    CHECK(unit.GetCurrentFuel() == unit.GetStat(StatId_t::Fuel));
+    CHECK(unit.GetMovesRemaining() == unit.GetStat(StatId_t::Movement));
     CHECK(unit.GetXp() == 0);
 }
 
@@ -33,18 +34,18 @@ TEST_CASE("Current-stat setters clamp to [0, live max]", "[unit][stats]")
     CHECK(unit.GetCurrentHp() == 0);
 
     // Healing past the maximum is capped at the live max.
-    unit.SetCurrentHp(unit.GetHitPoints() + 100);
-    CHECK(unit.GetCurrentHp() == unit.GetHitPoints());
+    unit.SetCurrentHp(unit.GetStat(StatId_t::HitPoints) + 100);
+    CHECK(unit.GetCurrentHp() == unit.GetStat(StatId_t::HitPoints));
 
     unit.SetCurrentFuel(-1);
     CHECK(unit.GetCurrentFuel() == 0);
-    unit.SetCurrentFuel(unit.GetFuel() + 100);
-    CHECK(unit.GetCurrentFuel() == unit.GetFuel());
+    unit.SetCurrentFuel(unit.GetStat(StatId_t::Fuel) + 100);
+    CHECK(unit.GetCurrentFuel() == unit.GetStat(StatId_t::Fuel));
 
     unit.SetMovesRemaining(-3);
     CHECK(unit.GetMovesRemaining() == 0);
-    unit.SetMovesRemaining(unit.GetMovement() + 100);
-    CHECK(unit.GetMovesRemaining() == unit.GetMovement());
+    unit.SetMovesRemaining(unit.GetStat(StatId_t::Movement) + 100);
+    CHECK(unit.GetMovesRemaining() == unit.GetStat(StatId_t::Movement));
 
     unit.SetXp(-10);
     CHECK(unit.GetXp() == 0);
