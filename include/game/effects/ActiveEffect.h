@@ -260,6 +260,11 @@ int ResolveStat(const UnitDesign& rDesign, StatId_t statId);
 int ResolveStat(const UnitDesign& rDesign, StatId_t statId, const EffectContext_t& rCtx);
 bool ResolveFlag(const UnitDesign& rDesign, RuleFlagId_t flagId);
 
+// A live unit's full effect list: design component effects plus the owner's FactionUnits
+// lane. Shared by ResolveStat / ResolveFlag and callers that need the same set (e.g.
+// concealment channels).
+std::vector<ActiveEffect_t> CollectLiveUnitEffects(const Unit& rUnit);
+
 // Resolve a live unit's stats / flags: design effects plus FactionUnits from the owner.
 int ResolveStat(const Unit& rUnit, StatId_t statId);
 int ResolveStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx);

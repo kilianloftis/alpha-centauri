@@ -358,12 +358,9 @@ void DispatchInstantaneousEffects(const BuildingConfig_t& rBuilding, BaseManager
     }
 }
 
-namespace
-{
-
-// A live unit's full effect list: its design's own component effects (ThisUnit lane)
+// A live unit's full effect list: its design's own component effects
 // plus the owning faction's FactionUnits-scoped effects.
-std::vector<ActiveEffect_t> CollectLiveUnitEffects_(const Unit& rUnit)
+std::vector<ActiveEffect_t> CollectLiveUnitEffects(const Unit& rUnit)
 {
     std::vector<ActiveEffect_t> effects = rUnit.GetDesign().CollectEffects();
     auto factionEffects =
@@ -371,8 +368,6 @@ std::vector<ActiveEffect_t> CollectLiveUnitEffects_(const Unit& rUnit)
     effects.insert(effects.end(), factionEffects.begin(), factionEffects.end());
     return effects;
 }
-
-} // namespace
 
 int ResolveStat(const UnitDesign& rDesign, StatId_t statId)
 {
@@ -402,20 +397,20 @@ bool ResolveFlag(const UnitDesign& rDesign, RuleFlagId_t flagId)
 
 int ResolveStat(const Unit& rUnit, StatId_t statId)
 {
-    const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects_(rUnit);
+    const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects(rUnit);
     return static_cast<int>(ResolveStatModifiers(FilterByStatId(effects, statId), SeedFor(statId)).total);
 }
 
 int ResolveStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx)
 {
-    const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects_(rUnit);
+    const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects(rUnit);
     return static_cast<int>(
         ResolveStatModifiers(FilterByStatIdInContext(effects, statId, rCtx), SeedFor(statId)).total);
 }
 
 bool ResolveFlag(const Unit& rUnit, RuleFlagId_t flagId)
 {
-    for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects_(rUnit))
+    for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rUnit))
     {
         const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.config->effect);
         if (pFlag && pFlag->flag == flagId)

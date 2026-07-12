@@ -102,6 +102,19 @@
     ]
   },
   {
+    "id": "conditional_cloak_detector",
+    "name": "Detects cloak only on River tiles",
+    "effects": [
+      {
+        "type": "Detect",
+        "scope": "ThisTile",
+        "radius": 2,
+        "condition": { "kind": "TargetTileHas", "value": "River" },
+        "parameters": { "channel": "cloak" }
+      }
+    ]
+  },
+  {
     "id": "Mirror",
     "name": "Mirror",
     "effects": [

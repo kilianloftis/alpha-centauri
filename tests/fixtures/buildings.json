@@ -248,6 +248,20 @@
     "category": "conquer"
   },
   {
+    "id": "cloaking_project",
+    "name": "Cloaking Project (Conceal cloak on all faction units)",
+    "effects": [
+      {
+        "type": "Conceal",
+        "scope": "FactionUnits",
+        "parameters": {
+          "channel": "cloak"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
     "id": "world_beacon",
     "name": "World Beacon (+10 energy to every base of every faction)",
     "effects": [

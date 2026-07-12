@@ -65,6 +65,19 @@
     ]
   },
   {
+    "id": "deep_pressure_hull",
+    "name": "Deep Pressure Hull (cloak only on Fungus — stand-in for sea-only)",
+    "type": "ability",
+    "effects": [
+      {
+        "type": "Conceal",
+        "scope": "ThisUnit",
+        "condition": { "kind": "TargetTileHas", "value": "Fungus" },
+        "parameters": { "channel": "cloak" }
+      }
+    ]
+  },
+  {
     "id": "energy_siphon",
     "name": "Energy Siphon (faction-lane effect on a component)",
     "type": "special",

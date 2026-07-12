@@ -4,6 +4,8 @@
 #include "GameFixtures.h"
 
 #include "game/faction/UnitVisibility.h"
+#include "game/faction/base/BaseManager.h"
+#include "game/faction/base/buildings/BuildingManager.h"
 #include "game/map/TerritoryMap.h"
 #include "game/units/Unit.h"
 
@@ -155,4 +157,65 @@ TEST_CASE("IsUnitVisibleTo is the UI gate for concealed vs contact-revealed unit
 
     player.GetRevealedUnits().Reveal(cloaked);
     CHECK(IsUnitVisibleTo(player, cloaked, *fixture.ctx));
+}
+
+TEST_CASE("FactionUnits Conceal from a cloaking project hides live units",
+          "[visibility][detection][cloak][FactionUnits]")
+{
+    actest::FactionFixture fixture;
+    Faction& observer = fixture.MakeFaction();
+    Faction& owner = fixture.MakeFaction();
+
+    BaseManager& base = fixture.MakeFactionBase(owner, 1, 4);
+    fixture.MakeUnit(observer, 4, 4, {"test_chassis"});
+    Unit& subject = fixture.MakeUnit(owner, 5, 4, {"test_chassis"});
+    observer.RebuildVisibility();
+
+    REQUIRE(observer.GetVisibleMap().IsVisible(subject.GetTile()));
+    CHECK(IsUnitVisibleTo(observer, subject, *fixture.ctx));
+
+    base.GetBuildingManager().AddBuilding("cloaking_project");
+    CHECK_FALSE(IsUnitVisibleTo(observer, subject, *fixture.ctx));
+}
+
+TEST_CASE("Conditional Conceal applies only when TargetTileHas is satisfied",
+          "[visibility][detection][cloak][condition]")
+{
+    actest::FactionFixture fixture;
+    Faction& observer = fixture.MakeFaction();
+    Faction& owner = fixture.MakeFaction();
+
+    fixture.MakeUnit(observer, 4, 4, {"test_chassis"});
+    Unit& subject = fixture.MakeUnit(owner, 5, 4, {"test_chassis", "deep_pressure_hull"});
+    observer.RebuildVisibility();
+
+    REQUIRE(observer.GetVisibleMap().IsVisible(subject.GetTile()));
+    // Clear tile: condition fails → no active Conceal → visible.
+    CHECK(IsUnitVisibleTo(observer, subject, *fixture.ctx));
+
+    fixture.At(5, 4).SetHasFungus(true);
+    CHECK_FALSE(IsUnitVisibleTo(observer, subject, *fixture.ctx));
+}
+
+TEST_CASE("Conditional Detect applies only when TargetTileHas is satisfied",
+          "[visibility][detection][cloak][condition]")
+{
+    actest::FactionFixture fixture;
+    Faction& owner = fixture.MakeFaction();
+    Faction& other = fixture.MakeFaction();
+
+    // Detector at (6,4) pierces cloak only on River tiles within radius 2.
+    fixture.MakeFactionBase(owner, 1, 4);
+    fixture.ctx->AddImprovementWithEffects(fixture.At(6, 4), "conditional_cloak_detector");
+    fixture.MakeUnit(owner, 6, 4, {"test_chassis"}); // light (7,4) and surrounds
+    owner.RebuildVisibility();
+
+    Unit& cloaked = fixture.MakeUnit(other, 7, 4, {"test_chassis", "Cloaking_Device"});
+    REQUIRE(owner.GetVisibleMap().IsVisible(7, 4));
+    // Cloak active; Detect condition fails off-river → still hidden.
+    CHECK_FALSE(IsUnitVisibleTo(owner, cloaked, *fixture.ctx));
+
+    fixture.At(7, 4).SetHasRiver(true);
+    // Same unit, same detector: condition now met → cloak pierced.
+    CHECK(IsUnitVisibleTo(owner, cloaked, *fixture.ctx));
 }

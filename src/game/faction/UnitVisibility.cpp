@@ -8,7 +8,6 @@
 #include "game/faction/FactionVisibleMap.h"
 #include "game/map/Tile.h"
 #include "game/units/Unit.h"
-#include "game/units/UnitDesign.h"
 
 #include <string>
 #include <unordered_set>
@@ -28,9 +27,11 @@ bool AppliesForFaction_(const ActiveEffect_t& rEffect, FactionId_t forFaction)
 void CollectConcealmentChannels_(const Unit& rSubject, const TileEffectsContext& rTileEffects,
                                  std::unordered_set<std::string>& rOut)
 {
-    for (const ActiveEffect_t& rEffect : rSubject.GetDesign().CollectEffects())
+    const EffectContext_t ctx{&rSubject.GetTile()};
+
+    for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rSubject))
     {
-        if (!rEffect.config || rEffect.config->scope != EffectScope_t::ThisUnit)
+        if (!rEffect.config || !ConditionSatisfied(*rEffect.config, ctx))
         {
             continue;
         }
@@ -43,7 +44,7 @@ void CollectConcealmentChannels_(const Unit& rSubject, const TileEffectsContext&
 
     for (const ActiveEffect_t& rEffect : rTileEffects.CollectAreaEffects(rSubject.GetTile()))
     {
-        if (!rEffect.config)
+        if (!rEffect.config || !ConditionSatisfied(*rEffect.config, ctx))
         {
             continue;
         }
@@ -59,9 +60,11 @@ bool HasDetectionCovering_(const Faction& rObserver, const Tile& rTile, const st
                            const TileEffectsContext& rTileEffects)
 {
     const FactionId_t observerId = rObserver.GetFactionId();
+    const EffectContext_t ctx{&rTile};
     for (const ActiveEffect_t& rEffect : rTileEffects.CollectAreaEffects(rTile))
     {
-        if (!rEffect.config || !AppliesForFaction_(rEffect, observerId))
+        if (!rEffect.config || !AppliesForFaction_(rEffect, observerId)
+            || !ConditionSatisfied(*rEffect.config, ctx))
         {
             continue;
         }
