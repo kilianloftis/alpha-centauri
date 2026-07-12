@@ -26,9 +26,9 @@ namespace
 // A base sees a Chebyshev radius-2 square (own tile plus two rings).
 constexpr int k_BaseVisionRadius = 2;
 
-// Sight radius from ThisTile Vision effects on an improvement. Prefer the effect's own
-// radius (Sensor declares "radius": 2 on the Vision entry); fall back to resolved amount
-// so amount-only configs still work like unit Vision.
+// Sight radius from ThisTile Vision StatModifiers on an improvement — same amount encoding
+// as unit Vision (Sensor declares amount: 2). Effect radius is only for auras (defense/Detect),
+// not for fog sight range.
 int SightRadiusFromImprovement_(const ImprovementConfig_t& rConfig)
 {
     int sight = 0;
@@ -48,16 +48,12 @@ int SightRadiusFromImprovement_(const ImprovementConfig_t& rConfig)
             continue;
         }
 
-        int range = rEffect.radius;
-        if (range <= 0)
-        {
-            ActiveEffect_t active;
-            active.config = &rEffect;
-            active.sourceId = rConfig.id;
-            range = static_cast<int>(
-                ResolveStatModifiers(std::vector<ActiveEffect_t>{active}, SeedFor(StatId_t::Vision))
-                    .total);
-        }
+        ActiveEffect_t active;
+        active.config = &rEffect;
+        active.sourceId = rConfig.id;
+        const int range = static_cast<int>(
+            ResolveStatModifiers(std::vector<ActiveEffect_t>{active}, SeedFor(StatId_t::Vision))
+                .total);
         sight = std::max(sight, range);
     }
     return sight;

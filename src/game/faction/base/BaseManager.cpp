@@ -46,7 +46,7 @@ WorkedTileClaim ClaimCenterTile_(TileEffectsContext& rTileEffects, const Tile& t
 
 BaseManager::BaseManager(
     FactionId_t factionId,
-    int baseId,
+    BaseId_t baseId,
     std::string name,
     Tile& tile,
     const BuildingRegistry* pBuildingRegistry,

@@ -11,6 +11,7 @@
 #include "game/faction/FactionConfig.h"
 #include "game/faction/FactionEffectsPool.h"
 #include "game/faction/FactionExploredMap.h"
+#include "game/faction/FactionRevealedUnits.h"
 #include "game/faction/FactionVisibleMap.h"
 #include "game/social-engineering/SocialPolicyConfig.h"
 #include "lib/DerefView.h"
@@ -72,7 +73,7 @@ public:
     // Factory method: unpacks the individual registries/calculators BaseManager needs from
     // rDataContext (a composition-root-supplied bag) so BaseManager itself can declare narrow,
     // named dependencies instead of taking the whole context.
-    BaseManager* CreateBase(int baseId, const std::string& name, Tile* pTile,
+    BaseManager* CreateBase(BaseId_t baseId, const std::string& name, Tile* pTile,
                             const GameDataContext& rDataContext,
                             TileEffectsContext& rTileEffects,
                             const SecretProjectAvailabilityCalculator& rSecretProjectAvailability);
@@ -136,6 +137,9 @@ public:
     const FactionExploredMap& GetExploredMap() const;
     FactionVisibleMap& GetVisibleMap();
     const FactionVisibleMap& GetVisibleMap() const;
+    // Contact reveal: concealed units this faction has bumped into (occupied tile / ZOC).
+    FactionRevealedUnits& GetRevealedUnits();
+    const FactionRevealedUnits& GetRevealedUnits() const;
     void BindWorldMap(WorldMap& rWorldMap);
     void RebuildVisibility();
 
@@ -174,6 +178,7 @@ private:
     FactionEffectsPool m_effectsPool;
     FactionExploredMap m_explored;
     FactionVisibleMap m_visible;
+    FactionRevealedUnits m_revealedUnits;
     WorldMap* m_pWorldMap = nullptr; // set by BindWorldMap; used by RebuildVisibility
     std::function<void()> m_onBaseListChanged;
 };

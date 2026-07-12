@@ -112,3 +112,47 @@ TEST_CASE("Cloaked unit inside Sensor radius stays hidden (no cloak detector)",
     REQUIRE(owner.GetVisibleMap().IsVisible(cloaked.GetTile()));
     CHECK_FALSE(IsUnitVisibleTo(owner, cloaked, *fixture.ctx));
 }
+
+TEST_CASE("Contact reveal pierces cloak for the bumping faction only",
+          "[visibility][detection][reveal]")
+{
+    actest::FactionFixture fixture;
+    Faction& observer = fixture.MakeFaction();
+    Faction& owner = fixture.MakeFaction();
+    Faction& bystander = fixture.MakeFaction();
+
+    fixture.MakeUnit(observer, 4, 4, {"test_chassis"});
+    Unit& cloaked = fixture.MakeUnit(owner, 5, 4, {"test_chassis", "Cloaking_Device"});
+    observer.RebuildVisibility();
+    bystander.RebuildVisibility();
+
+    REQUIRE_FALSE(IsUnitVisibleTo(observer, cloaked, *fixture.ctx));
+    observer.GetRevealedUnits().Reveal(cloaked);
+    CHECK(IsUnitVisibleTo(observer, cloaked, *fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(bystander, cloaked, *fixture.ctx));
+}
+
+// WorldDisplay / WorldView both gate unit draw & pick on IsUnitVisibleTo — these cases
+// are the contract those UI paths rely on for conceal vs contact reveal.
+TEST_CASE("IsUnitVisibleTo is the UI gate for concealed vs contact-revealed units",
+          "[visibility][detection][reveal][ui]")
+{
+    actest::FactionFixture fixture;
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    fixture.MakeUnit(player, 4, 4, {"test_chassis"});
+    Unit& cloaked = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "Cloaking_Device"});
+    Unit& plain = fixture.MakeUnit(enemy, 4, 5, {"test_chassis"});
+    player.RebuildVisibility();
+
+    REQUIRE(player.GetVisibleMap().IsVisible(cloaked.GetTile()));
+    REQUIRE(player.GetVisibleMap().IsVisible(plain.GetTile()));
+
+    // Concealed: hidden to the player. Visible hostile: shown.
+    CHECK_FALSE(IsUnitVisibleTo(player, cloaked, *fixture.ctx));
+    CHECK(IsUnitVisibleTo(player, plain, *fixture.ctx));
+
+    player.GetRevealedUnits().Reveal(cloaked);
+    CHECK(IsUnitVisibleTo(player, cloaked, *fixture.ctx));
+}

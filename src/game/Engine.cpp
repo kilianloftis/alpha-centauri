@@ -304,9 +304,11 @@ void Engine::Initialize_()
             UnitPositionIndex& rPositions = rMap.GetUnitPositions();
             // Basic vision-1 scout beside the base; deep-radar (vision 2) a little farther out.
             rFaction.GetUnitManager().CreateUnit(
-                rBasicDesign, rPositions, *rMap.GetTile(startX + 1, startY), pBase);
+                m_gameState->AllocateUnitId(), rBasicDesign, rPositions,
+                *rMap.GetTile(startX + 1, startY), pBase);
             rFaction.GetUnitManager().CreateUnit(
-                rRadarDesign, rPositions, *rMap.GetTile(startX + 2, startY), pBase);
+                m_gameState->AllocateUnitId(), rRadarDesign, rPositions,
+                *rMap.GetTile(startX + 2, startY), pBase);
         }
 
         ++positionIndex;

@@ -22,7 +22,7 @@ struct ClaimCandidate_t
 {
     FactionId_t factionId = k_NoFactionOwner;
     int distSq = std::numeric_limits<int>::max();
-    int baseId = std::numeric_limits<int>::max();
+    BaseId_t baseId = std::numeric_limits<BaseId_t>::max();
 };
 
 bool Beats_(const ClaimCandidate_t& rChallenger, const ClaimCandidate_t& rIncumbent)
@@ -53,7 +53,7 @@ void ClaimFromBase_(const BaseManager& rBase, const WorldMap& rWorldMap,
     const bool bWantWater = pOrigin->IsWater();
     const int radius = bWantWater ? k_SeaTerritoryRadius : k_LandTerritoryRadius;
     const FactionId_t factionId = rBase.GetFactionId();
-    const int baseId = rBase.GetBaseId();
+    const BaseId_t baseId = rBase.GetBaseId();
     const int ox = pOrigin->GetX();
     const int oy = pOrigin->GetY();
 

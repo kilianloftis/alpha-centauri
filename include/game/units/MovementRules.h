@@ -1,11 +1,34 @@
 #pragma once
 
+#include <vector>
+
 namespace ac
 {
 
 class Tile;
+class TileEffectsContext;
 class Unit;
 class WorldMap;
+
+// Objective step-check result. Rules attribute blockers when the outcome is an occupant
+// or ZOC block (hidden units still exert ZoC and occupy tiles — visibility is a Try* concern).
+enum class StepOutcome_t
+{
+    Legal,
+    BlockedByOccupant,
+    BlockedByZoc,
+    BlockedByTerrain,
+    NoMoves,
+    NotAdjacent,
+};
+
+struct StepEvaluation_t
+{
+    StepOutcome_t outcome = StepOutcome_t::Legal;
+    // Populated for BlockedByOccupant (hostile / stacking units on rTo) and BlockedByZoc
+    // (foreign projectors that make the step a ZOC→ZOC violation). Empty otherwise.
+    std::vector<Unit*> blockingUnits;
+};
 
 // Whether rProjector (a foreign unit) exerts zone of control that applies to rSubject.
 // Flight projectors affect land and sea subjects; sea/land projectors affect their own
@@ -23,22 +46,29 @@ bool IsZocViolation(const Unit& rMover, const Tile& rFrom, const Tile& rTo,
 // Destination has at least one unit from another faction.
 bool HasHostileUnit(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap);
 
+// Destination has at least one hostile unit visible to rMover's faction.
+bool HasVisibleHostileUnit(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
+                           const TileEffectsContext& rTileEffects);
+
 // Whether rMover may enter rTile for its domain (flight any; sea water; land land).
 bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile);
 
-// Adjacent step legality: moves remaining, adjacency, terrain, stacking, ZOC.
-// Hostile-occupied tiles are never enterable (combat is adjacent; see TryAttack).
+// Pure step rules over objective world state (visibility / reveal are not consulted).
+StepEvaluation_t EvaluateStep(const Unit& rMover, const Tile& rTo, const WorldMap& rWorldMap);
+
+// True when EvaluateStep reports Legal.
 bool CanStep(const Unit& rMover, const Tile& rTo, const WorldMap& rWorldMap);
 
 // Combat placeholder: no damage yet. Clears remaining moves and any active order.
 void ResolveCombatStub(Unit& rAttacker);
 
 // Attack a hostile-occupied adjacent tile without moving onto it. Returns false if not
-// adjacent, out of moves, or rTargetTile has no hostile unit.
-bool TryAttack(Unit& rAttacker, const Tile& rTargetTile, const WorldMap& rWorldMap);
+// adjacent, out of moves, or rTargetTile has no hostile unit visible to the attacker.
+bool TryAttack(Unit& rAttacker, const Tile& rTargetTile, const WorldMap& rWorldMap,
+               const TileEffectsContext& rTileEffects);
 
-// Apply one legal empty-tile step (TryMoveUnit + spend 1 move). Returns false if CanStep
-// fails or the occupancy move is rejected.
+// Apply one legal empty-tile step (TryMoveUnit + spend 1 move). On BlockedByOccupant /
+// BlockedByZoc, contact-reveals the attributed blocking units to the mover's faction.
 bool TryStep(Unit& rMover, const Tile& rTo, WorldMap& rWorldMap);
 
 // Temporary next-step seam (real pathfinding later). Among adjacent tiles that pass
@@ -46,5 +76,10 @@ bool TryStep(Unit& rMover, const Tile& rTo, WorldMap& rWorldMap);
 // every call. Returns nullptr if already there or no improving legal step exists.
 const Tile* ProposeNextStep(const Unit& rMover, const Tile& rDestination,
                             const WorldMap& rWorldMap);
+
+// Like ProposeNextStep, but also considers tiles blocked only by occupants or ZOC — used
+// to identify the bump target when the legal path is blocked (TryStep then reveals).
+const Tile* ProposeDesiredStep(const Unit& rMover, const Tile& rDestination,
+                               const WorldMap& rWorldMap);
 
 } // namespace ac

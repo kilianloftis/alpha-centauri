@@ -338,10 +338,10 @@ TEST_CASE("CanBuildImprovement: excludes-list features block construction", "[ef
     CHECK(CanBuildImprovement(tile, *pFarm));
 }
 
-TEST_CASE("Per-effect radius: an effect's own radius grants reach beyond the improvement's",
+TEST_CASE("Per-effect radius: an effect's own radius grants reach beyond the host tile",
           "[effects][tile][aura][radius]")
 {
-    // EffectRadiusBeacon: improvement radius 0, but its energy effect declares radius 2.
+    // EffectRadiusBeacon: energy effect declares radius 2.
     actest::WorldFixture world;
     world.ctx->AddImprovementWithEffects(world.At(4, 4), "EffectRadiusBeacon");
 
@@ -349,10 +349,10 @@ TEST_CASE("Per-effect radius: an effect's own radius grants reach beyond the imp
     CHECK(world.ctx->ResolveTileYield(world.At(7, 4)).energy == 0); // distance 3
 }
 
-TEST_CASE("Per-effect radius: improvement-level radius is the default, per-effect values override",
+TEST_CASE("Per-effect radius: sibling effects may declare different radii",
           "[effects][tile][aura][radius]")
 {
-    // MixedRadius: improvement radius 2; energy effect inherits it, minerals effect says 1.
+    // MixedRadius: energy reaches 2; minerals reaches 1.
     actest::WorldFixture world;
     world.ctx->AddImprovementWithEffects(world.At(4, 4), "MixedRadius");
 
@@ -364,12 +364,12 @@ TEST_CASE("Per-effect radius: improvement-level radius is the default, per-effec
     CHECK(atTwo.energy == 1);
     CHECK(atTwo.minerals == 0);
 
-    // Sensor declares radius on each effect entry (defense aura + vision sight + Detect).
+    // Sensor declares radius on aura effects; vision uses amount; ownership is on the improvement.
     const ImprovementConfig_t* pSensor = world.improvements.Find("Sensor");
     REQUIRE(pSensor != nullptr);
     REQUIRE(pSensor->effects.size() == 3);
     CHECK(pSensor->effects[0].radius == 2); // defense aura
-    CHECK(pSensor->effects[1].radius == 2); // vision sight
+    CHECK(pSensor->effects[1].radius == 0); // vision uses amount, not aura radius
     CHECK(pSensor->effects[2].radius == 2); // terrain Detect
     CHECK(pSensor->ownedByTerritory);
 }

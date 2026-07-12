@@ -13,6 +13,8 @@ class BaseManager;
 class Faction;
 class UnitPositionIndex;
 
+using UnitId_t = int;
+
 class Unit
 {
 public:
@@ -20,12 +22,16 @@ public:
     // destructor). The index is the single owner of unit-position state: it keeps
     // GetTile() in sync on every move (UnitPositionIndex::TryMoveUnit) and there is no
     // other way to change a unit's position. Throws if the stacking rule forbids rTile.
-    Unit(const UnitDesign& rDesign,
+    // unitId must be unique for the life of the game (WorldMap's unit IdAllocator).
+    Unit(UnitId_t unitId,
+         const UnitDesign& rDesign,
          UnitPositionIndex& rPositions,
          const Tile& rTile,
          BaseManager* pHomeBase,
          Faction& rFaction);
     ~Unit();
+
+    UnitId_t GetUnitId() const;
 
     const UnitDesign& GetDesign() const;
 
@@ -59,6 +65,7 @@ private:
     // The index maintains m_pTile alongside its occupancy lists (TryMoveUnit).
     friend class UnitPositionIndex;
 
+    UnitId_t m_unitId;
     const UnitDesign& m_rDesign;
     UnitPositionIndex& m_rPositions;
     const Tile* m_pTile;

@@ -18,6 +18,11 @@
         "type": "Conceal",
         "scope": "ThisUnit",
         "parameters": { "channel": "cloak" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "ignore_zone_of_control" }
       }
     ]
   },

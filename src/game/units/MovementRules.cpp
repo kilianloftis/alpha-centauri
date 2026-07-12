@@ -1,12 +1,14 @@
 #include "game/units/MovementRules.h"
 
 #include "game/Faction.h"
+#include "game/effects/EffectEnums.h"
+#include "game/faction/FactionRevealedUnits.h"
+#include "game/faction/UnitVisibility.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
-#include "game/effects/EffectEnums.h"
 
 namespace ac
 {
@@ -23,6 +25,54 @@ bool IgnoresZoneOfControl_(const Unit& rUnit)
 bool IsLandUnit_(const Unit& rUnit)
 {
     return !ResolveFlag(rUnit, RuleFlagId_t::Flight) && !ResolveFlag(rUnit, RuleFlagId_t::Sea);
+}
+
+void CollectHostileOccupants_(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
+                              std::vector<Unit*>& rOut)
+{
+    const FactionId_t moverId = rMover.GetFaction().GetFactionId();
+    for (Unit* pUnit : rWorldMap.GetUnitsOnTile(rTile))
+    {
+        if (pUnit && pUnit->GetFaction().GetFactionId() != moverId)
+        {
+            rOut.push_back(pUnit);
+        }
+    }
+}
+
+void CollectZocProjectorsAround_(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
+                                 std::vector<Unit*>& rOut)
+{
+    ForEachTileInChebyshevRadius(rTile, rWorldMap, /*radius=*/1, /*includeOrigin=*/false,
+        [&](const Tile* pNeighbor, int /*distance*/)
+        {
+            for (Unit* pUnit : rWorldMap.GetUnitsOnTile(*pNeighbor))
+            {
+                if (pUnit && UnitExertsZocOn(*pUnit, rMover))
+                {
+                    rOut.push_back(pUnit);
+                }
+            }
+        });
+}
+
+void RevealBlockingUnits_(Unit& rMover, const StepEvaluation_t& rEval)
+{
+    FactionRevealedUnits& rRevealed = rMover.GetFaction().GetRevealedUnits();
+    for (Unit* pUnit : rEval.blockingUnits)
+    {
+        if (pUnit)
+        {
+            rRevealed.Reveal(*pUnit);
+        }
+    }
+}
+
+bool IsDesiredStepCandidate_(StepOutcome_t outcome)
+{
+    return outcome == StepOutcome_t::Legal
+        || outcome == StepOutcome_t::BlockedByOccupant
+        || outcome == StepOutcome_t::BlockedByZoc;
 }
 
 } // namespace
@@ -90,6 +140,22 @@ bool HasHostileUnit(const Unit& rMover, const Tile& rTile, const WorldMap& rWorl
     return false;
 }
 
+bool HasVisibleHostileUnit(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
+                           const TileEffectsContext& rTileEffects)
+{
+    const Faction& rObserver = rMover.GetFaction();
+    const FactionId_t moverId = rObserver.GetFactionId();
+    for (const Unit* pUnit : rWorldMap.GetUnitsOnTile(rTile))
+    {
+        if (pUnit && pUnit->GetFaction().GetFactionId() != moverId
+            && IsUnitVisibleTo(rObserver, *pUnit, rTileEffects))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool IsZocViolation(const Unit& rMover, const Tile& rFrom, const Tile& rTo,
                     const WorldMap& rWorldMap)
 {
@@ -117,35 +183,62 @@ bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile)
     return rTile.IsLand();
 }
 
-bool CanStep(const Unit& rMover, const Tile& rTo, const WorldMap& rWorldMap)
+StepEvaluation_t EvaluateStep(const Unit& rMover, const Tile& rTo, const WorldMap& rWorldMap)
 {
+    StepEvaluation_t result;
+
     if (rMover.GetMovesRemaining() <= 0)
     {
-        return false;
+        result.outcome = StepOutcome_t::NoMoves;
+        return result;
     }
     if (!AreChebyshevAdjacent(rMover.GetTile(), rTo))
     {
-        return false;
+        result.outcome = StepOutcome_t::NotAdjacent;
+        return result;
     }
     if (!CanEnterTileTerrain(rMover, rTo))
     {
-        return false;
-    }
-    // Hostile units never share a tile; combat is resolved from an adjacent tile.
-    if (HasHostileUnit(rMover, rTo, rWorldMap))
-    {
-        return false;
-    }
-    if (IsZocViolation(rMover, rMover.GetTile(), rTo, rWorldMap))
-    {
-        return false;
-    }
-    if (UnitPositionIndex::IsSingleUnitPerTile() && !rWorldMap.GetUnitsOnTile(rTo).empty())
-    {
-        return false;
+        result.outcome = StepOutcome_t::BlockedByTerrain;
+        return result;
     }
 
-    return true;
+    // Hostile units never share a tile; combat is resolved from an adjacent tile.
+    CollectHostileOccupants_(rMover, rTo, rWorldMap, result.blockingUnits);
+    if (!result.blockingUnits.empty())
+    {
+        result.outcome = StepOutcome_t::BlockedByOccupant;
+        return result;
+    }
+
+    if (IsZocViolation(rMover, rMover.GetTile(), rTo, rWorldMap))
+    {
+        result.outcome = StepOutcome_t::BlockedByZoc;
+        CollectZocProjectorsAround_(rMover, rMover.GetTile(), rWorldMap, result.blockingUnits);
+        CollectZocProjectorsAround_(rMover, rTo, rWorldMap, result.blockingUnits);
+        return result;
+    }
+
+    if (UnitPositionIndex::IsSingleUnitPerTile() && !rWorldMap.GetUnitsOnTile(rTo).empty())
+    {
+        result.outcome = StepOutcome_t::BlockedByOccupant;
+        for (Unit* pUnit : rWorldMap.GetUnitsOnTile(rTo))
+        {
+            if (pUnit)
+            {
+                result.blockingUnits.push_back(pUnit);
+            }
+        }
+        return result;
+    }
+
+    result.outcome = StepOutcome_t::Legal;
+    return result;
+}
+
+bool CanStep(const Unit& rMover, const Tile& rTo, const WorldMap& rWorldMap)
+{
+    return EvaluateStep(rMover, rTo, rWorldMap).outcome == StepOutcome_t::Legal;
 }
 
 void ResolveCombatStub(Unit& rAttacker)
@@ -154,7 +247,8 @@ void ResolveCombatStub(Unit& rAttacker)
     rAttacker.ClearOrder();
 }
 
-bool TryAttack(Unit& rAttacker, const Tile& rTargetTile, const WorldMap& rWorldMap)
+bool TryAttack(Unit& rAttacker, const Tile& rTargetTile, const WorldMap& rWorldMap,
+               const TileEffectsContext& rTileEffects)
 {
     if (rAttacker.GetMovesRemaining() <= 0)
     {
@@ -164,7 +258,7 @@ bool TryAttack(Unit& rAttacker, const Tile& rTargetTile, const WorldMap& rWorldM
     {
         return false;
     }
-    if (!HasHostileUnit(rAttacker, rTargetTile, rWorldMap))
+    if (!HasVisibleHostileUnit(rAttacker, rTargetTile, rWorldMap, rTileEffects))
     {
         return false;
     }
@@ -175,17 +269,23 @@ bool TryAttack(Unit& rAttacker, const Tile& rTargetTile, const WorldMap& rWorldM
 
 bool TryStep(Unit& rMover, const Tile& rTo, WorldMap& rWorldMap)
 {
-    if (!CanStep(rMover, rTo, rWorldMap))
+    const StepEvaluation_t eval = EvaluateStep(rMover, rTo, rWorldMap);
+    if (eval.outcome == StepOutcome_t::Legal)
     {
-        return false;
+        if (!rWorldMap.GetUnitPositions().TryMoveUnit(rMover, rTo))
+        {
+            return false;
+        }
+        rMover.SetMovesRemaining(rMover.GetMovesRemaining() - 1);
+        return true;
     }
 
-    if (!rWorldMap.GetUnitPositions().TryMoveUnit(rMover, rTo))
+    if (eval.outcome == StepOutcome_t::BlockedByOccupant
+        || eval.outcome == StepOutcome_t::BlockedByZoc)
     {
-        return false;
+        RevealBlockingUnits_(rMover, eval);
     }
-    rMover.SetMovesRemaining(rMover.GetMovesRemaining() - 1);
-    return true;
+    return false;
 }
 
 const Tile* ProposeNextStep(const Unit& rMover, const Tile& rDestination,
@@ -205,6 +305,38 @@ const Tile* ProposeNextStep(const Unit& rMover, const Tile& rDestination,
         [&](const Tile* pTile, int /*distance*/)
         {
             if (!CanStep(rMover, *pTile, rWorldMap))
+            {
+                return;
+            }
+            const int dist = ChebyshevDistance(*pTile, rDestination);
+            if (dist < bestDist)
+            {
+                bestDist = dist;
+                pBest = pTile;
+            }
+        });
+
+    return pBest;
+}
+
+const Tile* ProposeDesiredStep(const Unit& rMover, const Tile& rDestination,
+                               const WorldMap& rWorldMap)
+{
+    const Tile& rFrom = rMover.GetTile();
+    if (&rFrom == &rDestination)
+    {
+        return nullptr;
+    }
+
+    const int currentDist = ChebyshevDistance(rFrom, rDestination);
+    const Tile* pBest = nullptr;
+    int bestDist = currentDist;
+
+    ForEachTileInChebyshevRadius(rFrom, rWorldMap, /*radius=*/1, /*includeOrigin=*/false,
+        [&](const Tile* pTile, int /*distance*/)
+        {
+            const StepEvaluation_t eval = EvaluateStep(rMover, *pTile, rWorldMap);
+            if (!IsDesiredStepCandidate_(eval.outcome))
             {
                 return;
             }

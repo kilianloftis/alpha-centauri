@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/units/Unit.h"
 #include "lib/DerefView.h"
 #include "lib/Revision.h"
 #include "lib/Signal.h"
@@ -9,7 +10,6 @@
 namespace ac
 {
 
-class Unit;
 class UnitDesign;
 class Tile;
 class BaseManager;
@@ -23,8 +23,9 @@ public:
     ~UnitManager() = default;
 
     // The unit registers itself on rTile in rPositions for its lifetime (see Unit's
-    // constructor); throws if the stacking rule forbids the tile.
-    Unit& CreateUnit(const UnitDesign& rDesign, UnitPositionIndex& rPositions,
+    // constructor); throws if the stacking rule forbids the tile. unitId must be unique
+    // across the game (caller: GameState::AllocateUnitId).
+    Unit& CreateUnit(UnitId_t unitId, const UnitDesign& rDesign, UnitPositionIndex& rPositions,
                      const Tile& rTile, BaseManager* pHomeBase = nullptr);
     void DestroyUnit(Unit& rUnit);
 

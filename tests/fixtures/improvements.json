@@ -91,8 +91,7 @@
       {
         "type": "StatModifier",
         "scope": "ThisTile",
-        "radius": 2,
-        "parameters": { "stat": "vision", "amount": 0, "op": "Add" }
+        "parameters": { "stat": "vision", "amount": 2, "op": "Add" }
       },
       {
         "type": "Detect",
@@ -105,41 +104,37 @@
   {
     "id": "Mirror",
     "name": "Mirror",
-    "radius": 2,
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "energy", "amount": 1, "op": "Add" } }
+      { "type": "StatModifier", "scope": "ThisTile", "radius": 2, "parameters": { "stat": "energy", "amount": 1, "op": "Add" } }
     ]
   },
   {
     "id": "Condenser",
     "name": "Condenser",
-    "radius": 1,
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "moisture_tier", "amount": 1, "op": "Add" } }
+      { "type": "StatModifier", "scope": "ThisTile", "radius": 1, "parameters": { "stat": "moisture_tier", "amount": 1, "op": "Add" } }
     ]
   },
   {
     "id": "EffectRadiusBeacon",
-    "name": "Effect Radius Beacon (radius on the effect, not the improvement)",
+    "name": "Effect Radius Beacon (radius on the effect)",
     "effects": [
       { "type": "StatModifier", "scope": "ThisTile", "radius": 2, "parameters": { "stat": "energy", "amount": 1 } }
     ]
   },
   {
     "id": "MixedRadius",
-    "name": "Mixed Radius (improvement radius 2 as default, one effect overrides to 1)",
-    "radius": 2,
+    "name": "Mixed Radius (sibling effects with different radii)",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "energy", "amount": 1 } },
+      { "type": "StatModifier", "scope": "ThisTile", "radius": 2, "parameters": { "stat": "energy", "amount": 1 } },
       { "type": "StatModifier", "scope": "ThisTile", "radius": 1, "parameters": { "stat": "minerals", "amount": 1 } }
     ]
   },
   {
     "id": "WeirdAura",
     "name": "Weird Aura (probe: non-ThisTile / Instantaneous effects on an improvement)",
-    "radius": 1,
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "energy", "amount": 1, "op": "Add" } },
+      { "type": "StatModifier", "scope": "ThisTile", "radius": 1, "parameters": { "stat": "energy", "amount": 1, "op": "Add" } },
       { "type": "StatModifier", "scope": "ThisBase", "parameters": { "stat": "nutrients", "amount": 5, "op": "Add" } },
       { "type": "StatModifier", "scope": "ThisTile", "persistence": "Instantaneous", "parameters": { "stat": "minerals", "amount": 7, "op": "Add" } }
     ]

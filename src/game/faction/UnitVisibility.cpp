@@ -4,6 +4,7 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/BonusEffect.h"
 #include "game/effects/TileEffectsContext.h"
+#include "game/faction/FactionRevealedUnits.h"
 #include "game/faction/FactionVisibleMap.h"
 #include "game/map/Tile.h"
 #include "game/units/Unit.h"
@@ -79,6 +80,12 @@ bool IsUnitVisibleTo(const Faction& rObserver, const Unit& rSubject,
                      const TileEffectsContext& rTileEffects)
 {
     if (rSubject.GetFaction().GetFactionId() == rObserver.GetFactionId())
+    {
+        return true;
+    }
+
+    // Contact reveal (blocked move / ZOC bump) pierces fog and Conceal for this observer.
+    if (rObserver.GetRevealedUnits().IsRevealed(rSubject))
     {
         return true;
     }

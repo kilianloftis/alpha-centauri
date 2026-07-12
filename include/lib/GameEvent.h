@@ -7,6 +7,7 @@ namespace ac
 {
 
 using FactionId_t = int;
+using BaseId_t = int;
 using TechId = std::string;
 
 struct EvTurnStarted
@@ -23,7 +24,7 @@ struct EvTechDiscovered
 struct EvBaseBuilt
 {
     FactionId_t factionId;
-    int baseId;
+    BaseId_t baseId;
 };
 
 struct EvFactionElim
@@ -34,20 +35,20 @@ struct EvFactionElim
 struct EvDroneRiot
 {
     FactionId_t factionId;
-    int baseId;
+    BaseId_t baseId;
 };
 
 struct EvBaseGainedPop
 {
     FactionId_t factionId;
-    int baseId;
+    BaseId_t baseId;
     int newSize;
 };
 
 struct EvBaseLostPop
 {
     FactionId_t factionId;
-    int baseId;
+    BaseId_t baseId;
     int newSize;
 };
 

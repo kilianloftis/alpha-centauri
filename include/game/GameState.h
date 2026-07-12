@@ -41,11 +41,12 @@ public:
     const Faction* GetPlayerFaction() const;
     Faction* GetPlayerFaction();
 
-    // Sole owners of faction/base ID allocation: nothing else may mint one of these IDs, so
-    // any runtime faction or base creation (not just the composition root) has a place to get
-    // a unique ID from.
+    // Sole owners of faction/base/unit ID allocation: nothing else may mint one of these
+    // IDs, so any runtime faction, base, or unit creation (not just the composition root)
+    // has a place to get a unique ID from.
     FactionId_t AllocateFactionId();
-    int AllocateBaseId();
+    BaseId_t AllocateBaseId();
+    UnitId_t AllocateUnitId();
 
     // World map
     WorldMap& GetWorldMap();
@@ -88,6 +89,7 @@ private:
     std::vector<std::unique_ptr<Faction>> m_factions;
     IdAllocator m_factionIdAllocator;
     IdAllocator m_baseIdAllocator;
+    IdAllocator m_unitIdAllocator;
     UnitOrderExecutor m_unitOrderExecutor;
     // Constructed with *this: only stores the reference, never dereferences it during
     // GameState's own construction, so binding it before m_factions is populated is safe.

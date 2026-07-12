@@ -233,12 +233,6 @@ void WorldDisplay::RenderUnits_(Graphics& rGraphics, int colStart, int rowStart,
                 continue;
             }
 
-            // Units only appear on currently-visible tiles (fog hides them).
-            if (fog.visible && !fog.visible->IsVisible(*pTile))
-            {
-                continue;
-            }
-
             const std::vector<Unit*>& units = rWorldMap.GetUnitsOnTile(*pTile);
             if (units.empty())
             {
@@ -248,6 +242,8 @@ void WorldDisplay::RenderUnits_(Graphics& rGraphics, int colStart, int rowStart,
             const float tileX = m_layout.x + ((col - colStart) * tileSize);
             const float tileY = m_layout.y + ((row - rowStart) * tileSize);
 
+            // Per-unit visibility (fog, Conceal/Detect, and contact reveal) — not tile fog
+            // alone, so contact-revealed units still draw even if they pierce fog of war.
             const Faction* pPlayer = m_rGameState.GetPlayerFaction();
             size_t drawn = 0;
             for (size_t i = 0; i < units.size(); ++i)

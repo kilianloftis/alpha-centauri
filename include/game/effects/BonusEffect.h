@@ -167,7 +167,7 @@ struct ConcealEffect_t
 };
 
 // Pierces concealment on a matching channel. Typically ThisTile with a radius (e.g. Sensor
-// Detect "terrain" at radius 2). Territory-owned sources use ActiveEffect_t::ownerFaction.
+// Detect "terrain" at radius 2). Territory-owned improvements stamp ActiveEffect_t::ownerFaction.
 struct DetectEffect_t
 {
     std::string channel;
@@ -214,8 +214,7 @@ struct EffectConfig_t
     // effects are excluded from context-free resolution (base economy, intrinsic unit stats).
     std::optional<Condition_t> condition;
     // For ThisTile-scoped effects: how far (Chebyshev tiles) beyond the host tile the effect
-    // reaches. 0 (default) = the host tile only. Parsed from the effect entry's own "radius"
-    // field; an improvement-level "radius" acts as the default for its effects (back-compat).
+    // reaches. 0 (default) = the host tile only. Parsed from the effect entry's "radius" field.
     int radius = 0;
 };
 

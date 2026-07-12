@@ -4,9 +4,11 @@
 #include "game/faction/AIProfile.h"
 #include "game/faction/Military.h"
 #include "game/faction/Diplomacy.h"
+#include "game/faction/UnitManager.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/WorldMap.h"
 #include "game/effects/TileEffectsContext.h"
+#include "game/units/Unit.h"
 #include <stdexcept>
 
 namespace ac
@@ -71,6 +73,14 @@ Faction& GameState::AddFaction(std::unique_ptr<Faction> pFaction)
     }
     pFaction->BindWorldMap(*m_worldMap);
     pFaction->SetOnBaseListChanged([this]() { RebuildTerritory(); });
+    // Drop destroyed units from every faction's contact-reveal set (address reuse safety).
+    pFaction->GetUnitManager().OnUnitDestroyed.Connect([this](Unit& rDestroyed)
+    {
+        for (Faction& rFaction : Factions())
+        {
+            rFaction.GetRevealedUnits().Forget(rDestroyed);
+        }
+    });
     m_factions.push_back(std::move(pFaction));
     return *m_factions.back();
 }
@@ -112,6 +122,11 @@ FactionId_t GameState::AllocateFactionId()
 int GameState::AllocateBaseId()
 {
     return m_baseIdAllocator.Allocate();
+}
+
+UnitId_t GameState::AllocateUnitId()
+{
+    return m_unitIdAllocator.Allocate();
 }
 
 WorldMap& GameState::GetWorldMap()

@@ -117,6 +117,7 @@ struct FactionFixture : BaseFixture
     std::vector<std::unique_ptr<ac::Faction>> factions;
     std::deque<ac::UnitDesign> designs; // deque: Units hold UnitDesign& references
     int nextFactionId = 1;
+    int nextUnitId = 1;
 
     FactionFixture()
     {
@@ -145,6 +146,14 @@ struct FactionFixture : BaseFixture
             /*techCost*/ nullptr, /*popTypeAvailability*/ nullptr));
         ac::Faction& rFaction = *factions.back();
         rFaction.BindWorldMap(map);
+        // Drop destroyed units from every faction's contact-reveal set (address reuse safety).
+        rFaction.GetUnitManager().OnUnitDestroyed.Connect([this](ac::Unit& rDestroyed)
+        {
+            for (auto& pFaction : factions)
+            {
+                pFaction->GetRevealedUnits().Forget(rDestroyed);
+            }
+        });
         // Keep territory current when bases are founded (same hook GameState uses).
         rFaction.SetOnBaseListChanged([this]()
         {
@@ -205,8 +214,8 @@ struct FactionFixture : BaseFixture
         designs.emplace_back(slots, assigned);
 
         // The unit registers itself in the map's position index for its lifetime.
-        return rFaction.GetUnitManager().CreateUnit(designs.back(), map.GetUnitPositions(),
-                                                    At(x, y), nullptr);
+        return rFaction.GetUnitManager().CreateUnit(nextUnitId++, designs.back(),
+                                                    map.GetUnitPositions(), At(x, y), nullptr);
     }
 
     void MoveUnit(ac::Unit& rUnit, int x, int y)

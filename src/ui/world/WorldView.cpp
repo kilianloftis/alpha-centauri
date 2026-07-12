@@ -4,7 +4,6 @@
 #include "game/GameState.h"
 #include "game/Faction.h"
 #include "game/faction/FactionExploredMap.h"
-#include "game/faction/FactionVisibleMap.h"
 #include "game/faction/UnitVisibility.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/EconomyManager.h"
@@ -144,8 +143,6 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
         const Faction* pPlayer = m_rGameState.GetPlayerFaction();
         const FactionExploredMap* pExplored =
             (pPlayer && pPlayer->GetExploredMap().IsSized()) ? &pPlayer->GetExploredMap() : nullptr;
-        const FactionVisibleMap* pVisible =
-            (pPlayer && pPlayer->GetVisibleMap().IsSized()) ? &pPlayer->GetVisibleMap() : nullptr;
 
         if (pExplored && !pExplored->IsExplored(worldX, worldY))
         {
@@ -158,10 +155,8 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
             return;
         }
 
-        if (!pVisible || pVisible->IsVisible(worldX, worldY))
-        {
-            SelectUnitAtTile_(worldX, worldY);
-        }
+        // Unit pick uses IsUnitVisibleTo (fog / Conceal / contact reveal), not tile fog alone.
+        SelectUnitAtTile_(worldX, worldY);
     }
 }
 

@@ -32,22 +32,11 @@ ImprovementConfig_t ImprovementConfigParser::ParseImprovementConfig(const nlohma
     config.description = improvementJson.value("description", "");
     config.mineralCost = improvementJson.value("mineral_cost", 0);
     config.requiredTech = ConfigFields::ParseRequiredTech(improvementJson);
-    config.radius = improvementJson.value("radius", 0);
     config.ownedByTerritory = improvementJson.value("owned_by_territory", false);
     config.frequency = improvementJson.value("frequency", 0);
     config.spritePath = improvementJson.value("sprite_path", "");
     config.excludes = ConfigFields::ParseStringArray(improvementJson, "excludes");
     config.effects = BonusEffectParser::ParseEffects(improvementJson, EffectSourceKind_t::Improvement, config.id);
-
-    // Back-compat: an improvement-level "radius" is the default reach for its effects.
-    // Effects that declare their own radius keep it; resolution is per-effect.
-    for (EffectConfig_t& rEffect : config.effects)
-    {
-        if (rEffect.radius == 0)
-        {
-            rEffect.radius = config.radius;
-        }
-    }
 
     return config;
 }

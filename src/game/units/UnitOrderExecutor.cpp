@@ -41,6 +41,13 @@ void UnitOrderExecutor::Execute_(Unit& rUnit, WorldMap& rWorldMap, MoveOrder_t& 
     const Tile* pNext = ProposeNextStep(rUnit, *rOrder.pDestination, rWorldMap);
     if (!pNext)
     {
+        // No legal improving step — TryStep the desired bump tile so occupant/ZOC
+        // blockers are contact-revealed (TryStep is a no-op move on those outcomes).
+        const Tile* pDesired = ProposeDesiredStep(rUnit, *rOrder.pDestination, rWorldMap);
+        if (pDesired)
+        {
+            TryStep(rUnit, *pDesired, rWorldMap);
+        }
         return;
     }
 

@@ -25,16 +25,11 @@ struct ImprovementConfig_t
     int mineralCost = 0;               // 0 for terrain/natural features (not buildable)
     std::string requiredTech;          // empty if not tech-gated
     std::vector<std::string> excludes; // feature ids that can't coexist with this one on a tile
-    // How far (in Chebyshev tiles) this improvement's effects reach beyond its own tile.
-    // 0 (default) = this tile only, e.g. Bunker/Rocky. >0 = also affects any tile within
-    // that distance, e.g. Sensor (radius 2) projects its defense bonus outward.
-    // All three resolvers (ResolveTileYield, ResolveTileDefenseMultiplier, RecomputeMoisture)
-    // honour radius via TileEffectsContext::CollectAreaEffects.
-    // An improvement-level "radius" is only a parse-time default for effects that omit their
-    // own radius; prefer declaring radius on each effect entry.
-    int radius = 0;
+    // Aura reach is per-effect (EffectConfig_t::radius); MaxEffectReach is derived from those.
+    // Resolvers honour radius via TileEffectsContext::CollectAreaEffects.
     // When true, this improvement's effects only apply for the faction that owns the
-    // host tile's territory (see TerritoryMap). Sensor is the canonical case.
+    // host tile's territory (see TerritoryMap). Sensor is the canonical case — ownership is
+    // a property of the improvement, not of individual effects.
     bool ownedByTerritory = false;
     int frequency = 0;                 // world-gen spawn weight; 0 = not randomly placed
     std::string spritePath;            // optional sprite override (used for tile bonuses)

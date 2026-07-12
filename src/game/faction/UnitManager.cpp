@@ -14,10 +14,11 @@ UnitManager::UnitManager(Faction& rFaction)
 {
 }
 
-Unit& UnitManager::CreateUnit(const UnitDesign& rDesign, UnitPositionIndex& rPositions,
-                              const Tile& rTile, BaseManager* pHomeBase)
+Unit& UnitManager::CreateUnit(UnitId_t unitId, const UnitDesign& rDesign,
+                              UnitPositionIndex& rPositions, const Tile& rTile,
+                              BaseManager* pHomeBase)
 {
-    auto pUnit = std::make_unique<Unit>(rDesign, rPositions, rTile, pHomeBase, m_rFaction);
+    auto pUnit = std::make_unique<Unit>(unitId, rDesign, rPositions, rTile, pHomeBase, m_rFaction);
     Unit& rUnit = *pUnit;
     m_units.push_back(std::move(pUnit));
     m_revision.Bump();

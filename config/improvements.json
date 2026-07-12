@@ -146,8 +146,7 @@
       {
         "type": "StatModifier",
         "scope": "ThisTile",
-        "radius":2,
-        "parameters": { "stat": "vision", "amount": 0, "op": "Add" }
+        "parameters": { "stat": "vision", "amount": 2, "op": "Add" }
       },
       {
         "type": "Detect",

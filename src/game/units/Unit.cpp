@@ -10,12 +10,14 @@
 namespace ac
 {
 
-Unit::Unit(const UnitDesign& rDesign,
+Unit::Unit(UnitId_t unitId,
+           const UnitDesign& rDesign,
            UnitPositionIndex& rPositions,
            const Tile& rTile,
            BaseManager* pHomeBase,
            Faction& rFaction)
-    : m_rDesign(rDesign)
+    : m_unitId(unitId)
+    , m_rDesign(rDesign)
     , m_rPositions(rPositions)
     , m_pTile(&rTile)
     , m_pHomeBase(pHomeBase)
@@ -42,6 +44,8 @@ Unit::~Unit()
 {
     m_rPositions.Unregister_(*this);
 }
+
+UnitId_t Unit::GetUnitId() const { return m_unitId; }
 
 const UnitDesign& Unit::GetDesign() const { return m_rDesign; }
 

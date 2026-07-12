@@ -150,7 +150,7 @@ void Faction::AddBase(std::unique_ptr<BaseManager> pBase)
     RebuildVisibility();
 }
 
-BaseManager* Faction::CreateBase(int baseId, const std::string& name, Tile* pTile,
+BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile* pTile,
                                   const GameDataContext& rDataContext,
                                   TileEffectsContext& rTileEffects,
                                   const SecretProjectAvailabilityCalculator& rSecretProjectAvailability)
@@ -299,6 +299,16 @@ FactionVisibleMap& Faction::GetVisibleMap()
 const FactionVisibleMap& Faction::GetVisibleMap() const
 {
     return m_visible;
+}
+
+FactionRevealedUnits& Faction::GetRevealedUnits()
+{
+    return m_revealedUnits;
+}
+
+const FactionRevealedUnits& Faction::GetRevealedUnits() const
+{
+    return m_revealedUnits;
 }
 
 void Faction::BindWorldMap(WorldMap& rWorldMap)

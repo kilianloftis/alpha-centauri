@@ -46,11 +46,10 @@ void AppendUnitAuraEffects_(const Tile& rOrigin, const WorldMap& rWorldMap, int 
         });
 }
 
-// How far an improvement's effects can reach: the improvement-level radius (kept as the
-// parse-time default) or any larger per-effect radius.
+// How far an improvement's effects can reach: the max per-effect radius.
 int MaxEffectReach_(const ImprovementConfig_t& rConfig)
 {
-    int reach = rConfig.radius;
+    int reach = 0;
     for (const EffectConfig_t& rEffect : rConfig.effects)
     {
         reach = std::max(reach, rEffect.radius);

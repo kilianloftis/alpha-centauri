@@ -35,6 +35,8 @@ struct GrowthConfig_t;
 class PopCompositionCalculator;
 class SecretProjectAvailabilityCalculator;
 
+using BaseId_t = int;
+
 // BaseManager coordinates base management subsystems.
 // Provides identity, position, and access to sub-managers. Sub-managers own their full
 // API surface; a method lives here only when it coordinates two or more subsystems
@@ -51,7 +53,7 @@ public:
     // such as Faction::CreateBase) is responsible for unpacking them.
     BaseManager(
         FactionId_t factionId,
-        int baseId,
+        BaseId_t baseId,
         std::string name,
         Tile& tile,
         const BuildingRegistry* pBuildingRegistry,

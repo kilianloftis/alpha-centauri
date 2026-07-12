@@ -3,9 +3,12 @@
 #include "game/units/MovementRules.h"
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitOrderExecutor.h"
+#include "game/faction/UnitVisibility.h"
 #include "game/map/MapUtils.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/effects/EffectEnums.h"
+
+#include <algorithm>
 
 using namespace ac;
 using namespace actest;
@@ -118,10 +121,119 @@ TEST_CASE("Attack is adjacent; hostiles never share a tile", "[movement][zoc]")
     CHECK_FALSE(CanStep(mover, fixture.At(5, 4), fixture.map));
     CHECK_FALSE(TryStep(mover, fixture.At(5, 4), fixture.map));
 
-    REQUIRE(TryAttack(mover, fixture.At(5, 4), fixture.map));
+    REQUIRE(TryAttack(mover, fixture.At(5, 4), fixture.map, *fixture.ctx));
     CHECK(mover.GetMovesRemaining() == 0);
     CHECK_FALSE(mover.GetOrder().has_value());
     CHECK(mover.GetTile().GetX() == 4); // still on own tile
+}
+
+TEST_CASE("Cannot attack a cloaked hostile until contact-revealed",
+          "[movement][visibility][reveal]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    Unit& cloaked = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "Cloaking_Device"});
+    Unit& mover = fixture.MakeUnit(player, 4, 4, {"test_chassis"});
+    player.RebuildVisibility();
+
+    REQUIRE(player.GetVisibleMap().IsVisible(cloaked.GetTile()));
+    REQUIRE_FALSE(IsUnitVisibleTo(player, cloaked, *fixture.ctx));
+    CHECK_FALSE(TryAttack(mover, fixture.At(5, 4), fixture.map, *fixture.ctx));
+    CHECK(mover.GetMovesRemaining() == 2);
+
+    // Bumping the occupied tile reveals the cloaked unit.
+    CHECK_FALSE(TryStep(mover, fixture.At(5, 4), fixture.map));
+    CHECK(IsUnitVisibleTo(player, cloaked, *fixture.ctx));
+    REQUIRE(TryAttack(mover, fixture.At(5, 4), fixture.map, *fixture.ctx));
+}
+
+TEST_CASE("ZOC block from a cloaked unit contact-reveals it",
+          "[movement][visibility][reveal][zoc]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    Unit& cloaked = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "Cloaking_Device"});
+    Unit& mover = fixture.MakeUnit(player, 4, 4, {"test_chassis"});
+    player.RebuildVisibility();
+
+    REQUIRE_FALSE(IsUnitVisibleTo(player, cloaked, *fixture.ctx));
+    // ZOC -> ZOC toward (4,5) is blocked by the cloaked projector.
+    CHECK_FALSE(TryStep(mover, fixture.At(4, 5), fixture.map));
+    CHECK(IsUnitVisibleTo(player, cloaked, *fixture.ctx));
+    CHECK(TryAttack(mover, fixture.At(5, 4), fixture.map, *fixture.ctx));
+}
+
+TEST_CASE("Move order into cloaked unit reveals via desired-step bump",
+          "[movement][visibility][reveal][orders]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    Unit& cloaked = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "Cloaking_Device"});
+    Unit& mover = fixture.MakeUnit(player, 4, 4, {"test_chassis"});
+    player.RebuildVisibility();
+    mover.SetOrder(MoveOrder_t{&fixture.At(5, 4)});
+
+    REQUIRE_FALSE(IsUnitVisibleTo(player, cloaked, *fixture.ctx));
+
+    UnitOrderExecutor executor;
+    executor.Execute(mover, fixture.map);
+
+    CHECK(IsUnitVisibleTo(player, cloaked, *fixture.ctx));
+    CHECK(mover.GetTile().GetX() == 4); // did not enter the hostile tile
+}
+
+TEST_CASE("EvaluateStep attributes occupant and ZOC blockers",
+          "[movement][evaluate]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    Unit& hostile = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    Unit& mover = fixture.MakeUnit(player, 4, 4, {"test_chassis"});
+
+    SECTION("occupied tile")
+    {
+        const StepEvaluation_t eval = EvaluateStep(mover, fixture.At(5, 4), fixture.map);
+        CHECK(eval.outcome == StepOutcome_t::BlockedByOccupant);
+        REQUIRE(eval.blockingUnits.size() == 1);
+        CHECK(eval.blockingUnits[0] == &hostile);
+    }
+
+    SECTION("ZOC to ZOC")
+    {
+        const StepEvaluation_t eval = EvaluateStep(mover, fixture.At(4, 5), fixture.map);
+        CHECK(eval.outcome == StepOutcome_t::BlockedByZoc);
+        REQUIRE_FALSE(eval.blockingUnits.empty());
+        CHECK(std::find(eval.blockingUnits.begin(), eval.blockingUnits.end(), &hostile)
+              != eval.blockingUnits.end());
+    }
+
+    SECTION("legal leave-ZOC step")
+    {
+        const StepEvaluation_t eval = EvaluateStep(mover, fixture.At(3, 3), fixture.map);
+        CHECK(eval.outcome == StepOutcome_t::Legal);
+        CHECK(eval.blockingUnits.empty());
+    }
+
+    SECTION("not adjacent / no moves")
+    {
+        CHECK(EvaluateStep(mover, fixture.At(6, 4), fixture.map).outcome
+              == StepOutcome_t::NotAdjacent);
+        mover.SetMovesRemaining(0);
+        CHECK(EvaluateStep(mover, fixture.At(4, 5), fixture.map).outcome
+              == StepOutcome_t::NoMoves);
+    }
 }
 
 TEST_CASE("Land ignores sea ZOC; sea ignores land ZOC", "[movement][zoc][domain]")
