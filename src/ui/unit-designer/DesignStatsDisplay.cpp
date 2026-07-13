@@ -76,7 +76,7 @@ void DesignStatsDisplay::Render(Graphics& rGraphics)
 
     drawStat("Attack",   design.GetStat(StatId_t::Attack));
     drawStat("Defense",  design.GetStat(StatId_t::Defense));
-    drawStat("Movement", design.GetStat(StatId_t::Movement));
+    drawStat("Movement", design.GetMovementPoints());
     drawStat("HP",       design.GetStat(StatId_t::HitPoints));
     if (design.GetStat(StatId_t::Fuel) > k_NoFuel)
     {

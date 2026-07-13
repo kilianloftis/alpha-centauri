@@ -94,7 +94,7 @@
         "parameters": { "stat": "vision", "amount": 1, "op": "Add" }
       },
       {
-        "type": "StatModifier",
+        "type": "RuleFlag",
         "scope": "ThisUnit",
         "parameters": { "flag": "ignores_difficult_terrain" }
       }

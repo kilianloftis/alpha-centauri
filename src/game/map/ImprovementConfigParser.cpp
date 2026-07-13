@@ -6,8 +6,32 @@
 #include "lib/Rational.h"
 #include "game/effects/BonusEffectParser.h"
 
+#include <stdexcept>
+#include <string>
+#include <string_view>
+
 namespace ac
 {
+
+namespace
+{
+
+// Ensures the rational lands on a whole number of move fragments. Done at parse so
+// MoveCostCalculator::ToFragments_ cannot fail on config-loaded values.
+void RequireMoveCostScales_(const Rational_t& rCost, std::string_view field, std::string_view id)
+{
+    try
+    {
+        (void)rCost.ScaledInt(MovementConstants_t::k_moveFragmentsPerPoint);
+    }
+    catch (const std::exception& e)
+    {
+        throw std::runtime_error(
+            "Improvement '" + std::string(id) + "' field '" + std::string(field) + "': " + e.what());
+    }
+}
+
+} // namespace
 
 bool CanBuildImprovement(const Tile& rTile, const ImprovementConfig_t& rCandidate)
 {
@@ -41,14 +65,12 @@ ImprovementConfig_t ImprovementConfigParser::ParseImprovementConfig(const nlohma
     if (improvementJson.contains("move_cost"))
     {
         config.moveCost = Rational_t::ParseJson(improvementJson.at("move_cost"));
-    }
-    else
-    {
-        config.moveCost = MovementConstants_t{}.defaultMoveCost;
+        RequireMoveCostScales_(*config.moveCost, "move_cost", config.id);
     }
     if (improvementJson.contains("move_cost_override"))
     {
         config.moveCostOverride = Rational_t::ParseJson(improvementJson.at("move_cost_override"));
+        RequireMoveCostScales_(*config.moveCostOverride, "move_cost_override", config.id);
     }
     config.effects = BonusEffectParser::ParseEffects(improvementJson, EffectSourceKind_t::Improvement, config.id);
 

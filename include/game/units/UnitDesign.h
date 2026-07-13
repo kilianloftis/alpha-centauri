@@ -40,6 +40,9 @@ public:
     int GetStat(StatId_t statId, const EffectContext_t& rCtx) const;
     bool GetFlag(RuleFlagId_t flagId) const;
 
+    // Chassis Movement stat in move-points (not fragments).
+    int GetMovementPoints() const;
+
     // Domain of the design's chassis component (required on every valid design).
     UnitDomain_t GetDomain() const;
 

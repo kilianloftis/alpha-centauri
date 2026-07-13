@@ -2,9 +2,13 @@
 #include <nlohmann/json.hpp>
 
 #include "GameFixtures.h"
+#include "game/map/ImprovementConfigParser.h"
 #include "game/units/MoveCostCalculator.h"
 #include "game/units/MovementConstants.h"
 #include "lib/Rational.h"
+
+#include <filesystem>
+#include <fstream>
 
 using namespace ac;
 using namespace actest;
@@ -19,19 +23,36 @@ TEST_CASE("Rational parses ints and fraction strings", "[move-cost][rational]")
     CHECK_THROWS(Rational_t::Parse("1/0"));
 }
 
-TEST_CASE("Improvement move_cost defaults to 1 when omitted", "[move-cost]")
+TEST_CASE("Invalid move_cost fraction fails at improvement parse time", "[move-cost]")
+{
+    namespace fs = std::filesystem;
+    const fs::path path = fs::temp_directory_path() / "ac_bad_move_cost.json";
+    {
+        std::ofstream out(path);
+        out << R"([
+          { "id": "BadRoad", "name": "Bad Road", "move_cost_override": "1/7", "effects": [] }
+        ])";
+    }
+
+    ImprovementConfigParser parser;
+    CHECK_THROWS(parser.ParseConfig(path.string()));
+    fs::remove(path);
+}
+
+TEST_CASE("Improvement move_cost is optional when omitted", "[move-cost]")
 {
     WorldFixture fixture;
     const ImprovementConfig_t& flat = fixture.improvements.Get("Flat");
-    CHECK(flat.moveCost.numerator == 1);
-    CHECK(flat.moveCost.denominator == 1);
+    CHECK_FALSE(flat.moveCost.has_value());
     CHECK_FALSE(flat.moveCostOverride.has_value());
 
     const ImprovementConfig_t& rocky = fixture.improvements.Get("Rocky");
-    CHECK(rocky.moveCost.numerator == 2);
-    CHECK(rocky.moveCost.denominator == 1);
+    REQUIRE(rocky.moveCost.has_value());
+    CHECK(rocky.moveCost->numerator == 2);
+    CHECK(rocky.moveCost->denominator == 1);
 
     const ImprovementConfig_t& road = fixture.improvements.Get("Road");
+    CHECK_FALSE(road.moveCost.has_value());
     REQUIRE(road.moveCostOverride.has_value());
     CHECK(road.moveCostOverride->ScaledInt(MovementConstants_t::k_moveFragmentsPerPoint)
           == MovementConstants_t::k_moveFragmentsPerPoint / 3);
@@ -74,6 +95,15 @@ TEST_CASE("MoveCostCalculator takes max cost or min override", "[move-cost]")
     tube.SetHasFungus(true);
     tube.AddImprovement(fixture.improvements.Get("MagTube"));
     CHECK(calc.ComputeFragments(tube, land) == 0);
+
+    // Override replaces max cost even when the override is numerically higher.
+    ImprovementConfig_t highOverride;
+    highOverride.id = "TestHighOverride";
+    highOverride.moveCostOverride = Rational_t::FromInt(5);
+    Tile& overridden = fixture.At(6, 5);
+    overridden.SetRockiness(Rockiness_t::Rocky); // move_cost 2
+    overridden.AddImprovement(highOverride);
+    CHECK(calc.ComputeFragments(overridden, land) == 5 * k_point);
 }
 
 TEST_CASE("MoveCostCalculator honours UnitMoveProfile flags", "[move-cost]")

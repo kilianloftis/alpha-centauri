@@ -23,7 +23,9 @@ struct UnitMoveProfile_t
 UnitMoveProfile_t MoveProfileFor(const Unit& rUnit);
 
 // Resolves the fragment cost to enter a tile from its terrain/improvement move_cost values
-// (max cost) and move_cost_override values (min override wins when any are present).
+// (max cost). Any move_cost_override on the tile replaces that result entirely — even when
+// the override is higher than the max cost. Among multiple overrides, the lowest wins
+// (e.g. MagTube 0 beats Road 1/3). If nothing defines a cost or override, defaultMoveCost.
 class MoveCostCalculator
 {
 public:
@@ -34,16 +36,19 @@ public:
     int ComputeFragments(const Tile& rTile, const UnitMoveProfile_t& rProfile) const;
 
 private:
-    // Running max move_cost and min move_cost_override while walking a tile's features.
+    // Running max move_cost and lowest move_cost_override while walking a tile's features.
+    // Both are unset until a feature contributes the corresponding field. An override, when
+    // present, replaces maxCost in the final result (it is not min'd against maxCost).
     struct CostAggregate_t
     {
-        int maxCost = 0;
-        std::optional<int> minOverride;
+        std::optional<int> maxCost;
+        std::optional<int> overrideCost;
     };
 
     int ToFragments_(const Rational_t& rCost) const;
 
-    // Base move_cost for one feature, after ignoresDifficultTerrain.
+    // Effective move_cost fragments for a feature that defines moveCost, after
+    // ignoresDifficultTerrain.
     int FeatureMoveCostFragments_(const ImprovementConfig_t& rConfig,
                                   const UnitMoveProfile_t& rProfile,
                                   int defaultFragments) const;
@@ -52,6 +57,7 @@ private:
     int FungusAsRoadOverrideFragments_() const;
 
     void ApplyOverride_(CostAggregate_t& rAgg, int overrideFragments) const;
+    void ApplyMoveCost_(CostAggregate_t& rAgg, int costFragments) const;
     void AccumulateFeature_(const ImprovementConfig_t& rConfig,
                             const UnitMoveProfile_t& rProfile,
                             int defaultFragments,

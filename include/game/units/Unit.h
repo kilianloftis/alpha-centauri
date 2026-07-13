@@ -48,14 +48,16 @@ public:
 
     int GetCurrentHp() const;
     int GetCurrentFuel() const;
+    // Chassis Movement stat in move-points (not fragments).
+    int GetMovementPoints() const;
     // Remaining movement in fragments (k_moveFragmentsPerPoint per Movement point).
-    int GetMovesRemaining() const;
+    int GetMoveFragmentsRemaining() const;
     int GetXp() const;
 
     void SetCurrentHp(int hp);
     void SetCurrentFuel(int fuel);
-    // Clamps to [0, Movement * k_moveFragmentsPerPoint].
-    void SetMovesRemaining(int moves);
+    // Clamps to [0, MovementPoints * k_moveFragmentsPerPoint].
+    void SetMoveFragmentsRemaining(int fragments);
     void SetXp(int xp);
     void SetHomeBase(BaseManager* pHomeBase);
 
@@ -77,7 +79,7 @@ private:
 
     int m_currentHp;
     int m_currentFuel;
-    int m_movesRemaining;
+    int m_moveFragmentsRemaining;
     int m_xp;
     std::optional<UnitOrder_t> m_order;
 };

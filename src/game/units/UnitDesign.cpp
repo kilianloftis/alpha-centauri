@@ -109,6 +109,11 @@ bool UnitDesign::GetFlag(RuleFlagId_t flagId) const
     return ResolveFlag(*this, flagId);
 }
 
+int UnitDesign::GetMovementPoints() const
+{
+    return GetStat(StatId_t::Movement);
+}
+
 UnitDomain_t UnitDesign::GetDomain() const
 {
     for (const auto& [rSlot, pComp] : m_slotComponents)

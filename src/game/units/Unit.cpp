@@ -28,14 +28,14 @@ Unit::Unit(UnitId_t unitId,
     // therefore starts at its true max, so current-vs-max is well defined from spawn.
     , m_currentHp(0)
     , m_currentFuel(0)
-    , m_movesRemaining(0)
+    , m_moveFragmentsRemaining(0)
     , m_xp(0)
 {
     // Members used by ResolveStat are initialised above; seed after the mem-init list.
     m_currentHp = ResolveStat(*this, StatId_t::HitPoints);
     m_currentFuel = ResolveStat(*this, StatId_t::Fuel);
-    m_movesRemaining = ResolveStat(*this, StatId_t::Movement)
-        * MovementConstants_t::k_moveFragmentsPerPoint;
+    m_moveFragmentsRemaining =
+        GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint;
 
     // Throws if the stacking rule forbids rTile; the destructor is not run for a unit
     // whose constructor throws, so no unregistration is needed on that path.
@@ -77,7 +77,8 @@ Faction& Unit::GetFaction() const           { return m_rFaction; }
 
 int Unit::GetCurrentHp() const              { return m_currentHp; }
 int Unit::GetCurrentFuel() const            { return m_currentFuel; }
-int Unit::GetMovesRemaining() const         { return m_movesRemaining; }
+int Unit::GetMovementPoints() const         { return ResolveStat(*this, StatId_t::Movement); }
+int Unit::GetMoveFragmentsRemaining() const { return m_moveFragmentsRemaining; }
 int Unit::GetXp() const                     { return m_xp; }
 
 // Current stats are clamped to [0, live max] so the invariant 0 <= current <= max holds
@@ -91,11 +92,11 @@ void Unit::SetCurrentFuel(int fuel)
 {
     m_currentFuel = std::clamp(fuel, 0, ResolveStat(*this, StatId_t::Fuel));
 }
-void Unit::SetMovesRemaining(int moves)
+void Unit::SetMoveFragmentsRemaining(int fragments)
 {
-    const int maxFragments = ResolveStat(*this, StatId_t::Movement)
-        * MovementConstants_t::k_moveFragmentsPerPoint;
-    m_movesRemaining = std::clamp(moves, 0, maxFragments);
+    const int maxFragments =
+        GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint;
+    m_moveFragmentsRemaining = std::clamp(fragments, 0, maxFragments);
 }
 void Unit::SetXp(int xp)                    { m_xp = std::max(xp, 0); }
 void Unit::SetHomeBase(BaseManager* pHomeBase) { m_pHomeBase = pHomeBase; }

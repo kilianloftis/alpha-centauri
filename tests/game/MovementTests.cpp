@@ -2,6 +2,7 @@
 #include "GameFixtures.h"
 #include "game/units/MovementRules.h"
 #include "game/units/MovementConstants.h"
+#include "game/units/StepEvaluator.h"
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "game/faction/UnitVisibility.h"
@@ -18,6 +19,18 @@ namespace
 {
 
 constexpr int k_point = MovementConstants_t::k_moveFragmentsPerPoint;
+
+struct MovementHarness_
+{
+    UnitOrderExecutor orders;
+
+    explicit MovementHarness_(WorldFixture& fixture)
+        : orders(fixture.improvements, fixture.map, *fixture.ctx)
+    {
+    }
+
+    StepEvaluator& steps() { return orders.Steps(); }
+};
 
 void MakeLand_(Tile& rTile)
 {
@@ -43,50 +56,54 @@ TEST_CASE("Step requires adjacency and spends one move", "[movement]")
 {
     FactionFixture fixture;
     FillLand_(fixture);
+    MovementHarness_ move(fixture);
     Faction& faction = fixture.MakeFaction();
     Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
-    REQUIRE(unit.GetMovesRemaining() == 2 * k_point);
+    REQUIRE(unit.GetMoveFragmentsRemaining() == 2 * k_point);
 
-    CHECK_FALSE(CanStep(unit, fixture.At(6, 4), fixture.map, fixture.improvements)); // not adjacent
-    REQUIRE(TryStep(unit, fixture.At(5, 4), fixture.map, fixture.improvements));
+    CHECK_FALSE(move.steps().CanStep(unit, fixture.At(6, 4))); // not adjacent
+    REQUIRE(move.orders.TryStep(unit, fixture.At(5, 4)));
     CHECK(unit.GetTile().GetX() == 5);
-    CHECK(unit.GetMovesRemaining() == k_point);
+    CHECK(unit.GetMoveFragmentsRemaining() == k_point);
 }
 
 TEST_CASE("Land cannot enter water; sea cannot enter land", "[movement][domain]")
 {
     FactionFixture fixture;
     FillLand_(fixture);
+    MovementHarness_ move(fixture);
     MakeWater_(fixture.At(5, 4));
 
     Faction& faction = fixture.MakeFaction();
     Unit& land = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
-    CHECK_FALSE(CanStep(land, fixture.At(5, 4), fixture.map, fixture.improvements));
+    CHECK_FALSE(move.steps().CanStep(land, fixture.At(5, 4)));
 
     MakeWater_(fixture.At(4, 5));
     MakeWater_(fixture.At(5, 5));
     Unit& sea = fixture.MakeUnit(faction, 4, 5, {"test_sea_chassis"});
     CHECK(sea.GetDomain() == UnitDomain_t::Sea);
-    CHECK_FALSE(CanStep(sea, fixture.At(4, 4), fixture.map, fixture.improvements));
-    CHECK(CanStep(sea, fixture.At(5, 5), fixture.map, fixture.improvements));
+    CHECK_FALSE(move.steps().CanStep(sea, fixture.At(4, 4)));
+    CHECK(move.steps().CanStep(sea, fixture.At(5, 5)));
 }
 
 TEST_CASE("Air can enter land or water", "[movement][domain]")
 {
     FactionFixture fixture;
     FillLand_(fixture);
+    MovementHarness_ move(fixture);
     MakeWater_(fixture.At(5, 4));
     Faction& faction = fixture.MakeFaction();
     Unit& flyer = fixture.MakeUnit(faction, 4, 4, {"test_flight_chassis"});
     CHECK(flyer.GetDomain() == UnitDomain_t::Air);
-    CHECK(CanStep(flyer, fixture.At(5, 4), fixture.map, fixture.improvements));
-    CHECK(CanStep(flyer, fixture.At(4, 5), fixture.map, fixture.improvements));
+    CHECK(move.steps().CanStep(flyer, fixture.At(5, 4)));
+    CHECK(move.steps().CanStep(flyer, fixture.At(4, 5)));
 }
 
 TEST_CASE("Enter ZOC allowed; ZOC to ZOC blocked; leave ZOC allowed", "[movement][zoc]")
 {
     FactionFixture fixture;
     FillLand_(fixture);
+    MovementHarness_ move(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
@@ -95,22 +112,23 @@ TEST_CASE("Enter ZOC allowed; ZOC to ZOC blocked; leave ZOC allowed", "[movement
     Unit& mover = fixture.MakeUnit(player, 3, 4, {"test_chassis"});
 
     // Enter ZOC: (3,4) -> (4,4)
-    REQUIRE(TryStep(mover, fixture.At(4, 4), fixture.map, fixture.improvements));
-    CHECK(IsTileInHostileZoc(mover, mover.GetTile(), fixture.map));
+    REQUIRE(move.orders.TryStep(mover, fixture.At(4, 4)));
+    CHECK(move.steps().IsTileInHostileZoc(mover, mover.GetTile()));
 
     // ZOC -> ZOC: (4,4) -> (4,5) both in ZOC of enemy at (5,4)
-    CHECK(IsTileInHostileZoc(mover, fixture.At(4, 5), fixture.map));
-    CHECK_FALSE(CanStep(mover, fixture.At(4, 5), fixture.map, fixture.improvements));
+    CHECK(move.steps().IsTileInHostileZoc(mover, fixture.At(4, 5)));
+    CHECK_FALSE(move.steps().CanStep(mover, fixture.At(4, 5)));
 
     // Leave ZOC: (4,4) -> (3,3) — (3,3) is Chebyshev 2 from enemy, outside ZOC
-    CHECK_FALSE(IsTileInHostileZoc(mover, fixture.At(3, 3), fixture.map));
-    CHECK(CanStep(mover, fixture.At(3, 3), fixture.map, fixture.improvements));
+    CHECK_FALSE(move.steps().IsTileInHostileZoc(mover, fixture.At(3, 3)));
+    CHECK(move.steps().CanStep(mover, fixture.At(3, 3)));
 }
 
 TEST_CASE("Attack is adjacent; hostiles never share a tile", "[movement][zoc]")
 {
     FactionFixture fixture;
     FillLand_(fixture);
+    MovementHarness_ move(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
@@ -118,12 +136,12 @@ TEST_CASE("Attack is adjacent; hostiles never share a tile", "[movement][zoc]")
     Unit& mover = fixture.MakeUnit(player, 4, 4, {"test_chassis"});
     mover.SetOrder(MoveOrder_t{&fixture.At(5, 4)});
 
-    REQUIRE(IsTileInHostileZoc(mover, mover.GetTile(), fixture.map));
-    CHECK_FALSE(CanStep(mover, fixture.At(5, 4), fixture.map, fixture.improvements));
-    CHECK_FALSE(TryStep(mover, fixture.At(5, 4), fixture.map, fixture.improvements));
+    REQUIRE(move.steps().IsTileInHostileZoc(mover, mover.GetTile()));
+    CHECK_FALSE(move.steps().CanStep(mover, fixture.At(5, 4)));
+    CHECK_FALSE(move.orders.TryStep(mover, fixture.At(5, 4)));
 
-    REQUIRE(TryAttack(mover, fixture.At(5, 4), fixture.map, *fixture.ctx));
-    CHECK(mover.GetMovesRemaining() == 0);
+    REQUIRE(move.orders.TryAttack(mover, fixture.At(5, 4)));
+    CHECK(mover.GetMoveFragmentsRemaining() == 0);
     CHECK_FALSE(mover.GetOrder().has_value());
     CHECK(mover.GetTile().GetX() == 4); // still on own tile
 }
@@ -133,6 +151,7 @@ TEST_CASE("Cannot attack a cloaked hostile until contact-revealed",
 {
     FactionFixture fixture;
     FillLand_(fixture);
+    MovementHarness_ move(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
@@ -142,13 +161,13 @@ TEST_CASE("Cannot attack a cloaked hostile until contact-revealed",
 
     REQUIRE(player.GetVisibleMap().IsVisible(cloaked.GetTile()));
     REQUIRE_FALSE(IsUnitVisibleTo(player, cloaked, *fixture.ctx));
-    CHECK_FALSE(TryAttack(mover, fixture.At(5, 4), fixture.map, *fixture.ctx));
-    CHECK(mover.GetMovesRemaining() == 2 * k_point);
+    CHECK_FALSE(move.orders.TryAttack(mover, fixture.At(5, 4)));
+    CHECK(mover.GetMoveFragmentsRemaining() == 2 * k_point);
 
     // Bumping the occupied tile reveals the cloaked unit.
-    CHECK_FALSE(TryStep(mover, fixture.At(5, 4), fixture.map, fixture.improvements));
+    CHECK_FALSE(move.orders.TryStep(mover, fixture.At(5, 4)));
     CHECK(IsUnitVisibleTo(player, cloaked, *fixture.ctx));
-    REQUIRE(TryAttack(mover, fixture.At(5, 4), fixture.map, *fixture.ctx));
+    REQUIRE(move.orders.TryAttack(mover, fixture.At(5, 4)));
 }
 
 TEST_CASE("ZOC block from a cloaked unit contact-reveals it",
@@ -156,6 +175,7 @@ TEST_CASE("ZOC block from a cloaked unit contact-reveals it",
 {
     FactionFixture fixture;
     FillLand_(fixture);
+    MovementHarness_ move(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
@@ -165,9 +185,9 @@ TEST_CASE("ZOC block from a cloaked unit contact-reveals it",
 
     REQUIRE_FALSE(IsUnitVisibleTo(player, cloaked, *fixture.ctx));
     // ZOC -> ZOC toward (4,5) is blocked by the cloaked projector.
-    CHECK_FALSE(TryStep(mover, fixture.At(4, 5), fixture.map, fixture.improvements));
+    CHECK_FALSE(move.orders.TryStep(mover, fixture.At(4, 5)));
     CHECK(IsUnitVisibleTo(player, cloaked, *fixture.ctx));
-    CHECK(TryAttack(mover, fixture.At(5, 4), fixture.map, *fixture.ctx));
+    CHECK(move.orders.TryAttack(mover, fixture.At(5, 4)));
 }
 
 TEST_CASE("Move order into cloaked unit reveals via desired-step bump",
@@ -175,6 +195,7 @@ TEST_CASE("Move order into cloaked unit reveals via desired-step bump",
 {
     FactionFixture fixture;
     FillLand_(fixture);
+    MovementHarness_ move(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
@@ -185,8 +206,7 @@ TEST_CASE("Move order into cloaked unit reveals via desired-step bump",
 
     REQUIRE_FALSE(IsUnitVisibleTo(player, cloaked, *fixture.ctx));
 
-    UnitOrderExecutor executor;
-    executor.Execute(mover, fixture.map, fixture.improvements);
+    move.orders.Execute(mover);
 
     CHECK(IsUnitVisibleTo(player, cloaked, *fixture.ctx));
     CHECK(mover.GetTile().GetX() == 4); // did not enter the hostile tile
@@ -197,6 +217,7 @@ TEST_CASE("EvaluateStep attributes occupant and ZOC blockers",
 {
     FactionFixture fixture;
     FillLand_(fixture);
+    MovementHarness_ move(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
@@ -205,7 +226,7 @@ TEST_CASE("EvaluateStep attributes occupant and ZOC blockers",
 
     SECTION("occupied tile")
     {
-        const StepEvaluation_t eval = EvaluateStep(mover, fixture.At(5, 4), fixture.map, fixture.improvements);
+        const StepEvaluation_t eval = move.steps().EvaluateStep(mover, fixture.At(5, 4));
         CHECK(eval.outcome == StepOutcome_t::BlockedByOccupant);
         REQUIRE(eval.blockingUnits.size() == 1);
         CHECK(eval.blockingUnits[0] == &hostile);
@@ -213,7 +234,7 @@ TEST_CASE("EvaluateStep attributes occupant and ZOC blockers",
 
     SECTION("ZOC to ZOC")
     {
-        const StepEvaluation_t eval = EvaluateStep(mover, fixture.At(4, 5), fixture.map, fixture.improvements);
+        const StepEvaluation_t eval = move.steps().EvaluateStep(mover, fixture.At(4, 5));
         CHECK(eval.outcome == StepOutcome_t::BlockedByZoc);
         REQUIRE_FALSE(eval.blockingUnits.empty());
         CHECK(std::find(eval.blockingUnits.begin(), eval.blockingUnits.end(), &hostile)
@@ -222,17 +243,17 @@ TEST_CASE("EvaluateStep attributes occupant and ZOC blockers",
 
     SECTION("legal leave-ZOC step")
     {
-        const StepEvaluation_t eval = EvaluateStep(mover, fixture.At(3, 3), fixture.map, fixture.improvements);
+        const StepEvaluation_t eval = move.steps().EvaluateStep(mover, fixture.At(3, 3));
         CHECK(eval.outcome == StepOutcome_t::Legal);
         CHECK(eval.blockingUnits.empty());
     }
 
     SECTION("not adjacent / no moves")
     {
-        CHECK(EvaluateStep(mover, fixture.At(6, 4), fixture.map, fixture.improvements).outcome
+        CHECK(move.steps().EvaluateStep(mover, fixture.At(6, 4)).outcome
               == StepOutcome_t::NotAdjacent);
-        mover.SetMovesRemaining(0);
-        CHECK(EvaluateStep(mover, fixture.At(4, 5), fixture.map, fixture.improvements).outcome
+        mover.SetMoveFragmentsRemaining(0);
+        CHECK(move.steps().EvaluateStep(mover, fixture.At(4, 5)).outcome
               == StepOutcome_t::NoMoves);
     }
 }
@@ -241,6 +262,7 @@ TEST_CASE("Land ignores sea ZOC; sea ignores land ZOC", "[movement][zoc][domain]
 {
     FactionFixture fixture;
     FillLand_(fixture);
+    MovementHarness_ move(fixture);
     MakeWater_(fixture.At(5, 4));
     MakeWater_(fixture.At(5, 5));
     MakeWater_(fixture.At(4, 5));
@@ -253,18 +275,18 @@ TEST_CASE("Land ignores sea ZOC; sea ignores land ZOC", "[movement][zoc][domain]
     {
         fixture.MakeUnit(enemy, 5, 4, {"test_sea_chassis"});
         Unit& land = fixture.MakeUnit(player, 6, 4, {"test_chassis"});
-        CHECK_FALSE(IsTileInHostileZoc(land, land.GetTile(), fixture.map));
+        CHECK_FALSE(move.steps().IsTileInHostileZoc(land, land.GetTile()));
         // Adjacent tiles that would be ZOC-to-ZOC if sea affected land remain legal.
-        CHECK(CanStep(land, fixture.At(6, 3), fixture.map, fixture.improvements));
-        CHECK(CanStep(land, fixture.At(7, 4), fixture.map, fixture.improvements));
+        CHECK(move.steps().CanStep(land, fixture.At(6, 3)));
+        CHECK(move.steps().CanStep(land, fixture.At(7, 4)));
     }
 
     SECTION("land projector does not affect sea")
     {
         fixture.MakeUnit(enemy, 4, 4, {"test_chassis"});
         Unit& sea = fixture.MakeUnit(player, 4, 5, {"test_sea_chassis"});
-        CHECK_FALSE(IsTileInHostileZoc(sea, sea.GetTile(), fixture.map));
-        CHECK(CanStep(sea, fixture.At(5, 5), fixture.map, fixture.improvements));
+        CHECK_FALSE(move.steps().IsTileInHostileZoc(sea, sea.GetTile()));
+        CHECK(move.steps().CanStep(sea, fixture.At(5, 5)));
     }
 }
 
@@ -272,38 +294,41 @@ TEST_CASE("Air ignores ZOC but exerts on land", "[movement][zoc]")
 {
     FactionFixture fixture;
     FillLand_(fixture);
+    MovementHarness_ move(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
     fixture.MakeUnit(enemy, 5, 4, {"test_flight_chassis"});
     Unit& land = fixture.MakeUnit(player, 4, 4, {"test_chassis"});
-    CHECK(IsTileInHostileZoc(land, land.GetTile(), fixture.map));
-    CHECK_FALSE(CanStep(land, fixture.At(4, 5), fixture.map, fixture.improvements)); // ZOC -> ZOC
+    CHECK(move.steps().IsTileInHostileZoc(land, land.GetTile()));
+    CHECK_FALSE(move.steps().CanStep(land, fixture.At(4, 5))); // ZOC -> ZOC
 
     fixture.MakeUnit(enemy, 5, 6, {"test_chassis"});
     Unit& flyer = fixture.MakeUnit(player, 4, 6, {"test_flight_chassis"});
-    CHECK_FALSE(IsTileInHostileZoc(flyer, flyer.GetTile(), fixture.map));
-    CHECK(CanStep(flyer, fixture.At(4, 5), fixture.map, fixture.improvements)); // would be ZOC->ZOC for land
+    CHECK_FALSE(move.steps().IsTileInHostileZoc(flyer, flyer.GetTile()));
+    CHECK(move.steps().CanStep(flyer, fixture.At(4, 5))); // would be ZOC->ZOC for land
 }
 
 TEST_CASE("IgnoreZoneOfControl flag bypasses ZOC", "[movement][zoc]")
 {
     FactionFixture fixture;
     FillLand_(fixture);
+    MovementHarness_ move(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
     fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
     Unit& probe = fixture.MakeUnit(player, 4, 4, {"test_chassis", "ignore_zoc"});
     CHECK(probe.GetFlag(RuleFlagId_t::IgnoreZoneOfControl));
-    CHECK_FALSE(IsTileInHostileZoc(probe, probe.GetTile(), fixture.map));
-    CHECK(CanStep(probe, fixture.At(4, 5), fixture.map, fixture.improvements));
+    CHECK_FALSE(move.steps().IsTileInHostileZoc(probe, probe.GetTile()));
+    CHECK(move.steps().CanStep(probe, fixture.At(4, 5)));
 }
 
 TEST_CASE("UnitOrderExecutor advances one greedy step without teleporting", "[movement][orders]")
 {
     FactionFixture fixture;
     FillLand_(fixture);
+    MovementHarness_ move(fixture);
     Faction& faction = fixture.MakeFaction();
     Unit& unit = fixture.MakeUnit(faction, 2, 4, {"test_chassis"});
     const Tile& rDest = fixture.At(5, 4);
@@ -311,18 +336,17 @@ TEST_CASE("UnitOrderExecutor advances one greedy step without teleporting", "[mo
 
     const int distBefore = ChebyshevDistance(unit.GetTile(), rDest);
 
-    UnitOrderExecutor executor;
-    executor.Execute(unit, fixture.map, fixture.improvements);
+    move.orders.Execute(unit);
 
     const int distAfter = ChebyshevDistance(unit.GetTile(), rDest);
     CHECK(distAfter == distBefore - 1);
-    CHECK(unit.GetMovesRemaining() == k_point);
+    CHECK(unit.GetMoveFragmentsRemaining() == k_point);
     REQUIRE(unit.GetOrder().has_value());
     // Still not at destination after one step.
     CHECK(&unit.GetTile() != &rDest);
 
-    executor.Execute(unit, fixture.map, fixture.improvements);
-    CHECK(unit.GetMovesRemaining() == 0);
+    move.orders.Execute(unit);
+    CHECK(unit.GetMoveFragmentsRemaining() == 0);
     REQUIRE(unit.GetOrder().has_value()); // destination not reached; waits for next turn
 }
 
@@ -330,6 +354,7 @@ TEST_CASE("ProposeNextStep respects ZOC", "[movement][zoc]")
 {
     FactionFixture fixture;
     FillLand_(fixture);
+    MovementHarness_ move(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
@@ -338,33 +363,34 @@ TEST_CASE("ProposeNextStep respects ZOC", "[movement][zoc]")
     fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
     Unit& mover = fixture.MakeUnit(player, 4, 4, {"test_chassis"});
 
-    CHECK(ProposeNextStep(mover, fixture.At(6, 4), fixture.map, fixture.improvements) == nullptr);
+    CHECK(move.steps().ProposeNextStep(mover, fixture.At(6, 4)) == nullptr);
 }
 
 TEST_CASE("TryStep spends tile move-cost fragments", "[movement][move-cost]")
 {
     FactionFixture fixture;
     FillLand_(fixture);
+    MovementHarness_ move(fixture);
     Faction& faction = fixture.MakeFaction();
     Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
-    REQUIRE(unit.GetMovesRemaining() == 2 * k_point);
+    REQUIRE(unit.GetMoveFragmentsRemaining() == 2 * k_point);
 
     Tile& rocky = fixture.At(5, 4);
     rocky.SetRockiness(Rockiness_t::Rocky);
-    REQUIRE(TryStep(unit, rocky, fixture.map, fixture.improvements));
-    CHECK(unit.GetMovesRemaining() == 0); // 2-point rocky drains a 2-move unit
+    REQUIRE(move.orders.TryStep(unit, rocky));
+    CHECK(unit.GetMoveFragmentsRemaining() == 0); // 2-point rocky drains a 2-move unit
 
     Unit& roadUnit = fixture.MakeUnit(faction, 4, 5, {"test_chassis"});
     Tile& road = fixture.At(5, 5);
     road.AddImprovement(fixture.improvements.Get("Road"));
-    REQUIRE(TryStep(roadUnit, road, fixture.map, fixture.improvements));
-    CHECK(roadUnit.GetMovesRemaining() == 2 * k_point - k_point / 3);
+    REQUIRE(move.orders.TryStep(roadUnit, road));
+    CHECK(roadUnit.GetMoveFragmentsRemaining() == 2 * k_point - k_point / 3);
 
     // Rocky with only one move point left is still enterable (SMAC); remaining zeroes.
     Unit& lastPoint = fixture.MakeUnit(faction, 6, 4, {"test_chassis"});
-    lastPoint.SetMovesRemaining(k_point);
+    lastPoint.SetMoveFragmentsRemaining(k_point);
     Tile& rocky2 = fixture.At(7, 4);
     rocky2.SetRockiness(Rockiness_t::Rocky);
-    REQUIRE(TryStep(lastPoint, rocky2, fixture.map, fixture.improvements));
-    CHECK(lastPoint.GetMovesRemaining() == 0);
+    REQUIRE(move.orders.TryStep(lastPoint, rocky2));
+    CHECK(lastPoint.GetMoveFragmentsRemaining() == 0);
 }

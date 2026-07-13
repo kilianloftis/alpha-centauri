@@ -8,6 +8,7 @@
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/WorldMap.h"
 #include "game/effects/TileEffectsContext.h"
+#include "game/units/UnitOrderExecutor.h"
 #include "game/units/Unit.h"
 #include <stdexcept>
 
@@ -28,6 +29,8 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
         throw std::invalid_argument("GameState: pWorldMap is null");
     }
     m_pTileEffects = std::make_unique<TileEffectsContext>(*m_worldMap, rImprovements, pUnitComponents);
+    m_pUnitOrderExecutor = std::make_unique<UnitOrderExecutor>(
+        rImprovements, *m_worldMap, *m_pTileEffects);
 }
 
 GameState::~GameState() = default;
@@ -181,7 +184,7 @@ const TileEffectsContext& GameState::GetTileEffects() const
 
 UnitOrderExecutor& GameState::GetUnitOrderExecutor()
 {
-    return m_unitOrderExecutor;
+    return *m_pUnitOrderExecutor;
 }
 
 void GameState::RebuildTerritory()

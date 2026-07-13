@@ -86,11 +86,11 @@ private:
     // reverse declaration order, so m_factions is destroyed before these two.
     std::unique_ptr<WorldMap> m_worldMap;
     std::unique_ptr<TileEffectsContext> m_pTileEffects;
+    std::unique_ptr<UnitOrderExecutor> m_pUnitOrderExecutor;
     std::vector<std::unique_ptr<Faction>> m_factions;
     IdAllocator m_factionIdAllocator;
     IdAllocator m_baseIdAllocator;
     IdAllocator m_unitIdAllocator;
-    UnitOrderExecutor m_unitOrderExecutor;
     // Constructed with *this: only stores the reference, never dereferences it during
     // GameState's own construction, so binding it before m_factions is populated is safe.
     SecretProjectAvailabilityCalculator m_secretProjectAvailability;

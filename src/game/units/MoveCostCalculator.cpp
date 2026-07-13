@@ -45,7 +45,7 @@ int MoveCostCalculator::FeatureMoveCostFragments_(const ImprovementConfig_t& rCo
                                                   const UnitMoveProfile_t& rProfile,
                                                   int defaultFragments) const
 {
-    int cost = ToFragments_(rConfig.moveCost);
+    int cost = ToFragments_(*rConfig.moveCost);
     // Difficult terrain (Rocky, Forest, …) is anything above the default cost; Fungus
     // stays elevated unless treatFungusAsRoad handled it separately.
     if (rProfile.ignoresDifficultTerrain && rConfig.id != k_FungusId)
@@ -67,9 +67,17 @@ int MoveCostCalculator::FungusAsRoadOverrideFragments_() const
 
 void MoveCostCalculator::ApplyOverride_(CostAggregate_t& rAgg, int overrideFragments) const
 {
-    rAgg.minOverride = rAgg.minOverride.has_value()
-        ? std::min(*rAgg.minOverride, overrideFragments)
+    // Among overrides only — never compared against maxCost here.
+    rAgg.overrideCost = rAgg.overrideCost.has_value()
+        ? std::min(*rAgg.overrideCost, overrideFragments)
         : overrideFragments;
+}
+
+void MoveCostCalculator::ApplyMoveCost_(CostAggregate_t& rAgg, int costFragments) const
+{
+    rAgg.maxCost = rAgg.maxCost.has_value()
+        ? std::max(*rAgg.maxCost, costFragments)
+        : costFragments;
 }
 
 void MoveCostCalculator::AccumulateFeature_(const ImprovementConfig_t& rConfig,
@@ -83,8 +91,10 @@ void MoveCostCalculator::AccumulateFeature_(const ImprovementConfig_t& rConfig,
         return;
     }
 
-    rAgg.maxCost = std::max(rAgg.maxCost,
-                            FeatureMoveCostFragments_(rConfig, rProfile, defaultFragments));
+    if (rConfig.moveCost.has_value())
+    {
+        ApplyMoveCost_(rAgg, FeatureMoveCostFragments_(rConfig, rProfile, defaultFragments));
+    }
 
     if (rConfig.moveCostOverride.has_value())
     {
@@ -118,11 +128,17 @@ int MoveCostCalculator::ComputeFragments(const Tile& rTile,
 {
     const int defaultFragments = m_constants.DefaultMoveCostFragments();
     CostAggregate_t agg;
-    agg.maxCost = defaultFragments;
-
     AccumulateTileFeatures_(rTile, rProfile, defaultFragments, agg);
 
-    return agg.minOverride.value_or(agg.maxCost);
+    if (agg.overrideCost.has_value())
+    {
+        return *agg.overrideCost;
+    }
+    if (agg.maxCost.has_value())
+    {
+        return *agg.maxCost;
+    }
+    return defaultFragments;
 }
 
 } // namespace ac
