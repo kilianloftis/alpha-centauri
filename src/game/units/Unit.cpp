@@ -64,6 +64,11 @@ bool Unit::GetFlag(RuleFlagId_t flagId) const
     return ResolveFlag(*this, flagId);
 }
 
+UnitDomain_t Unit::GetDomain() const
+{
+    return m_rDesign.GetDomain();
+}
+
 const Tile& Unit::GetTile() const                                      { return *m_pTile; }
 BaseManager* Unit::GetHomeBase() const      { return m_pHomeBase; }
 Faction& Unit::GetFaction() const           { return m_rFaction; }

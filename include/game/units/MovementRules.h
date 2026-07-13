@@ -31,8 +31,8 @@ struct StepEvaluation_t
 };
 
 // Whether rProjector (a foreign unit) exerts zone of control that applies to rSubject.
-// Flight projectors affect land and sea subjects; sea/land projectors affect their own
-// domain only. Subjects that IgnoresZoneOfControl() are never affected.
+// Air projectors affect land and sea subjects; sea/land projectors affect their own
+// domain only. Air subjects never match those rules; IgnoreZoneOfControl also exempts.
 bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject);
 
 // True if rTile is in hostile ZOC for rMover (Chebyshev-1 around a qualifying foreign unit).
@@ -50,7 +50,7 @@ bool HasHostileUnit(const Unit& rMover, const Tile& rTile, const WorldMap& rWorl
 bool HasVisibleHostileUnit(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
                            const TileEffectsContext& rTileEffects);
 
-// Whether rMover may enter rTile for its domain (flight any; sea water; land land).
+// Whether rMover may enter rTile for its chassis domain (air any; sea water; land land).
 bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile);
 
 // Pure step rules over objective world state (visibility / reveal are not consulted).

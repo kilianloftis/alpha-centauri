@@ -9,23 +9,13 @@
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
+#include "game/units/UnitComponentConfig.h"
 
 namespace ac
 {
 
 namespace
 {
-
-bool IgnoresZoneOfControl_(const Unit& rUnit)
-{
-    return ResolveFlag(rUnit, RuleFlagId_t::Flight)
-        || ResolveFlag(rUnit, RuleFlagId_t::IgnoreZoneOfControl);
-}
-
-bool IsLandUnit_(const Unit& rUnit)
-{
-    return !ResolveFlag(rUnit, RuleFlagId_t::Flight) && !ResolveFlag(rUnit, RuleFlagId_t::Sea);
-}
 
 void CollectHostileOccupants_(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
                               std::vector<Unit*>& rOut)
@@ -83,30 +73,28 @@ bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject)
     {
         return false;
     }
-    if (IgnoresZoneOfControl_(rSubject))
+    // Air subjects are already excluded by the domain match below; this flag is for
+    // land/sea units (e.g. probes) that ignore ZOC without changing domain.
+    if (ResolveFlag(rSubject, RuleFlagId_t::IgnoreZoneOfControl))
     {
         return false;
     }
 
-    if (ResolveFlag(rProjector, RuleFlagId_t::Flight))
+    switch (rProjector.GetDomain())
     {
-        // Flight exerts on land and sea units, not on other flight units.
-        return !ResolveFlag(rSubject, RuleFlagId_t::Flight);
+    case UnitDomain_t::Air:
+        // Air exerts on land and sea units, not on other air units.
+        return rSubject.GetDomain() != UnitDomain_t::Air;
+    case UnitDomain_t::Sea:
+        return rSubject.GetDomain() == UnitDomain_t::Sea;
+    case UnitDomain_t::Land:
+        return rSubject.GetDomain() == UnitDomain_t::Land;
     }
-    if (ResolveFlag(rProjector, RuleFlagId_t::Sea))
-    {
-        return ResolveFlag(rSubject, RuleFlagId_t::Sea);
-    }
-    return IsLandUnit_(rSubject);
+    return false;
 }
 
 bool IsTileInHostileZoc(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap)
 {
-    if (IgnoresZoneOfControl_(rMover))
-    {
-        return false;
-    }
-
     bool bInZoc = false;
     ForEachTileInChebyshevRadius(rTile, rWorldMap, /*radius=*/1, /*includeOrigin=*/false,
         [&](const Tile* pNeighbor, int /*distance*/)
@@ -159,10 +147,6 @@ bool HasVisibleHostileUnit(const Unit& rMover, const Tile& rTile, const WorldMap
 bool IsZocViolation(const Unit& rMover, const Tile& rFrom, const Tile& rTo,
                     const WorldMap& rWorldMap)
 {
-    if (IgnoresZoneOfControl_(rMover))
-    {
-        return false;
-    }
     if (!IsTileInHostileZoc(rMover, rFrom, rWorldMap))
     {
         return false;
@@ -172,15 +156,16 @@ bool IsZocViolation(const Unit& rMover, const Tile& rFrom, const Tile& rTo,
 
 bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile)
 {
-    if (ResolveFlag(rMover, RuleFlagId_t::Flight))
+    switch (rMover.GetDomain())
     {
+    case UnitDomain_t::Air:
         return true;
-    }
-    if (ResolveFlag(rMover, RuleFlagId_t::Sea))
-    {
+    case UnitDomain_t::Sea:
         return rTile.IsWater();
+    case UnitDomain_t::Land:
+        return rTile.IsLand();
     }
-    return rTile.IsLand();
+    return false;
 }
 
 StepEvaluation_t EvaluateStep(const Unit& rMover, const Tile& rTo, const WorldMap& rWorldMap)

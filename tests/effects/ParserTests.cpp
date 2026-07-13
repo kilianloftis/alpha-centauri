@@ -29,7 +29,6 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(BonusEffectParser::ParseStatId("fuel") == StatId_t::Fuel);
     CHECK(BonusEffectParser::ParseStatId("damage_from_out_of_fuel") == StatId_t::DamageFromOutOfFuel);
     CHECK(BonusEffectParser::ParseStatId("cargo_capacity") == StatId_t::CargoCapacity);
-    CHECK(BonusEffectParser::ParseStatId("difficult_terrain_cost") == StatId_t::DifficultTerrainCost);
     CHECK(BonusEffectParser::ParseStatId("cost_multiplier") == StatId_t::CostMultiplier);
     CHECK(BonusEffectParser::ParseStatId("growth_rate") == StatId_t::GrowthRate);
     CHECK(BonusEffectParser::ParseStatId("moisture_tier") == StatId_t::MoistureTier);
@@ -66,11 +65,12 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
 {
     CHECK(BonusEffectParser::ParseRuleFlagId("flight") == RuleFlagId_t::Flight);
     CHECK(BonusEffectParser::ParseRuleFlagId("single_use") == RuleFlagId_t::SingleUse);
-    CHECK(BonusEffectParser::ParseRuleFlagId("sea") == RuleFlagId_t::Sea);
     CHECK(BonusEffectParser::ParseRuleFlagId("ignore_zone_of_control") == RuleFlagId_t::IgnoreZoneOfControl);
     CHECK(BonusEffectParser::ParseRuleFlagId("population_boom") == RuleFlagId_t::PopulationBoom);
     CHECK(BonusEffectParser::ParseRuleFlagId("near_zero_growth") == RuleFlagId_t::NearZeroGrowth);
+    CHECK(BonusEffectParser::ParseRuleFlagId("ignores_difficult_terrain") == RuleFlagId_t::IgnoreDifficultTerrain);
     CHECK_THROWS(BonusEffectParser::ParseRuleFlagId("hover"));
+    CHECK_THROWS(BonusEffectParser::ParseRuleFlagId("sea"));
 
     CHECK(BonusEffectParser::ParseSocialRatingId("economy") == SocialRatingId_t::Economy);
     CHECK(BonusEffectParser::ParseSocialRatingId("efficiency") == SocialRatingId_t::Efficiency);

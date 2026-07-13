@@ -99,6 +99,42 @@ TEST_CASE("Sensor Detect requires territory ownership",
     CHECK_FALSE(IsUnitVisibleTo(other, hidden, *fixture.ctx));
 }
 
+TEST_CASE("Sensor vision and terrain Detect follow a territory ownership change",
+          "[visibility][fog][detection][territory]")
+{
+    actest::FactionFixture fixture;
+    Faction& a = fixture.MakeFaction();
+    Faction& b = fixture.MakeFaction();
+    Faction& third = fixture.MakeFaction();
+
+    // A claims Sensor at (5,4). Probe tile (5,6) is Chebyshev 2 from the Sensor but
+    // outside both bases' vision-2 squares (A at (0,4), later B at (8,4)).
+    fixture.MakeFactionBase(a, 0, 4);
+    fixture.ctx->AddImprovementWithEffects(fixture.At(5, 4), "Sensor");
+    a.RebuildVisibility();
+    b.RebuildVisibility();
+
+    fixture.At(5, 6).SetHasFungus(true);
+    Unit& hidden = fixture.MakeUnit(third, 5, 6, {"test_chassis"});
+
+    REQUIRE(fixture.map.GetTerritory().GetOwner(5, 4) == a.GetFactionId());
+    REQUIRE(a.GetVisibleMap().IsVisible(5, 6));
+    CHECK(IsUnitVisibleTo(a, hidden, *fixture.ctx));
+    CHECK_FALSE(b.GetVisibleMap().IsVisible(5, 6));
+    CHECK_FALSE(IsUnitVisibleTo(b, hidden, *fixture.ctx));
+
+    // Closer base flips Sensor territory to B; vision and Detect retarget on rebuild.
+    fixture.MakeFactionBase(b, 8, 4);
+    REQUIRE(fixture.map.GetTerritory().GetOwner(5, 4) == b.GetFactionId());
+    a.RebuildVisibility();
+    b.RebuildVisibility();
+
+    CHECK(b.GetVisibleMap().IsVisible(5, 6));
+    CHECK(IsUnitVisibleTo(b, hidden, *fixture.ctx));
+    CHECK_FALSE(a.GetVisibleMap().IsVisible(5, 6));
+    CHECK_FALSE(IsUnitVisibleTo(a, hidden, *fixture.ctx));
+}
+
 TEST_CASE("Cloaked unit inside Sensor radius stays hidden (no cloak detector)",
           "[visibility][detection][cloak]")
 {

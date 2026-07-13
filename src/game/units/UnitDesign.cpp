@@ -109,4 +109,21 @@ bool UnitDesign::GetFlag(RuleFlagId_t flagId) const
     return ResolveFlag(*this, flagId);
 }
 
+UnitDomain_t UnitDesign::GetDomain() const
+{
+    for (const auto& [rSlot, pComp] : m_slotComponents)
+    {
+        if (pComp && pComp->type == "chassis")
+        {
+            if (!pComp->domain.has_value())
+            {
+                throw std::runtime_error(
+                    "Chassis component '" + pComp->id + "' has no domain");
+            }
+            return *pComp->domain;
+        }
+    }
+    throw std::runtime_error("UnitDesign '" + m_id + "' has no chassis component");
+}
+
 } // namespace ac

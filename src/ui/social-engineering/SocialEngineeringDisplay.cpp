@@ -119,55 +119,6 @@ std::string FormatPolicyBonuses(const SocialPolicyConfig_t& rPolicy)
     return first ? "None" : oss.str();
 }
 
-std::string StatIdDisplayName(StatId_t stat)
-{
-    switch (stat)
-    {
-        case StatId_t::Nutrients:             return "Nutrients";
-        case StatId_t::Minerals:              return "Minerals";
-        case StatId_t::Energy:                return "Energy";
-        case StatId_t::Econ:                  return "Econ";
-        case StatId_t::Labs:                  return "Labs";
-        case StatId_t::Psych:                 return "Psych";
-        case StatId_t::Attack:                return "Attack";
-        case StatId_t::Defense:               return "Defense";
-        case StatId_t::Movement:              return "Movement";
-        case StatId_t::Vision:                return "Vision";
-        case StatId_t::HitPoints:             return "Hit Points";
-        case StatId_t::DisengageChance:       return "Disengage Chance";
-        case StatId_t::Fuel:                  return "Fuel";
-        case StatId_t::DamageFromOutOfFuel:   return "Out-of-Fuel Damage";
-        case StatId_t::CargoCapacity:         return "Cargo Capacity";
-        case StatId_t::DifficultTerrainCost:  return "Difficult Terrain Cost";
-        case StatId_t::CostMultiplier:        return "Cost Multiplier";
-        case StatId_t::GrowthRate:            return "Growth Rate";
-        case StatId_t::TechCost:              return "Tech Cost";
-        case StatId_t::MoistureTier:          return "Moisture Tier";
-    }
-    throw std::runtime_error("Unknown StatId_t");
-}
-
-std::string FormatStatModifier(const StatModifierEffect_t& rModifier)
-{
-    std::ostringstream oss;
-    const int amount = static_cast<int>(rModifier.amount);
-
-    switch (rModifier.op)
-    {
-        case ModifierOp_t::AddPercent:
-            oss << (amount >= 0 ? "+" : "") << amount << "% " << StatIdDisplayName(rModifier.stat);
-            break;
-        case ModifierOp_t::Add:
-            oss << (amount >= 0 ? "+" : "") << amount << " " << StatIdDisplayName(rModifier.stat);
-            break;
-        case ModifierOp_t::MultiplyGeometric:
-            oss << "x" << rModifier.amount << " " << StatIdDisplayName(rModifier.stat);
-            break;
-    }
-
-    return oss.str();
-}
-
 std::string GetFactionDisplayName(const Faction& rFaction)
 {
     const FactionConfig_t& rDefinition = rFaction.GetDefinition();
@@ -209,19 +160,6 @@ std::string FormatFactionBonuses(
         if (!pLevelEffects)
         {
             continue;
-        }
-
-        for (const EffectConfig_t& rEffect : *pLevelEffects)
-        {
-            if (const auto* pModifier = std::get_if<StatModifierEffect_t>(&rEffect.effect))
-            {
-                if (!first)
-                {
-                    oss << ", ";
-                }
-                first = false;
-                oss << FormatStatModifier(*pModifier);
-            }
         }
     }
 

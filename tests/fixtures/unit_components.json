@@ -3,6 +3,7 @@
     "id": "test_chassis",
     "name": "Test Chassis",
     "type": "chassis",
+    "domain": "land",
     "effects": [
       { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "movement", "amount": 2 } },
       { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "vision", "amount": 1 } },
@@ -13,8 +14,8 @@
     "id": "test_sea_chassis",
     "name": "Test Sea Chassis",
     "type": "chassis",
+    "domain": "sea",
     "effects": [
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "sea" } },
       { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "movement", "amount": 2 } },
       { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "vision", "amount": 1 } },
       { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "hit_points", "amount": 10 } }
@@ -24,8 +25,8 @@
     "id": "test_flight_chassis",
     "name": "Test Flight Chassis",
     "type": "chassis",
+    "domain": "air",
     "effects": [
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "flight" } },
       { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "movement", "amount": 2 } },
       { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "vision", "amount": 1 } },
       { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "hit_points", "amount": 10 } }

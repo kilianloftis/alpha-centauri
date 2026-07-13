@@ -40,6 +40,9 @@ public:
     int GetStat(StatId_t statId, const EffectContext_t& rCtx) const;
     bool GetFlag(RuleFlagId_t flagId) const;
 
+    // Domain of the design's chassis component (required on every valid design).
+    UnitDomain_t GetDomain() const;
+
 private:
     std::string m_id;
     std::string m_name;

@@ -24,7 +24,6 @@ StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "fuel")                    return StatId_t::Fuel;
     if (rStat == "damage_from_out_of_fuel") return StatId_t::DamageFromOutOfFuel;
     if (rStat == "cargo_capacity")          return StatId_t::CargoCapacity;
-    if (rStat == "difficult_terrain_cost")  return StatId_t::DifficultTerrainCost;
     if (rStat == "cost_multiplier")         return StatId_t::CostMultiplier;
     if (rStat == "growth_rate")             return StatId_t::GrowthRate;
     if (rStat == "tech_cost")               return StatId_t::TechCost;
@@ -34,12 +33,12 @@ StatId_t ParseStatId(const std::string& rStat)
 
 RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
 {
-    if (rFlag == "population_boom")         return RuleFlagId_t::PopulationBoom;
-    if (rFlag == "near_zero_growth")        return RuleFlagId_t::NearZeroGrowth;
-    if (rFlag == "flight")                  return RuleFlagId_t::Flight;
-    if (rFlag == "single_use")              return RuleFlagId_t::SingleUse;
-    if (rFlag == "sea")                     return RuleFlagId_t::Sea;
-    if (rFlag == "ignore_zone_of_control")  return RuleFlagId_t::IgnoreZoneOfControl;
+    if (rFlag == "population_boom")             return RuleFlagId_t::PopulationBoom;
+    if (rFlag == "near_zero_growth")            return RuleFlagId_t::NearZeroGrowth;
+    if (rFlag == "flight")                      return RuleFlagId_t::Flight;
+    if (rFlag == "single_use")                  return RuleFlagId_t::SingleUse;
+    if (rFlag == "ignore_zone_of_control")      return RuleFlagId_t::IgnoreZoneOfControl;
+    if (rFlag == "ignores_difficult_terrain")   return RuleFlagId_t::IgnoreDifficultTerrain;
     throw std::runtime_error("Unknown rule flag id: '" + rFlag + "'");
 }
 
