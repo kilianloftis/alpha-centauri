@@ -16,7 +16,7 @@ struct Rational_t;
 struct UnitMoveProfile_t
 {
     bool ignoresDifficultTerrain = false;
-    // Future: Xenoempathy / native life — treat Fungus squares as roads.
+    // Xenoempathy / native life — treat Fungus squares as roads.
     bool treatFungusAsRoad = false;
 };
 

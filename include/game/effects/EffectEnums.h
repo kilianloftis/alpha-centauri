@@ -125,6 +125,7 @@ enum class RuleFlagId_t
     SingleUse,
     IgnoreZoneOfControl,
     IgnoreDifficultTerrain,
+    TreatFungusAsRoad,
 
     // Faction/global flags
     PopulationBoom,

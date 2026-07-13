@@ -1,7 +1,10 @@
 #include "game/stages/TurnStart.h"
+#include "game/Faction.h"
 #include "game/GameState.h"
 #include "game/TurnStageRegistrar.h"
-#include <iostream>
+#include "game/faction/UnitManager.h"
+#include "game/units/MovementConstants.h"
+#include "game/units/Unit.h"
 
 namespace ac
 {
@@ -15,8 +18,14 @@ TurnStart::TurnStart(std::shared_ptr<HookContext> pHookContext)
 
 void TurnStart::ExecuteImpl(GameState& rGameState)
 {
-    (void)rGameState;
-    std::cout << "Executing TurnStart stage\n";
+    for (Faction& rFaction : rGameState.Factions())
+    {
+        for (Unit& rUnit : rFaction.GetUnitManager().Units())
+        {
+            rUnit.SetMoveFragmentsRemaining(
+                rUnit.GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint);
+        }
+    }
 }
 
 } // namespace ac

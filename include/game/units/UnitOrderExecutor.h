@@ -24,14 +24,12 @@ public:
                       const TileEffectsContext& rTileEffects);
     ~UnitOrderExecutor() = default;
 
-    StepEvaluator& Steps();
-    const StepEvaluator& Steps() const;
-
     void Execute(Unit& rUnit);
 
-    // Apply one legal empty-tile step (TryMoveUnit + spend tile move-cost fragments). On
+    // Apply one legal empty-tile step (MoveUnit + spend tile move-cost fragments). On
     // BlockedByOccupant / BlockedByZoc, contact-reveals the attributed blocking units.
-    bool TryStep(Unit& rMover, const Tile& rTo);
+    // Fungus multi-turn charge progress is stored on rMoveOrder.
+    bool TryStep(Unit& rMover, const Tile& rTo, MoveOrder_t& rMoveOrder);
 
     // Attack a hostile-occupied adjacent tile without moving onto it. Returns false if not
     // adjacent, out of moves, or rTargetTile has no hostile unit visible to the attacker.
@@ -45,6 +43,9 @@ private:
 
     void ResolveCombatStub_(Unit& rAttacker);
     void RevealBlockingUnits_(Unit& rMover, const StepEvaluation_t& rEval);
+    bool TryEnterTile_(Unit& rMover, const Tile& rTo, int remainingAfter);
+    bool TryFungusStep_(Unit& rMover, const Tile& rTo, MoveOrder_t& rMoveOrder);
+    void ClearFungusCharge_(MoveOrder_t& rMoveOrder);
 
     StepEvaluator m_steps;
 };

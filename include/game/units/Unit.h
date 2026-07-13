@@ -20,9 +20,10 @@ class Unit
 public:
     // Registers the unit on rTile in rPositions for its whole life (unregistered in the
     // destructor). The index is the single owner of unit-position state: it keeps
-    // GetTile() in sync on every move (UnitPositionIndex::TryMoveUnit) and there is no
-    // other way to change a unit's position. Throws if the stacking rule forbids rTile.
-    // unitId must be unique for the life of the game (WorldMap's unit IdAllocator).
+    // GetTile() in sync on every move (UnitPositionIndex::MoveUnit) and there is no
+    // other way to change a unit's position. Placement legality is the caller's job
+    // (UnitManager::CreateUnit). unitId must be unique for the life of the game
+    // (WorldMap's unit IdAllocator).
     Unit(UnitId_t unitId,
          const UnitDesign& rDesign,
          UnitPositionIndex& rPositions,
@@ -67,7 +68,7 @@ public:
     void ClearOrder();
 
 private:
-    // The index maintains m_pTile alongside its occupancy lists (TryMoveUnit).
+    // The index maintains m_pTile alongside its occupancy lists (MoveUnit).
     friend class UnitPositionIndex;
 
     UnitId_t m_unitId;

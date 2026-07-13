@@ -32,7 +32,7 @@ public:
 
     // Unit occupancy: the single owner of unit-position state. Units register/unregister
     // themselves at construction/destruction; movement goes through
-    // UnitPositionIndex::TryMoveUnit (see UnitPositionIndex).
+    // UnitPositionIndex::MoveUnit (see UnitPositionIndex).
     UnitPositionIndex& GetUnitPositions();
     const UnitPositionIndex& GetUnitPositions() const;
     const std::vector<Unit*>& GetUnitsOnTile(const Tile& rTile) const;

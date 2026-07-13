@@ -39,6 +39,7 @@ RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "single_use")                  return RuleFlagId_t::SingleUse;
     if (rFlag == "ignore_zone_of_control")      return RuleFlagId_t::IgnoreZoneOfControl;
     if (rFlag == "ignores_difficult_terrain")   return RuleFlagId_t::IgnoreDifficultTerrain;
+    if (rFlag == "treat_fungus_as_road")         return RuleFlagId_t::TreatFungusAsRoad;
     throw std::runtime_error("Unknown rule flag id: '" + rFlag + "'");
 }
 

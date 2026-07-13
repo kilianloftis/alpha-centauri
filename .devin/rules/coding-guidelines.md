@@ -14,6 +14,7 @@ Constructors should accept all arguments required to make the object valid
 If a class owns a resource, if possible, the class should construct that resource itself
 Prefer throwing exceptions over returning default values
 Throw errors if expected pointers are null
+Do not keep old code for legacy of backwards compatibilty reasons. Update all call sites as needed.
 
 ## SOLID Principles
 All code must adhere to SOLID principles:

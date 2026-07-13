@@ -3,6 +3,7 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitOrder.h"
 #include "game/units/MoveCostCalculator.h"
+#include "game/units/MovementRules.h"
 #include "game/faction/FactionRevealedUnits.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
@@ -20,16 +21,6 @@ UnitOrderExecutor::UnitOrderExecutor(const ImprovementRegistry& rImprovements,
                                      const TileEffectsContext& rTileEffects)
     : m_steps(rImprovements, rWorldMap, rTileEffects)
 {
-}
-
-StepEvaluator& UnitOrderExecutor::Steps()
-{
-    return m_steps;
-}
-
-const StepEvaluator& UnitOrderExecutor::Steps() const
-{
-    return m_steps;
 }
 
 void UnitOrderExecutor::RevealBlockingUnits_(Unit& rMover, const StepEvaluation_t& rEval)
@@ -50,18 +41,64 @@ void UnitOrderExecutor::ResolveCombatStub_(Unit& rAttacker)
     rAttacker.ClearOrder();
 }
 
-bool UnitOrderExecutor::TryStep(Unit& rMover, const Tile& rTo)
+bool UnitOrderExecutor::TryEnterTile_(Unit& rMover, const Tile& rTo, int remainingAfter)
+{
+    m_steps.GetWorldMap().GetUnitPositions().MoveUnit(rMover, rTo);
+    rMover.SetMoveFragmentsRemaining(remainingAfter);
+    return true;
+}
+
+void UnitOrderExecutor::ClearFungusCharge_(MoveOrder_t& rMoveOrder)
+{
+    rMoveOrder.pFungusChargeTile = nullptr;
+    rMoveOrder.fungusFragmentsPaid = 0;
+}
+
+bool UnitOrderExecutor::TryFungusStep_(Unit& rMover, const Tile& rTo, MoveOrder_t& rMoveOrder)
+{
+    WorldMap& rWorldMap = m_steps.GetWorldMap();
+
+    if (HasFriendlyOccupant(rMover, rTo, rWorldMap))
+    {
+        ClearFungusCharge_(rMoveOrder);
+        return TryEnterTile_(rMover, rTo, /*remainingAfter=*/0);
+    }
+
+    const UnitMoveProfile_t profile = MoveProfileFor(rMover);
+    const int cost = m_steps.GetMoveCosts().ComputeFragments(rTo, profile);
+    const int available = rMover.GetMoveFragmentsRemaining();
+
+    if (rMoveOrder.pFungusChargeTile != &rTo)
+    {
+        rMoveOrder.pFungusChargeTile = &rTo;
+        rMoveOrder.fungusFragmentsPaid = 0;
+    }
+    rMoveOrder.fungusFragmentsPaid += available;
+
+    if (rMoveOrder.fungusFragmentsPaid >= cost)
+    {
+        ClearFungusCharge_(rMoveOrder);
+        return TryEnterTile_(rMover, rTo, /*remainingAfter=*/0);
+    }
+
+    // Charged this turn's moves toward entry; stay put.
+    rMover.SetMoveFragmentsRemaining(0);
+    return false;
+}
+
+bool UnitOrderExecutor::TryStep(Unit& rMover, const Tile& rTo, MoveOrder_t& rMoveOrder)
 {
     const StepEvaluation_t eval = m_steps.EvaluateStep(rMover, rTo);
     if (eval.outcome == StepOutcome_t::Legal)
     {
-        if (!m_steps.GetWorldMap().GetUnitPositions().TryMoveUnit(rMover, rTo))
+        if (UsesFungusEntryRules(rMover, rTo))
         {
-            return false;
+            return TryFungusStep_(rMover, rTo, rMoveOrder);
         }
+
         const int cost = m_steps.GetMoveCosts().ComputeFragments(rTo, MoveProfileFor(rMover));
-        rMover.SetMoveFragmentsRemaining(rMover.GetMoveFragmentsRemaining() - cost);
-        return true;
+        ClearFungusCharge_(rMoveOrder);
+        return TryEnterTile_(rMover, rTo, rMover.GetMoveFragmentsRemaining() - cost);
     }
 
     if (eval.outcome == StepOutcome_t::BlockedByOccupant
@@ -129,12 +166,12 @@ void UnitOrderExecutor::Execute_(Unit& rUnit, MoveOrder_t& rOrder)
         const Tile* pDesired = m_steps.ProposeDesiredStep(rUnit, *rOrder.pDestination);
         if (pDesired)
         {
-            TryStep(rUnit, *pDesired);
+            TryStep(rUnit, *pDesired, rOrder);
         }
         return;
     }
 
-    if (!TryStep(rUnit, *pNext))
+    if (!TryStep(rUnit, *pNext, rOrder))
     {
         return;
     }

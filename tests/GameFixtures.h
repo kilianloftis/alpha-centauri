@@ -23,6 +23,7 @@
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitSlotConfig.h"
+#include "game/units/MovementRules.h"
 #include "game/effects/TileEffectsContext.h"
 
 #include <deque>
@@ -220,10 +221,12 @@ struct FactionFixture : BaseFixture
 
     void MoveUnit(ac::Unit& rUnit, int x, int y)
     {
-        if (!map.GetUnitPositions().TryMoveUnit(rUnit, At(x, y)))
+        ac::Tile& rDest = At(x, y);
+        if (!ac::CanPlaceUnitOnTile(rDest, map.GetUnitPositions()) && &rUnit.GetTile() != &rDest)
         {
             throw std::runtime_error("MoveUnit: destination blocked by the stacking rule");
         }
+        map.GetUnitPositions().MoveUnit(rUnit, rDest);
     }
 };
 

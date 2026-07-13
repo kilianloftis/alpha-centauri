@@ -1,10 +1,13 @@
 #include "game/faction/UnitManager.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
+#include "game/units/MovementRules.h"
 #include "game/map/Tile.h"
+#include "game/map/UnitPositionIndex.h"
 #include "game/Faction.h"
 #include <algorithm>
 #include <stdexcept>
+#include <string>
 
 namespace ac
 {
@@ -18,6 +21,13 @@ Unit& UnitManager::CreateUnit(UnitId_t unitId, const UnitDesign& rDesign,
                               UnitPositionIndex& rPositions, const Tile& rTile,
                               BaseManager* pHomeBase)
 {
+    if (!CanPlaceUnitOnTile(rTile, rPositions))
+    {
+        throw std::runtime_error("UnitManager: tile (" + std::to_string(rTile.GetX())
+                                 + ", " + std::to_string(rTile.GetY())
+                                 + ") already holds a unit (single-unit-per-tile rule)");
+    }
+
     auto pUnit = std::make_unique<Unit>(unitId, rDesign, rPositions, rTile, pHomeBase, m_rFaction);
     Unit& rUnit = *pUnit;
     m_units.push_back(std::move(pUnit));

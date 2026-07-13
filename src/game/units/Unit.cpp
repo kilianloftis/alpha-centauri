@@ -37,8 +37,6 @@ Unit::Unit(UnitId_t unitId,
     m_moveFragmentsRemaining =
         GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint;
 
-    // Throws if the stacking rule forbids rTile; the destructor is not run for a unit
-    // whose constructor throws, so no unregistration is needed on that path.
     m_rPositions.Register_(*this, rTile);
 }
 

@@ -5,6 +5,27 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 DEFAULT_BUILD_DIR="${ROOT_DIR}/build"
 DEFAULT_CONFIG="Debug"
 
+# Low-memory / WSL hosts OOM under heavy C++ parallelism; stronger machines can take 16.
+# Override with -j / --jobs, or BD_JOBS in the environment.
+function default_parallel_jobs() {
+  if [[ -n "${BD_JOBS:-}" ]]; then
+    echo "$BD_JOBS"
+    return
+  fi
+
+  local mem_kb=0
+  if [[ -r /proc/meminfo ]]; then
+    mem_kb=$(awk '/^MemTotal:/ { print $2; exit }' /proc/meminfo)
+  fi
+  local mem_gb=$((mem_kb / 1024 / 1024))
+
+  if (( mem_gb < 16 )); then
+    echo 2
+  else
+    echo 16
+  fi
+}
+
 function usage() {
   cat <<EOF
 Usage: $(basename "$0") <command> [options]
@@ -13,13 +34,13 @@ Commands:
   configure [build-dir] [--no-sfml] [--sfml-dir <dir>] [-- <cmake-args>...]
       Create or update the CMake build tree.
 
-  build [build-dir] [--config <Debug|Release>]
+  build [build-dir] [--config <Debug|Release>] [-j N|--jobs N]
       Build the configured project.
 
-  all [build-dir] [--config <Debug|Release>] [--no-sfml] [--sfml-dir <dir>] [-- <cmake-args>...]
+  all [build-dir] [--config <Debug|Release>] [-j N|--jobs N] [--no-sfml] [--sfml-dir <dir>] [-- <cmake-args>...]
       Configure and build in one step.
 
-  test [build-dir] [--config <Debug|Release>]
+  test [build-dir] [--config <Debug|Release>] [-j N|--jobs N]
       Build the test suite and run it via ctest.
 
   clean [build-dir]
@@ -27,7 +48,39 @@ Commands:
 
   help
       Show this help message.
+
+Parallelism:
+  Default job count is chosen from MemTotal (<16 GiB → 2, else → 16) so constrained
+  WSL hosts stay safe while larger machines use more cores. Override with -j / --jobs,
+  or set BD_JOBS. Forms: -j2, -j 2, --jobs 2.
 EOF
+}
+
+# Consumes -jN / -j N / --jobs N from "$@"; sets JOBS (default via default_parallel_jobs).
+# Remaining args are left in ARGS.
+function parse_common_build_opts() {
+  JOBS="$(default_parallel_jobs)"
+  ARGS=()
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -j)
+        JOBS="$2"
+        shift 2
+        ;;
+      -j*)
+        JOBS="${1#-j}"
+        shift
+        ;;
+      --jobs)
+        JOBS="$2"
+        shift 2
+        ;;
+      *)
+        ARGS+=("$1")
+        shift
+        ;;
+    esac
+  done
 }
 
 function configure() {
@@ -66,11 +119,15 @@ function configure() {
 }
 
 function build() {
-  local build_dir="${1:-$DEFAULT_BUILD_DIR}"
+  parse_common_build_opts "$@"
+  set -- "${ARGS[@]+"${ARGS[@]}"}"
+
+  local build_dir="$DEFAULT_BUILD_DIR"
   local config="$DEFAULT_CONFIG"
 
-  if [[ -z "$build_dir" || "$build_dir" == --* ]]; then
-    build_dir="$DEFAULT_BUILD_DIR"
+  if [[ $# -gt 0 && "$1" != --* ]]; then
+    build_dir="$1"
+    shift
   fi
 
   while [[ $# -gt 0 ]]; do
@@ -92,10 +149,14 @@ function build() {
     esac
   done
 
-  cmake --build "$build_dir" --config "$config" -j16
+  echo "Building with -j${JOBS}"
+  cmake --build "$build_dir" --config "$config" -j"$JOBS"
 }
 
 function run_tests() {
+  parse_common_build_opts "$@"
+  set -- "${ARGS[@]+"${ARGS[@]}"}"
+
   local build_dir="$DEFAULT_BUILD_DIR"
   local config="$DEFAULT_CONFIG"
 
@@ -116,7 +177,8 @@ function run_tests() {
     esac
   done
 
-  cmake --build "$build_dir" --config "$config" --target effects-tests
+  echo "Building tests with -j${JOBS}"
+  cmake --build "$build_dir" --config "$config" --target effects-tests -j"$JOBS"
   ctest --test-dir "$build_dir" --output-on-failure
 }
 
@@ -142,6 +204,9 @@ case "$command" in
     build "$@"
     ;;
   all)
+    parse_common_build_opts "$@"
+    set -- "${ARGS[@]+"${ARGS[@]}"}"
+
     if [[ $# -gt 0 && "$1" != --* ]]; then
       build_dir="$1"
       shift
@@ -179,7 +244,8 @@ case "$command" in
 
     mkdir -p "$build_dir"
     cmake -S "$ROOT_DIR" -B "$build_dir" -DCMAKE_BUILD_TYPE="$config" "${cmake_args[@]}"
-    cmake --build "$build_dir" --config "$config"
+    echo "Building with -j${JOBS}"
+    cmake --build "$build_dir" --config "$config" -j"$JOBS"
     ;;
   test)
     run_tests "$@"

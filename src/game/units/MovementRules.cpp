@@ -1,13 +1,23 @@
 #include "game/units/MovementRules.h"
 
 #include "game/Faction.h"
+#include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include "game/map/Tile.h"
+#include "game/map/UnitPositionIndex.h"
+#include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitComponentConfig.h"
 
 namespace ac
 {
+
+namespace
+{
+
+bool s_bSingleUnitPerTile = false;
+
+} // namespace
 
 bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject)
 {
@@ -47,6 +57,39 @@ bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile)
         return rTile.IsLand();
     }
     return false;
+}
+
+bool UsesFungusEntryRules(const Unit& rMover, const Tile& rTile)
+{
+    return rTile.GetHasFungus() && !ResolveFlag(rMover, RuleFlagId_t::TreatFungusAsRoad);
+}
+
+bool HasFriendlyOccupant(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap)
+{
+    const FactionId_t moverId = rMover.GetFaction().GetFactionId();
+    for (const Unit* pUnit : rWorldMap.GetUnitsOnTile(rTile))
+    {
+        if (pUnit && pUnit != &rMover && pUnit->GetFaction().GetFactionId() == moverId)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+void SetSingleUnitPerTile(bool bSingleUnitPerTile)
+{
+    s_bSingleUnitPerTile = bSingleUnitPerTile;
+}
+
+bool IsSingleUnitPerTile()
+{
+    return s_bSingleUnitPerTile;
+}
+
+bool CanPlaceUnitOnTile(const Tile& rTile, const UnitPositionIndex& rPositions)
+{
+    return !IsSingleUnitPerTile() || rPositions.GetUnitsOnTile(rTile).empty();
 }
 
 } // namespace ac

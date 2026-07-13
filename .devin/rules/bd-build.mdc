@@ -1,0 +1,31 @@
+---
+description: Use the bd script for all builds and tests; do not fall back
+alwaysApply: true
+---
+
+# Build and test with `bd`
+
+Always use the project-root [`bd`](bd) script for configuring, building, and running tests. Do not invoke `cmake`, `make`, `ninja`, or `ctest` directly (including under `build/`).
+
+```bash
+# ✅ GOOD
+./bd build
+./bd test
+./bd all
+./bd build -j2
+./bd test --config Release -j16
+
+# ❌ BAD
+cmake --build build -j$(nproc)
+make -C build effects-tests
+ctest --test-dir build
+./build/tests/effects-tests "[movement]"
+```
+
+## Failure handling
+
+If `bd` fails (configure, build, or test), **stop and report the failure to the user**. Do not retry with another build system, a different generator, or ad-hoc compile/link commands. Fix source/config issues and re-run `bd` only when that is the clear fix.
+
+## Parallelism
+
+Prefer `bd`'s default job count (from MemTotal) unless the user asks for `-j` / `--jobs` or `BD_JOBS`.

@@ -26,6 +26,7 @@ UnitMoveProfile_t MoveProfileFor(const Unit& rUnit)
 {
     UnitMoveProfile_t profile;
     profile.ignoresDifficultTerrain = ResolveFlag(rUnit, RuleFlagId_t::IgnoreDifficultTerrain);
+    profile.treatFungusAsRoad = ResolveFlag(rUnit, RuleFlagId_t::TreatFungusAsRoad);
     return profile;
 }
 

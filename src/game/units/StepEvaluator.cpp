@@ -4,9 +4,7 @@
 #include "game/faction/UnitVisibility.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
-#include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
-#include "game/units/MovementConstants.h"
 #include "game/units/MovementRules.h"
 #include "game/units/Unit.h"
 
@@ -50,22 +48,6 @@ bool IsDesiredStepCandidate_(StepOutcome_t outcome)
     return outcome == StepOutcome_t::Legal
         || outcome == StepOutcome_t::BlockedByOccupant
         || outcome == StepOutcome_t::BlockedByZoc;
-}
-
-// True when rRemaining fragments can pay rCost. Cost 0 (mag tubes) only needs any moves
-// left. Costs above remaining are still allowed when at least one full move point remains
-// (SMAC: rocky/fungus always enterable with >= 1 MP left; excess cost zeroes the unit).
-bool CanAffordMoveCost_(int remaining, int cost)
-{
-    if (remaining <= 0)
-    {
-        return false;
-    }
-    if (cost <= remaining)
-    {
-        return true;
-    }
-    return remaining >= MovementConstants_t::k_moveFragmentsPerPoint;
 }
 
 } // namespace
@@ -152,8 +134,8 @@ StepEvaluation_t StepEvaluator::EvaluateStep(const Unit& rMover, const Tile& rTo
 {
     StepEvaluation_t result;
 
-    const int cost = m_moveCosts.ComputeFragments(rTo, MoveProfileFor(rMover));
-    if (!CanAffordMoveCost_(rMover.GetMoveFragmentsRemaining(), cost))
+    // Any remaining fragments allow entry; tile cost is spent (and clamped) on TryStep.
+    if (rMover.GetMoveFragmentsRemaining() <= 0)
     {
         result.outcome = StepOutcome_t::NoMoves;
         return result;
@@ -185,7 +167,7 @@ StepEvaluation_t StepEvaluator::EvaluateStep(const Unit& rMover, const Tile& rTo
         return result;
     }
 
-    if (UnitPositionIndex::IsSingleUnitPerTile() && !m_rWorldMap.GetUnitsOnTile(rTo).empty())
+    if (!CanPlaceUnitOnTile(rTo, m_rWorldMap.GetUnitPositions()))
     {
         result.outcome = StepOutcome_t::BlockedByOccupant;
         for (Unit* pUnit : m_rWorldMap.GetUnitsOnTile(rTo))

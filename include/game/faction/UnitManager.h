@@ -23,8 +23,8 @@ public:
     ~UnitManager() = default;
 
     // The unit registers itself on rTile in rPositions for its lifetime (see Unit's
-    // constructor); throws if the stacking rule forbids the tile. unitId must be unique
-    // across the game (caller: GameState::AllocateUnitId).
+    // constructor). Rejects the tile under the stacking rule (MovementRules) before
+    // constructing. unitId must be unique across the game (caller: GameState::AllocateUnitId).
     Unit& CreateUnit(UnitId_t unitId, const UnitDesign& rDesign, UnitPositionIndex& rPositions,
                      const Tile& rTile, BaseManager* pHomeBase = nullptr);
     void DestroyUnit(Unit& rUnit);

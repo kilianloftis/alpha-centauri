@@ -56,17 +56,25 @@
       { "type": "StatModifier", "scope": "ThisTile", "radius": 2, "parameters": { "stat": "defense", "amount": 25, "op": "AddPercent" } }
     ]
   },
-  {
-    "id": "Cloaking_Device",
-    "name": "Cloaking Device",
-    "type": "ability",
-    "effects": [
-      { "type": "Conceal", "scope": "ThisUnit", "parameters": { "channel": "cloak" } },
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "ignore_zone_of_control" } }
-    ]
-  },
-  {
-    "id": "deep_pressure_hull",
+    {
+        "id": "Cloaking_Device",
+        "name": "Cloaking Device",
+        "type": "ability",
+        "effects": [
+            { "type": "Conceal", "scope": "ThisUnit", "parameters": { "channel": "cloak" } },
+            { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "ignore_zone_of_control" } }
+        ]
+    },
+    {
+        "id": "treat_fungus_as_road",
+        "name": "Treat Fungus as Road",
+        "type": "ability",
+        "effects": [
+            { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "treat_fungus_as_road" } }
+        ]
+    },
+    {
+        "id": "deep_pressure_hull",
     "name": "Deep Pressure Hull (cloak only on Fungus — stand-in for sea-only)",
     "type": "ability",
     "effects": [
