@@ -1,7 +1,9 @@
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/Tile.h"
+#include "game/units/MovementConstants.h"
 #include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
+#include "lib/Rational.h"
 #include "game/effects/BonusEffectParser.h"
 
 namespace ac
@@ -36,6 +38,18 @@ ImprovementConfig_t ImprovementConfigParser::ParseImprovementConfig(const nlohma
     config.frequency = improvementJson.value("frequency", 0);
     config.spritePath = improvementJson.value("sprite_path", "");
     config.excludes = ConfigFields::ParseStringArray(improvementJson, "excludes");
+    if (improvementJson.contains("move_cost"))
+    {
+        config.moveCost = Rational_t::ParseJson(improvementJson.at("move_cost"));
+    }
+    else
+    {
+        config.moveCost = MovementConstants_t{}.defaultMoveCost;
+    }
+    if (improvementJson.contains("move_cost_override"))
+    {
+        config.moveCostOverride = Rational_t::ParseJson(improvementJson.at("move_cost_override"));
+    }
     config.effects = BonusEffectParser::ParseEffects(improvementJson, EffectSourceKind_t::Improvement, config.id);
 
     return config;

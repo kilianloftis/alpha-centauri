@@ -18,6 +18,7 @@
   {
     "id": "Rocky",
     "name": "Rocky",
+    "move_cost": 2,
     "effects": [
       {
         "type": "StatModifier",
@@ -72,6 +73,7 @@
   {
     "id": "Fungus",
     "name": "Fungus",
+    "move_cost": 3,
     "effects": [
       {
         "type": "StatModifier",
@@ -84,6 +86,20 @@
         "parameters": { "channel": "terrain" }
       }
     ]
+  },
+  {
+    "id": "Road",
+    "name": "Road",
+    "mineral_cost": 5,
+    "move_cost_override": "1/3",
+    "effects": []
+  },
+  {
+    "id": "MagTube",
+    "name": "Mag Tube",
+    "mineral_cost": 10,
+    "move_cost_override": 0,
+    "effects": []
   },
   {
     "id": "Farm",

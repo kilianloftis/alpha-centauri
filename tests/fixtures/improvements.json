@@ -10,6 +10,7 @@
   {
     "id": "Rocky",
     "name": "Rocky",
+    "move_cost": 2,
     "effects": [
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "minerals", "amount": 2, "op": "Add" } },
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "defense", "amount": 25, "op": "AddPercent" } }
@@ -40,10 +41,25 @@
   {
     "id": "Fungus",
     "name": "Fungus",
+    "move_cost": 3,
     "effects": [
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "defense", "amount": 25, "op": "AddPercent" } },
       { "type": "Conceal", "scope": "ThisTile", "parameters": { "channel": "terrain" } }
     ]
+  },
+  {
+    "id": "Road",
+    "name": "Road",
+    "mineral_cost": 5,
+    "move_cost_override": "1/3",
+    "effects": []
+  },
+  {
+    "id": "MagTube",
+    "name": "Mag Tube",
+    "mineral_cost": 10,
+    "move_cost_override": 0,
+    "effects": []
   },
   {
     "id": "Farm",

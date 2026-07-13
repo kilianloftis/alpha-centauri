@@ -5,6 +5,7 @@
 #include "GameFixtures.h"
 
 #include "game/units/Unit.h"
+#include "game/units/MovementConstants.h"
 #include "game/effects/EffectEnums.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -19,7 +20,8 @@ TEST_CASE("A fresh unit starts at its live resolved maxima", "[unit][stats]")
 
     CHECK(unit.GetCurrentHp() == unit.GetStat(StatId_t::HitPoints));
     CHECK(unit.GetCurrentFuel() == unit.GetStat(StatId_t::Fuel));
-    CHECK(unit.GetMovesRemaining() == unit.GetStat(StatId_t::Movement));
+    CHECK(unit.GetMovesRemaining()
+          == unit.GetStat(StatId_t::Movement) * MovementConstants_t::k_moveFragmentsPerPoint);
     CHECK(unit.GetXp() == 0);
 }
 
@@ -44,8 +46,10 @@ TEST_CASE("Current-stat setters clamp to [0, live max]", "[unit][stats]")
 
     unit.SetMovesRemaining(-3);
     CHECK(unit.GetMovesRemaining() == 0);
-    unit.SetMovesRemaining(unit.GetStat(StatId_t::Movement) + 100);
-    CHECK(unit.GetMovesRemaining() == unit.GetStat(StatId_t::Movement));
+    const int maxFragments =
+        unit.GetStat(StatId_t::Movement) * MovementConstants_t::k_moveFragmentsPerPoint;
+    unit.SetMovesRemaining(maxFragments + 100);
+    CHECK(unit.GetMovesRemaining() == maxFragments);
 
     unit.SetXp(-10);
     CHECK(unit.GetXp() == 0);

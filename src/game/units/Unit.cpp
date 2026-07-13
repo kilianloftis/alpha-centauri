@@ -4,6 +4,7 @@
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/effects/ActiveEffect.h"
+#include "game/units/MovementConstants.h"
 
 #include <algorithm>
 
@@ -33,7 +34,8 @@ Unit::Unit(UnitId_t unitId,
     // Members used by ResolveStat are initialised above; seed after the mem-init list.
     m_currentHp = ResolveStat(*this, StatId_t::HitPoints);
     m_currentFuel = ResolveStat(*this, StatId_t::Fuel);
-    m_movesRemaining = ResolveStat(*this, StatId_t::Movement);
+    m_movesRemaining = ResolveStat(*this, StatId_t::Movement)
+        * MovementConstants_t::k_moveFragmentsPerPoint;
 
     // Throws if the stacking rule forbids rTile; the destructor is not run for a unit
     // whose constructor throws, so no unregistration is needed on that path.
@@ -91,7 +93,9 @@ void Unit::SetCurrentFuel(int fuel)
 }
 void Unit::SetMovesRemaining(int moves)
 {
-    m_movesRemaining = std::clamp(moves, 0, ResolveStat(*this, StatId_t::Movement));
+    const int maxFragments = ResolveStat(*this, StatId_t::Movement)
+        * MovementConstants_t::k_moveFragmentsPerPoint;
+    m_movesRemaining = std::clamp(moves, 0, maxFragments);
 }
 void Unit::SetXp(int xp)                    { m_xp = std::max(xp, 0); }
 void Unit::SetHomeBase(BaseManager* pHomeBase) { m_pHomeBase = pHomeBase; }

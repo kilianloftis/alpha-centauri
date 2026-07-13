@@ -201,6 +201,11 @@ const WorldMap& TileEffectsContext::GetWorldMap() const
     return m_rWorldMap;
 }
 
+const ImprovementRegistry& TileEffectsContext::GetImprovements() const
+{
+    return m_rImprovements;
+}
+
 std::vector<ActiveEffect_t> TileEffectsContext::CollectAreaEffects(const Tile& rTile) const
 {
     std::vector<ActiveEffect_t> effects;

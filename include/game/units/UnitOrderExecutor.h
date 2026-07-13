@@ -5,6 +5,7 @@ namespace ac
 
 class Unit;
 class WorldMap;
+class ImprovementRegistry;
 struct MoveOrder_t;
 struct HoldOrder_t;
 struct HoldUntilHealedOrder_t;
@@ -16,13 +17,17 @@ public:
     UnitOrderExecutor() = default;
     ~UnitOrderExecutor() = default;
 
-    void Execute(Unit& rUnit, WorldMap& rWorldMap);
+    void Execute(Unit& rUnit, WorldMap& rWorldMap, const ImprovementRegistry& rImprovements);
 
 private:
-    void Execute_(Unit& rUnit, WorldMap& rWorldMap, MoveOrder_t& rOrder);
-    void Execute_(Unit& rUnit, WorldMap& rWorldMap, HoldOrder_t& rOrder);
-    void Execute_(Unit& rUnit, WorldMap& rWorldMap, HoldUntilHealedOrder_t& rOrder);
-    void Execute_(Unit& rUnit, WorldMap& rWorldMap, HoldForTurnsOrder_t& rOrder);
+    void Execute_(Unit& rUnit, WorldMap& rWorldMap, const ImprovementRegistry& rImprovements,
+                  MoveOrder_t& rOrder);
+    void Execute_(Unit& rUnit, WorldMap& rWorldMap, const ImprovementRegistry& rImprovements,
+                  HoldOrder_t& rOrder);
+    void Execute_(Unit& rUnit, WorldMap& rWorldMap, const ImprovementRegistry& rImprovements,
+                  HoldUntilHealedOrder_t& rOrder);
+    void Execute_(Unit& rUnit, WorldMap& rWorldMap, const ImprovementRegistry& rImprovements,
+                  HoldForTurnsOrder_t& rOrder);
 };
 
 } // namespace ac

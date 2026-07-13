@@ -48,11 +48,13 @@ public:
 
     int GetCurrentHp() const;
     int GetCurrentFuel() const;
+    // Remaining movement in fragments (k_moveFragmentsPerPoint per Movement point).
     int GetMovesRemaining() const;
     int GetXp() const;
 
     void SetCurrentHp(int hp);
     void SetCurrentFuel(int fuel);
+    // Clamps to [0, Movement * k_moveFragmentsPerPoint].
     void SetMovesRemaining(int moves);
     void SetXp(int xp);
     void SetHomeBase(BaseManager* pHomeBase);

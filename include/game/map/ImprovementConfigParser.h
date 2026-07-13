@@ -1,7 +1,9 @@
 #pragma once
 
 #include "game/effects/BonusEffect.h"
+#include "lib/Rational.h"
 #include <nlohmann/json.hpp>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -33,6 +35,11 @@ struct ImprovementConfig_t
     bool ownedByTerritory = false;
     int frequency = 0;                 // world-gen spawn weight; 0 = not randomly placed
     std::string spritePath;            // optional sprite override (used for tile bonuses)
+    // Move cost in move-points (converted to fragments via k_moveFragmentsPerPoint).
+    // Defaults to 1 when omitted in JSON. On a tile, the highest moveCost wins unless any
+    // moveCostOverride is present, in which case the lowest override wins (roads / mag tubes).
+    Rational_t moveCost{1, 1};
+    std::optional<Rational_t> moveCostOverride;
     std::vector<EffectConfig_t> effects;
 };
 

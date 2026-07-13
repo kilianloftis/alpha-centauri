@@ -55,6 +55,8 @@ public:
     // the faction that owns the Sensor's tile). Terrain and non-owned improvements always apply.
     double ResolveTileDefenseMultiplier(const Tile& rTile, FactionId_t forFaction) const;
 
+    const ImprovementRegistry& GetImprovements() const;
+
     // Re-derives rTile's effective moisture from its stored base moisture plus any Condenser
     // aura in range, then calls Tile::SetMoisture(). Always recomputed from scratch so
     // multiple overlapping Condensers and add/remove order never cause drift.

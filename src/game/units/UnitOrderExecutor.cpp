@@ -8,18 +8,20 @@
 namespace ac
 {
 
-void UnitOrderExecutor::Execute(Unit& rUnit, WorldMap& rWorldMap)
+void UnitOrderExecutor::Execute(Unit& rUnit, WorldMap& rWorldMap,
+                                const ImprovementRegistry& rImprovements)
 {
     if (!rUnit.GetOrder().has_value())
         return;
 
     std::visit([&](auto& rOrder)
     {
-        Execute_(rUnit, rWorldMap, rOrder);
+        Execute_(rUnit, rWorldMap, rImprovements, rOrder);
     }, *rUnit.GetOrder()); // non-const overload — allows mutating HoldForTurnsOrder_t
 }
 
-void UnitOrderExecutor::Execute_(Unit& rUnit, WorldMap& rWorldMap, MoveOrder_t& rOrder)
+void UnitOrderExecutor::Execute_(Unit& rUnit, WorldMap& rWorldMap,
+                                 const ImprovementRegistry& rImprovements, MoveOrder_t& rOrder)
 {
     if (!rOrder.pDestination)
         throw std::runtime_error("MoveOrder has null destination");
@@ -38,20 +40,21 @@ void UnitOrderExecutor::Execute_(Unit& rUnit, WorldMap& rWorldMap, MoveOrder_t& 
 
     // Pathfinding is recalculated every step (fog / new info later). The greedy
     // ProposeNextStep seam is temporary until a real pathfinder lands.
-    const Tile* pNext = ProposeNextStep(rUnit, *rOrder.pDestination, rWorldMap);
+    const Tile* pNext = ProposeNextStep(rUnit, *rOrder.pDestination, rWorldMap, rImprovements);
     if (!pNext)
     {
         // No legal improving step — TryStep the desired bump tile so occupant/ZOC
         // blockers are contact-revealed (TryStep is a no-op move on those outcomes).
-        const Tile* pDesired = ProposeDesiredStep(rUnit, *rOrder.pDestination, rWorldMap);
+        const Tile* pDesired =
+            ProposeDesiredStep(rUnit, *rOrder.pDestination, rWorldMap, rImprovements);
         if (pDesired)
         {
-            TryStep(rUnit, *pDesired, rWorldMap);
+            TryStep(rUnit, *pDesired, rWorldMap, rImprovements);
         }
         return;
     }
 
-    if (!TryStep(rUnit, *pNext, rWorldMap))
+    if (!TryStep(rUnit, *pNext, rWorldMap, rImprovements))
     {
         return;
     }
@@ -63,7 +66,8 @@ void UnitOrderExecutor::Execute_(Unit& rUnit, WorldMap& rWorldMap, MoveOrder_t& 
     }
 }
 
-void UnitOrderExecutor::Execute_(Unit& rUnit, WorldMap& rWorldMap, HoldOrder_t& rOrder)
+void UnitOrderExecutor::Execute_(Unit& rUnit, WorldMap& rWorldMap,
+                                 const ImprovementRegistry& /*rImprovements*/, HoldOrder_t& rOrder)
 {
     // Hold indefinitely — nothing to do each turn
     (void)rUnit;
@@ -71,7 +75,9 @@ void UnitOrderExecutor::Execute_(Unit& rUnit, WorldMap& rWorldMap, HoldOrder_t& 
     (void)rOrder;
 }
 
-void UnitOrderExecutor::Execute_(Unit& rUnit, WorldMap& rWorldMap, HoldUntilHealedOrder_t& rOrder)
+void UnitOrderExecutor::Execute_(Unit& rUnit, WorldMap& rWorldMap,
+                                 const ImprovementRegistry& /*rImprovements*/,
+                                 HoldUntilHealedOrder_t& rOrder)
 {
     // TODO: Clear order when unit reaches full HP
     (void)rUnit;
@@ -79,7 +85,9 @@ void UnitOrderExecutor::Execute_(Unit& rUnit, WorldMap& rWorldMap, HoldUntilHeal
     (void)rOrder;
 }
 
-void UnitOrderExecutor::Execute_(Unit& rUnit, WorldMap& rWorldMap, HoldForTurnsOrder_t& rOrder)
+void UnitOrderExecutor::Execute_(Unit& rUnit, WorldMap& rWorldMap,
+                                 const ImprovementRegistry& /*rImprovements*/,
+                                 HoldForTurnsOrder_t& rOrder)
 {
     (void)rWorldMap;
     if (rOrder.turnsRemaining <= 0)

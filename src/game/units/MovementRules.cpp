@@ -4,10 +4,13 @@
 #include "game/effects/EffectEnums.h"
 #include "game/faction/FactionRevealedUnits.h"
 #include "game/faction/UnitVisibility.h"
+#include "game/map/ImprovementRegistry.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
+#include "game/units/MoveCostCalculator.h"
+#include "game/units/MovementConstants.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitComponentConfig.h"
 
@@ -63,6 +66,22 @@ bool IsDesiredStepCandidate_(StepOutcome_t outcome)
     return outcome == StepOutcome_t::Legal
         || outcome == StepOutcome_t::BlockedByOccupant
         || outcome == StepOutcome_t::BlockedByZoc;
+}
+
+// True when rRemaining fragments can pay rCost. Cost 0 (mag tubes) only needs any moves
+// left. Costs above remaining are still allowed when at least one full move point remains
+// (SMAC: rocky/fungus always enterable with >= 1 MP left; excess cost zeroes the unit).
+bool CanAffordMoveCost_(int remaining, int cost)
+{
+    if (remaining <= 0)
+    {
+        return false;
+    }
+    if (cost <= remaining)
+    {
+        return true;
+    }
+    return remaining >= MovementConstants_t::k_moveFragmentsPerPoint;
 }
 
 } // namespace
@@ -168,11 +187,14 @@ bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile)
     return false;
 }
 
-StepEvaluation_t EvaluateStep(const Unit& rMover, const Tile& rTo, const WorldMap& rWorldMap)
+StepEvaluation_t EvaluateStep(const Unit& rMover, const Tile& rTo, const WorldMap& rWorldMap,
+                              const ImprovementRegistry& rImprovements)
 {
     StepEvaluation_t result;
 
-    if (rMover.GetMovesRemaining() <= 0)
+    const MoveCostCalculator calc(rImprovements);
+    const int cost = calc.ComputeFragments(rTo, MoveProfileFor(rMover));
+    if (!CanAffordMoveCost_(rMover.GetMovesRemaining(), cost))
     {
         result.outcome = StepOutcome_t::NoMoves;
         return result;
@@ -221,9 +243,10 @@ StepEvaluation_t EvaluateStep(const Unit& rMover, const Tile& rTo, const WorldMa
     return result;
 }
 
-bool CanStep(const Unit& rMover, const Tile& rTo, const WorldMap& rWorldMap)
+bool CanStep(const Unit& rMover, const Tile& rTo, const WorldMap& rWorldMap,
+             const ImprovementRegistry& rImprovements)
 {
-    return EvaluateStep(rMover, rTo, rWorldMap).outcome == StepOutcome_t::Legal;
+    return EvaluateStep(rMover, rTo, rWorldMap, rImprovements).outcome == StepOutcome_t::Legal;
 }
 
 void ResolveCombatStub(Unit& rAttacker)
@@ -252,16 +275,19 @@ bool TryAttack(Unit& rAttacker, const Tile& rTargetTile, const WorldMap& rWorldM
     return true;
 }
 
-bool TryStep(Unit& rMover, const Tile& rTo, WorldMap& rWorldMap)
+bool TryStep(Unit& rMover, const Tile& rTo, WorldMap& rWorldMap,
+             const ImprovementRegistry& rImprovements)
 {
-    const StepEvaluation_t eval = EvaluateStep(rMover, rTo, rWorldMap);
+    const StepEvaluation_t eval = EvaluateStep(rMover, rTo, rWorldMap, rImprovements);
     if (eval.outcome == StepOutcome_t::Legal)
     {
         if (!rWorldMap.GetUnitPositions().TryMoveUnit(rMover, rTo))
         {
             return false;
         }
-        rMover.SetMovesRemaining(rMover.GetMovesRemaining() - 1);
+        const MoveCostCalculator calc(rImprovements);
+        const int cost = calc.ComputeFragments(rTo, MoveProfileFor(rMover));
+        rMover.SetMovesRemaining(rMover.GetMovesRemaining() - cost);
         return true;
     }
 
@@ -274,7 +300,8 @@ bool TryStep(Unit& rMover, const Tile& rTo, WorldMap& rWorldMap)
 }
 
 const Tile* ProposeNextStep(const Unit& rMover, const Tile& rDestination,
-                            const WorldMap& rWorldMap)
+                            const WorldMap& rWorldMap,
+                            const ImprovementRegistry& rImprovements)
 {
     const Tile& rFrom = rMover.GetTile();
     if (&rFrom == &rDestination)
@@ -289,7 +316,7 @@ const Tile* ProposeNextStep(const Unit& rMover, const Tile& rDestination,
     ForEachTileInChebyshevRadius(rFrom, rWorldMap, /*radius=*/1, /*includeOrigin=*/false,
         [&](const Tile* pTile, int /*distance*/)
         {
-            if (!CanStep(rMover, *pTile, rWorldMap))
+            if (!CanStep(rMover, *pTile, rWorldMap, rImprovements))
             {
                 return;
             }
@@ -305,7 +332,8 @@ const Tile* ProposeNextStep(const Unit& rMover, const Tile& rDestination,
 }
 
 const Tile* ProposeDesiredStep(const Unit& rMover, const Tile& rDestination,
-                               const WorldMap& rWorldMap)
+                               const WorldMap& rWorldMap,
+                               const ImprovementRegistry& rImprovements)
 {
     const Tile& rFrom = rMover.GetTile();
     if (&rFrom == &rDestination)
@@ -320,7 +348,7 @@ const Tile* ProposeDesiredStep(const Unit& rMover, const Tile& rDestination,
     ForEachTileInChebyshevRadius(rFrom, rWorldMap, /*radius=*/1, /*includeOrigin=*/false,
         [&](const Tile* pTile, int /*distance*/)
         {
-            const StepEvaluation_t eval = EvaluateStep(rMover, *pTile, rWorldMap);
+            const StepEvaluation_t eval = EvaluateStep(rMover, *pTile, rWorldMap, rImprovements);
             if (!IsDesiredStepCandidate_(eval.outcome))
             {
                 return;

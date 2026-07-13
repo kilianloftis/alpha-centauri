@@ -5,6 +5,7 @@
 namespace ac
 {
 
+class ImprovementRegistry;
 class Tile;
 class TileEffectsContext;
 class Unit;
@@ -54,10 +55,13 @@ bool HasVisibleHostileUnit(const Unit& rMover, const Tile& rTile, const WorldMap
 bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile);
 
 // Pure step rules over objective world state (visibility / reveal are not consulted).
-StepEvaluation_t EvaluateStep(const Unit& rMover, const Tile& rTo, const WorldMap& rWorldMap);
+// Move affordability uses tile move-cost fragments from rImprovements.
+StepEvaluation_t EvaluateStep(const Unit& rMover, const Tile& rTo, const WorldMap& rWorldMap,
+                              const ImprovementRegistry& rImprovements);
 
 // True when EvaluateStep reports Legal.
-bool CanStep(const Unit& rMover, const Tile& rTo, const WorldMap& rWorldMap);
+bool CanStep(const Unit& rMover, const Tile& rTo, const WorldMap& rWorldMap,
+             const ImprovementRegistry& rImprovements);
 
 // Combat placeholder: no damage yet. Clears remaining moves and any active order.
 void ResolveCombatStub(Unit& rAttacker);
@@ -67,19 +71,23 @@ void ResolveCombatStub(Unit& rAttacker);
 bool TryAttack(Unit& rAttacker, const Tile& rTargetTile, const WorldMap& rWorldMap,
                const TileEffectsContext& rTileEffects);
 
-// Apply one legal empty-tile step (TryMoveUnit + spend 1 move). On BlockedByOccupant /
-// BlockedByZoc, contact-reveals the attributed blocking units to the mover's faction.
-bool TryStep(Unit& rMover, const Tile& rTo, WorldMap& rWorldMap);
+// Apply one legal empty-tile step (TryMoveUnit + spend tile move-cost fragments). On
+// BlockedByOccupant / BlockedByZoc, contact-reveals the attributed blocking units to the
+// mover's faction.
+bool TryStep(Unit& rMover, const Tile& rTo, WorldMap& rWorldMap,
+             const ImprovementRegistry& rImprovements);
 
 // Temporary next-step seam (real pathfinding later). Among adjacent tiles that pass
 // CanStep, pick the one that minimizes Chebyshev distance to rDestination. Recalculate
 // every call. Returns nullptr if already there or no improving legal step exists.
 const Tile* ProposeNextStep(const Unit& rMover, const Tile& rDestination,
-                            const WorldMap& rWorldMap);
+                            const WorldMap& rWorldMap,
+                            const ImprovementRegistry& rImprovements);
 
 // Like ProposeNextStep, but also considers tiles blocked only by occupants or ZOC — used
 // to identify the bump target when the legal path is blocked (TryStep then reveals).
 const Tile* ProposeDesiredStep(const Unit& rMover, const Tile& rDestination,
-                               const WorldMap& rWorldMap);
+                               const WorldMap& rWorldMap,
+                               const ImprovementRegistry& rImprovements);
 
 } // namespace ac
