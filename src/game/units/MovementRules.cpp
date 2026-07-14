@@ -7,7 +7,6 @@
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
-#include "game/units/UnitComponentConfig.h"
 
 namespace ac
 {

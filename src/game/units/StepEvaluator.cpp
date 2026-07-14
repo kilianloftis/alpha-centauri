@@ -14,33 +14,61 @@ namespace ac
 namespace
 {
 
-void CollectHostileOccupants_(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
-                              std::vector<Unit*>& rOut)
+bool IsHostileTo_(const Unit& rMover, const Unit& rOther)
 {
-    const FactionId_t moverId = rMover.GetFaction().GetFactionId();
+    return rOther.GetFaction().GetFactionId() != rMover.GetFaction().GetFactionId();
+}
+
+// Invokes rFn(Unit&) for each hostile unit on rTile; stops early if rFn returns false.
+template <typename Fn>
+void ForEachHostileOnTile_(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
+                           Fn&& rFn)
+{
     for (Unit* pUnit : rWorldMap.GetUnitsOnTile(rTile))
     {
-        if (pUnit && pUnit->GetFaction().GetFactionId() != moverId)
+        if (pUnit && IsHostileTo_(rMover, *pUnit) && !rFn(*pUnit))
         {
-            rOut.push_back(pUnit);
+            return;
         }
     }
 }
 
-void CollectZocProjectorsAround_(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
-                                 std::vector<Unit*>& rOut)
+void CollectHostileOccupants_(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
+                              std::vector<Unit*>& rOut)
+{
+    ForEachHostileOnTile_(rMover, rTile, rWorldMap, [&](Unit& rUnit)
+    {
+        rOut.push_back(&rUnit);
+        return true;
+    });
+}
+
+// Invokes rFn(Unit&) for each ZOC projector around rTile; stops early if rFn returns false.
+template <typename Fn>
+void ForEachZocProjectorAround_(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
+                                Fn&& rFn)
 {
     ForEachTileInChebyshevRadius(rTile, rWorldMap, /*radius=*/1, /*includeOrigin=*/false,
         [&](const Tile* pNeighbor, int /*distance*/)
         {
             for (Unit* pUnit : rWorldMap.GetUnitsOnTile(*pNeighbor))
             {
-                if (pUnit && UnitExertsZocOn(*pUnit, rMover))
+                if (pUnit && UnitExertsZocOn(*pUnit, rMover) && !rFn(*pUnit))
                 {
-                    rOut.push_back(pUnit);
+                    return;
                 }
             }
         });
+}
+
+void CollectZocProjectorsAround_(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
+                                 std::vector<Unit*>& rOut)
+{
+    ForEachZocProjectorAround_(rMover, rTile, rWorldMap, [&](Unit& rUnit)
+    {
+        rOut.push_back(&rUnit);
+        return true;
+    });
 }
 
 bool IsDesiredStepCandidate_(StepOutcome_t outcome)
@@ -61,64 +89,42 @@ StepEvaluator::StepEvaluator(const ImprovementRegistry& rImprovements,
 {
 }
 
-WorldMap& StepEvaluator::GetWorldMap() const
-{
-    return m_rWorldMap;
-}
-
-const MoveCostCalculator& StepEvaluator::GetMoveCosts() const
-{
-    return m_moveCosts;
-}
-
 bool StepEvaluator::IsTileInHostileZoc(const Unit& rMover, const Tile& rTile) const
 {
     bool bInZoc = false;
-    ForEachTileInChebyshevRadius(rTile, m_rWorldMap, /*radius=*/1, /*includeOrigin=*/false,
-        [&](const Tile* pNeighbor, int /*distance*/)
-        {
-            if (bInZoc)
-            {
-                return;
-            }
-            for (Unit* pUnit : m_rWorldMap.GetUnitsOnTile(*pNeighbor))
-            {
-                if (pUnit && UnitExertsZocOn(*pUnit, rMover))
-                {
-                    bInZoc = true;
-                    return;
-                }
-            }
-        });
+    ForEachZocProjectorAround_(rMover, rTile, m_rWorldMap, [&](Unit& /*rProjector*/)
+    {
+        bInZoc = true;
+        return false;
+    });
     return bInZoc;
 }
 
 bool StepEvaluator::HasHostileUnit(const Unit& rMover, const Tile& rTile) const
 {
-    const FactionId_t moverId = rMover.GetFaction().GetFactionId();
-    for (const Unit* pUnit : m_rWorldMap.GetUnitsOnTile(rTile))
+    bool bFound = false;
+    ForEachHostileOnTile_(rMover, rTile, m_rWorldMap, [&](Unit& /*rHostile*/)
     {
-        if (pUnit && pUnit->GetFaction().GetFactionId() != moverId)
-        {
-            return true;
-        }
-    }
-    return false;
+        bFound = true;
+        return false;
+    });
+    return bFound;
 }
 
 bool StepEvaluator::HasVisibleHostileUnit(const Unit& rMover, const Tile& rTile) const
 {
     const Faction& rObserver = rMover.GetFaction();
-    const FactionId_t moverId = rObserver.GetFactionId();
-    for (const Unit* pUnit : m_rWorldMap.GetUnitsOnTile(rTile))
+    bool bFound = false;
+    ForEachHostileOnTile_(rMover, rTile, m_rWorldMap, [&](Unit& rHostile)
     {
-        if (pUnit && pUnit->GetFaction().GetFactionId() != moverId
-            && IsUnitVisibleTo(rObserver, *pUnit, m_rTileEffects))
+        if (IsUnitVisibleTo(rObserver, rHostile, m_rTileEffects))
         {
-            return true;
+            bFound = true;
+            return false;
         }
-    }
-    return false;
+        return true;
+    });
+    return bFound;
 }
 
 bool StepEvaluator::IsZocViolation(const Unit& rMover, const Tile& rFrom, const Tile& rTo) const

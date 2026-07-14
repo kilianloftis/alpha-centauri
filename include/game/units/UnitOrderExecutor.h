@@ -1,11 +1,14 @@
 #pragma once
 
+#include "game/units/MoveCostCalculator.h"
 #include "game/units/StepEvaluator.h"
+#include "game/units/Unit.h"
+
+#include <unordered_set>
 
 namespace ac
 {
 
-class Unit;
 class WorldMap;
 class Tile;
 class ImprovementRegistry;
@@ -15,7 +18,8 @@ struct HoldOrder_t;
 struct HoldUntilHealedOrder_t;
 struct HoldForTurnsOrder_t;
 
-// Owns StepEvaluator and applies mutating step/attack/order actions on top of it.
+// Owns StepEvaluator plus the world/cost/effects deps mutation needs, and applies
+// step/attack/order actions on top of evaluation.
 class UnitOrderExecutor
 {
 public:
@@ -28,6 +32,7 @@ public:
 
     // Apply one legal empty-tile step (MoveUnit + spend tile move-cost fragments). On
     // BlockedByOccupant / BlockedByZoc, contact-reveals the attributed blocking units.
+    // Newly revealed hostiles (contact or fog) cancel a pending MoveOrder on rMover.
     // Fungus multi-turn charge progress is stored on rMoveOrder.
     bool TryStep(Unit& rMover, const Tile& rTo, MoveOrder_t& rMoveOrder);
 
@@ -46,7 +51,16 @@ private:
     bool TryEnterTile_(Unit& rMover, const Tile& rTo, int remainingAfter);
     bool TryFungusStep_(Unit& rMover, const Tile& rTo, MoveOrder_t& rMoveOrder);
     void ClearFungusCharge_(MoveOrder_t& rMoveOrder);
+    void CollectVisibleHostileIds_(const Unit& rObserver,
+                                   std::unordered_set<UnitId_t>& rOut) const;
+    bool HasNewlyVisibleHostile_(const Unit& rObserver,
+                                 const std::unordered_set<UnitId_t>& rPreviouslyVisible) const;
+    void CancelMoveOrderIfNewHostile_(Unit& rMover,
+                                      const std::unordered_set<UnitId_t>& rPreviouslyVisible);
 
+    WorldMap& m_rWorldMap;
+    const TileEffectsContext& m_rTileEffects;
+    MoveCostCalculator m_moveCosts;
     StepEvaluator m_steps;
 };
 

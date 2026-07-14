@@ -41,9 +41,6 @@ public:
                   WorldMap& rWorldMap,
                   const TileEffectsContext& rTileEffects);
 
-    WorldMap& GetWorldMap() const;
-    const MoveCostCalculator& GetMoveCosts() const;
-
     // True if rTile is in hostile ZOC for rMover (Chebyshev-1 around a qualifying foreign unit).
     bool IsTileInHostileZoc(const Unit& rMover, const Tile& rTile) const;
 

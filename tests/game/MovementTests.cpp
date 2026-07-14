@@ -218,6 +218,32 @@ TEST_CASE("Move order into cloaked unit reveals via desired-step bump",
 
     CHECK(IsUnitVisibleTo(player, cloaked, *fixture.ctx));
     CHECK(mover.GetTile().GetX() == 4); // did not enter the hostile tile
+    CHECK_FALSE(mover.GetOrder().has_value()); // contact-reveal cancelled the move
+}
+
+TEST_CASE("Move order cancels when fog of war reveals a hostile",
+          "[movement][visibility][fog][orders]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    MovementHarness_ move(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    // Vision 1: enemy two tiles east is fogged until the mover steps closer.
+    Unit& hostile = fixture.MakeUnit(enemy, 6, 4, {"test_chassis"});
+    Unit& mover = fixture.MakeUnit(player, 4, 4, {"test_chassis"});
+    player.RebuildVisibility();
+    mover.SetOrder(MoveOrder_t{&fixture.At(6, 4)});
+
+    REQUIRE_FALSE(IsUnitVisibleTo(player, hostile, *fixture.ctx));
+    const int distBefore = ChebyshevDistance(mover.GetTile(), fixture.At(6, 4));
+
+    move.orders.Execute(mover);
+
+    CHECK(ChebyshevDistance(mover.GetTile(), fixture.At(6, 4)) == distBefore - 1);
+    CHECK(IsUnitVisibleTo(player, hostile, *fixture.ctx));
+    CHECK_FALSE(mover.GetOrder().has_value());
 }
 
 TEST_CASE("EvaluateStep attributes occupant and ZOC blockers",
