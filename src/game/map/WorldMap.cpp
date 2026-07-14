@@ -39,7 +39,7 @@ Tile* WorldMap::GetTile(int x, int y)
     {
         return nullptr;
     }
-    return m_tiles[GetTileIndex_(x, y)].get();
+    return m_tiles[GetTileIndex(x, y)].get();
 }
 
 const Tile* WorldMap::GetTile(int x, int y) const
@@ -48,7 +48,7 @@ const Tile* WorldMap::GetTile(int x, int y) const
     {
         return nullptr;
     }
-    return m_tiles[GetTileIndex_(x, y)].get();
+    return m_tiles[GetTileIndex(x, y)].get();
 }
 
 std::vector<std::unique_ptr<Tile>>& WorldMap::GetTiles()
@@ -61,9 +61,14 @@ const std::vector<std::unique_ptr<Tile>>& WorldMap::GetTiles() const
     return m_tiles;
 }
 
-int WorldMap::GetTileIndex_(int x, int y) const
+int WorldMap::GetTileIndex(int x, int y) const
 {
     return y * m_width + x;
+}
+
+int WorldMap::GetTileIndex(const Tile& rTile) const
+{
+    return GetTileIndex(rTile.GetX(), rTile.GetY());
 }
 
 UnitPositionIndex& WorldMap::GetUnitPositions()

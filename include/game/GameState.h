@@ -3,6 +3,9 @@
 #include "game/Faction.h"
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/map/WorldMap.h"
+#include "game/units/MoveCostCalculator.h"
+#include "game/units/StepEvaluator.h"
+#include "game/units/Pathfinder.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "lib/DerefView.h"
 #include "lib/IdAllocator.h"
@@ -66,6 +69,10 @@ public:
     TileEffectsContext& GetTileEffects();
     const TileEffectsContext& GetTileEffects() const;
 
+    // Shared path search for order execution and UI preview.
+    Pathfinder& GetPathfinder();
+    const Pathfinder& GetPathfinder() const;
+
     UnitOrderExecutor& GetUnitOrderExecutor();
 
     // Recompute world territory from every faction's bases. Also wired as each faction's
@@ -86,6 +93,9 @@ private:
     // reverse declaration order, so m_factions is destroyed before these two.
     std::unique_ptr<WorldMap> m_worldMap;
     std::unique_ptr<TileEffectsContext> m_pTileEffects;
+    std::unique_ptr<MoveCostCalculator> m_pMoveCosts;
+    std::unique_ptr<StepEvaluator> m_pSteps;
+    std::unique_ptr<Pathfinder> m_pPathfinder;
     std::unique_ptr<UnitOrderExecutor> m_pUnitOrderExecutor;
     std::vector<std::unique_ptr<Faction>> m_factions;
     IdAllocator m_factionIdAllocator;

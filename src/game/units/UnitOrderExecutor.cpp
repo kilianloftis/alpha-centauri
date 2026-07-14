@@ -2,7 +2,7 @@
 
 #include "game/units/UnitOrder.h"
 #include "game/units/MoveCostCalculator.h"
-#include "game/units/MovementRules.h"
+#include "game/units/Pathfinder.h"
 #include "game/faction/FactionRevealedUnits.h"
 #include "game/faction/UnitVisibility.h"
 #include "game/map/MapUtils.h"
@@ -11,19 +11,23 @@
 #include "game/map/WorldMap.h"
 #include "game/Faction.h"
 
+#include <algorithm>
 #include <stdexcept>
 #include <variant>
 
 namespace ac
 {
 
-UnitOrderExecutor::UnitOrderExecutor(const ImprovementRegistry& rImprovements,
+UnitOrderExecutor::UnitOrderExecutor(const MoveCostCalculator& rMoveCosts,
+                                     const StepEvaluator& rSteps,
                                      WorldMap& rWorldMap,
-                                     const TileEffectsContext& rTileEffects)
-    : m_rWorldMap(rWorldMap)
+                                     const TileEffectsContext& rTileEffects,
+                                     Pathfinder& rPathfinder)
+    : m_rMoveCosts(rMoveCosts)
+    , m_rSteps(rSteps)
+    , m_rWorldMap(rWorldMap)
     , m_rTileEffects(rTileEffects)
-    , m_moveCosts(rImprovements)
-    , m_steps(rImprovements, rWorldMap, rTileEffects)
+    , m_rPathfinder(rPathfinder)
 {
 }
 
@@ -97,31 +101,28 @@ void UnitOrderExecutor::ResolveCombatStub_(Unit& rAttacker)
     rAttacker.ClearOrder();
 }
 
-bool UnitOrderExecutor::TryEnterTile_(Unit& rMover, const Tile& rTo, int remainingAfter)
+void UnitOrderExecutor::EnterTile_(Unit& rMover, const Tile& rTo, int remainingAfter)
 {
     m_rWorldMap.GetUnitPositions().MoveUnit(rMover, rTo);
     rMover.SetMoveFragmentsRemaining(remainingAfter);
-    return true;
 }
 
-void UnitOrderExecutor::ClearFungusCharge_(MoveOrder_t& rMoveOrder)
+bool UnitOrderExecutor::SpendMovesAndEnter_(Unit& rMover, const Tile& rTo,
+                                            MoveOrder_t& rMoveOrder)
 {
-    rMoveOrder.pFungusChargeTile = nullptr;
-    rMoveOrder.fungusFragmentsPaid = 0;
-}
-
-bool UnitOrderExecutor::TryFungusStep_(Unit& rMover, const Tile& rTo, MoveOrder_t& rMoveOrder)
-{
-    if (HasFriendlyOccupant(rMover, rTo, m_rWorldMap))
-    {
-        ClearFungusCharge_(rMoveOrder);
-        return TryEnterTile_(rMover, rTo, /*remainingAfter=*/0);
-    }
-
-    const UnitMoveProfile_t profile = MoveProfileFor(rMover);
-    const int cost = m_moveCosts.ComputeFragments(rTo, profile);
+    const auto costs = m_rMoveCosts.ForUnit(rMover, m_rWorldMap);
+    const int cost = costs.ComputeFragments(rTo);
     const int available = rMover.GetMoveFragmentsRemaining();
 
+    if (!costs.EndsTurnOnEntry(rTo))
+    {
+        rMoveOrder.pFungusChargeTile = nullptr;
+        rMoveOrder.fungusFragmentsPaid = 0;
+        EnterTile_(rMover, rTo, std::max(0, available - cost));
+        return true;
+    }
+
+    // Charged entry: bank fragments across turns until full cost is paid, then enter.
     if (rMoveOrder.pFungusChargeTile != &rTo)
     {
         rMoveOrder.pFungusChargeTile = &rTo;
@@ -131,34 +132,30 @@ bool UnitOrderExecutor::TryFungusStep_(Unit& rMover, const Tile& rTo, MoveOrder_
 
     if (rMoveOrder.fungusFragmentsPaid >= cost)
     {
-        ClearFungusCharge_(rMoveOrder);
-        return TryEnterTile_(rMover, rTo, /*remainingAfter=*/0);
+        rMoveOrder.pFungusChargeTile = nullptr;
+        rMoveOrder.fungusFragmentsPaid = 0;
+        EnterTile_(rMover, rTo, /*remainingAfter=*/0);
+        return true;
     }
 
-    // Charged this turn's moves toward entry; stay put.
     rMover.SetMoveFragmentsRemaining(0);
     return false;
 }
 
 bool UnitOrderExecutor::TryStep(Unit& rMover, const Tile& rTo, MoveOrder_t& rMoveOrder)
 {
+    if (rMover.GetMoveFragmentsRemaining() <= 0)
+    {
+        return false;
+    }
+
     std::unordered_set<UnitId_t> visibleBefore;
     CollectVisibleHostileIds_(rMover, visibleBefore);
 
-    const StepEvaluation_t eval = m_steps.EvaluateStep(rMover, rTo);
+    const StepEvaluation_t eval = m_rSteps.EvaluateStep(rMover, rMover.GetTile(), rTo);
     if (eval.outcome == StepOutcome_t::Legal)
     {
-        bool bEntered = false;
-        if (UsesFungusEntryRules(rMover, rTo))
-        {
-            bEntered = TryFungusStep_(rMover, rTo, rMoveOrder);
-        }
-        else
-        {
-            const int cost = m_moveCosts.ComputeFragments(rTo, MoveProfileFor(rMover));
-            ClearFungusCharge_(rMoveOrder);
-            bEntered = TryEnterTile_(rMover, rTo, rMover.GetMoveFragmentsRemaining() - cost);
-        }
+        const bool bEntered = SpendMovesAndEnter_(rMover, rTo, rMoveOrder);
         if (bEntered)
         {
             CancelMoveOrderIfNewHostile_(rMover, visibleBefore);
@@ -185,7 +182,7 @@ bool UnitOrderExecutor::TryAttack(Unit& rAttacker, const Tile& rTargetTile)
     {
         return false;
     }
-    if (!m_steps.HasVisibleHostileUnit(rAttacker, rTargetTile))
+    if (!m_rSteps.HasVisibleHostileUnit(rAttacker, rTargetTile))
     {
         return false;
     }
@@ -222,14 +219,13 @@ void UnitOrderExecutor::Execute_(Unit& rUnit, MoveOrder_t& rOrder)
         return;
     }
 
-    // Pathfinding is recalculated every step (fog / new info later). The greedy
-    // ProposeNextStep seam is temporary until a real pathfinder lands.
-    const Tile* pNext = m_steps.ProposeNextStep(rUnit, *rOrder.pDestination);
+    // Path is recalculated every step so newly revealed fog / hostiles are accounted for.
+    const Tile* pNext = m_rPathfinder.NextStep(rUnit, *rOrder.pDestination);
     if (!pNext)
     {
-        // No legal improving step — TryStep the desired bump tile so occupant/ZOC
-        // blockers are contact-revealed (TryStep is a no-op move on those outcomes).
-        const Tile* pDesired = m_steps.ProposeDesiredStep(rUnit, *rOrder.pDestination);
+        // No legal path — TryStep the desired bump tile so occupant/ZOC blockers are
+        // contact-revealed (TryStep is a no-op move on those outcomes).
+        const Tile* pDesired = m_rPathfinder.DesiredContactStep(rUnit, *rOrder.pDestination);
         if (pDesired)
         {
             TryStep(rUnit, *pDesired, rOrder);

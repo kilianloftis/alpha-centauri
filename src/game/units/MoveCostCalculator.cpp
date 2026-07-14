@@ -5,6 +5,8 @@
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/Tile.h"
+#include "game/map/WorldMap.h"
+#include "game/units/MovementRules.h"
 #include "game/units/Unit.h"
 #include "lib/Rational.h"
 
@@ -22,13 +24,35 @@ constexpr const char* k_RoadId = "Road";
 
 } // namespace
 
-UnitMoveProfile_t MoveProfileFor(const Unit& rUnit)
+// --- Query -------------------------------------------------------------------
+
+MoveCostCalculator::Query::Query(const MoveCostCalculator& rCalc,
+                                 const Unit& rUnit,
+                                 const WorldMap& rWorldMap)
+    : m_rCalc(rCalc)
+    , m_rUnit(rUnit)
+    , m_rWorldMap(rWorldMap)
 {
-    UnitMoveProfile_t profile;
-    profile.ignoresDifficultTerrain = ResolveFlag(rUnit, RuleFlagId_t::IgnoreDifficultTerrain);
-    profile.treatFungusAsRoad = ResolveFlag(rUnit, RuleFlagId_t::TreatFungusAsRoad);
-    return profile;
+    m_profile.ignoresDifficultTerrain = ResolveFlag(rUnit, RuleFlagId_t::IgnoreDifficultTerrain);
+    m_profile.treatFungusAsRoad = ResolveFlag(rUnit, RuleFlagId_t::TreatFungusAsRoad);
 }
+
+int MoveCostCalculator::Query::ComputeFragments(const Tile& rTile) const
+{
+    if (!m_profile.treatFungusAsRoad && rTile.GetHasFungus()
+        && HasFriendlyOccupant(m_rUnit, rTile, m_rWorldMap))
+    {
+        return m_rCalc.m_constants.DefaultMoveCostFragments();
+    }
+    return m_rCalc.ComputeFragments_(rTile, m_profile);
+}
+
+bool MoveCostCalculator::Query::EndsTurnOnEntry(const Tile& rTile) const
+{
+    return rTile.GetHasFungus() && !m_profile.treatFungusAsRoad;
+}
+
+// --- MoveCostCalculator ------------------------------------------------------
 
 MoveCostCalculator::MoveCostCalculator(const ImprovementRegistry& rImprovements,
                                        MovementConstants_t constants)
@@ -37,13 +61,31 @@ MoveCostCalculator::MoveCostCalculator(const ImprovementRegistry& rImprovements,
 {
 }
 
+MoveCostCalculator::Query MoveCostCalculator::ForUnit(const Unit& rUnit,
+                                                      const WorldMap& rWorldMap) const
+{
+    return Query(*this, rUnit, rWorldMap);
+}
+
+int MoveCostCalculator::ComputeFragments(const Unit& rUnit, const Tile& rTile,
+                                         const WorldMap& rWorldMap) const
+{
+    return ForUnit(rUnit, rWorldMap).ComputeFragments(rTile);
+}
+
+bool MoveCostCalculator::EndsTurnOnEntry(const Unit& rUnit, const Tile& rTile,
+                                         const WorldMap& rWorldMap) const
+{
+    return ForUnit(rUnit, rWorldMap).EndsTurnOnEntry(rTile);
+}
+
 int MoveCostCalculator::ToFragments_(const Rational_t& rCost) const
 {
     return rCost.ScaledInt(MovementConstants_t::k_moveFragmentsPerPoint);
 }
 
 int MoveCostCalculator::FeatureMoveCostFragments_(const ImprovementConfig_t& rConfig,
-                                                  const UnitMoveProfile_t& rProfile,
+                                                  const Query::UnitMoveProfile_t& rProfile,
                                                   int defaultFragments) const
 {
     int cost = ToFragments_(*rConfig.moveCost);
@@ -82,7 +124,7 @@ void MoveCostCalculator::ApplyMoveCost_(CostAggregate_t& rAgg, int costFragments
 }
 
 void MoveCostCalculator::AccumulateFeature_(const ImprovementConfig_t& rConfig,
-                                            const UnitMoveProfile_t& rProfile,
+                                            const Query::UnitMoveProfile_t& rProfile,
                                             int defaultFragments,
                                             CostAggregate_t& rAgg) const
 {
@@ -104,7 +146,7 @@ void MoveCostCalculator::AccumulateFeature_(const ImprovementConfig_t& rConfig,
 }
 
 void MoveCostCalculator::AccumulateTileFeatures_(const Tile& rTile,
-                                                 const UnitMoveProfile_t& rProfile,
+                                                 const Query::UnitMoveProfile_t& rProfile,
                                                  int defaultFragments,
                                                  CostAggregate_t& rAgg) const
 {
@@ -124,8 +166,8 @@ void MoveCostCalculator::AccumulateTileFeatures_(const Tile& rTile,
     }
 }
 
-int MoveCostCalculator::ComputeFragments(const Tile& rTile,
-                                         const UnitMoveProfile_t& rProfile) const
+int MoveCostCalculator::ComputeFragments_(const Tile& rTile,
+                                          const Query::UnitMoveProfile_t& rProfile) const
 {
     const int defaultFragments = m_constants.DefaultMoveCostFragments();
     CostAggregate_t agg;

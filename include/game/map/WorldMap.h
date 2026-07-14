@@ -26,6 +26,10 @@ public:
     Tile* GetTile(int x, int y);
     const Tile* GetTile(int x, int y) const;
 
+    // Row-major index into GetTiles() for an in-bounds (x, y). Does not bounds-check.
+    int GetTileIndex(int x, int y) const;
+    int GetTileIndex(const Tile& rTile) const;
+
     // Get all tiles
     std::vector<std::unique_ptr<Tile>>& GetTiles();
     const std::vector<std::unique_ptr<Tile>>& GetTiles() const;
@@ -53,8 +57,6 @@ private:
     UnitPositionIndex m_unitPositionIndex;
     WorkedTileIndex m_workedTiles;
     TerritoryMap m_territory;
-
-    int GetTileIndex_(int x, int y) const;
 };
 
 } // namespace ac

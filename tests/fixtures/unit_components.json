@@ -74,6 +74,14 @@
         ]
     },
     {
+        "id": "ignores_difficult_terrain",
+        "name": "Ignores Difficult Terrain",
+        "type": "ability",
+        "effects": [
+            { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "ignores_difficult_terrain" } }
+        ]
+    },
+    {
         "id": "deep_pressure_hull",
     "name": "Deep Pressure Hull (cloak only on Fungus — stand-in for sea-only)",
     "type": "ability",

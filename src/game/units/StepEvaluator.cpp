@@ -71,13 +71,6 @@ void CollectZocProjectorsAround_(const Unit& rMover, const Tile& rTile, const Wo
     });
 }
 
-bool IsDesiredStepCandidate_(StepOutcome_t outcome)
-{
-    return outcome == StepOutcome_t::Legal
-        || outcome == StepOutcome_t::BlockedByOccupant
-        || outcome == StepOutcome_t::BlockedByZoc;
-}
-
 } // namespace
 
 StepEvaluator::StepEvaluator(const ImprovementRegistry& rImprovements,
@@ -136,17 +129,12 @@ bool StepEvaluator::IsZocViolation(const Unit& rMover, const Tile& rFrom, const 
     return IsTileInHostileZoc(rMover, rTo);
 }
 
-StepEvaluation_t StepEvaluator::EvaluateStep(const Unit& rMover, const Tile& rTo) const
+StepEvaluation_t StepEvaluator::EvaluateStep(const Unit& rMover, const Tile& rFrom,
+                                             const Tile& rTo) const
 {
     StepEvaluation_t result;
 
-    // Any remaining fragments allow entry; tile cost is spent (and clamped) on TryStep.
-    if (rMover.GetMoveFragmentsRemaining() <= 0)
-    {
-        result.outcome = StepOutcome_t::NoMoves;
-        return result;
-    }
-    if (!AreChebyshevAdjacent(rMover.GetTile(), rTo))
+    if (!AreChebyshevAdjacent(rFrom, rTo))
     {
         result.outcome = StepOutcome_t::NotAdjacent;
         return result;
@@ -165,10 +153,10 @@ StepEvaluation_t StepEvaluator::EvaluateStep(const Unit& rMover, const Tile& rTo
         return result;
     }
 
-    if (IsZocViolation(rMover, rMover.GetTile(), rTo))
+    if (IsZocViolation(rMover, rFrom, rTo))
     {
         result.outcome = StepOutcome_t::BlockedByZoc;
-        CollectZocProjectorsAround_(rMover, rMover.GetTile(), m_rWorldMap, result.blockingUnits);
+        CollectZocProjectorsAround_(rMover, rFrom, m_rWorldMap, result.blockingUnits);
         CollectZocProjectorsAround_(rMover, rTo, m_rWorldMap, result.blockingUnits);
         return result;
     }
@@ -190,70 +178,9 @@ StepEvaluation_t StepEvaluator::EvaluateStep(const Unit& rMover, const Tile& rTo
     return result;
 }
 
-bool StepEvaluator::CanStep(const Unit& rMover, const Tile& rTo) const
+bool StepEvaluator::CanStep(const Unit& rMover, const Tile& rFrom, const Tile& rTo) const
 {
-    return EvaluateStep(rMover, rTo).outcome == StepOutcome_t::Legal;
-}
-
-const Tile* StepEvaluator::ProposeNextStep(const Unit& rMover, const Tile& rDestination) const
-{
-    const Tile& rFrom = rMover.GetTile();
-    if (&rFrom == &rDestination)
-    {
-        return nullptr;
-    }
-
-    const int currentDist = ChebyshevDistance(rFrom, rDestination);
-    const Tile* pBest = nullptr;
-    int bestDist = currentDist;
-
-    ForEachTileInChebyshevRadius(rFrom, m_rWorldMap, /*radius=*/1, /*includeOrigin=*/false,
-        [&](const Tile* pTile, int /*distance*/)
-        {
-            if (!CanStep(rMover, *pTile))
-            {
-                return;
-            }
-            const int dist = ChebyshevDistance(*pTile, rDestination);
-            if (dist < bestDist)
-            {
-                bestDist = dist;
-                pBest = pTile;
-            }
-        });
-
-    return pBest;
-}
-
-const Tile* StepEvaluator::ProposeDesiredStep(const Unit& rMover, const Tile& rDestination) const
-{
-    const Tile& rFrom = rMover.GetTile();
-    if (&rFrom == &rDestination)
-    {
-        return nullptr;
-    }
-
-    const int currentDist = ChebyshevDistance(rFrom, rDestination);
-    const Tile* pBest = nullptr;
-    int bestDist = currentDist;
-
-    ForEachTileInChebyshevRadius(rFrom, m_rWorldMap, /*radius=*/1, /*includeOrigin=*/false,
-        [&](const Tile* pTile, int /*distance*/)
-        {
-            const StepEvaluation_t eval = EvaluateStep(rMover, *pTile);
-            if (!IsDesiredStepCandidate_(eval.outcome))
-            {
-                return;
-            }
-            const int dist = ChebyshevDistance(*pTile, rDestination);
-            if (dist < bestDist)
-            {
-                bestDist = dist;
-                pBest = pTile;
-            }
-        });
-
-    return pBest;
+    return EvaluateStep(rMover, rFrom, rTo).outcome == StepOutcome_t::Legal;
 }
 
 } // namespace ac

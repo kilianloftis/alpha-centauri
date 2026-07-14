@@ -20,7 +20,6 @@ enum class StepOutcome_t
     BlockedByOccupant,
     BlockedByZoc,
     BlockedByTerrain,
-    NoMoves,
     NotAdjacent,
 };
 
@@ -33,7 +32,8 @@ struct StepEvaluation_t
 };
 
 // Pure step / pathfinding evaluation over bound world + move-cost state. Does not mutate
-// units or reveal — those are UnitOrderExecutor::TryStep / TryAttack concerns.
+// units or reveal — those are UnitOrderExecutor::TryStep / TryAttack concerns. Does not
+// consult remaining move fragments; callers that gate on moves do so separately.
 class StepEvaluator
 {
 public:
@@ -54,18 +54,12 @@ public:
     // Destination has at least one hostile unit visible to rMover's faction.
     bool HasVisibleHostileUnit(const Unit& rMover, const Tile& rTile) const;
 
-    // Pure step rules over objective world state (visibility / reveal are not consulted).
-    StepEvaluation_t EvaluateStep(const Unit& rMover, const Tile& rTo) const;
+    // Whether the edge rFrom → rTo is legal for rMover over objective world state.
+    // Visibility / reveal / remaining moves are not consulted.
+    StepEvaluation_t EvaluateStep(const Unit& rMover, const Tile& rFrom, const Tile& rTo) const;
 
     // True when EvaluateStep reports Legal.
-    bool CanStep(const Unit& rMover, const Tile& rTo) const;
-
-    // Temporary next-step seam (real pathfinding later). Among adjacent tiles that pass
-    // CanStep, pick the one that minimizes Chebyshev distance to rDestination.
-    const Tile* ProposeNextStep(const Unit& rMover, const Tile& rDestination) const;
-
-    // Like ProposeNextStep, but also considers tiles blocked only by occupants or ZOC.
-    const Tile* ProposeDesiredStep(const Unit& rMover, const Tile& rDestination) const;
+    bool CanStep(const Unit& rMover, const Tile& rFrom, const Tile& rTo) const;
 
 private:
     MoveCostCalculator m_moveCosts;

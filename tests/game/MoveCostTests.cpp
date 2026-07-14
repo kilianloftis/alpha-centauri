@@ -60,41 +60,42 @@ TEST_CASE("Improvement move_cost is optional when omitted", "[move-cost]")
 
 TEST_CASE("MoveCostCalculator takes max cost or min override", "[move-cost]")
 {
-    WorldFixture fixture;
+    FactionFixture fixture;
     for (auto& pTile : fixture.map.GetTiles())
     {
         pTile->SetElevation(100);
     }
 
     MoveCostCalculator calc(fixture.improvements);
-    const UnitMoveProfile_t land{};
     constexpr int k_point = MovementConstants_t::k_moveFragmentsPerPoint;
+    Faction& faction = fixture.MakeFaction();
+    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
 
-    Tile& flat = fixture.At(4, 4);
-    CHECK(calc.ComputeFragments(flat, land) == k_point);
+    Tile& flat = fixture.At(3, 4);
+    CHECK(calc.ComputeFragments(unit, flat, fixture.map) == k_point);
 
     Tile& rocky = fixture.At(5, 4);
     rocky.SetRockiness(Rockiness_t::Rocky);
-    CHECK(calc.ComputeFragments(rocky, land) == 2 * k_point);
+    CHECK(calc.ComputeFragments(unit, rocky, fixture.map) == 2 * k_point);
 
     Tile& fungus = fixture.At(6, 4);
     fungus.SetHasFungus(true);
-    CHECK(calc.ComputeFragments(fungus, land) == 3 * k_point);
+    CHECK(calc.ComputeFragments(unit, fungus, fixture.map) == 3 * k_point);
 
     Tile& rockyFungus = fixture.At(7, 4);
     rockyFungus.SetRockiness(Rockiness_t::Rocky);
     rockyFungus.SetHasFungus(true);
-    CHECK(calc.ComputeFragments(rockyFungus, land) == 3 * k_point);
+    CHECK(calc.ComputeFragments(unit, rockyFungus, fixture.map) == 3 * k_point);
 
     Tile& road = fixture.At(4, 5);
     road.SetRockiness(Rockiness_t::Rocky);
     road.AddImprovement(fixture.improvements.Get("Road"));
-    CHECK(calc.ComputeFragments(road, land) == k_point / 3);
+    CHECK(calc.ComputeFragments(unit, road, fixture.map) == k_point / 3);
 
     Tile& tube = fixture.At(5, 5);
     tube.SetHasFungus(true);
     tube.AddImprovement(fixture.improvements.Get("MagTube"));
-    CHECK(calc.ComputeFragments(tube, land) == 0);
+    CHECK(calc.ComputeFragments(unit, tube, fixture.map) == 0);
 
     // Override replaces max cost even when the override is numerically higher.
     ImprovementConfig_t highOverride;
@@ -103,12 +104,12 @@ TEST_CASE("MoveCostCalculator takes max cost or min override", "[move-cost]")
     Tile& overridden = fixture.At(6, 5);
     overridden.SetRockiness(Rockiness_t::Rocky); // move_cost 2
     overridden.AddImprovement(highOverride);
-    CHECK(calc.ComputeFragments(overridden, land) == 5 * k_point);
+    CHECK(calc.ComputeFragments(unit, overridden, fixture.map) == 5 * k_point);
 }
 
 TEST_CASE("MoveCostCalculator honours UnitMoveProfile flags", "[move-cost]")
 {
-    WorldFixture fixture;
+    FactionFixture fixture;
     for (auto& pTile : fixture.map.GetTiles())
     {
         pTile->SetElevation(100);
@@ -116,28 +117,50 @@ TEST_CASE("MoveCostCalculator honours UnitMoveProfile flags", "[move-cost]")
 
     MoveCostCalculator calc(fixture.improvements);
     constexpr int k_point = MovementConstants_t::k_moveFragmentsPerPoint;
+    Faction& faction = fixture.MakeFaction();
 
-    UnitMoveProfile_t ignoresDifficult;
-    ignoresDifficult.ignoresDifficultTerrain = true;
-
+    Unit& hoverUnit = fixture.MakeUnit(faction, 4, 4,
+                                       {"test_chassis", "ignores_difficult_terrain"});
     Tile& rocky = fixture.At(5, 4);
     rocky.SetRockiness(Rockiness_t::Rocky);
-    CHECK(calc.ComputeFragments(rocky, ignoresDifficult) == k_point);
+    CHECK(calc.ComputeFragments(hoverUnit, rocky, fixture.map) == k_point);
 
     Tile& fungus = fixture.At(6, 4);
     fungus.SetHasFungus(true);
     // Fungus is not difficult terrain — still costs 3 unless treatFungusAsRoad.
-    CHECK(calc.ComputeFragments(fungus, ignoresDifficult) == 3 * k_point);
+    CHECK(calc.ComputeFragments(hoverUnit, fungus, fixture.map) == 3 * k_point);
 
-    UnitMoveProfile_t fungusAsRoad;
-    fungusAsRoad.treatFungusAsRoad = true;
-    CHECK(calc.ComputeFragments(fungus, fungusAsRoad) == k_point / 3);
+    Unit& nativeUnit = fixture.MakeUnit(faction, 4, 5, {"test_chassis", "treat_fungus_as_road"});
+    CHECK(calc.ComputeFragments(nativeUnit, fungus, fixture.map) == k_point / 3);
 
     Tile& rockyFungus = fixture.At(7, 4);
     rockyFungus.SetRockiness(Rockiness_t::Rocky);
     rockyFungus.SetHasFungus(true);
-    UnitMoveProfile_t both;
-    both.ignoresDifficultTerrain = true;
-    both.treatFungusAsRoad = true;
-    CHECK(calc.ComputeFragments(rockyFungus, both) == k_point / 3);
+    Unit& bothUnit = fixture.MakeUnit(faction, 4, 6,
+                                      {"test_chassis", "ignores_difficult_terrain",
+                                       "treat_fungus_as_road"});
+    CHECK(calc.ComputeFragments(bothUnit, rockyFungus, fixture.map) == k_point / 3);
+}
+
+TEST_CASE("ComputeFragments treats friendly fungus as default cost", "[move-cost][fungus]")
+{
+    FactionFixture fixture;
+    for (auto& pTile : fixture.map.GetTiles())
+    {
+        pTile->SetElevation(100);
+    }
+
+    MoveCostCalculator calc(fixture.improvements);
+    constexpr int k_point = MovementConstants_t::k_moveFragmentsPerPoint;
+    Faction& faction = fixture.MakeFaction();
+    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+
+    Tile& emptyFungus = fixture.At(5, 4);
+    emptyFungus.SetHasFungus(true);
+    CHECK(calc.ComputeFragments(unit, emptyFungus, fixture.map) == 3 * k_point);
+
+    Tile& friendFungus = fixture.At(6, 4);
+    friendFungus.SetHasFungus(true);
+    fixture.MakeUnit(faction, 6, 4, {"test_chassis"});
+    CHECK(calc.ComputeFragments(unit, friendFungus, fixture.map) == k_point);
 }

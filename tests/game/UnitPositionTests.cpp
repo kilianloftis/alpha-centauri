@@ -8,6 +8,8 @@
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/units/MovementRules.h"
+#include "game/units/MoveCostCalculator.h"
+#include "game/units/Pathfinder.h"
 #include "game/units/StepEvaluator.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitOrder.h"
@@ -32,12 +34,16 @@ struct SingleUnitPerTileGuard
 
 struct MovementHarness_
 {
+    MoveCostCalculator moveCosts;
     StepEvaluator steps;
+    Pathfinder pathfinder;
     UnitOrderExecutor orders;
 
     explicit MovementHarness_(WorldFixture& fixture)
-        : steps(fixture.improvements, fixture.map, *fixture.ctx)
-        , orders(fixture.improvements, fixture.map, *fixture.ctx)
+        : moveCosts(fixture.improvements)
+        , steps(fixture.improvements, fixture.map, *fixture.ctx)
+        , pathfinder(moveCosts, steps, fixture.map)
+        , orders(moveCosts, steps, fixture.map, *fixture.ctx, pathfinder)
     {
     }
 };
@@ -116,7 +122,7 @@ TEST_CASE("Single-unit-per-tile rule blocks placement and movement onto occupied
     CHECK_FALSE(CanPlaceUnitOnTile(fixture.At(4, 4), fixture.map.GetUnitPositions()));
 
     Unit& mover = fixture.MakeUnit(faction, 5, 4, {"test_chassis"});
-    CHECK_FALSE(move.steps.CanStep(mover, fixture.At(4, 4)));
+    CHECK_FALSE(move.steps.CanStep(mover, mover.GetTile(), fixture.At(4, 4)));
     CHECK(&mover.GetTile() == &fixture.At(5, 4));
     CHECK(fixture.map.GetUnitsOnTile(fixture.At(4, 4)).size() == 1);
 

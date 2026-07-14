@@ -1,6 +1,5 @@
 #pragma once
 
-#include "game/units/MoveCostCalculator.h"
 #include "game/units/StepEvaluator.h"
 #include "game/units/Unit.h"
 
@@ -9,23 +8,26 @@
 namespace ac
 {
 
+class MoveCostCalculator;
 class WorldMap;
 class Tile;
-class ImprovementRegistry;
-class TileEffectsContext;
+class Pathfinder;
 struct MoveOrder_t;
 struct HoldOrder_t;
 struct HoldUntilHealedOrder_t;
 struct HoldForTurnsOrder_t;
 
-// Owns StepEvaluator plus the world/cost/effects deps mutation needs, and applies
-// step/attack/order actions on top of evaluation.
+// Applies step/attack/order actions using shared MoveCostCalculator, StepEvaluator, and
+// Pathfinder references. Path search and step legality are shared world queries owned by
+// GameState; this class owns only the mutation logic.
 class UnitOrderExecutor
 {
 public:
-    UnitOrderExecutor(const ImprovementRegistry& rImprovements,
+    UnitOrderExecutor(const MoveCostCalculator& rMoveCosts,
+                      const StepEvaluator& rSteps,
                       WorldMap& rWorldMap,
-                      const TileEffectsContext& rTileEffects);
+                      const TileEffectsContext& rTileEffects,
+                      Pathfinder& rPathfinder);
     ~UnitOrderExecutor() = default;
 
     void Execute(Unit& rUnit);
@@ -48,9 +50,8 @@ private:
 
     void ResolveCombatStub_(Unit& rAttacker);
     void RevealBlockingUnits_(Unit& rMover, const StepEvaluation_t& rEval);
-    bool TryEnterTile_(Unit& rMover, const Tile& rTo, int remainingAfter);
-    bool TryFungusStep_(Unit& rMover, const Tile& rTo, MoveOrder_t& rMoveOrder);
-    void ClearFungusCharge_(MoveOrder_t& rMoveOrder);
+    void EnterTile_(Unit& rMover, const Tile& rTo, int remainingAfter);
+    bool SpendMovesAndEnter_(Unit& rMover, const Tile& rTo, MoveOrder_t& rMoveOrder);
     void CollectVisibleHostileIds_(const Unit& rObserver,
                                    std::unordered_set<UnitId_t>& rOut) const;
     bool HasNewlyVisibleHostile_(const Unit& rObserver,
@@ -58,10 +59,11 @@ private:
     void CancelMoveOrderIfNewHostile_(Unit& rMover,
                                       const std::unordered_set<UnitId_t>& rPreviouslyVisible);
 
+    const MoveCostCalculator& m_rMoveCosts;
+    const StepEvaluator& m_rSteps;
     WorldMap& m_rWorldMap;
     const TileEffectsContext& m_rTileEffects;
-    MoveCostCalculator m_moveCosts;
-    StepEvaluator m_steps;
+    Pathfinder& m_rPathfinder;
 };
 
 } // namespace ac

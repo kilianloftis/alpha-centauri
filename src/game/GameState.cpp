@@ -9,6 +9,7 @@
 #include "game/map/WorldMap.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/units/UnitOrderExecutor.h"
+#include "game/units/Pathfinder.h"
 #include "game/units/Unit.h"
 #include <stdexcept>
 
@@ -29,8 +30,11 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
         throw std::invalid_argument("GameState: pWorldMap is null");
     }
     m_pTileEffects = std::make_unique<TileEffectsContext>(*m_worldMap, rImprovements, pUnitComponents);
+    m_pMoveCosts = std::make_unique<MoveCostCalculator>(rImprovements);
+    m_pSteps = std::make_unique<StepEvaluator>(rImprovements, *m_worldMap, *m_pTileEffects);
+    m_pPathfinder = std::make_unique<Pathfinder>(*m_pMoveCosts, *m_pSteps, *m_worldMap);
     m_pUnitOrderExecutor = std::make_unique<UnitOrderExecutor>(
-        rImprovements, *m_worldMap, *m_pTileEffects);
+        *m_pMoveCosts, *m_pSteps, *m_worldMap, *m_pTileEffects, *m_pPathfinder);
 }
 
 GameState::~GameState() = default;
@@ -180,6 +184,16 @@ TileEffectsContext& GameState::GetTileEffects()
 const TileEffectsContext& GameState::GetTileEffects() const
 {
     return *m_pTileEffects;
+}
+
+Pathfinder& GameState::GetPathfinder()
+{
+    return *m_pPathfinder;
+}
+
+const Pathfinder& GameState::GetPathfinder() const
+{
+    return *m_pPathfinder;
 }
 
 UnitOrderExecutor& GameState::GetUnitOrderExecutor()
