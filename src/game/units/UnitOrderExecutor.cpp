@@ -11,7 +11,6 @@
 #include "game/map/WorldMap.h"
 #include "game/Faction.h"
 
-#include <algorithm>
 #include <stdexcept>
 #include <variant>
 
@@ -111,18 +110,18 @@ bool UnitOrderExecutor::SpendMovesAndEnter_(Unit& rMover, const Tile& rTo,
                                             MoveOrder_t& rMoveOrder)
 {
     const auto costs = m_rMoveCosts.ForUnit(rMover, m_rWorldMap);
-    const int cost = costs.ComputeFragments(rTo);
     const int available = rMover.GetMoveFragmentsRemaining();
+    const int consumed = costs.FragmentsConsumed(rTo, available);
 
-    if (!costs.EndsTurnOnEntry(rTo))
+    if (available >= consumed)
     {
         rMoveOrder.pFungusChargeTile = nullptr;
         rMoveOrder.fungusFragmentsPaid = 0;
-        EnterTile_(rMover, rTo, std::max(0, available - cost));
+        EnterTile_(rMover, rTo, available - consumed);
         return true;
     }
 
-    // Charged entry: bank fragments across turns until full cost is paid, then enter.
+    // Multi-turn charge: bank fragments across turns until full cost is paid.
     if (rMoveOrder.pFungusChargeTile != &rTo)
     {
         rMoveOrder.pFungusChargeTile = &rTo;
@@ -130,11 +129,11 @@ bool UnitOrderExecutor::SpendMovesAndEnter_(Unit& rMover, const Tile& rTo,
     }
     rMoveOrder.fungusFragmentsPaid += available;
 
-    if (rMoveOrder.fungusFragmentsPaid >= cost)
+    if (rMoveOrder.fungusFragmentsPaid >= consumed)
     {
         rMoveOrder.pFungusChargeTile = nullptr;
         rMoveOrder.fungusFragmentsPaid = 0;
-        EnterTile_(rMover, rTo, /*remainingAfter=*/0);
+        EnterTile_(rMover, rTo, 0);
         return true;
     }
 

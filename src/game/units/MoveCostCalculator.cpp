@@ -47,9 +47,15 @@ int MoveCostCalculator::Query::ComputeFragments(const Tile& rTile) const
     return m_rCalc.ComputeFragments_(rTile, m_profile);
 }
 
-bool MoveCostCalculator::Query::EndsTurnOnEntry(const Tile& rTile) const
+int MoveCostCalculator::Query::FragmentsConsumed(const Tile& rTile,
+                                                 int availableFragments) const
 {
-    return rTile.GetHasFungus() && !m_profile.treatFungusAsRoad;
+    const int cost = ComputeFragments(rTile);
+    if (rTile.GetHasFungus() && !m_profile.treatFungusAsRoad)
+    {
+        return std::max(cost, availableFragments);
+    }
+    return std::min(cost, availableFragments);
 }
 
 // --- MoveCostCalculator ------------------------------------------------------
@@ -65,18 +71,6 @@ MoveCostCalculator::Query MoveCostCalculator::ForUnit(const Unit& rUnit,
                                                       const WorldMap& rWorldMap) const
 {
     return Query(*this, rUnit, rWorldMap);
-}
-
-int MoveCostCalculator::ComputeFragments(const Unit& rUnit, const Tile& rTile,
-                                         const WorldMap& rWorldMap) const
-{
-    return ForUnit(rUnit, rWorldMap).ComputeFragments(rTile);
-}
-
-bool MoveCostCalculator::EndsTurnOnEntry(const Unit& rUnit, const Tile& rTile,
-                                         const WorldMap& rWorldMap) const
-{
-    return ForUnit(rUnit, rWorldMap).EndsTurnOnEntry(rTile);
 }
 
 int MoveCostCalculator::ToFragments_(const Rational_t& rCost) const

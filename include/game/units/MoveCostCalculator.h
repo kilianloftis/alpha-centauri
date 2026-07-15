@@ -28,8 +28,14 @@ public:
     class Query
     {
     public:
+        // Terrain entry cost in fragments (for pathfinding / charge tracking).
         int ComputeFragments(const Tile& rTile) const;
-        bool EndsTurnOnEntry(const Tile& rTile) const;
+
+        // Fragments consumed when entering rTile with availableFragments remaining.
+        // For tiles where any fragments suffice (normal terrain): min(cost, available).
+        // For tiles that require full-cost charging (e.g. fungus): max(cost, available),
+        //   so remaining = available - consumed naturally zeroes out on entry.
+        int FragmentsConsumed(const Tile& rTile, int availableFragments) const;
 
     private:
         friend class MoveCostCalculator;
@@ -48,10 +54,6 @@ public:
     };
 
     Query ForUnit(const Unit& rUnit, const WorldMap& rWorldMap) const;
-
-    // One-shot convenience wrappers (internally create a temporary Query).
-    int ComputeFragments(const Unit& rUnit, const Tile& rTile, const WorldMap& rWorldMap) const;
-    bool EndsTurnOnEntry(const Unit& rUnit, const Tile& rTile, const WorldMap& rWorldMap) const;
 
 private:
     // Running max move_cost and lowest move_cost_override while walking a tile's features.
