@@ -92,14 +92,12 @@ int MoveCostCalculator::FeatureMoveCostFragments_(const ImprovementConfig_t& rCo
     return cost;
 }
 
-int MoveCostCalculator::FungusAsRoadOverrideFragments_() const
+std::optional<int> MoveCostCalculator::FungusAsRoadOverrideFragments_() const
 {
-    if (const ImprovementConfig_t* pRoad = m_rImprovements.Find(k_RoadId);
-        pRoad && pRoad->moveCostOverride.has_value())
-    {
-        return ToFragments_(*pRoad->moveCostOverride);
-    }
-    return ToFragments_(Rational_t::Parse("1/3"));
+    const ImprovementConfig_t* pRoad = m_rImprovements.Find(k_RoadId);
+    if (!pRoad || !pRoad->moveCostOverride.has_value())
+        return std::nullopt;
+    return ToFragments_(*pRoad->moveCostOverride);
 }
 
 void MoveCostCalculator::ApplyOverride_(CostAggregate_t& rAgg, int overrideFragments) const
@@ -124,8 +122,12 @@ void MoveCostCalculator::AccumulateFeature_(const ImprovementConfig_t& rConfig,
 {
     if (rProfile.treatFungusAsRoad && rConfig.id == k_FungusId)
     {
-        ApplyOverride_(rAgg, FungusAsRoadOverrideFragments_());
-        return;
+        if (const std::optional<int> roadOverride = FungusAsRoadOverrideFragments_())
+        {
+            ApplyOverride_(rAgg, *roadOverride);
+            return;
+        }
+        // No Road override configured — fall through to Fungus's own costs.
     }
 
     if (rConfig.moveCost.has_value())

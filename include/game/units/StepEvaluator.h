@@ -1,12 +1,10 @@
 #pragma once
 
-#include "game/units/MoveCostCalculator.h"
 #include <vector>
 
 namespace ac
 {
 
-class ImprovementRegistry;
 class Tile;
 class TileEffectsContext;
 class Unit;
@@ -31,15 +29,13 @@ struct StepEvaluation_t
     std::vector<Unit*> blockingUnits;
 };
 
-// Pure step / pathfinding evaluation over bound world + move-cost state. Does not mutate
-// units or reveal — those are UnitOrderExecutor::TryStep / TryAttack concerns. Does not
-// consult remaining move fragments; callers that gate on moves do so separately.
+// Pure step / pathfinding evaluation over bound world state. Does not mutate units or
+// reveal — those are UnitOrderExecutor::TryStep / TryAttack concerns. Does not consult
+// remaining move fragments; callers that gate on moves do so separately.
 class StepEvaluator
 {
 public:
-    StepEvaluator(const ImprovementRegistry& rImprovements,
-                  WorldMap& rWorldMap,
-                  const TileEffectsContext& rTileEffects);
+    StepEvaluator(WorldMap& rWorldMap, const TileEffectsContext& rTileEffects);
 
     // True if rTile is in hostile ZOC for rMover (Chebyshev-1 around a qualifying foreign unit).
     bool IsTileInHostileZoc(const Unit& rMover, const Tile& rTile) const;
@@ -62,7 +58,6 @@ public:
     bool CanStep(const Unit& rMover, const Tile& rFrom, const Tile& rTo) const;
 
 private:
-    MoveCostCalculator m_moveCosts;
     WorldMap& m_rWorldMap;
     const TileEffectsContext& m_rTileEffects;
 };

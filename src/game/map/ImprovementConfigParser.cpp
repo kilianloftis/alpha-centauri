@@ -16,18 +16,27 @@ namespace ac
 namespace
 {
 
-// Ensures the rational lands on a whole number of move fragments. Done at parse so
-// MoveCostCalculator::ToFragments_ cannot fail on config-loaded values.
-void RequireMoveCostScales_(const Rational_t& rCost, std::string_view field, std::string_view id)
+// Ensures the rational is non-negative and lands on a whole number of move fragments.
+// Done at parse so MoveCostCalculator::ToFragments_ cannot fail on config-loaded values.
+void ValidateMoveCost_(const Rational_t& rCost, std::string_view field, std::string_view id)
 {
+    auto wrap = [&](const std::string& message) {
+        throw std::runtime_error(
+            "Improvement '" + std::string(id) + "' field '" + std::string(field) + "': " + message);
+    };
+
+    if (rCost.numerator < 0 || rCost.denominator <= 0)
+    {
+        wrap("move cost must be non-negative");
+    }
+
     try
     {
         (void)rCost.ScaledInt(MovementConstants_t::k_moveFragmentsPerPoint);
     }
     catch (const std::exception& e)
     {
-        throw std::runtime_error(
-            "Improvement '" + std::string(id) + "' field '" + std::string(field) + "': " + e.what());
+        wrap(e.what());
     }
 }
 
@@ -65,12 +74,12 @@ ImprovementConfig_t ImprovementConfigParser::ParseImprovementConfig(const nlohma
     if (improvementJson.contains("move_cost"))
     {
         config.moveCost = Rational_t::ParseJson(improvementJson.at("move_cost"));
-        RequireMoveCostScales_(*config.moveCost, "move_cost", config.id);
+        ValidateMoveCost_(*config.moveCost, "move_cost", config.id);
     }
     if (improvementJson.contains("move_cost_override"))
     {
         config.moveCostOverride = Rational_t::ParseJson(improvementJson.at("move_cost_override"));
-        RequireMoveCostScales_(*config.moveCostOverride, "move_cost_override", config.id);
+        ValidateMoveCost_(*config.moveCostOverride, "move_cost_override", config.id);
     }
     config.effects = BonusEffectParser::ParseEffects(improvementJson, EffectSourceKind_t::Improvement, config.id);
 

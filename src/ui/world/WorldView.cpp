@@ -71,6 +71,7 @@ WorldView::WorldView(
             if (m_pSelectedUnit == &rDestroyed)
             {
                 m_pSelectedUnit = nullptr;
+                m_bManualSelection = false;
             }
         });
     }
@@ -98,6 +99,18 @@ bool WorldView::PlayerUnitsNeedOrders_() const
     return pPlayer->GetUnitManager().HasUnitsRequiringOrders();
 }
 
+bool WorldView::UnitRequiresOrders_(const Unit& rUnit)
+{
+    return !rUnit.GetOrder().has_value() && rUnit.GetMoveFragmentsRemaining() > 0;
+}
+
+void WorldView::SelectNextAvailableUnit_()
+{
+    m_bManualSelection = false;
+    const Faction* pPlayer = m_rGameState.GetPlayerFaction();
+    m_pSelectedUnit = pPlayer ? pPlayer->GetUnitManager().GetNextAvailableUnit() : nullptr;
+}
+
 void WorldView::SelectNextAvailableUnitIfNeeded_()
 {
     const Faction* pPlayer = m_rGameState.GetPlayerFaction();
@@ -106,18 +119,23 @@ void WorldView::SelectNextAvailableUnitIfNeeded_()
         return;
     }
 
-    // Keep the current selection while it still needs orders.
-    if (m_pSelectedUnit
-        && m_pSelectedUnit->GetFaction().IsPlayerControlled()
-        && !m_pSelectedUnit->GetOrder().has_value()
-        && m_pSelectedUnit->GetMoveFragmentsRemaining() > 0)
+    // Manual browse of a unit that does not need orders (already moved / has an order):
+    // leave the selection alone so the player can inspect or re-order it.
+    if (m_bManualSelection && m_pSelectedUnit && !UnitRequiresOrders_(*m_pSelectedUnit))
     {
         return;
     }
 
+    if (m_pSelectedUnit && UnitRequiresOrders_(*m_pSelectedUnit))
+    {
+        return;
+    }
+
+    // Empty selection, or the auto-cycled unit is done (out of moves / has an order).
     if (Unit* pNext = pPlayer->GetUnitManager().GetNextAvailableUnit())
     {
         m_pSelectedUnit = pNext;
+        m_bManualSelection = false;
     }
 }
 
@@ -162,6 +180,10 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
 {
     if (m_pUnitOrderInputController->HandleKey(rEvent, GetControllableSelectedUnit_()))
     {
+        if (m_pUnitOrderInputController->WasOrderAssigned())
+        {
+            SelectNextAvailableUnit_();
+        }
         return true;
     }
 
@@ -178,6 +200,15 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
     else if (rEvent.key == Key_t::Enter)
     {
         m_onProcessTurn();
+        return true;
+    }
+    else if (rEvent.key == Key_t::V)
+    {
+        m_bManualSelection = false;
+        const Faction* pPlayer = m_rGameState.GetPlayerFaction();
+        m_pSelectedUnit = pPlayer
+            ? pPlayer->GetUnitManager().GetNextAvailableUnit(m_pSelectedUnit)
+            : nullptr;
         return true;
     }
 
@@ -219,9 +250,10 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
     if (m_pUnitOrderInputController->HandleMouse(rEvent, pControllable, pClickedTile,
                                                  &m_rGameState.GetPathfinder()))
     {
-        if (pControllable && pControllable->GetOrder().has_value())
+        if (m_pUnitOrderInputController->WasOrderAssigned() && pControllable)
         {
             m_rGameState.GetUnitOrderExecutor().Execute(*pControllable);
+            SelectNextAvailableUnit_();
         }
         return;
     }
@@ -255,6 +287,7 @@ void WorldView::SelectUnitAtTile_(int tileX, int tileY)
     if (!pTile)
     {
         m_pSelectedUnit = nullptr;
+        m_bManualSelection = false;
         return;
     }
 
@@ -262,6 +295,7 @@ void WorldView::SelectUnitAtTile_(int tileX, int tileY)
     if (units.empty())
     {
         m_pSelectedUnit = nullptr;
+        m_bManualSelection = false;
         return;
     }
 
@@ -277,10 +311,12 @@ void WorldView::SelectUnitAtTile_(int tileX, int tileY)
             continue;
         }
         m_pSelectedUnit = pUnit;
+        m_bManualSelection = true;
         return;
     }
 
     m_pSelectedUnit = nullptr;
+    m_bManualSelection = false;
 }
 
 Unit* WorldView::GetControllableSelectedUnit_() const

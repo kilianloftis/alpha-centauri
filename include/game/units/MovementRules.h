@@ -16,9 +16,6 @@ bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject);
 // Whether rMover may enter rTile for its chassis domain (air any; sea water; land land).
 bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile);
 
-// Fungus delayed-entry / end-turn rules (skipped when TreatFungusAsRoad).
-bool UsesFungusEntryRules(const Unit& rMover, const Tile& rTile);
-
 // True when a same-faction unit already occupies rTile (friend-on-fungus shortcut).
 bool HasFriendlyOccupant(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap);
 

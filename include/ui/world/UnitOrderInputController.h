@@ -24,6 +24,9 @@ public:
     bool HandleMouse(const MouseEvent_t& rEvent, Unit* pSelectedUnit, const Tile* pHoveredTile,
                      const Pathfinder* pPathfinder);
 
+    // True after the most recent HandleKey/HandleMouse call assigned an order.
+    bool WasOrderAssigned() const { return m_bOrderAssigned; }
+
     // Non-null while a left-click hold has exceeded the threshold and the path is valid.
     const Path_t* GetPathPreview() const;
 
@@ -35,8 +38,13 @@ private:
     void UpdatePreview_(Unit& rMover, const Tile& rDestination, const Pathfinder& rPathfinder);
 
     const std::unordered_map<Key_t, OrderHandler_t> m_orderHandlers = {
-        { Key_t::H, [](Unit& rUnit) { rUnit.SetOrder(HoldOrder_t{}); } },
+        { Key_t::H, [this](Unit& rUnit) {
+            rUnit.SetOrder(HoldOrder_t{});
+            m_bOrderAssigned = true;
+        } },
     };
+
+    bool m_bOrderAssigned = false;
 
     // Left-click long-press path preview.
     bool m_bLeftButtonHeld = false;

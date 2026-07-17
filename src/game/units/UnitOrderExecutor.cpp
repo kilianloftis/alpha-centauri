@@ -206,9 +206,12 @@ void UnitOrderExecutor::Execute_(Unit& rUnit, MoveOrder_t& rOrder)
     if (!rOrder.pDestination)
         throw std::runtime_error("MoveOrder has null destination");
 
+    // Snapshot: TryStep may ClearOrder on new hostiles, invalidating rOrder.
+    const Tile* const pDestination = rOrder.pDestination;
+
     while (true)
     {
-        if (&rUnit.GetTile() == rOrder.pDestination)
+        if (&rUnit.GetTile() == pDestination)
         {
             rUnit.ClearOrder();
             return;
@@ -219,14 +222,17 @@ void UnitOrderExecutor::Execute_(Unit& rUnit, MoveOrder_t& rOrder)
             return;
         }
 
+        // Re-resolve each step: rOrder from visit is dangling after ClearOrder.
+        MoveOrder_t& rLiveOrder = std::get<MoveOrder_t>(*rUnit.GetOrder());
+
         // Path is recalculated every step so newly revealed fog / hostiles are accounted for.
-        const Tile* pNext = m_rPathfinder.NextStep(rUnit, *rOrder.pDestination);
+        const Tile* pNext = m_rPathfinder.NextStep(rUnit, *pDestination);
         if (!pNext)
         {
-            const Tile* pDesired = m_rPathfinder.DesiredContactStep(rUnit, *rOrder.pDestination);
+            const Tile* pDesired = m_rPathfinder.DesiredContactStep(rUnit, *pDestination);
             if (pDesired)
             {
-                TryStep(rUnit, *pDesired, rOrder);
+                TryStep(rUnit, *pDesired, rLiveOrder);
             }
             return;
         }
@@ -234,7 +240,7 @@ void UnitOrderExecutor::Execute_(Unit& rUnit, MoveOrder_t& rOrder)
         const Tile* pTileBefore = &rUnit.GetTile();
         const int movesBefore = rUnit.GetMoveFragmentsRemaining();
 
-        if (!TryStep(rUnit, *pNext, rOrder))
+        if (!TryStep(rUnit, *pNext, rLiveOrder))
         {
             return;
         }

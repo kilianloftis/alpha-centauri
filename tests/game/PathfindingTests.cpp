@@ -44,7 +44,7 @@ struct PathHarness_
 
     explicit PathHarness_(WorldFixture& fixture)
         : moveCosts(fixture.improvements)
-        , steps(fixture.improvements, fixture.map, *fixture.ctx)
+        , steps(fixture.map, *fixture.ctx)
         , pathfinder(moveCosts, steps, fixture.map)
         , orders(moveCosts, steps, fixture.map, *fixture.ctx, pathfinder)
     {

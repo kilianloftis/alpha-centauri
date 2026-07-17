@@ -38,7 +38,7 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
     }
     m_pTileEffects = std::make_unique<TileEffectsContext>(*m_worldMap, rImprovements, pUnitComponents);
     m_pMoveCosts = std::make_unique<MoveCostCalculator>(rImprovements);
-    m_pSteps = std::make_unique<StepEvaluator>(rImprovements, *m_worldMap, *m_pTileEffects);
+    m_pSteps = std::make_unique<StepEvaluator>(*m_worldMap, *m_pTileEffects);
     m_pPathfinder = std::make_unique<Pathfinder>(*m_pMoveCosts, *m_pSteps, *m_worldMap);
     m_pUnitOrderExecutor = std::make_unique<UnitOrderExecutor>(
         *m_pMoveCosts, *m_pSteps, *m_worldMap, *m_pTileEffects, *m_pPathfinder);

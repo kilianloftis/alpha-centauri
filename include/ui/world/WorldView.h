@@ -41,9 +41,14 @@ public:
 private:
     void Update_();
     void SelectUnitAtTile_(int tileX, int tileY);
+    // Auto-cycle: fill empty selection, or advance past a unit that no longer needs orders.
+    // Does not steal a manual selection of a unit that already moved / has an order.
     void SelectNextAvailableUnitIfNeeded_();
+    // After an order is assigned — jump to the next unit that still needs orders.
+    void SelectNextAvailableUnit_();
     Unit* GetControllableSelectedUnit_() const;
     bool PlayerUnitsNeedOrders_() const;
+    static bool UnitRequiresOrders_(const Unit& rUnit);
 
     GameState& m_rGameState;
     const WindowLayout_t m_mapLayout;
@@ -53,6 +58,8 @@ private:
     OpenBaseCallback_t m_onOpenBase;
 
     Unit* m_pSelectedUnit = nullptr;
+    // True after a map click selection; cleared when auto-cycling via GetNextAvailableUnit.
+    bool m_bManualSelection = false;
     // Falling-edge detect for auto-advance when Pause at End of Turn is off.
     bool m_bHadUnitsNeedingOrders = false;
 

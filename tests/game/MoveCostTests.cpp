@@ -39,6 +39,22 @@ TEST_CASE("Invalid move_cost fraction fails at improvement parse time", "[move-c
     fs::remove(path);
 }
 
+TEST_CASE("Negative move_cost fails at improvement parse time", "[move-cost]")
+{
+    namespace fs = std::filesystem;
+    const fs::path path = fs::temp_directory_path() / "ac_negative_move_cost.json";
+    {
+        std::ofstream out(path);
+        out << R"([
+          { "id": "BadTerrain", "name": "Bad Terrain", "move_cost": -1, "effects": [] }
+        ])";
+    }
+
+    ImprovementConfigParser parser;
+    CHECK_THROWS(parser.ParseConfig(path.string()));
+    fs::remove(path);
+}
+
 TEST_CASE("Improvement move_cost is optional when omitted", "[move-cost]")
 {
     WorldFixture fixture;

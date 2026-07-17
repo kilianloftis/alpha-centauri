@@ -279,7 +279,7 @@ void Engine::Initialize_()
             };
 
             std::unordered_map<std::string, const UnitComponentConfig_t*> basicParts = {
-                {"chassis", resolve("Infantry")},
+                {"chassis", resolve("HoverTank")},
                 {"weapon",  resolve("Hand_Weapons")},
                 {"armour",  resolve("No_Armour")},
                 {"reactor", resolve("Fission_Plant")},

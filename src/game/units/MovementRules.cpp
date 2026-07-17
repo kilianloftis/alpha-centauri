@@ -58,11 +58,6 @@ bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile)
     return false;
 }
 
-bool UsesFungusEntryRules(const Unit& rMover, const Tile& rTile)
-{
-    return rTile.GetHasFungus() && !ResolveFlag(rMover, RuleFlagId_t::TreatFungusAsRoad);
-}
-
 bool HasFriendlyOccupant(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap)
 {
     const FactionId_t moverId = rMover.GetFaction().GetFactionId();

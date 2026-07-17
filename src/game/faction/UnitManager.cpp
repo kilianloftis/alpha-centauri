@@ -55,14 +55,40 @@ void UnitManager::DestroyUnit(Unit& rUnit)
     m_rFaction.RebuildVisibility();
 }
 
-Unit* UnitManager::GetNextAvailableUnit() const
+Unit* UnitManager::GetNextAvailableUnit(const Unit* pAfter) const
 {
+    auto requiresOrders = [](const Unit& rUnit)
+    {
+        return !rUnit.GetOrder().has_value() && rUnit.GetMoveFragmentsRemaining() > 0;
+    };
+
+    Unit* pFirst = nullptr;
+    bool bSeenAfter = (pAfter == nullptr);
+
     for (const std::unique_ptr<Unit>& pUnit : m_units)
     {
-        if (!pUnit->GetOrder().has_value() && pUnit->GetMoveFragmentsRemaining() > 0)
+        if (!requiresOrders(*pUnit))
+        {
+            continue;
+        }
+
+        if (!pFirst)
+        {
+            pFirst = pUnit.get();
+        }
+
+        if (bSeenAfter)
+        {
             return pUnit.get();
+        }
+
+        if (pUnit.get() == pAfter)
+        {
+            bSeenAfter = true;
+        }
     }
-    return nullptr;
+
+    return pFirst;
 }
 
 bool UnitManager::HasUnitsRequiringOrders() const

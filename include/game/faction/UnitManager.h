@@ -33,7 +33,9 @@ public:
     auto Units() { return DerefView(m_units); }
     auto Units() const { return DerefView(m_units); }
     // First unit with moves remaining and no order, or nullptr.
-    Unit* GetNextAvailableUnit() const;
+    // If pAfter is set, returns the next such unit after it (wrapping), or the first if
+    // pAfter is not among units that require orders.
+    Unit* GetNextAvailableUnit(const Unit* pAfter = nullptr) const;
     bool HasUnitsRequiringOrders() const;
 
     // Bumped on every unit creation/destruction; consumed by effect-pool caches.

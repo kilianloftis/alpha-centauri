@@ -7,6 +7,8 @@ namespace ac
 
 bool UnitOrderInputController::HandleKey(const KeyEvent_t& rEvent, Unit* pSelectedUnit)
 {
+    m_bOrderAssigned = false;
+
     if (!pSelectedUnit)
     {
         return false;
@@ -26,6 +28,8 @@ bool UnitOrderInputController::HandleMouse(const MouseEvent_t& rEvent, Unit* pSe
                                            const Tile* pHoveredTile,
                                            const Pathfinder* pPathfinder)
 {
+    m_bOrderAssigned = false;
+
     // --- Left-click: long-press path preview + move order ---
     if (rEvent.button == MouseButton_t::Left)
     {
@@ -54,6 +58,7 @@ bool UnitOrderInputController::HandleMouse(const MouseEvent_t& rEvent, Unit* pSe
         if (m_bPreviewActive && m_pPreviewUnit && m_pathPreview.bReachable)
         {
             m_pPreviewUnit->SetOrder(MoveOrder_t{m_pPreviewDestination});
+            m_bOrderAssigned = true;
             CancelPreview();
             return true;
         }

@@ -73,7 +73,9 @@ private:
                                   const Query::UnitMoveProfile_t& rProfile,
                                   int defaultFragments) const;
 
-    int FungusAsRoadOverrideFragments_() const;
+    // Road's move_cost_override when present; nullopt if Road is missing or has no override
+    // (TreatFungusAsRoad is then a cost no-op for Fungus).
+    std::optional<int> FungusAsRoadOverrideFragments_() const;
 
     void ApplyOverride_(CostAggregate_t& rAgg, int overrideFragments) const;
     void ApplyMoveCost_(CostAggregate_t& rAgg, int costFragments) const;

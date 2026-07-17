@@ -73,11 +73,8 @@ void CollectZocProjectorsAround_(const Unit& rMover, const Tile& rTile, const Wo
 
 } // namespace
 
-StepEvaluator::StepEvaluator(const ImprovementRegistry& rImprovements,
-                             WorldMap& rWorldMap,
-                             const TileEffectsContext& rTileEffects)
-    : m_moveCosts(rImprovements)
-    , m_rWorldMap(rWorldMap)
+StepEvaluator::StepEvaluator(WorldMap& rWorldMap, const TileEffectsContext& rTileEffects)
+    : m_rWorldMap(rWorldMap)
     , m_rTileEffects(rTileEffects)
 {
 }
