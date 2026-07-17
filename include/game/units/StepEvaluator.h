@@ -41,7 +41,8 @@ public:
     bool IsTileInHostileZoc(const Unit& rMover, const Tile& rTile) const;
 
     // True when moving from rFrom to rTo would illegally transit through hostile ZOC
-    // (ZOC -> ZOC). Attack is not a move — see UnitOrderExecutor::TryAttack.
+    // (ZOC -> ZOC). Exempt when rTo holds a friendly unit or base (SMAC). Attack is not
+    // a move — see UnitOrderExecutor::TryAttack.
     bool IsZocViolation(const Unit& rMover, const Tile& rFrom, const Tile& rTo) const;
 
     // Destination has at least one unit from another faction.
@@ -57,7 +58,32 @@ public:
     // True when EvaluateStep reports Legal.
     bool CanStep(const Unit& rMover, const Tile& rFrom, const Tile& rTo) const;
 
+    // Path-planning edge check using only information known to rMover's faction: explored
+    // terrain (shroud assumes domain-passable) and units visible to that faction. Concealed /
+    // fogged hostiles and their ZOC are ignored until revealed.
+    StepEvaluation_t EvaluatePlannedStep(const Unit& rMover, const Tile& rFrom,
+                                         const Tile& rTo) const;
+
+    // True when EvaluatePlannedStep reports Legal.
+    bool CanPlanStep(const Unit& rMover, const Tile& rFrom, const Tile& rTo) const;
+
 private:
+    enum class Knowledge_t
+    {
+        Objective,
+        FactionKnown,
+    };
+
+    StepEvaluation_t EvaluateStep_(const Unit& rMover, const Tile& rFrom, const Tile& rTo,
+                                   Knowledge_t knowledge) const;
+
+    bool IsTileInHostileZoc_(const Unit& rMover, const Tile& rTile, Knowledge_t knowledge) const;
+    bool IsZocViolation_(const Unit& rMover, const Tile& rFrom, const Tile& rTo,
+                         Knowledge_t knowledge) const;
+    bool CanEnterTerrain_(const Unit& rMover, const Tile& rTile, Knowledge_t knowledge) const;
+    bool UnitCountsForPlanner_(const Unit& rMover, const Unit& rOther,
+                               Knowledge_t knowledge) const;
+
     WorldMap& m_rWorldMap;
     const TileEffectsContext& m_rTileEffects;
 };

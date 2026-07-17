@@ -19,6 +19,9 @@ bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile);
 // True when a same-faction unit already occupies rTile (friend-on-fungus shortcut).
 bool HasFriendlyOccupant(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap);
 
+// True when rMover's faction has a base centered on rTile.
+bool HasFriendlyBase(const Unit& rMover, const Tile& rTile);
+
 // Stacking rule: when true, at most one unit may occupy a tile; when false (default),
 // units stack without limit, as in the original game.
 // TODO: static stand-in until a real game-configuration system exists.

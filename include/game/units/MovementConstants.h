@@ -5,9 +5,9 @@
 namespace ac
 {
 
-// Shared movement-point subdivision and default tile entry cost. Feature costs live on
-// ImprovementConfig_t (move_cost / move_cost_override) and are scaled by
-// k_moveFragmentsPerPoint so fractional roads ("1/3") land on whole fragments.
+// Shared movement-point subdivision and default tile entry cost. Feature costs are stored
+// on ImprovementConfig_t as fragments (JSON move_cost / move_cost_override are converted at
+// parse via k_moveFragmentsPerPoint so fractional roads ("1/3") land on whole fragments).
 struct MovementConstants_t
 {
     // Divisible by 2,3,4,5,6,8,9,10 — road "1/3" → 120 fragments.

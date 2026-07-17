@@ -1,17 +1,17 @@
 #include "game/units/MoveCostCalculator.h"
 
+#include "game/Faction.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
+#include "game/faction/FactionExploredMap.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/MovementRules.h"
 #include "game/units/Unit.h"
-#include "lib/Rational.h"
 
 #include <algorithm>
-#include <string>
 
 namespace ac
 {
@@ -37,25 +37,48 @@ MoveCostCalculator::Query::Query(const MoveCostCalculator& rCalc,
     m_profile.treatFungusAsRoad = ResolveFlag(rUnit, RuleFlagId_t::TreatFungusAsRoad);
 }
 
-int MoveCostCalculator::Query::ComputeFragments(const Tile& rTile) const
+EntryTerms_t MoveCostCalculator::Query::EntryTerms(const Tile& rTile) const
 {
-    if (!m_profile.treatFungusAsRoad && rTile.GetHasFungus()
-        && HasFriendlyOccupant(m_rUnit, rTile, m_rWorldMap))
+    const CostAggregate_t agg = m_rCalc.AggregateTileFeatures_(rTile, m_profile);
+
+    EntryTerms_t terms;
+    terms.costFragments = agg.overrideCost.has_value()
+        ? *agg.overrideCost
+        : agg.maxCost.value_or(m_rCalc.m_constants.DefaultMoveCostFragments());
+
+    // An override in play (Road / MagTube built on the tile, or TreatFungusAsRoad mapping
+    // fungus to Road's override) negates the fungus entry rules along with the cost.
+    if (rTile.GetHasFungus() && !agg.overrideCost.has_value())
+    {
+        terms.bEndsTurn = true;
+        terms.bRequiresFullCost = !HasFriendlyOccupant(m_rUnit, rTile, m_rWorldMap);
+    }
+    return terms;
+}
+
+int MoveCostCalculator::Query::PlannedCostFragments(const Tile& rTile) const
+{
+    const FactionExploredMap& rExplored = m_rUnit.GetFaction().GetExploredMap();
+    if (rExplored.IsSized() && !rExplored.IsExplored(rTile))
     {
         return m_rCalc.m_constants.DefaultMoveCostFragments();
     }
-    return m_rCalc.ComputeFragments_(rTile, m_profile);
-}
 
-int MoveCostCalculator::Query::FragmentsConsumed(const Tile& rTile,
-                                                 int availableFragments) const
-{
-    const int cost = ComputeFragments(rTile);
-    if (rTile.GetHasFungus() && !m_profile.treatFungusAsRoad)
+    const EntryTerms_t terms = EntryTerms(rTile);
+    if (!terms.bEndsTurn)
     {
-        return std::max(cost, availableFragments);
+        return terms.costFragments;
     }
-    return std::min(cost, availableFragments);
+
+    const int allotment =
+        m_rUnit.GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint;
+    if (allotment <= 0)
+    {
+        return terms.costFragments;
+    }
+    const int bankingTurns = (terms.costFragments + allotment - 1) / allotment;
+    const int turns = terms.bRequiresFullCost ? std::max(bankingTurns, 1) : 1;
+    return turns * allotment;
 }
 
 // --- MoveCostCalculator ------------------------------------------------------
@@ -73,16 +96,11 @@ MoveCostCalculator::Query MoveCostCalculator::ForUnit(const Unit& rUnit,
     return Query(*this, rUnit, rWorldMap);
 }
 
-int MoveCostCalculator::ToFragments_(const Rational_t& rCost) const
-{
-    return rCost.ScaledInt(MovementConstants_t::k_moveFragmentsPerPoint);
-}
-
 int MoveCostCalculator::FeatureMoveCostFragments_(const ImprovementConfig_t& rConfig,
                                                   const Query::UnitMoveProfile_t& rProfile,
                                                   int defaultFragments) const
 {
-    int cost = ToFragments_(*rConfig.moveCost);
+    int cost = *rConfig.moveCostFragments;
     // Difficult terrain (Rocky, Forest, …) is anything above the default cost; Fungus
     // stays elevated unless treatFungusAsRoad handled it separately.
     if (rProfile.ignoresDifficultTerrain && rConfig.id != k_FungusId)
@@ -95,9 +113,9 @@ int MoveCostCalculator::FeatureMoveCostFragments_(const ImprovementConfig_t& rCo
 std::optional<int> MoveCostCalculator::FungusAsRoadOverrideFragments_() const
 {
     const ImprovementConfig_t* pRoad = m_rImprovements.Find(k_RoadId);
-    if (!pRoad || !pRoad->moveCostOverride.has_value())
+    if (!pRoad || !pRoad->moveCostOverrideFragments.has_value())
         return std::nullopt;
-    return ToFragments_(*pRoad->moveCostOverride);
+    return *pRoad->moveCostOverrideFragments;
 }
 
 void MoveCostCalculator::ApplyOverride_(CostAggregate_t& rAgg, int overrideFragments) const
@@ -130,54 +148,37 @@ void MoveCostCalculator::AccumulateFeature_(const ImprovementConfig_t& rConfig,
         // No Road override configured — fall through to Fungus's own costs.
     }
 
-    if (rConfig.moveCost.has_value())
+    if (rConfig.moveCostFragments.has_value())
     {
         ApplyMoveCost_(rAgg, FeatureMoveCostFragments_(rConfig, rProfile, defaultFragments));
     }
 
-    if (rConfig.moveCostOverride.has_value())
+    if (rConfig.moveCostOverrideFragments.has_value())
     {
-        ApplyOverride_(rAgg, ToFragments_(*rConfig.moveCostOverride));
+        ApplyOverride_(rAgg, *rConfig.moveCostOverrideFragments);
     }
 }
 
-void MoveCostCalculator::AccumulateTileFeatures_(const Tile& rTile,
-                                                 const Query::UnitMoveProfile_t& rProfile,
-                                                 int defaultFragments,
-                                                 CostAggregate_t& rAgg) const
+MoveCostCalculator::CostAggregate_t MoveCostCalculator::AggregateTileFeatures_(
+    const Tile& rTile, const Query::UnitMoveProfile_t& rProfile) const
 {
-    for (const std::string& featureId : rTile.GetTerrainFeatureIds())
+    const int defaultFragments = m_constants.DefaultMoveCostFragments();
+    CostAggregate_t agg;
+    for (const ImprovementConfig_t* pConfig : rTile.GetTerrainFeatures())
     {
-        if (const ImprovementConfig_t* pConfig = m_rImprovements.Find(featureId))
+        if (pConfig)
         {
-            AccumulateFeature_(*pConfig, rProfile, defaultFragments, rAgg);
+            AccumulateFeature_(*pConfig, rProfile, defaultFragments, agg);
         }
     }
     for (const ImprovementConfig_t* pConfig : rTile.GetImprovements())
     {
         if (pConfig)
         {
-            AccumulateFeature_(*pConfig, rProfile, defaultFragments, rAgg);
+            AccumulateFeature_(*pConfig, rProfile, defaultFragments, agg);
         }
     }
-}
-
-int MoveCostCalculator::ComputeFragments_(const Tile& rTile,
-                                          const Query::UnitMoveProfile_t& rProfile) const
-{
-    const int defaultFragments = m_constants.DefaultMoveCostFragments();
-    CostAggregate_t agg;
-    AccumulateTileFeatures_(rTile, rProfile, defaultFragments, agg);
-
-    if (agg.overrideCost.has_value())
-    {
-        return *agg.overrideCost;
-    }
-    if (agg.maxCost.has_value())
-    {
-        return *agg.maxCost;
-    }
-    return defaultFragments;
+    return agg;
 }
 
 } // namespace ac

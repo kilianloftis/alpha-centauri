@@ -17,8 +17,8 @@ namespace
 {
 
 // Ensures the rational is non-negative and lands on a whole number of move fragments.
-// Done at parse so MoveCostCalculator::ToFragments_ cannot fail on config-loaded values.
-void ValidateMoveCost_(const Rational_t& rCost, std::string_view field, std::string_view id)
+// Done at parse so hot-path move-cost code never converts rationals.
+int ParseMoveCostFragments_(const Rational_t& rCost, std::string_view field, std::string_view id)
 {
     auto wrap = [&](const std::string& message) {
         throw std::runtime_error(
@@ -32,11 +32,12 @@ void ValidateMoveCost_(const Rational_t& rCost, std::string_view field, std::str
 
     try
     {
-        (void)rCost.ScaledInt(MovementConstants_t::k_moveFragmentsPerPoint);
+        return rCost.ScaledInt(MovementConstants_t::k_moveFragmentsPerPoint);
     }
     catch (const std::exception& e)
     {
         wrap(e.what());
+        return 0; // unreachable
     }
 }
 
@@ -73,13 +74,14 @@ ImprovementConfig_t ImprovementConfigParser::ParseImprovementConfig(const nlohma
     config.excludes = ConfigFields::ParseStringArray(improvementJson, "excludes");
     if (improvementJson.contains("move_cost"))
     {
-        config.moveCost = Rational_t::ParseJson(improvementJson.at("move_cost"));
-        ValidateMoveCost_(*config.moveCost, "move_cost", config.id);
+        const Rational_t cost = Rational_t::ParseJson(improvementJson.at("move_cost"));
+        config.moveCostFragments = ParseMoveCostFragments_(cost, "move_cost", config.id);
     }
     if (improvementJson.contains("move_cost_override"))
     {
-        config.moveCostOverride = Rational_t::ParseJson(improvementJson.at("move_cost_override"));
-        ValidateMoveCost_(*config.moveCostOverride, "move_cost_override", config.id);
+        const Rational_t cost = Rational_t::ParseJson(improvementJson.at("move_cost_override"));
+        config.moveCostOverrideFragments =
+            ParseMoveCostFragments_(cost, "move_cost_override", config.id);
     }
     config.effects = BonusEffectParser::ParseEffects(improvementJson, EffectSourceKind_t::Improvement, config.id);
 

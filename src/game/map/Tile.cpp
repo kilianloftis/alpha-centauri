@@ -1,5 +1,6 @@
 #include "game/map/Tile.h"
 #include "game/map/ImprovementConfigParser.h"
+#include "game/map/ImprovementRegistry.h"
 #include <magic_enum.hpp>
 #include <algorithm>
 #include <cmath>
@@ -72,6 +73,7 @@ int Tile::GetY() const
 void Tile::SetMoisture(Moisture_t moisture)
 {
     m_moisture = moisture;
+    RefreshTerrainFeatures_();
 }
 
 Moisture_t Tile::GetMoisture() const
@@ -92,6 +94,7 @@ Moisture_t Tile::GetBaseMoisture() const
 void Tile::SetRockiness(Rockiness_t rockiness)
 {
     m_rockiness = rockiness;
+    RefreshTerrainFeatures_();
 }
 
 Rockiness_t Tile::GetRockiness() const
@@ -131,6 +134,7 @@ int Tile::GetElevationEnergySeed() const
 void Tile::SetHasRiver(bool bHasRiver)
 {
     m_bHasRiver = bHasRiver;
+    RefreshTerrainFeatures_();
 }
 
 bool Tile::GetHasRiver() const
@@ -141,11 +145,18 @@ bool Tile::GetHasRiver() const
 void Tile::SetHasFungus(bool bHasFungus)
 {
     m_bHasFungus = bHasFungus;
+    RefreshTerrainFeatures_();
 }
 
 bool Tile::GetHasFungus() const
 {
     return m_bHasFungus;
+}
+
+void Tile::BindImprovements(const ImprovementRegistry& rImprovements)
+{
+    m_pImprovements = &rImprovements;
+    RefreshTerrainFeatures_();
 }
 
 void Tile::AddImprovement(const ImprovementConfig_t& rConfig)
@@ -180,6 +191,11 @@ const std::vector<const ImprovementConfig_t*>& Tile::GetImprovements() const
     return m_improvements;
 }
 
+const std::vector<const ImprovementConfig_t*>& Tile::GetTerrainFeatures() const
+{
+    return m_terrainFeatures;
+}
+
 bool Tile::HasFeature(std::string_view featureId) const
 {
     if (ToString(m_rockiness) == featureId) return true;
@@ -189,20 +205,36 @@ bool Tile::HasFeature(std::string_view featureId) const
     return HasImprovement(featureId);
 }
 
-std::vector<std::string> Tile::GetTerrainFeatureIds() const
+void Tile::RefreshTerrainFeatures_()
 {
-    std::vector<std::string> ids;
-    ids.push_back(ToString(m_rockiness));
-    ids.push_back(ToString(m_moisture));
+    m_terrainFeatures.clear();
+    if (!m_pImprovements)
+    {
+        return;
+    }
+
+    if (const ImprovementConfig_t* pRockiness = m_pImprovements->Find(ToString(m_rockiness)))
+    {
+        m_terrainFeatures.push_back(pRockiness);
+    }
+    if (const ImprovementConfig_t* pMoisture = m_pImprovements->Find(ToString(m_moisture)))
+    {
+        m_terrainFeatures.push_back(pMoisture);
+    }
     if (m_bHasRiver)
     {
-        ids.push_back("River");
+        if (const ImprovementConfig_t* pRiver = m_pImprovements->Find("River"))
+        {
+            m_terrainFeatures.push_back(pRiver);
+        }
     }
     if (m_bHasFungus)
     {
-        ids.push_back("Fungus");
+        if (const ImprovementConfig_t* pFungus = m_pImprovements->Find("Fungus"))
+        {
+            m_terrainFeatures.push_back(pFungus);
+        }
     }
-    return ids;
 }
 
 } // namespace ac

@@ -3,6 +3,7 @@
 #include "game/Faction.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
+#include "game/faction/base/BaseManager.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
@@ -64,6 +65,18 @@ bool HasFriendlyOccupant(const Unit& rMover, const Tile& rTile, const WorldMap& 
     for (const Unit* pUnit : rWorldMap.GetUnitsOnTile(rTile))
     {
         if (pUnit && pUnit != &rMover && pUnit->GetFaction().GetFactionId() == moverId)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool HasFriendlyBase(const Unit& rMover, const Tile& rTile)
+{
+    for (const BaseManager& rBase : rMover.GetFaction().Bases())
+    {
+        if (rBase.GetX() == rTile.GetX() && rBase.GetY() == rTile.GetY())
         {
             return true;
         }

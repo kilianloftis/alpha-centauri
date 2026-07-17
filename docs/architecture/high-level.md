@@ -283,6 +283,18 @@ graph TB
   - TileBonusRegistry loads from config/tile_bonuses.json
 - **Details**: See `docs/architecture/map-system.md` for detailed architecture
 
+### Unit Movement System
+- **Purpose**: Tile entry costs, step legality, path planning, and move-order execution
+- **Components**:
+  - `MoveCostCalculator`: Single home of the tile-entry rules — resolves a unit + tile into `EntryTerms_t` (fragment cost, fungus full-cost banking, forced end-of-turn) and a shroud-aware planning weight
+  - `StepEvaluator`: Edge legality (adjacency, terrain domain, occupants, ZOC) at objective or faction-known knowledge levels
+  - `Pathfinder`: Dijkstra over planned fragment costs and plannable steps
+  - `UnitOrderExecutor`: Executes unit orders; spends fragments and banks multi-turn fungus charges per `EntryTerms_t`
+- **Dependencies**:
+  - GameState owns UnitOrderExecutor; all four bind the live WorldMap
+  - MoveCostCalculator reads ImprovementRegistry configs (move_cost / move_cost_override)
+- **Details**: See `docs/architecture/unit-movement-system.md` for detailed architecture
+
 ### UI System
 - **Purpose**: Abstract UI management with layered rendering
 - **Components**:

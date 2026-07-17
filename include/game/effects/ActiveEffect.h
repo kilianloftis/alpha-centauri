@@ -19,7 +19,6 @@ class Faction;
 class IEffectsProvider;
 class PopulationManager;
 class Tile;
-class ImprovementRegistry;
 class Unit;
 class UnitDesign;
 struct BuildingConfig_t;
@@ -280,13 +279,12 @@ std::vector<ActiveEffect_t> CollectPopEffects(const PopTypeConfig_t& rConfig);
 // locally by Pop::ApplyTileMultipliers and never enter the base-wide pool.
 std::vector<ActiveEffect_t> CollectFromPops(const PopulationManager& rPops, const BaseManager& rOriginBase);
 
-// Collects every ThisTile-scoped effect from rTile's own features only: terrain feature ids
-// (rockiness, moisture, river, fungus) looked up in rImprovements, plus each improvement
-// config held directly on the tile. sourceId is the matching feature's id. Does NOT include
-// aura effects from nearby tiles —
+// Collects every ThisTile-scoped effect from rTile's own features only: terrain feature
+// configs (rockiness, moisture, river, fungus) plus each improvement config held on the tile.
+// sourceId is the matching feature's id. Does NOT include aura effects from nearby tiles —
 // use TileEffectsContext::CollectAreaEffects for that (which needs WorldMap).
 // Never enters the base-wide active effects pool (FilterForBase always excludes ThisTile).
-std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile, const ImprovementRegistry& rImprovements);
+std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile);
 
 // Fire all Instantaneous effects declared on rBuilding against rBase.
 // GrantBuilding: adds the granted building to the base immediately.

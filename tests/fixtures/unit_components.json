@@ -11,6 +11,17 @@
     ]
   },
   {
+    "id": "test_slow_chassis",
+    "name": "Test Slow Chassis (1 move)",
+    "type": "chassis",
+    "domain": "land",
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "movement", "amount": 1 } },
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "vision", "amount": 1 } },
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "hit_points", "amount": 10 } }
+    ]
+  },
+  {
     "id": "test_sea_chassis",
     "name": "Test Sea Chassis",
     "type": "chassis",

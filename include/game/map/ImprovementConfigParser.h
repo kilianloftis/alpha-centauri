@@ -1,7 +1,6 @@
 #pragma once
 
 #include "game/effects/BonusEffect.h"
-#include "lib/Rational.h"
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <string>
@@ -16,9 +15,9 @@ class Tile;
 // Arid/Moist/Wet), a natural feature (River, Fungus), or an improvement (Farm, Mine, Bunker,
 // Base, and what were formerly "bonus"/"landmark" specials - all just improvements now).
 // Terrain and improvements share this type and resolve effects/exclusivity identically; they
-// differ only in how they live on a Tile: terrain is intrinsic (enums/bools, listed by
-// Tile::GetTerrainFeatureIds() and looked up by id), while improvements are held directly as
-// ImprovementConfig_t pointers in Tile::GetImprovements().
+// differ only in how they live on a Tile: terrain enums/bools are mirrored as config pointers
+// via Tile::GetTerrainFeatures(), while improvements are held directly in
+// Tile::GetImprovements().
 struct ImprovementConfig_t
 {
     std::string id;
@@ -35,12 +34,13 @@ struct ImprovementConfig_t
     bool ownedByTerritory = false;
     int frequency = 0;                 // world-gen spawn weight; 0 = not randomly placed
     std::string spritePath;            // optional sprite override (used for tile bonuses)
-    // Optional move cost in move-points (converted to fragments via k_moveFragmentsPerPoint).
-    // On a tile, the highest moveCost among features that define one is used, unless any
-    // feature defines moveCostOverride — then the lowest override replaces the cost entirely
-    // (even if higher than the max moveCost). If neither is present, defaultMoveCost applies.
-    std::optional<Rational_t> moveCost;
-    std::optional<Rational_t> moveCostOverride;
+    // Optional move cost in fragments (JSON still uses move-points; conversion happens at
+    // parse). On a tile, the highest moveCostFragments among features that define one is used,
+    // unless any feature defines moveCostOverrideFragments — then the lowest override replaces
+    // the cost entirely (even if higher than the max moveCostFragments). If neither is present,
+    // defaultMoveCost applies.
+    std::optional<int> moveCostFragments;
+    std::optional<int> moveCostOverrideFragments;
     std::vector<EffectConfig_t> effects;
 };
 

@@ -136,6 +136,48 @@ TEST_CASE("Enter ZOC allowed; ZOC to ZOC blocked; leave ZOC allowed", "[movement
     CHECK(move.steps.CanStep(mover, mover.GetTile(), fixture.At(3, 3)));
 }
 
+TEST_CASE("ZOC to ZOC allowed onto friendly unit or base", "[movement][zoc]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    MovementHarness_ move(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    // Enemy at (5,4) — ZOC covers (4,4) and (4,5).
+    fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+
+    SECTION("friendly unit on destination")
+    {
+        fixture.MakeUnit(player, 4, 5, {"test_chassis"});
+        Unit& mover = fixture.MakeUnit(player, 4, 4, {"test_chassis"});
+        REQUIRE(move.steps.IsTileInHostileZoc(mover, mover.GetTile()));
+        REQUIRE(move.steps.IsTileInHostileZoc(mover, fixture.At(4, 5)));
+        CHECK(move.steps.CanStep(mover, mover.GetTile(), fixture.At(4, 5)));
+        CHECK_FALSE(move.steps.IsZocViolation(mover, mover.GetTile(), fixture.At(4, 5)));
+    }
+
+    SECTION("friendly base on destination")
+    {
+        fixture.MakeFactionBase(player, 4, 5);
+        Unit& mover = fixture.MakeUnit(player, 4, 4, {"test_chassis"});
+        REQUIRE(move.steps.IsTileInHostileZoc(mover, mover.GetTile()));
+        REQUIRE(move.steps.IsTileInHostileZoc(mover, fixture.At(4, 5)));
+        CHECK(move.steps.CanStep(mover, mover.GetTile(), fixture.At(4, 5)));
+        CHECK_FALSE(move.steps.IsZocViolation(mover, mover.GetTile(), fixture.At(4, 5)));
+    }
+
+    SECTION("enemy base alone does not exempt")
+    {
+        fixture.MakeFactionBase(enemy, 4, 5);
+        Unit& mover = fixture.MakeUnit(player, 4, 4, {"test_chassis"});
+        REQUIRE(move.steps.IsTileInHostileZoc(mover, mover.GetTile()));
+        REQUIRE(move.steps.IsTileInHostileZoc(mover, fixture.At(4, 5)));
+        CHECK(move.steps.IsZocViolation(mover, mover.GetTile(), fixture.At(4, 5)));
+        CHECK_FALSE(move.steps.CanStep(mover, mover.GetTile(), fixture.At(4, 5)));
+    }
+}
+
 TEST_CASE("Attack is adjacent; hostiles never share a tile", "[movement][zoc]")
 {
     FactionFixture fixture;
@@ -461,13 +503,14 @@ TEST_CASE("Fungus entry charges across turns until cost is paid", "[movement][fu
     FillLand_(fixture);
     MovementHarness_ move(fixture);
     Faction& faction = fixture.MakeFaction();
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_slow_chassis"});
+    REQUIRE(unit.GetMovementPoints() == 1);
 
     Tile& fungus = fixture.At(5, 4);
     fungus.SetHasFungus(true);
     unit.SetOrder(MoveOrder_t{&fungus});
 
-    // Simulate a 1-move chassis: three turns to pay fungus cost 3.
+    // 1-move chassis: three turns to pay fungus cost 3.
     for (int turn = 0; turn < 2; ++turn)
     {
         unit.SetMoveFragmentsRemaining(k_point);
@@ -476,8 +519,8 @@ TEST_CASE("Fungus entry charges across turns until cost is paid", "[movement][fu
         CHECK(unit.GetMoveFragmentsRemaining() == 0);
         REQUIRE(unit.GetOrder().has_value());
         const auto& rOrder = std::get<MoveOrder_t>(*unit.GetOrder());
-        CHECK(rOrder.pFungusChargeTile == &fungus);
-        CHECK(rOrder.fungusFragmentsPaid == (turn + 1) * k_point);
+        CHECK(rOrder.pChargeTile == &fungus);
+        CHECK(rOrder.chargeFragmentsPaid == (turn + 1) * k_point);
     }
 
     unit.SetMoveFragmentsRemaining(k_point);
@@ -504,6 +547,14 @@ TEST_CASE("Friendly on fungus allows immediate entry and ends the turn", "[movem
     REQUIRE(move.orders.TryStep(unit, fungus, stepOrder));
     CHECK(&unit.GetTile() == &fungus);
     CHECK(unit.GetMoveFragmentsRemaining() == 0);
+
+    // The waiver admits any positive balance — no banking even on the last fragment.
+    Unit& lastFragment = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    lastFragment.SetMoveFragmentsRemaining(1);
+    MoveOrder_t lastOrder{&fungus};
+    REQUIRE(move.orders.TryStep(lastFragment, fungus, lastOrder));
+    CHECK(&lastFragment.GetTile() == &fungus);
+    CHECK(lastFragment.GetMoveFragmentsRemaining() == 0);
 }
 
 TEST_CASE("Entering fungus ends the turn even with leftover moves", "[movement][fungus]")
@@ -518,16 +569,35 @@ TEST_CASE("Entering fungus ends the turn even with leftover moves", "[movement][
     fungus.SetHasFungus(true);
     unit.SetOrder(MoveOrder_t{&fungus});
 
-    // Pay 2 of 3 on turn 1.
+    // Pay 2 of 4 on turn 1 (M=2 charge opportunity for terrain cost 3).
     REQUIRE(unit.GetMoveFragmentsRemaining() == 2 * k_point);
     move.orders.Execute(unit);
     CHECK(&unit.GetTile() != &fungus);
 
-    // Turn 2: need 1 more point but refresh to 2 — entry must still zero remaining.
+    // Turn 2: finish the charge — entry must still zero remaining.
     unit.SetMoveFragmentsRemaining(2 * k_point);
     move.orders.Execute(unit);
     CHECK(&unit.GetTile() == &fungus);
     CHECK(unit.GetMoveFragmentsRemaining() == 0);
+}
+
+TEST_CASE("Road built on fungus negates the entry rules", "[movement][fungus]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    MovementHarness_ move(fixture);
+    Faction& faction = fixture.MakeFaction();
+    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    REQUIRE(unit.GetMoveFragmentsRemaining() == 2 * k_point);
+
+    Tile& roadFungus = fixture.At(5, 4);
+    roadFungus.SetHasFungus(true);
+    roadFungus.AddImprovement(fixture.improvements.Get("Road"));
+
+    MoveOrder_t stepOrder{&roadFungus};
+    REQUIRE(move.orders.TryStep(unit, roadFungus, stepOrder));
+    CHECK(&unit.GetTile() == &roadFungus);
+    CHECK(unit.GetMoveFragmentsRemaining() == 2 * k_point - k_point / 3);
 }
 
 TEST_CASE("TreatFungusAsRoad uses road cost without forced end-turn", "[movement][fungus]")

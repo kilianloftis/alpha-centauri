@@ -10,9 +10,10 @@ class Tile;
 struct MoveOrder_t
 {
     const Tile* pDestination = nullptr;
-    // Fragments banked toward entering pFungusChargeTile (SMAC multi-turn fungus entry).
-    const Tile* pFungusChargeTile = nullptr;
-    int fungusFragmentsPaid = 0;
+    // Fragments banked toward a bRequiresFullCost entry (SMAC multi-turn fungus entry).
+    // Reset whenever the unit enters a tile or charges a different one.
+    const Tile* pChargeTile = nullptr;
+    int chargeFragmentsPaid = 0;
 };
 
 struct HoldOrder_t {};

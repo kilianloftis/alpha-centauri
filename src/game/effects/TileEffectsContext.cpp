@@ -75,17 +75,15 @@ void AppendOwnedImprovementEffects_(const Tile& rHostTile, const ImprovementConf
 }
 
 void AppendAreaEffectsFromNeighbors_(const Tile& rOrigin, const WorldMap& rWorldMap,
-                                      const ImprovementRegistry& rImprovements,
                                       int maxRadius,
                                       std::vector<ActiveEffect_t>& rOut)
 {
     ForEachTileInChebyshevRadius(rOrigin, rWorldMap, maxRadius, false,
         [&](const Tile* pNearby, int distance)
         {
-            // Terrain features resolve by id via the registry; improvements are already configs.
-            for (const std::string& featureId : pNearby->GetTerrainFeatureIds())
+            for (const ImprovementConfig_t* pFeature : pNearby->GetTerrainFeatures())
             {
-                if (const ImprovementConfig_t* pFeature = rImprovements.Find(featureId))
+                if (pFeature)
                 {
                     AppendTileEffects(pFeature->effects, pFeature->id, distance, rOut);
                 }
@@ -99,12 +97,11 @@ void AppendAreaEffectsFromNeighbors_(const Tile& rOrigin, const WorldMap& rWorld
 }
 
 void AppendOwnTileEffects_(const Tile& rTile, const WorldMap& rWorldMap,
-                           const ImprovementRegistry& rImprovements,
                            std::vector<ActiveEffect_t>& rOut)
 {
-    for (const std::string& featureId : rTile.GetTerrainFeatureIds())
+    for (const ImprovementConfig_t* pFeature : rTile.GetTerrainFeatures())
     {
-        if (const ImprovementConfig_t* pFeature = rImprovements.Find(featureId))
+        if (pFeature)
         {
             AppendTileEffects(pFeature->effects, pFeature->id, 0, rOut);
         }
@@ -172,6 +169,13 @@ TileEffectsContext::TileEffectsContext(WorldMap& rWorldMap, const ImprovementReg
     , m_rImprovements(rImprovements)
     , m_maxRadius(0)
 {
+    // Mirror terrain enums/bools as ImprovementConfig_t pointers so hot-path collectors
+    // (effects, move costs) never re-resolve string ids against the registry.
+    for (std::unique_ptr<Tile>& pTile : rWorldMap.GetTiles())
+    {
+        pTile->BindImprovements(rImprovements);
+    }
+
     for (const ImprovementConfig_t& rConfig : rImprovements.GetAll())
     {
         m_maxRadius = std::max(m_maxRadius, MaxEffectReach_(rConfig));
@@ -209,8 +213,8 @@ const ImprovementRegistry& TileEffectsContext::GetImprovements() const
 std::vector<ActiveEffect_t> TileEffectsContext::CollectAreaEffects(const Tile& rTile) const
 {
     std::vector<ActiveEffect_t> effects;
-    AppendOwnTileEffects_(rTile, m_rWorldMap, m_rImprovements, effects);
-    AppendAreaEffectsFromNeighbors_(rTile, m_rWorldMap, m_rImprovements, m_maxRadius, effects);
+    AppendOwnTileEffects_(rTile, m_rWorldMap, effects);
+    AppendAreaEffectsFromNeighbors_(rTile, m_rWorldMap, m_maxRadius, effects);
     AppendUnitAuraEffects_(rTile, m_rWorldMap, m_maxRadius, effects);
     return effects;
 }

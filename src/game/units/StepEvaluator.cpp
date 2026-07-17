@@ -1,6 +1,7 @@
 #include "game/units/StepEvaluator.h"
 
 #include "game/Faction.h"
+#include "game/faction/FactionExploredMap.h"
 #include "game/faction/UnitVisibility.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
@@ -33,16 +34,6 @@ void ForEachHostileOnTile_(const Unit& rMover, const Tile& rTile, const WorldMap
     }
 }
 
-void CollectHostileOccupants_(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
-                              std::vector<Unit*>& rOut)
-{
-    ForEachHostileOnTile_(rMover, rTile, rWorldMap, [&](Unit& rUnit)
-    {
-        rOut.push_back(&rUnit);
-        return true;
-    });
-}
-
 // Invokes rFn(Unit&) for each ZOC projector around rTile; stops early if rFn returns false.
 template <typename Fn>
 void ForEachZocProjectorAround_(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
@@ -61,16 +52,6 @@ void ForEachZocProjectorAround_(const Unit& rMover, const Tile& rTile, const Wor
         });
 }
 
-void CollectZocProjectorsAround_(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
-                                 std::vector<Unit*>& rOut)
-{
-    ForEachZocProjectorAround_(rMover, rTile, rWorldMap, [&](Unit& rUnit)
-    {
-        rOut.push_back(&rUnit);
-        return true;
-    });
-}
-
 } // namespace
 
 StepEvaluator::StepEvaluator(WorldMap& rWorldMap, const TileEffectsContext& rTileEffects)
@@ -79,15 +60,50 @@ StepEvaluator::StepEvaluator(WorldMap& rWorldMap, const TileEffectsContext& rTil
 {
 }
 
-bool StepEvaluator::IsTileInHostileZoc(const Unit& rMover, const Tile& rTile) const
+bool StepEvaluator::UnitCountsForPlanner_(const Unit& rMover, const Unit& rOther,
+                                          Knowledge_t knowledge) const
+{
+    if (knowledge == Knowledge_t::Objective)
+    {
+        return true;
+    }
+    return IsUnitVisibleTo(rMover.GetFaction(), rOther, m_rTileEffects);
+}
+
+bool StepEvaluator::CanEnterTerrain_(const Unit& rMover, const Tile& rTile,
+                                     Knowledge_t knowledge) const
+{
+    if (knowledge == Knowledge_t::FactionKnown)
+    {
+        const FactionExploredMap& rExplored = rMover.GetFaction().GetExploredMap();
+        if (rExplored.IsSized() && !rExplored.IsExplored(rTile))
+        {
+            // Shroud: assume domain-compatible until the tile is explored.
+            return true;
+        }
+    }
+    return CanEnterTileTerrain(rMover, rTile);
+}
+
+bool StepEvaluator::IsTileInHostileZoc_(const Unit& rMover, const Tile& rTile,
+                                        Knowledge_t knowledge) const
 {
     bool bInZoc = false;
-    ForEachZocProjectorAround_(rMover, rTile, m_rWorldMap, [&](Unit& /*rProjector*/)
+    ForEachZocProjectorAround_(rMover, rTile, m_rWorldMap, [&](Unit& rProjector)
     {
+        if (!UnitCountsForPlanner_(rMover, rProjector, knowledge))
+        {
+            return true;
+        }
         bInZoc = true;
         return false;
     });
     return bInZoc;
+}
+
+bool StepEvaluator::IsTileInHostileZoc(const Unit& rMover, const Tile& rTile) const
+{
+    return IsTileInHostileZoc_(rMover, rTile, Knowledge_t::Objective);
 }
 
 bool StepEvaluator::HasHostileUnit(const Unit& rMover, const Tile& rTile) const
@@ -117,17 +133,28 @@ bool StepEvaluator::HasVisibleHostileUnit(const Unit& rMover, const Tile& rTile)
     return bFound;
 }
 
-bool StepEvaluator::IsZocViolation(const Unit& rMover, const Tile& rFrom, const Tile& rTo) const
+bool StepEvaluator::IsZocViolation_(const Unit& rMover, const Tile& rFrom, const Tile& rTo,
+                                    Knowledge_t knowledge) const
 {
-    if (!IsTileInHostileZoc(rMover, rFrom))
+    if (!IsTileInHostileZoc_(rMover, rFrom, knowledge))
     {
         return false;
     }
-    return IsTileInHostileZoc(rMover, rTo);
+    // SMAC: ZOC→ZOC is legal when the destination already holds a friendly unit or base.
+    if (HasFriendlyOccupant(rMover, rTo, m_rWorldMap) || HasFriendlyBase(rMover, rTo))
+    {
+        return false;
+    }
+    return IsTileInHostileZoc_(rMover, rTo, knowledge);
 }
 
-StepEvaluation_t StepEvaluator::EvaluateStep(const Unit& rMover, const Tile& rFrom,
-                                             const Tile& rTo) const
+bool StepEvaluator::IsZocViolation(const Unit& rMover, const Tile& rFrom, const Tile& rTo) const
+{
+    return IsZocViolation_(rMover, rFrom, rTo, Knowledge_t::Objective);
+}
+
+StepEvaluation_t StepEvaluator::EvaluateStep_(const Unit& rMover, const Tile& rFrom,
+                                              const Tile& rTo, Knowledge_t knowledge) const
 {
     StepEvaluation_t result;
 
@@ -136,48 +163,89 @@ StepEvaluation_t StepEvaluator::EvaluateStep(const Unit& rMover, const Tile& rFr
         result.outcome = StepOutcome_t::NotAdjacent;
         return result;
     }
-    if (!CanEnterTileTerrain(rMover, rTo))
+    if (!CanEnterTerrain_(rMover, rTo, knowledge))
     {
         result.outcome = StepOutcome_t::BlockedByTerrain;
         return result;
     }
 
     // Hostile units never share a tile; combat is resolved from an adjacent tile.
-    CollectHostileOccupants_(rMover, rTo, m_rWorldMap, result.blockingUnits);
+    ForEachHostileOnTile_(rMover, rTo, m_rWorldMap, [&](Unit& rHostile)
+    {
+        if (UnitCountsForPlanner_(rMover, rHostile, knowledge))
+        {
+            result.blockingUnits.push_back(&rHostile);
+        }
+        return true;
+    });
     if (!result.blockingUnits.empty())
     {
         result.outcome = StepOutcome_t::BlockedByOccupant;
         return result;
     }
 
-    if (IsZocViolation(rMover, rFrom, rTo))
+    if (IsZocViolation_(rMover, rFrom, rTo, knowledge))
     {
         result.outcome = StepOutcome_t::BlockedByZoc;
-        CollectZocProjectorsAround_(rMover, rFrom, m_rWorldMap, result.blockingUnits);
-        CollectZocProjectorsAround_(rMover, rTo, m_rWorldMap, result.blockingUnits);
+        ForEachZocProjectorAround_(rMover, rFrom, m_rWorldMap, [&](Unit& rProjector)
+        {
+            if (UnitCountsForPlanner_(rMover, rProjector, knowledge))
+            {
+                result.blockingUnits.push_back(&rProjector);
+            }
+            return true;
+        });
+        ForEachZocProjectorAround_(rMover, rTo, m_rWorldMap, [&](Unit& rProjector)
+        {
+            if (UnitCountsForPlanner_(rMover, rProjector, knowledge))
+            {
+                result.blockingUnits.push_back(&rProjector);
+            }
+            return true;
+        });
         return result;
     }
 
-    if (!CanPlaceUnitOnTile(rTo, m_rWorldMap.GetUnitPositions()))
+    if (IsSingleUnitPerTile())
     {
-        result.outcome = StepOutcome_t::BlockedByOccupant;
         for (Unit* pUnit : m_rWorldMap.GetUnitsOnTile(rTo))
         {
-            if (pUnit)
+            if (pUnit && UnitCountsForPlanner_(rMover, *pUnit, knowledge))
             {
                 result.blockingUnits.push_back(pUnit);
             }
         }
-        return result;
+        if (!result.blockingUnits.empty())
+        {
+            result.outcome = StepOutcome_t::BlockedByOccupant;
+            return result;
+        }
     }
 
     result.outcome = StepOutcome_t::Legal;
     return result;
 }
 
+StepEvaluation_t StepEvaluator::EvaluateStep(const Unit& rMover, const Tile& rFrom,
+                                             const Tile& rTo) const
+{
+    return EvaluateStep_(rMover, rFrom, rTo, Knowledge_t::Objective);
+}
+
 bool StepEvaluator::CanStep(const Unit& rMover, const Tile& rFrom, const Tile& rTo) const
 {
     return EvaluateStep(rMover, rFrom, rTo).outcome == StepOutcome_t::Legal;
+}
+
+StepEvaluation_t StepEvaluator::EvaluatePlannedStep(const Unit& rMover, const Tile& rFrom,
+                                                    const Tile& rTo) const
+{
+    return EvaluateStep_(rMover, rFrom, rTo, Knowledge_t::FactionKnown);
+}
+
+bool StepEvaluator::CanPlanStep(const Unit& rMover, const Tile& rFrom, const Tile& rTo) const
+{
+    return EvaluatePlannedStep(rMover, rFrom, rTo).outcome == StepOutcome_t::Legal;
 }
 
 } // namespace ac

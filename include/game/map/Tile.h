@@ -9,6 +9,7 @@ namespace ac
 {
 
 struct ImprovementConfig_t;
+class ImprovementRegistry;
 
 enum class Rockiness_t
 {
@@ -45,7 +46,7 @@ public:
     int GetY() const;
 
     // Terrain characteristics. GetMoisture()/SetMoisture() are the CURRENT/effective value -
-    // what rendering and GetTerrainFeatureIds() see, and what a Condenser's MoistureTier effect
+    // what rendering and GetTerrainFeatures() see, and what a Condenser's MoistureTier effect
     // mutates via RecomputeMoisture(). GetBaseMoisture()/SetBaseMoisture() are the natural,
     // un-condensed terrain truth set once by world generation; RecomputeMoisture always
     // re-derives the current value from the base plus whatever Condensers currently reach
@@ -80,6 +81,12 @@ public:
     void SetHasFungus(bool bHasFungus);
     bool GetHasFungus() const;
 
+    // Binds this tile to the improvement registry so terrain enums/bools can be mirrored as
+    // non-owning ImprovementConfig_t pointers (see GetTerrainFeatures). Call once after the
+    // registry is loaded — TileEffectsContext does this for every map tile. Terrain setters
+    // refresh the cached configs whenever the registry is bound.
+    void BindImprovements(const ImprovementRegistry& rImprovements);
+
     // Improvements: every non-terrain feature on this tile, held as non-owning pointers into
     // ImprovementRegistry (the same way BuildingManager holds BuildingConfig_t*). This one
     // collection covers player-built improvements (Farm, Mine, Bunker), the "Base" marker
@@ -92,12 +99,10 @@ public:
     bool HasImprovement(std::string_view improvementId) const;
     const std::vector<const ImprovementConfig_t*>& GetImprovements() const;
 
-    // Terrain-only feature ids: rockiness, moisture, river, fungus. These are intrinsic
-    // terrain properties (enums/bools), but for effects/exclusivity they're looked up in the
-    // ImprovementRegistry by string id, exactly like an improvement. Improvements are NOT
-    // included here - effect collectors iterate GetImprovements() for those config pointers
-    // directly (no registry lookup needed).
-    std::vector<std::string> GetTerrainFeatureIds() const;
+    // Terrain-only feature configs: rockiness, moisture, river, fungus. Intrinsic terrain
+    // properties (enums/bools) are mirrored here as registry pointers after BindImprovements.
+    // Improvements are NOT included — effect collectors iterate GetImprovements() for those.
+    const std::vector<const ImprovementConfig_t*>& GetTerrainFeatures() const;
 
     // Returns true if featureId matches any active feature on this tile: a terrain feature
     // (rockiness/moisture/river/fungus) or an improvement id. Used by conditions/selectors
@@ -105,6 +110,8 @@ public:
     bool HasFeature(std::string_view featureId) const;
 
 private:
+    void RefreshTerrainFeatures_();
+
     int m_x;
     int m_y;
 
@@ -116,6 +123,8 @@ private:
     bool m_bHasRiver;
     bool m_bHasFungus;
 
+    const ImprovementRegistry* m_pImprovements = nullptr;
+    std::vector<const ImprovementConfig_t*> m_terrainFeatures;
     std::vector<const ImprovementConfig_t*> m_improvements;
 };
 

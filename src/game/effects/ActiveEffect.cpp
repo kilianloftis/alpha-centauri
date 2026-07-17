@@ -9,7 +9,6 @@
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/map/ImprovementConfigParser.h"
-#include "game/map/ImprovementRegistry.h"
 #include "game/map/Tile.h"
 #include "game/population/pop-types/Pop.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
@@ -313,16 +312,15 @@ std::vector<ActiveEffect_t> CollectFromPops(const PopulationManager& rPops, cons
     return result;
 }
 
-std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile, const ImprovementRegistry& rImprovements)
+std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile)
 {
     std::vector<ActiveEffect_t> result;
 
-    // Terrain features (rockiness/moisture/river/fungus) are resolved by string id against
-    // the registry; improvements are already held as config pointers, so iterate them directly.
+    // Terrain features and improvements are both held as config pointers on the tile.
     // Own-tile collection is the distance-0 case of the shared tile-reach filter.
-    for (const std::string& featureId : rTile.GetTerrainFeatureIds())
+    for (const ImprovementConfig_t* pFeature : rTile.GetTerrainFeatures())
     {
-        if (const ImprovementConfig_t* pFeature = rImprovements.Find(featureId))
+        if (pFeature)
         {
             AppendTileEffects(pFeature->effects, pFeature->id, 0, result);
         }

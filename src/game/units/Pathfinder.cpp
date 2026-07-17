@@ -85,11 +85,11 @@ Path_t Pathfinder::FindPath(const Unit& rMover, const Tile& rDestination) const
         ForEachTileInChebyshevRadius(*pFrom, m_rWorldMap, /*radius=*/1, /*includeOrigin=*/false,
             [&](const Tile* pNeighbor, int /*distance*/)
             {
-                if (!m_rSteps.CanStep(rMover, *pFrom, *pNeighbor))
+                if (!m_rSteps.CanPlanStep(rMover, *pFrom, *pNeighbor))
                 {
                     return;
                 }
-                const int edgeCost = costs.ComputeFragments(*pNeighbor);
+                const int edgeCost = costs.PlannedCostFragments(*pNeighbor);
                 // MagTube (0) is allowed; still advance so the search progresses.
                 const int newCost = cost + edgeCost;
                 if (newCost < 0)

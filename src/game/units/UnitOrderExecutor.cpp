@@ -109,36 +109,33 @@ void UnitOrderExecutor::EnterTile_(Unit& rMover, const Tile& rTo, int remainingA
 bool UnitOrderExecutor::SpendMovesAndEnter_(Unit& rMover, const Tile& rTo,
                                             MoveOrder_t& rMoveOrder)
 {
-    const auto costs = m_rMoveCosts.ForUnit(rMover, m_rWorldMap);
+    const EntryTerms_t terms = m_rMoveCosts.ForUnit(rMover, m_rWorldMap).EntryTerms(rTo);
     const int available = rMover.GetMoveFragmentsRemaining();
-    const int consumed = costs.FragmentsConsumed(rTo, available);
 
-    if (available >= consumed)
+    if (terms.bRequiresFullCost)
     {
-        rMoveOrder.pFungusChargeTile = nullptr;
-        rMoveOrder.fungusFragmentsPaid = 0;
-        EnterTile_(rMover, rTo, available - consumed);
-        return true;
+        if (rMoveOrder.pChargeTile != &rTo)
+        {
+            rMoveOrder.pChargeTile = &rTo;
+            rMoveOrder.chargeFragmentsPaid = 0;
+        }
+        if (rMoveOrder.chargeFragmentsPaid + available < terms.costFragments)
+        {
+            // Bank this turn's fragments toward the entry price and stay put.
+            rMoveOrder.chargeFragmentsPaid += available;
+            rMover.SetMoveFragmentsRemaining(0);
+            return false;
+        }
     }
 
-    // Multi-turn charge: bank fragments across turns until full cost is paid.
-    if (rMoveOrder.pFungusChargeTile != &rTo)
-    {
-        rMoveOrder.pFungusChargeTile = &rTo;
-        rMoveOrder.fungusFragmentsPaid = 0;
-    }
-    rMoveOrder.fungusFragmentsPaid += available;
+    rMoveOrder.pChargeTile = nullptr;
+    rMoveOrder.chargeFragmentsPaid = 0;
 
-    if (rMoveOrder.fungusFragmentsPaid >= consumed)
-    {
-        rMoveOrder.pFungusChargeTile = nullptr;
-        rMoveOrder.fungusFragmentsPaid = 0;
-        EnterTile_(rMover, rTo, 0);
-        return true;
-    }
-
-    rMover.SetMoveFragmentsRemaining(0);
-    return false;
+    // Standard terrain admits any positive balance (SetMoveFragmentsRemaining clamps a
+    // negative result to 0); end-turn entries wipe whatever would remain.
+    const int remainingAfter = terms.bEndsTurn ? 0 : available - terms.costFragments;
+    EnterTile_(rMover, rTo, remainingAfter);
+    return true;
 }
 
 bool UnitOrderExecutor::TryStep(Unit& rMover, const Tile& rTo, MoveOrder_t& rMoveOrder)

@@ -148,7 +148,7 @@ TEST_CASE("CollectFromPops: only ThisBase-scoped pop effects enter the base pool
     CHECK(CountBySource(effects, "Doctor") == 2);
 }
 
-TEST_CASE("CollectTileEffects: terrain features resolve by string id through the registry",
+TEST_CASE("CollectTileEffects: terrain features contribute from cached configs",
           "[effects][collect][tile]")
 {
     actest::WorldFixture world;
@@ -156,14 +156,14 @@ TEST_CASE("CollectTileEffects: terrain features resolve by string id through the
 
     SECTION("featureless terrain (Flat/Arid) yields no effects")
     {
-        const auto effects = CollectTileEffects(tile, world.improvements);
+        const auto effects = CollectTileEffects(tile);
         CHECK(effects.empty());
     }
 
     SECTION("Rocky contributes its mineral and defense effects, sourceId = feature id")
     {
         tile.SetRockiness(Rockiness_t::Rocky);
-        const auto effects = CollectTileEffects(tile, world.improvements);
+        const auto effects = CollectTileEffects(tile);
         REQUIRE(effects.size() == 2);
         CHECK(effects[0].sourceId == "Rocky");
         CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Minerals), 0.0).total == 2.0);
@@ -174,7 +174,7 @@ TEST_CASE("CollectTileEffects: terrain features resolve by string id through the
         tile.SetRockiness(Rockiness_t::Rolling); // +1 mineral
         tile.SetMoisture(Moisture_t::Wet);       // +2 nutrients
         tile.SetHasRiver(true);                // +1 energy
-        const auto effects = CollectTileEffects(tile, world.improvements);
+        const auto effects = CollectTileEffects(tile);
         CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Minerals), 0.0).total == 1.0);
         CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Nutrients), 0.0).total == 2.0);
         CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Energy), 0.0).total == 1.0);
@@ -195,7 +195,7 @@ TEST_CASE("CollectTileEffects: improvements contribute directly from their held 
     tile.AddImprovement(*pFarm);
     tile.AddImprovement(*pMine);
 
-    const auto effects = CollectTileEffects(tile, world.improvements);
+    const auto effects = CollectTileEffects(tile);
     CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Nutrients), 0.0).total == 1.0);
     CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Minerals), 0.0).total == 2.0);
     CHECK(CountBySource(effects, "Farm") == 1);
@@ -210,7 +210,7 @@ TEST_CASE("CollectTileEffects: only ThisTile-scoped effects are collected from a
     Tile& tile = world.At(2, 2);
     tile.AddImprovement(*world.improvements.Find("WeirdAura"));
 
-    const auto effects = CollectTileEffects(tile, world.improvements);
+    const auto effects = CollectTileEffects(tile);
     for (const ActiveEffect_t& effect : effects)
     {
         CHECK(effect.config->scope == EffectScope_t::ThisTile);
@@ -228,6 +228,6 @@ TEST_CASE("CollectTileEffects: Instantaneous effects do not enter the continuous
     Tile& tile = world.At(2, 2);
     tile.AddImprovement(*world.improvements.Find("WeirdAura"));
 
-    const auto effects = CollectTileEffects(tile, world.improvements);
+    const auto effects = CollectTileEffects(tile);
     CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Minerals), 0.0).total == 0.0);
 }
