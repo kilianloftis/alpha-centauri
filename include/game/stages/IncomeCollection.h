@@ -8,11 +8,11 @@ namespace ac
 class IncomeCollection : public PerFactionTurnStage
 {
 public:
-    explicit IncomeCollection(std::shared_ptr<HookContext> pHookContext);
+    explicit IncomeCollection(HookContext hookContext);
     ~IncomeCollection() = default;
 
 protected:
-    void ExecuteImpl(GameState& rGameState, Faction& rFaction) override;
+    StageResult_t ExecuteImpl(GameState& rGameState, Faction& rFaction) override;
 };
 
 } // namespace ac

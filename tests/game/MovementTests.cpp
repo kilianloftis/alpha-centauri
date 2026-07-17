@@ -369,7 +369,7 @@ TEST_CASE("IgnoreZoneOfControl flag bypasses ZOC", "[movement][zoc]")
     CHECK(move.steps.CanStep(probe, probe.GetTile(), fixture.At(4, 5)));
 }
 
-TEST_CASE("UnitOrderExecutor advances one path step without teleporting", "[movement][orders]")
+TEST_CASE("UnitOrderExecutor advances until moves run out", "[movement][orders]")
 {
     FactionFixture fixture;
     FillLand_(fixture);
@@ -378,21 +378,14 @@ TEST_CASE("UnitOrderExecutor advances one path step without teleporting", "[move
     Unit& unit = fixture.MakeUnit(faction, 2, 4, {"test_chassis"});
     const Tile& rDest = fixture.At(5, 4);
     unit.SetOrder(MoveOrder_t{&rDest});
-
-    const int distBefore = ChebyshevDistance(unit.GetTile(), rDest);
-
-    move.orders.Execute(unit);
-
-    const int distAfter = ChebyshevDistance(unit.GetTile(), rDest);
-    CHECK(distAfter == distBefore - 1);
-    CHECK(unit.GetMoveFragmentsRemaining() == k_point);
-    REQUIRE(unit.GetOrder().has_value());
-    // Still not at destination after one step.
-    CHECK(&unit.GetTile() != &rDest);
+    REQUIRE(unit.GetMoveFragmentsRemaining() == 2 * k_point); // 2 steps worth
 
     move.orders.Execute(unit);
+
+    // 3 tiles away, 2 move points → advances 2 steps and runs out of moves.
+    CHECK(ChebyshevDistance(unit.GetTile(), rDest) == 1);
     CHECK(unit.GetMoveFragmentsRemaining() == 0);
-    REQUIRE(unit.GetOrder().has_value()); // destination not reached; waits for next turn
+    REQUIRE(unit.GetOrder().has_value()); // not at destination yet
 }
 
 TEST_CASE("Pathfinder NextStep respects ZOC", "[movement][zoc][pathfinding]")
@@ -453,7 +446,7 @@ TEST_CASE("TurnStart restores move fragments", "[movement][turn]")
     GameState state(std::make_unique<WorldMap>(3, 3), fixture.improvements, &fixture.unitComponents);
     state.AddFaction(std::move(fixture.factions[0]));
 
-    TurnStart stage(nullptr);
+    TurnStart stage(HookContext{});
     stage.Execute(state);
 
     CHECK(unit.GetMoveFragmentsRemaining() == 2 * k_point);

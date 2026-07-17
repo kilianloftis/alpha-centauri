@@ -6,6 +6,7 @@
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "game/TurnStageRegistrar.h"
+
 #include <variant>
 
 namespace ac
@@ -13,13 +14,26 @@ namespace ac
 
 namespace { TurnStageRegistrar<PlayerActions> g_registrar("PlayerActions"); }
 
-PlayerActions::PlayerActions(std::shared_ptr<HookContext> pHookContext)
-    : PerFactionTurnStage(pHookContext)
+PlayerActions::PlayerActions(HookContext hookContext)
+    : PerFactionTurnStage(std::move(hookContext))
 {
 }
 
-void PlayerActions::ExecuteImpl(GameState& rGameState, Faction& rFaction)
+bool PlayerActions::DoesUnitRequireOrders_(const Unit& rUnit)
 {
+    return !rUnit.GetOrder().has_value() && rUnit.GetMoveFragmentsRemaining() > 0;
+}
+
+StageResult_t PlayerActions::ExecuteImpl(GameState& rGameState, Faction& rFaction)
+{
+    const bool bPlayer = rFaction.IsPlayerControlled();
+
+    if (bPlayer && m_phase == Phase_t::AwaitingInteraction)
+    {
+        m_phase = Phase_t::EndingInteraction;
+        return StageResult_t::Yield;
+    }
+
     UnitOrderExecutor& rExecutor = rGameState.GetUnitOrderExecutor();
 
     for (Unit& rUnit : rFaction.GetUnitManager().Units())
@@ -29,27 +43,25 @@ void PlayerActions::ExecuteImpl(GameState& rGameState, Faction& rFaction)
             continue;
         }
 
-        // Move orders advance one step at a time until moves run out or progress stops.
-        // Other orders run a single Execute (e.g. hold-for-turns countdown).
-        if (!std::holds_alternative<MoveOrder_t>(*rUnit.GetOrder()))
+        if (std::holds_alternative<MoveOrder_t>(*rUnit.GetOrder())
+            && rUnit.GetMoveFragmentsRemaining() <= 0)
         {
-            rExecutor.Execute(rUnit);
             continue;
         }
 
-        while (rUnit.GetOrder().has_value()
-               && std::holds_alternative<MoveOrder_t>(*rUnit.GetOrder())
-               && rUnit.GetMoveFragmentsRemaining() > 0)
+        rExecutor.Execute(rUnit);
+
+        if (bPlayer && DoesUnitRequireOrders_(rUnit))
         {
-            const Tile* pTileBefore = &rUnit.GetTile();
-            const int movesBefore = rUnit.GetMoveFragmentsRemaining();
-            rExecutor.Execute(rUnit);
-            if (&rUnit.GetTile() == pTileBefore && rUnit.GetMoveFragmentsRemaining() == movesBefore)
-            {
-                break; // blocked (ZOC, terrain, no next step, …)
-            }
+            return StageResult_t::Yield;
         }
     }
+
+    if (bPlayer)
+    {
+        m_phase = Phase_t::AwaitingInteraction;
+    }
+    return StageResult_t::Continue;
 }
 
 } // namespace ac

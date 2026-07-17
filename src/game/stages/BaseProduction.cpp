@@ -11,12 +11,12 @@ namespace ac
 
 namespace { TurnStageRegistrar<BaseProduction> g_registrar("BaseProduction"); }
 
-BaseProduction::BaseProduction(std::shared_ptr<HookContext> pHookContext)
-    : PerFactionTurnStage(pHookContext)
+BaseProduction::BaseProduction(HookContext hookContext)
+    : PerFactionTurnStage(std::move(hookContext))
 {
 }
 
-void BaseProduction::ExecuteImpl(GameState& rGameState, Faction& rFaction)
+StageResult_t BaseProduction::ExecuteImpl(GameState& rGameState, Faction& rFaction)
 {
     (void)rGameState;
 
@@ -43,6 +43,7 @@ void BaseProduction::ExecuteImpl(GameState& rGameState, Faction& rFaction)
                       << rBase.GetMineralCost() << " minerals)\n";
         }
     }
+    return StageResult_t::Continue;
 }
 
 } // namespace ac

@@ -11,12 +11,12 @@ namespace ac
 
 namespace { TurnStageRegistrar<Population> g_registrar("Population"); }
 
-Population::Population(std::shared_ptr<HookContext> pHookContext)
-    : PerFactionTurnStage(pHookContext)
+Population::Population(HookContext hookContext)
+    : PerFactionTurnStage(std::move(hookContext))
 {
 }
 
-void Population::ExecuteImpl(GameState& rGameState, Faction& rFaction)
+StageResult_t Population::ExecuteImpl(GameState& rGameState, Faction& rFaction)
 {
     std::cout << "Executing Population stage\n";
 
@@ -31,6 +31,7 @@ void Population::ExecuteImpl(GameState& rGameState, Faction& rFaction)
                   << ", size: " << rBase.GetPopulation().GetSize() << ")\n";
         rBase.GetPopulation().RecalculateComposition();
     }
+    return StageResult_t::Continue;
 }
 
 } // namespace ac

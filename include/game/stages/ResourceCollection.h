@@ -8,11 +8,11 @@ namespace ac
 class ResourceCollection : public PerFactionTurnStage
 {
 public:
-    explicit ResourceCollection(std::shared_ptr<HookContext> pHookContext);
+    explicit ResourceCollection(HookContext hookContext);
     ~ResourceCollection() = default;
 
 protected:
-    void ExecuteImpl(GameState& rGameState, Faction& rFaction) override;
+    StageResult_t ExecuteImpl(GameState& rGameState, Faction& rFaction) override;
 };
 
 } // namespace ac

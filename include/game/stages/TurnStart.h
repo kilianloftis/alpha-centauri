@@ -8,11 +8,11 @@ namespace ac
 class TurnStart : public GlobalTurnStage
 {
 public:
-    explicit TurnStart(std::shared_ptr<HookContext> pHookContext);
+    explicit TurnStart(HookContext hookContext);
     ~TurnStart() = default;
 
 protected:
-    void ExecuteImpl(GameState& rGameState) override;
+    StageResult_t ExecuteImpl(GameState& rGameState) override;
 };
 
 } // namespace ac

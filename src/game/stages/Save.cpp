@@ -8,15 +8,16 @@ namespace ac
 
 namespace { TurnStageRegistrar<Save> g_registrar("Save"); }
 
-Save::Save(std::shared_ptr<HookContext> pHookContext)
-    : GlobalTurnStage(pHookContext)
+Save::Save(HookContext hookContext)
+    : GlobalTurnStage(std::move(hookContext))
 {
 }
 
-void Save::ExecuteImpl(GameState& rGameState)
+StageResult_t Save::ExecuteImpl(GameState& rGameState)
 {
     (void)rGameState;
     std::cout << "Executing Save stage\n";
+    return StageResult_t::Continue;
 }
 
 } // namespace ac

@@ -8,16 +8,17 @@ namespace ac
 
 namespace { TurnStageRegistrar<Upkeep> g_registrar("Upkeep"); }
 
-Upkeep::Upkeep(std::shared_ptr<HookContext> pHookContext)
-    : PerFactionTurnStage(pHookContext)
+Upkeep::Upkeep(HookContext hookContext)
+    : PerFactionTurnStage(std::move(hookContext))
 {
 }
 
-void Upkeep::ExecuteImpl(GameState& rGameState, Faction& rFaction)
+StageResult_t Upkeep::ExecuteImpl(GameState& rGameState, Faction& rFaction)
 {
     (void)rGameState;
     (void)rFaction;
     std::cout << "Executing Upkeep stage\n";
+    return StageResult_t::Continue;
 }
 
 } // namespace ac

@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 
 namespace ac
 {
@@ -11,46 +12,48 @@ namespace ac
 class GameState;
 class Faction;
 
+// Result of a single stage Execute call. Yield pauses turn processing; the next Advance()
+// re-enters the same stage (and, for per-faction stages, the same faction).
+enum class StageResult_t
+{
+    Continue, // stage finished; advance to next stage / faction
+    Yield     // pause turn; re-enter this stage on next Advance()
+};
+
 // Shared hook lifecycle for every turn stage. Carries no Execute contract of its own:
 // concrete stages implement exactly one of GlobalTurnStage or PerFactionTurnStage below,
 // so a stage never receives a parameter it cannot use.
 class TurnStageBase
 {
 public:
-    explicit TurnStageBase(std::shared_ptr<HookContext> pHookContext)
-    : m_pHookContext(pHookContext)
+    explicit TurnStageBase(HookContext hookContext)
+    : m_hookContext(std::move(hookContext))
     {}
 
     virtual ~TurnStageBase() = default;
 
     void OnEnter()
     {
-        if (m_pHookContext)
-        {
-            m_pHookContext->ExecutePreHooks();
-        }
+        m_hookContext.ExecutePreHooks();
     }
 
     void OnExit()
     {
-        if (m_pHookContext)
-        {
-            m_pHookContext->ExecutePostHooks();
-        }
+        m_hookContext.ExecutePostHooks();
     }
 
 protected:
     bool HasReplaceHooks() const
     {
-        return m_pHookContext && m_pHookContext->HasReplaceHooks();
+        return m_hookContext.HasReplaceHooks();
     }
 
     void ExecuteReplaceHooks()
     {
-        m_pHookContext->ExecuteReplaceHooks();
+        m_hookContext.ExecuteReplaceHooks();
     }
 
-    std::shared_ptr<HookContext> m_pHookContext;
+    HookContext m_hookContext;
 };
 
 // A stage that runs once per turn, independent of any faction (e.g. TurnStart, Save).
@@ -59,20 +62,18 @@ class GlobalTurnStage : public TurnStageBase
 public:
     using TurnStageBase::TurnStageBase;
 
-    void Execute(GameState& rGameState)
+    StageResult_t Execute(GameState& rGameState)
     {
         if (HasReplaceHooks())
         {
             ExecuteReplaceHooks();
+            return StageResult_t::Continue;
         }
-        else
-        {
-            ExecuteImpl(rGameState);
-        }
+        return ExecuteImpl(rGameState);
     }
 
 protected:
-    virtual void ExecuteImpl(GameState& rGameState) = 0;
+    virtual StageResult_t ExecuteImpl(GameState& rGameState) = 0;
 };
 
 // A stage that runs once per faction per turn (e.g. IncomeCollection, BaseProduction).
@@ -81,20 +82,18 @@ class PerFactionTurnStage : public TurnStageBase
 public:
     using TurnStageBase::TurnStageBase;
 
-    void Execute(GameState& rGameState, Faction& rFaction)
+    StageResult_t Execute(GameState& rGameState, Faction& rFaction)
     {
         if (HasReplaceHooks())
         {
             ExecuteReplaceHooks();
+            return StageResult_t::Continue;
         }
-        else
-        {
-            ExecuteImpl(rGameState, rFaction);
-        }
+        return ExecuteImpl(rGameState, rFaction);
     }
 
 protected:
-    virtual void ExecuteImpl(GameState& rGameState, Faction& rFaction) = 0;
+    virtual StageResult_t ExecuteImpl(GameState& rGameState, Faction& rFaction) = 0;
 };
 
 using GlobalTurnStageRegistry_t = std::map<std::string, std::unique_ptr<GlobalTurnStage>>;

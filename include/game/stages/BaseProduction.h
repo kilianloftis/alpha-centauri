@@ -8,11 +8,11 @@ namespace ac
 class BaseProduction : public PerFactionTurnStage
 {
 public:
-    explicit BaseProduction(std::shared_ptr<HookContext> pHookContext);
+    explicit BaseProduction(HookContext hookContext);
     ~BaseProduction() = default;
 
 protected:
-    void ExecuteImpl(GameState& rGameState, Faction& rFaction) override;
+    StageResult_t ExecuteImpl(GameState& rGameState, Faction& rFaction) override;
 };
 
 } // namespace ac

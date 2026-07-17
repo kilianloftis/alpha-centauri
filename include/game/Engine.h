@@ -10,7 +10,6 @@ class Input;
 class TurnStageFactory;
 class TurnProcessor;
 class GameState;
-class EventBus;
 class EventBridge;
 class GameDataContext;
 class ViewFactory;
@@ -33,8 +32,7 @@ private:
     std::unique_ptr<Input> m_pInput;
     std::unique_ptr<TurnStageFactory> m_turnStageFactory;
     std::unique_ptr<TurnProcessor> m_turnProcessor;
-    std::unique_ptr<GameState> m_gameState;
-    std::unique_ptr<EventBus> m_eventBus;
+    std::unique_ptr<GameState> m_pGameState;
     std::unique_ptr<EventBridge> m_eventBridge;
     std::unique_ptr<GameDataContext> m_gameDataContext;
     std::unique_ptr<ViewFactory> m_viewFactory;

@@ -10,12 +10,12 @@ namespace ac
 
 namespace { TurnStageRegistrar<ResearchAccumulation> g_registrar("ResearchAccumulation"); }
 
-ResearchAccumulation::ResearchAccumulation(std::shared_ptr<HookContext> pHookContext)
-    : PerFactionTurnStage(pHookContext)
+ResearchAccumulation::ResearchAccumulation(HookContext hookContext)
+    : PerFactionTurnStage(std::move(hookContext))
 {
 }
 
-void ResearchAccumulation::ExecuteImpl(GameState& rGameState, Faction& rFaction)
+StageResult_t ResearchAccumulation::ExecuteImpl(GameState& rGameState, Faction& rFaction)
 {
     (void)rGameState;
 
@@ -37,6 +37,7 @@ void ResearchAccumulation::ExecuteImpl(GameState& rGameState, Faction& rFaction)
 
         std::cout << "  Discovered tech: '" << techId << "'\n";
     }
+    return StageResult_t::Continue;
 }
 
 } // namespace ac

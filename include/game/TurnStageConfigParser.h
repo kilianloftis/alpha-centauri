@@ -16,7 +16,7 @@ struct TurnStageConfig_t
     std::string name;
     std::string description;
     bool repeat_for_each_faction;
-    std::shared_ptr<HookContext> hookContext;
+    HookContext hookContext;
 };
 
 class TurnStageConfigParser
@@ -29,7 +29,7 @@ public:
 
 private:
     TurnStageConfig_t ParseStageConfig(const nlohmann::json& stageJson);
-    void ParseHooks(const nlohmann::json& hooksJson, std::shared_ptr<HookContext> hookContext);
+    void ParseHooks(const nlohmann::json& hooksJson, HookContext& rHookContext);
 };
 
 } // namespace ac

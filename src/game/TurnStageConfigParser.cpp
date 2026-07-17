@@ -27,8 +27,6 @@ TurnStageConfig_t TurnStageConfigParser::ParseStageConfig(const nlohmann::json& 
     config.description = stageJson.value("description", "");
     config.repeat_for_each_faction = stageJson.value("repeat_for_each_faction", false);
 
-    config.hookContext = std::make_shared<HookContext>();
-
     if (stageJson.contains("hooks"))
     {
         json hooksJson = stageJson["hooks"];
@@ -38,28 +36,28 @@ TurnStageConfig_t TurnStageConfigParser::ParseStageConfig(const nlohmann::json& 
     return config;
 }
 
-void TurnStageConfigParser::ParseHooks(const nlohmann::json& hooksJson, std::shared_ptr<HookContext> hookContext)
+void TurnStageConfigParser::ParseHooks(const nlohmann::json& hooksJson, HookContext& rHookContext)
 {
     for (const auto& hookId : hooksJson.value("pre", json::array()))
     {
         Hook_t hook;
         hook.modId = hookId.value("mod_id", "");
         hook.scriptPath = hookId.value("script_path", "");
-        hookContext->AddPreHook(hook);
+        rHookContext.AddPreHook(hook);
     }
     for (const auto& hookId : hooksJson.value("post", json::array()))
     {
         Hook_t hook;
         hook.modId = hookId.value("mod_id", "");
         hook.scriptPath = hookId.value("script_path", "");
-        hookContext->AddPostHook(hook);
+        rHookContext.AddPostHook(hook);
     }
     for (const auto& hookId : hooksJson.value("replace", json::array()))
     {
         Hook_t hook;
         hook.modId = hookId.value("mod_id", "");
         hook.scriptPath = hookId.value("script_path", "");
-        hookContext->AddReplaceHook(hook);
+        rHookContext.AddReplaceHook(hook);
     }
 }
 

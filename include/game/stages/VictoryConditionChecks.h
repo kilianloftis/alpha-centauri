@@ -8,11 +8,11 @@ namespace ac
 class VictoryConditionChecks : public GlobalTurnStage
 {
 public:
-    explicit VictoryConditionChecks(std::shared_ptr<HookContext> pHookContext);
+    explicit VictoryConditionChecks(HookContext hookContext);
     ~VictoryConditionChecks() = default;
 
 protected:
-    void ExecuteImpl(GameState& rGameState) override;
+    StageResult_t ExecuteImpl(GameState& rGameState) override;
 };
 
 } // namespace ac

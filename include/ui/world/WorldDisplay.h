@@ -10,6 +10,7 @@ class GameState;
 class Unit;
 class WorldMap;
 class Tile;
+struct Path_t;
 enum class Moisture_t;
 enum class Rockiness_t;
 
@@ -23,6 +24,10 @@ public:
 
     // Set the unit currently selected by the player (highlighted on the map)
     void SetSelectedUnit(const Unit* pUnit);
+
+    // Set the path preview to render (nullptr to clear). Pointer must remain valid until
+    // the next Render call.
+    void SetPathPreview(const Path_t* pPath);
 
     // Set the top-left tile coordinate of the visible viewport
     void SetCameraOffset(int tileX, int tileY);
@@ -39,6 +44,7 @@ public:
 private:
     const GameState& m_rGameState;
     const Unit* m_pSelectedUnit = nullptr;
+    const Path_t* m_pPathPreview = nullptr;
 
     WindowLayout_t m_layout;
     float m_tileSize = 0.0f;
@@ -63,6 +69,9 @@ private:
 
     // Render Sensor tower markers on explored tiles
     void RenderSensors_(Graphics& rGraphics, int colStart, int rowStart, int colEnd, int rowEnd);
+
+    // Render path preview overlay on tiles
+    void RenderPathPreview_(Graphics& rGraphics, int colStart, int rowStart, int colEnd, int rowEnd);
 
     // Render unit markers on top of bases
     void RenderUnits_(Graphics& rGraphics, int colStart, int rowStart, int colEnd, int rowEnd);

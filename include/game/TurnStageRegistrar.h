@@ -16,9 +16,9 @@ struct TurnStageRegistrar
 {
     explicit TurnStageRegistrar(std::string id)
     {
-        TurnStageFactory::RegisterCreator(std::move(id), [](std::shared_ptr<HookContext> pHookContext)
+        TurnStageFactory::RegisterCreator(std::move(id), [](HookContext hookContext)
         {
-            return std::make_unique<T>(std::move(pHookContext));
+            return std::make_unique<T>(std::move(hookContext));
         });
     }
 };

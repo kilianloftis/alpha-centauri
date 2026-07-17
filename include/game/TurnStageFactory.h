@@ -19,7 +19,7 @@ struct TurnStageRegistries_t
 class TurnStageFactory
 {
 public:
-    using Creator_t = std::function<std::unique_ptr<TurnStageBase>(std::shared_ptr<HookContext>)>;
+    using Creator_t = std::function<std::unique_ptr<TurnStageBase>(HookContext)>;
 
     TurnStageFactory();
     ~TurnStageFactory() = default;

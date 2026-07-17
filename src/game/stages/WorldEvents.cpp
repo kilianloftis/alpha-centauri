@@ -8,15 +8,16 @@ namespace ac
 
 namespace { TurnStageRegistrar<WorldEvents> g_registrar("WorldEvents"); }
 
-WorldEvents::WorldEvents(std::shared_ptr<HookContext> pHookContext)
-    : GlobalTurnStage(pHookContext)
+WorldEvents::WorldEvents(HookContext hookContext)
+    : GlobalTurnStage(std::move(hookContext))
 {
 }
 
-void WorldEvents::ExecuteImpl(GameState& rGameState)
+StageResult_t WorldEvents::ExecuteImpl(GameState& rGameState)
 {
     (void)rGameState;
     std::cout << "Executing WorldEvents stage\n";
+    return StageResult_t::Continue;
 }
 
 } // namespace ac

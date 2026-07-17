@@ -194,7 +194,7 @@ TEST_CASE("FindPath at destination and unreachable terrain", "[movement][pathfin
     CHECK(harness.pathfinder.NextStep(unit, fixture.At(6, 4)) == nullptr);
 }
 
-TEST_CASE("UnitOrderExecutor advances along pathfinder NextStep", "[movement][pathfinding][orders]")
+TEST_CASE("UnitOrderExecutor advances along pathfinder until moves exhausted", "[movement][pathfinding][orders]")
 {
     FactionFixture fixture;
     FillLand_(fixture);
@@ -203,13 +203,14 @@ TEST_CASE("UnitOrderExecutor advances along pathfinder NextStep", "[movement][pa
     Unit& unit = fixture.MakeUnit(faction, 2, 4, {"test_chassis"});
     const Tile& rDest = fixture.At(5, 4);
     unit.SetOrder(MoveOrder_t{&rDest});
-
-    const Tile* pExpected = harness.pathfinder.NextStep(unit, rDest);
-    REQUIRE(pExpected);
+    REQUIRE(unit.GetMoveFragmentsRemaining() == 2 * k_point);
 
     harness.orders.Execute(unit);
-    CHECK(&unit.GetTile() == pExpected);
-    CHECK(ChebyshevDistance(unit.GetTile(), rDest) == 2);
+
+    // 3 tiles away, 2 move points → advances 2 steps.
+    CHECK(ChebyshevDistance(unit.GetTile(), rDest) == 1);
+    CHECK(unit.GetMoveFragmentsRemaining() == 0);
+    REQUIRE(unit.GetOrder().has_value());
 }
 
 TEST_CASE("FindPath prefers friendly fungus over empty fungus", "[movement][pathfinding][fungus]")

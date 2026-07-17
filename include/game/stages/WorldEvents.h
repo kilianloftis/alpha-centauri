@@ -8,11 +8,11 @@ namespace ac
 class WorldEvents : public GlobalTurnStage
 {
 public:
-    explicit WorldEvents(std::shared_ptr<HookContext> pHookContext);
+    explicit WorldEvents(HookContext hookContext);
     ~WorldEvents() = default;
 
 protected:
-    void ExecuteImpl(GameState& rGameState) override;
+    StageResult_t ExecuteImpl(GameState& rGameState) override;
 };
 
 } // namespace ac

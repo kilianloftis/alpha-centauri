@@ -206,41 +206,48 @@ void UnitOrderExecutor::Execute_(Unit& rUnit, MoveOrder_t& rOrder)
     if (!rOrder.pDestination)
         throw std::runtime_error("MoveOrder has null destination");
 
-    if (&rUnit.GetTile() == rOrder.pDestination)
+    while (true)
     {
-        rUnit.ClearOrder();
-        return;
-    }
-
-    if (rUnit.GetMoveFragmentsRemaining() <= 0)
-    {
-        // Keep the order for the next turn when moves refresh.
-        return;
-    }
-
-    // Path is recalculated every step so newly revealed fog / hostiles are accounted for.
-    const Tile* pNext = m_rPathfinder.NextStep(rUnit, *rOrder.pDestination);
-    if (!pNext)
-    {
-        // No legal path — TryStep the desired bump tile so occupant/ZOC blockers are
-        // contact-revealed (TryStep is a no-op move on those outcomes).
-        const Tile* pDesired = m_rPathfinder.DesiredContactStep(rUnit, *rOrder.pDestination);
-        if (pDesired)
+        if (&rUnit.GetTile() == rOrder.pDestination)
         {
-            TryStep(rUnit, *pDesired, rOrder);
+            rUnit.ClearOrder();
+            return;
         }
-        return;
-    }
 
-    if (!TryStep(rUnit, *pNext, rOrder))
-    {
-        return;
-    }
+        if (rUnit.GetMoveFragmentsRemaining() <= 0)
+        {
+            return;
+        }
 
-    // Combat stub / hostile reveal clears the order; otherwise clear at destination.
-    if (rUnit.GetOrder().has_value() && &rUnit.GetTile() == rOrder.pDestination)
-    {
-        rUnit.ClearOrder();
+        // Path is recalculated every step so newly revealed fog / hostiles are accounted for.
+        const Tile* pNext = m_rPathfinder.NextStep(rUnit, *rOrder.pDestination);
+        if (!pNext)
+        {
+            const Tile* pDesired = m_rPathfinder.DesiredContactStep(rUnit, *rOrder.pDestination);
+            if (pDesired)
+            {
+                TryStep(rUnit, *pDesired, rOrder);
+            }
+            return;
+        }
+
+        const Tile* pTileBefore = &rUnit.GetTile();
+        const int movesBefore = rUnit.GetMoveFragmentsRemaining();
+
+        if (!TryStep(rUnit, *pNext, rOrder))
+        {
+            return;
+        }
+
+        if (&rUnit.GetTile() == pTileBefore && rUnit.GetMoveFragmentsRemaining() == movesBefore)
+        {
+            return;
+        }
+
+        if (!rUnit.GetOrder().has_value())
+        {
+            return;
+        }
     }
 }
 

@@ -11,17 +11,21 @@
 #include "game/units/UnitOrderExecutor.h"
 #include "game/units/Pathfinder.h"
 #include "game/units/Unit.h"
+#include "lib/EventBus.h"
 #include <stdexcept>
 
 namespace ac
 {
 
-static constexpr int k_StartingMissionYear = 2100;
+// One less than the first playable year: TurnStart increments at the start of every turn,
+// so the first Advance lands on 2100.
+static constexpr int k_StartingMissionYear = 2099;
 
 GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
                      const ImprovementRegistry& rImprovements,
                      const UnitComponentRegistry* pUnitComponents)
     : m_missionYear(k_StartingMissionYear)
+    , m_pEventBus(std::make_unique<EventBus>())
     , m_worldMap(std::move(pWorldMap))
     , m_secretProjectAvailability(*this)
 {
@@ -52,6 +56,16 @@ void GameState::SetMissionYear(int year)
 void GameState::IncrementMissionYear()
 {
     ++m_missionYear;
+}
+
+EventBus& GameState::GetEventBus()
+{
+    return *m_pEventBus;
+}
+
+const EventBus& GameState::GetEventBus() const
+{
+    return *m_pEventBus;
 }
 
 std::vector<ActiveEffect_t> GameState::CollectWorldEffects(const Faction& rExclude) const

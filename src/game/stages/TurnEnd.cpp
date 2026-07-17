@@ -8,15 +8,16 @@ namespace ac
 
 namespace { TurnStageRegistrar<TurnEnd> g_registrar("TurnEnd"); }
 
-TurnEnd::TurnEnd(std::shared_ptr<HookContext> pHookContext)
-    : GlobalTurnStage(pHookContext)
+TurnEnd::TurnEnd(HookContext hookContext)
+    : GlobalTurnStage(std::move(hookContext))
 {
 }
 
-void TurnEnd::ExecuteImpl(GameState& rGameState)
+StageResult_t TurnEnd::ExecuteImpl(GameState& rGameState)
 {
     (void)rGameState;
     std::cout << "Executing TurnEnd stage\n";
+    return StageResult_t::Continue;
 }
 
 } // namespace ac

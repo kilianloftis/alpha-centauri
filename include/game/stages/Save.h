@@ -8,11 +8,11 @@ namespace ac
 class Save : public GlobalTurnStage
 {
 public:
-    explicit Save(std::shared_ptr<HookContext> pHookContext);
+    explicit Save(HookContext hookContext);
     ~Save() = default;
 
 protected:
-    void ExecuteImpl(GameState& rGameState) override;
+    StageResult_t ExecuteImpl(GameState& rGameState) override;
 };
 
 } // namespace ac

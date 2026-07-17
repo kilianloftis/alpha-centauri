@@ -8,11 +8,11 @@ namespace ac
 class ResearchAccumulation : public PerFactionTurnStage
 {
 public:
-    explicit ResearchAccumulation(std::shared_ptr<HookContext> pHookContext);
+    explicit ResearchAccumulation(HookContext hookContext);
     ~ResearchAccumulation() = default;
 
 protected:
-    void ExecuteImpl(GameState& rGameState, Faction& rFaction) override;
+    StageResult_t ExecuteImpl(GameState& rGameState, Faction& rFaction) override;
 };
 
 } // namespace ac

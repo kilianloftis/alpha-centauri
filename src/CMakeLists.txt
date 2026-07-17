@@ -89,7 +89,6 @@ add_library(ac-core STATIC
 # An OBJECT library is always pulled into the final link, so the registrars run.
 add_library(ac-turn-stages OBJECT
     game/stages/TurnStart.cpp
-    game/stages/NewYearBegins.cpp
     game/stages/ResourceCollection.cpp
     game/stages/IncomeCollection.cpp
     game/stages/ResearchAccumulation.cpp

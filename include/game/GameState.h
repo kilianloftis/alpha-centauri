@@ -18,6 +18,7 @@ namespace ac
 class ImprovementRegistry;
 class TileEffectsContext;
 class UnitComponentRegistry;
+class EventBus;
 
 class GameState
 {
@@ -33,6 +34,9 @@ public:
     int GetMissionYear() const;
     void SetMissionYear(int year);
     void IncrementMissionYear();
+
+    EventBus& GetEventBus();
+    const EventBus& GetEventBus() const;
 
     // Factions
     Faction& AddFaction(std::unique_ptr<Faction> pFaction);
@@ -88,6 +92,7 @@ public:
 
 private:
     int m_missionYear;
+    std::unique_ptr<EventBus> m_pEventBus;
     // WorldMap and TileEffectsContext are declared before m_factions so they outlive all
     // BaseManagers (which hold TileEffectsContext& references). Members are destroyed in
     // reverse declaration order, so m_factions is destroyed before these two.

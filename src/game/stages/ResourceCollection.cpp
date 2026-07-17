@@ -10,12 +10,12 @@ namespace ac
 
 namespace { TurnStageRegistrar<ResourceCollection> g_registrar("ResourceCollection"); }
 
-ResourceCollection::ResourceCollection(std::shared_ptr<HookContext> pHookContext)
-    : PerFactionTurnStage(pHookContext)
+ResourceCollection::ResourceCollection(HookContext hookContext)
+    : PerFactionTurnStage(std::move(hookContext))
 {
 }
 
-void ResourceCollection::ExecuteImpl(GameState& rGameState, Faction& rFaction)
+StageResult_t ResourceCollection::ExecuteImpl(GameState& rGameState, Faction& rFaction)
 {
     std::cout << "Executing ResourceCollection stage for faction\n";
 
@@ -23,6 +23,7 @@ void ResourceCollection::ExecuteImpl(GameState& rGameState, Faction& rFaction)
     // already includes its own).
     const std::vector<ActiveEffect_t> worldEffects = rGameState.CollectWorldEffects(rFaction);
     rFaction.ProduceBaseResources(worldEffects);
+    return StageResult_t::Continue;
 }
 
 } // namespace ac

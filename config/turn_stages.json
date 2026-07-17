@@ -2,18 +2,7 @@
   {
     "id": "TurnStart",
     "name": "Turn Start",
-    "description": "Initializes the beginning of a new turn",
-    "repeat_for_each_faction": false,
-    "hooks": {
-      "pre": [],
-      "post": [],
-      "replace": []
-    }
-  },
-  {
-    "id": "NewYearBegins",
-    "name": "New Year Begins",
-    "description": "Handles the start of a new mission year",
+    "description": "Increments the mission year, publishes EvTurnStarted, and refreshes unit moves",
     "repeat_for_each_faction": false,
     "hooks": {
       "pre": [],
@@ -88,17 +77,6 @@
     }
   },
   {
-    "id": "PlayerActions",
-    "name": "Player Actions",
-    "description": "Processes player actions during their turn",
-    "repeat_for_each_faction": true,
-    "hooks": {
-      "pre": [],
-      "post": [],
-      "replace": []
-    }
-  },
-  {
     "id": "WorldEvents",
     "name": "World Events",
     "description": "Handles random world events like mindworms and fungus",
@@ -114,6 +92,17 @@
     "name": "Victory Condition Checks",
     "description": "Checks if any faction has achieved victory",
     "repeat_for_each_faction": false,
+    "hooks": {
+      "pre": [],
+      "post": [],
+      "replace": []
+    }
+  },
+  {
+    "id": "PlayerActions",
+    "name": "Player Actions",
+    "description": "Executes pending unit orders at the end of the turn",
+    "repeat_for_each_faction": true,
     "hooks": {
       "pre": [],
       "post": [],

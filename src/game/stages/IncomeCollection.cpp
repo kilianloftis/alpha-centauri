@@ -10,12 +10,12 @@ namespace ac
 
 namespace { TurnStageRegistrar<IncomeCollection> g_registrar("IncomeCollection"); }
 
-IncomeCollection::IncomeCollection(std::shared_ptr<HookContext> pHookContext)
-    : PerFactionTurnStage(pHookContext)
+IncomeCollection::IncomeCollection(HookContext hookContext)
+    : PerFactionTurnStage(std::move(hookContext))
 {
 }
 
-void IncomeCollection::ExecuteImpl(GameState& rGameState, Faction& rFaction)
+StageResult_t IncomeCollection::ExecuteImpl(GameState& rGameState, Faction& rFaction)
 {
     (void)rGameState;
 
@@ -25,6 +25,7 @@ void IncomeCollection::ExecuteImpl(GameState& rGameState, Faction& rFaction)
 
     std::cout << "  Faction income: " << totalIncome
               << ", total energy: " << rFaction.GetEconomy().GetEnergy() << "\n";
+    return StageResult_t::Continue;
 }
 
 } // namespace ac

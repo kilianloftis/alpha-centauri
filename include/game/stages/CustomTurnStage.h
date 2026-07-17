@@ -16,11 +16,11 @@ namespace ac
 class CustomGlobalTurnStage : public GlobalTurnStage
 {
 public:
-    CustomGlobalTurnStage(std::shared_ptr<HookContext> pHookContext, const std::string& name);
+    CustomGlobalTurnStage(HookContext hookContext, const std::string& name);
     ~CustomGlobalTurnStage() = default;
 
 protected:
-    void ExecuteImpl(GameState& rGameState) override { (void)rGameState; }
+    StageResult_t ExecuteImpl(GameState& rGameState) override { (void)rGameState; return StageResult_t::Continue; }
 
 private:
     std::string m_name;
@@ -29,11 +29,11 @@ private:
 class CustomPerFactionTurnStage : public PerFactionTurnStage
 {
 public:
-    CustomPerFactionTurnStage(std::shared_ptr<HookContext> pHookContext, const std::string& name);
+    CustomPerFactionTurnStage(HookContext hookContext, const std::string& name);
     ~CustomPerFactionTurnStage() = default;
 
 protected:
-    void ExecuteImpl(GameState& rGameState, Faction& rFaction) override { (void)rGameState; (void)rFaction; }
+    StageResult_t ExecuteImpl(GameState& rGameState, Faction& rFaction) override { (void)rGameState; (void)rFaction; return StageResult_t::Continue; }
 
 private:
     std::string m_name;

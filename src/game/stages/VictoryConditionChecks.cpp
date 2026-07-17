@@ -8,15 +8,16 @@ namespace ac
 
 namespace { TurnStageRegistrar<VictoryConditionChecks> g_registrar("VictoryConditionChecks"); }
 
-VictoryConditionChecks::VictoryConditionChecks(std::shared_ptr<HookContext> pHookContext)
-    : GlobalTurnStage(pHookContext)
+VictoryConditionChecks::VictoryConditionChecks(HookContext hookContext)
+    : GlobalTurnStage(std::move(hookContext))
 {
 }
 
-void VictoryConditionChecks::ExecuteImpl(GameState& rGameState)
+StageResult_t VictoryConditionChecks::ExecuteImpl(GameState& rGameState)
 {
     (void)rGameState;
     std::cout << "Executing VictoryConditionChecks stage\n";
+    return StageResult_t::Continue;
 }
 
 } // namespace ac

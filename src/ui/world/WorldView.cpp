@@ -12,6 +12,7 @@
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitOrder.h"
+#include "game/units/UnitOrderExecutor.h"
 #include "ui/TileHitTester.h"
 #include "graphics/Graphics.h"
 #include <string>
@@ -89,6 +90,7 @@ void WorldView::Update_()
     static_cast<InfoPanelElement*>(m_elements[k_InfoPanelElementIndex].get())->SetInfoLines(infoLines);
 
     m_pWorldDisplay->SetSelectedUnit(m_pSelectedUnit);
+    m_pWorldDisplay->SetPathPreview(m_pUnitOrderInputController->GetPathPreview());
 }
 
 bool WorldView::HandleKey(const KeyEvent_t& rEvent)
@@ -133,12 +135,18 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
     const int worldY = tile ? tile->second + camY : k_InvalidTileCoord;
     const Tile* pClickedTile = m_rGameState.GetWorldMap().GetTile(worldX, worldY);
 
-    if (m_pUnitOrderInputController->HandleMouse(rEvent, GetControllableSelectedUnit_(), pClickedTile))
+    Unit* pControllable = GetControllableSelectedUnit_();
+    if (m_pUnitOrderInputController->HandleMouse(rEvent, pControllable, pClickedTile,
+                                                 &m_rGameState.GetPathfinder()))
     {
+        if (pControllable && pControllable->GetOrder().has_value())
+        {
+            m_rGameState.GetUnitOrderExecutor().Execute(*pControllable);
+        }
         return;
     }
 
-    if (rEvent.button == MouseButton_t::Left && rEvent.bPressed && tile)
+    if (rEvent.button == MouseButton_t::Left && !rEvent.bPressed && tile)
     {
         const Faction* pPlayer = m_rGameState.GetPlayerFaction();
         const FactionExploredMap* pExplored =

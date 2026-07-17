@@ -7,6 +7,7 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/units/Pathfinder.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 #include <algorithm>
@@ -30,6 +31,7 @@ constexpr float k_UnitMarkerWidthRatio          = 0.22f;
 constexpr float k_UnitMarkerHeightRatio         = 0.22f;
 constexpr float k_UnitMarkerSpacingRatio        = 0.03f;
 constexpr Color_t k_UnitMarkerColor               {0, 220, 255, 255};
+constexpr Color_t k_UnitMarkerExhaustedColor      {0, 110, 130, 200};
 constexpr Color_t k_SensorMarkerColor             {40, 220, 120, 255};
 constexpr float k_SensorMarkerFontSizeRatio       = 0.22f;
 constexpr float k_SensorMarkerWidthRatio          = 0.28f;
@@ -48,6 +50,7 @@ constexpr int   k_RockinessFlatValue            = 0;
 constexpr Color_t k_TileBorderColor               {80, 80, 80, 255};
 constexpr Color_t k_ShroudColor                   {0, 0, 0, 255};
 constexpr Color_t k_FogTerrainColor               {110, 110, 110, 255};
+constexpr Color_t k_PathPreviewColor              {255, 255, 100, 60};
 constexpr float k_TileBorderWidth               = -1.0f;
 constexpr int   k_ElevationMetersPerKm          = 1000;
 constexpr unsigned int k_TileFontSize           = 14;
@@ -84,6 +87,11 @@ WorldDisplay::WorldDisplay(const GameState& rGameState, WindowLayout_t layout)
 const WorldMap& WorldDisplay::GetWorldMap_() const
 {
     return m_rGameState.GetWorldMap();
+}
+
+void WorldDisplay::SetPathPreview(const Path_t* pPath)
+{
+    m_pPathPreview = pPath;
 }
 
 void WorldDisplay::SetSelectedUnit(const Unit* pUnit)
@@ -212,6 +220,33 @@ void WorldDisplay::RenderSensors_(Graphics& rGraphics, int colStart, int rowStar
     }
 }
 
+void WorldDisplay::RenderPathPreview_(Graphics& rGraphics, int colStart, int rowStart,
+                                      int colEnd, int rowEnd)
+{
+    if (!m_pPathPreview || m_pPathPreview->tiles.empty())
+    {
+        return;
+    }
+
+    for (const Tile* pTile : m_pPathPreview->tiles)
+    {
+        if (!pTile)
+        {
+            continue;
+        }
+        const int col = pTile->GetX();
+        const int row = pTile->GetY();
+        if (col < colStart || col >= colEnd || row < rowStart || row >= rowEnd)
+        {
+            continue;
+        }
+        const float tileX = m_layout.x + ((col - colStart) * m_effectiveTileSize);
+        const float tileY = m_layout.y + ((row - rowStart) * m_effectiveTileSize);
+        rGraphics.DrawFilledRect(tileX, tileY, m_effectiveTileSize, m_effectiveTileSize,
+                                 k_PathPreviewColor);
+    }
+}
+
 void WorldDisplay::RenderUnits_(Graphics& rGraphics, int colStart, int rowStart, int colEnd, int rowEnd)
 {
     const WorldMap& rWorldMap = GetWorldMap_();
@@ -262,13 +297,16 @@ void WorldDisplay::RenderUnits_(Graphics& rGraphics, int colStart, int rowStart,
                 const float offsetY = tileSize - markerHeight - spacing;
                 ++drawn;
 
+                const bool bExhausted = pUnit->GetMoveFragmentsRemaining() <= 0;
+                const Color_t& markerColor = bExhausted ? k_UnitMarkerExhaustedColor : k_UnitMarkerColor;
+
                 // TODO: Use faction color based on pUnit->GetFaction().
                 rGraphics.DrawFilledRect(
                     tileX + offsetX,
                     tileY + offsetY,
                     markerWidth,
                     markerHeight,
-                    k_UnitMarkerColor);
+                    markerColor);
 
                 if (pUnit == m_pSelectedUnit)
                 {
@@ -338,6 +376,7 @@ void WorldDisplay::Render(Graphics& rGraphics)
     }
 
     RenderBases_(rGraphics, colStart, rowStart, colEnd, rowEnd);
+    RenderPathPreview_(rGraphics, colStart, rowStart, colEnd, rowEnd);
     RenderSensors_(rGraphics, colStart, rowStart, colEnd, rowEnd);
     RenderUnits_(rGraphics, colStart, rowStart, colEnd, rowEnd);
 }

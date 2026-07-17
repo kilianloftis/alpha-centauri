@@ -8,11 +8,11 @@ namespace ac
 class Upkeep : public PerFactionTurnStage
 {
 public:
-    explicit Upkeep(std::shared_ptr<HookContext> pHookContext);
+    explicit Upkeep(HookContext hookContext);
     ~Upkeep() = default;
 
 protected:
-    void ExecuteImpl(GameState& rGameState, Faction& rFaction) override;
+    StageResult_t ExecuteImpl(GameState& rGameState, Faction& rFaction) override;
 };
 
 } // namespace ac

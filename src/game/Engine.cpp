@@ -60,7 +60,6 @@ namespace ac
 Engine::Engine()
     : m_pGraphics(CreateGraphics())
     , m_pInput(CreateInput())
-    , m_eventBus(std::make_unique<EventBus>())
     , m_gameDataContext(std::make_unique<GameDataContext>())
 {
     if (!m_pGraphics)
@@ -112,31 +111,13 @@ void Engine::ProcessTurn_()
         throw std::logic_error("Engine::ProcessTurn_ called while an overlay view is active");
     }
 
-    m_eventBus->Publish(EvTurnStarted{ m_gameState->GetMissionYear() });
-    m_turnProcessor->ProcessTurn(*m_gameState);
-    m_gameState->IncrementMissionYear();
+    // Runs until a stage yields for interaction; turn boundaries are handled inside stages.
+    m_turnProcessor->Advance(*m_pGameState);
 }
 
 void Engine::Initialize_()
 {
     std::cout << "Initializing game engine...\n";
-
-    // Create EventBridge
-    m_eventBridge = std::make_unique<EventBridge>(*m_eventBus);
-
-    // Subscribe to population events for testing
-    m_eventBus->Subscribe([](const GameEvent& event) {
-        if (auto* pGained = std::get_if<EvBaseGainedPop>(&event))
-        {
-            std::cout << "[EVENT] Base " << pGained->baseId << " (Faction " << pGained->factionId
-                      << ") gained a pop! New size: " << pGained->newSize << "\n";
-        }
-        else if (auto* pLost = std::get_if<EvBaseLostPop>(&event))
-        {
-            std::cout << "[EVENT] Base " << pLost->baseId << " (Faction " << pLost->factionId
-                      << ") lost a pop! New size: " << pLost->newSize << "\n";
-        }
-    });
 
     m_gameDataContext->popTypeRegistry = std::make_unique<PopTypeRegistry>();
     m_gameDataContext->popTypeRegistry->Load("config/pop_types.json");
@@ -220,14 +201,28 @@ void Engine::Initialize_()
     worldConfig.height = 20;
     worldConfig.minElevation = -1000;
     worldConfig.maxElevation = 4000;
-    m_gameState = std::make_unique<GameState>(worldGen.Generate(worldConfig),
+    m_pGameState = std::make_unique<GameState>(worldGen.Generate(worldConfig),
                                               *m_gameDataContext->improvementRegistry,
                                               m_gameDataContext->unitComponentRegistry.get());
-    std::cout << "Generated world map: " << m_gameState->GetWorldMap().GetWidth() << "x" << m_gameState->GetWorldMap().GetHeight() << "\n";
+    std::cout << "Generated world map: " << m_pGameState->GetWorldMap().GetWidth() << "x" << m_pGameState->GetWorldMap().GetHeight() << "\n";
+
+    m_eventBridge = std::make_unique<EventBridge>(m_pGameState->GetEventBus());
+    m_pGameState->GetEventBus().Subscribe([](const GameEvent& event) {
+        if (auto* pGained = std::get_if<EvBaseGainedPop>(&event))
+        {
+            std::cout << "[EVENT] Base " << pGained->baseId << " (Faction " << pGained->factionId
+                      << ") gained a pop! New size: " << pGained->newSize << "\n";
+        }
+        else if (auto* pLost = std::get_if<EvBaseLostPop>(&event))
+        {
+            std::cout << "[EVENT] Base " << pLost->baseId << " (Faction " << pLost->factionId
+                      << ") lost a pop! New size: " << pLost->newSize << "\n";
+        }
+    });
 
     // Create factions from config with a starting base each.
-    const int centerX = m_gameState->GetWorldMap().GetWidth() / 2;
-    const int centerY = m_gameState->GetWorldMap().GetHeight() / 2;
+    const int centerX = m_pGameState->GetWorldMap().GetWidth() / 2;
+    const int centerY = m_pGameState->GetWorldMap().GetHeight() / 2;
     const std::vector<std::pair<int, int>> startPositions = {
         {centerX, centerY},
         {centerX + 3, centerY + 3},
@@ -241,7 +236,7 @@ void Engine::Initialize_()
         // GameState::GetPlayerFaction() searches for.
         const bool bIsPlayerControlled = (positionIndex == 0);
         auto pFaction = std::make_unique<Faction>(
-            m_gameState->AllocateFactionId(),
+            m_pGameState->AllocateFactionId(),
             bIsPlayerControlled,
             rFactionConfig,
             m_gameDataContext->buildingRegistry.get(),
@@ -253,14 +248,14 @@ void Engine::Initialize_()
 
         const auto& [startX, startY] = startPositions[positionIndex % startPositions.size()];
         BaseManager* pBase = pFaction->CreateBase(
-            m_gameState->AllocateBaseId(), pFaction->SuggestBaseName(),
-            m_gameState->GetWorldMap().GetTile(startX, startY),
+            m_pGameState->AllocateBaseId(), pFaction->SuggestBaseName(),
+            m_pGameState->GetWorldMap().GetTile(startX, startY),
             *m_gameDataContext,
-            m_gameState->GetTileEffects(),
-            m_gameState->GetSecretProjectAvailability());
+            m_pGameState->GetTileEffects(),
+            m_pGameState->GetSecretProjectAvailability());
 
         m_eventBridge->WireBase(*pBase);
-        Faction& rFaction = m_gameState->AddFaction(std::move(pFaction));
+        Faction& rFaction = m_pGameState->AddFaction(std::move(pFaction));
 
         // Temporary test units on the player faction so fog-of-war vision is easy to see.
         if (bIsPlayerControlled)
@@ -300,14 +295,14 @@ void Engine::Initialize_()
                 throw std::runtime_error("Engine setup: failed to add deep-radar scout design");
             }
 
-            WorldMap& rMap = m_gameState->GetWorldMap();
+            WorldMap& rMap = m_pGameState->GetWorldMap();
             UnitPositionIndex& rPositions = rMap.GetUnitPositions();
             // Basic vision-1 scout beside the base; deep-radar (vision 2) a little farther out.
             rFaction.GetUnitManager().CreateUnit(
-                m_gameState->AllocateUnitId(), rBasicDesign, rPositions,
+                m_pGameState->AllocateUnitId(), rBasicDesign, rPositions,
                 *rMap.GetTile(startX + 1, startY), pBase);
             rFaction.GetUnitManager().CreateUnit(
-                m_gameState->AllocateUnitId(), rRadarDesign, rPositions,
+                m_pGameState->AllocateUnitId(), rRadarDesign, rPositions,
                 *rMap.GetTile(startX + 2, startY), pBase);
         }
 
@@ -315,13 +310,13 @@ void Engine::Initialize_()
     }
 
     // Bases were founded before AddFaction wired OnBaseListChanged, so rebuild once now.
-    m_gameState->RebuildTerritory();
+    m_pGameState->RebuildTerritory();
 
     // Temporary test Sensors: one in each faction's territory (south of their starting base).
     {
-        WorldMap& rMap = m_gameState->GetWorldMap();
-        TileEffectsContext& rTileEffects = m_gameState->GetTileEffects();
-        for (Faction& rFaction : m_gameState->Factions())
+        WorldMap& rMap = m_pGameState->GetWorldMap();
+        TileEffectsContext& rTileEffects = m_pGameState->GetTileEffects();
+        for (Faction& rFaction : m_pGameState->Factions())
         {
             for (BaseManager& rBase : rFaction.Bases())
             {
@@ -339,14 +334,14 @@ void Engine::Initialize_()
             }
         }
         // Sensors are vision sources; rebuild fog after placing them.
-        for (Faction& rFaction : m_gameState->Factions())
+        for (Faction& rFaction : m_pGameState->Factions())
         {
             rFaction.RebuildVisibility();
         }
     }
 
-    std::cout << "Test setup complete. " << m_gameState->GetNumFactions() << " faction(s), "
-              << m_gameState->GetPlayerFaction()->GetBaseCount() << " base(s)\n";
+    std::cout << "Test setup complete. " << m_pGameState->GetNumFactions() << " faction(s), "
+              << m_pGameState->GetPlayerFaction()->GetBaseCount() << " base(s)\n";
 
     m_turnStageFactory = std::make_unique<TurnStageFactory>();
     m_turnStageFactory->LoadConfig("config/turn_stages.json");
@@ -360,7 +355,7 @@ void Engine::Initialize_()
         std::move(registries.global), std::move(registries.perFaction), std::move(stageOrder));
 
     m_viewFactory = std::make_unique<ViewFactory>(
-        *m_gameState,
+        *m_pGameState,
         *m_gameDataContext,
         *m_pGraphics);
 
@@ -382,6 +377,9 @@ void Engine::Initialize_()
         return m_viewFactory->CreateUnitDesignerView(fullscreen);
     });
     m_uiManager->SetWorldView(std::move(pWorldView));
+
+    // Start processing until the first interactive yield.
+    m_turnProcessor->Advance(*m_pGameState);
 }
 
 void Engine::PrintWelcome_() const
