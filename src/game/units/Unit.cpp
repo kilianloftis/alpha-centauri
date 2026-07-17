@@ -71,7 +71,8 @@ UnitDomain_t Unit::GetDomain() const
 
 const Tile& Unit::GetTile() const                                      { return *m_pTile; }
 BaseManager* Unit::GetHomeBase() const      { return m_pHomeBase; }
-Faction& Unit::GetFaction() const           { return m_rFaction; }
+Faction& Unit::GetFaction()                 { return m_rFaction; }
+const Faction& Unit::GetFaction() const     { return m_rFaction; }
 
 int Unit::GetCurrentHp() const              { return m_currentHp; }
 int Unit::GetCurrentFuel() const            { return m_currentFuel; }

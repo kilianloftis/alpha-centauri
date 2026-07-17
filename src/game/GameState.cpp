@@ -36,6 +36,12 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
     {
         throw std::invalid_argument("GameState: pWorldMap is null");
     }
+    // UnitPositionIndex owns position only; visibility rebuild stays on Faction (same
+    // pattern as create/destroy in UnitManager, and OnUnitDestroyed side effects here).
+    m_worldMap->GetUnitPositions().OnUnitMoved.Connect([](Unit& rMoved)
+    {
+        rMoved.GetFaction().RebuildVisibility();
+    });
     m_pTileEffects = std::make_unique<TileEffectsContext>(*m_worldMap, rImprovements, pUnitComponents);
     m_pMoveCosts = std::make_unique<MoveCostCalculator>(rImprovements);
     m_pSteps = std::make_unique<StepEvaluator>(*m_worldMap, *m_pTileEffects);

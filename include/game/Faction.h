@@ -131,8 +131,9 @@ public:
 
     // Fog of war: permanent explored memory and currently-visible tiles as separate maps.
     // BindWorldMap sizes both from the shared WorldMap; RebuildVisibility refreshes
-    // current vision from units/bases (and grows explored). Callers that change vision
-    // sources (unit create/move/destroy, base founding) invoke RebuildVisibility.
+    // current vision from units/bases (and grows explored). Unit create/destroy call it
+    // from UnitManager; moves reach it via UnitPositionIndex::OnUnitMoved (wired by
+    // GameState); base founding invokes it from AddBase.
     FactionExploredMap& GetExploredMap();
     const FactionExploredMap& GetExploredMap() const;
     FactionVisibleMap& GetVisibleMap();

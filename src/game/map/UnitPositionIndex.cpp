@@ -1,7 +1,6 @@
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/Tile.h"
 #include "game/units/Unit.h"
-#include "game/Faction.h"
 #include <algorithm>
 #include <stdexcept>
 
@@ -24,7 +23,7 @@ void UnitPositionIndex::MoveUnit(Unit& rUnit, const Tile& rNewTile)
     RemoveFromTile_(rUnit);
     m_index[&rNewTile].push_back(&rUnit);
     rUnit.m_pTile = &rNewTile;
-    rUnit.GetFaction().RebuildVisibility();
+    OnUnitMoved.Emit(rUnit);
 }
 
 void UnitPositionIndex::Register_(Unit& rUnit, const Tile& rTile)

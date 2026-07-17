@@ -127,6 +127,11 @@ struct FactionFixture : BaseFixture
         dataContext.socialPolicyRegistry->Load(FixturePath("social_policies.json"));
         dataContext.socialRatingRegistry = std::make_unique<ac::SocialRatingRegistry>();
         dataContext.socialRatingRegistry->Load(FixturePath("social_rating_effects.json"));
+        // Mirror GameState: index emits OnUnitMoved; faction rebuilds visibility.
+        map.GetUnitPositions().OnUnitMoved.Connect([](ac::Unit& rMoved)
+        {
+            rMoved.GetFaction().RebuildVisibility();
+        });
     }
 
     ac::SocialPolicyRegistry& socialPolicies() { return *dataContext.socialPolicyRegistry; }

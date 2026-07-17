@@ -80,6 +80,30 @@ TEST_CASE("DestroyUnit emits OnUnitDestroyed before the unit is removed", "[unit
     CHECK(pDestroyed == &unit);
 }
 
+TEST_CASE("MoveUnit emits OnUnitMoved after updating occupancy", "[unit][signal]")
+{
+    FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+
+    Unit* pMoved = nullptr;
+    const Tile* pTileAtEmit = nullptr;
+    fixture.map.GetUnitPositions().OnUnitMoved.Connect([&](Unit& rUnit) {
+        pMoved = &rUnit;
+        pTileAtEmit = &rUnit.GetTile();
+    });
+
+    fixture.map.GetUnitPositions().MoveUnit(unit, fixture.At(5, 4));
+
+    CHECK(pMoved == &unit);
+    CHECK(pTileAtEmit == &fixture.At(5, 4));
+
+    // Same-tile move is a no-op and must not re-emit.
+    pMoved = nullptr;
+    fixture.map.GetUnitPositions().MoveUnit(unit, fixture.At(5, 4));
+    CHECK(pMoved == nullptr);
+}
+
 TEST_CASE("Moving a unit keeps its tile pointer and the index in sync", "[unit][index]")
 {
     FactionFixture fixture;

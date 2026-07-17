@@ -45,7 +45,8 @@ public:
 
     const Tile& GetTile() const;
     BaseManager* GetHomeBase() const;
-    Faction& GetFaction() const;
+    Faction& GetFaction();
+    const Faction& GetFaction() const;
 
     int GetCurrentHp() const;
     int GetCurrentFuel() const;
