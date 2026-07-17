@@ -1,7 +1,9 @@
 #include "ui/world/WorldView.h"
 #include <algorithm>
 #include "ui/world/InfoPanelElement.h"
+#include "ui/world/EndTurnButton.h"
 #include "game/GameState.h"
+#include "game/GameSettings.h"
 #include "game/Faction.h"
 #include "game/faction/FactionExploredMap.h"
 #include "game/faction/UnitVisibility.h"
@@ -24,11 +26,13 @@ namespace ac
 namespace
 {
 
-constexpr RatioLayout_t k_MapLayout      {0.0f, 0.0f, 1.0f, 0.867f};
-constexpr RatioLayout_t k_InfoPanelLayout{0.0f, 0.867f, 1.0f, 0.133f};
-constexpr Color_t k_ResearchTextColor      {100, 200, 255, 255};
-constexpr size_t k_InfoPanelElementIndex = 0;
-constexpr int    k_InvalidTileCoord      = -1;
+constexpr RatioLayout_t k_MapLayout       {0.0f, 0.0f, 1.0f, 0.867f};
+constexpr RatioLayout_t k_InfoPanelLayout {0.0f, 0.867f, 1.0f, 0.133f};
+// Right side, just above the bottom info panel.
+constexpr RatioLayout_t k_EndTurnLayout   {0.82f, 0.80f, 0.16f, 0.055f};
+constexpr Color_t k_ResearchTextColor       {100, 200, 255, 255};
+constexpr size_t k_InfoPanelElementIndex  = 0;
+constexpr int    k_InvalidTileCoord       = -1;
 
 } // namespace
 
@@ -51,6 +55,12 @@ WorldView::WorldView(
 , m_pUnitOrderInputController(std::make_unique<UnitOrderInputController>())
 {
     m_elements.push_back(std::make_unique<InfoPanelElement>(ResolveLayout(m_layout, k_InfoPanelLayout)));
+
+    auto pEndTurn = std::make_unique<EndTurnButton>(
+        ResolveLayout(m_layout, k_EndTurnLayout),
+        [this]() { m_onProcessTurn(); });
+    m_pEndTurnButton = pEndTurn.get();
+    m_elements.push_back(std::move(pEndTurn));
 
     // Every faction exists by the time WorldView is constructed (Engine::Initialize_ creates
     // them all up front) and none are added later, so wiring here covers unit death for the
@@ -78,6 +88,39 @@ void WorldView::UpdateCameraInput(bool bEnabled)
     m_pCameraInputController->Update(bEnabled);
 }
 
+bool WorldView::PlayerUnitsNeedOrders_() const
+{
+    const Faction* pPlayer = m_rGameState.GetPlayerFaction();
+    if (!pPlayer)
+    {
+        return false;
+    }
+    return pPlayer->GetUnitManager().HasUnitsRequiringOrders();
+}
+
+void WorldView::SelectNextAvailableUnitIfNeeded_()
+{
+    const Faction* pPlayer = m_rGameState.GetPlayerFaction();
+    if (!pPlayer)
+    {
+        return;
+    }
+
+    // Keep the current selection while it still needs orders.
+    if (m_pSelectedUnit
+        && m_pSelectedUnit->GetFaction().IsPlayerControlled()
+        && !m_pSelectedUnit->GetOrder().has_value()
+        && m_pSelectedUnit->GetMoveFragmentsRemaining() > 0)
+    {
+        return;
+    }
+
+    if (Unit* pNext = pPlayer->GetUnitManager().GetNextAvailableUnit())
+    {
+        m_pSelectedUnit = pNext;
+    }
+}
+
 void WorldView::Update_()
 {
     std::vector<InfoPanelElement::InfoLine> infoLines;
@@ -88,6 +131,28 @@ void WorldView::Update_()
         infoLines.push_back({"Research: " + std::to_string(pPlayerFaction->GetResearch().GetAccumulatedPoints()), k_ResearchTextColor});
     }
     static_cast<InfoPanelElement*>(m_elements[k_InfoPanelElementIndex].get())->SetInfoLines(infoLines);
+
+    SelectNextAvailableUnitIfNeeded_();
+
+    const bool bNeedOrders = PlayerUnitsNeedOrders_();
+    const bool bPauseAtEnd = m_rGameState.GetSettings().IsPauseAtEndOfTurn();
+
+    if (m_pEndTurnButton)
+    {
+        // Ready highlight only when pause-at-end is on and the interaction phase is finished.
+        m_pEndTurnButton->SetReady(bPauseAtEnd && !bNeedOrders);
+    }
+
+    // When pause is off, advance automatically once the last unit that needed orders is done.
+    if (!bPauseAtEnd && m_bHadUnitsNeedingOrders && !bNeedOrders)
+    {
+        m_bHadUnitsNeedingOrders = false;
+        m_onProcessTurn();
+    }
+    else
+    {
+        m_bHadUnitsNeedingOrders = bNeedOrders;
+    }
 
     m_pWorldDisplay->SetSelectedUnit(m_pSelectedUnit);
     m_pWorldDisplay->SetPathPreview(m_pUnitOrderInputController->GetPathPreview());
@@ -121,6 +186,21 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
 
 void WorldView::HandleMouse(const MouseEvent_t& rEvent)
 {
+    // UI chrome (End Turn) above the map takes priority over tile/unit input.
+    if (rEvent.bPressed)
+    {
+        const float x = static_cast<float>(rEvent.x);
+        const float y = static_cast<float>(rEvent.y);
+        for (int i = static_cast<int>(m_elements.size()) - 1; i >= 0; --i)
+        {
+            if (m_elements[static_cast<size_t>(i)]->Contains(x, y))
+            {
+                m_elements[static_cast<size_t>(i)]->HandleMouseClick(rEvent);
+                return;
+            }
+        }
+    }
+
     const float tileSize = m_pWorldDisplay->GetEffectiveTileSize();
     const int camX = m_pWorldDisplay->GetCameraX();
     const int camY = m_pWorldDisplay->GetCameraY();

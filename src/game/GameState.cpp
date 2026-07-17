@@ -1,5 +1,6 @@
 #include "game/GameState.h"
 
+#include "game/GameSettings.h"
 #include "game/faction/FactionIdentity.h"
 #include "game/faction/AIProfile.h"
 #include "game/faction/Military.h"
@@ -23,8 +24,10 @@ static constexpr int k_StartingMissionYear = 2099;
 
 GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
                      const ImprovementRegistry& rImprovements,
-                     const UnitComponentRegistry* pUnitComponents)
+                     const UnitComponentRegistry* pUnitComponents,
+                     GameSettings& rSettings)
     : m_missionYear(k_StartingMissionYear)
+    , m_rSettings(rSettings)
     , m_pEventBus(std::make_unique<EventBus>())
     , m_worldMap(std::move(pWorldMap))
     , m_secretProjectAvailability(*this)
@@ -42,6 +45,16 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
 }
 
 GameState::~GameState() = default;
+
+GameSettings& GameState::GetSettings()
+{
+    return m_rSettings;
+}
+
+const GameSettings& GameState::GetSettings() const
+{
+    return m_rSettings;
+}
 
 int GameState::GetMissionYear() const
 {

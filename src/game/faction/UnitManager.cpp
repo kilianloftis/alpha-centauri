@@ -65,4 +65,9 @@ Unit* UnitManager::GetNextAvailableUnit() const
     return nullptr;
 }
 
+bool UnitManager::HasUnitsRequiringOrders() const
+{
+    return GetNextAvailableUnit() != nullptr;
+}
+
 } // namespace ac

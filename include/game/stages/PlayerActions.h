@@ -17,9 +17,9 @@ protected:
     StageResult_t ExecuteImpl(GameState& rGameState, Faction& rFaction) override;
 
 private:
-    // Player-faction re-entrancy: first call always Yields for interaction. Enter resumes
-    // and resolves pending orders; if a unit finishes still needing orders, Yield again.
-    // Once the pass completes, Continue — Enter ends the phase even if other units were
+    // Player-faction re-entrancy: first call always Yields for interaction. Enter / End Turn
+    // resumes and resolves pending orders; if a unit finishes still needing orders, Yield
+    // again. Once the pass completes, Continue — ending the phase even if other units were
     // left unordered.
     enum class Phase_t
     {

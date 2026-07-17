@@ -12,6 +12,7 @@
 #include "game/map/UnitPositionIndex.h"
 #include "game/effects/EffectEnums.h"
 #include "game/GameState.h"
+#include "game/GameSettings.h"
 #include "game/stages/TurnStart.h"
 
 #include <algorithm>
@@ -443,7 +444,9 @@ TEST_CASE("TurnStart restores move fragments", "[movement][turn]")
     Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
     unit.SetMoveFragmentsRemaining(0);
 
-    GameState state(std::make_unique<WorldMap>(3, 3), fixture.improvements, &fixture.unitComponents);
+    GameSettings settings;
+    GameState state(std::make_unique<WorldMap>(3, 3), fixture.improvements, &fixture.unitComponents,
+                    settings);
     state.AddFaction(std::move(fixture.factions[0]));
 
     TurnStart stage(HookContext{});

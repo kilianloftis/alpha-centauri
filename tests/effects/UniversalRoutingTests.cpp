@@ -9,6 +9,7 @@
 #include "TestHelpers.h"
 
 #include "game/GameState.h"
+#include "game/GameSettings.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/units/Unit.h"
@@ -98,7 +99,9 @@ TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other fact
           "[effects][routing][world]")
 {
     actest::FactionFixture fixture;
-    GameState state(std::make_unique<WorldMap>(9, 9), fixture.improvements, &fixture.unitComponents);
+    GameSettings settings;
+    GameState state(std::make_unique<WorldMap>(9, 9), fixture.improvements, &fixture.unitComponents,
+                    settings);
 
     Faction& factionA = state.AddFaction(std::make_unique<Faction>(
                                                1, /*bIsPlayerControlled*/ true, fixture.factionDefinition,

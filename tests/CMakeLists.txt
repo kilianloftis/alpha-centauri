@@ -39,6 +39,7 @@ add_executable(effects-tests
     game/TerritoryTests.cpp
     game/WorkerAssignmentTests.cpp
     game/TurnProcessorTests.cpp
+    game/GameSettingsTests.cpp
     game/RequiredTechValidatorTests.cpp
 )
 

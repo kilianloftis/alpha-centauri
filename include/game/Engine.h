@@ -14,6 +14,7 @@ class EventBridge;
 class GameDataContext;
 class ViewFactory;
 class UIManager;
+class GameSettings;
 
 class Engine
 {
@@ -30,6 +31,7 @@ private:
 
     std::unique_ptr<Graphics> m_pGraphics;
     std::unique_ptr<Input> m_pInput;
+    std::unique_ptr<GameSettings> m_pSettings;
     std::unique_ptr<TurnStageFactory> m_turnStageFactory;
     std::unique_ptr<TurnProcessor> m_turnProcessor;
     std::unique_ptr<GameState> m_pGameState;

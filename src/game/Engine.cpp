@@ -1,5 +1,6 @@
 #include "game/Engine.h"
 #include "game/GameState.h"
+#include "game/GameSettings.h"
 #include "game/Faction.h"
 #include "game/TurnStageFactory.h"
 #include "game/TurnProcessor.h"
@@ -60,6 +61,7 @@ namespace ac
 Engine::Engine()
     : m_pGraphics(CreateGraphics())
     , m_pInput(CreateInput())
+    , m_pSettings(std::make_unique<GameSettings>())
     , m_gameDataContext(std::make_unique<GameDataContext>())
 {
     if (!m_pGraphics)
@@ -118,6 +120,8 @@ void Engine::ProcessTurn_()
 void Engine::Initialize_()
 {
     std::cout << "Initializing game engine...\n";
+
+    m_pSettings->Load();
 
     m_gameDataContext->popTypeRegistry = std::make_unique<PopTypeRegistry>();
     m_gameDataContext->popTypeRegistry->Load("config/pop_types.json");
@@ -203,7 +207,8 @@ void Engine::Initialize_()
     worldConfig.maxElevation = 4000;
     m_pGameState = std::make_unique<GameState>(worldGen.Generate(worldConfig),
                                               *m_gameDataContext->improvementRegistry,
-                                              m_gameDataContext->unitComponentRegistry.get());
+                                              m_gameDataContext->unitComponentRegistry.get(),
+                                              *m_pSettings);
     std::cout << "Generated world map: " << m_pGameState->GetWorldMap().GetWidth() << "x" << m_pGameState->GetWorldMap().GetHeight() << "\n";
 
     m_eventBridge = std::make_unique<EventBridge>(m_pGameState->GetEventBus());
@@ -357,7 +362,8 @@ void Engine::Initialize_()
     m_viewFactory = std::make_unique<ViewFactory>(
         *m_pGameState,
         *m_gameDataContext,
-        *m_pGraphics);
+        *m_pGraphics,
+        *m_pSettings);
 
     const WindowLayout_t fullscreen = m_viewFactory->GetFullscreenLayout();
 
@@ -375,6 +381,9 @@ void Engine::Initialize_()
     });
     m_uiManager->RegisterViewShortcut(Key_t::U, [this, fullscreen]() -> std::unique_ptr<IGameView> {
         return m_viewFactory->CreateUnitDesignerView(fullscreen);
+    });
+    m_uiManager->RegisterViewShortcut(Key_t::O, [this, fullscreen]() -> std::unique_ptr<IGameView> {
+        return m_viewFactory->CreateSettingsView(fullscreen);
     });
     m_uiManager->SetWorldView(std::move(pWorldView));
 

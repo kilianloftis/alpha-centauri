@@ -32,7 +32,9 @@ public:
     // Iterate units by reference without exposing the owning unique_ptrs.
     auto Units() { return DerefView(m_units); }
     auto Units() const { return DerefView(m_units); }
+    // First unit with moves remaining and no order, or nullptr.
     Unit* GetNextAvailableUnit() const;
+    bool HasUnitsRequiringOrders() const;
 
     // Bumped on every unit creation/destruction; consumed by effect-pool caches.
     uint64_t GetRevision() const { return m_revision.Get(); }

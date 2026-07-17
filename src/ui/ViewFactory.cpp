@@ -23,11 +23,13 @@ constexpr float k_FullscreenOriginY = 0.0f;
 ViewFactory::ViewFactory(
     GameState& rGameState,
     GameDataContext& rGameDataContext,
-    Graphics& rGraphics
+    Graphics& rGraphics,
+    GameSettings& rSettings
 )
     : m_rGameState(rGameState)
     , m_rGameDataContext(rGameDataContext)
     , m_rGraphics(rGraphics)
+    , m_rSettings(rSettings)
 {
 }
 
@@ -115,6 +117,13 @@ std::unique_ptr<UnitDesignerView> ViewFactory::CreateUnitDesignerView(
         &pFaction->GetUnitManager(),
         layout
     );
+}
+
+std::unique_ptr<SettingsView> ViewFactory::CreateSettingsView(
+    const WindowLayout_t& layout
+) const
+{
+    return std::make_unique<SettingsView>(m_rSettings, layout);
 }
 
 WindowLayout_t ViewFactory::GetFullscreenLayout() const

@@ -17,6 +17,7 @@ class BaseManager;
 class Graphics;
 class Unit;
 class WorldMap;
+class EndTurnButton;
 
 class WorldView : public IGameView
 {
@@ -40,8 +41,9 @@ public:
 private:
     void Update_();
     void SelectUnitAtTile_(int tileX, int tileY);
-    void ExecuteUnitOrder_(Unit& rUnit);
+    void SelectNextAvailableUnitIfNeeded_();
     Unit* GetControllableSelectedUnit_() const;
+    bool PlayerUnitsNeedOrders_() const;
 
     GameState& m_rGameState;
     const WindowLayout_t m_mapLayout;
@@ -51,9 +53,12 @@ private:
     OpenBaseCallback_t m_onOpenBase;
 
     Unit* m_pSelectedUnit = nullptr;
+    // Falling-edge detect for auto-advance when Pause at End of Turn is off.
+    bool m_bHadUnitsNeedingOrders = false;
 
     std::unique_ptr<CameraInputController> m_pCameraInputController;
     std::unique_ptr<UnitOrderInputController> m_pUnitOrderInputController;
+    EndTurnButton* m_pEndTurnButton = nullptr;
 };
 
 } // namespace ac

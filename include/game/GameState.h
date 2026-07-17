@@ -19,21 +19,27 @@ class ImprovementRegistry;
 class TileEffectsContext;
 class UnitComponentRegistry;
 class EventBus;
+class GameSettings;
 
 class GameState
 {
 public:
     // pUnitComponents sizes the aura scan for unit-projected ThisTile effects; may be null
     // if units never project auras. Throws if pWorldMap is null.
+    // rSettings is a non-owning reference to Engine-owned player preferences (not save state).
     GameState(std::unique_ptr<WorldMap> pWorldMap,
               const ImprovementRegistry& rImprovements,
-              const UnitComponentRegistry* pUnitComponents);
+              const UnitComponentRegistry* pUnitComponents,
+              GameSettings& rSettings);
     ~GameState();
 
     // Mission year
     int GetMissionYear() const;
     void SetMissionYear(int year);
     void IncrementMissionYear();
+
+    GameSettings& GetSettings();
+    const GameSettings& GetSettings() const;
 
     EventBus& GetEventBus();
     const EventBus& GetEventBus() const;
@@ -92,6 +98,7 @@ public:
 
 private:
     int m_missionYear;
+    GameSettings& m_rSettings;
     std::unique_ptr<EventBus> m_pEventBus;
     // WorldMap and TileEffectsContext are declared before m_factions so they outlive all
     // BaseManagers (which hold TileEffectsContext& references). Members are destroyed in

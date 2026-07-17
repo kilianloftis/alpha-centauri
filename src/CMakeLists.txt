@@ -4,6 +4,7 @@
 # ---------------------------------------------------------------------------
 add_library(ac-core STATIC
     game/GameState.cpp
+    game/GameSettings.cpp
     game/GameDataContext.cpp
     game/EffectReferenceValidator.cpp
     game/RequiredTechValidator.cpp
@@ -190,6 +191,7 @@ add_executable(alpha-centauri
     ui/world/UnitOrderInputController.cpp
     ui/world/WorldDisplay.cpp
     ui/world/InfoPanelElement.cpp
+    ui/world/EndTurnButton.cpp
     ui/base/BaseView.cpp
     ui/base/BaseWorkableAreaDisplay.cpp
     ui/base/GrowthDisplay.cpp
@@ -199,6 +201,8 @@ add_executable(alpha-centauri
     ui/base/PopTypeSelectorPopup.cpp
     ui/research/ResearchView.cpp
     ui/research/CurrentResearchPanel.cpp
+    ui/settings/SettingsView.cpp
+    ui/settings/SettingsPanel.cpp
     ui/social-engineering/SocialEngineeringView.cpp
     ui/social-engineering/SocialEngineeringDisplay.cpp
     ui/social-engineering/SocialEngineeringBottomPanel.cpp

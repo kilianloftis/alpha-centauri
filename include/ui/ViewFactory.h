@@ -4,6 +4,7 @@
 #include "ui/IGameView.h"
 #include "ui/base/BaseView.h"
 #include "ui/research/ResearchView.h"
+#include "ui/settings/SettingsView.h"
 #include "ui/social-engineering/SocialEngineeringView.h"
 #include "ui/unit-designer/UnitDesignerView.h"
 #include "ui/world/WorldView.h"
@@ -15,6 +16,7 @@ namespace ac
 
 class GameState;
 class GameDataContext;
+class GameSettings;
 class Graphics;
 class BaseManager;
 class UnitSlotRegistry;
@@ -25,7 +27,8 @@ public:
     ViewFactory(
         GameState& rGameState,
         GameDataContext& rGameDataContext,
-        Graphics& rGraphics
+        Graphics& rGraphics,
+        GameSettings& rSettings
     );
 
     std::unique_ptr<WorldView> CreateWorldView(
@@ -54,12 +57,17 @@ public:
         const WindowLayout_t& layout
     ) const;
 
+    std::unique_ptr<SettingsView> CreateSettingsView(
+        const WindowLayout_t& layout
+    ) const;
+
     WindowLayout_t GetFullscreenLayout() const;
 
 private:
     GameState& m_rGameState;
     GameDataContext& m_rGameDataContext;
     Graphics& m_rGraphics;
+    GameSettings& m_rSettings;
 };
 
 } // namespace ac
