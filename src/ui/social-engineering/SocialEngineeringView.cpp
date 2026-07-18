@@ -25,7 +25,7 @@ SocialEngineeringView::SocialEngineeringView(
     ));
     m_elements.push_back(std::make_unique<SocialEngineeringBottomPanel>(
         m_pFaction,
-        ResolveLayout(m_layout, k_CenterPanelLayout)
+        ResolveLayout(m_layout, k_BottomPanelLayout)
     ));
 }
 

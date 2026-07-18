@@ -26,10 +26,6 @@ namespace ac
 namespace
 {
 
-constexpr RatioLayout_t k_MapLayout       {0.0f, 0.0f, 1.0f, 0.867f};
-constexpr RatioLayout_t k_InfoPanelLayout {0.0f, 0.867f, 1.0f, 0.133f};
-// Right side, just above the bottom info panel.
-constexpr RatioLayout_t k_EndTurnLayout   {0.82f, 0.80f, 0.16f, 0.055f};
 constexpr Color_t k_ResearchTextColor       {100, 200, 255, 255};
 constexpr size_t k_InfoPanelElementIndex  = 0;
 constexpr int    k_InvalidTileCoord       = -1;
@@ -54,10 +50,10 @@ WorldView::WorldView(
 , m_pCameraInputController(std::make_unique<CameraInputController>(*m_pWorldDisplay, rWorldMap, m_mapLayout))
 , m_pUnitOrderInputController(std::make_unique<UnitOrderInputController>())
 {
-    m_elements.push_back(std::make_unique<InfoPanelElement>(ResolveLayout(m_layout, k_InfoPanelLayout)));
+    m_elements.push_back(std::make_unique<InfoPanelElement>(ResolveLayout(m_layout, k_CenterPanelLayout)));
 
     auto pEndTurn = std::make_unique<EndTurnButton>(
-        ResolveLayout(m_layout, k_EndTurnLayout),
+        ResolveLayout(m_layout, k_RightButtonLayout),
         [this]() { m_onProcessTurn(); });
     m_pEndTurnButton = pEndTurn.get();
     m_elements.push_back(std::move(pEndTurn));

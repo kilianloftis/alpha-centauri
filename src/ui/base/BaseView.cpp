@@ -68,7 +68,7 @@ BaseView::BaseView(
     ));
     m_elements.push_back(std::make_unique<PopulationDisplay>(
         &m_rBase.GetPopulation(),
-        ResolveLayout(m_layout, k_CenterPanelLayout),
+        ResolveLayout(m_layout, k_BottomPanelLayout),
         std::move(onPopClick)
     ));
 }

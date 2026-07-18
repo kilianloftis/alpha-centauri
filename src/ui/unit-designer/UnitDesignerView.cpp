@@ -104,7 +104,7 @@ void UnitDesignerView::BuildDesignListPanel_()
 {
     m_elements.push_back(std::make_unique<DesignListPanel>(
         &m_rMilitary,
-        ResolveLayout(m_layout, k_CenterPanelLayout),
+        ResolveLayout(m_layout, k_BottomPanelLayout),
         [this](const UnitDesign* pDesign) { OnDesignSelected_(pDesign); }
     ));
 }
