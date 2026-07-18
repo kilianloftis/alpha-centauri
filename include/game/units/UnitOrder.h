@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <variant>
 
 namespace ac
@@ -14,17 +15,29 @@ struct MoveOrder_t
     // Reset whenever the unit enters a tile or charges a different one.
     const Tile* pChargeTile = nullptr;
     int chargeFragmentsPaid = 0;
+
+    std::string ToString() const;
 };
 
-struct HoldOrder_t {};
+struct HoldOrder_t
+{
+    std::string ToString() const;
+};
 
-struct HoldUntilHealedOrder_t {};
+struct HoldUntilHealedOrder_t
+{
+    std::string ToString() const;
+};
 
 struct HoldForTurnsOrder_t
 {
     int turnsRemaining;
+
+    std::string ToString() const;
 };
 
 using UnitOrder_t = std::variant<MoveOrder_t, HoldOrder_t, HoldUntilHealedOrder_t, HoldForTurnsOrder_t>;
+
+std::string ToString(const UnitOrder_t& rOrder);
 
 } // namespace ac

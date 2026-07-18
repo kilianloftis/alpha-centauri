@@ -46,6 +46,10 @@ public:
     // Domain of the design's chassis component (required on every valid design).
     UnitDomain_t GetDomain() const;
 
+    // SMAC-style combat rating: additive A-D-M with component display annotations
+    // (e.g. "2~-<3r>-1*2, ECM").
+    std::string FormatCombatRating() const;
+
 private:
     std::string m_id;
     std::string m_name;

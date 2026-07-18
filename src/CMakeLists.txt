@@ -57,6 +57,7 @@ add_library(ac-core STATIC
     game/buildings/SecretProjectAvailabilityCalculator.cpp
     game/units/Unit.cpp
     game/units/UnitDesign.cpp
+    game/units/UnitOrder.cpp
     game/units/UnitOrderExecutor.cpp
     game/units/MovementRules.cpp
     game/units/StepEvaluator.cpp
@@ -191,6 +192,7 @@ add_executable(alpha-centauri
     ui/world/UnitOrderInputController.cpp
     ui/world/WorldDisplay.cpp
     ui/world/InfoPanelElement.cpp
+    ui/world/SelectedUnitPanel.cpp
     ui/world/EndTurnButton.cpp
     ui/base/BaseView.cpp
     ui/base/BaseWorkableAreaDisplay.cpp

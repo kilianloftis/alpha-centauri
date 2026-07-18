@@ -30,6 +30,9 @@
         "scope": "ThisUnit",
         "parameters": { "stat": "cost_multiplier", "amount": 0.5, "op": "MultiplyGeometric" }
       }
+    ],
+    "combat_rating_modifiers": [
+      { "target": "rating", "suffix": "*2" }
     ]
   },
   {
@@ -49,6 +52,9 @@
         "scope": "ThisUnit",
         "parameters": { "stat": "cost_multiplier", "amount": 0.25, "op": "MultiplyGeometric" }
       }
+    ],
+    "combat_rating_modifiers": [
+      { "target": "rating", "suffix": "*3" }
     ]
   }
 ]

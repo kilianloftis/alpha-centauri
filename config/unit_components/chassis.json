@@ -2,6 +2,7 @@
   {
     "id": "Infantry",
     "name": "Infantry",
+    "unit_name": "Infantry",
     "type": "chassis",
     "domain": "land",
     "required_tech": "",
@@ -28,6 +29,7 @@
   {
     "id": "Speeder",
     "name": "Speeder",
+    "unit_name": "Speeder",
     "type": "chassis",
     "domain": "land",
     "required_tech": "test_tech_1",
@@ -53,6 +55,7 @@
   {
     "id": "Foil",
     "name": "Foil",
+    "unit_name": "Foil",
     "type": "chassis",
     "domain": "sea",
     "required_tech": "test_tech_2",
@@ -78,6 +81,7 @@
   {
     "id": "HoverTank",
     "name": "Hover Tank",
+    "unit_name": "Hovertank",
     "type": "chassis",
     "domain": "land",
     "required_tech": "test_tech_3",

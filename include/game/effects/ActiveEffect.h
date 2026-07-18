@@ -259,6 +259,10 @@ int ResolveStat(const UnitDesign& rDesign, StatId_t statId);
 int ResolveStat(const UnitDesign& rDesign, StatId_t statId, const EffectContext_t& rCtx);
 bool ResolveFlag(const UnitDesign& rDesign, RuleFlagId_t flagId);
 
+// Sum of ModifierOp_t::Add contributions only (component effects). Ignores AddPercent /
+// MultiplyGeometric — the SMAC-style base combat rating (e.g. laser 2, not 2 * 1.25).
+int ResolveAdditiveStat(const UnitDesign& rDesign, StatId_t statId);
+
 // A live unit's full effect list: design component effects plus the owner's FactionUnits
 // lane. Shared by ResolveStat / ResolveFlag and callers that need the same set (e.g.
 // concealment channels).

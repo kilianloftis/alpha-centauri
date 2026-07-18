@@ -41,20 +41,38 @@ UnitDesign::UnitDesign(
         }
     }
 
-    bool bFirst = true;
+    // Stable unique id from every filled slot (abilities included).
+    bool bFirstId = true;
     for (const auto& [rSlot, pComp] : m_slotComponents)
     {
-        // Include every filled slot (required and optional) so designs that differ only
-        // by ability get distinct ids — e.g. Infantry vs Infantry + Deep Radar.
         if (!pComp)
         {
             continue;
         }
-        if (!bFirst) { m_name += " / "; m_id += "_"; }
-        m_name += pComp->name;
-        m_id   += pComp->id;
-        bFirst = false;
+        if (!bFirstId)
+        {
+            m_id += "_";
+        }
+        m_id += pComp->id;
+        bFirstId = false;
     }
+
+    // Display name: Weapon Armour Chassis unit_name fragments (empty parts omitted).
+    // Order is fixed SMAC-style, not slot-table order.
+    auto appendUnitNamePart = [this](const UnitComponentConfig_t* pComp) {
+        if (!pComp || pComp->unitName.empty())
+        {
+            return;
+        }
+        if (!m_name.empty())
+        {
+            m_name += " ";
+        }
+        m_name += pComp->unitName;
+    };
+    appendUnitNamePart(GetComponentForSlot("weapon"));
+    appendUnitNamePart(GetComponentForSlot("armour"));
+    appendUnitNamePart(GetComponentForSlot("chassis"));
 }
 
 const std::string& UnitDesign::GetId() const   { return m_id; }
@@ -129,6 +147,74 @@ UnitDomain_t UnitDesign::GetDomain() const
         }
     }
     throw std::runtime_error("UnitDesign '" + m_id + "' has no chassis component");
+}
+
+namespace
+{
+
+std::string DecorateCombatRatingField_(
+    const std::vector<std::pair<UnitSlotConfig_t, const UnitComponentConfig_t*>>& rSlotComponents,
+    CombatRatingTarget_t target,
+    const std::string& rValue)
+{
+    std::string prefixes;
+    std::string suffixes;
+    for (const auto& [rSlot, pComp] : rSlotComponents)
+    {
+        (void)rSlot;
+        if (!pComp)
+        {
+            continue;
+        }
+        for (const CombatRatingModifier_t& rMod : pComp->combatRatingModifiers)
+        {
+            if (rMod.target != target)
+            {
+                continue;
+            }
+            prefixes += rMod.prefix;
+            suffixes += rMod.suffix;
+        }
+    }
+    return prefixes + rValue + suffixes;
+}
+
+} // namespace
+
+std::string UnitDesign::FormatCombatRating() const
+{
+    const std::string attack = DecorateCombatRatingField_(
+        m_slotComponents,
+        CombatRatingTarget_t::Attack,
+        std::to_string(ResolveAdditiveStat(*this, StatId_t::Attack)));
+    const std::string defense = DecorateCombatRatingField_(
+        m_slotComponents,
+        CombatRatingTarget_t::Defense,
+        std::to_string(ResolveAdditiveStat(*this, StatId_t::Defense)));
+    const std::string movement = DecorateCombatRatingField_(
+        m_slotComponents,
+        CombatRatingTarget_t::Movement,
+        std::to_string(ResolveAdditiveStat(*this, StatId_t::Movement)));
+
+    std::string rating = DecorateCombatRatingField_(
+        m_slotComponents,
+        CombatRatingTarget_t::Rating,
+        attack + "-" + defense + "-" + movement);
+
+    for (const auto& [rSlot, pComp] : m_slotComponents)
+    {
+        (void)rSlot;
+        if (!pComp)
+        {
+            continue;
+        }
+        for (const std::string& rLabel : pComp->combatRatingLabels)
+        {
+            rating += ", ";
+            rating += rLabel;
+        }
+    }
+    return rating;
 }
 
 } // namespace ac

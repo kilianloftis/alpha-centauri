@@ -16,7 +16,7 @@ public:
 
     std::vector<UnitComponentConfig_t> ParseConfig(const std::string& rConfigPath);
 
-private:
+    // Public for unit tests of a single component entry.
     UnitComponentConfig_t ParseComponentConfig(const nlohmann::json& rComponentJson);
 };
 

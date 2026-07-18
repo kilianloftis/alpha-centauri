@@ -5,7 +5,8 @@
     "type": "ability",
     "required_tech": "test_tech_1",
     "mineral_cost": 5,
-    "effects": []
+    "effects": [],
+    "combat_rating_labels": ["ECM"]
   },
   {
     "id": "Cloaking_Device",
@@ -38,6 +39,28 @@
         "scope": "ThisUnit",
         "parameters": { "stat": "vision", "amount": 1, "op": "Add" }
       }
+    ]
+  },
+  {
+    "id": "Marine_Detachment",
+    "name": "Marine Detachment",
+    "type": "ability",
+    "required_tech": "",
+    "mineral_cost": 0,
+    "effects": [],
+    "combat_rating_modifiers": [
+      { "target": "attack", "suffix": "~" }
+    ]
+  },
+  {
+    "id": "AAA_Tracking",
+    "name": "AAA Tracking",
+    "type": "ability",
+    "required_tech": "",
+    "mineral_cost": 0,
+    "effects": [],
+    "combat_rating_modifiers": [
+      { "target": "defense", "prefix": "<", "suffix": ">" }
     ]
   }
 ]

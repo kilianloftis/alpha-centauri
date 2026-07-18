@@ -72,6 +72,16 @@ bool CameraInputController::HandleKey(const KeyEvent_t& rEvent)
     return false;
 }
 
+void CameraInputController::CenterOnTile(int tileX, int tileY)
+{
+    const auto [maxCamX, maxCamY] = ComputeMaxCamera_();
+    const int cameraX = std::clamp(
+        tileX - (m_rWorldDisplay.GetVisibleCols() / 2), k_InitialCameraOffset, maxCamX);
+    const int cameraY = std::clamp(
+        tileY - (m_rWorldDisplay.GetVisibleRows() / 2), k_InitialCameraOffset, maxCamY);
+    m_rWorldDisplay.SetCameraOffset(cameraX, cameraY);
+}
+
 void CameraInputController::Update(bool bEnabled)
 {
     if (!bEnabled || !HasLastMousePosition())

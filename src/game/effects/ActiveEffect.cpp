@@ -380,6 +380,23 @@ int ResolveStat(const UnitDesign& rDesign, StatId_t statId, const EffectContext_
                              SeedFor(statId)).total);
 }
 
+int ResolveAdditiveStat(const UnitDesign& rDesign, StatId_t statId)
+{
+    // Materialize first: FilterByStatId returns a borrowing view (see its contract).
+    const std::vector<ActiveEffect_t> effects = rDesign.CollectEffects();
+    double addTotal = SeedFor(statId);
+    for (const ActiveEffect_t& rEffect : FilterByStatId(effects, statId))
+    {
+        const StatModifierEffect_t* pStatModifier =
+            std::get_if<StatModifierEffect_t>(&rEffect.config->effect);
+        if (pStatModifier && pStatModifier->op == ModifierOp_t::Add)
+        {
+            addTotal += pStatModifier->amount;
+        }
+    }
+    return static_cast<int>(addTotal);
+}
+
 bool ResolveFlag(const UnitDesign& rDesign, RuleFlagId_t flagId)
 {
     for (const ActiveEffect_t& rEffect : rDesign.CollectEffects())

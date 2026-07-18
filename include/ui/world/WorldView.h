@@ -40,6 +40,7 @@ public:
 
 private:
     void Update_();
+    void SetSelectedUnit_(Unit* pUnit, bool bManualSelection);
     void SelectUnitAtTile_(int tileX, int tileY);
     // Auto-cycle: fill empty selection, or advance past a unit that no longer needs orders.
     // Does not steal a manual selection of a unit that already moved / has an order.

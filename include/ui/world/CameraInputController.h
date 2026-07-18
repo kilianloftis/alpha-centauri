@@ -15,6 +15,7 @@ public:
 
     bool HandleKey(const KeyEvent_t& rEvent);
     void Update(bool bEnabled);
+    void CenterOnTile(int tileX, int tileY);
 
 private:
     struct CameraBounds_t

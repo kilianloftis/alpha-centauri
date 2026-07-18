@@ -1,6 +1,7 @@
 #include "ui/world/WorldView.h"
 #include <algorithm>
 #include "ui/world/InfoPanelElement.h"
+#include "ui/world/SelectedUnitPanel.h"
 #include "ui/world/EndTurnButton.h"
 #include "game/GameState.h"
 #include "game/GameSettings.h"
@@ -11,6 +12,7 @@
 #include "game/faction/EconomyManager.h"
 #include "game/faction/ResearchManager.h"
 #include "game/faction/UnitManager.h"
+#include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitOrder.h"
@@ -26,9 +28,10 @@ namespace ac
 namespace
 {
 
-constexpr Color_t k_ResearchTextColor       {100, 200, 255, 255};
-constexpr size_t k_InfoPanelElementIndex  = 0;
-constexpr int    k_InvalidTileCoord       = -1;
+constexpr Color_t k_ResearchTextColor         {100, 200, 255, 255};
+constexpr size_t k_SelectedUnitPanelIndex   = 0;
+constexpr size_t k_InfoPanelElementIndex    = 1;
+constexpr int    k_InvalidTileCoord         = -1;
 
 } // namespace
 
@@ -50,6 +53,7 @@ WorldView::WorldView(
 , m_pCameraInputController(std::make_unique<CameraInputController>(*m_pWorldDisplay, rWorldMap, m_mapLayout))
 , m_pUnitOrderInputController(std::make_unique<UnitOrderInputController>())
 {
+    m_elements.push_back(std::make_unique<SelectedUnitPanel>(ResolveLayout(m_layout, k_LeftPanelLayout)));
     m_elements.push_back(std::make_unique<InfoPanelElement>(ResolveLayout(m_layout, k_CenterPanelLayout)));
 
     auto pEndTurn = std::make_unique<EndTurnButton>(
@@ -66,8 +70,7 @@ WorldView::WorldView(
         rFaction.GetUnitManager().OnUnitDestroyed.Connect([this](Unit& rDestroyed) {
             if (m_pSelectedUnit == &rDestroyed)
             {
-                m_pSelectedUnit = nullptr;
-                m_bManualSelection = false;
+                SetSelectedUnit_(nullptr, false);
             }
         });
     }
@@ -100,11 +103,25 @@ bool WorldView::UnitRequiresOrders_(const Unit& rUnit)
     return !rUnit.GetOrder().has_value() && rUnit.GetMoveFragmentsRemaining() > 0;
 }
 
+void WorldView::SetSelectedUnit_(Unit* pUnit, bool bManualSelection)
+{
+    const bool bSelectionChanged = m_pSelectedUnit != pUnit;
+    m_pSelectedUnit = pUnit;
+    m_bManualSelection = bManualSelection;
+
+    if (bSelectionChanged && pUnit && !bManualSelection)
+    {
+        const Tile& rTile = pUnit->GetTile();
+        m_pCameraInputController->CenterOnTile(rTile.GetX(), rTile.GetY());
+    }
+}
+
 void WorldView::SelectNextAvailableUnit_()
 {
-    m_bManualSelection = false;
     const Faction* pPlayer = m_rGameState.GetPlayerFaction();
-    m_pSelectedUnit = pPlayer ? pPlayer->GetUnitManager().GetNextAvailableUnit() : nullptr;
+    SetSelectedUnit_(
+        pPlayer ? pPlayer->GetUnitManager().GetNextAvailableUnit() : nullptr,
+        false);
 }
 
 void WorldView::SelectNextAvailableUnitIfNeeded_()
@@ -130,8 +147,7 @@ void WorldView::SelectNextAvailableUnitIfNeeded_()
     // Empty selection, or the auto-cycled unit is done (out of moves / has an order).
     if (Unit* pNext = pPlayer->GetUnitManager().GetNextAvailableUnit())
     {
-        m_pSelectedUnit = pNext;
-        m_bManualSelection = false;
+        SetSelectedUnit_(pNext, false);
     }
 }
 
@@ -147,6 +163,9 @@ void WorldView::Update_()
     static_cast<InfoPanelElement*>(m_elements[k_InfoPanelElementIndex].get())->SetInfoLines(infoLines);
 
     SelectNextAvailableUnitIfNeeded_();
+
+    static_cast<SelectedUnitPanel*>(m_elements[k_SelectedUnitPanelIndex].get())
+        ->SetSelectedUnit(m_pSelectedUnit);
 
     const bool bNeedOrders = PlayerUnitsNeedOrders_();
     const bool bPauseAtEnd = m_rGameState.GetSettings().IsPauseAtEndOfTurn();
@@ -200,11 +219,10 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
     }
     else if (rEvent.key == Key_t::V)
     {
-        m_bManualSelection = false;
         const Faction* pPlayer = m_rGameState.GetPlayerFaction();
-        m_pSelectedUnit = pPlayer
-            ? pPlayer->GetUnitManager().GetNextAvailableUnit(m_pSelectedUnit)
-            : nullptr;
+        SetSelectedUnit_(
+            pPlayer ? pPlayer->GetUnitManager().GetNextAvailableUnit(m_pSelectedUnit) : nullptr,
+            false);
         return true;
     }
 
@@ -282,16 +300,14 @@ void WorldView::SelectUnitAtTile_(int tileX, int tileY)
     const Tile* pTile = rWorldMap.GetTile(tileX, tileY);
     if (!pTile)
     {
-        m_pSelectedUnit = nullptr;
-        m_bManualSelection = false;
+        SetSelectedUnit_(nullptr, false);
         return;
     }
 
     const std::vector<Unit*>& units = rWorldMap.GetUnitsOnTile(*pTile);
     if (units.empty())
     {
-        m_pSelectedUnit = nullptr;
-        m_bManualSelection = false;
+        SetSelectedUnit_(nullptr, false);
         return;
     }
 
@@ -306,13 +322,11 @@ void WorldView::SelectUnitAtTile_(int tileX, int tileY)
         {
             continue;
         }
-        m_pSelectedUnit = pUnit;
-        m_bManualSelection = true;
+        SetSelectedUnit_(pUnit, true);
         return;
     }
 
-    m_pSelectedUnit = nullptr;
-    m_bManualSelection = false;
+    SetSelectedUnit_(nullptr, false);
 }
 
 Unit* WorldView::GetControllableSelectedUnit_() const
