@@ -116,4 +116,13 @@ const std::optional<UnitOrder_t>& Unit::GetOrder() const { return m_order; }
 void Unit::SetOrder(const UnitOrder_t& rOrder)            { m_order = rOrder; }
 void Unit::ClearOrder()                                   { m_order.reset(); }
 
+bool Unit::HasAttackedThisTurn() const { return m_bAttackedThisTurn; }
+bool Unit::HasAttackedLastTurn() const { return m_bAttackedLastTurn; }
+void Unit::MarkAttacked()              { m_bAttackedThisTurn = true; }
+void Unit::AdvanceAttackHistory()
+{
+    m_bAttackedLastTurn = m_bAttackedThisTurn;
+    m_bAttackedThisTurn = false;
+}
+
 } // namespace ac

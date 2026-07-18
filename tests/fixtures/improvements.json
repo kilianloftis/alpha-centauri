@@ -83,14 +83,16 @@
     "name": "Bunker",
     "mineral_cost": 10,
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "defense", "amount": 50, "op": "AddPercent" } }
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "defense", "amount": 50, "op": "AddPercent" } },
+      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "prevents_disengage" } }
     ]
   },
   {
     "id": "Base",
     "name": "Base",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "defense", "amount": 100, "op": "AddPercent" } }
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "defense", "amount": 100, "op": "AddPercent" } },
+      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "prevents_disengage" } }
     ]
   },
   {

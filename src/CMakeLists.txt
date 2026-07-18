@@ -59,6 +59,8 @@ add_library(ac-core STATIC
     game/units/UnitDesign.cpp
     game/units/UnitOrder.cpp
     game/units/UnitOrderExecutor.cpp
+    game/units/CombatResolver.cpp
+    game/units/DisengageRules.cpp
     game/units/MovementRules.cpp
     game/units/StepEvaluator.cpp
     game/units/Pathfinder.cpp

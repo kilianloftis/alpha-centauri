@@ -423,6 +423,23 @@ int ResolveStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx)
         ResolveStatModifiers(FilterByStatIdInContext(effects, statId, rCtx), SeedFor(statId)).total);
 }
 
+double ResolveMultiplicativeStat(const Unit& rUnit, StatId_t statId, double baseValue,
+                                 const EffectContext_t& rCtx)
+{
+    const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects(rUnit);
+    std::vector<std::pair<double, ModifierOp_t>> contributions;
+    for (const ActiveEffect_t& rEffect : FilterByStatIdInContext(effects, statId, rCtx))
+    {
+        const StatModifierEffect_t* pModifier =
+            std::get_if<StatModifierEffect_t>(&rEffect.config->effect);
+        if (pModifier && pModifier->op != ModifierOp_t::Add)
+        {
+            contributions.emplace_back(pModifier->amount, pModifier->op);
+        }
+    }
+    return ApplyModifierStack(baseValue, contributions);
+}
+
 bool ResolveFlag(const Unit& rUnit, RuleFlagId_t flagId)
 {
     for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rUnit))

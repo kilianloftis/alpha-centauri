@@ -60,6 +60,64 @@
     ]
   },
   {
+    "id": "test_weak_weapon",
+    "name": "Test Weak Weapon",
+    "type": "weapon",
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "attack", "amount": 1 } }
+    ]
+  },
+  {
+    "id": "test_armor",
+    "name": "Test Armor",
+    "type": "armor",
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "defense", "amount": 3 } }
+    ]
+  },
+  {
+    "id": "test_psi",
+    "name": "Test Psi Combat",
+    "type": "ability",
+    "effects": [
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "forces_psi_combat" } }
+    ]
+  },
+  {
+    "id": "test_psi_attack_modifiers",
+    "name": "Test Psi Attack Modifiers",
+    "type": "ability",
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "attack", "amount": 100, "op": "Add" } },
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "attack", "amount": 50, "op": "AddPercent" } }
+    ]
+  },
+  {
+    "id": "test_psi_defense_modifiers",
+    "name": "Test Psi Defense Modifiers",
+    "type": "ability",
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "defense", "amount": 100, "op": "Add" } },
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "defense", "amount": 2, "op": "MultiplyGeometric" } }
+    ]
+  },
+  {
+    "id": "test_psi_tier_2",
+    "name": "Test Psi Tier 2",
+    "type": "reactor",
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "psi_damage", "amount": 2, "op": "Add" } }
+    ]
+  },
+  {
+    "id": "comm_jammer",
+    "name": "Comm Jammer",
+    "type": "ability",
+    "effects": [
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "prevents_disengage" } }
+    ]
+  },
+  {
     "id": "sensor_pod",
     "name": "Sensor Pod (mobile ThisTile aura, radius 2)",
     "type": "special",

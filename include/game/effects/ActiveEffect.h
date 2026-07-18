@@ -271,6 +271,11 @@ std::vector<ActiveEffect_t> CollectLiveUnitEffects(const Unit& rUnit);
 // Resolve a live unit's stats / flags: design effects plus FactionUnits from the owner.
 int ResolveStat(const Unit& rUnit, StatId_t statId);
 int ResolveStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx);
+// Resolves only multiplicative contributions (AddPercent / MultiplyGeometric), seeded at
+// baseValue. Add contributions are deliberately ignored. Used by psi combat, whose Attack
+// and Defense strengths start at 1 instead of using conventional additive weapon/armour.
+double ResolveMultiplicativeStat(const Unit& rUnit, StatId_t statId, double baseValue,
+                                 const EffectContext_t& rCtx = {});
 bool ResolveFlag(const Unit& rUnit, RuleFlagId_t flagId);
 
 // Collects a single pop type's own effects (both ThisPop-scoped tile multipliers and

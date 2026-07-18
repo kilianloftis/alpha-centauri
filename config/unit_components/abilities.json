@@ -5,7 +5,13 @@
     "type": "ability",
     "required_tech": "test_tech_1",
     "mineral_cost": 5,
-    "effects": [],
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "prevents_disengage" }
+      }
+    ],
     "combat_rating_labels": ["ECM"]
   },
   {

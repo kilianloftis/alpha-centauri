@@ -23,6 +23,8 @@ enum class StatId_t
     Movement,
     Vision,
     HitPoints,
+    // Damage received per lost psi-combat round. Reactors set this to their tier.
+    PsiDamage,
     DisengageChance,
     Fuel,
     DamageFromOutOfFuel,
@@ -74,6 +76,7 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::Movement:
         case StatId_t::Vision:
         case StatId_t::HitPoints:
+        case StatId_t::PsiDamage:
         case StatId_t::DisengageChance:
         case StatId_t::Fuel:
         case StatId_t::DamageFromOutOfFuel:
@@ -126,6 +129,13 @@ enum class RuleFlagId_t
     IgnoreZoneOfControl,
     IgnoreDifficultTerrain,
     TreatFungusAsRoad,
+    // Any combat involving a unit with this flag uses psi strengths and damage.
+    ForcesPsiCombat,
+
+    // Unit / tile flags
+    // Blocks the *opponent* from disengaging when carried ThisUnit (Comm Jammer), or blocks
+    // a unit on this tile from disengaging when declared ThisTile (Base, Bunker, Airbase).
+    PreventsDisengage,
 
     // Faction/global flags
     PopulationBoom,

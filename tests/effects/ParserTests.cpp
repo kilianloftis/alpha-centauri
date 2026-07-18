@@ -25,6 +25,7 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(BonusEffectParser::ParseStatId("movement") == StatId_t::Movement);
     CHECK(BonusEffectParser::ParseStatId("vision") == StatId_t::Vision);
     CHECK(BonusEffectParser::ParseStatId("hit_points") == StatId_t::HitPoints);
+    CHECK(BonusEffectParser::ParseStatId("psi_damage") == StatId_t::PsiDamage);
     CHECK(BonusEffectParser::ParseStatId("disengage_chance") == StatId_t::DisengageChance);
     CHECK(BonusEffectParser::ParseStatId("fuel") == StatId_t::Fuel);
     CHECK(BonusEffectParser::ParseStatId("damage_from_out_of_fuel") == StatId_t::DamageFromOutOfFuel);
@@ -70,6 +71,8 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
     CHECK(BonusEffectParser::ParseRuleFlagId("near_zero_growth") == RuleFlagId_t::NearZeroGrowth);
     CHECK(BonusEffectParser::ParseRuleFlagId("ignores_difficult_terrain") == RuleFlagId_t::IgnoreDifficultTerrain);
     CHECK(BonusEffectParser::ParseRuleFlagId("treat_fungus_as_road") == RuleFlagId_t::TreatFungusAsRoad);
+    CHECK(BonusEffectParser::ParseRuleFlagId("forces_psi_combat") == RuleFlagId_t::ForcesPsiCombat);
+    CHECK(BonusEffectParser::ParseRuleFlagId("prevents_disengage") == RuleFlagId_t::PreventsDisengage);
     CHECK_THROWS(BonusEffectParser::ParseRuleFlagId("hover"));
     CHECK_THROWS(BonusEffectParser::ParseRuleFlagId("sea"));
 

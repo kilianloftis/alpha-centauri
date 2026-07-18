@@ -27,6 +27,22 @@ UnitOrderExecutor::UnitOrderExecutor(const MoveCostCalculator& rMoveCosts,
     , m_rWorldMap(rWorldMap)
     , m_rTileEffects(rTileEffects)
     , m_rPathfinder(rPathfinder)
+    , m_combat(rMoveCosts, rSteps, rWorldMap, rTileEffects)
+{
+}
+
+UnitOrderExecutor::UnitOrderExecutor(const MoveCostCalculator& rMoveCosts,
+                                     const StepEvaluator& rSteps,
+                                     WorldMap& rWorldMap,
+                                     const TileEffectsContext& rTileEffects,
+                                     Pathfinder& rPathfinder,
+                                     uint32_t combatSeed)
+    : m_rMoveCosts(rMoveCosts)
+    , m_rSteps(rSteps)
+    , m_rWorldMap(rWorldMap)
+    , m_rTileEffects(rTileEffects)
+    , m_rPathfinder(rPathfinder)
+    , m_combat(rMoveCosts, rSteps, rWorldMap, rTileEffects, combatSeed)
 {
 }
 
@@ -94,10 +110,20 @@ void UnitOrderExecutor::CancelMoveOrderIfNewHostile_(
     }
 }
 
-void UnitOrderExecutor::ResolveCombatStub_(Unit& rAttacker)
+Unit* UnitOrderExecutor::FindVisibleHostileOnTile_(const Unit& rAttacker,
+                                                   const Tile& rTile) const
 {
-    rAttacker.SetMoveFragmentsRemaining(0);
-    rAttacker.ClearOrder();
+    const Faction& rObserver = rAttacker.GetFaction();
+    const FactionId_t observerId = rObserver.GetFactionId();
+    for (Unit* pUnit : m_rWorldMap.GetUnitsOnTile(rTile))
+    {
+        if (pUnit && pUnit->GetFaction().GetFactionId() != observerId
+            && IsUnitVisibleTo(rObserver, *pUnit, m_rTileEffects))
+        {
+            return pUnit;
+        }
+    }
+    return nullptr;
 }
 
 void UnitOrderExecutor::EnterTile_(Unit& rMover, const Tile& rTo, int remainingAfter)
@@ -168,23 +194,32 @@ bool UnitOrderExecutor::TryStep(Unit& rMover, const Tile& rTo, MoveOrder_t& rMov
     return false;
 }
 
-bool UnitOrderExecutor::TryAttack(Unit& rAttacker, const Tile& rTargetTile)
+std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
+                                                           const Tile& rTargetTile)
 {
     if (rAttacker.GetMoveFragmentsRemaining() <= 0)
     {
-        return false;
+        return std::nullopt;
     }
     if (!AreChebyshevAdjacent(rAttacker.GetTile(), rTargetTile))
     {
-        return false;
-    }
-    if (!m_rSteps.HasVisibleHostileUnit(rAttacker, rTargetTile))
-    {
-        return false;
+        return std::nullopt;
     }
 
-    ResolveCombatStub_(rAttacker);
-    return true;
+    Unit* pDefender = FindVisibleHostileOnTile_(rAttacker, rTargetTile);
+    if (!pDefender)
+    {
+        return std::nullopt;
+    }
+
+    CombatResult_t result = m_combat.Resolve(rAttacker, *pDefender);
+    if (!result.bAttackerDestroyed)
+    {
+        rAttacker.MarkAttacked();
+        rAttacker.SetMoveFragmentsRemaining(0);
+        rAttacker.ClearOrder();
+    }
+    return result;
 }
 
 void UnitOrderExecutor::Execute(Unit& rUnit)

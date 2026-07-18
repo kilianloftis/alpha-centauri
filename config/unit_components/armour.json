@@ -61,5 +61,20 @@
     "combat_rating_modifiers": [
       { "target": "defense", "suffix": "r" }
     ]
+  },
+  {
+    "id": "Psi_Armour",
+    "name": "Psi Armour",
+    "unit_name": "Psi",
+    "type": "armour",
+    "required_tech": "",
+    "mineral_cost": 0,
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "forces_psi_combat" }
+      }
+    ]
   }
 ]

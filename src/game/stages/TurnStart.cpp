@@ -32,6 +32,7 @@ StageResult_t TurnStart::ExecuteImpl(GameState& rGameState)
         {
             rUnit.SetMoveFragmentsRemaining(
                 rUnit.GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint);
+            rUnit.AdvanceAttackHistory();
         }
     }
     return StageResult_t::Continue;

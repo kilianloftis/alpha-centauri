@@ -103,5 +103,31 @@
         "parameters": { "flag": "ignores_difficult_terrain" }
       }
     ]
+  },
+  {
+    "id": "Mind_Worm",
+    "name": "Mind Worm",
+    "unit_name": "Mind Worm",
+    "type": "chassis",
+    "domain": "land",
+    "required_tech": "",
+    "mineral_cost": 0,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "movement", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "vision", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "forces_psi_combat" }
+      }
+    ]
   }
 ]

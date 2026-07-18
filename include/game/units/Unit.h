@@ -69,6 +69,14 @@ public:
     void SetOrder(const UnitOrder_t& rOrder);
     void ClearOrder();
 
+    // Attack history for the disengage rule: a unit that attacked on its current or previous
+    // turn may not disengage. MarkAttacked is called by UnitOrderExecutor::TryAttack;
+    // AdvanceAttackHistory shifts this-turn → last-turn at TurnStart.
+    bool HasAttackedThisTurn() const;
+    bool HasAttackedLastTurn() const;
+    void MarkAttacked();
+    void AdvanceAttackHistory();
+
 private:
     // The index maintains m_pTile alongside its occupancy lists (MoveUnit).
     friend class UnitPositionIndex;
@@ -91,6 +99,8 @@ private:
     int m_xp;
     std::optional<UnitOrder_t> m_order;
     bool m_bRegistered;
+    bool m_bAttackedThisTurn = false;
+    bool m_bAttackedLastTurn = false;
 };
 
 } // namespace ac

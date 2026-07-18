@@ -10,6 +10,11 @@
         "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": { "stat": "hit_points", "amount": 10, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "psi_damage", "amount": 1, "op": "Add" }
       }
     ]
   },
@@ -24,6 +29,11 @@
         "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": { "stat": "hit_points", "amount": 20, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "psi_damage", "amount": 2, "op": "Add" }
       },
       {
         "type": "StatModifier",
@@ -46,6 +56,11 @@
         "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": { "stat": "hit_points", "amount": 30, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "psi_damage", "amount": 3, "op": "Add" }
       },
       {
         "type": "StatModifier",

@@ -187,7 +187,7 @@ TEST_CASE("Attack is adjacent; hostiles never share a tile", "[movement][zoc]")
     Faction& enemy = fixture.MakeFaction();
 
     fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
-    Unit& mover = fixture.MakeUnit(player, 4, 4, {"test_chassis"});
+    Unit& mover = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
     mover.SetOrder(MoveOrder_t{&fixture.At(5, 4)});
 
     REQUIRE(move.steps.IsTileInHostileZoc(mover, mover.GetTile()));
@@ -195,7 +195,10 @@ TEST_CASE("Attack is adjacent; hostiles never share a tile", "[movement][zoc]")
     MoveOrder_t bumpHostile{&fixture.At(5, 4)};
     CHECK_FALSE(move.orders.TryStep(mover, fixture.At(5, 4), bumpHostile));
 
-    REQUIRE(move.orders.TryAttack(mover, fixture.At(5, 4)));
+    const auto result = move.orders.TryAttack(mover, fixture.At(5, 4));
+    REQUIRE(result.has_value());
+    CHECK(result->bDefenderDestroyed);
+    CHECK_FALSE(result->bAttackerDestroyed);
     CHECK(mover.GetMoveFragmentsRemaining() == 0);
     CHECK_FALSE(mover.GetOrder().has_value());
     CHECK(mover.GetTile().GetX() == 4); // still on own tile
@@ -211,7 +214,7 @@ TEST_CASE("Cannot attack a cloaked hostile until contact-revealed",
     Faction& enemy = fixture.MakeFaction();
 
     Unit& cloaked = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "Cloaking_Device"});
-    Unit& mover = fixture.MakeUnit(player, 4, 4, {"test_chassis"});
+    Unit& mover = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
     player.RebuildVisibility();
 
     REQUIRE(player.GetVisibleMap().IsVisible(cloaked.GetTile()));
@@ -236,7 +239,7 @@ TEST_CASE("ZOC block from a cloaked unit contact-reveals it",
     Faction& enemy = fixture.MakeFaction();
 
     Unit& cloaked = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "Cloaking_Device"});
-    Unit& mover = fixture.MakeUnit(player, 4, 4, {"test_chassis"});
+    Unit& mover = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
     player.RebuildVisibility();
 
     REQUIRE_FALSE(IsUnitVisibleTo(player, cloaked, *fixture.ctx));

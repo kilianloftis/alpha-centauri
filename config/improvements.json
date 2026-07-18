@@ -134,6 +134,11 @@
         "type": "StatModifier",
         "scope": "ThisTile",
         "parameters": { "stat": "defense", "amount": 25, "op": "AddPercent" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": { "flag": "prevents_disengage" }
       }
     ]
   },
@@ -145,6 +150,11 @@
         "type": "StatModifier",
         "scope": "ThisTile",
         "parameters": { "stat": "defense", "amount": 100, "op": "AddPercent" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": { "flag": "prevents_disengage" }
       }
     ]
   },

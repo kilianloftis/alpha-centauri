@@ -20,6 +20,7 @@ StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "movement")                return StatId_t::Movement;
     if (rStat == "vision")                  return StatId_t::Vision;
     if (rStat == "hit_points")              return StatId_t::HitPoints;
+    if (rStat == "psi_damage")              return StatId_t::PsiDamage;
     if (rStat == "disengage_chance")        return StatId_t::DisengageChance;
     if (rStat == "fuel")                    return StatId_t::Fuel;
     if (rStat == "damage_from_out_of_fuel") return StatId_t::DamageFromOutOfFuel;
@@ -40,6 +41,8 @@ RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "ignore_zone_of_control")      return RuleFlagId_t::IgnoreZoneOfControl;
     if (rFlag == "ignores_difficult_terrain")   return RuleFlagId_t::IgnoreDifficultTerrain;
     if (rFlag == "treat_fungus_as_road")         return RuleFlagId_t::TreatFungusAsRoad;
+    if (rFlag == "forces_psi_combat")            return RuleFlagId_t::ForcesPsiCombat;
+    if (rFlag == "prevents_disengage")          return RuleFlagId_t::PreventsDisengage;
     throw std::runtime_error("Unknown rule flag id: '" + rFlag + "'");
 }
 
