@@ -30,6 +30,7 @@ Unit::Unit(UnitId_t unitId,
     , m_currentFuel(0)
     , m_moveFragmentsRemaining(0)
     , m_xp(0)
+    , m_bRegistered(false)
 {
     // Members used by ResolveStat are initialised above; seed after the mem-init list.
     m_currentHp = ResolveStat(*this, StatId_t::HitPoints);
@@ -38,11 +39,21 @@ Unit::Unit(UnitId_t unitId,
         GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint;
 
     m_rPositions.Register_(*this, rTile);
+    m_bRegistered = true;
 }
 
 Unit::~Unit()
 {
-    m_rPositions.Unregister_(*this);
+    DetachFromWorld_();
+}
+
+void Unit::DetachFromWorld_()
+{
+    if (m_bRegistered)
+    {
+        m_rPositions.Unregister_(*this);
+        m_bRegistered = false;
+    }
 }
 
 UnitId_t Unit::GetUnitId() const { return m_unitId; }

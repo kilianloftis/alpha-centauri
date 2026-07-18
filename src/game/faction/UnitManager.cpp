@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 namespace ac
 {
@@ -15,6 +16,31 @@ namespace ac
 UnitManager::UnitManager(Faction& rFaction)
     : m_rFaction(rFaction)
 {
+}
+
+UnitManager::DeferredDestructionScope::DeferredDestructionScope(UnitManager& rManager)
+    : m_pManager(&rManager)
+{
+    m_pManager->BeginDestructionDeferral_();
+}
+
+UnitManager::DeferredDestructionScope::DeferredDestructionScope(
+    DeferredDestructionScope&& rOther) noexcept
+    : m_pManager(std::exchange(rOther.m_pManager, nullptr))
+{
+}
+
+UnitManager::DeferredDestructionScope::~DeferredDestructionScope()
+{
+    if (m_pManager)
+    {
+        m_pManager->EndDestructionDeferral_();
+    }
+}
+
+UnitManager::DeferredDestructionScope UnitManager::DeferDestruction()
+{
+    return DeferredDestructionScope(*this);
 }
 
 Unit& UnitManager::CreateUnit(UnitId_t unitId, const UnitDesign& rDesign,
@@ -50,9 +76,44 @@ void UnitManager::DestroyUnit(Unit& rUnit)
     }
 
     OnUnitDestroyed.Emit(rUnit);
-    m_units.erase(it);
+    if (m_destructionDeferralDepth > 0)
+    {
+        m_pendingDestructions.push_back(std::move(*it));
+        rUnit.DetachFromWorld_();
+    }
+    else
+    {
+        m_units.erase(it);
+    }
     m_revision.Bump();
     m_rFaction.RebuildVisibility();
+}
+
+bool UnitManager::IsPendingDestruction(const Unit& rUnit) const
+{
+    return std::ranges::any_of(m_pendingDestructions,
+        [&rUnit](const std::unique_ptr<Unit>& pUnit) {
+            return pUnit.get() == &rUnit;
+        });
+}
+
+void UnitManager::BeginDestructionDeferral_()
+{
+    ++m_destructionDeferralDepth;
+}
+
+void UnitManager::EndDestructionDeferral_()
+{
+    if (--m_destructionDeferralDepth == 0)
+    {
+        FlushPendingDestructions_();
+    }
+}
+
+void UnitManager::FlushPendingDestructions_()
+{
+    m_pendingDestructions.clear();
+    std::erase(m_units, nullptr);
 }
 
 Unit* UnitManager::GetNextAvailableUnit(const Unit* pAfter) const
@@ -67,7 +128,9 @@ Unit* UnitManager::GetNextAvailableUnit(const Unit* pAfter) const
 
     for (const std::unique_ptr<Unit>& pUnit : m_units)
     {
-        if (!requiresOrders(*pUnit))
+        // Null slots exist while a DeferredDestructionScope is open (DestroyUnit moves the
+        // owning pointer out but defers compaction); a destroyed unit must not be offered.
+        if (!pUnit || !requiresOrders(*pUnit))
         {
             continue;
         }

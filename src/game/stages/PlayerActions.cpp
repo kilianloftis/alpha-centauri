@@ -35,8 +35,12 @@ StageResult_t PlayerActions::ExecuteImpl(GameState& rGameState, Faction& rFactio
     }
 
     UnitOrderExecutor& rExecutor = rGameState.GetUnitOrderExecutor();
+    UnitManager& rUnitManager = rFaction.GetUnitManager();
 
-    for (Unit& rUnit : rFaction.GetUnitManager().Units())
+    // Execute may destroy its current unit. Remove it from gameplay immediately, but keep
+    // its object alive until this pass reaches a safe point.
+    const auto destructionScope = rUnitManager.DeferDestruction();
+    for (Unit& rUnit : rUnitManager.Units())
     {
         if (!rUnit.GetOrder().has_value())
         {
@@ -51,7 +55,8 @@ StageResult_t PlayerActions::ExecuteImpl(GameState& rGameState, Faction& rFactio
 
         rExecutor.Execute(rUnit);
 
-        if (bPlayer && DoesUnitRequireOrders_(rUnit))
+        if (bPlayer && !rUnitManager.IsPendingDestruction(rUnit)
+            && DoesUnitRequireOrders_(rUnit))
         {
             return StageResult_t::Yield;
         }

@@ -18,6 +18,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <stdexcept>
+#include <vector>
 
 using namespace ac;
 using namespace actest;
@@ -78,6 +79,45 @@ TEST_CASE("DestroyUnit emits OnUnitDestroyed before the unit is removed", "[unit
     faction.GetUnitManager().DestroyUnit(unit);
 
     CHECK(pDestroyed == &unit);
+}
+
+TEST_CASE("Deferred destruction keeps unit iteration safe", "[unit][lifetime]")
+{
+    FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    UnitManager& rUnits = faction.GetUnitManager();
+    fixture.MakeUnit(faction, 3, 4, {"test_chassis"});
+    fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    fixture.MakeUnit(faction, 5, 4, {"test_chassis"});
+
+    std::vector<UnitId_t> visitedIds;
+    {
+        const auto destructionScope = rUnits.DeferDestruction();
+        for (Unit& rUnit : rUnits.Units())
+        {
+            const Tile& rTile = rUnit.GetTile();
+            visitedIds.push_back(rUnit.GetUnitId());
+
+            rUnits.DestroyUnit(rUnit);
+
+            // Logical removal is immediate, while the deferred object remains safe to
+            // inspect until the traversal reaches its scope boundary.
+            CHECK(fixture.map.GetUnitsOnTile(rTile).empty());
+            CHECK(rUnits.IsPendingDestruction(rUnit));
+            CHECK(rUnit.GetUnitId() == visitedIds.back());
+
+            // Queries must tolerate the null slots the deferral leaves in the unit list
+            // and never offer a destroyed unit.
+            CHECK(rUnits.GetNextAvailableUnit() != &rUnit);
+        }
+
+        CHECK(rUnits.Units().empty());
+        CHECK(rUnits.GetNextAvailableUnit() == nullptr);
+        CHECK_FALSE(rUnits.HasUnitsRequiringOrders());
+    }
+
+    CHECK(visitedIds.size() == 3);
+    CHECK(rUnits.Units().empty());
 }
 
 TEST_CASE("MoveUnit emits OnUnitMoved after updating occupancy", "[unit][signal]")

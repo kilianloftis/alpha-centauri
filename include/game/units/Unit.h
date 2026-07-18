@@ -11,6 +11,7 @@ namespace ac
 class Tile;
 class BaseManager;
 class Faction;
+class UnitManager;
 class UnitPositionIndex;
 
 using UnitId_t = int;
@@ -71,6 +72,11 @@ public:
 private:
     // The index maintains m_pTile alongside its occupancy lists (MoveUnit).
     friend class UnitPositionIndex;
+    friend class UnitManager;
+
+    // Removes this unit from world occupancy before deferred object reclamation. Safe to
+    // call once; the destructor skips unregistering an already-detached unit.
+    void DetachFromWorld_();
 
     UnitId_t m_unitId;
     const UnitDesign& m_rDesign;
@@ -84,6 +90,7 @@ private:
     int m_moveFragmentsRemaining;
     int m_xp;
     std::optional<UnitOrder_t> m_order;
+    bool m_bRegistered;
 };
 
 } // namespace ac

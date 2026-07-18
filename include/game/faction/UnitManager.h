@@ -1,10 +1,11 @@
 #pragma once
 
 #include "game/units/Unit.h"
-#include "lib/DerefView.h"
 #include "lib/Revision.h"
 #include "lib/Signal.h"
+#include <cstddef>
 #include <memory>
+#include <ranges>
 #include <vector>
 
 namespace ac
@@ -19,6 +20,22 @@ class UnitPositionIndex;
 class UnitManager
 {
 public:
+    class DeferredDestructionScope
+    {
+    public:
+        DeferredDestructionScope(const DeferredDestructionScope&) = delete;
+        DeferredDestructionScope& operator=(const DeferredDestructionScope&) = delete;
+        DeferredDestructionScope(DeferredDestructionScope&& rOther) noexcept;
+        DeferredDestructionScope& operator=(DeferredDestructionScope&&) = delete;
+        ~DeferredDestructionScope();
+
+    private:
+        friend class UnitManager;
+        explicit DeferredDestructionScope(UnitManager& rManager);
+
+        UnitManager* m_pManager;
+    };
+
     explicit UnitManager(Faction& rFaction);
     ~UnitManager() = default;
 
@@ -29,9 +46,35 @@ public:
                      const Tile& rTile, BaseManager* pHomeBase = nullptr);
     void DestroyUnit(Unit& rUnit);
 
-    // Iterate units by reference without exposing the owning unique_ptrs.
-    auto Units() { return DerefView(m_units); }
-    auto Units() const { return DerefView(m_units); }
+    // Keep destroyed objects alive until the scope ends so a pass may safely destroy its
+    // current unit. DestroyUnit still removes the unit immediately from occupancy and all
+    // Units() views; only memory reclamation is deferred. Scopes may be nested.
+    [[nodiscard]] DeferredDestructionScope DeferDestruction();
+    bool IsPendingDestruction(const Unit& rUnit) const;
+
+    // Iterate live units by reference without exposing the owning unique_ptrs. Null slots
+    // left by deferred destruction are skipped.
+    auto Units()
+    {
+        return m_units
+            | std::views::filter([](const std::unique_ptr<Unit>& pUnit) {
+                  return pUnit != nullptr;
+              })
+            | std::views::transform([](const std::unique_ptr<Unit>& pUnit) -> Unit& {
+                  return *pUnit;
+              });
+    }
+    auto Units() const
+    {
+        return m_units
+            | std::views::filter([](const std::unique_ptr<Unit>& pUnit) {
+                  return pUnit != nullptr;
+              })
+            | std::views::transform([](const std::unique_ptr<Unit>& pUnit) -> const Unit& {
+                  return *pUnit;
+              });
+    }
+
     // First unit with moves remaining and no order, or nullptr.
     // If pAfter is set, returns the next such unit after it (wrapping), or the first if
     // pAfter is not among units that require orders.
@@ -41,13 +84,19 @@ public:
     // Bumped on every unit creation/destruction; consumed by effect-pool caches.
     uint64_t GetRevision() const { return m_revision.Get(); }
 
-    // Fired from DestroyUnit before the unit is erased, so observers (e.g. WorldView's unit
-    // selection) can drop any reference to it while it is still valid.
+    // Fired from DestroyUnit before the unit is removed, so observers (e.g. WorldView's
+    // unit selection) can drop any reference to it while it is still valid.
     Signal<Unit&> OnUnitDestroyed;
 
 private:
+    void BeginDestructionDeferral_();
+    void EndDestructionDeferral_();
+    void FlushPendingDestructions_();
+
     Faction& m_rFaction;
     std::vector<std::unique_ptr<Unit>> m_units;
+    std::vector<std::unique_ptr<Unit>> m_pendingDestructions;
+    std::size_t m_destructionDeferralDepth = 0;
     Revision m_revision;
 };
 
