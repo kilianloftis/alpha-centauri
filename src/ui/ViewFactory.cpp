@@ -37,7 +37,8 @@ std::unique_ptr<WorldView> ViewFactory::CreateWorldView(
     const WindowLayout_t& layout,
     std::function<void()> onProcessTurn,
     std::function<void()> onRequestExit,
-    std::function<void(BaseManager&)> onOpenBase
+    std::function<void(BaseManager&)> onOpenBase,
+    WorldView::OpenCombatCallback_t onOpenCombat
 ) const
 {
     return std::make_unique<WorldView>(
@@ -46,7 +47,8 @@ std::unique_ptr<WorldView> ViewFactory::CreateWorldView(
         layout,
         std::move(onProcessTurn),
         std::move(onRequestExit),
-        std::move(onOpenBase));
+        std::move(onOpenBase),
+        std::move(onOpenCombat));
 }
 
 std::unique_ptr<BaseView> ViewFactory::CreateBaseView(BaseManager& rBase) const
@@ -124,6 +126,30 @@ std::unique_ptr<SettingsView> ViewFactory::CreateSettingsView(
 ) const
 {
     return std::make_unique<SettingsView>(m_rSettings, layout);
+}
+
+std::unique_ptr<CombatView> ViewFactory::CreateCombatView(
+    const WindowLayout_t& layout,
+    CombatResult_t result,
+    const Tile& rAttackerTile,
+    const Tile& rDefenderTile,
+    std::string attackerName,
+    std::string defenderName,
+    WorldDisplay& rWorldDisplay,
+    WindowLayout_t mapLayout,
+    std::function<void()> onFinished
+) const
+{
+    return std::make_unique<CombatView>(
+        layout,
+        std::move(result),
+        rAttackerTile,
+        rDefenderTile,
+        std::move(attackerName),
+        std::move(defenderName),
+        rWorldDisplay,
+        mapLayout,
+        std::move(onFinished));
 }
 
 WindowLayout_t ViewFactory::GetFullscreenLayout() const

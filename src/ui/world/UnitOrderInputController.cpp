@@ -1,5 +1,6 @@
 #include "ui/world/UnitOrderInputController.h"
 
+#include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 
 namespace ac
@@ -8,6 +9,8 @@ namespace ac
 bool UnitOrderInputController::HandleKey(const KeyEvent_t& rEvent, Unit* pSelectedUnit)
 {
     m_bOrderAssigned = false;
+    m_bAttackRequested = false;
+    m_pAttackTarget = nullptr;
 
     if (!pSelectedUnit)
     {
@@ -29,8 +32,10 @@ bool UnitOrderInputController::HandleMouse(const MouseEvent_t& rEvent, Unit* pSe
                                            const Pathfinder* pPathfinder)
 {
     m_bOrderAssigned = false;
+    m_bAttackRequested = false;
+    m_pAttackTarget = nullptr;
 
-    // --- Left-click: long-press path preview + move order ---
+    // --- Left-click: long-press path preview + move order / adjacent attack ---
     if (rEvent.button == MouseButton_t::Left)
     {
         if (rEvent.bPressed)
@@ -59,6 +64,18 @@ bool UnitOrderInputController::HandleMouse(const MouseEvent_t& rEvent, Unit* pSe
         {
             m_pPreviewUnit->SetOrder(MoveOrder_t{m_pPreviewDestination});
             m_bOrderAssigned = true;
+            CancelPreview();
+            return true;
+        }
+
+        // Long-press on an adjacent tile: request an attack (WorldView calls TryAttack).
+        const auto elapsed = std::chrono::steady_clock::now() - m_leftButtonPressTime;
+        if (elapsed >= std::chrono::milliseconds(k_holdThresholdMs)
+            && m_pPreviewUnit && m_pPreviewDestination
+            && AreChebyshevAdjacent(m_pPreviewUnit->GetTile(), *m_pPreviewDestination))
+        {
+            m_bAttackRequested = true;
+            m_pAttackTarget = m_pPreviewDestination;
             CancelPreview();
             return true;
         }

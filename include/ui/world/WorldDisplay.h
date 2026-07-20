@@ -1,18 +1,19 @@
 #pragma once
 
 #include "graphics/Graphics.h"
+#include "game/units/Unit.h"
 #include "ui/UIElement.h"
+#include "ui/world/UnitMarkerRenderer.h"
+
+#include <optional>
 
 namespace ac
 {
 
 class GameState;
-class Unit;
 class WorldMap;
 class Tile;
 struct Path_t;
-enum class Moisture_t;
-enum class Rockiness_t;
 
 // Displays the world map as a grid of tiles.
 // Each tile shows: moisture rockiness elevation(km). Bases, Sensors, and units are read
@@ -22,7 +23,8 @@ class WorldDisplay
 public:
     WorldDisplay(const GameState& rGameState, WindowLayout_t layout);
 
-    // Set the unit currently selected by the player (highlighted on the map)
+    // Set the unit currently selected by the player (highlighted on the map). Also used as
+    // the path-preview line origin when a path is active.
     void SetSelectedUnit(const Unit* pUnit);
 
     // Set the path preview to render (nullptr to clear). Pointer must remain valid until
@@ -38,6 +40,9 @@ public:
     int GetVisibleCols() const;
     int GetVisibleRows() const;
 
+    // Unit marker layer: last-frame draw cache for combat overlays / hit animations.
+    const UnitMarkerRenderer& GetUnitMarkers() const { return m_unitMarkers; }
+
     // Render the world map using the stored layout.
     void Render(Graphics& rGraphics);
 
@@ -45,6 +50,7 @@ private:
     const GameState& m_rGameState;
     const Unit* m_pSelectedUnit = nullptr;
     const Path_t* m_pPathPreview = nullptr;
+    UnitMarkerRenderer m_unitMarkers;
 
     WindowLayout_t m_layout;
     float m_tileSize = 0.0f;
@@ -56,25 +62,14 @@ private:
 
     const WorldMap& GetWorldMap_() const;
 
-    // Convert terrain enums to display integers
-    int MoistureToInt_(Moisture_t moisture) const;
-    int RockinessToInt_(Rockiness_t rockiness) const;
-
-    // Render a single tile. Fogged tiles show terrain in muted color (explored memory).
-    void RenderTile_(Graphics& rGraphics, const Tile& rTile, float x, float y, float size,
-                     bool bFogged = false);
-
     // Render base markers with owner color and population info
     void RenderBases_(Graphics& rGraphics, int colStart, int rowStart, int colEnd, int rowEnd);
 
     // Render Sensor tower markers on explored tiles
     void RenderSensors_(Graphics& rGraphics, int colStart, int rowStart, int colEnd, int rowEnd);
 
-    // Render path preview overlay on tiles
-    void RenderPathPreview_(Graphics& rGraphics, int colStart, int rowStart, int colEnd, int rowEnd);
-
-    // Render unit markers on top of bases
-    void RenderUnits_(Graphics& rGraphics, int colStart, int rowStart, int colEnd, int rowEnd);
+    // Render path preview as a line through tile centers
+    void RenderPathPreview_(Graphics& rGraphics, int colStart, int rowStart);
 };
 
 } // namespace ac

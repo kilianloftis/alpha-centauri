@@ -49,6 +49,10 @@ void DrawFilledRect(float x, float y, float width, float height, const Color_t& 
     {
     }
 
+void DrawLine(float x1, float y1, float x2, float y2, const Color_t& color, float thickness) override
+    {
+    }
+
 unsigned int GetWindowWidth() const override
     {
         return 1280;

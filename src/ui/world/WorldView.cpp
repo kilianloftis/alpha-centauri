@@ -1,7 +1,9 @@
 #include "ui/world/WorldView.h"
 #include <algorithm>
 #include "ui/world/InfoPanelElement.h"
+#include "ui/world/LocationPanel.h"
 #include "ui/world/SelectedUnitPanel.h"
+#include "ui/world/UnitStackPanel.h"
 #include "ui/world/EndTurnButton.h"
 #include "game/GameState.h"
 #include "game/GameSettings.h"
@@ -15,6 +17,7 @@
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
+#include "game/units/UnitDesign.h"
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "ui/TileHitTester.h"
@@ -28,10 +31,8 @@ namespace ac
 namespace
 {
 
-constexpr Color_t k_ResearchTextColor         {100, 200, 255, 255};
-constexpr size_t k_SelectedUnitPanelIndex   = 0;
-constexpr size_t k_InfoPanelElementIndex    = 1;
-constexpr int    k_InvalidTileCoord         = -1;
+constexpr Color_t k_ResearchTextColor {100, 200, 255, 255};
+constexpr int    k_InvalidTileCoord  = -1;
 
 } // namespace
 
@@ -41,7 +42,8 @@ WorldView::WorldView(
     WindowLayout_t layout,
     std::function<void()> onProcessTurn,
     std::function<void()> onRequestExit,
-    OpenBaseCallback_t onOpenBase
+    OpenBaseCallback_t onOpenBase,
+    OpenCombatCallback_t onOpenCombat
 )
 : IGameView(layout)
 , m_rGameState(rGameState)
@@ -50,11 +52,27 @@ WorldView::WorldView(
 , m_onProcessTurn(std::move(onProcessTurn))
 , m_onRequestExit(std::move(onRequestExit))
 , m_onOpenBase(std::move(onOpenBase))
+, m_onOpenCombat(std::move(onOpenCombat))
 , m_pCameraInputController(std::make_unique<CameraInputController>(*m_pWorldDisplay, rWorldMap, m_mapLayout))
 , m_pUnitOrderInputController(std::make_unique<UnitOrderInputController>())
 {
-    m_elements.push_back(std::make_unique<SelectedUnitPanel>(ResolveLayout(m_layout, k_LeftPanelLayout)));
-    m_elements.push_back(std::make_unique<InfoPanelElement>(ResolveLayout(m_layout, k_CenterPanelLayout)));
+    auto pSelectedUnit = std::make_unique<SelectedUnitPanel>(ResolveLayout(m_layout, k_LeftPanelLayout));
+    m_pSelectedUnitPanel = pSelectedUnit.get();
+    m_elements.push_back(std::move(pSelectedUnit));
+
+    auto pLocation = std::make_unique<LocationPanel>(ResolveLayout(m_layout, k_LocationPanelLayout));
+    m_pLocationPanel = pLocation.get();
+    m_elements.push_back(std::move(pLocation));
+
+    auto pInfo = std::make_unique<InfoPanelElement>(ResolveLayout(m_layout, k_CenterPanelLayout));
+    m_pInfoPanel = pInfo.get();
+    m_elements.push_back(std::move(pInfo));
+
+    auto pUnitStack = std::make_unique<UnitStackPanel>(
+        ResolveLayout(m_layout, k_BottomPanelLayout),
+        [this](Unit& rUnit) { SetSelectedUnit_(&rUnit, true); });
+    m_pUnitStackPanel = pUnitStack.get();
+    m_elements.push_back(std::move(pUnitStack));
 
     auto pEndTurn = std::make_unique<EndTurnButton>(
         ResolveLayout(m_layout, k_RightButtonLayout),
@@ -80,12 +98,20 @@ void WorldView::Render(Graphics& rGraphics)
 {
     Update_();
     m_pWorldDisplay->Render(rGraphics);
-    IGameView::Render(rGraphics);
+    if (!m_bSuppressDashboard)
+    {
+        IGameView::Render(rGraphics);
+    }
 }
 
 void WorldView::UpdateCameraInput(bool bEnabled)
 {
     m_pCameraInputController->Update(bEnabled);
+}
+
+void WorldView::SetSuppressDashboard(bool bSuppress)
+{
+    m_bSuppressDashboard = bSuppress;
 }
 
 bool WorldView::PlayerUnitsNeedOrders_() const
@@ -109,11 +135,22 @@ void WorldView::SetSelectedUnit_(Unit* pUnit, bool bManualSelection)
     m_pSelectedUnit = pUnit;
     m_bManualSelection = bManualSelection;
 
+    // Keep location / stack panels on the selected unit's tile when cycling or picking.
+    if (pUnit)
+    {
+        m_pSelectedTile = &pUnit->GetTile();
+    }
+
     if (bSelectionChanged && pUnit && !bManualSelection)
     {
         const Tile& rTile = pUnit->GetTile();
         m_pCameraInputController->CenterOnTile(rTile.GetX(), rTile.GetY());
     }
+}
+
+void WorldView::SetSelectedTile_(const Tile* pTile)
+{
+    m_pSelectedTile = pTile;
 }
 
 void WorldView::SelectNextAvailableUnit_()
@@ -132,9 +169,9 @@ void WorldView::SelectNextAvailableUnitIfNeeded_()
         return;
     }
 
-    // Manual browse of a unit that does not need orders (already moved / has an order):
-    // leave the selection alone so the player can inspect or re-order it.
-    if (m_bManualSelection && m_pSelectedUnit && !UnitRequiresOrders_(*m_pSelectedUnit))
+    // Manual map browse: empty tile (no unit) or a unit that does not need orders
+    // (already moved / has an order). Leave selection alone so the player can inspect.
+    if (m_bManualSelection && (!m_pSelectedUnit || !UnitRequiresOrders_(*m_pSelectedUnit)))
     {
         return;
     }
@@ -160,24 +197,44 @@ void WorldView::Update_()
         infoLines.push_back({"Energy: " + std::to_string(pPlayerFaction->GetEconomy().GetEnergy()), Color_t::Yellow()});
         infoLines.push_back({"Research: " + std::to_string(pPlayerFaction->GetResearch().GetAccumulatedPoints()), k_ResearchTextColor});
     }
-    static_cast<InfoPanelElement*>(m_elements[k_InfoPanelElementIndex].get())->SetInfoLines(infoLines);
+    m_pInfoPanel->SetInfoLines(infoLines);
 
-    SelectNextAvailableUnitIfNeeded_();
+    if (!m_bSuppressDashboard)
+    {
+        SelectNextAvailableUnitIfNeeded_();
+    }
 
-    static_cast<SelectedUnitPanel*>(m_elements[k_SelectedUnitPanelIndex].get())
-        ->SetSelectedUnit(m_pSelectedUnit);
+    m_pSelectedUnitPanel->SetSelectedUnit(m_pSelectedUnit);
+    m_pLocationPanel->SetSelectedTile(m_pSelectedTile);
+
+    std::vector<Unit*> stackUnits;
+    if (m_pSelectedTile)
+    {
+        const Faction* pPlayer = m_rGameState.GetPlayerFaction();
+        for (Unit* pUnit : m_rGameState.GetWorldMap().GetUnitsOnTile(*m_pSelectedTile))
+        {
+            if (!pUnit)
+            {
+                continue;
+            }
+            if (pPlayer && !IsUnitVisibleTo(*pPlayer, *pUnit, m_rGameState.GetTileEffects()))
+            {
+                continue;
+            }
+            stackUnits.push_back(pUnit);
+        }
+    }
+    m_pUnitStackPanel->SetUnits(std::move(stackUnits), m_pSelectedUnit);
 
     const bool bNeedOrders = PlayerUnitsNeedOrders_();
     const bool bPauseAtEnd = m_rGameState.GetSettings().IsPauseAtEndOfTurn();
 
-    if (m_pEndTurnButton)
-    {
-        // Ready highlight only when pause-at-end is on and the interaction phase is finished.
-        m_pEndTurnButton->SetReady(bPauseAtEnd && !bNeedOrders);
-    }
+    // Ready highlight only when pause-at-end is on and the interaction phase is finished.
+    m_pEndTurnButton->SetReady(bPauseAtEnd && !bNeedOrders && !m_bSuppressDashboard);
 
     // When pause is off, advance automatically once the last unit that needed orders is done.
-    if (!bPauseAtEnd && m_bHadUnitsNeedingOrders && !bNeedOrders)
+    // Skip while CombatView is open (ProcessTurn_ also rejects overlays).
+    if (!bPauseAtEnd && !m_bSuppressDashboard && m_bHadUnitsNeedingOrders && !bNeedOrders)
     {
         m_bHadUnitsNeedingOrders = false;
         m_onProcessTurn();
@@ -261,9 +318,31 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
     const Tile* pClickedTile = m_rGameState.GetWorldMap().GetTile(worldX, worldY);
 
     Unit* pControllable = GetControllableSelectedUnit_();
-    if (m_pUnitOrderInputController->HandleMouse(rEvent, pControllable, pClickedTile,
-                                                 &m_rGameState.GetPathfinder()))
+    const bool bOrderHandled = m_pUnitOrderInputController->HandleMouse(
+        rEvent, pControllable, pClickedTile, &m_rGameState.GetPathfinder());
+
+    // Left-click release on an explored tile selects the tile and a visible unit on it
+    // (also when a move / attack order consumed the click — tile only in that case until
+    // the normal pick path below runs).
+    if (rEvent.button == MouseButton_t::Left && !rEvent.bPressed && pClickedTile)
     {
+        const Faction* pPlayer = m_rGameState.GetPlayerFaction();
+        const FactionExploredMap* pExplored =
+            (pPlayer && pPlayer->GetExploredMap().IsSized()) ? &pPlayer->GetExploredMap() : nullptr;
+        if (!pExplored || pExplored->IsExplored(worldX, worldY))
+        {
+            SetSelectedTile_(pClickedTile);
+        }
+    }
+
+    if (bOrderHandled)
+    {
+        if (m_pUnitOrderInputController->WasAttackRequested() && pControllable
+            && m_pUnitOrderInputController->GetAttackTarget())
+        {
+            TryBeginAttack_(*pControllable, *m_pUnitOrderInputController->GetAttackTarget());
+            return;
+        }
         if (m_pUnitOrderInputController->WasOrderAssigned() && pControllable)
         {
             m_rGameState.GetUnitOrderExecutor().Execute(*pControllable);
@@ -283,15 +362,62 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
             return;
         }
 
+        // Unit pick uses IsUnitVisibleTo (fog / Conceal / contact reveal), not tile fog alone.
+        SelectUnitAtTile_(worldX, worldY);
+
         if (BaseManager* pBase = m_rGameState.FindBaseAt(worldX, worldY))
         {
             m_onOpenBase(*pBase);
             return;
         }
-
-        // Unit pick uses IsUnitVisibleTo (fog / Conceal / contact reveal), not tile fog alone.
-        SelectUnitAtTile_(worldX, worldY);
     }
+}
+
+void WorldView::TryBeginAttack_(Unit& rAttacker, const Tile& rTargetTile)
+{
+    // Capture identity / tiles before Resolve mutates positions / destroys units.
+    const Tile& rAttackerTile = rAttacker.GetTile();
+    const std::string attackerName = rAttacker.GetDesign().GetName();
+    const std::string defenderName = FindUnitNameOnTile_(rTargetTile);
+
+    const auto result = m_rGameState.GetUnitOrderExecutor().TryAttack(rAttacker, rTargetTile);
+    if (!result)
+    {
+        return;
+    }
+
+    if (result->rounds.empty())
+    {
+        SelectNextAvailableUnit_();
+        return;
+    }
+
+    SetSuppressDashboard(true);
+    m_onOpenCombat(
+        *result,
+        rAttackerTile,
+        rTargetTile,
+        attackerName,
+        defenderName,
+        *m_pWorldDisplay,
+        m_mapLayout,
+        [this]() {
+            SetSuppressDashboard(false);
+            SelectNextAvailableUnit_();
+        });
+}
+
+std::string WorldView::FindUnitNameOnTile_(const Tile& rTile) const
+{
+    const std::vector<Unit*>& units = m_rGameState.GetWorldMap().GetUnitsOnTile(rTile);
+    for (const Unit* pUnit : units)
+    {
+        if (pUnit)
+        {
+            return pUnit->GetDesign().GetName();
+        }
+    }
+    return {};
 }
 
 void WorldView::SelectUnitAtTile_(int tileX, int tileY)
@@ -300,14 +426,14 @@ void WorldView::SelectUnitAtTile_(int tileX, int tileY)
     const Tile* pTile = rWorldMap.GetTile(tileX, tileY);
     if (!pTile)
     {
-        SetSelectedUnit_(nullptr, false);
+        SetSelectedUnit_(nullptr, true);
         return;
     }
 
     const std::vector<Unit*>& units = rWorldMap.GetUnitsOnTile(*pTile);
     if (units.empty())
     {
-        SetSelectedUnit_(nullptr, false);
+        SetSelectedUnit_(nullptr, true);
         return;
     }
 
@@ -326,7 +452,7 @@ void WorldView::SelectUnitAtTile_(int tileX, int tileY)
         return;
     }
 
-    SetSelectedUnit_(nullptr, false);
+    SetSelectedUnit_(nullptr, true);
 }
 
 Unit* WorldView::GetControllableSelectedUnit_() const

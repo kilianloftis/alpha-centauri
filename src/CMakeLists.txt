@@ -187,14 +187,20 @@ add_executable(alpha-centauri
     input/KeyEventQueue.cpp
     input/MouseEventQueue.cpp
     ui/TileHitTester.cpp
+    ui/TileRenderer.cpp
     ui/UIManager.cpp
     ui/ViewFactory.cpp
     ui/world/WorldView.cpp
     ui/world/CameraInputController.cpp
     ui/world/UnitOrderInputController.cpp
+    ui/world/CombatPresentation.cpp
+    ui/world/CombatView.cpp
     ui/world/WorldDisplay.cpp
+    ui/world/UnitMarkerRenderer.cpp
     ui/world/InfoPanelElement.cpp
+    ui/world/LocationPanel.cpp
     ui/world/SelectedUnitPanel.cpp
+    ui/world/UnitStackPanel.cpp
     ui/world/EndTurnButton.cpp
     ui/base/BaseView.cpp
     ui/base/BaseWorkableAreaDisplay.cpp

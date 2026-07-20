@@ -371,7 +371,26 @@ void Engine::Initialize_()
         fullscreen,
         [this]() { ProcessTurn_(); },
         [this]() { m_uiManager->RequestExit(); },
-        [this](BaseManager& rBase) { m_uiManager->PushView(m_viewFactory->CreateBaseView(rBase)); }
+        [this](BaseManager& rBase) { m_uiManager->PushView(m_viewFactory->CreateBaseView(rBase)); },
+        [this](CombatResult_t result,
+               const Tile& rAttackerTile,
+               const Tile& rDefenderTile,
+               std::string attackerName,
+               std::string defenderName,
+               WorldDisplay& rWorldDisplay,
+               WindowLayout_t mapLayout,
+               std::function<void()> onFinished) {
+            m_uiManager->PushView(m_viewFactory->CreateCombatView(
+                m_viewFactory->GetFullscreenLayout(),
+                std::move(result),
+                rAttackerTile,
+                rDefenderTile,
+                std::move(attackerName),
+                std::move(defenderName),
+                rWorldDisplay,
+                mapLayout,
+                std::move(onFinished)));
+        }
     );
     m_uiManager->RegisterViewShortcut(Key_t::F2, [this, fullscreen]() -> std::unique_ptr<IGameView> {
         return m_viewFactory->CreateResearchView(fullscreen);

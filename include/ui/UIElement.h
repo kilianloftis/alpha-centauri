@@ -58,7 +58,7 @@ inline constexpr RatioLayout_t k_LocationPanelLayout {0.20f, 0.70f, 0.12f, 0.30f
 // Faction stats + dominance graph (upper ~2/3 of the mid dashboard).
 inline constexpr RatioLayout_t k_CenterPanelLayout   {0.32f, 0.70f, 0.46f, 0.20f};
 // Mid dashboard band between location and right panels (full strip height).
-inline constexpr RatioLayout_t k_BottomPanelLayout   {0.32f, 0.70f, 0.46f, 0.30f};
+inline constexpr RatioLayout_t k_BottomPanelLayout   {0.32f, 0.90f, 0.46f, 0.10f};
 // Minimap + mission-year / energy footer (far right).
 inline constexpr RatioLayout_t k_RightPanelLayout    {0.78f, 0.70f, 0.22f, 0.30f};
 // TURN COMPLETE along the top edge of the right panel.

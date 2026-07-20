@@ -5,6 +5,7 @@
 #include "input/KeyEventQueue.h"
 #include "input/MouseEventQueue.h"
 #include <SFML/Graphics.hpp>
+#include <cmath>
 #include <iostream>
 #include <memory>
 #include <optional>
@@ -107,6 +108,24 @@ public:
         rect.setPosition(sf::Vector2f(x, y));
         rect.setFillColor(sf::Color(color.r, color.g, color.b, color.a));
         m_window.draw(rect);
+    }
+
+    void DrawLine(float x1, float y1, float x2, float y2, const Color_t& color, float thickness) override
+    {
+        const float dx = x2 - x1;
+        const float dy = y2 - y1;
+        const float length = std::sqrt(dx * dx + dy * dy);
+        if (length <= 0.0f || thickness <= 0.0f)
+        {
+            return;
+        }
+
+        sf::RectangleShape line(sf::Vector2f(length, thickness));
+        line.setOrigin({0.f, thickness * 0.5f});
+        line.setPosition({x1, y1});
+        line.setRotation(sf::radians(std::atan2(dy, dx)));
+        line.setFillColor(sf::Color(color.r, color.g, color.b, color.a));
+        m_window.draw(line);
     }
 
     unsigned int GetWindowWidth() const override

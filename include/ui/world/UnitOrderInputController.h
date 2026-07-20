@@ -27,6 +27,11 @@ public:
     // True after the most recent HandleKey/HandleMouse call assigned an order.
     bool WasOrderAssigned() const { return m_bOrderAssigned; }
 
+    // True after a long-press release on an adjacent tile (attack attempt). Target remains
+    // valid until the next HandleKey/HandleMouse call.
+    bool WasAttackRequested() const { return m_bAttackRequested; }
+    const Tile* GetAttackTarget() const { return m_pAttackTarget; }
+
     // Non-null while a left-click hold has exceeded the threshold and the path is valid.
     const Path_t* GetPathPreview() const;
 
@@ -45,6 +50,8 @@ private:
     };
 
     bool m_bOrderAssigned = false;
+    bool m_bAttackRequested = false;
+    const Tile* m_pAttackTarget = nullptr;
 
     // Left-click long-press path preview.
     bool m_bLeftButtonHeld = false;
