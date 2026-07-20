@@ -15,7 +15,6 @@
 #include "game/faction/Military.h"
 #include "game/faction/ResearchManager.h"
 #include "game/faction/ResearchSelector.h"
-#include "game/faction/Diplomacy.h"
 #include "game/faction/SocialEngineeringManager.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/base/buildings/BuildingManager.h"
@@ -49,7 +48,6 @@ Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
     , m_pMilitary(std::make_unique<Military>())
     , m_pResearch(std::make_unique<ResearchManager>(pTechRegistry, pTechCostCalculator, this))
     , m_pResearchSelector(std::make_unique<ResearchSelector>(m_pResearch.get()))
-    , m_pDiplomacy(nullptr)
     , m_pSocialEngineering(std::make_unique<SocialEngineeringManager>(pSocialPolicyRegistry,
                                                                         pSocialRatingRegistry))
     , m_pUnits(std::make_unique<UnitManager>(*this))

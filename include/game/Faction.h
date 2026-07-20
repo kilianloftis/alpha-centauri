@@ -34,7 +34,6 @@ class EconomyManager;
 class Military;
 class ResearchManager;
 class ResearchSelector;
-class Diplomacy;
 class SocialEngineeringManager;
 class PopTypeAvailabilityCalculator;
 class SecretProjectAvailabilityCalculator;
@@ -170,7 +169,6 @@ private:
     std::unique_ptr<Military> m_pMilitary;
     std::unique_ptr<ResearchManager> m_pResearch;
     std::unique_ptr<ResearchSelector> m_pResearchSelector;
-    std::unique_ptr<Diplomacy> m_pDiplomacy;
     std::unique_ptr<SocialEngineeringManager> m_pSocialEngineering;
     std::unique_ptr<UnitManager> m_pUnits;
     std::vector<std::unique_ptr<BaseManager>> m_bases;

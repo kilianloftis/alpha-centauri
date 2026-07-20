@@ -4,7 +4,7 @@
 #include "game/faction/FactionIdentity.h"
 #include "game/faction/AIProfile.h"
 #include "game/faction/Military.h"
-#include "game/faction/Diplomacy.h"
+#include "game/faction/DiplomacyManager.h"
 #include "game/faction/UnitManager.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/WorldMap.h"
@@ -30,6 +30,7 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
     , m_rSettings(rSettings)
     , m_pEventBus(std::make_unique<EventBus>())
     , m_worldMap(std::move(pWorldMap))
+    , m_pDiplomacy(std::make_unique<DiplomacyManager>())
     , m_secretProjectAvailability(*this)
 {
     if (!m_worldMap)
@@ -152,6 +153,16 @@ Faction* GameState::GetPlayerFaction()
         }
     }
     return nullptr;
+}
+
+DiplomacyManager& GameState::GetDiplomacy()
+{
+    return *m_pDiplomacy;
+}
+
+const DiplomacyManager& GameState::GetDiplomacy() const
+{
+    return *m_pDiplomacy;
 }
 
 FactionId_t GameState::AllocateFactionId()

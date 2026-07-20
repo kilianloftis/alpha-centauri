@@ -2,6 +2,7 @@
 
 #include "game/Faction.h"
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
+#include "game/faction/DiplomacyManager.h"
 #include "game/map/WorldMap.h"
 #include "game/units/MoveCostCalculator.h"
 #include "game/units/StepEvaluator.h"
@@ -53,6 +54,9 @@ public:
     // Returns the faction with IsPlayerControlled() set, or nullptr if none has been added yet.
     const Faction* GetPlayerFaction() const;
     Faction* GetPlayerFaction();
+
+    DiplomacyManager& GetDiplomacy();
+    const DiplomacyManager& GetDiplomacy() const;
 
     // Sole owners of faction/base/unit ID allocation: nothing else may mint one of these
     // IDs, so any runtime faction, base, or unit creation (not just the composition root)
@@ -109,6 +113,7 @@ private:
     std::unique_ptr<StepEvaluator> m_pSteps;
     std::unique_ptr<Pathfinder> m_pPathfinder;
     std::unique_ptr<UnitOrderExecutor> m_pUnitOrderExecutor;
+    std::unique_ptr<DiplomacyManager> m_pDiplomacy;
     std::vector<std::unique_ptr<Faction>> m_factions;
     IdAllocator m_factionIdAllocator;
     IdAllocator m_baseIdAllocator;
