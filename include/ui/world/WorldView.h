@@ -49,7 +49,8 @@ public:
         std::function<void()> onProcessTurn,
         std::function<void()> onRequestExit,
         OpenBaseCallback_t onOpenBase,
-        OpenCombatCallback_t onOpenCombat
+        OpenCombatCallback_t onOpenCombat,
+        std::function<void()> onOpenCommlinks
     );
 
     void Render(Graphics& rGraphics) override;
@@ -84,6 +85,7 @@ private:
     std::function<void()> m_onRequestExit;
     OpenBaseCallback_t m_onOpenBase;
     OpenCombatCallback_t m_onOpenCombat;
+    std::function<void()> m_onOpenCommlinks;
 
     Unit* m_pSelectedUnit = nullptr;
     const Tile* m_pSelectedTile = nullptr;

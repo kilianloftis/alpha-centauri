@@ -61,8 +61,8 @@ inline constexpr RatioLayout_t k_CenterPanelLayout   {0.32f, 0.70f, 0.46f, 0.20f
 inline constexpr RatioLayout_t k_BottomPanelLayout   {0.32f, 0.90f, 0.46f, 0.10f};
 // Minimap + mission-year / energy footer (far right).
 inline constexpr RatioLayout_t k_RightPanelLayout    {0.78f, 0.70f, 0.22f, 0.30f};
-// TURN COMPLETE along the top edge of the right panel.
-inline constexpr RatioLayout_t k_RightButtonLayout       {0.90f, 0.67f, 0.10f, 0.03f};
+// Upper subdivisions of the right panel (fullscreen ratios, like the other dashboard columns).
+inline constexpr RatioLayout_t k_RightButtonLayout {0.90f, 0.67f, 0.10f, 0.03f};
 
 inline constexpr RatioLayout_t k_PopupLayout         {0.5f,  0.75f, 0.25f, 0.125f};
 inline constexpr RatioLayout_t k_PopupLayoutSmall    {0.3f,  0.3f,  0.4f,  0.4f};

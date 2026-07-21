@@ -3,6 +3,24 @@
 namespace ac
 {
 
+std::string ToString(DiplomaticStatus status)
+{
+    switch (status)
+    {
+    case DiplomaticStatus::None:
+        return {};
+    case DiplomaticStatus::Truce:
+        return "Truce";
+    case DiplomaticStatus::Friendship:
+        return "Friendship";
+    case DiplomaticStatus::Pact:
+        return "Pact";
+    case DiplomaticStatus::Vendetta:
+        return "Vendetta";
+    }
+    return {};
+}
+
 DiplomaticStatus DiplomacyLedger::GetStatus(FactionId_t a, FactionId_t b) const
 {
     const FactionPair key = FactionPair::Canonical(a, b);

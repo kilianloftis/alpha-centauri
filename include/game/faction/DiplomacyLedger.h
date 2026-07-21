@@ -3,6 +3,7 @@
 #include "game/faction/FactionPair.h"
 #include "game/faction/base/BaseTypes.h"
 #include <map>
+#include <string>
 
 namespace ac
 {
@@ -17,6 +18,9 @@ enum class DiplomaticStatus
     Pact,
     Vendetta
 };
+
+// Empty string for None; otherwise the status name (Truce, Friendship, Pact, Vendetta).
+std::string ToString(DiplomaticStatus status);
 
 // World-scoped tracker for diplomatic state between factions.
 class DiplomacyLedger

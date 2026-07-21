@@ -4,6 +4,7 @@
 #include "ui/IGameView.h"
 #include "ui/base/BaseView.h"
 #include "ui/research/ResearchView.h"
+#include "ui/commlinks/CommlinksView.h"
 #include "ui/settings/SettingsView.h"
 #include "ui/social-engineering/SocialEngineeringView.h"
 #include "ui/unit-designer/UnitDesignerView.h"
@@ -40,7 +41,8 @@ public:
         std::function<void()> onProcessTurn,
         std::function<void()> onRequestExit,
         std::function<void(BaseManager&)> onOpenBase,
-        WorldView::OpenCombatCallback_t onOpenCombat
+        WorldView::OpenCombatCallback_t onOpenCombat,
+        std::function<void()> onOpenCommlinks
     ) const;
 
     std::unique_ptr<BaseView> CreateBaseView(BaseManager& rBase) const;
@@ -63,6 +65,10 @@ public:
     ) const;
 
     std::unique_ptr<SettingsView> CreateSettingsView(
+        const WindowLayout_t& layout
+    ) const;
+
+    std::unique_ptr<CommlinksView> CreateCommlinksView(
         const WindowLayout_t& layout
     ) const;
 

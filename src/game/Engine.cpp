@@ -391,6 +391,10 @@ void Engine::Initialize_()
                 rWorldDisplay,
                 mapLayout,
                 std::move(onFinished)));
+        },
+        [this]() {
+            m_uiManager->PushView(
+                m_viewFactory->CreateCommlinksView(m_viewFactory->GetFullscreenLayout()));
         }
     );
     m_uiManager->RegisterViewShortcut(Key_t::F2, [this, fullscreen]() -> std::unique_ptr<IGameView> {

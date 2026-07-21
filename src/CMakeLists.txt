@@ -206,6 +206,9 @@ add_executable(alpha-centauri
     ui/world/SelectedUnitPanel.cpp
     ui/world/UnitStackPanel.cpp
     ui/world/EndTurnButton.cpp
+    ui/world/CommlinksButton.cpp
+    ui/commlinks/CommlinksView.cpp
+    ui/commlinks/CommlinksPanel.cpp
     ui/base/BaseView.cpp
     ui/base/BaseWorkableAreaDisplay.cpp
     ui/base/GrowthDisplay.cpp

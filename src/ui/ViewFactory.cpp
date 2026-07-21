@@ -38,7 +38,8 @@ std::unique_ptr<WorldView> ViewFactory::CreateWorldView(
     std::function<void()> onProcessTurn,
     std::function<void()> onRequestExit,
     std::function<void(BaseManager&)> onOpenBase,
-    WorldView::OpenCombatCallback_t onOpenCombat
+    WorldView::OpenCombatCallback_t onOpenCombat,
+    std::function<void()> onOpenCommlinks
 ) const
 {
     return std::make_unique<WorldView>(
@@ -48,7 +49,8 @@ std::unique_ptr<WorldView> ViewFactory::CreateWorldView(
         std::move(onProcessTurn),
         std::move(onRequestExit),
         std::move(onOpenBase),
-        std::move(onOpenCombat));
+        std::move(onOpenCombat),
+        std::move(onOpenCommlinks));
 }
 
 std::unique_ptr<BaseView> ViewFactory::CreateBaseView(BaseManager& rBase) const
@@ -126,6 +128,13 @@ std::unique_ptr<SettingsView> ViewFactory::CreateSettingsView(
 ) const
 {
     return std::make_unique<SettingsView>(m_rSettings, layout);
+}
+
+std::unique_ptr<CommlinksView> ViewFactory::CreateCommlinksView(
+    const WindowLayout_t& layout
+) const
+{
+    return std::make_unique<CommlinksView>(m_rGameState, layout);
 }
 
 std::unique_ptr<CombatView> ViewFactory::CreateCombatView(

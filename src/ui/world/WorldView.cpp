@@ -4,6 +4,7 @@
 #include "ui/world/LocationPanel.h"
 #include "ui/world/SelectedUnitPanel.h"
 #include "ui/world/UnitStackPanel.h"
+#include "ui/world/CommlinksButton.h"
 #include "ui/world/EndTurnButton.h"
 #include "game/GameState.h"
 #include "game/GameSettings.h"
@@ -43,7 +44,8 @@ WorldView::WorldView(
     std::function<void()> onProcessTurn,
     std::function<void()> onRequestExit,
     OpenBaseCallback_t onOpenBase,
-    OpenCombatCallback_t onOpenCombat
+    OpenCombatCallback_t onOpenCombat,
+    std::function<void()> onOpenCommlinks
 )
 : IGameView(layout)
 , m_rGameState(rGameState)
@@ -53,6 +55,7 @@ WorldView::WorldView(
 , m_onRequestExit(std::move(onRequestExit))
 , m_onOpenBase(std::move(onOpenBase))
 , m_onOpenCombat(std::move(onOpenCombat))
+, m_onOpenCommlinks(std::move(onOpenCommlinks))
 , m_pCameraInputController(std::make_unique<CameraInputController>(*m_pWorldDisplay, rWorldMap, m_mapLayout))
 , m_pUnitOrderInputController(std::make_unique<UnitOrderInputController>())
 {
@@ -74,8 +77,12 @@ WorldView::WorldView(
     m_pUnitStackPanel = pUnitStack.get();
     m_elements.push_back(std::move(pUnitStack));
 
-    auto pEndTurn = std::make_unique<EndTurnButton>(
+    m_elements.push_back(std::make_unique<CommlinksButton>(
         ResolveLayout(m_layout, k_RightButtonLayout),
+        [this]() { m_onOpenCommlinks(); }));
+
+    auto pEndTurn = std::make_unique<EndTurnButton>(
+        ResolveLayout(k_RightPanelLayout, {0.0f, 0.0f, 1.0f, 0.08f}),
         [this]() { m_onProcessTurn(); });
     m_pEndTurnButton = pEndTurn.get();
     m_elements.push_back(std::move(pEndTurn));
