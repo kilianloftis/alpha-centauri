@@ -2,6 +2,7 @@
 
 #include "ui/social-engineering/SocialEngineeringDisplay.h"
 #include "ui/social-engineering/SocialEngineeringBottomPanel.h"
+#include "ui/style/UiStyle.h"
 
 namespace ac
 {
@@ -21,11 +22,11 @@ SocialEngineeringView::SocialEngineeringView(
         m_pFaction,
         m_pPolicyRegistry,
         m_pRatingRegistry,
-        ResolveLayout(m_layout, k_TopPanelLayout)
+        ResolveLayout(m_layout, Style().layouts.topPanel)
     ));
     m_elements.push_back(std::make_unique<SocialEngineeringBottomPanel>(
         m_pFaction,
-        ResolveLayout(m_layout, k_BottomPanelLayout)
+        ResolveLayout(m_layout, Style().layouts.bottomPanel)
     ));
 }
 

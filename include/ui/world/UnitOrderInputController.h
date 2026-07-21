@@ -38,8 +38,6 @@ public:
     void CancelPreview();
 
 private:
-    static constexpr int k_holdThresholdMs = 500;
-
     void UpdatePreview_(Unit& rMover, const Tile& rDestination, const Pathfinder& rPathfinder);
 
     const std::unordered_map<Key_t, OrderHandler_t> m_orderHandlers = {

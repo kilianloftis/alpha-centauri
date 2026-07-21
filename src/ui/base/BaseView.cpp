@@ -15,6 +15,7 @@
 #include "lib/EventBus.h"
 #include "ui/UIManager.h"
 #include "ui/TileHitTester.h"
+#include "ui/style/UiStyle.h"
 #include "graphics/Graphics.h"
 #include <string>
 
@@ -33,10 +34,10 @@ BaseView::BaseView(
     , m_bEditable(bEditable)
 {
     const WindowLayout_t leftColumn = ResolveLayout(m_layout, {
-        k_LeftPanelLayout.x,
-        0.25f,
-        k_LeftPanelLayout.width,
-        2.0f * k_LeftPanelLayout.height
+        Style().layouts.leftPanel.x,
+        Style().baseView.leftColumnY,
+        Style().layouts.leftPanel.width,
+        Style().baseView.leftColumnHeightMultiplier * Style().layouts.leftPanel.height
     });
 
     BaseWorkableAreaDisplay::TileClickCallback_t onTileClick;
@@ -53,22 +54,22 @@ BaseView::BaseView(
 
     m_elements.push_back(std::make_unique<GrowthDisplay>(
         &m_rBase,
-        ResolveLayout(leftColumn, {0.0f, 0.0f, 1.0f, 0.5f})
+        ResolveLayout(leftColumn, Style().baseView.growthHalfLayout)
     ));
     m_elements.push_back(std::make_unique<BaseWorkableAreaDisplay>(
         &m_rBase,
-        ResolveLayout(m_layout, k_TopPanelLayout),
+        ResolveLayout(m_layout, Style().layouts.topPanel),
         std::move(onTileClick),
         std::move(onBaseClick)
     ));
     m_elements.push_back(std::make_unique<ProductionDisplay>(
         &m_rBase,
-        ResolveLayout(leftColumn, {0.0f, 0.5f, 1.0f, 0.5f}),
+        ResolveLayout(leftColumn, Style().baseView.productionHalfLayout),
         std::move(onProductionClick)
     ));
     m_elements.push_back(std::make_unique<PopulationDisplay>(
         &m_rBase.GetPopulation(),
-        ResolveLayout(m_layout, k_BottomPanelLayout),
+        ResolveLayout(m_layout, Style().layouts.bottomPanel),
         std::move(onPopClick)
     ));
 }
@@ -128,7 +129,7 @@ void BaseView::HandlePopClick(Pop& rPop)
 
     m_elements.push_back(std::make_unique<PopTypeSelectorPopup>(
         m_rFaction.GetAvailablePopTypes(),
-        ResolveLayout(m_layout, k_PopupLayoutSmall),
+        ResolveLayout(m_layout, Style().layouts.popupSmall),
         [this, &rPop](const PopTypeConfig_t& rConfig) {
             HandlePopTypeSelected(rPop, rConfig);
         }
@@ -156,7 +157,7 @@ void BaseView::HandleProductionDisplayClicked_()
 
     m_elements.push_back(std::make_unique<ProductionSelectorPopup>(
         std::move(available),
-        ResolveLayout(m_layout, k_TopPanelLayout),
+        ResolveLayout(m_layout, Style().layouts.topPanel),
         [this](const IConstructable& rItem) { m_rBase.GetProduction().SetProduction(&rItem); }
     ));
 }

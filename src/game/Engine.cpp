@@ -48,6 +48,7 @@
 #include "game/map/WorldGenerator.h"
 #include "ui/UIManager.h"
 #include "ui/ViewFactory.h"
+#include "ui/style/UiStyle.h"
 #include <functional>
 #include <iostream>
 #include <stdexcept>
@@ -122,6 +123,8 @@ void Engine::Initialize_()
     std::cout << "Initializing game engine...\n";
 
     m_pSettings->Load();
+
+    UiStyle::Load("config/ui/style.json");
 
     m_gameDataContext->popTypeRegistry = std::make_unique<PopTypeRegistry>();
     m_gameDataContext->popTypeRegistry->Load("config/pop_types.json");

@@ -2,21 +2,10 @@
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "graphics/Graphics.h"
 #include "input/Input.h"
+#include "ui/style/UiStyle.h"
 
 namespace ac
 {
-
-namespace
-{
-
-constexpr float k_HeaderFontSizeRatio  = 0.04f;
-constexpr float k_EntryFontSizeRatio   = 0.03f;
-constexpr float k_LineHeightRatio      = 0.05f;
-constexpr float k_PaddingRatio         = 0.02f;
-constexpr float k_HeaderLineOffset     = 2.0f;
-constexpr Color_t k_BackgroundColor      {20, 20, 40, 230};
-
-} // namespace
 
 PopTypeSelectorPopup::PopTypeSelectorPopup(
     std::vector<const PopTypeConfig_t*> popTypes,
@@ -32,9 +21,10 @@ PopTypeSelectorPopup::PopTypeSelectorPopup(
 
 void PopTypeSelectorPopup::CacheEntryRects_()
 {
-    const float lineHeight = m_layout.height * k_LineHeightRatio;
+    const auto& style = Style().popTypeSelectorPopup;
+    const float lineHeight = m_layout.height * style.lineHeightRatio;
 
-    float offsetY = lineHeight * k_HeaderLineOffset;
+    float offsetY = lineHeight * style.headerLineOffset;
     for (size_t i = 0; i < m_popTypes.size(); ++i)
     {
         m_entryRects.push_back(Rectangle_t{
@@ -53,25 +43,27 @@ void PopTypeSelectorPopup::Render(Graphics& rGraphics)
     {
         return;
     }
-    const float padding = k_PaddingRatio * m_layout.width;
 
-    const unsigned int headerFontSize = static_cast<unsigned int>(m_layout.height * k_HeaderFontSizeRatio);
-    const unsigned int entryFontSize  = static_cast<unsigned int>(m_layout.height * k_EntryFontSizeRatio);
-    const float        lineHeight     = m_layout.height * k_LineHeightRatio;
+    const auto& style = Style().popTypeSelectorPopup;
+    const float padding = style.paddingRatio * m_layout.width;
 
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, k_BackgroundColor);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color_t::Yellow());
+    const unsigned int headerFontSize = static_cast<unsigned int>(m_layout.height * style.headerFontSizeRatio);
+    const unsigned int entryFontSize  = static_cast<unsigned int>(m_layout.height * style.entryFontSizeRatio);
+    const float        lineHeight     = m_layout.height * style.lineHeightRatio;
 
-    rGraphics.DrawText("Select Pop Type", m_layout.x + padding, m_layout.y + padding, headerFontSize, Color_t::Yellow());
+    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.backgroundColor);
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.borderColor);
+
+    rGraphics.DrawText("Select Pop Type", m_layout.x + padding, m_layout.y + padding, headerFontSize, style.headerColor);
 
     if (m_popTypes.empty())
     {
         rGraphics.DrawText(
             "No pop types available",
             m_layout.x + padding,
-            m_layout.y + lineHeight * k_HeaderLineOffset,
+            m_layout.y + lineHeight * style.headerLineOffset,
             entryFontSize,
-            Color_t::White()
+            style.hintColor
         );
         return;
     }
@@ -79,7 +71,7 @@ void PopTypeSelectorPopup::Render(Graphics& rGraphics)
     for (size_t i = 0; i < m_popTypes.size(); ++i)
     {
         const Rectangle_t& rect = m_entryRects[i];
-        rGraphics.DrawText(m_popTypes[i]->name, rect.x + padding, rect.y, entryFontSize, Color_t::White());
+        rGraphics.DrawText(m_popTypes[i]->name, rect.x + padding, rect.y, entryFontSize, style.entryColor);
     }
 }
 

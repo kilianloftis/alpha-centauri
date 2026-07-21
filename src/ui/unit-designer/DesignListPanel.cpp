@@ -2,29 +2,10 @@
 #include "game/faction/Military.h"
 #include "game/units/UnitDesign.h"
 #include "graphics/Graphics.h"
+#include "ui/style/UiStyle.h"
 
 namespace ac
 {
-
-namespace
-{
-
-constexpr Color_t k_BackgroundColor           {10, 10, 15, 255};
-constexpr Color_t k_BorderColor               {60, 60, 80, 255};
-constexpr Color_t k_EmptyListTextColor        {100, 100, 100, 255};
-constexpr Color_t k_SelectedBoxFillColor      {50, 50, 90, 255};
-constexpr Color_t k_UnselectedBoxFillColor    {25, 25, 40, 255};
-constexpr Color_t k_UnselectedBoxBorderColor  {80, 80, 110, 255};
-constexpr float k_BoxWidthRatio             = 0.15f;
-constexpr float k_BoxPaddingRatio           = 0.005f;
-constexpr float k_FontSizeRatio             = 0.07f;
-constexpr float k_LabelFontRatio            = 0.05f;
-constexpr float k_EmptyListPaddingMultiplier = 4.0f;
-constexpr float k_VerticalPaddingMultiplier = 2.0f;
-constexpr float k_TextPadRatio              = 0.05f;
-constexpr float k_TextVerticalRatio         = 0.35f;
-
-} // namespace
 
 DesignListPanel::DesignListPanel(
     const Military* pMilitary,
@@ -38,8 +19,14 @@ DesignListPanel::DesignListPanel(
 
 void DesignListPanel::Render(Graphics& rGraphics)
 {
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, k_BackgroundColor);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, k_BorderColor);
+    rGraphics.DrawFilledRect(
+        m_layout.x, m_layout.y, m_layout.width, m_layout.height,
+        Style().designListPanel.backgroundColor
+    );
+    rGraphics.DrawRect(
+        m_layout.x, m_layout.y, m_layout.width, m_layout.height,
+        Style().designListPanel.borderColor
+    );
 
     if (!m_pMilitary)
     {
@@ -50,38 +37,46 @@ void DesignListPanel::Render(Graphics& rGraphics)
 
     if (rDesigns.empty())
     {
-        const unsigned int labelSize = static_cast<unsigned int>(m_layout.height * k_LabelFontRatio);
-        const float padding = m_layout.height * k_BoxPaddingRatio * k_EmptyListPaddingMultiplier;
+        const unsigned int labelSize = static_cast<unsigned int>(
+            m_layout.height * Style().designListPanel.labelFontRatio);
+        const float padding = m_layout.height * Style().designListPanel.boxPaddingRatio
+            * Style().designListPanel.emptyListPaddingMultiplier;
         rGraphics.DrawText(
             "No designs saved — select components above and click Save Design",
             m_layout.x + padding,
             m_layout.y + padding,
             labelSize,
-            k_EmptyListTextColor
+            Style().designListPanel.emptyListTextColor
         );
         return;
     }
 
-    const float boxPad    = m_layout.height * k_BoxPaddingRatio;
-    const float boxWidth  = m_layout.width * k_BoxWidthRatio;
-    const float boxHeight = m_layout.height - boxPad * k_VerticalPaddingMultiplier;
-    const unsigned int fontSize = static_cast<unsigned int>(m_layout.height * k_FontSizeRatio);
+    const float boxPad = m_layout.height * Style().designListPanel.boxPaddingRatio;
+    const float boxWidth = m_layout.width * Style().designListPanel.boxWidthRatio;
+    const float boxHeight =
+        m_layout.height - boxPad * Style().designListPanel.verticalPaddingMultiplier;
+    const unsigned int fontSize = static_cast<unsigned int>(
+        m_layout.height * Style().designListPanel.fontSizeRatio);
 
     float x = m_layout.x + boxPad;
     for (const auto& pDesign : rDesigns)
     {
-        const bool bSelected   = pDesign.get() == m_pSelectedDesign;
-        const Color_t fillColor  = bSelected ? k_SelectedBoxFillColor : k_UnselectedBoxFillColor;
-        const Color_t borderColor = bSelected ? Color_t::Yellow() : k_UnselectedBoxBorderColor;
+        const bool bSelected = pDesign.get() == m_pSelectedDesign;
+        const Color_t fillColor = bSelected
+            ? Style().designListPanel.selectedBoxFillColor
+            : Style().designListPanel.unselectedBoxFillColor;
+        const Color_t borderColor = bSelected
+            ? Style().designListPanel.selectedBoxBorderColor
+            : Style().designListPanel.unselectedBoxBorderColor;
 
         rGraphics.DrawFilledRect(x, m_layout.y + boxPad, boxWidth, boxHeight, fillColor);
         rGraphics.DrawRect(x, m_layout.y + boxPad, boxWidth, boxHeight, borderColor);
 
-        const float textPad = boxWidth * k_TextPadRatio;
+        const float textPad = boxWidth * Style().designListPanel.textPadRatio;
         rGraphics.DrawText(
             pDesign->GetName(),
             x + textPad,
-            m_layout.y + boxPad + boxHeight * k_TextVerticalRatio,
+            m_layout.y + boxPad + boxHeight * Style().designListPanel.textVerticalRatio,
             fontSize
         );
 
@@ -100,10 +95,11 @@ void DesignListPanel::HandleMouseClick(const MouseEvent_t& rEvent)
         return;
     }
 
-    const auto& rDesigns  = m_pMilitary->GetDesigns();
-    const float boxPad    = m_layout.height * k_BoxPaddingRatio;
-    const float boxWidth  = m_layout.width * k_BoxWidthRatio;
-    const float boxHeight = m_layout.height - boxPad * k_VerticalPaddingMultiplier;
+    const auto& rDesigns = m_pMilitary->GetDesigns();
+    const float boxPad = m_layout.height * Style().designListPanel.boxPaddingRatio;
+    const float boxWidth = m_layout.width * Style().designListPanel.boxWidthRatio;
+    const float boxHeight =
+        m_layout.height - boxPad * Style().designListPanel.verticalPaddingMultiplier;
 
     float x = m_layout.x + boxPad;
     for (const auto& pDesign : rDesigns)

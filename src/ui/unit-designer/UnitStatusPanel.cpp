@@ -3,26 +3,11 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 #include "graphics/Graphics.h"
+#include "ui/style/UiStyle.h"
 #include <sstream>
 
 namespace ac
 {
-
-namespace
-{
-
-constexpr Color_t k_BackgroundColor      {20, 20, 20, 255};
-constexpr Color_t k_BorderColor          {80, 80, 80, 255};
-constexpr Color_t k_MutedTextColor       {100, 100, 100, 255};
-constexpr float k_HeaderFontSizeRatio  = 0.08f;
-constexpr float k_StatFontSizeRatio    = 0.07f;
-constexpr float k_LineHeightRatio      = 0.10f;
-constexpr float k_PaddingRatio         = 0.04f;
-constexpr float k_DesignNameLineIndex  = 1.0f;
-constexpr float k_ActiveCountLineIndex = 2.0f;
-constexpr float k_InProdLineIndex      = 3.0f;
-
-} // namespace
 
 UnitStatusPanel::UnitStatusPanel(
     std::function<const UnitDesign*()> getSelectedDesign,
@@ -36,15 +21,29 @@ UnitStatusPanel::UnitStatusPanel(
 
 void UnitStatusPanel::Render(Graphics& rGraphics)
 {
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, k_BackgroundColor);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, k_BorderColor);
+    rGraphics.DrawFilledRect(
+        m_layout.x, m_layout.y, m_layout.width, m_layout.height,
+        Style().unitStatusPanel.backgroundColor
+    );
+    rGraphics.DrawRect(
+        m_layout.x, m_layout.y, m_layout.width, m_layout.height,
+        Style().unitStatusPanel.borderColor
+    );
 
-    const float padding          = m_layout.width * k_PaddingRatio;
-    const unsigned int headerSize = static_cast<unsigned int>(m_layout.width * k_HeaderFontSizeRatio);
-    const unsigned int statSize   = static_cast<unsigned int>(m_layout.width * k_StatFontSizeRatio);
-    const float lineH            = m_layout.width * k_LineHeightRatio;
+    const float padding = m_layout.width * Style().unitStatusPanel.paddingRatio;
+    const unsigned int headerSize = static_cast<unsigned int>(
+        m_layout.width * Style().unitStatusPanel.headerFontSizeRatio);
+    const unsigned int statSize = static_cast<unsigned int>(
+        m_layout.width * Style().unitStatusPanel.statFontSizeRatio);
+    const float lineH = m_layout.width * Style().unitStatusPanel.lineHeightRatio;
 
-    rGraphics.DrawText("Unit Status", m_layout.x + padding, m_layout.y + padding, headerSize, Color_t::Yellow());
+    rGraphics.DrawText(
+        "Unit Status",
+        m_layout.x + padding,
+        m_layout.y + padding,
+        headerSize,
+        Style().unitStatusPanel.headerColor
+    );
 
     const UnitDesign* pDesign = m_getSelectedDesign();
     if (!pDesign)
@@ -54,12 +53,17 @@ void UnitStatusPanel::Render(Graphics& rGraphics)
             m_layout.x + padding,
             m_layout.y + padding + lineH,
             statSize,
-            k_MutedTextColor
+            Style().unitStatusPanel.mutedTextColor
         );
         return;
     }
 
-    rGraphics.DrawText(pDesign->GetName(), m_layout.x + padding, m_layout.y + padding + lineH * k_DesignNameLineIndex, statSize);
+    rGraphics.DrawText(
+        pDesign->GetName(),
+        m_layout.x + padding,
+        m_layout.y + padding + lineH * Style().unitStatusPanel.designNameLineIndex,
+        statSize
+    );
 
     int activeCount = 0;
     if (m_pUnitManager)
@@ -75,15 +79,20 @@ void UnitStatusPanel::Render(Graphics& rGraphics)
 
     std::ostringstream oss;
     oss << "Active: " << activeCount;
-    rGraphics.DrawText(oss.str(), m_layout.x + padding, m_layout.y + padding + lineH * k_ActiveCountLineIndex, statSize);
+    rGraphics.DrawText(
+        oss.str(),
+        m_layout.x + padding,
+        m_layout.y + padding + lineH * Style().unitStatusPanel.activeCountLineIndex,
+        statSize
+    );
 
     // TODO: count in-production once base production integrates with UnitDesign
     rGraphics.DrawText(
         "In Prod: -",
         m_layout.x + padding,
-        m_layout.y + padding + lineH * k_InProdLineIndex,
+        m_layout.y + padding + lineH * Style().unitStatusPanel.inProdLineIndex,
         statSize,
-        k_MutedTextColor
+        Style().unitStatusPanel.mutedTextColor
     );
 }
 

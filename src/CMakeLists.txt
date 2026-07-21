@@ -194,6 +194,7 @@ add_executable(alpha-centauri
     ui/TileRenderer.cpp
     ui/UIManager.cpp
     ui/ViewFactory.cpp
+    ui/style/UiStyle.cpp
     ui/world/WorldView.cpp
     ui/world/CameraInputController.cpp
     ui/world/UnitOrderInputController.cpp

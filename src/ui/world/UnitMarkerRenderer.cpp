@@ -6,6 +6,7 @@
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/UnitDesign.h"
+#include "ui/style/UiStyle.h"
 
 namespace ac
 {
@@ -13,19 +14,7 @@ namespace ac
 namespace
 {
 
-constexpr float k_UnitMarkerFontSizeRatio    = 0.2f;
-constexpr float k_UnitMarkerWidthRatio       = 0.22f;
-constexpr float k_UnitMarkerHeightRatio      = 0.22f;
-constexpr float k_UnitMarkerSpacingRatio     = 0.03f;
-constexpr Color_t k_UnitMarkerColor            {0, 220, 255, 255};
-constexpr Color_t k_UnitMarkerExhaustedColor   {0, 110, 130, 200};
-constexpr float k_SelectionBorderOffset      = 1.0f;
-constexpr float k_SelectionBorderExpansion   = 2.0f;
-constexpr float k_SelectionBorderWidth       = 2.0f;
 constexpr size_t k_UnitNameFirstCharCount    = 1;
-constexpr Color_t k_HitOverlayFill             {255, 40, 40, 160};
-constexpr Color_t k_HitOverlayBorder           {255, 80, 80, 255};
-constexpr float k_HitOverlayBorderWidth      = 2.0f;
 
 } // namespace
 
@@ -40,10 +29,11 @@ void UnitMarkerRenderer::Render(Graphics& rGraphics,
 {
     m_markerRects.clear();
 
+    const auto& s = Style().unitMarker;
     const WorldMap& rWorldMap = rGameState.GetWorldMap();
-    const float markerWidth = tileSize * k_UnitMarkerWidthRatio;
-    const float markerHeight = tileSize * k_UnitMarkerHeightRatio;
-    const float spacing = tileSize * k_UnitMarkerSpacingRatio;
+    const float markerWidth = tileSize * s.widthRatio;
+    const float markerHeight = tileSize * s.heightRatio;
+    const float spacing = tileSize * s.spacingRatio;
     const Faction* pPlayer = rGameState.GetPlayerFaction();
 
     for (int row = rowStart; row < rowEnd; ++row)
@@ -105,9 +95,10 @@ std::optional<Rectangle_t> UnitMarkerRenderer::GetCachedMarkerRect(UnitId_t unit
 
 Rectangle_t UnitMarkerRenderer::MarkerRectOnTile(float tileX, float tileY, float tileSize)
 {
-    const float markerWidth = tileSize * k_UnitMarkerWidthRatio;
-    const float markerHeight = tileSize * k_UnitMarkerHeightRatio;
-    const float spacing = tileSize * k_UnitMarkerSpacingRatio;
+    const auto& s = Style().unitMarker;
+    const float markerWidth = tileSize * s.widthRatio;
+    const float markerHeight = tileSize * s.heightRatio;
+    const float spacing = tileSize * s.spacingRatio;
     return Rectangle_t{
         tileX + spacing,
         tileY + tileSize - markerHeight - spacing,
@@ -118,8 +109,9 @@ Rectangle_t UnitMarkerRenderer::MarkerRectOnTile(float tileX, float tileY, float
 void UnitMarkerRenderer::DrawMarker(Graphics& rGraphics, const Unit& rUnit,
                                     const Rectangle_t& rMarker, bool bSelected)
 {
+    const auto& s = Style().unitMarker;
     const bool bExhausted = rUnit.GetMoveFragmentsRemaining() <= 0;
-    const Color_t& markerColor = bExhausted ? k_UnitMarkerExhaustedColor : k_UnitMarkerColor;
+    const Color_t& markerColor = bExhausted ? s.exhaustedColor : s.markerColor;
 
     // TODO: Use faction color based on rUnit.GetFaction().
     rGraphics.DrawFilledRect(rMarker.x, rMarker.y, rMarker.width, rMarker.height, markerColor);
@@ -127,12 +119,12 @@ void UnitMarkerRenderer::DrawMarker(Graphics& rGraphics, const Unit& rUnit,
     if (bSelected)
     {
         rGraphics.DrawRect(
-            rMarker.x - k_SelectionBorderOffset,
-            rMarker.y - k_SelectionBorderOffset,
-            rMarker.width + k_SelectionBorderExpansion,
-            rMarker.height + k_SelectionBorderExpansion,
-            Color_t::Yellow(),
-            k_SelectionBorderWidth);
+            rMarker.x - s.selectionBorderOffset,
+            rMarker.y - s.selectionBorderOffset,
+            rMarker.width + s.selectionBorderExpansion,
+            rMarker.height + s.selectionBorderExpansion,
+            s.selectionBorderColor,
+            s.selectionBorderWidth);
     }
 
     const std::string& unitName = rUnit.GetDesign().GetName();
@@ -142,24 +134,25 @@ void UnitMarkerRenderer::DrawMarker(Graphics& rGraphics, const Unit& rUnit,
     }
 
     // Keep the same font/inset proportions as map markers (sized off tile, not chip).
-    const float referenceTileSize = rMarker.height / k_UnitMarkerHeightRatio;
+    const float referenceTileSize = rMarker.height / s.heightRatio;
     const unsigned int fontSize =
-        static_cast<unsigned int>(referenceTileSize * k_UnitMarkerFontSizeRatio);
-    const float spacing = referenceTileSize * k_UnitMarkerSpacingRatio;
+        static_cast<unsigned int>(referenceTileSize * s.fontSizeRatio);
+    const float spacing = referenceTileSize * s.spacingRatio;
     rGraphics.DrawText(
         unitName.substr(0, k_UnitNameFirstCharCount),
         rMarker.x + spacing,
         rMarker.y + spacing,
         fontSize,
-        Color_t::Black());
+        s.initialTextColor);
 }
 
 void UnitMarkerRenderer::DrawHitOverlay(Graphics& rGraphics, const Rectangle_t& rMarker)
 {
+    const auto& s = Style().unitMarker;
     // Placeholder: a translucent red plate over the unit marker. Swap for a hit animation.
-    rGraphics.DrawFilledRect(rMarker.x, rMarker.y, rMarker.width, rMarker.height, k_HitOverlayFill);
-    rGraphics.DrawRect(rMarker.x, rMarker.y, rMarker.width, rMarker.height, k_HitOverlayBorder,
-                       k_HitOverlayBorderWidth);
+    rGraphics.DrawFilledRect(rMarker.x, rMarker.y, rMarker.width, rMarker.height, s.hitOverlayFill);
+    rGraphics.DrawRect(rMarker.x, rMarker.y, rMarker.width, rMarker.height, s.hitOverlayBorder,
+                       s.hitOverlayBorderWidth);
 }
 
 } // namespace ac

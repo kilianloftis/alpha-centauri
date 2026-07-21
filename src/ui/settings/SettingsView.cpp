@@ -1,6 +1,7 @@
 #include "ui/settings/SettingsView.h"
 #include "ui/settings/SettingsPanel.h"
 #include "game/GameSettings.h"
+#include "ui/style/UiStyle.h"
 
 namespace ac
 {
@@ -11,7 +12,7 @@ SettingsView::SettingsView(GameSettings& rSettings, WindowLayout_t layout)
 {
     m_elements.push_back(std::make_unique<SettingsPanel>(
         m_rSettings,
-        ResolveLayout(m_layout, k_PopupLayoutSmall)));
+        ResolveLayout(m_layout, Style().layouts.popupSmall)));
 }
 
 bool SettingsView::HandleKey(const KeyEvent_t& rEvent)

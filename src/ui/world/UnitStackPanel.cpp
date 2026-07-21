@@ -3,24 +3,13 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 #include "graphics/Graphics.h"
+#include "ui/style/UiStyle.h"
 #include "ui/world/UnitMarkerRenderer.h"
 
 #include <algorithm>
 
 namespace ac
 {
-
-namespace
-{
-
-constexpr Color_t k_BackgroundColor {20, 20, 40, 255};
-constexpr Color_t k_BorderColor     {100, 100, 160, 255};
-constexpr float k_PaddingRatio    = 0.04f;
-constexpr float k_SlotGapRatio    = 0.02f;
-constexpr float k_IconHeightRatio = 0.55f;
-constexpr float k_StatFontRatio   = 0.22f;
-
-} // namespace
 
 UnitStackPanel::UnitStackPanel(WindowLayout_t layout, UnitClickCallback_t onUnitClicked)
     : UIElement(layout)
@@ -43,11 +32,12 @@ void UnitStackPanel::CacheSlots_()
         return;
     }
 
-    const float padding = m_layout.height * k_PaddingRatio;
-    const float gap = m_layout.width * k_SlotGapRatio;
-    const float iconSize = m_layout.height * k_IconHeightRatio;
+    const auto& s = Style().unitStackPanel;
+    const float padding = m_layout.height * s.paddingRatio;
+    const float gap = m_layout.width * s.slotGapRatio;
+    const float iconSize = m_layout.height * s.iconHeightRatio;
     const unsigned int statFontSize =
-        std::max(1u, static_cast<unsigned int>(m_layout.height * k_StatFontRatio));
+        std::max(1u, static_cast<unsigned int>(m_layout.height * s.statFontRatio));
     const float slotWidth = iconSize;
     const float slotHeight = iconSize + static_cast<float>(statFontSize) + padding;
 
@@ -77,25 +67,27 @@ void UnitStackPanel::Render(Graphics& rGraphics)
 
 void UnitStackPanel::DrawBackground_(Graphics& rGraphics) const
 {
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, k_BackgroundColor);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, k_BorderColor);
+    const auto& s = Style().unitStackPanel;
+    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, s.backgroundColor);
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, s.borderColor);
 }
 
 void UnitStackPanel::DrawSlot_(Graphics& rGraphics, const Slot_t& rSlot) const
 {
+    const auto& s = Style().unitStackPanel;
     const float iconSize = rSlot.rect.width;
     const Rectangle_t marker{rSlot.rect.x, rSlot.rect.y, iconSize, iconSize};
     UnitMarkerRenderer::DrawMarker(
         rGraphics, *rSlot.pUnit, marker, rSlot.pUnit == m_pSelectedUnit);
 
     const unsigned int statFontSize =
-        std::max(1u, static_cast<unsigned int>(m_layout.height * k_StatFontRatio));
+        std::max(1u, static_cast<unsigned int>(m_layout.height * s.statFontRatio));
     rGraphics.DrawText(
         rSlot.pUnit->GetDesign().FormatCombatRating(),
         rSlot.rect.x,
         rSlot.rect.y + iconSize,
         statFontSize,
-        Color_t::White());
+        s.statTextColor);
 }
 
 void UnitStackPanel::HandleMouseClick(const MouseEvent_t& rEvent)

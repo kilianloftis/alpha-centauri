@@ -45,28 +45,8 @@ inline WindowLayout_t ResolveLayout(const WindowLayout_t& windowLayout, const Ra
         };
 }
 
-// SMAC world-view chrome: map on top (~70%), dashboard strip below (~30%).
-// Dashboard columns L→R: unit | location | faction center | minimap/turn.
-inline constexpr RatioLayout_t k_FullscreenLayout    {0.0f,  0.0f,  1.0f,  1.0f};
-inline constexpr RatioLayout_t k_MapLayout           {0.0f,  0.0f,  1.0f,  0.70f};
-inline constexpr RatioLayout_t k_TopPanelLayout      {0.2f,  0.05f, 0.6f,  0.60f};
-
-// Unit portrait / status (far left of the dashboard).
-inline constexpr RatioLayout_t k_LeftPanelLayout     {0.0f,  0.70f, 0.20f, 0.30f};
-// Terrain tile, depth, and coordinates (beside the unit panel).
-inline constexpr RatioLayout_t k_LocationPanelLayout {0.20f, 0.70f, 0.12f, 0.30f};
-// Faction stats + dominance graph (upper ~2/3 of the mid dashboard).
-inline constexpr RatioLayout_t k_CenterPanelLayout   {0.32f, 0.70f, 0.46f, 0.20f};
-// Mid dashboard band between location and right panels (full strip height).
-inline constexpr RatioLayout_t k_BottomPanelLayout   {0.32f, 0.90f, 0.46f, 0.10f};
-// Minimap + mission-year / energy footer (far right).
-inline constexpr RatioLayout_t k_RightPanelLayout    {0.78f, 0.70f, 0.22f, 0.30f};
-// Upper subdivisions of the right panel (fullscreen ratios, like the other dashboard columns).
-inline constexpr RatioLayout_t k_RightButtonLayout {0.90f, 0.67f, 0.10f, 0.03f};
-
-inline constexpr RatioLayout_t k_PopupLayout         {0.5f,  0.75f, 0.25f, 0.125f};
-inline constexpr RatioLayout_t k_PopupLayoutSmall    {0.3f,  0.3f,  0.4f,  0.4f};
-
+// Shared chrome layouts (map, dashboard columns, popups) live in config/ui/style.json
+// under "layouts" and are accessed via Style().layouts.* after UiStyle::Load.
 
 class UIElement
 {

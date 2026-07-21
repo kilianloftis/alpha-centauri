@@ -2,6 +2,7 @@
 
 #include "game/map/Tile.h"
 #include "graphics/Graphics.h"
+#include "ui/style/UiStyle.h"
 
 #include <sstream>
 
@@ -17,13 +18,7 @@ constexpr int   k_MoistureAridValue      = 0;
 constexpr int   k_RockinessRockyValue    = 2;
 constexpr int   k_RockinessRollingValue  = 1;
 constexpr int   k_RockinessFlatValue     = 0;
-constexpr Color_t k_TileBorderColor        {80, 80, 80, 255};
-constexpr Color_t k_FogTerrainColor        {110, 110, 110, 255};
-constexpr float k_TileBorderWidth        = -1.0f;
 constexpr int   k_ElevationMetersPerKm   = 1000;
-constexpr unsigned int k_TileFontSize    = 14;
-constexpr float k_TileTextOffsetXRatio   = 0.1f;
-constexpr float k_TileTextOffsetYRatio   = 0.3f;
 
 int MoistureToInt_(Moisture_t moisture)
 {
@@ -58,7 +53,8 @@ int RockinessToInt_(Rockiness_t rockiness)
 void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float y, float size,
                           bool bFogged)
 {
-    rGraphics.DrawRect(x, y, size, size, k_TileBorderColor, k_TileBorderWidth);
+    const auto& s = Style().tileRenderer;
+    rGraphics.DrawRect(x, y, size, size, s.tileBorderColor, s.tileBorderWidth);
 
     const int moisture = MoistureToInt_(rTile.GetMoisture());
     const int rockiness = RockinessToInt_(rTile.GetRockiness());
@@ -67,12 +63,12 @@ void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float
     std::ostringstream oss;
     oss << moisture << " " << rockiness << " " << elevationKm;
 
-    const Color_t textColor = bFogged ? k_FogTerrainColor : Color_t::White();
+    const Color_t textColor = bFogged ? s.fogTerrainColor : s.clearTerrainTextColor;
     rGraphics.DrawText(
         oss.str(),
-        x + size * k_TileTextOffsetXRatio,
-        y + size * k_TileTextOffsetYRatio,
-        k_TileFontSize,
+        x + size * s.tileTextOffsetXRatio,
+        y + size * s.tileTextOffsetYRatio,
+        s.tileFontSize,
         textColor);
 }
 

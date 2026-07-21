@@ -3,25 +3,13 @@
 #include "game/map/Tile.h"
 #include "graphics/Graphics.h"
 #include "ui/TileRenderer.h"
+#include "ui/style/UiStyle.h"
 #include <algorithm>
 #include <sstream>
 #include <string>
 
 namespace ac
 {
-
-namespace
-{
-
-constexpr Color_t k_BackgroundColor {20, 20, 40, 255};
-constexpr Color_t k_BorderColor     {100, 100, 160, 255};
-constexpr Color_t k_MutedTextColor  {100, 100, 120, 255};
-constexpr float k_PaddingRatio    = 0.06f;
-constexpr float k_PreviewSizeRatio = 0.40f;
-constexpr float k_TextFontRatio   = 0.055f;
-constexpr float k_TextGapRatio    = 0.025f;
-
-} // namespace
 
 LocationPanel::LocationPanel(WindowLayout_t layout)
     : UIElement(layout)
@@ -38,11 +26,12 @@ void LocationPanel::Render(Graphics& rGraphics)
         return;
     }
 
-    const float padding = m_layout.width * k_PaddingRatio;
+    const auto& s = Style().locationPanel;
+    const float padding = m_layout.width * s.paddingRatio;
     const unsigned int fontSize =
-        static_cast<unsigned int>(m_layout.height * k_TextFontRatio);
-    const float textGap = m_layout.height * k_TextGapRatio;
-    const float previewSize = std::min(m_layout.width, m_layout.height) * k_PreviewSizeRatio;
+        static_cast<unsigned int>(m_layout.height * s.textFontRatio);
+    const float textGap = m_layout.height * s.textGapRatio;
+    const float previewSize = std::min(m_layout.width, m_layout.height) * s.previewSizeRatio;
     const float previewX = m_layout.x + (m_layout.width - previewSize) * 0.5f;
     const float previewY = m_layout.y + padding;
     const float textX = m_layout.x + padding;
@@ -57,21 +46,23 @@ void LocationPanel::Render(Graphics& rGraphics)
 
 void LocationPanel::DrawBackground_(Graphics& rGraphics) const
 {
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, k_BackgroundColor);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, k_BorderColor);
+    const auto& s = Style().locationPanel;
+    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, s.backgroundColor);
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, s.borderColor);
 }
 
 void LocationPanel::DrawEmptyState_(Graphics& rGraphics) const
 {
-    const float padding = m_layout.width * k_PaddingRatio;
+    const auto& s = Style().locationPanel;
+    const float padding = m_layout.width * s.paddingRatio;
     const unsigned int fontSize =
-        static_cast<unsigned int>(m_layout.height * k_TextFontRatio);
+        static_cast<unsigned int>(m_layout.height * s.textFontRatio);
     rGraphics.DrawText(
         "No tile",
         m_layout.x + padding,
         m_layout.y + padding,
         fontSize,
-        k_MutedTextColor);
+        s.mutedTextColor);
 }
 
 float LocationPanel::DrawCoordinates_(Graphics& rGraphics, float textX, float textY,
@@ -79,7 +70,7 @@ float LocationPanel::DrawCoordinates_(Graphics& rGraphics, float textX, float te
 {
     std::ostringstream oss;
     oss << "(" << m_pSelectedTile->GetX() << ", " << m_pSelectedTile->GetY() << ")";
-    rGraphics.DrawText(oss.str(), textX, textY, fontSize, Color_t::White());
+    rGraphics.DrawText(oss.str(), textX, textY, fontSize, Style().locationPanel.bodyTextColor);
     return textY + static_cast<float>(fontSize);
 }
 
@@ -96,16 +87,17 @@ float LocationPanel::DrawElevation_(Graphics& rGraphics, float textX, float text
     {
         oss << "Alt: " << elevation << "m";
     }
-    rGraphics.DrawText(oss.str(), textX, textY, fontSize, Color_t::White());
+    rGraphics.DrawText(oss.str(), textX, textY, fontSize, Style().locationPanel.bodyTextColor);
     return textY + static_cast<float>(fontSize);
 }
 
 void LocationPanel::DrawContents_(Graphics& rGraphics, float textX, float textY,
                                   unsigned int fontSize, float textGap) const
 {
+    const auto& s = Style().locationPanel;
     const float lineStep = static_cast<float>(fontSize) + textGap;
     float y = textY;
-    const float bottom = m_layout.y + m_layout.height - m_layout.width * k_PaddingRatio;
+    const float bottom = m_layout.y + m_layout.height - m_layout.width * s.paddingRatio;
 
     auto drawName = [&](const ImprovementConfig_t* pConfig)
     {
@@ -113,7 +105,7 @@ void LocationPanel::DrawContents_(Graphics& rGraphics, float textX, float textY,
         {
             return;
         }
-        rGraphics.DrawText(pConfig->name, textX, y, fontSize, Color_t::White());
+        rGraphics.DrawText(pConfig->name, textX, y, fontSize, s.bodyTextColor);
         y += lineStep;
     };
 

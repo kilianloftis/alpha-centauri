@@ -9,18 +9,10 @@
 #include "game/units/UnitSlotRegistry.h"
 #include "game/units/UnitDesign.h"
 #include "input/Input.h"
+#include "ui/style/UiStyle.h"
 
 namespace ac
 {
-
-namespace
-{
-
-constexpr RatioLayout_t k_LeftSlotColumnLayout  {0.0f, 0.0f, 0.2f, 1.0f};
-constexpr RatioLayout_t k_DesignStatsLayout     {0.2f, 0.0f, 0.6f, 1.0f};
-constexpr RatioLayout_t k_RightSlotColumnLayout {0.8f, 0.0f, 0.2f, 1.0f};
-
-} // namespace
 
 UnitDesignerView::UnitDesignerView(
     Military& rMilitary,
@@ -44,7 +36,7 @@ void UnitDesignerView::BuildUnitStatusPanel_(const UnitManager* pUnitManager)
     m_elements.push_back(std::make_unique<UnitStatusPanel>(
         [this]() { return m_pSelectedDesign; },
         pUnitManager,
-        ResolveLayout(m_layout, k_LeftPanelLayout)
+        ResolveLayout(m_layout, Style().layouts.leftPanel)
     ));
 }
 
@@ -80,23 +72,23 @@ void UnitDesignerView::BuildTopPanelElements_()
         }
     }
 
-    const WindowLayout_t topPanel = ResolveLayout(m_layout, k_TopPanelLayout);
+    const WindowLayout_t topPanel = ResolveLayout(m_layout, Style().layouts.topPanel);
 
     m_elements.push_back(std::make_unique<SlotColumnPanel>(
         std::move(leftSlots),
-        ResolveLayout(topPanel, k_LeftSlotColumnLayout)
+        ResolveLayout(topPanel, Style().unitDesignerView.leftSlotColumnLayout)
     ));
 
     m_elements.push_back(std::make_unique<DesignStatsDisplay>(
         &m_state,
         &m_rSlotRegistry.GetAll(),
-        ResolveLayout(topPanel, k_DesignStatsLayout),
+        ResolveLayout(topPanel, Style().unitDesignerView.designStatsLayout),
         [this]() { HandleSaveDesign_(); }
     ));
 
     m_elements.push_back(std::make_unique<SlotColumnPanel>(
         std::move(rightSlots),
-        ResolveLayout(topPanel, k_RightSlotColumnLayout)
+        ResolveLayout(topPanel, Style().unitDesignerView.rightSlotColumnLayout)
     ));
 }
 
@@ -104,7 +96,7 @@ void UnitDesignerView::BuildDesignListPanel_()
 {
     m_elements.push_back(std::make_unique<DesignListPanel>(
         &m_rMilitary,
-        ResolveLayout(m_layout, k_BottomPanelLayout),
+        ResolveLayout(m_layout, Style().layouts.bottomPanel),
         [this](const UnitDesign* pDesign) { OnDesignSelected_(pDesign); }
     ));
 }
@@ -153,7 +145,7 @@ void UnitDesignerView::ShowComponentSelector_(
 
     m_elements.push_back(std::make_unique<ComponentSelectorPopup>(
         std::move(available),
-        ResolveLayout(m_layout, k_PopupLayoutSmall),
+        ResolveLayout(m_layout, Style().layouts.popupSmall),
         std::move(onSelected)
     ));
 }

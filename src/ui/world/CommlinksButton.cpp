@@ -1,19 +1,9 @@
 #include "ui/world/CommlinksButton.h"
 #include "graphics/Graphics.h"
+#include "ui/style/UiStyle.h"
 
 namespace ac
 {
-
-namespace
-{
-
-constexpr Color_t k_FillColor   {40, 40, 70, 255};
-constexpr Color_t k_BorderColor {100, 100, 160, 255};
-constexpr unsigned int k_FontSize = 16;
-constexpr float k_TextPadX        = 10.0f;
-constexpr float k_TextPadY        = 8.0f;
-
-} // namespace
 
 CommlinksButton::CommlinksButton(WindowLayout_t layout, std::function<void()> onOpenCommlinks)
     : UIElement(layout)
@@ -23,14 +13,15 @@ CommlinksButton::CommlinksButton(WindowLayout_t layout, std::function<void()> on
 
 void CommlinksButton::Render(Graphics& rGraphics)
 {
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, k_FillColor);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, k_BorderColor);
+    const auto& s = Style().commlinksButton;
+    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, s.fillColor);
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, s.borderColor);
     rGraphics.DrawText(
         "Commlinks",
-        m_layout.x + k_TextPadX,
-        m_layout.y + k_TextPadY,
-        k_FontSize,
-        Color_t::White());
+        m_layout.x + s.textPadX,
+        m_layout.y + s.textPadY,
+        s.fontSize,
+        s.labelColor);
 }
 
 void CommlinksButton::HandleMouseClick(const MouseEvent_t& /*rEvent*/)

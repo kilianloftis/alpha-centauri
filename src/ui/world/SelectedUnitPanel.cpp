@@ -4,6 +4,7 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 #include "graphics/Graphics.h"
+#include "ui/style/UiStyle.h"
 #include <algorithm>
 #include <sstream>
 #include <string>
@@ -14,16 +15,6 @@ namespace ac
 namespace
 {
 
-constexpr Color_t k_BackgroundColor        {20, 20, 40, 255};
-constexpr Color_t k_BorderColor            {100, 100, 160, 255};
-constexpr Color_t k_MutedTextColor         {100, 100, 120, 255};
-constexpr Color_t k_IconColor              {0, 220, 255, 255};
-constexpr Color_t k_IconExhaustedColor     {0, 110, 130, 200};
-constexpr float k_PaddingRatio           = 0.06f;
-constexpr float k_IconSizeRatio          = 0.45f;
-constexpr float k_IconInitialFontRatio   = 0.45f;
-constexpr float k_TextFontRatio          = 0.06f;
-constexpr float k_TextGapRatio           = 0.04f;
 constexpr size_t k_UnitNameFirstCharCount = 1;
 
 } // namespace
@@ -43,12 +34,13 @@ void SelectedUnitPanel::Render(Graphics& rGraphics)
         return;
     }
 
-    const float padding = m_layout.width * k_PaddingRatio;
+    const auto& s = Style().selectedUnitPanel;
+    const float padding = m_layout.width * s.paddingRatio;
     const unsigned int fontSize =
-        static_cast<unsigned int>(m_layout.height * k_TextFontRatio);
-    const float textGap = m_layout.height * k_TextGapRatio;
-    const float iconSize = std::min(m_layout.width, m_layout.height) * k_IconSizeRatio;
-    const float iconX = m_layout.x + (m_layout.width - iconSize) * 0.5f;
+        static_cast<unsigned int>(m_layout.height * s.textFontRatio);
+    const float textGap = m_layout.height * s.textGapRatio;
+    const float iconSize = std::min(m_layout.width, m_layout.height) * s.iconSizeRatio;
+    const float iconX = m_layout.x + (m_layout.width - iconSize) * s.iconCenterRatio;
     const float iconY = m_layout.y + padding;
     const float textX = m_layout.x + padding;
 
@@ -64,29 +56,32 @@ void SelectedUnitPanel::Render(Graphics& rGraphics)
 
 void SelectedUnitPanel::DrawBackground_(Graphics& rGraphics) const
 {
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, k_BackgroundColor);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, k_BorderColor);
+    const auto& s = Style().selectedUnitPanel;
+    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, s.backgroundColor);
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, s.borderColor);
 }
 
 void SelectedUnitPanel::DrawEmptyState_(Graphics& rGraphics) const
 {
-    const float padding = m_layout.width * k_PaddingRatio;
+    const auto& s = Style().selectedUnitPanel;
+    const float padding = m_layout.width * s.paddingRatio;
     const unsigned int fontSize =
-        static_cast<unsigned int>(m_layout.height * k_TextFontRatio);
+        static_cast<unsigned int>(m_layout.height * s.textFontRatio);
     rGraphics.DrawText(
         "No unit",
         m_layout.x + padding,
         m_layout.y + padding,
         fontSize,
-        k_MutedTextColor);
+        s.mutedTextColor);
 }
 
 void SelectedUnitPanel::DrawUnitIcon_(Graphics& rGraphics, float iconX, float iconY, float iconSize) const
 {
+    const auto& s = Style().selectedUnitPanel;
     const bool bExhausted = m_pSelectedUnit->GetMoveFragmentsRemaining() <= 0;
-    const Color_t& rIconColor = bExhausted ? k_IconExhaustedColor : k_IconColor;
+    const Color_t& rIconColor = bExhausted ? s.iconExhaustedColor : s.iconColor;
     rGraphics.DrawFilledRect(iconX, iconY, iconSize, iconSize, rIconColor);
-    rGraphics.DrawRect(iconX, iconY, iconSize, iconSize, k_BorderColor);
+    rGraphics.DrawRect(iconX, iconY, iconSize, iconSize, s.borderColor);
 
     const std::string& unitName = m_pSelectedUnit->GetDesign().GetName();
     if (unitName.empty())
@@ -95,13 +90,13 @@ void SelectedUnitPanel::DrawUnitIcon_(Graphics& rGraphics, float iconX, float ic
     }
 
     const unsigned int initialFontSize =
-        static_cast<unsigned int>(iconSize * k_IconInitialFontRatio);
+        static_cast<unsigned int>(iconSize * s.iconInitialFontRatio);
     rGraphics.DrawText(
         unitName.substr(0, k_UnitNameFirstCharCount),
-        iconX + iconSize * 0.3f,
-        iconY + iconSize * 0.25f,
+        iconX + iconSize * s.iconInitialOffsetXRatio,
+        iconY + iconSize * s.iconInitialOffsetYRatio,
         initialFontSize,
-        Color_t::Black());
+        s.iconInitialTextColor);
 }
 
 float SelectedUnitPanel::DrawName_(Graphics& rGraphics, float textX, float textY,
@@ -112,7 +107,7 @@ float SelectedUnitPanel::DrawName_(Graphics& rGraphics, float textX, float textY
         textX,
         textY,
         fontSize,
-        Color_t::White());
+        Style().selectedUnitPanel.bodyTextColor);
     return textY + static_cast<float>(fontSize);
 }
 
@@ -124,7 +119,7 @@ float SelectedUnitPanel::DrawStats_(Graphics& rGraphics, float textX, float text
         textX,
         textY,
         fontSize,
-        Color_t::White());
+        Style().selectedUnitPanel.bodyTextColor);
     return textY + static_cast<float>(fontSize);
 }
 
@@ -142,13 +137,14 @@ float SelectedUnitPanel::DrawMoves_(Graphics& rGraphics, float textX, float text
     oss.precision(remainingFragments % MovementConstants_t::k_moveFragmentsPerPoint == 0 ? 0 : 1);
     oss << "Moves: " << remainingPoints << "/" << maxPoints;
 
-    rGraphics.DrawText(oss.str(), textX, textY, fontSize, Color_t::White());
+    rGraphics.DrawText(oss.str(), textX, textY, fontSize, Style().selectedUnitPanel.bodyTextColor);
     return textY + static_cast<float>(fontSize);
 }
 
 float SelectedUnitPanel::DrawOrders_(Graphics& rGraphics, float textX, float textY,
                                      unsigned int fontSize) const
 {
+    const auto& s = Style().selectedUnitPanel;
     const std::optional<UnitOrder_t>& rOrder = m_pSelectedUnit->GetOrder();
     const std::string orderText = "Orders: " + (rOrder ? ToString(*rOrder) : "None");
     rGraphics.DrawText(
@@ -156,13 +152,14 @@ float SelectedUnitPanel::DrawOrders_(Graphics& rGraphics, float textX, float tex
         textX,
         textY,
         fontSize,
-        rOrder ? Color_t::White() : k_MutedTextColor);
+        rOrder ? s.bodyTextColor : s.mutedTextColor);
     return textY + static_cast<float>(fontSize);
 }
 
 void SelectedUnitPanel::DrawHomeBase_(Graphics& rGraphics, float textX, float textY,
                                       unsigned int fontSize) const
 {
+    const auto& s = Style().selectedUnitPanel;
     const BaseManager* pHomeBase = m_pSelectedUnit->GetHomeBase();
     const std::string homeText = "Home: " + (pHomeBase ? pHomeBase->GetName() : "None");
     rGraphics.DrawText(
@@ -170,7 +167,7 @@ void SelectedUnitPanel::DrawHomeBase_(Graphics& rGraphics, float textX, float te
         textX,
         textY,
         fontSize,
-        pHomeBase ? Color_t::White() : k_MutedTextColor);
+        pHomeBase ? s.bodyTextColor : s.mutedTextColor);
 }
 
 } // namespace ac

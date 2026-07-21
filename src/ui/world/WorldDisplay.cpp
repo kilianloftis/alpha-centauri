@@ -9,6 +9,7 @@
 #include "game/units/Pathfinder.h"
 #include "game/units/Unit.h"
 #include "ui/TileRenderer.h"
+#include "ui/style/UiStyle.h"
 #include <algorithm>
 #include <string>
 #include <utility>
@@ -20,20 +21,7 @@ namespace ac
 namespace
 {
 
-constexpr float k_DefaultTileScale              = 1.0f / 10.0f;
-constexpr float k_BaseNameFontSizeRatio         = 0.25f;
-constexpr float k_BaseTextOffsetRatio           = 0.1f;
-constexpr float k_BaseNameWidthRatio            = 0.8f;
-constexpr float k_BaseNameCharWidthRatio        = 0.5f;
 constexpr size_t k_BaseNameMinTruncChars        = 3;
-constexpr Color_t k_SensorMarkerColor             {40, 220, 120, 255};
-constexpr float k_SensorMarkerFontSizeRatio       = 0.22f;
-constexpr float k_SensorMarkerWidthRatio          = 0.28f;
-constexpr float k_SensorMarkerHeightRatio         = 0.28f;
-constexpr float k_SensorMarkerInsetRatio          = 0.04f;
-constexpr Color_t k_ShroudColor                   {0, 0, 0, 255};
-constexpr Color_t k_PathPreviewColor              {255, 0, 0, 220};
-constexpr float k_PathPreviewLineThicknessRatio  = 0.08f;
 
 struct PlayerFogMaps_t
 {
@@ -57,7 +45,8 @@ WorldDisplay::WorldDisplay(const GameState& rGameState, WindowLayout_t layout)
     : m_rGameState(rGameState)
     , m_layout(layout)
 {
-    m_effectiveTileSize = m_tileSize > 0.0f ? m_tileSize : m_layout.height * k_DefaultTileScale;
+    const auto& s = Style().worldDisplay;
+    m_effectiveTileSize = m_tileSize > 0.0f ? m_tileSize : m_layout.height * s.defaultTileScale;
     m_visibleCols = static_cast<int>(m_layout.width  / m_effectiveTileSize);
     m_visibleRows = static_cast<int>(m_layout.height / m_effectiveTileSize);
 }
@@ -111,11 +100,12 @@ int WorldDisplay::GetVisibleRows() const
 
 void WorldDisplay::RenderBases_(Graphics& rGraphics, int colStart, int rowStart, int colEnd, int rowEnd)
 {
+    const auto& s = Style().worldDisplay;
     const float tileSize = GetEffectiveTileSize();
     const PlayerFogMaps_t fog = PlayerFog_(m_rGameState);
 
-    const unsigned int fontSize = static_cast<unsigned int>(tileSize * k_BaseNameFontSizeRatio);
-    const float textOffsetX = tileSize * k_BaseTextOffsetRatio;
+    const unsigned int fontSize = static_cast<unsigned int>(tileSize * s.baseNameFontSizeRatio);
+    const float textOffsetX = tileSize * s.baseTextOffsetRatio;
 
     for (const Faction& rFaction : m_rGameState.Factions())
     {
@@ -139,7 +129,7 @@ void WorldDisplay::RenderBases_(Graphics& rGraphics, int colStart, int rowStart,
             const float baseY = m_layout.y + ((baseYTile - rowStart) * tileSize);
 
             const size_t maxChars = static_cast<size_t>(
-                (tileSize * k_BaseNameWidthRatio) / (fontSize * k_BaseNameCharWidthRatio));
+                (tileSize * s.baseNameWidthRatio) / (fontSize * s.baseNameCharWidthRatio));
             std::string displayName = rBase.GetName();
             if (displayName.length() > maxChars && maxChars > k_BaseNameMinTruncChars)
             {
@@ -150,26 +140,27 @@ void WorldDisplay::RenderBases_(Graphics& rGraphics, int colStart, int rowStart,
                 displayName = displayName.substr(0, maxChars);
             }
 
-            const float textOffsetY = tileSize * k_BaseTextOffsetRatio;
+            const float textOffsetY = tileSize * s.baseTextOffsetRatio;
 
             // TODO: Use faction color for base marker based on rBase.GetFactionId()
             // TODO: Show capture animation when base capture is implemented
             // TODO: Show population size below name
-            rGraphics.DrawText(displayName, baseX + textOffsetX, baseY + textOffsetY, fontSize, Color_t::Yellow());
+            rGraphics.DrawText(displayName, baseX + textOffsetX, baseY + textOffsetY, fontSize, s.baseNameColor);
         }
     }
 }
 
 void WorldDisplay::RenderSensors_(Graphics& rGraphics, int colStart, int rowStart, int colEnd, int rowEnd)
 {
+    const auto& s = Style().worldDisplay;
     const WorldMap& rWorldMap = GetWorldMap_();
     const float tileSize = GetEffectiveTileSize();
     const PlayerFogMaps_t fog = PlayerFog_(m_rGameState);
 
-    const unsigned int fontSize = static_cast<unsigned int>(tileSize * k_SensorMarkerFontSizeRatio);
-    const float markerWidth = tileSize * k_SensorMarkerWidthRatio;
-    const float markerHeight = tileSize * k_SensorMarkerHeightRatio;
-    const float inset = tileSize * k_SensorMarkerInsetRatio;
+    const unsigned int fontSize = static_cast<unsigned int>(tileSize * s.sensorMarkerFontSizeRatio);
+    const float markerWidth = tileSize * s.sensorMarkerWidthRatio;
+    const float markerHeight = tileSize * s.sensorMarkerHeightRatio;
+    const float inset = tileSize * s.sensorMarkerInsetRatio;
 
     for (int row = rowStart; row < rowEnd; ++row)
     {
@@ -193,8 +184,8 @@ void WorldDisplay::RenderSensors_(Graphics& rGraphics, int colStart, int rowStar
             const float markerX = tileX + tileSize - markerWidth - inset;
             const float markerY = tileY + inset;
 
-            rGraphics.DrawFilledRect(markerX, markerY, markerWidth, markerHeight, k_SensorMarkerColor);
-            rGraphics.DrawText("S", markerX + inset, markerY + inset, fontSize, Color_t::Black());
+            rGraphics.DrawFilledRect(markerX, markerY, markerWidth, markerHeight, s.sensorMarkerColor);
+            rGraphics.DrawText("S", markerX + inset, markerY + inset, fontSize, s.sensorLabelColor);
         }
     }
 }
@@ -206,6 +197,7 @@ void WorldDisplay::RenderPathPreview_(Graphics& rGraphics, int colStart, int row
         return;
     }
 
+    const auto& s = Style().worldDisplay;
     const float halfTile = m_effectiveTileSize * 0.5f;
     const auto tileCenter = [&](const Tile& rTile) -> std::pair<float, float> {
         return {
@@ -234,12 +226,12 @@ void WorldDisplay::RenderPathPreview_(Graphics& rGraphics, int colStart, int row
         return;
     }
 
-    const float thickness = std::max(1.0f, m_effectiveTileSize * k_PathPreviewLineThicknessRatio);
+    const float thickness = std::max(1.0f, m_effectiveTileSize * s.pathPreviewLineThicknessRatio);
     for (size_t i = 1; i < centers.size(); ++i)
     {
         rGraphics.DrawLine(centers[i - 1].first, centers[i - 1].second,
                            centers[i].first, centers[i].second,
-                           k_PathPreviewColor, thickness);
+                           s.pathPreviewColor, thickness);
     }
 }
 
@@ -275,7 +267,8 @@ void WorldDisplay::Render(Graphics& rGraphics)
 
             if (fog.explored && !fog.explored->IsExplored(*pTile))
             {
-                rGraphics.DrawFilledRect(tileX, tileY, m_effectiveTileSize, m_effectiveTileSize, k_ShroudColor);
+                rGraphics.DrawFilledRect(tileX, tileY, m_effectiveTileSize, m_effectiveTileSize,
+                                         Style().worldDisplay.shroudColor);
                 continue;
             }
 

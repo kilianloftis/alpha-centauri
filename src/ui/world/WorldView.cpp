@@ -22,6 +22,7 @@
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "ui/TileHitTester.h"
+#include "ui/style/UiStyle.h"
 #include "graphics/Graphics.h"
 #include <string>
 #include <memory>
@@ -32,7 +33,6 @@ namespace ac
 namespace
 {
 
-constexpr Color_t k_ResearchTextColor {100, 200, 255, 255};
 constexpr int    k_InvalidTileCoord  = -1;
 
 } // namespace
@@ -49,7 +49,7 @@ WorldView::WorldView(
 )
 : IGameView(layout)
 , m_rGameState(rGameState)
-, m_mapLayout(ResolveLayout(layout, k_MapLayout))
+, m_mapLayout(ResolveLayout(layout, Style().layouts.map))
 , m_pWorldDisplay(std::make_unique<WorldDisplay>(rGameState, m_mapLayout))
 , m_onProcessTurn(std::move(onProcessTurn))
 , m_onRequestExit(std::move(onRequestExit))
@@ -59,30 +59,30 @@ WorldView::WorldView(
 , m_pCameraInputController(std::make_unique<CameraInputController>(*m_pWorldDisplay, rWorldMap, m_mapLayout))
 , m_pUnitOrderInputController(std::make_unique<UnitOrderInputController>())
 {
-    auto pSelectedUnit = std::make_unique<SelectedUnitPanel>(ResolveLayout(m_layout, k_LeftPanelLayout));
+    auto pSelectedUnit = std::make_unique<SelectedUnitPanel>(ResolveLayout(m_layout, Style().layouts.leftPanel));
     m_pSelectedUnitPanel = pSelectedUnit.get();
     m_elements.push_back(std::move(pSelectedUnit));
 
-    auto pLocation = std::make_unique<LocationPanel>(ResolveLayout(m_layout, k_LocationPanelLayout));
+    auto pLocation = std::make_unique<LocationPanel>(ResolveLayout(m_layout, Style().layouts.locationPanel));
     m_pLocationPanel = pLocation.get();
     m_elements.push_back(std::move(pLocation));
 
-    auto pInfo = std::make_unique<InfoPanelElement>(ResolveLayout(m_layout, k_CenterPanelLayout));
+    auto pInfo = std::make_unique<InfoPanelElement>(ResolveLayout(m_layout, Style().layouts.centerPanel));
     m_pInfoPanel = pInfo.get();
     m_elements.push_back(std::move(pInfo));
 
     auto pUnitStack = std::make_unique<UnitStackPanel>(
-        ResolveLayout(m_layout, k_BottomPanelLayout),
+        ResolveLayout(m_layout, Style().layouts.bottomPanel),
         [this](Unit& rUnit) { SetSelectedUnit_(&rUnit, true); });
     m_pUnitStackPanel = pUnitStack.get();
     m_elements.push_back(std::move(pUnitStack));
 
     m_elements.push_back(std::make_unique<CommlinksButton>(
-        ResolveLayout(m_layout, k_RightButtonLayout),
+        ResolveLayout(m_layout, Style().layouts.rightButton),
         [this]() { m_onOpenCommlinks(); }));
 
     auto pEndTurn = std::make_unique<EndTurnButton>(
-        ResolveLayout(k_RightPanelLayout, {0.0f, 0.0f, 1.0f, 0.08f}),
+        ResolveLayout(Style().layouts.rightPanel, Style().endTurnButton.layout),
         [this]() { m_onProcessTurn(); });
     m_pEndTurnButton = pEndTurn.get();
     m_elements.push_back(std::move(pEndTurn));
@@ -197,12 +197,13 @@ void WorldView::SelectNextAvailableUnitIfNeeded_()
 
 void WorldView::Update_()
 {
+    const auto& s = Style().worldView;
     std::vector<InfoPanelElement::InfoLine> infoLines;
-    infoLines.push_back({"Mission Year: " + std::to_string(m_rGameState.GetMissionYear()), Color_t::White()});
+    infoLines.push_back({"Mission Year: " + std::to_string(m_rGameState.GetMissionYear()), s.missionYearColor});
     if (const Faction* pPlayerFaction = m_rGameState.GetPlayerFaction())
     {
-        infoLines.push_back({"Energy: " + std::to_string(pPlayerFaction->GetEconomy().GetEnergy()), Color_t::Yellow()});
-        infoLines.push_back({"Research: " + std::to_string(pPlayerFaction->GetResearch().GetAccumulatedPoints()), k_ResearchTextColor});
+        infoLines.push_back({"Energy: " + std::to_string(pPlayerFaction->GetEconomy().GetEnergy()), s.energyTextColor});
+        infoLines.push_back({"Research: " + std::to_string(pPlayerFaction->GetResearch().GetAccumulatedPoints()), s.researchTextColor});
     }
     m_pInfoPanel->SetInfoLines(infoLines);
 

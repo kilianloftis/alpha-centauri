@@ -2,6 +2,7 @@
 
 #include "game/map/Tile.h"
 #include "graphics/Graphics.h"
+#include "ui/style/UiStyle.h"
 #include "ui/world/InfoPanelElement.h"
 #include "ui/world/WorldDisplay.h"
 
@@ -43,15 +44,15 @@ CombatView::CombatView(WindowLayout_t layout,
     , m_attackerName(std::move(attackerName))
     , m_defenderName(std::move(defenderName))
 {
-    auto pAttacker = std::make_unique<InfoPanelElement>(ResolveLayout(m_layout, k_LeftPanelLayout));
+    auto pAttacker = std::make_unique<InfoPanelElement>(ResolveLayout(m_layout, Style().layouts.leftPanel));
     m_pAttackerPanel = pAttacker.get();
     m_elements.push_back(std::move(pAttacker));
 
-    auto pRound = std::make_unique<InfoPanelElement>(ResolveLayout(m_layout, k_BottomPanelLayout));
+    auto pRound = std::make_unique<InfoPanelElement>(ResolveLayout(m_layout, Style().layouts.bottomPanel));
     m_pRoundPanel = pRound.get();
     m_elements.push_back(std::move(pRound));
 
-    auto pDefender = std::make_unique<InfoPanelElement>(ResolveLayout(m_layout, k_RightPanelLayout));
+    auto pDefender = std::make_unique<InfoPanelElement>(ResolveLayout(m_layout, Style().layouts.rightPanel));
     m_pDefenderPanel = pDefender.get();
     m_elements.push_back(std::move(pDefender));
 
@@ -95,6 +96,7 @@ void CombatView::OnPopped()
 
 void CombatView::RefreshPanels_()
 {
+    const auto& s = Style().combatView;
     const CombatResult_t& rResult = m_presentation.GetResult();
     const CombatRound_t* pRound = m_presentation.GetDisplayedRound();
 
@@ -104,13 +106,13 @@ void CombatView::RefreshPanels_()
                                   : (rResult.rounds.empty() ? 0 : rResult.rounds.back().defenderHpAfter);
 
     m_pAttackerPanel->SetInfoLines({
-        {m_attackerName.empty() ? "Attacker" : m_attackerName, Color_t::White()},
-        {FormatHpLine_("HP", attackerHp), Color_t::Yellow()},
+        {m_attackerName.empty() ? "Attacker" : m_attackerName, s.sideNameColor},
+        {FormatHpLine_("HP", attackerHp), s.hpLineColor},
     });
 
     m_pDefenderPanel->SetInfoLines({
-        {m_defenderName.empty() ? "Defender" : m_defenderName, Color_t::White()},
-        {FormatHpLine_("HP", defenderHp), Color_t::Yellow()},
+        {m_defenderName.empty() ? "Defender" : m_defenderName, s.sideNameColor},
+        {FormatHpLine_("HP", defenderHp), s.hpLineColor},
     });
 
     std::vector<InfoPanelElement::InfoLine> roundLines;
@@ -119,22 +121,22 @@ void CombatView::RefreshPanels_()
         roundLines.push_back({
             "Round " + std::to_string(*roundIndex + 1) + " / "
                 + std::to_string(rResult.rounds.size()),
-            Color_t::White()});
+            s.roundHeaderColor});
         if (pRound)
         {
             roundLines.push_back({
                 "Rolls " + std::to_string(pRound->attackRoll) + " vs "
                     + std::to_string(pRound->defenseRoll),
-                Color_t{180, 180, 220, 255}});
+                s.rollsLineColor});
             roundLines.push_back({
                 SideLabel_(pRound->roundWinner) + " hits for "
                     + std::to_string(pRound->damage),
-                Color_t::Red()});
+                s.hitLineColor});
         }
     }
     else
     {
-        roundLines.push_back({"Combat", Color_t::White()});
+        roundLines.push_back({"Combat", s.idleLabelColor});
     }
     m_pRoundPanel->SetInfoLines(roundLines);
 }

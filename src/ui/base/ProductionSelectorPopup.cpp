@@ -1,21 +1,10 @@
 #include "ui/base/ProductionSelectorPopup.h"
 #include "graphics/Graphics.h"
 #include "input/Input.h"
+#include "ui/style/UiStyle.h"
 
 namespace ac
 {
-
-namespace
-{
-
-constexpr float k_HeaderFontSizeRatio  = 0.04f;
-constexpr float k_EntryFontSizeRatio   = 0.03f;
-constexpr float k_LineHeightRatio      = 0.05f;
-constexpr float k_PaddingRatio         = 0.02f;
-constexpr float k_HeaderLineOffset     = 2.0f;
-constexpr Color_t k_BackgroundColor      {20, 20, 40, 230};
-
-} // namespace
 
 ProductionSelectorPopup::ProductionSelectorPopup(
     std::vector<const IConstructable*> availableItems,
@@ -31,8 +20,9 @@ ProductionSelectorPopup::ProductionSelectorPopup(
 
 void ProductionSelectorPopup::CacheEntryRects_()
 {
-    const float lineHeight = m_layout.height * k_LineHeightRatio;
-    float offsetY = lineHeight * k_HeaderLineOffset;
+    const auto& style = Style().productionSelectorPopup;
+    const float lineHeight = m_layout.height * style.lineHeightRatio;
+    float offsetY = lineHeight * style.headerLineOffset;
     for (size_t i = 0; i < m_availableItems.size(); ++i)
     {
         m_entryRects.push_back(Rectangle_t{
@@ -52,24 +42,25 @@ void ProductionSelectorPopup::Render(Graphics& rGraphics)
         return;
     }
 
-    const float padding = k_PaddingRatio * m_layout.width;
-    const unsigned int headerFontSize = static_cast<unsigned int>(m_layout.height * k_HeaderFontSizeRatio);
-    const unsigned int entryFontSize  = static_cast<unsigned int>(m_layout.height * k_EntryFontSizeRatio);
-    const float lineHeight = m_layout.height * k_LineHeightRatio;
+    const auto& style = Style().productionSelectorPopup;
+    const float padding = style.paddingRatio * m_layout.width;
+    const unsigned int headerFontSize = static_cast<unsigned int>(m_layout.height * style.headerFontSizeRatio);
+    const unsigned int entryFontSize  = static_cast<unsigned int>(m_layout.height * style.entryFontSizeRatio);
+    const float lineHeight = m_layout.height * style.lineHeightRatio;
 
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, k_BackgroundColor);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, Color_t::Yellow());
+    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.backgroundColor);
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.borderColor);
 
-    rGraphics.DrawText("Select Production", m_layout.x + padding, m_layout.y + padding, headerFontSize, Color_t::Yellow());
+    rGraphics.DrawText("Select Production", m_layout.x + padding, m_layout.y + padding, headerFontSize, style.headerColor);
 
     if (m_availableItems.empty())
     {
         rGraphics.DrawText(
             "Nothing available to build",
             m_layout.x + padding,
-            m_layout.y + lineHeight * k_HeaderLineOffset,
+            m_layout.y + lineHeight * style.headerLineOffset,
             entryFontSize,
-            Color_t::White()
+            style.hintColor
         );
         return;
     }
@@ -77,7 +68,7 @@ void ProductionSelectorPopup::Render(Graphics& rGraphics)
     for (size_t i = 0; i < m_availableItems.size(); ++i)
     {
         const Rectangle_t& rect = m_entryRects[i];
-        rGraphics.DrawText(m_availableItems[i]->GetName(), rect.x + padding, rect.y, entryFontSize, Color_t::White());
+        rGraphics.DrawText(m_availableItems[i]->GetName(), rect.x + padding, rect.y, entryFontSize, style.entryColor);
     }
 }
 

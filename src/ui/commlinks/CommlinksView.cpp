@@ -1,6 +1,7 @@
 #include "ui/commlinks/CommlinksView.h"
 #include "ui/commlinks/CommlinksPanel.h"
 #include "game/GameState.h"
+#include "ui/style/UiStyle.h"
 
 namespace ac
 {
@@ -11,7 +12,7 @@ CommlinksView::CommlinksView(GameState& rGameState, WindowLayout_t layout)
 {
     m_elements.push_back(std::make_unique<CommlinksPanel>(
         m_rGameState,
-        ResolveLayout(m_layout, k_PopupLayoutSmall)));
+        ResolveLayout(m_layout, Style().layouts.popupSmall)));
 }
 
 bool CommlinksView::HandleKey(const KeyEvent_t& rEvent)

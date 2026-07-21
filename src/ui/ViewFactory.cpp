@@ -8,17 +8,10 @@
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitSlotRegistry.h"
 #include "graphics/Graphics.h"
+#include "ui/style/UiStyle.h"
 
 namespace ac
 {
-
-namespace
-{
-
-constexpr float k_FullscreenOriginX = 0.0f;
-constexpr float k_FullscreenOriginY = 0.0f;
-
-} // namespace
 
 ViewFactory::ViewFactory(
     GameState& rGameState,
@@ -163,9 +156,10 @@ std::unique_ptr<CombatView> ViewFactory::CreateCombatView(
 
 WindowLayout_t ViewFactory::GetFullscreenLayout() const
 {
+    const auto& s = Style().viewFactory;
     return {
-        k_FullscreenOriginX,
-        k_FullscreenOriginY,
+        s.fullscreenOriginX,
+        s.fullscreenOriginY,
         static_cast<float>(m_rGraphics.GetWindowWidth()),
         static_cast<float>(m_rGraphics.GetWindowHeight())
     };

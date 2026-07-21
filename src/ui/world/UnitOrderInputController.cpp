@@ -2,6 +2,7 @@
 
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
+#include "ui/style/UiStyle.h"
 
 namespace ac
 {
@@ -70,7 +71,7 @@ bool UnitOrderInputController::HandleMouse(const MouseEvent_t& rEvent, Unit* pSe
 
         // Long-press on an adjacent tile: request an attack (WorldView calls TryAttack).
         const auto elapsed = std::chrono::steady_clock::now() - m_leftButtonPressTime;
-        if (elapsed >= std::chrono::milliseconds(k_holdThresholdMs)
+        if (elapsed >= std::chrono::milliseconds(Style().unitOrderInput.holdThresholdMs)
             && m_pPreviewUnit && m_pPreviewDestination
             && AreChebyshevAdjacent(m_pPreviewUnit->GetTile(), *m_pPreviewDestination))
         {
@@ -88,7 +89,7 @@ bool UnitOrderInputController::HandleMouse(const MouseEvent_t& rEvent, Unit* pSe
     if (rEvent.button == MouseButton_t::None && m_bLeftButtonHeld && pSelectedUnit && pPathfinder)
     {
         const auto elapsed = std::chrono::steady_clock::now() - m_leftButtonPressTime;
-        if (elapsed < std::chrono::milliseconds(k_holdThresholdMs))
+        if (elapsed < std::chrono::milliseconds(Style().unitOrderInput.holdThresholdMs))
         {
             return false;
         }

@@ -3,6 +3,7 @@
 #include "game/units/CombatResolver.h"
 #include "graphics/Graphics.h"
 #include "ui/UIElement.h"
+#include "ui/style/UiStyle.h"
 
 #include <chrono>
 #include <cstddef>
@@ -19,11 +20,9 @@ class WorldDisplay;
 class CombatPresentation
 {
 public:
-    static constexpr int k_defaultDamageFlashMs = 500;
-    static constexpr int k_defaultInterRoundDelayMs = 250;
-
-    explicit CombatPresentation(int damageFlashMs = k_defaultDamageFlashMs,
-                                int interRoundDelayMs = k_defaultInterRoundDelayMs);
+    explicit CombatPresentation(
+        int damageFlashMs = Style().combatPresentation.defaultDamageFlashMs,
+        int interRoundDelayMs = Style().combatPresentation.defaultInterRoundDelayMs);
 
     // Copies rResult and records the combatants' tiles for ghost hit overlays when a unit
     // was destroyed during Resolve. No-op (clears) when rounds is empty.

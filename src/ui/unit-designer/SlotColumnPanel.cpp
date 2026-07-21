@@ -2,31 +2,10 @@
 #include "game/units/UnitComponentConfig.h"
 #include "graphics/Graphics.h"
 #include "input/Input.h"
+#include "ui/style/UiStyle.h"
 
 namespace ac
 {
-
-namespace
-{
-
-constexpr int   k_VisibleSlots               = 3;
-constexpr float k_ArrowHeightRatio           = 0.08f;
-constexpr float k_LabelFontSizeRatio         = 0.08f;
-constexpr float k_NameFontSizeRatio          = 0.07f;
-constexpr float k_PaddingRatio               = 0.04f;
-constexpr float k_ArrowAreaMultiplier        = 2.0f;
-constexpr float k_ArrowFontSizeRatio         = 0.6f;
-constexpr float k_ArrowPadXRatio             = 0.4f;
-constexpr float k_NameLabelSpacingMultiplier = 1.4f;
-constexpr Color_t k_ArrowFillColor             {30, 30, 40, 255};
-constexpr Color_t k_ArrowBorderColor           {60, 60, 80, 255};
-constexpr Color_t k_DisabledArrowColor         {60, 60, 60, 255};
-constexpr Color_t k_SlotFillColor              {30, 30, 35, 255};
-constexpr Color_t k_SlotBorderColor            {80, 80, 100, 255};
-constexpr Color_t k_LabelTextColor             {150, 150, 170, 255};
-constexpr Color_t k_EmptyNameColor             {80, 80, 80, 255};
-
-} // namespace
 
 SlotColumnPanel::SlotColumnPanel(std::vector<SlotEntry_t> slots, WindowLayout_t layout)
     : UIElement(layout)
@@ -37,7 +16,7 @@ SlotColumnPanel::SlotColumnPanel(std::vector<SlotEntry_t> slots, WindowLayout_t 
 
 bool SlotColumnPanel::NeedsScroll_() const
 {
-    return static_cast<int>(m_slots.size()) > k_VisibleSlots;
+    return static_cast<int>(m_slots.size()) > Style().slotColumnPanel.visibleSlots;
 }
 
 void SlotColumnPanel::CacheRects_()
@@ -46,15 +25,15 @@ void SlotColumnPanel::CacheRects_()
 
     if (NeedsScroll_())
     {
-        const float arrowH = m_layout.height * k_ArrowHeightRatio;
+        const float arrowH = m_layout.height * Style().slotColumnPanel.arrowHeightRatio;
         const float slotAreaY = m_layout.y + arrowH;
-        const float slotAreaH = m_layout.height - arrowH * k_ArrowAreaMultiplier;
-        const float slotH = slotAreaH / static_cast<float>(k_VisibleSlots);
+        const float slotAreaH = m_layout.height - arrowH * Style().slotColumnPanel.arrowAreaMultiplier;
+        const float slotH = slotAreaH / static_cast<float>(Style().slotColumnPanel.visibleSlots);
 
         m_upArrowRect   = {m_layout.x, m_layout.y,                          m_layout.width, arrowH};
         m_downArrowRect = {m_layout.x, m_layout.y + m_layout.height - arrowH, m_layout.width, arrowH};
 
-        for (int i = 0; i < k_VisibleSlots; ++i)
+        for (int i = 0; i < Style().slotColumnPanel.visibleSlots; ++i)
         {
             m_slotRects.push_back({
                 m_layout.x,
@@ -86,39 +65,46 @@ void SlotColumnPanel::Render(Graphics& rGraphics)
     if (NeedsScroll_())
     {
         const bool bCanScrollUp   = m_scrollOffset > 0;
-        const bool bCanScrollDown = m_scrollOffset + k_VisibleSlots < static_cast<int>(m_slots.size());
+        const bool bCanScrollDown =
+            m_scrollOffset + Style().slotColumnPanel.visibleSlots < static_cast<int>(m_slots.size());
 
-        const Color_t upColor   = bCanScrollUp   ? Color_t::White() : k_DisabledArrowColor;
-        const Color_t downColor = bCanScrollDown ? Color_t::White() : k_DisabledArrowColor;
+        const Color_t upColor   = bCanScrollUp
+            ? Style().slotColumnPanel.enabledArrowColor
+            : Style().slotColumnPanel.disabledArrowColor;
+        const Color_t downColor = bCanScrollDown
+            ? Style().slotColumnPanel.enabledArrowColor
+            : Style().slotColumnPanel.disabledArrowColor;
 
         rGraphics.DrawFilledRect(
             m_upArrowRect.x, m_upArrowRect.y,
             m_upArrowRect.width, m_upArrowRect.height,
-            k_ArrowFillColor
+            Style().slotColumnPanel.arrowFillColor
         );
         rGraphics.DrawRect(
             m_upArrowRect.x, m_upArrowRect.y,
             m_upArrowRect.width, m_upArrowRect.height,
-            k_ArrowBorderColor
+            Style().slotColumnPanel.arrowBorderColor
         );
-        const unsigned int arrowFontSize = static_cast<unsigned int>(m_upArrowRect.height * k_ArrowFontSizeRatio);
-        const float arrowPadX = m_upArrowRect.width * k_ArrowPadXRatio;
+        const unsigned int arrowFontSize = static_cast<unsigned int>(
+            m_upArrowRect.height * Style().slotColumnPanel.arrowFontSizeRatio);
+        const float arrowPadX = m_upArrowRect.width * Style().slotColumnPanel.arrowPadXRatio;
         rGraphics.DrawText("^", m_upArrowRect.x + arrowPadX, m_upArrowRect.y, arrowFontSize, upColor);
 
         rGraphics.DrawFilledRect(
             m_downArrowRect.x, m_downArrowRect.y,
             m_downArrowRect.width, m_downArrowRect.height,
-            k_ArrowFillColor
+            Style().slotColumnPanel.arrowFillColor
         );
         rGraphics.DrawRect(
             m_downArrowRect.x, m_downArrowRect.y,
             m_downArrowRect.width, m_downArrowRect.height,
-            k_ArrowBorderColor
+            Style().slotColumnPanel.arrowBorderColor
         );
         rGraphics.DrawText("v", m_downArrowRect.x + arrowPadX, m_downArrowRect.y, arrowFontSize, downColor);
     }
 
-    const int visibleCount = std::min(k_VisibleSlots, static_cast<int>(m_slots.size()));
+    const int visibleCount = std::min(
+        Style().slotColumnPanel.visibleSlots, static_cast<int>(m_slots.size()));
     for (int i = 0; i < visibleCount; ++i)
     {
         const int slotIdx = m_scrollOffset + i;
@@ -127,24 +113,38 @@ void SlotColumnPanel::Render(Graphics& rGraphics)
         const SlotEntry_t& rEntry = m_slots[slotIdx];
         const Rectangle_t& rRect = m_slotRects[i];
 
-        rGraphics.DrawFilledRect(rRect.x, rRect.y, rRect.width, rRect.height, k_SlotFillColor);
-        rGraphics.DrawRect(rRect.x, rRect.y, rRect.width, rRect.height, k_SlotBorderColor);
+        rGraphics.DrawFilledRect(
+            rRect.x, rRect.y, rRect.width, rRect.height,
+            Style().slotColumnPanel.slotFillColor
+        );
+        rGraphics.DrawRect(
+            rRect.x, rRect.y, rRect.width, rRect.height,
+            Style().slotColumnPanel.slotBorderColor
+        );
 
-        const float padding          = rRect.height * k_PaddingRatio;
-        const unsigned int labelSize = static_cast<unsigned int>(rRect.height * k_LabelFontSizeRatio);
-        const unsigned int nameSize  = static_cast<unsigned int>(rRect.height * k_NameFontSizeRatio);
+        const float padding = rRect.height * Style().slotColumnPanel.paddingRatio;
+        const unsigned int labelSize = static_cast<unsigned int>(
+            rRect.height * Style().slotColumnPanel.labelFontSizeRatio);
+        const unsigned int nameSize = static_cast<unsigned int>(
+            rRect.height * Style().slotColumnPanel.nameFontSizeRatio);
 
         const bool bRequired = rEntry.pSlotConfig->required;
         const std::string label = rEntry.pSlotConfig->displayName + (bRequired ? "" : " (opt)");
-        rGraphics.DrawText(label, rRect.x + padding, rRect.y + padding, labelSize, k_LabelTextColor);
+        rGraphics.DrawText(
+            label, rRect.x + padding, rRect.y + padding, labelSize,
+            Style().slotColumnPanel.labelTextColor
+        );
 
         const UnitComponentConfig_t* pComp = rEntry.getComponent();
         const std::string& rName = pComp ? pComp->name : "(none)";
-        const Color_t nameColor    = pComp ? Color_t::White() : k_EmptyNameColor;
+        const Color_t nameColor = pComp
+            ? Style().slotColumnPanel.filledNameColor
+            : Style().slotColumnPanel.emptyNameColor;
         rGraphics.DrawText(
             rName,
             rRect.x + padding,
-            rRect.y + padding + static_cast<float>(labelSize) * k_NameLabelSpacingMultiplier,
+            rRect.y + padding + static_cast<float>(labelSize)
+                * Style().slotColumnPanel.nameLabelSpacingMultiplier,
             nameSize,
             nameColor
         );
@@ -167,14 +167,15 @@ void SlotColumnPanel::HandleMouseClick(const MouseEvent_t& rEvent)
         }
 
         if (ContainsMouseCoord(m_downArrowRect, rEvent) &&
-            m_scrollOffset + k_VisibleSlots < static_cast<int>(m_slots.size()))
+            m_scrollOffset + Style().slotColumnPanel.visibleSlots < static_cast<int>(m_slots.size()))
         {
             ++m_scrollOffset;
             return;
         }
     }
 
-    const int visibleCount = std::min(k_VisibleSlots, static_cast<int>(m_slots.size()));
+    const int visibleCount = std::min(
+        Style().slotColumnPanel.visibleSlots, static_cast<int>(m_slots.size()));
     for (int i = 0; i < visibleCount; ++i)
     {
         if (ContainsMouseCoord(m_slotRects[i], rEvent))

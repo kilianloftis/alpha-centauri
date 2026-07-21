@@ -2,6 +2,7 @@
 
 #include "ui/UIElement.h"
 #include "graphics/Graphics.h"
+#include "ui/style/UiStyle.h"
 #include <string>
 #include <vector>
 
@@ -19,7 +20,7 @@ public:
     struct InfoLine
     {
         std::string text;
-        Color_t color = Color_t::White();
+        Color_t color = Style().infoPanel.defaultLineColor;
     };
 
     void Render(Graphics& rGraphics) override;

@@ -1,22 +1,9 @@
 #include "ui/research/CurrentResearchPanel.h"
 #include "graphics/Graphics.h"
+#include "ui/style/UiStyle.h"
 
 namespace ac
 {
-
-namespace
-{
-
-constexpr RatioLayout_t k_CurrentResearchLabelLayout    {0.0f, 0.0f,  1.0f, 0.35f};
-constexpr RatioLayout_t k_CurrentResearchTargetLayout   {0.0f, 0.35f, 1.0f, 0.4f};
-constexpr RatioLayout_t k_CurrentResearchProgressLayout {0.0f, 0.75f, 1.0f, 0.25f};
-constexpr Color_t k_BackgroundColor                       {30, 30, 50, 255};
-constexpr Color_t k_BorderColor                           {80, 80, 120, 255};
-constexpr unsigned int k_LabelFontSize                  = 14;
-constexpr unsigned int k_TargetFontSize                 = 16;
-constexpr unsigned int k_ProgressFontSize               = 13;
-
-} // namespace
 
 CurrentResearchPanel::CurrentResearchPanel(const ResearchManager* pResearch, WindowLayout_t layout)
     : UIElement(layout)
@@ -25,27 +12,29 @@ CurrentResearchPanel::CurrentResearchPanel(const ResearchManager* pResearch, Win
 
 void CurrentResearchPanel::Render(Graphics& rGraphics)
 {
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, k_BackgroundColor);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, k_BorderColor);
+    const auto& style = Style().currentResearchPanel;
 
-    const WindowLayout_t labelArea    = ResolveLayout(m_layout, k_CurrentResearchLabelLayout);
-    const WindowLayout_t targetArea   = ResolveLayout(m_layout, k_CurrentResearchTargetLayout);
-    const WindowLayout_t progressArea = ResolveLayout(m_layout, k_CurrentResearchProgressLayout);
+    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.backgroundColor);
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.borderColor);
 
-    rGraphics.DrawText("Current Research Target:", labelArea.x, labelArea.y, k_LabelFontSize, Color_t::White());
+    const WindowLayout_t labelArea    = ResolveLayout(m_layout, style.labelLayout);
+    const WindowLayout_t targetArea   = ResolveLayout(m_layout, style.targetLayout);
+    const WindowLayout_t progressArea = ResolveLayout(m_layout, style.progressLayout);
+
+    rGraphics.DrawText("Current Research Target:", labelArea.x, labelArea.y, style.labelFontSize, style.labelColor);
 
     if (m_pResearch && m_pResearch->HasResearchTarget())
     {
-        rGraphics.DrawText(m_pResearch->GetResearchTarget(), targetArea.x, targetArea.y, k_TargetFontSize, Color_t::Yellow());
+        rGraphics.DrawText(m_pResearch->GetResearchTarget(), targetArea.x, targetArea.y, style.targetFontSize, style.targetColor);
 
         const int accumulated = m_pResearch->GetAccumulatedPoints();
         const int needed      = m_pResearch->GetPointsNeededForCurrentTech();
         const std::string progressText = std::to_string(accumulated) + " / " + std::to_string(needed) + " RP";
-        rGraphics.DrawText(progressText, progressArea.x, progressArea.y, k_ProgressFontSize, Color_t::Green());
+        rGraphics.DrawText(progressText, progressArea.x, progressArea.y, style.progressFontSize, style.progressColor);
     }
     else
     {
-        rGraphics.DrawText("None", targetArea.x, targetArea.y, k_TargetFontSize, Color_t::Yellow());
+        rGraphics.DrawText("None", targetArea.x, targetArea.y, style.targetFontSize, style.targetColor);
     }
 }
 
