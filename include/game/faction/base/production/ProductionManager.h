@@ -32,6 +32,7 @@ public:
 
     // Mineral stockpile owned by this manager.
     int GetMineralStockpile() const;
+    void SetMineralStockpile(int amount);
 
     // Apply minerals produced this turn: add to stockpile, complete if cost is met.
     // rBaseEffects is forwarded to GetMineralCost. Returns the completed item id,

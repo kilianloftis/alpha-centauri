@@ -138,6 +138,11 @@ int PopulationManager::GetNutrientStockpile() const
     return m_nutrientStockpile;
 }
 
+void PopulationManager::SetNutrientStockpile(int amount)
+{
+    m_nutrientStockpile = amount;
+}
+
 int PopulationManager::GetNutrientsRequired(const BaseEffects_t& rBaseEffects) const
 {
     return GrowthCalculator::ComputeNutrientsRequired(*m_pGrowthConfig, GetSize(), rBaseEffects);

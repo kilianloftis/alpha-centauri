@@ -69,6 +69,20 @@ public:
 
     // Base management
     void AddBase(std::unique_ptr<BaseManager> pBase);
+    // Destroy the base and return a snapshot for reconstruct-under-new-owner.
+    std::optional<BaseSnapshot_t> ExtractBase(BaseId_t baseId);
+    // Rebuild a base from a snapshot (recalculates pop roles and worked tiles).
+    BaseManager* CreateBaseFromSnapshot(const BaseSnapshot_t& rSnapshot,
+                                        const GameDataContext& rDataContext,
+                                        TileEffectsContext& rTileEffects,
+                                        const SecretProjectAvailabilityCalculator& rSecretProjectAvailability);
+    // Extract from this faction and CreateBaseFromSnapshot on rReceiver.
+    // Throws if baseId is missing or rReceiver is this faction.
+    void TransferBaseTo(BaseId_t baseId,
+                        Faction& rReceiver,
+                        const GameDataContext& rDataContext,
+                        TileEffectsContext& rTileEffects,
+                        const SecretProjectAvailabilityCalculator& rSecretProjectAvailability);
     // Factory method: unpacks the individual registries/calculators BaseManager needs from
     // rDataContext (a composition-root-supplied bag) so BaseManager itself can declare narrow,
     // named dependencies instead of taking the whole context.
@@ -147,6 +161,9 @@ public:
     // world territory; tests may leave it unset and call TerritoryMap::Rebuild directly.
     void SetOnBaseListChanged(std::function<void()> handler);
 
+    // Invoked at the end of RebuildVisibility. GameState uses this for first-contact scans.
+    void SetOnVisibilityRebuilt(std::function<void(Faction&)> handler);
+
     // Pop types
     std::vector<const PopTypeConfig_t*> GetAvailablePopTypes() const;
 
@@ -180,6 +197,7 @@ private:
     FactionRevealedUnits m_revealedUnits;
     WorldMap* m_pWorldMap = nullptr; // set by BindWorldMap; used by RebuildVisibility
     std::function<void()> m_onBaseListChanged;
+    std::function<void(Faction&)> m_onVisibilityRebuilt;
 };
 
 } // namespace ac

@@ -59,6 +59,7 @@ Unit& UnitManager::CreateUnit(UnitId_t unitId, const UnitDesign& rDesign,
     m_units.push_back(std::move(pUnit));
     m_revision.Bump();
     m_rFaction.RebuildVisibility();
+    OnUnitCreated.Emit(rUnit);
     return rUnit;
 }
 

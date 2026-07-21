@@ -4,7 +4,8 @@
 #include "game/faction/FactionIdentity.h"
 #include "game/faction/AIProfile.h"
 #include "game/faction/Military.h"
-#include "game/faction/DiplomacyManager.h"
+#include "game/faction/DiplomacyLedger.h"
+#include "game/faction/DiplomaticActionExecutor.h"
 #include "game/faction/UnitManager.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/WorldMap.h"
@@ -30,23 +31,28 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
     , m_rSettings(rSettings)
     , m_pEventBus(std::make_unique<EventBus>())
     , m_worldMap(std::move(pWorldMap))
-    , m_pDiplomacy(std::make_unique<DiplomacyManager>())
+    , m_pDiplomacy(std::make_unique<DiplomacyLedger>())
+    , m_pDiplomaticActionExecutor(std::make_unique<DiplomaticActionExecutor>())
     , m_secretProjectAvailability(*this)
 {
     if (!m_worldMap)
     {
         throw std::invalid_argument("GameState: pWorldMap is null");
     }
-    // UnitPositionIndex owns position only; visibility rebuild stays on Faction (same
-    // pattern as create/destroy in UnitManager, and OnUnitDestroyed side effects here).
-    m_worldMap->GetUnitPositions().OnUnitMoved.Connect([](Unit& rMoved)
-    {
-        rMoved.GetFaction().RebuildVisibility();
-    });
     m_pTileEffects = std::make_unique<TileEffectsContext>(*m_worldMap, rImprovements, pUnitComponents);
     m_pMoveCosts = std::make_unique<MoveCostCalculator>(rImprovements);
     m_pSteps = std::make_unique<StepEvaluator>(*m_worldMap, *m_pTileEffects);
     m_pPathfinder = std::make_unique<Pathfinder>(*m_pMoveCosts, *m_pSteps, *m_worldMap);
+    m_pFirstContact = std::make_unique<FirstContactResolver>(
+        *m_pDiplomacy, m_factions);
+    // UnitPositionIndex owns position only; visibility rebuild stays on Faction (same
+    // pattern as create/destroy in UnitManager, and OnUnitDestroyed side effects here).
+    m_worldMap->GetUnitPositions().OnUnitMoved.Connect([this](Unit& rMoved)
+    {
+        rMoved.GetFaction().RebuildVisibility();
+        // Stationary factions whose vision already covers the new tile must also meet.
+        m_pFirstContact->ConsiderUnit(rMoved);
+    });
     m_pUnitOrderExecutor = std::make_unique<UnitOrderExecutor>(
         *m_pMoveCosts, *m_pSteps, *m_worldMap, *m_pTileEffects, *m_pPathfinder);
 }
@@ -113,7 +119,19 @@ Faction& GameState::AddFaction(std::unique_ptr<Faction> pFaction)
         throw std::invalid_argument("GameState::AddFaction: pFaction is null");
     }
     pFaction->BindWorldMap(*m_worldMap);
-    pFaction->SetOnBaseListChanged([this]() { RebuildTerritory(); });
+    pFaction->SetOnBaseListChanged([this]()
+    {
+        RebuildTerritory();
+        // A new base may sit inside another faction's existing vision cone.
+        for (Faction& rObserver : Factions())
+        {
+            m_pFirstContact->ConsiderObserver(rObserver);
+        }
+    });
+    pFaction->SetOnVisibilityRebuilt([this](Faction& rObserver)
+    {
+        m_pFirstContact->ConsiderObserver(rObserver);
+    });
     // Drop destroyed units from every faction's contact-reveal set (address reuse safety).
     pFaction->GetUnitManager().OnUnitDestroyed.Connect([this](Unit& rDestroyed)
     {
@@ -121,6 +139,11 @@ Faction& GameState::AddFaction(std::unique_ptr<Faction> pFaction)
         {
             rFaction.GetRevealedUnits().Forget(rDestroyed);
         }
+    });
+    pFaction->GetUnitManager().OnUnitCreated.Connect([this](Unit& rCreated)
+    {
+        // Created into another faction's existing vision (no move event).
+        m_pFirstContact->ConsiderUnit(rCreated);
     });
     m_factions.push_back(std::move(pFaction));
     return *m_factions.back();
@@ -155,14 +178,19 @@ Faction* GameState::GetPlayerFaction()
     return nullptr;
 }
 
-DiplomacyManager& GameState::GetDiplomacy()
+DiplomacyLedger& GameState::GetDiplomacyLedger()
 {
     return *m_pDiplomacy;
 }
 
-const DiplomacyManager& GameState::GetDiplomacy() const
+const DiplomacyLedger& GameState::GetDiplomacyLedger() const
 {
     return *m_pDiplomacy;
+}
+
+DiplomaticActionExecutor& GameState::GetDiplomaticActionExecutor()
+{
+    return *m_pDiplomaticActionExecutor;
 }
 
 FactionId_t GameState::AllocateFactionId()
@@ -243,6 +271,16 @@ const Pathfinder& GameState::GetPathfinder() const
 UnitOrderExecutor& GameState::GetUnitOrderExecutor()
 {
     return *m_pUnitOrderExecutor;
+}
+
+FirstContactResolver& GameState::GetFirstContactResolver()
+{
+    return *m_pFirstContact;
+}
+
+const FirstContactResolver& GameState::GetFirstContactResolver() const
+{
+    return *m_pFirstContact;
 }
 
 void GameState::RebuildTerritory()

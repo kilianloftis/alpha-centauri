@@ -115,8 +115,10 @@ struct BaseFixture : WorldFixture
 struct FactionFixture : BaseFixture
 {
     ac::FactionConfig_t factionDefinition; // minimal shared definition for test factions
+    // designs must outlive factions: units hold UnitDesign& into this deque, and
+    // BaseManager teardown can CollectEffects on live units during ~Faction.
+    std::deque<ac::UnitDesign> designs;
     std::vector<std::unique_ptr<ac::Faction>> factions;
-    std::deque<ac::UnitDesign> designs; // deque: Units hold UnitDesign& references
     int nextFactionId = 1;
     int nextUnitId = 1;
 

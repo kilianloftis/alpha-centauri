@@ -14,8 +14,10 @@
 #include "game/GameState.h"
 #include "game/GameSettings.h"
 #include "game/stages/TurnStart.h"
+#include "game/map/WorldMap.h"
 
 #include <algorithm>
+#include <memory>
 #include <variant>
 
 using namespace ac;

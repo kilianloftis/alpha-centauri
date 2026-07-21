@@ -48,6 +48,11 @@ int ProductionManager::GetMineralStockpile() const
     return m_mineralStockpile;
 }
 
+void ProductionManager::SetMineralStockpile(int amount)
+{
+    m_mineralStockpile = amount;
+}
+
 std::string ProductionManager::ApplyProduction(int minerals, const BaseEffects_t& rBaseEffects)
 {
     if (!HasProduction())

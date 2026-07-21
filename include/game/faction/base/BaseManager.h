@@ -37,6 +37,21 @@ class SecretProjectAvailabilityCalculator;
 
 using BaseId_t = int;
 
+// Non-recomputable state needed to destroy a base and rebuild it under a new owner.
+// Worked tiles and pop roles are omitted — recalculated after reconstruct (psych changes).
+struct BaseSnapshot_t
+{
+    BaseId_t baseId = 0;
+    std::string name;
+    Tile* pTile = nullptr;
+    int populationSize = 0;
+    std::vector<std::string> buildingIds;
+    // Empty when nothing is queued.
+    std::string productionItemId;
+    int mineralStockpile = 0;  // progress toward current production
+    int nutrientStockpile = 0; // growth bank
+};
+
 // BaseManager coordinates base management subsystems.
 // Provides identity, position, and access to sub-managers. Sub-managers own their full
 // API surface; a method lives here only when it coordinates two or more subsystems
@@ -66,8 +81,12 @@ public:
         TileEffectsContext& rTileEffects,
         const ResearchManager* pResearchManager,
         const EconomyManager* pEconomyManager,
-        const IEffectsProvider* pEffectsProvider);
+        const IEffectsProvider* pEffectsProvider,
+        int initialPopulation = 3);
     ~BaseManager();
+
+    // Capture identity, size, buildings, production, and stockpiles for transfer.
+    BaseSnapshot_t CaptureSnapshot() const;
 
     // Population subsystem. Pure population queries and mutations go through this reference;
     // BaseManager only keeps operations that coordinate population with other subsystems.

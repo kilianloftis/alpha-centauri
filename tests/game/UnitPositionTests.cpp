@@ -14,9 +14,11 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitOrderExecutor.h"
+#include "game/map/WorldMap.h"
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <memory>
 #include <stdexcept>
 #include <vector>
 

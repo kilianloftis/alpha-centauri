@@ -26,6 +26,9 @@ public:
 
     void Mark(const Tile& rTile) { m_flags.Set(rTile); }
 
+    // Union another faction's explored memory into this one (map trade).
+    void MergeFrom(const FactionExploredMap& rOther) { m_flags.MergeFrom(rOther.m_flags); }
+
     uint64_t GetRevision() const { return m_flags.GetRevision(); }
 
 private:

@@ -9,6 +9,7 @@
 #include "game/faction/UnitVisibility.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
+#include "game/map/WorldMap.h"
 
 using namespace ac;
 using namespace actest;

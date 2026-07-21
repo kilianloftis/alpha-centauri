@@ -19,6 +19,7 @@
 #include "game/faction/UnitManager.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/population/PopulationManager.h"
+#include "game/faction/base/production/ProductionManager.h"
 #include "game/population/pop-types/Pop.h"
 #include "game/social-engineering/SocialRatingRegistry.h"
 #include "game/population/calculators/PopTypeAvailabilityCalculator.h"
@@ -146,6 +147,98 @@ void Faction::AddBase(std::unique_ptr<BaseManager> pBase)
         m_onBaseListChanged();
     }
     RebuildVisibility();
+}
+
+std::optional<BaseSnapshot_t> Faction::ExtractBase(BaseId_t baseId)
+{
+    for (auto it = m_bases.begin(); it != m_bases.end(); ++it)
+    {
+        if ((*it)->GetBaseId() == baseId)
+        {
+            BaseSnapshot_t snapshot = (*it)->CaptureSnapshot();
+            m_bases.erase(it);
+            m_baseListRevision.Bump();
+            if (m_onBaseListChanged)
+            {
+                m_onBaseListChanged();
+            }
+            RebuildVisibility();
+            return snapshot;
+        }
+    }
+    return std::nullopt;
+}
+
+BaseManager* Faction::CreateBaseFromSnapshot(
+    const BaseSnapshot_t& rSnapshot,
+    const GameDataContext& rDataContext,
+    TileEffectsContext& rTileEffects,
+    const SecretProjectAvailabilityCalculator& rSecretProjectAvailability)
+{
+    if (!rSnapshot.pTile)
+    {
+        throw std::invalid_argument("Faction::CreateBaseFromSnapshot: pTile is null");
+    }
+
+    auto pBase = std::make_unique<BaseManager>(
+        m_factionId, rSnapshot.baseId, rSnapshot.name, *rSnapshot.pTile,
+        rDataContext.buildingRegistry.get(),
+        rDataContext.socialRatingRegistry.get(),
+        rDataContext.popTypeRegistry.get(),
+        rDataContext.popTypeAvailabilityCalculator.get(),
+        rDataContext.growthConfig.get(),
+        rDataContext.popCompositionCalculator.get(),
+        &rSecretProjectAvailability,
+        rTileEffects,
+        m_pResearch.get(), m_pEconomy.get(), this,
+        rSnapshot.populationSize);
+
+    for (const std::string& buildingId : rSnapshot.buildingIds)
+    {
+        pBase->GetBuildingManager().AddBuilding(buildingId);
+    }
+
+    pBase->GetPopulation().SetNutrientStockpile(rSnapshot.nutrientStockpile);
+
+    if (!rSnapshot.productionItemId.empty())
+    {
+        if (!rDataContext.buildingRegistry)
+        {
+            throw std::runtime_error(
+                "Faction::CreateBaseFromSnapshot: building registry is null");
+        }
+        pBase->GetProduction().SetProduction(
+            &rDataContext.buildingRegistry->Get(rSnapshot.productionItemId));
+    }
+    pBase->GetProduction().SetMineralStockpile(rSnapshot.mineralStockpile);
+
+    // Psych (and thus drone/talent targets) may differ under the new owner.
+    pBase->GetPopulation().RecalculateComposition();
+    pBase->GetWorkerAssignments().UnassignAll();
+    pBase->GetWorkerAssignments().AutoAssignWorkers();
+
+    BaseManager* pRawBase = pBase.get();
+    AddBase(std::move(pBase));
+    return pRawBase;
+}
+
+void Faction::TransferBaseTo(BaseId_t baseId,
+                             Faction& rReceiver,
+                             const GameDataContext& rDataContext,
+                             TileEffectsContext& rTileEffects,
+                             const SecretProjectAvailabilityCalculator& rSecretProjectAvailability)
+{
+    if (&rReceiver == this)
+    {
+        throw std::invalid_argument("Faction::TransferBaseTo: cannot transfer to self");
+    }
+    std::optional<BaseSnapshot_t> snapshot = ExtractBase(baseId);
+    if (!snapshot.has_value())
+    {
+        throw std::runtime_error("Faction::TransferBaseTo: base not found");
+    }
+    rReceiver.CreateBaseFromSnapshot(
+        *snapshot, rDataContext, rTileEffects, rSecretProjectAvailability);
 }
 
 BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile* pTile,
@@ -326,11 +419,20 @@ void Faction::RebuildVisibility()
         return;
     }
     m_visible.RebuildFromSources(*this, *m_pWorldMap, m_explored);
+    if (m_onVisibilityRebuilt)
+    {
+        m_onVisibilityRebuilt(*this);
+    }
 }
 
 void Faction::SetOnBaseListChanged(std::function<void()> handler)
 {
     m_onBaseListChanged = std::move(handler);
+}
+
+void Faction::SetOnVisibilityRebuilt(std::function<void(Faction&)> handler)
+{
+    m_onVisibilityRebuilt = std::move(handler);
 }
 
 std::vector<const PopTypeConfig_t*> Faction::GetAvailablePopTypes() const

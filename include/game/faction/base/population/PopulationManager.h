@@ -104,6 +104,7 @@ public:
 
     // Nutrient stockpile owned by this manager (growth bank).
     int GetNutrientStockpile() const;
+    void SetNutrientStockpile(int amount);
 
     // Nutrients required for the next population growth step.
     // rBaseEffects is this base's final effect list (BaseManager::BuildBaseEffects_).

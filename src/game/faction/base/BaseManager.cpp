@@ -59,7 +59,8 @@ BaseManager::BaseManager(
     TileEffectsContext& rTileEffects,
     const ResearchManager* pResearchManager,
     const EconomyManager* pEconomyManager,
-    const IEffectsProvider* pEffectsProvider)
+    const IEffectsProvider* pEffectsProvider,
+    int initialPopulation)
     : m_factionId(factionId)
     , m_baseId(baseId)
     , m_tile(tile)
@@ -71,7 +72,7 @@ BaseManager::BaseManager(
     , m_pEffectsProvider(pEffectsProvider)
     , m_pPopulation(std::make_unique<PopulationManager>(
           pPopTypeRegistry, pPopTypeAvailabilityCalculator, pGrowthConfig, pCompositionCalculator,
-          pResearchManager, 3))
+          pResearchManager, initialPopulation))
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(ComputeWorkableTiles_(rTileEffects, tile), *m_pPopulation, rTileEffects, rTileEffects.GetWorldMap().GetWorkedTiles()))
     , m_pBuildings(std::make_unique<BuildingManager>(pBuildingRegistry, pSecretProjectCalculator, pResearchManager))
     , m_pResources(std::make_unique<ResourceManager>(
@@ -109,7 +110,33 @@ BaseManager::BaseManager(
     });
 }
 
-BaseManager::~BaseManager() = default;
+BaseManager::~BaseManager()
+{
+    m_rTileEffects.RemoveImprovementWithEffects(m_tile, "Base");
+}
+
+BaseSnapshot_t BaseManager::CaptureSnapshot() const
+{
+    BaseSnapshot_t snapshot;
+    snapshot.baseId = m_baseId;
+    snapshot.name = m_name;
+    snapshot.pTile = &m_tile;
+    snapshot.populationSize = m_pPopulation->GetSize();
+    for (const BuildingConfig_t* pBuilding : m_pBuildings->GetBuildings())
+    {
+        if (pBuilding)
+        {
+            snapshot.buildingIds.push_back(pBuilding->id);
+        }
+    }
+    if (const IConstructable* pProduction = m_pProduction->GetCurrentProduction())
+    {
+        snapshot.productionItemId = pProduction->GetId();
+    }
+    snapshot.mineralStockpile = m_pProduction->GetMineralStockpile();
+    snapshot.nutrientStockpile = m_pPopulation->GetNutrientStockpile();
+    return snapshot;
+}
 
 PopulationManager& BaseManager::GetPopulation()
 {

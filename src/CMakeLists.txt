@@ -21,7 +21,11 @@ add_library(ac-core STATIC
     game/faction/ResearchManager.cpp
     game/faction/ResearchSelector.cpp
     game/GameCategory.cpp
-    game/faction/DiplomacyManager.cpp
+    game/faction/DiplomacyLedger.cpp
+    game/faction/DiplomacyActions.cpp
+    game/faction/TradeItem.cpp
+    game/faction/DiplomaticActionExecutor.cpp
+    game/faction/FirstContactResolver.cpp
     game/faction/SocialEngineeringManager.cpp
     game/faction/base/BaseManager.cpp
     game/faction/base/buildings/BuildingManager.cpp

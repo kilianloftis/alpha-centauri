@@ -66,4 +66,26 @@ void TileFlagMap::Set(const Tile& rTile)
     Set(rTile.GetX(), rTile.GetY());
 }
 
+void TileFlagMap::MergeFrom(const TileFlagMap& rOther)
+{
+    if (!IsSized() || !rOther.IsSized()
+        || m_width != rOther.m_width || m_height != rOther.m_height)
+    {
+        return;
+    }
+    bool bChanged = false;
+    for (size_t i = 0; i < m_flags.size(); ++i)
+    {
+        if (rOther.m_flags[i] && !m_flags[i])
+        {
+            m_flags[i] = 1;
+            bChanged = true;
+        }
+    }
+    if (bChanged)
+    {
+        m_revision.Bump();
+    }
+}
+
 } // namespace ac

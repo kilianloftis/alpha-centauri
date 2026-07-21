@@ -209,6 +209,7 @@ void Engine::Initialize_()
                                               *m_gameDataContext->improvementRegistry,
                                               m_gameDataContext->unitComponentRegistry.get(),
                                               *m_pSettings);
+    m_pGameState->GetDiplomaticActionExecutor().SetGameDataContext(*m_gameDataContext);
     std::cout << "Generated world map: " << m_pGameState->GetWorldMap().GetWidth() << "x" << m_pGameState->GetWorldMap().GetHeight() << "\n";
 
     m_eventBridge = std::make_unique<EventBridge>(m_pGameState->GetEventBus());

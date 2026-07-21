@@ -87,6 +87,8 @@ public:
     // Fired from DestroyUnit before the unit is removed, so observers (e.g. WorldView's
     // unit selection) can drop any reference to it while it is still valid.
     Signal<Unit&> OnUnitDestroyed;
+    // Fired after CreateUnit finishes (unit is live and visibility has been rebuilt).
+    Signal<Unit&> OnUnitCreated;
 
 private:
     void BeginDestructionDeferral_();

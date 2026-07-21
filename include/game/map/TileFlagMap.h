@@ -32,6 +32,9 @@ public:
     void Set(int x, int y);
     void Set(const Tile& rTile);
 
+    // OR every set flag from rOther into this map. No-op if either is unsized or sizes differ.
+    void MergeFrom(const TileFlagMap& rOther);
+
     uint64_t GetRevision() const { return m_revision.Get(); }
 
 private:

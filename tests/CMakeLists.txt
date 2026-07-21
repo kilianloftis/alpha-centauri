@@ -22,7 +22,10 @@ add_executable(effects-tests
     faction/FactionConfigParserTests.cpp
     faction/FactionFlavorTests.cpp
     faction/EconomyManagerTests.cpp
-    faction/DiplomacyManagerTests.cpp
+    faction/DiplomacyLedgerTests.cpp
+    faction/DiplomacyActionsTests.cpp
+    faction/DiplomaticActionExecutorTests.cpp
+    faction/FirstContactTests.cpp
     faction/ProductionCostTests.cpp
     faction/GrowthTests.cpp
     faction/BuildingTechGateTests.cpp
