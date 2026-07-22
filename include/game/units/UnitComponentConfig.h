@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/effects/BonusEffect.h"
+#include "game/units/UnitDomain.h"
 
 #include <optional>
 #include <string>
@@ -8,14 +9,6 @@
 
 namespace ac
 {
-
-// Movement / ZOC domain. Required on chassis components; land = neither sea nor air.
-enum class UnitDomain_t
-{
-    Land,
-    Sea,
-    Air,
-};
 
 // Where a combat-rating annotation attaches on the SMAC-style A-D-M string.
 enum class CombatRatingTarget_t

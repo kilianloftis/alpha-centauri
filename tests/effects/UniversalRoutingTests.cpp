@@ -95,6 +95,40 @@ TEST_CASE("FactionUnits lane: a building's FactionUnits rule flag applies to liv
     CHECK_FALSE(unit.GetDesign().GetFlag(RuleFlagId_t::Flight)); // intrinsic design unchanged
 }
 
+TEST_CASE("FactionUnits unitFilter Domain: Aerospace Complex only boosts air starting XP",
+          "[effects][routing][unitFilter]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+    base.GetBuildingManager().AddBuilding("Aerospace_Complex");
+
+    Unit& land = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    Unit& air = fixture.MakeUnit(faction, 5, 4, {"test_flight_chassis"});
+
+    CHECK(land.GetXp() == 0);
+    CHECK(land.GetStat(StatId_t::StartingExperience) == 0);
+    CHECK(air.GetXp() == 2);
+    CHECK(air.GetStat(StatId_t::StartingExperience) == 2);
+}
+
+TEST_CASE("FactionUnits unitFilter HasComponent: only matching designs receive the bonus",
+          "[effects][routing][unitFilter]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+
+    Unit& armed = fixture.MakeUnit(faction, 4, 4, {"test_chassis", "test_weapon"});
+    Unit& unarmed = fixture.MakeUnit(faction, 5, 4, {"test_chassis"});
+    CHECK(armed.GetStat(StatId_t::Attack) == 4);
+    CHECK(unarmed.GetStat(StatId_t::Attack) == 0);
+
+    base.GetBuildingManager().AddBuilding("component_attack_array"); // +1 attack if HasComponent test_weapon
+    CHECK(armed.GetStat(StatId_t::Attack) == 5);
+    CHECK(unarmed.GetStat(StatId_t::Attack) == 0);
+}
+
 TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other factions' bases",
           "[effects][routing][world]")
 {

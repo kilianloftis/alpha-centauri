@@ -68,6 +68,11 @@ struct EffectContext_t
 // True if config carries no condition, or its condition is satisfied by ctx.
 bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx);
 
+// True if config carries no unitFilter, or its unitFilter matches rUnit (Domain /
+// HasComponent). Used by CollectLiveUnitEffects to drop FactionUnits (and any other)
+// effects that do not apply to this unit.
+bool UnitFilterSatisfied(const EffectConfig_t& config, const Unit& rUnit);
+
 // Appends non-Instantaneous effects from a config list as ActiveEffect_t instances.
 // Used by building, pop, unit, and tile effect collection; pOriginBase is set only
 // when the effect's scope is ThisBase. This (and its filtered variants below) is the

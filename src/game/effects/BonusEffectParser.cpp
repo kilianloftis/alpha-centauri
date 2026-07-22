@@ -26,6 +26,7 @@ StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "damage_from_out_of_fuel") return StatId_t::DamageFromOutOfFuel;
     if (rStat == "cargo_capacity")          return StatId_t::CargoCapacity;
     if (rStat == "cost_multiplier")         return StatId_t::CostMultiplier;
+    if (rStat == "starting_experience")     return StatId_t::StartingExperience;
     if (rStat == "growth_rate")             return StatId_t::GrowthRate;
     if (rStat == "tech_cost")               return StatId_t::TechCost;
     if (rStat == "moisture_tier")           return StatId_t::MoistureTier;
@@ -146,6 +147,45 @@ TileSelector_t ParseTileSelector(const nlohmann::json& selectorJson)
     return selector;
 }
 
+UnitDomain_t ParseUnitDomain(const std::string& rDomain)
+{
+    if (rDomain == "land") return UnitDomain_t::Land;
+    if (rDomain == "sea")  return UnitDomain_t::Sea;
+    if (rDomain == "air")  return UnitDomain_t::Air;
+    throw std::runtime_error("Unknown unit domain '" + rDomain + "' (expected land, sea, or air)");
+}
+
+UnitFilter_t ParseUnitFilter(const nlohmann::json& filterJson)
+{
+    UnitFilter_t filter;
+    const std::string kindStr = filterJson.value("kind", "");
+    if (kindStr == "Domain")
+    {
+        filter.kind = UnitFilterKind_t::Domain;
+        const std::string domainStr = filterJson.value("domain", "");
+        if (domainStr.empty())
+        {
+            throw std::runtime_error("Domain unitFilter requires a non-empty 'domain'");
+        }
+        filter.domain = ParseUnitDomain(domainStr);
+    }
+    else if (kindStr == "HasComponent")
+    {
+        filter.kind = UnitFilterKind_t::HasComponent;
+        const std::string componentId = filterJson.value("component", "");
+        if (componentId.empty())
+        {
+            throw std::runtime_error("HasComponent unitFilter requires a non-empty 'component' id");
+        }
+        filter.component = componentId;
+    }
+    else
+    {
+        throw std::runtime_error("Unknown unitFilter kind: '" + kindStr + "'");
+    }
+    return filter;
+}
+
 EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
 {
     EffectConfig_t effect;
@@ -165,6 +205,10 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
     if (effectJson.contains("condition"))
     {
         effect.condition = ParseCondition(effectJson.at("condition"));
+    }
+    if (effectJson.contains("unitFilter"))
+    {
+        effect.unitFilter = ParseUnitFilter(effectJson.at("unitFilter"));
     }
 
     if (typeStr == "GrantBuilding")

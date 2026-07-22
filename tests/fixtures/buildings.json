@@ -262,6 +262,40 @@
     "category": "conquer"
   },
   {
+    "id": "Aerospace_Complex",
+    "name": "Aerospace Complex (+2 starting XP to air units)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "unitFilter": { "kind": "Domain", "domain": "air" },
+        "parameters": {
+          "stat": "starting_experience",
+          "amount": 2,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "component_attack_array",
+    "name": "Component Attack Array (+1 attack to units with test_weapon)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "unitFilter": { "kind": "HasComponent", "component": "test_weapon" },
+        "parameters": {
+          "stat": "attack",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
     "id": "world_beacon",
     "name": "World Beacon (+10 energy to every base of every faction)",
     "effects": [

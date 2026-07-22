@@ -238,6 +238,24 @@ bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx
     return false;
 }
 
+bool UnitFilterSatisfied(const EffectConfig_t& config, const Unit& rUnit)
+{
+    if (!config.unitFilter)
+    {
+        return true;
+    }
+    const UnitFilter_t& filter = *config.unitFilter;
+    switch (filter.kind)
+    {
+        case UnitFilterKind_t::Domain:
+            return filter.domain.has_value() && rUnit.GetDomain() == *filter.domain;
+        case UnitFilterKind_t::HasComponent:
+            return filter.component.has_value()
+                && rUnit.GetDesign().HasComponent(*filter.component);
+    }
+    return false;
+}
+
 BaseEffects_t FilterForBase(const FactionEffects_t& rFactionEffects, const BaseManager& rBase)
 {
     BaseEffects_t matching;
@@ -357,13 +375,17 @@ void DispatchInstantaneousEffects(const BuildingConfig_t& rBuilding, BaseManager
 }
 
 // A live unit's full effect list: its design's own component effects
-// plus the owning faction's FactionUnits-scoped effects.
+// plus the owning faction's FactionUnits-scoped effects that match the unit filter.
 std::vector<ActiveEffect_t> CollectLiveUnitEffects(const Unit& rUnit)
 {
     std::vector<ActiveEffect_t> effects = rUnit.GetDesign().CollectEffects();
     auto factionEffects =
         FilterByScope(rUnit.GetFaction().GetActiveEffects().effects, EffectScope_t::FactionUnits);
     effects.insert(effects.end(), factionEffects.begin(), factionEffects.end());
+    std::erase_if(effects, [&](const ActiveEffect_t& rEffect)
+    {
+        return rEffect.config && !UnitFilterSatisfied(*rEffect.config, rUnit);
+    });
     return effects;
 }
 

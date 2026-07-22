@@ -90,6 +90,18 @@ const UnitComponentConfig_t* UnitDesign::GetComponentForSlot(const std::string& 
     return nullptr;
 }
 
+bool UnitDesign::HasComponent(const std::string& rComponentId) const
+{
+    for (const UnitComponentConfig_t* pComp : m_components)
+    {
+        if (pComp && pComp->id == rComponentId)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 std::vector<ActiveEffect_t> UnitDesign::CollectEffects() const
 {
     return CollectUnitEffects(m_components);

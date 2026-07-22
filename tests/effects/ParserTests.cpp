@@ -31,6 +31,7 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(BonusEffectParser::ParseStatId("damage_from_out_of_fuel") == StatId_t::DamageFromOutOfFuel);
     CHECK(BonusEffectParser::ParseStatId("cargo_capacity") == StatId_t::CargoCapacity);
     CHECK(BonusEffectParser::ParseStatId("cost_multiplier") == StatId_t::CostMultiplier);
+    CHECK(BonusEffectParser::ParseStatId("starting_experience") == StatId_t::StartingExperience);
     CHECK(BonusEffectParser::ParseStatId("growth_rate") == StatId_t::GrowthRate);
     CHECK(BonusEffectParser::ParseStatId("moisture_tier") == StatId_t::MoistureTier);
 
@@ -248,6 +249,63 @@ TEST_CASE("ParseEffectConfig: conditions", "[effects][parser][condition]")
     {
         CHECK_THROWS(BonusEffectParser::ParseCondition(
             json::parse(R"({ "kind": "TargetIsShiny", "value": "x" })")));
+    }
+}
+
+TEST_CASE("ParseEffectConfig: unitFilter", "[effects][parser][unitFilter]")
+{
+    SECTION("Domain filter")
+    {
+        const json effectJson = json::parse(R"({
+            "type": "StatModifier",
+            "scope": "FactionUnits",
+            "unitFilter": { "kind": "Domain", "domain": "air" },
+            "parameters": { "stat": "starting_experience", "amount": 2 }
+        })");
+
+        const EffectConfig_t config = BonusEffectParser::ParseEffectConfig(effectJson);
+        REQUIRE(config.unitFilter.has_value());
+        CHECK(config.unitFilter->kind == UnitFilterKind_t::Domain);
+        REQUIRE(config.unitFilter->domain.has_value());
+        CHECK(*config.unitFilter->domain == UnitDomain_t::Air);
+        CHECK_FALSE(config.unitFilter->component.has_value());
+    }
+
+    SECTION("HasComponent filter")
+    {
+        const json effectJson = json::parse(R"({
+            "type": "RuleFlag",
+            "scope": "FactionUnits",
+            "unitFilter": { "kind": "HasComponent", "component": "test_weapon" },
+            "parameters": { "flag": "flight" }
+        })");
+
+        const EffectConfig_t config = BonusEffectParser::ParseEffectConfig(effectJson);
+        REQUIRE(config.unitFilter.has_value());
+        CHECK(config.unitFilter->kind == UnitFilterKind_t::HasComponent);
+        REQUIRE(config.unitFilter->component.has_value());
+        CHECK(*config.unitFilter->component == "test_weapon");
+        CHECK_FALSE(config.unitFilter->domain.has_value());
+    }
+
+    SECTION("Domain without domain throws")
+    {
+        CHECK_THROWS(BonusEffectParser::ParseUnitFilter(json::parse(R"({ "kind": "Domain" })")));
+    }
+
+    SECTION("HasComponent without component throws")
+    {
+        CHECK_THROWS(BonusEffectParser::ParseUnitFilter(json::parse(R"({ "kind": "HasComponent" })")));
+    }
+
+    SECTION("unknown unitFilter kind throws")
+    {
+        CHECK_THROWS(BonusEffectParser::ParseUnitFilter(json::parse(R"({ "kind": "Everything" })")));
+    }
+
+    SECTION("unknown domain throws")
+    {
+        CHECK_THROWS(BonusEffectParser::ParseUnitDomain("space"));
     }
 }
 

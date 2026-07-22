@@ -12,10 +12,7 @@
 #include "lib/GameEvent.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/GameDataContext.h"
-#include "game/EffectReferenceValidator.h"
-#include "game/RequiredTechValidator.h"
 #include "game/buildings/BuildingRegistry.h"
-#include "game/map/ImprovementRegistry.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
@@ -23,26 +20,15 @@
 #include "game/effects/TileEffectsContext.h"
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitSlotRegistry.h"
-#include "game/research/TechRegistry.h"
-#include "game/social-engineering/SocialPolicyRegistry.h"
-#include "game/social-engineering/SocialRatingRegistry.h"
 #include "game/faction/FactionRegistry.h"
 #include "game/faction/FactionConfig.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopContainer.h"
-#include "game/population/pop-types/PopTypeRegistry.h"
-#include "game/population/pop-types/PopCompositionConfigParser.h"
-#include "game/population/pop-types/GrowthConfigParser.h"
-#include "game/population/calculators/PopCompositionCalculator.h"
-#include "game/population/calculators/PopTypeAvailabilityCalculator.h"
-#include "game/research/TechCostConfig.h"
-#include "game/research/TechCostCalculator.h"
 #include "game/faction/Military.h"
 #include "game/faction/UnitManager.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitSlotConfig.h"
-#include "lib/LuaRuntime.h"
 #include "ui/IGameView.h"
 #include "ui/TileHitTester.h"
 #include "game/map/WorldGenerator.h"
@@ -126,80 +112,8 @@ void Engine::Initialize_()
 
     UiStyle::Load("config/ui/style.json");
 
-    m_gameDataContext->popTypeRegistry = std::make_unique<PopTypeRegistry>();
-    m_gameDataContext->popTypeRegistry->Load("config/pop_types.json");
-    m_gameDataContext->popTypeAvailabilityCalculator =
-        std::make_unique<PopTypeAvailabilityCalculator>(*m_gameDataContext->popTypeRegistry);
-
-    m_gameDataContext->buildingRegistry = std::make_unique<BuildingRegistry>();
-    m_gameDataContext->buildingRegistry->Load("config/buildings");
-
-    m_gameDataContext->improvementRegistry = std::make_unique<ImprovementRegistry>();
-    m_gameDataContext->improvementRegistry->Load("config/improvements.json");
-
-    m_gameDataContext->unitComponentRegistry = std::make_unique<UnitComponentRegistry>();
-    m_gameDataContext->unitComponentRegistry->Load("config/unit_components");
-
-    m_gameDataContext->unitSlotRegistry = std::make_unique<UnitSlotRegistry>();
-    m_gameDataContext->unitSlotRegistry->Load("config/unit_slot_config.json");
-
-    m_gameDataContext->techRegistry = std::make_unique<TechRegistry>();
-    m_gameDataContext->techRegistry->Load("config/techs.json");
-
-    m_gameDataContext->socialPolicyRegistry = std::make_unique<SocialPolicyRegistry>();
-    m_gameDataContext->socialPolicyRegistry->Load("config/social_policies.json");
-
-    m_gameDataContext->socialRatingRegistry = std::make_unique<SocialRatingRegistry>();
-    m_gameDataContext->socialRatingRegistry->Load("config/social_rating_effects.json");
-
-    m_gameDataContext->factionRegistry = std::make_unique<FactionRegistry>();
-    m_gameDataContext->factionRegistry->Load("config/factions");
-
-    // All effect-declaring registries are loaded; fail startup on any effect that
-    // references a nonexistent building/tech/improvement/feature id.
-    ValidateEffectReferences(*m_gameDataContext);
-
-    // Same standard, applied to the requiredTech field every one of those config types also
-    // carries: fail startup on a typo'd required_tech instead of leaving the entry
-    // permanently unavailable.
-    ValidateRequiredTechReferences(*m_gameDataContext);
-
-    m_gameDataContext->luaRuntime = std::make_unique<LuaRuntime>();
-
-    PopCompositionConfigParser compositionParser;
-    m_gameDataContext->popCompositionConfig =
-        std::make_unique<PopCompositionConfig_t>(
-            compositionParser.ParseConfig("config/pop_composition.lua", *m_gameDataContext->luaRuntime));
-    {
-        const PopCompositionConfig_t& rComposition = *m_gameDataContext->popCompositionConfig;
-        if (!m_gameDataContext->popTypeRegistry->Find(rComposition.droneTypeId))
-        {
-            throw std::runtime_error(
-                "pop composition drone_type '" + rComposition.droneTypeId
-                + "' is not a known pop type");
-        }
-        if (!m_gameDataContext->popTypeRegistry->Find(rComposition.talentTypeId))
-        {
-            throw std::runtime_error(
-                "pop composition talent_type '" + rComposition.talentTypeId
-                + "' is not a known pop type");
-        }
-    }
-    m_gameDataContext->popCompositionCalculator =
-        std::make_unique<PopCompositionCalculator>(
-            *m_gameDataContext->popCompositionConfig, *m_gameDataContext->luaRuntime);
-
-    GrowthConfigParser growthParser;
-    m_gameDataContext->growthConfig =
-        std::make_unique<GrowthConfig_t>(
-            growthParser.ParseConfig("config/pop_growth.json"));
-    TechCostConfigParser techCostParser;
-    m_gameDataContext->techCostConfig =
-        std::make_unique<TechCostConfig_t>(
-            techCostParser.ParseConfig("config/tech_cost.lua", *m_gameDataContext->luaRuntime));
-    m_gameDataContext->techCostCalculator =
-        std::make_unique<TechCostCalculator>(
-            *m_gameDataContext->techCostConfig, *m_gameDataContext->luaRuntime);
+    // Every config parser + cross-config id validation (including unitFilter HasComponent).
+    LoadGameData(*m_gameDataContext);
 
     // Generate world map and build the save-game state around it.
     WorldGenerator worldGen;

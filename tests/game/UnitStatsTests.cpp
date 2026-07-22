@@ -31,6 +31,7 @@ TEST_CASE("A fresh unit starts at its live resolved maxima", "[unit][stats]")
     CHECK(unit.GetMoveFragmentsRemaining()
           == unit.GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint);
     CHECK(unit.GetXp() == 0);
+    CHECK(unit.GetStat(StatId_t::StartingExperience) == 0);
 }
 
 TEST_CASE("Current-stat setters clamp to [0, live max]", "[unit][stats]")

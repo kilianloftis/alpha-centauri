@@ -32,8 +32,14 @@ Condition_t ParseCondition(const nlohmann::json& conditionJson);
 
 TileSelector_t ParseTileSelector(const nlohmann::json& selectorJson);
 
+UnitDomain_t ParseUnitDomain(const std::string& rDomain);
+
+// Parses a UnitFilter_t from a unitFilter JSON object
+// ({ "kind": "Domain", "domain": "air" } or { "kind": "HasComponent", "component": "..." }).
+UnitFilter_t ParseUnitFilter(const nlohmann::json& filterJson);
+
 // Parses a single entry of an "effects" JSON array
-// (type/scope/persistence/condition/radius/parameters).
+// (type/scope/persistence/condition/unitFilter/radius/parameters).
 EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson);
 
 // Throws if scope can never be resolved for the given source kind (ThisPop off a pop type,

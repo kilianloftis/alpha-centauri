@@ -31,6 +31,8 @@ enum class StatId_t
     CargoCapacity,
     DifficultTerrainCost,
     CostMultiplier,
+    // XP granted when a unit is created (seeded into Unit::m_xp at spawn; not a live max).
+    StartingExperience,
 
     // Population growth rate modifier (AddPercent, base = 100%)
     GrowthRate,
@@ -82,6 +84,7 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::DamageFromOutOfFuel:
         case StatId_t::CargoCapacity:
         case StatId_t::DifficultTerrainCost:
+        case StatId_t::StartingExperience:
         case StatId_t::TechCost:             return StatKind_t::Additive;
         case StatId_t::CostMultiplier:       return StatKind_t::PureMultiplier;
         case StatId_t::GrowthRate:

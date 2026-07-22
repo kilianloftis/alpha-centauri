@@ -48,7 +48,8 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
                               const std::string& rSourceId,
                               const BuildingRegistry* pBuildings,
                               const ImprovementRegistry* pImprovements,
-                              const TechRegistry* pTechs)
+                              const TechRegistry* pTechs,
+                              const UnitComponentRegistry* pUnitComponents)
 {
     for (const EffectConfig_t& rEffect : rEffects)
     {
@@ -84,6 +85,14 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
         {
             ThrowBadReference_(rSourceId, "condition feature", rEffect.condition->value);
         }
+
+        if (rEffect.unitFilter && rEffect.unitFilter->kind == UnitFilterKind_t::HasComponent
+            && rEffect.unitFilter->component && pUnitComponents
+            && !pUnitComponents->Find(*rEffect.unitFilter->component))
+        {
+            ThrowBadReference_(rSourceId, "unitFilter component",
+                               *rEffect.unitFilter->component);
+        }
     }
 }
 
@@ -92,10 +101,12 @@ void ValidateEffectReferences(const GameDataContext& rData)
     const BuildingRegistry* pBuildings = rData.buildingRegistry.get();
     const ImprovementRegistry* pImprovements = rData.improvementRegistry.get();
     const TechRegistry* pTechs = rData.techRegistry.get();
+    const UnitComponentRegistry* pUnitComponents = rData.unitComponentRegistry.get();
 
     auto validate = [&](const std::vector<EffectConfig_t>& rEffects, const std::string& rSourceId)
     {
-        ValidateEffectReferences(rEffects, rSourceId, pBuildings, pImprovements, pTechs);
+        ValidateEffectReferences(rEffects, rSourceId, pBuildings, pImprovements, pTechs,
+                                 pUnitComponents);
     };
 
     if (pBuildings)

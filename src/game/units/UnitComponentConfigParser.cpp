@@ -11,14 +11,6 @@ namespace ac
 namespace
 {
 
-UnitDomain_t ParseUnitDomain_(const std::string& rDomain)
-{
-    if (rDomain == "land") return UnitDomain_t::Land;
-    if (rDomain == "sea")  return UnitDomain_t::Sea;
-    if (rDomain == "air")  return UnitDomain_t::Air;
-    throw std::runtime_error("Unknown unit domain '" + rDomain + "' (expected land, sea, or air)");
-}
-
 CombatRatingTarget_t ParseCombatRatingTarget_(const std::string& rTarget)
 {
     if (rTarget == "attack")   return CombatRatingTarget_t::Attack;
@@ -110,7 +102,7 @@ UnitComponentConfig_t UnitComponentConfigParser::ParseComponentConfig(const nloh
         {
             throw std::runtime_error("Chassis component '" + config.id + "' missing required 'domain'");
         }
-        config.domain = ParseUnitDomain_(rComponentJson.at("domain").get<std::string>());
+        config.domain = BonusEffectParser::ParseUnitDomain(rComponentJson.at("domain").get<std::string>());
     }
     else if (bHasDomain)
     {

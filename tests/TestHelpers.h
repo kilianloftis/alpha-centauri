@@ -40,7 +40,8 @@ public:
                                       ac::EffectScope_t scope = ac::EffectScope_t::FactionGlobal,
                                       std::optional<ac::TileSelector_t> selector = std::nullopt,
                                       std::optional<ac::Condition_t> condition = std::nullopt,
-                                      ac::EffectPersistence_t persistence = ac::EffectPersistence_t::Continuous)
+                                      ac::EffectPersistence_t persistence = ac::EffectPersistence_t::Continuous,
+                                      std::optional<ac::UnitFilter_t> unitFilter = std::nullopt)
     {
         ac::StatModifierEffect_t modifier;
         modifier.stat = stat;
@@ -53,6 +54,7 @@ public:
         config.scope = scope;
         config.persistence = persistence;
         config.condition = std::move(condition);
+        config.unitFilter = std::move(unitFilter);
         return Add(std::move(config));
     }
 
@@ -109,6 +111,16 @@ inline ac::TileSelector_t ImprovementSelector(std::string improvementId)
 inline ac::Condition_t TargetTileHas(std::string featureId)
 {
     return ac::Condition_t{ac::ConditionKind_t::TargetTileHas, std::move(featureId)};
+}
+
+inline ac::UnitFilter_t DomainFilter(ac::UnitDomain_t domain)
+{
+    return ac::UnitFilter_t{ac::UnitFilterKind_t::Domain, domain, std::nullopt};
+}
+
+inline ac::UnitFilter_t HasComponentFilter(std::string componentId)
+{
+    return ac::UnitFilter_t{ac::UnitFilterKind_t::HasComponent, std::nullopt, std::move(componentId)};
 }
 
 } // namespace actest

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "game/GameDataPaths.h"
+
 #include <memory>
 
 namespace ac
@@ -54,5 +56,14 @@ struct GameDataContext
     std::unique_ptr<TechCostCalculator> techCostCalculator;
     std::unique_ptr<PopTypeAvailabilityCalculator> popTypeAvailabilityCalculator;
 };
+
+// Single entry point that runs every config parser into rData. Load order is deliberate:
+// registries that are reference targets (techs, improvements, unit components) load before
+// configs that may cite them, then ValidateEffectReferences / ValidateRequiredTechReferences
+// run once everything is present — so a typo'd unitFilter HasComponent id (or grant/tech/
+// selector id) fails here instead of becoming a silent no-op. Formula configs and the
+// calculators built from them load last. Call from Engine::Initialize_; do not re-order
+// individual Load calls at other call sites.
+void LoadGameData(GameDataContext& rData, const GameDataPaths& rPaths = {});
 
 } // namespace ac

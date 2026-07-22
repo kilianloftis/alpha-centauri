@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/effects/EffectEnums.h"
+#include "game/units/UnitDomain.h"
 
 #include <optional>
 #include <string>
@@ -204,6 +205,25 @@ struct Condition_t
     std::string value;
 };
 
+// Restricts which units an effect applies to when merged into a live unit's effect list
+// (CollectLiveUnitEffects). Absent = all units. Distinct from condition: filters are
+// unit-identity predicates evaluated context-free (domain, component loadout), not combat
+// situational predicates.
+enum class UnitFilterKind_t
+{
+    Domain,
+    HasComponent,
+};
+
+struct UnitFilter_t
+{
+    UnitFilterKind_t kind;
+    // Set when kind == Domain.
+    std::optional<UnitDomain_t> domain;
+    // Component id; set when kind == HasComponent.
+    std::optional<std::string> component;
+};
+
 struct EffectConfig_t
 {
     EffectVariant_t effect;
@@ -213,6 +233,9 @@ struct EffectConfig_t
     // context that satisfies the condition (see ConditionSatisfied / EffectContext_t). Such
     // effects are excluded from context-free resolution (base economy, intrinsic unit stats).
     std::optional<Condition_t> condition;
+    // Absent = applies to every unit that receives this effect. When present, CollectLiveUnitEffects
+    // drops the effect for units that do not match (e.g. Domain=Air for Aerospace Complex).
+    std::optional<UnitFilter_t> unitFilter;
     // For ThisTile-scoped effects: how far (Chebyshev tiles) beyond the host tile the effect
     // reaches. 0 (default) = the host tile only. Parsed from the effect entry's "radius" field.
     int radius = 0;

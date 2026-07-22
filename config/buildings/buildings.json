@@ -76,5 +76,24 @@
     ],
     "category": "discover",
     "required_tech": "test_tech_1"
+  },
+  {
+    "id": "Aerospace_Complex",
+    "name": "Aerospace Complex",
+    "mineral_cost": 12,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "unitFilter": { "kind": "Domain", "domain": "air" },
+        "parameters": {
+          "stat": "starting_experience",
+          "amount": 2,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "conquer",
+    "required_tech": "test_tech_1"
   }
 ]

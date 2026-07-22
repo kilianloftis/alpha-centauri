@@ -37,6 +37,7 @@ Unit::Unit(UnitId_t unitId,
     m_currentFuel = ResolveStat(*this, StatId_t::Fuel);
     m_moveFragmentsRemaining =
         GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint;
+    m_xp = ResolveStat(*this, StatId_t::StartingExperience);
 
     m_rPositions.Register_(*this, rTile);
     m_bRegistered = true;

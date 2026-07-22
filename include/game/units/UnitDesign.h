@@ -28,6 +28,9 @@ public:
 
     const UnitComponentConfig_t* GetComponentForSlot(const std::string& rSlotId) const;
 
+    // True if any filled slot carries a component with the given id.
+    bool HasComponent(const std::string& rComponentId) const;
+
     // All continuous effects attached to this design's components, as ActiveEffect_t
     // instances (sourceId = component id). The single way anything outside UnitDesign
     // consumes component effects — live-unit stat resolution, faction-lane collection,
