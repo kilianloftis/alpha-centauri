@@ -5,6 +5,7 @@
 #include "game/buildings/BuildingRegistry.h"
 #include "game/faction/FactionRegistry.h"
 #include "game/map/ImprovementRegistry.h"
+#include "game/map/WorldGenPresetRegistry.h"
 #include "game/population/calculators/PopCompositionCalculator.h"
 #include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "game/population/pop-types/GrowthConfigParser.h"
@@ -61,6 +62,9 @@ void LoadGameData(GameDataContext& rData, const GameDataPaths& rPaths)
 
     rData.factionRegistry = std::make_unique<FactionRegistry>();
     rData.factionRegistry->Load(rPaths.factions);
+
+    rData.worldGenPresetRegistry = std::make_unique<WorldGenPresetRegistry>();
+    rData.worldGenPresetRegistry->Load(rPaths.worldGenPresets);
 
     // Cross-config id checks — only safe once every registry above is loaded.
     ValidateEffectReferences(rData);

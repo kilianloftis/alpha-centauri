@@ -1,65 +1,188 @@
 #include "game/map/WorldGenerator.h"
+#include "game/map/FbmNoise.h"
+
+#include <algorithm>
 #include <chrono>
+#include <cmath>
+#include <vector>
 
 namespace ac
 {
 
-WorldGenerator::WorldGenerator()
+namespace
 {
+
+float Remap_(float value, float inMin, float inMax, float outMin, float outMax)
+{
+    if (inMax <= inMin)
+    {
+        return outMin;
+    }
+    const float t = (value - inMin) / (inMax - inMin);
+    return outMin + t * (outMax - outMin);
 }
 
-WorldGenerator::~WorldGenerator()
-{
-}
+} // namespace
 
-std::unique_ptr<WorldMap> WorldGenerator::Generate(const WorldGenConfig_t& config)
+WorldGenerator::WorldGenerator() = default;
+
+WorldGenerator::~WorldGenerator() = default;
+
+std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& rConfig,
+                                                   const WorldGenPresetConfig_t& rPreset)
 {
-    // Initialize RNG
-    unsigned int seed = config.seed == 0 
+    const unsigned int seed = rConfig.seed == 0
         ? static_cast<unsigned int>(std::chrono::steady_clock::now().time_since_epoch().count())
-        : config.seed;
+        : rConfig.seed;
     m_rng.seed(seed);
 
-    // Create empty world
-    auto pWorld = std::make_unique<WorldMap>(config.width, config.height);
+    auto pWorld = std::make_unique<WorldMap>(rConfig.width, rConfig.height);
 
-    // Generate terrain characteristics
-    GenerateElevation_(*pWorld, config);
+    GenerateElevation_(*pWorld, rConfig, rPreset);
     GenerateMoisture_(*pWorld);
     GenerateRockiness_(*pWorld);
-    GenerateRivers_(*pWorld, config);
 
     return pWorld;
 }
 
-void WorldGenerator::GenerateElevation_(WorldMap& world, const WorldGenConfig_t& config)
+void WorldGenerator::GenerateElevation_(WorldMap& rWorld,
+                                        const MapGenerationConfig_t& rConfig,
+                                        const WorldGenPresetConfig_t& rPreset)
 {
-    for (int y = 0; y < world.GetHeight(); ++y)
+    const int width = rWorld.GetWidth();
+    const int height = rWorld.GetHeight();
+    const int tileCount = width * height;
+    if (tileCount <= 0)
     {
-        for (int x = 0; x < world.GetWidth(); ++x)
+        return;
+    }
+
+    FbmNoise noise(static_cast<int>(rConfig.seed == 0 ? m_rng() : rConfig.seed), rPreset);
+
+    const float invWidth = width > 1 ? 1.0f / static_cast<float>(width - 1) : 0.0f;
+    const float invHeight = height > 1 ? 1.0f / static_cast<float>(height - 1) : 0.0f;
+    const float scale = std::max(rPreset.continentScale, 0.001f);
+
+    std::vector<float> field(static_cast<size_t>(tileCount));
+    float minValue = 0.0f;
+    float maxValue = 0.0f;
+
+    for (int y = 0; y < height; ++y)
+    {
+        for (int x = 0; x < width; ++x)
         {
-            Tile* pTile = world.GetTile(x, y);
-            if (pTile)
+            const float nx = static_cast<float>(x) * invWidth * 2.0f - 1.0f;
+            const float ny = static_cast<float>(y) * invHeight * 2.0f - 1.0f;
+            const float sampleX = static_cast<float>(x) * scale;
+            const float sampleY = static_cast<float>(y) * scale;
+            const float masked = ApplyLandmassMask_(noise.Sample(sampleX, sampleY), nx, ny, rPreset);
+
+            const size_t index = static_cast<size_t>(y * width + x);
+            field[index] = masked;
+            if (index == 0 || masked < minValue)
             {
-                int elevation = RandomInt_(config.minElevation, config.maxElevation);
-                pTile->SetElevation(elevation);
+                minValue = masked;
             }
+            if (index == 0 || masked > maxValue)
+            {
+                maxValue = masked;
+            }
+        }
+    }
+
+    float oceanCoverage = std::clamp(rConfig.oceanCoverage, 0.0f, 1.0f);
+    size_t waterCount = static_cast<size_t>(oceanCoverage * static_cast<float>(tileCount));
+    if (waterCount >= static_cast<size_t>(tileCount))
+    {
+        waterCount = static_cast<size_t>(tileCount) - 1;
+    }
+
+    std::vector<float> sorted = field;
+    std::nth_element(sorted.begin(), sorted.begin() + static_cast<std::ptrdiff_t>(waterCount),
+                     sorted.end());
+    const float threshold = sorted[waterCount];
+
+    for (int y = 0; y < height; ++y)
+    {
+        for (int x = 0; x < width; ++x)
+        {
+            Tile* pTile = rWorld.GetTile(x, y);
+            if (!pTile)
+            {
+                continue;
+            }
+
+            const float value = field[static_cast<size_t>(y * width + x)];
+            int elevation = 0;
+            if (value < threshold)
+            {
+                elevation = static_cast<int>(std::lround(
+                    Remap_(value, minValue, threshold,
+                           static_cast<float>(rPreset.minElevation), -1.0f)));
+            }
+            else
+            {
+                elevation = static_cast<int>(std::lround(
+                    Remap_(value, threshold, maxValue,
+                           0.0f, static_cast<float>(rPreset.maxElevation))));
+            }
+            pTile->SetElevation(elevation);
         }
     }
 }
 
-void WorldGenerator::GenerateMoisture_(WorldMap& world)
+float WorldGenerator::ApplyLandmassMask_(float noiseValue,
+                                         float nx,
+                                         float ny,
+                                         const WorldGenPresetConfig_t& rPreset) const
+{
+    const float dist = std::sqrt(nx * nx + ny * ny);
+    const float edge = std::max(std::abs(nx), std::abs(ny));
+    float value = noiseValue;
+
+    switch (rPreset.type)
+    {
+    case WorldGenPreset_t::Pangea:
+    case WorldGenPreset_t::Continents:
+    case WorldGenPreset_t::Islands:
+    case WorldGenPreset_t::Archipelago:
+        value += rPreset.centerBias * (1.0f - dist);
+        value -= rPreset.edgeFalloff * edge;
+        break;
+
+    case WorldGenPreset_t::Ring:
+    {
+        // Peak landmass around mid-radius; depress map center and outer rim.
+        constexpr float kRingRadius = 0.65f;
+        const float ring = 1.0f - std::min(std::abs(dist - kRingRadius) * 2.5f, 1.0f);
+        value += rPreset.centerBias * ring;
+        value -= rPreset.edgeFalloff * edge;
+        value -= rPreset.centerBias * 0.5f * std::max(0.0f, 1.0f - dist * 2.0f);
+        break;
+    }
+
+    case WorldGenPreset_t::Lakes:
+        // Prefer land near the rim and depress the interior for inland seas/lakes.
+        value -= rPreset.centerBias * (1.0f - dist);
+        value -= rPreset.edgeFalloff * edge * 0.5f;
+        break;
+    }
+
+    return value;
+}
+
+void WorldGenerator::GenerateMoisture_(WorldMap& rWorld)
 {
     std::uniform_int_distribution<int> dist(0, 2);
-    
-    for (int y = 0; y < world.GetHeight(); ++y)
+
+    for (int y = 0; y < rWorld.GetHeight(); ++y)
     {
-        for (int x = 0; x < world.GetWidth(); ++x)
+        for (int x = 0; x < rWorld.GetWidth(); ++x)
         {
-            Tile* pTile = world.GetTile(x, y);
+            Tile* pTile = rWorld.GetTile(x, y);
             if (pTile)
             {
-                int value = dist(m_rng);
+                const int value = dist(m_rng);
                 pTile->SetBaseMoisture(static_cast<Moisture_t>(value));
                 pTile->SetMoisture(static_cast<Moisture_t>(value));
             }
@@ -67,39 +190,19 @@ void WorldGenerator::GenerateMoisture_(WorldMap& world)
     }
 }
 
-void WorldGenerator::GenerateRockiness_(WorldMap& world)
+void WorldGenerator::GenerateRockiness_(WorldMap& rWorld)
 {
     std::uniform_int_distribution<int> dist(0, 2);
-    
-    for (int y = 0; y < world.GetHeight(); ++y)
-    {
-        for (int x = 0; x < world.GetWidth(); ++x)
-        {
-            Tile* pTile = world.GetTile(x, y);
-            if (pTile)
-            {
-                int value = dist(m_rng);
-                pTile->SetRockiness(static_cast<Rockiness_t>(value));
-            }
-        }
-    }
-}
 
-void WorldGenerator::GenerateRivers_(WorldMap& world, const WorldGenConfig_t& config)
-{
-    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
-    
-    for (int y = 0; y < world.GetHeight(); ++y)
+    for (int y = 0; y < rWorld.GetHeight(); ++y)
     {
-        for (int x = 0; x < world.GetWidth(); ++x)
+        for (int x = 0; x < rWorld.GetWidth(); ++x)
         {
-            Tile* pTile = world.GetTile(x, y);
+            Tile* pTile = rWorld.GetTile(x, y);
             if (pTile)
             {
-                if (dist(m_rng) < config.riverChance)
-                {
-                    pTile->SetHasRiver(true);
-                }
+                const int value = dist(m_rng);
+                pTile->SetRockiness(static_cast<Rockiness_t>(value));
             }
         }
     }

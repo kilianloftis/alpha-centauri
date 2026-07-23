@@ -1,20 +1,13 @@
 #pragma once
 
+#include "game/map/MapGenerationConfig.h"
+#include "game/map/WorldGenPresetConfig.h"
 #include "game/map/WorldMap.h"
+#include <memory>
 #include <random>
 
 namespace ac
 {
-
-struct WorldGenConfig_t
-{
-    int width = 10;
-    int height = 10;
-    int minElevation = -4000;
-    int maxElevation = 4000;
-    float riverChance = 0.05f;  // 5% chance per tile
-    unsigned int seed = 0;     // 0 = random seed
-};
 
 class WorldGenerator
 {
@@ -22,16 +15,23 @@ public:
     WorldGenerator();
     ~WorldGenerator();
 
-    // Generate a new world map with the given configuration
-    std::unique_ptr<WorldMap> Generate(const WorldGenConfig_t& config);
+    // Generate a new world map from session knobs + a resolved landmass preset.
+    std::unique_ptr<WorldMap> Generate(const MapGenerationConfig_t& rConfig,
+                                       const WorldGenPresetConfig_t& rPreset);
 
 private:
     std::mt19937 m_rng;
 
-    void GenerateElevation_(WorldMap& world, const WorldGenConfig_t& config);
-    void GenerateMoisture_(WorldMap& world);
-    void GenerateRockiness_(WorldMap& world);
-    void GenerateRivers_(WorldMap& world, const WorldGenConfig_t& config);
+    void GenerateElevation_(WorldMap& rWorld,
+                            const MapGenerationConfig_t& rConfig,
+                            const WorldGenPresetConfig_t& rPreset);
+    void GenerateMoisture_(WorldMap& rWorld);
+    void GenerateRockiness_(WorldMap& rWorld);
+
+    float ApplyLandmassMask_(float noiseValue,
+                             float nx,
+                             float ny,
+                             const WorldGenPresetConfig_t& rPreset) const;
 
     int RandomInt_(int min, int max);
     float RandomFloat_();

@@ -21,6 +21,7 @@ struct GameDataPaths
     std::string popComposition = "config/pop_composition.lua";
     std::string popGrowth = "config/pop_growth.json";
     std::string techCost = "config/tech_cost.lua";
+    std::string worldGenPresets = "config/world_gen_presets.json";
 };
 
 } // namespace ac

@@ -23,6 +23,7 @@ struct TechCostConfig_t;
 class TechCostCalculator;
 class PopTypeAvailabilityCalculator;
 class ImprovementRegistry;
+class WorldGenPresetRegistry;
 
 // Owns the definition data loaded once at startup (registries and config structs, all
 // reconstructible from config files) plus the calculators/services built from that data.
@@ -49,6 +50,7 @@ struct GameDataContext
     std::unique_ptr<GrowthConfig_t> growthConfig;
     std::unique_ptr<TechCostConfig_t> techCostConfig;
     std::unique_ptr<ImprovementRegistry> improvementRegistry;
+    std::unique_ptr<WorldGenPresetRegistry> worldGenPresetRegistry;
 
     // --- Calculators / services (built from the data above) ---
     std::unique_ptr<LuaRuntime> luaRuntime;

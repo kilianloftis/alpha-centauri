@@ -31,6 +31,8 @@
 #include "game/units/UnitSlotConfig.h"
 #include "ui/IGameView.h"
 #include "ui/TileHitTester.h"
+#include "game/map/MapGenerationConfig.h"
+#include "game/map/WorldGenPresetRegistry.h"
 #include "game/map/WorldGenerator.h"
 #include "ui/UIManager.h"
 #include "ui/ViewFactory.h"
@@ -117,12 +119,10 @@ void Engine::Initialize_()
 
     // Generate world map and build the save-game state around it.
     WorldGenerator worldGen;
-    WorldGenConfig_t worldConfig;
-    worldConfig.width = 30;
-    worldConfig.height = 20;
-    worldConfig.minElevation = -1000;
-    worldConfig.maxElevation = 4000;
-    m_pGameState = std::make_unique<GameState>(worldGen.Generate(worldConfig),
+    const MapGenerationConfig_t& rWorldConfig = m_pSettings->GetMapGeneration();
+    const WorldGenPresetConfig_t& rPreset =
+        m_gameDataContext->worldGenPresetRegistry->Get(rWorldConfig.presetId);
+    m_pGameState = std::make_unique<GameState>(worldGen.Generate(rWorldConfig, rPreset),
                                               *m_gameDataContext->improvementRegistry,
                                               m_gameDataContext->unitComponentRegistry.get(),
                                               *m_pSettings);

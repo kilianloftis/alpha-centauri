@@ -86,6 +86,8 @@ add_library(ac-core STATIC
     game/faction/FactionVisibleMap.cpp
     game/faction/UnitVisibility.cpp
     game/map/ImprovementConfigParser.cpp
+    game/map/WorldGenPresetConfigParser.cpp
+    game/map/FbmNoise.cpp
     game/map/WorldMap.cpp
     game/map/WorldGenerator.cpp
     game/stages/CustomTurnStage.cpp
@@ -118,6 +120,13 @@ target_include_directories(ac-turn-stages PUBLIC
 target_include_directories(ac-core PUBLIC
     ${CMAKE_SOURCE_DIR}/include
 )
+
+# Compile-time fog/shroud bypass for map debugging (IsExplored / IsVisible always true).
+# Enable with: ./bd configure -- -DAC_DEBUG_REVEAL_MAP=ON
+option(AC_DEBUG_REVEAL_MAP "Reveal entire map (no fog/shroud)" OFF)
+if(AC_DEBUG_REVEAL_MAP)
+    target_compile_definitions(ac-core PUBLIC AC_DEBUG_REVEAL_MAP)
+endif()
 
 # Add nlohmann/json library
 include(FetchContent)
@@ -180,6 +189,17 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(sol2)
 target_link_libraries(ac-core PUBLIC sol2)
+
+# FastNoiseLite (header-only; upstream has no CMake package target)
+FetchContent_Declare(
+    fastnoiselite
+    GIT_REPOSITORY https://github.com/Auburn/FastNoiseLite.git
+    GIT_TAG v1.1.1
+)
+FetchContent_MakeAvailable(fastnoiselite)
+add_library(fastnoiselite INTERFACE)
+target_include_directories(fastnoiselite INTERFACE ${fastnoiselite_SOURCE_DIR}/Cpp)
+target_link_libraries(ac-core PUBLIC fastnoiselite)
 
 # ---------------------------------------------------------------------------
 # alpha-centauri: the game executable — engine loop, UI, and the selected

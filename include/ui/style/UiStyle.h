@@ -34,6 +34,13 @@ struct TileRendererStyle
     Color_t tileBorderColor{};
     Color_t fogTerrainColor{};
     Color_t clearTerrainTextColor{};
+    Color_t waterLowColor{};
+    Color_t waterHighColor{};
+    Color_t landLowColor{};
+    Color_t landHighColor{};
+    int minElevationMeters{};
+    int maxElevationMeters{};
+    float fogFillDimRatio{};
     float tileBorderWidth{};
     unsigned int tileFontSize{};
     float tileTextOffsetXRatio{};

@@ -7,13 +7,13 @@
       0.0, 0.0, 1.0, 0.7
     ],
     "top_panel": [
-      0.2, 0.05, 0.6, 0.65
+      0.2, 0.05, 0.6, 0.6
     ],
     "left_panel": [
       0.0, 0.7, 0.2, 0.3
     ],
     "location_panel": [
-      0.2, 0.7, 0.46, 0.2
+      0.2, 0.7, 0.12, 0.3
     ],
     "center_panel": [
       0.32, 0.7, 0.46, 0.2
@@ -48,6 +48,21 @@
     "clear_terrain_text_color": [
       255, 255, 255, 255
     ],
+    "water_low_color": [
+      8, 24, 72, 255
+    ],
+    "water_high_color": [
+      64, 140, 210, 255
+    ],
+    "land_low_color": [
+      92, 58, 28, 255
+    ],
+    "land_high_color": [
+      210, 176, 128, 255
+    ],
+    "min_elevation_meters": -4000,
+    "max_elevation_meters": 4000,
+    "fog_fill_dim_ratio": 0.55,
     "tile_border_width": -1.0,
     "tile_font_size": 14,
     "tile_text_offset_x_ratio": 0.1,
@@ -424,6 +439,17 @@
     "pop_letter_color": [
       255, 255, 255, 255
     ]
+  },
+  "support_display": {
+    "background_color": [
+      20, 20, 40, 255
+    ],
+    "border_color": [
+      100, 100, 160, 255
+    ],
+    "padding_ratio": 0.03,
+    "icon_size_ratio": 0.1,
+    "icon_gap_ratio": 0.015
   },
   "base_workable_area_display": {
     "grid_dimension": 5,

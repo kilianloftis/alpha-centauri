@@ -75,6 +75,13 @@ TileRendererStyle ParseTileRendererStyle_(const nlohmann::json& j)
     s.tileBorderColor = ParseColor_(j, "tile_border_color");
     s.fogTerrainColor = ParseColor_(j, "fog_terrain_color");
     s.clearTerrainTextColor = ParseColor_(j, "clear_terrain_text_color");
+    s.waterLowColor = ParseColor_(j, "water_low_color");
+    s.waterHighColor = ParseColor_(j, "water_high_color");
+    s.landLowColor = ParseColor_(j, "land_low_color");
+    s.landHighColor = ParseColor_(j, "land_high_color");
+    s.minElevationMeters = j.at("min_elevation_meters").get<int>();
+    s.maxElevationMeters = j.at("max_elevation_meters").get<int>();
+    s.fogFillDimRatio = j.at("fog_fill_dim_ratio").get<float>();
     s.tileBorderWidth = j.at("tile_border_width").get<float>();
     s.tileFontSize = j.at("tile_font_size").get<unsigned int>();
     s.tileTextOffsetXRatio = j.at("tile_text_offset_x_ratio").get<float>();
