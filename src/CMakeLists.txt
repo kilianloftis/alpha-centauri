@@ -212,13 +212,16 @@ add_executable(alpha-centauri
     ui/world/CommlinksButton.cpp
     ui/commlinks/CommlinksView.cpp
     ui/commlinks/CommlinksPanel.cpp
+    ui/PlaceholderPanel.cpp
     ui/base/BaseView.cpp
+    ui/base/BaseNameDisplay.cpp
     ui/base/BaseWorkableAreaDisplay.cpp
     ui/base/GrowthDisplay.cpp
     ui/base/ProductionDisplay.cpp
     ui/base/ProductionSelectorPopup.cpp
     ui/base/PopulationDisplay.cpp
     ui/base/PopTypeSelectorPopup.cpp
+    ui/base/SupportDisplay.cpp
     ui/research/ResearchView.cpp
     ui/research/CurrentResearchPanel.cpp
     ui/settings/SettingsView.cpp
@@ -243,6 +246,10 @@ if(USE_SFML)
     target_compile_definitions(alpha-centauri PRIVATE USE_SFML)
     target_sources(alpha-centauri PRIVATE graphics/SFMLGraphics.cpp input/SFMLInput.cpp)
     target_link_libraries(alpha-centauri PRIVATE SFML::Graphics SFML::Window SFML::System)
+    if(UNIX AND NOT APPLE)
+        find_package(X11 REQUIRED)
+        target_link_libraries(alpha-centauri PRIVATE X11::X11)
+    endif()
 else()
     target_sources(alpha-centauri PRIVATE graphics/NullGraphics.cpp input/NullInput.cpp)
 endif()

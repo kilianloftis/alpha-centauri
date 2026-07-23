@@ -5,6 +5,7 @@
 #include "input/KeyEventQueue.h"
 #include "input/MouseEventQueue.h"
 #include <SFML/Graphics.hpp>
+#include <SFML/System/Sleep.hpp>
 #include <cmath>
 #include <iostream>
 #include <memory>
@@ -12,8 +13,72 @@
 #include <stdexcept>
 #include <unordered_map>
 
+#if defined(SFML_SYSTEM_WINDOWS)
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#elif defined(SFML_SYSTEM_LINUX) || defined(SFML_SYSTEM_FREEBSD) || defined(SFML_SYSTEM_OPENBSD) || \
+    defined(SFML_SYSTEM_NETBSD)
+#include <X11/Xatom.h>
+#include <X11/Xlib.h>
+// Xlib macros collide with identifiers used elsewhere in this translation unit.
+#undef None
+#undef Status
+#endif
+
 namespace ac
 {
+
+namespace
+{
+
+constexpr unsigned int k_DefaultWindowWidth  = 1280;
+constexpr unsigned int k_DefaultWindowHeight = 900;
+constexpr int          k_MaximizeWaitAttempts = 50;
+constexpr sf::Time     k_MaximizeWaitSlice    = sf::milliseconds(10);
+
+// Ask the window manager to maximize. SFML 3.0 only exposes Windowed/Fullscreen states.
+void MaximizeNativeWindow_(sf::WindowBase& rWindow)
+{
+#if defined(SFML_SYSTEM_WINDOWS)
+    ShowWindow(rWindow.getNativeHandle(), SW_SHOWMAXIMIZED);
+#elif defined(SFML_SYSTEM_LINUX) || defined(SFML_SYSTEM_FREEBSD) || defined(SFML_SYSTEM_OPENBSD) || \
+    defined(SFML_SYSTEM_NETBSD)
+    Display* pDisplay = XOpenDisplay(nullptr);
+    if (!pDisplay)
+    {
+        return;
+    }
+
+    const Atom wmState = XInternAtom(pDisplay, "_NET_WM_STATE", False);
+    const Atom maxHorz = XInternAtom(pDisplay, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
+    const Atom maxVert = XInternAtom(pDisplay, "_NET_WM_STATE_MAXIMIZED_VERT", False);
+
+    XEvent event{};
+    event.xclient.type         = ClientMessage;
+    event.xclient.window       = rWindow.getNativeHandle();
+    event.xclient.message_type = wmState;
+    event.xclient.format       = 32;
+    event.xclient.data.l[0]    = 1; // _NET_WM_STATE_ADD
+    event.xclient.data.l[1]    = static_cast<long>(maxHorz);
+    event.xclient.data.l[2]    = static_cast<long>(maxVert);
+    event.xclient.data.l[3]    = 1; // application
+
+    XSendEvent(
+        pDisplay,
+        DefaultRootWindow(pDisplay),
+        False,
+        SubstructureRedirectMask | SubstructureNotifyMask,
+        &event);
+    XFlush(pDisplay);
+    XCloseDisplay(pDisplay);
+#else
+    (void)rWindow;
+#endif
+}
+
+} // namespace
 
 static const std::string k_FontPath1 = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
 static const std::string k_FontPath2 = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf";
@@ -22,13 +87,29 @@ class SFMLGraphics : public Graphics
 {
 public:
     SFMLGraphics()
-        : m_window(sf::VideoMode(sf::Vector2u(1280, 900)), "Alpha Centauri")
+        : m_window(
+              sf::VideoMode(sf::Vector2u(k_DefaultWindowWidth, k_DefaultWindowHeight)),
+              "Alpha Centauri")
     {
         std::cout << "[SFMLGraphics] Creating window...\n";
         if (!m_window.isOpen())
         {
             throw std::runtime_error("[SFMLGraphics] Failed to create SFML render window");
         }
+
+        const sf::Vector2u sizeBeforeMaximize = m_window.getSize();
+        MaximizeNativeWindow_(m_window);
+        // Maximize is applied asynchronously by the WM; wait briefly for the Resized event.
+        for (int attempt = 0; attempt < k_MaximizeWaitAttempts; ++attempt)
+        {
+            ProcessEvents_();
+            if (m_window.getSize() != sizeBeforeMaximize)
+            {
+                break;
+            }
+            sf::sleep(k_MaximizeWaitSlice);
+        }
+
         m_window.setFramerateLimit(60);
         m_window.setKeyRepeatEnabled(false);
         m_window.requestFocus();

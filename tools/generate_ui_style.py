@@ -282,10 +282,13 @@ SECTIONS: list[tuple[str, str, list[tuple[str, str, str, object]]]] = [
         "baseView",
         "base_view",
         [
-            ("leftColumnY", "left_column_y", "float", 0.25),
-            ("leftColumnHeightMultiplier", "left_column_height_multiplier", "float", 2.0),
-            ("growthHalfLayout", "growth_half_layout", "layout", [0.0, 0.0, 1.0, 0.5]),
-            ("productionHalfLayout", "production_half_layout", "layout", [0.0, 0.5, 1.0, 0.5]),
+            ("growthLayout", "growth_layout", "layout", [0.0, 0.0, 0.2, 1.0]),
+            ("workableLayout", "workable_layout", "layout", [0.2, 0.0, 0.6, 1.0]),
+            ("buildingsLayout", "buildings_layout", "layout", [0.8, 0.0, 0.2, 1.0]),
+            ("productionLayout", "production_layout", "layout", [0.0, 0.0, 0.666667, 1.0]),
+            ("buildQueueLayout", "build_queue_layout", "layout", [0.666667, 0.0, 0.333333, 1.0]),
+            ("baseNameLayout", "base_name_layout", "layout", [0.0, 0.0, 1.0, 0.333333]),
+            ("populationLayout", "population_layout", "layout", [0.0, 0.333333, 1.0, 0.666667]),
         ],
     ),
     (
@@ -336,6 +339,17 @@ SECTIONS: list[tuple[str, str, list[tuple[str, str, str, object]]]] = [
             ("popBoxFillColor", "pop_box_fill_color", "color", [0, 0, 255, 255]),
             ("popBoxBorderColor", "pop_box_border_color", "color", [255, 255, 255, 255]),
             ("popLetterColor", "pop_letter_color", "color", [255, 255, 255, 255]),
+        ],
+    ),
+    (
+        "supportDisplay",
+        "support_display",
+        [
+            ("backgroundColor", "background_color", "color", [20, 20, 40, 255]),
+            ("borderColor", "border_color", "color", [100, 100, 160, 255]),
+            ("paddingRatio", "padding_ratio", "float", 0.03),
+            ("iconSizeRatio", "icon_size_ratio", "float", 0.10),
+            ("iconGapRatio", "icon_gap_ratio", "float", 0.015),
         ],
     ),
     (

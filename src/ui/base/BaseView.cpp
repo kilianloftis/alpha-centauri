@@ -1,20 +1,23 @@
 #include "ui/base/BaseView.h"
+#include "ui/base/BaseNameDisplay.h"
 #include "ui/base/BaseWorkableAreaDisplay.h"
 #include "ui/base/GrowthDisplay.h"
 #include "ui/base/ProductionDisplay.h"
 #include "ui/base/ProductionSelectorPopup.h"
 #include "ui/base/PopulationDisplay.h"
 #include "ui/base/PopTypeSelectorPopup.h"
+#include "ui/base/SupportDisplay.h"
+#include "ui/PlaceholderPanel.h"
+#include "ui/world/UnitStackPanel.h"
 #include "game/population/pop-types/Pop.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/production/ProductionManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
+#include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/units/Unit.h"
 #include "game/Faction.h"
-#include "lib/EventBus.h"
-#include "ui/UIManager.h"
-#include "ui/TileHitTester.h"
 #include "ui/style/UiStyle.h"
 #include "graphics/Graphics.h"
 #include <string>
@@ -33,12 +36,10 @@ BaseView::BaseView(
     , m_rFaction(rFaction)
     , m_bEditable(bEditable)
 {
-    const WindowLayout_t leftColumn = ResolveLayout(m_layout, {
-        Style().layouts.leftPanel.x,
-        Style().baseView.leftColumnY,
-        Style().layouts.leftPanel.width,
-        Style().baseView.leftColumnHeightMultiplier * Style().layouts.leftPanel.height
-    });
+    const auto& bv = Style().baseView;
+    const WindowLayout_t topPanel = ResolveLayout(m_layout, Style().layouts.topPanel);
+    const WindowLayout_t leftPanel = ResolveLayout(m_layout, Style().layouts.leftPanel);
+    const WindowLayout_t centerPanel = ResolveLayout(m_layout, Style().layouts.centerPanel);
 
     BaseWorkableAreaDisplay::TileClickCallback_t onTileClick;
     BaseWorkableAreaDisplay::BaseClickCallback_t onBaseClick;
@@ -52,29 +53,107 @@ BaseView::BaseView(
         onPopClick = [this](Pop& rPop) { HandlePopClick(rPop); };
     }
 
+    // TopPanel: Growth | Workable (60%) | Buildings
     m_elements.push_back(std::make_unique<GrowthDisplay>(
         &m_rBase,
-        ResolveLayout(leftColumn, Style().baseView.growthHalfLayout)
+        ResolveLayout(topPanel, bv.growthLayout)
     ));
     m_elements.push_back(std::make_unique<BaseWorkableAreaDisplay>(
         &m_rBase,
-        ResolveLayout(m_layout, Style().layouts.topPanel),
+        ResolveLayout(topPanel, bv.workableLayout),
         std::move(onTileClick),
         std::move(onBaseClick)
     ));
+    m_elements.push_back(std::make_unique<PlaceholderPanel>(
+        "Buildings",
+        ResolveLayout(topPanel, bv.buildingsLayout)
+    ));
+
+    // LeftPanel: Production (2/3) | Build Queue (1/3)
     m_elements.push_back(std::make_unique<ProductionDisplay>(
         &m_rBase,
-        ResolveLayout(leftColumn, Style().baseView.productionHalfLayout),
+        ResolveLayout(leftPanel, bv.productionLayout),
         std::move(onProductionClick)
+    ));
+    m_elements.push_back(std::make_unique<PlaceholderPanel>(
+        "Build Queue",
+        ResolveLayout(leftPanel, bv.buildQueueLayout)
+    ));
+
+    // CenterPanel: Base Name (1/3) | Population (2/3)
+    m_elements.push_back(std::make_unique<BaseNameDisplay>(
+        &m_rBase,
+        ResolveLayout(centerPanel, bv.baseNameLayout)
     ));
     m_elements.push_back(std::make_unique<PopulationDisplay>(
         &m_rBase.GetPopulation(),
-        ResolveLayout(m_layout, Style().layouts.bottomPanel),
+        ResolveLayout(centerPanel, bv.populationLayout),
         std::move(onPopClick)
     ));
+
+    // RightPanel: Support
+    m_elements.push_back(std::make_unique<SupportDisplay>(
+        &m_rBase,
+        ResolveLayout(m_layout, Style().layouts.rightPanel)
+    ));
+
+    // BottomPanel: Unit stack (same component / slot as WorldView)
+    auto pUnitStack = std::make_unique<UnitStackPanel>(
+        ResolveLayout(m_layout, Style().layouts.bottomPanel),
+        [this](Unit& rUnit) { HandleUnitStackClicked_(rUnit); });
+    m_pUnitStackPanel = pUnitStack.get();
+    m_elements.push_back(std::move(pUnitStack));
 }
 
 BaseView::~BaseView() = default;
+
+void BaseView::Render(Graphics& rGraphics)
+{
+    RefreshUnitStack_();
+    IGameView::Render(rGraphics);
+}
+
+void BaseView::RefreshUnitStack_()
+{
+    const WorldMap& rMap = m_rBase.GetTileEffects().GetWorldMap();
+    const Tile* pTile = rMap.GetTile(m_rBase.GetX(), m_rBase.GetY());
+
+    std::vector<Unit*> stackUnits;
+    if (pTile)
+    {
+        for (Unit* pUnit : rMap.GetUnitsOnTile(*pTile))
+        {
+            if (pUnit)
+            {
+                stackUnits.push_back(pUnit);
+            }
+        }
+    }
+
+    if (m_pSelectedUnit)
+    {
+        bool bStillPresent = false;
+        for (Unit* pUnit : stackUnits)
+        {
+            if (pUnit == m_pSelectedUnit)
+            {
+                bStillPresent = true;
+                break;
+            }
+        }
+        if (!bStillPresent)
+        {
+            m_pSelectedUnit = nullptr;
+        }
+    }
+
+    m_pUnitStackPanel->SetUnits(std::move(stackUnits), m_pSelectedUnit);
+}
+
+void BaseView::HandleUnitStackClicked_(Unit& rUnit)
+{
+    m_pSelectedUnit = &rUnit;
+}
 
 bool BaseView::HandleKey(const KeyEvent_t& rEvent)
 {

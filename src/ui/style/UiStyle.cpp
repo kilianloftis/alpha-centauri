@@ -312,10 +312,13 @@ SettingsPanelStyle ParseSettingsPanelStyle_(const nlohmann::json& j)
 BaseViewStyle ParseBaseViewStyle_(const nlohmann::json& j)
 {
     BaseViewStyle s{};
-    s.leftColumnY = j.at("left_column_y").get<float>();
-    s.leftColumnHeightMultiplier = j.at("left_column_height_multiplier").get<float>();
-    s.growthHalfLayout = ParseLayout_(j, "growth_half_layout");
-    s.productionHalfLayout = ParseLayout_(j, "production_half_layout");
+    s.growthLayout = ParseLayout_(j, "growth_layout");
+    s.workableLayout = ParseLayout_(j, "workable_layout");
+    s.buildingsLayout = ParseLayout_(j, "buildings_layout");
+    s.productionLayout = ParseLayout_(j, "production_layout");
+    s.buildQueueLayout = ParseLayout_(j, "build_queue_layout");
+    s.baseNameLayout = ParseLayout_(j, "base_name_layout");
+    s.populationLayout = ParseLayout_(j, "population_layout");
     return s;
 }
 
@@ -366,6 +369,17 @@ PopulationDisplayStyle ParsePopulationDisplayStyle_(const nlohmann::json& j)
     s.popBoxFillColor = ParseColor_(j, "pop_box_fill_color");
     s.popBoxBorderColor = ParseColor_(j, "pop_box_border_color");
     s.popLetterColor = ParseColor_(j, "pop_letter_color");
+    return s;
+}
+
+SupportDisplayStyle ParseSupportDisplayStyle_(const nlohmann::json& j)
+{
+    SupportDisplayStyle s{};
+    s.backgroundColor = ParseColor_(j, "background_color");
+    s.borderColor = ParseColor_(j, "border_color");
+    s.paddingRatio = j.at("padding_ratio").get<float>();
+    s.iconSizeRatio = j.at("icon_size_ratio").get<float>();
+    s.iconGapRatio = j.at("icon_gap_ratio").get<float>();
     return s;
 }
 
@@ -630,6 +644,7 @@ void UiStyle::Load(const std::string& filePath)
     style.growthDisplay = ParseGrowthDisplayStyle_(root.at("growth_display"));
     style.productionDisplay = ParseProductionDisplayStyle_(root.at("production_display"));
     style.populationDisplay = ParsePopulationDisplayStyle_(root.at("population_display"));
+    style.supportDisplay = ParseSupportDisplayStyle_(root.at("support_display"));
     style.baseWorkableAreaDisplay = ParseBaseWorkableAreaDisplayStyle_(root.at("base_workable_area_display"));
     style.popTypeSelectorPopup = ParsePopTypeSelectorPopupStyle_(root.at("pop_type_selector_popup"));
     style.productionSelectorPopup = ParseProductionSelectorPopupStyle_(root.at("production_selector_popup"));

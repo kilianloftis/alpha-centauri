@@ -237,10 +237,13 @@ struct SettingsPanelStyle
 
 struct BaseViewStyle
 {
-    float leftColumnY{};
-    float leftColumnHeightMultiplier{};
-    RatioLayout_t growthHalfLayout{};
-    RatioLayout_t productionHalfLayout{};
+    RatioLayout_t growthLayout{};
+    RatioLayout_t workableLayout{};
+    RatioLayout_t buildingsLayout{};
+    RatioLayout_t productionLayout{};
+    RatioLayout_t buildQueueLayout{};
+    RatioLayout_t baseNameLayout{};
+    RatioLayout_t populationLayout{};
 };
 
 struct GrowthDisplayStyle
@@ -285,6 +288,15 @@ struct PopulationDisplayStyle
     Color_t popBoxFillColor{};
     Color_t popBoxBorderColor{};
     Color_t popLetterColor{};
+};
+
+struct SupportDisplayStyle
+{
+    Color_t backgroundColor{};
+    Color_t borderColor{};
+    float paddingRatio{};
+    float iconSizeRatio{};
+    float iconGapRatio{};
 };
 
 struct BaseWorkableAreaDisplayStyle
@@ -512,6 +524,7 @@ public:
     GrowthDisplayStyle growthDisplay;
     ProductionDisplayStyle productionDisplay;
     PopulationDisplayStyle populationDisplay;
+    SupportDisplayStyle supportDisplay;
     BaseWorkableAreaDisplayStyle baseWorkableAreaDisplay;
     PopTypeSelectorPopupStyle popTypeSelectorPopup;
     ProductionSelectorPopupStyle productionSelectorPopup;
