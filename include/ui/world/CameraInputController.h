@@ -18,13 +18,8 @@ public:
     void CenterOnTile(int tileX, int tileY);
 
 private:
-    struct CameraBounds_t
-    {
-        int maxCamX;
-        int maxCamY;
-    };
-
-    CameraBounds_t ComputeMaxCamera_() const;
+    // Vertical only — X wraps continuously around the map width.
+    int ComputeMaxCameraY_() const;
     void ApplyEdgeScroll_(int mouseX, int mouseY);
 
     WorldDisplay& m_rWorldDisplay;

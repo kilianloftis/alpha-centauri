@@ -152,7 +152,7 @@ const Tile* Pathfinder::DesiredContactStep(const Unit& rMover, const Tile& rDest
         return nullptr;
     }
 
-    const int currentDist = ChebyshevDistance(rFrom, rDestination);
+    const int currentDist = ChebyshevDistance(rFrom, rDestination, m_rWorldMap.GetWidth());
     const Tile* pBest = nullptr;
     int bestDist = currentDist;
 
@@ -164,7 +164,7 @@ const Tile* Pathfinder::DesiredContactStep(const Unit& rMover, const Tile& rDest
             {
                 return;
             }
-            const int dist = ChebyshevDistance(*pTile, rDestination);
+            const int dist = ChebyshevDistance(*pTile, rDestination, m_rWorldMap.GetWidth());
             if (dist < bestDist)
             {
                 bestDist = dist;

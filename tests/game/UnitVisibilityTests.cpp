@@ -255,3 +255,31 @@ TEST_CASE("Conditional Detect applies only when TargetTileHas is satisfied",
     // Same unit, same detector: condition now met → cloak pierced.
     CHECK(IsUnitVisibleTo(owner, cloaked, *fixture.ctx));
 }
+
+TEST_CASE("Sensor terrain Detect wraps horizontally across the map seam",
+          "[visibility][detection][wrap]")
+{
+    actest::FactionFixture fixture;
+    Faction& owner = fixture.MakeFaction();
+    Faction& other = fixture.MakeFaction();
+    const int width = fixture.map.GetWidth();
+
+    fixture.MakeFactionBase(owner, 4, 4);
+    fixture.ctx->AddImprovementWithEffects(fixture.At(0, 4), "Sensor");
+    owner.RebuildVisibility();
+
+    fixture.At(width - 1, 4).SetHasFungus(true);
+    Unit& hiddenNear = fixture.MakeUnit(other, width - 1, 4, {"test_chassis"});
+    fixture.At(width - 3, 4).SetHasFungus(true);
+    Unit& hiddenFar = fixture.MakeUnit(other, width - 3, 4, {"test_chassis"});
+
+    REQUIRE(owner.GetVisibleMap().IsVisible(width - 1, 4));
+    CHECK(IsUnitVisibleTo(owner, hiddenNear, *fixture.ctx));
+
+    // Light the far tile with a scout so concealment (not fog) is what hides it.
+    // Chebyshev 3 across the wrap — Detect radius 2 does not reach.
+    fixture.MakeUnit(owner, width - 3, 5, {"test_chassis"});
+    owner.RebuildVisibility();
+    REQUIRE(owner.GetVisibleMap().IsVisible(width - 3, 4));
+    CHECK_FALSE(IsUnitVisibleTo(owner, hiddenFar, *fixture.ctx));
+}

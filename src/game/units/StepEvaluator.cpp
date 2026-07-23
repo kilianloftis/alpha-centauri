@@ -158,7 +158,7 @@ StepEvaluation_t StepEvaluator::EvaluateStep_(const Unit& rMover, const Tile& rF
 {
     StepEvaluation_t result;
 
-    if (!AreChebyshevAdjacent(rFrom, rTo))
+    if (!AreChebyshevAdjacent(rFrom, rTo, m_rWorldMap.GetWidth()))
     {
         result.outcome = StepOutcome_t::NotAdjacent;
         return result;

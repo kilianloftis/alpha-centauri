@@ -44,6 +44,8 @@ public:
     // FindPath fails (planner thought the way was clear / blocked for other reasons).
     const Tile* DesiredContactStep(const Unit& rMover, const Tile& rDestination) const;
 
+    const WorldMap& GetWorldMap() const { return m_rWorldMap; }
+
 private:
     const MoveCostCalculator& m_rMoveCosts;
     const StepEvaluator& m_rSteps;

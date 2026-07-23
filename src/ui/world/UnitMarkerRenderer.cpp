@@ -7,6 +7,7 @@
 #include "game/map/WorldMap.h"
 #include "game/units/UnitDesign.h"
 #include "ui/style/UiStyle.h"
+#include "ui/world/MapViewport.h"
 
 namespace ac
 {
@@ -20,67 +21,50 @@ constexpr size_t k_UnitNameFirstCharCount    = 1;
 
 void UnitMarkerRenderer::Render(Graphics& rGraphics,
                                 const GameState& rGameState,
-                                WindowLayout_t mapLayout,
-                                float tileSize,
-                                int colStart,
-                                int rowStart,
-                                int colEnd,
-                                int rowEnd)
+                                const MapViewport& rViewport)
 {
     m_markerRects.clear();
 
     const auto& s = Style().unitMarker;
     const WorldMap& rWorldMap = rGameState.GetWorldMap();
+    const float tileSize = rViewport.TileSize();
     const float markerWidth = tileSize * s.widthRatio;
     const float markerHeight = tileSize * s.heightRatio;
     const float spacing = tileSize * s.spacingRatio;
     const Faction* pPlayer = rGameState.GetPlayerFaction();
 
-    for (int row = rowStart; row < rowEnd; ++row)
-    {
-        for (int col = colStart; col < colEnd; ++col)
+    rViewport.ForEachVisibleTile([&](const Tile& rTile, float tileX, float tileY) {
+        const std::vector<Unit*>& units = rWorldMap.GetUnitsOnTile(rTile);
+        if (units.empty())
         {
-            const Tile* pTile = rWorldMap.GetTile(col, row);
-            if (!pTile)
-            {
-                continue;
-            }
-
-            const std::vector<Unit*>& units = rWorldMap.GetUnitsOnTile(*pTile);
-            if (units.empty())
-            {
-                continue;
-            }
-
-            const float tileX = mapLayout.x + ((col - colStart) * tileSize);
-            const float tileY = mapLayout.y + ((row - rowStart) * tileSize);
-
-            // Per-unit visibility (fog, Conceal/Detect, and contact reveal) — not tile fog
-            // alone, so contact-revealed units still draw even if they pierce fog of war.
-            size_t drawn = 0;
-            for (const Unit* pUnit : units)
-            {
-                if (!pUnit)
-                {
-                    continue;
-                }
-                if (pPlayer && !IsUnitVisibleTo(*pPlayer, *pUnit, rGameState.GetTileEffects()))
-                {
-                    continue;
-                }
-
-                const Rectangle_t marker{
-                    tileX + spacing + (drawn * (markerWidth + spacing)),
-                    tileY + tileSize - markerHeight - spacing,
-                    markerWidth,
-                    markerHeight};
-                ++drawn;
-
-                m_markerRects[pUnit->GetUnitId()] = marker;
-                DrawMarker(rGraphics, *pUnit, marker, pUnit == m_pSelectedUnit);
-            }
+            return;
         }
-    }
+
+        // Per-unit visibility (fog, Conceal/Detect, and contact reveal) — not tile fog
+        // alone, so contact-revealed units still draw even if they pierce fog of war.
+        size_t drawn = 0;
+        for (const Unit* pUnit : units)
+        {
+            if (!pUnit)
+            {
+                continue;
+            }
+            if (pPlayer && !IsUnitVisibleTo(*pPlayer, *pUnit, rGameState.GetTileEffects()))
+            {
+                continue;
+            }
+
+            const Rectangle_t marker{
+                tileX + spacing + (drawn * (markerWidth + spacing)),
+                tileY + tileSize - markerHeight - spacing,
+                markerWidth,
+                markerHeight};
+            ++drawn;
+
+            m_markerRects[pUnit->GetUnitId()] = marker;
+            DrawMarker(rGraphics, *pUnit, marker, pUnit == m_pSelectedUnit);
+        }
+    });
 }
 
 std::optional<Rectangle_t> UnitMarkerRenderer::GetCachedMarkerRect(UnitId_t unitId) const

@@ -1,8 +1,10 @@
 #include "ui/base/BaseWorkableAreaDisplay.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
-#include "graphics/Graphics.h"
 #include "game/effects/TileEffectsContext.h"
+#include "game/map/MapUtils.h"
+#include "game/map/WorldMap.h"
+#include "graphics/Graphics.h"
 #include "ui/style/UiStyle.h"
 #include <sstream>
 
@@ -38,6 +40,7 @@ void BaseWorkableAreaDisplay::CacheTileRects_()
 
     const int baseX = m_pBase->GetX();
     const int baseY = m_pBase->GetY();
+    const int mapWidth = m_pBase->GetTileEffects().GetWorldMap().GetWidth();
 
     for (const Tile* pTile : m_pBase->GetWorkerAssignments().GetWorkableTiles())
     {
@@ -46,7 +49,7 @@ void BaseWorkableAreaDisplay::CacheTileRects_()
             continue;
         }
 
-        const int relX = pTile->GetX() - baseX;
+        const int relX = DeltaX(baseX, pTile->GetX(), mapWidth);
         const int relY = pTile->GetY() - baseY;
         const float screenX = m_startX + (static_cast<float>(relX) + style.gridCenterOffset) * m_tileSize;
         const float screenY = m_startY + (static_cast<float>(relY) + style.gridCenterOffset) * m_tileSize;

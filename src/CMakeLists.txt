@@ -222,6 +222,7 @@ add_executable(alpha-centauri
     ui/world/UnitOrderInputController.cpp
     ui/world/CombatPresentation.cpp
     ui/world/CombatView.cpp
+    ui/world/MapViewport.cpp
     ui/world/WorldDisplay.cpp
     ui/world/UnitMarkerRenderer.cpp
     ui/world/InfoPanelElement.cpp

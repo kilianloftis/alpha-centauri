@@ -35,23 +35,24 @@ TEST_CASE("Land base claims a Euclidean disk of contiguous land", "[territory]")
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    // Corner base so some on-map tiles fall outside radius 7 (dx^2+dy^2 <= 50).
-    fixture.MakeFactionBase(faction, 0, 0);
+    // Use the non-wrapping Y axis for radius tips — X wraps, so east/west tips on a
+    // 9-wide map sit inside the disk via the short wrap path.
+    fixture.MakeFactionBase(faction, 4, 0);
     RebuildTerritory_(fixture);
 
     const TerritoryMap& rTerritory = fixture.map.GetTerritory();
     const FactionId_t id = faction.GetFactionId();
 
-    CHECK(rTerritory.GetOwner(0, 0) == id);
+    CHECK(rTerritory.GetOwner(4, 0) == id);
     // Cardinal tip: 7^2 = 49 <= 50.
-    CHECK(rTerritory.GetOwner(7, 0) == id);
-    // Boundary of the formula: 7^2+1^2 = 50 <= 50.
-    CHECK(rTerritory.GetOwner(7, 1) == id);
-    CHECK(rTerritory.GetOwner(5, 5) == id); // 50 <= 50
+    CHECK(rTerritory.GetOwner(4, 7) == id);
+    // Boundary of the formula: 1^2+7^2 = 50 <= 50.
+    CHECK(rTerritory.GetOwner(5, 7) == id);
+    CHECK(rTerritory.GetOwner(0, 5) == id); // wrapped dx to x=0 is 4; 16+25=41 <= 50
 
-    // Just outside: 7^2+2^2 = 53 > 50.
-    CHECK_FALSE(rTerritory.HasOwner(7, 2));
-    CHECK_FALSE(InEuclideanRadius(7, 2, 7));
+    // Just outside: 2^2+7^2 = 53 > 50.
+    CHECK_FALSE(rTerritory.HasOwner(6, 7));
+    CHECK_FALSE(InEuclideanRadius(2, 7, 7));
 }
 
 TEST_CASE("Land territory does not cross water or claim sea tiles", "[territory]")
@@ -59,25 +60,25 @@ TEST_CASE("Land territory does not cross water or claim sea tiles", "[territory]
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
 
-    // Water column blocks land connectivity from x=1 to x=5.
-    for (int y = 0; y < fixture.map.GetHeight(); ++y)
+    // Water row blocks land connectivity north/south (Y does not wrap).
+    for (int x = 0; x < fixture.map.GetWidth(); ++x)
     {
-        fixture.At(3, y).SetElevation(-100);
+        fixture.At(x, 3).SetElevation(-100);
     }
     // A sea tile adjacent to the base that must not be claimed by a land base.
-    fixture.At(1, 5).SetElevation(-100);
+    fixture.At(5, 1).SetElevation(-100);
 
-    fixture.MakeFactionBase(faction, 1, 4);
+    fixture.MakeFactionBase(faction, 4, 1);
     RebuildTerritory_(fixture);
 
     const TerritoryMap& rTerritory = fixture.map.GetTerritory();
     const FactionId_t id = faction.GetFactionId();
 
-    CHECK(rTerritory.GetOwner(1, 4) == id);
-    CHECK(rTerritory.GetOwner(2, 4) == id);
-    CHECK_FALSE(rTerritory.HasOwner(1, 5)); // sea
-    CHECK_FALSE(rTerritory.HasOwner(3, 4)); // water barrier itself
-    CHECK_FALSE(rTerritory.HasOwner(5, 4)); // land beyond the cut
+    CHECK(rTerritory.GetOwner(4, 1) == id);
+    CHECK(rTerritory.GetOwner(4, 2) == id);
+    CHECK_FALSE(rTerritory.HasOwner(5, 1)); // sea
+    CHECK_FALSE(rTerritory.HasOwner(4, 3)); // water barrier itself
+    CHECK_FALSE(rTerritory.HasOwner(4, 5)); // land beyond the cut
 }
 
 TEST_CASE("Sea base claims Euclidean radius-3 contiguous sea only", "[territory]")
@@ -151,7 +152,7 @@ TEST_CASE("Founding another base expands territory on rebuild", "[territory]")
     fixture.MakeFactionBase(faction, 0, 0);
     RebuildTerritory_(fixture);
     REQUIRE(fixture.map.GetTerritory().GetOwner(0, 0) == faction.GetFactionId());
-    // (8,8) from (0,0): 128 > 50, outside the first base's disk.
+    // (8,8) from (0,0): wrapped dx=-1, dy=8 → 65 > 50, outside the first base's disk.
     REQUIRE_FALSE(fixture.map.GetTerritory().HasOwner(8, 8));
 
     fixture.MakeFactionBase(faction, 8, 8);
@@ -166,4 +167,52 @@ TEST_CASE("Workable area matches Euclidean radius 2", "[territory][workable]")
     CHECK(InEuclideanRadius(1, 2, 2));
     CHECK_FALSE(InEuclideanRadius(2, 2, 2));
     CHECK(InEuclideanRadius(0, 2, 2));
+}
+
+TEST_CASE("Territory BFS wraps horizontally when the long path is water", "[territory][wrap]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    const int width = fixture.map.GetWidth();
+
+    for (int y = 0; y < fixture.map.GetHeight(); ++y)
+    {
+        for (int x = 0; x < width; ++x)
+        {
+            fixture.At(x, y).SetElevation(100);
+        }
+    }
+    // Land only on the seam columns; the long way around is ocean.
+    for (int y = 0; y < fixture.map.GetHeight(); ++y)
+    {
+        for (int x = 1; x < width - 1; ++x)
+        {
+            fixture.At(x, y).SetElevation(-100);
+        }
+    }
+
+    fixture.MakeFactionBase(faction, 0, 4);
+    RebuildTerritory_(fixture);
+
+    const TerritoryMap& rTerritory = fixture.map.GetTerritory();
+    const FactionId_t id = faction.GetFactionId();
+    CHECK(rTerritory.GetOwner(0, 4) == id);
+    CHECK(rTerritory.GetOwner(width - 1, 4) == id);
+    CHECK(rTerritory.GetOwner(width - 1, 5) == id);
+    CHECK_FALSE(rTerritory.HasOwner(1, 4)); // water
+}
+
+TEST_CASE("Contested tiles prefer the wrap-short base", "[territory][wrap]")
+{
+    actest::FactionFixture fixture;
+    Faction& a = fixture.MakeFaction();
+    Faction& b = fixture.MakeFaction();
+    const int width = fixture.map.GetWidth();
+
+    fixture.MakeFactionBase(a, 0, 4);
+    fixture.MakeFactionBase(b, 3, 4);
+    RebuildTerritory_(fixture);
+
+    // (width-1,4) is wrap-adjacent to A (dx=1) and farther from B.
+    CHECK(fixture.map.GetTerritory().GetOwner(width - 1, 4) == a.GetFactionId());
 }

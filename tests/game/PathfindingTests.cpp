@@ -83,7 +83,7 @@ TEST_CASE("FindPath open land reaches destination with Chebyshev cost", "[moveme
     CHECK(path.tiles.back() == &rDest);
     CHECK(path.totalCostFragments == 3 * k_point);
     CHECK(harness.pathfinder.NextStep(unit, rDest) == path.tiles.front());
-    CHECK(ChebyshevDistance(*path.tiles.front(), rDest) == 2);
+    CHECK(ChebyshevDistance(*path.tiles.front(), rDest, fixture.map.GetWidth()) == 2);
 }
 
 TEST_CASE("FindPath prefers cheaper road corridor over shorter rocky", "[movement][pathfinding]")
@@ -184,12 +184,12 @@ TEST_CASE("FindPath unreachable when visible ZOC walls off destination",
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
-    // Mover pinned at map edge in ZOC with no legal exit; dest behind the enemy.
-    fixture.MakeUnit(enemy, 1, 4, {"test_chassis"});
-    Unit& mover = fixture.MakeUnit(player, 0, 4, {"test_chassis"});
-    const Tile& rDest = fixture.At(2, 4);
+    // Mover pinned at the north map edge in ZOC (Y does not wrap); dest behind the enemy.
+    fixture.MakeUnit(enemy, 4, 1, {"test_chassis"});
+    Unit& mover = fixture.MakeUnit(player, 4, 0, {"test_chassis"});
+    const Tile& rDest = fixture.At(4, 2);
 
-    REQUIRE(IsUnitVisibleTo(player, *fixture.map.GetUnitsOnTile(fixture.At(1, 4)).front(),
+    REQUIRE(IsUnitVisibleTo(player, *fixture.map.GetUnitsOnTile(fixture.At(4, 1)).front(),
                             *fixture.ctx));
 
     const Path_t path = harness.pathfinder.FindPath(mover, rDest);
@@ -237,7 +237,7 @@ TEST_CASE("UnitOrderExecutor advances along pathfinder until moves exhausted", "
     harness.orders.Execute(unit);
 
     // 3 tiles away, 2 move points → advances 2 steps.
-    CHECK(ChebyshevDistance(unit.GetTile(), rDest) == 1);
+    CHECK(ChebyshevDistance(unit.GetTile(), rDest, fixture.map.GetWidth()) == 1);
     CHECK(unit.GetMoveFragmentsRemaining() == 0);
     REQUIRE(unit.GetOrder().has_value());
 }
@@ -437,4 +437,24 @@ TEST_CASE("FindPath ignores shrouded rockiness for cost",
     REQUIRE(known.bReachable);
     // Short path pays rocky (+1) on the column-4 step.
     CHECK(known.totalCostFragments == 4 * k_point);
+}
+
+TEST_CASE("FindPath takes the one-step wrap across the map seam", "[movement][pathfinding][wrap]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    PathHarness_ harness(fixture);
+    Faction& faction = fixture.MakeFaction();
+    ExploreAll_(faction, fixture.map);
+
+    const int width = fixture.map.GetWidth();
+    Unit& unit = fixture.MakeUnit(faction, 0, 4, {"test_chassis"});
+    const Tile& rDest = fixture.At(width - 1, 4);
+
+    const Path_t path = harness.pathfinder.FindPath(unit, rDest);
+    REQUIRE(path.bReachable);
+    REQUIRE(path.tiles.size() == 1);
+    CHECK(path.tiles.front() == &rDest);
+    CHECK(path.totalCostFragments == k_point);
+    CHECK(harness.pathfinder.NextStep(unit, rDest) == &rDest);
 }

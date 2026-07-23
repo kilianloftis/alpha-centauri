@@ -85,7 +85,13 @@ WorldView::WorldView(
         [this]() { m_onOpenCommlinks(); }));
 
     const WindowLayout_t rightPanel = ResolveLayout(m_layout, Style().layouts.rightPanel);
-    m_elements.push_back(std::make_unique<MinimapDisplay>(m_rGameState, rightPanel));
+    m_elements.push_back(std::make_unique<MinimapDisplay>(
+        m_rGameState,
+        rightPanel,
+        m_pWorldDisplay->GetViewport(),
+        [this](int tileX, int tileY) {
+            m_pCameraInputController->CenterOnTile(tileX, tileY);
+        }));
 
     // Nested in rightPanel so End Turn sits on top of the minimap (and receives clicks first).
     auto pEndTurn = std::make_unique<EndTurnButton>(
@@ -345,18 +351,19 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
         }
     }
 
-    const float tileSize = m_pWorldDisplay->GetEffectiveTileSize();
-    const int camX = m_pWorldDisplay->GetCameraX();
-    const int camY = m_pWorldDisplay->GetCameraY();
+    const MapViewport& rViewport = m_pWorldDisplay->GetViewport();
 
     auto tile = TileHitTester::HitTestWorldGrid(
         static_cast<float>(rEvent.x), static_cast<float>(rEvent.y),
-        m_mapLayout.x, m_mapLayout.y, tileSize,
-        m_pWorldDisplay->GetVisibleCols(),
-        m_pWorldDisplay->GetVisibleRows());
+        m_mapLayout.x, m_mapLayout.y, rViewport.TileSize(),
+        rViewport.VisibleCols(),
+        rViewport.VisibleRows());
 
-    const int worldX = tile ? tile->first + camX : k_InvalidTileCoord;
-    const int worldY = tile ? tile->second + camY : k_InvalidTileCoord;
+    const auto worldCoords = tile
+        ? rViewport.WorldCoordsAt(tile->first, tile->second)
+        : std::nullopt;
+    const int worldX = worldCoords ? worldCoords->first : k_InvalidTileCoord;
+    const int worldY = worldCoords ? worldCoords->second : k_InvalidTileCoord;
     const Tile* pClickedTile = m_rGameState.GetWorldMap().GetTile(worldX, worldY);
 
     Unit* pControllable = GetControllableSelectedUnit_();

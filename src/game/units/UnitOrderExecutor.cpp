@@ -201,7 +201,7 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
     {
         return std::nullopt;
     }
-    if (!AreChebyshevAdjacent(rAttacker.GetTile(), rTargetTile))
+    if (!AreChebyshevAdjacent(rAttacker.GetTile(), rTargetTile, m_rWorldMap.GetWidth()))
     {
         return std::nullopt;
     }

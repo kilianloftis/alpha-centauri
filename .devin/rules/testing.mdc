@@ -1,0 +1,40 @@
+---
+description: Write requirement-based tests; treat failures as signals, always report them
+alwaysApply: true
+---
+
+# Testing
+
+## Write tests from requirements
+
+Tests encode the intended behavior (spec, design notes, player-visible rules), not the current implementation.
+
+```cpp
+// ❌ BAD — locks in whatever the code does today
+CHECK(path.tiles.size() == impl.CachedHopCount());
+
+ // ✅ GOOD — asserts the requirement (shortest wrap path is one step)
+CHECK(path.tiles.size() == 1);
+CHECK(path.tiles.front() == &rDestAcrossSeam);
+```
+
+When behavior changes, update tests only if the **requirement** changed. Do not weaken or relocate assertions just to make a green suite after an implementation change.
+
+## When a test fails after a change
+
+Decide which is true before editing the test:
+
+1. **Requirements changed** — The product/spec now expects different behavior. Update or replace the test to match the new requirements, and note that in the summary.
+2. **Implementation changed (or regressed)** — The requirement is unchanged. The failure is a bug signal: investigate and fix the code (or explain why the requirement was wrong). Do **not** delete, skip, or dodge the assertion to silence it.
+
+```text
+# ❌ BAD
+Test failed after adding wrap → move the case off the seam / drop the check
+
+# ✅ GOOD
+Test failed after adding wrap → either assert the new wrap requirement, or fix the bug
+```
+
+## Always report failures
+
+In the final summary for the user, **always mention test failures** when any occurred during the work — names or filters, what failed, and whether you treated them as a requirement change or an implementation bug — even if everything passes by the end of the session.

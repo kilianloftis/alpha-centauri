@@ -1,6 +1,7 @@
 #include "ui/world/CombatPresentation.h"
 
 #include "game/map/Tile.h"
+#include "ui/world/MapViewport.h"
 #include "ui/world/UnitMarkerRenderer.h"
 #include "ui/world/WorldDisplay.h"
 
@@ -91,8 +92,7 @@ const CombatRound_t* CombatPresentation::GetDisplayedRound() const
 }
 
 void CombatPresentation::Render(Graphics& rGraphics,
-                                const WorldDisplay& rDisplay,
-                                WindowLayout_t mapLayout) const
+                                const WorldDisplay& rDisplay) const
 {
     const std::optional<UnitId_t> flashingId = GetFlashingUnitId();
     if (!flashingId)
@@ -120,21 +120,16 @@ void CombatPresentation::Render(Graphics& rGraphics,
         return;
     }
 
-    const float tileSize = rDisplay.GetEffectiveTileSize();
-    const int camX = rDisplay.GetCameraX();
-    const int camY = rDisplay.GetCameraY();
-    const int col = pTile->GetX();
-    const int row = pTile->GetY();
-    if (col < camX || col >= camX + rDisplay.GetVisibleCols()
-        || row < camY || row >= camY + rDisplay.GetVisibleRows())
+    const auto origin = rDisplay.GetViewport().PixelOriginOf(pTile->GetX(), pTile->GetY());
+    if (!origin)
     {
         return;
     }
 
-    const float tileX = mapLayout.x + ((col - camX) * tileSize);
-    const float tileY = mapLayout.y + ((row - camY) * tileSize);
     UnitMarkerRenderer::DrawHitOverlay(
-        rGraphics, UnitMarkerRenderer::MarkerRectOnTile(tileX, tileY, tileSize));
+        rGraphics,
+        UnitMarkerRenderer::MarkerRectOnTile(origin->first, origin->second,
+                                             rDisplay.GetEffectiveTileSize()));
 }
 
 void CombatPresentation::StartRound_(size_t roundIndex)

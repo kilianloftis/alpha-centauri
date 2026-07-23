@@ -34,9 +34,9 @@ bool Beats_(const ClaimCandidate_t& rChallenger, const ClaimCandidate_t& rIncumb
     return rChallenger.baseId < rIncumbent.baseId;
 }
 
-int EuclideanDistSq_(int x0, int y0, int x1, int y1)
+int EuclideanDistSq_(int x0, int y0, int x1, int y1, int mapWidth)
 {
-    const int dx = x0 - x1;
+    const int dx = DeltaX(x0, x1, mapWidth);
     const int dy = y0 - y1;
     return dx * dx + dy * dy;
 }
@@ -74,7 +74,7 @@ void ClaimFromBase_(const BaseManager& rBase, const WorldMap& rWorldMap,
         const auto [x, y] = queue.front();
         queue.pop();
 
-        const ClaimCandidate_t challenger{factionId, EuclideanDistSq_(ox, oy, x, y), baseId};
+        const ClaimCandidate_t challenger{factionId, EuclideanDistSq_(ox, oy, x, y, width), baseId};
         ClaimCandidate_t& rIncumbent = rBest[index(x, y)];
         if (rIncumbent.factionId == k_NoFactionOwner || Beats_(challenger, rIncumbent))
         {
@@ -83,17 +83,17 @@ void ClaimFromBase_(const BaseManager& rBase, const WorldMap& rWorldMap,
 
         for (int i = 0; i < 4; ++i)
         {
-            const int nx = x + k_Dx[i];
             const int ny = y + k_Dy[i];
-            if (nx < 0 || ny < 0 || nx >= width || ny >= height)
+            if (ny < 0 || ny >= height)
             {
                 continue;
             }
+            const int nx = WrapX(x + k_Dx[i], width);
             if (visited[index(nx, ny)])
             {
                 continue;
             }
-            if (!InEuclideanRadius(nx - ox, ny - oy, radius))
+            if (!InEuclideanRadius(DeltaX(ox, nx, width), ny - oy, radius))
             {
                 continue;
             }

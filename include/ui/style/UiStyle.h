@@ -66,6 +66,12 @@ struct WorldDisplayStyle
     Color_t sensorLabelColor{};
 };
 
+struct MinimapDisplayStyle
+{
+    Color_t viewportBorderColor{};
+    float viewportBorderWidth{};
+};
+
 struct UnitMarkerStyle
 {
     float fontSizeRatio{};
@@ -512,6 +518,7 @@ public:
     ViewFactoryStyle viewFactory;
     TileRendererStyle tileRenderer;
     WorldDisplayStyle worldDisplay;
+    MinimapDisplayStyle minimapDisplay;
     UnitMarkerStyle unitMarker;
     SelectedUnitPanelStyle selectedUnitPanel;
     LocationPanelStyle locationPanel;

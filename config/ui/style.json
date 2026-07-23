@@ -95,6 +95,12 @@
       0, 0, 0, 255
     ]
   },
+  "minimap_display": {
+    "viewport_border_color": [
+      255, 255, 255, 220
+    ],
+    "viewport_border_width": 1.5
+  },
   "unit_marker": {
     "font_size_ratio": 0.2,
     "width_ratio": 0.22,

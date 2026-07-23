@@ -69,7 +69,7 @@ void CombatView::Render(Graphics& rGraphics)
 {
     m_presentation.Update();
     RefreshPanels_();
-    m_presentation.Render(rGraphics, m_rWorldDisplay, m_mapLayout);
+    m_presentation.Render(rGraphics, m_rWorldDisplay);
     IGameView::Render(rGraphics);
     FinishIfDone_();
 }

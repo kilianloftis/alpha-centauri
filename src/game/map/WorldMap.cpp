@@ -1,4 +1,5 @@
 #include "game/map/WorldMap.h"
+#include "game/map/MapUtils.h"
 #include "game/units/Unit.h"
 
 namespace ac
@@ -35,19 +36,21 @@ int WorldMap::GetHeight() const
 
 Tile* WorldMap::GetTile(int x, int y)
 {
-    if (x < 0 || x >= m_width || y < 0 || y >= m_height)
+    if (y < 0 || y >= m_height || m_width <= 0)
     {
         return nullptr;
     }
+    x = WrapX(x, m_width);
     return m_tiles[GetTileIndex(x, y)].get();
 }
 
 const Tile* WorldMap::GetTile(int x, int y) const
 {
-    if (x < 0 || x >= m_width || y < 0 || y >= m_height)
+    if (y < 0 || y >= m_height || m_width <= 0)
     {
         return nullptr;
     }
+    x = WrapX(x, m_width);
     return m_tiles[GetTileIndex(x, y)].get();
 }
 

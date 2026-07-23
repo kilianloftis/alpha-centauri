@@ -49,8 +49,7 @@ public:
     // Live units use UnitMarkerRenderer's last-frame cache; destroyed units fall back to
     // their pre-fight tile.
     void Render(Graphics& rGraphics,
-                const WorldDisplay& rDisplay,
-                WindowLayout_t mapLayout) const;
+                const WorldDisplay& rDisplay) const;
 
 private:
     enum class Phase_t

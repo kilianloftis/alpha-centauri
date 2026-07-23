@@ -289,3 +289,22 @@ TEST_CASE("ResetAllAssignments clears user locks and reassigns by yield", "[work
     CHECK_FALSE(rPop.IsUserAssigned());
     CHECK(rPop.GetTile() == &richTile);
 }
+
+TEST_CASE("Workable area wraps horizontally across the map seam", "[worker][workable][wrap]")
+{
+    actest::BaseFixture fixture;
+    const int width = fixture.map.GetWidth();
+    BaseManager& base = fixture.MakeBase(0, 4);
+
+    base.GetWorkerAssignments().UnassignAll();
+    Pop& rPop = FirstPop(base);
+    Pop& rPop2 = LastPop(base);
+
+    // Euclidean radius 2 across the wrap: (width-1,4) and (width-1,5) are workable.
+    REQUIRE(base.GetWorkerAssignments().AssignWorker(rPop, &fixture.At(width - 1, 4)));
+    REQUIRE(base.GetWorkerAssignments().AssignWorker(rPop2, &fixture.At(width - 1, 5)));
+
+    // (width-2,6): dx=2, dy=2 — outside the workable disk (corners cut).
+    base.GetWorkerAssignments().UnassignWorker(rPop);
+    CHECK_FALSE(base.GetWorkerAssignments().AssignWorker(rPop, &fixture.At(width - 2, 6)));
+}

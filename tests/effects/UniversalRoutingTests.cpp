@@ -229,3 +229,20 @@ TEST_CASE("Unit aura: ThisUnit effects on a unit's components never leak into ti
     CHECK(yield.minerals == 0);
     CHECK(yield.energy == 0);
 }
+
+TEST_CASE("Unit aura wraps horizontally across the map seam",
+          "[effects][routing][aura][wrap]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    const int width = fixture.map.GetWidth();
+
+    fixture.MakeUnit(faction, 0, 4, {"sensor_pod"}); // +25% defense, radius 2
+
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(width - 1, 4), faction.GetFactionId())
+          == Approx(1.25));
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(width - 2, 4), faction.GetFactionId())
+          == Approx(1.25));
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(width - 3, 4), faction.GetFactionId())
+          == Approx(1.0));
+}

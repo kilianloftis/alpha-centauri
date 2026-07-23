@@ -3,6 +3,7 @@
 #include "game/map/WorldMap.h"
 #include "input/MouseEventQueue.h"
 #include "ui/style/UiStyle.h"
+#include "ui/world/MapViewport.h"
 #include "ui/world/WorldDisplay.h"
 
 #include <algorithm>
@@ -28,41 +29,39 @@ CameraInputController::CameraInputController(WorldDisplay& rWorldDisplay, const 
 {
 }
 
-CameraInputController::CameraBounds_t CameraInputController::ComputeMaxCamera_() const
+int CameraInputController::ComputeMaxCameraY_() const
 {
     const int initialOffset = Style().cameraInput.initialCameraOffset;
-    return {
-        std::max(initialOffset, m_rWorldMap.GetWidth()  - m_rWorldDisplay.GetVisibleCols()),
-        std::max(initialOffset, m_rWorldMap.GetHeight() - m_rWorldDisplay.GetVisibleRows())
-    };
+    return std::max(initialOffset, m_rWorldMap.GetHeight() - m_rWorldDisplay.GetVisibleRows());
 }
 
 bool CameraInputController::HandleKey(const KeyEvent_t& rEvent)
 {
     const auto& s = Style().cameraInput;
-    const auto [maxCamX, maxCamY] = ComputeMaxCamera_();
+    const int maxCamY = ComputeMaxCameraY_();
+    MapViewport& rViewport = m_rWorldDisplay.GetViewport();
 
-    int camX = m_rWorldDisplay.GetCameraX();
-    int camY = m_rWorldDisplay.GetCameraY();
+    const int camX = rViewport.CameraX();
+    const int camY = rViewport.CameraY();
 
     if (rEvent.key == Key_t::ArrowLeft)
     {
-        m_rWorldDisplay.SetCameraOffset(std::max(s.initialCameraOffset, camX - s.cameraScrollStep), camY);
+        rViewport.ScrollBy(-s.cameraScrollStep, 0);
         return true;
     }
     else if (rEvent.key == Key_t::ArrowRight)
     {
-        m_rWorldDisplay.SetCameraOffset(std::min(maxCamX, camX + s.cameraScrollStep), camY);
+        rViewport.ScrollBy(s.cameraScrollStep, 0);
         return true;
     }
     else if (rEvent.key == Key_t::ArrowUp)
     {
-        m_rWorldDisplay.SetCameraOffset(camX, std::max(s.initialCameraOffset, camY - s.cameraScrollStep));
+        rViewport.SetCamera(camX, std::max(s.initialCameraOffset, camY - s.cameraScrollStep));
         return true;
     }
     else if (rEvent.key == Key_t::ArrowDown)
     {
-        m_rWorldDisplay.SetCameraOffset(camX, std::min(maxCamY, camY + s.cameraScrollStep));
+        rViewport.SetCamera(camX, std::min(maxCamY, camY + s.cameraScrollStep));
         return true;
     }
 
@@ -72,12 +71,12 @@ bool CameraInputController::HandleKey(const KeyEvent_t& rEvent)
 void CameraInputController::CenterOnTile(int tileX, int tileY)
 {
     const int initialOffset = Style().cameraInput.initialCameraOffset;
-    const auto [maxCamX, maxCamY] = ComputeMaxCamera_();
-    const int cameraX = std::clamp(
-        tileX - (m_rWorldDisplay.GetVisibleCols() / 2), initialOffset, maxCamX);
+    const int maxCamY = ComputeMaxCameraY_();
+    MapViewport& rViewport = m_rWorldDisplay.GetViewport();
+    const int cameraX = tileX - (rViewport.VisibleCols() / 2);
     const int cameraY = std::clamp(
-        tileY - (m_rWorldDisplay.GetVisibleRows() / 2), initialOffset, maxCamY);
-    m_rWorldDisplay.SetCameraOffset(cameraX, cameraY);
+        tileY - (rViewport.VisibleRows() / 2), initialOffset, maxCamY);
+    rViewport.SetCamera(cameraX, cameraY);
 }
 
 void CameraInputController::Update(bool bEnabled)
@@ -96,7 +95,8 @@ void CameraInputController::Update(bool bEnabled)
 void CameraInputController::ApplyEdgeScroll_(int mouseX, int mouseY)
 {
     const auto& s = Style().cameraInput;
-    const auto [maxCamX, maxCamY] = ComputeMaxCamera_();
+    const int maxCamY = ComputeMaxCameraY_();
+    MapViewport& rViewport = m_rWorldDisplay.GetViewport();
 
     const float relX = static_cast<float>(mouseX - m_mapLayout.x) / m_mapLayout.width;
     const float relY = static_cast<float>(mouseY - m_mapLayout.y) / m_mapLayout.height;
@@ -141,9 +141,8 @@ void CameraInputController::ApplyEdgeScroll_(int mouseX, int mouseY)
         m_edgeScrollAccumulatorX -= static_cast<float>(deltaX);
         m_edgeScrollAccumulatorY -= static_cast<float>(deltaY);
 
-        const int newCamX = std::clamp(m_rWorldDisplay.GetCameraX() + deltaX, s.initialCameraOffset, maxCamX);
-        const int newCamY = std::clamp(m_rWorldDisplay.GetCameraY() + deltaY, s.initialCameraOffset, maxCamY);
-        m_rWorldDisplay.SetCameraOffset(newCamX, newCamY);
+        const int newCamY = std::clamp(rViewport.CameraY() + deltaY, s.initialCameraOffset, maxCamY);
+        rViewport.SetCamera(rViewport.CameraX() + deltaX, newCamY);
     }
 }
 

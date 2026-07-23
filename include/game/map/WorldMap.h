@@ -22,7 +22,7 @@ public:
     int GetWidth() const;
     int GetHeight() const;
 
-    // Tile access
+    // Tile access. X wraps horizontally (cylinder); Y out of bounds returns nullptr.
     Tile* GetTile(int x, int y);
     const Tile* GetTile(int x, int y) const;
 

@@ -110,6 +110,14 @@ WorldDisplayStyle ParseWorldDisplayStyle_(const nlohmann::json& j)
     return s;
 }
 
+MinimapDisplayStyle ParseMinimapDisplayStyle_(const nlohmann::json& j)
+{
+    MinimapDisplayStyle s{};
+    s.viewportBorderColor = ParseColor_(j, "viewport_border_color");
+    s.viewportBorderWidth = j.at("viewport_border_width").get<float>();
+    return s;
+}
+
 UnitMarkerStyle ParseUnitMarkerStyle_(const nlohmann::json& j)
 {
     UnitMarkerStyle s{};
@@ -632,6 +640,7 @@ void UiStyle::Load(const std::string& filePath)
     style.viewFactory = ParseViewFactoryStyle_(root.at("view_factory"));
     style.tileRenderer = ParseTileRendererStyle_(root.at("tile_renderer"));
     style.worldDisplay = ParseWorldDisplayStyle_(root.at("world_display"));
+    style.minimapDisplay = ParseMinimapDisplayStyle_(root.at("minimap_display"));
     style.unitMarker = ParseUnitMarkerStyle_(root.at("unit_marker"));
     style.selectedUnitPanel = ParseSelectedUnitPanelStyle_(root.at("selected_unit_panel"));
     style.locationPanel = ParseLocationPanelStyle_(root.at("location_panel"));

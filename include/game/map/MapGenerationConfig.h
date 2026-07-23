@@ -13,7 +13,7 @@ struct MapGenerationConfig_t
     int height = 150;
     unsigned int seed = 0;              // 0 = random
     float oceanCoverage = 0.6f;         // target water fraction [0,1]
-    std::string presetId = "continents";
+    std::string presetId = "islands";
 };
 
 } // namespace ac

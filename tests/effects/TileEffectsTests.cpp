@@ -389,3 +389,40 @@ TEST_CASE("Aura collection: non-ThisTile and Instantaneous effects do not leak i
     CHECK(neighborYield.nutrients == 0); // ThisBase-scoped effect must not apply here
     CHECK(neighborYield.minerals == 0);  // Instantaneous effect must not apply continuously
 }
+
+TEST_CASE("Sensor aura wraps horizontally across the map seam",
+          "[effects][tile][aura][wrap][territory]")
+{
+    actest::FactionFixture fixture;
+    Faction& owner = fixture.MakeFaction();
+    const int width = fixture.map.GetWidth();
+    fixture.MakeFactionBase(owner, 4, 4);
+    fixture.ctx->AddImprovementWithEffects(fixture.At(0, 4), "Sensor");
+    const FactionId_t id = owner.GetFactionId();
+
+    REQUIRE(fixture.map.GetTerritory().GetOwner(0, 4) == id);
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(width - 1, 4), id) == Approx(1.25));
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(width - 2, 4), id) == Approx(1.25));
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(width - 3, 4), id) == Approx(1.0));
+}
+
+TEST_CASE("Condenser moisture aura wraps horizontally across the map seam",
+          "[effects][tile][moisture][wrap]")
+{
+    actest::WorldFixture world;
+    const int width = world.map.GetWidth();
+    Tile& dryAcrossSeam = world.At(width - 1, 4);
+    dryAcrossSeam.SetBaseMoisture(Moisture_t::Arid);
+    dryAcrossSeam.SetMoisture(Moisture_t::Arid);
+
+    Tile& dryTooFar = world.At(width - 2, 4);
+    dryTooFar.SetBaseMoisture(Moisture_t::Arid);
+    dryTooFar.SetMoisture(Moisture_t::Arid);
+
+    // Condenser radius 1 at the west edge reaches one tile across the wrap.
+    world.ctx->AddImprovementWithEffects(world.At(0, 4), "Condenser");
+
+    CHECK(dryAcrossSeam.GetMoisture() == Moisture_t::Moist);
+    CHECK(dryAcrossSeam.GetBaseMoisture() == Moisture_t::Arid);
+    CHECK(dryTooFar.GetMoisture() == Moisture_t::Arid);
+}

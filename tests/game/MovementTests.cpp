@@ -291,11 +291,11 @@ TEST_CASE("Move order cancels when fog of war reveals a hostile",
     mover.SetOrder(MoveOrder_t{&fixture.At(6, 4)});
 
     REQUIRE_FALSE(IsUnitVisibleTo(player, hostile, *fixture.ctx));
-    const int distBefore = ChebyshevDistance(mover.GetTile(), fixture.At(6, 4));
+    const int distBefore = ChebyshevDistance(mover.GetTile(), fixture.At(6, 4), fixture.map.GetWidth());
 
     move.orders.Execute(mover);
 
-    CHECK(ChebyshevDistance(mover.GetTile(), fixture.At(6, 4)) == distBefore - 1);
+    CHECK(ChebyshevDistance(mover.GetTile(), fixture.At(6, 4), fixture.map.GetWidth()) == distBefore - 1);
     CHECK(IsUnitVisibleTo(player, hostile, *fixture.ctx));
     CHECK_FALSE(mover.GetOrder().has_value());
 }
@@ -431,7 +431,7 @@ TEST_CASE("UnitOrderExecutor advances until moves run out", "[movement][orders]"
     move.orders.Execute(unit);
 
     // 3 tiles away, 2 move points → advances 2 steps and runs out of moves.
-    CHECK(ChebyshevDistance(unit.GetTile(), rDest) == 1);
+    CHECK(ChebyshevDistance(unit.GetTile(), rDest, fixture.map.GetWidth()) == 1);
     CHECK(unit.GetMoveFragmentsRemaining() == 0);
     REQUIRE(unit.GetOrder().has_value()); // not at destination yet
 }
@@ -444,11 +444,12 @@ TEST_CASE("Pathfinder NextStep respects ZOC", "[movement][zoc][pathfinding]")
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
-    // Mover pinned at map edge in ZOC: no legal exit toward dest behind the enemy.
-    fixture.MakeUnit(enemy, 1, 4, {"test_chassis"});
-    Unit& mover = fixture.MakeUnit(player, 0, 4, {"test_chassis"});
+    // Mover pinned at the north map edge in ZOC (Y does not wrap): no legal exit
+    // toward dest behind the enemy.
+    fixture.MakeUnit(enemy, 4, 1, {"test_chassis"});
+    Unit& mover = fixture.MakeUnit(player, 4, 0, {"test_chassis"});
 
-    CHECK(move.pathfinder.NextStep(mover, fixture.At(2, 4)) == nullptr);
+    CHECK(move.pathfinder.NextStep(mover, fixture.At(4, 2)) == nullptr);
 }
 
 TEST_CASE("TryStep spends tile move-cost fragments", "[movement][move-cost]")
@@ -621,4 +622,59 @@ TEST_CASE("TreatFungusAsRoad uses road cost without forced end-turn", "[movement
     REQUIRE(move.orders.TryStep(unit, fungus, stepOrder));
     CHECK(&unit.GetTile() == &fungus);
     CHECK(unit.GetMoveFragmentsRemaining() == 2 * k_point - k_point / 3);
+}
+
+TEST_CASE("Step wraps horizontally across the map seam", "[movement][wrap]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    MovementHarness_ move(fixture);
+    Faction& faction = fixture.MakeFaction();
+    const int width = fixture.map.GetWidth();
+    Unit& unit = fixture.MakeUnit(faction, 0, 4, {"test_chassis"});
+
+    CHECK(move.steps.CanStep(unit, unit.GetTile(), fixture.At(width - 1, 4)));
+    CHECK_FALSE(move.steps.CanStep(unit, unit.GetTile(), fixture.At(width - 2, 4)));
+
+    MoveOrder_t wrapStep{&fixture.At(width - 1, 4)};
+    REQUIRE(move.orders.TryStep(unit, fixture.At(width - 1, 4), wrapStep));
+    CHECK(unit.GetTile().GetX() == width - 1);
+}
+
+TEST_CASE("Hostile ZOC wraps horizontally across the map seam", "[movement][zoc][wrap]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    MovementHarness_ move(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    const int width = fixture.map.GetWidth();
+
+    fixture.MakeUnit(enemy, 0, 4, {"test_chassis"});
+    Unit& mover = fixture.MakeUnit(player, width - 1, 4, {"test_chassis"});
+
+    REQUIRE(move.steps.IsTileInHostileZoc(mover, mover.GetTile()));
+    // ZOC-to-ZOC along the seam is blocked.
+    CHECK_FALSE(move.steps.CanStep(mover, mover.GetTile(), fixture.At(width - 1, 5)));
+    // Leaving to Chebyshev 2 from the enemy (across the wrap) is allowed.
+    CHECK_FALSE(move.steps.IsTileInHostileZoc(mover, fixture.At(width - 2, 3)));
+    CHECK(move.steps.CanStep(mover, mover.GetTile(), fixture.At(width - 2, 3)));
+}
+
+TEST_CASE("Attack wraps horizontally across the map seam", "[movement][zoc][wrap]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    MovementHarness_ move(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    const int width = fixture.map.GetWidth();
+
+    fixture.MakeUnit(enemy, width - 1, 4, {"test_chassis"});
+    Unit& mover = fixture.MakeUnit(player, 0, 4, {"test_chassis", "test_weapon"});
+
+    CHECK_FALSE(move.orders.TryAttack(mover, fixture.At(width - 2, 4))); // not adjacent
+    const auto result = move.orders.TryAttack(mover, fixture.At(width - 1, 4));
+    REQUIRE(result.has_value());
+    CHECK(mover.GetTile().GetX() == 0);
 }

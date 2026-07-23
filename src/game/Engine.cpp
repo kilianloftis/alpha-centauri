@@ -144,10 +144,11 @@ void Engine::Initialize_()
     });
 
     // Create factions from config with a starting base each.
+    // Player base at x=0 so horizontal wrap is easy to exercise in the viewport.
     const int centerX = m_pGameState->GetWorldMap().GetWidth() / 2;
     const int centerY = m_pGameState->GetWorldMap().GetHeight() / 2;
     const std::vector<std::pair<int, int>> startPositions = {
-        {centerX, centerY},
+        {0, centerY},
         {centerX + 3, centerY + 3},
     };
 

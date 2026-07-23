@@ -30,7 +30,7 @@ TEST_CASE("GameSettings Load leaves defaults when file is missing", "[GameSettin
     CHECK(settings.GetMapGeneration().width == 200);
     CHECK(settings.GetMapGeneration().height == 150);
     CHECK(settings.GetMapGeneration().oceanCoverage == Approx(0.6f));
-    CHECK(settings.GetMapGeneration().presetId == "continents");
+    CHECK(settings.GetMapGeneration().presetId == "islands");
 }
 
 TEST_CASE("GameSettings Save and Load round-trip pause_at_end_of_turn", "[GameSettings]")
@@ -119,7 +119,7 @@ TEST_CASE("GameSettings Load keeps map_generation defaults when subsection is ab
     loaded.Load(path.string());
     CHECK(loaded.IsPauseAtEndOfTurn());
     CHECK(loaded.GetMapGeneration().width == 200);
-    CHECK(loaded.GetMapGeneration().presetId == "continents");
+    CHECK(loaded.GetMapGeneration().presetId == "islands");
 
     std::filesystem::remove(path);
 }

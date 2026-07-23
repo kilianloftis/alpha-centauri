@@ -3,6 +3,7 @@
 #include "graphics/Graphics.h"
 #include "game/units/Unit.h"
 #include "ui/UIElement.h"
+#include "ui/world/MapViewport.h"
 #include "ui/world/UnitMarkerRenderer.h"
 
 #include <optional>
@@ -31,8 +32,11 @@ public:
     // the next Render call.
     void SetPathPreview(const Path_t* pPath);
 
-    // Set the top-left tile coordinate of the visible viewport
+    // Set the top-left tile coordinate of the visible viewport (X wraps).
     void SetCameraOffset(int tileX, int tileY);
+
+    MapViewport& GetViewport() { return m_viewport; }
+    const MapViewport& GetViewport() const { return m_viewport; }
 
     float GetEffectiveTileSize() const;
     int GetCameraX() const;
@@ -51,25 +55,16 @@ private:
     const Unit* m_pSelectedUnit = nullptr;
     const Path_t* m_pPathPreview = nullptr;
     UnitMarkerRenderer m_unitMarkers;
-
-    WindowLayout_t m_layout;
-    float m_tileSize = 0.0f;
-    float m_effectiveTileSize = 40.0f;
-    int m_visibleCols = 0;
-    int m_visibleRows = 0;
-    int m_cameraX = 0;
-    int m_cameraY = 0;
-
-    const WorldMap& GetWorldMap_() const;
+    MapViewport m_viewport;
 
     // Render base markers with owner color and population info
-    void RenderBases_(Graphics& rGraphics, int colStart, int rowStart, int colEnd, int rowEnd);
+    void RenderBases_(Graphics& rGraphics);
 
     // Render Sensor tower markers on explored tiles
-    void RenderSensors_(Graphics& rGraphics, int colStart, int rowStart, int colEnd, int rowEnd);
+    void RenderSensors_(Graphics& rGraphics);
 
     // Render path preview as a line through tile centers
-    void RenderPathPreview_(Graphics& rGraphics, int colStart, int rowStart);
+    void RenderPathPreview_(Graphics& rGraphics);
 };
 
 } // namespace ac

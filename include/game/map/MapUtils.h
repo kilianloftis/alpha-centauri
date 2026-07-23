@@ -8,6 +8,35 @@
 namespace ac
 {
 
+// Horizontal cylinder wrap: map X is continuous (planet wraps east/west). Y does not wrap.
+// Returns x in [0, width). width must be > 0.
+inline int WrapX(int x, int width)
+{
+    int wrapped = x % width;
+    if (wrapped < 0)
+    {
+        wrapped += width;
+    }
+    return wrapped;
+}
+
+// Shortest signed horizontal delta from xFrom to xTo on a cylinder of the given width.
+// Result is in (-width/2, width/2]. width must be > 0.
+inline int DeltaX(int xFrom, int xTo, int mapWidth)
+{
+    int dx = xTo - xFrom;
+    dx %= mapWidth;
+    if (dx > mapWidth / 2)
+    {
+        dx -= mapWidth;
+    }
+    else if (dx < -(mapWidth - 1) / 2)
+    {
+        dx += mapWidth;
+    }
+    return dx;
+}
+
 // Discrete Euclidean disk shared by base territory and the workable area:
 // dx^2 + dy^2 <= radius^2 + 1. Radius 2 yields the classic SMAC 5x5-minus-corners
 // workable cross (20 tiles around the base).
@@ -16,21 +45,18 @@ inline bool InEuclideanRadius(int dx, int dy, int radius)
     return dx * dx + dy * dy <= radius * radius + 1;
 }
 
-// King-move / square distance: max(|dx|, |dy|). Used by vision, aura radii, ZOC, and
-// adjacent unit steps (see ForEachTileInChebyshevRadius).
-inline int ChebyshevDistance(int dx, int dy)
+// King-move / square distance on a horizontally wrapping map (Y does not wrap):
+// max(|DeltaX|, |dy|). Used by vision, aura radii, ZOC, and adjacent unit steps
+// (see ForEachTileInChebyshevRadius).
+inline int ChebyshevDistance(const Tile& rA, const Tile& rB, int mapWidth)
 {
-    return std::max(std::abs(dx), std::abs(dy));
+    return std::max(std::abs(DeltaX(rA.GetX(), rB.GetX(), mapWidth)),
+                    std::abs(rA.GetY() - rB.GetY()));
 }
 
-inline int ChebyshevDistance(const Tile& rA, const Tile& rB)
+inline bool AreChebyshevAdjacent(const Tile& rA, const Tile& rB, int mapWidth)
 {
-    return ChebyshevDistance(rA.GetX() - rB.GetX(), rA.GetY() - rB.GetY());
-}
-
-inline bool AreChebyshevAdjacent(const Tile& rA, const Tile& rB)
-{
-    return ChebyshevDistance(rA, rB) == 1;
+    return ChebyshevDistance(rA, rB, mapWidth) == 1;
 }
 
 // Calls fn(tile_ptr, distance) for every tile within Chebyshev `radius` tiles of rOrigin
@@ -44,7 +70,7 @@ inline bool AreChebyshevAdjacent(const Tile& rA, const Tile& rB)
 // WorldMapT can be WorldMap or const WorldMap — the tile pointer type in the callback matches
 // automatically (Tile* from WorldMap&, const Tile* from const WorldMap&).
 //
-// Null tile pointers (map edge) are silently skipped before fn is invoked.
+// X wraps via WorldMap::GetTile; null tiles (Y out of bounds) are skipped before fn is invoked.
 template<typename WorldMapT, typename Fn>
 void ForEachTileInChebyshevRadius(const Tile& rOrigin, WorldMapT& rWorldMap,
                                    int radius, bool includeOrigin, Fn&& fn)
@@ -53,7 +79,7 @@ void ForEachTileInChebyshevRadius(const Tile& rOrigin, WorldMapT& rWorldMap,
     {
         for (int dx = -radius; dx <= radius; ++dx)
         {
-            const int distance = ChebyshevDistance(dx, dy);
+            const int distance = std::max(std::abs(dx), std::abs(dy));
             if (distance > radius)
             {
                 continue;
@@ -74,6 +100,7 @@ void ForEachTileInChebyshevRadius(const Tile& rOrigin, WorldMapT& rWorldMap,
 
 // Calls fn(tile_ptr, distSq) for every tile in the discrete Euclidean disk
 // dx^2 + dy^2 <= radius^2 + 1 (see InEuclideanRadius). `distSq` is dx^2 + dy^2.
+// X wraps via WorldMap::GetTile.
 template<typename WorldMapT, typename Fn>
 void ForEachTileInEuclideanRadius(const Tile& rOrigin, WorldMapT& rWorldMap,
                                   const int radius, bool includeOrigin, Fn&& fn)
@@ -102,7 +129,7 @@ void ForEachTileInEuclideanRadius(const Tile& rOrigin, WorldMapT& rWorldMap,
 
 // The SMAC base workable area: Euclidean radius 2 (dx^2 + dy^2 <= 5), which is a 5x5
 // square with the four corners removed. Skips rOrigin itself (20 surrounding tiles).
-// WorldMapT can be WorldMap or const WorldMap.
+// WorldMapT can be WorldMap or const WorldMap. X wraps.
 template<typename WorldMapT, typename Fn>
 void ForEachTileInWorkableArea(const Tile& rOrigin, WorldMapT& rWorldMap, Fn&& fn)
 {
