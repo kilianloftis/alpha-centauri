@@ -135,6 +135,13 @@ enum class RuleFlagId_t
     // Any combat involving a unit with this flag uses psi strengths and damage.
     ForcesPsiCombat,
 
+    // Non-combat special equipment (weapon-slot) capability gates. Consumers are future
+    // Found Base / Terraform / Supply / Probe order systems — ResolveFlag only for now.
+    FoundBase,
+    Terraform,
+    SupplyCrawl,
+    ProbeTeam,
+
     // Unit / tile flags
     // Blocks the *opponent* from disengaging when carried ThisUnit (Comm Jammer), or blocks
     // a unit on this tile from disengaging when declared ThisTile (Base, Bunker, Airbase).

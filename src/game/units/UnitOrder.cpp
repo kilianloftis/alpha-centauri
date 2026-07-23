@@ -36,6 +36,17 @@ std::string HoldForTurnsOrder_t::ToString() const
         + (turnsRemaining == 1 ? " turn" : " turns");
 }
 
+std::string SupplyCrawlOrder_t::ToString() const
+{
+    switch (resource)
+    {
+        case StatId_t::Nutrients: return "Supply Nutrients";
+        case StatId_t::Minerals:  return "Supply Minerals";
+        case StatId_t::Energy:    return "Supply Energy";
+        default:                  return "Supply";
+    }
+}
+
 std::string ToString(const UnitOrder_t& rOrder)
 {
     return std::visit([](const auto& rConcreteOrder) {

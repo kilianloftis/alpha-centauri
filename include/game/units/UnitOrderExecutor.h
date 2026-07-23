@@ -19,6 +19,7 @@ struct MoveOrder_t;
 struct HoldOrder_t;
 struct HoldUntilHealedOrder_t;
 struct HoldForTurnsOrder_t;
+struct SupplyCrawlOrder_t;
 
 // Applies step/attack/order actions using shared MoveCostCalculator, StepEvaluator, and
 // Pathfinder references. Path search and step legality are shared world queries owned by
@@ -59,6 +60,7 @@ private:
     void Execute_(Unit& rUnit, HoldOrder_t& rOrder);
     void Execute_(Unit& rUnit, HoldUntilHealedOrder_t& rOrder);
     void Execute_(Unit& rUnit, HoldForTurnsOrder_t& rOrder);
+    void Execute_(Unit& rUnit, SupplyCrawlOrder_t& rOrder);
 
     Unit* FindVisibleHostileOnTile_(const Unit& rAttacker, const Tile& rTile) const;
     void RevealBlockingUnits_(Unit& rMover, const StepEvaluation_t& rEval);

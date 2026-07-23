@@ -1,5 +1,6 @@
 #include "ui/world/UnitOrderInputController.h"
 
+#include "game/effects/EffectEnums.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "ui/style/UiStyle.h"
@@ -11,10 +12,23 @@ bool UnitOrderInputController::HandleKey(const KeyEvent_t& rEvent, Unit* pSelect
 {
     m_bOrderAssigned = false;
     m_bAttackRequested = false;
+    m_bSupplyCrawlRequested = false;
     m_pAttackTarget = nullptr;
 
     if (!pSelectedUnit)
     {
+        return false;
+    }
+
+    // O opens the supply-crawl resource picker (WorldView reacts to WasSupplyCrawlRequested).
+    // Only consume the key when the unit can actually crawl, so global O (Settings) still works.
+    if (rEvent.key == Key_t::O)
+    {
+        if (pSelectedUnit->GetFlag(RuleFlagId_t::SupplyCrawl) && pSelectedUnit->GetHomeBase())
+        {
+            m_bSupplyCrawlRequested = true;
+            return true;
+        }
         return false;
     }
 
@@ -34,6 +48,7 @@ bool UnitOrderInputController::HandleMouse(const MouseEvent_t& rEvent, Unit* pSe
 {
     m_bOrderAssigned = false;
     m_bAttackRequested = false;
+    m_bSupplyCrawlRequested = false;
     m_pAttackTarget = nullptr;
 
     // --- Left-click: long-press path preview + move order / adjacent attack ---

@@ -39,6 +39,7 @@ add_executable(effects-tests
     game/CombatResolverTests.cpp
     game/UnitNamingTests.cpp
     game/UnitOrderTests.cpp
+    game/SupplyCrawlTests.cpp
     game/VisibilityTests.cpp
     game/UnitVisibilityTests.cpp
     game/MovementTests.cpp
@@ -46,6 +47,7 @@ add_executable(effects-tests
     game/PathfindingTests.cpp
     game/TerritoryTests.cpp
     game/WorkerAssignmentTests.cpp
+    game/HomeBaseTests.cpp
     game/TurnProcessorTests.cpp
     game/GameSettingsTests.cpp
     game/RequiredTechValidatorTests.cpp

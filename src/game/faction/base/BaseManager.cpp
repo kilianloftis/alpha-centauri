@@ -66,6 +66,7 @@ BaseManager::BaseManager(
     , m_tile(tile)
     , m_rTileEffects(rTileEffects)
     , m_centerTileClaim(ClaimCenterTile_(rTileEffects, tile))
+    , m_homeUnits(*this)
     , m_pBuildingRegistry(pBuildingRegistry)
     , m_pSocialRatings(pSocialRatingRegistry)
     , m_pResearch(pResearchManager)
@@ -76,7 +77,8 @@ BaseManager::BaseManager(
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(ComputeWorkableTiles_(rTileEffects, tile), *m_pPopulation, rTileEffects, rTileEffects.GetWorldMap().GetWorkedTiles()))
     , m_pBuildings(std::make_unique<BuildingManager>(pBuildingRegistry, pSecretProjectCalculator, pResearchManager))
     , m_pResources(std::make_unique<ResourceManager>(
-          m_pWorkerAssignments.get(), pEconomyManager, m_pBuildings.get(), &m_tile, &m_rTileEffects))
+          m_pWorkerAssignments.get(), pEconomyManager, m_pBuildings.get(), &m_tile, &m_rTileEffects,
+          &m_homeUnits))
     , m_pProduction(std::make_unique<ProductionManager>())
     , m_name(std::move(name))
 {
@@ -370,6 +372,16 @@ FactionId_t BaseManager::GetFactionId() const
 int BaseManager::GetBaseId() const
 {
     return m_baseId;
+}
+
+HomeBaseIndex& BaseManager::GetHomeUnits()
+{
+    return m_homeUnits;
+}
+
+const HomeBaseIndex& BaseManager::GetHomeUnits() const
+{
+    return m_homeUnits;
 }
 
 } // namespace ac

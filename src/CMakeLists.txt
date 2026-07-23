@@ -28,6 +28,7 @@ add_library(ac-core STATIC
     game/faction/FirstContactResolver.cpp
     game/faction/SocialEngineeringManager.cpp
     game/faction/base/BaseManager.cpp
+    game/faction/base/HomeBaseIndex.cpp
     game/faction/base/buildings/BuildingManager.cpp
     game/faction/base/production/ProductionManager.cpp
     game/faction/base/production/ProductionCostCalculator.cpp
@@ -196,6 +197,7 @@ add_executable(alpha-centauri
     ui/ViewFactory.cpp
     ui/style/UiStyle.cpp
     ui/world/WorldView.cpp
+    ui/world/SupplyCrawlPopup.cpp
     ui/world/CameraInputController.cpp
     ui/world/UnitOrderInputController.cpp
     ui/world/CombatPresentation.cpp

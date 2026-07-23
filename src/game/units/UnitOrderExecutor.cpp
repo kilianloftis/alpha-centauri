@@ -316,4 +316,11 @@ void UnitOrderExecutor::Execute_(Unit& rUnit, HoldForTurnsOrder_t& rOrder)
         rUnit.ClearOrder();
 }
 
+void UnitOrderExecutor::Execute_(Unit& rUnit, SupplyCrawlOrder_t& rOrder)
+{
+    // Harvest happens in ResourceCollection via HomeBaseIndex units in ResourceManager.
+    (void)rUnit;
+    (void)rOrder;
+}
+
 } // namespace ac

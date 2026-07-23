@@ -1,10 +1,15 @@
 #include "game/faction/base/resources/ResourceManager.h"
 #include "game/faction/EconomyManager.h"
+#include "game/faction/base/HomeBaseIndex.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/map/Tile.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/effects/BonusEffect.h"
+#include "game/units/Unit.h"
+#include "game/units/UnitOrder.h"
+
+#include <variant>
 
 namespace ac
 {
@@ -23,6 +28,45 @@ int GetResourceValue_(const TileResources_t& resources, StatId_t resourceId)
     }
 }
 
+TileResources_t CollectSupplyCrawlYield_(const HomeBaseIndex& rHomeUnits,
+                                         const TileEffectsContext& rTileEffects,
+                                         const BaseEffects_t& rBaseEffects)
+{
+    TileResources_t total{0, 0, 0};
+    for (const Unit* pUnit : rHomeUnits.GetUnits())
+    {
+        if (!pUnit || !pUnit->IsSupplyCrawling())
+        {
+            continue;
+        }
+
+        const Tile* pTile = pUnit->GetWorkedTile();
+        if (!pTile)
+        {
+            continue;
+        }
+
+        const auto& rOrder = std::get<SupplyCrawlOrder_t>(*pUnit->GetOrder());
+        const TileResources_t yield =
+            rTileEffects.ResolveTileYield(*pTile, /*isBaseTile*/false, rBaseEffects);
+        switch (rOrder.resource)
+        {
+            case StatId_t::Nutrients:
+                total.nutrients += yield.nutrients;
+                break;
+            case StatId_t::Minerals:
+                total.minerals += yield.minerals;
+                break;
+            case StatId_t::Energy:
+                total.energy += yield.energy;
+                break;
+            default:
+                break;
+        }
+    }
+    return total;
+}
+
 } // namespace
 
 ResourceManager::ResourceManager(
@@ -30,12 +74,14 @@ ResourceManager::ResourceManager(
     const EconomyManager* pEconomy,
     const BuildingManager* pBuildings,
     const Tile* pBaseTile,
-    const TileEffectsContext* pTileEffects)
+    const TileEffectsContext* pTileEffects,
+    const HomeBaseIndex* pHomeUnits)
     : m_pWorkerAssignments(pWorkerAssignments)
     , m_pEconomy(pEconomy)
     , m_pBuildings(pBuildings)
     , m_pBaseTile(pBaseTile)
     , m_pTileEffects(pTileEffects)
+    , m_pHomeUnits(pHomeUnits)
 {
 }
 
@@ -43,8 +89,7 @@ ResourceManager::~ResourceManager()
 {
 }
 
-// Total worked resources: every worker pop's fully-modified tile yield (from
-// WorkerAssignmentManager) plus the base center tile, which is worked for free (no pop).
+// Total worked resources: worker pops + supply crawlers home to this base + base center.
 TileResources_t ResourceManager::ComputeWorked_(const BaseEffects_t& rBaseEffects) const
 {
     if (!m_pWorkerAssignments || !m_pTileEffects)
@@ -52,6 +97,14 @@ TileResources_t ResourceManager::ComputeWorked_(const BaseEffects_t& rBaseEffect
         throw std::runtime_error("WorkerAssignmentManager or TileEffectsContext not set");
     }
     TileResources_t total = m_pWorkerAssignments->ComputeWorkedResources(rBaseEffects);
+    if (m_pHomeUnits)
+    {
+        const TileResources_t crawl =
+            CollectSupplyCrawlYield_(*m_pHomeUnits, *m_pTileEffects, rBaseEffects);
+        total.nutrients += crawl.nutrients;
+        total.energy    += crawl.energy;
+        total.minerals  += crawl.minerals;
+    }
     if (m_pBaseTile)
     {
         const TileResources_t baseTile = m_pTileEffects->ResolveTileYield(*m_pBaseTile, /*isBaseTile*/true, rBaseEffects);

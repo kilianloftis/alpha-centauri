@@ -73,6 +73,10 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
     CHECK(BonusEffectParser::ParseRuleFlagId("ignores_difficult_terrain") == RuleFlagId_t::IgnoreDifficultTerrain);
     CHECK(BonusEffectParser::ParseRuleFlagId("treat_fungus_as_road") == RuleFlagId_t::TreatFungusAsRoad);
     CHECK(BonusEffectParser::ParseRuleFlagId("forces_psi_combat") == RuleFlagId_t::ForcesPsiCombat);
+    CHECK(BonusEffectParser::ParseRuleFlagId("found_base") == RuleFlagId_t::FoundBase);
+    CHECK(BonusEffectParser::ParseRuleFlagId("terraform") == RuleFlagId_t::Terraform);
+    CHECK(BonusEffectParser::ParseRuleFlagId("supply_crawl") == RuleFlagId_t::SupplyCrawl);
+    CHECK(BonusEffectParser::ParseRuleFlagId("probe_team") == RuleFlagId_t::ProbeTeam);
     CHECK(BonusEffectParser::ParseRuleFlagId("prevents_disengage") == RuleFlagId_t::PreventsDisengage);
     CHECK_THROWS(BonusEffectParser::ParseRuleFlagId("hover"));
     CHECK_THROWS(BonusEffectParser::ParseRuleFlagId("sea"));

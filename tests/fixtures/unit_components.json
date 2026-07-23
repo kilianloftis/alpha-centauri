@@ -164,6 +164,14 @@
     ]
   },
   {
+    "id": "test_supply_crawler",
+    "name": "Test Supply Crawler",
+    "type": "weapon",
+    "effects": [
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "supply_crawl" } }
+    ]
+  },
+  {
     "id": "energy_siphon",
     "name": "Energy Siphon (faction-lane effect on a component)",
     "type": "special",

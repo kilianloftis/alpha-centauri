@@ -7,6 +7,7 @@
 
 #include "game/units/Unit.h"
 #include "game/units/UnitComponentConfig.h"
+#include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitSlotConfig.h"
 #include "game/units/MovementConstants.h"
@@ -14,10 +15,31 @@
 #include "game/effects/EffectEnums.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
 using namespace ac;
+
+namespace
+{
+
+UnitDesign MakeSpecialDesign_(
+    const UnitComponentConfig_t& rChassis,
+    const UnitComponentConfig_t& rSpecial)
+{
+    const std::vector<UnitSlotConfig_t> slots = {
+        {.id = "weapon", .displayName = "Weapon", .componentType = "weapon", .required = true},
+        {.id = "chassis", .displayName = "Chassis", .componentType = "chassis", .required = true},
+    };
+    const std::unordered_map<std::string, const UnitComponentConfig_t*> components = {
+        {"weapon", &rSpecial},
+        {"chassis", &rChassis},
+    };
+    return UnitDesign(slots, components);
+}
+
+} // namespace
 
 TEST_CASE("A fresh unit starts at its live resolved maxima", "[unit][stats]")
 {
@@ -111,4 +133,56 @@ TEST_CASE("ResolveAdditiveStat sums component Adds and ignores percent modifiers
     CHECK(ResolveAdditiveStat(design, StatId_t::Movement) == 2);
     // Full resolve still applies percent: (2+1)*1.5 = 4.
     CHECK(ResolveStat(design, StatId_t::Attack) == 4);
+}
+
+TEST_CASE("Non-combat specials resolve capability flags and cargo capacity", "[unit][stats][specials]")
+{
+    UnitComponentRegistry specials;
+    specials.Load(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/unit_components/specials.json");
+
+    actest::EffectPool pool;
+    UnitComponentConfig_t chassis;
+    chassis.id = "test_chassis";
+    chassis.type = "chassis";
+    chassis.domain = UnitDomain_t::Land;
+    chassis.effects = {
+        pool.StatMod(StatId_t::Movement, 1.0, ModifierOp_t::Add, EffectScope_t::ThisUnit),
+    };
+
+    SECTION("Colony Pod")
+    {
+        const UnitDesign design = MakeSpecialDesign_(chassis, specials.Get("Colony_Pod"));
+        CHECK(ResolveFlag(design, RuleFlagId_t::SingleUse));
+        CHECK(ResolveFlag(design, RuleFlagId_t::FoundBase));
+        CHECK(ResolveStat(design, StatId_t::Attack) == 0);
+    }
+
+    SECTION("Transport")
+    {
+        const UnitDesign design = MakeSpecialDesign_(chassis, specials.Get("Transport"));
+        CHECK(ResolveStat(design, StatId_t::CargoCapacity) == 1);
+        CHECK(ResolveStat(design, StatId_t::Attack) == 0);
+    }
+
+    SECTION("Supply Crawler")
+    {
+        const UnitDesign design = MakeSpecialDesign_(chassis, specials.Get("Supply_Crawler"));
+        CHECK(ResolveFlag(design, RuleFlagId_t::SupplyCrawl));
+        CHECK(ResolveStat(design, StatId_t::Attack) == 0);
+    }
+
+    SECTION("Terraformer")
+    {
+        const UnitDesign design = MakeSpecialDesign_(chassis, specials.Get("Terraformer"));
+        CHECK(ResolveFlag(design, RuleFlagId_t::Terraform));
+        CHECK(ResolveStat(design, StatId_t::Attack) == 0);
+    }
+
+    SECTION("Probe Team")
+    {
+        const UnitDesign design = MakeSpecialDesign_(chassis, specials.Get("Probe_Team"));
+        CHECK(ResolveFlag(design, RuleFlagId_t::ProbeTeam));
+        CHECK(ResolveFlag(design, RuleFlagId_t::IgnoreZoneOfControl));
+        CHECK(ResolveStat(design, StatId_t::Attack) == 0);
+    }
 }

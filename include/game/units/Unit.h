@@ -1,5 +1,7 @@
 #pragma once
 
+#include "game/faction/base/HomeBaseIndex.h"
+#include "game/map/WorkedTileIndex.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitOrder.h"
 #include <optional>
@@ -44,7 +46,9 @@ public:
     bool GetFlag(RuleFlagId_t flagId) const;
     UnitDomain_t GetDomain() const;
 
+    // Map position (UnitPositionIndex). Distinct from GetWorkedTile().
     const Tile& GetTile() const;
+    // Home base from the held HomeBaseClaim (nullptr when unset or the base was destroyed).
     BaseManager* GetHomeBase() const;
     Faction& GetFaction();
     const Faction& GetFaction() const;
@@ -62,12 +66,27 @@ public:
     // Clamps to [0, MovementPoints * k_moveFragmentsPerPoint].
     void SetMoveFragmentsRemaining(int fragments);
     void SetXp(int xp);
+    // Claims rHomeBase's HomeBaseIndex (or clears). Replaces any previous home claim.
     void SetHomeBase(BaseManager* pHomeBase);
 
     std::optional<UnitOrder_t>& GetOrder();
     const std::optional<UnitOrder_t>& GetOrder() const;
     void SetOrder(const UnitOrder_t& rOrder);
     void ClearOrder();
+
+    // Worked-tile claim for supply crawl (same WorkedTileClaim shape as Pop). Minted via
+    // WorkedTileIndex in TryStartSupplyCrawl; yield is collected from HomeBaseIndex units.
+    void SetTileClaim(WorkedTileClaim claim);
+    // The claimed harvest tile, or nullptr when unassigned. Not the unit's map position.
+    const Tile* GetWorkedTile() const;
+
+    // Begin a supply crawl on the unit's current tile. Claims via the world WorkedTileIndex
+    // (any free tile). Requires SupplyCrawl flag, a home base, and a free tile.
+    // resource must be Nutrients, Minerals, or Energy.
+    bool TryStartSupplyCrawl(StatId_t resource);
+
+    // True while a SupplyCrawl order is active and the unit holds a worked-tile claim.
+    bool IsSupplyCrawling() const;
 
     // Attack history for the disengage rule: a unit that attacked on its current or previous
     // turn may not disengage. MarkAttacked is called by UnitOrderExecutor::TryAttack;
@@ -85,12 +104,14 @@ private:
     // Removes this unit from world occupancy before deferred object reclamation. Safe to
     // call once; the destructor skips unregistering an already-detached unit.
     void DetachFromWorld_();
+    void ReleaseWorkedTile_();
 
     UnitId_t m_unitId;
     const UnitDesign& m_rDesign;
     UnitPositionIndex& m_rPositions;
     const Tile* m_pTile;
-    BaseManager* m_pHomeBase;
+    // Holding the claim IS the home-base link (see HomeBaseIndex).
+    HomeBaseClaim m_homeBaseClaim;
     Faction& m_rFaction;
 
     int m_currentHp;
@@ -98,6 +119,8 @@ private:
     int m_moveFragmentsRemaining;
     int m_xp;
     std::optional<UnitOrder_t> m_order;
+    // Held while supply-crawling (Pop-equivalent); releases the tile when destroyed/cleared.
+    WorkedTileClaim m_tileClaim;
     bool m_bRegistered;
     bool m_bAttackedThisTurn = false;
     bool m_bAttackedLastTurn = false;

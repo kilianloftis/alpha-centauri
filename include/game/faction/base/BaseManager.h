@@ -3,6 +3,7 @@
 #include "game/IConstructable.h"
 #include "game/buildings/BuildingConfigParser.h"
 #include "game/faction/base/BaseTypes.h"
+#include "game/faction/base/HomeBaseIndex.h"
 #include "game/map/WorkedTileIndex.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/TileEffectsContext.h"
@@ -180,6 +181,10 @@ public:
     FactionId_t GetFactionId() const;
     int GetBaseId() const;
 
+    // Units that claim this base as home (see HomeBaseIndex / HomeBaseClaim).
+    HomeBaseIndex& GetHomeUnits();
+    const HomeBaseIndex& GetHomeUnits() const;
+
 private:
     // FilterForBase over the faction-wide pool, plus this base's own pop-generated ThisBase
     // effects — everything that applies to this base, before rating expansion. Shared by
@@ -204,6 +209,9 @@ private:
     // world WorkedTileIndex for its whole life — no other base, friendly or enemy, can
     // ever work another base's tile. Released automatically when the base is destroyed.
     WorkedTileClaim m_centerTileClaim;
+    // Units that call this base home. Destroyed with the base; orphans outstanding claims
+    // so units never keep a dangling BaseManager*.
+    HomeBaseIndex m_homeUnits;
     const BuildingRegistry* m_pBuildingRegistry;
     const SocialRatingRegistry* m_pSocialRatings;
     const ResearchManager* m_pResearch;

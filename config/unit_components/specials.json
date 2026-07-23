@@ -1,0 +1,87 @@
+[
+  {
+    "id": "Colony_Pod",
+    "name": "Colony Pod",
+    "unit_name": "Colony Pod",
+    "type": "weapon",
+    "required_tech": "",
+    "mineral_cost": 10,
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "single_use" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "found_base" }
+      }
+    ]
+  },
+  {
+    "id": "Transport",
+    "name": "Transport",
+    "unit_name": "Transport",
+    "type": "weapon",
+    "required_tech": "",
+    "mineral_cost": 5,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "cargo_capacity", "amount": 1, "op": "Add" }
+      }
+    ]
+  },
+  {
+    "id": "Supply_Crawler",
+    "name": "Supply Crawler",
+    "unit_name": "Supply",
+    "type": "weapon",
+    "required_tech": "",
+    "mineral_cost": 5,
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "supply_crawl" }
+      }
+    ]
+  },
+  {
+    "id": "Terraformer",
+    "name": "Terraformer",
+    "unit_name": "Former",
+    "type": "weapon",
+    "required_tech": "",
+    "mineral_cost": 5,
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "terraform" }
+      }
+    ]
+  },
+  {
+    "id": "Probe_Team",
+    "name": "Probe Team",
+    "unit_name": "Probe",
+    "type": "weapon",
+    "required_tech": "",
+    "mineral_cost": 5,
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "probe_team" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "ignore_zone_of_control" }
+      }
+    ]
+  }
+]

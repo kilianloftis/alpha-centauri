@@ -21,6 +21,7 @@ class WorkedTileIndex;
 // world-scoped WorkedTileIndex — the single owner of the one-worker-per-tile rule across
 // all bases and factions. WorkerAssignmentManager validates assignments against its
 // workable tile set and runs the auto-assignment algorithm. It does NOT own tiles.
+// Supply crawlers claim tiles on the Unit itself and are collected via HomeBaseIndex.
 class WorkerAssignmentManager
 {
 public:
@@ -73,8 +74,8 @@ public:
     // For each worker pop with an assigned tile, resolves the tile's full yield (intrinsic +
     // area effects + any base-wide per-tile modifier in rBaseEffects matching the tile), then
     // applies the pop's tile multipliers so those multipliers scale the whole tile yield.
-    // Does NOT include the base center tile — that is a pop-less tile owned by ResourceManager.
-    // Pops or tiles that cannot be resolved are skipped.
+    // Does NOT include the base center tile or supply crawlers — those are collected by
+    // ResourceManager (center tile + HomeBaseIndex units).
     TileResources_t ComputeWorkedResources(const BaseEffects_t& rBaseEffects) const;
 
     // Full yield from one assigned worker tile: intrinsic + area + matching base-wide per-tile
@@ -104,7 +105,6 @@ private:
     void UnassignFromTile_(Pop& rPop);
     void ConvertToFallback_(Pop& rPop);
     Pop* FindLowestYieldAssignedWorker_() const;
-
 
     std::vector<const Tile*> m_workableTiles;
     TileScorer m_scorer;

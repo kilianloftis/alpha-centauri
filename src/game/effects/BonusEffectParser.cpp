@@ -43,6 +43,10 @@ RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "ignores_difficult_terrain")   return RuleFlagId_t::IgnoreDifficultTerrain;
     if (rFlag == "treat_fungus_as_road")         return RuleFlagId_t::TreatFungusAsRoad;
     if (rFlag == "forces_psi_combat")            return RuleFlagId_t::ForcesPsiCombat;
+    if (rFlag == "found_base")                   return RuleFlagId_t::FoundBase;
+    if (rFlag == "terraform")                   return RuleFlagId_t::Terraform;
+    if (rFlag == "supply_crawl")                return RuleFlagId_t::SupplyCrawl;
+    if (rFlag == "probe_team")                  return RuleFlagId_t::ProbeTeam;
     if (rFlag == "prevents_disengage")          return RuleFlagId_t::PreventsDisengage;
     throw std::runtime_error("Unknown rule flag id: '" + rFlag + "'");
 }

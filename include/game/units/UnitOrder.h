@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/effects/EffectEnums.h"
 #include <string>
 #include <variant>
 
@@ -36,7 +37,21 @@ struct HoldForTurnsOrder_t
     std::string ToString() const;
 };
 
-using UnitOrder_t = std::variant<MoveOrder_t, HoldOrder_t, HoldUntilHealedOrder_t, HoldForTurnsOrder_t>;
+// Park on the current tile and harvest one resource type for the unit's home base.
+// resource must be Nutrients, Minerals, or Energy.
+struct SupplyCrawlOrder_t
+{
+    StatId_t resource = StatId_t::Nutrients;
+
+    std::string ToString() const;
+};
+
+using UnitOrder_t = std::variant<
+    MoveOrder_t,
+    HoldOrder_t,
+    HoldUntilHealedOrder_t,
+    HoldForTurnsOrder_t,
+    SupplyCrawlOrder_t>;
 
 std::string ToString(const UnitOrder_t& rOrder);
 

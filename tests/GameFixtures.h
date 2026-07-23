@@ -115,8 +115,9 @@ struct BaseFixture : WorldFixture
 struct FactionFixture : BaseFixture
 {
     ac::FactionConfig_t factionDefinition; // minimal shared definition for test factions
-    // designs must outlive factions: units hold UnitDesign& into this deque, and
-    // BaseManager teardown can CollectEffects on live units during ~Faction.
+    // designs must outlive factions: units hold UnitDesign& into this deque.
+    // Units are destroyed before bases (~Faction member order), so crawler claim
+    // release can reach WorkerAssignmentManager while the home base is still alive.
     std::deque<ac::UnitDesign> designs;
     std::vector<std::unique_ptr<ac::Faction>> factions;
     int nextFactionId = 1;
@@ -199,7 +200,8 @@ struct FactionFixture : BaseFixture
     // Builds a design from fixture components (one synthetic slot per component) and
     // creates a live unit at (x, y), registered on the world map for aura/position queries.
     ac::Unit& MakeUnit(ac::Faction& rFaction, int x, int y,
-                       const std::vector<std::string>& rComponentIds)
+                       const std::vector<std::string>& rComponentIds,
+                       ac::BaseManager* pHomeBase = nullptr)
     {
         std::vector<ac::UnitSlotConfig_t> slots;
         std::unordered_map<std::string, const ac::UnitComponentConfig_t*> assigned;
@@ -223,7 +225,7 @@ struct FactionFixture : BaseFixture
 
         // The unit registers itself in the map's position index for its lifetime.
         return rFaction.GetUnitManager().CreateUnit(nextUnitId++, designs.back(),
-                                                    map.GetUnitPositions(), At(x, y), nullptr);
+                                                    map.GetUnitPositions(), At(x, y), pHomeBase);
     }
 
     void MoveUnit(ac::Unit& rUnit, int x, int y)

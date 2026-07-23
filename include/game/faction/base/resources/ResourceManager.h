@@ -11,6 +11,7 @@ namespace ac
 class WorkerAssignmentManager;
 class EconomyManager;
 class BuildingManager;
+class HomeBaseIndex;
 class Tile;
 class TileEffectsContext;
 
@@ -24,7 +25,8 @@ public:
         const EconomyManager* pEconomy,
         const BuildingManager* pBuildings,
         const Tile* pBaseTile,
-        const TileEffectsContext* pTileEffects);
+        const TileEffectsContext* pTileEffects,
+        const HomeBaseIndex* pHomeUnits);
     ~ResourceManager();
 
     // Resource production per turn.
@@ -53,6 +55,7 @@ private:
     const BuildingManager* m_pBuildings;
     const Tile* m_pBaseTile;
     const TileEffectsContext* m_pTileEffects;
+    const HomeBaseIndex* m_pHomeUnits;
     int m_nutrients = 0;
     int m_minerals = 0;
     int m_econ = 0;

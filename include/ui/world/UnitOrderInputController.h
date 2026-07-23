@@ -32,6 +32,10 @@ public:
     bool WasAttackRequested() const { return m_bAttackRequested; }
     const Tile* GetAttackTarget() const { return m_pAttackTarget; }
 
+    // True after O on a supply-capable unit with a home base. WorldView opens the resource
+    // picker; the controller does not assign the order itself.
+    bool WasSupplyCrawlRequested() const { return m_bSupplyCrawlRequested; }
+
     // Non-null while a left-click hold has exceeded the threshold and the path is valid.
     const Path_t* GetPathPreview() const;
 
@@ -49,6 +53,7 @@ private:
 
     bool m_bOrderAssigned = false;
     bool m_bAttackRequested = false;
+    bool m_bSupplyCrawlRequested = false;
     const Tile* m_pAttackTarget = nullptr;
 
     // Left-click long-press path preview.

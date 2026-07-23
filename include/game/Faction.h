@@ -187,8 +187,10 @@ private:
     std::unique_ptr<ResearchManager> m_pResearch;
     std::unique_ptr<ResearchSelector> m_pResearchSelector;
     std::unique_ptr<SocialEngineeringManager> m_pSocialEngineering;
-    std::unique_ptr<UnitManager> m_pUnits;
+    // Bases before units: ~Faction destroys units first so Unit can release crawler claims
+    // through WorkerAssignmentManager while the home base is still alive.
     std::vector<std::unique_ptr<BaseManager>> m_bases;
+    std::unique_ptr<UnitManager> m_pUnits;
     Revision m_baseListRevision; // bumped when a base is added (later: removed/captured)
     // Declared after m_baseListRevision, which its constructor binds a reference to.
     FactionEffectsPool m_effectsPool;

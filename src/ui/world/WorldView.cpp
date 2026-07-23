@@ -3,6 +3,7 @@
 #include "ui/world/InfoPanelElement.h"
 #include "ui/world/LocationPanel.h"
 #include "ui/world/SelectedUnitPanel.h"
+#include "ui/world/SupplyCrawlPopup.h"
 #include "ui/world/UnitStackPanel.h"
 #include "ui/world/CommlinksButton.h"
 #include "ui/world/EndTurnButton.h"
@@ -21,6 +22,7 @@
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitOrderExecutor.h"
+#include "game/effects/EffectEnums.h"
 #include "ui/TileHitTester.h"
 #include "ui/style/UiStyle.h"
 #include "graphics/Graphics.h"
@@ -258,8 +260,35 @@ void WorldView::Update_()
 
 bool WorldView::HandleKey(const KeyEvent_t& rEvent)
 {
-    if (m_pUnitOrderInputController->HandleKey(rEvent, GetControllableSelectedUnit_()))
+    // Popups / chrome first (Escape to dismiss SupplyCrawlPopup, etc.).
+    for (int i = static_cast<int>(m_elements.size()) - 1; i >= 0; --i)
     {
+        if (m_elements[static_cast<size_t>(i)]->HandleKey(rEvent))
+        {
+            return true;
+        }
+    }
+
+    Unit* pControllable = GetControllableSelectedUnit_();
+    if (m_pUnitOrderInputController->HandleKey(rEvent, pControllable))
+    {
+        if (m_pUnitOrderInputController->WasSupplyCrawlRequested() && pControllable)
+        {
+            Unit* pUnit = pControllable;
+            m_elements.push_back(std::make_unique<SupplyCrawlPopup>(
+                ResolveLayout(m_layout, Style().layouts.popupSmall),
+                [this, pUnit](StatId_t resource) {
+                    if (m_pSelectedUnit != pUnit)
+                    {
+                        return;
+                    }
+                    if (pUnit->TryStartSupplyCrawl(resource))
+                    {
+                        SelectNextAvailableUnit_();
+                    }
+                }));
+            return true;
+        }
         if (m_pUnitOrderInputController->WasOrderAssigned())
         {
             SelectNextAvailableUnit_();

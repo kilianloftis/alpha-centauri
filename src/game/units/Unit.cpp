@@ -1,15 +1,33 @@
 #include "game/units/Unit.h"
 
 #include "game/Faction.h"
+#include "game/faction/base/BaseManager.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
+#include "game/map/WorkedTileIndex.h"
+#include "game/map/WorldMap.h"
 #include "game/effects/ActiveEffect.h"
+#include "game/effects/TileEffectsContext.h"
 #include "game/units/MovementConstants.h"
 
 #include <algorithm>
+#include <stdexcept>
+#include <variant>
 
 namespace ac
 {
+
+namespace
+{
+
+bool IsCrawlResource_(StatId_t resource)
+{
+    return resource == StatId_t::Nutrients
+        || resource == StatId_t::Minerals
+        || resource == StatId_t::Energy;
+}
+
+} // namespace
 
 Unit::Unit(UnitId_t unitId,
            const UnitDesign& rDesign,
@@ -21,7 +39,6 @@ Unit::Unit(UnitId_t unitId,
     , m_rDesign(rDesign)
     , m_rPositions(rPositions)
     , m_pTile(&rTile)
-    , m_pHomeBase(pHomeBase)
     , m_rFaction(rFaction)
     // Seed current stats from the *live* resolved maxima (design effects + the faction's
     // active FactionUnits effects), not the design's context-free values. A fresh unit
@@ -39,6 +56,11 @@ Unit::Unit(UnitId_t unitId,
         GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint;
     m_xp = ResolveStat(*this, StatId_t::StartingExperience);
 
+    if (pHomeBase)
+    {
+        m_homeBaseClaim = pHomeBase->GetHomeUnits().Claim(*this);
+    }
+
     m_rPositions.Register_(*this, rTile);
     m_bRegistered = true;
 }
@@ -50,6 +72,7 @@ Unit::~Unit()
 
 void Unit::DetachFromWorld_()
 {
+    ReleaseWorkedTile_();
     if (m_bRegistered)
     {
         m_rPositions.Unregister_(*this);
@@ -82,7 +105,7 @@ UnitDomain_t Unit::GetDomain() const
 }
 
 const Tile& Unit::GetTile() const                                      { return *m_pTile; }
-BaseManager* Unit::GetHomeBase() const      { return m_pHomeBase; }
+BaseManager* Unit::GetHomeBase() const      { return m_homeBaseClaim.GetBase(); }
 Faction& Unit::GetFaction()                 { return m_rFaction; }
 const Faction& Unit::GetFaction() const     { return m_rFaction; }
 
@@ -110,12 +133,87 @@ void Unit::SetMoveFragmentsRemaining(int fragments)
     m_moveFragmentsRemaining = std::clamp(fragments, 0, maxFragments);
 }
 void Unit::SetXp(int xp)                    { m_xp = std::max(xp, 0); }
-void Unit::SetHomeBase(BaseManager* pHomeBase) { m_pHomeBase = pHomeBase; }
+
+void Unit::SetHomeBase(BaseManager* pHomeBase)
+{
+    if (GetHomeBase() == pHomeBase)
+    {
+        return;
+    }
+    if (!pHomeBase)
+    {
+        m_homeBaseClaim = HomeBaseClaim{};
+        return;
+    }
+    m_homeBaseClaim = pHomeBase->GetHomeUnits().Claim(*this);
+}
 
 std::optional<UnitOrder_t>& Unit::GetOrder()             { return m_order; }
 const std::optional<UnitOrder_t>& Unit::GetOrder() const { return m_order; }
-void Unit::SetOrder(const UnitOrder_t& rOrder)            { m_order = rOrder; }
-void Unit::ClearOrder()                                   { m_order.reset(); }
+
+void Unit::SetTileClaim(WorkedTileClaim claim)
+{
+    m_tileClaim = std::move(claim);
+}
+
+const Tile* Unit::GetWorkedTile() const
+{
+    return m_tileClaim.GetTile();
+}
+
+void Unit::ReleaseWorkedTile_()
+{
+    m_tileClaim = WorkedTileClaim{};
+}
+
+void Unit::SetOrder(const UnitOrder_t& rOrder)
+{
+    ReleaseWorkedTile_();
+    m_order = rOrder;
+}
+
+void Unit::ClearOrder()
+{
+    ReleaseWorkedTile_();
+    m_order.reset();
+}
+
+bool Unit::TryStartSupplyCrawl(StatId_t resource)
+{
+    if (!IsCrawlResource_(resource))
+    {
+        throw std::runtime_error("TryStartSupplyCrawl: resource must be nutrients, minerals, or energy");
+    }
+    BaseManager* pHomeBase = GetHomeBase();
+    if (!GetFlag(RuleFlagId_t::SupplyCrawl) || !pHomeBase)
+    {
+        return false;
+    }
+
+    ClearOrder();
+
+    // Claim the current tile directly (same WorkedTileIndex as workers; any free tile).
+    WorkedTileClaim claim = pHomeBase->GetTileEffects().GetWorldMap().GetWorkedTiles().TryClaim(
+        GetTile(),
+        /*bUserAssigned*/ true,
+        [this]() { ClearOrder(); });
+    if (!claim.GetTile())
+    {
+        return false;
+    }
+
+    m_tileClaim = std::move(claim);
+    // Claim is held; set the order without SetOrder (which would release it).
+    m_order = SupplyCrawlOrder_t{resource};
+    return true;
+}
+
+bool Unit::IsSupplyCrawling() const
+{
+    return m_tileClaim.GetTile() != nullptr
+        && m_order.has_value()
+        && std::holds_alternative<SupplyCrawlOrder_t>(*m_order);
+}
 
 bool Unit::HasAttackedThisTurn() const { return m_bAttackedThisTurn; }
 bool Unit::HasAttackedLastTurn() const { return m_bAttackedLastTurn; }
