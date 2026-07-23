@@ -7,6 +7,7 @@
 #include "ui/world/UnitStackPanel.h"
 #include "ui/world/CommlinksButton.h"
 #include "ui/world/EndTurnButton.h"
+#include "ui/world/MinimapDisplay.h"
 #include "game/GameState.h"
 #include "game/GameSettings.h"
 #include "game/Faction.h"
@@ -83,8 +84,12 @@ WorldView::WorldView(
         ResolveLayout(m_layout, Style().layouts.rightButton),
         [this]() { m_onOpenCommlinks(); }));
 
+    const WindowLayout_t rightPanel = ResolveLayout(m_layout, Style().layouts.rightPanel);
+    m_elements.push_back(std::make_unique<MinimapDisplay>(m_rGameState, rightPanel));
+
+    // Nested in rightPanel so End Turn sits on top of the minimap (and receives clicks first).
     auto pEndTurn = std::make_unique<EndTurnButton>(
-        ResolveLayout(Style().layouts.rightPanel, Style().endTurnButton.layout),
+        ResolveLayout(rightPanel, Style().endTurnButton.layout),
         [this]() { m_onProcessTurn(); });
     m_pEndTurnButton = pEndTurn.get();
     m_elements.push_back(std::move(pEndTurn));

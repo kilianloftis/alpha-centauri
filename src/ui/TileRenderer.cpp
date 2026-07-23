@@ -86,8 +86,11 @@ float Remap01_(float value, float inMin, float inMax)
     return (value - inMin) / (inMax - inMin);
 }
 
-Color_t ElevationFillColor_(const Tile& rTile, const TileRendererStyle& s, bool bFogged)
+} // namespace
+
+Color_t TileRenderer::FillColor(const Tile& rTile, bool bFogged)
 {
+    const auto& s = Style().tileRenderer;
     const int elevation = rTile.GetElevation();
     Color_t fill{};
 
@@ -115,14 +118,12 @@ Color_t ElevationFillColor_(const Tile& rTile, const TileRendererStyle& s, bool 
     return fill;
 }
 
-} // namespace
-
 void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float y, float size,
                           bool bFogged)
 {
     const auto& s = Style().tileRenderer;
 
-    rGraphics.DrawFilledRect(x, y, size, size, ElevationFillColor_(rTile, s, bFogged));
+    rGraphics.DrawFilledRect(x, y, size, size, FillColor(rTile, bFogged));
     rGraphics.DrawRect(x, y, size, size, s.tileBorderColor, s.tileBorderWidth);
 
     const int moisture = MoistureToInt_(rTile.GetMoisture());
