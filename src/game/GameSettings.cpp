@@ -25,6 +25,31 @@ void LoadMapGeneration_(const nlohmann::json& rJson, MapGenerationConfig_t& rCon
     rConfig.seed = rMap.value("seed", rConfig.seed);
 }
 
+void LoadGameRules_(const nlohmann::json& rJson, GameRulesConfig_t& rConfig)
+{
+    if (rJson.contains("game_rules") && rJson["game_rules"].is_object())
+    {
+        const nlohmann::json& rRules = rJson["game_rules"];
+        rConfig.pauseAtEndOfTurn = rRules.value("pause_at_end_of_turn", rConfig.pauseAtEndOfTurn);
+        rConfig.removeShroud = rRules.value("remove_shroud", rConfig.removeShroud);
+        return;
+    }
+
+    // Backward compatibility: older prefs stored pause at the top level.
+    rConfig.pauseAtEndOfTurn = rJson.value("pause_at_end_of_turn", rConfig.pauseAtEndOfTurn);
+}
+
+void LoadDebugOptions_(const nlohmann::json& rJson, DebugOptionsConfig_t& rConfig)
+{
+    if (!rJson.contains("debug_options") || !rJson["debug_options"].is_object())
+    {
+        return;
+    }
+
+    const nlohmann::json& rDebug = rJson["debug_options"];
+    rConfig.removeFog = rDebug.value("remove_fog", rConfig.removeFog);
+}
+
 nlohmann::json MapGenerationToJson_(const MapGenerationConfig_t& rConfig)
 {
     return nlohmann::json{
@@ -48,14 +73,21 @@ void GameSettings::Load(const std::string& path)
     }
 
     const nlohmann::json json = nlohmann::json::parse(file);
-    m_bPauseAtEndOfTurn = json.value("pause_at_end_of_turn", m_bPauseAtEndOfTurn);
+    LoadGameRules_(json, m_gameRules);
+    LoadDebugOptions_(json, m_debugOptions);
     LoadMapGeneration_(json, m_mapGeneration);
 }
 
 void GameSettings::Save(const std::string& path) const
 {
     nlohmann::json json;
-    json["pause_at_end_of_turn"] = m_bPauseAtEndOfTurn;
+    json["game_rules"] = {
+        {"pause_at_end_of_turn", m_gameRules.pauseAtEndOfTurn},
+        {"remove_shroud", m_gameRules.removeShroud},
+    };
+    json["debug_options"] = {
+        {"remove_fog", m_debugOptions.removeFog},
+    };
     json["map_generation"] = MapGenerationToJson_(m_mapGeneration);
 
     std::ofstream file(path);

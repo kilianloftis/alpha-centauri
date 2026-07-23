@@ -21,27 +21,13 @@ public:
     int GetWidth() const { return m_flags.GetWidth(); }
     int GetHeight() const { return m_flags.GetHeight(); }
 
-    bool IsExplored(int x, int y) const
-    {
-#ifdef AC_DEBUG_REVEAL_MAP
-        (void)x;
-        (void)y;
-        return true;
-#else
-        return m_flags.Test(x, y);
-#endif
-    }
-    bool IsExplored(const Tile& rTile) const
-    {
-#ifdef AC_DEBUG_REVEAL_MAP
-        (void)rTile;
-        return true;
-#else
-        return m_flags.Test(rTile);
-#endif
-    }
+    bool IsExplored(int x, int y) const { return m_flags.Test(x, y); }
+    bool IsExplored(const Tile& rTile) const { return m_flags.Test(rTile); }
 
     void Mark(const Tile& rTile) { m_flags.Set(rTile); }
+
+    // Mark every tile explored (e.g. orbital satellite / RemoveShroud game rule).
+    void MarkAll() { m_flags.SetAll(); }
 
     // Union another faction's explored memory into this one (map trade).
     void MergeFrom(const FactionExploredMap& rOther) { m_flags.MergeFrom(rOther.m_flags); }

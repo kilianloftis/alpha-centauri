@@ -1,3 +1,4 @@
+#include "game/faction/VisibilityRules.h"
 #include "game/Faction.h"
 
 #include "game/buildings/BuildingRegistry.h"
@@ -419,6 +420,7 @@ void Faction::RebuildVisibility()
         return;
     }
     m_visible.RebuildFromSources(*this, *m_pWorldMap, m_explored);
+    ApplyVisibilityRules(*this, m_pSettings);
     if (m_onVisibilityRebuilt)
     {
         m_onVisibilityRebuilt(*this);

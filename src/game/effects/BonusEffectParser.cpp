@@ -37,6 +37,8 @@ RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
 {
     if (rFlag == "population_boom")             return RuleFlagId_t::PopulationBoom;
     if (rFlag == "near_zero_growth")            return RuleFlagId_t::NearZeroGrowth;
+    if (rFlag == "remove_shroud")               return RuleFlagId_t::RemoveShroud;
+    if (rFlag == "remove_fog")                  return RuleFlagId_t::RemoveFog;
     if (rFlag == "flight")                      return RuleFlagId_t::Flight;
     if (rFlag == "single_use")                  return RuleFlagId_t::SingleUse;
     if (rFlag == "ignore_zone_of_control")      return RuleFlagId_t::IgnoreZoneOfControl;

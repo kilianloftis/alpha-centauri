@@ -3,9 +3,11 @@
 
 #include "GameFixtures.h"
 
+#include "game/GameSettings.h"
 #include "game/faction/FactionExploredMap.h"
 #include "game/faction/FactionVisibleMap.h"
 #include "game/faction/UnitManager.h"
+#include "game/faction/VisibilityRules.h"
 #include "game/units/Unit.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -188,4 +190,66 @@ TEST_CASE("Sensor vision wraps horizontally across the map seam",
     CHECK(owner.GetVisibleMap().IsVisible(width - 2, 4));
     // Chebyshev 3 from Sensor and from the centered base — outside both vision-2 squares.
     CHECK_FALSE(owner.GetVisibleMap().IsVisible(width - 3, 7));
+}
+
+TEST_CASE("ApplyRemoveShroud marks the entire map explored", "[visibility][fog][shroud]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+
+    REQUIRE_FALSE(faction.GetExploredMap().IsExplored(0, 0));
+    ApplyRemoveShroud(faction);
+    CHECK(faction.GetExploredMap().IsExplored(0, 0));
+    CHECK(faction.GetExploredMap().IsExplored(8, 8));
+    // Fog of war is unchanged: far tiles stay invisible.
+    CHECK_FALSE(faction.GetVisibleMap().IsVisible(0, 0));
+}
+
+TEST_CASE("ApplyRemoveFog makes every tile currently visible", "[visibility][fog]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+
+    REQUIRE_FALSE(faction.GetVisibleMap().IsVisible(0, 0));
+    ApplyRemoveFog(faction);
+    CHECK(faction.IsFogRemoved());
+    CHECK(faction.GetVisibleMap().IsVisible(0, 0));
+    CHECK(faction.GetVisibleMap().IsVisible(8, 8));
+
+    // Sticky fog removal survives a vision rebuild.
+    faction.RebuildVisibility();
+    CHECK(faction.GetVisibleMap().IsVisible(0, 0));
+}
+
+TEST_CASE("GameRules remove_shroud explores the map on rebuild", "[visibility][fog][shroud]")
+{
+    actest::FactionFixture fixture;
+    GameSettings settings;
+    settings.GetGameRules().removeShroud = true;
+
+    Faction& faction = fixture.MakeFaction();
+    faction.SetSettings(&settings);
+    faction.RebuildVisibility();
+
+    CHECK(faction.GetExploredMap().IsExplored(0, 0));
+    CHECK(faction.GetExploredMap().IsExplored(8, 8));
+}
+
+TEST_CASE("DebugOptions remove_fog applies to the player faction only", "[visibility][fog]")
+{
+    actest::FactionFixture fixture;
+    GameSettings settings;
+    settings.GetDebugOptions().removeFog = true;
+
+    Faction& player = fixture.MakeFaction();
+    Faction& ai = fixture.MakeFaction();
+    player.SetSettings(&settings);
+    ai.SetSettings(&settings);
+    player.RebuildVisibility();
+    ai.RebuildVisibility();
+
+    CHECK(player.GetVisibleMap().IsVisible(0, 0));
+    CHECK_FALSE(ai.GetVisibleMap().IsVisible(0, 0));
 }

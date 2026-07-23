@@ -84,6 +84,7 @@ add_library(ac-core STATIC
     game/map/TileFlagMap.cpp
     game/map/TerritoryMap.cpp
     game/faction/FactionVisibleMap.cpp
+    game/faction/VisibilityRules.cpp
     game/faction/UnitVisibility.cpp
     game/map/ImprovementConfigParser.cpp
     game/map/WorldGenPresetConfigParser.cpp
@@ -120,13 +121,6 @@ target_include_directories(ac-turn-stages PUBLIC
 target_include_directories(ac-core PUBLIC
     ${CMAKE_SOURCE_DIR}/include
 )
-
-# Compile-time fog/shroud bypass for map debugging (IsExplored / IsVisible always true).
-# Enable with: ./bd configure -- -DAC_DEBUG_REVEAL_MAP=ON
-option(AC_DEBUG_REVEAL_MAP "Reveal entire map (no fog/shroud)" OFF)
-if(AC_DEBUG_REVEAL_MAP)
-    target_compile_definitions(ac-core PUBLIC AC_DEBUG_REVEAL_MAP)
-endif()
 
 # Add nlohmann/json library
 include(FetchContent)

@@ -41,6 +41,7 @@ class UnitManager;
 struct PopTypeConfig_t;
 struct GameDataContext;
 class WorldMap;
+class GameSettings;
 
 class Faction : public IEffectsProvider
 {
@@ -157,6 +158,16 @@ public:
     void BindWorldMap(WorldMap& rWorldMap);
     void RebuildVisibility();
 
+    // Optional session prefs (Engine/GameState owned). Used by RebuildVisibility to apply
+    // GameRules.RemoveShroud / DebugOptions.RemoveFog without compiling them in.
+    void SetSettings(const GameSettings* pSettings) { m_pSettings = pSettings; }
+    const GameSettings* GetSettings() const { return m_pSettings; }
+
+    // Sticky fog removal from ApplyRemoveFog (Instantaneous project completion). Continuous
+    // RuleFlag / debug settings are layered on top in ApplyVisibilityRules.
+    void SetFogRemoved(bool bFogRemoved) { m_bFogRemoved = bFogRemoved; }
+    bool IsFogRemoved() const { return m_bFogRemoved; }
+
     // Invoked after AddBase (after visibility rebuild). GameState uses this to rebuild
     // world territory; tests may leave it unset and call TerritoryMap::Rebuild directly.
     void SetOnBaseListChanged(std::function<void()> handler);
@@ -198,6 +209,8 @@ private:
     FactionVisibleMap m_visible;
     FactionRevealedUnits m_revealedUnits;
     WorldMap* m_pWorldMap = nullptr; // set by BindWorldMap; used by RebuildVisibility
+    const GameSettings* m_pSettings = nullptr; // non-owning; optional session prefs
+    bool m_bFogRemoved = false; // sticky ApplyRemoveFog
     std::function<void()> m_onBaseListChanged;
     std::function<void(Faction&)> m_onVisibilityRebuilt;
 };

@@ -32,4 +32,9 @@ float FbmNoise::Sample(float x, float y) const
     return m_pImpl->noise.GetNoise(x, y);
 }
 
+float FbmNoise::Sample(float x, float y, float z) const
+{
+    return m_pImpl->noise.GetNoise(x, y, z);
+}
+
 } // namespace ac

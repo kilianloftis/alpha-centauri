@@ -33,7 +33,7 @@ Usage: $(basename "$0") <command> [options]
 Commands:
   configure [build-dir] [--no-sfml] [--sfml-dir <dir>] [-- <cmake-args>...]
       Create or update the CMake build tree.
-      Pass cmake args after --, e.g. -- -DAC_DEBUG_REVEAL_MAP=ON
+      Pass cmake args after --, e.g. -- -DCMAKE_BUILD_TYPE=Release
 
   build [build-dir] [--config <Debug|Release>] [-j N|--jobs N]
       Build the configured project.

@@ -78,6 +78,8 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
     CHECK(BonusEffectParser::ParseRuleFlagId("supply_crawl") == RuleFlagId_t::SupplyCrawl);
     CHECK(BonusEffectParser::ParseRuleFlagId("probe_team") == RuleFlagId_t::ProbeTeam);
     CHECK(BonusEffectParser::ParseRuleFlagId("prevents_disengage") == RuleFlagId_t::PreventsDisengage);
+    CHECK(BonusEffectParser::ParseRuleFlagId("remove_shroud") == RuleFlagId_t::RemoveShroud);
+    CHECK(BonusEffectParser::ParseRuleFlagId("remove_fog") == RuleFlagId_t::RemoveFog);
     CHECK_THROWS(BonusEffectParser::ParseRuleFlagId("hover"));
     CHECK_THROWS(BonusEffectParser::ParseRuleFlagId("sea"));
 

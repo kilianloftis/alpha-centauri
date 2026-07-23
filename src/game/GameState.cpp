@@ -118,6 +118,7 @@ Faction& GameState::AddFaction(std::unique_ptr<Faction> pFaction)
     {
         throw std::invalid_argument("GameState::AddFaction: pFaction is null");
     }
+    pFaction->SetSettings(&m_rSettings);
     pFaction->BindWorldMap(*m_worldMap);
     pFaction->SetOnBaseListChanged([this]()
     {

@@ -62,6 +62,10 @@ void WorldGenerator::GenerateElevation_(WorldMap& rWorld,
     const float invWidth = width > 1 ? 1.0f / static_cast<float>(width - 1) : 0.0f;
     const float invHeight = height > 1 ? 1.0f / static_cast<float>(height - 1) : 0.0f;
     const float scale = std::max(rPreset.continentScale, 0.001f);
+    // Sample on a cylinder so x=0 and x=width are adjacent in noise space (horizontal wrap).
+    constexpr float kTwoPi = 6.283185307179586f;
+    const float cylinderRadius =
+        (static_cast<float>(width) * scale) / kTwoPi;
 
     std::vector<float> field(static_cast<size_t>(tileCount));
     float minValue = 0.0f;
@@ -73,9 +77,12 @@ void WorldGenerator::GenerateElevation_(WorldMap& rWorld,
         {
             const float nx = static_cast<float>(x) * invWidth * 2.0f - 1.0f;
             const float ny = static_cast<float>(y) * invHeight * 2.0f - 1.0f;
-            const float sampleX = static_cast<float>(x) * scale;
+            const float angle = (static_cast<float>(x) / static_cast<float>(width)) * kTwoPi;
+            const float sampleX = std::cos(angle) * cylinderRadius;
+            const float sampleZ = std::sin(angle) * cylinderRadius;
             const float sampleY = static_cast<float>(y) * scale;
-            const float masked = ApplyLandmassMask_(noise.Sample(sampleX, sampleY), nx, ny, rPreset);
+            const float masked =
+                ApplyLandmassMask_(noise.Sample(sampleX, sampleY, sampleZ), nx, ny, rPreset);
 
             const size_t index = static_cast<size_t>(y * width + x);
             field[index] = masked;
@@ -137,7 +144,8 @@ float WorldGenerator::ApplyLandmassMask_(float noiseValue,
                                          const WorldGenPresetConfig_t& rPreset) const
 {
     const float dist = std::sqrt(nx * nx + ny * ny);
-    const float edge = std::max(std::abs(nx), std::abs(ny));
+    // Cylinder: only north/south are true edges; east/west wrap and must not be depressed.
+    const float edge = std::abs(ny);
     float value = noiseValue;
 
     switch (rPreset.type)

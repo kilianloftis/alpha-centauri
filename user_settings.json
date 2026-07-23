@@ -1,0 +1,16 @@
+{
+  "debug_options": {
+    "remove_fog": true
+  },
+  "game_rules": {
+    "pause_at_end_of_turn": true,
+    "remove_shroud": true
+  },
+  "map_generation": {
+    "height": 150,
+    "ocean_coverage": 0.6000000238418579,
+    "preset_id": "pangea",
+    "seed": 0,
+    "width": 200
+  }
+}

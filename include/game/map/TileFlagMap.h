@@ -22,6 +22,9 @@ public:
     // Clear every flag without changing dimensions. No-op if unsized.
     void ClearAll();
 
+    // Set every flag. No-op if unsized. Bumps revision only when something changes.
+    void SetAll();
+
     bool IsSized() const { return m_width > 0 && m_height > 0; }
     int GetWidth() const { return m_width; }
     int GetHeight() const { return m_height; }

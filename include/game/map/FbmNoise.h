@@ -20,6 +20,7 @@ public:
 
     // Returns a fractal noise sample, typically in roughly [-1, 1].
     float Sample(float x, float y) const;
+    float Sample(float x, float y, float z) const;
 
 private:
     struct Impl;

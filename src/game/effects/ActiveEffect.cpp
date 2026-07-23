@@ -475,4 +475,21 @@ bool ResolveFlag(const Unit& rUnit, RuleFlagId_t flagId)
     return false;
 }
 
+bool ResolveFlag(const Faction& rFaction, RuleFlagId_t flagId)
+{
+    for (const ActiveEffect_t& rEffect : CollectActiveEffects(rFaction).effects)
+    {
+        if (!rEffect.config)
+        {
+            continue;
+        }
+        const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.config->effect);
+        if (pFlag && pFlag->flag == flagId)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 } // namespace ac

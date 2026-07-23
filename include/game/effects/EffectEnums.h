@@ -149,8 +149,12 @@ enum class RuleFlagId_t
 
     // Faction/global flags
     PopulationBoom,
-    NearZeroGrowth
-    // TODO: add more flags as they are defined
+    NearZeroGrowth,
+
+    // Map visibility. RemoveShroud permanently explores the map (satellite); RemoveFog
+    // clears current fog while active (secret project). See VisibilityRules helpers.
+    RemoveShroud,
+    RemoveFog
 };
 
 } // namespace ac

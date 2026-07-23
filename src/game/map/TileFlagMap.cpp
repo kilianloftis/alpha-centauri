@@ -27,6 +27,27 @@ void TileFlagMap::ClearAll()
     m_revision.Bump();
 }
 
+void TileFlagMap::SetAll()
+{
+    if (!IsSized())
+    {
+        return;
+    }
+    bool bChanged = false;
+    for (uint8_t& rFlag : m_flags)
+    {
+        if (!rFlag)
+        {
+            rFlag = 1;
+            bChanged = true;
+        }
+    }
+    if (bChanged)
+    {
+        m_revision.Bump();
+    }
+}
+
 bool TileFlagMap::InBounds_(int x, int y) const
 {
     return x >= 0 && y >= 0 && x < m_width && y < m_height;
