@@ -27,8 +27,8 @@ TEST_CASE("GameSettings Load leaves defaults when file is missing", "[GameSettin
     GameSettings settings;
     settings.Load(path.string());
     CHECK_FALSE(settings.IsPauseAtEndOfTurn());
-    CHECK_FALSE(settings.GetGameRules().removeShroud);
-    CHECK_FALSE(settings.GetDebugOptions().removeFog);
+    CHECK_FALSE(settings.GetVisibility().removeShroud);
+    CHECK_FALSE(settings.GetVisibility().removeFog);
     CHECK(settings.GetMapGeneration().width == 200);
     CHECK(settings.GetMapGeneration().height == 150);
     CHECK(settings.GetMapGeneration().oceanCoverage == Approx(0.6f));
@@ -67,8 +67,10 @@ TEST_CASE("GameSettings Save writes nested game_rules and debug_options", "[Game
 
     GameSettings settings;
     settings.SetPauseAtEndOfTurn(true);
-    settings.GetGameRules().removeShroud = true;
-    settings.GetDebugOptions().removeFog = true;
+    VisibilityConfig_t visibility;
+    visibility.removeShroud = true;
+    visibility.removeFog = true;
+    settings.SetVisibility(visibility);
     settings.Save(path.string());
 
     std::ifstream file(path);
@@ -155,15 +157,36 @@ TEST_CASE("GameSettings Save and Load round-trip remove_shroud and remove_fog", 
 
     {
         GameSettings settings;
-        settings.GetGameRules().removeShroud = true;
-        settings.GetDebugOptions().removeFog = true;
+        VisibilityConfig_t visibility;
+        visibility.removeShroud = true;
+        visibility.removeFog = true;
+        settings.SetVisibility(visibility);
         settings.Save(path.string());
     }
 
     GameSettings loaded;
     loaded.Load(path.string());
-    CHECK(loaded.GetGameRules().removeShroud);
-    CHECK(loaded.GetDebugOptions().removeFog);
+    CHECK(loaded.GetVisibility().removeShroud);
+    CHECK(loaded.GetVisibility().removeFog);
 
     std::filesystem::remove(path);
+}
+
+TEST_CASE("GameSettings SetVisibility emits OnVisibilityChanged only on change", "[GameSettings]")
+{
+    GameSettings settings;
+    int emissions = 0;
+    auto connection = settings.OnVisibilityChanged.ConnectScoped([&]() { ++emissions; });
+
+    VisibilityConfig_t visibility;
+    visibility.removeFog = true;
+    settings.SetVisibility(visibility);
+    CHECK(emissions == 1);
+
+    settings.SetVisibility(visibility);
+    CHECK(emissions == 1);
+
+    visibility.removeFog = false;
+    settings.SetVisibility(visibility);
+    CHECK(emissions == 2);
 }

@@ -29,6 +29,8 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
                      GameSettings& rSettings)
     : m_missionYear(k_StartingMissionYear)
     , m_rSettings(rSettings)
+    , m_visibilitySettingsChanged(rSettings.OnVisibilityChanged.ConnectScoped(
+          [this]() { OnVisibilitySettingsChanged_(); }))
     , m_pEventBus(std::make_unique<EventBus>())
     , m_worldMap(std::move(pWorldMap))
     , m_pDiplomacy(std::make_unique<DiplomacyLedger>())
@@ -300,6 +302,14 @@ void GameState::RebuildTerritory()
 const SecretProjectAvailabilityCalculator& GameState::GetSecretProjectAvailability() const
 {
     return m_secretProjectAvailability;
+}
+
+void GameState::OnVisibilitySettingsChanged_()
+{
+    for (Faction& rFaction : Factions())
+    {
+        rFaction.RebuildVisibility();
+    }
 }
 
 } // namespace ac

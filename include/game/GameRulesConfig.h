@@ -7,8 +7,8 @@ namespace ac
 struct GameRulesConfig_t
 {
     bool pauseAtEndOfTurn = false;
-    // When set, every faction treats the whole map as explored (no shroud).
-    bool removeShroud = false;
+
+    bool operator==(const GameRulesConfig_t&) const = default;
 };
 
 } // namespace ac

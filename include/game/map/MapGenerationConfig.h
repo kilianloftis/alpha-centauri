@@ -14,6 +14,8 @@ struct MapGenerationConfig_t
     unsigned int seed = 0;              // 0 = random
     float oceanCoverage = 0.6f;         // target water fraction [0,1]
     std::string presetId = "islands";
+
+    bool operator==(const MapGenerationConfig_t&) const = default;
 };
 
 } // namespace ac

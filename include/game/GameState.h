@@ -12,6 +12,7 @@
 #include "game/units/UnitOrderExecutor.h"
 #include "lib/DerefView.h"
 #include "lib/IdAllocator.h"
+#include "lib/Signal.h"
 #include <memory>
 #include <vector>
 
@@ -108,8 +109,11 @@ public:
     const SecretProjectAvailabilityCalculator& GetSecretProjectAvailability() const;
 
 private:
+    void OnVisibilitySettingsChanged_();
+
     int m_missionYear;
     GameSettings& m_rSettings;
+    Signal<>::ScopedConnection m_visibilitySettingsChanged;
     std::unique_ptr<EventBus> m_pEventBus;
     // WorldMap and TileEffectsContext are declared before m_factions so they outlive all
     // BaseManagers (which hold TileEffectsContext& references). Members are destroyed in

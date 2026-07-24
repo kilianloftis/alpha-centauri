@@ -16,6 +16,12 @@ class Signal
 public:
     using Slot = std::function<void(Args...)>;
 
+    Signal() = default;
+    Signal(const Signal&) = delete;
+    Signal& operator=(const Signal&) = delete;
+    Signal(Signal&&) = delete;
+    Signal& operator=(Signal&&) = delete;
+
     // RAII guard: disconnects on destruction / move-assignment. Signal must outlive
     // any live ScopedConnection that still points at it.
     class ScopedConnection

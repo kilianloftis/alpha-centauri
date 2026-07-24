@@ -31,7 +31,6 @@ void LoadGameRules_(const nlohmann::json& rJson, GameRulesConfig_t& rConfig)
     {
         const nlohmann::json& rRules = rJson["game_rules"];
         rConfig.pauseAtEndOfTurn = rRules.value("pause_at_end_of_turn", rConfig.pauseAtEndOfTurn);
-        rConfig.removeShroud = rRules.value("remove_shroud", rConfig.removeShroud);
         return;
     }
 
@@ -39,15 +38,18 @@ void LoadGameRules_(const nlohmann::json& rJson, GameRulesConfig_t& rConfig)
     rConfig.pauseAtEndOfTurn = rJson.value("pause_at_end_of_turn", rConfig.pauseAtEndOfTurn);
 }
 
-void LoadDebugOptions_(const nlohmann::json& rJson, DebugOptionsConfig_t& rConfig)
+void LoadVisibility_(const nlohmann::json& rJson, VisibilityConfig_t& rConfig)
 {
-    if (!rJson.contains("debug_options") || !rJson["debug_options"].is_object())
+    // Prefs keep remove_shroud under game_rules and remove_fog under debug_options so
+    // existing user_settings.json files continue to load.
+    if (rJson.contains("game_rules") && rJson["game_rules"].is_object())
     {
-        return;
+        rConfig.removeShroud = rJson["game_rules"].value("remove_shroud", rConfig.removeShroud);
     }
-
-    const nlohmann::json& rDebug = rJson["debug_options"];
-    rConfig.removeFog = rDebug.value("remove_fog", rConfig.removeFog);
+    if (rJson.contains("debug_options") && rJson["debug_options"].is_object())
+    {
+        rConfig.removeFog = rJson["debug_options"].value("remove_fog", rConfig.removeFog);
+    }
 }
 
 nlohmann::json MapGenerationToJson_(const MapGenerationConfig_t& rConfig)
@@ -63,6 +65,43 @@ nlohmann::json MapGenerationToJson_(const MapGenerationConfig_t& rConfig)
 
 } // namespace
 
+void GameSettings::SetGameRules(const GameRulesConfig_t& rConfig)
+{
+    if (m_gameRules == rConfig)
+    {
+        return;
+    }
+    m_gameRules = rConfig;
+    OnGameRulesChanged.Emit();
+}
+
+void GameSettings::SetVisibility(const VisibilityConfig_t& rConfig)
+{
+    if (m_visibility == rConfig)
+    {
+        return;
+    }
+    m_visibility = rConfig;
+    OnVisibilityChanged.Emit();
+}
+
+void GameSettings::SetPauseAtEndOfTurn(bool value)
+{
+    GameRulesConfig_t rules = m_gameRules;
+    rules.pauseAtEndOfTurn = value;
+    SetGameRules(rules);
+}
+
+void GameSettings::SetMapGeneration(const MapGenerationConfig_t& rConfig)
+{
+    if (m_mapGeneration == rConfig)
+    {
+        return;
+    }
+    m_mapGeneration = rConfig;
+    OnMapGenerationChanged.Emit();
+}
+
 void GameSettings::Load(const std::string& path)
 {
     std::ifstream file(path);
@@ -73,9 +112,16 @@ void GameSettings::Load(const std::string& path)
     }
 
     const nlohmann::json json = nlohmann::json::parse(file);
-    LoadGameRules_(json, m_gameRules);
-    LoadDebugOptions_(json, m_debugOptions);
-    LoadMapGeneration_(json, m_mapGeneration);
+
+    GameRulesConfig_t gameRules;
+    VisibilityConfig_t visibility;
+    MapGenerationConfig_t mapGeneration;
+    LoadGameRules_(json, gameRules);
+    LoadVisibility_(json, visibility);
+    LoadMapGeneration_(json, mapGeneration);
+    SetGameRules(gameRules);
+    SetVisibility(visibility);
+    SetMapGeneration(mapGeneration);
 }
 
 void GameSettings::Save(const std::string& path) const
@@ -83,10 +129,10 @@ void GameSettings::Save(const std::string& path) const
     nlohmann::json json;
     json["game_rules"] = {
         {"pause_at_end_of_turn", m_gameRules.pauseAtEndOfTurn},
-        {"remove_shroud", m_gameRules.removeShroud},
+        {"remove_shroud", m_visibility.removeShroud},
     };
     json["debug_options"] = {
-        {"remove_fog", m_debugOptions.removeFog},
+        {"remove_fog", m_visibility.removeFog},
     };
     json["map_generation"] = MapGenerationToJson_(m_mapGeneration);
 

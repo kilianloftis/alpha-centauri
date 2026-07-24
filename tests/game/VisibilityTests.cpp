@@ -4,13 +4,16 @@
 #include "GameFixtures.h"
 
 #include "game/GameSettings.h"
+#include "game/GameState.h"
 #include "game/faction/FactionExploredMap.h"
 #include "game/faction/FactionVisibleMap.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/VisibilityRules.h"
+#include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <memory>
 
 using namespace ac;
 
@@ -223,11 +226,13 @@ TEST_CASE("ApplyRemoveFog makes every tile currently visible", "[visibility][fog
     CHECK(faction.GetVisibleMap().IsVisible(0, 0));
 }
 
-TEST_CASE("GameRules remove_shroud explores the map on rebuild", "[visibility][fog][shroud]")
+TEST_CASE("Visibility remove_shroud explores the map on rebuild", "[visibility][fog][shroud]")
 {
     actest::FactionFixture fixture;
     GameSettings settings;
-    settings.GetGameRules().removeShroud = true;
+    VisibilityConfig_t visibility;
+    visibility.removeShroud = true;
+    settings.SetVisibility(visibility);
 
     Faction& faction = fixture.MakeFaction();
     faction.SetSettings(&settings);
@@ -237,11 +242,13 @@ TEST_CASE("GameRules remove_shroud explores the map on rebuild", "[visibility][f
     CHECK(faction.GetExploredMap().IsExplored(8, 8));
 }
 
-TEST_CASE("DebugOptions remove_fog applies to the player faction only", "[visibility][fog]")
+TEST_CASE("Visibility remove_fog applies to the player faction only", "[visibility][fog]")
 {
     actest::FactionFixture fixture;
     GameSettings settings;
-    settings.GetDebugOptions().removeFog = true;
+    VisibilityConfig_t visibility;
+    visibility.removeFog = true;
+    settings.SetVisibility(visibility);
 
     Faction& player = fixture.MakeFaction();
     Faction& ai = fixture.MakeFaction();
@@ -252,4 +259,32 @@ TEST_CASE("DebugOptions remove_fog applies to the player faction only", "[visibi
 
     CHECK(player.GetVisibleMap().IsVisible(0, 0));
     CHECK_FALSE(ai.GetVisibleMap().IsVisible(0, 0));
+}
+
+TEST_CASE("OnVisibilityChanged toggles fog live without rebuild call sites", "[visibility][fog]")
+{
+    actest::FactionFixture fixture;
+    GameSettings settings;
+
+    auto pMap = std::make_unique<WorldMap>(9, 9);
+    GameState gameState(std::move(pMap), fixture.improvements, &fixture.unitComponents, settings);
+
+    auto pFaction = std::make_unique<Faction>(
+        gameState.AllocateFactionId(), true, fixture.factionDefinition,
+        fixture.dataContext.buildingRegistry.get(), nullptr,
+        fixture.dataContext.socialPolicyRegistry.get(),
+        fixture.dataContext.socialRatingRegistry.get(),
+        nullptr, nullptr);
+    Faction& player = gameState.AddFaction(std::move(pFaction));
+    player.RebuildVisibility();
+    REQUIRE_FALSE(player.GetVisibleMap().IsVisible(0, 0));
+
+    VisibilityConfig_t visibility;
+    visibility.removeFog = true;
+    settings.SetVisibility(visibility);
+    CHECK(player.GetVisibleMap().IsVisible(0, 0));
+
+    visibility.removeFog = false;
+    settings.SetVisibility(visibility);
+    CHECK_FALSE(player.GetVisibleMap().IsVisible(0, 0));
 }
