@@ -4,6 +4,7 @@
 #include "ui/IGameView.h"
 #include "ui/world/CameraInputController.h"
 #include "ui/world/UnitOrderInputController.h"
+#include "ui/world/TerraformInputController.h"
 #include "ui/world/WorldDisplay.h"
 #include "input/Input.h"
 #include <functional>
@@ -15,6 +16,7 @@ namespace ac
 {
 
 class GameState;
+class GameDataContext;
 class BaseManager;
 class Graphics;
 class Unit;
@@ -30,6 +32,8 @@ class WorldView : public IGameView
 {
 public:
     using OpenBaseCallback_t = std::function<void(BaseManager&)>;
+    // Called after a colony pod founds a base (EventBridge::WireBase, open BaseView, etc.).
+    using BaseFoundedCallback_t = std::function<void(BaseManager&)>;
     // Pushes CombatView. WorldView supplies display/map layout and an onFinished that
     // restores dashboard selection after playback.
     using OpenCombatCallback_t = std::function<void(
@@ -44,13 +48,15 @@ public:
 
     WorldView(
         GameState& rGameState,
+        GameDataContext& rGameDataContext,
         const WorldMap& rWorldMap,
         WindowLayout_t layout,
         std::function<void()> onProcessTurn,
         std::function<void()> onRequestExit,
         OpenBaseCallback_t onOpenBase,
         OpenCombatCallback_t onOpenCombat,
-        std::function<void()> onOpenCommlinks
+        std::function<void()> onOpenCommlinks,
+        BaseFoundedCallback_t onBaseFounded = {}
     );
 
     void Render(Graphics& rGraphics) override;
@@ -79,6 +85,7 @@ private:
     std::string FindUnitNameOnTile_(const Tile& rTile) const;
 
     GameState& m_rGameState;
+    GameDataContext& m_rGameDataContext;
     const WindowLayout_t m_mapLayout;
     std::unique_ptr<WorldDisplay> m_pWorldDisplay;
     std::function<void()> m_onProcessTurn;
@@ -86,6 +93,7 @@ private:
     OpenBaseCallback_t m_onOpenBase;
     OpenCombatCallback_t m_onOpenCombat;
     std::function<void()> m_onOpenCommlinks;
+    BaseFoundedCallback_t m_onBaseFounded;
 
     Unit* m_pSelectedUnit = nullptr;
     const Tile* m_pSelectedTile = nullptr;
@@ -97,6 +105,7 @@ private:
 
     std::unique_ptr<CameraInputController> m_pCameraInputController;
     std::unique_ptr<UnitOrderInputController> m_pUnitOrderInputController;
+    std::unique_ptr<TerraformInputController> m_pTerraformInputController;
     SelectedUnitPanel* m_pSelectedUnitPanel = nullptr;
     LocationPanel* m_pLocationPanel = nullptr;
     InfoPanelElement* m_pInfoPanel = nullptr;

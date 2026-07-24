@@ -1,5 +1,6 @@
 #include "game/map/WorldGenerator.h"
 #include "game/map/FbmNoise.h"
+#include "game/map/MoistureGeneration.h"
 
 #include <algorithm>
 #include <chrono>
@@ -29,7 +30,8 @@ WorldGenerator::WorldGenerator() = default;
 WorldGenerator::~WorldGenerator() = default;
 
 std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& rConfig,
-                                                   const WorldGenPresetConfig_t& rPreset)
+                                                   const WorldGenPresetConfig_t& rPreset,
+                                                   const WorldGenDecorationConfig_t& rDecoration)
 {
     const unsigned int seed = rConfig.seed == 0
         ? static_cast<unsigned int>(std::chrono::steady_clock::now().time_since_epoch().count())
@@ -39,7 +41,7 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
     auto pWorld = std::make_unique<WorldMap>(rConfig.width, rConfig.height);
 
     GenerateElevation_(*pWorld, rConfig, rPreset);
-    GenerateMoisture_(*pWorld);
+    GenerateMoisture_(*pWorld, rDecoration.moisture);
     GenerateRockiness_(*pWorld);
 
     return pWorld;
@@ -179,21 +181,41 @@ float WorldGenerator::ApplyLandmassMask_(float noiseValue,
     return value;
 }
 
-void WorldGenerator::GenerateMoisture_(WorldMap& rWorld)
+void WorldGenerator::GenerateMoisture_(WorldMap& rWorld,
+                                       const MoistureDecorationConfig_t& rMoisture)
 {
-    std::uniform_int_distribution<int> dist(0, 2);
+    const int width = rWorld.GetWidth();
+    const int height = rWorld.GetHeight();
 
-    for (int y = 0; y < rWorld.GetHeight(); ++y)
+    for (int y = 0; y < height; ++y)
     {
-        for (int x = 0; x < rWorld.GetWidth(); ++x)
+        for (int x = 0; x < width; ++x)
         {
             Tile* pTile = rWorld.GetTile(x, y);
-            if (pTile)
+            if (!pTile)
             {
-                const int value = dist(m_rng);
-                pTile->SetBaseMoisture(static_cast<Moisture_t>(value));
-                pTile->SetMoisture(static_cast<Moisture_t>(value));
+                continue;
             }
+
+            // Mid-band base so unaided tiles still produce a mix of tiers.
+            float score = rMoisture.baseMin + RandomFloat_() * rMoisture.baseRange;
+            score += moisture_gen::TropicalMoistureBonus(y, height, rMoisture);
+
+            if (pTile->IsLand())
+            {
+                score += moisture_gen::CoastalMoistureBonus(*pTile, rWorld, rMoisture);
+
+                const Tile* pWest = rWorld.GetTile(x - 1, y);
+                const Tile* pEast = rWorld.GetTile(x + 1, y);
+                const int elevWest = pWest ? pWest->GetElevation() : pTile->GetElevation();
+                const int elevEast = pEast ? pEast->GetElevation() : pTile->GetElevation();
+                score += moisture_gen::OrographicMoistureBias(
+                    pTile->GetElevation(), elevWest, elevEast, rMoisture);
+            }
+
+            const Moisture_t moisture = moisture_gen::QuantizeMoistureScore(score, rMoisture);
+            pTile->SetBaseMoisture(moisture);
+            pTile->SetMoisture(moisture);
         }
     }
 }

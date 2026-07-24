@@ -234,6 +234,19 @@ bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx
     {
         case ConditionKind_t::TargetTileHas:
             return ctx.targetTile != nullptr && ctx.targetTile->HasFeature(condition.value);
+        case ConditionKind_t::AllOf:
+            if (!ctx.targetTile)
+            {
+                return false;
+            }
+            for (const std::string& rFeatureId : condition.values)
+            {
+                if (!ctx.targetTile->HasFeature(rFeatureId))
+                {
+                    return false;
+                }
+            }
+            return true;
     }
     return false;
 }
@@ -399,7 +412,7 @@ int ResolveStat(const UnitDesign& rDesign, StatId_t statId, const EffectContext_
 {
     return static_cast<int>(
         ResolveStatModifiers(FilterByStatIdInContext(rDesign.CollectEffects(), statId, rCtx),
-                             SeedFor(statId)).total);
+                             SeedFor(statId), &rCtx).total);
 }
 
 int ResolveAdditiveStat(const UnitDesign& rDesign, StatId_t statId)
@@ -442,7 +455,8 @@ int ResolveStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx)
 {
     const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects(rUnit);
     return static_cast<int>(
-        ResolveStatModifiers(FilterByStatIdInContext(effects, statId, rCtx), SeedFor(statId)).total);
+        ResolveStatModifiers(FilterByStatIdInContext(effects, statId, rCtx), SeedFor(statId),
+                             &rCtx).total);
 }
 
 double ResolveMultiplicativeStat(const Unit& rUnit, StatId_t statId, double baseValue,
@@ -456,7 +470,7 @@ double ResolveMultiplicativeStat(const Unit& rUnit, StatId_t statId, double base
             std::get_if<StatModifierEffect_t>(&rEffect.config->effect);
         if (pModifier && pModifier->op != ModifierOp_t::Add)
         {
-            contributions.emplace_back(pModifier->amount, pModifier->op);
+            contributions.emplace_back(EffectiveStatModifierAmount(*pModifier, &rCtx), pModifier->op);
         }
     }
     return ApplyModifierStack(baseValue, contributions);

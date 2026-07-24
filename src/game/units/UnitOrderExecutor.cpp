@@ -3,13 +3,24 @@
 #include "game/units/UnitOrder.h"
 #include "game/units/MoveCostCalculator.h"
 #include "game/units/Pathfinder.h"
+#include "game/units/FoundBaseRules.h"
+#include "game/units/TerraformRules.h"
 #include "game/faction/FactionRevealedUnits.h"
+#include "game/faction/UnitManager.h"
 #include "game/faction/UnitVisibility.h"
+#include "game/faction/base/BaseManager.h"
+#include "game/faction/EconomyManager.h"
+#include "game/map/ImprovementRegistry.h"
 #include "game/map/MapUtils.h"
+#include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
+#include "game/effects/EffectEnums.h"
+#include "game/effects/TileEffectsContext.h"
 #include "game/Faction.h"
+#include "game/GameDataContext.h"
+#include "game/GameState.h"
 
 #include <stdexcept>
 #include <variant>
@@ -20,7 +31,7 @@ namespace ac
 UnitOrderExecutor::UnitOrderExecutor(const MoveCostCalculator& rMoveCosts,
                                      const StepEvaluator& rSteps,
                                      WorldMap& rWorldMap,
-                                     const TileEffectsContext& rTileEffects,
+                                     TileEffectsContext& rTileEffects,
                                      Pathfinder& rPathfinder)
     : m_rMoveCosts(rMoveCosts)
     , m_rSteps(rSteps)
@@ -34,7 +45,7 @@ UnitOrderExecutor::UnitOrderExecutor(const MoveCostCalculator& rMoveCosts,
 UnitOrderExecutor::UnitOrderExecutor(const MoveCostCalculator& rMoveCosts,
                                      const StepEvaluator& rSteps,
                                      WorldMap& rWorldMap,
-                                     const TileEffectsContext& rTileEffects,
+                                     TileEffectsContext& rTileEffects,
                                      Pathfinder& rPathfinder,
                                      uint32_t combatSeed)
     : m_rMoveCosts(rMoveCosts)
@@ -44,6 +55,12 @@ UnitOrderExecutor::UnitOrderExecutor(const MoveCostCalculator& rMoveCosts,
     , m_rPathfinder(rPathfinder)
     , m_combat(rMoveCosts, rSteps, rWorldMap, rTileEffects, combatSeed)
 {
+}
+
+OrderProgress_t UnitOrderExecutor::ExpendIfSingleUse_(const Unit& rUnit) const
+{
+    return rUnit.GetFlag(RuleFlagId_t::SingleUse) ? OrderProgress_t::Expended
+                                                  : OrderProgress_t::Complete;
 }
 
 void UnitOrderExecutor::RevealBlockingUnits_(Unit& rMover, const StepEvaluation_t& rEval)
@@ -129,7 +146,20 @@ Unit* UnitOrderExecutor::FindVisibleHostileOnTile_(const Unit& rAttacker,
 void UnitOrderExecutor::EnterTile_(Unit& rMover, const Tile& rTo, int remainingAfter)
 {
     m_rWorldMap.GetUnitPositions().MoveUnit(rMover, rTo);
-    rMover.SetMoveFragmentsRemaining(remainingAfter);
+
+    // Hostile entry into a Bunker spends all remaining moves (capture).
+    int remaining = remainingAfter;
+    if (rTo.HasImprovement("Bunker"))
+    {
+        const FactionId_t territoryOwner = m_rWorldMap.GetTerritory().GetOwner(rTo);
+        if (territoryOwner != k_NoFactionOwner
+            && territoryOwner != rMover.GetFaction().GetFactionId())
+        {
+            remaining = 0;
+        }
+    }
+
+    rMover.SetMoveFragmentsRemaining(remaining);
 }
 
 bool UnitOrderExecutor::SpendMovesAndEnter_(Unit& rMover, const Tile& rTo,
@@ -218,22 +248,98 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
         rAttacker.MarkAttacked();
         rAttacker.SetMoveFragmentsRemaining(0);
         rAttacker.ClearOrder();
+        if (ExpendIfSingleUse_(rAttacker) == OrderProgress_t::Expended)
+        {
+            rAttacker.GetFaction().GetUnitManager().DestroyUnit(rAttacker);
+            result.bAttackerDestroyed = true;
+        }
     }
     return result;
 }
 
-void UnitOrderExecutor::Execute(Unit& rUnit)
+BaseManager* UnitOrderExecutor::TryFoundBase(Unit& rUnit, GameState& rGameState,
+                                             const GameDataContext& rDataContext,
+                                             std::function<void(BaseManager&)> onBaseCreated)
 {
-    if (!rUnit.GetOrder().has_value())
-        return;
-
-    std::visit([&](auto& rOrder)
+    if (!rUnit.GetFlag(RuleFlagId_t::FoundBase))
     {
-        Execute_(rUnit, rOrder);
-    }, *rUnit.GetOrder()); // non-const overload — allows mutating HoldForTurnsOrder_t
+        return nullptr;
+    }
+
+    Faction& rFaction = rUnit.GetFaction();
+    const Tile& rUnitTile = rUnit.GetTile();
+    if (!CanFoundBaseAt(rUnitTile, rFaction.GetFactionId(), rGameState))
+    {
+        return nullptr;
+    }
+
+    Tile* pTile = rGameState.GetWorldMap().GetTile(rUnitTile.GetX(), rUnitTile.GetY());
+    if (!pTile)
+    {
+        return nullptr;
+    }
+
+    BaseManager* pBase = rFaction.CreateBase(
+        rGameState.AllocateBaseId(),
+        rFaction.SuggestBaseName(),
+        pTile,
+        rDataContext,
+        rGameState.GetTileEffects(),
+        rGameState.GetSecretProjectAvailability());
+
+    if (onBaseCreated)
+    {
+        onBaseCreated(*pBase);
+    }
+
+    if (ExpendIfSingleUse_(rUnit) == OrderProgress_t::Expended)
+    {
+        rFaction.GetUnitManager().DestroyUnit(rUnit);
+    }
+    return pBase;
 }
 
-void UnitOrderExecutor::Execute_(Unit& rUnit, MoveOrder_t& rOrder)
+bool UnitOrderExecutor::TryStartTerraform(Unit& rUnit, const std::string& improvementId,
+                                          GameState& rGameState)
+{
+    const ImprovementConfig_t* pConfig = m_rTileEffects.GetImprovements().Find(improvementId);
+    if (!pConfig)
+    {
+        return false;
+    }
+    if (!CanStartTerraform(rUnit, *pConfig, rGameState))
+    {
+        return false;
+    }
+
+    const int cost = TerraformEnergyCost(rUnit, *pConfig, rGameState);
+    rUnit.GetFaction().GetEconomy().AddEnergy(-cost);
+    rUnit.SetOrder(TerraformOrder_t{improvementId, pConfig->turnsRequired});
+    rUnit.SetMoveFragmentsRemaining(0);
+    return true;
+}
+
+OrderProgress_t UnitOrderExecutor::Execute(Unit& rUnit)
+{
+    if (!rUnit.GetOrder().has_value())
+    {
+        return OrderProgress_t::Complete;
+    }
+
+    // non-const visit — allows mutating HoldForTurnsOrder_t / TerraformOrder_t
+    const OrderProgress_t progress = std::visit([&](auto& rOrder) -> OrderProgress_t
+    {
+        return Execute_(rUnit, rOrder);
+    }, *rUnit.GetOrder());
+
+    if (progress != OrderProgress_t::Continue)
+    {
+        rUnit.ClearOrder();
+    }
+    return progress;
+}
+
+OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, MoveOrder_t& rOrder)
 {
     if (!rOrder.pDestination)
         throw std::runtime_error("MoveOrder has null destination");
@@ -245,16 +351,15 @@ void UnitOrderExecutor::Execute_(Unit& rUnit, MoveOrder_t& rOrder)
     {
         if (&rUnit.GetTile() == pDestination)
         {
-            rUnit.ClearOrder();
-            return;
+            return OrderProgress_t::Complete;
         }
 
         if (rUnit.GetMoveFragmentsRemaining() <= 0)
         {
-            return;
+            return OrderProgress_t::Continue;
         }
 
-        // Re-resolve each step: rOrder from visit is dangling after ClearOrder.
+        // Re-resolve each step: rOrder from visit is dangling after mid-flight ClearOrder.
         MoveOrder_t& rLiveOrder = std::get<MoveOrder_t>(*rUnit.GetOrder());
 
         // Path is recalculated every step so newly revealed fog / hostiles are accounted for.
@@ -266,7 +371,9 @@ void UnitOrderExecutor::Execute_(Unit& rUnit, MoveOrder_t& rOrder)
             {
                 TryStep(rUnit, *pDesired, rLiveOrder);
             }
-            return;
+            // Order may have been cleared by contact; otherwise keep it for next turn.
+            return rUnit.GetOrder().has_value() ? OrderProgress_t::Continue
+                                                : OrderProgress_t::Complete;
         }
 
         const Tile* pTileBefore = &rUnit.GetTile();
@@ -274,53 +381,87 @@ void UnitOrderExecutor::Execute_(Unit& rUnit, MoveOrder_t& rOrder)
 
         if (!TryStep(rUnit, *pNext, rLiveOrder))
         {
-            return;
+            return rUnit.GetOrder().has_value() ? OrderProgress_t::Continue
+                                                : OrderProgress_t::Complete;
         }
 
         if (&rUnit.GetTile() == pTileBefore && rUnit.GetMoveFragmentsRemaining() == movesBefore)
         {
-            return;
+            return OrderProgress_t::Continue;
         }
 
         if (!rUnit.GetOrder().has_value())
         {
-            return;
+            return OrderProgress_t::Complete;
         }
     }
 }
 
-void UnitOrderExecutor::Execute_(Unit& rUnit, HoldOrder_t& rOrder)
+OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, HoldOrder_t& rOrder)
 {
     // Hold indefinitely — nothing to do each turn
     (void)rUnit;
     (void)rOrder;
+    return OrderProgress_t::Continue;
 }
 
-void UnitOrderExecutor::Execute_(Unit& rUnit, HoldUntilHealedOrder_t& rOrder)
+OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, HoldUntilHealedOrder_t& rOrder)
 {
     // TODO: Clear order when unit reaches full HP
     (void)rUnit;
     (void)rOrder;
+    return OrderProgress_t::Continue;
 }
 
-void UnitOrderExecutor::Execute_(Unit& rUnit, HoldForTurnsOrder_t& rOrder)
+OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, HoldForTurnsOrder_t& rOrder)
 {
+    (void)rUnit;
     if (rOrder.turnsRemaining <= 0)
     {
-        rUnit.ClearOrder();
-        return;
+        return OrderProgress_t::Complete;
     }
 
     --rOrder.turnsRemaining;
-    if (rOrder.turnsRemaining == 0)
-        rUnit.ClearOrder();
+    return rOrder.turnsRemaining == 0 ? OrderProgress_t::Complete
+                                      : OrderProgress_t::Continue;
 }
 
-void UnitOrderExecutor::Execute_(Unit& rUnit, SupplyCrawlOrder_t& rOrder)
+OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, SupplyCrawlOrder_t& rOrder)
 {
     // Harvest happens in ResourceCollection via HomeBaseIndex units in ResourceManager.
     (void)rUnit;
     (void)rOrder;
+    return OrderProgress_t::Continue;
+}
+
+OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, TerraformOrder_t& rOrder)
+{
+    if (rOrder.turnsRemaining <= 0)
+    {
+        return OrderProgress_t::Complete;
+    }
+
+    --rOrder.turnsRemaining;
+    if (rOrder.turnsRemaining > 0)
+    {
+        return OrderProgress_t::Continue;
+    }
+
+    // Order remains until Execute clears on Complete — safe to read rOrder here.
+    const ImprovementConfig_t* pConfig = m_rTileEffects.GetImprovements().Find(rOrder.improvementId);
+    if (!pConfig)
+    {
+        return OrderProgress_t::Complete;
+    }
+
+    Tile* pTile = m_rWorldMap.GetTile(rUnit.GetTile().GetX(), rUnit.GetTile().GetY());
+    if (!pTile)
+    {
+        return OrderProgress_t::Complete;
+    }
+
+    ApplyTerraformResult(*pTile, *pConfig, m_rTileEffects, m_rWorldMap, rUnit);
+    return OrderProgress_t::Complete;
 }
 
 } // namespace ac

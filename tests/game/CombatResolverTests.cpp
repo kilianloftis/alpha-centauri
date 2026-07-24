@@ -2,8 +2,10 @@
 
 #include "game/units/CombatResolver.h"
 #include "game/units/MoveCostCalculator.h"
+#include "game/units/Pathfinder.h"
 #include "game/units/StepEvaluator.h"
 #include "game/units/UnitOrder.h"
+#include "game/units/UnitOrderExecutor.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include "game/map/Tile.h"
@@ -31,6 +33,22 @@ struct CombatHarness_
         : moveCosts(fixture.improvements)
         , steps(fixture.map, *fixture.ctx)
         , combat(moveCosts, steps, fixture.map, *fixture.ctx, seed)
+    {
+    }
+};
+
+struct OrderHarness_
+{
+    MoveCostCalculator moveCosts;
+    StepEvaluator steps;
+    Pathfinder pathfinder;
+    UnitOrderExecutor orders;
+
+    OrderHarness_(WorldFixture& fixture, uint32_t seed)
+        : moveCosts(fixture.improvements)
+        , steps(fixture.map, *fixture.ctx)
+        , pathfinder(moveCosts, steps, fixture.map)
+        , orders(moveCosts, steps, fixture.map, *fixture.ctx, pathfinder, seed)
     {
     }
 };
@@ -109,6 +127,29 @@ TEST_CASE("Higher roll wins the round; ties go to the defender", "[combat]")
     CHECK_FALSE(result.bAttackerDestroyed);
     CHECK(result.victor == CombatSide_t::Attacker);
     CHECK(result.defenderId == defenderId);
+    CHECK(fixture.map.GetUnitsOnTile(fixture.At(5, 4)).empty());
+}
+
+TEST_CASE("SingleUse attacker is expended after combat even on a win", "[combat][single-use]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_single_use_weapon"});
+    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    REQUIRE(attacker.GetFlag(RuleFlagId_t::SingleUse));
+
+    // Expenditure is on UnitOrderExecutor::TryAttack, not CombatResolver::Resolve.
+    OrderHarness_ harness(fixture, /*seed*/ 42);
+    const auto result = harness.orders.TryAttack(attacker, defender.GetTile());
+    REQUIRE(result.has_value());
+
+    CHECK(result->bDefenderDestroyed);
+    CHECK(result->bAttackerDestroyed);
+    CHECK(result->victor == CombatSide_t::Attacker);
+    CHECK(fixture.map.GetUnitsOnTile(fixture.At(4, 4)).empty());
     CHECK(fixture.map.GetUnitsOnTile(fixture.At(5, 4)).empty());
 }
 

@@ -67,6 +67,8 @@ add_library(ac-core STATIC
     game/units/CombatResolver.cpp
     game/units/DisengageRules.cpp
     game/units/MovementRules.cpp
+    game/units/FoundBaseRules.cpp
+    game/units/TerraformRules.cpp
     game/units/StepEvaluator.cpp
     game/units/Pathfinder.cpp
     game/units/MoveCostCalculator.cpp
@@ -87,7 +89,9 @@ add_library(ac-core STATIC
     game/faction/VisibilityRules.cpp
     game/faction/UnitVisibility.cpp
     game/map/ImprovementConfigParser.cpp
+    game/map/TerraformSpread.cpp
     game/map/WorldGenPresetConfigParser.cpp
+    game/map/WorldGenDecorationConfigParser.cpp
     game/map/FbmNoise.cpp
     game/map/WorldMap.cpp
     game/map/WorldGenerator.cpp
@@ -214,6 +218,7 @@ add_executable(alpha-centauri
     ui/world/SupplyCrawlPopup.cpp
     ui/world/CameraInputController.cpp
     ui/world/UnitOrderInputController.cpp
+    ui/world/TerraformInputController.cpp
     ui/world/CombatPresentation.cpp
     ui/world/CombatView.cpp
     ui/world/MapViewport.cpp

@@ -6,7 +6,7 @@ namespace ac
 {
 
 // Player/session knobs for world generation. Landmass recipe knobs live on
-// WorldGenPresetConfig_t (loaded from config/world_gen_presets.json).
+// WorldGenPresetConfig_t (loaded from config/worldGen/presets.json).
 struct MapGenerationConfig_t
 {
     int width = 200;

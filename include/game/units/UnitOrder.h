@@ -9,6 +9,15 @@ namespace ac
 
 class Tile;
 
+// Result of advancing a unit's current order one execution step (PlayerActions pass or
+// an immediate use-action). Callers use this instead of inspecting post-hoc order/unit state.
+enum class OrderProgress_t
+{
+    Continue, // order persists into next turn
+    Complete, // order finished; unit survives
+    Expended, // order finished by consuming the unit (SingleUse)
+};
+
 struct MoveOrder_t
 {
     const Tile* pDestination = nullptr;
@@ -46,12 +55,23 @@ struct SupplyCrawlOrder_t
     std::string ToString() const;
 };
 
+// Multi-turn Former project. improvementId names an ImprovementConfig_t entry
+// (placeable or terraform action). turnsRemaining counts down each PlayerActions pass.
+struct TerraformOrder_t
+{
+    std::string improvementId;
+    int turnsRemaining = 0;
+
+    std::string ToString() const;
+};
+
 using UnitOrder_t = std::variant<
     MoveOrder_t,
     HoldOrder_t,
     HoldUntilHealedOrder_t,
     HoldForTurnsOrder_t,
-    SupplyCrawlOrder_t>;
+    SupplyCrawlOrder_t,
+    TerraformOrder_t>;
 
 std::string ToString(const UnitOrder_t& rOrder);
 

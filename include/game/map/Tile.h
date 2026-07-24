@@ -68,9 +68,8 @@ public:
     bool IsWater() const;
     bool IsLand() const;
 
-    // Raw energy seed derived purely from elevation. River/Fungus/improvement bonuses are
-    // resolved separately via the effects system (see CollectTileEffects/ResolveTileYield)
-    // and layered on top of this seed.
+    // Raw energy bands from elevation (floor(elev/1000) on land). SolarCollector/Mirror
+    // apply these via StatModifier amount_source ElevationEnergySeed, scaled by amount.
     int GetElevationEnergySeed() const;
 
     // Rivers

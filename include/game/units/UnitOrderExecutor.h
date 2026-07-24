@@ -3,8 +3,10 @@
 #include "game/units/CombatResolver.h"
 #include "game/units/StepEvaluator.h"
 #include "game/units/Unit.h"
+#include "game/units/UnitOrder.h"
 
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <unordered_set>
 
@@ -15,33 +17,36 @@ class MoveCostCalculator;
 class WorldMap;
 class Tile;
 class Pathfinder;
-struct MoveOrder_t;
-struct HoldOrder_t;
-struct HoldUntilHealedOrder_t;
-struct HoldForTurnsOrder_t;
-struct SupplyCrawlOrder_t;
+class BaseManager;
+class GameState;
+struct GameDataContext;
 
-// Applies step/attack/order actions using shared MoveCostCalculator, StepEvaluator, and
+// Applies step/attack/order/use actions using shared MoveCostCalculator, StepEvaluator, and
 // Pathfinder references. Path search and step legality are shared world queries owned by
-// GameState; this class owns only the mutation logic.
+// GameState; this class owns only the mutation logic. SingleUse expenditure lives here
+// (ExpendIfSingleUse_), not in CombatResolver or FoundBaseRules.
 class UnitOrderExecutor
 {
 public:
     UnitOrderExecutor(const MoveCostCalculator& rMoveCosts,
                       const StepEvaluator& rSteps,
                       WorldMap& rWorldMap,
-                      const TileEffectsContext& rTileEffects,
+                      TileEffectsContext& rTileEffects,
                       Pathfinder& rPathfinder);
     // Same as above, but seeds CombatResolver for deterministic tests.
     UnitOrderExecutor(const MoveCostCalculator& rMoveCosts,
                       const StepEvaluator& rSteps,
                       WorldMap& rWorldMap,
-                      const TileEffectsContext& rTileEffects,
+                      TileEffectsContext& rTileEffects,
                       Pathfinder& rPathfinder,
                       uint32_t combatSeed);
     ~UnitOrderExecutor() = default;
 
-    void Execute(Unit& rUnit);
+    // Advance the unit's current order one pass. Returns Continue if the order remains,
+    // Complete if it finished and the unit survives, Expended if SingleUse should be
+    // DestroyUnit'd by the caller (PlayerActions under DeferDestruction).
+    // Clears the unit's order whenever progress is not Continue.
+    OrderProgress_t Execute(Unit& rUnit);
 
     // Apply one legal empty-tile step (MoveUnit + spend tile move-cost fragments). On
     // BlockedByOccupant / BlockedByZoc, contact-reveals the attributed blocking units.
@@ -52,15 +57,32 @@ public:
     // Attack a hostile-occupied adjacent tile without moving onto it. Returns nullopt if not
     // adjacent, out of moves, or rTargetTile has no hostile unit visible to the attacker.
     // Otherwise resolves combat (HP / DestroyUnit) and returns the round-by-round result for
-    // UI playback.
+    // UI playback. SingleUse attackers return as destroyed after the caller (or this method)
+    // runs DestroyUnit on OrderProgress_t::Expended.
     std::optional<CombatResult_t> TryAttack(Unit& rAttacker, const Tile& rTargetTile);
 
+    // Found a base on the unit's tile. Requires FoundBase flag and a legal tile (spacing +
+    // territory). onBaseCreated runs after CreateBase (e.g. EventBridge::WireBase). SingleUse
+    // colony pods are DestroyUnit'd here on Expended. Returns the new base, or nullptr.
+    BaseManager* TryFoundBase(Unit& rUnit, GameState& rGameState,
+                              const GameDataContext& rDataContext,
+                              std::function<void(BaseManager&)> onBaseCreated = {});
+
+    // Begin a Former terraform project for improvementId. Spends energy up front and
+    // assigns TerraformOrder_t. Returns false if ineligible.
+    bool TryStartTerraform(Unit& rUnit, const std::string& improvementId, GameState& rGameState);
+
 private:
-    void Execute_(Unit& rUnit, MoveOrder_t& rOrder);
-    void Execute_(Unit& rUnit, HoldOrder_t& rOrder);
-    void Execute_(Unit& rUnit, HoldUntilHealedOrder_t& rOrder);
-    void Execute_(Unit& rUnit, HoldForTurnsOrder_t& rOrder);
-    void Execute_(Unit& rUnit, SupplyCrawlOrder_t& rOrder);
+    // SingleUse outcome for a completed use-action. Does not destroy — callers (TryAttack /
+    // TryFoundBase, or PlayerActions for Execute) must DestroyUnit on Expended.
+    OrderProgress_t ExpendIfSingleUse_(const Unit& rUnit) const;
+
+    OrderProgress_t Execute_(Unit& rUnit, MoveOrder_t& rOrder);
+    OrderProgress_t Execute_(Unit& rUnit, HoldOrder_t& rOrder);
+    OrderProgress_t Execute_(Unit& rUnit, HoldUntilHealedOrder_t& rOrder);
+    OrderProgress_t Execute_(Unit& rUnit, HoldForTurnsOrder_t& rOrder);
+    OrderProgress_t Execute_(Unit& rUnit, SupplyCrawlOrder_t& rOrder);
+    OrderProgress_t Execute_(Unit& rUnit, TerraformOrder_t& rOrder);
 
     Unit* FindVisibleHostileOnTile_(const Unit& rAttacker, const Tile& rTile) const;
     void RevealBlockingUnits_(Unit& rMover, const StepEvaluation_t& rEval);
@@ -76,7 +98,7 @@ private:
     const MoveCostCalculator& m_rMoveCosts;
     const StepEvaluator& m_rSteps;
     WorldMap& m_rWorldMap;
-    const TileEffectsContext& m_rTileEffects;
+    TileEffectsContext& m_rTileEffects;
     Pathfinder& m_rPathfinder;
     CombatResolver m_combat;
 };

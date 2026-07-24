@@ -11,6 +11,20 @@ namespace ac
 
 class Tile;
 
+// What happens when a Former finishes a terraform order for this config.
+// place (default): AddImprovementWithEffects. Other values mutate the tile and never
+// add this config id as a tile feature.
+enum class TerraformResult_t
+{
+    Place,
+    LevelTerrain,
+    RaiseLand,
+    LowerLand,
+    PlantFungus,
+    RemoveFungus,
+    Aquifer,
+};
+
 // A single tile feature definition: a terrain classification (Flat/Rolling/Rocky,
 // Arid/Moist/Wet), a natural feature (River, Fungus), or an improvement (Farm, Mine, Bunker,
 // Base, and what were formerly "bonus"/"landmark" specials - all just improvements now).
@@ -23,7 +37,8 @@ struct ImprovementConfig_t
     std::string id;
     std::string name;
     std::string description;           // optional flavour text (used for tile bonuses)
-    int mineralCost = 0;               // 0 for terrain/natural features (not buildable)
+    int turnsRequired = 0;             // 0 = not a Former project
+    int energyCost = 0;                // flat energy at order start; raise/lower may override
     std::string requiredTech;          // empty if not tech-gated
     std::vector<std::string> excludes; // feature ids that can't coexist with this one on a tile
     // Aura reach is per-effect (EffectConfig_t::radius); MaxEffectReach is derived from those.
@@ -34,6 +49,10 @@ struct ImprovementConfig_t
     bool ownedByTerritory = false;
     int frequency = 0;                 // world-gen spawn weight; 0 = not randomly placed
     std::string spritePath;            // optional sprite override (used for tile bonuses)
+    TerraformResult_t terraformResult = TerraformResult_t::Place;
+    // Feature/improvement ids whose yield StatModifiers are dropped while this improvement
+    // is present (Forest suppresses rockiness/moisture; Borehole suppresses most terraform).
+    std::vector<std::string> suppressYieldSources;
     // Optional move cost in fragments (JSON still uses move-points; conversion happens at
     // parse). On a tile, the highest moveCostFragments among features that define one is used,
     // unless any feature defines moveCostOverrideFragments — then the lowest override replaces
@@ -45,7 +64,7 @@ struct ImprovementConfig_t
 };
 
 // Returns true if none of rCandidate's excludes are present among rTile's current feature ids.
-// Does not check requiredTech/mineralCost - those are construction-flow concerns, not modeled yet.
+// Does not check requiredTech/turnsRequired/energyCost - those are construction-flow concerns.
 bool CanBuildImprovement(const Tile& rTile, const ImprovementConfig_t& rCandidate);
 
 class ImprovementConfigParser

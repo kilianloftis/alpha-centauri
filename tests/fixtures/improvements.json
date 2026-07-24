@@ -50,38 +50,82 @@
   {
     "id": "Road",
     "name": "Road",
-    "mineral_cost": 5,
+    "turns_required": 1,
+    "energy_cost": 0,
     "move_cost_override": "1/3",
     "effects": []
   },
   {
     "id": "MagTube",
     "name": "Mag Tube",
-    "mineral_cost": 10,
+    "turns_required": 3,
+    "energy_cost": 0,
     "move_cost_override": 0,
     "effects": []
   },
   {
     "id": "Farm",
     "name": "Farm",
-    "mineral_cost": 5,
+    "turns_required": 4,
+    "energy_cost": 0,
     "excludes": ["Rocky"],
     "effects": [
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" } }
     ]
   },
   {
+    "id": "Forest",
+    "name": "Forest",
+    "turns_required": 4,
+    "energy_cost": 0,
+    "suppress_yield_sources": ["Flat", "Rolling", "Rocky", "Arid", "Moist", "Wet"],
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" } },
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "minerals", "amount": 2, "op": "Add" } },
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "energy", "amount": 1, "op": "Add" } }
+    ]
+  },
+  {
+    "id": "Nutrients",
+    "name": "Nutrients",
+    "frequency": 10,
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 2, "op": "Add" } }
+    ]
+  },
+  {
     "id": "Mine",
     "name": "Mine",
-    "mineral_cost": 5,
+    "turns_required": 8,
+    "energy_cost": 0,
     "effects": [
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "minerals", "amount": 2, "op": "Add" } }
     ]
   },
   {
+    "id": "SolarCollector",
+    "name": "Solar Collector",
+    "turns_required": 4,
+    "energy_cost": 0,
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "energy", "amount": 1, "op": "Add" } },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "energy",
+          "amount_source": "ElevationEnergySeed",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
     "id": "Bunker",
     "name": "Bunker",
-    "mineral_cost": 10,
+    "turns_required": 5,
+    "energy_cost": 0,
     "effects": [
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "defense", "amount": 50, "op": "AddPercent" } },
       { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "prevents_disengage" } }
@@ -98,6 +142,8 @@
   {
     "id": "Sensor",
     "name": "Sensor",
+    "turns_required": 4,
+    "energy_cost": 0,
     "owned_by_territory": true,
     "effects": [
       {
@@ -135,16 +181,90 @@
   {
     "id": "Mirror",
     "name": "Mirror",
+    "turns_required": 12,
+    "energy_cost": 0,
     "effects": [
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "energy", "amount": 1, "op": "Add" } },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "energy",
+          "amount_source": "ElevationEnergySeed",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
       { "type": "StatModifier", "scope": "ThisTile", "radius": 2, "parameters": { "stat": "energy", "amount": 1, "op": "Add" } }
     ]
   },
   {
     "id": "Condenser",
     "name": "Condenser",
+    "turns_required": 12,
+    "energy_cost": 0,
     "effects": [
       { "type": "StatModifier", "scope": "ThisTile", "radius": 1, "parameters": { "stat": "moisture_tier", "amount": 1, "op": "Add" } }
     ]
+  },
+  {
+    "id": "ThermalBorehole",
+    "name": "Thermal Borehole",
+    "turns_required": 24,
+    "energy_cost": 0,
+    "suppress_yield_sources": ["Flat", "Rolling", "Rocky", "Arid", "Moist", "Wet", "Farm", "Mine"],
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "minerals", "amount": 6, "op": "Add" } },
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "energy", "amount": 6, "op": "Add" } }
+    ]
+  },
+  {
+    "id": "RaiseLand",
+    "name": "Raise Land",
+    "turns_required": 12,
+    "energy_cost": 0,
+    "terraform": { "result": "raise_land" },
+    "effects": []
+  },
+  {
+    "id": "LevelTerrain",
+    "name": "Level Terrain",
+    "turns_required": 8,
+    "energy_cost": 0,
+    "terraform": { "result": "level_terrain" },
+    "effects": []
+  },
+  {
+    "id": "PlantFungus",
+    "name": "Plant Fungus",
+    "turns_required": 6,
+    "energy_cost": 0,
+    "terraform": { "result": "plant_fungus" },
+    "effects": []
+  },
+  {
+    "id": "RemoveFungus",
+    "name": "Remove Fungus",
+    "turns_required": 6,
+    "energy_cost": 0,
+    "terraform": { "result": "remove_fungus" },
+    "effects": []
+  },
+  {
+    "id": "Aquifer",
+    "name": "Aquifer",
+    "turns_required": 18,
+    "energy_cost": 0,
+    "terraform": { "result": "aquifer" },
+    "effects": []
+  },
+  {
+    "id": "LowerLand",
+    "name": "Lower Land",
+    "turns_required": 12,
+    "energy_cost": 0,
+    "terraform": { "result": "lower_land" },
+    "effects": []
   },
   {
     "id": "EffectRadiusBeacon",

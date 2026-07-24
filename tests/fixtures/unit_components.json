@@ -172,6 +172,40 @@
     ]
   },
   {
+    "id": "test_colony_pod",
+    "name": "Test Colony Pod",
+    "type": "weapon",
+    "effects": [
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "found_base" } },
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "single_use" } }
+    ]
+  },
+  {
+    "id": "test_terraformer",
+    "name": "Test Terraformer",
+    "type": "weapon",
+    "effects": [
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "terraform" } }
+    ]
+  },
+  {
+    "id": "test_found_base_only",
+    "name": "Test Found Base Without Single Use",
+    "type": "weapon",
+    "effects": [
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "found_base" } }
+    ]
+  },
+  {
+    "id": "test_single_use_weapon",
+    "name": "Test Single-Use Weapon (missile stand-in)",
+    "type": "weapon",
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "attack", "amount": 4, "op": "Add" } },
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "single_use" } }
+    ]
+  },
+  {
     "id": "energy_siphon",
     "name": "Energy Siphon (faction-lane effect on a component)",
     "type": "special",

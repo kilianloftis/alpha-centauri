@@ -79,11 +79,26 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
 
         // Condition feature ids match Tile::HasFeature: either a terrain feature id or an
         // improvement id.
-        if (rEffect.condition && pImprovements
-            && !IsTerrainFeatureId_(rEffect.condition->value)
-            && !pImprovements->Find(rEffect.condition->value))
+        if (rEffect.condition && pImprovements)
         {
-            ThrowBadReference_(rSourceId, "condition feature", rEffect.condition->value);
+            auto checkFeature = [&](const std::string& rFeatureId)
+            {
+                if (!IsTerrainFeatureId_(rFeatureId) && !pImprovements->Find(rFeatureId))
+                {
+                    ThrowBadReference_(rSourceId, "condition feature", rFeatureId);
+                }
+            };
+            if (rEffect.condition->kind == ConditionKind_t::AllOf)
+            {
+                for (const std::string& rFeatureId : rEffect.condition->values)
+                {
+                    checkFeature(rFeatureId);
+                }
+            }
+            else
+            {
+                checkFeature(rEffect.condition->value);
+            }
         }
 
         if (rEffect.unitFilter && rEffect.unitFilter->kind == UnitFilterKind_t::HasComponent

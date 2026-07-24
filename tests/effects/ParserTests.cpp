@@ -160,6 +160,71 @@ TEST_CASE("ParseEffectConfig: amount as numeric string (used by real configs)", 
     CHECK(pMod->amount == Approx(2.0));
 }
 
+TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
+{
+    SECTION("ElevationEnergySeed with explicit per-band scale")
+    {
+        const json effectJson = json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisTile",
+            "parameters": {
+                "stat": "energy",
+                "amount_source": "ElevationEnergySeed",
+                "amount": 2,
+                "op": "Add"
+            }
+        })");
+
+        const EffectConfig_t config = BonusEffectParser::ParseEffectConfig(effectJson);
+        const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
+        REQUIRE(pMod != nullptr);
+        REQUIRE(pMod->amountSource.has_value());
+        CHECK(*pMod->amountSource == StatModifierEffect_t::AmountSource_t::ElevationEnergySeed);
+        CHECK(pMod->amount == Approx(2.0));
+    }
+
+    SECTION("amount defaults to 1 when amount_source is set")
+    {
+        const json effectJson = json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisTile",
+            "parameters": { "stat": "energy", "amount_source": "ElevationEnergySeed" }
+        })");
+
+        const EffectConfig_t config = BonusEffectParser::ParseEffectConfig(effectJson);
+        const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
+        REQUIRE(pMod != nullptr);
+        CHECK(pMod->amount == Approx(1.0));
+    }
+
+    SECTION("amount_source on non-energy stat throws")
+    {
+        CHECK_THROWS(BonusEffectParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisTile",
+            "parameters": { "stat": "minerals", "amount_source": "ElevationEnergySeed" }
+        })")));
+    }
+
+    SECTION("amount_source outside ThisTile throws")
+    {
+        CHECK_THROWS(BonusEffectParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisBase",
+            "parameters": { "stat": "energy", "amount_source": "ElevationEnergySeed" }
+        })")));
+    }
+
+    SECTION("unknown amount_source throws")
+    {
+        CHECK_THROWS(BonusEffectParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisTile",
+            "parameters": { "stat": "energy", "amount_source": "MoonPhase" }
+        })")));
+    }
+}
+
 TEST_CASE("ParseEffectConfig: StatModifier tile selectors", "[effects][parser]")
 {
     SECTION("HasImprovement selector")

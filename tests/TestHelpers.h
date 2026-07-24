@@ -110,7 +110,7 @@ inline ac::TileSelector_t ImprovementSelector(std::string improvementId)
 
 inline ac::Condition_t TargetTileHas(std::string featureId)
 {
-    return ac::Condition_t{ac::ConditionKind_t::TargetTileHas, std::move(featureId)};
+    return ac::Condition_t{ac::ConditionKind_t::TargetTileHas, std::move(featureId), {}};
 }
 
 inline ac::UnitFilter_t DomainFilter(ac::UnitDomain_t domain)

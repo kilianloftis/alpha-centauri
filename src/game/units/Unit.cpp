@@ -7,6 +7,7 @@
 #include "game/map/WorkedTileIndex.h"
 #include "game/map/WorldMap.h"
 #include "game/effects/ActiveEffect.h"
+#include "game/effects/EffectEnums.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/units/MovementConstants.h"
 

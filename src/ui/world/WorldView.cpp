@@ -9,6 +9,7 @@
 #include "ui/world/EndTurnButton.h"
 #include "ui/world/MinimapDisplay.h"
 #include "game/GameState.h"
+#include "game/GameDataContext.h"
 #include "game/GameSettings.h"
 #include "game/Faction.h"
 #include "game/faction/FactionExploredMap.h"
@@ -19,10 +20,10 @@
 #include "game/faction/UnitManager.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/units/UnitOrderExecutor.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitOrder.h"
-#include "game/units/UnitOrderExecutor.h"
 #include "game/effects/EffectEnums.h"
 #include "ui/TileHitTester.h"
 #include "ui/style/UiStyle.h"
@@ -42,16 +43,19 @@ constexpr int    k_InvalidTileCoord  = -1;
 
 WorldView::WorldView(
     GameState& rGameState,
+    GameDataContext& rGameDataContext,
     const WorldMap& rWorldMap,
     WindowLayout_t layout,
     std::function<void()> onProcessTurn,
     std::function<void()> onRequestExit,
     OpenBaseCallback_t onOpenBase,
     OpenCombatCallback_t onOpenCombat,
-    std::function<void()> onOpenCommlinks
+    std::function<void()> onOpenCommlinks,
+    BaseFoundedCallback_t onBaseFounded
 )
 : IGameView(layout)
 , m_rGameState(rGameState)
+, m_rGameDataContext(rGameDataContext)
 , m_mapLayout(ResolveLayout(layout, Style().layouts.map))
 , m_pWorldDisplay(std::make_unique<WorldDisplay>(rGameState, m_mapLayout))
 , m_onProcessTurn(std::move(onProcessTurn))
@@ -59,8 +63,10 @@ WorldView::WorldView(
 , m_onOpenBase(std::move(onOpenBase))
 , m_onOpenCombat(std::move(onOpenCombat))
 , m_onOpenCommlinks(std::move(onOpenCommlinks))
+, m_onBaseFounded(std::move(onBaseFounded))
 , m_pCameraInputController(std::make_unique<CameraInputController>(*m_pWorldDisplay, rWorldMap, m_mapLayout))
 , m_pUnitOrderInputController(std::make_unique<UnitOrderInputController>())
+, m_pTerraformInputController(std::make_unique<TerraformInputController>())
 {
     auto pSelectedUnit = std::make_unique<SelectedUnitPanel>(ResolveLayout(m_layout, Style().layouts.leftPanel));
     m_pSelectedUnitPanel = pSelectedUnit.get();
@@ -300,9 +306,33 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
                 }));
             return true;
         }
+        if (m_pUnitOrderInputController->WasFoundBaseRequested() && pControllable)
+        {
+            if (m_rGameState.GetUnitOrderExecutor().TryFoundBase(
+                    *pControllable, m_rGameState, m_rGameDataContext, m_onBaseFounded))
+            {
+                // DestroyUnit clears selection via OnUnitDestroyed; pick the next unit.
+                SelectNextAvailableUnit_();
+            }
+            return true;
+        }
         if (m_pUnitOrderInputController->WasOrderAssigned())
         {
             SelectNextAvailableUnit_();
+        }
+        return true;
+    }
+
+    if (m_pTerraformInputController->HandleKey(rEvent, pControllable))
+    {
+        if (m_pTerraformInputController->WasTerraformRequested() && pControllable)
+        {
+            if (m_rGameState.GetUnitOrderExecutor().TryStartTerraform(
+                    *pControllable, m_pTerraformInputController->GetRequestedImprovementId(),
+                    m_rGameState))
+            {
+                SelectNextAvailableUnit_();
+            }
         }
         return true;
     }

@@ -6,6 +6,7 @@
 #include <optional>
 #include <string>
 #include <variant>
+#include <vector>
 
 namespace ac
 {
@@ -124,6 +125,14 @@ struct StatModifierEffect_t
     StatId_t stat = StatId_t::Nutrients;
     double amount = 0.0;
     ModifierOp_t op = ModifierOp_t::Add;
+    // When set, `amount` scales a runtime tile value instead of being a literal add.
+    // ElevationEnergySeed: contribution = GetElevationEnergySeed() * amount (per-band scale).
+    // Requires EffectContext_t::targetTile at resolve time; excluded from context-free filters.
+    enum class AmountSource_t
+    {
+        ElevationEnergySeed,
+    };
+    std::optional<AmountSource_t> amountSource;
     // When set, this modifier is a per-tile yield modifier: it applies to each worked tile
     // whose features satisfy the selector (e.g. "+1 mineral to every worked Mine"), rather
     // than once at the base level. Absent selector: intrinsic tile yield (ThisTile scope) or
@@ -195,14 +204,17 @@ enum class ConditionKind_t
     // founded base registers as an improvement. In combat the target is the defender's tile,
     // so this expresses both "+X% attacking into Forest" and "+X% attacking a Base".
     TargetTileHas,
+    // Every feature id in `values` is present on the target tile (AND of TargetTileHas).
+    AllOf,
 };
 
 struct Condition_t
 {
     ConditionKind_t kind;
-    // Parameter for the condition. For TargetTileHas this is the feature id passed to
-    // Tile::HasFeature (e.g. "Base", "Forest", "Rocky").
+    // Parameter for TargetTileHas: feature id passed to Tile::HasFeature.
     std::string value;
+    // Parameter for AllOf: every id must be present on the target tile.
+    std::vector<std::string> values;
 };
 
 // Restricts which units an effect applies to when merged into a live unit's effect list

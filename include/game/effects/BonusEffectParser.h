@@ -20,6 +20,7 @@ SocialRatingId_t ParseSocialRatingId(const std::string& rRating);
 ModifierOp_t ParseModifierOp(const std::string& rOp);
 EffectScope_t ParseEffectScope(const std::string& rScope);
 EffectPersistence_t ParseEffectPersistence(const std::string& rPersistence);
+StatModifierEffect_t::AmountSource_t ParseAmountSource(const std::string& rSource);
 
 // Reads parameters[key] as either a JSON number or a numeric string. Returns defaultValue if absent.
 double ParseNumber(const nlohmann::json& parameters, const std::string& key, double defaultValue);

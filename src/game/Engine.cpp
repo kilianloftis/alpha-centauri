@@ -122,10 +122,11 @@ void Engine::Initialize_()
     const MapGenerationConfig_t& rWorldConfig = m_pSettings->GetMapGeneration();
     const WorldGenPresetConfig_t& rPreset =
         m_gameDataContext->worldGenPresetRegistry->Get(rWorldConfig.presetId);
-    m_pGameState = std::make_unique<GameState>(worldGen.Generate(rWorldConfig, rPreset),
-                                              *m_gameDataContext->improvementRegistry,
-                                              m_gameDataContext->unitComponentRegistry.get(),
-                                              *m_pSettings);
+    m_pGameState = std::make_unique<GameState>(
+        worldGen.Generate(rWorldConfig, rPreset, *m_gameDataContext->worldGenDecorationConfig),
+        *m_gameDataContext->improvementRegistry,
+        m_gameDataContext->unitComponentRegistry.get(),
+        *m_pSettings);
     m_pGameState->GetDiplomaticActionExecutor().SetGameDataContext(*m_gameDataContext);
     std::cout << "Generated world map: " << m_pGameState->GetWorldMap().GetWidth() << "x" << m_pGameState->GetWorldMap().GetHeight() << "\n";
 
@@ -181,8 +182,7 @@ void Engine::Initialize_()
         m_eventBridge->WireBase(*pBase);
         Faction& rFaction = m_pGameState->AddFaction(std::move(pFaction));
 
-        // Temporary test units on the player faction so fog-of-war vision is easy to see.
-        if (bIsPlayerControlled)
+        // Temporary test units so fog-of-war vision and specials are easy to exercise.
         {
             const UnitComponentRegistry& rComponents = *m_gameDataContext->unitComponentRegistry;
             const std::vector<UnitSlotConfig_t>& rSlots = m_gameDataContext->unitSlotRegistry->GetAll();
@@ -197,37 +197,76 @@ void Engine::Initialize_()
                 return pComponent;
             };
 
+            auto addDesign = [&rFaction](std::unique_ptr<UnitDesign> pDesign,
+                                         const char* pLabel) -> const UnitDesign&
+            {
+                const UnitDesign& rDesign = *pDesign;
+                if (!rFaction.GetMilitary().AddDesign(std::move(pDesign)))
+                {
+                    throw std::runtime_error(
+                        std::string("Engine setup: failed to add ") + pLabel + " design");
+                }
+                return rDesign;
+            };
+
+            WorldMap& rMap = m_pGameState->GetWorldMap();
+            UnitPositionIndex& rPositions = rMap.GetUnitPositions();
+
             std::unordered_map<std::string, const UnitComponentConfig_t*> basicParts = {
                 {"chassis", resolve("HoverTank")},
                 {"weapon",  resolve("Missile_Weapons")},
                 {"armour",  resolve("No_Armour")},
                 {"reactor", resolve("Fission_Plant")},
             };
-            auto pBasicDesign = std::make_unique<UnitDesign>(rSlots, basicParts);
-            const UnitDesign& rBasicDesign = *pBasicDesign;
-            if (!rFaction.GetMilitary().AddDesign(std::move(pBasicDesign)))
-            {
-                throw std::runtime_error("Engine setup: failed to add basic scout design");
-            }
+            const UnitDesign& rBasicDesign = addDesign(
+                std::make_unique<UnitDesign>(rSlots, basicParts), "basic scout");
 
-            std::unordered_map<std::string, const UnitComponentConfig_t*> radarParts = basicParts;
-            radarParts["ability_1"] = resolve("Deep_Radar");
-            auto pRadarDesign = std::make_unique<UnitDesign>(rSlots, radarParts);
-            const UnitDesign& rRadarDesign = *pRadarDesign;
-            if (!rFaction.GetMilitary().AddDesign(std::move(pRadarDesign)))
+            if (bIsPlayerControlled)
             {
-                throw std::runtime_error("Engine setup: failed to add deep-radar scout design");
-            }
+                std::unordered_map<std::string, const UnitComponentConfig_t*> radarParts = basicParts;
+                radarParts["ability_1"] = resolve("Deep_Radar");
+                const UnitDesign& rRadarDesign = addDesign(
+                    std::make_unique<UnitDesign>(rSlots, radarParts), "deep-radar scout");
 
-            WorldMap& rMap = m_pGameState->GetWorldMap();
-            UnitPositionIndex& rPositions = rMap.GetUnitPositions();
-            // Basic vision-1 scout beside the base; deep-radar (vision 2) a little farther out.
-            rFaction.GetUnitManager().CreateUnit(
-                m_pGameState->AllocateUnitId(), rBasicDesign, rPositions,
-                *rMap.GetTile(startX + 1, startY), pBase);
-            rFaction.GetUnitManager().CreateUnit(
-                m_pGameState->AllocateUnitId(), rRadarDesign, rPositions,
-                *rMap.GetTile(startX + 2, startY), pBase);
+                std::unordered_map<std::string, const UnitComponentConfig_t*> colonyParts = {
+                    {"chassis", resolve("Infantry")},
+                    {"weapon",  resolve("Colony_Pod")},
+                    {"armour",  resolve("No_Armour")},
+                    {"reactor", resolve("Fission_Plant")},
+                };
+                const UnitDesign& rColonyDesign = addDesign(
+                    std::make_unique<UnitDesign>(rSlots, colonyParts), "colony pod");
+
+                std::unordered_map<std::string, const UnitComponentConfig_t*> crawlerParts = {
+                    {"chassis", resolve("Infantry")},
+                    {"weapon",  resolve("Supply_Crawler")},
+                    {"armour",  resolve("No_Armour")},
+                    {"reactor", resolve("Fission_Plant")},
+                };
+                const UnitDesign& rCrawlerDesign = addDesign(
+                    std::make_unique<UnitDesign>(rSlots, crawlerParts), "supply crawler");
+
+                // Basic vision-1 scout beside the base; deep-radar (vision 2) a little farther out.
+                rFaction.GetUnitManager().CreateUnit(
+                    m_pGameState->AllocateUnitId(), rBasicDesign, rPositions,
+                    *rMap.GetTile(startX + 1, startY), pBase);
+                rFaction.GetUnitManager().CreateUnit(
+                    m_pGameState->AllocateUnitId(), rRadarDesign, rPositions,
+                    *rMap.GetTile(startX + 2, startY), pBase);
+                rFaction.GetUnitManager().CreateUnit(
+                    m_pGameState->AllocateUnitId(), rColonyDesign, rPositions,
+                    *rMap.GetTile(startX + 1, startY + 1), pBase);
+                rFaction.GetUnitManager().CreateUnit(
+                    m_pGameState->AllocateUnitId(), rCrawlerDesign, rPositions,
+                    *rMap.GetTile(startX + 2, startY + 1), pBase);
+            }
+            else
+            {
+                // Enemy scout beside the AI base for multi-faction visibility/combat checks.
+                rFaction.GetUnitManager().CreateUnit(
+                    m_pGameState->AllocateUnitId(), rBasicDesign, rPositions,
+                    *rMap.GetTile(startX + 1, startY), pBase);
+            }
         }
 
         ++positionIndex;
@@ -313,7 +352,8 @@ void Engine::Initialize_()
         [this]() {
             m_uiManager->PushView(
                 m_viewFactory->CreateCommlinksView(m_viewFactory->GetFullscreenLayout()));
-        }
+        },
+        [this](BaseManager& rBase) { m_eventBridge->WireBase(rBase); }
     );
     m_uiManager->RegisterViewShortcut(Key_t::F2, [this, fullscreen]() -> std::unique_ptr<IGameView> {
         return m_viewFactory->CreateResearchView(fullscreen);

@@ -14,6 +14,7 @@ bool UnitOrderInputController::HandleKey(const KeyEvent_t& rEvent, Unit* pSelect
     m_bOrderAssigned = false;
     m_bAttackRequested = false;
     m_bSupplyCrawlRequested = false;
+    m_bFoundBaseRequested = false;
     m_pAttackTarget = nullptr;
 
     if (!pSelectedUnit)
@@ -28,6 +29,18 @@ bool UnitOrderInputController::HandleKey(const KeyEvent_t& rEvent, Unit* pSelect
         if (pSelectedUnit->GetFlag(RuleFlagId_t::SupplyCrawl) && pSelectedUnit->GetHomeBase())
         {
             m_bSupplyCrawlRequested = true;
+            return true;
+        }
+        return false;
+    }
+
+    // B requests founding a base (WorldView runs UnitOrderExecutor::TryFoundBase).
+    // Only consume when the unit has FoundBase so B stays free for other UI on ordinary units.
+    if (rEvent.key == Key_t::B)
+    {
+        if (pSelectedUnit->GetFlag(RuleFlagId_t::FoundBase))
+        {
+            m_bFoundBaseRequested = true;
             return true;
         }
         return false;
@@ -50,6 +63,7 @@ bool UnitOrderInputController::HandleMouse(const MouseEvent_t& rEvent, Unit* pSe
     m_bOrderAssigned = false;
     m_bAttackRequested = false;
     m_bSupplyCrawlRequested = false;
+    m_bFoundBaseRequested = false;
     m_pAttackTarget = nullptr;
 
     // --- Left-click: long-press path preview + move order / adjacent attack ---

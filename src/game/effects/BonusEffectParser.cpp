@@ -76,6 +76,15 @@ ModifierOp_t ParseModifierOp(const std::string& rOp)
     throw std::runtime_error("Unknown modifier op: '" + rOp + "'");
 }
 
+StatModifierEffect_t::AmountSource_t ParseAmountSource(const std::string& rSource)
+{
+    if (rSource == "ElevationEnergySeed")
+    {
+        return StatModifierEffect_t::AmountSource_t::ElevationEnergySeed;
+    }
+    throw std::runtime_error("Unknown amount_source: '" + rSource + "'");
+}
+
 EffectScope_t ParseEffectScope(const std::string& rScope)
 {
     if (rScope == "ThisBase")        return EffectScope_t::ThisBase;
@@ -111,6 +120,7 @@ double ParseNumber(const nlohmann::json& parameters, const std::string& key, dou
 ConditionKind_t ParseConditionKind(const std::string& rKind)
 {
     if (rKind == "TargetTileHas") return ConditionKind_t::TargetTileHas;
+    if (rKind == "AllOf") return ConditionKind_t::AllOf;
     throw std::runtime_error("Unknown condition kind: '" + rKind + "'");
 }
 
@@ -118,6 +128,24 @@ Condition_t ParseCondition(const nlohmann::json& conditionJson)
 {
     Condition_t condition;
     condition.kind = ParseConditionKind(conditionJson.value("kind", ""));
+    if (condition.kind == ConditionKind_t::AllOf)
+    {
+        if (!conditionJson.contains("values") || !conditionJson.at("values").is_array()
+            || conditionJson.at("values").empty())
+        {
+            throw std::runtime_error("AllOf condition requires a non-empty 'values' array");
+        }
+        for (const auto& rValue : conditionJson.at("values"))
+        {
+            if (!rValue.is_string() || rValue.get<std::string>().empty())
+            {
+                throw std::runtime_error("AllOf condition values must be non-empty strings");
+            }
+            condition.values.push_back(rValue.get<std::string>());
+        }
+        return condition;
+    }
+
     condition.value = conditionJson.value("value", "");
     if (condition.value.empty())
     {
@@ -245,8 +273,28 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
     {
         StatModifierEffect_t statModifier;
         statModifier.stat = ParseStatId(parameters.value("stat", ""));
-        statModifier.amount = ParseNumber(parameters, "amount", 0.0);
         statModifier.op = ParseModifierOp(parameters.value("op", "Add"));
+        if (parameters.contains("amount_source"))
+        {
+            statModifier.amountSource = ParseAmountSource(parameters.at("amount_source").get<std::string>());
+            // amount is the per-band scale when amount_source is set (default 1).
+            statModifier.amount = ParseNumber(parameters, "amount", 1.0);
+            if (statModifier.stat != StatId_t::Energy)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' is only valid on the energy stat, got '"
+                    + parameters.value("stat", "") + "'");
+            }
+            if (effect.scope != EffectScope_t::ThisTile)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' requires scope ThisTile");
+            }
+        }
+        else
+        {
+            statModifier.amount = ParseNumber(parameters, "amount", 0.0);
+        }
         // Optional per-tile selector: when present, this modifier applies to each worked
         // tile satisfying the selector instead of once at the base level. Selectors are
         // resolved only during tile-yield resolution, so they are rejected on any stat

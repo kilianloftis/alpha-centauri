@@ -36,6 +36,10 @@ public:
     // picker; the controller does not assign the order itself.
     bool WasSupplyCrawlRequested() const { return m_bSupplyCrawlRequested; }
 
+    // True after B on a FoundBase-capable unit. WorldView runs
+    // UnitOrderExecutor::TryFoundBase (tile legality is checked there).
+    bool WasFoundBaseRequested() const { return m_bFoundBaseRequested; }
+
     // Non-null while a left-click hold has exceeded the threshold and the path is valid.
     const Path_t* GetPathPreview() const;
 
@@ -54,6 +58,7 @@ private:
     bool m_bOrderAssigned = false;
     bool m_bAttackRequested = false;
     bool m_bSupplyCrawlRequested = false;
+    bool m_bFoundBaseRequested = false;
     const Tile* m_pAttackTarget = nullptr;
 
     // Left-click long-press path preview.

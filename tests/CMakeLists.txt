@@ -40,6 +40,10 @@ add_executable(effects-tests
     game/UnitNamingTests.cpp
     game/UnitOrderTests.cpp
     game/SupplyCrawlTests.cpp
+    game/FoundBaseTests.cpp
+    game/ImprovementConfigParserTests.cpp
+    game/TerraformTests.cpp
+    game/WorldGeneratorMoistureTests.cpp
     game/VisibilityTests.cpp
     game/UnitVisibilityTests.cpp
     game/MovementTests.cpp

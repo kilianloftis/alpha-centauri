@@ -5,12 +5,16 @@
 #include "TestHelpers.h"
 
 #include "game/map/ImprovementConfigParser.h"
+#include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
+#include "game/map/TerraformSpread.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/TileEffectsContext.h"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+
+#include <random>
 
 using namespace ac;
 using Catch::Approx;
@@ -99,7 +103,7 @@ TEST_CASE("ResolveTileDefenseMultiplier: terrain and improvement bonuses combine
     CHECK(fixture.ctx->ResolveTileDefenseMultiplier(tile, id) == Approx(2.0));
 }
 
-TEST_CASE("ResolveTileYield: energy is seeded from elevation, other resources start at zero",
+TEST_CASE("ResolveTileYield: bare tiles start at zero; SolarCollector applies elevation via amount_source",
           "[effects][tile][yield]")
 {
     actest::WorldFixture world;
@@ -113,18 +117,22 @@ TEST_CASE("ResolveTileYield: energy is seeded from elevation, other resources st
         CHECK(yield.energy == 0);
     }
 
-    SECTION("elevation seeds energy at 1 per 1000m")
+    SECTION("elevation energy comes from SolarCollector amount_source")
     {
         tile.SetElevation(1000);
-        CHECK(world.ctx->ResolveTileYield(tile).energy == 1);
-        tile.SetElevation(2500);
+        CHECK(world.ctx->ResolveTileYield(tile).energy == 0);
+        world.ctx->AddImprovementWithEffects(tile, "SolarCollector");
+        // flat +1 + ElevationEnergySeed*1 (=1)
         CHECK(world.ctx->ResolveTileYield(tile).energy == 2);
+        tile.SetElevation(2500);
+        CHECK(world.ctx->ResolveTileYield(tile).energy == 3);
     }
 
-    SECTION("negative elevation seeds zero, not negative energy")
+    SECTION("negative elevation yields only Solar flat bonus")
     {
         tile.SetElevation(-2000);
-        CHECK(world.ctx->ResolveTileYield(tile).energy == 0);
+        world.ctx->AddImprovementWithEffects(tile, "SolarCollector");
+        CHECK(world.ctx->ResolveTileYield(tile).energy == 1);
     }
 }
 
@@ -134,15 +142,16 @@ TEST_CASE("ResolveTileYield: each resource resolves from the matching StatId_t (
     actest::WorldFixture world;
     Tile& tile = world.At(4, 4);
 
-    tile.SetElevation(1000);   // energy seed 1
+    tile.SetElevation(1000);   // ElevationEnergySeed 1 with SolarCollector
     tile.SetHasRiver(true);    // +1 energy
     world.ctx->AddImprovementWithEffects(tile, "Farm"); // +1 nutrients
     world.ctx->AddImprovementWithEffects(tile, "Mine"); // +2 minerals
+    world.ctx->AddImprovementWithEffects(tile, "SolarCollector"); // +1 flat + seed
 
     const TileResources_t yield = world.ctx->ResolveTileYield(tile);
     CHECK(yield.nutrients == 1);
     CHECK(yield.minerals == 2);
-    CHECK(yield.energy == 2);
+    CHECK(yield.energy == 3); // solar flat 1 + seed 1 + river 1
 }
 
 TEST_CASE("ResolveTileYield: terrain classification contributes through the same registry ids",
@@ -425,4 +434,119 @@ TEST_CASE("Condenser moisture aura wraps horizontally across the map seam",
     CHECK(dryAcrossSeam.GetMoisture() == Moisture_t::Moist);
     CHECK(dryAcrossSeam.GetBaseMoisture() == Moisture_t::Arid);
     CHECK(dryTooFar.GetMoisture() == Moisture_t::Arid);
+}
+
+TEST_CASE("Forest suppresses rockiness/moisture but keeps resource bonuses",
+          "[effects][tile][yield][forest]")
+{
+    actest::WorldFixture world;
+    Tile& tile = world.At(4, 4);
+    tile.SetRockiness(Rockiness_t::Rocky);
+    tile.SetMoisture(Moisture_t::Wet);
+    world.ctx->AddImprovementWithEffects(tile, "Forest");
+    world.ctx->AddImprovementWithEffects(tile, "Nutrients");
+
+    const TileResources_t yield = world.ctx->ResolveTileYield(tile);
+    CHECK(yield.nutrients == 3);
+    CHECK(yield.minerals == 2);
+    CHECK(yield.energy == 1);
+}
+
+TEST_CASE("TerraformSpreadGrowthAttempts matches SMAC alien_fauna formula",
+          "[terraform][spread]")
+{
+    CHECK(TerraformSpreadGrowthAttempts(3200, 0) == 100);   // 3200 / 32
+    CHECK(TerraformSpreadGrowthAttempts(3200, 100) == 56);  // 3200 / (25 + 32)
+    CHECK(TerraformSpreadGrowthAttempts(0, 0) == 0);
+}
+
+TEST_CASE("TrySpreadTerraformFromTile spreads Forest, prefers arid, clears fungus",
+          "[terraform][spread]")
+{
+    actest::WorldFixture world;
+    Tile& origin = world.At(4, 4);
+    origin.SetElevation(100);
+    origin.SetRockiness(Rockiness_t::Flat);
+    world.ctx->AddImprovementWithEffects(origin, "Forest");
+
+    // Only two land candidates: arid+fungus should beat wet.
+    ForEachTileInChebyshevRadius(origin, world.map, 1, false,
+        [&](Tile* pNeighbor, int /*distance*/)
+        {
+            pNeighbor->SetElevation(-1000); // sea: ineligible for Forest
+        });
+
+    Tile& arid = world.At(5, 4);
+    arid.SetElevation(100);
+    arid.SetRockiness(Rockiness_t::Flat);
+    arid.SetMoisture(Moisture_t::Arid);
+    arid.SetHasFungus(true);
+
+    Tile& wet = world.At(3, 4);
+    wet.SetElevation(100);
+    wet.SetRockiness(Rockiness_t::Flat);
+    wet.SetMoisture(Moisture_t::Wet);
+
+    REQUIRE(TrySpreadTerraformFromTile(origin, world.map, *world.ctx));
+    CHECK(arid.HasImprovement("Forest"));
+    CHECK_FALSE(arid.GetHasFungus());
+    CHECK_FALSE(wet.HasImprovement("Forest"));
+}
+
+TEST_CASE("TrySpreadTerraformFromTile does not spread Forest onto Rocky tiles",
+          "[terraform][spread]")
+{
+    actest::WorldFixture world;
+    Tile& origin = world.At(4, 4);
+    origin.SetElevation(100);
+    world.ctx->AddImprovementWithEffects(origin, "Forest");
+
+    ForEachTileInChebyshevRadius(origin, world.map, 1, false,
+        [&](Tile* pNeighbor, int /*distance*/)
+        {
+            pNeighbor->SetElevation(100);
+            pNeighbor->SetRockiness(Rockiness_t::Rocky);
+            pNeighbor->SetMoisture(Moisture_t::Arid);
+        });
+
+    CHECK_FALSE(TrySpreadTerraformFromTile(origin, world.map, *world.ctx));
+    ForEachTileInChebyshevRadius(origin, world.map, 1, false,
+        [&](Tile* pNeighbor, int /*distance*/)
+        {
+            CHECK_FALSE(pNeighbor->HasImprovement("Forest"));
+        });
+}
+
+TEST_CASE("SpreadTerraformImprovements eventually spreads from a sampled Forest",
+          "[terraform][spread]")
+{
+    actest::WorldFixture world;
+    Tile& origin = world.At(4, 4);
+    origin.SetElevation(100);
+    origin.SetRockiness(Rockiness_t::Flat);
+    world.ctx->AddImprovementWithEffects(origin, "Forest");
+
+    Tile& neighbor = world.At(5, 4);
+    neighbor.SetElevation(100);
+    neighbor.SetRockiness(Rockiness_t::Flat);
+    neighbor.SetMoisture(Moisture_t::Arid);
+
+    // Leave other adjacent tiles rocky so only `neighbor` can receive the spread.
+    ForEachTileInChebyshevRadius(origin, world.map, 1, false,
+        [&](Tile* pNeighbor, int /*distance*/)
+        {
+            if (pNeighbor != &neighbor)
+            {
+                pNeighbor->SetRockiness(Rockiness_t::Rocky);
+            }
+        });
+
+    std::mt19937 rng(1);
+    bool spread = false;
+    for (int i = 0; i < 2000 && !spread; ++i)
+    {
+        SpreadTerraformImprovements(world.map, *world.ctx, /*turnIndex=*/0, rng);
+        spread = neighbor.HasImprovement("Forest");
+    }
+    CHECK(spread);
 }

@@ -128,6 +128,9 @@ enum class RuleFlagId_t
 {
     // Unit flags
     Flight,
+    // After a successful use-action, ExpendIfSingleUse_ reports Expended and the caller
+    // DestroyUnit's (PlayerActions under deferral, or TryAttack / TryFoundBase directly).
+    // ResolveFlag ORs across every component on the design.
     SingleUse,
     IgnoreZoneOfControl,
     IgnoreDifficultTerrain,
@@ -135,8 +138,7 @@ enum class RuleFlagId_t
     // Any combat involving a unit with this flag uses psi strengths and damage.
     ForcesPsiCombat,
 
-    // Non-combat special equipment (weapon-slot) capability gates. Consumers are future
-    // Found Base / Terraform / Supply / Probe order systems — ResolveFlag only for now.
+    // Non-combat special equipment (weapon-slot) capability gates.
     FoundBase,
     Terraform,
     SupplyCrawl,

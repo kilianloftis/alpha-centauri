@@ -2,6 +2,7 @@
 
 #include "game/faction/base/BaseTypes.h"
 #include "game/effects/BonusEffect.h"
+#include "game/map/Tile.h"
 #include <algorithm>
 #include <optional>
 #include <ranges>
@@ -18,7 +19,6 @@ class BaseManager;
 class Faction;
 class IEffectsProvider;
 class PopulationManager;
-class Tile;
 class Unit;
 class UnitDesign;
 struct BuildingConfig_t;
@@ -59,11 +59,33 @@ struct BaseEffects_t
 
 // Runtime context an effect's condition is evaluated against. Fields are optional; a
 // condition that references an absent field evaluates false. Combat sets targetTile to the
-// defender's tile so TargetTileHas conditions can inspect it.
+// defender's tile so TargetTileHas conditions can inspect it. Tile yield also sets
+// targetTile so amount_source (e.g. ElevationEnergySeed) can read the host tile.
 struct EffectContext_t
 {
     const Tile* targetTile = nullptr;
 };
+
+// Resolves a StatModifier's effective contribution amount. Literal `amount` when
+// amountSource is absent; otherwise scales a tile-derived value (requires targetTile).
+inline double EffectiveStatModifierAmount(const StatModifierEffect_t& rMod,
+                                          const EffectContext_t* pCtx)
+{
+    if (!rMod.amountSource.has_value())
+    {
+        return rMod.amount;
+    }
+    switch (*rMod.amountSource)
+    {
+        case StatModifierEffect_t::AmountSource_t::ElevationEnergySeed:
+            if (!pCtx || !pCtx->targetTile)
+            {
+                return 0.0;
+            }
+            return static_cast<double>(pCtx->targetTile->GetElevationEnergySeed()) * rMod.amount;
+    }
+    return rMod.amount;
+}
 
 // True if config carries no condition, or its condition is satisfied by ctx.
 bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx);
@@ -140,8 +162,11 @@ double ApplyModifierStack(double base, const std::vector<std::pair<double, Modif
 // state its seed — 0.0 for additive stats, 1.0 for pure multipliers, or a raw value the
 // modifiers scale (tile yield, growth rate's 100). Templated on the input range so it
 // accepts both an owned vector and a lazy Filter* view below without materializing one.
+// pCtx resolves amount_source modifiers (e.g. ElevationEnergySeed); pass nullptr for
+// context-free resolves (those filters already drop amount_source effects).
 template <std::ranges::input_range Range>
-StatBreakdown_t ResolveStatModifiers(Range&& matching, double baseValue)
+StatBreakdown_t ResolveStatModifiers(Range&& matching, double baseValue,
+                                     const EffectContext_t* pCtx = nullptr)
 {
     StatBreakdown_t breakdown;
     breakdown.total = 0.0;
@@ -161,7 +186,7 @@ StatBreakdown_t ResolveStatModifiers(Range&& matching, double baseValue)
 
         StatBreakdown_t::Contribution contribution;
         contribution.sourceId = active.sourceId;
-        contribution.amount = pStatModifier->amount;
+        contribution.amount = EffectiveStatModifierAmount(*pStatModifier, pCtx);
         contribution.op = pStatModifier->op;
         breakdown.contributions.push_back(contribution);
     }
@@ -183,8 +208,9 @@ StatBreakdown_t ResolveStatModifiers(Range&& matching, double baseValue)
 }
 
 // Returns a lazy view of effects whose target stat matches the given StatId_t.
-// Only includes StatModifierEffect_t instances. Condition-carrying effects are excluded:
-// they only apply through a matching runtime context (see FilterByStatIdInContext).
+// Only includes StatModifierEffect_t instances. Condition-carrying and amount_source
+// effects are excluded: they only apply through FilterByStatIdInContext with a context
+// that can satisfy / resolve them.
 // The view borrows `effects` — consume it within the statement/expression that creates it
 // (e.g. pass it straight into ResolveStatModifiers), or materialize explicitly (the vector
 // iterator-pair constructor) if the result must outlive that statement.
@@ -197,9 +223,9 @@ inline auto FilterByStatId(const std::vector<ActiveEffect_t>& effects, StatId_t 
             return false;
         }
         const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
-        // Conditional effects are excluded from context-free resolution — they only apply
-        // through FilterByStatIdInContext with a context that satisfies the condition.
-        return pStatModifier && pStatModifier->stat == statId && !effect.config->condition;
+        // Conditional / amount_source effects are excluded from context-free resolution.
+        return pStatModifier && pStatModifier->stat == statId && !effect.config->condition
+            && !pStatModifier->amountSource;
     });
 }
 
@@ -236,7 +262,8 @@ inline auto FilterBaseLevelByStatId(const BaseEffects_t& rBaseEffects, StatId_t 
             return false;
         }
         const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
-        return pStatModifier && pStatModifier->stat == statId && !pStatModifier->selector && !effect.config->condition;
+        return pStatModifier && pStatModifier->stat == statId && !pStatModifier->selector
+            && !effect.config->condition && !pStatModifier->amountSource;
     });
 }
 

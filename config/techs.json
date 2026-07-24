@@ -89,5 +89,42 @@
     "name": "Secrets of Alpha Centauri",
     "category": "discover",
     "cost": 120
+  },
+  {
+    "id": "doctrine_air_power",
+    "name": "Doctrine: Air Power",
+    "category": "conquer",
+    "cost": 40
+  },
+  {
+    "id": "ecological_engineering",
+    "name": "Ecological Engineering",
+    "category": "build",
+    "cost": 50
+  },
+  {
+    "id": "advanced_military_algorithms",
+    "name": "Advanced Military Algorithms",
+    "category": "conquer",
+    "cost": 60
+  },
+  {
+    "id": "environmental_economics",
+    "name": "Environmental Economics",
+    "category": "build",
+    "cost": 70
+  },
+  {
+    "id": "monopole_magnets",
+    "name": "Monopole Magnets",
+    "category": "discover",
+    "cost": 80
+  },
+  {
+    "id": "advanced_ecological_engineering",
+    "name": "Advanced Ecological Engineering",
+    "category": "build",
+    "cost": 90,
+    "prerequisites": ["ecological_engineering"]
   }
 ]

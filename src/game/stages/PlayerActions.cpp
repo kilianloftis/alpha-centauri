@@ -37,8 +37,8 @@ StageResult_t PlayerActions::ExecuteImpl(GameState& rGameState, Faction& rFactio
     UnitOrderExecutor& rExecutor = rGameState.GetUnitOrderExecutor();
     UnitManager& rUnitManager = rFaction.GetUnitManager();
 
-    // Execute may destroy its current unit. Remove it from gameplay immediately, but keep
-    // its object alive until this pass reaches a safe point.
+    // Execute may report Expended (SingleUse). DestroyUnit under deferral so the current
+    // unit stays safe to reference until this pass reaches a safe point.
     const auto destructionScope = rUnitManager.DeferDestruction();
     for (Unit& rUnit : rUnitManager.Units())
     {
@@ -53,10 +53,14 @@ StageResult_t PlayerActions::ExecuteImpl(GameState& rGameState, Faction& rFactio
             continue;
         }
 
-        rExecutor.Execute(rUnit);
+        const OrderProgress_t progress = rExecutor.Execute(rUnit);
+        if (progress == OrderProgress_t::Expended)
+        {
+            rUnitManager.DestroyUnit(rUnit);
+            continue;
+        }
 
-        if (bPlayer && !rUnitManager.IsPendingDestruction(rUnit)
-            && DoesUnitRequireOrders_(rUnit))
+        if (bPlayer && DoesUnitRequireOrders_(rUnit))
         {
             return StageResult_t::Yield;
         }

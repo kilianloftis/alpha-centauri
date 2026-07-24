@@ -8,9 +8,12 @@
 #include "TestHelpers.h"
 
 #include "game/effects/ActiveEffect.h"
+#include "game/map/Tile.h"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+
+#include <ranges>
 
 using namespace ac;
 using actest::Active;
@@ -192,4 +195,31 @@ TEST_CASE("ResolveStatModifiers: does NOT itself filter by stat — callers must
         Active(pool.StatMod(StatId_t::Minerals, 3.0), "b"),
     };
     CHECK(ResolveStatModifiers(effects, 0.0).total == Approx(5.0));
+}
+
+TEST_CASE("ResolveStatModifiers: amount_source ElevationEnergySeed scales seed by amount",
+          "[effects][math][amount_source]")
+{
+    actest::EffectPool pool;
+    StatModifierEffect_t mod;
+    mod.stat = StatId_t::Energy;
+    mod.amount = 2.0;
+    mod.op = ModifierOp_t::Add;
+    mod.amountSource = StatModifierEffect_t::AmountSource_t::ElevationEnergySeed;
+
+    EffectConfig_t config;
+    config.effect = mod;
+    config.scope = EffectScope_t::ThisTile;
+    config.persistence = EffectPersistence_t::Continuous;
+    const EffectConfig_t& rConfig = pool.Add(std::move(config));
+
+    Tile tile(0, 0);
+    tile.SetElevation(2000); // seed = 2
+    const EffectContext_t ctx{&tile};
+    const std::vector<ActiveEffect_t> effects = {Active(rConfig, "solar")};
+
+    CHECK(ResolveStatModifiers(effects, 0.0, &ctx).total == Approx(4.0)); // 2 * 2
+    CHECK(ResolveStatModifiers(effects, 0.0, nullptr).total == Approx(0.0));
+    CHECK(std::ranges::distance(FilterByStatId(effects, StatId_t::Energy)) == 0);
+    CHECK(std::ranges::distance(FilterByStatIdInContext(effects, StatId_t::Energy, ctx)) == 1);
 }

@@ -12,6 +12,7 @@
 #include "game/effects/ActiveEffect.h"
 #include <algorithm>
 #include <cmath>
+#include <unordered_set>
 
 namespace ac
 {
@@ -235,12 +236,42 @@ TileResources_t TileEffectsContext::ResolveTileYield(const Tile& rTile, bool isB
 TileResources_t TileEffectsContext::ResolveYieldFromEffects_(const Tile& rTile,
                                                              const std::vector<ActiveEffect_t>& effects) const
 {
-    // Energy deliberately bypasses SeedFor: it is an Additive stat, but this site scales a
-    // raw base — the tile's elevation energy seed.
-    const double nutrients = ResolveStatModifiers(FilterByStatId(effects, StatId_t::Nutrients), SeedFor(StatId_t::Nutrients)).total;
-    const double minerals  = ResolveStatModifiers(FilterByStatId(effects, StatId_t::Minerals), SeedFor(StatId_t::Minerals)).total;
+    std::vector<ActiveEffect_t> filtered = effects;
+
+    // Forest / Borehole: drop yield StatModifiers whose sourceId is suppressed.
+    std::unordered_set<std::string> suppress;
+    for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
+    {
+        if (!pImprovement)
+        {
+            continue;
+        }
+        for (const std::string& rId : pImprovement->suppressYieldSources)
+        {
+            suppress.insert(rId);
+        }
+    }
+    if (!suppress.empty())
+    {
+        filtered.erase(std::remove_if(filtered.begin(), filtered.end(),
+                           [&](const ActiveEffect_t& rEffect) {
+                               return suppress.count(rEffect.sourceId) > 0;
+                           }),
+                       filtered.end());
+    }
+
+    const EffectContext_t ctx{&rTile};
+    // Energy seed is 0 here: elevation bands come from SolarCollector/Mirror amount_source
+    // effects (ElevationEnergySeed), not a hardcoded improvement-id gate.
+    const double nutrients = ResolveStatModifiers(
+        FilterByStatIdInContext(filtered, StatId_t::Nutrients, ctx), SeedFor(StatId_t::Nutrients),
+        &ctx).total;
+    const double minerals  = ResolveStatModifiers(
+        FilterByStatIdInContext(filtered, StatId_t::Minerals, ctx), SeedFor(StatId_t::Minerals),
+        &ctx).total;
     const double energy    = ResolveStatModifiers(
-        FilterByStatId(effects, StatId_t::Energy), static_cast<double>(rTile.GetElevationEnergySeed())).total;
+        FilterByStatIdInContext(filtered, StatId_t::Energy, ctx), SeedFor(StatId_t::Energy),
+        &ctx).total;
 
     return TileResources_t{
         static_cast<int>(nutrients),
