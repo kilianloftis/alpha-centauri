@@ -53,6 +53,8 @@ struct ImprovementConfig_t
     // Feature/improvement ids whose yield StatModifiers are dropped while this improvement
     // is present (Forest suppresses rockiness/moisture; Borehole suppresses most terraform).
     std::vector<std::string> suppressYieldSources;
+    // When true, downhill river flow marks this tile then stops (ThermalBorehole).
+    bool terminatesRiver = false;
     // Optional move cost in fragments (JSON still uses move-points; conversion happens at
     // parse). On a tile, the highest moveCostFragments among features that define one is used,
     // unless any feature defines moveCostOverrideFragments — then the lowest override replaces

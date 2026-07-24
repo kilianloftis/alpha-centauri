@@ -178,6 +178,7 @@ TEST_CASE("Terraform mutations: level, fungus, aquifer", "[unit][terraform][muta
     REQUIRE(game.pState->GetUnitOrderExecutor().TryStartTerraform(
         former, "Aquifer", *game.pState));
     game.FinishTerraform(former);
+    CHECK(tile.GetHasAquifer());
     CHECK(tile.GetHasRiver());
 }
 

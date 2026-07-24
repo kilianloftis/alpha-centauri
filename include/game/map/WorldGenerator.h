@@ -29,7 +29,10 @@ private:
                             const MapGenerationConfig_t& rConfig,
                             const WorldGenPresetConfig_t& rPreset);
     void GenerateMoisture_(WorldMap& rWorld, const MoistureDecorationConfig_t& rMoisture);
-    void GenerateRockiness_(WorldMap& rWorld);
+    void GenerateRockiness_(WorldMap& rWorld,
+                            ErosiveForces_t erosiveForces,
+                            const RockinessDecorationConfig_t& rRockiness);
+    void GenerateAquifers_(WorldMap& rWorld, const AquiferDecorationConfig_t& rAquifers);
 
     float ApplyLandmassMask_(float noiseValue,
                              float nx,

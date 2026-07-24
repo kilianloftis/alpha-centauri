@@ -129,6 +129,7 @@ ImprovementConfig_t ImprovementConfigParser::ParseImprovementConfig(const nlohma
     config.excludes = ConfigFields::ParseStringArray(improvementJson, "excludes");
     config.suppressYieldSources =
         ConfigFields::ParseStringArray(improvementJson, "suppress_yield_sources");
+    config.terminatesRiver = improvementJson.value("terminates_river", false);
     config.terraformResult = ParseTerraformResult_(improvementJson, config.id);
     if (improvementJson.contains("move_cost"))
     {

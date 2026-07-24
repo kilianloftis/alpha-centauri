@@ -65,6 +65,11 @@ std::string GetOceanCoverageText_(const GameSettings& rSettings)
     return buffer;
 }
 
+std::string GetErosiveForcesText_(const GameSettings& rSettings)
+{
+    return ToString(rSettings.GetMapGeneration().erosiveForces);
+}
+
 std::string GetPresetIdText_(const GameSettings& rSettings)
 {
     return rSettings.GetMapGeneration().presetId;
@@ -97,6 +102,8 @@ const SettingDescriptor_t k_SettingDescriptors[] = {
      nullptr, nullptr, GetMapHeightText_},
     {"Ocean Coverage", SettingRowKind_t::ReadOnlyValue, SettingScope_t::NewGameOnly,
      nullptr, nullptr, GetOceanCoverageText_},
+    {"Erosive Forces", SettingRowKind_t::ReadOnlyValue, SettingScope_t::NewGameOnly,
+     nullptr, nullptr, GetErosiveForcesText_},
     {"Preset", SettingRowKind_t::ReadOnlyValue, SettingScope_t::NewGameOnly,
      nullptr, nullptr, GetPresetIdText_},
     {"Seed", SettingRowKind_t::ReadOnlyValue, SettingScope_t::NewGameOnly,

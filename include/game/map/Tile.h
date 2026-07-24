@@ -31,8 +31,8 @@ std::string ToString(Rockiness_t rockiness);
 std::string ToString(Moisture_t moisture);
 
 // Every terrain feature id Tile::HasFeature can match (all rockiness/moisture tiers plus
-// River and Fungus). Together with improvement ids, these are the valid feature references
-// for effect conditions/selectors — used by ValidateEffectReferences.
+// River, Aquifer, and Fungus). Together with improvement ids, these are the valid feature
+// references for effect conditions/selectors — used by ValidateEffectReferences.
 const std::vector<std::string>& AllTerrainFeatureIds();
 
 class Tile
@@ -72,9 +72,13 @@ public:
     // apply these via StatModifier amount_source ElevationEnergySeed, scaled by amount.
     int GetElevationEnergySeed() const;
 
-    // Rivers
+    // Rivers (derived from aquifer downhill flow; rebuilt by RecomputeRivers)
     void SetHasRiver(bool bHasRiver);
     bool GetHasRiver() const;
+
+    // Aquifers (persistent river sources; placed by world-gen / Former Aquifer)
+    void SetHasAquifer(bool bHasAquifer);
+    bool GetHasAquifer() const;
 
     // Fungus (alien vegetation; presence-only for now, spreading is a future enhancement)
     void SetHasFungus(bool bHasFungus);
@@ -98,14 +102,15 @@ public:
     bool HasImprovement(std::string_view improvementId) const;
     const std::vector<const ImprovementConfig_t*>& GetImprovements() const;
 
-    // Terrain-only feature configs: rockiness, moisture, river, fungus. Intrinsic terrain
-    // properties (enums/bools) are mirrored here as registry pointers after BindImprovements.
-    // Improvements are NOT included — effect collectors iterate GetImprovements() for those.
+    // Terrain-only feature configs: rockiness, moisture, river, aquifer, fungus. Intrinsic
+    // terrain properties (enums/bools) are mirrored here as registry pointers after
+    // BindImprovements. Improvements are NOT included — effect collectors iterate
+    // GetImprovements() for those.
     const std::vector<const ImprovementConfig_t*>& GetTerrainFeatures() const;
 
     // Returns true if featureId matches any active feature on this tile: a terrain feature
-    // (rockiness/moisture/river/fungus) or an improvement id. Used by conditions/selectors
-    // and CanBuildImprovement, which reference features by string id.
+    // (rockiness/moisture/river/aquifer/fungus) or an improvement id. Used by
+    // conditions/selectors and CanBuildImprovement, which reference features by string id.
     bool HasFeature(std::string_view featureId) const;
 
 private:
@@ -120,6 +125,7 @@ private:
     int m_elevation;
 
     bool m_bHasRiver;
+    bool m_bHasAquifer;
     bool m_bHasFungus;
 
     const ImprovementRegistry* m_pImprovements = nullptr;

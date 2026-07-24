@@ -11,5 +11,25 @@
     "orographic_max_elev": 4000.0,
     "arid_threshold": 0.4,
     "moist_threshold": 0.7
+  },
+  "rockiness": {
+    "low": {
+      "flat": 0.45,
+      "rolling": 0.35,
+      "rocky": 0.2
+    },
+    "average": {
+      "flat": 0.55,
+      "rolling": 0.35,
+      "rocky": 0.1
+    },
+    "high": {
+      "flat": 0.7,
+      "rolling": 0.25,
+      "rocky": 0.05
+    }
+  },
+  "aquifers": {
+    "land_fraction": 0.002
   }
 }

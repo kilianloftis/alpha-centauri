@@ -212,6 +212,7 @@
     "name": "Thermal Borehole",
     "turns_required": 24,
     "energy_cost": 0,
+    "terminates_river": true,
     "suppress_yield_sources": ["Flat", "Rolling", "Rocky", "Arid", "Moist", "Wet", "Farm", "Mine"],
     "effects": [
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "minerals", "amount": 6, "op": "Add" } },

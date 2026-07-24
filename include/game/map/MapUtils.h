@@ -59,6 +59,22 @@ inline bool AreChebyshevAdjacent(const Tile& rA, const Tile& rB, int mapWidth)
     return ChebyshevDistance(rA, rB, mapWidth) == 1;
 }
 
+// Orthogonal (4-way) neighbors in fixed order N, E, S, W. X wraps; Y may be null (skipped).
+// Used by river downhill flow — not Chebyshev/diagonal.
+template<typename WorldMapT, typename Fn>
+void ForEachOrthogonalNeighbor(const Tile& rOrigin, WorldMapT& rWorldMap, Fn&& fn)
+{
+    static constexpr int k_Deltas[4][2] = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}};
+    for (const auto& delta : k_Deltas)
+    {
+        auto* pTile = rWorldMap.GetTile(rOrigin.GetX() + delta[0], rOrigin.GetY() + delta[1]);
+        if (pTile)
+        {
+            fn(pTile);
+        }
+    }
+}
+
 // Calls fn(tile_ptr, distance) for every tile within Chebyshev `radius` tiles of rOrigin
 // (square / king-move distance: max(|dx|, |dy|)). This is the metric for vision and for
 // all effect/improvement aura radii (Sensor, Condenser, unit auras, …).

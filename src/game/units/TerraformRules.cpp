@@ -8,6 +8,7 @@
 #include "game/faction/ResearchManager.h"
 #include "game/faction/base/BaseTypes.h"
 #include "game/map/MapUtils.h"
+#include "game/map/RiverGeneration.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
@@ -75,7 +76,7 @@ bool CanApplyMutation_(const Tile& rTile, const ImprovementConfig_t& rConfig, Un
         case TerraformResult_t::RemoveFungus:
             return rTile.GetHasFungus();
         case TerraformResult_t::Aquifer:
-            return !rTile.GetHasRiver() && !IsSeaTile_(rTile);
+            return !rTile.GetHasAquifer() && !IsSeaTile_(rTile);
         case TerraformResult_t::RaiseLand:
             if (domain == UnitDomain_t::Sea)
             {
@@ -204,11 +205,12 @@ bool ApplyTerraformResult(Tile& rTile, const ImprovementConfig_t& rConfig,
             return true;
 
         case TerraformResult_t::Aquifer:
-            if (rTile.GetHasRiver() || IsSeaTile_(rTile))
+            if (rTile.GetHasAquifer() || IsSeaTile_(rTile))
             {
                 return false;
             }
-            rTile.SetHasRiver(true);
+            rTile.SetHasAquifer(true);
+            RecomputeRivers(rWorldMap);
             return true;
 
         case TerraformResult_t::RaiseLand:
@@ -228,6 +230,7 @@ bool ApplyTerraformResult(Tile& rTile, const ImprovementConfig_t& rConfig,
                             std::min(newElev, pNeighbor->GetElevation() + 1000));
                     }
                 });
+            RecomputeRivers(rWorldMap);
             (void)rFormer;
             return true;
         }
@@ -239,6 +242,7 @@ bool ApplyTerraformResult(Tile& rTile, const ImprovementConfig_t& rConfig,
                 return false;
             }
             rTile.SetElevation(rTile.GetElevation() - 1000);
+            RecomputeRivers(rWorldMap);
             return true;
         }
     }

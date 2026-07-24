@@ -3,6 +3,7 @@
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/MapUtils.h"
+#include "game/map/RiverGeneration.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
@@ -402,15 +403,24 @@ void TileEffectsContext::AddImprovementWithEffects(Tile& rTile, const std::strin
     const ImprovementConfig_t& rConfig = m_rImprovements.Get(improvementId);
     rTile.AddImprovement(rConfig);
     RecomputeMoistureInRadius_(rTile, MaxEffectReach_(rConfig), *this, m_rWorldMap);
+    if (rConfig.terminatesRiver)
+    {
+        RecomputeRivers(m_rWorldMap);
+    }
 }
 
 void TileEffectsContext::RemoveImprovementWithEffects(Tile& rTile, const std::string& improvementId)
 {
     const ImprovementConfig_t* pConfig = m_rImprovements.Find(improvementId);
     const int radius = pConfig ? MaxEffectReach_(*pConfig) : 0;
+    const bool bTerminatesRiver = pConfig && pConfig->terminatesRiver;
 
     rTile.RemoveImprovement(improvementId);
     RecomputeMoistureInRadius_(rTile, radius, *this, m_rWorldMap);
+    if (bTerminatesRiver)
+    {
+        RecomputeRivers(m_rWorldMap);
+    }
 }
 
 } // namespace ac

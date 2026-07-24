@@ -32,6 +32,7 @@ TEST_CASE("GameSettings Load leaves defaults when file is missing", "[GameSettin
     CHECK(settings.GetMapGeneration().width == 200);
     CHECK(settings.GetMapGeneration().height == 150);
     CHECK(settings.GetMapGeneration().oceanCoverage == Approx(0.6f));
+    CHECK(settings.GetMapGeneration().erosiveForces == ErosiveForces_t::Average);
     CHECK(settings.GetMapGeneration().presetId == "islands");
 }
 
@@ -97,6 +98,7 @@ TEST_CASE("GameSettings Save and Load round-trip map_generation subsection", "[G
         mapGen.width = 64;
         mapGen.height = 48;
         mapGen.oceanCoverage = 0.45f;
+        mapGen.erosiveForces = ErosiveForces_t::Low;
         mapGen.presetId = "archipelago";
         mapGen.seed = 42;
         settings.SetMapGeneration(mapGen);
@@ -108,6 +110,7 @@ TEST_CASE("GameSettings Save and Load round-trip map_generation subsection", "[G
     CHECK(loaded.GetMapGeneration().width == 64);
     CHECK(loaded.GetMapGeneration().height == 48);
     CHECK(loaded.GetMapGeneration().oceanCoverage == Approx(0.45f));
+    CHECK(loaded.GetMapGeneration().erosiveForces == ErosiveForces_t::Low);
     CHECK(loaded.GetMapGeneration().presetId == "archipelago");
     CHECK(loaded.GetMapGeneration().seed == 42u);
 

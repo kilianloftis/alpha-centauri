@@ -332,6 +332,7 @@
     "energy_cost": 0,
     "required_tech": "ecological_engineering",
     "excludes": ["Farm", "Mine", "Forest", "SolarCollector", "SoilEnricher", "Mirror", "Condenser"],
+    "terminates_river": true,
     "suppress_yield_sources": [
       "Flat", "Rolling", "Rocky", "Arid", "Moist", "Wet",
       "Farm", "Mine", "Forest", "SolarCollector", "SoilEnricher", "Mirror", "Condenser",

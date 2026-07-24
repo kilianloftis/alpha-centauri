@@ -1,6 +1,8 @@
 #include "game/map/WorldGenerator.h"
 #include "game/map/FbmNoise.h"
 #include "game/map/MoistureGeneration.h"
+#include "game/map/RiverGeneration.h"
+#include "game/map/RockinessGeneration.h"
 
 #include <algorithm>
 #include <chrono>
@@ -42,7 +44,8 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
 
     GenerateElevation_(*pWorld, rConfig, rPreset);
     GenerateMoisture_(*pWorld, rDecoration.moisture);
-    GenerateRockiness_(*pWorld);
+    GenerateRockiness_(*pWorld, rConfig.erosiveForces, rDecoration.rockiness);
+    GenerateAquifers_(*pWorld, rDecoration.aquifers);
 
     return pWorld;
 }
@@ -220,9 +223,13 @@ void WorldGenerator::GenerateMoisture_(WorldMap& rWorld,
     }
 }
 
-void WorldGenerator::GenerateRockiness_(WorldMap& rWorld)
+void WorldGenerator::GenerateRockiness_(WorldMap& rWorld,
+                                        ErosiveForces_t erosiveForces,
+                                        const RockinessDecorationConfig_t& rRockiness)
 {
-    std::uniform_int_distribution<int> dist(0, 2);
+    using namespace rockiness_gen;
+
+    const RockinessWeights_t& rWeights = WeightsForLevel(rRockiness, erosiveForces);
 
     for (int y = 0; y < rWorld.GetHeight(); ++y)
     {
@@ -231,11 +238,37 @@ void WorldGenerator::GenerateRockiness_(WorldMap& rWorld)
             Tile* pTile = rWorld.GetTile(x, y);
             if (pTile)
             {
-                const int value = dist(m_rng);
-                pTile->SetRockiness(static_cast<Rockiness_t>(value));
+                pTile->SetRockiness(SampleRockiness(rWeights, RandomFloat_()));
             }
         }
     }
+}
+
+void WorldGenerator::GenerateAquifers_(WorldMap& rWorld,
+                                       const AquiferDecorationConfig_t& rAquifers)
+{
+    std::vector<Tile*> landTiles;
+    for (auto& pTile : rWorld.GetTiles())
+    {
+        if (pTile && pTile->IsLand())
+        {
+            landTiles.push_back(pTile.get());
+        }
+    }
+
+    if (!landTiles.empty() && rAquifers.landFraction > 0.0f)
+    {
+        std::shuffle(landTiles.begin(), landTiles.end(), m_rng);
+        const size_t target = static_cast<size_t>(
+            std::lround(rAquifers.landFraction * static_cast<float>(landTiles.size())));
+        const size_t count = std::min(target, landTiles.size());
+        for (size_t i = 0; i < count; ++i)
+        {
+            landTiles[i]->SetHasAquifer(true);
+        }
+    }
+
+    RecomputeRivers(rWorld);
 }
 
 int WorldGenerator::RandomInt_(int min, int max)

@@ -27,7 +27,7 @@ const std::vector<std::string>& AllTerrainFeatureIds()
     static const std::vector<std::string> ids = {
         ToString(Rockiness_t::Flat), ToString(Rockiness_t::Rolling), ToString(Rockiness_t::Rocky),
         ToString(Moisture_t::Arid), ToString(Moisture_t::Moist), ToString(Moisture_t::Wet),
-        "River", "Fungus",
+        "River", "Aquifer", "Fungus",
     };
     return ids;
 }
@@ -40,6 +40,7 @@ Tile::Tile()
     , m_rockiness(Rockiness_t::Flat)
     , m_elevation(0)
     , m_bHasRiver(false)
+    , m_bHasAquifer(false)
     , m_bHasFungus(false)
 {
 }
@@ -52,6 +53,7 @@ Tile::Tile(int x, int y)
     , m_rockiness(Rockiness_t::Flat)
     , m_elevation(0)
     , m_bHasRiver(false)
+    , m_bHasAquifer(false)
     , m_bHasFungus(false)
 {
 }
@@ -142,6 +144,17 @@ bool Tile::GetHasRiver() const
     return m_bHasRiver;
 }
 
+void Tile::SetHasAquifer(bool bHasAquifer)
+{
+    m_bHasAquifer = bHasAquifer;
+    RefreshTerrainFeatures_();
+}
+
+bool Tile::GetHasAquifer() const
+{
+    return m_bHasAquifer;
+}
+
 void Tile::SetHasFungus(bool bHasFungus)
 {
     m_bHasFungus = bHasFungus;
@@ -201,6 +214,7 @@ bool Tile::HasFeature(std::string_view featureId) const
     if (ToString(m_rockiness) == featureId) return true;
     if (ToString(m_moisture)  == featureId) return true;
     if (m_bHasRiver  && featureId == "River")  return true;
+    if (m_bHasAquifer && featureId == "Aquifer") return true;
     if (m_bHasFungus && featureId == "Fungus") return true;
     return HasImprovement(featureId);
 }
@@ -226,6 +240,13 @@ void Tile::RefreshTerrainFeatures_()
         if (const ImprovementConfig_t* pRiver = m_pImprovements->Find("River"))
         {
             m_terrainFeatures.push_back(pRiver);
+        }
+    }
+    if (m_bHasAquifer)
+    {
+        if (const ImprovementConfig_t* pAquifer = m_pImprovements->Find("Aquifer"))
+        {
+            m_terrainFeatures.push_back(pAquifer);
         }
     }
     if (m_bHasFungus)

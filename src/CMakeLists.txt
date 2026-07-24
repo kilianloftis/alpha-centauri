@@ -93,6 +93,8 @@ add_library(ac-core STATIC
     game/map/TerraformSpread.cpp
     game/map/WorldGenPresetConfigParser.cpp
     game/map/WorldGenDecorationConfigParser.cpp
+    game/map/MapGenerationConfig.cpp
+    game/map/RiverGeneration.cpp
     game/map/FbmNoise.cpp
     game/map/WorldMap.cpp
     game/map/WorldGenerator.cpp
