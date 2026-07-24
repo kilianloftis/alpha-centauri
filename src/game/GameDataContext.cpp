@@ -19,6 +19,7 @@
 #include "game/social-engineering/SocialRatingRegistry.h"
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitSlotRegistry.h"
+#include "game/effects/TileYieldRulesConfigParser.h"
 #include "lib/LuaRuntime.h"
 
 #include <stdexcept>
@@ -70,6 +71,9 @@ void LoadGameData(GameDataContext& rData, const GameDataPaths& rPaths)
     WorldGenDecorationConfigParser decorationParser;
     rData.worldGenDecorationConfig = std::make_unique<WorldGenDecorationConfig_t>(
         decorationParser.ParseConfig(rPaths.worldGenDecoration));
+
+    TileYieldRulesConfigParser tileYieldRulesParser;
+    rData.tileYieldRules = tileYieldRulesParser.ParseConfig(rPaths.tileYieldRules);
 
     // Cross-config id checks — only safe once every registry above is loaded.
     ValidateEffectReferences(rData);

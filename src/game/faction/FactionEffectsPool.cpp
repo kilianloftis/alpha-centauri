@@ -2,6 +2,7 @@
 
 #include "game/Faction.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/faction/ResearchManager.h"
 #include "game/faction/SocialEngineeringManager.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/base/BaseManager.h"
@@ -10,13 +11,17 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 
+#include <algorithm>
+
 namespace ac
 {
 
 FactionEffectsPool::FactionEffectsPool(const BuildingRegistry* pBuildingRegistry,
-                                       const Revision& rBaseListRevision)
+                                       const Revision& rBaseListRevision,
+                                       const std::vector<EffectConfig_t>* pTileYieldRules)
     : m_pBuildingRegistry(pBuildingRegistry)
     , m_rBaseListRevision(rBaseListRevision)
+    , m_pTileYieldRules(pTileYieldRules)
 {
 }
 
@@ -95,10 +100,22 @@ std::vector<ActiveEffect_t> FactionEffectsPool::CollectDefinitionEffects_(const 
     return result;
 }
 
+std::vector<ActiveEffect_t> FactionEffectsPool::CollectTileYieldRuleEffects_() const
+{
+    std::vector<ActiveEffect_t> result;
+    if (!m_pTileYieldRules)
+    {
+        return result;
+    }
+    AppendActiveEffects(*m_pTileYieldRules, nullptr, "tile_yield_rules", result);
+    return result;
+}
+
 void FactionEffectsPool::CollectRevisions_(const Faction& rFaction, std::vector<uint64_t>& rOut) const
 {
     rOut.clear();
     rOut.push_back(m_rBaseListRevision.Get());
+    rOut.push_back(rFaction.GetResearch().GetRevision());
     rOut.push_back(rFaction.GetSocialEngineering().GetRevision());
     rOut.push_back(rFaction.GetUnitManager().GetRevision());
     for (const BaseManager& rBase : rFaction.Bases())
@@ -120,6 +137,10 @@ void FactionEffectsPool::Validate_(const Faction& rFaction) const
 void FactionEffectsPool::Rebuild_(const Faction& rFaction) const
 {
     FactionEffects_t factionEffects;
+    const std::vector<ActiveEffect_t> tileYieldRules = CollectTileYieldRuleEffects_();
+    factionEffects.effects.insert(factionEffects.effects.end(), tileYieldRules.begin(),
+                                  tileYieldRules.end());
+
     const std::vector<ActiveEffect_t> defEffects = CollectDefinitionEffects_(rFaction);
     factionEffects.effects.insert(factionEffects.effects.end(), defEffects.begin(), defEffects.end());
 
@@ -134,6 +155,17 @@ void FactionEffectsPool::Rebuild_(const Faction& rFaction) const
 
     const std::vector<ActiveEffect_t> unitEffects = CollectUnitEffects_(rFaction);
     factionEffects.effects.insert(factionEffects.effects.end(), unitEffects.begin(), unitEffects.end());
+
+    // Drop effects gated by a discovered tech (removed_by_tech). Research revision is in the
+    // stamp, so discovering a tech rebuilds the pool and lifts those gates.
+    const ResearchManager& rResearch = rFaction.GetResearch();
+    factionEffects.effects.erase(
+        std::remove_if(factionEffects.effects.begin(), factionEffects.effects.end(),
+                       [&](const ActiveEffect_t& rEffect) {
+                           return rEffect.config && !rEffect.config->removedByTech.empty()
+                               && rResearch.HasDiscoveredTech(rEffect.config->removedByTech);
+                       }),
+        factionEffects.effects.end());
 
     m_cachedPool = std::move(factionEffects);
     CollectRevisions_(rFaction, m_cachedStamp);

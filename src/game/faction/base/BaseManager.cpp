@@ -74,7 +74,9 @@ BaseManager::BaseManager(
     , m_pPopulation(std::make_unique<PopulationManager>(
           pPopTypeRegistry, pPopTypeAvailabilityCalculator, pGrowthConfig, pCompositionCalculator,
           pResearchManager, initialPopulation))
-    , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(ComputeWorkableTiles_(rTileEffects, tile), *m_pPopulation, rTileEffects, rTileEffects.GetWorldMap().GetWorkedTiles()))
+    , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(
+          ComputeWorkableTiles_(rTileEffects, tile), *m_pPopulation, rTileEffects,
+          rTileEffects.GetWorldMap().GetWorkedTiles()))
     , m_pBuildings(std::make_unique<BuildingManager>(pBuildingRegistry, pSecretProjectCalculator, pResearchManager))
     , m_pResources(std::make_unique<ResourceManager>(
           m_pWorkerAssignments.get(), pEconomyManager, m_pBuildings.get(), &m_tile, &m_rTileEffects,
@@ -354,9 +356,14 @@ int BaseManager::GetY() const
     return m_tile.GetY();
 }
 
-TileResources_t BaseManager::GetWorkedTileYield(const Tile& rTile) const
+TileYieldView_t BaseManager::GetWorkedTileYield(const Tile& rTile) const
 {
     return m_pWorkerAssignments->GetWorkedTileYield(rTile, BuildBaseEffects_());
+}
+
+TileYieldView_t BaseManager::GetPreviewTileYield(const Tile& rTile) const
+{
+    return m_rTileEffects.ResolvePreviewTileYield(rTile, BuildBaseEffects_());
 }
 
 const std::string& BaseManager::GetName() const

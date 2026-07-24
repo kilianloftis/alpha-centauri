@@ -424,6 +424,43 @@ TEST_CASE("ParseEffectConfig: RuleFlag requires a valid flag", "[effects][parser
         json::parse(R"({ "type": "RuleFlag", "scope": "ThisUnit", "parameters": {} })")));
 }
 
+TEST_CASE("ParseEffectConfig: TileResourceCap and apply_after_restriction", "[effects][parser]")
+{
+    const json capJson = json::parse(R"({
+        "type": "TileResourceCap", "scope": "FactionGlobal",
+        "removed_by_tech": "gene_splicing",
+        "parameters": { "stat": "nutrients", "max": 2 }
+    })");
+    const EffectConfig_t capConfig = BonusEffectParser::ParseEffectConfig(capJson);
+    const auto* pCap = std::get_if<TileResourceCapEffect_t>(&capConfig.effect);
+    REQUIRE(pCap != nullptr);
+    CHECK(pCap->stat == StatId_t::Nutrients);
+    CHECK(pCap->max == 2);
+    CHECK(capConfig.removedByTech == "gene_splicing");
+
+    CHECK_THROWS(BonusEffectParser::ParseEffectConfig(json::parse(R"({
+        "type": "TileResourceCap", "scope": "ThisTile",
+        "parameters": { "stat": "nutrients", "max": 2 }
+    })")));
+
+    const json afterJson = json::parse(R"({
+        "type": "StatModifier", "scope": "ThisTile",
+        "parameters": { "stat": "nutrients", "amount": 2, "op": "Add", "apply_after_restriction": true }
+    })");
+    const EffectConfig_t afterConfig = BonusEffectParser::ParseEffectConfig(afterJson);
+    const auto* pMod = std::get_if<StatModifierEffect_t>(&afterConfig.effect);
+    REQUIRE(pMod != nullptr);
+    CHECK(pMod->applyAfterRestriction);
+
+    CHECK_THROWS(BonusEffectParser::ParseEffectConfig(json::parse(R"({
+        "type": "StatModifier", "scope": "ThisTile",
+        "parameters": {
+            "stat": "nutrients", "amount": 2, "op": "AddPercent",
+            "apply_after_restriction": true
+        }
+    })")));
+}
+
 TEST_CASE("ParseEffectConfig: SocialRatingModifier", "[effects][parser]")
 {
     const json ratingJson = json::parse(R"({

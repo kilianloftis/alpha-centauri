@@ -48,7 +48,7 @@ TileResources_t CollectSupplyCrawlYield_(const HomeBaseIndex& rHomeUnits,
 
         const auto& rOrder = std::get<SupplyCrawlOrder_t>(*pUnit->GetOrder());
         const TileResources_t yield =
-            rTileEffects.ResolveTileYield(*pTile, /*isBaseTile*/false, rBaseEffects);
+            rTileEffects.ResolveTileYield(*pTile, /*isBaseTile*/false, rBaseEffects).effective;
         switch (rOrder.resource)
         {
             case StatId_t::Nutrients:
@@ -107,7 +107,8 @@ TileResources_t ResourceManager::ComputeWorked_(const BaseEffects_t& rBaseEffect
     }
     if (m_pBaseTile)
     {
-        const TileResources_t baseTile = m_pTileEffects->ResolveTileYield(*m_pBaseTile, /*isBaseTile*/true, rBaseEffects);
+        const TileResources_t baseTile =
+            m_pTileEffects->ResolveTileYield(*m_pBaseTile, /*isBaseTile*/true, rBaseEffects).effective;
         total.nutrients += baseTile.nutrients;
         total.energy    += baseTile.energy;
         total.minerals  += baseTile.minerals;

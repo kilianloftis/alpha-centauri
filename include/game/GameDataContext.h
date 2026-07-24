@@ -1,8 +1,10 @@
 #pragma once
 
 #include "game/GameDataPaths.h"
+#include "game/effects/BonusEffect.h"
 
 #include <memory>
+#include <vector>
 
 namespace ac
 {
@@ -53,6 +55,8 @@ struct GameDataContext
     std::unique_ptr<ImprovementRegistry> improvementRegistry;
     std::unique_ptr<WorldGenPresetRegistry> worldGenPresetRegistry;
     std::unique_ptr<WorldGenDecorationConfig_t> worldGenDecorationConfig;
+    // FactionGlobal TileResourceCap rules (and any other universal tile-yield effects).
+    std::vector<EffectConfig_t> tileYieldRules;
 
     // --- Calculators / services (built from the data above) ---
     std::unique_ptr<LuaRuntime> luaRuntime;

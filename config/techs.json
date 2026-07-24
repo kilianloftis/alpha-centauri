@@ -97,6 +97,12 @@
     "cost": 40
   },
   {
+    "id": "gene_splicing",
+    "name": "Gene Splicing",
+    "category": "discover",
+    "cost": 40
+  },
+  {
     "id": "ecological_engineering",
     "name": "Ecological Engineering",
     "category": "build",

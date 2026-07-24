@@ -169,7 +169,8 @@ void Engine::Initialize_()
             m_gameDataContext->socialPolicyRegistry.get(),
             m_gameDataContext->socialRatingRegistry.get(),
             m_gameDataContext->techCostCalculator.get(),
-            m_gameDataContext->popTypeAvailabilityCalculator.get());
+            m_gameDataContext->popTypeAvailabilityCalculator.get(),
+            &m_gameDataContext->tileYieldRules);
 
         const auto& [startX, startY] = startPositions[positionIndex % startPositions.size()];
         BaseManager* pBase = pFaction->CreateBase(

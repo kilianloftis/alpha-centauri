@@ -5,6 +5,7 @@
 #include "TestHelpers.h"
 
 #include "game/buildings/BuildingConfigParser.h"
+#include "game/faction/ResearchManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/map/Tile.h"
 #include "game/effects/ActiveEffect.h"
@@ -172,7 +173,11 @@ TEST_CASE("Full pipeline: building and pop bonuses land in base resource product
     REQUIRE(pOtherWorker != nullptr);
     base.ConvertPop(*pOtherWorker, "Doctor");
 
-    // Nutrients: farm tile (2 Wet + 1 Farm + 1 booster) + base center tile (0) + flat 2 = 6.
+    // Nutrients: farm tile (2 Wet + 1 Farm + 1 booster) is capped at 2 until gene_splicing,
+    // then + flat 2 from the building = 4. Discovering the tech lifts the tile to 4 → 6 total.
+    CHECK(base.GetNutrientProduction() == 4);
+
+    faction.GetResearch().AddDiscoveredTech("gene_splicing");
     CHECK(base.GetNutrientProduction() == 6);
     // Minerals: nothing anywhere.
     CHECK(base.GetMineralProduction() == 0);

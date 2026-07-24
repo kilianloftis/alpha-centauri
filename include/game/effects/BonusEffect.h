@@ -138,6 +138,17 @@ struct StatModifierEffect_t
     // than once at the base level. Absent selector: intrinsic tile yield (ThisTile scope) or
     // a flat base modifier (ThisBase scope), depending on the effect's scope.
     std::optional<TileSelector_t> selector;
+    // When true, this contribution is added after per-tile resource caps (classic SMAC
+    // resource-bonus specials). Only valid on nutrients/minerals/energy.
+    bool applyAfterRestriction = false;
+};
+
+// Caps one tile resource at `max`. Lift the cap by putting `removed_by_tech` on the
+// EffectConfig_t (FactionEffectsPool drops it once that tech is discovered).
+struct TileResourceCapEffect_t
+{
+    StatId_t stat = StatId_t::Nutrients;
+    int max = 2;
 };
 
 struct RuleFlagEffect_t
@@ -188,6 +199,7 @@ using EffectVariant_t = std::variant<
     GrantTechEffect_t,
     GrantUnitEffect_t,
     StatModifierEffect_t,
+    TileResourceCapEffect_t,
     RuleFlagEffect_t,
     SocialEngineeringOverrideEffect_t,
     DiplomaticModifierEffect_t,
@@ -248,6 +260,10 @@ struct EffectConfig_t
     // Absent = applies to every unit that receives this effect. When present, CollectLiveUnitEffects
     // drops the effect for units that do not match (e.g. Domain=Air for Aerospace Complex).
     std::optional<UnitFilter_t> unitFilter;
+    // When set, FactionEffectsPool omits this effect once the faction has discovered the tech.
+    // Empty / absent = never removed by research. Parsed from the effect entry's
+    // "removed_by_tech" field (alongside condition / unitFilter).
+    std::string removedByTech;
     // For ThisTile-scoped effects: how far (Chebyshev tiles) beyond the host tile the effect
     // reaches. 0 (default) = the host tile only. Parsed from the effect entry's "radius" field.
     int radius = 0;

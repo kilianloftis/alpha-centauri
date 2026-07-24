@@ -188,6 +188,7 @@ void ResearchManager::AddDiscoveredTech(TechId techId)
         throw std::invalid_argument("ResearchManager::AddDiscoveredTech: Tech already discovered");
     }
     m_discoveredTechs.push_back(techId);
+    m_revision.Bump();
 }
 
 std::vector<const TechConfig_t*> ResearchManager::GetAvailableTechs() const

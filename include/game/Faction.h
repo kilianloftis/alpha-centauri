@@ -54,7 +54,8 @@ public:
              const SocialPolicyRegistry* pSocialPolicyRegistry,
              const SocialRatingRegistry* pSocialRatingRegistry,
              TechCostCalculator* pTechCostCalculator,
-             const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator);
+             const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator,
+             const std::vector<EffectConfig_t>* pTileYieldRules = nullptr);
     ~Faction();
 
     FactionId_t GetFactionId() const { return m_factionId; }

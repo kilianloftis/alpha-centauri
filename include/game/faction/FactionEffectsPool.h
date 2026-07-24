@@ -20,7 +20,8 @@ class FactionEffectsPool
 {
 public:
     FactionEffectsPool(const BuildingRegistry* pBuildingRegistry,
-                       const Revision& rBaseListRevision);
+                       const Revision& rBaseListRevision,
+                       const std::vector<EffectConfig_t>* pTileYieldRules = nullptr);
 
     // The validated pool for rFaction. The reference is valid until the next
     // effect-source mutation on rFaction.
@@ -45,6 +46,9 @@ private:
     // Permanent bonuses from the faction definition config.
     std::vector<ActiveEffect_t> CollectDefinitionEffects_(const Faction& rFaction) const;
 
+    // Universal tile-yield rules (TileResourceCap, etc.) from GameDataContext.
+    std::vector<ActiveEffect_t> CollectTileYieldRuleEffects_() const;
+
     // Fills rOut with the revision of every pool contributor in a fixed order — the
     // single source of truth for what the pool depends on, used both to validate the
     // cache and to stamp it after a rebuild. A new contributor must be added here and
@@ -59,6 +63,7 @@ private:
 
     const BuildingRegistry* m_pBuildingRegistry;
     const Revision& m_rBaseListRevision;
+    const std::vector<EffectConfig_t>* m_pTileYieldRules;
 
     // The empty initial stamp never equals a real collection, so no "never built"
     // sentinel is needed. m_scratchRevisions is reused between validations to keep the

@@ -85,12 +85,14 @@ void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, const Tile& rTile
 
     rGraphics.DrawRect(x, y, size, size, style.tileBorderColor, style.tileBorderWidth);
 
-    const TileResources_t yield = bIsWorked
+    const TileYieldView_t yield = bIsWorked
         ? m_pBase->GetWorkedTileYield(rTile)
-        : m_pBase->GetTileEffects().ResolveTileYield(rTile);
-    const int nutrients = yield.nutrients;
-    const int minerals = yield.minerals;
-    const int energy = yield.energy;
+        : m_pBase->GetPreviewTileYield(rTile);
+    // Display the collectable (capped) totals; potential remains available on the view for
+    // restriction callouts / tooltips.
+    const int nutrients = yield.effective.nutrients;
+    const int minerals = yield.effective.minerals;
+    const int energy = yield.effective.energy;
 
     std::ostringstream oss;
     oss << nutrients << " " << minerals << " " << energy;

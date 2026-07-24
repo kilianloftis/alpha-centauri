@@ -244,6 +244,7 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
     {
         effect.unitFilter = ParseUnitFilter(effectJson.at("unitFilter"));
     }
+    effect.removedByTech = effectJson.value("removed_by_tech", "");
 
     if (typeStr == "GrantBuilding")
     {
@@ -309,7 +310,47 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
             }
             statModifier.selector = ParseTileSelector(parameters.at("selector"));
         }
+        statModifier.applyAfterRestriction = parameters.value("apply_after_restriction", false);
+        if (statModifier.applyAfterRestriction
+            && statModifier.stat != StatId_t::Nutrients && statModifier.stat != StatId_t::Minerals
+            && statModifier.stat != StatId_t::Energy)
+        {
+            throw std::runtime_error(
+                "StatModifier 'apply_after_restriction' is only valid on tile resource "
+                "stats (nutrients/minerals/energy), got '" + parameters.value("stat", "") + "'");
+        }
+        if (statModifier.applyAfterRestriction && statModifier.op != ModifierOp_t::Add)
+        {
+            throw std::runtime_error(
+                "StatModifier 'apply_after_restriction' requires op Add");
+        }
         effect.effect = statModifier;
+    }
+    else if (typeStr == "TileResourceCap")
+    {
+        TileResourceCapEffect_t cap;
+        cap.stat = ParseStatId(parameters.value("stat", ""));
+        if (cap.stat != StatId_t::Nutrients && cap.stat != StatId_t::Minerals
+            && cap.stat != StatId_t::Energy)
+        {
+            throw std::runtime_error(
+                "TileResourceCap 'stat' must be nutrients/minerals/energy, got '"
+                + parameters.value("stat", "") + "'");
+        }
+        cap.max = static_cast<int>(ParseNumber(parameters, "max", 2.0));
+        if (cap.max < 0)
+        {
+            throw std::runtime_error("TileResourceCap 'max' must be >= 0");
+        }
+        if (effect.scope != EffectScope_t::FactionGlobal
+            && effect.scope != EffectScope_t::AllOwnerBases
+            && effect.scope != EffectScope_t::WorldGlobal)
+        {
+            throw std::runtime_error(
+                "TileResourceCap requires a faction-wide scope (FactionGlobal / AllOwnerBases / "
+                "WorldGlobal)");
+        }
+        effect.effect = cap;
     }
     else if (typeStr == "RuleFlag")
     {

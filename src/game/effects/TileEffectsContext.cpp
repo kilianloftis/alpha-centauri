@@ -10,8 +10,10 @@
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitDesign.h"
 #include "game/effects/ActiveEffect.h"
+#include "game/effects/BonusEffect.h"
 #include <algorithm>
 #include <cmath>
+#include <optional>
 #include <unordered_set>
 
 namespace ac
@@ -19,6 +21,53 @@ namespace ac
 
 namespace
 {
+
+std::optional<int> CapForStat_(StatId_t stat, const std::vector<ActiveEffect_t>& rEffects)
+{
+    std::optional<int> cap;
+    for (const ActiveEffect_t& rEffect : rEffects)
+    {
+        if (!rEffect.config)
+        {
+            continue;
+        }
+        const auto* pCap = std::get_if<TileResourceCapEffect_t>(&rEffect.config->effect);
+        if (!pCap || pCap->stat != stat)
+        {
+            continue;
+        }
+        // Multiple caps: keep the tightest (lowest max).
+        cap = cap.has_value() ? std::min(*cap, pCap->max) : pCap->max;
+    }
+    return cap;
+}
+
+int ApplyCap_(int value, std::optional<int> cap)
+{
+    return cap.has_value() ? std::min(value, *cap) : value;
+}
+
+TileResources_t ApplyTileResourceRestrictions_(TileResources_t yield,
+                                               const std::vector<ActiveEffect_t>& rEffects)
+{
+    yield.nutrients = ApplyCap_(yield.nutrients, CapForStat_(StatId_t::Nutrients, rEffects));
+    yield.minerals  = ApplyCap_(yield.minerals, CapForStat_(StatId_t::Minerals, rEffects));
+    yield.energy    = ApplyCap_(yield.energy, CapForStat_(StatId_t::Energy, rEffects));
+    return yield;
+}
+
+TileResources_t AssembleRestrictedTileYield_(TileResources_t subjectToRestriction,
+                                             TileResources_t afterRestriction,
+                                             const std::vector<ActiveEffect_t>& rEffects)
+{
+    const TileResources_t capped =
+        ApplyTileResourceRestrictions_(subjectToRestriction, rEffects);
+    return TileResources_t{
+        capped.nutrients + afterRestriction.nutrients,
+        capped.energy + afterRestriction.energy,
+        capped.minerals + afterRestriction.minerals,
+    };
+}
 
 // Appends ThisTile-scoped effects projected by units within maxRadius of rOrigin — a unit
 // component with a radius effect is a mobile aura (e.g. a sensor pod). Units standing on
@@ -220,21 +269,37 @@ std::vector<ActiveEffect_t> TileEffectsContext::CollectAreaEffects(const Tile& r
     return effects;
 }
 
-TileResources_t TileEffectsContext::ResolveTileYield(const Tile& rTile) const
+TileYieldView_t TileEffectsContext::ResolveTileYield(const Tile& rTile) const
 {
-    return ResolveYieldFromEffects_(rTile, CollectAreaEffects(rTile));
+    return ResolveYieldFromEffects_(rTile, CollectAreaEffects(rTile), /*pCapEffects*/ nullptr);
 }
 
-TileResources_t TileEffectsContext::ResolveTileYield(const Tile& rTile, bool isBaseTile,
+TileYieldView_t TileEffectsContext::ResolveTileYield(const Tile& rTile, bool isBaseTile,
                                                      const BaseEffects_t& rBaseEffects) const
 {
     std::vector<ActiveEffect_t> effects = CollectAreaEffects(rTile);
     AppendMatchingTileModifiers_(rBaseEffects.effects, rTile, isBaseTile, effects);
-    return ResolveYieldFromEffects_(rTile, effects);
+    return ResolveYieldFromEffects_(rTile, effects, &rBaseEffects);
 }
 
-TileResources_t TileEffectsContext::ResolveYieldFromEffects_(const Tile& rTile,
-                                                             const std::vector<ActiveEffect_t>& effects) const
+TileYieldView_t TileEffectsContext::ResolvePreviewTileYield(const Tile& rTile,
+                                                            const BaseEffects_t& rCapEffects) const
+{
+    return ResolveYieldFromEffects_(rTile, CollectAreaEffects(rTile), &rCapEffects);
+}
+
+int TileEffectsContext::ResolveResource_(const Tile& rTile,
+                                         const std::vector<ActiveEffect_t>& effects,
+                                         StatId_t stat) const
+{
+    const EffectContext_t ctx{&rTile};
+    return static_cast<int>(
+        ResolveStatModifiers(FilterByStatIdInContext(effects, stat, ctx), SeedFor(stat), &ctx).total);
+}
+
+TileYieldView_t TileEffectsContext::ResolveYieldFromEffects_(
+    const Tile& rTile, const std::vector<ActiveEffect_t>& effects,
+    const BaseEffects_t* pCapEffects) const
 {
     std::vector<ActiveEffect_t> filtered = effects;
 
@@ -260,24 +325,46 @@ TileResources_t TileEffectsContext::ResolveYieldFromEffects_(const Tile& rTile,
                        filtered.end());
     }
 
-    const EffectContext_t ctx{&rTile};
+    std::vector<ActiveEffect_t> beforeRestriction;
+    std::vector<ActiveEffect_t> afterRestriction;
+    beforeRestriction.reserve(filtered.size());
+    afterRestriction.reserve(filtered.size());
+    for (const ActiveEffect_t& rEffect : filtered)
+    {
+        const auto* pMod =
+            rEffect.config ? std::get_if<StatModifierEffect_t>(&rEffect.config->effect) : nullptr;
+        if (pMod && pMod->applyAfterRestriction)
+        {
+            afterRestriction.push_back(rEffect);
+        }
+        else
+        {
+            beforeRestriction.push_back(rEffect);
+        }
+    }
+
     // Energy seed is 0 here: elevation bands come from SolarCollector/Mirror amount_source
     // effects (ElevationEnergySeed), not a hardcoded improvement-id gate.
-    const double nutrients = ResolveStatModifiers(
-        FilterByStatIdInContext(filtered, StatId_t::Nutrients, ctx), SeedFor(StatId_t::Nutrients),
-        &ctx).total;
-    const double minerals  = ResolveStatModifiers(
-        FilterByStatIdInContext(filtered, StatId_t::Minerals, ctx), SeedFor(StatId_t::Minerals),
-        &ctx).total;
-    const double energy    = ResolveStatModifiers(
-        FilterByStatIdInContext(filtered, StatId_t::Energy, ctx), SeedFor(StatId_t::Energy),
-        &ctx).total;
-
-    return TileResources_t{
-        static_cast<int>(nutrients),
-        static_cast<int>(energy),
-        static_cast<int>(minerals)
+    const TileResources_t subject{
+        ResolveResource_(rTile, beforeRestriction, StatId_t::Nutrients),
+        ResolveResource_(rTile, beforeRestriction, StatId_t::Energy),
+        ResolveResource_(rTile, beforeRestriction, StatId_t::Minerals),
     };
+    const TileResources_t after{
+        ResolveResource_(rTile, afterRestriction, StatId_t::Nutrients),
+        ResolveResource_(rTile, afterRestriction, StatId_t::Energy),
+        ResolveResource_(rTile, afterRestriction, StatId_t::Minerals),
+    };
+
+    const TileResources_t potential{
+        subject.nutrients + after.nutrients,
+        subject.energy + after.energy,
+        subject.minerals + after.minerals,
+    };
+    const TileResources_t effective = pCapEffects
+        ? AssembleRestrictedTileYield_(subject, after, pCapEffects->effects)
+        : potential;
+    return TileYieldView_t{effective, potential};
 }
 
 double TileEffectsContext::ResolveTileDefenseMultiplier(const Tile& rTile, FactionId_t forFaction) const

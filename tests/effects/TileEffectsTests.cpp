@@ -111,7 +111,7 @@ TEST_CASE("ResolveTileYield: bare tiles start at zero; SolarCollector applies el
 
     SECTION("featureless tile at sea level yields nothing")
     {
-        const TileResources_t yield = world.ctx->ResolveTileYield(tile);
+        const TileResources_t yield = world.ctx->ResolveTileYield(tile).effective;
         CHECK(yield.nutrients == 0);
         CHECK(yield.minerals == 0);
         CHECK(yield.energy == 0);
@@ -120,19 +120,19 @@ TEST_CASE("ResolveTileYield: bare tiles start at zero; SolarCollector applies el
     SECTION("elevation energy comes from SolarCollector amount_source")
     {
         tile.SetElevation(1000);
-        CHECK(world.ctx->ResolveTileYield(tile).energy == 0);
+        CHECK(world.ctx->ResolveTileYield(tile).effective.energy == 0);
         world.ctx->AddImprovementWithEffects(tile, "SolarCollector");
         // flat +1 + ElevationEnergySeed*1 (=1)
-        CHECK(world.ctx->ResolveTileYield(tile).energy == 2);
+        CHECK(world.ctx->ResolveTileYield(tile).effective.energy == 2);
         tile.SetElevation(2500);
-        CHECK(world.ctx->ResolveTileYield(tile).energy == 3);
+        CHECK(world.ctx->ResolveTileYield(tile).effective.energy == 3);
     }
 
     SECTION("negative elevation yields only Solar flat bonus")
     {
         tile.SetElevation(-2000);
         world.ctx->AddImprovementWithEffects(tile, "SolarCollector");
-        CHECK(world.ctx->ResolveTileYield(tile).energy == 1);
+        CHECK(world.ctx->ResolveTileYield(tile).effective.energy == 1);
     }
 }
 
@@ -148,7 +148,7 @@ TEST_CASE("ResolveTileYield: each resource resolves from the matching StatId_t (
     world.ctx->AddImprovementWithEffects(tile, "Mine"); // +2 minerals
     world.ctx->AddImprovementWithEffects(tile, "SolarCollector"); // +1 flat + seed
 
-    const TileResources_t yield = world.ctx->ResolveTileYield(tile);
+    const TileResources_t yield = world.ctx->ResolveTileYield(tile).effective;
     CHECK(yield.nutrients == 1);
     CHECK(yield.minerals == 2);
     CHECK(yield.energy == 3); // solar flat 1 + seed 1 + river 1
@@ -162,7 +162,7 @@ TEST_CASE("ResolveTileYield: terrain classification contributes through the same
     tile.SetMoisture(Moisture_t::Wet);       // +2 nutrients
     tile.SetRockiness(Rockiness_t::Rolling); // +1 mineral
 
-    const TileResources_t yield = world.ctx->ResolveTileYield(tile);
+    const TileResources_t yield = world.ctx->ResolveTileYield(tile).effective;
     CHECK(yield.nutrients == 2);
     CHECK(yield.minerals == 1);
 }
@@ -172,12 +172,12 @@ TEST_CASE("ResolveTileYield: a Mirror's energy aura reaches nearby tiles", "[eff
     actest::WorldFixture world;
     world.ctx->AddImprovementWithEffects(world.At(4, 4), "Mirror");
 
-    CHECK(world.ctx->ResolveTileYield(world.At(6, 4)).energy == 1); // distance 2
-    CHECK(world.ctx->ResolveTileYield(world.At(7, 4)).energy == 0); // distance 3
+    CHECK(world.ctx->ResolveTileYield(world.At(6, 4)).effective.energy == 1); // distance 2
+    CHECK(world.ctx->ResolveTileYield(world.At(7, 4)).effective.energy == 0); // distance 3
 
     // Two mirrors in range stack.
     world.ctx->AddImprovementWithEffects(world.At(6, 5), "Mirror");
-    CHECK(world.ctx->ResolveTileYield(world.At(6, 4)).energy == 2);
+    CHECK(world.ctx->ResolveTileYield(world.At(6, 4)).effective.energy == 2);
 }
 
 TEST_CASE("ResolveTileYield with base effects: selector-carrying modifiers apply per matching tile",
@@ -195,8 +195,8 @@ TEST_CASE("ResolveTileYield with base effects: selector-carrying modifiers apply
     }};
 
     // Farm tile: 1 (Farm) + 1 (booster). Plain tile: unaffected.
-    CHECK(world.ctx->ResolveTileYield(farmTile, false, baseEffects).nutrients == 2);
-    CHECK(world.ctx->ResolveTileYield(plainTile, false, baseEffects).nutrients == 0);
+    CHECK(world.ctx->ResolveTileYield(farmTile, false, baseEffects).effective.nutrients == 2);
+    CHECK(world.ctx->ResolveTileYield(plainTile, false, baseEffects).effective.nutrients == 0);
 }
 
 TEST_CASE("ResolveTileYield with base effects: BaseTile selector applies only to the base center tile",
@@ -211,8 +211,8 @@ TEST_CASE("ResolveTileYield with base effects: BaseTile selector applies only to
                                     actest::BaseTileSelector()), "center_booster"),
     }};
 
-    CHECK(world.ctx->ResolveTileYield(tile, true, baseEffects).energy == 2);
-    CHECK(world.ctx->ResolveTileYield(tile, false, baseEffects).energy == 0);
+    CHECK(world.ctx->ResolveTileYield(tile, true, baseEffects).effective.energy == 2);
+    CHECK(world.ctx->ResolveTileYield(tile, false, baseEffects).effective.energy == 0);
 }
 
 TEST_CASE("ResolveTileYield with base effects: flat (non-selector) modifiers are NOT applied per tile",
@@ -229,8 +229,8 @@ TEST_CASE("ResolveTileYield with base effects: flat (non-selector) modifiers are
                        "flat_nutrient"),
     }};
 
-    CHECK(world.ctx->ResolveTileYield(tile, true, baseEffects).nutrients == 0);
-    CHECK(world.ctx->ResolveTileYield(tile, false, baseEffects).nutrients == 0);
+    CHECK(world.ctx->ResolveTileYield(tile, true, baseEffects).effective.nutrients == 0);
+    CHECK(world.ctx->ResolveTileYield(tile, false, baseEffects).effective.nutrients == 0);
 }
 
 TEST_CASE("ResolveTileYield: percentage modifiers scale a tile's own yield", "[effects][tile][yield]")
@@ -250,7 +250,7 @@ TEST_CASE("ResolveTileYield: percentage modifiers scale a tile's own yield", "[e
     }};
 
     // (2 + 1) * 1.5 = 4.5, truncated to 4 by the int cast.
-    CHECK(world.ctx->ResolveTileYield(tile, false, baseEffects).nutrients == 4);
+    CHECK(world.ctx->ResolveTileYield(tile, false, baseEffects).effective.nutrients == 4);
 }
 
 TEST_CASE("RecomputeMoisture: Condenser aura raises effective moisture, derived fresh from base moisture",
@@ -303,11 +303,11 @@ TEST_CASE("RecomputeMoisture: the moisture shift feeds back into tile yield", "[
     Tile& tile = world.At(4, 4);
     tile.SetBaseMoisture(Moisture_t::Arid);
     tile.SetMoisture(Moisture_t::Arid);
-    CHECK(world.ctx->ResolveTileYield(tile).nutrients == 0);
+    CHECK(world.ctx->ResolveTileYield(tile).effective.nutrients == 0);
 
     world.ctx->AddImprovementWithEffects(tile, "Condenser");
     // Now effectively Moist: +1 nutrients through the Moist terrain feature.
-    CHECK(world.ctx->ResolveTileYield(tile).nutrients == 1);
+    CHECK(world.ctx->ResolveTileYield(tile).effective.nutrients == 1);
 }
 
 TEST_CASE("AddImprovementWithEffects: unknown improvement ids throw",
@@ -330,7 +330,7 @@ TEST_CASE("Aura effects at the map edge are collected without crashing", "[effec
     const FactionId_t id = owner.GetFactionId();
     CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(2, 0), id) == Approx(1.25));
     CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(1, 0), id) == Approx(1.25));
-    CHECK(fixture.ctx->ResolveTileYield(fixture.At(0, 1)).nutrients == 0);
+    CHECK(fixture.ctx->ResolveTileYield(fixture.At(0, 1)).effective.nutrients == 0);
 }
 
 TEST_CASE("CanBuildImprovement: excludes-list features block construction", "[effects][tile]")
@@ -354,8 +354,8 @@ TEST_CASE("Per-effect radius: an effect's own radius grants reach beyond the hos
     actest::WorldFixture world;
     world.ctx->AddImprovementWithEffects(world.At(4, 4), "EffectRadiusBeacon");
 
-    CHECK(world.ctx->ResolveTileYield(world.At(6, 4)).energy == 1); // distance 2
-    CHECK(world.ctx->ResolveTileYield(world.At(7, 4)).energy == 0); // distance 3
+    CHECK(world.ctx->ResolveTileYield(world.At(6, 4)).effective.energy == 1); // distance 2
+    CHECK(world.ctx->ResolveTileYield(world.At(7, 4)).effective.energy == 0); // distance 3
 }
 
 TEST_CASE("Per-effect radius: sibling effects may declare different radii",
@@ -365,11 +365,11 @@ TEST_CASE("Per-effect radius: sibling effects may declare different radii",
     actest::WorldFixture world;
     world.ctx->AddImprovementWithEffects(world.At(4, 4), "MixedRadius");
 
-    const TileResources_t atOne = world.ctx->ResolveTileYield(world.At(5, 4));
+    const TileResources_t atOne = world.ctx->ResolveTileYield(world.At(5, 4)).effective;
     CHECK(atOne.energy == 1);
     CHECK(atOne.minerals == 1);
 
-    const TileResources_t atTwo = world.ctx->ResolveTileYield(world.At(6, 4));
+    const TileResources_t atTwo = world.ctx->ResolveTileYield(world.At(6, 4)).effective;
     CHECK(atTwo.energy == 1);
     CHECK(atTwo.minerals == 0);
 
@@ -393,7 +393,7 @@ TEST_CASE("Aura collection: non-ThisTile and Instantaneous effects do not leak i
     actest::WorldFixture world;
     world.ctx->AddImprovementWithEffects(world.At(4, 4), "WeirdAura");
 
-    const TileResources_t neighborYield = world.ctx->ResolveTileYield(world.At(5, 4));
+    const TileResources_t neighborYield = world.ctx->ResolveTileYield(world.At(5, 4)).effective;
     CHECK(neighborYield.energy == 1);    // the legitimate ThisTile aura effect
     CHECK(neighborYield.nutrients == 0); // ThisBase-scoped effect must not apply here
     CHECK(neighborYield.minerals == 0);  // Instantaneous effect must not apply continuously
@@ -446,7 +446,7 @@ TEST_CASE("Forest suppresses rockiness/moisture but keeps resource bonuses",
     world.ctx->AddImprovementWithEffects(tile, "Forest");
     world.ctx->AddImprovementWithEffects(tile, "Nutrients");
 
-    const TileResources_t yield = world.ctx->ResolveTileYield(tile);
+    const TileResources_t yield = world.ctx->ResolveTileYield(tile).effective;
     CHECK(yield.nutrients == 3);
     CHECK(yield.minerals == 2);
     CHECK(yield.energy == 1);

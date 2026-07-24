@@ -2,6 +2,7 @@
 
 #include "game/research/TechRegistry.h"
 #include "game/research/TechCostCalculator.h"
+#include "lib/Revision.h"
 #include <cstdint>
 #include <optional>
 #include <vector>
@@ -52,6 +53,10 @@ public:
 
     std::vector<const TechConfig_t*> GetAvailableTechs() const;
 
+    // Bumped when a tech is discovered; FactionEffectsPool includes this in its stamp so
+    // removed_by_tech effects drop out of the pool on the next Get.
+    uint64_t GetRevision() const { return m_revision.Get(); }
+
 private:
     const TechRegistry* m_pTechRegistry;
     const TechCostCalculator* m_pTechCostCalculator;
@@ -63,6 +68,7 @@ private:
     mutable int m_pointsNeededForCurrentTech;
     // Provider effects version the cost was computed against (0 = no provider involved).
     mutable uint64_t m_costEffectsVersion = 0;
+    Revision m_revision;
 
     void ResetAccumulatedPoints_();
 

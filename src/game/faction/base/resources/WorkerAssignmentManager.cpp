@@ -25,7 +25,9 @@ WorkerAssignmentManager::WorkerAssignmentManager(std::vector<const Tile*> workab
     : m_workableTiles(std::move(workableTiles))
     , m_scorer([this](const Tile& rTile) -> float
       {
-          const TileResources_t yield = m_rTileEffects.ResolveTileYield(rTile);
+          // Intrinsic + area (incl. post-restriction bonuses). Caps need base effects and are
+          // applied on the production path; ranking without them is acceptable for auto-assign.
+          const TileResources_t yield = m_rTileEffects.ResolveTileYield(rTile).effective;
           return static_cast<float>(yield.nutrients + yield.energy + yield.minerals);
       })
     , m_rPops(rPops)
@@ -161,7 +163,8 @@ TileResources_t WorkerAssignmentManager::ComputeWorkedResources(const BaseEffect
             continue;
         }
 
-        const TileResources_t yield = m_rTileEffects.ResolveTileYield(*pTile, /*isBaseTile*/false, rBaseEffects);
+        const TileResources_t yield = m_rTileEffects.ResolveTileYield(
+            *pTile, /*isBaseTile*/false, rBaseEffects).effective;
         const TileResources_t modified = rPop.ApplyTileMultipliers(yield);
 
         total.nutrients += modified.nutrients;
@@ -171,8 +174,8 @@ TileResources_t WorkerAssignmentManager::ComputeWorkedResources(const BaseEffect
     return total;
 }
 
-TileResources_t WorkerAssignmentManager::GetWorkedTileYield(const Tile& rTile,
-                                                            const BaseEffects_t& rBaseEffects) const
+TileYieldView_t WorkerAssignmentManager::GetWorkedTileYield(
+    const Tile& rTile, const BaseEffects_t& rBaseEffects) const
 {
     for (const Pop& rPop : m_rPops.Pops())
     {
@@ -181,10 +184,14 @@ TileResources_t WorkerAssignmentManager::GetWorkedTileYield(const Tile& rTile,
             continue;
         }
 
-        const TileResources_t yield = m_rTileEffects.ResolveTileYield(rTile, /*isBaseTile*/false, rBaseEffects);
-        return rPop.ApplyTileMultipliers(yield);
+        const TileYieldView_t yield = m_rTileEffects.ResolveTileYield(
+            rTile, /*isBaseTile*/false, rBaseEffects);
+        return TileYieldView_t{
+            rPop.ApplyTileMultipliers(yield.effective),
+            rPop.ApplyTileMultipliers(yield.potential),
+        };
     }
-    return TileResources_t{0, 0, 0};
+    return TileYieldView_t{};
 }
 
 void WorkerAssignmentManager::SetTileScorer(TileScorer scorer)

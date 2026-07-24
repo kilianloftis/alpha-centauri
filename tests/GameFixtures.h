@@ -25,6 +25,7 @@
 #include "game/units/UnitSlotConfig.h"
 #include "game/units/MovementRules.h"
 #include "game/effects/TileEffectsContext.h"
+#include "game/effects/TileYieldRulesConfigParser.h"
 
 #include <deque>
 #include <memory>
@@ -115,6 +116,7 @@ struct BaseFixture : WorldFixture
 struct FactionFixture : BaseFixture
 {
     ac::FactionConfig_t factionDefinition; // minimal shared definition for test factions
+    std::vector<ac::EffectConfig_t> tileYieldRules;
     // designs must outlive factions: units hold UnitDesign& into this deque.
     // Units are destroyed before bases (~Faction member order), so crawler claim
     // release can reach WorkerAssignmentManager while the home base is still alive.
@@ -130,6 +132,8 @@ struct FactionFixture : BaseFixture
         dataContext.socialPolicyRegistry->Load(FixturePath("social_policies.json"));
         dataContext.socialRatingRegistry = std::make_unique<ac::SocialRatingRegistry>();
         dataContext.socialRatingRegistry->Load(FixturePath("social_rating_effects.json"));
+        tileYieldRules = ac::TileYieldRulesConfigParser{}.ParseConfig(
+            FixturePath("tile_yield_rules.json"));
         // Mirror GameState: index emits OnUnitMoved; faction rebuilds visibility.
         map.GetUnitPositions().OnUnitMoved.Connect([](ac::Unit& rMoved)
         {
@@ -152,7 +156,8 @@ struct FactionFixture : BaseFixture
             factionDefinition,
             dataContext.buildingRegistry.get(), /*techRegistry*/ nullptr,
             dataContext.socialPolicyRegistry.get(), dataContext.socialRatingRegistry.get(),
-            /*techCost*/ nullptr, /*popTypeAvailability*/ nullptr));
+            /*techCost*/ nullptr, /*popTypeAvailability*/ nullptr,
+            &tileYieldRules));
         ac::Faction& rFaction = *factions.back();
         rFaction.BindWorldMap(map);
         // Drop destroyed units from every faction's contact-reveal set (address reuse safety).
@@ -191,7 +196,7 @@ struct FactionFixture : BaseFixture
             dataContext.popCompositionCalculator.get(),
             /*secretProjectCalculator*/ nullptr,
             *ctx,
-            /*research*/ nullptr, &economy, &rFaction);
+            &rFaction.GetResearch(), &economy, &rFaction);
         ac::BaseManager& rBase = *pBase;
         rFaction.AddBase(std::move(pBase));
         return rBase;

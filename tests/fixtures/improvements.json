@@ -90,7 +90,7 @@
     "name": "Nutrients",
     "frequency": 10,
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 2, "op": "Add" } }
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 2, "op": "Add", "apply_after_restriction": true } }
     ]
   },
   {

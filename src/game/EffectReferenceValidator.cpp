@@ -77,6 +77,11 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
             }
         }
 
+        if (!rEffect.removedByTech.empty() && pTechs && !pTechs->Find(rEffect.removedByTech))
+        {
+            ThrowBadReference_(rSourceId, "tech", rEffect.removedByTech);
+        }
+
         // Condition feature ids match Tile::HasFeature: either a terrain feature id or an
         // improvement id.
         if (rEffect.condition && pImprovements)
@@ -176,6 +181,7 @@ void ValidateEffectReferences(const GameDataContext& rData)
             validate(rConfig.effects, rConfig.id);
         }
     }
+    validate(rData.tileYieldRules, "tile_yield_rules");
 }
 
 } // namespace ac

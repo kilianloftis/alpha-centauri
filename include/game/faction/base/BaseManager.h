@@ -167,9 +167,10 @@ public:
     int GetX() const;
     int GetY() const;
 
-    // Effective yield from a worked tile after base-wide and pop tile effects.
-    // Unworked tiles should use TileEffectsContext::ResolveTileYield for intrinsic preview.
-    TileResources_t GetWorkedTileYield(const Tile& rTile) const;
+    // Worked / preview tile yield after base-wide (and, for worked tiles, pop) effects.
+    // .effective applies TileResourceCap; .potential is uncapped (for UI).
+    TileYieldView_t GetWorkedTileYield(const Tile& rTile) const;
+    TileYieldView_t GetPreviewTileYield(const Tile& rTile) const;
 
     // Access to the tile-effects resolver (bundles WorldMap + ImprovementRegistry).
     // Used by BaseWorkableAreaDisplay and any other system that needs to resolve tile yield or defense.

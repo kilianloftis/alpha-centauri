@@ -38,17 +38,23 @@ public:
     std::vector<ActiveEffect_t> CollectAreaEffects(const Tile& rTile) const;
 
     // Combined nutrient/mineral/energy yield including aura effects (e.g. nearby Mirror).
-    // Intrinsic (terrain/improvement/river) plus area effects only — no base-wide modifiers.
-    TileResources_t ResolveTileYield(const Tile& rTile) const;
+    // Intrinsic (terrain/improvement/river) plus area effects only — no base-wide modifiers
+    // and no tech-gated resource caps. apply_after_restriction modifiers are included.
+    // effective == potential (no caps in this path).
+    TileYieldView_t ResolveTileYield(const Tile& rTile) const;
 
     // As above, but also folds in any per-tile StatModifier from rBaseEffects whose selector
-    // matches this tile (e.g. a building's "+1 mineral to every worked Mine"). isBaseTile
-    // distinguishes the base center tile so BaseTile-selector modifiers resolve correctly.
-    // This is the single entry point for a worked tile's full pre-pop-multiplier yield.
-    // Takes BaseEffects_t: only a base's final effect list may drive the selector pass —
-    // handing it the raw faction pool would apply other bases' per-tile modifiers here.
-    TileResources_t ResolveTileYield(const Tile& rTile, bool isBaseTile,
+    // matches this tile. TileResourceCap effects still present in rBaseEffects clamp the
+    // pre-restriction lane; apply_after_restriction modifiers are added after. Caps whose
+    // removed_by_tech has been discovered are already absent from the faction pool.
+    // Production reads .effective; UI may also use .potential.
+    TileYieldView_t ResolveTileYield(const Tile& rTile, bool isBaseTile,
                                      const BaseEffects_t& rBaseEffects) const;
+
+    // Intrinsic + area yield with the same TileResourceCap / after-restriction assembly as
+    // the worked-tile overload, but without building selectors. Used for unworked previews.
+    TileYieldView_t ResolvePreviewTileYield(const Tile& rTile,
+                                            const BaseEffects_t& rCapEffects) const;
 
     // Combined defense multiplier including aura effects (e.g. nearby Sensor, Rocky terrain).
     // forFaction selects which territory-owned improvement auras apply (Sensor only benefits
@@ -72,10 +78,15 @@ public:
     void RemoveImprovementWithEffects(Tile& rTile, const std::string& improvementId);
 
 private:
-    // Resolves nutrient/mineral/energy from an already-collected effect list (energy seeded
-    // from the tile's elevation). Shared by both ResolveTileYield overloads.
-    TileResources_t ResolveYieldFromEffects_(const Tile& rTile,
-                                             const std::vector<ActiveEffect_t>& effects) const;
+    // Resolves one resource lane from an already-collected / filtered effect list.
+    int ResolveResource_(const Tile& rTile, const std::vector<ActiveEffect_t>& effects,
+                         StatId_t stat) const;
+
+    // Splits effects into pre-cap vs apply_after_restriction lanes, resolves each, then
+    // builds effective (capped via TileResourceCap in pCapEffects) and potential (uncapped).
+    TileYieldView_t ResolveYieldFromEffects_(const Tile& rTile,
+                                             const std::vector<ActiveEffect_t>& effects,
+                                             const BaseEffects_t* pCapEffects) const;
 
     WorldMap& m_rWorldMap;
     const ImprovementRegistry& m_rImprovements;

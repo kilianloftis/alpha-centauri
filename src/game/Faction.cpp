@@ -37,7 +37,8 @@ Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
                  const SocialPolicyRegistry* pSocialPolicyRegistry,
                  const SocialRatingRegistry* pSocialRatingRegistry,
                  TechCostCalculator* pTechCostCalculator,
-                 const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator)
+                 const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator,
+                 const std::vector<EffectConfig_t>* pTileYieldRules)
     : m_factionId(factionId)
     , m_bIsPlayerControlled(bIsPlayerControlled)
     , m_rDefinition(rDefinition)
@@ -53,7 +54,7 @@ Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
     , m_pSocialEngineering(std::make_unique<SocialEngineeringManager>(pSocialPolicyRegistry,
                                                                         pSocialRatingRegistry))
     , m_pUnits(std::make_unique<UnitManager>(*this))
-    , m_effectsPool(pBuildingRegistry, m_baseListRevision)
+    , m_effectsPool(pBuildingRegistry, m_baseListRevision, pTileYieldRules)
 {
     m_pResearchSelector->EnsureResearchTarget();
 }

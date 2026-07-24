@@ -43,6 +43,7 @@ add_executable(effects-tests
     game/FoundBaseTests.cpp
     game/ImprovementConfigParserTests.cpp
     game/TerraformTests.cpp
+    game/TileResourceRestrictionTests.cpp
     game/WorldGeneratorMoistureTests.cpp
     game/VisibilityTests.cpp
     game/UnitVisibilityTests.cpp

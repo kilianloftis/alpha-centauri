@@ -224,7 +224,7 @@ TEST_CASE("Unit aura: ThisUnit effects on a unit's components never leak into ti
     fixture.MakeUnit(faction, 4, 4, {"test_weapon", "test_chassis"});
 
     CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(4, 4), faction.GetFactionId()) == Approx(1.0));
-    const TileResources_t yield = fixture.ctx->ResolveTileYield(fixture.At(4, 4));
+    const TileResources_t yield = fixture.ctx->ResolveTileYield(fixture.At(4, 4)).effective;
     CHECK(yield.nutrients == 0);
     CHECK(yield.minerals == 0);
     CHECK(yield.energy == 0);

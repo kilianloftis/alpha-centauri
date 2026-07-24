@@ -1,0 +1,25 @@
+{
+  "effects": [
+    {
+      "type": "TileResourceCap",
+      "scope": "FactionGlobal",
+      "persistence": "Continuous",
+      "removed_by_tech": "gene_splicing",
+      "parameters": { "stat": "nutrients", "max": 2 }
+    },
+    {
+      "type": "TileResourceCap",
+      "scope": "FactionGlobal",
+      "persistence": "Continuous",
+      "removed_by_tech": "ecological_engineering",
+      "parameters": { "stat": "minerals", "max": 2 }
+    },
+    {
+      "type": "TileResourceCap",
+      "scope": "FactionGlobal",
+      "persistence": "Continuous",
+      "removed_by_tech": "environmental_economics",
+      "parameters": { "stat": "energy", "max": 2 }
+    }
+  ]
+}

@@ -55,6 +55,7 @@ add_library(ac-core STATIC
     game/effects/ActiveEffect.cpp
     game/effects/BonusEffectParser.cpp
     game/effects/TileEffectsContext.cpp
+    game/effects/TileYieldRulesConfigParser.cpp
     game/TurnStageFactory.cpp
     game/TurnStageConfigParser.cpp
     game/HookContext.cpp
