@@ -51,6 +51,7 @@ add_executable(effects-tests
     game/TurnProcessorTests.cpp
     game/GameSettingsTests.cpp
     game/RequiredTechValidatorTests.cpp
+    lib/SignalTests.cpp
 )
 
 target_link_libraries(effects-tests PRIVATE ac-core ac-turn-stages Catch2::Catch2WithMain)
