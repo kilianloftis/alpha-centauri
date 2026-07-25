@@ -94,6 +94,21 @@
     ]
   },
   {
+    "id": "Monolith",
+    "name": "Monolith",
+    "frequency": 3,
+    "suppress_yield_sources": [
+      "Flat", "Rolling", "Rocky", "Arid", "Moist", "Wet", "River",
+      "Farm", "Mine", "Forest", "SolarCollector", "SoilEnricher", "Mirror", "Condenser",
+      "ThermalBorehole", "Nutrients"
+    ],
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 2, "op": "Add" } },
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "minerals", "amount": 2, "op": "Add" } },
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "energy", "amount": 2, "op": "Add" } }
+    ]
+  },
+  {
     "id": "Mine",
     "name": "Mine",
     "turns_required": 8,

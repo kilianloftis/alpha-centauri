@@ -105,6 +105,8 @@ WorldDisplayStyle ParseWorldDisplayStyle_(const nlohmann::json& j)
     s.shroudColor = ParseColor_(j, "shroud_color");
     s.pathPreviewColor = ParseColor_(j, "path_preview_color");
     s.pathPreviewLineThicknessRatio = j.at("path_preview_line_thickness_ratio").get<float>();
+    s.riverColor = ParseColor_(j, "river_color");
+    s.riverLineThicknessRatio = j.at("river_line_thickness_ratio").get<float>();
     s.baseNameColor = ParseColor_(j, "base_name_color");
     s.sensorLabelColor = ParseColor_(j, "sensor_label_color");
     return s;

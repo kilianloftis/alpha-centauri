@@ -4,6 +4,7 @@
 #include "game/faction/FactionExploredMap.h"
 #include "game/faction/FactionVisibleMap.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/map/RiverGeneration.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Pathfinder.h"
@@ -169,6 +170,76 @@ void WorldDisplay::RenderSensors_(Graphics& rGraphics)
     });
 }
 
+void WorldDisplay::RenderRivers_(Graphics& rGraphics)
+{
+    const auto& s = Style().worldDisplay;
+    const PlayerFogMaps_t fog = PlayerFog_(m_rGameState);
+    const WorldMap& rWorldMap = m_viewport.GetWorldMap();
+    const float thickness = std::max(1.0f, m_viewport.TileSize() * s.riverLineThicknessRatio);
+    const float stub = m_viewport.TileSize() * 0.2f;
+
+    m_viewport.ForEachVisibleTile([&](const Tile& rTile, float /*tileX*/, float /*tileY*/) {
+        if (fog.explored && !fog.explored->IsExplored(rTile))
+        {
+            return;
+        }
+        if (!rTile.GetHasRiver())
+        {
+            return;
+        }
+
+        const auto from = m_viewport.PixelCenterOf(rTile);
+        if (!from)
+        {
+            return;
+        }
+
+        const RiverConnection_t connections = GetRiverConnections(rTile, rWorldMap);
+
+        // Isolated river tile (source/sink with no river neighbor): short cross so it shows.
+        if (connections == RiverConnection_t::None)
+        {
+            rGraphics.DrawLine(from->first - stub, from->second, from->first + stub, from->second,
+                               s.riverColor, thickness);
+            rGraphics.DrawLine(from->first, from->second - stub, from->first, from->second + stub,
+                               s.riverColor, thickness);
+            return;
+        }
+
+        // Draw only East/South edges to avoid double-drawing when both tiles are visible.
+        static constexpr RiverConnection_t k_DrawDirs[2] = {
+            RiverConnection_t::East,
+            RiverConnection_t::South,
+        };
+        static constexpr int k_Deltas[2][2] = {{1, 0}, {0, 1}};
+
+        for (int i = 0; i < 2; ++i)
+        {
+            if (!HasRiverConnection(connections, k_DrawDirs[i]))
+            {
+                continue;
+            }
+            const Tile* pNeighbor =
+                rWorldMap.GetTile(rTile.GetX() + k_Deltas[i][0], rTile.GetY() + k_Deltas[i][1]);
+            if (!pNeighbor)
+            {
+                continue;
+            }
+            if (fog.explored && !fog.explored->IsExplored(*pNeighbor))
+            {
+                continue;
+            }
+            const auto to = m_viewport.PixelCenterOf(*pNeighbor);
+            if (!to)
+            {
+                continue;
+            }
+            rGraphics.DrawLine(from->first, from->second, to->first, to->second,
+                               s.riverColor, thickness);
+        }
+    });
+}
+
 void WorldDisplay::RenderPathPreview_(Graphics& rGraphics)
 {
     if (!m_pPathPreview || m_pPathPreview->tiles.empty())
@@ -238,6 +309,7 @@ void WorldDisplay::Render(Graphics& rGraphics)
     });
 
     RenderBases_(rGraphics);
+    RenderRivers_(rGraphics);
     RenderPathPreview_(rGraphics);
     RenderSensors_(rGraphics);
     m_unitMarkers.Render(rGraphics, m_rGameState, m_viewport);

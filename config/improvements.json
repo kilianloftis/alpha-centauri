@@ -507,5 +507,35 @@
         "parameters": { "stat": "energy", "amount": 2, "op": "Add", "apply_after_restriction": true }
       }
     ]
+  },
+  {
+    "id": "Monolith",
+    "name": "Monolith",
+    "description": "An alien monolith; tile yields are fixed at 2 nutrients, 2 minerals, and 2 energy",
+    "frequency": 3,
+    "sprite_path": "assets/sprites/tile_bonuses/monolith.png",
+    "suppress_yield_sources": [
+      "Flat", "Rolling", "Rocky", "Arid", "Moist", "Wet", "River",
+      "Farm", "Mine", "Forest", "SolarCollector", "SoilEnricher", "Mirror", "Condenser",
+      "ThermalBorehole", "KelpFarm", "MiningPlatform", "TidalHarness",
+      "Nutrients", "Minerals", "Energy"
+    ],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "nutrients", "amount": 2, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "minerals", "amount": 2, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "energy", "amount": 2, "op": "Add" }
+      }
+    ]
   }
 ]

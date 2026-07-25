@@ -63,6 +63,9 @@ private:
     // Render Sensor tower markers on explored tiles
     void RenderSensors_(Graphics& rGraphics);
 
+    // Render rivers as blue lines between orthogonally adjacent river tiles
+    void RenderRivers_(Graphics& rGraphics);
+
     // Render path preview as a line through tile centers
     void RenderPathPreview_(Graphics& rGraphics);
 };

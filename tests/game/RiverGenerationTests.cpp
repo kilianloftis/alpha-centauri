@@ -27,6 +27,32 @@ void SetLandElev_(Tile& rTile, int elev)
 
 } // namespace
 
+TEST_CASE("GetRiverConnections reports orthogonal river neighbors", "[worldgen][rivers]")
+{
+    WorldMap world(3, 3);
+    for (int y = 0; y < 3; ++y)
+    {
+        for (int x = 0; x < 3; ++x)
+        {
+            world.GetTile(x, y)->SetElevation(1000);
+        }
+    }
+
+    world.GetTile(1, 1)->SetHasRiver(true);
+    world.GetTile(1, 0)->SetHasRiver(true); // N
+    world.GetTile(2, 1)->SetHasRiver(true); // E
+    // Diagonal must not count
+    world.GetTile(2, 0)->SetHasRiver(true);
+
+    const RiverConnection_t mask = GetRiverConnections(*world.GetTile(1, 1), world);
+    CHECK(HasRiverConnection(mask, RiverConnection_t::North));
+    CHECK(HasRiverConnection(mask, RiverConnection_t::East));
+    CHECK_FALSE(HasRiverConnection(mask, RiverConnection_t::South));
+    CHECK_FALSE(HasRiverConnection(mask, RiverConnection_t::West));
+
+    CHECK(GetRiverConnections(*world.GetTile(0, 0), world) == RiverConnection_t::None);
+}
+
 TEST_CASE("WorldGenDecorationConfigParser loads aquifers from decoration.json",
           "[worldgen][aquifers][parser]")
 {

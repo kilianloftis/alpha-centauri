@@ -452,6 +452,24 @@ TEST_CASE("Forest suppresses rockiness/moisture but keeps resource bonuses",
     CHECK(yield.energy == 1);
 }
 
+TEST_CASE("Monolith replaces tile yield with 2-2-2",
+          "[effects][tile][yield][monolith]")
+{
+    actest::WorldFixture world;
+    Tile& tile = world.At(4, 4);
+    tile.SetRockiness(Rockiness_t::Rocky);
+    tile.SetMoisture(Moisture_t::Wet);
+    tile.SetHasRiver(true);
+    world.ctx->AddImprovementWithEffects(tile, "Farm");
+    world.ctx->AddImprovementWithEffects(tile, "Nutrients");
+    world.ctx->AddImprovementWithEffects(tile, "Monolith");
+
+    const TileResources_t yield = world.ctx->ResolveTileYield(tile).effective;
+    CHECK(yield.nutrients == 2);
+    CHECK(yield.minerals == 2);
+    CHECK(yield.energy == 2);
+}
+
 TEST_CASE("TerraformSpreadGrowthAttempts matches SMAC alien_fauna formula",
           "[terraform][spread]")
 {

@@ -62,6 +62,8 @@ struct WorldDisplayStyle
     Color_t shroudColor{};
     Color_t pathPreviewColor{};
     float pathPreviewLineThicknessRatio{};
+    Color_t riverColor{};
+    float riverLineThicknessRatio{};
     Color_t baseNameColor{};
     Color_t sensorLabelColor{};
 };

@@ -88,6 +88,10 @@
       255, 0, 0, 220
     ],
     "path_preview_line_thickness_ratio": 0.08,
+    "river_color": [
+      40, 120, 220, 220
+    ],
+    "river_line_thickness_ratio": 0.1,
     "base_name_color": [
       255, 255, 0, 255
     ],
