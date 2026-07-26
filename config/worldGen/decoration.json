@@ -36,6 +36,7 @@
     "land_fraction": 0.08,
     "water_fraction": 0.02,
     "min_patch_tiles": 1,
-    "max_patch_tiles": 48
+    "max_patch_tiles": 16,
+    "patch_size_skew": 4.0
   }
 }

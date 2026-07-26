@@ -9,6 +9,8 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <unordered_map>
+#include <unordered_set>
 
 namespace ac
 {
@@ -103,9 +105,79 @@ bool CanBuildImprovement(const Tile& rTile, const ImprovementConfig_t& rCandidat
 
 std::vector<ImprovementConfig_t> ImprovementConfigParser::ParseConfig(const std::string& configPath)
 {
-    return JsonConfigLoader::LoadPath<ImprovementConfig_t>(
+    auto configs = JsonConfigLoader::LoadPath<ImprovementConfig_t>(
         configPath, "improvement",
         [this](const nlohmann::json& rJson) { return ParseImprovementConfig(rJson); });
+    ExpandTagReferences(configs);
+    return configs;
+}
+
+void ImprovementConfigParser::ExpandTagReferences(std::vector<ImprovementConfig_t>& rConfigs) const
+{
+    std::unordered_map<std::string, std::vector<std::string>> tagToIds;
+    for (const ImprovementConfig_t& rConfig : rConfigs)
+    {
+        for (const std::string& rTag : rConfig.tags)
+        {
+            if (rTag.empty())
+            {
+                throw std::runtime_error(
+                    "Improvement '" + rConfig.id + "': tags entries must be non-empty");
+            }
+            tagToIds[rTag].push_back(rConfig.id);
+        }
+    }
+
+    auto expand = [&](const std::vector<std::string>& rRaw, std::string_view field,
+                      std::string_view id) {
+        std::vector<std::string> expanded;
+        std::unordered_set<std::string> seen;
+        for (const std::string& rEntry : rRaw)
+        {
+            if (!rEntry.empty() && rEntry.front() == '@')
+            {
+                const std::string tag = rEntry.substr(1);
+                if (tag.empty())
+                {
+                    throw std::runtime_error(
+                        "Improvement '" + std::string(id) + "' field '" + std::string(field)
+                        + "': tag reference '@' is missing a tag name");
+                }
+                const auto it = tagToIds.find(tag);
+                if (it == tagToIds.end())
+                {
+                    throw std::runtime_error(
+                        "Improvement '" + std::string(id) + "' field '" + std::string(field)
+                        + "': unknown tag '@" + tag + "'");
+                }
+                for (const std::string& rTaggedId : it->second)
+                {
+                    // Skip self: a feature tagged X that lists @X must not suppress/exclude
+                    // its own yields (ThermalBorehole + @land_terraform).
+                    if (rTaggedId == id)
+                    {
+                        continue;
+                    }
+                    if (seen.insert(rTaggedId).second)
+                    {
+                        expanded.push_back(rTaggedId);
+                    }
+                }
+            }
+            else if (seen.insert(rEntry).second)
+            {
+                expanded.push_back(rEntry);
+            }
+        }
+        return expanded;
+    };
+
+    for (ImprovementConfig_t& rConfig : rConfigs)
+    {
+        rConfig.excludes = expand(rConfig.excludes, "excludes", rConfig.id);
+        rConfig.suppressYieldSources =
+            expand(rConfig.suppressYieldSources, "suppress_yield_sources", rConfig.id);
+    }
 }
 
 ImprovementConfig_t ImprovementConfigParser::ParseImprovementConfig(const nlohmann::json& improvementJson)
@@ -126,6 +198,7 @@ ImprovementConfig_t ImprovementConfigParser::ParseImprovementConfig(const nlohma
     config.ownedByTerritory = improvementJson.value("owned_by_territory", false);
     config.frequency = improvementJson.value("frequency", 0);
     config.spritePath = improvementJson.value("sprite_path", "");
+    config.tags = ConfigFields::ParseStringArray(improvementJson, "tags");
     config.excludes = ConfigFields::ParseStringArray(improvementJson, "excludes");
     config.suppressYieldSources =
         ConfigFields::ParseStringArray(improvementJson, "suppress_yield_sources");

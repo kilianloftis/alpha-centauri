@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <unordered_set>
 #include <vector>
 
 namespace ac
@@ -14,10 +15,21 @@ namespace ac
 namespace
 {
 
-int RandomIntInclusive_(int min, int max, std::mt19937& rRng)
+// Skew uniform[min, max] toward the small end: size = min + floor(span * u^skew).
+// skew 1 → uniform; higher → more mass near min.
+int SamplePatchSize_(int min, int max, float skew, std::mt19937& rRng)
 {
-    std::uniform_int_distribution<int> dist(min, max);
-    return dist(rRng);
+    if (min >= max)
+    {
+        return min;
+    }
+
+    std::uniform_real_distribution<float> unit(0.0f, 1.0f);
+    const float u = unit(rRng);
+    const float t = std::pow(u, skew);
+    const int span = max - min + 1;
+    const int size = min + static_cast<int>(t * static_cast<float>(span));
+    return std::min(max, size);
 }
 
 bool IsEligible_(const Tile& rTile, bool bWantLand)
@@ -29,14 +41,32 @@ bool IsEligible_(const Tile& rTile, bool bWantLand)
     return bWantLand ? rTile.IsLand() : rTile.IsWater();
 }
 
+// True if rTile orthogonally touches fungus outside the current patch (would coalesce).
+bool TouchesForeignFungus_(const Tile& rTile, WorldMap& rWorld,
+                           const std::unordered_set<const Tile*>& rPatch)
+{
+    bool touches = false;
+    ForEachOrthogonalNeighbor(rTile, rWorld, [&](const Tile* pNeighbor)
+    {
+        if (pNeighbor && pNeighbor->GetHasFungus() && rPatch.count(pNeighbor) == 0)
+        {
+            touches = true;
+        }
+    });
+    return touches;
+}
+
 int GrowPatch_(WorldMap& rWorld, Tile& rSeed, int targetSize, bool bWantLand, std::mt19937& rRng)
 {
-    if (targetSize <= 0 || !IsEligible_(rSeed, bWantLand))
+    if (targetSize <= 0 || !IsEligible_(rSeed, bWantLand)
+        || TouchesForeignFungus_(rSeed, rWorld, /*empty patch=*/{}))
     {
         return 0;
     }
 
+    std::unordered_set<const Tile*> patch;
     rSeed.SetHasFungus(true);
+    patch.insert(&rSeed);
     int placed = 1;
     if (placed >= targetSize)
     {
@@ -46,7 +76,7 @@ int GrowPatch_(WorldMap& rWorld, Tile& rSeed, int targetSize, bool bWantLand, st
     std::vector<Tile*> frontier;
     ForEachOrthogonalNeighbor(rSeed, rWorld, [&](Tile* pNeighbor)
     {
-        if (IsEligible_(*pNeighbor, bWantLand))
+        if (IsEligible_(*pNeighbor, bWantLand) && !TouchesForeignFungus_(*pNeighbor, rWorld, patch))
         {
             frontier.push_back(pNeighbor);
         }
@@ -60,17 +90,20 @@ int GrowPatch_(WorldMap& rWorld, Tile& rSeed, int targetSize, bool bWantLand, st
         frontier[index] = frontier.back();
         frontier.pop_back();
 
-        if (!pNext || !IsEligible_(*pNext, bWantLand))
+        if (!pNext || !IsEligible_(*pNext, bWantLand)
+            || TouchesForeignFungus_(*pNext, rWorld, patch))
         {
             continue;
         }
 
         pNext->SetHasFungus(true);
+        patch.insert(pNext);
         ++placed;
 
         ForEachOrthogonalNeighbor(*pNext, rWorld, [&](Tile* pNeighbor)
         {
-            if (IsEligible_(*pNeighbor, bWantLand))
+            if (IsEligible_(*pNeighbor, bWantLand)
+                && !TouchesForeignFungus_(*pNeighbor, rWorld, patch))
             {
                 frontier.push_back(pNeighbor);
             }
@@ -84,6 +117,7 @@ void PlaceOnDomain_(WorldMap& rWorld,
                     float fraction,
                     int minPatch,
                     int maxPatch,
+                    float sizeSkew,
                     bool bWantLand,
                     std::mt19937& rRng)
 {
@@ -122,12 +156,14 @@ void PlaceOnDomain_(WorldMap& rWorld,
     while (remaining > 0 && candidateIndex < candidates.size())
     {
         Tile* pSeed = candidates[candidateIndex++];
-        if (!pSeed || !IsEligible_(*pSeed, bWantLand))
+        if (!pSeed || !IsEligible_(*pSeed, bWantLand)
+            || TouchesForeignFungus_(*pSeed, rWorld, /*empty=*/{}))
         {
             continue;
         }
 
-        const int desired = std::min(remaining, RandomIntInclusive_(patchMin, patchMax, rRng));
+        const int desired = std::min(
+            remaining, SamplePatchSize_(patchMin, patchMax, sizeSkew, rRng));
         const int grown = GrowPatch_(rWorld, *pSeed, desired, bWantLand, rRng);
         remaining -= grown;
     }
@@ -140,8 +176,10 @@ void PlaceFungus(WorldMap& rWorld, const FungusDecorationConfig_t& rConfig, std:
     const int minPatch = std::max(1, rConfig.minPatchTiles);
     const int maxPatch = std::max(minPatch, rConfig.maxPatchTiles);
 
-    PlaceOnDomain_(rWorld, rConfig.landFraction, minPatch, maxPatch, /*bWantLand=*/true, rRng);
-    PlaceOnDomain_(rWorld, rConfig.waterFraction, minPatch, maxPatch, /*bWantLand=*/false, rRng);
+    PlaceOnDomain_(rWorld, rConfig.landFraction, minPatch, maxPatch, rConfig.patchSizeSkew,
+                   /*bWantLand=*/true, rRng);
+    PlaceOnDomain_(rWorld, rConfig.waterFraction, minPatch, maxPatch, rConfig.patchSizeSkew,
+                   /*bWantLand=*/false, rRng);
 }
 
 } // namespace ac

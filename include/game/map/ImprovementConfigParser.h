@@ -40,6 +40,9 @@ struct ImprovementConfig_t
     int turnsRequired = 0;             // 0 = not a Former project
     int energyCost = 0;                // flat energy at order start; raise/lower may override
     std::string requiredTech;          // empty if not tech-gated
+    // Optional classification labels (e.g. "landmark", "landform"). Stored for later use and
+    // available as "@tag" references in excludes / suppress_yield_sources (expanded at parse).
+    std::vector<std::string> tags;
     std::vector<std::string> excludes; // feature ids that can't coexist with this one on a tile
     // Aura reach is per-effect (EffectConfig_t::radius); MaxEffectReach is derived from those.
     // Resolvers honour radius via TileEffectsContext::CollectAreaEffects.
@@ -51,7 +54,7 @@ struct ImprovementConfig_t
     std::string spritePath;            // optional sprite override (used for tile bonuses)
     TerraformResult_t terraformResult = TerraformResult_t::Place;
     // Feature/improvement ids whose yield StatModifiers are dropped while this improvement
-    // is present (Forest suppresses rockiness/moisture; Borehole suppresses most terraform).
+    // is present (Forest suppresses landform; Borehole suppresses most terraform).
     std::vector<std::string> suppressYieldSources;
     // When true, downhill river flow marks this tile then stops (ThermalBorehole).
     bool terminatesRiver = false;
@@ -79,6 +82,7 @@ public:
 
 private:
     ImprovementConfig_t ParseImprovementConfig(const nlohmann::json& improvementJson);
+    void ExpandTagReferences(std::vector<ImprovementConfig_t>& rConfigs) const;
 };
 
 } // namespace ac

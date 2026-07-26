@@ -9,7 +9,9 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 #include <filesystem>
 #include <fstream>
+#include <queue>
 #include <random>
+#include <vector>
 
 using namespace ac;
 using Catch::Approx;
@@ -56,6 +58,56 @@ bool HasOrthogonalFungusNeighbor_(const Tile& rTile, const WorldMap& rWorld)
     return found;
 }
 
+// Orthogonal connected-component sizes for fungus tiles.
+std::vector<int> FungusPatchSizes_(WorldMap& rWorld)
+{
+    const int w = rWorld.GetWidth();
+    const int h = rWorld.GetHeight();
+    std::vector<char> visited(static_cast<size_t>(w * h), 0);
+    std::vector<int> sizes;
+
+    auto idx = [w](int x, int y) { return y * w + x; };
+
+    for (int y = 0; y < h; ++y)
+    {
+        for (int x = 0; x < w; ++x)
+        {
+            Tile* pStart = rWorld.GetTile(x, y);
+            if (!pStart || !pStart->GetHasFungus() || visited[static_cast<size_t>(idx(x, y))])
+            {
+                continue;
+            }
+
+            int size = 0;
+            std::queue<Tile*> q;
+            q.push(pStart);
+            visited[static_cast<size_t>(idx(x, y))] = 1;
+            while (!q.empty())
+            {
+                Tile* pTile = q.front();
+                q.pop();
+                ++size;
+                ForEachOrthogonalNeighbor(*pTile, rWorld, [&](Tile* pNeighbor)
+                {
+                    if (!pNeighbor || !pNeighbor->GetHasFungus())
+                    {
+                        return;
+                    }
+                    const size_t n = static_cast<size_t>(idx(pNeighbor->GetX(), pNeighbor->GetY()));
+                    if (visited[n])
+                    {
+                        return;
+                    }
+                    visited[n] = 1;
+                    q.push(pNeighbor);
+                });
+            }
+            sizes.push_back(size);
+        }
+    }
+    return sizes;
+}
+
 } // namespace
 
 TEST_CASE("WorldGenDecorationConfigParser loads fungus knobs from decoration.json",
@@ -68,7 +120,8 @@ TEST_CASE("WorldGenDecorationConfigParser loads fungus knobs from decoration.jso
     CHECK(config.fungus.landFraction == Approx(0.08f));
     CHECK(config.fungus.waterFraction == Approx(0.02f));
     CHECK(config.fungus.minPatchTiles == 1);
-    CHECK(config.fungus.maxPatchTiles == 48);
+    CHECK(config.fungus.maxPatchTiles == 16);
+    CHECK(config.fungus.patchSizeSkew == Approx(4.0f));
 }
 
 TEST_CASE("WorldGenDecorationConfigParser throws when fungus object is missing",
@@ -124,12 +177,20 @@ TEST_CASE("PlaceFungus respects max_patch_tiles of 1 (no intentional growth)",
     cfg.landFraction = 1.0f; // try to cover everything, but only via 1-tile patches
     cfg.minPatchTiles = 1;
     cfg.maxPatchTiles = 1;
+    cfg.patchSizeSkew = 1.0f;
 
     std::mt19937 rng(99);
     PlaceFungus(world, cfg, rng);
 
-    // Every tile may be fungus (adjacent seeds), but growth never expands a patch.
-    CHECK(CountFungus_(world) == world.GetWidth() * world.GetHeight());
+    // Isolation keeps 1-tile patches from touching; growth never expands past 1.
+    REQUIRE(CountFungus_(world) > 0);
+    for (const auto& pTile : world.GetTiles())
+    {
+        if (pTile->GetHasFungus())
+        {
+            CHECK_FALSE(HasOrthogonalFungusNeighbor_(*pTile, world));
+        }
+    }
 }
 
 TEST_CASE("PlaceFungus grows contiguous multi-tile patches", "[worldgen][fungus]")
@@ -141,6 +202,7 @@ TEST_CASE("PlaceFungus grows contiguous multi-tile patches", "[worldgen][fungus]
     cfg.landFraction = 0.2f;
     cfg.minPatchTiles = 8;
     cfg.maxPatchTiles = 8;
+    cfg.patchSizeSkew = 1.0f;
 
     std::mt19937 rng(3);
     PlaceFungus(world, cfg, rng);
@@ -162,6 +224,44 @@ TEST_CASE("PlaceFungus grows contiguous multi-tile patches", "[worldgen][fungus]
     REQUIRE(fungusTiles >= 8);
     // Interior/edge of an 8-tile patch: most tiles should touch another fungus tile.
     CHECK(fungusWithNeighbor >= fungusTiles - 2);
+}
+
+TEST_CASE("PlaceFungus patch_size_skew weights toward small patches",
+          "[worldgen][fungus]")
+{
+    WorldMap world(40, 40);
+    FillLand_(world);
+
+    FungusDecorationConfig_t cfg;
+    cfg.landFraction = 0.12f;
+    cfg.waterFraction = 0.0f;
+    cfg.minPatchTiles = 1;
+    cfg.maxPatchTiles = 16;
+    cfg.patchSizeSkew = 4.0f;
+
+    std::mt19937 rng(42);
+    PlaceFungus(world, cfg, rng);
+
+    const std::vector<int> sizes = FungusPatchSizes_(world);
+    REQUIRE(sizes.size() >= 10);
+
+    int small = 0; // 1–2 tiles
+    int large = 0; // near the max end
+    for (int size : sizes)
+    {
+        if (size <= 2)
+        {
+            ++small;
+        }
+        if (size >= 10)
+        {
+            ++large;
+        }
+    }
+
+    // Power skew + isolation ⇒ majority small; large patches are uncommon.
+    CHECK(small * 2 >= static_cast<int>(sizes.size()));
+    CHECK(large * 5 <= static_cast<int>(sizes.size()));
 }
 
 TEST_CASE("PlaceFungus water_fraction only stamps water tiles", "[worldgen][fungus]")

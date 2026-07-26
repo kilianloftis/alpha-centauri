@@ -1,8 +1,9 @@
 [
-  { "id": "Flat", "name": "Flat", "effects": [] },
+  { "id": "Flat", "name": "Flat", "tags": ["landform"], "effects": [] },
   {
     "id": "Rolling",
     "name": "Rolling",
+    "tags": ["landform"],
     "effects": [
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "minerals", "amount": 1, "op": "Add" } }
     ]
@@ -10,16 +11,18 @@
   {
     "id": "Rocky",
     "name": "Rocky",
+    "tags": ["landform"],
     "move_cost": 2,
     "effects": [
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "minerals", "amount": 2, "op": "Add" } },
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "defense", "amount": 25, "op": "AddPercent" } }
     ]
   },
-  { "id": "Arid", "name": "Arid", "effects": [] },
+  { "id": "Arid", "name": "Arid", "tags": ["landform"], "effects": [] },
   {
     "id": "Moist",
     "name": "Moist",
+    "tags": ["landform"],
     "effects": [
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" } }
     ]
@@ -27,6 +30,7 @@
   {
     "id": "Wet",
     "name": "Wet",
+    "tags": ["landform"],
     "effects": [
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 2, "op": "Add" } }
     ]
@@ -43,10 +47,9 @@
     "name": "Fungus",
     "move_cost": 3,
     "suppress_yield_sources": [
-      "Flat", "Rolling", "Rocky", "Arid", "Moist", "Wet", "River",
-      "Farm", "Mine", "Forest", "SolarCollector", "SoilEnricher", "Mirror", "Condenser",
-      "ThermalBorehole", "KelpFarm", "MiningPlatform", "TidalHarness",
-      "Nutrients", "Minerals", "Energy"
+      "@landform", "River", "@land_terraform",
+      "SoilEnricher", "KelpFarm", "MiningPlatform", "TidalHarness",
+      "@resource_bonus", "Minerals", "Energy"
     ],
     "effects": [
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" } },
@@ -73,6 +76,7 @@
   {
     "id": "Farm",
     "name": "Farm",
+    "tags": ["land_terraform"],
     "turns_required": 4,
     "energy_cost": 0,
     "excludes": ["Rocky"],
@@ -83,9 +87,10 @@
   {
     "id": "Forest",
     "name": "Forest",
+    "tags": ["land_terraform"],
     "turns_required": 4,
     "energy_cost": 0,
-    "suppress_yield_sources": ["Flat", "Rolling", "Rocky", "Arid", "Moist", "Wet"],
+    "suppress_yield_sources": ["@landform"],
     "effects": [
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" } },
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "minerals", "amount": 2, "op": "Add" } },
@@ -95,6 +100,7 @@
   {
     "id": "Nutrients",
     "name": "Nutrients",
+    "tags": ["resource_bonus"],
     "frequency": 10,
     "effects": [
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 2, "op": "Add", "apply_after_restriction": true } }
@@ -105,9 +111,8 @@
     "name": "Monolith",
     "frequency": 3,
     "suppress_yield_sources": [
-      "Flat", "Rolling", "Rocky", "Arid", "Moist", "Wet", "River",
-      "Farm", "Mine", "Forest", "SolarCollector", "SoilEnricher", "Mirror", "Condenser",
-      "ThermalBorehole", "Nutrients"
+      "@landform", "River", "@land_terraform",
+      "SoilEnricher", "@resource_bonus"
     ],
     "effects": [
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 2, "op": "Add" } },
@@ -118,6 +123,7 @@
   {
     "id": "Mine",
     "name": "Mine",
+    "tags": ["land_terraform"],
     "turns_required": 8,
     "energy_cost": 0,
     "effects": [
@@ -127,6 +133,7 @@
   {
     "id": "SolarCollector",
     "name": "Solar Collector",
+    "tags": ["land_terraform"],
     "turns_required": 4,
     "energy_cost": 0,
     "effects": [
@@ -203,6 +210,7 @@
   {
     "id": "Mirror",
     "name": "Mirror",
+    "tags": ["land_terraform"],
     "turns_required": 12,
     "energy_cost": 0,
     "effects": [
@@ -223,6 +231,7 @@
   {
     "id": "Condenser",
     "name": "Condenser",
+    "tags": ["land_terraform"],
     "turns_required": 12,
     "energy_cost": 0,
     "effects": [
@@ -232,10 +241,11 @@
   {
     "id": "ThermalBorehole",
     "name": "Thermal Borehole",
+    "tags": ["land_terraform"],
     "turns_required": 24,
     "energy_cost": 0,
     "terminates_river": true,
-    "suppress_yield_sources": ["Flat", "Rolling", "Rocky", "Arid", "Moist", "Wet", "Farm", "Mine"],
+    "suppress_yield_sources": ["@landform", "Farm", "Mine"],
     "effects": [
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "minerals", "amount": 6, "op": "Add" } },
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "energy", "amount": 6, "op": "Add" } }

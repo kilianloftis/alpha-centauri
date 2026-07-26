@@ -152,6 +152,7 @@ FungusDecorationConfig_t ParseFungus_(const nlohmann::json& rJson)
     config.waterFraction = rJson.value("water_fraction", config.waterFraction);
     config.minPatchTiles = rJson.value("min_patch_tiles", config.minPatchTiles);
     config.maxPatchTiles = rJson.value("max_patch_tiles", config.maxPatchTiles);
+    config.patchSizeSkew = rJson.value("patch_size_skew", config.patchSizeSkew);
 
     if (config.landFraction < 0.0f || config.landFraction > 1.0f)
     {
@@ -172,6 +173,11 @@ FungusDecorationConfig_t ParseFungus_(const nlohmann::json& rJson)
     {
         throw std::runtime_error(
             "world gen decoration fungus.max_patch_tiles must be >= min_patch_tiles");
+    }
+    if (config.patchSizeSkew < 1.0f)
+    {
+        throw std::runtime_error(
+            "world gen decoration fungus.patch_size_skew must be >= 1");
     }
     return config;
 }

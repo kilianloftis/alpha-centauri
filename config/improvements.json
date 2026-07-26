@@ -2,11 +2,13 @@
   {
     "id": "Flat",
     "name": "Flat",
+    "tags": ["landform"],
     "effects": []
   },
   {
     "id": "Rolling",
     "name": "Rolling",
+    "tags": ["landform"],
     "effects": [
       {
         "type": "StatModifier",
@@ -18,6 +20,7 @@
   {
     "id": "Rocky",
     "name": "Rocky",
+    "tags": ["landform"],
     "move_cost": 2,
     "effects": [
       {
@@ -35,11 +38,13 @@
   {
     "id": "Arid",
     "name": "Arid",
+    "tags": ["landform"],
     "effects": []
   },
   {
     "id": "Moist",
     "name": "Moist",
+    "tags": ["landform"],
     "effects": [
       {
         "type": "StatModifier",
@@ -51,6 +56,7 @@
   {
     "id": "Wet",
     "name": "Wet",
+    "tags": ["landform"],
     "effects": [
       {
         "type": "StatModifier",
@@ -76,10 +82,7 @@
     "name": "Fungus",
     "move_cost": 3,
     "suppress_yield_sources": [
-      "Flat", "Rolling", "Rocky", "Arid", "Moist", "Wet", "River",
-      "Farm", "Mine", "Forest", "SolarCollector", "SoilEnricher", "Mirror", "Condenser",
-      "ThermalBorehole", "KelpFarm", "MiningPlatform", "TidalHarness",
-      "Nutrients", "Minerals", "Energy"
+      "@landform", "@land_terraform", "@sea_terraform", "@resource_bonus"
     ],
     "effects": [
       {
@@ -119,6 +122,7 @@
   {
     "id": "Farm",
     "name": "Farm",
+    "tags": ["land_terraform"],
     "turns_required": 4,
     "energy_cost": 0,
     "excludes": ["Rocky", "Forest", "ThermalBorehole"],
@@ -133,10 +137,11 @@
   {
     "id": "Forest",
     "name": "Forest",
+    "tags": ["land_terraform"],
     "turns_required": 4,
     "energy_cost": 0,
     "excludes": ["Farm", "Mine", "SolarCollector", "SoilEnricher", "ThermalBorehole", "Fungus"],
-    "suppress_yield_sources": ["Flat", "Rolling", "Rocky", "Arid", "Moist", "Wet"],
+    "suppress_yield_sources": ["@landform"],
     "effects": [
       {
         "type": "StatModifier",
@@ -158,6 +163,7 @@
   {
     "id": "Mine",
     "name": "Mine",
+    "tags": ["land_terraform"],
     "turns_required": 8,
     "energy_cost": 0,
     "excludes": ["Forest", "ThermalBorehole", "SolarCollector"],
@@ -189,6 +195,7 @@
   {
     "id": "SolarCollector",
     "name": "Solar Collector",
+    "tags": ["land_terraform"],
     "turns_required": 4,
     "energy_cost": 0,
     "excludes": ["Mine", "Forest", "ThermalBorehole", "Mirror"],
@@ -213,6 +220,7 @@
   {
     "id": "SoilEnricher",
     "name": "Soil Enricher",
+    "tags": ["land_terraform"],
     "turns_required": 8,
     "energy_cost": 0,
     "required_tech": "advanced_ecological_engineering",
@@ -287,6 +295,7 @@
   {
     "id": "Mirror",
     "name": "Echelon Mirror",
+    "tags": ["land_terraform"],
     "turns_required": 12,
     "energy_cost": 0,
     "required_tech": "ecological_engineering",
@@ -318,6 +327,7 @@
   {
     "id": "Condenser",
     "name": "Condenser",
+    "tags": ["land_terraform"],
     "turns_required": 12,
     "energy_cost": 0,
     "required_tech": "ecological_engineering",
@@ -339,15 +349,14 @@
   {
     "id": "ThermalBorehole",
     "name": "Thermal Borehole",
+    "tags": ["land_terraform"],
     "turns_required": 24,
     "energy_cost": 0,
     "required_tech": "ecological_engineering",
-    "excludes": ["Farm", "Mine", "Forest", "SolarCollector", "SoilEnricher", "Mirror", "Condenser"],
+    "excludes": ["@land_terraform"],
     "terminates_river": true,
     "suppress_yield_sources": [
-      "Flat", "Rolling", "Rocky", "Arid", "Moist", "Wet",
-      "Farm", "Mine", "Forest", "SolarCollector", "SoilEnricher", "Mirror", "Condenser",
-      "KelpFarm", "MiningPlatform", "TidalHarness"
+      "@landform", "@land_terraform", "@sea_terraform"
     ],
     "effects": [
       {
@@ -365,6 +374,7 @@
   {
     "id": "KelpFarm",
     "name": "Kelp Farm",
+    "tags": ["sea_terraform"],
     "turns_required": 4,
     "energy_cost": 0,
     "excludes": ["MiningPlatform", "TidalHarness", "ThermalBorehole"],
@@ -379,6 +389,7 @@
   {
     "id": "MiningPlatform",
     "name": "Mining Platform",
+    "tags": ["sea_terraform"],
     "turns_required": 8,
     "energy_cost": 0,
     "excludes": ["KelpFarm", "TidalHarness", "ThermalBorehole"],
@@ -398,6 +409,7 @@
   {
     "id": "TidalHarness",
     "name": "Tidal Harness",
+    "tags": ["sea_terraform"],
     "turns_required": 4,
     "energy_cost": 0,
     "excludes": ["KelpFarm", "MiningPlatform", "ThermalBorehole"],
@@ -481,7 +493,8 @@
     "id": "MonsoonJungle",
     "name": "Monsoon Jungle",
     "description": "Anomalous earthlike jungle; rich soil yields extra nutrients",
-    "excludes": ["GarlandCrater", "UraniumFlats", "PholusRidge", "MountPlanet", "FreshwaterSea", "GeothermalShallows", "FossilFieldRidge", "ManifoldNexus", "GreatDunes", "SunnyMesa", "NessusCanyon", "Nutrients", "Minerals", "Energy", "Monolith"],
+    "tags": ["landmark"],
+    "excludes": ["@landmark", "@resource_bonus", "Monolith"],
     "effects": [
       {
         "type": "StatModifier",
@@ -494,7 +507,8 @@
     "id": "GarlandCrater",
     "name": "Garland Crater",
     "description": "Impact crater rich in industrial metals",
-    "excludes": ["MonsoonJungle", "UraniumFlats", "PholusRidge", "MountPlanet", "FreshwaterSea", "GeothermalShallows", "FossilFieldRidge", "ManifoldNexus", "GreatDunes", "SunnyMesa", "NessusCanyon", "Nutrients", "Minerals", "Energy", "Monolith"],
+    "tags": ["landmark"],
+    "excludes": ["@landmark", "@resource_bonus", "Monolith"],
     "effects": [
       {
         "type": "StatModifier",
@@ -507,7 +521,8 @@
     "id": "UraniumFlats",
     "name": "Uranium Flats",
     "description": "Savanna rich in heavy elements",
-    "excludes": ["MonsoonJungle", "GarlandCrater", "PholusRidge", "MountPlanet", "FreshwaterSea", "GeothermalShallows", "FossilFieldRidge", "ManifoldNexus", "GreatDunes", "SunnyMesa", "NessusCanyon", "Nutrients", "Minerals", "Energy", "Monolith"],
+    "tags": ["landmark"],
+    "excludes": ["@landmark", "@resource_bonus", "Monolith"],
     "effects": [
       {
         "type": "StatModifier",
@@ -520,7 +535,8 @@
     "id": "PholusRidge",
     "name": "Pholus Ridge",
     "description": "Tectonic ridge unleashing geothermal energy",
-    "excludes": ["MonsoonJungle", "GarlandCrater", "UraniumFlats", "MountPlanet", "FreshwaterSea", "GeothermalShallows", "FossilFieldRidge", "ManifoldNexus", "GreatDunes", "SunnyMesa", "NessusCanyon", "Nutrients", "Minerals", "Energy", "Monolith"],
+    "tags": ["landmark"],
+    "excludes": ["@landmark", "@resource_bonus", "Monolith"],
     "effects": [
       {
         "type": "StatModifier",
@@ -533,7 +549,8 @@
     "id": "MountPlanet",
     "name": "Mount Planet",
     "description": "Active shield volcano; slopes yield minerals and energy",
-    "excludes": ["MonsoonJungle", "GarlandCrater", "UraniumFlats", "PholusRidge", "FreshwaterSea", "GeothermalShallows", "FossilFieldRidge", "ManifoldNexus", "GreatDunes", "SunnyMesa", "NessusCanyon", "Nutrients", "Minerals", "Energy", "Monolith", "Farm", "Forest"],
+    "tags": ["landmark"],
+    "excludes": ["@landmark", "@resource_bonus", "Monolith", "Farm", "Forest"],
     "effects": [
       {
         "type": "StatModifier",
@@ -551,7 +568,8 @@
     "id": "FreshwaterSea",
     "name": "Freshwater Sea",
     "description": "Inland sea rich in nutrients",
-    "excludes": ["MonsoonJungle", "GarlandCrater", "UraniumFlats", "PholusRidge", "MountPlanet", "GeothermalShallows", "FossilFieldRidge", "ManifoldNexus", "GreatDunes", "SunnyMesa", "NessusCanyon", "Nutrients", "Minerals", "Energy", "Monolith"],
+    "tags": ["landmark"],
+    "excludes": ["@landmark", "@resource_bonus", "Monolith"],
     "effects": [
       {
         "type": "StatModifier",
@@ -564,7 +582,8 @@
     "id": "GeothermalShallows",
     "name": "Geothermal Shallows",
     "description": "Coastal shelf of underwater geysers",
-    "excludes": ["MonsoonJungle", "GarlandCrater", "UraniumFlats", "PholusRidge", "MountPlanet", "FreshwaterSea", "FossilFieldRidge", "ManifoldNexus", "GreatDunes", "SunnyMesa", "NessusCanyon", "Nutrients", "Minerals", "Energy", "Monolith"],
+    "tags": ["landmark"],
+    "excludes": ["@landmark", "@resource_bonus", "Monolith"],
     "effects": [
       {
         "type": "StatModifier",
@@ -577,7 +596,8 @@
     "id": "FossilFieldRidge",
     "name": "Fossil Field Ridge",
     "description": "Undersea coral formation rich in minerals",
-    "excludes": ["MonsoonJungle", "GarlandCrater", "UraniumFlats", "PholusRidge", "MountPlanet", "FreshwaterSea", "GeothermalShallows", "ManifoldNexus", "GreatDunes", "SunnyMesa", "NessusCanyon", "Nutrients", "Minerals", "Energy", "Monolith"],
+    "tags": ["landmark"],
+    "excludes": ["@landmark", "@resource_bonus", "Monolith"],
     "effects": [
       {
         "type": "StatModifier",
@@ -590,7 +610,8 @@
     "id": "SunnyMesa",
     "name": "Sunny Mesa",
     "description": "Highland excellent for harvesting energy",
-    "excludes": ["MonsoonJungle", "GarlandCrater", "UraniumFlats", "PholusRidge", "MountPlanet", "FreshwaterSea", "GeothermalShallows", "FossilFieldRidge", "ManifoldNexus", "GreatDunes", "NessusCanyon", "Nutrients", "Minerals", "Energy", "Monolith"],
+    "tags": ["landmark"],
+    "excludes": ["@landmark", "@resource_bonus", "Monolith"],
     "effects": [
       {
         "type": "StatModifier",
@@ -603,7 +624,8 @@
     "id": "NessusCanyon",
     "name": "Nessus Canyon",
     "description": "Vast canyon with millennia of mineral deposits",
-    "excludes": ["MonsoonJungle", "GarlandCrater", "UraniumFlats", "PholusRidge", "MountPlanet", "FreshwaterSea", "GeothermalShallows", "FossilFieldRidge", "ManifoldNexus", "GreatDunes", "SunnyMesa", "Nutrients", "Minerals", "Energy", "Monolith"],
+    "tags": ["landmark"],
+    "excludes": ["@landmark", "@resource_bonus", "Monolith"],
     "effects": [
       {
         "type": "StatModifier",
@@ -616,15 +638,17 @@
     "id": "GreatDunes",
     "name": "Great Dunes",
     "description": "Vast inhospitable desert; no resource bonus",
-    "excludes": ["MonsoonJungle", "GarlandCrater", "UraniumFlats", "PholusRidge", "MountPlanet", "FreshwaterSea", "GeothermalShallows", "FossilFieldRidge", "ManifoldNexus", "SunnyMesa", "NessusCanyon", "Nutrients", "Minerals", "Energy", "Monolith"],
+    "tags": ["landmark"],
+    "excludes": ["@landmark", "@resource_bonus", "Monolith"],
     "effects": []
   },
   {
     "id": "ManifoldNexus",
     "name": "Manifold Nexus",
     "description": "Progenitor control nexus; +1 Planet when inside faction territory",
+    "tags": ["landmark"],
     "owned_by_territory": true,
-    "excludes": ["MonsoonJungle", "GarlandCrater", "UraniumFlats", "PholusRidge", "MountPlanet", "FreshwaterSea", "GeothermalShallows", "FossilFieldRidge", "GreatDunes", "SunnyMesa", "NessusCanyon", "Nutrients", "Minerals", "Energy", "Monolith"],
+    "excludes": ["@landmark", "@resource_bonus", "Monolith"],
     "effects": [
       {
         "type": "SocialRatingModifier",
@@ -637,13 +661,15 @@
     "id": "UnityWreckage",
     "name": "U.N.S. Unity Wreckage",
     "description": "Shattered hull of the Unity",
-    "excludes": ["MonsoonJungle", "GarlandCrater", "UraniumFlats", "PholusRidge", "MountPlanet", "FreshwaterSea", "GeothermalShallows", "FossilFieldRidge", "ManifoldNexus", "GreatDunes", "SunnyMesa", "NessusCanyon", "Nutrients", "Minerals", "Energy", "Monolith"],
+    "tags": ["landmark"],
+    "excludes": ["@landmark", "@resource_bonus", "Monolith"],
     "effects": []
   },
   {
     "id": "Nutrients",
     "name": "Nutrients",
     "description": "Exceptionally fertile soil provides extra nutrients",
+    "tags": ["resource_bonus"],
     "frequency": 10,
     "sprite_path": "assets/sprites/tile_bonuses/nutrient_rich_soil.png",
     "effects": [
@@ -658,6 +684,7 @@
     "id": "Minerals",
     "name": "Minerals",
     "description": "Rich mineral veins near the surface",
+    "tags": ["resource_bonus"],
     "frequency": 10,
     "sprite_path": "assets/sprites/tile_bonuses/mineral_deposit.png",
     "effects": [
@@ -672,6 +699,7 @@
     "id": "Energy",
     "name": "Energy",
     "description": "Natural energy source provides energy",
+    "tags": ["resource_bonus"],
     "frequency": 10,
     "sprite_path": "assets/sprites/tile_bonuses/energy_vein.png",
     "effects": [
@@ -689,10 +717,7 @@
     "frequency": 3,
     "sprite_path": "assets/sprites/tile_bonuses/monolith.png",
     "suppress_yield_sources": [
-      "Flat", "Rolling", "Rocky", "Arid", "Moist", "Wet", "River",
-      "Farm", "Mine", "Forest", "SolarCollector", "SoilEnricher", "Mirror", "Condenser",
-      "ThermalBorehole", "KelpFarm", "MiningPlatform", "TidalHarness",
-      "Nutrients", "Minerals", "Energy"
+      "@landform", "River", "@land_terraform", "@sea_terraform", "@resource_bonus"
     ],
     "effects": [
       {

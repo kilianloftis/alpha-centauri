@@ -49,12 +49,15 @@ struct AquiferDecorationConfig_t
 };
 
 // Fungus decoration: orthogonal patch growth from single tiles to large swaths.
+// Target size is drawn from [minPatchTiles, maxPatchTiles] with a power skew:
+// size = min + floor((max-min+1) * u^patchSizeSkew). skew 1 = uniform; higher → smaller.
 struct FungusDecorationConfig_t
 {
     float landFraction = 0.08f;   // target fraction of land tiles with fungus
     float waterFraction = 0.0f;   // target fraction of water tiles (sea fungus)
     int minPatchTiles = 1;
-    int maxPatchTiles = 48;
+    int maxPatchTiles = 16;
+    float patchSizeSkew = 4.0f;   // >= 1; higher weights the small end of the range
 };
 
 // Post-elevation terrain decoration (moisture, rockiness, aquifers, fungus, …).
