@@ -47,6 +47,7 @@ add_executable(effects-tests
     game/WorldGeneratorMoistureTests.cpp
     game/WorldGeneratorRockinessTests.cpp
     game/RiverGenerationTests.cpp
+    game/LandmarkGenerationTests.cpp
     game/VisibilityTests.cpp
     game/UnitVisibilityTests.cpp
     game/MovementTests.cpp

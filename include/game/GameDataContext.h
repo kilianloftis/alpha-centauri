@@ -27,6 +27,7 @@ class PopTypeAvailabilityCalculator;
 class ImprovementRegistry;
 class WorldGenPresetRegistry;
 struct WorldGenDecorationConfig_t;
+struct LandmarkConfig_t;
 
 // Owns the definition data loaded once at startup (registries and config structs, all
 // reconstructible from config files) plus the calculators/services built from that data.
@@ -55,6 +56,7 @@ struct GameDataContext
     std::unique_ptr<ImprovementRegistry> improvementRegistry;
     std::unique_ptr<WorldGenPresetRegistry> worldGenPresetRegistry;
     std::unique_ptr<WorldGenDecorationConfig_t> worldGenDecorationConfig;
+    std::vector<LandmarkConfig_t> worldGenLandmarks;
     // FactionGlobal TileResourceCap rules (and any other universal tile-yield effects).
     std::vector<EffectConfig_t> tileYieldRules;
 

@@ -5,6 +5,8 @@
 #include "game/buildings/BuildingRegistry.h"
 #include "game/faction/FactionRegistry.h"
 #include "game/map/ImprovementRegistry.h"
+#include "game/map/LandmarkConfig.h"
+#include "game/map/LandmarkConfigParser.h"
 #include "game/map/WorldGenDecorationConfigParser.h"
 #include "game/map/WorldGenPresetRegistry.h"
 #include "game/population/calculators/PopCompositionCalculator.h"
@@ -71,6 +73,17 @@ void LoadGameData(GameDataContext& rData, const GameDataPaths& rPaths)
     WorldGenDecorationConfigParser decorationParser;
     rData.worldGenDecorationConfig = std::make_unique<WorldGenDecorationConfig_t>(
         decorationParser.ParseConfig(rPaths.worldGenDecoration));
+
+    {
+        std::vector<std::string> improvementIds;
+        for (const ImprovementConfig_t& rConfig : rData.improvementRegistry->GetAll())
+        {
+            improvementIds.push_back(rConfig.id);
+        }
+        LandmarkConfigParser landmarkParser;
+        rData.worldGenLandmarks =
+            landmarkParser.ParseConfig(rPaths.worldGenLandmarks, improvementIds);
+    }
 
     TileYieldRulesConfigParser tileYieldRulesParser;
     rData.tileYieldRules = tileYieldRulesParser.ParseConfig(rPaths.tileYieldRules);

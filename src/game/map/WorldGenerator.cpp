@@ -1,5 +1,7 @@
 #include "game/map/WorldGenerator.h"
 #include "game/map/FbmNoise.h"
+#include "game/map/ImprovementRegistry.h"
+#include "game/map/LandmarkGeneration.h"
 #include "game/map/MoistureGeneration.h"
 #include "game/map/RiverGeneration.h"
 #include "game/map/RockinessGeneration.h"
@@ -33,7 +35,9 @@ WorldGenerator::~WorldGenerator() = default;
 
 std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& rConfig,
                                                    const WorldGenPresetConfig_t& rPreset,
-                                                   const WorldGenDecorationConfig_t& rDecoration)
+                                                   const WorldGenDecorationConfig_t& rDecoration,
+                                                   const std::vector<LandmarkConfig_t>& rLandmarks,
+                                                   const ImprovementRegistry& rImprovements)
 {
     const unsigned int seed = rConfig.seed == 0
         ? static_cast<unsigned int>(std::chrono::steady_clock::now().time_since_epoch().count())
@@ -46,6 +50,7 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
     GenerateMoisture_(*pWorld, rDecoration.moisture);
     GenerateRockiness_(*pWorld, rConfig.erosiveForces, rDecoration.rockiness);
     GenerateAquifers_(*pWorld, rDecoration.aquifers);
+    GenerateLandmarks_(*pWorld, rLandmarks, rImprovements);
 
     return pWorld;
 }
@@ -269,6 +274,13 @@ void WorldGenerator::GenerateAquifers_(WorldMap& rWorld,
     }
 
     RecomputeRivers(rWorld);
+}
+
+void WorldGenerator::GenerateLandmarks_(WorldMap& rWorld,
+                                        const std::vector<LandmarkConfig_t>& rLandmarks,
+                                        const ImprovementRegistry& rImprovements)
+{
+    PlaceLandmarks(rWorld, rLandmarks, rImprovements, m_rng);
 }
 
 int WorldGenerator::RandomInt_(int min, int max)

@@ -123,7 +123,9 @@ void Engine::Initialize_()
     const WorldGenPresetConfig_t& rPreset =
         m_gameDataContext->worldGenPresetRegistry->Get(rWorldConfig.presetId);
     m_pGameState = std::make_unique<GameState>(
-        worldGen.Generate(rWorldConfig, rPreset, *m_gameDataContext->worldGenDecorationConfig),
+        worldGen.Generate(rWorldConfig, rPreset, *m_gameDataContext->worldGenDecorationConfig,
+                          m_gameDataContext->worldGenLandmarks,
+                          *m_gameDataContext->improvementRegistry),
         *m_gameDataContext->improvementRegistry,
         m_gameDataContext->unitComponentRegistry.get(),
         *m_pSettings);

@@ -467,6 +467,169 @@
     ]
   },
   {
+    "id": "MonsoonJungle",
+    "name": "Monsoon Jungle",
+    "description": "Anomalous earthlike jungle; rich soil yields extra nutrients",
+    "excludes": ["GarlandCrater", "UraniumFlats", "PholusRidge", "MountPlanet", "FreshwaterSea", "GeothermalShallows", "FossilFieldRidge", "ManifoldNexus", "GreatDunes", "SunnyMesa", "NessusCanyon", "Nutrients", "Minerals", "Energy", "Monolith"],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" }
+      }
+    ]
+  },
+  {
+    "id": "GarlandCrater",
+    "name": "Garland Crater",
+    "description": "Impact crater rich in industrial metals",
+    "excludes": ["MonsoonJungle", "UraniumFlats", "PholusRidge", "MountPlanet", "FreshwaterSea", "GeothermalShallows", "FossilFieldRidge", "ManifoldNexus", "GreatDunes", "SunnyMesa", "NessusCanyon", "Nutrients", "Minerals", "Energy", "Monolith"],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "minerals", "amount": 1, "op": "Add" }
+      }
+    ]
+  },
+  {
+    "id": "UraniumFlats",
+    "name": "Uranium Flats",
+    "description": "Savanna rich in heavy elements",
+    "excludes": ["MonsoonJungle", "GarlandCrater", "PholusRidge", "MountPlanet", "FreshwaterSea", "GeothermalShallows", "FossilFieldRidge", "ManifoldNexus", "GreatDunes", "SunnyMesa", "NessusCanyon", "Nutrients", "Minerals", "Energy", "Monolith"],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "energy", "amount": 1, "op": "Add" }
+      }
+    ]
+  },
+  {
+    "id": "PholusRidge",
+    "name": "Pholus Ridge",
+    "description": "Tectonic ridge unleashing geothermal energy",
+    "excludes": ["MonsoonJungle", "GarlandCrater", "UraniumFlats", "MountPlanet", "FreshwaterSea", "GeothermalShallows", "FossilFieldRidge", "ManifoldNexus", "GreatDunes", "SunnyMesa", "NessusCanyon", "Nutrients", "Minerals", "Energy", "Monolith"],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "energy", "amount": 1, "op": "Add" }
+      }
+    ]
+  },
+  {
+    "id": "MountPlanet",
+    "name": "Mount Planet",
+    "description": "Active shield volcano; slopes yield minerals and energy",
+    "excludes": ["MonsoonJungle", "GarlandCrater", "UraniumFlats", "PholusRidge", "FreshwaterSea", "GeothermalShallows", "FossilFieldRidge", "ManifoldNexus", "GreatDunes", "SunnyMesa", "NessusCanyon", "Nutrients", "Minerals", "Energy", "Monolith", "Farm", "Forest"],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "minerals", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "energy", "amount": 1, "op": "Add" }
+      }
+    ]
+  },
+  {
+    "id": "FreshwaterSea",
+    "name": "Freshwater Sea",
+    "description": "Inland sea rich in nutrients",
+    "excludes": ["MonsoonJungle", "GarlandCrater", "UraniumFlats", "PholusRidge", "MountPlanet", "GeothermalShallows", "FossilFieldRidge", "ManifoldNexus", "GreatDunes", "SunnyMesa", "NessusCanyon", "Nutrients", "Minerals", "Energy", "Monolith"],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" }
+      }
+    ]
+  },
+  {
+    "id": "GeothermalShallows",
+    "name": "Geothermal Shallows",
+    "description": "Coastal shelf of underwater geysers",
+    "excludes": ["MonsoonJungle", "GarlandCrater", "UraniumFlats", "PholusRidge", "MountPlanet", "FreshwaterSea", "FossilFieldRidge", "ManifoldNexus", "GreatDunes", "SunnyMesa", "NessusCanyon", "Nutrients", "Minerals", "Energy", "Monolith"],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "energy", "amount": 1, "op": "Add" }
+      }
+    ]
+  },
+  {
+    "id": "FossilFieldRidge",
+    "name": "Fossil Field Ridge",
+    "description": "Undersea coral formation rich in minerals",
+    "excludes": ["MonsoonJungle", "GarlandCrater", "UraniumFlats", "PholusRidge", "MountPlanet", "FreshwaterSea", "GeothermalShallows", "ManifoldNexus", "GreatDunes", "SunnyMesa", "NessusCanyon", "Nutrients", "Minerals", "Energy", "Monolith"],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "minerals", "amount": 1, "op": "Add" }
+      }
+    ]
+  },
+  {
+    "id": "SunnyMesa",
+    "name": "Sunny Mesa",
+    "description": "Highland excellent for harvesting energy",
+    "excludes": ["MonsoonJungle", "GarlandCrater", "UraniumFlats", "PholusRidge", "MountPlanet", "FreshwaterSea", "GeothermalShallows", "FossilFieldRidge", "ManifoldNexus", "GreatDunes", "NessusCanyon", "Nutrients", "Minerals", "Energy", "Monolith"],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "energy", "amount": 1, "op": "Add" }
+      }
+    ]
+  },
+  {
+    "id": "NessusCanyon",
+    "name": "Nessus Canyon",
+    "description": "Vast canyon with millennia of mineral deposits",
+    "excludes": ["MonsoonJungle", "GarlandCrater", "UraniumFlats", "PholusRidge", "MountPlanet", "FreshwaterSea", "GeothermalShallows", "FossilFieldRidge", "ManifoldNexus", "GreatDunes", "SunnyMesa", "Nutrients", "Minerals", "Energy", "Monolith"],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "minerals", "amount": 1, "op": "Add" }
+      }
+    ]
+  },
+  {
+    "id": "GreatDunes",
+    "name": "Great Dunes",
+    "description": "Vast inhospitable desert; no resource bonus",
+    "excludes": ["MonsoonJungle", "GarlandCrater", "UraniumFlats", "PholusRidge", "MountPlanet", "FreshwaterSea", "GeothermalShallows", "FossilFieldRidge", "ManifoldNexus", "SunnyMesa", "NessusCanyon", "Nutrients", "Minerals", "Energy", "Monolith"],
+    "effects": []
+  },
+  {
+    "id": "ManifoldNexus",
+    "name": "Manifold Nexus",
+    "description": "Progenitor control nexus; +1 Planet when inside faction territory",
+    "owned_by_territory": true,
+    "excludes": ["MonsoonJungle", "GarlandCrater", "UraniumFlats", "PholusRidge", "MountPlanet", "FreshwaterSea", "GeothermalShallows", "FossilFieldRidge", "GreatDunes", "SunnyMesa", "NessusCanyon", "Nutrients", "Minerals", "Energy", "Monolith"],
+    "effects": [
+      {
+        "type": "SocialRatingModifier",
+        "scope": "FactionGlobal",
+        "parameters": { "rating": "planet", "amount": 1 }
+      }
+    ]
+  },
+  {
+    "id": "UnityWreckage",
+    "name": "U.N.S. Unity Wreckage",
+    "description": "Shattered hull of the Unity",
+    "excludes": ["MonsoonJungle", "GarlandCrater", "UraniumFlats", "PholusRidge", "MountPlanet", "FreshwaterSea", "GeothermalShallows", "FossilFieldRidge", "ManifoldNexus", "GreatDunes", "SunnyMesa", "NessusCanyon", "Nutrients", "Minerals", "Energy", "Monolith"],
+    "effects": []
+  },
+  {
     "id": "Nutrients",
     "name": "Nutrients",
     "description": "Exceptionally fertile soil provides extra nutrients",

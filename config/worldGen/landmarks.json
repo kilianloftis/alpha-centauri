@@ -1,0 +1,185 @@
+[
+  {
+    "id": "MonsoonJungle",
+    "improvement_id": "MonsoonJungle",
+    "domain": "land",
+    "max_count": 1,
+    "min_spacing": 24,
+    "shape": { "kind": "disk", "radius": 4 }
+  },
+  {
+    "id": "GarlandCrater",
+    "improvement_id": "GarlandCrater",
+    "domain": "land",
+    "max_count": 1,
+    "min_spacing": 24,
+    "shape": { "kind": "disk", "radius": 3 }
+  },
+  {
+    "id": "UraniumFlats",
+    "improvement_id": "UraniumFlats",
+    "domain": "land",
+    "max_count": 1,
+    "min_spacing": 20,
+    "shape": { "kind": "disk", "radius": 3 }
+  },
+  {
+    "id": "PholusRidge",
+    "improvement_id": "PholusRidge",
+    "domain": "land",
+    "max_count": 1,
+    "min_spacing": 20,
+    "shape": {
+      "kind": "mask",
+      "rows": [
+        "  XXX  ",
+        " XXXXX ",
+        "XXXXXXX",
+        " XXXXX ",
+        "  XXX  "
+      ]
+    }
+  },
+  {
+    "id": "MountPlanet",
+    "improvement_id": "MountPlanet",
+    "domain": "land",
+    "max_count": 1,
+    "min_spacing": 28,
+    "shape": { "kind": "sculptor", "id": "mount_planet", "radius": 4 }
+  },
+  {
+    "id": "SunnyMesa",
+    "improvement_id": "SunnyMesa",
+    "domain": "land",
+    "max_count": 1,
+    "min_spacing": 20,
+    "shape": { "kind": "disk", "radius": 3 }
+  },
+  {
+    "id": "NessusCanyon",
+    "improvement_id": "NessusCanyon",
+    "domain": "land",
+    "max_count": 1,
+    "min_spacing": 20,
+    "shape": {
+      "kind": "mask",
+      "rows": [
+        "X      ",
+        "XX     ",
+        "XXX    ",
+        " XXX   ",
+        "  XXX  ",
+        "   XXX ",
+        "    XXX",
+        "     XX",
+        "      X"
+      ]
+    }
+  },
+  {
+    "id": "GreatDunes",
+    "improvement_id": "GreatDunes",
+    "domain": "land",
+    "max_count": 1,
+    "min_spacing": 20,
+    "shape": { "kind": "disk", "radius": 4 }
+  },
+  {
+    "id": "ManifoldNexus",
+    "improvement_id": "ManifoldNexus",
+    "domain": "land",
+    "max_count": 1,
+    "min_spacing": 20,
+    "shape": { "kind": "disk", "radius": 1 }
+  },
+  {
+    "id": "TheRuins",
+    "improvement_id": "Monolith",
+    "domain": "land",
+    "max_count": 1,
+    "min_spacing": 24,
+    "set_fungus": true,
+    "shape": {
+      "kind": "mask",
+      "rows": [
+        "  X X X  ",
+        "         ",
+        "X       X",
+        "         ",
+        "X   X   X",
+        "         ",
+        "X       X",
+        "         ",
+        "  X X X  "
+      ]
+    }
+  },
+  {
+    "id": "BoreholeCluster",
+    "improvement_id": "ThermalBorehole",
+    "domain": "land",
+    "max_count": 1,
+    "min_spacing": 20,
+    "shape": {
+      "kind": "mask",
+      "rows": [
+        "X X",
+        " X ",
+        "X  "
+      ]
+    }
+  },
+  {
+    "id": "FreshwaterSea",
+    "improvement_id": "FreshwaterSea",
+    "domain": "water",
+    "max_count": 1,
+    "min_spacing": 20,
+    "shape": { "kind": "disk", "radius": 4 }
+  },
+  {
+    "id": "GeothermalShallows",
+    "improvement_id": "GeothermalShallows",
+    "domain": "water",
+    "max_count": 1,
+    "min_spacing": 20,
+    "shape": { "kind": "disk", "radius": 3 }
+  },
+  {
+    "id": "FossilFieldRidge",
+    "improvement_id": "FossilFieldRidge",
+    "domain": "water",
+    "max_count": 1,
+    "min_spacing": 20,
+    "shape": {
+      "kind": "mask",
+      "rows": [
+        "   XX    ",
+        "  XXXX   ",
+        " XXXXXX  ",
+        "XXXXXXXX ",
+        " XXXXXXXX",
+        "  XXXXXX ",
+        "   XXXX  ",
+        "    XX   "
+      ]
+    }
+  },
+  {
+    "id": "UnityWreckage",
+    "improvement_id": "UnityWreckage",
+    "domain": "land",
+    "max_count": 1,
+    "min_spacing": 24,
+    "shape": {
+      "kind": "mask",
+      "rows": [
+        " XX ",
+        "XXXX",
+        "XXXX",
+        " XX "
+      ]
+    }
+  }
+]

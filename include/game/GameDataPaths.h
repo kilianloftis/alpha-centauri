@@ -23,6 +23,7 @@ struct GameDataPaths
     std::string techCost = "config/tech_cost.lua";
     std::string worldGenPresets = "config/worldGen/presets.json";
     std::string worldGenDecoration = "config/worldGen/decoration.json";
+    std::string worldGenLandmarks = "config/worldGen/landmarks.json";
     std::string tileYieldRules = "config/tile_yield_rules.json";
 };
 
