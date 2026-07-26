@@ -177,7 +177,8 @@ bool TileMatchesSelector_(const TileSelector_t& selector, const Tile& rTile, boo
         case TileSelectorKind_t::BaseTile:
             return isBaseTile;
         case TileSelectorKind_t::HasImprovement:
-            return selector.improvement && rTile.HasImprovement(*selector.improvement);
+            // HasFeature so terrain ids (Fungus, Rocky, …) match the same way as Farm/Mine.
+            return selector.improvement && rTile.HasFeature(*selector.improvement);
     }
     return false;
 }
@@ -304,19 +305,26 @@ TileYieldView_t TileEffectsContext::ResolveYieldFromEffects_(
 {
     std::vector<ActiveEffect_t> filtered = effects;
 
-    // Forest / Borehole: drop yield StatModifiers whose sourceId is suppressed.
+    // Forest / Borehole / Fungus: drop effects whose sourceId is suppressed.
+    // Terrain features (Fungus) carry suppress lists too — not only GetImprovements().
     std::unordered_set<std::string> suppress;
-    for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
+    auto absorbSuppress = [&](const std::vector<const ImprovementConfig_t*>& rConfigs)
     {
-        if (!pImprovement)
+        for (const ImprovementConfig_t* pConfig : rConfigs)
         {
-            continue;
+            if (!pConfig)
+            {
+                continue;
+            }
+            for (const std::string& rId : pConfig->suppressYieldSources)
+            {
+                suppress.insert(rId);
+            }
         }
-        for (const std::string& rId : pImprovement->suppressYieldSources)
-        {
-            suppress.insert(rId);
-        }
-    }
+    };
+    absorbSuppress(rTile.GetImprovements());
+    absorbSuppress(rTile.GetTerrainFeatures());
+
     if (!suppress.empty())
     {
         filtered.erase(std::remove_if(filtered.begin(), filtered.end(),

@@ -60,6 +60,12 @@
     "land_high_color": [
       210, 176, 128, 255
     ],
+    "forest_color": [
+      34, 140, 56, 255
+    ],
+    "fungus_color": [
+      220, 80, 180, 255
+    ],
     "min_elevation_meters": -4000,
     "max_elevation_meters": 4000,
     "fog_fill_dim_ratio": 0.55,

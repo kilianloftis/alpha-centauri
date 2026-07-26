@@ -48,12 +48,22 @@ struct AquiferDecorationConfig_t
     float landFraction = 0.02f;
 };
 
-// Post-elevation terrain decoration (moisture, rockiness, aquifers, …).
+// Fungus decoration: orthogonal patch growth from single tiles to large swaths.
+struct FungusDecorationConfig_t
+{
+    float landFraction = 0.08f;   // target fraction of land tiles with fungus
+    float waterFraction = 0.0f;   // target fraction of water tiles (sea fungus)
+    int minPatchTiles = 1;
+    int maxPatchTiles = 48;
+};
+
+// Post-elevation terrain decoration (moisture, rockiness, aquifers, fungus, …).
 struct WorldGenDecorationConfig_t
 {
     MoistureDecorationConfig_t moisture;
     RockinessDecorationConfig_t rockiness;
     AquiferDecorationConfig_t aquifers;
+    FungusDecorationConfig_t fungus;
 };
 
 } // namespace ac

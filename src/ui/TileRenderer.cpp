@@ -94,7 +94,16 @@ Color_t TileRenderer::FillColor(const Tile& rTile, bool bFogged)
     const int elevation = rTile.GetElevation();
     Color_t fill{};
 
-    if (rTile.IsWater())
+    // Feature overlays win over the elevation gradient (Forest excludes Fungus in config).
+    if (rTile.GetHasFungus())
+    {
+        fill = s.fungusColor;
+    }
+    else if (rTile.HasImprovement("Forest"))
+    {
+        fill = s.forestColor;
+    }
+    else if (rTile.IsWater())
     {
         // Water: darker at depth (minElevation), lighter near sea level (-1).
         const float t = Remap01_(static_cast<float>(elevation),

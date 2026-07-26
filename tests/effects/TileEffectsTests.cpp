@@ -452,6 +452,45 @@ TEST_CASE("Forest suppresses rockiness/moisture but keeps resource bonuses",
     CHECK(yield.energy == 1);
 }
 
+TEST_CASE("Fungus overrides tile yield to 1 nutrient",
+          "[effects][tile][yield][fungus]")
+{
+    actest::WorldFixture world;
+    Tile& tile = world.At(4, 4);
+    tile.SetRockiness(Rockiness_t::Rocky);
+    tile.SetMoisture(Moisture_t::Wet);
+    tile.SetHasRiver(true);
+    world.ctx->AddImprovementWithEffects(tile, "Farm");
+    world.ctx->AddImprovementWithEffects(tile, "Nutrients");
+    tile.SetHasFungus(true);
+
+    const TileResources_t yield = world.ctx->ResolveTileYield(tile).effective;
+    CHECK(yield.nutrients == 1);
+    CHECK(yield.minerals == 0);
+    CHECK(yield.energy == 0);
+}
+
+TEST_CASE("Fungus yield can be boosted by base-effect selectors",
+          "[effects][tile][yield][fungus][selector]")
+{
+    actest::WorldFixture world;
+    Tile& tile = world.At(4, 4);
+    tile.SetRockiness(Rockiness_t::Rocky);
+    tile.SetMoisture(Moisture_t::Wet);
+    tile.SetHasFungus(true);
+
+    actest::EffectPool pool;
+    const BaseEffects_t baseEffects{{
+        actest::Active(pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
+                                    actest::ImprovementSelector("Fungus")), "fungus_booster"),
+    }};
+
+    const TileResources_t yield = world.ctx->ResolveTileYield(tile, false, baseEffects).effective;
+    CHECK(yield.nutrients == 2);
+    CHECK(yield.minerals == 0);
+    CHECK(yield.energy == 0);
+}
+
 TEST_CASE("Monolith replaces tile yield with 2-2-2",
           "[effects][tile][yield][monolith]")
 {

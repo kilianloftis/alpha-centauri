@@ -79,6 +79,8 @@ TileRendererStyle ParseTileRendererStyle_(const nlohmann::json& j)
     s.waterHighColor = ParseColor_(j, "water_high_color");
     s.landLowColor = ParseColor_(j, "land_low_color");
     s.landHighColor = ParseColor_(j, "land_high_color");
+    s.forestColor = ParseColor_(j, "forest_color");
+    s.fungusColor = ParseColor_(j, "fungus_color");
     s.minElevationMeters = j.at("min_elevation_meters").get<int>();
     s.maxElevationMeters = j.at("max_elevation_meters").get<int>();
     s.fogFillDimRatio = j.at("fog_fill_dim_ratio").get<float>();

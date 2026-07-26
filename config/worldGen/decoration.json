@@ -31,5 +31,11 @@
   },
   "aquifers": {
     "land_fraction": 0.002
+  },
+  "fungus": {
+    "land_fraction": 0.08,
+    "water_fraction": 0.02,
+    "min_patch_tiles": 1,
+    "max_patch_tiles": 48
   }
 }

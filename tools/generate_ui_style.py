@@ -50,6 +50,8 @@ SECTIONS: list[tuple[str, str, list[tuple[str, str, str, object]]]] = [
             ("waterHighColor", "water_high_color", "color", [64, 140, 210, 255]),
             ("landLowColor", "land_low_color", "color", [92, 58, 28, 255]),
             ("landHighColor", "land_high_color", "color", [210, 176, 128, 255]),
+            ("forestColor", "forest_color", "color", [34, 140, 56, 255]),
+            ("fungusColor", "fungus_color", "color", [220, 80, 180, 255]),
             ("minElevationMeters", "min_elevation_meters", "int", -4000),
             ("maxElevationMeters", "max_elevation_meters", "int", 4000),
             ("fogFillDimRatio", "fog_fill_dim_ratio", "float", 0.55),

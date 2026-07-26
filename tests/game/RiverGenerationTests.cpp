@@ -59,7 +59,7 @@ TEST_CASE("WorldGenDecorationConfigParser loads aquifers from decoration.json",
     WorldGenDecorationConfigParser parser;
     const WorldGenDecorationConfig_t config =
         parser.ParseConfig(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/worldGen/decoration.json");
-    CHECK(config.aquifers.landFraction == Approx(0.02f));
+    CHECK(config.aquifers.landFraction == Approx(0.002f));
 }
 
 TEST_CASE("WorldGenDecorationConfigParser throws when aquifers object is missing",

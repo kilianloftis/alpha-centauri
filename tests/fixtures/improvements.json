@@ -42,7 +42,14 @@
     "id": "Fungus",
     "name": "Fungus",
     "move_cost": 3,
+    "suppress_yield_sources": [
+      "Flat", "Rolling", "Rocky", "Arid", "Moist", "Wet", "River",
+      "Farm", "Mine", "Forest", "SolarCollector", "SoilEnricher", "Mirror", "Condenser",
+      "ThermalBorehole", "KelpFarm", "MiningPlatform", "TidalHarness",
+      "Nutrients", "Minerals", "Energy"
+    ],
     "effects": [
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" } },
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "defense", "amount": 25, "op": "AddPercent" } },
       { "type": "Conceal", "scope": "ThisTile", "parameters": { "channel": "terrain" } }
     ]

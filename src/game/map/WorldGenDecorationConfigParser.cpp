@@ -140,6 +140,42 @@ AquiferDecorationConfig_t ParseAquifers_(const nlohmann::json& rJson)
     return config;
 }
 
+FungusDecorationConfig_t ParseFungus_(const nlohmann::json& rJson)
+{
+    FungusDecorationConfig_t config;
+    if (!rJson.contains("land_fraction"))
+    {
+        throw std::runtime_error(
+            "world gen decoration fungus missing required field 'land_fraction'");
+    }
+    config.landFraction = rJson.at("land_fraction").get<float>();
+    config.waterFraction = rJson.value("water_fraction", config.waterFraction);
+    config.minPatchTiles = rJson.value("min_patch_tiles", config.minPatchTiles);
+    config.maxPatchTiles = rJson.value("max_patch_tiles", config.maxPatchTiles);
+
+    if (config.landFraction < 0.0f || config.landFraction > 1.0f)
+    {
+        throw std::runtime_error(
+            "world gen decoration fungus.land_fraction must be in [0, 1]");
+    }
+    if (config.waterFraction < 0.0f || config.waterFraction > 1.0f)
+    {
+        throw std::runtime_error(
+            "world gen decoration fungus.water_fraction must be in [0, 1]");
+    }
+    if (config.minPatchTiles < 1)
+    {
+        throw std::runtime_error(
+            "world gen decoration fungus.min_patch_tiles must be >= 1");
+    }
+    if (config.maxPatchTiles < config.minPatchTiles)
+    {
+        throw std::runtime_error(
+            "world gen decoration fungus.max_patch_tiles must be >= min_patch_tiles");
+    }
+    return config;
+}
+
 } // namespace
 
 WorldGenDecorationConfig_t WorldGenDecorationConfigParser::ParseConfig(
@@ -170,6 +206,12 @@ WorldGenDecorationConfig_t WorldGenDecorationConfigParser::ParseConfig(
             "world gen decoration config missing required object 'aquifers'");
     }
     config.aquifers = ParseAquifers_(json.at("aquifers"));
+    if (!json.contains("fungus") || !json.at("fungus").is_object())
+    {
+        throw std::runtime_error(
+            "world gen decoration config missing required object 'fungus'");
+    }
+    config.fungus = ParseFungus_(json.at("fungus"));
     return config;
 }
 

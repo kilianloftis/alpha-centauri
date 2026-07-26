@@ -13,6 +13,7 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/map/MapUtils.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
@@ -303,6 +304,37 @@ void Engine::Initialize_()
         for (Faction& rFaction : m_pGameState->Factions())
         {
             rFaction.RebuildVisibility();
+        }
+    }
+
+    // Temporary: fungus around the player base (and a couple forests) so vegetation fills
+    // are easy to see while sprites are not yet in place.
+    if (Faction* pPlayer = m_pGameState->GetPlayerFaction())
+    {
+        WorldMap& rMap = m_pGameState->GetWorldMap();
+        TileEffectsContext& rTileEffects = m_pGameState->GetTileEffects();
+        for (BaseManager& rBase : pPlayer->Bases())
+        {
+            Tile* pBaseTile = rMap.GetTile(rBase.GetX(), rBase.GetY());
+            if (!pBaseTile)
+            {
+                throw std::runtime_error("Engine setup: player base tile out of bounds");
+            }
+            ForEachTileInChebyshevRadius(*pBaseTile, rMap, 2, /*includeOrigin=*/false,
+                [&](Tile* pTile, int distance)
+                {
+                    if (!pTile || !pTile->IsLand() || pTile->HasImprovement("Base"))
+                    {
+                        return;
+                    }
+                    else if (distance == 1
+                             && (pTile->GetX() + pTile->GetY()) % 2 == 0
+                             && !pTile->GetHasFungus())
+                    {
+                        rTileEffects.AddImprovementWithEffects(*pTile, "Forest");
+                    }
+                });
+            break;
         }
     }
 

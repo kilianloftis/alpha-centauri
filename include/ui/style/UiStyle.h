@@ -38,6 +38,8 @@ struct TileRendererStyle
     Color_t waterHighColor{};
     Color_t landLowColor{};
     Color_t landHighColor{};
+    Color_t forestColor{};
+    Color_t fungusColor{};
     int minElevationMeters{};
     int maxElevationMeters{};
     float fogFillDimRatio{};
