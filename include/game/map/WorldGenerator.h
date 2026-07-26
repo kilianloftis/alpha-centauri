@@ -43,6 +43,9 @@ private:
     void GenerateLandmarks_(WorldMap& rWorld,
                             const std::vector<LandmarkConfig_t>& rLandmarks,
                             const ImprovementRegistry& rImprovements);
+    void GenerateTileBonuses_(WorldMap& rWorld,
+                              const TileBonusDecorationConfig_t& rBonuses,
+                              const ImprovementRegistry& rImprovements);
 
     float ApplyLandmassMask_(float noiseValue,
                              float nx,

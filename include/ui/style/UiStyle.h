@@ -61,6 +61,11 @@ struct WorldDisplayStyle
     float sensorMarkerWidthRatio{};
     float sensorMarkerHeightRatio{};
     float sensorMarkerInsetRatio{};
+    Color_t monolithMarkerColor{};
+    float monolithMarkerFontSizeRatio{};
+    float monolithMarkerWidthRatio{};
+    float monolithMarkerHeightRatio{};
+    float monolithMarkerInsetRatio{};
     Color_t shroudColor{};
     Color_t pathPreviewColor{};
     float pathPreviewLineThicknessRatio{};
@@ -68,6 +73,7 @@ struct WorldDisplayStyle
     float riverLineThicknessRatio{};
     Color_t baseNameColor{};
     Color_t sensorLabelColor{};
+    Color_t monolithLabelColor{};
 };
 
 struct MinimapDisplayStyle

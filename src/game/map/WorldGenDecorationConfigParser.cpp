@@ -182,6 +182,23 @@ FungusDecorationConfig_t ParseFungus_(const nlohmann::json& rJson)
     return config;
 }
 
+TileBonusDecorationConfig_t ParseTileBonuses_(const nlohmann::json& rJson)
+{
+    TileBonusDecorationConfig_t config;
+    if (!rJson.contains("land_fraction"))
+    {
+        throw std::runtime_error(
+            "world gen decoration tile_bonuses missing required field 'land_fraction'");
+    }
+    config.landFraction = rJson.at("land_fraction").get<float>();
+    if (config.landFraction < 0.0f || config.landFraction > 1.0f)
+    {
+        throw std::runtime_error(
+            "world gen decoration tile_bonuses.land_fraction must be in [0, 1]");
+    }
+    return config;
+}
+
 } // namespace
 
 WorldGenDecorationConfig_t WorldGenDecorationConfigParser::ParseConfig(
@@ -218,6 +235,12 @@ WorldGenDecorationConfig_t WorldGenDecorationConfigParser::ParseConfig(
             "world gen decoration config missing required object 'fungus'");
     }
     config.fungus = ParseFungus_(json.at("fungus"));
+    if (!json.contains("tile_bonuses") || !json.at("tile_bonuses").is_object())
+    {
+        throw std::runtime_error(
+            "world gen decoration config missing required object 'tile_bonuses'");
+    }
+    config.tileBonuses = ParseTileBonuses_(json.at("tile_bonuses"));
     return config;
 }
 

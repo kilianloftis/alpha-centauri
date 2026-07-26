@@ -38,5 +38,8 @@
     "min_patch_tiles": 1,
     "max_patch_tiles": 16,
     "patch_size_skew": 4.0
+  },
+  "tile_bonuses": {
+    "land_fraction": 0.04
   }
 }

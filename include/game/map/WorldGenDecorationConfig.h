@@ -60,6 +60,12 @@ struct FungusDecorationConfig_t
     float patchSizeSkew = 4.0f;   // >= 1; higher weights the small end of the range
 };
 
+// Frequency-weighted tile bonuses (Nutrients/Minerals/Energy/Monolith, …).
+struct TileBonusDecorationConfig_t
+{
+    float landFraction = 0.04f; // target fraction of land tiles that receive a bonus
+};
+
 // Post-elevation terrain decoration (moisture, rockiness, aquifers, fungus, …).
 struct WorldGenDecorationConfig_t
 {
@@ -67,6 +73,7 @@ struct WorldGenDecorationConfig_t
     RockinessDecorationConfig_t rockiness;
     AquiferDecorationConfig_t aquifers;
     FungusDecorationConfig_t fungus;
+    TileBonusDecorationConfig_t tileBonuses;
 };
 
 } // namespace ac

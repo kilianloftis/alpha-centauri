@@ -122,6 +122,7 @@ TEST_CASE("WorldGenDecorationConfigParser loads fungus knobs from decoration.jso
     CHECK(config.fungus.minPatchTiles == 1);
     CHECK(config.fungus.maxPatchTiles == 16);
     CHECK(config.fungus.patchSizeSkew == Approx(4.0f));
+    CHECK(config.tileBonuses.landFraction == Approx(0.04f));
 }
 
 TEST_CASE("WorldGenDecorationConfigParser throws when fungus object is missing",

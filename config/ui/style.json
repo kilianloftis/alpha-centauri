@@ -87,6 +87,13 @@
     "sensor_marker_width_ratio": 0.28,
     "sensor_marker_height_ratio": 0.28,
     "sensor_marker_inset_ratio": 0.04,
+    "monolith_marker_color": [
+      160, 120, 255, 255
+    ],
+    "monolith_marker_font_size_ratio": 0.24,
+    "monolith_marker_width_ratio": 0.32,
+    "monolith_marker_height_ratio": 0.32,
+    "monolith_marker_inset_ratio": 0.04,
     "shroud_color": [
       0, 0, 0, 255
     ],
@@ -103,6 +110,9 @@
     ],
     "sensor_label_color": [
       0, 0, 0, 255
+    ],
+    "monolith_label_color": [
+      255, 255, 255, 255
     ]
   },
   "minimap_display": {

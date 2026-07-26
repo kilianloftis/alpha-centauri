@@ -170,6 +170,33 @@ void WorldDisplay::RenderSensors_(Graphics& rGraphics)
     });
 }
 
+void WorldDisplay::RenderMonoliths_(Graphics& rGraphics)
+{
+    const auto& s = Style().worldDisplay;
+    const float tileSize = m_viewport.TileSize();
+
+    const unsigned int fontSize = static_cast<unsigned int>(tileSize * s.monolithMarkerFontSizeRatio);
+    const float markerWidth = tileSize * s.monolithMarkerWidthRatio;
+    const float markerHeight = tileSize * s.monolithMarkerHeightRatio;
+    const float inset = tileSize * s.monolithMarkerInsetRatio;
+
+    // Drawn after the shroud fill and without an explored/visible gate — monoliths pierce
+    // fog of war so players can navigate toward them from the start.
+    m_viewport.ForEachVisibleTile([&](const Tile& rTile, float tileX, float tileY) {
+        if (!rTile.HasImprovement("Monolith"))
+        {
+            return;
+        }
+
+        // Centered so the marker reads as a tile landmark (Sensors own the top-right).
+        const float markerX = tileX + (tileSize - markerWidth) * 0.5f;
+        const float markerY = tileY + (tileSize - markerHeight) * 0.5f;
+
+        rGraphics.DrawFilledRect(markerX, markerY, markerWidth, markerHeight, s.monolithMarkerColor);
+        rGraphics.DrawText("M", markerX + inset, markerY + inset, fontSize, s.monolithLabelColor);
+    });
+}
+
 void WorldDisplay::RenderRivers_(Graphics& rGraphics)
 {
     const auto& s = Style().worldDisplay;
@@ -312,6 +339,7 @@ void WorldDisplay::Render(Graphics& rGraphics)
     RenderRivers_(rGraphics);
     RenderPathPreview_(rGraphics);
     RenderSensors_(rGraphics);
+    RenderMonoliths_(rGraphics);
     m_unitMarkers.Render(rGraphics, m_rGameState, m_viewport);
 }
 

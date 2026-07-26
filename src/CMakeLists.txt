@@ -96,6 +96,7 @@ add_library(ac-core STATIC
     game/map/LandmarkConfigParser.cpp
     game/map/LandmarkGeneration.cpp
     game/map/FungusGeneration.cpp
+    game/map/TileBonusGeneration.cpp
     game/map/MapGenerationConfig.cpp
     game/map/RiverGeneration.cpp
     game/map/FbmNoise.cpp

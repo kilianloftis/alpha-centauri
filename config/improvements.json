@@ -494,7 +494,7 @@
     "name": "Monsoon Jungle",
     "description": "Anomalous earthlike jungle; rich soil yields extra nutrients",
     "tags": ["landmark"],
-    "excludes": ["@landmark", "@resource_bonus", "Monolith"],
+    "excludes": ["@landmark"],
     "effects": [
       {
         "type": "StatModifier",
@@ -508,7 +508,7 @@
     "name": "Garland Crater",
     "description": "Impact crater rich in industrial metals",
     "tags": ["landmark"],
-    "excludes": ["@landmark", "@resource_bonus", "Monolith"],
+    "excludes": ["@landmark", "@resource_bonus"],
     "effects": [
       {
         "type": "StatModifier",
@@ -522,7 +522,7 @@
     "name": "Uranium Flats",
     "description": "Savanna rich in heavy elements",
     "tags": ["landmark"],
-    "excludes": ["@landmark", "@resource_bonus", "Monolith"],
+    "excludes": ["@landmark", "@resource_bonus"],
     "effects": [
       {
         "type": "StatModifier",
@@ -536,7 +536,7 @@
     "name": "Pholus Ridge",
     "description": "Tectonic ridge unleashing geothermal energy",
     "tags": ["landmark"],
-    "excludes": ["@landmark", "@resource_bonus", "Monolith"],
+    "excludes": ["@landmark", "@resource_bonus"],
     "effects": [
       {
         "type": "StatModifier",
@@ -550,7 +550,7 @@
     "name": "Mount Planet",
     "description": "Active shield volcano; slopes yield minerals and energy",
     "tags": ["landmark"],
-    "excludes": ["@landmark", "@resource_bonus", "Monolith", "Farm", "Forest"],
+    "excludes": ["@landmark", "@resource_bonus"],
     "effects": [
       {
         "type": "StatModifier",
@@ -714,7 +714,9 @@
     "id": "Monolith",
     "name": "Monolith",
     "description": "An alien monolith; tile yields are fixed at 2 nutrients, 2 minerals, and 2 energy",
+    "tags": ["resource_bonus"],
     "frequency": 3,
+    "excludes": ["@landmark", "@resource_bonus", "Monolith"],
     "sprite_path": "assets/sprites/tile_bonuses/monolith.png",
     "suppress_yield_sources": [
       "@landform", "River", "@land_terraform", "@sea_terraform", "@resource_bonus"

@@ -1,6 +1,7 @@
 #include "game/map/WorldGenerator.h"
 #include "game/map/FbmNoise.h"
 #include "game/map/FungusGeneration.h"
+#include "game/map/TileBonusGeneration.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/LandmarkGeneration.h"
 #include "game/map/MoistureGeneration.h"
@@ -53,6 +54,7 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
     GenerateAquifers_(*pWorld, rDecoration.aquifers);
     GenerateFungus_(*pWorld, rDecoration.fungus);
     GenerateLandmarks_(*pWorld, rLandmarks, rImprovements);
+    GenerateTileBonuses_(*pWorld, rDecoration.tileBonuses, rImprovements);
 
     return pWorld;
 }
@@ -288,6 +290,13 @@ void WorldGenerator::GenerateLandmarks_(WorldMap& rWorld,
                                         const ImprovementRegistry& rImprovements)
 {
     PlaceLandmarks(rWorld, rLandmarks, rImprovements, m_rng);
+}
+
+void WorldGenerator::GenerateTileBonuses_(WorldMap& rWorld,
+                                          const TileBonusDecorationConfig_t& rBonuses,
+                                          const ImprovementRegistry& rImprovements)
+{
+    PlaceTileBonuses(rWorld, rBonuses, rImprovements, m_rng);
 }
 
 int WorldGenerator::RandomInt_(int min, int max)

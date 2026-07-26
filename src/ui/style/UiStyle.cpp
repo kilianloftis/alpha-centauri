@@ -104,6 +104,11 @@ WorldDisplayStyle ParseWorldDisplayStyle_(const nlohmann::json& j)
     s.sensorMarkerWidthRatio = j.at("sensor_marker_width_ratio").get<float>();
     s.sensorMarkerHeightRatio = j.at("sensor_marker_height_ratio").get<float>();
     s.sensorMarkerInsetRatio = j.at("sensor_marker_inset_ratio").get<float>();
+    s.monolithMarkerColor = ParseColor_(j, "monolith_marker_color");
+    s.monolithMarkerFontSizeRatio = j.at("monolith_marker_font_size_ratio").get<float>();
+    s.monolithMarkerWidthRatio = j.at("monolith_marker_width_ratio").get<float>();
+    s.monolithMarkerHeightRatio = j.at("monolith_marker_height_ratio").get<float>();
+    s.monolithMarkerInsetRatio = j.at("monolith_marker_inset_ratio").get<float>();
     s.shroudColor = ParseColor_(j, "shroud_color");
     s.pathPreviewColor = ParseColor_(j, "path_preview_color");
     s.pathPreviewLineThicknessRatio = j.at("path_preview_line_thickness_ratio").get<float>();
@@ -111,6 +116,7 @@ WorldDisplayStyle ParseWorldDisplayStyle_(const nlohmann::json& j)
     s.riverLineThicknessRatio = j.at("river_line_thickness_ratio").get<float>();
     s.baseNameColor = ParseColor_(j, "base_name_color");
     s.sensorLabelColor = ParseColor_(j, "sensor_label_color");
+    s.monolithLabelColor = ParseColor_(j, "monolith_label_color");
     return s;
 }
 

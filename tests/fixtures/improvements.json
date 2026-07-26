@@ -109,7 +109,9 @@
   {
     "id": "Monolith",
     "name": "Monolith",
+    "tags": ["resource_bonus"],
     "frequency": 3,
+    "excludes": ["@resource_bonus", "Monolith"],
     "suppress_yield_sources": [
       "@landform", "River", "@land_terraform",
       "SoilEnricher", "@resource_bonus"

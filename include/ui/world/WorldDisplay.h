@@ -17,8 +17,8 @@ class Tile;
 struct Path_t;
 
 // Displays the world map as a grid of tiles.
-// Each tile shows: moisture rockiness elevation(km). Bases, Sensors, and units are read
-// live from GameState / WorldMap — no per-frame DTO rebuild.
+// Each tile shows: moisture rockiness elevation(km). Bases, Sensors, Monoliths, and units
+// are read live from GameState / WorldMap — no per-frame DTO rebuild.
 class WorldDisplay
 {
 public:
@@ -62,6 +62,9 @@ private:
 
     // Render Sensor tower markers on explored tiles
     void RenderSensors_(Graphics& rGraphics);
+
+    // Render Monolith markers on explored tiles
+    void RenderMonoliths_(Graphics& rGraphics);
 
     // Render rivers as blue lines between orthogonally adjacent river tiles
     void RenderRivers_(Graphics& rGraphics);
