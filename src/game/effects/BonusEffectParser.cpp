@@ -27,6 +27,8 @@ StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "cargo_capacity")          return StatId_t::CargoCapacity;
     if (rStat == "cost_multiplier")         return StatId_t::CostMultiplier;
     if (rStat == "starting_experience")     return StatId_t::StartingExperience;
+    if (rStat == "morale_bonus")            return StatId_t::MoraleBonus;
+    if (rStat == "positive_morale_scale")   return StatId_t::PositiveMoraleScale;
     if (rStat == "growth_rate")             return StatId_t::GrowthRate;
     if (rStat == "tech_cost")               return StatId_t::TechCost;
     if (rStat == "moisture_tier")           return StatId_t::MoistureTier;
@@ -50,6 +52,7 @@ RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "supply_crawl")                return RuleFlagId_t::SupplyCrawl;
     if (rFlag == "probe_team")                  return RuleFlagId_t::ProbeTeam;
     if (rFlag == "prevents_disengage")          return RuleFlagId_t::PreventsDisengage;
+    if (rFlag == "creche")                      return RuleFlagId_t::Creche;
     throw std::runtime_error("Unknown rule flag id: '" + rFlag + "'");
 }
 
@@ -95,6 +98,7 @@ EffectScope_t ParseEffectScope(const std::string& rScope)
     if (rScope == "WorldGlobal")     return EffectScope_t::WorldGlobal;
     if (rScope == "ThisPop")         return EffectScope_t::ThisPop;
     if (rScope == "ThisTile")        return EffectScope_t::ThisTile;
+    if (rScope == "ProducedAtThisBase") return EffectScope_t::ProducedAtThisBase;
     throw std::runtime_error("Unknown effect scope: '" + rScope + "'");
 }
 
@@ -121,6 +125,8 @@ ConditionKind_t ParseConditionKind(const std::string& rKind)
 {
     if (rKind == "TargetTileHas") return ConditionKind_t::TargetTileHas;
     if (rKind == "AllOf") return ConditionKind_t::AllOf;
+    if (rKind == "IsDefending") return ConditionKind_t::IsDefending;
+    if (rKind == "OriginBaseIsTargetBase") return ConditionKind_t::OriginBaseIsTargetBase;
     throw std::runtime_error("Unknown condition kind: '" + rKind + "'");
 }
 
@@ -128,20 +134,41 @@ Condition_t ParseCondition(const nlohmann::json& conditionJson)
 {
     Condition_t condition;
     condition.kind = ParseConditionKind(conditionJson.value("kind", ""));
+    if (condition.kind == ConditionKind_t::IsDefending
+        || condition.kind == ConditionKind_t::OriginBaseIsTargetBase)
+    {
+        return condition;
+    }
     if (condition.kind == ConditionKind_t::AllOf)
     {
-        if (!conditionJson.contains("values") || !conditionJson.at("values").is_array()
-            || conditionJson.at("values").empty())
+        const bool bHasValues = conditionJson.contains("values")
+            && conditionJson.at("values").is_array()
+            && !conditionJson.at("values").empty();
+        const bool bHasConditions = conditionJson.contains("conditions")
+            && conditionJson.at("conditions").is_array()
+            && !conditionJson.at("conditions").empty();
+        if (!bHasValues && !bHasConditions)
         {
-            throw std::runtime_error("AllOf condition requires a non-empty 'values' array");
+            throw std::runtime_error(
+                "AllOf condition requires a non-empty 'values' and/or 'conditions' array");
         }
-        for (const auto& rValue : conditionJson.at("values"))
+        if (bHasValues)
         {
-            if (!rValue.is_string() || rValue.get<std::string>().empty())
+            for (const auto& rValue : conditionJson.at("values"))
             {
-                throw std::runtime_error("AllOf condition values must be non-empty strings");
+                if (!rValue.is_string() || rValue.get<std::string>().empty())
+                {
+                    throw std::runtime_error("AllOf condition values must be non-empty strings");
+                }
+                condition.values.push_back(rValue.get<std::string>());
             }
-            condition.values.push_back(rValue.get<std::string>());
+        }
+        if (bHasConditions)
+        {
+            for (const auto& rNested : conditionJson.at("conditions"))
+            {
+                condition.conditions.push_back(ParseCondition(rNested));
+            }
         }
         return condition;
     }
@@ -212,6 +239,16 @@ UnitFilter_t ParseUnitFilter(const nlohmann::json& filterJson)
             throw std::runtime_error("HasComponent unitFilter requires a non-empty 'component' id");
         }
         filter.component = componentId;
+    }
+    else if (kindStr == "HasFlag")
+    {
+        filter.kind = UnitFilterKind_t::HasFlag;
+        const std::string flagId = filterJson.value("flag", "");
+        if (flagId.empty())
+        {
+            throw std::runtime_error("HasFlag unitFilter requires a non-empty 'flag' id");
+        }
+        filter.flag = ParseRuleFlagId(flagId);
     }
     else
     {

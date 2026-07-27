@@ -26,9 +26,11 @@ static constexpr int k_StartingMissionYear = 2099;
 GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
                      const ImprovementRegistry& rImprovements,
                      const UnitComponentRegistry* pUnitComponents,
-                     GameSettings& rSettings)
+                     GameSettings& rSettings,
+                     const MoraleConfig_t& rMorale)
     : m_missionYear(k_StartingMissionYear)
     , m_rSettings(rSettings)
+    , m_morale(rMorale)
     , m_visibilitySettingsChanged(rSettings.OnVisibilityChanged.ConnectScoped(
           [this]() { OnVisibilitySettingsChanged_(); }))
     , m_pEventBus(std::make_unique<EventBus>())
@@ -56,10 +58,16 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
         m_pFirstContact->ConsiderUnit(rMoved);
     });
     m_pUnitOrderExecutor = std::make_unique<UnitOrderExecutor>(
-        *m_pMoveCosts, *m_pSteps, *m_worldMap, *m_pTileEffects, *m_pPathfinder);
+        *m_pMoveCosts, *m_pSteps, *m_worldMap, *m_pTileEffects, *m_pPathfinder,
+        m_morale.GetConfig());
 }
 
 GameState::~GameState() = default;
+
+const MoraleCalculator& GameState::GetMoraleCalculator() const
+{
+    return m_morale;
+}
 
 GameSettings& GameState::GetSettings()
 {

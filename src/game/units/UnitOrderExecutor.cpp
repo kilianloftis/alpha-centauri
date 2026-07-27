@@ -21,7 +21,6 @@
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
-
 #include <stdexcept>
 #include <variant>
 
@@ -32,13 +31,15 @@ UnitOrderExecutor::UnitOrderExecutor(const MoveCostCalculator& rMoveCosts,
                                      const StepEvaluator& rSteps,
                                      WorldMap& rWorldMap,
                                      TileEffectsContext& rTileEffects,
-                                     Pathfinder& rPathfinder)
+                                     Pathfinder& rPathfinder,
+                                     const MoraleConfig_t& rMorale)
     : m_rMoveCosts(rMoveCosts)
     , m_rSteps(rSteps)
     , m_rWorldMap(rWorldMap)
     , m_rTileEffects(rTileEffects)
     , m_rPathfinder(rPathfinder)
-    , m_combat(rMoveCosts, rSteps, rWorldMap, rTileEffects)
+    , m_morale(rMorale)
+    , m_combat(rMoveCosts, rSteps, rWorldMap, rTileEffects, rMorale)
 {
 }
 
@@ -47,13 +48,15 @@ UnitOrderExecutor::UnitOrderExecutor(const MoveCostCalculator& rMoveCosts,
                                      WorldMap& rWorldMap,
                                      TileEffectsContext& rTileEffects,
                                      Pathfinder& rPathfinder,
+                                     const MoraleConfig_t& rMorale,
                                      uint32_t combatSeed)
     : m_rMoveCosts(rMoveCosts)
     , m_rSteps(rSteps)
     , m_rWorldMap(rWorldMap)
     , m_rTileEffects(rTileEffects)
     , m_rPathfinder(rPathfinder)
-    , m_combat(rMoveCosts, rSteps, rWorldMap, rTileEffects, combatSeed)
+    , m_morale(rMorale)
+    , m_combat(rMoveCosts, rSteps, rWorldMap, rTileEffects, rMorale, combatSeed)
 {
 }
 
@@ -243,6 +246,19 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
     }
 
     CombatResult_t result = m_combat.Resolve(rAttacker, *pDefender);
+
+    // Promotion on kill (not mere disengage). Probe teams skipped inside TryPromote.
+    if (result.bDefenderDestroyed && !result.bAttackerDestroyed)
+    {
+        m_morale.TryPromote(rAttacker, result.attackStrength, result.defenseStrength,
+                            m_combat.GetRng());
+    }
+    if (result.bAttackerDestroyed && !result.bDefenderDestroyed)
+    {
+        m_morale.TryPromote(*pDefender, result.attackStrength, result.defenseStrength,
+                            m_combat.GetRng());
+    }
+
     if (!result.bAttackerDestroyed)
     {
         rAttacker.MarkAttacked();

@@ -66,6 +66,9 @@ add_library(ac-core STATIC
     game/units/UnitOrder.cpp
     game/units/UnitOrderExecutor.cpp
     game/units/CombatResolver.cpp
+    game/units/MoraleConfig.cpp
+    game/units/MoraleConfigParser.cpp
+    game/units/MoraleCalculator.cpp
     game/units/DisengageRules.cpp
     game/units/MovementRules.cpp
     game/units/FoundBaseRules.cpp

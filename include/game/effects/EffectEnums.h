@@ -33,6 +33,12 @@ enum class StatId_t
     CostMultiplier,
     // XP granted when a unit is created (seeded into Unit::m_xp at spawn; not a live max).
     StartingExperience,
+    // Live morale-level offset (SE Morale, Creche in-base, etc.). Added to Unit::m_xp when
+    // computing effective combat morale; not seeded into m_xp.
+    MoraleBonus,
+    // Scales positive *conditional* morale_bonus contributions (Creche in-base, etc.).
+    // PureMultiplier (seed 1.0); SE Morale ≤ -2 uses AddPercent -50 ("+ modifiers halved").
+    PositiveMoraleScale,
 
     // Population growth rate modifier (AddPercent, base = 100%)
     GrowthRate,
@@ -85,8 +91,10 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::CargoCapacity:
         case StatId_t::DifficultTerrainCost:
         case StatId_t::StartingExperience:
+        case StatId_t::MoraleBonus:
         case StatId_t::TechCost:             return StatKind_t::Additive;
-        case StatId_t::CostMultiplier:       return StatKind_t::PureMultiplier;
+        case StatId_t::CostMultiplier:
+        case StatId_t::PositiveMoraleScale:  return StatKind_t::PureMultiplier;
         case StatId_t::GrowthRate:
         case StatId_t::MoistureTier:         return StatKind_t::RawScaled;
     }
@@ -152,6 +160,8 @@ enum class RuleFlagId_t
     // Faction/global flags
     PopulationBoom,
     NearZeroGrowth,
+    // Children's Crèche at a base: softens negative morale_bonus for units home-based there.
+    Creche,
 
     // Map visibility. RemoveShroud permanently explores the map (satellite); RemoveFog
     // clears current fog while active (secret project). See VisibilityRules helpers.

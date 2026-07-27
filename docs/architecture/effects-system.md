@@ -106,7 +106,7 @@ not by which config declared it. Each scope has one "lane":
 | `ThisBase` | owning base | source collector tags `originBase`; `FilterForBase` |
 | `AllOwnerBases` / `FactionGlobal` | every base of the faction | faction pool (`CollectActiveEffects`) |
 | `WorldGlobal` | every base of every faction | own pool + `GameState::CollectWorldEffects` (other factions' contributions, passed into `ProduceBaseResources`/`ApplyBaseGrowth` by the turn stages) |
-| `FactionUnits` | every live unit of the faction | faction pool, merged into `Unit::Get*` stat/flag resolution |
+| `FactionUnits` | live units of the faction (home-base scoped when `originBase` is set) | faction pool → `CollectLiveUnitEffects`; building effects tag `originBase` so train bonuses apply only to units home to that base. Combat Attack/Defense also fold in morale `AddPercent` from `morale_levels.json` via `ResolveCombatStat`. `EffectContext_t::combatRole` enables `IsDefending` (SE Morale defense-in-base). |
 | `ThisUnit` | the unit itself | `CollectUnitEffects` (design components) |
 | `ThisPop` | the pop itself | `Pop::ApplyTileMultipliers` |
 | `ThisTile` | tile resolvers | `CollectTileEffects`/`CollectAreaEffects` — features on the tile, radius-reaching features nearby, and units projecting component effects |

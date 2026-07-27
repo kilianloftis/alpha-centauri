@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/units/CombatResolver.h"
+#include "game/units/MoraleCalculator.h"
 #include "game/units/StepEvaluator.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitOrder.h"
@@ -32,13 +33,15 @@ public:
                       const StepEvaluator& rSteps,
                       WorldMap& rWorldMap,
                       TileEffectsContext& rTileEffects,
-                      Pathfinder& rPathfinder);
+                      Pathfinder& rPathfinder,
+                      const MoraleConfig_t& rMorale);
     // Same as above, but seeds CombatResolver for deterministic tests.
     UnitOrderExecutor(const MoveCostCalculator& rMoveCosts,
                       const StepEvaluator& rSteps,
                       WorldMap& rWorldMap,
                       TileEffectsContext& rTileEffects,
                       Pathfinder& rPathfinder,
+                      const MoraleConfig_t& rMorale,
                       uint32_t combatSeed);
     ~UnitOrderExecutor() = default;
 
@@ -100,6 +103,7 @@ private:
     WorldMap& m_rWorldMap;
     TileEffectsContext& m_rTileEffects;
     Pathfinder& m_rPathfinder;
+    MoraleCalculator m_morale;
     CombatResolver m_combat;
 };
 

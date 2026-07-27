@@ -8,6 +8,7 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/population/PopulationManager.h"
+#include "game/social-engineering/SocialRatingResolver.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 
@@ -18,10 +19,12 @@ namespace ac
 
 FactionEffectsPool::FactionEffectsPool(const BuildingRegistry* pBuildingRegistry,
                                        const Revision& rBaseListRevision,
-                                       const std::vector<EffectConfig_t>* pTileYieldRules)
+                                       const std::vector<EffectConfig_t>* pTileYieldRules,
+                                       const SocialRatingRegistry* pSocialRatings)
     : m_pBuildingRegistry(pBuildingRegistry)
     , m_rBaseListRevision(rBaseListRevision)
     , m_pTileYieldRules(pTileYieldRules)
+    , m_pSocialRatings(pSocialRatings)
 {
 }
 
@@ -149,6 +152,13 @@ void FactionEffectsPool::Rebuild_(const Faction& rFaction) const
 
     const std::vector<ActiveEffect_t> seEffects = rFaction.GetSocialEngineering().CollectEffects();
     factionEffects.effects.insert(factionEffects.effects.end(), seEffects.begin(), seEffects.end());
+
+    // Expand SE rating axes whose gameplay effects target units / faction-global lanes
+    // (e.g. Morale → morale_bonus). Base-lane ratings still expand per base.
+    if (m_pSocialRatings)
+    {
+        ExpandFactionLaneSocialRatingEffects(factionEffects, *m_pSocialRatings);
+    }
 
     const std::vector<ActiveEffect_t> popEffects = CollectPopEffects_(rFaction);
     factionEffects.effects.insert(factionEffects.effects.end(), popEffects.begin(), popEffects.end());

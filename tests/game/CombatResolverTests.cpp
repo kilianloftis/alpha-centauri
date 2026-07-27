@@ -1,6 +1,8 @@
 #include "GameFixtures.h"
 
 #include "game/units/CombatResolver.h"
+#include "game/units/MoraleCalculator.h"
+#include "game/units/MoraleConfig.h"
 #include "game/units/MoveCostCalculator.h"
 #include "game/units/Pathfinder.h"
 #include "game/units/StepEvaluator.h"
@@ -29,10 +31,11 @@ struct CombatHarness_
     StepEvaluator steps;
     CombatResolver combat;
 
-    CombatHarness_(WorldFixture& fixture, uint32_t seed)
+    CombatHarness_(FactionFixture& fixture, uint32_t seed)
         : moveCosts(fixture.improvements)
         , steps(fixture.map, *fixture.ctx)
-        , combat(moveCosts, steps, fixture.map, *fixture.ctx, seed)
+        , combat(moveCosts, steps, fixture.map, *fixture.ctx, *fixture.dataContext.moraleConfig,
+                 seed)
     {
     }
 };
@@ -44,11 +47,12 @@ struct OrderHarness_
     Pathfinder pathfinder;
     UnitOrderExecutor orders;
 
-    OrderHarness_(WorldFixture& fixture, uint32_t seed)
+    OrderHarness_(FactionFixture& fixture, uint32_t seed)
         : moveCosts(fixture.improvements)
         , steps(fixture.map, *fixture.ctx)
         , pathfinder(moveCosts, steps, fixture.map)
-        , orders(moveCosts, steps, fixture.map, *fixture.ctx, pathfinder, seed)
+        , orders(moveCosts, steps, fixture.map, *fixture.ctx, pathfinder,
+                 *fixture.dataContext.moraleConfig, seed)
     {
     }
 };
@@ -80,10 +84,17 @@ TEST_CASE("Combat strength is resolved rating times 0x100", "[combat]")
 
     Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
     Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "test_armor"});
+    // Disciplined = 0% morale so ResolveCombatStat matches weapon/armour only.
+    attacker.SetXp(2);
+    defender.SetXp(2);
 
+    const MoraleCalculator morale(*fixture.dataContext.moraleConfig);
+    const EffectContext_t attackCtx{&defender.GetTile(), CombatRole_t::Attacker};
+    const EffectContext_t defenseCtx{&defender.GetTile(), CombatRole_t::Defender};
     const int attackRating =
-        ResolveStat(attacker, StatId_t::Attack, EffectContext_t{&defender.GetTile()});
-    const int defenseRating = ResolveStat(defender, StatId_t::Defense);
+        morale.ResolveCombatStat(attacker, StatId_t::Attack, attackCtx);
+    const int defenseRating =
+        morale.ResolveCombatStat(defender, StatId_t::Defense, defenseCtx);
 
     CombatHarness_ harness(fixture, /*seed*/ 1);
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);
@@ -256,6 +267,9 @@ TEST_CASE("Psi combat ignores additive ratings and applies multipliers to one", 
     Unit& defender = fixture.MakeUnit(
         enemy, 5, 4,
         {"test_chassis", "test_armor", "test_psi_defense_modifiers"});
+    // Disciplined = 0% morale so psi percents are unmodified by rank.
+    attacker.SetXp(2);
+    defender.SetXp(2);
 
     // Conventional values are huge (156 attack, 206 defense), but psi starts both at 1:
     // attacker +50% => 1.5; defender geometric x2 => 2.
@@ -282,6 +296,8 @@ TEST_CASE("Either combatant can force psi combat", "[combat][psi]")
             fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_psi"});
         Unit& defender =
             fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "test_armor"});
+        attacker.SetXp(2);
+        defender.SetXp(2);
 
         CombatHarness_ harness(fixture, /*seed*/ 5);
         const CombatResult_t result = harness.combat.Resolve(attacker, defender);
@@ -300,6 +316,8 @@ TEST_CASE("Either combatant can force psi combat", "[combat][psi]")
             fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
         Unit& defender =
             fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "test_armor", "test_psi"});
+        attacker.SetXp(2);
+        defender.SetXp(2);
 
         CombatHarness_ harness(fixture, /*seed*/ 5);
         const CombatResult_t result = harness.combat.Resolve(attacker, defender);

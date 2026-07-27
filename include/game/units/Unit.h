@@ -2,6 +2,7 @@
 
 #include "game/faction/base/HomeBaseIndex.h"
 #include "game/map/WorkedTileIndex.h"
+#include "game/units/MoraleCalculator.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitOrder.h"
 #include <optional>
@@ -27,12 +28,17 @@ public:
     // other way to change a unit's position. Placement legality is the caller's job
     // (UnitManager::CreateUnit). unitId must be unique for the life of the game
     // (WorldMap's unit IdAllocator).
+    // pProducedAt is the base that built this unit (train bonuses). Distinct from pHomeBase;
+    // when null, defaults to pHomeBase so typical CreateUnit(home) keeps both aligned.
+    // rMoraleConfig is game-wide static data (GameDataContext) used to seed XP and clamp SetXp.
     Unit(UnitId_t unitId,
          const UnitDesign& rDesign,
          UnitPositionIndex& rPositions,
          const Tile& rTile,
          BaseManager* pHomeBase,
-         Faction& rFaction);
+         Faction& rFaction,
+         const MoraleConfig_t& rMoraleConfig,
+         BaseManager* pProducedAt = nullptr);
     ~Unit();
 
     UnitId_t GetUnitId() const;
@@ -50,6 +56,8 @@ public:
     const Tile& GetTile() const;
     // Home base from the held HomeBaseClaim (nullptr when unset or the base was destroyed).
     BaseManager* GetHomeBase() const;
+    // Base that produced this unit (nullptr if unknown / destroyed). Independent of home.
+    BaseManager* GetProducedAtBase() const;
     Faction& GetFaction();
     const Faction& GetFaction() const;
 
@@ -112,7 +120,10 @@ private:
     const Tile* m_pTile;
     // Holding the claim IS the home-base link (see HomeBaseIndex).
     HomeBaseClaim m_homeBaseClaim;
+    // Production base id (looked up via GetProducedAtBase); independent of home claim.
+    std::optional<int> m_producedAtBaseId;
     Faction& m_rFaction;
+    MoraleCalculator m_morale;
 
     int m_currentHp;
     int m_currentFuel;

@@ -267,7 +267,8 @@ TEST_CASE("OnVisibilityChanged toggles fog live without rebuild call sites", "[v
     GameSettings settings;
 
     auto pMap = std::make_unique<WorldMap>(9, 9);
-    GameState gameState(std::move(pMap), fixture.improvements, &fixture.unitComponents, settings);
+    GameState gameState(std::move(pMap), fixture.improvements, &fixture.unitComponents, settings,
+                        *fixture.dataContext.moraleConfig);
 
     auto pFaction = std::make_unique<Faction>(
         gameState.AllocateFactionId(), true, fixture.factionDefinition,

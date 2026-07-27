@@ -6,6 +6,7 @@
 #include "game/faction/DiplomaticActionExecutor.h"
 #include "game/faction/FirstContactResolver.h"
 #include "game/map/WorldMap.h"
+#include "game/units/MoraleCalculator.h"
 #include "game/units/MoveCostCalculator.h"
 #include "game/units/StepEvaluator.h"
 #include "game/units/Pathfinder.h"
@@ -31,11 +32,15 @@ public:
     // pUnitComponents sizes the aura scan for unit-projected ThisTile effects; may be null
     // if units never project auras. Throws if pWorldMap is null.
     // rSettings is a non-owning reference to Engine-owned player preferences (not save state).
+    // rMorale is game-wide static data from GameDataContext (XP ranks / combat % / promotion).
     GameState(std::unique_ptr<WorldMap> pWorldMap,
               const ImprovementRegistry& rImprovements,
               const UnitComponentRegistry* pUnitComponents,
-              GameSettings& rSettings);
+              GameSettings& rSettings,
+              const MoraleConfig_t& rMorale);
     ~GameState();
+
+    const MoraleCalculator& GetMoraleCalculator() const;
 
     // Mission year
     int GetMissionYear() const;
@@ -113,6 +118,7 @@ private:
 
     int m_missionYear;
     GameSettings& m_rSettings;
+    MoraleCalculator m_morale;
     Signal<>::ScopedConnection m_visibilitySettingsChanged;
     std::unique_ptr<EventBus> m_pEventBus;
     // WorldMap and TileEffectsContext are declared before m_factions so they outlive all

@@ -24,6 +24,8 @@
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitSlotConfig.h"
 #include "game/units/MovementRules.h"
+#include "game/units/MoraleConfig.h"
+#include "game/units/MoraleConfigParser.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/effects/TileYieldRulesConfigParser.h"
 
@@ -52,6 +54,8 @@ struct WorldFixture
     ac::ImprovementRegistry improvements;
     ac::UnitComponentRegistry unitComponents;
     std::unique_ptr<ac::TileEffectsContext> ctx;
+    // Game-wide static morale table (same fixture file Engine loads into GameDataContext).
+    std::unique_ptr<ac::MoraleConfig_t> moraleConfig;
 
     explicit WorldFixture(int width = 9, int height = 9)
         : map(width, height)
@@ -59,6 +63,8 @@ struct WorldFixture
         improvements.Load(FixturePath("improvements.json"));
         unitComponents.Load(FixturePath("unit_components.json"));
         ctx = std::make_unique<ac::TileEffectsContext>(map, improvements, &unitComponents);
+        moraleConfig = std::make_unique<ac::MoraleConfig_t>(
+            ac::MoraleConfigParser{}.ParseConfig(FixturePath("morale_levels.json")));
     }
 
     ac::Tile& At(int x, int y) { return *map.GetTile(x, y); }
@@ -132,6 +138,8 @@ struct FactionFixture : BaseFixture
         dataContext.socialPolicyRegistry->Load(FixturePath("social_policies.json"));
         dataContext.socialRatingRegistry = std::make_unique<ac::SocialRatingRegistry>();
         dataContext.socialRatingRegistry->Load(FixturePath("social_rating_effects.json"));
+        dataContext.moraleConfig = std::make_unique<ac::MoraleConfig_t>(
+            ac::MoraleConfigParser{}.ParseConfig(FixturePath("morale_levels.json")));
         tileYieldRules = ac::TileYieldRulesConfigParser{}.ParseConfig(
             FixturePath("tile_yield_rules.json"));
         // Mirror GameState: index emits OnUnitMoved; faction rebuilds visibility.
@@ -206,7 +214,8 @@ struct FactionFixture : BaseFixture
     // creates a live unit at (x, y), registered on the world map for aura/position queries.
     ac::Unit& MakeUnit(ac::Faction& rFaction, int x, int y,
                        const std::vector<std::string>& rComponentIds,
-                       ac::BaseManager* pHomeBase = nullptr)
+                       ac::BaseManager* pHomeBase = nullptr,
+                       ac::BaseManager* pProducedAt = nullptr)
     {
         std::vector<ac::UnitSlotConfig_t> slots;
         std::unordered_map<std::string, const ac::UnitComponentConfig_t*> assigned;
@@ -230,7 +239,9 @@ struct FactionFixture : BaseFixture
 
         // The unit registers itself in the map's position index for its lifetime.
         return rFaction.GetUnitManager().CreateUnit(nextUnitId++, designs.back(),
-                                                    map.GetUnitPositions(), At(x, y), pHomeBase);
+                                                    map.GetUnitPositions(), At(x, y),
+                                                    *dataContext.moraleConfig, pHomeBase,
+                                                    pProducedAt);
     }
 
     void MoveUnit(ac::Unit& rUnit, int x, int y)

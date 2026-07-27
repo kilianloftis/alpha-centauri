@@ -67,7 +67,7 @@ TEST_CASE("FactionUnits lane: a building's FactionUnits stat modifier boosts liv
     Faction& faction = fixture.MakeFaction();
     BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
 
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_weapon"}); // 4 attack intrinsic
+    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_weapon"}, &base); // 4 attack intrinsic
     CHECK(unit.GetStat(StatId_t::Attack) == 4);
 
     base.GetBuildingManager().AddBuilding("unit_attack_array"); // +25% attack, FactionUnits
@@ -87,7 +87,7 @@ TEST_CASE("FactionUnits lane: a building's FactionUnits rule flag applies to liv
     Faction& faction = fixture.MakeFaction();
     BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
 
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"}, &base);
     CHECK_FALSE(unit.GetFlag(RuleFlagId_t::Flight));
 
     base.GetBuildingManager().AddBuilding("flight_grantor"); // RuleFlag flight, FactionUnits
@@ -95,7 +95,7 @@ TEST_CASE("FactionUnits lane: a building's FactionUnits rule flag applies to liv
     CHECK_FALSE(unit.GetDesign().GetFlag(RuleFlagId_t::Flight)); // intrinsic design unchanged
 }
 
-TEST_CASE("FactionUnits unitFilter Domain: Aerospace Complex only boosts air starting XP",
+TEST_CASE("ProducedAtThisBase unitFilter Domain: Aerospace Complex only boosts air starting XP",
           "[effects][routing][unitFilter]")
 {
     actest::FactionFixture fixture;
@@ -103,13 +103,39 @@ TEST_CASE("FactionUnits unitFilter Domain: Aerospace Complex only boosts air sta
     BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
     base.GetBuildingManager().AddBuilding("Aerospace_Complex");
 
-    Unit& land = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
-    Unit& air = fixture.MakeUnit(faction, 5, 4, {"test_flight_chassis"});
+    Unit& land = fixture.MakeUnit(faction, 4, 4, {"test_chassis"}, &base);
+    Unit& air = fixture.MakeUnit(faction, 5, 4, {"test_flight_chassis"}, &base);
 
-    CHECK(land.GetXp() == 0);
+    CHECK(land.GetXp() == 1); // base_intrinsic only
     CHECK(land.GetStat(StatId_t::StartingExperience) == 0);
-    CHECK(air.GetXp() == 2);
+    CHECK(air.GetXp() == 3); // base_intrinsic 1 + Aerospace 2
     CHECK(air.GetStat(StatId_t::StartingExperience) == 2);
+}
+
+TEST_CASE("ProducedAtThisBase StartingExperience requires matching production base",
+          "[effects][routing][producedAt]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& withComplex = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& otherBase = fixture.MakeFactionBase(faction, 6, 6);
+    withComplex.GetBuildingManager().AddBuilding("Aerospace_Complex");
+
+    Unit& airBuiltThere = fixture.MakeUnit(faction, 3, 3, {"test_flight_chassis"}, &withComplex);
+    Unit& airBuiltElsewhere = fixture.MakeUnit(faction, 5, 5, {"test_flight_chassis"}, &otherBase);
+    Unit& airNoBase = fixture.MakeUnit(faction, 4, 4, {"test_flight_chassis"});
+    // Home reassigned away from the production base must not strip train XP.
+    Unit& airRehomed = fixture.MakeUnit(faction, 7, 7, {"test_flight_chassis"}, &withComplex,
+                                        &withComplex);
+    airRehomed.SetHomeBase(&otherBase);
+
+    CHECK(airBuiltThere.GetXp() == 3);
+    CHECK(airBuiltElsewhere.GetXp() == 1);
+    CHECK(airNoBase.GetXp() == 1);
+    CHECK(airRehomed.GetHomeBase() == &otherBase);
+    CHECK(airRehomed.GetProducedAtBase() == &withComplex);
+    CHECK(airRehomed.GetXp() == 3);
+    CHECK(airRehomed.GetStat(StatId_t::StartingExperience) == 2);
 }
 
 TEST_CASE("FactionUnits unitFilter HasComponent: only matching designs receive the bonus",
@@ -119,8 +145,8 @@ TEST_CASE("FactionUnits unitFilter HasComponent: only matching designs receive t
     Faction& faction = fixture.MakeFaction();
     BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
 
-    Unit& armed = fixture.MakeUnit(faction, 4, 4, {"test_chassis", "test_weapon"});
-    Unit& unarmed = fixture.MakeUnit(faction, 5, 4, {"test_chassis"});
+    Unit& armed = fixture.MakeUnit(faction, 4, 4, {"test_chassis", "test_weapon"}, &base);
+    Unit& unarmed = fixture.MakeUnit(faction, 5, 4, {"test_chassis"}, &base);
     CHECK(armed.GetStat(StatId_t::Attack) == 4);
     CHECK(unarmed.GetStat(StatId_t::Attack) == 0);
 
@@ -135,7 +161,7 @@ TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other fact
     actest::FactionFixture fixture;
     GameSettings settings;
     GameState state(std::make_unique<WorldMap>(9, 9), fixture.improvements, &fixture.unitComponents,
-                    settings);
+                    settings, *fixture.dataContext.moraleConfig);
 
     Faction& factionA = state.AddFaction(std::make_unique<Faction>(
                                                1, /*bIsPlayerControlled*/ true, fixture.factionDefinition,

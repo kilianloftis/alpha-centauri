@@ -26,6 +26,9 @@ enum class EffectScope_t
     // or improvement). Resolved locally via CollectTileEffects/ResolveTileYield/
     // ResolveTileDefenseMultiplier and must never enter the base-wide active effects pool.
     ThisTile,
+    // Units produced at the originating base (Unit::GetProducedAtBase). Distinct from home
+    // base and from FactionUnits: train-at-this-base bonuses (Command Center, Aerospace).
+    ProducedAtThisBase,
 };
 
 enum class EffectPersistence_t
@@ -50,6 +53,9 @@ enum class EffectLane_t
     // Merged into every live unit's stat resolution. Lives in the faction pool; consumed by
     // Unit::Get* via FilterByScope(FactionUnits), never applies at base level.
     FactionUnits,
+    // Merged into live units whose production base matches originBase. Lives in the faction
+    // pool tagged with originBase; never applies at base level.
+    ProducedAtBase,
     // Resolved by the unit's own design (intrinsic component stats). Never enters the pool.
     UnitLocal,
     // Resolved by the pop itself (tile multipliers). Never enters the pool.
@@ -68,6 +74,7 @@ constexpr EffectLane_t LaneFor(EffectScope_t scope)
         case EffectScope_t::FactionGlobal:
         case EffectScope_t::WorldGlobal:   return EffectLane_t::FactionWide;
         case EffectScope_t::FactionUnits:  return EffectLane_t::FactionUnits;
+        case EffectScope_t::ProducedAtThisBase: return EffectLane_t::ProducedAtBase;
         case EffectScope_t::ThisUnit:      return EffectLane_t::UnitLocal;
         case EffectScope_t::ThisPop:       return EffectLane_t::PopLocal;
         case EffectScope_t::ThisTile:      return EffectLane_t::TileLocal;
@@ -216,8 +223,14 @@ enum class ConditionKind_t
     // founded base registers as an improvement. In combat the target is the defender's tile,
     // so this expresses both "+X% attacking into Forest" and "+X% attacking a Base".
     TargetTileHas,
-    // Every feature id in `values` is present on the target tile (AND of TargetTileHas).
+    // Every feature id in `values` is present on the target tile (AND of TargetTileHas),
+    // and/or every nested condition in `conditions` is satisfied.
     AllOf,
+    // True when EffectContext_t::combatRole is Defender (defense-only SE Morale extras).
+    IsDefending,
+    // True when ActiveEffect_t::originBase is the base sitting on EffectContext_t::targetTile
+    // (Creche combat bonus for the base being defended, not the unit's home).
+    OriginBaseIsTargetBase,
 };
 
 struct Condition_t
@@ -227,6 +240,8 @@ struct Condition_t
     std::string value;
     // Parameter for AllOf: every id must be present on the target tile.
     std::vector<std::string> values;
+    // Parameter for AllOf: nested conditions (e.g. IsDefending + TargetTileHas Base).
+    std::vector<Condition_t> conditions;
 };
 
 // Restricts which units an effect applies to when merged into a live unit's effect list
@@ -237,6 +252,8 @@ enum class UnitFilterKind_t
 {
     Domain,
     HasComponent,
+    // Unit resolves true for the named RuleFlag (design + FactionUnits).
+    HasFlag,
 };
 
 struct UnitFilter_t
@@ -246,6 +263,8 @@ struct UnitFilter_t
     std::optional<UnitDomain_t> domain;
     // Component id; set when kind == HasComponent.
     std::optional<std::string> component;
+    // Set when kind == HasFlag.
+    std::optional<RuleFlagId_t> flag;
 };
 
 struct EffectConfig_t

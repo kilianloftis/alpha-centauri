@@ -37,6 +37,7 @@ add_executable(effects-tests
     game/UnitStatsTests.cpp
     game/CombatRatingTests.cpp
     game/CombatResolverTests.cpp
+    game/MoraleCalculatorTests.cpp
     game/UnitNamingTests.cpp
     game/UnitOrderTests.cpp
     game/SupplyCrawlTests.cpp

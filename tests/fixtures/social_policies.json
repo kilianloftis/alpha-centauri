@@ -30,6 +30,22 @@
     ]
   },
   {
+    "id": "morale_policy",
+    "name": "Morale Policy (+2 Morale rating, faction-wide)",
+    "category": "values",
+    "effects": [
+      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "morale", "amount": 2 } }
+    ]
+  },
+  {
+    "id": "low_morale_policy",
+    "name": "Low Morale Policy (-2 Morale rating)",
+    "category": "values",
+    "effects": [
+      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "morale", "amount": -2 } }
+    ]
+  },
+  {
     "id": "simple",
     "name": "Simple",
     "category": "economics",

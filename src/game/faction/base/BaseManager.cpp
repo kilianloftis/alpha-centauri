@@ -231,7 +231,10 @@ std::vector<ActiveEffect_t> BaseManager::CollectBuildingEffects() const
 
     for (ActiveEffect_t& effect : result)
     {
-        if (effect.config && effect.config->scope == EffectScope_t::ThisBase)
+        if (effect.config
+            && (effect.config->scope == EffectScope_t::ThisBase
+                || effect.config->scope == EffectScope_t::ProducedAtThisBase
+                || effect.config->scope == EffectScope_t::FactionUnits))
         {
             effect.originBase = this;
         }

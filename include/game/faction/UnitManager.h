@@ -16,6 +16,7 @@ class Tile;
 class BaseManager;
 class Faction;
 class UnitPositionIndex;
+struct MoraleConfig_t;
 
 class UnitManager
 {
@@ -42,8 +43,11 @@ public:
     // The unit registers itself on rTile in rPositions for its lifetime (see Unit's
     // constructor). Rejects the tile under the stacking rule (MovementRules) before
     // constructing. unitId must be unique across the game (caller: GameState::AllocateUnitId).
+    // pProducedAt defaults to pHomeBase when null (see Unit ctor).
+    // rMorale is game-wide static data from GameDataContext.
     Unit& CreateUnit(UnitId_t unitId, const UnitDesign& rDesign, UnitPositionIndex& rPositions,
-                     const Tile& rTile, BaseManager* pHomeBase = nullptr);
+                     const Tile& rTile, const MoraleConfig_t& rMorale,
+                     BaseManager* pHomeBase = nullptr, BaseManager* pProducedAt = nullptr);
     void DestroyUnit(Unit& rUnit);
 
     // Keep destroyed objects alive until the scope ends so a pass may safely destroy its

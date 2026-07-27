@@ -46,4 +46,11 @@ const std::vector<EffectConfig_t>* FindSocialRatingLevelEffects(
 void ExpandSocialRatingEffects(BaseEffects_t& rBaseEffects,
                                const SocialRatingRegistry& rRatings);
 
+// Expands accumulated SocialRatingModifiers into FactionUnits gameplay effects and
+// appends them to the faction pool (so SE Morale reaches live units). Base-lane
+// effects (AllOwnerBases / ThisBase / FactionGlobal economy) stay on the per-base
+// ExpandSocialRatingEffects path only — do not re-expand FactionWide here.
+void ExpandFactionLaneSocialRatingEffects(FactionEffects_t& rFactionEffects,
+                                          const SocialRatingRegistry& rRatings);
+
 } // namespace ac

@@ -30,6 +30,7 @@
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitSlotConfig.h"
+#include "game/units/MoraleConfig.h"
 #include "ui/IGameView.h"
 #include "ui/TileHitTester.h"
 #include "game/map/MapGenerationConfig.h"
@@ -129,7 +130,8 @@ void Engine::Initialize_()
                           *m_gameDataContext->improvementRegistry),
         *m_gameDataContext->improvementRegistry,
         m_gameDataContext->unitComponentRegistry.get(),
-        *m_pSettings);
+        *m_pSettings,
+        *m_gameDataContext->moraleConfig);
     m_pGameState->GetDiplomaticActionExecutor().SetGameDataContext(*m_gameDataContext);
     std::cout << "Generated world map: " << m_pGameState->GetWorldMap().GetWidth() << "x" << m_pGameState->GetWorldMap().GetHeight() << "\n";
 
@@ -251,25 +253,26 @@ void Engine::Initialize_()
                     std::make_unique<UnitDesign>(rSlots, crawlerParts), "supply crawler");
 
                 // Basic vision-1 scout beside the base; deep-radar (vision 2) a little farther out.
+                const MoraleConfig_t& rMorale = *m_gameDataContext->moraleConfig;
                 rFaction.GetUnitManager().CreateUnit(
                     m_pGameState->AllocateUnitId(), rBasicDesign, rPositions,
-                    *rMap.GetTile(startX + 1, startY), pBase);
+                    *rMap.GetTile(startX + 1, startY), rMorale, pBase);
                 rFaction.GetUnitManager().CreateUnit(
                     m_pGameState->AllocateUnitId(), rRadarDesign, rPositions,
-                    *rMap.GetTile(startX + 2, startY), pBase);
+                    *rMap.GetTile(startX + 2, startY), rMorale, pBase);
                 rFaction.GetUnitManager().CreateUnit(
                     m_pGameState->AllocateUnitId(), rColonyDesign, rPositions,
-                    *rMap.GetTile(startX + 1, startY + 1), pBase);
+                    *rMap.GetTile(startX + 1, startY + 1), rMorale, pBase);
                 rFaction.GetUnitManager().CreateUnit(
                     m_pGameState->AllocateUnitId(), rCrawlerDesign, rPositions,
-                    *rMap.GetTile(startX + 2, startY + 1), pBase);
+                    *rMap.GetTile(startX + 2, startY + 1), rMorale, pBase);
             }
             else
             {
                 // Enemy scout beside the AI base for multi-faction visibility/combat checks.
                 rFaction.GetUnitManager().CreateUnit(
                     m_pGameState->AllocateUnitId(), rBasicDesign, rPositions,
-                    *rMap.GetTile(startX + 1, startY), pBase);
+                    *rMap.GetTile(startX + 1, startY), *m_gameDataContext->moraleConfig, pBase);
             }
         }
 

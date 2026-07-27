@@ -97,36 +97,57 @@
     "id": "morale",
     "levels": {
       "-4": [
-        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "attack",  "amount": -4, "op": "Add" } },
-        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "defense", "amount": -4, "op": "Add" } }
+        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "morale_bonus", "amount": -3, "op": "Add" } },
+        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "positive_morale_scale", "amount": -50, "op": "AddPercent" } }
       ],
       "-3": [
-        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "attack",  "amount": -3, "op": "Add" } },
-        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "defense", "amount": -3, "op": "Add" } }
+        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "morale_bonus", "amount": -2, "op": "Add" } },
+        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "positive_morale_scale", "amount": -50, "op": "AddPercent" } }
       ],
       "-2": [
-        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "attack",  "amount": -2, "op": "Add" } },
-        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "defense", "amount": -2, "op": "Add" } }
+        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "morale_bonus", "amount": -1, "op": "Add" } },
+        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "positive_morale_scale", "amount": -50, "op": "AddPercent" } }
       ],
       "-1": [
-        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "attack",  "amount": -1, "op": "Add" } },
-        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "defense", "amount": -1, "op": "Add" } }
+        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "morale_bonus", "amount": -1, "op": "Add" } }
       ],
       "1": [
-        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "attack",  "amount": 1, "op": "Add" } },
-        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "defense", "amount": 1, "op": "Add" } }
+        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "morale_bonus", "amount": 1, "op": "Add" } }
       ],
       "2": [
-        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "attack",  "amount": 1, "op": "Add" } },
-        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "defense", "amount": 2, "op": "Add" } }
+        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "morale_bonus", "amount": 1, "op": "Add" } },
+        {
+          "type": "StatModifier",
+          "scope": "FactionUnits",
+          "persistence": "Continuous",
+          "condition": {
+            "kind": "AllOf",
+            "conditions": [
+              { "kind": "IsDefending" },
+              { "kind": "TargetTileHas", "value": "Base" }
+            ]
+          },
+          "parameters": { "stat": "morale_bonus", "amount": 1, "op": "Add" }
+        }
       ],
       "3": [
-        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "attack",  "amount": 2, "op": "Add" } },
-        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "defense", "amount": 3, "op": "Add" } }
+        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "morale_bonus", "amount": 2, "op": "Add" } },
+        {
+          "type": "StatModifier",
+          "scope": "FactionUnits",
+          "persistence": "Continuous",
+          "condition": {
+            "kind": "AllOf",
+            "conditions": [
+              { "kind": "IsDefending" },
+              { "kind": "TargetTileHas", "value": "Base" }
+            ]
+          },
+          "parameters": { "stat": "morale_bonus", "amount": 1, "op": "Add" }
+        }
       ],
       "4": [
-        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "attack",  "amount": 3, "op": "Add" } },
-        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "defense", "amount": 4, "op": "Add" } }
+        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "morale_bonus", "amount": 3, "op": "Add" } }
       ]
     }
   },

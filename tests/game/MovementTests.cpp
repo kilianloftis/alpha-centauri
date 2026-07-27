@@ -39,7 +39,7 @@ struct MovementHarness_
         : moveCosts(fixture.improvements)
         , steps(fixture.map, *fixture.ctx)
         , pathfinder(moveCosts, steps, fixture.map)
-        , orders(moveCosts, steps, fixture.map, *fixture.ctx, pathfinder)
+        , orders(moveCosts, steps, fixture.map, *fixture.ctx, pathfinder, *fixture.moraleConfig)
     {
     }
 };
@@ -494,7 +494,7 @@ TEST_CASE("TurnStart restores move fragments", "[movement][turn]")
 
     GameSettings settings;
     GameState state(std::make_unique<WorldMap>(3, 3), fixture.improvements, &fixture.unitComponents,
-                    settings);
+                    settings, *fixture.moraleConfig);
     state.AddFaction(std::move(fixture.factions[0]));
 
     TurnStart stage(HookContext{});

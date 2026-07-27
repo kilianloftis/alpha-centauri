@@ -46,7 +46,7 @@ struct MovementHarness_
         : moveCosts(fixture.improvements)
         , steps(fixture.map, *fixture.ctx)
         , pathfinder(moveCosts, steps, fixture.map)
-        , orders(moveCosts, steps, fixture.map, *fixture.ctx, pathfinder)
+        , orders(moveCosts, steps, fixture.map, *fixture.ctx, pathfinder, *fixture.moraleConfig)
     {
     }
 };

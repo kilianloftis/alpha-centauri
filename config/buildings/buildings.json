@@ -84,7 +84,7 @@
     "effects": [
       {
         "type": "StatModifier",
-        "scope": "FactionUnits",
+        "scope": "ProducedAtThisBase",
         "unitFilter": { "kind": "Domain", "domain": "air" },
         "parameters": {
           "stat": "starting_experience",
@@ -94,6 +94,57 @@
       }
     ],
     "category": "conquer",
+    "required_tech": "test_tech_1"
+  },
+  {
+    "id": "Command_Center",
+    "name": "Command Center",
+    "mineral_cost": 10,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ProducedAtThisBase",
+        "unitFilter": { "kind": "Domain", "domain": "land" },
+        "parameters": {
+          "stat": "starting_experience",
+          "amount": 2,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "conquer",
+    "required_tech": "test_tech_1"
+  },
+  {
+    "id": "Childrens_Creche",
+    "name": "Children's Crèche",
+    "mineral_cost": 8,
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisBase",
+        "parameters": { "flag": "creche" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "persistence": "Continuous",
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            { "kind": "IsDefending" },
+            { "kind": "TargetTileHas", "value": "Base" },
+            { "kind": "OriginBaseIsTargetBase" }
+          ]
+        },
+        "parameters": {
+          "stat": "morale_bonus",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "build",
     "required_tech": "test_tech_1"
   }
 ]

@@ -25,5 +25,61 @@
         { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "cost_multiplier", "amount": -20, "op": "AddPercent" } }
       ]
     }
+  },
+  {
+    "id": "morale",
+    "levels": {
+      "-4": [
+        { "type": "StatModifier", "scope": "FactionUnits", "parameters": { "stat": "morale_bonus", "amount": -3, "op": "Add" } },
+        { "type": "StatModifier", "scope": "FactionUnits", "parameters": { "stat": "positive_morale_scale", "amount": -50, "op": "AddPercent" } }
+      ],
+      "-3": [
+        { "type": "StatModifier", "scope": "FactionUnits", "parameters": { "stat": "morale_bonus", "amount": -2, "op": "Add" } },
+        { "type": "StatModifier", "scope": "FactionUnits", "parameters": { "stat": "positive_morale_scale", "amount": -50, "op": "AddPercent" } }
+      ],
+      "-2": [
+        { "type": "StatModifier", "scope": "FactionUnits", "parameters": { "stat": "morale_bonus", "amount": -1, "op": "Add" } },
+        { "type": "StatModifier", "scope": "FactionUnits", "parameters": { "stat": "positive_morale_scale", "amount": -50, "op": "AddPercent" } }
+      ],
+      "-1": [
+        { "type": "StatModifier", "scope": "FactionUnits", "parameters": { "stat": "morale_bonus", "amount": -1, "op": "Add" } }
+      ],
+      "1": [
+        { "type": "StatModifier", "scope": "FactionUnits", "parameters": { "stat": "morale_bonus", "amount": 1, "op": "Add" } }
+      ],
+      "2": [
+        { "type": "StatModifier", "scope": "FactionUnits", "parameters": { "stat": "morale_bonus", "amount": 1, "op": "Add" } },
+        {
+          "type": "StatModifier",
+          "scope": "FactionUnits",
+          "condition": {
+            "kind": "AllOf",
+            "conditions": [
+              { "kind": "IsDefending" },
+              { "kind": "TargetTileHas", "value": "Base" }
+            ]
+          },
+          "parameters": { "stat": "morale_bonus", "amount": 1, "op": "Add" }
+        }
+      ],
+      "3": [
+        { "type": "StatModifier", "scope": "FactionUnits", "parameters": { "stat": "morale_bonus", "amount": 2, "op": "Add" } },
+        {
+          "type": "StatModifier",
+          "scope": "FactionUnits",
+          "condition": {
+            "kind": "AllOf",
+            "conditions": [
+              { "kind": "IsDefending" },
+              { "kind": "TargetTileHas", "value": "Base" }
+            ]
+          },
+          "parameters": { "stat": "morale_bonus", "amount": 1, "op": "Add" }
+        }
+      ],
+      "4": [
+        { "type": "StatModifier", "scope": "FactionUnits", "parameters": { "stat": "morale_bonus", "amount": 3, "op": "Add" } }
+      ]
+    }
   }
 ]

@@ -1,6 +1,7 @@
 #include "game/faction/UnitManager.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
+#include "game/units/MoraleConfig.h"
 #include "game/units/MovementRules.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
@@ -45,7 +46,8 @@ UnitManager::DeferredDestructionScope UnitManager::DeferDestruction()
 
 Unit& UnitManager::CreateUnit(UnitId_t unitId, const UnitDesign& rDesign,
                               UnitPositionIndex& rPositions, const Tile& rTile,
-                              BaseManager* pHomeBase)
+                              const MoraleConfig_t& rMorale, BaseManager* pHomeBase,
+                              BaseManager* pProducedAt)
 {
     if (!CanPlaceUnitOnTile(rTile, rPositions))
     {
@@ -54,7 +56,8 @@ Unit& UnitManager::CreateUnit(UnitId_t unitId, const UnitDesign& rDesign,
                                  + ") already holds a unit (single-unit-per-tile rule)");
     }
 
-    auto pUnit = std::make_unique<Unit>(unitId, rDesign, rPositions, rTile, pHomeBase, m_rFaction);
+    auto pUnit = std::make_unique<Unit>(unitId, rDesign, rPositions, rTile, pHomeBase, m_rFaction,
+                                        rMorale, pProducedAt);
     Unit& rUnit = *pUnit;
     m_units.push_back(std::move(pUnit));
     m_revision.Bump();

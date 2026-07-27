@@ -21,8 +21,9 @@ namespace ac
 CombatResolver::CombatResolver(const MoveCostCalculator& rMoveCosts,
                                const StepEvaluator& rSteps,
                                WorldMap& rWorldMap,
-                               const TileEffectsContext& rTileEffects)
-    : CombatResolver(rMoveCosts, rSteps, rWorldMap, rTileEffects, std::random_device{}())
+                               const TileEffectsContext& rTileEffects,
+                               const MoraleConfig_t& rMorale)
+    : CombatResolver(rMoveCosts, rSteps, rWorldMap, rTileEffects, rMorale, std::random_device{}())
 {
 }
 
@@ -30,10 +31,12 @@ CombatResolver::CombatResolver(const MoveCostCalculator& rMoveCosts,
                                const StepEvaluator& rSteps,
                                WorldMap& rWorldMap,
                                const TileEffectsContext& rTileEffects,
+                               const MoraleConfig_t& rMorale,
                                uint32_t seed)
     : m_disengage(rMoveCosts, rSteps, rWorldMap)
     , m_rWorldMap(rWorldMap)
     , m_rTileEffects(rTileEffects)
+    , m_morale(rMorale)
     , m_rng(seed)
 {
 }
@@ -87,7 +90,8 @@ CombatResult_t CombatResolver::Resolve(Unit& rAttacker, Unit& rDefender)
     result.attackerId = rAttacker.GetUnitId();
     result.defenderId = rDefender.GetUnitId();
 
-    const EffectContext_t attackCtx{&rDefender.GetTile()};
+    const EffectContext_t attackCtx{&rDefender.GetTile(), CombatRole_t::Attacker};
+    const EffectContext_t defenseCtx{&rDefender.GetTile(), CombatRole_t::Defender};
     const double tileDefenseMult = m_rTileEffects.ResolveTileDefenseMultiplier(
         rDefender.GetTile(), rDefender.GetFaction().GetFactionId());
 
@@ -95,10 +99,10 @@ CombatResult_t CombatResolver::Resolve(Unit& rAttacker, Unit& rDefender)
                         || ResolveFlag(rDefender, RuleFlagId_t::ForcesPsiCombat);
     if (result.bPsiCombat)
     {
-        const double attackRating =
-            ResolveMultiplicativeStat(rAttacker, StatId_t::Attack, 1.0, attackCtx);
-        const double defenseRating =
-            ResolveMultiplicativeStat(rDefender, StatId_t::Defense, 1.0);
+        const double attackRating = m_morale.ResolveCombatMultiplicativeStat(
+            rAttacker, StatId_t::Attack, 1.0, attackCtx);
+        const double defenseRating = m_morale.ResolveCombatMultiplicativeStat(
+            rDefender, StatId_t::Defense, 1.0, defenseCtx);
         result.attackStrength =
             static_cast<int>(std::lround(attackRating * k_combatStrengthScale));
         result.defenseStrength = static_cast<int>(
@@ -106,8 +110,10 @@ CombatResult_t CombatResolver::Resolve(Unit& rAttacker, Unit& rDefender)
     }
     else
     {
-        const int attackRating = ResolveStat(rAttacker, StatId_t::Attack, attackCtx);
-        const int defenseRating = ResolveStat(rDefender, StatId_t::Defense);
+        const int attackRating =
+            m_morale.ResolveCombatStat(rAttacker, StatId_t::Attack, attackCtx);
+        const int defenseRating =
+            m_morale.ResolveCombatStat(rDefender, StatId_t::Defense, defenseCtx);
         result.attackStrength = attackRating * k_combatStrengthScale;
         result.defenseStrength = static_cast<int>(
             std::lround(defenseRating * tileDefenseMult * k_combatStrengthScale));

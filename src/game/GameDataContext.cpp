@@ -22,6 +22,7 @@
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitSlotRegistry.h"
 #include "game/effects/TileYieldRulesConfigParser.h"
+#include "game/units/MoraleConfigParser.h"
 #include "lib/LuaRuntime.h"
 
 #include <stdexcept>
@@ -87,6 +88,10 @@ void LoadGameData(GameDataContext& rData, const GameDataPaths& rPaths)
 
     TileYieldRulesConfigParser tileYieldRulesParser;
     rData.tileYieldRules = tileYieldRulesParser.ParseConfig(rPaths.tileYieldRules);
+
+    MoraleConfigParser moraleParser;
+    rData.moraleConfig =
+        std::make_unique<MoraleConfig_t>(moraleParser.ParseConfig(rPaths.moraleLevels));
 
     // Cross-config id checks — only safe once every registry above is loaded.
     ValidateEffectReferences(rData);

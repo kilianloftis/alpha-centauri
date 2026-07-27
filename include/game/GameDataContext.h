@@ -28,6 +28,7 @@ class ImprovementRegistry;
 class WorldGenPresetRegistry;
 struct WorldGenDecorationConfig_t;
 struct LandmarkConfig_t;
+struct MoraleConfig_t;
 
 // Owns the definition data loaded once at startup (registries and config structs, all
 // reconstructible from config files) plus the calculators/services built from that data.
@@ -59,6 +60,7 @@ struct GameDataContext
     std::vector<LandmarkConfig_t> worldGenLandmarks;
     // FactionGlobal TileResourceCap rules (and any other universal tile-yield effects).
     std::vector<EffectConfig_t> tileYieldRules;
+    std::unique_ptr<MoraleConfig_t> moraleConfig;
 
     // --- Calculators / services (built from the data above) ---
     std::unique_ptr<LuaRuntime> luaRuntime;

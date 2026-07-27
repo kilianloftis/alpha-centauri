@@ -29,7 +29,9 @@ struct ActiveEffect_t
 {
     const EffectConfig_t* config;   // non-owning, points into static config data
     std::string sourceId;           // "command_nexus", "free_market", etc — for breakdown/UI
-    const BaseManager* originBase = nullptr; // only set for ThisBase-scoped effects
+    // Set for ThisBase / ProducedAtThisBase, and for FactionUnits collected from a base
+    // (per-base attribution for conditions like OriginBaseIsTargetBase — not a membership filter).
+    const BaseManager* originBase = nullptr;
     // Set for improvements with owned_by_territory (e.g. Sensor): the FactionId_t that owns
     // the host tile's territory at collection time. When set, tile defense / detection / fog
     // vision only apply the effect for that faction. Unowned territory stores k_NoFactionOwner.
@@ -57,13 +59,23 @@ struct BaseEffects_t
     std::vector<ActiveEffect_t> effects;
 };
 
+// Which side of a fight is resolving stats. None for non-combat resolution.
+enum class CombatRole_t
+{
+    None,
+    Attacker,
+    Defender,
+};
+
 // Runtime context an effect's condition is evaluated against. Fields are optional; a
 // condition that references an absent field evaluates false. Combat sets targetTile to the
 // defender's tile so TargetTileHas conditions can inspect it. Tile yield also sets
 // targetTile so amount_source (e.g. ElevationEnergySeed) can read the host tile.
+// combatRole enables IsDefending (SE Morale defense-in-base extras).
 struct EffectContext_t
 {
     const Tile* targetTile = nullptr;
+    CombatRole_t combatRole = CombatRole_t::None;
 };
 
 // Resolves a StatModifier's effective contribution amount. Literal `amount` when
@@ -88,7 +100,9 @@ inline double EffectiveStatModifierAmount(const StatModifierEffect_t& rMod,
 }
 
 // True if config carries no condition, or its condition is satisfied by ctx.
-bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx);
+// OriginBaseIsTargetBase requires pOriginBase (ActiveEffect_t::originBase).
+bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx,
+                        const BaseManager* pOriginBase = nullptr);
 
 // True if config carries no unitFilter, or its unitFilter matches rUnit (Domain /
 // HasComponent). Used by CollectLiveUnitEffects to drop FactionUnits (and any other)
@@ -96,10 +110,10 @@ bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx
 bool UnitFilterSatisfied(const EffectConfig_t& config, const Unit& rUnit);
 
 // Appends non-Instantaneous effects from a config list as ActiveEffect_t instances.
-// Used by building, pop, unit, and tile effect collection; pOriginBase is set only
-// when the effect's scope is ThisBase. This (and its filtered variants below) is the
-// single config->ActiveEffect_t conversion — new effect sources should collect through
-// one of these rather than hand-rolling the loop.
+// Used by building, pop, unit, and tile effect collection; pOriginBase is recorded for
+// ThisBase, ProducedAtThisBase, and FactionUnits. This (and its filtered variants below)
+// is the single config->ActiveEffect_t conversion — new effect sources should collect
+// through one of these rather than hand-rolling the loop.
 void AppendActiveEffects(const std::vector<EffectConfig_t>& rEffects,
                          const BaseManager* pOriginBase,
                          const std::string& sourceId,
@@ -243,7 +257,8 @@ inline auto FilterByStatIdInContext(const std::vector<ActiveEffect_t>& effects,
             return false;
         }
         const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
-        return pStatModifier && pStatModifier->stat == statId && ConditionSatisfied(*effect.config, ctx);
+        return pStatModifier && pStatModifier->stat == statId
+            && ConditionSatisfied(*effect.config, ctx, effect.originBase);
     });
 }
 
@@ -295,9 +310,8 @@ bool ResolveFlag(const UnitDesign& rDesign, RuleFlagId_t flagId);
 // MultiplyGeometric — the SMAC-style base combat rating (e.g. laser 2, not 2 * 1.25).
 int ResolveAdditiveStat(const UnitDesign& rDesign, StatId_t statId);
 
-// A live unit's full effect list: design component effects plus the owner's FactionUnits
-// lane. Shared by ResolveStat / ResolveFlag and callers that need the same set (e.g.
-// concealment channels).
+// A live unit's full effect list: design components, FactionUnits (all faction units,
+// unitFilter only), and ProducedAtThisBase matching Unit::GetProducedAtBase.
 std::vector<ActiveEffect_t> CollectLiveUnitEffects(const Unit& rUnit);
 
 // Resolve a live unit's stats / flags: design effects plus FactionUnits from the owner.

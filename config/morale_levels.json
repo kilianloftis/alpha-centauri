@@ -1,0 +1,21 @@
+{
+  "base_intrinsic": 1,
+  "probe_base_intrinsic": 2,
+  "defense_floor_index": 1,
+  "levels": [
+    { "index": 0, "conventional": "Very Green",  "native": "Hatchling",    "combat_bonus_percent": -25 },
+    { "index": 1, "conventional": "Green",       "native": "Larval Mass",  "combat_bonus_percent": -12.5 },
+    { "index": 2, "conventional": "Disciplined", "native": "Pre-Boil",     "combat_bonus_percent": 0 },
+    { "index": 3, "conventional": "Hardened",    "native": "Boil",         "combat_bonus_percent": 12.5 },
+    { "index": 4, "conventional": "Veteran",     "native": "Mature Boil",  "combat_bonus_percent": 25 },
+    { "index": 5, "conventional": "Commando",    "native": "Great Boil",   "combat_bonus_percent": 37.5 },
+    { "index": 6, "conventional": "Elite",       "native": "Demon Boil",   "combat_bonus_percent": 50 }
+  ],
+  "promotion": {
+    "rules": [
+      { "max_level": 1, "chance": 1.0 },
+      { "level": 2, "formula": "defense_over_total" },
+      { "min_level": 3, "max_level": 5, "formula": "defense_over_total_half" }
+    ]
+  }
+}

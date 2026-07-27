@@ -32,6 +32,8 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(BonusEffectParser::ParseStatId("cargo_capacity") == StatId_t::CargoCapacity);
     CHECK(BonusEffectParser::ParseStatId("cost_multiplier") == StatId_t::CostMultiplier);
     CHECK(BonusEffectParser::ParseStatId("starting_experience") == StatId_t::StartingExperience);
+    CHECK(BonusEffectParser::ParseStatId("morale_bonus") == StatId_t::MoraleBonus);
+    CHECK(BonusEffectParser::ParseStatId("positive_morale_scale") == StatId_t::PositiveMoraleScale);
     CHECK(BonusEffectParser::ParseStatId("growth_rate") == StatId_t::GrowthRate);
     CHECK(BonusEffectParser::ParseStatId("moisture_tier") == StatId_t::MoistureTier);
 
@@ -52,6 +54,8 @@ TEST_CASE("ParseModifierOp / ParseEffectScope / ParseEffectPersistence mappings"
     CHECK(BonusEffectParser::ParseEffectScope("AllOwnerBases") == EffectScope_t::AllOwnerBases);
     CHECK(BonusEffectParser::ParseEffectScope("ThisUnit") == EffectScope_t::ThisUnit);
     CHECK(BonusEffectParser::ParseEffectScope("FactionUnits") == EffectScope_t::FactionUnits);
+    CHECK(BonusEffectParser::ParseEffectScope("ProducedAtThisBase")
+          == EffectScope_t::ProducedAtThisBase);
     CHECK(BonusEffectParser::ParseEffectScope("FactionGlobal") == EffectScope_t::FactionGlobal);
     CHECK(BonusEffectParser::ParseEffectScope("WorldGlobal") == EffectScope_t::WorldGlobal);
     CHECK(BonusEffectParser::ParseEffectScope("ThisPop") == EffectScope_t::ThisPop);
@@ -77,6 +81,7 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
     CHECK(BonusEffectParser::ParseRuleFlagId("terraform") == RuleFlagId_t::Terraform);
     CHECK(BonusEffectParser::ParseRuleFlagId("supply_crawl") == RuleFlagId_t::SupplyCrawl);
     CHECK(BonusEffectParser::ParseRuleFlagId("probe_team") == RuleFlagId_t::ProbeTeam);
+    CHECK(BonusEffectParser::ParseRuleFlagId("creche") == RuleFlagId_t::Creche);
     CHECK(BonusEffectParser::ParseRuleFlagId("prevents_disengage") == RuleFlagId_t::PreventsDisengage);
     CHECK(BonusEffectParser::ParseRuleFlagId("remove_shroud") == RuleFlagId_t::RemoveShroud);
     CHECK(BonusEffectParser::ParseRuleFlagId("remove_fog") == RuleFlagId_t::RemoveFog);

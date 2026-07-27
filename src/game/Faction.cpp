@@ -54,7 +54,7 @@ Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
     , m_pSocialEngineering(std::make_unique<SocialEngineeringManager>(pSocialPolicyRegistry,
                                                                         pSocialRatingRegistry))
     , m_pUnits(std::make_unique<UnitManager>(*this))
-    , m_effectsPool(pBuildingRegistry, m_baseListRevision, pTileYieldRules)
+    , m_effectsPool(pBuildingRegistry, m_baseListRevision, pTileYieldRules, pSocialRatingRegistry)
 {
     m_pResearchSelector->EnsureResearchTarget();
 }

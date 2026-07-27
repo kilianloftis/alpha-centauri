@@ -35,12 +35,15 @@ Unit::Unit(UnitId_t unitId,
            UnitPositionIndex& rPositions,
            const Tile& rTile,
            BaseManager* pHomeBase,
-           Faction& rFaction)
+           Faction& rFaction,
+           const MoraleConfig_t& rMoraleConfig,
+           BaseManager* pProducedAt)
     : m_unitId(unitId)
     , m_rDesign(rDesign)
     , m_rPositions(rPositions)
     , m_pTile(&rTile)
     , m_rFaction(rFaction)
+    , m_morale(rMoraleConfig)
     // Seed current stats from the *live* resolved maxima (design effects + the faction's
     // active FactionUnits effects), not the design's context-free values. A fresh unit
     // therefore starts at its true max, so current-vs-max is well defined from spawn.
@@ -50,17 +53,24 @@ Unit::Unit(UnitId_t unitId,
     , m_xp(0)
     , m_bRegistered(false)
 {
-    // Members used by ResolveStat are initialised above; seed after the mem-init list.
-    m_currentHp = ResolveStat(*this, StatId_t::HitPoints);
-    m_currentFuel = ResolveStat(*this, StatId_t::Fuel);
-    m_moveFragmentsRemaining =
-        GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint;
-    m_xp = ResolveStat(*this, StatId_t::StartingExperience);
-
     if (pHomeBase)
     {
         m_homeBaseClaim = pHomeBase->GetHomeUnits().Claim(*this);
     }
+    // Production base is independent of home; default to home when the caller omits it.
+    if (BaseManager* pBuiltAt = pProducedAt ? pProducedAt : pHomeBase)
+    {
+        m_producedAtBaseId = pBuiltAt->GetBaseId();
+    }
+
+    // Members used by ResolveStat are initialised above; seed after the mem-init list.
+    // ProducedAtThisBase StartingExperience needs m_producedAtBaseId before this resolve.
+    m_currentHp = ResolveStat(*this, StatId_t::HitPoints);
+    m_currentFuel = ResolveStat(*this, StatId_t::Fuel);
+    m_moveFragmentsRemaining =
+        GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint;
+    m_xp = m_morale.BaseIntrinsicXp(*this)
+        + ResolveStat(*this, StatId_t::StartingExperience);
 
     m_rPositions.Register_(*this, rTile);
     m_bRegistered = true;
@@ -107,6 +117,21 @@ UnitDomain_t Unit::GetDomain() const
 
 const Tile& Unit::GetTile() const                                      { return *m_pTile; }
 BaseManager* Unit::GetHomeBase() const      { return m_homeBaseClaim.GetBase(); }
+BaseManager* Unit::GetProducedAtBase() const
+{
+    if (!m_producedAtBaseId.has_value())
+    {
+        return nullptr;
+    }
+    for (BaseManager& rBase : m_rFaction.Bases())
+    {
+        if (rBase.GetBaseId() == *m_producedAtBaseId)
+        {
+            return &rBase;
+        }
+    }
+    return nullptr;
+}
 Faction& Unit::GetFaction()                 { return m_rFaction; }
 const Faction& Unit::GetFaction() const     { return m_rFaction; }
 
@@ -133,7 +158,10 @@ void Unit::SetMoveFragmentsRemaining(int fragments)
         GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint;
     m_moveFragmentsRemaining = std::clamp(fragments, 0, maxFragments);
 }
-void Unit::SetXp(int xp)                    { m_xp = std::max(xp, 0); }
+void Unit::SetXp(int xp)
+{
+    m_xp = std::clamp(xp, 0, m_morale.GetConfig().MaxLevel());
+}
 
 void Unit::SetHomeBase(BaseManager* pHomeBase)
 {

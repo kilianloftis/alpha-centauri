@@ -42,7 +42,8 @@ struct TerraformGame_
             pTile->SetRockiness(Rockiness_t::Flat);
         }
         pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings);
+            std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
+            *fixtures.dataContext.moraleConfig);
 
         auto pFaction = std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition,
@@ -87,7 +88,7 @@ struct TerraformGame_
         REQUIRE(pTile);
         return pPlayer->GetUnitManager().CreateUnit(
             pState->AllocateUnitId(), rDesign, pState->GetWorldMap().GetUnitPositions(), *pTile,
-            pHome);
+            *fixtures.dataContext.moraleConfig, pHome);
     }
 
     void FinishTerraform(Unit& rUnit)
@@ -142,7 +143,8 @@ TEST_CASE("TryStartTerraform rejects non-formers and exclusions", "[unit][terraf
     Tile* pTile = game.pState->GetWorldMap().GetTile(6, 4);
     Unit& scout = game.pPlayer->GetUnitManager().CreateUnit(
         game.pState->AllocateUnitId(), game.fixtures.designs.back(),
-        game.pState->GetWorldMap().GetUnitPositions(), *pTile, &home);
+        game.pState->GetWorldMap().GetUnitPositions(), *pTile,
+        *game.fixtures.dataContext.moraleConfig, &home);
 
     CHECK_FALSE(game.pState->GetUnitOrderExecutor().TryStartTerraform(scout, "Farm", *game.pState));
 

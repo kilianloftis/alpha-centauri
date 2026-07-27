@@ -38,7 +38,8 @@ struct DiplomacyGame_
             pTile->SetElevation(100);
         }
         pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings);
+            std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
+            *fixtures.dataContext.moraleConfig);
 
         auto pA = std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition,

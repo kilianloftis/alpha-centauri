@@ -88,4 +88,43 @@ void ExpandSocialRatingEffects(BaseEffects_t& rBaseEffects,
     }
 }
 
+void ExpandFactionLaneSocialRatingEffects(FactionEffects_t& rFactionEffects,
+                                          const SocialRatingRegistry& rRatings)
+{
+    const std::map<SocialRatingId_t, int> totals =
+        AccumulateSocialRatings(rFactionEffects.effects);
+
+    for (const auto& [rating, total] : totals)
+    {
+        if (total == 0)
+        {
+            continue;
+        }
+
+        const SocialRatingConfig_t* pRatingConfig = rRatings.Find(SocialRatingIdToString(rating));
+        if (!pRatingConfig || pRatingConfig->levelEffects.empty())
+        {
+            continue;
+        }
+
+        const int level = ClampSocialRatingTotal(*pRatingConfig, total);
+        const auto it = pRatingConfig->levelEffects.find(level);
+        if (it == pRatingConfig->levelEffects.end())
+        {
+            continue;
+        }
+
+        const std::string sourceId = "se_rating_" + SocialRatingIdToString(rating)
+                                     + "_" + std::to_string(level);
+        for (const auto& rEffect : it->second)
+        {
+            if (ac::LaneFor(scope) != ac::EffectLane_t::FactionUnits;)
+            {
+                continue;
+            }
+            rFactionEffects.effects.push_back({&rEffect, sourceId, nullptr});
+        }
+    }
+}
+
 } // namespace ac

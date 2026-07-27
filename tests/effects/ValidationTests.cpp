@@ -37,6 +37,7 @@ static_assert(LaneFor(EffectScope_t::AllOwnerBases) == EffectLane_t::FactionWide
 static_assert(LaneFor(EffectScope_t::FactionGlobal) == EffectLane_t::FactionWide);
 static_assert(LaneFor(EffectScope_t::WorldGlobal) == EffectLane_t::FactionWide);
 static_assert(LaneFor(EffectScope_t::FactionUnits) == EffectLane_t::FactionUnits);
+static_assert(LaneFor(EffectScope_t::ProducedAtThisBase) == EffectLane_t::ProducedAtBase);
 static_assert(LaneFor(EffectScope_t::ThisUnit) == EffectLane_t::UnitLocal);
 static_assert(LaneFor(EffectScope_t::ThisPop) == EffectLane_t::PopLocal);
 static_assert(LaneFor(EffectScope_t::ThisTile) == EffectLane_t::TileLocal);
@@ -46,6 +47,7 @@ static_assert(IsFactionLane(EffectScope_t::AllOwnerBases));
 static_assert(IsFactionLane(EffectScope_t::FactionGlobal));
 static_assert(IsFactionLane(EffectScope_t::WorldGlobal));
 static_assert(IsFactionLane(EffectScope_t::FactionUnits));
+static_assert(!IsFactionLane(EffectScope_t::ProducedAtThisBase));
 static_assert(!IsFactionLane(EffectScope_t::ThisUnit));
 static_assert(!IsFactionLane(EffectScope_t::ThisPop));
 static_assert(!IsFactionLane(EffectScope_t::ThisTile));
@@ -70,7 +72,9 @@ static_assert(KindFor(StatId_t::DamageFromOutOfFuel) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::CargoCapacity) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::DifficultTerrainCost) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::StartingExperience) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::MoraleBonus) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::CostMultiplier) == StatKind_t::PureMultiplier);
+static_assert(KindFor(StatId_t::PositiveMoraleScale) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::GrowthRate) == StatKind_t::RawScaled);
 static_assert(KindFor(StatId_t::MoistureTier) == StatKind_t::RawScaled);
 

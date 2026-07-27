@@ -37,7 +37,8 @@ struct ContactGame_
             pTile->SetElevation(100);
         }
         pState = std::make_unique<GameState>(
-            std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings);
+            std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
+            *fixtures.dataContext.moraleConfig);
 
         auto pFactionA = std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition,
@@ -80,7 +81,8 @@ struct ContactGame_
         REQUIRE(pTile);
         return rFaction.GetUnitManager().CreateUnit(
             pState->AllocateUnitId(), fixtures.designs.back(),
-            pState->GetWorldMap().GetUnitPositions(), *pTile, nullptr);
+            pState->GetWorldMap().GetUnitPositions(), *pTile,
+            *fixtures.dataContext.moraleConfig, nullptr);
     }
 };
 

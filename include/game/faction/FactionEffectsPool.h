@@ -10,6 +10,7 @@ namespace ac
 
 class Faction;
 class BuildingRegistry;
+class SocialRatingRegistry;
 
 // Assembles and memoizes the faction-wide active effect pool (code review finding 1.1).
 // Reads rFaction's subsystems through their public API. rFaction is taken as a parameter
@@ -21,7 +22,8 @@ class FactionEffectsPool
 public:
     FactionEffectsPool(const BuildingRegistry* pBuildingRegistry,
                        const Revision& rBaseListRevision,
-                       const std::vector<EffectConfig_t>* pTileYieldRules = nullptr);
+                       const std::vector<EffectConfig_t>* pTileYieldRules = nullptr,
+                       const SocialRatingRegistry* pSocialRatings = nullptr);
 
     // The validated pool for rFaction. The reference is valid until the next
     // effect-source mutation on rFaction.
@@ -64,6 +66,7 @@ private:
     const BuildingRegistry* m_pBuildingRegistry;
     const Revision& m_rBaseListRevision;
     const std::vector<EffectConfig_t>* m_pTileYieldRules;
+    const SocialRatingRegistry* m_pSocialRatings;
 
     // The empty initial stamp never equals a real collection, so no "never built"
     // sentinel is needed. m_scratchRevisions is reused between validations to keep the

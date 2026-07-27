@@ -267,7 +267,7 @@
     "effects": [
       {
         "type": "StatModifier",
-        "scope": "FactionUnits",
+        "scope": "ProducedAtThisBase",
         "unitFilter": { "kind": "Domain", "domain": "air" },
         "parameters": {
           "stat": "starting_experience",
@@ -277,6 +277,52 @@
       }
     ],
     "category": "conquer"
+  },
+  {
+    "id": "Command_Center",
+    "name": "Command Center (+2 starting XP to land units)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ProducedAtThisBase",
+        "unitFilter": { "kind": "Domain", "domain": "land" },
+        "parameters": {
+          "stat": "starting_experience",
+          "amount": 2,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "Childrens_Creche",
+    "name": "Children's Crèche",
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisBase",
+        "parameters": { "flag": "creche" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            { "kind": "IsDefending" },
+            { "kind": "TargetTileHas", "value": "Base" },
+            { "kind": "OriginBaseIsTargetBase" }
+          ]
+        },
+        "parameters": {
+          "stat": "morale_bonus",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "build"
   },
   {
     "id": "component_attack_array",

@@ -204,7 +204,7 @@ TEST_CASE("FactionUnits Conceal from a cloaking project hides live units",
 
     BaseManager& base = fixture.MakeFactionBase(owner, 1, 4);
     fixture.MakeUnit(observer, 4, 4, {"test_chassis"});
-    Unit& subject = fixture.MakeUnit(owner, 5, 4, {"test_chassis"});
+    Unit& subject = fixture.MakeUnit(owner, 5, 4, {"test_chassis"}, &base);
     observer.RebuildVisibility();
 
     REQUIRE(observer.GetVisibleMap().IsVisible(subject.GetTile()));

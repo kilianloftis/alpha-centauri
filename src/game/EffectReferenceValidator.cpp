@@ -20,6 +20,7 @@
 #include "game/effects/BonusEffect.h"
 
 #include <algorithm>
+#include <functional>
 #include <stdexcept>
 #include <variant>
 
@@ -83,7 +84,7 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
         }
 
         // Condition feature ids match Tile::HasFeature: either a terrain feature id or an
-        // improvement id.
+        // improvement id. IsDefending has no feature id.
         if (rEffect.condition && pImprovements)
         {
             auto checkFeature = [&](const std::string& rFeatureId)
@@ -93,17 +94,28 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
                     ThrowBadReference_(rSourceId, "condition feature", rFeatureId);
                 }
             };
-            if (rEffect.condition->kind == ConditionKind_t::AllOf)
+            std::function<void(const Condition_t&)> checkCondition = [&](const Condition_t& rCond)
             {
-                for (const std::string& rFeatureId : rEffect.condition->values)
+                switch (rCond.kind)
                 {
-                    checkFeature(rFeatureId);
+                    case ConditionKind_t::IsDefending:
+                        break;
+                    case ConditionKind_t::TargetTileHas:
+                        checkFeature(rCond.value);
+                        break;
+                    case ConditionKind_t::AllOf:
+                        for (const std::string& rFeatureId : rCond.values)
+                        {
+                            checkFeature(rFeatureId);
+                        }
+                        for (const Condition_t& rNested : rCond.conditions)
+                        {
+                            checkCondition(rNested);
+                        }
+                        break;
                 }
-            }
-            else
-            {
-                checkFeature(rEffect.condition->value);
-            }
+            };
+            checkCondition(*rEffect.condition);
         }
 
         if (rEffect.unitFilter && rEffect.unitFilter->kind == UnitFilterKind_t::HasComponent

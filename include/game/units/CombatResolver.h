@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/units/DisengageRules.h"
+#include "game/units/MoraleCalculator.h"
 #include "game/units/Unit.h"
 
 #include <cstdint>
@@ -82,16 +83,22 @@ public:
     CombatResolver(const MoveCostCalculator& rMoveCosts,
                    const StepEvaluator& rSteps,
                    WorldMap& rWorldMap,
-                   const TileEffectsContext& rTileEffects);
+                   const TileEffectsContext& rTileEffects,
+                   const MoraleConfig_t& rMorale);
     CombatResolver(const MoveCostCalculator& rMoveCosts,
                    const StepEvaluator& rSteps,
                    WorldMap& rWorldMap,
                    const TileEffectsContext& rTileEffects,
+                   const MoraleConfig_t& rMorale,
                    uint32_t seed);
 
     // Applies HP each round, moves a unit on disengage, and DestroyUnit when a side
-    // reaches 0. Attack uses EffectContext_t{defender tile} so TargetTileHas mods apply.
+    // reaches 0. Attack uses EffectContext_t{defender tile, Attacker}; defense uses
+    // {defender tile, Defender} so IsDefending / Base conditions apply.
     CombatResult_t Resolve(Unit& rAttacker, Unit& rDefender);
+
+    // Shared with promotion rolls in UnitOrderExecutor::TryAttack.
+    std::mt19937& GetRng() const { return m_rng; }
 
 private:
     int Roll_(int strength) const;
@@ -103,6 +110,8 @@ private:
     DisengageRules m_disengage;
     WorldMap& m_rWorldMap;
     const TileEffectsContext& m_rTileEffects;
+    MoraleCalculator m_morale;
+    // mutable: Roll_ / GetRng are const so Resolve can stay const-correct for callers.
     mutable std::mt19937 m_rng;
 };
 

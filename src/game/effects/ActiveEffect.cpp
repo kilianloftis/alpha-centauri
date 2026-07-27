@@ -49,7 +49,13 @@ void AppendActiveEffectsIf_(const std::vector<EffectConfig_t>& rEffects,
         ActiveEffect_t activeEffect;
         activeEffect.config = &rEffect;
         activeEffect.sourceId = sourceId;
-        activeEffect.originBase = (rEffect.scope == EffectScope_t::ThisBase) ? pOriginBase : nullptr;
+        // ThisBase / ProducedAtThisBase need origin for routing. FactionUnits keep origin for
+        // per-base conditions (e.g. OriginBaseIsTargetBase) — not as a membership filter.
+        const EffectLane_t lane = LaneFor(rEffect.scope);
+        const bool bTagOrigin = lane == EffectLane_t::Base
+            || lane == EffectLane_t::ProducedAtBase
+            || rEffect.scope == EffectScope_t::FactionUnits;
+        activeEffect.originBase = bTagOrigin ? pOriginBase : nullptr;
         rOut.push_back(activeEffect);
     }
 }
@@ -170,15 +176,20 @@ std::vector<ActiveEffect_t> ExpandGrantBuildingEffects(
         }
         else
         {
-            // AllOwnerBases / FactionGlobal grant: non-ThisBase effects apply once globally;
-            // ThisBase-scoped sub-effects are cloned once per base.
+            // AllOwnerBases / FactionGlobal grant: non-per-base effects apply once globally;
+            // ThisBase / ProducedAtThisBase sub-effects are cloned once per base.
+            const auto isPerBaseScope = [](EffectScope_t scope)
+            {
+                return scope == EffectScope_t::ThisBase
+                    || scope == EffectScope_t::ProducedAtThisBase;
+            };
             const std::pair<const BaseManager*, std::string> globalKey = {nullptr, pGrant->buildingId};
             if (!processedGrantedIds.count(globalKey))
             {
                 processedGrantedIds.insert(globalKey);
                 AppendActiveEffectsIf_(pGranted->effects, nullptr, sourceId,
-                                       [](const EffectConfig_t& rEffect)
-                                       { return rEffect.scope != EffectScope_t::ThisBase; },
+                                       [&](const EffectConfig_t& rEffect)
+                                       { return !isPerBaseScope(rEffect.scope); },
                                        effects);
             }
 
@@ -190,8 +201,8 @@ std::vector<ActiveEffect_t> ExpandGrantBuildingEffects(
                 {
                     processedGrantedIds.insert(key);
                     AppendActiveEffectsIf_(pGranted->effects, pBase, sourceId,
-                                           [](const EffectConfig_t& rEffect)
-                                           { return rEffect.scope == EffectScope_t::ThisBase; },
+                                           [&](const EffectConfig_t& rEffect)
+                                           { return isPerBaseScope(rEffect.scope); },
                                            effects);
                 }
             }
@@ -223,32 +234,52 @@ const FactionEffects_t& CollectActiveEffects(const IEffectsProvider& rProvider)
     return rProvider.GetActiveEffects();
 }
 
-bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx)
+namespace
+{
+
+bool ConditionBodySatisfied_(const Condition_t& condition, const EffectContext_t& ctx,
+                             const BaseManager* pOriginBase)
+{
+    switch (condition.kind)
+    {
+        case ConditionKind_t::TargetTileHas:
+            return ctx.targetTile != nullptr && ctx.targetTile->HasFeature(condition.value);
+        case ConditionKind_t::IsDefending:
+            return ctx.combatRole == CombatRole_t::Defender;
+        case ConditionKind_t::OriginBaseIsTargetBase:
+            return pOriginBase != nullptr && ctx.targetTile != nullptr
+                && pOriginBase->GetX() == ctx.targetTile->GetX()
+                && pOriginBase->GetY() == ctx.targetTile->GetY();
+        case ConditionKind_t::AllOf:
+            for (const std::string& rFeatureId : condition.values)
+            {
+                if (!ctx.targetTile || !ctx.targetTile->HasFeature(rFeatureId))
+                {
+                    return false;
+                }
+            }
+            for (const Condition_t& rNested : condition.conditions)
+            {
+                if (!ConditionBodySatisfied_(rNested, ctx, pOriginBase))
+                {
+                    return false;
+                }
+            }
+            return !condition.values.empty() || !condition.conditions.empty();
+    }
+    return false;
+}
+
+} // namespace
+
+bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx,
+                        const BaseManager* pOriginBase)
 {
     if (!config.condition)
     {
         return true;
     }
-    const Condition_t& condition = *config.condition;
-    switch (condition.kind)
-    {
-        case ConditionKind_t::TargetTileHas:
-            return ctx.targetTile != nullptr && ctx.targetTile->HasFeature(condition.value);
-        case ConditionKind_t::AllOf:
-            if (!ctx.targetTile)
-            {
-                return false;
-            }
-            for (const std::string& rFeatureId : condition.values)
-            {
-                if (!ctx.targetTile->HasFeature(rFeatureId))
-                {
-                    return false;
-                }
-            }
-            return true;
-    }
-    return false;
+    return ConditionBodySatisfied_(*config.condition, ctx, pOriginBase);
 }
 
 bool UnitFilterSatisfied(const EffectConfig_t& config, const Unit& rUnit)
@@ -265,6 +296,10 @@ bool UnitFilterSatisfied(const EffectConfig_t& config, const Unit& rUnit)
         case UnitFilterKind_t::HasComponent:
             return filter.component.has_value()
                 && rUnit.GetDesign().HasComponent(*filter.component);
+        // Design-only: avoid CollectLiveUnitEffects recursion (HasFlag is evaluated while
+        // building that list). Native / probe filters key off chassis/special components.
+        case UnitFilterKind_t::HasFlag:
+            return filter.flag.has_value() && ResolveFlag(rUnit.GetDesign(), *filter.flag);
     }
     return false;
 }
@@ -291,6 +326,7 @@ BaseEffects_t FilterForBase(const FactionEffects_t& rFactionEffects, const BaseM
                 matching.effects.push_back(effect);
                 break;
             case EffectLane_t::FactionUnits:
+            case EffectLane_t::ProducedAtBase:
             case EffectLane_t::UnitLocal:
             case EffectLane_t::PopLocal:
             case EffectLane_t::TileLocal:
@@ -387,17 +423,34 @@ void DispatchInstantaneousEffects(const BuildingConfig_t& rBuilding, BaseManager
     }
 }
 
-// A live unit's full effect list: its design's own component effects
-// plus the owning faction's FactionUnits-scoped effects that match the unit filter.
+// A live unit's full effect list: design components, all FactionUnits (unitFilter only),
+// and ProducedAtThisBase effects whose origin matches the unit's production base.
 std::vector<ActiveEffect_t> CollectLiveUnitEffects(const Unit& rUnit)
 {
     std::vector<ActiveEffect_t> effects = rUnit.GetDesign().CollectEffects();
-    auto factionEffects =
-        FilterByScope(rUnit.GetFaction().GetActiveEffects().effects, EffectScope_t::FactionUnits);
+    const auto& rPool = rUnit.GetFaction().GetActiveEffects().effects;
+    auto factionEffects = FilterByScope(rPool, EffectScope_t::FactionUnits);
     effects.insert(effects.end(), factionEffects.begin(), factionEffects.end());
+    auto producedEffects = FilterByScope(rPool, EffectScope_t::ProducedAtThisBase);
+    effects.insert(effects.end(), producedEffects.begin(), producedEffects.end());
+
+    const BaseManager* pProducedAt = rUnit.GetProducedAtBase();
     std::erase_if(effects, [&](const ActiveEffect_t& rEffect)
     {
-        return rEffect.config && !UnitFilterSatisfied(*rEffect.config, rUnit);
+        if (!rEffect.config)
+        {
+            return false;
+        }
+        if (!UnitFilterSatisfied(*rEffect.config, rUnit))
+        {
+            return true;
+        }
+        if (rEffect.config->scope == EffectScope_t::ProducedAtThisBase
+            && rEffect.originBase != pProducedAt)
+        {
+            return true;
+        }
+        return false;
     });
     return effects;
 }
