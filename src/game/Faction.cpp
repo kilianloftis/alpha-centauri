@@ -111,6 +111,16 @@ int Faction::GetNetIncomePerTurn() const
     return total;
 }
 
+int Faction::TotalPopulation() const
+{
+    int total = 0;
+    for (const BaseManager& rBase : Bases())
+    {
+        total += rBase.GetPopulation().GetSize();
+    }
+    return total;
+}
+
 int Faction::GetResearchPerTurn_() const
 {
     int total = 0;

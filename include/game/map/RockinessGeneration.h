@@ -27,7 +27,7 @@ inline const RockinessWeights_t& WeightsForLevel(const RockinessDecorationConfig
     throw std::runtime_error("Unknown erosive forces level");
 }
 
-// u in [0, 1). Weights are expected non-negative; zero-sum falls back to Flat.
+// u in [0, 1). Weights are expected non-negative; zero-sum throws.
 inline Rockiness_t SampleRockiness(const RockinessWeights_t& rWeights, float u)
 {
     u = std::clamp(u, 0.0f, 1.0f);

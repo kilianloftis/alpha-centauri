@@ -81,6 +81,17 @@ void DiplomacyLedger::SetKnown(FactionId_t a, FactionId_t b, bool known)
     m_known[key] = true;
 }
 
+void DiplomacyLedger::SetKnown(const std::vector<FactionId_t>& rFactionIds)
+{
+    for (size_t i = 0; i < rFactionIds.size(); ++i)
+    {
+        for (size_t j = i + 1; j < rFactionIds.size(); ++j)
+        {
+            SetKnown(rFactionIds[i], rFactionIds[j], true);
+        }
+    }
+}
+
 int DiplomacyLedger::GetGrievance(FactionId_t holder, FactionId_t against) const
 {
     const DirectedFactionPair key = DirectedFactionPair::Make(holder, against);

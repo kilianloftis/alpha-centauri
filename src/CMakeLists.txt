@@ -26,6 +26,11 @@ add_library(ac-core STATIC
     game/faction/TradeItem.cpp
     game/faction/DiplomaticActionExecutor.cpp
     game/faction/FirstContactResolver.cpp
+    game/council/CouncilEffects.cpp
+    game/council/CouncilOutcomeApplier.cpp
+    game/council/CouncilProposalConfigParser.cpp
+    game/council/CouncilRulesConfigParser.cpp
+    game/council/PlanetaryCouncil.cpp
     game/faction/SocialEngineeringManager.cpp
     game/faction/base/BaseManager.cpp
     game/faction/base/HomeBaseIndex.cpp

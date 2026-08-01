@@ -25,6 +25,8 @@
 #include "game/units/MoraleCalculator.h"
 #include "game/units/MoraleConfigParser.h"
 #include "game/units/ProbeActionConfigParser.h"
+#include "game/council/CouncilProposalRegistry.h"
+#include "game/council/CouncilRulesConfigParser.h"
 #include "lib/LuaRuntime.h"
 
 #include <stdexcept>
@@ -98,6 +100,13 @@ void LoadGameData(GameDataContext& rData, const GameDataPaths& rPaths)
     ProbeActionConfigParser probeParser;
     rData.probeActionsConfig =
         std::make_unique<ProbeActionsConfig_t>(probeParser.ParseConfig(rPaths.probeActions));
+
+    rData.councilProposalRegistry = std::make_unique<CouncilProposalRegistry>();
+    rData.councilProposalRegistry->Load(rPaths.councilProposals);
+
+    CouncilRulesConfigParser councilRulesParser;
+    rData.councilRules =
+        std::make_unique<CouncilRulesConfig_t>(councilRulesParser.ParseConfig(rPaths.councilRules));
 
     // Cross-config id checks — only safe once every registry above is loaded.
     ValidateEffectReferences(rData);

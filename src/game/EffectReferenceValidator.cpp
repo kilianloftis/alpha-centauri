@@ -13,6 +13,9 @@
 #include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/faction/FactionConfig.h"
 #include "game/faction/FactionRegistry.h"
+#include "game/council/CouncilProposalConfig.h"
+#include "game/council/CouncilProposalRegistry.h"
+#include "game/council/CouncilRulesConfig.h"
 #include "game/social-engineering/SocialRatingConfig.h"
 #include "game/social-engineering/SocialRatingRegistry.h"
 #include "game/units/UnitComponentConfig.h"
@@ -192,6 +195,17 @@ void ValidateEffectReferences(const GameDataContext& rData)
         {
             validate(rConfig.effects, rConfig.id);
         }
+    }
+    if (rData.councilProposalRegistry)
+    {
+        for (const CouncilProposalConfig_t& rConfig : rData.councilProposalRegistry->GetAll())
+        {
+            validate(rConfig.effects, rConfig.id);
+        }
+    }
+    if (rData.councilRules)
+    {
+        validate(rData.councilRules->governorEffects, "council_governor");
     }
     validate(rData.tileYieldRules, "tile_yield_rules");
 }

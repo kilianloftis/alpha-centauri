@@ -59,6 +59,8 @@ TEST_CASE("FactionConfigParser loads per-faction directory layout", "[faction][p
     CHECK(pMinimal->identity.descriptiveName == "Minimal");
     CHECK(pMinimal->identity.noun == "Minimal");
     CHECK(pMinimal->identity.adjective == "Minimal");
+    CHECK(pMinimal->identity.participatesInCouncil);
+    CHECK(pComplete->identity.participatesInCouncil);
     CHECK(pMinimal->leader.name == "Leader");
     CHECK(pMinimal->leader.title.empty());
     CHECK_FALSE(pMinimal->ai.wealth);
@@ -103,6 +105,32 @@ TEST_CASE("FactionConfigParser throws when required files are missing", "[factio
         CHECK(std::string(e.what()) == "Required faction config file missing: "
                                        + (factionDir / "leader.json").string());
     }
+
+    std::filesystem::remove_all(tempDir);
+}
+
+TEST_CASE("FactionConfigParser honors participates_in_council false", "[faction][parser]")
+{
+    const std::filesystem::path tempDir =
+        std::filesystem::temp_directory_path() / "ac_faction_parser_council_test";
+    std::filesystem::remove_all(tempDir);
+    const std::filesystem::path factionDir = tempDir / "alien";
+    std::filesystem::create_directories(factionDir);
+
+    std::ofstream(factionDir / "identity.json") << R"({
+        "name": "Alien",
+        "participates_in_council": false
+    })";
+    std::ofstream(factionDir / "leader.json") << R"({"name": "X"})";
+    std::ofstream(factionDir / "ai.json") << R"({})";
+    std::ofstream(factionDir / "effects.json") << R"({"effects": []})";
+    std::ofstream(factionDir / "base_names.json") << R"([])";
+    std::ofstream(factionDir / "phrases.json") << R"({})";
+
+    FactionConfigParser parser;
+    const std::vector<FactionConfig_t> configs = parser.ParseConfig(tempDir.string());
+    REQUIRE(configs.size() == 1);
+    CHECK_FALSE(configs.front().identity.participatesInCouncil);
 
     std::filesystem::remove_all(tempDir);
 }

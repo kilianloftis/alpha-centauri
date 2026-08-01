@@ -115,6 +115,26 @@ struct GrantUnitEffect_t
     std::string unitId;
 };
 
+// Instantaneous treasury credit. Council proposals (Salvage Unity Fusion Core) dispatch this
+// via PlanetaryCouncil rather than the building construction path.
+struct GrantEnergyEffect_t
+{
+    int amount = 0;
+};
+
+// Instantaneous world-state mutation applied by PlanetaryCouncil (sea level / climate).
+enum class WorldParameterId_t
+{
+    SeaLevel,
+};
+
+struct WorldParameterEffect_t
+{
+    WorldParameterId_t parameter = WorldParameterId_t::SeaLevel;
+    // Signed delta applied when the effect fires (negative = cooling / falling seas).
+    int amount = 0;
+};
+
 enum class TileSelectorKind_t
 {
     BaseTile,
@@ -205,6 +225,8 @@ using EffectVariant_t = std::variant<
     GrantBuildingEffect_t,
     GrantTechEffect_t,
     GrantUnitEffect_t,
+    GrantEnergyEffect_t,
+    WorldParameterEffect_t,
     StatModifierEffect_t,
     TileResourceCapEffect_t,
     RuleFlagEffect_t,
@@ -300,6 +322,7 @@ enum class EffectSourceKind_t
     SocialPolicy,
     SocialRating,
     Faction,
+    CouncilProposal,
 };
 
 } // namespace ac

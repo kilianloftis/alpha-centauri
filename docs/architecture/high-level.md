@@ -80,6 +80,13 @@ graph TB
         CollectActiveEffects[CollectActiveEffects]
     end
 
+    subgraph "Planetary Council System"
+        PlanetaryCouncil[PlanetaryCouncil<br/>voting state machine]
+        CouncilEffects[CouncilEffects<br/>active-effect store]
+        CouncilOutcomeApplier[CouncilOutcomeApplier<br/>game mutation]
+        CouncilProposalRegistry[CouncilProposalRegistry]
+    end
+
     subgraph "Configuration"
         TurnStagesConfig[config/turn_stages.json]
         TileBonusConfigFile[config/tile_bonuses.json]
@@ -150,6 +157,13 @@ graph TB
     Faction --> Signal
     TurnProcessor --> Signal
 
+    GameState --> PlanetaryCouncil
+    PlanetaryCouncil --> CouncilEffects
+    PlanetaryCouncil --> CouncilOutcomeApplier
+    PlanetaryCouncil --> CouncilProposalRegistry
+    PlanetaryCouncil --> Signal
+    CouncilEffects --> ActiveEffect
+
     BaseDisplay --> Graphics
     BaseDisplay --> Base
     PopulationDisplay --> Graphics
@@ -190,6 +204,10 @@ graph TB
     style EffectConfig fill:#ffd,stroke:#333,stroke-width:3px
     style ActiveEffect fill:#fbf,stroke:#333,stroke-width:3px
     style CollectActiveEffects fill:#bfb,stroke:#333,stroke-width:3px
+    style PlanetaryCouncil fill:#f9f,stroke:#333,stroke-width:3px
+    style CouncilEffects fill:#fbf,stroke:#333,stroke-width:2px
+    style CouncilOutcomeApplier fill:#fbf,stroke:#333,stroke-width:2px
+    style CouncilProposalRegistry fill:#bbf,stroke:#333,stroke-width:2px
     style BaseDisplay fill:#bfb,stroke:#333,stroke-width:2px
     style PopulationDisplay fill:#bfb,stroke:#333,stroke-width:2px
     style WorldDisplay fill:#bfb,stroke:#333,stroke-width:2px
@@ -341,6 +359,18 @@ graph TB
   - `EffectConfig_t` is stored inside `BuildingConfig_t` and will eventually be stored in `SocialPolicyConfig_t`.
   - `CollectActiveEffects` reads from `Faction` (bases and social engineering manager).
 - **Details**: See `docs/architecture/effects-system.md` for detailed architecture
+
+### Planetary Council System
+- **Purpose**: Runtime Planetary Council — proposals, voting, the Planetary Governor, and the continuous world law the council keeps in force.
+- **Components**:
+  - `PlanetaryCouncil`: The vote lifecycle (propose → vote/veto → resolve), fixed membership, governorship, and active-proposal set. Owned by `GameState` (`std::unique_ptr`); exposes `OnProposalOpened` / `OnResolved` signals for the UI.
+  - `CouncilEffects`: Store for the continuous `ActiveEffect_t`s the council projects — world-global effects from proposals in force, plus the governor's faction-global effects.
+  - `CouncilOutcomeApplier`: Applies a passed proposal's outward mutations (energy grants, governor infiltration); world-parameter outcomes are deferred to `WorldEvents`.
+  - `CouncilProposalRegistry`: Proposal definitions loaded/validated from `config/council/`.
+- **Dependencies**:
+  - `GameState` owns the council and folds `CouncilEffects` output into the faction effect pool
+  - Reads `Faction` population/effects, `DiplomacyLedger` (commlinks/infiltration), and `ResearchManager` (tech gating)
+- **Details**: See `docs/architecture/council-system.md` for detailed architecture
 
 ### UI Components
 - **Purpose**: Display components that render game information using the Graphics interface

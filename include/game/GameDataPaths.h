@@ -27,6 +27,8 @@ struct GameDataPaths
     std::string tileYieldRules = "config/tile_yield_rules.json";
     std::string moraleLevels = "config/morale_levels.json";
     std::string probeActions = "config/probe_actions.json";
+    std::string councilProposals = "config/council/proposals.json";
+    std::string councilRules = "config/council/rules.json";
 };
 
 } // namespace ac

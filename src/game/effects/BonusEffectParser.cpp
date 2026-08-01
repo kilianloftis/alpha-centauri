@@ -36,6 +36,9 @@ StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "growth_rate")             return StatId_t::GrowthRate;
     if (rStat == "tech_cost")               return StatId_t::TechCost;
     if (rStat == "moisture_tier")           return StatId_t::MoistureTier;
+    if (rStat == "commerce_rate")           return StatId_t::CommerceRate;
+    if (rStat == "council_votes")          return StatId_t::CouncilVotes;
+    if (rStat == "commerce_energy_bonus")   return StatId_t::CommerceEnergyBonus;
     throw std::runtime_error("Unknown stat id: '" + rStat + "'");
 }
 
@@ -61,6 +64,7 @@ RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "probe_subversion_immune")     return RuleFlagId_t::ProbeSubversionImmune;
     if (rFlag == "blocks_probe_teams")          return RuleFlagId_t::BlocksProbeTeams;
     if (rFlag == "ignores_probe_block")         return RuleFlagId_t::IgnoresProbeBlock;
+    if (rFlag == "atrocities_forbidden")        return RuleFlagId_t::AtrocitiesForbidden;
     throw std::runtime_error("Unknown rule flag id: '" + rFlag + "'");
 }
 
@@ -314,6 +318,31 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
         if (grantUnit.unitId.empty())
             throw std::runtime_error("GrantUnit effect missing required 'unit_id'");
         effect.effect = grantUnit;
+    }
+    else if (typeStr == "GrantEnergy")
+    {
+        GrantEnergyEffect_t grantEnergy;
+        grantEnergy.amount = static_cast<int>(ParseNumber(parameters, "amount", 0.0));
+        if (grantEnergy.amount < 0)
+        {
+            throw std::runtime_error("GrantEnergy 'amount' must be >= 0");
+        }
+        effect.effect = grantEnergy;
+    }
+    else if (typeStr == "WorldParameter")
+    {
+        WorldParameterEffect_t worldParam;
+        const std::string paramStr = parameters.value("parameter", "");
+        if (paramStr == "sea_level")
+        {
+            worldParam.parameter = WorldParameterId_t::SeaLevel;
+        }
+        else
+        {
+            throw std::runtime_error("Unknown WorldParameter '" + paramStr + "'");
+        }
+        worldParam.amount = static_cast<int>(ParseNumber(parameters, "amount", 0.0));
+        effect.effect = worldParam;
     }
     else if (typeStr == "StatModifier")
     {

@@ -81,6 +81,9 @@ static_assert(KindFor(StatId_t::ProbeSuccessScale) == StatKind_t::PureMultiplier
 static_assert(KindFor(StatId_t::PositiveMoraleScale) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::GrowthRate) == StatKind_t::RawScaled);
 static_assert(KindFor(StatId_t::MoistureTier) == StatKind_t::RawScaled);
+static_assert(KindFor(StatId_t::CommerceRate) == StatKind_t::PureMultiplier);
+static_assert(KindFor(StatId_t::CouncilVotes) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::CommerceEnergyBonus) == StatKind_t::Additive);
 
 // SeedFor derives the context-free seed from the kind; RawScaled stats have none (SeedFor
 // throws for them, which is not constexpr-evaluable, so no pin here).

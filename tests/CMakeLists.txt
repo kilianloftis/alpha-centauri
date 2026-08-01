@@ -64,6 +64,7 @@ add_executable(effects-tests
     game/TurnProcessorTests.cpp
     game/GameSettingsTests.cpp
     game/RequiredTechValidatorTests.cpp
+    game/PlanetaryCouncilTests.cpp
     lib/SignalTests.cpp
 )
 

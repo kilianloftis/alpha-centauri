@@ -103,10 +103,10 @@ TEST_CASE("SampleRockiness respects weight bands", "[worldgen][rockiness]")
     CHECK(SampleRockiness(weights, 0.999f) == Rockiness_t::Rocky);
 }
 
-TEST_CASE("SampleRockiness falls back to Flat when all weights are zero",
-          "[worldgen][rockiness]")
+TEST_CASE("SampleRockiness throws when all weights are zero", "[worldgen][rockiness]")
 {
-    CHECK(SampleRockiness(RockinessWeights_t{0.0f, 0.0f, 0.0f}, 0.5f) == Rockiness_t::Flat);
+    CHECK_THROWS_WITH(SampleRockiness(RockinessWeights_t{0.0f, 0.0f, 0.0f}, 0.5f),
+                      Catch::Matchers::ContainsSubstring("Invalid rockiness weights"));
 }
 
 TEST_CASE("ParseErosiveForces accepts case-insensitive names", "[worldgen][rockiness]")

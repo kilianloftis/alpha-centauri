@@ -4,6 +4,7 @@
 #include "game/faction/base/BaseTypes.h"
 #include <map>
 #include <string>
+#include <vector>
 
 namespace ac
 {
@@ -39,6 +40,8 @@ public:
 
     bool AreKnown(FactionId_t a, FactionId_t b) const;
     void SetKnown(FactionId_t a, FactionId_t b, bool known = true);
+    // Establish mutual known-contact (commlinks) between every pair in rFactionIds.
+    void SetKnown(const std::vector<FactionId_t>& rFactionIds);
 
     int GetGrievance(FactionId_t holder, FactionId_t against) const;
     void SetGrievance(FactionId_t holder, FactionId_t against, int value);

@@ -1,0 +1,151 @@
+[
+  {
+    "id": "un_charter",
+    "name": "U.N. Charter",
+    "description": "Prohibition on the use of atrocity",
+    "initially_active": true,
+    "proposable": false,
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "WorldGlobal",
+        "persistence": "Continuous",
+        "parameters": { "flag": "atrocities_forbidden" }
+      }
+    ]
+  },
+  {
+    "id": "salvage_unity_fusion_core",
+    "name": "Salvage Unity Fusion Core",
+    "description": "+500 energy credits for each Council member",
+    "vote_weight": "representative",
+    "required_tech": "orbital_spaceflight",
+    "effects": [
+      {
+        "type": "GrantEnergy",
+        "scope": "FactionGlobal",
+        "persistence": "Instantaneous",
+        "parameters": { "amount": 500 }
+      }
+    ]
+  },
+  {
+    "id": "global_trade_pact",
+    "name": "Global Trade Pact",
+    "description": "Commerce rates doubled planet wide",
+    "vote_weight": "representative",
+    "required_tech": "planetary_economics",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "WorldGlobal",
+        "persistence": "Continuous",
+        "parameters": { "stat": "commerce_rate", "amount": 100, "op": "AddPercent" }
+      }
+    ]
+  },
+  {
+    "id": "repeal_trade_pact",
+    "name": "Repeal Trade Pact",
+    "description": "Commerce rates return to normal",
+    "vote_weight": "representative",
+    "required_proposals": ["global_trade_pact"],
+    "repeals": ["global_trade_pact"],
+    "effects": []
+  },
+  {
+    "id": "launch_solar_shade",
+    "name": "Launch Solar Shade",
+    "description": "Global cooling; sea levels fall",
+    "vote_weight": "representative",
+    "required_tech": "advanced_spaceflight",
+    "effects": [
+      {
+        "type": "WorldParameter",
+        "scope": "WorldGlobal",
+        "persistence": "Instantaneous",
+        "parameters": { "parameter": "sea_level", "amount": -1 }
+      }
+    ]
+  },
+  {
+    "id": "increase_solar_shade",
+    "name": "Increase Solar Shade",
+    "description": "Global cooling; sea levels drop",
+    "vote_weight": "representative",
+    "required_tech": "advanced_spaceflight",
+    "required_proposals": ["launch_solar_shade"],
+    "repeatable": true,
+    "effects": [
+      {
+        "type": "WorldParameter",
+        "scope": "WorldGlobal",
+        "persistence": "Instantaneous",
+        "parameters": { "parameter": "sea_level", "amount": -1 }
+      }
+    ]
+  },
+  {
+    "id": "melt_polar_caps",
+    "name": "Melt Polar Caps",
+    "description": "Global warming; sea levels rise",
+    "vote_weight": "representative",
+    "required_tech": "advanced_ecological_engineering",
+    "repeatable": true,
+    "effects": [
+      {
+        "type": "WorldParameter",
+        "scope": "WorldGlobal",
+        "persistence": "Instantaneous",
+        "parameters": { "parameter": "sea_level", "amount": 1 }
+      }
+    ]
+  },
+  {
+    "id": "repeal_un_charter",
+    "name": "Repeal U.N. Charter",
+    "description": "Prohibition on the use of atrocity lifted",
+    "vote_weight": "representative",
+    "required_tech": "advanced_military_algorithms",
+    "requires_rule_flags": ["atrocities_forbidden"],
+    "repeals": ["un_charter", "reinstate_un_charter"],
+    "effects": []
+  },
+  {
+    "id": "reinstate_un_charter",
+    "name": "Reinstate U.N. Charter",
+    "description": "Prohibition on the use of atrocity",
+    "vote_weight": "representative",
+    "forbids_rule_flags": ["atrocities_forbidden"],
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "WorldGlobal",
+        "persistence": "Continuous",
+        "parameters": { "flag": "atrocities_forbidden" }
+      }
+    ]
+  },
+  {
+    "id": "elect_planetary_governor",
+    "name": "Elect Planetary Governor",
+    "description": "Elect a Planetary Governor from the two most populous factions",
+    "kind": "election",
+    "vote_weight": "population",
+    "election_outcome": "planetary_governor",
+    "repeatable": true,
+    "effects": []
+  },
+  {
+    "id": "elect_supreme_leader",
+    "name": "Elect Supreme Leader",
+    "description": "Elect a Supreme Leader; winner achieves diplomatic victory",
+    "kind": "election",
+    "vote_weight": "population",
+    "vote_threshold": 0.75,
+    "election_outcome": "supreme_leader",
+    "required_tech": "mind_machine_interface",
+    "repeatable": true,
+    "effects": []
+  }
+]

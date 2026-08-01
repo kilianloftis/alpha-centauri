@@ -275,6 +275,9 @@ void Engine::Initialize_()
     // Bases were founded before AddFaction wired OnBaseListChanged, so rebuild once now.
     m_pGameState->RebuildTerritory();
 
+    m_pGameState->CreatePlanetaryCouncil(*m_gameDataContext->councilProposalRegistry,
+                                         *m_gameDataContext->councilRules);
+
     // Temporary test Sensors: one in each faction's territory (south of their starting base).
     {
         WorldMap& rMap = m_pGameState->GetWorldMap();

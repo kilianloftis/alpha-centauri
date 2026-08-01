@@ -132,5 +132,24 @@
     "category": "build",
     "cost": 90,
     "prerequisites": ["ecological_engineering"]
+  },
+  {
+    "id": "orbital_spaceflight",
+    "name": "Orbital Spaceflight",
+    "category": "discover",
+    "cost": 100
+  },
+  {
+    "id": "planetary_economics",
+    "name": "Planetary Economics",
+    "category": "build",
+    "cost": 110
+  },
+  {
+    "id": "advanced_spaceflight",
+    "name": "Advanced Spaceflight",
+    "category": "discover",
+    "cost": 120,
+    "prerequisites": ["orbital_spaceflight"]
   }
 ]

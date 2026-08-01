@@ -89,6 +89,7 @@ FactionIdentityConfig FactionConfigParser::ParseIdentity(const nlohmann::json& j
     identity.descriptiveName = j.value("descriptive_name", identity.name);
     identity.noun = j.value("noun", identity.name);
     identity.adjective = j.value("adjective", identity.name);
+    identity.participatesInCouncil = j.value("participates_in_council", true);
     return identity;
 }
 

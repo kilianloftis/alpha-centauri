@@ -14,6 +14,9 @@
 #include "game/units/ProbeActionExecutor.h"
 #include "game/units/Pathfinder.h"
 #include "game/units/Unit.h"
+#include "game/council/PlanetaryCouncil.h"
+#include "game/council/CouncilProposalRegistry.h"
+#include "game/council/CouncilRulesConfig.h"
 #include "lib/EventBus.h"
 #include <random>
 #include <stdexcept>
@@ -123,6 +126,14 @@ std::vector<ActiveEffect_t> GameState::CollectWorldEffects(const Faction& rExclu
             FilterByScope(pFaction->GetActiveEffects().effects, EffectScope_t::WorldGlobal);
         result.insert(result.end(), worldEffects.begin(), worldEffects.end());
     }
+    if (m_pCouncil)
+    {
+        const std::vector<ActiveEffect_t> councilWorld = m_pCouncil->CollectWorldEffects();
+        result.insert(result.end(), councilWorld.begin(), councilWorld.end());
+        const std::vector<ActiveEffect_t> councilFaction =
+            m_pCouncil->CollectFactionEffects(rExclude);
+        result.insert(result.end(), councilFaction.begin(), councilFaction.end());
+    }
     return result;
 }
 
@@ -167,6 +178,30 @@ Faction& GameState::AddFaction(std::unique_ptr<Faction> pFaction)
 int GameState::GetNumFactions() const
 {
     return static_cast<int>(m_factions.size());
+}
+
+Faction* GameState::FindFaction(FactionId_t factionId)
+{
+    for (auto& pFaction : m_factions)
+    {
+        if (pFaction->GetFactionId() == factionId)
+        {
+            return pFaction.get();
+        }
+    }
+    return nullptr;
+}
+
+const Faction* GameState::FindFaction(FactionId_t factionId) const
+{
+    for (const auto& pFaction : m_factions)
+    {
+        if (pFaction->GetFactionId() == factionId)
+        {
+            return pFaction.get();
+        }
+    }
+    return nullptr;
 }
 
 const Faction* GameState::GetPlayerFaction() const
@@ -308,6 +343,35 @@ FirstContactResolver& GameState::GetFirstContactResolver()
 const FirstContactResolver& GameState::GetFirstContactResolver() const
 {
     return *m_pFirstContact;
+}
+
+void GameState::CreatePlanetaryCouncil(const CouncilProposalRegistry& rRegistry,
+                                       const CouncilRulesConfig_t& rRules)
+{
+    if (m_pCouncil)
+    {
+        throw std::logic_error("GameState::CreatePlanetaryCouncil: council already exists");
+    }
+
+    std::vector<Faction*> members;
+    for (Faction& rFaction : Factions())
+    {
+        if (rFaction.GetDefinition().identity.participatesInCouncil)
+        {
+            members.push_back(&rFaction);
+        }
+    }
+    m_pCouncil = std::make_unique<PlanetaryCouncil>(rRegistry, rRules, std::move(members));
+}
+
+PlanetaryCouncil* GameState::GetPlanetaryCouncil()
+{
+    return m_pCouncil.get();
+}
+
+const PlanetaryCouncil* GameState::GetPlanetaryCouncil() const
+{
+    return m_pCouncil.get();
 }
 
 void GameState::RebuildTerritory()

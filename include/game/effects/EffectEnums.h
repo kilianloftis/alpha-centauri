@@ -59,7 +59,15 @@ enum class StatId_t
     TechCost,
 
     // Tile terrain mutation (resolved back into Tile::SetMoisture, not a runtime-queried stat)
-    MoistureTier
+    MoistureTier,
+
+    // Planetary commerce income multiplier (PureMultiplier; Global Trade Pact uses AddPercent).
+    CommerceRate,
+    // Extra council votes (Additive). Population elections seed with total population;
+    // representative elections seed with 1. Buildings / projects / faction bonuses modify this.
+    CouncilVotes,
+    // Bonus energy credited per commerce transaction at each base (Additive; Planetary Governor).
+    CommerceEnergyBonus
     // TODO: add more stats as they are defined
 };
 
@@ -105,12 +113,15 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::StartingExperience:
         case StatId_t::MoraleBonus:
         case StatId_t::ProbeDefense:
-        case StatId_t::TechCost:             return StatKind_t::Additive;
+        case StatId_t::TechCost:
+        case StatId_t::CouncilVotes:
+        case StatId_t::CommerceEnergyBonus:  return StatKind_t::Additive;
         case StatId_t::CostMultiplier:
         case StatId_t::ProbeActionCost:
         case StatId_t::ProbeFailureScale:
         case StatId_t::ProbeSuccessScale:
-        case StatId_t::PositiveMoraleScale:  return StatKind_t::PureMultiplier;
+        case StatId_t::PositiveMoraleScale:
+        case StatId_t::CommerceRate:         return StatKind_t::PureMultiplier;
         case StatId_t::GrowthRate:
         case StatId_t::MoistureTier:         return StatKind_t::RawScaled;
     }
@@ -190,7 +201,10 @@ enum class RuleFlagId_t
     // Map visibility. RemoveShroud permanently explores the map (satellite); RemoveFog
     // clears current fog while active (secret project). See VisibilityRules helpers.
     RemoveShroud,
-    RemoveFog
+    RemoveFog,
+
+    // U.N. Charter: atrocities are illegal while this flag is in force planet-wide.
+    AtrocitiesForbidden
 };
 
 } // namespace ac

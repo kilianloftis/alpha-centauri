@@ -98,6 +98,9 @@ public:
     auto Bases() const { return DerefView(m_bases); }
     size_t GetBaseCount() const { return m_bases.size(); }
 
+    // Sum of population size across all bases.
+    int TotalPopulation() const;
+
     // Base with the Headquarters RuleFlag, or nullptr if none.
     BaseManager* GetHeadquarters();
     const BaseManager* GetHeadquarters() const;

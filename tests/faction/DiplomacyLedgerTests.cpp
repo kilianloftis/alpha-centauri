@@ -73,6 +73,16 @@ TEST_CASE("Known contact is symmetric", "[diplomacy]")
     CHECK_FALSE(ledger.AreKnown(1, 2));
 }
 
+TEST_CASE("SetKnown among many factions links every pair", "[diplomacy]")
+{
+    DiplomacyLedger ledger;
+    ledger.SetKnown({1, 2, 3});
+    CHECK(ledger.AreKnown(1, 2));
+    CHECK(ledger.AreKnown(1, 3));
+    CHECK(ledger.AreKnown(2, 3));
+    CHECK_FALSE(ledger.AreKnown(1, 4));
+}
+
 TEST_CASE("Grievance and infiltration are directed", "[diplomacy]")
 {
     DiplomacyLedger ledger;

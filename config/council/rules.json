@@ -1,0 +1,12 @@
+{
+  "governor_propose_interval_years": 10,
+  "member_propose_interval_years": 20,
+  "governor_effects": [
+    {
+      "type": "StatModifier",
+      "scope": "FactionGlobal",
+      "persistence": "Continuous",
+      "parameters": { "stat": "commerce_energy_bonus", "amount": 1, "op": "Add" }
+    }
+  ]
+}

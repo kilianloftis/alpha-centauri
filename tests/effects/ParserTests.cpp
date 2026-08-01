@@ -40,6 +40,9 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(BonusEffectParser::ParseStatId("positive_morale_scale") == StatId_t::PositiveMoraleScale);
     CHECK(BonusEffectParser::ParseStatId("growth_rate") == StatId_t::GrowthRate);
     CHECK(BonusEffectParser::ParseStatId("moisture_tier") == StatId_t::MoistureTier);
+    CHECK(BonusEffectParser::ParseStatId("commerce_rate") == StatId_t::CommerceRate);
+    CHECK(BonusEffectParser::ParseStatId("council_votes") == StatId_t::CouncilVotes);
+    CHECK(BonusEffectParser::ParseStatId("commerce_energy_bonus") == StatId_t::CommerceEnergyBonus);
 
     CHECK_THROWS(BonusEffectParser::ParseStatId("not_a_stat"));
     CHECK_THROWS(BonusEffectParser::ParseStatId(""));
@@ -96,6 +99,8 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
     CHECK(BonusEffectParser::ParseRuleFlagId("prevents_disengage") == RuleFlagId_t::PreventsDisengage);
     CHECK(BonusEffectParser::ParseRuleFlagId("remove_shroud") == RuleFlagId_t::RemoveShroud);
     CHECK(BonusEffectParser::ParseRuleFlagId("remove_fog") == RuleFlagId_t::RemoveFog);
+    CHECK(BonusEffectParser::ParseRuleFlagId("atrocities_forbidden")
+          == RuleFlagId_t::AtrocitiesForbidden);
     CHECK_THROWS(BonusEffectParser::ParseRuleFlagId("hover"));
     CHECK_THROWS(BonusEffectParser::ParseRuleFlagId("sea"));
 

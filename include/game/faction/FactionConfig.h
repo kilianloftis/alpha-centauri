@@ -14,6 +14,9 @@ struct FactionIdentityConfig
     std::string descriptiveName;
     std::string noun;
     std::string adjective;
+    // When false, the faction cannot sit in / convene the Planetary Council (e.g. aliens).
+    // Omitted in JSON defaults to true.
+    bool participatesInCouncil = true;
 };
 
 struct LeaderConfig

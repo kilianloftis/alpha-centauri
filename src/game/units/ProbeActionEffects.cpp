@@ -30,16 +30,6 @@ namespace ac
 namespace
 {
 
-int FactionTotalPopulation_(const Faction& rFaction)
-{
-    int total = 0;
-    for (const BaseManager& rBase : rFaction.Bases())
-    {
-        total += rBase.GetPopulation().GetSize();
-    }
-    return total;
-}
-
 bool ApplyInfiltrate_(Faction& rActor, BaseManager& rBase, GameState& rGameState,
                       ProbeActionResult_t& rResult)
 {
@@ -92,7 +82,7 @@ int StealEnergyAmount_(const BaseManager& rBase, const Faction& rTarget, int mor
         return 0;
     }
     const int pop = rBase.GetPopulation().GetSize();
-    const int factionPop = FactionTotalPopulation_(rTarget);
+    const int factionPop = rTarget.TotalPopulation();
     const int share = energy * pop / (factionPop + 1);
     const int minSteal = std::max(0, (share * std::max(1, morale)) / 10);
     return std::clamp(minSteal + std::max(0, (share - minSteal) / 2), 0, energy);

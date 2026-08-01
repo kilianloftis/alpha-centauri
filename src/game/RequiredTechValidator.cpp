@@ -14,6 +14,7 @@
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitSlotConfig.h"
 #include "game/units/UnitSlotRegistry.h"
+#include "game/council/CouncilProposalRegistry.h"
 
 #include <stdexcept>
 
@@ -71,6 +72,10 @@ void ValidateRequiredTechReferences(const GameDataContext& rData)
     if (rData.popTypeRegistry)
     {
         ValidateRequiredTech_(rData.popTypeRegistry->GetAll(), rTechs, "Pop type");
+    }
+    if (rData.councilProposalRegistry)
+    {
+        ValidateRequiredTech_(rData.councilProposalRegistry->GetAll(), rTechs, "Council proposal");
     }
 }
 

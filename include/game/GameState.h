@@ -27,6 +27,9 @@ class TileEffectsContext;
 class UnitComponentRegistry;
 class EventBus;
 class GameSettings;
+class CouncilProposalRegistry;
+struct CouncilRulesConfig_t;
+class PlanetaryCouncil;
 
 class GameState
 {
@@ -42,6 +45,12 @@ public:
               GameSettings& rSettings,
               const MoraleCalculator& rMorale);
     ~GameState();
+
+    // Build the Planetary Council from factions currently in this GameState that
+    // participate in the council. Call after the starting factions have been added.
+    // Registry/rules must outlive this GameState. Throws if already created.
+    void CreatePlanetaryCouncil(const CouncilProposalRegistry& rRegistry,
+                                const CouncilRulesConfig_t& rRules);
 
     const MoraleCalculator& GetMoraleCalculator() const;
 
@@ -62,6 +71,9 @@ public:
     // Iterate factions by reference without exposing the owning unique_ptrs.
     auto Factions() { return DerefView(m_factions); }
     auto Factions() const { return DerefView(m_factions); }
+    // nullptr when no faction with that id has been added.
+    Faction* FindFaction(FactionId_t factionId);
+    const Faction* FindFaction(FactionId_t factionId) const;
     // Returns the faction with IsPlayerControlled() set, or nullptr if none has been added yet.
     const Faction* GetPlayerFaction() const;
     Faction* GetPlayerFaction();
@@ -87,7 +99,9 @@ public:
     const BaseManager* FindBaseAt(int tileX, int tileY) const;
 
     // WorldGlobal lane: every faction's WorldGlobal-scoped active effects, excluding
-    // rExclude's own (a faction's own pool already contains its WorldGlobal effects).
+    // rExclude's own (a faction's own pool already contains its WorldGlobal effects),
+    // plus Planetary Council WorldGlobal effects and any FactionGlobal council effects
+    // that apply to rExclude (e.g. Planetary Governor commerce energy).
     // Turn stages pass this into Faction::ProduceBaseResources / ApplyBaseGrowth so a
     // WorldGlobal effect declared by one faction reaches all of them.
     std::vector<ActiveEffect_t> CollectWorldEffects(const Faction& rExclude) const;
@@ -107,6 +121,10 @@ public:
 
     FirstContactResolver& GetFirstContactResolver();
     const FirstContactResolver& GetFirstContactResolver() const;
+
+    // Null until CreatePlanetaryCouncil (most unit-test fixtures never create one).
+    PlanetaryCouncil* GetPlanetaryCouncil();
+    const PlanetaryCouncil* GetPlanetaryCouncil() const;
 
     // Recompute world territory from every faction's bases. Also wired as each faction's
     // OnBaseListChanged handler so founding a base keeps ownership current.
@@ -144,6 +162,7 @@ private:
     std::mt19937 m_rng;
     std::unique_ptr<UnitOrderExecutor> m_pUnitOrderExecutor;
     std::unique_ptr<ProbeActionExecutor> m_pProbeActions;
+    std::unique_ptr<PlanetaryCouncil> m_pCouncil;
     IdAllocator m_factionIdAllocator;
     IdAllocator m_baseIdAllocator;
     IdAllocator m_unitIdAllocator;
