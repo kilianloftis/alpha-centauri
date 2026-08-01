@@ -19,6 +19,19 @@ class UnitPositionIndex;
 
 using UnitId_t = int;
 
+// Non-recomputable state needed to destroy a unit and rebuild it under a new owner.
+// Home / produced-at are omitted — foreign home claims are invalid after transfer.
+struct UnitSnapshot_t
+{
+    UnitId_t unitId = 0;
+    const UnitDesign* pDesign = nullptr;
+    const Tile* pTile = nullptr;
+    int currentHp = 0;
+    int currentFuel = 0;
+    int xp = 0;
+    int moveFragmentsRemaining = 0;
+};
+
 class Unit
 {
 public:
@@ -30,20 +43,24 @@ public:
     // (WorldMap's unit IdAllocator).
     // pProducedAt is the base that built this unit (train bonuses). Distinct from pHomeBase;
     // when null, defaults to pHomeBase so typical CreateUnit(home) keeps both aligned.
-    // rMoraleConfig is game-wide static data (GameDataContext) used to seed XP and clamp SetXp.
+    // rMorale is the game-wide calculator owned by GameDataContext (supplied by the owning
+    // UnitManager); used here only to seed intrinsic XP and clamp SetXp.
     Unit(UnitId_t unitId,
          const UnitDesign& rDesign,
          UnitPositionIndex& rPositions,
          const Tile& rTile,
          BaseManager* pHomeBase,
          Faction& rFaction,
-         const MoraleConfig_t& rMoraleConfig,
+         const MoraleCalculator& rMorale,
          BaseManager* pProducedAt = nullptr);
     ~Unit();
 
     UnitId_t GetUnitId() const;
 
     const UnitDesign& GetDesign() const;
+
+    // Capture identity and live combat/move state for transfer.
+    UnitSnapshot_t CaptureSnapshot() const;
 
     // Live-unit stat / flag resolution (design effects + FactionUnits). Prefer the free
     // ResolveStat / ResolveFlag overloads; these forward to them.
@@ -123,7 +140,7 @@ private:
     // Production base id (looked up via GetProducedAtBase); independent of home claim.
     std::optional<int> m_producedAtBaseId;
     Faction& m_rFaction;
-    MoraleCalculator m_morale;
+    const MoraleCalculator& m_rMorale;
 
     int m_currentHp;
     int m_currentFuel;

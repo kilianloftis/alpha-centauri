@@ -22,7 +22,9 @@
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitSlotRegistry.h"
 #include "game/effects/TileYieldRulesConfigParser.h"
+#include "game/units/MoraleCalculator.h"
 #include "game/units/MoraleConfigParser.h"
+#include "game/units/ProbeActionConfigParser.h"
 #include "lib/LuaRuntime.h"
 
 #include <stdexcept>
@@ -93,6 +95,10 @@ void LoadGameData(GameDataContext& rData, const GameDataPaths& rPaths)
     rData.moraleConfig =
         std::make_unique<MoraleConfig_t>(moraleParser.ParseConfig(rPaths.moraleLevels));
 
+    ProbeActionConfigParser probeParser;
+    rData.probeActionsConfig =
+        std::make_unique<ProbeActionsConfig_t>(probeParser.ParseConfig(rPaths.probeActions));
+
     // Cross-config id checks — only safe once every registry above is loaded.
     ValidateEffectReferences(rData);
     ValidateRequiredTechReferences(rData);
@@ -130,6 +136,8 @@ void LoadGameData(GameDataContext& rData, const GameDataPaths& rPaths)
         techCostParser.ParseConfig(rPaths.techCost, *rData.luaRuntime));
     rData.techCostCalculator =
         std::make_unique<TechCostCalculator>(*rData.techCostConfig, *rData.luaRuntime);
+
+    rData.moraleCalculator = std::make_unique<MoraleCalculator>(*rData.moraleConfig);
 }
 
 } // namespace ac

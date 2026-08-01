@@ -108,7 +108,7 @@ TEST_CASE("TurnProcessor throws instead of silently skipping a stage id missing 
     actest::WorldFixture world;
     GameSettings settings;
     GameState gameState(std::make_unique<WorldMap>(3, 3), world.improvements, nullptr, settings,
-                        *world.moraleConfig);
+                        *world.dataContext.moraleCalculator);
 
     TurnProcessor processor(GlobalTurnStageRegistry_t{}, PerFactionTurnStageRegistry_t{},
                              {"NoSuchStage"});
@@ -125,7 +125,7 @@ TEST_CASE("TurnProcessor executes stages until a yield, including per-faction st
 
     GameSettings settings;
     GameState gameState(std::make_unique<WorldMap>(3, 3), fixtures.improvements, nullptr, settings,
-                        *fixtures.moraleConfig);
+                        *fixtures.dataContext.moraleCalculator);
     gameState.AddFaction(std::move(fixtures.factions[0]));
     gameState.AddFaction(std::move(fixtures.factions[1]));
 
@@ -158,7 +158,7 @@ TEST_CASE("TurnProcessor re-enters a yielding stage on the next Advance",
     actest::WorldFixture world;
     GameSettings settings;
     GameState gameState(std::make_unique<WorldMap>(3, 3), world.improvements, nullptr, settings,
-                        *world.moraleConfig);
+                        *world.dataContext.moraleCalculator);
 
     GlobalTurnStageRegistry_t global;
     auto pStage = std::make_unique<YieldOnceGlobalStage>();
@@ -193,7 +193,7 @@ TEST_CASE("TurnProcessor wraps to the start of the stage order after the last st
     actest::WorldFixture world;
     GameSettings settings;
     GameState gameState(std::make_unique<WorldMap>(3, 3), world.improvements, nullptr, settings,
-                        *world.moraleConfig);
+                        *world.dataContext.moraleCalculator);
 
     // Yields once, then Continues and resets so the next cycle yields again.
     class YieldEachCycleStage : public GlobalTurnStage
@@ -248,7 +248,7 @@ TEST_CASE("TurnProcessor resumes the same faction after a per-faction stage yiel
 
     GameSettings settings;
     GameState gameState(std::make_unique<WorldMap>(3, 3), fixtures.improvements, nullptr, settings,
-                        *fixtures.moraleConfig);
+                        *fixtures.dataContext.moraleCalculator);
     gameState.AddFaction(std::move(fixtures.factions[0]));
     gameState.AddFaction(std::move(fixtures.factions[1]));
 
@@ -280,7 +280,7 @@ TEST_CASE("TurnProcessor throws if the stage order has no yielding stage",
     actest::WorldFixture world;
     GameSettings settings;
     GameState gameState(std::make_unique<WorldMap>(3, 3), world.improvements, nullptr, settings,
-                        *world.moraleConfig);
+                        *world.dataContext.moraleCalculator);
 
     GlobalTurnStageRegistry_t global;
     global["OnlyContinue"] = std::make_unique<CountingGlobalStage>();

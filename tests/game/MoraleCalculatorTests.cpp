@@ -43,7 +43,7 @@ TEST_CASE("CombatMoraleAddPercent follows configured level percents", "[morale]"
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
     Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
-    const MoraleCalculator morale(*fixture.dataContext.moraleConfig);
+    const MoraleCalculator& morale = fixture.morale();
 
     unit.SetXp(0);
     CHECK(morale.CombatMoraleAddPercent(unit, {}) == Catch::Approx(-25.0));
@@ -58,7 +58,7 @@ TEST_CASE("DisplayName switches on ForcesPsiCombat", "[morale]")
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
     Unit& conventional = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
-    const MoraleCalculator morale(*fixture.dataContext.moraleConfig);
+    const MoraleCalculator& morale = fixture.morale();
     conventional.SetXp(3);
     CHECK(morale.DisplayName(conventional) == "Hardened");
 }
@@ -70,7 +70,7 @@ TEST_CASE("SE Morale +2 adds defense-in-base morale_bonus only when defending", 
     BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
     Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"}, &base);
     unit.SetXp(2); // Disciplined intrinsic
-    const MoraleCalculator morale(*fixture.dataContext.moraleConfig);
+    const MoraleCalculator& morale = fixture.morale();
 
     const SocialPolicyConfig_t* pPolicy = fixture.socialPolicies().Find("morale_policy");
     REQUIRE(pPolicy);
@@ -93,7 +93,7 @@ TEST_CASE("Low SE Morale halves positive Creche defense bonus", "[morale][se]")
     base.GetBuildingManager().AddBuilding("Childrens_Creche");
     Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"}, &base);
     unit.SetXp(2);
-    const MoraleCalculator morale(*fixture.dataContext.moraleConfig);
+    const MoraleCalculator& morale = fixture.morale();
 
     const SocialPolicyConfig_t* pPolicy = fixture.socialPolicies().Find("low_morale_policy");
     REQUIRE(pPolicy);
@@ -111,7 +111,7 @@ TEST_CASE("Defense floor keeps defender at Green", "[morale]")
     Faction& faction = fixture.MakeFaction();
     Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
     unit.SetXp(0); // Very Green
-    const MoraleCalculator morale(*fixture.dataContext.moraleConfig);
+    const MoraleCalculator& morale = fixture.morale();
 
     const EffectContext_t atkCtx{&unit.GetTile(), CombatRole_t::Attacker};
     const EffectContext_t defCtx{&unit.GetTile(), CombatRole_t::Defender};
@@ -125,7 +125,7 @@ TEST_CASE("ResolveCombatStat applies morale AddPercent", "[morale][combat]")
     Faction& faction = fixture.MakeFaction();
     Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis", "test_weapon"});
     unit.SetXp(4); // Veteran = +25%
-    const MoraleCalculator morale(*fixture.dataContext.moraleConfig);
+    const MoraleCalculator& morale = fixture.morale();
     const EffectContext_t ctx{&unit.GetTile(), CombatRole_t::Attacker};
 
     const int baseAttack = ResolveStat(unit, StatId_t::Attack, ctx);
@@ -138,7 +138,7 @@ TEST_CASE("Promotion: Green always promotes; Elite never", "[morale][promotion]"
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
     Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
-    const MoraleCalculator morale(*fixture.dataContext.moraleConfig);
+    const MoraleCalculator& morale = fixture.morale();
     std::mt19937 rng(1);
 
     unit.SetXp(1);
@@ -169,8 +169,9 @@ TEST_CASE("TryAttack promotes survivor after a kill", "[morale][promotion]")
     MoveCostCalculator moveCosts(fixture.improvements);
     StepEvaluator steps(fixture.map, *fixture.ctx);
     Pathfinder pathfinder(moveCosts, steps, fixture.map);
+    std::mt19937 rng(/*seed*/ 42);
     UnitOrderExecutor orders(moveCosts, steps, fixture.map, *fixture.ctx, pathfinder,
-                             *fixture.dataContext.moraleConfig, /*seed*/ 42);
+                             fixture.morale(), rng);
 
     const int xpBefore = attacker.GetXp();
     auto result = orders.TryAttack(attacker, defender.GetTile());

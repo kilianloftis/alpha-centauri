@@ -24,6 +24,7 @@
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitSlotConfig.h"
 #include "game/units/MovementRules.h"
+#include "game/units/MoraleCalculator.h"
 #include "game/units/MoraleConfig.h"
 #include "game/units/MoraleConfigParser.h"
 #include "game/effects/TileEffectsContext.h"
@@ -50,12 +51,13 @@ struct PopTypeRegistryOnly
 // construction, so the registries must be loaded first — hence the unique_ptr.
 struct WorldFixture
 {
+    // Declared first so it is destroyed last: factions, bases, and units created by the
+    // derived fixtures hold references into it, exactly as in Engine.
+    ac::GameDataContext dataContext;
     ac::WorldMap map;
     ac::ImprovementRegistry improvements;
     ac::UnitComponentRegistry unitComponents;
     std::unique_ptr<ac::TileEffectsContext> ctx;
-    // Game-wide static morale table (same fixture file Engine loads into GameDataContext).
-    std::unique_ptr<ac::MoraleConfig_t> moraleConfig;
 
     explicit WorldFixture(int width = 9, int height = 9)
         : map(width, height)
@@ -63,9 +65,14 @@ struct WorldFixture
         improvements.Load(FixturePath("improvements.json"));
         unitComponents.Load(FixturePath("unit_components.json"));
         ctx = std::make_unique<ac::TileEffectsContext>(map, improvements, &unitComponents);
-        moraleConfig = std::make_unique<ac::MoraleConfig_t>(
+        // Same morale table Engine loads, and the one calculator built from it.
+        dataContext.moraleConfig = std::make_unique<ac::MoraleConfig_t>(
             ac::MoraleConfigParser{}.ParseConfig(FixturePath("morale_levels.json")));
+        dataContext.moraleCalculator =
+            std::make_unique<ac::MoraleCalculator>(*dataContext.moraleConfig);
     }
+
+    ac::MoraleCalculator& morale() const { return *dataContext.moraleCalculator; }
 
     ac::Tile& At(int x, int y) { return *map.GetTile(x, y); }
 };
@@ -78,8 +85,10 @@ struct WorldFixture
 // exactly as in the game.
 struct BaseFixture : WorldFixture
 {
-    ac::GameDataContext dataContext;
     ac::EconomyManager economy; // default 40/50/10 energy split
+    // Stub owner for MakeBase standalone bases (declared before bases so bases destroy first).
+    ac::FactionConfig_t ownerDefinition;
+    std::unique_ptr<ac::Faction> pOwnerFaction;
     std::vector<std::unique_ptr<ac::BaseManager>> bases;
     int nextBaseId = 1;
 
@@ -91,6 +100,9 @@ struct BaseFixture : WorldFixture
         dataContext.popTypeRegistry->Load(FixturePath("pop_types.json"));
         dataContext.growthConfig = std::make_unique<ac::GrowthConfig_t>();
         dataContext.luaRuntime = std::make_unique<ac::LuaRuntime>();
+        ownerDefinition.id = "test_base_owner";
+        pOwnerFaction = std::make_unique<ac::Faction>(
+            /*factionId*/ 1, /*bIsPlayerControlled*/ true, ownerDefinition, dataContext);
     }
 
     ac::BuildingRegistry& buildings() { return *dataContext.buildingRegistry; }
@@ -101,7 +113,7 @@ struct BaseFixture : WorldFixture
     ac::BaseManager& MakeBase(int x, int y)
     {
         bases.push_back(std::make_unique<ac::BaseManager>(
-            /*factionId*/ 1, nextBaseId++, "TestBase", At(x, y),
+            *pOwnerFaction, nextBaseId++, "TestBase", At(x, y),
             dataContext.buildingRegistry.get(),
             dataContext.socialRatingRegistry.get(),
             dataContext.popTypeRegistry.get(),
@@ -122,7 +134,6 @@ struct BaseFixture : WorldFixture
 struct FactionFixture : BaseFixture
 {
     ac::FactionConfig_t factionDefinition; // minimal shared definition for test factions
-    std::vector<ac::EffectConfig_t> tileYieldRules;
     // designs must outlive factions: units hold UnitDesign& into this deque.
     // Units are destroyed before bases (~Faction member order), so crawler claim
     // release can reach WorkerAssignmentManager while the home base is still alive.
@@ -138,9 +149,7 @@ struct FactionFixture : BaseFixture
         dataContext.socialPolicyRegistry->Load(FixturePath("social_policies.json"));
         dataContext.socialRatingRegistry = std::make_unique<ac::SocialRatingRegistry>();
         dataContext.socialRatingRegistry->Load(FixturePath("social_rating_effects.json"));
-        dataContext.moraleConfig = std::make_unique<ac::MoraleConfig_t>(
-            ac::MoraleConfigParser{}.ParseConfig(FixturePath("morale_levels.json")));
-        tileYieldRules = ac::TileYieldRulesConfigParser{}.ParseConfig(
+        dataContext.tileYieldRules = ac::TileYieldRulesConfigParser{}.ParseConfig(
             FixturePath("tile_yield_rules.json"));
         // Mirror GameState: index emits OnUnitMoved; faction rebuilds visibility.
         map.GetUnitPositions().OnUnitMoved.Connect([](ac::Unit& rMoved)
@@ -160,12 +169,7 @@ struct FactionFixture : BaseFixture
         // faction (e.g. WorldGlobal routing between two factions) get an AI one.
         const bool bIsPlayerControlled = factions.empty();
         factions.push_back(std::make_unique<ac::Faction>(
-            nextFactionId++, bIsPlayerControlled,
-            factionDefinition,
-            dataContext.buildingRegistry.get(), /*techRegistry*/ nullptr,
-            dataContext.socialPolicyRegistry.get(), dataContext.socialRatingRegistry.get(),
-            /*techCost*/ nullptr, /*popTypeAvailability*/ nullptr,
-            &tileYieldRules));
+            nextFactionId++, bIsPlayerControlled, factionDefinition, dataContext));
         ac::Faction& rFaction = *factions.back();
         rFaction.BindWorldMap(map);
         // Drop destroyed units from every faction's contact-reveal set (address reuse safety).
@@ -195,7 +199,7 @@ struct FactionFixture : BaseFixture
     ac::BaseManager& MakeFactionBase(ac::Faction& rFaction, int x, int y)
     {
         auto pBase = std::make_unique<ac::BaseManager>(
-            rFaction.GetFactionId(), nextBaseId++, "TestBase", At(x, y),
+            rFaction, nextBaseId++, "TestBase", At(x, y),
             dataContext.buildingRegistry.get(),
             dataContext.socialRatingRegistry.get(),
             dataContext.popTypeRegistry.get(),
@@ -240,8 +244,7 @@ struct FactionFixture : BaseFixture
         // The unit registers itself in the map's position index for its lifetime.
         return rFaction.GetUnitManager().CreateUnit(nextUnitId++, designs.back(),
                                                     map.GetUnitPositions(), At(x, y),
-                                                    *dataContext.moraleConfig, pHomeBase,
-                                                    pProducedAt);
+                                                    pHomeBase, pProducedAt);
     }
 
     void MoveUnit(ac::Unit& rUnit, int x, int y)

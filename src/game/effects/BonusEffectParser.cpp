@@ -26,6 +26,10 @@ StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "damage_from_out_of_fuel") return StatId_t::DamageFromOutOfFuel;
     if (rStat == "cargo_capacity")          return StatId_t::CargoCapacity;
     if (rStat == "cost_multiplier")         return StatId_t::CostMultiplier;
+    if (rStat == "probe_action_cost")       return StatId_t::ProbeActionCost;
+    if (rStat == "probe_defense")           return StatId_t::ProbeDefense;
+    if (rStat == "probe_failure_scale")     return StatId_t::ProbeFailureScale;
+    if (rStat == "probe_success_scale")     return StatId_t::ProbeSuccessScale;
     if (rStat == "starting_experience")     return StatId_t::StartingExperience;
     if (rStat == "morale_bonus")            return StatId_t::MoraleBonus;
     if (rStat == "positive_morale_scale")   return StatId_t::PositiveMoraleScale;
@@ -53,6 +57,10 @@ RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "probe_team")                  return RuleFlagId_t::ProbeTeam;
     if (rFlag == "prevents_disengage")          return RuleFlagId_t::PreventsDisengage;
     if (rFlag == "creche")                      return RuleFlagId_t::Creche;
+    if (rFlag == "headquarters")                return RuleFlagId_t::Headquarters;
+    if (rFlag == "probe_subversion_immune")     return RuleFlagId_t::ProbeSubversionImmune;
+    if (rFlag == "blocks_probe_teams")          return RuleFlagId_t::BlocksProbeTeams;
+    if (rFlag == "ignores_probe_block")         return RuleFlagId_t::IgnoresProbeBlock;
     throw std::runtime_error("Unknown rule flag id: '" + rFlag + "'");
 }
 

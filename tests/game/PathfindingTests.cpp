@@ -11,6 +11,8 @@
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 
+#include <random>
+
 using namespace ac;
 using namespace actest;
 
@@ -54,13 +56,14 @@ struct PathHarness_
     MoveCostCalculator moveCosts;
     StepEvaluator steps;
     Pathfinder pathfinder;
+    std::mt19937 rng;
     UnitOrderExecutor orders;
 
     explicit PathHarness_(WorldFixture& fixture)
         : moveCosts(fixture.improvements)
         , steps(fixture.map, *fixture.ctx)
         , pathfinder(moveCosts, steps, fixture.map)
-        , orders(moveCosts, steps, fixture.map, *fixture.ctx, pathfinder, *fixture.moraleConfig)
+        , orders(moveCosts, steps, fixture.map, *fixture.ctx, pathfinder, fixture.morale(), rng)
     {
     }
 };

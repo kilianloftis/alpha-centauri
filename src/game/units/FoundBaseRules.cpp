@@ -39,12 +39,7 @@ bool IsTooCloseToAnyBase(const Tile& rTile, const WorldMap& rWorldMap,
         {
             continue;
         }
-        const Tile* pBaseTile = rWorldMap.GetTile(pBase->GetX(), pBase->GetY());
-        if (!pBaseTile)
-        {
-            continue;
-        }
-        if (ChebyshevDistance(rTile, *pBaseTile, mapWidth) < k_MinBaseFoundingSeparation)
+        if (ChebyshevDistance(rTile, pBase->GetTile(), mapWidth) < k_MinBaseFoundingSeparation)
         {
             return true;
         }

@@ -73,6 +73,9 @@ struct CombatResult_t
 // class owns the half-HP threshold, round ordering, random tile pick, MoveUnit, and
 // DestroyUnit. After a round, the side that just took damage is checked first, then the
 // other.
+//
+// RNG is injected (typically GameState's shared stream) so combat, promotion, and probe
+// rolls can share one deterministic sequence.
 class CombatResolver
 {
 public:
@@ -84,21 +87,13 @@ public:
                    const StepEvaluator& rSteps,
                    WorldMap& rWorldMap,
                    const TileEffectsContext& rTileEffects,
-                   const MoraleConfig_t& rMorale);
-    CombatResolver(const MoveCostCalculator& rMoveCosts,
-                   const StepEvaluator& rSteps,
-                   WorldMap& rWorldMap,
-                   const TileEffectsContext& rTileEffects,
-                   const MoraleConfig_t& rMorale,
-                   uint32_t seed);
+                   const MoraleCalculator& rMorale,
+                   std::mt19937& rRng);
 
     // Applies HP each round, moves a unit on disengage, and DestroyUnit when a side
     // reaches 0. Attack uses EffectContext_t{defender tile, Attacker}; defense uses
     // {defender tile, Defender} so IsDefending / Base conditions apply.
     CombatResult_t Resolve(Unit& rAttacker, Unit& rDefender);
-
-    // Shared with promotion rolls in UnitOrderExecutor::TryAttack.
-    std::mt19937& GetRng() const { return m_rng; }
 
 private:
     int Roll_(int strength) const;
@@ -110,9 +105,9 @@ private:
     DisengageRules m_disengage;
     WorldMap& m_rWorldMap;
     const TileEffectsContext& m_rTileEffects;
-    MoraleCalculator m_morale;
-    // mutable: Roll_ / GetRng are const so Resolve can stay const-correct for callers.
-    mutable std::mt19937 m_rng;
+    const MoraleCalculator& m_rMorale;
+    // Non-const reference: Roll_ is const so Resolve stays const-correct for callers.
+    std::mt19937& m_rRng;
 };
 
 } // namespace ac

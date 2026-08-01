@@ -73,6 +73,11 @@ add_library(ac-core STATIC
     game/units/MovementRules.cpp
     game/units/FoundBaseRules.cpp
     game/units/TerraformRules.cpp
+    game/units/ProbeActionConfigParser.cpp
+    game/units/ProbeActionEffects.cpp
+    game/units/ProbeActionExecutor.cpp
+    game/units/ProbeRules.cpp
+    game/units/ProbeTarget.cpp
     game/units/StepEvaluator.cpp
     game/units/Pathfinder.cpp
     game/units/MoveCostCalculator.cpp
@@ -226,6 +231,7 @@ add_executable(alpha-centauri
     ui/style/UiStyle.cpp
     ui/world/WorldView.cpp
     ui/world/SupplyCrawlPopup.cpp
+    ui/world/ProbeActionPopup.cpp
     ui/world/CameraInputController.cpp
     ui/world/UnitOrderInputController.cpp
     ui/world/TerraformInputController.cpp

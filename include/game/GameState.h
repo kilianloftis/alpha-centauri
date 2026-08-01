@@ -11,10 +11,12 @@
 #include "game/units/StepEvaluator.h"
 #include "game/units/Pathfinder.h"
 #include "game/units/UnitOrderExecutor.h"
+#include "game/units/ProbeActionExecutor.h"
 #include "lib/DerefView.h"
 #include "lib/IdAllocator.h"
 #include "lib/Signal.h"
 #include <memory>
+#include <random>
 #include <vector>
 
 namespace ac
@@ -32,12 +34,13 @@ public:
     // pUnitComponents sizes the aura scan for unit-projected ThisTile effects; may be null
     // if units never project auras. Throws if pWorldMap is null.
     // rSettings is a non-owning reference to Engine-owned player preferences (not save state).
-    // rMorale is game-wide static data from GameDataContext (XP ranks / combat % / promotion).
+    // rMorale is the GameDataContext-owned calculator (XP ranks / combat % / promotion),
+    // borrowed here for the combat and probe paths. It must outlive this GameState.
     GameState(std::unique_ptr<WorldMap> pWorldMap,
               const ImprovementRegistry& rImprovements,
               const UnitComponentRegistry* pUnitComponents,
               GameSettings& rSettings,
-              const MoraleConfig_t& rMorale);
+              const MoraleCalculator& rMorale);
     ~GameState();
 
     const MoraleCalculator& GetMoraleCalculator() const;
@@ -99,6 +102,9 @@ public:
 
     UnitOrderExecutor& GetUnitOrderExecutor();
 
+    ProbeActionExecutor& GetProbeActions();
+    const ProbeActionExecutor& GetProbeActions() const;
+
     FirstContactResolver& GetFirstContactResolver();
     const FirstContactResolver& GetFirstContactResolver() const;
 
@@ -118,7 +124,7 @@ private:
 
     int m_missionYear;
     GameSettings& m_rSettings;
-    MoraleCalculator m_morale;
+    const MoraleCalculator& m_rMorale;
     Signal<>::ScopedConnection m_visibilitySettingsChanged;
     std::unique_ptr<EventBus> m_pEventBus;
     // WorldMap and TileEffectsContext are declared before m_factions so they outlive all
@@ -133,7 +139,11 @@ private:
     std::unique_ptr<DiplomaticActionExecutor> m_pDiplomaticActionExecutor;
     std::vector<std::unique_ptr<Faction>> m_factions;
     std::unique_ptr<FirstContactResolver> m_pFirstContact;
+    // Shared combat / promotion / probe roll stream. Declared before the executors that
+    // hold references into it.
+    std::mt19937 m_rng;
     std::unique_ptr<UnitOrderExecutor> m_pUnitOrderExecutor;
+    std::unique_ptr<ProbeActionExecutor> m_pProbeActions;
     IdAllocator m_factionIdAllocator;
     IdAllocator m_baseIdAllocator;
     IdAllocator m_unitIdAllocator;

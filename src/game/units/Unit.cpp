@@ -36,14 +36,14 @@ Unit::Unit(UnitId_t unitId,
            const Tile& rTile,
            BaseManager* pHomeBase,
            Faction& rFaction,
-           const MoraleConfig_t& rMoraleConfig,
+           const MoraleCalculator& rMorale,
            BaseManager* pProducedAt)
     : m_unitId(unitId)
     , m_rDesign(rDesign)
     , m_rPositions(rPositions)
     , m_pTile(&rTile)
     , m_rFaction(rFaction)
-    , m_morale(rMoraleConfig)
+    , m_rMorale(rMorale)
     // Seed current stats from the *live* resolved maxima (design effects + the faction's
     // active FactionUnits effects), not the design's context-free values. A fresh unit
     // therefore starts at its true max, so current-vs-max is well defined from spawn.
@@ -69,7 +69,7 @@ Unit::Unit(UnitId_t unitId,
     m_currentFuel = ResolveStat(*this, StatId_t::Fuel);
     m_moveFragmentsRemaining =
         GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint;
-    m_xp = m_morale.BaseIntrinsicXp(*this)
+    m_xp = m_rMorale.BaseIntrinsicXp(*this)
         + ResolveStat(*this, StatId_t::StartingExperience);
 
     m_rPositions.Register_(*this, rTile);
@@ -94,6 +94,19 @@ void Unit::DetachFromWorld_()
 UnitId_t Unit::GetUnitId() const { return m_unitId; }
 
 const UnitDesign& Unit::GetDesign() const { return m_rDesign; }
+
+UnitSnapshot_t Unit::CaptureSnapshot() const
+{
+    UnitSnapshot_t snapshot;
+    snapshot.unitId = m_unitId;
+    snapshot.pDesign = &m_rDesign;
+    snapshot.pTile = m_pTile;
+    snapshot.currentHp = m_currentHp;
+    snapshot.currentFuel = m_currentFuel;
+    snapshot.xp = m_xp;
+    snapshot.moveFragmentsRemaining = m_moveFragmentsRemaining;
+    return snapshot;
+}
 
 int Unit::GetStat(StatId_t statId) const
 {
@@ -160,7 +173,7 @@ void Unit::SetMoveFragmentsRemaining(int fragments)
 }
 void Unit::SetXp(int xp)
 {
-    m_xp = std::clamp(xp, 0, m_morale.GetConfig().MaxLevel());
+    m_xp = std::clamp(xp, 0, m_rMorale.GetConfig().MaxLevel());
 }
 
 void Unit::SetHomeBase(BaseManager* pHomeBase)

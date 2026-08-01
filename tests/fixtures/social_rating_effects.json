@@ -81,5 +81,49 @@
         { "type": "StatModifier", "scope": "FactionUnits", "parameters": { "stat": "morale_bonus", "amount": 3, "op": "Add" } }
       ]
     }
+  },
+  {
+    "id": "probe",
+    "levels": {
+      "-3": [
+        { "type": "StatModifier", "scope": "FactionGlobal", "persistence": "Continuous",
+          "parameters": { "stat": "probe_defense", "amount": -3, "op": "Add" } },
+        { "type": "StatModifier", "scope": "FactionGlobal", "persistence": "Continuous",
+          "parameters": { "stat": "probe_action_cost", "amount": -50, "op": "AddPercent" } }
+      ],
+      "-2": [
+        { "type": "StatModifier", "scope": "FactionGlobal", "persistence": "Continuous",
+          "parameters": { "stat": "probe_defense", "amount": -2, "op": "Add" } },
+        { "type": "StatModifier", "scope": "FactionGlobal", "persistence": "Continuous",
+          "parameters": { "stat": "probe_action_cost", "amount": -50, "op": "AddPercent" } }
+      ],
+      "-1": [
+        { "type": "StatModifier", "scope": "FactionGlobal", "persistence": "Continuous",
+          "parameters": { "stat": "probe_defense", "amount": -1, "op": "Add" } },
+        { "type": "StatModifier", "scope": "FactionGlobal", "persistence": "Continuous",
+          "parameters": { "stat": "probe_action_cost", "amount": -25, "op": "AddPercent" } }
+      ],
+      "1": [
+        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous",
+          "unitFilter": { "kind": "HasFlag", "flag": "probe_team" },
+          "parameters": { "stat": "morale_bonus", "amount": 1, "op": "Add" } },
+        { "type": "StatModifier", "scope": "FactionGlobal", "persistence": "Continuous",
+          "parameters": { "stat": "probe_action_cost", "amount": 50, "op": "AddPercent" } }
+      ],
+      "2": [
+        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous",
+          "unitFilter": { "kind": "HasFlag", "flag": "probe_team" },
+          "parameters": { "stat": "morale_bonus", "amount": 2, "op": "Add" } },
+        { "type": "StatModifier", "scope": "FactionGlobal", "persistence": "Continuous",
+          "parameters": { "stat": "probe_action_cost", "amount": 100, "op": "AddPercent" } }
+      ],
+      "3": [
+        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous",
+          "unitFilter": { "kind": "HasFlag", "flag": "probe_team" },
+          "parameters": { "stat": "morale_bonus", "amount": 3, "op": "Add" } },
+        { "type": "RuleFlag", "scope": "FactionGlobal", "persistence": "Continuous",
+          "parameters": { "flag": "probe_subversion_immune" } }
+      ]
+    }
   }
 ]

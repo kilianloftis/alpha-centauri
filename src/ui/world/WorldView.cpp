@@ -4,6 +4,7 @@
 #include "ui/world/LocationPanel.h"
 #include "ui/world/SelectedUnitPanel.h"
 #include "ui/world/SupplyCrawlPopup.h"
+#include "ui/world/ProbeActionPopup.h"
 #include "ui/world/UnitStackPanel.h"
 #include "ui/world/CommlinksButton.h"
 #include "ui/world/EndTurnButton.h"
@@ -24,6 +25,7 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitOrder.h"
+#include "game/units/ProbeActionResult.h"
 #include "game/effects/EffectEnums.h"
 #include "ui/TileHitTester.h"
 #include "ui/style/UiStyle.h"
@@ -316,6 +318,12 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
             }
             return true;
         }
+        if (m_pUnitOrderInputController->WasProbeActionRequested() && pControllable
+            && m_pUnitOrderInputController->GetProbeTarget())
+        {
+            TryOpenProbeActions_(*pControllable, *m_pUnitOrderInputController->GetProbeTarget());
+            return true;
+        }
         if (m_pUnitOrderInputController->WasOrderAssigned())
         {
             SelectNextAvailableUnit_();
@@ -398,7 +406,8 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
 
     Unit* pControllable = GetControllableSelectedUnit_();
     const bool bOrderHandled = m_pUnitOrderInputController->HandleMouse(
-        rEvent, pControllable, pClickedTile, &m_rGameState.GetPathfinder());
+        rEvent, pControllable, pClickedTile, &m_rGameState.GetPathfinder(), &m_rGameState,
+        &m_rGameDataContext);
 
     // Left-click release on an explored tile selects the tile and a visible unit on it
     // (also when a move / attack order consumed the click — tile only in that case until
@@ -420,6 +429,12 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
             && m_pUnitOrderInputController->GetAttackTarget())
         {
             TryBeginAttack_(*pControllable, *m_pUnitOrderInputController->GetAttackTarget());
+            return;
+        }
+        if (m_pUnitOrderInputController->WasProbeActionRequested() && pControllable
+            && m_pUnitOrderInputController->GetProbeTarget())
+        {
+            TryOpenProbeActions_(*pControllable, *m_pUnitOrderInputController->GetProbeTarget());
             return;
         }
         if (m_pUnitOrderInputController->WasOrderAssigned() && pControllable)
@@ -484,6 +499,39 @@ void WorldView::TryBeginAttack_(Unit& rAttacker, const Tile& rTargetTile)
             SetSuppressDashboard(false);
             SelectNextAvailableUnit_();
         });
+}
+
+void WorldView::TryOpenProbeActions_(Unit& rProbe, const Tile& rTargetTile)
+{
+    std::vector<std::pair<ProbeActionId_t, std::string>> actions =
+        m_rGameState.GetProbeActions().ListAvailableProbeActions(
+            rProbe, rTargetTile, m_rGameState, m_rGameDataContext);
+    if (actions.empty())
+    {
+        return;
+    }
+
+    // Capture the tile, not the base/unit on it: WorldMap owns tiles for the whole game,
+    // whereas the target may be captured or killed while the popup is open. TryProbeAction
+    // re-resolves and rejects cleanly if it is gone.
+    Unit* pProbe = &rProbe;
+    const Tile* pTargetTile = &rTargetTile;
+    m_elements.push_back(std::make_unique<ProbeActionPopup>(
+        ResolveLayout(m_layout, Style().layouts.popupSmall),
+        std::move(actions),
+        [this, pProbe, pTargetTile](ProbeActionId_t actionId) {
+            if (m_pSelectedUnit != pProbe)
+            {
+                return;
+            }
+            const ProbeActionResult_t result =
+                m_rGameState.GetProbeActions().TryProbeAction(
+                    *pProbe, actionId, *pTargetTile, m_rGameState, m_rGameDataContext);
+            if (result.outcome != ProbeActionOutcome_t::Rejected)
+            {
+                SelectNextAvailableUnit_();
+            }
+        }));
 }
 
 std::string WorldView::FindUnitNameOnTile_(const Tile& rTile) const

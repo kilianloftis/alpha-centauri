@@ -181,6 +181,15 @@
     ]
   },
   {
+    "id": "Probe_Team",
+    "name": "Probe Team",
+    "type": "weapon",
+    "effects": [
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "probe_team" } },
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "ignore_zone_of_control" } }
+    ]
+  },
+  {
     "id": "test_terraformer",
     "name": "Test Terraformer",
     "type": "weapon",

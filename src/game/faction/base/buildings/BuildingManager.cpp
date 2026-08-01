@@ -21,7 +21,7 @@ BuildingManager::~BuildingManager()
 {
 }
 
-void BuildingManager::AddBuilding(const std::string& buildingId)
+void BuildingManager::AddBuilding(const BuildingId_t& buildingId)
 {
     if (!m_pRegistry)
     {
@@ -31,7 +31,7 @@ void BuildingManager::AddBuilding(const std::string& buildingId)
     m_revision.Bump();
 }
 
-void BuildingManager::DestroyBuilding(const std::string& buildingId)
+void BuildingManager::DestroyBuilding(const BuildingId_t& buildingId)
 {
     auto it = std::find_if(m_buildings.begin(), m_buildings.end(),
         [&buildingId](const BuildingConfig_t* pBuilding)
@@ -88,7 +88,7 @@ std::vector<const BuildingConfig_t*> BuildingManager::GetBuildingsAvailableForCo
     return available;
 }
 
-bool BuildingManager::DoesBuildingExist_(const std::string& buildingId) const
+bool BuildingManager::DoesBuildingExist_(const BuildingId_t& buildingId) const
 {
     return std::find_if(m_buildings.begin(), m_buildings.end(),
         [&buildingId](const BuildingConfig_t* pBuilding)

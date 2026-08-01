@@ -26,6 +26,8 @@
 #include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/units/Unit.h"
+#include "game/units/MoraleCalculator.h"
+#include "game/map/UnitPositionIndex.h"
 #include "game/effects/ActiveEffect.h"
 
 namespace ac
@@ -33,28 +35,24 @@ namespace ac
 
 Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
                  const FactionConfig_t& rDefinition,
-                 const BuildingRegistry* pBuildingRegistry, const TechRegistry* pTechRegistry,
-                 const SocialPolicyRegistry* pSocialPolicyRegistry,
-                 const SocialRatingRegistry* pSocialRatingRegistry,
-                 TechCostCalculator* pTechCostCalculator,
-                 const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator,
-                 const std::vector<EffectConfig_t>* pTileYieldRules)
+                 const GameDataContext& rDataContext)
     : m_factionId(factionId)
     , m_bIsPlayerControlled(bIsPlayerControlled)
     , m_rDefinition(rDefinition)
-    , m_pBuildingRegistry(pBuildingRegistry)
-    , m_pPopTypeAvailabilityCalculator(pPopTypeAvailabilityCalculator)
+    , m_rDataContext(rDataContext)
     , m_pIdentity(std::make_unique<FactionIdentity>(rDefinition.identity, rDefinition.leader))
     , m_pAIProfile(std::make_unique<AIProfile>(rDefinition.ai))
     , m_pFlavor(std::make_unique<FactionFlavor>(rDefinition.flavor, *m_pIdentity))
     , m_pEconomy(std::make_unique<EconomyManager>())
     , m_pMilitary(std::make_unique<Military>())
-    , m_pResearch(std::make_unique<ResearchManager>(pTechRegistry, pTechCostCalculator, this))
+    , m_pResearch(std::make_unique<ResearchManager>(rDataContext.techRegistry.get(),
+                                                    rDataContext.techCostCalculator.get(), this))
     , m_pResearchSelector(std::make_unique<ResearchSelector>(m_pResearch.get()))
-    , m_pSocialEngineering(std::make_unique<SocialEngineeringManager>(pSocialPolicyRegistry,
-                                                                        pSocialRatingRegistry))
-    , m_pUnits(std::make_unique<UnitManager>(*this))
-    , m_effectsPool(pBuildingRegistry, m_baseListRevision, pTileYieldRules, pSocialRatingRegistry)
+    , m_pSocialEngineering(std::make_unique<SocialEngineeringManager>(
+          rDataContext.socialPolicyRegistry.get(), rDataContext.socialRatingRegistry.get()))
+    , m_pUnits(std::make_unique<UnitManager>(*this, *rDataContext.moraleCalculator))
+    , m_effectsPool(rDataContext.buildingRegistry.get(), m_baseListRevision,
+                    &rDataContext.tileYieldRules, rDataContext.socialRatingRegistry.get())
 {
     m_pResearchSelector->EnsureResearchTarget();
 }
@@ -183,7 +181,7 @@ BaseManager* Faction::CreateBaseFromSnapshot(
     }
 
     auto pBase = std::make_unique<BaseManager>(
-        m_factionId, rSnapshot.baseId, rSnapshot.name, *rSnapshot.pTile,
+        *this, rSnapshot.baseId, rSnapshot.name, *rSnapshot.pTile,
         rDataContext.buildingRegistry.get(),
         rDataContext.socialRatingRegistry.get(),
         rDataContext.popTypeRegistry.get(),
@@ -243,6 +241,88 @@ void Faction::TransferBaseTo(BaseId_t baseId,
         *snapshot, rDataContext, rTileEffects, rSecretProjectAvailability);
 }
 
+std::optional<UnitSnapshot_t> Faction::ExtractUnit(UnitId_t unitId)
+{
+    Unit* pFound = nullptr;
+    for (Unit& rUnit : GetUnitManager().Units())
+    {
+        if (rUnit.GetUnitId() == unitId)
+        {
+            pFound = &rUnit;
+            break;
+        }
+    }
+    if (!pFound)
+    {
+        return std::nullopt;
+    }
+    UnitSnapshot_t snapshot = pFound->CaptureSnapshot();
+    GetUnitManager().DestroyUnit(*pFound);
+    return snapshot;
+}
+
+Unit& Faction::CreateUnitFromSnapshot(const UnitSnapshot_t& rSnapshot,
+                                      UnitPositionIndex& rPositions)
+{
+    if (!rSnapshot.pDesign)
+    {
+        throw std::invalid_argument("Faction::CreateUnitFromSnapshot: pDesign is null");
+    }
+    if (!rSnapshot.pTile)
+    {
+        throw std::invalid_argument("Faction::CreateUnitFromSnapshot: pTile is null");
+    }
+
+    Unit& rNew = GetUnitManager().CreateUnit(rSnapshot.unitId, *rSnapshot.pDesign, rPositions,
+                                             *rSnapshot.pTile, /*pHomeBase=*/nullptr);
+    rNew.SetCurrentHp(rSnapshot.currentHp);
+    rNew.SetCurrentFuel(rSnapshot.currentFuel);
+    rNew.SetXp(rSnapshot.xp);
+    rNew.SetMoveFragmentsRemaining(rSnapshot.moveFragmentsRemaining);
+    rNew.ClearOrder();
+    return rNew;
+}
+
+void Faction::TransferUnitTo(UnitId_t unitId,
+                             Faction& rReceiver,
+                             UnitPositionIndex& rPositions)
+{
+    if (&rReceiver == this)
+    {
+        throw std::invalid_argument("Faction::TransferUnitTo: cannot transfer to self");
+    }
+    std::optional<UnitSnapshot_t> snapshot = ExtractUnit(unitId);
+    if (!snapshot.has_value())
+    {
+        throw std::runtime_error("Faction::TransferUnitTo: unit not found");
+    }
+    rReceiver.CreateUnitFromSnapshot(*snapshot, rPositions);
+}
+
+BaseManager* Faction::GetHeadquarters()
+{
+    for (BaseManager& rBase : Bases())
+    {
+        if (ResolveFlag(rBase, RuleFlagId_t::Headquarters))
+        {
+            return &rBase;
+        }
+    }
+    return nullptr;
+}
+
+const BaseManager* Faction::GetHeadquarters() const
+{
+    for (const BaseManager& rBase : Bases())
+    {
+        if (ResolveFlag(rBase, RuleFlagId_t::Headquarters))
+        {
+            return &rBase;
+        }
+    }
+    return nullptr;
+}
+
 BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile* pTile,
                                   const GameDataContext& rDataContext,
                                   TileEffectsContext& rTileEffects,
@@ -253,7 +333,7 @@ BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile*
         throw std::invalid_argument("Faction::CreateBase: pTile is null");
     }
     auto pBase = std::make_unique<BaseManager>(
-        m_factionId, baseId, name, *pTile,
+        *this, baseId, name, *pTile,
         rDataContext.buildingRegistry.get(),
         rDataContext.socialRatingRegistry.get(),
         rDataContext.popTypeRegistry.get(),
@@ -336,7 +416,7 @@ bool Faction::DiscoverCurrentResearch()
 
 std::vector<const BuildingConfig_t*> Faction::GetDiscoveredBuildings() const
 {
-    if (!m_pBuildingRegistry || !m_pResearch)
+    if (!m_rDataContext.buildingRegistry || !m_pResearch)
     {
         throw std::runtime_error("BuildingRegistry or ResearchManager not initialized");
     }
@@ -344,7 +424,7 @@ std::vector<const BuildingConfig_t*> Faction::GetDiscoveredBuildings() const
     const std::vector<std::string>& discoveredTechs = m_pResearch->GetDiscoveredTechs();
 
     std::vector<const BuildingConfig_t*> discovered;
-    for (const BuildingConfig_t& rConfig : m_pBuildingRegistry->GetAll())
+    for (const BuildingConfig_t& rConfig : m_rDataContext.buildingRegistry->GetAll())
     {
         if (rConfig.IsAvailable(discoveredTechs))
         {
@@ -440,12 +520,12 @@ void Faction::SetOnVisibilityRebuilt(std::function<void(Faction&)> handler)
 
 std::vector<const PopTypeConfig_t*> Faction::GetAvailablePopTypes() const
 {
-    if (!m_pPopTypeAvailabilityCalculator || !m_pResearch)
+    if (!m_rDataContext.popTypeAvailabilityCalculator || !m_pResearch)
     {
         throw std::runtime_error("Faction::GetAvailablePopTypes: Missing calculator or research manager");
     }
 
-    return m_pPopTypeAvailabilityCalculator->GetAvailable(m_pResearch->GetDiscoveredTechs());
+    return m_rDataContext.popTypeAvailabilityCalculator->GetAvailable(m_pResearch->GetDiscoveredTechs());
 }
 
 const FactionEffects_t& Faction::GetActiveEffects() const

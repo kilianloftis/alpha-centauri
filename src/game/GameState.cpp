@@ -11,9 +11,11 @@
 #include "game/map/WorldMap.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/units/UnitOrderExecutor.h"
+#include "game/units/ProbeActionExecutor.h"
 #include "game/units/Pathfinder.h"
 #include "game/units/Unit.h"
 #include "lib/EventBus.h"
+#include <random>
 #include <stdexcept>
 
 namespace ac
@@ -27,16 +29,17 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
                      const ImprovementRegistry& rImprovements,
                      const UnitComponentRegistry* pUnitComponents,
                      GameSettings& rSettings,
-                     const MoraleConfig_t& rMorale)
+                     const MoraleCalculator& rMorale)
     : m_missionYear(k_StartingMissionYear)
     , m_rSettings(rSettings)
-    , m_morale(rMorale)
+    , m_rMorale(rMorale)
     , m_visibilitySettingsChanged(rSettings.OnVisibilityChanged.ConnectScoped(
           [this]() { OnVisibilitySettingsChanged_(); }))
     , m_pEventBus(std::make_unique<EventBus>())
     , m_worldMap(std::move(pWorldMap))
     , m_pDiplomacy(std::make_unique<DiplomacyLedger>())
     , m_pDiplomaticActionExecutor(std::make_unique<DiplomaticActionExecutor>())
+    , m_rng(std::random_device{}())
     , m_secretProjectAvailability(*this)
 {
     if (!m_worldMap)
@@ -58,15 +61,16 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
         m_pFirstContact->ConsiderUnit(rMoved);
     });
     m_pUnitOrderExecutor = std::make_unique<UnitOrderExecutor>(
-        *m_pMoveCosts, *m_pSteps, *m_worldMap, *m_pTileEffects, *m_pPathfinder,
-        m_morale.GetConfig());
+        *m_pMoveCosts, *m_pSteps, *m_worldMap, *m_pTileEffects, *m_pPathfinder, m_rMorale,
+        m_rng);
+    m_pProbeActions = std::make_unique<ProbeActionExecutor>(*m_worldMap, m_rMorale, m_rng);
 }
 
 GameState::~GameState() = default;
 
 const MoraleCalculator& GameState::GetMoraleCalculator() const
 {
-    return m_morale;
+    return m_rMorale;
 }
 
 GameSettings& GameState::GetSettings()
@@ -235,7 +239,8 @@ BaseManager* GameState::FindBaseAt(int tileX, int tileY)
     {
         for (BaseManager& rBase : rFaction.Bases())
         {
-            if (rBase.GetX() == tileX && rBase.GetY() == tileY)
+            const Tile& rTile = rBase.GetTile();
+            if (rTile.GetX() == tileX && rTile.GetY() == tileY)
             {
                 return &rBase;
             }
@@ -250,7 +255,8 @@ const BaseManager* GameState::FindBaseAt(int tileX, int tileY) const
     {
         for (const BaseManager& rBase : rFaction.Bases())
         {
-            if (rBase.GetX() == tileX && rBase.GetY() == tileY)
+            const Tile& rTile = rBase.GetTile();
+            if (rTile.GetX() == tileX && rTile.GetY() == tileY)
             {
                 return &rBase;
             }
@@ -282,6 +288,16 @@ const Pathfinder& GameState::GetPathfinder() const
 UnitOrderExecutor& GameState::GetUnitOrderExecutor()
 {
     return *m_pUnitOrderExecutor;
+}
+
+ProbeActionExecutor& GameState::GetProbeActions()
+{
+    return *m_pProbeActions;
+}
+
+const ProbeActionExecutor& GameState::GetProbeActions() const
+{
+    return *m_pProbeActions;
 }
 
 FirstContactResolver& GameState::GetFirstContactResolver()

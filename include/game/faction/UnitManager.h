@@ -16,7 +16,7 @@ class Tile;
 class BaseManager;
 class Faction;
 class UnitPositionIndex;
-struct MoraleConfig_t;
+class MoraleCalculator;
 
 class UnitManager
 {
@@ -37,16 +37,17 @@ public:
         UnitManager* m_pManager;
     };
 
-    explicit UnitManager(Faction& rFaction);
+    // rMorale is the game-wide calculator owned by GameDataContext; every unit this manager
+    // creates borrows it, so morale rules need not be threaded through create/transfer calls.
+    UnitManager(Faction& rFaction, const MoraleCalculator& rMorale);
     ~UnitManager() = default;
 
     // The unit registers itself on rTile in rPositions for its lifetime (see Unit's
     // constructor). Rejects the tile under the stacking rule (MovementRules) before
     // constructing. unitId must be unique across the game (caller: GameState::AllocateUnitId).
     // pProducedAt defaults to pHomeBase when null (see Unit ctor).
-    // rMorale is game-wide static data from GameDataContext.
     Unit& CreateUnit(UnitId_t unitId, const UnitDesign& rDesign, UnitPositionIndex& rPositions,
-                     const Tile& rTile, const MoraleConfig_t& rMorale,
+                     const Tile& rTile,
                      BaseManager* pHomeBase = nullptr, BaseManager* pProducedAt = nullptr);
     void DestroyUnit(Unit& rUnit);
 
@@ -100,6 +101,7 @@ private:
     void FlushPendingDestructions_();
 
     Faction& m_rFaction;
+    const MoraleCalculator& m_rMorale;
     std::vector<std::unique_ptr<Unit>> m_units;
     std::vector<std::unique_ptr<Unit>> m_pendingDestructions;
     std::size_t m_destructionDeferralDepth = 0;

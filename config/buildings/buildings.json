@@ -146,5 +146,34 @@
     ],
     "category": "build",
     "required_tech": "test_tech_1"
+  },
+  {
+    "id": "Headquarters",
+    "name": "Headquarters",
+    "mineral_cost": 0,
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisBase",
+        "parameters": { "flag": "headquarters" }
+      }
+    ],
+    "category": "conquer",
+    "required_tech": ""
+  },
+  {
+    "id": "Covert_Ops_Center",
+    "name": "Covert Ops Center",
+    "mineral_cost": 12,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "persistence": "Continuous",
+        "parameters": { "stat": "probe_defense", "amount": 2, "op": "Add" }
+      }
+    ],
+    "category": "conquer",
+    "required_tech": "planetary_networks"
   }
 ]

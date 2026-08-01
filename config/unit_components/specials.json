@@ -83,5 +83,25 @@
         "parameters": { "flag": "ignore_zone_of_control" }
       }
     ]
+  },
+  {
+    "id": "Algorithmic_Enhancement",
+    "name": "Algorithmic Enhancement",
+    "type": "ability",
+    "required_tech": "planetary_networks",
+    "mineral_cost": 1,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "persistence": "Continuous",
+        "parameters": { "stat": "probe_failure_scale", "amount": -50, "op": "AddPercent" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "ignores_probe_block" }
+      }
+    ]
   }
 ]

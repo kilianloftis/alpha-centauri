@@ -76,7 +76,7 @@ bool HasFriendlyBase(const Unit& rMover, const Tile& rTile)
 {
     for (const BaseManager& rBase : rMover.GetFaction().Bases())
     {
-        if (rBase.GetX() == rTile.GetX() && rBase.GetY() == rTile.GetY())
+        if (&rBase.GetTile() == &rTile)
         {
             return true;
         }

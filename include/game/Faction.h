@@ -14,6 +14,7 @@
 #include "game/faction/FactionRevealedUnits.h"
 #include "game/faction/FactionVisibleMap.h"
 #include "game/social-engineering/SocialPolicyConfig.h"
+#include "game/units/Unit.h"
 #include "lib/DerefView.h"
 #include "lib/Revision.h"
 #include "game/effects/ActiveEffect.h"
@@ -38,6 +39,8 @@ class SocialEngineeringManager;
 class PopTypeAvailabilityCalculator;
 class SecretProjectAvailabilityCalculator;
 class UnitManager;
+class UnitPositionIndex;
+class MoraleCalculator;
 struct PopTypeConfig_t;
 struct GameDataContext;
 class WorldMap;
@@ -46,16 +49,14 @@ class GameSettings;
 class Faction : public IEffectsProvider
 {
 public:
+    // rDataContext is the game-wide definition data (registries plus the calculators built
+    // from them). It is held by reference for the faction's whole life and handed to the
+    // subsystems that need pieces of it, so adding a new kind of shared game data does not
+    // change this signature. Must outlive the faction — see Engine's member ordering.
     Faction(FactionId_t factionId,
              bool bIsPlayerControlled,
              const FactionConfig_t& rDefinition,
-             const BuildingRegistry* pBuildingRegistry,
-             const TechRegistry* pTechRegistry,
-             const SocialPolicyRegistry* pSocialPolicyRegistry,
-             const SocialRatingRegistry* pSocialRatingRegistry,
-             TechCostCalculator* pTechCostCalculator,
-             const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator,
-             const std::vector<EffectConfig_t>* pTileYieldRules = nullptr);
+             const GameDataContext& rDataContext);
     ~Faction();
 
     FactionId_t GetFactionId() const { return m_factionId; }
@@ -96,6 +97,10 @@ public:
     auto Bases() { return DerefView(m_bases); }
     auto Bases() const { return DerefView(m_bases); }
     size_t GetBaseCount() const { return m_bases.size(); }
+
+    // Base with the Headquarters RuleFlag, or nullptr if none.
+    BaseManager* GetHeadquarters();
+    const BaseManager* GetHeadquarters() const;
 
     // Returns buildings the faction has the technology to build.
     std::vector<const BuildingConfig_t*> GetDiscoveredBuildings() const;
@@ -144,6 +149,17 @@ public:
     UnitManager& GetUnitManager();
     const UnitManager& GetUnitManager() const;
 
+    // Destroy the unit and return a snapshot for reconstruct-under-new-owner.
+    std::optional<UnitSnapshot_t> ExtractUnit(UnitId_t unitId);
+    // Rebuild a unit from a snapshot (clears home / produced-at; foreign claims are invalid).
+    Unit& CreateUnitFromSnapshot(const UnitSnapshot_t& rSnapshot,
+                                 UnitPositionIndex& rPositions);
+    // Extract from this faction and CreateUnitFromSnapshot on rReceiver.
+    // Throws if unitId is missing or rReceiver is this faction.
+    void TransferUnitTo(UnitId_t unitId,
+                        Faction& rReceiver,
+                        UnitPositionIndex& rPositions);
+
     // Fog of war: permanent explored memory and currently-visible tiles as separate maps.
     // BindWorldMap sizes both from the shared WorldMap; RebuildVisibility refreshes
     // current vision from units/bases (and grows explored). Unit create/destroy call it
@@ -189,8 +205,7 @@ private:
     FactionId_t m_factionId;
     bool m_bIsPlayerControlled;
     const FactionConfig_t& m_rDefinition;
-    const BuildingRegistry* m_pBuildingRegistry;
-    const PopTypeAvailabilityCalculator* m_pPopTypeAvailabilityCalculator;
+    const GameDataContext& m_rDataContext;
     std::unique_ptr<FactionIdentity> m_pIdentity;
     std::unique_ptr<AIProfile> m_pAIProfile;
     std::unique_ptr<FactionFlavor> m_pFlavor;

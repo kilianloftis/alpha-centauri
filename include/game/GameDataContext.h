@@ -29,6 +29,8 @@ class WorldGenPresetRegistry;
 struct WorldGenDecorationConfig_t;
 struct LandmarkConfig_t;
 struct MoraleConfig_t;
+class MoraleCalculator;
+struct ProbeActionsConfig_t;
 
 // Owns the definition data loaded once at startup (registries and config structs, all
 // reconstructible from config files) plus the calculators/services built from that data.
@@ -61,12 +63,17 @@ struct GameDataContext
     // FactionGlobal TileResourceCap rules (and any other universal tile-yield effects).
     std::vector<EffectConfig_t> tileYieldRules;
     std::unique_ptr<MoraleConfig_t> moraleConfig;
+    std::unique_ptr<ProbeActionsConfig_t> probeActionsConfig;
 
     // --- Calculators / services (built from the data above) ---
     std::unique_ptr<LuaRuntime> luaRuntime;
     std::unique_ptr<PopCompositionCalculator> popCompositionCalculator;
     std::unique_ptr<TechCostCalculator> techCostCalculator;
     std::unique_ptr<PopTypeAvailabilityCalculator> popTypeAvailabilityCalculator;
+    // Stateless view over moraleConfig — reads no live save-game state, so it belongs here
+    // beside techCostCalculator rather than on GameState. Every faction, unit, and combat
+    // path borrows this one instance.
+    std::unique_ptr<MoraleCalculator> moraleCalculator;
 };
 
 // Single entry point that runs every config parser into rData. Load order is deliberate:

@@ -94,11 +94,7 @@ void FactionVisibleMap::RebuildFromSources(const Faction& rFaction, const WorldM
 
     for (const BaseManager& rBase : rFaction.Bases())
     {
-        const Tile* pBaseTile = rWorldMap.GetTile(rBase.GetX(), rBase.GetY());
-        if (pBaseTile)
-        {
-            RevealAround_(*pBaseTile, k_BaseVisionRadius, rWorldMap, rExplored);
-        }
+        RevealAround_(rBase.GetTile(), k_BaseVisionRadius, rWorldMap, rExplored);
     }
 
     // Vision ThisTile effects on improvements (e.g. Sensor): territory-owned improvements

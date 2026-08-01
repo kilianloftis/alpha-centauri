@@ -31,6 +31,18 @@ enum class StatId_t
     CargoCapacity,
     DifficultTerrainCost,
     CostMultiplier,
+    // Multiplier on enemy probe mind-control / subversion energy costs (PureMultiplier).
+    // SE Probe levels emit AddPercent; resolved from the target base's effect list.
+    ProbeActionCost,
+    // Additive local probe defense (Covert Ops Center +2, etc.). Added to SE Probe before
+    // the success/escape clamp.
+    ProbeDefense,
+    // Scales mission/escape failure rates for the acting probe (PureMultiplier). Algorithmic
+    // Enhancement emits AddPercent -50. Not applied against a target with BlocksProbeTeams.
+    ProbeFailureScale,
+    // Scales mission/escape success rates against this target (PureMultiplier). Hunter-Seeker
+    // Algorithm emits AddPercent -50.
+    ProbeSuccessScale,
     // XP granted when a unit is created (seeded into Unit::m_xp at spawn; not a live max).
     StartingExperience,
     // Live morale-level offset (SE Morale, Creche in-base, etc.). Added to Unit::m_xp when
@@ -92,8 +104,12 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::DifficultTerrainCost:
         case StatId_t::StartingExperience:
         case StatId_t::MoraleBonus:
+        case StatId_t::ProbeDefense:
         case StatId_t::TechCost:             return StatKind_t::Additive;
         case StatId_t::CostMultiplier:
+        case StatId_t::ProbeActionCost:
+        case StatId_t::ProbeFailureScale:
+        case StatId_t::ProbeSuccessScale:
         case StatId_t::PositiveMoraleScale:  return StatKind_t::PureMultiplier;
         case StatId_t::GrowthRate:
         case StatId_t::MoistureTier:         return StatKind_t::RawScaled;
@@ -162,6 +178,14 @@ enum class RuleFlagId_t
     NearZeroGrowth,
     // Children's Crèche at a base: softens negative morale_bonus for units home-based there.
     Creche,
+    // Base is the faction headquarters (assassinate / MC eligibility).
+    Headquarters,
+    // SE Probe +3 / Thought Control: bases and units cannot be subverted by standard probes.
+    ProbeSubversionImmune,
+    // Target blocks probe actions unless the probe IgnoresProbeBlock (Hunter-Seeker, etc.).
+    BlocksProbeTeams,
+    // Probe may attempt actions against BlocksProbeTeams / ProbeSubversionImmune targets.
+    IgnoresProbeBlock,
 
     // Map visibility. RemoveShroud permanently explores the map (satellite); RemoveFog
     // clears current fog while active (secret project). See VisibilityRules helpers.

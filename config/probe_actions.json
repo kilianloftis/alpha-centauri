@@ -1,0 +1,94 @@
+{
+  "success_formula": {
+    "morale_divisor": 2,
+    "strength_offset": 1,
+    "defense_clamp_min": -2,
+    "defense_clamp_max": 0
+  },
+  "actions": [
+    {
+      "id": "infiltrate",
+      "name": "Infiltrate Datalinks",
+      "target": "base",
+      "risk": 0
+    },
+    {
+      "id": "steal_tech",
+      "name": "Procure Research Data",
+      "target": "base",
+      "risk": 0,
+      "risk_repeat": 1
+    },
+    {
+      "id": "drain_energy",
+      "name": "Drain Energy Reserves",
+      "target": "base",
+      "risk": 0
+    },
+    {
+      "id": "sabotage_random",
+      "name": "Activate Sabotage Virus (Random)",
+      "target": "base",
+      "risk": 0
+    },
+    {
+      "id": "sabotage_facility",
+      "name": "Activate Sabotage Virus (Facility)",
+      "target": "base",
+      "risk": 1
+    },
+    {
+      "id": "incite_drone_riots",
+      "name": "Incite Drone Riots",
+      "target": "base",
+      "risk": 0
+    },
+    {
+      "id": "assassinate",
+      "name": "Assassinate Prominent Researchers",
+      "target": "base",
+      "risk": 1,
+      "hq_only": true
+    },
+    {
+      "id": "mind_control_base",
+      "name": "Engage Mind Control Probe",
+      "target": "base",
+      "risk": 0,
+      "not_hq": true,
+      "cost": {
+        "energy_bias": 1200,
+        "dist_bias": 4
+      }
+    },
+    {
+      "id": "total_thought_control",
+      "name": "Attempt Total Thought Control",
+      "target": "base",
+      "risk": 1,
+      "not_hq": true,
+      "cost": {
+        "energy_bias": 1200,
+        "dist_bias": 4
+      }
+    },
+    {
+      "id": "genetic_plague",
+      "name": "Introduce Genetic Plague",
+      "target": "base",
+      "risk": 0,
+      "atrocity": true,
+      "required_tech": "gene_splicing"
+    },
+    {
+      "id": "subvert_unit",
+      "name": "Mind Control Unit",
+      "target": "unit",
+      "risk": 0,
+      "cost": {
+        "energy_bias": 800,
+        "dist_bias": 2
+      }
+    }
+  ]
+}

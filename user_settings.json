@@ -4,9 +4,10 @@
   },
   "game_rules": {
     "pause_at_end_of_turn": true,
-    "remove_shroud": true
+    "remove_shroud": false
   },
   "map_generation": {
+    "erosive_forces": "Average",
     "height": 150,
     "ocean_coverage": 0.6000000238418579,
     "preset_id": "pangea",

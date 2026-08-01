@@ -32,6 +32,15 @@ void RiotCalculator::Update(const RiotConditionInputs& inputs)
     }
 }
 
+void RiotCalculator::ForceRiot()
+{
+    if (!m_bRioting)
+    {
+        m_bRioting = true;
+        m_rIsRioting.Emit();
+    }
+}
+
 bool RiotCalculator::IsRioting() const
 {
     return m_bRioting;

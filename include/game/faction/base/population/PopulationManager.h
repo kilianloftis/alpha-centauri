@@ -94,6 +94,9 @@ public:
     // Check riot conditions at end of turn. Delegates to m_riot.Update(inputs).
     void CheckRiotEndOfTurn();
 
+    // Force an active drone riot (probe action). Does not alter pop composition.
+    void ForceRiot();
+
     // Check golden age conditions at end of turn. Delegates to m_goldenAge.Update(...).
     void CheckGoldenAgeEndOfTurn();
 

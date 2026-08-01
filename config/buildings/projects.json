@@ -15,5 +15,27 @@
     ],
     "category": "grow",
     "required_tech": "test_tech_1"
+  },
+  {
+    "id": "Hunter_Seeker_Algorithm",
+    "name": "Hunter-Seeker Algorithm",
+    "mineral_cost": 300,
+    "secret_project": true,
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "FactionGlobal",
+        "persistence": "Continuous",
+        "parameters": { "flag": "blocks_probe_teams" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "persistence": "Continuous",
+        "parameters": { "stat": "probe_success_scale", "amount": -50, "op": "AddPercent" }
+      }
+    ],
+    "category": "conquer",
+    "required_tech": "planetary_networks"
   }
 ]

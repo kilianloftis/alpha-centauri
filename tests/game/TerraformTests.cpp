@@ -43,14 +43,11 @@ struct TerraformGame_
         }
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
-            *fixtures.dataContext.moraleConfig);
+            *fixtures.dataContext.moraleCalculator);
 
         auto pFaction = std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition,
-            fixtures.dataContext.buildingRegistry.get(), nullptr,
-            fixtures.dataContext.socialPolicyRegistry.get(),
-            fixtures.dataContext.socialRatingRegistry.get(),
-            nullptr, nullptr);
+            fixtures.dataContext);
         pPlayer = &pState->AddFaction(std::move(pFaction));
         pPlayer->GetEconomy().AddEnergy(100);
     }
@@ -88,7 +85,7 @@ struct TerraformGame_
         REQUIRE(pTile);
         return pPlayer->GetUnitManager().CreateUnit(
             pState->AllocateUnitId(), rDesign, pState->GetWorldMap().GetUnitPositions(), *pTile,
-            *fixtures.dataContext.moraleConfig, pHome);
+            pHome);
     }
 
     void FinishTerraform(Unit& rUnit)
@@ -144,7 +141,7 @@ TEST_CASE("TryStartTerraform rejects non-formers and exclusions", "[unit][terraf
     Unit& scout = game.pPlayer->GetUnitManager().CreateUnit(
         game.pState->AllocateUnitId(), game.fixtures.designs.back(),
         game.pState->GetWorldMap().GetUnitPositions(), *pTile,
-        *game.fixtures.dataContext.moraleConfig, &home);
+        &home);
 
     CHECK_FALSE(game.pState->GetUnitOrderExecutor().TryStartTerraform(scout, "Farm", *game.pState));
 

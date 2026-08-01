@@ -19,6 +19,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <memory>
+#include <random>
 #include <stdexcept>
 #include <vector>
 
@@ -40,13 +41,14 @@ struct MovementHarness_
     MoveCostCalculator moveCosts;
     StepEvaluator steps;
     Pathfinder pathfinder;
+    std::mt19937 rng;
     UnitOrderExecutor orders;
 
     explicit MovementHarness_(WorldFixture& fixture)
         : moveCosts(fixture.improvements)
         , steps(fixture.map, *fixture.ctx)
         , pathfinder(moveCosts, steps, fixture.map)
-        , orders(moveCosts, steps, fixture.map, *fixture.ctx, pathfinder, *fixture.moraleConfig)
+        , orders(moveCosts, steps, fixture.map, *fixture.ctx, pathfinder, fixture.morale(), rng)
     {
     }
 };

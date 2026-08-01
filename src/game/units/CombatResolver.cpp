@@ -22,22 +22,13 @@ CombatResolver::CombatResolver(const MoveCostCalculator& rMoveCosts,
                                const StepEvaluator& rSteps,
                                WorldMap& rWorldMap,
                                const TileEffectsContext& rTileEffects,
-                               const MoraleConfig_t& rMorale)
-    : CombatResolver(rMoveCosts, rSteps, rWorldMap, rTileEffects, rMorale, std::random_device{}())
-{
-}
-
-CombatResolver::CombatResolver(const MoveCostCalculator& rMoveCosts,
-                               const StepEvaluator& rSteps,
-                               WorldMap& rWorldMap,
-                               const TileEffectsContext& rTileEffects,
-                               const MoraleConfig_t& rMorale,
-                               uint32_t seed)
+                               const MoraleCalculator& rMorale,
+                               std::mt19937& rRng)
     : m_disengage(rMoveCosts, rSteps, rWorldMap)
     , m_rWorldMap(rWorldMap)
     , m_rTileEffects(rTileEffects)
-    , m_morale(rMorale)
-    , m_rng(seed)
+    , m_rMorale(rMorale)
+    , m_rRng(rRng)
 {
 }
 
@@ -48,7 +39,7 @@ int CombatResolver::Roll_(int strength) const
         return 0;
     }
     std::uniform_int_distribution<int> dist(0, strength - 1);
-    return dist(m_rng);
+    return dist(m_rRng);
 }
 
 bool CombatResolver::TryDisengage_(Unit& rCandidate, CombatSide_t side, int startHp,
@@ -70,7 +61,7 @@ bool CombatResolver::TryDisengage_(Unit& rCandidate, CombatSide_t side, int star
     }
 
     std::uniform_int_distribution<size_t> pick(0, retreats.size() - 1);
-    const Tile* pRetreat = retreats[pick(m_rng)];
+    const Tile* pRetreat = retreats[pick(m_rRng)];
     m_rWorldMap.GetUnitPositions().MoveUnit(rCandidate, *pRetreat);
     rResult.pRetreatTile = pRetreat;
     if (side == CombatSide_t::Attacker)
@@ -99,9 +90,9 @@ CombatResult_t CombatResolver::Resolve(Unit& rAttacker, Unit& rDefender)
                         || ResolveFlag(rDefender, RuleFlagId_t::ForcesPsiCombat);
     if (result.bPsiCombat)
     {
-        const double attackRating = m_morale.ResolveCombatMultiplicativeStat(
+        const double attackRating = m_rMorale.ResolveCombatMultiplicativeStat(
             rAttacker, StatId_t::Attack, 1.0, attackCtx);
-        const double defenseRating = m_morale.ResolveCombatMultiplicativeStat(
+        const double defenseRating = m_rMorale.ResolveCombatMultiplicativeStat(
             rDefender, StatId_t::Defense, 1.0, defenseCtx);
         result.attackStrength =
             static_cast<int>(std::lround(attackRating * k_combatStrengthScale));
@@ -111,9 +102,9 @@ CombatResult_t CombatResolver::Resolve(Unit& rAttacker, Unit& rDefender)
     else
     {
         const int attackRating =
-            m_morale.ResolveCombatStat(rAttacker, StatId_t::Attack, attackCtx);
+            m_rMorale.ResolveCombatStat(rAttacker, StatId_t::Attack, attackCtx);
         const int defenseRating =
-            m_morale.ResolveCombatStat(rDefender, StatId_t::Defense, defenseCtx);
+            m_rMorale.ResolveCombatStat(rDefender, StatId_t::Defense, defenseCtx);
         result.attackStrength = attackRating * k_combatStrengthScale;
         result.defenseStrength = static_cast<int>(
             std::lround(defenseRating * tileDefenseMult * k_combatStrengthScale));

@@ -44,18 +44,14 @@ int EuclideanDistSq_(int x0, int y0, int x1, int y1, int mapWidth)
 void ClaimFromBase_(const BaseManager& rBase, const WorldMap& rWorldMap,
                     std::vector<ClaimCandidate_t>& rBest, int width, int height)
 {
-    const Tile* pOrigin = rWorldMap.GetTile(rBase.GetX(), rBase.GetY());
-    if (!pOrigin)
-    {
-        return;
-    }
+    const Tile& rOrigin = rBase.GetTile();
 
-    const bool bWantWater = pOrigin->IsWater();
+    const bool bWantWater = rOrigin.IsWater();
     const int radius = bWantWater ? k_SeaTerritoryRadius : k_LandTerritoryRadius;
     const FactionId_t factionId = rBase.GetFactionId();
     const BaseId_t baseId = rBase.GetBaseId();
-    const int ox = pOrigin->GetX();
-    const int oy = pOrigin->GetY();
+    const int ox = rOrigin.GetX();
+    const int oy = rOrigin.GetY();
 
     std::vector<uint8_t> visited(static_cast<size_t>(width) * static_cast<size_t>(height), 0);
     auto index = [width](int x, int y) {
@@ -65,9 +61,6 @@ void ClaimFromBase_(const BaseManager& rBase, const WorldMap& rWorldMap,
     std::queue<std::pair<int, int>> queue;
     queue.push({ox, oy});
     visited[index(ox, oy)] = 1;
-
-    static constexpr int k_Dx[4] = {1, -1, 0, 0};
-    static constexpr int k_Dy[4] = {0, 0, 1, -1};
 
     while (!queue.empty())
     {
@@ -81,30 +74,29 @@ void ClaimFromBase_(const BaseManager& rBase, const WorldMap& rWorldMap,
             rIncumbent = challenger;
         }
 
-        for (int i = 0; i < 4; ++i)
+        const Tile* pCurrent = rWorldMap.GetTile(x, y);
+        if (!pCurrent)
         {
-            const int ny = y + k_Dy[i];
-            if (ny < 0 || ny >= height)
-            {
-                continue;
-            }
-            const int nx = WrapX(x + k_Dx[i], width);
+            continue;
+        }
+        ForEachOrthogonalNeighbor(*pCurrent, rWorldMap, [&](const Tile* pNeighbor) {
+            const int nx = pNeighbor->GetX();
+            const int ny = pNeighbor->GetY();
             if (visited[index(nx, ny)])
             {
-                continue;
+                return;
             }
             if (!InEuclideanRadius(DeltaX(ox, nx, width), ny - oy, radius))
             {
-                continue;
+                return;
             }
-            const Tile* pNeighbor = rWorldMap.GetTile(nx, ny);
-            if (!pNeighbor || pNeighbor->IsWater() != bWantWater)
+            if (pNeighbor->IsWater() != bWantWater)
             {
-                continue;
+                return;
             }
             visited[index(nx, ny)] = 1;
             queue.push({nx, ny});
-        }
+        });
     }
 }
 

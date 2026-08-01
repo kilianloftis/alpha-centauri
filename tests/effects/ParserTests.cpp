@@ -31,6 +31,10 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(BonusEffectParser::ParseStatId("damage_from_out_of_fuel") == StatId_t::DamageFromOutOfFuel);
     CHECK(BonusEffectParser::ParseStatId("cargo_capacity") == StatId_t::CargoCapacity);
     CHECK(BonusEffectParser::ParseStatId("cost_multiplier") == StatId_t::CostMultiplier);
+    CHECK(BonusEffectParser::ParseStatId("probe_action_cost") == StatId_t::ProbeActionCost);
+    CHECK(BonusEffectParser::ParseStatId("probe_defense") == StatId_t::ProbeDefense);
+    CHECK(BonusEffectParser::ParseStatId("probe_failure_scale") == StatId_t::ProbeFailureScale);
+    CHECK(BonusEffectParser::ParseStatId("probe_success_scale") == StatId_t::ProbeSuccessScale);
     CHECK(BonusEffectParser::ParseStatId("starting_experience") == StatId_t::StartingExperience);
     CHECK(BonusEffectParser::ParseStatId("morale_bonus") == StatId_t::MoraleBonus);
     CHECK(BonusEffectParser::ParseStatId("positive_morale_scale") == StatId_t::PositiveMoraleScale);
@@ -81,6 +85,13 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
     CHECK(BonusEffectParser::ParseRuleFlagId("terraform") == RuleFlagId_t::Terraform);
     CHECK(BonusEffectParser::ParseRuleFlagId("supply_crawl") == RuleFlagId_t::SupplyCrawl);
     CHECK(BonusEffectParser::ParseRuleFlagId("probe_team") == RuleFlagId_t::ProbeTeam);
+    CHECK(BonusEffectParser::ParseRuleFlagId("headquarters") == RuleFlagId_t::Headquarters);
+    CHECK(BonusEffectParser::ParseRuleFlagId("probe_subversion_immune")
+          == RuleFlagId_t::ProbeSubversionImmune);
+    CHECK(BonusEffectParser::ParseRuleFlagId("blocks_probe_teams")
+          == RuleFlagId_t::BlocksProbeTeams);
+    CHECK(BonusEffectParser::ParseRuleFlagId("ignores_probe_block")
+          == RuleFlagId_t::IgnoresProbeBlock);
     CHECK(BonusEffectParser::ParseRuleFlagId("creche") == RuleFlagId_t::Creche);
     CHECK(BonusEffectParser::ParseRuleFlagId("prevents_disengage") == RuleFlagId_t::PreventsDisengage);
     CHECK(BonusEffectParser::ParseRuleFlagId("remove_shroud") == RuleFlagId_t::RemoveShroud);

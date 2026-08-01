@@ -27,7 +27,7 @@ bool ObserverSeesForeignBase_(const Faction& rObserver, const Faction& rOther)
     const FactionVisibleMap& rVisible = rObserver.GetVisibleMap();
     for (const BaseManager& rBase : rOther.Bases())
     {
-        if (rVisible.IsVisible(rBase.GetX(), rBase.GetY()))
+        if (rVisible.IsVisible(rBase.GetTile()))
         {
             return true;
         }

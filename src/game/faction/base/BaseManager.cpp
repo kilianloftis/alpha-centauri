@@ -1,4 +1,5 @@
 #include "game/faction/base/BaseManager.h"
+#include "game/Faction.h"
 #include "game/IEffectsProvider.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/production/ProductionManager.h"
@@ -45,7 +46,7 @@ WorkedTileClaim ClaimCenterTile_(TileEffectsContext& rTileEffects, const Tile& t
 } // namespace
 
 BaseManager::BaseManager(
-    FactionId_t factionId,
+    Faction& rFaction,
     BaseId_t baseId,
     std::string name,
     Tile& tile,
@@ -61,7 +62,7 @@ BaseManager::BaseManager(
     const EconomyManager* pEconomyManager,
     const IEffectsProvider* pEffectsProvider,
     int initialPopulation)
-    : m_factionId(factionId)
+    : m_rFaction(rFaction)
     , m_baseId(baseId)
     , m_tile(tile)
     , m_rTileEffects(rTileEffects)
@@ -349,14 +350,19 @@ int BaseManager::GetNutrientsRequired() const
     return m_pPopulation->GetNutrientsRequired(BuildBaseEffects_());
 }
 
-int BaseManager::GetX() const
+Tile& BaseManager::GetTile()
 {
-    return m_tile.GetX();
+    return m_tile;
 }
 
-int BaseManager::GetY() const
+const Tile& BaseManager::GetTile() const
 {
-    return m_tile.GetY();
+    return m_tile;
+}
+
+const BaseEffects_t& BaseManager::GetBaseEffects() const
+{
+    return BuildBaseEffects_();
 }
 
 TileYieldView_t BaseManager::GetWorkedTileYield(const Tile& rTile) const
@@ -374,9 +380,19 @@ const std::string& BaseManager::GetName() const
     return m_name;
 }
 
+Faction& BaseManager::GetFaction()
+{
+    return m_rFaction;
+}
+
+const Faction& BaseManager::GetFaction() const
+{
+    return m_rFaction;
+}
+
 FactionId_t BaseManager::GetFactionId() const
 {
-    return m_factionId;
+    return m_rFaction.GetFactionId();
 }
 
 int BaseManager::GetBaseId() const

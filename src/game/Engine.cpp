@@ -131,7 +131,7 @@ void Engine::Initialize_()
         *m_gameDataContext->improvementRegistry,
         m_gameDataContext->unitComponentRegistry.get(),
         *m_pSettings,
-        *m_gameDataContext->moraleConfig);
+        *m_gameDataContext->moraleCalculator);
     m_pGameState->GetDiplomaticActionExecutor().SetGameDataContext(*m_gameDataContext);
     std::cout << "Generated world map: " << m_pGameState->GetWorldMap().GetWidth() << "x" << m_pGameState->GetWorldMap().GetHeight() << "\n";
 
@@ -169,13 +169,7 @@ void Engine::Initialize_()
             m_pGameState->AllocateFactionId(),
             bIsPlayerControlled,
             rFactionConfig,
-            m_gameDataContext->buildingRegistry.get(),
-            m_gameDataContext->techRegistry.get(),
-            m_gameDataContext->socialPolicyRegistry.get(),
-            m_gameDataContext->socialRatingRegistry.get(),
-            m_gameDataContext->techCostCalculator.get(),
-            m_gameDataContext->popTypeAvailabilityCalculator.get(),
-            &m_gameDataContext->tileYieldRules);
+            *m_gameDataContext);
 
         const auto& [startX, startY] = startPositions[positionIndex % startPositions.size()];
         BaseManager* pBase = pFaction->CreateBase(
@@ -253,26 +247,25 @@ void Engine::Initialize_()
                     std::make_unique<UnitDesign>(rSlots, crawlerParts), "supply crawler");
 
                 // Basic vision-1 scout beside the base; deep-radar (vision 2) a little farther out.
-                const MoraleConfig_t& rMorale = *m_gameDataContext->moraleConfig;
                 rFaction.GetUnitManager().CreateUnit(
                     m_pGameState->AllocateUnitId(), rBasicDesign, rPositions,
-                    *rMap.GetTile(startX + 1, startY), rMorale, pBase);
+                    *rMap.GetTile(startX + 1, startY), pBase);
                 rFaction.GetUnitManager().CreateUnit(
                     m_pGameState->AllocateUnitId(), rRadarDesign, rPositions,
-                    *rMap.GetTile(startX + 2, startY), rMorale, pBase);
+                    *rMap.GetTile(startX + 2, startY), pBase);
                 rFaction.GetUnitManager().CreateUnit(
                     m_pGameState->AllocateUnitId(), rColonyDesign, rPositions,
-                    *rMap.GetTile(startX + 1, startY + 1), rMorale, pBase);
+                    *rMap.GetTile(startX + 1, startY + 1), pBase);
                 rFaction.GetUnitManager().CreateUnit(
                     m_pGameState->AllocateUnitId(), rCrawlerDesign, rPositions,
-                    *rMap.GetTile(startX + 2, startY + 1), rMorale, pBase);
+                    *rMap.GetTile(startX + 2, startY + 1), pBase);
             }
             else
             {
                 // Enemy scout beside the AI base for multi-faction visibility/combat checks.
                 rFaction.GetUnitManager().CreateUnit(
                     m_pGameState->AllocateUnitId(), rBasicDesign, rPositions,
-                    *rMap.GetTile(startX + 1, startY), *m_gameDataContext->moraleConfig, pBase);
+                    *rMap.GetTile(startX + 1, startY), pBase);
             }
         }
 
@@ -290,7 +283,8 @@ void Engine::Initialize_()
         {
             for (BaseManager& rBase : rFaction.Bases())
             {
-                Tile* pSensorTile = rMap.GetTile(rBase.GetX(), rBase.GetY() + 2);
+                const Tile& rBaseTile = rBase.GetTile();
+                Tile* pSensorTile = rMap.GetTile(rBaseTile.GetX(), rBaseTile.GetY() + 2);
                 if (!pSensorTile)
                 {
                     throw std::runtime_error("Engine setup: Sensor tile out of bounds");
@@ -318,12 +312,7 @@ void Engine::Initialize_()
         TileEffectsContext& rTileEffects = m_pGameState->GetTileEffects();
         for (BaseManager& rBase : pPlayer->Bases())
         {
-            Tile* pBaseTile = rMap.GetTile(rBase.GetX(), rBase.GetY());
-            if (!pBaseTile)
-            {
-                throw std::runtime_error("Engine setup: player base tile out of bounds");
-            }
-            ForEachTileInChebyshevRadius(*pBaseTile, rMap, 2, /*includeOrigin=*/false,
+            ForEachTileInChebyshevRadius(rBase.GetTile(), rMap, 2, /*includeOrigin=*/false,
                 [&](Tile* pTile, int distance)
                 {
                     if (!pTile || !pTile->IsLand() || pTile->HasImprovement("Base"))

@@ -233,6 +233,11 @@ void PopulationManager::CheckRiotEndOfTurn()
     m_riot.Update(BuildRiotInputs_());
 }
 
+void PopulationManager::ForceRiot()
+{
+    m_riot.ForceRiot();
+}
+
 void PopulationManager::CheckGoldenAgeEndOfTurn()
 {
     GoldenAgeCalculator::Inputs_t inputs;

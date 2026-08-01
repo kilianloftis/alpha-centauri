@@ -103,14 +103,15 @@ void WorldDisplay::RenderBases_(Graphics& rGraphics)
     {
         for (const BaseManager& rBase : rFaction.Bases())
         {
-            const auto origin = m_viewport.PixelOriginOf(rBase.GetX(), rBase.GetY());
+            const Tile& rBaseTile = rBase.GetTile();
+            const auto origin = m_viewport.PixelOriginOf(rBaseTile.GetX(), rBaseTile.GetY());
             if (!origin)
             {
                 continue;
             }
 
             // Shroud hides bases entirely; fog still shows last-known bases.
-            if (fog.explored && !fog.explored->IsExplored(rBase.GetX(), rBase.GetY()))
+            if (fog.explored && !fog.explored->IsExplored(rBaseTile))
             {
                 continue;
             }

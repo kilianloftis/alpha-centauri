@@ -18,6 +18,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <cmath>
+#include <random>
 
 using namespace ac;
 using namespace actest;
@@ -29,13 +30,14 @@ struct CombatHarness_
 {
     MoveCostCalculator moveCosts;
     StepEvaluator steps;
+    std::mt19937 rng;
     CombatResolver combat;
 
     CombatHarness_(FactionFixture& fixture, uint32_t seed)
         : moveCosts(fixture.improvements)
         , steps(fixture.map, *fixture.ctx)
-        , combat(moveCosts, steps, fixture.map, *fixture.ctx, *fixture.dataContext.moraleConfig,
-                 seed)
+        , rng(seed)
+        , combat(moveCosts, steps, fixture.map, *fixture.ctx, fixture.morale(), rng)
     {
     }
 };
@@ -45,14 +47,16 @@ struct OrderHarness_
     MoveCostCalculator moveCosts;
     StepEvaluator steps;
     Pathfinder pathfinder;
+    std::mt19937 rng;
     UnitOrderExecutor orders;
 
     OrderHarness_(FactionFixture& fixture, uint32_t seed)
         : moveCosts(fixture.improvements)
         , steps(fixture.map, *fixture.ctx)
         , pathfinder(moveCosts, steps, fixture.map)
+        , rng(seed)
         , orders(moveCosts, steps, fixture.map, *fixture.ctx, pathfinder,
-                 *fixture.dataContext.moraleConfig, seed)
+                 fixture.morale(), rng)
     {
     }
 };
@@ -88,7 +92,7 @@ TEST_CASE("Combat strength is resolved rating times 0x100", "[combat]")
     attacker.SetXp(2);
     defender.SetXp(2);
 
-    const MoraleCalculator morale(*fixture.dataContext.moraleConfig);
+    const MoraleCalculator& morale = fixture.morale();
     const EffectContext_t attackCtx{&defender.GetTile(), CombatRole_t::Attacker};
     const EffectContext_t defenseCtx{&defender.GetTile(), CombatRole_t::Defender};
     const int attackRating =

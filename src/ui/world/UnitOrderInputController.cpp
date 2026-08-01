@@ -1,9 +1,12 @@
 #include "ui/world/UnitOrderInputController.h"
 
+#include "game/GameDataContext.h"
+#include "game/GameState.h"
 #include "game/effects/EffectEnums.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/units/UnitOrderExecutor.h"
 #include "ui/style/UiStyle.h"
 
 namespace ac
@@ -11,11 +14,7 @@ namespace ac
 
 bool UnitOrderInputController::HandleKey(const KeyEvent_t& rEvent, Unit* pSelectedUnit)
 {
-    m_bOrderAssigned = false;
-    m_bAttackRequested = false;
-    m_bSupplyCrawlRequested = false;
-    m_bFoundBaseRequested = false;
-    m_pAttackTarget = nullptr;
+    ClearRequestFlags_();
 
     if (!pSelectedUnit)
     {
@@ -58,92 +57,188 @@ bool UnitOrderInputController::HandleKey(const KeyEvent_t& rEvent, Unit* pSelect
 
 bool UnitOrderInputController::HandleMouse(const MouseEvent_t& rEvent, Unit* pSelectedUnit,
                                            const Tile* pHoveredTile,
-                                           const Pathfinder* pPathfinder)
+                                           const Pathfinder* pPathfinder, GameState* pGameState,
+                                           const GameDataContext* pDataContext)
+{
+    ClearRequestFlags_();
+
+    if (rEvent.button == MouseButton_t::Left)
+    {
+        return HandleLeftButton_(rEvent, pSelectedUnit, pHoveredTile, pPathfinder, pGameState,
+                                 pDataContext);
+    }
+
+    // Mouse move: update preview destination while holding.
+    if (rEvent.button == MouseButton_t::None && m_bLeftButtonHeld && pSelectedUnit && pPathfinder)
+    {
+        return UpdateHoldPreview_(*pSelectedUnit, pHoveredTile, *pPathfinder);
+    }
+
+    return false;
+}
+
+void UnitOrderInputController::ClearRequestFlags_()
 {
     m_bOrderAssigned = false;
     m_bAttackRequested = false;
     m_bSupplyCrawlRequested = false;
     m_bFoundBaseRequested = false;
-    m_pAttackTarget = nullptr;
+    m_bProbeActionRequested = false;
+    m_pInteractTarget = nullptr;
+}
 
-    // --- Left-click: long-press path preview + move order / adjacent attack ---
-    if (rEvent.button == MouseButton_t::Left)
+bool UnitOrderInputController::HasExceededHoldThreshold_() const
+{
+    const auto elapsed = std::chrono::steady_clock::now() - m_leftButtonPressTime;
+    return elapsed >= std::chrono::milliseconds(Style().unitOrderInput.holdThresholdMs);
+}
+
+bool UnitOrderInputController::HandleLeftButton_(const MouseEvent_t& rEvent, Unit* pSelectedUnit,
+                                                 const Tile* pHoveredTile,
+                                                 const Pathfinder* pPathfinder,
+                                                 GameState* pGameState,
+                                                 const GameDataContext* pDataContext)
+{
+    if (rEvent.bPressed)
     {
-        if (rEvent.bPressed)
-        {
-            if (!pSelectedUnit)
-            {
-                return false;
-            }
-            m_bLeftButtonHeld = true;
-            m_leftButtonPressTime = std::chrono::steady_clock::now();
-            m_pPreviewUnit = pSelectedUnit;
-            m_pPreviewDestination = pHoveredTile;
-            m_bPreviewActive = false;
-            return true;
-        }
+        return BeginLeftHold_(pSelectedUnit, pHoveredTile);
+    }
 
-        // Release.
-        if (!m_bLeftButtonHeld)
-        {
-            return false;
-        }
+    return FinishLeftHold_(pPathfinder, pGameState, pDataContext);
+}
 
-        m_bLeftButtonHeld = false;
-
-        if (m_bPreviewActive && m_pPreviewUnit && m_pathPreview.bReachable)
-        {
-            m_pPreviewUnit->SetOrder(MoveOrder_t{m_pPreviewDestination});
-            m_bOrderAssigned = true;
-            CancelPreview();
-            return true;
-        }
-
-        // Long-press on an adjacent tile: request an attack (WorldView calls TryAttack).
-        const auto elapsed = std::chrono::steady_clock::now() - m_leftButtonPressTime;
-        if (elapsed >= std::chrono::milliseconds(Style().unitOrderInput.holdThresholdMs)
-            && m_pPreviewUnit && m_pPreviewDestination && pPathfinder
-            && AreChebyshevAdjacent(m_pPreviewUnit->GetTile(), *m_pPreviewDestination,
-                                    pPathfinder->GetWorldMap().GetWidth()))
-        {
-            m_bAttackRequested = true;
-            m_pAttackTarget = m_pPreviewDestination;
-            CancelPreview();
-            return true;
-        }
-
-        CancelPreview();
+bool UnitOrderInputController::BeginLeftHold_(Unit* pSelectedUnit, const Tile* pHoveredTile)
+{
+    if (!pSelectedUnit)
+    {
         return false;
     }
 
-    // --- Mouse move: update preview destination while holding ---
-    if (rEvent.button == MouseButton_t::None && m_bLeftButtonHeld && pSelectedUnit && pPathfinder)
+    m_bLeftButtonHeld = true;
+    m_leftButtonPressTime = std::chrono::steady_clock::now();
+    m_pPreviewUnit = pSelectedUnit;
+    m_pPreviewDestination = pHoveredTile;
+    m_bPreviewActive = false;
+    return true;
+}
+
+bool UnitOrderInputController::FinishLeftHold_(const Pathfinder* pPathfinder, GameState* pGameState,
+                                               const GameDataContext* pDataContext)
+{
+    if (!m_bLeftButtonHeld)
     {
-        const auto elapsed = std::chrono::steady_clock::now() - m_leftButtonPressTime;
-        if (elapsed < std::chrono::milliseconds(Style().unitOrderInput.holdThresholdMs))
-        {
-            return false;
-        }
-
-        if (pHoveredTile && pHoveredTile != &pSelectedUnit->GetTile())
-        {
-            m_pPreviewUnit = pSelectedUnit;
-            if (pHoveredTile != m_pPreviewDestination)
-            {
-                m_pPreviewDestination = pHoveredTile;
-                UpdatePreview_(*pSelectedUnit, *pHoveredTile, *pPathfinder);
-            }
-            else if (!m_bPreviewActive)
-            {
-                UpdatePreview_(*pSelectedUnit, *pHoveredTile, *pPathfinder);
-            }
-        }
-        else
-        {
-            m_bPreviewActive = false;
-        }
-
         return false;
+    }
+
+    m_bLeftButtonHeld = false;
+
+    Unit* pMover = m_pPreviewUnit;
+    const Tile* pDest = m_pPreviewDestination;
+    const bool bHeldLongEnough = HasExceededHoldThreshold_() || m_bPreviewActive;
+
+    if (pMover && pDest && pPathfinder && bHeldLongEnough && pDest != &pMover->GetTile()
+        && TryResolveHoldRelease_(*pMover, *pDest, *pPathfinder, pGameState, pDataContext))
+    {
+        return true;
+    }
+
+    CancelPreview();
+    return false;
+}
+
+bool UnitOrderInputController::TryResolveHoldRelease_(Unit& rMover, const Tile& rDest,
+                                                      const Pathfinder& rPathfinder,
+                                                      GameState* pGameState,
+                                                      const GameDataContext* pDataContext)
+{
+    const WorldMap& rMap = rPathfinder.GetWorldMap();
+    const bool bAdjacent = AreChebyshevAdjacent(rMover.GetTile(), rDest, rMap.GetWidth());
+    // Both act-on questions are the game layer's to answer: CanOpenProbeActions
+    // covers adjacency, visibility and probe eligibility, and FindVisibleHostileOnTile
+    // is the same gate TryAttack uses.
+    const Unit* pVisibleHostile =
+        pGameState ? pGameState->GetUnitOrderExecutor().FindVisibleHostileOnTile(rMover, rDest)
+                   : nullptr;
+
+    if (bAdjacent
+        && TryAdjacentInteract_(rMover, rDest, pGameState, pDataContext, pVisibleHostile))
+    {
+        return true;
+    }
+
+    return TryAssignMoveOrder_(rMover, rDest, pVisibleHostile);
+}
+
+bool UnitOrderInputController::TryAdjacentInteract_(Unit& rMover, const Tile& rDest,
+                                                    GameState* pGameState,
+                                                    const GameDataContext* pDataContext,
+                                                    const Unit* pVisibleHostile)
+{
+    if (pGameState && pDataContext
+        && pGameState->GetProbeActions().CanOpenProbeActions(rMover, rDest, *pGameState,
+                                                             *pDataContext))
+    {
+        m_bProbeActionRequested = true;
+        m_pInteractTarget = &rDest;
+        CancelPreview();
+        return true;
+    }
+
+    if (pVisibleHostile)
+    {
+        m_bAttackRequested = true;
+        m_pInteractTarget = &rDest;
+        CancelPreview();
+        return true;
+    }
+
+    return false;
+}
+
+bool UnitOrderInputController::TryAssignMoveOrder_(Unit& rMover, const Tile& rDest,
+                                                   const Unit* pVisibleHostile)
+{
+    // Everything else is a move. A seen hostile is the one case the planner refuses
+    // to route into, so order the move anyway and let Execute_ close in via
+    // DesiredContactStep. Undefended bases plan fine (only units and ZoC block a
+    // step), and concealed occupants are invisible to the planner too — so both
+    // take the ordinary reachability path, and the step that fails on arrival
+    // reveals whatever was hiding there.
+    if (!pVisibleHostile && !(m_bPreviewActive && m_pathPreview.bReachable))
+    {
+        return false;
+    }
+
+    rMover.SetOrder(MoveOrder_t{&rDest});
+    m_bOrderAssigned = true;
+    CancelPreview();
+    return true;
+}
+
+bool UnitOrderInputController::UpdateHoldPreview_(Unit& rSelectedUnit, const Tile* pHoveredTile,
+                                                  const Pathfinder& rPathfinder)
+{
+    if (!HasExceededHoldThreshold_())
+    {
+        return false;
+    }
+
+    if (pHoveredTile && pHoveredTile != &rSelectedUnit.GetTile())
+    {
+        m_pPreviewUnit = &rSelectedUnit;
+        if (pHoveredTile != m_pPreviewDestination)
+        {
+            m_pPreviewDestination = pHoveredTile;
+            UpdatePreview_(rSelectedUnit, *pHoveredTile, rPathfinder);
+        }
+        else if (!m_bPreviewActive)
+        {
+            UpdatePreview_(rSelectedUnit, *pHoveredTile, rPathfinder);
+        }
+    }
+    else
+    {
+        m_bPreviewActive = false;
     }
 
     return false;

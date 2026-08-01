@@ -248,8 +248,7 @@ bool ConditionBodySatisfied_(const Condition_t& condition, const EffectContext_t
             return ctx.combatRole == CombatRole_t::Defender;
         case ConditionKind_t::OriginBaseIsTargetBase:
             return pOriginBase != nullptr && ctx.targetTile != nullptr
-                && pOriginBase->GetX() == ctx.targetTile->GetX()
-                && pOriginBase->GetY() == ctx.targetTile->GetY();
+                && &pOriginBase->GetTile() == ctx.targetTile;
         case ConditionKind_t::AllOf:
             for (const std::string& rFeatureId : condition.values)
             {
@@ -545,6 +544,23 @@ bool ResolveFlag(const Unit& rUnit, RuleFlagId_t flagId)
 bool ResolveFlag(const Faction& rFaction, RuleFlagId_t flagId)
 {
     for (const ActiveEffect_t& rEffect : CollectActiveEffects(rFaction).effects)
+    {
+        if (!rEffect.config)
+        {
+            continue;
+        }
+        const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.config->effect);
+        if (pFlag && pFlag->flag == flagId)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool ResolveFlag(const BaseManager& rBase, RuleFlagId_t flagId)
+{
+    for (const ActiveEffect_t& rEffect : rBase.GetBaseEffects().effects)
     {
         if (!rEffect.config)
         {

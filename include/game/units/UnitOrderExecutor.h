@@ -9,6 +9,8 @@
 #include <cstdint>
 #include <functional>
 #include <optional>
+#include <random>
+#include <string>
 #include <unordered_set>
 
 namespace ac
@@ -34,15 +36,8 @@ public:
                       WorldMap& rWorldMap,
                       TileEffectsContext& rTileEffects,
                       Pathfinder& rPathfinder,
-                      const MoraleConfig_t& rMorale);
-    // Same as above, but seeds CombatResolver for deterministic tests.
-    UnitOrderExecutor(const MoveCostCalculator& rMoveCosts,
-                      const StepEvaluator& rSteps,
-                      WorldMap& rWorldMap,
-                      TileEffectsContext& rTileEffects,
-                      Pathfinder& rPathfinder,
-                      const MoraleConfig_t& rMorale,
-                      uint32_t combatSeed);
+                      const MoraleCalculator& rMorale,
+                      std::mt19937& rRng);
     ~UnitOrderExecutor() = default;
 
     // Advance the unit's current order one pass. Returns Continue if the order remains,
@@ -75,6 +70,12 @@ public:
     // assigns TerraformOrder_t. Returns false if ineligible.
     bool TryStartTerraform(Unit& rUnit, const std::string& improvementId, GameState& rGameState);
 
+    // Hostile unit on rTile that rObserver's faction can actually see, or nullptr. This is
+    // the visibility gate TryAttack applies before resolving combat, exposed so input
+    // routing and AI can ask rather than re-derive it. Concealed occupants read as absent,
+    // which is what keeps an order on their tile a move until a blocked step reveals them.
+    Unit* FindVisibleHostileOnTile(const Unit& rObserver, const Tile& rTile) const;
+
 private:
     // SingleUse outcome for a completed use-action. Does not destroy — callers (TryAttack /
     // TryFoundBase, or PlayerActions for Execute) must DestroyUnit on Expended.
@@ -87,7 +88,6 @@ private:
     OrderProgress_t Execute_(Unit& rUnit, SupplyCrawlOrder_t& rOrder);
     OrderProgress_t Execute_(Unit& rUnit, TerraformOrder_t& rOrder);
 
-    Unit* FindVisibleHostileOnTile_(const Unit& rAttacker, const Tile& rTile) const;
     void RevealBlockingUnits_(Unit& rMover, const StepEvaluation_t& rEval);
     void EnterTile_(Unit& rMover, const Tile& rTo, int remainingAfter);
     bool SpendMovesAndEnter_(Unit& rMover, const Tile& rTo, MoveOrder_t& rMoveOrder);
@@ -103,7 +103,8 @@ private:
     WorldMap& m_rWorldMap;
     TileEffectsContext& m_rTileEffects;
     Pathfinder& m_rPathfinder;
-    MoraleCalculator m_morale;
+    const MoraleCalculator& m_rMorale;
+    std::mt19937& m_rRng;
     CombatResolver m_combat;
 };
 

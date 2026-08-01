@@ -39,26 +39,17 @@ struct DiplomacyGame_
         }
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
-            *fixtures.dataContext.moraleConfig);
+            *fixtures.dataContext.moraleCalculator);
 
         auto pA = std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition,
-            fixtures.dataContext.buildingRegistry.get(), nullptr,
-            fixtures.dataContext.socialPolicyRegistry.get(),
-            fixtures.dataContext.socialRatingRegistry.get(),
-            nullptr, nullptr);
+            fixtures.dataContext);
         auto pB = std::make_unique<Faction>(
             pState->AllocateFactionId(), false, fixtures.factionDefinition,
-            fixtures.dataContext.buildingRegistry.get(), nullptr,
-            fixtures.dataContext.socialPolicyRegistry.get(),
-            fixtures.dataContext.socialRatingRegistry.get(),
-            nullptr, nullptr);
+            fixtures.dataContext);
         auto pC = std::make_unique<Faction>(
             pState->AllocateFactionId(), false, fixtures.factionDefinition,
-            fixtures.dataContext.buildingRegistry.get(), nullptr,
-            fixtures.dataContext.socialPolicyRegistry.get(),
-            fixtures.dataContext.socialRatingRegistry.get(),
-            nullptr, nullptr);
+            fixtures.dataContext);
 
         pPlayer = &pState->AddFaction(std::move(pA));
         pAi = &pState->AddFaction(std::move(pB));

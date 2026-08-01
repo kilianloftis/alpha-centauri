@@ -1,7 +1,7 @@
 #include "game/faction/UnitManager.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
-#include "game/units/MoraleConfig.h"
+#include "game/units/MoraleCalculator.h"
 #include "game/units/MovementRules.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
@@ -14,8 +14,9 @@
 namespace ac
 {
 
-UnitManager::UnitManager(Faction& rFaction)
+UnitManager::UnitManager(Faction& rFaction, const MoraleCalculator& rMorale)
     : m_rFaction(rFaction)
+    , m_rMorale(rMorale)
 {
 }
 
@@ -46,8 +47,7 @@ UnitManager::DeferredDestructionScope UnitManager::DeferDestruction()
 
 Unit& UnitManager::CreateUnit(UnitId_t unitId, const UnitDesign& rDesign,
                               UnitPositionIndex& rPositions, const Tile& rTile,
-                              const MoraleConfig_t& rMorale, BaseManager* pHomeBase,
-                              BaseManager* pProducedAt)
+                              BaseManager* pHomeBase, BaseManager* pProducedAt)
 {
     if (!CanPlaceUnitOnTile(rTile, rPositions))
     {
@@ -57,7 +57,7 @@ Unit& UnitManager::CreateUnit(UnitId_t unitId, const UnitDesign& rDesign,
     }
 
     auto pUnit = std::make_unique<Unit>(unitId, rDesign, rPositions, rTile, pHomeBase, m_rFaction,
-                                        rMorale, pProducedAt);
+                                        m_rMorale, pProducedAt);
     Unit& rUnit = *pUnit;
     m_units.push_back(std::move(pUnit));
     m_revision.Bump();

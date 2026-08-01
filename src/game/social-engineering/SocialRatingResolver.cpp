@@ -118,7 +118,7 @@ void ExpandFactionLaneSocialRatingEffects(FactionEffects_t& rFactionEffects,
                                      + "_" + std::to_string(level);
         for (const auto& rEffect : it->second)
         {
-            if (ac::LaneFor(scope) != ac::EffectLane_t::FactionUnits;)
+            if (LaneFor(rEffect.scope) != EffectLane_t::FactionUnits)
             {
                 continue;
             }

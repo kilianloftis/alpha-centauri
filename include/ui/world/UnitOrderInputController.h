@@ -12,6 +12,8 @@ namespace ac
 {
 
 class Tile;
+class GameState;
+struct GameDataContext;
 
 class UnitOrderInputController
 {
@@ -21,16 +23,24 @@ public:
     UnitOrderInputController() = default;
 
     bool HandleKey(const KeyEvent_t& rEvent, Unit* pSelectedUnit);
+    // pGameState / pDataContext are used so probe validity can be deferred to
+    // ProbeActionExecutor (via GameState). Attack still uses local enemy-unit checks.
     bool HandleMouse(const MouseEvent_t& rEvent, Unit* pSelectedUnit, const Tile* pHoveredTile,
-                     const Pathfinder* pPathfinder);
+                     const Pathfinder* pPathfinder, GameState* pGameState = nullptr,
+                     const GameDataContext* pDataContext = nullptr);
 
     // True after the most recent HandleKey/HandleMouse call assigned an order.
     bool WasOrderAssigned() const { return m_bOrderAssigned; }
 
-    // True after a long-press release on an adjacent tile (attack attempt). Target remains
-    // valid until the next HandleKey/HandleMouse call.
+    // True after a long-press release on an adjacent tile with a non-allied unit.
+    // Target remains valid until the next HandleKey/HandleMouse call.
     bool WasAttackRequested() const { return m_bAttackRequested; }
-    const Tile* GetAttackTarget() const { return m_pAttackTarget; }
+    const Tile* GetAttackTarget() const { return m_pInteractTarget; }
+
+    // True after a long-press release when ProbeActionExecutor reports a legal probe menu
+    // against that tile. Target is that tile.
+    bool WasProbeActionRequested() const { return m_bProbeActionRequested; }
+    const Tile* GetProbeTarget() const { return m_pInteractTarget; }
 
     // True after O on a supply-capable unit with a home base. WorldView opens the resource
     // picker; the controller does not assign the order itself.
@@ -46,6 +56,23 @@ public:
     void CancelPreview();
 
 private:
+    void ClearRequestFlags_();
+    bool HasExceededHoldThreshold_() const;
+
+    bool HandleLeftButton_(const MouseEvent_t& rEvent, Unit* pSelectedUnit,
+                           const Tile* pHoveredTile, const Pathfinder* pPathfinder,
+                           GameState* pGameState, const GameDataContext* pDataContext);
+    bool BeginLeftHold_(Unit* pSelectedUnit, const Tile* pHoveredTile);
+    bool FinishLeftHold_(const Pathfinder* pPathfinder, GameState* pGameState,
+                         const GameDataContext* pDataContext);
+    bool TryResolveHoldRelease_(Unit& rMover, const Tile& rDest, const Pathfinder& rPathfinder,
+                                GameState* pGameState, const GameDataContext* pDataContext);
+    bool TryAdjacentInteract_(Unit& rMover, const Tile& rDest, GameState* pGameState,
+                              const GameDataContext* pDataContext, const Unit* pVisibleHostile);
+    bool TryAssignMoveOrder_(Unit& rMover, const Tile& rDest, const Unit* pVisibleHostile);
+    bool UpdateHoldPreview_(Unit& rSelectedUnit, const Tile* pHoveredTile,
+                            const Pathfinder& rPathfinder);
+
     void UpdatePreview_(Unit& rMover, const Tile& rDestination, const Pathfinder& rPathfinder);
 
     const std::unordered_map<Key_t, OrderHandler_t> m_orderHandlers = {
@@ -57,9 +84,10 @@ private:
 
     bool m_bOrderAssigned = false;
     bool m_bAttackRequested = false;
+    bool m_bProbeActionRequested = false;
     bool m_bSupplyCrawlRequested = false;
     bool m_bFoundBaseRequested = false;
-    const Tile* m_pAttackTarget = nullptr;
+    const Tile* m_pInteractTarget = nullptr;
 
     // Left-click long-press path preview.
     bool m_bLeftButtonHeld = false;

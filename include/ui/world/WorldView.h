@@ -82,6 +82,7 @@ private:
     bool PlayerUnitsNeedOrders_() const;
     static bool UnitRequiresOrders_(const Unit& rUnit);
     void TryBeginAttack_(Unit& rAttacker, const Tile& rTargetTile);
+    void TryOpenProbeActions_(Unit& rProbe, const Tile& rTargetTile);
     std::string FindUnitNameOnTile_(const Tile& rTile) const;
 
     GameState& m_rGameState;

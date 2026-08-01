@@ -30,6 +30,7 @@ class ResearchManager;
 class SocialRatingRegistry;
 class IEffectsProvider;
 class Tile;
+class Faction;
 class PopTypeRegistry;
 class PopTypeAvailabilityCalculator;
 struct GrowthConfig_t;
@@ -60,15 +61,16 @@ struct BaseSnapshot_t
 class BaseManager
 {
 public:
-    // pEffectsProvider is the owning faction's effect pool; may be null for a base that
-    // resolves no faction effects (standalone test bases). pPopTypeRegistry,
+    // rFaction is the owning faction (lifetime must outlive this base). pEffectsProvider is
+    // the owning faction's effect pool; may be null for a base that resolves no faction
+    // effects (standalone test bases). pPopTypeRegistry,
     // pPopTypeAvailabilityCalculator, pGrowthConfig, and pCompositionCalculator are forwarded
     // to the population subsystem; pSecretProjectCalculator is forwarded to the building
     // subsystem. All are named individually (rather than taking a whole GameDataContext) so
     // this leaf class's real dependencies are visible at the call site; the caller (a factory
     // such as Faction::CreateBase) is responsible for unpacking them.
     BaseManager(
-        FactionId_t factionId,
+        Faction& rFaction,
         BaseId_t baseId,
         std::string name,
         Tile& tile,
@@ -164,8 +166,11 @@ public:
 
     int GetNutrientsRequired() const;
 
-    int GetX() const;
-    int GetY() const;
+    Tile& GetTile();
+    const Tile& GetTile() const;
+
+    // Final effect list this base resolves against (faction pool + pops + SE rating expansion).
+    const BaseEffects_t& GetBaseEffects() const;
 
     // Worked / preview tile yield after base-wide (and, for worked tiles, pop) effects.
     // .effective applies TileResourceCap; .potential is uncapped (for UI).
@@ -179,6 +184,8 @@ public:
 
     // Base identity
     const std::string& GetName() const;
+    Faction& GetFaction();
+    const Faction& GetFaction() const;
     FactionId_t GetFactionId() const;
     int GetBaseId() const;
 
@@ -202,7 +209,7 @@ private:
     // version changed. The reference is valid until the next effect-source mutation.
     const BaseEffects_t& BuildBaseEffects_() const;
 
-    FactionId_t m_factionId;
+    Faction& m_rFaction;
     int m_baseId;
     Tile& m_tile;
     TileEffectsContext& m_rTileEffects;

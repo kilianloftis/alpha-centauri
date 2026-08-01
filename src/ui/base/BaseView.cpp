@@ -116,17 +116,14 @@ void BaseView::Render(Graphics& rGraphics)
 void BaseView::RefreshUnitStack_()
 {
     const WorldMap& rMap = m_rBase.GetTileEffects().GetWorldMap();
-    const Tile* pTile = rMap.GetTile(m_rBase.GetX(), m_rBase.GetY());
+    const Tile& rTile = m_rBase.GetTile();
 
     std::vector<Unit*> stackUnits;
-    if (pTile)
+    for (Unit* pUnit : rMap.GetUnitsOnTile(rTile))
     {
-        for (Unit* pUnit : rMap.GetUnitsOnTile(*pTile))
+        if (pUnit)
         {
-            if (pUnit)
-            {
-                stackUnits.push_back(pUnit);
-            }
+            stackUnits.push_back(pUnit);
         }
     }
 

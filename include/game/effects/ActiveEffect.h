@@ -324,8 +324,15 @@ double ResolveMultiplicativeStat(const Unit& rUnit, StatId_t statId, double base
                                  const EffectContext_t& rCtx = {});
 bool ResolveFlag(const Unit& rUnit, RuleFlagId_t flagId);
 
-// Resolve a faction-wide RuleFlag from the continuous effect pool (buildings, ratings, etc.).
+// Resolve a faction-wide RuleFlag from the continuous effect pool (buildings, SPs, etc.).
+// Note: Social-rating expansions of FactionGlobal effects are applied per-base
+// (ExpandSocialRatingEffects) and are NOT visible here — use ResolveFlag(BaseManager) for those.
 bool ResolveFlag(const Faction& rFaction, RuleFlagId_t flagId);
+
+// Resolve a RuleFlag from a base's final effect list (FilterForBase + SE rating expansion +
+// buildings). Prefer this for ThisBase flags (Headquarters) and for FactionGlobal SE effects
+// (e.g. probe_subversion_immune).
+bool ResolveFlag(const BaseManager& rBase, RuleFlagId_t flagId);
 
 // Collects a single pop type's own effects (both ThisPop-scoped tile multipliers and
 // ThisBase-scoped flat generation bonuses). sourceId is the pop type's id.

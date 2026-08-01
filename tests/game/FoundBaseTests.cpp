@@ -74,20 +74,14 @@ struct FoundBaseGame_
         }
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
-            *fixtures.dataContext.moraleConfig);
+            *fixtures.dataContext.moraleCalculator);
 
         auto pFactionA = std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition,
-            fixtures.dataContext.buildingRegistry.get(), nullptr,
-            fixtures.dataContext.socialPolicyRegistry.get(),
-            fixtures.dataContext.socialRatingRegistry.get(),
-            nullptr, nullptr);
+            fixtures.dataContext);
         auto pFactionB = std::make_unique<Faction>(
             pState->AllocateFactionId(), false, fixtures.factionDefinition,
-            fixtures.dataContext.buildingRegistry.get(), nullptr,
-            fixtures.dataContext.socialPolicyRegistry.get(),
-            fixtures.dataContext.socialRatingRegistry.get(),
-            nullptr, nullptr);
+            fixtures.dataContext);
 
         pPlayer = &pState->AddFaction(std::move(pFactionA));
         pAi = &pState->AddFaction(std::move(pFactionB));
@@ -130,7 +124,7 @@ struct FoundBaseGame_
         return rFaction.GetUnitManager().CreateUnit(
             pState->AllocateUnitId(), fixtures.designs.back(),
             pState->GetWorldMap().GetUnitPositions(), *pTile,
-            *fixtures.dataContext.moraleConfig, pHomeBase);
+            pHomeBase);
     }
 };
 
@@ -182,8 +176,8 @@ TEST_CASE("TryFoundBase creates a base; SingleUse expends the colony pod", "[uni
     BaseManager* pNew = game.pState->GetUnitOrderExecutor().TryFoundBase(
         pod, *game.pState, game.fixtures.dataContext);
     REQUIRE(pNew);
-    CHECK(pNew->GetX() == 7);
-    CHECK(pNew->GetY() == 4);
+    CHECK(pNew->GetTile().GetX() == 7);
+    CHECK(pNew->GetTile().GetY() == 4);
     CHECK(game.pPlayer->GetBaseCount() == 2);
     CHECK(CountUnits_(*game.pPlayer) == 0);
     CHECK(game.pState->FindBaseAt(7, 4) == pNew);

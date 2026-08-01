@@ -11,9 +11,11 @@
 namespace ac
 {
 
+using BuildingId_t = std::string;
+
 struct BuildingConfig_t : public IConstructable
 {
-    std::string id;
+    BuildingId_t id;
     std::string name;
     GameCategory_t category;
     int mineralCost;

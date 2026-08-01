@@ -25,10 +25,10 @@ public:
     ~BuildingManager();
 
     // Add a building by id. Throws if the factory cannot find the id.
-    void AddBuilding(const std::string& buildingId);
+    void AddBuilding(const BuildingId_t& buildingId);
 
     // Destroy the first building with the given id. No-op if not present.
-    void DestroyBuilding(const std::string& buildingId);
+    void DestroyBuilding(const BuildingId_t& buildingId);
 
     // All currently constructed buildings.
     const std::vector<const BuildingConfig_t*>& GetBuildings() const;
@@ -46,7 +46,7 @@ public:
     uint64_t GetRevision() const { return m_revision.Get(); }
 
 private:
-    bool DoesBuildingExist_(const std::string& buildingId) const;
+    bool DoesBuildingExist_(const BuildingId_t& buildingId) const;
 
     const BuildingRegistry* m_pRegistry;
     const ResearchManager* m_pResearch;

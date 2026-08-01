@@ -38,8 +38,7 @@ void BaseWorkableAreaDisplay::CacheTileRects_()
     m_startX = m_layout.x + (m_layout.width  - gridWidth)  / style.gridCenterOffset;
     m_startY = m_layout.y + (m_layout.height - gridHeight) / style.gridCenterOffset;
 
-    const int baseX = m_pBase->GetX();
-    const int baseY = m_pBase->GetY();
+    const Tile& rBaseTile = m_pBase->GetTile();
     const int mapWidth = m_pBase->GetTileEffects().GetWorldMap().GetWidth();
 
     for (const Tile* pTile : m_pBase->GetWorkerAssignments().GetWorkableTiles())
@@ -49,8 +48,8 @@ void BaseWorkableAreaDisplay::CacheTileRects_()
             continue;
         }
 
-        const int relX = DeltaX(baseX, pTile->GetX(), mapWidth);
-        const int relY = pTile->GetY() - baseY;
+        const int relX = DeltaX(rBaseTile.GetX(), pTile->GetX(), mapWidth);
+        const int relY = pTile->GetY() - rBaseTile.GetY();
         const float screenX = m_startX + (static_cast<float>(relX) + style.gridCenterOffset) * m_tileSize;
         const float screenY = m_startY + (static_cast<float>(relY) + style.gridCenterOffset) * m_tileSize;
 

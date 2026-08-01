@@ -38,20 +38,14 @@ struct ContactGame_
         }
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
-            *fixtures.dataContext.moraleConfig);
+            *fixtures.dataContext.moraleCalculator);
 
         auto pFactionA = std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition,
-            fixtures.dataContext.buildingRegistry.get(), nullptr,
-            fixtures.dataContext.socialPolicyRegistry.get(),
-            fixtures.dataContext.socialRatingRegistry.get(),
-            nullptr, nullptr);
+            fixtures.dataContext);
         auto pFactionB = std::make_unique<Faction>(
             pState->AllocateFactionId(), false, fixtures.factionDefinition,
-            fixtures.dataContext.buildingRegistry.get(), nullptr,
-            fixtures.dataContext.socialPolicyRegistry.get(),
-            fixtures.dataContext.socialRatingRegistry.get(),
-            nullptr, nullptr);
+            fixtures.dataContext);
 
         pA = &pState->AddFaction(std::move(pFactionA));
         pB = &pState->AddFaction(std::move(pFactionB));
@@ -82,7 +76,7 @@ struct ContactGame_
         return rFaction.GetUnitManager().CreateUnit(
             pState->AllocateUnitId(), fixtures.designs.back(),
             pState->GetWorldMap().GetUnitPositions(), *pTile,
-            *fixtures.dataContext.moraleConfig, nullptr);
+            nullptr);
     }
 };
 

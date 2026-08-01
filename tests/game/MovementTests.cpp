@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <random>
 #include <variant>
 
 using namespace ac;
@@ -33,13 +34,14 @@ struct MovementHarness_
     MoveCostCalculator moveCosts;
     StepEvaluator steps;
     Pathfinder pathfinder;
+    std::mt19937 rng;
     UnitOrderExecutor orders;
 
     explicit MovementHarness_(WorldFixture& fixture)
         : moveCosts(fixture.improvements)
         , steps(fixture.map, *fixture.ctx)
         , pathfinder(moveCosts, steps, fixture.map)
-        , orders(moveCosts, steps, fixture.map, *fixture.ctx, pathfinder, *fixture.moraleConfig)
+        , orders(moveCosts, steps, fixture.map, *fixture.ctx, pathfinder, fixture.morale(), rng)
     {
     }
 };
@@ -494,7 +496,7 @@ TEST_CASE("TurnStart restores move fragments", "[movement][turn]")
 
     GameSettings settings;
     GameState state(std::make_unique<WorldMap>(3, 3), fixture.improvements, &fixture.unitComponents,
-                    settings, *fixture.moraleConfig);
+                    settings, *fixture.dataContext.moraleCalculator);
     state.AddFaction(std::move(fixture.factions[0]));
 
     TurnStart stage(HookContext{});

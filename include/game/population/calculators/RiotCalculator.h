@@ -31,6 +31,9 @@ public:
     // or riot_ended if conditions are no longer met and base was rioting.
     void Update(const RiotConditionInputs& inputs);
 
+    // Force an active drone riot (probe Incite Drone Riots). Emits OnIsRioting if newly active.
+    void ForceRiot();
+
     // True if base is currently in an active drone riot.
     bool IsRioting() const;
 
