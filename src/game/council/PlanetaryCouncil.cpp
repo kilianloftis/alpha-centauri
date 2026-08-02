@@ -132,6 +132,16 @@ int PlanetaryCouncil::YearsUntilCanPropose(const GameState& rGameState,
     return std::max(0, needed - elapsed);
 }
 
+std::optional<int> PlanetaryCouncil::LastProposedYear(const Faction& rFaction) const
+{
+    const auto it = m_lastProposedYear.find(rFaction.GetFactionId());
+    if (it == m_lastProposedYear.end())
+    {
+        return std::nullopt;
+    }
+    return it->second;
+}
+
 bool PlanetaryCouncil::IsActive(const std::string& rProposalId) const
 {
     return std::find(m_activeProposalIds.begin(), m_activeProposalIds.end(), rProposalId)
@@ -387,7 +397,7 @@ bool PlanetaryCouncil::VetoUnanimouslyOverruled_() const
     return true;
 }
 
-bool PlanetaryCouncil::AllMembersVoted_() const
+bool PlanetaryCouncil::AllMembersVoted() const
 {
     if (!m_pending)
     {
@@ -579,7 +589,7 @@ ResolveProposalResult_t PlanetaryCouncil::Resolve(GameState& rGameState)
     {
         throw std::invalid_argument("PlanetaryCouncil::Resolve: no pending proposal");
     }
-    if (!AllMembersVoted_())
+    if (!AllMembersVoted())
     {
         throw std::invalid_argument("PlanetaryCouncil::Resolve: votes incomplete");
     }

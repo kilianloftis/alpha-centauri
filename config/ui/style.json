@@ -334,7 +334,53 @@
     "row_start_y": 0.2,
     "row_height": 0.08,
     "row_pad_x": 0.05,
-    "status_pad_x": 0.55
+    "status_pad_x": 0.55,
+    "council_button_layout": [
+      0.1,
+      0.88,
+      0.8,
+      0.08
+    ]
+  },
+  "council_vote_view": {
+    "background_color": [
+      30, 30, 50, 255
+    ],
+    "border_color": [
+      80, 80, 120, 255
+    ],
+    "faction_name_color": [
+      255, 255, 0, 255
+    ],
+    "ballot_color": [
+      255, 255, 255, 255
+    ],
+    "weight_color": [
+      180, 180, 220, 255
+    ],
+    "header_color": [
+      255, 255, 255, 255
+    ],
+    "name_color": [
+      255, 255, 0, 255
+    ],
+    "tally_color": [
+      255, 255, 255, 255
+    ],
+    "faction_font_size": 14,
+    "ballot_font_size": 14,
+    "weight_font_size": 12,
+    "header_font_size": 16,
+    "name_font_size": 16,
+    "tally_font_size": 14,
+    "padding_ratio": 0.04,
+    "line_height_ratio": 0.12,
+    "vote_button_layout": [
+      0.3,
+      0.72,
+      0.4,
+      0.22
+    ]
   },
   "current_research_panel": {
     "label_layout": [

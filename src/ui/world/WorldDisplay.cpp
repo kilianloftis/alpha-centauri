@@ -175,16 +175,21 @@ void WorldDisplay::RenderMonoliths_(Graphics& rGraphics)
 {
     const auto& s = Style().worldDisplay;
     const float tileSize = m_viewport.TileSize();
+    const PlayerFogMaps_t fog = PlayerFog_(m_rGameState);
 
     const unsigned int fontSize = static_cast<unsigned int>(tileSize * s.monolithMarkerFontSizeRatio);
     const float markerWidth = tileSize * s.monolithMarkerWidthRatio;
     const float markerHeight = tileSize * s.monolithMarkerHeightRatio;
     const float inset = tileSize * s.monolithMarkerInsetRatio;
 
-    // Drawn after the shroud fill and without an explored/visible gate — monoliths pierce
-    // fog of war so players can navigate toward them from the start.
     m_viewport.ForEachVisibleTile([&](const Tile& rTile, float tileX, float tileY) {
         if (!rTile.HasImprovement("Monolith"))
+        {
+            return;
+        }
+
+        // Shroud hides monoliths; fog still shows last-known markers (same as bases/sensors).
+        if (fog.explored && !fog.explored->IsExplored(rTile))
         {
             return;
         }
@@ -207,6 +212,7 @@ void WorldDisplay::RenderRivers_(Graphics& rGraphics)
     const float stub = m_viewport.TileSize() * 0.2f;
 
     m_viewport.ForEachVisibleTile([&](const Tile& rTile, float /*tileX*/, float /*tileY*/) {
+        // Rivers stay under shroud; only explored river tiles seed drawing.
         if (fog.explored && !fog.explored->IsExplored(rTile))
         {
             return;
@@ -234,14 +240,18 @@ void WorldDisplay::RenderRivers_(Graphics& rGraphics)
             return;
         }
 
-        // Draw only East/South edges to avoid double-drawing when both tiles are visible.
-        static constexpr RiverConnection_t k_DrawDirs[2] = {
+        // East/South edges avoid double-drawing when both tiles are explored. North/West
+        // edges are drawn only into shrouded neighbors so a river can flow "off the map
+        // of knowledge" without waiting for the far tile to be explored.
+        static constexpr RiverConnection_t k_DrawDirs[4] = {
+            RiverConnection_t::North,
             RiverConnection_t::East,
             RiverConnection_t::South,
+            RiverConnection_t::West,
         };
-        static constexpr int k_Deltas[2][2] = {{1, 0}, {0, 1}};
+        static constexpr int k_Deltas[4][2] = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}};
 
-        for (int i = 0; i < 2; ++i)
+        for (int i = 0; i < 4; ++i)
         {
             if (!HasRiverConnection(connections, k_DrawDirs[i]))
             {
@@ -253,7 +263,12 @@ void WorldDisplay::RenderRivers_(Graphics& rGraphics)
             {
                 continue;
             }
-            if (fog.explored && !fog.explored->IsExplored(*pNeighbor))
+            const bool bNeighborExplored =
+                !fog.explored || fog.explored->IsExplored(*pNeighbor);
+            const bool bEastOrSouth =
+                k_DrawDirs[i] == RiverConnection_t::East
+                || k_DrawDirs[i] == RiverConnection_t::South;
+            if (!bEastOrSouth && bNeighborExplored)
             {
                 continue;
             }

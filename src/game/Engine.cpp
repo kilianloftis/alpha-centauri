@@ -1,5 +1,7 @@
 #include "game/Engine.h"
 #include "game/GameState.h"
+#include "game/council/CouncilAiStub.h"
+#include "game/council/PlanetaryCouncil.h"
 #include "game/GameSettings.h"
 #include "game/Faction.h"
 #include "game/TurnStageFactory.h"
@@ -155,7 +157,7 @@ void Engine::Initialize_()
     const int centerY = m_pGameState->GetWorldMap().GetHeight() / 2;
     const std::vector<std::pair<int, int>> startPositions = {
         {0, centerY},
-        {centerX + 3, centerY + 3},
+        {5, centerY},
     };
 
     size_t positionIndex = 0;
@@ -277,6 +279,13 @@ void Engine::Initialize_()
 
     m_pGameState->CreatePlanetaryCouncil(*m_gameDataContext->councilProposalRegistry,
                                          *m_gameDataContext->councilRules);
+    m_councilAiVoteConn = m_pGameState->GetPlanetaryCouncil()->OnProposalOpened.ConnectScoped(
+        [this](Faction& /*rProposer*/, const std::string& /*rProposalId*/) {
+            if (PlanetaryCouncil* pCouncil = m_pGameState->GetPlanetaryCouncil())
+            {
+                CastStubCouncilVotes(*pCouncil);
+            }
+        });
 
     // Temporary test Sensors: one in each faction's territory (south of their starting base).
     {
@@ -380,8 +389,12 @@ void Engine::Initialize_()
                 std::move(onFinished)));
         },
         [this]() {
-            m_uiManager->PushView(
-                m_viewFactory->CreateCommlinksView(m_viewFactory->GetFullscreenLayout()));
+            const WindowLayout_t fullscreen = m_viewFactory->GetFullscreenLayout();
+            m_uiManager->PushView(m_viewFactory->CreateCommlinksView(
+                fullscreen,
+                [this, fullscreen]() {
+                    m_uiManager->PushView(m_viewFactory->CreateCouncilVoteView(fullscreen));
+                }));
         },
         [this](BaseManager& rBase) { m_eventBridge->WireBase(rBase); }
     );

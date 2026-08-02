@@ -95,7 +95,11 @@ private:
     Unit* m_pPreviewUnit = nullptr;
     const Tile* m_pPreviewDestination = nullptr;
     Path_t m_pathPreview;
+    // True when a path graphic should be drawn (reachable non-empty path).
     bool m_bPreviewActive = false;
+    // True after FindPath has been run for m_pPreviewDestination (reachable or not).
+    // Prevents re-flooding the map on every mouse-move for unreachable goals.
+    bool m_bPreviewSearchDone = false;
 };
 
 } // namespace ac

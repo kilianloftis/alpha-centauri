@@ -61,6 +61,9 @@ public:
     bool HasCommlinksToAllMembers(const GameState& rGameState, const Faction& rFaction) const;
     int ProposeCooldownYears(const Faction& rFaction) const;
     int YearsUntilCanPropose(const GameState& rGameState, const Faction& rFaction) const;
+    // Mission year of this faction's last Propose, or nullopt if they have never proposed.
+    std::optional<int> LastProposedYear(const Faction& rFaction) const;
+    const CouncilRulesConfig_t& GetRules() const { return m_rRules; }
 
     // --- Proposal availability ---
     bool IsActive(const std::string& rProposalId) const;
@@ -84,6 +87,9 @@ public:
     // Governor veto. Returns false if there is no pending proposal or caller is not governor.
     // Overruled at Resolve when every non-governor member voted Yea.
     bool VetoPending(const Faction& rGovernor);
+
+    // True when every council member has a ballot (or election vote) on the pending proposal.
+    bool AllMembersVoted() const;
 
     ResolveProposalResult_t Resolve(GameState& rGameState);
 
@@ -131,7 +137,6 @@ private:
     void RemoveActiveProposal_(const std::string& rProposalId);
     void ActivateProposal_(const CouncilProposalConfig_t& rConfig);
     void ApplyGovernor_(GameState& rGameState, Faction& rGovernor);
-    bool AllMembersVoted_() const;
     bool VetoUnanimouslyOverruled_() const;
     Faction* FindMember_(FactionId_t factionId) const;
 

@@ -183,6 +183,15 @@ void WorldView::SetSelectedTile_(const Tile* pTile)
 
 void WorldView::SelectNextAvailableUnit_()
 {
+    // Short moves clear the order but leave move fragments — stay on this unit so the
+    // player can keep issuing orders. GetNextAvailableUnit() alone would jump to the
+    // first faction unit that needs orders, which is often a different unit.
+    if (m_pSelectedUnit && UnitRequiresOrders_(*m_pSelectedUnit))
+    {
+        SetSelectedUnit_(m_pSelectedUnit, m_bManualSelection);
+        return;
+    }
+
     const Faction* pPlayer = m_rGameState.GetPlayerFaction();
     SetSelectedUnit_(
         pPlayer ? pPlayer->GetUnitManager().GetNextAvailableUnit() : nullptr,
@@ -409,22 +418,28 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
         rEvent, pControllable, pClickedTile, &m_rGameState.GetPathfinder(), &m_rGameState,
         &m_rGameDataContext);
 
-    // Left-click release on an explored tile selects the tile and a visible unit on it
-    // (also when a move / attack order consumed the click — tile only in that case until
-    // the normal pick path below runs).
-    if (rEvent.button == MouseButton_t::Left && !rEvent.bPressed && pClickedTile)
-    {
-        const Faction* pPlayer = m_rGameState.GetPlayerFaction();
-        const FactionExploredMap* pExplored =
-            (pPlayer && pPlayer->GetExploredMap().IsSized()) ? &pPlayer->GetExploredMap() : nullptr;
-        if (!pExplored || pExplored->IsExplored(worldX, worldY))
-        {
-            SetSelectedTile_(pClickedTile);
-        }
-    }
-
     if (bOrderHandled)
     {
+        const bool bDidOrderAction =
+            m_pUnitOrderInputController->WasAttackRequested()
+            || m_pUnitOrderInputController->WasProbeActionRequested()
+            || m_pUnitOrderInputController->WasOrderAssigned();
+
+        // Move / attack / probe still focus the location panel on the target tile.
+        // An aborted long-press (held past threshold, no order) must not change selection.
+        if (bDidOrderAction && rEvent.button == MouseButton_t::Left && !rEvent.bPressed
+            && pClickedTile)
+        {
+            const Faction* pPlayer = m_rGameState.GetPlayerFaction();
+            const FactionExploredMap* pExplored =
+                (pPlayer && pPlayer->GetExploredMap().IsSized()) ? &pPlayer->GetExploredMap()
+                                                                : nullptr;
+            if (!pExplored || pExplored->IsExplored(worldX, worldY))
+            {
+                SetSelectedTile_(pClickedTile);
+            }
+        }
+
         if (m_pUnitOrderInputController->WasAttackRequested() && pControllable
             && m_pUnitOrderInputController->GetAttackTarget())
         {
@@ -455,6 +470,8 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
         {
             return;
         }
+
+        SetSelectedTile_(pClickedTile);
 
         // Unit pick uses IsUnitVisibleTo (fog / Conceal / contact reveal), not tile fog alone.
         SelectUnitAtTile_(worldX, worldY);

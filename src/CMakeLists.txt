@@ -26,6 +26,7 @@ add_library(ac-core STATIC
     game/faction/TradeItem.cpp
     game/faction/DiplomaticActionExecutor.cpp
     game/faction/FirstContactResolver.cpp
+    game/council/CouncilAiStub.cpp
     game/council/CouncilEffects.cpp
     game/council/CouncilOutcomeApplier.cpp
     game/council/CouncilProposalConfigParser.cpp
@@ -255,6 +256,14 @@ add_executable(alpha-centauri
     ui/world/CommlinksButton.cpp
     ui/commlinks/CommlinksView.cpp
     ui/commlinks/CommlinksPanel.cpp
+    ui/commlinks/CouncilButton.cpp
+    ui/commlinks/CouncilCooldownPopup.cpp
+    ui/commlinks/CouncilProposalsPopup.cpp
+    ui/council/CouncilVoteView.cpp
+    ui/council/CouncilFactionVotesPanel.cpp
+    ui/council/CouncilProposalInfoPanel.cpp
+    ui/council/CouncilVoteButton.cpp
+    ui/council/CouncilBallotPopup.cpp
     ui/PlaceholderPanel.cpp
     ui/base/BaseView.cpp
     ui/base/BaseNameDisplay.cpp

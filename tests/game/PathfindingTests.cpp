@@ -220,8 +220,11 @@ TEST_CASE("FindPath at destination and unreachable known terrain", "[movement][p
 
     MakeWater_(fixture.At(6, 4));
     ExploreAll_(faction, fixture.map);
+    // Known water is a domain dead-end: planner must reject without a land-flood search.
+    CHECK_FALSE(harness.steps.CanPlanEnterTerrain(unit, fixture.At(6, 4)));
     const Path_t water = harness.pathfinder.FindPath(unit, fixture.At(6, 4));
     CHECK_FALSE(water.bReachable);
+    CHECK(water.tiles.empty());
     CHECK(harness.pathfinder.NextStep(unit, fixture.At(6, 4)) == nullptr);
 }
 

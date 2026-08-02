@@ -76,7 +76,8 @@ private:
     // Does not steal a manual selection (empty tile browse, or a unit that already moved /
     // has an order).
     void SelectNextAvailableUnitIfNeeded_();
-    // After an order is assigned — jump to the next unit that still needs orders.
+    // After an order/action — keep the selection if that unit still needs orders
+    // (e.g. a short move with moves left); otherwise jump to the next unit that does.
     void SelectNextAvailableUnit_();
     Unit* GetControllableSelectedUnit_() const;
     bool PlayerUnitsNeedOrders_() const;

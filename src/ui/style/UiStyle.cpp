@@ -300,6 +300,30 @@ CommlinksPanelStyle ParseCommlinksPanelStyle_(const nlohmann::json& j)
     s.rowHeight = j.at("row_height").get<float>();
     s.rowPadX = j.at("row_pad_x").get<float>();
     s.statusPadX = j.at("status_pad_x").get<float>();
+    s.councilButtonLayout = ParseLayout_(j, "council_button_layout");
+    return s;
+}
+
+CouncilVoteViewStyle ParseCouncilVoteViewStyle_(const nlohmann::json& j)
+{
+    CouncilVoteViewStyle s{};
+    s.backgroundColor = ParseColor_(j, "background_color");
+    s.borderColor = ParseColor_(j, "border_color");
+    s.factionNameColor = ParseColor_(j, "faction_name_color");
+    s.ballotColor = ParseColor_(j, "ballot_color");
+    s.weightColor = ParseColor_(j, "weight_color");
+    s.headerColor = ParseColor_(j, "header_color");
+    s.nameColor = ParseColor_(j, "name_color");
+    s.tallyColor = ParseColor_(j, "tally_color");
+    s.factionFontSize = j.at("faction_font_size").get<unsigned int>();
+    s.ballotFontSize = j.at("ballot_font_size").get<unsigned int>();
+    s.weightFontSize = j.at("weight_font_size").get<unsigned int>();
+    s.headerFontSize = j.at("header_font_size").get<unsigned int>();
+    s.nameFontSize = j.at("name_font_size").get<unsigned int>();
+    s.tallyFontSize = j.at("tally_font_size").get<unsigned int>();
+    s.paddingRatio = j.at("padding_ratio").get<float>();
+    s.lineHeightRatio = j.at("line_height_ratio").get<float>();
+    s.voteButtonLayout = ParseLayout_(j, "vote_button_layout");
     return s;
 }
 
@@ -664,6 +688,7 @@ void UiStyle::Load(const std::string& filePath)
     style.cameraInput = ParseCameraInputStyle_(root.at("camera_input"));
     style.unitOrderInput = ParseUnitOrderInputStyle_(root.at("unit_order_input"));
     style.commlinksPanel = ParseCommlinksPanelStyle_(root.at("commlinks_panel"));
+    style.councilVoteView = ParseCouncilVoteViewStyle_(root.at("council_vote_view"));
     style.currentResearchPanel = ParseCurrentResearchPanelStyle_(root.at("current_research_panel"));
     style.settingsPanel = ParseSettingsPanelStyle_(root.at("settings_panel"));
     style.baseView = ParseBaseViewStyle_(root.at("base_view"));

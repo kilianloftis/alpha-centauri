@@ -127,10 +127,19 @@ std::unique_ptr<SettingsView> ViewFactory::CreateSettingsView(
 }
 
 std::unique_ptr<CommlinksView> ViewFactory::CreateCommlinksView(
+    const WindowLayout_t& layout,
+    std::function<void()> onOpenCouncilVote
+) const
+{
+    return std::make_unique<CommlinksView>(
+        m_rGameState, layout, std::move(onOpenCouncilVote));
+}
+
+std::unique_ptr<CouncilVoteView> ViewFactory::CreateCouncilVoteView(
     const WindowLayout_t& layout
 ) const
 {
-    return std::make_unique<CommlinksView>(m_rGameState, layout);
+    return std::make_unique<CouncilVoteView>(m_rGameState, layout);
 }
 
 std::unique_ptr<CombatView> ViewFactory::CreateCombatView(

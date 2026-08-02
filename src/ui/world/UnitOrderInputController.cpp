@@ -119,6 +119,7 @@ bool UnitOrderInputController::BeginLeftHold_(Unit* pSelectedUnit, const Tile* p
     m_pPreviewUnit = pSelectedUnit;
     m_pPreviewDestination = pHoveredTile;
     m_bPreviewActive = false;
+    m_bPreviewSearchDone = false;
     return true;
 }
 
@@ -135,15 +136,19 @@ bool UnitOrderInputController::FinishLeftHold_(const Pathfinder* pPathfinder, Ga
     Unit* pMover = m_pPreviewUnit;
     const Tile* pDest = m_pPreviewDestination;
     const bool bHeldLongEnough = HasExceededHoldThreshold_() || m_bPreviewActive;
+    const bool bOtherTile = pMover && pDest && pDest != &pMover->GetTile();
 
-    if (pMover && pDest && pPathfinder && bHeldLongEnough && pDest != &pMover->GetTile()
+    if (bOtherTile && pPathfinder && bHeldLongEnough
         && TryResolveHoldRelease_(*pMover, *pDest, *pPathfinder, pGameState, pDataContext))
     {
         return true;
     }
 
     CancelPreview();
-    return false;
+    // Long-press on another tile that did not yield an order is an aborted pathfinding
+    // gesture — consume it so the map does not fall through to tile / unit selection.
+    // Short clicks (below the hold threshold) still fall through for normal selection.
+    return bOtherTile && bHeldLongEnough;
 }
 
 bool UnitOrderInputController::TryResolveHoldRelease_(Unit& rMover, const Tile& rDest,
@@ -229,10 +234,12 @@ bool UnitOrderInputController::UpdateHoldPreview_(Unit& rSelectedUnit, const Til
         if (pHoveredTile != m_pPreviewDestination)
         {
             m_pPreviewDestination = pHoveredTile;
+            m_bPreviewSearchDone = false;
             UpdatePreview_(rSelectedUnit, *pHoveredTile, rPathfinder);
         }
-        else if (!m_bPreviewActive)
+        else if (!m_bPreviewSearchDone)
         {
+            // First search after the hold threshold (destination was set on press).
             UpdatePreview_(rSelectedUnit, *pHoveredTile, rPathfinder);
         }
     }
@@ -248,6 +255,7 @@ void UnitOrderInputController::UpdatePreview_(Unit& rMover, const Tile& rDestina
                                               const Pathfinder& rPathfinder)
 {
     m_pathPreview = rPathfinder.FindPath(rMover, rDestination);
+    m_bPreviewSearchDone = true;
     m_bPreviewActive = m_pathPreview.bReachable && !m_pathPreview.tiles.empty();
 }
 
@@ -263,6 +271,7 @@ const Path_t* UnitOrderInputController::GetPathPreview() const
 void UnitOrderInputController::CancelPreview()
 {
     m_bPreviewActive = false;
+    m_bPreviewSearchDone = false;
     m_pPreviewUnit = nullptr;
     m_pPreviewDestination = nullptr;
     m_pathPreview = {};

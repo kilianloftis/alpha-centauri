@@ -45,6 +45,13 @@ Path_t Pathfinder::FindPath(const Unit& rMover, const Tile& rDestination) const
         return result;
     }
 
+    // Known domain mismatch (e.g. land unit → explored water): unreachable without a
+    // full-component Dijkstra. Shrouded tiles still pass CanPlanEnterTerrain.
+    if (!m_rSteps.CanPlanEnterTerrain(rMover, rDestination))
+    {
+        return result;
+    }
+
     const int tileCount = m_rWorldMap.GetWidth() * m_rWorldMap.GetHeight();
     constexpr int k_inf = std::numeric_limits<int>::max();
 

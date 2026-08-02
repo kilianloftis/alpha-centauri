@@ -66,7 +66,8 @@ private:
     // Render Monolith markers on explored tiles
     void RenderMonoliths_(Graphics& rGraphics);
 
-    // Render rivers as blue lines between orthogonally adjacent river tiles
+    // Render rivers as blue lines between orthogonally adjacent river tiles.
+    // Explored river tiles only; segments may extend into shrouded neighbors.
     void RenderRivers_(Graphics& rGraphics);
 
     // Render path preview as a line through tile centers

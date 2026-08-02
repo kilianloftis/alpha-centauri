@@ -248,4 +248,9 @@ bool StepEvaluator::CanPlanStep(const Unit& rMover, const Tile& rFrom, const Til
     return EvaluatePlannedStep(rMover, rFrom, rTo).outcome == StepOutcome_t::Legal;
 }
 
+bool StepEvaluator::CanPlanEnterTerrain(const Unit& rMover, const Tile& rTile) const
+{
+    return CanEnterTerrain_(rMover, rTile, Knowledge_t::FactionKnown);
+}
+
 } // namespace ac

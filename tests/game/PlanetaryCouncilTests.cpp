@@ -2,6 +2,7 @@
 
 #include "game/GameSettings.h"
 #include "game/GameState.h"
+#include "game/council/CouncilAiStub.h"
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/council/CouncilRulesConfigParser.h"
 #include "game/council/PlanetaryCouncil.h"
@@ -190,6 +191,7 @@ TEST_CASE("Proposing while on cooldown is rejected", "[council]")
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
     game.GiveAllCommlinksTo(*game.pA);
 
+    const int proposedYear = game.pState->GetMissionYear();
     rCouncil.Propose(*game.pState, *game.pA, "elect_planetary_governor");
     rCouncil.CastElectionVote(*game.pA, game.pA);
     rCouncil.CastElectionVote(*game.pB, game.pA);
@@ -197,6 +199,8 @@ TEST_CASE("Proposing while on cooldown is rejected", "[council]")
     REQUIRE(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
 
     CHECK(rCouncil.YearsUntilCanPropose(*game.pState, *game.pA) == 10);
+    REQUIRE(rCouncil.LastProposedYear(*game.pA).has_value());
+    CHECK(*rCouncil.LastProposedYear(*game.pA) == proposedYear);
     CHECK_THROWS_AS(
         rCouncil.Propose(*game.pState, *game.pA, "elect_planetary_governor"),
         std::invalid_argument);
@@ -321,6 +325,52 @@ TEST_CASE("Council emits open and resolve notifications", "[council]")
     CHECK(resolvedCount == 2);
     CHECK(resolvedId == "global_trade_pact");
     CHECK(resolvedResult == ResolveProposalResult_t::Failed);
+}
+
+TEST_CASE("Stub AI votes fill non-player ballots only", "[council]")
+{
+    CouncilGame_ game;
+    game.Discover(*game.pA, "planetary_economics");
+    game.GiveAllCommlinksTo(*game.pA);
+    PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+
+    REQUIRE(game.pA->IsPlayerControlled());
+    REQUIRE_FALSE(game.pB->IsPlayerControlled());
+    REQUIRE_FALSE(game.pC->IsPlayerControlled());
+
+    rCouncil.Propose(*game.pState, *game.pA, "global_trade_pact");
+    CastStubCouncilVotes(rCouncil);
+
+    const auto* pPending = rCouncil.GetPending();
+    REQUIRE(pPending);
+    CHECK(pPending->ballots.count(game.pA->GetFactionId()) == 0);
+    REQUIRE(pPending->ballots.count(game.pB->GetFactionId()) == 1);
+    REQUIRE(pPending->ballots.count(game.pC->GetFactionId()) == 1);
+    CHECK(pPending->ballots.at(game.pB->GetFactionId()) == CouncilBallot_t::Yea);
+    CHECK(pPending->ballots.at(game.pC->GetFactionId()) == CouncilBallot_t::Yea);
+
+    // Idempotent: already-cast AI ballots are left alone.
+    rCouncil.CastVote(*game.pB, CouncilBallot_t::Nay);
+    CastStubCouncilVotes(rCouncil);
+    CHECK(pPending->ballots.at(game.pB->GetFactionId()) == CouncilBallot_t::Nay);
+}
+
+TEST_CASE("Stub AI election votes pick the proposer", "[council]")
+{
+    CouncilGame_ game;
+    game.GiveAllCommlinksTo(*game.pA);
+    PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+
+    rCouncil.Propose(*game.pState, *game.pA, "elect_planetary_governor");
+    CastStubCouncilVotes(rCouncil);
+
+    const auto* pPending = rCouncil.GetPending();
+    REQUIRE(pPending);
+    CHECK(pPending->electionVotes.count(game.pA->GetFactionId()) == 0);
+    REQUIRE(pPending->electionVotes.count(game.pB->GetFactionId()) == 1);
+    REQUIRE(pPending->electionVotes.count(game.pC->GetFactionId()) == 1);
+    CHECK(pPending->electionVotes.at(game.pB->GetFactionId()) == game.pA->GetFactionId());
+    CHECK(pPending->electionVotes.at(game.pC->GetFactionId()) == game.pA->GetFactionId());
 }
 
 TEST_CASE("Council membership is fixed at construction", "[council]")

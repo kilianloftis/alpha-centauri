@@ -1,6 +1,9 @@
 #pragma once
 
+#include "lib/Signal.h"
+
 #include <memory>
+#include <string>
 
 namespace ac
 {
@@ -15,6 +18,7 @@ class GameDataContext;
 class ViewFactory;
 class UIManager;
 class GameSettings;
+class Faction;
 
 class Engine
 {
@@ -43,6 +47,8 @@ private:
     std::unique_ptr<EventBridge> m_eventBridge;
     std::unique_ptr<ViewFactory> m_viewFactory;
     std::unique_ptr<UIManager> m_uiManager;
+    // Must outlive disconnect: council is owned by GameState above.
+    Signal<Faction&, const std::string&>::ScopedConnection m_councilAiVoteConn;
 };
 
 } // namespace ac

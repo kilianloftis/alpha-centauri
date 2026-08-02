@@ -229,6 +229,28 @@ struct CommlinksPanelStyle
     float rowHeight{};
     float rowPadX{};
     float statusPadX{};
+    RatioLayout_t councilButtonLayout{};
+};
+
+struct CouncilVoteViewStyle
+{
+    Color_t backgroundColor{};
+    Color_t borderColor{};
+    Color_t factionNameColor{};
+    Color_t ballotColor{};
+    Color_t weightColor{};
+    Color_t headerColor{};
+    Color_t nameColor{};
+    Color_t tallyColor{};
+    unsigned int factionFontSize{};
+    unsigned int ballotFontSize{};
+    unsigned int weightFontSize{};
+    unsigned int headerFontSize{};
+    unsigned int nameFontSize{};
+    unsigned int tallyFontSize{};
+    float paddingRatio{};
+    float lineHeightRatio{};
+    RatioLayout_t voteButtonLayout{};
 };
 
 struct CurrentResearchPanelStyle
@@ -542,6 +564,7 @@ public:
     CameraInputStyle cameraInput;
     UnitOrderInputStyle unitOrderInput;
     CommlinksPanelStyle commlinksPanel;
+    CouncilVoteViewStyle councilVoteView;
     CurrentResearchPanelStyle currentResearchPanel;
     SettingsPanelStyle settingsPanel;
     BaseViewStyle baseView;

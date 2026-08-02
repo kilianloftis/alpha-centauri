@@ -5,6 +5,7 @@
 #include "ui/base/BaseView.h"
 #include "ui/research/ResearchView.h"
 #include "ui/commlinks/CommlinksView.h"
+#include "ui/council/CouncilVoteView.h"
 #include "ui/settings/SettingsView.h"
 #include "ui/social-engineering/SocialEngineeringView.h"
 #include "ui/unit-designer/UnitDesignerView.h"
@@ -70,6 +71,11 @@ public:
     ) const;
 
     std::unique_ptr<CommlinksView> CreateCommlinksView(
+        const WindowLayout_t& layout,
+        std::function<void()> onOpenCouncilVote
+    ) const;
+
+    std::unique_ptr<CouncilVoteView> CreateCouncilVoteView(
         const WindowLayout_t& layout
     ) const;
 
