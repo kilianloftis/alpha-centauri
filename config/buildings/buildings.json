@@ -60,22 +60,87 @@
     "required_tech": "test_tech_2"
   },
   {
-    "id": "satellite",
-    "name": "Satellite",
-    "mineral_cost": 8,
+    "id": "Sky_Hydroponics_Lab",
+    "name": "Sky Hydroponics Lab",
+    "mineral_cost": 12,
     "allow_multiple": true,
+    "orbital": true,
     "effects": [
       {
         "type": "StatModifier",
-        "scope": "FactionGlobal",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "grow",
+    "required_tech": "orbital_spaceflight"
+  },
+  {
+    "id": "Orbital_Power_Transmitter",
+    "name": "Orbital Power Transmitter",
+    "mineral_cost": 12,
+    "allow_multiple": true,
+    "orbital": true,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
         "parameters": {
           "stat": "energy",
-          "amount": "1"
+          "amount": 1,
+          "op": "Add"
         }
       }
     ],
     "category": "discover",
-    "required_tech": "test_tech_1"
+    "required_tech": "orbital_spaceflight"
+  },
+  {
+    "id": "Nessus_Mining_Station",
+    "name": "Nessus Mining Station",
+    "mineral_cost": 12,
+    "allow_multiple": true,
+    "orbital": true,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "stat": "minerals",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "build",
+    "required_tech": "orbital_spaceflight"
+  },
+  {
+    "id": "Orbital_Defense_Pod",
+    "name": "Orbital Defense Pod",
+    "mineral_cost": 12,
+    "allow_multiple": true,
+    "orbital": true,
+    "effects": [
+      {
+        "type": "OrbitalAttack",
+        "scope": "FactionGlobal",
+        "parameters": { "chance": 50, "cooldown_turns": 1 }
+      },
+      {
+        "type": "InterceptAttempt",
+        "scope": "FactionGlobal",
+        "parameters": { "chance": 50, "cooldown_turns": 1 },
+        "unitFilter": { "kind": "Domain", "domain": "orbital" },
+        "condition": { "kind": "TargetTileHas", "value": "Base" }
+      }
+    ],
+    "category": "conquer",
+    "required_tech": "advanced_spaceflight"
   },
   {
     "id": "Aerospace_Complex",

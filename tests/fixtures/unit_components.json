@@ -44,6 +44,31 @@
     ]
   },
   {
+    "id": "test_orbital_chassis",
+    "name": "Test Orbital Chassis",
+    "type": "chassis",
+    "domain": "orbital",
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "movement", "amount": 4 } },
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "vision", "amount": 1 } },
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "hit_points", "amount": 10 } },
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "single_use" } }
+    ]
+  },
+  {
+    "id": "test_sam_escort",
+    "name": "Test SAM Escort",
+    "type": "ability",
+    "effects": [
+      {
+        "type": "InterceptAttempt",
+        "scope": "ThisUnit",
+        "parameters": { "chance": 100 },
+        "unitFilter": { "kind": "Domain", "domain": "orbital" }
+      }
+    ]
+  },
+  {
     "id": "ignore_zoc",
     "name": "Ignore Zone of Control",
     "type": "ability",

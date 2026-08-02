@@ -28,6 +28,7 @@ BuildingConfig_t BuildingConfigParser::ParseBuildingConfig(const nlohmann::json&
     config.mineralCost = buildingJson.value("mineral_cost", 0);
     config.allowMultiple = buildingJson.value("allow_multiple", false);
     config.bIsSecretProject = buildingJson.value("secret_project", false);
+    config.orbital = buildingJson.value("orbital", false);
     if (buildingJson.contains("required_techs"))
     {
         throw std::runtime_error(

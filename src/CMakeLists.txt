@@ -68,6 +68,8 @@ add_library(ac-core STATIC
     game/HookContext.cpp
     game/buildings/BuildingConfigParser.cpp
     game/buildings/SecretProjectAvailabilityCalculator.cpp
+    game/orbital/OrbitalAttack.cpp
+    game/orbital/OrbitalCensus.cpp
     game/units/Unit.cpp
     game/units/UnitDesign.cpp
     game/units/UnitOrder.cpp
@@ -77,6 +79,7 @@ add_library(ac-core STATIC
     game/units/MoraleConfigParser.cpp
     game/units/MoraleCalculator.cpp
     game/units/DisengageRules.cpp
+    game/units/InterceptRules.cpp
     game/units/MovementRules.cpp
     game/units/FoundBaseRules.cpp
     game/units/TerraformRules.cpp

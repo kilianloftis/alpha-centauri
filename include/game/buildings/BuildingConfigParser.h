@@ -22,6 +22,8 @@ struct BuildingConfig_t : public IConstructable
     std::string requiredTech;  // empty if none — same convention as SocialPolicyConfig_t, etc.
     bool allowMultiple;
     bool bIsSecretProject;
+    // Public orbital census: counts of buildings with this flag are visible to all factions.
+    bool orbital = false;
     std::vector<EffectConfig_t> effects;
 
     const std::string& GetId() const override { return id; }

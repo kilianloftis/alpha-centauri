@@ -35,8 +35,12 @@ bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject)
     switch (rProjector.GetDomain())
     {
     case UnitDomain_t::Air:
-        // Air exerts on land and sea units, not on other air units.
-        return rSubject.GetDomain() != UnitDomain_t::Air;
+        // Air exerts on land and sea units, not on other air/orbital units.
+        return rSubject.GetDomain() != UnitDomain_t::Air
+            && rSubject.GetDomain() != UnitDomain_t::Orbital;
+    case UnitDomain_t::Orbital:
+        // Orbital projectors do not exert ZOC.
+        return false;
     case UnitDomain_t::Sea:
         return rSubject.GetDomain() == UnitDomain_t::Sea;
     case UnitDomain_t::Land:
@@ -50,6 +54,7 @@ bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile)
     switch (rMover.GetDomain())
     {
     case UnitDomain_t::Air:
+    case UnitDomain_t::Orbital:
         return true;
     case UnitDomain_t::Sea:
         return rTile.IsWater();

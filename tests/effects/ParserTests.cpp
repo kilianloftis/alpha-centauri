@@ -395,6 +395,11 @@ TEST_CASE("ParseEffectConfig: unitFilter", "[effects][parser][unitFilter]")
         CHECK_THROWS(BonusEffectParser::ParseUnitFilter(json::parse(R"({ "kind": "Everything" })")));
     }
 
+    SECTION("orbital domain parses")
+    {
+        CHECK(BonusEffectParser::ParseUnitDomain("orbital") == UnitDomain_t::Orbital);
+    }
+
     SECTION("unknown domain throws")
     {
         CHECK_THROWS(BonusEffectParser::ParseUnitDomain("space"));

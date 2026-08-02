@@ -6,6 +6,8 @@
 #include "game/faction/DiplomaticActionExecutor.h"
 #include "game/faction/FirstContactResolver.h"
 #include "game/map/WorldMap.h"
+#include "game/orbital/OrbitalAttack.h"
+#include "game/orbital/OrbitalCensus.h"
 #include "game/units/MoraleCalculator.h"
 #include "game/units/MoveCostCalculator.h"
 #include "game/units/StepEvaluator.h"
@@ -136,6 +138,20 @@ public:
     // constructible only after GameState exists, and would dangle if GameState were ever
     // rebuilt (new game / load game).
     const SecretProjectAvailabilityCalculator& GetSecretProjectAvailability() const;
+
+    // Public orbital building census (buildings with orbital == true). Visible to all factions.
+    std::vector<OrbitalCensusEntry_t> GetOrbitalCensus() const;
+    int CountOrbitalBuildings(FactionId_t factionId, const BuildingId_t& buildingId) const;
+
+    // Ready OrbitalAttack buildings for rFaction (UI selection list).
+    std::vector<OrbitalAttackerOption_t> ListReadyOrbitalAttackers(const Faction& rFaction) const;
+
+    // ASAT using a chosen ready attacker building against another faction's orbital.
+    // Uses GameState RNG.
+    OrbitalAttackResult_t TryAttackSatellite(Faction& rAttacker,
+                                             Faction& rDefender,
+                                             const BuildingId_t& attackerBuildingId,
+                                             const BuildingId_t& targetOrbitalBuildingId);
 
 private:
     void OnVisibilitySettingsChanged_();

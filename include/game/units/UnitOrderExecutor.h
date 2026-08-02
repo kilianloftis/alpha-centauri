@@ -57,7 +57,10 @@ public:
     // Otherwise resolves combat (HP / DestroyUnit) and returns the round-by-round result for
     // UI playback. SingleUse attackers return as destroyed after the caller (or this method)
     // runs DestroyUnit on OrderProgress_t::Expended.
-    std::optional<CombatResult_t> TryAttack(Unit& rAttacker, const Tile& rTargetTile);
+    // When pGameState is set, ready InterceptAttempt effects may destroy the attacker before
+    // CombatResolver runs.
+    std::optional<CombatResult_t> TryAttack(Unit& rAttacker, const Tile& rTargetTile,
+                                            GameState* pGameState = nullptr);
 
     // Found a base on the unit's tile. Requires FoundBase flag and a legal tile (spacing +
     // territory). onBaseCreated runs after CreateBase (e.g. EventBridge::WireBase). SingleUse

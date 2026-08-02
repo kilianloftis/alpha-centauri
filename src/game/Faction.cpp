@@ -2,6 +2,8 @@
 #include "game/Faction.h"
 
 #include "game/buildings/BuildingRegistry.h"
+
+#include <algorithm>
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/GameDataContext.h"
 #include "game/map/WorldMap.h"
@@ -119,6 +121,91 @@ int Faction::TotalPopulation() const
         total += rBase.GetPopulation().GetSize();
     }
     return total;
+}
+
+int Faction::CountBuildings(const BuildingId_t& buildingId) const
+{
+    int total = 0;
+    for (const BaseManager& rBase : Bases())
+    {
+        for (const BuildingConfig_t* pBuilding : rBase.GetBuildingManager().GetBuildings())
+        {
+            if (pBuilding && pBuilding->id == buildingId)
+            {
+                ++total;
+            }
+        }
+    }
+    return total;
+}
+
+BaseManager* Faction::FindBaseWithBuilding(const BuildingId_t& buildingId)
+{
+    return const_cast<BaseManager*>(
+        static_cast<const Faction*>(this)->FindBaseWithBuilding(buildingId));
+}
+
+const BaseManager* Faction::FindBaseWithBuilding(const BuildingId_t& buildingId) const
+{
+    for (const BaseManager& rBase : Bases())
+    {
+        for (const BuildingConfig_t* pBuilding : rBase.GetBuildingManager().GetBuildings())
+        {
+            if (pBuilding && pBuilding->id == buildingId)
+            {
+                return &rBase;
+            }
+        }
+    }
+    return nullptr;
+}
+
+const BuildingConfig_t* Faction::FindOwnedBuildingConfig(const BuildingId_t& buildingId) const
+{
+    for (const BaseManager& rBase : Bases())
+    {
+        for (const BuildingConfig_t* pBuilding : rBase.GetBuildingManager().GetBuildings())
+        {
+            if (pBuilding && pBuilding->id == buildingId)
+            {
+                return pBuilding;
+            }
+        }
+    }
+    return nullptr;
+}
+
+int Faction::CountReadyBuildings(const BuildingId_t& buildingId, int missionYear) const
+{
+    int deployed = 0;
+    for (const BuildingDeploy_t& rDeploy : m_buildingDeploys)
+    {
+        if (rDeploy.buildingId == buildingId && missionYear < rDeploy.readyMissionYear)
+        {
+            ++deployed;
+        }
+    }
+    const int total = CountBuildings(buildingId);
+    return total > deployed ? total - deployed : 0;
+}
+
+void Faction::DeployBuilding(const BuildingId_t& buildingId, int readyMissionYear)
+{
+    m_buildingDeploys.push_back(BuildingDeploy_t{buildingId, readyMissionYear});
+}
+
+void Faction::NotifyBuildingDestroyed(const BuildingId_t& buildingId)
+{
+    // Prefer dropping an active (still cooling) deploy record so ready count stays coherent.
+    auto cooling = std::find_if(m_buildingDeploys.begin(), m_buildingDeploys.end(),
+                                [&](const BuildingDeploy_t& rDeploy)
+                                {
+                                    return rDeploy.buildingId == buildingId;
+                                });
+    if (cooling != m_buildingDeploys.end())
+    {
+        m_buildingDeploys.erase(cooling);
+    }
 }
 
 int Faction::GetResearchPerTurn_() const

@@ -231,6 +231,29 @@ struct DetectEffect_t
     std::string channel;
 };
 
+// Player/AI-initiated attack against another faction's orbital buildings (ASAT).
+// Each ready building copy with this effect is one charge; attempting deploys the source.
+struct OrbitalAttackEffect_t
+{
+    // Success percent points (50 = 50%).
+    int chance = 50;
+    // Intervening mission years the source stays deployed after an attempt.
+    // Ready when missionYear >= deployYear + cooldownTurns + 1 (default 1 → ready at Y+2).
+    int cooldownTurns = 1;
+};
+
+// Generic pre-combat intercept: before Resolve, roll to destroy the attacker.
+// unitFilter (on EffectConfig_t) selects eligible attackers; condition gates the situation.
+// Optional cooldownTurns: when >= 0, attempting deploys the source (shared with OrbitalAttack
+// when both live on the same building id).
+struct InterceptAttemptEffect_t
+{
+    int chance = 50;
+    // -1 = no deploy cooldown (may attempt every attack). >= 0 uses the same ready-year formula
+    // as OrbitalAttackEffect_t::cooldownTurns.
+    int cooldownTurns = -1;
+};
+
 using EffectVariant_t = std::variant<
     GrantBuildingEffect_t,
     GrantTechEffect_t,
@@ -245,7 +268,9 @@ using EffectVariant_t = std::variant<
     DiplomaticModifierEffect_t,
     SocialRatingModifierEffect_t,
     ConcealEffect_t,
-    DetectEffect_t
+    DetectEffect_t,
+    OrbitalAttackEffect_t,
+    InterceptAttemptEffect_t
 >;
 
 enum class ConditionKind_t

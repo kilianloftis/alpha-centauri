@@ -121,6 +121,10 @@ public:
     void MarkAttacked();
     void AdvanceAttackHistory();
 
+    // ThisUnit-scoped InterceptAttempt deploy cooldown (mission year when ready again).
+    bool IsInterceptReady(int missionYear) const;
+    void DeployIntercept(int readyMissionYear);
+
 private:
     // The index maintains m_pTile alongside its occupancy lists (MoveUnit).
     friend class UnitPositionIndex;
@@ -152,6 +156,8 @@ private:
     bool m_bRegistered;
     bool m_bAttackedThisTurn = false;
     bool m_bAttackedLastTurn = false;
+    // Available when missionYear >= this (0 = always ready at game start).
+    int m_interceptReadyMissionYear = 0;
 };
 
 } // namespace ac

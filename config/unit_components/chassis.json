@@ -129,5 +129,31 @@
         "parameters": { "flag": "forces_psi_combat" }
       }
     ]
+  },
+  {
+    "id": "Missile",
+    "name": "Missile",
+    "unit_name": "Missile",
+    "type": "chassis",
+    "domain": "orbital",
+    "required_tech": "orbital_spaceflight",
+    "mineral_cost": 10,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "movement", "amount": 8, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "vision", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "single_use" }
+      }
+    ]
   }
 ]

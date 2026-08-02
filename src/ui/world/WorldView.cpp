@@ -491,7 +491,8 @@ void WorldView::TryBeginAttack_(Unit& rAttacker, const Tile& rTargetTile)
     const std::string attackerName = rAttacker.GetDesign().GetName();
     const std::string defenderName = FindUnitNameOnTile_(rTargetTile);
 
-    const auto result = m_rGameState.GetUnitOrderExecutor().TryAttack(rAttacker, rTargetTile);
+    const auto result =
+        m_rGameState.GetUnitOrderExecutor().TryAttack(rAttacker, rTargetTile, &m_rGameState);
     if (!result)
     {
         return;

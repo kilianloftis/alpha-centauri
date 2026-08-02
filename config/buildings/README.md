@@ -20,6 +20,7 @@ Each file must be a JSON array of building objects. Any number of files may coex
 | `required_tech` | string | No | `""` | Tech that must be discovered before the building is available; omit or empty = always available |
 | `allow_multiple` | bool | No | `false` | If true, a base may build more than one copy |
 | `secret_project` | bool | No | `false` | If true, only one faction in the world may own this building |
+| `orbital` | bool | No | `false` | If true, ownership counts are public to all factions (satellite census) |
 | `effects` | Effect[] | No | `[]` | Structured list of gameplay effects (see below) |
 
 A flat per-turn bonus (the old `nutrients_bonus`) is a `StatModifier` effect with `scope: "ThisBase"`. A per-improvement bonus (the old `improvement_bonuses`) is a `TileYieldModifier` effect with a `HasImprovement` selector — see Effect Types below.
@@ -50,6 +51,8 @@ Each entry in `effects` describes a single gameplay effect applied when the buil
 | `SocialEngineeringOverride` | Forces a social engineering value (`parameters.category`, `parameters.value`) |
 | `DiplomaticModifier` | Adjusts diplomatic standing (`parameters.target_faction_id`, `parameters.value`) |
 | `TileYieldModifier` | Modifies the yield of selected tiles (`parameters.resource`, `parameters.selector`, `parameters.amount`, `parameters.op`) — see below |
+| `OrbitalAttack` | ASAT charge against other factions' `orbital` buildings (`parameters.chance`, `parameters.cooldown_turns`) |
+| `InterceptAttempt` | Pre-combat intercept (`parameters.chance`, optional `cooldown_turns`; requires `unitFilter`) |
 
 `amount`/`value` accept either a JSON number or a numeric string. `op` is one of `Add`, `AddPercent` (amount in percent points, e.g. `25` = +25%), `MultiplyGeometric` (factor form, e.g. `0.5`) — defaults to `Add`.
 

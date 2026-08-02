@@ -324,5 +324,17 @@
       { "type": "StatModifier", "scope": "ThisBase", "parameters": { "stat": "nutrients", "amount": 5, "op": "Add" } },
       { "type": "StatModifier", "scope": "ThisTile", "persistence": "Instantaneous", "parameters": { "stat": "minerals", "amount": 7, "op": "Add" } }
     ]
+  },
+  {
+    "id": "test_sam_battery",
+    "name": "Test SAM Battery",
+    "effects": [
+      {
+        "type": "InterceptAttempt",
+        "scope": "ThisTile",
+        "parameters": { "chance": 100 },
+        "unitFilter": { "kind": "Domain", "domain": "orbital" }
+      }
+    ]
   }
 ]

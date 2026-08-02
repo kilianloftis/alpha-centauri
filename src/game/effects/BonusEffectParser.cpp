@@ -225,7 +225,9 @@ UnitDomain_t ParseUnitDomain(const std::string& rDomain)
     if (rDomain == "land") return UnitDomain_t::Land;
     if (rDomain == "sea")  return UnitDomain_t::Sea;
     if (rDomain == "air")  return UnitDomain_t::Air;
-    throw std::runtime_error("Unknown unit domain '" + rDomain + "' (expected land, sea, or air)");
+    if (rDomain == "orbital") return UnitDomain_t::Orbital;
+    throw std::runtime_error(
+        "Unknown unit domain '" + rDomain + "' (expected land, sea, air, or orbital)");
 }
 
 UnitFilter_t ParseUnitFilter(const nlohmann::json& filterJson)
@@ -522,6 +524,51 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
         if (detect.channel.empty())
             throw std::runtime_error("Detect effect missing required 'channel'");
         effect.effect = detect;
+    }
+    else if (typeStr == "OrbitalAttack")
+    {
+        if (effect.scope != EffectScope_t::FactionGlobal
+            && effect.scope != EffectScope_t::AllOwnerBases)
+        {
+            throw std::runtime_error(
+                "OrbitalAttack requires scope FactionGlobal or AllOwnerBases");
+        }
+        OrbitalAttackEffect_t orbitalAttack;
+        orbitalAttack.chance = static_cast<int>(ParseNumber(parameters, "chance", 50.0));
+        if (orbitalAttack.chance < 0 || orbitalAttack.chance > 100)
+        {
+            throw std::runtime_error("OrbitalAttack 'chance' must be in [0, 100]");
+        }
+        orbitalAttack.cooldownTurns =
+            static_cast<int>(ParseNumber(parameters, "cooldown_turns", 1.0));
+        if (orbitalAttack.cooldownTurns < 0)
+        {
+            throw std::runtime_error("OrbitalAttack 'cooldown_turns' must be >= 0");
+        }
+        effect.effect = orbitalAttack;
+    }
+    else if (typeStr == "InterceptAttempt")
+    {
+        if (!effect.unitFilter)
+        {
+            throw std::runtime_error("InterceptAttempt requires a unitFilter");
+        }
+        InterceptAttemptEffect_t intercept;
+        intercept.chance = static_cast<int>(ParseNumber(parameters, "chance", 50.0));
+        if (intercept.chance < 0 || intercept.chance > 100)
+        {
+            throw std::runtime_error("InterceptAttempt 'chance' must be in [0, 100]");
+        }
+        if (parameters.contains("cooldown_turns"))
+        {
+            intercept.cooldownTurns =
+                static_cast<int>(ParseNumber(parameters, "cooldown_turns", 1.0));
+            if (intercept.cooldownTurns < 0)
+            {
+                throw std::runtime_error("InterceptAttempt 'cooldown_turns' must be >= 0");
+            }
+        }
+        effect.effect = intercept;
     }
     else
     {

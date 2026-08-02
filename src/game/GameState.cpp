@@ -392,6 +392,31 @@ const SecretProjectAvailabilityCalculator& GameState::GetSecretProjectAvailabili
     return m_secretProjectAvailability;
 }
 
+std::vector<OrbitalCensusEntry_t> GameState::GetOrbitalCensus() const
+{
+    return BuildOrbitalCensus(*this);
+}
+
+int GameState::CountOrbitalBuildings(FactionId_t factionId, const BuildingId_t& buildingId) const
+{
+    return CountFactionOrbitalBuildings(*this, factionId, buildingId);
+}
+
+std::vector<OrbitalAttackerOption_t> GameState::ListReadyOrbitalAttackers(
+    const Faction& rFaction) const
+{
+    return ::ac::ListReadyOrbitalAttackers(rFaction, m_missionYear);
+}
+
+OrbitalAttackResult_t GameState::TryAttackSatellite(Faction& rAttacker,
+                                                    Faction& rDefender,
+                                                    const BuildingId_t& attackerBuildingId,
+                                                    const BuildingId_t& targetOrbitalBuildingId)
+{
+    return ::ac::TryAttackSatellite(*this, rAttacker, rDefender, attackerBuildingId,
+                                    targetOrbitalBuildingId, m_rng);
+}
+
 void GameState::OnVisibilitySettingsChanged_()
 {
     for (Faction& rFaction : Factions())

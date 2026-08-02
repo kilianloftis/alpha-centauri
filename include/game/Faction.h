@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "game/IEffectsProvider.h"
+#include "game/buildings/BuildingConfigParser.h"
 #include "game/faction/base/BaseTypes.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/FactionConfig.h"
@@ -107,6 +108,20 @@ public:
 
     // Returns buildings the faction has the technology to build.
     std::vector<const BuildingConfig_t*> GetDiscoveredBuildings() const;
+
+    // Sum of constructed copies of buildingId across all bases.
+    int CountBuildings(const BuildingId_t& buildingId) const;
+    // First base that holds at least one copy, or nullptr.
+    BaseManager* FindBaseWithBuilding(const BuildingId_t& buildingId);
+    const BaseManager* FindBaseWithBuilding(const BuildingId_t& buildingId) const;
+    // Config of any owned copy, or nullptr when the faction has none.
+    const BuildingConfig_t* FindOwnedBuildingConfig(const BuildingId_t& buildingId) const;
+    // Copies not on deploy cooldown at missionYear (see DeployBuilding).
+    int CountReadyBuildings(const BuildingId_t& buildingId, int missionYear) const;
+    // Mark one copy of buildingId deployed until readyMissionYear (inclusive unavailable before).
+    void DeployBuilding(const BuildingId_t& buildingId, int readyMissionYear);
+    // Drop one deploy record for buildingId when a copy is destroyed (prefer cooling copies).
+    void NotifyBuildingDestroyed(const BuildingId_t& buildingId);
 
     // Economy subsystem: energy treasury and allocation split.
     EconomyManager& GetEconomy();
@@ -232,6 +247,15 @@ private:
     bool m_bFogRemoved = false; // sticky ApplyRemoveFog
     std::function<void()> m_onBaseListChanged;
     std::function<void(Faction&)> m_onVisibilityRebuilt;
+
+    // Shared ASAT / intercept deploy cooldowns keyed by building id (no per-instance ids).
+    // A copy is unavailable while missionYear < readyMissionYear.
+    struct BuildingDeploy_t
+    {
+        BuildingId_t buildingId;
+        int readyMissionYear = 0;
+    };
+    std::vector<BuildingDeploy_t> m_buildingDeploys;
 };
 
 } // namespace ac

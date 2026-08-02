@@ -1,5 +1,6 @@
 #include "game/units/UnitOrderExecutor.h"
 
+#include "game/units/InterceptRules.h"
 #include "game/units/UnitOrder.h"
 #include "game/units/MoveCostCalculator.h"
 #include "game/units/Pathfinder.h"
@@ -213,7 +214,8 @@ bool UnitOrderExecutor::TryStep(Unit& rMover, const Tile& rTo, MoveOrder_t& rMov
 }
 
 std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
-                                                           const Tile& rTargetTile)
+                                                           const Tile& rTargetTile,
+                                                           GameState* pGameState)
 {
     if (rAttacker.GetMoveFragmentsRemaining() <= 0)
     {
@@ -228,6 +230,16 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
     if (!pDefender)
     {
         return std::nullopt;
+    }
+
+    if (pGameState)
+    {
+        if (std::optional<CombatResult_t> intercepted =
+                TryInterceptAttack(*pGameState, rAttacker, *pDefender, m_rTileEffects, m_rRng))
+        {
+            // Intercept destroys the attacker; no attack history / move spend on a dead unit.
+            return intercepted;
+        }
     }
 
     CombatResult_t result = m_combat.Resolve(rAttacker, *pDefender);

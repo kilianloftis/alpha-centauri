@@ -404,5 +404,89 @@
       }
     ],
     "category": "build"
+  },
+  {
+    "id": "Sky_Hydroponics_Lab",
+    "name": "Sky Hydroponics Lab",
+    "allow_multiple": true,
+    "orbital": true,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" }
+      }
+    ],
+    "category": "grow"
+  },
+  {
+    "id": "Orbital_Power_Transmitter",
+    "name": "Orbital Power Transmitter",
+    "allow_multiple": true,
+    "orbital": true,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "parameters": { "stat": "energy", "amount": 1, "op": "Add" }
+      }
+    ],
+    "category": "discover"
+  },
+  {
+    "id": "test_odp_always_hit",
+    "name": "Test ODP Always Hit",
+    "allow_multiple": true,
+    "orbital": true,
+    "effects": [
+      {
+        "type": "OrbitalAttack",
+        "scope": "FactionGlobal",
+        "parameters": { "chance": 100, "cooldown_turns": 1 }
+      },
+      {
+        "type": "InterceptAttempt",
+        "scope": "FactionGlobal",
+        "parameters": { "chance": 100, "cooldown_turns": 1 },
+        "unitFilter": { "kind": "Domain", "domain": "orbital" },
+        "condition": { "kind": "TargetTileHas", "value": "Base" }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "test_odp_always_miss",
+    "name": "Test ODP Always Miss",
+    "allow_multiple": true,
+    "orbital": true,
+    "effects": [
+      {
+        "type": "OrbitalAttack",
+        "scope": "FactionGlobal",
+        "parameters": { "chance": 0, "cooldown_turns": 1 }
+      },
+      {
+        "type": "InterceptAttempt",
+        "scope": "FactionGlobal",
+        "parameters": { "chance": 0, "cooldown_turns": 1 },
+        "unitFilter": { "kind": "Domain", "domain": "orbital" },
+        "condition": { "kind": "TargetTileHas", "value": "Base" }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "test_base_aaa",
+    "name": "Test Base AAA",
+    "effects": [
+      {
+        "type": "InterceptAttempt",
+        "scope": "ThisBase",
+        "parameters": { "chance": 100 },
+        "unitFilter": { "kind": "Domain", "domain": "orbital" },
+        "condition": { "kind": "TargetTileHas", "value": "Base" }
+      }
+    ],
+    "category": "conquer"
   }
 ]

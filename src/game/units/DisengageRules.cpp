@@ -101,7 +101,9 @@ bool DisengageRules::CanDisengage(const Unit& rCandidate, const Unit& rOpponent)
     {
         return false;
     }
-    if (rCandidate.GetDomain() == UnitDomain_t::Air || rOpponent.GetDomain() == UnitDomain_t::Air)
+    if (rCandidate.GetDomain() == UnitDomain_t::Air || rOpponent.GetDomain() == UnitDomain_t::Air
+        || rCandidate.GetDomain() == UnitDomain_t::Orbital
+        || rOpponent.GetDomain() == UnitDomain_t::Orbital)
     {
         return false;
     }

@@ -266,4 +266,14 @@ void Unit::AdvanceAttackHistory()
     m_bAttackedThisTurn = false;
 }
 
+bool Unit::IsInterceptReady(int missionYear) const
+{
+    return missionYear >= m_interceptReadyMissionYear;
+}
+
+void Unit::DeployIntercept(int readyMissionYear)
+{
+    m_interceptReadyMissionYear = readyMissionYear;
+}
+
 } // namespace ac

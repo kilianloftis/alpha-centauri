@@ -13,6 +13,7 @@
 #include "game/units/MoraleCalculator.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
+#include "lib/RandomRoll.h"
 
 #include <algorithm>
 #include <cmath>
@@ -238,9 +239,8 @@ ProbeRollResult_t RollProbeAction(const ProbeChance_t& rChances, std::mt19937& r
 {
     ProbeRollResult_t result;
     result.chances = rChances;
-    std::uniform_int_distribution<int> dist(0, 99);
 
-    if (rChances.risk <= 0 || dist(rRng) < rChances.successRate)
+    if (rChances.risk <= 0 || RollPercent(rChances.successRate, rRng))
     {
         result.missionSucceeded = true;
     }
@@ -249,10 +249,7 @@ ProbeRollResult_t RollProbeAction(const ProbeChance_t& rChances, std::mt19937& r
         return result;
     }
 
-    if (dist(rRng) < rChances.survivalRate)
-    {
-        result.escaped = true;
-    }
+    result.escaped = RollPercent(rChances.survivalRate, rRng);
     return result;
 }
 
