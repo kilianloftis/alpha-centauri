@@ -826,5 +826,70 @@
     "design_name_line_index": 1.0,
     "active_count_line_index": 2.0,
     "in_prod_line_index": 3.0
+  },
+  "satellite_view": {
+    "background_color": [
+      30, 30, 50, 255
+    ],
+    "border_color": [
+      80, 80, 120, 255
+    ],
+    "header_color": [
+      255, 255, 255, 255
+    ],
+    "faction_name_color": [
+      255, 255, 0, 255
+    ],
+    "cell_color": [
+      255, 255, 255, 255
+    ],
+    "tab_fill_color": [
+      40, 40, 70, 255
+    ],
+    "tab_selected_fill_color": [
+      70, 70, 120, 255
+    ],
+    "tab_border_color": [
+      100, 100, 160, 255
+    ],
+    "tab_label_color": [
+      255, 255, 255, 255
+    ],
+    "tab_font_size": 14,
+    "header_font_size": 12,
+    "faction_font_size": 14,
+    "cell_font_size": 14,
+    "padding_ratio": 0.08,
+    "tab_text_pad_x": 10.0,
+    "tab_text_pad_y": 8.0,
+    "summary_tab_layout": [
+      0.02, 0.02, 0.47, 0.12
+    ],
+    "attack_tab_layout": [
+      0.51, 0.02, 0.47, 0.12
+    ],
+    "content_layout": [
+      0.02, 0.16, 0.96, 0.82
+    ],
+    "attack_button_layout": [
+      0.30, 0.20, 0.40, 0.12
+    ],
+    "attacker_list_layout": [
+      0.06, 0.18, 0.88, 0.54
+    ],
+    "attacker_confirm_layout": [
+      0.10, 0.78, 0.36, 0.14
+    ],
+    "attacker_cancel_layout": [
+      0.54, 0.78, 0.36, 0.14
+    ],
+    "outcome_ok_layout": [
+      0.30, 0.72, 0.40, 0.18
+    ],
+    "list_button_height": 36.0,
+    "list_button_gap": 6.0,
+    "list_header_height": 22.0,
+    "list_pad_x": 8.0,
+    "list_pad_y": 8.0
   }
 }

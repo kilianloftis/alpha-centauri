@@ -15,6 +15,7 @@ struct OrbitalAttackResult_t
 {
     bool bAttempted = false;
     bool bHit = false;
+    bool bAttackerDestroyed = false;
     BuildingId_t attackerBuildingId;
     BuildingId_t targetBuildingId;
 };
@@ -38,6 +39,7 @@ std::vector<OrbitalAttackerOption_t> ListReadyOrbitalAttackers(const Faction& rF
 
 // Player/AI-initiated ASAT using a chosen ready attacker building. Deploys that building
 // (hit or miss). On hit, destroys one instance of an orbital building on the defender.
+// On miss, may destroy the attacker per chanceOfDestructionOnFail.
 // bAttempted == false when the target is missing/non-orbital, or attackerBuildingId is not a
 // ready OrbitalAttack source for rAttacker.
 // Throws std::logic_error when rAttacker and rDefender are the same faction.

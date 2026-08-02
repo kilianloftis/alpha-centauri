@@ -119,6 +119,11 @@ OrbitalAttackResult_t TryAttackSatellite(GameState& rGameState,
     {
         DestroyOneBuilding_(rDefender, targetOrbitalBuildingId);
     }
+    else if (RollPercent(pEffect->chanceOfDestructionOnFail, rRng))
+    {
+        DestroyOneBuilding_(rAttacker, attackerBuildingId);
+        result.bAttackerDestroyed = true;
+    }
     return result;
 }
 

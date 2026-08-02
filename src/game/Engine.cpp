@@ -13,6 +13,7 @@
 #include "game/EventBridge.h"
 #include "lib/GameEvent.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/buildings/BuildingManager.h"
 #include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/map/MapUtils.h"
@@ -183,6 +184,28 @@ void Engine::Initialize_()
 
         m_eventBridge->WireBase(*pBase);
         Faction& rFaction = m_pGameState->AddFaction(std::move(pFaction));
+
+        // Temporary orbital satellites so the satellite summary / ASAT view has something to show.
+        {
+            BuildingManager& rBuildings = pBase->GetBuildingManager();
+            if (bIsPlayerControlled)
+            {
+                rBuildings.AddBuilding("Sky_Hydroponics_Lab");
+                rBuildings.AddBuilding("Sky_Hydroponics_Lab");
+                rBuildings.AddBuilding("Orbital_Power_Transmitter");
+                rBuildings.AddBuilding("Orbital_Defense_Pod");
+                rBuildings.AddBuilding("Orbital_Defense_Pod");
+            }
+            else
+            {
+                // Vary AI starting orbitals so the attack target list is interesting.
+                rBuildings.AddBuilding("Sky_Hydroponics_Lab");
+                rBuildings.AddBuilding("Nessus_Mining_Station");
+                rBuildings.AddBuilding("Nessus_Mining_Station");
+                rBuildings.AddBuilding("Orbital_Power_Transmitter");
+                rBuildings.AddBuilding("Orbital_Defense_Pod");
+            }
+        }
 
         // Temporary test units so fog-of-war vision and specials are easy to exercise.
         {
@@ -409,6 +432,9 @@ void Engine::Initialize_()
     });
     m_uiManager->RegisterViewShortcut(Key_t::O, [this, fullscreen]() -> std::unique_ptr<IGameView> {
         return m_viewFactory->CreateSettingsView(fullscreen);
+    });
+    m_uiManager->RegisterViewShortcut(Key_t::F6, [this, fullscreen]() -> std::unique_ptr<IGameView> {
+        return m_viewFactory->CreateSatelliteView(fullscreen);
     });
     m_uiManager->SetWorldView(std::move(pWorldView));
 

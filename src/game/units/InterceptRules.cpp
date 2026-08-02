@@ -7,12 +7,14 @@
 #include "game/effects/TileEffectsContext.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/buildings/BuildingManager.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 #include "lib/RandomRoll.h"
 
 #include <algorithm>
 #include <initializer_list>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -34,21 +36,25 @@ enum class InterceptDeployKind_t
 struct InterceptCandidate_t
 {
     const InterceptAttemptEffect_t* pIntercept = nullptr;
+    // Ledger used for cooldown (None when the effect opts out or the lane has no ledger).
     InterceptDeployKind_t deployKind = InterceptDeployKind_t::None;
+    // Physical source kind for destroy-on-fail (not downgraded when cooldown is opted out).
+    InterceptDeployKind_t sourceKind = InterceptDeployKind_t::None;
     // ActiveEffect_t::sourceId of the granting source — a BuildingId_t only on the Building
     // lane; a component or tile-feature id otherwise.
     std::string sourceId;
     Unit* pUnitSource = nullptr;
 };
 
-// deployKind is the calling lane's ledger. An effect opting out of cooldowns
-// (cooldownTurns < 0) is downgraded to None so it may attempt on every attack.
+// sourceKind is the calling lane's physical source. deployKind matches it unless the effect
+// opts out of cooldowns (cooldownTurns < 0), in which case deploy is None so it may attempt
+// on every attack.
 void AppendMatchingIntercepts_(std::vector<InterceptCandidate_t>& rOut,
                                const std::vector<ActiveEffect_t>& rEffects,
                                const Unit& rAttacker,
                                const EffectContext_t& rCtx,
                                std::initializer_list<EffectScope_t> allowedScopes,
-                               InterceptDeployKind_t deployKind,
+                               InterceptDeployKind_t sourceKind,
                                Unit* pUnitSource)
 {
     for (const ActiveEffect_t& rEffect : rEffects)
@@ -71,8 +77,9 @@ void AppendMatchingIntercepts_(std::vector<InterceptCandidate_t>& rOut,
         candidate.pIntercept = pIntercept;
         candidate.sourceId = rEffect.sourceId;
         candidate.pUnitSource = pUnitSource;
+        candidate.sourceKind = sourceKind;
         candidate.deployKind =
-            pIntercept->cooldownTurns < 0 ? InterceptDeployKind_t::None : deployKind;
+            pIntercept->cooldownTurns < 0 ? InterceptDeployKind_t::None : sourceKind;
         rOut.push_back(candidate);
     }
 }
@@ -155,6 +162,41 @@ CombatResult_t ResolveInterceptKill_(Unit& rAttacker, Unit& rDefender)
     return result;
 }
 
+// On a failed intercept roll, optionally destroy the intercepting source (building or unit).
+void MaybeDestroyInterceptSourceOnFail_(Faction& rDefFaction, InterceptCandidate_t& rCandidate,
+                                        std::mt19937& rRng)
+{
+    if (!RollPercent(rCandidate.pIntercept->chanceOfDestructionOnFail, rRng))
+    {
+        return;
+    }
+    switch (rCandidate.sourceKind)
+    {
+    case InterceptDeployKind_t::None:
+        // ThisTile (and other non-instance) sources have nothing to destroy.
+        return;
+    case InterceptDeployKind_t::Building:
+    {
+        BaseManager* pBase = rDefFaction.FindBaseWithBuilding(rCandidate.sourceId);
+        if (!pBase)
+        {
+            throw std::logic_error(
+                "MaybeDestroyInterceptSourceOnFail_: faction owns no base holding building '"
+                + rCandidate.sourceId + "'");
+        }
+        pBase->GetBuildingManager().DestroyBuilding(rCandidate.sourceId);
+        rDefFaction.NotifyBuildingDestroyed(rCandidate.sourceId);
+        return;
+    }
+    case InterceptDeployKind_t::Unit:
+        if (rCandidate.pUnitSource)
+        {
+            rDefFaction.GetUnitManager().DestroyUnit(*rCandidate.pUnitSource);
+        }
+        return;
+    }
+}
+
 } // namespace
 
 std::optional<CombatResult_t> TryInterceptAttack(GameState& rGameState,
@@ -176,6 +218,7 @@ std::optional<CombatResult_t> TryInterceptAttack(GameState& rGameState,
         }
         if (!RollPercent(rCandidate.pIntercept->chance, rRng))
         {
+            MaybeDestroyInterceptSourceOnFail_(rDefFaction, rCandidate, rRng);
             continue;
         }
         return ResolveInterceptKill_(rAttacker, rDefender);

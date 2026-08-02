@@ -2,6 +2,7 @@
 #include "game/GameState.h"
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
+#include "game/buildings/BuildingRegistry.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/Military.h"
 #include "game/faction/ResearchManager.h"
@@ -140,6 +141,14 @@ std::unique_ptr<CouncilVoteView> ViewFactory::CreateCouncilVoteView(
 ) const
 {
     return std::make_unique<CouncilVoteView>(m_rGameState, layout);
+}
+
+std::unique_ptr<SatelliteView> ViewFactory::CreateSatelliteView(
+    const WindowLayout_t& layout
+) const
+{
+    return std::make_unique<SatelliteView>(
+        m_rGameState, *m_rGameDataContext.buildingRegistry, layout);
 }
 
 std::unique_ptr<CombatView> ViewFactory::CreateCombatView(

@@ -545,6 +545,14 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
         {
             throw std::runtime_error("OrbitalAttack 'cooldown_turns' must be >= 0");
         }
+        orbitalAttack.chanceOfDestructionOnFail =
+            static_cast<int>(ParseNumber(parameters, "chance_of_destruction_on_fail", 0.0));
+        if (orbitalAttack.chanceOfDestructionOnFail < 0
+            || orbitalAttack.chanceOfDestructionOnFail > 100)
+        {
+            throw std::runtime_error(
+                "OrbitalAttack 'chance_of_destruction_on_fail' must be in [0, 100]");
+        }
         effect.effect = orbitalAttack;
     }
     else if (typeStr == "InterceptAttempt")
@@ -567,6 +575,13 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
             {
                 throw std::runtime_error("InterceptAttempt 'cooldown_turns' must be >= 0");
             }
+        }
+        intercept.chanceOfDestructionOnFail =
+            static_cast<int>(ParseNumber(parameters, "chance_of_destruction_on_fail", 0.0));
+        if (intercept.chanceOfDestructionOnFail < 0 || intercept.chanceOfDestructionOnFail > 100)
+        {
+            throw std::runtime_error(
+                "InterceptAttempt 'chance_of_destruction_on_fail' must be in [0, 100]");
         }
         effect.effect = intercept;
     }

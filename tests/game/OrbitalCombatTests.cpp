@@ -212,9 +212,28 @@ TEST_CASE("TryAttackSatellite miss still deploys the pod", "[orbital][asat]")
         *game.pPlayer, *game.pAi, "test_odp_always_miss", "Sky_Hydroponics_Lab");
     CHECK(result.bAttempted);
     CHECK_FALSE(result.bHit);
+    CHECK_FALSE(result.bAttackerDestroyed);
     CHECK(game.pState->CountOrbitalBuildings(game.pAi->GetFactionId(), "Sky_Hydroponics_Lab") == 1);
+    CHECK(game.pPlayer->CountBuildings("test_odp_always_miss") == 1);
     CHECK(game.pPlayer->CountReadyBuildings("test_odp_always_miss", game.pState->GetMissionYear())
           == 0);
+}
+
+TEST_CASE("TryAttackSatellite miss can destroy the attacking satellite", "[orbital][asat]")
+{
+    OrbitalGame_ game;
+    BaseManager& attackerBase = game.MakeBase(*game.pPlayer, 2, 2);
+    BaseManager& defenderBase = game.MakeBase(*game.pAi, 6, 6);
+    attackerBase.GetBuildingManager().AddBuilding("test_odp_miss_destroy");
+    defenderBase.GetBuildingManager().AddBuilding("Sky_Hydroponics_Lab");
+
+    const OrbitalAttackResult_t result = game.pState->TryAttackSatellite(
+        *game.pPlayer, *game.pAi, "test_odp_miss_destroy", "Sky_Hydroponics_Lab");
+    CHECK(result.bAttempted);
+    CHECK_FALSE(result.bHit);
+    CHECK(result.bAttackerDestroyed);
+    CHECK(game.pState->CountOrbitalBuildings(game.pAi->GetFactionId(), "Sky_Hydroponics_Lab") == 1);
+    CHECK(game.pPlayer->CountBuildings("test_odp_miss_destroy") == 0);
 }
 
 TEST_CASE("TryAttackSatellite fails without ready pods or non-orbital target", "[orbital][asat]")
@@ -301,8 +320,26 @@ TEST_CASE("ODP intercept miss still deploys and allows combat", "[orbital][inter
         missile, garrison.GetTile(), game.pState.get());
     REQUIRE(result);
     CHECK_FALSE(result->rounds.empty());
+    CHECK(game.pPlayer->CountBuildings("test_odp_always_miss") == 1);
     CHECK(game.pPlayer->CountReadyBuildings("test_odp_always_miss", game.pState->GetMissionYear())
           == 0);
+}
+
+TEST_CASE("ODP intercept miss can destroy the intercepting satellite", "[orbital][intercept]")
+{
+    OrbitalGame_ game;
+    BaseManager& playerBase = game.MakeBase(*game.pPlayer, 4, 4);
+    playerBase.GetBuildingManager().AddBuilding("test_odp_miss_destroy");
+
+    Unit& missile = game.MakeUnit(*game.pAi, 5, 4, {"test_orbital_chassis", "test_weapon"});
+    Unit& garrison = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_armor"}, &playerBase);
+    missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
+
+    auto result = game.pState->GetUnitOrderExecutor().TryAttack(
+        missile, garrison.GetTile(), game.pState.get());
+    REQUIRE(result);
+    CHECK_FALSE(result->rounds.empty());
+    CHECK(game.pPlayer->CountBuildings("test_odp_miss_destroy") == 0);
 }
 
 TEST_CASE("Second ready ODP can still act after the first deploys", "[orbital][deploy]")
@@ -419,23 +456,33 @@ TEST_CASE("Parse OrbitalAttack and InterceptAttempt effects", "[effects][parser]
     const EffectConfig_t attack = BonusEffectParser::ParseEffectConfig(json::parse(R"({
         "type": "OrbitalAttack",
         "scope": "FactionGlobal",
-        "parameters": { "chance": 50, "cooldown_turns": 1 }
+        "parameters": {
+            "chance": 50,
+            "cooldown_turns": 1,
+            "chance_of_destruction_on_fail": 50
+        }
     })"));
     const auto* pAttack = std::get_if<OrbitalAttackEffect_t>(&attack.effect);
     REQUIRE(pAttack);
     CHECK(pAttack->chance == 50);
     CHECK(pAttack->cooldownTurns == 1);
+    CHECK(pAttack->chanceOfDestructionOnFail == 50);
 
     const EffectConfig_t intercept = BonusEffectParser::ParseEffectConfig(json::parse(R"({
         "type": "InterceptAttempt",
         "scope": "FactionGlobal",
-        "parameters": { "chance": 50, "cooldown_turns": 1 },
+        "parameters": {
+            "chance": 50,
+            "cooldown_turns": 1,
+            "chance_of_destruction_on_fail": 0
+        },
         "unitFilter": { "kind": "Domain", "domain": "orbital" },
         "condition": { "kind": "TargetTileHas", "value": "Base" }
     })"));
     const auto* pIntercept = std::get_if<InterceptAttemptEffect_t>(&intercept.effect);
     REQUIRE(pIntercept);
     CHECK(pIntercept->chance == 50);
+    CHECK(pIntercept->chanceOfDestructionOnFail == 0);
     CHECK(intercept.unitFilter.has_value());
     CHECK(intercept.condition.has_value());
 

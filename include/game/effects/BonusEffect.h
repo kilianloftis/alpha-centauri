@@ -240,6 +240,8 @@ struct OrbitalAttackEffect_t
     // Intervening mission years the source stays deployed after an attempt.
     // Ready when missionYear >= deployYear + cooldownTurns + 1 (default 1 → ready at Y+2).
     int cooldownTurns = 1;
+    // Percent chance the attacking satellite is destroyed when the attempt fails (miss).
+    int chanceOfDestructionOnFail = 0;
 };
 
 // Generic pre-combat intercept: before Resolve, roll to destroy the attacker.
@@ -252,6 +254,8 @@ struct InterceptAttemptEffect_t
     // -1 = no deploy cooldown (may attempt every attack). >= 0 uses the same ready-year formula
     // as OrbitalAttackEffect_t::cooldownTurns.
     int cooldownTurns = -1;
+    // Percent chance the intercepting source is destroyed when the attempt fails (miss).
+    int chanceOfDestructionOnFail = 0;
 };
 
 using EffectVariant_t = std::variant<

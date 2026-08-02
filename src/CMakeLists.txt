@@ -267,6 +267,12 @@ add_executable(alpha-centauri
     ui/council/CouncilProposalInfoPanel.cpp
     ui/council/CouncilVoteButton.cpp
     ui/council/CouncilBallotPopup.cpp
+    ui/satellite/SatelliteView.cpp
+    ui/satellite/SatelliteLabeledButton.cpp
+    ui/satellite/SatelliteSummaryPanel.cpp
+    ui/satellite/SatelliteButtonListPanel.cpp
+    ui/satellite/OrbitalAttackerPopup.cpp
+    ui/satellite/OrbitalAttackOutcomePopup.cpp
     ui/PlaceholderPanel.cpp
     ui/base/BaseView.cpp
     ui/base/BaseNameDisplay.cpp

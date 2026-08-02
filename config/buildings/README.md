@@ -51,8 +51,8 @@ Each entry in `effects` describes a single gameplay effect applied when the buil
 | `SocialEngineeringOverride` | Forces a social engineering value (`parameters.category`, `parameters.value`) |
 | `DiplomaticModifier` | Adjusts diplomatic standing (`parameters.target_faction_id`, `parameters.value`) |
 | `TileYieldModifier` | Modifies the yield of selected tiles (`parameters.resource`, `parameters.selector`, `parameters.amount`, `parameters.op`) — see below |
-| `OrbitalAttack` | ASAT charge against other factions' `orbital` buildings (`parameters.chance`, `parameters.cooldown_turns`) |
-| `InterceptAttempt` | Pre-combat intercept (`parameters.chance`, optional `cooldown_turns`; requires `unitFilter`) |
+| `OrbitalAttack` | ASAT charge against other factions' `orbital` buildings (`parameters.chance`, `parameters.cooldown_turns`, `parameters.chance_of_destruction_on_fail`) |
+| `InterceptAttempt` | Pre-combat intercept (`parameters.chance`, optional `cooldown_turns`, `chance_of_destruction_on_fail`; requires `unitFilter`) |
 
 `amount`/`value` accept either a JSON number or a numeric string. `op` is one of `Add`, `AddPercent` (amount in percent points, e.g. `25` = +25%), `MultiplyGeometric` (factor form, e.g. `0.5`) — defaults to `Add`.
 

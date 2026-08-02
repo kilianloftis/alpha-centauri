@@ -650,6 +650,41 @@ UnitStatusPanelStyle ParseUnitStatusPanelStyle_(const nlohmann::json& j)
     return s;
 }
 
+SatelliteViewStyle ParseSatelliteViewStyle_(const nlohmann::json& j)
+{
+    SatelliteViewStyle s{};
+    s.backgroundColor = ParseColor_(j, "background_color");
+    s.borderColor = ParseColor_(j, "border_color");
+    s.headerColor = ParseColor_(j, "header_color");
+    s.factionNameColor = ParseColor_(j, "faction_name_color");
+    s.cellColor = ParseColor_(j, "cell_color");
+    s.tabFillColor = ParseColor_(j, "tab_fill_color");
+    s.tabSelectedFillColor = ParseColor_(j, "tab_selected_fill_color");
+    s.tabBorderColor = ParseColor_(j, "tab_border_color");
+    s.tabLabelColor = ParseColor_(j, "tab_label_color");
+    s.tabFontSize = j.at("tab_font_size").get<unsigned int>();
+    s.headerFontSize = j.at("header_font_size").get<unsigned int>();
+    s.factionFontSize = j.at("faction_font_size").get<unsigned int>();
+    s.cellFontSize = j.at("cell_font_size").get<unsigned int>();
+    s.paddingRatio = j.at("padding_ratio").get<float>();
+    s.tabTextPadX = j.at("tab_text_pad_x").get<float>();
+    s.tabTextPadY = j.at("tab_text_pad_y").get<float>();
+    s.summaryTabLayout = ParseLayout_(j, "summary_tab_layout");
+    s.attackTabLayout = ParseLayout_(j, "attack_tab_layout");
+    s.contentLayout = ParseLayout_(j, "content_layout");
+    s.attackButtonLayout = ParseLayout_(j, "attack_button_layout");
+    s.attackerListLayout = ParseLayout_(j, "attacker_list_layout");
+    s.attackerConfirmLayout = ParseLayout_(j, "attacker_confirm_layout");
+    s.attackerCancelLayout = ParseLayout_(j, "attacker_cancel_layout");
+    s.outcomeOkLayout = ParseLayout_(j, "outcome_ok_layout");
+    s.listButtonHeight = j.at("list_button_height").get<float>();
+    s.listButtonGap = j.at("list_button_gap").get<float>();
+    s.listHeaderHeight = j.at("list_header_height").get<float>();
+    s.listPadX = j.at("list_pad_x").get<float>();
+    s.listPadY = j.at("list_pad_y").get<float>();
+    return s;
+}
+
 } // namespace
 
 void UiStyle::Load(const std::string& filePath)
@@ -708,6 +743,7 @@ void UiStyle::Load(const std::string& filePath)
     style.designStatsDisplay = ParseDesignStatsDisplayStyle_(root.at("design_stats_display"));
     style.designListPanel = ParseDesignListPanelStyle_(root.at("design_list_panel"));
     style.unitStatusPanel = ParseUnitStatusPanelStyle_(root.at("unit_status_panel"));
+    style.satelliteView = ParseSatelliteViewStyle_(root.at("satellite_view"));
 
     g_style = style;
     g_loaded = true;

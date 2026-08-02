@@ -538,6 +538,39 @@ struct UnitStatusPanelStyle
     float inProdLineIndex{};
 };
 
+struct SatelliteViewStyle
+{
+    Color_t backgroundColor{};
+    Color_t borderColor{};
+    Color_t headerColor{};
+    Color_t factionNameColor{};
+    Color_t cellColor{};
+    Color_t tabFillColor{};
+    Color_t tabSelectedFillColor{};
+    Color_t tabBorderColor{};
+    Color_t tabLabelColor{};
+    unsigned int tabFontSize{};
+    unsigned int headerFontSize{};
+    unsigned int factionFontSize{};
+    unsigned int cellFontSize{};
+    float paddingRatio{};
+    float tabTextPadX{};
+    float tabTextPadY{};
+    RatioLayout_t summaryTabLayout{};
+    RatioLayout_t attackTabLayout{};
+    RatioLayout_t contentLayout{};
+    RatioLayout_t attackButtonLayout{};
+    RatioLayout_t attackerListLayout{};
+    RatioLayout_t attackerConfirmLayout{};
+    RatioLayout_t attackerCancelLayout{};
+    RatioLayout_t outcomeOkLayout{};
+    float listButtonHeight{};
+    float listButtonGap{};
+    float listHeaderHeight{};
+    float listPadX{};
+    float listPadY{};
+};
+
 class UiStyle
 {
 public:
@@ -584,6 +617,7 @@ public:
     DesignStatsDisplayStyle designStatsDisplay;
     DesignListPanelStyle designListPanel;
     UnitStatusPanelStyle unitStatusPanel;
+    SatelliteViewStyle satelliteView;
 };
 
 inline const UiStyle& Style()

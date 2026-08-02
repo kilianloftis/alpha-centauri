@@ -129,12 +129,20 @@
       {
         "type": "OrbitalAttack",
         "scope": "FactionGlobal",
-        "parameters": { "chance": 50, "cooldown_turns": 1 }
+        "parameters": {
+          "chance": 50,
+          "cooldown_turns": 1,
+          "chance_of_destruction_on_fail": 50
+        }
       },
       {
         "type": "InterceptAttempt",
         "scope": "FactionGlobal",
-        "parameters": { "chance": 50, "cooldown_turns": 1 },
+        "parameters": {
+          "chance": 50,
+          "cooldown_turns": 1,
+          "chance_of_destruction_on_fail": 0
+        },
         "unitFilter": { "kind": "Domain", "domain": "orbital" },
         "condition": { "kind": "TargetTileHas", "value": "Base" }
       }
