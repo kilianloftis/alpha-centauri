@@ -29,8 +29,6 @@ CouncilRulesConfig_t CouncilRulesConfigParser::ParseConfig(const std::string& co
         json.value("governor_propose_interval_years", config.governorProposeIntervalYears);
     config.memberProposeIntervalYears =
         json.value("member_propose_interval_years", config.memberProposeIntervalYears);
-    config.governorInfiltratesMembers =
-        json.value("governor_infiltrates_members", config.governorInfiltratesMembers);
 
     if (config.governorProposeIntervalYears <= 0)
     {

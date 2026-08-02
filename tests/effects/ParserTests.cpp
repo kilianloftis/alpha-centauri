@@ -498,6 +498,48 @@ TEST_CASE("ParseEffectConfig: SocialRatingModifier", "[effects][parser]")
         json::parse(R"({ "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": {} })")));
 }
 
+TEST_CASE("ParseEffectConfig: Infiltration uses scope + factionFilter", "[effects][parser]")
+{
+    const EffectConfig_t council = BonusEffectParser::ParseEffectConfig(json::parse(R"({
+        "type": "Infiltration",
+        "scope": "FactionGlobal",
+        "persistence": "Continuous",
+        "factionFilter": { "kind": "CouncilMembers" }
+    })"));
+    CHECK(council.scope == EffectScope_t::FactionGlobal);
+    CHECK(council.persistence == EffectPersistence_t::Continuous);
+    CHECK(std::get_if<InfiltrationEffect_t>(&council.effect));
+    REQUIRE(council.factionFilter);
+    CHECK(council.factionFilter->kind == FactionFilterKind_t::CouncilMembers);
+
+    const EffectConfig_t world = BonusEffectParser::ParseEffectConfig(json::parse(R"({
+        "type": "Infiltration",
+        "scope": "WorldGlobal",
+        "persistence": "Continuous"
+    })"));
+    CHECK(world.scope == EffectScope_t::WorldGlobal);
+    CHECK_FALSE(world.factionFilter.has_value());
+
+    const EffectConfig_t probe = BonusEffectParser::ParseEffectConfig(json::parse(R"({
+        "type": "Infiltration",
+        "scope": "FactionGlobal",
+        "persistence": "Instantaneous",
+        "factionFilter": { "kind": "ActionTarget" }
+    })"));
+    REQUIRE(probe.factionFilter);
+    CHECK(probe.factionFilter->kind == FactionFilterKind_t::ActionTarget);
+
+    CHECK_THROWS(BonusEffectParser::ParseEffectConfig(json::parse(R"({
+        "type": "Infiltration", "scope": "FactionGlobal", "persistence": "Continuous"
+    })")));
+    CHECK_THROWS(BonusEffectParser::ParseEffectConfig(json::parse(R"({
+        "type": "Infiltration",
+        "scope": "FactionGlobal",
+        "persistence": "Continuous",
+        "factionFilter": { "kind": "ActionTarget" }
+    })")));
+}
+
 TEST_CASE("ParseEffectConfig: Conceal and Detect require a channel", "[effects][parser][detection]")
 {
     const EffectConfig_t conceal = BonusEffectParser::ParseEffectConfig(json::parse(R"({

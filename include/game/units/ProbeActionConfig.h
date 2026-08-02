@@ -1,5 +1,7 @@
 #pragma once
 
+#include "game/effects/BonusEffect.h"
+
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -96,6 +98,8 @@ struct ProbeActionConfig_t
     bool bNotHq = false;
     bool bIsAtrocity = false;
     std::optional<ProbeCostConfig_t> cost;
+    // Optional Instantaneous effects applied on success (e.g. Infiltration + ActionTarget).
+    std::vector<EffectConfig_t> effects;
 };
 
 struct ProbeActionsConfig_t

@@ -49,6 +49,12 @@ TEST_CASE("ProbeActionConfigParser loads SMAC defaults", "[probe][config]")
     CHECK(config.successFormula.strengthOffset == 1);
     REQUIRE(config.Find(ProbeActionId_t::Infiltrate) != nullptr);
     CHECK(config.Find(ProbeActionId_t::Infiltrate)->risk == 0);
+    REQUIRE(config.Find(ProbeActionId_t::Infiltrate)->effects.size() == 1);
+    CHECK(std::get_if<InfiltrationEffect_t>(
+        &config.Find(ProbeActionId_t::Infiltrate)->effects.front().effect));
+    REQUIRE(config.Find(ProbeActionId_t::Infiltrate)->effects.front().factionFilter);
+    CHECK(config.Find(ProbeActionId_t::Infiltrate)->effects.front().factionFilter->kind
+          == FactionFilterKind_t::ActionTarget);
     REQUIRE(config.Find(ProbeActionId_t::StealTech) != nullptr);
     CHECK(config.Find(ProbeActionId_t::StealTech)->riskRepeat == 1);
     REQUIRE(config.Find(ProbeActionId_t::MindControlBase) != nullptr);

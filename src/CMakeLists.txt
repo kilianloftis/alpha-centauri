@@ -59,6 +59,7 @@ add_library(ac-core STATIC
     game/EventBridge.cpp
     game/effects/ActiveEffect.cpp
     game/effects/BonusEffectParser.cpp
+    game/effects/InfiltrationRules.cpp
     game/effects/TileEffectsContext.cpp
     game/effects/TileYieldRulesConfigParser.cpp
     game/TurnStageFactory.cpp

@@ -5,6 +5,7 @@
 #include "game/GameState.h"
 #include "game/buildings/BuildingConfigParser.h"
 #include "game/effects/ActiveEffect.h"
+#include "game/effects/InfiltrationRules.h"
 #include "game/faction/DiplomacyLedger.h"
 #include "game/faction/EconomyManager.h"
 #include "game/faction/ResearchManager.h"
@@ -31,10 +32,9 @@ namespace
 {
 
 bool ApplyInfiltrate_(Faction& rActor, BaseManager& rBase, GameState& rGameState,
-                      ProbeActionResult_t& rResult)
+                      const ProbeActionConfig_t& rAction, ProbeActionResult_t& rResult)
 {
-    rGameState.GetDiplomacyLedger().SetInfiltration(rActor.GetFactionId(), rBase.GetFactionId(),
-                                                    true);
+    ApplyInfiltrationEffects(rGameState, rActor, rAction.effects, rBase.GetFactionId());
     rResult.detail = ProbeActionStatus_t::Infiltrated;
     return true;
 }
@@ -193,7 +193,7 @@ bool ApplyBaseAction_(Unit& rProbe, const ProbeActionConfig_t& rAction, BaseMana
     switch (rAction.id)
     {
         case ProbeActionId_t::Infiltrate:
-            return ApplyInfiltrate_(rActor, rBase, rGameState, rResult);
+            return ApplyInfiltrate_(rActor, rBase, rGameState, rAction, rResult);
         case ProbeActionId_t::StealTech:
             return ApplyStealTech_(rActor, rBase, rResult, rRng);
         case ProbeActionId_t::DrainEnergy:

@@ -39,8 +39,12 @@ UnitDomain_t ParseUnitDomain(const std::string& rDomain);
 // ({ "kind": "Domain", "domain": "air" } or { "kind": "HasComponent", "component": "..." }).
 UnitFilter_t ParseUnitFilter(const nlohmann::json& filterJson);
 
+// Parses a FactionFilter_t from a factionFilter JSON object
+// ({ "kind": "ActionTarget" } or { "kind": "CouncilMembers" }).
+FactionFilter_t ParseFactionFilter(const nlohmann::json& filterJson);
+
 // Parses a single entry of an "effects" JSON array
-// (type/scope/persistence/condition/unitFilter/radius/parameters).
+// (type/scope/persistence/condition/unitFilter/factionFilter/radius/parameters).
 EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson);
 
 // Throws if scope can never be resolved for the given source kind (ThisPop off a pop type,

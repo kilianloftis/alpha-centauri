@@ -2,7 +2,9 @@
 
 #include "game/IEffectsProvider.h"
 #include "game/Faction.h"
+#include "game/GameState.h"
 #include "game/buildings/BuildingConfigParser.h"
+#include "game/effects/InfiltrationRules.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/faction/SocialEngineeringManager.h"
 #include "game/faction/base/BaseManager.h"
@@ -400,7 +402,8 @@ std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile)
     return result;
 }
 
-void DispatchInstantaneousEffects(const BuildingConfig_t& rBuilding, BaseManager& rBase)
+void DispatchInstantaneousEffects(const BuildingConfig_t& rBuilding, BaseManager& rBase,
+                                  GameState* pGameState)
 {
     for (const EffectConfig_t& effect : rBuilding.effects)
     {
@@ -418,6 +421,16 @@ void DispatchInstantaneousEffects(const BuildingConfig_t& rBuilding, BaseManager
         else if (std::get_if<GrantUnitEffect_t>(&effect.effect))
         {
             std::cerr << "[TODO] Instantaneous GrantUnit from '" << rBuilding.id << "' not yet implemented\n";
+        }
+        else if (std::get_if<InfiltrationEffect_t>(&effect.effect))
+        {
+            if (!pGameState)
+            {
+                std::cerr << "[TODO] Instantaneous Infiltration from '" << rBuilding.id
+                          << "' requires GameState at dispatch\n";
+                continue;
+            }
+            ApplyInfiltrationEffect(*pGameState, rBase.GetFaction(), effect);
         }
     }
 }

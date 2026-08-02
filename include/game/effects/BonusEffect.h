@@ -135,6 +135,16 @@ struct WorldParameterEffect_t
     int amount = 0;
 };
 
+// Directed datalink infiltration. The beneficiary (effect owner / acting faction) gains
+// visibility into other factions. Target set is scope + optional factionFilter:
+//   WorldGlobal, no filter     → every other faction
+//   FactionGlobal + CouncilMembers / ActionTarget → filter selects targets
+// Instantaneous: written to DiplomacyLedger at apply time.
+// Continuous: honored at query time (HasInfiltration) while the effect remains active.
+struct InfiltrationEffect_t
+{
+};
+
 enum class TileSelectorKind_t
 {
     BaseTile,
@@ -227,6 +237,7 @@ using EffectVariant_t = std::variant<
     GrantUnitEffect_t,
     GrantEnergyEffect_t,
     WorldParameterEffect_t,
+    InfiltrationEffect_t,
     StatModifierEffect_t,
     TileResourceCapEffect_t,
     RuleFlagEffect_t,
@@ -289,6 +300,23 @@ struct UnitFilter_t
     std::optional<RuleFlagId_t> flag;
 };
 
+// Restricts which *other* factions a cross-faction effect (Infiltration, future
+// DiplomaticModifier, …) applies to. Orthogonal to EffectScope_t: scope is the resolution
+// lane (FactionGlobal / WorldGlobal); factionFilter narrows the diplomatic target set.
+// Absent + WorldGlobal → every other faction. Absent + other scopes → no automatic targets.
+enum class FactionFilterKind_t
+{
+    // Only the faction supplied as actionTarget at apply/query time (probe mission target).
+    ActionTarget,
+    // Other factions that sit on the Planetary Council (or participatesInCouncil if none).
+    CouncilMembers,
+};
+
+struct FactionFilter_t
+{
+    FactionFilterKind_t kind = FactionFilterKind_t::ActionTarget;
+};
+
 struct EffectConfig_t
 {
     EffectVariant_t effect;
@@ -301,6 +329,9 @@ struct EffectConfig_t
     // Absent = applies to every unit that receives this effect. When present, CollectLiveUnitEffects
     // drops the effect for units that do not match (e.g. Domain=Air for Aerospace Complex).
     std::optional<UnitFilter_t> unitFilter;
+    // Absent = default target set from scope (WorldGlobal → all other factions). When present,
+    // further restricts which factions a directed cross-faction effect applies to.
+    std::optional<FactionFilter_t> factionFilter;
     // When set, FactionEffectsPool omits this effect once the faction has discovered the tech.
     // Empty / absent = never removed by research. Parsed from the effect entry's
     // "removed_by_tech" field (alongside condition / unitFilter).
@@ -323,6 +354,7 @@ enum class EffectSourceKind_t
     SocialRating,
     Faction,
     CouncilProposal,
+    ProbeAction,
 };
 
 } // namespace ac

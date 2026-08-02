@@ -10,7 +10,15 @@
       "id": "infiltrate",
       "name": "Infiltrate Datalinks",
       "target": "base",
-      "risk": 0
+      "risk": 0,
+      "effects": [
+        {
+          "type": "Infiltration",
+          "scope": "FactionGlobal",
+          "persistence": "Instantaneous",
+          "factionFilter": { "kind": "ActionTarget" }
+        }
+      ]
     },
     {
       "id": "steal_tech",

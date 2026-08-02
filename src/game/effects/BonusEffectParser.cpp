@@ -269,6 +269,25 @@ UnitFilter_t ParseUnitFilter(const nlohmann::json& filterJson)
     return filter;
 }
 
+FactionFilter_t ParseFactionFilter(const nlohmann::json& filterJson)
+{
+    FactionFilter_t filter;
+    const std::string kindStr = filterJson.value("kind", "");
+    if (kindStr == "ActionTarget")
+    {
+        filter.kind = FactionFilterKind_t::ActionTarget;
+    }
+    else if (kindStr == "CouncilMembers")
+    {
+        filter.kind = FactionFilterKind_t::CouncilMembers;
+    }
+    else
+    {
+        throw std::runtime_error("Unknown factionFilter kind: '" + kindStr + "'");
+    }
+    return filter;
+}
+
 EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
 {
     EffectConfig_t effect;
@@ -292,6 +311,10 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
     if (effectJson.contains("unitFilter"))
     {
         effect.unitFilter = ParseUnitFilter(effectJson.at("unitFilter"));
+    }
+    if (effectJson.contains("factionFilter"))
+    {
+        effect.factionFilter = ParseFactionFilter(effectJson.at("factionFilter"));
     }
     effect.removedByTech = effectJson.value("removed_by_tech", "");
 
@@ -343,6 +366,29 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
         }
         worldParam.amount = static_cast<int>(ParseNumber(parameters, "amount", 0.0));
         effect.effect = worldParam;
+    }
+    else if (typeStr == "Infiltration")
+    {
+        if (effect.scope != EffectScope_t::FactionGlobal
+            && effect.scope != EffectScope_t::WorldGlobal)
+        {
+            throw std::runtime_error(
+                "Infiltration requires scope FactionGlobal or WorldGlobal");
+        }
+        if (effect.scope == EffectScope_t::FactionGlobal && !effect.factionFilter)
+        {
+            throw std::runtime_error(
+                "FactionGlobal Infiltration requires a factionFilter "
+                "(WorldGlobal without a filter means all other factions)");
+        }
+        if (effect.factionFilter
+            && effect.factionFilter->kind == FactionFilterKind_t::ActionTarget
+            && effect.persistence != EffectPersistence_t::Instantaneous)
+        {
+            throw std::runtime_error(
+                "factionFilter ActionTarget requires persistence Instantaneous");
+        }
+        effect.effect = InfiltrationEffect_t{};
     }
     else if (typeStr == "StatModifier")
     {

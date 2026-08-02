@@ -12,8 +12,8 @@ struct CouncilRulesConfig_t;
 
 // Applies the game-state mutations a passed council proposal produces: a proposal's
 // Instantaneous effects (energy grants; world-parameter changes trigger world events)
-// and the Planetary Governor's diplomatic privileges. Keeps this outward-facing mutation
-// out of the council's voting logic.
+// and Instantaneous governor_effects (e.g. Infiltration). Keeps this outward-facing
+// mutation out of the council's voting logic.
 class CouncilOutcomeApplier
 {
 public:
@@ -23,7 +23,8 @@ public:
     void ApplyInstantaneousEffects(const std::vector<Faction*>& rMembers,
                                    const CouncilProposalConfig_t& rConfig);
 
-    // Grant the governor their configured diplomatic privileges over the other members.
+    // Apply Instantaneous entries from council rules governorEffects (shared infiltration
+    // helpers). Continuous governor Infiltration is query-time via HasInfiltration.
     void ApplyGovernor(GameState& rGameState,
                        const std::vector<Faction*>& rMembers,
                        const Faction& rGovernor);

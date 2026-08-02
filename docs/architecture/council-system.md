@@ -104,8 +104,8 @@ graph TB
   - `ApplyInstantaneousEffects` — energy grants to every member (`EconomyManager::AddEnergy`).
     World-parameter effects (sea level) are a documented **TODO**: they must trigger a
     `WorldEvents` world event, not mutate the map here.
-  - `ApplyGovernor` — grants the governor infiltration over the other members, gated by the
-    config flag `governorInfiltratesMembers`.
+  - `ApplyGovernor` — applies Instantaneous `governorEffects` via shared infiltration
+    helpers. Continuous `Infiltration` + `factionFilter: CouncilMembers` is query-time.
 - **Depends on**: `CouncilRulesConfig_t` (reference); `GameState`/`Faction`/`DiplomacyLedger`
   passed per call.
 
@@ -115,7 +115,7 @@ graph TB
   `proposable`, `requiredTech`, `requiredProposals`, `repeals`, `requires/forbidsRuleFlags`,
   `electionOutcome`, and `effects`.
 - **CouncilRulesConfig_t**: standing rules — `governorProposeIntervalYears`,
-  `memberProposeIntervalYears`, `governorInfiltratesMembers`, and `governorEffects`.
+  `memberProposeIntervalYears`, and `governorEffects`.
 - **CouncilProposalRegistry**: loads/validates the proposal list (rejects `requiredProposals`
   / `repeals` that reference unknown ids). Parsed by `CouncilProposalConfigParser`; rules by
   `CouncilRulesConfigParser`. Loaded from `config/council/`.
@@ -160,9 +160,9 @@ mutation belongs to the `WorldEvents` system. Until that system exposes a trigge
 applier holds a TODO and no world state lives on the council.
 
 ### Moddability
-Governor benefits are fully config-driven: continuous bonuses via `governorEffects`, the
-infiltration privilege via `governorInfiltratesMembers`. Proposals, vote weights, thresholds,
-tech gates, and rule-flag interactions all come from `config/council/`.
+Governor benefits are fully config-driven via `governorEffects` (continuous FactionGlobal
+bonuses, including Continuous `Infiltration` filtered to council members). Proposals, vote
+weights, thresholds, tech gates, and rule-flag interactions all come from `config/council/`.
 
 ### Event-driven for the UI
 The council exposes `Signal`s for the AI-initiates-a-vote popup flow rather than forcing the

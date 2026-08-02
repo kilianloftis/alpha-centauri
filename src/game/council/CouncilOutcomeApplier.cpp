@@ -4,7 +4,7 @@
 #include "game/GameState.h"
 #include "game/council/CouncilProposalConfig.h"
 #include "game/council/CouncilRulesConfig.h"
-#include "game/faction/DiplomacyLedger.h"
+#include "game/effects/InfiltrationRules.h"
 #include "game/faction/EconomyManager.h"
 
 #include <variant>
@@ -43,23 +43,13 @@ void CouncilOutcomeApplier::ApplyInstantaneousEffects(const std::vector<Faction*
 }
 
 void CouncilOutcomeApplier::ApplyGovernor(GameState& rGameState,
-                                          const std::vector<Faction*>& rMembers,
+                                          const std::vector<Faction*>& /*rMembers*/,
                                           const Faction& rGovernor)
 {
-    if (!m_rRules.governorInfiltratesMembers)
-    {
-        return;
-    }
-    DiplomacyLedger& rDiplomacy = rGameState.GetDiplomacyLedger();
-    const FactionId_t governorId = rGovernor.GetFactionId();
-    for (Faction* pMember : rMembers)
-    {
-        if (pMember->GetFactionId() == governorId)
-        {
-            continue;
-        }
-        rDiplomacy.SetInfiltration(governorId, pMember->GetFactionId(), true);
-    }
+    // Instantaneous governor_effects (e.g. sticky Infiltration). Continuous entries —
+    // including Continuous Infiltration with CouncilMembers — live in CouncilEffects and
+    // are honored by HasInfiltration at query time.
+    ApplyInfiltrationEffects(rGameState, rGovernor, m_rRules.governorEffects);
 }
 
 } // namespace ac

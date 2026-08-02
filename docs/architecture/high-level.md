@@ -365,7 +365,7 @@ graph TB
 - **Components**:
   - `PlanetaryCouncil`: The vote lifecycle (propose → vote/veto → resolve), fixed membership, governorship, and active-proposal set. Owned by `GameState` (`std::unique_ptr`); exposes `OnProposalOpened` / `OnResolved` signals for the UI.
   - `CouncilEffects`: Store for the continuous `ActiveEffect_t`s the council projects — world-global effects from proposals in force, plus the governor's faction-global effects.
-  - `CouncilOutcomeApplier`: Applies a passed proposal's outward mutations (energy grants, governor infiltration); world-parameter outcomes are deferred to `WorldEvents`.
+  - `CouncilOutcomeApplier`: Applies a passed proposal's outward mutations (energy grants) and Instantaneous governor effects (infiltration); world-parameter outcomes are deferred to `WorldEvents`.
   - `CouncilProposalRegistry`: Proposal definitions loaded/validated from `config/council/`.
 - **Dependencies**:
   - `GameState` owns the council and folds `CouncilEffects` output into the faction effect pool

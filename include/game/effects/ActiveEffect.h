@@ -17,6 +17,7 @@ namespace ac
 // Forward declarations
 class BaseManager;
 class Faction;
+class GameState;
 class IEffectsProvider;
 class PopulationManager;
 class Unit;
@@ -354,7 +355,10 @@ std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile);
 // Fire all Instantaneous effects declared on rBuilding against rBase.
 // GrantBuilding: adds the granted building to the base immediately.
 // GrantTech / GrantUnit: logged as TODO stubs until those systems are wired.
+// Infiltration: requires pGameState (ledger write); skipped with a stderr note when null.
+// Continuous Infiltration is honored at query time via HasInfiltration — no dispatch.
 // Call this right after a building is added to the base (e.g. from OnProductionCompleted).
-void DispatchInstantaneousEffects(const BuildingConfig_t& rBuilding, BaseManager& rBase);
+void DispatchInstantaneousEffects(const BuildingConfig_t& rBuilding, BaseManager& rBase,
+                                  GameState* pGameState = nullptr);
 
 } // namespace ac

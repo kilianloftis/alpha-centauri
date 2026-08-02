@@ -13,9 +13,9 @@ struct CouncilRulesConfig_t
 {
     int governorProposeIntervalYears = 10;
     int memberProposeIntervalYears = 20;
-    // When true, the Planetary Governor gains infiltration over every other council member.
-    bool governorInfiltratesMembers = true;
-    // Continuous FactionGlobal effects granted while a faction holds the governorship.
+    // Effects granted when a faction holds the governorship. Continuous FactionGlobal
+    // entries feed CouncilEffects; Instantaneous entries (e.g. Infiltration) are applied
+    // by CouncilOutcomeApplier::ApplyGovernor at election time.
     std::vector<EffectConfig_t> governorEffects;
 };
 

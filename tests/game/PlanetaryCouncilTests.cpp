@@ -5,6 +5,7 @@
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/council/CouncilRulesConfigParser.h"
 #include "game/council/PlanetaryCouncil.h"
+#include "game/effects/InfiltrationRules.h"
 #include "game/faction/DiplomacyLedger.h"
 #include "game/faction/EconomyManager.h"
 #include "game/faction/ResearchManager.h"
@@ -146,11 +147,15 @@ TEST_CASE("Council rules config loads propose intervals and governor effects", "
 
     CHECK(rules.governorProposeIntervalYears == 10);
     CHECK(rules.memberProposeIntervalYears == 20);
-    REQUIRE(rules.governorEffects.size() == 1);
-    const auto* pStat = std::get_if<StatModifierEffect_t>(&rules.governorEffects.front().effect);
+    REQUIRE(rules.governorEffects.size() == 2);
+    const auto* pStat = std::get_if<StatModifierEffect_t>(&rules.governorEffects[0].effect);
     REQUIRE(pStat);
     CHECK(pStat->stat == StatId_t::CommerceEnergyBonus);
     CHECK(pStat->amount == Catch::Approx(1.0));
+    CHECK(rules.governorEffects[1].persistence == EffectPersistence_t::Continuous);
+    CHECK(std::get_if<InfiltrationEffect_t>(&rules.governorEffects[1].effect));
+    REQUIRE(rules.governorEffects[1].factionFilter);
+    CHECK(rules.governorEffects[1].factionFilter->kind == FactionFilterKind_t::CouncilMembers);
 }
 
 TEST_CASE("Proposing requires commlinks to every council member and shares them", "[council]")
@@ -445,10 +450,11 @@ TEST_CASE("Elect Planetary Governor sets governor benefits and infiltrators", "[
 
     REQUIRE(rCouncil.GetPlanetaryGovernor());
     CHECK(rCouncil.GetPlanetaryGovernor() == game.pA);
-    CHECK(game.pState->GetDiplomacyLedger().HasInfiltration(game.pA->GetFactionId(),
-                                                            game.pB->GetFactionId()));
-    CHECK(game.pState->GetDiplomacyLedger().HasInfiltration(game.pA->GetFactionId(),
-                                                            game.pC->GetFactionId()));
+    // Continuous governor Infiltration + CouncilMembers — query-time, not ledger sticky.
+    CHECK(HasInfiltration(*game.pState, game.pA->GetFactionId(), game.pB->GetFactionId()));
+    CHECK(HasInfiltration(*game.pState, game.pA->GetFactionId(), game.pC->GetFactionId()));
+    CHECK_FALSE(game.pState->GetDiplomacyLedger().HasInfiltration(game.pA->GetFactionId(),
+                                                                  game.pB->GetFactionId()));
 
     // Governor propose interval is 10 years; members are 20.
     CHECK(rCouncil.ProposeCooldownYears(*game.pA) == 10);
