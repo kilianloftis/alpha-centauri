@@ -18,8 +18,16 @@ namespace
 
 bool IsHostileTo_(const Unit& rMover, const Unit& rOther)
 {
-    return !rOther.IsEmbarked()
-        && rOther.GetFaction().GetFactionId() != rMover.GetFaction().GetFactionId();
+    if (rOther.GetFaction().GetFactionId() == rMover.GetFaction().GetFactionId())
+    {
+        return false;
+    }
+    // Embarked cargo blocks only in a base (same eligibility as combat defense).
+    if (rOther.IsEmbarked() && !rOther.GetTile().HasImprovement("Base"))
+    {
+        return false;
+    }
+    return true;
 }
 
 // Invokes rFn(Unit&) for each hostile unit on rTile; stops early if rFn returns false.

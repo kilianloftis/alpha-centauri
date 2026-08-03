@@ -144,23 +144,6 @@ Unit* FindBoardableTransport(const Unit& rPassenger, const Tile& rTile,
     return nullptr;
 }
 
-bool CanEnterTile(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap)
-{
-    if (CanOccupyTileUnaided(rMover, rTile))
-    {
-        return true;
-    }
-    if (rMover.GetDomain() != UnitDomain_t::Land || !rTile.IsWater())
-    {
-        return false;
-    }
-    if (FindBoardableTransport(rMover, rTile, rWorldMap))
-    {
-        return true;
-    }
-    return ResolveFlag(rMover, RuleFlagId_t::Amphibious) && rTile.HasImprovement("Base");
-}
-
 bool CanUnloadTo(const Unit& rPassenger, const Tile& rFrom, const Tile& rTo,
                  const WorldMap& rWorldMap)
 {
@@ -172,7 +155,7 @@ bool CanUnloadTo(const Unit& rPassenger, const Tile& rFrom, const Tile& rTo,
     {
         return false;
     }
-    // Unload uses full enter rules (friendly base, amphibious sea base, land, etc.).
+    // Unload uses full enter rules (friendly base, Permission(Enter) sea base, land, etc.).
     return CanEnterTile(rPassenger, rTo, rWorldMap);
 }
 

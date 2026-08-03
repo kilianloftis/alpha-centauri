@@ -126,8 +126,9 @@ public:
     bool IsInterceptReady(int missionYear) const;
     void DeployIntercept(int readyMissionYear);
 
-    // Cargo / transport. Embarked units share the carrier's tile but are ignored for
-    // combat targeting, ZOC, and tile occupancy until they disembark.
+    // Cargo / transport. Embarked units share the carrier's tile. Outside a base they are
+    // ignored for combat targeting, ZOC, and tile occupancy; in a base they may defend and
+    // block (carrier preferred as the combat target when both are present).
     bool IsEmbarked() const;
     Unit* GetCarrier() const;
     const std::vector<Unit*>& GetCargo() const;

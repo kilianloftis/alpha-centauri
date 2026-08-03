@@ -59,12 +59,14 @@ public:
     }
 
     const ac::EffectConfig_t& RuleFlag(ac::RuleFlagId_t flag,
-                                       ac::EffectScope_t scope = ac::EffectScope_t::FactionGlobal)
+                                       ac::EffectScope_t scope = ac::EffectScope_t::FactionGlobal,
+                                       std::optional<ac::Condition_t> condition = std::nullopt)
     {
         ac::EffectConfig_t config;
         config.effect = ac::RuleFlagEffect_t{flag};
         config.scope = scope;
         config.persistence = ac::EffectPersistence_t::Continuous;
+        config.condition = std::move(condition);
         return Add(std::move(config));
     }
 

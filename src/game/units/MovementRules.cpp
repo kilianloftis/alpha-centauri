@@ -2,12 +2,15 @@
 
 #include "game/Faction.h"
 #include "game/effects/ActiveEffect.h"
+#include "game/effects/BonusEffect.h"
 #include "game/effects/EffectEnums.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
+#include "game/units/TransportRules.h"
 #include "game/units/Unit.h"
+#include "game/units/UnitDomain.h"
 
 namespace ac
 {
@@ -77,6 +80,25 @@ bool CanOccupyTileUnaided(const Unit& rMover, const Tile& rTile)
     // A land unit garrisons a friendly sea base without needing a hull under it.
     return rMover.GetDomain() == UnitDomain_t::Land && rTile.IsWater()
         && HasFriendlyBase(rMover, rTile);
+}
+
+bool CanEnterTile(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap)
+{
+    if (CanOccupyTileUnaided(rMover, rTile))
+    {
+        return true;
+    }
+    if (rMover.GetDomain() != UnitDomain_t::Land || !rTile.IsWater())
+    {
+        return false;
+    }
+    if (FindBoardableTransport(rMover, rTile, rWorldMap))
+    {
+        return true;
+    }
+    EffectContext_t ctx;
+    ctx.targetTile = &rTile;
+    return HasPermission(rMover, PermissionId_t::Enter, ctx);
 }
 
 bool HasFriendlyOccupant(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap)

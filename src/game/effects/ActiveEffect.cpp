@@ -252,6 +252,8 @@ bool ConditionBodySatisfied_(const Condition_t& condition, const EffectContext_t
         case ConditionKind_t::OriginBaseIsTargetBase:
             return pOriginBase != nullptr && ctx.targetTile != nullptr
                 && &pOriginBase->GetTile() == ctx.targetTile;
+        case ConditionKind_t::AttackerIsEmbarked:
+            return ctx.pAttacker != nullptr && ctx.pAttacker->IsEmbarked();
         case ConditionKind_t::AllOf:
             for (const std::string& rFeatureId : condition.values)
             {
@@ -502,6 +504,10 @@ bool ResolveFlag(const UnitDesign& rDesign, RuleFlagId_t flagId)
 {
     for (const ActiveEffect_t& rEffect : rDesign.CollectEffects())
     {
+        if (!rEffect.config || rEffect.config->condition.has_value())
+        {
+            continue;
+        }
         const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.config->effect);
         if (pFlag && pFlag->flag == flagId)
         {
@@ -546,6 +552,10 @@ bool ResolveFlag(const Unit& rUnit, RuleFlagId_t flagId)
 {
     for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rUnit))
     {
+        if (!rEffect.config || rEffect.config->condition.has_value())
+        {
+            continue;
+        }
         const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.config->effect);
         if (pFlag && pFlag->flag == flagId)
         {
@@ -559,7 +569,7 @@ bool ResolveFlag(const Faction& rFaction, RuleFlagId_t flagId)
 {
     for (const ActiveEffect_t& rEffect : CollectActiveEffects(rFaction).effects)
     {
-        if (!rEffect.config)
+        if (!rEffect.config || rEffect.config->condition.has_value())
         {
             continue;
         }
@@ -576,7 +586,7 @@ bool ResolveFlag(const BaseManager& rBase, RuleFlagId_t flagId)
 {
     for (const ActiveEffect_t& rEffect : rBase.GetBaseEffects().effects)
     {
-        if (!rEffect.config)
+        if (!rEffect.config || rEffect.config->condition.has_value())
         {
             continue;
         }
@@ -585,6 +595,33 @@ bool ResolveFlag(const BaseManager& rBase, RuleFlagId_t flagId)
         {
             return true;
         }
+    }
+    return false;
+}
+
+bool HasPermission(const Unit& rUnit, PermissionId_t permission, const EffectContext_t& rCtx)
+{
+    for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rUnit))
+    {
+        if (!rEffect.config)
+        {
+            continue;
+        }
+        const PermissionEffect_t* pPerm =
+            std::get_if<PermissionEffect_t>(&rEffect.config->effect);
+        if (!pPerm || pPerm->permission != permission)
+        {
+            continue;
+        }
+        if (!UnitFilterSatisfied(*rEffect.config, rUnit))
+        {
+            continue;
+        }
+        if (!ConditionSatisfied(*rEffect.config, rCtx, rEffect.originBase))
+        {
+            continue;
+        }
+        return true;
     }
     return false;
 }

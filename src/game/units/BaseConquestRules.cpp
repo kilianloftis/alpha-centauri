@@ -18,30 +18,17 @@ bool HasBaseGarrison(const BaseManager& rBase, const WorldMap& rWorldMap)
     const FactionId_t ownerId = rBase.GetFactionId();
     for (const Unit* pUnit : rWorldMap.GetUnitsOnTile(rBase.GetTile()))
     {
-        // Embarked units count here, unlike everywhere else. Cargo sitting in a base is
-        // still a garrison: it survives its carrier being sunk in port (SurvivesCarrierLoss)
-        // and holds the base against capture. The carrier is what an attacker can target —
-        // see FindVisibleHostileOnTile — so this does not make the cargo fight, only hold.
+        // Embarked units count here: cargo sitting in a base is still a garrison (it
+        // survives its carrier being sunk in port via SurvivesCarrierLoss and holds the
+        // base against capture). Embarked-in-base cargo is also eligible as a combat
+        // defender — see AttackRules::FindVisibleHostileOnTile — with the carrier preferred
+        // when both are present.
         if (pUnit && pUnit->GetFaction().GetFactionId() == ownerId)
         {
             return true;
         }
     }
     return false;
-}
-
-bool CanAttackIntoBaseTile(const Unit& rAttacker, const Tile& rBaseTile)
-{
-    // Only the land → sea-base case is gated; ships and aircraft keep coastal options open.
-    if (rAttacker.GetDomain() != UnitDomain_t::Land)
-    {
-        return true;
-    }
-    if (!rBaseTile.IsWater() || !rBaseTile.HasImprovement("Base"))
-    {
-        return true;
-    }
-    return ResolveFlag(rAttacker, RuleFlagId_t::Amphibious);
 }
 
 bool CanCaptureBase(const Unit& rCapturer)

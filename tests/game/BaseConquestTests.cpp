@@ -11,9 +11,9 @@
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/units/AttackRules.h"
 #include "game/units/BaseConquestConfig.h"
 #include "game/units/BaseConquestRules.h"
-#include "game/units/MovementConstants.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitOrder.h"
@@ -52,12 +52,6 @@ void FillWater_(WorldMap& rMap)
 size_t CountUnits_(Faction& rFaction)
 {
     return static_cast<size_t>(std::ranges::distance(rFaction.GetUnitManager().Units()));
-}
-
-void RestoreMoves_(Unit& rUnit)
-{
-    rUnit.SetMoveFragmentsRemaining(
-        rUnit.GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint);
 }
 
 struct ConquestGame_
@@ -173,11 +167,13 @@ TEST_CASE("CanCaptureBase: cannot_capture_bases is the sole veto", "[unit][conqu
     CHECK_FALSE(CanCaptureBase(former));
 }
 
-TEST_CASE("Sea-base assault: attack and entry need Amphibious; capture is flag-gated",
+TEST_CASE("Sea-base assault: attack needs pods for land; capture is flag-gated",
           "[unit][conquest]")
 {
     ConquestGame_ game;
     FillWater_(game.pState->GetWorldMap());
+    game.pState->GetWorldMap().GetTile(4, 4)->SetElevation(100);
+    game.pState->GetWorldMap().GetTile(4, 5)->SetElevation(100);
     BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4);
 
     Unit& land = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon"});
@@ -185,17 +181,18 @@ TEST_CASE("Sea-base assault: attack and entry need Amphibious; capture is flag-g
                                {"test_chassis", "test_weapon", "test_amphibious"});
     Unit& sea = game.MakeUnit(*game.pPlayer, 3, 4, {"test_sea_chassis", "test_weapon"});
 
-    // Flag-only: land combat may capture once on the tile; TryStep enforces Amphibious.
+    // Capture itself is flag-gated only; entry/attack use Permission + CanAttackTile.
     CHECK(CanCaptureBase(land));
     CHECK(CanCaptureBase(amph));
     CHECK(CanCaptureBase(sea));
 
-    CHECK_FALSE(CanAttackIntoBaseTile(land, rBase.GetTile()));
-    CHECK(CanAttackIntoBaseTile(amph, rBase.GetTile()));
-    CHECK(CanAttackIntoBaseTile(sea, rBase.GetTile()));
+    WorldMap& rMap = game.pState->GetWorldMap();
+    CHECK_FALSE(CanAttackTile(land, rBase.GetTile(), rMap));
+    CHECK(CanAttackTile(amph, rBase.GetTile(), rMap));
+    CHECK(CanAttackTile(sea, rBase.GetTile(), rMap));
 }
 
-TEST_CASE("Land without Amphibious cannot attack or enter a sea base", "[unit][conquest][amphibious]")
+TEST_CASE("Land without pods cannot attack or enter a sea base", "[unit][conquest][amphibious]")
 {
     ConquestGame_ game;
     FillWater_(game.pState->GetWorldMap());
@@ -216,7 +213,7 @@ TEST_CASE("Land without Amphibious cannot attack or enter a sea base", "[unit][c
     CHECK(game.pPlayer->GetBaseCount() == 0);
 }
 
-TEST_CASE("Amphibious land can attack then step into a sea base to capture",
+TEST_CASE("Pods land can attack then step into a sea base to capture",
           "[unit][conquest][amphibious]")
 {
     ConquestGame_ game;
@@ -233,15 +230,16 @@ TEST_CASE("Amphibious land can attack then step into a sea base to capture",
     REQUIRE(result->bDefenderDestroyed);
     CHECK(game.pPlayer->GetBaseCount() == 0);
     CHECK(game.pAi->GetBaseCount() == 1);
+    // Attack spent one move point; the leftover is enough for a separate capture step.
+    REQUIRE(amph.GetMoveFragmentsRemaining() > 0);
 
-    RestoreMoves_(amph);
     MoveOrder_t order;
     REQUIRE(game.pState->GetUnitOrderExecutor().TryStep(amph, rBase.GetTile(), order).bEntered);
     REQUIRE(game.pPlayer->GetBaseCount() == 1);
     CHECK(game.pAi->GetBaseCount() == 0);
 }
 
-TEST_CASE("Amphibious land can enter an undefended sea base to capture it",
+TEST_CASE("Pods land can enter an undefended sea base to capture it",
           "[unit][conquest][amphibious]")
 {
     ConquestGame_ game;
@@ -277,12 +275,12 @@ TEST_CASE("Killing the last defender cuts pop; stepping in captures, destroys fa
     REQUIRE(result->bDefenderDestroyed);
     REQUIRE_FALSE(result->bAttackerDestroyed);
 
-    // Last-defender pop only; ownership unchanged until entry.
+    // Last-defender pop only; ownership unchanged until a separate entry order.
     CHECK(game.pAi->GetBaseCount() == 1);
     CHECK(game.pPlayer->GetBaseCount() == 0);
     CHECK((*game.pAi->Bases().begin()).GetPopulation().GetSize() == 3);
+    REQUIRE(attacker.GetMoveFragmentsRemaining() > 0);
 
-    RestoreMoves_(attacker);
     MoveOrder_t order;
     REQUIRE(game.pState->GetUnitOrderExecutor().TryStep(attacker, rBase.GetTile(), order).bEntered);
 
@@ -313,8 +311,8 @@ TEST_CASE("Perimeter Defense skips last-defender pop loss; capture pop applies o
 
     CHECK(game.pPlayer->GetBaseCount() == 0);
     CHECK((*game.pAi->Bases().begin()).GetPopulation().GetSize() == 3);
+    REQUIRE(attacker.GetMoveFragmentsRemaining() > 0);
 
-    RestoreMoves_(attacker);
     MoveOrder_t order;
     REQUIRE(game.pState->GetUnitOrderExecutor().TryStep(attacker, rBase.GetTile(), order).bEntered);
 
@@ -341,8 +339,8 @@ TEST_CASE("Needlejet can clear a garrison but cannot capture on entry", "[unit][
     CHECK((*game.pAi->Bases().begin()).GetBaseId() == baseId);
     CHECK((*game.pAi->Bases().begin()).GetPopulation().GetSize() == 2);
     CHECK(game.pPlayer->GetBaseCount() == 0);
+    REQUIRE(attacker.GetMoveFragmentsRemaining() > 0);
 
-    RestoreMoves_(attacker);
     MoveOrder_t order;
     REQUIRE(game.pState->GetUnitOrderExecutor().TryStep(attacker, rBase.GetTile(), order).bEntered);
     REQUIRE(game.pAi->GetBaseCount() == 1);
@@ -436,11 +434,11 @@ TEST_CASE("Human conquering Progenitor reduces population to one and spawns esca
     REQUIRE(result.has_value());
     REQUIRE(result->bDefenderDestroyed);
 
-    // Last-defender casualty: 5→4; still AI-owned until entry.
+    // Last-defender casualty: 5→4; still AI-owned until a separate entry order.
     CHECK(game.pPlayer->GetBaseCount() == 0);
     CHECK((*game.pAi->Bases().begin()).GetPopulation().GetSize() == 4);
+    REQUIRE(attacker.GetMoveFragmentsRemaining() > 0);
 
-    RestoreMoves_(attacker);
     MoveOrder_t order;
     REQUIRE(game.pState->GetUnitOrderExecutor().TryStep(attacker, rBase.GetTile(), order).bEntered);
 
@@ -487,8 +485,8 @@ TEST_CASE("NoConquestRepair leaves the capturer damaged", "[unit][conquest]")
         attacker, defender.GetTile());
     REQUIRE(result.has_value());
     REQUIRE(result->bDefenderDestroyed);
+    REQUIRE(attacker.GetMoveFragmentsRemaining() > 0);
 
-    RestoreMoves_(attacker);
     MoveOrder_t order;
     REQUIRE(game.pState->GetUnitOrderExecutor().TryStep(attacker, rBase.GetTile(), order).bEntered);
 

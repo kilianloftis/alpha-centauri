@@ -74,15 +74,16 @@ public:
     // Stop using rMover when the result reports bMoverDestroyed.
     [[nodiscard]] StepResult_t TryStep(Unit& rMover, const Tile& rTo, MoveOrder_t& rMoveOrder);
 
-    // Attack a hostile-occupied adjacent tile without moving onto it. Returns nullopt if not
-    // adjacent, out of moves, rTargetTile has no hostile unit visible to the attacker, or a
-    // land unit lacks Amphibious against a water-tile base garrison.
-    // Otherwise resolves combat (HP / DestroyUnit) and returns the round-by-round result for
-    // UI playback. SingleUse attackers return as destroyed after the caller (or this method)
+    // Attack a hostile-occupied adjacent tile without moving onto it. Costs one movement
+    // point; neither side changes tile. Returns nullopt when FindAttackableHostileOnTile
+    // denies the declare (moves / adjacency / visibility / CanAttackTile). Otherwise
+    // resolves combat (HP / DestroyUnit) and returns the round-by-round result for UI
+    // playback. SingleUse attackers return as destroyed after the caller (or this method)
     // runs DestroyUnit on OrderProgress_t::Expended.
     // When world is bound, ready InterceptAttempt effects may destroy the attacker before
-    // CombatResolver runs. After the last garrison dies on a base tile, conquest / native
-    // raid side effects apply when GameDataContext is bound.
+    // CombatResolver runs. After the last garrison dies on a base tile, last-defender
+    // casualties / adjacent native raid apply when GameDataContext is bound — ownership
+    // transfer still requires a later enter-tile order while moves remain.
     std::optional<CombatResult_t> TryAttack(Unit& rAttacker, const Tile& rTargetTile);
 
     // Found a base on the unit's tile. Requires FoundBase flag and a legal tile (spacing +
@@ -96,11 +97,8 @@ public:
     // assigns TerraformOrder_t. Returns false if ineligible.
     bool TryStartTerraform(Unit& rUnit, const std::string& improvementId, GameState& rGameState);
 
-    // Hostile unit on rTile that rObserver's faction can actually see, or nullptr. This is
-    // the visibility gate TryAttack applies before resolving combat, exposed so input
-    // routing and AI can ask rather than re-derive it. Concealed occupants read as absent,
-    // which is what keeps an order on their tile a move until a blocked step reveals them.
-    // Embarked cargo is ignored.
+    // Forwards to AttackRules::FindVisibleHostileOnTile (visibility + embark-in-base
+    // targeting). Input/AI use this; declare-attack legality is FindAttackableHostileOnTile.
     Unit* FindVisibleHostileOnTile(const Unit& rObserver, const Tile& rTile) const;
 
     // Attach rPassenger to the first boardable transport on its tile (L key / UI).

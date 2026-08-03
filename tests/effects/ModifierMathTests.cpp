@@ -174,7 +174,7 @@ TEST_CASE("ResolveStatModifiers: non-StatModifier effects and null configs are i
 {
     actest::EffectPool pool;
     std::vector<ActiveEffect_t> effects = {
-        Active(pool.RuleFlag(RuleFlagId_t::Flight), "flag_source"),
+        Active(pool.RuleFlag(RuleFlagId_t::ForcesPsiCombat), "flag_source"),
         Active(pool.StatMod(StatId_t::Energy, 4.0), "real"),
     };
     effects.push_back(ActiveEffect_t{nullptr, "null_config", nullptr});

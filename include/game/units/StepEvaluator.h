@@ -68,7 +68,7 @@ public:
     bool CanPlanStep(const Unit& rMover, const Tile& rFrom, const Tile& rTo) const;
 
     // Whether rMover may enter rTile under faction knowledge (shroud assumes domain-
-    // compatible). Includes land boarding / amphibious sea-base exceptions. Used by
+    // compatible). Includes land boarding / Permission(Enter) sea-base exceptions. Used by
     // Pathfinder to reject known domain-mismatched goals without flooding the reachable
     // land/sea component.
     bool CanPlanEnterTerrain(const Unit& rMover, const Tile& rTile) const;

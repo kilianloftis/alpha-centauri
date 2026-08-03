@@ -77,9 +77,15 @@
     ],
     "effects": [
       {
-        "type": "RuleFlag",
+        "type": "Permission",
         "scope": "ThisUnit",
-        "parameters": { "flag": "amphibious" }
+        "parameters": { "permission": "Enter" },
+        "condition": { "kind": "AllOf", "values": ["Water", "Base"] }
+      },
+      {
+        "type": "Permission",
+        "scope": "ThisUnit",
+        "parameters": { "permission": "Attack" }
       }
     ]
   },

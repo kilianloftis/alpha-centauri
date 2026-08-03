@@ -517,7 +517,14 @@ units, pops, or tiles according to each entry's `scope`.
 
 **A new rule flag**: add the `RuleFlagId_t` enumerator and its `ParseRuleFlagId` string, then
 check it with a `std::get_if<RuleFlagEffect_t>` scan over the relevant pool — see
-`Unit::ResolveFlag_` for the pattern.
+`Unit::ResolveFlag_` for the pattern. Context-free `ResolveFlag` overloads skip effects
+that carry a `condition` (same rule as `FilterByStatId`).
+
+**Permissions** (`PermissionEffect_t` / `PermissionId_t`): capability grants consumed via
+`HasPermission(unit, id, ctx)`. Stock Amphibious Pods use `Enter` (conditioned on
+Water+Base) and unconditional `Attack` for channel-crossing fights. `Tile::HasFeature`
+accepts `"Water"` for those conditions. `AttackerIsEmbarked` is available for mod-scoped
+attack grants.
 
 **Tile capability flags** are the `ThisTile`-scoped subset, resolved by two helpers in
 `ActiveEffect.h` rather than by a hand-rolled scan:

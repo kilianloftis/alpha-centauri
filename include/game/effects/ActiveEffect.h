@@ -74,10 +74,12 @@ enum class CombatRole_t
 // defender's tile so TargetTileHas conditions can inspect it. Tile yield also sets
 // targetTile so amount_source (e.g. ElevationEnergySeed) can read the host tile.
 // combatRole enables IsDefending (SE Morale defense-in-base extras).
+// pAttacker enables AttackerIsEmbarked (and future attacker-side conditions).
 struct EffectContext_t
 {
     const Tile* targetTile = nullptr;
     CombatRole_t combatRole = CombatRole_t::None;
+    const Unit* pAttacker = nullptr;
 };
 
 // Resolves a StatModifier's effective contribution amount. Literal `amount` when
@@ -304,6 +306,7 @@ inline auto FilterByScope(const std::vector<ActiveEffect_t>& effects, EffectScop
 std::vector<ActiveEffect_t> CollectUnitEffects(const std::vector<const UnitComponentConfig_t*>& components);
 
 // Resolve a unit design's intrinsic (component-only) stats / flags — no faction pool.
+// Context-free: effects carrying a condition are skipped (same rule as FilterByStatId).
 int ResolveStat(const UnitDesign& rDesign, StatId_t statId);
 int ResolveStat(const UnitDesign& rDesign, StatId_t statId, const EffectContext_t& rCtx);
 bool ResolveFlag(const UnitDesign& rDesign, RuleFlagId_t flagId);
@@ -324,17 +327,23 @@ int ResolveStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx)
 // and Defense strengths start at 1 instead of using conventional additive weapon/armour.
 double ResolveMultiplicativeStat(const Unit& rUnit, StatId_t statId, double baseValue,
                                  const EffectContext_t& rCtx = {});
+// Context-free: effects carrying a condition are skipped (same rule as FilterByStatId).
 bool ResolveFlag(const Unit& rUnit, RuleFlagId_t flagId);
 
 // Resolve a faction-wide RuleFlag from the continuous effect pool (buildings, SPs, etc.).
+// Context-free: effects carrying a condition are skipped.
 // Note: Social-rating expansions of FactionGlobal effects are applied per-base
 // (ExpandSocialRatingEffects) and are NOT visible here — use ResolveFlag(BaseManager) for those.
 bool ResolveFlag(const Faction& rFaction, RuleFlagId_t flagId);
 
 // Resolve a RuleFlag from a base's final effect list (FilterForBase + SE rating expansion +
 // buildings). Prefer this for ThisBase flags (Headquarters) and for FactionGlobal SE effects
-// (e.g. probe_subversion_immune).
+// (e.g. probe_subversion_immune). Context-free: effects carrying a condition are skipped.
 bool ResolveFlag(const BaseManager& rBase, RuleFlagId_t flagId);
+
+// True when rUnit has a live PermissionEffect of the given id whose unitFilter and condition
+// are both satisfied in rCtx.
+bool HasPermission(const Unit& rUnit, PermissionId_t permission, const EffectContext_t& rCtx);
 
 // True if any of rTile's own features (terrain + improvements) declares flagId as an
 // unconditional ThisTile rule flag on the tile itself. Radius auras don't project flags —

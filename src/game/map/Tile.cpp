@@ -27,7 +27,7 @@ const std::vector<std::string>& AllTerrainFeatureIds()
     static const std::vector<std::string> ids = {
         ToString(Rockiness_t::Flat), ToString(Rockiness_t::Rolling), ToString(Rockiness_t::Rocky),
         ToString(Moisture_t::Arid), ToString(Moisture_t::Moist), ToString(Moisture_t::Wet),
-        "River", "Aquifer", "Fungus",
+        "River", "Aquifer", "Fungus", "Water",
     };
     return ids;
 }
@@ -211,6 +211,7 @@ const std::vector<const ImprovementConfig_t*>& Tile::GetTerrainFeatures() const
 
 bool Tile::HasFeature(std::string_view featureId) const
 {
+    if (featureId == "Water") return IsWater();
     if (ToString(m_rockiness) == featureId) return true;
     if (ToString(m_moisture)  == featureId) return true;
     if (m_bHasRiver  && featureId == "River")  return true;

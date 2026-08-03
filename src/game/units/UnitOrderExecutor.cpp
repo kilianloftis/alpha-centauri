@@ -3,7 +3,9 @@
 #include "game/units/InterceptRules.h"
 #include "game/units/UnitOrder.h"
 #include "game/units/MoveCostCalculator.h"
+#include "game/units/MovementConstants.h"
 #include "game/units/Pathfinder.h"
+#include "game/units/AttackRules.h"
 #include "game/units/BaseConquestRules.h"
 #include "game/units/FoundBaseRules.h"
 #include "game/units/IUnitOrderWorld.h"
@@ -16,7 +18,6 @@
 #include "game/faction/EconomyManager.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/MapUtils.h"
-#include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
@@ -124,18 +125,7 @@ void UnitOrderExecutor::CancelMoveOrderIfNewHostile_(
 Unit* UnitOrderExecutor::FindVisibleHostileOnTile(const Unit& rObserver,
                                                   const Tile& rTile) const
 {
-    const Faction& rObserverFaction = rObserver.GetFaction();
-    const FactionId_t observerId = rObserverFaction.GetFactionId();
-    for (Unit* pUnit : m_rWorldMap.GetUnitsOnTile(rTile))
-    {
-        if (pUnit && !pUnit->IsEmbarked()
-            && pUnit->GetFaction().GetFactionId() != observerId
-            && IsUnitVisibleTo(rObserverFaction, *pUnit, m_rTileEffects))
-        {
-            return pUnit;
-        }
-    }
-    return nullptr;
+    return ac::FindVisibleHostileOnTile(rObserver, rTile, m_rWorldMap, m_rTileEffects);
 }
 
 bool UnitOrderExecutor::TryAttachToTransport(Unit& rPassenger, bool bRefuelOnAttach)
@@ -178,20 +168,7 @@ void UnitOrderExecutor::EnterTile_(Unit& rMover, const Tile& rTo, int remainingA
     }
 
     m_rWorldMap.GetUnitPositions().MoveUnit(rMover, rTo);
-
-    // Hostile entry into a Bunker spends all remaining moves (capture).
-    int remaining = remainingAfter;
-    if (rTo.HasImprovement("Bunker"))
-    {
-        const FactionId_t territoryOwner = m_rWorldMap.GetTerritory().GetOwner(rTo);
-        if (territoryOwner != k_NoFactionOwner
-            && territoryOwner != rMover.GetFaction().GetFactionId())
-        {
-            remaining = 0;
-        }
-    }
-
-    rMover.SetMoveFragmentsRemaining(remaining);
+    rMover.SetMoveFragmentsRemaining(remainingAfter);
 }
 
 StepResult_t UnitOrderExecutor::SpendMovesAndEnter_(Unit& rMover, const Tile& rTo,
@@ -264,22 +241,9 @@ StepResult_t UnitOrderExecutor::TryStep(Unit& rMover, const Tile& rTo, MoveOrder
 std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
                                                            const Tile& rTargetTile)
 {
-    if (rAttacker.GetMoveFragmentsRemaining() <= 0)
-    {
-        return std::nullopt;
-    }
-    if (!AreChebyshevAdjacent(rAttacker.GetTile(), rTargetTile, m_rWorldMap.GetWidth()))
-    {
-        return std::nullopt;
-    }
-
-    Unit* pDefender = FindVisibleHostileOnTile(rAttacker, rTargetTile);
+    Unit* pDefender =
+        FindAttackableHostileOnTile(rAttacker, rTargetTile, m_rWorldMap, m_rTileEffects);
     if (!pDefender)
-    {
-        return std::nullopt;
-    }
-    // Land units need Amphibious to attack a garrisoned sea base.
-    if (!CanAttackIntoBaseTile(rAttacker, rTargetTile))
     {
         return std::nullopt;
     }
@@ -314,7 +278,11 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
     if (!result.bAttackerDestroyed)
     {
         rAttacker.MarkAttacked();
-        rAttacker.SetMoveFragmentsRemaining(0);
+        // Combat never moves either side; it only costs one movement point. Capture of an
+        // emptied base is a later step onto the tile while moves remain.
+        rAttacker.SetMoveFragmentsRemaining(
+            rAttacker.GetMoveFragmentsRemaining()
+            - MovementConstants_t::k_moveFragmentsPerPoint);
         rAttacker.ClearOrder();
         if (ExpendIfSingleUse_(rAttacker) == OrderProgress_t::Expended)
         {
@@ -323,7 +291,8 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
         }
     }
 
-    // After SingleUse expenditure: only a surviving capturer/raider may take the base.
+    // Last-defender casualties / adjacent native raid — not ownership transfer. Capture
+    // requires a separate enter-tile order after combat.
     if (result.bDefenderDestroyed && !result.bAttackerDestroyed && bDefenderOnBase && m_pWorld
         && m_pGameData)
     {

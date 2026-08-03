@@ -82,6 +82,7 @@ add_library(ac-core STATIC
     game/units/InterceptRules.cpp
     game/units/MovementRules.cpp
     game/units/TransportRules.cpp
+    game/units/AttackRules.cpp
     game/units/FoundBaseRules.cpp
     game/units/TerraformRules.cpp
     game/units/BaseConquestConfigParser.cpp

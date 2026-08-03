@@ -1,5 +1,6 @@
 #include "game/effects/BonusEffectParser.h"
 
+#include <magic_enum.hpp>
 #include <stdexcept>
 
 namespace ac
@@ -44,11 +45,11 @@ StatId_t ParseStatId(const std::string& rStat)
 
 RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
 {
+    if (rFlag == "flight")                      return RuleFlagId_t::Flight;
     if (rFlag == "population_boom")             return RuleFlagId_t::PopulationBoom;
     if (rFlag == "near_zero_growth")            return RuleFlagId_t::NearZeroGrowth;
     if (rFlag == "remove_shroud")               return RuleFlagId_t::RemoveShroud;
     if (rFlag == "remove_fog")                  return RuleFlagId_t::RemoveFog;
-    if (rFlag == "flight")                      return RuleFlagId_t::Flight;
     if (rFlag == "single_use")                  return RuleFlagId_t::SingleUse;
     if (rFlag == "ignore_zone_of_control")      return RuleFlagId_t::IgnoreZoneOfControl;
     if (rFlag == "ignores_difficult_terrain")   return RuleFlagId_t::IgnoreDifficultTerrain;
@@ -58,7 +59,6 @@ RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "terraform")                   return RuleFlagId_t::Terraform;
     if (rFlag == "supply_crawl")                return RuleFlagId_t::SupplyCrawl;
     if (rFlag == "probe_team")                  return RuleFlagId_t::ProbeTeam;
-    if (rFlag == "amphibious")                  return RuleFlagId_t::Amphibious;
     if (rFlag == "cannot_capture_bases")        return RuleFlagId_t::CannotCaptureBases;
     if (rFlag == "no_conquest_repair")          return RuleFlagId_t::NoConquestRepair;
     if (rFlag == "prevents_conquest_pop_loss")  return RuleFlagId_t::PreventsConquestPopLoss;
@@ -141,11 +141,12 @@ double ParseNumber(const nlohmann::json& parameters, const std::string& key, dou
 
 ConditionKind_t ParseConditionKind(const std::string& rKind)
 {
-    if (rKind == "TargetTileHas") return ConditionKind_t::TargetTileHas;
-    if (rKind == "AllOf") return ConditionKind_t::AllOf;
-    if (rKind == "IsDefending") return ConditionKind_t::IsDefending;
-    if (rKind == "OriginBaseIsTargetBase") return ConditionKind_t::OriginBaseIsTargetBase;
-    throw std::runtime_error("Unknown condition kind: '" + rKind + "'");
+    const auto kind = magic_enum::enum_cast<ConditionKind_t>(rKind);
+    if (!kind.has_value())
+    {
+        throw std::runtime_error("Unknown condition kind: '" + rKind + "'");
+    }
+    return *kind;
 }
 
 Condition_t ParseCondition(const nlohmann::json& conditionJson)
@@ -153,7 +154,8 @@ Condition_t ParseCondition(const nlohmann::json& conditionJson)
     Condition_t condition;
     condition.kind = ParseConditionKind(conditionJson.value("kind", ""));
     if (condition.kind == ConditionKind_t::IsDefending
-        || condition.kind == ConditionKind_t::OriginBaseIsTargetBase)
+        || condition.kind == ConditionKind_t::OriginBaseIsTargetBase
+        || condition.kind == ConditionKind_t::AttackerIsEmbarked)
     {
         return condition;
     }
@@ -488,6 +490,22 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
             throw std::runtime_error("RuleFlag effect missing required 'flag'");
         ruleFlag.flag = ParseRuleFlagId(flagStr);
         effect.effect = ruleFlag;
+    }
+    else if (typeStr == "Permission")
+    {
+        PermissionEffect_t permission;
+        const std::string permissionStr = parameters.value("permission", "");
+        if (permissionStr.empty())
+        {
+            throw std::runtime_error("Permission effect missing required 'permission'");
+        }
+        const auto id = magic_enum::enum_cast<PermissionId_t>(permissionStr);
+        if (!id.has_value())
+        {
+            throw std::runtime_error("Unknown permission id: '" + permissionStr + "'");
+        }
+        permission.permission = *id;
+        effect.effect = permission;
     }
     else if (typeStr == "SocialEngineeringOverride")
     {

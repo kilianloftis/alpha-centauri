@@ -273,6 +273,21 @@ struct TransportParamsEffect_t
     std::vector<RuleFlagId_t> loadSiteFlags;
 };
 
+enum class PermissionId_t
+{
+    // Lifts a channel-crossing attack that reachability already allows.
+    Attack,
+    // Lifts land -> water entry onto a qualifying tile (sea base).
+    Enter,
+};
+
+// Grants a capability the rules otherwise deny. Enter almost always carries a condition
+// selecting which tiles; Attack on stock pods is unconditional (any channel cross).
+struct PermissionEffect_t
+{
+    PermissionId_t permission = PermissionId_t::Attack;
+};
+
 using EffectVariant_t = std::variant<
     GrantBuildingEffect_t,
     GrantTechEffect_t,
@@ -290,7 +305,8 @@ using EffectVariant_t = std::variant<
     DetectEffect_t,
     OrbitalAttackEffect_t,
     InterceptAttemptEffect_t,
-    TransportParamsEffect_t
+    TransportParamsEffect_t,
+    PermissionEffect_t
 >;
 
 enum class ConditionKind_t
@@ -309,6 +325,8 @@ enum class ConditionKind_t
     // True when ActiveEffect_t::originBase is the base sitting on EffectContext_t::targetTile
     // (Creche combat bonus for the base being defended, not the unit's home).
     OriginBaseIsTargetBase,
+    // True when EffectContext_t::pAttacker is non-null and embarked.
+    AttackerIsEmbarked,
 };
 
 struct Condition_t

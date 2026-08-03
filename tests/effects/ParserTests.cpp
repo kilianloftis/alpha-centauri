@@ -77,7 +77,6 @@ TEST_CASE("ParseModifierOp / ParseEffectScope / ParseEffectPersistence mappings"
 
 TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]")
 {
-    CHECK(BonusEffectParser::ParseRuleFlagId("flight") == RuleFlagId_t::Flight);
     CHECK(BonusEffectParser::ParseRuleFlagId("single_use") == RuleFlagId_t::SingleUse);
     CHECK(BonusEffectParser::ParseRuleFlagId("ignore_zone_of_control") == RuleFlagId_t::IgnoreZoneOfControl);
     CHECK(BonusEffectParser::ParseRuleFlagId("population_boom") == RuleFlagId_t::PopulationBoom);
@@ -89,7 +88,6 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
     CHECK(BonusEffectParser::ParseRuleFlagId("terraform") == RuleFlagId_t::Terraform);
     CHECK(BonusEffectParser::ParseRuleFlagId("supply_crawl") == RuleFlagId_t::SupplyCrawl);
     CHECK(BonusEffectParser::ParseRuleFlagId("probe_team") == RuleFlagId_t::ProbeTeam);
-    CHECK(BonusEffectParser::ParseRuleFlagId("amphibious") == RuleFlagId_t::Amphibious);
     CHECK(BonusEffectParser::ParseRuleFlagId("cannot_capture_bases")
           == RuleFlagId_t::CannotCaptureBases);
     CHECK(BonusEffectParser::ParseRuleFlagId("no_conquest_repair")
@@ -429,7 +427,7 @@ TEST_CASE("ParseEffectConfig: unitFilter", "[effects][parser][unitFilter]")
             "type": "RuleFlag",
             "scope": "FactionUnits",
             "unitFilter": { "kind": "HasComponent", "component": "test_weapon" },
-            "parameters": { "flag": "flight" }
+            "parameters": { "flag": "forces_psi_combat" }
         })");
 
         const EffectConfig_t config = BonusEffectParser::ParseEffectConfig(effectJson);
@@ -499,15 +497,56 @@ TEST_CASE("ParseEffectConfig: grant effects require their id parameter", "[effec
 TEST_CASE("ParseEffectConfig: RuleFlag requires a valid flag", "[effects][parser]")
 {
     const json flagJson = json::parse(R"({
-        "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "flight" }
+        "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "forces_psi_combat" }
     })");
     const EffectConfig_t flagConfig = BonusEffectParser::ParseEffectConfig(flagJson);
     const auto* pFlag = std::get_if<RuleFlagEffect_t>(&flagConfig.effect);
     REQUIRE(pFlag != nullptr);
-    CHECK(pFlag->flag == RuleFlagId_t::Flight);
+    CHECK(pFlag->flag == RuleFlagId_t::ForcesPsiCombat);
 
     CHECK_THROWS(BonusEffectParser::ParseEffectConfig(
         json::parse(R"({ "type": "RuleFlag", "scope": "ThisUnit", "parameters": {} })")));
+}
+
+TEST_CASE("ParseEffectConfig: Permission and AttackerIsEmbarked", "[effects][parser][permission]")
+{
+    const json enterJson = json::parse(R"({
+        "type": "Permission", "scope": "ThisUnit",
+        "parameters": { "permission": "Enter" },
+        "condition": { "kind": "AllOf", "values": ["Water", "Base"] }
+    })");
+    const EffectConfig_t enterConfig = BonusEffectParser::ParseEffectConfig(enterJson);
+    const auto* pEnter = std::get_if<PermissionEffect_t>(&enterConfig.effect);
+    REQUIRE(pEnter != nullptr);
+    CHECK(pEnter->permission == PermissionId_t::Enter);
+    REQUIRE(enterConfig.condition.has_value());
+    CHECK(enterConfig.condition->kind == ConditionKind_t::AllOf);
+
+    const json attackJson = json::parse(R"({
+        "type": "Permission", "scope": "ThisUnit",
+        "parameters": { "permission": "Attack" }
+    })");
+    const EffectConfig_t attackConfig = BonusEffectParser::ParseEffectConfig(attackJson);
+    const auto* pAttack = std::get_if<PermissionEffect_t>(&attackConfig.effect);
+    REQUIRE(pAttack != nullptr);
+    CHECK(pAttack->permission == PermissionId_t::Attack);
+    CHECK_FALSE(attackConfig.condition.has_value());
+
+    const json embarkedJson = json::parse(R"({
+        "type": "Permission", "scope": "ThisUnit",
+        "parameters": { "permission": "Attack" },
+        "condition": { "kind": "AttackerIsEmbarked" }
+    })");
+    const EffectConfig_t embarkedConfig = BonusEffectParser::ParseEffectConfig(embarkedJson);
+    REQUIRE(embarkedConfig.condition.has_value());
+    CHECK(embarkedConfig.condition->kind == ConditionKind_t::AttackerIsEmbarked);
+
+    CHECK_THROWS(BonusEffectParser::ParseEffectConfig(
+        json::parse(R"({ "type": "Permission", "scope": "ThisUnit", "parameters": {} })")));
+    CHECK_THROWS(BonusEffectParser::ParseEffectConfig(json::parse(R"({
+        "type": "Permission", "scope": "ThisUnit",
+        "parameters": { "permission": "Fly" }
+    })")));
 }
 
 TEST_CASE("ParseEffectConfig: TileResourceCap and apply_after_restriction", "[effects][parser]")

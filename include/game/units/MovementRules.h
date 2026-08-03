@@ -19,8 +19,14 @@ bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile);
 
 // Tiles rMover can hold on its own: its domain terrain, or a friendly sea base (a land
 // unit garrisons one without a hull). Excludes anything that depends on other units being
-// present — see CanEnterTile in TransportRules.h for that.
+// present — see CanEnterTile for boarding / Permission(Enter).
 bool CanOccupyTileUnaided(const Unit& rMover, const Tile& rTile);
+
+// Full tile-entry predicate used by stepping, unloading, and attack legality.
+// CanOccupyTileUnaided, plus land exceptions that depend on what else is on the tile:
+// board a friendly transport (TransportRules), or Permission(Enter) onto a qualifying
+// sea-base tile. Neither grants free ocean movement.
+bool CanEnterTile(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap);
 
 // True when a same-faction unit already occupies rTile (friend-on-fungus shortcut).
 bool HasFriendlyOccupant(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap);

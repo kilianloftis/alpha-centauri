@@ -14,11 +14,7 @@ enum class FactionSpecies_t;
 // Owner units that still hold the base against capture.
 bool HasBaseGarrison(const BaseManager& rBase, const WorldMap& rWorldMap);
 
-// Land units need Amphibious to attack a garrison on a water-tile base.
-// Other domains are unrestricted here (sea/air coastal fights stay open).
-bool CanAttackIntoBaseTile(const Unit& rAttacker, const Tile& rBaseTile);
-
-// Capturer may take an undefended base once on its tile. Domain / amphibious
+// Capturer may take an undefended base once on its tile. Domain / channel-crossing
 // entry is gated by TryStep (CanEnterTile) and the garrison by HasBaseGarrison, so this
 // asks only about the unit: CannotCaptureBases is the sole veto (Needlejet / Missile
 // chassis, noncombat weapon modules).

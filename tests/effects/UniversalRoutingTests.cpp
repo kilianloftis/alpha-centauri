@@ -13,7 +13,12 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/units/Unit.h"
+#include "game/units/UnitDesign.h"
 #include "game/effects/ActiveEffect.h"
+#include "game/effects/BonusEffect.h"
+#include "game/effects/EffectEnums.h"
+
+#include <variant>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -88,11 +93,36 @@ TEST_CASE("FactionUnits lane: a building's FactionUnits rule flag applies to liv
     BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
 
     Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"}, &base);
-    CHECK_FALSE(unit.GetFlag(RuleFlagId_t::Flight));
+    EffectContext_t attackCtx;
+    attackCtx.pAttacker = &unit;
+    CHECK_FALSE(HasPermission(unit, PermissionId_t::Attack, attackCtx));
 
-    base.GetBuildingManager().AddBuilding("flight_grantor"); // RuleFlag flight, FactionUnits
-    CHECK(unit.GetFlag(RuleFlagId_t::Flight));
-    CHECK_FALSE(unit.GetDesign().GetFlag(RuleFlagId_t::Flight)); // intrinsic design unchanged
+    base.GetBuildingManager().AddBuilding("amphibious_grantor"); // Permission Enter/Attack, FactionUnits
+    CHECK(HasPermission(unit, PermissionId_t::Attack, attackCtx));
+
+    // Intrinsic design unchanged — grant arrives from the faction pool only.
+    bool bDesignHasAttack = false;
+    for (const ActiveEffect_t& rEffect : unit.GetDesign().CollectEffects())
+    {
+        const auto* pPerm = rEffect.config
+            ? std::get_if<PermissionEffect_t>(&rEffect.config->effect)
+            : nullptr;
+        if (pPerm && pPerm->permission == PermissionId_t::Attack)
+        {
+            bDesignHasAttack = true;
+        }
+    }
+    CHECK_FALSE(bDesignHasAttack);
+}
+
+TEST_CASE("ResolveFlag: context-free resolution skips condition-carrying RuleFlags",
+          "[effects][flag][condition]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis", "test_conditional_psi_flag"});
+    CHECK_FALSE(unit.GetFlag(RuleFlagId_t::ForcesPsiCombat));
+    CHECK_FALSE(unit.GetDesign().GetFlag(RuleFlagId_t::ForcesPsiCombat));
 }
 
 TEST_CASE("ProducedAtThisBase unitFilter Domain: Aerospace Complex only boosts air starting XP",

@@ -179,9 +179,6 @@ enum class RuleFlagId_t
     SupplyCrawl,
     ProbeTeam,
 
-    // Conquest / amphibious assault.
-    // Land units may attack and capture sea bases (not free ocean movement).
-    Amphibious,
     // Sole capture veto: chassis (Needlejet / Missile) or noncombat weapon modules.
     CannotCaptureBases,
     // Capturing this unit does not fully repair it (e.g. Battle Ogre).

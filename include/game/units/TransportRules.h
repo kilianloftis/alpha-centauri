@@ -12,9 +12,8 @@ class Tile;
 class WorldMap;
 enum class UnitDomain_t;
 
-// Cargo rules, plus the tile-entry predicates that depend on a transport being present.
-// This module sits above MovementRules and uses it; MovementRules knows nothing of cargo,
-// which keeps the dependency one-directional.
+// Cargo capability and boarding/unload mutations. Tile entry itself lives in MovementRules
+// (CanEnterTile), which calls FindBoardableTransport for the boarding case.
 
 // Effective passenger domains the carrier may take (union of TransportParams; land-only
 // default when CargoCapacity > 0 but no params apply).
@@ -33,15 +32,12 @@ bool CanCarryPassenger(const Unit& rCarrier, const Unit& rPassenger);
 bool CanLoadAtTile(const Unit& rCarrier, const Tile& rTile, const WorldMap& rWorldMap);
 
 // First non-embarked friendly carrier on rTile that can accept rPassenger.
+// Used by MovementRules::CanEnterTile and by explicit attach orders.
 Unit* FindBoardableTransport(const Unit& rPassenger, const Tile& rTile,
                              const WorldMap& rWorldMap);
 
-// CanOccupyTileUnaided, plus the land exceptions that depend on what else is on the tile:
-// board a friendly transport, or amphibious assault onto a sea-base tile. Neither grants
-// free ocean movement.
-bool CanEnterTile(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap);
-
-// Whether an embarked passenger may step off its carrier's tile onto rTo.
+// Whether an embarked passenger may step off its carrier's tile onto rTo
+// (adjacency + MovementRules::CanEnterTile).
 bool CanUnloadTo(const Unit& rPassenger, const Tile& rFrom, const Tile& rTo,
                  const WorldMap& rWorldMap);
 

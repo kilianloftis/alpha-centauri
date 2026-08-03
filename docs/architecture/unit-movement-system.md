@@ -9,16 +9,18 @@ executor and pathfinder only consume its output and never inspect tile features 
 ```mermaid
 graph TD
     subgraph Rules
-        MovementRules[MovementRules<br/>terrain domain entry, unaided occupancy,<br/>ZOC, friendly occupant / base, stacking]
-        TransportRules[TransportRules<br/>cargo domains / capacity / load sites,<br/>boarding-aware CanEnterTile, CanUnloadTo]
+        MovementRules[MovementRules<br/>terrain / unaided / CanEnterTile,<br/>ZOC, friendly occupant / base, stacking]
+        TransportRules[TransportRules<br/>cargo domains / capacity / load sites,<br/>boarding, CanUnloadTo]
         MoveCostCalculator[MoveCostCalculator<br/>tile costs + fungus entry rules]
         EntryTerms[EntryTerms_t<br/>costFragments,<br/>bRequiresFullCost, bEndsTurn]
         MoveCostCalculator -->|resolves per unit + tile| EntryTerms
-        TransportRules --> MovementRules
+        MovementRules --> TransportRules
+        AttackRules[AttackRules<br/>CanAttackTile / targeting /<br/>FindAttackableHostileOnTile]
+        AttackRules --> MovementRules
     end
 
     subgraph Conquest
-        BaseConquestRules[BaseConquestRules<br/>pure predicates: garrison, amphibious<br/>assault, capture veto, species]
+        BaseConquestRules[BaseConquestRules<br/>pure predicates: garrison,<br/>capture veto, species]
         BaseConquestEffects[BaseConquestEffects<br/>world mutation: pop loss, facility<br/>destruction, capture, raze, raid]
         BaseConquestConfig[BaseConquestConfig_t<br/>config/base_conquest.json]
         BaseConquestEffects --> BaseConquestRules
@@ -27,7 +29,8 @@ graph TD
 
     StepEvaluator[StepEvaluator<br/>edge legality: adjacency, terrain,<br/>occupants, ZOC — objective or<br/>faction-known knowledge]
     Pathfinder[Pathfinder<br/>Dijkstra over PlannedCostFragments<br/>+ CanPlanStep]
-    UnitOrderExecutor[UnitOrderExecutor<br/>TryStep / order loop,<br/>spends fragments, banks charges]
+    UnitOrderExecutor[UnitOrderExecutor<br/>TryStep / TryAttack / order loop,<br/>spends fragments, banks charges]
+    UnitOrderExecutor --> AttackRules
     IUnitOrderWorld[IUnitOrderWorld<br/>session surface: FindBaseAt,<br/>intercept, conquest]
     GameState[GameState]
 
@@ -115,25 +118,35 @@ means it already happened. `TryStep` is `[[nodiscard]]` so this cannot be droppe
 
 ## Transports and cargo
 
-`TransportRules` sits above `MovementRules` and uses it; `MovementRules` knows nothing about
-cargo, which keeps the dependency one-way. Three entry predicates form a ladder:
+`MovementRules` owns the entry ladder and is what other modules call. For the boarding
+case it asks `TransportRules::FindBoardableTransport` (`.cpp` edge only; headers stay
+acyclic). Three entry predicates form a ladder:
 
 - `CanEnterTileTerrain` (MovementRules) — chassis domain against raw terrain.
 - `CanOccupyTileUnaided` (MovementRules) — the above, plus a land unit garrisoning a friendly
   sea base. "Can this unit hold this tile with nothing under it?"
-- `CanEnterTile` (TransportRules) — the above, plus the land exceptions that depend on what
-  else is on the tile: boarding a friendly transport, or an Amphibious assault onto a
-  sea-base tile. Neither grants free ocean movement.
+- `CanEnterTile` (MovementRules) — the above, plus the land exceptions that depend on what
+  else is on the tile: boarding a friendly transport, or `Permission(Enter)` onto a
+  qualifying sea-base tile. Neither grants free ocean movement.
 
 Carrier capability is entirely config-driven via the `TransportParams` effect: which
 passenger domains a carrier accepts, and which tile capabilities it needs in order to
 exchange cargo (`loadSiteFlags`, resolved through `TileProvidesFlag` — see
 `effects-system.md`). Capacity itself is the `cargo_capacity` stat.
 
-An embarked unit shares its carrier's tile but is excluded from ZOC projection, combat
-targeting, tile occupancy, and visible-hostile scans; `Unit::IsEmbarked` is the single gate.
-`UnitPositionIndex::MoveUnit` carries cargo along with the carrier, and `StepEvaluator`
-routes an embarked mover through `CanUnloadTo` instead of the normal terrain check.
+**Attack implies entry (every domain).** `AttackRules::CanAttackTile` requires
+`CanEnterTile` — ships therefore cannot attack shore; air may attack wherever it can land.
+Land additionally needs `Permission(Attack)` on a channel crossing (embarked, or attacker
+tile water-ness differs from the target). Amphibious Pods grant conditional `Enter`
+(Water+Base) and unconditional `Attack`. Declare-attack legality for `TryAttack` / UI is
+`FindAttackableHostileOnTile` (moves, adjacency, visible hostile, `CanAttackTile`);
+targeting rules (embarked-in-base, prefer carrier) live in `FindVisibleHostileOnTile`.
+
+An embarked unit shares its carrier's tile. Outside a base it is excluded from ZOC,
+combat targeting, and tile occupancy; in a base it may defend and block (carrier preferred
+as the combat target). `UnitPositionIndex::MoveUnit` carries cargo along with the carrier,
+and `StepEvaluator` routes an embarked mover through `CanUnloadTo` instead of the normal
+terrain check.
 
 ### Boarding is only automatic where it has to be
 
@@ -151,18 +164,17 @@ predicate from the other direction: when a carrier is destroyed, cargo that can 
 unaided is set down on it and cargo that cannot goes down with the carrier — a ship sunk in
 port does not drown the garrison, one sunk at sea does.
 
-`HasBaseGarrison` is the one place that deliberately counts embarked units. Cargo parked in a
-base still holds it against capture, which is consistent with surviving the carrier's loss
-there. It does not make the cargo fight: `FindVisibleHostileOnTile` still skips embarked
-units, so the carrier remains the only thing an attacker can target.
+`HasBaseGarrison` counts embarked units in a base (cargo holds against capture and may
+defend). Open-sea cargo remains invisible to `FindVisibleHostileOnTile`.
 
 ## Base conquest
 
 Conquest is split so the predicates stay testable without a live world:
 
-- `BaseConquestRules` — pure predicates only. `HasBaseGarrison`, `CanAttackIntoBaseTile`
-  (land needs Amphibious against a sea-base garrison), `CanCaptureBase` (`CannotCaptureBases`
-  is the sole veto — Needlejet/Missile chassis, noncombat modules), and the species tests.
+- `BaseConquestRules` — pure predicates only. `HasBaseGarrison`, `CanCaptureBase`
+  (`CannotCaptureBases` is the sole veto — Needlejet/Missile chassis, noncombat modules),
+  and the species tests. Land assault legality lives in `AttackRules` /
+  `MovementRules::CanEnterTile`.
 - `BaseConquestEffects` — every world mutation, returning a `BaseConquestResult_t` tally
   (population lost, facilities destroyed, escape pods, razed, actor destroyed).
 

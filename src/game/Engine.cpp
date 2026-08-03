@@ -29,7 +29,9 @@
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopContainer.h"
 #include "game/faction/Military.h"
+#include "game/faction/ResearchManager.h"
 #include "game/faction/UnitManager.h"
+#include "game/research/TechRegistry.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitSlotConfig.h"
@@ -247,6 +249,15 @@ void Engine::Initialize_()
             const UnitDesign& rBasicDesign = addDesign(
                 std::make_unique<UnitDesign>(rSlots, basicParts), "basic scout");
 
+            std::unordered_map<std::string, const UnitComponentConfig_t*> probeParts = {
+                {"chassis", resolve("Infantry")},
+                {"weapon",  resolve("Probe_Team")},
+                {"armour",  resolve("No_Armour")},
+                {"reactor", resolve("Fission_Plant")},
+            };
+            const UnitDesign& rProbeDesign = addDesign(
+                std::make_unique<UnitDesign>(rSlots, probeParts), "probe team");
+
             if (bIsPlayerControlled)
             {
                 std::unordered_map<std::string, const UnitComponentConfig_t*> radarParts = basicParts;
@@ -285,13 +296,31 @@ void Engine::Initialize_()
                 rFaction.GetUnitManager().CreateUnit(
                     m_pGameState->AllocateUnitId(), rCrawlerDesign, rPositions,
                     *rMap.GetTile(startX + 2, startY + 1), pBase);
+                rFaction.GetUnitManager().CreateUnit(
+                    m_pGameState->AllocateUnitId(), rProbeDesign, rPositions,
+                    *rMap.GetTile(startX + 1, startY - 1), pBase);
             }
             else
             {
-                // Enemy scout beside the AI base for multi-faction visibility/combat checks.
+                // Enemy scout / probe beside the AI base for multi-faction checks.
                 rFaction.GetUnitManager().CreateUnit(
                     m_pGameState->AllocateUnitId(), rBasicDesign, rPositions,
                     *rMap.GetTile(startX + 1, startY), pBase);
+                rFaction.GetUnitManager().CreateUnit(
+                    m_pGameState->AllocateUnitId(), rProbeDesign, rPositions,
+                    *rMap.GetTile(startX + 1, startY - 1), pBase);
+            }
+        }
+
+        // Temporary: unlock the full tech tree for in-game testing.
+        {
+            ResearchManager& rResearch = rFaction.GetResearch();
+            for (const TechConfig_t& rTech : m_gameDataContext->techRegistry->GetAll())
+            {
+                if (!rResearch.HasDiscoveredTech(rTech.id))
+                {
+                    rResearch.AddDiscoveredTech(rTech.id);
+                }
             }
         }
 

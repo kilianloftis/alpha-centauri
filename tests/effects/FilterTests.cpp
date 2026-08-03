@@ -8,7 +8,9 @@
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/Tile.h"
 #include "game/effects/ActiveEffect.h"
+#include "game/effects/BonusEffect.h"
 
+#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 
 using namespace ac;
@@ -20,7 +22,7 @@ TEST_CASE("FilterByStatId: keeps only StatModifiers targeting the requested stat
     const std::vector<ActiveEffect_t> effects = {
         Active(pool.StatMod(StatId_t::Nutrients, 1.0), "nut"),
         Active(pool.StatMod(StatId_t::Minerals, 2.0), "min"),
-        Active(pool.RuleFlag(RuleFlagId_t::Flight), "flag"),
+        Active(pool.RuleFlag(RuleFlagId_t::ForcesPsiCombat), "flag"),
     };
 
     const std::vector<ActiveEffect_t> matching = actest::Materialize(FilterByStatId(effects, StatId_t::Nutrients));
@@ -199,4 +201,30 @@ TEST_CASE("Filters tolerate null configs", "[effects][filter]")
     CHECK(FilterBaseLevelByStatId(BaseEffects_t{effects}, StatId_t::Energy).empty());
     CHECK(FilterByStatIdInContext(effects, StatId_t::Energy, EffectContext_t{}).empty());
     CHECK(FilterByScope(effects, EffectScope_t::ThisBase).empty());
+}
+
+TEST_CASE("ConditionSatisfied: AttackerIsEmbarked requires pAttacker", "[effects][condition]")
+{
+    actest::EffectPool pool;
+    EffectConfig_t config;
+    config.effect = PermissionEffect_t{PermissionId_t::Attack};
+    config.scope = EffectScope_t::ThisUnit;
+    config.persistence = EffectPersistence_t::Continuous;
+    config.condition = Condition_t{ConditionKind_t::AttackerIsEmbarked, {}, {}, {}};
+    const EffectConfig_t& rConfig = pool.Add(std::move(config));
+
+    CHECK_FALSE(ConditionSatisfied(rConfig, EffectContext_t{}));
+}
+
+TEST_CASE("HasFeature: Water matches IsWater tiles", "[effects][condition][tile]")
+{
+    Tile water(0, 0);
+    water.SetElevation(-100);
+    Tile land(1, 0);
+    land.SetElevation(100);
+
+    CHECK(water.HasFeature("Water"));
+    CHECK_FALSE(land.HasFeature("Water"));
+    CHECK(std::find(AllTerrainFeatureIds().begin(), AllTerrainFeatureIds().end(), "Water")
+          != AllTerrainFeatureIds().end());
 }

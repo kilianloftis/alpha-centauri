@@ -102,6 +102,8 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
                 switch (rCond.kind)
                 {
                     case ConditionKind_t::IsDefending:
+                    case ConditionKind_t::OriginBaseIsTargetBase:
+                    case ConditionKind_t::AttackerIsEmbarked:
                         break;
                     case ConditionKind_t::TargetTileHas:
                         checkFeature(rCond.value);

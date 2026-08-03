@@ -5,9 +5,30 @@
     "type": "chassis",
     "domain": "land",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "movement", "amount": 2 } },
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "vision", "amount": 1 } },
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "hit_points", "amount": 10 } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "movement",
+          "amount": 2
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "vision",
+          "amount": 1
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "hit_points",
+          "amount": 10
+        }
+      }
     ]
   },
   {
@@ -16,9 +37,30 @@
     "type": "chassis",
     "domain": "land",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "movement", "amount": 1 } },
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "vision", "amount": 1 } },
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "hit_points", "amount": 10 } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "movement",
+          "amount": 1
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "vision",
+          "amount": 1
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "hit_points",
+          "amount": 10
+        }
+      }
     ]
   },
   {
@@ -27,9 +69,30 @@
     "type": "chassis",
     "domain": "sea",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "movement", "amount": 2 } },
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "vision", "amount": 1 } },
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "hit_points", "amount": 10 } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "movement",
+          "amount": 2
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "vision",
+          "amount": 1
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "hit_points",
+          "amount": 10
+        }
+      }
     ]
   },
   {
@@ -38,9 +101,30 @@
     "type": "chassis",
     "domain": "air",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "movement", "amount": 2 } },
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "vision", "amount": 1 } },
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "hit_points", "amount": 10 } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "movement",
+          "amount": 2
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "vision",
+          "amount": 1
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "hit_points",
+          "amount": 10
+        }
+      }
     ]
   },
   {
@@ -49,10 +133,37 @@
     "type": "chassis",
     "domain": "orbital",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "movement", "amount": 4 } },
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "vision", "amount": 1 } },
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "hit_points", "amount": 10 } },
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "single_use" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "movement",
+          "amount": 4
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "vision",
+          "amount": 1
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "hit_points",
+          "amount": 10
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "single_use"
+        }
+      }
     ]
   },
   {
@@ -63,8 +174,13 @@
       {
         "type": "InterceptAttempt",
         "scope": "ThisUnit",
-        "parameters": { "chance": 100 },
-        "unitFilter": { "kind": "Domain", "domain": "orbital" }
+        "parameters": {
+          "chance": 100
+        },
+        "unitFilter": {
+          "kind": "Domain",
+          "domain": "orbital"
+        }
       }
     ]
   },
@@ -73,7 +189,13 @@
     "name": "Ignore Zone of Control",
     "type": "ability",
     "effects": [
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "ignore_zone_of_control" } }
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "ignore_zone_of_control"
+        }
+      }
     ]
   },
   {
@@ -81,7 +203,14 @@
     "name": "Test Weapon",
     "type": "weapon",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "attack", "amount": 4 } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "attack",
+          "amount": 4
+        }
+      }
     ]
   },
   {
@@ -89,7 +218,14 @@
     "name": "Test Weak Weapon",
     "type": "weapon",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "attack", "amount": 1 } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "attack",
+          "amount": 1
+        }
+      }
     ]
   },
   {
@@ -97,7 +233,14 @@
     "name": "Test Armor",
     "type": "armor",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "defense", "amount": 3 } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "defense",
+          "amount": 3
+        }
+      }
     ]
   },
   {
@@ -105,7 +248,13 @@
     "name": "Test Psi Combat",
     "type": "ability",
     "effects": [
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "forces_psi_combat" } }
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "forces_psi_combat"
+        }
+      }
     ]
   },
   {
@@ -113,8 +262,24 @@
     "name": "Test Psi Attack Modifiers",
     "type": "ability",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "attack", "amount": 100, "op": "Add" } },
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "attack", "amount": 50, "op": "AddPercent" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "attack",
+          "amount": 100,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "attack",
+          "amount": 50,
+          "op": "AddPercent"
+        }
+      }
     ]
   },
   {
@@ -122,8 +287,24 @@
     "name": "Test Psi Defense Modifiers",
     "type": "ability",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "defense", "amount": 100, "op": "Add" } },
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "defense", "amount": 2, "op": "MultiplyGeometric" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "defense",
+          "amount": 100,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "defense",
+          "amount": 2,
+          "op": "MultiplyGeometric"
+        }
+      }
     ]
   },
   {
@@ -131,7 +312,15 @@
     "name": "Test Psi Tier 2",
     "type": "reactor",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "psi_damage", "amount": 2, "op": "Add" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "psi_damage",
+          "amount": 2,
+          "op": "Add"
+        }
+      }
     ]
   },
   {
@@ -139,7 +328,13 @@
     "name": "Comm Jammer",
     "type": "ability",
     "effects": [
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "prevents_disengage" } }
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "prevents_disengage"
+        }
+      }
     ]
   },
   {
@@ -147,44 +342,82 @@
     "name": "Sensor Pod (mobile ThisTile aura, radius 2)",
     "type": "special",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "radius": 2, "parameters": { "stat": "defense", "amount": 25, "op": "AddPercent" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "radius": 2,
+        "parameters": {
+          "stat": "defense",
+          "amount": 25,
+          "op": "AddPercent"
+        }
+      }
     ]
   },
-    {
-        "id": "Cloaking_Device",
-        "name": "Cloaking Device",
-        "type": "ability",
-        "effects": [
-            { "type": "Conceal", "scope": "ThisUnit", "parameters": { "channel": "cloak" } },
-            { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "ignore_zone_of_control" } }
-        ]
-    },
-    {
-        "id": "treat_fungus_as_road",
-        "name": "Treat Fungus as Road",
-        "type": "ability",
-        "effects": [
-            { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "treat_fungus_as_road" } }
-        ]
-    },
-    {
-        "id": "ignores_difficult_terrain",
-        "name": "Ignores Difficult Terrain",
-        "type": "ability",
-        "effects": [
-            { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "ignores_difficult_terrain" } }
-        ]
-    },
-    {
-        "id": "deep_pressure_hull",
-    "name": "Deep Pressure Hull (cloak only on Fungus — stand-in for sea-only)",
+  {
+    "id": "Cloaking_Device",
+    "name": "Cloaking Device",
     "type": "ability",
     "effects": [
       {
         "type": "Conceal",
         "scope": "ThisUnit",
-        "condition": { "kind": "TargetTileHas", "value": "Fungus" },
-        "parameters": { "channel": "cloak" }
+        "parameters": {
+          "channel": "cloak"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "ignore_zone_of_control"
+        }
+      }
+    ]
+  },
+  {
+    "id": "treat_fungus_as_road",
+    "name": "Treat Fungus as Road",
+    "type": "ability",
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "treat_fungus_as_road"
+        }
+      }
+    ]
+  },
+  {
+    "id": "ignores_difficult_terrain",
+    "name": "Ignores Difficult Terrain",
+    "type": "ability",
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "ignores_difficult_terrain"
+        }
+      }
+    ]
+  },
+  {
+    "id": "deep_pressure_hull",
+    "name": "Deep Pressure Hull (cloak only on Fungus \u2014 stand-in for sea-only)",
+    "type": "ability",
+    "effects": [
+      {
+        "type": "Conceal",
+        "scope": "ThisUnit",
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "Fungus"
+        },
+        "parameters": {
+          "channel": "cloak"
+        }
       }
     ]
   },
@@ -193,8 +426,20 @@
     "name": "Test Supply Crawler",
     "type": "weapon",
     "effects": [
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "supply_crawl" } },
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "cannot_capture_bases" } }
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "supply_crawl"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "cannot_capture_bases"
+        }
+      }
     ]
   },
   {
@@ -202,9 +447,27 @@
     "name": "Test Colony Pod",
     "type": "weapon",
     "effects": [
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "found_base" } },
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "single_use" } },
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "cannot_capture_bases" } }
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "found_base"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "single_use"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "cannot_capture_bases"
+        }
+      }
     ]
   },
   {
@@ -212,9 +475,27 @@
     "name": "Probe Team",
     "type": "weapon",
     "effects": [
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "probe_team" } },
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "ignore_zone_of_control" } },
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "cannot_capture_bases" } }
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "probe_team"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "ignore_zone_of_control"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "cannot_capture_bases"
+        }
+      }
     ]
   },
   {
@@ -222,8 +503,20 @@
     "name": "Test Terraformer",
     "type": "weapon",
     "effects": [
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "terraform" } },
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "cannot_capture_bases" } }
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "terraform"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "cannot_capture_bases"
+        }
+      }
     ]
   },
   {
@@ -231,8 +524,20 @@
     "name": "Test Found Base Without Single Use",
     "type": "weapon",
     "effects": [
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "found_base" } },
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "cannot_capture_bases" } }
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "found_base"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "cannot_capture_bases"
+        }
+      }
     ]
   },
   {
@@ -240,8 +545,22 @@
     "name": "Test Single-Use Weapon (missile stand-in)",
     "type": "weapon",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "attack", "amount": 4, "op": "Add" } },
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "single_use" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "attack",
+          "amount": 4,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "single_use"
+        }
+      }
     ]
   },
   {
@@ -249,7 +568,32 @@
     "name": "Energy Siphon (faction-lane effect on a component)",
     "type": "special",
     "effects": [
-      { "type": "StatModifier", "scope": "FactionGlobal", "parameters": { "stat": "energy", "amount": 1 } }
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "energy",
+          "amount": 1
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_conditional_psi_flag",
+    "name": "Test Conditional Psi Flag",
+    "type": "ability",
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "forces_psi_combat"
+        },
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "Base"
+        }
+      }
     ]
   },
   {
@@ -257,7 +601,27 @@
     "name": "Test Amphibious Pods",
     "type": "ability",
     "effects": [
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "amphibious" } }
+      {
+        "type": "Permission",
+        "scope": "ThisUnit",
+        "parameters": {
+          "permission": "Enter"
+        },
+        "condition": {
+          "kind": "AllOf",
+          "values": [
+            "Water",
+            "Base"
+          ]
+        }
+      },
+      {
+        "type": "Permission",
+        "scope": "ThisUnit",
+        "parameters": {
+          "permission": "Attack"
+        }
+      }
     ]
   },
   {
@@ -265,39 +629,96 @@
     "name": "Test Troop Transport",
     "type": "weapon",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "cargo_capacity", "amount": 1, "op": "Add" } },
-      { "type": "TransportParams", "scope": "ThisUnit", "parameters": { "passenger_domains": ["land"] } },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "cargo_capacity",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
       {
         "type": "TransportParams",
         "scope": "ThisUnit",
-        "unitFilter": { "kind": "Domain", "domain": "air" },
-        "parameters": { "load_site_flags": ["loads_air_transport"] }
+        "parameters": {
+          "passenger_domains": [
+            "land"
+          ]
+        }
+      },
+      {
+        "type": "TransportParams",
+        "scope": "ThisUnit",
+        "unitFilter": {
+          "kind": "Domain",
+          "domain": "air"
+        },
+        "parameters": {
+          "load_site_flags": [
+            "loads_air_transport"
+          ]
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "unitFilter": { "kind": "Domain", "domain": "land" },
-        "parameters": { "stat": "movement", "amount": -1, "op": "Add" }
+        "unitFilter": {
+          "kind": "Domain",
+          "domain": "land"
+        },
+        "parameters": {
+          "stat": "movement",
+          "amount": -1,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "unitFilter": { "kind": "Domain", "domain": "sea" },
-        "parameters": { "stat": "movement", "amount": -1, "op": "Add" }
+        "unitFilter": {
+          "kind": "Domain",
+          "domain": "sea"
+        },
+        "parameters": {
+          "stat": "movement",
+          "amount": -1,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "unitFilter": { "kind": "Domain", "domain": "air" },
-        "parameters": { "stat": "movement", "amount": -50, "op": "AddPercent" }
+        "unitFilter": {
+          "kind": "Domain",
+          "domain": "air"
+        },
+        "parameters": {
+          "stat": "movement",
+          "amount": -50,
+          "op": "AddPercent"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "unitFilter": { "kind": "Domain", "domain": "air" },
-        "parameters": { "stat": "movement", "amount": -1, "op": "Add" }
+        "unitFilter": {
+          "kind": "Domain",
+          "domain": "air"
+        },
+        "parameters": {
+          "stat": "movement",
+          "amount": -1,
+          "op": "Add"
+        }
       },
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "cannot_capture_bases" } }
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "cannot_capture_bases"
+        }
+      }
     ]
   },
   {
@@ -305,9 +726,31 @@
     "name": "Test Troop Transport Capacity 2",
     "type": "weapon",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "cargo_capacity", "amount": 2, "op": "Add" } },
-      { "type": "TransportParams", "scope": "ThisUnit", "parameters": { "passenger_domains": ["land"] } },
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "cannot_capture_bases" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "cargo_capacity",
+          "amount": 2,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "TransportParams",
+        "scope": "ThisUnit",
+        "parameters": {
+          "passenger_domains": [
+            "land"
+          ]
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "cannot_capture_bases"
+        }
+      }
     ]
   },
   {
@@ -318,11 +761,30 @@
       {
         "type": "TransportParams",
         "scope": "ThisUnit",
-        "unitFilter": { "kind": "Domain", "domain": "sea" },
-        "parameters": { "passenger_domains": ["air"] }
+        "unitFilter": {
+          "kind": "Domain",
+          "domain": "sea"
+        },
+        "parameters": {
+          "passenger_domains": [
+            "air"
+          ]
+        }
       },
-      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "refuels_air" } },
-      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "loads_air_transport" } }
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": {
+          "flag": "refuels_air"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": {
+          "flag": "loads_air_transport"
+        }
+      }
     ]
   },
   {
@@ -330,16 +792,34 @@
     "name": "Test Air Transport",
     "type": "weapon",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "cargo_capacity", "amount": 1, "op": "Add" } },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "cargo_capacity",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
       {
         "type": "TransportParams",
         "scope": "ThisUnit",
         "parameters": {
-          "passenger_domains": ["land"],
-          "load_site_flags": ["loads_air_transport"]
+          "passenger_domains": [
+            "land"
+          ],
+          "load_site_flags": [
+            "loads_air_transport"
+          ]
         }
       },
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "cannot_capture_bases" } }
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "cannot_capture_bases"
+        }
+      }
     ]
   },
   {
@@ -348,12 +828,52 @@
     "type": "chassis",
     "domain": "air",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "movement", "amount": 4 } },
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "vision", "amount": 1 } },
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "hit_points", "amount": 10 } },
-      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "fuel", "amount": 1 } },
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "flight" } },
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "cannot_capture_bases" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "movement",
+          "amount": 4
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "vision",
+          "amount": 1
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "hit_points",
+          "amount": 10
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "fuel",
+          "amount": 1
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "flight"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "cannot_capture_bases"
+        }
+      }
     ]
   },
   {
@@ -361,7 +881,13 @@
     "name": "Test No Conquest Repair (Battle Ogre stand-in)",
     "type": "ability",
     "effects": [
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "no_conquest_repair" } }
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "no_conquest_repair"
+        }
+      }
     ]
   }
 ]

@@ -234,15 +234,19 @@
     "category": "conquer"
   },
   {
-    "id": "flight_grantor",
-    "name": "Flight Grantor (grants flight to all faction units)",
+    "id": "amphibious_grantor",
+    "name": "Amphibious Grantor (grants amphibious permissions to all faction units)",
     "effects": [
       {
-        "type": "RuleFlag",
+        "type": "Permission",
         "scope": "FactionUnits",
-        "parameters": {
-          "flag": "flight"
-        }
+        "parameters": { "permission": "Enter" },
+        "condition": { "kind": "AllOf", "values": ["Water", "Base"] }
+      },
+      {
+        "type": "Permission",
+        "scope": "FactionUnits",
+        "parameters": { "permission": "Attack" }
       }
     ],
     "category": "conquer"

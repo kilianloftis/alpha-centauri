@@ -6,6 +6,7 @@
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/units/AttackRules.h"
 #include "ui/style/UiStyle.h"
 
 namespace ac
@@ -173,15 +174,19 @@ bool UnitOrderInputController::TryResolveHoldRelease_(Unit& rMover, const Tile& 
 {
     const WorldMap& rMap = rPathfinder.GetWorldMap();
     const bool bAdjacent = AreChebyshevAdjacent(rMover.GetTile(), rDest, rMap.GetWidth());
-    // Both act-on questions are the game layer's to answer: CanOpenProbeActions
-    // covers adjacency, visibility and probe eligibility, and FindVisibleHostileOnTile
-    // is the same gate TryAttack uses.
+    // Act-on questions are the game layer's: CanOpenProbeActions for probes;
+    // FindAttackableHostileOnTile matches TryAttack's declare gate. A visible but
+    // non-attackable hostile still steers move orders (planner contact path).
     const Unit* pVisibleHostile =
         pGameState ? pGameState->GetUnitOrderExecutor().FindVisibleHostileOnTile(rMover, rDest)
                    : nullptr;
+    const Unit* pAttackableHostile =
+        pGameState ? FindAttackableHostileOnTile(rMover, rDest, rMap,
+                                                 pGameState->GetTileEffects())
+                   : nullptr;
 
     if (bAdjacent
-        && TryAdjacentInteract_(rMover, rDest, pGameState, pDataContext, pVisibleHostile))
+        && TryAdjacentInteract_(rMover, rDest, pGameState, pDataContext, pAttackableHostile))
     {
         return true;
     }

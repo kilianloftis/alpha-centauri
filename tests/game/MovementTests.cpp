@@ -102,7 +102,7 @@ TEST_CASE("Land cannot enter water; sea cannot enter land", "[movement][domain]"
     CHECK(move.steps.CanStep(sea, sea.GetTile(), fixture.At(5, 5)));
 }
 
-TEST_CASE("Land may enter friendly sea base or transport; Amphibious is not open ocean",
+TEST_CASE("Land may enter friendly sea base or transport; pods are not open ocean",
           "[movement][domain][amphibious]")
 {
     FactionFixture fixture;
@@ -135,7 +135,7 @@ TEST_CASE("Land may enter friendly sea base or transport; Amphibious is not open
         CHECK_FALSE(move.steps.CanStep(land, land.GetTile(), fixture.At(5, 4)));
     }
 
-    SECTION("Amphibious does not grant empty-water movement")
+    SECTION("Pods do not grant empty-water movement")
     {
         Unit& amph = fixture.MakeUnit(faction, 4, 4, {"test_chassis", "test_amphibious"});
         CHECK_FALSE(move.steps.CanStep(amph, amph.GetTile(), fixture.At(5, 4)));
@@ -242,11 +242,13 @@ TEST_CASE("Attack is adjacent; hostiles never share a tile", "[movement][zoc]")
     MoveOrder_t bumpHostile{&fixture.At(5, 4)};
     CHECK_FALSE(move.orders.TryStep(mover, fixture.At(5, 4), bumpHostile).bEntered);
 
+    const int movesBefore = mover.GetMoveFragmentsRemaining();
     const auto result = move.orders.TryAttack(mover, fixture.At(5, 4));
     REQUIRE(result.has_value());
     CHECK(result->bDefenderDestroyed);
     CHECK_FALSE(result->bAttackerDestroyed);
-    CHECK(mover.GetMoveFragmentsRemaining() == 0);
+    // Combat costs one movement point and never relocates either side.
+    CHECK(mover.GetMoveFragmentsRemaining() == movesBefore - k_point);
     CHECK_FALSE(mover.GetOrder().has_value());
     CHECK(mover.GetTile().GetX() == 4); // still on own tile
 }
