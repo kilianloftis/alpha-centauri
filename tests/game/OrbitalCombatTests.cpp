@@ -277,7 +277,7 @@ TEST_CASE("Deployed pod cannot ASAT then intercept until ready year", "[orbital]
     garrison.SetMoveFragmentsRemaining(garrison.GetMovementPoints() * k_point);
 
     auto result = game.pState->GetUnitOrderExecutor().TryAttack(
-        missile, garrison.GetTile(), game.pState.get());
+        missile, garrison.GetTile());
     // Deployed ODP cannot intercept; combat proceeds (missile may die in combat or survive).
     REQUIRE(result);
     // If intercept had fired, rounds would be empty and attacker destroyed without combat.
@@ -297,7 +297,7 @@ TEST_CASE("ODP intercepts orbital attacker on a base at 100% chance", "[orbital]
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 
     auto result = game.pState->GetUnitOrderExecutor().TryAttack(
-        missile, garrison.GetTile(), game.pState.get());
+        missile, garrison.GetTile());
     REQUIRE(result);
     CHECK(result->bAttackerDestroyed);
     CHECK(result->rounds.empty());
@@ -317,7 +317,7 @@ TEST_CASE("ODP intercept miss still deploys and allows combat", "[orbital][inter
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 
     auto result = game.pState->GetUnitOrderExecutor().TryAttack(
-        missile, garrison.GetTile(), game.pState.get());
+        missile, garrison.GetTile());
     REQUIRE(result);
     CHECK_FALSE(result->rounds.empty());
     CHECK(game.pPlayer->CountBuildings("test_odp_always_miss") == 1);
@@ -336,7 +336,7 @@ TEST_CASE("ODP intercept miss can destroy the intercepting satellite", "[orbital
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 
     auto result = game.pState->GetUnitOrderExecutor().TryAttack(
-        missile, garrison.GetTile(), game.pState.get());
+        missile, garrison.GetTile());
     REQUIRE(result);
     CHECK_FALSE(result->rounds.empty());
     CHECK(game.pPlayer->CountBuildings("test_odp_miss_destroy") == 0);
@@ -427,7 +427,7 @@ TEST_CASE("ThisUnit InterceptAttempt fires for the defending unit only", "[orbit
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 
     auto result = game.pState->GetUnitOrderExecutor().TryAttack(
-        missile, samGarrison.GetTile(), game.pState.get());
+        missile, samGarrison.GetTile());
     REQUIRE(result);
     CHECK(result->bAttackerDestroyed);
     CHECK(result->rounds.empty());
@@ -445,7 +445,7 @@ TEST_CASE("ThisTile InterceptAttempt fires on the battery tile", "[orbital][inte
     missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
 
     auto result = game.pState->GetUnitOrderExecutor().TryAttack(
-        missile, garrison.GetTile(), game.pState.get());
+        missile, garrison.GetTile());
     REQUIRE(result);
     CHECK(result->bAttackerDestroyed);
     CHECK(result->rounds.empty());

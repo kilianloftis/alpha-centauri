@@ -16,6 +16,11 @@
         "type": "RuleFlag",
         "scope": "ThisUnit",
         "parameters": { "flag": "found_base" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "cannot_capture_bases" }
       }
     ]
   },
@@ -31,6 +36,48 @@
         "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": { "stat": "cargo_capacity", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "TransportParams",
+        "scope": "ThisUnit",
+        "parameters": { "passenger_domains": ["land"] }
+      },
+      {
+        "type": "TransportParams",
+        "scope": "ThisUnit",
+        "unitFilter": { "kind": "Domain", "domain": "air" },
+        "parameters": {
+          "load_site_flags": ["loads_air_transport"]
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "unitFilter": { "kind": "Domain", "domain": "land" },
+        "parameters": { "stat": "movement", "amount": -1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "unitFilter": { "kind": "Domain", "domain": "sea" },
+        "parameters": { "stat": "movement", "amount": -1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "unitFilter": { "kind": "Domain", "domain": "air" },
+        "parameters": { "stat": "movement", "amount": -50, "op": "AddPercent" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "unitFilter": { "kind": "Domain", "domain": "air" },
+        "parameters": { "stat": "movement", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "cannot_capture_bases" }
       }
     ]
   },
@@ -46,6 +93,11 @@
         "type": "RuleFlag",
         "scope": "ThisUnit",
         "parameters": { "flag": "supply_crawl" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "cannot_capture_bases" }
       }
     ]
   },
@@ -61,6 +113,11 @@
         "type": "RuleFlag",
         "scope": "ThisUnit",
         "parameters": { "flag": "terraform" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "cannot_capture_bases" }
       }
     ]
   },
@@ -81,6 +138,11 @@
         "type": "RuleFlag",
         "scope": "ThisUnit",
         "parameters": { "flag": "ignore_zone_of_control" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "cannot_capture_bases" }
       }
     ]
   },

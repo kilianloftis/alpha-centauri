@@ -14,6 +14,9 @@
 #include "game/units/ProbeActionExecutor.h"
 #include "game/units/Pathfinder.h"
 #include "game/units/Unit.h"
+#include "game/units/BaseConquestEffects.h"
+#include "game/units/InterceptRules.h"
+#include "game/GameDataContext.h"
 #include "game/council/PlanetaryCouncil.h"
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/council/CouncilRulesConfig.h"
@@ -63,9 +66,11 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
         // Stationary factions whose vision already covers the new tile must also meet.
         m_pFirstContact->ConsiderUnit(rMoved);
     });
+    // Passing *this is safe here: the executor only stores the pointer and never calls back
+    // during GameState's own construction (same contract as m_secretProjectAvailability).
     m_pUnitOrderExecutor = std::make_unique<UnitOrderExecutor>(
         *m_pMoveCosts, *m_pSteps, *m_worldMap, *m_pTileEffects, *m_pPathfinder, m_rMorale,
-        m_rng);
+        m_rng, this);
     m_pProbeActions = std::make_unique<ProbeActionExecutor>(*m_worldMap, m_rMorale, m_rng);
 }
 
@@ -300,6 +305,25 @@ const BaseManager* GameState::FindBaseAt(int tileX, int tileY) const
     return nullptr;
 }
 
+std::optional<CombatResult_t> GameState::TryInterceptAttack(
+    Unit& rAttacker, Unit& rDefender, TileEffectsContext& rTileEffects, std::mt19937& rRng)
+{
+    return ac::TryInterceptAttack(*this, rAttacker, rDefender, rTileEffects, rRng);
+}
+
+BaseConquestResult_t GameState::ResolvePostCombatBaseConquest(
+    Unit& rAttacker, const Tile& rDefenderTile, const GameDataContext& rDataContext,
+    std::mt19937& rRng)
+{
+    return ac::ResolvePostCombatBaseConquest(rAttacker, rDefenderTile, *this, rDataContext, rRng);
+}
+
+BaseConquestResult_t GameState::ResolveBaseEntryConquest(
+    Unit& rMover, const GameDataContext& rDataContext, std::mt19937& rRng)
+{
+    return ac::ResolveBaseEntryConquest(rMover, *this, rDataContext, rRng);
+}
+
 TileEffectsContext& GameState::GetTileEffects()
 {
     return *m_pTileEffects;
@@ -390,6 +414,16 @@ void GameState::RebuildTerritory()
 const SecretProjectAvailabilityCalculator& GameState::GetSecretProjectAvailability() const
 {
     return m_secretProjectAvailability;
+}
+
+void GameState::MarkSecretProjectDestroyed(const std::string& buildingId)
+{
+    m_destroyedSecretProjects.insert(buildingId);
+}
+
+bool GameState::IsSecretProjectDestroyed(const std::string& buildingId) const
+{
+    return m_destroyedSecretProjects.contains(buildingId);
 }
 
 std::vector<OrbitalCensusEntry_t> GameState::GetOrbitalCensus() const

@@ -31,6 +31,7 @@ struct LandmarkConfig_t;
 struct MoraleConfig_t;
 class MoraleCalculator;
 struct ProbeActionsConfig_t;
+struct BaseConquestConfig_t;
 class CouncilProposalRegistry;
 struct CouncilRulesConfig_t;
 
@@ -66,6 +67,7 @@ struct GameDataContext
     std::vector<EffectConfig_t> tileYieldRules;
     std::unique_ptr<MoraleConfig_t> moraleConfig;
     std::unique_ptr<ProbeActionsConfig_t> probeActionsConfig;
+    std::unique_ptr<BaseConquestConfig_t> baseConquestConfig;
     std::unique_ptr<CouncilProposalRegistry> councilProposalRegistry;
     std::unique_ptr<CouncilRulesConfig_t> councilRules;
 

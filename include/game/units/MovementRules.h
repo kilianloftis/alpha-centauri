@@ -9,12 +9,18 @@ class WorldMap;
 class UnitPositionIndex;
 
 // Whether rProjector (a foreign unit) exerts zone of control that applies to rSubject.
-// Air projectors affect land and sea subjects; sea/land projectors affect their own
-// domain only. Air subjects never match those rules; IgnoreZoneOfControl also exempts.
+// Embarked cargo never projects. Air projectors affect land and sea subjects; sea/land
+// projectors affect their own domain only. Air subjects never match those rules;
+// IgnoreZoneOfControl also exempts.
 bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject);
 
 // Whether rMover may enter rTile for its chassis domain (air any; sea water; land land).
 bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile);
+
+// Tiles rMover can hold on its own: its domain terrain, or a friendly sea base (a land
+// unit garrisons one without a hull). Excludes anything that depends on other units being
+// present — see CanEnterTile in TransportRules.h for that.
+bool CanOccupyTileUnaided(const Unit& rMover, const Tile& rTile);
 
 // True when a same-faction unit already occupies rTile (friend-on-fungus shortcut).
 bool HasFriendlyOccupant(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap);

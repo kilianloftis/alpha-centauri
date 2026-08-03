@@ -13,9 +13,10 @@ class Tile;
 // an immediate use-action). Callers use this instead of inspecting post-hoc order/unit state.
 enum class OrderProgress_t
 {
-    Continue, // order persists into next turn
-    Complete, // order finished; unit survives
-    Expended, // order finished by consuming the unit (SingleUse)
+    Continue,      // order persists into next turn
+    Complete,      // order finished; unit survives
+    Expended,      // order finished by consuming the unit (SingleUse); caller must DestroyUnit
+    UnitDestroyed, // the unit died advancing the order and is already destroyed; drop it
 };
 
 struct MoveOrder_t

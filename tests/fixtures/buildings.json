@@ -517,5 +517,36 @@
       }
     ],
     "category": "conquer"
+  },
+  {
+    "id": "Perimeter_Defense",
+    "name": "Perimeter Defense",
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisBase",
+        "parameters": { "flag": "prevents_conquest_pop_loss" }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "test_secret_project",
+    "name": "Test Secret Project",
+    "secret_project": true,
+    "effects": [],
+    "category": "discover"
+  },
+  {
+    "id": "test_facility_a",
+    "name": "Test Facility A",
+    "effects": [],
+    "category": "build"
+  },
+  {
+    "id": "test_facility_b",
+    "name": "Test Facility B",
+    "effects": [],
+    "category": "build"
   }
 ]

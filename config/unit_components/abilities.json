@@ -53,10 +53,7 @@
     "type": "ability",
     "required_tech": "",
     "mineral_cost": 0,
-    "effects": [],
-    "combat_rating_modifiers": [
-      { "target": "attack", "suffix": "~" }
-    ]
+    "effects": []
   },
   {
     "id": "AAA_Tracking",
@@ -67,6 +64,43 @@
     "effects": [],
     "combat_rating_modifiers": [
       { "target": "defense", "prefix": "<", "suffix": ">" }
+    ]
+  },
+  {
+    "id": "Amphibious_Pods",
+    "name": "Amphibious Pods",
+    "type": "ability",
+    "required_tech": "",
+    "mineral_cost": 5,
+    "combat_rating_modifiers": [
+      { "target": "attack", "suffix": "~" }
+    ],
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "amphibious" }
+      }
+    ]
+  },
+  {
+    "id": "Carrier_Deck",
+    "name": "Carrier Deck",
+    "type": "ability",
+    "required_tech": "",
+    "mineral_cost": 5,
+    "effects": [
+      {
+        "type": "TransportParams",
+        "scope": "ThisUnit",
+        "unitFilter": { "kind": "Domain", "domain": "sea" },
+        "parameters": { "passenger_domains": ["air"] }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": { "flag": "refuels_air" }
+      }
     ]
   }
 ]

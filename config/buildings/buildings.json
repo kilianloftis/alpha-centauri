@@ -248,5 +248,19 @@
     ],
     "category": "conquer",
     "required_tech": "planetary_networks"
+  },
+  {
+    "id": "Perimeter_Defense",
+    "name": "Perimeter Defense",
+    "mineral_cost": 10,
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisBase",
+        "parameters": { "flag": "prevents_conquest_pop_loss" }
+      }
+    ],
+    "category": "conquer",
+    "required_tech": "test_tech_1"
   }
 ]

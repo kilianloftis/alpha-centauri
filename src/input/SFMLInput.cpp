@@ -23,14 +23,18 @@ SFMLInput()
 
 std::optional<Key_t>CaptureKey() override
 {
-    return PopPendingKeyEvent();
+    if (auto event = PopPendingKeyEvent())
+    {
+        return event->key;
+    }
+    return std::nullopt;
 }
 
 void CaptureKeyAsync(std::function<void(KeyEvent_t)> callback) override
 {
-    if (auto key = CaptureKey())
+    if (auto event = PopPendingKeyEvent())
     {
-        callback(KeyEvent_t{*key});
+        callback(*event);
     }
 }
 

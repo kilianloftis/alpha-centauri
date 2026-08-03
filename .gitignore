@@ -2,3 +2,4 @@ build/
 alpha-centauri
 settings.local.json.tmp*
 settings.json.tmp*
+build-asan

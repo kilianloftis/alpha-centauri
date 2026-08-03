@@ -81,14 +81,73 @@ Unit::~Unit()
     DetachFromWorld_();
 }
 
+void Unit::ClearCargoLinks_()
+{
+    if (m_pCarrier)
+    {
+        auto& rCargo = m_pCarrier->m_cargo;
+        rCargo.erase(std::remove(rCargo.begin(), rCargo.end(), this), rCargo.end());
+        m_pCarrier = nullptr;
+    }
+    for (Unit* pPassenger : m_cargo)
+    {
+        if (pPassenger && pPassenger->m_pCarrier == this)
+        {
+            pPassenger->m_pCarrier = nullptr;
+        }
+    }
+    m_cargo.clear();
+}
+
 void Unit::DetachFromWorld_()
 {
+    ClearCargoLinks_();
     ReleaseWorkedTile_();
     if (m_bRegistered)
     {
         m_rPositions.Unregister_(*this);
         m_bRegistered = false;
     }
+}
+
+bool Unit::IsEmbarked() const
+{
+    return m_pCarrier != nullptr;
+}
+
+Unit* Unit::GetCarrier() const
+{
+    return m_pCarrier;
+}
+
+const std::vector<Unit*>& Unit::GetCargo() const
+{
+    return m_cargo;
+}
+
+void Unit::EmbarkInto(Unit& rCarrier)
+{
+    if (m_pCarrier == &rCarrier)
+    {
+        return;
+    }
+    if (m_pCarrier)
+    {
+        Disembark();
+    }
+    m_pCarrier = &rCarrier;
+    rCarrier.m_cargo.push_back(this);
+}
+
+void Unit::Disembark()
+{
+    if (!m_pCarrier)
+    {
+        return;
+    }
+    auto& rCargo = m_pCarrier->m_cargo;
+    rCargo.erase(std::remove(rCargo.begin(), rCargo.end(), this), rCargo.end());
+    m_pCarrier = nullptr;
 }
 
 UnitId_t Unit::GetUnitId() const { return m_unitId; }

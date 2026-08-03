@@ -167,7 +167,9 @@
     "name": "Base",
     "effects": [
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "defense", "amount": 100, "op": "AddPercent" } },
-      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "prevents_disengage" } }
+      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "prevents_disengage" } },
+      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "refuels_air" } },
+      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "loads_air_transport" } }
     ]
   },
   {

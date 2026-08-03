@@ -1,0 +1,9 @@
+{
+  "last_defender_pop_loss": 1,
+  "capture_pop_loss": 1,
+  "capture_facilities_destroyed_min": 0,
+  "capture_facilities_destroyed_max_percent": 50,
+  "escape_colony_pod": {
+    "components": ["Infantry", "Colony_Pod", "No_Armour", "Fission_Plant"]
+  }
+}

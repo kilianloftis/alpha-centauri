@@ -202,6 +202,6 @@ TEST_CASE("Single-unit-per-tile rule blocks placement and movement onto occupied
     faction.GetUnitManager().DestroyUnit(blocker);
     CHECK(CanPlaceUnitOnTile(fixture.At(4, 4), fixture.map.GetUnitPositions()));
     MoveOrder_t stepOrder{&fixture.At(4, 4)};
-    REQUIRE(move.orders.TryStep(mover, fixture.At(4, 4), stepOrder));
+    REQUIRE(move.orders.TryStep(mover, fixture.At(4, 4), stepOrder).bEntered);
     CHECK(&mover.GetTile() == &fixture.At(4, 4));
 }

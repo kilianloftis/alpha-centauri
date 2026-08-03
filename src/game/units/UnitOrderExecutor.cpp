@@ -4,7 +4,10 @@
 #include "game/units/UnitOrder.h"
 #include "game/units/MoveCostCalculator.h"
 #include "game/units/Pathfinder.h"
+#include "game/units/BaseConquestRules.h"
 #include "game/units/FoundBaseRules.h"
+#include "game/units/IUnitOrderWorld.h"
+#include "game/units/TransportRules.h"
 #include "game/units/TerraformRules.h"
 #include "game/faction/FactionRevealedUnits.h"
 #include "game/faction/UnitManager.h"
@@ -34,7 +37,8 @@ UnitOrderExecutor::UnitOrderExecutor(const MoveCostCalculator& rMoveCosts,
                                      TileEffectsContext& rTileEffects,
                                      Pathfinder& rPathfinder,
                                      const MoraleCalculator& rMorale,
-                                     std::mt19937& rRng)
+                                     std::mt19937& rRng,
+                                     IUnitOrderWorld* pWorld)
     : m_rMoveCosts(rMoveCosts)
     , m_rSteps(rSteps)
     , m_rWorldMap(rWorldMap)
@@ -43,6 +47,7 @@ UnitOrderExecutor::UnitOrderExecutor(const MoveCostCalculator& rMoveCosts,
     , m_rMorale(rMorale)
     , m_rRng(rRng)
     , m_combat(rMoveCosts, rSteps, rWorldMap, rTileEffects, rMorale, rRng)
+    , m_pWorld(pWorld)
 {
 }
 
@@ -123,7 +128,8 @@ Unit* UnitOrderExecutor::FindVisibleHostileOnTile(const Unit& rObserver,
     const FactionId_t observerId = rObserverFaction.GetFactionId();
     for (Unit* pUnit : m_rWorldMap.GetUnitsOnTile(rTile))
     {
-        if (pUnit && pUnit->GetFaction().GetFactionId() != observerId
+        if (pUnit && !pUnit->IsEmbarked()
+            && pUnit->GetFaction().GetFactionId() != observerId
             && IsUnitVisibleTo(rObserverFaction, *pUnit, m_rTileEffects))
         {
             return pUnit;
@@ -132,8 +138,45 @@ Unit* UnitOrderExecutor::FindVisibleHostileOnTile(const Unit& rObserver,
     return nullptr;
 }
 
+bool UnitOrderExecutor::TryAttachToTransport(Unit& rPassenger, bool bRefuelOnAttach)
+{
+    return ac::TryAttachToTransport(rPassenger, m_rWorldMap, bRefuelOnAttach);
+}
+
+bool UnitOrderExecutor::TryAutoAttachWhenMustLand(Unit& rPassenger)
+{
+    return ac::TryAutoAttachWhenMustLand(rPassenger, m_rWorldMap);
+}
+
+bool UnitOrderExecutor::TryUnloadTransport(Unit& rCarrier)
+{
+    return TryUnloadTransportInPlace(rCarrier);
+}
+
+bool UnitOrderExecutor::ApplyArrivalEffects_(Unit& rMover, bool bWasEmbarked)
+{
+    // Board a transport on this tile only when the mover cannot hold the tile itself
+    // (step onto open water); entering a base leaves it a garrison, not cargo.
+    if (!bWasEmbarked)
+    {
+        ac::TryAutoAttachOnEntry(rMover, m_rWorldMap);
+    }
+
+    if (!m_pWorld || !m_pGameData)
+    {
+        return true;
+    }
+    // A native raider spends itself on the raid, so this can free rMover.
+    return !m_pWorld->ResolveBaseEntryConquest(rMover, *m_pGameData, m_rRng).bActorDestroyed;
+}
+
 void UnitOrderExecutor::EnterTile_(Unit& rMover, const Tile& rTo, int remainingAfter)
 {
+    if (rMover.IsEmbarked())
+    {
+        rMover.Disembark();
+    }
+
     m_rWorldMap.GetUnitPositions().MoveUnit(rMover, rTo);
 
     // Hostile entry into a Bunker spends all remaining moves (capture).
@@ -151,8 +194,8 @@ void UnitOrderExecutor::EnterTile_(Unit& rMover, const Tile& rTo, int remainingA
     rMover.SetMoveFragmentsRemaining(remaining);
 }
 
-bool UnitOrderExecutor::SpendMovesAndEnter_(Unit& rMover, const Tile& rTo,
-                                            MoveOrder_t& rMoveOrder)
+StepResult_t UnitOrderExecutor::SpendMovesAndEnter_(Unit& rMover, const Tile& rTo,
+                                                    MoveOrder_t& rMoveOrder)
 {
     const EntryTerms_t terms = m_rMoveCosts.ForUnit(rMover, m_rWorldMap).EntryTerms(rTo);
     const int available = rMover.GetMoveFragmentsRemaining();
@@ -169,7 +212,7 @@ bool UnitOrderExecutor::SpendMovesAndEnter_(Unit& rMover, const Tile& rTo,
             // Bank this turn's fragments toward the entry price and stay put.
             rMoveOrder.chargeFragmentsPaid += available;
             rMover.SetMoveFragmentsRemaining(0);
-            return false;
+            return {};
         }
     }
 
@@ -179,15 +222,20 @@ bool UnitOrderExecutor::SpendMovesAndEnter_(Unit& rMover, const Tile& rTo,
     // Standard terrain admits any positive balance (SetMoveFragmentsRemaining clamps a
     // negative result to 0); end-turn entries wipe whatever would remain.
     const int remainingAfter = terms.bEndsTurn ? 0 : available - terms.costFragments;
+    const bool bWasEmbarked = rMover.IsEmbarked();
     EnterTile_(rMover, rTo, remainingAfter);
-    return true;
+
+    StepResult_t result;
+    result.bEntered = true;
+    result.bMoverDestroyed = !ApplyArrivalEffects_(rMover, bWasEmbarked);
+    return result;
 }
 
-bool UnitOrderExecutor::TryStep(Unit& rMover, const Tile& rTo, MoveOrder_t& rMoveOrder)
+StepResult_t UnitOrderExecutor::TryStep(Unit& rMover, const Tile& rTo, MoveOrder_t& rMoveOrder)
 {
     if (rMover.GetMoveFragmentsRemaining() <= 0)
     {
-        return false;
+        return {};
     }
 
     std::unordered_set<UnitId_t> visibleBefore;
@@ -196,12 +244,12 @@ bool UnitOrderExecutor::TryStep(Unit& rMover, const Tile& rTo, MoveOrder_t& rMov
     const StepEvaluation_t eval = m_rSteps.EvaluateStep(rMover, rMover.GetTile(), rTo);
     if (eval.outcome == StepOutcome_t::Legal)
     {
-        const bool bEntered = SpendMovesAndEnter_(rMover, rTo, rMoveOrder);
-        if (bEntered)
+        const StepResult_t result = SpendMovesAndEnter_(rMover, rTo, rMoveOrder);
+        if (result.bEntered && !result.bMoverDestroyed)
         {
             CancelMoveOrderIfNewHostile_(rMover, visibleBefore);
         }
-        return bEntered;
+        return result;
     }
 
     if (eval.outcome == StepOutcome_t::BlockedByOccupant
@@ -210,12 +258,11 @@ bool UnitOrderExecutor::TryStep(Unit& rMover, const Tile& rTo, MoveOrder_t& rMov
         RevealBlockingUnits_(rMover, eval);
         CancelMoveOrderIfNewHostile_(rMover, visibleBefore);
     }
-    return false;
+    return {};
 }
 
 std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
-                                                           const Tile& rTargetTile,
-                                                           GameState* pGameState)
+                                                           const Tile& rTargetTile)
 {
     if (rAttacker.GetMoveFragmentsRemaining() <= 0)
     {
@@ -231,16 +278,26 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
     {
         return std::nullopt;
     }
+    // Land units need Amphibious to attack a garrisoned sea base.
+    if (!CanAttackIntoBaseTile(rAttacker, rTargetTile))
+    {
+        return std::nullopt;
+    }
 
-    if (pGameState)
+    if (m_pWorld)
     {
         if (std::optional<CombatResult_t> intercepted =
-                TryInterceptAttack(*pGameState, rAttacker, *pDefender, m_rTileEffects, m_rRng))
+                m_pWorld->TryInterceptAttack(rAttacker, *pDefender, m_rTileEffects, m_rRng))
         {
             // Intercept destroys the attacker; no attack history / move spend on a dead unit.
             return intercepted;
         }
     }
+
+    // Snapshot before Resolve may DestroyUnit the defender (and free its tile reference).
+    const Tile& rDefenderTile = pDefender->GetTile();
+    const bool bDefenderOnBase =
+        m_pWorld && m_pWorld->FindBaseAt(rDefenderTile.GetX(), rDefenderTile.GetY()) != nullptr;
 
     CombatResult_t result = m_combat.Resolve(rAttacker, *pDefender);
 
@@ -264,6 +321,17 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
             rAttacker.GetFaction().GetUnitManager().DestroyUnit(rAttacker);
             result.bAttackerDestroyed = true;
         }
+    }
+
+    // After SingleUse expenditure: only a surviving capturer/raider may take the base.
+    if (result.bDefenderDestroyed && !result.bAttackerDestroyed && bDefenderOnBase && m_pWorld
+        && m_pGameData)
+    {
+        // A native raider spends itself on the raid; report that so UI playback does not
+        // show a survivor that no longer exists.
+        result.bAttackerDestroyed =
+            m_pWorld->ResolvePostCombatBaseConquest(rAttacker, rDefenderTile, *m_pGameData, m_rRng)
+                .bActorDestroyed;
     }
     return result;
 }
@@ -343,7 +411,8 @@ OrderProgress_t UnitOrderExecutor::Execute(Unit& rUnit)
         return Execute_(rUnit, rOrder);
     }, *rUnit.GetOrder());
 
-    if (progress != OrderProgress_t::Continue)
+    // The unit is already gone on UnitDestroyed — there is no order left to clear.
+    if (progress != OrderProgress_t::Continue && progress != OrderProgress_t::UnitDestroyed)
     {
         rUnit.ClearOrder();
     }
@@ -378,9 +447,9 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, MoveOrder_t& rOrder)
         if (!pNext)
         {
             const Tile* pDesired = m_rPathfinder.DesiredContactStep(rUnit, *pDestination);
-            if (pDesired)
+            if (pDesired && TryStep(rUnit, *pDesired, rLiveOrder).bMoverDestroyed)
             {
-                TryStep(rUnit, *pDesired, rLiveOrder);
+                return OrderProgress_t::UnitDestroyed;
             }
             // Order may have been cleared by contact; otherwise keep it for next turn.
             return rUnit.GetOrder().has_value() ? OrderProgress_t::Continue
@@ -390,7 +459,12 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, MoveOrder_t& rOrder)
         const Tile* pTileBefore = &rUnit.GetTile();
         const int movesBefore = rUnit.GetMoveFragmentsRemaining();
 
-        if (!TryStep(rUnit, *pNext, rLiveOrder))
+        const StepResult_t stepped = TryStep(rUnit, *pNext, rLiveOrder);
+        if (stepped.bMoverDestroyed)
+        {
+            return OrderProgress_t::UnitDestroyed;
+        }
+        if (!stepped.bEntered)
         {
             return rUnit.GetOrder().has_value() ? OrderProgress_t::Continue
                                                 : OrderProgress_t::Complete;

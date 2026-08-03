@@ -3,6 +3,7 @@
 #include "game/units/UnitDesign.h"
 #include "game/units/MoraleCalculator.h"
 #include "game/units/MovementRules.h"
+#include "game/units/TransportRules.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/Faction.h"
@@ -10,6 +11,7 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace ac
 {
@@ -68,6 +70,28 @@ Unit& UnitManager::CreateUnit(UnitId_t unitId, const UnitDesign& rDesign,
 
 void UnitManager::DestroyUnit(Unit& rUnit)
 {
+    // Cargo that can hold the carrier's tile by itself is set down there — a ship sunk in
+    // port does not drown the garrison; anything over open water goes down with it. Snapshot
+    // first, since both branches clear the cargo links. Only passengers this manager owns are
+    // ours to destroy; a carrier never holds another faction's units (CanCarryPassenger).
+    const std::vector<Unit*> cargo = rUnit.GetCargo();
+    const Tile& rCarrierTile = rUnit.GetTile();
+    for (Unit* pPassenger : cargo)
+    {
+        if (!pPassenger || pPassenger == &rUnit)
+        {
+            continue;
+        }
+        if (SurvivesCarrierLoss(*pPassenger, rCarrierTile))
+        {
+            pPassenger->Disembark();
+        }
+        else if (&pPassenger->GetFaction() == &m_rFaction)
+        {
+            DestroyUnit(*pPassenger);
+        }
+    }
+
     auto it = std::find_if(m_units.begin(), m_units.end(),
         [&rUnit](const std::unique_ptr<Unit>& pUnit)
         {

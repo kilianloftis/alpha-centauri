@@ -6,7 +6,6 @@
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
-#include "game/units/UnitOrderExecutor.h"
 #include "ui/style/UiStyle.h"
 
 namespace ac
@@ -19,6 +18,20 @@ bool UnitOrderInputController::HandleKey(const KeyEvent_t& rEvent, Unit* pSelect
     if (!pSelectedUnit)
     {
         return false;
+    }
+
+    // Shift+U: WorldView runs TryUnloadTransport.
+    if (rEvent.key == Key_t::U && rEvent.modifier.bShift)
+    {
+        m_bUnloadTransportRequested = true;
+        return true;
+    }
+
+    // L: WorldView tries attach; on failure terraform may still handle L.
+    if (rEvent.key == Key_t::L)
+    {
+        m_bAttachTransportRequested = true;
+        return true;
     }
 
     // O opens the supply-crawl resource picker (WorldView reacts to WasSupplyCrawlRequested).
@@ -83,6 +96,8 @@ void UnitOrderInputController::ClearRequestFlags_()
     m_bAttackRequested = false;
     m_bSupplyCrawlRequested = false;
     m_bFoundBaseRequested = false;
+    m_bAttachTransportRequested = false;
+    m_bUnloadTransportRequested = false;
     m_bProbeActionRequested = false;
     m_pInteractTarget = nullptr;
 }

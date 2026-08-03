@@ -263,6 +263,16 @@
         "type": "RuleFlag",
         "scope": "ThisTile",
         "parameters": { "flag": "prevents_disengage" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": { "flag": "refuels_air" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": { "flag": "loads_air_transport" }
       }
     ]
   },
@@ -486,6 +496,16 @@
         "type": "RuleFlag",
         "scope": "ThisTile",
         "parameters": { "flag": "prevents_disengage" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": { "flag": "refuels_air" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": { "flag": "loads_air_transport" }
       }
     ]
   },

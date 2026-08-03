@@ -54,6 +54,11 @@ StageResult_t PlayerActions::ExecuteImpl(GameState& rGameState, Faction& rFactio
         }
 
         const OrderProgress_t progress = rExecutor.Execute(rUnit);
+        if (progress == OrderProgress_t::UnitDestroyed)
+        {
+            // Already destroyed while advancing (e.g. a native raider consumed by its raid).
+            continue;
+        }
         if (progress == OrderProgress_t::Expended)
         {
             rUnitManager.DestroyUnit(rUnit);

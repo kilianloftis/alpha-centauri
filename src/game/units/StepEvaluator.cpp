@@ -7,6 +7,7 @@
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/MovementRules.h"
+#include "game/units/TransportRules.h"
 #include "game/units/Unit.h"
 
 namespace ac
@@ -17,7 +18,8 @@ namespace
 
 bool IsHostileTo_(const Unit& rMover, const Unit& rOther)
 {
-    return rOther.GetFaction().GetFactionId() != rMover.GetFaction().GetFactionId();
+    return !rOther.IsEmbarked()
+        && rOther.GetFaction().GetFactionId() != rMover.GetFaction().GetFactionId();
 }
 
 // Invokes rFn(Unit&) for each hostile unit on rTile; stops early if rFn returns false.
@@ -82,7 +84,7 @@ bool StepEvaluator::CanEnterTerrain_(const Unit& rMover, const Tile& rTile,
             return true;
         }
     }
-    return CanEnterTileTerrain(rMover, rTile);
+    return CanEnterTile(rMover, rTile, m_rWorldMap);
 }
 
 bool StepEvaluator::IsTileInHostileZoc_(const Unit& rMover, const Tile& rTile,
@@ -163,7 +165,17 @@ StepEvaluation_t StepEvaluator::EvaluateStep_(const Unit& rMover, const Tile& rF
         result.outcome = StepOutcome_t::NotAdjacent;
         return result;
     }
-    if (!CanEnterTerrain_(rMover, rTo, knowledge))
+
+    // Embarked units may only unload to an adjacent legal tile.
+    if (rMover.IsEmbarked())
+    {
+        if (!CanUnloadTo(rMover, rFrom, rTo, m_rWorldMap))
+        {
+            result.outcome = StepOutcome_t::BlockedByTerrain;
+            return result;
+        }
+    }
+    else if (!CanEnterTerrain_(rMover, rTo, knowledge))
     {
         result.outcome = StepOutcome_t::BlockedByTerrain;
         return result;
@@ -210,7 +222,7 @@ StepEvaluation_t StepEvaluator::EvaluateStep_(const Unit& rMover, const Tile& rF
     {
         for (Unit* pUnit : m_rWorldMap.GetUnitsOnTile(rTo))
         {
-            if (pUnit && UnitCountsForPlanner_(rMover, *pUnit, knowledge))
+            if (pUnit && !pUnit->IsEmbarked() && UnitCountsForPlanner_(rMover, *pUnit, knowledge))
             {
                 result.blockingUnits.push_back(pUnit);
             }

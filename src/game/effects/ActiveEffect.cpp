@@ -12,6 +12,7 @@
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/Tile.h"
+#include "game/map/WorldMap.h"
 #include "game/population/pop-types/Pop.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/social-engineering/SocialPolicyConfig.h"
@@ -583,6 +584,80 @@ bool ResolveFlag(const BaseManager& rBase, RuleFlagId_t flagId)
         if (pFlag && pFlag->flag == flagId)
         {
             return true;
+        }
+    }
+    return false;
+}
+
+namespace
+{
+
+// Shared by both tile-flag overloads: does rEffect declare flagId as an unconditional
+// ThisTile flag on the host tile itself (radius 0, no condition)? Radius auras are excluded
+// deliberately — a tile capability describes its host, not the host's neighbourhood.
+bool DeclaresTileFlag_(const EffectConfig_t& rEffect, RuleFlagId_t flagId)
+{
+    const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.effect);
+    return pFlag && pFlag->flag == flagId && rEffect.scope == EffectScope_t::ThisTile
+        && rEffect.radius == 0 && !rEffect.condition.has_value();
+}
+
+bool AnyDeclaresTileFlag_(const std::vector<EffectConfig_t>& rEffects, RuleFlagId_t flagId)
+{
+    for (const EffectConfig_t& rEffect : rEffects)
+    {
+        if (DeclaresTileFlag_(rEffect, flagId))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+} // namespace
+
+bool ResolveFlag(const Tile& rTile, RuleFlagId_t flagId)
+{
+    for (const ImprovementConfig_t* pConfig : rTile.GetTerrainFeatures())
+    {
+        if (pConfig && AnyDeclaresTileFlag_(pConfig->effects, flagId))
+        {
+            return true;
+        }
+    }
+    for (const ImprovementConfig_t* pConfig : rTile.GetImprovements())
+    {
+        if (pConfig && AnyDeclaresTileFlag_(pConfig->effects, flagId))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool TileProvidesFlag(const Tile& rTile, RuleFlagId_t flagId, const WorldMap& rWorldMap,
+                      FactionId_t factionId)
+{
+    if (ResolveFlag(rTile, flagId))
+    {
+        return true;
+    }
+    for (const Unit* pUnit : rWorldMap.GetUnitsOnTile(rTile))
+    {
+        // An embarked unit is cargo, not a site: its deck is unavailable while stowed.
+        if (!pUnit || pUnit->IsEmbarked()
+            || pUnit->GetFaction().GetFactionId() != factionId)
+        {
+            continue;
+        }
+        // Live effects, not design-only: a tile capability must honour unitFilter and pick
+        // up FactionUnits-scoped grants, exactly as the transport rules that consume it do.
+        for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(*pUnit))
+        {
+            if (rEffect.config && DeclaresTileFlag_(*rEffect.config, flagId))
+            {
+                return true;
+            }
         }
     }
     return false;

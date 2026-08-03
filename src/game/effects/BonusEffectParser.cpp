@@ -58,7 +58,13 @@ RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "terraform")                   return RuleFlagId_t::Terraform;
     if (rFlag == "supply_crawl")                return RuleFlagId_t::SupplyCrawl;
     if (rFlag == "probe_team")                  return RuleFlagId_t::ProbeTeam;
+    if (rFlag == "amphibious")                  return RuleFlagId_t::Amphibious;
+    if (rFlag == "cannot_capture_bases")        return RuleFlagId_t::CannotCaptureBases;
+    if (rFlag == "no_conquest_repair")          return RuleFlagId_t::NoConquestRepair;
+    if (rFlag == "prevents_conquest_pop_loss")  return RuleFlagId_t::PreventsConquestPopLoss;
     if (rFlag == "prevents_disengage")          return RuleFlagId_t::PreventsDisengage;
+    if (rFlag == "refuels_air")                 return RuleFlagId_t::RefuelsAir;
+    if (rFlag == "loads_air_transport")         return RuleFlagId_t::LoadsAirTransport;
     if (rFlag == "creche")                      return RuleFlagId_t::Creche;
     if (rFlag == "headquarters")                return RuleFlagId_t::Headquarters;
     if (rFlag == "probe_subversion_immune")     return RuleFlagId_t::ProbeSubversionImmune;
@@ -584,6 +590,54 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
                 "InterceptAttempt 'chance_of_destruction_on_fail' must be in [0, 100]");
         }
         effect.effect = intercept;
+    }
+    else if (typeStr == "TransportParams")
+    {
+        if (effect.scope != EffectScope_t::ThisUnit)
+        {
+            throw std::runtime_error("TransportParams requires scope ThisUnit");
+        }
+        TransportParamsEffect_t transport;
+        if (parameters.contains("passenger_domains"))
+        {
+            if (!parameters.at("passenger_domains").is_array())
+            {
+                throw std::runtime_error("TransportParams 'passenger_domains' must be an array");
+            }
+            for (const auto& rDomainJson : parameters.at("passenger_domains"))
+            {
+                if (!rDomainJson.is_string())
+                {
+                    throw std::runtime_error(
+                        "TransportParams passenger_domains entries must be strings");
+                }
+                transport.passengerDomains.push_back(
+                    ParseUnitDomain(rDomainJson.get<std::string>()));
+            }
+        }
+        if (parameters.contains("load_site_flags"))
+        {
+            if (!parameters.at("load_site_flags").is_array())
+            {
+                throw std::runtime_error("TransportParams 'load_site_flags' must be an array");
+            }
+            for (const auto& rFlagJson : parameters.at("load_site_flags"))
+            {
+                if (!rFlagJson.is_string() || rFlagJson.get<std::string>().empty())
+                {
+                    throw std::runtime_error(
+                        "TransportParams load_site_flags entries must be non-empty strings");
+                }
+                transport.loadSiteFlags.push_back(ParseRuleFlagId(rFlagJson.get<std::string>()));
+            }
+        }
+        if (transport.passengerDomains.empty() && transport.loadSiteFlags.empty())
+        {
+            throw std::runtime_error(
+                "TransportParams requires at least one of 'passenger_domains' "
+                "or 'load_site_flags'");
+        }
+        effect.effect = transport;
     }
     else
     {

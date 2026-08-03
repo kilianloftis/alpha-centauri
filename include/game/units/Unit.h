@@ -7,6 +7,7 @@
 #include "game/units/UnitOrder.h"
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace ac
 {
@@ -125,6 +126,16 @@ public:
     bool IsInterceptReady(int missionYear) const;
     void DeployIntercept(int readyMissionYear);
 
+    // Cargo / transport. Embarked units share the carrier's tile but are ignored for
+    // combat targeting, ZOC, and tile occupancy until they disembark.
+    bool IsEmbarked() const;
+    Unit* GetCarrier() const;
+    const std::vector<Unit*>& GetCargo() const;
+    // Link passenger into rCarrier (same tile). Caller enforces capacity / domain / load site.
+    void EmbarkInto(Unit& rCarrier);
+    // Clear carrier link; passenger remains on its current tile.
+    void Disembark();
+
 private:
     // The index maintains m_pTile alongside its occupancy lists (MoveUnit).
     friend class UnitPositionIndex;
@@ -134,6 +145,7 @@ private:
     // call once; the destructor skips unregistering an already-detached unit.
     void DetachFromWorld_();
     void ReleaseWorkedTile_();
+    void ClearCargoLinks_();
 
     UnitId_t m_unitId;
     const UnitDesign& m_rDesign;
@@ -158,6 +170,8 @@ private:
     bool m_bAttackedLastTurn = false;
     // Available when missionYear >= this (0 = always ready at game start).
     int m_interceptReadyMissionYear = 0;
+    Unit* m_pCarrier = nullptr;
+    std::vector<Unit*> m_cargo;
 };
 
 } // namespace ac

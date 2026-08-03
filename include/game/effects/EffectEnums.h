@@ -179,10 +179,32 @@ enum class RuleFlagId_t
     SupplyCrawl,
     ProbeTeam,
 
+    // Conquest / amphibious assault.
+    // Land units may attack and capture sea bases (not free ocean movement).
+    Amphibious,
+    // Sole capture veto: chassis (Needlejet / Missile) or noncombat weapon modules.
+    CannotCaptureBases,
+    // Capturing this unit does not fully repair it (e.g. Battle Ogre).
+    NoConquestRepair,
+    // Base flag: skip population loss when the last defender falls.
+    PreventsConquestPopLoss,
+
     // Unit / tile flags
     // Blocks the *opponent* from disengaging when carried ThisUnit (Comm Jammer), or blocks
     // a unit on this tile from disengaging when declared ThisTile (Base, Bunker, Airbase).
     PreventsDisengage,
+
+    // Tile service capabilities. Declared ThisTile — by an improvement on the tile, or
+    // projected onto the tile by a component of a friendly unit standing there (Carrier
+    // Deck). Queried via TileProvidesFlag, never named directly by the consumer, so a new
+    // site kind only has to declare the capability to participate.
+    // Air units restore Fuel here.
+    RefuelsAir,
+    // Air transports may exchange cargo here. Separate from RefuelsAir because the two are
+    // independent capabilities that SMAC happens to co-locate: Base and Airbase declare
+    // both, while a Carrier Deck refuels without being a load site. Granting a carrier deck
+    // this flag is the supported way to opt into loading at sea.
+    LoadsAirTransport,
 
     // Faction/global flags
     PopulationBoom,

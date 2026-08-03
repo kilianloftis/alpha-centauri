@@ -50,6 +50,12 @@ public:
     // UnitOrderExecutor::TryFoundBase (tile legality is checked there).
     bool WasFoundBaseRequested() const { return m_bFoundBaseRequested; }
 
+    // True after L. WorldView tries TryAttachToTransport; on failure terraform may use L.
+    bool WasAttachTransportRequested() const { return m_bAttachTransportRequested; }
+
+    // True after Shift+U. WorldView runs TryUnloadTransport.
+    bool WasUnloadTransportRequested() const { return m_bUnloadTransportRequested; }
+
     // Non-null while a left-click hold has exceeded the threshold and the path is valid.
     const Path_t* GetPathPreview() const;
 
@@ -87,6 +93,8 @@ private:
     bool m_bProbeActionRequested = false;
     bool m_bSupplyCrawlRequested = false;
     bool m_bFoundBaseRequested = false;
+    bool m_bAttachTransportRequested = false;
+    bool m_bUnloadTransportRequested = false;
     const Tile* m_pInteractTarget = nullptr;
 
     // Left-click long-press path preview.

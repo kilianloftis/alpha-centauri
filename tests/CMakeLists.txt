@@ -45,6 +45,7 @@ add_executable(effects-tests
     game/UnitOrderTests.cpp
     game/SupplyCrawlTests.cpp
     game/FoundBaseTests.cpp
+    game/BaseConquestTests.cpp
     game/ImprovementConfigParserTests.cpp
     game/TerraformTests.cpp
     game/TileResourceRestrictionTests.cpp
@@ -57,6 +58,7 @@ add_executable(effects-tests
     game/VisibilityTests.cpp
     game/UnitVisibilityTests.cpp
     game/MovementTests.cpp
+    game/TransportTests.cpp
     game/MoveCostTests.cpp
     game/PathfindingTests.cpp
     game/TerritoryTests.cpp

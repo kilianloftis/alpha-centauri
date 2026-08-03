@@ -21,6 +21,10 @@ bool s_bSingleUnitPerTile = false;
 
 bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject)
 {
+    if (rProjector.IsEmbarked())
+    {
+        return false;
+    }
     if (rProjector.GetFaction().GetFactionId() == rSubject.GetFaction().GetFactionId())
     {
         return false;
@@ -64,12 +68,24 @@ bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile)
     return false;
 }
 
+bool CanOccupyTileUnaided(const Unit& rMover, const Tile& rTile)
+{
+    if (CanEnterTileTerrain(rMover, rTile))
+    {
+        return true;
+    }
+    // A land unit garrisons a friendly sea base without needing a hull under it.
+    return rMover.GetDomain() == UnitDomain_t::Land && rTile.IsWater()
+        && HasFriendlyBase(rMover, rTile);
+}
+
 bool HasFriendlyOccupant(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap)
 {
     const FactionId_t moverId = rMover.GetFaction().GetFactionId();
     for (const Unit* pUnit : rWorldMap.GetUnitsOnTile(rTile))
     {
-        if (pUnit && pUnit != &rMover && pUnit->GetFaction().GetFactionId() == moverId)
+        if (pUnit && pUnit != &rMover && !pUnit->IsEmbarked()
+            && pUnit->GetFaction().GetFactionId() == moverId)
         {
             return true;
         }

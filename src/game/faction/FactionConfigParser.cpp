@@ -22,6 +22,14 @@ constexpr const char* k_EffectsFile = "effects.json";
 constexpr const char* k_BaseNamesFile = "base_names.json";
 constexpr const char* k_PhrasesFile = "phrases.json";
 
+FactionSpecies_t ParseFactionSpecies_(const std::string& rValue)
+{
+    if (rValue == "human")       return FactionSpecies_t::Human;
+    if (rValue == "progenitor")  return FactionSpecies_t::Progenitor;
+    if (rValue == "native_life") return FactionSpecies_t::NativeLife;
+    throw std::runtime_error("identity.json: unknown species '" + rValue + "'");
+}
+
 } // namespace
 
 std::vector<FactionConfig_t> FactionConfigParser::ParseConfig(const std::string& configPath)
@@ -90,6 +98,10 @@ FactionIdentityConfig FactionConfigParser::ParseIdentity(const nlohmann::json& j
     identity.noun = j.value("noun", identity.name);
     identity.adjective = j.value("adjective", identity.name);
     identity.participatesInCouncil = j.value("participates_in_council", true);
+    if (j.contains("species"))
+    {
+        identity.species = ParseFactionSpecies_(j.at("species").get<std::string>());
+    }
     return identity;
 }
 

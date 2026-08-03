@@ -4,23 +4,23 @@
 namespace ac
 {
 
-static std::deque<Key_t>g_pendingKeyEvents;
+static std::deque<KeyEvent_t> g_pendingKeyEvents;
 
-void PushPendingKeyEvent_t(Key_t key)
+void PushPendingKeyEvent_t(const KeyEvent_t& rEvent)
 {
-    g_pendingKeyEvents.push_back(key);
+    g_pendingKeyEvents.push_back(rEvent);
 }
 
-std::optional<Key_t>PopPendingKeyEvent()
+std::optional<KeyEvent_t> PopPendingKeyEvent()
 {
-if (g_pendingKeyEvents.empty())
+    if (g_pendingKeyEvents.empty())
     {
         return std::nullopt;
     }
 
-    auto key = g_pendingKeyEvents.front();
+    const KeyEvent_t event = g_pendingKeyEvents.front();
     g_pendingKeyEvents.pop_front();
-    return key;
+    return event;
 }
 
 } // namespace ac

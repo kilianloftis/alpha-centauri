@@ -20,11 +20,6 @@ enum class Key_t
     ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
 };
 
-struct KeyEvent_t
-{
-    Key_t key;
-};
-
 enum class Modifier_t
 {
     None,
@@ -38,6 +33,14 @@ struct ModifierState_t
     bool bCtrl = false;
     bool bAlt = false;
     bool bShift = false;
+};
+
+struct KeyEvent_t
+{
+    Key_t key;
+    // Captured with the keystroke by the backend, as MouseEvent_t does. Consumers must read
+    // it from the event rather than polling the keyboard, which is SFML-only.
+    ModifierState_t modifier;
 };
 
 enum class MouseButton_t

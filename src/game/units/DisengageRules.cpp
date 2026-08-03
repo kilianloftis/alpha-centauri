@@ -3,7 +3,6 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/BonusEffect.h"
 #include "game/effects/EffectEnums.h"
-#include "game/map/ImprovementConfigParser.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
@@ -19,45 +18,6 @@ namespace ac
 
 namespace
 {
-
-// True if any of rTile's own features (terrain + improvements) declares flagId as an
-// unconditional ThisTile rule flag on the tile itself (radius auras don't project flags).
-bool TileHasRuleFlag_(const Tile& rTile, RuleFlagId_t flagId)
-{
-    auto configDeclaresFlag = [&](const ImprovementConfig_t* pConfig)
-    {
-        if (!pConfig)
-        {
-            return false;
-        }
-        for (const EffectConfig_t& rEffect : pConfig->effects)
-        {
-            const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.effect);
-            if (pFlag && pFlag->flag == flagId && rEffect.scope == EffectScope_t::ThisTile
-                && rEffect.radius == 0 && !rEffect.condition.has_value())
-            {
-                return true;
-            }
-        }
-        return false;
-    };
-
-    for (const ImprovementConfig_t* pConfig : rTile.GetTerrainFeatures())
-    {
-        if (configDeclaresFlag(pConfig))
-        {
-            return true;
-        }
-    }
-    for (const ImprovementConfig_t* pConfig : rTile.GetImprovements())
-    {
-        if (configDeclaresFlag(pConfig))
-        {
-            return true;
-        }
-    }
-    return false;
-}
 
 bool HasHoldFamilyOrder_(const Unit& rUnit)
 {
@@ -117,7 +77,7 @@ bool DisengageRules::CanDisengage(const Unit& rCandidate, const Unit& rOpponent)
         return false;
     }
     // Fortified position on the candidate's own tile (Base, Bunker, ...).
-    if (TileHasRuleFlag_(rCandidate.GetTile(), RuleFlagId_t::PreventsDisengage))
+    if (ResolveFlag(rCandidate.GetTile(), RuleFlagId_t::PreventsDisengage))
     {
         return false;
     }

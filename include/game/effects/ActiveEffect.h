@@ -22,6 +22,7 @@ class IEffectsProvider;
 class PopulationManager;
 class Unit;
 class UnitDesign;
+class WorldMap;
 struct BuildingConfig_t;
 struct UnitComponentConfig_t;
 struct PopTypeConfig_t;
@@ -334,6 +335,18 @@ bool ResolveFlag(const Faction& rFaction, RuleFlagId_t flagId);
 // buildings). Prefer this for ThisBase flags (Headquarters) and for FactionGlobal SE effects
 // (e.g. probe_subversion_immune).
 bool ResolveFlag(const BaseManager& rBase, RuleFlagId_t flagId);
+
+// True if any of rTile's own features (terrain + improvements) declares flagId as an
+// unconditional ThisTile rule flag on the tile itself. Radius auras don't project flags —
+// a flag describes the host tile, not its neighbourhood.
+bool ResolveFlag(const Tile& rTile, RuleFlagId_t flagId);
+
+// The above, OR a non-embarked unit of factionId standing on rTile whose design projects
+// flagId at ThisTile (Carrier Deck). Lets a consumer ask what a tile can do for it without
+// naming which improvements or components supply the capability. Note the faction check is
+// this function's own: TileEffectsContext's unit auras are deliberately not territory-owned.
+bool TileProvidesFlag(const Tile& rTile, RuleFlagId_t flagId, const WorldMap& rWorldMap,
+                      FactionId_t factionId);
 
 // Collects a single pop type's own effects (both ThisPop-scoped tile multipliers and
 // ThisBase-scoped flat generation bonuses). sourceId is the pop type's id.

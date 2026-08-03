@@ -20,10 +20,19 @@ void UnitPositionIndex::MoveUnit(Unit& rUnit, const Tile& rNewTile)
     {
         return;
     }
+    // Snapshot cargo before mutating occupancy; passengers ride with the carrier.
+    const std::vector<Unit*> cargo = rUnit.GetCargo();
     RemoveFromTile_(rUnit);
     m_index[&rNewTile].push_back(&rUnit);
     rUnit.m_pTile = &rNewTile;
     OnUnitMoved.Emit(rUnit);
+    for (Unit* pPassenger : cargo)
+    {
+        if (pPassenger && pPassenger->GetCarrier() == &rUnit)
+        {
+            MoveUnit(*pPassenger, rNewTile);
+        }
+    }
 }
 
 void UnitPositionIndex::Register_(Unit& rUnit, const Tile& rTile)

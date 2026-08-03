@@ -6,7 +6,7 @@
 namespace ac
 {
 
-void PushPendingKeyEvent_t(Key_t key);
-std::optional<Key_t>PopPendingKeyEvent();
+void PushPendingKeyEvent_t(const KeyEvent_t& rEvent);
+std::optional<KeyEvent_t> PopPendingKeyEvent();
 
 } // namespace ac

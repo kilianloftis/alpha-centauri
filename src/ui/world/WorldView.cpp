@@ -300,7 +300,24 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
     Unit* pControllable = GetControllableSelectedUnit_();
     if (m_pUnitOrderInputController->HandleKey(rEvent, pControllable))
     {
-        if (m_pUnitOrderInputController->WasSupplyCrawlRequested() && pControllable)
+        if (m_pUnitOrderInputController->WasAttachTransportRequested())
+        {
+            if (pControllable
+                && m_rGameState.GetUnitOrderExecutor().TryAttachToTransport(*pControllable))
+            {
+                return true;
+            }
+            // Attach failed — fall through so terraform can use L (LevelTerrain).
+        }
+        else if (m_pUnitOrderInputController->WasUnloadTransportRequested())
+        {
+            if (pControllable)
+            {
+                m_rGameState.GetUnitOrderExecutor().TryUnloadTransport(*pControllable);
+            }
+            return true;
+        }
+        else if (m_pUnitOrderInputController->WasSupplyCrawlRequested() && pControllable)
         {
             Unit* pUnit = pControllable;
             m_elements.push_back(std::make_unique<SupplyCrawlPopup>(
@@ -317,7 +334,7 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
                 }));
             return true;
         }
-        if (m_pUnitOrderInputController->WasFoundBaseRequested() && pControllable)
+        else if (m_pUnitOrderInputController->WasFoundBaseRequested() && pControllable)
         {
             if (m_rGameState.GetUnitOrderExecutor().TryFoundBase(
                     *pControllable, m_rGameState, m_rGameDataContext, m_onBaseFounded))
@@ -327,17 +344,20 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
             }
             return true;
         }
-        if (m_pUnitOrderInputController->WasProbeActionRequested() && pControllable
-            && m_pUnitOrderInputController->GetProbeTarget())
+        else if (m_pUnitOrderInputController->WasProbeActionRequested() && pControllable
+                 && m_pUnitOrderInputController->GetProbeTarget())
         {
             TryOpenProbeActions_(*pControllable, *m_pUnitOrderInputController->GetProbeTarget());
             return true;
         }
-        if (m_pUnitOrderInputController->WasOrderAssigned())
+        else
         {
-            SelectNextAvailableUnit_();
+            if (m_pUnitOrderInputController->WasOrderAssigned())
+            {
+                SelectNextAvailableUnit_();
+            }
+            return true;
         }
-        return true;
     }
 
     if (m_pTerraformInputController->HandleKey(rEvent, pControllable))
@@ -491,8 +511,7 @@ void WorldView::TryBeginAttack_(Unit& rAttacker, const Tile& rTargetTile)
     const std::string attackerName = rAttacker.GetDesign().GetName();
     const std::string defenderName = FindUnitNameOnTile_(rTargetTile);
 
-    const auto result =
-        m_rGameState.GetUnitOrderExecutor().TryAttack(rAttacker, rTargetTile, &m_rGameState);
+    const auto result = m_rGameState.GetUnitOrderExecutor().TryAttack(rAttacker, rTargetTile);
     if (!result)
     {
         return;

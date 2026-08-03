@@ -519,6 +519,29 @@ units, pops, or tiles according to each entry's `scope`.
 check it with a `std::get_if<RuleFlagEffect_t>` scan over the relevant pool — see
 `Unit::ResolveFlag_` for the pattern.
 
+**Tile capability flags** are the `ThisTile`-scoped subset, resolved by two helpers in
+`ActiveEffect.h` rather than by a hand-rolled scan:
+
+- `ResolveFlag(const Tile&, RuleFlagId_t)` — the tile's own terrain features and
+  improvements. Used by `DisengageRules` for `PreventsDisengage`.
+- `TileProvidesFlag(const Tile&, RuleFlagId_t, const WorldMap&, FactionId_t)` — the above,
+  plus any non-embarked unit of that faction standing on the tile whose design declares the
+  flag at `ThisTile`. The faction check belongs to this helper: `TileEffectsContext`'s unit
+  auras are deliberately not territory-owned.
+
+Both require `radius == 0` and no condition — a capability describes its host tile, not the
+host's neighbourhood, so radius auras never project flags.
+
+This is the mechanism for "what can this tile do for me" questions, and the reason consumers
+never name improvement or component ids. `TransportParamsEffect_t::loadSiteFlags` lists
+capabilities (`loads_air_transport`), and `CanLoadAtTile` asks whether the tile provides any
+of them; a Base, an Airbase, or a carrier deck participates purely by declaring the flag.
+`RefuelsAir` and `LoadsAirTransport` are kept separate for exactly this reason — SMAC
+co-locates them at bases and airbases, but a carrier deck declaring only `RefuelsAir` is the
+stock rule, and adding `LoadsAirTransport` to it is the supported way to allow air transports
+to load at sea. Note that `RuleFlagId_t` is a C++ enum: mods can add new *sites*, but not new
+*capabilities*.
+
 **A new effect type** (a new `EffectVariant_t` alternative):
 
 1. Define the struct in `BonusEffect.h` and add it to `EffectVariant_t`.

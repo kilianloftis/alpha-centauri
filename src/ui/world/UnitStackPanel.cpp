@@ -7,6 +7,7 @@
 #include "ui/world/UnitMarkerRenderer.h"
 
 #include <algorithm>
+#include <string>
 
 namespace ac
 {
@@ -82,8 +83,13 @@ void UnitStackPanel::DrawSlot_(Graphics& rGraphics, const Slot_t& rSlot) const
 
     const unsigned int statFontSize =
         std::max(1u, static_cast<unsigned int>(m_layout.height * s.statFontRatio));
+    std::string label = rSlot.pUnit->GetDesign().FormatCombatRating();
+    if (rSlot.pUnit->IsEmbarked())
+    {
+        label += " c";
+    }
     rGraphics.DrawText(
-        rSlot.pUnit->GetDesign().FormatCombatRating(),
+        label,
         rSlot.rect.x,
         rSlot.rect.y + iconSize,
         statFontSize,

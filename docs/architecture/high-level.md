@@ -304,15 +304,20 @@ graph TB
 - **Details**: See `docs/architecture/map-system.md` for detailed architecture
 
 ### Unit Movement System
-- **Purpose**: Tile entry costs, step legality, path planning, and move-order execution
+- **Purpose**: Tile entry costs, step legality, path planning, move-order execution, cargo transport, and base conquest
 - **Components**:
   - `MoveCostCalculator`: Single home of the tile-entry rules — resolves a unit + tile into `EntryTerms_t` (fragment cost, fungus full-cost banking, forced end-of-turn) and a shroud-aware planning weight
+  - `MovementRules`: Free functions for terrain-domain entry, unaided tile occupancy, ZOC, friendly occupant/base, and stacking. Knows nothing about cargo
+  - `TransportRules`: Cargo domains, capacity, and load sites (config-driven via the `TransportParams` effect), plus the boarding-aware `CanEnterTile` / `CanUnloadTo`. Sits above `MovementRules` and uses it, one-way
   - `StepEvaluator`: Edge legality (adjacency, terrain domain, occupants, ZOC) at objective or faction-known knowledge levels
   - `Pathfinder`: Dijkstra over planned fragment costs and plannable steps
   - `UnitOrderExecutor`: Executes unit orders; spends fragments and banks multi-turn fungus charges per `EntryTerms_t`
+  - `BaseConquestRules` / `BaseConquestEffects`: Pure conquest predicates (garrison, amphibious assault, capture veto, species) split from the world mutations they gate (population loss, facility destruction, capture, raze, native raid)
+  - `IUnitOrderWorld`: Narrow session surface — base lookup, intercept, conquest — that `GameState` implements and injects into `UnitOrderExecutor`; nullable so movement-only harnesses need no `GameState`
 - **Dependencies**:
-  - GameState owns UnitOrderExecutor; all four bind the live WorldMap
+  - GameState owns UnitOrderExecutor and implements `IUnitOrderWorld` for it; all bind the live WorldMap
   - MoveCostCalculator reads ImprovementRegistry configs (move_cost / move_cost_override)
+  - BaseConquestEffects reads `config/base_conquest.json` via `GameDataContext::baseConquestConfig`
 - **Details**: See `docs/architecture/unit-movement-system.md` for detailed architecture
 
 ### UI System

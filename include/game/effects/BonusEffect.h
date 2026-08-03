@@ -258,6 +258,21 @@ struct InterceptAttemptEffect_t
     int chanceOfDestructionOnFail = 0;
 };
 
+// Declares which passenger domains this unit may carry, and optionally where it may load.
+// Capacity remains cargo_capacity. Contributions union across matching ThisUnit effects
+// (see unitFilter for carrier domain).
+struct TransportParamsEffect_t
+{
+    std::vector<UnitDomain_t> passengerDomains;
+    // Tile capabilities required to load or unload cargo, ORed together (and across every
+    // TransportParams on the carrier). Empty means load anywhere. These name capabilities,
+    // not sites: a tile qualifies when an improvement on it or a friendly unit standing on
+    // it declares the flag (TileProvidesFlag), so a new load site — an improvement, a
+    // carrier deck, a future variant of one — participates by declaring the capability
+    // without any carrier's config changing.
+    std::vector<RuleFlagId_t> loadSiteFlags;
+};
+
 using EffectVariant_t = std::variant<
     GrantBuildingEffect_t,
     GrantTechEffect_t,
@@ -274,7 +289,8 @@ using EffectVariant_t = std::variant<
     ConcealEffect_t,
     DetectEffect_t,
     OrbitalAttackEffect_t,
-    InterceptAttemptEffect_t
+    InterceptAttemptEffect_t,
+    TransportParamsEffect_t
 >;
 
 enum class ConditionKind_t

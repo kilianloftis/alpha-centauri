@@ -8,6 +8,14 @@
 namespace ac
 {
 
+// Biological/cultural identity used by conquest and similar cross-faction rules.
+enum class FactionSpecies_t
+{
+    Human,
+    Progenitor,
+    NativeLife,
+};
+
 struct FactionIdentityConfig
 {
     std::string name;
@@ -17,6 +25,8 @@ struct FactionIdentityConfig
     // When false, the faction cannot sit in / convene the Planetary Council (e.g. aliens).
     // Omitted in JSON defaults to true.
     bool participatesInCouncil = true;
+    // Omitted in JSON defaults to Human.
+    FactionSpecies_t species = FactionSpecies_t::Human;
 };
 
 struct LeaderConfig

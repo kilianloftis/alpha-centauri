@@ -2,6 +2,7 @@
 // array schema used by every config source (buildings, unit components, pop types,
 // improvements, social policies).
 
+#include "game/effects/BonusEffect.h"
 #include "game/effects/BonusEffectParser.h"
 
 #include <catch2/catch_approx.hpp>
@@ -88,6 +89,13 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
     CHECK(BonusEffectParser::ParseRuleFlagId("terraform") == RuleFlagId_t::Terraform);
     CHECK(BonusEffectParser::ParseRuleFlagId("supply_crawl") == RuleFlagId_t::SupplyCrawl);
     CHECK(BonusEffectParser::ParseRuleFlagId("probe_team") == RuleFlagId_t::ProbeTeam);
+    CHECK(BonusEffectParser::ParseRuleFlagId("amphibious") == RuleFlagId_t::Amphibious);
+    CHECK(BonusEffectParser::ParseRuleFlagId("cannot_capture_bases")
+          == RuleFlagId_t::CannotCaptureBases);
+    CHECK(BonusEffectParser::ParseRuleFlagId("no_conquest_repair")
+          == RuleFlagId_t::NoConquestRepair);
+    CHECK(BonusEffectParser::ParseRuleFlagId("prevents_conquest_pop_loss")
+          == RuleFlagId_t::PreventsConquestPopLoss);
     CHECK(BonusEffectParser::ParseRuleFlagId("headquarters") == RuleFlagId_t::Headquarters);
     CHECK(BonusEffectParser::ParseRuleFlagId("probe_subversion_immune")
           == RuleFlagId_t::ProbeSubversionImmune);
@@ -342,6 +350,58 @@ TEST_CASE("ParseEffectConfig: conditions", "[effects][parser][condition]")
         CHECK_THROWS(BonusEffectParser::ParseCondition(
             json::parse(R"({ "kind": "TargetIsShiny", "value": "x" })")));
     }
+}
+
+TEST_CASE("ParseEffectConfig: TransportParams", "[effects][parser][transport]")
+{
+    const json effectJson = json::parse(R"({
+        "type": "TransportParams",
+        "scope": "ThisUnit",
+        "unitFilter": { "kind": "Domain", "domain": "sea" },
+        "parameters": { "passenger_domains": ["air"] }
+    })");
+
+    const EffectConfig_t config = BonusEffectParser::ParseEffectConfig(effectJson);
+    const auto* pParams = std::get_if<TransportParamsEffect_t>(&config.effect);
+    REQUIRE(pParams);
+    REQUIRE(pParams->passengerDomains.size() == 1);
+    CHECK(pParams->passengerDomains.front() == UnitDomain_t::Air);
+    REQUIRE(config.unitFilter.has_value());
+    CHECK(*config.unitFilter->domain == UnitDomain_t::Sea);
+
+    const json loadSitesJson = json::parse(R"({
+        "type": "TransportParams",
+        "scope": "ThisUnit",
+        "unitFilter": { "kind": "Domain", "domain": "air" },
+        "parameters": {
+            "load_site_flags": ["loads_air_transport", "refuels_air"]
+        }
+    })");
+    const EffectConfig_t loadSites = BonusEffectParser::ParseEffectConfig(loadSitesJson);
+    const auto* pLoad = std::get_if<TransportParamsEffect_t>(&loadSites.effect);
+    REQUIRE(pLoad);
+    CHECK(pLoad->passengerDomains.empty());
+    REQUIRE(pLoad->loadSiteFlags.size() == 2);
+    CHECK(pLoad->loadSiteFlags[0] == RuleFlagId_t::LoadsAirTransport);
+    CHECK(pLoad->loadSiteFlags[1] == RuleFlagId_t::RefuelsAir);
+
+    // Load sites name capabilities, not improvement or component ids.
+    CHECK_THROWS(BonusEffectParser::ParseEffectConfig(json::parse(R"({
+        "type": "TransportParams",
+        "scope": "ThisUnit",
+        "parameters": { "load_site_flags": ["Airbase"] }
+    })")));
+
+    CHECK_THROWS(BonusEffectParser::ParseEffectConfig(json::parse(R"({
+        "type": "TransportParams",
+        "scope": "ThisBase",
+        "parameters": { "passenger_domains": ["land"] }
+    })")));
+    CHECK_THROWS(BonusEffectParser::ParseEffectConfig(json::parse(R"({
+        "type": "TransportParams",
+        "scope": "ThisUnit",
+        "parameters": {}
+    })")));
 }
 
 TEST_CASE("ParseEffectConfig: unitFilter", "[effects][parser][unitFilter]")

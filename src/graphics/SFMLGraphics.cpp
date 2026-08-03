@@ -239,7 +239,7 @@ private:
             {
                 if (auto mapped = KeyFromSfKey(KeyEvent_t->code))
                 {
-                    PushPendingKeyEvent_t(*mapped);
+                    PushPendingKeyEvent_t({*mapped, GetModifierState()});
                 }
             }
 

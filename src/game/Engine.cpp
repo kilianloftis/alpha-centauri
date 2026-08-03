@@ -136,6 +136,7 @@ void Engine::Initialize_()
         *m_pSettings,
         *m_gameDataContext->moraleCalculator);
     m_pGameState->GetDiplomaticActionExecutor().SetGameDataContext(*m_gameDataContext);
+    m_pGameState->GetUnitOrderExecutor().SetGameDataContext(*m_gameDataContext);
     std::cout << "Generated world map: " << m_pGameState->GetWorldMap().GetWidth() << "x" << m_pGameState->GetWorldMap().GetHeight() << "\n";
 
     m_eventBridge = std::make_unique<EventBridge>(m_pGameState->GetEventBus());

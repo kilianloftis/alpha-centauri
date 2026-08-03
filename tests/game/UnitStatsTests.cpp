@@ -162,6 +162,7 @@ TEST_CASE("Non-combat specials resolve capability flags and cargo capacity", "[u
         const UnitDesign design = MakeSpecialDesign_(chassis, specials.Get("Transport"));
         CHECK(ResolveStat(design, StatId_t::CargoCapacity) == 1);
         CHECK(ResolveStat(design, StatId_t::Attack) == 0);
+        // Domain-filtered movement penalties apply on live units (see TransportTests).
     }
 
     SECTION("Supply Crawler")

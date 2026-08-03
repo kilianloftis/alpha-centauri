@@ -14,6 +14,10 @@ SecretProjectAvailabilityCalculator::SecretProjectAvailabilityCalculator(const G
 
 bool SecretProjectAvailabilityCalculator::IsCompleted(const std::string& rBuildingId) const
 {
+    if (m_rGameState.IsSecretProjectDestroyed(rBuildingId))
+    {
+        return true;
+    }
     for (const Faction& rFaction : m_rGameState.Factions())
     {
         for (const BaseManager& rBase : rFaction.Bases())

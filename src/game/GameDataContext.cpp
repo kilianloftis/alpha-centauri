@@ -25,6 +25,7 @@
 #include "game/units/MoraleCalculator.h"
 #include "game/units/MoraleConfigParser.h"
 #include "game/units/ProbeActionConfigParser.h"
+#include "game/units/BaseConquestConfigParser.h"
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/council/CouncilRulesConfigParser.h"
 #include "lib/LuaRuntime.h"
@@ -100,6 +101,10 @@ void LoadGameData(GameDataContext& rData, const GameDataPaths& rPaths)
     ProbeActionConfigParser probeParser;
     rData.probeActionsConfig =
         std::make_unique<ProbeActionsConfig_t>(probeParser.ParseConfig(rPaths.probeActions));
+
+    BaseConquestConfigParser conquestParser;
+    rData.baseConquestConfig =
+        std::make_unique<BaseConquestConfig_t>(conquestParser.ParseConfig(rPaths.baseConquest));
 
     rData.councilProposalRegistry = std::make_unique<CouncilProposalRegistry>();
     rData.councilProposalRegistry->Load(rPaths.councilProposals);

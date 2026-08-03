@@ -12,13 +12,17 @@
 #include "game/units/MoveCostCalculator.h"
 #include "game/units/StepEvaluator.h"
 #include "game/units/Pathfinder.h"
+#include "game/units/IUnitOrderWorld.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "game/units/ProbeActionExecutor.h"
 #include "lib/DerefView.h"
 #include "lib/IdAllocator.h"
 #include "lib/Signal.h"
 #include <memory>
+#include <optional>
 #include <random>
+#include <string>
+#include <unordered_set>
 #include <vector>
 
 namespace ac
@@ -33,7 +37,7 @@ class CouncilProposalRegistry;
 struct CouncilRulesConfig_t;
 class PlanetaryCouncil;
 
-class GameState
+class GameState : public IUnitOrderWorld
 {
 public:
     // pUnitComponents sizes the aura scan for unit-projected ThisTile effects; may be null
@@ -97,8 +101,17 @@ public:
     const WorldMap& GetWorldMap() const;
 
     // Base whose center tile is (tileX, tileY), or nullptr if none.
-    BaseManager* FindBaseAt(int tileX, int tileY);
+    BaseManager* FindBaseAt(int tileX, int tileY) override;
     const BaseManager* FindBaseAt(int tileX, int tileY) const;
+
+    std::optional<CombatResult_t> TryInterceptAttack(
+        Unit& rAttacker, Unit& rDefender, TileEffectsContext& rTileEffects,
+        std::mt19937& rRng) override;
+    BaseConquestResult_t ResolvePostCombatBaseConquest(
+        Unit& rAttacker, const Tile& rDefenderTile, const GameDataContext& rDataContext,
+        std::mt19937& rRng) override;
+    BaseConquestResult_t ResolveBaseEntryConquest(
+        Unit& rMover, const GameDataContext& rDataContext, std::mt19937& rRng) override;
 
     // WorldGlobal lane: every faction's WorldGlobal-scoped active effects, excluding
     // rExclude's own (a faction's own pool already contains its WorldGlobal effects),
@@ -138,6 +151,11 @@ public:
     // constructible only after GameState exists, and would dangle if GameState were ever
     // rebuilt (new game / load game).
     const SecretProjectAvailabilityCalculator& GetSecretProjectAvailability() const;
+
+    // Secret Projects lost when a base is razed (pop → 0). Tombstoned so they can never be
+    // rebuilt by any faction.
+    void MarkSecretProjectDestroyed(const std::string& buildingId);
+    bool IsSecretProjectDestroyed(const std::string& buildingId) const;
 
     // Public orbital building census (buildings with orbital == true). Visible to all factions.
     std::vector<OrbitalCensusEntry_t> GetOrbitalCensus() const;
@@ -185,6 +203,7 @@ private:
     // Constructed with *this: only stores the reference, never dereferences it during
     // GameState's own construction, so binding it before m_factions is populated is safe.
     SecretProjectAvailabilityCalculator m_secretProjectAvailability;
+    std::unordered_set<std::string> m_destroyedSecretProjects;
 };
 
 } // namespace ac

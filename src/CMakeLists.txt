@@ -81,8 +81,12 @@ add_library(ac-core STATIC
     game/units/DisengageRules.cpp
     game/units/InterceptRules.cpp
     game/units/MovementRules.cpp
+    game/units/TransportRules.cpp
     game/units/FoundBaseRules.cpp
     game/units/TerraformRules.cpp
+    game/units/BaseConquestConfigParser.cpp
+    game/units/BaseConquestRules.cpp
+    game/units/BaseConquestEffects.cpp
     game/units/ProbeActionConfigParser.cpp
     game/units/ProbeActionEffects.cpp
     game/units/ProbeActionExecutor.cpp

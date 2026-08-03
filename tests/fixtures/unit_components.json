@@ -193,7 +193,8 @@
     "name": "Test Supply Crawler",
     "type": "weapon",
     "effects": [
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "supply_crawl" } }
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "supply_crawl" } },
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "cannot_capture_bases" } }
     ]
   },
   {
@@ -202,7 +203,8 @@
     "type": "weapon",
     "effects": [
       { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "found_base" } },
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "single_use" } }
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "single_use" } },
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "cannot_capture_bases" } }
     ]
   },
   {
@@ -211,7 +213,8 @@
     "type": "weapon",
     "effects": [
       { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "probe_team" } },
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "ignore_zone_of_control" } }
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "ignore_zone_of_control" } },
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "cannot_capture_bases" } }
     ]
   },
   {
@@ -219,7 +222,8 @@
     "name": "Test Terraformer",
     "type": "weapon",
     "effects": [
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "terraform" } }
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "terraform" } },
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "cannot_capture_bases" } }
     ]
   },
   {
@@ -227,7 +231,8 @@
     "name": "Test Found Base Without Single Use",
     "type": "weapon",
     "effects": [
-      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "found_base" } }
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "found_base" } },
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "cannot_capture_bases" } }
     ]
   },
   {
@@ -245,6 +250,118 @@
     "type": "special",
     "effects": [
       { "type": "StatModifier", "scope": "FactionGlobal", "parameters": { "stat": "energy", "amount": 1 } }
+    ]
+  },
+  {
+    "id": "test_amphibious",
+    "name": "Test Amphibious Pods",
+    "type": "ability",
+    "effects": [
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "amphibious" } }
+    ]
+  },
+  {
+    "id": "test_transport",
+    "name": "Test Troop Transport",
+    "type": "weapon",
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "cargo_capacity", "amount": 1, "op": "Add" } },
+      { "type": "TransportParams", "scope": "ThisUnit", "parameters": { "passenger_domains": ["land"] } },
+      {
+        "type": "TransportParams",
+        "scope": "ThisUnit",
+        "unitFilter": { "kind": "Domain", "domain": "air" },
+        "parameters": { "load_site_flags": ["loads_air_transport"] }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "unitFilter": { "kind": "Domain", "domain": "land" },
+        "parameters": { "stat": "movement", "amount": -1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "unitFilter": { "kind": "Domain", "domain": "sea" },
+        "parameters": { "stat": "movement", "amount": -1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "unitFilter": { "kind": "Domain", "domain": "air" },
+        "parameters": { "stat": "movement", "amount": -50, "op": "AddPercent" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "unitFilter": { "kind": "Domain", "domain": "air" },
+        "parameters": { "stat": "movement", "amount": -1, "op": "Add" }
+      },
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "cannot_capture_bases" } }
+    ]
+  },
+  {
+    "id": "test_transport_2",
+    "name": "Test Troop Transport Capacity 2",
+    "type": "weapon",
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "cargo_capacity", "amount": 2, "op": "Add" } },
+      { "type": "TransportParams", "scope": "ThisUnit", "parameters": { "passenger_domains": ["land"] } },
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "cannot_capture_bases" } }
+    ]
+  },
+  {
+    "id": "test_carrier_deck",
+    "name": "Test Carrier Deck",
+    "type": "ability",
+    "effects": [
+      {
+        "type": "TransportParams",
+        "scope": "ThisUnit",
+        "unitFilter": { "kind": "Domain", "domain": "sea" },
+        "parameters": { "passenger_domains": ["air"] }
+      },
+      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "refuels_air" } },
+      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "loads_air_transport" } }
+    ]
+  },
+  {
+    "id": "test_air_transport",
+    "name": "Test Air Transport",
+    "type": "weapon",
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "cargo_capacity", "amount": 1, "op": "Add" } },
+      {
+        "type": "TransportParams",
+        "scope": "ThisUnit",
+        "parameters": {
+          "passenger_domains": ["land"],
+          "load_site_flags": ["loads_air_transport"]
+        }
+      },
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "cannot_capture_bases" } }
+    ]
+  },
+  {
+    "id": "test_fuel_flight_chassis",
+    "name": "Test Fuel Flight Chassis (Needlejet stand-in)",
+    "type": "chassis",
+    "domain": "air",
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "movement", "amount": 4 } },
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "vision", "amount": 1 } },
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "hit_points", "amount": 10 } },
+      { "type": "StatModifier", "scope": "ThisUnit", "parameters": { "stat": "fuel", "amount": 1 } },
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "flight" } },
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "cannot_capture_bases" } }
+    ]
+  },
+  {
+    "id": "test_no_conquest_repair",
+    "name": "Test No Conquest Repair (Battle Ogre stand-in)",
+    "type": "ability",
+    "effects": [
+      { "type": "RuleFlag", "scope": "ThisUnit", "parameters": { "flag": "no_conquest_repair" } }
     ]
   }
 ]
