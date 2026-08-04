@@ -43,6 +43,26 @@
     ]
   },
   {
+    "id": "Water",
+    "name": "Water",
+    "tags": ["landform"],
+    "effects": []
+  },
+  {
+    "id": "Ocean",
+    "name": "Ocean",
+    "tags": ["landform"],
+    "effects": []
+  },
+  {
+    "id": "OceanShelf",
+    "name": "Ocean Shelf",
+    "tags": ["landform"],
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" } }
+    ]
+  },
+  {
     "id": "Fungus",
     "name": "Fungus",
     "move_cost": 3,
@@ -95,6 +115,17 @@
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" } },
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "minerals", "amount": 2, "op": "Add" } },
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "energy", "amount": 1, "op": "Add" } }
+    ]
+  },
+  {
+    "id": "KelpFarm",
+    "name": "Kelp Farm",
+    "tags": ["sea_terraform"],
+    "turns_required": 4,
+    "energy_cost": 0,
+    "excludes": ["Ocean"],
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 2, "op": "Add" } }
     ]
   },
   {

@@ -113,6 +113,7 @@ add_library(ac-core STATIC
     game/faction/VisibilityRules.cpp
     game/faction/UnitVisibility.cpp
     game/map/ImprovementConfigParser.cpp
+    game/map/TerrainFeatureValidation.cpp
     game/map/TerraformSpread.cpp
     game/map/WorldGenPresetConfigParser.cpp
     game/map/WorldGenDecorationConfigParser.cpp
@@ -128,6 +129,14 @@ add_library(ac-core STATIC
     game/stages/CustomTurnStage.cpp
     lib/Rational.cpp
 )
+
+# Exhaustive-switch enforcement. Several enums (TerrainFeature_t, ConditionKind_t, ...) are
+# deliberately handled by unqualified switches so that adding an enumerator breaks the build
+# at every site that must make a decision about it, rather than silently taking a default.
+# Promoted to an error because a mere warning is lost in build output.
+if(NOT MSVC)
+    target_compile_options(ac-core PRIVATE -Wswitch -Werror=switch)
+endif()
 
 # Built-in turn stages self-register via file-scope TurnStageRegistrar<T> instances.
 # Those symbols are never named from outside their TUs, so a STATIC archive would

@@ -5,6 +5,7 @@
 #include "game/buildings/BuildingRegistry.h"
 #include "game/faction/FactionRegistry.h"
 #include "game/map/ImprovementRegistry.h"
+#include "game/map/TerrainFeatureValidation.h"
 #include "game/map/LandmarkConfig.h"
 #include "game/map/LandmarkConfigParser.h"
 #include "game/map/WorldGenDecorationConfigParser.h"
@@ -114,6 +115,7 @@ void LoadGameData(GameDataContext& rData, const GameDataPaths& rPaths)
         std::make_unique<CouncilRulesConfig_t>(councilRulesParser.ParseConfig(rPaths.councilRules));
 
     // Cross-config id checks — only safe once every registry above is loaded.
+    ValidateTerrainFeatures(*rData.improvementRegistry);
     ValidateEffectReferences(rData);
     ValidateRequiredTechReferences(rData);
 

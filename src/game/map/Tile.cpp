@@ -20,18 +20,6 @@ std::string ToString(Moisture_t moisture)
     return std::string(magic_enum::enum_name(moisture));
 }
 
-const std::vector<std::string>& AllTerrainFeatureIds()
-{
-    // Built from the same ToString mappings HasFeature matches against, so the list can't
-    // drift from the actual matching logic.
-    static const std::vector<std::string> ids = {
-        ToString(Rockiness_t::Flat), ToString(Rockiness_t::Rolling), ToString(Rockiness_t::Rocky),
-        ToString(Moisture_t::Arid), ToString(Moisture_t::Moist), ToString(Moisture_t::Wet),
-        "River", "Aquifer", "Fungus", "Water",
-    };
-    return ids;
-}
-
 Tile::Tile()
     : m_x(0)
     , m_y(0)
@@ -107,6 +95,7 @@ Rockiness_t Tile::GetRockiness() const
 void Tile::SetElevation(int elevation)
 {
     m_elevation = elevation;
+    RefreshTerrainFeatures_();
 }
 
 int Tile::GetElevation() const
@@ -211,12 +200,29 @@ const std::vector<const ImprovementConfig_t*>& Tile::GetTerrainFeatures() const
 
 bool Tile::HasFeature(std::string_view featureId) const
 {
-    if (featureId == "Water") return IsWater();
-    if (ToString(m_rockiness) == featureId) return true;
-    if (ToString(m_moisture)  == featureId) return true;
-    if (m_bHasRiver  && featureId == "River")  return true;
-    if (m_bHasAquifer && featureId == "Aquifer") return true;
-    if (m_bHasFungus && featureId == "Fungus") return true;
+    // Intrinsic features answer from tile state, never from the improvement list - a tile
+    // cannot carry "River"/"Fungus"/a depth band as a built improvement. The switch is
+    // exhaustive so adding a TerrainFeature_t enumerator fails to compile until handled here.
+    if (const auto feature = magic_enum::enum_cast<TerrainFeature_t>(featureId))
+    {
+        switch (*feature)
+        {
+            case TerrainFeature_t::Water:
+                return IsWater();
+            case TerrainFeature_t::Ocean:
+                return IsWater() && m_elevation < k_OceanShelfMinElevation;
+            case TerrainFeature_t::OceanShelf:
+                return IsWater() && m_elevation >= k_OceanShelfMinElevation;
+            case TerrainFeature_t::River:
+                return m_bHasRiver;
+            case TerrainFeature_t::Aquifer:
+                return m_bHasAquifer;
+            case TerrainFeature_t::Fungus:
+                return m_bHasFungus;
+        }
+    }
+    if (magic_enum::enum_name(m_rockiness) == featureId) return true;
+    if (magic_enum::enum_name(m_moisture)  == featureId) return true;
     return HasImprovement(featureId);
 }
 
@@ -228,34 +234,35 @@ void Tile::RefreshTerrainFeatures_()
         return;
     }
 
-    if (const ImprovementConfig_t* pRockiness = m_pImprovements->Find(ToString(m_rockiness)))
+    // Get() rather than Find(): ValidateTerrainFeatures has already proven every id below
+    // exists in the registry, so a miss here is a broken invariant, not a skippable feature.
+    auto pushFeature = [&](std::string_view id)
     {
-        m_terrainFeatures.push_back(pRockiness);
-    }
-    if (const ImprovementConfig_t* pMoisture = m_pImprovements->Find(ToString(m_moisture)))
+        m_terrainFeatures.push_back(&m_pImprovements->Get(std::string(id)));
+    };
+
+    pushFeature(magic_enum::enum_name(m_rockiness));
+    pushFeature(magic_enum::enum_name(m_moisture));
+    if (IsWater())
     {
-        m_terrainFeatures.push_back(pMoisture);
+        // General-to-specific: Water carries the rules shared by all sea tiles, then exactly
+        // one depth band layers its own on top.
+        pushFeature(magic_enum::enum_name(TerrainFeature_t::Water));
+        pushFeature(magic_enum::enum_name(m_elevation >= k_OceanShelfMinElevation
+                                              ? TerrainFeature_t::OceanShelf
+                                              : TerrainFeature_t::Ocean));
     }
     if (m_bHasRiver)
     {
-        if (const ImprovementConfig_t* pRiver = m_pImprovements->Find("River"))
-        {
-            m_terrainFeatures.push_back(pRiver);
-        }
+        pushFeature(magic_enum::enum_name(TerrainFeature_t::River));
     }
     if (m_bHasAquifer)
     {
-        if (const ImprovementConfig_t* pAquifer = m_pImprovements->Find("Aquifer"))
-        {
-            m_terrainFeatures.push_back(pAquifer);
-        }
+        pushFeature(magic_enum::enum_name(TerrainFeature_t::Aquifer));
     }
     if (m_bHasFungus)
     {
-        if (const ImprovementConfig_t* pFungus = m_pImprovements->Find("Fungus"))
-        {
-            m_terrainFeatures.push_back(pFungus);
-        }
+        pushFeature(magic_enum::enum_name(TerrainFeature_t::Fungus));
     }
 }
 

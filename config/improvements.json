@@ -78,6 +78,30 @@
     ]
   },
   {
+    "id": "Water",
+    "name": "Water",
+    "tags": ["landform"],
+    "effects": []
+  },
+  {
+    "id": "Ocean",
+    "name": "Ocean",
+    "tags": ["landform"],
+    "effects": []
+  },
+  {
+    "id": "OceanShelf",
+    "name": "Ocean Shelf",
+    "tags": ["landform"],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" }
+      }
+    ]
+  },
+  {
     "id": "Fungus",
     "name": "Fungus",
     "move_cost": 3,
@@ -387,7 +411,7 @@
     "tags": ["sea_terraform"],
     "turns_required": 4,
     "energy_cost": 0,
-    "excludes": ["MiningPlatform", "TidalHarness", "ThermalBorehole"],
+    "excludes": ["Ocean", "MiningPlatform", "TidalHarness", "ThermalBorehole"],
     "effects": [
       {
         "type": "StatModifier",
@@ -402,7 +426,7 @@
     "tags": ["sea_terraform"],
     "turns_required": 8,
     "energy_cost": 0,
-    "excludes": ["KelpFarm", "TidalHarness", "ThermalBorehole"],
+    "excludes": ["Ocean", "KelpFarm", "TidalHarness", "ThermalBorehole"],
     "effects": [
       {
         "type": "StatModifier",
@@ -422,7 +446,7 @@
     "tags": ["sea_terraform"],
     "turns_required": 4,
     "energy_cost": 0,
-    "excludes": ["KelpFarm", "MiningPlatform", "ThermalBorehole"],
+    "excludes": ["Ocean", "KelpFarm", "MiningPlatform", "ThermalBorehole"],
     "effects": [
       {
         "type": "StatModifier",

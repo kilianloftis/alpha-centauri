@@ -5,6 +5,7 @@
 #include "game/EffectReferenceValidator.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/map/ImprovementRegistry.h"
+#include "game/map/TerrainFeatureValidation.h"
 #include "game/units/UnitComponentRegistry.h"
 #include "game/effects/BonusEffect.h"
 
@@ -132,12 +133,15 @@ TEST_CASE("ValidateEffectReferences: condition features accept terrain ids and i
     improvements.Load(actest::FixturePath("improvements.json"));
 
     actest::EffectPool pool;
-    // "Rocky" is a terrain feature id; "Base" is an improvement id — both valid.
+    // "Rocky" / "Base" / "Water" are all improvement ids — condition features have no
+    // non-registry special cases.
     const std::vector<EffectConfig_t> good = {
         pool.StatMod(StatId_t::Attack, 25.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit,
                      std::nullopt, actest::TargetTileHas("Rocky")),
         pool.StatMod(StatId_t::Attack, 25.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit,
-                     std::nullopt, actest::TargetTileHas("Base"))};
+                     std::nullopt, actest::TargetTileHas("Base")),
+        pool.StatMod(StatId_t::Attack, 25.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit,
+                     std::nullopt, actest::TargetTileHas("Water"))};
     CHECK_NOTHROW(ValidateEffectReferences(good, "src", nullptr, &improvements, nullptr));
 
     const std::vector<EffectConfig_t> bad = {
@@ -145,6 +149,20 @@ TEST_CASE("ValidateEffectReferences: condition features accept terrain ids and i
                      std::nullopt, actest::TargetTileHas("Swamp"))};
     CHECK_THROWS_WITH(ValidateEffectReferences(bad, "src", nullptr, &improvements, nullptr),
                       Catch::Matchers::ContainsSubstring("Swamp"));
+}
+
+TEST_CASE("ValidateTerrainFeatures: every intrinsic terrain id must have an improvement entry",
+          "[effects][validation][terrain]")
+{
+    ImprovementRegistry complete;
+    complete.Load(actest::FixturePath("improvements.json"));
+    CHECK_NOTHROW(ValidateTerrainFeatures(complete));
+
+    // Same file minus "Aquifer" — without this check Tile would silently drop the feature.
+    ImprovementRegistry incomplete;
+    incomplete.Load(actest::FixturePath("improvements_missing_terrain.json"));
+    CHECK_THROWS_WITH(ValidateTerrainFeatures(incomplete),
+                      Catch::Matchers::ContainsSubstring("Aquifer"));
 }
 
 TEST_CASE("ValidateEffectReferences: HasComponent unitFilter ids must exist",

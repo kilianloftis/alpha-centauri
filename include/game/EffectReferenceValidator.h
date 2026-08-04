@@ -14,11 +14,11 @@ struct EffectConfig_t;
 struct GameDataContext;
 
 // Validates the cross-config id references inside one effects list: GrantBuilding targets,
-// GrantTech targets, HasImprovement selector ids, TargetTileHas condition feature ids
-// (an improvement id or a terrain feature id from AllTerrainFeatureIds), and HasComponent
-// unitFilter component ids. Throws std::runtime_error naming rSourceId and the offending
-// id. A null registry skips the checks that need it. GrantUnit targets are not validated —
-// unit designs are runtime data with no config registry.
+// GrantTech targets, HasImprovement selector ids, TargetTileHas / AllOf condition feature
+// ids (always an improvement id), and HasComponent unitFilter
+// component ids. Throws std::runtime_error naming rSourceId and the offending id. A null
+// registry skips the checks that need it. GrantUnit targets are not validated — unit
+// designs are runtime data with no config registry.
 void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
                               const std::string& rSourceId,
                               const BuildingRegistry* pBuildings,

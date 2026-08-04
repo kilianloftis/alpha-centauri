@@ -25,15 +25,30 @@ enum class Moisture_t
     Wet
 };
 
+// Feature ids Tile::HasFeature resolves from intrinsic tile state (elevation and the terrain
+// bools) rather than from the improvement list. Enumerator names ARE the corresponding
+// ImprovementConfig_t::id strings - magic_enum maps between the two, so there is no second
+// place to keep them in sync - and every one must exist in improvements.json, which
+// ValidateTerrainFeatures enforces at load. Water is not exclusive with the depth bands: a
+// submerged tile carries Water (shared sea rules) plus exactly one of Ocean/OceanShelf.
+enum class TerrainFeature_t
+{
+    Water,
+    Ocean,
+    OceanShelf,
+    River,
+    Aquifer,
+    Fungus
+};
+
 // String ids matching ImprovementConfig_t::id entries in config/improvements.json,
 // used to look up effects/exclusivity for these terrain classifications.
 std::string ToString(Rockiness_t rockiness);
 std::string ToString(Moisture_t moisture);
 
-// Every terrain feature id Tile::HasFeature can match (all rockiness/moisture tiers plus
-// River, Aquifer, Fungus, and Water). Together with improvement ids, these are the valid
-// feature references for effect conditions/selectors — used by ValidateEffectReferences.
-const std::vector<std::string>& AllTerrainFeatureIds();
+// SMAC ocean-shelf / "one above sea" mapped onto meter elevations: deep ocean below this
+// cannot host kelp / sea terraform; shallower water is OceanShelf.
+inline constexpr int k_OceanShelfMinElevation = -2000;
 
 class Tile
 {
@@ -102,15 +117,15 @@ public:
     bool HasImprovement(std::string_view improvementId) const;
     const std::vector<const ImprovementConfig_t*>& GetImprovements() const;
 
-    // Terrain-only feature configs: rockiness, moisture, river, aquifer, fungus. Intrinsic
-    // terrain properties (enums/bools) are mirrored here as registry pointers after
-    // BindImprovements. Improvements are NOT included — effect collectors iterate
-    // GetImprovements() for those.
+    // Terrain-only feature configs: rockiness, moisture, and every active TerrainFeature_t.
+    // Intrinsic terrain properties (enums/bools/elevation) are mirrored here as registry
+    // pointers after BindImprovements, ordered general-to-specific (Water before its depth
+    // band). Improvements are NOT included — effect collectors iterate GetImprovements().
     const std::vector<const ImprovementConfig_t*>& GetTerrainFeatures() const;
 
-    // Returns true if featureId matches any active feature on this tile: a terrain feature
-    // (rockiness/moisture/river/aquifer/fungus) or an improvement id. Used by
-    // conditions/selectors and CanBuildImprovement, which reference features by string id.
+    // Returns true if featureId matches any active feature on this tile: a rockiness/moisture
+    // name, an active TerrainFeature_t, or an improvement id. Used by conditions/selectors and
+    // CanBuildImprovement, which reference features by string id.
     bool HasFeature(std::string_view featureId) const;
 
 private:

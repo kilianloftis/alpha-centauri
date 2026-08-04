@@ -16,9 +16,8 @@ namespace ac
 namespace
 {
 
-// SMAC ocean-shelf / "one above sea" mapped onto our meter elevations: deep ocean
-// below -2000m cannot host kelp; land above 1000m only receives forest when moist/wet.
-constexpr int k_OceanShelfMinElevation = -2000;
+// Land above 1000m only receives forest when moist/wet. Deep-ocean kelp gate uses
+// k_OceanShelfMinElevation from Tile.h.
 constexpr int k_OneAboveSeaMaxElevation = 1000;
 
 int MoistureOrdinal_(Moisture_t moisture)

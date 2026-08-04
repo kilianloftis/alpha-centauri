@@ -1,0 +1,63 @@
+[
+  {
+    "id": "Flat",
+    "name": "Flat",
+    "tags": ["landform"],
+    "effects": []
+  },
+  {
+    "id": "Rolling",
+    "name": "Rolling",
+    "tags": ["landform"],
+    "effects": []
+  },
+  {
+    "id": "Rocky",
+    "name": "Rocky",
+    "tags": ["landform"],
+    "effects": []
+  },
+  {
+    "id": "Arid",
+    "name": "Arid",
+    "effects": []
+  },
+  {
+    "id": "Moist",
+    "name": "Moist",
+    "effects": []
+  },
+  {
+    "id": "Wet",
+    "name": "Wet",
+    "effects": []
+  },
+  {
+    "id": "Water",
+    "name": "Water",
+    "tags": ["landform"],
+    "effects": []
+  },
+  {
+    "id": "Ocean",
+    "name": "Ocean",
+    "tags": ["landform"],
+    "effects": []
+  },
+  {
+    "id": "OceanShelf",
+    "name": "Ocean Shelf",
+    "tags": ["landform"],
+    "effects": []
+  },
+  {
+    "id": "River",
+    "name": "River",
+    "effects": []
+  },
+  {
+    "id": "Fungus",
+    "name": "Fungus",
+    "effects": []
+  }
+]

@@ -11,7 +11,9 @@
 #include "game/units/MovementRules.h"
 #include "game/units/Unit.h"
 
+#include <magic_enum.hpp>
 #include <algorithm>
+#include <string_view>
 
 namespace ac
 {
@@ -19,7 +21,7 @@ namespace ac
 namespace
 {
 
-constexpr const char* k_FungusId = "Fungus";
+constexpr std::string_view k_FungusId = magic_enum::enum_name(TerrainFeature_t::Fungus);
 constexpr const char* k_RoadId = "Road";
 
 } // namespace

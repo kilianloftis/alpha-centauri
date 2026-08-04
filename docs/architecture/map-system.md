@@ -24,6 +24,7 @@ graph TB
     subgraph "Tile Features"
         River[River<br/>bool]
         Fungus[Fungus<br/>bool]
+        TerrainFeature_t[TerrainFeature_t<br/>enum: Water/Ocean/OceanShelf/<br/>River/Aquifer/Fungus<br/>names are improvement ids]
         Improvements[Improvements<br/>vector const ImprovementConfig_t*]
     end
 
@@ -91,7 +92,8 @@ Territory overlap between factions is broken by crow-flies distance (`dx² + dy�
     - Elevation (int: -4000 to 4000 meters)
   - Expose `IsWater()` / `IsLand()` — water is `elevation < 0` (same rule as landform rendering)
   - Track tile features (Rivers, Fungus, Improvements)
-  - Expose `GetTerrainFeatureIds()` (terrain ids) and `GetImprovements()` (config pointers) so the effects system can resolve yield/defense from terrain and improvements through one mechanism — see Tile Improvement Effects below
+  - Expose `GetTerrainFeatures()` (terrain config pointers) and `GetImprovements()` (config pointers) so the effects system can resolve yield/defense from terrain and improvements through one mechanism — see Tile Improvement Effects below
+  - Resolve intrinsic feature ids via `TerrainFeature_t`, whose enumerator names *are* the `improvements.json` ids (`magic_enum` maps between them, so there is no second list to keep in sync). `HasFeature` switches over it exhaustively — `-Werror=switch` on `ac-core` means adding an enumerator breaks the build until every site decides about it — and `ValidateTerrainFeatures` throws at load if any enumerator lacks an improvement entry. Features stack: a sea tile carries `Water` *and* one of `Ocean`/`OceanShelf`
 - **Composition**:
   - `Position`: x,y coordinates on the map grid
   - `Moisture_t`: Enum (Arid, Moist, Wet) - affects nutrient production via its `Moist`/`Wet` entry in `config/improvements.json`
@@ -177,7 +179,7 @@ graph TB
   - Improvement rendering priority and monolith/landmark handling
 
 ### Tile Improvement Effects
-- **Purpose**: Unifies terrain classification, natural features, player-built improvements, tile specials (formerly "bonus"/"landmark"), and a founded base behind one config type (`ImprovementConfig_t`), since all of them answer the same two questions: what effects do they grant, and what do they exclude. Terrain is resolved by string id (`Tile::GetTerrainFeatureIds()` → `ImprovementRegistry::Find(id)`); improvements are held directly as `const ImprovementConfig_t*` on the tile (`Tile::GetImprovements()`). Full details (scope semantics, the `ThisTile` resolution pattern, the seeded-energy pattern) are in `docs/architecture/effects-system.md`'s "Tile Improvement Effects" section — this is the map-system-facing summary.
+- **Purpose**: Unifies terrain classification, natural features, player-built improvements, tile specials (formerly "bonus"/"landmark"), and a founded base behind one config type (`ImprovementConfig_t`), since all of them answer the same two questions: what effects do they grant, and what do they exclude. Terrain is resolved by name into cached config pointers (`Tile::GetTerrainFeatures()`); improvements are held directly as `const ImprovementConfig_t*` on the tile (`Tile::GetImprovements()`). Full details (scope semantics, the `ThisTile` resolution pattern, the seeded-energy pattern) are in `docs/architecture/effects-system.md`'s "Tile Improvement Effects" section — this is the map-system-facing summary.
 - **Components**:
   - `ImprovementConfig_t` / `ImprovementConfigParser` / `ImprovementRegistry` (`include/game/map/ImprovementConfigParser.h`, `ImprovementRegistry.h`) — id, name, mineral cost, required tech, `excludes` (incompatible feature ids), per-effect `radius`, optional `owned_by_territory`, and an `effects` array.
   - `TileEffectsContext::CollectAreaEffects` / `ResolveTileYield` / `ResolveTileDefenseMultiplier` — gather own-tile and neighbor aura effects (Chebyshev scan).

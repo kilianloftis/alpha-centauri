@@ -10,7 +10,6 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/BonusEffect.h"
 
-#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 
 using namespace ac;
@@ -224,7 +223,24 @@ TEST_CASE("HasFeature: Water matches IsWater tiles", "[effects][condition][tile]
     land.SetElevation(100);
 
     CHECK(water.HasFeature("Water"));
+    CHECK(water.IsWater());
     CHECK_FALSE(land.HasFeature("Water"));
-    CHECK(std::find(AllTerrainFeatureIds().begin(), AllTerrainFeatureIds().end(), "Water")
-          != AllTerrainFeatureIds().end());
+    CHECK_FALSE(land.IsWater());
+}
+
+TEST_CASE("HasFeature: Ocean vs OceanShelf by depth", "[effects][condition][tile]")
+{
+    Tile shelf(0, 0);
+    shelf.SetElevation(-100);
+    Tile ocean(1, 0);
+    ocean.SetElevation(k_OceanShelfMinElevation - 1);
+    Tile land(2, 0);
+    land.SetElevation(100);
+
+    CHECK(shelf.HasFeature("OceanShelf"));
+    CHECK_FALSE(shelf.HasFeature("Ocean"));
+    CHECK(ocean.HasFeature("Ocean"));
+    CHECK_FALSE(ocean.HasFeature("OceanShelf"));
+    CHECK_FALSE(land.HasFeature("Ocean"));
+    CHECK_FALSE(land.HasFeature("OceanShelf"));
 }

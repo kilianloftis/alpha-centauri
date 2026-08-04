@@ -347,6 +347,83 @@ TEST_CASE("CanBuildImprovement: excludes-list features block construction", "[ef
     CHECK(CanBuildImprovement(tile, *pFarm));
 }
 
+TEST_CASE("ResolveTileYield: OceanShelf adds nutrients; Ocean does not",
+          "[effects][tile][yield]")
+{
+    actest::WorldFixture world;
+    Tile& tile = world.At(4, 4);
+
+    tile.SetElevation(-100); // OceanShelf
+    CHECK(tile.HasFeature("OceanShelf"));
+    CHECK(world.ctx->ResolveTileYield(tile).effective.nutrients == 1);
+
+    tile.SetElevation(k_OceanShelfMinElevation - 1); // Ocean
+    CHECK(tile.HasFeature("Ocean"));
+    CHECK(world.ctx->ResolveTileYield(tile).effective.nutrients == 0);
+}
+
+TEST_CASE("Terrain features: Water stacks with its depth band, general before specific",
+          "[effects][tile][terrain]")
+{
+    actest::WorldFixture world;
+    Tile& tile = world.At(4, 4);
+
+    // Index of a feature id within GetTerrainFeatures(), or -1 when absent.
+    auto indexOf = [&](std::string_view id)
+    {
+        const std::vector<const ImprovementConfig_t*>& rFeatures = tile.GetTerrainFeatures();
+        for (std::size_t i = 0; i < rFeatures.size(); ++i)
+        {
+            if (rFeatures[i]->id == id)
+            {
+                return static_cast<int>(i);
+            }
+        }
+        return -1;
+    };
+
+    tile.SetElevation(-100); // shallow water
+    CHECK(tile.HasFeature("Water"));
+    CHECK(tile.HasFeature("OceanShelf"));
+    CHECK_FALSE(tile.HasFeature("Ocean"));
+    // Both present, and Water precedes the depth band it generalizes.
+    REQUIRE(indexOf("Water") >= 0);
+    REQUIRE(indexOf("OceanShelf") >= 0);
+    CHECK(indexOf("Water") < indexOf("OceanShelf"));
+    CHECK(indexOf("Ocean") == -1);
+
+    tile.SetElevation(k_OceanShelfMinElevation - 1); // deep water
+    CHECK(tile.HasFeature("Water"));
+    CHECK(tile.HasFeature("Ocean"));
+    CHECK_FALSE(tile.HasFeature("OceanShelf"));
+    REQUIRE(indexOf("Water") >= 0);
+    REQUIRE(indexOf("Ocean") >= 0);
+    CHECK(indexOf("Water") < indexOf("Ocean"));
+    CHECK(indexOf("OceanShelf") == -1);
+
+    tile.SetElevation(100); // land carries neither
+    CHECK_FALSE(tile.HasFeature("Water"));
+    CHECK_FALSE(tile.HasFeature("Ocean"));
+    CHECK_FALSE(tile.HasFeature("OceanShelf"));
+    CHECK(indexOf("Water") == -1);
+}
+
+TEST_CASE("CanBuildImprovement: sea terraform excludes Ocean but allows OceanShelf",
+          "[effects][tile]")
+{
+    actest::WorldFixture world;
+    const ImprovementConfig_t* pKelp = world.improvements.Find("KelpFarm");
+    REQUIRE(pKelp != nullptr);
+
+    Tile& shelf = world.At(4, 4);
+    shelf.SetElevation(-100);
+    CHECK(CanBuildImprovement(shelf, *pKelp));
+
+    Tile& ocean = world.At(5, 4);
+    ocean.SetElevation(k_OceanShelfMinElevation - 1);
+    CHECK_FALSE(CanBuildImprovement(ocean, *pKelp));
+}
+
 TEST_CASE("Per-effect radius: an effect's own radius grants reach beyond the host tile",
           "[effects][tile][aura][radius]")
 {

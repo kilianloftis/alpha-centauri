@@ -5,7 +5,6 @@
 #include "game/buildings/BuildingRegistry.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
-#include "game/map/Tile.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
 #include "game/research/TechRegistry.h"
@@ -22,7 +21,6 @@
 #include "game/units/UnitComponentRegistry.h"
 #include "game/effects/BonusEffect.h"
 
-#include <algorithm>
 #include <functional>
 #include <stdexcept>
 #include <variant>
@@ -38,12 +36,6 @@ namespace
 {
     throw std::runtime_error("Effect on '" + rSourceId + "' references unknown " + what
                              + " '" + rBadId + "'");
-}
-
-bool IsTerrainFeatureId_(const std::string& rId)
-{
-    const std::vector<std::string>& terrainIds = AllTerrainFeatureIds();
-    return std::find(terrainIds.begin(), terrainIds.end(), rId) != terrainIds.end();
 }
 
 } // namespace
@@ -86,13 +78,14 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
             ThrowBadReference_(rSourceId, "tech", rEffect.removedByTech);
         }
 
-        // Condition feature ids match Tile::HasFeature: either a terrain feature id or an
-        // improvement id. IsDefending has no feature id.
+        // Condition feature ids match Tile::HasFeature, and every one of them - including the
+        // intrinsic TerrainFeature_t ids - is an improvement entry. IsDefending /
+        // AttackerIsEmbarked have no feature id.
         if (rEffect.condition && pImprovements)
         {
             auto checkFeature = [&](const std::string& rFeatureId)
             {
-                if (!IsTerrainFeatureId_(rFeatureId) && !pImprovements->Find(rFeatureId))
+                if (!pImprovements->Find(rFeatureId))
                 {
                     ThrowBadReference_(rSourceId, "condition feature", rFeatureId);
                 }
