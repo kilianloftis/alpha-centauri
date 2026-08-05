@@ -4,14 +4,20 @@
 #include "GameFixtures.h"
 #include "TestHelpers.h"
 
+#include "game/GameSettings.h"
+#include "game/GameState.h"
 #include "game/buildings/BuildingConfigParser.h"
+#include "game/faction/DiplomacyLedger.h"
 #include "game/faction/ResearchManager.h"
 #include "game/faction/base/population/PopulationManager.h"
+#include "game/faction/base/production/ProductionManager.h"
 #include "game/map/Tile.h"
 #include "game/effects/ActiveEffect.h"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <memory>
+#include <stdexcept>
 
 using namespace ac;
 using Catch::Approx;
@@ -113,15 +119,21 @@ TEST_CASE("FilterForBase: a ThisBase effect with no origin base applies to no ba
 TEST_CASE("DispatchInstantaneousEffects: Instantaneous GrantBuilding constructs the building immediately",
           "[effects][base][instantaneous]")
 {
-    actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
+    actest::FactionFixture fixture;
+    GameSettings settings;
+    auto pMap = std::make_unique<WorldMap>(9, 9);
+    GameState state(std::move(pMap), fixture.improvements, &fixture.unitComponents, settings,
+                    fixture.morale());
+    Faction& faction = state.AddFaction(std::make_unique<Faction>(
+        state.AllocateFactionId(), true, fixture.factionDefinition, fixture.dataContext));
+    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
 
     const BuildingConfig_t* pGrantor = fixture.buildings().Find("instant_grantor");
     REQUIRE(pGrantor != nullptr);
 
     // Simulate OnProductionCompleted for instant_grantor.
     base.GetBuildingManager().AddBuilding(pGrantor->id);
-    DispatchInstantaneousEffects(*pGrantor, base);
+    DispatchInstantaneousEffects(*pGrantor, base, state);
 
     bool hasGranted = false;
     for (const BuildingConfig_t* pBuilding : base.GetBuildingManager().GetBuildings())
@@ -136,6 +148,44 @@ TEST_CASE("DispatchInstantaneousEffects: Instantaneous GrantBuilding constructs 
     // The granted building is a real constructed building: its continuous effects collect.
     const auto effects = base.CollectBuildingEffects();
     CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Nutrients), 0.0).total == 2.0);
+}
+
+TEST_CASE("DispatchInstantaneousEffects: Instantaneous Infiltration writes DiplomacyLedger",
+          "[effects][base][instantaneous][infiltration]")
+{
+    actest::FactionFixture fixture;
+    GameSettings settings;
+    auto pMap = std::make_unique<WorldMap>(9, 9);
+    GameState state(std::move(pMap), fixture.improvements, &fixture.unitComponents, settings,
+                    fixture.morale());
+    Faction& beneficiary = state.AddFaction(std::make_unique<Faction>(
+        state.AllocateFactionId(), true, fixture.factionDefinition, fixture.dataContext));
+    Faction& other = state.AddFaction(std::make_unique<Faction>(
+        state.AllocateFactionId(), false, fixture.factionDefinition, fixture.dataContext));
+    BaseManager& base = fixture.MakeFactionBase(beneficiary, 4, 4);
+
+    const BuildingConfig_t* pInfiltrator = fixture.buildings().Find("instant_infiltrator");
+    REQUIRE(pInfiltrator != nullptr);
+
+    base.GetBuildingManager().AddBuilding(pInfiltrator->id);
+    DispatchInstantaneousEffects(*pInfiltrator, base, state);
+
+    CHECK(state.GetDiplomacyLedger().HasInfiltration(
+        beneficiary.GetFactionId(), other.GetFactionId()));
+    // Ledger forbids self-pairs; FactionFilterCoversTarget also excludes the beneficiary.
+}
+
+TEST_CASE("Production completion without Bound GameState throws on Instantaneous dispatch",
+          "[effects][base][instantaneous]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(4, 4);
+    REQUIRE(fixture.pOwnerFaction->GetGameState() == nullptr);
+
+    const BuildingConfig_t* pGrantor = fixture.buildings().Find("instant_grantor");
+    REQUIRE(pGrantor != nullptr);
+    base.GetProduction().SetProduction(pGrantor);
+    CHECK_THROWS_AS(base.GetProduction().CompleteProduction(), std::runtime_error);
 }
 
 TEST_CASE("Full pipeline: building and pop bonuses land in base resource production",

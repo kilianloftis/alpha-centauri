@@ -180,18 +180,18 @@ TEST_CASE("ResolveStatModifiers: breakdown records amount and op per contributio
     CHECK(breakdown.contributions[0].sourceId == "bonus");
 }
 
-TEST_CASE("ResolveStatModifiers: non-StatModifier effects and null configs are ignored", "[effects][math]")
+TEST_CASE("ResolveStatModifiers: non-StatModifier effects are ignored", "[effects][math]")
 {
     actest::EffectPool pool;
-    std::vector<ActiveEffect_t> effects = {
+    const std::vector<ActiveEffect_t> effects = {
         Active(pool.RuleFlag(RuleFlagId_t::ForcesPsiCombat), "flag_source"),
         Active(pool.StatMod(StatId_t::Energy, 4.0), "real"),
     };
-    effects.push_back(ActiveEffect_t{nullptr, "null_config", nullptr});
 
     const StatBreakdown_t breakdown = ResolveStatModifiers(effects, 0.0);
     CHECK(breakdown.total == Approx(4.0));
     CHECK(breakdown.contributions.size() == 1);
+    CHECK(effects[1].config != nullptr); // ActiveEffect_t always carries a config
 }
 
 TEST_CASE("ResolveStatModifiers: does NOT itself filter by stat — callers must pre-filter", "[effects][math]")

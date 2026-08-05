@@ -83,7 +83,7 @@ void ExpandSocialRatingEffects(BaseEffects_t& rBaseEffects,
                                      + "_" + std::to_string(level);
         for (const auto& rEffect : it->second)
         {
-            rBaseEffects.effects.push_back({&rEffect, sourceId, nullptr});
+            rBaseEffects.effects.emplace_back(rEffect, sourceId);
         }
     }
 }
@@ -133,7 +133,7 @@ void ExpandFactionLaneSocialRatingEffects(FactionEffects_t& rFactionEffects,
             {
                 continue;
             }
-            rFactionEffects.effects.push_back({&rEffect, sourceId, nullptr});
+            rFactionEffects.effects.emplace_back(rEffect, sourceId);
         }
     }
 }

@@ -92,6 +92,16 @@ constexpr bool IsFactionLane(EffectScope_t scope)
     return lane == EffectLane_t::FactionWide || lane == EffectLane_t::FactionUnits;
 }
 
+// True when AppendActiveEffects should record pOriginBase on the ActiveEffect_t.
+// Derived from LaneFor (plus FactionUnits, which keeps origin for per-base conditions).
+constexpr bool TagsOriginBase(EffectScope_t scope)
+{
+    const EffectLane_t lane = LaneFor(scope);
+    return lane == EffectLane_t::Base
+        || lane == EffectLane_t::ProducedAtBase
+        || scope == EffectScope_t::FactionUnits;
+}
+
 enum class ModifierOp_t
 {
     Add,

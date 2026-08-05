@@ -603,16 +603,17 @@ ResolveProposalResult_t PlanetaryCouncil::Resolve(GameState& rGameState)
     return result;
 }
 
-std::vector<ActiveEffect_t> PlanetaryCouncil::CollectWorldEffects() const
+const std::vector<ActiveEffect_t>& PlanetaryCouncil::CollectWorldEffects() const
 {
     return m_effects.WorldEffects();
 }
 
-std::vector<ActiveEffect_t> PlanetaryCouncil::CollectFactionEffects(const Faction& rFaction) const
+const std::vector<ActiveEffect_t>& PlanetaryCouncil::CollectFactionEffects(const Faction& rFaction) const
 {
+    static const std::vector<ActiveEffect_t> k_Empty;
     if (m_pGovernor != &rFaction)
     {
-        return {};
+        return k_Empty;
     }
     return m_effects.GovernorEffects();
 }

@@ -4,6 +4,7 @@
 #include "game/effects/BonusEffect.h"
 #include "game/effects/EffectEnums.h"
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -20,14 +21,10 @@ bool IsContinuousWorldEffect(const EffectConfig_t& rEffect);
 
 // Owns the continuous ActiveEffects the Planetary Council projects: world-global effects
 // from the proposals currently in force, and faction-global effects granted to the
-// Planetary Governor. Keeps each ActiveEffect_t wrapper together with its backing
-// EffectConfig_t, so the wrappers this class hands out are internally consistent.
-//
-// That consistency does NOT survive a rebuild: RebuildWorld / SetGovernorEffects clear and
-// refill the config vectors, reallocating them, so any ActiveEffect_t *copied out* before
-// the rebuild dangles. Callers that retain copies (Faction's composed pool, BaseManager's
-// memo) rely on PlanetaryCouncil bumping its revision on every rebuild — see
-// PlanetaryCouncil::GetRevision. Package 3 replaces this with stable storage.
+// Planetary Governor. Backing EffectConfig_t nodes are heap-allocated; on rebuild, prior
+// nodes are retired (not destroyed) so ActiveEffect_t::config addresses remain valid for
+// the lifetime of this CouncilEffects instance, including across RebuildWorld /
+// SetGovernorEffects.
 class CouncilEffects
 {
 public:
@@ -42,15 +39,20 @@ public:
     const std::vector<ActiveEffect_t>& WorldEffects() const { return m_worldEffects; }
     const std::vector<ActiveEffect_t>& GovernorEffects() const { return m_governorEffects; }
 
-    // True when any active world effect carries the given RuleFlag.
+    // True when any active world effect carries the given RuleFlag. Throws if a wrapper
+    // has a null config (invariant violation — configs are always set at rebuild).
     bool HasActiveRuleFlag(RuleFlagId_t flag) const;
 
 private:
     void RebuildWrappers_();
+    void RetireConfigs_(std::vector<std::unique_ptr<EffectConfig_t>>& rLive,
+                        std::vector<std::unique_ptr<EffectConfig_t>>& rRetired);
 
-    std::vector<EffectConfig_t> m_worldConfigs;
+    std::vector<std::unique_ptr<EffectConfig_t>> m_worldConfigs;
+    std::vector<std::unique_ptr<EffectConfig_t>> m_retiredWorldConfigs;
     std::vector<ActiveEffect_t> m_worldEffects;
-    std::vector<EffectConfig_t> m_governorConfigs;
+    std::vector<std::unique_ptr<EffectConfig_t>> m_governorConfigs;
+    std::vector<std::unique_ptr<EffectConfig_t>> m_retiredGovernorConfigs;
     std::vector<ActiveEffect_t> m_governorEffects;
 };
 

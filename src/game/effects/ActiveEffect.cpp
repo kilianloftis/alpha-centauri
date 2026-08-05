@@ -22,6 +22,7 @@
 #include "game/effects/BonusEffect.h"
 #include <algorithm>
 #include <cmath>
+#include <span>
 #include <stdexcept>
 #include <iostream>
 #include <set>
@@ -35,9 +36,9 @@ namespace
 
 // The one config->ActiveEffect_t loop. Every public collect/append helper funnels through
 // here so the Instantaneous exclusion (those fire once via DispatchInstantaneousEffects)
-// and the ThisBase origin tagging can never be forgotten by an individual collector.
+// and TagsOriginBase origin tagging can never be forgotten by an individual collector.
 template <typename IncludePred>
-void AppendActiveEffectsIf_(const std::vector<EffectConfig_t>& rEffects,
+void AppendActiveEffectsIf_(std::span<const EffectConfig_t> rEffects,
                             const BaseManager* pOriginBase,
                             const std::string& sourceId,
                             IncludePred include,
@@ -49,23 +50,13 @@ void AppendActiveEffectsIf_(const std::vector<EffectConfig_t>& rEffects,
             continue;
         if (!include(rEffect))
             continue;
-        ActiveEffect_t activeEffect;
-        activeEffect.config = &rEffect;
-        activeEffect.sourceId = sourceId;
-        // ThisBase / ProducedAtThisBase need origin for routing. FactionUnits keep origin for
-        // per-base conditions (e.g. OriginBaseIsTargetBase) — not as a membership filter.
-        const EffectLane_t lane = LaneFor(rEffect.scope);
-        const bool bTagOrigin = lane == EffectLane_t::Base
-            || lane == EffectLane_t::ProducedAtBase
-            || rEffect.scope == EffectScope_t::FactionUnits;
-        activeEffect.originBase = bTagOrigin ? pOriginBase : nullptr;
-        rOut.push_back(activeEffect);
+        rOut.emplace_back(rEffect, sourceId, TagsOriginBase(rEffect.scope) ? pOriginBase : nullptr);
     }
 }
 
 } // namespace
 
-void AppendActiveEffects(const std::vector<EffectConfig_t>& rEffects,
+void AppendActiveEffects(std::span<const EffectConfig_t> rEffects,
                          const BaseManager* pOriginBase,
                          const std::string& sourceId,
                          std::vector<ActiveEffect_t>& rOut)
@@ -74,7 +65,7 @@ void AppendActiveEffects(const std::vector<EffectConfig_t>& rEffects,
                            [](const EffectConfig_t&) { return true; }, rOut);
 }
 
-void AppendFactionLaneEffects(const std::vector<EffectConfig_t>& rEffects,
+void AppendFactionLaneEffects(std::span<const EffectConfig_t> rEffects,
                               const std::string& sourceId,
                               std::vector<ActiveEffect_t>& rOut)
 {
@@ -90,7 +81,7 @@ bool TileEffectReaches(const EffectConfig_t& rEffect, int distance)
         && rEffect.radius >= distance;
 }
 
-void AppendTileEffects(const std::vector<EffectConfig_t>& rEffects,
+void AppendTileEffects(std::span<const EffectConfig_t> rEffects,
                        const std::string& sourceId,
                        int distance,
                        std::vector<ActiveEffect_t>& rOut)
@@ -273,10 +264,6 @@ std::vector<ActiveEffect_t> ExpandGrantBuildingEffects(
     // Index-based: AppendActiveEffects may push new GrantBuilding entries that must expand too.
     for (size_t i = 0; i < effects.size(); ++i)
     {
-        if (!effects[i].config)
-        {
-            continue;
-        }
         ExpandOneGrant_(effects[i], rRegistry, rBases, processedGrantedIds, effects);
     }
 
@@ -381,11 +368,6 @@ BaseEffects_t FilterForBase(const FactionEffects_t& rFactionEffects, const BaseM
     BaseEffects_t matching;
     for (const ActiveEffect_t& effect : rFactionEffects.effects)
     {
-        if (!effect.config)
-        {
-            continue;
-        }
-
         switch (LaneFor(effect.config->scope))
         {
             case EffectLane_t::Base:
@@ -434,19 +416,11 @@ std::vector<ActiveEffect_t> CollectFromPops(const PopulationManager& rPops, cons
     std::vector<ActiveEffect_t> result;
     for (const Pop& rPop : rPops.Pops())
     {
-        // Bind the source to a named local before filtering it: CollectPopEffects(...) is
-        // otherwise a temporary destroyed at the end of its statement, and the range-for
-        // below needs flatEffects to survive past that statement.
-        const std::vector<ActiveEffect_t> popEffects = CollectPopEffects(rPop.GetConfig());
+        // Origin is tagged at append time (TagsOriginBase); keep only ThisBase for the base pool.
+        std::vector<ActiveEffect_t> popEffects;
+        AppendActiveEffects(rPop.GetConfig().effects, &rOriginBase, rPop.GetConfig().id, popEffects);
         auto flatEffectsView = FilterByScope(popEffects, EffectScope_t::ThisBase);
-        const std::vector<ActiveEffect_t> flatEffects(flatEffectsView.begin(), flatEffectsView.end());
-
-        for (const ActiveEffect_t& effect : flatEffects)
-        {
-            ActiveEffect_t active = effect;
-            active.originBase = &rOriginBase;
-            result.push_back(active);
-        }
+        result.insert(result.end(), flatEffectsView.begin(), flatEffectsView.end());
     }
     return result;
 }
@@ -474,7 +448,7 @@ std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile)
 }
 
 void DispatchInstantaneousEffects(const BuildingConfig_t& rBuilding, BaseManager& rBase,
-                                  GameState* pGameState)
+                                  GameState& rGameState)
 {
     for (const EffectConfig_t& effect : rBuilding.effects)
     {
@@ -495,19 +469,14 @@ void DispatchInstantaneousEffects(const BuildingConfig_t& rBuilding, BaseManager
         }
         else if (std::get_if<InfiltrationEffect_t>(&effect.effect))
         {
-            if (!pGameState)
-            {
-                std::cerr << "[TODO] Instantaneous Infiltration from '" << rBuilding.id
-                          << "' requires GameState at dispatch\n";
-                continue;
-            }
-            ApplyInfiltrationEffect(*pGameState, rBase.GetFaction(), effect);
+            ApplyInfiltrationEffect(rGameState, rBase.GetFaction(), effect);
         }
     }
 }
 
-// A live unit's full effect list: design components, all FactionUnits (unitFilter only),
-// and ProducedAtThisBase effects whose origin matches the unit's production base.
+// A live unit's full effect list: design components, all FactionUnits, and ProducedAtThisBase
+// effects whose origin matches the unit's production base. unitFilter and ProducedAt origin
+// are applied here — see CollectLiveUnitEffects declaration.
 std::vector<ActiveEffect_t> CollectLiveUnitEffects(const Unit& rUnit)
 {
     std::vector<ActiveEffect_t> effects = rUnit.GetDesign().CollectEffects();
@@ -520,10 +489,6 @@ std::vector<ActiveEffect_t> CollectLiveUnitEffects(const Unit& rUnit)
     const BaseManager* pProducedAt = rUnit.GetProducedAtBase();
     std::erase_if(effects, [&](const ActiveEffect_t& rEffect)
     {
-        if (!rEffect.config)
-        {
-            return false;
-        }
         if (!UnitFilterSatisfied(*rEffect.config, rUnit))
         {
             return true;
@@ -538,16 +503,42 @@ std::vector<ActiveEffect_t> CollectLiveUnitEffects(const Unit& rUnit)
     return effects;
 }
 
+namespace
+{
+
+template <std::ranges::input_range Range>
+bool ResolveFlagFromEffects_(Range&& effects, RuleFlagId_t flagId)
+{
+    for (const ActiveEffect_t& rEffect : effects)
+    {
+        if (rEffect.config->condition.has_value())
+        {
+            continue;
+        }
+        const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.config->effect);
+        if (pFlag && pFlag->flag == flagId)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+} // namespace
+
 int ResolveStat(const UnitDesign& rDesign, StatId_t statId)
 {
+    // Materialize first: FilterByStatId rejects rvalues (borrowing view).
+    const std::vector<ActiveEffect_t> effects = rDesign.CollectEffects();
     return FinalizeResolvedStat(
-        ResolveStatModifiers(FilterByStatId(rDesign.CollectEffects(), statId), SeedFor(statId)).total);
+        ResolveStatModifiers(FilterByStatId(effects, statId), SeedFor(statId)).total);
 }
 
 int ResolveStat(const UnitDesign& rDesign, StatId_t statId, const EffectContext_t& rCtx)
 {
+    const std::vector<ActiveEffect_t> effects = rDesign.CollectEffects();
     return FinalizeResolvedStat(
-        ResolveStatModifiers(FilterByStatIdInContext(rDesign.CollectEffects(), statId, rCtx),
+        ResolveStatModifiers(FilterByStatIdInContext(effects, statId, rCtx),
                              SeedFor(statId), &rCtx).total);
 }
 
@@ -570,19 +561,7 @@ int ResolveAdditiveStat(const UnitDesign& rDesign, StatId_t statId)
 
 bool ResolveFlag(const UnitDesign& rDesign, RuleFlagId_t flagId)
 {
-    for (const ActiveEffect_t& rEffect : rDesign.CollectEffects())
-    {
-        if (!rEffect.config || rEffect.config->condition.has_value())
-        {
-            continue;
-        }
-        const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.config->effect);
-        if (pFlag && pFlag->flag == flagId)
-        {
-            return true;
-        }
-    }
-    return false;
+    return ResolveFlagFromEffects_(rDesign.CollectEffects(), flagId);
 }
 
 int ResolveStat(const Unit& rUnit, StatId_t statId)
@@ -619,70 +598,26 @@ double ResolveMultiplicativeStat(const Unit& rUnit, StatId_t statId, double base
 
 bool ResolveFlag(const Unit& rUnit, RuleFlagId_t flagId)
 {
-    for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rUnit))
-    {
-        if (!rEffect.config || rEffect.config->condition.has_value())
-        {
-            continue;
-        }
-        const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.config->effect);
-        if (pFlag && pFlag->flag == flagId)
-        {
-            return true;
-        }
-    }
-    return false;
+    return ResolveFlagFromEffects_(CollectLiveUnitEffects(rUnit), flagId);
 }
 
 bool ResolveFlag(const Faction& rFaction, RuleFlagId_t flagId)
 {
-    for (const ActiveEffect_t& rEffect : CollectActiveEffects(rFaction).effects)
-    {
-        if (!rEffect.config || rEffect.config->condition.has_value())
-        {
-            continue;
-        }
-        const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.config->effect);
-        if (pFlag && pFlag->flag == flagId)
-        {
-            return true;
-        }
-    }
-    return false;
+    return ResolveFlagFromEffects_(CollectActiveEffects(rFaction).effects, flagId);
 }
 
 bool ResolveFlag(const BaseManager& rBase, RuleFlagId_t flagId)
 {
-    for (const ActiveEffect_t& rEffect : rBase.GetBaseEffects().effects)
-    {
-        if (!rEffect.config || rEffect.config->condition.has_value())
-        {
-            continue;
-        }
-        const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.config->effect);
-        if (pFlag && pFlag->flag == flagId)
-        {
-            return true;
-        }
-    }
-    return false;
+    return ResolveFlagFromEffects_(rBase.GetBaseEffects().effects, flagId);
 }
 
 bool HasPermission(const Unit& rUnit, PermissionId_t permission, const EffectContext_t& rCtx)
 {
     for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rUnit))
     {
-        if (!rEffect.config)
-        {
-            continue;
-        }
         const PermissionEffect_t* pPerm =
             std::get_if<PermissionEffect_t>(&rEffect.config->effect);
         if (!pPerm || pPerm->permission != permission)
-        {
-            continue;
-        }
-        if (!UnitFilterSatisfied(*rEffect.config, rUnit))
         {
             continue;
         }
@@ -760,7 +695,7 @@ bool TileProvidesFlag(const Tile& rTile, RuleFlagId_t flagId, const WorldMap& rW
         // up FactionUnits-scoped grants, exactly as the transport rules that consume it do.
         for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(*pUnit))
         {
-            if (rEffect.config && DeclaresTileFlag_(*rEffect.config, flagId))
+            if (DeclaresTileFlag_(*rEffect.config, flagId))
             {
                 return true;
             }

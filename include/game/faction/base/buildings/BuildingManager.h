@@ -9,6 +9,7 @@
 namespace ac
 {
 
+class BaseManager;
 class BuildingRegistry;
 class ResearchManager;
 class SecretProjectAvailabilityCalculator;
@@ -34,8 +35,8 @@ public:
     const std::vector<const BuildingConfig_t*>& GetBuildings() const;
 
     // Collect all continuous effects from constructed buildings in this base.
-    // originBase is left nullptr; the caller (BaseManager) tags ThisBase-scoped effects.
-    std::vector<ActiveEffect_t> CollectEffects() const;
+    // Passes rOriginBase into AppendActiveEffects so TagsOriginBase scopes are tagged.
+    std::vector<ActiveEffect_t> CollectEffects(const BaseManager& rOriginBase) const;
 
     // Get a list of buildings that can be constructed at this base.
     // Discovered techs are read from the associated ResearchManager.

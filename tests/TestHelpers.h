@@ -87,7 +87,7 @@ private:
 inline ac::ActiveEffect_t Active(const ac::EffectConfig_t& rConfig, std::string sourceId = "src",
                                  const ac::BaseManager* pOriginBase = nullptr)
 {
-    return ac::ActiveEffect_t{&rConfig, std::move(sourceId), pOriginBase};
+    return ac::ActiveEffect_t(rConfig, std::move(sourceId), pOriginBase);
 }
 
 // Materializes a lazy Filter*(...) result into an owned, indexable vector — needed

@@ -48,9 +48,7 @@ int SightRadiusFromImprovement_(const ImprovementConfig_t& rConfig)
             continue;
         }
 
-        ActiveEffect_t active;
-        active.config = &rEffect;
-        active.sourceId = rConfig.id;
+        const ActiveEffect_t active(rEffect, rConfig.id);
         const int range = FinalizeResolvedStat(
             ResolveStatModifiers(std::vector<ActiveEffect_t>{active}, SeedFor(StatId_t::Vision))
                 .total);

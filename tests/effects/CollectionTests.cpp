@@ -49,7 +49,7 @@ TEST_CASE("AppendActiveEffects: skips Instantaneous effects", "[effects][collect
     CHECK(out[0].sourceId == "source");
 }
 
-TEST_CASE("AppendActiveEffects: originBase is recorded only for ThisBase-scoped effects", "[effects][collect]")
+TEST_CASE("AppendActiveEffects: originBase follows TagsOriginBase", "[effects][collect]")
 {
     actest::BaseFixture fixture;
     const BaseManager& base = fixture.MakeBase(4, 4);
@@ -59,15 +59,21 @@ TEST_CASE("AppendActiveEffects: originBase is recorded only for ThisBase-scoped 
         pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase),
         pool.StatMod(StatId_t::Energy, 1.0, ModifierOp_t::Add, EffectScope_t::FactionGlobal),
         pool.StatMod(StatId_t::Minerals, 1.0, ModifierOp_t::Add, EffectScope_t::AllOwnerBases),
+        pool.StatMod(StatId_t::Attack, 1.0, ModifierOp_t::Add, EffectScope_t::ProducedAtThisBase),
+        pool.StatMod(StatId_t::Attack, 1.0, ModifierOp_t::Add, EffectScope_t::FactionUnits),
+        pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisPop),
     };
 
     std::vector<ActiveEffect_t> out;
     AppendActiveEffects(configs, &base, "source", out);
 
-    REQUIRE(out.size() == 3);
+    REQUIRE(out.size() == 6);
     CHECK(out[0].originBase == &base);     // ThisBase
     CHECK(out[1].originBase == nullptr);   // FactionGlobal
     CHECK(out[2].originBase == nullptr);   // AllOwnerBases
+    CHECK(out[3].originBase == &base);     // ProducedAtThisBase
+    CHECK(out[4].originBase == &base);     // FactionUnits
+    CHECK(out[5].originBase == nullptr);   // ThisPop (PopLocal)
 }
 
 TEST_CASE("CollectUnitEffects: gathers component effects, tagged with the component id",

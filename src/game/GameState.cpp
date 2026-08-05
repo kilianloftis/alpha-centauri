@@ -157,13 +157,11 @@ std::vector<ActiveEffect_t> GameState::CollectWorldExtras(const Faction& rFor) c
     }
     if (m_pCouncil)
     {
-        // These wrappers point at EffectConfig_t storage owned by CouncilEffects, which
-        // reallocates on RebuildWorld / SetGovernorEffects. Every such rebuild bumps the
-        // council revision, which moves GetWorldCompositionStamp and forces the caller's
-        // composed cache to be rebuilt before anything reads these copies again.
-        const std::vector<ActiveEffect_t> councilWorld = m_pCouncil->CollectWorldEffects();
+        // CouncilEffects keeps config addresses stable across rebuilds; revision bumps still
+        // force composed-pool caches to pick up the new active set.
+        const std::vector<ActiveEffect_t>& councilWorld = m_pCouncil->CollectWorldEffects();
         result.insert(result.end(), councilWorld.begin(), councilWorld.end());
-        const std::vector<ActiveEffect_t> councilFaction = m_pCouncil->CollectFactionEffects(rFor);
+        const std::vector<ActiveEffect_t>& councilFaction = m_pCouncil->CollectFactionEffects(rFor);
         result.insert(result.end(), councilFaction.begin(), councilFaction.end());
     }
     return result;
@@ -178,6 +176,7 @@ Faction& GameState::AddFaction(std::unique_ptr<Faction> pFaction)
     pFaction->SetSettings(&m_rSettings);
     pFaction->BindWorldMap(*m_worldMap);
     pFaction->BindWorldEffects(*this);
+    pFaction->BindGameState(*this);
     pFaction->SetOnBaseListChanged([this]()
     {
         RebuildTerritory();

@@ -51,7 +51,7 @@ const std::vector<const BuildingConfig_t*>& BuildingManager::GetBuildings() cons
     return m_buildings;
 }
 
-std::vector<ActiveEffect_t> BuildingManager::CollectEffects() const
+std::vector<ActiveEffect_t> BuildingManager::CollectEffects(const BaseManager& rOriginBase) const
 {
     std::vector<ActiveEffect_t> result;
     for (const BuildingConfig_t* pBuilding : m_buildings)
@@ -60,7 +60,7 @@ std::vector<ActiveEffect_t> BuildingManager::CollectEffects() const
         {
             continue;
         }
-        AppendActiveEffects(pBuilding->effects, nullptr, pBuilding->id, result);
+        AppendActiveEffects(pBuilding->effects, &rOriginBase, pBuilding->id, result);
     }
     return result;
 }

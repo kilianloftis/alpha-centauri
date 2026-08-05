@@ -182,6 +182,18 @@
     "category": "build"
   },
   {
+    "id": "instant_infiltrator",
+    "name": "Instantaneous Infiltrator",
+    "effects": [
+      {
+        "type": "Infiltration",
+        "scope": "WorldGlobal",
+        "persistence": "Instantaneous"
+      }
+    ],
+    "category": "build"
+  },
+  {
     "id": "flat_nutrient",
     "name": "Flat Nutrient Building",
     "effects": [

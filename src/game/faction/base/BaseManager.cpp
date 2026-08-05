@@ -1,5 +1,6 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/Faction.h"
+#include "game/GameState.h"
 #include "game/IEffectsProvider.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/production/ProductionManager.h"
@@ -110,7 +111,13 @@ BaseManager::BaseManager(
         {
             throw std::runtime_error("BaseManager: building registry is null after production");
         }
-        DispatchInstantaneousEffects(m_pBuildingRegistry->Get(itemId), *this);
+        GameState* pGameState = m_rFaction.GetGameState();
+        if (!pGameState)
+        {
+            throw std::runtime_error(
+                "BaseManager: Faction has no GameState bound; cannot dispatch Instantaneous effects");
+        }
+        DispatchInstantaneousEffects(m_pBuildingRegistry->Get(itemId), *this, *pGameState);
         OnProductionCompleted.Emit(itemId);
     });
 }
@@ -228,19 +235,7 @@ const BuildingManager& BaseManager::GetBuildingManager() const
 
 std::vector<ActiveEffect_t> BaseManager::CollectBuildingEffects() const
 {
-    std::vector<ActiveEffect_t> result = m_pBuildings->CollectEffects();
-
-    for (ActiveEffect_t& effect : result)
-    {
-        if (effect.config
-            && (effect.config->scope == EffectScope_t::ThisBase
-                || effect.config->scope == EffectScope_t::ProducedAtThisBase
-                || effect.config->scope == EffectScope_t::FactionUnits))
-        {
-            effect.originBase = this;
-        }
-    }
-    return result;
+    return m_pBuildings->CollectEffects(*this);
 }
 
 std::vector<const IConstructable*> BaseManager::GetConstructable() const

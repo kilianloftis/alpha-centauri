@@ -436,6 +436,27 @@ TEST_CASE("Global Trade Pact activates and can be repealed", "[council]")
     CHECK_FALSE(rCouncil.IsActive("global_trade_pact"));
 }
 
+TEST_CASE("Council world effect config pointers survive RebuildWorld", "[council][effects]")
+{
+    CouncilGame_ game;
+    game.Discover(*game.pA, "planetary_economics");
+    PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+
+    // U.N. Charter starts active — retain a copy of its wrappers.
+    REQUIRE_FALSE(rCouncil.CollectWorldEffects().empty());
+    const std::vector<ActiveEffect_t> retained = rCouncil.CollectWorldEffects();
+    const EffectScope_t firstScope = retained.front().config->scope;
+    const EffectConfig_t* pFirstConfig = retained.front().config;
+
+    game.PassStandard(*game.pA, "global_trade_pact");
+    CHECK(rCouncil.IsActive("global_trade_pact"));
+
+    // Prior wrappers' config addresses remain readable after an additive rebuild.
+    CHECK(retained.front().config == pFirstConfig);
+    CHECK(retained.front().config->scope == firstScope);
+    CHECK(retained.front().config->scope == EffectScope_t::WorldGlobal);
+}
+
 TEST_CASE("Solar shade and polar caps proposals pass; the shade is repeatable", "[council]")
 {
     // The world-map effect of these proposals (gradual sea-level change) is owned by the

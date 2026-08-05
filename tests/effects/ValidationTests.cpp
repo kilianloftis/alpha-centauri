@@ -53,6 +53,16 @@ static_assert(!IsFactionLane(EffectScope_t::ThisUnit));
 static_assert(!IsFactionLane(EffectScope_t::ThisPop));
 static_assert(!IsFactionLane(EffectScope_t::ThisTile));
 
+static_assert(TagsOriginBase(EffectScope_t::ThisBase));
+static_assert(TagsOriginBase(EffectScope_t::ProducedAtThisBase));
+static_assert(TagsOriginBase(EffectScope_t::FactionUnits));
+static_assert(!TagsOriginBase(EffectScope_t::AllOwnerBases));
+static_assert(!TagsOriginBase(EffectScope_t::FactionGlobal));
+static_assert(!TagsOriginBase(EffectScope_t::WorldGlobal));
+static_assert(!TagsOriginBase(EffectScope_t::ThisUnit));
+static_assert(!TagsOriginBase(EffectScope_t::ThisPop));
+static_assert(!TagsOriginBase(EffectScope_t::ThisTile));
+
 // KindFor is the same single-source-of-truth pattern for stat seed semantics: pin every
 // stat's kind so a new StatId_t (which the compiler forces into KindFor's switch) gets a
 // deliberate seed decision here too.

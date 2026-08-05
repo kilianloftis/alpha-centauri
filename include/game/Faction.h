@@ -47,6 +47,7 @@ struct PopTypeConfig_t;
 struct GameDataContext;
 class WorldMap;
 class GameSettings;
+class GameState;
 
 class Faction : public IEffectsProvider
 {
@@ -200,6 +201,11 @@ public:
     void SetSettings(const GameSettings* pSettings) { m_pSettings = pSettings; }
     const GameSettings* GetSettings() const { return m_pSettings; }
 
+    // Optional session back-pointer (GameState::AddFaction). Required for Instantaneous
+    // Infiltration dispatch on production completion; null when the faction is unbound.
+    void BindGameState(GameState& rGameState) { m_pGameState = &rGameState; }
+    GameState* GetGameState() const { return m_pGameState; }
+
     // Sticky fog removal from ApplyRemoveFog (Instantaneous project completion). Continuous
     // RuleFlag / debug settings are layered on top in ApplyVisibilityRules.
     void SetFogRemoved(bool bFogRemoved) { m_bFogRemoved = bFogRemoved; }
@@ -254,6 +260,7 @@ private:
     WorldMap* m_pWorldMap = nullptr; // set by BindWorldMap; used by RebuildVisibility
     IWorldEffectsSource* m_pWorldEffects = nullptr; // set by BindWorldEffects; optional
     const GameSettings* m_pSettings = nullptr; // non-owning; optional session prefs
+    GameState* m_pGameState = nullptr; // set by BindGameState; optional session back-pointer
     bool m_bFogRemoved = false; // sticky ApplyRemoveFog
     std::function<void()> m_onBaseListChanged;
     std::function<void(Faction&)> m_onVisibilityRebuilt;

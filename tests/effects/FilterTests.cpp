@@ -191,16 +191,8 @@ TEST_CASE("FilterByScope: exact scope match only", "[effects][filter]")
     CHECK(FilterByScope(effects, EffectScope_t::WorldGlobal).empty());
 }
 
-TEST_CASE("Filters tolerate null configs", "[effects][filter]")
-{
-    std::vector<ActiveEffect_t> effects;
-    effects.push_back(ActiveEffect_t{nullptr, "broken", nullptr});
-
-    CHECK(FilterByStatId(effects, StatId_t::Energy).empty());
-    CHECK(FilterBaseLevelByStatId(BaseEffects_t{effects}, StatId_t::Energy).empty());
-    CHECK(FilterByStatIdInContext(effects, StatId_t::Energy, EffectContext_t{}).empty());
-    CHECK(FilterByScope(effects, EffectScope_t::ThisBase).empty());
-}
+// Rvalue Filter* overloads are deleted so a temporary vector cannot silently dangle the
+// borrowing view (e.g. FilterByStatId(std::vector<ActiveEffect_t>{}, …) is ill-formed).
 
 TEST_CASE("ConditionSatisfied: AttackerIsEmbarked requires pAttacker", "[effects][condition]")
 {
