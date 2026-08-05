@@ -67,6 +67,18 @@
     ]
   },
   {
+    "id": "MoraleOfficer",
+    "name": "Morale Officer (+1 Morale rating, FactionGlobal — faction-lane rating source)",
+    "can_work_tile": false,
+    "player_assignable": true,
+    "riot_contribution": 0,
+    "golden_age_contribution": 0,
+    "obsoletes": [],
+    "effects": [
+      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "morale", "amount": 1 } }
+    ]
+  },
+  {
     "id": "FungalFarmer",
     "name": "Fungal Farmer (worker with a ThisPop tile multiplier plus a ThisBase flat bonus)",
     "can_work_tile": true,

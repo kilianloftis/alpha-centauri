@@ -123,6 +123,11 @@ void ResearchManager::ComputePointsNeeded_() const
             ResolveStatModifiers(FilterByStatId(rFactionEffects.effects, StatId_t::TechCost), 0.0).total);
         m_costEffectsVersion = m_pEffectsProvider->GetEffectsVersion();
     }
+    else
+    {
+        m_costEffectsVersion = 0;
+    }
+    m_costResearchRevision = GetRevision();
     // All other fields are placeholder defaults (diff=1, turns=0, bIsAI=false, etc.)
 
     m_pointsNeededForCurrentTech = m_pTechCostCalculator->CalculateCost(*m_pCurrentResearchTarget, inputs);
@@ -130,11 +135,14 @@ void ResearchManager::ComputePointsNeeded_() const
 
 void ResearchManager::RevalidatePointsNeeded_() const
 {
-    if (!m_pCurrentResearchTarget || !m_pEffectsProvider)
+    if (!m_pCurrentResearchTarget)
     {
         return;
     }
-    if (m_pEffectsProvider->GetEffectsVersion() != m_costEffectsVersion)
+    const bool bResearchChanged = GetRevision() != m_costResearchRevision;
+    const bool bEffectsChanged = m_pEffectsProvider
+        && m_pEffectsProvider->GetEffectsVersion() != m_costEffectsVersion;
+    if (bResearchChanged || bEffectsChanged)
     {
         ComputePointsNeeded_();
     }

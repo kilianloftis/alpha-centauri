@@ -136,3 +136,47 @@ TEST_CASE("ResearchManager: a TechCost effect appearing mid-research updates the
     research.SetAccumulatedPoints(raisedCost);
     CHECK(research.CanDiscoverTech());
 }
+
+TEST_CASE("ResearchManager: AddDiscoveredTech revalidates cost with a null effects provider",
+          "[research][cache]")
+{
+    TechRegistry techRegistry;
+    techRegistry.Load(actest::FixturePath("techs.json"));
+    LuaRuntime lua;
+    TechCostConfigParser parser;
+    const TechCostConfig_t config =
+        parser.ParseConfig(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/tech_cost.lua", lua);
+    TechCostCalculator calculator(config, lua);
+
+    ResearchManager research(&techRegistry, &calculator, nullptr);
+    research.SetResearchTarget("advanced_build");
+    const int costBefore = research.GetPointsNeededForCurrentTech();
+
+    // Tech count is a direct cost input; discovery must bump cost even without a provider.
+    research.AddDiscoveredTech("grow_tech");
+    const int costAfter = research.GetPointsNeededForCurrentTech();
+    CHECK(costAfter != costBefore);
+}
+
+TEST_CASE("ResearchManager: AddDiscoveredTech revalidates cost when provider version is frozen",
+          "[research][cache]")
+{
+    TechRegistry techRegistry;
+    techRegistry.Load(actest::FixturePath("techs.json"));
+    LuaRuntime lua;
+    TechCostConfigParser parser;
+    const TechCostConfig_t config =
+        parser.ParseConfig(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/tech_cost.lua", lua);
+    TechCostCalculator calculator(config, lua);
+
+    FakeEffectsProvider provider;
+    ResearchManager research(&techRegistry, &calculator, &provider);
+    research.SetResearchTarget("advanced_build");
+    const int costBefore = research.GetPointsNeededForCurrentTech();
+    const uint64_t frozenVersion = provider.version;
+
+    research.AddDiscoveredTech("grow_tech");
+    REQUIRE(provider.version == frozenVersion);
+    const int costAfter = research.GetPointsNeededForCurrentTech();
+    CHECK(costAfter != costBefore);
+}

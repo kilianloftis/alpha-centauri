@@ -10,30 +10,29 @@ namespace ac
 
 class Faction;
 class BuildingRegistry;
+class ResearchManager;
 class SocialRatingRegistry;
 
-// Assembles and memoizes the faction-wide active effect pool (code review finding 1.1).
-// Reads rFaction's subsystems through their public API. rFaction is taken as a parameter
-// on each call rather than stored, so the pool holds no back-reference to its owner —
-// only the cache itself and the two dependencies that are not "the whole faction"
-// (the building registry and the base-list revision) are held as state.
+// Assembles and memoizes the faction-wide *local* active effect pool for one owning
+// Faction (bound at construction). WorldGlobal peers and council extras are composed
+// later by Faction::GetActiveEffects — this pool never sees them.
 class FactionEffectsPool
 {
 public:
-    FactionEffectsPool(const BuildingRegistry* pBuildingRegistry,
+    FactionEffectsPool(const Faction& rFaction,
+                       const BuildingRegistry* pBuildingRegistry,
                        const Revision& rBaseListRevision,
                        const std::vector<EffectConfig_t>* pTileYieldRules = nullptr,
                        const SocialRatingRegistry* pSocialRatings = nullptr);
 
-    // The validated pool for rFaction. The reference is valid until the next
-    // effect-source mutation on rFaction.
-    const FactionEffects_t& Get(const Faction& rFaction) const;
+    // The validated local pool. Valid until the next effect-source mutation on the owner.
+    const FactionEffects_t& Get() const;
 
-    // Monotonic pool version for rFaction; changes iff the pool content changed.
-    uint64_t GetVersion(const Faction& rFaction) const;
+    // Monotonic pool version; changes iff the pool content changed.
+    uint64_t GetVersion() const;
 
 private:
-    // Buildings across all bases, with grant chains expanded.
+    // Raw continuous effects from constructed buildings across all bases (no grant expand).
     std::vector<ActiveEffect_t> CollectBuildingEffects_(const Faction& rFaction) const;
 
     // Faction-lane effects (any scope except the locally-resolved ThisPop/ThisBase)
@@ -51,6 +50,9 @@ private:
     // Universal tile-yield rules (TileResourceCap, etc.) from GameDataContext.
     std::vector<ActiveEffect_t> CollectTileYieldRuleEffects_() const;
 
+    // Erase effects whose removedByTech is already discovered.
+    static void ApplyRemovedByTech_(FactionEffects_t& rEffects, const ResearchManager& rResearch);
+
     // Fills rOut with the revision of every pool contributor in a fixed order — the
     // single source of truth for what the pool depends on, used both to validate the
     // cache and to stamp it after a rebuild. A new contributor must be added here and
@@ -58,11 +60,12 @@ private:
     void CollectRevisions_(const Faction& rFaction, std::vector<uint64_t>& rOut) const;
 
     // Rebuild the pool if any contributor revision changed since the last stamp.
-    void Validate_(const Faction& rFaction) const;
+    void Validate_() const;
 
-    // Recollect the pool, restamp, and advance the version.
-    void Rebuild_(const Faction& rFaction) const;
+    // Recollect the pool, stamp from the pre-rebuild scratch revisions, advance version.
+    void Rebuild_() const;
 
+    const Faction& m_rFaction;
     const BuildingRegistry* m_pBuildingRegistry;
     const Revision& m_rBaseListRevision;
     const std::vector<EffectConfig_t>* m_pTileYieldRules;

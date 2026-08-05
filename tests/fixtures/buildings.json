@@ -361,6 +361,22 @@
     "category": "discover"
   },
   {
+    "id": "labs_amplifier",
+    "name": "Labs Amplifier (+50% Labs at this base)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "labs",
+          "amount": 50,
+          "op": "AddPercent"
+        }
+      }
+    ],
+    "category": "discover"
+  },
+  {
     "id": "growth_shrine",
     "name": "Growth Shrine (+1 Growth rating in this base only)",
     "effects": [
@@ -389,6 +405,52 @@
       }
     ],
     "category": "grow"
+  },
+  {
+    "id": "morale_shrine",
+    "name": "Morale Shrine (+1 Morale rating in this base only)",
+    "effects": [
+      {
+        "type": "SocialRatingModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "rating": "morale",
+          "amount": 1
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "gated_grantor",
+    "name": "Grantor removed by gene_splicing",
+    "effects": [
+      {
+        "type": "GrantBuilding",
+        "scope": "ThisBase",
+        "removed_by_tech": "gene_splicing",
+        "parameters": {
+          "building_id": "granted_hall"
+        }
+      }
+    ],
+    "category": "build"
+  },
+  {
+    "id": "gated_morale_policy_building",
+    "name": "Morale rating mod removed by gene_splicing",
+    "effects": [
+      {
+        "type": "SocialRatingModifier",
+        "scope": "FactionGlobal",
+        "removed_by_tech": "gene_splicing",
+        "parameters": {
+          "rating": "morale",
+          "amount": 2
+        }
+      }
+    ],
+    "category": "conquer"
   },
   {
     "id": "center_booster",

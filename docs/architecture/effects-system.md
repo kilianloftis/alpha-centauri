@@ -105,7 +105,7 @@ not by which config declared it. Each scope has one "lane":
 |---|---|---|
 | `ThisBase` | owning base | source collector tags `originBase`; `FilterForBase` |
 | `AllOwnerBases` / `FactionGlobal` | every base of the faction | faction pool (`CollectActiveEffects`) |
-| `WorldGlobal` | every base of every faction | own pool + `GameState::CollectWorldEffects` (other factions' contributions, passed into `ProduceBaseResources`/`ApplyBaseGrowth` by the turn stages) |
+| `WorldGlobal` | every base of every faction | composed into `Faction::GetActiveEffects()` (local `FactionEffectsPool` + `IWorldEffectsSource` / `GameState::CollectWorldExtras` for peer WorldGlobal and council extras). Turn stages call no-arg `ProduceBaseResources` / `ApplyBaseGrowth`; they do not append a second list. |
 | `FactionUnits` | live units of the faction (home-base scoped when `originBase` is set) | faction pool → `CollectLiveUnitEffects`; building effects tag `originBase` so train bonuses apply only to units home to that base. Combat Attack/Defense also fold in morale `AddPercent` from `morale_levels.json` via `ResolveCombatStat`. `EffectContext_t::combatRole` enables `IsDefending` (SE Morale defense-in-base). |
 | `ThisUnit` | the unit itself | `CollectUnitEffects` (design components) |
 | `ThisPop` | the pop itself | `Pop::ApplyTileMultipliers` |
@@ -182,8 +182,21 @@ concept doesn't exist yet are **legal but inert**:
 - **`constexpr SeedFor(StatId_t) -> double`**: derives the context-free seed from the kind
   (`0.0`/`1.0`); throws for `RawScaled`, forcing those sites to pass their raw value
   explicitly. Sites that deliberately resolve an Additive stat against a raw base (tile
-  yield's elevation energy seed, pop tile multipliers, the tile defense multiplier) also
-  pass their seed explicitly and say so in a comment.
+  yield's elevation energy seed, pop tile multipliers, the tile defense multiplier,
+  `ResourceManager` base-level production) also pass their seed explicitly and say so in a
+  comment.
+- **`FinalizeResolvedStat(double) -> int`**: the single float→int rule for a resolved
+  modifier total — `std::lround`, half away from zero. Every consumer of a
+  `ResolveStatModifiers` / `ApplyModifierStack` total goes through it: `ResolveStat` (design
+  and live unit) and `ResolveAdditiveStat`, `MoraleCalculator::ResolveCombatStat`,
+  `PlanetaryCouncil` vote weight, `ResourceManager` base-level production and the
+  Econ/Labs/Psych splits, `Pop::ApplyTileMultipliers` and specialist output,
+  `TileEffectsContext::ResolveResource_` (per-tile yield), `UnitDesign::GetBaseCost`,
+  `ResearchManager`'s tech-cost modifier, and `FactionVisibleMap`'s vision range. Do not
+  truncate or `std::round` a total anywhere else — a fork means one stat resolves to two
+  values depending on which path asked, which is what this helper exists to prevent. The one
+  deliberate exception is `MoraleCalculator`'s `PositiveMoraleScale` step, which truncates
+  toward zero to match integer halving and says so at the call site.
 
 ### TileSelectorKind_t / TileSelector_t
 - **Purpose**: On a `StatModifierEffect_t`, selects which worked tiles the modifier applies to. A tile improvement is identified by its plain string id (`ImprovementConfig_t::id`), matching `Tile::HasImprovement()` — there is no separate improvement-type enum.
@@ -215,8 +228,10 @@ concept doesn't exist yet are **legal but inert**:
     `Is*` resolution, which merges the design's own `ThisUnit` effects with the faction
     pool's `FactionUnits` effects (so a building or policy can boost every unit).
   - `FactionGlobal` — the whole faction.
-  - `WorldGlobal` — all factions. A faction's own pool carries its own `WorldGlobal`
-    effects; turn stages add other factions' via `GameState::CollectWorldEffects`.
+  - `WorldGlobal` — all factions. A faction's own `FactionEffectsPool` carries its own
+    `WorldGlobal` effects; `Faction::GetActiveEffects()` (when bound to `IWorldEffectsSource`)
+    also appends peer WorldGlobal and council extras. `GetLocalActiveEffects()` is the
+    uncomposed pool used when harvesting peers.
   - `ThisPop` — only the specific pop instance the effect belongs to (pop type tile-multiplier effects use this scope). Resolved locally by `Pop::ApplyTileMultipliers` and never enters the base-wide active effects pool — `FilterForBase` always excludes it, same as `ThisUnit`/`FactionUnits`.
   - `ThisTile` — only the specific tile the effect belongs to (terrain classification, river, fungus, or improvement). Resolved locally via `CollectTileEffects`/`ResolveTileYield`/`ResolveTileDefenseMultiplier` and never enters the base-wide active effects pool — `FilterForBase` always excludes it too. See Tile Improvement Effects below.
 
@@ -232,9 +247,10 @@ concept doesn't exist yet are **legal but inert**:
   `std::vector<ActiveEffect_t>`s that happen to share a shape, so using the wrong list at
   the wrong stage is a compile error — the consumer-side counterpart of `LaneFor` making
   scope routing compiler-enforced.
-- **`FactionEffects_t`**: what `CollectActiveEffects` returns (plus other factions' WorldGlobal
-  contributions appended by turn stages). Still contains every base's `ThisBase` effects and
-  the `FactionUnits` lane, so it must never be resolved against directly at base level.
+- **`FactionEffects_t`**: what `CollectActiveEffects` / `IEffectsProvider::GetActiveEffects`
+  returns (local pool plus, when bound, peer WorldGlobal and council extras). Still contains
+  every base's `ThisBase` effects and the `FactionUnits` lane, so it must never be resolved
+  against directly at base level.
 - **`BaseEffects_t`**: one base's final effect list — produced only by `FilterForBase`, then
   extended by the pop merge (`CollectFromPops`) and rating expansion
   (`ExpandSocialRatingEffects`) inside `BaseManager::BuildBaseEffects_`. This is the type
@@ -309,38 +325,60 @@ concept doesn't exist yet are **legal but inert**:
 - **Adding a new effect source** is therefore two calls: `BonusEffectParser::ParseEffects`
   at load time, and one of these at collection time — no hand-rolled loops.
 
-### CollectActiveEffects
-- **Purpose**: Gathers all active effects for a faction — the faction pool.
-- **Responsibilities**:
-  - Takes only a `const Faction&` as a parameter; returns a `FactionEffects_t`.
-  - Calls `Faction::CollectBuildingEffects`, which calls `BaseManager::CollectBuildingEffects` on every base to collect raw building effects, then passes the combined list to `ExpandGrantBuildingEffects` (along with the faction's `BuildingRegistry` and base list) to expand any `GrantBuildingEffect_t` entries. The `sourceId` is chained (e.g., `command_nexus -> network_node`). `ThisBase`-scoped sub-effects of a faction-wide grant are cloned once per base with the correct `originBase`. A grant whose target already appears in its own source chain is skipped (cycle guard).
-  - Calls `CollectFromSocialEngineering` (delegating to `Faction::CollectSocialEffects`) to gather the active social policies' effects — including `SocialRatingModifier` entries, which pass through as ordinary effects (see Social Ratings below).
-  - Calls `Faction::CollectPopFactionEffects` — pop effects on the faction lanes (`IsFactionLane`); the locally-resolved `ThisPop`/`ThisBase` stay with `Pop::ApplyTileMultipliers` and `CollectFromPops` respectively.
-  - Calls `Faction::CollectUnitFactionEffects` — live units' component effects on the faction lanes (e.g. a component that generates faction-wide energy while a unit carrying it exists); `ThisUnit`/`ThisTile` are resolved by the unit design and the tile resolvers.
-- **Returns**: A vector of `ActiveEffect_t` instances.
+### CollectActiveEffects / `FactionEffectsPool::Rebuild_`
+- **Purpose**: Assembles the faction's *local* active effect pool (memoized on
+  `FactionEffectsPool`, bound to its owning `Faction`). Peer `WorldGlobal` and council
+  extras are composed later by `Faction::GetActiveEffects` — they never enter this rebuild.
+- **Pipeline** (strict order):
+  1. **Collect** raw continuous contributors: tile-yield rules, faction definition,
+     constructed buildings (no grant expand yet), social engineering, pop faction-lane,
+     unit faction-lane.
+  2. **Gate** `removed_by_tech` (erase effects whose tech is already discovered).
+  3. **Expand grants** via `ExpandGrantBuildingEffects`. `processedGrantedIds` is
+     pre-seeded from each base's `BuildingManager::GetBuildings()` (`{pBase, id}` and
+     `{nullptr, id}`) so a grant of a building already constructed does not double-count
+     that building's continuous effects. Grant `sourceId` is chained
+     (e.g. `command_nexus -> network_node`). `ThisBase` sub-effects of a faction-wide
+     grant are cloned once per base; a grant whose target appears in its own source
+     chain is skipped (cycle guard).
+  4. **Expand faction-lane social ratings** via `ExpandFactionLaneSocialRatingEffects`
+     (`FactionEffects_t`): accumulate only `LaneFor(scope) == FactionWide` modifiers,
+     append only `FactionUnits` gameplay effects from the level table.
+  5. **Gate** `removed_by_tech` again (grant/rating derivatives may carry the field).
+  6. **Stamp** the cache from the pre-rebuild revision snapshot (`m_scratchRevisions`);
+     do not re-walk contributors after rebuild.
+- **Returns**: `FactionEffects_t` (local pool). Composed view is
+  `Faction::GetActiveEffects()`.
 
 ### Social Ratings (two-level)
-- `SocialRatingModifier` effects are ordinary effects and can come from **any** source: a
-  policy's faction-wide `+2 Growth`, a building's `ThisBase` `+1 Growth`, etc.
-- `SocialRatingResolver` (`game/social-engineering/SocialRatingResolver.h`). Both functions
-  take `BaseEffects_t` — accumulation is only meaningful after the list is filtered to its
-  final base context, and the type makes running it on the raw pool a compile error:
-  - `AccumulateSocialRatings(baseEffects)` sums modifier contributions per rating axis.
-  - `ExpandSocialRatingEffects(baseEffects, ratingRegistry)` maps each non-zero accumulated
-    level through `SocialRatingConfig_t::levelEffects` (SMAC clamp-at-extremes: totals outside
-    `[min, max]` of the table use that extreme; in-range missing keys, including typical
-    absent 0, still produce nothing) and appends the resulting gameplay effects with sourceId
-    `se_rating_<axis>_<level>` (clamped level).
+- `SocialRatingModifier` effects are ordinary effects from **faction-internal** sources: a
+  policy's faction-wide `+2 Growth`, a building's `ThisBase` `+1 Growth`, a pop/unit
+  faction-lane modifier, etc. Ratings are a local axis — peer `WorldGlobal` and council
+  extras do not move them (`GetEffectiveSocialRating` / base-lane expand read
+  `GetLocalActiveEffects`; package 5 rejects `WorldGlobal` `SocialRatingModifier` at load).
+- `SocialRatingResolver` (`game/social-engineering/SocialRatingResolver.h`):
+  - `AccumulateSocialRatings(effects)` sums modifier contributions per rating axis.
+    Callers pass a context-filtered list (local base list, or FactionWide-only for the
+    faction lane).
+  - `ExpandSocialRatingEffects(BaseEffects_t&, ratingRegistry)` — base lane: maps each
+    non-zero accumulated level through `SocialRatingConfig_t::levelEffects` (SMAC
+    clamp-at-extremes) and appends gameplay effects with sourceId
+    `se_rating_<axis>_<level>` (clamped level). Runs after `FilterForBase` + pop merge.
+  - `ExpandFactionLaneSocialRatingEffects(FactionEffects_t&, ratingRegistry)` — faction
+    lane: accumulates **FactionWide** modifiers only (ignores `ThisBase`), appends only
+    `FactionUnits` gameplay effects. Do not re-expand FactionWide economy effects here.
 - **Per-base effective ratings fall out automatically**: `BaseManager::BuildBaseEffects_`
-  runs the expansion *after* `FilterForBase` + pop merge, so faction-wide modifiers reach
-  every base while `ThisBase` modifiers shift only their own base — a `+2 Growth` policy
-  plus a `+1 Growth` shrine resolves that base at level 3 and every other base at level 2.
-  `BaseManager::GetEffectiveSocialRating(rating, pool)` exposes the per-axis total.
+  expands ratings from the *local* filtered list after pop merge, so faction-wide
+  modifiers reach every base while `ThisBase` modifiers shift only their own base — a
+  `+2 Growth` policy plus a `+1 Growth` shrine resolves that base at level 3 and every
+  other base at level 2. `BaseManager::GetEffectiveSocialRating(rating)` exposes the
+  per-axis total from the local pool.
 - **Growth rating → growth rate**: the growth axis's levels map to `GrowthRate`
   `AddPercent` modifiers (`config/social_rating_effects.json`, ±10% per level), which
   `GrowthCalculator::ComputeNutrientsRequired` resolves per base — so the SE Growth score
   directly scales each base's growth threshold, both at turn end (`ApplyGrowth`) and in the
-  UI (`GrowthDisplay` passes the faction pool to `GetNutrientsRequired`). The extreme
+  UI (`GrowthDisplay` → `GetNutrientsRequired()`, which uses the same memoized
+  `BuildBaseEffects_()` as turn resolution). The extreme
   levels emit `NearZeroGrowth` / `PopulationBoom` rule flags instead (see Known Gaps).
 - **Industry rating → production cost**: the industry axis's levels map to `CostMultiplier`
   `AddPercent` modifiers (±10% per level, matching SMAC's ±10% mineral-cost change), which
@@ -351,11 +389,15 @@ concept doesn't exist yet are **legal but inert**:
 ### ResourceManager Integration
 - **Purpose**: Applies active effects to base resource production.
 - **Responsibilities**:
-  - `Faction::ProduceBaseResources()` collects active effects once per faction and passes them to each base.
-  - `BaseManager::ProduceResources()` builds the base's final effect list via `BuildBaseEffects_`: `FilterForBase` over the faction pool, plus this base's own pop-generated effects via `CollectFromPops(GetPopContainer(), *this)` (see Pop Type Effects above), plus the gameplay effects of this base's effective social rating levels via `ExpandSocialRatingEffects` (see Social Ratings above). `ApplyGrowth` and `GetNutrientsRequired` use the same helper.
+  - `Faction::ProduceBaseResources()` / `ApplyBaseGrowth()` route to every base with no
+    external effect vector. Each base resolves against `BuildBaseEffects_()` over the
+    composed `IEffectsProvider` pool (local contributors plus bound world/council extras).
+  - `BaseManager::ProduceResources()` / `ApplyGrowth()` / production getters /
+    `GetNutrientsRequired` / tile-yield queries all use that same memoized list.
   - `ResourceManager::ProduceResources()` stores the effects and uses them when calculating nutrients, minerals, and energy. There is a **single per-tile pass**: `ResourceManager::ComputeWorked_` sums `WorkerAssignmentManager::ComputeWorkedResources(baseEffects)` (every worker pop's tile) plus the base center tile (worked for free, no pop). Each tile's full yield is resolved once by `TileEffectsContext::ResolveTileYield(tile, isBaseTile, baseEffects)`, which folds in every selector-matching `StatModifier` from `baseEffects`, then applies configurable **TileResourceCap** effects still present in that list: each resource is clamped to `max`. Caps declare `removed_by_tech` on the `EffectConfig_t`; `FactionEffectsPool` drops them once Research discovers that tech (research revision is in the pool stamp). StatModifiers with `apply_after_restriction: true` (resource-bonus specials) are added **after** the cap. Pop tile multipliers then scale that whole yield. Flat base-level bonuses remain uncapped. Per-tile `Add`/`Multiply` modifiers summed across tiles are mathematically equivalent to the old aggregate-with-counts approach, so no separate delta pass is needed.
-    - `CalculateResource_` then adds only **flat** (non-selector) `StatModifier` contributions for `StatId_t::Nutrients`/`Minerals`/`Energy` via `FilterBaseLevelByStatId`/`ResolveStatModifiers` — selector-carrying modifiers are excluded here because they were already applied per tile.
-    - `StatId_t::Econ`/`Labs`/`Psych` are not produced from tiles — `CalculateEcon_`/`CalculateLabs_`/`CalculatePsych_` take the percentage-of-energy split from `EconomyManager` and add any flat `StatModifier` contributions (e.g. specialist pop output) on top via `FilterBaseLevelByStatId`/`ResolveStatModifiers`, the same pattern used by `AllocateEnergy_` when stockpiling each turn. **All base-level resolution uses `FilterBaseLevelByStatId`** — selector-carrying modifiers belong exclusively to the per-tile pass (and parse-time validation restricts selectors to tile-resource stats anyway).
+    - `CalculateResource_` seeds `ResolveStatModifiers` with the **worked** nutrient/mineral/energy total (not `SeedFor`, which is 0 for Additive stats), so selector-free base-level `AddPercent` (e.g. Economy rating minerals −10%/−20%) scales production. Only **non-selector** modifiers remain here via `FilterBaseLevelByStatId` — selector-carrying modifiers were already applied per tile.
+    - `StatId_t::Econ`/`Labs`/`Psych` are not produced from tiles — `CalculateEcon_`/`CalculateLabs_`/`CalculatePsych_` seed `ResolveStatModifiers` with the energy-split integer from `EconomyManager`, then finalize once (same pattern as worked resources). **All base-level resolution uses `FilterBaseLevelByStatId`** — selector-carrying modifiers belong exclusively to the per-tile pass (and parse-time validation restricts selectors to tile-resource stats anyway).
+    - Float→int for these totals goes through `FinalizeResolvedStat` (`std::lround`) — including the per-tile pass upstream, so a tile yield is not truncated once and rounded again at base level. See `FinalizeResolvedStat` under Core Vocabulary for the full list of sites.
   - Stored effects are also used by the live `Get*Production()` queries.
 
 ### BuildingManager / BaseManager Constructed Buildings

@@ -54,7 +54,7 @@ Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
     , m_pSocialEngineering(std::make_unique<SocialEngineeringManager>(
           rDataContext.socialPolicyRegistry.get(), rDataContext.socialRatingRegistry.get()))
     , m_pUnits(std::make_unique<UnitManager>(*this, *rDataContext.moraleCalculator))
-    , m_effectsPool(rDataContext.buildingRegistry.get(), m_baseListRevision,
+    , m_effectsPool(*this, rDataContext.buildingRegistry.get(), m_baseListRevision,
                     &rDataContext.tileYieldRules, rDataContext.socialRatingRegistry.get())
 {
     m_pResearchSelector->EnsureResearchTarget();
@@ -630,12 +630,12 @@ std::vector<const PopTypeConfig_t*> Faction::GetAvailablePopTypes() const
 
 const FactionEffects_t& Faction::GetLocalActiveEffects() const
 {
-    return m_effectsPool.Get(*this);
+    return m_effectsPool.Get();
 }
 
 uint64_t Faction::GetLocalEffectsVersion() const
 {
-    return m_effectsPool.GetVersion(*this);
+    return m_effectsPool.GetVersion();
 }
 
 void Faction::EnsureComposedEffects_() const

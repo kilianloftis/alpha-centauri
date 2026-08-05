@@ -104,6 +104,10 @@ void AppendTileEffects(const std::vector<EffectConfig_t>& rEffects,
 namespace
 {
 
+// Key: (originBase*, grantedBuildingId). Pointer identity is intentional — two
+// different bases granting the same building must each expand independently.
+using ProcessedGrantedIds_t = std::set<std::pair<const BaseManager*, std::string>>;
+
 // True if buildingId appears as a segment of a chained sourceId ("a -> b -> c").
 // Used to break grant cycles: a grant whose target is already an ancestor in its own
 // chain (the constructed root or an earlier grant) is already contributing its effects,
@@ -129,6 +133,133 @@ bool GrantChainContains_(const std::string& rSourceChain, const std::string& rBu
     }
 }
 
+bool IsPerBaseGrantScope_(EffectScope_t scope)
+{
+    return scope == EffectScope_t::ThisBase
+        || scope == EffectScope_t::ProducedAtThisBase;
+}
+
+// Mark buildings already constructed on rBases as processed so a later grant of the same
+// id does not double-count continuous effects (SMAC Command Nexus / Perimeter Defense).
+// Seeds both {pBase, id} (ThisBase half) and {nullptr, id} (FactionGlobal half).
+void SeedProcessedGrantedIdsFromConstructed_(
+    const std::vector<const BaseManager*>& rBases,
+    ProcessedGrantedIds_t& rProcessed)
+{
+    for (const BaseManager* pBase : rBases)
+    {
+        if (!pBase)
+        {
+            continue;
+        }
+        for (const BuildingConfig_t* pBuilding : pBase->GetBuildingManager().GetBuildings())
+        {
+            if (!pBuilding)
+            {
+                throw std::runtime_error(
+                    "ExpandGrantBuildingEffects: null constructed building");
+            }
+            rProcessed.insert({pBase, pBuilding->id});
+            rProcessed.insert({nullptr, pBuilding->id});
+        }
+    }
+}
+
+// ThisBase-scoped grant: expand the granted building once for the originating base.
+void ExpandLocalGrant_(const BuildingConfig_t& rGranted,
+                       const BaseManager& rOriginBase,
+                       const std::string& rGrantedBuildingId,
+                       const std::string& rSourceId,
+                       ProcessedGrantedIds_t& rProcessed,
+                       std::vector<ActiveEffect_t>& rEffects)
+{
+    const std::pair<const BaseManager*, std::string> key = {&rOriginBase, rGrantedBuildingId};
+    if (rProcessed.count(key))
+    {
+        return;
+    }
+    rProcessed.insert(key);
+    AppendActiveEffects(rGranted.effects, &rOriginBase, rSourceId, rEffects);
+}
+
+// FactionGlobal / AllOwnerBases grant: non-per-base effects once globally; ThisBase /
+// ProducedAtThisBase sub-effects cloned once per base that has not already constructed it.
+void ExpandGlobalGrant_(const BuildingConfig_t& rGranted,
+                        const std::string& rGrantedBuildingId,
+                        const std::string& rSourceId,
+                        const std::vector<const BaseManager*>& rBases,
+                        ProcessedGrantedIds_t& rProcessed,
+                        std::vector<ActiveEffect_t>& rEffects)
+{
+    const std::pair<const BaseManager*, std::string> globalKey = {nullptr, rGrantedBuildingId};
+    if (!rProcessed.count(globalKey))
+    {
+        rProcessed.insert(globalKey);
+        AppendActiveEffectsIf_(rGranted.effects, nullptr, rSourceId,
+                               [](const EffectConfig_t& rEffect)
+                               { return !IsPerBaseGrantScope_(rEffect.scope); },
+                               rEffects);
+    }
+
+    for (const BaseManager* pBase : rBases)
+    {
+        if (!pBase)
+        {
+            continue;
+        }
+        const std::pair<const BaseManager*, std::string> key = {pBase, rGrantedBuildingId};
+        if (rProcessed.count(key))
+        {
+            continue;
+        }
+        rProcessed.insert(key);
+        AppendActiveEffectsIf_(rGranted.effects, pBase, rSourceId,
+                               [](const EffectConfig_t& rEffect)
+                               { return IsPerBaseGrantScope_(rEffect.scope); },
+                               rEffects);
+    }
+}
+
+// Resolve one GrantBuilding entry: look up the target, skip cycles, dispatch local/global.
+// Copies fields needed for expansion before appending — rEffects may reallocate.
+void ExpandOneGrant_(const ActiveEffect_t& rGrantEffect,
+                     const BuildingRegistry& rRegistry,
+                     const std::vector<const BaseManager*>& rBases,
+                     ProcessedGrantedIds_t& rProcessed,
+                     std::vector<ActiveEffect_t>& rEffects)
+{
+    const GrantBuildingEffect_t* pGrant =
+        std::get_if<GrantBuildingEffect_t>(&rGrantEffect.config->effect);
+    if (!pGrant)
+    {
+        return;
+    }
+
+    const BuildingConfig_t* pGranted = rRegistry.Find(pGrant->buildingId);
+    if (!pGranted)
+    {
+        throw std::runtime_error("Unknown granted building id '" + pGrant->buildingId + "'");
+    }
+
+    if (GrantChainContains_(rGrantEffect.sourceId, pGrant->buildingId))
+    {
+        return;
+    }
+
+    const std::string grantedBuildingId = pGrant->buildingId;
+    const std::string sourceId = rGrantEffect.sourceId + " -> " + pGranted->id;
+    const BaseManager* pOriginBase = rGrantEffect.originBase;
+    if (pOriginBase != nullptr)
+    {
+        ExpandLocalGrant_(*pGranted, *pOriginBase, grantedBuildingId, sourceId,
+                          rProcessed, rEffects);
+    }
+    else
+    {
+        ExpandGlobalGrant_(*pGranted, grantedBuildingId, sourceId, rBases, rProcessed, rEffects);
+    }
+}
+
 } // namespace
 
 std::vector<ActiveEffect_t> ExpandGrantBuildingEffects(
@@ -136,80 +267,17 @@ std::vector<ActiveEffect_t> ExpandGrantBuildingEffects(
     const BuildingRegistry& rRegistry,
     const std::vector<const BaseManager*>& rBases)
 {
-    // Key: (originBase*, grantedBuildingId). Pointer identity is intentional — two
-    // different bases granting the same building must each expand independently.
-    std::set<std::pair<const BaseManager*, std::string>> processedGrantedIds;
+    ProcessedGrantedIds_t processedGrantedIds;
+    SeedProcessedGrantedIdsFromConstructed_(rBases, processedGrantedIds);
 
+    // Index-based: AppendActiveEffects may push new GrantBuilding entries that must expand too.
     for (size_t i = 0; i < effects.size(); ++i)
     {
-        const EffectConfig_t* pEffect = effects[i].config;
-        if (!pEffect)
+        if (!effects[i].config)
         {
             continue;
         }
-
-        const GrantBuildingEffect_t* pGrant = std::get_if<GrantBuildingEffect_t>(&pEffect->effect);
-        if (!pGrant)
-        {
-            continue;
-        }
-
-        const BuildingConfig_t* pGranted = rRegistry.Find(pGrant->buildingId);
-        if (!pGranted)
-        {
-            throw std::runtime_error("Unknown granted building id '" + pGrant->buildingId + "'");
-        }
-
-        if (GrantChainContains_(effects[i].sourceId, pGrant->buildingId))
-        {
-            continue;
-        }
-
-        const std::string sourceId = effects[i].sourceId + " -> " + pGranted->id;
-
-        if (effects[i].originBase != nullptr)
-        {
-            // ThisBase-scoped grant: expand effects once, attributed to the originating base.
-            const std::pair<const BaseManager*, std::string> key = {effects[i].originBase, pGrant->buildingId};
-            if (!processedGrantedIds.count(key))
-            {
-                processedGrantedIds.insert(key);
-                AppendActiveEffects(pGranted->effects, effects[i].originBase, sourceId, effects);
-            }
-        }
-        else
-        {
-            // AllOwnerBases / FactionGlobal grant: non-per-base effects apply once globally;
-            // ThisBase / ProducedAtThisBase sub-effects are cloned once per base.
-            const auto isPerBaseScope = [](EffectScope_t scope)
-            {
-                return scope == EffectScope_t::ThisBase
-                    || scope == EffectScope_t::ProducedAtThisBase;
-            };
-            const std::pair<const BaseManager*, std::string> globalKey = {nullptr, pGrant->buildingId};
-            if (!processedGrantedIds.count(globalKey))
-            {
-                processedGrantedIds.insert(globalKey);
-                AppendActiveEffectsIf_(pGranted->effects, nullptr, sourceId,
-                                       [&](const EffectConfig_t& rEffect)
-                                       { return !isPerBaseScope(rEffect.scope); },
-                                       effects);
-            }
-
-            for (const BaseManager* pBase : rBases)
-            {
-                if (!pBase) continue;
-                const std::pair<const BaseManager*, std::string> key = {pBase, pGrant->buildingId};
-                if (!processedGrantedIds.count(key))
-                {
-                    processedGrantedIds.insert(key);
-                    AppendActiveEffectsIf_(pGranted->effects, pBase, sourceId,
-                                           [&](const EffectConfig_t& rEffect)
-                                           { return isPerBaseScope(rEffect.scope); },
-                                           effects);
-                }
-            }
-        }
+        ExpandOneGrant_(effects[i], rRegistry, rBases, processedGrantedIds, effects);
     }
 
     return effects;

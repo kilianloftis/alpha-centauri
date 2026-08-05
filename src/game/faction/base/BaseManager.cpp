@@ -287,11 +287,19 @@ BaseEffects_t BaseManager::BuildBaseEffects_(const FactionEffects_t& rFactionEff
 {
     BaseEffects_t baseEffects = CollectBaseLocalEffects_(rFactionEffects);
 
-    // Map this base's effective social rating levels (faction-wide modifiers + any
-    // ThisBase-scoped ones that survived FilterForBase) to their gameplay effects.
+    // Ratings are a faction-internal axis: accumulate from the local pool only, then
+    // append gameplay effects onto the composed base list (which may still carry
+    // world/council StatModifiers).
     if (m_pSocialRatings)
     {
-        ExpandSocialRatingEffects(baseEffects, *m_pSocialRatings);
+        BaseEffects_t ratingSource =
+            CollectBaseLocalEffects_(m_rFaction.GetLocalActiveEffects());
+        const size_t beforeExpand = ratingSource.effects.size();
+        ExpandSocialRatingEffects(ratingSource, *m_pSocialRatings);
+        for (size_t i = beforeExpand; i < ratingSource.effects.size(); ++i)
+        {
+            baseEffects.effects.push_back(ratingSource.effects[i]);
+        }
     }
 
     return baseEffects;
@@ -315,22 +323,11 @@ const BaseEffects_t& BaseManager::BuildBaseEffects_() const
 
 int BaseManager::GetEffectiveSocialRating(SocialRatingId_t rating) const
 {
-    if (!m_pEffectsProvider)
-    {
-        throw std::runtime_error("BaseManager::GetEffectiveSocialRating: m_pEffectsProvider is null");
-    }
-    // KNOWN LANE SPLIT (package 2): this accumulates over the *composed* pool, so a
-    // SocialRatingModifier arriving as a council effect or a peer faction's WorldGlobal
-    // counts toward this base's rating — but FactionEffectsPool::ExpandFactionLaneSocialRating-
-    // Effects runs inside Rebuild_ over the *local* pool only, so the same modifier never
-    // reaches the FactionUnits / FactionGlobal lane. No shipped config declares a rating
-    // modifier at those scopes (BonusEffectParser::ValidateScopeForSource does not forbid it,
-    // so a mod can), which is why this is a latent split rather than a live bug. Package 2
-    // owns the resolution: either feed world extras into faction-lane expansion too, or
-    // restrict rating accumulation to the local pool. Do not "fix" it by silently changing
-    // one side here.
+    // Local-only ratings: peer WorldGlobal / council SocialRatingModifiers never move
+    // this axis (see AccumulateSocialRatings). Package 5 rejects those scopes at load.
     const std::map<SocialRatingId_t, int> totals =
-        AccumulateSocialRatings(CollectBaseLocalEffects_(m_pEffectsProvider->GetActiveEffects()).effects);
+        AccumulateSocialRatings(
+            CollectBaseLocalEffects_(m_rFaction.GetLocalActiveEffects()).effects);
     const auto it = totals.find(rating);
     return it == totals.end() ? 0 : it->second;
 }

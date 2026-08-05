@@ -148,6 +148,8 @@ class BuildingRegistry;
 // Expands any GrantBuildingEffect_t entries in `effects`, appending the granted
 // building's own effects. rBases is used to attribute ThisBase-scoped sub-effects
 // to the correct base when the grant itself has no originBase (faction-global scope).
+// Constructed buildings on rBases pre-seed the grant dedupe set so a grant of a
+// building already built does not double-count that building's continuous effects.
 // Returns the expanded vector by value.
 std::vector<ActiveEffect_t> ExpandGrantBuildingEffects(
     std::vector<ActiveEffect_t> effects,

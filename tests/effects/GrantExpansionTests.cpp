@@ -224,3 +224,44 @@ TEST_CASE("Instantaneous GrantBuilding effects never enter the active pool, so t
     CHECK(expanded.empty());
     CHECK(TotalFor(expanded, StatId_t::Nutrients, &baseA) == 0.0);
 }
+
+TEST_CASE("ExpandGrantBuildingEffects: grant of an already-constructed building does not double-count",
+          "[effects][grant]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& baseA = fixture.MakeBase(2, 2);
+
+    // SMAC Command Nexus / Perimeter Defense: hall is built, and a local grantor also grants it.
+    baseA.GetBuildingManager().AddBuilding("granted_hall");
+    baseA.GetBuildingManager().AddBuilding("grantor_local");
+    const auto expanded = ExpandGrantBuildingEffects(
+        baseA.CollectBuildingEffects(), fixture.buildings(), {&baseA});
+
+    // granted_hall's ThisBase +3 minerals appear once (constructed), not 2×.
+    CHECK(TotalFor(expanded, StatId_t::Minerals, &baseA) == 3.0);
+    CHECK(TotalFor(expanded, StatId_t::Energy, nullptr) == 1.0);
+}
+
+TEST_CASE("ExpandGrantBuildingEffects: global grant skips ThisBase clone where hall is built",
+          "[effects][grant]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& baseA = fixture.MakeBase(2, 2);
+    BaseManager& baseB = fixture.MakeBase(6, 6);
+
+    baseA.GetBuildingManager().AddBuilding("granted_hall");
+    baseA.GetBuildingManager().AddBuilding("grantor_global");
+
+    std::vector<ActiveEffect_t> collected = baseA.CollectBuildingEffects();
+    const auto fromB = baseB.CollectBuildingEffects();
+    collected.insert(collected.end(), fromB.begin(), fromB.end());
+
+    const auto expanded = ExpandGrantBuildingEffects(std::move(collected), fixture.buildings(),
+                                                     {&baseA, &baseB});
+
+    // A already has the hall constructed — no second ThisBase minerals. B still receives the grant.
+    CHECK(TotalFor(expanded, StatId_t::Minerals, &baseA) == 3.0);
+    CHECK(TotalFor(expanded, StatId_t::Minerals, &baseB) == 3.0);
+    // FactionGlobal energy from the hall appears once (constructed contribution; grant skipped).
+    CHECK(TotalFor(expanded, StatId_t::Energy, nullptr) == 1.0);
+}

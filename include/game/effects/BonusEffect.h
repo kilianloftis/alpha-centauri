@@ -48,7 +48,8 @@ enum class EffectLane_t
     // instead, so they never enter the pool).
     Base,
     // Resolved at every base of the faction (WorldGlobal additionally crosses factions via
-    // GameState::CollectWorldEffects). Lives in the faction pool; FilterForBase includes it.
+    // GameState::CollectWorldExtras / Faction composition). Lives in the faction pool;
+    // FilterForBase includes it.
     FactionWide,
     // Merged into every live unit's stat resolution. Lives in the faction pool; consumed by
     // Unit::Get* via FilterByScope(FactionUnits), never applies at base level.

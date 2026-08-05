@@ -571,3 +571,77 @@ TEST_CASE("Supreme Leader election stubs diplomatic victory at 75 percent", "[co
     REQUIRE(rCouncil.GetSupremeLeaderVictoryStub());
     CHECK(rCouncil.GetSupremeLeaderVictoryStub() == game.pA);
 }
+
+TEST_CASE("Council world and governor extras compose into Faction::GetActiveEffects",
+          "[council][effects][composition]")
+{
+    CouncilGame_ game;
+    game.Discover(*game.pA, "planetary_economics");
+    game.GiveAllCommlinksTo(*game.pA);
+
+    PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+    BaseManager& baseA = *game.pA->Bases().begin();
+    BaseManager& baseB = *game.pB->Bases().begin();
+
+    // Force composition once so post-law version bumps are measurable per faction.
+    const uint64_t versionABefore = game.pA->GetEffectsVersion();
+    const uint64_t versionBBefore = game.pB->GetEffectsVersion();
+    const int nutrientsBefore = baseA.GetNutrientsRequired();
+
+    // Passing a continuous WorldGlobal law must enter every faction's composed pool and
+    // bump the effects version so BaseManager memos rebuild — without stage-appended lists.
+    game.PassStandard(*game.pA, "global_trade_pact");
+    CHECK(rCouncil.IsActive("global_trade_pact"));
+    CHECK(game.pA->GetEffectsVersion() != versionABefore);
+    CHECK(game.pB->GetEffectsVersion() != versionBBefore);
+
+    auto hasCommerceRate = [](const FactionEffects_t& rPool)
+    {
+        for (const ActiveEffect_t& rEffect : rPool.effects)
+        {
+            if (const auto* pStat = std::get_if<StatModifierEffect_t>(&rEffect.config->effect))
+            {
+                if (pStat->stat == StatId_t::CommerceRate)
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+    CHECK(hasCommerceRate(game.pA->GetActiveEffects()));
+    CHECK(hasCommerceRate(game.pB->GetActiveEffects()));
+    // Local pool must not absorb council extras (harvest peers from local only).
+    CHECK_FALSE(hasCommerceRate(game.pA->GetLocalActiveEffects()));
+
+    // Memoized nutrient threshold still resolves after the world stamp moved (same list as
+    // ApplyGrowth would use — no external vector).
+    CHECK(baseA.GetNutrientsRequired() == nutrientsBefore);
+    CHECK(baseB.GetNutrientsRequired() == baseA.GetNutrientsRequired());
+
+    // Governor FactionGlobal extras reach only the governor's composed view.
+    game.AdvancePastProposeCooldown(*game.pA);
+    rCouncil.Propose(*game.pState, *game.pA, "elect_planetary_governor");
+    rCouncil.CastElectionVote(*game.pA, game.pA);
+    rCouncil.CastElectionVote(*game.pB, game.pA);
+    rCouncil.CastElectionVote(*game.pC, game.pA);
+    REQUIRE(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
+
+    auto hasCommerceEnergyBonus = [](const FactionEffects_t& rPool)
+    {
+        for (const ActiveEffect_t& rEffect : rPool.effects)
+        {
+            if (const auto* pStat = std::get_if<StatModifierEffect_t>(&rEffect.config->effect))
+            {
+                if (pStat->stat == StatId_t::CommerceEnergyBonus)
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+    CHECK(hasCommerceEnergyBonus(game.pA->GetActiveEffects()));
+    CHECK_FALSE(hasCommerceEnergyBonus(game.pB->GetActiveEffects()));
+    CHECK_FALSE(hasCommerceEnergyBonus(game.pA->GetLocalActiveEffects()));
+}

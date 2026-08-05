@@ -220,7 +220,8 @@ public:
     uint64_t GetEffectsVersion() const override;
 
     // Local pool only (no peer WorldGlobal / council). Used when harvesting peers for
-    // world composition and by package-2 expand work that must not see session extras.
+    // world composition, and for social-rating accumulation / faction-lane rating expand
+    // (ratings are a faction-internal axis — see SocialRatingResolver).
     const FactionEffects_t& GetLocalActiveEffects() const;
     uint64_t GetLocalEffectsVersion() const;
 

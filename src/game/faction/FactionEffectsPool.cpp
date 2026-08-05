@@ -17,30 +17,33 @@
 namespace ac
 {
 
-FactionEffectsPool::FactionEffectsPool(const BuildingRegistry* pBuildingRegistry,
+FactionEffectsPool::FactionEffectsPool(const Faction& rFaction,
+                                       const BuildingRegistry* pBuildingRegistry,
                                        const Revision& rBaseListRevision,
                                        const std::vector<EffectConfig_t>* pTileYieldRules,
                                        const SocialRatingRegistry* pSocialRatings)
-    : m_pBuildingRegistry(pBuildingRegistry)
+    : m_rFaction(rFaction)
+    , m_pBuildingRegistry(pBuildingRegistry)
     , m_rBaseListRevision(rBaseListRevision)
     , m_pTileYieldRules(pTileYieldRules)
     , m_pSocialRatings(pSocialRatings)
 {
 }
 
-const FactionEffects_t& FactionEffectsPool::Get(const Faction& rFaction) const
+const FactionEffects_t& FactionEffectsPool::Get() const
 {
-    Validate_(rFaction);
+    Validate_();
     return m_cachedPool;
 }
 
-uint64_t FactionEffectsPool::GetVersion(const Faction& rFaction) const
+uint64_t FactionEffectsPool::GetVersion() const
 {
-    Validate_(rFaction);
+    Validate_();
     return m_version;
 }
 
-std::vector<ActiveEffect_t> FactionEffectsPool::CollectBuildingEffects_(const Faction& rFaction) const
+std::vector<ActiveEffect_t> FactionEffectsPool::CollectBuildingEffects_(
+    const Faction& rFaction) const
 {
     std::vector<ActiveEffect_t> result;
     for (const BaseManager& rBase : rFaction.Bases())
@@ -48,18 +51,7 @@ std::vector<ActiveEffect_t> FactionEffectsPool::CollectBuildingEffects_(const Fa
         const auto baseEffects = rBase.CollectBuildingEffects();
         result.insert(result.end(), baseEffects.begin(), baseEffects.end());
     }
-
-    if (!m_pBuildingRegistry)
-    {
-        return result;
-    }
-
-    std::vector<const BaseManager*> bases;
-    for (const BaseManager& rBase : rFaction.Bases())
-    {
-        bases.push_back(&rBase);
-    }
-    return ExpandGrantBuildingEffects(std::move(result), *m_pBuildingRegistry, bases);
+    return result;
 }
 
 std::vector<ActiveEffect_t> FactionEffectsPool::CollectPopEffects_(const Faction& rFaction) const
@@ -95,7 +87,8 @@ std::vector<ActiveEffect_t> FactionEffectsPool::CollectUnitEffects_(const Factio
     return result;
 }
 
-std::vector<ActiveEffect_t> FactionEffectsPool::CollectDefinitionEffects_(const Faction& rFaction) const
+std::vector<ActiveEffect_t> FactionEffectsPool::CollectDefinitionEffects_(
+    const Faction& rFaction) const
 {
     std::vector<ActiveEffect_t> result;
     AppendActiveEffects(rFaction.GetDefinition().effects, nullptr,
@@ -114,7 +107,20 @@ std::vector<ActiveEffect_t> FactionEffectsPool::CollectTileYieldRuleEffects_() c
     return result;
 }
 
-void FactionEffectsPool::CollectRevisions_(const Faction& rFaction, std::vector<uint64_t>& rOut) const
+void FactionEffectsPool::ApplyRemovedByTech_(FactionEffects_t& rEffects,
+                                             const ResearchManager& rResearch)
+{
+    rEffects.effects.erase(
+        std::remove_if(rEffects.effects.begin(), rEffects.effects.end(),
+                       [&](const ActiveEffect_t& rEffect) {
+                           return rEffect.config && !rEffect.config->removedByTech.empty()
+                               && rResearch.HasDiscoveredTech(rEffect.config->removedByTech);
+                       }),
+        rEffects.effects.end());
+}
+
+void FactionEffectsPool::CollectRevisions_(const Faction& rFaction,
+                                           std::vector<uint64_t>& rOut) const
 {
     rOut.clear();
     rOut.push_back(m_rBaseListRevision.Get());
@@ -128,57 +134,71 @@ void FactionEffectsPool::CollectRevisions_(const Faction& rFaction, std::vector<
     }
 }
 
-void FactionEffectsPool::Validate_(const Faction& rFaction) const
+void FactionEffectsPool::Validate_() const
 {
-    CollectRevisions_(rFaction, m_scratchRevisions);
+    CollectRevisions_(m_rFaction, m_scratchRevisions);
     if (m_scratchRevisions != m_cachedStamp)
     {
-        Rebuild_(rFaction);
+        Rebuild_();
     }
 }
 
-void FactionEffectsPool::Rebuild_(const Faction& rFaction) const
+void FactionEffectsPool::Rebuild_() const
 {
+    // Pipeline: collect raw → gate → expand grants → expand faction-lane ratings →
+    // gate again → stamp from the Validate_ scratch snapshot (do not re-collect).
     FactionEffects_t factionEffects;
+
     const std::vector<ActiveEffect_t> tileYieldRules = CollectTileYieldRuleEffects_();
     factionEffects.effects.insert(factionEffects.effects.end(), tileYieldRules.begin(),
                                   tileYieldRules.end());
 
-    const std::vector<ActiveEffect_t> defEffects = CollectDefinitionEffects_(rFaction);
-    factionEffects.effects.insert(factionEffects.effects.end(), defEffects.begin(), defEffects.end());
+    const std::vector<ActiveEffect_t> defEffects = CollectDefinitionEffects_(m_rFaction);
+    factionEffects.effects.insert(factionEffects.effects.end(), defEffects.begin(),
+                                  defEffects.end());
 
-    const std::vector<ActiveEffect_t> buildingEffects = CollectBuildingEffects_(rFaction);
-    factionEffects.effects.insert(factionEffects.effects.end(), buildingEffects.begin(), buildingEffects.end());
+    const std::vector<ActiveEffect_t> buildingEffects = CollectBuildingEffects_(m_rFaction);
+    factionEffects.effects.insert(factionEffects.effects.end(), buildingEffects.begin(),
+                                  buildingEffects.end());
 
-    const std::vector<ActiveEffect_t> seEffects = rFaction.GetSocialEngineering().CollectEffects();
-    factionEffects.effects.insert(factionEffects.effects.end(), seEffects.begin(), seEffects.end());
+    const std::vector<ActiveEffect_t> seEffects =
+        m_rFaction.GetSocialEngineering().CollectEffects();
+    factionEffects.effects.insert(factionEffects.effects.end(), seEffects.begin(),
+                                  seEffects.end());
 
-    // Expand SE rating axes whose gameplay effects target units / faction-global lanes
-    // (e.g. Morale → morale_bonus). Base-lane ratings still expand per base.
+    const std::vector<ActiveEffect_t> popEffects = CollectPopEffects_(m_rFaction);
+    factionEffects.effects.insert(factionEffects.effects.end(), popEffects.begin(),
+                                  popEffects.end());
+
+    const std::vector<ActiveEffect_t> unitEffects = CollectUnitEffects_(m_rFaction);
+    factionEffects.effects.insert(factionEffects.effects.end(), unitEffects.begin(),
+                                  unitEffects.end());
+
+    const ResearchManager& rResearch = m_rFaction.GetResearch();
+    ApplyRemovedByTech_(factionEffects, rResearch);
+
+    if (m_pBuildingRegistry)
+    {
+        std::vector<const BaseManager*> bases;
+        for (const BaseManager& rBase : m_rFaction.Bases())
+        {
+            bases.push_back(&rBase);
+        }
+        factionEffects.effects = ExpandGrantBuildingEffects(
+            std::move(factionEffects.effects), *m_pBuildingRegistry, bases);
+    }
+
+    // Expand SE rating axes whose gameplay effects target FactionUnits (e.g. Morale →
+    // morale_bonus). Accumulation is FactionWide-only; ThisBase stays on the per-base path.
     if (m_pSocialRatings)
     {
         ExpandFactionLaneSocialRatingEffects(factionEffects, *m_pSocialRatings);
     }
 
-    const std::vector<ActiveEffect_t> popEffects = CollectPopEffects_(rFaction);
-    factionEffects.effects.insert(factionEffects.effects.end(), popEffects.begin(), popEffects.end());
-
-    const std::vector<ActiveEffect_t> unitEffects = CollectUnitEffects_(rFaction);
-    factionEffects.effects.insert(factionEffects.effects.end(), unitEffects.begin(), unitEffects.end());
-
-    // Drop effects gated by a discovered tech (removed_by_tech). Research revision is in the
-    // stamp, so discovering a tech rebuilds the pool and lifts those gates.
-    const ResearchManager& rResearch = rFaction.GetResearch();
-    factionEffects.effects.erase(
-        std::remove_if(factionEffects.effects.begin(), factionEffects.effects.end(),
-                       [&](const ActiveEffect_t& rEffect) {
-                           return rEffect.config && !rEffect.config->removedByTech.empty()
-                               && rResearch.HasDiscoveredTech(rEffect.config->removedByTech);
-                       }),
-        factionEffects.effects.end());
+    ApplyRemovedByTech_(factionEffects, rResearch);
 
     m_cachedPool = std::move(factionEffects);
-    CollectRevisions_(rFaction, m_cachedStamp);
+    m_cachedStamp = m_scratchRevisions;
     ++m_version;
 }
 

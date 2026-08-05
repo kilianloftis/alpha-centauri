@@ -91,8 +91,19 @@ void ExpandSocialRatingEffects(BaseEffects_t& rBaseEffects,
 void ExpandFactionLaneSocialRatingEffects(FactionEffects_t& rFactionEffects,
                                           const SocialRatingRegistry& rRatings)
 {
+    // Faction-lane expansion only accumulates FactionWide modifiers. ThisBase rating
+    // mods stay on ExpandSocialRatingEffects after FilterForBase so N bases with
+    // ThisBase shrines cannot inflate FactionUnits bonuses.
+    std::vector<ActiveEffect_t> factionWideModifiers;
+    for (const ActiveEffect_t& rEffect : rFactionEffects.effects)
+    {
+        if (rEffect.config && LaneFor(rEffect.config->scope) == EffectLane_t::FactionWide)
+        {
+            factionWideModifiers.push_back(rEffect);
+        }
+    }
     const std::map<SocialRatingId_t, int> totals =
-        AccumulateSocialRatings(rFactionEffects.effects);
+        AccumulateSocialRatings(factionWideModifiers);
 
     for (const auto& [rating, total] : totals)
     {

@@ -31,8 +31,9 @@ public:
     void AddResearchPoints(int points);
     void SetAccumulatedPoints(int points);
 
-    // Cost of the current target. Revalidated against the effects provider's version, so a
-    // TechCost-modifying effect appearing mid-research is reflected on the next read.
+    // Cost of the current target. Revalidated against the effects provider's version and
+    // this manager's research revision (tech count is a direct cost input), so a
+    // TechCost-modifying effect or a mid-research tech discovery is reflected on the next read.
     int GetPointsNeededForCurrentTech() const;
     void RecalculatePointsNeeded();
 
@@ -68,15 +69,18 @@ private:
     mutable int m_pointsNeededForCurrentTech;
     // Provider effects version the cost was computed against (0 = no provider involved).
     mutable uint64_t m_costEffectsVersion = 0;
+    // Research revision (discovered-tech count) the cost was computed against.
+    mutable uint64_t m_costResearchRevision = 0;
     Revision m_revision;
 
     void ResetAccumulatedPoints_();
 
-    // Compute the cost of the current target and record the provider version it used.
+    // Compute the cost of the current target and record the provider / research revisions.
     void ComputePointsNeeded_() const;
 
-    // Recompute m_pointsNeededForCurrentTech if the provider's effect pool changed since
-    // the last computation. No-op without a target or provider.
+    // Recompute m_pointsNeededForCurrentTech if the provider's effect pool or this
+    // manager's research revision changed since the last computation. With a null
+    // provider, still revalidates when research revision changes (tech count is a cost input).
     void RevalidatePointsNeeded_() const;
 };
 

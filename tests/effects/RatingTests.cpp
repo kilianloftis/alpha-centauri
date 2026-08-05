@@ -6,6 +6,8 @@
 #include "TestHelpers.h"
 
 #include "game/IConstructable.h"
+#include "game/faction/ResearchManager.h"
+#include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/production/ProductionManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/map/Tile.h"
@@ -230,4 +232,164 @@ TEST_CASE("Economy rating minerals AddPercent scales worked minerals",
 
     faction.ProduceBaseResources();
     CHECK(base.GetResources().ConsumeMinerals() == expected);
+}
+
+TEST_CASE("Base-level Labs AddPercent seeds from the energy split, not zero",
+          "[effects][rating][labs]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+
+    // Flat +10 energy → default 50% labs split = 5.
+    base.GetBuildingManager().AddBuilding("world_beacon");
+    const int labsBefore = base.GetLabsProduction();
+    REQUIRE(labsBefore == 5);
+
+    // +50% Labs must scale the split (5 * 1.5 = 7.5 → 8), not vanish on SeedFor(Labs)==0.
+    base.GetBuildingManager().AddBuilding("labs_amplifier");
+    const int expected = FinalizeResolvedStat(static_cast<double>(labsBefore) * 1.5);
+    CHECK(expected == 8);
+    CHECK(base.GetLabsProduction() == expected);
+
+    faction.ProduceBaseResources();
+    CHECK(base.GetResources().ConsumeLabs() == expected);
+}
+
+TEST_CASE("Faction-lane rating expand ignores ThisBase modifiers across multiple bases",
+          "[effects][rating]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& baseA = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& baseB = fixture.MakeFactionBase(faction, 6, 6);
+
+    // Policy +2 Morale (FactionGlobal). Two ThisBase shrines must not inflate FactionUnits.
+    faction.GetSocialEngineering().SetActivePolicy(fixture.socialPolicies().Get("morale_policy"));
+    baseA.GetBuildingManager().AddBuilding("morale_shrine");
+    baseB.GetBuildingManager().AddBuilding("morale_shrine");
+
+    const FactionEffects_t& rPool = faction.GetLocalActiveEffects();
+    bool foundPolicyLevel = false;
+    bool foundInflatedLevel = false;
+    for (const ActiveEffect_t& rEffect : rPool.effects)
+    {
+        if (rEffect.sourceId == "se_rating_morale_2")
+        {
+            foundPolicyLevel = true;
+        }
+        if (rEffect.sourceId == "se_rating_morale_4")
+        {
+            foundInflatedLevel = true;
+        }
+    }
+    CHECK(foundPolicyLevel);
+    CHECK_FALSE(foundInflatedLevel);
+
+    // Per-base effective ratings still see their own shrine.
+    CHECK(baseA.GetEffectiveSocialRating(SocialRatingId_t::Morale) == 3);
+    CHECK(baseB.GetEffectiveSocialRating(SocialRatingId_t::Morale) == 3);
+}
+
+TEST_CASE("Faction-lane rating expand observes pop FactionGlobal SocialRatingModifiers",
+          "[effects][rating]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+
+    // MoraleOfficer declares +1 Morale FactionGlobal. If rating expand ran before pop
+    // collection, the expanded FactionUnits level would be absent.
+    base.GetPopulation().AddPop("MoraleOfficer");
+
+    const FactionEffects_t& rPool = faction.GetLocalActiveEffects();
+    bool foundLevel = false;
+    for (const ActiveEffect_t& rEffect : rPool.effects)
+    {
+        if (rEffect.sourceId == "se_rating_morale_1")
+        {
+            foundLevel = true;
+        }
+    }
+    CHECK(foundLevel);
+}
+
+TEST_CASE("removed_by_tech gates GrantBuilding before expansion",
+          "[effects][rating][grant]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+
+    base.GetBuildingManager().AddBuilding("gated_grantor");
+    REQUIRE(ResolveStatModifiers(
+                FilterByStatId(faction.GetLocalActiveEffects().effects, StatId_t::Minerals),
+                0.0)
+                .total
+            == Approx(3.0));
+
+    faction.GetResearch().AddDiscoveredTech("gene_splicing");
+    CHECK(ResolveStatModifiers(
+              FilterByStatId(faction.GetLocalActiveEffects().effects, StatId_t::Minerals), 0.0)
+              .total
+          == Approx(0.0));
+}
+
+TEST_CASE("removed_by_tech gates SocialRatingModifier before faction-lane expand",
+          "[effects][rating]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+
+    base.GetBuildingManager().AddBuilding("gated_morale_policy_building");
+    {
+        bool found = false;
+        for (const ActiveEffect_t& rEffect : faction.GetLocalActiveEffects().effects)
+        {
+            if (rEffect.sourceId == "se_rating_morale_2")
+            {
+                found = true;
+            }
+        }
+        CHECK(found);
+    }
+
+    faction.GetResearch().AddDiscoveredTech("gene_splicing");
+    for (const ActiveEffect_t& rEffect : faction.GetLocalActiveEffects().effects)
+    {
+        CHECK(rEffect.sourceId.find("se_rating_morale_") == std::string::npos);
+    }
+}
+
+TEST_CASE("Two factions with equal revision stamps do not share a local effect pool",
+          "[effects][rating]")
+{
+    actest::FactionFixture fixture;
+    actest::EffectPool effectPool;
+
+    // Configs must outlive the Faction references into them (declare before the factions).
+    FactionConfig_t defA = fixture.factionDefinition;
+    defA.id = "faction_a";
+    defA.effects.push_back(
+        effectPool.StatMod(StatId_t::Energy, 5.0, ModifierOp_t::Add, EffectScope_t::FactionGlobal));
+    FactionConfig_t defB = fixture.factionDefinition;
+    defB.id = "faction_b";
+    defB.effects.push_back(
+        effectPool.StatMod(StatId_t::Energy, 11.0, ModifierOp_t::Add, EffectScope_t::FactionGlobal));
+
+    // Keep factions out of fixture.factions so destruction order is factions → defs.
+    auto pFactionA = std::make_unique<Faction>(1, true, defA, fixture.dataContext);
+    auto pFactionB = std::make_unique<Faction>(2, false, defB, fixture.dataContext);
+    pFactionA->BindWorldMap(fixture.map);
+    pFactionB->BindWorldMap(fixture.map);
+
+    CHECK(ResolveStatModifiers(
+              FilterByStatId(pFactionA->GetLocalActiveEffects().effects, StatId_t::Energy), 0.0)
+              .total
+          == Approx(5.0));
+    CHECK(ResolveStatModifiers(
+              FilterByStatId(pFactionB->GetLocalActiveEffects().effects, StatId_t::Energy), 0.0)
+              .total
+          == Approx(11.0));
 }
