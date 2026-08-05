@@ -100,6 +100,6 @@ TEST_CASE("Supply crawl credits only the chosen resource to the home base", "[un
     CHECK(base.GetMineralProduction() == mineralsBefore + 2);
     CHECK(base.GetNutrientProduction() == nutrientsBefore);
 
-    base.ProduceResources(faction.GetActiveEffects());
+    base.ProduceResources();
     CHECK(base.GetResources().ConsumeMinerals() >= mineralsBefore + 2);
 }

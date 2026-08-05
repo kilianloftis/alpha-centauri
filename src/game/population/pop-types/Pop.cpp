@@ -108,7 +108,7 @@ TileResources_t Pop::ApplyTileMultipliers(const TileResources_t& resources) cons
     {
         const StatBreakdown_t breakdown =
             ResolveStatModifiers(FilterByStatId(tileEffects, statId), static_cast<double>(rawValue));
-        return static_cast<int>(std::round(breakdown.total));
+        return FinalizeResolvedStat(breakdown.total);
     };
 
     return TileResources_t{
@@ -127,7 +127,8 @@ SpecialistOutput_t Pop::GetSpecialistOutput() const
 
     auto resolveFlat = [&](StatId_t statId) -> int
     {
-        return static_cast<int>(ResolveStatModifiers(FilterByStatId(flatEffects, statId), SeedFor(statId)).total);
+        return FinalizeResolvedStat(
+            ResolveStatModifiers(FilterByStatId(flatEffects, statId), SeedFor(statId)).total);
     };
 
     return SpecialistOutput_t{

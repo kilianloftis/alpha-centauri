@@ -16,10 +16,8 @@ BaseProduction::BaseProduction(HookContext hookContext)
 {
 }
 
-StageResult_t BaseProduction::ExecuteImpl(GameState& rGameState, Faction& rFaction)
+StageResult_t BaseProduction::ExecuteImpl(GameState& /*rGameState*/, Faction& rFaction)
 {
-    (void)rGameState;
-
     std::cout << "Executing BaseProduction stage for faction\n";
 
     for (BaseManager& rBase : rFaction.Bases())

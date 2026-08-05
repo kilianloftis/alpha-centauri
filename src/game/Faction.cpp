@@ -4,6 +4,7 @@
 #include "game/buildings/BuildingRegistry.h"
 
 #include <algorithm>
+#include <cstdint>
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/GameDataContext.h"
 #include "game/map/WorldMap.h"
@@ -452,30 +453,24 @@ BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile*
     return pRawBase;
 }
 
-void Faction::ProduceBaseResources(const std::vector<ActiveEffect_t>& rExternalEffects)
+void Faction::ProduceBaseResources()
 {
-    FactionEffects_t factionEffects = GetActiveEffects();
-    factionEffects.effects.insert(factionEffects.effects.end(), rExternalEffects.begin(), rExternalEffects.end());
-
     for (const auto& pBase : m_bases)
     {
         if (pBase)
         {
-            pBase->ProduceResources(factionEffects);
+            pBase->ProduceResources();
         }
     }
 }
 
-void Faction::ApplyBaseGrowth(const std::vector<ActiveEffect_t>& rExternalEffects)
+void Faction::ApplyBaseGrowth()
 {
-    FactionEffects_t factionEffects = GetActiveEffects();
-    factionEffects.effects.insert(factionEffects.effects.end(), rExternalEffects.begin(), rExternalEffects.end());
-
     for (const auto& pBase : m_bases)
     {
         if (pBase)
         {
-            pBase->ApplyGrowth(factionEffects);
+            pBase->ApplyGrowth();
         }
     }
 }
@@ -591,6 +586,14 @@ void Faction::BindWorldMap(WorldMap& rWorldMap)
     RebuildVisibility();
 }
 
+void Faction::BindWorldEffects(IWorldEffectsSource& rWorldEffects)
+{
+    m_pWorldEffects = &rWorldEffects;
+    // Force recomposition on next GetActiveEffects.
+    m_composedLocalVersion = UINT64_MAX;
+    m_composedWorldStamp = UINT64_MAX;
+}
+
 void Faction::RebuildVisibility()
 {
     if (!m_pWorldMap)
@@ -625,14 +628,57 @@ std::vector<const PopTypeConfig_t*> Faction::GetAvailablePopTypes() const
     return m_rDataContext.popTypeAvailabilityCalculator->GetAvailable(m_pResearch->GetDiscoveredTechs());
 }
 
-const FactionEffects_t& Faction::GetActiveEffects() const
+const FactionEffects_t& Faction::GetLocalActiveEffects() const
 {
     return m_effectsPool.Get(*this);
 }
 
-uint64_t Faction::GetEffectsVersion() const
+uint64_t Faction::GetLocalEffectsVersion() const
 {
     return m_effectsPool.GetVersion(*this);
+}
+
+void Faction::EnsureComposedEffects_() const
+{
+    // GetWorldCompositionStamp sweeps every peer faction's pool, so both public accessors
+    // funnel through here rather than each recomputing it — one sweep per query, and the
+    // returned list and version can never describe different compositions.
+    const uint64_t localVersion = GetLocalEffectsVersion();
+    const uint64_t worldStamp =
+        m_pWorldEffects ? m_pWorldEffects->GetWorldCompositionStamp(*this) : 0;
+    if (localVersion == m_composedLocalVersion && worldStamp == m_composedWorldStamp)
+    {
+        return;
+    }
+
+    m_composedEffects = GetLocalActiveEffects();
+    if (m_pWorldEffects)
+    {
+        const std::vector<ActiveEffect_t> extras = m_pWorldEffects->CollectWorldExtras(*this);
+        m_composedEffects.effects.insert(m_composedEffects.effects.end(), extras.begin(),
+                                         extras.end());
+    }
+    m_composedLocalVersion = localVersion;
+    m_composedWorldStamp = worldStamp;
+    // Monotonic, so consumers comparing versions for equality (BaseManager's base-effect
+    // memo, ResearchManager's cost cache) cannot be fooled by a collision the way a hash of
+    // (localVersion, worldStamp) could. Starts at 1: never equal to a default-initialized 0.
+    ++m_composedVersion;
+}
+
+const FactionEffects_t& Faction::GetActiveEffects() const
+{
+    EnsureComposedEffects_();
+    return m_composedEffects;
+}
+
+uint64_t Faction::GetEffectsVersion() const
+{
+    // Moves when the local pool changes *or* when peer WorldGlobal / council inputs do, so
+    // downstream memos invalidate on world changes without those effects being folded into
+    // the local pool.
+    EnsureComposedEffects_();
+    return m_composedVersion;
 }
 
 } // namespace ac

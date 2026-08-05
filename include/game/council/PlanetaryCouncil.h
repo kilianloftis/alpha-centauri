@@ -104,10 +104,20 @@ public:
     int ComputeVoteWeight(const Faction& rFaction, CouncilVoteWeight_t mode) const;
 
     // Continuous WorldGlobal effects from active proposals (Trade Pact, U.N. Charter, etc.).
+    // The returned wrappers' `config` pointers reference CouncilEffects-owned storage — see
+    // GetRevision for the rule that keeps copies of them valid.
     std::vector<ActiveEffect_t> CollectWorldEffects() const;
     // Continuous FactionGlobal effects for the governor (commerce energy bonus).
     std::vector<ActiveEffect_t> CollectFactionEffects(const Faction& rFaction) const;
 
+    // Load-bearing for pointer validity, not just for cache invalidation:
+    // GameState::CollectWorldExtras hands copies of the Collect*Effects wrappers to
+    // Faction's composed-pool cache and (through it) BaseManager's memo, where they are
+    // retained across turns. CouncilEffects reallocates its EffectConfig_t storage on every
+    // RebuildWorld / SetGovernorEffects, dangling those copies — so each of those calls must
+    // be followed by m_revision.Bump(), which moves GetWorldCompositionStamp and forces the
+    // caches to recompose before anything reads them again. Package 3 (stable council effect
+    // storage) is the structural fix; until then, never rebuild without bumping.
     const Revision& GetRevision() const { return m_revision; }
 
     struct PendingProposal_t

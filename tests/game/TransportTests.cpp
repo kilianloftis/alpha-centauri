@@ -81,8 +81,8 @@ TEST_CASE("Transport special applies movement penalties by domain", "[transport]
     CHECK(sea.GetStat(StatId_t::Movement) == 1);
 
     Unit& air = fixture.MakeUnit(faction, 5, 4, {"test_fuel_flight_chassis", "test_transport"});
-    // Fuel flight chassis movement 4: (4 + −1) * 0.5 → 1.
-    CHECK(air.GetStat(StatId_t::Movement) == 1);
+    // Fuel flight chassis movement 4: (4 + −1) * 0.5 = 1.5 → FinalizeResolvedStat → 2.
+    CHECK(air.GetStat(StatId_t::Movement) == 2);
 }
 
 TEST_CASE("Board requires capacity; full transport rejects; attach via L and step",

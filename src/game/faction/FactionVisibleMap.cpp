@@ -51,7 +51,7 @@ int SightRadiusFromImprovement_(const ImprovementConfig_t& rConfig)
         ActiveEffect_t active;
         active.config = &rEffect;
         active.sourceId = rConfig.id;
-        const int range = static_cast<int>(
+        const int range = FinalizeResolvedStat(
             ResolveStatModifiers(std::vector<ActiveEffect_t>{active}, SeedFor(StatId_t::Vision))
                 .total);
         sight = std::max(sight, range);

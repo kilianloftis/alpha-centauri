@@ -116,27 +116,54 @@ const EventBus& GameState::GetEventBus() const
     return *m_pEventBus;
 }
 
-std::vector<ActiveEffect_t> GameState::CollectWorldEffects(const Faction& rExclude) const
+uint64_t GameState::GetWorldCompositionStamp(const Faction& rFor) const
+{
+    // Mix peer local-pool versions and council revision. Using local versions (not composed)
+    // keeps council extras from feeding back into the stamp when peers also compose.
+    auto mix = [](uint64_t a, uint64_t b) -> uint64_t
+    {
+        return a ^ (b + 0x9e3779b97f4a7c15ULL + (a << 6) + (a >> 2));
+    };
+
+    uint64_t stamp = 0;
+    for (const auto& pFaction : m_factions)
+    {
+        if (pFaction.get() == &rFor)
+        {
+            continue;
+        }
+        stamp = mix(stamp, pFaction->GetLocalEffectsVersion());
+    }
+    if (m_pCouncil)
+    {
+        stamp = mix(stamp, m_pCouncil->GetRevision().Get());
+    }
+    return stamp;
+}
+
+std::vector<ActiveEffect_t> GameState::CollectWorldExtras(const Faction& rFor) const
 {
     std::vector<ActiveEffect_t> result;
     for (const auto& pFaction : m_factions)
     {
-        if (pFaction.get() == &rExclude)
+        if (pFaction.get() == &rFor)
         {
             continue;
         }
-        // Lazy view, not a copy: the source is Faction's cached pool (long-lived), and this
-        // is its only use, right below.
+        // Peer *local* pool only: composed GetActiveEffects would re-emit council extras.
         auto worldEffects =
-            FilterByScope(pFaction->GetActiveEffects().effects, EffectScope_t::WorldGlobal);
+            FilterByScope(pFaction->GetLocalActiveEffects().effects, EffectScope_t::WorldGlobal);
         result.insert(result.end(), worldEffects.begin(), worldEffects.end());
     }
     if (m_pCouncil)
     {
+        // These wrappers point at EffectConfig_t storage owned by CouncilEffects, which
+        // reallocates on RebuildWorld / SetGovernorEffects. Every such rebuild bumps the
+        // council revision, which moves GetWorldCompositionStamp and forces the caller's
+        // composed cache to be rebuilt before anything reads these copies again.
         const std::vector<ActiveEffect_t> councilWorld = m_pCouncil->CollectWorldEffects();
         result.insert(result.end(), councilWorld.begin(), councilWorld.end());
-        const std::vector<ActiveEffect_t> councilFaction =
-            m_pCouncil->CollectFactionEffects(rExclude);
+        const std::vector<ActiveEffect_t> councilFaction = m_pCouncil->CollectFactionEffects(rFor);
         result.insert(result.end(), councilFaction.begin(), councilFaction.end());
     }
     return result;
@@ -150,6 +177,7 @@ Faction& GameState::AddFaction(std::unique_ptr<Faction> pFaction)
     }
     pFaction->SetSettings(&m_rSettings);
     pFaction->BindWorldMap(*m_worldMap);
+    pFaction->BindWorldEffects(*this);
     pFaction->SetOnBaseListChanged([this]()
     {
         RebuildTerritory();

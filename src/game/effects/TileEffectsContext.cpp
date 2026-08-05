@@ -295,7 +295,7 @@ int TileEffectsContext::ResolveResource_(const Tile& rTile,
                                          StatId_t stat) const
 {
     const EffectContext_t ctx{&rTile};
-    return static_cast<int>(
+    return FinalizeResolvedStat(
         ResolveStatModifiers(FilterByStatIdInContext(effects, stat, ctx), SeedFor(stat), &ctx).total);
 }
 

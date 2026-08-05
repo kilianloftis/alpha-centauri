@@ -13,10 +13,8 @@ Upkeep::Upkeep(HookContext hookContext)
 {
 }
 
-StageResult_t Upkeep::ExecuteImpl(GameState& rGameState, Faction& rFaction)
+StageResult_t Upkeep::ExecuteImpl(GameState& /*rGameState*/, Faction& /*rFaction*/)
 {
-    (void)rGameState;
-    (void)rFaction;
     std::cout << "Executing Upkeep stage\n";
     return StageResult_t::Continue;
 }

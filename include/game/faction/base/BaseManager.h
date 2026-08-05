@@ -153,11 +153,12 @@ public:
 
     // Collect resources from worked tiles and allocate energy to categories.
     // Called once per turn per base during ResourceCollection stage.
-    void ProduceResources(const FactionEffects_t& rFactionEffects);
+    // Resolves against the composed provider pool (BuildBaseEffects_ memo).
+    void ProduceResources();
 
     // Apply nutrients produced this turn: add to stockpile, grow or starve if threshold is met.
-    // rFactionEffects is the faction-wide pool; GrowthRate modifiers are resolved per base.
-    void ApplyGrowth(const FactionEffects_t& rFactionEffects);
+    // GrowthRate modifiers resolve against the same memoized base effect list.
+    void ApplyGrowth();
 
     // This base's effective social rating on one axis: faction-wide SocialRatingModifier
     // contributions plus any ThisBase-scoped ones originating here (e.g. a building's

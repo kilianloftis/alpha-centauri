@@ -13,9 +13,8 @@ TurnEnd::TurnEnd(HookContext hookContext)
 {
 }
 
-StageResult_t TurnEnd::ExecuteImpl(GameState& rGameState)
+StageResult_t TurnEnd::ExecuteImpl(GameState& /*rGameState*/)
 {
-    (void)rGameState;
     std::cout << "Executing TurnEnd stage\n";
     return StageResult_t::Continue;
 }

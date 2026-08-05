@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "game/IEffectsProvider.h"
+#include "game/IWorldEffectsSource.h"
 #include "game/buildings/BuildingConfigParser.h"
 #include "game/faction/base/BaseTypes.h"
 #include "game/faction/base/BaseManager.h"
@@ -140,13 +141,12 @@ public:
     std::optional<int> GetBreakthroughRate() const;
     std::optional<int> GetTurnsUntilBreakthrough() const;
 
-    // Resource production - routes to all bases and faction economy manager.
-    // rExternalEffects are effects from outside this faction (other factions' WorldGlobal
-    // effects, gathered by the turn stage via CollectWorldEffects); appended to the pool.
-    void ProduceBaseResources(const std::vector<ActiveEffect_t>& rExternalEffects);
+    // Resource production — routes to all bases. Each base resolves against the composed
+    // provider pool (local + world/council via GetActiveEffects).
+    void ProduceBaseResources();
 
     // Apply growth to all bases, incorporating GrowthRate stat effects.
-    void ApplyBaseGrowth(const std::vector<ActiveEffect_t>& rExternalEffects);
+    void ApplyBaseGrowth();
 
     // Research subsystem.
     ResearchManager& GetResearch();
@@ -191,6 +191,8 @@ public:
     FactionRevealedUnits& GetRevealedUnits();
     const FactionRevealedUnits& GetRevealedUnits() const;
     void BindWorldMap(WorldMap& rWorldMap);
+    // Session world/council extras for IEffectsProvider composition (GameState binds itself).
+    void BindWorldEffects(IWorldEffectsSource& rWorldEffects);
     void RebuildVisibility();
 
     // Optional session prefs (Engine/GameState owned). Used by RebuildVisibility to apply
@@ -213,11 +215,17 @@ public:
     // Pop types
     std::vector<const PopTypeConfig_t*> GetAvailablePopTypes() const;
 
-    // IEffectsProvider — delegates to the memoized FactionEffectsPool component.
+    // IEffectsProvider — composed view: local FactionEffectsPool plus bound world extras.
     const FactionEffects_t& GetActiveEffects() const override;
     uint64_t GetEffectsVersion() const override;
 
+    // Local pool only (no peer WorldGlobal / council). Used when harvesting peers for
+    // world composition and by package-2 expand work that must not see session extras.
+    const FactionEffects_t& GetLocalActiveEffects() const;
+    uint64_t GetLocalEffectsVersion() const;
+
 private:
+    void EnsureComposedEffects_() const;
     int GetResearchPerTurn_() const;
 
     FactionId_t m_factionId;
@@ -243,10 +251,18 @@ private:
     FactionVisibleMap m_visible;
     FactionRevealedUnits m_revealedUnits;
     WorldMap* m_pWorldMap = nullptr; // set by BindWorldMap; used by RebuildVisibility
+    IWorldEffectsSource* m_pWorldEffects = nullptr; // set by BindWorldEffects; optional
     const GameSettings* m_pSettings = nullptr; // non-owning; optional session prefs
     bool m_bFogRemoved = false; // sticky ApplyRemoveFog
     std::function<void()> m_onBaseListChanged;
     std::function<void(Faction&)> m_onVisibilityRebuilt;
+
+    // Composed GetActiveEffects cache (local pool + world extras). The two stamps are the
+    // cache key; m_composedVersion is what GetEffectsVersion publishes.
+    mutable FactionEffects_t m_composedEffects;
+    mutable uint64_t m_composedLocalVersion = UINT64_MAX;
+    mutable uint64_t m_composedWorldStamp = UINT64_MAX;
+    mutable uint64_t m_composedVersion = 0;
 
     // Shared ASAT / intercept deploy cooldowns keyed by building id (no per-instance ids).
     // A copy is unavailable while missionYear < readyMissionYear.

@@ -7,6 +7,8 @@
 
 #include "game/IConstructable.h"
 #include "game/faction/base/production/ProductionManager.h"
+#include "game/faction/base/resources/WorkerAssignmentManager.h"
+#include "game/map/Tile.h"
 #include "game/social-engineering/SocialRatingResolver.h"
 #include "game/effects/ActiveEffect.h"
 
@@ -129,7 +131,7 @@ TEST_CASE("Two-level ratings: faction-wide policy rating plus a base-local build
 
     // The rating table maps growth level 3 -> +3 nutrients, level 2 -> +1 nutrients.
     // Worked tiles are all barren, so nutrient production isolates the rating effects.
-    faction.ProduceBaseResources({});
+    faction.ProduceBaseResources();
     CHECK(baseWithShrine.GetNutrientProduction() == 3);
     CHECK(plainBase.GetNutrientProduction() == 1);
 }
@@ -193,7 +195,39 @@ TEST_CASE("Rating modifiers are honored from any source: a building's FactionGlo
     CHECK(baseA.GetEffectiveSocialRating(SocialRatingId_t::Growth) == 2);
     CHECK(baseB.GetEffectiveSocialRating(SocialRatingId_t::Growth) == 2);
 
-    faction.ProduceBaseResources({});
+    faction.ProduceBaseResources();
     CHECK(baseA.GetNutrientProduction() == 1); // growth level 2 -> +1 nutrients
     CHECK(baseB.GetNutrientProduction() == 1);
+}
+
+TEST_CASE("Economy rating minerals AddPercent scales worked minerals",
+          "[effects][rating][economy]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+
+    // Pack the workable area with Rocky (+2 minerals each). Base center is worked for free;
+    // AutoAssignWorkers places the starting workers on the best remaining tiles.
+    for (int dx = -1; dx <= 1; ++dx)
+    {
+        for (int dy = -1; dy <= 1; ++dy)
+        {
+            fixture.At(4 + dx, 4 + dy).SetRockiness(Rockiness_t::Rocky);
+        }
+    }
+    base.GetWorkerAssignments().AutoAssignWorkers();
+
+    const int worked = base.GetMineralProduction();
+    REQUIRE(worked >= 8);
+
+    faction.GetSocialEngineering().SetActivePolicy(fixture.socialPolicies().Get("economy_policy"));
+    CHECK(base.GetEffectiveSocialRating(SocialRatingId_t::Economy) == 2);
+
+    const int expected = FinalizeResolvedStat(static_cast<double>(worked) * 0.9);
+    REQUIRE(expected < worked);
+    CHECK(base.GetMineralProduction() == expected);
+
+    faction.ProduceBaseResources();
+    CHECK(base.GetResources().ConsumeMinerals() == expected);
 }

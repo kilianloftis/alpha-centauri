@@ -15,10 +15,8 @@ ResearchAccumulation::ResearchAccumulation(HookContext hookContext)
 {
 }
 
-StageResult_t ResearchAccumulation::ExecuteImpl(GameState& rGameState, Faction& rFaction)
+StageResult_t ResearchAccumulation::ExecuteImpl(GameState& /*rGameState*/, Faction& rFaction)
 {
-    (void)rGameState;
-
     std::cout << "Executing ResearchAccumulation stage for faction\n";
 
     const int totalLabs = rFaction.CollectResearch();

@@ -131,8 +131,8 @@ TEST_CASE("ResolveAdditiveStat sums component Adds and ignores percent modifiers
     CHECK(ResolveAdditiveStat(design, StatId_t::Attack) == 3);
     CHECK(ResolveAdditiveStat(design, StatId_t::Defense) == 2);
     CHECK(ResolveAdditiveStat(design, StatId_t::Movement) == 2);
-    // Full resolve still applies percent: (2+1)*1.5 = 4.
-    CHECK(ResolveStat(design, StatId_t::Attack) == 4);
+    // Full resolve still applies percent: (2+1)*1.5 = 4.5 → FinalizeResolvedStat → 5.
+    CHECK(ResolveStat(design, StatId_t::Attack) == 5);
 }
 
 TEST_CASE("Non-combat specials resolve capability flags and cargo capacity", "[unit][stats][specials]")

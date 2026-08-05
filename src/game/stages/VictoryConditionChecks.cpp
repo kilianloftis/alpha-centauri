@@ -13,9 +13,8 @@ VictoryConditionChecks::VictoryConditionChecks(HookContext hookContext)
 {
 }
 
-StageResult_t VictoryConditionChecks::ExecuteImpl(GameState& rGameState)
+StageResult_t VictoryConditionChecks::ExecuteImpl(GameState& /*rGameState*/)
 {
-    (void)rGameState;
     std::cout << "Executing VictoryConditionChecks stage\n";
     return StageResult_t::Continue;
 }

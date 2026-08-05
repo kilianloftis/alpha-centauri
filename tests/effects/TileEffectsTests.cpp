@@ -249,8 +249,10 @@ TEST_CASE("ResolveTileYield: percentage modifiers scale a tile's own yield", "[e
                                     actest::ImprovementSelector("Farm")), "gene_splicer"),
     }};
 
-    // (2 + 1) * 1.5 = 4.5, truncated to 4 by the int cast.
-    CHECK(world.ctx->ResolveTileYield(tile, false, baseEffects).effective.nutrients == 4);
+    // (2 + 1) * 1.5 = 4.5 → FinalizeResolvedStat → 5. Per-tile yield shares the one
+    // float→int rule with base-level resolve, so the worked total it feeds into
+    // ResourceManager::CalculateResource_ is not truncated first and rounded again after.
+    CHECK(world.ctx->ResolveTileYield(tile, false, baseEffects).effective.nutrients == 5);
 }
 
 TEST_CASE("RecomputeMoisture: Condenser aura raises effective moisture, derived fresh from base moisture",

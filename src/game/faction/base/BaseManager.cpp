@@ -319,15 +319,25 @@ int BaseManager::GetEffectiveSocialRating(SocialRatingId_t rating) const
     {
         throw std::runtime_error("BaseManager::GetEffectiveSocialRating: m_pEffectsProvider is null");
     }
+    // KNOWN LANE SPLIT (package 2): this accumulates over the *composed* pool, so a
+    // SocialRatingModifier arriving as a council effect or a peer faction's WorldGlobal
+    // counts toward this base's rating — but FactionEffectsPool::ExpandFactionLaneSocialRating-
+    // Effects runs inside Rebuild_ over the *local* pool only, so the same modifier never
+    // reaches the FactionUnits / FactionGlobal lane. No shipped config declares a rating
+    // modifier at those scopes (BonusEffectParser::ValidateScopeForSource does not forbid it,
+    // so a mod can), which is why this is a latent split rather than a live bug. Package 2
+    // owns the resolution: either feed world extras into faction-lane expansion too, or
+    // restrict rating accumulation to the local pool. Do not "fix" it by silently changing
+    // one side here.
     const std::map<SocialRatingId_t, int> totals =
         AccumulateSocialRatings(CollectBaseLocalEffects_(m_pEffectsProvider->GetActiveEffects()).effects);
     const auto it = totals.find(rating);
     return it == totals.end() ? 0 : it->second;
 }
 
-void BaseManager::ProduceResources(const FactionEffects_t& rFactionEffects)
+void BaseManager::ProduceResources()
 {
-    m_pResources->ProduceResources(BuildBaseEffects_(rFactionEffects));
+    m_pResources->ProduceResources(BuildBaseEffects_());
 }
 
 ResourceManager& BaseManager::GetResources()
@@ -340,9 +350,9 @@ const ResourceManager& BaseManager::GetResources() const
     return *m_pResources;
 }
 
-void BaseManager::ApplyGrowth(const FactionEffects_t& rFactionEffects)
+void BaseManager::ApplyGrowth()
 {
-    m_pPopulation->ApplyGrowth(m_pResources->ConsumeNutrients(), BuildBaseEffects_(rFactionEffects));
+    m_pPopulation->ApplyGrowth(m_pResources->ConsumeNutrients(), BuildBaseEffects_());
 }
 
 int BaseManager::GetNutrientsRequired() const

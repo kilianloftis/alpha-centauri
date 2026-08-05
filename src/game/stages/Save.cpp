@@ -13,9 +13,8 @@ Save::Save(HookContext hookContext)
 {
 }
 
-StageResult_t Save::ExecuteImpl(GameState& rGameState)
+StageResult_t Save::ExecuteImpl(GameState& /*rGameState*/)
 {
-    (void)rGameState;
     std::cout << "Executing Save stage\n";
     return StageResult_t::Continue;
 }

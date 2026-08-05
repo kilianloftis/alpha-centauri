@@ -160,7 +160,7 @@ int PlanetaryCouncil::ComputeVoteWeight(const Faction& rFaction,
                             ? static_cast<double>(rFaction.TotalPopulation())
                             : 1.0;
 
-    std::vector<ActiveEffect_t> effects = rFaction.GetActiveEffects().effects;
+    std::vector<ActiveEffect_t> effects = rFaction.GetLocalActiveEffects().effects;
     for (const ActiveEffect_t& rExtra : CollectFactionEffects(rFaction))
     {
         effects.push_back(rExtra);
@@ -172,7 +172,7 @@ int PlanetaryCouncil::ComputeVoteWeight(const Faction& rFaction,
 
     const StatBreakdown_t breakdown =
         ResolveStatModifiers(FilterByStatId(effects, StatId_t::CouncilVotes), seed);
-    return std::max(0, static_cast<int>(std::lround(breakdown.total)));
+    return std::max(0, FinalizeResolvedStat(breakdown.total));
 }
 
 std::vector<Faction*> PlanetaryCouncil::GovernorCandidates() const

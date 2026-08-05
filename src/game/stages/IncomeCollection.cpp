@@ -15,10 +15,8 @@ IncomeCollection::IncomeCollection(HookContext hookContext)
 {
 }
 
-StageResult_t IncomeCollection::ExecuteImpl(GameState& rGameState, Faction& rFaction)
+StageResult_t IncomeCollection::ExecuteImpl(GameState& /*rGameState*/, Faction& rFaction)
 {
-    (void)rGameState;
-
     std::cout << "Executing IncomeCollection stage for faction\n";
 
     const int totalIncome = rFaction.CollectIncome();

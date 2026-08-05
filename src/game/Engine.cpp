@@ -260,11 +260,6 @@ void Engine::Initialize_()
 
             if (bIsPlayerControlled)
             {
-                std::unordered_map<std::string, const UnitComponentConfig_t*> radarParts = basicParts;
-                radarParts["ability_1"] = resolve("Deep_Radar");
-                const UnitDesign& rRadarDesign = addDesign(
-                    std::make_unique<UnitDesign>(rSlots, radarParts), "deep-radar scout");
-
                 std::unordered_map<std::string, const UnitComponentConfig_t*> colonyParts = {
                     {"chassis", resolve("Infantry")},
                     {"weapon",  resolve("Colony_Pod")},
@@ -283,13 +278,10 @@ void Engine::Initialize_()
                 const UnitDesign& rCrawlerDesign = addDesign(
                     std::make_unique<UnitDesign>(rSlots, crawlerParts), "supply crawler");
 
-                // Basic vision-1 scout beside the base; deep-radar (vision 2) a little farther out.
+                // Vision-1 HoverTank scout beside the base (Deep Radar would stack to 2).
                 rFaction.GetUnitManager().CreateUnit(
                     m_pGameState->AllocateUnitId(), rBasicDesign, rPositions,
                     *rMap.GetTile(startX + 1, startY), pBase);
-                rFaction.GetUnitManager().CreateUnit(
-                    m_pGameState->AllocateUnitId(), rRadarDesign, rPositions,
-                    *rMap.GetTile(startX + 2, startY), pBase);
                 rFaction.GetUnitManager().CreateUnit(
                     m_pGameState->AllocateUnitId(), rColonyDesign, rPositions,
                     *rMap.GetTile(startX + 1, startY + 1), pBase);

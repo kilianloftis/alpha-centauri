@@ -4,6 +4,7 @@
 #include "game/effects/BonusEffect.h"
 #include "game/map/Tile.h"
 #include <algorithm>
+#include <cmath>
 #include <optional>
 #include <ranges>
 #include <string>
@@ -41,11 +42,11 @@ struct ActiveEffect_t
 };
 
 // The faction-wide effect pool: what CollectActiveEffects gathers (buildings with grants
-// expanded, social policies, pop/unit faction-lane effects), plus other factions' WorldGlobal
-// contributions appended by the turn stages. Deliberately a distinct type from BaseEffects_t:
-// the pool still holds every base's ThisBase effects and the FactionUnits lane, so resolving
-// base stats directly against it would count effects that don't apply — FilterForBase is the
-// only path from a pool to a base's effect list.
+// expanded, social policies, pop/unit faction-lane effects), plus — when the faction is bound
+// to a session world source — other factions' WorldGlobal and council extras. Deliberately a
+// distinct type from BaseEffects_t: the pool still holds every base's ThisBase effects and the
+// FactionUnits lane, so resolving base stats directly against it would count effects that don't
+// apply — FilterForBase is the only path from a pool to a base's effect list.
 struct FactionEffects_t
 {
     std::vector<ActiveEffect_t> effects;
@@ -171,8 +172,17 @@ const FactionEffects_t& CollectActiveEffects(const IEffectsProvider& rProvider);
 
 // Apply a stack of modifier contributions to a base value using the standard formula:
 //   result = (base + sumOfAdds) * (1 + sumOf(percent/100)) * productOfGeometric
-// Each pair is {amount, op}. Contributions are applied in the order given.
+// Each pair is {amount, op}. Op order is partition-by-kind (Add, then AddPercent, then
+// MultiplyGeometric), not contribution order — see ApplyModifierStack.
 double ApplyModifierStack(double base, const std::vector<std::pair<double, ModifierOp_t>>& contributions);
+
+// Single float→int rule for any resolved modifier total (ResolveStat, combat, council votes,
+// ResourceManager, pop tile multipliers). Half-away from zero via std::lround — do not truncate
+// or std::round the same stack elsewhere.
+inline int FinalizeResolvedStat(double value)
+{
+    return static_cast<int>(std::lround(value));
+}
 
 // baseValue seeds the additive total before contributions are summed. It is deliberately
 // NOT defaulted: stats resolved purely through multiplicative modifiers (e.g.

@@ -27,6 +27,17 @@
     }
   },
   {
+    "id": "economy",
+    "levels": {
+      "2": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "minerals", "amount": -10, "op": "AddPercent" } }
+      ],
+      "3": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "minerals", "amount": -20, "op": "AddPercent" } }
+      ]
+    }
+  },
+  {
     "id": "morale",
     "levels": {
       "-4": [

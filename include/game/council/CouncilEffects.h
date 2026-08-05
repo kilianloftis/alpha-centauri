@@ -21,8 +21,13 @@ bool IsContinuousWorldEffect(const EffectConfig_t& rEffect);
 // Owns the continuous ActiveEffects the Planetary Council projects: world-global effects
 // from the proposals currently in force, and faction-global effects granted to the
 // Planetary Governor. Keeps each ActiveEffect_t wrapper together with its backing
-// EffectConfig_t so the non-owning ActiveEffect_t::config pointers stay valid across
-// rebuilds.
+// EffectConfig_t, so the wrappers this class hands out are internally consistent.
+//
+// That consistency does NOT survive a rebuild: RebuildWorld / SetGovernorEffects clear and
+// refill the config vectors, reallocating them, so any ActiveEffect_t *copied out* before
+// the rebuild dangles. Callers that retain copies (Faction's composed pool, BaseManager's
+// memo) rely on PlanetaryCouncil bumping its revision on every rebuild — see
+// PlanetaryCouncil::GetRevision. Package 3 replaces this with stable storage.
 class CouncilEffects
 {
 public:

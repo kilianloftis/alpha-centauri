@@ -15,14 +15,12 @@ ResourceCollection::ResourceCollection(HookContext hookContext)
 {
 }
 
-StageResult_t ResourceCollection::ExecuteImpl(GameState& rGameState, Faction& rFaction)
+StageResult_t ResourceCollection::ExecuteImpl(GameState& /*rGameState*/, Faction& rFaction)
 {
     std::cout << "Executing ResourceCollection stage for faction\n";
 
-    // Other factions' WorldGlobal effects apply here too (the faction's own pool
-    // already includes its own).
-    const std::vector<ActiveEffect_t> worldEffects = rGameState.CollectWorldEffects(rFaction);
-    rFaction.ProduceBaseResources(worldEffects);
+    // World/council extras are already in Faction::GetActiveEffects via BindWorldEffects.
+    rFaction.ProduceBaseResources();
     return StageResult_t::Continue;
 }
 

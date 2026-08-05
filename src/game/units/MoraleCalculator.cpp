@@ -230,7 +230,7 @@ int MoraleCalculator::ResolveCombatStat(const Unit& rUnit, StatId_t statId,
         }
     }
     contributions.emplace_back(CombatMoraleAddPercent(rUnit, rCtx), ModifierOp_t::AddPercent);
-    return static_cast<int>(std::lround(ApplyModifierStack(SeedFor(statId), contributions)));
+    return FinalizeResolvedStat(ApplyModifierStack(SeedFor(statId), contributions));
 }
 
 double MoraleCalculator::ResolveCombatMultiplicativeStat(const Unit& rUnit, StatId_t statId,

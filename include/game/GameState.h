@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/Faction.h"
+#include "game/IWorldEffectsSource.h"
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/faction/DiplomacyLedger.h"
 #include "game/faction/DiplomaticActionExecutor.h"
@@ -37,7 +38,7 @@ class CouncilProposalRegistry;
 struct CouncilRulesConfig_t;
 class PlanetaryCouncil;
 
-class GameState : public IUnitOrderWorld
+class GameState : public IUnitOrderWorld, public IWorldEffectsSource
 {
 public:
     // pUnitComponents sizes the aura scan for unit-projected ThisTile effects; may be null
@@ -113,13 +114,10 @@ public:
     BaseConquestResult_t ResolveBaseEntryConquest(
         Unit& rMover, const GameDataContext& rDataContext, std::mt19937& rRng) override;
 
-    // WorldGlobal lane: every faction's WorldGlobal-scoped active effects, excluding
-    // rExclude's own (a faction's own pool already contains its WorldGlobal effects),
-    // plus Planetary Council WorldGlobal effects and any FactionGlobal council effects
-    // that apply to rExclude (e.g. Planetary Governor commerce energy).
-    // Turn stages pass this into Faction::ProduceBaseResources / ApplyBaseGrowth so a
-    // WorldGlobal effect declared by one faction reaches all of them.
-    std::vector<ActiveEffect_t> CollectWorldEffects(const Faction& rExclude) const;
+    // IWorldEffectsSource — peer WorldGlobal (from local pools) + council extras for rFor.
+    // Bound onto each Faction in AddFaction so GetActiveEffects composes one pool.
+    std::vector<ActiveEffect_t> CollectWorldExtras(const Faction& rFor) const override;
+    uint64_t GetWorldCompositionStamp(const Faction& rFor) const override;
 
     // Tile effects context (WorldMap + ImprovementRegistry bundled for tile resolution).
     TileEffectsContext& GetTileEffects();

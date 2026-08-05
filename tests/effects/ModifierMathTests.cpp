@@ -48,6 +48,16 @@ TEST_CASE("ApplyModifierStack: AddPercent is percent points on top of 100%", "[e
     CHECK(ApplyModifierStack(4.0, Stack({{-25.0, ModifierOp_t::AddPercent}})) == Approx(3.0));
 }
 
+TEST_CASE("FinalizeResolvedStat uses lround for half values", "[effects][math][rounding]")
+{
+    CHECK(FinalizeResolvedStat(2.5) == 3);
+    CHECK(FinalizeResolvedStat(1.5) == 2);
+    CHECK(FinalizeResolvedStat(2.4) == 2);
+    // Strength-2 attacker with +25% → 2.5 → 3 (shared ResolveStat / combat rule).
+    CHECK(FinalizeResolvedStat(ApplyModifierStack(2.0, Stack({{25.0, ModifierOp_t::AddPercent}})))
+          == 3);
+}
+
 TEST_CASE("ApplyModifierStack: multiple AddPercent contributions combine arithmetically, not geometrically",
           "[effects][math]")
 {

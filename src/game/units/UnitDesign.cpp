@@ -121,7 +121,7 @@ int UnitDesign::GetBaseCost() const
         ResolveStatModifiers(FilterByStatId(allEffects, StatId_t::CostMultiplier), SeedFor(StatId_t::CostMultiplier));
     const float costMult = breakdown.contributions.empty() ? 1.0f : static_cast<float>(breakdown.total);
 
-    return static_cast<int>(rawCost * costMult);
+    return FinalizeResolvedStat(static_cast<double>(rawCost) * costMult);
 }
 
 int UnitDesign::GetStat(StatId_t statId) const

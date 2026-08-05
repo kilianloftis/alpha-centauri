@@ -16,13 +16,12 @@ Population::Population(HookContext hookContext)
 {
 }
 
-StageResult_t Population::ExecuteImpl(GameState& rGameState, Faction& rFaction)
+StageResult_t Population::ExecuteImpl(GameState& /*rGameState*/, Faction& rFaction)
 {
     std::cout << "Executing Population stage\n";
 
-    // Other factions' WorldGlobal effects apply to growth too.
-    const std::vector<ActiveEffect_t> worldEffects = rGameState.CollectWorldEffects(rFaction);
-    rFaction.ApplyBaseGrowth(worldEffects);
+    // World/council extras are already in Faction::GetActiveEffects via BindWorldEffects.
+    rFaction.ApplyBaseGrowth();
 
     for (BaseManager& rBase : rFaction.Bases())
     {

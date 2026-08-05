@@ -472,13 +472,13 @@ std::vector<ActiveEffect_t> CollectLiveUnitEffects(const Unit& rUnit)
 
 int ResolveStat(const UnitDesign& rDesign, StatId_t statId)
 {
-    return static_cast<int>(
+    return FinalizeResolvedStat(
         ResolveStatModifiers(FilterByStatId(rDesign.CollectEffects(), statId), SeedFor(statId)).total);
 }
 
 int ResolveStat(const UnitDesign& rDesign, StatId_t statId, const EffectContext_t& rCtx)
 {
-    return static_cast<int>(
+    return FinalizeResolvedStat(
         ResolveStatModifiers(FilterByStatIdInContext(rDesign.CollectEffects(), statId, rCtx),
                              SeedFor(statId), &rCtx).total);
 }
@@ -497,7 +497,7 @@ int ResolveAdditiveStat(const UnitDesign& rDesign, StatId_t statId)
             addTotal += pStatModifier->amount;
         }
     }
-    return static_cast<int>(addTotal);
+    return FinalizeResolvedStat(addTotal);
 }
 
 bool ResolveFlag(const UnitDesign& rDesign, RuleFlagId_t flagId)
@@ -520,13 +520,14 @@ bool ResolveFlag(const UnitDesign& rDesign, RuleFlagId_t flagId)
 int ResolveStat(const Unit& rUnit, StatId_t statId)
 {
     const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects(rUnit);
-    return static_cast<int>(ResolveStatModifiers(FilterByStatId(effects, statId), SeedFor(statId)).total);
+    return FinalizeResolvedStat(
+        ResolveStatModifiers(FilterByStatId(effects, statId), SeedFor(statId)).total);
 }
 
 int ResolveStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx)
 {
     const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects(rUnit);
-    return static_cast<int>(
+    return FinalizeResolvedStat(
         ResolveStatModifiers(FilterByStatIdInContext(effects, statId, rCtx), SeedFor(statId),
                              &rCtx).total);
 }

@@ -205,27 +205,36 @@ TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other fact
 
     baseA.GetBuildingManager().AddBuilding("world_beacon"); // +10 energy, WorldGlobal
 
-    SECTION("CollectWorldEffects gathers the other faction's WorldGlobal effects only")
+    SECTION("CollectWorldExtras gathers the other faction's WorldGlobal effects only")
     {
-        const auto forB = state.CollectWorldEffects(factionB);
+        const auto forB = state.CollectWorldExtras(factionB);
         CHECK(ResolveStatModifiers(FilterByStatId(forB, StatId_t::Energy), 0.0).total == Approx(10.0));
 
         // Faction A's own pool already carries its WorldGlobal effects; the world pass
         // excludes them so they are not double-counted.
-        CHECK(state.CollectWorldEffects(factionA).empty());
+        CHECK(state.CollectWorldExtras(factionA).empty());
     }
 
     SECTION("faction B's base production includes faction A's WorldGlobal energy")
     {
-        factionB.ProduceBaseResources(state.CollectWorldEffects(factionB));
+        factionB.ProduceBaseResources();
         // 10 energy split 40/50/10 -> econ 4.
         CHECK(baseB.GetResources().ConsumeEcon() == 4);
+        // Live getter agrees with the banked path (same composed pool).
+        CHECK(baseB.GetEconProduction() == 4);
     }
 
     SECTION("faction A's own base gets its own WorldGlobal effect through its own pool")
     {
-        factionA.ProduceBaseResources(state.CollectWorldEffects(factionA));
+        factionA.ProduceBaseResources();
         CHECK(baseA.GetEconProduction() == 4);
+    }
+
+    SECTION("peer WorldGlobal invalidates the observing base memo")
+    {
+        CHECK(baseB.GetEconProduction() == 4);
+        baseA.GetBuildingManager().AddBuilding("world_beacon"); // second +10 energy
+        CHECK(baseB.GetEconProduction() == 8);
     }
 }
 

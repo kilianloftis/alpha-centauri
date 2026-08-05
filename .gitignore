@@ -3,3 +3,5 @@ alpha-centauri
 settings.local.json.tmp*
 settings.json.tmp*
 build-asan
+docs/effects-fix-prompts
+review-parts
