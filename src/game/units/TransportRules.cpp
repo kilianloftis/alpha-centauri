@@ -24,10 +24,6 @@ void ForEachTransportParams_(const Unit& rCarrier, Fn&& rFn)
 {
     for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rCarrier))
     {
-        if (!rEffect.config)
-        {
-            continue;
-        }
         const auto* pParams = std::get_if<TransportParamsEffect_t>(&rEffect.config->effect);
         if (pParams)
         {

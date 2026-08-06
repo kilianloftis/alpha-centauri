@@ -106,7 +106,8 @@ BaseManager::BaseManager(
     });
 
     m_pProduction->OnProductionCompleted.Connect([this](const std::string& itemId) {
-        m_pBuildings->AddBuilding(itemId);
+        // Both preconditions are checked before the base is mutated: a throw here must not
+        // leave the building constructed with its Instantaneous effects never dispatched.
         if (!m_pBuildingRegistry)
         {
             throw std::runtime_error("BaseManager: building registry is null after production");
@@ -117,6 +118,7 @@ BaseManager::BaseManager(
             throw std::runtime_error(
                 "BaseManager: Faction has no GameState bound; cannot dispatch Instantaneous effects");
         }
+        m_pBuildings->AddBuilding(itemId);
         DispatchInstantaneousEffects(m_pBuildingRegistry->Get(itemId), *this, *pGameState);
         OnProductionCompleted.Emit(itemId);
     });

@@ -150,7 +150,11 @@ TEST_CASE("DispatchInstantaneousEffects: Instantaneous GrantBuilding constructs 
     CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Nutrients), 0.0).total == 2.0);
 }
 
-TEST_CASE("DispatchInstantaneousEffects: Instantaneous Infiltration writes DiplomacyLedger",
+// End-to-end for the whole dispatch path: GameState::AddFaction binds the session, so
+// completing production reaches ApplyInfiltrationEffect without the caller passing anything.
+// Drives CompleteProduction rather than DispatchInstantaneousEffects so that dropping either
+// BindGameState or the dispatch call in BaseManager's completion handler fails here.
+TEST_CASE("Production completion dispatches Instantaneous Infiltration into the DiplomacyLedger",
           "[effects][base][instantaneous][infiltration]")
 {
     actest::FactionFixture fixture;
@@ -166,9 +170,12 @@ TEST_CASE("DispatchInstantaneousEffects: Instantaneous Infiltration writes Diplo
 
     const BuildingConfig_t* pInfiltrator = fixture.buildings().Find("instant_infiltrator");
     REQUIRE(pInfiltrator != nullptr);
+    REQUIRE(beneficiary.GetGameState() == &state);
+    REQUIRE_FALSE(state.GetDiplomacyLedger().HasInfiltration(
+        beneficiary.GetFactionId(), other.GetFactionId()));
 
-    base.GetBuildingManager().AddBuilding(pInfiltrator->id);
-    DispatchInstantaneousEffects(*pInfiltrator, base, state);
+    base.GetProduction().SetProduction(pInfiltrator);
+    CHECK(base.GetProduction().CompleteProduction() == pInfiltrator->id);
 
     CHECK(state.GetDiplomacyLedger().HasInfiltration(
         beneficiary.GetFactionId(), other.GetFactionId()));
@@ -186,6 +193,10 @@ TEST_CASE("Production completion without Bound GameState throws on Instantaneous
     REQUIRE(pGrantor != nullptr);
     base.GetProduction().SetProduction(pGrantor);
     CHECK_THROWS_AS(base.GetProduction().CompleteProduction(), std::runtime_error);
+
+    // The throw precedes every mutation: no half-completed base with the building
+    // constructed but its Instantaneous effects never dispatched.
+    CHECK(base.GetBuildingManager().GetBuildings().empty());
 }
 
 TEST_CASE("Full pipeline: building and pop bonuses land in base resource production",

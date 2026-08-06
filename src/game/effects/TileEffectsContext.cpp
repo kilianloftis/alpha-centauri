@@ -28,10 +28,6 @@ std::optional<int> CapForStat_(StatId_t stat, const std::vector<ActiveEffect_t>&
     std::optional<int> cap;
     for (const ActiveEffect_t& rEffect : rEffects)
     {
-        if (!rEffect.config)
-        {
-            continue;
-        }
         const auto* pCap = std::get_if<TileResourceCapEffect_t>(&rEffect.config->effect);
         if (!pCap || pCap->stat != stat)
         {
@@ -191,10 +187,6 @@ void AppendMatchingTileModifiers_(const std::vector<ActiveEffect_t>& baseEffects
 {
     for (const ActiveEffect_t& effect : baseEffects)
     {
-        if (!effect.config)
-        {
-            continue;
-        }
         const StatModifierEffect_t* pModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
         if (pModifier && pModifier->selector && TileMatchesSelector_(*pModifier->selector, rTile, isBaseTile))
         {

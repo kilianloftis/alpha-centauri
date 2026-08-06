@@ -4,12 +4,23 @@
 #include "game/council/CouncilProposalRegistry.h"
 
 #include <span>
-#include <stdexcept>
-#include <utility>
 #include <variant>
 
 namespace ac
 {
+
+namespace
+{
+
+// Wrappers borrow the registry/rules config, so append one entry at a time from the
+// source's own storage rather than copying it into a local vector first.
+void AppendBorrowed_(const EffectConfig_t& rEffect, const std::string& rSourceId,
+                     std::vector<ActiveEffect_t>& rOut)
+{
+    AppendActiveEffects(std::span<const EffectConfig_t>(&rEffect, 1), nullptr, rSourceId, rOut);
+}
+
+} // namespace
 
 bool IsContinuousWorldEffect(const EffectConfig_t& rEffect)
 {
@@ -17,21 +28,10 @@ bool IsContinuousWorldEffect(const EffectConfig_t& rEffect)
            && rEffect.scope == EffectScope_t::WorldGlobal;
 }
 
-void CouncilEffects::RetireConfigs_(std::vector<std::unique_ptr<EffectConfig_t>>& rLive,
-                                    std::vector<std::unique_ptr<EffectConfig_t>>& rRetired)
-{
-    // Move nodes aside without destroying them so previously handed-out config* stay valid.
-    for (std::unique_ptr<EffectConfig_t>& pConfig : rLive)
-    {
-        rRetired.push_back(std::move(pConfig));
-    }
-    rLive.clear();
-}
-
 void CouncilEffects::RebuildWorld(const std::vector<std::string>& rActiveProposalIds,
                                   const CouncilProposalRegistry& rRegistry)
 {
-    RetireConfigs_(m_worldConfigs, m_retiredWorldConfigs);
+    m_worldEffects.clear();
     for (const std::string& rId : rActiveProposalIds)
     {
         const CouncilProposalConfig_t* pConfig = rRegistry.Find(rId);
@@ -43,41 +43,22 @@ void CouncilEffects::RebuildWorld(const std::vector<std::string>& rActiveProposa
         {
             if (IsContinuousWorldEffect(rEffect))
             {
-                m_worldConfigs.push_back(std::make_unique<EffectConfig_t>(rEffect));
+                AppendBorrowed_(rEffect, "council", m_worldEffects);
             }
         }
     }
-    RebuildWrappers_();
 }
 
 void CouncilEffects::SetGovernorEffects(const std::vector<EffectConfig_t>& rGovernorEffects)
 {
-    RetireConfigs_(m_governorConfigs, m_retiredGovernorConfigs);
+    m_governorEffects.clear();
     for (const EffectConfig_t& rEffect : rGovernorEffects)
     {
         if (rEffect.persistence == EffectPersistence_t::Continuous
             && rEffect.scope == EffectScope_t::FactionGlobal)
         {
-            m_governorConfigs.push_back(std::make_unique<EffectConfig_t>(rEffect));
+            AppendBorrowed_(rEffect, "council_governor", m_governorEffects);
         }
-    }
-    RebuildWrappers_();
-}
-
-void CouncilEffects::RebuildWrappers_()
-{
-    m_worldEffects.clear();
-    for (const std::unique_ptr<EffectConfig_t>& pEffect : m_worldConfigs)
-    {
-        AppendActiveEffects(std::span<const EffectConfig_t>(pEffect.get(), 1),
-                            nullptr, "council", m_worldEffects);
-    }
-
-    m_governorEffects.clear();
-    for (const std::unique_ptr<EffectConfig_t>& pEffect : m_governorConfigs)
-    {
-        AppendActiveEffects(std::span<const EffectConfig_t>(pEffect.get(), 1),
-                            nullptr, "council_governor", m_governorEffects);
     }
 }
 
@@ -85,10 +66,6 @@ bool CouncilEffects::HasActiveRuleFlag(RuleFlagId_t flag) const
 {
     for (const ActiveEffect_t& rEffect : m_worldEffects)
     {
-        if (!rEffect.config)
-        {
-            throw std::runtime_error("CouncilEffects::HasActiveRuleFlag: null config");
-        }
         if (const auto* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.config->effect))
         {
             if (pFlag->flag == flag)

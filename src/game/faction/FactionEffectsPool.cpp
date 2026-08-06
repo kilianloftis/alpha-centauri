@@ -111,7 +111,7 @@ void FactionEffectsPool::ApplyRemovedByTech_(FactionEffects_t& rEffects,
     rEffects.effects.erase(
         std::remove_if(rEffects.effects.begin(), rEffects.effects.end(),
                        [&](const ActiveEffect_t& rEffect) {
-                           return rEffect.config && !rEffect.config->removedByTech.empty()
+                           return !rEffect.config->removedByTech.empty()
                                && rResearch.HasDiscoveredTech(rEffect.config->removedByTech);
                        }),
         rEffects.effects.end());

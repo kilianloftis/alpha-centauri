@@ -204,7 +204,9 @@ public:
     // Optional session back-pointer (GameState::AddFaction). Required for Instantaneous
     // Infiltration dispatch on production completion; null when the faction is unbound.
     void BindGameState(GameState& rGameState) { m_pGameState = &rGameState; }
-    GameState* GetGameState() const { return m_pGameState; }
+    // Non-const: the session is handed out to be mutated (Instantaneous Infiltration writes
+    // the diplomacy ledger), so a const Faction must not be able to produce it.
+    GameState* GetGameState() { return m_pGameState; }
 
     // Sticky fog removal from ApplyRemoveFog (Instantaneous project completion). Continuous
     // RuleFlag / debug settings are layered on top in ApplyVisibilityRules.

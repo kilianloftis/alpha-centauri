@@ -240,7 +240,8 @@ concept doesn't exist yet are **legal but inert**:
 - **Construction**: `ActiveEffect_t(const EffectConfig_t&, sourceId, originBase?)` — `config` is
   always non-null after construction. Hand-rolled null configs are not a valid instance.
 - **Responsibilities**:
-  - Points back to the static (or CouncilEffects-stable) `EffectConfig_t`.
+  - Points back to the registry-owned `EffectConfig_t` (buildings, pop types, unit components,
+    council proposals, council rules) — every source is loaded once and outlives the wrapper.
   - Records the source id (e.g., building id or social policy id) for UI breakdowns.
   - Records the originating `BaseManager` when `TagsOriginBase(scope)` (ThisBase,
     ProducedAtThisBase, FactionUnits).
@@ -335,7 +336,9 @@ concept doesn't exist yet are **legal but inert**:
 - **Signature**: `DispatchInstantaneousEffects(building, base, GameState&)` — no default; a live
   session is required so Instantaneous Infiltration can write the diplomacy ledger.
 - **Production completion**: `BaseManager` reads `Faction::GetGameState()` (bound by
-  `GameState::AddFaction` via `BindGameState`) and throws if null before dispatching.
+  `GameState::AddFaction` via `BindGameState`) and throws if null. Both that check and the
+  registry check run *before* the completed building is added, so a throw never leaves a base
+  holding a building whose Instantaneous effects were never dispatched.
 - GrantTech / GrantUnit remain TODO stubs; Infiltration always calls `ApplyInfiltrationEffect`.
 
 ### CollectLiveUnitEffects
@@ -344,10 +347,17 @@ concept doesn't exist yet are **legal but inert**:
   resolve paths re-check conditions only, not unitFilter.
 
 ### CouncilEffects
-- Stable config storage: heap `EffectConfig_t` nodes are retired (not destroyed) on
-  `RebuildWorld` / `SetGovernorEffects`, so retained `ActiveEffect_t::config` pointers stay
-  valid for the lifetime of the `CouncilEffects` instance. `PlanetaryCouncil::CollectWorldEffects`
-  / `CollectFactionEffects` return const references into that store.
+- **Borrows, never copies**: wrappers point straight at the `EffectConfig_t` entries owned by
+  the `CouncilProposalRegistry` and the council rules config — the same arrangement as building
+  and pop-type effects pointing at their registries. Both sources load once and outlive the
+  council, so `ActiveEffect_t::config` addresses are stable for the whole session: a retained
+  wrapper survives any number of rebuilds, and an unchanged proposal keeps the same address
+  across them. `CouncilEffects` owns no config storage and needs no retirement scheme.
+- The effect *vectors* are rebuilt in place, so the const references returned by
+  `PlanetaryCouncil::CollectWorldEffects` / `CollectFactionEffects` are invalidated by the next
+  `RebuildWorld` / `SetGovernorEffects`. Consumers copy the wrappers out (see
+  `GameState::CollectWorldExtras`); the council revision bump tells composed-pool caches to
+  recompose.
 
 ### CollectActiveEffects / `FactionEffectsPool::Rebuild_`
 - **Purpose**: Assembles the faction's *local* active effect pool (memoized on

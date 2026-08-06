@@ -31,7 +31,7 @@ void CollectConcealmentChannels_(const Unit& rSubject, const TileEffectsContext&
 
     for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rSubject))
     {
-        if (!rEffect.config || !ConditionSatisfied(*rEffect.config, ctx, rEffect.originBase))
+        if (!ConditionSatisfied(*rEffect.config, ctx, rEffect.originBase))
         {
             continue;
         }
@@ -44,7 +44,7 @@ void CollectConcealmentChannels_(const Unit& rSubject, const TileEffectsContext&
 
     for (const ActiveEffect_t& rEffect : rTileEffects.CollectAreaEffects(rSubject.GetTile()))
     {
-        if (!rEffect.config || !ConditionSatisfied(*rEffect.config, ctx, rEffect.originBase))
+        if (!ConditionSatisfied(*rEffect.config, ctx, rEffect.originBase))
         {
             continue;
         }
@@ -63,7 +63,7 @@ bool HasDetectionCovering_(const Faction& rObserver, const Tile& rTile, const st
     const EffectContext_t ctx{&rTile};
     for (const ActiveEffect_t& rEffect : rTileEffects.CollectAreaEffects(rTile))
     {
-        if (!rEffect.config || !AppliesForFaction_(rEffect, observerId)
+        if (!AppliesForFaction_(rEffect, observerId)
             || !ConditionSatisfied(*rEffect.config, ctx, rEffect.originBase))
         {
             continue;

@@ -104,15 +104,16 @@ public:
     int ComputeVoteWeight(const Faction& rFaction, CouncilVoteWeight_t mode) const;
 
     // Continuous WorldGlobal effects from active proposals (Trade Pact, U.N. Charter, etc.).
-    // Wrappers' `config` pointers reference CouncilEffects-owned storage that remains valid
-    // for the lifetime of the council (including across RebuildWorld).
+    // Wrappers' `config` pointers reference the proposal registry, so a retained wrapper
+    // stays valid across any rebuild. The returned vector itself is rebuilt in place by
+    // RebuildWorld — copy the wrappers out rather than holding this reference across a vote.
     const std::vector<ActiveEffect_t>& CollectWorldEffects() const;
     // Continuous FactionGlobal effects for the governor (commerce energy bonus).
     // Empty when rFaction is not the governor.
     const std::vector<ActiveEffect_t>& CollectFactionEffects(const Faction& rFaction) const;
 
     // Bumped on every RebuildWorld / SetGovernorEffects so Faction composed-pool caches
-    // recompose. CouncilEffects config addresses themselves remain stable across rebuilds.
+    // recompose. The borrowed config addresses themselves are stable across rebuilds.
     const Revision& GetRevision() const { return m_revision; }
 
     struct PendingProposal_t

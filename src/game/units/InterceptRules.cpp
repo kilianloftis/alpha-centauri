@@ -59,9 +59,8 @@ void AppendMatchingIntercepts_(std::vector<InterceptCandidate_t>& rOut,
 {
     for (const ActiveEffect_t& rEffect : rEffects)
     {
-        if (!rEffect.config
-            || std::find(allowedScopes.begin(), allowedScopes.end(), rEffect.config->scope)
-                   == allowedScopes.end())
+        if (std::find(allowedScopes.begin(), allowedScopes.end(), rEffect.config->scope)
+                == allowedScopes.end())
         {
             continue;
         }

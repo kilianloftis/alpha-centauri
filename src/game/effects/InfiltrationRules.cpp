@@ -33,8 +33,7 @@ bool ContinuousEffectGrantsInfiltration_(const ActiveEffect_t& rEffect,
                                          FactionId_t target,
                                          const GameState& rState)
 {
-    if (!rEffect.config
-        || rEffect.config->persistence != EffectPersistence_t::Continuous
+    if (rEffect.config->persistence != EffectPersistence_t::Continuous
         || !std::get_if<InfiltrationEffect_t>(&rEffect.config->effect))
     {
         return false;

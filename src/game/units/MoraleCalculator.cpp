@@ -23,10 +23,6 @@ int SumMoraleBonus_(const Unit& rUnit, const EffectContext_t& rCtx, bool bCondit
     int total = 0;
     for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rUnit))
     {
-        if (!rEffect.config)
-        {
-            continue;
-        }
         const StatModifierEffect_t* pMod =
             std::get_if<StatModifierEffect_t>(&rEffect.config->effect);
         if (!pMod || pMod->stat != StatId_t::MoraleBonus || pMod->op != ModifierOp_t::Add)
@@ -57,10 +53,6 @@ bool HomeBaseHasCreche_(const Unit& rUnit)
     // Creche is a ThisBase RuleFlag on the home base's buildings.
     for (const ActiveEffect_t& rEffect : pHome->CollectBuildingEffects())
     {
-        if (!rEffect.config)
-        {
-            continue;
-        }
         const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.config->effect);
         if (pFlag && pFlag->flag == RuleFlagId_t::Creche)
         {

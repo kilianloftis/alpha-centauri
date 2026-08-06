@@ -68,10 +68,6 @@ std::map<SocialRatingId_t, int> AccumulateSocialRatings(
     std::map<SocialRatingId_t, int> totals;
     for (const ActiveEffect_t& rEffect : rEffects)
     {
-        if (!rEffect.config)
-        {
-            continue;
-        }
         if (laneFilter && LaneFor(rEffect.config->scope) != *laneFilter)
         {
             continue;

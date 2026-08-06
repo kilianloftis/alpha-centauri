@@ -455,6 +455,11 @@ TEST_CASE("Council world effect config pointers survive RebuildWorld", "[council
     CHECK(retained.front().config == pFirstConfig);
     CHECK(retained.front().config->scope == firstScope);
     CHECK(retained.front().config->scope == EffectScope_t::WorldGlobal);
+
+    // Stronger: wrappers borrow the proposal registry, so a proposal that stayed active keeps
+    // the *same* config address — a rebuild does not re-home unchanged effects.
+    REQUIRE_FALSE(rCouncil.CollectWorldEffects().empty());
+    CHECK(rCouncil.CollectWorldEffects().front().config == pFirstConfig);
 }
 
 TEST_CASE("Solar shade and polar caps proposals pass; the shade is repeatable", "[council]")
