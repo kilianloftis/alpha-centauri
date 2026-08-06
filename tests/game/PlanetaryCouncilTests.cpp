@@ -326,6 +326,34 @@ TEST_CASE("Proposing while on cooldown is rejected", "[council]")
     CHECK(rCouncil.GetPending());
 }
 
+TEST_CASE("CouncilMembers filter matches nobody when no PlanetaryCouncil exists", "[council][infiltration]")
+{
+    // participatesInCouncil is eligibility for council construction, not membership.
+    // Without CreatePlanetaryCouncil, CouncilMembers must fail closed for every candidate.
+    FactionFixture fixtures;
+    REQUIRE(fixtures.factionDefinition.identity.participatesInCouncil);
+
+    GameSettings settings;
+    auto pMap = std::make_unique<WorldMap>(9, 9);
+    GameState state(std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
+                    *fixtures.dataContext.moraleCalculator);
+
+    Faction& rA = state.AddFaction(std::make_unique<Faction>(
+        state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext));
+    Faction& rB = state.AddFaction(std::make_unique<Faction>(
+        state.AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext));
+    REQUIRE(state.GetPlanetaryCouncil() == nullptr);
+
+    EffectConfig_t config;
+    config.effect = InfiltrationEffect_t{};
+    config.scope = EffectScope_t::FactionGlobal;
+    config.persistence = EffectPersistence_t::Continuous;
+    config.factionFilter = FactionFilter_t{FactionFilterKind_t::CouncilMembers};
+
+    CHECK_FALSE(FactionFilterCoversTarget(config, rA.GetFactionId(), rB.GetFactionId(), state));
+    CHECK_FALSE(HasInfiltration(state, rA.GetFactionId(), rB.GetFactionId()));
+}
+
 TEST_CASE("Non-participating factions are excluded from the council", "[council]")
 {
     CouncilGame_ game;

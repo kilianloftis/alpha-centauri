@@ -388,7 +388,7 @@ enum class FactionFilterKind_t
 {
     // Only the faction supplied as actionTarget at apply/query time (probe mission target).
     ActionTarget,
-    // Other factions that sit on the Planetary Council (or participatesInCouncil if none).
+    // Other factions on the PlanetaryCouncil member list. Matches nobody when no council exists.
     CouncilMembers,
 };
 

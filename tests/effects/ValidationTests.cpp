@@ -104,6 +104,7 @@ static_assert(KindFor(StatId_t::Defense) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Movement) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Vision) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::HitPoints) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::PsiDamage) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::DisengageChance) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Fuel) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::DamageFromOutOfFuel) == StatKind_t::Additive);
@@ -118,6 +119,7 @@ static_assert(KindFor(StatId_t::ProbeFailureScale) == StatKind_t::PureMultiplier
 static_assert(KindFor(StatId_t::ProbeSuccessScale) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::PositiveMoraleScale) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::GrowthRate) == StatKind_t::RawScaled);
+static_assert(KindFor(StatId_t::TechCost) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::MoistureTier) == StatKind_t::RawScaled);
 static_assert(KindFor(StatId_t::CommerceRate) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::CouncilVotes) == StatKind_t::Additive);

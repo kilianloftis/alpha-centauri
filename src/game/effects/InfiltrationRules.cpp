@@ -21,11 +21,14 @@ bool IsCouncilMemberTarget_(const GameState& rState, FactionId_t candidate)
     {
         return false;
     }
-    if (const PlanetaryCouncil* pCouncil = rState.GetPlanetaryCouncil())
+    const PlanetaryCouncil* pCouncil = rState.GetPlanetaryCouncil();
+    if (!pCouncil)
     {
-        return pCouncil->IsCouncilMember(*pCandidate);
+        // No council ⇒ no council members. Do not treat participatesInCouncil
+        // (eligibility for council construction) as membership.
+        return false;
     }
-    return pCandidate->GetDefinition().identity.participatesInCouncil;
+    return pCouncil->IsCouncilMember(*pCandidate);
 }
 
 bool ContinuousEffectGrantsInfiltration_(const ActiveEffect_t& rEffect,

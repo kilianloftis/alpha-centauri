@@ -135,6 +135,33 @@ TEST_CASE("ResolveAdditiveStat sums component Adds and ignores percent modifiers
     CHECK(ResolveStat(design, StatId_t::Attack) == 5);
 }
 
+TEST_CASE("UnitDesign GetBaseCost uses CostMultiplier seed when no contributions", "[unit][stats][cost]")
+{
+    UnitComponentConfig_t weapon;
+    weapon.id = "laser";
+    weapon.type = "weapon";
+    weapon.mineralCost = 3;
+
+    UnitComponentConfig_t chassis;
+    chassis.id = "infantry";
+    chassis.type = "chassis";
+    chassis.domain = UnitDomain_t::Land;
+    chassis.mineralCost = 1;
+
+    const std::vector<UnitSlotConfig_t> slots = {
+        {.id = "weapon", .displayName = "Weapon", .componentType = "weapon", .required = true},
+        {.id = "chassis", .displayName = "Chassis", .componentType = "chassis", .required = true},
+    };
+    const std::unordered_map<std::string, const UnitComponentConfig_t*> components = {
+        {"weapon", &weapon},
+        {"chassis", &chassis},
+    };
+    const UnitDesign design(slots, components);
+
+    // No CostMultiplier contributions → SeedFor(1.0) → raw mineral sum.
+    CHECK(design.GetBaseCost() == 4);
+}
+
 TEST_CASE("Non-combat specials resolve capability flags and cargo capacity", "[unit][stats][specials]")
 {
     UnitComponentRegistry specials;
