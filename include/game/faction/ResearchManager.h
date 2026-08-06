@@ -15,10 +15,14 @@ class IEffectsProvider;
 class ResearchManager
 {
 public:
-    // pEffectsProvider supplies the faction effect pool for TechCost modifiers; may be null
-    // when no effects should influence research cost.
-    ResearchManager(const TechRegistry* pTechRegistry,
-                    const TechCostCalculator* pTechCostCalculator,
+    // The registry and cost calculator come from GameDataContext, which the composition root
+    // always supplies complete — so they are references, not a null mode this class has to
+    // second-guess (it previously dereferenced the registry unchecked in one method and
+    // returned an empty list from another). pEffectsProvider supplies the faction effect pool
+    // for TechCost modifiers and stays a pointer: the owning Faction passes `this` while it is
+    // still constructing, so a genuinely provider-less manager is representable.
+    ResearchManager(const TechRegistry& rTechRegistry,
+                    const TechCostCalculator& rTechCostCalculator,
                     const IEffectsProvider* pEffectsProvider);
     ~ResearchManager();
 
@@ -59,8 +63,8 @@ public:
     uint64_t GetRevision() const { return m_revision.Get(); }
 
 private:
-    const TechRegistry* m_pTechRegistry;
-    const TechCostCalculator* m_pTechCostCalculator;
+    const TechRegistry& m_rTechRegistry;
+    const TechCostCalculator& m_rTechCostCalculator;
     const IEffectsProvider* m_pEffectsProvider;
 
     std::vector<TechId> m_discoveredTechs;

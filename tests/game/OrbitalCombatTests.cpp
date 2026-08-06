@@ -50,9 +50,11 @@ struct OrbitalGame_
             *fixtures.dataContext.moraleCalculator);
 
         auto pFactionA = std::make_unique<Faction>(
-            pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext);
+            pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
+            fixtures.map, fixtures.settings, actest::k_TestFactionSeed);
         auto pFactionB = std::make_unique<Faction>(
-            pState->AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext);
+            pState->AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
+            fixtures.map, fixtures.settings, actest::k_TestFactionSeed);
         pPlayer = &pState->AddFaction(std::move(pFactionA));
         pAi = &pState->AddFaction(std::move(pFactionB));
     }

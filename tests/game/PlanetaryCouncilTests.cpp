@@ -59,11 +59,14 @@ struct CouncilGame_
             *fixtures.dataContext.moraleCalculator);
 
         auto pFactionA = std::make_unique<Faction>(
-            pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext);
+            pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
+            pState->GetWorldMap(), settings, actest::k_TestFactionSeed);
         auto pFactionB = std::make_unique<Faction>(
-            pState->AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext);
+            pState->AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
+            pState->GetWorldMap(), settings, actest::k_TestFactionSeed);
         auto pFactionC = std::make_unique<Faction>(
-            pState->AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext);
+            pState->AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
+            pState->GetWorldMap(), settings, actest::k_TestFactionSeed);
 
         pA = &pState->AddFaction(std::move(pFactionA));
         pB = &pState->AddFaction(std::move(pFactionB));
@@ -352,9 +355,11 @@ TEST_CASE("CouncilMembers filter matches nobody when no PlanetaryCouncil exists"
                     *fixtures.dataContext.moraleCalculator);
 
     Faction& rA = state.AddFaction(std::make_unique<Faction>(
-        state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext));
+        state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
+        state.GetWorldMap(), settings, actest::k_TestFactionSeed));
     Faction& rB = state.AddFaction(std::make_unique<Faction>(
-        state.AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext));
+        state.AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
+        state.GetWorldMap(), settings, actest::k_TestFactionSeed));
     REQUIRE(state.GetPlanetaryCouncil() == nullptr);
 
     const std::vector<ActiveEffect_t>& rActive = rA.GetActiveEffects().effects;
@@ -375,7 +380,8 @@ TEST_CASE("Non-participating factions are excluded from the council", "[council]
     game.alienDefinition.identity.participatesInCouncil = false;
 
     auto pAlien = std::make_unique<Faction>(
-        game.pState->AllocateFactionId(), false, game.alienDefinition, game.fixtures.dataContext);
+        game.pState->AllocateFactionId(), false, game.alienDefinition, game.fixtures.dataContext,
+        game.pState->GetWorldMap(), game.settings, actest::k_TestFactionSeed);
     Faction& rAlien = game.pState->AddFaction(std::move(pAlien));
 
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
@@ -408,7 +414,8 @@ TEST_CASE("Non-members cannot cast council votes", "[council]")
     game.alienDefinition.id = "alien";
     game.alienDefinition.identity.participatesInCouncil = false;
     auto pAlien = std::make_unique<Faction>(
-        game.pState->AllocateFactionId(), false, game.alienDefinition, game.fixtures.dataContext);
+        game.pState->AllocateFactionId(), false, game.alienDefinition, game.fixtures.dataContext,
+        game.pState->GetWorldMap(), game.settings, actest::k_TestFactionSeed);
     Faction& rAlien = game.pState->AddFaction(std::move(pAlien));
 
     game.GiveAllCommlinksTo(*game.pA);
@@ -539,7 +546,8 @@ TEST_CASE("Council membership is fixed at construction", "[council]")
     lateDef.id = "late_joiner";
     lateDef.identity.participatesInCouncil = true;
     auto pLate = std::make_unique<Faction>(
-        game.pState->AllocateFactionId(), false, lateDef, game.fixtures.dataContext);
+        game.pState->AllocateFactionId(), false, lateDef, game.fixtures.dataContext,
+        game.pState->GetWorldMap(), game.settings, actest::k_TestFactionSeed);
     Faction& rLate = game.pState->AddFaction(std::move(pLate));
 
     CHECK(rCouncil.Members().size() == 3);

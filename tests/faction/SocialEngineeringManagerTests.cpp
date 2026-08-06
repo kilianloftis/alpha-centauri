@@ -41,7 +41,7 @@ TEST_CASE("SocialEngineeringManager: constructs when all default policies exist 
     SocialPolicyRegistry registry;
     registry.Load(path.string());
 
-    CHECK_NOTHROW(SocialEngineeringManager(&registry, nullptr));
+    CHECK_NOTHROW(SocialEngineeringManager(registry));
     std::filesystem::remove(path);
 }
 
@@ -56,7 +56,7 @@ TEST_CASE("SocialEngineeringManager: throws when a default policy id is missing 
     SocialPolicyRegistry registry;
     registry.Load(path.string());
 
-    CHECK_THROWS_WITH(SocialEngineeringManager(&registry, nullptr),
+    CHECK_THROWS_WITH(SocialEngineeringManager(registry),
                       Catch::Matchers::ContainsSubstring("none_future"));
     std::filesystem::remove(path);
 }
@@ -73,16 +73,14 @@ TEST_CASE("SocialEngineeringManager: throws when a default policy id is in the w
     SocialPolicyRegistry registry;
     registry.Load(path.string());
 
-    CHECK_THROWS_WITH(SocialEngineeringManager(&registry, nullptr),
+    CHECK_THROWS_WITH(SocialEngineeringManager(registry),
                       Catch::Matchers::ContainsSubstring("frontier"));
     std::filesystem::remove(path);
 }
 
-TEST_CASE("SocialEngineeringManager: a null registry skips default-policy validation",
-          "[social-engineering][validation]")
-{
-    CHECK_NOTHROW(SocialEngineeringManager(nullptr, nullptr));
-}
+// (Removed: "a null registry skips default-policy validation". The registry is a constructor
+// reference now, so skipping validation is unrepresentable — that test pinned the escape hatch
+// that let a faction be built with no policies at all.)
 
 TEST_CASE("SocialEngineeringManager: SetActivePolicy stores the policy under its own category",
           "[social-engineering][validation]")
@@ -91,7 +89,7 @@ TEST_CASE("SocialEngineeringManager: SetActivePolicy stores the policy under its
     SocialPolicyRegistry registry;
     registry.Load(path.string());
 
-    SocialEngineeringManager manager(&registry, nullptr);
+    SocialEngineeringManager manager(registry);
 
     const SocialPolicyConfig_t& rPoliceState = registry.Get("police_state");
     CHECK_NOTHROW(manager.SetActivePolicy(rPoliceState));
@@ -126,7 +124,7 @@ TEST_CASE("SocialEngineeringManager: GetSocialRating sums active policy modifier
     SocialPolicyRegistry registry;
     registry.Load(path.string());
 
-    SocialEngineeringManager manager(&registry, nullptr);
+    SocialEngineeringManager manager(registry);
 
     CHECK(manager.GetSocialRating(SocialRatingId_t::Growth) == 3);
     CHECK(manager.GetSocialRating(SocialRatingId_t::Police) == 0);

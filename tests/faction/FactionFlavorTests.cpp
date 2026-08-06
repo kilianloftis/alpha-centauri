@@ -1,3 +1,5 @@
+#include "GameFixtures.h"
+
 #include "game/faction/FactionConfig.h"
 #include "game/faction/FactionFlavor.h"
 #include "game/faction/FactionIdentity.h"
@@ -39,7 +41,7 @@ TEST_CASE("FactionFlavor substitutes identity tokens in templates", "[faction][f
 {
     const FactionIdentity identity = MakeTestIdentity();
     const FactionFlavorConfig flavorConfig = MakeTestFlavorConfig();
-    FactionFlavor flavor(flavorConfig, identity);
+    FactionFlavor flavor(flavorConfig, identity, actest::k_TestFactionSeed);
 
     CHECK(flavor.Format("{leader}") == "Deirdre");
     CHECK(flavor.Format("{leader.title}") == "Lady Deirdre");
@@ -55,7 +57,7 @@ TEST_CASE("FactionFlavor picks unique base names then falls back", "[faction][fl
 {
     const FactionIdentity identity = MakeTestIdentity();
     const FactionFlavorConfig flavorConfig = MakeTestFlavorConfig();
-    FactionFlavor flavor(flavorConfig, identity);
+    FactionFlavor flavor(flavorConfig, identity, actest::k_TestFactionSeed);
 
     const std::string first = flavor.PickBaseName();
     const std::string second = flavor.PickBaseName();
@@ -72,7 +74,7 @@ TEST_CASE("FactionFlavor formats picked phrases", "[faction][flavor]")
 {
     const FactionIdentity identity = MakeTestIdentity();
     const FactionFlavorConfig flavorConfig = MakeTestFlavorConfig();
-    FactionFlavor flavor(flavorConfig, identity);
+    FactionFlavor flavor(flavorConfig, identity, actest::k_TestFactionSeed);
 
     CHECK(flavor.PickPhrase("greeting") == "Deirdre of the Gaian greets you.");
     CHECK(flavor.PickPhrase("missing_category").empty());

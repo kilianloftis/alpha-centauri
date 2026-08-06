@@ -20,13 +20,16 @@ class TileEffectsContext;
 class ResourceManager
 {
 public:
+    // All are owned by (or resolved from) the base that owns this manager, so none can be
+    // absent. They were pointers re-checked at every single use, with "not set" throws that no
+    // caller could ever trigger. (The BuildingManager parameter this used to take was stored
+    // and never read.)
     ResourceManager(
-        const WorkerAssignmentManager* pWorkerAssignments,
-        const EconomyManager* pEconomy,
-        const BuildingManager* pBuildings,
-        const Tile* pBaseTile,
-        const TileEffectsContext* pTileEffects,
-        const HomeBaseIndex* pHomeUnits);
+        const WorkerAssignmentManager& rWorkerAssignments,
+        const EconomyManager& rEconomy,
+        const Tile& rBaseTile,
+        const TileEffectsContext& rTileEffects,
+        const HomeBaseIndex& rHomeUnits);
     ~ResourceManager();
 
     // Resource production per turn.
@@ -55,12 +58,12 @@ public:
     void RebindEconomy(const EconomyManager& rEconomy);
 
 private:
-    const WorkerAssignmentManager* m_pWorkerAssignments;
+    const WorkerAssignmentManager& m_rWorkerAssignments;
+    // Re-pointed by RebindEconomy on ownership transfer; always the current owner's.
     const EconomyManager* m_pEconomy;
-    const BuildingManager* m_pBuildings;
-    const Tile* m_pBaseTile;
-    const TileEffectsContext* m_pTileEffects;
-    const HomeBaseIndex* m_pHomeUnits;
+    const Tile& m_rBaseTile;
+    const TileEffectsContext& m_rTileEffects;
+    const HomeBaseIndex& m_rHomeUnits;
     int m_nutrients = 0;
     int m_minerals = 0;
     int m_econ = 0;

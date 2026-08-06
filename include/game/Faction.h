@@ -57,10 +57,26 @@ public:
     // from them). It is held by reference for the faction's whole life and handed to the
     // subsystems that need pieces of it, so adding a new kind of shared game data does not
     // change this signature. Must outlive the faction — see Engine's member ordering.
+    //
+    // rWorldMap and rSettings are constructor dependencies rather than post-construction
+    // binds: a faction without a map used to early-return out of RebuildVisibility, so a base
+    // founded on a not-yet-wired faction silently produced no visibility, no territory rebuild
+    // and no first-contact check while every getter still returned plausible values. Taking
+    // them here makes that state unrepresentable. The constructor sizes the explored/visible
+    // maps from rWorldMap. The remaining session wiring (GameState back-pointer and the two
+    // observers) is applied by GameState::AddFaction — see AttachToSession.
+    //
+    // seed drives every per-faction random choice (base names, the starting research target).
+    // It is injected rather than drawn from std::random_device inside the sub-objects, because
+    // those choices are save-game state: an unseedable generator meant the same session could
+    // not be reproduced. The composition root derives it from the session seed.
     Faction(FactionId_t factionId,
              bool bIsPlayerControlled,
              const FactionConfig_t& rDefinition,
-             const GameDataContext& rDataContext);
+             const GameDataContext& rDataContext,
+             WorldMap& rWorldMap,
+             const GameSettings& rSettings,
+             uint32_t seed);
     ~Faction();
 
     FactionId_t GetFactionId() const { return m_factionId; }
@@ -215,17 +231,16 @@ public:
     // Contact reveal: concealed units this faction has bumped into (occupied tile / ZOC).
     FactionRevealedUnits& GetRevealedUnits();
     const FactionRevealedUnits& GetRevealedUnits() const;
-    void BindWorldMap(WorldMap& rWorldMap);
+    const WorldMap& GetWorldMap() const { return m_rWorldMap; }
     // Session world/council extras for IEffectsProvider composition (GameState binds itself).
     void BindWorldEffects(IWorldEffectsSource& rWorldEffects);
     void RebuildVisibility();
 
-    // Optional session prefs (Engine/GameState owned). Used by RebuildVisibility to apply
+    // Session prefs (Engine/GameState owned). Used by RebuildVisibility to apply
     // GameRules.RemoveShroud / DebugOptions.RemoveFog without compiling them in.
-    void SetSettings(const GameSettings* pSettings) { m_pSettings = pSettings; }
-    const GameSettings* GetSettings() const { return m_pSettings; }
+    const GameSettings& GetSettings() const { return m_rSettings; }
 
-    // Optional session back-pointer (GameState::AddFaction). Required for Instantaneous
+    // Optional session back-pointer (GameState::AttachToSession). Required for Instantaneous
     // Infiltration dispatch on production completion; null when the faction is unbound.
     void BindGameState(GameState& rGameState) { m_pGameState = &rGameState; }
     // Non-const: the session is handed out to be mutated (Instantaneous Infiltration writes
@@ -283,9 +298,9 @@ private:
     FactionExploredMap m_explored;
     FactionVisibleMap m_visible;
     FactionRevealedUnits m_revealedUnits;
-    WorldMap* m_pWorldMap = nullptr; // set by BindWorldMap; used by RebuildVisibility
+    WorldMap& m_rWorldMap; // constructor-injected; RebuildVisibility can never be a no-op
+    const GameSettings& m_rSettings; // non-owning session prefs; constructor-injected
     IWorldEffectsSource* m_pWorldEffects = nullptr; // set by BindWorldEffects; optional
-    const GameSettings* m_pSettings = nullptr; // non-owning; optional session prefs
     GameState* m_pGameState = nullptr; // set by BindGameState; optional session back-pointer
     bool m_bFogRemoved = false; // sticky ApplyRemoveFog
     std::function<void()> m_onBaseListChanged;

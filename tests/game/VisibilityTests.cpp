@@ -229,13 +229,12 @@ TEST_CASE("ApplyRemoveFog makes every tile currently visible", "[visibility][fog
 TEST_CASE("Visibility remove_shroud explores the map on rebuild", "[visibility][fog][shroud]")
 {
     actest::FactionFixture fixture;
-    GameSettings settings;
     VisibilityConfig_t visibility;
     visibility.removeShroud = true;
-    settings.SetVisibility(visibility);
+    // Settings are a Faction constructor dependency, so configure them before minting one.
+    fixture.settings.SetVisibility(visibility);
 
     Faction& faction = fixture.MakeFaction();
-    faction.SetSettings(&settings);
     faction.RebuildVisibility();
 
     CHECK(faction.GetExploredMap().IsExplored(0, 0));
@@ -245,15 +244,12 @@ TEST_CASE("Visibility remove_shroud explores the map on rebuild", "[visibility][
 TEST_CASE("Visibility remove_fog applies to the player faction only", "[visibility][fog]")
 {
     actest::FactionFixture fixture;
-    GameSettings settings;
     VisibilityConfig_t visibility;
     visibility.removeFog = true;
-    settings.SetVisibility(visibility);
+    fixture.settings.SetVisibility(visibility);
 
     Faction& player = fixture.MakeFaction();
     Faction& ai = fixture.MakeFaction();
-    player.SetSettings(&settings);
-    ai.SetSettings(&settings);
     player.RebuildVisibility();
     ai.RebuildVisibility();
 
@@ -272,7 +268,7 @@ TEST_CASE("OnVisibilityChanged toggles fog live without rebuild call sites", "[v
 
     auto pFaction = std::make_unique<Faction>(
         gameState.AllocateFactionId(), true, fixture.factionDefinition,
-        fixture.dataContext);
+        fixture.dataContext, gameState.GetWorldMap(), settings, actest::k_TestFactionSeed);
     Faction& player = gameState.AddFaction(std::move(pFaction));
     player.RebuildVisibility();
     REQUIRE_FALSE(player.GetVisibleMap().IsVisible(0, 0));

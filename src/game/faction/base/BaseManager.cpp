@@ -51,17 +51,14 @@ BaseManager::BaseManager(
     BaseId_t baseId,
     std::string name,
     Tile& tile,
-    const BuildingRegistry* pBuildingRegistry,
-    const SocialRatingRegistry* pSocialRatingRegistry,
-    const PopTypeRegistry* pPopTypeRegistry,
-    const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator,
-    const GrowthConfig_t* pGrowthConfig,
-    PopCompositionCalculator* pCompositionCalculator,
+    const BuildingRegistry& rBuildingRegistry,
+    const SocialRatingRegistry& rSocialRatingRegistry,
+    const PopTypeRegistry& rPopTypeRegistry,
+    const PopTypeAvailabilityCalculator& rPopTypeAvailabilityCalculator,
+    const GrowthConfig_t& rGrowthConfig,
+    PopCompositionCalculator& rCompositionCalculator,
     const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
     TileEffectsContext& rTileEffects,
-    const ResearchManager* pResearchManager,
-    const EconomyManager* pEconomyManager,
-    const IEffectsProvider* pEffectsProvider,
     int initialPopulation)
     : m_pFaction(&rFaction)
     , m_baseId(baseId)
@@ -69,20 +66,20 @@ BaseManager::BaseManager(
     , m_rTileEffects(rTileEffects)
     , m_centerTileClaim(ClaimCenterTile_(rTileEffects, tile))
     , m_homeUnits(*this)
-    , m_pBuildingRegistry(pBuildingRegistry)
-    , m_pSocialRatings(pSocialRatingRegistry)
-    , m_pResearch(pResearchManager)
-    , m_pEffectsProvider(pEffectsProvider)
+    , m_rBuildingRegistry(rBuildingRegistry)
+    , m_rSocialRatings(rSocialRatingRegistry)
+    , m_pResearch(&rFaction.GetResearch())
+    , m_pEffectsProvider(&rFaction)
     , m_pPopulation(std::make_unique<PopulationManager>(
-          pPopTypeRegistry, pPopTypeAvailabilityCalculator, pGrowthConfig, pCompositionCalculator,
-          pResearchManager, initialPopulation))
+          rPopTypeRegistry, rPopTypeAvailabilityCalculator, rGrowthConfig, rCompositionCalculator,
+          rFaction.GetResearch(), initialPopulation))
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(
           ComputeWorkableTiles_(rTileEffects, tile), *m_pPopulation, rTileEffects,
           rTileEffects.GetWorldMap().GetWorkedTiles()))
-    , m_pBuildings(std::make_unique<BuildingManager>(pBuildingRegistry, pSecretProjectCalculator, pResearchManager))
+    , m_pBuildings(std::make_unique<BuildingManager>(rBuildingRegistry, pSecretProjectCalculator,
+                                                     rFaction.GetResearch()))
     , m_pResources(std::make_unique<ResourceManager>(
-          m_pWorkerAssignments.get(), pEconomyManager, m_pBuildings.get(), &m_tile, &m_rTileEffects,
-          &m_homeUnits))
+          *m_pWorkerAssignments, rFaction.GetEconomy(), m_tile, m_rTileEffects, m_homeUnits))
     , m_pProduction(std::make_unique<ProductionManager>())
     , m_name(std::move(name))
 {
@@ -106,12 +103,8 @@ BaseManager::BaseManager(
     });
 
     m_pProduction->OnProductionCompleted.Connect([this](const std::string& itemId) {
-        // Both preconditions are checked before the base is mutated: a throw here must not
-        // leave the building constructed with its Instantaneous effects never dispatched.
-        if (!m_pBuildingRegistry)
-        {
-            throw std::runtime_error("BaseManager: building registry is null after production");
-        }
+        // Checked before the base is mutated: a throw here must not leave the building
+        // constructed with its Instantaneous effects never dispatched.
         GameState* pGameState = m_pFaction->GetGameState();
         if (!pGameState)
         {
@@ -119,7 +112,7 @@ BaseManager::BaseManager(
                 "BaseManager: Faction has no GameState bound; cannot dispatch Instantaneous effects");
         }
         m_pBuildings->AddBuilding(itemId);
-        DispatchInstantaneousEffects(m_pBuildingRegistry->Get(itemId), *this, *pGameState);
+        DispatchInstantaneousEffects(m_rBuildingRegistry.Get(itemId), *this, *pGameState);
         OnProductionCompleted.Emit(itemId);
     });
 }
@@ -301,13 +294,10 @@ BaseEffects_t BaseManager::BuildBaseEffects_(const FactionEffects_t& rFactionEff
     // the level effects onto the composed base list (which may also carry world/council
     // StatModifiers). The two lists differ, which is why the resolver returns its effects
     // instead of expanding in place.
-    if (m_pSocialRatings)
-    {
-        const std::vector<ActiveEffect_t> ratingEffects =
-            ResolveSocialRatingLevelEffects(CollectRatingSource_(), *m_pSocialRatings);
-        baseEffects.effects.insert(baseEffects.effects.end(), ratingEffects.begin(),
-                                   ratingEffects.end());
-    }
+    const std::vector<ActiveEffect_t> ratingEffects =
+        ResolveSocialRatingLevelEffects(CollectRatingSource_(), m_rSocialRatings);
+    baseEffects.effects.insert(baseEffects.effects.end(), ratingEffects.begin(),
+                               ratingEffects.end());
 
     return baseEffects;
 }

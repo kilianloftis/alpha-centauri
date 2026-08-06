@@ -43,13 +43,13 @@ struct DiplomacyGame_
 
         auto pA = std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition,
-            fixtures.dataContext);
+            fixtures.dataContext, fixtures.map, fixtures.settings, actest::k_TestFactionSeed);
         auto pB = std::make_unique<Faction>(
             pState->AllocateFactionId(), false, fixtures.factionDefinition,
-            fixtures.dataContext);
+            fixtures.dataContext, fixtures.map, fixtures.settings, actest::k_TestFactionSeed);
         auto pC = std::make_unique<Faction>(
             pState->AllocateFactionId(), false, fixtures.factionDefinition,
-            fixtures.dataContext);
+            fixtures.dataContext, fixtures.map, fixtures.settings, actest::k_TestFactionSeed);
 
         pPlayer = &pState->AddFaction(std::move(pA));
         pAi = &pState->AddFaction(std::move(pB));

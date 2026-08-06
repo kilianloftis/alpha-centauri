@@ -19,11 +19,16 @@ class SocialRatingRegistry;
 class FactionEffectsPool
 {
 public:
+    // All four data dependencies come from GameDataContext, which the composition root always
+    // supplies complete. They were optional pointers whose null branches silently dropped
+    // whole effect lanes — no buildings, no tile-yield rules, no social-rating expansion —
+    // with no diagnostic, which is how fixture factions came to resolve ratings differently
+    // from real ones.
     FactionEffectsPool(const Faction& rFaction,
-                       const BuildingRegistry* pBuildingRegistry,
+                       const BuildingRegistry& rBuildingRegistry,
                        const Revision& rBaseListRevision,
-                       const std::vector<EffectConfig_t>* pTileYieldRules = nullptr,
-                       const SocialRatingRegistry* pSocialRatings = nullptr);
+                       const std::vector<EffectConfig_t>& rTileYieldRules,
+                       const SocialRatingRegistry& rSocialRatings);
 
     // The validated local pool. Valid until the next effect-source mutation on the owner.
     const FactionEffects_t& Get() const;
@@ -66,10 +71,10 @@ private:
     void Rebuild_() const;
 
     const Faction& m_rFaction;
-    const BuildingRegistry* m_pBuildingRegistry;
+    const BuildingRegistry& m_rBuildingRegistry;
     const Revision& m_rBaseListRevision;
-    const std::vector<EffectConfig_t>* m_pTileYieldRules;
-    const SocialRatingRegistry* m_pSocialRatings;
+    const std::vector<EffectConfig_t>& m_rTileYieldRules;
+    const SocialRatingRegistry& m_rSocialRatings;
 
     // The empty initial stamp never equals a real collection, so no "never built"
     // sentinel is needed. m_scratchRevisions is reused between validations to keep the

@@ -38,26 +38,38 @@ namespace ac
 
 Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
                  const FactionConfig_t& rDefinition,
-                 const GameDataContext& rDataContext)
+                 const GameDataContext& rDataContext,
+                 WorldMap& rWorldMap,
+                 const GameSettings& rSettings,
+                 uint32_t seed)
     : m_factionId(factionId)
     , m_bIsPlayerControlled(bIsPlayerControlled)
     , m_rDefinition(rDefinition)
     , m_rDataContext(rDataContext)
     , m_pIdentity(std::make_unique<FactionIdentity>(rDefinition.identity, rDefinition.leader))
     , m_pAIProfile(std::make_unique<AIProfile>(rDefinition.ai))
-    , m_pFlavor(std::make_unique<FactionFlavor>(rDefinition.flavor, *m_pIdentity))
+    // Distinct sub-streams from one seed, so flavor and research picks do not correlate.
+    , m_pFlavor(std::make_unique<FactionFlavor>(rDefinition.flavor, *m_pIdentity, seed))
     , m_pEconomy(std::make_unique<EconomyManager>())
     , m_pMilitary(std::make_unique<Military>())
-    , m_pResearch(std::make_unique<ResearchManager>(rDataContext.techRegistry.get(),
-                                                    rDataContext.techCostCalculator.get(), this))
-    , m_pResearchSelector(std::make_unique<ResearchSelector>(m_pResearch.get()))
+    , m_pResearch(std::make_unique<ResearchManager>(*rDataContext.techRegistry,
+                                                    *rDataContext.techCostCalculator, this))
+    , m_pResearchSelector(std::make_unique<ResearchSelector>(*m_pResearch, seed ^ 0x9E3779B9u))
     , m_pSocialEngineering(std::make_unique<SocialEngineeringManager>(
-          rDataContext.socialPolicyRegistry.get(), rDataContext.socialRatingRegistry.get()))
+          *rDataContext.socialPolicyRegistry))
     , m_pUnits(std::make_unique<UnitManager>(*this, *rDataContext.moraleCalculator))
-    , m_effectsPool(*this, rDataContext.buildingRegistry.get(), m_baseListRevision,
-                    &rDataContext.tileYieldRules, rDataContext.socialRatingRegistry.get())
+    , m_effectsPool(*this, *rDataContext.buildingRegistry, m_baseListRevision,
+                    rDataContext.tileYieldRules, *rDataContext.socialRatingRegistry)
+    , m_rWorldMap(rWorldMap)
+    , m_rSettings(rSettings)
 {
     m_pResearchSelector->EnsureResearchTarget();
+    // Size the fog maps from the map this faction is bound to for life, then take a first
+    // reading. Formerly BindWorldMap's job, which left a window where visibility silently
+    // did nothing.
+    m_explored.Reset(rWorldMap.GetWidth(), rWorldMap.GetHeight());
+    m_visible.Reset(rWorldMap.GetWidth(), rWorldMap.GetHeight());
+    RebuildVisibility();
 }
 
 Faction::~Faction()
@@ -349,15 +361,14 @@ BaseManager* Faction::CreateBaseFromSnapshot(
 
     auto pBase = std::make_unique<BaseManager>(
         *this, rSnapshot.baseId, rSnapshot.name, *rSnapshot.pTile,
-        rDataContext.buildingRegistry.get(),
-        rDataContext.socialRatingRegistry.get(),
-        rDataContext.popTypeRegistry.get(),
-        rDataContext.popTypeAvailabilityCalculator.get(),
-        rDataContext.growthConfig.get(),
-        rDataContext.popCompositionCalculator.get(),
+        *rDataContext.buildingRegistry,
+        *rDataContext.socialRatingRegistry,
+        *rDataContext.popTypeRegistry,
+        *rDataContext.popTypeAvailabilityCalculator,
+        *rDataContext.growthConfig,
+        *rDataContext.popCompositionCalculator,
         &rSecretProjectAvailability,
         rTileEffects,
-        m_pResearch.get(), m_pEconomy.get(), this,
         rSnapshot.populationSize);
 
     for (const std::string& buildingId : rSnapshot.buildingIds)
@@ -543,15 +554,14 @@ BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile*
     }
     auto pBase = std::make_unique<BaseManager>(
         *this, baseId, name, *pTile,
-        rDataContext.buildingRegistry.get(),
-        rDataContext.socialRatingRegistry.get(),
-        rDataContext.popTypeRegistry.get(),
-        rDataContext.popTypeAvailabilityCalculator.get(),
-        rDataContext.growthConfig.get(),
-        rDataContext.popCompositionCalculator.get(),
+        *rDataContext.buildingRegistry,
+        *rDataContext.socialRatingRegistry,
+        *rDataContext.popTypeRegistry,
+        *rDataContext.popTypeAvailabilityCalculator,
+        *rDataContext.growthConfig,
+        *rDataContext.popCompositionCalculator,
         &rSecretProjectAvailability,
-        rTileEffects,
-        m_pResearch.get(), m_pEconomy.get(), this);
+        rTileEffects);
 
     pBase->GetWorkerAssignments().UnassignAll();
     pBase->GetWorkerAssignments().AutoAssignWorkers();
@@ -687,16 +697,6 @@ const FactionRevealedUnits& Faction::GetRevealedUnits() const
     return m_revealedUnits;
 }
 
-void Faction::BindWorldMap(WorldMap& rWorldMap)
-{
-    m_pWorldMap = &rWorldMap;
-    const int width = rWorldMap.GetWidth();
-    const int height = rWorldMap.GetHeight();
-    m_explored.Reset(width, height);
-    m_visible.Reset(width, height);
-    RebuildVisibility();
-}
-
 void Faction::BindWorldEffects(IWorldEffectsSource& rWorldEffects)
 {
     m_pWorldEffects = &rWorldEffects;
@@ -707,12 +707,8 @@ void Faction::BindWorldEffects(IWorldEffectsSource& rWorldEffects)
 
 void Faction::RebuildVisibility()
 {
-    if (!m_pWorldMap)
-    {
-        return;
-    }
-    m_visible.RebuildFromSources(*this, *m_pWorldMap, m_explored);
-    ApplyVisibilityRules(*this, m_pSettings);
+    m_visible.RebuildFromSources(*this, m_rWorldMap, m_explored);
+    ApplyVisibilityRules(*this, m_rSettings);
     if (m_onVisibilityRebuilt)
     {
         m_onVisibilityRebuilt(*this);

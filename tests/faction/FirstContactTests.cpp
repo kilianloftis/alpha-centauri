@@ -42,10 +42,10 @@ struct ContactGame_
 
         auto pFactionA = std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition,
-            fixtures.dataContext);
+            fixtures.dataContext, fixtures.map, fixtures.settings, actest::k_TestFactionSeed);
         auto pFactionB = std::make_unique<Faction>(
             pState->AllocateFactionId(), false, fixtures.factionDefinition,
-            fixtures.dataContext);
+            fixtures.dataContext, fixtures.map, fixtures.settings, actest::k_TestFactionSeed);
 
         pA = &pState->AddFaction(std::move(pFactionA));
         pB = &pState->AddFaction(std::move(pFactionB));

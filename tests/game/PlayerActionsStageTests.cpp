@@ -44,7 +44,8 @@ struct PlayerActionsGame_
             settings, *fixtures.dataContext.moraleCalculator);
 
         auto pFaction = std::make_unique<Faction>(
-            pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext);
+            pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
+            pState->GetWorldMap(), settings, actest::k_TestFactionSeed);
         pPlayer = &pState->AddFaction(std::move(pFaction));
     }
 
@@ -192,7 +193,8 @@ TEST_CASE("PlayerActions resets interaction phase when active faction changes",
     PlayerActionsGame_ game;
     auto pOther = std::make_unique<Faction>(
         game.pState->AllocateFactionId(), true, game.fixtures.factionDefinition,
-        game.fixtures.dataContext);
+        game.fixtures.dataContext, game.pState->GetWorldMap(), game.settings,
+        actest::k_TestFactionSeed);
     Faction& rOther = game.pState->AddFaction(std::move(pOther));
 
     PlayerActions stage(HookContext{});

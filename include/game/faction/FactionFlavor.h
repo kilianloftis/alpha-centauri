@@ -14,7 +14,11 @@ namespace ac
 class FactionFlavor
 {
 public:
-    FactionFlavor(const FactionFlavorConfig& rFlavor, const FactionIdentity& rIdentity);
+    // seed is supplied by the owning Faction (derived from the session seed), not drawn from
+    // std::random_device here: base-name picks are part of the save-game state, so an
+    // unseedable generator meant the same session could not be reproduced.
+    FactionFlavor(const FactionFlavorConfig& rFlavor, const FactionIdentity& rIdentity,
+                  uint32_t seed);
 
     std::string PickBaseName();
     std::string PickPhrase(const std::string& category) const;

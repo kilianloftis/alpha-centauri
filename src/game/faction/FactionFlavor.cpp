@@ -25,10 +25,11 @@ void ReplaceAll_(std::string& rHaystack, const std::string& rNeedle, const std::
 
 } // namespace
 
-FactionFlavor::FactionFlavor(const FactionFlavorConfig& rFlavor, const FactionIdentity& rIdentity)
+FactionFlavor::FactionFlavor(const FactionFlavorConfig& rFlavor, const FactionIdentity& rIdentity,
+                             uint32_t seed)
     : m_flavor(rFlavor)
     , m_identity(rIdentity)
-    , m_rng(std::random_device{}())
+    , m_rng(seed)
 {
 }
 

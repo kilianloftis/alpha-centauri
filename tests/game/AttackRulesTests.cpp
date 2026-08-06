@@ -71,9 +71,11 @@ struct AttackGame_
         aiDefinition.id = "ai";
 
         auto pFactionA = std::make_unique<Faction>(
-            pState->AllocateFactionId(), true, playerDefinition, fixtures.dataContext);
+            pState->AllocateFactionId(), true, playerDefinition, fixtures.dataContext,
+            pState->GetWorldMap(), settings, actest::k_TestFactionSeed);
         auto pFactionB = std::make_unique<Faction>(
-            pState->AllocateFactionId(), false, aiDefinition, fixtures.dataContext);
+            pState->AllocateFactionId(), false, aiDefinition, fixtures.dataContext,
+            pState->GetWorldMap(), settings, actest::k_TestFactionSeed);
         pPlayer = &pState->AddFaction(std::move(pFactionA));
         pAi = &pState->AddFaction(std::move(pFactionB));
     }

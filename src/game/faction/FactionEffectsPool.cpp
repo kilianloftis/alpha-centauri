@@ -18,15 +18,15 @@ namespace ac
 {
 
 FactionEffectsPool::FactionEffectsPool(const Faction& rFaction,
-                                       const BuildingRegistry* pBuildingRegistry,
+                                       const BuildingRegistry& rBuildingRegistry,
                                        const Revision& rBaseListRevision,
-                                       const std::vector<EffectConfig_t>* pTileYieldRules,
-                                       const SocialRatingRegistry* pSocialRatings)
+                                       const std::vector<EffectConfig_t>& rTileYieldRules,
+                                       const SocialRatingRegistry& rSocialRatings)
     : m_rFaction(rFaction)
-    , m_pBuildingRegistry(pBuildingRegistry)
+    , m_rBuildingRegistry(rBuildingRegistry)
     , m_rBaseListRevision(rBaseListRevision)
-    , m_pTileYieldRules(pTileYieldRules)
-    , m_pSocialRatings(pSocialRatings)
+    , m_rTileYieldRules(rTileYieldRules)
+    , m_rSocialRatings(rSocialRatings)
 {
 }
 
@@ -97,11 +97,7 @@ std::vector<ActiveEffect_t> FactionEffectsPool::CollectDefinitionEffects_() cons
 std::vector<ActiveEffect_t> FactionEffectsPool::CollectTileYieldRuleEffects_() const
 {
     std::vector<ActiveEffect_t> result;
-    if (!m_pTileYieldRules)
-    {
-        return result;
-    }
-    AppendActiveEffects(*m_pTileYieldRules, nullptr, "tile_yield_rules", result);
+    AppendActiveEffects(m_rTileYieldRules, nullptr, "tile_yield_rules", result);
     return result;
 }
 
@@ -176,7 +172,6 @@ void FactionEffectsPool::Rebuild_() const
     const ResearchManager& rResearch = m_rFaction.GetResearch();
     ApplyRemovedByTech_(factionEffects, rResearch);
 
-    if (m_pBuildingRegistry)
     {
         std::vector<const BaseManager*> bases;
         for (const BaseManager& rBase : m_rFaction.Bases())
@@ -184,7 +179,7 @@ void FactionEffectsPool::Rebuild_() const
             bases.push_back(&rBase);
         }
         factionEffects.effects = ExpandGrantBuildingEffects(
-            std::move(factionEffects.effects), *m_pBuildingRegistry, bases);
+            std::move(factionEffects.effects), m_rBuildingRegistry, bases);
     }
 
     // Gate the grant derivatives before anything reads them: a granted building's own
@@ -195,10 +190,7 @@ void FactionEffectsPool::Rebuild_() const
 
     // Expand SE rating axes whose gameplay effects target FactionUnits (e.g. Morale →
     // morale_bonus). Accumulation is FactionWide-only; ThisBase stays on the per-base path.
-    if (m_pSocialRatings)
-    {
-        ExpandFactionLaneSocialRatingEffects(factionEffects, *m_pSocialRatings);
-    }
+    ExpandFactionLaneSocialRatingEffects(factionEffects, m_rSocialRatings);
 
     // Rating level effects are the last derivatives; gate them too.
     ApplyRemovedByTech_(factionEffects, rResearch);

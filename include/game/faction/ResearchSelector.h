@@ -16,8 +16,11 @@ class ResearchManager;
 class ResearchSelector
 {
 public:
-    explicit ResearchSelector(ResearchManager* pResearchManager);
-    ResearchSelector(ResearchManager* pResearchManager, uint32_t seed);
+    // The manager is a reference: the owning Faction always has one, and the pointer form had
+    // three different null policies for the same member (throw / return false / silent no-op).
+    // The seed is required — the convenience overload that drew from std::random_device made
+    // the starting research target unreproducible across runs of the same session.
+    ResearchSelector(ResearchManager& rResearchManager, uint32_t seed);
 
     void SetCategoryEnabled(GameCategory_t category, bool enabled);
     bool IsCategoryEnabled(GameCategory_t category) const;
@@ -36,7 +39,7 @@ private:
     bool IsTechInSelectedCategory_(const TechConfig_t& rConfig) const;
     const TechConfig_t* PickRandom_(const std::vector<const TechConfig_t*>& rCandidates) const;
 
-    ResearchManager* m_pResearchManager;
+    ResearchManager& m_rResearchManager;
     std::array<bool, k_GameCategoryCount> m_categoryEnabled;
     mutable std::mt19937 m_rng;
 };

@@ -1,0 +1,124 @@
+// Package 4 — composition root, dependency validity, session boundaries.
+//
+// The invariants here are mostly enforced by signatures (a dependency the composition root
+// always supplies is a constructor reference, so "absent" is unrepresentable and there is
+// nothing to test at runtime). What remains testable is the seam where that guarantee is
+// established — GameDataContext completeness — and the two behaviours the old
+// construct-then-wire sequence got wrong: silent no-op visibility and the load-bearing
+// AddFaction ordering.
+
+#include "GameFixtures.h"
+
+#include "game/Faction.h"
+#include "game/GameDataContext.h"
+#include "game/GameSettings.h"
+#include "game/GameState.h"
+#include "game/buildings/BuildingRegistry.h"
+#include "game/faction/base/BaseManager.h"
+#include "game/map/TerritoryMap.h"
+#include "game/map/WorldMap.h"
+#include "game/units/MoraleCalculator.h"
+
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
+
+#include <memory>
+
+using namespace ac;
+using namespace actest;
+
+TEST_CASE("ThrowIfIncomplete names the missing member", "[composition][gamedata]")
+{
+    // A default-constructed context is the old "service locator" state: every member null.
+    // It must not be silently usable — and the diagnostic has to name a field, because
+    // "something was null" is not something a modder can act on.
+    GameDataContext empty;
+    CHECK_THROWS_WITH(ThrowIfIncomplete(empty),
+                      Catch::Matchers::ContainsSubstring("buildingRegistry"));
+}
+
+TEST_CASE("ThrowIfIncomplete reports the first member still missing", "[composition][gamedata]")
+{
+    // Filling one member moves the complaint to the next, so the check walks the whole set
+    // rather than guarding a single field. (This is the loader's contract. Test fixtures
+    // deliberately assemble a narrower context — only what Faction and BaseManager need — and
+    // do not run this check; the reference-typed constructors are what stop a fixture from
+    // building a half-valid object out of it.)
+    GameDataContext data;
+    CHECK_THROWS_WITH(ThrowIfIncomplete(data),
+                      Catch::Matchers::ContainsSubstring("buildingRegistry"));
+
+    data.buildingRegistry = std::make_unique<BuildingRegistry>();
+    CHECK_THROWS_WITH(ThrowIfIncomplete(data),
+                      Catch::Matchers::ContainsSubstring("unitComponentRegistry"));
+}
+
+TEST_CASE("A newly constructed faction already has sized fog maps", "[composition][faction]")
+{
+    // The world map is a constructor dependency, so there is no window between construction
+    // and BindWorldMap in which RebuildVisibility silently did nothing. The faction's own
+    // base tile is visible without any explicit wiring step.
+    FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+
+    CHECK(&faction.GetWorldMap() == &fixture.map);
+    // Explored/visible maps are sized from the map, not left at 0x0: an in-bounds query is
+    // answerable rather than out of range.
+    CHECK_NOTHROW(faction.GetExploredMap().IsExplored(fixture.map.GetWidth() - 1,
+                                                      fixture.map.GetHeight() - 1));
+
+    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    CHECK(faction.GetVisibleMap().IsVisible(base.GetTile().GetX(), base.GetTile().GetY()));
+}
+
+TEST_CASE("AddFaction scans a faction that already owns bases", "[composition][faction]")
+{
+    // The ordering bug: AddFaction used to wire observers and rebuild visibility *before*
+    // pushing the faction into m_factions, so a faction arriving already populated (load-game,
+    // or any runtime creation) was never folded into territory. Now registration happens
+    // first and AttachToSession_ ends with a catch-up sweep.
+    WorldFixture fixture;
+    GameSettings settings;
+    GameState state(std::make_unique<WorldMap>(9, 9), fixture.improvements,
+                    &fixture.unitComponents, settings, *fixture.dataContext.moraleCalculator);
+
+    FactionConfig_t definition;
+    definition.id = "already_populated";
+    auto pFaction = std::make_unique<Faction>(
+        state.AllocateFactionId(), true, definition, fixture.dataContext,
+        state.GetWorldMap(), settings, k_TestFactionSeed);
+
+    // Found the base BEFORE the faction is known to the session — the case that used to be
+    // skipped entirely.
+    BaseManager* pBase = pFaction->CreateBase(
+        state.AllocateBaseId(), "PreExisting", state.GetWorldMap().GetTile(4, 4),
+        fixture.dataContext, state.GetTileEffects(), state.GetSecretProjectAvailability());
+    REQUIRE(pBase != nullptr);
+
+    Faction& rAdded = state.AddFaction(std::move(pFaction));
+
+    // Territory covers the pre-existing base's tile, and vision was rebuilt for it.
+    CHECK(state.GetWorldMap().GetTerritory().GetOwner(pBase->GetTile())
+          == rAdded.GetFactionId());
+    CHECK(rAdded.GetVisibleMap().IsVisible(4, 4));
+}
+
+TEST_CASE("Faction random choices are reproducible from the seed", "[composition][faction][rng]")
+{
+    // Base names and the starting research target used to come from std::random_device inside
+    // FactionFlavor / ResearchSelector, so the same session could not be replayed — and any
+    // test touching research became order-dependent. Same seed must mean same picks.
+    FactionFixture fixture;
+    FactionConfig_t definition = fixture.factionDefinition;
+    definition.id = "seeded";
+
+    auto make = [&](uint32_t seed) {
+        return std::make_unique<Faction>(99, false, definition, fixture.dataContext,
+                                         fixture.map, fixture.settings, seed);
+    };
+
+    auto pA = make(4242u);
+    auto pB = make(4242u);
+    CHECK(pA->SuggestBaseName() == pB->SuggestBaseName());
+    CHECK(pA->GetResearch().GetResearchTarget() == pB->GetResearch().GetResearchTarget());
+}

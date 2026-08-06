@@ -427,9 +427,11 @@ TEST_CASE("TurnProcessor per-faction resume does not skip later factions by id o
     (void)gameState.AllocateFactionId();
 
     auto pA = std::make_unique<Faction>(
-        gameState.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext);
+        gameState.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
+        fixtures.map, fixtures.settings, actest::k_TestFactionSeed);
     auto pB = std::make_unique<Faction>(
-        gameState.AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext);
+        gameState.AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext,
+        fixtures.map, fixtures.settings, actest::k_TestFactionSeed);
     gameState.AddFaction(std::move(pA));
     gameState.AddFaction(std::move(pB));
 

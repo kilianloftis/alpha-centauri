@@ -29,6 +29,14 @@ public:
 
 private:
     void Initialize_();
+    // Process-wide setup that outlives any session: user settings, UI style, and the parsed
+    // game data. Runs once; a future "new game" from the menu must not re-run it.
+    void InitializeApp_();
+    // Everything a session owns: the resolved seed, the generated world, GameState, factions
+    // and their starting assets, and the council. Requires InitializeApp_.
+    void StartNewGame_();
+    // Turn pipeline and views. Requires a session to bind to, so it runs last.
+    void InitializeUi_();
     void PrintWelcome_() const;
     void GameLoop_();
     void ProcessTurn_();
@@ -41,6 +49,9 @@ private:
     // must outlive them. Members are destroyed in reverse declaration order, so GameState
     // (and every faction/base/unit it owns) is torn down while this is still alive.
     std::unique_ptr<GameDataContext> m_gameDataContext;
+    // Resolved once in Initialize_ (map config seed, or a drawn one when that is 0) and used to
+    // derive every per-faction seed, so a session's random choices are reproducible.
+    unsigned int m_sessionSeed = 0;
     std::unique_ptr<TurnStageFactory> m_turnStageFactory;
     std::unique_ptr<TurnProcessor> m_turnProcessor;
     std::unique_ptr<GameState> m_pGameState;

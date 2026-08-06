@@ -36,8 +36,9 @@ struct ResearchTestFixture
             techCostParser.ParseConfig(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/tech_cost.lua",
                                        *luaRuntime));
         techCostCalculator = std::make_unique<TechCostCalculator>(*techCostConfig, *luaRuntime);
-        research = std::make_unique<ResearchManager>(&techRegistry, techCostCalculator.get(), nullptr);
-        selector = std::make_unique<ResearchSelector>(research.get(), seed);
+        research = std::make_unique<ResearchManager>(techRegistry, *techCostCalculator,
+                                                     /*pEffectsProvider*/ nullptr);
+        selector = std::make_unique<ResearchSelector>(*research, seed);
     }
 };
 
@@ -133,7 +134,7 @@ TEST_CASE("ResearchSelector random assignment stays within selected categories",
     std::unordered_set<TechId> seen;
     for (int i = 0; i < 20; ++i)
     {
-        ResearchSelector selector(fixture.research.get(), static_cast<uint32_t>(i));
+        ResearchSelector selector(*fixture.research, static_cast<uint32_t>(i));
         selector.SetCategoryEnabled(GameCategory_t::Build, true);
         selector.SetCategoryEnabled(GameCategory_t::Grow, true);
         selector.SetCategoryEnabled(GameCategory_t::Discover, false);

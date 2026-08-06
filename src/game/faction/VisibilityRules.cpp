@@ -22,13 +22,12 @@ void ApplyRemoveFog(Faction& rFaction)
     rFaction.GetVisibleMap().MarkAll();
 }
 
-void ApplyVisibilityRules(Faction& rFaction, const GameSettings* pSettings)
+void ApplyVisibilityRules(Faction& rFaction, const GameSettings& rSettings)
 {
     const bool bRemoveFog =
         rFaction.IsFogRemoved()
         || ResolveFlag(rFaction, RuleFlagId_t::RemoveFog)
-        || (rFaction.IsPlayerControlled() && pSettings
-            && pSettings->GetVisibility().removeFog);
+        || (rFaction.IsPlayerControlled() && rSettings.GetVisibility().removeFog);
     rFaction.GetVisibleMap().SetRemoveFog(bRemoveFog);
     if (bRemoveFog)
     {
@@ -37,7 +36,7 @@ void ApplyVisibilityRules(Faction& rFaction, const GameSettings* pSettings)
 
     const bool bRemoveShroud =
         ResolveFlag(rFaction, RuleFlagId_t::RemoveShroud)
-        || (pSettings && pSettings->GetVisibility().removeShroud);
+        || rSettings.GetVisibility().removeShroud;
     if (bRemoveShroud)
     {
         ApplyRemoveShroud(rFaction);

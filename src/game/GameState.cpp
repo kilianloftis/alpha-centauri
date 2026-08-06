@@ -185,11 +185,25 @@ Faction& GameState::AddFaction(std::unique_ptr<Faction> pFaction)
     {
         throw std::invalid_argument("GameState::AddFaction: pFaction is null");
     }
-    pFaction->SetSettings(&m_rSettings);
-    pFaction->BindWorldMap(*m_worldMap);
-    pFaction->BindWorldEffects(*this);
-    pFaction->BindGameState(*this);
-    pFaction->SetOnBaseListChanged([this]()
+    // Register first, attach second. The faction must already be in m_factions before any
+    // observer runs: AttachToSession_ ends with a visibility/territory sweep, and both
+    // ConsiderObserver and RebuildTerritory iterate Factions(). Wiring before the push (the
+    // previous order) meant a faction arriving with bases already on the map — load-game, or
+    // any future runtime creation — was never scanned for contact or territory.
+    m_factions.push_back(std::move(pFaction));
+    Faction& rAdded = *m_factions.back();
+    AttachToSession_(rAdded);
+    return rAdded;
+}
+
+void GameState::AttachToSession_(Faction& rFaction)
+{
+    // The whole session wiring for one faction, in one place. World map and settings are
+    // constructor dependencies (see Faction's constructor); what remains is the container
+    // back-pointer and the observers, which necessarily close over this GameState.
+    rFaction.BindWorldEffects(*this);
+    rFaction.BindGameState(*this);
+    rFaction.SetOnBaseListChanged([this]()
     {
         RebuildTerritory();
         // A new base may sit inside another faction's existing vision cone.
@@ -198,32 +212,36 @@ Faction& GameState::AddFaction(std::unique_ptr<Faction> pFaction)
             m_pFirstContact->ConsiderObserver(rObserver);
         }
     });
-    pFaction->SetOnVisibilityRebuilt([this](Faction& rObserver)
+    rFaction.SetOnVisibilityRebuilt([this](Faction& rObserver)
     {
         m_pFirstContact->ConsiderObserver(rObserver);
     });
     // Drop destroyed units from every faction's contact-reveal set (address reuse safety).
-    pFaction->GetUnitManager().OnUnitDestroyed.Connect([this](Unit& rDestroyed)
+    rFaction.GetUnitManager().OnUnitDestroyed.Connect([this](Unit& rDestroyed)
     {
-        for (Faction& rFaction : Factions())
+        for (Faction& rOther : Factions())
         {
-            rFaction.GetRevealedUnits().Forget(rDestroyed);
+            rOther.GetRevealedUnits().Forget(rDestroyed);
         }
     });
-    pFaction->GetUnitManager().OnUnitCreated.Connect([this](Unit& rCreated)
+    rFaction.GetUnitManager().OnUnitCreated.Connect([this](Unit& rCreated)
     {
         // Created into another faction's existing vision (no move event).
         m_pFirstContact->ConsiderUnit(rCreated);
     });
-    pFaction->GetUnitManager().OnUnitAdopted.Connect([this](Unit& rAdopted)
+    rFaction.GetUnitManager().OnUnitAdopted.Connect([this](Unit& rAdopted)
     {
         // Transfer is not a birth (see UnitManager::OnUnitAdopted), but the unit now sits in
         // observers' vision under a faction they may not have met yet — same first-contact
         // scan as a genuine creation.
         m_pFirstContact->ConsiderUnit(rAdopted);
     });
-    m_factions.push_back(std::move(pFaction));
-    return *m_factions.back();
+
+    // Catch up on anything the faction already owns. A freshly-constructed faction has no
+    // bases and no units, so this is a no-op for the new-game path; it is what makes an
+    // already-populated faction correct.
+    RebuildTerritory();
+    rFaction.RebuildVisibility();
 }
 
 int GameState::GetNumFactions() const

@@ -83,7 +83,9 @@ public:
     EventBus& GetEventBus();
     const EventBus& GetEventBus() const;
 
-    // Factions
+    // Factions. Registration only: the faction is already valid when it arrives (world map and
+    // settings are constructor dependencies). This adds the session wiring that must close over
+    // GameState — see AttachToSession_ — and works for a faction that already owns bases/units.
     Faction& AddFaction(std::unique_ptr<Faction> pFaction);
     int GetNumFactions() const;
     // Iterate factions by reference without exposing the owning unique_ptrs.
@@ -182,6 +184,11 @@ public:
 
 private:
     void OnVisibilitySettingsChanged_();
+    // All session wiring for one faction (back-pointer + observers), applied by AddFaction
+    // after the faction is in m_factions — the observers iterate Factions(), so the order is
+    // load-bearing. Ends with a territory/visibility sweep so a faction that arrives already
+    // populated is scanned rather than silently skipped.
+    void AttachToSession_(Faction& rFaction);
 
     int m_missionYear;
     GameSettings& m_rSettings;

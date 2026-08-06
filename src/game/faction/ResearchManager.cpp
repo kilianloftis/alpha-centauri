@@ -10,11 +10,11 @@
 namespace ac
 {
 
-ResearchManager::ResearchManager(const TechRegistry* pTechRegistry,
-                                 const TechCostCalculator* pTechCostCalculator,
+ResearchManager::ResearchManager(const TechRegistry& rTechRegistry,
+                                 const TechCostCalculator& rTechCostCalculator,
                                  const IEffectsProvider* pEffectsProvider)
-    : m_pTechRegistry(pTechRegistry)
-    , m_pTechCostCalculator(pTechCostCalculator)
+    : m_rTechRegistry(rTechRegistry)
+    , m_rTechCostCalculator(rTechCostCalculator)
     , m_pEffectsProvider(pEffectsProvider)
     , m_discoveredTechs()
     , m_pCurrentResearchTarget(nullptr)
@@ -29,7 +29,7 @@ ResearchManager::~ResearchManager()
 
 void ResearchManager::SetResearchTarget(TechId techId)
 {
-    const TechConfig_t* pTarget = m_pTechRegistry->Find(techId);
+    const TechConfig_t* pTarget = m_rTechRegistry.Find(techId);
     if (!pTarget)
     {
         throw std::runtime_error("Unknown tech id '" + techId + "'");
@@ -104,9 +104,10 @@ std::optional<int> ResearchManager::GetTurnsUntilBreakthrough(int researchPerTur
 
 void ResearchManager::RecalculatePointsNeeded()
 {
-    if (!m_pCurrentResearchTarget || !m_pTechCostCalculator || !m_pTechRegistry)
+    if (!m_pCurrentResearchTarget)
     {
-        throw std::runtime_error("ResearchManager::RecalculatePointsNeeded: Invalid state");
+        throw std::runtime_error(
+            "ResearchManager::RecalculatePointsNeeded: no current research target");
     }
     ComputePointsNeeded_();
 }
@@ -130,7 +131,7 @@ void ResearchManager::ComputePointsNeeded_() const
     m_costResearchRevision = GetRevision();
     // All other fields are placeholder defaults (diff=1, turns=0, bIsAI=false, etc.)
 
-    m_pointsNeededForCurrentTech = m_pTechCostCalculator->CalculateCost(*m_pCurrentResearchTarget, inputs);
+    m_pointsNeededForCurrentTech = m_rTechCostCalculator.CalculateCost(*m_pCurrentResearchTarget, inputs);
 }
 
 void ResearchManager::RevalidatePointsNeeded_() const
@@ -201,13 +202,8 @@ void ResearchManager::AddDiscoveredTech(TechId techId)
 
 std::vector<const TechConfig_t*> ResearchManager::GetAvailableTechs() const
 {
-    if (!m_pTechRegistry)
-    {
-        return {};
-    }
-
     std::vector<const TechConfig_t*> available;
-    const auto& allConfigs = m_pTechRegistry->GetAll();
+    const auto& allConfigs = m_rTechRegistry.GetAll();
 
     for (const TechConfig_t& rConfig : allConfigs)
     {

@@ -69,22 +69,33 @@ public:
     // subsystem. All are named individually (rather than taking a whole GameDataContext) so
     // this leaf class's real dependencies are visible at the call site; the caller (a factory
     // such as Faction::CreateBase) is responsible for unpacking them.
+    // Narrow, named dependencies rather than the whole GameDataContext (Faction::CreateBase
+    // unpacks them). They are references: the composition root always supplies them, and the
+    // pointer form had three different null behaviours — throw, silent skip of all
+    // social-rating expansion, and a no-op RecalculateComposition — which is how fixture bases
+    // came to resolve ratings differently from real ones.
+    //
+    // Research manager, economy manager and effects provider are NOT parameters: they are the
+    // owning faction's, and passing them separately let a caller inject one faction's economy
+    // into another faction's base while RebindFaction silently overrode it on transfer.
+    //
+    // pSecretProjectCalculator is the one genuinely optional dependency: it reads live session
+    // state (the faction vector) and so only exists inside a GameState. A base without one
+    // cannot answer secret-project availability, and BuildingManager says so rather than
+    // guessing.
     BaseManager(
         Faction& rFaction,
         BaseId_t baseId,
         std::string name,
         Tile& tile,
-        const BuildingRegistry* pBuildingRegistry,
-        const SocialRatingRegistry* pSocialRatingRegistry,
-        const PopTypeRegistry* pPopTypeRegistry,
-        const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator,
-        const GrowthConfig_t* pGrowthConfig,
-        PopCompositionCalculator* pCompositionCalculator,
+        const BuildingRegistry& rBuildingRegistry,
+        const SocialRatingRegistry& rSocialRatingRegistry,
+        const PopTypeRegistry& rPopTypeRegistry,
+        const PopTypeAvailabilityCalculator& rPopTypeAvailabilityCalculator,
+        const GrowthConfig_t& rGrowthConfig,
+        PopCompositionCalculator& rCompositionCalculator,
         const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
         TileEffectsContext& rTileEffects,
-        const ResearchManager* pResearchManager,
-        const EconomyManager* pEconomyManager,
-        const IEffectsProvider* pEffectsProvider,
         int initialPopulation = 3);
     ~BaseManager();
 
@@ -242,8 +253,9 @@ private:
     // Units that call this base home. Destroyed with the base; orphans outstanding claims
     // so units never keep a dangling BaseManager*.
     HomeBaseIndex m_homeUnits;
-    const BuildingRegistry* m_pBuildingRegistry;
-    const SocialRatingRegistry* m_pSocialRatings;
+    const BuildingRegistry& m_rBuildingRegistry;
+    const SocialRatingRegistry& m_rSocialRatings;
+    // Re-pointed by RebindFaction on ownership transfer; always the current owner's.
     const ResearchManager* m_pResearch;
     const IEffectsProvider* m_pEffectsProvider = nullptr;
     // Declaration order is construction order: resources depends on worker assignments

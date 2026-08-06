@@ -16,6 +16,7 @@
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
+#include <random>
 #include "game/map/MapUtils.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
@@ -58,7 +59,6 @@ Engine::Engine()
     : m_pGraphics(CreateGraphics())
     , m_pInput(CreateInput())
     , m_pSettings(std::make_unique<GameSettings>())
-    , m_gameDataContext(std::make_unique<GameDataContext>())
 {
     if (!m_pGraphics)
     {
@@ -121,16 +121,41 @@ void Engine::Initialize_()
 {
     std::cout << "Initializing game engine...\n";
 
+    // Three explicit phases. App data is process-wide and survives any number of sessions;
+    // the session is everything a "new game" builds; the UI is bound to the session that
+    // exists by then. Keeping them separate is what will let load-game reuse StartNewGame_'s
+    // successor without re-running config parsing, and lets tests build a session without a
+    // graphics backend.
+    InitializeApp_();
+    StartNewGame_();
+    InitializeUi_();
+}
+
+void Engine::InitializeApp_()
+{
     m_pSettings->Load();
 
     UiStyle::Load("config/ui/style.json");
 
     // Every config parser + cross-config id validation (including unitFilter HasComponent).
-    LoadGameData(*m_gameDataContext);
+    // Returns complete or throws: nothing downstream has to check a member for null.
+    m_gameDataContext = std::make_unique<GameDataContext>(LoadGameData());
+}
+
+void Engine::StartNewGame_()
+{
+    // One session seed, resolved once and handed down. `seed == 0` in the map config means
+    // "pick one"; resolving it here (rather than letting each sub-object reach for
+    // std::random_device) is what makes a session reproducible — every per-faction random
+    // choice derives from this value.
+    // TODO: persist the resolved seed into settings/save state so a finished game can be
+    // replayed. That is package 10's world-generation item.
+    const MapGenerationConfig_t& rWorldConfig = m_pSettings->GetMapGeneration();
+    m_sessionSeed = rWorldConfig.seed != 0 ? rWorldConfig.seed : std::random_device{}();
+    std::cout << "Session seed: " << m_sessionSeed << "\n";
 
     // Generate world map and build the save-game state around it.
     WorldGenerator worldGen;
-    const MapGenerationConfig_t& rWorldConfig = m_pSettings->GetMapGeneration();
     const WorldGenPresetConfig_t& rPreset =
         m_gameDataContext->worldGenPresetRegistry->Get(rWorldConfig.presetId);
     m_pGameState = std::make_unique<GameState>(
@@ -178,7 +203,12 @@ void Engine::Initialize_()
             m_pGameState->AllocateFactionId(),
             bIsPlayerControlled,
             rFactionConfig,
-            *m_gameDataContext);
+            *m_gameDataContext,
+            m_pGameState->GetWorldMap(),
+            *m_pSettings,
+            // Per-faction sub-stream of the session seed, so factions do not share a sequence
+            // and adding one does not shift another's picks.
+            static_cast<uint32_t>(m_sessionSeed + 0x9E3779B9u * (positionIndex + 1)));
 
         // Wire EventBridge to every base this faction ever introduces — founding (below),
         // future load, and capture/trade adopt alike — via the single Faction::OnBaseAdded
@@ -326,7 +356,9 @@ void Engine::Initialize_()
         ++positionIndex;
     }
 
-    // Bases were founded before AddFaction wired OnBaseListChanged, so rebuild once now.
+    // Bases are founded before AddFaction, so each faction's territory is folded in by
+    // AttachToSession_'s catch-up sweep as it is registered. This final rebuild is the
+    // whole-world pass once every faction exists.
     m_pGameState->RebuildTerritory();
 
     m_pGameState->CreatePlanetaryCouncil(*m_gameDataContext->councilProposalRegistry,
@@ -396,7 +428,10 @@ void Engine::Initialize_()
 
     std::cout << "Test setup complete. " << m_pGameState->GetNumFactions() << " faction(s), "
               << m_pGameState->GetPlayerFaction()->GetBaseCount() << " base(s)\n";
+}
 
+void Engine::InitializeUi_()
+{
     m_turnStageFactory = std::make_unique<TurnStageFactory>();
     m_turnStageFactory->LoadConfig("config/turn_stages.json");
     auto registries = m_turnStageFactory->CreateStages();

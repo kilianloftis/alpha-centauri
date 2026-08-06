@@ -47,6 +47,13 @@ struct GameDataContext
     GameDataContext();
     ~GameDataContext();
 
+    // Move-only: LoadGameData returns one by value, and the composition root owns exactly one.
+    // Defined out-of-line because the members are incomplete types here.
+    GameDataContext(GameDataContext&&) noexcept;
+    GameDataContext& operator=(GameDataContext&&) noexcept;
+    GameDataContext(const GameDataContext&) = delete;
+    GameDataContext& operator=(const GameDataContext&) = delete;
+
     // --- Registries and config structs (definition data) ---
     std::unique_ptr<BuildingRegistry> buildingRegistry;
     std::unique_ptr<UnitComponentRegistry> unitComponentRegistry;
@@ -82,13 +89,22 @@ struct GameDataContext
     std::unique_ptr<MoraleCalculator> moraleCalculator;
 };
 
-// Single entry point that runs every config parser into rData. Load order is deliberate:
-// registries that are reference targets (techs, improvements, unit components) load before
-// configs that may cite them, then ValidateEffectReferences / ValidateRequiredTechReferences
-// run once everything is present — so a typo'd unitFilter HasComponent id (or grant/tech/
-// selector id) fails here instead of becoming a silent no-op. Formula configs and the
-// calculators built from them load last. Call from Engine::Initialize_; do not re-order
-// individual Load calls at other call sites.
-void LoadGameData(GameDataContext& rData, const GameDataPaths& rPaths = {});
+// Single entry point that runs every config parser and returns a *complete* context. Load
+// order is deliberate: registries that are reference targets (techs, improvements, unit
+// components) load before configs that may cite them, then ValidateEffectReferences /
+// ValidateRequiredTechReferences run once everything is present — so a typo'd unitFilter
+// HasComponent id (or grant/tech/selector id) fails here instead of becoming a silent no-op.
+// Formula configs and the calculators built from them load last.
+//
+// Returns by value rather than filling a caller-supplied bag so there is no window in which a
+// half-populated context is observable: every member is non-null when this returns, or it threw.
+// ThrowIfIncomplete enforces that before returning, naming the first missing member — consumers
+// may therefore dereference any member without checking. Call from Engine::Initialize_; do not
+// re-order individual Load calls at other call sites.
+GameDataContext LoadGameData(const GameDataPaths& rPaths = {});
+
+// Throw naming the first null member. Called by LoadGameData; also the check a test fixture
+// should run once it has finished assembling a context by hand.
+void ThrowIfIncomplete(const GameDataContext& rData);
 
 } // namespace ac

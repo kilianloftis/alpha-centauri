@@ -21,9 +21,11 @@ struct PopCompositionResult;
 class PopContainer
 {
 public:
-    PopContainer(const PopTypeRegistry* pReg,
-                 const PopTypeAvailabilityCalculator* pAvailabilityCalculator,
-                 const ResearchManager* pResearchManager,
+    // References: a null registry used to construct a base with zero pops and then throw on
+    // the first AddPop, which is a failure reported at the wrong place and time.
+    PopContainer(const PopTypeRegistry& rRegistry,
+                 const PopTypeAvailabilityCalculator& rAvailabilityCalculator,
+                 const ResearchManager& rResearchManager,
                  int initialSize);
     ~PopContainer() = default;
 
@@ -70,8 +72,8 @@ public:
 private:
     std::vector<std::unique_ptr<Pop>> m_pops;
     Revision m_revision;
-    const PopTypeRegistry* m_pRegistry;
-    const PopTypeAvailabilityCalculator* m_pAvailabilityCalculator;
+    const PopTypeRegistry& m_rRegistry;
+    const PopTypeAvailabilityCalculator& m_rAvailabilityCalculator;
     const ResearchManager* m_pResearchManager;
 
     int CountPops_(bool (*predicate)(const Pop*)) const;

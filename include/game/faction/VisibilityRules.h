@@ -13,8 +13,9 @@ void ApplyRemoveShroud(Faction& rFaction);
 // Survives visibility rebuilds until cleared; also sets the visible-map bypass immediately.
 void ApplyRemoveFog(Faction& rFaction);
 
-// Re-apply continuous RemoveShroud / RemoveFog from RuleFlags and optional session settings.
-// Call after FactionVisibleMap::RebuildFromSources.
-void ApplyVisibilityRules(Faction& rFaction, const GameSettings* pSettings = nullptr);
+// Re-apply continuous RemoveShroud / RemoveFog from RuleFlags and session settings.
+// Call after FactionVisibleMap::RebuildFromSources. Settings are a Faction constructor
+// dependency, so there is no "no settings" mode to degrade to.
+void ApplyVisibilityRules(Faction& rFaction, const GameSettings& rSettings);
 
 } // namespace ac

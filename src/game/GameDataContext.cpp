@@ -38,9 +38,55 @@ namespace ac
 
 GameDataContext::GameDataContext() = default;
 GameDataContext::~GameDataContext() = default;
+GameDataContext::GameDataContext(GameDataContext&&) noexcept = default;
+GameDataContext& GameDataContext::operator=(GameDataContext&&) noexcept = default;
 
-void LoadGameData(GameDataContext& rData, const GameDataPaths& rPaths)
+void ThrowIfIncomplete(const GameDataContext& rData)
 {
+    // Consumers take these as references and dereference without checking, so an incomplete
+    // context must never escape the loader. Named individually: "something is null" is not a
+    // diagnostic a modder can act on.
+    const std::pair<const void*, const char*> required[] = {
+        {rData.buildingRegistry.get(), "buildingRegistry"},
+        {rData.unitComponentRegistry.get(), "unitComponentRegistry"},
+        {rData.unitSlotRegistry.get(), "unitSlotRegistry"},
+        {rData.techRegistry.get(), "techRegistry"},
+        {rData.socialPolicyRegistry.get(), "socialPolicyRegistry"},
+        {rData.socialRatingRegistry.get(), "socialRatingRegistry"},
+        {rData.factionRegistry.get(), "factionRegistry"},
+        {rData.popTypeRegistry.get(), "popTypeRegistry"},
+        {rData.popCompositionConfig.get(), "popCompositionConfig"},
+        {rData.growthConfig.get(), "growthConfig"},
+        {rData.techCostConfig.get(), "techCostConfig"},
+        {rData.improvementRegistry.get(), "improvementRegistry"},
+        {rData.worldGenPresetRegistry.get(), "worldGenPresetRegistry"},
+        {rData.worldGenDecorationConfig.get(), "worldGenDecorationConfig"},
+        {rData.moraleConfig.get(), "moraleConfig"},
+        {rData.probeActionsConfig.get(), "probeActionsConfig"},
+        {rData.baseConquestConfig.get(), "baseConquestConfig"},
+        {rData.councilProposalRegistry.get(), "councilProposalRegistry"},
+        {rData.councilRules.get(), "councilRules"},
+        {rData.luaRuntime.get(), "luaRuntime"},
+        {rData.popCompositionCalculator.get(), "popCompositionCalculator"},
+        {rData.techCostCalculator.get(), "techCostCalculator"},
+        {rData.popTypeAvailabilityCalculator.get(), "popTypeAvailabilityCalculator"},
+        {rData.moraleCalculator.get(), "moraleCalculator"},
+    };
+    for (const auto& [pMember, pName] : required)
+    {
+        if (!pMember)
+        {
+            throw std::runtime_error(
+                std::string("GameDataContext is incomplete: '") + pName + "' was not loaded");
+        }
+    }
+}
+
+GameDataContext LoadGameData(const GameDataPaths& rPaths)
+{
+    GameDataContext data;
+    GameDataContext& rData = data;
+
     // --- Reference-target registries first (cited by later configs / validators) ---
     rData.techRegistry = std::make_unique<TechRegistry>();
     rData.techRegistry->Load(rPaths.techs);
@@ -154,6 +200,9 @@ void LoadGameData(GameDataContext& rData, const GameDataPaths& rPaths)
         std::make_unique<TechCostCalculator>(*rData.techCostConfig, *rData.luaRuntime);
 
     rData.moraleCalculator = std::make_unique<MoraleCalculator>(*rData.moraleConfig);
+
+    ThrowIfIncomplete(data);
+    return data;
 }
 
 } // namespace ac

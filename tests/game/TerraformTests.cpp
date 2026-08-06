@@ -47,7 +47,7 @@ struct TerraformGame_
 
         auto pFaction = std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition,
-            fixtures.dataContext);
+            fixtures.dataContext, fixtures.map, fixtures.settings, actest::k_TestFactionSeed);
         pPlayer = &pState->AddFaction(std::move(pFaction));
         pPlayer->GetEconomy().AddEnergy(100);
     }

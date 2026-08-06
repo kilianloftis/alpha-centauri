@@ -19,19 +19,12 @@ constexpr const char* k_DefaultFutureSocietyPolicyId = "none_future";
 
 } // namespace
 
-SocialEngineeringManager::SocialEngineeringManager(const SocialPolicyRegistry* pRegistry,
-                                                   const SocialRatingRegistry* pRatingRegistry)
-    : m_pRegistry(pRegistry)
-    , m_pRatingRegistry(pRatingRegistry)
+SocialEngineeringManager::SocialEngineeringManager(const SocialPolicyRegistry& rRegistry)
+    : m_rRegistry(rRegistry)
 {
     // Fail fast if the config doesn't provide these hardcoded defaults: without this check
     // a missing/miscategorized default silently leaves GetActivePolicy() returning nullptr
     // for that category forever, instead of failing at faction construction.
-    if (!m_pRegistry)
-    {
-        return;
-    }
-
     const std::map<SocialCategory_t, const char*> defaults = {
         { SocialCategory_t::Politics,      k_DefaultPoliticsPolicyId },
         { SocialCategory_t::Economics,     k_DefaultEconomicsPolicyId },
@@ -41,7 +34,7 @@ SocialEngineeringManager::SocialEngineeringManager(const SocialPolicyRegistry* p
 
     for (const auto& [category, id] : defaults)
     {
-        const SocialPolicyConfig_t& rPolicy = m_pRegistry->Get(id); // throws if unknown
+        const SocialPolicyConfig_t& rPolicy = m_rRegistry.Get(id); // throws if unknown
         if (rPolicy.category != category)
         {
             throw std::runtime_error(
@@ -58,12 +51,8 @@ SocialEngineeringManager::~SocialEngineeringManager()
 
 void SocialEngineeringManager::SetActivePolicy(const SocialPolicyConfig_t& rPolicy)
 {
-    if (!m_pRegistry)
-    {
-        throw std::runtime_error("SocialEngineeringManager::SetActivePolicy: policy registry is null");
-    }
     // Store the registry instance so the pointer outlives the caller's temporary.
-    const SocialPolicyConfig_t& rCanonical = m_pRegistry->Get(rPolicy.id);
+    const SocialPolicyConfig_t& rCanonical = m_rRegistry.Get(rPolicy.id);
     m_activePolicies[rCanonical.category] = &rCanonical;
     m_revision.Bump();
 }
@@ -108,13 +97,8 @@ std::vector<const SocialPolicyConfig_t*> SocialEngineeringManager::GetAvailableP
     SocialCategory_t category,
     const std::vector<std::string>& rDiscoveredTechIds) const
 {
-    if (!m_pRegistry)
-    {
-        return {};
-    }
-
     std::vector<const SocialPolicyConfig_t*> result;
-    for (const SocialPolicyConfig_t* pConfig : m_pRegistry->GetByCategory(category))
+    for (const SocialPolicyConfig_t* pConfig : m_rRegistry.GetByCategory(category))
     {
         if (pConfig->IsAvailable(rDiscoveredTechIds))
         {

@@ -20,9 +20,11 @@ class SecretProjectAvailabilityCalculator;
 class BuildingManager
 {
 public:
-    BuildingManager(const BuildingRegistry* pBuildingRegistry,
+    // pSecretProjectCalculator is the one optional dependency (it reads live session state, so
+    // it only exists inside a GameState); the others always come from the composition root.
+    BuildingManager(const BuildingRegistry& rBuildingRegistry,
                     const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
-                    const ResearchManager* pResearchManager);
+                    const ResearchManager& rResearchManager);
     ~BuildingManager();
 
     // Add a building by id. Throws if the factory cannot find the id.
@@ -54,7 +56,7 @@ public:
 private:
     bool DoesBuildingExist_(const BuildingId_t& buildingId) const;
 
-    const BuildingRegistry* m_pRegistry;
+    const BuildingRegistry& m_rRegistry;
     const ResearchManager* m_pResearch;
     const SecretProjectAvailabilityCalculator* m_pSecretProjectCalculator;
     std::vector<const BuildingConfig_t*> m_buildings;

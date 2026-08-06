@@ -195,10 +195,14 @@ TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other fact
 
     Faction& factionA = state.AddFaction(std::make_unique<Faction>(
                                                1, /*bIsPlayerControlled*/ true, fixture.factionDefinition,
-                                               fixture.dataContext));
+                                               fixture.dataContext,
+                                               fixture.map, fixture.settings,
+                                               actest::k_TestFactionSeed));
     Faction& factionB = state.AddFaction(std::make_unique<Faction>(
                                                2, /*bIsPlayerControlled*/ false, fixture.factionDefinition,
-                                               fixture.dataContext));
+                                               fixture.dataContext,
+                                               fixture.map, fixture.settings,
+                                               actest::k_TestFactionSeed));
 
     BaseManager& baseA = fixture.MakeFactionBase(factionA, 2, 2);
     BaseManager& baseB = fixture.MakeFactionBase(factionB, 6, 6);

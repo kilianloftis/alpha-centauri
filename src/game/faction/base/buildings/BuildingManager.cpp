@@ -8,11 +8,11 @@
 namespace ac
 {
 
-BuildingManager::BuildingManager(const BuildingRegistry* pBuildingRegistry,
+BuildingManager::BuildingManager(const BuildingRegistry& rBuildingRegistry,
                                  const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
-                                 const ResearchManager* pResearchManager)
-    : m_pRegistry(pBuildingRegistry)
-    , m_pResearch(pResearchManager)
+                                 const ResearchManager& rResearchManager)
+    : m_rRegistry(rBuildingRegistry)
+    , m_pResearch(&rResearchManager)
     , m_pSecretProjectCalculator(pSecretProjectCalculator)
 {
 }
@@ -28,11 +28,7 @@ void BuildingManager::RebindResearch(const ResearchManager& rResearch)
 
 void BuildingManager::AddBuilding(const BuildingId_t& buildingId)
 {
-    if (!m_pRegistry)
-    {
-        throw std::runtime_error("BuildingManager::AddBuilding: building registry is null");
-    }
-    m_buildings.push_back(&m_pRegistry->Get(buildingId));
+    m_buildings.push_back(&m_rRegistry.Get(buildingId));
     m_revision.Bump();
 }
 
@@ -73,13 +69,18 @@ std::vector<ActiveEffect_t> BuildingManager::CollectEffects(const BaseManager& r
 std::vector<const BuildingConfig_t*> BuildingManager::GetBuildingsAvailableForConstruction() const
 {
     std::vector<const BuildingConfig_t*> available;
-    if (!m_pResearch || !m_pRegistry || !m_pSecretProjectCalculator)
+    if (!m_pSecretProjectCalculator)
     {
-        throw std::runtime_error("BuildingManager::GetBuildingsAvailableForConstruction: missing dependencies");
+        // The one optional dependency, and the only thing that can be missing here: without a
+        // session there is no way to know which secret projects are already built, and
+        // guessing would offer the player a project that cannot be constructed.
+        throw std::runtime_error(
+            "BuildingManager::GetBuildingsAvailableForConstruction: this base has no "
+            "SecretProjectAvailabilityCalculator, so build availability cannot be resolved");
     }
 
     const std::vector<std::string>& discoveredTechs = m_pResearch->GetDiscoveredTechs();
-    for (const BuildingConfig_t& rBuilding : m_pRegistry->GetAll())
+    for (const BuildingConfig_t& rBuilding : m_rRegistry.GetAll())
     {
         const bool bSecretProjectCompleted = rBuilding.bIsSecretProject
                 && m_pSecretProjectCalculator->IsCompleted(rBuilding.id);

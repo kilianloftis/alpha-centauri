@@ -26,13 +26,8 @@ size_t CategoryIndex_(GameCategory_t category)
 
 } // namespace
 
-ResearchSelector::ResearchSelector(ResearchManager* pResearchManager)
-    : ResearchSelector(pResearchManager, std::random_device{}())
-{
-}
-
-ResearchSelector::ResearchSelector(ResearchManager* pResearchManager, uint32_t seed)
-    : m_pResearchManager(pResearchManager)
+ResearchSelector::ResearchSelector(ResearchManager& rResearchManager, uint32_t seed)
+    : m_rResearchManager(rResearchManager)
     , m_categoryEnabled{true, true, true, true}
     , m_rng(seed)
 {
@@ -50,12 +45,7 @@ bool ResearchSelector::IsCategoryEnabled(GameCategory_t category) const
 
 std::vector<const TechConfig_t*> ResearchSelector::GetCandidateTargets() const
 {
-    if (!m_pResearchManager)
-    {
-        throw std::runtime_error("ResearchManager is null");
-    }
-
-    const std::vector<const TechConfig_t*> available = m_pResearchManager->GetAvailableTechs();
+    const std::vector<const TechConfig_t*> available = m_rResearchManager.GetAvailableTechs();
     if (available.empty())
     {
         return {};
@@ -85,11 +75,6 @@ std::vector<const TechConfig_t*> ResearchSelector::GetCandidateTargets() const
 
 bool ResearchSelector::AssignResearchTarget()
 {
-    if (!m_pResearchManager)
-    {
-        return false;
-    }
-
     const std::vector<const TechConfig_t*> candidates = GetCandidateTargets();
     if (candidates.empty())
     {
@@ -102,13 +87,13 @@ bool ResearchSelector::AssignResearchTarget()
         return false;
     }
 
-    m_pResearchManager->SetResearchTarget(pChosen->id);
+    m_rResearchManager.SetResearchTarget(pChosen->id);
     return true;
 }
 
 void ResearchSelector::EnsureResearchTarget()
 {
-    if (!m_pResearchManager || m_pResearchManager->HasResearchTarget())
+    if (m_rResearchManager.HasResearchTarget())
     {
         return;
     }

@@ -25,11 +25,16 @@ class ResearchManager;
 class PopulationManager
 {
 public:
-    PopulationManager(const PopTypeRegistry* pPopTypeRegistry,
-                      const PopTypeAvailabilityCalculator* pPopTypeAvailabilityCalculator,
-                      const GrowthConfig_t* pGrowthConfig,
-                      PopCompositionCalculator* pCompositionCalculator,
-                      const ResearchManager* pResearchManager,
+    // References throughout: the growth config in particular used to be "optional" (falling
+    // back to a hardcoded max size of 7, duplicating pop_growth.json's own default) while
+    // GetNutrientsRequired and ApplyGrowth dereferenced it unchecked — so the supported null
+    // case was a crash on the first growth turn. A null composition calculator likewise made
+    // RecalculateComposition a silent no-op, which is the state fixtures used to build.
+    PopulationManager(const PopTypeRegistry& rPopTypeRegistry,
+                      const PopTypeAvailabilityCalculator& rPopTypeAvailabilityCalculator,
+                      const GrowthConfig_t& rGrowthConfig,
+                      PopCompositionCalculator& rCompositionCalculator,
+                      const ResearchManager& rResearchManager,
                       int initialSize);
     ~PopulationManager();
 
@@ -141,9 +146,9 @@ public:
 
 private:
     PopContainer m_container;
-    const PopTypeRegistry* m_pRegistry = nullptr;
-    const GrowthConfig_t* m_pGrowthConfig = nullptr;
-    PopCompositionCalculator* m_pCompositionCalculator = nullptr;
+    const PopTypeRegistry& m_rRegistry;
+    const GrowthConfig_t& m_rGrowthConfig;
+    PopCompositionCalculator& m_rCompositionCalculator;
     int m_maxSize;
     int m_nutrientStockpile = 0;
     int m_compositionBatchDepth = 0;

@@ -17,8 +17,10 @@ class SocialRatingRegistry;
 class SocialEngineeringManager
 {
 public:
-    SocialEngineeringManager(const SocialPolicyRegistry* pRegistry,
-                              const SocialRatingRegistry* pRatingRegistry);
+    // A reference: the composition root always supplies the registry, and the null branch used
+    // to skip the very default-policy validation its own comment called "fail fast".
+    // (The rating registry parameter this used to take was stored and never read.)
+    explicit SocialEngineeringManager(const SocialPolicyRegistry& rRegistry);
     ~SocialEngineeringManager();
 
     // Set the active policy for its category (rPolicy.category). Throws if the
@@ -47,8 +49,7 @@ public:
     uint64_t GetRevision() const { return m_revision.Get(); }
 
 private:
-    const SocialPolicyRegistry* m_pRegistry;
-    const SocialRatingRegistry* m_pRatingRegistry;
+    const SocialPolicyRegistry& m_rRegistry;
     std::map<SocialCategory_t, const SocialPolicyConfig_t*> m_activePolicies;
     Revision m_revision;
 };

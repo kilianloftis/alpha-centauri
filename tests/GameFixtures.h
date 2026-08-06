@@ -6,16 +6,24 @@
 #include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/faction/EconomyManager.h"
+#include "game/faction/ResearchManager.h"
 #include "game/faction/SocialEngineeringManager.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/resources/ResourceManager.h"
+#include "game/GameSettings.h"
 #include "game/map/ImprovementRegistry.h"
+#include "game/research/TechCostCalculator.h"
+#include "game/research/TechCostConfig.h"
+#include "game/research/TechRegistry.h"
 #include "lib/LuaRuntime.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/population/calculators/PopCompositionCalculator.h"
+#include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "game/population/pop-types/GrowthConfigParser.h"
+#include "game/population/pop-types/PopCompositionConfigParser.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/social-engineering/SocialRatingRegistry.h"
@@ -38,6 +46,38 @@
 namespace actest
 {
 
+// Fixed seed for test factions. Faction seeds drive base-name and starting-research-target
+// picks; drawing them from std::random_device (as the sub-objects used to) makes any test that
+// touches research or base names order-dependent and intermittently red. Tests that care about
+// a specific draw pass their own value.
+constexpr uint32_t k_TestFactionSeed = 1234u;
+
+// The pop-type registry plus the two rules services PopContainer / PopulationManager require
+// (availability resolution and the discovered-tech source behind it). Small enough for
+// population unit tests that do not want a whole world, but real enough that those tests
+// exercise the same conversion rules the game does — they used to pass nulls and silently skip
+// the tech gate entirely.
+struct PopRulesFixture
+{
+    ac::PopTypeRegistry popTypes;
+    ac::TechRegistry techs;
+    ac::LuaRuntime lua;
+    ac::TechCostConfig_t techCostConfig; // default: empty formula
+    std::unique_ptr<ac::TechCostCalculator> techCost;
+    std::unique_ptr<ac::PopTypeAvailabilityCalculator> availability;
+    std::unique_ptr<ac::ResearchManager> research;
+
+    PopRulesFixture()
+    {
+        popTypes.Load(FixturePath("pop_types.json"));
+        techs.Load(FixturePath("techs.json"));
+        techCost = std::make_unique<ac::TechCostCalculator>(techCostConfig, lua);
+        availability = std::make_unique<ac::PopTypeAvailabilityCalculator>(popTypes);
+        research = std::make_unique<ac::ResearchManager>(techs, *techCost,
+                                                        /*pEffectsProvider*/ nullptr);
+    }
+};
+
 // Just the pop-type registry, for tests that only need PopTypeConfig_t entries.
 struct PopTypeRegistryOnly
 {
@@ -54,11 +94,18 @@ struct WorldFixture
     // Declared first so it is destroyed last: factions, bases, and units created by the
     // derived fixtures hold references into it, exactly as in Engine.
     ac::GameDataContext dataContext;
+    ac::GameSettings settings; // session prefs; a Faction constructor dependency
     ac::WorldMap map;
     ac::ImprovementRegistry improvements;
     ac::UnitComponentRegistry unitComponents;
     std::unique_ptr<ac::TileEffectsContext> ctx;
 
+    // Every dependency a Faction or BaseManager takes is loaded here rather than in the
+    // derived fixtures, because those dependencies are references now: there is no
+    // "half-loaded context" for a fixture to construct against. That is deliberate — fixture
+    // bases used to be built with a null rating registry and null research manager, so they
+    // resolved social ratings to nothing while the real game resolved them, with no
+    // diagnostic. A fixture that diverges from Engine is not a fixture.
     explicit WorldFixture(int width = 9, int height = 9)
         : map(width, height)
     {
@@ -70,6 +117,32 @@ struct WorldFixture
             ac::MoraleConfigParser{}.ParseConfig(FixturePath("morale_levels.json")));
         dataContext.moraleCalculator =
             std::make_unique<ac::MoraleCalculator>(*dataContext.moraleConfig);
+
+        dataContext.luaRuntime = std::make_unique<ac::LuaRuntime>();
+        dataContext.buildingRegistry = std::make_unique<ac::BuildingRegistry>();
+        dataContext.buildingRegistry->Load(FixturePath("buildings.json"));
+        dataContext.popTypeRegistry = std::make_unique<ac::PopTypeRegistry>();
+        dataContext.popTypeRegistry->Load(FixturePath("pop_types.json"));
+        dataContext.growthConfig = std::make_unique<ac::GrowthConfig_t>();
+        dataContext.techRegistry = std::make_unique<ac::TechRegistry>();
+        dataContext.techRegistry->Load(FixturePath("techs.json"));
+        // Default (empty-formula) cost config: tests that care about tech cost supply their own.
+        dataContext.techCostConfig = std::make_unique<ac::TechCostConfig_t>();
+        dataContext.techCostCalculator = std::make_unique<ac::TechCostCalculator>(
+            *dataContext.techCostConfig, *dataContext.luaRuntime);
+        dataContext.socialPolicyRegistry = std::make_unique<ac::SocialPolicyRegistry>();
+        dataContext.socialPolicyRegistry->Load(FixturePath("social_policies.json"));
+        dataContext.socialRatingRegistry = std::make_unique<ac::SocialRatingRegistry>();
+        dataContext.socialRatingRegistry->Load(FixturePath("social_rating_effects.json"));
+        dataContext.tileYieldRules = ac::TileYieldRulesConfigParser{}.ParseConfig(
+            FixturePath("tile_yield_rules.json"));
+        dataContext.popTypeAvailabilityCalculator =
+            std::make_unique<ac::PopTypeAvailabilityCalculator>(*dataContext.popTypeRegistry);
+        dataContext.popCompositionConfig = std::make_unique<ac::PopCompositionConfig_t>(
+            ac::PopCompositionConfigParser{}.ParseConfig(FixturePath("pop_composition.lua"),
+                                                        *dataContext.luaRuntime));
+        dataContext.popCompositionCalculator = std::make_unique<ac::PopCompositionCalculator>(
+            *dataContext.popCompositionConfig, *dataContext.luaRuntime);
     }
 
     ac::MoraleCalculator& morale() const { return *dataContext.moraleCalculator; }
@@ -77,10 +150,8 @@ struct WorldFixture
     ac::Tile& At(int x, int y) { return *map.GetTile(x, y); }
 };
 
-// WorldFixture plus the building/pop-type registries and the ability to found real bases.
-// Bases are created with the minimum viable dependency set: no research/composition
-// calculators. The production cost calculator is required by BaseManager, so a default
-// (empty-formula) one is provided. Each base starts with 3 default Worker pops
+// WorldFixture plus the ability to found real bases (the registries themselves are loaded by
+// WorldFixture, since Faction now requires them). Each base starts with 3 default Worker pops
 // (BaseManager's built-in initial size) and registers the "Base" improvement on its tile,
 // exactly as in the game.
 struct BaseFixture : WorldFixture
@@ -94,15 +165,10 @@ struct BaseFixture : WorldFixture
 
     BaseFixture()
     {
-        dataContext.buildingRegistry = std::make_unique<ac::BuildingRegistry>();
-        dataContext.buildingRegistry->Load(FixturePath("buildings.json"));
-        dataContext.popTypeRegistry = std::make_unique<ac::PopTypeRegistry>();
-        dataContext.popTypeRegistry->Load(FixturePath("pop_types.json"));
-        dataContext.growthConfig = std::make_unique<ac::GrowthConfig_t>();
-        dataContext.luaRuntime = std::make_unique<ac::LuaRuntime>();
         ownerDefinition.id = "test_base_owner";
         pOwnerFaction = std::make_unique<ac::Faction>(
-            /*factionId*/ 1, /*bIsPlayerControlled*/ true, ownerDefinition, dataContext);
+            /*factionId*/ 1, /*bIsPlayerControlled*/ true, ownerDefinition, dataContext,
+            map, settings, k_TestFactionSeed);
     }
 
     ac::BuildingRegistry& buildings() { return *dataContext.buildingRegistry; }
@@ -114,23 +180,22 @@ struct BaseFixture : WorldFixture
     {
         bases.push_back(std::make_unique<ac::BaseManager>(
             *pOwnerFaction, nextBaseId++, "TestBase", At(x, y),
-            dataContext.buildingRegistry.get(),
-            dataContext.socialRatingRegistry.get(),
-            dataContext.popTypeRegistry.get(),
-            dataContext.popTypeAvailabilityCalculator.get(),
-            dataContext.growthConfig.get(),
-            dataContext.popCompositionCalculator.get(),
+            *dataContext.buildingRegistry,
+            *dataContext.socialRatingRegistry,
+            *dataContext.popTypeRegistry,
+            *dataContext.popTypeAvailabilityCalculator,
+            *dataContext.growthConfig,
+            *dataContext.popCompositionCalculator,
+            // The one optional dependency: it needs a GameState, which this fixture has no
+            // reason to build. Only GetBuildingsAvailableForConstruction requires it.
             /*secretProjectCalculator*/ nullptr,
-            *ctx,
-            /*research*/ nullptr, &economy, /*effectsProvider*/ nullptr));
+            *ctx));
         return *bases.back();
     }
 };
 
-// BaseFixture plus social policy/rating registries, real Factions, and unit designs — for
-// the universal-routing lanes (FactionUnits, WorldGlobal, two-level ratings, unit auras).
-// Bases made through MakeFactionBase are owned by their faction and get the rating registry,
-// so per-base social rating expansion is active.
+// BaseFixture plus real Factions and unit designs — for the universal-routing lanes
+// (FactionUnits, WorldGlobal, two-level ratings, unit auras).
 struct FactionFixture : BaseFixture
 {
     ac::FactionConfig_t factionDefinition; // minimal shared definition for test factions
@@ -145,10 +210,6 @@ struct FactionFixture : BaseFixture
     FactionFixture()
     {
         factionDefinition.id = "test_faction";
-        dataContext.socialPolicyRegistry = std::make_unique<ac::SocialPolicyRegistry>();
-        dataContext.socialPolicyRegistry->Load(FixturePath("social_policies.json"));
-        dataContext.socialRatingRegistry = std::make_unique<ac::SocialRatingRegistry>();
-        dataContext.socialRatingRegistry->Load(FixturePath("social_rating_effects.json"));
         dataContext.tileYieldRules = ac::TileYieldRulesConfigParser{}.ParseConfig(
             FixturePath("tile_yield_rules.json"));
         // Mirror GameState: index emits OnUnitMoved; faction rebuilds visibility.
@@ -168,10 +229,12 @@ struct FactionFixture : BaseFixture
         // Only the first fixture faction is player-controlled; tests needing a second
         // faction (e.g. WorldGlobal routing between two factions) get an AI one.
         const bool bIsPlayerControlled = factions.empty();
+        // Distinct per faction so two fixture factions do not make identical picks.
+        const uint32_t seed = k_TestFactionSeed + static_cast<uint32_t>(nextFactionId);
         factions.push_back(std::make_unique<ac::Faction>(
-            nextFactionId++, bIsPlayerControlled, factionDefinition, dataContext));
+            nextFactionId++, bIsPlayerControlled, factionDefinition, dataContext,
+            map, settings, seed));
         ac::Faction& rFaction = *factions.back();
-        rFaction.BindWorldMap(map);
         // Drop destroyed units from every faction's contact-reveal set (address reuse safety).
         rFaction.GetUnitManager().OnUnitDestroyed.Connect([this](ac::Unit& rDestroyed)
         {
@@ -200,15 +263,14 @@ struct FactionFixture : BaseFixture
     {
         auto pBase = std::make_unique<ac::BaseManager>(
             rFaction, nextBaseId++, "TestBase", At(x, y),
-            dataContext.buildingRegistry.get(),
-            dataContext.socialRatingRegistry.get(),
-            dataContext.popTypeRegistry.get(),
-            dataContext.popTypeAvailabilityCalculator.get(),
-            dataContext.growthConfig.get(),
-            dataContext.popCompositionCalculator.get(),
+            *dataContext.buildingRegistry,
+            *dataContext.socialRatingRegistry,
+            *dataContext.popTypeRegistry,
+            *dataContext.popTypeAvailabilityCalculator,
+            *dataContext.growthConfig,
+            *dataContext.popCompositionCalculator,
             /*secretProjectCalculator*/ nullptr,
-            *ctx,
-            &rFaction.GetResearch(), &economy, &rFaction);
+            *ctx);
         ac::BaseManager& rBase = *pBase;
         rFaction.AddBase(std::move(pBase));
         return rBase;

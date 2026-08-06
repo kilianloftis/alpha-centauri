@@ -9,21 +9,18 @@
 namespace ac
 {
 
-PopContainer::PopContainer(const PopTypeRegistry* pReg,
-                           const PopTypeAvailabilityCalculator* pAvailabilityCalculator,
-                           const ResearchManager* pResearchManager,
+PopContainer::PopContainer(const PopTypeRegistry& rRegistry,
+                           const PopTypeAvailabilityCalculator& rAvailabilityCalculator,
+                           const ResearchManager& rResearchManager,
                            int initialSize)
-    : m_pRegistry(pReg)
-    , m_pAvailabilityCalculator(pAvailabilityCalculator)
-    , m_pResearchManager(pResearchManager)
+    : m_rRegistry(rRegistry)
+    , m_rAvailabilityCalculator(rAvailabilityCalculator)
+    , m_pResearchManager(&rResearchManager)
 {
-    if (m_pRegistry && initialSize > 0)
+    const std::string& rDefaultId = m_rRegistry.GetDefault().id;
+    for (int i = 0; i < initialSize; ++i)
     {
-        const std::string& rDefaultId = m_pRegistry->GetDefault().id;
-        for (int i = 0; i < initialSize; ++i)
-        {
-            m_pops.push_back(m_pRegistry->Create(rDefaultId));
-        }
+        m_pops.push_back(m_rRegistry.Create(rDefaultId));
     }
 }
 
@@ -54,11 +51,7 @@ int PopContainer::GetSpecialistCount() const
 
 void PopContainer::AddPop(const std::string& typeId)
 {
-    if (!m_pRegistry)
-    {
-        throw std::runtime_error("PopContainer has no registry");
-    }
-    auto pPop = m_pRegistry->Create(typeId);
+    auto pPop = m_rRegistry.Create(typeId);
     m_pops.push_back(std::move(pPop));
     m_revision.Bump();
 }
@@ -74,11 +67,7 @@ void PopContainer::RemovePop()
 
 void PopContainer::ConvertTo(Pop& rPop, const std::string& typeId)
 {
-    if (!m_pRegistry)
-    {
-        throw std::runtime_error("PopContainer has no registry");
-    }
-    const PopTypeConfig_t* pConfig = m_pRegistry->Find(typeId);
+    const PopTypeConfig_t* pConfig = m_rRegistry.Find(typeId);
     if (!pConfig)
     {
         throw std::runtime_error("Unknown pop type: " + typeId);
@@ -89,11 +78,7 @@ void PopContainer::ConvertTo(Pop& rPop, const std::string& typeId)
 
 void PopContainer::ConvertToFallback(Pop& rPop)
 {
-    if (!m_pRegistry || !m_pAvailabilityCalculator || !m_pResearchManager)
-    {
-        throw std::runtime_error("PopContainer missing registry, availability calculator, or research manager");
-    }
-    const PopTypeConfig_t* pCurrentConfig = m_pRegistry->Find(rPop.GetPopType());
+    const PopTypeConfig_t* pCurrentConfig = m_rRegistry.Find(rPop.GetPopType());
     if (!pCurrentConfig)
     {
         throw std::runtime_error("Current pop type not found in registry: " + std::string(rPop.GetPopType()));
@@ -102,7 +87,7 @@ void PopContainer::ConvertToFallback(Pop& rPop)
     {
         throw std::runtime_error("Pop has no fallback type configured");
     }
-    const PopTypeConfig_t& rResolved = m_pAvailabilityCalculator->ResolveCurrentType(
+    const PopTypeConfig_t& rResolved = m_rAvailabilityCalculator.ResolveCurrentType(
         pCurrentConfig->fallbackPopTypeId, m_pResearchManager->GetDiscoveredTechs());
     rPop.Convert(rResolved);
     m_revision.Bump();

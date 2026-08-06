@@ -117,7 +117,7 @@ TEST_CASE("ResearchManager: a TechCost effect appearing mid-research updates the
     TechCostCalculator calculator(config, lua);
 
     FakeEffectsProvider provider;
-    ResearchManager research(&techRegistry, &calculator, &provider);
+    ResearchManager research(techRegistry, calculator, &provider);
 
     research.SetResearchTarget("build_tech");
     const int baseCost = research.GetPointsNeededForCurrentTech();
@@ -150,7 +150,7 @@ TEST_CASE("ResearchManager: AddDiscoveredTech revalidates cost with a null effec
         parser.ParseConfig(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/tech_cost.lua", lua);
     TechCostCalculator calculator(config, lua);
 
-    ResearchManager research(&techRegistry, &calculator, nullptr);
+    ResearchManager research(techRegistry, calculator, /*pEffectsProvider*/ nullptr);
     research.SetResearchTarget("advanced_build");
     const int costBefore = research.GetPointsNeededForCurrentTech();
 
@@ -172,7 +172,7 @@ TEST_CASE("ResearchManager: AddDiscoveredTech revalidates cost when provider ver
     TechCostCalculator calculator(config, lua);
 
     FakeEffectsProvider provider;
-    ResearchManager research(&techRegistry, &calculator, &provider);
+    ResearchManager research(techRegistry, calculator, &provider);
     research.SetResearchTarget("advanced_build");
     const int costBefore = research.GetPointsNeededForCurrentTech();
     const uint64_t frozenVersion = provider.version;

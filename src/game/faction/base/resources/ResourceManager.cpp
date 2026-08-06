@@ -70,18 +70,16 @@ TileResources_t CollectSupplyCrawlYield_(const HomeBaseIndex& rHomeUnits,
 } // namespace
 
 ResourceManager::ResourceManager(
-    const WorkerAssignmentManager* pWorkerAssignments,
-    const EconomyManager* pEconomy,
-    const BuildingManager* pBuildings,
-    const Tile* pBaseTile,
-    const TileEffectsContext* pTileEffects,
-    const HomeBaseIndex* pHomeUnits)
-    : m_pWorkerAssignments(pWorkerAssignments)
-    , m_pEconomy(pEconomy)
-    , m_pBuildings(pBuildings)
-    , m_pBaseTile(pBaseTile)
-    , m_pTileEffects(pTileEffects)
-    , m_pHomeUnits(pHomeUnits)
+    const WorkerAssignmentManager& rWorkerAssignments,
+    const EconomyManager& rEconomy,
+    const Tile& rBaseTile,
+    const TileEffectsContext& rTileEffects,
+    const HomeBaseIndex& rHomeUnits)
+    : m_rWorkerAssignments(rWorkerAssignments)
+    , m_pEconomy(&rEconomy)
+    , m_rBaseTile(rBaseTile)
+    , m_rTileEffects(rTileEffects)
+    , m_rHomeUnits(rHomeUnits)
 {
 }
 
@@ -97,27 +95,20 @@ ResourceManager::~ResourceManager()
 // Total worked resources: worker pops + supply crawlers home to this base + base center.
 TileResources_t ResourceManager::ComputeWorked_(const BaseEffects_t& rBaseEffects) const
 {
-    if (!m_pWorkerAssignments || !m_pTileEffects)
-    {
-        throw std::runtime_error("WorkerAssignmentManager or TileEffectsContext not set");
-    }
-    TileResources_t total = m_pWorkerAssignments->ComputeWorkedResources(rBaseEffects);
-    if (m_pHomeUnits)
-    {
-        const TileResources_t crawl =
-            CollectSupplyCrawlYield_(*m_pHomeUnits, *m_pTileEffects, rBaseEffects);
-        total.nutrients += crawl.nutrients;
-        total.energy    += crawl.energy;
-        total.minerals  += crawl.minerals;
-    }
-    if (m_pBaseTile)
-    {
-        const TileResources_t baseTile =
-            m_pTileEffects->ResolveTileYield(*m_pBaseTile, /*bIsBaseTile*/true, rBaseEffects).effective;
-        total.nutrients += baseTile.nutrients;
-        total.energy    += baseTile.energy;
-        total.minerals  += baseTile.minerals;
-    }
+    TileResources_t total = m_rWorkerAssignments.ComputeWorkedResources(rBaseEffects);
+
+    const TileResources_t crawl =
+        CollectSupplyCrawlYield_(m_rHomeUnits, m_rTileEffects, rBaseEffects);
+    total.nutrients += crawl.nutrients;
+    total.energy    += crawl.energy;
+    total.minerals  += crawl.minerals;
+
+    const TileResources_t baseTile =
+        m_rTileEffects.ResolveTileYield(m_rBaseTile, /*bIsBaseTile*/true, rBaseEffects).effective;
+    total.nutrients += baseTile.nutrients;
+    total.energy    += baseTile.energy;
+    total.minerals  += baseTile.minerals;
+
     return total;
 }
 
@@ -146,8 +137,6 @@ int ResourceManager::GetMineralProduction(const BaseEffects_t& rBaseEffects) con
 
 int ResourceManager::CalculateEcon_(int energy, const BaseEffects_t& rBaseEffects) const
 {
-    if (!m_pEconomy)
-        throw std::runtime_error("EconomyManager not set");
     // FilterBaseLevelByStatId, not FilterByStatId: base-level resolution must never pick up
     // selector-carrying (per-tile) modifiers, even on stats where none make sense today.
     const int split = m_pEconomy->CalculateEnergyForEcon(energy);
@@ -159,8 +148,6 @@ int ResourceManager::CalculateEcon_(int energy, const BaseEffects_t& rBaseEffect
 
 int ResourceManager::CalculateLabs_(int energy, const BaseEffects_t& rBaseEffects) const
 {
-    if (!m_pEconomy)
-        throw std::runtime_error("EconomyManager not set");
     const int split = m_pEconomy->CalculateEnergyForLabs(energy);
     return FinalizeResolvedStat(
         ResolveStatModifiers(FilterBaseLevelByStatId(rBaseEffects, StatId_t::Labs),
@@ -170,8 +157,6 @@ int ResourceManager::CalculateLabs_(int energy, const BaseEffects_t& rBaseEffect
 
 int ResourceManager::CalculatePsych_(int energy, const BaseEffects_t& rBaseEffects) const
 {
-    if (!m_pEconomy)
-        throw std::runtime_error("EconomyManager not set");
     const int split = m_pEconomy->CalculateEnergyForPsych(energy);
     return FinalizeResolvedStat(
         ResolveStatModifiers(FilterBaseLevelByStatId(rBaseEffects, StatId_t::Psych),

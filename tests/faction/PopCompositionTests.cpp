@@ -51,8 +51,8 @@ TEST_CASE("Pop role predicates: drone, talent, plain worker, specialist", "[popu
 TEST_CASE("ApplyCompositionTargets uses configured type ids and skips existing drones",
           "[population][composition]")
 {
-    actest::PopTypeRegistryOnly reg;
-    PopContainer container(&reg.popTypes, nullptr, nullptr, /*initialSize*/ 0);
+    actest::PopRulesFixture reg;
+    PopContainer container(reg.popTypes, *reg.availability, *reg.research, /*initialSize*/ 0);
     container.AddPop("Worker");
     container.AddPop("Worker");
     container.AddPop("Drone");
@@ -100,7 +100,7 @@ TEST_CASE("PopCompositionConfigParser requires drone_type and talent_type",
 TEST_CASE("Converting to or from a specialist recalculates composition",
           "[population][composition]")
 {
-    actest::PopTypeRegistryOnly reg;
+    actest::PopRulesFixture reg;
     LuaRuntime lua;
     PopCompositionConfigParser parser;
     const PopCompositionConfig_t config =
@@ -108,7 +108,8 @@ TEST_CASE("Converting to or from a specialist recalculates composition",
     PopCompositionCalculator calculator(config, lua);
     GrowthConfig_t growth;
 
-    PopulationManager pops(&reg.popTypes, nullptr, &growth, &calculator, nullptr, /*initialSize*/ 4);
+    PopulationManager pops(reg.popTypes, *reg.availability, growth, calculator, *reg.research,
+                           /*initialSize*/ 4);
     REQUIRE(pops.GetTalentCount() == 0);
 
     // Doctor contributes +2 psych → talent_formula floor(2/2) = 1 talent.

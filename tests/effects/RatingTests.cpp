@@ -433,10 +433,12 @@ TEST_CASE("Two factions with equal revision stamps do not share a local effect p
         effectPool.StatMod(StatId_t::Energy, 11.0, ModifierOp_t::Add, EffectScope_t::FactionGlobal));
 
     // Keep factions out of fixture.factions so destruction order is factions → defs.
-    auto pFactionA = std::make_unique<Faction>(1, true, defA, fixture.dataContext);
-    auto pFactionB = std::make_unique<Faction>(2, false, defB, fixture.dataContext);
-    pFactionA->BindWorldMap(fixture.map);
-    pFactionB->BindWorldMap(fixture.map);
+    auto pFactionA = std::make_unique<Faction>(1, true, defA, fixture.dataContext,
+                                               fixture.map, fixture.settings,
+                                               actest::k_TestFactionSeed + 1);
+    auto pFactionB = std::make_unique<Faction>(2, false, defB, fixture.dataContext,
+                                               fixture.map, fixture.settings,
+                                               actest::k_TestFactionSeed + 2);
 
     CHECK(ResolveStatModifiers(
               FilterByStatId(pFactionA->GetLocalActiveEffects().effects, StatId_t::Energy), 0.0)
