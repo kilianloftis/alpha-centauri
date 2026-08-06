@@ -749,6 +749,27 @@ Package 4 owns the constructor/null-policy half of these classes (two-phase-init
 - `EventBridge` keyed by object rather than `baseId` (a reconstructed base reusing its id was silently left unwired).
 - Dead machinery removed per the no-legacy rule: `ExtractUnit` / `CreateUnitFromSnapshot` / `UnitSnapshot_t` / `CaptureSnapshot`, the `onBaseFounded`/`onBaseCreated` chain, `DiplomaticActionExecutor::SetGameDataContext`.
 
+### Package 4 — Composition root, dependency validity, session boundaries (2026-08-06)
+
+**Status:** complete (one item deliberately deferred, below)  
+**Prompt:** [`docs/full-review-fix-prompts/04-composition-root-and-deps.md`](full-review-fix-prompts/04-composition-root-and-deps.md)
+
+**Fixes landed:**
+- `LoadGameData` is a factory returning a complete `GameDataContext` (move-only); `ThrowIfIncomplete` names the first missing member, so a partially-loaded context cannot escape the loader and consumers may dereference any member.
+- `Faction` takes `WorldMap&`, `const GameSettings&` and a seed in its constructor and sizes its fog maps there. The old null-map path made `RebuildVisibility` a silent no-op — no visibility, no territory, no first contact, with plausible-looking getters.
+- `GameState::AddFaction` registers first, then `AttachToSession_` wires and runs a territory/visibility/first-contact catch-up sweep. The previous order skipped any faction arriving with bases already on the map.
+- One null policy everywhere: `BaseManager`, `BuildingManager`, `PopContainer`, `PopulationManager`, `ResourceManager`, `ResearchManager`, `ResearchSelector`, `SocialEngineeringManager`, `FactionEffectsPool` take references. `SecretProjectAvailabilityCalculator` is the one documented optional (it reads live session state). `PopulationManager`'s max size comes from `pop_growth.json`, not a compiled-in 7.
+- `Engine::Initialize_` split into `InitializeApp_` / `StartNewGame_` / `InitializeUi_`; `main.cpp` gained a top-level error boundary.
+- One session seed resolved in `Engine` and handed to world generation, `GameState`'s roll RNG, and each faction — nothing draws from `std::random_device` on its own.
+- Dropped dependencies stored and never read (`SocialEngineeringManager`'s rating registry, `ResourceManager`'s `BuildingManager`, `BaseManager::m_pResearch`) and `BaseManager`'s research/economy/effects-provider parameters, which let a caller inject one faction's economy into another faction's base.
+- Test fixtures build real registries instead of nulls — fixture bases previously resolved social ratings to nothing while the real game resolved them.
+
+**Review follow-ups applied:** symmetric first-contact sweep in `AttachToSession_` (test pins it via a one-way Sensor sighting); removed a fixture reload of `tileYieldRules` that freed a buffer the owner faction's effect cache still pointed at; session seed actually reaches `WorldGenerator` and `GameState::m_rng`; dead members/guards and stale comments removed; `faction-system.md` / `high-level.md` / `turn-system.md` updated (including deleting the `FactionFactory` that does not exist).
+
+**Deferred, with rationale:**
+- The `GameState` / `Faction` god-facade split ([H]) — ~50 and ~60 public members across eighteen concerns; needs its own package, sequenced after 5–17.
+- `AddFaction` does not *enforce* that a faction was built against the session's `WorldMap`. The contract is documented and production satisfies it; enforcing it needs a fixture map-ownership redesign with destruction-order hazards.
+
 ---
 
 ## Cross-package dependency sketch
