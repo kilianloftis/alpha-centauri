@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/effects/BonusEffect.h"
+#include "game/effects/EffectConfig.h"
 #include <nlohmann/json.hpp>
 #include <string>
 #include <vector>

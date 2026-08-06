@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/effects/BonusEffect.h"
+#include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
 #include <magic_enum.hpp>
 #include <algorithm>

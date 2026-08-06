@@ -15,7 +15,7 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 #include "game/effects/ActiveEffect.h"
-#include "game/effects/BonusEffect.h"
+#include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
 
 #include <variant>

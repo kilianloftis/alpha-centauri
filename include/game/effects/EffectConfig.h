@@ -11,106 +11,6 @@
 namespace ac
 {
 
-enum class EffectScope_t
-{
-    ThisBase,
-    AllOwnerBases,
-    ThisUnit,
-    FactionUnits,
-    FactionGlobal,
-    WorldGlobal,
-    // Only the specific pop instance the effect belongs to. Resolved locally by Pop
-    // (e.g. ApplyTileMultipliers) and must never enter the base-wide active effects pool.
-    ThisPop,
-    // Only the specific tile the effect belongs to (terrain classification, river, fungus,
-    // or improvement). Resolved locally via CollectTileEffects/ResolveTileYield/
-    // ResolveTileDefenseMultiplier and must never enter the base-wide active effects pool.
-    ThisTile,
-    // Units produced at the originating base (Unit::GetProducedAtBase). Distinct from home
-    // base and from FactionUnits: train-at-this-base bonuses (Command Center, Aerospace).
-    ProducedAtThisBase,
-};
-
-enum class EffectPersistence_t
-{
-    Instantaneous,
-    Continuous,
-};
-
-// Where an effect is resolved — its scope's "lane". This is the single source of truth for
-// scope routing: collectors and filters derive their decisions from LaneFor instead of
-// hand-maintained scope lists. Adding a value to EffectScope_t forces an update to LaneFor's
-// exhaustive switch, and every collector/filter picks up the new scope's routing from there.
-enum class EffectLane_t
-{
-    // Resolved by the owning base: lives in the faction pool tagged with originBase,
-    // included per base by FilterForBase (pop ThisBase effects merge via CollectFromPops
-    // instead, so they never enter the pool).
-    Base,
-    // Resolved at every base of the faction (WorldGlobal additionally crosses factions via
-    // GameState::CollectWorldExtras / Faction composition). Lives in the faction pool;
-    // FilterForBase includes it.
-    FactionWide,
-    // Merged into every live unit's stat resolution. Lives in the faction pool; consumed by
-    // Unit::Get* via FilterByScope(FactionUnits), never applies at base level.
-    FactionUnits,
-    // Merged into live units whose production base matches originBase. Lives in the faction
-    // pool tagged with originBase; never applies at base level.
-    ProducedAtBase,
-    // Resolved by the unit's own design (intrinsic component stats). Never enters the pool.
-    UnitLocal,
-    // Resolved by the pop itself (tile multipliers). Never enters the pool.
-    PopLocal,
-    // Resolved by the tile resolvers (CollectTileEffects/CollectAreaEffects). Never enters
-    // the pool.
-    TileLocal,
-};
-
-constexpr EffectLane_t LaneFor(EffectScope_t scope)
-{
-    switch (scope)
-    {
-        case EffectScope_t::ThisBase:      return EffectLane_t::Base;
-        case EffectScope_t::AllOwnerBases:
-        case EffectScope_t::FactionGlobal:
-        case EffectScope_t::WorldGlobal:   return EffectLane_t::FactionWide;
-        case EffectScope_t::FactionUnits:  return EffectLane_t::FactionUnits;
-        case EffectScope_t::ProducedAtThisBase: return EffectLane_t::ProducedAtBase;
-        case EffectScope_t::ThisUnit:      return EffectLane_t::UnitLocal;
-        case EffectScope_t::ThisPop:       return EffectLane_t::PopLocal;
-        case EffectScope_t::ThisTile:      return EffectLane_t::TileLocal;
-    }
-    return EffectLane_t::FactionWide; // unreachable; all enumerators handled above
-}
-
-// True for scopes resolved faction-wide through the pool (at bases or units) rather than
-// locally by a specific base/pop/unit/tile. This is what Faction's pop/unit collectors feed
-// into CollectActiveEffects.
-constexpr bool IsFactionLane(EffectScope_t scope)
-{
-    const EffectLane_t lane = LaneFor(scope);
-    return lane == EffectLane_t::FactionWide || lane == EffectLane_t::FactionUnits;
-}
-
-// True when AppendActiveEffects should record pOriginBase on the ActiveEffect_t.
-// Derived from LaneFor (plus FactionUnits, which keeps origin for per-base conditions).
-constexpr bool TagsOriginBase(EffectScope_t scope)
-{
-    const EffectLane_t lane = LaneFor(scope);
-    return lane == EffectLane_t::Base
-        || lane == EffectLane_t::ProducedAtBase
-        || scope == EffectScope_t::FactionUnits;
-}
-
-enum class ModifierOp_t
-{
-    Add,
-    // amount is in percent points (25 = +25%, -25 = -25%), matching the UI's bonus display.
-    // All AddPercent contributions sum into a single arithmetic factor before the geometric step.
-    AddPercent,
-    MultiplyGeometric
-};
-
 struct GrantBuildingEffect_t
 {
     std::string buildingId;
@@ -134,11 +34,6 @@ struct GrantEnergyEffect_t
 };
 
 // Instantaneous world-state mutation applied by PlanetaryCouncil (sea level / climate).
-enum class WorldParameterId_t
-{
-    SeaLevel,
-};
-
 struct WorldParameterEffect_t
 {
     WorldParameterId_t parameter = WorldParameterId_t::SeaLevel;
@@ -291,14 +186,6 @@ struct TransportParamsEffect_t
     std::vector<RuleFlagId_t> loadSiteFlags;
 };
 
-enum class PermissionId_t
-{
-    // Lifts a channel-crossing attack that reachability already allows.
-    Attack,
-    // Lifts land -> water entry onto a qualifying tile (sea base).
-    Enter,
-};
-
 // Grants a capability the rules otherwise deny. Enter almost always carries a condition
 // selecting which tiles; Attack on stock pods is unconditional (any channel cross).
 struct PermissionEffect_t
@@ -398,18 +285,8 @@ struct UnitFilterHasFlag_t
 using UnitFilter_t =
     std::variant<UnitFilterDomain_t, UnitFilterHasComponent_t, UnitFilterHasFlag_t>;
 
-// Restricts which *other* factions a cross-faction effect (Infiltration, future
-// DiplomaticModifier, …) applies to. Orthogonal to EffectScope_t: scope is the resolution
-// lane (FactionGlobal / WorldGlobal); factionFilter narrows the diplomatic target set.
+// Restricts which *other* factions a cross-faction effect applies to (see FactionFilterKind_t).
 // Absent + WorldGlobal → every other faction. Absent + other scopes → no automatic targets.
-enum class FactionFilterKind_t
-{
-    // Only the faction supplied as actionTarget at apply/query time (probe mission target).
-    ActionTarget,
-    // Other factions on the PlanetaryCouncil member list. Matches nobody when no council exists.
-    CouncilMembers,
-};
-
 struct FactionFilter_t
 {
     FactionFilterKind_t kind = FactionFilterKind_t::ActionTarget;
@@ -437,25 +314,6 @@ struct EffectConfig_t
     // For ThisTile-scoped effects: how far (Chebyshev tiles) beyond the host tile the effect
     // reaches. 0 (default) = the host tile only. Parsed from the effect entry's "radius" field.
     int radius = 0;
-};
-
-// Which kind of config declared an effects array. Used for the minimal load-time scope
-// validation: scopes that can only ever be resolved against one source kind (a specific pop,
-// a specific unit, or an origin base) are rejected on any other source instead of silently
-// doing nothing.
-enum class EffectSourceKind_t
-{
-    Building,
-    UnitComponent,
-    PopType,
-    Improvement,
-    SocialPolicy,
-    SocialRating,
-    Faction,
-    CouncilProposal,
-    CouncilRules,
-    ProbeAction,
-    TileYieldRules,
 };
 
 } // namespace ac

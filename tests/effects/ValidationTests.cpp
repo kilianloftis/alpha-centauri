@@ -16,7 +16,7 @@
 #include "game/social-engineering/SocialRatingRegistry.h"
 #include "game/units/ProbeActionConfig.h"
 #include "game/units/UnitComponentRegistry.h"
-#include "game/effects/BonusEffect.h"
+#include "game/effects/EffectConfig.h"
 
 #include "TestHelpers.h"
 

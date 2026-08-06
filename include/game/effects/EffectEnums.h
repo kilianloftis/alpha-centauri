@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdexcept>
+#include <string>
 
 namespace ac
 {
@@ -72,7 +73,7 @@ enum class StatId_t
 };
 
 // How a stat's modifier stack is seeded — the seed-semantics counterpart of LaneFor's scope
-// routing (BonusEffect.h). Adding a StatId_t forces a kind decision in KindFor's exhaustive
+// routing (LaneFor in this header). Adding a StatId_t forces a kind decision in KindFor's exhaustive
 // switch, and SeedFor derives the context-free seed from it, so a resolve site can no longer
 // default a pure-multiplier stat to a 0.0 seed (which silently resolves to 0 — see
 // ResolveStatModifiers).
@@ -145,6 +146,44 @@ constexpr double SeedFor(StatId_t stat)
     return 0.0; // unreachable; all enumerators handled above
 }
 
+// Snake_case JSON wire form differs from enumerator names — one explicit map next to the enum.
+inline StatId_t ParseStatId(const std::string& rStat)
+{
+    if (rStat == "nutrients")               return StatId_t::Nutrients;
+    if (rStat == "minerals")                return StatId_t::Minerals;
+    if (rStat == "energy")                  return StatId_t::Energy;
+    if (rStat == "econ")                    return StatId_t::Econ;
+    if (rStat == "labs")                    return StatId_t::Labs;
+    if (rStat == "psych")                   return StatId_t::Psych;
+    if (rStat == "attack")                  return StatId_t::Attack;
+    if (rStat == "defense")                 return StatId_t::Defense;
+    if (rStat == "movement")                return StatId_t::Movement;
+    if (rStat == "vision")                  return StatId_t::Vision;
+    if (rStat == "hit_points")              return StatId_t::HitPoints;
+    if (rStat == "psi_damage")              return StatId_t::PsiDamage;
+    if (rStat == "disengage_chance")        return StatId_t::DisengageChance;
+    if (rStat == "fuel")                    return StatId_t::Fuel;
+    if (rStat == "damage_from_out_of_fuel") return StatId_t::DamageFromOutOfFuel;
+    if (rStat == "cargo_capacity")          return StatId_t::CargoCapacity;
+    if (rStat == "difficult_terrain_cost")  return StatId_t::DifficultTerrainCost;
+    if (rStat == "cost_multiplier")         return StatId_t::CostMultiplier;
+    if (rStat == "probe_action_cost")       return StatId_t::ProbeActionCost;
+    if (rStat == "probe_defense")           return StatId_t::ProbeDefense;
+    if (rStat == "probe_failure_scale")     return StatId_t::ProbeFailureScale;
+    if (rStat == "probe_success_scale")     return StatId_t::ProbeSuccessScale;
+    if (rStat == "starting_experience")     return StatId_t::StartingExperience;
+    if (rStat == "morale_bonus")            return StatId_t::MoraleBonus;
+    if (rStat == "positive_morale_scale")   return StatId_t::PositiveMoraleScale;
+    if (rStat == "growth_rate")             return StatId_t::GrowthRate;
+    if (rStat == "tech_cost")               return StatId_t::TechCost;
+    if (rStat == "moisture_tier")           return StatId_t::MoistureTier;
+    if (rStat == "commerce_rate")           return StatId_t::CommerceRate;
+    if (rStat == "council_votes")          return StatId_t::CouncilVotes;
+    if (rStat == "commerce_energy_bonus")   return StatId_t::CommerceEnergyBonus;
+    throw std::runtime_error("Unknown stat id: '" + rStat + "'");
+}
+
+
 enum class SocialRatingId_t
 {
     Economy,
@@ -158,6 +197,22 @@ enum class SocialRatingId_t
     Industry,
     Probe
 };
+
+// Snake_case JSON wire form differs from enumerator names — one explicit map next to the enum.
+inline SocialRatingId_t ParseSocialRatingId(const std::string& rRating)
+{
+    if (rRating == "economy")    return SocialRatingId_t::Economy;
+    if (rRating == "efficiency") return SocialRatingId_t::Efficiency;
+    if (rRating == "support")    return SocialRatingId_t::Support;
+    if (rRating == "police")     return SocialRatingId_t::Police;
+    if (rRating == "morale")     return SocialRatingId_t::Morale;
+    if (rRating == "growth")     return SocialRatingId_t::Growth;
+    if (rRating == "planet")     return SocialRatingId_t::Planet;
+    if (rRating == "research")   return SocialRatingId_t::Research;
+    if (rRating == "industry")   return SocialRatingId_t::Industry;
+    if (rRating == "probe")      return SocialRatingId_t::Probe;
+    throw std::runtime_error("Unknown social rating id: '" + rRating + "'");
+}
 
 enum class RuleFlagId_t
 {
@@ -225,5 +280,182 @@ enum class RuleFlagId_t
     // U.N. Charter: atrocities are illegal while this flag is in force planet-wide.
     AtrocitiesForbidden
 };
+
+// Snake_case JSON wire form differs from enumerator names — one explicit map next to the enum.
+inline RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
+{
+    if (rFlag == "flight")                      return RuleFlagId_t::Flight;
+    if (rFlag == "population_boom")             return RuleFlagId_t::PopulationBoom;
+    if (rFlag == "near_zero_growth")            return RuleFlagId_t::NearZeroGrowth;
+    if (rFlag == "remove_shroud")               return RuleFlagId_t::RemoveShroud;
+    if (rFlag == "remove_fog")                  return RuleFlagId_t::RemoveFog;
+    if (rFlag == "single_use")                  return RuleFlagId_t::SingleUse;
+    if (rFlag == "ignore_zone_of_control")      return RuleFlagId_t::IgnoreZoneOfControl;
+    if (rFlag == "ignores_difficult_terrain")   return RuleFlagId_t::IgnoreDifficultTerrain;
+    if (rFlag == "treat_fungus_as_road")         return RuleFlagId_t::TreatFungusAsRoad;
+    if (rFlag == "forces_psi_combat")            return RuleFlagId_t::ForcesPsiCombat;
+    if (rFlag == "found_base")                   return RuleFlagId_t::FoundBase;
+    if (rFlag == "terraform")                   return RuleFlagId_t::Terraform;
+    if (rFlag == "supply_crawl")                return RuleFlagId_t::SupplyCrawl;
+    if (rFlag == "probe_team")                  return RuleFlagId_t::ProbeTeam;
+    if (rFlag == "cannot_capture_bases")        return RuleFlagId_t::CannotCaptureBases;
+    if (rFlag == "no_conquest_repair")          return RuleFlagId_t::NoConquestRepair;
+    if (rFlag == "prevents_conquest_pop_loss")  return RuleFlagId_t::PreventsConquestPopLoss;
+    if (rFlag == "prevents_disengage")          return RuleFlagId_t::PreventsDisengage;
+    if (rFlag == "refuels_air")                 return RuleFlagId_t::RefuelsAir;
+    if (rFlag == "loads_air_transport")         return RuleFlagId_t::LoadsAirTransport;
+    if (rFlag == "creche")                      return RuleFlagId_t::Creche;
+    if (rFlag == "headquarters")                return RuleFlagId_t::Headquarters;
+    if (rFlag == "probe_subversion_immune")     return RuleFlagId_t::ProbeSubversionImmune;
+    if (rFlag == "blocks_probe_teams")          return RuleFlagId_t::BlocksProbeTeams;
+    if (rFlag == "ignores_probe_block")         return RuleFlagId_t::IgnoresProbeBlock;
+    if (rFlag == "atrocities_forbidden")        return RuleFlagId_t::AtrocitiesForbidden;
+    throw std::runtime_error("Unknown rule flag id: '" + rFlag + "'");
+}
+
+enum class EffectScope_t
+{
+    ThisBase,
+    AllOwnerBases,
+    ThisUnit,
+    FactionUnits,
+    FactionGlobal,
+    WorldGlobal,
+    // Only the specific pop instance the effect belongs to. Resolved locally by Pop
+    // (e.g. ApplyTileMultipliers) and must never enter the base-wide active effects pool.
+    ThisPop,
+    // Only the specific tile the effect belongs to (terrain classification, river, fungus,
+    // or improvement). Resolved locally via CollectTileEffects/ResolveTileYield/
+    // ResolveTileDefenseMultiplier and must never enter the base-wide active effects pool.
+    ThisTile,
+    // Units produced at the originating base (Unit::GetProducedAtBase). Distinct from home
+    // base and from FactionUnits: train-at-this-base bonuses (Command Center, Aerospace).
+    ProducedAtThisBase,
+};
+
+enum class EffectPersistence_t
+{
+    Instantaneous,
+    Continuous,
+};
+
+// Where an effect is resolved — its scope's "lane". This is the single source of truth for
+// scope routing: collectors and filters derive their decisions from LaneFor instead of
+// hand-maintained scope lists. Adding a value to EffectScope_t forces an update to LaneFor's
+// exhaustive switch, and every collector/filter picks up the new scope's routing from there.
+enum class EffectLane_t
+{
+    // Resolved by the owning base: lives in the faction pool tagged with originBase,
+    // included per base by FilterForBase (pop ThisBase effects merge via CollectFromPops
+    // instead, so they never enter the pool).
+    Base,
+    // Resolved at every base of the faction (WorldGlobal additionally crosses factions via
+    // GameState::CollectWorldExtras / Faction composition). Lives in the faction pool;
+    // FilterForBase includes it.
+    FactionWide,
+    // Merged into every live unit's stat resolution. Lives in the faction pool; consumed by
+    // Unit::Get* via FilterByScope(FactionUnits), never applies at base level.
+    FactionUnits,
+    // Merged into live units whose production base matches originBase. Lives in the faction
+    // pool tagged with originBase; never applies at base level.
+    ProducedAtBase,
+    // Resolved by the unit's own design (intrinsic component stats). Never enters the pool.
+    UnitLocal,
+    // Resolved by the pop itself (tile multipliers). Never enters the pool.
+    PopLocal,
+    // Resolved by the tile resolvers (CollectTileEffects/CollectAreaEffects). Never enters
+    // the pool.
+    TileLocal,
+};
+
+constexpr EffectLane_t LaneFor(EffectScope_t scope)
+{
+    switch (scope)
+    {
+        case EffectScope_t::ThisBase:      return EffectLane_t::Base;
+        case EffectScope_t::AllOwnerBases:
+        case EffectScope_t::FactionGlobal:
+        case EffectScope_t::WorldGlobal:   return EffectLane_t::FactionWide;
+        case EffectScope_t::FactionUnits:  return EffectLane_t::FactionUnits;
+        case EffectScope_t::ProducedAtThisBase: return EffectLane_t::ProducedAtBase;
+        case EffectScope_t::ThisUnit:      return EffectLane_t::UnitLocal;
+        case EffectScope_t::ThisPop:       return EffectLane_t::PopLocal;
+        case EffectScope_t::ThisTile:      return EffectLane_t::TileLocal;
+    }
+    return EffectLane_t::FactionWide; // unreachable; all enumerators handled above
+}
+
+// True for scopes resolved faction-wide through the pool (at bases or units) rather than
+// locally by a specific base/pop/unit/tile. This is what Faction's pop/unit collectors feed
+// into CollectActiveEffects.
+constexpr bool IsFactionLane(EffectScope_t scope)
+{
+    const EffectLane_t lane = LaneFor(scope);
+    return lane == EffectLane_t::FactionWide || lane == EffectLane_t::FactionUnits;
+}
+
+// True when AppendActiveEffects should record pOriginBase on the ActiveEffect_t.
+// Derived from LaneFor (plus FactionUnits, which keeps origin for per-base conditions).
+constexpr bool TagsOriginBase(EffectScope_t scope)
+{
+    const EffectLane_t lane = LaneFor(scope);
+    return lane == EffectLane_t::Base
+        || lane == EffectLane_t::ProducedAtBase
+        || scope == EffectScope_t::FactionUnits;
+}
+
+enum class ModifierOp_t
+{
+    Add,
+    // amount is in percent points (25 = +25%, -25 = -25%), matching the UI's bonus display.
+    // All AddPercent contributions sum into a single arithmetic factor before the geometric step.
+    AddPercent,
+    MultiplyGeometric
+};
+
+// Instantaneous world-state mutation id (sea level / climate) for WorldParameterEffect_t.
+enum class WorldParameterId_t
+{
+    SeaLevel,
+};
+
+enum class PermissionId_t
+{
+    // Lifts a channel-crossing attack that reachability already allows.
+    Attack,
+    // Lifts land -> water entry onto a qualifying tile (sea base).
+    Enter,
+};
+
+// Restricts which *other* factions a cross-faction effect (Infiltration, future
+// DiplomaticModifier, …) applies to. Orthogonal to EffectScope_t: scope is the resolution
+// lane (FactionGlobal / WorldGlobal); factionFilter narrows the diplomatic target set.
+enum class FactionFilterKind_t
+{
+    // Only the faction supplied as actionTarget at apply/query time (probe mission target).
+    ActionTarget,
+    // Other factions on the PlanetaryCouncil member list. Matches nobody when no council exists.
+    CouncilMembers,
+};
+
+// Which kind of config declared an effects array. Used for the minimal load-time scope
+// validation: scopes that can only ever be resolved against one source kind (a specific pop,
+// a specific unit, or an origin base) are rejected on any other source instead of silently
+// doing nothing.
+enum class EffectSourceKind_t
+{
+    Building,
+    UnitComponent,
+    PopType,
+    Improvement,
+    SocialPolicy,
+    SocialRating,
+    Faction,
+    CouncilProposal,
+    CouncilRules,
+    ProbeAction,
+    TileYieldRules,
+};
+
 
 } // namespace ac

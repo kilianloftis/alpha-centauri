@@ -19,7 +19,7 @@
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
-#include "game/effects/BonusEffect.h"
+#include "game/effects/EffectConfig.h"
 #include <algorithm>
 #include <cmath>
 #include <span>

@@ -1,7 +1,7 @@
 #include "game/units/DisengageRules.h"
 
 #include "game/effects/ActiveEffect.h"
-#include "game/effects/BonusEffect.h"
+#include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"

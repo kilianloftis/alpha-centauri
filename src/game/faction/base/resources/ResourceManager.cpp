@@ -5,7 +5,7 @@
 #include "game/map/Tile.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/TileEffectsContext.h"
-#include "game/effects/BonusEffect.h"
+#include "game/effects/EffectConfig.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitOrder.h"
 

@@ -20,7 +20,7 @@
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/ProbeActionConfig.h"
-#include "game/effects/BonusEffect.h"
+#include "game/effects/EffectConfig.h"
 
 #include <functional>
 #include <memory>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/effects/BonusEffect.h"
+#include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
 #include <nlohmann/json.hpp>
 #include <string>
@@ -14,9 +14,11 @@ namespace ac
 namespace BonusEffectParser
 {
 
-StatId_t ParseStatId(const std::string& rStat);
-RuleFlagId_t ParseRuleFlagId(const std::string& rFlag);
-SocialRatingId_t ParseSocialRatingId(const std::string& rRating);
+// Snake_case id maps live next to their enums in EffectEnums.h; re-export for parser call sites.
+using ::ac::ParseStatId;
+using ::ac::ParseRuleFlagId;
+using ::ac::ParseSocialRatingId;
+
 ModifierOp_t ParseModifierOp(const std::string& rOp);
 EffectScope_t ParseEffectScope(const std::string& rScope);
 EffectPersistence_t ParseEffectPersistence(const std::string& rPersistence);

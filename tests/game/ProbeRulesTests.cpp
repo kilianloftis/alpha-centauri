@@ -3,7 +3,7 @@
 #include "game/units/MoraleCalculator.h"
 #include "game/units/MoraleConfigParser.h"
 #include "game/social-engineering/SocialRatingConfigParser.h"
-#include "game/effects/BonusEffect.h"
+#include "game/effects/EffectConfig.h"
 
 #include "TestHelpers.h"
 

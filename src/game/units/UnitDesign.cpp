@@ -1,6 +1,6 @@
 #include "game/units/UnitDesign.h"
 #include "game/effects/ActiveEffect.h"
-#include "game/effects/BonusEffect.h"
+#include "game/effects/EffectConfig.h"
 #include <stdexcept>
 #include <sstream>
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "game/faction/base/BaseTypes.h"
-#include "game/effects/BonusEffect.h"
+#include "game/effects/EffectConfig.h"
 #include "game/map/Tile.h"
 #include <algorithm>
 #include <cmath>

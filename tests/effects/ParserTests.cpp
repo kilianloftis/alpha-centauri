@@ -2,7 +2,7 @@
 // array schema used by every config source (buildings, unit components, pop types,
 // improvements, social policies).
 
-#include "game/effects/BonusEffect.h"
+#include "game/effects/EffectConfig.h"
 #include "game/effects/BonusEffectParser.h"
 
 #include <catch2/catch_approx.hpp>

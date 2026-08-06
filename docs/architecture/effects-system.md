@@ -112,7 +112,7 @@ not by which config declared it. Each scope has one "lane":
 | `ThisTile` | tile resolvers | `CollectTileEffects`/`CollectAreaEffects` — features on the tile, radius-reaching features nearby, and units projecting component effects |
 
 In code, this table is a single constexpr function: `LaneFor(EffectScope_t) -> EffectLane_t`
-in `BonusEffect.h`, with the derived predicate `IsFactionLane`. Every collector/filter
+in `EffectEnums.h`, with the derived predicate `IsFactionLane`. Every collector/filter
 routes through it (`FilterForBase`, `AppendFactionLaneEffects`,
 `AppendTileEffects`/`TileEffectReaches`), so adding a scope means the compiler forces one
 routing decision in `LaneFor`'s exhaustive switch and every collector follows automatically.
@@ -138,6 +138,8 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   supported) — a building-projected tile aura would need a base-tile anchor.
 
 ### EffectConfig_t
+- **Header**: `EffectConfig.h` holds `EffectConfig_t` / `EffectVariant_t` / effect structs;
+  enums and snake_case wire parsers live in `EffectEnums.h`.
 - **Purpose**: A single static effect definition loaded from configuration.
 - **Responsibilities**:
   - Holds the typed effect variant via `EffectVariant_t`.
@@ -333,7 +335,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 - **Purpose**: The single config→`ActiveEffect_t` conversion. One core loop owns the two
   universal rules — `Instantaneous` effects never enter the continuous pool (they fire once
   via `DispatchInstantaneousEffects`), and `originBase` is tagged when `TagsOriginBase(scope)`
-  (next to `LaneFor` / `IsFactionLane` in `BonusEffect.h`).
+  (next to `LaneFor` / `IsFactionLane` in `EffectEnums.h`).
 - **Variants** (all in `ActiveEffect.h`):
   - `AppendActiveEffects(effects, pOriginBase, sourceId, out)` — every continuous effect.
     `CollectUnitEffects`/`CollectPopEffects`, `BuildingManager::CollectEffects(rOriginBase)`,
@@ -591,7 +593,7 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
 Producers only differ in which top-level JSON fields they read; the `effects` array itself is
 parsed and collected identically everywhere.
 
-1. **Parse**: add an `EffectSourceKind_t` enumerator (`BonusEffect.h`) and call
+1. **Parse**: add an `EffectSourceKind_t` enumerator (`EffectEnums.h`) and call
    `config.effects = BonusEffectParser::ParseEffects(json, EffectSourceKind_t::X, config.id);`
    in the config parser — exactly what `BuildingConfigParser`, `PopTypeConfigParser`, etc.
    do. Only add a `ValidateScopeForSource` rejection if a scope is *certainly impossible*
@@ -677,7 +679,7 @@ to load at sea. Note that `RuleFlagId_t` is a C++ enum: mods can add new *sites*
 
 **A new effect type** (a new `EffectVariant_t` alternative):
 
-1. Define the struct in `BonusEffect.h` and add it to `EffectVariant_t`.
+1. Define the struct in `EffectConfig.h` and add it to `EffectVariant_t`.
 2. Add a focused `ParseYourEffect_` function in `BonusEffectParser.cpp` and register it in
    the `EffectTypeParsers_` dispatch table (type string → parse fn). Validate required
    parameters there (throw on missing/empty ids — don't parse permissively).

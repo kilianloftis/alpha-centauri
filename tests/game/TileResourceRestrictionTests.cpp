@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "game/faction/ResearchManager.h"
-#include "game/effects/BonusEffect.h"
+#include "game/effects/EffectConfig.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/map/Tile.h"
 

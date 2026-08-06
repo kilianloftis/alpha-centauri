@@ -1,7 +1,7 @@
 #pragma once
 
 #include "game/GameDataPaths.h"
-#include "game/effects/BonusEffect.h"
+#include "game/effects/EffectConfig.h"
 
 #include <memory>
 #include <vector>
