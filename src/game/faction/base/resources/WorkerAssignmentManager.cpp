@@ -160,6 +160,24 @@ bool WorkerAssignmentManager::IsTileAssigned(const Tile* pTile) const
     return pTile && m_rWorkedTiles.IsWorked(*pTile);
 }
 
+bool WorkerAssignmentManager::IsTileWorkedByThisBase(const Tile* pTile) const
+{
+    if (!pTile)
+    {
+        return false;
+    }
+    // Scans this base's pops, the same set GetWorkedTileYield resolves against, so the two
+    // always agree: if this returns true the yield lookup finds a pop, and vice versa.
+    for (const Pop& rPop : m_rPops.Pops())
+    {
+        if (rPop.IsWorker() && rPop.GetTile() == pTile)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 TileResources_t WorkerAssignmentManager::ComputeWorkedResources(const BaseEffects_t& rBaseEffects) const
 {
     TileResources_t total{0, 0, 0};
@@ -234,15 +252,28 @@ void WorkerAssignmentManager::AutoAssignWorkers()
     }
 }
 
-void WorkerAssignmentManager::UserAssignBestAvailableWorker(const Tile* pTile)
+bool WorkerAssignmentManager::UserAssignBestAvailableWorker(const Tile* pTile)
 {
+    // Establish that the tile can be worked at all before touching any pop. The later branches
+    // pay for the attempt — one converts a specialist back to a worker, the other pulls a
+    // worker off a tile it was productively working — and the previous code ignored
+    // UserAssignWorker's bool, so a doomed request destroyed a specialist's role or left a
+    // worker idle with nothing to show for it.
+    if (std::find(m_workableTiles.begin(), m_workableTiles.end(), pTile) == m_workableTiles.end())
+    {
+        return false;
+    }
+    if (IsTileAssigned(pTile))
+    {
+        return false;
+    }
+
     // Reverse order: prefer the most recently added pop when several are eligible.
     for (Pop& rPop : std::views::reverse(m_rPops.Pops()))
     {
         if (rPop.IsWorker() && rPop.GetTile() == nullptr)
         {
-            UserAssignWorker(rPop, pTile);
-            return;
+            return UserAssignWorker(rPop, pTile);
         }
     }
 
@@ -251,17 +282,30 @@ void WorkerAssignmentManager::UserAssignBestAvailableWorker(const Tile* pTile)
         if (rPop.IsSpecialist())
         {
             m_rPops.ConvertToDefaultPopType(rPop);
-            UserAssignWorker(rPop, pTile);
-            return;
+            if (UserAssignWorker(rPop, pTile))
+            {
+                return true;
+            }
+            // The conversion already happened; auto-assignment gives the now-plain worker a
+            // tile rather than leaving it idle.
+            AutoAssignWorkers();
+            return false;
         }
     }
 
     Pop* pWorker = FindLowestYieldAssignedWorker_();
-    if (pWorker)
+    if (!pWorker)
     {
-        UnassignWorker(*pWorker);
-        UserAssignWorker(*pWorker, pTile);
+        return false;
     }
+    UnassignWorker(*pWorker);
+    if (UserAssignWorker(*pWorker, pTile))
+    {
+        return true;
+    }
+    // Put it back to work somewhere rather than stranding it on a failed move.
+    AutoAssignWorkers();
+    return false;
 }
 
 Pop* WorkerAssignmentManager::FindLowestYieldAssignedWorker_() const

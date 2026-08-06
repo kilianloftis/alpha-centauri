@@ -119,7 +119,8 @@ public:
     // Find the best available pop and user-assign them to the given tile.
     // Priority: unassigned worker → specialist converted to worker → steal an assigned worker.
     // No-op if the tile is not workable or no pop can be found.
-    void UserAssignBestAvailableWorker(const Tile* pTile);
+    // See WorkerAssignmentManager::UserAssignBestAvailableWorker. False means nothing changed.
+    bool UserAssignBestAvailableWorker(const Tile* pTile);
 
     // Resource production per turn (calculated live).
     int GetNutrientProduction() const;

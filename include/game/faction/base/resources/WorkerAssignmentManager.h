@@ -72,9 +72,18 @@ public:
     // Unassign all pops, revert specialists to workers, and re-run auto-assignment.
     void ResetAllAssignments();
 
-    // Returns true if the given tile already has a worker assigned — by this base or any
-    // other, including other factions' (queried from the world-scoped WorkedTileIndex).
+    // Availability: is the tile taken by anyone at all — this base, a neighbouring base, or
+    // another faction (queried from the world-scoped WorkedTileIndex). This is the predicate
+    // auto-assignment needs. It is NOT the one to ask when the question is "is *this* base
+    // working it" — for that, see IsTileWorkedByThisBase.
     bool IsTileAssigned(const Tile* pTile) const;
+
+    // Is one of *this base's* pops working the tile. Overlapping base radii are the normal
+    // case, so this differs from IsTileAssigned for any tile in range that a neighbour, an
+    // enemy, or a supply crawler holds. Asking the wrong one made the base screen paint such
+    // tiles as worked and then show 0 0 0 (GetWorkedTileYield finds no matching pop), and
+    // routed clicks on them to an unassign that silently did nothing.
+    bool IsTileWorkedByThisBase(const Tile* pTile) const;
 
     // Compute aggregate resources from all assigned workers.
     // For each worker pop with an assigned tile, resolves the tile's full yield (intrinsic +
@@ -100,7 +109,10 @@ public:
     // Returns the set of workable tiles this manager can assign.
     const std::vector<const Tile*>& GetWorkableTiles() const;
 
-    void UserAssignBestAvailableWorker(const Tile* pTile);
+    // Put some pop on pTile, preferring an idle worker, then a specialist, then the
+    // lowest-yield worker already assigned elsewhere. Returns false (changing nothing) when
+    // pTile is outside this base's workable set or already worked by anyone.
+    bool UserAssignBestAvailableWorker(const Tile* pTile);
 
 private:
     bool Assign_(Pop& rPop, const Tile* pTile, bool bUserAssigned);

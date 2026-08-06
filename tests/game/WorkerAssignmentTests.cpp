@@ -29,6 +29,19 @@ Pop& FirstPop(BaseManager& rBase)
     throw std::logic_error("base has no pops");
 }
 
+int CountAssignedWorkers(BaseManager& rBase)
+{
+    int count = 0;
+    for (const Pop& rPop : rBase.GetPopulation().Pops())
+    {
+        if (rPop.IsWorker() && rPop.GetTile() != nullptr)
+        {
+            ++count;
+        }
+    }
+    return count;
+}
+
 Pop& LastPop(BaseManager& rBase)
 {
     Pop* pLast = nullptr;
@@ -68,6 +81,59 @@ TEST_CASE("A tile worked by one base cannot be worked by another base", "[worker
     baseA.GetWorkerAssignments().UnassignWorker(FirstPop(baseA));
     CHECK_FALSE(fixture.map.GetWorkedTiles().IsWorked(shared));
     CHECK(baseB.GetWorkerAssignments().AssignWorker(FirstPop(baseB), &shared));
+}
+
+TEST_CASE("IsTileWorkedByThisBase distinguishes my worker from anyone's", "[worker][index]")
+{
+    // Overlapping radii are the normal case, so "worked by anyone" is the wrong question for
+    // the base screen: it painted a neighbour's tile as worked and then showed 0 0 0, because
+    // GetWorkedTileYield only resolves against this base's pops. The two must agree.
+    actest::BaseFixture fixture;
+    BaseManager& baseA = fixture.MakeBase(2, 2);
+    BaseManager& baseB = fixture.MakeBase(4, 4);
+    Tile& shared = fixture.At(3, 3);
+
+    baseA.GetWorkerAssignments().UnassignAll();
+    baseB.GetWorkerAssignments().UnassignAll();
+    REQUIRE(baseA.GetWorkerAssignments().AssignWorker(FirstPop(baseA), &shared));
+
+    // A works it; B does not — even though B's availability check says "taken".
+    CHECK(baseA.GetWorkerAssignments().IsTileWorkedByThisBase(&shared));
+    CHECK_FALSE(baseB.GetWorkerAssignments().IsTileWorkedByThisBase(&shared));
+    CHECK(baseB.GetWorkerAssignments().IsTileAssigned(&shared));
+
+    // A base's own centre tile is claimed for its whole life but worked by no pop, so it is
+    // "assigned" and not "worked by this base" — the case that produced the 0 0 0 display.
+    CHECK(baseB.GetWorkerAssignments().IsTileAssigned(&fixture.At(2, 2)));
+    CHECK_FALSE(baseB.GetWorkerAssignments().IsTileWorkedByThisBase(&fixture.At(2, 2)));
+}
+
+TEST_CASE("UserAssignBestAvailableWorker changes nothing when the tile is unavailable",
+          "[worker][index]")
+{
+    // The fallback branches convert a specialist or pull a worker off a productive tile before
+    // attempting the assignment, and the result was discarded — so a doomed request destroyed
+    // a specialist's role or left a worker idle for nothing.
+    actest::BaseFixture fixture;
+    BaseManager& baseA = fixture.MakeBase(2, 2);
+    BaseManager& baseB = fixture.MakeBase(4, 4);
+    Tile& shared = fixture.At(3, 3);
+
+    baseB.GetWorkerAssignments().UnassignAll();
+    REQUIRE(baseA.GetWorkerAssignments().AssignWorker(FirstPop(baseA), &shared));
+
+    // Every one of B's workers is idle; taking A's tile is impossible.
+    const int idleBefore = CountAssignedWorkers(baseB);
+    CHECK_FALSE(baseB.UserAssignBestAvailableWorker(&shared));
+    CHECK(CountAssignedWorkers(baseB) == idleBefore);
+    CHECK_FALSE(baseB.GetWorkerAssignments().IsTileWorkedByThisBase(&shared));
+
+    // A tile outside the base's workable set is refused the same way.
+    CHECK_FALSE(baseB.UserAssignBestAvailableWorker(&fixture.At(8, 8)));
+
+    // A genuinely free tile in range still works.
+    CHECK(baseB.UserAssignBestAvailableWorker(&fixture.At(5, 4)));
+    CHECK(baseB.GetWorkerAssignments().IsTileWorkedByThisBase(&fixture.At(5, 4)));
 }
 
 TEST_CASE("A base can never work another base's own tile", "[worker][index]")

@@ -198,7 +198,10 @@ void BaseView::HandleTileClick_(const Tile* pTile)
 
     auto& rAssignments = m_rBase.GetWorkerAssignments();
 
-    if (rAssignments.IsTileAssigned(pTile))
+    // Toggle against what *this* base is doing. UserUnassignTile only scans this base's pops,
+    // so routing a click here on a tile a neighbour works silently did nothing; the assign
+    // path handles the "taken by someone else" case by failing to find a free tile.
+    if (rAssignments.IsTileWorkedByThisBase(pTile))
     {
         rAssignments.UserUnassignTile(pTile);
     }

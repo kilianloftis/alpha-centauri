@@ -68,8 +68,12 @@ void BaseWorkableAreaDisplay::Render(Graphics& rGraphics)
 
     for (const TileRect_t& entry : m_tileRects)
     {
+        // "Worked by this base", not "worked by anyone": RenderTile_ picks GetWorkedTileYield
+        // for a worked tile, and that only resolves against this base's pops. Asking the
+        // world-wide predicate painted a neighbour's (or an enemy's) tile as worked and then
+        // displayed 0 0 0 for it.
         RenderTile_(rGraphics, *entry.pTile, entry.rect.x, entry.rect.y, m_tileSize,
-                    m_pBase->GetWorkerAssignments().IsTileAssigned(entry.pTile));
+                    m_pBase->GetWorkerAssignments().IsTileWorkedByThisBase(entry.pTile));
     }
 
     const float centerX = m_startX + style.gridCenterOffset * m_tileSize;

@@ -191,9 +191,9 @@ const WorkerAssignmentManager& BaseManager::GetWorkerAssignments() const
     return *m_pWorkerAssignments;
 }
 
-void BaseManager::UserAssignBestAvailableWorker(const Tile* pTile)
+bool BaseManager::UserAssignBestAvailableWorker(const Tile* pTile)
 {
-    m_pWorkerAssignments->UserAssignBestAvailableWorker(pTile);
+    return m_pWorkerAssignments->UserAssignBestAvailableWorker(pTile);
 }
 
 int BaseManager::GetNutrientProduction() const
