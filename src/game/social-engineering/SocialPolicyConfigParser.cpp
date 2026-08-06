@@ -1,7 +1,7 @@
 #include "game/social-engineering/SocialPolicyConfigParser.h"
 #include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
-#include "game/effects/BonusEffectParser.h"
+#include "game/effects/EffectConfigParser.h"
 #include <nlohmann/json.hpp>
 #include <stdexcept>
 
@@ -26,7 +26,7 @@ SocialPolicyConfig_t SocialPolicyConfigParser::ParsePolicyConfig(const nlohmann:
     config.name = ConfigFields::ParseName(policyJson, config.id);
     config.category = ParseCategory(policyJson.at("category"));
     config.requiredTech = ConfigFields::ParseRequiredTech(policyJson);
-    config.effects = BonusEffectParser::ParseEffects(policyJson, EffectSourceKind_t::SocialPolicy, config.id);
+    config.effects = EffectConfigParser::ParseEffects(policyJson, EffectSourceKind_t::SocialPolicy, config.id);
 
     return config;
 }

@@ -2,7 +2,7 @@
 
 #include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
-#include "game/effects/BonusEffectParser.h"
+#include "game/effects/EffectConfigParser.h"
 #include <nlohmann/json.hpp>
 #include <stdexcept>
 #include <variant>
@@ -29,7 +29,7 @@ std::vector<RuleFlagId_t> ParseRuleFlagList_(const nlohmann::json& rJson, const 
     flags.reserve(rArr.size());
     for (const auto& rEntry : rArr)
     {
-        flags.push_back(BonusEffectParser::ParseRuleFlagId(rEntry.get<std::string>()));
+        flags.push_back(ParseRuleFlagId(rEntry.get<std::string>()));
     }
     return flags;
 }
@@ -102,7 +102,7 @@ CouncilProposalConfig_t CouncilProposalConfigParser::ParseProposalConfig(
         config.electionOutcome =
             ParseElectionOutcome(proposalJson.at("election_outcome").get<std::string>());
     }
-    config.effects = BonusEffectParser::ParseEffects(
+    config.effects = EffectConfigParser::ParseEffects(
         proposalJson, EffectSourceKind_t::CouncilProposal, config.id);
     for (const EffectConfig_t& rEffect : config.effects)
     {

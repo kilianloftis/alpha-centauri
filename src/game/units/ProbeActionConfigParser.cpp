@@ -1,6 +1,6 @@
 #include "game/units/ProbeActionConfigParser.h"
 
-#include "game/effects/BonusEffectParser.h"
+#include "game/effects/EffectConfigParser.h"
 
 #include <nlohmann/json.hpp>
 #include <fstream>
@@ -58,7 +58,7 @@ ProbeActionConfig_t ParseAction_(const json& rActionJson)
     {
         nlohmann::json wrapper = nlohmann::json::object();
         wrapper["effects"] = rActionJson.at("effects");
-        action.effects = BonusEffectParser::ParseEffects(
+        action.effects = EffectConfigParser::ParseEffects(
             wrapper, EffectSourceKind_t::ProbeAction,
             ProbeActionIdToString(action.id));
     }

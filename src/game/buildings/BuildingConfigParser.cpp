@@ -1,7 +1,7 @@
 #include "game/buildings/BuildingConfigParser.h"
 #include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
-#include "game/effects/BonusEffectParser.h"
+#include "game/effects/EffectConfigParser.h"
 #include <nlohmann/json.hpp>
 #include <stdexcept>
 
@@ -36,7 +36,7 @@ BuildingConfig_t BuildingConfigParser::ParseBuildingConfig(const nlohmann::json&
             "use singular 'required_tech' (omit or \"\" = always available)");
     }
     config.requiredTech = ConfigFields::ParseRequiredTech(buildingJson);
-    config.effects = BonusEffectParser::ParseEffects(buildingJson, EffectSourceKind_t::Building, config.id);
+    config.effects = EffectConfigParser::ParseEffects(buildingJson, EffectSourceKind_t::Building, config.id);
 
     return config;
 }

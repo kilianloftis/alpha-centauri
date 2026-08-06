@@ -178,11 +178,10 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "tech_cost")               return StatId_t::TechCost;
     if (rStat == "moisture_tier")           return StatId_t::MoistureTier;
     if (rStat == "commerce_rate")           return StatId_t::CommerceRate;
-    if (rStat == "council_votes")          return StatId_t::CouncilVotes;
+    if (rStat == "council_votes")           return StatId_t::CouncilVotes;
     if (rStat == "commerce_energy_bonus")   return StatId_t::CommerceEnergyBonus;
     throw std::runtime_error("Unknown stat id: '" + rStat + "'");
 }
-
 
 enum class SocialRatingId_t
 {
@@ -456,6 +455,5 @@ enum class EffectSourceKind_t
     ProbeAction,
     TileYieldRules,
 };
-
 
 } // namespace ac

@@ -173,6 +173,10 @@ bool TileMatchesSelector_(const TileSelector_t& selector, const Tile& rTile, boo
                 // HasFeature so terrain ids (Fungus, Rocky, …) match the same way as Farm/Mine.
                 return rTile.HasFeature(rAlt.improvement);
             }
+            else
+            {
+                static_assert(k_AlwaysFalse<T>, "Unhandled TileSelector_t alternative");
+            }
         },
         selector);
 }

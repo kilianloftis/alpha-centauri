@@ -8,16 +8,13 @@
 namespace ac
 {
 
-// Shared JSON parsing for the bonus/effect system. Used by every config parser that
+// Shared JSON parsing for the effect system. Used by every config parser that
 // defines EffectConfig_t entries (buildings, unit components, and future sources such
 // as social engineering) so the string<->enum mappings live in exactly one place.
-namespace BonusEffectParser
+// Snake_case id parsing (ParseStatId / ParseRuleFlagId / ParseSocialRatingId) lives next
+// to its enums in EffectEnums.h, at ac scope.
+namespace EffectConfigParser
 {
-
-// Snake_case id maps live next to their enums in EffectEnums.h; re-export for parser call sites.
-using ::ac::ParseStatId;
-using ::ac::ParseRuleFlagId;
-using ::ac::ParseSocialRatingId;
 
 ModifierOp_t ParseModifierOp(const std::string& rOp);
 EffectScope_t ParseEffectScope(const std::string& rScope);
@@ -66,6 +63,6 @@ std::vector<EffectConfig_t> ParseEffects(const nlohmann::json& rContainerJson,
                                          EffectSourceKind_t sourceKind,
                                          const std::string& rSourceId);
 
-} // namespace BonusEffectParser
+} // namespace EffectConfigParser
 
 } // namespace ac

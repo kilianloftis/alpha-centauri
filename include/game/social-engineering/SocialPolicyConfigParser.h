@@ -1,7 +1,7 @@
 #pragma once
 
 #include "game/social-engineering/SocialPolicyConfig.h"
-#include "game/effects/BonusEffectParser.h"
+#include "game/effects/EffectConfigParser.h"
 #include <nlohmann/json.hpp>
 #include <string>
 #include <vector>

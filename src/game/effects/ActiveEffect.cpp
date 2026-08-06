@@ -336,6 +336,10 @@ bool ConditionBodySatisfied_(const Condition_t& condition, const EffectContext_t
                 }
                 return true;
             }
+            else
+            {
+                static_assert(k_AlwaysFalse<T>, "Unhandled Condition_t alternative");
+            }
         },
         condition.AsVariant());
 }
@@ -375,6 +379,10 @@ bool UnitFilterSatisfied(const EffectConfig_t& config, const Unit& rUnit)
                 // Design-only: avoid CollectLiveUnitEffects recursion (HasFlag is evaluated
                 // while building that list). Native / probe filters key off chassis/specials.
                 return ResolveFlag(rUnit.GetDesign(), rAlt.flag);
+            }
+            else
+            {
+                static_assert(k_AlwaysFalse<T>, "Unhandled UnitFilter_t alternative");
             }
         },
         *config.unitFilter);

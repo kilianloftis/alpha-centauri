@@ -1,5 +1,5 @@
 #include "game/social-engineering/SocialRatingConfigParser.h"
-#include "game/effects/BonusEffectParser.h"
+#include "game/effects/EffectConfigParser.h"
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <iostream>
@@ -46,7 +46,7 @@ SocialRatingConfig_t SocialRatingConfigParser::ParseRatingConfig(const nlohmann:
 {
     SocialRatingConfig_t config;
     config.id = rRatingJson["id"];
-    config.rating = BonusEffectParser::ParseSocialRatingId(config.id);
+    config.rating = ParseSocialRatingId(config.id);
 
     const auto& rLevels = rRatingJson["levels"];
     for (auto it = rLevels.begin(); it != rLevels.end(); ++it)
@@ -55,8 +55,8 @@ SocialRatingConfig_t SocialRatingConfigParser::ParseRatingConfig(const nlohmann:
         std::vector<EffectConfig_t> effects;
         for (const auto& rEffectJson : it.value())
         {
-            EffectConfig_t effect = BonusEffectParser::ParseEffectConfig(rEffectJson);
-            BonusEffectParser::ValidateScopeForSource(effect.scope, EffectSourceKind_t::SocialRating,
+            EffectConfig_t effect = EffectConfigParser::ParseEffectConfig(rEffectJson);
+            EffectConfigParser::ValidateScopeForSource(effect.scope, EffectSourceKind_t::SocialRating,
                                                       config.id + " level " + it.key());
             effects.push_back(std::move(effect));
         }

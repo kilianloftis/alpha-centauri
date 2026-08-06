@@ -1,6 +1,6 @@
 #include "game/effects/TileYieldRulesConfigParser.h"
 
-#include "game/effects/BonusEffectParser.h"
+#include "game/effects/EffectConfigParser.h"
 
 #include <fstream>
 #include <nlohmann/json.hpp>
@@ -18,7 +18,7 @@ std::vector<EffectConfig_t> TileYieldRulesConfigParser::ParseConfig(const std::s
     }
 
     const nlohmann::json json = nlohmann::json::parse(file);
-    return BonusEffectParser::ParseEffects(
+    return EffectConfigParser::ParseEffects(
         json, EffectSourceKind_t::TileYieldRules, "tile_yield_rules");
 }
 

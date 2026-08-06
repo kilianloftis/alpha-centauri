@@ -7,6 +7,7 @@
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/council/CouncilRulesConfigParser.h"
 #include "game/council/PlanetaryCouncil.h"
+#include "game/effects/ActiveEffect.h"
 #include "game/effects/InfiltrationRules.h"
 #include "game/effects/TileYieldRulesConfigParser.h"
 #include "game/faction/DiplomacyLedger.h"
@@ -15,12 +16,15 @@
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/map/WorldMap.h"
 
+#include <algorithm>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <filesystem>
 #include <fstream>
 #include <memory>
 #include <stdexcept>
+#include <variant>
+#include <vector>
 
 using namespace ac;
 using namespace actest;
@@ -333,6 +337,15 @@ TEST_CASE("CouncilMembers filter matches nobody when no PlanetaryCouncil exists"
     FactionFixture fixtures;
     REQUIRE(fixtures.factionDefinition.identity.participatesInCouncil);
 
+    EffectConfig_t config;
+    config.effect = InfiltrationEffect_t{};
+    config.scope = EffectScope_t::FactionGlobal;
+    config.persistence = EffectPersistence_t::Continuous;
+    config.factionFilter = FactionFilter_t{FactionFilterKind_t::CouncilMembers};
+    // Declared on the faction definition so it reaches the faction's active effect pool —
+    // otherwise HasInfiltration walks an empty list and passes regardless of the filter.
+    fixtures.factionDefinition.effects.push_back(config);
+
     GameSettings settings;
     auto pMap = std::make_unique<WorldMap>(9, 9);
     GameState state(std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
@@ -344,11 +357,11 @@ TEST_CASE("CouncilMembers filter matches nobody when no PlanetaryCouncil exists"
         state.AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext));
     REQUIRE(state.GetPlanetaryCouncil() == nullptr);
 
-    EffectConfig_t config;
-    config.effect = InfiltrationEffect_t{};
-    config.scope = EffectScope_t::FactionGlobal;
-    config.persistence = EffectPersistence_t::Continuous;
-    config.factionFilter = FactionFilter_t{FactionFilterKind_t::CouncilMembers};
+    const std::vector<ActiveEffect_t>& rActive = rA.GetActiveEffects().effects;
+    REQUIRE(std::any_of(rActive.begin(), rActive.end(), [](const ActiveEffect_t& rEffect)
+    {
+        return std::get_if<InfiltrationEffect_t>(&rEffect.config->effect) != nullptr;
+    }));
 
     CHECK_FALSE(FactionFilterCoversTarget(config, rA.GetFactionId(), rB.GetFactionId(), state));
     CHECK_FALSE(HasInfiltration(state, rA.GetFactionId(), rB.GetFactionId()));

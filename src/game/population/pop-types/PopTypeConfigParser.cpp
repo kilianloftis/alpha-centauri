@@ -1,7 +1,7 @@
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
-#include "game/effects/BonusEffectParser.h"
+#include "game/effects/EffectConfigParser.h"
 #include <nlohmann/json.hpp>
 
 namespace ac
@@ -31,7 +31,7 @@ PopTypeConfig_t PopTypeConfigParser::ParsePopTypeConfig(const nlohmann::json& po
     config.requiredTech          = ConfigFields::ParseRequiredTech(popJson);
     config.fallbackPopTypeId     = popJson.value("fallback_pop_type",       "");
     config.obsoletes             = ConfigFields::ParseStringArray(popJson, "obsoletes");
-    config.effects               = BonusEffectParser::ParseEffects(popJson, EffectSourceKind_t::PopType, config.id);
+    config.effects               = EffectConfigParser::ParseEffects(popJson, EffectSourceKind_t::PopType, config.id);
 
     return config;
 }

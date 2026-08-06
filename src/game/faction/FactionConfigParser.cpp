@@ -1,7 +1,7 @@
 #include "game/faction/FactionConfigParser.h"
 
 #include "lib/config/ConfigFields.h"
-#include "game/effects/BonusEffectParser.h"
+#include "game/effects/EffectConfigParser.h"
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
@@ -80,7 +80,7 @@ FactionConfig_t FactionConfigParser::ParseFactionDirectory(const std::string& id
     config.identity = ParseIdentity(ReadRequiredJsonFile(dirPath + "/" + k_IdentityFile), id);
     config.leader = ParseLeader(ReadRequiredJsonFile(dirPath + "/" + k_LeaderFile));
     config.ai = ParseAITendencies(ReadRequiredJsonFile(dirPath + "/" + k_AIFile));
-    config.effects = BonusEffectParser::ParseEffects(
+    config.effects = EffectConfigParser::ParseEffects(
         ReadRequiredJsonFile(dirPath + "/" + k_EffectsFile), EffectSourceKind_t::Faction, config.id);
     config.flavor.baseNames =
         ParseBaseNames(ReadRequiredJsonFile(dirPath + "/" + k_BaseNamesFile));

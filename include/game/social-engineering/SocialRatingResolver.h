@@ -19,7 +19,7 @@ class SocialRatingRegistry;
 // SocialRatingModifier effects are ordinary effects that can be declared by faction-
 // internal sources (social policy, building, pop type, unit component, ...). Ratings are
 // a *local* axis: accumulation on both lanes uses the faction's local effect pool, not
-// peer WorldGlobal or council extras. Until BonusEffectParser rejects a WorldGlobal
+// peer WorldGlobal or council extras. Until EffectConfigParser rejects a WorldGlobal
 // SocialRatingModifier at load (package 5), a mod can declare one and it moves neither
 // lane — the restriction is silent, not enforced.
 //

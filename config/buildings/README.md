@@ -29,7 +29,7 @@ A flat per-turn bonus (the old `nutrients_bonus`) is a `StatModifier` effect wit
 
 ## Effects
 
-Each entry in `effects` describes a single gameplay effect applied when the building is present. All `effects` arrays — for buildings, unit components, and any future effect source — are parsed by the single shared `BonusEffectParser` (`include/lib/effects/BonusEffectParser.h`), so the schema below applies everywhere, not just to buildings.
+Each entry in `effects` describes a single gameplay effect applied when the building is present. All `effects` arrays — for buildings, unit components, and any future effect source — are parsed by the single shared `EffectConfigParser` (`include/game/effects/EffectConfigParser.h`), so the schema below applies everywhere, not just to buildings.
 
 | Field | Type | Required | Default | Description |
 |---|---|---|---|---|

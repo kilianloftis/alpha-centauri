@@ -158,7 +158,18 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
                                 checkCondition(rNested);
                             }
                         }
-                        // IsDefending / OriginBaseIsTargetBase / AttackerIsEmbarked: no ids.
+                        else if constexpr (std::is_same_v<T, IsDefending_t>
+                                           || std::is_same_v<T, OriginBaseIsTargetBase_t>
+                                           || std::is_same_v<T, AttackerIsEmbarked_t>)
+                        {
+                            // Parameterless predicates: no config ids to resolve.
+                        }
+                        else
+                        {
+                            // A void visitor has no missing-return diagnostic, so without this
+                            // a new alternative would silently skip reference validation.
+                            static_assert(k_AlwaysFalse<T>, "Unhandled Condition_t alternative");
+                        }
                     },
                     rCond.AsVariant());
             };

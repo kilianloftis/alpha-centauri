@@ -6,7 +6,7 @@
 #include "game/orbital/OrbitalCensus.h"
 #include "game/units/InterceptRules.h"
 #include "game/effects/ActiveEffect.h"
-#include "game/effects/BonusEffectParser.h"
+#include "game/effects/EffectConfigParser.h"
 #include "game/effects/EffectEnums.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/base/buildings/BuildingManager.h"
@@ -100,8 +100,8 @@ struct OrbitalGame_
 
 TEST_CASE("ParseUnitDomain accepts orbital", "[effects][parser][orbital]")
 {
-    CHECK(BonusEffectParser::ParseUnitDomain("orbital") == UnitDomain_t::Orbital);
-    CHECK_THROWS(BonusEffectParser::ParseUnitDomain("space"));
+    CHECK(EffectConfigParser::ParseUnitDomain("orbital") == UnitDomain_t::Orbital);
+    CHECK_THROWS(EffectConfigParser::ParseUnitDomain("space"));
 }
 
 TEST_CASE("Orbital domain can enter any terrain", "[movement][orbital]")
@@ -453,7 +453,7 @@ TEST_CASE("ThisTile InterceptAttempt fires on the battery tile", "[orbital][inte
 
 TEST_CASE("Parse OrbitalAttack and InterceptAttempt effects", "[effects][parser][orbital]")
 {
-    const EffectConfig_t attack = BonusEffectParser::ParseEffectConfig(json::parse(R"({
+    const EffectConfig_t attack = EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "OrbitalAttack",
         "scope": "FactionGlobal",
         "parameters": {
@@ -468,7 +468,7 @@ TEST_CASE("Parse OrbitalAttack and InterceptAttempt effects", "[effects][parser]
     CHECK(pAttack->cooldownTurns == 1);
     CHECK(pAttack->chanceOfDestructionOnFail == 50);
 
-    const EffectConfig_t intercept = BonusEffectParser::ParseEffectConfig(json::parse(R"({
+    const EffectConfig_t intercept = EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "InterceptAttempt",
         "scope": "FactionGlobal",
         "parameters": {
@@ -486,13 +486,13 @@ TEST_CASE("Parse OrbitalAttack and InterceptAttempt effects", "[effects][parser]
     CHECK(intercept.unitFilter.has_value());
     CHECK(intercept.condition.has_value());
 
-    CHECK_THROWS(BonusEffectParser::ParseEffectConfig(json::parse(R"({
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "InterceptAttempt",
         "scope": "FactionGlobal",
         "parameters": { "chance": 50 }
     })")));
 
-    CHECK_THROWS(BonusEffectParser::ParseEffectConfig(json::parse(R"({
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "OrbitalAttack",
         "scope": "FactionGlobal",
         "parameters": { "chance": 50 }

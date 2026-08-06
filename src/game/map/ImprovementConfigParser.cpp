@@ -4,7 +4,7 @@
 #include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
 #include "lib/Rational.h"
-#include "game/effects/BonusEffectParser.h"
+#include "game/effects/EffectConfigParser.h"
 
 #include <stdexcept>
 #include <string>
@@ -215,7 +215,7 @@ ImprovementConfig_t ImprovementConfigParser::ParseImprovementConfig(const nlohma
         config.moveCostOverrideFragments =
             ParseMoveCostFragments_(cost, "move_cost_override", config.id);
     }
-    config.effects = BonusEffectParser::ParseEffects(improvementJson, EffectSourceKind_t::Improvement, config.id);
+    config.effects = EffectConfigParser::ParseEffects(improvementJson, EffectSourceKind_t::Improvement, config.id);
 
     return config;
 }

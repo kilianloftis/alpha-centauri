@@ -118,7 +118,7 @@ routes through it (`FilterForBase`, `AppendFactionLaneEffects`,
 routing decision in `LaneFor`'s exhaustive switch and every collector follows automatically.
 `tests/effects/ValidationTests.cpp` pins each scope's lane with `static_assert`s.
 
-Load-time validation (`BonusEffectParser::ValidateScopeForSource`) rejects the
+Load-time validation (`EffectConfigParser::ValidateScopeForSource`) rejects the
 certainly-impossible combinations — with a clear error:
 
 - `ThisPop` only on a pop type
@@ -347,7 +347,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   - `AppendTileEffects(effects, sourceId, distance, out)` — only effects satisfying
     `TileEffectReaches(e, distance)` (ThisTile lane, continuous, `radius >= distance`).
     Used by own-tile collection (`distance` 0), neighbor auras, and unit auras alike.
-- **Adding a new effect source** is therefore two calls: `BonusEffectParser::ParseEffects`
+- **Adding a new effect source** is therefore two calls: `EffectConfigParser::ParseEffects`
   at load time, and one of these at collection time — no hand-rolled loops.
 
 ### DispatchInstantaneousEffects
@@ -472,12 +472,12 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   - `AddBuilding()` and `DestroyBuilding()` only mutate constructed buildings.
   - Granted buildings are not stored; they are discovered dynamically by the effects system.
 
-### BonusEffectParser
+### EffectConfigParser
 
 - **Purpose**: Single shared implementation of the JSON `effects` array schema, used by every config parser that defines `EffectConfig_t` entries.
-- **Location**: `include/game/effects/BonusEffectParser.h` / `src/game/effects/BonusEffectParser.cpp`.
+- **Location**: `include/game/effects/EffectConfigParser.h` / `src/game/effects/EffectConfigParser.cpp`.
 - **Responsibilities**:
-  - `ParseStatId`, `ParseRuleFlagId`, `ParseModifierOp`, `ParseEffectScope`, `ParseEffectPersistence` — the canonical string&lt;-&gt;enum mappings. These previously existed as separate, drifting copies in `BuildingConfigParser` and `UnitComponentConfigParser`.
+  - `ParseModifierOp`, `ParseEffectScope`, `ParseEffectPersistence` — the canonical string&lt;-&gt;enum mappings for effect-config enums. These previously existed as separate, drifting copies in `BuildingConfigParser` and `UnitComponentConfigParser`. The snake_case id maps (`ParseStatId`, `ParseRuleFlagId`, `ParseSocialRatingId`) live next to their enums in `EffectEnums.h` at `ac` scope, per the one-map-next-to-the-enum guideline.
   - `ParseNumber` — reads a JSON field as either a number or a numeric string (used for optional numeric params with a caller-supplied default).
   - `RequireNumber` — same, but throws if the key is absent (no silent balance defaults). Used for `TileResourceCap.max`, `OrbitalAttack.chance` / `cooldown_turns`, and `InterceptAttempt.chance`.
   - `ParseTileSelector` — parses a `TileSelector_t` from a `selector` JSON object. Called by the `StatModifier` branch when a `selector` field is present, making that modifier a per-tile yield modifier. A `selector` on any stat other than `nutrients`/`minerals`/`energy` is rejected at parse time — selectors only take part in tile-yield resolution, so such a modifier would silently never apply.
@@ -486,7 +486,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
     - `StatModifier` with `amount_source` requires `op: Add` (or omitted op, which defaults to Add).
     - Balance keys listed under `RequireNumber` above have no C++ invent-defaults.
   - `ParseEffects` — parses the `effects` array of a containing JSON object, returning `{}` if absent; throws if `"effects"` is present but not an array. The validating overload takes an `EffectSourceKind_t` (`Building`, `UnitComponent`, `PopType`, `Improvement`, `SocialPolicy`, `SocialRating`, `Faction`, `CouncilProposal`, `CouncilRules`, `ProbeAction`, `TileYieldRules`) and runs `ValidateScopeForSource` on every entry.
-- **Consumers**: Every effect-declaring config parser calls `BonusEffectParser::ParseEffects` (or `ParseEffectConfig` + `ValidateScopeForSource`). Council proposal / governor parsers add a second honored-shape check after scope validation (see council-system.md).
+- **Consumers**: Every effect-declaring config parser calls `EffectConfigParser::ParseEffects` (or `ParseEffectConfig` + `ValidateScopeForSource`). Council proposal / governor parsers add a second honored-shape check after scope validation (see council-system.md).
 
 ### EffectReferenceValidator (post-load id validation)
 
@@ -569,7 +569,7 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
 ### Tile Improvement Effects
 
 - **Purpose**: Unifies every "thing on a tile" — terrain classification (Rockiness_t, Moisture_t), natural features (River, Fungus), player-built improvements (Farm, Mine, Bunker), tile specials that were formerly separate "bonus"/"landmark" slots, and a founded Base — behind one config type, since they all answer the same two questions: what effects do they grant, and what do they exclude. Defined in `include/game/map/ImprovementConfigParser.h` / `config/improvements.json`.
-- **`ImprovementConfig_t`**: `id`, `name`, `description`, `mineralCost`, `requiredTech`, `excludes` (other feature ids that can't coexist with this one on a tile), `radius` (default `0`), `frequency`, `spritePath`, `effects` (the standard `EffectConfig_t` vector, parsed via `BonusEffectParser::ParseEffects`).
+- **`ImprovementConfig_t`**: `id`, `name`, `description`, `mineralCost`, `requiredTech`, `excludes` (other feature ids that can't coexist with this one on a tile), `radius` (default `0`), `frequency`, `spritePath`, `effects` (the standard `EffectConfig_t` vector, parsed via `EffectConfigParser::ParseEffects`).
 - **How a tile holds features**: improvements are stored directly as non-owning `const ImprovementConfig_t*` in `Tile::GetImprovements()` (the same pattern `BuildingManager` uses for `BuildingConfig_t*`); the caller resolves the id via `ImprovementRegistry` (the funnel is `TileEffectsContext`). Terrain stays as typed enums/bools on `Tile` — world-gen and rendering need the exhaustive/exclusive guarantee (every tile is *exactly one* of Flat/Rolling/Rocky) — and is exposed for effect resolution as resolved config pointers via `Tile::GetTerrainFeatures()` (Rockiness_t, Moisture_t, and each active `TerrainFeature_t`), cached by `RefreshTerrainFeatures_` whenever a terrain setter runs. `Tile::HasFeature(id)` answers "is this feature present?" across both (terrain names + improvement ids) for conditions/selectors/`CanBuildImprovement`.
 - **`CollectTileEffects(tile, improvementRegistry)`**: collects a tile's own `ThisTile`-scoped effects into a flat `ActiveEffect_t` list (sourceId = the feature's id) in two passes — each `GetTerrainFeatures()` config, plus each `GetImprovements()` config, both read directly (no lookup). Mirrors `CollectPopEffects`/`CollectUnitEffects`. Only ever resolves a tile's *own* effects (radius 0) — it has no `WorldMap` to look at neighbors.
 - **`radius` (aura effects)**: radius is a **per-effect** property (`EffectConfig_t::radius`, default `0` = the host tile only), declared on the effect entry itself — e.g. `Sensor`'s `+25%` defense effect carries `radius: 2`, `Mirror`'s `+1 energy` carries `radius: 2`, `Condenser`'s `+1 moisture_tier` carries `radius: 1`. There is **no** improvement-level radius default: `ImprovementConfig_t` has no radius member and `ImprovementConfigParser` never reads one, so siblings do not inherit a radius from their container and each effect states its own. Only continuous `ThisTile`-scoped effects take part in aura resolution — neighbor collection applies the exact same scope/persistence filter as own-tile collection.
@@ -594,7 +594,7 @@ Producers only differ in which top-level JSON fields they read; the `effects` ar
 parsed and collected identically everywhere.
 
 1. **Parse**: add an `EffectSourceKind_t` enumerator (`EffectEnums.h`) and call
-   `config.effects = BonusEffectParser::ParseEffects(json, EffectSourceKind_t::X, config.id);`
+   `config.effects = EffectConfigParser::ParseEffects(json, EffectSourceKind_t::X, config.id);`
    in the config parser — exactly what `BuildingConfigParser`, `PopTypeConfigParser`, etc.
    do. Only add a `ValidateScopeForSource` rejection if a scope is *certainly impossible*
    for the source; scopes whose anchor concept is pending stay legal-but-inert (see
@@ -625,7 +625,7 @@ units, pops, or tiles according to each entry's `scope`.
 **A new stat** (the most common case):
 
 1. Add the `StatId_t` enumerator (`EffectEnums.h`) and its string mapping in `ParseStatId`
-   (`BonusEffectParser.cpp`); extend the mapping test in `ParserTests.cpp`.
+   (same header); extend the mapping test in `ParserTests.cpp`.
 2. Classify its seed semantics in `KindFor` (`EffectEnums.h`) — the compiler forces this via
    the exhaustive switch — and pin it in `ValidationTests.cpp` alongside the others.
 3. Resolve it where the value is needed, choosing the filter by context:
@@ -680,7 +680,7 @@ to load at sea. Note that `RuleFlagId_t` is a C++ enum: mods can add new *sites*
 **A new effect type** (a new `EffectVariant_t` alternative):
 
 1. Define the struct in `EffectConfig.h` and add it to `EffectVariant_t`.
-2. Add a focused `ParseYourEffect_` function in `BonusEffectParser.cpp` and register it in
+2. Add a focused `ParseYourEffect_` function in `EffectConfigParser.cpp` and register it in
    the `EffectTypeParsers_` dispatch table (type string → parse fn). Validate required
    parameters there (throw on missing/empty ids — don't parse permissively).
 3. If it references other configs by id, add an id-checking arm (not a catch-all) to the
@@ -705,8 +705,8 @@ selector pass won't compile against the raw pool.
 - **Typed effect structs**: Replace the previous string-keyed parameter map with strongly typed structs, making effect consumers type-safe and easier to extend.
 - **Static config vs. runtime instances**: `EffectConfig_t` lives in immutable configuration data; `ActiveEffect_t` records the runtime context (source, origin base).
 - **Moddability**: New effect types can be added by extending `EffectVariant_t`, adding a
-  focused parse function, and registering it in `BonusEffectParser`'s type dispatch table.
-- **One parser, every source**: `BonusEffectParser` is the single place that knows how to turn JSON into `EffectConfig_t`. Buildings and unit components only differ in which top-level fields they read (`mineral_cost`, `required_tech`, etc.) — the `effects` array itself is parsed identically everywhere.
+  focused parse function, and registering it in `EffectConfigParser`'s type dispatch table.
+- **One parser, every source**: `EffectConfigParser` is the single place that knows how to turn JSON into `EffectConfig_t`. Buildings and unit components only differ in which top-level fields they read (`mineral_cost`, `required_tech`, etc.) — the `effects` array itself is parsed identically everywhere.
 
 ## Known Gaps
 

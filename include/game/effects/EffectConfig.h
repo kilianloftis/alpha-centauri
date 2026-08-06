@@ -11,6 +11,14 @@
 namespace ac
 {
 
+// Terminal `else` marker for exhaustive std::visit over the sum types below. The `-Wswitch`
+// /`-Werror=switch` pair that guards this project's enum switches has no variant equivalent,
+// so every visitor ends in `else { static_assert(k_AlwaysFalse<T>); }` — adding an
+// alternative then breaks the build at each site that must decide about it, instead of
+// falling off a non-void lambda (or silently doing nothing in a void one).
+template <typename T>
+inline constexpr bool k_AlwaysFalse = false;
+
 struct GrantBuildingEffect_t
 {
     std::string buildingId;
@@ -228,7 +236,9 @@ struct TargetTileHas_t
 };
 
 // Every nested condition is satisfied (AND). Parser desugars AllOf JSON `"values": ["A","B"]`
-// into TargetTileHas alternatives; after parse only nested Condition_t nodes remain.
+// into TargetTileHas alternatives; after parse only nested Condition_t nodes remain. An empty
+// conditions list is the one invalid state the variant cannot rule out: the parser rejects it,
+// and ConditionBodySatisfied_ evaluates it as false for hand-built structs.
 struct AllOf_t
 {
     std::vector<Condition_t> conditions;
@@ -268,7 +278,7 @@ struct Condition_t : std::variant<TargetTileHas_t, AllOf_t, IsDefending_t,
 // situational predicates.
 struct UnitFilterDomain_t
 {
-    UnitDomain_t domain;
+    UnitDomain_t domain = UnitDomain_t::Land;
 };
 
 struct UnitFilterHasComponent_t
@@ -279,7 +289,7 @@ struct UnitFilterHasComponent_t
 // Unit resolves true for the named RuleFlag (design + FactionUnits).
 struct UnitFilterHasFlag_t
 {
-    RuleFlagId_t flag;
+    RuleFlagId_t flag = RuleFlagId_t::Flight;
 };
 
 using UnitFilter_t =

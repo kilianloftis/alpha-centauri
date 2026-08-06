@@ -1,4 +1,4 @@
-#include "game/effects/BonusEffectParser.h"
+#include "game/effects/EffectConfigParser.h"
 
 #include <magic_enum.hpp>
 #include <cstddef>
@@ -8,7 +8,7 @@
 
 namespace ac
 {
-namespace BonusEffectParser
+namespace EffectConfigParser
 {
 
 namespace
@@ -771,5 +771,5 @@ std::vector<EffectConfig_t> ParseEffects(const nlohmann::json& rContainerJson,
     return effects;
 }
 
-} // namespace BonusEffectParser
+} // namespace EffectConfigParser
 } // namespace ac

@@ -1,6 +1,6 @@
 #include "game/council/CouncilRulesConfigParser.h"
 
-#include "game/effects/BonusEffectParser.h"
+#include "game/effects/EffectConfigParser.h"
 
 #include <cstddef>
 #include <fstream>
@@ -75,7 +75,7 @@ CouncilRulesConfig_t CouncilRulesConfigParser::ParseConfig(const std::string& co
         // ParseEffects expects a container with an "effects" array; wrap the field.
         nlohmann::json wrapper = nlohmann::json::object();
         wrapper["effects"] = json.at("governor_effects");
-        config.governorEffects = BonusEffectParser::ParseEffects(
+        config.governorEffects = EffectConfigParser::ParseEffects(
             wrapper, EffectSourceKind_t::CouncilRules, "council_governor");
         for (std::size_t index = 0; index < config.governorEffects.size(); ++index)
         {
