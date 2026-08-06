@@ -8,6 +8,8 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <nlohmann/json.hpp>
+#include <stdexcept>
+#include <string>
 
 using namespace ac;
 using Catch::Approx;
@@ -31,6 +33,8 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(BonusEffectParser::ParseStatId("fuel") == StatId_t::Fuel);
     CHECK(BonusEffectParser::ParseStatId("damage_from_out_of_fuel") == StatId_t::DamageFromOutOfFuel);
     CHECK(BonusEffectParser::ParseStatId("cargo_capacity") == StatId_t::CargoCapacity);
+    CHECK(BonusEffectParser::ParseStatId("difficult_terrain_cost")
+          == StatId_t::DifficultTerrainCost);
     CHECK(BonusEffectParser::ParseStatId("cost_multiplier") == StatId_t::CostMultiplier);
     CHECK(BonusEffectParser::ParseStatId("probe_action_cost") == StatId_t::ProbeActionCost);
     CHECK(BonusEffectParser::ParseStatId("probe_defense") == StatId_t::ProbeDefense);
@@ -125,13 +129,29 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
 
 TEST_CASE("ParseNumber: accepts numbers and numeric strings", "[effects][parser]")
 {
-    const json params = {{"as_number", 2.5}, {"as_int", 3}, {"as_string", "4.5"}, {"bad", true}};
+    const json params = {
+        {"as_number", 2.5},
+        {"as_int", 3},
+        {"as_string", "4.5"},
+        {"bad", true},
+        {"junk", "2abc"},
+    };
 
     CHECK(BonusEffectParser::ParseNumber(params, "as_number", 0.0) == Approx(2.5));
     CHECK(BonusEffectParser::ParseNumber(params, "as_int", 0.0) == Approx(3.0));
     CHECK(BonusEffectParser::ParseNumber(params, "as_string", 0.0) == Approx(4.5));
     CHECK(BonusEffectParser::ParseNumber(params, "missing", 7.0) == Approx(7.0));
     CHECK_THROWS(BonusEffectParser::ParseNumber(params, "bad", 0.0));
+
+    try
+    {
+        BonusEffectParser::ParseNumber(params, "junk", 0.0);
+        FAIL("expected trailing junk to throw");
+    }
+    catch (const std::runtime_error& e)
+    {
+        CHECK(std::string(e.what()).find("junk") != std::string::npos);
+    }
 }
 
 TEST_CASE("ParseEffectConfig: StatModifier with explicit fields", "[effects][parser]")
@@ -248,6 +268,28 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
             "type": "StatModifier",
             "scope": "ThisTile",
             "parameters": { "stat": "energy", "amount_source": "MoonPhase" }
+        })")));
+    }
+
+    SECTION("amount_source with omitted op (defaults to Add) is OK")
+    {
+        CHECK_NOTHROW(BonusEffectParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisTile",
+            "parameters": { "stat": "energy", "amount_source": "ElevationEnergySeed" }
+        })")));
+    }
+
+    SECTION("amount_source with explicit non-Add op throws")
+    {
+        CHECK_THROWS(BonusEffectParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisTile",
+            "parameters": {
+                "stat": "energy",
+                "amount_source": "ElevationEnergySeed",
+                "op": "MultiplyGeometric"
+            }
         })")));
     }
 }
@@ -568,6 +610,11 @@ TEST_CASE("ParseEffectConfig: TileResourceCap and apply_after_restriction", "[ef
         "parameters": { "stat": "nutrients", "max": 2 }
     })")));
 
+    CHECK_THROWS(BonusEffectParser::ParseEffectConfig(json::parse(R"({
+        "type": "TileResourceCap", "scope": "FactionGlobal",
+        "parameters": { "stat": "nutrients" }
+    })")));
+
     const json afterJson = json::parse(R"({
         "type": "StatModifier", "scope": "ThisTile",
         "parameters": { "stat": "nutrients", "amount": 2, "op": "Add", "apply_after_restriction": true }
@@ -699,6 +746,61 @@ TEST_CASE("ParseEffectConfig: per-effect radius", "[effects][parser][radius]")
         })");
         CHECK_THROWS(BonusEffectParser::ParseEffectConfig(negative));
     }
+
+    SECTION("nonzero radius on non-ThisTile throws")
+    {
+        CHECK_THROWS(BonusEffectParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier", "scope": "ThisBase", "radius": 2,
+            "parameters": { "stat": "energy", "amount": 1 }
+        })")));
+    }
+}
+
+TEST_CASE("ParseEffectConfig: missing type or scope throws", "[effects][parser]")
+{
+    CHECK_THROWS(BonusEffectParser::ParseEffectConfig(json::parse(R"({
+        "scope": "ThisBase",
+        "parameters": { "stat": "nutrients", "amount": 1 }
+    })")));
+    CHECK_THROWS(BonusEffectParser::ParseEffectConfig(json::parse(R"({
+        "type": "StatModifier",
+        "parameters": { "stat": "nutrients", "amount": 1 }
+    })")));
+}
+
+TEST_CASE("ParseEffectConfig: required balance keys", "[effects][parser][orbital]")
+{
+    CHECK_THROWS(BonusEffectParser::ParseEffectConfig(json::parse(R"({
+        "type": "OrbitalAttack", "scope": "FactionGlobal",
+        "parameters": { "cooldown_turns": 1 }
+    })")));
+    CHECK_THROWS(BonusEffectParser::ParseEffectConfig(json::parse(R"({
+        "type": "OrbitalAttack", "scope": "FactionGlobal",
+        "parameters": { "chance": 50 }
+    })")));
+    CHECK_THROWS(BonusEffectParser::ParseEffectConfig(json::parse(R"({
+        "type": "InterceptAttempt", "scope": "FactionGlobal",
+        "parameters": {},
+        "unitFilter": { "kind": "Domain", "domain": "orbital" }
+    })")));
+
+    const EffectConfig_t interceptNoCooldown = BonusEffectParser::ParseEffectConfig(json::parse(R"({
+        "type": "InterceptAttempt", "scope": "FactionGlobal",
+        "parameters": { "chance": 50 },
+        "unitFilter": { "kind": "Domain", "domain": "orbital" }
+    })"));
+    const auto* pIntercept = std::get_if<InterceptAttemptEffect_t>(&interceptNoCooldown.effect);
+    REQUIRE(pIntercept);
+    CHECK(pIntercept->chance == 50);
+    CHECK(pIntercept->cooldownTurns == -1);
+}
+
+TEST_CASE("ParseEffects: non-array effects throws", "[effects][parser]")
+{
+    CHECK_THROWS(BonusEffectParser::ParseEffects(json::parse(R"({
+        "id": "bad",
+        "effects": { "type": "StatModifier", "scope": "ThisBase" }
+    })")));
 }
 
 TEST_CASE("ValidateScopeForSource: rejects only the certainly-impossible combinations",
@@ -715,8 +817,21 @@ TEST_CASE("ValidateScopeForSource: rejects only the certainly-impossible combina
     CHECK_NOTHROW(BonusEffectParser::ValidateScopeForSource(
         EffectScope_t::ThisUnit, EffectSourceKind_t::UnitComponent, "some_component"));
 
-    // Everything else loads — including combinations whose anchor concept doesn't exist yet
-    // (e.g. a faction-lane effect on an improvement, pending territory ownership).
+    // ThisBase / ProducedAtThisBase need an origin base (or pop-merge path).
+    CHECK_THROWS(BonusEffectParser::ValidateScopeForSource(
+        EffectScope_t::ThisBase, EffectSourceKind_t::UnitComponent, "sensor_pod"));
+    CHECK_THROWS(BonusEffectParser::ValidateScopeForSource(
+        EffectScope_t::ProducedAtThisBase, EffectSourceKind_t::Improvement, "monolith"));
+    CHECK_THROWS(BonusEffectParser::ValidateScopeForSource(
+        EffectScope_t::ThisBase, EffectSourceKind_t::CouncilProposal, "trade_pact"));
+    CHECK_THROWS(BonusEffectParser::ValidateScopeForSource(
+        EffectScope_t::ThisBase, EffectSourceKind_t::TileYieldRules, "tile_yield_rules"));
+    CHECK_NOTHROW(BonusEffectParser::ValidateScopeForSource(
+        EffectScope_t::ThisBase, EffectSourceKind_t::Building, "recycling_tanks"));
+    CHECK_NOTHROW(BonusEffectParser::ValidateScopeForSource(
+        EffectScope_t::ProducedAtThisBase, EffectSourceKind_t::Building, "aerospace"));
+
+    // Legal-but-inert: faction-lane on improvement (pending territory) still loads.
     CHECK_NOTHROW(BonusEffectParser::ValidateScopeForSource(
         EffectScope_t::FactionGlobal, EffectSourceKind_t::Improvement, "monolith"));
     CHECK_NOTHROW(BonusEffectParser::ValidateScopeForSource(

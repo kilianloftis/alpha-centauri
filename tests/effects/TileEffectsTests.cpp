@@ -481,7 +481,7 @@ TEST_CASE("Aura collection: non-ThisTile and Instantaneous effects do not leak i
           "[effects][tile][aura]")
 {
     // The neighbor-aura path applies the same filter as a tile's own features: only
-    // continuous ThisTile-scoped effects. WeirdAura (radius 1) carries a ThisBase +5
+    // continuous ThisTile-scoped effects. WeirdAura (radius 1) carries a FactionGlobal +5
     // nutrients and an Instantaneous +7 minerals alongside its legitimate ThisTile +1 energy;
     // only the energy may reach the neighbor.
     actest::WorldFixture world;
@@ -489,7 +489,7 @@ TEST_CASE("Aura collection: non-ThisTile and Instantaneous effects do not leak i
 
     const TileResources_t neighborYield = world.ctx->ResolveTileYield(world.At(5, 4)).effective;
     CHECK(neighborYield.energy == 1);    // the legitimate ThisTile aura effect
-    CHECK(neighborYield.nutrients == 0); // ThisBase-scoped effect must not apply here
+    CHECK(neighborYield.nutrients == 0); // FactionGlobal-scoped effect must not apply here
     CHECK(neighborYield.minerals == 0);  // Instantaneous effect must not apply continuously
 }
 

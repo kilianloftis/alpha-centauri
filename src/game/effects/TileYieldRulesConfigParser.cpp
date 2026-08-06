@@ -18,7 +18,8 @@ std::vector<EffectConfig_t> TileYieldRulesConfigParser::ParseConfig(const std::s
     }
 
     const nlohmann::json json = nlohmann::json::parse(file);
-    return BonusEffectParser::ParseEffects(json);
+    return BonusEffectParser::ParseEffects(
+        json, EffectSourceKind_t::TileYieldRules, "tile_yield_rules");
 }
 
 } // namespace ac

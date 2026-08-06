@@ -25,6 +25,9 @@ StatModifierEffect_t::AmountSource_t ParseAmountSource(const std::string& rSourc
 // Reads parameters[key] as either a JSON number or a numeric string. Returns defaultValue if absent.
 double ParseNumber(const nlohmann::json& parameters, const std::string& key, double defaultValue);
 
+// Like ParseNumber, but throws if the key is absent (no silent default).
+double RequireNumber(const nlohmann::json& parameters, const std::string& key);
+
 ConditionKind_t ParseConditionKind(const std::string& rKind);
 
 // Parses a Condition_t from a condition JSON object ({ "kind": ..., "value": ... }).
@@ -48,9 +51,9 @@ FactionFilter_t ParseFactionFilter(const nlohmann::json& filterJson);
 EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson);
 
 // Throws if scope can never be resolved for the given source kind (ThisPop off a pop type,
-// ThisUnit off a unit component). Deliberately minimal: every other combination loads —
-// routing is scope-driven, and combinations whose anchor concept doesn't exist yet (e.g.
-// faction-lane effects on improvements, pending territory) stay legal-but-inert.
+// ThisUnit off a unit component, ThisBase/ProducedAtThisBase off a source that cannot supply
+// an origin base). Deliberately leaves intentional legal-but-inert combos alone (e.g.
+// faction-lane effects on improvements, pending territory).
 void ValidateScopeForSource(EffectScope_t scope, EffectSourceKind_t sourceKind,
                             const std::string& rSourceId);
 

@@ -8,7 +8,8 @@ namespace ac
 {
 
 // Loads config/tile_yield_rules.json — FactionGlobal TileResourceCap (and related) effects
-// merged into every faction's effect pool.
+// merged into every faction's effect pool. Parsed with EffectSourceKind_t::TileYieldRules
+// so ValidateScopeForSource rejects scopes that can never apply (e.g. ThisPop).
 class TileYieldRulesConfigParser
 {
 public:

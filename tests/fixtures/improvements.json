@@ -367,7 +367,7 @@
     "name": "Weird Aura (probe: non-ThisTile / Instantaneous effects on an improvement)",
     "effects": [
       { "type": "StatModifier", "scope": "ThisTile", "radius": 1, "parameters": { "stat": "energy", "amount": 1, "op": "Add" } },
-      { "type": "StatModifier", "scope": "ThisBase", "parameters": { "stat": "nutrients", "amount": 5, "op": "Add" } },
+      { "type": "StatModifier", "scope": "FactionGlobal", "parameters": { "stat": "nutrients", "amount": 5, "op": "Add" } },
       { "type": "StatModifier", "scope": "ThisTile", "persistence": "Instantaneous", "parameters": { "stat": "minerals", "amount": 7, "op": "Add" } }
     ]
   },

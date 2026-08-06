@@ -491,4 +491,10 @@ TEST_CASE("Parse OrbitalAttack and InterceptAttempt effects", "[effects][parser]
         "scope": "FactionGlobal",
         "parameters": { "chance": 50 }
     })")));
+
+    CHECK_THROWS(BonusEffectParser::ParseEffectConfig(json::parse(R"({
+        "type": "OrbitalAttack",
+        "scope": "FactionGlobal",
+        "parameters": { "chance": 50 }
+    })")));
 }

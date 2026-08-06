@@ -3,10 +3,12 @@
 #include "game/GameSettings.h"
 #include "game/GameState.h"
 #include "game/council/CouncilAiStub.h"
+#include "game/council/CouncilProposalConfigParser.h"
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/council/CouncilRulesConfigParser.h"
 #include "game/council/PlanetaryCouncil.h"
 #include "game/effects/InfiltrationRules.h"
+#include "game/effects/TileYieldRulesConfigParser.h"
 #include "game/faction/DiplomacyLedger.h"
 #include "game/faction/EconomyManager.h"
 #include "game/faction/ResearchManager.h"
@@ -15,6 +17,8 @@
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <filesystem>
+#include <fstream>
 #include <memory>
 #include <stdexcept>
 
@@ -157,6 +161,117 @@ TEST_CASE("Council rules config loads propose intervals and governor effects", "
     CHECK(std::get_if<InfiltrationEffect_t>(&rules.governorEffects[1].effect));
     REQUIRE(rules.governorEffects[1].factionFilter);
     CHECK(rules.governorEffects[1].factionFilter->kind == FactionFilterKind_t::CouncilMembers);
+}
+
+TEST_CASE("Council proposal honored shapes: stock OK; inert shapes throw", "[council][parser]")
+{
+    // Stock fixture already exercised Continuous+WorldGlobal, Instantaneous+GrantEnergy,
+    // Instantaneous+WorldParameter+WorldGlobal via the load test above.
+    const std::filesystem::path path =
+        std::filesystem::temp_directory_path() / "ac_council_bad_proposal.json";
+
+    SECTION("Continuous FactionGlobal throws")
+    {
+        {
+            std::ofstream out(path);
+            out << R"([{
+                "id": "bad_faction_global",
+                "name": "Bad",
+                "effects": [{
+                    "type": "StatModifier",
+                    "scope": "FactionGlobal",
+                    "persistence": "Continuous",
+                    "parameters": { "stat": "energy", "amount": 1 }
+                }]
+            }])";
+        }
+        CHECK_THROWS(CouncilProposalConfigParser{}.ParseConfig(path.string()));
+    }
+
+    SECTION("Instantaneous StatModifier throws")
+    {
+        {
+            std::ofstream out(path);
+            out << R"([{
+                "id": "bad_instant_stat",
+                "name": "Bad",
+                "effects": [{
+                    "type": "StatModifier",
+                    "scope": "WorldGlobal",
+                    "persistence": "Instantaneous",
+                    "parameters": { "stat": "energy", "amount": 1 }
+                }]
+            }])";
+        }
+        CHECK_THROWS(CouncilProposalConfigParser{}.ParseConfig(path.string()));
+    }
+
+    std::filesystem::remove(path);
+}
+
+TEST_CASE("Council governor honored shapes: inert shapes throw", "[council][parser]")
+{
+    const std::filesystem::path path =
+        std::filesystem::temp_directory_path() / "ac_council_bad_rules.json";
+
+    SECTION("Continuous WorldGlobal throws")
+    {
+        {
+            std::ofstream out(path);
+            out << R"({
+                "governor_propose_interval_years": 10,
+                "member_propose_interval_years": 20,
+                "governor_effects": [{
+                    "type": "StatModifier",
+                    "scope": "WorldGlobal",
+                    "persistence": "Continuous",
+                    "parameters": { "stat": "energy", "amount": 1 }
+                }]
+            })";
+        }
+        CHECK_THROWS(CouncilRulesConfigParser{}.ParseConfig(path.string()));
+    }
+
+    SECTION("Instantaneous StatModifier throws")
+    {
+        {
+            std::ofstream out(path);
+            out << R"({
+                "governor_propose_interval_years": 10,
+                "member_propose_interval_years": 20,
+                "governor_effects": [{
+                    "type": "StatModifier",
+                    "scope": "FactionGlobal",
+                    "persistence": "Instantaneous",
+                    "parameters": { "stat": "energy", "amount": 1 }
+                }]
+            })";
+        }
+        CHECK_THROWS(CouncilRulesConfigParser{}.ParseConfig(path.string()));
+    }
+
+    std::filesystem::remove(path);
+}
+
+TEST_CASE("Tile yield rules reject illegal scopes", "[effects][parser][tile_yield]")
+{
+    const std::filesystem::path path =
+        std::filesystem::temp_directory_path() / "ac_bad_tile_yield_rules.json";
+    {
+        std::ofstream out(path);
+        out << R"({
+            "effects": [{
+                "type": "StatModifier",
+                "scope": "ThisPop",
+                "parameters": { "stat": "nutrients", "amount": 1 }
+            }]
+        })";
+    }
+    CHECK_THROWS(TileYieldRulesConfigParser{}.ParseConfig(path.string()));
+    std::filesystem::remove(path);
+
+    CHECK_NOTHROW(
+        TileYieldRulesConfigParser{}.ParseConfig(FixturePath("tile_yield_rules.json")));
 }
 
 TEST_CASE("Proposing requires commlinks to every council member and shares them", "[council]")

@@ -211,7 +211,8 @@ TEST_CASE("CollectTileEffects: improvements contribute directly from their held 
 TEST_CASE("CollectTileEffects: only ThisTile-scoped effects are collected from a tile's own features",
           "[effects][collect][tile]")
 {
-    // WeirdAura carries a ThisBase-scoped effect; that must never enter tile-local resolution.
+    // WeirdAura carries a FactionGlobal-scoped effect (legal-but-inert on improvements);
+    // that must never enter tile-local resolution.
     actest::WorldFixture world;
     Tile& tile = world.At(2, 2);
     tile.AddImprovement(*world.improvements.Find("WeirdAura"));

@@ -5,6 +5,7 @@
 #include "game/effects/BonusEffectParser.h"
 #include <nlohmann/json.hpp>
 #include <stdexcept>
+#include <variant>
 
 namespace ac
 {
@@ -31,6 +32,35 @@ std::vector<RuleFlagId_t> ParseRuleFlagList_(const nlohmann::json& rJson, const 
         flags.push_back(BonusEffectParser::ParseRuleFlagId(rEntry.get<std::string>()));
     }
     return flags;
+}
+
+// Honored proposal shapes (runtime consumers): Continuous+WorldGlobal (CouncilEffects world
+// store); Instantaneous+GrantEnergy (applier); Instantaneous+WorldParameter+WorldGlobal
+// (deferred no-op until WorldEvents — still loadable). Everything else would pass a vote
+// and do nothing.
+void ValidateProposalEffectHonored_(const EffectConfig_t& rEffect, const std::string& rProposalId)
+{
+    if (rEffect.persistence == EffectPersistence_t::Continuous
+        && rEffect.scope == EffectScope_t::WorldGlobal)
+    {
+        return;
+    }
+    if (rEffect.persistence == EffectPersistence_t::Instantaneous
+        && std::holds_alternative<GrantEnergyEffect_t>(rEffect.effect))
+    {
+        return;
+    }
+    if (rEffect.persistence == EffectPersistence_t::Instantaneous
+        && std::holds_alternative<WorldParameterEffect_t>(rEffect.effect)
+        && rEffect.scope == EffectScope_t::WorldGlobal)
+    {
+        return;
+    }
+    throw std::runtime_error(
+        "Council proposal '" + rProposalId
+        + "' has an effect shape that is not honored by the council runtime "
+          "(allowed: Continuous+WorldGlobal; Instantaneous+GrantEnergy; "
+          "Instantaneous+WorldParameter+WorldGlobal)");
 }
 
 } // namespace
@@ -74,6 +104,10 @@ CouncilProposalConfig_t CouncilProposalConfigParser::ParseProposalConfig(
     }
     config.effects = BonusEffectParser::ParseEffects(
         proposalJson, EffectSourceKind_t::CouncilProposal, config.id);
+    for (const EffectConfig_t& rEffect : config.effects)
+    {
+        ValidateProposalEffectHonored_(rEffect, config.id);
+    }
     return config;
 }
 

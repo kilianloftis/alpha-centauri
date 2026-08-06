@@ -118,10 +118,18 @@ routes through it (`FilterForBase`, `AppendFactionLaneEffects`,
 routing decision in `LaneFor`'s exhaustive switch and every collector follows automatically.
 `tests/effects/ValidationTests.cpp` pins each scope's lane with `static_assert`s.
 
-Load-time validation (`BonusEffectParser::ValidateScopeForSource`) rejects only the
-certainly-impossible combinations — `ThisPop` off a pop type, `ThisUnit` off a unit
-component — with a clear error. Every other combination loads; combinations whose anchor
-concept doesn't exist yet are **legal but inert**:
+Load-time validation (`BonusEffectParser::ValidateScopeForSource`) rejects the
+certainly-impossible combinations — with a clear error:
+
+- `ThisPop` only on a pop type
+- `ThisUnit` only on a unit component
+- `ThisBase` / `ProducedAtThisBase` only on sources that can supply an origin base or
+  pop-merge path: `Building`, `PopType`, `SocialPolicy`, `SocialRating`. Rejected on
+  `UnitComponent`, `Improvement`, `ProbeAction`, `Faction`, `CouncilProposal`,
+  `CouncilRules`, `TileYieldRules`.
+
+Every other combination loads; combinations whose anchor concept doesn't exist yet are
+**legal but inert**:
 
 - **Faction-lane scopes on improvements** (e.g. a monolith granting `FactionGlobal` energy):
   improvements will be faction-owned by territory, which isn't implemented yet. The config
@@ -134,9 +142,11 @@ concept doesn't exist yet are **legal but inert**:
 - **Responsibilities**:
   - Holds the typed effect variant via `EffectVariant_t`.
   - Stores metadata: `scope`, `persistence`, `condition`, and `radius`.
-  - `radius` (default `0`) applies to `ThisTile`-scoped effects: how far (Manhattan tiles)
-    beyond the host tile the effect reaches. Parsed from the effect entry's own `"radius"`
-    field; an improvement-level `"radius"` acts as the parse-time default for its effects.
+  - `radius` (default `0`) applies only to `ThisTile`-scoped effects: how far (Chebyshev
+    tiles) beyond the host tile the effect reaches. A nonzero `"radius"` on any other
+    scope is rejected at parse time. Parsed from the effect entry's own `"radius"` field —
+    there is no container-level default, so a `"radius"` placed beside `"effects"` (e.g. on
+    an improvement) is ignored.
 - **Lifetime**: Lives inside static configuration data such as `BuildingConfig_t`.
 
 ### EffectVariant_t
@@ -396,8 +406,8 @@ concept doesn't exist yet are **legal but inert**:
   faction-lane modifier, etc. Ratings are a local axis — peer `WorldGlobal` and council
   extras do not move them: both lanes read `IEffectsProvider::GetLocalActiveEffects()`.
   The restriction is currently **silent** — a mod can still declare a `WorldGlobal`
-  `SocialRatingModifier` and it moves neither lane; package 5 makes
-  `BonusEffectParser::ValidateScopeForSource` reject it at load.
+  `SocialRatingModifier` and it moves neither lane (load-time rejection for that shape is
+  not yet wired).
 - `SocialRatingResolver` (`game/social-engineering/SocialRatingResolver.h`). Both lanes
   share one level-lookup path (`FindSocialRatingLevelEffects` + sourceId + append), so a
   clamp or sourceId change cannot drift between them:
@@ -460,11 +470,15 @@ concept doesn't exist yet are **legal but inert**:
 - **Location**: `include/game/effects/BonusEffectParser.h` / `src/game/effects/BonusEffectParser.cpp`.
 - **Responsibilities**:
   - `ParseStatId`, `ParseRuleFlagId`, `ParseModifierOp`, `ParseEffectScope`, `ParseEffectPersistence` — the canonical string&lt;-&gt;enum mappings. These previously existed as separate, drifting copies in `BuildingConfigParser` and `UnitComponentConfigParser`.
-  - `ParseNumber` — reads a JSON field as either a number or a numeric string (used for `amount` and `value`).
+  - `ParseNumber` — reads a JSON field as either a number or a numeric string (used for optional numeric params with a caller-supplied default).
+  - `RequireNumber` — same, but throws if the key is absent (no silent balance defaults). Used for `TileResourceCap.max`, `OrbitalAttack.chance` / `cooldown_turns`, and `InterceptAttempt.chance`.
   - `ParseTileSelector` — parses a `TileSelector_t` from a `selector` JSON object. Called by the `StatModifier` branch when a `selector` field is present, making that modifier a per-tile yield modifier. A `selector` on any stat other than `nutrients`/`minerals`/`energy` is rejected at parse time — selectors only take part in tile-yield resolution, so such a modifier would silently never apply.
-  - `ParseEffectConfig` — parses one entry of an `effects` array (`type`/`scope`/`persistence`/`condition`/`parameters`) into an `EffectConfig_t`. Covers every `EffectVariant_t` alternative, and parses the optional typed `condition` object via `ParseCondition`.
-  - `ParseEffects` — parses the `effects` array of a containing JSON object, returning `{}` if absent.
-- **Consumers**: `BuildingConfigParser` and `UnitComponentConfigParser` both call `BonusEffectParser::ParseEffects` directly on the building/component JSON object — there is no per-domain effect schema anymore. Adding a new effect source (e.g. a future social-engineering or diplomacy parser) means calling the same function.
+  - `ParseEffectConfig` — parses one entry of an `effects` array (`type`/`scope`/`persistence`/`condition`/`parameters`) into an `EffectConfig_t`. Required keys `type` and `scope` use `.at()` (missing → throw). Dispatches on `type` via a static table of per-type parse functions (one focused function per `EffectVariant_t` alternative). Additional strictness:
+    - Nonzero `radius` requires `scope: ThisTile`.
+    - `StatModifier` with `amount_source` requires `op: Add` (or omitted op, which defaults to Add).
+    - Balance keys listed under `RequireNumber` above have no C++ invent-defaults.
+  - `ParseEffects` — parses the `effects` array of a containing JSON object, returning `{}` if absent; throws if `"effects"` is present but not an array. The validating overload takes an `EffectSourceKind_t` (`Building`, `UnitComponent`, `PopType`, `Improvement`, `SocialPolicy`, `SocialRating`, `Faction`, `CouncilProposal`, `CouncilRules`, `ProbeAction`, `TileYieldRules`) and runs `ValidateScopeForSource` on every entry.
+- **Consumers**: Every effect-declaring config parser calls `BonusEffectParser::ParseEffects` (or `ParseEffectConfig` + `ValidateScopeForSource`). Council proposal / governor parsers add a second honored-shape check after scope validation (see council-system.md).
 
 ### EffectReferenceValidator (post-load id validation)
 
@@ -542,7 +556,7 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
 - **`ImprovementConfig_t`**: `id`, `name`, `description`, `mineralCost`, `requiredTech`, `excludes` (other feature ids that can't coexist with this one on a tile), `radius` (default `0`), `frequency`, `spritePath`, `effects` (the standard `EffectConfig_t` vector, parsed via `BonusEffectParser::ParseEffects`).
 - **How a tile holds features**: improvements are stored directly as non-owning `const ImprovementConfig_t*` in `Tile::GetImprovements()` (the same pattern `BuildingManager` uses for `BuildingConfig_t*`); the caller resolves the id via `ImprovementRegistry` (the funnel is `TileEffectsContext`). Terrain stays as typed enums/bools on `Tile` — world-gen and rendering need the exhaustive/exclusive guarantee (every tile is *exactly one* of Flat/Rolling/Rocky) — and is exposed for effect resolution as resolved config pointers via `Tile::GetTerrainFeatures()` (Rockiness_t, Moisture_t, and each active `TerrainFeature_t`), cached by `RefreshTerrainFeatures_` whenever a terrain setter runs. `Tile::HasFeature(id)` answers "is this feature present?" across both (terrain names + improvement ids) for conditions/selectors/`CanBuildImprovement`.
 - **`CollectTileEffects(tile, improvementRegistry)`**: collects a tile's own `ThisTile`-scoped effects into a flat `ActiveEffect_t` list (sourceId = the feature's id) in two passes — each `GetTerrainFeatures()` config, plus each `GetImprovements()` config, both read directly (no lookup). Mirrors `CollectPopEffects`/`CollectUnitEffects`. Only ever resolves a tile's *own* effects (radius 0) — it has no `WorldMap` to look at neighbors.
-- **`radius` (aura effects)**: radius is a **per-effect** property (`EffectConfig_t::radius`, default `0` = the host tile only). An improvement-level `"radius"` in JSON acts as the parse-time default for that improvement's effects, so existing configs keep working — e.g. `Sensor` (`radius: 2`) projects its `+25%` defense bonus, `Mirror` (`radius: 2`) its `+1 energy`, `Condenser` (`radius: 1`) its `+1 moisture_tier`. An individual effect can declare its own `"radius"` to differ from its siblings. Only continuous `ThisTile`-scoped effects take part in aura resolution — neighbor collection applies the exact same scope/persistence filter as own-tile collection.
+- **`radius` (aura effects)**: radius is a **per-effect** property (`EffectConfig_t::radius`, default `0` = the host tile only), declared on the effect entry itself — e.g. `Sensor`'s `+25%` defense effect carries `radius: 2`, `Mirror`'s `+1 energy` carries `radius: 2`, `Condenser`'s `+1 moisture_tier` carries `radius: 1`. There is **no** improvement-level radius default: `ImprovementConfig_t` has no radius member and `ImprovementConfigParser` never reads one, so siblings do not inherit a radius from their container and each effect states its own. Only continuous `ThisTile`-scoped effects take part in aura resolution — neighbor collection applies the exact same scope/persistence filter as own-tile collection.
 - **Unit auras**: unit components can carry `ThisTile`-scoped effects with a radius (e.g. a sensor pod granting `+25%` defense within 2 tiles). `CollectAreaEffects` scans `WorldMap::GetUnitsOnTile` over the aura radius — including units standing on the resolved tile itself — so the aura follows the unit as it moves. Each collected aura stamps `ActiveEffect_t::ownerFaction` from the projecting unit's faction (same gate as territory-owned improvements for defense / area Conceal; Detect additionally requires a stamped owner and fails closed without one). `TileEffectsContext` takes the `UnitComponentRegistry` at construction to size its scan bound.
 - **`CollectAreaEffects(tile, worldMap, registry)`**: the single function powering all three radius-aware resolvers (defense, yield, and moisture recompute). `WorldMap` is needed to look up neighboring tiles and units.
 - **`ResolveTileDefenseMultiplier(tile, worldMap, improvementRegistry)`**: `ResolveStatModifiers(FilterByStatId(CollectAreaEffects(...), Defense), 1.0).total`.
@@ -552,7 +566,7 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
 - **`StatId_t::MoistureTier`** (`"moisture_tier"` in JSON): integer tile tier (Arid=0, Moist=1, Wet=2), used exclusively by `RecomputeMoisture` as a terrain-mutation target. Not queryable at runtime — it is a seed for `SetMoisture()`, not a cached stat. `Condenser`'s `+1 moisture_tier Add` effect flows through `RecomputeMoisture` to actually call `Tile::SetMoisture()`, making the change visible in rendering and tile-yield resolution.
 - **`Tile::m_baseMoisture`/`GetBaseMoisture()`/`SetBaseMoisture()`**: the natural, un-condensed terrain truth set once by `WorldGenerator`. `m_moisture`/`GetMoisture()`/`SetMoisture()` is the current/effective value (what rendering and `GetTerrainFeatures()` see), mutated by `RecomputeMoisture` from the base + nearby Condensers. World-gen sets both to the same initial random value; `RecomputeMoisture` derives `m_moisture` from `m_baseMoisture` fresh each time — never increments/decrements in place — so overlapping Condensers and add/remove order can never cause drift.
 - **`RecomputeMoisture(tile, worldMap, registry)`**: re-derives `tile`'s effective moisture from `tile.GetBaseMoisture()` + any `moisture_tier` `Add` effects from `CollectAreaEffects`, clamps to `[Arid, Wet]`, calls `tile.SetMoisture()`. Single function, always called from the current live world state — idempotent, consistent with any number of overlapping Condensers.
-- **`AddImprovementWithEffects` / `RemoveImprovementWithEffects`**: the single safe entry point for adding/removing any improvement. After the raw `Tile::AddImprovement/RemoveImprovement`, calls `RecomputeMoisture` for every tile within the improvement's maximum effect reach (improvement-level radius or any larger per-effect radius, including the host tile) — so a Condenser addition immediately updates moisture on itself and 8 neighbors, and removal automatically reverts them. `BaseManager` uses this for `"Base"` (radius 0, a no-op recompute, but consistent). When a future improvement-construction UI is added, it must go through these functions.
+- **`AddImprovementWithEffects` / `RemoveImprovementWithEffects`**: the single safe entry point for adding/removing any improvement. After the raw `Tile::AddImprovement/RemoveImprovement`, calls `RecomputeMoisture` for every tile within the improvement's maximum effect reach (`MaxEffectReach_` — the largest per-effect radius, including the host tile) — so a Condenser addition immediately updates moisture on itself and 8 neighbors, and removal automatically reverts them. `BaseManager` uses this for `"Base"` (radius 0, a no-op recompute, but consistent). When a future improvement-construction UI is added, it must go through these functions.
 - **`CanBuildImprovement(tile, candidateConfig)`**: returns false if any id in `candidateConfig.excludes` is present on the tile per `tile.HasFeature(id)` (e.g. Farm excludes Rocky). Exposed as a resolver only — no improvement-construction UI/flow exists yet to enforce it.
 - **"Base" as an improvement**: `BaseManager`'s constructor calls `AddImprovementWithEffects(m_tile, "Base", worldMap, registry)`, so a founded base grants its own `ThisTile` defense bonus (`config/improvements.json`'s `Base` entry, currently a placeholder `+100%`) through the exact same mechanism as Bunker/Rocky/Fungus. This is also why `BaseManager` now holds a non-const `Tile&` (previously `const Tile&`), `Faction::CreateBase` takes a non-const `Tile*`, and `Faction::CreateBase` takes a non-const `WorldMap&`.
 - **Building bonuses to worked improvements**: a building can boost worked tiles that have a given improvement by attaching a `HasImprovement` `selector` to a `StatModifier` (e.g. Nutrient Bank's "+1 nutrients to worked Farms"). The selector's `improvement` is the plain `ImprovementConfig_t::id` string and is matched against `Tile::HasImprovement()` during the per-tile yield resolve — the same string-id lookup used everywhere else, with no separate improvement-type enum.
@@ -651,12 +665,14 @@ to load at sea. Note that `RuleFlagId_t` is a C++ enum: mods can add new *sites*
 **A new effect type** (a new `EffectVariant_t` alternative):
 
 1. Define the struct in `BonusEffect.h` and add it to `EffectVariant_t`.
-2. Add the parser branch in `ParseEffectConfig`, validating required parameters there
-   (throw on missing/empty ids — don't parse permissively).
+2. Add a focused `ParseYourEffect_` function in `BonusEffectParser.cpp` and register it in
+   the `EffectTypeParsers_` dispatch table (type string → parse fn). Validate required
+   parameters there (throw on missing/empty ids — don't parse permissively).
 3. If it references other configs by id, add the check to `ValidateEffectReferences`.
 4. Consume it with `std::get_if<YourEffect_t>` wherever it applies (`SocialRatingResolver`
    is the model for a type-specific consumer). If it can be `Instantaneous`, it also needs a
    branch in `DispatchInstantaneousEffects`.
+5. Add parser coverage in `ParserTests.cpp`.
 
 **A new resolution site** (consuming existing effects somewhere new): fetch the right pool
 rather than building a parallel collection path — the faction pool via
@@ -671,7 +687,8 @@ selector pass won't compile against the raw pool.
 
 - **Typed effect structs**: Replace the previous string-keyed parameter map with strongly typed structs, making effect consumers type-safe and easier to extend.
 - **Static config vs. runtime instances**: `EffectConfig_t` lives in immutable configuration data; `ActiveEffect_t` records the runtime context (source, origin base).
-- **Moddability**: New effect types can be added by extending `EffectVariant_t` and adding a corresponding parser branch in `BonusEffectParser`.
+- **Moddability**: New effect types can be added by extending `EffectVariant_t`, adding a
+  focused parse function, and registering it in `BonusEffectParser`'s type dispatch table.
 - **One parser, every source**: `BonusEffectParser` is the single place that knows how to turn JSON into `EffectConfig_t`. Buildings and unit components only differ in which top-level fields they read (`mineral_cost`, `required_tech`, etc.) — the `effects` array itself is parsed identically everywhere.
 
 ## Known Gaps

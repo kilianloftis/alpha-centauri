@@ -119,6 +119,17 @@ graph TB
 - **CouncilProposalRegistry**: loads/validates the proposal list (rejects `requiredProposals`
   / `repeals` that reference unknown ids). Parsed by `CouncilProposalConfigParser`; rules by
   `CouncilRulesConfigParser`. Loaded from `config/council/`.
+- **Honored effect shapes** (load-time; anything else throws — a passed proposal must not be a
+  silent no-op):
+  - **Proposals** (`EffectSourceKind_t::CouncilProposal`):
+    1. `Continuous` + `WorldGlobal` (any type the continuous world store can hold)
+    2. `Instantaneous` + `GrantEnergy` (any scope; the applier ignores scope and grants all
+       members)
+    3. `Instantaneous` + `WorldParameter` + `WorldGlobal` — **explicit deferred** shape:
+       load is allowed, apply is a no-op until `WorldEvents` exposes a trigger API
+  - **Governor** (`EffectSourceKind_t::CouncilRules`, via `governor_effects`):
+    1. `Continuous` + `FactionGlobal`
+    2. `Instantaneous` + `Infiltration` (scopes already enforced by Infiltration parse)
 
 ### Notifications
 - `Signal<Faction&, const std::string&> OnProposalOpened` — fired when a proposal is put
@@ -157,7 +168,9 @@ one reason to change.
 ### The council never mutates the world map
 World-parameter outcomes (sea level, climate) are triggers, not direct edits — gradual map
 mutation belongs to the `WorldEvents` system. Until that system exposes a trigger API, the
-applier holds a TODO and no world state lives on the council.
+applier holds a TODO and no world state lives on the council. Stock proposals that declare
+`Instantaneous` + `WorldParameter` + `WorldGlobal` (solar shade, polar caps) are still
+**allowed at load** as a deferred surface; apply is a documented no-op until WorldEvents.
 
 ### Moddability
 Governor benefits are fully config-driven via `governorEffects` (continuous FactionGlobal

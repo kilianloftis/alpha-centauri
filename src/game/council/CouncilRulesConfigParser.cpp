@@ -2,12 +2,41 @@
 
 #include "game/effects/BonusEffectParser.h"
 
+#include <cstddef>
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <stdexcept>
+#include <string>
+#include <variant>
 
 namespace ac
 {
+
+namespace
+{
+
+// Honored governor shapes: Continuous+FactionGlobal (CouncilEffects::SetGovernorEffects);
+// Instantaneous+Infiltration (ApplyGovernor). Infiltration scopes are already enforced at parse.
+void ValidateGovernorEffectHonored_(const EffectConfig_t& rEffect, std::size_t index,
+                                    const std::string& rConfigPath)
+{
+    if (rEffect.persistence == EffectPersistence_t::Continuous
+        && rEffect.scope == EffectScope_t::FactionGlobal)
+    {
+        return;
+    }
+    if (rEffect.persistence == EffectPersistence_t::Instantaneous
+        && std::holds_alternative<InfiltrationEffect_t>(rEffect.effect))
+    {
+        return;
+    }
+    throw std::runtime_error(
+        "governor_effects[" + std::to_string(index) + "] in '" + rConfigPath
+        + "' has a shape that is not honored by the council runtime "
+          "(allowed: Continuous+FactionGlobal; Instantaneous+Infiltration)");
+}
+
+} // namespace
 
 CouncilRulesConfig_t CouncilRulesConfigParser::ParseConfig(const std::string& configPath)
 {
@@ -47,7 +76,11 @@ CouncilRulesConfig_t CouncilRulesConfigParser::ParseConfig(const std::string& co
         nlohmann::json wrapper = nlohmann::json::object();
         wrapper["effects"] = json.at("governor_effects");
         config.governorEffects = BonusEffectParser::ParseEffects(
-            wrapper, EffectSourceKind_t::CouncilProposal, "council_governor");
+            wrapper, EffectSourceKind_t::CouncilRules, "council_governor");
+        for (std::size_t index = 0; index < config.governorEffects.size(); ++index)
+        {
+            ValidateGovernorEffectHonored_(config.governorEffects[index], index, configPath);
+        }
     }
 
     return config;

@@ -196,7 +196,8 @@ struct StatModifierEffect_t
 struct TileResourceCapEffect_t
 {
     StatId_t stat = StatId_t::Nutrients;
-    int max = 2;
+    // Required in JSON (`max`); no SMAC balance default — set explicitly when hand-building.
+    int max;
 };
 
 struct RuleFlagEffect_t
@@ -247,12 +248,14 @@ struct DetectEffect_t
 // Each ready building copy with this effect is one charge; attempting deploys the source.
 struct OrbitalAttackEffect_t
 {
-    // Success percent points (50 = 50%).
-    int chance = 50;
+    // Success percent points (50 = 50%). Required in JSON; set explicitly when hand-building.
+    int chance;
     // Intervening mission years the source stays deployed after an attempt.
-    // Ready when missionYear >= deployYear + cooldownTurns + 1 (default 1 → ready at Y+2).
-    int cooldownTurns = 1;
+    // Ready when missionYear >= deployYear + cooldownTurns + 1 (e.g. 1 → ready at Y+2).
+    // Required in JSON; set explicitly when hand-building.
+    int cooldownTurns;
     // Percent chance the attacking satellite is destroyed when the attempt fails (miss).
+    // Optional in JSON (default 0).
     int chanceOfDestructionOnFail = 0;
 };
 
@@ -262,11 +265,13 @@ struct OrbitalAttackEffect_t
 // when both live on the same building id).
 struct InterceptAttemptEffect_t
 {
-    int chance = 50;
+    // Success percent points. Required in JSON; set explicitly when hand-building.
+    int chance;
     // -1 = no deploy cooldown (may attempt every attack). >= 0 uses the same ready-year formula
-    // as OrbitalAttackEffect_t::cooldownTurns.
+    // as OrbitalAttackEffect_t::cooldownTurns. Omitted in JSON → -1.
     int cooldownTurns = -1;
     // Percent chance the intercepting source is destroyed when the attempt fails (miss).
+    // Optional in JSON (default 0).
     int chanceOfDestructionOnFail = 0;
 };
 
@@ -418,7 +423,8 @@ struct EffectConfig_t
 
 // Which kind of config declared an effects array. Used for the minimal load-time scope
 // validation: scopes that can only ever be resolved against one source kind (a specific pop,
-// a specific unit) are rejected on any other source instead of silently doing nothing.
+// a specific unit, or an origin base) are rejected on any other source instead of silently
+// doing nothing.
 enum class EffectSourceKind_t
 {
     Building,
@@ -429,7 +435,9 @@ enum class EffectSourceKind_t
     SocialRating,
     Faction,
     CouncilProposal,
+    CouncilRules,
     ProbeAction,
+    TileYieldRules,
 };
 
 } // namespace ac
