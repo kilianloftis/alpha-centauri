@@ -1,11 +1,9 @@
 #pragma once
 
-#include "game/TurnStages.h"
 #include "game/HookContext.h"
+#include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
-#include <memory>
-#include <nlohmann/json.hpp>
 
 namespace ac
 {
@@ -15,21 +13,22 @@ struct TurnStageConfig_t
     std::string id;
     std::string name;
     std::string description;
-    bool repeat_for_each_faction;
+    bool bRepeatForEachFaction = false;
     HookContext hookContext;
 };
 
 class TurnStageConfigParser
 {
 public:
-    TurnStageConfigParser();
-    ~TurnStageConfigParser() = default;
+    TurnStageConfigParser() = default;
 
+    // Throws on duplicate stage ids, unbound scriptPath hooks, or empty hook objects.
     std::vector<TurnStageConfig_t> ParseConfig(const std::string& configPath);
 
 private:
     TurnStageConfig_t ParseStageConfig(const nlohmann::json& stageJson);
     void ParseHooks(const nlohmann::json& hooksJson, HookContext& rHookContext);
+    static Hook_t ParseHook_(const nlohmann::json& hookJson);
 };
 
 } // namespace ac

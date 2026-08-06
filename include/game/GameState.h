@@ -41,6 +41,11 @@ class PlanetaryCouncil;
 class GameState : public IUnitOrderWorld, public IWorldEffectsSource
 {
 public:
+    // One less than the first playable year: TurnStart increments at the start of every turn,
+    // so the first Advance lands on k_FirstPlayableMissionYear.
+    static constexpr int k_StartingMissionYear = 2099;
+    static constexpr int k_FirstPlayableMissionYear = k_StartingMissionYear + 1;
+
     // pUnitComponents sizes the aura scan for unit-projected ThisTile effects; may be null
     // if units never project auras. Throws if pWorldMap is null.
     // rSettings is a non-owning reference to Engine-owned player preferences (not save state).
@@ -65,6 +70,12 @@ public:
     int GetMissionYear() const;
     void SetMissionYear(int year);
     void IncrementMissionYear();
+    // Years since k_FirstPlayableMissionYear (0 on the first playable year); never negative.
+    int GetYearsSinceFirstPlayableYear() const;
+
+    // Shared combat / probe / world-event roll stream for this session.
+    std::mt19937& GetRng();
+    const std::mt19937& GetRng() const;
 
     GameSettings& GetSettings();
     const GameSettings& GetSettings() const;

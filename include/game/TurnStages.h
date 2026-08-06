@@ -35,14 +35,17 @@ public:
     void OnEnter()
     {
         m_hookContext.ExecutePreHooks();
+        OnEnterImpl();
     }
 
     void OnExit()
     {
+        OnExitImpl();
         m_hookContext.ExecutePostHooks();
     }
 
 protected:
+    // Skip ExecuteImpl only when a replace hook is actually callable.
     bool HasReplaceHooks() const
     {
         return m_hookContext.HasReplaceHooks();
@@ -52,6 +55,9 @@ protected:
     {
         m_hookContext.ExecuteReplaceHooks();
     }
+
+    virtual void OnEnterImpl() {}
+    virtual void OnExitImpl() {}
 
     HookContext m_hookContext;
 };

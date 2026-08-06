@@ -9,26 +9,26 @@ graph TB
     subgraph "Configuration"
         ConfigFile[config/turn_stages.json]
         TurnStageConfigParser[TurnStageConfigParser]
-        TurnStageConfig[TurnStageConfig<br/>id, name, description<br/>repeat_for_each_faction<br/>hookContext]
+        TurnStageConfig[TurnStageConfig_t<br/>id, name, description<br/>bRepeatForEachFaction<br/>hookContext]
     end
 
     subgraph "Stage Construction"
         TurnStageFactory[TurnStageFactory]
-        TurnStageRegistrar["TurnStageRegistrar&lt;T&gt;<br/>(file-scope, self-registers T)"]
-        CreatorRegistry[Creator registry<br/>id -> factory function]
+        TurnStageRegistrar["TurnStageRegistrar&lt;T&gt;<br/>(compile-time Global vs PerFaction)"]
+        GlobalCreators[Global creator registry]
+        PerFactionCreators[Per-faction creator registry]
         CustomGlobalTurnStage[CustomGlobalTurnStage]
         CustomPerFactionTurnStage[CustomPerFactionTurnStage]
     end
 
     subgraph "Stage Interfaces"
-        TurnStageBase[TurnStageBase<br/>hook lifecycle: OnEnter/OnExit]
+        TurnStageBase[TurnStageBase<br/>OnEnter/OnExit + OnExitImpl]
         GlobalTurnStage["GlobalTurnStage<br/>Execute(GameState&amp;)"]
         PerFactionTurnStage["PerFactionTurnStage<br/>Execute(GameState&amp;, Faction&amp;)"]
     end
 
     subgraph "Built-in Global Stages"
         TurnStart[TurnStart]
-        NewYearBegins[NewYearBegins]
         WorldEvents[WorldEvents]
         VictoryConditionChecks[VictoryConditionChecks]
         TurnEnd[TurnEnd]
@@ -47,15 +47,15 @@ graph TB
 
     subgraph "Turn Execution"
         TurnProcessor[TurnProcessor]
-        ProcessTurn["ProcessTurn(GameState&amp;)"]
-        GlobalRegistry["m_globalRegistry<br/>map&lt;id, unique_ptr&lt;GlobalTurnStage&gt;&gt;"]
-        PerFactionRegistry["m_perFactionRegistry<br/>map&lt;id, unique_ptr&lt;PerFactionTurnStage&gt;&gt;"]
-        StageOrder["m_stageOrder<br/>vector&lt;id&gt;"]
+        Advance["Advance(GameState&amp;)"]
+        GlobalRegistry["m_globalRegistry"]
+        PerFactionRegistry["m_perFactionRegistry"]
+        StageOrder["m_stageOrder"]
     end
 
     subgraph "Hook_t System"
         HookContext[HookContext]
-        Hook_t[Hook_t<br/>mod_id, script_path, callback]
+        Hook_t[Hook_t<br/>modId, scriptPath, callback]
     end
 
     Engine --> TurnStageFactory
@@ -67,16 +67,18 @@ graph TB
     HookContext --> Hook_t
 
     TurnStageFactory --> TurnStageConfigParser
-    TurnStageRegistrar -.->|registers at static init| CreatorRegistry
-    TurnStageFactory --> CreatorRegistry
-    CreatorRegistry -->|known id| TurnStageBase
+    TurnStageRegistrar -.->|registers at static init| GlobalCreators
+    TurnStageRegistrar -.->|registers at static init| PerFactionCreators
+    TurnStageFactory --> GlobalCreators
+    TurnStageFactory --> PerFactionCreators
+    GlobalCreators -->|known id| GlobalTurnStage
+    PerFactionCreators -->|known id| PerFactionTurnStage
     TurnStageFactory -->|unknown id, repeat=false| CustomGlobalTurnStage
     TurnStageFactory -->|unknown id, repeat=true| CustomPerFactionTurnStage
 
     TurnStageBase --> GlobalTurnStage
     TurnStageBase --> PerFactionTurnStage
     GlobalTurnStage --> TurnStart
-    GlobalTurnStage --> NewYearBegins
     GlobalTurnStage --> WorldEvents
     GlobalTurnStage --> VictoryConditionChecks
     GlobalTurnStage --> TurnEnd
@@ -91,16 +93,12 @@ graph TB
     PerFactionTurnStage --> PlayerActions
     PerFactionTurnStage --> CustomPerFactionTurnStage
 
-    TurnStageFactory -->|dynamic_cast buckets each stage| GlobalRegistry
-    TurnStageFactory -->|dynamic_cast buckets each stage| PerFactionRegistry
-
-    TurnProcessor --> ProcessTurn
+    TurnProcessor --> Advance
     TurnProcessor --> GlobalRegistry
     TurnProcessor --> PerFactionRegistry
     TurnProcessor --> StageOrder
-    ProcessTurn -->|id in GlobalRegistry| GlobalTurnStage
-    ProcessTurn -->|id in PerFactionRegistry, once per Faction| PerFactionTurnStage
-    ProcessTurn -->|id in neither| Throw[throws std::runtime_error]
+    Advance -->|Yield| Pause[pause until next Advance]
+    Advance -->|exception| Abort[OnExit then rethrow; Reset recovers]
 
     style TurnProcessor fill:#bbf,stroke:#333,stroke-width:4px
     style TurnStageFactory fill:#bbf,stroke:#333,stroke-width:4px
@@ -116,105 +114,74 @@ graph TB
 (`include/game/TurnStages.h`)
 
 A turn stage never receives a parameter it cannot use: rather than one interface with
-nullable `GameState*`/`Faction*` arguments, there are two narrow interfaces, matching the
-two ways a stage can run:
+nullable `GameState*`/`Faction*` arguments, there are two narrow interfaces:
 
-- **`TurnStageBase`**: shared hook lifecycle only (`OnEnter()`/`OnExit()` run pre/post
-  hooks; `HasReplaceHooks()`/`ExecuteReplaceHooks()` are protected helpers for the two
-  subclasses below). Declares no `Execute` — it carries no execution contract of its own.
-- **`GlobalTurnStage`**: `Execute(GameState& rGameState)`, for stages that run once per
-  turn (e.g. `TurnStart`, `Save`). NVI: the public, non-virtual `Execute` checks for a
-  replace hook and otherwise calls the protected pure-virtual `ExecuteImpl(GameState&)`.
-- **`PerFactionTurnStage`**: `Execute(GameState& rGameState, Faction& rFaction)`, for
-  stages that run once per faction per turn (e.g. `IncomeCollection`, `BaseProduction`).
-  Same NVI shape, with `ExecuteImpl(GameState&, Faction&)`.
+- **`TurnStageBase`**: shared hook lifecycle (`OnEnter`/`OnExit`). Subclasses may override
+  `OnEnterImpl` / `OnExitImpl` for stage-local cleanup (e.g. `PlayerActions` pass state).
+  `HasReplaceHooks()` is true only when a replace hook has a **callable** callback —
+  unbound replace entries must not suppress `ExecuteImpl`.
+- **`GlobalTurnStage`**: `Execute(GameState&)`, once per turn.
+- **`PerFactionTurnStage`**: `Execute(GameState&, Faction&)`, once per living faction per turn.
 
-Every concrete stage derives from exactly one of the two, declared and overridden
-consistently as `protected` (no more private-in-base/public-in-derived mismatch).
+### Yield / resume contract
 
-### TurnStageFactory (`TurnStageFactory.{h,cpp}`)
-Builds stage instances from parsed config and buckets them by interface:
+`StageResult_t::Yield` pauses turn processing. The next `TurnProcessor::Advance` re-enters
+the **same** stage (and, for per-faction stages, the **same** faction until that faction
+`Continue`s). UI / Engine must not assume turns are atomic — overlays and player input may
+sit between `Advance` calls (see UI modal gating; package 2).
 
-- **`RegisterCreator(id, creator)`**: a static registration hook. Built-in stages don't
-  need a case in this file — see `TurnStageRegistrar` below.
-- **`CreateStageInstance(config)`**: looks up `config.id` in the creator registry; if
-  found, invokes the creator. If not found (a mod-defined id with no C++ class), falls
-  back to `CustomGlobalTurnStage` or `CustomPerFactionTurnStage` based on
-  `config.repeat_for_each_faction` — the only place that flag decides a stage's shape,
-  since mod stages have no static C++ type to derive it from.
-- **`CreateStages()`**: for each config, creates the instance, then `dynamic_cast`s it
-  into `GlobalTurnStageRegistry_t` or `PerFactionTurnStageRegistry_t` (throws if a stage
-  is somehow neither — cannot happen for any type reachable via `RegisterCreator` or the
-  `Custom*` fallback, but guards the invariant if a future stage type violates it).
+`PlayerActions` for a player faction:
 
-### TurnStageRegistrar<T> (`TurnStageRegistrar.h`)
-A template whose constructor calls `TurnStageFactory::RegisterCreator`. Each built-in
-stage's `.cpp` defines one file-scope instance:
-```cpp
-namespace { TurnStageRegistrar<BaseProduction> g_registrar("BaseProduction"); }
-```
-This runs at static-init time, before `main`. Adding a new built-in stage means adding its
-class and this one line — `TurnStageFactory.cpp` is never edited (Open/Closed).
-
-Built-in stage TUs live in the `ac-turn-stages` OBJECT library (not inside `ac-core.a`).
-Their registrar symbols are never named from outside their translation units, so a STATIC
-archive would drop those objects at link time and every config id would fall through to
-`Custom*TurnStage` (which then throws if it has no hooks). An OBJECT library is always
-pulled into the final link of `alpha-centauri` and `effects-tests`.
+1. First enter of a pass → `Yield` (`AwaitingInteraction`) so the player can issue orders.
+2. Resume (End Turn) → resolve pending multi-turn orders; if a unit still needs orders →
+   `Yield` again without re-executing units already advanced this pass.
+3. When the faction pass `Continue`s (or the stage exits), phase and the advanced-unit set
+   reset so a later player still gets the interaction gate.
 
 ### TurnProcessor (`TurnProcessor.{h,cpp}`)
-- **State**: `m_globalRegistry`, `m_perFactionRegistry` (both populated once at
-  construction), `m_stageOrder` (the ordered list of ids from config).
-- **`ProcessTurn(GameState& rGameState)`**: for each id in `m_stageOrder`, looks it up in
-  `m_globalRegistry` first, then `m_perFactionRegistry`. A hit in the global registry
-  calls `Execute(rGameState)` once; a hit in the per-faction registry calls
-  `Execute(rGameState, rFaction)` once per `rGameState.Factions()`. An id in neither
-  **throws** `std::runtime_error` — a typo in `turn_stages.json` fails turn processing
-  loudly instead of silently dropping the stage.
-- Mission year comes from `rGameState.GetMissionYear()` (logged, not cached as a member);
-  faction count comes from `rGameState.Factions()` directly — no separate `numFactions` or
-  `repeatFlags` parameters to keep in sync with the registries.
 
-### Custom (mod-defined) stages (`stages/CustomTurnStage.{h,cpp}`)
-`CustomGlobalTurnStage` and `CustomPerFactionTurnStage` are thin, hook-only stages for ids
-present in `turn_stages.json` but with no matching built-in C++ class (e.g.
-`CustomModStage` in the sample config). Both require at least one hook (pre/post/replace)
-at construction, or they would silently do nothing.
+- **`Advance(GameState&)`**: runs stages until one yields, wrapping the stage order for the
+  next turn cycle. Throws if a full cycle completes with no yielding stage.
+- **Per-faction resume**: tracks completed faction ids for the current stage and the
+  yielded faction id. Does **not** depend on monotonic id ordering. If the resume faction
+  disappears while yielded, remaining incomplete factions are processed.
+- **Exceptions**: after `OnEnter`, a throw from `Execute` still runs `OnExit` (post hooks)
+  and clears entered/resume state, then rethrows. **`Reset()`** returns the processor to
+  stage index 0 for recovery after a poisoned no-yield cycle or aborted stage.
+- Erasing a faction mid-stage loop is unsupported until the lifetime protocol defines it.
 
-### HookContext / Hook_t (`HookContext.h`)
-Unchanged: `pre`, `post`, and `replace` hook lists per stage, parsed from the stage's
-`hooks` object in config. `Hook_t::callback` is still `std::function<void()>` — not yet
-wired to any script runtime (see the moddability finding in
-`docs/code-review-findings.md` §1.10; hooks receive no `GameState`/`Faction` context, so a
-real mod script could not act on one yet even though the plumbing to invoke a callback
-exists).
+### TurnStageFactory / TurnStageRegistrar
+
+- Built-ins register via `TurnStageRegistrar<T>` into **typed** global or per-faction
+  creator maps (`if constexpr` on the base). `CreateStages` does not rediscover kind by RTTI.
+- `repeatForEachFaction` in config is cross-checked against the registered kind (mismatch
+  throws). For unknown (mod) ids the flag selects `CustomGlobalTurnStage` vs
+  `CustomPerFactionTurnStage`.
+- Duplicate stage ids throw at parse / create. `scriptPath` hooks throw at parse (no Lua
+  loader yet). Custom stages require at least one **callable** callback.
+
+### Built-in stage behaviour (non-exhaustive)
+
+- **`TurnStart`**: increments mission year (`GameState::k_StartingMissionYear` → first
+  playable year `k_FirstPlayableMissionYear`), publishes turn-start events, refreshes moves.
+- **`WorldEvents`**: forest/kelp spread via `SpreadTerraformImprovements`, using
+  `GameState::GetRng()` and `GetYearsSinceFirstPlayableYear()` (session stream — not a
+  private year×area seed).
+- **`Population`**: growth, composition recalculation, then
+  `CheckRiotEndOfTurn` / `CheckGoldenAgeEndOfTurn` per base.
+- **`PlayerActions`**: interactive yield + idempotent order resolution (above).
 
 ### Configuration (`config/turn_stages.json`)
-A flat JSON array (no nesting/sub-stages). Each entry: `id` (matches a registrar id or is
-a custom/mod stage), `name`, `description`, `repeat_for_each_faction`, and `hooks.{pre,
-post,replace}` (each a list of `{mod_id, script_path}`). `TurnStageConfigParser` parses
-this directly into a `std::vector<TurnStageConfig>` — order in the array is turn order.
 
-### Built-in stages
-- **Global** (`repeat_for_each_faction: false`): `TurnStart`, `NewYearBegins`,
-  `WorldEvents`, `VictoryConditionChecks`, `TurnEnd`, `Save`.
-- **Per-faction** (`repeat_for_each_faction: true`): `ResourceCollection`,
-  `IncomeCollection`, `ResearchAccumulation`, `BaseProduction`, `Population`, `Upkeep`,
-  `PlayerActions`.
-
-Several of these (`TurnStart`, `NewYearBegins`, `WorldEvents`, `VictoryConditionChecks`,
-`TurnEnd`, `Save`, `Upkeep`, `PlayerActions`) are placeholder logging stages — the actual
-game rules for those phases are not yet implemented (see the coding guideline: leave a
-TODO rather than invent rules).
+Flat JSON array; order is turn order. Each entry: `id`, `name`, `description`,
+`repeatForEachFaction`, and `hooks.{pre,post,replace}` (lists of `{modId, scriptPath}`).
+Stock config has no unbound Custom/mod sample stage.
 
 ### Integration Flow
-1. `Engine::Initialize_` constructs a `TurnStageFactory`, calls `LoadConfig` (throws if
-   the file is missing or produces no stages), and calls `CreateStages()` to get the two
-   registries.
-2. `Engine` builds `stageOrder` from `GetStageConfigs()` and constructs a `TurnProcessor`
-   with the two registries plus `stageOrder`.
-3. Each turn, `Engine::ProcessTurn_` calls `m_turnProcessor->ProcessTurn(*m_gameState)`.
-4. For each stage id, in order: `OnEnter()` (pre-hooks) → dispatch by registry membership
-   (global once, or per-faction once per `Faction`) → `OnExit()` (post-hooks). A stage
-   with a replace hook skips its `ExecuteImpl` entirely and runs the replace hook instead.
-5. `Engine` increments the mission year after `ProcessTurn` returns.
+
+1. `Engine::Initialize_` loads `config/turn_stages.json`, `CreateStages()`, builds
+   `stageOrder` from configs, constructs `TurnProcessor`.
+2. Each interactive step, `Engine` calls `m_turnProcessor->Advance(*m_gameState)` when the
+   UI allows turn advance (modal contract is package 2).
+3. For each stage: `OnEnter` → `Execute` (possibly `Yield`) → on `Continue`, `OnExit`.
+4. Replace hooks skip `ExecuteImpl` **only** when a replace callback is callable.

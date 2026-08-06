@@ -20,12 +20,40 @@ TurnProcessor::TurnProcessor(GlobalTurnStageRegistry_t globalRegistry,
     }
 }
 
+void TurnProcessor::Reset()
+{
+    m_stageIndex = 0;
+    m_bStageEntered = false;
+    m_completedFactionIds.clear();
+    m_bHasResumeFaction = false;
+    m_resumeFactionId = 0;
+}
+
 void TurnProcessor::CompleteStage_(TurnStageBase& rStage)
 {
-    rStage.OnExit();
+    // Clear entered before OnExit so a throw from OnExit cannot double-run post hooks via Abort.
     m_bStageEntered = false;
-    m_resumeFactionId.reset();
+    m_completedFactionIds.clear();
+    m_bHasResumeFaction = false;
+    m_resumeFactionId = 0;
+    rStage.OnExit();
     ++m_stageIndex;
+}
+
+void TurnProcessor::AbortStage_(TurnStageBase& rStage)
+{
+    if (!m_bStageEntered)
+    {
+        m_completedFactionIds.clear();
+        m_bHasResumeFaction = false;
+        m_resumeFactionId = 0;
+        return;
+    }
+    m_bStageEntered = false;
+    m_completedFactionIds.clear();
+    m_bHasResumeFaction = false;
+    m_resumeFactionId = 0;
+    rStage.OnExit();
 }
 
 void TurnProcessor::EnsureEntered_(TurnStageBase& rStage)
@@ -39,40 +67,83 @@ void TurnProcessor::EnsureEntered_(TurnStageBase& rStage)
 
 StageResult_t TurnProcessor::ExecuteGlobalStage_(GlobalTurnStage& rStage, GameState& rGameState)
 {
-    EnsureEntered_(rStage);
-
-    const StageResult_t result = rStage.Execute(rGameState);
-    if (result == StageResult_t::Yield)
+    try
     {
-        return StageResult_t::Yield;
-    }
+        EnsureEntered_(rStage);
 
-    CompleteStage_(rStage);
-    return StageResult_t::Continue;
+        const StageResult_t result = rStage.Execute(rGameState);
+        if (result == StageResult_t::Yield)
+        {
+            return StageResult_t::Yield;
+        }
+
+        CompleteStage_(rStage);
+        return StageResult_t::Continue;
+    }
+    catch (...)
+    {
+        AbortStage_(rStage);
+        throw;
+    }
 }
 
 StageResult_t TurnProcessor::ExecutePerFactionStage_(PerFactionTurnStage& rStage,
                                                      GameState& rGameState)
 {
-    EnsureEntered_(rStage);
-
-    for (Faction& rFaction : rGameState.Factions())
+    try
     {
-        if (m_resumeFactionId.has_value() && rFaction.GetFactionId() < *m_resumeFactionId)
+        EnsureEntered_(rStage);
+
+        if (m_bHasResumeFaction)
         {
-            continue;
+            bool bResumePresent = false;
+            for (Faction& rFaction : rGameState.Factions())
+            {
+                if (rFaction.GetFactionId() == m_resumeFactionId)
+                {
+                    bResumePresent = true;
+                    break;
+                }
+            }
+            if (!bResumePresent)
+            {
+                // Resume faction was eliminated while yielded; process remaining factions.
+                m_bHasResumeFaction = false;
+            }
         }
 
-        const StageResult_t result = rStage.Execute(rGameState, rFaction);
-        if (result == StageResult_t::Yield)
+        for (Faction& rFaction : rGameState.Factions())
         {
-            m_resumeFactionId = rFaction.GetFactionId();
-            return StageResult_t::Yield;
+            const FactionId_t factionId = rFaction.GetFactionId();
+            if (m_completedFactionIds.contains(factionId))
+            {
+                continue;
+            }
+            if (m_bHasResumeFaction && factionId != m_resumeFactionId)
+            {
+                continue;
+            }
+
+            const StageResult_t result = rStage.Execute(rGameState, rFaction);
+            if (result == StageResult_t::Yield)
+            {
+                m_resumeFactionId = factionId;
+                m_bHasResumeFaction = true;
+                return StageResult_t::Yield;
+            }
+
+            m_completedFactionIds.insert(factionId);
+            m_bHasResumeFaction = false;
         }
+
+        CompleteStage_(rStage);
+        return StageResult_t::Continue;
     }
-
-    CompleteStage_(rStage);
-    return StageResult_t::Continue;
+    catch (...)
+    {
+        AbortStage_(rStage);
+        throw;
+    }
 }
 
 StageResult_t TurnProcessor::ExecuteCurrentStage_(GameState& rGameState)

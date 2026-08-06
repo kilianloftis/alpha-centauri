@@ -701,6 +701,24 @@ Package 4 owns the constructor/null-policy half of these classes (two-phase-init
 
 ---
 
+## Execution log
+
+### Package 1 — Turn pipeline integrity (2026-08-06)
+
+**Status:** complete  
+**Prompt:** [`docs/full-review-fix-prompts/01-turn-pipeline-integrity.md`](full-review-fix-prompts/01-turn-pipeline-integrity.md)
+
+**Fixes landed:**
+- Replace hooks skip `ExecuteImpl` only when a callback is callable; `scriptPath` hooks fail at config load; stock `CustomModStage` removed; Custom* requires a callable hook.
+- `TurnProcessor`: `OnExit`/post hooks on stage throw; `Reset()` recovery; per-faction resume via completed-id set (no `id < resumeId`).
+- `PlayerActions`: mid-pass Yield does not re-tick in-progress multi-turn orders; completed units can take a new order; phase resets on faction change / stage exit.
+- WorldEvents uses `GameState::GetRng()` + shared first-playable-year epoch; Population calls riot/golden-age EOT checks.
+- Factory typed registration + `repeatForEachFaction` cross-check + duplicate id rejection; `turn-system.md` rewritten for `Advance`/Yield.
+
+**Review follow-ups applied:** advanced-set only on `Continue`; phase reset when active faction changes; enter/exit lifecycle hardening; stronger PlayerActions/WorldEvents/Population tests.
+
+---
+
 ## Cross-package dependency sketch
 
 ```text

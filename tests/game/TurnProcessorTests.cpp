@@ -2,12 +2,15 @@
 
 #include "game/TurnProcessor.h"
 #include "game/TurnStages.h"
+#include "game/HookContext.h"
+#include "game/Faction.h"
 #include "game/GameState.h"
 #include "game/GameSettings.h"
 #include "game/map/WorldMap.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <stdexcept>
+#include <vector>
 
 using namespace ac;
 
@@ -287,4 +290,188 @@ TEST_CASE("TurnProcessor throws if the stage order has no yielding stage",
 
     TurnProcessor processor(std::move(global), PerFactionTurnStageRegistry_t{}, {"OnlyContinue"});
     CHECK_THROWS_AS(processor.Advance(gameState), std::logic_error);
+}
+
+TEST_CASE("TurnProcessor Reset recovers after a no-yield stage order throw",
+          "[TurnProcessor]")
+{
+    actest::WorldFixture world;
+    GameSettings settings;
+    GameState gameState(std::make_unique<WorldMap>(3, 3), world.improvements, nullptr, settings,
+                        *world.dataContext.moraleCalculator);
+
+    class YieldAfterContinue : public GlobalTurnStage
+    {
+    public:
+        YieldAfterContinue() : GlobalTurnStage(HookContext{}) {}
+        int callCount = 0;
+
+    protected:
+        StageResult_t ExecuteImpl(GameState&) override
+        {
+            ++callCount;
+            // First Advance: Continue so the cycle can complete without yield and throw.
+            // After Reset, second Advance: Yield.
+            return callCount == 1 ? StageResult_t::Continue : StageResult_t::Yield;
+        }
+    };
+
+    GlobalTurnStageRegistry_t global;
+    auto pStage = std::make_unique<YieldAfterContinue>();
+    YieldAfterContinue& rStage = *pStage;
+    global["Flip"] = std::move(pStage);
+
+    TurnProcessor processor(std::move(global), PerFactionTurnStageRegistry_t{}, {"Flip"});
+    CHECK_THROWS_AS(processor.Advance(gameState), std::logic_error);
+    CHECK(rStage.callCount == 1);
+
+    processor.Reset();
+    processor.Advance(gameState);
+    CHECK(rStage.callCount == 2);
+}
+
+TEST_CASE("TurnProcessor runs OnExit/post hooks when Execute throws",
+          "[TurnProcessor]")
+{
+    actest::WorldFixture world;
+    GameSettings settings;
+    GameState gameState(std::make_unique<WorldMap>(3, 3), world.improvements, nullptr, settings,
+                        *world.dataContext.moraleCalculator);
+
+    class ThrowingStage : public GlobalTurnStage
+    {
+    public:
+        ThrowingStage(HookContext hooks) : GlobalTurnStage(std::move(hooks)) {}
+
+    protected:
+        StageResult_t ExecuteImpl(GameState&) override
+        {
+            throw std::runtime_error("stage failed");
+        }
+    };
+
+    int postCount = 0;
+    HookContext hooks;
+    Hook_t post;
+    post.modId = "test";
+    post.callback = [&]() { ++postCount; };
+    hooks.AddPostHook(post);
+
+    GlobalTurnStageRegistry_t global;
+    global["Boom"] = std::make_unique<ThrowingStage>(std::move(hooks));
+
+    TurnProcessor processor(std::move(global), PerFactionTurnStageRegistry_t{}, {"Boom"});
+    CHECK_THROWS_AS(processor.Advance(gameState), std::runtime_error);
+    CHECK(postCount == 1);
+
+    // Not wedged mid-enter: Reset leaves a clean cursor (re-Advance throws again from the
+    // stage body, which is defined recovery — not a stuck no-yield poison).
+    processor.Reset();
+    CHECK_THROWS_AS(processor.Advance(gameState), std::runtime_error);
+    CHECK(postCount == 2);
+}
+
+TEST_CASE("TurnProcessor unbound replace hook does not skip ExecuteImpl",
+          "[TurnProcessor]")
+{
+    actest::WorldFixture world;
+    GameSettings settings;
+    GameState gameState(std::make_unique<WorldMap>(3, 3), world.improvements, nullptr, settings,
+                        *world.dataContext.moraleCalculator);
+
+    HookContext hooks;
+    Hook_t replace;
+    replace.modId = "mod";
+    // no callback
+    hooks.AddReplaceHook(replace);
+
+    class HookedCountingStage : public GlobalTurnStage
+    {
+    public:
+        HookedCountingStage(HookContext h) : GlobalTurnStage(std::move(h)) {}
+        int callCount = 0;
+
+    protected:
+        StageResult_t ExecuteImpl(GameState&) override
+        {
+            ++callCount;
+            return StageResult_t::Continue;
+        }
+    };
+
+    GlobalTurnStageRegistry_t global;
+    auto pStage = std::make_unique<HookedCountingStage>(std::move(hooks));
+    HookedCountingStage& rStage = *pStage;
+    global["Hooked"] = std::move(pStage);
+    auto pStop = std::make_unique<AlwaysYieldStage>();
+    global["Stop"] = std::move(pStop);
+
+    TurnProcessor processor(std::move(global), PerFactionTurnStageRegistry_t{},
+                            {"Hooked", "Stop"});
+    processor.Advance(gameState);
+    CHECK(rStage.callCount == 1);
+}
+
+TEST_CASE("TurnProcessor per-faction resume does not skip later factions by id order",
+          "[TurnProcessor]")
+{
+    actest::FactionFixture fixtures;
+    // Allocate so the first living faction can have a higher id than the second insertion
+    // would under a naive "< resumeId" skip — use GameState allocators after construct.
+    GameSettings settings;
+    GameState gameState(std::make_unique<WorldMap>(3, 3), fixtures.improvements, nullptr, settings,
+                        *fixtures.dataContext.moraleCalculator);
+
+    // Burn a low id so the first added faction is not id 1 contiguous-only assumption.
+    (void)gameState.AllocateFactionId();
+    (void)gameState.AllocateFactionId();
+
+    auto pA = std::make_unique<Faction>(
+        gameState.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext);
+    auto pB = std::make_unique<Faction>(
+        gameState.AllocateFactionId(), false, fixtures.factionDefinition, fixtures.dataContext);
+    gameState.AddFaction(std::move(pA));
+    gameState.AddFaction(std::move(pB));
+
+    class YieldFirstFactionOnce : public PerFactionTurnStage
+    {
+    public:
+        YieldFirstFactionOnce() : PerFactionTurnStage(HookContext{}) {}
+        int callCount = 0;
+        std::vector<FactionId_t> order;
+
+    protected:
+        StageResult_t ExecuteImpl(GameState&, Faction& rFaction) override
+        {
+            order.push_back(rFaction.GetFactionId());
+            ++callCount;
+            // Yield once on the first call for each "wave" pattern: first visit yields.
+            if (callCount == 1)
+            {
+                return StageResult_t::Yield;
+            }
+            return StageResult_t::Continue;
+        }
+    };
+
+    PerFactionTurnStageRegistry_t perFaction;
+    auto pStage = std::make_unique<YieldFirstFactionOnce>();
+    YieldFirstFactionOnce& rStage = *pStage;
+    perFaction["YieldFirst"] = std::move(pStage);
+
+    GlobalTurnStageRegistry_t global;
+    auto pStop = std::make_unique<AlwaysYieldStage>();
+    global["Stop"] = std::move(pStop);
+
+    TurnProcessor processor(std::move(global), std::move(perFaction), {"YieldFirst", "Stop"});
+
+    processor.Advance(gameState);
+    REQUIRE(rStage.callCount == 1);
+    REQUIRE(rStage.order.size() == 1);
+
+    processor.Advance(gameState); // resume first (Continue), then second (Continue), then Stop
+    CHECK(rStage.callCount == 3);
+    REQUIRE(rStage.order.size() == 3);
+    CHECK(rStage.order[0] == rStage.order[1]); // same faction resumed
+    CHECK(rStage.order[2] != rStage.order[0]); // second faction also processed
 }

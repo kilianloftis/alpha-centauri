@@ -1,12 +1,7 @@
 #include "game/HookContext.h"
-#include <iostream>
 
 namespace ac
 {
-
-HookContext::HookContext()
-{
-}
 
 void HookContext::AddPreHook(const Hook_t& hook)
 {
@@ -27,7 +22,6 @@ void HookContext::ExecutePreHooks()
 {
     for (const auto& hook : m_preHooks)
     {
-        std::cout << "  Executing pre hook from mod: " << hook.modId << "\n";
         if (hook.callback)
         {
             hook.callback();
@@ -39,7 +33,6 @@ void HookContext::ExecutePostHooks()
 {
     for (const auto& hook : m_postHooks)
     {
-        std::cout << "  Executing post hook from mod: " << hook.modId << "\n";
         if (hook.callback)
         {
             hook.callback();
@@ -51,7 +44,6 @@ void HookContext::ExecuteReplaceHooks()
 {
     for (const auto& hook : m_replaceHooks)
     {
-        std::cout << "  Executing replace hook from mod: " << hook.modId << "\n";
         if (hook.callback)
         {
             hook.callback();
@@ -59,9 +51,21 @@ void HookContext::ExecuteReplaceHooks()
     }
 }
 
+bool HookContext::HasCallable_(const std::vector<Hook_t>& rHooks)
+{
+    for (const Hook_t& rHook : rHooks)
+    {
+        if (rHook.callback)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool HookContext::HasReplaceHooks() const
 {
-    return !m_replaceHooks.empty();
+    return HasCallable_(m_replaceHooks);
 }
 
 bool HookContext::HasPreHooks() const
@@ -72,6 +76,11 @@ bool HookContext::HasPreHooks() const
 bool HookContext::HasPostHooks() const
 {
     return !m_postHooks.empty();
+}
+
+bool HookContext::HasCallableHook() const
+{
+    return HasCallable_(m_preHooks) || HasCallable_(m_postHooks) || HasCallable_(m_replaceHooks);
 }
 
 } // namespace ac

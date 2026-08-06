@@ -66,6 +66,8 @@ add_executable(effects-tests
     game/WorkerAssignmentTests.cpp
     game/HomeBaseTests.cpp
     game/TurnProcessorTests.cpp
+    game/TurnStageConfigTests.cpp
+    game/PlayerActionsStageTests.cpp
     game/GameSettingsTests.cpp
     game/RequiredTechValidatorTests.cpp
     game/PlanetaryCouncilTests.cpp

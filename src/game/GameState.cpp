@@ -21,15 +21,12 @@
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/council/CouncilRulesConfig.h"
 #include "lib/EventBus.h"
+#include <algorithm>
 #include <random>
 #include <stdexcept>
 
 namespace ac
 {
-
-// One less than the first playable year: TurnStart increments at the start of every turn,
-// so the first Advance lands on 2100.
-static constexpr int k_StartingMissionYear = 2099;
 
 GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
                      const ImprovementRegistry& rImprovements,
@@ -104,6 +101,21 @@ void GameState::SetMissionYear(int year)
 void GameState::IncrementMissionYear()
 {
     ++m_missionYear;
+}
+
+int GameState::GetYearsSinceFirstPlayableYear() const
+{
+    return std::max(0, m_missionYear - k_FirstPlayableMissionYear);
+}
+
+std::mt19937& GameState::GetRng()
+{
+    return m_rng;
+}
+
+const std::mt19937& GameState::GetRng() const
+{
+    return m_rng;
 }
 
 EventBus& GameState::GetEventBus()

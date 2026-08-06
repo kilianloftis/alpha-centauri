@@ -19,6 +19,18 @@ PlayerActions::PlayerActions(HookContext hookContext)
 {
 }
 
+void PlayerActions::ResetPassState_()
+{
+    m_phase = Phase_t::AwaitingInteraction;
+    m_activeFactionId.reset();
+    m_advancedUnitIds.clear();
+}
+
+void PlayerActions::OnExitImpl()
+{
+    ResetPassState_();
+}
+
 bool PlayerActions::DoesUnitRequireOrders_(const Unit& rUnit)
 {
     return !rUnit.GetOrder().has_value() && rUnit.GetMoveFragmentsRemaining() > 0;
@@ -26,6 +38,14 @@ bool PlayerActions::DoesUnitRequireOrders_(const Unit& rUnit)
 
 StageResult_t PlayerActions::ExecuteImpl(GameState& rGameState, Faction& rFaction)
 {
+    const FactionId_t factionId = rFaction.GetFactionId();
+    if (m_activeFactionId.has_value() && *m_activeFactionId != factionId)
+    {
+        // Prior pass abandoned (e.g. resume faction eliminated while yielded).
+        ResetPassState_();
+    }
+    m_activeFactionId = factionId;
+
     const bool bPlayer = rFaction.IsPlayerControlled();
 
     if (bPlayer && m_phase == Phase_t::AwaitingInteraction)
@@ -42,6 +62,11 @@ StageResult_t PlayerActions::ExecuteImpl(GameState& rGameState, Faction& rFactio
     const auto destructionScope = rUnitManager.DeferDestruction();
     for (Unit& rUnit : rUnitManager.Units())
     {
+        if (m_advancedUnitIds.contains(rUnit.GetUnitId()))
+        {
+            continue;
+        }
+
         if (!rUnit.GetOrder().has_value())
         {
             continue;
@@ -54,6 +79,12 @@ StageResult_t PlayerActions::ExecuteImpl(GameState& rGameState, Faction& rFactio
         }
 
         const OrderProgress_t progress = rExecutor.Execute(rUnit);
+        if (progress == OrderProgress_t::Continue)
+        {
+            // Multi-turn order still in progress — do not re-tick on mid-pass Yield resume.
+            m_advancedUnitIds.insert(rUnit.GetUnitId());
+        }
+
         if (progress == OrderProgress_t::UnitDestroyed)
         {
             // Already destroyed while advancing (e.g. a native raider consumed by its raid).
@@ -71,10 +102,7 @@ StageResult_t PlayerActions::ExecuteImpl(GameState& rGameState, Faction& rFactio
         }
     }
 
-    if (bPlayer)
-    {
-        m_phase = Phase_t::AwaitingInteraction;
-    }
+    ResetPassState_();
     return StageResult_t::Continue;
 }
 

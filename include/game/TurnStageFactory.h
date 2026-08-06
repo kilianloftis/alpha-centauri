@@ -19,24 +19,22 @@ struct TurnStageRegistries_t
 class TurnStageFactory
 {
 public:
-    using Creator_t = std::function<std::unique_ptr<TurnStageBase>(HookContext)>;
+    using GlobalCreator_t = std::function<std::unique_ptr<GlobalTurnStage>(HookContext)>;
+    using PerFactionCreator_t = std::function<std::unique_ptr<PerFactionTurnStage>(HookContext)>;
 
-    TurnStageFactory();
-    ~TurnStageFactory() = default;
+    TurnStageFactory() = default;
 
     // Throws if the config cannot be loaded or yields no stages.
     void LoadConfig(const std::string& configPath);
     TurnStageRegistries_t CreateStages();
     const std::vector<TurnStageConfig_t>& GetStageConfigs() const { return m_stageConfigs; }
 
-    // Registers the creator for a built-in stage id, keyed by that id. Invoked by
-    // file-scope TurnStageRegistrar<T> instances (see TurnStageRegistrar.h) so that
-    // adding a new built-in stage never requires editing this factory.
-    static void RegisterCreator(const std::string& id, Creator_t creator);
+    // Typed registration so CreateStages buckets without RTTI. Invoked by file-scope
+    // TurnStageRegistrar<T> instances.
+    static void RegisterGlobalCreator(const std::string& id, GlobalCreator_t creator);
+    static void RegisterPerFactionCreator(const std::string& id, PerFactionCreator_t creator);
 
 private:
-    std::unique_ptr<TurnStageBase> CreateStageInstance(const TurnStageConfig_t& config);
-
     std::vector<TurnStageConfig_t> m_stageConfigs;
 };
 
