@@ -730,6 +730,25 @@ Package 4 owns the constructor/null-policy half of these classes (two-phase-init
 
 **Review follow-ups applied:** modal key path always reports handled (no global shortcut leak under WorldView modals); auto-end-turn queues even while modal-blocked and drains when clear; shortcut gate uses `CanAdvanceTurn()`.
 
+### Package 3 — Object lifetime and ownership transfer (2026-08-06)
+
+**Status:** complete  
+**Prompt:** [`docs/full-review-fix-prompts/03-lifetime-and-transfer.md`](full-review-fix-prompts/03-lifetime-and-transfer.md)
+
+**Fixes landed:**
+- Transfer separated from destroy: `UnitManager::ReleaseUnit`/`AdoptUnit` (no cargo loss, no `OnUnitDestroyed`); `TransferBaseTo` is an identity-preserving `unique_ptr` move + `RebindFaction`, not destroy-then-recreate. All conquest/probe/diplomacy call sites converted.
+- Deploy cooldowns migrate with a transferred base, drop on raze; `HomeBaseIndex` reduced to one representation; `WorkerAssignmentManager` teardown clears claims.
+- `BaseView` pops on `OnDestroyed` / owner change; `EventBridge` auto-wires from `Faction::OnBaseAdded` so no call site has to remember.
+- `high-level.md` gained an "Object lifetime and ownership transfer" section; `ui-system.md` no longer claims bases are immortal.
+
+**Review follow-ups applied:**
+- `Signal::ScopedConnection` now holds a weak alive-token and goes inert if the Signal dies first — the invalidation mechanism was itself a use-after-free (`~BaseView` unregistering through a freed `BaseManager`).
+- Base transfer drops the previous owner's home claims: a supply crawler homed at a base feeds that base's production, so the captor was harvesting the loser's crawlers. Unit transfer also clears produced-at.
+- `HomeBaseIndex` noexcept invariant checks abort with a diagnostic instead of `assert` (compiled out under `NDEBUG`, leaving `erase(end())` UB).
+- `CountReadyBuildings` made a pure query; expiry retired by `PruneExpiredDeploys` from the `Upkeep` stage. `NotifyBuildingDestroyed` retires the still-cooling record, not the first match.
+- `EventBridge` keyed by object rather than `baseId` (a reconstructed base reusing its id was silently left unwired).
+- Dead machinery removed per the no-legacy rule: `ExtractUnit` / `CreateUnitFromSnapshot` / `UnitSnapshot_t` / `CaptureSnapshot`, the `onBaseFounded`/`onBaseCreated` chain, `DiplomaticActionExecutor::SetGameDataContext`.
+
 ---
 
 ## Cross-package dependency sketch
