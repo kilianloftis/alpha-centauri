@@ -16,9 +16,12 @@ struct GameDataContext;
 // Validates the cross-config id references inside one effects list: GrantBuilding targets,
 // GrantTech targets, HasImprovement selector ids, TargetTileHas / AllOf condition feature
 // ids (always an improvement id), and HasComponent unitFilter
-// component ids. Throws std::runtime_error naming rSourceId and the offending id. A null
-// registry skips the checks that need it. GrantUnit targets are not validated — unit
-// designs are runtime data with no config registry.
+// component ids. Throws std::runtime_error naming rSourceId and the offending id.
+//
+// Null registry pointers skip only the checks that need that registry — intentional for
+// partial unit-test contexts. Production code uses the GameDataContext overload below,
+// which requires every target registry. GrantUnit targets are not validated — unit designs
+// are runtime data with no config registry.
 void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
                               const std::string& rSourceId,
                               const BuildingRegistry* pBuildings,
@@ -27,9 +30,12 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
                               const UnitComponentRegistry* pUnitComponents = nullptr);
 
 // Walks every loaded config that declares effects (buildings, improvements, pop types,
-// unit components, social policies, social rating tables) and validates each list via the
-// overload above. Call once from LoadGameData after all registries are loaded so a typo'd
-// id fails at startup with the source named, instead of loading as a silent no-op effect.
+// unit components, social policies, social rating tables, factions, council proposals,
+// council governor effects, probe actions, tile yield rules) and validates each list via
+// the overload above. Throws if any target registry or walked effect-source unique_ptr that
+// LoadGameData always installs is null — never silently no-ops the whole check. Call once
+// from LoadGameData after all registries are loaded so a typo'd id fails at startup with
+// the source named, instead of loading as a silent no-op effect.
 void ValidateEffectReferences(const GameDataContext& rData);
 
 } // namespace ac

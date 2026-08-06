@@ -3,9 +3,18 @@
 // seed semantics (KindFor/SeedFor).
 
 #include "game/EffectReferenceValidator.h"
+#include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/council/CouncilProposalRegistry.h"
+#include "game/council/CouncilRulesConfig.h"
+#include "game/faction/FactionRegistry.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/TerrainFeatureValidation.h"
+#include "game/population/pop-types/PopTypeRegistry.h"
+#include "game/research/TechRegistry.h"
+#include "game/social-engineering/SocialPolicyRegistry.h"
+#include "game/social-engineering/SocialRatingRegistry.h"
+#include "game/units/ProbeActionConfig.h"
 #include "game/units/UnitComponentRegistry.h"
 #include "game/effects/BonusEffect.h"
 
@@ -13,19 +22,37 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
+#include <filesystem>
+#include <fstream>
 
 using namespace ac;
 
 namespace
 {
 
-EffectConfig_t GrantBuilding_(std::string buildingId)
+EffectConfig_t GrantBuilding(std::string buildingId)
 {
     EffectConfig_t config;
     config.effect = GrantBuildingEffect_t{std::move(buildingId)};
     config.scope = EffectScope_t::ThisBase;
     config.persistence = EffectPersistence_t::Continuous;
     return config;
+}
+
+// Empty instances of every target / effect-source LoadGameData installs before validation.
+void FillEffectReferenceContext(GameDataContext& rData)
+{
+    rData.buildingRegistry = std::make_unique<BuildingRegistry>();
+    rData.improvementRegistry = std::make_unique<ImprovementRegistry>();
+    rData.techRegistry = std::make_unique<TechRegistry>();
+    rData.unitComponentRegistry = std::make_unique<UnitComponentRegistry>();
+    rData.popTypeRegistry = std::make_unique<PopTypeRegistry>();
+    rData.socialPolicyRegistry = std::make_unique<SocialPolicyRegistry>();
+    rData.socialRatingRegistry = std::make_unique<SocialRatingRegistry>();
+    rData.factionRegistry = std::make_unique<FactionRegistry>();
+    rData.councilProposalRegistry = std::make_unique<CouncilProposalRegistry>();
+    rData.councilRules = std::make_unique<CouncilRulesConfig_t>();
+    rData.probeActionsConfig = std::make_unique<ProbeActionsConfig_t>();
 }
 
 } // namespace
@@ -107,10 +134,10 @@ TEST_CASE("ValidateEffectReferences: GrantBuilding targets must exist", "[effect
     BuildingRegistry buildings;
     buildings.Load(actest::FixturePath("buildings.json"));
 
-    const std::vector<EffectConfig_t> good = {GrantBuilding_("granted_hall")};
+    const std::vector<EffectConfig_t> good = {GrantBuilding("granted_hall")};
     CHECK_NOTHROW(ValidateEffectReferences(good, "src", &buildings, nullptr, nullptr));
 
-    const std::vector<EffectConfig_t> bad = {GrantBuilding_("no_such_building")};
+    const std::vector<EffectConfig_t> bad = {GrantBuilding("no_such_building")};
     CHECK_THROWS_WITH(ValidateEffectReferences(bad, "src", &buildings, nullptr, nullptr),
                       Catch::Matchers::ContainsSubstring("no_such_building"));
 
@@ -198,4 +225,65 @@ TEST_CASE("ValidateEffectReferences: HasComponent unitFilter ids must exist",
 
     // A null registry skips the check (partial validation context).
     CHECK_NOTHROW(ValidateEffectReferences(bad, "src", nullptr, nullptr, nullptr, nullptr));
+}
+
+TEST_CASE("ValidateEffectReferences(GameDataContext): null required registry throws",
+          "[effects][validation]")
+{
+    GameDataContext empty;
+    CHECK_THROWS_WITH(ValidateEffectReferences(empty),
+                      Catch::Matchers::ContainsSubstring("buildingRegistry"));
+
+    GameDataContext missingTech;
+    FillEffectReferenceContext(missingTech);
+    missingTech.techRegistry.reset();
+    CHECK_THROWS_WITH(ValidateEffectReferences(missingTech),
+                      Catch::Matchers::ContainsSubstring("techRegistry"));
+
+    GameDataContext complete;
+    FillEffectReferenceContext(complete);
+    CHECK_NOTHROW(ValidateEffectReferences(complete));
+}
+
+TEST_CASE("ValidateEffectReferences(GameDataContext): probe action effect ids are checked",
+          "[effects][validation][probe]")
+{
+    // Minimal building registry — the full buildings fixture grants techs that would
+    // fail against an empty TechRegistry before the probe walk is reached.
+    const std::filesystem::path buildingsPath =
+        std::filesystem::temp_directory_path() / "ac_probe_effect_buildings.json";
+    {
+        std::ofstream out(buildingsPath);
+        out << R"([
+            { "id": "granted_hall", "name": "Granted Hall", "mineral_cost": 10, "category": "grow" }
+        ])";
+    }
+
+    GameDataContext data;
+    FillEffectReferenceContext(data);
+    data.buildingRegistry->Load(buildingsPath.string());
+
+    SECTION("known GrantBuilding on a probe action does not throw")
+    {
+        ProbeActionConfig_t action;
+        action.id = ProbeActionId_t::Infiltrate;
+        action.effects = {GrantBuilding("granted_hall")};
+        data.probeActionsConfig->actions = {action};
+
+        CHECK_NOTHROW(ValidateEffectReferences(data));
+    }
+
+    SECTION("unknown GrantBuilding throws naming the probe action")
+    {
+        ProbeActionConfig_t action;
+        action.id = ProbeActionId_t::Infiltrate;
+        action.effects = {GrantBuilding("no_such_building")};
+        data.probeActionsConfig->actions = {action};
+
+        CHECK_THROWS_WITH(ValidateEffectReferences(data),
+                          Catch::Matchers::ContainsSubstring("probe_action:infiltrate")
+                              && Catch::Matchers::ContainsSubstring("no_such_building"));
+    }
+
+    std::filesystem::remove(buildingsPath);
 }

@@ -492,15 +492,23 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   selector ids against `ImprovementRegistry`, and `TargetTileHas` condition values against
   improvement ids. Every `HasFeature` id is an improvement entry — terrain classifications
   (Flat / Arid) and intrinsic features alike (`Water` / `Ocean` / `River` / …) — so this
-  check has no special cases. `GrantUnit` is not validated — unit designs are runtime data
-  with no config registry.
+  check has no special cases. Payload dispatch is an exhaustive `std::visit` over
+  `EffectVariant_t` (compile break when a new alternative is added without an arm).
+  `GrantUnit` is intentionally an empty arm — unit designs are runtime data with no config
+  registry.
+- **Null policy**: the list overload (`ValidateEffectReferences(effects, sourceId, …)`)
+  keeps nullable registry pointers so unit tests can validate one family in isolation
+  (null = skip that family's checks). The `GameDataContext` overload throws if any target
+  registry or walked effect-source unique_ptr that `LoadGameData` always installs is null —
+  never silently no-ops the whole check.
 - **`ValidateTerrainFeatures(improvements)`** (`game/map/TerrainFeatureValidation.h`) runs
   alongside it: every `Rockiness_t`, `Moisture_t` and `TerrainFeature_t` enumerator must have
   an improvement entry whose id matches the enumerator name. `Tile` mirrors those enums into
   `GetTerrainFeatures()` by name, so a missing entry would otherwise cost a tile its terrain
   effects silently.
 - **Coverage**: every effect-declaring config — buildings, improvements, pop types, unit
-  components, social policies, and each rating level's effect list.
+  components, social policies, each rating level's effect list, factions, council proposals,
+  council governor effects, probe actions, and `tileYieldRules`.
 - Deliberately **not** part of `Registry::Validate_`: test fixtures intentionally contain
   dangling grant ids (to test that expansion skips unknown targets), and single registries
   can't see cross-registry references anyway.
@@ -510,17 +518,18 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 - **Location**: `include/game/RequiredTechValidator.h` / `src/game/RequiredTechValidator.cpp`.
 - **Purpose**: same fail-at-startup standard as `EffectReferenceValidator`, applied to the
   separate `requiredTech` scalar field (not an effect list) that buildings, improvements,
-  unit components, unit slots, social policies, and pop types all carry. Kept as its own
-  component rather than folded into `EffectReferenceValidator` — same lifecycle point and
-  `GameDataContext`-shaped entry point, but a distinct concern. Runs once from `Engine` right
-  after `ValidateEffectReferences`: `ValidateRequiredTechReferences(*m_gameDataContext)`.
-- **Checks**: for every config in each of the six registries, if `requiredTech` is non-empty
-  it must be a known id in `TechRegistry`; throws naming the source config and the bad tech
-  id otherwise. A null registry (including a null `TechRegistry`) skips the checks that need
-  it, matching `EffectReferenceValidator`'s convention.
+  unit components, unit slots, social policies, pop types, council proposals, and probe
+  actions all carry. Kept as its own component rather than folded into
+  `EffectReferenceValidator` — same lifecycle point and `GameDataContext`-shaped entry
+  point, but a distinct concern. Runs once from `Engine` right after
+  `ValidateEffectReferences`: `ValidateRequiredTechReferences(*m_gameDataContext)`.
+- **Checks**: for every config in each walked source, if `requiredTech` is non-empty it must
+  be a known id in `TechRegistry`; throws naming the source config and the bad tech id
+  otherwise. Throws if `techRegistry` or any walked source registry/config that
+  `LoadGameData` always installs is null — never silently no-ops.
 - **Coverage**: `BuildingRegistry`, `ImprovementRegistry`, `UnitComponentRegistry`,
-  `UnitSlotRegistry`, `SocialPolicyRegistry`, `PopTypeRegistry` — every registry whose config
-  struct declares a `requiredTech` field.
+  `UnitSlotRegistry`, `SocialPolicyRegistry`, `PopTypeRegistry`, `CouncilProposalRegistry`,
+  and `probeActionsConfig` — every source whose config declares a `requiredTech` field.
 
 ### Unit Component Effects
 
@@ -666,7 +675,9 @@ to load at sea. Note that `RuleFlagId_t` is a C++ enum: mods can add new *sites*
 2. Add a focused `ParseYourEffect_` function in `BonusEffectParser.cpp` and register it in
    the `EffectTypeParsers_` dispatch table (type string → parse fn). Validate required
    parameters there (throw on missing/empty ids — don't parse permissively).
-3. If it references other configs by id, add the check to `ValidateEffectReferences`.
+3. If it references other configs by id, add an id-checking arm (not a catch-all) to the
+   exhaustive `std::visit` in `ValidateEffectReferences`; otherwise add an explicit empty
+   arm so the compile-time exhaustiveness guard stays intact.
 4. Consume it with `std::get_if<YourEffect_t>` wherever it applies (`SocialRatingResolver`
    is the model for a type-specific consumer). If it can be `Instantaneous`, it also needs a
    branch in `DispatchInstantaneousEffects`.

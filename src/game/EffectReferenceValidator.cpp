@@ -19,9 +19,11 @@
 #include "game/social-engineering/SocialRatingRegistry.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitComponentRegistry.h"
+#include "game/units/ProbeActionConfig.h"
 #include "game/effects/BonusEffect.h"
 
 #include <functional>
+#include <memory>
 #include <stdexcept>
 #include <variant>
 
@@ -31,12 +33,75 @@ namespace ac
 namespace
 {
 
-[[noreturn]] void ThrowBadReference_(const std::string& rSourceId, const char* what,
-                                     const std::string& rBadId)
+[[noreturn]] void ThrowBadReference(const std::string& rSourceId, const char* what,
+                                    const std::string& rBadId)
 {
     throw std::runtime_error("Effect on '" + rSourceId + "' references unknown " + what
                              + " '" + rBadId + "'");
 }
+
+template <typename T>
+const T& RequireRegistry(const std::unique_ptr<T>& pRegistry, const char* fieldName)
+{
+    if (!pRegistry)
+    {
+        throw std::runtime_error(std::string("ValidateEffectReferences: GameDataContext.")
+                                 + fieldName + " is null");
+    }
+    return *pRegistry;
+}
+
+// Exhaustive over EffectVariant_t: a new alternative without an arm fails to compile.
+// Id-bearing arms check registries; all others (including GrantUnit) are explicit no-ops.
+struct EffectPayloadValidator
+{
+    const std::string& rSourceId;
+    const BuildingRegistry* pBuildings;
+    const ImprovementRegistry* pImprovements;
+    const TechRegistry* pTechs;
+
+    void operator()(const GrantBuildingEffect_t& rGrant) const
+    {
+        if (pBuildings && !pBuildings->Find(rGrant.buildingId))
+        {
+            ThrowBadReference(rSourceId, "building", rGrant.buildingId);
+        }
+    }
+
+    void operator()(const GrantTechEffect_t& rTech) const
+    {
+        if (pTechs && !pTechs->Find(rTech.techId))
+        {
+            ThrowBadReference(rSourceId, "tech", rTech.techId);
+        }
+    }
+
+    void operator()(const StatModifierEffect_t& rModifier) const
+    {
+        if (rModifier.selector && rModifier.selector->improvement && pImprovements
+            && !pImprovements->Find(*rModifier.selector->improvement))
+        {
+            ThrowBadReference(rSourceId, "selector improvement",
+                              *rModifier.selector->improvement);
+        }
+    }
+
+    void operator()(const GrantUnitEffect_t&) const {}
+    void operator()(const GrantEnergyEffect_t&) const {}
+    void operator()(const WorldParameterEffect_t&) const {}
+    void operator()(const InfiltrationEffect_t&) const {}
+    void operator()(const TileResourceCapEffect_t&) const {}
+    void operator()(const RuleFlagEffect_t&) const {}
+    void operator()(const SocialEngineeringOverrideEffect_t&) const {}
+    void operator()(const DiplomaticModifierEffect_t&) const {}
+    void operator()(const SocialRatingModifierEffect_t&) const {}
+    void operator()(const ConcealEffect_t&) const {}
+    void operator()(const DetectEffect_t&) const {}
+    void operator()(const OrbitalAttackEffect_t&) const {}
+    void operator()(const InterceptAttemptEffect_t&) const {}
+    void operator()(const TransportParamsEffect_t&) const {}
+    void operator()(const PermissionEffect_t&) const {}
+};
 
 } // namespace
 
@@ -49,33 +114,12 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
 {
     for (const EffectConfig_t& rEffect : rEffects)
     {
-        if (const auto* pGrant = std::get_if<GrantBuildingEffect_t>(&rEffect.effect))
-        {
-            if (pBuildings && !pBuildings->Find(pGrant->buildingId))
-            {
-                ThrowBadReference_(rSourceId, "building", pGrant->buildingId);
-            }
-        }
-        else if (const auto* pTech = std::get_if<GrantTechEffect_t>(&rEffect.effect))
-        {
-            if (pTechs && !pTechs->Find(pTech->techId))
-            {
-                ThrowBadReference_(rSourceId, "tech", pTech->techId);
-            }
-        }
-        else if (const auto* pModifier = std::get_if<StatModifierEffect_t>(&rEffect.effect))
-        {
-            if (pModifier->selector && pModifier->selector->improvement && pImprovements
-                && !pImprovements->Find(*pModifier->selector->improvement))
-            {
-                ThrowBadReference_(rSourceId, "selector improvement",
-                                   *pModifier->selector->improvement);
-            }
-        }
+        std::visit(EffectPayloadValidator{rSourceId, pBuildings, pImprovements, pTechs},
+                   rEffect.effect);
 
         if (!rEffect.removedByTech.empty() && pTechs && !pTechs->Find(rEffect.removedByTech))
         {
-            ThrowBadReference_(rSourceId, "tech", rEffect.removedByTech);
+            ThrowBadReference(rSourceId, "tech", rEffect.removedByTech);
         }
 
         // Condition feature ids match Tile::HasFeature, and every one of them - including the
@@ -87,7 +131,7 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
             {
                 if (!pImprovements->Find(rFeatureId))
                 {
-                    ThrowBadReference_(rSourceId, "condition feature", rFeatureId);
+                    ThrowBadReference(rSourceId, "condition feature", rFeatureId);
                 }
             };
             std::function<void(const Condition_t&)> checkCondition = [&](const Condition_t& rCond)
@@ -120,7 +164,7 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
             && rEffect.unitFilter->component && pUnitComponents
             && !pUnitComponents->Find(*rEffect.unitFilter->component))
         {
-            ThrowBadReference_(rSourceId, "unitFilter component",
+            ThrowBadReference(rSourceId, "unitFilter component",
                                *rEffect.unitFilter->component);
         }
     }
@@ -128,80 +172,80 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
 
 void ValidateEffectReferences(const GameDataContext& rData)
 {
-    const BuildingRegistry* pBuildings = rData.buildingRegistry.get();
-    const ImprovementRegistry* pImprovements = rData.improvementRegistry.get();
-    const TechRegistry* pTechs = rData.techRegistry.get();
-    const UnitComponentRegistry* pUnitComponents = rData.unitComponentRegistry.get();
+    // Target registries LoadGameData always installs — unexpected null means every id check
+    // for that family would otherwise pass vacuously.
+    const BuildingRegistry& rBuildings =
+        RequireRegistry(rData.buildingRegistry, "buildingRegistry");
+    const ImprovementRegistry& rImprovements =
+        RequireRegistry(rData.improvementRegistry, "improvementRegistry");
+    const TechRegistry& rTechs = RequireRegistry(rData.techRegistry, "techRegistry");
+    const UnitComponentRegistry& rUnitComponents =
+        RequireRegistry(rData.unitComponentRegistry, "unitComponentRegistry");
+
+    // Effect-source registries / configs LoadGameData always populates before calling us.
+    const PopTypeRegistry& rPopTypes =
+        RequireRegistry(rData.popTypeRegistry, "popTypeRegistry");
+    const SocialPolicyRegistry& rSocialPolicies =
+        RequireRegistry(rData.socialPolicyRegistry, "socialPolicyRegistry");
+    const SocialRatingRegistry& rSocialRatings =
+        RequireRegistry(rData.socialRatingRegistry, "socialRatingRegistry");
+    const FactionRegistry& rFactions =
+        RequireRegistry(rData.factionRegistry, "factionRegistry");
+    const CouncilProposalRegistry& rCouncilProposals =
+        RequireRegistry(rData.councilProposalRegistry, "councilProposalRegistry");
+    const CouncilRulesConfig_t& rCouncilRules =
+        RequireRegistry(rData.councilRules, "councilRules");
+    const ProbeActionsConfig_t& rProbeActions =
+        RequireRegistry(rData.probeActionsConfig, "probeActionsConfig");
 
     auto validate = [&](const std::vector<EffectConfig_t>& rEffects, const std::string& rSourceId)
     {
-        ValidateEffectReferences(rEffects, rSourceId, pBuildings, pImprovements, pTechs,
-                                 pUnitComponents);
+        ValidateEffectReferences(rEffects, rSourceId, &rBuildings, &rImprovements, &rTechs,
+                                 &rUnitComponents);
     };
 
-    if (pBuildings)
+    for (const BuildingConfig_t& rConfig : rBuildings.GetAll())
     {
-        for (const BuildingConfig_t& rConfig : pBuildings->GetAll())
+        validate(rConfig.effects, rConfig.id);
+    }
+    for (const ImprovementConfig_t& rConfig : rImprovements.GetAll())
+    {
+        validate(rConfig.effects, rConfig.id);
+    }
+    for (const PopTypeConfig_t& rConfig : rPopTypes.GetAll())
+    {
+        validate(rConfig.effects, rConfig.id);
+    }
+    for (const UnitComponentConfig_t& rConfig : rUnitComponents.GetAll())
+    {
+        validate(rConfig.effects, rConfig.id);
+    }
+    for (const SocialPolicyConfig_t& rConfig : rSocialPolicies.GetAll())
+    {
+        validate(rConfig.effects, rConfig.id);
+    }
+    for (const SocialRatingConfig_t& rConfig : rSocialRatings.GetAll())
+    {
+        for (const auto& [level, rEffects] : rConfig.levelEffects)
         {
-            validate(rConfig.effects, rConfig.id);
+            validate(rEffects, rConfig.id + " level " + std::to_string(level));
         }
     }
-    if (pImprovements)
+    for (const FactionConfig_t& rConfig : rFactions.GetAll())
     {
-        for (const ImprovementConfig_t& rConfig : pImprovements->GetAll())
-        {
-            validate(rConfig.effects, rConfig.id);
-        }
+        validate(rConfig.effects, rConfig.id);
     }
-    if (rData.popTypeRegistry)
+    for (const CouncilProposalConfig_t& rConfig : rCouncilProposals.GetAll())
     {
-        for (const PopTypeConfig_t& rConfig : rData.popTypeRegistry->GetAll())
-        {
-            validate(rConfig.effects, rConfig.id);
-        }
+        validate(rConfig.effects, rConfig.id);
     }
-    if (rData.unitComponentRegistry)
+    validate(rCouncilRules.governorEffects, "council_governor");
+    for (const ProbeActionConfig_t& rAction : rProbeActions.actions)
     {
-        for (const UnitComponentConfig_t& rConfig : rData.unitComponentRegistry->GetAll())
-        {
-            validate(rConfig.effects, rConfig.id);
-        }
+        validate(rAction.effects,
+                 std::string("probe_action:") + ProbeActionIdToString(rAction.id));
     }
-    if (rData.socialPolicyRegistry)
-    {
-        for (const SocialPolicyConfig_t& rConfig : rData.socialPolicyRegistry->GetAll())
-        {
-            validate(rConfig.effects, rConfig.id);
-        }
-    }
-    if (rData.socialRatingRegistry)
-    {
-        for (const SocialRatingConfig_t& rConfig : rData.socialRatingRegistry->GetAll())
-        {
-            for (const auto& [level, rEffects] : rConfig.levelEffects)
-            {
-                validate(rEffects, rConfig.id + " level " + std::to_string(level));
-            }
-        }
-    }
-    if (rData.factionRegistry)
-    {
-        for (const FactionConfig_t& rConfig : rData.factionRegistry->GetAll())
-        {
-            validate(rConfig.effects, rConfig.id);
-        }
-    }
-    if (rData.councilProposalRegistry)
-    {
-        for (const CouncilProposalConfig_t& rConfig : rData.councilProposalRegistry->GetAll())
-        {
-            validate(rConfig.effects, rConfig.id);
-        }
-    }
-    if (rData.councilRules)
-    {
-        validate(rData.councilRules->governorEffects, "council_governor");
-    }
+    // tileYieldRules is a plain vector on GameDataContext (always present; may be empty).
     validate(rData.tileYieldRules, "tile_yield_rules");
 }
 

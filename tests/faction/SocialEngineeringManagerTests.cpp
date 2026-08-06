@@ -16,7 +16,7 @@ using namespace ac;
 namespace
 {
 
-std::filesystem::path WriteTempJson_(const std::string& name, const std::string& body)
+std::filesystem::path WriteTempJson(const std::string& name, const std::string& body)
 {
     const std::filesystem::path path = std::filesystem::temp_directory_path() / name;
     std::ofstream out(path);
@@ -37,7 +37,7 @@ const char* k_ValidDefaults = R"([
 TEST_CASE("SocialEngineeringManager: constructs when all default policies exist in their category",
           "[social-engineering][validation]")
 {
-    const std::filesystem::path path = WriteTempJson_("ac_sem_valid.json", k_ValidDefaults);
+    const std::filesystem::path path = WriteTempJson("ac_sem_valid.json", k_ValidDefaults);
     SocialPolicyRegistry registry;
     registry.Load(path.string());
 
@@ -48,7 +48,7 @@ TEST_CASE("SocialEngineeringManager: constructs when all default policies exist 
 TEST_CASE("SocialEngineeringManager: throws when a default policy id is missing from config",
           "[social-engineering][validation]")
 {
-    const std::filesystem::path path = WriteTempJson_("ac_sem_missing.json", R"([
+    const std::filesystem::path path = WriteTempJson("ac_sem_missing.json", R"([
         { "id": "frontier",    "name": "Frontier",    "category": "politics",       "effects": [] },
         { "id": "simple",      "name": "Simple",      "category": "economics",      "effects": [] },
         { "id": "survival",    "name": "Survival",    "category": "values",         "effects": [] }
@@ -64,7 +64,7 @@ TEST_CASE("SocialEngineeringManager: throws when a default policy id is missing 
 TEST_CASE("SocialEngineeringManager: throws when a default policy id is in the wrong category",
           "[social-engineering][validation]")
 {
-    const std::filesystem::path path = WriteTempJson_("ac_sem_miscategorized.json", R"([
+    const std::filesystem::path path = WriteTempJson("ac_sem_miscategorized.json", R"([
         { "id": "frontier",    "name": "Frontier",    "category": "economics",      "effects": [] },
         { "id": "simple",      "name": "Simple",      "category": "economics",      "effects": [] },
         { "id": "survival",    "name": "Survival",    "category": "values",         "effects": [] },
@@ -87,7 +87,7 @@ TEST_CASE("SocialEngineeringManager: a null registry skips default-policy valida
 TEST_CASE("SocialEngineeringManager: SetActivePolicy stores the policy under its own category",
           "[social-engineering][validation]")
 {
-    const std::filesystem::path path = WriteTempJson_("ac_sem_set_active.json", k_ValidDefaults);
+    const std::filesystem::path path = WriteTempJson("ac_sem_set_active.json", k_ValidDefaults);
     SocialPolicyRegistry registry;
     registry.Load(path.string());
 
@@ -111,7 +111,7 @@ TEST_CASE("SocialEngineeringManager: SetActivePolicy stores the policy under its
 TEST_CASE("SocialEngineeringManager: GetSocialRating sums active policy modifiers only",
           "[social-engineering][rating]")
 {
-    const std::filesystem::path path = WriteTempJson_("ac_sem_rating.json", R"([
+    const std::filesystem::path path = WriteTempJson("ac_sem_rating.json", R"([
         { "id": "frontier", "name": "Frontier", "category": "politics", "effects": [
             { "type": "SocialRatingModifier", "scope": "FactionGlobal",
               "parameters": { "rating": "growth", "amount": 2 } }

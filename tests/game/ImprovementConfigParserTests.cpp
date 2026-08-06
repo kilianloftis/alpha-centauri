@@ -10,7 +10,7 @@ using namespace ac;
 namespace
 {
 
-std::filesystem::path WriteTempJson_(const std::string& name, const std::string& body)
+std::filesystem::path WriteTempJson(const std::string& name, const std::string& body)
 {
     const std::filesystem::path path = std::filesystem::temp_directory_path() / name;
     std::ofstream out(path);
@@ -22,7 +22,7 @@ std::filesystem::path WriteTempJson_(const std::string& name, const std::string&
 
 TEST_CASE("ImprovementConfigParser: turns_required and energy_cost", "[improvements][parser]")
 {
-    const auto path = WriteTempJson_("ac_improvement_parser.json", R"([
+    const auto path = WriteTempJson("ac_improvement_parser.json", R"([
         {
             "id": "Road",
             "name": "Road",
@@ -43,7 +43,7 @@ TEST_CASE("ImprovementConfigParser: turns_required and energy_cost", "[improveme
 
 TEST_CASE("ImprovementConfigParser: rejects mineral_cost", "[improvements][parser]")
 {
-    const auto path = WriteTempJson_("ac_improvement_mineral.json", R"([
+    const auto path = WriteTempJson("ac_improvement_mineral.json", R"([
         { "id": "Road", "name": "Road", "mineral_cost": 5, "effects": [] }
     ])");
 
@@ -56,7 +56,7 @@ TEST_CASE("ImprovementConfigParser: terraform.result", "[improvements][parser]")
 {
     SECTION("raise_land")
     {
-        const auto path = WriteTempJson_("ac_improvement_raise.json", R"([
+        const auto path = WriteTempJson("ac_improvement_raise.json", R"([
             {
                 "id": "RaiseLand",
                 "name": "Raise Land",
@@ -74,7 +74,7 @@ TEST_CASE("ImprovementConfigParser: terraform.result", "[improvements][parser]")
 
     SECTION("unknown result throws")
     {
-        const auto path = WriteTempJson_("ac_improvement_bad_tf.json", R"([
+        const auto path = WriteTempJson("ac_improvement_bad_tf.json", R"([
             {
                 "id": "Bad",
                 "name": "Bad",
@@ -90,7 +90,7 @@ TEST_CASE("ImprovementConfigParser: terraform.result", "[improvements][parser]")
 
 TEST_CASE("ImprovementConfigParser: suppress_yield_sources", "[improvements][parser]")
 {
-    const auto path = WriteTempJson_("ac_improvement_suppress.json", R"([
+    const auto path = WriteTempJson("ac_improvement_suppress.json", R"([
         {
             "id": "Forest",
             "name": "Forest",
@@ -111,7 +111,7 @@ TEST_CASE("ImprovementConfigParser: suppress_yield_sources", "[improvements][par
 
 TEST_CASE("ImprovementConfigParser: tags are stored on config", "[improvements][parser]")
 {
-    const auto path = WriteTempJson_("ac_improvement_tags.json", R"([
+    const auto path = WriteTempJson("ac_improvement_tags.json", R"([
         {
             "id": "Rocky",
             "name": "Rocky",
@@ -131,7 +131,7 @@ TEST_CASE("ImprovementConfigParser: tags are stored on config", "[improvements][
 TEST_CASE("ImprovementConfigParser: expands @tag in excludes and suppress_yield_sources",
           "[improvements][parser]")
 {
-    const auto path = WriteTempJson_("ac_improvement_tag_expand.json", R"([
+    const auto path = WriteTempJson("ac_improvement_tag_expand.json", R"([
         { "id": "Flat", "name": "Flat", "tags": ["landform"], "effects": [] },
         { "id": "Rocky", "name": "Rocky", "tags": ["landform"], "effects": [] },
         {
@@ -187,7 +187,7 @@ TEST_CASE("ImprovementConfigParser: expands @tag in excludes and suppress_yield_
 TEST_CASE("ImprovementConfigParser: @tag expansion omits self from suppress list",
           "[improvements][parser]")
 {
-    const auto path = WriteTempJson_("ac_improvement_tag_self.json", R"([
+    const auto path = WriteTempJson("ac_improvement_tag_self.json", R"([
         { "id": "Farm", "name": "Farm", "tags": ["land_terraform"], "effects": [] },
         {
             "id": "ThermalBorehole",
@@ -207,7 +207,7 @@ TEST_CASE("ImprovementConfigParser: @tag expansion omits self from suppress list
 
 TEST_CASE("ImprovementConfigParser: tag expansion deduplicates mixed ids", "[improvements][parser]")
 {
-    const auto path = WriteTempJson_("ac_improvement_tag_dedupe.json", R"([
+    const auto path = WriteTempJson("ac_improvement_tag_dedupe.json", R"([
         { "id": "Flat", "name": "Flat", "tags": ["landform"], "effects": [] },
         { "id": "Rocky", "name": "Rocky", "tags": ["landform"], "effects": [] },
         {
@@ -227,7 +227,7 @@ TEST_CASE("ImprovementConfigParser: tag expansion deduplicates mixed ids", "[imp
 
 TEST_CASE("ImprovementConfigParser: unknown @tag throws", "[improvements][parser]")
 {
-    const auto path = WriteTempJson_("ac_improvement_bad_tag.json", R"([
+    const auto path = WriteTempJson("ac_improvement_bad_tag.json", R"([
         {
             "id": "Forest",
             "name": "Forest",
