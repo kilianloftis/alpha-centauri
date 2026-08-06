@@ -46,10 +46,21 @@ struct ActiveEffect_t
     // (per-base attribution for conditions like OriginBaseIsTargetBase — not a membership filter).
     const BaseManager* originBase = nullptr;
     // Set for improvements with owned_by_territory (e.g. Sensor): the FactionId_t that owns
-    // the host tile's territory at collection time. When set, tile defense / detection / fog
-    // vision only apply the effect for that faction. Unowned territory stores k_NoFactionOwner.
+    // the host tile's territory at collection time. Also set for unit-projected ThisTile auras
+    // from the projecting unit's faction. When set, tile defense / fog vision / area Conceal
+    // only apply for that faction (unset = universal, e.g. Rocky defense, Fungus Conceal).
+    // Detect requires a stamped owner — see AppliesForFaction vs UnitVisibility's fail-closed
+    // Detect gate. Unowned territory stores k_NoFactionOwner (has_value, matches nobody).
     std::optional<FactionId_t> ownerFaction;
 };
+
+// General faction gate for attributed tile effects: unset ownerFaction ⇒ applies to all
+// (terrain defense / Fungus Conceal). Detect must additionally require has_value at the
+// consumer — an unattributed Detect never pierces.
+inline bool AppliesForFaction(const ActiveEffect_t& rEffect, FactionId_t forFaction)
+{
+    return !rEffect.ownerFaction.has_value() || *rEffect.ownerFaction == forFaction;
+}
 
 // The faction-wide effect pool: what CollectActiveEffects gathers (buildings with grants
 // expanded, social policies, pop/unit faction-lane effects), plus — when the faction is bound
@@ -357,8 +368,8 @@ bool ResolveFlag(const Tile& rTile, RuleFlagId_t flagId);
 
 // The above, OR a non-embarked unit of factionId standing on rTile whose design projects
 // flagId at ThisTile (Carrier Deck). Lets a consumer ask what a tile can do for it without
-// naming which improvements or components supply the capability. Note the faction check is
-// this function's own: TileEffectsContext's unit auras are deliberately not territory-owned.
+// naming which improvements or components supply the capability. Flags use this function's
+// on-tile unit faction check; projected auras stamp ownerFaction from the unit separately.
 bool TileProvidesFlag(const Tile& rTile, RuleFlagId_t flagId, const WorldMap& rWorldMap,
                       FactionId_t factionId);
 

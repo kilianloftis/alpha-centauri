@@ -355,6 +355,36 @@
     ]
   },
   {
+    "id": "cloak_detector_pod",
+    "name": "Mobile cloak Detect aura (ThisTile, radius 2)",
+    "type": "special",
+    "effects": [
+      {
+        "type": "Detect",
+        "scope": "ThisTile",
+        "radius": 2,
+        "parameters": {
+          "channel": "cloak"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cloak_field",
+    "name": "Mobile cloak Conceal aura (ThisTile, radius 1)",
+    "type": "special",
+    "effects": [
+      {
+        "type": "Conceal",
+        "scope": "ThisTile",
+        "radius": 1,
+        "parameters": {
+          "channel": "cloak"
+        }
+      }
+    ]
+  },
+  {
     "id": "Cloaking_Device",
     "name": "Cloaking Device",
     "type": "ability",

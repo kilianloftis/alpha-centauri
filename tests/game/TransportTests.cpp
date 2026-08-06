@@ -303,6 +303,23 @@ TEST_CASE("Must-land attach refuels; air carrier loads at Base/Airbase or carrie
     CHECK(land2.GetCarrier() == &airTransport);
 }
 
+TEST_CASE("A hostile carrier deck is not a load site", "[transport]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    MakeWater_(fixture.At(5, 5));
+    Unit& airTransport = fixture.MakeUnit(player, 5, 5, {"test_flight_chassis", "test_air_transport"});
+    // TileProvidesFlag runs its own on-tile unit faction check: an enemy deck supplies nothing.
+    fixture.MakeUnit(enemy, 5, 5, {"test_sea_chassis", "test_carrier_deck"});
+    CHECK_FALSE(CanLoadAtTile(airTransport, fixture.At(5, 5), fixture.map));
+
+    fixture.MakeUnit(player, 5, 5, {"test_sea_chassis", "test_carrier_deck"});
+    CHECK(CanLoadAtTile(airTransport, fixture.At(5, 5), fixture.map));
+}
+
 TEST_CASE("Attack on transport tile hits carrier not cargo", "[transport][combat]")
 {
     FactionFixture fixture;

@@ -62,6 +62,21 @@ TEST_CASE("Sensor aura only benefits the faction that owns its territory",
     CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(6, 4), other.GetFactionId()) == Approx(1.0));
 }
 
+TEST_CASE("A unit-projected defense aura only benefits the projecting faction",
+          "[effects][tile][aura][unit]")
+{
+    actest::FactionFixture fixture;
+    Faction& owner = fixture.MakeFaction();
+    Faction& foreign = fixture.MakeFaction();
+
+    // Unit auras are attributed to the unit's faction, not to territory — no base needed.
+    fixture.MakeUnit(owner, 4, 4, {"sensor_pod"});
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(5, 4), owner.GetFactionId())
+          == Approx(1.25));
+    CHECK(fixture.ctx->ResolveTileDefenseMultiplier(fixture.At(5, 4), foreign.GetFactionId())
+          == Approx(1.0));
+}
+
 TEST_CASE("Sensor on unowned territory benefits nobody", "[effects][tile][aura][territory]")
 {
     actest::WorldFixture world;

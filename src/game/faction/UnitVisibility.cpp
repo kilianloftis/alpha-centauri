@@ -9,6 +9,7 @@
 #include "game/map/Tile.h"
 #include "game/units/Unit.h"
 
+#include <span>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -19,12 +20,7 @@ namespace ac
 namespace
 {
 
-bool AppliesForFaction_(const ActiveEffect_t& rEffect, FactionId_t forFaction)
-{
-    return !rEffect.ownerFaction.has_value() || *rEffect.ownerFaction == forFaction;
-}
-
-void CollectConcealmentChannels_(const Unit& rSubject, const TileEffectsContext& rTileEffects,
+void CollectConcealmentChannels_(const Unit& rSubject, std::span<const ActiveEffect_t> areaEffects,
                                  std::unordered_set<std::string>& rOut)
 {
     const EffectContext_t ctx{&rSubject.GetTile()};
@@ -42,9 +38,13 @@ void CollectConcealmentChannels_(const Unit& rSubject, const TileEffectsContext&
         }
     }
 
-    for (const ActiveEffect_t& rEffect : rTileEffects.CollectAreaEffects(rSubject.GetTile()))
+    // Tile-area Conceal: terrain (unset owner) applies to everyone; unit/territory auras
+    // only conceal subjects matching ownerFaction.
+    const FactionId_t subjectId = rSubject.GetFaction().GetFactionId();
+    for (const ActiveEffect_t& rEffect : areaEffects)
     {
-        if (!ConditionSatisfied(*rEffect.config, ctx, rEffect.originBase))
+        if (!AppliesForFaction(rEffect, subjectId)
+            || !ConditionSatisfied(*rEffect.config, ctx, rEffect.originBase))
         {
             continue;
         }
@@ -57,13 +57,15 @@ void CollectConcealmentChannels_(const Unit& rSubject, const TileEffectsContext&
 }
 
 bool HasDetectionCovering_(const Faction& rObserver, const Tile& rTile, const std::string& rChannel,
-                           const TileEffectsContext& rTileEffects)
+                           std::span<const ActiveEffect_t> areaEffects)
 {
     const FactionId_t observerId = rObserver.GetFactionId();
     const EffectContext_t ctx{&rTile};
-    for (const ActiveEffect_t& rEffect : rTileEffects.CollectAreaEffects(rTile))
+    for (const ActiveEffect_t& rEffect : areaEffects)
     {
-        if (!AppliesForFaction_(rEffect, observerId)
+        // Detect fails closed without a stamped owner — unset never pierces for every faction.
+        if (!rEffect.ownerFaction.has_value()
+            || !AppliesForFaction(rEffect, observerId)
             || !ConditionSatisfied(*rEffect.config, ctx, rEffect.originBase))
         {
             continue;
@@ -99,11 +101,12 @@ bool IsUnitVisibleTo(const Faction& rObserver, const Unit& rSubject,
         return false;
     }
 
+    const std::vector<ActiveEffect_t> areaEffects = rTileEffects.CollectAreaEffects(rTile);
     std::unordered_set<std::string> channels;
-    CollectConcealmentChannels_(rSubject, rTileEffects, channels);
+    CollectConcealmentChannels_(rSubject, areaEffects, channels);
     for (const std::string& rChannel : channels)
     {
-        if (!HasDetectionCovering_(rObserver, rTile, rChannel, rTileEffects))
+        if (!HasDetectionCovering_(rObserver, rTile, rChannel, areaEffects))
         {
             return false;
         }

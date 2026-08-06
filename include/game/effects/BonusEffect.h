@@ -236,7 +236,8 @@ struct ConcealEffect_t
 };
 
 // Pierces concealment on a matching channel. Typically ThisTile with a radius (e.g. Sensor
-// Detect "terrain" at radius 2). Territory-owned improvements stamp ActiveEffect_t::ownerFaction.
+// Detect "terrain" at radius 2). Collectors must stamp ActiveEffect_t::ownerFaction
+// (territory owner or projecting unit); Detect without attribution never pierces.
 struct DetectEffect_t
 {
     std::string channel;

@@ -239,21 +239,29 @@ TEST_CASE("Conditional Detect applies only when TargetTileHas is satisfied",
     actest::FactionFixture fixture;
     Faction& owner = fixture.MakeFaction();
     Faction& other = fixture.MakeFaction();
+    Faction& third = fixture.MakeFaction();
 
     // Detector at (6,4) pierces cloak only on River tiles within radius 2.
     fixture.MakeFactionBase(owner, 1, 4);
     fixture.ctx->AddImprovementWithEffects(fixture.At(6, 4), "conditional_cloak_detector");
     fixture.MakeUnit(owner, 6, 4, {"test_chassis"}); // light (7,4) and surrounds
     owner.RebuildVisibility();
+    // Third faction lights the same tile; the detector is not on its territory.
+    fixture.MakeUnit(third, 7, 5, {"test_chassis"});
+    third.RebuildVisibility();
 
     Unit& cloaked = fixture.MakeUnit(other, 7, 4, {"test_chassis", "Cloaking_Device"});
     REQUIRE(owner.GetVisibleMap().IsVisible(7, 4));
+    REQUIRE(third.GetVisibleMap().IsVisible(7, 4));
     // Cloak active; Detect condition fails off-river → still hidden.
     CHECK_FALSE(IsUnitVisibleTo(owner, cloaked, *fixture.ctx));
 
     fixture.At(7, 4).SetHasRiver(true);
     // Same unit, same detector: condition now met → cloak pierced.
     CHECK(IsUnitVisibleTo(owner, cloaked, *fixture.ctx));
+    // The detector is owned_by_territory: only the territory owner pierces, condition or not.
+    REQUIRE(fixture.map.GetTerritory().GetOwner(6, 4) == owner.GetFactionId());
+    CHECK_FALSE(IsUnitVisibleTo(third, cloaked, *fixture.ctx));
 }
 
 TEST_CASE("Sensor terrain Detect wraps horizontally across the map seam",
@@ -282,4 +290,67 @@ TEST_CASE("Sensor terrain Detect wraps horizontally across the map seam",
     owner.RebuildVisibility();
     REQUIRE(owner.GetVisibleMap().IsVisible(width - 3, 4));
     CHECK_FALSE(IsUnitVisibleTo(owner, hiddenFar, *fixture.ctx));
+}
+
+TEST_CASE("Unit ThisTile Detect pierces cloak only for the projecting faction",
+          "[visibility][detection][cloak][aura]")
+{
+    actest::FactionFixture fixture;
+    Faction& detectorOwner = fixture.MakeFaction();
+    Faction& cloakedOwner = fixture.MakeFaction();
+    Faction& third = fixture.MakeFaction();
+
+    // Detector pod at (5,4); cloaked enemy at (6,4) within radius 2.
+    fixture.MakeUnit(detectorOwner, 5, 4, {"test_chassis", "cloak_detector_pod"});
+    Unit& cloaked = fixture.MakeUnit(cloakedOwner, 6, 4, {"test_chassis", "Cloaking_Device"});
+    // Third faction lights the same tile without its own Detect.
+    fixture.MakeUnit(third, 6, 5, {"test_chassis"});
+    detectorOwner.RebuildVisibility();
+    third.RebuildVisibility();
+
+    REQUIRE(detectorOwner.GetVisibleMap().IsVisible(cloaked.GetTile()));
+    REQUIRE(third.GetVisibleMap().IsVisible(cloaked.GetTile()));
+    CHECK(IsUnitVisibleTo(detectorOwner, cloaked, *fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(third, cloaked, *fixture.ctx));
+}
+
+TEST_CASE("Unit ThisTile Conceal hides only friendly subjects in radius",
+          "[visibility][detection][cloak][aura]")
+{
+    actest::FactionFixture fixture;
+    Faction& auraOwner = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    Faction& scout = fixture.MakeFaction();
+
+    // Aura unit of A at (5,4); friendly of A and enemy of B both adjacent.
+    fixture.MakeUnit(auraOwner, 5, 4, {"test_chassis", "cloak_field"});
+    Unit& friendly = fixture.MakeUnit(auraOwner, 6, 4, {"test_chassis"});
+    Unit& hostile = fixture.MakeUnit(enemy, 5, 5, {"test_chassis"});
+    // Third-faction scout lights both tiles; no Detect of its own.
+    fixture.MakeUnit(scout, 6, 5, {"test_chassis"});
+    scout.RebuildVisibility();
+
+    REQUIRE(scout.GetVisibleMap().IsVisible(friendly.GetTile()));
+    REQUIRE(scout.GetVisibleMap().IsVisible(hostile.GetTile()));
+    // Friendly subject gets the aura Conceal → hidden from scout without Detect.
+    CHECK_FALSE(IsUnitVisibleTo(scout, friendly, *fixture.ctx));
+    // Enemy subject does not gain the aura → visible.
+    CHECK(IsUnitVisibleTo(scout, hostile, *fixture.ctx));
+}
+
+TEST_CASE("Detect without ownerFaction never pierces cloak",
+          "[visibility][detection][cloak]")
+{
+    actest::FactionFixture fixture;
+    Faction& observer = fixture.MakeFaction();
+    Faction& owner = fixture.MakeFaction();
+
+    // Improvement Detect with no owned_by_territory → no stamp → fail closed.
+    fixture.ctx->AddImprovementWithEffects(fixture.At(6, 4), "unowned_cloak_detector");
+    fixture.MakeUnit(observer, 6, 4, {"test_chassis"});
+    Unit& cloaked = fixture.MakeUnit(owner, 7, 4, {"test_chassis", "Cloaking_Device"});
+    observer.RebuildVisibility();
+
+    REQUIRE(observer.GetVisibleMap().IsVisible(cloaked.GetTile()));
+    CHECK_FALSE(IsUnitVisibleTo(observer, cloaked, *fixture.ctx));
 }

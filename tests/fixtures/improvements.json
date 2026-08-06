@@ -232,12 +232,25 @@
   {
     "id": "conditional_cloak_detector",
     "name": "Detects cloak only on River tiles",
+    "owned_by_territory": true,
     "effects": [
       {
         "type": "Detect",
         "scope": "ThisTile",
         "radius": 2,
         "condition": { "kind": "TargetTileHas", "value": "River" },
+        "parameters": { "channel": "cloak" }
+      }
+    ]
+  },
+  {
+    "id": "unowned_cloak_detector",
+    "name": "Detect without territory ownership (never stamps ownerFaction)",
+    "effects": [
+      {
+        "type": "Detect",
+        "scope": "ThisTile",
+        "radius": 2,
         "parameters": { "channel": "cloak" }
       }
     ]

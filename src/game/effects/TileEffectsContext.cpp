@@ -1,5 +1,6 @@
 #include "game/effects/TileEffectsContext.h"
 
+#include "game/Faction.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/MapUtils.h"
@@ -69,7 +70,7 @@ TileResources_t AssembleRestrictedTileYield_(TileResources_t subjectToRestrictio
 // Appends ThisTile-scoped effects projected by units within maxRadius of rOrigin — a unit
 // component with a radius effect is a mobile aura (e.g. a sensor pod). Units standing on
 // rOrigin itself project at distance 0. TileEffectReaches is the same filter improvements
-// and terrain use. Unit auras are not territory-owned.
+// and terrain use. Each aura is attributed to the projecting unit's faction.
 void AppendUnitAuraEffects_(const Tile& rOrigin, const WorldMap& rWorldMap, int maxRadius,
                             std::vector<ActiveEffect_t>& rOut)
 {
@@ -82,10 +83,12 @@ void AppendUnitAuraEffects_(const Tile& rOrigin, const WorldMap& rWorldMap, int 
                 {
                     continue;
                 }
+                const FactionId_t owner = pUnit->GetFaction().GetFactionId();
                 for (ActiveEffect_t& rActive : pUnit->GetDesign().CollectEffects())
                 {
                     if (TileEffectReaches(*rActive.config, distance))
                     {
+                        rActive.ownerFaction = owner;
                         rOut.push_back(std::move(rActive));
                     }
                 }
@@ -158,12 +161,6 @@ void AppendOwnTileEffects_(const Tile& rTile, const WorldMap& rWorldMap,
     {
         AppendOwnedImprovementEffects_(rTile, *pImprovement, 0, rWorldMap, rOut);
     }
-}
-
-bool AppliesForFaction_(const ActiveEffect_t& rEffect, FactionId_t forFaction)
-{
-    // Territory-owned improvements (Sensor) only apply for their territory owner.
-    return !rEffect.ownerFaction.has_value() || *rEffect.ownerFaction == forFaction;
 }
 
 bool TileMatchesSelector_(const TileSelector_t& selector, const Tile& rTile, bool isBaseTile)
@@ -375,7 +372,7 @@ double TileEffectsContext::ResolveTileDefenseMultiplier(const Tile& rTile, Facti
     applicable.reserve(effects.size());
     for (const ActiveEffect_t& rEffect : effects)
     {
-        if (AppliesForFaction_(rEffect, forFaction))
+        if (AppliesForFaction(rEffect, forFaction))
         {
             applicable.push_back(rEffect);
         }

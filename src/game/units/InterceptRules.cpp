@@ -111,6 +111,10 @@ std::vector<InterceptCandidate_t> CollectInterceptCandidates_(GameState& rGameSt
     // TODO: a ThisTile source has no deploy ledger to charge, so it ignores cooldownTurns and
     // may attempt on every attack. Honouring the configured cooldown needs a per-tile (or
     // per-improvement) deploy record — the rule for that is not defined yet.
+    // TODO: this is the only CollectAreaEffects consumer that ignores ActiveEffect_t::ownerFaction,
+    // so an intercept aura projected by a hostile unit or an enemy-owned territory improvement
+    // still fires for the defender. Gating on AppliesForFaction(effect, defender faction) is the
+    // obvious fix, but whether a neutral/allied tile source may intercept is not a settled rule.
     AppendMatchingIntercepts_(candidates, rTileEffects.CollectAreaEffects(rDefender.GetTile()),
                               rAttacker, ctx, {EffectScope_t::ThisTile},
                               InterceptDeployKind_t::None, nullptr);
