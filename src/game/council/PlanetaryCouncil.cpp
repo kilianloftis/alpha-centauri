@@ -226,11 +226,12 @@ std::vector<Faction*> PlanetaryCouncil::EligibleCandidates(
     return m_members;
 }
 
-bool PlanetaryCouncil::IsEligibleCandidate_(const CouncilProposalConfig_t& rConfig,
-                                           const Faction& rCandidate) const
+bool PlanetaryCouncil::IsEligibleCandidate_(const Faction& rCandidate) const
 {
-    const std::vector<Faction*> eligible = EligibleCandidates(rConfig);
-    return std::find(eligible.begin(), eligible.end(), &rCandidate) != eligible.end();
+    // Against the snapshot taken when the vote opened, not a fresh computation — see Propose.
+    const std::vector<FactionId_t>& rEligible = m_pending->eligibleCandidateIds;
+    return std::find(rEligible.begin(), rEligible.end(), rCandidate.GetFactionId())
+           != rEligible.end();
 }
 
 bool PlanetaryCouncil::CanPropose(const Faction& rProposer, const std::string& rProposalId) const
@@ -360,10 +361,35 @@ void PlanetaryCouncil::Propose(GameState& rGameState, Faction& rProposer,
     PendingProposal_t pending;
     pending.proposalId = rProposalId;
     pending.proposerId = rProposer.GetFactionId();
+    // Snapshot who may be voted for. The eligible set is derived from live population, so
+    // recomputing it per ballot would let a faction drop out of the top two mid-vote: ballots
+    // already cast for it would silently stand while later voters could not choose it, and
+    // the tally would elect a faction that is no longer eligible. One set, fixed for the vote.
+    const CouncilProposalConfig_t& rConfig = m_rRegistry.Get(rProposalId);
+    if (rConfig.kind == CouncilProposalKind_t::Election)
+    {
+        for (const Faction* pCandidate : EligibleCandidates(rConfig))
+        {
+            pending.eligibleCandidateIds.push_back(pCandidate->GetFactionId());
+        }
+    }
     m_pending = std::move(pending);
     m_lastProposedYear[rProposer.GetFactionId()] = rGameState.GetMissionYear();
     m_revision.Bump();
-    OnProposalOpened.Emit(rProposer, rProposalId);
+
+    // Observers (the AI voter, the UI) run here. If one throws, the pending slot must not
+    // survive: Propose throws while m_pending is set and only Resolve clears it, so a stranded
+    // pending proposal is the terminal state this package exists to remove.
+    try
+    {
+        OnProposalOpened.Emit(rProposer, rProposalId);
+    }
+    catch (...)
+    {
+        m_pending.reset();
+        m_revision.Bump();
+        throw;
+    }
 }
 
 void PlanetaryCouncil::CastVote(const Faction& rVoter, CouncilBallot_t ballot)
@@ -415,7 +441,7 @@ void PlanetaryCouncil::CastElectionVote(const Faction& rVoter, const Faction* pC
     // membership as the candidate list, so any member could be elected Planetary Governor
     // despite the "two most populous factions" rule stated in the proposal description and in
     // docs/architecture/council-system.md.
-    if (pCandidate && !IsEligibleCandidate_(rConfig, *pCandidate))
+    if (pCandidate && !IsEligibleCandidate_(*pCandidate))
     {
         throw std::invalid_argument(
             "PlanetaryCouncil::CastElectionVote: '" + pCandidate->GetDefinitionId()
@@ -573,6 +599,14 @@ Faction* PlanetaryCouncil::TallyElection_(const CouncilProposalConfig_t& rConfig
         {
             continue;
         }
+        // Re-check eligibility at tally time as well as at cast time. Cast-time validation
+        // alone is not enough: a ballot is only as good as the moment it was cast, and this
+        // is the last point before a winner is installed as governor.
+        const Faction* pCandidate = FindMember_(*it->second);
+        if (!pCandidate || !IsEligibleCandidate_(*pCandidate))
+        {
+            continue;
+        }
         tallies[*it->second] += weight;
     }
 
@@ -616,11 +650,10 @@ ResolveProposalResult_t PlanetaryCouncil::ApplyPassedProposal_(
     ++m_passCounts[rConfig.id];
     m_applier.ApplyInstantaneousEffects(m_members, rConfig);
 
-    if (rConfig.electionOutcome != CouncilElectionOutcome_t::PlanetaryGovernor
-        && rConfig.electionOutcome != CouncilElectionOutcome_t::SupremeLeaderVictory)
-    {
-        ActivateProposal_(rConfig);
-    }
+    // Unconditional: ActivateProposal_ itself decides what belongs in the in-force set (only
+    // proposals carrying continuous world effects), so the election special-cases that used to
+    // guard this call are redundant.
+    ActivateProposal_(rConfig);
 
     ResolveProposalResult_t result =
         overruled ? ResolveProposalResult_t::VetoOverruled : ResolveProposalResult_t::Passed;
@@ -629,7 +662,6 @@ ResolveProposalResult_t PlanetaryCouncil::ApplyPassedProposal_(
         && pElectionWinner)
     {
         ApplyGovernor_(rGameState, *pElectionWinner);
-        ActivateProposal_(rConfig);
     }
     else if (rConfig.electionOutcome == CouncilElectionOutcome_t::SupremeLeaderVictory
              && pElectionWinner)

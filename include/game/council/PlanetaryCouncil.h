@@ -133,6 +133,9 @@ public:
         // Standard ballots; election votes use electionVotes instead.
         std::map<FactionId_t, CouncilBallot_t> ballots;
         std::map<FactionId_t, std::optional<FactionId_t>> electionVotes;
+        // Who may be voted for, fixed when the vote opened (empty for a standard ballot).
+        // Snapshotted because eligibility is derived from live population — see Propose.
+        std::vector<FactionId_t> eligibleCandidateIds;
     };
 
     const PendingProposal_t* GetPending() const
@@ -154,15 +157,18 @@ private:
     void ApplyGovernor_(GameState& rGameState, Faction& rGovernor);
     bool VetoUnanimouslyOverruled_() const;
     Faction* FindMember_(FactionId_t factionId) const;
-    bool IsEligibleCandidate_(const CouncilProposalConfig_t& rConfig,
-                              const Faction& rCandidate) const;
+    // Against m_pending->eligibleCandidateIds; requires a pending election.
+    bool IsEligibleCandidate_(const Faction& rCandidate) const;
     bool HasPassed_(const std::string& rProposalId) const;
 
     // --- Resolve helpers ---
     // Decide the outcome of the pending proposal (veto, tally, apply). Leaves m_pending in
     // place; the caller clears it and fires OnResolved.
     ResolveProposalResult_t ResolveOutcome_(GameState& rGameState);
-    // Tally a standard ballot; returns true when weighted Yea outvotes Nay.
+    // Tally a standard ballot. With voteThreshold == 0 this is "weighted Yea outvotes Nay";
+    // with a threshold it is "weighted Yea reaches that share of *total* member weight", so an
+    // abstention counts against reaching the bar rather than being neutral. Same rule, same
+    // denominator, as TallyElection_.
     bool TallyStandard_(const CouncilProposalConfig_t& rConfig) const;
     // Tally an election; returns the winning member, or null when no candidate clears the
     // threshold (i.e. the proposal failed).

@@ -911,6 +911,87 @@ TEST_CASE("A repeal is unavailable while its target is not in force", "[council]
     game.PassStandard(*game.pA, "global_trade_pact");
     REQUIRE(rCouncil.IsActive("global_trade_pact"));
     CHECK(rCouncil.CanPropose(*game.pA, "repeal_trade_pact"));
+
+    // The case that actually pins the repeal gate. After the repeal passes, its
+    // required_proposals entry is still satisfied (global_trade_pact *has passed*), and the
+    // consumption rule now exempts repeals — so only "is the target still in force" can block
+    // it. Without that rule this check fails.
+    game.PassStandard(*game.pA, "repeal_trade_pact");
+    REQUIRE(rCouncil.HasPassed("global_trade_pact"));
+    REQUIRE_FALSE(rCouncil.IsActive("global_trade_pact"));
+    CHECK_FALSE(rCouncil.CanPropose(*game.pA, "repeal_trade_pact"));
+}
+
+TEST_CASE("A standard proposal honors vote_threshold", "[council][tally]")
+{
+    // voteThreshold was read by the election tally only, so a modder setting it on a standard
+    // proposal silently got a plain majority. Measured as a share of total vote weight, which
+    // means an abstention counts against reaching the bar (same rule the election tally uses).
+    CouncilGame_ game;
+    game.Discover(*game.pA, "planetary_economics");
+    PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+
+    // Representative weight: one vote per member, three members. 2 of 3 is 0.667, so a 0.75
+    // bar needs all three — and a bare majority must not be enough.
+    CouncilProposalConfig_t& rConfig =
+        const_cast<CouncilProposalConfig_t&>(rCouncil.GetRegistry().Get("global_trade_pact"));
+    rConfig.voteThreshold = 0.75;
+
+    game.GiveAllCommlinksTo(*game.pA);
+    game.AdvancePastProposeCooldown(*game.pA);
+    rCouncil.Propose(*game.pState, *game.pA, "global_trade_pact");
+    rCouncil.CastVote(*game.pA, CouncilBallot_t::Yea);
+    rCouncil.CastVote(*game.pB, CouncilBallot_t::Yea);
+    rCouncil.CastVote(*game.pC, CouncilBallot_t::Nay);
+    // A bare majority (2 of 3) would pass under `yea > nay`; it must not clear a 0.66 bar.
+    CHECK(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::Failed);
+
+    game.GiveAllCommlinksTo(*game.pA);
+    game.AdvancePastProposeCooldown(*game.pA);
+    rCouncil.Propose(*game.pState, *game.pA, "global_trade_pact");
+    for (Faction* pMember : rCouncil.Members())
+    {
+        rCouncil.CastVote(*pMember, CouncilBallot_t::Yea);
+    }
+    CHECK(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
+
+    rConfig.voteThreshold = 0.0;
+}
+
+TEST_CASE("The AI stub never votes for an ineligible candidate", "[council][election][ai]")
+{
+    // The stub prefers to back the proposer, but the proposer need not be a governor
+    // candidate. Since the stub runs inside Propose's OnProposalOpened emission, an
+    // ineligible pick throws out of Propose — and would strand m_pending, which is a worse
+    // brick than the one this package removed.
+    CouncilGame_ game;
+    PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+
+    // Make the proposer the *least* populous member, so it is outside the top two.
+    game.fixtures.MakeFactionBase(*game.pB, 7, 4);
+    game.fixtures.MakeFactionBase(*game.pC, 1, 7);
+
+    const std::vector<Faction*> eligible =
+        rCouncil.EligibleCandidates(rCouncil.GetRegistry().Get("elect_planetary_governor"));
+    REQUIRE(std::find(eligible.begin(), eligible.end(), game.pA) == eligible.end());
+
+    game.GiveAllCommlinksTo(*game.pA);
+    game.AdvancePastProposeCooldown(*game.pA);
+    CHECK_NOTHROW(rCouncil.Propose(*game.pState, *game.pA, "elect_planetary_governor"));
+    CastStubCouncilVotes(rCouncil);
+
+    // Every AI ballot names an eligible candidate (or abstains).
+    for (const auto& [voterId, candidateId] : rCouncil.GetPending()->electionVotes)
+    {
+        if (!candidateId)
+        {
+            continue;
+        }
+        const auto& rEligibleIds = rCouncil.GetPending()->eligibleCandidateIds;
+        CHECK(std::find(rEligibleIds.begin(), rEligibleIds.end(), *candidateId)
+              != rEligibleIds.end());
+    }
+    CHECK_NOTHROW(rCouncil.Resolve(*game.pState));
 }
 
 TEST_CASE("CastElectionVote rejects an ineligible governor candidate", "[council][election]")

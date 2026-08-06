@@ -67,13 +67,37 @@ graph TB
 - **Purpose**: The council's voting state machine — the one runtime object that runs a
   proposal from agenda to outcome. It holds the fixed membership, the single pending vote,
   the governorship, and the set of proposals currently in force.
+- **In force vs enacted** — two different questions, and conflating them was a shipped bug:
+  - `IsActive(id)` — *in force*: this proposal contributes continuous world effects right now.
+    Only proposals that carry a `Continuous` + `WorldGlobal` effect ever enter this set.
+  - `HasPassed(id)` — *enacted*: it has been voted through at least once (pass-count history).
+    One-shots and pure repeals are only ever this.
+  Marking every passed proposal "in force" made `CanPropose`'s `IsActive && !repeatable` rule
+  consume `repeal_un_charter` permanently, so a reinstated charter could never be repealed
+  again.
 - **Responsibilities**:
   - Membership (fixed at construction; every member must have
     `identity.participatesInCouncil`) and eligibility — `CanPropose` owns proposal
-    availability (member, proposable, tech, required/forbidden rule flags, repeatability);
+    availability: member, proposable, tech, required/forbidden rule flags, `required_proposals`
+    (satisfied by *enacted*, so a one-shot prerequisite like `launch_solar_shade` still counts),
+    the repeal gate (a proposal with `repeals` is available only while one of its targets is in
+    force), and repeatability. Repeatability has two exemptions — continuous world laws and
+    repeals — because both become meaningful again when their subject changes state.
     `Propose` adds the propose-time gates it excludes (commlinks, cooldown).
   - The vote lifecycle: `Propose` → `CastVote`/`CastElectionVote` (+ governor `VetoPending`)
     → `Resolve`. Only one `PendingProposal_t` exists at a time.
+  - **Absentees abstain.** `Resolve` has no "everyone voted" precondition: a member with no
+    ballot counts as an abstention, which is what both tallies already did with a missing
+    entry. Requiring unanimous participation made the pending slot terminal — nothing else
+    clears it and `Propose` throws while it is set. `AllMembersVoted()` remains as an advisory
+    query. `Propose` also clears the pending slot if an `OnProposalOpened` observer throws,
+    for the same reason.
+  - **Election eligibility** is the council's rule, not the UI's: `EligibleCandidates()` returns
+    `GovernorCandidates()` (the two most populous members) for a Planetary Governor election
+    and the whole council for Supreme Leader. The set is snapshotted into the pending proposal
+    when the vote opens — it derives from live population, so recomputing it per ballot would
+    let a faction drop out mid-vote while ballots already cast for it silently stood.
+    `CastElectionVote` and the tally both validate against that snapshot.
   - Governorship bookkeeping and the Supreme Leader victory stub.
   - Delegating outward effects to `CouncilEffects` (continuous) and
     `CouncilOutcomeApplier` (instantaneous / governor).

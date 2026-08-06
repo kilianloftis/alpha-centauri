@@ -110,8 +110,28 @@ Extract `TallyStandardBallots` / `TallyElectionVotes` as free functions over
   theme; doing them here would duplicate that work.
 - **`ComputeVoteWeight` rebuilding the effect pool per member per call** — a caching concern
   that belongs with package 17's memoization work on the same pattern.
-- **Election ballot lists every member (`ui/council`)** — package 15 owns view correctness; the
-  rule is enforced in D regardless of what the UI offers.
+- **Election ballot lists every member (`ui/council`)** — ~~package 15~~ **done here after
+  review**: enforcing D while the UI still offered every member turned a cosmetic UI bug into
+  an exception on selection, so the view now offers exactly `EligibleCandidates()`.
+
+Still open from this package's finding list, deferred with reason:
+
+- **[M] A governor veto on an election can never be overruled.** `VetoUnanimouslyOverruled_`
+  reads `m_pending->ballots`, which is always empty for an election (those populate
+  `electionVotes`), so a vetoed election is unconditionally `Vetoed`. Fixing it needs a
+  *rule*: what does "every non-governor voted Yea" mean for an election — every non-governor
+  voted for the same candidate? for any candidate? SMAC has to answer that, so this is a TODO
+  rather than a guess (see `.devin/rules/coding-guidelines.md`).
+- **[M] The applier ignores per-effect targeting on instantaneous outcomes**
+  (`CouncilOutcomeApplier` applies `GrantEnergy` to every member, never consulting
+  `factionFilter` / `condition`). Untouched — it is an effects-routing concern, not a lifecycle
+  one, and belongs with the effects packages' filter work.
+- **[M] A missing member silently turns a won election into a failure** (`ResolveOutcome_`).
+  Untouched; interacts with the veto-overrule rule above and should be decided with it.
+- **[E] Tally as pure free functions.** Not done. The tallies are still private members reading
+  `m_pending`. The behavioural fixes (threshold, eligibility) landed without it, and extracting
+  them is a pure refactor better done alongside the veto/absentee rules above so the extracted
+  signature is settled once.
 
 ## Test plan
 

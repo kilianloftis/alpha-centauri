@@ -20,22 +20,26 @@ void CastStubCouncilVotes(PlanetaryCouncil& rCouncil)
     const Faction* pElectionChoice = nullptr;
     if (rConfig.kind == CouncilProposalKind_t::Election)
     {
-        for (Faction* pMember : rCouncil.Members())
+        // Ask the council who may be voted for rather than guessing. Backing the proposer is
+        // the stub's preference, but the proposer need not be eligible — nothing stops a
+        // faction outside the top two from proposing a governor election — and
+        // CastElectionVote rejects an ineligible candidate. Since this runs inside Propose's
+        // OnProposalOpened emission, a throw here would unwind out of Propose with m_pending
+        // already set: the council would be left holding a vote nothing can resolve.
+        const std::vector<Faction*> eligible = rCouncil.EligibleCandidates(rConfig);
+        for (Faction* pCandidate : eligible)
         {
-            if (pMember && pMember->GetFactionId() == pPending->proposerId)
+            if (pCandidate && pCandidate->GetFactionId() == pPending->proposerId)
             {
-                pElectionChoice = pMember;
+                pElectionChoice = pCandidate;
                 break;
             }
         }
-        if (!pElectionChoice)
+        if (!pElectionChoice && !eligible.empty())
         {
-            const std::vector<Faction*> candidates = rCouncil.GovernorCandidates();
-            if (!candidates.empty())
-            {
-                pElectionChoice = candidates.front();
-            }
+            pElectionChoice = eligible.front();
         }
+        // Leaving pElectionChoice null is a valid abstention if nobody is eligible.
     }
 
     for (Faction* pMember : rCouncil.Members())

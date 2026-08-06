@@ -36,12 +36,14 @@ bool CouncilVoteView::HandleKey(const KeyEvent_t& rEvent)
     }
     if (rEvent.key == Key_t::Escape)
     {
-        // Refuse dismiss while a ballot is still open — closing would leave GetPending() set
-        // and brick further proposals (Package 5 owns absentee/resolve exits).
-        const PlanetaryCouncil* pCouncil = m_rGameState.GetPlanetaryCouncil();
+        // Escape resolves rather than abandons. Simply closing would leave GetPending() set,
+        // and Propose throws while it is — the council would accept no further business. Now
+        // that absentees abstain (PlanetaryCouncil::Resolve), resolving is always available,
+        // so there is no reason to trap the player in the view.
+        PlanetaryCouncil* pCouncil = m_rGameState.GetPlanetaryCouncil();
         if (pCouncil && pCouncil->GetPending())
         {
-            return true;
+            pCouncil->Resolve(m_rGameState);
         }
         m_bShouldClose = true;
         return true;
@@ -52,10 +54,13 @@ bool CouncilVoteView::HandleKey(const KeyEvent_t& rEvent)
 void CouncilVoteView::TryResolveAndClose_()
 {
     PlanetaryCouncil* pCouncil = m_rGameState.GetPlanetaryCouncil();
-    if (!pCouncil || !pCouncil->AllMembersVoted())
+    if (!pCouncil || !pCouncil->GetPending())
     {
         return;
     }
+    // No AllMembersVoted() gate: a member that has not voted abstains. Waiting for unanimous
+    // participation is what made a silent member terminal, since nothing else clears the
+    // pending slot.
     pCouncil->Resolve(m_rGameState);
     m_bShouldClose = true;
 }
@@ -78,7 +83,10 @@ void CouncilVoteView::OpenBallotSelector_()
     {
         m_elements.push_back(CouncilBallotPopup::CreateElection(
             popupLayout,
-            pCouncil->Members(),
+            // Exactly the members CastElectionVote will accept. Offering full membership meant
+            // the "two most populous factions" rule was decided by the UI — and now that the
+            // council enforces it, offering an ineligible candidate would throw on selection.
+            pCouncil->EligibleCandidates(rConfig),
             [this](const Faction* pCandidate) {
                 PlanetaryCouncil* pCouncilInner = m_rGameState.GetPlanetaryCouncil();
                 Faction* pPlayerInner = m_rGameState.GetPlayerFaction();
