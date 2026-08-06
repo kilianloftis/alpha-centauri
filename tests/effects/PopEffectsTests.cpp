@@ -40,6 +40,21 @@ TEST_CASE("Pop::ApplyTileMultipliers: ThisPop AddPercent scales only the targete
     CHECK(result.minerals == 2);
 }
 
+TEST_CASE("Pop::ApplyTileMultipliers: ThisPop Add increases the targeted resource",
+          "[effects][pop]")
+{
+    // A flat Add on the tile being worked. ThisPop — not ThisTile — is the scope
+    // Pop::ApplyTileMultipliers resolves. No production pop type uses this shape yet.
+    actest::PopTypeRegistryOnly reg;
+    Pop hand(*reg.popTypes.Find("NutrientHand"));
+
+    const TileResources_t raw{4, 2, 3};
+    const TileResources_t result = hand.ApplyTileMultipliers(raw);
+    CHECK(result.nutrients == 5);
+    CHECK(result.energy == 2);
+    CHECK(result.minerals == 3);
+}
+
 TEST_CASE("Pop::ApplyTileMultipliers: zero raw yield stays zero under percent multipliers",
           "[effects][pop]")
 {

@@ -254,6 +254,25 @@ StatBreakdown_t ResolveStatModifiers(Range&& matching, double baseValue,
     return breakdown;
 }
 
+// Same filter loop and ApplyModifierStack as ResolveStatModifiers, but skips the sorted
+// Contribution list — for hot paths that only need .total (e.g. per-tile yield).
+template <std::ranges::input_range Range>
+double ResolveStatModifiersTotal(Range&& matching, double baseValue,
+                                 const EffectContext_t* pCtx = nullptr)
+{
+    std::vector<std::pair<double, ModifierOp_t>> stack;
+    for (const ActiveEffect_t& active : matching)
+    {
+        const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&active.config->effect);
+        if (!pStatModifier)
+        {
+            continue;
+        }
+        stack.emplace_back(EffectiveStatModifierAmount(*pStatModifier, pCtx), pStatModifier->op);
+    }
+    return ApplyModifierStack(baseValue, stack);
+}
+
 // Lazy Filter* views borrow the lvalue `effects` vector — materialize into a named local
 // before filtering if the source is a temporary (rvalue overloads are deleted).
 inline auto FilterByStatId(const std::vector<ActiveEffect_t>& effects, StatId_t statId)
@@ -268,6 +287,17 @@ inline auto FilterByStatId(const std::vector<ActiveEffect_t>& effects, StatId_t 
 }
 inline auto FilterByStatId(std::vector<ActiveEffect_t>&& effects, StatId_t statId) = delete;
 
+// The single in-context matching rule: a StatModifier on statId whose condition ctx satisfies.
+// Shared by FilterByStatIdInContext and by callers filtering something other than a
+// vector<ActiveEffect_t> (e.g. the tile-yield pointer lanes) so the rule cannot drift.
+inline bool StatModifierMatchesInContext(const ActiveEffect_t& effect, StatId_t statId,
+                                         const EffectContext_t& ctx)
+{
+    const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
+    return pStatModifier && pStatModifier->stat == statId
+        && ConditionSatisfied(*effect.config, ctx, effect.originBase);
+}
+
 // Like FilterByStatId, but for a specific runtime context: includes unconditional effects
 // plus any condition-carrying effect whose condition is satisfied by ctx. This is the entry
 // point for context-dependent resolution such as combat (attack/defense vs a given target).
@@ -276,9 +306,7 @@ inline auto FilterByStatIdInContext(const std::vector<ActiveEffect_t>& effects,
 {
     return effects | std::views::filter([statId, ctx](const ActiveEffect_t& effect)
     {
-        const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
-        return pStatModifier && pStatModifier->stat == statId
-            && ConditionSatisfied(*effect.config, ctx, effect.originBase);
+        return StatModifierMatchesInContext(effect, statId, ctx);
     });
 }
 inline auto FilterByStatIdInContext(std::vector<ActiveEffect_t>&& effects,

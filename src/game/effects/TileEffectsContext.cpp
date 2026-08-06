@@ -67,35 +67,6 @@ TileResources_t AssembleRestrictedTileYield_(TileResources_t subjectToRestrictio
     };
 }
 
-// Appends ThisTile-scoped effects projected by units within maxRadius of rOrigin — a unit
-// component with a radius effect is a mobile aura (e.g. a sensor pod). Units standing on
-// rOrigin itself project at distance 0. TileEffectReaches is the same filter improvements
-// and terrain use. Each aura is attributed to the projecting unit's faction.
-void AppendUnitAuraEffects_(const Tile& rOrigin, const WorldMap& rWorldMap, int maxRadius,
-                            std::vector<ActiveEffect_t>& rOut)
-{
-    ForEachTileInChebyshevRadius(rOrigin, rWorldMap, maxRadius, true,
-        [&](const Tile* pNearby, int distance)
-        {
-            for (const Unit* pUnit : rWorldMap.GetUnitsOnTile(*pNearby))
-            {
-                if (!pUnit)
-                {
-                    continue;
-                }
-                const FactionId_t owner = pUnit->GetFaction().GetFactionId();
-                for (ActiveEffect_t& rActive : pUnit->GetDesign().CollectEffects())
-                {
-                    if (TileEffectReaches(*rActive.config, distance))
-                    {
-                        rActive.ownerFaction = owner;
-                        rOut.push_back(std::move(rActive));
-                    }
-                }
-            }
-        });
-}
-
 // How far an improvement's effects can reach: the max per-effect radius.
 int MaxEffectReach_(const ImprovementConfig_t& rConfig)
 {
@@ -124,28 +95,6 @@ void AppendOwnedImprovementEffects_(const Tile& rHostTile, const ImprovementConf
     }
 }
 
-void AppendAreaEffectsFromNeighbors_(const Tile& rOrigin, const WorldMap& rWorldMap,
-                                      int maxRadius,
-                                      std::vector<ActiveEffect_t>& rOut)
-{
-    ForEachTileInChebyshevRadius(rOrigin, rWorldMap, maxRadius, false,
-        [&](const Tile* pNearby, int distance)
-        {
-            for (const ImprovementConfig_t* pFeature : pNearby->GetTerrainFeatures())
-            {
-                if (pFeature)
-                {
-                    AppendTileEffects(pFeature->effects, pFeature->id, distance, rOut);
-                }
-            }
-
-            for (const ImprovementConfig_t* pImprovement : pNearby->GetImprovements())
-            {
-                AppendOwnedImprovementEffects_(*pNearby, *pImprovement, distance, rWorldMap, rOut);
-            }
-        });
-}
-
 void AppendOwnTileEffects_(const Tile& rTile, const WorldMap& rWorldMap,
                            std::vector<ActiveEffect_t>& rOut)
 {
@@ -163,12 +112,56 @@ void AppendOwnTileEffects_(const Tile& rTile, const WorldMap& rWorldMap,
     }
 }
 
-bool TileMatchesSelector_(const TileSelector_t& selector, const Tile& rTile, bool isBaseTile)
+// Single Chebyshev walk: neighbor improvement/terrain auras (distance > 0) plus unit auras
+// (including units on the origin tile at distance 0).
+void AppendNeighborAndUnitAreaEffects_(const Tile& rOrigin, const WorldMap& rWorldMap,
+                                       int maxRadius, std::vector<ActiveEffect_t>& rOut)
+{
+    ForEachTileInChebyshevRadius(rOrigin, rWorldMap, maxRadius, true,
+        [&](const Tile* pNearby, int distance)
+        {
+            if (distance > 0)
+            {
+                for (const ImprovementConfig_t* pFeature : pNearby->GetTerrainFeatures())
+                {
+                    if (pFeature)
+                    {
+                        AppendTileEffects(pFeature->effects, pFeature->id, distance, rOut);
+                    }
+                }
+
+                for (const ImprovementConfig_t* pImprovement : pNearby->GetImprovements())
+                {
+                    AppendOwnedImprovementEffects_(*pNearby, *pImprovement, distance, rWorldMap,
+                                                   rOut);
+                }
+            }
+
+            for (const Unit* pUnit : rWorldMap.GetUnitsOnTile(*pNearby))
+            {
+                if (!pUnit)
+                {
+                    continue;
+                }
+                const FactionId_t owner = pUnit->GetFaction().GetFactionId();
+                for (ActiveEffect_t& rActive : pUnit->GetDesign().CollectEffects())
+                {
+                    if (TileEffectReaches(*rActive.config, distance))
+                    {
+                        rActive.ownerFaction = owner;
+                        rOut.push_back(std::move(rActive));
+                    }
+                }
+            }
+        });
+}
+
+bool TileMatchesSelector_(const TileSelector_t& selector, const Tile& rTile, bool bIsBaseTile)
 {
     switch (selector.kind)
     {
         case TileSelectorKind_t::BaseTile:
-            return isBaseTile;
+            return bIsBaseTile;
         case TileSelectorKind_t::HasImprovement:
             // HasFeature so terrain ids (Fungus, Rocky, …) match the same way as Farm/Mine.
             return selector.improvement && rTile.HasFeature(*selector.improvement);
@@ -179,13 +172,14 @@ bool TileMatchesSelector_(const TileSelector_t& selector, const Tile& rTile, boo
 // Appends every base-wide StatModifier that carries a tile selector matching rTile.
 // Non-selector StatModifiers (flat base bonuses) are left for base-level resolution.
 void AppendMatchingTileModifiers_(const std::vector<ActiveEffect_t>& baseEffects,
-                                  const Tile& rTile, bool isBaseTile,
+                                  const Tile& rTile, bool bIsBaseTile,
                                   std::vector<ActiveEffect_t>& rOut)
 {
     for (const ActiveEffect_t& effect : baseEffects)
     {
         const StatModifierEffect_t* pModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
-        if (pModifier && pModifier->selector && TileMatchesSelector_(*pModifier->selector, rTile, isBaseTile))
+        if (pModifier && pModifier->selector
+            && TileMatchesSelector_(*pModifier->selector, rTile, bIsBaseTile))
         {
             rOut.push_back(effect);
         }
@@ -200,6 +194,51 @@ void RecomputeMoistureInRadius_(const Tile& rChangedTile, int radius, TileEffect
         {
             rCtx.RecomputeMoisture(*pAffected);
         });
+}
+
+// Pointer-partition into pre-cap vs apply_after_restriction lanes, skipping suppressed sources.
+// Does not clone ActiveEffect_t — callers resolve through the pointer lists.
+void PartitionYieldEffects_(const Tile& rTile, const std::vector<ActiveEffect_t>& effects,
+                            std::vector<const ActiveEffect_t*>& rBeforeRestriction,
+                            std::vector<const ActiveEffect_t*>& rAfterRestriction)
+{
+    std::unordered_set<std::string> suppress;
+    auto absorbSuppress = [&](const std::vector<const ImprovementConfig_t*>& rConfigs)
+    {
+        for (const ImprovementConfig_t* pConfig : rConfigs)
+        {
+            if (!pConfig)
+            {
+                continue;
+            }
+            for (const std::string& rId : pConfig->suppressYieldSources)
+            {
+                suppress.insert(rId);
+            }
+        }
+    };
+    absorbSuppress(rTile.GetImprovements());
+    absorbSuppress(rTile.GetTerrainFeatures());
+
+    rBeforeRestriction.reserve(effects.size());
+    rAfterRestriction.reserve(effects.size());
+    for (const ActiveEffect_t& rEffect : effects)
+    {
+        if (suppress.count(rEffect.sourceId) > 0)
+        {
+            continue;
+        }
+        const auto* pMod =
+            rEffect.config ? std::get_if<StatModifierEffect_t>(&rEffect.config->effect) : nullptr;
+        if (pMod && pMod->applyAfterRestriction)
+        {
+            rAfterRestriction.push_back(&rEffect);
+        }
+        else
+        {
+            rBeforeRestriction.push_back(&rEffect);
+        }
+    }
 }
 
 } // namespace
@@ -217,9 +256,17 @@ TileEffectsContext::TileEffectsContext(WorldMap& rWorldMap, const ImprovementReg
         pTile->BindImprovements(rImprovements);
     }
 
+    // Scan bound: only ThisTile-scoped radii (same rule for improvements and unit components).
+    // Nonzero radius on any other scope is rejected at parse time.
     for (const ImprovementConfig_t& rConfig : rImprovements.GetAll())
     {
-        m_maxRadius = std::max(m_maxRadius, MaxEffectReach_(rConfig));
+        for (const EffectConfig_t& rEffect : rConfig.effects)
+        {
+            if (rEffect.scope == EffectScope_t::ThisTile)
+            {
+                m_maxRadius = std::max(m_maxRadius, rEffect.radius);
+            }
+        }
     }
     if (pUnitComponents)
     {
@@ -255,91 +302,44 @@ std::vector<ActiveEffect_t> TileEffectsContext::CollectAreaEffects(const Tile& r
 {
     std::vector<ActiveEffect_t> effects;
     AppendOwnTileEffects_(rTile, m_rWorldMap, effects);
-    AppendAreaEffectsFromNeighbors_(rTile, m_rWorldMap, m_maxRadius, effects);
-    AppendUnitAuraEffects_(rTile, m_rWorldMap, m_maxRadius, effects);
+    AppendNeighborAndUnitAreaEffects_(rTile, m_rWorldMap, m_maxRadius, effects);
     return effects;
 }
 
 TileYieldView_t TileEffectsContext::ResolveTileYield(const Tile& rTile) const
 {
-    return ResolveYieldFromEffects_(rTile, CollectAreaEffects(rTile), /*pCapEffects*/ nullptr);
+    return ResolveYieldFromEffects_(rTile, CollectAreaEffects(rTile));
 }
 
-TileYieldView_t TileEffectsContext::ResolveTileYield(const Tile& rTile, bool isBaseTile,
+TileYieldView_t TileEffectsContext::ResolveTileYield(const Tile& rTile, bool bIsBaseTile,
                                                      const BaseEffects_t& rBaseEffects) const
 {
     std::vector<ActiveEffect_t> effects = CollectAreaEffects(rTile);
-    AppendMatchingTileModifiers_(rBaseEffects.effects, rTile, isBaseTile, effects);
-    return ResolveYieldFromEffects_(rTile, effects, &rBaseEffects);
-}
-
-TileYieldView_t TileEffectsContext::ResolvePreviewTileYield(const Tile& rTile,
-                                                            const BaseEffects_t& rCapEffects) const
-{
-    return ResolveYieldFromEffects_(rTile, CollectAreaEffects(rTile), &rCapEffects);
+    AppendMatchingTileModifiers_(rBaseEffects.effects, rTile, bIsBaseTile, effects);
+    return ResolveYieldFromEffects_(rTile, effects, rBaseEffects);
 }
 
 int TileEffectsContext::ResolveResource_(const Tile& rTile,
-                                         const std::vector<ActiveEffect_t>& effects,
+                                         std::span<const ActiveEffect_t*> effects,
                                          StatId_t stat) const
 {
     const EffectContext_t ctx{&rTile};
-    return FinalizeResolvedStat(
-        ResolveStatModifiers(FilterByStatIdInContext(effects, stat, ctx), SeedFor(stat), &ctx).total);
+    auto matching = effects
+        | std::views::transform([](const ActiveEffect_t* pEffect) -> const ActiveEffect_t& {
+              return *pEffect;
+          })
+        | std::views::filter([&](const ActiveEffect_t& effect) {
+              return StatModifierMatchesInContext(effect, stat, ctx);
+          });
+    return FinalizeResolvedStat(ResolveStatModifiersTotal(matching, SeedFor(stat), &ctx));
 }
 
-TileYieldView_t TileEffectsContext::ResolveYieldFromEffects_(
-    const Tile& rTile, const std::vector<ActiveEffect_t>& effects,
-    const BaseEffects_t* pCapEffects) const
+TileEffectsContext::YieldLanes_t TileEffectsContext::ResolveYieldLanes_(
+    const Tile& rTile, const std::vector<ActiveEffect_t>& effects) const
 {
-    std::vector<ActiveEffect_t> filtered = effects;
-
-    // Forest / Borehole / Fungus: drop effects whose sourceId is suppressed.
-    // Terrain features (Fungus) carry suppress lists too — not only GetImprovements().
-    std::unordered_set<std::string> suppress;
-    auto absorbSuppress = [&](const std::vector<const ImprovementConfig_t*>& rConfigs)
-    {
-        for (const ImprovementConfig_t* pConfig : rConfigs)
-        {
-            if (!pConfig)
-            {
-                continue;
-            }
-            for (const std::string& rId : pConfig->suppressYieldSources)
-            {
-                suppress.insert(rId);
-            }
-        }
-    };
-    absorbSuppress(rTile.GetImprovements());
-    absorbSuppress(rTile.GetTerrainFeatures());
-
-    if (!suppress.empty())
-    {
-        filtered.erase(std::remove_if(filtered.begin(), filtered.end(),
-                           [&](const ActiveEffect_t& rEffect) {
-                               return suppress.count(rEffect.sourceId) > 0;
-                           }),
-                       filtered.end());
-    }
-
-    std::vector<ActiveEffect_t> beforeRestriction;
-    std::vector<ActiveEffect_t> afterRestriction;
-    beforeRestriction.reserve(filtered.size());
-    afterRestriction.reserve(filtered.size());
-    for (const ActiveEffect_t& rEffect : filtered)
-    {
-        const auto* pMod =
-            rEffect.config ? std::get_if<StatModifierEffect_t>(&rEffect.config->effect) : nullptr;
-        if (pMod && pMod->applyAfterRestriction)
-        {
-            afterRestriction.push_back(rEffect);
-        }
-        else
-        {
-            beforeRestriction.push_back(rEffect);
-        }
-    }
+    std::vector<const ActiveEffect_t*> beforeRestriction;
+    std::vector<const ActiveEffect_t*> afterRestriction;
+    PartitionYieldEffects_(rTile, effects, beforeRestriction, afterRestriction);
 
     // Energy seed is 0 here: elevation bands come from SolarCollector/Mirror amount_source
     // effects (ElevationEnergySeed), not a hardcoded improvement-id gate.
@@ -353,16 +353,33 @@ TileYieldView_t TileEffectsContext::ResolveYieldFromEffects_(
         ResolveResource_(rTile, afterRestriction, StatId_t::Energy),
         ResolveResource_(rTile, afterRestriction, StatId_t::Minerals),
     };
-
-    const TileResources_t potential{
-        subject.nutrients + after.nutrients,
-        subject.energy + after.energy,
-        subject.minerals + after.minerals,
+    return YieldLanes_t{
+        subject,
+        after,
+        TileResources_t{
+            subject.nutrients + after.nutrients,
+            subject.energy + after.energy,
+            subject.minerals + after.minerals,
+        },
     };
-    const TileResources_t effective = pCapEffects
-        ? AssembleRestrictedTileYield_(subject, after, pCapEffects->effects)
-        : potential;
-    return TileYieldView_t{effective, potential};
+}
+
+TileYieldView_t TileEffectsContext::ResolveYieldFromEffects_(
+    const Tile& rTile, const std::vector<ActiveEffect_t>& effects) const
+{
+    const YieldLanes_t lanes = ResolveYieldLanes_(rTile, effects);
+    return TileYieldView_t{lanes.potential, lanes.potential};
+}
+
+TileYieldView_t TileEffectsContext::ResolveYieldFromEffects_(
+    const Tile& rTile, const std::vector<ActiveEffect_t>& effects,
+    const BaseEffects_t& rCapEffects) const
+{
+    const YieldLanes_t lanes = ResolveYieldLanes_(rTile, effects);
+    return TileYieldView_t{
+        AssembleRestrictedTileYield_(lanes.subject, lanes.after, rCapEffects.effects),
+        lanes.potential,
+    };
 }
 
 double TileEffectsContext::ResolveTileDefenseMultiplier(const Tile& rTile, FactionId_t forFaction) const

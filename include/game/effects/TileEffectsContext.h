@@ -2,6 +2,7 @@
 
 #include "game/faction/base/BaseTypes.h"
 #include "game/effects/ActiveEffect.h"
+#include <span>
 #include <string>
 #include <vector>
 
@@ -47,14 +48,10 @@ public:
     // matches this tile. TileResourceCap effects still present in rBaseEffects clamp the
     // pre-restriction lane; apply_after_restriction modifiers are added after. Caps whose
     // removed_by_tech has been discovered are already absent from the faction pool.
-    // Production reads .effective; UI may also use .potential.
-    TileYieldView_t ResolveTileYield(const Tile& rTile, bool isBaseTile,
+    // Production reads .effective; UI preview for unworked tiles uses the same path with
+    // bIsBaseTile == false (as-if-worked tile-level yield, without pop multipliers).
+    TileYieldView_t ResolveTileYield(const Tile& rTile, bool bIsBaseTile,
                                      const BaseEffects_t& rBaseEffects) const;
-
-    // Intrinsic + area yield with the same TileResourceCap / after-restriction assembly as
-    // the worked-tile overload, but without building selectors. Used for unworked previews.
-    TileYieldView_t ResolvePreviewTileYield(const Tile& rTile,
-                                            const BaseEffects_t& rCapEffects) const;
 
     // Combined defense multiplier including aura effects (e.g. nearby Sensor, Rocky terrain).
     // forFaction selects which territory-owned improvement auras apply (Sensor only benefits
@@ -78,20 +75,32 @@ public:
     void RemoveImprovementWithEffects(Tile& rTile, const std::string& improvementId);
 
 private:
-    // Resolves one resource lane from an already-collected / filtered effect list.
-    int ResolveResource_(const Tile& rTile, const std::vector<ActiveEffect_t>& effects,
+    // Resolves one resource lane from an already-partitioned pointer list (no ActiveEffect_t copies).
+    int ResolveResource_(const Tile& rTile, std::span<const ActiveEffect_t*> effects,
                          StatId_t stat) const;
 
-    // Splits effects into pre-cap vs apply_after_restriction lanes, resolves each, then
-    // builds effective (capped via TileResourceCap in pCapEffects) and potential (uncapped).
+    // Pointer-partition + resolve into pre-cap / after-restriction / potential lanes.
+    struct YieldLanes_t
+    {
+        TileResources_t subject;
+        TileResources_t after;
+        TileResources_t potential;
+    };
+    YieldLanes_t ResolveYieldLanes_(const Tile& rTile,
+                                    const std::vector<ActiveEffect_t>& effects) const;
+
+    // Builds TileYieldView_t from lanes. No-cap overload: effective == potential.
+    // Cap overload clamps via TileResourceCap in rCapEffects.
+    TileYieldView_t ResolveYieldFromEffects_(const Tile& rTile,
+                                             const std::vector<ActiveEffect_t>& effects) const;
     TileYieldView_t ResolveYieldFromEffects_(const Tile& rTile,
                                              const std::vector<ActiveEffect_t>& effects,
-                                             const BaseEffects_t* pCapEffects) const;
+                                             const BaseEffects_t& rCapEffects) const;
 
     WorldMap& m_rWorldMap;
     const ImprovementRegistry& m_rImprovements;
-    // Max per-effect radius across all improvement configs and unit-component ThisTile
-    // effects; bounds the aura scan. Cached in the constructor.
+    // Max ThisTile-scoped effect radius across improvement configs and unit components;
+    // bounds the aura scan. Cached in the constructor.
     int m_maxRadius;
 };
 

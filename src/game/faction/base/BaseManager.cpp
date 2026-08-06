@@ -381,7 +381,7 @@ TileYieldView_t BaseManager::GetWorkedTileYield(const Tile& rTile) const
 
 TileYieldView_t BaseManager::GetPreviewTileYield(const Tile& rTile) const
 {
-    return m_rTileEffects.ResolvePreviewTileYield(rTile, BuildBaseEffects_());
+    return m_rTileEffects.ResolveTileYield(rTile, /*bIsBaseTile*/ false, BuildBaseEffects_());
 }
 
 const std::string& BaseManager::GetName() const

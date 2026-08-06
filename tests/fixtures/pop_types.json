@@ -90,5 +90,17 @@
       { "type": "StatModifier", "scope": "ThisPop", "parameters": { "stat": "nutrients", "amount": 50, "op": "AddPercent" } },
       { "type": "StatModifier", "scope": "ThisBase", "parameters": { "stat": "econ", "amount": 1, "op": "Add" } }
     ]
+  },
+  {
+    "id": "NutrientHand",
+    "name": "Nutrient Hand (worker with a ThisPop flat nutrient Add on the worked tile)",
+    "can_work_tile": true,
+    "player_assignable": true,
+    "riot_contribution": 0,
+    "golden_age_contribution": 0,
+    "obsoletes": [],
+    "effects": [
+      { "type": "StatModifier", "scope": "ThisPop", "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" } }
+    ]
   }
 ]

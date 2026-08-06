@@ -164,7 +164,7 @@ TileResources_t WorkerAssignmentManager::ComputeWorkedResources(const BaseEffect
         }
 
         const TileResources_t yield = m_rTileEffects.ResolveTileYield(
-            *pTile, /*isBaseTile*/false, rBaseEffects).effective;
+            *pTile, /*bIsBaseTile*/false, rBaseEffects).effective;
         const TileResources_t modified = rPop.ApplyTileMultipliers(yield);
 
         total.nutrients += modified.nutrients;
@@ -185,7 +185,7 @@ TileYieldView_t WorkerAssignmentManager::GetWorkedTileYield(
         }
 
         const TileYieldView_t yield = m_rTileEffects.ResolveTileYield(
-            rTile, /*isBaseTile*/false, rBaseEffects);
+            rTile, /*bIsBaseTile*/false, rBaseEffects);
         return TileYieldView_t{
             rPop.ApplyTileMultipliers(yield.effective),
             rPop.ApplyTileMultipliers(yield.potential),

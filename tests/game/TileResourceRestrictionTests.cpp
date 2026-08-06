@@ -94,19 +94,51 @@ TEST_CASE("Tile resource restrictions: production caps worked tiles but not flat
     base.UserAssignBestAvailableWorker(&farmTile);
 
     // Wet(+2) + Farm(+1) + booster(+1) = 4, capped to 2; flat +2 still applies → 4.
+    // Preview is as-if-worked for tile-level yield (same selectors + caps as ResolveTileYield).
     CHECK(base.GetNutrientProduction() == 4);
     CHECK(base.GetWorkedTileYield(farmTile).effective.nutrients == 2);
     CHECK(base.GetPreviewTileYield(farmTile).effective.nutrients == 2);
     CHECK(base.GetWorkedTileYield(farmTile).potential.nutrients == 4);
-    CHECK(base.GetPreviewTileYield(farmTile).potential.nutrients == 3);
+    CHECK(base.GetPreviewTileYield(farmTile).potential.nutrients == 4);
 
     // Discovering the lift tech rebuilds the faction pool without the nutrient cap.
     faction.GetResearch().AddDiscoveredTech("gene_splicing");
     CHECK(base.GetNutrientProduction() == 6);
     CHECK(base.GetWorkedTileYield(farmTile).effective.nutrients == 4);
-    CHECK(base.GetPreviewTileYield(farmTile).effective.nutrients == 3); // Wet+Farm, no booster
+    CHECK(base.GetPreviewTileYield(farmTile).effective.nutrients == 4); // Wet+Farm+booster
+    // The requirement itself: preview is the worked tile-level yield. Fixture pops carry no
+    // ThisPop multipliers, so ApplyTileMultipliers is identity and the two must agree exactly.
+    CHECK(base.GetPreviewTileYield(farmTile).effective.nutrients
+          == base.GetWorkedTileYield(farmTile).effective.nutrients);
     CHECK(base.GetWorkedTileYield(farmTile).effective.nutrients
           == base.GetWorkedTileYield(farmTile).potential.nutrients);
+}
+
+TEST_CASE("Preview yield on an unworked tile includes selector modifiers",
+          "[resources][restrictions]")
+{
+    // The placement-UX case: BaseWorkableAreaDisplay shows preview for tiles with no worker,
+    // so a building that boosts Farms must be visible before the player assigns anyone.
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+
+    Tile& farmTile = fixture.At(5, 4);
+    farmTile.SetBaseMoisture(Moisture_t::Wet);
+    farmTile.SetMoisture(Moisture_t::Wet);
+    fixture.ctx->AddImprovementWithEffects(farmTile, "Farm");
+
+    base.GetBuildingManager().AddBuilding("farm_booster"); // +1 on Farms
+    faction.GetResearch().AddDiscoveredTech("gene_splicing"); // lift the nutrient cap
+
+    // No worker assigned to farmTile — Wet(+2) + Farm(+1) + booster(+1) = 4.
+    CHECK(base.GetPreviewTileYield(farmTile).effective.nutrients == 4);
+    CHECK(base.GetPreviewTileYield(farmTile).potential.nutrients == 4);
+
+    // Assigning a worker must not change the tile-level number the preview promised.
+    base.UserAssignBestAvailableWorker(&farmTile);
+    CHECK(base.GetWorkedTileYield(farmTile).effective.nutrients
+          == base.GetPreviewTileYield(farmTile).effective.nutrients);
 }
 
 TEST_CASE("Tile resource restrictions: resource-bonus improvements apply after the cap",
