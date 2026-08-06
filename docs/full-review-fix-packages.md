@@ -785,6 +785,18 @@ Package 4 owns the constructor/null-policy half of these classes (two-phase-init
 
 **Deferred, with rationale:** election veto overrule (`VetoUnanimouslyOverruled_` reads standard ballots, which elections never populate — needs a SMAC rule, left as a TODO); `CouncilOutcomeApplier` per-effect targeting; missing-member-fails-election; extracting the tallies as pure functions. See the analysis doc.
 
+### Package 6 — Base economy (2026-08-06)
+
+**Status:** PARTIAL — the player-visible defect and the worker-stranding bug are fixed; the second [H] and ~9 [M] findings are not started. See the analysis doc for the full remaining list.  
+**Prompt:** [`docs/full-review-fix-prompts/06-base-economy-and-population.md`](full-review-fix-prompts/06-base-economy-and-population.md)
+
+**Fixes landed:**
+- `IsTileWorkedByThisBase` added and both UI callers switched to it. Asking the world-scoped `IsTileAssigned` made the base screen paint neighbour/enemy/crawler-worked tiles as worked and then display `0 0 0` (the yield lookup only resolves this base's pops), and routed clicks on them to a no-op unassign. Reachable in any two-base start.
+- `UserAssignBestAvailableWorker` validates the tile before touching a pop and returns `bool`; its fallback branches no longer destroy a specialist's role or strand a worker on a doomed request.
+- Psych documented as a silent sink (`ConsumePsych` has no caller) with a TODO — what psych buys is a SMAC rule, not something to invent.
+
+**Not started:** `PopContainer` owning composition policy [H]; production-queue contract; ignored `precedence` key; throwing `~BatchCompositionUpdate`; `RemovePop` semantics; composition staleness; `psych_output` scope; golden-age worker count; minerals-per-row to config; untyped `BaseSnapshot_t` production id.
+
 ---
 
 ## Cross-package dependency sketch
