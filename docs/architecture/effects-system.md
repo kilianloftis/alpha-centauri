@@ -24,7 +24,7 @@ graph TB
         CollectTileEffects[CollectTileEffects]
         CollectAreaEffects[TileEffectsContext::CollectAreaEffects]
         FilterForBase[FilterForBase]
-        ExpandRatingEffects[ExpandSocialRatingEffects]
+        ExpandRatingEffects[ResolveSocialRatingLevelEffects]
     end
 
     subgraph "Effect Sources"
@@ -237,10 +237,13 @@ concept doesn't exist yet are **legal but inert**:
 
 ### ActiveEffect_t
 - **Purpose**: A runtime instance of an effect tied to a specific source.
+- **Construction**: `ActiveEffect_t(const EffectConfig_t&, sourceId, originBase?)` — `config` is
+  always non-null after construction. Hand-rolled null configs are not a valid instance.
 - **Responsibilities**:
-  - Points back to the static `EffectConfig_t`.
+  - Points back to the static (or CouncilEffects-stable) `EffectConfig_t`.
   - Records the source id (e.g., building id or social policy id) for UI breakdowns.
-  - Records the originating `BaseManager` for `ThisBase`-scoped effects.
+  - Records the originating `BaseManager` when `TagsOriginBase(scope)` (ThisBase,
+    ProducedAtThisBase, FactionUnits).
 
 ### FactionEffects_t / BaseEffects_t (typed pools)
 - **Purpose**: Make the two consumer-side pipeline stages distinct types instead of two
@@ -252,8 +255,8 @@ concept doesn't exist yet are **legal but inert**:
   every base's `ThisBase` effects and the `FactionUnits` lane, so it must never be resolved
   against directly at base level.
 - **`BaseEffects_t`**: one base's final effect list — produced only by `FilterForBase`, then
-  extended by the pop merge (`CollectFromPops`) and rating expansion
-  (`ExpandSocialRatingEffects`) inside `BaseManager::BuildBaseEffects_`. This is the type
+  extended by the pop merge (`CollectFromPops`) and the rating level effects
+  (`ResolveSocialRatingLevelEffects`) inside `BaseManager::BuildBaseEffects_`. This is the type
   `FilterBaseLevelByStatId`, `ResolveTileYield(tile, isBaseTile, baseEffects)`,
   `ResourceManager::ProduceResources`, and the growth path accept.
 - Both are thin structs holding a `std::vector<ActiveEffect_t> effects;`. Pre-pool source
@@ -264,7 +267,7 @@ concept doesn't exist yet are **legal but inert**:
 - **Purpose**: A resolved view of stat modifiers for a single stat.
 - **Responsibilities**:
   - Holds a `total` computed from all additive contributions and all multiplicative factors.
-  - Records every `Contribution` with its `sourceId`, `amount`, and `op` so the UI can show the breakdown.
+  - Records every `Contribution_t` with its `sourceId`, `amount`, and `op` so the UI can show the breakdown.
 
 ### ResolveStatModifiers
 - **Purpose**: Resolves a set of `ActiveEffect_t` instances into a `StatBreakdown_t`.
@@ -284,7 +287,8 @@ concept doesn't exist yet are **legal but inert**:
 
 ### FilterByStatId
 - **Purpose**: Filters active effects to only `StatModifierEffect_t` instances targeting a given `StatId_t` (including any that carry a tile `selector`).
-- **Returns**: A vector of matching `ActiveEffect_t` instances.
+- **Borrowing**: Lazy views borrow the lvalue `effects` vector — rvalue overloads are deleted so temporaries cannot silently dangle. Materialize (`CollectEffects()` into a named local) before filtering when the source is a temporary.
+- **Returns**: A lazy view of matching `ActiveEffect_t` instances.
 
 ### FilterBaseLevelByStatId
 - **Purpose**: Like `FilterByStatId`, but for **base-level** resolution: excludes
@@ -311,11 +315,13 @@ concept doesn't exist yet are **legal but inert**:
 ### Collection helpers (AppendActiveEffects and variants)
 - **Purpose**: The single config→`ActiveEffect_t` conversion. One core loop owns the two
   universal rules — `Instantaneous` effects never enter the continuous pool (they fire once
-  via `DispatchInstantaneousEffects`), and `ThisBase` effects get their `originBase` tag.
+  via `DispatchInstantaneousEffects`), and `originBase` is tagged when `TagsOriginBase(scope)`
+  (next to `LaneFor` / `IsFactionLane` in `BonusEffect.h`).
 - **Variants** (all in `ActiveEffect.h`):
   - `AppendActiveEffects(effects, pOriginBase, sourceId, out)` — every continuous effect.
-    `CollectUnitEffects`/`CollectPopEffects`, `BuildingManager::CollectEffects`, and
-    `SocialEngineeringManager` collect through this.
+    `CollectUnitEffects`/`CollectPopEffects`, `BuildingManager::CollectEffects(rOriginBase)`,
+    and `SocialEngineeringManager` collect through this. Base-anchored sources pass the
+    owning base so tagging happens at append time (no post-pass re-tag).
   - `AppendFactionLaneEffects(effects, sourceId, out)` — only `IsFactionLane` scopes; what a
     source contributes to the faction pool when its local scopes are resolved elsewhere.
     Used by `Faction::CollectPopFactionEffects`.
@@ -325,6 +331,24 @@ concept doesn't exist yet are **legal but inert**:
 - **Adding a new effect source** is therefore two calls: `BonusEffectParser::ParseEffects`
   at load time, and one of these at collection time — no hand-rolled loops.
 
+### DispatchInstantaneousEffects
+- **Signature**: `DispatchInstantaneousEffects(building, base, GameState&)` — no default; a live
+  session is required so Instantaneous Infiltration can write the diplomacy ledger.
+- **Production completion**: `BaseManager` reads `Faction::GetGameState()` (bound by
+  `GameState::AddFaction` via `BindGameState`) and throws if null before dispatching.
+- GrantTech / GrantUnit remain TODO stubs; Infiltration always calls `ApplyInfiltrationEffect`.
+
+### CollectLiveUnitEffects
+- Returns design + FactionUnits + matching ProducedAtThisBase effects. The list already
+  satisfies `UnitFilterSatisfied` and the ProducedAt origin match — `HasPermission` /
+  resolve paths re-check conditions only, not unitFilter.
+
+### CouncilEffects
+- Stable config storage: heap `EffectConfig_t` nodes are retired (not destroyed) on
+  `RebuildWorld` / `SetGovernorEffects`, so retained `ActiveEffect_t::config` pointers stay
+  valid for the lifetime of the `CouncilEffects` instance. `PlanetaryCouncil::CollectWorldEffects`
+  / `CollectFactionEffects` return const references into that store.
+
 ### CollectActiveEffects / `FactionEffectsPool::Rebuild_`
 - **Purpose**: Assembles the faction's *local* active effect pool (memoized on
   `FactionEffectsPool`, bound to its owning `Faction`). Peer `WorldGlobal` and council
@@ -333,7 +357,10 @@ concept doesn't exist yet are **legal but inert**:
   1. **Collect** raw continuous contributors: tile-yield rules, faction definition,
      constructed buildings (no grant expand yet), social engineering, pop faction-lane,
      unit faction-lane.
-  2. **Gate** `removed_by_tech` (erase effects whose tech is already discovered).
+  2. **Gate** `removed_by_tech` (erase effects whose tech is already discovered). Every
+     expansion below is bracketed by this gate: a derivative outlives its producer
+     otherwise, and derivatives (a granted building's effects, a rating level's effects)
+     do not inherit the gate that was on the effect that produced them.
   3. **Expand grants** via `ExpandGrantBuildingEffects`. `processedGrantedIds` is
      pre-seeded from each base's `BuildingManager::GetBuildings()` (`{pBase, id}` and
      `{nullptr, id}`) so a grant of a building already constructed does not double-count
@@ -341,11 +368,14 @@ concept doesn't exist yet are **legal but inert**:
      (e.g. `command_nexus -> network_node`). `ThisBase` sub-effects of a faction-wide
      grant are cloned once per base; a grant whose target appears in its own source
      chain is skipped (cycle guard).
-  4. **Expand faction-lane social ratings** via `ExpandFactionLaneSocialRatingEffects`
+  4. **Gate** again — the grant derivatives are now in the list, and a gated
+     `SocialRatingModifier` arriving through a grant must not reach the accumulation in
+     step 5.
+  5. **Expand faction-lane social ratings** via `ExpandFactionLaneSocialRatingEffects`
      (`FactionEffects_t`): accumulate only `LaneFor(scope) == FactionWide` modifiers,
      append only `FactionUnits` gameplay effects from the level table.
-  5. **Gate** `removed_by_tech` again (grant/rating derivatives may carry the field).
-  6. **Stamp** the cache from the pre-rebuild revision snapshot (`m_scratchRevisions`);
+  6. **Gate** a last time (a level table's own effects may carry the field).
+  7. **Stamp** the cache from the pre-rebuild revision snapshot (`m_scratchRevisions`);
      do not re-walk contributors after rebuild.
 - **Returns**: `FactionEffects_t` (local pool). Composed view is
   `Faction::GetActiveEffects()`.
@@ -354,25 +384,32 @@ concept doesn't exist yet are **legal but inert**:
 - `SocialRatingModifier` effects are ordinary effects from **faction-internal** sources: a
   policy's faction-wide `+2 Growth`, a building's `ThisBase` `+1 Growth`, a pop/unit
   faction-lane modifier, etc. Ratings are a local axis — peer `WorldGlobal` and council
-  extras do not move them (`GetEffectiveSocialRating` / base-lane expand read
-  `GetLocalActiveEffects`; package 5 rejects `WorldGlobal` `SocialRatingModifier` at load).
-- `SocialRatingResolver` (`game/social-engineering/SocialRatingResolver.h`):
-  - `AccumulateSocialRatings(effects)` sums modifier contributions per rating axis.
-    Callers pass a context-filtered list (local base list, or FactionWide-only for the
-    faction lane).
-  - `ExpandSocialRatingEffects(BaseEffects_t&, ratingRegistry)` — base lane: maps each
-    non-zero accumulated level through `SocialRatingConfig_t::levelEffects` (SMAC
-    clamp-at-extremes) and appends gameplay effects with sourceId
-    `se_rating_<axis>_<level>` (clamped level). Runs after `FilterForBase` + pop merge.
+  extras do not move them: both lanes read `IEffectsProvider::GetLocalActiveEffects()`.
+  The restriction is currently **silent** — a mod can still declare a `WorldGlobal`
+  `SocialRatingModifier` and it moves neither lane; package 5 makes
+  `BonusEffectParser::ValidateScopeForSource` reject it at load.
+- `SocialRatingResolver` (`game/social-engineering/SocialRatingResolver.h`). Both lanes
+  share one level-lookup path (`FindSocialRatingLevelEffects` + sourceId + append), so a
+  clamp or sourceId change cannot drift between them:
+  - `AccumulateSocialRatings(effects, laneFilter?)` sums modifier contributions per rating
+    axis. Base-context callers pass no filter (`FilterForBase` established the context);
+    the faction lane passes `FactionWide`.
+  - `ResolveSocialRatingLevelEffects(const BaseEffects_t&, ratingRegistry)` — base lane:
+    maps each non-zero accumulated level through `SocialRatingConfig_t::levelEffects`
+    (SMAC clamp-at-extremes) and **returns** the gameplay effects with sourceId
+    `se_rating_<axis>_<level>` (clamped level). It returns rather than appends because the
+    accumulation source (local pool, filtered + pop-merged) is not the list the base
+    resolves against (composed pool).
   - `ExpandFactionLaneSocialRatingEffects(FactionEffects_t&, ratingRegistry)` — faction
     lane: accumulates **FactionWide** modifiers only (ignores `ThisBase`), appends only
     `FactionUnits` gameplay effects. Do not re-expand FactionWide economy effects here.
-- **Per-base effective ratings fall out automatically**: `BaseManager::BuildBaseEffects_`
-  expands ratings from the *local* filtered list after pop merge, so faction-wide
+- **Per-base effective ratings fall out automatically**: `BaseManager::CollectRatingSource_`
+  filters the *local* pool for the base and merges its pops; that one list feeds both
+  `GetEffectiveSocialRating` and the level effects spliced into `BuildBaseEffects_`, so the
+  number the UI reports and the effects the base resolves cannot disagree. Faction-wide
   modifiers reach every base while `ThisBase` modifiers shift only their own base — a
   `+2 Growth` policy plus a `+1 Growth` shrine resolves that base at level 3 and every
-  other base at level 2. `BaseManager::GetEffectiveSocialRating(rating)` exposes the
-  per-axis total from the local pool.
+  other base at level 2.
 - **Growth rating → growth rate**: the growth axis's levels map to `GrowthRate`
   `AddPercent` modifiers (`config/social_rating_effects.json`, ±10% per level), which
   `GrowthCalculator::ComputeNutrientsRequired` resolves per base — so the SE Growth score
@@ -527,8 +564,9 @@ parsed and collected identically everywhere.
    which owns the Instantaneous exclusion and `originBase` tagging (see Collection helpers):
    - Faction-anchored source (policy-like): `AppendActiveEffects(effects, nullptr, id, out)`
      from a collector wired into `CollectActiveEffects`.
-   - Base-anchored source (building-like): `AppendActiveEffects(effects, pBase, id, out)` so
-     `ThisBase` effects are attributed to their base, then feed the faction pool.
+   - Base-anchored source (building-like): `AppendActiveEffects(effects, &base, id, out)` so
+     `TagsOriginBase` scopes are attributed at append time (`BuildingManager::CollectEffects`
+     takes the owning `BaseManager&`), then feed the faction pool.
    - Source whose local scopes are resolved elsewhere (pop/unit-like):
      `AppendFactionLaneEffects(effects, id, out)` for the pool, and resolve the local lanes
      at their owner (the way `Pop::ApplyTileMultipliers` and `CollectUnitEffects` do).

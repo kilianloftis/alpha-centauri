@@ -1,0 +1,505 @@
+[
+  {
+    "id": "13-map-runtime",
+    "title": "Map \u2014 runtime world model",
+    "files": [
+      "src/game/map/TerraformSpread.cpp",
+      "include/game/map/TerraformSpread.h",
+      "src/game/map/TerrainFeatureValidation.cpp",
+      "include/game/map/TerrainFeatureValidation.h",
+      "src/game/map/TerritoryMap.cpp",
+      "include/game/map/TerritoryMap.h",
+      "src/game/map/Tile.cpp",
+      "include/game/map/Tile.h",
+      "src/game/map/TileFlagMap.cpp",
+      "include/game/map/TileFlagMap.h",
+      "src/game/map/TileLayerResolver.cpp",
+      "include/game/map/TileLayerResolver.h",
+      "src/game/map/UnitPositionIndex.cpp",
+      "include/game/map/UnitPositionIndex.h",
+      "src/game/map/WorkedTileIndex.cpp",
+      "include/game/map/WorkedTileIndex.h",
+      "src/game/map/WorldMap.cpp",
+      "include/game/map/WorldMap.h"
+    ]
+  },
+  {
+    "id": "14-map-generation",
+    "title": "Map \u2014 world generation and config",
+    "files": [
+      "src/game/map/FbmNoise.cpp",
+      "include/game/map/FbmNoise.h",
+      "src/game/map/FungusGeneration.cpp",
+      "include/game/map/FungusGeneration.h",
+      "src/game/map/ImprovementConfigParser.cpp",
+      "include/game/map/ImprovementConfigParser.h",
+      "src/game/map/LandmarkConfigParser.cpp",
+      "include/game/map/LandmarkConfigParser.h",
+      "src/game/map/LandmarkGeneration.cpp",
+      "include/game/map/LandmarkGeneration.h",
+      "src/game/map/MapGenerationConfig.cpp",
+      "include/game/map/MapGenerationConfig.h",
+      "src/game/map/RiverGeneration.cpp",
+      "include/game/map/RiverGeneration.h",
+      "src/game/map/TileBonusGeneration.cpp",
+      "include/game/map/TileBonusGeneration.h",
+      "src/game/map/WorldGenDecorationConfigParser.cpp",
+      "include/game/map/WorldGenDecorationConfigParser.h",
+      "src/game/map/WorldGenPresetConfigParser.cpp",
+      "include/game/map/WorldGenPresetConfigParser.h",
+      "src/game/map/WorldGenerator.cpp",
+      "include/game/map/WorldGenerator.h",
+      "include/game/map/MapUtils.h",
+      "include/game/map/WorldGenPresetRegistry.h",
+      "include/game/map/WorldGenDecorationConfig.h",
+      "include/game/map/MoistureGeneration.h",
+      "include/game/map/RockinessGeneration.h",
+      "include/game/map/TileLayer.h",
+      "include/game/map/ImprovementRegistry.h",
+      "include/game/map/LandmarkConfig.h",
+      "include/game/map/WorldGenPresetConfig.h"
+    ]
+  },
+  {
+    "id": "15-orbital",
+    "title": "Orbital systems",
+    "files": [
+      "src/game/orbital/OrbitalAttack.cpp",
+      "include/game/orbital/OrbitalAttack.h",
+      "src/game/orbital/OrbitalCensus.cpp",
+      "include/game/orbital/OrbitalCensus.h"
+    ]
+  },
+  {
+    "id": "16-population-calculators",
+    "title": "Population \u2014 calculators",
+    "files": [
+      "src/game/population/calculators/GoldenAgeCalculator.cpp",
+      "include/game/population/calculators/GoldenAgeCalculator.h",
+      "src/game/population/calculators/GrowthCalculator.cpp",
+      "include/game/population/calculators/GrowthCalculator.h",
+      "src/game/population/calculators/PopCompositionCalculator.cpp",
+      "include/game/population/calculators/PopCompositionCalculator.h",
+      "src/game/population/calculators/PopTypeAvailabilityCalculator.cpp",
+      "include/game/population/calculators/PopTypeAvailabilityCalculator.h",
+      "src/game/population/calculators/RiotCalculator.cpp",
+      "include/game/population/calculators/RiotCalculator.h"
+    ]
+  },
+  {
+    "id": "17-population-types",
+    "title": "Population \u2014 pop types and config",
+    "files": [
+      "src/game/population/pop-types/GrowthConfigParser.cpp",
+      "include/game/population/pop-types/GrowthConfigParser.h",
+      "src/game/population/pop-types/Pop.cpp",
+      "include/game/population/pop-types/Pop.h",
+      "src/game/population/pop-types/PopCompositionConfigParser.cpp",
+      "include/game/population/pop-types/PopCompositionConfigParser.h",
+      "src/game/population/pop-types/PopTypeConfigParser.cpp",
+      "include/game/population/pop-types/PopTypeConfigParser.h",
+      "include/game/population/pop-types/PopTypeRegistry.h"
+    ]
+  },
+  {
+    "id": "18-research",
+    "title": "Research \u2014 tech registry and costs",
+    "files": [
+      "src/game/research/TechConfigParser.cpp",
+      "include/game/research/TechConfigParser.h",
+      "src/game/research/TechCostCalculator.cpp",
+      "include/game/research/TechCostCalculator.h",
+      "src/game/research/TechCostConfigParser.cpp",
+      "src/game/research/TechRegistry.cpp",
+      "include/game/research/TechRegistry.h",
+      "include/game/research/TechCostConfig.h"
+    ]
+  },
+  {
+    "id": "19-social-engineering",
+    "title": "Social engineering \u2014 policies and ratings",
+    "files": [
+      "src/game/social-engineering/SocialPolicyConfigParser.cpp",
+      "include/game/social-engineering/SocialPolicyConfigParser.h",
+      "src/game/social-engineering/SocialRatingConfigParser.cpp",
+      "include/game/social-engineering/SocialRatingConfigParser.h",
+      "src/game/social-engineering/SocialRatingResolver.cpp",
+      "include/game/social-engineering/SocialRatingResolver.h",
+      "include/game/social-engineering/SocialEffects.h",
+      "include/game/social-engineering/SocialRatingRegistry.h",
+      "include/game/social-engineering/SocialPolicyRegistry.h",
+      "include/game/social-engineering/SocialRatingConfig.h",
+      "include/game/social-engineering/SocialPolicyConfig.h"
+    ]
+  },
+  {
+    "id": "20-stages-early",
+    "title": "Turn stages \u2014 early pipeline",
+    "files": [
+      "src/game/stages/BaseProduction.cpp",
+      "include/game/stages/BaseProduction.h",
+      "src/game/stages/IncomeCollection.cpp",
+      "include/game/stages/IncomeCollection.h",
+      "src/game/stages/PlayerActions.cpp",
+      "include/game/stages/PlayerActions.h",
+      "src/game/stages/Population.cpp",
+      "include/game/stages/Population.h",
+      "src/game/stages/ResearchAccumulation.cpp",
+      "include/game/stages/ResearchAccumulation.h",
+      "src/game/stages/ResourceCollection.cpp",
+      "include/game/stages/ResourceCollection.h",
+      "src/game/stages/TurnStart.cpp",
+      "include/game/stages/TurnStart.h"
+    ]
+  },
+  {
+    "id": "21-stages-late",
+    "title": "Turn stages \u2014 late pipeline and custom",
+    "files": [
+      "src/game/stages/CustomTurnStage.cpp",
+      "include/game/stages/CustomTurnStage.h",
+      "src/game/stages/Save.cpp",
+      "include/game/stages/Save.h",
+      "src/game/stages/TurnEnd.cpp",
+      "include/game/stages/TurnEnd.h",
+      "src/game/stages/Upkeep.cpp",
+      "include/game/stages/Upkeep.h",
+      "src/game/stages/VictoryConditionChecks.cpp",
+      "include/game/stages/VictoryConditionChecks.h",
+      "src/game/stages/WorldEvents.cpp",
+      "include/game/stages/WorldEvents.h"
+    ]
+  },
+  {
+    "id": "22-units-core-movement",
+    "title": "Units \u2014 model, orders, movement",
+    "files": [
+      "src/game/units/FoundBaseRules.cpp",
+      "include/game/units/FoundBaseRules.h",
+      "src/game/units/MoveCostCalculator.cpp",
+      "include/game/units/MoveCostCalculator.h",
+      "src/game/units/MovementRules.cpp",
+      "include/game/units/MovementRules.h",
+      "src/game/units/Pathfinder.cpp",
+      "include/game/units/Pathfinder.h",
+      "src/game/units/StepEvaluator.cpp",
+      "include/game/units/StepEvaluator.h",
+      "src/game/units/TerraformRules.cpp",
+      "include/game/units/TerraformRules.h",
+      "src/game/units/TransportRules.cpp",
+      "include/game/units/TransportRules.h",
+      "src/game/units/Unit.cpp",
+      "include/game/units/Unit.h",
+      "src/game/units/UnitComponentConfigParser.cpp",
+      "include/game/units/UnitComponentConfigParser.h",
+      "src/game/units/UnitDesign.cpp",
+      "include/game/units/UnitDesign.h",
+      "src/game/units/UnitOrder.cpp",
+      "include/game/units/UnitOrder.h",
+      "src/game/units/UnitOrderExecutor.cpp",
+      "include/game/units/UnitOrderExecutor.h",
+      "src/game/units/UnitSlotConfigParser.cpp",
+      "include/game/units/UnitSlotConfigParser.h",
+      "include/game/units/UnitSlotRegistry.h",
+      "include/game/units/UnitDomain.h",
+      "include/game/units/UnitComponentConfig.h",
+      "include/game/units/UnitComponentRegistry.h",
+      "include/game/units/IUnitOrderWorld.h",
+      "include/game/units/UnitSlotConfig.h",
+      "include/game/units/MovementConstants.h"
+    ]
+  },
+  {
+    "id": "23-units-combat-probes",
+    "title": "Units \u2014 combat, probes, conquest, morale",
+    "files": [
+      "src/game/units/AttackRules.cpp",
+      "include/game/units/AttackRules.h",
+      "src/game/units/BaseConquestConfigParser.cpp",
+      "include/game/units/BaseConquestConfigParser.h",
+      "src/game/units/BaseConquestEffects.cpp",
+      "include/game/units/BaseConquestEffects.h",
+      "src/game/units/BaseConquestRules.cpp",
+      "include/game/units/BaseConquestRules.h",
+      "src/game/units/CombatResolver.cpp",
+      "include/game/units/CombatResolver.h",
+      "src/game/units/DisengageRules.cpp",
+      "include/game/units/DisengageRules.h",
+      "src/game/units/InterceptRules.cpp",
+      "include/game/units/InterceptRules.h",
+      "src/game/units/MoraleCalculator.cpp",
+      "include/game/units/MoraleCalculator.h",
+      "src/game/units/MoraleConfig.cpp",
+      "include/game/units/MoraleConfig.h",
+      "src/game/units/MoraleConfigParser.cpp",
+      "include/game/units/MoraleConfigParser.h",
+      "src/game/units/ProbeActionConfigParser.cpp",
+      "include/game/units/ProbeActionConfigParser.h",
+      "src/game/units/ProbeActionEffects.cpp",
+      "include/game/units/ProbeActionEffects.h",
+      "src/game/units/ProbeActionExecutor.cpp",
+      "include/game/units/ProbeActionExecutor.h",
+      "src/game/units/ProbeRules.cpp",
+      "include/game/units/ProbeRules.h",
+      "src/game/units/ProbeTarget.cpp",
+      "include/game/units/ProbeTarget.h",
+      "include/game/units/BaseConquestConfig.h",
+      "include/game/units/ProbeActionResult.h",
+      "include/game/units/ProbeActionConfig.h"
+    ]
+  },
+  {
+    "id": "24-graphics",
+    "title": "Graphics backend",
+    "files": [
+      "src/graphics/NullGraphics.cpp",
+      "src/graphics/SFMLGraphics.cpp",
+      "include/graphics/Graphics.h"
+    ]
+  },
+  {
+    "id": "25-input",
+    "title": "Input backend",
+    "files": [
+      "src/input/KeyEventQueue.cpp",
+      "include/input/KeyEventQueue.h",
+      "src/input/KeyMapping.cpp",
+      "include/input/KeyMapping.h",
+      "src/input/MouseEventQueue.cpp",
+      "include/input/MouseEventQueue.h",
+      "src/input/NullInput.cpp",
+      "src/input/SFMLInput.cpp",
+      "include/input/Input.h"
+    ]
+  },
+  {
+    "id": "26-lib",
+    "title": "Shared libraries",
+    "files": [
+      "src/lib/EventBus.cpp",
+      "include/lib/EventBus.h",
+      "src/lib/LuaRuntime.cpp",
+      "include/lib/LuaRuntime.h",
+      "src/lib/Rational.cpp",
+      "include/lib/Rational.h",
+      "src/lib/config/ConfigFields.cpp",
+      "include/lib/config/ConfigFields.h",
+      "include/lib/Signal.h",
+      "include/lib/GameEvent.h",
+      "include/lib/IdAllocator.h",
+      "include/lib/RandomRoll.h",
+      "include/lib/DerefView.h",
+      "include/lib/Revision.h",
+      "include/lib/Registry.h",
+      "include/lib/config/JsonConfigLoader.h"
+    ]
+  },
+  {
+    "id": "27-ui-core",
+    "title": "UI \u2014 manager, views, tile rendering",
+    "files": [
+      "src/ui/PlaceholderPanel.cpp",
+      "include/ui/PlaceholderPanel.h",
+      "src/ui/TileHitTester.cpp",
+      "include/ui/TileHitTester.h",
+      "src/ui/TileRenderer.cpp",
+      "include/ui/TileRenderer.h",
+      "src/ui/UIManager.cpp",
+      "include/ui/UIManager.h",
+      "src/ui/ViewFactory.cpp",
+      "include/ui/ViewFactory.h",
+      "include/ui/IGameView.h",
+      "include/ui/UIElement.h"
+    ]
+  },
+  {
+    "id": "28-ui-base-displays",
+    "title": "UI \u2014 base view and displays",
+    "files": [
+      "src/ui/base/BaseNameDisplay.cpp",
+      "include/ui/base/BaseNameDisplay.h",
+      "src/ui/base/BaseView.cpp",
+      "include/ui/base/BaseView.h",
+      "src/ui/base/BaseWorkableAreaDisplay.cpp",
+      "include/ui/base/BaseWorkableAreaDisplay.h",
+      "src/ui/base/GrowthDisplay.cpp",
+      "include/ui/base/GrowthDisplay.h",
+      "src/ui/base/PopulationDisplay.cpp",
+      "include/ui/base/PopulationDisplay.h",
+      "src/ui/base/ProductionDisplay.cpp",
+      "include/ui/base/ProductionDisplay.h",
+      "src/ui/base/SupportDisplay.cpp",
+      "include/ui/base/SupportDisplay.h"
+    ]
+  },
+  {
+    "id": "29-ui-base-selectors",
+    "title": "UI \u2014 base selector popups",
+    "files": [
+      "src/ui/base/PopTypeSelectorPopup.cpp",
+      "include/ui/base/PopTypeSelectorPopup.h",
+      "src/ui/base/ProductionSelectorPopup.cpp",
+      "include/ui/base/ProductionSelectorPopup.h"
+    ]
+  },
+  {
+    "id": "30-ui-commlinks",
+    "title": "UI \u2014 commlinks",
+    "files": [
+      "src/ui/commlinks/CommlinksPanel.cpp",
+      "include/ui/commlinks/CommlinksPanel.h",
+      "src/ui/commlinks/CommlinksView.cpp",
+      "include/ui/commlinks/CommlinksView.h",
+      "src/ui/commlinks/CouncilButton.cpp",
+      "include/ui/commlinks/CouncilButton.h",
+      "src/ui/commlinks/CouncilCooldownPopup.cpp",
+      "include/ui/commlinks/CouncilCooldownPopup.h",
+      "src/ui/commlinks/CouncilProposalsPopup.cpp",
+      "include/ui/commlinks/CouncilProposalsPopup.h"
+    ]
+  },
+  {
+    "id": "31-ui-council",
+    "title": "UI \u2014 council vote",
+    "files": [
+      "src/ui/council/CouncilBallotPopup.cpp",
+      "include/ui/council/CouncilBallotPopup.h",
+      "src/ui/council/CouncilFactionVotesPanel.cpp",
+      "include/ui/council/CouncilFactionVotesPanel.h",
+      "src/ui/council/CouncilProposalInfoPanel.cpp",
+      "include/ui/council/CouncilProposalInfoPanel.h",
+      "src/ui/council/CouncilVoteButton.cpp",
+      "include/ui/council/CouncilVoteButton.h",
+      "src/ui/council/CouncilVoteView.cpp",
+      "include/ui/council/CouncilVoteView.h"
+    ]
+  },
+  {
+    "id": "32-ui-research",
+    "title": "UI \u2014 research",
+    "files": [
+      "src/ui/research/CurrentResearchPanel.cpp",
+      "include/ui/research/CurrentResearchPanel.h",
+      "src/ui/research/ResearchView.cpp",
+      "include/ui/research/ResearchView.h"
+    ]
+  },
+  {
+    "id": "33-ui-satellite",
+    "title": "UI \u2014 satellite / orbital",
+    "files": [
+      "src/ui/satellite/OrbitalAttackOutcomePopup.cpp",
+      "include/ui/satellite/OrbitalAttackOutcomePopup.h",
+      "src/ui/satellite/OrbitalAttackerPopup.cpp",
+      "include/ui/satellite/OrbitalAttackerPopup.h",
+      "src/ui/satellite/SatelliteButtonListPanel.cpp",
+      "include/ui/satellite/SatelliteButtonListPanel.h",
+      "src/ui/satellite/SatelliteLabeledButton.cpp",
+      "include/ui/satellite/SatelliteLabeledButton.h",
+      "src/ui/satellite/SatelliteSummaryPanel.cpp",
+      "include/ui/satellite/SatelliteSummaryPanel.h",
+      "src/ui/satellite/SatelliteView.cpp",
+      "include/ui/satellite/SatelliteView.h"
+    ]
+  },
+  {
+    "id": "34-ui-settings",
+    "title": "UI \u2014 settings",
+    "files": [
+      "src/ui/settings/SettingsPanel.cpp",
+      "include/ui/settings/SettingsPanel.h",
+      "src/ui/settings/SettingsView.cpp",
+      "include/ui/settings/SettingsView.h",
+      "include/ui/settings/SettingDescriptor.h"
+    ]
+  },
+  {
+    "id": "35-ui-social-engineering",
+    "title": "UI \u2014 social engineering",
+    "files": [
+      "src/ui/social-engineering/SocialEngineeringBottomPanel.cpp",
+      "include/ui/social-engineering/SocialEngineeringBottomPanel.h",
+      "src/ui/social-engineering/SocialEngineeringDisplay.cpp",
+      "include/ui/social-engineering/SocialEngineeringDisplay.h",
+      "src/ui/social-engineering/SocialEngineeringView.cpp",
+      "include/ui/social-engineering/SocialEngineeringView.h"
+    ]
+  },
+  {
+    "id": "36-ui-style",
+    "title": "UI \u2014 style",
+    "files": [
+      "src/ui/style/UiStyle.cpp",
+      "include/ui/style/UiStyle.h"
+    ]
+  },
+  {
+    "id": "37-ui-unit-designer",
+    "title": "UI \u2014 unit designer",
+    "files": [
+      "src/ui/unit-designer/ComponentSelectorPopup.cpp",
+      "include/ui/unit-designer/ComponentSelectorPopup.h",
+      "src/ui/unit-designer/ComponentSlotDisplay.cpp",
+      "include/ui/unit-designer/ComponentSlotDisplay.h",
+      "src/ui/unit-designer/DesignListPanel.cpp",
+      "include/ui/unit-designer/DesignListPanel.h",
+      "src/ui/unit-designer/DesignStatsDisplay.cpp",
+      "include/ui/unit-designer/DesignStatsDisplay.h",
+      "src/ui/unit-designer/SlotColumnPanel.cpp",
+      "include/ui/unit-designer/SlotColumnPanel.h",
+      "src/ui/unit-designer/UnitDesignerView.cpp",
+      "include/ui/unit-designer/UnitDesignerView.h",
+      "src/ui/unit-designer/UnitStatusPanel.cpp",
+      "include/ui/unit-designer/UnitStatusPanel.h",
+      "include/ui/unit-designer/UnitDesignerState.h"
+    ]
+  },
+  {
+    "id": "38-ui-world-map",
+    "title": "UI \u2014 world map and combat presentation",
+    "files": [
+      "src/ui/world/CameraInputController.cpp",
+      "include/ui/world/CameraInputController.h",
+      "src/ui/world/CombatPresentation.cpp",
+      "include/ui/world/CombatPresentation.h",
+      "src/ui/world/CombatView.cpp",
+      "include/ui/world/CombatView.h",
+      "src/ui/world/MapViewport.cpp",
+      "include/ui/world/MapViewport.h",
+      "src/ui/world/MinimapDisplay.cpp",
+      "include/ui/world/MinimapDisplay.h",
+      "src/ui/world/UnitMarkerRenderer.cpp",
+      "include/ui/world/UnitMarkerRenderer.h",
+      "src/ui/world/UnitOrderInputController.cpp",
+      "include/ui/world/UnitOrderInputController.h",
+      "src/ui/world/WorldDisplay.cpp",
+      "include/ui/world/WorldDisplay.h",
+      "src/ui/world/WorldView.cpp",
+      "include/ui/world/WorldView.h"
+    ]
+  },
+  {
+    "id": "39-ui-world-panels",
+    "title": "UI \u2014 world panels and order input",
+    "files": [
+      "src/ui/world/CommlinksButton.cpp",
+      "include/ui/world/CommlinksButton.h",
+      "src/ui/world/EndTurnButton.cpp",
+      "include/ui/world/EndTurnButton.h",
+      "src/ui/world/InfoPanelElement.cpp",
+      "include/ui/world/InfoPanelElement.h",
+      "src/ui/world/LocationPanel.cpp",
+      "include/ui/world/LocationPanel.h",
+      "src/ui/world/ProbeActionPopup.cpp",
+      "include/ui/world/ProbeActionPopup.h",
+      "src/ui/world/SelectedUnitPanel.cpp",
+      "include/ui/world/SelectedUnitPanel.h",
+      "src/ui/world/SupplyCrawlPopup.cpp",
+      "include/ui/world/SupplyCrawlPopup.h",
+      "src/ui/world/TerraformInputController.cpp",
+      "include/ui/world/TerraformInputController.h",
+      "src/ui/world/UnitStackPanel.cpp",
+      "include/ui/world/UnitStackPanel.h"
+    ]
+  }
+]
