@@ -28,10 +28,9 @@ double ParseNumber(const nlohmann::json& parameters, const std::string& key, dou
 // Like ParseNumber, but throws if the key is absent (no silent default).
 double RequireNumber(const nlohmann::json& parameters, const std::string& key);
 
-ConditionKind_t ParseConditionKind(const std::string& rKind);
-
 // Parses a Condition_t from a condition JSON object ({ "kind": ..., "value": ... }).
 // Called by ParseEffectConfig when an effect entry carries a "condition" field.
+// AllOf `"values"` are desugared to nested TargetTileHas alternatives.
 Condition_t ParseCondition(const nlohmann::json& conditionJson);
 
 TileSelector_t ParseTileSelector(const nlohmann::json& selectorJson);

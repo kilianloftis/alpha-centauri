@@ -16,7 +16,9 @@
 #include <algorithm>
 #include <cmath>
 #include <optional>
+#include <type_traits>
 #include <unordered_set>
+#include <variant>
 
 namespace ac
 {
@@ -158,15 +160,21 @@ void AppendNeighborAndUnitAreaEffects_(const Tile& rOrigin, const WorldMap& rWor
 
 bool TileMatchesSelector_(const TileSelector_t& selector, const Tile& rTile, bool bIsBaseTile)
 {
-    switch (selector.kind)
-    {
-        case TileSelectorKind_t::BaseTile:
-            return bIsBaseTile;
-        case TileSelectorKind_t::HasImprovement:
-            // HasFeature so terrain ids (Fungus, Rocky, …) match the same way as Farm/Mine.
-            return selector.improvement && rTile.HasFeature(*selector.improvement);
-    }
-    return false;
+    return std::visit(
+        [&](const auto& rAlt) -> bool
+        {
+            using T = std::decay_t<decltype(rAlt)>;
+            if constexpr (std::is_same_v<T, TileSelectorBaseTile_t>)
+            {
+                return bIsBaseTile;
+            }
+            else if constexpr (std::is_same_v<T, TileSelectorHasImprovement_t>)
+            {
+                // HasFeature so terrain ids (Fungus, Rocky, …) match the same way as Farm/Mine.
+                return rTile.HasFeature(rAlt.improvement);
+            }
+        },
+        selector);
 }
 
 // Appends every base-wide StatModifier that carries a tile selector matching rTile.

@@ -102,27 +102,27 @@ std::vector<ac::ActiveEffect_t> Materialize(Range&& range)
 
 inline ac::TileSelector_t BaseTileSelector()
 {
-    return ac::TileSelector_t{ac::TileSelectorKind_t::BaseTile, std::nullopt};
+    return ac::TileSelectorBaseTile_t{};
 }
 
 inline ac::TileSelector_t ImprovementSelector(std::string improvementId)
 {
-    return ac::TileSelector_t{ac::TileSelectorKind_t::HasImprovement, std::move(improvementId)};
+    return ac::TileSelectorHasImprovement_t{std::move(improvementId)};
 }
 
 inline ac::Condition_t TargetTileHas(std::string featureId)
 {
-    return ac::Condition_t{ac::ConditionKind_t::TargetTileHas, std::move(featureId), {}};
+    return ac::TargetTileHas_t{std::move(featureId)};
 }
 
 inline ac::UnitFilter_t DomainFilter(ac::UnitDomain_t domain)
 {
-    return ac::UnitFilter_t{ac::UnitFilterKind_t::Domain, domain, std::nullopt};
+    return ac::UnitFilterDomain_t{domain};
 }
 
 inline ac::UnitFilter_t HasComponentFilter(std::string componentId)
 {
-    return ac::UnitFilter_t{ac::UnitFilterKind_t::HasComponent, std::nullopt, std::move(componentId)};
+    return ac::UnitFilterHasComponent_t{std::move(componentId)};
 }
 
 } // namespace actest

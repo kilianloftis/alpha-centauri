@@ -156,17 +156,18 @@ struct InfiltrationEffect_t
 {
 };
 
-enum class TileSelectorKind_t
+// Which worked tiles a selector-carrying StatModifier applies to. Sum type so BaseTile vs
+// HasImprovement cannot carry mismatched fields.
+struct TileSelectorBaseTile_t
 {
-    BaseTile,
-    HasImprovement
 };
 
-struct TileSelector_t
+struct TileSelectorHasImprovement_t
 {
-    TileSelectorKind_t kind;
-    std::optional<std::string> improvement; // improvement id, set only when kind == HasImprovement
+    std::string improvement; // feature id matched via Tile::HasFeature
 };
+
+using TileSelector_t = std::variant<TileSelectorBaseTile_t, TileSelectorHasImprovement_t>;
 
 struct StatModifierEffect_t
 {
@@ -326,59 +327,76 @@ using EffectVariant_t = std::variant<
     PermissionEffect_t
 >;
 
-enum class ConditionKind_t
+// Runtime predicates on EffectConfig_t. Sum type so kind/parameter mismatches are
+// unrepresentable. Inherits std::variant so AllOf_t can recurse (vector<Condition_t>).
+// Visit/get via AsVariant() — std::visit requires the std::variant specialization.
+struct Condition_t;
+
+// The tile targeted by this effect has the named feature id. Evaluated via Tile::HasFeature,
+// so one alternative covers terrain classification (e.g. "Rocky"), river/fungus, and any
+// improvement id — including "Base". In combat the target is the defender's tile.
+struct TargetTileHas_t
 {
-    // The tile targeted by this effect has the named feature id. Evaluated via
-    // Tile::HasFeature, so a single kind covers terrain classification (e.g. "Rocky"),
-    // river/fungus, and any improvement id — including "Base", which a
-    // founded base registers as an improvement. In combat the target is the defender's tile,
-    // so this expresses both "+X% attacking into Forest" and "+X% attacking a Base".
-    TargetTileHas,
-    // Every feature id in `values` is present on the target tile (AND of TargetTileHas),
-    // and/or every nested condition in `conditions` is satisfied.
-    AllOf,
-    // True when EffectContext_t::combatRole is Defender (defense-only SE Morale extras).
-    IsDefending,
-    // True when ActiveEffect_t::originBase is the base sitting on EffectContext_t::targetTile
-    // (Creche combat bonus for the base being defended, not the unit's home).
-    OriginBaseIsTargetBase,
-    // True when EffectContext_t::pAttacker is non-null and embarked.
-    AttackerIsEmbarked,
+    std::string featureId;
 };
 
-struct Condition_t
+// Every nested condition is satisfied (AND). Parser desugars AllOf JSON `"values": ["A","B"]`
+// into TargetTileHas alternatives; after parse only nested Condition_t nodes remain.
+struct AllOf_t
 {
-    ConditionKind_t kind;
-    // Parameter for TargetTileHas: feature id passed to Tile::HasFeature.
-    std::string value;
-    // Parameter for AllOf: every id must be present on the target tile.
-    std::vector<std::string> values;
-    // Parameter for AllOf: nested conditions (e.g. IsDefending + TargetTileHas Base).
     std::vector<Condition_t> conditions;
+};
+
+// True when EffectContext_t::combatRole is Defender (defense-only SE Morale extras).
+struct IsDefending_t
+{
+};
+
+// True when ActiveEffect_t::originBase is the base sitting on EffectContext_t::targetTile
+// (Creche combat bonus for the base being defended, not the unit's home).
+struct OriginBaseIsTargetBase_t
+{
+};
+
+// True when EffectContext_t::pAttacker is non-null and embarked.
+struct AttackerIsEmbarked_t
+{
+};
+
+struct Condition_t : std::variant<TargetTileHas_t, AllOf_t, IsDefending_t,
+                                  OriginBaseIsTargetBase_t, AttackerIsEmbarked_t>
+{
+    using Variant = std::variant<TargetTileHas_t, AllOf_t, IsDefending_t,
+                                 OriginBaseIsTargetBase_t, AttackerIsEmbarked_t>;
+    using Variant::Variant;
+    using Variant::operator=;
+
+    Variant& AsVariant() & { return *this; }
+    const Variant& AsVariant() const & { return *this; }
 };
 
 // Restricts which units an effect applies to when merged into a live unit's effect list
 // (CollectLiveUnitEffects). Absent = all units. Distinct from condition: filters are
 // unit-identity predicates evaluated context-free (domain, component loadout), not combat
 // situational predicates.
-enum class UnitFilterKind_t
+struct UnitFilterDomain_t
 {
-    Domain,
-    HasComponent,
-    // Unit resolves true for the named RuleFlag (design + FactionUnits).
-    HasFlag,
+    UnitDomain_t domain;
 };
 
-struct UnitFilter_t
+struct UnitFilterHasComponent_t
 {
-    UnitFilterKind_t kind;
-    // Set when kind == Domain.
-    std::optional<UnitDomain_t> domain;
-    // Component id; set when kind == HasComponent.
-    std::optional<std::string> component;
-    // Set when kind == HasFlag.
-    std::optional<RuleFlagId_t> flag;
+    std::string component;
 };
+
+// Unit resolves true for the named RuleFlag (design + FactionUnits).
+struct UnitFilterHasFlag_t
+{
+    RuleFlagId_t flag;
+};
+
+using UnitFilter_t =
+    std::variant<UnitFilterDomain_t, UnitFilterHasComponent_t, UnitFilterHasFlag_t>;
 
 // Restricts which *other* factions a cross-faction effect (Infiltration, future
 // DiplomaticModifier, …) applies to. Orthogonal to EffectScope_t: scope is the resolution

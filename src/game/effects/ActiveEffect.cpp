@@ -27,6 +27,8 @@
 #include <iostream>
 #include <set>
 #include <string_view>
+#include <type_traits>
+#include <variant>
 
 namespace ac
 {
@@ -298,35 +300,44 @@ namespace
 bool ConditionBodySatisfied_(const Condition_t& condition, const EffectContext_t& ctx,
                              const BaseManager* pOriginBase)
 {
-    switch (condition.kind)
-    {
-        case ConditionKind_t::TargetTileHas:
-            return ctx.targetTile != nullptr && ctx.targetTile->HasFeature(condition.value);
-        case ConditionKind_t::IsDefending:
-            return ctx.combatRole == CombatRole_t::Defender;
-        case ConditionKind_t::OriginBaseIsTargetBase:
-            return pOriginBase != nullptr && ctx.targetTile != nullptr
-                && &pOriginBase->GetTile() == ctx.targetTile;
-        case ConditionKind_t::AttackerIsEmbarked:
-            return ctx.pAttacker != nullptr && ctx.pAttacker->IsEmbarked();
-        case ConditionKind_t::AllOf:
-            for (const std::string& rFeatureId : condition.values)
+    return std::visit(
+        [&](const auto& rAlt) -> bool
+        {
+            using T = std::decay_t<decltype(rAlt)>;
+            if constexpr (std::is_same_v<T, TargetTileHas_t>)
             {
-                if (!ctx.targetTile || !ctx.targetTile->HasFeature(rFeatureId))
+                return ctx.targetTile != nullptr && ctx.targetTile->HasFeature(rAlt.featureId);
+            }
+            else if constexpr (std::is_same_v<T, IsDefending_t>)
+            {
+                return ctx.combatRole == CombatRole_t::Defender;
+            }
+            else if constexpr (std::is_same_v<T, OriginBaseIsTargetBase_t>)
+            {
+                return pOriginBase != nullptr && ctx.targetTile != nullptr
+                    && &pOriginBase->GetTile() == ctx.targetTile;
+            }
+            else if constexpr (std::is_same_v<T, AttackerIsEmbarked_t>)
+            {
+                return ctx.pAttacker != nullptr && ctx.pAttacker->IsEmbarked();
+            }
+            else if constexpr (std::is_same_v<T, AllOf_t>)
+            {
+                if (rAlt.conditions.empty())
                 {
                     return false;
                 }
-            }
-            for (const Condition_t& rNested : condition.conditions)
-            {
-                if (!ConditionBodySatisfied_(rNested, ctx, pOriginBase))
+                for (const Condition_t& rNested : rAlt.conditions)
                 {
-                    return false;
+                    if (!ConditionBodySatisfied_(rNested, ctx, pOriginBase))
+                    {
+                        return false;
+                    }
                 }
+                return true;
             }
-            return !condition.values.empty() || !condition.conditions.empty();
-    }
-    return false;
+        },
+        condition.AsVariant());
 }
 
 } // namespace
@@ -347,20 +358,26 @@ bool UnitFilterSatisfied(const EffectConfig_t& config, const Unit& rUnit)
     {
         return true;
     }
-    const UnitFilter_t& filter = *config.unitFilter;
-    switch (filter.kind)
-    {
-        case UnitFilterKind_t::Domain:
-            return filter.domain.has_value() && rUnit.GetDomain() == *filter.domain;
-        case UnitFilterKind_t::HasComponent:
-            return filter.component.has_value()
-                && rUnit.GetDesign().HasComponent(*filter.component);
-        // Design-only: avoid CollectLiveUnitEffects recursion (HasFlag is evaluated while
-        // building that list). Native / probe filters key off chassis/special components.
-        case UnitFilterKind_t::HasFlag:
-            return filter.flag.has_value() && ResolveFlag(rUnit.GetDesign(), *filter.flag);
-    }
-    return false;
+    return std::visit(
+        [&](const auto& rAlt) -> bool
+        {
+            using T = std::decay_t<decltype(rAlt)>;
+            if constexpr (std::is_same_v<T, UnitFilterDomain_t>)
+            {
+                return rUnit.GetDomain() == rAlt.domain;
+            }
+            else if constexpr (std::is_same_v<T, UnitFilterHasComponent_t>)
+            {
+                return rUnit.GetDesign().HasComponent(rAlt.component);
+            }
+            else if constexpr (std::is_same_v<T, UnitFilterHasFlag_t>)
+            {
+                // Design-only: avoid CollectLiveUnitEffects recursion (HasFlag is evaluated
+                // while building that list). Native / probe filters key off chassis/specials.
+                return ResolveFlag(rUnit.GetDesign(), rAlt.flag);
+            }
+        },
+        *config.unitFilter);
 }
 
 BaseEffects_t FilterForBase(const FactionEffects_t& rFactionEffects, const BaseManager& rBase)

@@ -25,6 +25,7 @@
 #include <functional>
 #include <memory>
 #include <stdexcept>
+#include <type_traits>
 #include <variant>
 
 namespace ac
@@ -78,11 +79,17 @@ struct EffectPayloadValidator
 
     void operator()(const StatModifierEffect_t& rModifier) const
     {
-        if (rModifier.selector && rModifier.selector->improvement && pImprovements
-            && !pImprovements->Find(*rModifier.selector->improvement))
+        if (!rModifier.selector || !pImprovements)
         {
-            ThrowBadReference(rSourceId, "selector improvement",
-                              *rModifier.selector->improvement);
+            return;
+        }
+        if (const auto* pHas =
+                std::get_if<TileSelectorHasImprovement_t>(&*rModifier.selector))
+        {
+            if (!pImprovements->Find(pHas->improvement))
+            {
+                ThrowBadReference(rSourceId, "selector improvement", pHas->improvement);
+            }
         }
     }
 
@@ -136,36 +143,38 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
             };
             std::function<void(const Condition_t&)> checkCondition = [&](const Condition_t& rCond)
             {
-                switch (rCond.kind)
-                {
-                    case ConditionKind_t::IsDefending:
-                    case ConditionKind_t::OriginBaseIsTargetBase:
-                    case ConditionKind_t::AttackerIsEmbarked:
-                        break;
-                    case ConditionKind_t::TargetTileHas:
-                        checkFeature(rCond.value);
-                        break;
-                    case ConditionKind_t::AllOf:
-                        for (const std::string& rFeatureId : rCond.values)
+                std::visit(
+                    [&](const auto& rAlt)
+                    {
+                        using T = std::decay_t<decltype(rAlt)>;
+                        if constexpr (std::is_same_v<T, TargetTileHas_t>)
                         {
-                            checkFeature(rFeatureId);
+                            checkFeature(rAlt.featureId);
                         }
-                        for (const Condition_t& rNested : rCond.conditions)
+                        else if constexpr (std::is_same_v<T, AllOf_t>)
                         {
-                            checkCondition(rNested);
+                            for (const Condition_t& rNested : rAlt.conditions)
+                            {
+                                checkCondition(rNested);
+                            }
                         }
-                        break;
-                }
+                        // IsDefending / OriginBaseIsTargetBase / AttackerIsEmbarked: no ids.
+                    },
+                    rCond.AsVariant());
             };
             checkCondition(*rEffect.condition);
         }
 
-        if (rEffect.unitFilter && rEffect.unitFilter->kind == UnitFilterKind_t::HasComponent
-            && rEffect.unitFilter->component && pUnitComponents
-            && !pUnitComponents->Find(*rEffect.unitFilter->component))
+        if (rEffect.unitFilter && pUnitComponents)
         {
-            ThrowBadReference(rSourceId, "unitFilter component",
-                               *rEffect.unitFilter->component);
+            if (const auto* pHas =
+                    std::get_if<UnitFilterHasComponent_t>(&*rEffect.unitFilter))
+            {
+                if (!pUnitComponents->Find(pHas->component))
+                {
+                    ThrowBadReference(rSourceId, "unitFilter component", pHas->component);
+                }
+            }
         }
     }
 }

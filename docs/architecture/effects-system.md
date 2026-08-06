@@ -208,17 +208,23 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   deliberate exception is `MoraleCalculator`'s `PositiveMoraleScale` step, which truncates
   toward zero to match integer halving and says so at the call site.
 
-### TileSelectorKind_t / TileSelector_t
-- **Purpose**: On a `StatModifierEffect_t`, selects which worked tiles the modifier applies to. A tile improvement is identified by its plain string id (`ImprovementConfig_t::id`), matching `Tile::HasImprovement()` — there is no separate improvement-type enum.
-- **Values** (`TileSelectorKind_t`):
-  - `BaseTile` — the base's own center tile.
-  - `HasImprovement` — any tile that has the improvement named in `selector.improvement` (`std::optional<std::string>`).
+### TileSelector_t
+- **Purpose**: On a `StatModifierEffect_t`, selects which worked tiles the modifier applies to. A tile improvement is identified by its plain string id (`ImprovementConfig_t::id`), matching `Tile::HasFeature()` — there is no separate improvement-type enum.
+- **Shape**: `std::variant` so invalid kind/parameter combos are unrepresentable:
+  - `TileSelectorBaseTile_t` — the base's own center tile.
+  - `TileSelectorHasImprovement_t` — any tile that has the feature named in `improvement`.
 
-### ConditionKind_t / Condition_t
+### Condition_t
 - **Purpose**: An optional runtime predicate on `EffectConfig_t` (`std::optional<Condition_t> condition`). When present, the effect only applies in a context that satisfies the condition, and is excluded from context-free resolution (base economy, intrinsic unit stats). This is how situational modifiers — e.g. "+25% attack vs a Base", "+25% attack into Forest" — are expressed, replacing the former `UnitBonusTableEffect_t`.
-- **Values** (`ConditionKind_t`):
-  - `TargetTileHas` — the targeted tile has the feature id in `condition.value`, matched via `Tile::HasFeature`. One kind covers terrain classification (`Rocky`), river/fungus, and any improvement id — including `Base` (a founded base registers itself as the `Base` improvement) and tile specials (formerly "bonus"/"landmark"). In combat the target is the defender's tile.
-- **Evaluation**: `ConditionSatisfied(config, EffectContext_t)` in `ActiveEffect`. `EffectContext_t` carries the runtime target (`targetTile`); combat builds one from the defender. `FilterByStatIdInContext` includes unconditional effects plus condition-satisfied ones; `FilterByStatId`/`FilterBaseLevelByStatId` exclude all condition-carrying effects.
+- **Shape**: inherits `std::variant` (so `AllOf_t` can recurse). Alternatives:
+  - `TargetTileHas_t` — the targeted tile has `featureId`, matched via `Tile::HasFeature`. One alternative covers terrain classification (`Rocky`), river/fungus, and any improvement id — including `Base` (a founded base registers itself as the `Base` improvement) and tile specials. In combat the target is the defender's tile.
+  - `AllOf_t` — every nested `Condition_t` is satisfied (AND). Wire JSON may still supply `"values": ["A","B"]` and/or `"conditions"`; the parser desugars each values entry to `TargetTileHas_t` so only nested conditions exist in memory.
+  - `IsDefending_t`, `OriginBaseIsTargetBase_t`, `AttackerIsEmbarked_t` — parameterless situational predicates.
+- **Evaluation**: `ConditionSatisfied(config, EffectContext_t)` in `ActiveEffect` via exhaustive `std::visit`. `EffectContext_t` carries the runtime target (`targetTile`); combat builds one from the defender. `FilterByStatIdInContext` includes unconditional effects plus condition-satisfied ones; `FilterByStatId`/`FilterBaseLevelByStatId` exclude all condition-carrying effects.
+
+### UnitFilter_t
+- **Purpose**: Restricts which units an effect applies to in `CollectLiveUnitEffects` (context-free identity predicates, not combat situations).
+- **Shape**: `std::variant` of `UnitFilterDomain_t` / `UnitFilterHasComponent_t` / `UnitFilterHasFlag_t` with required fields as plain members.
 
 ### ModifierOp_t
 - **Purpose**: Describes how a stat modifier combines with the running total.

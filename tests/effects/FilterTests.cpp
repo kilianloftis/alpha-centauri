@@ -201,7 +201,7 @@ TEST_CASE("ConditionSatisfied: AttackerIsEmbarked requires pAttacker", "[effects
     config.effect = PermissionEffect_t{PermissionId_t::Attack};
     config.scope = EffectScope_t::ThisUnit;
     config.persistence = EffectPersistence_t::Continuous;
-    config.condition = Condition_t{ConditionKind_t::AttackerIsEmbarked, {}, {}, {}};
+    config.condition = AttackerIsEmbarked_t{};
     const EffectConfig_t& rConfig = pool.Add(std::move(config));
 
     CHECK_FALSE(ConditionSatisfied(rConfig, EffectContext_t{}));

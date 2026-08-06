@@ -584,27 +584,22 @@ double RequireNumber(const nlohmann::json& parameters, const std::string& key)
     return ParseNumber(parameters, key, 0.0);
 }
 
-ConditionKind_t ParseConditionKind(const std::string& rKind)
-{
-    const auto kind = magic_enum::enum_cast<ConditionKind_t>(rKind);
-    if (!kind.has_value())
-    {
-        throw std::runtime_error("Unknown condition kind: '" + rKind + "'");
-    }
-    return *kind;
-}
-
 Condition_t ParseCondition(const nlohmann::json& conditionJson)
 {
-    Condition_t condition;
-    condition.kind = ParseConditionKind(conditionJson.value("kind", ""));
-    if (condition.kind == ConditionKind_t::IsDefending
-        || condition.kind == ConditionKind_t::OriginBaseIsTargetBase
-        || condition.kind == ConditionKind_t::AttackerIsEmbarked)
+    const std::string kindStr = conditionJson.value("kind", "");
+    if (kindStr == "IsDefending")
     {
-        return condition;
+        return IsDefending_t{};
     }
-    if (condition.kind == ConditionKind_t::AllOf)
+    if (kindStr == "OriginBaseIsTargetBase")
+    {
+        return OriginBaseIsTargetBase_t{};
+    }
+    if (kindStr == "AttackerIsEmbarked")
+    {
+        return AttackerIsEmbarked_t{};
+    }
+    if (kindStr == "AllOf")
     {
         const bool bHasValues = conditionJson.contains("values")
             && conditionJson.at("values").is_array()
@@ -617,6 +612,8 @@ Condition_t ParseCondition(const nlohmann::json& conditionJson)
             throw std::runtime_error(
                 "AllOf condition requires a non-empty 'values' and/or 'conditions' array");
         }
+
+        AllOf_t allOf;
         if (bHasValues)
         {
             for (const auto& rValue : conditionJson.at("values"))
@@ -625,52 +622,49 @@ Condition_t ParseCondition(const nlohmann::json& conditionJson)
                 {
                     throw std::runtime_error("AllOf condition values must be non-empty strings");
                 }
-                condition.values.push_back(rValue.get<std::string>());
+                allOf.conditions.push_back(TargetTileHas_t{rValue.get<std::string>()});
             }
         }
         if (bHasConditions)
         {
             for (const auto& rNested : conditionJson.at("conditions"))
             {
-                condition.conditions.push_back(ParseCondition(rNested));
+                allOf.conditions.push_back(ParseCondition(rNested));
             }
         }
-        return condition;
+        return allOf;
+    }
+    if (kindStr == "TargetTileHas")
+    {
+        const std::string featureId = conditionJson.value("value", "");
+        if (featureId.empty())
+        {
+            throw std::runtime_error("Condition requires a non-empty 'value'");
+        }
+        return TargetTileHas_t{featureId};
     }
 
-    condition.value = conditionJson.value("value", "");
-    if (condition.value.empty())
-    {
-        throw std::runtime_error("Condition requires a non-empty 'value'");
-    }
-    return condition;
+    throw std::runtime_error("Unknown condition kind: '" + kindStr + "'");
 }
 
 TileSelector_t ParseTileSelector(const nlohmann::json& selectorJson)
 {
-    TileSelector_t selector;
-
     const std::string kindStr = selectorJson.value("kind", "BaseTile");
     if (kindStr == "BaseTile")
     {
-        selector.kind = TileSelectorKind_t::BaseTile;
+        return TileSelectorBaseTile_t{};
     }
-    else if (kindStr == "HasImprovement")
+    if (kindStr == "HasImprovement")
     {
-        selector.kind = TileSelectorKind_t::HasImprovement;
         const std::string improvementId = selectorJson.value("improvement", "");
         if (improvementId.empty())
         {
             throw std::runtime_error("HasImprovement selector requires a non-empty 'improvement' id");
         }
-        selector.improvement = improvementId;
-    }
-    else
-    {
-        throw std::runtime_error("Unknown tile selector kind: '" + kindStr + "'");
+        return TileSelectorHasImprovement_t{improvementId};
     }
 
-    return selector;
+    throw std::runtime_error("Unknown tile selector kind: '" + kindStr + "'");
 }
 
 UnitDomain_t ParseUnitDomain(const std::string& rDomain)
@@ -685,43 +679,36 @@ UnitDomain_t ParseUnitDomain(const std::string& rDomain)
 
 UnitFilter_t ParseUnitFilter(const nlohmann::json& filterJson)
 {
-    UnitFilter_t filter;
     const std::string kindStr = filterJson.value("kind", "");
     if (kindStr == "Domain")
     {
-        filter.kind = UnitFilterKind_t::Domain;
         const std::string domainStr = filterJson.value("domain", "");
         if (domainStr.empty())
         {
             throw std::runtime_error("Domain unitFilter requires a non-empty 'domain'");
         }
-        filter.domain = ParseUnitDomain(domainStr);
+        return UnitFilterDomain_t{ParseUnitDomain(domainStr)};
     }
-    else if (kindStr == "HasComponent")
+    if (kindStr == "HasComponent")
     {
-        filter.kind = UnitFilterKind_t::HasComponent;
         const std::string componentId = filterJson.value("component", "");
         if (componentId.empty())
         {
             throw std::runtime_error("HasComponent unitFilter requires a non-empty 'component' id");
         }
-        filter.component = componentId;
+        return UnitFilterHasComponent_t{componentId};
     }
-    else if (kindStr == "HasFlag")
+    if (kindStr == "HasFlag")
     {
-        filter.kind = UnitFilterKind_t::HasFlag;
         const std::string flagId = filterJson.value("flag", "");
         if (flagId.empty())
         {
             throw std::runtime_error("HasFlag unitFilter requires a non-empty 'flag' id");
         }
-        filter.flag = ParseRuleFlagId(flagId);
+        return UnitFilterHasFlag_t{ParseRuleFlagId(flagId)};
     }
-    else
-    {
-        throw std::runtime_error("Unknown unitFilter kind: '" + kindStr + "'");
-    }
-    return filter;
+
+    throw std::runtime_error("Unknown unitFilter kind: '" + kindStr + "'");
 }
 
 FactionFilter_t ParseFactionFilter(const nlohmann::json& filterJson)

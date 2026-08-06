@@ -130,7 +130,7 @@ add_library(ac-core STATIC
     lib/Rational.cpp
 )
 
-# Exhaustive-switch enforcement. Several enums (TerrainFeature_t, ConditionKind_t, ...) are
+# Exhaustive-switch enforcement. Several enums (TerrainFeature_t, EffectScope_t, ...) are
 # deliberately handled by unqualified switches so that adding an enumerator breaks the build
 # at every site that must make a decision about it, rather than silently taking a default.
 # Promoted to an error because a mere warning is lost in build output.

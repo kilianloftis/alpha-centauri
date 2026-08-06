@@ -10,6 +10,7 @@
 #include <nlohmann/json.hpp>
 #include <stdexcept>
 #include <string>
+#include <variant>
 
 using namespace ac;
 using Catch::Approx;
@@ -311,9 +312,9 @@ TEST_CASE("ParseEffectConfig: StatModifier tile selectors", "[effects][parser]")
         const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
         REQUIRE(pMod != nullptr);
         REQUIRE(pMod->selector.has_value());
-        CHECK(pMod->selector->kind == TileSelectorKind_t::HasImprovement);
-        REQUIRE(pMod->selector->improvement.has_value());
-        CHECK(*pMod->selector->improvement == "Farm");
+        const auto* pHas = std::get_if<TileSelectorHasImprovement_t>(&*pMod->selector);
+        REQUIRE(pHas);
+        CHECK(pHas->improvement == "Farm");
     }
 
     SECTION("BaseTile selector (also the default kind)")
@@ -328,8 +329,7 @@ TEST_CASE("ParseEffectConfig: StatModifier tile selectors", "[effects][parser]")
         const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
         REQUIRE(pMod != nullptr);
         REQUIRE(pMod->selector.has_value());
-        CHECK(pMod->selector->kind == TileSelectorKind_t::BaseTile);
-        CHECK_FALSE(pMod->selector->improvement.has_value());
+        CHECK(std::holds_alternative<TileSelectorBaseTile_t>(*pMod->selector));
     }
 
     SECTION("HasImprovement without an improvement id throws")
@@ -376,8 +376,9 @@ TEST_CASE("ParseEffectConfig: conditions", "[effects][parser][condition]")
 
         const EffectConfig_t config = BonusEffectParser::ParseEffectConfig(effectJson);
         REQUIRE(config.condition.has_value());
-        CHECK(config.condition->kind == ConditionKind_t::TargetTileHas);
-        CHECK(config.condition->value == "Forest");
+        const auto* pHas = std::get_if<TargetTileHas_t>(&config.condition->AsVariant());
+        REQUIRE(pHas);
+        CHECK(pHas->featureId == "Forest");
     }
 
     SECTION("empty condition value throws")
@@ -407,7 +408,9 @@ TEST_CASE("ParseEffectConfig: TransportParams", "[effects][parser][transport]")
     REQUIRE(pParams->passengerDomains.size() == 1);
     CHECK(pParams->passengerDomains.front() == UnitDomain_t::Air);
     REQUIRE(config.unitFilter.has_value());
-    CHECK(*config.unitFilter->domain == UnitDomain_t::Sea);
+    const auto* pDomain = std::get_if<UnitFilterDomain_t>(&*config.unitFilter);
+    REQUIRE(pDomain);
+    CHECK(pDomain->domain == UnitDomain_t::Sea);
 
     const json loadSitesJson = json::parse(R"({
         "type": "TransportParams",
@@ -457,10 +460,9 @@ TEST_CASE("ParseEffectConfig: unitFilter", "[effects][parser][unitFilter]")
 
         const EffectConfig_t config = BonusEffectParser::ParseEffectConfig(effectJson);
         REQUIRE(config.unitFilter.has_value());
-        CHECK(config.unitFilter->kind == UnitFilterKind_t::Domain);
-        REQUIRE(config.unitFilter->domain.has_value());
-        CHECK(*config.unitFilter->domain == UnitDomain_t::Air);
-        CHECK_FALSE(config.unitFilter->component.has_value());
+        const auto* pDomain = std::get_if<UnitFilterDomain_t>(&*config.unitFilter);
+        REQUIRE(pDomain);
+        CHECK(pDomain->domain == UnitDomain_t::Air);
     }
 
     SECTION("HasComponent filter")
@@ -474,10 +476,9 @@ TEST_CASE("ParseEffectConfig: unitFilter", "[effects][parser][unitFilter]")
 
         const EffectConfig_t config = BonusEffectParser::ParseEffectConfig(effectJson);
         REQUIRE(config.unitFilter.has_value());
-        CHECK(config.unitFilter->kind == UnitFilterKind_t::HasComponent);
-        REQUIRE(config.unitFilter->component.has_value());
-        CHECK(*config.unitFilter->component == "test_weapon");
-        CHECK_FALSE(config.unitFilter->domain.has_value());
+        const auto* pComp = std::get_if<UnitFilterHasComponent_t>(&*config.unitFilter);
+        REQUIRE(pComp);
+        CHECK(pComp->component == "test_weapon");
     }
 
     SECTION("Domain without domain throws")
@@ -562,7 +563,15 @@ TEST_CASE("ParseEffectConfig: Permission and AttackerIsEmbarked", "[effects][par
     REQUIRE(pEnter != nullptr);
     CHECK(pEnter->permission == PermissionId_t::Enter);
     REQUIRE(enterConfig.condition.has_value());
-    CHECK(enterConfig.condition->kind == ConditionKind_t::AllOf);
+    const auto* pAllOf = std::get_if<AllOf_t>(&enterConfig.condition->AsVariant());
+    REQUIRE(pAllOf);
+    REQUIRE(pAllOf->conditions.size() == 2);
+    const auto* pWater = std::get_if<TargetTileHas_t>(&pAllOf->conditions[0].AsVariant());
+    const auto* pBase = std::get_if<TargetTileHas_t>(&pAllOf->conditions[1].AsVariant());
+    REQUIRE(pWater);
+    REQUIRE(pBase);
+    CHECK(pWater->featureId == "Water");
+    CHECK(pBase->featureId == "Base");
 
     const json attackJson = json::parse(R"({
         "type": "Permission", "scope": "ThisUnit",
@@ -581,7 +590,7 @@ TEST_CASE("ParseEffectConfig: Permission and AttackerIsEmbarked", "[effects][par
     })");
     const EffectConfig_t embarkedConfig = BonusEffectParser::ParseEffectConfig(embarkedJson);
     REQUIRE(embarkedConfig.condition.has_value());
-    CHECK(embarkedConfig.condition->kind == ConditionKind_t::AttackerIsEmbarked);
+    CHECK(std::holds_alternative<AttackerIsEmbarked_t>(embarkedConfig.condition->AsVariant()));
 
     CHECK_THROWS(BonusEffectParser::ParseEffectConfig(
         json::parse(R"({ "type": "Permission", "scope": "ThisUnit", "parameters": {} })")));
