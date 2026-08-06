@@ -727,11 +727,8 @@ void Faction::SetOnVisibilityRebuilt(std::function<void(Faction&)> handler)
 
 std::vector<const PopTypeConfig_t*> Faction::GetAvailablePopTypes() const
 {
-    if (!m_rDataContext.popTypeAvailabilityCalculator || !m_pResearch)
-    {
-        throw std::runtime_error("Faction::GetAvailablePopTypes: Missing calculator or research manager");
-    }
-
+    // Both are guaranteed: LoadGameData/ThrowIfIncomplete rejects a context without the
+    // calculator, and m_pResearch is a unique_ptr this constructor always fills.
     return m_rDataContext.popTypeAvailabilityCalculator->GetAvailable(m_pResearch->GetDiscoveredTechs());
 }
 

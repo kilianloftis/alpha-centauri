@@ -14,6 +14,7 @@
 #include "game/GameSettings.h"
 #include "game/GameState.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/faction/DiplomacyLedger.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/WorldMap.h"
@@ -80,7 +81,8 @@ TEST_CASE("AddFaction scans a faction that already owns bases", "[composition][f
     WorldFixture fixture;
     GameSettings settings;
     GameState state(std::make_unique<WorldMap>(9, 9), fixture.improvements,
-                    &fixture.unitComponents, settings, *fixture.dataContext.moraleCalculator);
+                    &fixture.unitComponents, settings, *fixture.dataContext.moraleCalculator,
+                    k_TestRngSeed);
 
     FactionConfig_t definition;
     definition.id = "already_populated";
@@ -101,6 +103,52 @@ TEST_CASE("AddFaction scans a faction that already owns bases", "[composition][f
     CHECK(state.GetWorldMap().GetTerritory().GetOwner(pBase->GetTile())
           == rAdded.GetFactionId());
     CHECK(rAdded.GetVisibleMap().IsVisible(4, 4));
+}
+
+TEST_CASE("AddFaction establishes contact in both directions", "[composition][faction]")
+{
+    // Contact is symmetric, but the catch-up sweep used to run RebuildVisibility on the
+    // *newcomer only* — which asks "what can the newcomer see", never "who can already see the
+    // newcomer". An incumbent whose vision covers the arriving faction's base stayed unaware of
+    // it until some unrelated later event.
+    WorldFixture fixture;
+    GameSettings settings;
+    GameState state(std::make_unique<WorldMap>(9, 9), fixture.improvements,
+                    &fixture.unitComponents, settings, *fixture.dataContext.moraleCalculator,
+                    k_TestRngSeed);
+
+    // The sighting must be one-way, or the newcomer's own sweep would establish contact and
+    // the test would pass either way. A Sensor (vision 2, territory-owned) extends the
+    // incumbent's sight to (6,4) from a base at (2,4) that is itself 4 tiles away — outside
+    // the newcomer base's own radius of 2, so the newcomer sees no incumbent base or unit.
+    FactionConfig_t incumbentDef;
+    incumbentDef.id = "incumbent";
+    Faction& rIncumbent = state.AddFaction(std::make_unique<Faction>(
+        state.AllocateFactionId(), true, incumbentDef, fixture.dataContext,
+        state.GetWorldMap(), settings, k_TestFactionSeed));
+    rIncumbent.CreateBase(state.AllocateBaseId(), "Incumbent", state.GetWorldMap().GetTile(2, 4),
+                          fixture.dataContext, state.GetTileEffects(),
+                          state.GetSecretProjectAvailability());
+    state.GetTileEffects().AddImprovementWithEffects(*state.GetWorldMap().GetTile(4, 4), "Sensor");
+    rIncumbent.RebuildVisibility();
+
+    FactionConfig_t arrivalDef;
+    arrivalDef.id = "arrival";
+    auto pArrival = std::make_unique<Faction>(
+        state.AllocateFactionId(), false, arrivalDef, fixture.dataContext,
+        state.GetWorldMap(), settings, k_TestFactionSeed + 1);
+    pArrival->CreateBase(state.AllocateBaseId(), "Arrival", state.GetWorldMap().GetTile(6, 4),
+                         fixture.dataContext, state.GetTileEffects(),
+                         state.GetSecretProjectAvailability());
+
+    // Precondition: the sighting really is one-way.
+    REQUIRE(rIncumbent.GetVisibleMap().IsVisible(6, 4));
+    REQUIRE_FALSE(pArrival->GetVisibleMap().IsVisible(2, 4));
+
+    Faction& rArrival = state.AddFaction(std::move(pArrival));
+
+    CHECK(state.GetDiplomacyLedger().AreKnown(rIncumbent.GetFactionId(),
+                                              rArrival.GetFactionId()));
 }
 
 TEST_CASE("Faction random choices are reproducible from the seed", "[composition][faction][rng]")

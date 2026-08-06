@@ -220,10 +220,11 @@ public:
     void TransferUnitTo(UnitId_t unitId, Faction& rReceiver);
 
     // Fog of war: permanent explored memory and currently-visible tiles as separate maps.
-    // BindWorldMap sizes both from the shared WorldMap; RebuildVisibility refreshes
-    // current vision from units/bases (and grows explored). Unit create/destroy call it
-    // from UnitManager; moves reach it via UnitPositionIndex::OnUnitMoved (wired by
-    // GameState); base founding invokes it from AddBase.
+    // The constructor sizes both from the world map and takes a first reading;
+    // RebuildVisibility refreshes current vision from units/bases (and grows explored). Unit
+    // create/destroy call it from UnitManager; moves reach it via
+    // UnitPositionIndex::OnUnitMoved (wired by GameState); base founding invokes it from
+    // AddBase.
     FactionExploredMap& GetExploredMap();
     const FactionExploredMap& GetExploredMap() const;
     FactionVisibleMap& GetVisibleMap();

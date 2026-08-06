@@ -123,10 +123,10 @@ TEST_CASE("DispatchInstantaneousEffects: Instantaneous GrantBuilding constructs 
     GameSettings settings;
     auto pMap = std::make_unique<WorldMap>(9, 9);
     GameState state(std::move(pMap), fixture.improvements, &fixture.unitComponents, settings,
-                    fixture.morale());
+                    fixture.morale(), actest::k_TestRngSeed);
     Faction& faction = state.AddFaction(std::make_unique<Faction>(
         state.AllocateFactionId(), true, fixture.factionDefinition, fixture.dataContext,
-        fixture.map, fixture.settings, actest::k_TestFactionSeed));
+        state.GetWorldMap(), fixture.settings, actest::k_TestFactionSeed));
     BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
 
     const BuildingConfig_t* pGrantor = fixture.buildings().Find("instant_grantor");
@@ -162,13 +162,13 @@ TEST_CASE("Production completion dispatches Instantaneous Infiltration into the 
     GameSettings settings;
     auto pMap = std::make_unique<WorldMap>(9, 9);
     GameState state(std::move(pMap), fixture.improvements, &fixture.unitComponents, settings,
-                    fixture.morale());
+                    fixture.morale(), actest::k_TestRngSeed);
     Faction& beneficiary = state.AddFaction(std::make_unique<Faction>(
         state.AllocateFactionId(), true, fixture.factionDefinition, fixture.dataContext,
-        fixture.map, fixture.settings, actest::k_TestFactionSeed));
+        state.GetWorldMap(), fixture.settings, actest::k_TestFactionSeed));
     Faction& other = state.AddFaction(std::make_unique<Faction>(
         state.AllocateFactionId(), false, fixture.factionDefinition, fixture.dataContext,
-        fixture.map, fixture.settings, actest::k_TestFactionSeed));
+        state.GetWorldMap(), fixture.settings, actest::k_TestFactionSeed));
     BaseManager& base = fixture.MakeFactionBase(beneficiary, 4, 4);
 
     const BuildingConfig_t* pInfiltrator = fixture.buildings().Find("instant_infiltrator");

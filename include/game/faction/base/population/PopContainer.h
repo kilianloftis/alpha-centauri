@@ -74,6 +74,8 @@ private:
     Revision m_revision;
     const PopTypeRegistry& m_rRegistry;
     const PopTypeAvailabilityCalculator& m_rAvailabilityCalculator;
+    // A pointer, unlike its siblings above, only because RebindResearch re-points it when the
+    // base changes owner. Set from a constructor reference; never null.
     const ResearchManager* m_pResearchManager;
 
     int CountPops_(bool (*predicate)(const Pop*)) const;

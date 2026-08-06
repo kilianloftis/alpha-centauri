@@ -3,7 +3,7 @@
 ```mermaid
 graph TB
     subgraph "Composition Root"
-        Engine[Engine::Initialize_]
+        Engine[Engine::InitializeUi_]
     end
 
     subgraph "Configuration"
@@ -181,8 +181,9 @@ Stock config has no unbound Custom/mod sample stage.
 
 ### Integration Flow
 
-1. `Engine::Initialize_` loads `config/turn_stages.json`, `CreateStages()`, builds
-   `stageOrder` from configs, constructs `TurnProcessor`.
+1. `Engine::InitializeUi_` (the third composition-root phase — see `high-level.md`) loads
+   `config/turn_stages.json`, `CreateStages()`, builds `stageOrder` from configs, constructs
+   `TurnProcessor`.
 2. Each interactive step, `Engine` calls `m_turnProcessor->Advance(*m_gameState)` when the
    UI allows turn advance (modal contract is package 2).
 3. For each stage: `OnEnter` → `Execute` (possibly `Yield`) → on `Continue`, `OnExit`.

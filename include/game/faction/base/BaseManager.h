@@ -61,14 +61,8 @@ struct BaseSnapshot_t
 class BaseManager
 {
 public:
-    // rFaction is the owning faction (lifetime must outlive this base). pEffectsProvider is
-    // the owning faction's effect pool; may be null for a base that resolves no faction
-    // effects (standalone test bases). pPopTypeRegistry,
-    // pPopTypeAvailabilityCalculator, pGrowthConfig, and pCompositionCalculator are forwarded
-    // to the population subsystem; pSecretProjectCalculator is forwarded to the building
-    // subsystem. All are named individually (rather than taking a whole GameDataContext) so
-    // this leaf class's real dependencies are visible at the call site; the caller (a factory
-    // such as Faction::CreateBase) is responsible for unpacking them.
+    // rFaction is the owning faction; its lifetime must outlive this base.
+    //
     // Narrow, named dependencies rather than the whole GameDataContext (Faction::CreateBase
     // unpacks them). They are references: the composition root always supplies them, and the
     // pointer form had three different null behaviours — throw, silent skip of all
@@ -255,8 +249,8 @@ private:
     HomeBaseIndex m_homeUnits;
     const BuildingRegistry& m_rBuildingRegistry;
     const SocialRatingRegistry& m_rSocialRatings;
-    // Re-pointed by RebindFaction on ownership transfer; always the current owner's.
-    const ResearchManager* m_pResearch;
+    // Always the owning faction (set in the ctor, re-pointed by RebindFaction). A pointer only
+    // because it is rebindable; never null.
     const IEffectsProvider* m_pEffectsProvider = nullptr;
     // Declaration order is construction order: resources depends on worker assignments
     // and buildings, so it is declared after both.

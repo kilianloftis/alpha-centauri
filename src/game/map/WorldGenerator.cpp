@@ -39,11 +39,9 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
                                                    const WorldGenPresetConfig_t& rPreset,
                                                    const WorldGenDecorationConfig_t& rDecoration,
                                                    const std::vector<LandmarkConfig_t>& rLandmarks,
-                                                   const ImprovementRegistry& rImprovements)
+                                                   const ImprovementRegistry& rImprovements,
+                                                   unsigned int seed)
 {
-    const unsigned int seed = rConfig.seed == 0
-        ? static_cast<unsigned int>(std::chrono::steady_clock::now().time_since_epoch().count())
-        : rConfig.seed;
     m_rng.seed(seed);
 
     auto pWorld = std::make_unique<WorldMap>(rConfig.width, rConfig.height);

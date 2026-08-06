@@ -71,7 +71,7 @@ struct ConquestGame_
         FillLand_(*pMap);
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
-            *fixtures.dataContext.moraleCalculator);
+            *fixtures.dataContext.moraleCalculator, actest::k_TestRngSeed);
 
         fixtures.dataContext.baseConquestConfig = std::make_unique<BaseConquestConfig_t>();
         fixtures.dataContext.baseConquestConfig->captureFacilitiesDestroyedMin = 1;

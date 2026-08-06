@@ -84,8 +84,7 @@ void ThrowIfIncomplete(const GameDataContext& rData)
 
 GameDataContext LoadGameData(const GameDataPaths& rPaths)
 {
-    GameDataContext data;
-    GameDataContext& rData = data;
+    GameDataContext rData;
 
     // --- Reference-target registries first (cited by later configs / validators) ---
     rData.techRegistry = std::make_unique<TechRegistry>();
@@ -201,8 +200,8 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
 
     rData.moraleCalculator = std::make_unique<MoraleCalculator>(*rData.moraleConfig);
 
-    ThrowIfIncomplete(data);
-    return data;
+    ThrowIfIncomplete(rData);
+    return rData;
 }
 
 } // namespace ac

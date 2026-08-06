@@ -62,7 +62,6 @@ graph TB
         GameState[GameState<br/>(mutable save-game data)]
         WorldMap[WorldMap]
         FactionVector[FactionVector<br/>vector&lt;unique_ptr&lt;Faction&gt;&gt;]
-        FactionFactory[FactionFactory]
         Faction[Faction]
         FactionSubsystems[Faction Subsystems:<br/>FactionIdentity, AIProfile,<br/>Economy, Military,<br/>Research, Diplomacy]
     end
@@ -144,7 +143,6 @@ graph TB
     GameDataContext --> PopCompositionConfig_t
     GameDataContext --> PopCompositionCalculator
     GameDataContext --> LuaRuntime
-    FactionFactory --> Faction
     FactionVector --> Faction
     Faction --> FactionSubsystems
     Faction --> CollectActiveEffects
@@ -192,7 +190,6 @@ graph TB
     style PopCompositionCalculator fill:#ffd,stroke:#333,stroke-width:2px
     style LuaRuntime fill:#ffd,stroke:#333,stroke-width:2px
     style FactionVector fill:#fbf,stroke:#333,stroke-width:2px
-    style FactionFactory fill:#ff9,stroke:#333,stroke-width:2px
     style Faction fill:#f9f,stroke:#333,stroke-width:2px
     style Signal fill:#f9f,stroke:#333,stroke-width:2px
     style Tile fill:#fbf,stroke:#333,stroke-width:2px
@@ -274,20 +271,45 @@ graph TB
   - `PopCompositionCalculator`: Evaluates composition formulas at runtime
   - `LuaRuntime`: Shared Lua state used to load and evaluate config scripts
 - **Note**: Implemented as a plain struct with public `unique_ptr` members (no getters/setters needed)
+- **Valid by construction**: `LoadGameData(paths)` is a *factory* — it returns a fully populated
+  context by value (the struct is move-only) rather than filling a default-constructed bag.
+  `ThrowIfIncomplete` runs before it returns and throws naming the first null member, so a
+  partially-loaded context cannot escape the loader. **Consumers may therefore dereference any
+  member without checking**, and the subsystems that need pieces of it take them as constructor
+  references rather than nullable pointers. Test fixtures deliberately assemble a narrower
+  context (only what `Faction` and `BaseManager` need) and do not run the completeness check;
+  the reference-typed constructors are what stop them building a half-valid object from it.
+
+### Composition root phases
+`Engine::Initialize_` runs three explicit phases, in order:
+1. `InitializeApp_` — process-wide and session-independent: user settings, UI style, and
+   `LoadGameData`. A future "new game" from the menu must not re-run it.
+2. `StartNewGame_` — everything a session owns: the resolved session seed, world generation,
+   `GameState`, factions and their starting assets, and the Planetary Council.
+3. `InitializeUi_` — the turn pipeline (`turn_stages.json`) and the views, which bind to the
+   session that exists by then.
+
+**Session seed.** `StartNewGame_` resolves one seed (the map config's, or a drawn value when
+that is 0), reports it, and hands it down: to `WorldGenerator::Generate`, to `GameState`'s roll
+RNG, and as a per-faction sub-stream to each `Faction`. No sub-object reaches for
+`std::random_device` on its own, which is what makes a session reproducible from the reported
+seed. (Persisting that seed into save state is still open — see the world-generation package.)
 
 ### Faction System
 - **Purpose**: Manages all factions and their mutable save-game state
 - **Components**:
   - `GameState`: Owns FactionVector, missionYear, and WorldMap — mutable data written to and read from disk. Also owns two world-scoped resolvers that must share the map's lifetime rather than GameDataContext's: `TileEffectsContext` (bundles the live WorldMap with the immutable ImprovementRegistry to resolve tile effects) and the stateless `UnitOrderExecutor`. `SecretProjectAvailabilityCalculator` lives here too, since it scans the live faction vector — as an owned member of the object it queries, it cannot dangle the way a `GameDataContext`-owned reference into it could. `GameState` is also the sole owner of faction/base ID allocation, via two `IdAllocator` (`lib/IdAllocator.h`) members — the only place either ID namespace is minted, so any future runtime faction/base creation (not just Engine's composition root) has somewhere to get a unique ID from. `GetPlayerFaction()` returns whichever `Faction` has `IsPlayerControlled() == true` (set at construction), not an index-0 convention — see the `Faction` bullet below. `GameState` borrows (but does not own) the `MoraleCalculator` — see the `GameDataContext` note below.
   - `FactionVector`: Vector of unique_ptr<Faction> stored inside GameState
-  - `FactionFactory`: Creates Faction instances from configuration
   - `Faction`: Represents a single faction with all its subsystems
   - `Faction Subsystems`: FactionIdentity, AIProfile, Economy, Military, Research, Diplomacy
 - **Dependencies**:
   - Engine owns GameState
   - GameState owns FactionVector
   - TurnProcessor accesses FactionVector via GameState
-  - FactionFactory creates Faction instances during initialization
+  - `Engine::StartNewGame_` constructs factions (there is no `FactionFactory`) and registers
+    them with `GameState::AddFaction`, which is registration-only — see
+    `faction-system.md`, "Faction construction", for the constructor contract and the
+    load-bearing attach order
   - Each Faction owns its subsystems
 - **Details**: See `docs/architecture/faction-system.md` for detailed architecture
 

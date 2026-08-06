@@ -52,6 +52,10 @@ namespace actest
 // a specific draw pass their own value.
 constexpr uint32_t k_TestFactionSeed = 1234u;
 
+// Fixed seed for a test GameState's roll RNG (combat, promotion, probes). Same reasoning:
+// std::random_device made every roll-dependent test a coin flip across runs.
+constexpr uint32_t k_TestRngSeed = 4321u;
+
 // The pop-type registry plus the two rules services PopContainer / PopulationManager require
 // (availability resolution and the discovered-tech source behind it). Small enough for
 // population unit tests that do not want a whole world, but real enough that those tests
@@ -210,8 +214,11 @@ struct FactionFixture : BaseFixture
     FactionFixture()
     {
         factionDefinition.id = "test_faction";
-        dataContext.tileYieldRules = ac::TileYieldRulesConfigParser{}.ParseConfig(
-            FixturePath("tile_yield_rules.json"));
+        // NOTE: do not (re)load dataContext.tileYieldRules here. WorldFixture already parsed
+        // it, and BaseFixture's pOwnerFaction has by now cached ActiveEffect_t entries holding
+        // EffectConfig_t* into that vector's buffer. Reassigning it frees the buffer those
+        // pointers reference, and no revision the effects pool samples changes, so the stale
+        // cache is never rebuilt — a use-after-free on the next base-effects query.
         // Mirror GameState: index emits OnUnitMoved; faction rebuilds visibility.
         map.GetUnitPositions().OnUnitMoved.Connect([](ac::Unit& rMoved)
         {

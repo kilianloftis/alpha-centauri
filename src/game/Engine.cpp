@@ -161,11 +161,15 @@ void Engine::StartNewGame_()
     m_pGameState = std::make_unique<GameState>(
         worldGen.Generate(rWorldConfig, rPreset, *m_gameDataContext->worldGenDecorationConfig,
                           m_gameDataContext->worldGenLandmarks,
-                          *m_gameDataContext->improvementRegistry),
+                          *m_gameDataContext->improvementRegistry,
+                          m_sessionSeed),
         *m_gameDataContext->improvementRegistry,
         m_gameDataContext->unitComponentRegistry.get(),
         *m_pSettings,
-        *m_gameDataContext->moraleCalculator);
+        *m_gameDataContext->moraleCalculator,
+        // Distinct sub-stream from world generation, so changing map size does not shift
+        // combat rolls (and vice versa).
+        static_cast<uint32_t>(m_sessionSeed ^ 0x5BF03635u));
     m_pGameState->GetUnitOrderExecutor().SetGameDataContext(*m_gameDataContext);
     std::cout << "Generated world map: " << m_pGameState->GetWorldMap().GetWidth() << "x" << m_pGameState->GetWorldMap().GetHeight() << "\n";
 

@@ -164,19 +164,38 @@ graph TB
   - Provide indexed access
 - **Interaction**: Owned by GameState, accessed by TurnProcessor
 
-### FactionFactory
-- **Purpose**: Creates Faction instances from configuration or parameters
-- **Responsibilities**:
-  - Create Faction instances with proper initialization
-  - Load faction data from configuration files
-  - Validate faction creation parameters
-- **Interaction**: Used during game initialization to populate FactionVector
-- **Pattern**: Similar to TurnStageFactory, follows factory pattern for object creation
+### Faction construction
+There is no `FactionFactory`. `Engine::StartNewGame_` constructs each `Faction` directly from
+its `FactionConfig_t` (out of `GameDataContext::factionRegistry`) and hands it to
+`GameState::AddFaction`.
+
+A `Faction` is **valid when its constructor returns**. It takes, as required arguments:
+`FactionId_t`, `bIsPlayerControlled`, `const FactionConfig_t&`, `const GameDataContext&`,
+`WorldMap&`, `const GameSettings&`, and a `uint32_t seed`. The constructor sizes the
+explored/visible maps from the world map and takes a first visibility reading.
+
+- The **world map and settings** are constructor dependencies rather than post-construction
+  `Bind`/`Set` calls: a faction without a map used to make `RebuildVisibility` a silent no-op,
+  so a base founded on a not-yet-wired faction produced no visibility, no territory rebuild and
+  no first-contact check while every getter still returned plausible values.
+- The **seed** drives every per-faction random choice (base names, the starting research
+  target). It is injected rather than drawn from `std::random_device` inside `FactionFlavor` /
+  `ResearchSelector`, because those choices are save-game state; `Engine` resolves one session
+  seed and derives a sub-stream per faction.
+
+`GameState::AddFaction` is **registration, not construction**. It pushes the faction into
+`m_factions` *first*, then calls `AttachToSession_` to install the session back-pointer and the
+observers (which necessarily close over `GameState`), and finishes with a territory/visibility
+catch-up sweep plus a full first-contact pass. The order is load-bearing: the observers iterate
+`Factions()`, so wiring before the push meant a faction arriving with bases already on the map
+— load-game, or any future runtime creation — was never scanned.
+
+Caller contract: the faction must have been constructed against the session's `WorldMap`.
 
 ### Faction
 - **Purpose**: Represents a single faction in the game (player or AI)
-- **Identity**: Constructed with a `FactionId` (minted by `GameState::AllocateFactionId()`, the sole
-  allocator for this ID namespace) and a `bIsPlayerControlled` flag, both required constructor
+- **Identity**: `FactionId` is minted by `GameState::AllocateFactionId()` (the sole allocator for
+  this ID namespace); it and `bIsPlayerControlled` are required constructor
   arguments so a `Faction` always knows its own identity — it is never assigned after the fact.
   `Faction::CreateBase` threads `m_factionId` into each `BaseManager` it creates, so callers no
   longer pass a faction ID in from outside. `bIsPlayerControlled` is what
@@ -310,11 +329,11 @@ graph TB
 - Engine owns GameState
 - GameState owns FactionVector (vector of unique_ptr<Faction>)
 - Each Faction owns its subsystems
-- FactionFactory is used during initialization to create factions
+- `Engine::StartNewGame_` constructs factions and registers them via `GameState::AddFaction`
 - This hierarchy ensures proper lifetime management
 
 ### Modding Integration
-- FactionFactory loads faction data from configuration files
+- Faction definitions are loaded from configuration into `GameDataContext::factionRegistry`
 - FactionIdentity can be customized via config
 - AIProfile can be customized via config
 - TechTree can be extended via mods

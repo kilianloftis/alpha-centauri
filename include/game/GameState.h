@@ -51,11 +51,15 @@ public:
     // rSettings is a non-owning reference to Engine-owned player preferences (not save state).
     // rMorale is the GameDataContext-owned calculator (XP ranks / combat % / promotion),
     // borrowed here for the combat and probe paths. It must outlive this GameState.
+    // rngSeed seeds the session RNG behind every combat, promotion and probe roll. Injected
+    // rather than drawn from std::random_device so a session is reproducible from the seed the
+    // composition root resolves and reports; tests pass a fixed value to keep rolls stable.
     GameState(std::unique_ptr<WorldMap> pWorldMap,
               const ImprovementRegistry& rImprovements,
               const UnitComponentRegistry* pUnitComponents,
               GameSettings& rSettings,
-              const MoraleCalculator& rMorale);
+              const MoraleCalculator& rMorale,
+              uint32_t rngSeed);
     ~GameState();
 
     // Build the Planetary Council from factions currently in this GameState that

@@ -68,7 +68,6 @@ BaseManager::BaseManager(
     , m_homeUnits(*this)
     , m_rBuildingRegistry(rBuildingRegistry)
     , m_rSocialRatings(rSocialRatingRegistry)
-    , m_pResearch(&rFaction.GetResearch())
     , m_pEffectsProvider(&rFaction)
     , m_pPopulation(std::make_unique<PopulationManager>(
           rPopTypeRegistry, rPopTypeAvailabilityCalculator, rGrowthConfig, rCompositionCalculator,
@@ -279,10 +278,6 @@ BaseEffects_t BaseManager::CollectBaseLocalEffects_(const FactionEffects_t& rFac
 
 BaseEffects_t BaseManager::CollectRatingSource_() const
 {
-    if (!m_pEffectsProvider)
-    {
-        throw std::runtime_error("BaseManager::CollectRatingSource_: m_pEffectsProvider is null");
-    }
     return CollectBaseLocalEffects_(m_pEffectsProvider->GetLocalActiveEffects());
 }
 
@@ -304,10 +299,6 @@ BaseEffects_t BaseManager::BuildBaseEffects_(const FactionEffects_t& rFactionEff
 
 const BaseEffects_t& BaseManager::BuildBaseEffects_() const
 {
-    if (!m_pEffectsProvider)
-    {
-        throw std::runtime_error("BaseManager::BuildBaseEffects_: m_pEffectsProvider is null");
-    }
     const FactionEffects_t& rPool = m_pEffectsProvider->GetActiveEffects();
     const uint64_t poolVersion = m_pEffectsProvider->GetEffectsVersion();
     if (poolVersion != m_cachedPoolVersion)
@@ -401,7 +392,6 @@ FactionId_t BaseManager::GetFactionId() const
 void BaseManager::RebindFaction(Faction& rFaction)
 {
     m_pFaction = &rFaction;
-    m_pResearch = &rFaction.GetResearch();
     m_pEffectsProvider = &rFaction;
     m_pPopulation->RebindResearch(rFaction.GetResearch());
     m_pBuildings->RebindResearch(rFaction.GetResearch());

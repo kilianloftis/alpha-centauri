@@ -541,7 +541,7 @@ TEST_CASE("TurnStart restores move fragments", "[movement][turn]")
 
     GameSettings settings;
     GameState state(std::make_unique<WorldMap>(3, 3), fixture.improvements, &fixture.unitComponents,
-                    settings, *fixture.dataContext.moraleCalculator);
+                    settings, *fixture.dataContext.moraleCalculator, actest::k_TestRngSeed);
     state.AddFaction(std::move(fixture.factions[0]));
 
     TurnStart stage(HookContext{});
