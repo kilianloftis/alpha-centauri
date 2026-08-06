@@ -64,7 +64,7 @@ struct FactionEffects_t
 
 // One base's effect list: FilterForBase over the faction pool, then the base's pop-generated
 // ThisBase effects (CollectFromPops) and expanded social-rating effects
-// (ExpandSocialRatingEffects) merged in — see BaseManager::BuildBaseEffects_. Every entry
+// (ResolveSocialRatingLevelEffects) merged in — see BaseManager::BuildBaseEffects_. Every entry
 // applies to that single base, which is the precondition for base-level resolution
 // (FilterBaseLevelByStatId) and the per-tile selector pass (TileEffectsContext::ResolveTileYield).
 struct BaseEffects_t
@@ -338,7 +338,7 @@ bool ResolveFlag(const Unit& rUnit, RuleFlagId_t flagId);
 // Resolve a faction-wide RuleFlag from the continuous effect pool (buildings, SPs, etc.).
 // Context-free: effects carrying a condition are skipped.
 // Note: Social-rating expansions of FactionGlobal effects are applied per-base
-// (ExpandSocialRatingEffects) and are NOT visible here — use ResolveFlag(BaseManager) for those.
+// (ResolveSocialRatingLevelEffects) and are NOT visible here — use ResolveFlag(BaseManager).
 bool ResolveFlag(const Faction& rFaction, RuleFlagId_t flagId);
 
 // Resolve a RuleFlag from a base's final effect list (FilterForBase + SE rating expansion +

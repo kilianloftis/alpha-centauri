@@ -33,19 +33,19 @@ public:
 
 private:
     // Raw continuous effects from constructed buildings across all bases (no grant expand).
-    std::vector<ActiveEffect_t> CollectBuildingEffects_(const Faction& rFaction) const;
+    std::vector<ActiveEffect_t> CollectBuildingEffects_() const;
 
     // Faction-lane effects (any scope except the locally-resolved ThisPop/ThisBase)
     // declared by pops living in the faction's bases. ThisBase pop effects merge per base
     // via CollectFromPops; ThisPop effects are resolved by the pop itself.
-    std::vector<ActiveEffect_t> CollectPopEffects_(const Faction& rFaction) const;
+    std::vector<ActiveEffect_t> CollectPopEffects_() const;
 
     // Faction-lane effects (any scope except the locally-resolved ThisUnit/ThisTile)
     // declared by the components of the faction's live units.
-    std::vector<ActiveEffect_t> CollectUnitEffects_(const Faction& rFaction) const;
+    std::vector<ActiveEffect_t> CollectUnitEffects_() const;
 
     // Permanent bonuses from the faction definition config.
-    std::vector<ActiveEffect_t> CollectDefinitionEffects_(const Faction& rFaction) const;
+    std::vector<ActiveEffect_t> CollectDefinitionEffects_() const;
 
     // Universal tile-yield rules (TileResourceCap, etc.) from GameDataContext.
     std::vector<ActiveEffect_t> CollectTileYieldRuleEffects_() const;
@@ -57,7 +57,7 @@ private:
     // single source of truth for what the pool depends on, used both to validate the
     // cache and to stamp it after a rebuild. A new contributor must be added here and
     // collected in Rebuild_.
-    void CollectRevisions_(const Faction& rFaction, std::vector<uint64_t>& rOut) const;
+    void CollectRevisions_(std::vector<uint64_t>& rOut) const;
 
     // Rebuild the pool if any contributor revision changed since the last stamp.
     void Validate_() const;

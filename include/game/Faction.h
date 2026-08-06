@@ -228,7 +228,7 @@ public:
     // Local pool only (no peer WorldGlobal / council). Used when harvesting peers for
     // world composition, and for social-rating accumulation / faction-lane rating expand
     // (ratings are a faction-internal axis — see SocialRatingResolver).
-    const FactionEffects_t& GetLocalActiveEffects() const;
+    const FactionEffects_t& GetLocalActiveEffects() const override;
     uint64_t GetLocalEffectsVersion() const;
 
 private:

@@ -42,11 +42,10 @@ uint64_t FactionEffectsPool::GetVersion() const
     return m_version;
 }
 
-std::vector<ActiveEffect_t> FactionEffectsPool::CollectBuildingEffects_(
-    const Faction& rFaction) const
+std::vector<ActiveEffect_t> FactionEffectsPool::CollectBuildingEffects_() const
 {
     std::vector<ActiveEffect_t> result;
-    for (const BaseManager& rBase : rFaction.Bases())
+    for (const BaseManager& rBase : m_rFaction.Bases())
     {
         const auto baseEffects = rBase.CollectBuildingEffects();
         result.insert(result.end(), baseEffects.begin(), baseEffects.end());
@@ -54,10 +53,10 @@ std::vector<ActiveEffect_t> FactionEffectsPool::CollectBuildingEffects_(
     return result;
 }
 
-std::vector<ActiveEffect_t> FactionEffectsPool::CollectPopEffects_(const Faction& rFaction) const
+std::vector<ActiveEffect_t> FactionEffectsPool::CollectPopEffects_() const
 {
     std::vector<ActiveEffect_t> result;
-    for (const BaseManager& rBase : rFaction.Bases())
+    for (const BaseManager& rBase : m_rFaction.Bases())
     {
         for (const Pop& rPop : rBase.GetPopulation().Pops())
         {
@@ -69,10 +68,10 @@ std::vector<ActiveEffect_t> FactionEffectsPool::CollectPopEffects_(const Faction
     return result;
 }
 
-std::vector<ActiveEffect_t> FactionEffectsPool::CollectUnitEffects_(const Faction& rFaction) const
+std::vector<ActiveEffect_t> FactionEffectsPool::CollectUnitEffects_() const
 {
     std::vector<ActiveEffect_t> result;
-    for (const Unit& rUnit : rFaction.GetUnitManager().Units())
+    for (const Unit& rUnit : m_rFaction.GetUnitManager().Units())
     {
         for (const ActiveEffect_t& rEffect : rUnit.GetDesign().CollectEffects())
         {
@@ -87,12 +86,11 @@ std::vector<ActiveEffect_t> FactionEffectsPool::CollectUnitEffects_(const Factio
     return result;
 }
 
-std::vector<ActiveEffect_t> FactionEffectsPool::CollectDefinitionEffects_(
-    const Faction& rFaction) const
+std::vector<ActiveEffect_t> FactionEffectsPool::CollectDefinitionEffects_() const
 {
     std::vector<ActiveEffect_t> result;
-    AppendActiveEffects(rFaction.GetDefinition().effects, nullptr,
-                        rFaction.GetDefinition().id, result);
+    AppendActiveEffects(m_rFaction.GetDefinition().effects, nullptr,
+                        m_rFaction.GetDefinition().id, result);
     return result;
 }
 
@@ -119,15 +117,14 @@ void FactionEffectsPool::ApplyRemovedByTech_(FactionEffects_t& rEffects,
         rEffects.effects.end());
 }
 
-void FactionEffectsPool::CollectRevisions_(const Faction& rFaction,
-                                           std::vector<uint64_t>& rOut) const
+void FactionEffectsPool::CollectRevisions_(std::vector<uint64_t>& rOut) const
 {
     rOut.clear();
     rOut.push_back(m_rBaseListRevision.Get());
-    rOut.push_back(rFaction.GetResearch().GetRevision());
-    rOut.push_back(rFaction.GetSocialEngineering().GetRevision());
-    rOut.push_back(rFaction.GetUnitManager().GetRevision());
-    for (const BaseManager& rBase : rFaction.Bases())
+    rOut.push_back(m_rFaction.GetResearch().GetRevision());
+    rOut.push_back(m_rFaction.GetSocialEngineering().GetRevision());
+    rOut.push_back(m_rFaction.GetUnitManager().GetRevision());
+    for (const BaseManager& rBase : m_rFaction.Bases())
     {
         rOut.push_back(rBase.GetBuildingManager().GetRevision());
         rOut.push_back(rBase.GetPopulation().GetRevision());
@@ -136,7 +133,7 @@ void FactionEffectsPool::CollectRevisions_(const Faction& rFaction,
 
 void FactionEffectsPool::Validate_() const
 {
-    CollectRevisions_(m_rFaction, m_scratchRevisions);
+    CollectRevisions_(m_scratchRevisions);
     if (m_scratchRevisions != m_cachedStamp)
     {
         Rebuild_();
@@ -145,19 +142,21 @@ void FactionEffectsPool::Validate_() const
 
 void FactionEffectsPool::Rebuild_() const
 {
-    // Pipeline: collect raw → gate → expand grants → expand faction-lane ratings →
-    // gate again → stamp from the Validate_ scratch snapshot (do not re-collect).
+    // Pipeline: collect raw → gate → expand grants → gate → expand faction-lane ratings →
+    // gate → stamp from the Validate_ scratch snapshot (do not re-collect). Every
+    // expansion is bracketed by the gate, so no derivative outlives the effect that
+    // produced it.
     FactionEffects_t factionEffects;
 
     const std::vector<ActiveEffect_t> tileYieldRules = CollectTileYieldRuleEffects_();
     factionEffects.effects.insert(factionEffects.effects.end(), tileYieldRules.begin(),
                                   tileYieldRules.end());
 
-    const std::vector<ActiveEffect_t> defEffects = CollectDefinitionEffects_(m_rFaction);
+    const std::vector<ActiveEffect_t> defEffects = CollectDefinitionEffects_();
     factionEffects.effects.insert(factionEffects.effects.end(), defEffects.begin(),
                                   defEffects.end());
 
-    const std::vector<ActiveEffect_t> buildingEffects = CollectBuildingEffects_(m_rFaction);
+    const std::vector<ActiveEffect_t> buildingEffects = CollectBuildingEffects_();
     factionEffects.effects.insert(factionEffects.effects.end(), buildingEffects.begin(),
                                   buildingEffects.end());
 
@@ -166,11 +165,11 @@ void FactionEffectsPool::Rebuild_() const
     factionEffects.effects.insert(factionEffects.effects.end(), seEffects.begin(),
                                   seEffects.end());
 
-    const std::vector<ActiveEffect_t> popEffects = CollectPopEffects_(m_rFaction);
+    const std::vector<ActiveEffect_t> popEffects = CollectPopEffects_();
     factionEffects.effects.insert(factionEffects.effects.end(), popEffects.begin(),
                                   popEffects.end());
 
-    const std::vector<ActiveEffect_t> unitEffects = CollectUnitEffects_(m_rFaction);
+    const std::vector<ActiveEffect_t> unitEffects = CollectUnitEffects_();
     factionEffects.effects.insert(factionEffects.effects.end(), unitEffects.begin(),
                                   unitEffects.end());
 
@@ -188,6 +187,12 @@ void FactionEffectsPool::Rebuild_() const
             std::move(factionEffects.effects), *m_pBuildingRegistry, bases);
     }
 
+    // Gate the grant derivatives before anything reads them: a granted building's own
+    // effects can carry removed_by_tech, and a gated SocialRatingModifier arriving this way
+    // must not reach the accumulation below (the level effects it would produce carry no
+    // gate of their own, so the final pass could not undo it).
+    ApplyRemovedByTech_(factionEffects, rResearch);
+
     // Expand SE rating axes whose gameplay effects target FactionUnits (e.g. Morale →
     // morale_bonus). Accumulation is FactionWide-only; ThisBase stays on the per-base path.
     if (m_pSocialRatings)
@@ -195,6 +200,7 @@ void FactionEffectsPool::Rebuild_() const
         ExpandFactionLaneSocialRatingEffects(factionEffects, *m_pSocialRatings);
     }
 
+    // Rating level effects are the last derivatives; gate them too.
     ApplyRemovedByTech_(factionEffects, rResearch);
 
     m_cachedPool = std::move(factionEffects);

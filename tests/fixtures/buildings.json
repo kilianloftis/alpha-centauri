@@ -434,6 +434,36 @@
     "category": "conquer"
   },
   {
+    "id": "gated_rating_hall",
+    "name": "Granted hall whose Morale rating mod is removed by gene_splicing",
+    "effects": [
+      {
+        "type": "SocialRatingModifier",
+        "scope": "FactionGlobal",
+        "removed_by_tech": "gene_splicing",
+        "parameters": {
+          "rating": "morale",
+          "amount": 2
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "rating_grantor",
+    "name": "Ungated grantor of gated_rating_hall",
+    "effects": [
+      {
+        "type": "GrantBuilding",
+        "scope": "ThisBase",
+        "parameters": {
+          "building_id": "gated_rating_hall"
+        }
+      }
+    ],
+    "category": "build"
+  },
+  {
     "id": "gated_grantor",
     "name": "Grantor removed by gene_splicing",
     "effects": [

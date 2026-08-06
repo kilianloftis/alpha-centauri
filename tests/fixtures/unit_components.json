@@ -579,6 +579,21 @@
     ]
   },
   {
+    "id": "morale_beacon",
+    "name": "Morale Beacon (faction-lane SocialRatingModifier on a component)",
+    "type": "special",
+    "effects": [
+      {
+        "type": "SocialRatingModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "rating": "morale",
+          "amount": 1
+        }
+      }
+    ]
+  },
+  {
     "id": "test_conditional_psi_flag",
     "name": "Test Conditional Psi Flag",
     "type": "ability",

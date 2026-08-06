@@ -99,6 +99,8 @@ struct FakeEffectsProvider : ac::IEffectsProvider
 
     const ac::FactionEffects_t& GetActiveEffects() const override { return pool; }
     uint64_t GetEffectsVersion() const override { return version; }
+    // No world extras on the fake, so the composed and local views are the same list.
+    const ac::FactionEffects_t& GetLocalActiveEffects() const override { return pool; }
 };
 
 } // namespace

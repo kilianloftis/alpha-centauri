@@ -10,7 +10,7 @@ namespace ac
 int ProductionCostCalculator::ComputeCost(int baseCost, const BaseEffects_t& rBaseEffects)
 {
     // CostMultiplier is PureMultiplier (seed 1.0). Industry rating levels emit AddPercent
-    // contributions here via ExpandSocialRatingEffects — same seam as GrowthRate.
+    // contributions here via ResolveSocialRatingLevelEffects — same seam as GrowthRate.
     const double multiplier = ResolveStatModifiers(
         FilterBaseLevelByStatId(rBaseEffects, StatId_t::CostMultiplier),
         SeedFor(StatId_t::CostMultiplier)).total;

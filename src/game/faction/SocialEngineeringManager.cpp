@@ -82,7 +82,7 @@ std::vector<ActiveEffect_t> SocialEngineeringManager::CollectEffects() const
 {
     // Policy effects pass through as ordinary active effects — including SocialRatingModifier
     // entries. Rating accumulation and the rating-level -> gameplay-effects mapping happen
-    // later, per base, in ExpandSocialRatingEffects (SocialRatingResolver): rating modifiers
+    // later, per base, in ResolveSocialRatingLevelEffects (SocialRatingResolver): modifiers
     // can come from any source (buildings, pops, ...), and ThisBase-scoped ones shift a
     // single base's effective rating.
     std::vector<ActiveEffect_t> result;

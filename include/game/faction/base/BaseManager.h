@@ -162,7 +162,8 @@ public:
 
     // This base's effective social rating on one axis: faction-wide SocialRatingModifier
     // contributions plus any ThisBase-scoped ones originating here (e.g. a building's
-    // +1 Growth).
+    // +1 Growth), accumulated from the faction's local pool only — peer WorldGlobal and
+    // council effects do not move ratings.
     int GetEffectiveSocialRating(SocialRatingId_t rating) const;
 
     int GetNutrientsRequired() const;
@@ -195,16 +196,22 @@ public:
     const HomeBaseIndex& GetHomeUnits() const;
 
 private:
-    // FilterForBase over the faction-wide pool, plus this base's own pop-generated ThisBase
-    // effects — everything that applies to this base, before rating expansion. Shared by
-    // BuildBaseEffects_ (which expands ratings into gameplay effects) and GetEffectiveSocialRating
-    // (which only accumulates the rating totals).
+    // FilterForBase over a faction-wide pool, plus this base's own pop-generated ThisBase
+    // effects — everything from that pool that applies to this base, before rating
+    // expansion. Called with the composed pool for resolution (BuildBaseEffects_) and with
+    // the local pool for ratings (CollectRatingSource_).
     BaseEffects_t CollectBaseLocalEffects_(const FactionEffects_t& rFactionEffects) const;
 
-    // The final effect list this base resolves against: CollectBaseLocalEffects_ plus the
-    // gameplay effects of this base's effective social rating levels
-    // (ExpandSocialRatingEffects).
+    // The final effect list this base resolves against: CollectBaseLocalEffects_ over the
+    // composed pool, plus the gameplay effects of this base's effective social rating
+    // levels — which are accumulated from the *local* pool only (ratings are a
+    // faction-internal axis; see SocialRatingResolver).
     BaseEffects_t BuildBaseEffects_(const FactionEffects_t& rFactionEffects) const;
+
+    // This base's rating context: CollectBaseLocalEffects_ over the provider's local pool.
+    // The one input to both GetEffectiveSocialRating and the base-lane rating expansion,
+    // so the number the UI reports and the effects the base resolves cannot disagree.
+    BaseEffects_t CollectRatingSource_() const;
 
     // Memoized variant over the provider's pool: rebuilt only when the provider's effects
     // version changed. The reference is valid until the next effect-source mutation.

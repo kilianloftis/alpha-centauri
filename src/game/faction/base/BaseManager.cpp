@@ -278,23 +278,29 @@ BaseEffects_t BaseManager::CollectBaseLocalEffects_(const FactionEffects_t& rFac
     return baseEffects;
 }
 
+BaseEffects_t BaseManager::CollectRatingSource_() const
+{
+    if (!m_pEffectsProvider)
+    {
+        throw std::runtime_error("BaseManager::CollectRatingSource_: m_pEffectsProvider is null");
+    }
+    return CollectBaseLocalEffects_(m_pEffectsProvider->GetLocalActiveEffects());
+}
+
 BaseEffects_t BaseManager::BuildBaseEffects_(const FactionEffects_t& rFactionEffects) const
 {
     BaseEffects_t baseEffects = CollectBaseLocalEffects_(rFactionEffects);
 
-    // Ratings are a faction-internal axis: accumulate from the local pool only, then
-    // append gameplay effects onto the composed base list (which may still carry
-    // world/council StatModifiers).
+    // Ratings are a faction-internal axis: accumulate from the local pool only, then append
+    // the level effects onto the composed base list (which may also carry world/council
+    // StatModifiers). The two lists differ, which is why the resolver returns its effects
+    // instead of expanding in place.
     if (m_pSocialRatings)
     {
-        BaseEffects_t ratingSource =
-            CollectBaseLocalEffects_(m_rFaction.GetLocalActiveEffects());
-        const size_t beforeExpand = ratingSource.effects.size();
-        ExpandSocialRatingEffects(ratingSource, *m_pSocialRatings);
-        for (size_t i = beforeExpand; i < ratingSource.effects.size(); ++i)
-        {
-            baseEffects.effects.push_back(ratingSource.effects[i]);
-        }
+        const std::vector<ActiveEffect_t> ratingEffects =
+            ResolveSocialRatingLevelEffects(CollectRatingSource_(), *m_pSocialRatings);
+        baseEffects.effects.insert(baseEffects.effects.end(), ratingEffects.begin(),
+                                   ratingEffects.end());
     }
 
     return baseEffects;
@@ -318,11 +324,10 @@ const BaseEffects_t& BaseManager::BuildBaseEffects_() const
 
 int BaseManager::GetEffectiveSocialRating(SocialRatingId_t rating) const
 {
-    // Local-only ratings: peer WorldGlobal / council SocialRatingModifiers never move
-    // this axis (see AccumulateSocialRatings). Package 5 rejects those scopes at load.
+    // Local-only ratings: peer WorldGlobal / council SocialRatingModifiers never move this
+    // axis (see AccumulateSocialRatings). Same source list as the base-lane expansion.
     const std::map<SocialRatingId_t, int> totals =
-        AccumulateSocialRatings(
-            CollectBaseLocalEffects_(m_rFaction.GetLocalActiveEffects()).effects);
+        AccumulateSocialRatings(CollectRatingSource_().effects);
     const auto it = totals.find(rating);
     return it == totals.end() ? 0 : it->second;
 }

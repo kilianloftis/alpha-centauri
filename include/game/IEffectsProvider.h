@@ -22,6 +22,12 @@ public:
     // Monotonic version of the pool; changes iff the pool content changed. Consumers can
     // memoize derived state keyed on this value (see BaseManager::BuildBaseEffects_).
     virtual uint64_t GetEffectsVersion() const = 0;
+
+    // The provider's own contributions only — no peer WorldGlobal, no council extras.
+    // Consumers of faction-internal axes (social ratings) read this rather than the
+    // composed pool, so an outside effect cannot move an axis the faction owns. Any
+    // change here also moves GetEffectsVersion, so memos keyed on that stay correct.
+    virtual const FactionEffects_t& GetLocalActiveEffects() const = 0;
 };
 
 } // namespace ac

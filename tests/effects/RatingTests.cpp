@@ -37,23 +37,24 @@ TEST_CASE("AccumulateSocialRatings: sums per axis across sources", "[effects][ra
     CHECK(totals.count(SocialRatingId_t::Economy) == 0);
 }
 
-TEST_CASE("ExpandSocialRatingEffects: maps accumulated levels through the rating table",
+TEST_CASE("ResolveSocialRatingLevelEffects: maps accumulated levels through the rating table",
           "[effects][rating]")
 {
     actest::FactionFixture fixture;
     actest::EffectPool pool;
 
-    SECTION("a defined level appends its gameplay effects")
+    SECTION("a defined level returns its gameplay effects")
     {
-        BaseEffects_t baseEffects{{
+        const BaseEffects_t ratingSource{{
             Active(pool.RatingMod(SocialRatingId_t::Growth, 2), "policy"),
         }};
-        ExpandSocialRatingEffects(baseEffects, fixture.socialRatings());
+        const std::vector<ActiveEffect_t> levelEffects =
+            ResolveSocialRatingLevelEffects(ratingSource, fixture.socialRatings());
 
         // Fixture: growth level 2 -> +1 nutrients (AllOwnerBases).
-        CHECK(ResolveStatModifiers(FilterByStatId(baseEffects.effects, StatId_t::Nutrients), 0.0).total == Approx(1.0));
+        CHECK(ResolveStatModifiers(FilterByStatId(levelEffects, StatId_t::Nutrients), 0.0).total == Approx(1.0));
         bool foundRatingSource = false;
-        for (const ActiveEffect_t& rEffect : baseEffects.effects)
+        for (const ActiveEffect_t& rEffect : levelEffects)
         {
             if (rEffect.sourceId == "se_rating_growth_2")
             {
@@ -66,14 +67,15 @@ TEST_CASE("ExpandSocialRatingEffects: maps accumulated levels through the rating
     SECTION("totals above the highest configured level clamp to that extreme")
     {
         // Fixture growth levels: {2, 3}. Total 5 clamps to 3 -> +3 nutrients.
-        BaseEffects_t baseEffects{{
+        const BaseEffects_t ratingSource{{
             Active(pool.RatingMod(SocialRatingId_t::Growth, 5), "policy"),
         }};
-        ExpandSocialRatingEffects(baseEffects, fixture.socialRatings());
-        CHECK(ResolveStatModifiers(FilterByStatId(baseEffects.effects, StatId_t::Nutrients), 0.0).total == Approx(3.0));
+        const std::vector<ActiveEffect_t> levelEffects =
+            ResolveSocialRatingLevelEffects(ratingSource, fixture.socialRatings());
+        CHECK(ResolveStatModifiers(FilterByStatId(levelEffects, StatId_t::Nutrients), 0.0).total == Approx(3.0));
 
         bool foundClampedSource = false;
-        for (const ActiveEffect_t& rEffect : baseEffects.effects)
+        for (const ActiveEffect_t& rEffect : levelEffects)
         {
             if (rEffect.sourceId == "se_rating_growth_3")
             {
@@ -86,33 +88,32 @@ TEST_CASE("ExpandSocialRatingEffects: maps accumulated levels through the rating
     SECTION("totals below the lowest configured level clamp to that extreme")
     {
         // Fixture industry levels: {-1, 1, 2}. Total -5 clamps to -1 -> CostMultiplier +10%.
-        BaseEffects_t baseEffects{{
+        const BaseEffects_t ratingSource{{
             Active(pool.RatingMod(SocialRatingId_t::Industry, -5), "policy"),
         }};
-        ExpandSocialRatingEffects(baseEffects, fixture.socialRatings());
-        CHECK(ResolveStatModifiers(FilterByStatId(baseEffects.effects, StatId_t::CostMultiplier), 100.0).total
+        const std::vector<ActiveEffect_t> levelEffects =
+            ResolveSocialRatingLevelEffects(ratingSource, fixture.socialRatings());
+        CHECK(ResolveStatModifiers(FilterByStatId(levelEffects, StatId_t::CostMultiplier), 100.0).total
               == Approx(110.0));
     }
 
     SECTION("in-range missing levels still produce no effects")
     {
         // Fixture industry levels: {-1, 1, 2}. Total 0 is inside [-1, 2] but unlisted.
-        BaseEffects_t baseEffects{{
+        const BaseEffects_t ratingSource{{
             Active(pool.RatingMod(SocialRatingId_t::Industry, 1), "policy"),
             Active(pool.RatingMod(SocialRatingId_t::Industry, -1), "malus"),
         }};
-        ExpandSocialRatingEffects(baseEffects, fixture.socialRatings());
-        CHECK(FilterByStatId(baseEffects.effects, StatId_t::CostMultiplier).empty());
+        CHECK(ResolveSocialRatingLevelEffects(ratingSource, fixture.socialRatings()).empty());
     }
 
     SECTION("modifiers that cancel to zero produce no effects")
     {
-        BaseEffects_t baseEffects{{
+        const BaseEffects_t ratingSource{{
             Active(pool.RatingMod(SocialRatingId_t::Growth, 2), "policy"),
             Active(pool.RatingMod(SocialRatingId_t::Growth, -2), "malus"),
         }};
-        ExpandSocialRatingEffects(baseEffects, fixture.socialRatings());
-        CHECK(FilterByStatId(baseEffects.effects, StatId_t::Nutrients).empty());
+        CHECK(ResolveSocialRatingLevelEffects(ratingSource, fixture.socialRatings()).empty());
     }
 }
 
@@ -314,6 +315,28 @@ TEST_CASE("Faction-lane rating expand observes pop FactionGlobal SocialRatingMod
     CHECK(foundLevel);
 }
 
+TEST_CASE("Faction-lane rating expand observes unit-component SocialRatingModifiers",
+          "[effects][rating]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    fixture.MakeFactionBase(faction, 2, 2);
+
+    // morale_beacon declares +1 Morale FactionGlobal on a component of a live unit. Unit
+    // faction-lane effects are collected after ratings only if the pipeline is misordered.
+    fixture.MakeUnit(faction, 3, 3, {"test_chassis", "morale_beacon"});
+
+    bool foundLevel = false;
+    for (const ActiveEffect_t& rEffect : faction.GetLocalActiveEffects().effects)
+    {
+        if (rEffect.sourceId == "se_rating_morale_1")
+        {
+            foundLevel = true;
+        }
+    }
+    CHECK(foundLevel);
+}
+
 TEST_CASE("removed_by_tech gates GrantBuilding before expansion",
           "[effects][rating][grant]")
 {
@@ -353,6 +376,37 @@ TEST_CASE("removed_by_tech gates SocialRatingModifier before faction-lane expand
             }
         }
         CHECK(found);
+    }
+
+    faction.GetResearch().AddDiscoveredTech("gene_splicing");
+    for (const ActiveEffect_t& rEffect : faction.GetLocalActiveEffects().effects)
+    {
+        CHECK(rEffect.sourceId.find("se_rating_morale_") == std::string::npos);
+    }
+}
+
+TEST_CASE("removed_by_tech gates a rating modifier that arrives through a grant",
+          "[effects][rating][grant]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+
+    // The grantor is ungated; the gated +2 Morale modifier only exists after grant
+    // expansion. The gate must run between expansion and rating accumulation — the level
+    // effects it would produce carry no gate of their own, so a single trailing pass
+    // would leave se_rating_morale_2 behind.
+    base.GetBuildingManager().AddBuilding("rating_grantor");
+    {
+        bool found = false;
+        for (const ActiveEffect_t& rEffect : faction.GetLocalActiveEffects().effects)
+        {
+            if (rEffect.sourceId.find("se_rating_morale_") != std::string::npos)
+            {
+                found = true;
+            }
+        }
+        REQUIRE(found);
     }
 
     faction.GetResearch().AddDiscoveredTech("gene_splicing");

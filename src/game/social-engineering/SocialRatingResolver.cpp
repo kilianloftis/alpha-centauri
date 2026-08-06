@@ -10,13 +10,69 @@
 namespace ac
 {
 
+namespace
+{
+
+// Maps each non-zero accumulated level through the registry table and appends that level's
+// gameplay effects to rOut with sourceId "se_rating_<axis>_<level>" (clamped level).
+// appendLane, when set, keeps only level effects on that lane — the faction lane emits
+// FactionUnits only, while the base lane takes the whole level.
+void AppendRatingLevelEffects_(const std::map<SocialRatingId_t, int>& rTotals,
+                               const SocialRatingRegistry& rRatings,
+                               std::optional<EffectLane_t> appendLane,
+                               std::vector<ActiveEffect_t>& rOut)
+{
+    for (const auto& [rating, total] : rTotals)
+    {
+        if (total == 0)
+        {
+            continue;
+        }
+
+        const SocialRatingConfig_t* pRatingConfig = rRatings.Find(SocialRatingIdToString(rating));
+        if (!pRatingConfig)
+        {
+            continue;
+        }
+
+        // SMAC: out-of-range totals use the extreme configured level's effects. In-range
+        // missing keys (including typical absent 0) still produce nothing.
+        const std::vector<EffectConfig_t>* pLevelEffects =
+            FindSocialRatingLevelEffects(*pRatingConfig, total);
+        if (!pLevelEffects)
+        {
+            continue;
+        }
+
+        // Non-null level effects imply a non-empty table, so clamping is safe here.
+        const int level = ClampSocialRatingTotal(*pRatingConfig, total);
+        const std::string sourceId = "se_rating_" + SocialRatingIdToString(rating)
+                                     + "_" + std::to_string(level);
+        for (const EffectConfig_t& rEffect : *pLevelEffects)
+        {
+            if (appendLane && LaneFor(rEffect.scope) != *appendLane)
+            {
+                continue;
+            }
+            rOut.emplace_back(rEffect, sourceId);
+        }
+    }
+}
+
+} // namespace
+
 std::map<SocialRatingId_t, int> AccumulateSocialRatings(
-    const std::vector<ActiveEffect_t>& rEffects)
+    const std::vector<ActiveEffect_t>& rEffects,
+    std::optional<EffectLane_t> laneFilter)
 {
     std::map<SocialRatingId_t, int> totals;
     for (const ActiveEffect_t& rEffect : rEffects)
     {
         if (!rEffect.config)
+        {
+            continue;
+        }
+        if (laneFilter && LaneFor(rEffect.config->scope) != *laneFilter)
         {
             continue;
         }
@@ -52,90 +108,24 @@ const std::vector<EffectConfig_t>* FindSocialRatingLevelEffects(
     return &it->second;
 }
 
-void ExpandSocialRatingEffects(BaseEffects_t& rBaseEffects,
-                               const SocialRatingRegistry& rRatings)
+std::vector<ActiveEffect_t> ResolveSocialRatingLevelEffects(
+    const BaseEffects_t& rRatingSource, const SocialRatingRegistry& rRatings)
 {
-    const std::map<SocialRatingId_t, int> totals = AccumulateSocialRatings(rBaseEffects.effects);
-
-    for (const auto& [rating, total] : totals)
-    {
-        if (total == 0)
-        {
-            continue;
-        }
-
-        const SocialRatingConfig_t* pRatingConfig = rRatings.Find(SocialRatingIdToString(rating));
-        if (!pRatingConfig || pRatingConfig->levelEffects.empty())
-        {
-            continue;
-        }
-
-        // SMAC: out-of-range totals use the extreme configured level's effects. In-range
-        // missing keys (including typical absent 0) still produce nothing.
-        const int level = ClampSocialRatingTotal(*pRatingConfig, total);
-        const auto it = pRatingConfig->levelEffects.find(level);
-        if (it == pRatingConfig->levelEffects.end())
-        {
-            continue;
-        }
-
-        const std::string sourceId = "se_rating_" + SocialRatingIdToString(rating)
-                                     + "_" + std::to_string(level);
-        for (const auto& rEffect : it->second)
-        {
-            rBaseEffects.effects.emplace_back(rEffect, sourceId);
-        }
-    }
+    std::vector<ActiveEffect_t> levelEffects;
+    AppendRatingLevelEffects_(AccumulateSocialRatings(rRatingSource.effects), rRatings,
+                              std::nullopt, levelEffects);
+    return levelEffects;
 }
 
 void ExpandFactionLaneSocialRatingEffects(FactionEffects_t& rFactionEffects,
                                           const SocialRatingRegistry& rRatings)
 {
-    // Faction-lane expansion only accumulates FactionWide modifiers. ThisBase rating
-    // mods stay on ExpandSocialRatingEffects after FilterForBase so N bases with
-    // ThisBase shrines cannot inflate FactionUnits bonuses.
-    std::vector<ActiveEffect_t> factionWideModifiers;
-    for (const ActiveEffect_t& rEffect : rFactionEffects.effects)
-    {
-        if (rEffect.config && LaneFor(rEffect.config->scope) == EffectLane_t::FactionWide)
-        {
-            factionWideModifiers.push_back(rEffect);
-        }
-    }
-    const std::map<SocialRatingId_t, int> totals =
-        AccumulateSocialRatings(factionWideModifiers);
-
-    for (const auto& [rating, total] : totals)
-    {
-        if (total == 0)
-        {
-            continue;
-        }
-
-        const SocialRatingConfig_t* pRatingConfig = rRatings.Find(SocialRatingIdToString(rating));
-        if (!pRatingConfig || pRatingConfig->levelEffects.empty())
-        {
-            continue;
-        }
-
-        const int level = ClampSocialRatingTotal(*pRatingConfig, total);
-        const auto it = pRatingConfig->levelEffects.find(level);
-        if (it == pRatingConfig->levelEffects.end())
-        {
-            continue;
-        }
-
-        const std::string sourceId = "se_rating_" + SocialRatingIdToString(rating)
-                                     + "_" + std::to_string(level);
-        for (const auto& rEffect : it->second)
-        {
-            if (LaneFor(rEffect.scope) != EffectLane_t::FactionUnits)
-            {
-                continue;
-            }
-            rFactionEffects.effects.emplace_back(rEffect, sourceId);
-        }
-    }
+    // Faction-lane expansion only accumulates FactionWide modifiers. ThisBase rating mods
+    // stay on the per-base path after FilterForBase, so N bases with ThisBase shrines
+    // cannot inflate FactionUnits bonuses.
+    AppendRatingLevelEffects_(
+        AccumulateSocialRatings(rFactionEffects.effects, EffectLane_t::FactionWide), rRatings,
+        EffectLane_t::FactionUnits, rFactionEffects.effects);
 }
 
 } // namespace ac
