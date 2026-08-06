@@ -787,15 +787,18 @@ Package 4 owns the constructor/null-policy half of these classes (two-phase-init
 
 ### Package 6 — Base economy (2026-08-06)
 
-**Status:** PARTIAL — the player-visible defect and the worker-stranding bug are fixed; the second [H] and ~9 [M] findings are not started. See the analysis doc for the full remaining list.  
+**Status:** PARTIAL — both [H] findings and three [M]s are fixed; seven [M] findings are not started. See the analysis doc for the remaining list.  
 **Prompt:** [`docs/full-review-fix-prompts/06-base-economy-and-population.md`](full-review-fix-prompts/06-base-economy-and-population.md)
 
 **Fixes landed:**
 - `IsTileWorkedByThisBase` added and both UI callers switched to it. Asking the world-scoped `IsTileAssigned` made the base screen paint neighbour/enemy/crawler-worked tiles as worked and then display `0 0 0` (the yield lookup only resolves this base's pops), and routed clicks on them to a no-op unassign. Reachable in any two-base start.
 - `UserAssignBestAvailableWorker` validates the tile before touching a pop and returns `bool`; its fallback branches no longer destroy a specialist's role or strand a worker on a doomed request.
 - Psych documented as a silent sink (`ConsumePsych` has no caller) with a TODO — what psych buys is a SMAC rule, not something to invent.
+- `PopContainer` reduced to storage [H]; `PopulationManager` now owns conversion legality, the obsolescence chain and composition reconciliation. The container applied the tech gate in `ConvertToFallback` but not `ConvertTo`, so one path could seat a type the other refused.
+- `~BatchCompositionUpdate` no longer lets a config error escape a destructor as `std::terminate`, from a guard on the hot worker-assignment paths.
+- Golden age counts plain workers; counting every tile-capable pop put talents on both sides of `talents >= workers + specialists`, making the rule "every pop a talent".
 
-**Not started:** `PopContainer` owning composition policy [H]; production-queue contract; ignored `precedence` key; throwing `~BatchCompositionUpdate`; `RemovePop` semantics; composition staleness; `psych_output` scope; golden-age worker count; minerals-per-row to config; untyped `BaseSnapshot_t` production id.
+**Not started:** production-queue contract; ignored `precedence` key (TODO in place); `RemovePop` semantics; composition staleness; `psych_output` scope; minerals-per-row to config; untyped `BaseSnapshot_t` production id.
 
 ---
 

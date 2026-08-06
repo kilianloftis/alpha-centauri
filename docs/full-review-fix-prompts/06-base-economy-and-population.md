@@ -3,8 +3,8 @@
 **Source package:** [`docs/full-review-fix-packages.md`](../full-review-fix-packages.md), Package 6
 **Verified against:** working tree at commit `6e25eb8` (after full-review Packages 1–5)
 
-**Status: PARTIAL.** The player-visible defect and the worker-stranding bug are fixed and
-tested. The remaining findings are listed below with what each needs; they are not started.
+**Status: PARTIAL.** Both `[H]` findings plus three `[M]`s are fixed and tested. The remaining
+findings are listed below with what each needs; they are not started.
 
 ---
 
@@ -46,32 +46,50 @@ rule this codebase does not have. `.devin/rules/coding-guidelines.md` forbids in
 
 ---
 
+### [H] `PopContainer` owns composition policy and rules services, not storage — FIXED
+
+The container held the availability calculator and applied it in `ConvertToFallback` but not in
+`ConvertTo`, so `ConvertTo(rPop, "Thinker")` installed a type the fallback path would refuse —
+the tech gate existed on one conversion path only.
+
+`PopContainer` is now storage (vector, counts, revision; registry-only constructor).
+`PopContainer::ConvertTo` takes an already-resolved `PopTypeConfig_t`. `PopulationManager` owns
+the policy: `ResolveType_` walks the obsolescence chain and is the single place a requested type
+becomes an actual one, and `ApplyCompositionTargets` (the reconciliation loops) moved up with
+it. The loops use `ConvertResolved_` so they cannot re-enter recalculation through `ConvertTo`'s
+specialist hook.
+
+### [M] `~BatchCompositionUpdate` runs work that can throw — FIXED
+
+Deferred `RecalculateComposition` reaches the registry and the obsolescence chain, both of which
+throw on an unsatisfiable config; destructors are implicitly `noexcept`, so that called
+`std::terminate` — from a guard that sits on the hot worker-assignment paths. Now caught and
+reported: stale composition is recoverable, termination is not.
+
+### [M] Golden-age inputs use `GetWorkerCount()` — FIXED
+
+That count is every tile-capable pop, so drones and talents landed on both sides of the
+documented `talents >= workers + specialists` rule and the effective condition became "every pop
+must be a talent". Added `GetPlainWorkerCount` for the disjoint bucket; both counts now document
+what they include.
+
+---
+
 ## Not started
 
 Each of these is confirmed present; none is addressed.
 
-- **[H] `PopContainer` owns composition policy and rules services, not storage.**
-  `ApplyCompositionTargets` is the whole reconciliation algorithm and `ConvertToFallback`
-  resolves the obsolescence chain, both in the class documented as the container, while
-  `PopulationManager` degenerates into delegation. The concrete cost is inconsistent
-  enforcement: `ConvertTo` applies **no** availability check even though the container holds the
-  calculator, so `ConvertTo(rPop, "Thinker")` installs a type `ConvertToFallback` would refuse.
-  Direction: leave the container with add/remove/convert/counts/revision, and move target
-  reconciliation plus fallback resolution up into `PopulationManager`, which already computes
-  the targets and can enforce availability once for every path.
 - **[M] The production queue has no contract** for switching, surplus carry, or invalid input;
   `SetProduction` accepts any pointer and no layer validates the item.
 - **[M] The `precedence` config key is parsed and ignored**, and the hardcoded order
-  (drones first, then talents) contradicts what `config/pop_composition.lua` ships.
-- **[M] `~BatchCompositionUpdate` runs work that can throw** from a destructor.
+  (drones first, then talents) contradicts what `config/pop_composition.lua` ships. A TODO now
+  marks the spot in `PopulationManager::ApplyCompositionTargets`.
 - **[M] `RemovePop` is silent, arbitrary, and unobservable** (always `pop_back`, no `Pop&` in
   the signal, so an observer cannot invalidate a reference — the mirror of the guarantee
   `UnitManager::OnUnitDestroyed` provides).
 - **[M] Composition goes stale on every size change except growth.**
 - **[M] Composition's `psych_output` is specialist psych only** (see the psych TODO above —
   same rule gap).
-- **[M] Golden-age inputs use `GetWorkerCount()`**, which counts drones and talents too, so the
-  documented `talents >= workers + specialists` rule effectively becomes "every pop a talent".
 - **[M] Production's minerals-per-row is the one game number still in code**
   (`ProductionCostCalculator::k_MineralsPerRow`). Moving it needs a production config file and
   parser; there is no existing config to hang it on.
