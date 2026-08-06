@@ -637,15 +637,21 @@ TEST_CASE("Solar shade and polar caps proposals pass; the shade is repeatable", 
 
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
     game.PassStandard(*game.pA, "launch_solar_shade");
-    CHECK(rCouncil.IsActive("launch_solar_shade"));
+    // These carry only Instantaneous effects, so they are history, not standing law: HasPassed,
+    // not IsActive. The in-force set means "contributes continuous world effects right now" —
+    // conflating the two is what let a pure repeal be consumed for the rest of the game.
+    CHECK(rCouncil.HasPassed("launch_solar_shade"));
+    CHECK_FALSE(rCouncil.IsActive("launch_solar_shade"));
 
-    // increase_solar_shade is repeatable: it can be proposed and pass more than once.
+    // increase_solar_shade is repeatable: it can be proposed and pass more than once. Its
+    // required_proposals gate on launch_solar_shade is satisfied by that proposal having
+    // passed, which is why the two meanings had to be separated rather than just narrowed.
     game.PassStandard(*game.pA, "increase_solar_shade");
     CHECK(rCouncil.CanPropose(*game.pA, "increase_solar_shade"));
     game.PassStandard(*game.pA, "increase_solar_shade");
 
     game.PassStandard(*game.pA, "melt_polar_caps");
-    CHECK(rCouncil.IsActive("melt_polar_caps"));
+    CHECK(rCouncil.HasPassed("melt_polar_caps"));
 }
 
 TEST_CASE("U.N. Charter starts in force and can be repealed then reinstated", "[council]")
@@ -834,4 +840,107 @@ TEST_CASE("Council world and governor extras compose into Faction::GetActiveEffe
     CHECK(hasCommerceEnergyBonus(game.pA->GetActiveEffects()));
     CHECK_FALSE(hasCommerceEnergyBonus(game.pB->GetActiveEffects()));
     CHECK_FALSE(hasCommerceEnergyBonus(game.pA->GetLocalActiveEffects()));
+}
+
+// --- Package 5: lifecycle exits, in-force vs enacted, tally rules -------------------------
+
+TEST_CASE("A pending vote resolves when a member never votes", "[council][lifecycle]")
+{
+    // The brick: Resolve used to throw unless every member had a ballot, and nothing else
+    // cleared m_pending while Propose threw whenever it was set. One silent member ended the
+    // council permanently. An absent member abstains — which is what the tally already did.
+    CouncilGame_ game;
+    game.Discover(*game.pA, "planetary_economics");
+    game.Discover(*game.pB, "planetary_economics");
+    PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+
+    game.GiveAllCommlinksTo(*game.pA);
+    game.AdvancePastProposeCooldown(*game.pA);
+    rCouncil.Propose(*game.pState, *game.pA, "global_trade_pact");
+
+    // Only the proposer and one other vote; pC never does.
+    rCouncil.CastVote(*game.pA, CouncilBallot_t::Yea);
+    rCouncil.CastVote(*game.pB, CouncilBallot_t::Yea);
+    REQUIRE_FALSE(rCouncil.AllMembersVoted());
+
+    CHECK(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
+
+    // The council is usable afterwards: the pending slot is clear and a new vote can open.
+    CHECK(rCouncil.GetPending() == nullptr);
+    game.AdvancePastProposeCooldown(*game.pB);
+    game.GiveAllCommlinksTo(*game.pB);
+    CHECK_NOTHROW(rCouncil.Propose(*game.pState, *game.pB, "repeal_trade_pact"));
+}
+
+TEST_CASE("A repeal can be used again after its target is re-enacted", "[council][lifecycle]")
+{
+    // repeal_un_charter has no effects of its own, so marking it "active" on passage made
+    // CanPropose's `IsActive && !repeatable` rule consume it for the rest of the game — the
+    // charter could be repealed once and never again.
+    CouncilGame_ game;
+    game.Discover(*game.pA, "advanced_military_algorithms");
+    PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+
+    REQUIRE(rCouncil.IsActive("un_charter"));
+    game.PassStandard(*game.pA, "repeal_un_charter");
+    CHECK_FALSE(rCouncil.HasActiveRuleFlag(RuleFlagId_t::AtrocitiesForbidden));
+    // A pure repeal is never "in force"; it is history.
+    CHECK_FALSE(rCouncil.IsActive("repeal_un_charter"));
+    CHECK(rCouncil.HasPassed("repeal_un_charter"));
+
+    game.PassStandard(*game.pA, "reinstate_un_charter");
+    REQUIRE(rCouncil.HasActiveRuleFlag(RuleFlagId_t::AtrocitiesForbidden));
+
+    // The flip-flop the code always intended: repealable again now the charter is back.
+    CHECK(rCouncil.CanPropose(*game.pA, "repeal_un_charter"));
+    game.PassStandard(*game.pA, "repeal_un_charter");
+    CHECK_FALSE(rCouncil.HasActiveRuleFlag(RuleFlagId_t::AtrocitiesForbidden));
+}
+
+TEST_CASE("A repeal is unavailable while its target is not in force", "[council][lifecycle]")
+{
+    // The other half of the split: proposing to repeal a law that is not standing is
+    // meaningless, and this is what keeps the repeal re-proposable without making it free.
+    CouncilGame_ game;
+    game.Discover(*game.pA, "planetary_economics");
+    PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+
+    CHECK_FALSE(rCouncil.IsActive("global_trade_pact"));
+    CHECK_FALSE(rCouncil.CanPropose(*game.pA, "repeal_trade_pact"));
+
+    game.PassStandard(*game.pA, "global_trade_pact");
+    REQUIRE(rCouncil.IsActive("global_trade_pact"));
+    CHECK(rCouncil.CanPropose(*game.pA, "repeal_trade_pact"));
+}
+
+TEST_CASE("CastElectionVote rejects an ineligible governor candidate", "[council][election]")
+{
+    // The "two most populous factions" rule lived only in GovernorCandidates(), which nothing
+    // enforcing anything called — the UI passed full membership as the candidate list.
+    CouncilGame_ game;
+    PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+
+    game.GiveAllCommlinksTo(*game.pA);
+    game.AdvancePastProposeCooldown(*game.pA);
+    rCouncil.Propose(*game.pState, *game.pA, "elect_planetary_governor");
+
+    const std::vector<Faction*> eligible =
+        rCouncil.EligibleCandidates(rCouncil.GetRegistry().Get("elect_planetary_governor"));
+    REQUIRE(eligible.size() == 2);
+
+    // Whichever member is not in the top two cannot be voted for.
+    Faction* pIneligible = nullptr;
+    for (Faction* pMember : rCouncil.Members())
+    {
+        if (std::find(eligible.begin(), eligible.end(), pMember) == eligible.end())
+        {
+            pIneligible = pMember;
+        }
+    }
+    REQUIRE(pIneligible != nullptr);
+
+    CHECK_THROWS(rCouncil.CastElectionVote(*game.pA, pIneligible));
+    CHECK_NOTHROW(rCouncil.CastElectionVote(*game.pA, eligible.front()));
+    // Abstaining is always allowed.
+    CHECK_NOTHROW(rCouncil.CastElectionVote(*game.pB, nullptr));
 }

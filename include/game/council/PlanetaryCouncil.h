@@ -66,7 +66,11 @@ public:
     const CouncilRulesConfig_t& GetRules() const { return m_rRules; }
 
     // --- Proposal availability ---
+    // In force: this proposal contributes continuous world effects right now. Distinct from
+    // "has passed" (see the pass-count history) — a one-shot or a pure repeal is never in force.
     bool IsActive(const std::string& rProposalId) const;
+    // Enacted at least once, whether or not it is still in force.
+    bool HasPassed(const std::string& rProposalId) const;
     // True when any active council WorldGlobal effect carries the given RuleFlag.
     bool HasActiveRuleFlag(RuleFlagId_t flag) const;
 
@@ -99,6 +103,11 @@ public:
 
     // Top two council members by total population (ties broken by lower faction id).
     std::vector<Faction*> GovernorCandidates() const;
+
+    // Members that may be voted for in this proposal's election: GovernorCandidates() for a
+    // Planetary Governor election, every member for Supreme Leader. The single source of truth
+    // for the rule — CastElectionVote enforces it, and the UI should offer exactly this list.
+    std::vector<Faction*> EligibleCandidates(const CouncilProposalConfig_t& rConfig) const;
 
     // Vote weight for a member under the given mode (applies CouncilVotes effects).
     int ComputeVoteWeight(const Faction& rFaction, CouncilVoteWeight_t mode) const;
@@ -145,6 +154,9 @@ private:
     void ApplyGovernor_(GameState& rGameState, Faction& rGovernor);
     bool VetoUnanimouslyOverruled_() const;
     Faction* FindMember_(FactionId_t factionId) const;
+    bool IsEligibleCandidate_(const CouncilProposalConfig_t& rConfig,
+                              const Faction& rCandidate) const;
+    bool HasPassed_(const std::string& rProposalId) const;
 
     // --- Resolve helpers ---
     // Decide the outcome of the pending proposal (veto, tally, apply). Leaves m_pending in

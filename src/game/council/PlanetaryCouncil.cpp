@@ -148,6 +148,17 @@ bool PlanetaryCouncil::IsActive(const std::string& rProposalId) const
            != m_activeProposalIds.end();
 }
 
+bool PlanetaryCouncil::HasPassed(const std::string& rProposalId) const
+{
+    return HasPassed_(rProposalId);
+}
+
+bool PlanetaryCouncil::HasPassed_(const std::string& rProposalId) const
+{
+    const auto it = m_passCounts.find(rProposalId);
+    return it != m_passCounts.end() && it->second > 0;
+}
+
 bool PlanetaryCouncil::HasActiveRuleFlag(RuleFlagId_t flag) const
 {
     return m_effects.HasActiveRuleFlag(flag);
@@ -204,6 +215,24 @@ std::vector<Faction*> PlanetaryCouncil::GovernorCandidates() const
     return result;
 }
 
+std::vector<Faction*> PlanetaryCouncil::EligibleCandidates(
+    const CouncilProposalConfig_t& rConfig) const
+{
+    if (rConfig.electionOutcome == CouncilElectionOutcome_t::PlanetaryGovernor)
+    {
+        return GovernorCandidates();
+    }
+    // Supreme Leader is open to the whole council.
+    return m_members;
+}
+
+bool PlanetaryCouncil::IsEligibleCandidate_(const CouncilProposalConfig_t& rConfig,
+                                           const Faction& rCandidate) const
+{
+    const std::vector<Faction*> eligible = EligibleCandidates(rConfig);
+    return std::find(eligible.begin(), eligible.end(), &rCandidate) != eligible.end();
+}
+
 bool PlanetaryCouncil::CanPropose(const Faction& rProposer, const std::string& rProposalId) const
 {
     const CouncilProposalConfig_t* pConfig = m_rRegistry.Find(rProposalId);
@@ -226,9 +255,27 @@ bool PlanetaryCouncil::CanPropose(const Faction& rProposer, const std::string& r
         return false;
     }
 
+    // required_proposals asks "has this been enacted", not "is it still in force". The two
+    // used to be the same set, which is why splitting them matters here: launch_solar_shade
+    // carries only an Instantaneous effect, so it is history rather than a standing law, yet
+    // increase_solar_shade must still require it.
     for (const std::string& rRequired : pConfig->requiredProposals)
     {
-        if (!IsActive(rRequired))
+        if (!HasPassed_(rRequired) && !IsActive(rRequired))
+        {
+            return false;
+        }
+    }
+
+    // A repeal is meaningful only while something it repeals is actually in force. This is the
+    // "is it still standing" half of the split above, and it is what keeps a repeal proposable
+    // again after its target is re-enacted (see the consumption rule below).
+    if (!pConfig->repeals.empty())
+    {
+        const bool bAnyTargetInForce =
+            std::any_of(pConfig->repeals.begin(), pConfig->repeals.end(),
+                        [this](const std::string& rId) { return IsActive(rId); });
+        if (!bAnyTargetInForce)
         {
             return false;
         }
@@ -258,7 +305,15 @@ bool PlanetaryCouncil::CanPropose(const Faction& rProposer, const std::string& r
     // above covers passes that leave a lasting marker; this catches passes that don't — one
     // whose marker was later removed by a repeal. Continuous world laws are exempt: repealing
     // one clears its active id precisely so it can be enacted again.
-    if (!pConfig->repeatable && !IsActive(rProposalId) && !HasContinuousWorldEffects_(*pConfig))
+    //
+    // Repeals are exempt for the same reason. A proposal that repeals something is not a
+    // one-shot: it becomes meaningful again whenever its target is back in force, and its own
+    // availability already tracks that through config gates (repeal_trade_pact declares
+    // required_proposals: [global_trade_pact]; repeal_un_charter declares
+    // requires_rule_flags: [atrocities_forbidden], both checked above). Consuming it after one
+    // use is what made the charter unrepealable once reinstated.
+    if (!pConfig->repeatable && !IsActive(rProposalId) && !HasContinuousWorldEffects_(*pConfig)
+        && pConfig->repeals.empty())
     {
         const auto it = m_passCounts.find(rProposalId);
         if (it != m_passCounts.end() && it->second > 0)
@@ -355,6 +410,17 @@ void PlanetaryCouncil::CastElectionVote(const Faction& rVoter, const Faction* pC
         throw std::invalid_argument(
             "PlanetaryCouncil::CastElectionVote: candidate is not a council member");
     }
+    // Eligibility is the council's rule, enforced where the vote is cast. It used to live only
+    // in GovernorCandidates(), which nothing enforcing anything called — the UI passed the full
+    // membership as the candidate list, so any member could be elected Planetary Governor
+    // despite the "two most populous factions" rule stated in the proposal description and in
+    // docs/architecture/council-system.md.
+    if (pCandidate && !IsEligibleCandidate_(rConfig, *pCandidate))
+    {
+        throw std::invalid_argument(
+            "PlanetaryCouncil::CastElectionVote: '" + pCandidate->GetDefinitionId()
+            + "' is not an eligible candidate for '" + rConfig.id + "'");
+    }
     std::optional<FactionId_t> candidateId;
     if (pCandidate)
     {
@@ -433,6 +499,14 @@ void PlanetaryCouncil::RemoveActiveProposal_(const std::string& rProposalId)
 
 void PlanetaryCouncil::ActivateProposal_(const CouncilProposalConfig_t& rConfig)
 {
+    // The in-force set means "this law currently contributes continuous world effects" — not
+    // "this proposal has passed at some point", which is what m_passCounts records. Marking a
+    // pure repeal (no effects of its own) as active made CanPropose's `IsActive && !repeatable`
+    // rule consume it forever, so a repealed-then-reinstated law could never be repealed again.
+    if (!HasContinuousWorldEffects_(rConfig))
+    {
+        return;
+    }
     if (!IsActive(rConfig.id))
     {
         m_activeProposalIds.push_back(rConfig.id);
@@ -453,10 +527,14 @@ bool PlanetaryCouncil::TallyStandard_(const CouncilProposalConfig_t& rConfig) co
 {
     int yea = 0;
     int nay = 0;
+    int totalWeight = 0;
     for (Faction* pMember : m_members)
     {
         const int weight = ComputeVoteWeight(*pMember, rConfig.voteWeight);
+        totalWeight += weight;
         const auto it = m_pending->ballots.find(pMember->GetFactionId());
+        // A missing ballot is an abstention (see Resolve): it counts toward the total weight
+        // a threshold is measured against, but for neither side.
         if (it == m_pending->ballots.end() || it->second == CouncilBallot_t::Abstain)
         {
             continue;
@@ -469,6 +547,15 @@ bool PlanetaryCouncil::TallyStandard_(const CouncilProposalConfig_t& rConfig) co
         {
             nay += weight;
         }
+    }
+
+    // voteThreshold is documented as "fraction of total vote weight required for passage;
+    // 0 = simple majority". It was read by TallyElection_ only, so a modder setting it on a
+    // standard proposal silently got a plain majority.
+    if (rConfig.voteThreshold > 0.0)
+    {
+        const double share = totalWeight > 0 ? static_cast<double>(yea) / totalWeight : 0.0;
+        return share >= rConfig.voteThreshold;
     }
     return yea > nay;
 }
@@ -589,10 +676,12 @@ ResolveProposalResult_t PlanetaryCouncil::Resolve(GameState& rGameState)
     {
         throw std::invalid_argument("PlanetaryCouncil::Resolve: no pending proposal");
     }
-    if (!AllMembersVoted())
-    {
-        throw std::invalid_argument("PlanetaryCouncil::Resolve: votes incomplete");
-    }
+    // Deliberately no "all members voted" precondition. A member that never casts a ballot
+    // abstains — which is exactly what both tallies already do with a missing entry. Requiring
+    // unanimous participation made the pending slot a terminal state: nothing else clears
+    // m_pending and Propose throws while it is set, so one silent member bricked the council
+    // for the rest of the game. AllMembersVoted() remains available for a UI that wants to
+    // wait before offering to resolve.
 
     const std::string proposalId = m_pending->proposalId;
     const ResolveProposalResult_t result = ResolveOutcome_(rGameState);
