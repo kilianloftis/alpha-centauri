@@ -16,6 +16,10 @@ UIManager::UIManager(Graphics& rGraphics, Input& rInput)
 {
 }
 
+// Out-of-line so callers that only forward-declare WorldView (per UIManager.h) don't need its
+// complete type just to destroy a UIManager.
+UIManager::~UIManager() = default;
+
 void UIManager::SetWorldView(std::unique_ptr<WorldView> pWorldView)
 {
     m_pWorldView = std::move(pWorldView);
@@ -45,6 +49,13 @@ void UIManager::ProcessKeys_()
     {
         IGameView* pActive = GetActiveView_();
         if (pActive && pActive->HandleKey(event))
+        {
+            return;
+        }
+        // Global view shortcuts (F2 research, E social engineering, ...) must not stack a
+        // second overlay while one is already active, and must not push while the world view
+        // has a blocking in-view modal (same gate as CanAdvanceTurn).
+        if (!CanAdvanceTurn())
         {
             return;
         }
@@ -81,6 +92,31 @@ void UIManager::ProcessMouse_()
             pActive->HandleMouse(*event);
         }
     }
+}
+
+void UIManager::Update()
+{
+    // Only the world view queues an out-of-band advance request (auto end-turn); overlays
+    // resolve their own state through input. Package 1's Advance is idempotent to call when
+    // nothing is ready to resume, so no additional CanAdvanceTurn() gate is needed here —
+    // Engine::ProcessTurn_ (wired as WorldView's onProcessTurn) applies that gate itself.
+    if (m_pWorldView)
+    {
+        m_pWorldView->ProcessPendingAutoEndTurn();
+    }
+}
+
+bool UIManager::CanAdvanceTurn() const
+{
+    if (HasOverlayView())
+    {
+        return false;
+    }
+    if (m_pWorldView && m_pWorldView->BlocksTurnAdvance())
+    {
+        return false;
+    }
+    return true;
 }
 
 void UIManager::Render()

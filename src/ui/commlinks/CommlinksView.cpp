@@ -56,6 +56,7 @@ void CommlinksView::OpenCouncilCooldownPopup_()
 
     const CouncilRulesConfig_t& rRules = pCouncil->GetRules();
     // OK dismisses this council cooldown UI (and the parent Commlinks overlay).
+    DismissOpenModals_();
     m_elements.push_back(std::make_unique<CouncilCooldownPopup>(
         ResolveLayout(m_layout, Style().layouts.popupSmall),
         rRules.memberProposeIntervalYears,
@@ -83,6 +84,7 @@ void CommlinksView::OpenCouncilProposals_()
         }
     }
 
+    DismissOpenModals_();
     m_elements.push_back(std::make_unique<CouncilProposalsPopup>(
         std::move(available),
         ResolveLayout(m_layout, Style().layouts.topPanel),

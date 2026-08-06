@@ -91,6 +91,9 @@ void Engine::GameLoop_()
     while (!m_uiManager->ShouldExit())
     {
         m_uiManager->ProcessInput();
+        // Between input and paint: consumes UI-queued turn-advance requests (WorldView auto
+        // end-turn) so Advance never runs from the Render path.
+        m_uiManager->Update();
         m_uiManager->Render();
     }
 }
@@ -98,15 +101,16 @@ void Engine::GameLoop_()
 void Engine::ProcessTurn_()
 {
     // Turn processing can mutate/destroy pops (starvation) and other base state that
-    // base-level popups (e.g. PopTypeSelectorPopup) hold live references to. Input routing
-    // already makes this unreachable in practice - UIManager only routes input to the top of
-    // the overlay stack, and this callback is only ever wired to WorldView's Enter handler -
-    // but that makes it an implicit invariant. Assert it explicitly so a future caller that
-    // bypasses view-stack routing (a scripted/auto turn, say) fails loudly instead of silently
-    // dangling a popup's captured reference.
-    if (m_uiManager->HasOverlayView())
+    // base-level popups (e.g. PopTypeSelectorPopup) hold live references to. UIManager's
+    // modal/overlay contract (UIManager::CanAdvanceTurn) is the single source of truth for
+    // whether it is safe to resume: an overlay is on the stack, or the world view reports a
+    // blocking in-view modal (probe/supply popup, ...). This is a soft gate, not a
+    // programmer-error assert — an ordinary player End Turn / Enter / auto-advance while a
+    // modal is open is expected UI traffic, not a bypass of view-stack routing, so it simply
+    // no-ops instead of throwing.
+    if (!m_uiManager->CanAdvanceTurn())
     {
-        throw std::logic_error("Engine::ProcessTurn_ called while an overlay view is active");
+        return;
     }
 
     // Runs until a stage yields for interaction; turn boundaries are handled inside stages.

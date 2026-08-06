@@ -149,6 +149,7 @@ void SatelliteView::OnAttackClicked_()
 
 void SatelliteView::ShowOutcome_(std::string message)
 {
+    DismissOpenModals_();
     m_elements.push_back(std::make_unique<OrbitalAttackOutcomePopup>(
         ResolveLayout(m_layout, Style().layouts.popupSmall),
         std::move(message)));
@@ -170,6 +171,7 @@ void SatelliteView::OpenAttackerPopup_(FactionId_t targetFactionId,
         return;
     }
 
+    DismissOpenModals_();
     m_elements.push_back(std::make_unique<OrbitalAttackerPopup>(
         ResolveLayout(m_layout, Style().layouts.popupSmall),
         std::move(attackers),

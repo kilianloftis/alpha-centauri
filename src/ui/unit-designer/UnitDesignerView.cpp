@@ -143,6 +143,7 @@ void UnitDesignerView::ShowComponentSelector_(
         }
     }
 
+    DismissOpenModals_();
     m_elements.push_back(std::make_unique<ComponentSelectorPopup>(
         std::move(available),
         ResolveLayout(m_layout, Style().layouts.popupSmall),

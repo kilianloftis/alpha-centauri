@@ -67,6 +67,11 @@ public:
     // While CombatView is up, skip drawing the normal dashboard (combat panels cover it).
     void SetSuppressDashboard(bool bSuppress);
 
+    // Runs the auto end-turn callback if one was queued by the last Update_() pass (Pause at
+    // End of Turn off, no units left needing orders). Called from UIManager::Update(), between
+    // ProcessInput and Render, so turn advance never runs on the paint path.
+    void ProcessPendingAutoEndTurn();
+
 private:
     void Update_();
     void SetSelectedUnit_(Unit* pUnit, bool bManualSelection);
@@ -104,6 +109,9 @@ private:
     // Falling-edge detect for auto-advance when Pause at End of Turn is off.
     bool m_bHadUnitsNeedingOrders = false;
     bool m_bSuppressDashboard = false;
+    // Set by Update_() (called from Render); consumed by ProcessPendingAutoEndTurn() from
+    // UIManager::Update() so the actual onProcessTurn() call never happens on the Render path.
+    bool m_bPendingAutoEndTurn = false;
 
     std::unique_ptr<CameraInputController> m_pCameraInputController;
     std::unique_ptr<UnitOrderInputController> m_pUnitOrderInputController;

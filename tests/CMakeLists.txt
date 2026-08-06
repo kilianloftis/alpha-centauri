@@ -71,6 +71,7 @@ add_executable(effects-tests
     game/GameSettingsTests.cpp
     game/RequiredTechValidatorTests.cpp
     game/PlanetaryCouncilTests.cpp
+    ui/ModalContractTests.cpp
     lib/SignalTests.cpp
 )
 

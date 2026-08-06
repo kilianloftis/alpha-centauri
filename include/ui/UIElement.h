@@ -68,6 +68,15 @@ public:
     virtual bool HandleKey(const KeyEvent_t& rEvent) { return false; }
 
     bool ShouldClose() const { return m_bShouldClose; }
+    void RequestClose() { m_bShouldClose = true; }
+
+    // Modal elements (selectors, proposals, ballots, probe/supply pickers, orbital dialogs, ...)
+    // capture input exclusively while open: the owning IGameView routes every mouse press
+    // (even outside this element's Contains rect) and every key to the topmost modal element
+    // instead of underlying chrome/map, and treats the view as blocking turn advance while one
+    // is open (see IGameView::HasModalElement / BlocksTurnAdvance). Default false so ordinary
+    // panels/buttons are unaffected.
+    virtual bool IsModal() const { return false; }
 
 protected:
     const WindowLayout_t m_layout;

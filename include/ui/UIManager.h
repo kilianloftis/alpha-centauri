@@ -17,8 +17,13 @@ public:
     using ViewFactory_t = std::function<std::unique_ptr<IGameView>()>;
 
     UIManager(Graphics& rGraphics, Input& rInput);
+    ~UIManager();
 
     void ProcessInput();
+    // Consumes UI-queued, non-input-driven turn advance requests (e.g. WorldView's auto
+    // end-turn once no units need orders). Called once per frame between ProcessInput and
+    // Render so turn advance never runs from the paint path.
+    void Update();
     void Render();
 
     void RegisterViewShortcut(Key_t key, ViewFactory_t factory);
@@ -27,6 +32,11 @@ public:
     void PopView();
     bool HasViews() const;
     bool HasOverlayView() const;
+
+    // False while an overlay is on the stack, or the world view reports a blocking in-view
+    // modal (probe/supply popup, ...). Engine::ProcessTurn_ soft-gates TurnProcessor::Advance
+    // on this instead of throwing for an ordinary UI-initiated End Turn under a modal.
+    bool CanAdvanceTurn() const;
 
     bool ShouldExit() const;
     void RequestExit();

@@ -717,6 +717,19 @@ Package 4 owns the constructor/null-policy half of these classes (two-phase-init
 
 **Review follow-ups applied:** advanced-set only on `Continue`; phase reset when active faction changes; enter/exit lifecycle hardening; stronger PlayerActions/WorldEvents/Population tests.
 
+### Package 2 — Modal / overlay contract (2026-08-06)
+
+**Status:** complete  
+**Prompt:** [`docs/full-review-fix-prompts/02-modal-overlay-contract.md`](full-review-fix-prompts/02-modal-overlay-contract.md)
+
+**Fixes landed:**
+- Shared `UIElement::IsModal` + `IGameView` exclusive mouse/key routing (outside-chrome clicks reach dismiss); `DismissOpenModals_` before selector/proposals/ballot/probe/supply/orbital push.
+- `UIManager::CanAdvanceTurn()` (overlay or world in-view modal); shortcuts suppressed when advance blocked; `Engine::ProcessTurn_` soft-gates then `Advance` (no overlay `logic_error`).
+- WorldView: modal capture for probe/supply; auto end-turn queued from `Update_`, consumed in `UIManager::Update` (not `Render`); Council vote Escape refused while pending.
+- `ui-system.md` rewritten for Advance/Yield + modal gate; `tests/ui/ModalContractTests.cpp` for routing/dismiss/`BlocksTurnAdvance`.
+
+**Review follow-ups applied:** modal key path always reports handled (no global shortcut leak under WorldView modals); auto-end-turn queues even while modal-blocked and drains when clear; shortcut gate uses `CanAdvanceTurn()`.
+
 ---
 
 ## Cross-package dependency sketch

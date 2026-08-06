@@ -142,6 +142,22 @@ void WorldView::SetSuppressDashboard(bool bSuppress)
     m_bSuppressDashboard = bSuppress;
 }
 
+void WorldView::ProcessPendingAutoEndTurn()
+{
+    if (!m_bPendingAutoEndTurn)
+    {
+        return;
+    }
+    // Keep the request queued while an in-view modal blocks Advance; soft-gate in
+    // Engine::ProcessTurn_ would otherwise drop it after clearing the flag.
+    if (BlocksTurnAdvance())
+    {
+        return;
+    }
+    m_bPendingAutoEndTurn = false;
+    m_onProcessTurn();
+}
+
 bool WorldView::PlayerUnitsNeedOrders_() const
 {
     const Faction* pPlayer = m_rGameState.GetPlayerFaction();
@@ -271,13 +287,15 @@ void WorldView::Update_()
     m_pEndTurnButton->SetReady(bPauseAtEnd && !bNeedOrders && !m_bSuppressDashboard);
 
     // When pause is off, advance automatically once the last unit that needed orders is done.
-    // Skip while CombatView is open (ProcessTurn_ also rejects overlays).
+    // Queue even if an in-view modal currently blocks Advance — ProcessPendingAutoEndTurn
+    // keeps the flag until CanAdvanceTurn is clear. Do not call m_onProcessTurn() here:
+    // Update_() runs from Render(), and Advance must never run on the paint path.
     if (!bPauseAtEnd && !m_bSuppressDashboard && m_bHadUnitsNeedingOrders && !bNeedOrders)
     {
         m_bHadUnitsNeedingOrders = false;
-        m_onProcessTurn();
+        m_bPendingAutoEndTurn = true;
     }
-    else
+    else if (!m_bPendingAutoEndTurn)
     {
         m_bHadUnitsNeedingOrders = bNeedOrders;
     }
@@ -288,13 +306,14 @@ void WorldView::Update_()
 
 bool WorldView::HandleKey(const KeyEvent_t& rEvent)
 {
-    // Popups / chrome first (Escape to dismiss SupplyCrawlPopup, etc.).
-    for (int i = static_cast<int>(m_elements.size()) - 1; i >= 0; --i)
+    // Exclusive modal capture (probe/supply popups, ...): while one is open it is the only
+    // thing that sees the key, so Enter cannot end the turn and map/unit hotkeys cannot
+    // mutate selection/orders underneath it. Always return true so UIManager does not run
+    // global view shortcuts (F2/E/…) while a Unit*-capturing modal is open on WorldView.
+    if (UIElement* pModal = GetTopModalElement())
     {
-        if (m_elements[static_cast<size_t>(i)]->HandleKey(rEvent))
-        {
-            return true;
-        }
+        (void)pModal->HandleKey(rEvent);
+        return true;
     }
 
     Unit* pControllable = GetControllableSelectedUnit_();
@@ -320,6 +339,7 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
         else if (m_pUnitOrderInputController->WasSupplyCrawlRequested() && pControllable)
         {
             Unit* pUnit = pControllable;
+            DismissOpenModals_();
             m_elements.push_back(std::make_unique<SupplyCrawlPopup>(
                 ResolveLayout(m_layout, Style().layouts.popupSmall),
                 [this, pUnit](StatId_t resource) {
@@ -403,6 +423,18 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
 
 void WorldView::HandleMouse(const MouseEvent_t& rEvent)
 {
+    // Exclusive modal capture: every press goes to the topmost modal element, even outside
+    // its own Contains rect (so outside-click dismiss works), and neither chrome nor the map
+    // underneath ever sees it. Release events are dropped, matching IGameView's default.
+    if (UIElement* pModal = GetTopModalElement())
+    {
+        if (rEvent.bPressed)
+        {
+            pModal->HandleMouseClick(rEvent);
+        }
+        return;
+    }
+
     // UI chrome (End Turn) above the map takes priority over tile/unit input.
     if (rEvent.bPressed)
     {
@@ -553,6 +585,7 @@ void WorldView::TryOpenProbeActions_(Unit& rProbe, const Tile& rTargetTile)
     // re-resolves and rejects cleanly if it is gone.
     Unit* pProbe = &rProbe;
     const Tile* pTargetTile = &rTargetTile;
+    DismissOpenModals_();
     m_elements.push_back(std::make_unique<ProbeActionPopup>(
         ResolveLayout(m_layout, Style().layouts.popupSmall),
         std::move(actions),

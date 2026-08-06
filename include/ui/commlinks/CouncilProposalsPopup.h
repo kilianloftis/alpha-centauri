@@ -23,6 +23,7 @@ public:
     ~CouncilProposalsPopup() override = default;
 
     void Render(Graphics& rGraphics) override;
+    bool IsModal() const override { return true; }
 
     bool HandleKey(const KeyEvent_t& rEvent) override;
     void HandleMouseClick(const MouseEvent_t& rEvent) override;

@@ -36,6 +36,13 @@ bool CouncilVoteView::HandleKey(const KeyEvent_t& rEvent)
     }
     if (rEvent.key == Key_t::Escape)
     {
+        // Refuse dismiss while a ballot is still open — closing would leave GetPending() set
+        // and brick further proposals (Package 5 owns absentee/resolve exits).
+        const PlanetaryCouncil* pCouncil = m_rGameState.GetPlanetaryCouncil();
+        if (pCouncil && pCouncil->GetPending())
+        {
+            return true;
+        }
         m_bShouldClose = true;
         return true;
     }
@@ -66,6 +73,7 @@ void CouncilVoteView::OpenBallotSelector_()
     const CouncilProposalConfig_t& rConfig = pCouncil->GetRegistry().Get(rPending.proposalId);
     const WindowLayout_t popupLayout = ResolveLayout(m_layout, Style().layouts.popupSmall);
 
+    DismissOpenModals_();
     if (rConfig.kind == CouncilProposalKind_t::Election)
     {
         m_elements.push_back(CouncilBallotPopup::CreateElection(

@@ -20,6 +20,7 @@ public:
     ~ComponentSelectorPopup() override = default;
 
     void Render(Graphics& rGraphics) override;
+    bool IsModal() const override { return true; }
     void HandleMouseClick(const MouseEvent_t& rEvent) override;
     bool HandleKey(const KeyEvent_t& rEvent) override;
 

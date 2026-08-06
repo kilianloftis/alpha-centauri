@@ -203,6 +203,7 @@ void BaseView::HandlePopClick(Pop& rPop)
         return;
     }
 
+    DismissOpenModals_();
     m_elements.push_back(std::make_unique<PopTypeSelectorPopup>(
         m_rFaction.GetAvailablePopTypes(),
         ResolveLayout(m_layout, Style().layouts.popupSmall),
@@ -231,6 +232,7 @@ void BaseView::HandleProductionDisplayClicked_()
 
     std::vector<const IConstructable*> available = m_rBase.GetConstructable();
 
+    DismissOpenModals_();
     m_elements.push_back(std::make_unique<ProductionSelectorPopup>(
         std::move(available),
         ResolveLayout(m_layout, Style().layouts.topPanel),
