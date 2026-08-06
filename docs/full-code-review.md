@@ -4,16 +4,17 @@
 **Scope:** All of `src/` except `Engine` (ad-hoc testing catchall). Headers under `include/` reviewed with their implementations.
 **Lens:** clean code, simplicity, SOLID, clarity, robustness, maintainability.
 **Note:** Many systems are intentionally unimplemented; missing features are not treated as defects.
-**Effects model:** Findings about the effects subsystem were extracted to [`docs/effects-model-review.md`](effects-model-review.md).
+**Effects model:** Findings about the effects subsystem were extracted to [`docs/effects-model-review.md`](effects-model-review.md) and have since been **remediated** by work packages 1–8 (`docs/effects-fix-packages.md`, analyses in [`docs/effects-fix-prompts/`](effects-fix-prompts/)). The per-section "effects-model findings moved" pointers, and the few findings in this document that those packages also fixed, were removed on 2026-08-06.
+**Remediation plan for what remains:** [`docs/full-review-fix-packages.md`](full-review-fix-packages.md).
 
 ## Summary
 
 | Severity | Count |
 |----------|------:|
 | High `[H]` | 50 |
-| Medium `[M]` | 165 |
+| Medium `[M]` | 163 |
 | Low `[L]` | 38 |
-| **Total** | **253** |
+| **Total** | **251** |
 
 Parts were produced by per-directory review agents (directories with >8 implementation files split across two agents), plus one architecture-only pass. Effects-model findings live in a separate document.
 
@@ -29,14 +30,14 @@ Parts were produced by per-directory review agents (directories with >8 implemen
 - [Faction — military, units, diplomacy, visibility](#faction-military-units-diplomacy-visibility) — H=3 M=6 L=1
 - [Base management — BaseManager, home-base index, buildings](#base-management-basemanager-home-base-index-buildings) — H=1 M=3 L=1
 - [Base management — population and production](#base-management-population-and-production) — H=2 M=9 L=1
-- [Base management — resources and worker assignment](#base-management-resources-and-worker-assignment) — H=1 M=5 L=1
+- [Base management — resources and worker assignment](#base-management-resources-and-worker-assignment) — H=1 M=4 L=1
 - [Map — runtime world model](#map-runtime-world-model) — H=1 M=5 L=1
 - [Map — world generation and config](#map-world-generation-and-config) — H=2 M=4 L=1
 - [Orbital systems](#orbital-systems) — H=0 M=2 L=1
 - [Population — calculators](#population-calculators) — H=1 M=4 L=1
 - [Population — pop types and config](#population-pop-types-and-config) — H=0 M=5 L=1
 - [Research — tech registry and costs](#research-tech-registry-and-costs) — H=1 M=3 L=1
-- [Social engineering — policies and ratings](#social-engineering-policies-and-ratings) — H=0 M=4 L=1
+- [Social engineering — policies and ratings](#social-engineering-policies-and-ratings) — H=0 M=3 L=1
 - [Turn stages — early pipeline](#turn-stages-early-pipeline) — H=1 M=3 L=1
 - [Turn stages — late pipeline and custom](#turn-stages-late-pipeline-and-custom) — H=1 M=2 L=1
 - [Units — model, orders, movement](#units-model-orders-movement) — H=2 M=5 L=1
@@ -290,11 +291,6 @@ replace hook removes a stage's real work and substitutes nothing. Secondary to t
 `TurnProcessor` gained a yield/resume state machine with no exception story — any throw from a
 stage leaves it wedged mid-stage with the hook lifecycle half-run.
 
-**Effects-model findings moved:** see [`docs/effects-model-review.md`](effects-model-review.md).
-- `[M] The effect validator's variant dispatch has no exhaustiveness guard`
-- `[M] A missing registry silently disables validation instead of failing`
-
-
 ### [H] A configured replace hook silently deletes the stage's behavior
 `include/game/TurnStages.h:67-71` (and `:87-91`) skip `ExecuteImpl` entirely whenever
 `HasReplaceHooks()` is true, and return `Continue`. But `HookContext::ExecuteReplaceHooks`
@@ -524,10 +520,6 @@ The dominant weakness is the state model itself: the "state machine" is one
 two different things, with no way to leave a pending vote once entered. Vote tallying and the
 election-candidate rule are also not where they claim to be.
 
-**Effects-model findings moved:** see [`docs/effects-model-review.md`](effects-model-review.md).
-- `[M] `ActiveEffect_t::config` pointers into a rebuilt vector outlive their guarantee`
-
-
 ### [H] `m_activeProposalIds` conflates "law in force" with "already enacted"
 `src/game/council/PlanetaryCouncil.cpp:532-535` — every passed non-election proposal is pushed
 into the active set, even one whose only content is a repeal or an instantaneous grant. Since
@@ -612,13 +604,14 @@ inertness may be the project's deliberate "legal but inert" policy, but silently
 declared `factionFilter` is a different failure — it produces wrong values rather than none.
 
 ### [M] `ComputeVoteWeight` rebuilds the whole effect pool per member, per call
-`src/game/council/PlanetaryCouncil.cpp:163-171` — each call copies the faction's entire cached
-effect pool, then appends copies of the governor and world effect vectors, to read a single
+`src/game/council/PlanetaryCouncil.cpp:155-175` — each call copies the faction's entire cached
+local effect pool, then appends copies of the governor and world effect entries, to read a single
 `CouncilVotes` stat. `TallyStandard_`/`TallyElection_` call it once per member, and
 `CouncilFactionVotesPanel::Render` calls it once per member *per frame*
-(`src/ui/council/CouncilFactionVotesPanel.cpp:119`). `CollectWorldEffects()` returning by value
-when `CouncilEffects::WorldEffects()` already exposes a const reference is the avoidable half of
-this; filtering by `StatId_t::CouncilVotes` before copying is the other.
+(`src/ui/council/CouncilFactionVotesPanel.cpp:119`). Effects package 3 removed the by-value
+`CollectWorldEffects()`/`CollectFactionEffects()` copies (both return `const&` now); what remains
+is the whole-pool copy — filter by `StatId_t::CouncilVotes` first, and key the UI read on a
+revision rather than recomputing per frame.
 
 ### [M] A missing member silently turns a won election into a failure
 `src/game/council/PlanetaryCouncil.cpp:517` — `FindMember_(bestId)` can return null, and
@@ -677,11 +670,6 @@ proposal schema is a permissive *superset* of what the runtime honors — severa
 combinations load cleanly and then do nothing at all, which is the one failure mode a
 data-driven, moddable proposal list cannot afford. Adding a proposal built from existing
 effect types is pure data (good); adding a new *outcome* still requires C++.
-
-**Effects-model findings moved:** see [`docs/effects-model-review.md`](effects-model-review.md).
-- `[H] Proposal `effects` are accepted in shapes the council can never apply`
-- `[M] `governor_effects` are parsed without checking the shapes the runtime keeps`
-
 
 ### [M] `kind` and `election_outcome` are parsed independently, and mismatches half-apply
 `CouncilProposalConfigParser.cpp:53` and `:70-73` parse the two fields with no consistency
@@ -742,7 +730,7 @@ which they get. Fix: either state the actual semantics on this field, or split i
 - `src/game/council/CouncilProposalConfigParser.cpp:80-92` — `ParseVoteWeight` / `ParseKind` are
   hand-rolled string chains whose wire forms differ from the enumerators only by case
   (`"standard"` ↔ `Standard`); the guidelines call for `magic_enum::enum_cast` here, as
-  `BonusEffectParser.cpp:502` already does. `ParseElectionOutcome` correctly keeps an explicit
+  `EffectConfigParser.cpp:419` already does. `ParseElectionOutcome` correctly keeps an explicit
   map (`"supreme_leader"` ↔ `SupremeLeaderVictory`).
 - `src/game/council/CouncilProposalConfigParser.cpp:80-101` — all three helpers are stateless
   `const` members; moving them beside `ParseRuleFlagList_` in the anonymous namespace would
@@ -754,10 +742,7 @@ which they get. Fix: either state the actual semantics on this field, or split i
   wants an object variant.
 - `src/game/council/CouncilRulesConfigParser.cpp:47-48` — the `wrapper["effects"] = ...` trick to
   satisfy `ParseEffects`' container contract is duplicated at `ProbeActionConfigParser.cpp:60`; a
-  `ParseEffectList(const json& array)` overload in `BonusEffectParser` would remove both.
-- `src/game/council/CouncilRulesConfigParser.cpp:50` — governor effects are labelled
-  `EffectSourceKind_t::CouncilProposal`; their source is the governorship, not a proposal. Only
-  affects diagnostics today, but it is a wrong fact recorded in code.
+  `ParseEffectList(const json& array)` overload in `EffectConfigParser` would remove both.
 - `src/game/council/CouncilProposalConfigParser.cpp:17-33` — `ParseRuleFlagList_` re-implements the
   string-array read that `ConfigFields::ParseStringArray` already provides; only the flag mapping
   is council-specific.
@@ -803,14 +788,6 @@ the cache is not bound to the faction it was built for. Outside the pool, the do
 weakness is optional-pointer dependencies handled three different ways per class, plus a
 research cost cache keyed on only one of its two inputs. `EconomyManager`, `FactionIdentity`,
 `AIProfile` and `Specialist` are thin to the point of being liabilities.
-
-**Effects-model findings moved:** see [`docs/effects-model-review.md`](effects-model-review.md).
-- `[H] Research cost cache is keyed on the effects version but also depends on tech count`
-- `[M] Social-rating expansion runs before pop and unit effects are collected`
-- `[M] `removed_by_tech` is filtered after the effects it gates have already been expanded`
-- `[M] The memoized pool is not bound to the faction it was built for`
-- `[M] The rebuild stamp is re-collected after the rebuild instead of snapshotted before it`
-
 
 ### [H] `EconomyManager` owns the treasury but offers no way to spend from it
 `src/game/faction/EconomyManager.cpp:12-15` — `AddEnergy` is the only mutator and applies
@@ -917,10 +894,6 @@ subsystem; a single game-level seed source would settle both.
   not true: any contributor bump rebuilds and increments the version even when the content is
   identical (add then destroy an effect-less building), needlessly invalidating
   `BaseManager::BuildBaseEffects_` and the research cost.
-- `include/game/faction/FactionEffectsPool.h:44-46` — the unit collector comment says "any
-  scope except the locally-resolved ThisUnit/ThisTile", but `IsFactionLane` also drops
-  `ThisBase` and `ProducedAtThisBase`, which parse-time validation permits on a unit
-  component; those are silently discarded.
 - `include/game/faction/SocialEngineeringManager.h:25-26` — the comment says `SetActivePolicy`
   throws "when a registry is bound"; it now also throws when one is not
   (`SocialEngineeringManager.cpp:61-64`). It also takes a whole `SocialPolicyConfig_t` only to
@@ -940,8 +913,7 @@ subsystem; a single game-level seed source would settle both.
 
 **Observed outside slice:**
 - `include/game/faction/base/population/PopContainer.h:33` + `include/game/population/pop-types/Pop.h:56` — `Pops()` hands out mutable `Pop&` and `Pop::Convert` is public, so a pop's type (a pool input) can be changed without bumping `PopContainer::m_revision`; only `PopContainer` calls it today, so the "every mutator bumps" invariant holds by discipline alone.
-- `src/game/Faction.cpp:455-467,469-481` — `ProduceBaseResources`/`ApplyBaseGrowth` append external/council effects to a *copy* of the pool, while `BaseManager`'s cached `BuildBaseEffects_()` path sees the pool without them, so `GetEconProduction()` and the per-turn production run answer differently for the same base.
-- `src/game/faction/base/BaseManager.cpp:300-310` — `BuildBaseEffects_()` calls `GetActiveEffects()` and `GetEffectsVersion()` back to back, validating the pool (a full per-base revision traversal) twice per stat read.
+- `src/game/faction/base/BaseManager.cpp:311-324` — `BuildBaseEffects_()` calls `GetActiveEffects()` and `GetEffectsVersion()` back to back, validating the pool (a full per-base revision traversal) twice per stat read.
 - `docs/architecture/faction-system.md:31-39,205-231` — the economy/AI subsystems are documented with members that do not exist (`Credits`, `TradeRoutes`, `IncomeCalculator`, `Personality`, `Priorities`, `UnitFactory`), and `FactionEffectsPool`, `ResearchSelector`, `SocialEngineeringManager` and `UnitManager` are absent entirely; `docs/architecture/high-level.md:285` lists the same stale subsystem set.
 
 ---
@@ -973,11 +945,6 @@ keyed by stable id). The dominant weakness is *when* that derived state is recom
 whole-map scan fires on every unit event — and the diplomacy executor, which validates a
 proposal item-by-item but applies it as a whole, and reaches its collaborator through a
 post-construction setter.
-
-**Effects-model findings moved:** see [`docs/effects-model-review.md`](effects-model-review.md).
-- `[M] `IsUnitVisibleTo` re-collects tile area effects once per concealment channel`
-- `[M] A `Detect` effect with no `ownerFaction` reveals concealed units to *every* faction`
-
 
 ### [H] Visibility rebuild is a whole-map, per-event recompute
 `src/game/faction/FactionVisibleMap.cpp:104` — `RebuildFromSources` clears and re-derives
@@ -1118,12 +1085,6 @@ is the one the UI and half the turn pipeline read. Secondary: the constructor st
 ten nullable dependencies whose null behaviour is inconsistent (throw / silent skip /
 deferred throw from a sub-manager).
 
-**Effects-model findings moved:** see [`docs/effects-model-review.md`](effects-model-review.md).
-- `[H] Two divergent effect lists per base: the memo omits world and council effects`
-- `[M] `CollectBuildingEffects` re-implements the origin-tagging rule that the effects layer owns`
-- `[M] Instantaneous `Infiltration` is unreachable from the only production-completion path`
-
-
 ### [H] The constructor accepts ten nullable dependencies with three different null behaviours
 `src/game/faction/base/BaseManager.cpp:48`–`64` — every registry, calculator, config and
 manager arrives as a raw pointer that may be null, and the class then reacts differently to
@@ -1205,9 +1166,7 @@ missing entry, and stop implying an exception contract that cannot hold.
   destructor (the class holds no incomplete types); it also suppresses implicit moves.
 
 **Observed outside slice:**
-- `src/game/Faction.cpp:455`,`:469` — the world-effect append that creates the two-list split
-  above lives here; the base-side half is reported in this slice.
-- `docs/architecture/effects-system.md:356` — states `ResourceManager::ProduceResources()`
+- `docs/architecture/effects-system.md:462` — states `ResourceManager::ProduceResources()`
   "stores the effects"; it takes them per call and stores nothing (`ResourceManager.h:50`).
 
 ---
@@ -1283,10 +1242,6 @@ callers asking a per-base one, and `ResourceManager` is a thin but sloppy layer 
 pointers, five near-identical stockpile accessors, and a base-level modifier pass that silently
 drops every percentage effect.
 
-**Effects-model findings moved:** see [`docs/effects-model-review.md`](effects-model-review.md).
-- `[H] Base-level percentage modifiers are silently discarded`
-
-
 ### [H] `IsTileAssigned` answers "worked by anyone" to callers asking "worked by me"
 `src/game/faction/base/resources/WorkerAssignmentManager.cpp:142-148` forwards to the world-scoped
 index, which is correct for `GetAvailableTiles_` but wrong for the two UI callers, and the class
@@ -1346,15 +1301,6 @@ feature — the cost is already charged. Related: the stockpiles are accumulate-
 no per-turn guard, so a mod that drops a consuming stage from `config/turn_stages.json` grows them
 without bound silently.
 
-### [M] `int` truncation where the rest of the pipeline rounds
-`ResourceManager.cpp:126` ends `CalculateResource_` with `static_cast<int>(base)`, and lines 145/153/161
-truncate the modifier totals the same way. `Pop::ApplyTileMultipliers` uses `std::round`
-(`src/game/population/pop-types/Pop.cpp:111`) for the equivalent step. Truncation toward zero loses a
-whole resource point on ordinary binary-float products (e.g. a correctly applied `-30%` on 7 gives
-4.899…→4, not 5) and rounds negative penalties *up*, i.e. in the player's favour. Once the percentage
-bug above is fixed this becomes visible on every base. Fix: pick one rounding rule for resource
-integers and use it in both places.
-
 ### [L] Convention and hygiene items
 - `WorkerAssignmentManager.h:50-57` — `ReleaseUserAssignment` / `ReleaseAllUserAssignments` have no
   callers anywhere (the latter not even in tests) and `ReleaseUserAssignment`'s body is identical to
@@ -1390,10 +1336,6 @@ integers and use it in both places.
   `OnPopLost` does not, so a tile freed by starvation stays unworked while fallback specialists exist.
 - `src/ui/base/BaseView.cpp:189-196` — the tile-click toggle depends on the conflated predicate above;
   it will need updating with the fix.
-- `docs/architecture/effects-system.md:356-357` — says `ResourceManager::ProduceResources()` "stores the
-  effects" (they are passed per call now) and describes the base-level pass as adding "flat"
-  contributions, which is the documented cover for the `AddPercent` defect above.
-
 ---
 
 ## Map — runtime world model
@@ -1744,20 +1686,13 @@ census entries from repeated calls to one function).
 
 **Files:** `src/game/social-engineering/SocialPolicyConfigParser.cpp`, `include/game/social-engineering/SocialPolicyConfigParser.h`, `src/game/social-engineering/SocialRatingConfigParser.cpp`, `include/game/social-engineering/SocialRatingConfigParser.h`, `src/game/social-engineering/SocialRatingResolver.cpp`, `include/game/social-engineering/SocialRatingResolver.h`, `include/game/social-engineering/SocialEffects.h`, `include/game/social-engineering/SocialRatingRegistry.h`, `include/game/social-engineering/SocialPolicyRegistry.h`, `include/game/social-engineering/SocialRatingConfig.h`, `include/game/social-engineering/SocialPolicyConfig.h`
 
-**Assessment:** Policy config + `IsAvailable`, registries, and the SMAC clamp path (`ClampSocialRatingTotal` / `FindSocialRatingLevelEffects` / per-base `ExpandSocialRatingEffects`) are clear and match the two-level design. The weak spot is faction-lane expansion: it accumulates on the raw faction pool and breaks the same invariant the per-base path and the resolver header document. Rating load also lagged behind the shared `JsonConfigLoader` / `ConfigFields` pattern the policy parser already uses.
-
-**Effects-model findings moved:** see [`docs/effects-model-review.md`](effects-model-review.md).
-- `[H] Do not accumulate ThisBase modifiers for FactionUnits expansion`
-
+**Assessment:** Policy config + `IsAvailable`, registries, and the SMAC clamp path (`ClampSocialRatingTotal` / `FindSocialRatingLevelEffects` / per-base `ExpandSocialRatingEffects`) are clear and match the two-level design; faction-lane expansion (previously accumulating over the raw faction pool) was fixed by effects package 2, which also collapsed both expands onto one shared append helper. What remains is rating load, which still lags behind the shared `JsonConfigLoader` / `ConfigFields` pattern the policy parser already uses.
 
 ### [M] Rating parser still hand-rolls file load and weak field access
 `src/game/social-engineering/SocialRatingConfigParser.cpp:17-66` — `ParseConfig` duplicates `JsonConfigLoader::LoadFile` (open / array check / loop / cout), while `SocialPolicyConfigParser` already uses the shared helper. `ParseRatingConfig` uses `operator[]` for `id` / `levels` instead of `ConfigFields::ParseId` and `.at("levels")`, so a missing `levels` object can yield an empty table instead of a load error. Route through `JsonConfigLoader::LoadFile` + `ConfigFields` and require `levels` to be a JSON object.
 
-### [M] Clamp/lookup logic is copied three ways
-`src/game/social-engineering/SocialRatingResolver.cpp:38-53`, `55-88`, `91-128` — `FindSocialRatingLevelEffects` already clamps and exact-matches, but both expand functions reimplement that path and nearly duplicate each other (differing only in the append filter). A future clamp or sourceId change can drift between UI lookup and gameplay expansion. Drive both expands through `FindSocialRatingLevelEffects` (plus a small append helper with an optional lane filter).
-
 ### [M] Missing rating-table entry silently drops the axis
-`src/game/social-engineering/SocialRatingResolver.cpp:67-70`, `104-107` — a non-zero accumulated total whose axis is absent from `SocialRatingRegistry` (or has an empty `levelEffects`) is skipped with no error. Modifier parse already constrains `SocialRatingId_t`; a missing table row is a config/registry defect. Prefer `Get` / throw on unknown axis when `total != 0`, consistent with the project’s required-id rule.
+`src/game/social-engineering/SocialRatingResolver.cpp:31-35`, `39-43` (`AppendRatingLevelEffects_`) — a non-zero accumulated total whose axis is absent from `SocialRatingRegistry` (or has an empty `levelEffects`) is skipped with no error. Modifier parse already constrains `SocialRatingId_t`; a missing table row is a config/registry defect. Prefer `Get` / throw on unknown axis when `total != 0`, consistent with the project’s required-id rule.
 
 ### [M] Delete unused `SocialScores` stub type
 `include/game/social-engineering/SocialEffects.h:6-18` — `SocialScores` is never included or referenced anywhere in the tree. It presents a parallel per-field score model next to the real `SocialRatingId_t` + map accumulation path and will mislead the next reader. Remove the header (or replace it only when a real DTO is needed).
@@ -1765,12 +1700,11 @@ census entries from repeated calls to one function).
 ### [L] Convention and hygiene items
 - `include/game/social-engineering/SocialEffects.h:6` — `SocialScores` omits the `_t` data-struct suffix required by coding guidelines.
 - `include/game/social-engineering/SocialPolicyRegistry.h:15` — parameter `rCategory` is passed by value; `r` prefix is for references.
-- `include/game/social-engineering/SocialPolicyConfigParser.h:4` — `#include "game/effects/BonusEffectParser.h"` is unused in the header (only the `.cpp` needs it).
+- `include/game/social-engineering/SocialPolicyConfigParser.h:4` — `#include "game/effects/EffectConfigParser.h"` is unused in the header (only the `.cpp` needs it).
 - `include/game/social-engineering/SocialPolicyConfigParser.h:15-16`, `SocialRatingConfigParser.h:14-15` — empty public default constructors add nothing; prefer `= default` on the declaration or omit.
-- `src/game/social-engineering/SocialRatingResolver.cpp:31-35` — `ClampSocialRatingTotal` is UB on empty `levelEffects` (`begin()`/`rbegin()`); public API documents the precondition but does not enforce it (assert or throw).
+- `src/game/social-engineering/SocialRatingResolver.cpp:80-85` — `ClampSocialRatingTotal` is UB on empty `levelEffects` (`begin()`/`rbegin()`); public API documents the precondition but does not enforce it (assert or throw).
 
 **Observed outside slice:**
-- `docs/architecture/effects-system.md:324-327` — still claims accumulation takes `BaseEffects_t` so the raw pool is a compile error; code now takes `vector<ActiveEffect_t>` and `ExpandFactionLaneSocialRatingEffects` runs on the pool (`FactionEffectsPool.cpp:160`).
 - `docs/architecture/high-level.md:365` — still says `EffectConfig_t` “will eventually” live on `SocialPolicyConfig_t`; policies already store `effects`.
 
 ---
@@ -2008,7 +1942,7 @@ turn order.
 - `include/game/units/DisengageRules.h:22` — Header says “neither combatant is an air unit”; `DisengageRules.cpp:64-66` also blocks Orbital — update the contract comment.
 - `include/game/units/ProbeActionConfig.h:35-68` — `ProbeActionIdToString` / `ParseProbeActionId` duplicate the snake_case map; keep one table.
 - `src/game/units/ProbeActionEffects.cpp:118` — HQ exclusion uses string id `"Headquarters"` while `ProbeRules` already exposes `IsHeadquarters` via the rule flag.
-- `src/game/units/AttackRules.cpp:5` / `ProbeActionEffects.cpp:9` — Likely unused includes (`BonusEffect.h`, `DiplomacyLedger.h`).
+- `src/game/units/AttackRules.cpp:5` / `ProbeActionEffects.cpp:9` — Likely unused includes (`EffectConfig.h`, `DiplomacyLedger.h`).
 - `src/game/units/BaseConquestConfigParser.cpp:22-28` — Optional `json.value(..., default)` soft-fills tunables; other parsers in this slice throw on missing required structure.
 
 **Observed outside slice:**
