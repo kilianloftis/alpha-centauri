@@ -770,6 +770,21 @@ Package 4 owns the constructor/null-policy half of these classes (two-phase-init
 - The `GameState` / `Faction` god-facade split ([H]) — ~50 and ~60 public members across eighteen concerns; needs its own package, sequenced after 5–17.
 - `AddFaction` does not *enforce* that a faction was built against the session's `WorldMap`. The contract is documented and production satisfies it; enforcing it needs a fixture map-ownership redesign with destruction-order hazards.
 
+### Package 5 — Planetary Council lifecycle and availability (2026-08-06)
+
+**Status:** complete for the lifecycle/availability half; four findings deferred with reasons (below)  
+**Prompt:** [`docs/full-review-fix-prompts/05-council-lifecycle-and-schema.md`](full-review-fix-prompts/05-council-lifecycle-and-schema.md)
+
+**Fixes landed:**
+- Absentees abstain: `Resolve` dropped the "everyone voted" precondition, and `CouncilVoteView` stopped gating on it (Escape now resolves rather than trapping the player). The pending slot was terminal — nothing else clears it and `Propose` throws while it is set.
+- In force vs enacted split: only proposals carrying continuous world effects enter the active set (`IsActive`); everything else is history (`HasPassed`). Marking pure repeals active consumed `repeal_un_charter` permanently, so a reinstated charter could never be repealed again.
+- `required_proposals` asks "enacted"; a repeal is available only while a target is in force and is exempt from one-shot consumption. Both come from what the shipped config already declares — no invented rules.
+- `TallyStandard_` honors `voteThreshold`; `CastElectionVote` and the tally validate candidates against an eligibility set snapshotted when the vote opens; the UI offers exactly that set.
+
+**Review follow-ups applied:** the eligibility check had made the AI stub throw out of `Propose` (it backed the proposer without checking eligibility), stranding a pending vote — fixed, plus `Propose` now clears the slot if an observer throws. The UI half of the brick fix was missing, so the library change had no reachable caller.
+
+**Deferred, with rationale:** election veto overrule (`VetoUnanimouslyOverruled_` reads standard ballots, which elections never populate — needs a SMAC rule, left as a TODO); `CouncilOutcomeApplier` per-effect targeting; missing-member-fails-election; extracting the tallies as pure functions. See the analysis doc.
+
 ---
 
 ## Cross-package dependency sketch
