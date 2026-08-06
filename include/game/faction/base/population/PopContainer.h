@@ -12,21 +12,19 @@ namespace ac
 {
 
 class PopTypeRegistry;
-class PopTypeAvailabilityCalculator;
-class ResearchManager;
-struct PopCompositionResult;
 
-// Manages the population vector and pop transformations.
-// Tracks assigned vs unassigned pops and handles automatic conversions.
+// Storage for a base's pops: the vector, the counts, and the revision. Deliberately owns no
+// population *policy* — which types a pop may become, how the obsolescence chain resolves, and
+// how composition targets are reconciled all live in PopulationManager. Keeping the rules out
+// of here is what makes them enforceable in one place: this class used to hold the availability
+// calculator and apply it on one conversion path (ConvertToFallback) but not the other
+// (ConvertTo), so ConvertTo could install a pop type the fallback path would have refused.
 class PopContainer
 {
 public:
-    // References: a null registry used to construct a base with zero pops and then throw on
-    // the first AddPop, which is a failure reported at the wrong place and time.
-    PopContainer(const PopTypeRegistry& rRegistry,
-                 const PopTypeAvailabilityCalculator& rAvailabilityCalculator,
-                 const ResearchManager& rResearchManager,
-                 int initialSize);
+    // The registry is a reference: a null one used to construct a base with zero pops and then
+    // throw on the first AddPop, which is a failure reported at the wrong place and time.
+    PopContainer(const PopTypeRegistry& rRegistry, int initialSize);
     ~PopContainer() = default;
 
     // Container access
@@ -35,8 +33,12 @@ public:
     auto Pops() { return DerefView(m_pops); }
     auto Pops() const { return DerefView(m_pops); }
 
-    // Population counts by type
+    // Population counts by type.
+    // GetWorkerCount is every tile-capable pop — plain workers *and* drones *and* talents — so
+    // it does not partition the population against the counts below. Callers that need the
+    // disjoint "worker, not drone, not talent" bucket want GetPlainWorkerCount.
     int GetWorkerCount() const;
+    int GetPlainWorkerCount() const;
     int GetTalentCount() const;
     int GetDroneCount() const;
     int GetSpecialistCount() const;
@@ -45,20 +47,10 @@ public:
     void AddPop(const std::string& typeId);
     void RemovePop();
 
-    // Convert a pop to any type by config id
-    void ConvertTo(Pop& rPop, const std::string& typeId);
-
-    // Convert this pop to its configured fallback type, resolved through the obsolescence chain
-    // so the pop ends up as the most current non-obsoleted successor.
-    // Throws if the pop has no fallback configured or the resolved type is not in the registry.
-    void ConvertToFallback(Pop& rPop);
-
-    // Apply composition targets: converts excess drones/talents to workers,
-    // then promotes plain workers to the configured drone/talent type ids.
-    void ApplyCompositionTargets(const PopCompositionResult& targets,
-                                 const std::string& defaultTypeId,
-                                 const std::string& droneTypeId,
-                                 const std::string& talentTypeId);
+    // Install an already-resolved type on a pop. The caller decides *which* type is legal —
+    // see PopulationManager::ConvertTo, which resolves the id through the obsolescence chain
+    // first, so every conversion path applies the same rule.
+    void ConvertTo(Pop& rPop, const PopTypeConfig_t& rConfig);
 
     // Compute total psych output across all pops
     int ComputePsychOutput() const;
@@ -66,17 +58,10 @@ public:
     // Bumped on every pop mutation (add/remove/convert); consumed by effect-pool caches.
     uint64_t GetRevision() const { return m_revision.Get(); }
 
-    // See PopulationManager::RebindResearch.
-    void RebindResearch(const ResearchManager& rResearch);
-
 private:
     std::vector<std::unique_ptr<Pop>> m_pops;
     Revision m_revision;
     const PopTypeRegistry& m_rRegistry;
-    const PopTypeAvailabilityCalculator& m_rAvailabilityCalculator;
-    // A pointer, unlike its siblings above, only because RebindResearch re-points it when the
-    // base changes owner. Set from a constructor reference; never null.
-    const ResearchManager* m_pResearchManager;
 
     int CountPops_(bool (*predicate)(const Pop*)) const;
 };

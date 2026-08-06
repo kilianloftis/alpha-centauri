@@ -1,0 +1,56 @@
+[
+  {
+    "id": "Worker",
+    "name": "Worker",
+    "is_default": true,
+    "can_work_tile": true,
+    "player_assignable": true,
+    "riot_contribution": 0,
+    "golden_age_contribution": 0,
+    "obsoletes": [],
+    "effects": []
+  },
+  {
+    "id": "Drone",
+    "name": "Drone",
+    "can_work_tile": true,
+    "player_assignable": false,
+    "riot_contribution": 1,
+    "golden_age_contribution": 0,
+    "obsoletes": [],
+    "effects": []
+  },
+  {
+    "id": "Talent",
+    "name": "Talent",
+    "can_work_tile": true,
+    "player_assignable": false,
+    "riot_contribution": 0,
+    "golden_age_contribution": 1,
+    "obsoletes": [],
+    "effects": []
+  },
+  {
+    "id": "Technician",
+    "name": "Technician",
+    "can_work_tile": false,
+    "player_assignable": true,
+    "riot_contribution": 0,
+    "golden_age_contribution": 0,
+    "fallback_pop_type": "Worker",
+    "obsoletes": [],
+    "effects": []
+  },
+  {
+    "id": "Engineer",
+    "name": "Engineer",
+    "can_work_tile": false,
+    "player_assignable": true,
+    "riot_contribution": 0,
+    "golden_age_contribution": 0,
+    "required_tech": "advanced_build",
+    "fallback_pop_type": "Worker",
+    "obsoletes": ["Technician"],
+    "effects": []
+  }
+]

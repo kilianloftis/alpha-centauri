@@ -5,8 +5,13 @@
 
 #include "game/faction/base/population/PopContainer.h"
 #include "game/faction/base/population/PopulationManager.h"
+#include "game/faction/ResearchManager.h"
 #include "game/population/calculators/PopCompositionCalculator.h"
+#include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "game/population/pop-types/GrowthConfigParser.h"
+#include "game/research/TechCostCalculator.h"
+#include "game/research/TechCostConfig.h"
+#include "game/research/TechRegistry.h"
 #include "game/population/pop-types/Pop.h"
 #include "game/population/pop-types/PopCompositionConfigParser.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
@@ -51,26 +56,36 @@ TEST_CASE("Pop role predicates: drone, talent, plain worker, specialist", "[popu
 TEST_CASE("ApplyCompositionTargets uses configured type ids and skips existing drones",
           "[population][composition]")
 {
+    // Reconciliation is driven through PopulationManager now: PopContainer is storage and owns
+    // no policy, so the tech gate cannot apply on one conversion path and not another.
     actest::PopRulesFixture reg;
-    PopContainer container(reg.popTypes, *reg.availability, *reg.research, /*initialSize*/ 0);
-    container.AddPop("Worker");
-    container.AddPop("Worker");
-    container.AddPop("Drone");
-    container.AddPop("Worker");
+    LuaRuntime lua;
+    PopCompositionConfigParser parser;
+    const PopCompositionConfig_t config =
+        parser.ParseConfig(actest::FixturePath("pop_composition.lua"), lua);
+    PopCompositionCalculator calculator(config, lua);
+    GrowthConfig_t growth;
+
+    PopulationManager pops(reg.popTypes, *reg.availability, growth, calculator, *reg.research,
+                           /*initialSize*/ 0);
+    pops.AddPop("Worker");
+    pops.AddPop("Worker");
+    pops.AddPop("Drone");
+    pops.AddPop("Worker");
 
     PopCompositionResult targets;
     targets.targetDrones = 2;
     targets.targetTalents = 1;
 
-    container.ApplyCompositionTargets(targets, "Worker", "Drone", "Talent");
+    pops.ApplyCompositionTargets(targets, "Drone", "Talent");
 
-    CHECK(container.GetSize() == 4);
-    CHECK(container.GetDroneCount() == 2);
-    CHECK(container.GetTalentCount() == 1);
+    CHECK(pops.GetSize() == 4);
+    CHECK(pops.GetDroneCount() == 2);
+    CHECK(pops.GetTalentCount() == 1);
     // One plain worker remains; GetWorkerCount includes drones/talents (can-work, non-specialist).
-    CHECK(container.GetWorkerCount() == 4);
+    CHECK(pops.GetWorkerCount() == 4);
     int plainWorkers = 0;
-    for (const Pop& rPop : container.Pops())
+    for (const Pop& rPop : pops.Pops())
     {
         if (rPop.IsPlainWorker())
         {
@@ -78,6 +93,76 @@ TEST_CASE("ApplyCompositionTargets uses configured type ids and skips existing d
         }
     }
     CHECK(plainWorkers == 1);
+}
+
+TEST_CASE("Golden age counts plain workers, not every tile-capable pop",
+          "[population][goldenage]")
+{
+    // GetWorkerCount() is every tile-capable pop, so drones and talents were counted on both
+    // sides of GoldenAgeCalculator's documented "talents >= workers + specialists" rule.
+    // Counting talents against themselves made the effective condition "every pop a talent".
+    actest::PopRulesFixture reg;
+    LuaRuntime lua;
+    PopCompositionConfigParser parser;
+    const PopCompositionConfig_t config =
+        parser.ParseConfig(actest::FixturePath("pop_composition.lua"), lua);
+    PopCompositionCalculator calculator(config, lua);
+    GrowthConfig_t growth;
+
+    PopulationManager pops(reg.popTypes, *reg.availability, growth, calculator, *reg.research,
+                           /*initialSize*/ 0);
+    // Two talents and one plain worker, no drones: talents(2) >= workers(1) + specialists(0).
+    pops.AddPop("Talent");
+    pops.AddPop("Talent");
+    pops.AddPop("Worker");
+
+    REQUIRE(pops.GetTalentCount() == 2);
+    REQUIRE(pops.GetDroneCount() == 0);
+    // The distinction the fix rests on: three tile-capable pops, one of them a plain worker.
+    REQUIRE(pops.GetWorkerCount() == 3);
+    REQUIRE(pops.GetPlainWorkerCount() == 1);
+
+    pops.CheckGoldenAgeEndOfTurn();
+    // With GetWorkerCount() the test would be talents(2) >= 3 + 0 — false, no golden age.
+    CHECK(pops.IsInGoldenAge());
+}
+
+TEST_CASE("Every conversion path resolves the obsolescence chain", "[population][composition]")
+{
+    // The defect this package's [H] describes: PopContainer held the availability calculator
+    // and applied it in ConvertToFallback but not in ConvertTo, so ConvertTo could seat a pop
+    // type the fallback path would have refused — the tech gate existed on one path only.
+    // Both now go through PopulationManager::ResolveType_.
+    PopTypeRegistry registry;
+    registry.Load(actest::FixturePath("pop_types_obsolescence.json"));
+
+    TechRegistry techs;
+    techs.Load(actest::FixturePath("techs.json"));
+    LuaRuntime lua;
+    TechCostConfig_t techCostConfig;
+    TechCostCalculator techCost(techCostConfig, lua);
+    ResearchManager research(techs, techCost, /*pEffectsProvider*/ nullptr);
+    PopTypeAvailabilityCalculator availability(registry);
+
+    PopCompositionConfigParser parser;
+    const PopCompositionConfig_t config =
+        parser.ParseConfig(actest::FixturePath("pop_composition.lua"), lua);
+    PopCompositionCalculator calculator(config, lua);
+    GrowthConfig_t growth;
+
+    PopulationManager pops(registry, availability, growth, calculator, research,
+                           /*initialSize*/ 1);
+    Pop& rPop = *pops.Pops().begin();
+
+    // Before the tech, Engineer does not exist yet, so Technician is current.
+    pops.ConvertTo(rPop, "Technician");
+    CHECK(std::string(rPop.GetPopType()) == "Technician");
+
+    // Discovering the tech makes Engineer obsolete Technician. Asking for a Technician now
+    // yields an Engineer — the same resolution ConvertToFallback always performed.
+    research.AddDiscoveredTech("advanced_build");
+    pops.ConvertTo(rPop, "Technician");
+    CHECK(std::string(rPop.GetPopType()) == "Engineer");
 }
 
 TEST_CASE("PopCompositionConfigParser requires drone_type and talent_type",

@@ -17,6 +17,7 @@ struct GrowthConfig_t;
 class PopTypeRegistry;
 class PopTypeAvailabilityCalculator;
 class PopCompositionCalculator;
+struct PopCompositionResult;
 class ResearchManager;
 
 // PopulationManager is the API surface for the population component.
@@ -47,7 +48,10 @@ public:
     auto Pops() const { return m_container.Pops(); }
 
     // Pop counts by type
+    // Every tile-capable pop, including drones and talents — see PopContainer::GetWorkerCount.
     int GetWorkerCount() const { return m_container.GetWorkerCount(); }
+    // Workers that are neither drones nor talents; disjoint from the two counts below.
+    int GetPlainWorkerCount() const { return m_container.GetPlainWorkerCount(); }
     int GetTalentCount() const { return m_container.GetTalentCount(); }
     int GetDroneCount() const { return m_container.GetDroneCount(); }
     int GetSpecialistCount() const { return m_container.GetSpecialistCount(); }
@@ -79,8 +83,16 @@ public:
 
     // Reconcile actual pop composition against calculator targets.
     // Converts workers to drones/talents (or back) to match targetDrones/targetTalents.
-    // No-op if no composition calculator is set.
     void RecalculateComposition();
+
+    // Reconcile against explicitly supplied targets. This is population *policy* — which pops
+    // change and in what order — and lives here rather than in PopContainer, which is storage.
+    // Every conversion it performs is resolved through the obsolescence chain, so the tech gate
+    // applies here exactly as it does to ConvertTo and ConvertToFallback; the container's own
+    // version applied it to neither.
+    void ApplyCompositionTargets(const PopCompositionResult& rTargets,
+                                 const std::string& droneTypeId,
+                                 const std::string& talentTypeId);
 
     // Defers specialist-driven RecalculateComposition until the outermost batch ends, so
     // multi-pop conversions (reset / auto-assign overflow) apply composition once.
@@ -104,6 +116,7 @@ public:
 
     // Check golden age conditions at end of turn. Delegates to m_goldenAge.Update(...).
     void CheckGoldenAgeEndOfTurn();
+    bool IsInGoldenAge() const;
 
     // Population limits (initial value from GrowthConfig_t::maxBaseSize).
     // Hab Complex / Habitation Dome should raise this via SetMaxSize (TODO).
@@ -147,6 +160,11 @@ public:
 private:
     PopContainer m_container;
     const PopTypeRegistry& m_rRegistry;
+    // The rules services the container used to hold. They live here because this class owns
+    // population policy — conversion legality, the obsolescence chain, composition targets.
+    const PopTypeAvailabilityCalculator& m_rAvailabilityCalculator;
+    // A pointer only because RebindResearch re-points it when the base changes owner.
+    const ResearchManager* m_pResearch;
     const GrowthConfig_t& m_rGrowthConfig;
     PopCompositionCalculator& m_rCompositionCalculator;
     int m_maxSize;
@@ -163,6 +181,12 @@ private:
     void NotifyPopLost_();
     void MaybeRecalculateCompositionAfterSpecialistChange_();
     const std::string& GetDefaultPopType_() const;
+    // Requested type id -> the type a pop actually becomes, walking the obsolescence chain
+    // against currently discovered techs. The one place that rule is applied.
+    const PopTypeConfig_t& ResolveType_(const std::string& typeId) const;
+    // ConvertTo without the specialist-change recalculation hook, for callers that are already
+    // inside a recalculation.
+    void ConvertResolved_(Pop& rPop, const std::string& typeId);
 };
 
 } // namespace ac

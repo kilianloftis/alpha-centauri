@@ -1,7 +1,4 @@
 #include "game/faction/base/population/PopContainer.h"
-#include "game/faction/ResearchManager.h"
-#include "game/population/calculators/PopCompositionCalculator.h"
-#include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
 #include <stdexcept>
@@ -9,13 +6,8 @@
 namespace ac
 {
 
-PopContainer::PopContainer(const PopTypeRegistry& rRegistry,
-                           const PopTypeAvailabilityCalculator& rAvailabilityCalculator,
-                           const ResearchManager& rResearchManager,
-                           int initialSize)
+PopContainer::PopContainer(const PopTypeRegistry& rRegistry, int initialSize)
     : m_rRegistry(rRegistry)
-    , m_rAvailabilityCalculator(rAvailabilityCalculator)
-    , m_pResearchManager(&rResearchManager)
 {
     const std::string& rDefaultId = m_rRegistry.GetDefault().id;
     for (int i = 0; i < initialSize; ++i)
@@ -31,7 +23,15 @@ int PopContainer::GetSize() const
 
 int PopContainer::GetWorkerCount() const
 {
+    // Every tile-capable pop: plain workers *plus* drones and talents. The `!IsSpecialist()`
+    // clause is redundant (IsSpecialist is !bCanWorkTile && riot == 0, which cannot hold when
+    // IsWorker does) and is kept only for readability of the intent.
     return CountPops_([](const Pop* p) { return p->IsWorker() && !p->IsSpecialist(); });
+}
+
+int PopContainer::GetPlainWorkerCount() const
+{
+    return CountPops_([](const Pop* p) { return p->IsPlainWorker(); });
 }
 
 int PopContainer::GetTalentCount() const
@@ -65,89 +65,10 @@ void PopContainer::RemovePop()
     }
 }
 
-void PopContainer::ConvertTo(Pop& rPop, const std::string& typeId)
+void PopContainer::ConvertTo(Pop& rPop, const PopTypeConfig_t& rConfig)
 {
-    const PopTypeConfig_t* pConfig = m_rRegistry.Find(typeId);
-    if (!pConfig)
-    {
-        throw std::runtime_error("Unknown pop type: " + typeId);
-    }
-    rPop.Convert(*pConfig);
+    rPop.Convert(rConfig);
     m_revision.Bump();
-}
-
-void PopContainer::ConvertToFallback(Pop& rPop)
-{
-    const PopTypeConfig_t* pCurrentConfig = m_rRegistry.Find(rPop.GetPopType());
-    if (!pCurrentConfig)
-    {
-        throw std::runtime_error("Current pop type not found in registry: " + std::string(rPop.GetPopType()));
-    }
-    if (pCurrentConfig->fallbackPopTypeId.empty())
-    {
-        throw std::runtime_error("Pop has no fallback type configured");
-    }
-    const PopTypeConfig_t& rResolved = m_rAvailabilityCalculator.ResolveCurrentType(
-        pCurrentConfig->fallbackPopTypeId, m_pResearchManager->GetDiscoveredTechs());
-    rPop.Convert(rResolved);
-    m_revision.Bump();
-}
-
-void PopContainer::ApplyCompositionTargets(const PopCompositionResult& targets,
-                                           const std::string& defaultTypeId,
-                                           const std::string& droneTypeId,
-                                           const std::string& talentTypeId)
-{
-    // Convert excess drones back to workers first
-    int currentDrones = GetDroneCount();
-    for (auto& pPop : m_pops)
-    {
-        if (currentDrones <= targets.targetDrones)
-        {
-            break;
-        }
-        if (pPop->IsDrone())
-        {
-            ConvertTo(*pPop, defaultTypeId);
-            currentDrones--;
-        }
-    }
-
-    // Convert excess talents back to workers
-    int currentTalents = GetTalentCount();
-    for (auto& pPop : m_pops)
-    {
-        if (currentTalents <= targets.targetTalents) break;
-        if (pPop->IsTalent())
-        {
-            ConvertTo(*pPop, defaultTypeId);
-            currentTalents--;
-        }
-    }
-
-    // Convert plain workers to drones to reach target
-    currentDrones = GetDroneCount();
-    for (auto& pPop : m_pops)
-    {
-        if (currentDrones >= targets.targetDrones) break;
-        if (pPop->IsPlainWorker())
-        {
-            ConvertTo(*pPop, droneTypeId);
-            currentDrones++;
-        }
-    }
-
-    // Convert plain workers to talents to reach target
-    currentTalents = GetTalentCount();
-    for (auto& pPop : m_pops)
-    {
-        if (currentTalents >= targets.targetTalents) break;
-        if (pPop->IsPlainWorker())
-        {
-            ConvertTo(*pPop, talentTypeId);
-            currentTalents++;
-        }
-    }
 }
 
 int PopContainer::ComputePsychOutput() const
@@ -158,11 +79,6 @@ int PopContainer::ComputePsychOutput() const
         total += pPop->GetSpecialistOutput().psych;
     }
     return total;
-}
-
-void PopContainer::RebindResearch(const ResearchManager& rResearch)
-{
-    m_pResearchManager = &rResearch;
 }
 
 int PopContainer::CountPops_(bool (*predicate)(const Pop*)) const

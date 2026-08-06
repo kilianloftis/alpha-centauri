@@ -6,6 +6,7 @@
 #include "game/population/pop-types/PopTypeRegistry.h"
 #include "game/population/pop-types/GrowthConfigParser.h"
 #include "game/faction/ResearchManager.h"
+#include <iostream>
 #include <stdexcept>
 
 namespace ac
@@ -17,11 +18,10 @@ PopulationManager::PopulationManager(const PopTypeRegistry& rPopTypeRegistry,
                                      PopCompositionCalculator& rCompositionCalculator,
                                      const ResearchManager& rResearchManager,
                                      int initialSize)
-    : m_container(rPopTypeRegistry,
-                  rPopTypeAvailabilityCalculator,
-                  rResearchManager,
-                  initialSize)
+    : m_container(rPopTypeRegistry, initialSize)
     , m_rRegistry(rPopTypeRegistry)
+    , m_rAvailabilityCalculator(rPopTypeAvailabilityCalculator)
+    , m_pResearch(&rResearchManager)
     , m_rGrowthConfig(rGrowthConfig)
     , m_rCompositionCalculator(rCompositionCalculator)
     // The cap comes from pop_growth.json; there is no second, compiled-in default to drift.
@@ -38,7 +38,7 @@ PopulationManager::~PopulationManager()
 
 void PopulationManager::RebindResearch(const ResearchManager& rResearch)
 {
-    m_container.RebindResearch(rResearch);
+    m_pResearch = &rResearch;
 }
 
 int PopulationManager::GetSize() const
@@ -78,10 +78,25 @@ void PopulationManager::RemovePop()
     NotifyPopLost_();
 }
 
+const PopTypeConfig_t& PopulationManager::ResolveType_(const std::string& typeId) const
+{
+    // The single place a requested pop type becomes an actual one. Every conversion path goes
+    // through the obsolescence chain, so a pop always lands on the most current non-obsoleted
+    // successor of what was asked for. Previously only the fallback path did this, and plain
+    // ConvertTo installed the raw id — so it could seat a type the fallback path would refuse.
+    return m_rAvailabilityCalculator.ResolveCurrentType(typeId,
+                                                        m_pResearch->GetDiscoveredTechs());
+}
+
+void PopulationManager::ConvertResolved_(Pop& rPop, const std::string& typeId)
+{
+    m_container.ConvertTo(rPop, ResolveType_(typeId));
+}
+
 void PopulationManager::ConvertTo(Pop& rPop, const std::string& typeId)
 {
     const bool wasSpecialist = rPop.IsSpecialist();
-    m_container.ConvertTo(rPop, typeId);
+    ConvertResolved_(rPop, typeId);
     if (wasSpecialist || rPop.IsSpecialist())
     {
         MaybeRecalculateCompositionAfterSpecialistChange_();
@@ -95,12 +110,19 @@ void PopulationManager::ConvertToDefaultPopType(Pop& rPop)
 
 void PopulationManager::ConvertToFallback(Pop& rPop)
 {
-    const bool wasSpecialist = rPop.IsSpecialist();
-    m_container.ConvertToFallback(rPop);
-    if (wasSpecialist || rPop.IsSpecialist())
+    const PopTypeConfig_t* pCurrent = m_rRegistry.Find(rPop.GetPopType());
+    if (!pCurrent)
     {
-        MaybeRecalculateCompositionAfterSpecialistChange_();
+        throw std::runtime_error("PopulationManager::ConvertToFallback: current pop type not in "
+                                 "registry: " + std::string(rPop.GetPopType()));
     }
+    if (pCurrent->fallbackPopTypeId.empty())
+    {
+        throw std::runtime_error("PopulationManager::ConvertToFallback: pop type '"
+                                 + pCurrent->id + "' has no fallback configured");
+    }
+    // Same resolution as any other conversion — ConvertTo owns the chain walk.
+    ConvertTo(rPop, pCurrent->fallbackPopTypeId);
 }
 
 PopulationManager::BatchCompositionUpdate::BatchCompositionUpdate(PopulationManager& rPops)
@@ -111,10 +133,29 @@ PopulationManager::BatchCompositionUpdate::BatchCompositionUpdate(PopulationMana
 
 PopulationManager::BatchCompositionUpdate::~BatchCompositionUpdate()
 {
-    if (--m_rPops.m_compositionBatchDepth == 0 && m_rPops.m_bCompositionDirty)
+    if (--m_rPops.m_compositionBatchDepth != 0 || !m_rPops.m_bCompositionDirty)
     {
-        m_rPops.m_bCompositionDirty = false;
+        return;
+    }
+    m_rPops.m_bCompositionDirty = false;
+    // Destructors are implicitly noexcept, and the deferred work here can throw: it reaches
+    // GetDefaultPopType_ (registry) and ResolveType_ (obsolescence chain), both of which throw
+    // on a config the registry cannot satisfy. Letting that escape calls std::terminate — and
+    // this guard sits on the hot worker-assignment paths, so it would take the process down
+    // rather than surface a config error. Report and swallow instead; the composition is left
+    // stale, which is recoverable, unlike termination.
+    try
+    {
         m_rPops.RecalculateComposition();
+    }
+    catch (const std::exception& rError)
+    {
+        std::cerr << "BatchCompositionUpdate: deferred composition recalculation failed: "
+                  << rError.what() << "\n";
+    }
+    catch (...)
+    {
+        std::cerr << "BatchCompositionUpdate: deferred composition recalculation failed\n";
     }
 }
 
@@ -207,8 +248,84 @@ void PopulationManager::RecalculateComposition()
     const PopCompositionResult targets = m_rCompositionCalculator.Calculate(inputs);
     const PopCompositionConfig_t& rConfig = m_rCompositionCalculator.GetConfig();
 
-    m_container.ApplyCompositionTargets(targets, GetDefaultPopType_(),
-                                        rConfig.droneTypeId, rConfig.talentTypeId);
+    ApplyCompositionTargets(targets, rConfig.droneTypeId, rConfig.talentTypeId);
+}
+
+void PopulationManager::ApplyCompositionTargets(const PopCompositionResult& rTargets,
+                                                const std::string& droneTypeId,
+                                                const std::string& talentTypeId)
+{
+    // Reconciliation is population *policy*, so it lives here rather than in the container:
+    // it decides which pops change and in what order, and every conversion it performs is
+    // resolved through the obsolescence chain like any other.
+    //
+    // ConvertResolved_ rather than ConvertTo: we are already inside a recalculation, and
+    // ConvertTo's specialist hook would re-enter it. Drones and talents are tile-workers, so
+    // that hook does not fire for them today — but relying on that is how a recursion bug gets
+    // introduced by a later pop type that is a specialist.
+    const std::string& rDefaultTypeId = GetDefaultPopType_();
+
+    // Demote surplus first, so the promotions below have plain workers to draw from.
+    int currentDrones = m_container.GetDroneCount();
+    for (Pop& rPop : m_container.Pops())
+    {
+        if (currentDrones <= rTargets.targetDrones)
+        {
+            break;
+        }
+        if (rPop.IsDrone())
+        {
+            ConvertResolved_(rPop, rDefaultTypeId);
+            --currentDrones;
+        }
+    }
+
+    int currentTalents = m_container.GetTalentCount();
+    for (Pop& rPop : m_container.Pops())
+    {
+        if (currentTalents <= rTargets.targetTalents)
+        {
+            break;
+        }
+        if (rPop.IsTalent())
+        {
+            ConvertResolved_(rPop, rDefaultTypeId);
+            --currentTalents;
+        }
+    }
+
+    // TODO: PopCompositionConfig_t::precedence ships an order ("Talent", "Drone", "Worker")
+    // and is parsed but not read; this promotes to drones first. When plain workers are scarce
+    // the order decides who gets promoted, so a modder editing precedence currently sees no
+    // effect and gets the opposite of what the file says. Honoring it (or deleting the key) is
+    // the remaining half of this finding.
+    currentDrones = m_container.GetDroneCount();
+    for (Pop& rPop : m_container.Pops())
+    {
+        if (currentDrones >= rTargets.targetDrones)
+        {
+            break;
+        }
+        if (rPop.IsPlainWorker())
+        {
+            ConvertResolved_(rPop, droneTypeId);
+            ++currentDrones;
+        }
+    }
+
+    currentTalents = m_container.GetTalentCount();
+    for (Pop& rPop : m_container.Pops())
+    {
+        if (currentTalents >= rTargets.targetTalents)
+        {
+            break;
+        }
+        if (rPop.IsPlainWorker())
+        {
+            ConvertResolved_(rPop, talentTypeId);
+            ++currentTalents;
+        }
+    }
 }
 
 void PopulationManager::MaybeRecalculateCompositionAfterSpecialistChange_()
@@ -236,9 +353,18 @@ void PopulationManager::CheckGoldenAgeEndOfTurn()
     GoldenAgeCalculator::Inputs_t inputs;
     inputs.droneCount = m_container.GetDroneCount();
     inputs.talentCount = m_container.GetTalentCount();
-    inputs.workerCount = m_container.GetWorkerCount();
+    // Plain workers, not GetWorkerCount(): that counts every tile-capable pop, so drones and
+    // talents landed on both sides of the calculator's documented
+    // "talents >= workers + specialists" rule. Counting talents against themselves made the
+    // effective condition "every pop must be a talent" — far stricter than the stated rule.
+    inputs.workerCount = m_container.GetPlainWorkerCount();
     inputs.specialistCount = m_container.GetSpecialistCount();
     m_goldenAge.Update(inputs);
+}
+
+bool PopulationManager::IsInGoldenAge() const
+{
+    return m_goldenAge.IsInGoldenAge();
 }
 
 void PopulationManager::NotifyPopGained_()
