@@ -1,6 +1,7 @@
 #include "lib/Signal.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <utility>
 #include <vector>
 
 using ac::Signal;
@@ -106,4 +107,42 @@ TEST_CASE("Signal self-disconnect during Emit does not call later invocations", 
     sig.Emit();
     sig.Emit();
     REQUIRE(count == 1);
+}
+
+TEST_CASE("Signal ScopedConnection outliving its Signal is inert, not a dangling write",
+          "[signal][lifetime]")
+{
+    // The observer-outlives-subject case: a UI view connects to BaseManager::OnDestroyed, the
+    // base emits and is destroyed, and the view is popped (and destructed) only afterwards.
+    // ~ScopedConnection must not reach into the freed Signal to unregister itself.
+    Signal<>::ScopedConnection conn;
+    bool bFired = false;
+    {
+        Signal<> sig;
+        conn = sig.ConnectScoped([&]() { bFired = true; });
+        REQUIRE(conn.IsConnected());
+        sig.Emit();
+    }
+    CHECK(bFired);
+    // The token expired with the Signal, so the connection reports itself dead...
+    CHECK_FALSE(conn.IsConnected());
+    // ...and both explicit Disconnect and ~ScopedConnection (at scope exit) are no-ops.
+    CHECK_NOTHROW(conn.Disconnect());
+}
+
+TEST_CASE("Signal ScopedConnection moved out of a dead Signal stays inert", "[signal][lifetime]")
+{
+    // Moving a connection must carry the alive token with it, or the move target would think
+    // it still owns a live registration in a Signal that is already gone.
+    Signal<>::ScopedConnection moved;
+    {
+        Signal<>::ScopedConnection conn;
+        {
+            Signal<> sig;
+            conn = sig.ConnectScoped([]() {});
+        }
+        moved = std::move(conn);
+    }
+    CHECK_FALSE(moved.IsConnected());
+    CHECK_NOTHROW(moved.Disconnect());
 }

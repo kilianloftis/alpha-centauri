@@ -35,6 +35,11 @@ PopulationManager::~PopulationManager()
 {
 }
 
+void PopulationManager::RebindResearch(const ResearchManager& rResearch)
+{
+    m_container.RebindResearch(rResearch);
+}
+
 int PopulationManager::GetSize() const
 {
     return m_container.GetSize();

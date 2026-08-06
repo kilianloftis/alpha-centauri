@@ -42,7 +42,7 @@ Unit::Unit(UnitId_t unitId,
     , m_rDesign(rDesign)
     , m_rPositions(rPositions)
     , m_pTile(&rTile)
-    , m_rFaction(rFaction)
+    , m_pFaction(&rFaction)
     , m_rMorale(rMorale)
     // Seed current stats from the *live* resolved maxima (design effects + the faction's
     // active FactionUnits effects), not the design's context-free values. A fresh unit
@@ -154,19 +154,6 @@ UnitId_t Unit::GetUnitId() const { return m_unitId; }
 
 const UnitDesign& Unit::GetDesign() const { return m_rDesign; }
 
-UnitSnapshot_t Unit::CaptureSnapshot() const
-{
-    UnitSnapshot_t snapshot;
-    snapshot.unitId = m_unitId;
-    snapshot.pDesign = &m_rDesign;
-    snapshot.pTile = m_pTile;
-    snapshot.currentHp = m_currentHp;
-    snapshot.currentFuel = m_currentFuel;
-    snapshot.xp = m_xp;
-    snapshot.moveFragmentsRemaining = m_moveFragmentsRemaining;
-    return snapshot;
-}
-
 int Unit::GetStat(StatId_t statId) const
 {
     return ResolveStat(*this, statId);
@@ -195,7 +182,7 @@ BaseManager* Unit::GetProducedAtBase() const
     {
         return nullptr;
     }
-    for (BaseManager& rBase : m_rFaction.Bases())
+    for (BaseManager& rBase : m_pFaction->Bases())
     {
         if (rBase.GetBaseId() == *m_producedAtBaseId)
         {
@@ -204,8 +191,14 @@ BaseManager* Unit::GetProducedAtBase() const
     }
     return nullptr;
 }
-Faction& Unit::GetFaction()                 { return m_rFaction; }
-const Faction& Unit::GetFaction() const     { return m_rFaction; }
+void Unit::ClearProducedAtBase()            { m_producedAtBaseId.reset(); }
+Faction& Unit::GetFaction()                 { return *m_pFaction; }
+const Faction& Unit::GetFaction() const     { return *m_pFaction; }
+
+void Unit::RebindFaction(Faction& rFaction)
+{
+    m_pFaction = &rFaction;
+}
 
 int Unit::GetCurrentHp() const              { return m_currentHp; }
 int Unit::GetCurrentFuel() const            { return m_currentFuel; }

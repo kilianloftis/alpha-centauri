@@ -20,19 +20,6 @@ class UnitPositionIndex;
 
 using UnitId_t = int;
 
-// Non-recomputable state needed to destroy a unit and rebuild it under a new owner.
-// Home / produced-at are omitted — foreign home claims are invalid after transfer.
-struct UnitSnapshot_t
-{
-    UnitId_t unitId = 0;
-    const UnitDesign* pDesign = nullptr;
-    const Tile* pTile = nullptr;
-    int currentHp = 0;
-    int currentFuel = 0;
-    int xp = 0;
-    int moveFragmentsRemaining = 0;
-};
-
 class Unit
 {
 public:
@@ -60,9 +47,6 @@ public:
 
     const UnitDesign& GetDesign() const;
 
-    // Capture identity and live combat/move state for transfer.
-    UnitSnapshot_t CaptureSnapshot() const;
-
     // Live-unit stat / flag resolution (design effects + FactionUnits). Prefer the free
     // ResolveStat / ResolveFlag overloads; these forward to them.
     int GetStat(StatId_t statId) const;
@@ -76,8 +60,17 @@ public:
     BaseManager* GetHomeBase() const;
     // Base that produced this unit (nullptr if unknown / destroyed). Independent of home.
     BaseManager* GetProducedAtBase() const;
+    // Forget the production base. Ownership transfer calls this: the record names a base of
+    // the *previous* owner, and GetProducedAtBase resolves ids against the unit's own faction,
+    // so keeping it would let the unit retroactively claim ProducedAtThisBase bonuses if the
+    // new owner ever captured that base (see docs/architecture/high-level.md, "Object lifetime").
+    void ClearProducedAtBase();
     Faction& GetFaction();
     const Faction& GetFaction() const;
+    // Ownership transfer (Faction::TransferUnitTo): rebind to the new owner without
+    // destroying/recreating the unit. Does not touch home base, cargo, or position —
+    // callers apply those rules (see docs/architecture/high-level.md, "Object lifetime").
+    void RebindFaction(Faction& rFaction);
 
     int GetCurrentHp() const;
     int GetCurrentFuel() const;
@@ -156,7 +149,8 @@ private:
     HomeBaseClaim m_homeBaseClaim;
     // Production base id (looked up via GetProducedAtBase); independent of home claim.
     std::optional<int> m_producedAtBaseId;
-    Faction& m_rFaction;
+    // Rebindable owner (RebindFaction): never null while the unit lives in a UnitManager.
+    Faction* m_pFaction;
     const MoraleCalculator& m_rMorale;
 
     int m_currentHp;

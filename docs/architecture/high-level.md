@@ -291,6 +291,66 @@ graph TB
   - Each Faction owns its subsystems
 - **Details**: See `docs/architecture/faction-system.md` for detailed architecture
 
+### Object lifetime and ownership transfer
+- **Purpose**: One protocol for what "destroy" and "transfer" mean for `Unit` and `BaseManager`,
+  so gameplay effects, `EventBridge`, and UI invalidation all agree on it. See
+  `docs/full-review-fix-prompts/03-lifetime-and-transfer.md` for the full analysis this codifies.
+- **Destroy (unit) = `UnitManager::DestroyUnit` only.** Applies combat carrier-loss cargo rules
+  (a destroyed carrier's cargo that cannot survive on the exposed tile is destroyed; survivors
+  disembark) and emits `OnUnitDestroyed` *before* the unit is erased, so observers (UI selection,
+  `GameState` revealed-unit cleanup) can invalidate their reference while it is still valid.
+  Real death only — combat loss, starvation of a unit-holding pop, etc.
+- **Transfer (unit) ≠ destroy.** `Faction::TransferUnitTo` never calls `DestroyUnit`. It uses
+  `UnitManager::ReleaseUnit` (removes the unit from the giver's `UnitManager` with **no** cargo
+  loss and **no** `OnUnitDestroyed` — emits `OnUnitReleased` instead) followed by
+  `UnitManager::AdoptUnit` on the receiver (rebinds the unit's `Faction*` via `Unit::RebindFaction`,
+  adds it to the receiver's `UnitManager`, emits `OnUnitAdopted`). A transferred carrier's entire
+  embarked cargo graph moves with it, still embarked, under the new owner. A unit transferred
+  while embarked on someone else's carrier is disembarked cleanly first (no destroy, no
+  `CanPlaceUnitOnTile` conflict against the carrier's own tile), then transferred. Home-base
+  claims do not follow a transferred unit to a foreign faction's base — cleared on transfer, not
+  reassigned; the produced-at record is cleared for the same reason (it names a base of the
+  previous owner, and keeping it would let the unit claim `ProducedAtThisBase` bonuses if the new
+  owner ever captured that base). Mods/observers see one adopt event, never a fake
+  death-then-birth pair.
+- **Destroy (base) = raze / extract-and-destroy (`Faction::ExtractBase`).** The `BaseManager`
+  object dies: `~BaseManager` emits `OnDestroyed` (while still fully valid, so an open `BaseView`
+  can pop before the reference dangles), `HomeBaseIndex` orphans every claim into the base
+  (units keep existing, just lose that home), deploy-cooldown records for that `baseId` are
+  dropped (`Faction::DropBuildingDeploys_`), and any `WorkerAssignmentManager` displaced-worker
+  handlers are cleared before it or the base disappears.
+- **Transfer (base) = identity-preserving ownership move, not snapshot recreate.**
+  `Faction::TransferBaseTo` does `ReleaseBase` (moves the `unique_ptr<BaseManager>` out of the
+  giver — same object, same address, same `baseId`, same `Tile`/`HomeBaseIndex`/
+  `WorkerAssignmentManager`) → `BaseManager::RebindFaction` (repoints every per-faction
+  dependency the base resolves through — effects provider, `ResearchManager` for tech-gated
+  buildings/pop fallback, `EconomyManager` for the energy split — so the next resolve reads the
+  new owner) → receiver `AddBase`. Deploy-cooldown records for that `baseId` migrate with the
+  base (`Faction::MigrateBuildingDeploys_`) rather than leaking on the giver or vanishing on the
+  receiver. The caller still recalculates composition/worker assignment afterward, since psych
+  may differ under the new owner — but the `BaseManager*` itself never changes. The
+  `HomeBaseIndex` moves with the object rather than the faction, so claims held by units the
+  *receiver* owns stay valid; claims held by units of any other faction are **foreign** and are
+  dropped on transfer. That is the same rule unit transfer applies, and it is load-bearing: a
+  supply crawler homed at a base feeds that base's production
+  (`ResourceManager::ComputeWorked_`), so leaving the loser's claims in place would have the
+  captor harvesting the loser's crawlers.
+- **Base introduction is auto-wired.** `Faction::AddBase` emits `OnBaseAdded` for every insertion
+  — founding, post-transfer adopt, and (if it returns) future load — and `Engine` connects that
+  once, at faction construction, to `EventBridge::WireBase`. `WireBase` is idempotent (tracks
+  wired `BaseManager` objects — by address, not `baseId`, so a reconstructed base reusing its id
+  is still wired), so it is safe to call from both the signal and any remaining explicit call
+  site. No caller needs to remember to wire a captured/traded base by hand.
+- **UI rule**: views may hold `BaseManager&` / `Unit*` for their whole life only while the
+  protocol guarantees validity, or must subscribe to the signals above and pop/clear. Minimum
+  bar: `BaseView` pops when its base is destroyed (`OnDestroyed`) or changes owner (its
+  `GetFaction()` no longer matches the faction the view was opened for); `WorldView` clears
+  `m_pSelectedUnit` on both `OnUnitDestroyed` and `OnUnitReleased` so selection can never dangle
+  or silently point at a unit that just left the player's faction. See
+  `docs/architecture/ui-system.md`, "Object Lifetime / Invalidation".
+- **Out of scope here**: faction elimination / erasing a `Faction` mid-turn is still deferred —
+  see `docs/architecture/turn-system.md`.
+
 ### Map System
 - **Purpose**: Manages game world terrain and tile-based resource production
 - **Components**:

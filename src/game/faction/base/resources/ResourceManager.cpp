@@ -85,6 +85,11 @@ ResourceManager::ResourceManager(
 {
 }
 
+void ResourceManager::RebindEconomy(const EconomyManager& rEconomy)
+{
+    m_pEconomy = &rEconomy;
+}
+
 ResourceManager::~ResourceManager()
 {
 }

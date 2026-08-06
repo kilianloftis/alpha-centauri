@@ -178,35 +178,78 @@ const BuildingConfig_t* Faction::FindOwnedBuildingConfig(const BuildingId_t& bui
 
 int Faction::CountReadyBuildings(const BuildingId_t& buildingId, int missionYear) const
 {
-    int deployed = 0;
+    int cooling = 0;
     for (const BuildingDeploy_t& rDeploy : m_buildingDeploys)
     {
         if (rDeploy.buildingId == buildingId && missionYear < rDeploy.readyMissionYear)
         {
-            ++deployed;
+            ++cooling;
         }
     }
     const int total = CountBuildings(buildingId);
-    return total > deployed ? total - deployed : 0;
+    return total > cooling ? total - cooling : 0;
 }
 
-void Faction::DeployBuilding(const BuildingId_t& buildingId, int readyMissionYear)
+void Faction::PruneExpiredDeploys(int missionYear)
 {
-    m_buildingDeploys.push_back(BuildingDeploy_t{buildingId, readyMissionYear});
-}
-
-void Faction::NotifyBuildingDestroyed(const BuildingId_t& buildingId)
-{
-    // Prefer dropping an active (still cooling) deploy record so ready count stays coherent.
-    auto cooling = std::find_if(m_buildingDeploys.begin(), m_buildingDeploys.end(),
-                                [&](const BuildingDeploy_t& rDeploy)
-                                {
-                                    return rDeploy.buildingId == buildingId;
-                                });
-    if (cooling != m_buildingDeploys.end())
+    std::erase_if(m_buildingDeploys, [missionYear](const BuildingDeploy_t& rDeploy)
     {
-        m_buildingDeploys.erase(cooling);
+        return missionYear >= rDeploy.readyMissionYear;
+    });
+}
+
+void Faction::DeployBuilding(BaseId_t baseId, const BuildingId_t& buildingId, int readyMissionYear)
+{
+    m_buildingDeploys.push_back(BuildingDeploy_t{baseId, buildingId, readyMissionYear});
+}
+
+void Faction::NotifyBuildingDestroyed(BaseId_t baseId, const BuildingId_t& buildingId)
+{
+    // Only records for this base: another base's cooling copy of the same buildingId must not
+    // be dropped just because this one shares its id. Among this base's records, drop the one
+    // with the latest readyMissionYear — the most-cooling copy. A destroyed copy must take a
+    // suppression with it, and retiring an already-expired record instead would leave a live
+    // cooldown attached to a copy that no longer exists, under-counting the ready total.
+    auto latest = m_buildingDeploys.end();
+    for (auto it = m_buildingDeploys.begin(); it != m_buildingDeploys.end(); ++it)
+    {
+        if (it->baseId != baseId || it->buildingId != buildingId)
+        {
+            continue;
+        }
+        if (latest == m_buildingDeploys.end() || it->readyMissionYear > latest->readyMissionYear)
+        {
+            latest = it;
+        }
     }
+    if (latest != m_buildingDeploys.end())
+    {
+        m_buildingDeploys.erase(latest);
+    }
+}
+
+void Faction::MigrateBuildingDeploys_(BaseId_t baseId, Faction& rReceiver)
+{
+    for (auto it = m_buildingDeploys.begin(); it != m_buildingDeploys.end();)
+    {
+        if (it->baseId == baseId)
+        {
+            rReceiver.m_buildingDeploys.push_back(*it);
+            it = m_buildingDeploys.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
+}
+
+void Faction::DropBuildingDeploys_(BaseId_t baseId)
+{
+    std::erase_if(m_buildingDeploys, [baseId](const BuildingDeploy_t& rDeploy)
+    {
+        return rDeploy.baseId == baseId;
+    });
 }
 
 int Faction::GetResearchPerTurn_() const
@@ -238,6 +281,7 @@ void Faction::AddBase(std::unique_ptr<BaseManager> pBase)
     {
         throw std::invalid_argument("Faction::AddBase: pBase is null");
     }
+    BaseManager& rAdded = *pBase;
     m_bases.push_back(std::move(pBase));
     m_baseListRevision.Bump();
     if (m_onBaseListChanged)
@@ -245,6 +289,10 @@ void Faction::AddBase(std::unique_ptr<BaseManager> pBase)
         m_onBaseListChanged();
     }
     RebuildVisibility();
+    // Single "a base now exists in this faction" hook — founding, load, and post-transfer
+    // adopt alike. EventBridge wires from this so conquest/probe/diplomacy callers never
+    // need to remember WireBase (see docs/architecture/high-level.md, "Object lifetime").
+    OnBaseAdded.Emit(rAdded);
 }
 
 std::optional<BaseSnapshot_t> Faction::ExtractBase(BaseId_t baseId)
@@ -255,6 +303,7 @@ std::optional<BaseSnapshot_t> Faction::ExtractBase(BaseId_t baseId)
         {
             BaseSnapshot_t snapshot = (*it)->CaptureSnapshot();
             m_bases.erase(it);
+            DropBuildingDeploys_(baseId);
             m_baseListRevision.Bump();
             if (m_onBaseListChanged)
             {
@@ -265,6 +314,26 @@ std::optional<BaseSnapshot_t> Faction::ExtractBase(BaseId_t baseId)
         }
     }
     return std::nullopt;
+}
+
+std::unique_ptr<BaseManager> Faction::ReleaseBase(BaseId_t baseId)
+{
+    for (auto it = m_bases.begin(); it != m_bases.end(); ++it)
+    {
+        if ((*it)->GetBaseId() == baseId)
+        {
+            std::unique_ptr<BaseManager> pReleased = std::move(*it);
+            m_bases.erase(it);
+            m_baseListRevision.Bump();
+            if (m_onBaseListChanged)
+            {
+                m_onBaseListChanged();
+            }
+            RebuildVisibility();
+            return pReleased;
+        }
+    }
+    throw std::runtime_error("Faction::ReleaseBase: base not found");
 }
 
 BaseManager* Faction::CreateBaseFromSnapshot(
@@ -320,81 +389,123 @@ BaseManager* Faction::CreateBaseFromSnapshot(
     return pRawBase;
 }
 
-void Faction::TransferBaseTo(BaseId_t baseId,
-                             Faction& rReceiver,
-                             const GameDataContext& rDataContext,
-                             TileEffectsContext& rTileEffects,
-                             const SecretProjectAvailabilityCalculator& rSecretProjectAvailability)
+namespace
+{
+
+// Clear the home-base link of every unit homed at rBase that rBase's owner does not own.
+// Iterates a copy: SetHomeBase(nullptr) releases the claim, mutating the index's vector.
+void DropForeignHomeClaims_(BaseManager& rBase)
+{
+    const Faction* pOwner = &rBase.GetFaction();
+    const std::vector<Unit*> homed = rBase.GetHomeUnits().GetUnits();
+    for (Unit* pUnit : homed)
+    {
+        if (pUnit && &pUnit->GetFaction() != pOwner)
+        {
+            pUnit->SetHomeBase(nullptr);
+        }
+    }
+}
+
+} // namespace
+
+void Faction::TransferBaseTo(BaseId_t baseId, Faction& rReceiver)
 {
     if (&rReceiver == this)
     {
         throw std::invalid_argument("Faction::TransferBaseTo: cannot transfer to self");
     }
-    std::optional<BaseSnapshot_t> snapshot = ExtractBase(baseId);
-    if (!snapshot.has_value())
-    {
-        throw std::runtime_error("Faction::TransferBaseTo: base not found");
-    }
-    rReceiver.CreateBaseFromSnapshot(
-        *snapshot, rDataContext, rTileEffects, rSecretProjectAvailability);
+
+    // Identity-preserving move: same BaseManager object, same baseId, same address — not
+    // ExtractBase + CreateBaseFromSnapshot. RebindFaction re-points every per-faction
+    // dependency (effects provider, research, economy) the base resolves through.
+    std::unique_ptr<BaseManager> pBase = ReleaseBase(baseId);
+    BaseManager& rBase = *pBase;
+    rBase.RebindFaction(rReceiver);
+    MigrateBuildingDeploys_(baseId, rReceiver);
+    rReceiver.AddBase(std::move(pBase));
+
+    // The base keeps its HomeBaseIndex across the move, so units of the *previous* owner
+    // would still be homed here — and a supply crawler homed at a base feeds that base's
+    // production (ResourceManager::ComputeWorked_), i.e. the captor would harvest the loser's
+    // crawlers. A claim on a base its owner does not own is a foreign home claim, which the
+    // transfer protocol treats as invalid; drop exactly those (same rule ReleaseAndAdopt_
+    // applies to unit transfer). Units the receiver already owns keep their home.
+    DropForeignHomeClaims_(rBase);
+
+    // Psych (and thus drone/talent targets) may differ under the new owner — same
+    // recalculation CreateBaseFromSnapshot used to apply after reconstruct.
+    rBase.GetPopulation().RecalculateComposition();
+    rBase.GetWorkerAssignments().UnassignAll();
+    rBase.GetWorkerAssignments().AutoAssignWorkers();
 }
 
-std::optional<UnitSnapshot_t> Faction::ExtractUnit(UnitId_t unitId)
+namespace
 {
-    Unit* pFound = nullptr;
-    for (Unit& rUnit : GetUnitManager().Units())
+
+Unit* FindUnitById_(Faction& rFaction, UnitId_t unitId)
+{
+    for (Unit& rUnit : rFaction.GetUnitManager().Units())
     {
         if (rUnit.GetUnitId() == unitId)
         {
-            pFound = &rUnit;
-            break;
+            return &rUnit;
         }
     }
-    if (!pFound)
-    {
-        return std::nullopt;
-    }
-    UnitSnapshot_t snapshot = pFound->CaptureSnapshot();
-    GetUnitManager().DestroyUnit(*pFound);
-    return snapshot;
+    return nullptr;
 }
 
-Unit& Faction::CreateUnitFromSnapshot(const UnitSnapshot_t& rSnapshot,
-                                      UnitPositionIndex& rPositions)
+// Release + adopt one unit (giver→receiver), clearing the home-base claim and the production
+// base: both name bases of the previous owner, and a claim on a base the receiver does not own
+// is a foreign home claim, which the transfer protocol treats as invalid (see
+// Unit::ClearProducedAtBase and docs/architecture/high-level.md, "Object lifetime").
+Unit& ReleaseAndAdopt_(Faction& rGiver, Faction& rReceiver, Unit& rUnit)
 {
-    if (!rSnapshot.pDesign)
-    {
-        throw std::invalid_argument("Faction::CreateUnitFromSnapshot: pDesign is null");
-    }
-    if (!rSnapshot.pTile)
-    {
-        throw std::invalid_argument("Faction::CreateUnitFromSnapshot: pTile is null");
-    }
-
-    Unit& rNew = GetUnitManager().CreateUnit(rSnapshot.unitId, *rSnapshot.pDesign, rPositions,
-                                             *rSnapshot.pTile, /*pHomeBase=*/nullptr);
-    rNew.SetCurrentHp(rSnapshot.currentHp);
-    rNew.SetCurrentFuel(rSnapshot.currentFuel);
-    rNew.SetXp(rSnapshot.xp);
-    rNew.SetMoveFragmentsRemaining(rSnapshot.moveFragmentsRemaining);
-    rNew.ClearOrder();
-    return rNew;
+    std::unique_ptr<Unit> pReleased = rGiver.GetUnitManager().ReleaseUnit(rUnit);
+    Unit& rAdopted = rReceiver.GetUnitManager().AdoptUnit(std::move(pReleased));
+    rAdopted.SetHomeBase(nullptr);
+    rAdopted.ClearProducedAtBase();
+    return rAdopted;
 }
 
-void Faction::TransferUnitTo(UnitId_t unitId,
-                             Faction& rReceiver,
-                             UnitPositionIndex& rPositions)
+} // namespace
+
+void Faction::TransferUnitTo(UnitId_t unitId, Faction& rReceiver)
 {
     if (&rReceiver == this)
     {
         throw std::invalid_argument("Faction::TransferUnitTo: cannot transfer to self");
     }
-    std::optional<UnitSnapshot_t> snapshot = ExtractUnit(unitId);
-    if (!snapshot.has_value())
+
+    Unit* pFound = FindUnitById_(*this, unitId);
+    if (!pFound)
     {
         throw std::runtime_error("Faction::TransferUnitTo: unit not found");
     }
-    rReceiver.CreateUnitFromSnapshot(*snapshot, rPositions);
+
+    // A transferred carrier's cargo travels with it (peaceful transfer never strands or
+    // sinks passengers — that is DestroyUnit's combat rule only). Snapshot before releasing:
+    // ReleaseUnit/AdoptUnit do not touch cargo/carrier links, but the vector itself is a
+    // view into pFound's live state that we are about to hand to another faction.
+    const std::vector<Unit*> cargo = pFound->GetCargo();
+
+    // A transferred embarked passenger detaches cleanly rather than dying: no throw, and no
+    // CanPlaceUnitOnTile re-check, since the unit never leaves the map (see
+    // docs/architecture/high-level.md, "Object lifetime").
+    if (pFound->IsEmbarked())
+    {
+        pFound->Disembark();
+    }
+
+    ReleaseAndAdopt_(*this, rReceiver, *pFound);
+
+    for (Unit* pPassenger : cargo)
+    {
+        if (pPassenger && &pPassenger->GetFaction() == this)
+        {
+            ReleaseAndAdopt_(*this, rReceiver, *pPassenger);
+        }
+    }
 }
 
 BaseManager* Faction::GetHeadquarters()

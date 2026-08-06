@@ -320,16 +320,7 @@ void DiplomaticActionExecutor::ApplyItem_(GameState& rState,
             }
             else if constexpr (std::is_same_v<T, TradeBase_t>)
             {
-                if (!m_pGameData)
-                {
-                    throw std::runtime_error(
-                        "DiplomaticActionExecutor::ApplyItem_: GameDataContext not set");
-                }
-                pGiver->TransferBaseTo(rConcrete.baseId,
-                                       *pReceiver,
-                                       *m_pGameData,
-                                       rState.GetTileEffects(),
-                                       rState.GetSecretProjectAvailability());
+                pGiver->TransferBaseTo(rConcrete.baseId, *pReceiver);
             }
             else if constexpr (std::is_same_v<T, TradeCommFrequency_t>)
             {

@@ -44,8 +44,7 @@ public:
         std::function<void()> onRequestExit,
         std::function<void(BaseManager&)> onOpenBase,
         WorldView::OpenCombatCallback_t onOpenCombat,
-        std::function<void()> onOpenCommlinks,
-        WorldView::BaseFoundedCallback_t onBaseFounded = {}
+        std::function<void()> onOpenCommlinks
     ) const;
 
     std::unique_ptr<BaseView> CreateBaseView(BaseManager& rBase) const;

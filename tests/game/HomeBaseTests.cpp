@@ -90,3 +90,51 @@ TEST_CASE("Destroying a base orphans home-base claims", "[unit][home]")
     REQUIRE(faction.ExtractBase(baseId).has_value());
     CHECK(unit.GetHomeBase() == nullptr);
 }
+
+TEST_CASE("Transferring a base drops the previous owner's home claims", "[unit][home][transfer]")
+{
+    FactionFixture fixture;
+    Faction& giver = fixture.MakeFaction();
+    Faction& receiver = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(giver, 4, 4);
+
+    Unit& unit = fixture.MakeUnit(giver, 5, 4, {"test_chassis"}, &base);
+    REQUIRE(unit.GetHomeBase() == &base);
+
+    // Ownership change ≠ destroy — the HomeBaseIndex moves with the BaseManager object rather
+    // than the faction — but a claim held by a unit the new owner does not own is a *foreign*
+    // claim, and the transfer protocol treats those as invalid. Leaving it would let the captor
+    // collect the loser's supply-crawler yield (ResourceManager::ComputeWorked_ walks the home
+    // index with no faction check) and list the loser's units in its own SupportDisplay.
+    giver.TransferBaseTo(base.GetBaseId(), receiver);
+
+    CHECK(&base.GetFaction() == &receiver);
+    CHECK(&unit.GetFaction() == &giver);
+    // The unit itself survives untouched; only the home link is severed.
+    CHECK(unit.GetHomeBase() == nullptr);
+    CHECK(base.GetHomeUnits().GetUnits().empty());
+}
+
+TEST_CASE("Transferring a base keeps home claims held by the receiver's own units",
+          "[unit][home][transfer]")
+{
+    FactionFixture fixture;
+    Faction& giver = fixture.MakeFaction();
+    Faction& receiver = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(giver, 4, 4);
+    BaseManager* pBaseAddress = &base;
+
+    // A receiver-owned unit already homed at the base being handed over: not foreign, so the
+    // claim must survive the transfer (the foreign-claim rule is about ownership, not about
+    // transfer clearing the index wholesale).
+    Unit& receiverUnit = fixture.MakeUnit(receiver, 5, 4, {"test_chassis"}, nullptr);
+    receiverUnit.SetHomeBase(&base);
+    REQUIRE(receiverUnit.GetHomeBase() == &base);
+
+    giver.TransferBaseTo(base.GetBaseId(), receiver);
+
+    CHECK(&base.GetFaction() == &receiver);
+    CHECK(receiverUnit.GetHomeBase() == pBaseAddress);
+    REQUIRE(base.GetHomeUnits().GetUnits().size() == 1);
+    CHECK(base.GetHomeUnits().GetUnits().front() == &receiverUnit);
+}

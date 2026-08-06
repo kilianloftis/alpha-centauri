@@ -87,11 +87,12 @@ int DestroyRandomFacilities_(BaseManager& rBase, const BaseConquestConfig_t& rCo
 
     std::shuffle(candidates.begin(), candidates.end(), rRng);
     Faction& rOwner = rBase.GetFaction();
+    const BaseId_t baseId = rBase.GetBaseId();
     for (int i = 0; i < toDestroy; ++i)
     {
         const BuildingId_t id = candidates[static_cast<size_t>(i)]->id;
         rBase.GetBuildingManager().DestroyBuilding(id);
-        rOwner.NotifyBuildingDestroyed(id);
+        rOwner.NotifyBuildingDestroyed(baseId, id);
     }
     return toDestroy;
 }
@@ -261,7 +262,7 @@ BaseConquestResult_t ApplyNativeRaid_(Unit& rNative, BaseManager& rBase, GameSta
         std::uniform_int_distribution<size_t> pick(0, facilities.size() - 1);
         const BuildingId_t id = facilities[pick(rRng)]->id;
         rBase.GetBuildingManager().DestroyBuilding(id);
-        rBase.GetFaction().NotifyBuildingDestroyed(id);
+        rBase.GetFaction().NotifyBuildingDestroyed(rBase.GetBaseId(), id);
         result.facilitiesDestroyed = 1;
     }
     else if (rBase.GetPopulation().GetSize() > 0)
@@ -304,8 +305,7 @@ BaseConquestResult_t ApplyCapture_(Unit& rCapturer, BaseManager& rBase, GameStat
         return result;
     }
 
-    rOldOwner.TransferBaseTo(baseId, rNewOwner, rDataContext, rGameState.GetTileEffects(),
-                             rGameState.GetSecretProjectAvailability());
+    rOldOwner.TransferBaseTo(baseId, rNewOwner);
     RepairCapturer_(rCapturer);
     return result;
 }

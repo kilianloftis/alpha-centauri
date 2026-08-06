@@ -46,6 +46,11 @@ public:
     // Bumped on every building mutation; consumed by effect-pool caches.
     uint64_t GetRevision() const { return m_revision.Get(); }
 
+    // Ownership transfer (BaseManager::RebindFaction): tech-gated construction availability
+    // must read the new owner's discovered techs from the next
+    // GetBuildingsAvailableForConstruction call.
+    void RebindResearch(const ResearchManager& rResearch);
+
 private:
     bool DoesBuildingExist_(const BuildingId_t& buildingId) const;
 

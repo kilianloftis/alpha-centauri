@@ -148,13 +148,11 @@ bool ApplyAssassinate_(BaseManager& rBase, ProbeActionResult_t& rResult)
     return true;
 }
 
-bool ApplyMindControlBase_(Faction& rActor, BaseManager& rBase, GameState& rGameState,
-                           const GameDataContext& rDataContext, ProbeActionResult_t& rResult)
+bool ApplyMindControlBase_(Faction& rActor, BaseManager& rBase, ProbeActionResult_t& rResult)
 {
     Faction& rTarget = rBase.GetFaction();
     const BaseId_t baseId = rBase.GetBaseId();
-    rTarget.TransferBaseTo(baseId, rActor, rDataContext, rGameState.GetTileEffects(),
-                           rGameState.GetSecretProjectAvailability());
+    rTarget.TransferBaseTo(baseId, rActor);
     rResult.detail = ProbeActionStatus_t::BaseCaptured;
     return true;
 }
@@ -174,11 +172,9 @@ bool ApplyGeneticPlague_(BaseManager& rBase, ProbeActionResult_t& rResult)
     return true;
 }
 
-bool ApplySubvertUnit_(Faction& rActor, Unit& rTargetUnit, GameState& rGameState,
-                       ProbeActionResult_t& rResult)
+bool ApplySubvertUnit_(Faction& rActor, Unit& rTargetUnit, ProbeActionResult_t& rResult)
 {
-    rTargetUnit.GetFaction().TransferUnitTo(rTargetUnit.GetUnitId(), rActor,
-                                            rGameState.GetWorldMap().GetUnitPositions());
+    rTargetUnit.GetFaction().TransferUnitTo(rTargetUnit.GetUnitId(), rActor);
     rResult.detail = ProbeActionStatus_t::UnitSubverted;
     return true;
 }
@@ -207,7 +203,7 @@ bool ApplyBaseAction_(Unit& rProbe, const ProbeActionConfig_t& rAction, BaseMana
             return ApplyAssassinate_(rBase, rResult);
         case ProbeActionId_t::MindControlBase:
         case ProbeActionId_t::TotalThoughtControl:
-            return ApplyMindControlBase_(rActor, rBase, rGameState, rDataContext, rResult);
+            return ApplyMindControlBase_(rActor, rBase, rResult);
         case ProbeActionId_t::GeneticPlague:
             return ApplyGeneticPlague_(rBase, rResult);
         case ProbeActionId_t::SubvertUnit:
@@ -217,11 +213,11 @@ bool ApplyBaseAction_(Unit& rProbe, const ProbeActionConfig_t& rAction, BaseMana
 }
 
 bool ApplyUnitAction_(Unit& rProbe, const ProbeActionConfig_t& rAction, Unit& rTargetUnit,
-                      GameState& rGameState, ProbeActionResult_t& rResult)
+                      ProbeActionResult_t& rResult)
 {
     if (rAction.id == ProbeActionId_t::SubvertUnit)
     {
-        return ApplySubvertUnit_(rProbe.GetFaction(), rTargetUnit, rGameState, rResult);
+        return ApplySubvertUnit_(rProbe.GetFaction(), rTargetUnit, rResult);
     }
     return false;
 }
@@ -245,7 +241,7 @@ bool ApplyProbeActionEffect(Unit& rProbe, const ProbeActionConfig_t& rAction,
             }
             else
             {
-                return ApplyUnitAction_(rProbe, rAction, rConcrete.rUnit, rGameState, rResult);
+                return ApplyUnitAction_(rProbe, rAction, rConcrete.rUnit, rResult);
             }
         },
         rTarget.ref);

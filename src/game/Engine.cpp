@@ -141,7 +141,6 @@ void Engine::Initialize_()
         m_gameDataContext->unitComponentRegistry.get(),
         *m_pSettings,
         *m_gameDataContext->moraleCalculator);
-    m_pGameState->GetDiplomaticActionExecutor().SetGameDataContext(*m_gameDataContext);
     m_pGameState->GetUnitOrderExecutor().SetGameDataContext(*m_gameDataContext);
     std::cout << "Generated world map: " << m_pGameState->GetWorldMap().GetWidth() << "x" << m_pGameState->GetWorldMap().GetHeight() << "\n";
 
@@ -181,6 +180,11 @@ void Engine::Initialize_()
             rFactionConfig,
             *m_gameDataContext);
 
+        // Wire EventBridge to every base this faction ever introduces — founding (below),
+        // future load, and capture/trade adopt alike — via the single Faction::OnBaseAdded
+        // hook, rather than a per-call-site WireBase chore (see EventBridge::WireBase).
+        pFaction->OnBaseAdded.Connect([this](BaseManager& rBase) { m_eventBridge->WireBase(rBase); });
+
         const auto& [startX, startY] = startPositions[positionIndex % startPositions.size()];
         BaseManager* pBase = pFaction->CreateBase(
             m_pGameState->AllocateBaseId(), pFaction->SuggestBaseName(),
@@ -189,7 +193,6 @@ void Engine::Initialize_()
             m_pGameState->GetTileEffects(),
             m_pGameState->GetSecretProjectAvailability());
 
-        m_eventBridge->WireBase(*pBase);
         Faction& rFaction = m_pGameState->AddFaction(std::move(pFaction));
 
         // Temporary orbital satellites so the satellite summary / ASAT view has something to show.
@@ -444,8 +447,7 @@ void Engine::Initialize_()
                 [this, fullscreen]() {
                     m_uiManager->PushView(m_viewFactory->CreateCouncilVoteView(fullscreen));
                 }));
-        },
-        [this](BaseManager& rBase) { m_eventBridge->WireBase(rBase); }
+        }
     );
     m_uiManager->RegisterViewShortcut(Key_t::F2, [this, fullscreen]() -> std::unique_ptr<IGameView> {
         return m_viewFactory->CreateResearchView(fullscreen);

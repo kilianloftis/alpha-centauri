@@ -14,6 +14,11 @@ EventBridge::EventBridge(EventBus& rBus)
 
 void EventBridge::WireBase(BaseManager& rBase)
 {
+    if (!m_wiredBases.insert(&rBase).second)
+    {
+        return;
+    }
+
     rBase.OnPopGained.Connect([this, &rBase](int newSize) {
         m_rBus.Publish(EvBaseGainedPop{ rBase.GetFactionId(), rBase.GetBaseId(), newSize });
     });

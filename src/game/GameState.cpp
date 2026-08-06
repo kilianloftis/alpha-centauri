@@ -215,6 +215,13 @@ Faction& GameState::AddFaction(std::unique_ptr<Faction> pFaction)
         // Created into another faction's existing vision (no move event).
         m_pFirstContact->ConsiderUnit(rCreated);
     });
+    pFaction->GetUnitManager().OnUnitAdopted.Connect([this](Unit& rAdopted)
+    {
+        // Transfer is not a birth (see UnitManager::OnUnitAdopted), but the unit now sits in
+        // observers' vision under a faction they may not have met yet — same first-contact
+        // scan as a genuine creation.
+        m_pFirstContact->ConsiderUnit(rAdopted);
+    });
     m_factions.push_back(std::move(pFaction));
     return *m_factions.back();
 }

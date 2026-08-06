@@ -2,14 +2,29 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/units/Unit.h"
 #include <algorithm>
-#include <stdexcept>
+#include <cstdio>
+#include <cstdlib>
 
 namespace ac
 {
 
+namespace
+{
+
+// Unconditional abort with a diagnostic. Used by the noexcept claim paths below, where an
+// invariant violation is a programming error that must not be swallowed: throwing would
+// call std::terminate without a message, and assert() would compile out under NDEBUG and
+// leave the erase() calls to corrupt the index silently.
+[[noreturn]] void FatalInvariant_(const char* pMessage)
+{
+    std::fprintf(stderr, "FATAL: %s\n", pMessage);
+    std::abort();
+}
+
+} // namespace
+
 HomeBaseClaim::HomeBaseClaim(HomeBaseIndex& rIndex, Unit& rUnit)
     : m_pIndex(&rIndex)
-    , m_pUnit(&rUnit)
 {
     m_pIndex->m_claims.push_back(this);
     m_pIndex->m_units.push_back(&rUnit);
@@ -43,13 +58,11 @@ BaseManager* HomeBaseClaim::GetBase() const
 void HomeBaseClaim::MoveFrom_(HomeBaseClaim& rOther) noexcept
 {
     m_pIndex = rOther.m_pIndex;
-    m_pUnit = rOther.m_pUnit;
     if (m_pIndex)
     {
         m_pIndex->UpdateClaimPointer_(&rOther, this);
     }
     rOther.m_pIndex = nullptr;
-    rOther.m_pUnit = nullptr;
 }
 
 void HomeBaseClaim::Release_()
@@ -59,13 +72,11 @@ void HomeBaseClaim::Release_()
         m_pIndex->Release_(*this);
     }
     m_pIndex = nullptr;
-    m_pUnit = nullptr;
 }
 
 void HomeBaseClaim::Orphan_() noexcept
 {
     m_pIndex = nullptr;
-    m_pUnit = nullptr;
 }
 
 HomeBaseIndex::HomeBaseIndex(BaseManager& rBase)
@@ -94,10 +105,13 @@ HomeBaseClaim HomeBaseIndex::Claim(Unit& rUnit)
 
 void HomeBaseIndex::Release_(HomeBaseClaim& rClaim)
 {
+    // Reached from ~HomeBaseClaim (implicitly noexcept) and operator=(&&) (declared noexcept):
+    // an invariant violation here is a programming error, not a recoverable runtime condition,
+    // so it aborts rather than throws — see FatalInvariant_.
     auto claimIt = std::find(m_claims.begin(), m_claims.end(), &rClaim);
     if (claimIt == m_claims.end())
     {
-        throw std::logic_error("HomeBaseIndex: released a claim that was not registered");
+        FatalInvariant_("HomeBaseIndex: released a claim that was not registered");
     }
     const auto idx = static_cast<std::size_t>(claimIt - m_claims.begin());
     m_claims.erase(claimIt);
@@ -107,10 +121,11 @@ void HomeBaseIndex::Release_(HomeBaseClaim& rClaim)
 
 void HomeBaseIndex::UpdateClaimPointer_(HomeBaseClaim* pFrom, HomeBaseClaim* pTo)
 {
+    // Reached from HomeBaseClaim's noexcept move ctor/assign — see Release_ above.
     auto it = std::find(m_claims.begin(), m_claims.end(), pFrom);
     if (it == m_claims.end())
     {
-        throw std::logic_error("HomeBaseIndex: moved a claim that was not registered");
+        FatalInvariant_("HomeBaseIndex: moved a claim that was not registered");
     }
     *it = pTo;
 }

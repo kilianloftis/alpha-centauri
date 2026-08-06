@@ -32,8 +32,6 @@ class WorldView : public IGameView
 {
 public:
     using OpenBaseCallback_t = std::function<void(BaseManager&)>;
-    // Called after a colony pod founds a base (EventBridge::WireBase, open BaseView, etc.).
-    using BaseFoundedCallback_t = std::function<void(BaseManager&)>;
     // Pushes CombatView. WorldView supplies display/map layout and an onFinished that
     // restores dashboard selection after playback.
     using OpenCombatCallback_t = std::function<void(
@@ -55,8 +53,7 @@ public:
         std::function<void()> onRequestExit,
         OpenBaseCallback_t onOpenBase,
         OpenCombatCallback_t onOpenCombat,
-        std::function<void()> onOpenCommlinks,
-        BaseFoundedCallback_t onBaseFounded = {}
+        std::function<void()> onOpenCommlinks
     );
 
     void Render(Graphics& rGraphics) override;
@@ -100,7 +97,6 @@ private:
     OpenBaseCallback_t m_onOpenBase;
     OpenCombatCallback_t m_onOpenCombat;
     std::function<void()> m_onOpenCommlinks;
-    BaseFoundedCallback_t m_onBaseFounded;
 
     Unit* m_pSelectedUnit = nullptr;
     const Tile* m_pSelectedTile = nullptr;

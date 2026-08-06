@@ -37,8 +37,9 @@ void DestroyOneBuilding_(Faction& rOwner, const BuildingId_t& buildingId)
         throw std::logic_error("DestroyOneBuilding_: faction owns no base holding building '"
                                + buildingId + "'");
     }
+    const BaseId_t baseId = pBase->GetBaseId();
     pBase->GetBuildingManager().DestroyBuilding(buildingId);
-    rOwner.NotifyBuildingDestroyed(buildingId);
+    rOwner.NotifyBuildingDestroyed(baseId, buildingId);
 }
 
 } // namespace
@@ -110,8 +111,14 @@ OrbitalAttackResult_t TryAttackSatellite(GameState& rGameState,
         return result;
     }
 
+    // Best-effort base attribution for the deploy ledger (see Faction::DeployBuilding): the
+    // faction-wide ready count above does not track which specific copy answers this attack,
+    // so this picks the first base holding one. Precise per-copy tracking is Package 8.
+    const BaseManager* pAttackerBase = rAttacker.FindBaseWithBuilding(attackerBuildingId);
+    const BaseId_t attackerBaseId = pAttackerBase ? pAttackerBase->GetBaseId() : BaseId_t{};
+
     result.bAttempted = true;
-    rAttacker.DeployBuilding(attackerBuildingId,
+    rAttacker.DeployBuilding(attackerBaseId, attackerBuildingId,
                              ReadyYearAfterDeploy(year, pEffect->cooldownTurns));
 
     result.bHit = RollPercent(pEffect->chance, rRng);

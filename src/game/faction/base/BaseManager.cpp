@@ -63,7 +63,7 @@ BaseManager::BaseManager(
     const EconomyManager* pEconomyManager,
     const IEffectsProvider* pEffectsProvider,
     int initialPopulation)
-    : m_rFaction(rFaction)
+    : m_pFaction(&rFaction)
     , m_baseId(baseId)
     , m_tile(tile)
     , m_rTileEffects(rTileEffects)
@@ -112,7 +112,7 @@ BaseManager::BaseManager(
         {
             throw std::runtime_error("BaseManager: building registry is null after production");
         }
-        GameState* pGameState = m_rFaction.GetGameState();
+        GameState* pGameState = m_pFaction->GetGameState();
         if (!pGameState)
         {
             throw std::runtime_error(
@@ -126,6 +126,10 @@ BaseManager::BaseManager(
 
 BaseManager::~BaseManager()
 {
+    // Emitted first, while every member is still fully alive, so an observer (BaseView's
+    // pop-on-destroy) can drop its reference before the object actually goes away — mirrors
+    // UnitManager::OnUnitDestroyed's "signal before erase" contract.
+    OnDestroyed.Emit();
     m_rTileEffects.RemoveImprovementWithEffects(m_tile, "Base");
 }
 
@@ -391,17 +395,30 @@ const std::string& BaseManager::GetName() const
 
 Faction& BaseManager::GetFaction()
 {
-    return m_rFaction;
+    return *m_pFaction;
 }
 
 const Faction& BaseManager::GetFaction() const
 {
-    return m_rFaction;
+    return *m_pFaction;
 }
 
 FactionId_t BaseManager::GetFactionId() const
 {
-    return m_rFaction.GetFactionId();
+    return m_pFaction->GetFactionId();
+}
+
+void BaseManager::RebindFaction(Faction& rFaction)
+{
+    m_pFaction = &rFaction;
+    m_pResearch = &rFaction.GetResearch();
+    m_pEffectsProvider = &rFaction;
+    m_pPopulation->RebindResearch(rFaction.GetResearch());
+    m_pBuildings->RebindResearch(rFaction.GetResearch());
+    m_pResources->RebindEconomy(rFaction.GetEconomy());
+    // The cached BuildBaseEffects_ result was built from the old owner's pool; force a
+    // rebuild against the new provider even if version numbers happen to collide.
+    m_cachedPoolVersion.reset();
 }
 
 int BaseManager::GetBaseId() const

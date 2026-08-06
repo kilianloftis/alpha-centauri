@@ -117,6 +117,43 @@ void UnitManager::DestroyUnit(Unit& rUnit)
     m_rFaction.RebuildVisibility();
 }
 
+std::unique_ptr<Unit> UnitManager::ReleaseUnit(Unit& rUnit)
+{
+    auto it = std::find_if(m_units.begin(), m_units.end(),
+        [&rUnit](const std::unique_ptr<Unit>& pUnit)
+        {
+            return pUnit.get() == &rUnit;
+        });
+    if (it == m_units.end())
+    {
+        throw std::runtime_error("UnitManager::ReleaseUnit: unit not found");
+    }
+
+    // Emit while still owned/live, mirroring DestroyUnit's "signal before erase" contract.
+    OnUnitReleased.Emit(rUnit);
+
+    std::unique_ptr<Unit> pReleased = std::move(*it);
+    m_units.erase(it);
+    m_revision.Bump();
+    m_rFaction.RebuildVisibility();
+    return pReleased;
+}
+
+Unit& UnitManager::AdoptUnit(std::unique_ptr<Unit> pUnit)
+{
+    if (!pUnit)
+    {
+        throw std::invalid_argument("UnitManager::AdoptUnit: pUnit is null");
+    }
+    pUnit->RebindFaction(m_rFaction);
+    Unit& rUnit = *pUnit;
+    m_units.push_back(std::move(pUnit));
+    m_revision.Bump();
+    m_rFaction.RebuildVisibility();
+    OnUnitAdopted.Emit(rUnit);
+    return rUnit;
+}
+
 bool UnitManager::IsPendingDestruction(const Unit& rUnit) const
 {
     return std::ranges::any_of(m_pendingDestructions,

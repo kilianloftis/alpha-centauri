@@ -39,7 +39,6 @@ private:
     void MoveFrom_(HomeBaseClaim& rOther) noexcept;
 
     HomeBaseIndex* m_pIndex = nullptr;
-    Unit* m_pUnit = nullptr;
 };
 
 // Per-base owner of "which units call this base home". Owned by BaseManager. Mutation happens

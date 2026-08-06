@@ -175,6 +175,11 @@ int PopContainer::ComputePsychOutput() const
     return total;
 }
 
+void PopContainer::RebindResearch(const ResearchManager& rResearch)
+{
+    m_pResearchManager = &rResearch;
+}
+
 int PopContainer::CountPops_(bool (*predicate)(const Pop*)) const
 {
     int count = 0;

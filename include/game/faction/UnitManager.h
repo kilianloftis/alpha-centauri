@@ -51,6 +51,20 @@ public:
                      BaseManager* pHomeBase = nullptr, BaseManager* pProducedAt = nullptr);
     void DestroyUnit(Unit& rUnit);
 
+    // Ownership transfer, giver side (Faction::TransferUnitTo): removes rUnit from this
+    // manager and returns it, WITHOUT applying DestroyUnit's combat carrier-loss rules and
+    // WITHOUT emitting OnUnitDestroyed — the unit is not dying, it is leaving. Cargo / carrier
+    // links, position registration, and world occupancy are untouched; the caller decides what
+    // to do with them (see docs/architecture/high-level.md, "Object lifetime"). Throws if
+    // rUnit is not owned by this manager.
+    std::unique_ptr<Unit> ReleaseUnit(Unit& rUnit);
+    // Ownership transfer, receiver side: takes a unit released from another manager (or newly
+    // built off-manager), rebinds it to this manager's faction, and adds it as live. Does not
+    // re-check tile placement (the unit never left the map) and does not emit OnUnitCreated —
+    // observers that must react to "a unit now exists under this faction" without treating it
+    // as a birth should use OnUnitAdopted. Throws if pUnit is null.
+    Unit& AdoptUnit(std::unique_ptr<Unit> pUnit);
+
     // Keep destroyed objects alive until the scope ends so a pass may safely destroy its
     // current unit. DestroyUnit still removes the unit immediately from occupancy and all
     // Units() views; only memory reclamation is deferred. Scopes may be nested.
@@ -94,6 +108,15 @@ public:
     Signal<Unit&> OnUnitDestroyed;
     // Fired after CreateUnit finishes (unit is live and visibility has been rebuilt).
     Signal<Unit&> OnUnitCreated;
+    // Fired from ReleaseUnit before the unit is removed from this manager (giver side of a
+    // transfer). Distinct from OnUnitDestroyed: the unit is not dying. Observers holding a
+    // raw Unit* for "my faction's unit" (e.g. WorldView selection) should drop it here even
+    // though the pointer itself stays valid — see docs/architecture/high-level.md.
+    Signal<Unit&> OnUnitReleased;
+    // Fired after AdoptUnit finishes (receiver side of a transfer): unit is live under the
+    // new faction and visibility has been rebuilt. Distinct from OnUnitCreated so mods do not
+    // see a fake birth for a unit that already existed under another faction.
+    Signal<Unit&> OnUnitAdopted;
 
 private:
     void BeginDestructionDeferral_();

@@ -49,6 +49,11 @@ public:
     // Called once per turn per base from the ResourceCollection stage.
     void ProduceResources(const BaseEffects_t& rBaseEffects);
 
+    // Ownership transfer (BaseManager::RebindFaction): the energy allocation split (econ /
+    // labs / psych percentages) is per-faction, so a transferred base must read the new
+    // owner's EconomyManager from the next ProduceResources call.
+    void RebindEconomy(const EconomyManager& rEconomy);
+
 private:
     const WorkerAssignmentManager* m_pWorkerAssignments;
     const EconomyManager* m_pEconomy;

@@ -52,8 +52,7 @@ WorldView::WorldView(
     std::function<void()> onRequestExit,
     OpenBaseCallback_t onOpenBase,
     OpenCombatCallback_t onOpenCombat,
-    std::function<void()> onOpenCommlinks,
-    BaseFoundedCallback_t onBaseFounded
+    std::function<void()> onOpenCommlinks
 )
 : IGameView(layout)
 , m_rGameState(rGameState)
@@ -65,7 +64,6 @@ WorldView::WorldView(
 , m_onOpenBase(std::move(onOpenBase))
 , m_onOpenCombat(std::move(onOpenCombat))
 , m_onOpenCommlinks(std::move(onOpenCommlinks))
-, m_onBaseFounded(std::move(onBaseFounded))
 , m_pCameraInputController(std::make_unique<CameraInputController>(*m_pWorldDisplay, rWorldMap, m_mapLayout))
 , m_pUnitOrderInputController(std::make_unique<UnitOrderInputController>())
 , m_pTerraformInputController(std::make_unique<TerraformInputController>())
@@ -115,6 +113,15 @@ WorldView::WorldView(
     {
         rFaction.GetUnitManager().OnUnitDestroyed.Connect([this](Unit& rDestroyed) {
             if (m_pSelectedUnit == &rDestroyed)
+            {
+                SetSelectedUnit_(nullptr, false);
+            }
+        });
+        // Transfer preserves identity (the pointer does not dangle), but a unit that just
+        // left this faction is no longer "my" selection — drop it rather than keep showing
+        // a foreign unit as selected (see docs/architecture/high-level.md, "Object lifetime").
+        rFaction.GetUnitManager().OnUnitReleased.Connect([this](Unit& rReleased) {
+            if (m_pSelectedUnit == &rReleased)
             {
                 SetSelectedUnit_(nullptr, false);
             }
@@ -357,7 +364,7 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
         else if (m_pUnitOrderInputController->WasFoundBaseRequested() && pControllable)
         {
             if (m_rGameState.GetUnitOrderExecutor().TryFoundBase(
-                    *pControllable, m_rGameState, m_rGameDataContext, m_onBaseFounded))
+                    *pControllable, m_rGameState, m_rGameDataContext))
             {
                 // DestroyUnit clears selection via OnUnitDestroyed; pick the next unit.
                 SelectNextAvailableUnit_();

@@ -33,8 +33,7 @@ std::unique_ptr<WorldView> ViewFactory::CreateWorldView(
     std::function<void()> onRequestExit,
     std::function<void(BaseManager&)> onOpenBase,
     WorldView::OpenCombatCallback_t onOpenCombat,
-    std::function<void()> onOpenCommlinks,
-    WorldView::BaseFoundedCallback_t onBaseFounded
+    std::function<void()> onOpenCommlinks
 ) const
 {
     return std::make_unique<WorldView>(
@@ -46,8 +45,7 @@ std::unique_ptr<WorldView> ViewFactory::CreateWorldView(
         std::move(onRequestExit),
         std::move(onOpenBase),
         std::move(onOpenCombat),
-        std::move(onOpenCommlinks),
-        std::move(onBaseFounded));
+        std::move(onOpenCommlinks));
 }
 
 std::unique_ptr<BaseView> ViewFactory::CreateBaseView(BaseManager& rBase) const

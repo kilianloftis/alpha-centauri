@@ -306,8 +306,7 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
 }
 
 BaseManager* UnitOrderExecutor::TryFoundBase(Unit& rUnit, GameState& rGameState,
-                                             const GameDataContext& rDataContext,
-                                             std::function<void(BaseManager&)> onBaseCreated)
+                                             const GameDataContext& rDataContext)
 {
     if (!rUnit.GetFlag(RuleFlagId_t::FoundBase))
     {
@@ -334,11 +333,6 @@ BaseManager* UnitOrderExecutor::TryFoundBase(Unit& rUnit, GameState& rGameState,
         rDataContext,
         rGameState.GetTileEffects(),
         rGameState.GetSecretProjectAvailability());
-
-    if (onBaseCreated)
-    {
-        onBaseCreated(*pBase);
-    }
 
     if (ExpendIfSingleUse_(rUnit) == OrderProgress_t::Expended)
     {

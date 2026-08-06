@@ -19,6 +19,7 @@
 #include "game/units/Unit.h"
 #include "lib/DerefView.h"
 #include "lib/Revision.h"
+#include "lib/Signal.h"
 #include "game/effects/ActiveEffect.h"
 
 namespace ac
@@ -75,20 +76,27 @@ public:
 
     // Base management
     void AddBase(std::unique_ptr<BaseManager> pBase);
-    // Destroy the base and return a snapshot for reconstruct-under-new-owner.
+    // Destroy the base (razed on capture) and return a snapshot of its
+    // pre-destruction state. This is the DESTROY path: home-base claims orphan, the object
+    // is gone, and CreateBaseFromSnapshot is a *reconstruction* (new address), not a live
+    // transfer. See TransferBaseTo for ownership change that preserves identity.
     std::optional<BaseSnapshot_t> ExtractBase(BaseId_t baseId);
-    // Rebuild a base from a snapshot (recalculates pop roles and worked tiles).
+    // Move a base out of this faction's ownership without destroying it (identity-preserving
+    // transfer's building block). Throws if baseId is missing.
+    std::unique_ptr<BaseManager> ReleaseBase(BaseId_t baseId);
+    // Rebuild a base from a snapshot (recalculates pop roles and worked tiles). New object,
+    // new address — for future save/load reconstruction, NOT the live transfer path (see
+    // TransferBaseTo).
     BaseManager* CreateBaseFromSnapshot(const BaseSnapshot_t& rSnapshot,
                                         const GameDataContext& rDataContext,
                                         TileEffectsContext& rTileEffects,
                                         const SecretProjectAvailabilityCalculator& rSecretProjectAvailability);
-    // Extract from this faction and CreateBaseFromSnapshot on rReceiver.
+    // Identity-preserving ownership move: ReleaseBase → rebind owner → rReceiver.AddBase.
+    // Same BaseManager object and baseId end up owned by rReceiver; no destroy/recreate, no
+    // fake events. Recalculates composition and worker assignment under the new owner
+    // (psych may differ) and migrates this base's building deploy cooldowns.
     // Throws if baseId is missing or rReceiver is this faction.
-    void TransferBaseTo(BaseId_t baseId,
-                        Faction& rReceiver,
-                        const GameDataContext& rDataContext,
-                        TileEffectsContext& rTileEffects,
-                        const SecretProjectAvailabilityCalculator& rSecretProjectAvailability);
+    void TransferBaseTo(BaseId_t baseId, Faction& rReceiver);
     // Factory method: unpacks the individual registries/calculators BaseManager needs from
     // rDataContext (a composition-root-supplied bag) so BaseManager itself can declare narrow,
     // named dependencies instead of taking the whole context.
@@ -100,6 +108,11 @@ public:
     auto Bases() { return DerefView(m_bases); }
     auto Bases() const { return DerefView(m_bases); }
     size_t GetBaseCount() const { return m_bases.size(); }
+
+    // Fired at the end of AddBase for every insertion — founding, load, and post-transfer
+    // adopt alike. The single hook EventBridge wires from (see EventBridge::WireBase);
+    // conquest/probe/diplomacy callers do not need to remember to wire anything themselves.
+    Signal<BaseManager&> OnBaseAdded;
 
     // Sum of population size across all bases.
     int TotalPopulation() const;
@@ -118,12 +131,24 @@ public:
     const BaseManager* FindBaseWithBuilding(const BuildingId_t& buildingId) const;
     // Config of any owned copy, or nullptr when the faction has none.
     const BuildingConfig_t* FindOwnedBuildingConfig(const BuildingId_t& buildingId) const;
-    // Copies not on deploy cooldown at missionYear (see DeployBuilding).
+    // Copies not on deploy cooldown at missionYear (see DeployBuilding). A pure query: asking
+    // about a hypothetical or future year must not mutate the ledger, so the answer does not
+    // depend on what was asked before. Expiry is retired by PruneExpiredDeploys.
     int CountReadyBuildings(const BuildingId_t& buildingId, int missionYear) const;
-    // Mark one copy of buildingId deployed until readyMissionYear (inclusive unavailable before).
-    void DeployBuilding(const BuildingId_t& buildingId, int readyMissionYear);
-    // Drop one deploy record for buildingId when a copy is destroyed (prefer cooling copies).
-    void NotifyBuildingDestroyed(const BuildingId_t& buildingId);
+    // Retire every deploy record that has become ready at missionYear, so the ledger cannot
+    // grow unbounded across many deploy cycles. Called once per faction per turn (Upkeep
+    // stage); dropping a record is equivalent to it counting as ready, so this changes no
+    // CountReadyBuildings answer for the current or any later year.
+    void PruneExpiredDeploys(int missionYear);
+    // Mark one copy of buildingId at baseId deployed until readyMissionYear (inclusive
+    // unavailable before). Keyed by base (best-effort: the caller's base attribution, not a
+    // tracked per-instance id) so the record cannot outlive that base's ownership of the
+    // copy: ReleaseBase/ExtractBase migrate or drop matching records with the base.
+    void DeployBuilding(BaseId_t baseId, const BuildingId_t& buildingId, int readyMissionYear);
+    // Drop the deploy record for buildingId at baseId when that specific copy is destroyed.
+    // No-op if the copy at baseId was not cooling — never drops another base's record for
+    // the same buildingId.
+    void NotifyBuildingDestroyed(BaseId_t baseId, const BuildingId_t& buildingId);
 
     // Economy subsystem: energy treasury and allocation split.
     EconomyManager& GetEconomy();
@@ -168,16 +193,15 @@ public:
     UnitManager& GetUnitManager();
     const UnitManager& GetUnitManager() const;
 
-    // Destroy the unit and return a snapshot for reconstruct-under-new-owner.
-    std::optional<UnitSnapshot_t> ExtractUnit(UnitId_t unitId);
-    // Rebuild a unit from a snapshot (clears home / produced-at; foreign claims are invalid).
-    Unit& CreateUnitFromSnapshot(const UnitSnapshot_t& rSnapshot,
-                                 UnitPositionIndex& rPositions);
-    // Extract from this faction and CreateUnitFromSnapshot on rReceiver.
-    // Throws if unitId is missing or rReceiver is this faction.
-    void TransferUnitTo(UnitId_t unitId,
-                        Faction& rReceiver,
-                        UnitPositionIndex& rPositions);
+    // Identity-preserving ownership move (subvert / trade): release from this faction's
+    // UnitManager and adopt into rReceiver's, without DestroyUnit's combat cargo-loss rules
+    // and without emitting OnUnitDestroyed/OnUnitCreated (see UnitManager::ReleaseUnit /
+    // AdoptUnit and OnUnitReleased / OnUnitAdopted). A transferred carrier's cargo travels
+    // with it; a transferred embarked passenger detaches from its carrier cleanly (no throw,
+    // no CanPlaceUnitOnTile re-check — the unit never leaves the map). Home base is cleared
+    // (a foreign home claim is invalid). Throws if unitId is missing or rReceiver is this
+    // faction.
+    void TransferUnitTo(UnitId_t unitId, Faction& rReceiver);
 
     // Fog of war: permanent explored memory and currently-visible tiles as separate maps.
     // BindWorldMap sizes both from the shared WorldMap; RebuildVisibility refreshes
@@ -274,10 +298,21 @@ private:
     mutable uint64_t m_composedWorldStamp = UINT64_MAX;
     mutable uint64_t m_composedVersion = 0;
 
-    // Shared ASAT / intercept deploy cooldowns keyed by building id (no per-instance ids).
-    // A copy is unavailable while missionYear < readyMissionYear.
+    // Migrate every deploy record for baseId to rReceiver (TransferBaseTo) so a cooling
+    // ASAT/interceptor copy keeps its cooldown under the new owner instead of leaking a
+    // phantom suppression in the old one. Extract/raze simply drops them (see ExtractBase).
+    void MigrateBuildingDeploys_(BaseId_t baseId, Faction& rReceiver);
+    // Drop every deploy record for baseId (base destroyed: razed on capture).
+    void DropBuildingDeploys_(BaseId_t baseId);
+
+    // ASAT / intercept deploy cooldowns, keyed by (baseId, buildingId) — the base attribution
+    // is the calling site's best-effort pick of "a base holding a copy," not a tracked
+    // per-instance id (see DeployBuilding). A copy is unavailable while
+    // missionYear < readyMissionYear. Expired records are retired by PruneExpiredDeploys,
+    // not by the CountReadyBuildings query, which is const in both senses.
     struct BuildingDeploy_t
     {
+        BaseId_t baseId = 0;
         BuildingId_t buildingId;
         int readyMissionYear = 0;
     };

@@ -36,6 +36,19 @@ WorkerAssignmentManager::WorkerAssignmentManager(std::vector<const Tile*> workab
 {
 }
 
+WorkerAssignmentManager::~WorkerAssignmentManager()
+{
+    // See header: release every worker's WorkedTileClaim now, while `this` is still valid,
+    // so no claim can later invoke a displaced-worker handler pointing at a destroyed manager.
+    for (Pop& rPop : m_rPops.Pops())
+    {
+        if (rPop.IsWorker() && rPop.GetTile() != nullptr)
+        {
+            rPop.SetTileClaim(WorkedTileClaim{});
+        }
+    }
+}
+
 bool WorkerAssignmentManager::UserAssignWorker(Pop& rPop, const Tile* pTile)
 {
     return Assign_(rPop, pTile, /*bUserAssigned*/true);

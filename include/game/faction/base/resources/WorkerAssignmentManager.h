@@ -27,7 +27,13 @@ class WorkerAssignmentManager
 public:
     WorkerAssignmentManager(std::vector<const Tile*> workableTiles, PopulationManager& rPops,
                              const TileEffectsContext& rTileEffects, WorkedTileIndex& rWorkedTiles);
-    ~WorkerAssignmentManager() = default;
+    // BaseManager constructs m_pPopulation before m_pWorkerAssignments, so member destruction
+    // order tears this manager down first while pops (and their WorkedTileClaims) still live.
+    // Assign_ hands each claim a `[this]{ AutoAssignWorkers(); }` displaced-worker handler
+    // (see WorkedTileIndex), so a claim surviving past this destructor would hold a dangling
+    // `this`. Clear every worker's claim here — before that becomes possible — rather than
+    // relying on callers to never trigger displacement during base teardown.
+    ~WorkerAssignmentManager();
 
     using TileScorer = std::function<float(const Tile&)>;
 

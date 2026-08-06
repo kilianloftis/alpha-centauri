@@ -21,6 +21,11 @@ BuildingManager::~BuildingManager()
 {
 }
 
+void BuildingManager::RebindResearch(const ResearchManager& rResearch)
+{
+    m_pResearch = &rResearch;
+}
+
 void BuildingManager::AddBuilding(const BuildingId_t& buildingId)
 {
     if (!m_pRegistry)

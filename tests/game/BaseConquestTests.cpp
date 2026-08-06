@@ -288,6 +288,11 @@ TEST_CASE("Killing the last defender cuts pop; stepping in captures, destroys fa
     CHECK(game.pAi->GetBaseCount() == 0);
     REQUIRE(game.pPlayer->GetBaseCount() == 1);
     BaseManager& rCaptured = *game.pPlayer->Bases().begin();
+    // Capture is an identity-preserving ownership transfer, not destroy+recreate: same
+    // BaseManager object and baseId, just rebound to the new owner.
+    CHECK(&rCaptured == &rBase);
+    CHECK(rCaptured.GetBaseId() == rBase.GetBaseId());
+    CHECK(&rCaptured.GetFaction() == game.pPlayer);
     CHECK(rCaptured.GetPopulation().GetSize() == 2);
     REQUIRE(rCaptured.GetBuildingManager().GetBuildings().size() == 1);
     CHECK(rCaptured.GetBuildingManager().GetBuildings().front()->id == "test_secret_project");
@@ -361,6 +366,7 @@ TEST_CASE("Entering an undefended foreign base captures it", "[unit][conquest]")
 
     CHECK(game.pAi->GetBaseCount() == 0);
     REQUIRE(game.pPlayer->GetBaseCount() == 1);
+    CHECK(&*game.pPlayer->Bases().begin() == &rBase);
     CHECK((*game.pPlayer->Bases().begin()).GetPopulation().GetSize() == 2);
 }
 

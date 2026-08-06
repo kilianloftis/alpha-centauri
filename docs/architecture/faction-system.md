@@ -292,6 +292,7 @@ graph TB
     - `is_rioting`: emitted at end of turn (`CheckRiotEndOfTurn`) when riot conditions are still met; sets `m_bRioting = true`
     - `riot_ended`: emitted at end of turn when riot conditions are no longer met and the base was previously rioting
 - **Rationale**: Bases are the primary source of resources and require complex management of population with specialized worker roles, buildings, and tile resources
+- **Destroy vs. transfer**: a `BaseManager` is destroyed only by raze/extract (`Faction::ExtractBase`); ownership change (capture, mind-control, trade) is an identity-preserving move (`Faction::TransferBaseTo`) that rebinds the same object to a new `Faction` rather than recreating it. See `docs/architecture/high-level.md`, "Object lifetime and ownership transfer", for the full protocol, including how `HomeBaseIndex`, deploy cooldowns, and `EventBridge` wiring survive each case.
 
 ## Integration with Engine
 

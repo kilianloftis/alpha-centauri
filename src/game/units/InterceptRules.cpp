@@ -141,15 +141,23 @@ bool TryDeployInterceptSource_(Faction& rDefFaction,
             ReadyYearAfterDeploy(missionYear, rIntercept.cooldownTurns));
         return true;
     case InterceptDeployKind_t::Building:
+    {
         // DeployBuilding appends a deploy record that CountReadyBuildings subtracts, so the
         // faction's own ready count is the running tally across candidates — no local memo.
         if (rDefFaction.CountReadyBuildings(rCandidate.sourceId, missionYear) <= 0)
         {
             return false;
         }
+        // Best-effort base attribution (see Faction::DeployBuilding): the ready count above
+        // does not track which specific copy answers this intercept. Precise per-copy
+        // tracking is Package 8.
+        const BaseManager* pBase = rDefFaction.FindBaseWithBuilding(rCandidate.sourceId);
+        const BaseId_t baseId = pBase ? pBase->GetBaseId() : BaseId_t{};
         rDefFaction.DeployBuilding(
-            rCandidate.sourceId, ReadyYearAfterDeploy(missionYear, rIntercept.cooldownTurns));
+            baseId, rCandidate.sourceId,
+            ReadyYearAfterDeploy(missionYear, rIntercept.cooldownTurns));
         return true;
+    }
     }
     return false;
 }
@@ -188,7 +196,7 @@ void MaybeDestroyInterceptSourceOnFail_(Faction& rDefFaction, InterceptCandidate
                 + rCandidate.sourceId + "'");
         }
         pBase->GetBuildingManager().DestroyBuilding(rCandidate.sourceId);
-        rDefFaction.NotifyBuildingDestroyed(rCandidate.sourceId);
+        rDefFaction.NotifyBuildingDestroyed(pBase->GetBaseId(), rCandidate.sourceId);
         return;
     }
     case InterceptDeployKind_t::Unit:

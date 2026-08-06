@@ -34,7 +34,9 @@ BaseView::BaseView(
     : IGameView(layout)
     , m_rBase(rBase)
     , m_rFaction(rFaction)
+    , m_pOwnerAtOpen(&rBase.GetFaction())
     , m_bEditable(bEditable)
+    , m_destroyedConnection(rBase.OnDestroyed.ConnectScoped([this]() { m_bShouldClose = true; }))
 {
     const auto& bv = Style().baseView;
     const WindowLayout_t topPanel = ResolveLayout(m_layout, Style().layouts.topPanel);
@@ -109,6 +111,16 @@ BaseView::~BaseView() = default;
 
 void BaseView::Render(Graphics& rGraphics)
 {
+    // Base survives identity-preserving transfer (RebindFaction), so &GetFaction() is always
+    // safe to read here — unlike destroy, which is instead caught by m_destroyedConnection
+    // (OnDestroyed fires while the object is still valid, before UIManager ever renders a
+    // popped view again). Pop rather than render a base that changed hands out from under it.
+    if (&m_rBase.GetFaction() != m_pOwnerAtOpen)
+    {
+        m_bShouldClose = true;
+        return;
+    }
+
     RefreshUnitStack_();
     IGameView::Render(rGraphics);
 }

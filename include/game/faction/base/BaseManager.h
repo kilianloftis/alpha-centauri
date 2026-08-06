@@ -195,6 +195,19 @@ public:
     HomeBaseIndex& GetHomeUnits();
     const HomeBaseIndex& GetHomeUnits() const;
 
+    // Ownership transfer (Faction::TransferBaseTo): rebind to the new owner in place — same
+    // object, same baseId, same tile/HomeBaseIndex/WorkerAssignmentManager. Re-points every
+    // per-faction dependency this base resolves through (effects provider, research, economy)
+    // so production/tech-gated buildings and the econ split use the new owner from the next
+    // resolve. Caller still owns recalculating composition/worker assignment afterward (psych
+    // may differ under the new owner). See docs/architecture/high-level.md, "Object lifetime".
+    void RebindFaction(Faction& rFaction);
+
+    // Fired at the start of ~BaseManager, while the object is still fully valid, so observers
+    // (e.g. an open BaseView) can invalidate their reference before it dangles. Not fired on
+    // ownership transfer — the object survives that; see RebindFaction / GetFaction().
+    Signal<> OnDestroyed;
+
 private:
     // FilterForBase over a faction-wide pool, plus this base's own pop-generated ThisBase
     // effects — everything from that pool that applies to this base, before rating
@@ -217,7 +230,8 @@ private:
     // version changed. The reference is valid until the next effect-source mutation.
     const BaseEffects_t& BuildBaseEffects_() const;
 
-    Faction& m_rFaction;
+    // Rebindable owner (RebindFaction): never null while the base lives in a Faction.
+    Faction* m_pFaction;
     int m_baseId;
     Tile& m_tile;
     TileEffectsContext& m_rTileEffects;

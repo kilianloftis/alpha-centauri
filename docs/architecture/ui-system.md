@@ -230,7 +230,9 @@ it is safe to call `Advance`:
 
 ### Object Lifetime / Invalidation (code-review 1.8)
 Views hold live references/pointers into mutable game state with no generic weak-handle system.
-Two of the three cases the review flagged are closed; the third is deliberately deferred:
+See [`high-level.md`, "Object lifetime and ownership transfer"](high-level.md#object-lifetime-and-ownership-transfer)
+for the destroy-vs-transfer protocol these invalidation rules consume. All cases the review
+flagged are now closed:
 
 - **`BaseView::HandlePopClick`'s captured `Pop&`** is safe by construction rather than by a
   runtime handle: the only thing that erases a `Pop` (`PopulationManager::RemovePop`, via
@@ -238,12 +240,19 @@ Two of the three cases the review flagged are closed; the third is deliberately 
   `Advance` while any overlay (including BaseView) or blocking in-view modal is open. Preserve
   the same "no destructive mutation while a popup holding live references is open" invariant
   for any future mid-turn interactive popup.
-- **`WorldView::m_pSelectedUnit`** (a raw `Unit*`) is kept valid via `UnitManager::OnUnitDestroyed`,
-  a `Signal<Unit&>` emitted in `DestroyUnit` before the unit is erased (mirroring
-  `PopulationManager`'s `OnGrowth`/`OnStarvation` pattern). `WorldView` connects to every
-  faction's `UnitManager` at construction (all factions exist by then; none are added later) and
-  clears `m_pSelectedUnit` when it matches the destroyed unit.
-- **Deferred**: `BaseView`/`GrowthDisplay`/`ProductionDisplay` hold `BaseManager&`/`const
-  BaseManager*` for their whole life with no invalidation path. No code destroys a `BaseManager`
-  today — base capture/destruction doesn't exist as a feature — so there is nothing to guard
-  against yet; revisit once that feature lands (Package 3 lifetime protocol).
+- **`WorldView::m_pSelectedUnit`** (a raw `Unit*`) cannot dangle or go foreign: it is cleared on
+  `UnitManager::OnUnitDestroyed` (a `Signal<Unit&>` emitted in `DestroyUnit` before the unit is
+  erased, mirroring `PopulationManager`'s `OnGrowth`/`OnStarvation` pattern) and on
+  `UnitManager::OnUnitReleased` (emitted by `ReleaseUnit` when the unit is about to leave this
+  faction via transfer — the address survives, but it is no longer "my" selection). `WorldView`
+  connects to every faction's `UnitManager` at construction (all factions exist by then; none
+  are added later).
+- **`BaseView`/`GrowthDisplay`/`ProductionDisplay`'s `BaseManager&`/`const BaseManager*`**: a
+  base can now be destroyed (razed on capture) or change owner (capture / trade / mind-control)
+  without the view's knowledge otherwise. `BaseView` connects to
+  `BaseManager::OnDestroyed` at construction and pops itself when it fires; the connection is a
+  `Signal::ScopedConnection`, which goes inert if the signal dies first, so the view may safely
+  outlive the base it was watching. `Render()` also pops
+  when `&BaseManager::GetFaction()` no longer matches the owner recorded when the view was
+  opened. Ownership transfer is identity-preserving (same `BaseManager` object), so this is a
+  polling comparison, not a dangling-pointer check — see `high-level.md`.

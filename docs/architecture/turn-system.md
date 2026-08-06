@@ -148,7 +148,9 @@ sit between `Advance` calls (see UI modal gating; package 2).
 - **Exceptions**: after `OnEnter`, a throw from `Execute` still runs `OnExit` (post hooks)
   and clears entered/resume state, then rethrows. **`Reset()`** returns the processor to
   stage index 0 for recovery after a poisoned no-yield cycle or aborted stage.
-- Erasing a faction mid-stage loop is unsupported until the lifetime protocol defines it.
+- Erasing a faction mid-stage loop is unsupported until the lifetime protocol defines it —
+  see `docs/architecture/high-level.md`, "Object lifetime and ownership transfer", which
+  covers unit/base destroy and transfer but explicitly defers faction elimination.
 
 ### TurnStageFactory / TurnStageRegistrar
 

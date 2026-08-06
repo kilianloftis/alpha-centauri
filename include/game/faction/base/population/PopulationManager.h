@@ -117,6 +117,11 @@ public:
     // At max size, nutrients bank but the growth threshold is not spent.
     void ApplyGrowth(int nutrients, const BaseEffects_t& rBaseEffects);
 
+    // Ownership transfer (BaseManager::RebindFaction): pop fallback/obsolescence resolution
+    // is research-gated, so a transferred base's pops must read the new owner's discovered
+    // techs from the next conversion.
+    void RebindResearch(const ResearchManager& rResearch);
+
     // Signals
     Signal<int> OnPopGained;   // new size
     Signal<int> OnPopLost;     // new size

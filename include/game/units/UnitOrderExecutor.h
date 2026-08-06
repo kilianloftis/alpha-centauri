@@ -87,11 +87,11 @@ public:
     std::optional<CombatResult_t> TryAttack(Unit& rAttacker, const Tile& rTargetTile);
 
     // Found a base on the unit's tile. Requires FoundBase flag and a legal tile (spacing +
-    // territory). onBaseCreated runs after CreateBase (e.g. EventBridge::WireBase). SingleUse
-    // colony pods are DestroyUnit'd here on Expended. Returns the new base, or nullptr.
+    // territory). Observers hang off Faction::OnBaseAdded, which CreateBase fires — callers do
+    // not wire anything (see EventBridge::WireBase). SingleUse colony pods are DestroyUnit'd
+    // here on Expended. Returns the new base, or nullptr.
     BaseManager* TryFoundBase(Unit& rUnit, GameState& rGameState,
-                              const GameDataContext& rDataContext,
-                              std::function<void(BaseManager&)> onBaseCreated = {});
+                              const GameDataContext& rDataContext);
 
     // Begin a Former terraform project for improvementId. Spends energy up front and
     // assigns TerraformOrder_t. Returns false if ineligible.

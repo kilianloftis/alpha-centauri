@@ -64,6 +64,9 @@ public:
     // Bumped on every pop mutation (add/remove/convert); consumed by effect-pool caches.
     uint64_t GetRevision() const { return m_revision.Get(); }
 
+    // See PopulationManager::RebindResearch.
+    void RebindResearch(const ResearchManager& rResearch);
+
 private:
     std::vector<std::unique_ptr<Pop>> m_pops;
     Revision m_revision;

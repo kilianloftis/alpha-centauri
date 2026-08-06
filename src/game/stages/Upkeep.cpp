@@ -1,4 +1,5 @@
 #include "game/stages/Upkeep.h"
+#include "game/Faction.h"
 #include "game/GameState.h"
 #include "game/TurnStageRegistrar.h"
 #include <iostream>
@@ -13,9 +14,12 @@ Upkeep::Upkeep(HookContext hookContext)
 {
 }
 
-StageResult_t Upkeep::ExecuteImpl(GameState& /*rGameState*/, Faction& /*rFaction*/)
+StageResult_t Upkeep::ExecuteImpl(GameState& rGameState, Faction& rFaction)
 {
     std::cout << "Executing Upkeep stage\n";
+    // Retire ASAT / interceptor deploy records that have come off cooldown. Done here rather
+    // than inside CountReadyBuildings so that query stays pure (see Faction::CountReadyBuildings).
+    rFaction.PruneExpiredDeploys(rGameState.GetMissionYear());
     return StageResult_t::Continue;
 }
 

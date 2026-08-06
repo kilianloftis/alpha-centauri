@@ -58,7 +58,6 @@ struct DiplomacyGame_
         pState->GetDiplomacyLedger().SetKnown(pPlayer->GetFactionId(), pAi->GetFactionId());
         pState->GetDiplomacyLedger().SetKnown(pPlayer->GetFactionId(), pThird->GetFactionId());
         pState->GetDiplomacyLedger().SetKnown(pAi->GetFactionId(), pThird->GetFactionId());
-        pState->GetDiplomaticActionExecutor().SetGameDataContext(fixtures.dataContext);
     }
 };
 

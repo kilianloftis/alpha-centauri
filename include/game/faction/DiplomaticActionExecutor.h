@@ -7,7 +7,6 @@ namespace ac
 {
 
 class GameState;
-struct GameDataContext;
 
 enum class DiplomaticProposeResult
 {
@@ -22,9 +21,6 @@ class DiplomaticActionExecutor
 {
 public:
     DiplomaticActionExecutor() = default;
-
-    // Required for base transfer reconstruct; Engine / tests set this after construction.
-    void SetGameDataContext(const GameDataContext& rGameData) { m_pGameData = &rGameData; }
 
     DiplomaticProposeResult Propose(GameState& rState, const DiplomaticProposal_t& rProposal);
 
@@ -56,7 +52,6 @@ private:
                     const TradeItem_t& rItem);
 
     std::optional<DiplomaticProposal_t> m_pending;
-    const GameDataContext* m_pGameData = nullptr;
 };
 
 } // namespace ac
