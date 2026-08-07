@@ -122,7 +122,7 @@ bool HasFriendlyBase(const Unit& rMover, const Tile& rTile)
 
 bool CanPlaceUnitOnTile(const Tile& rTile, const UnitPositionIndex& rPositions)
 {
-    return !rPositions.IsSingleUnitPerTile() || rPositions.GetUnitsOnTile(rTile).empty();
+    return rPositions.CanPlaceUnit(rTile);
 }
 
 } // namespace ac

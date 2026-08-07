@@ -24,7 +24,7 @@ void UnitPositionIndex::MoveUnit(Unit& rUnit, const Tile& rNewTile)
     // about legality first (StepEvaluator, UnitManager::CreateUnit) still do, but a caller that
     // forgets can no longer overstack the index behind their back. Embarked passengers are
     // exempt: they ride with their carrier and are not independent occupants.
-    if (m_bSingleUnitPerTile && !rUnit.IsEmbarked() && !CanPlaceUnit_(rNewTile))
+    if (!rUnit.IsEmbarked() && !CanPlaceUnit(rNewTile))
     {
         throw std::logic_error(
             "UnitPositionIndex::MoveUnit: destination already occupied and this world allows "
@@ -59,8 +59,12 @@ void UnitPositionIndex::ForEachUnit(const std::function<void(const Unit&)>& rVis
     }
 }
 
-bool UnitPositionIndex::CanPlaceUnit_(const Tile& rTile) const
+bool UnitPositionIndex::CanPlaceUnit(const Tile& rTile) const
 {
+    if (!m_bSingleUnitPerTile)
+    {
+        return true;
+    }
     // Only non-embarked units count as occupants — a loaded transport's cargo shares its tile.
     const auto it = m_index.find(&rTile);
     if (it == m_index.end())

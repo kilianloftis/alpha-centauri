@@ -210,6 +210,71 @@ TEST_CASE("Single-unit-per-tile rule blocks placement and movement onto occupied
     CHECK(&mover.GetTile() == &fixture.At(4, 4));
 }
 
+TEST_CASE("A loaded carrier moves under the stacking rule", "[unit][index][transport]")
+{
+    // The embarked exemption in MoveUnit is load-bearing: cargo is towed by a recursive
+    // MoveUnit onto the tile the carrier just took, so without the exemption every loaded move
+    // would throw. Delete `!rUnit.IsEmbarked()` and this is the test that catches it.
+    FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    for (auto& pTile : fixture.map.GetTiles())
+    {
+        pTile->SetElevation(-10); // all sea, so the transport can move
+    }
+
+    // Load first: under the strict rule the passenger could not be *created* beside the
+    // carrier, since it is not cargo yet. (That tension is inherent to the rule, not to this
+    // change — boarding in the shipped game happens by stepping onto the carrier's tile.)
+    Unit& transport = fixture.MakeUnit(faction, 4, 4, {"test_sea_chassis", "test_transport"});
+    Unit& cargo = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    cargo.EmbarkInto(transport);
+    REQUIRE(cargo.IsEmbarked());
+
+    fixture.map.GetUnitPositions().SetSingleUnitPerTile(true);
+
+    // Two units share (4,4) legally — the passenger is not an independent occupant.
+    CHECK_NOTHROW(fixture.map.GetUnitPositions().MoveUnit(transport, fixture.At(5, 4)));
+    CHECK(&transport.GetTile() == &fixture.At(5, 4));
+    CHECK(&cargo.GetTile() == &fixture.At(5, 4));
+
+    // ...and the tile they left is free again, while the one they took is not.
+    CHECK(fixture.map.GetUnitPositions().CanPlaceUnit(fixture.At(4, 4)));
+    CHECK_FALSE(fixture.map.GetUnitPositions().CanPlaceUnit(fixture.At(5, 4)));
+}
+
+TEST_CASE("EmbarkInto refuses a carrier it cannot legally board", "[unit][transport]")
+{
+    // These invariants used to be documented as caller duties, so one missed call site could
+    // overfill m_cargo (FreeCargoSlots goes negative) or link a passenger to a carrier on
+    // another tile that MoveUnit would still tow.
+    FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    for (auto& pTile : fixture.map.GetTiles())
+    {
+        pTile->SetElevation(-10);
+    }
+
+    Unit& transport = fixture.MakeUnit(faction, 4, 4, {"test_sea_chassis", "test_transport"});
+    Unit& farAway = fixture.MakeUnit(faction, 7, 7, {"test_chassis"});
+    Unit& sameTile = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+
+    // Different tiles.
+    CHECK_THROWS_AS(farAway.EmbarkInto(transport), std::invalid_argument);
+    CHECK_FALSE(farAway.IsEmbarked());
+
+    // A unit cannot carry itself.
+    CHECK_THROWS_AS(transport.EmbarkInto(transport), std::invalid_argument);
+
+    // A plain chassis is not a carrier at all (no cargo capacity).
+    CHECK_THROWS_AS(transport.EmbarkInto(sameTile), std::invalid_argument);
+
+    // The legal case still works, and re-embarking the same carrier is a no-op, not a throw.
+    CHECK_NOTHROW(sameTile.EmbarkInto(transport));
+    CHECK(sameTile.IsEmbarked());
+    CHECK_NOTHROW(sameTile.EmbarkInto(transport));
+    CHECK(transport.GetCargo().size() == 1);
+}
+
 TEST_CASE("The stacking rule is per world, not per process", "[unit][index]")
 {
     // It used to be a file-scope global in MovementRules, so two worlds could not disagree and

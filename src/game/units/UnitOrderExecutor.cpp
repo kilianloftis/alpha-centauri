@@ -165,9 +165,16 @@ bool UnitOrderExecutor::ApplyArrivalEffects_(Unit& rMover, bool bWasEmbarked)
     }
 
     // No world bound means no session to conquer into — a legitimate mode for movement-only
-    // harnesses. A world *without* game data is not: it silently skipped capture and native
-    // raids, so a base entry that should have changed hands just didn't, with no diagnostic.
+    // harnesses.
     if (!m_pWorld)
+    {
+        return true;
+    }
+    // Only demand game data where a conquest can actually happen. ResolveBaseEntryConquest
+    // no-ops when the arrival tile holds no base, so guarding unconditionally would turn every
+    // step onto ordinary ground into a hard error for any world that has not been handed its
+    // data — far wider than the "capture silently skipped" defect being fixed.
+    if (!m_pWorld->FindBaseAt(rMover.GetTile().GetX(), rMover.GetTile().GetY()))
     {
         return true;
     }

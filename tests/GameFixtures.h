@@ -318,12 +318,10 @@ struct FactionFixture : BaseFixture
 
     void MoveUnit(ac::Unit& rUnit, int x, int y)
     {
-        ac::Tile& rDest = At(x, y);
-        if (!ac::CanPlaceUnitOnTile(rDest, map.GetUnitPositions()) && &rUnit.GetTile() != &rDest)
-        {
-            throw std::runtime_error("MoveUnit: destination blocked by the stacking rule");
-        }
-        map.GetUnitPositions().MoveUnit(rUnit, rDest);
+        // No pre-check here: UnitPositionIndex::MoveUnit enforces the stacking rule itself now.
+        // The guard this used to duplicate threw a different exception type than production,
+        // so a fixture move and a real move failed differently.
+        map.GetUnitPositions().MoveUnit(rUnit, At(x, y));
     }
 };
 
