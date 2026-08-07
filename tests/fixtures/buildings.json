@@ -613,6 +613,26 @@
     "category": "conquer"
   },
   {
+    "id": "test_odp_thisbase_miss_destroy",
+    "name": "Test ODP (ThisBase) Miss Destroys Source",
+    "allow_multiple": true,
+    "orbital": true,
+    "effects": [
+      {
+        "type": "InterceptAttempt",
+        "scope": "ThisBase",
+        "parameters": {
+          "chance": 0,
+          "cooldown_turns": 1,
+          "chance_of_destruction_on_fail": 100
+        },
+        "unitFilter": { "kind": "Domain", "domain": "orbital" },
+        "condition": { "kind": "TargetTileHas", "value": "Base" }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
     "id": "test_base_aaa",
     "name": "Test Base AAA",
     "effects": [

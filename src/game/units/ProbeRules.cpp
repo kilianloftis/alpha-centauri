@@ -267,7 +267,7 @@ bool IsHeadquarters(const BaseManager& rBase)
 }
 
 bool CanProbeAction(const Unit& rProbe, const ProbeActionConfig_t& rAction,
-                    const ProbeTarget_t& rTarget)
+                    const ProbeTarget_t& rTarget, const WorldMap& rMap)
 {
     if (!ActorMeetsActionPrereqs_(rProbe, rAction))
     {
@@ -303,6 +303,26 @@ bool CanProbeAction(const Unit& rProbe, const ProbeActionConfig_t& rAction,
 
     if (rAction.cost.has_value() && !bIgnoresBlock
         && TargetHasFlag(rTarget, RuleFlagId_t::ProbeSubversionImmune))
+    {
+        return false;
+    }
+
+    // TODO: sabotage_facility needs a facility to target, and nothing can supply one — there is
+    // no facility picker in the UI, so every caller passes an empty id. Offering it would risk
+    // the probe on a mission that can only fail. Previously an empty id silently fell through
+    // to the random-sabotage branch, making this action a duplicate of sabotage_random rather
+    // than the targeted one it is configured to be. Re-enable when the picker exists.
+    if (rAction.id == ProbeActionId_t::SabotageFacility)
+    {
+        return false;
+    }
+
+    // A paid action whose cost cannot be quoted is not offerable: TryPayProbeCost_ would
+    // refuse it and the attempt would silently do nothing. This is what keeps "Subvert Unit"
+    // off the menu for a garrison standing on the HQ tile, where the quote is nullopt —
+    // previously such a unit was priced as if the HQ were 12 tiles away, making the
+    // best-defended tile on the map the cheapest to subvert.
+    if (rAction.cost.has_value() && !QuoteProbeActionCost(rAction, rTarget, rMap).has_value())
     {
         return false;
     }

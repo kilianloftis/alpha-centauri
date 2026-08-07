@@ -166,10 +166,18 @@ bool TryDeployInterceptSource_(Faction& rDefFaction,
         {
             return false;
         }
-        // Best-effort base attribution (see Faction::DeployBuilding): the ready count above
-        // does not track which specific copy answers this intercept. Precise per-copy
-        // tracking is Package 8.
-        const BaseManager* pBase = rDefFaction.FindBaseWithBuilding(rCandidate.sourceId);
+        // Attribute the deploy to the same base destroy-on-fail will charge. These two must
+        // agree: NotifyBuildingDestroyed only erases a record whose baseId matches, so keying
+        // the deploy on FindBaseWithBuilding (the *first* base owning the id) while destroying
+        // through pBaseSource left an unerasable record — the surviving copy in another base
+        // stayed suppressed for the whole cooldown.
+        //
+        // FindBaseWithBuilding remains the fallback for FactionGlobal / AllOwnerBases charges,
+        // which belong to no single base; there, best-effort attribution is all the model
+        // supports (see Faction::DeployBuilding).
+        const BaseManager* pBase = rCandidate.pBaseSource
+                                       ? rCandidate.pBaseSource
+                                       : rDefFaction.FindBaseWithBuilding(rCandidate.sourceId);
         const BaseId_t baseId = pBase ? pBase->GetBaseId() : BaseId_t{};
         rDefFaction.DeployBuilding(
             baseId, rCandidate.sourceId,

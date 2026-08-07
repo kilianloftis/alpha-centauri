@@ -344,6 +344,42 @@ TEST_CASE("ODP intercept miss can destroy the intercepting satellite", "[orbital
     CHECK(game.pPlayer->CountBuildings("test_odp_miss_destroy") == 0);
 }
 
+TEST_CASE("A failed intercept destroys the firing base's copy, not another base's",
+          "[orbital][intercept]")
+{
+    // InterceptCandidate_t used to carry only sourceId, so destroy-on-fail re-derived the base
+    // with FindBaseWithBuilding — the *first* base owning that id. With the same building in
+    // two bases the wrong copy died. The deploy record has to key on the same base, or the
+    // survivor stays suppressed for the whole cooldown by a record nothing can erase.
+    OrbitalGame_ game;
+    // firstBase is created first, so FindBaseWithBuilding would return it.
+    BaseManager& firstBase = game.MakeBase(*game.pPlayer, 1, 1);
+    BaseManager& defendingBase = game.MakeBase(*game.pPlayer, 4, 4);
+    // ThisBase scope: the charge belongs to one base, which is the case pBaseSource exists for.
+    firstBase.GetBuildingManager().AddBuilding("test_odp_thisbase_miss_destroy");
+    defendingBase.GetBuildingManager().AddBuilding("test_odp_thisbase_miss_destroy");
+    REQUIRE(game.pPlayer->CountBuildings("test_odp_thisbase_miss_destroy") == 2);
+
+    Unit& missile = game.MakeUnit(*game.pAi, 5, 4, {"test_orbital_chassis", "test_weapon"});
+    Unit& garrison =
+        game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_armor"}, &defendingBase);
+    missile.SetMoveFragmentsRemaining(missile.GetMovementPoints() * k_point);
+
+    auto result = game.pState->GetUnitOrderExecutor().TryAttack(missile, garrison.GetTile());
+    REQUIRE(result);
+
+    // The base that actually fired lost its copy; the uninvolved base kept its own.
+    CHECK(defendingBase.GetBuildingManager().GetBuildings().empty());
+    CHECK(firstBase.GetBuildingManager().GetBuildings().size() == 1);
+    CHECK(game.pPlayer->CountBuildings("test_odp_thisbase_miss_destroy") == 1);
+
+    // And the survivor is usable: its deploy record was erased with the copy that spent it.
+    // With deploy and destroy keyed on different bases, this reads 0.
+    CHECK(game.pPlayer->CountReadyBuildings("test_odp_thisbase_miss_destroy",
+                                            game.pState->GetMissionYear())
+          == 1);
+}
+
 TEST_CASE("Second ready ODP can still act after the first deploys", "[orbital][deploy]")
 {
     OrbitalGame_ game;

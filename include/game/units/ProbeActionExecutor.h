@@ -79,9 +79,11 @@ private:
                                           const ProbeRollResult_t& roll);
     // Has rActorFactionId already run a probe action against this base? Records the attempt as
     // a side effect, so the first call for a pair is false and every later one is true.
-    // TODO: the scope of "repeat" is not specified by any rule we have — this treats it as
-    // permanent per (faction, base) for the session. Whether it should decay over turns, or
-    // reset when the base changes hands, needs the SMAC rule.
+    // TODO: the scope of "repeat" is not specified by any rule we have. This treats it as
+    // permanent, per (faction, base), and shared across actions — so a prior drain_energy
+    // marks a first-ever steal_tech as a repeat, even though risk_repeat is declared
+    // per-action in config. Whether it should decay over turns, reset when the base changes
+    // hands, or be tracked per action all need the SMAC rule.
     bool NoteAndCheckRepeatAtBase_(FactionId_t actorFactionId, BaseId_t targetBaseId);
 
     ProbeActionResult_t FailMission_(Unit& rUnit, ProbeActionResult_t result) const;

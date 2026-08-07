@@ -127,10 +127,14 @@ const UnitDesign* EnsureEscapePodDesign_(Faction& rFaction, const GameDataContex
     {
         return nullptr;
     }
-    // But a configured pod that cannot be assembled is a config error, not a silent no-op.
-    // It used to return null and SpawnEscapePods_ returned 0, so a cross-species capture still
-    // stripped population (ApplySpeciesClashPopulation_) and simply produced no pods — the
-    // player lost the pops the rule says they should have escaped with, with no diagnostic.
+    // A configured pod that cannot be assembled is a config error, not a silent no-op: it used
+    // to return null and spawn nothing, so a cross-species capture stripped population and
+    // produced no pods — the player lost the pops the rule says they escape with, silently.
+    //
+    // These throws should be unreachable: LoadGameData validates every componentIds entry
+    // against the registry (and ThrowIfIncomplete guarantees the registry itself), so a bad
+    // config fails at startup naming the file rather than here, mid-capture, after facilities
+    // have already been destroyed. Kept as assertions for a context assembled by hand.
     if (!rDataContext.unitComponentRegistry)
     {
         throw std::runtime_error(

@@ -65,8 +65,20 @@ bool CombatResolver::TryDisengage_(Unit& rCandidate, CombatSide_t side, int star
     // DisengageChance was defined, configured (Speeder chassis ships disengage_chance: 25) and
     // documented as a percent, but never read — so every eligible unit withdrew, every time.
     // The roll gates the state change rather than following it.
-    const int disengageChance = ResolveStat(rCandidate, StatId_t::DisengageChance);
-    if (!RollPercent(disengageChance, m_rRng))
+    //
+    // Resolved with a combat context, like every other combat stat here: the context-free
+    // overload drops any modifier carrying a condition, so an IsDefending or terrain-gated
+    // disengage_chance would parse, validate, and then be silently ignored.
+    //
+    // TODO: this is called once per combat round while the unit stays past the half-HP gate,
+    // so the effective withdrawal probability compounds (25% over three rounds is ~58%, not
+    // 25%). docs/game-rules/unit-components.md calls it "% chance to disengage from combat",
+    // which reads as once per combat — but whether SMAC rolls per round is not recorded here,
+    // so the existing per-round call site is left as-is rather than guessed at.
+    const EffectContext_t disengageCtx{
+        &rCandidate.GetTile(),
+        side == CombatSide_t::Attacker ? CombatRole_t::Attacker : CombatRole_t::Defender};
+    if (!RollPercent(ResolveStat(rCandidate, StatId_t::DisengageChance, disengageCtx), m_rRng))
     {
         return false;
     }

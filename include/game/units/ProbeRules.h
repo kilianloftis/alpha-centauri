@@ -72,10 +72,12 @@ ProbeRollResult_t RollProbeAction(const ProbeChance_t& rChances, std::mt19937& r
 bool IsHeadquarters(const BaseManager& rBase);
 
 // Probe-mechanics eligibility only: ProbeTeam, required tech, target-kind match, HQ
-// constraints, BlocksProbeTeams / ProbeSubversionImmune. Does not check moves or
-// adjacency (those belong to ProbeActionExecutor).
+// constraints, BlocksProbeTeams / ProbeSubversionImmune, and — for paid actions — that a cost
+// can actually be quoted, so an action that payment would refuse is never offered. Does not
+// check moves or adjacency (those belong to ProbeActionExecutor). rMap is needed for the
+// distance-to-HQ term in the quote.
 bool CanProbeAction(const Unit& rProbe, const ProbeActionConfig_t& rAction,
-                    const ProbeTarget_t& rTarget);
+                    const ProbeTarget_t& rTarget, const WorldMap& rMap);
 
 // Energy cost for paid actions (0 when free). Empty when the formula cannot produce a
 // cost (e.g. zero distance to HQ). Affordability / payment live in ProbeActionExecutor.

@@ -143,7 +143,10 @@ bool ApplySabotage_(BaseManager& rBase, ProbeActionId_t actionId, const Building
     {
         std::uniform_int_distribution<size_t> dist(0, candidates.size() - 1);
         const BuildingConfig_t* pChosen = candidates[dist(rRng)];
-        const BuildingId_t chosenId = pChosen->id; // copy: the config dies with the building
+        // Copy the id before destroying: the config itself outlives this (BuildingManager holds
+        // registry pointers and only erases its own), but reading through pChosen after the
+        // erase relies on that indirection staying true.
+        const BuildingId_t chosenId = pChosen->id;
         DestroyBuildingAndNotify_(rBase, chosenId);
         rResult.detail = ProbeDestroyedFacility_t{chosenId};
         return true;

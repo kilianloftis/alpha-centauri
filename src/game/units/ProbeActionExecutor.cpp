@@ -54,7 +54,7 @@ bool ProbeActionExecutor::CanTryProbeAction_(const Unit& rUnit,
     {
         return false;
     }
-    return CanProbeAction(rUnit, rAction, rTarget);
+    return CanProbeAction(rUnit, rAction, rTarget, m_rWorldMap);
 }
 
 bool ProbeActionExecutor::CanTryProbeAction(const Unit& rUnit,

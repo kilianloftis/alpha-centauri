@@ -151,6 +151,18 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
     BaseConquestConfigParser conquestParser;
     rData.baseConquestConfig =
         std::make_unique<BaseConquestConfig_t>(conquestParser.ParseConfig(rPaths.baseConquest));
+    // Escape-pod components are only assembled on a cross-species capture, which can be hours
+    // into a session. Validating the ids here turns a typo in base_conquest.json into a startup
+    // error naming the file, instead of a mid-game failure at the one moment the rule fires.
+    for (const std::string& rComponentId : rData.baseConquestConfig->escapeColonyPod.componentIds)
+    {
+        if (!rData.unitComponentRegistry->Find(rComponentId))
+        {
+            throw std::runtime_error(
+                "base conquest escape_colony_pod component '" + rComponentId
+                + "' is not a known unit component");
+        }
+    }
 
     rData.councilProposalRegistry = std::make_unique<CouncilProposalRegistry>();
     rData.councilProposalRegistry->Load(rPaths.councilProposals);
