@@ -817,6 +817,24 @@ Package 4 owns the constructor/null-policy half of these classes (two-phase-init
 
 **Deferred:** `NextStep`'s full Dijkstra per move fragment (wants a benchmark, sequenced with package 10); the `[L]` hygiene block (batched into package 16); and the *shape* of the `GameDataContext` dependency — removing `SetGameDataContext` needs the `GameState` god-facade split. Note the stacking rule ships off, so its new throw is not reachable in a real session today.
 
+### Package 8 — Units: combat, probes, conquest (2026-08-06)
+
+**Status:** complete — both [H] and all six [M] fixed; the [L] hygiene block is batched into package 16.  
+**Prompt:** [`docs/full-review-fix-prompts/08-units-combat-and-probes.md`](full-review-fix-prompts/08-units-combat-and-probes.md)
+
+**Fixes landed:**
+- `DisengageChance` is rolled, with a combat context, before the withdrawal it gates. The stat was defined, shipped on the Speeder chassis and documented as a percent, but never read — every eligible unit withdrew, every time.
+- Intercept candidates carry their originating base, so destroy-on-fail hits the copy that fired and the deploy record keys on the same base.
+- Probe sabotage notifies the faction (a sabotaged copy left a phantom cooldown suppressing survivors), separates targeted from random, and no longer reports a kill for a no-op destroy.
+- Intercept conditions see `CombatRole_t::Defender` with the attacker set; `IsDefending` previously never matched.
+- Subverting a unit on the HQ tile is refused rather than priced as if the HQ were 12 tiles away — and the action no longer appears when its cost cannot be quoted.
+- Escape-pod component ids validated at load; runtime assembly failures throw instead of silently spawning nothing after population was already stripped.
+- `risk_repeat` is reachable: the executor owns the repeat history instead of a caller flag no caller ever set.
+
+**Review follow-ups applied:** the intercept fix had only corrected the destroy half, leaving deploy and destroy keyed on different bases — a worse ledger desync than the bug being fixed; and requiring a facility id turned `sabotage_facility` into a listed action that could only lose the probe, since no UI supplies one (now suppressed with a TODO). Escape-pod validation moved to load time so a config typo fails at startup rather than mid-capture, hours in.
+
+**TODOs left rather than guessed:** whether the disengage roll is per round or per combat; the scope of "repeat" (decay, ownership change, per-action) for `risk_repeat`.
+
 ---
 
 ## Cross-package dependency sketch
