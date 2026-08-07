@@ -8,15 +8,24 @@
 namespace ac
 {
 
+// What a pop *is*, as declared by config. A closed partition: every pop has exactly one role,
+// so IsPlainWorker / IsDrone / IsTalent / IsSpecialist cannot overlap.
+enum class PopRole_t
+{
+    Worker,     // works a tile, no composition role
+    Drone,      // works a tile, counts toward riots
+    Talent,     // works a tile, counts toward golden ages
+    Specialist  // does not work a tile
+};
+
 struct PopTypeConfig_t
 {
     std::string id;
     std::string name;
+    PopRole_t role = PopRole_t::Worker;
     bool bIsDefault = false;
     bool bCanWorkTile = false;
     bool bPlayerAssignable = false;
-    int riotContribution = 0;
-    int goldenAgeContribution = 0;
     std::vector<std::string> obsoletes;
     std::string requiredTech;
     std::string fallbackPopTypeId;
@@ -26,7 +35,7 @@ struct PopTypeConfig_t
 class PopTypeConfigParser
 {
 public:
-    PopTypeConfigParser();
+    PopTypeConfigParser() = default;
     ~PopTypeConfigParser() = default;
 
     std::vector<PopTypeConfig_t> ParseConfig(const std::string& configPath);

@@ -14,9 +14,8 @@ namespace
 
 constexpr int k_DroneGroupOrder              = 0;
 constexpr int k_WorkerGroupOrder             = 1;
-constexpr int k_GoldenAgeGroupOrder          = 2;
+constexpr int k_TalentGroupOrder             = 2;
 constexpr int k_SpecialistGroupOrder         = 3;
-constexpr int k_NoGoldenAgeContribution      = 0;
 constexpr size_t k_MinPopCountForSpacing     = 2;
 constexpr char k_UnknownPopLetter            = '?';
 
@@ -24,10 +23,10 @@ int PopGroupOrder(const Pop& rPop)
 {
     if (rPop.IsDrone())
         return k_DroneGroupOrder;
-    if (rPop.IsWorker() && rPop.GetGoldenAgeContribution() == k_NoGoldenAgeContribution)
+    if (rPop.IsPlainWorker())
         return k_WorkerGroupOrder;
-    if (rPop.GetGoldenAgeContribution() > k_NoGoldenAgeContribution)
-        return k_GoldenAgeGroupOrder;
+    if (rPop.IsTalent())
+        return k_TalentGroupOrder;
     return k_SpecialistGroupOrder;
 }
 

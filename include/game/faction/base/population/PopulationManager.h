@@ -12,12 +12,12 @@
 namespace ac
 {
 
-struct RiotConditionInputs;
+struct RiotConditionInputs_t;
 struct GrowthConfig_t;
 class PopTypeRegistry;
 class PopTypeAvailabilityCalculator;
 class PopCompositionCalculator;
-struct PopCompositionResult;
+struct PopCompositionResult_t;
 class ResearchManager;
 
 // PopulationManager is the API surface for the population component.
@@ -90,7 +90,7 @@ public:
     // Every conversion it performs is resolved through the obsolescence chain, so the tech gate
     // applies here exactly as it does to ConvertTo and ConvertToFallback; the container's own
     // version applied it to neither.
-    void ApplyCompositionTargets(const PopCompositionResult& rTargets,
+    void ApplyCompositionTargets(const PopCompositionResult_t& rTargets,
                                  const std::string& droneTypeId,
                                  const std::string& talentTypeId);
 
@@ -111,8 +111,9 @@ public:
     // Check riot conditions at end of turn. Delegates to m_riot.Update(inputs).
     void CheckRiotEndOfTurn();
 
-    // Force an active drone riot (probe action). Does not alter pop composition.
-    void ForceRiot();
+    // Force an active drone riot for `turns` end-of-turn passes (probe action). Does not alter
+    // pop composition, so it needs its own lifetime — the natural condition will not sustain it.
+    void ForceRiot(int turns);
 
     // Check golden age conditions at end of turn. Delegates to m_goldenAge.Update(...).
     void CheckGoldenAgeEndOfTurn();
@@ -175,7 +176,7 @@ private:
     RiotCalculator m_riot;
     GoldenAgeCalculator m_goldenAge;
 
-    RiotConditionInputs BuildRiotInputs_() const;
+    RiotConditionInputs_t BuildRiotInputs_() const;
 
     void NotifyPopGained_();
     void NotifyPopLost_();

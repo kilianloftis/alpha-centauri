@@ -1,3 +1,5 @@
+#include "TempConfigFile.h"
+
 #include "game/population/pop-types/GrowthConfigParser.h"
 #include "game/population/pop-types/PopCompositionConfigParser.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
@@ -17,42 +19,7 @@
 
 using namespace ac;
 
-namespace
-{
-
-// Removes itself, so a run leaves no temp files behind and a later run cannot read a stale one.
-class TempConfig_
-{
-public:
-    TempConfig_(const char* name, const std::string& rContents)
-        : m_path(std::filesystem::temp_directory_path() / name)
-    {
-        std::ofstream out(m_path);
-        if (!out.is_open())
-        {
-            throw std::runtime_error("could not write test config " + m_path.string());
-        }
-        out << rContents;
-        out.close();
-        REQUIRE(std::filesystem::exists(m_path));
-    }
-
-    ~TempConfig_()
-    {
-        std::error_code ignored;
-        std::filesystem::remove(m_path, ignored);
-    }
-
-    TempConfig_(const TempConfig_&) = delete;
-    TempConfig_& operator=(const TempConfig_&) = delete;
-
-    std::string Path() const { return m_path.string(); }
-
-private:
-    std::filesystem::path m_path;
-};
-
-} // namespace
+using actest::TempConfigFile;
 
 TEST_CASE("A tech tree with a prerequisite cycle fails at load", "[config][tech]")
 {
@@ -63,7 +30,7 @@ TEST_CASE("A tech tree with a prerequisite cycle fails at load", "[config][tech]
 
     SECTION("a two-tech cycle is named")
     {
-        const TempConfig_ config("ac_tech_cycle.json", R"([
+        const TempConfigFile config("ac_tech_cycle.json", R"([
             { "id": "a", "name": "A", "category": "build", "cost": 10, "prerequisites": ["b"] },
             { "id": "b", "name": "B", "category": "build", "cost": 10, "prerequisites": ["a"] }
         ])");
@@ -75,7 +42,7 @@ TEST_CASE("A tech tree with a prerequisite cycle fails at load", "[config][tech]
 
     SECTION("a longer cycle is caught too")
     {
-        const TempConfig_ config("ac_tech_cycle3.json", R"([
+        const TempConfigFile config("ac_tech_cycle3.json", R"([
             { "id": "a", "name": "A", "category": "build", "cost": 10, "prerequisites": ["c"] },
             { "id": "b", "name": "B", "category": "build", "cost": 10, "prerequisites": ["a"] },
             { "id": "c", "name": "C", "category": "build", "cost": 10, "prerequisites": ["b"] }
@@ -86,7 +53,7 @@ TEST_CASE("A tech tree with a prerequisite cycle fails at load", "[config][tech]
 
     SECTION("a diamond is not a cycle")
     {
-        const TempConfig_ config("ac_tech_diamond.json", R"([
+        const TempConfigFile config("ac_tech_diamond.json", R"([
             { "id": "root", "name": "Root", "category": "build", "cost": 10 },
             { "id": "left", "name": "Left", "category": "build", "cost": 10,
               "prerequisites": ["root"] },
@@ -100,7 +67,7 @@ TEST_CASE("A tech tree with a prerequisite cycle fails at load", "[config][tech]
 
     SECTION("a cycle behind a valid prefix is still caught")
     {
-        const TempConfig_ config("ac_tech_cycle_deep.json", R"([
+        const TempConfigFile config("ac_tech_cycle_deep.json", R"([
             { "id": "root", "name": "Root", "category": "build", "cost": 10 },
             { "id": "mid", "name": "Mid", "category": "build", "cost": 10,
               "prerequisites": ["root", "loop_a"] },
@@ -121,7 +88,7 @@ TEST_CASE("A tech without a usable cost is rejected, by name", "[config][tech]")
 
     SECTION("missing")
     {
-        const TempConfig_ config("ac_tech_no_cost.json",
+        const TempConfigFile config("ac_tech_no_cost.json",
                                  R"([{ "id": "flight", "name": "Flight", "category": "build" }])");
         CHECK_THROWS_WITH(registry.Load(config.Path()),
                           Catch::Matchers::ContainsSubstring("flight")
@@ -130,7 +97,7 @@ TEST_CASE("A tech without a usable cost is rejected, by name", "[config][tech]")
 
     SECTION("wrong type")
     {
-        const TempConfig_ config(
+        const TempConfigFile config(
             "ac_tech_bad_cost.json",
             R"([{ "id": "flight", "name": "Flight", "category": "build", "cost": "cheap" }])");
         CHECK_THROWS_WITH(registry.Load(config.Path()),
@@ -143,7 +110,7 @@ TEST_CASE("A wrong-shaped prerequisites list names the tech", "[config][tech]")
 {
     // "prerequisites": "tech_x" read identically to no prerequisites at all.
     TechRegistry registry;
-    const TempConfig_ config("ac_tech_bad_prereqs.json", R"([
+    const TempConfigFile config("ac_tech_bad_prereqs.json", R"([
         { "id": "flight", "name": "Flight", "category": "build", "cost": 10,
           "prerequisites": "industrial_base" }
     ])");
@@ -195,7 +162,7 @@ TEST_CASE("Growth config requires its keys and positive values", "[config][popul
 
     SECTION("a missing key names the key, not just the file")
     {
-        const TempConfig_ config("ac_growth_missing.json", R"({"max_base_size": 8})");
+        const TempConfigFile config("ac_growth_missing.json", R"({"max_base_size": 8})");
         CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
                           Catch::Matchers::ContainsSubstring("nutrients_per_pop")
                               && Catch::Matchers::ContainsSubstring("required"));
@@ -203,7 +170,7 @@ TEST_CASE("Growth config requires its keys and positive values", "[config][popul
 
     SECTION("a non-positive value is rejected")
     {
-        const TempConfig_ config("ac_growth_zero.json",
+        const TempConfigFile config("ac_growth_zero.json",
                                  R"({"nutrients_per_pop": 0, "max_base_size": 8})");
         CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
                           Catch::Matchers::ContainsSubstring("nutrients_per_pop"));
@@ -211,7 +178,7 @@ TEST_CASE("Growth config requires its keys and positive values", "[config][popul
 
     SECTION("a fractional value is rejected rather than truncated")
     {
-        const TempConfig_ config("ac_growth_float.json",
+        const TempConfigFile config("ac_growth_float.json",
                                  R"({"nutrients_per_pop": 10.9, "max_base_size": 8})");
         CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
                           Catch::Matchers::ContainsSubstring("integer"));
@@ -219,7 +186,7 @@ TEST_CASE("Growth config requires its keys and positive values", "[config][popul
 
     SECTION("a complete config loads")
     {
-        const TempConfig_ config("ac_growth_ok.json",
+        const TempConfigFile config("ac_growth_ok.json",
                                  R"({"nutrients_per_pop": 10, "max_base_size": 8})");
         const GrowthConfig_t growth = parser.ParseConfig(config.Path());
         CHECK(growth.nutrientsPerPop == 10);
@@ -235,7 +202,7 @@ TEST_CASE("Pop composition requires formulas and rejects the unimplemented key",
 
     SECTION("an empty formula would mean zero drones forever")
     {
-        const TempConfig_ config("ac_comp_empty.lua", R"(return {
+        const TempConfigFile config("ac_comp_empty.lua", R"(return {
             drone_formula = "", talent_formula = "0",
             drone_type = "Drone", talent_type = "Talent",
         })");
@@ -245,13 +212,40 @@ TEST_CASE("Pop composition requires formulas and rejects the unimplemented key",
 
     SECTION("precedence is refused rather than silently ignored")
     {
-        const TempConfig_ config("ac_comp_precedence.lua", R"(return {
+        const TempConfigFile config("ac_comp_precedence.lua", R"(return {
             drone_formula = "0", talent_formula = "0",
             drone_type = "Drone", talent_type = "Talent",
             precedence = { "Talent", "Drone" },
         })");
         CHECK_THROWS_WITH(parser.ParseConfig(config.Path(), lua),
                           Catch::Matchers::ContainsSubstring("not implemented"));
+    }
+}
+
+TEST_CASE("A pop type without a role is rejected", "[config][population]")
+{
+    // Role used to be inferred from riot_contribution / golden_age_contribution magnitudes, so
+    // it could not be stated and could not be wrong. Now it is stated, it must be present.
+    PopTypeRegistry registry;
+
+    SECTION("missing")
+    {
+        const TempConfigFile config("ac_pop_no_role.json", R"([
+            { "id": "Worker", "name": "Worker", "is_default": true, "can_work_tile": true }
+        ])");
+        CHECK_THROWS_WITH(registry.Load(config.Path()),
+                          Catch::Matchers::ContainsSubstring("Worker")
+                              && Catch::Matchers::ContainsSubstring("role"));
+    }
+
+    SECTION("unknown value")
+    {
+        const TempConfigFile config("ac_pop_bad_role.json", R"([
+            { "id": "Worker", "name": "Worker", "role": "supervisor", "is_default": true,
+              "can_work_tile": true }
+        ])");
+        CHECK_THROWS_WITH(registry.Load(config.Path()),
+                          Catch::Matchers::ContainsSubstring("supervisor"));
     }
 }
 
@@ -263,9 +257,11 @@ TEST_CASE("Pop types validate their references to other pop types", "[config][po
 
     SECTION("an unknown fallback_pop_type is rejected")
     {
-        const TempConfig_ config("ac_pop_fallback.json", R"([
-            { "id": "Worker", "name": "Worker", "is_default": true, "can_work_tile": true },
-            { "id": "Specialist", "name": "Specialist", "fallback_pop_type": "Typo" }
+        const TempConfigFile config("ac_pop_fallback.json", R"([
+            { "id": "Worker", "name": "Worker", "role": "worker", "is_default": true,
+              "can_work_tile": true },
+            { "id": "Specialist", "name": "Specialist", "role": "specialist",
+              "fallback_pop_type": "Typo" }
         ])");
         CHECK_THROWS_WITH(registry.Load(config.Path()),
                           Catch::Matchers::ContainsSubstring("Typo"));
@@ -273,9 +269,11 @@ TEST_CASE("Pop types validate their references to other pop types", "[config][po
 
     SECTION("an unknown obsoletes entry is rejected")
     {
-        const TempConfig_ config("ac_pop_obsoletes.json", R"([
-            { "id": "Worker", "name": "Worker", "is_default": true, "can_work_tile": true },
-            { "id": "Doctor", "name": "Doctor", "obsoletes": ["NoSuchType"] }
+        const TempConfigFile config("ac_pop_obsoletes.json", R"([
+            { "id": "Worker", "name": "Worker", "role": "worker", "is_default": true,
+              "can_work_tile": true },
+            { "id": "Doctor", "name": "Doctor", "role": "specialist",
+              "obsoletes": ["NoSuchType"] }
         ])");
         CHECK_THROWS_WITH(registry.Load(config.Path()),
                           Catch::Matchers::ContainsSubstring("NoSuchType"));
@@ -283,10 +281,12 @@ TEST_CASE("Pop types validate their references to other pop types", "[config][po
 
     SECTION("valid references load")
     {
-        const TempConfig_ config("ac_pop_ok.json", R"([
-            { "id": "Worker", "name": "Worker", "is_default": true, "can_work_tile": true },
-            { "id": "Doctor", "name": "Doctor", "fallback_pop_type": "Worker" },
-            { "id": "Empath", "name": "Empath", "obsoletes": ["Doctor"] }
+        const TempConfigFile config("ac_pop_ok.json", R"([
+            { "id": "Worker", "name": "Worker", "role": "worker", "is_default": true,
+              "can_work_tile": true },
+            { "id": "Doctor", "name": "Doctor", "role": "specialist",
+              "fallback_pop_type": "Worker" },
+            { "id": "Empath", "name": "Empath", "role": "specialist", "obsoletes": ["Doctor"] }
         ])");
         CHECK_NOTHROW(registry.Load(config.Path()));
     }

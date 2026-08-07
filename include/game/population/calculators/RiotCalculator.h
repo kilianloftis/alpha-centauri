@@ -2,48 +2,55 @@
 
 #include "lib/Signal.h"
 
+#include <optional>
+
 namespace ac
 {
 
-// Inputs for calculating drone riot condition.
-// If targetTalents >= 0, condition is: droneCount > targetTalents
-// Otherwise, condition is: droneCount > talentCount (fallback)
-struct RiotConditionInputs
+// Inputs for the natural riot condition: drones outnumber the talent target.
+struct RiotConditionInputs_t
 {
     int droneCount = 0;
     int talentCount = 0;
-    int targetTalents = -1;  // -1 means use talentCount as fallback
+    // The composition's talent target when there is one; otherwise the actual talent count.
+    std::optional<int> targetTalents;
 };
 
 // Tracks drone riot state for a base population.
-// Call NotifyPopGrown(inputs) when the population grows to emit will_riot if conditions are newly met.
-// Call Update(inputs) at end of turn to drive is_rioting / riot_ended.
+//
+// Two independent sources keep a riot alive, because they expire differently:
+//   - the natural condition (drones > talent target), recomputed on every Update
+//   - a forced riot (probe Incite Drone Riots), which lasts a fixed number of turns and which
+//     the natural condition cannot sustain, since the action does not change composition
+// A base is rioting while either holds.
 class RiotCalculator
 {
 public:
     RiotCalculator(Signal<>& rWillRiot, Signal<>& rIsRioting, Signal<>& rRiotEnded);
     ~RiotCalculator() = default;
 
-    // Call after a pop is added. Emits will_riot if conditions are met but riot is not yet active.
-    void NotifyPopGrown(const RiotConditionInputs& inputs);
+    // Call after a pop is added. Emits will_riot if the natural condition is newly met.
+    void NotifyPopGrown(const RiotConditionInputs_t& rInputs);
 
-    // Call at end of turn. Emits is_rioting if conditions are met (activates riot),
-    // or riot_ended if conditions are no longer met and base was rioting.
-    void Update(const RiotConditionInputs& inputs);
+    // Call at end of turn. Ages any forced riot by one turn, then emits is_rioting while the
+    // base is rioting, or riot_ended on the turn it stops.
+    void Update(const RiotConditionInputs_t& rInputs);
 
-    // Force an active drone riot (probe Incite Drone Riots). Emits OnIsRioting if newly active.
-    void ForceRiot();
+    // Force a riot for the next `turns` end-of-turn passes (probe Incite Drone Riots).
+    // Extends but never shortens an existing forced riot. Emits OnIsRioting if newly active.
+    void ForceRiot(int turns);
 
-    // True if base is currently in an active drone riot.
+    // True if the base is currently in an active drone riot, from either source.
     bool IsRioting() const;
 
 private:
+    static bool NaturalCondition_(const RiotConditionInputs_t& rInputs);
+
     Signal<>& m_rWillRiot;
     Signal<>& m_rIsRioting;
     Signal<>& m_rRiotEnded;
     bool m_bRioting = false;
-
-    static bool ComputeCondition_(const RiotConditionInputs& inputs);
+    int m_forcedTurnsRemaining = 0;
 };
 
 } // namespace ac

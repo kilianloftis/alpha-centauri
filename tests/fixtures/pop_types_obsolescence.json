@@ -2,41 +2,37 @@
   {
     "id": "Worker",
     "name": "Worker",
+    "role": "worker",
     "is_default": true,
     "can_work_tile": true,
     "player_assignable": true,
-    "riot_contribution": 0,
-    "golden_age_contribution": 0,
     "obsoletes": [],
     "effects": []
   },
   {
     "id": "Drone",
     "name": "Drone",
+    "role": "drone",
     "can_work_tile": true,
     "player_assignable": false,
-    "riot_contribution": 1,
-    "golden_age_contribution": 0,
     "obsoletes": [],
     "effects": []
   },
   {
     "id": "Talent",
     "name": "Talent",
+    "role": "talent",
     "can_work_tile": true,
     "player_assignable": false,
-    "riot_contribution": 0,
-    "golden_age_contribution": 1,
     "obsoletes": [],
     "effects": []
   },
   {
     "id": "Technician",
     "name": "Technician",
+    "role": "specialist",
     "can_work_tile": false,
     "player_assignable": true,
-    "riot_contribution": 0,
-    "golden_age_contribution": 0,
     "fallback_pop_type": "Worker",
     "obsoletes": [],
     "effects": []
@@ -44,13 +40,23 @@
   {
     "id": "Engineer",
     "name": "Engineer",
+    "role": "specialist",
     "can_work_tile": false,
     "player_assignable": true,
-    "riot_contribution": 0,
-    "golden_age_contribution": 0,
     "required_tech": "advanced_build",
     "fallback_pop_type": "Worker",
     "obsoletes": ["Technician"],
+    "effects": []
+  },
+  {
+    "id": "Transcend",
+    "name": "Transcend",
+    "role": "specialist",
+    "can_work_tile": false,
+    "player_assignable": true,
+    "required_tech": "transcendence",
+    "fallback_pop_type": "Worker",
+    "obsoletes": ["Engineer"],
     "effects": []
   }
 ]

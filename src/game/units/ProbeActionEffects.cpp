@@ -175,9 +175,10 @@ bool ApplySabotage_(GameState& rGameState, BaseManager& rBase, ProbeActionId_t a
     return true;
 }
 
-bool ApplyInciteDroneRiots_(BaseManager& rBase, ProbeActionResult_t& rResult)
+bool ApplyInciteDroneRiots_(BaseManager& rBase, const ProbeActionConfig_t& rConfig,
+                            ProbeActionResult_t& rResult)
 {
-    rBase.GetPopulation().ForceRiot();
+    rBase.GetPopulation().ForceRiot(rConfig.riotTurns);
     rResult.detail = ProbeActionStatus_t::Riot;
     return true;
 }
@@ -239,7 +240,7 @@ bool ApplyBaseAction_(Unit& rProbe, const ProbeActionConfig_t& rAction, BaseMana
         case ProbeActionId_t::SabotageFacility:
             return ApplySabotage_(rGameState, rBase, rAction.id, facilityId, rResult, rRng);
         case ProbeActionId_t::InciteDroneRiots:
-            return ApplyInciteDroneRiots_(rBase, rResult);
+            return ApplyInciteDroneRiots_(rBase, rAction, rResult);
         case ProbeActionId_t::Assassinate:
             return ApplyAssassinate_(rBase, rResult);
         case ProbeActionId_t::MindControlBase:

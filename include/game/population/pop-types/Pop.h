@@ -29,27 +29,22 @@ public:
     // The full config backing this pop's current type.
     const PopTypeConfig_t& GetConfig() const;
 
-    // True if this pop can work a tile (can_work_tile in config)
+    // True if this pop can work a tile (can_work_tile in config). A capability, not a role:
+    // plain workers, drones and talents all answer true.
     bool IsWorker() const;
 
-    // True if this pop contributes to riot (riot_contribution > 0)
+    // Role predicates. Together with IsPlainWorker below these partition every pop: exactly one
+    // of the four is true. The role comes from the config's `role` field.
     bool IsDrone() const;
-
-    // True if this pop contributes to golden age (golden_age_contribution > 0)
     bool IsTalent() const;
-
-    // True if this pop is a specialist (!can_work_tile && !IsDrone())
     bool IsSpecialist() const;
 
     // Worker that is neither drone nor talent — the pool composition converts to/from.
+    // The fourth member of the partition above.
     bool IsPlainWorker() const;
 
     // True if the player can manually assign this pop type
     bool IsPlayerAssignable() const;
-
-    // Riot and golden age contribution values from config
-    int GetRiotContribution() const;
-    int GetGoldenAgeContribution() const;
 
     // Swap this pop's type config in-place.
     // Clears tile assignment if the new type is not a worker.

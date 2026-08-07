@@ -73,7 +73,7 @@ TEST_CASE("ApplyCompositionTargets uses configured type ids and skips existing d
     pops.AddPop("Drone");
     pops.AddPop("Worker");
 
-    PopCompositionResult targets;
+    PopCompositionResult_t targets;
     targets.targetDrones = 2;
     targets.targetTalents = 1;
 

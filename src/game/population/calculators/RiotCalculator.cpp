@@ -1,5 +1,7 @@
 #include "game/population/calculators/RiotCalculator.h"
 
+#include <algorithm>
+
 namespace ac
 {
 
@@ -10,17 +12,26 @@ RiotCalculator::RiotCalculator(Signal<>& rWillRiot, Signal<>& rIsRioting, Signal
 {
 }
 
-void RiotCalculator::NotifyPopGrown(const RiotConditionInputs& inputs)
+void RiotCalculator::NotifyPopGrown(const RiotConditionInputs_t& rInputs)
 {
-    if (!m_bRioting && ComputeCondition_(inputs))
+    if (!m_bRioting && NaturalCondition_(rInputs))
     {
         m_rWillRiot.Emit();
     }
 }
 
-void RiotCalculator::Update(const RiotConditionInputs& inputs)
+void RiotCalculator::Update(const RiotConditionInputs_t& rInputs)
 {
-    if (ComputeCondition_(inputs))
+    // This pass is one of the turns the forced riot was bought for, so it counts before it is
+    // consumed: ForceRiot(1) survives exactly the next end of turn.
+    const bool bForced = m_forcedTurnsRemaining > 0;
+    if (bForced)
+    {
+        --m_forcedTurnsRemaining;
+    }
+
+    const bool bRioting = NaturalCondition_(rInputs) || bForced;
+    if (bRioting)
     {
         m_bRioting = true;
         m_rIsRioting.Emit();
@@ -32,9 +43,10 @@ void RiotCalculator::Update(const RiotConditionInputs& inputs)
     }
 }
 
-void RiotCalculator::ForceRiot()
+void RiotCalculator::ForceRiot(int turns)
 {
-    if (!m_bRioting)
+    m_forcedTurnsRemaining = std::max(m_forcedTurnsRemaining, std::max(0, turns));
+    if (m_forcedTurnsRemaining > 0 && !m_bRioting)
     {
         m_bRioting = true;
         m_rIsRioting.Emit();
@@ -46,10 +58,10 @@ bool RiotCalculator::IsRioting() const
     return m_bRioting;
 }
 
-bool RiotCalculator::ComputeCondition_(const RiotConditionInputs& inputs)
+bool RiotCalculator::NaturalCondition_(const RiotConditionInputs_t& rInputs)
 {
-    int threshold = (inputs.targetTalents >= 0) ? inputs.targetTalents : inputs.talentCount;
-    return inputs.droneCount > threshold;
+    const int threshold = rInputs.targetTalents.value_or(rInputs.talentCount);
+    return rInputs.droneCount > threshold;
 }
 
 } // namespace ac

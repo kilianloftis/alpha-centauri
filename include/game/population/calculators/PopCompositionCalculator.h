@@ -10,7 +10,7 @@ namespace ac
 class LuaRuntime;
 
 // Input variables available to composition formulas.
-struct PopCompositionInputs
+struct PopCompositionInputs_t
 {
     int baseSize            = 0;
     int psychOutput         = 0;
@@ -19,7 +19,7 @@ struct PopCompositionInputs
 };
 
 // Result of a composition calculation: target counts per named type.
-struct PopCompositionResult
+struct PopCompositionResult_t
 {
     int targetDrones  = 0;
     int targetTalents = 0;
@@ -36,14 +36,15 @@ public:
     ~PopCompositionCalculator() = default;
 
     // Calculate target drone and talent counts given runtime inputs.
-    PopCompositionResult Calculate(const PopCompositionInputs& inputs);
+    // Throws if a formula fails or produces a negative target.
+    PopCompositionResult_t Calculate(const PopCompositionInputs_t& rInputs);
 
     // Access the underlying config (drone/talent type ids, formulas, etc.)
     const PopCompositionConfig_t& GetConfig() const;
 
 private:
-    const PopCompositionConfig_t* m_pConfig;
-    LuaRuntime* m_pLua;
+    const PopCompositionConfig_t& m_rConfig;
+    LuaRuntime& m_rLua;
 };
 
 } // namespace ac

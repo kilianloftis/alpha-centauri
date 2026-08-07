@@ -31,37 +31,27 @@ bool Pop::IsWorker() const
 
 bool Pop::IsDrone() const
 {
-    return m_pConfig->riotContribution > 0;
+    return m_pConfig->role == PopRole_t::Drone;
 }
 
 bool Pop::IsTalent() const
 {
-    return m_pConfig->goldenAgeContribution > 0;
+    return m_pConfig->role == PopRole_t::Talent;
 }
 
 bool Pop::IsSpecialist() const
 {
-    return !m_pConfig->bCanWorkTile && m_pConfig->riotContribution == 0;
+    return m_pConfig->role == PopRole_t::Specialist;
 }
 
 bool Pop::IsPlainWorker() const
 {
-    return IsWorker() && !IsDrone() && !IsTalent();
+    return m_pConfig->role == PopRole_t::Worker;
 }
 
 bool Pop::IsPlayerAssignable() const
 {
     return m_pConfig->bPlayerAssignable;
-}
-
-int Pop::GetRiotContribution() const
-{
-    return m_pConfig->riotContribution;
-}
-
-int Pop::GetGoldenAgeContribution() const
-{
-    return m_pConfig->goldenAgeContribution;
 }
 
 void Pop::Convert(const PopTypeConfig_t& rConfig)

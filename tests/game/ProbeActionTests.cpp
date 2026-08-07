@@ -159,7 +159,7 @@ TEST_CASE("ForceRiot activates drone riot state", "[probe][riot]")
     BaseFixture fixture;
     BaseManager& base = fixture.MakeBase(4, 4);
     CHECK_FALSE(base.GetPopulation().IsRioting());
-    base.GetPopulation().ForceRiot();
+    base.GetPopulation().ForceRiot(/*turns=*/1);
     CHECK(base.GetPopulation().IsRioting());
 }
 

@@ -59,6 +59,7 @@ add_executable(effects-tests
     game/MapRulesTests.cpp
     game/WorldGenPipelineTests.cpp
     game/ConfigStrictnessTests.cpp
+    game/PopulationCalculatorTests.cpp
     game/VisibilityTests.cpp
     game/UnitVisibilityTests.cpp
     game/MovementTests.cpp

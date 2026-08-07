@@ -49,7 +49,8 @@
       "id": "incite_drone_riots",
       "name": "Incite Drone Riots",
       "target": "base",
-      "risk": 0
+      "risk": 0,
+      "riot_turns": 1
     },
     {
       "id": "assassinate",

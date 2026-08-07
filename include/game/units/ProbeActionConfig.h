@@ -97,6 +97,11 @@ struct ProbeActionConfig_t
     bool bHqOnly = false;
     bool bNotHq = false;
     bool bIsAtrocity = false;
+    // Incite Drone Riots only, and required there: end-of-turn passes the forced riot survives.
+    // The action does not change pop composition, so nothing else keeps the riot alive.
+    // TODO: SMAC's actual duration is unknown; config/probe_actions.json states 1, which is the
+    // least that makes the action do anything.
+    int riotTurns = 0;
     std::optional<ProbeCostConfig_t> cost;
     // Optional Instantaneous effects applied on success (e.g. Infiltration + ActionTarget).
     std::vector<EffectConfig_t> effects;

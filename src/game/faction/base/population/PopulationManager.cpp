@@ -229,12 +229,12 @@ bool PopulationManager::IsDestroyed() const
     return m_container.GetSize() == 0;
 }
 
-RiotConditionInputs PopulationManager::BuildRiotInputs_() const
+RiotConditionInputs_t PopulationManager::BuildRiotInputs_() const
 {
-    RiotConditionInputs inputs;
+    RiotConditionInputs_t inputs;
     inputs.droneCount = m_container.GetDroneCount();
     inputs.talentCount = m_container.GetTalentCount();
-    PopCompositionInputs compInputs;
+    PopCompositionInputs_t compInputs;
     compInputs.baseSize = m_container.GetSize();
     compInputs.psychOutput = m_container.ComputePsychOutput();
     inputs.targetTalents = m_rCompositionCalculator.Calculate(compInputs).targetTalents;
@@ -243,17 +243,17 @@ RiotConditionInputs PopulationManager::BuildRiotInputs_() const
 
 void PopulationManager::RecalculateComposition()
 {
-    PopCompositionInputs inputs;
+    PopCompositionInputs_t inputs;
     inputs.baseSize = m_container.GetSize();
     inputs.psychOutput = m_container.ComputePsychOutput();
     // TODO: supply faction drone/talent modifiers once faction modifiers are accessible here
-    const PopCompositionResult targets = m_rCompositionCalculator.Calculate(inputs);
+    const PopCompositionResult_t targets = m_rCompositionCalculator.Calculate(inputs);
     const PopCompositionConfig_t& rConfig = m_rCompositionCalculator.GetConfig();
 
     ApplyCompositionTargets(targets, rConfig.droneTypeId, rConfig.talentTypeId);
 }
 
-void PopulationManager::ApplyCompositionTargets(const PopCompositionResult& rTargets,
+void PopulationManager::ApplyCompositionTargets(const PopCompositionResult_t& rTargets,
                                                 const std::string& droneTypeId,
                                                 const std::string& talentTypeId)
 {
@@ -343,9 +343,9 @@ void PopulationManager::CheckRiotEndOfTurn()
     m_riot.Update(BuildRiotInputs_());
 }
 
-void PopulationManager::ForceRiot()
+void PopulationManager::ForceRiot(int turns)
 {
-    m_riot.ForceRiot();
+    m_riot.ForceRiot(turns);
 }
 
 void PopulationManager::CheckGoldenAgeEndOfTurn()

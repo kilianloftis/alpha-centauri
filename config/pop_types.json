@@ -2,11 +2,10 @@
   {
     "id": "Worker",
     "name": "Worker",
+    "role": "worker",
     "is_default": true,
     "can_work_tile": true,
     "player_assignable": true,
-    "riot_contribution": 0,
-    "golden_age_contribution": 0,
     "fallback_pop_type": "Doctor",
     "obsoletes": [],
     "effects": []
@@ -14,10 +13,9 @@
   {
     "id": "Drone",
     "name": "Drone",
+    "role": "drone",
     "can_work_tile": true,
     "player_assignable": false,
-    "riot_contribution": 1,
-    "golden_age_contribution": 0,
     "fallback_pop_type": "Doctor",
     "obsoletes": [],
     "effects": []
@@ -25,10 +23,9 @@
   {
     "id": "Talent",
     "name": "Talent",
+    "role": "talent",
     "can_work_tile": true,
     "player_assignable": false,
-    "riot_contribution": 0,
-    "golden_age_contribution": 1,
     "fallback_pop_type": "Doctor",
     "obsoletes": [],
     "effects": []
@@ -36,10 +33,9 @@
   {
     "id": "Doctor",
     "name": "Doctor",
+    "role": "specialist",
     "can_work_tile": false,
     "player_assignable": true,
-    "riot_contribution": 0,
-    "golden_age_contribution": 0,
     "obsoletes": [],
     "effects": [
       {
@@ -52,10 +48,9 @@
   {
     "id": "Technician",
     "name": "Technician",
+    "role": "specialist",
     "can_work_tile": false,
     "player_assignable": true,
-    "riot_contribution": 0,
-    "golden_age_contribution": 0,
     "obsoletes": [],
     "effects": [
       {
@@ -68,10 +63,9 @@
   {
     "id": "Librarian",
     "name": "Librarian",
+    "role": "specialist",
     "can_work_tile": false,
     "player_assignable": true,
-    "riot_contribution": 0,
-    "golden_age_contribution": 0,
     "required_tech": "planetary_networks",
     "obsoletes": [],
     "effects": [
@@ -85,10 +79,9 @@
   {
     "id": "Empath",
     "name": "Empath",
+    "role": "specialist",
     "can_work_tile": false,
     "player_assignable": true,
-    "riot_contribution": 0,
-    "golden_age_contribution": 0,
     "required_tech": "centauri_meditation",
     "obsoletes": ["Doctor"],
     "effects": [
@@ -107,10 +100,9 @@
   {
     "id": "Engineer",
     "name": "Engineer",
+    "role": "specialist",
     "can_work_tile": false,
     "player_assignable": true,
-    "riot_contribution": 0,
-    "golden_age_contribution": 0,
     "required_tech": "fusion_power",
     "obsoletes": ["Technician"],
     "effects": [
@@ -129,10 +121,9 @@
   {
     "id": "Thinker",
     "name": "Thinker",
+    "role": "specialist",
     "can_work_tile": false,
     "player_assignable": true,
-    "riot_contribution": 0,
-    "golden_age_contribution": 0,
     "required_tech": "mind_machine_interface",
     "obsoletes": ["Librarian"],
     "effects": [
@@ -151,10 +142,9 @@
   {
     "id": "Transcend",
     "name": "Transcend",
+    "role": "specialist",
     "can_work_tile": false,
     "player_assignable": true,
-    "riot_contribution": 0,
-    "golden_age_contribution": 0,
     "required_tech": "secrets_of_alpha_centauri",
     "obsoletes": ["Empath", "Thinker"],
     "effects": [

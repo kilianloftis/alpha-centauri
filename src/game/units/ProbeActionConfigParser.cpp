@@ -50,6 +50,27 @@ ProbeActionConfig_t ParseAction_(const json& rActionJson)
     action.bHqOnly = rActionJson.value("hq_only", false);
     action.bNotHq = rActionJson.value("not_hq", false);
     action.bIsAtrocity = rActionJson.value("atrocity", false);
+    // Only the riot action has a riot duration; accepting the key elsewhere would silently
+    // ignore it.
+    if (action.id == ProbeActionId_t::InciteDroneRiots)
+    {
+        if (!rActionJson.contains("riot_turns"))
+        {
+            throw std::runtime_error("Probe action '" + action.name
+                                     + "': missing required field 'riot_turns'");
+        }
+        action.riotTurns = rActionJson.at("riot_turns").get<int>();
+        if (action.riotTurns < 1)
+        {
+            throw std::runtime_error("Probe action '" + action.name
+                                     + "': riot_turns must be >= 1");
+        }
+    }
+    else if (rActionJson.contains("riot_turns"))
+    {
+        throw std::runtime_error("Probe action '" + action.name
+                                 + "': riot_turns applies only to incite_drone_riots");
+    }
     if (rActionJson.contains("cost") && !rActionJson.at("cost").is_null())
     {
         action.cost = ParseCost_(rActionJson.at("cost"));

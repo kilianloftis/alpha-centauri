@@ -23,10 +23,9 @@ int PopContainer::GetSize() const
 
 int PopContainer::GetWorkerCount() const
 {
-    // Every tile-capable pop: plain workers *plus* drones and talents. The `!IsSpecialist()`
-    // clause is redundant (IsSpecialist is !bCanWorkTile && riot == 0, which cannot hold when
-    // IsWorker does) and is kept only for readability of the intent.
-    return CountPops_([](const Pop* p) { return p->IsWorker() && !p->IsSpecialist(); });
+    // Every tile-capable pop: plain workers *plus* drones and talents. PopTypeRegistry enforces
+    // role Specialist <=> !can_work_tile, so IsWorker() already excludes specialists.
+    return CountPops_([](const Pop* p) { return p->IsWorker(); });
 }
 
 int PopContainer::GetPlainWorkerCount() const

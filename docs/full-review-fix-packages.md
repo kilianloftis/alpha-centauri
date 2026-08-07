@@ -892,6 +892,25 @@ Package 4 owns the constructor/null-policy half of these classes (two-phase-init
 
 **Deferred:** eight other hand-rolled single-object parsers still duplicate open/parse/`is_object` (Package 16's hygiene sweep); converting them here would have buried the behavioural changes.
 
+### Package 12 — Population rules and calculators (2026-08-07)
+
+**Status:** complete — the [H], five of six [M] (one no longer reproduced), and the [L] hygiene block.  
+**Prompt:** [`docs/full-review-fix-prompts/12-population-rules.md`](full-review-fix-prompts/12-population-rules.md)
+
+**Fixes landed:**
+- An incited riot survives. `ForceRiot` set the same flag `Update` clears whenever drones ≤ talents, and the `Population` stage calls `Update` every turn — so a probe's Incite Drone Riots was undone before the player could see it, on any base that was not already rioting on its own. Forced riots now carry their own expiry, and a base riots while either source holds.
+- Pop roles are declared, not inferred. `IsDrone`/`IsTalent` read `riot_contribution`/`golden_age_contribution` magnitudes and `IsSpecialist` excluded drones but not talents, so a non-worker with a golden-age contribution counted as both. A required `role` key makes the four predicates a partition; the two contribution fields, having no other reader, are deleted.
+- Obsolescence closes transitively over the whole graph and no longer gates intermediate steps on their own tech. Reaching Transcend without Empath left Doctor assignable beside it, and `ResolveCurrentType` agreed — because the two methods answered the same question by different walks. They now share one, so they cannot disagree.
+- Obsolescence cycles are rejected at load rather than walked at runtime; the calculator is on the per-turn path for every pop of every base.
+- A negative composition target throws instead of flooring to 0, now that `EvalInt` cannot return 0 for a broken formula.
+- Direct tests for the three calculators that had none (`RiotCalculator`, `GoldenAgeCalculator`, `PopTypeAvailabilityCalculator`).
+
+**Review follow-ups applied:** the contribution-magnitude coupling **survived in `PopulationDisplay`**, which grouped pops by golden-age contribution while rendering glyphs by `IsTalent()` — two definitions of "talent" four lines apart. The documented "registry order" tie-break was false (last-write over frontier × registry order, so depth 1 and depth 2 tied in opposite directions), and the "GetAvailable and ResolveCurrentType cannot disagree" test asserted one direction inside an `if`, so an empty `GetAvailable` would have passed it. Two behaviours and the new required `role` key shipped with no tests.
+
+**TODOs left rather than guessed:** the real duration of an incited riot (`riot_turns` in config, required, currently 1); which pop type is promoted first when plain workers are scarce.
+
+**Note:** the review's `ResolveCurrentType`-hang finding no longer reproduced — an earlier package had already added the visited set.
+
 ---
 
 ## Cross-package dependency sketch

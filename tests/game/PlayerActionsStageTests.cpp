@@ -218,7 +218,7 @@ TEST_CASE("Population stage invokes riot and golden-age end-of-turn updates",
     pBase->GetPopulation().OnGoldenAgeStarted.Connect([&]() { ++goldenAgeCallbacks; });
     pBase->GetPopulation().OnGoldenAgeEnded.Connect([&]() { ++goldenAgeCallbacks; });
 
-    pBase->GetPopulation().ForceRiot();
+    pBase->GetPopulation().ForceRiot(/*turns=*/1);
     REQUIRE(pBase->GetPopulation().IsRioting());
 
     PerFactionTurnStageRegistry_t perFaction;
@@ -230,14 +230,19 @@ TEST_CASE("Population stage invokes riot and golden-age end-of-turn updates",
     TurnProcessor processor(std::move(global), std::move(perFaction), {"Population", "Stop"});
     processor.Advance(*game.pState);
 
-    // Fixture base is not drone-majority, so EOT Update clears an unsustained ForceRiot.
-    CHECK_FALSE(pBase->GetPopulation().IsRioting());
+    // The fixture base is not drone-majority, so only the forced riot keeps this true. An
+    // incited riot has to outlive the end of turn it was incited on for the probe action to do
+    // anything observable.
+    CHECK(pBase->GetPopulation().IsRioting());
+
     // Golden-age Update ran (may or may not transition); calling both EOT APIs is required.
-    // A second stage pass must also be safe (exercises CheckGoldenAgeEndOfTurn again).
-    processor.Advance(*game.pState); // Stop yielded; wrap would need another yield — Reset path:
+    // A second stage pass must also be safe (exercises CheckGoldenAgeEndOfTurn again), and it
+    // is where the one forced turn expires.
     (void)goldenAgeCallbacks;
+    processor.Advance(*game.pState);
     Population stage(HookContext{});
     CHECK(stage.Execute(*game.pState, *game.pPlayer) == StageResult_t::Continue);
+    CHECK_FALSE(pBase->GetPopulation().IsRioting());
 }
 
 TEST_CASE("WorldEvents consumes GameState session RNG", "[WorldEvents]")
