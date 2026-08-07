@@ -15,13 +15,6 @@
 namespace ac
 {
 
-namespace
-{
-
-bool s_bSingleUnitPerTile = false;
-
-} // namespace
-
 bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject)
 {
     if (rProjector.IsEmbarked())
@@ -127,19 +120,9 @@ bool HasFriendlyBase(const Unit& rMover, const Tile& rTile)
     return false;
 }
 
-void SetSingleUnitPerTile(bool bSingleUnitPerTile)
-{
-    s_bSingleUnitPerTile = bSingleUnitPerTile;
-}
-
-bool IsSingleUnitPerTile()
-{
-    return s_bSingleUnitPerTile;
-}
-
 bool CanPlaceUnitOnTile(const Tile& rTile, const UnitPositionIndex& rPositions)
 {
-    return !IsSingleUnitPerTile() || rPositions.GetUnitsOnTile(rTile).empty();
+    return !rPositions.IsSingleUnitPerTile() || rPositions.GetUnitsOnTile(rTile).empty();
 }
 
 } // namespace ac

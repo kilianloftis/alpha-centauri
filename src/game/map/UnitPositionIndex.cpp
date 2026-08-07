@@ -20,6 +20,16 @@ void UnitPositionIndex::MoveUnit(Unit& rUnit, const Tile& rNewTile)
     {
         return;
     }
+    // Enforced at the mutation boundary, not only at the planning layer. Callers that reason
+    // about legality first (StepEvaluator, UnitManager::CreateUnit) still do, but a caller that
+    // forgets can no longer overstack the index behind their back. Embarked passengers are
+    // exempt: they ride with their carrier and are not independent occupants.
+    if (m_bSingleUnitPerTile && !rUnit.IsEmbarked() && !CanPlaceUnit_(rNewTile))
+    {
+        throw std::logic_error(
+            "UnitPositionIndex::MoveUnit: destination already occupied and this world allows "
+            "only one unit per tile");
+    }
     // Snapshot cargo before mutating occupancy; passengers ride with the carrier.
     const std::vector<Unit*> cargo = rUnit.GetCargo();
     RemoveFromTile_(rUnit);
@@ -33,6 +43,32 @@ void UnitPositionIndex::MoveUnit(Unit& rUnit, const Tile& rNewTile)
             MoveUnit(*pPassenger, rNewTile);
         }
     }
+}
+
+void UnitPositionIndex::ForEachUnit(const std::function<void(const Unit&)>& rVisit) const
+{
+    for (const auto& [pTile, rUnits] : m_index)
+    {
+        for (const Unit* pUnit : rUnits)
+        {
+            if (pUnit)
+            {
+                rVisit(*pUnit);
+            }
+        }
+    }
+}
+
+bool UnitPositionIndex::CanPlaceUnit_(const Tile& rTile) const
+{
+    // Only non-embarked units count as occupants — a loaded transport's cargo shares its tile.
+    const auto it = m_index.find(&rTile);
+    if (it == m_index.end())
+    {
+        return true;
+    }
+    return std::none_of(it->second.begin(), it->second.end(),
+                        [](const Unit* pUnit) { return pUnit && !pUnit->IsEmbarked(); });
 }
 
 void UnitPositionIndex::Register_(Unit& rUnit, const Tile& rTile)

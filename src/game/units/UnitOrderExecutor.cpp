@@ -26,6 +26,7 @@
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
+#include <iostream>
 #include <stdexcept>
 #include <variant>
 
@@ -70,27 +71,38 @@ void UnitOrderExecutor::RevealBlockingUnits_(Unit& rMover, const StepEvaluation_
     }
 }
 
+void UnitOrderExecutor::RequireGameDataForConquest_(const char* pWhat) const
+{
+    if (!m_pGameData)
+    {
+        throw std::logic_error(
+            std::string("UnitOrderExecutor: ") + pWhat + " needs a GameDataContext, but none was "
+            "bound (SetGameDataContext). A world is bound, so this is a wiring error, not a "
+            "movement-only harness.");
+    }
+}
+
 void UnitOrderExecutor::CollectVisibleHostileIds_(const Unit& rObserver,
                                                   std::unordered_set<UnitId_t>& rOut) const
 {
     const Faction& rFaction = rObserver.GetFaction();
     const FactionId_t observerId = rFaction.GetFactionId();
 
-    for (const auto& pTile : m_rWorldMap.GetTiles())
+    // Sweep the position index, not the map. This runs twice per attempted step (before and
+    // after), so a multi-step move used to pay O(steps x tiles x units) — dominated by empty
+    // fog on a real map. The index holds only occupied tiles, making it O(units) per sweep.
+    //
+    // TODO: still O(units) per step. Restricting the sweep to units whose visibility could have
+    // changed (a dirty set invalidated by reveal/move) would make it proportional to what
+    // actually moved, but needs a visibility-revision seam that does not exist yet.
+    m_rWorldMap.GetUnitPositions().ForEachUnit([&](const Unit& rUnit)
     {
-        if (!pTile)
+        if (rUnit.GetFaction().GetFactionId() != observerId
+            && IsUnitVisibleTo(rFaction, rUnit, m_rTileEffects))
         {
-            continue;
+            rOut.insert(rUnit.GetUnitId());
         }
-        for (const Unit* pUnit : m_rWorldMap.GetUnitsOnTile(*pTile))
-        {
-            if (pUnit && pUnit->GetFaction().GetFactionId() != observerId
-                && IsUnitVisibleTo(rFaction, *pUnit, m_rTileEffects))
-            {
-                rOut.insert(pUnit->GetUnitId());
-            }
-        }
-    }
+    });
 }
 
 bool UnitOrderExecutor::HasNewlyVisibleHostile_(
@@ -152,10 +164,14 @@ bool UnitOrderExecutor::ApplyArrivalEffects_(Unit& rMover, bool bWasEmbarked)
         ac::TryAutoAttachOnEntry(rMover, m_rWorldMap);
     }
 
-    if (!m_pWorld || !m_pGameData)
+    // No world bound means no session to conquer into — a legitimate mode for movement-only
+    // harnesses. A world *without* game data is not: it silently skipped capture and native
+    // raids, so a base entry that should have changed hands just didn't, with no diagnostic.
+    if (!m_pWorld)
     {
         return true;
     }
+    RequireGameDataForConquest_("base entry");
     // A native raider spends itself on the raid, so this can free rMover.
     return !m_pWorld->ResolveBaseEntryConquest(rMover, *m_pGameData, m_rRng).bActorDestroyed;
 }
@@ -293,9 +309,9 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
 
     // Last-defender casualties / adjacent native raid — not ownership transfer. Capture
     // requires a separate enter-tile order after combat.
-    if (result.bDefenderDestroyed && !result.bAttackerDestroyed && bDefenderOnBase && m_pWorld
-        && m_pGameData)
+    if (result.bDefenderDestroyed && !result.bAttackerDestroyed && bDefenderOnBase && m_pWorld)
     {
+        RequireGameDataForConquest_("post-combat base conquest");
         // A native raider spends itself on the raid; report that so UI playback does not
         // show a survivor that no longer exists.
         result.bAttackerDestroyed =
@@ -495,20 +511,36 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, TerraformOrder_t& rOrde
         return OrderProgress_t::Continue;
     }
 
+    // Energy was already debited in TryStartTerraform, and the turns are already spent. Every
+    // exit below therefore reports whether the work actually landed instead of completing
+    // silently: the player otherwise pays for a project that mutated nothing — reachable when
+    // another former changes the tile mid-project, or a mod removes the improvement id.
+    //
+    // TODO: report/refund is a rule decision (SMAC: does a pre-empted former get its energy
+    // back?). Until that is settled, the failure is at least visible rather than invisible.
+
     // Order remains until Execute clears on Complete — safe to read rOrder here.
     const ImprovementConfig_t* pConfig = m_rTileEffects.GetImprovements().Find(rOrder.improvementId);
     if (!pConfig)
     {
+        std::cerr << "Terraform completed with no effect: improvement '" << rOrder.improvementId
+                  << "' is not in the registry\n";
         return OrderProgress_t::Complete;
     }
 
     Tile* pTile = m_rWorldMap.GetTile(rUnit.GetTile().GetX(), rUnit.GetTile().GetY());
     if (!pTile)
     {
+        std::cerr << "Terraform completed with no effect: unit is not on a valid tile\n";
         return OrderProgress_t::Complete;
     }
 
-    ApplyTerraformResult(*pTile, *pConfig, m_rTileEffects, m_rWorldMap, rUnit);
+    if (!ApplyTerraformResult(*pTile, *pConfig, m_rTileEffects, m_rWorldMap, rUnit))
+    {
+        std::cerr << "Terraform completed with no effect: '" << rOrder.improvementId
+                  << "' could not be applied at (" << pTile->GetX() << ", " << pTile->GetY()
+                  << ") — the tile likely changed during the project\n";
+    }
     return OrderProgress_t::Complete;
 }
 

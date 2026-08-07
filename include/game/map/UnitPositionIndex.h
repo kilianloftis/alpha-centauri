@@ -1,6 +1,7 @@
 #pragma once
 
 #include "lib/Signal.h"
+#include <functional>
 #include <unordered_map>
 #include <vector>
 
@@ -29,6 +30,17 @@ public:
 
     const std::vector<Unit*>& GetUnitsOnTile(const Tile& rTile) const;
 
+    // Visit every registered unit once, in unspecified order. O(units) — the index only holds
+    // occupied tiles, so this is the way to sweep all units without walking the whole map.
+    void ForEachUnit(const std::function<void(const Unit&)>& rVisit) const;
+
+    // Stacking rule: when set, at most one non-embarked unit may occupy a tile. It lives here,
+    // beside the occupancy it constrains and scoped to one world, rather than in a file-scope
+    // global in MovementRules — a process-wide switch meant two sessions could not disagree and
+    // a test could leak the setting into the next case.
+    void SetSingleUnitPerTile(bool bSingleUnitPerTile) { m_bSingleUnitPerTile = bSingleUnitPerTile; }
+    bool IsSingleUnitPerTile() const { return m_bSingleUnitPerTile; }
+
     // Move rUnit to rNewTile, updating the occupancy and the unit's tile pointer together.
     // Moving a unit onto its own tile is a no-op. Does not enforce stacking — callers must
     // have already established that the destination is legal. Emits OnUnitMoved after a
@@ -45,8 +57,11 @@ private:
     void Unregister_(Unit& rUnit);
 
     void RemoveFromTile_(Unit& rUnit);
+    // True when rTile holds no non-embarked unit.
+    bool CanPlaceUnit_(const Tile& rTile) const;
 
     std::unordered_map<const Tile*, std::vector<Unit*>> m_index;
+    bool m_bSingleUnitPerTile = false;
 };
 
 } // namespace ac

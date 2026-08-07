@@ -39,12 +39,24 @@ bool IsSeaTile_(const Tile& rTile)
     return rTile.GetElevation() < 0;
 }
 
+// Improvements a sea former builds, and only on water. Driven by the config tag rather than a
+// closed id list: config/improvements.json already tags KelpFarm / MiningPlatform /
+// TidalHarness "sea_terraform", so a modded sea improvement with a new id used to be treated
+// as land-only.
+constexpr const char* k_SeaTerraformTag = "sea_terraform";
+
+bool IsSeaOnlyImprovement_(const ImprovementConfig_t& rConfig)
+{
+    return std::find(rConfig.tags.begin(), rConfig.tags.end(), k_SeaTerraformTag)
+           != rConfig.tags.end();
+}
+
 bool DomainAllows_(const Unit& rUnit, const ImprovementConfig_t& rConfig, const Tile& rTile)
 {
     const bool bSea = IsSeaTile_(rTile);
     const UnitDomain_t domain = rUnit.GetDomain();
 
-    if (rConfig.id == "KelpFarm" || rConfig.id == "MiningPlatform" || rConfig.id == "TidalHarness")
+    if (IsSeaOnlyImprovement_(rConfig))
     {
         return bSea && domain == UnitDomain_t::Sea;
     }

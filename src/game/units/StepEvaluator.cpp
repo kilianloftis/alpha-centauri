@@ -226,7 +226,7 @@ StepEvaluation_t StepEvaluator::EvaluateStep_(const Unit& rMover, const Tile& rF
         return result;
     }
 
-    if (IsSingleUnitPerTile())
+    if (m_rWorldMap.GetUnitPositions().IsSingleUnitPerTile())
     {
         for (Unit* pUnit : m_rWorldMap.GetUnitsOnTile(rTo))
         {

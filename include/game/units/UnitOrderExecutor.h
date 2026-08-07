@@ -128,6 +128,9 @@ private:
     // Returns false when the arrival destroyed rMover (native raid).
     bool ApplyArrivalEffects_(Unit& rMover, bool bWasEmbarked);
     StepResult_t SpendMovesAndEnter_(Unit& rMover, const Tile& rTo, MoveOrder_t& rMoveOrder);
+    // Throws when a conquest path is reached with a world bound but no GameDataContext. That
+    // combination used to no-op silently: no capture, no native raid, no diagnostic.
+    void RequireGameDataForConquest_(const char* pWhat) const;
     void CollectVisibleHostileIds_(const Unit& rObserver,
                                    std::unordered_set<UnitId_t>& rOut) const;
     bool HasNewlyVisibleHostile_(const Unit& rObserver,

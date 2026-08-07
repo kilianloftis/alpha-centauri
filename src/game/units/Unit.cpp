@@ -10,6 +10,7 @@
 #include "game/effects/EffectEnums.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/units/MovementConstants.h"
+#include "game/units/TransportRules.h"
 
 #include <algorithm>
 #include <stdexcept>
@@ -130,6 +131,24 @@ void Unit::EmbarkInto(Unit& rCarrier)
     if (m_pCarrier == &rCarrier)
     {
         return;
+    }
+    // The invariants used to be documented as caller duties, which meant one missed call site
+    // could overfill m_cargo (FreeCargoSlots then goes negative) or link a passenger to a
+    // carrier on another tile, which MoveUnit would still tow. Enforced here so the cargo graph
+    // cannot be put into a state the rules say is impossible.
+    if (&rCarrier == this)
+    {
+        throw std::invalid_argument("Unit::EmbarkInto: a unit cannot carry itself");
+    }
+    if (&rCarrier.GetTile() != &GetTile())
+    {
+        throw std::invalid_argument("Unit::EmbarkInto: carrier and passenger are not on the "
+                                    "same tile");
+    }
+    if (!CanCarryPassenger(rCarrier, *this))
+    {
+        throw std::invalid_argument("Unit::EmbarkInto: carrier cannot take this passenger "
+                                    "(capacity, domain, faction, or the carrier is itself cargo)");
     }
     if (m_pCarrier)
     {

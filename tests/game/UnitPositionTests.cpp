@@ -29,12 +29,9 @@ using namespace actest;
 namespace
 {
 
-// Restores the default stacking rule even if a test assertion fails mid-case.
-struct SingleUnitPerTileGuard
-{
-    SingleUnitPerTileGuard() { SetSingleUnitPerTile(true); }
-    ~SingleUnitPerTileGuard() { SetSingleUnitPerTile(false); }
-};
+// (The SingleUnitPerTileGuard that used to live here is gone: the stacking rule is per-world
+// state on UnitPositionIndex now, so a test sets it on its own fixture's index and cannot leak
+// it into the next case.)
 
 struct MovementHarness_
 {
@@ -175,8 +172,8 @@ TEST_CASE("Units stack without limit by default", "[unit][index]")
 TEST_CASE("Single-unit-per-tile rule blocks placement and movement onto occupied tiles",
           "[unit][index]")
 {
-    SingleUnitPerTileGuard guard;
     FactionFixture fixture;
+    fixture.map.GetUnitPositions().SetSingleUnitPerTile(true);
     Faction& faction = fixture.MakeFaction();
     MovementHarness_ move(fixture);
 
@@ -198,10 +195,38 @@ TEST_CASE("Single-unit-per-tile rule blocks placement and movement onto occupied
     fixture.map.GetUnitPositions().MoveUnit(mover, fixture.At(5, 4));
     CHECK(&mover.GetTile() == &fixture.At(5, 4));
 
+    // The index refuses the illegal move itself, not just the planner. A caller that skips the
+    // step check can no longer overstack behind its back — which is what made the old
+    // file-scope flag an incomplete fix.
+    CHECK_THROWS_AS(fixture.map.GetUnitPositions().MoveUnit(mover, fixture.At(4, 4)),
+                    std::logic_error);
+    CHECK(&mover.GetTile() == &fixture.At(5, 4));
+
     // Destroying the blocker frees the tile.
     faction.GetUnitManager().DestroyUnit(blocker);
     CHECK(CanPlaceUnitOnTile(fixture.At(4, 4), fixture.map.GetUnitPositions()));
     MoveOrder_t stepOrder{&fixture.At(4, 4)};
     REQUIRE(move.orders.TryStep(mover, fixture.At(4, 4), stepOrder).bEntered);
     CHECK(&mover.GetTile() == &fixture.At(4, 4));
+}
+
+TEST_CASE("The stacking rule is per world, not per process", "[unit][index]")
+{
+    // It used to be a file-scope global in MovementRules, so two worlds could not disagree and
+    // a test that set it leaked into the next case.
+    FactionFixture strict;
+    strict.map.GetUnitPositions().SetSingleUnitPerTile(true);
+    FactionFixture loose;
+
+    CHECK(strict.map.GetUnitPositions().IsSingleUnitPerTile());
+    CHECK_FALSE(loose.map.GetUnitPositions().IsSingleUnitPerTile());
+
+    // The loose world still stacks freely while the strict one refuses.
+    Faction& rLooseFaction = loose.MakeFaction();
+    loose.MakeUnit(rLooseFaction, 4, 4, {"test_chassis"});
+    CHECK_NOTHROW(loose.MakeUnit(rLooseFaction, 4, 4, {"test_chassis"}));
+
+    Faction& rStrictFaction = strict.MakeFaction();
+    strict.MakeUnit(rStrictFaction, 4, 4, {"test_chassis"});
+    CHECK_THROWS(strict.MakeUnit(rStrictFaction, 4, 4, {"test_chassis"}));
 }

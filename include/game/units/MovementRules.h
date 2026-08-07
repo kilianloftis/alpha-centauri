@@ -34,13 +34,10 @@ bool HasFriendlyOccupant(const Unit& rMover, const Tile& rTile, const WorldMap& 
 // True when rMover's faction has a base centered on rTile.
 bool HasFriendlyBase(const Unit& rMover, const Tile& rTile);
 
-// Stacking rule: when true, at most one unit may occupy a tile; when false (default),
-// units stack without limit, as in the original game.
-// TODO: static stand-in until a real game-configuration system exists.
-void SetSingleUnitPerTile(bool bSingleUnitPerTile);
-bool IsSingleUnitPerTile();
-
 // Whether a new unit (or move destination) may occupy rTile under the stacking rule.
+// The rule itself lives on UnitPositionIndex (see UnitPositionIndex::SetSingleUnitPerTile) —
+// one setting per world, beside the occupancy it constrains, rather than a process-wide global
+// that two sessions could not disagree about and a test could leak into the next case.
 bool CanPlaceUnitOnTile(const Tile& rTile, const UnitPositionIndex& rPositions);
 
 } // namespace ac
