@@ -12,12 +12,15 @@ SecretProjectAvailabilityCalculator::SecretProjectAvailabilityCalculator(const G
 {
 }
 
-bool SecretProjectAvailabilityCalculator::IsCompleted(const std::string& rBuildingId) const
+bool SecretProjectAvailabilityCalculator::IsUnavailable(const std::string& rBuildingId) const
 {
-    if (m_rGameState.IsSecretProjectDestroyed(rBuildingId))
-    {
-        return true;
-    }
+    // A destroyed project is gone for good — unavailable, but owned by nobody.
+    return m_rGameState.IsSecretProjectDestroyed(rBuildingId)
+           || IsOwnedByAnyFaction(rBuildingId);
+}
+
+bool SecretProjectAvailabilityCalculator::IsOwnedByAnyFaction(const std::string& rBuildingId) const
+{
     for (const Faction& rFaction : m_rGameState.Factions())
     {
         for (const BaseManager& rBase : rFaction.Bases())

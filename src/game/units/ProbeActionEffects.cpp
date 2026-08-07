@@ -106,14 +106,24 @@ bool ApplyDrainEnergy_(Unit& rProbe, BaseManager& rBase, GameState& rGameState,
 // for that copy is retired. Every other destruction path (raze, orbital attack, intercept
 // fail) notifies; sabotage did not, leaving m_buildingDeploys stale so CountReadyBuildings
 // under-counted the faction's remaining copies for the rest of the cooldown.
-void DestroyBuildingAndNotify_(BaseManager& rBase, const BuildingId_t& rBuildingId)
+void DestroyBuildingAndNotify_(GameState& rGameState, BaseManager& rBase,
+                               const BuildingId_t& rBuildingId)
 {
+    // Read the config before the copy is gone.
+    const BuildingConfig_t* pConfig = rBase.GetFaction().FindOwnedBuildingConfig(rBuildingId);
     rBase.GetBuildingManager().DestroyBuilding(rBuildingId);
     rBase.GetFaction().NotifyBuildingDestroyed(rBase.GetBaseId(), rBuildingId);
+    // Same tombstone rule as raze, ASAT and intercept: a sabotaged secret project stays gone
+    // rather than becoming buildable again.
+    if (pConfig && pConfig->bIsSecretProject)
+    {
+        rGameState.MarkSecretProjectDestroyed(rBuildingId);
+    }
 }
 
-bool ApplySabotage_(BaseManager& rBase, ProbeActionId_t actionId, const BuildingId_t& facilityId,
-                    ProbeActionResult_t& rResult, std::mt19937& rRng)
+bool ApplySabotage_(GameState& rGameState, BaseManager& rBase, ProbeActionId_t actionId,
+                    const BuildingId_t& facilityId, ProbeActionResult_t& rResult,
+                    std::mt19937& rRng)
 {
     // Targeted sabotage is a distinct action from random sabotage, so an empty or unknown
     // facility id is a failed action — not a silent fall-through to the random branch, and not
@@ -125,7 +135,7 @@ bool ApplySabotage_(BaseManager& rBase, ProbeActionId_t actionId, const Building
             rResult.detail = ProbeActionStatus_t::NoTarget;
             return false;
         }
-        DestroyBuildingAndNotify_(rBase, facilityId);
+        DestroyBuildingAndNotify_(rGameState, rBase, facilityId);
         rResult.detail = ProbeDestroyedFacility_t{facilityId};
         return true;
     }
@@ -147,7 +157,7 @@ bool ApplySabotage_(BaseManager& rBase, ProbeActionId_t actionId, const Building
         // registry pointers and only erases its own), but reading through pChosen after the
         // erase relies on that indirection staying true.
         const BuildingId_t chosenId = pChosen->id;
-        DestroyBuildingAndNotify_(rBase, chosenId);
+        DestroyBuildingAndNotify_(rGameState, rBase, chosenId);
         rResult.detail = ProbeDestroyedFacility_t{chosenId};
         return true;
     }
@@ -219,7 +229,7 @@ bool ApplyBaseAction_(Unit& rProbe, const ProbeActionConfig_t& rAction, BaseMana
             return ApplyDrainEnergy_(rProbe, rBase, rGameState, rResult);
         case ProbeActionId_t::SabotageRandom:
         case ProbeActionId_t::SabotageFacility:
-            return ApplySabotage_(rBase, rAction.id, facilityId, rResult, rRng);
+            return ApplySabotage_(rGameState, rBase, rAction.id, facilityId, rResult, rRng);
         case ProbeActionId_t::InciteDroneRiots:
             return ApplyInciteDroneRiots_(rBase, rResult);
         case ProbeActionId_t::Assassinate:

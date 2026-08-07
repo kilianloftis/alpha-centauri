@@ -2,8 +2,10 @@
 #include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
 #include "game/effects/EffectConfigParser.h"
+#include <algorithm>
 #include <nlohmann/json.hpp>
 #include <stdexcept>
+#include <vector>
 
 namespace ac
 {
@@ -19,16 +21,74 @@ std::vector<BuildingConfig_t> BuildingConfigParser::ParseConfig(const std::strin
         [this](const nlohmann::json& rJson) { return ParseBuildingConfig(rJson); });
 }
 
+namespace
+{
+
+// json::value() silently substitutes the default for a key of the wrong shape, so
+// "allow_multiple": "yes" or "mineral_cost": "40" parses as false / 0 and the modder is told
+// nothing. Check the type when the key is present, and name the building in the message.
+template<typename T>
+T ParseTyped_(const nlohmann::json& rJson, const char* pKey, const BuildingId_t& rBuildingId,
+              T defaultValue, bool (nlohmann::json::*pIsRightType)() const,
+              const char* pExpected)
+{
+    if (!rJson.contains(pKey) || rJson.at(pKey).is_null())
+    {
+        return defaultValue;
+    }
+    const nlohmann::json& rValue = rJson.at(pKey);
+    if (!(rValue.*pIsRightType)())
+    {
+        throw std::runtime_error("Building '" + rBuildingId + "': '" + std::string(pKey)
+                                 + "' must be " + pExpected);
+    }
+    return rValue.get<T>();
+}
+
+// Keys the parser understands. A typo'd key would otherwise be accepted and ignored, so the
+// modder's setting silently never applies.
+const std::vector<std::string>& KnownBuildingKeys_()
+{
+    static const std::vector<std::string> keys = {
+        "id", "name", "category", "mineral_cost", "required_tech",
+        "allow_multiple", "secret_project", "orbital", "effects",
+    };
+    return keys;
+}
+
+} // namespace
+
 BuildingConfig_t BuildingConfigParser::ParseBuildingConfig(const nlohmann::json& buildingJson)
 {
     BuildingConfig_t config;
     config.id = ConfigFields::ParseId(buildingJson);
     config.name = ConfigFields::ParseName(buildingJson, config.id);
-    config.category = ParseGameCategoryField(buildingJson);
-    config.mineralCost = buildingJson.value("mineral_cost", 0);
-    config.allowMultiple = buildingJson.value("allow_multiple", false);
-    config.bIsSecretProject = buildingJson.value("secret_project", false);
-    config.orbital = buildingJson.value("orbital", false);
+
+    for (const auto& [rKey, rUnused] : buildingJson.items())
+    {
+        const std::vector<std::string>& rKnown = KnownBuildingKeys_();
+        if (std::find(rKnown.begin(), rKnown.end(), rKey) == rKnown.end())
+        {
+            throw std::runtime_error("Building '" + config.id + "': unknown key '" + rKey + "'");
+        }
+    }
+
+    // Optional. It is required by no rule and read by no code today — making it mandatory
+    // forced every modded building to supply a value that does nothing. Kept (rather than
+    // deleted) because config/buildings.json ships it on every entry and the build menu is the
+    // obvious future consumer; when something reads it, tighten this back up.
+    if (buildingJson.contains("category") && !buildingJson.at("category").is_null())
+    {
+        config.category = ParseGameCategoryField(buildingJson);
+    }
+    config.mineralCost = ParseTyped_<int>(buildingJson, "mineral_cost", config.id, 0,
+                                          &nlohmann::json::is_number_integer, "an integer");
+    config.allowMultiple = ParseTyped_<bool>(buildingJson, "allow_multiple", config.id, false,
+                                             &nlohmann::json::is_boolean, "a boolean");
+    config.bIsSecretProject = ParseTyped_<bool>(buildingJson, "secret_project", config.id, false,
+                                                &nlohmann::json::is_boolean, "a boolean");
+    config.orbital = ParseTyped_<bool>(buildingJson, "orbital", config.id, false,
+                                       &nlohmann::json::is_boolean, "a boolean");
     if (buildingJson.contains("required_techs"))
     {
         throw std::runtime_error(

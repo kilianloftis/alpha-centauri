@@ -28,7 +28,36 @@ void BuildingManager::RebindResearch(const ResearchManager& rResearch)
 
 void BuildingManager::AddBuilding(const BuildingId_t& buildingId)
 {
-    m_buildings.push_back(&m_rRegistry.Get(buildingId));
+    const BuildingConfig_t& rConfig = m_rRegistry.Get(buildingId);
+
+    // Enforced here, at the single mutation point, rather than only where the build menu is
+    // generated. Filtering the menu does not stop two bases that both had a project listed when
+    // they queued it from both completing it — same faction, or two factions in one
+    // BaseProduction pass — which silently broke "only one faction in the world may own this"
+    // (config/buildings/README.md). ProductionManager -> OnProductionCompleted -> here is the
+    // path that actually grants a building, and it checked nothing.
+    if (!rConfig.allowMultiple && DoesBuildingExist_(buildingId))
+    {
+        throw std::runtime_error("BuildingManager::AddBuilding: '" + buildingId
+                                 + "' is already present in this base and is not allowMultiple");
+    }
+    if (rConfig.bIsSecretProject)
+    {
+        if (!m_pSecretProjectCalculator)
+        {
+            throw std::runtime_error(
+                "BuildingManager::AddBuilding: '" + buildingId + "' is a secret project, but "
+                "this base has no SecretProjectAvailabilityCalculator to check uniqueness");
+        }
+        if (m_pSecretProjectCalculator->IsUnavailable(buildingId))
+        {
+            throw std::runtime_error("BuildingManager::AddBuilding: secret project '" + buildingId
+                                     + "' is already built or was destroyed; it cannot be built "
+                                       "again");
+        }
+    }
+
+    m_buildings.push_back(&rConfig);
     m_revision.Bump();
 }
 
@@ -88,7 +117,7 @@ std::vector<const BuildingConfig_t*> BuildingManager::GetBuildingsAvailableForCo
     for (const BuildingConfig_t& rBuilding : m_rRegistry.GetAll())
     {
         const bool bSecretProjectCompleted = rBuilding.bIsSecretProject
-                && m_pSecretProjectCalculator->IsCompleted(rBuilding.id);
+                && m_pSecretProjectCalculator->IsUnavailable(rBuilding.id);
         if (rBuilding.IsAvailable(discoveredTechs)
                 && (rBuilding.allowMultiple || !DoesBuildingExist_(rBuilding.id))
                 && !bSecretProjectCompleted)

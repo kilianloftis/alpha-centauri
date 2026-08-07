@@ -360,6 +360,7 @@
   {
     "id": "world_beacon",
     "name": "World Beacon (+10 energy to every base of every faction)",
+    "allow_multiple": true,
     "effects": [
       {
         "type": "StatModifier",
@@ -668,6 +669,7 @@
   {
     "id": "test_facility_a",
     "name": "Test Facility A",
+    "allow_multiple": true,
     "effects": [],
     "category": "build"
   },

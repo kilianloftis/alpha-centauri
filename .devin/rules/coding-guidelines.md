@@ -16,6 +16,9 @@ Prefer throwing exceptions over returning default values
 Throw errors if expected pointers are null
 Do not keep old code for legacy of backwards compatibilty reasons. Update all call sites as needed.
 
+## Commmenting
+Keep comments to a minimum. Code should be self-documenting. We don't need comments explainging why something was changed.
+
 ## SOLID Principles
 All code must adhere to SOLID principles:
 - **S**ingle Responsibility Principle: Each class/function should have one reason to change

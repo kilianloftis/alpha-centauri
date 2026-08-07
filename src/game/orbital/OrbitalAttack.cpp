@@ -28,7 +28,7 @@ const OrbitalAttackEffect_t* FindOrbitalAttackEffect_(const BuildingConfig_t& rB
     return nullptr;
 }
 
-void DestroyOneBuilding_(Faction& rOwner, const BuildingId_t& buildingId)
+void DestroyOneBuilding_(GameState& rGameState, Faction& rOwner, const BuildingId_t& buildingId)
 {
     BaseManager* pBase = rOwner.FindBaseWithBuilding(buildingId);
     if (!pBase)
@@ -38,8 +38,18 @@ void DestroyOneBuilding_(Faction& rOwner, const BuildingId_t& buildingId)
                                + buildingId + "'");
     }
     const BaseId_t baseId = pBase->GetBaseId();
+    // Read the config before the copy is gone.
+    const BuildingConfig_t* pConfig = rOwner.FindOwnedBuildingConfig(buildingId);
     pBase->GetBuildingManager().DestroyBuilding(buildingId);
     rOwner.NotifyBuildingDestroyed(baseId, buildingId);
+    // One tombstone rule for every destruction path. Stock orbitals are not secret projects,
+    // but a modded orbital + secret_project building destroyed here would otherwise become
+    // buildable again — unlike the same building razed with its base, which BaseConquestEffects
+    // tombstones.
+    if (pConfig && pConfig->bIsSecretProject)
+    {
+        rGameState.MarkSecretProjectDestroyed(buildingId);
+    }
 }
 
 } // namespace
@@ -124,11 +134,11 @@ OrbitalAttackResult_t TryAttackSatellite(GameState& rGameState,
     result.bHit = RollPercent(pEffect->chance, rRng);
     if (result.bHit)
     {
-        DestroyOneBuilding_(rDefender, targetOrbitalBuildingId);
+        DestroyOneBuilding_(rGameState, rDefender, targetOrbitalBuildingId);
     }
     else if (RollPercent(pEffect->chanceOfDestructionOnFail, rRng))
     {
-        DestroyOneBuilding_(rAttacker, attackerBuildingId);
+        DestroyOneBuilding_(rGameState, rAttacker, attackerBuildingId);
         result.bAttackerDestroyed = true;
     }
     return result;

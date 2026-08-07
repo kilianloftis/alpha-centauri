@@ -200,7 +200,8 @@ CombatResult_t ResolveInterceptKill_(Unit& rAttacker, Unit& rDefender)
 }
 
 // On a failed intercept roll, optionally destroy the intercepting source (building or unit).
-void MaybeDestroyInterceptSourceOnFail_(Faction& rDefFaction, InterceptCandidate_t& rCandidate,
+void MaybeDestroyInterceptSourceOnFail_(GameState& rGameState, Faction& rDefFaction,
+                                        InterceptCandidate_t& rCandidate,
                                         std::mt19937& rRng)
 {
     if (!RollPercent(rCandidate.pIntercept->chanceOfDestructionOnFail, rRng))
@@ -226,8 +227,16 @@ void MaybeDestroyInterceptSourceOnFail_(Faction& rDefFaction, InterceptCandidate
                 "MaybeDestroyInterceptSourceOnFail_: faction owns no base holding building '"
                 + rCandidate.sourceId + "'");
         }
+        // Read the config before the copy is gone.
+        const BuildingConfig_t* pConfig =
+            rDefFaction.FindOwnedBuildingConfig(rCandidate.sourceId);
         pBase->GetBuildingManager().DestroyBuilding(rCandidate.sourceId);
         rDefFaction.NotifyBuildingDestroyed(pBase->GetBaseId(), rCandidate.sourceId);
+        // Same tombstone rule as raze and ASAT: a destroyed secret project stays destroyed.
+        if (pConfig && pConfig->bIsSecretProject)
+        {
+            rGameState.MarkSecretProjectDestroyed(rCandidate.sourceId);
+        }
         return;
     }
     case InterceptDeployKind_t::Unit:
@@ -260,7 +269,7 @@ std::optional<CombatResult_t> TryInterceptAttack(GameState& rGameState,
         }
         if (!RollPercent(rCandidate.pIntercept->chance, rRng))
         {
-            MaybeDestroyInterceptSourceOnFail_(rDefFaction, rCandidate, rRng);
+            MaybeDestroyInterceptSourceOnFail_(rGameState, rDefFaction, rCandidate, rRng);
             continue;
         }
         return ResolveInterceptKill_(rAttacker, rDefender);
