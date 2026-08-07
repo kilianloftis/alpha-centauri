@@ -23,6 +23,8 @@ public:
     void Render(Graphics& rGraphics) override;
     void HandleMouseClick(const MouseEvent_t& rEvent) override;
 
+    // The visible window follows pSelectedUnit, so a stack wider than the panel stays fully
+    // reachable through the select-next-unit cycle rather than being silently truncated.
     void SetUnits(std::vector<Unit*> units, const Unit* pSelectedUnit);
 
 private:
@@ -32,6 +34,8 @@ private:
         Unit* pUnit = nullptr;
     };
 
+    bool HasHiddenUnits() const;
+    void ScrollSelectedIntoView_();
     void DrawBackground_(Graphics& rGraphics) const;
     void CacheSlots_();
     void DrawSlot_(Graphics& rGraphics, const Slot_t& rSlot) const;
@@ -40,6 +44,8 @@ private:
     std::vector<Unit*> m_units;
     const Unit* m_pSelectedUnit = nullptr;
     std::vector<Slot_t> m_slots;
+    // Index of the leftmost unit currently laid out.
+    size_t m_scrollOffset = 0;
 };
 
 } // namespace ac

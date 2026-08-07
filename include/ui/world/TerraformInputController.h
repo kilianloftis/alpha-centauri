@@ -8,6 +8,7 @@
 namespace ac
 {
 
+class ImprovementRegistry;
 class Unit;
 
 // Former-only hotkeys that request a terraform project by improvement id.
@@ -15,7 +16,11 @@ class Unit;
 class TerraformInputController
 {
 public:
-    TerraformInputController() = default;
+    // Bindings come from config/ui/terraform_bindings.json and every improvement id in it is
+    // checked against rImprovements here, so a renamed or misspelled id fails at startup
+    // naming the key rather than doing nothing when the player presses it.
+    TerraformInputController(const std::string& rConfigPath,
+                             const ImprovementRegistry& rImprovements);
 
     bool HandleKey(const KeyEvent_t& rEvent, Unit* pSelectedUnit);
 
@@ -26,32 +31,8 @@ private:
     bool m_bTerraformRequested = false;
     std::string m_requestedImprovementId;
 
-    // Letter bindings (no modifier keys in KeyEvent_t). Only consumed when the unit has
-    // RuleFlagId_t::Terraform so letters stay free on other units.
-    const std::unordered_map<Key_t, std::string> m_bindings = {
-        { Key_t::R, "Road" },
-        { Key_t::F, "Farm" },
-        { Key_t::I, "Mine" },
-        { Key_t::O, "Forest" },
-        { Key_t::S, "Sensor" },
-        { Key_t::Y, "SolarCollector" },
-        { Key_t::E, "SoilEnricher" },
-        { Key_t::B, "Bunker" },
-        { Key_t::A, "Airbase" },
-        { Key_t::G, "MagTube" },
-        { Key_t::C, "Condenser" },
-        { Key_t::X, "Mirror" },
-        { Key_t::Z, "ThermalBorehole" },
-        { Key_t::P, "PlantFungus" },
-        { Key_t::D, "RemoveFungus" },
-        { Key_t::L, "LevelTerrain" },
-        { Key_t::U, "RaiseLand" },
-        { Key_t::J, "LowerLand" },
-        { Key_t::Q, "Aquifer" },
-        { Key_t::K, "KelpFarm" },
-        { Key_t::W, "MiningPlatform" },
-        { Key_t::T, "TidalHarness" },
-    };
+    // Consulted only for units with RuleFlagId_t::Terraform, so letters stay free elsewhere.
+    std::unordered_map<Key_t, std::string> m_bindings;
 };
 
 } // namespace ac

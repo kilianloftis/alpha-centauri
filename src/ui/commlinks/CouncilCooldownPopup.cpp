@@ -30,7 +30,7 @@ CouncilCooldownPopup::CouncilCooldownPopup(
 
 void CouncilCooldownPopup::CacheOkButtonRect_()
 {
-    const auto& style = Style().productionSelectorPopup;
+    const auto& style = Style().listSelectorPopup;
     const float padding = style.paddingRatio * m_layout.width;
     const float lineHeight = m_layout.height * style.lineHeightRatio;
     const float buttonWidth = m_layout.width * 0.35f;
@@ -59,7 +59,7 @@ void CouncilCooldownPopup::Render(Graphics& rGraphics)
         return;
     }
 
-    const auto& style = Style().productionSelectorPopup;
+    const auto& style = Style().listSelectorPopup;
     const auto& buttonStyle = Style().commlinksButton;
     const float padding = style.paddingRatio * m_layout.width;
     const unsigned int headerFontSize =

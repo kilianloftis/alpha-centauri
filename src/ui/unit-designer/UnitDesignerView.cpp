@@ -1,6 +1,6 @@
 #include "ui/unit-designer/UnitDesignerView.h"
 #include "ui/unit-designer/SlotColumnPanel.h"
-#include "ui/unit-designer/ComponentSelectorPopup.h"
+#include "ui/ListSelectorPopup.h"
 #include "ui/unit-designer/DesignStatsDisplay.h"
 #include "ui/unit-designer/DesignListPanel.h"
 #include "ui/unit-designer/UnitStatusPanel.h"
@@ -54,9 +54,11 @@ void UnitDesignerView::BuildTopPanelElements_()
             auto it = m_state.components.find(slotId);
             return it != m_state.components.end() ? it->second : nullptr;
         };
-        entry.onClicked = [this, slotId = rSlot.id, compType = rSlot.componentType]()
+        entry.onClicked = [this, slotId = rSlot.id, compType = rSlot.componentType,
+                           slotName = rSlot.displayName]()
         {
-            ShowComponentSelector_(compType, [this, slotId](const UnitComponentConfig_t& rComp)
+            ShowComponentSelector_(compType, slotName,
+                                   [this, slotId](const UnitComponentConfig_t& rComp)
             {
                 m_state.components[slotId] = &rComp;
             });
@@ -131,6 +133,7 @@ bool UnitDesignerView::HandleKey(const KeyEvent_t& rEvent)
 
 void UnitDesignerView::ShowComponentSelector_(
     const std::string& rComponentType,
+    const std::string& rSlotDisplayName,
     std::function<void(const UnitComponentConfig_t&)> onSelected
 )
 {
@@ -143,12 +146,21 @@ void UnitDesignerView::ShowComponentSelector_(
         }
     }
 
+    std::vector<std::string> rows;
+    rows.reserve(available.size());
+    for (const UnitComponentConfig_t* pConfig : available)
+    {
+        rows.push_back(pConfig->name);
+    }
+
     DismissOpenModals_();
-    m_elements.push_back(std::make_unique<ComponentSelectorPopup>(
-        std::move(available),
+    m_elements.push_back(std::make_unique<ListSelectorPopup>(
+        "Select " + rSlotDisplayName, "No components available", std::move(rows),
         ResolveLayout(m_layout, Style().layouts.popupSmall),
-        std::move(onSelected)
-    ));
+        [available = std::move(available), onSelected = std::move(onSelected)](size_t index) {
+            onSelected(*available[index]);
+        },
+        Style().componentSelectorPopup));
 }
 
 void UnitDesignerView::HandleSaveDesign_()

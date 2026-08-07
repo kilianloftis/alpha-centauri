@@ -22,7 +22,9 @@ void UnitStackPanel::SetUnits(std::vector<Unit*> units, const Unit* pSelectedUni
 {
     m_units = std::move(units);
     m_pSelectedUnit = pSelectedUnit;
+    m_scrollOffset = 0;
     CacheSlots_();
+    ScrollSelectedIntoView_();
 }
 
 void UnitStackPanel::CacheSlots_()
@@ -46,8 +48,9 @@ void UnitStackPanel::CacheSlots_()
     const float y = m_layout.y + (m_layout.height - slotHeight) * 0.5f;
     const float right = m_layout.x + m_layout.width - padding;
 
-    for (Unit* pUnit : m_units)
+    for (size_t i = m_scrollOffset; i < m_units.size(); ++i)
     {
+        Unit* pUnit = m_units[i];
         if (!pUnit || x + slotWidth > right)
         {
             break;
@@ -57,12 +60,56 @@ void UnitStackPanel::CacheSlots_()
     }
 }
 
+bool UnitStackPanel::HasHiddenUnits() const
+{
+    return m_scrollOffset > 0 || m_scrollOffset + m_slots.size() < m_units.size();
+}
+
+// Every unit on the tile stays reachable through the existing select-next-unit cycle: the
+// window follows the selection instead of the tail of the stack being unclickable.
+void UnitStackPanel::ScrollSelectedIntoView_()
+{
+    if (!m_pSelectedUnit || m_slots.empty())
+    {
+        return;
+    }
+
+    const auto it = std::find(m_units.begin(), m_units.end(), m_pSelectedUnit);
+    if (it == m_units.end())
+    {
+        return;
+    }
+
+    const size_t selectedIndex = static_cast<size_t>(std::distance(m_units.begin(), it));
+    const size_t visible = m_slots.size();
+    if (selectedIndex < m_scrollOffset + visible)
+    {
+        return;
+    }
+
+    m_scrollOffset = selectedIndex - visible + 1;
+    CacheSlots_();
+}
+
 void UnitStackPanel::Render(Graphics& rGraphics)
 {
     DrawBackground_(rGraphics);
     for (const Slot_t& rSlot : m_slots)
     {
         DrawSlot_(rGraphics, rSlot);
+    }
+
+    if (HasHiddenUnits())
+    {
+        const auto& s = Style().unitStackPanel;
+        const auto fontSize =
+            std::max(1u, static_cast<unsigned int>(m_layout.height * s.statFontRatio));
+        const std::string cue = std::to_string(m_scrollOffset + 1) + "-"
+                                + std::to_string(m_scrollOffset + m_slots.size()) + "/"
+                                + std::to_string(m_units.size());
+        rGraphics.DrawText(cue, m_layout.x + m_layout.width * s.paddingRatio,
+                           m_layout.y + m_layout.height * s.paddingRatio, fontSize,
+                           s.statTextColor);
     }
 }
 

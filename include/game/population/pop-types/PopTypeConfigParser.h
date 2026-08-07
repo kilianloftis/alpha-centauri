@@ -22,6 +22,9 @@ struct PopTypeConfig_t
 {
     std::string id;
     std::string name;
+    // Single character drawn in the base population strip. Required, because deriving it from
+    // the id collides (Drone/Doctor, Talent/Technician) and the collision is invisible.
+    char displayGlyph = '?';
     PopRole_t role = PopRole_t::Worker;
     bool bIsDefault = false;
     bool bCanWorkTile = false;

@@ -1,5 +1,7 @@
 #include "ui/council/CouncilVoteView.h"
-#include "ui/council/CouncilBallotPopup.h"
+#include "ui/ListSelectorPopup.h"
+
+#include <array>
 #include "ui/council/CouncilFactionVotesPanel.h"
 #include "ui/council/CouncilProposalInfoPanel.h"
 #include "ui/council/CouncilVoteButton.h"
@@ -81,35 +83,50 @@ void CouncilVoteView::OpenBallotSelector_()
     DismissOpenModals_();
     if (rConfig.kind == CouncilProposalKind_t::Election)
     {
-        m_elements.push_back(CouncilBallotPopup::CreateElection(
-            popupLayout,
-            // Exactly the members CastElectionVote will accept. Offering full membership meant
-            // the "two most populous factions" rule was decided by the UI — and now that the
-            // council enforces it, offering an ineligible candidate would throw on selection.
-            pCouncil->EligibleCandidates(rConfig),
-            [this](const Faction* pCandidate) {
+        // Exactly the members CastElectionVote will accept. Offering full membership meant the
+        // "two most populous factions" rule was decided by the UI — and now that the council
+        // enforces it, offering an ineligible candidate would throw on selection.
+        std::vector<Faction*> candidates = pCouncil->EligibleCandidates(rConfig);
+        std::vector<std::string> rows;
+        rows.reserve(candidates.size() + 1);
+        for (const Faction* pCandidate : candidates)
+        {
+            rows.push_back(pCandidate->GetDefinition().identity.name);
+        }
+        rows.push_back("Abstain");
+        candidates.push_back(nullptr); // trailing abstain, so index maps straight across
+
+        m_elements.push_back(std::make_unique<ListSelectorPopup>(
+            "Cast Ballot", "No candidates", std::move(rows), popupLayout,
+            [this, candidates = std::move(candidates)](size_t index) {
                 PlanetaryCouncil* pCouncilInner = m_rGameState.GetPlanetaryCouncil();
                 Faction* pPlayerInner = m_rGameState.GetPlayerFaction();
                 if (pCouncilInner && pPlayerInner)
                 {
-                    pCouncilInner->CastElectionVote(*pPlayerInner, pCandidate);
+                    pCouncilInner->CastElectionVote(*pPlayerInner, candidates[index]);
                     TryResolveAndClose_();
                 }
-            }));
+            },
+            Style().listSelectorPopup));
         return;
     }
 
-    m_elements.push_back(CouncilBallotPopup::CreateStandard(
+    static constexpr std::array<CouncilBallot_t, 3> k_Ballots = {
+        CouncilBallot_t::Yea, CouncilBallot_t::Nay, CouncilBallot_t::Abstain};
+
+    m_elements.push_back(std::make_unique<ListSelectorPopup>(
+        "Cast Ballot", "No ballot options", std::vector<std::string>{"Yea", "Nay", "Abstain"},
         popupLayout,
-        [this](CouncilBallot_t ballot) {
+        [this](size_t index) {
             PlanetaryCouncil* pCouncilInner = m_rGameState.GetPlanetaryCouncil();
             Faction* pPlayerInner = m_rGameState.GetPlayerFaction();
             if (pCouncilInner && pPlayerInner)
             {
-                pCouncilInner->CastVote(*pPlayerInner, ballot);
+                pCouncilInner->CastVote(*pPlayerInner, k_Ballots[index]);
                 TryResolveAndClose_();
             }
-        }));
+        },
+        Style().listSelectorPopup));
 }
 
 } // namespace ac

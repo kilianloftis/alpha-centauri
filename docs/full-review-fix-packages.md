@@ -930,6 +930,23 @@ Package 4 owns the constructor/null-policy half of these classes (two-phase-init
 
 **Not covered by tests:** the SFML mapping functions and the wiring between a real window and the queue — `USE_SFML` is defined only on the executable target, and no `Graphics` implementation is in the test target. Nothing would catch `PumpEvents` forgetting to push, or the loop losing its `PumpEvents()` call.
 
+### Package 14 — UI: shared components and config-driven content (2026-08-07)
+
+**Status:** four of five [H] and eleven of twelve [M]. The [H] `UiStyle` god-object is **deferred to its own package**, and the `[M]` ViewFactory header narrowing is batched into package 16 — both stated up front in the prompt.
+**Prompt:** [`docs/full-review-fix-prompts/14-ui-shared-components.md`](full-review-fix-prompts/14-ui-shared-components.md)
+
+**Fixes landed:**
+- **Seven** copies of one list-selector widget became one `ListSelectorPopup` (production, pop types, probe actions, supply crawl, unit components, council proposals, council ballots — all deleted). They had already diverged: outside-click dismiss existed in one, null-checking in another, and none clipped a long list. Rows are now bounded to the content area with arrow-key scrolling and an `[a-b of N]` indicator, outside clicks dismiss, and an absent handler throws at construction rather than letting a click silently no-op.
+- Terraform hotkeys moved to `config/ui/terraform_bindings.json`, validated against `ImprovementRegistry` when the controller is built — twenty-two improvement ids that had to stay byte-identical to `improvements.json`, with a mismatch surfacing only later inside `TryStartTerraform`.
+- `ComponentSlotDisplay` deleted: compiled, styled, never constructed, while `SlotColumnPanel` reimplemented the same paint and click path.
+- Content out of C++: pop display glyphs (`display_glyph`, required), supply-crawl resources (one `k_CrawlResources` shared by the rule and the menu, so a listed choice cannot be one the rule rejects), the social-engineering category/rating tables (`magic_enum::enum_values`), and the map renderer's improvement ids.
+- The duplicate `PopTypeSelectorPopupStyle`/`ProductionSelectorPopupStyle` pair collapsed into one type; the unit designer's picker keeps its own look as a second *instance* of it. The UI's copy of the world elevation range is gone.
+- `UnitStackPanel`'s visible window follows the selected unit, so a stack wider than the panel stays reachable through the select-next-unit cycle.
+
+**Review follow-ups applied:** `ScrollBy` had **no callers**, so the stack-panel finding was not actually fixed — the panel still dropped units and now announced the ones it dropped; replaced with selection-following. The overflow indicator was **drawn over the last visible row**, which stayed clickable underneath it. I had also claimed the unit designer's picker appearance was preserved when padding and the first-row offset both moved, and I missed `CouncilBallotPopup` — a seventh copy I edited in this very package without noticing. All corrected, and the doc's overstated claims fixed rather than left standing.
+
+**Deferred, with reasons in the prompt:** the `UiStyle` singleton (290 `Style()` call sites across 61 files, in code with no automated coverage); threading the world-gen preset's elevation range into `TileRenderer` (the UI's duplicate copy is gone, but the renderer now uses Planet's absolute clamp, so a narrow-range preset still colours flat); and a draw-position-recording graphics stub, whose absence is why the indicator collision was found by review rather than by test.
+
 ---
 
 ## Cross-package dependency sketch

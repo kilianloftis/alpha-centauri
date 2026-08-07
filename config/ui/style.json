@@ -66,8 +66,6 @@
     "fungus_color": [
       220, 80, 180, 255
     ],
-    "min_elevation_meters": -4000,
-    "max_elevation_meters": 4000,
     "fog_fill_dim_ratio": 0.55,
     "tile_border_width": -1.0,
     "tile_font_size": 14,
@@ -550,29 +548,8 @@
       120, 120, 120, 255
     ]
   },
-  "pop_type_selector_popup": {
-    "header_font_size_ratio": 0.04,
-    "entry_font_size_ratio": 0.03,
-    "line_height_ratio": 0.05,
-    "padding_ratio": 0.02,
-    "header_line_offset": 2.0,
-    "background_color": [
-      20, 20, 40, 230
-    ],
-    "border_color": [
-      255, 255, 0, 255
-    ],
-    "header_color": [
-      255, 255, 0, 255
-    ],
-    "hint_color": [
-      255, 255, 255, 255
-    ],
-    "entry_color": [
-      255, 255, 255, 255
-    ]
-  },
-  "production_selector_popup": {
+  "list_selector_popup": {
+    "border_width": 1.0,
     "header_font_size_ratio": 0.04,
     "entry_font_size_ratio": 0.03,
     "line_height_ratio": 0.05,
@@ -704,27 +681,6 @@
       255, 255, 255, 255
     ]
   },
-  "component_slot_display": {
-    "background_color": [
-      30, 30, 35, 255
-    ],
-    "border_color": [
-      80, 80, 100, 255
-    ],
-    "label_text_color": [
-      150, 150, 170, 255
-    ],
-    "empty_name_color": [
-      80, 80, 80, 255
-    ],
-    "filled_name_color": [
-      255, 255, 255, 255
-    ],
-    "label_font_size_ratio": 0.08,
-    "name_font_size_ratio": 0.07,
-    "padding_ratio": 0.04,
-    "name_label_spacing_multiplier": 1.4
-  },
   "component_selector_popup": {
     "background_color": [
       20, 20, 40, 255
@@ -732,18 +688,21 @@
     "border_color": [
       100, 100, 180, 255
     ],
-    "title_color": [
+    "header_color": [
       255, 255, 0, 255
+    ],
+    "hint_color": [
+      255, 255, 255, 255
     ],
     "entry_color": [
       255, 255, 255, 255
     ],
     "border_width": 2.0,
-    "title_font_size_ratio": 0.05,
+    "header_font_size_ratio": 0.05,
     "entry_font_size_ratio": 0.04,
-    "entry_height_ratio": 0.07,
+    "line_height_ratio": 0.07,
     "padding_ratio": 0.03,
-    "title_height_multiplier": 2.0
+    "header_line_offset": 2.0
   },
   "design_stats_display": {
     "background_color": [

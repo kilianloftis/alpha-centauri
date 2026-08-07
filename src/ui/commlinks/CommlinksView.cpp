@@ -2,7 +2,7 @@
 #include "ui/commlinks/CommlinksPanel.h"
 #include "ui/commlinks/CouncilButton.h"
 #include "ui/commlinks/CouncilCooldownPopup.h"
-#include "ui/commlinks/CouncilProposalsPopup.h"
+#include "ui/ListSelectorPopup.h"
 #include "game/Faction.h"
 #include "game/GameState.h"
 #include "game/council/CouncilProposalConfig.h"
@@ -84,11 +84,21 @@ void CommlinksView::OpenCouncilProposals_()
         }
     }
 
+    std::vector<std::string> rows;
+    rows.reserve(available.size());
+    for (const CouncilProposalConfig_t* pProposal : available)
+    {
+        rows.push_back(pProposal->name);
+    }
+
     DismissOpenModals_();
-    m_elements.push_back(std::make_unique<CouncilProposalsPopup>(
-        std::move(available),
+    m_elements.push_back(std::make_unique<ListSelectorPopup>(
+        "Council Proposals", "No proposals available", std::move(rows),
         ResolveLayout(m_layout, Style().layouts.topPanel),
-        [this](const CouncilProposalConfig_t& rProposal) { OnProposalSelected_(rProposal); }));
+        [this, available = std::move(available)](size_t index) {
+            OnProposalSelected_(*available[index]);
+        },
+        Style().listSelectorPopup));
 }
 
 void CommlinksView::OnProposalSelected_(const CouncilProposalConfig_t& rProposal)

@@ -3,8 +3,7 @@
 #include "ui/world/InfoPanelElement.h"
 #include "ui/world/LocationPanel.h"
 #include "ui/world/SelectedUnitPanel.h"
-#include "ui/world/SupplyCrawlPopup.h"
-#include "ui/world/ProbeActionPopup.h"
+#include "ui/ListSelectorPopup.h"
 #include "ui/world/UnitStackPanel.h"
 #include "ui/world/CommlinksButton.h"
 #include "ui/world/EndTurnButton.h"
@@ -30,6 +29,7 @@
 #include "ui/TileHitTester.h"
 #include "ui/style/UiStyle.h"
 #include "graphics/Graphics.h"
+#include <magic_enum.hpp>
 #include <string>
 #include <memory>
 
@@ -66,7 +66,8 @@ WorldView::WorldView(
 , m_onOpenCommlinks(std::move(onOpenCommlinks))
 , m_pCameraInputController(std::make_unique<CameraInputController>(*m_pWorldDisplay, rWorldMap, m_mapLayout))
 , m_pUnitOrderInputController(std::make_unique<UnitOrderInputController>())
-, m_pTerraformInputController(std::make_unique<TerraformInputController>())
+, m_pTerraformInputController(std::make_unique<TerraformInputController>(
+      rGameDataContext.paths.terraformBindings, *rGameDataContext.improvementRegistry))
 {
     auto pSelectedUnit = std::make_unique<SelectedUnitPanel>(ResolveLayout(m_layout, Style().layouts.leftPanel));
     m_pSelectedUnitPanel = pSelectedUnit.get();
@@ -346,10 +347,18 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
         else if (m_pUnitOrderInputController->WasSupplyCrawlRequested() && pControllable)
         {
             Unit* pUnit = pControllable;
+            std::vector<std::string> rows;
+            for (const StatId_t resource : k_CrawlResources)
+            {
+                rows.push_back(std::string(magic_enum::enum_name(resource)));
+            }
+
             DismissOpenModals_();
-            m_elements.push_back(std::make_unique<SupplyCrawlPopup>(
+            m_elements.push_back(std::make_unique<ListSelectorPopup>(
+                "Supply Crawl", "No resources available", std::move(rows),
                 ResolveLayout(m_layout, Style().layouts.popupSmall),
-                [this, pUnit](StatId_t resource) {
+                [this, pUnit](size_t index) {
+                    const StatId_t resource = k_CrawlResources[index];
                     if (m_pSelectedUnit != pUnit)
                     {
                         return;
@@ -358,7 +367,8 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
                     {
                         SelectNextAvailableUnit_();
                     }
-                }));
+                },
+                Style().listSelectorPopup));
             return true;
         }
         else if (m_pUnitOrderInputController->WasFoundBaseRequested() && pControllable)
@@ -592,11 +602,23 @@ void WorldView::TryOpenProbeActions_(Unit& rProbe, const Tile& rTargetTile)
     // re-resolves and rejects cleanly if it is gone.
     Unit* pProbe = &rProbe;
     const Tile* pTargetTile = &rTargetTile;
+
+    std::vector<std::string> rows;
+    std::vector<ProbeActionId_t> actionIds;
+    rows.reserve(actions.size());
+    actionIds.reserve(actions.size());
+    for (const auto& [id, rLabel] : actions)
+    {
+        actionIds.push_back(id);
+        rows.push_back(rLabel);
+    }
+
     DismissOpenModals_();
-    m_elements.push_back(std::make_unique<ProbeActionPopup>(
+    m_elements.push_back(std::make_unique<ListSelectorPopup>(
+        "Probe Actions", "No actions available", std::move(rows),
         ResolveLayout(m_layout, Style().layouts.popupSmall),
-        std::move(actions),
-        [this, pProbe, pTargetTile](ProbeActionId_t actionId) {
+        [this, pProbe, pTargetTile, actionIds = std::move(actionIds)](size_t index) {
+            const ProbeActionId_t actionId = actionIds[index];
             if (m_pSelectedUnit != pProbe)
             {
                 return;
@@ -608,7 +630,8 @@ void WorldView::TryOpenProbeActions_(Unit& rProbe, const Tile& rTargetTile)
             {
                 SelectNextAvailableUnit_();
             }
-        }));
+        },
+        Style().listSelectorPopup));
 }
 
 std::string WorldView::FindUnitNameOnTile_(const Tile& rTile) const

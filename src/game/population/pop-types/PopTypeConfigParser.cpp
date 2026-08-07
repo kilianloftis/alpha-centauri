@@ -27,6 +27,19 @@ PopTypeConfig_t PopTypeConfigParser::ParsePopTypeConfig(const nlohmann::json& po
     }
     config.role =
         EnumFromName<PopRole_t>(popJson.at("role").get<std::string>(), "pop type role");
+    if (!popJson.contains("display_glyph"))
+    {
+        throw std::runtime_error("Pop type '" + config.id
+                                 + "': missing required field 'display_glyph'");
+    }
+    const std::string glyph = popJson.at("display_glyph").get<std::string>();
+    if (glyph.size() != 1)
+    {
+        throw std::runtime_error("Pop type '" + config.id
+                                 + "': display_glyph must be exactly one character, got '" + glyph
+                                 + "'");
+    }
+    config.displayGlyph = glyph[0];
     config.bIsDefault         = popJson.value("is_default",          false);
     config.bCanWorkTile       = popJson.value("can_work_tile",       false);
     config.bPlayerAssignable  = popJson.value("player_assignable",   false);

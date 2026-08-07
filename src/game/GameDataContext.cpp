@@ -85,6 +85,7 @@ void ThrowIfIncomplete(const GameDataContext& rData)
 GameDataContext LoadGameData(const GameDataPaths& rPaths)
 {
     GameDataContext rData;
+    rData.paths = rPaths;
 
     // --- Reference-target registries first (cited by later configs / validators) ---
     rData.techRegistry = std::make_unique<TechRegistry>();

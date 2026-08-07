@@ -17,7 +17,6 @@ constexpr int k_WorkerGroupOrder             = 1;
 constexpr int k_TalentGroupOrder             = 2;
 constexpr int k_SpecialistGroupOrder         = 3;
 constexpr size_t k_MinPopCountForSpacing     = 2;
-constexpr char k_UnknownPopLetter            = '?';
 
 int PopGroupOrder(const Pop& rPop)
 {
@@ -107,19 +106,7 @@ void PopulationDisplay::Render(Graphics& rGraphics)
 
         m_popBoxes.push_back(PopBox_t{{boxX, boxY, boxSize, boxSize}, sortedPops[i]});
 
-        const char* popType = sortedPops[i]->GetPopType();
-        char firstLetter = popType && popType[0] ? popType[0] : k_UnknownPopLetter;
-        // Letter collisions until pop types carry an explicit display glyph:
-        // Drone/Doctor both D → R (riot); Talent/Technician both T → A (tAlent).
-        if (sortedPops[i]->IsDrone())
-        {
-            firstLetter = 'R';
-        }
-        else if (sortedPops[i]->IsTalent())
-        {
-            firstLetter = 'A';
-        }
-        std::string letterStr(1, firstLetter);
+        const std::string letterStr(1, sortedPops[i]->GetConfig().displayGlyph);
 
         const float textX = boxX + boxSize * style.popBoxTextXOffsetRatio;
         const float textY = boxY + boxSize * style.popBoxTextYOffsetRatio;

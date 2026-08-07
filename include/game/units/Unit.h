@@ -5,12 +5,23 @@
 #include "game/units/MoraleCalculator.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitOrder.h"
+#include <array>
 #include <optional>
 #include <string>
 #include <vector>
 
 namespace ac
 {
+
+// What a supply crawler may carry. The rule and the UI that offers the choice read the same
+// list, so a menu entry cannot exist that TryStartSupplyCrawl then rejects.
+inline constexpr std::array<StatId_t, 3> k_CrawlResources = {
+    StatId_t::Nutrients,
+    StatId_t::Minerals,
+    StatId_t::Energy,
+};
+
+bool IsCrawlResource(StatId_t resource);
 
 class Tile;
 class BaseManager;

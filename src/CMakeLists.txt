@@ -253,8 +253,7 @@ add_executable(alpha-centauri
     ui/ViewFactory.cpp
     ui/style/UiStyle.cpp
     ui/world/WorldView.cpp
-    ui/world/SupplyCrawlPopup.cpp
-    ui/world/ProbeActionPopup.cpp
+    ui/ListSelectorPopup.cpp
     ui/world/CameraInputController.cpp
     ui/world/UnitOrderInputController.cpp
     ui/world/TerraformInputController.cpp
@@ -274,12 +273,10 @@ add_executable(alpha-centauri
     ui/commlinks/CommlinksPanel.cpp
     ui/commlinks/CouncilButton.cpp
     ui/commlinks/CouncilCooldownPopup.cpp
-    ui/commlinks/CouncilProposalsPopup.cpp
     ui/council/CouncilVoteView.cpp
     ui/council/CouncilFactionVotesPanel.cpp
     ui/council/CouncilProposalInfoPanel.cpp
     ui/council/CouncilVoteButton.cpp
-    ui/council/CouncilBallotPopup.cpp
     ui/satellite/SatelliteView.cpp
     ui/satellite/SatelliteLabeledButton.cpp
     ui/satellite/SatelliteSummaryPanel.cpp
@@ -292,9 +289,7 @@ add_executable(alpha-centauri
     ui/base/BaseWorkableAreaDisplay.cpp
     ui/base/GrowthDisplay.cpp
     ui/base/ProductionDisplay.cpp
-    ui/base/ProductionSelectorPopup.cpp
     ui/base/PopulationDisplay.cpp
-    ui/base/PopTypeSelectorPopup.cpp
     ui/base/SupportDisplay.cpp
     ui/research/ResearchView.cpp
     ui/research/CurrentResearchPanel.cpp
@@ -304,8 +299,6 @@ add_executable(alpha-centauri
     ui/social-engineering/SocialEngineeringDisplay.cpp
     ui/social-engineering/SocialEngineeringBottomPanel.cpp
     ui/unit-designer/SlotColumnPanel.cpp
-    ui/unit-designer/ComponentSlotDisplay.cpp
-    ui/unit-designer/ComponentSelectorPopup.cpp
     ui/unit-designer/DesignStatsDisplay.cpp
     ui/unit-designer/DesignListPanel.cpp
     ui/unit-designer/UnitStatusPanel.cpp

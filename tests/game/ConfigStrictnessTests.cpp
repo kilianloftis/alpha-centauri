@@ -258,9 +258,9 @@ TEST_CASE("Pop types validate their references to other pop types", "[config][po
     SECTION("an unknown fallback_pop_type is rejected")
     {
         const TempConfigFile config("ac_pop_fallback.json", R"([
-            { "id": "Worker", "name": "Worker", "role": "worker", "is_default": true,
+            { "id": "Worker", "name": "Worker", "role": "worker", "display_glyph": "X", "is_default": true,
               "can_work_tile": true },
-            { "id": "Specialist", "name": "Specialist", "role": "specialist",
+            { "id": "Specialist", "name": "Specialist", "role": "specialist", "display_glyph": "X",
               "fallback_pop_type": "Typo" }
         ])");
         CHECK_THROWS_WITH(registry.Load(config.Path()),
@@ -270,9 +270,9 @@ TEST_CASE("Pop types validate their references to other pop types", "[config][po
     SECTION("an unknown obsoletes entry is rejected")
     {
         const TempConfigFile config("ac_pop_obsoletes.json", R"([
-            { "id": "Worker", "name": "Worker", "role": "worker", "is_default": true,
+            { "id": "Worker", "name": "Worker", "role": "worker", "display_glyph": "X", "is_default": true,
               "can_work_tile": true },
-            { "id": "Doctor", "name": "Doctor", "role": "specialist",
+            { "id": "Doctor", "name": "Doctor", "role": "specialist", "display_glyph": "X",
               "obsoletes": ["NoSuchType"] }
         ])");
         CHECK_THROWS_WITH(registry.Load(config.Path()),
@@ -282,11 +282,11 @@ TEST_CASE("Pop types validate their references to other pop types", "[config][po
     SECTION("valid references load")
     {
         const TempConfigFile config("ac_pop_ok.json", R"([
-            { "id": "Worker", "name": "Worker", "role": "worker", "is_default": true,
+            { "id": "Worker", "name": "Worker", "role": "worker", "display_glyph": "X", "is_default": true,
               "can_work_tile": true },
-            { "id": "Doctor", "name": "Doctor", "role": "specialist",
+            { "id": "Doctor", "name": "Doctor", "role": "specialist", "display_glyph": "X",
               "fallback_pop_type": "Worker" },
-            { "id": "Empath", "name": "Empath", "role": "specialist", "obsoletes": ["Doctor"] }
+            { "id": "Empath", "name": "Empath", "role": "specialist", "display_glyph": "X", "obsoletes": ["Doctor"] }
         ])");
         CHECK_NOTHROW(registry.Load(config.Path()));
     }

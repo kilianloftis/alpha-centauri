@@ -37,6 +37,7 @@ private:
 
     void ShowComponentSelector_(
         const std::string& rComponentType,
+        const std::string& rSlotDisplayName,
         std::function<void(const UnitComponentConfig_t&)> onSelected
     );
     void HandleSaveDesign_();

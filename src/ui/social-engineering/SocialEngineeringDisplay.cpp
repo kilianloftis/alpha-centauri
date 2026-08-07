@@ -13,6 +13,8 @@
 #include "game/effects/EffectConfig.h"
 #include "ui/style/UiStyle.h"
 
+#include <magic_enum.hpp>
+
 #include <array>
 #include <cctype>
 #include <sstream>
@@ -25,25 +27,9 @@ namespace ac
 namespace
 {
 
-constexpr std::array<SocialCategory_t, 4> k_Categories = {
-    SocialCategory_t::Politics,
-    SocialCategory_t::Economics,
-    SocialCategory_t::Values,
-    SocialCategory_t::FutureSociety
-};
-
-constexpr std::array<SocialRatingId_t, 10> k_AllRatings = {
-    SocialRatingId_t::Economy,
-    SocialRatingId_t::Efficiency,
-    SocialRatingId_t::Support,
-    SocialRatingId_t::Police,
-    SocialRatingId_t::Morale,
-    SocialRatingId_t::Growth,
-    SocialRatingId_t::Planet,
-    SocialRatingId_t::Research,
-    SocialRatingId_t::Industry,
-    SocialRatingId_t::Probe
-};
+// Derived from the enums, so a new category or rating axis appears here without an edit.
+constexpr auto k_Categories = magic_enum::enum_values<SocialCategory_t>();
+constexpr auto k_AllRatings = magic_enum::enum_values<SocialRatingId_t>();
 
 std::string CapitalizeFirst(std::string text)
 {

@@ -1,0 +1,27 @@
+{
+  "_comment": "Former hotkeys. `key` is a Key_t enumerator name; `improvement` must exist in config/improvements.json, which is checked when the controller is built. Letters only: KeyEvent_t carries no modifiers for these, and the binding is consulted only for units with the Terraform rule flag, so letters stay free on everything else.",
+  "bindings": [
+    { "key": "R", "improvement": "Road" },
+    { "key": "F", "improvement": "Farm" },
+    { "key": "I", "improvement": "Mine" },
+    { "key": "O", "improvement": "Forest" },
+    { "key": "S", "improvement": "Sensor" },
+    { "key": "Y", "improvement": "SolarCollector" },
+    { "key": "E", "improvement": "SoilEnricher" },
+    { "key": "B", "improvement": "Bunker" },
+    { "key": "A", "improvement": "Airbase" },
+    { "key": "G", "improvement": "MagTube" },
+    { "key": "C", "improvement": "Condenser" },
+    { "key": "X", "improvement": "Mirror" },
+    { "key": "Z", "improvement": "ThermalBorehole" },
+    { "key": "P", "improvement": "PlantFungus" },
+    { "key": "D", "improvement": "RemoveFungus" },
+    { "key": "L", "improvement": "LevelTerrain" },
+    { "key": "U", "improvement": "RaiseLand" },
+    { "key": "J", "improvement": "LowerLand" },
+    { "key": "Q", "improvement": "Aquifer" },
+    { "key": "K", "improvement": "KelpFarm" },
+    { "key": "W", "improvement": "MiningPlatform" },
+    { "key": "T", "improvement": "TidalHarness" }
+  ]
+}

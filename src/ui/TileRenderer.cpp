@@ -106,18 +106,19 @@ Color_t TileRenderer::FillColor(const Tile& rTile, bool bFogged)
     }
     else if (rTile.IsWater())
     {
-        // Water: darker at depth (minElevation), lighter near sea level (-1).
+        // Water: darker at depth, lighter near sea level (-1). The domain is Planet's own
+        // elevation range, not a UI copy of it that a world-gen change could leave behind.
         const float t = Remap01_(static_cast<float>(elevation),
-                                 static_cast<float>(s.minElevationMeters),
+                                 static_cast<float>(k_MinElevation),
                                  -1.0f);
         fill = LerpColor_(s.waterLowColor, s.waterHighColor, t);
     }
     else
     {
-        // Land: darker near sea level (0), lighter at peaks (maxElevation).
+        // Land: darker near sea level (0), lighter at peaks.
         const float t = Remap01_(static_cast<float>(elevation),
                                  0.0f,
-                                 static_cast<float>(s.maxElevationMeters));
+                                 static_cast<float>(k_MaxElevation));
         fill = LerpColor_(s.landLowColor, s.landHighColor, t);
     }
 

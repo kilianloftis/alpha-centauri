@@ -87,6 +87,11 @@ struct GameDataContext
     // beside techCostCalculator rather than on GameState. Every faction, unit, and combat
     // path borrows this one instance.
     std::unique_ptr<MoraleCalculator> moraleCalculator;
+
+    // The paths this context was loaded from, so a caller that needs a config file LoadGameData
+    // does not parse (the UI's terraform bindings) resolves it the same way as everything else
+    // rather than hardcoding a second root.
+    GameDataPaths paths;
 };
 
 // Single entry point that runs every config parser and returns a *complete* context. Load

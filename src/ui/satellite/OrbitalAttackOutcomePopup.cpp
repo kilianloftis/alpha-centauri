@@ -40,7 +40,7 @@ void OrbitalAttackOutcomePopup::Render(Graphics& rGraphics)
     }
 
     const auto& style = Style().satelliteView;
-    const auto& popupStyle = Style().productionSelectorPopup;
+    const auto& popupStyle = Style().listSelectorPopup;
     const float padding = popupStyle.paddingRatio * m_layout.width;
     const unsigned int headerFontSize =
         static_cast<unsigned int>(m_layout.height * popupStyle.headerFontSizeRatio);

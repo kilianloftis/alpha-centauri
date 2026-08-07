@@ -5,6 +5,7 @@
 #include "game/faction/FactionVisibleMap.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/map/RiverGeneration.h"
+#include "game/map/ImprovementIds.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Pathfinder.h"
@@ -151,7 +152,7 @@ void WorldDisplay::RenderSensors_(Graphics& rGraphics)
     const float inset = tileSize * s.sensorMarkerInsetRatio;
 
     m_viewport.ForEachVisibleTile([&](const Tile& rTile, float tileX, float tileY) {
-        if (!rTile.HasImprovement("Sensor"))
+        if (!rTile.HasImprovement(ImprovementIds::k_Sensor))
         {
             return;
         }
@@ -183,7 +184,7 @@ void WorldDisplay::RenderMonoliths_(Graphics& rGraphics)
     const float inset = tileSize * s.monolithMarkerInsetRatio;
 
     m_viewport.ForEachVisibleTile([&](const Tile& rTile, float tileX, float tileY) {
-        if (!rTile.HasImprovement("Monolith"))
+        if (!rTile.HasImprovement(ImprovementIds::k_Monolith))
         {
             return;
         }

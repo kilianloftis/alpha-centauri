@@ -3,10 +3,9 @@
 #include "ui/base/BaseWorkableAreaDisplay.h"
 #include "ui/base/GrowthDisplay.h"
 #include "ui/base/ProductionDisplay.h"
-#include "ui/base/ProductionSelectorPopup.h"
 #include "ui/base/PopulationDisplay.h"
-#include "ui/base/PopTypeSelectorPopup.h"
 #include "ui/base/SupportDisplay.h"
+#include "ui/ListSelectorPopup.h"
 #include "ui/PlaceholderPanel.h"
 #include "ui/world/UnitStackPanel.h"
 #include "game/population/pop-types/Pop.h"
@@ -218,14 +217,22 @@ void BaseView::HandlePopClick(Pop& rPop)
         return;
     }
 
+    std::vector<const PopTypeConfig_t*> available = m_rFaction.GetAvailablePopTypes();
+    std::vector<std::string> rows;
+    rows.reserve(available.size());
+    for (const PopTypeConfig_t* pConfig : available)
+    {
+        rows.push_back(pConfig->name);
+    }
+
     DismissOpenModals_();
-    m_elements.push_back(std::make_unique<PopTypeSelectorPopup>(
-        m_rFaction.GetAvailablePopTypes(),
+    m_elements.push_back(std::make_unique<ListSelectorPopup>(
+        "Select Pop Type", "No pop types available", std::move(rows),
         ResolveLayout(m_layout, Style().layouts.popupSmall),
-        [this, &rPop](const PopTypeConfig_t& rConfig) {
-            HandlePopTypeSelected(rPop, rConfig);
-        }
-    ));
+        [this, &rPop, available = std::move(available)](size_t index) {
+            HandlePopTypeSelected(rPop, *available[index]);
+        },
+        Style().listSelectorPopup));
 }
 
 void BaseView::HandlePopTypeSelected(Pop& rPop, const PopTypeConfig_t& rConfig)
@@ -246,13 +253,21 @@ void BaseView::HandleProductionDisplayClicked_()
     }
 
     std::vector<const IConstructable*> available = m_rBase.GetConstructable();
+    std::vector<std::string> rows;
+    rows.reserve(available.size());
+    for (const IConstructable* pItem : available)
+    {
+        rows.push_back(pItem->GetName());
+    }
 
     DismissOpenModals_();
-    m_elements.push_back(std::make_unique<ProductionSelectorPopup>(
-        std::move(available),
+    m_elements.push_back(std::make_unique<ListSelectorPopup>(
+        "Select Production", "Nothing available to build", std::move(rows),
         ResolveLayout(m_layout, Style().layouts.topPanel),
-        [this](const IConstructable& rItem) { m_rBase.GetProduction().SetProduction(&rItem); }
-    ));
+        [this, available = std::move(available)](size_t index) {
+            m_rBase.GetProduction().SetProduction(available[index]);
+        },
+        Style().listSelectorPopup));
 }
 
 } // namespace ac

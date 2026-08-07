@@ -81,8 +81,6 @@ TileRendererStyle ParseTileRendererStyle_(const nlohmann::json& j)
     s.landHighColor = ParseColor_(j, "land_high_color");
     s.forestColor = ParseColor_(j, "forest_color");
     s.fungusColor = ParseColor_(j, "fungus_color");
-    s.minElevationMeters = j.at("min_elevation_meters").get<int>();
-    s.maxElevationMeters = j.at("max_elevation_meters").get<int>();
     s.fogFillDimRatio = j.at("fog_fill_dim_ratio").get<float>();
     s.tileBorderWidth = j.at("tile_border_width").get<float>();
     s.tileFontSize = j.at("tile_font_size").get<unsigned int>();
@@ -451,30 +449,15 @@ BaseWorkableAreaDisplayStyle ParseBaseWorkableAreaDisplayStyle_(const nlohmann::
     return s;
 }
 
-PopTypeSelectorPopupStyle ParsePopTypeSelectorPopupStyle_(const nlohmann::json& j)
+ListSelectorPopupStyle ParseListSelectorPopupStyle_(const nlohmann::json& j)
 {
-    PopTypeSelectorPopupStyle s{};
+    ListSelectorPopupStyle s{};
     s.headerFontSizeRatio = j.at("header_font_size_ratio").get<float>();
     s.entryFontSizeRatio = j.at("entry_font_size_ratio").get<float>();
     s.lineHeightRatio = j.at("line_height_ratio").get<float>();
     s.paddingRatio = j.at("padding_ratio").get<float>();
     s.headerLineOffset = j.at("header_line_offset").get<float>();
-    s.backgroundColor = ParseColor_(j, "background_color");
-    s.borderColor = ParseColor_(j, "border_color");
-    s.headerColor = ParseColor_(j, "header_color");
-    s.hintColor = ParseColor_(j, "hint_color");
-    s.entryColor = ParseColor_(j, "entry_color");
-    return s;
-}
-
-ProductionSelectorPopupStyle ParseProductionSelectorPopupStyle_(const nlohmann::json& j)
-{
-    ProductionSelectorPopupStyle s{};
-    s.headerFontSizeRatio = j.at("header_font_size_ratio").get<float>();
-    s.entryFontSizeRatio = j.at("entry_font_size_ratio").get<float>();
-    s.lineHeightRatio = j.at("line_height_ratio").get<float>();
-    s.paddingRatio = j.at("padding_ratio").get<float>();
-    s.headerLineOffset = j.at("header_line_offset").get<float>();
+    s.borderWidth = j.at("border_width").get<float>();
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
     s.headerColor = ParseColor_(j, "header_color");
@@ -558,37 +541,6 @@ SlotColumnPanelStyle ParseSlotColumnPanelStyle_(const nlohmann::json& j)
     s.labelTextColor = ParseColor_(j, "label_text_color");
     s.emptyNameColor = ParseColor_(j, "empty_name_color");
     s.filledNameColor = ParseColor_(j, "filled_name_color");
-    return s;
-}
-
-ComponentSlotDisplayStyle ParseComponentSlotDisplayStyle_(const nlohmann::json& j)
-{
-    ComponentSlotDisplayStyle s{};
-    s.backgroundColor = ParseColor_(j, "background_color");
-    s.borderColor = ParseColor_(j, "border_color");
-    s.labelTextColor = ParseColor_(j, "label_text_color");
-    s.emptyNameColor = ParseColor_(j, "empty_name_color");
-    s.filledNameColor = ParseColor_(j, "filled_name_color");
-    s.labelFontSizeRatio = j.at("label_font_size_ratio").get<float>();
-    s.nameFontSizeRatio = j.at("name_font_size_ratio").get<float>();
-    s.paddingRatio = j.at("padding_ratio").get<float>();
-    s.nameLabelSpacingMultiplier = j.at("name_label_spacing_multiplier").get<float>();
-    return s;
-}
-
-ComponentSelectorPopupStyle ParseComponentSelectorPopupStyle_(const nlohmann::json& j)
-{
-    ComponentSelectorPopupStyle s{};
-    s.backgroundColor = ParseColor_(j, "background_color");
-    s.borderColor = ParseColor_(j, "border_color");
-    s.titleColor = ParseColor_(j, "title_color");
-    s.entryColor = ParseColor_(j, "entry_color");
-    s.borderWidth = j.at("border_width").get<float>();
-    s.titleFontSizeRatio = j.at("title_font_size_ratio").get<float>();
-    s.entryFontSizeRatio = j.at("entry_font_size_ratio").get<float>();
-    s.entryHeightRatio = j.at("entry_height_ratio").get<float>();
-    s.paddingRatio = j.at("padding_ratio").get<float>();
-    s.titleHeightMultiplier = j.at("title_height_multiplier").get<float>();
     return s;
 }
 
@@ -733,14 +685,12 @@ void UiStyle::Load(const std::string& filePath)
     style.populationDisplay = ParsePopulationDisplayStyle_(root.at("population_display"));
     style.supportDisplay = ParseSupportDisplayStyle_(root.at("support_display"));
     style.baseWorkableAreaDisplay = ParseBaseWorkableAreaDisplayStyle_(root.at("base_workable_area_display"));
-    style.popTypeSelectorPopup = ParsePopTypeSelectorPopupStyle_(root.at("pop_type_selector_popup"));
-    style.productionSelectorPopup = ParseProductionSelectorPopupStyle_(root.at("production_selector_popup"));
+    style.listSelectorPopup = ParseListSelectorPopupStyle_(root.at("list_selector_popup"));
     style.socialEngineeringDisplay = ParseSocialEngineeringDisplayStyle_(root.at("social_engineering_display"));
     style.socialEngineeringBottomPanel = ParseSocialEngineeringBottomPanelStyle_(root.at("social_engineering_bottom_panel"));
     style.unitDesignerView = ParseUnitDesignerViewStyle_(root.at("unit_designer_view"));
     style.slotColumnPanel = ParseSlotColumnPanelStyle_(root.at("slot_column_panel"));
-    style.componentSlotDisplay = ParseComponentSlotDisplayStyle_(root.at("component_slot_display"));
-    style.componentSelectorPopup = ParseComponentSelectorPopupStyle_(root.at("component_selector_popup"));
+    style.componentSelectorPopup = ParseListSelectorPopupStyle_(root.at("component_selector_popup"));
     style.designStatsDisplay = ParseDesignStatsDisplayStyle_(root.at("design_stats_display"));
     style.designListPanel = ParseDesignListPanelStyle_(root.at("design_list_panel"));
     style.unitStatusPanel = ParseUnitStatusPanelStyle_(root.at("unit_status_panel"));

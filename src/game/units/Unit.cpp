@@ -19,17 +19,11 @@
 namespace ac
 {
 
-namespace
+bool IsCrawlResource(StatId_t resource)
 {
-
-bool IsCrawlResource_(StatId_t resource)
-{
-    return resource == StatId_t::Nutrients
-        || resource == StatId_t::Minerals
-        || resource == StatId_t::Energy;
+    return std::find(k_CrawlResources.begin(), k_CrawlResources.end(), resource)
+           != k_CrawlResources.end();
 }
-
-} // namespace
 
 Unit::Unit(UnitId_t unitId,
            const UnitDesign& rDesign,
@@ -293,7 +287,7 @@ void Unit::ClearOrder()
 
 bool Unit::TryStartSupplyCrawl(StatId_t resource)
 {
-    if (!IsCrawlResource_(resource))
+    if (!IsCrawlResource(resource))
     {
         throw std::runtime_error("TryStartSupplyCrawl: resource must be nutrients, minerals, or energy");
     }

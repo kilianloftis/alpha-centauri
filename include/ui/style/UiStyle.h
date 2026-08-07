@@ -40,8 +40,6 @@ struct TileRendererStyle
     Color_t landHighColor{};
     Color_t forestColor{};
     Color_t fungusColor{};
-    int minElevationMeters{};
-    int maxElevationMeters{};
     float fogFillDimRatio{};
     float tileBorderWidth{};
     unsigned int tileFontSize{};
@@ -363,27 +361,16 @@ struct BaseWorkableAreaDisplayStyle
     Color_t unavailableTileTextColor{};
 };
 
-struct PopTypeSelectorPopupStyle
+// Every modal list-selector's metrics. One type, so a tweak cannot land on one screen only;
+// distinct looks are distinct *instances* of it (see componentSelectorPopup).
+struct ListSelectorPopupStyle
 {
     float headerFontSizeRatio{};
     float entryFontSizeRatio{};
     float lineHeightRatio{};
     float paddingRatio{};
     float headerLineOffset{};
-    Color_t backgroundColor{};
-    Color_t borderColor{};
-    Color_t headerColor{};
-    Color_t hintColor{};
-    Color_t entryColor{};
-};
-
-struct ProductionSelectorPopupStyle
-{
-    float headerFontSizeRatio{};
-    float entryFontSizeRatio{};
-    float lineHeightRatio{};
-    float paddingRatio{};
-    float headerLineOffset{};
+    float borderWidth{};
     Color_t backgroundColor{};
     Color_t borderColor{};
     Color_t headerColor{};
@@ -459,33 +446,6 @@ struct SlotColumnPanelStyle
     Color_t labelTextColor{};
     Color_t emptyNameColor{};
     Color_t filledNameColor{};
-};
-
-struct ComponentSlotDisplayStyle
-{
-    Color_t backgroundColor{};
-    Color_t borderColor{};
-    Color_t labelTextColor{};
-    Color_t emptyNameColor{};
-    Color_t filledNameColor{};
-    float labelFontSizeRatio{};
-    float nameFontSizeRatio{};
-    float paddingRatio{};
-    float nameLabelSpacingMultiplier{};
-};
-
-struct ComponentSelectorPopupStyle
-{
-    Color_t backgroundColor{};
-    Color_t borderColor{};
-    Color_t titleColor{};
-    Color_t entryColor{};
-    float borderWidth{};
-    float titleFontSizeRatio{};
-    float entryFontSizeRatio{};
-    float entryHeightRatio{};
-    float paddingRatio{};
-    float titleHeightMultiplier{};
 };
 
 struct DesignStatsDisplayStyle
@@ -609,14 +569,14 @@ public:
     PopulationDisplayStyle populationDisplay;
     SupportDisplayStyle supportDisplay;
     BaseWorkableAreaDisplayStyle baseWorkableAreaDisplay;
-    PopTypeSelectorPopupStyle popTypeSelectorPopup;
-    ProductionSelectorPopupStyle productionSelectorPopup;
+    ListSelectorPopupStyle listSelectorPopup;
     SocialEngineeringDisplayStyle socialEngineeringDisplay;
     SocialEngineeringBottomPanelStyle socialEngineeringBottomPanel;
     UnitDesignerViewStyle unitDesignerView;
     SlotColumnPanelStyle slotColumnPanel;
-    ComponentSlotDisplayStyle componentSlotDisplay;
-    ComponentSelectorPopupStyle componentSelectorPopup;
+    // Its own instance of the shared type: the unit designer's picker keeps distinct colours
+    // and metrics without a second widget or a second style shape.
+    ListSelectorPopupStyle componentSelectorPopup;
     DesignStatsDisplayStyle designStatsDisplay;
     DesignListPanelStyle designListPanel;
     UnitStatusPanelStyle unitStatusPanel;

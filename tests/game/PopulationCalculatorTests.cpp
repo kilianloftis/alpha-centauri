@@ -316,10 +316,10 @@ TEST_CASE("An obsolescence cycle is rejected at load", "[population][pop-types][
     // must not be reachable, and a hang is not something a caller's try/catch can absorb.
     PopTypeRegistry registry;
     const TempConfigFile config("ac_pop_cycle.json", R"([
-        { "id": "Worker", "name": "Worker", "role": "worker", "is_default": true,
+        { "id": "Worker", "name": "Worker", "role": "worker", "display_glyph": "X", "is_default": true,
           "can_work_tile": true },
-        { "id": "A", "name": "A", "role": "specialist", "obsoletes": ["B"] },
-        { "id": "B", "name": "B", "role": "specialist", "obsoletes": ["A"] }
+        { "id": "A", "name": "A", "role": "specialist", "display_glyph": "X", "obsoletes": ["B"] },
+        { "id": "B", "name": "B", "role": "specialist", "display_glyph": "X", "obsoletes": ["A"] }
     ])");
 
     CHECK_THROWS_WITH(registry.Load(config.Path()),
@@ -331,9 +331,9 @@ TEST_CASE("A pop type whose role contradicts can_work_tile is rejected",
 {
     PopTypeRegistry registry;
     const TempConfigFile config("ac_pop_role_clash.json", R"([
-        { "id": "Worker", "name": "Worker", "role": "worker", "is_default": true,
+        { "id": "Worker", "name": "Worker", "role": "worker", "display_glyph": "X", "is_default": true,
           "can_work_tile": true },
-        { "id": "Odd", "name": "Odd", "role": "specialist", "can_work_tile": true }
+        { "id": "Odd", "name": "Odd", "role": "specialist", "display_glyph": "X", "can_work_tile": true }
     ])");
 
     CHECK_THROWS_WITH(registry.Load(config.Path()),

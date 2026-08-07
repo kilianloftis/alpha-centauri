@@ -37,7 +37,7 @@ graph TB
     end
 
     subgraph "Base Popups"
-        PopTypeSelectorPopup[PopTypeSelectorPopup<br/>extends UIPopup<br/>lists available pop types]
+        ListSelectorPopup[ListSelectorPopup<br/>extends UIElement<br/>the one modal list picker]
     end
 
     subgraph "Dependencies"
@@ -91,32 +91,25 @@ graph TB
     style BaseWorkableAreaDisplay fill:#bfb,stroke:#333,stroke-width:2px
     style PopulationDisplay fill:#bfb,stroke:#333,stroke-width:2px
     style GrowthDisplay fill:#bfb,stroke:#333,stroke-width:2px
-    PopTypeSelectorPopup -.->|extends| UIPopup
-    style PopTypeSelectorPopup fill:#bfb,stroke:#333,stroke-width:2px
+    style ListSelectorPopup fill:#bfb,stroke:#333,stroke-width:3px
 
     subgraph "Unit Designer"
         UnitDesignerView[UnitDesignerView<br/>implements IGameView]
-        ComponentSlotDisplay[ComponentSlotDisplay<br/>extends UIElement<br/>shows one component slot]
-        ComponentSelectorPopup[ComponentSelectorPopup<br/>extends UIElement<br/>pick component from list]
         DesignStatsDisplay[DesignStatsDisplay<br/>extends UIElement<br/>shows combined stats]
         DesignListPanel[DesignListPanel<br/>extends UIElement<br/>shows saved designs]
         UnitStatusPanel[UnitStatusPanel<br/>extends UIElement<br/>shows active/in-prod counts]
         UnitDesignerState[UnitDesignerState_t<br/>draft component selection]
     end
-    UnitDesignerView -->|owns| ComponentSlotDisplay
     UnitDesignerView -->|owns| DesignStatsDisplay
     UnitDesignerView -->|owns| DesignListPanel
     UnitDesignerView -->|owns| UnitStatusPanel
-    UnitDesignerView -->|spawns on click| ComponentSelectorPopup
+    UnitDesignerView -->|spawns on click| ListSelectorPopup
     UnitDesignerView -->|holds| UnitDesignerState
     DesignStatsDisplay -->|reads| UnitDesignerState
-    ComponentSlotDisplay -->|reads via lambda| UnitDesignerState
     UnitDesignerView -->|saves to| Military
     DesignListPanel -->|reads| Military
 
     style UnitDesignerView fill:#bfb,stroke:#333,stroke-width:2px
-    style ComponentSlotDisplay fill:#bfb,stroke:#333,stroke-width:2px
-    style ComponentSelectorPopup fill:#bfb,stroke:#333,stroke-width:2px
     style DesignStatsDisplay fill:#bfb,stroke:#333,stroke-width:2px
     style DesignListPanel fill:#bfb,stroke:#333,stroke-width:2px
     style UnitStatusPanel fill:#bfb,stroke:#333,stroke-width:2px
@@ -207,6 +200,27 @@ Views are rendered bottom-to-top through the stack. Each view renders its own `U
 
 ### Factory: CreateUIManager()
 Returns `UIManagerImpl`, a platform-agnostic implementation (no compile-time flag needed).
+
+### ListSelectorPopup — the one list picker
+
+Every "pick one of these" modal is a `ListSelectorPopup`: production, pop types, probe actions,
+supply-crawl resources, unit components, council proposals, council ballots. It takes a title, an
+empty-list message, a vector of row labels, and `onSelected(size_t index)`; the caller keeps its
+own payload vector and indexes into it.
+
+Seven near-identical copies preceded it and had already diverged — outside-click dismiss existed
+in one, null-checking in another, and none clipped a long list. Consolidating means those rules
+have one owner:
+
+- **Bounded rows.** Only as many rows as fit below the header are laid out. When the list is
+  longer, the bottom line is reserved for an `[a-b of N]` indicator, so it never paints over a row
+  that would still be clickable underneath it. Arrow keys scroll.
+- **Outside click dismisses**, which is reachable because modal routing delivers every press to
+  the top modal (see below).
+- **An absent handler throws at construction.** A selector whose click does nothing is a
+  programmer error, not a state to render.
+- **Style is a constructor parameter**, not a lookup, so a screen can keep its own colours and
+  metrics (the unit designer's picker does) without a second widget or a second style type.
 
 ### Modal / overlay contract and turn gating
 

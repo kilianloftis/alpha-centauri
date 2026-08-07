@@ -79,6 +79,8 @@ add_executable(effects-tests
     game/RequiredTechValidatorTests.cpp
     game/PlanetaryCouncilTests.cpp
     ui/ModalContractTests.cpp
+    ui/ListSelectorPopupTests.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/ui/ListSelectorPopup.cpp
     lib/SignalTests.cpp
     lib/ConfigLibraryTests.cpp
     lib/EventBusTests.cpp
