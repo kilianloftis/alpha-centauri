@@ -93,7 +93,7 @@ bool ProbeActionExecutor::CanOpenProbeActions(const Unit& rProbe, const Tile& rT
 
 ProbeActionResult_t ProbeActionExecutor::TryProbeAction(
     Unit& rUnit, ProbeActionId_t actionId, const Tile& rTile, GameState& rGameState,
-    const GameDataContext& rDataContext, const BuildingId_t& facilityId, bool bRepeatAtBase)
+    const GameDataContext& rDataContext, const BuildingId_t& facilityId)
 {
     ProbeActionResult_t result;
     if (!rDataContext.probeActionsConfig)
@@ -113,11 +113,28 @@ ProbeActionResult_t ProbeActionExecutor::TryProbeAction(
         return result;
     }
 
+    // Decided here from session history rather than trusted from the caller. Recorded before
+    // the roll so an attempt counts whether or not it succeeds — a failed probe still tips the
+    // base off.
+    bool bRepeatAtBase = false;
+    if (const BaseManager* pTargetBase = AsBase(*target))
+    {
+        bRepeatAtBase = NoteAndCheckRepeatAtBase_(rUnit.GetFaction().GetFactionId(),
+                                                  pTargetBase->GetBaseId());
+    }
+
     const int risk = ResolveMissionRisk_(*pAction, *target, facilityId, bRepeatAtBase);
     FillProbeChances_(result, rUnit, *target, rDataContext, risk);
     const ProbeRollResult_t roll = RollProbeAction(result.chances, m_rRng);
     return ResolveProbeRoll_(rUnit, *pAction, *target, rGameState, rDataContext, facilityId,
                              result, roll);
+}
+
+bool ProbeActionExecutor::NoteAndCheckRepeatAtBase_(FactionId_t actorFactionId,
+                                                    BaseId_t targetBaseId)
+{
+    // insert().second is false when the pair was already present — i.e. this is a repeat.
+    return !m_probedBases.emplace(actorFactionId, targetBaseId).second;
 }
 
 std::optional<ProbeTarget_t> ProbeActionExecutor::ResolveEligibleTarget_(

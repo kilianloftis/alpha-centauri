@@ -33,6 +33,10 @@ public:
     // Destroy the first building with the given id. No-op if not present.
     void DestroyBuilding(const BuildingId_t& buildingId);
 
+    // Whether this base currently holds at least one copy. Callers that must not report success
+    // for a no-op destroy (probe sabotage) check this first.
+    bool HasBuilding(const BuildingId_t& buildingId) const;
+
     // All currently constructed buildings.
     const std::vector<const BuildingConfig_t*>& GetBuildings() const;
 

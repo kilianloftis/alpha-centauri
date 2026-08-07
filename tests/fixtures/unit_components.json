@@ -934,5 +934,35 @@
         }
       }
     ]
+  },
+  {
+    "id": "test_always_disengages",
+    "name": "Test Always Disengages",
+    "type": "ability",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "disengage_chance",
+          "amount": 100
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_never_disengages",
+    "name": "Test Never Disengages",
+    "type": "ability",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "disengage_chance",
+          "amount": 0
+        }
+      }
+    ]
   }
 ]

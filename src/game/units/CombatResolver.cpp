@@ -10,6 +10,7 @@
 #include "game/map/WorldMap.h"
 #include "game/units/MoveCostCalculator.h"
 #include "game/units/StepEvaluator.h"
+#include "lib/RandomRoll.h"
 
 #include <algorithm>
 #include <cmath>
@@ -56,6 +57,16 @@ bool CombatResolver::TryDisengage_(Unit& rCandidate, CombatSide_t side, int star
 
     const std::vector<const Tile*> retreats = m_disengage.CollectRetreatTiles(rCandidate);
     if (retreats.empty())
+    {
+        return false;
+    }
+
+    // Roll the chance the stat actually describes, and roll it *before* committing the move.
+    // DisengageChance was defined, configured (Speeder chassis ships disengage_chance: 25) and
+    // documented as a percent, but never read — so every eligible unit withdrew, every time.
+    // The roll gates the state change rather than following it.
+    const int disengageChance = ResolveStat(rCandidate, StatId_t::DisengageChance);
+    if (!RollPercent(disengageChance, m_rRng))
     {
         return false;
     }

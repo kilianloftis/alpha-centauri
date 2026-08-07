@@ -122,9 +122,20 @@ bool MaybeRazeBase_(BaseManager& rBase, GameState& rGameState, BaseConquestResul
 const UnitDesign* EnsureEscapePodDesign_(Faction& rFaction, const GameDataContext& rDataContext,
                                          const EscapeColonyPodConfig_t& rPodConfig)
 {
-    if (!rDataContext.unitComponentRegistry || rPodConfig.componentIds.empty())
+    // No configured pod is a legitimate "this ruleset has no escape pods" — nothing to build.
+    if (rPodConfig.componentIds.empty())
     {
         return nullptr;
+    }
+    // But a configured pod that cannot be assembled is a config error, not a silent no-op.
+    // It used to return null and SpawnEscapePods_ returned 0, so a cross-species capture still
+    // stripped population (ApplySpeciesClashPopulation_) and simply produced no pods — the
+    // player lost the pops the rule says they should have escaped with, with no diagnostic.
+    if (!rDataContext.unitComponentRegistry)
+    {
+        throw std::runtime_error(
+            "EnsureEscapePodDesign_: escape colony pods are configured but no unit component "
+            "registry is available to build them");
     }
 
     std::vector<UnitSlotConfig_t> slots;
@@ -135,7 +146,9 @@ const UnitDesign* EnsureEscapePodDesign_(Faction& rFaction, const GameDataContex
         const UnitComponentConfig_t* pComponent = rDataContext.unitComponentRegistry->Find(rId);
         if (!pComponent)
         {
-            return nullptr;
+            throw std::runtime_error(
+                "EnsureEscapePodDesign_: escape colony pod component '" + rId
+                + "' is not in the unit component registry");
         }
         UnitSlotConfig_t slot;
         slot.id = "escape_slot_" + std::to_string(slotIndex++);

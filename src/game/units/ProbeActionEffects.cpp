@@ -102,15 +102,34 @@ bool ApplyDrainEnergy_(Unit& rProbe, BaseManager& rBase, GameState& rGameState,
     return true;
 }
 
+// Destroy a building and tell the owning faction, so a cooling ASAT/interceptor deploy record
+// for that copy is retired. Every other destruction path (raze, orbital attack, intercept
+// fail) notifies; sabotage did not, leaving m_buildingDeploys stale so CountReadyBuildings
+// under-counted the faction's remaining copies for the rest of the cooldown.
+void DestroyBuildingAndNotify_(BaseManager& rBase, const BuildingId_t& rBuildingId)
+{
+    rBase.GetBuildingManager().DestroyBuilding(rBuildingId);
+    rBase.GetFaction().NotifyBuildingDestroyed(rBase.GetBaseId(), rBuildingId);
+}
+
 bool ApplySabotage_(BaseManager& rBase, ProbeActionId_t actionId, const BuildingId_t& facilityId,
                     ProbeActionResult_t& rResult, std::mt19937& rRng)
 {
-    if (actionId == ProbeActionId_t::SabotageFacility && !facilityId.empty())
+    // Targeted sabotage is a distinct action from random sabotage, so an empty or unknown
+    // facility id is a failed action — not a silent fall-through to the random branch, and not
+    // a ProbeDestroyedFacility_t report after DestroyBuilding's documented no-op.
+    if (actionId == ProbeActionId_t::SabotageFacility)
     {
-        rBase.GetBuildingManager().DestroyBuilding(facilityId);
+        if (facilityId.empty() || !rBase.GetBuildingManager().HasBuilding(facilityId))
+        {
+            rResult.detail = ProbeActionStatus_t::NoTarget;
+            return false;
+        }
+        DestroyBuildingAndNotify_(rBase, facilityId);
         rResult.detail = ProbeDestroyedFacility_t{facilityId};
         return true;
     }
+
     // Random: destroy a uniformly chosen non-HQ facility; else wipe current production.
     std::vector<const BuildingConfig_t*> candidates;
     for (const BuildingConfig_t* pBuilding : rBase.GetBuildingManager().GetBuildings())
@@ -124,8 +143,9 @@ bool ApplySabotage_(BaseManager& rBase, ProbeActionId_t actionId, const Building
     {
         std::uniform_int_distribution<size_t> dist(0, candidates.size() - 1);
         const BuildingConfig_t* pChosen = candidates[dist(rRng)];
-        rBase.GetBuildingManager().DestroyBuilding(pChosen->id);
-        rResult.detail = ProbeDestroyedFacility_t{pChosen->id};
+        const BuildingId_t chosenId = pChosen->id; // copy: the config dies with the building
+        DestroyBuildingAndNotify_(rBase, chosenId);
+        rResult.detail = ProbeDestroyedFacility_t{chosenId};
         return true;
     }
     rBase.GetProduction().SetProduction(nullptr);

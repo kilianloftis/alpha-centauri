@@ -44,6 +44,13 @@ struct InterceptCandidate_t
     // lane; a component or tile-feature id otherwise.
     std::string sourceId;
     Unit* pUnitSource = nullptr;
+    // The base the building charge came from, when the candidate was collected from a specific
+    // base's effects (the ThisBase lane). Null for FactionGlobal / AllOwnerBases charges, which
+    // are not tied to one base. Destroy-on-fail used to re-derive the base with
+    // FindBaseWithBuilding, which returns the *first* base owning that id — so with the same
+    // building in two bases the wrong copy was destroyed and the deploy cleared against the
+    // wrong inventory.
+    BaseManager* pBaseSource = nullptr;
 };
 
 // sourceKind is the calling lane's physical source. deployKind matches it unless the effect
@@ -55,7 +62,8 @@ void AppendMatchingIntercepts_(std::vector<InterceptCandidate_t>& rOut,
                                const EffectContext_t& rCtx,
                                std::initializer_list<EffectScope_t> allowedScopes,
                                InterceptDeployKind_t sourceKind,
-                               Unit* pUnitSource)
+                               Unit* pUnitSource,
+                               BaseManager* pBaseSource)
 {
     for (const ActiveEffect_t& rEffect : rEffects)
     {
@@ -76,6 +84,7 @@ void AppendMatchingIntercepts_(std::vector<InterceptCandidate_t>& rOut,
         candidate.pIntercept = pIntercept;
         candidate.sourceId = rEffect.sourceId;
         candidate.pUnitSource = pUnitSource;
+        candidate.pBaseSource = pBaseSource;
         candidate.sourceKind = sourceKind;
         candidate.deployKind =
             pIntercept->cooldownTurns < 0 ? InterceptDeployKind_t::None : sourceKind;
@@ -89,24 +98,33 @@ std::vector<InterceptCandidate_t> CollectInterceptCandidates_(GameState& rGameSt
                                                               TileEffectsContext& rTileEffects)
 {
     Faction& rDefFaction = rDefender.GetFaction();
-    const EffectContext_t ctx{&rDefender.GetTile(), CombatRole_t::Attacker};
+    // The intercepting side is the defender, and the live attacker is available — so say so.
+    // Marking the role Attacker and leaving pAttacker null meant an IsDefending condition on
+    // an intercept effect never matched and AttackerIsEmbarked was always false, silently, even
+    // though UnitFilterSatisfied right below already has the attacker.
+    EffectContext_t ctx{&rDefender.GetTile(), CombatRole_t::Defender};
+    ctx.pAttacker = &rAttacker;
     std::vector<InterceptCandidate_t> candidates;
 
+    // Faction-wide charges are not tied to one base, so there is no originating base to carry.
     AppendMatchingIntercepts_(candidates, rDefFaction.GetActiveEffects().effects, rAttacker, ctx,
                               {EffectScope_t::FactionGlobal, EffectScope_t::AllOwnerBases},
-                              InterceptDeployKind_t::Building, nullptr);
+                              InterceptDeployKind_t::Building, nullptr, nullptr);
 
-    if (const BaseManager* pBase =
+    if (BaseManager* pBase =
             rGameState.FindBaseAt(rDefender.GetTile().GetX(), rDefender.GetTile().GetY());
         pBase && &pBase->GetFaction() == &rDefFaction)
     {
+        // A ThisBase charge belongs to *this* base; carry it so destroy-on-fail hits the copy
+        // that actually fired rather than whichever base FindBaseWithBuilding happens to return.
         AppendMatchingIntercepts_(candidates, pBase->CollectBuildingEffects(), rAttacker, ctx,
                                   {EffectScope_t::ThisBase}, InterceptDeployKind_t::Building,
-                                  nullptr);
+                                  nullptr, pBase);
     }
 
     AppendMatchingIntercepts_(candidates, rDefender.GetDesign().CollectEffects(), rAttacker, ctx,
-                              {EffectScope_t::ThisUnit}, InterceptDeployKind_t::Unit, &rDefender);
+                              {EffectScope_t::ThisUnit}, InterceptDeployKind_t::Unit, &rDefender,
+                              nullptr);
 
     // TODO: a ThisTile source has no deploy ledger to charge, so it ignores cooldownTurns and
     // may attempt on every attack. Honouring the configured cooldown needs a per-tile (or
@@ -117,7 +135,7 @@ std::vector<InterceptCandidate_t> CollectInterceptCandidates_(GameState& rGameSt
     // obvious fix, but whether a neutral/allied tile source may intercept is not a settled rule.
     AppendMatchingIntercepts_(candidates, rTileEffects.CollectAreaEffects(rDefender.GetTile()),
                               rAttacker, ctx, {EffectScope_t::ThisTile},
-                              InterceptDeployKind_t::None, nullptr);
+                              InterceptDeployKind_t::None, nullptr, nullptr);
 
     return candidates;
 }
@@ -188,7 +206,12 @@ void MaybeDestroyInterceptSourceOnFail_(Faction& rDefFaction, InterceptCandidate
         return;
     case InterceptDeployKind_t::Building:
     {
-        BaseManager* pBase = rDefFaction.FindBaseWithBuilding(rCandidate.sourceId);
+        // Prefer the base the charge actually came from. FindBaseWithBuilding is only the
+        // fallback for faction-wide charges, which belong to no single base — for those,
+        // destroying "a" copy is the best the model supports.
+        BaseManager* pBase = rCandidate.pBaseSource
+                                 ? rCandidate.pBaseSource
+                                 : rDefFaction.FindBaseWithBuilding(rCandidate.sourceId);
         if (!pBase)
         {
             throw std::logic_error(

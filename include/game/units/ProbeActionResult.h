@@ -27,6 +27,9 @@ enum class ProbeActionStatus_t
     ResearchWiped,
     BaseCaptured,
     UnitSubverted,
+    // Targeted sabotage named a facility the base does not have (or named none). Distinct from
+    // the random-sabotage lane, which falls back to wiping production.
+    NoTarget,
 };
 
 struct ProbeStolenTech_t

@@ -32,6 +32,11 @@ void BuildingManager::AddBuilding(const BuildingId_t& buildingId)
     m_revision.Bump();
 }
 
+bool BuildingManager::HasBuilding(const BuildingId_t& buildingId) const
+{
+    return DoesBuildingExist_(buildingId);
+}
+
 void BuildingManager::DestroyBuilding(const BuildingId_t& buildingId)
 {
     auto it = std::find_if(m_buildings.begin(), m_buildings.end(),

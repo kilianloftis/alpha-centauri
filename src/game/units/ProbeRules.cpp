@@ -104,11 +104,19 @@ std::optional<int> QuoteMindControlBaseCost_(const ProbeCostConfig_t& rCost, int
 }
 
 // mineralCost * (energy + bias) / (dist + bias), then SE multiplier.
-int QuoteSubvertUnitCost_(const ProbeCostConfig_t& rCost, int mineralCost, int energy,
-                          int distToHq, double costMultiplier)
+std::optional<int> QuoteSubvertUnitCost_(const ProbeCostConfig_t& rCost, int mineralCost,
+                                         int energy, int distToHq, double costMultiplier)
 {
-    const int dist = distToHq > 0 ? distToHq : k_defaultHqDistance;
-    const int cost = mineralCost * (energy + rCost.energyBias) / (dist + rCost.distBias);
+    // Distance 0 means the target sits on the HQ tile — a real distance, not "no HQ";
+    // DistanceToHeadquarters_ already substitutes k_defaultHqDistance for the no-HQ case.
+    // Treating 0 as "no HQ" priced an HQ-garrison subversion at denominator 12 + distBias
+    // instead of refusing it, making the best-defended tile on the map the cheapest to subvert.
+    // Refused, matching QuoteMindControlBaseCost_ on the same input.
+    if (distToHq <= 0)
+    {
+        return std::nullopt;
+    }
+    const int cost = mineralCost * (energy + rCost.energyBias) / (distToHq + rCost.distBias);
     return ApplyProbeCostMultiplier_(cost, costMultiplier);
 }
 

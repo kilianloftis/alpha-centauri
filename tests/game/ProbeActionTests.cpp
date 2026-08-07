@@ -269,6 +269,107 @@ TEST_CASE("steal_tech effect picks randomly among eligible techs", "[probe][acti
     CHECK(seen.size() == 2);
 }
 
+TEST_CASE("A second probe against the same base uses risk_repeat", "[probe][action][risk]")
+{
+    // risk_repeat was parsed and stored but unreachable: TryProbeAction took a bRepeatAtBase
+    // flag defaulting to false that no caller ever set. The executor owns the history now.
+    ProbeGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 4, 4);
+
+    // steal_tech is the fixture action that declares risk_repeat (1) distinct from risk (0).
+    const ProbeActionConfig_t* pAction =
+        game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::StealTech);
+    REQUIRE(pAction);
+    REQUIRE(pAction->riskRepeat.has_value());
+    REQUIRE(*pAction->riskRepeat != pAction->risk);
+
+    // Two probes, so whether the first survives does not decide the second attempt.
+    Unit& first = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+    const ProbeActionResult_t firstResult = game.pState->GetProbeActions().TryProbeAction(
+        first, ProbeActionId_t::StealTech, enemy.GetTile(), *game.pState,
+        game.fixtures.dataContext);
+    CHECK(firstResult.chances.risk == pAction->risk);
+
+    Unit& second = game.MakeUnit(*game.pPlayer, 5, 4, {"test_chassis", "Probe_Team"}, &home);
+    const ProbeActionResult_t secondResult = game.pState->GetProbeActions().TryProbeAction(
+        second, ProbeActionId_t::StealTech, enemy.GetTile(), *game.pState,
+        game.fixtures.dataContext);
+    CHECK(secondResult.chances.risk == *pAction->riskRepeat);
+}
+
+TEST_CASE("Sabotage retires the destroyed copy's deploy record", "[probe][action][sabotage]")
+{
+    // Every other destruction path (raze, orbital attack, intercept fail) notifies the owning
+    // faction so a cooling ASAT/interceptor record is retired. Sabotage did not, so
+    // CountReadyBuildings kept subtracting a charge for a building that no longer existed.
+    ProbeGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 4, 4);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+
+    // Two copies, one of them cooling: the sabotaged base's, so the *other* base's copy is what
+    // exposes a stale record. Without the notification the phantom charge keeps suppressing it.
+    BaseManager& enemySecond = game.MakeBase(*game.pAi, 7, 7);
+    enemy.GetBuildingManager().AddBuilding("test_facility_a");
+    enemySecond.GetBuildingManager().AddBuilding("test_facility_a");
+    game.pAi->DeployBuilding(enemy.GetBaseId(), "test_facility_a", /*readyMissionYear*/ 100);
+    REQUIRE(game.pAi->CountBuildings("test_facility_a") == 2);
+    REQUIRE(game.pAi->CountReadyBuildings("test_facility_a", /*missionYear*/ 1) == 1);
+
+    const ProbeActionConfig_t* pAction =
+        game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::SabotageRandom);
+    REQUIRE(pAction);
+    const std::optional<ProbeTarget_t> target = ResolveProbeTarget(
+        probe, enemy.GetTile(), ProbeTargetKind_t::Base, *game.pState);
+    REQUIRE(target.has_value());
+
+    ProbeActionResult_t result;
+    std::mt19937 rng(7);
+    REQUIRE(ApplyProbeActionEffect(probe, *pAction, *target, *game.pState,
+                                   game.fixtures.dataContext, {}, result, rng));
+
+    // The sabotaged copy is gone and took its cooldown record with it, so the surviving copy in
+    // the other base reads ready. Without the notification the stale charge would suppress it.
+    CHECK(game.pAi->CountBuildings("test_facility_a") == 1);
+    CHECK(game.pAi->CountReadyBuildings("test_facility_a", /*missionYear*/ 1) == 1);
+}
+
+TEST_CASE("Targeted sabotage of a facility the base lacks fails", "[probe][action][sabotage]")
+{
+    // An empty or unknown facility id used to fall through to the random branch, and a
+    // non-empty missing id still reported ProbeDestroyedFacility_t after DestroyBuilding's
+    // documented no-op — claiming a kill that never happened.
+    ProbeGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 4, 4);
+    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+
+    enemy.GetBuildingManager().AddBuilding("Command_Center");
+
+    const ProbeActionConfig_t* pAction =
+        game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::SabotageFacility);
+    REQUIRE(pAction);
+    const std::optional<ProbeTarget_t> target = ResolveProbeTarget(
+        probe, enemy.GetTile(), ProbeTargetKind_t::Base, *game.pState);
+    REQUIRE(target.has_value());
+
+    ProbeActionResult_t result;
+    std::mt19937 rng(7);
+    // Naming a facility this base does not have fails outright...
+    CHECK_FALSE(ApplyProbeActionEffect(probe, *pAction, *target, *game.pState,
+                                       game.fixtures.dataContext, {"flat_nutrient"}, result, rng));
+    CHECK(std::get_if<ProbeActionStatus_t>(&result.detail) != nullptr);
+    // ...and does not quietly destroy the building it *does* have instead.
+    CHECK(game.pAi->CountBuildings("Command_Center") == 1);
+
+    // The legal case still works.
+    ProbeActionResult_t hit;
+    REQUIRE(ApplyProbeActionEffect(probe, *pAction, *target, *game.pState,
+                                   game.fixtures.dataContext, {"Command_Center"}, hit, rng));
+    CHECK(game.pAi->CountBuildings("Command_Center") == 0);
+}
+
 TEST_CASE("sabotage_random effect picks randomly among non-HQ buildings",
           "[probe][action][sabotage]")
 {
