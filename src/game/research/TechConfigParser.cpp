@@ -2,13 +2,10 @@
 #include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
 #include <nlohmann/json.hpp>
+#include <stdexcept>
 
 namespace ac
 {
-
-TechConfigParser::TechConfigParser()
-{
-}
 
 std::vector<TechConfig_t> TechConfigParser::ParseConfig(const std::string& configPath)
 {
@@ -23,7 +20,20 @@ TechConfig_t TechConfigParser::ParseTechConfig(const nlohmann::json& techJson)
     config.id = ConfigFields::ParseId(techJson);
     config.name = ConfigFields::ParseName(techJson, config.id);
     config.category = ParseGameCategoryField(techJson);
-    config.cost = techJson.value("cost", 0);
+    // Required: base_cost feeds the cost formula, so an omitted key silently cheapens the tech.
+    if (!techJson.contains("cost"))
+    {
+        throw std::runtime_error("Tech '" + config.id + "': missing required field 'cost'");
+    }
+    if (!techJson.at("cost").is_number_integer())
+    {
+        throw std::runtime_error("Tech '" + config.id + "': 'cost' must be an integer");
+    }
+    config.cost = techJson.at("cost").get<int>();
+    if (config.cost < 0)
+    {
+        throw std::runtime_error("Tech '" + config.id + "': 'cost' must not be negative");
+    }
     config.prerequisites = ConfigFields::ParseStringArray(techJson, "prerequisites");
 
     return config;

@@ -58,6 +58,7 @@ add_executable(effects-tests
     game/TileBonusGenerationTests.cpp
     game/MapRulesTests.cpp
     game/WorldGenPipelineTests.cpp
+    game/ConfigStrictnessTests.cpp
     game/VisibilityTests.cpp
     game/UnitVisibilityTests.cpp
     game/MovementTests.cpp
@@ -78,6 +79,7 @@ add_executable(effects-tests
     game/PlanetaryCouncilTests.cpp
     ui/ModalContractTests.cpp
     lib/SignalTests.cpp
+    lib/ConfigLibraryTests.cpp
 )
 
 target_link_libraries(effects-tests PRIVATE ac-core ac-turn-stages Catch2::Catch2WithMain)

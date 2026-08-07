@@ -296,11 +296,9 @@ void PopulationManager::ApplyCompositionTargets(const PopCompositionResult& rTar
         }
     }
 
-    // TODO: PopCompositionConfig_t::precedence ships an order ("Talent", "Drone", "Worker")
-    // and is parsed but not read; this promotes to drones first. When plain workers are scarce
-    // the order decides who gets promoted, so a modder editing precedence currently sees no
-    // effect and gets the opposite of what the file says. Honoring it (or deleting the key) is
-    // the remaining half of this finding.
+    // TODO: this promotes to drones first. When plain workers are scarce the order decides who
+    // gets promoted, and SMAC's rule for it is unknown. No config controls it - the parser
+    // rejects a `precedence` key rather than accepting one it cannot honour.
     currentDrones = m_container.GetDroneCount();
     for (Pop& rPop : m_container.Pops())
     {

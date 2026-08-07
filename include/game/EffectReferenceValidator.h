@@ -10,13 +10,14 @@ class BuildingRegistry;
 class ImprovementRegistry;
 class TechRegistry;
 class UnitComponentRegistry;
+class SocialRatingRegistry;
 struct EffectConfig_t;
 struct GameDataContext;
 
 // Validates the cross-config id references inside one effects list: GrantBuilding targets,
 // GrantTech targets, HasImprovement selector ids, TargetTileHas / AllOf condition feature
-// ids (always an improvement id), and HasComponent unitFilter
-// component ids. Throws std::runtime_error naming rSourceId and the offending id.
+// ids (always an improvement id), HasComponent unitFilter component ids, and
+// SocialRatingModifier axes. Throws std::runtime_error naming rSourceId and the offending id.
 //
 // Null registry pointers skip only the checks that need that registry — intentional for
 // partial unit-test contexts. Production code uses the GameDataContext overload below,
@@ -27,7 +28,8 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
                               const BuildingRegistry* pBuildings,
                               const ImprovementRegistry* pImprovements,
                               const TechRegistry* pTechs,
-                              const UnitComponentRegistry* pUnitComponents = nullptr);
+                              const UnitComponentRegistry* pUnitComponents = nullptr,
+                              const SocialRatingRegistry* pSocialRatings = nullptr);
 
 // Walks every loaded config that declares effects (buildings, improvements, pop types,
 // unit components, social policies, social rating tables, factions, council proposals,

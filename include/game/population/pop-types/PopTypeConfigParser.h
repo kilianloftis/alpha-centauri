@@ -12,11 +12,11 @@ struct PopTypeConfig_t
 {
     std::string id;
     std::string name;
-    bool bIsDefault;
-    bool bCanWorkTile;
-    bool bPlayerAssignable;
-    int riotContribution;
-    int goldenAgeContribution;
+    bool bIsDefault = false;
+    bool bCanWorkTile = false;
+    bool bPlayerAssignable = false;
+    int riotContribution = 0;
+    int goldenAgeContribution = 0;
     std::vector<std::string> obsoletes;
     std::string requiredTech;
     std::string fallbackPopTypeId;

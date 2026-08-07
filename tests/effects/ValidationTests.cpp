@@ -147,6 +147,39 @@ TEST_CASE("ValidateEffectReferences: GrantBuilding targets must exist", "[effect
     CHECK_NOTHROW(ValidateEffectReferences(bad, "src", nullptr, nullptr, nullptr));
 }
 
+TEST_CASE("ValidateEffectReferences: social rating axes must have a table",
+          "[effects][validation]")
+{
+    // SocialRatingResolver looks up the axis table whenever the accumulated total is non-zero,
+    // which is the first turn after a player adopts a policy declaring the modifier. A modifier
+    // naming an axis with no table has to fail at load, not there.
+    SocialRatingRegistry ratings;
+    ratings.Load(actest::FixturePath("social_rating_effects.json"));
+
+    const auto ratingModifier = [](SocialRatingId_t rating) {
+        EffectConfig_t config;
+        config.effect = SocialRatingModifierEffect_t{rating, 2};
+        config.scope = EffectScope_t::FactionGlobal;
+        config.persistence = EffectPersistence_t::Continuous;
+        return std::vector<EffectConfig_t>{config};
+    };
+
+    CHECK_NOTHROW(ValidateEffectReferences(ratingModifier(SocialRatingId_t::Growth), "policy_x",
+                                           nullptr, nullptr, nullptr, nullptr, &ratings));
+
+    // The fixture defines no table for Police.
+    REQUIRE(ratings.Find("police") == nullptr);
+    CHECK_THROWS_WITH(ValidateEffectReferences(ratingModifier(SocialRatingId_t::Police),
+                                               "policy_x", nullptr, nullptr, nullptr, nullptr,
+                                               &ratings),
+                      Catch::Matchers::ContainsSubstring("police")
+                          && Catch::Matchers::ContainsSubstring("policy_x"));
+
+    // A null registry skips the check (partial validation context).
+    CHECK_NOTHROW(ValidateEffectReferences(ratingModifier(SocialRatingId_t::Police), "policy_x",
+                                           nullptr, nullptr, nullptr, nullptr, nullptr));
+}
+
 TEST_CASE("ValidateEffectReferences: selector improvement ids must exist", "[effects][validation]")
 {
     ImprovementRegistry improvements;

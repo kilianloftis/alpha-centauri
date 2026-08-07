@@ -17,6 +17,7 @@ protected:
 
 private:
     void ValidatePrerequisites_(const TechConfig_t& rConfig, const std::vector<TechConfig_t>& rConfigs);
+    void ValidateNoPrerequisiteCycles_() const;
 };
 
 } // namespace ac

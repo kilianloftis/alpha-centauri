@@ -56,6 +56,10 @@ constexpr uint32_t k_TestFactionSeed = 1234u;
 // std::random_device made every roll-dependent test a coin flip across runs.
 constexpr uint32_t k_TestRngSeed = 4321u;
 
+// Tech cost formula for fixtures that do not care about research cost: it just echoes the
+// tech's own cost. A formula is required config, so "no formula" is not expressible.
+inline const std::string k_TestTechCostFormula = "base_cost";
+
 // The pop-type registry plus the two rules services PopContainer / PopulationManager require
 // (availability resolution and the discovered-tech source behind it). Small enough for
 // population unit tests that do not want a whole world, but real enough that those tests
@@ -66,7 +70,7 @@ struct PopRulesFixture
     ac::PopTypeRegistry popTypes;
     ac::TechRegistry techs;
     ac::LuaRuntime lua;
-    ac::TechCostConfig_t techCostConfig; // default: empty formula
+    ac::TechCostConfig_t techCostConfig{k_TestTechCostFormula};
     std::unique_ptr<ac::TechCostCalculator> techCost;
     std::unique_ptr<ac::PopTypeAvailabilityCalculator> availability;
     std::unique_ptr<ac::ResearchManager> research;
@@ -130,8 +134,9 @@ struct WorldFixture
         dataContext.growthConfig = std::make_unique<ac::GrowthConfig_t>();
         dataContext.techRegistry = std::make_unique<ac::TechRegistry>();
         dataContext.techRegistry->Load(FixturePath("techs.json"));
-        // Default (empty-formula) cost config: tests that care about tech cost supply their own.
-        dataContext.techCostConfig = std::make_unique<ac::TechCostConfig_t>();
+        // Trivial formula; tests that care about tech cost supply their own.
+        dataContext.techCostConfig =
+            std::make_unique<ac::TechCostConfig_t>(ac::TechCostConfig_t{k_TestTechCostFormula});
         dataContext.techCostCalculator = std::make_unique<ac::TechCostCalculator>(
             *dataContext.techCostConfig, *dataContext.luaRuntime);
         dataContext.socialPolicyRegistry = std::make_unique<ac::SocialPolicyRegistry>();

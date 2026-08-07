@@ -1,7 +1,7 @@
 #pragma once
 
-#include <array>
 #include <cstddef>
+#include <magic_enum.hpp>
 #include <nlohmann/json.hpp>
 #include <string>
 
@@ -16,14 +16,8 @@ enum class GameCategory_t
     Conquer
 };
 
-constexpr size_t k_GameCategoryCount = 4;
-
-constexpr std::array<GameCategory_t, k_GameCategoryCount> k_AllGameCategories = {
-    GameCategory_t::Build,
-    GameCategory_t::Grow,
-    GameCategory_t::Discover,
-    GameCategory_t::Conquer,
-};
+// Derived from the enum: fixed-size arrays sized by this stay in step with the enumerators.
+constexpr size_t k_GameCategoryCount = magic_enum::enum_count<GameCategory_t>();
 
 std::string GameCategoryToString(GameCategory_t category);
 GameCategory_t ParseGameCategory(const std::string& category);

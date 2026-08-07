@@ -60,6 +60,7 @@ struct EffectPayloadValidator
     const BuildingRegistry* pBuildings;
     const ImprovementRegistry* pImprovements;
     const TechRegistry* pTechs;
+    const SocialRatingRegistry* pSocialRatings;
 
     void operator()(const GrantBuildingEffect_t& rGrant) const
     {
@@ -101,7 +102,18 @@ struct EffectPayloadValidator
     void operator()(const RuleFlagEffect_t&) const {}
     void operator()(const SocialEngineeringOverrideEffect_t&) const {}
     void operator()(const DiplomaticModifierEffect_t&) const {}
-    void operator()(const SocialRatingModifierEffect_t&) const {}
+    // The rating axis has to exist in the rating registry: SocialRatingResolver looks the table
+    // up whenever the accumulated total is non-zero, which is the first turn after a player
+    // adopts the policy that declares this modifier.
+    void operator()(const SocialRatingModifierEffect_t& rModifier) const
+    {
+        if (pSocialRatings && !pSocialRatings->Find(SocialRatingIdToString(rModifier.rating)))
+        {
+            ThrowBadReference(rSourceId, "social rating axis",
+                              SocialRatingIdToString(rModifier.rating));
+        }
+    }
+
     void operator()(const ConcealEffect_t&) const {}
     void operator()(const DetectEffect_t&) const {}
     void operator()(const OrbitalAttackEffect_t&) const {}
@@ -117,12 +129,14 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
                               const BuildingRegistry* pBuildings,
                               const ImprovementRegistry* pImprovements,
                               const TechRegistry* pTechs,
-                              const UnitComponentRegistry* pUnitComponents)
+                              const UnitComponentRegistry* pUnitComponents,
+                              const SocialRatingRegistry* pSocialRatings)
 {
     for (const EffectConfig_t& rEffect : rEffects)
     {
-        std::visit(EffectPayloadValidator{rSourceId, pBuildings, pImprovements, pTechs},
-                   rEffect.effect);
+        std::visit(
+            EffectPayloadValidator{rSourceId, pBuildings, pImprovements, pTechs, pSocialRatings},
+            rEffect.effect);
 
         if (!rEffect.removedByTech.empty() && pTechs && !pTechs->Find(rEffect.removedByTech))
         {
@@ -221,7 +235,7 @@ void ValidateEffectReferences(const GameDataContext& rData)
     auto validate = [&](const std::vector<EffectConfig_t>& rEffects, const std::string& rSourceId)
     {
         ValidateEffectReferences(rEffects, rSourceId, &rBuildings, &rImprovements, &rTechs,
-                                 &rUnitComponents);
+                                 &rUnitComponents, &rSocialRatings);
     };
 
     for (const BuildingConfig_t& rConfig : rBuildings.GetAll())

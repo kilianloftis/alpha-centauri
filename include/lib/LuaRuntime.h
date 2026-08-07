@@ -22,7 +22,13 @@ public:
 
     // Evaluate a formula string as a Lua expression with named integer variables.
     // The expression is wrapped as "return <formula>" and executed.
-    // Returns 0 and logs a warning on error.
+    //
+    // Throws if the formula is empty, fails to evaluate (the Lua message is included), returns
+    // a non-number, returns a fractional value, or returns something outside int range. A
+    // formula is game data: a broken one is a config error, not a zero.
+    //
+    // vars are visible to the formula as globals and are cleared afterwards, so a formula that
+    // omits an input cannot read a previous call's value.
     int EvalInt(const std::string& formula,
                 const std::unordered_map<std::string, int>& vars);
 

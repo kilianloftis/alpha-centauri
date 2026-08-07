@@ -1,10 +1,10 @@
 {
-  "debug_options": {
-    "remove_fog": false
-  },
   "game_rules": {
-    "pause_at_end_of_turn": true,
-    "remove_shroud": false
+    "pause_at_end_of_turn": true
+  },
+  "visibility": {
+    "remove_shroud": false,
+    "remove_fog": false
   },
   "map_generation": {
     "erosive_forces": "Average",

@@ -71,21 +71,18 @@ graph TB
 ### TechRegistry
 - **Purpose**: Global registry of all available technologies
 - **Responsibilities**:
-  - Register and store all Tech instances
-  - Provide lookup by TechId
-  - Filter available techs based on discovered prerequisites
-- **Lifetime**: Global/singleton, loaded at game start
+  - Register and store all `TechConfig_t` entries; lookup by id
+  - **Validate the tech graph at load**: every prerequisite id exists, no tech is its own prerequisite, and the prerequisite graph is acyclic. A cycle is unreachable forever — `ResearchManager::GetAvailableTechs` only offers a tech once every prerequisite is discovered — so it must fail at load rather than present as techs quietly missing from the research menu.
+- **Lifetime**: Loaded at game start into `GameDataContext`
 - **Used by**: All ResearchManager instances
 
 ### TechCostCalculator
 - **Purpose**: Calculate research points needed for a technology
 - **Responsibilities**:
-  - Calculate base cost from Tech
-  - Apply penalty for missing prerequisites (50% per missing prereq)
-  - Apply global cost multiplier
-  - Enforce minimum cost
-- **Pattern**: Similar to GrowthCalculator in BasePopulation
-- **Formula**: `cost = baseCost * (1 + 0.5 * missingPrereqs) * multiplier`
+  - Evaluate the `cost_formula` from `config/tech_cost.lua` with the runtime inputs in `TechCostInputs_t` plus the tech's own `cost` as `base_cost`
+  - Reject a non-positive result
+- **No C++ formula and no minimum-cost floor**: both live in the Lua config. The floor used to be `std::max(1, cost)` in C++, which turned an empty or broken formula — `LuaRuntime::EvalInt` returned 0 for both — into a valid-looking research cost of 1. `EvalInt` now throws, the parser requires a non-empty `cost_formula`, and the calculator rejects a non-positive result, so a broken mod formula fails loudly instead of making every tech cost 1.
+- **Pattern**: Thin Lua bridge, same shape as `PopCompositionCalculator`
 
 ## Usage Flow
 

@@ -5,6 +5,7 @@
 #include "game/effects/EffectConfig.h"
 
 #include <algorithm>
+#include <stdexcept>
 #include <string>
 
 namespace ac
@@ -29,23 +30,31 @@ void AppendRatingLevelEffects_(const std::map<SocialRatingId_t, int>& rTotals,
             continue;
         }
 
-        const SocialRatingConfig_t* pRatingConfig = rRatings.Find(SocialRatingIdToString(rating));
+        // A non-zero total means something declared a modifier on this axis, so a missing table
+        // is a config defect rather than "this axis does nothing". ValidateEffectReferences
+        // rejects such a modifier at load; this is the backstop, and it names the axis because
+        // Registry::Get's message would not say what kind of id it failed to find.
+        const std::string axisId = SocialRatingIdToString(rating);
+        const SocialRatingConfig_t* pRatingConfig = rRatings.Find(axisId);
         if (!pRatingConfig)
         {
-            continue;
+            throw std::runtime_error("Social rating axis '" + axisId + "' accumulated "
+                                     + std::to_string(total)
+                                     + " but has no table in the social rating registry");
         }
+        const SocialRatingConfig_t& rRatingConfig = *pRatingConfig;
 
         // SMAC: out-of-range totals use the extreme configured level's effects. In-range
         // missing keys (including typical absent 0) still produce nothing.
         const std::vector<EffectConfig_t>* pLevelEffects =
-            FindSocialRatingLevelEffects(*pRatingConfig, total);
+            FindSocialRatingLevelEffects(rRatingConfig, total);
         if (!pLevelEffects)
         {
             continue;
         }
 
         // Non-null level effects imply a non-empty table, so clamping is safe here.
-        const int level = ClampSocialRatingTotal(*pRatingConfig, total);
+        const int level = ClampSocialRatingTotal(rRatingConfig, total);
         const std::string sourceId = "se_rating_" + SocialRatingIdToString(rating)
                                      + "_" + std::to_string(level);
         for (const EffectConfig_t& rEffect : *pLevelEffects)
@@ -82,6 +91,10 @@ std::map<SocialRatingId_t, int> AccumulateSocialRatings(
 
 int ClampSocialRatingTotal(const SocialRatingConfig_t& rConfig, int total)
 {
+    if (rConfig.levelEffects.empty())
+    {
+        throw std::runtime_error("Social rating '" + rConfig.id + "' has no levels to clamp to");
+    }
     const int minLevel = rConfig.levelEffects.begin()->first;
     const int maxLevel = rConfig.levelEffects.rbegin()->first;
     return std::clamp(total, minLevel, maxLevel);

@@ -24,32 +24,27 @@ PopCompositionConfig_t PopCompositionConfigParser::ParseConfig(const std::string
 
     sol::table tbl = result;
 
-    config.droneFormula  = tbl.get_or("drone_formula",  std::string(""));
-    config.talentFormula = tbl.get_or("talent_formula", std::string(""));
-    config.droneTypeId   = tbl.get_or("drone_type",     std::string(""));
-    config.talentTypeId  = tbl.get_or("talent_type",    std::string(""));
-
-    if (config.droneTypeId.empty())
-    {
-        throw std::runtime_error("pop composition script '" + scriptPath
-                                 + "' must set drone_type to a pop type id");
-    }
-    if (config.talentTypeId.empty())
-    {
-        throw std::runtime_error("pop composition script '" + scriptPath
-                                 + "' must set talent_type to a pop type id");
-    }
-
-    sol::optional<sol::table> precedence = tbl["precedence"];
-    if (precedence)
-    {
-        for (const auto& [key, val] : *precedence)
+    const auto requireString = [&](const char* key) {
+        const std::string value = tbl.get_or(key, std::string(""));
+        if (value.empty())
         {
-            if (val.is<std::string>())
-            {
-                config.precedence.push_back(val.as<std::string>());
-            }
+            throw std::runtime_error("pop composition script '" + scriptPath + "' must set "
+                                     + key + " to a non-empty value");
         }
+        return value;
+    };
+
+    config.droneFormula = requireString("drone_formula");
+    config.talentFormula = requireString("talent_formula");
+    config.droneTypeId = requireString("drone_type");
+    config.talentTypeId = requireString("talent_type");
+
+    // TODO: recalculation order is not implemented. Rejected rather than ignored so a modder
+    // who sets it learns it does nothing.
+    if (tbl["precedence"].valid())
+    {
+        throw std::runtime_error("pop composition script '" + scriptPath
+                                 + "' sets 'precedence', which is not implemented; remove it");
     }
 
     return config;

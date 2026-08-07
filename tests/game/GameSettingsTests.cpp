@@ -2,6 +2,7 @@
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -61,8 +62,10 @@ TEST_CASE("GameSettings Save and Load round-trip pause_at_end_of_turn", "[GameSe
     std::filesystem::remove(path);
 }
 
-TEST_CASE("GameSettings Save writes nested game_rules and debug_options", "[GameSettings]")
+TEST_CASE("GameSettings Save groups keys by config struct", "[GameSettings]")
 {
+    // remove_shroud used to be written under game_rules and remove_fog under debug_options, so
+    // the on-disk grouping did not match VisibilityConfig_t and a new knob had no obvious home.
     const std::filesystem::path path = TempSettingsPath("ac_settings_json_key.json");
     std::filesystem::remove(path);
 
@@ -79,10 +82,11 @@ TEST_CASE("GameSettings Save writes nested game_rules and debug_options", "[Game
     std::string contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     CHECK(contents.find("game_rules") != std::string::npos);
     CHECK(contents.find("pause_at_end_of_turn") != std::string::npos);
+    CHECK(contents.find("visibility") != std::string::npos);
     CHECK(contents.find("remove_shroud") != std::string::npos);
-    CHECK(contents.find("debug_options") != std::string::npos);
     CHECK(contents.find("remove_fog") != std::string::npos);
     CHECK(contents.find("map_generation") != std::string::npos);
+    CHECK(contents.find("debug_options") == std::string::npos);
 
     std::filesystem::remove(path);
 }
@@ -136,19 +140,40 @@ TEST_CASE("GameSettings Load keeps map_generation defaults when subsection is ab
     std::filesystem::remove(path);
 }
 
-TEST_CASE("GameSettings Load accepts legacy top-level pause_at_end_of_turn", "[GameSettings]")
+TEST_CASE("GameSettings rejects an unusable map_generation block", "[GameSettings]")
 {
-    const std::filesystem::path path = TempSettingsPath("ac_settings_legacy_pause.json");
-    std::filesystem::remove(path);
+    // Load is the trust boundary for a hand-editable file. These used to be taken verbatim and
+    // surface as a failure from inside world generation, if at all.
+    const std::filesystem::path path = TempSettingsPath("ac_settings_bad_map_gen.json");
 
-    {
+    const auto writeMapGen = [&path](const std::string& rBody) {
         std::ofstream file(path);
-        file << R"({"pause_at_end_of_turn": true})" << '\n';
+        file << R"({"map_generation": )" << rBody << "}" << '\n';
+    };
+
+    SECTION("non-positive dimensions")
+    {
+        writeMapGen(R"({"width": 0, "height": 40})");
+        GameSettings loaded;
+        CHECK_THROWS_WITH(loaded.Load(path.string()),
+                          Catch::Matchers::ContainsSubstring("width"));
     }
 
-    GameSettings loaded;
-    loaded.Load(path.string());
-    CHECK(loaded.IsPauseAtEndOfTurn());
+    SECTION("ocean coverage outside [0, 1]")
+    {
+        writeMapGen(R"({"ocean_coverage": 1.5})");
+        GameSettings loaded;
+        CHECK_THROWS_WITH(loaded.Load(path.string()),
+                          Catch::Matchers::ContainsSubstring("ocean_coverage"));
+    }
+
+    SECTION("empty preset id")
+    {
+        writeMapGen(R"({"preset_id": ""})");
+        GameSettings loaded;
+        CHECK_THROWS_WITH(loaded.Load(path.string()),
+                          Catch::Matchers::ContainsSubstring("preset_id"));
+    }
 
     std::filesystem::remove(path);
 }

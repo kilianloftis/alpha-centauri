@@ -42,6 +42,25 @@ protected:
                 "pop_types config must have exactly one is_default entry, found " +
                 std::to_string(defaultCount));
         }
+
+        // A typo'd fallback surfaces only when a pop actually converts, and a typo'd obsoletes
+        // entry never surfaces at all - it is silently inert in ResolveCurrentType.
+        for (const PopTypeConfig_t& rConfig : this->m_configs)
+        {
+            if (!rConfig.fallbackPopTypeId.empty() && !this->Find(rConfig.fallbackPopTypeId))
+            {
+                throw std::runtime_error("Pop type '" + rConfig.id + "': fallback_pop_type '"
+                                         + rConfig.fallbackPopTypeId + "' is not a known pop type");
+            }
+            for (const std::string& rObsoleteId : rConfig.obsoletes)
+            {
+                if (!this->Find(rObsoleteId))
+                {
+                    throw std::runtime_error("Pop type '" + rConfig.id + "': obsoletes entry '"
+                                             + rObsoleteId + "' is not a known pop type");
+                }
+            }
+        }
     }
 };
 

@@ -5,6 +5,4 @@ return {
     -- Pop type ids used when converting workers to match composition targets.
     drone_type  = "Drone",
     talent_type = "Talent",
-
-    precedence = { "Talent", "Drone", "Worker" },
 }

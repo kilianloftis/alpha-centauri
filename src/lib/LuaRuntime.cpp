@@ -1,5 +1,9 @@
 #include "lib/LuaRuntime.h"
-#include <iostream>
+
+#include <cmath>
+#include <limits>
+#include <stdexcept>
+#include <string>
 
 namespace ac
 {
@@ -39,15 +43,24 @@ int LuaRuntime::EvalInt(const std::string& formula,
 {
     if (formula.empty())
     {
-        return 0;
+        throw std::runtime_error("Lua formula is empty");
     }
 
-    // Set variables as Lua globals scoped to this call
+    // Globals, not a per-call environment: config scripts define helper functions whose _ENV is
+    // the globals table, so a formula calling one must see these there. Cleared on the way out
+    // so an input a later formula forgets to set cannot read this call's value.
     for (const auto& [name, value] : vars)
     {
         m_lua[name] = value;
     }
+    const auto clearVars = [this, &vars]() {
+        for (const auto& [name, value] : vars)
+        {
+            m_lua[name] = sol::lua_nil;
+        }
+    };
 
+    lua_Number number = 0.0;
     try
     {
         sol::protected_function_result result =
@@ -55,18 +68,37 @@ int LuaRuntime::EvalInt(const std::string& formula,
 
         if (!result.valid())
         {
-            sol::error err = result;
-            std::cout << "Warning: Lua formula error (\"" << formula << "\"): " << err.what() << "\n";
-            return 0;
+            const sol::error err = result;
+            throw std::runtime_error("Lua formula error (\"" + formula + "\"): " + err.what());
         }
 
-        return static_cast<int>(result.get<lua_Number>());
+        const sol::optional<lua_Number> value = result.get<sol::optional<lua_Number>>();
+        if (!value)
+        {
+            throw std::runtime_error("Lua formula (\"" + formula + "\") did not return a number");
+        }
+        number = *value;
     }
-    catch (const sol::error& e)
+    catch (...)
     {
-        std::cout << "Warning: Lua formula error (\"" << formula << "\"): " << e.what() << "\n";
-        return 0;
+        clearVars();
+        throw;
     }
+    clearVars();
+
+    lua_Number integral = 0.0;
+    if (std::modf(number, &integral) != 0.0)
+    {
+        throw std::runtime_error("Lua formula (\"" + formula + "\") returned "
+                                 + std::to_string(number) + ", which is not a whole number");
+    }
+    if (integral < static_cast<lua_Number>(std::numeric_limits<int>::min())
+        || integral > static_cast<lua_Number>(std::numeric_limits<int>::max()))
+    {
+        throw std::runtime_error("Lua formula (\"" + formula + "\") returned "
+                                 + std::to_string(number) + ", which does not fit in an int");
+    }
+    return static_cast<int>(integral);
 }
 
 } // namespace ac

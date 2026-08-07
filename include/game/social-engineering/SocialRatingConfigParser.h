@@ -11,7 +11,7 @@ namespace ac
 class SocialRatingConfigParser
 {
 public:
-    SocialRatingConfigParser();
+    SocialRatingConfigParser() = default;
     ~SocialRatingConfigParser() = default;
 
     std::vector<SocialRatingConfig_t> ParseConfig(const std::string& rConfigPath);

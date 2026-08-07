@@ -12,12 +12,12 @@ class SocialPolicyRegistry : public Registry<SocialPolicyConfig_t, SocialPolicyC
 {
 public:
     // All policies belonging to a specific category.
-    std::vector<const SocialPolicyConfig_t*> GetByCategory(SocialCategory_t rCategory) const
+    std::vector<const SocialPolicyConfig_t*> GetByCategory(SocialCategory_t category) const
     {
         std::vector<const SocialPolicyConfig_t*> result;
         for (const auto& config : m_configs)
         {
-            if (config.category == rCategory)
+            if (config.category == category)
             {
                 result.push_back(&config);
             }

@@ -1,5 +1,8 @@
 #include "game/research/TechCostCalculator.h"
 #include "lib/LuaRuntime.h"
+
+#include <stdexcept>
+#include <string>
 #include <unordered_map>
 
 namespace ac
@@ -8,10 +11,6 @@ namespace ac
 TechCostCalculator::TechCostCalculator(const TechCostConfig_t& rConfig, LuaRuntime& rLua)
     : m_pConfig(&rConfig)
     , m_pLua(&rLua)
-{
-}
-
-TechCostCalculator::~TechCostCalculator()
 {
 }
 
@@ -31,9 +30,13 @@ int TechCostCalculator::CalculateCost(const TechConfig_t& rTech, const TechCostI
         {"base_cost",           rTech.cost},
     };
 
-    int cost = m_pLua->EvalInt(m_pConfig->costFormula, vars);
-
-    return std::max(1, cost);
+    const int cost = m_pLua->EvalInt(m_pConfig->costFormula, vars);
+    if (cost <= 0)
+    {
+        throw std::runtime_error("Tech cost formula produced " + std::to_string(cost)
+                                 + " for tech '" + rTech.id + "'; costs must be positive");
+    }
+    return cost;
 }
 
 } // namespace ac

@@ -26,19 +26,33 @@ public:
     // through a base pointer.
     virtual ~Registry() = default;
 
+    // All-or-nothing: a file that fails to parse or validate leaves the registry holding
+    // whatever it held before, rather than the payload that was just rejected.
     void Load(const std::string& rConfigPath)
     {
         TParser parser;
         auto configs = parser.ParseConfig(rConfigPath);
 
-        m_indexById.clear();
+        std::vector<TConfig> previousConfigs = std::move(m_configs);
+        std::unordered_map<std::string, size_t> previousIndex = std::move(m_indexById);
+
         m_configs = std::move(configs);
+        m_indexById.clear();
         for (size_t i = 0; i < m_configs.size(); i++)
         {
             m_indexById[m_configs[i].id] = i;
         }
 
-        Validate_();
+        try
+        {
+            Validate_();
+        }
+        catch (...)
+        {
+            m_configs = std::move(previousConfigs);
+            m_indexById = std::move(previousIndex);
+            throw;
+        }
     }
 
     // Optional lookup: nullptr when the id is absent. Prefer Get() when the id must exist.
@@ -81,21 +95,19 @@ protected:
         ValidateNoDuplicates_();
     }
 
+    // m_indexById keeps one slot per id, so a smaller index than the config list is exactly the
+    // set of collisions; the duplicate is then named by the entry whose slot points elsewhere.
     void ValidateNoDuplicates_() const
     {
-        for (const TConfig& rConfig : m_configs)
+        if (m_indexById.size() == m_configs.size())
         {
-            int count = 0;
-            for (const TConfig& rOther : m_configs)
+            return;
+        }
+        for (size_t i = 0; i < m_configs.size(); ++i)
+        {
+            if (m_indexById.at(m_configs[i].id) != i)
             {
-                if (rOther.id == rConfig.id)
-                {
-                    ++count;
-                }
-                if (count > 1)
-                {
-                    throw std::runtime_error("Duplicate id '" + rConfig.id + "' in registry");
-                }
+                throw std::runtime_error("Duplicate id '" + m_configs[i].id + "' in registry");
             }
         }
     }

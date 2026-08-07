@@ -1,6 +1,8 @@
 #include "lib/Rational.h"
 
+#include <cstdint>
 #include <cstdlib>
+#include <limits>
 #include <numeric>
 #include <stdexcept>
 
@@ -69,7 +71,17 @@ int Rational_t::ScaledInt(int scale) const
             "Rational " + std::to_string(numerator) + "/" + std::to_string(denominator)
             + " does not scale to an integer at scale=" + std::to_string(scale));
     }
-    return num * (scale / den);
+
+    // Widened before multiplying: the divisibility check above says nothing about whether the
+    // product fits, and signed overflow is UB rather than a detectable wrong answer.
+    const int64_t scaled = static_cast<int64_t>(num) * static_cast<int64_t>(scale / den);
+    if (scaled < std::numeric_limits<int>::min() || scaled > std::numeric_limits<int>::max())
+    {
+        throw std::runtime_error(
+            "Rational " + std::to_string(numerator) + "/" + std::to_string(denominator)
+            + " scaled at scale=" + std::to_string(scale) + " does not fit in an int");
+    }
+    return static_cast<int>(scaled);
 }
 
 } // namespace ac

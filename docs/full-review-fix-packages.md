@@ -798,7 +798,7 @@ Package 4 owns the constructor/null-policy half of these classes (two-phase-init
 - `~BatchCompositionUpdate` no longer lets a config error escape a destructor as `std::terminate`, from a guard on the hot worker-assignment paths.
 - Golden age counts plain workers; counting every tile-capable pop put talents on both sides of `talents >= workers + specialists`, making the rule "every pop a talent".
 
-**Not started:** production-queue contract; ignored `precedence` key (TODO in place); `RemovePop` semantics; composition staleness; `psych_output` scope; minerals-per-row to config; untyped `BaseSnapshot_t` production id.
+**Not started:** production-queue contract; `RemovePop` semantics; composition staleness; `psych_output` scope; minerals-per-row to config; untyped `BaseSnapshot_t` production id. (The ignored `precedence` key was resolved by package 11: the parser rejects it rather than accepting a setting it cannot honour.)
 
 ### Package 7 — Units: movement and orders (2026-08-06)
 
@@ -870,6 +870,27 @@ Package 4 owns the constructor/null-policy half of these classes (two-phase-init
 **TODOs left rather than guessed:** the SMAC floor for sea-former land lowering; whether orographic moisture should be re-derived after landmark sculpting (doing so would re-roll the moisture tiers that landmark anchors were already chosen against).
 
 **Deferred:** save-game persistence of the resolved seed (no save system exists; writing it back through `GameSettings` would turn `seed: 0` into a fixed seed for every later game); `std::vector<Tile>` storage for `WorldMap`, which would also fix the const overload handing out mutable tiles.
+
+### Package 11 — Config parsing, registries, and shared libraries (2026-08-07)
+
+**Status:** complete — the [H], all 17 [M], and the research / social-engineering / shared-library hygiene bullets.  
+**Prompt:** [`docs/full-review-fix-prompts/11-config-and-registries.md`](full-review-fix-prompts/11-config-and-registries.md)
+
+**Fixes landed:**
+- Research cost can no longer be invented. An empty or broken `cost_formula` evaluated to 0 and `std::max(1, cost)` turned that into a working game where every tech costs 1. Three gates now: the parser requires a non-empty formula, `EvalInt` throws, the calculator rejects a non-positive result.
+- `LuaRuntime::EvalInt` throws instead of logging a warning and returning 0, and clears its variables afterwards — they were globals under a comment claiming they were "scoped to this call", so a formula that omitted an input silently read the previous formula's value. Non-integral and out-of-range results are rejected rather than truncated.
+- `Registry::Load` is all-or-nothing: a file that fails validation used to leave the registry holding exactly the payload that had just been rejected.
+- Tech prerequisite cycles fail at load. A cyclic component is unreachable forever, so it presented as techs quietly missing from the research menu.
+- Required-or-throw for `cost`, `nutrients_per_pop`, `max_base_size`, `drone_formula`/`talent_formula`, and `levels`; `ParseStringArray` rejects a wrong-typed value instead of reading it as an empty list; `Rational_t::ScaledInt` widens before multiplying rather than overflowing.
+- `PopTypeRegistry` validates `fallback_pop_type` and `obsoletes` ids; a typo'd fallback used to surface only when a pop converted, and a bad `obsoletes` entry never surfaced at all.
+- `GameSettings::Load` validates the map-generation block it feeds to world generation, drops the back-compat branch the guidelines forbid, and groups keys by config struct so `VisibilityConfig_t`'s knobs live under `visibility`.
+- The `precedence` key is rejected rather than parsed and ignored; `SocialScores`, `k_AllGameCategories` and `config/pop_growth.lua` deleted; `k_GameCategoryCount` derived from the enum, so a fifth category cannot leave `ResearchSelector` indexing out of bounds.
+
+**Review follow-ups applied:** swapping `Find` for `Get` in `SocialRatingResolver` moved a silent no-op to a **mid-turn** throw with a message naming neither the kind of id nor the source — the inverse of this package's premise. The axis check moved to `ValidateEffectReferences` at load. Several new errors threw nlohmann's bare `key 'x' not found`, naming neither file nor id; `GameSettings::Load` still treated a wrong-shaped section as absent, the same defect being fixed in `ParseStringArray` two files away.
+
+**TODOs left rather than guessed:** which pop type is promoted first when plain workers are scarce.
+
+**Deferred:** eight other hand-rolled single-object parsers still duplicate open/parse/`is_object` (Package 16's hygiene sweep); converting them here would have buried the behavioural changes.
 
 ---
 

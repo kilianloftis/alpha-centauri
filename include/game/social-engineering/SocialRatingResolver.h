@@ -39,7 +39,7 @@ std::map<SocialRatingId_t, int> AccumulateSocialRatings(
 
 // SMAC rule: totals below the lowest / above the highest configured level use that
 // extreme's effects. Returns the level key to look up in levelEffects after clamping
-// into [min, max] of the table. Caller must ensure levelEffects is non-empty.
+// into [min, max] of the table. Throws if levelEffects is empty.
 int ClampSocialRatingTotal(const SocialRatingConfig_t& rConfig, int total);
 
 // Clamps `total` into the configured range, then exact-matches. Returns nullptr when the

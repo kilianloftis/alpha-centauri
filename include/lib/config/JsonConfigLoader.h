@@ -52,6 +52,31 @@ std::vector<T> LoadFile(const std::string& filePath, const char* noun, ParseFn p
     return configs;
 }
 
+// Opens a single JSON file expected to contain a top-level object and returns it parsed through
+// parseObject. For config types that are one settings block rather than an array of entries.
+template <typename T, typename ParseFn>
+T LoadObjectFile(const std::string& filePath, const char* noun, ParseFn parseObject)
+{
+    std::cout << "Loading " << noun << " configuration from: " << filePath << "\n";
+
+    std::ifstream configFile(filePath);
+    if (!configFile.is_open())
+    {
+        throw std::runtime_error("Could not open " + filePath);
+    }
+
+    nlohmann::json configJson;
+    configFile >> configJson;
+
+    if (!configJson.is_object())
+    {
+        throw std::runtime_error("Expected a JSON object of " + std::string(noun)
+                                 + " settings in '" + filePath + "'");
+    }
+
+    return parseObject(configJson);
+}
+
 // Like LoadFile, but if `path` is a directory it loads every *.json file inside it (sorted
 // by name for deterministic ordering) and concatenates the results. Otherwise `path` is
 // treated as a single file.

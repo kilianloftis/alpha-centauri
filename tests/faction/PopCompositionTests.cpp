@@ -139,7 +139,7 @@ TEST_CASE("Every conversion path resolves the obsolescence chain", "[population]
     TechRegistry techs;
     techs.Load(actest::FixturePath("techs.json"));
     LuaRuntime lua;
-    TechCostConfig_t techCostConfig;
+    TechCostConfig_t techCostConfig{actest::k_TestTechCostFormula};
     TechCostCalculator techCost(techCostConfig, lua);
     ResearchManager research(techs, techCost, /*pEffectsProvider*/ nullptr);
     PopTypeAvailabilityCalculator availability(registry);

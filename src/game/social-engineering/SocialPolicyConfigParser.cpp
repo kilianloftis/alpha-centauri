@@ -8,10 +8,6 @@
 namespace ac
 {
 
-SocialPolicyConfigParser::SocialPolicyConfigParser()
-{
-}
-
 std::vector<SocialPolicyConfig_t> SocialPolicyConfigParser::ParseConfig(const std::string& configPath)
 {
     return JsonConfigLoader::LoadFile<SocialPolicyConfig_t>(

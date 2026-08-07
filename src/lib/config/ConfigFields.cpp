@@ -1,5 +1,7 @@
 #include "lib/config/ConfigFields.h"
 
+#include <stdexcept>
+
 namespace ac
 {
 namespace ConfigFields
@@ -24,12 +26,32 @@ std::vector<std::string> ParseStringArray(const nlohmann::json& j, const std::st
 {
     std::vector<std::string> values;
     const auto it = j.find(key);
-    if (it != j.end() && it->is_array())
+    if (it == j.end())
     {
-        for (const auto& rEntry : *it)
+        return values;
+    }
+    // Names the owning entry where there is one, so a modder does not have to bisect the file.
+    const auto fail = [&j, &key](const std::string& rMessage) {
+        std::string where = "Field '" + key + "'";
+        const auto idIt = j.find("id");
+        if (idIt != j.end() && idIt->is_string())
         {
-            values.push_back(rEntry.get<std::string>());
+            where += " on '" + idIt->get<std::string>() + "'";
         }
+        throw std::runtime_error(where + " " + rMessage);
+    };
+
+    if (!it->is_array())
+    {
+        fail("must be an array of strings");
+    }
+    for (const auto& rEntry : *it)
+    {
+        if (!rEntry.is_string())
+        {
+            fail("must contain only strings");
+        }
+        values.push_back(rEntry.get<std::string>());
     }
     return values;
 }

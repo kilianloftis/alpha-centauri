@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include <vector>
 
 namespace ac
 {
@@ -10,11 +9,10 @@ class LuaRuntime;
 
 struct PopCompositionConfig_t
 {
-    std::string droneFormula;            // Lua expression: number of drones
-    std::string talentFormula;           // Lua expression: number of talents
-    std::string droneTypeId;             // Pop type id to convert into for drones
-    std::string talentTypeId;            // Pop type id to convert into for talents
-    std::vector<std::string> precedence; // Order in which types are assigned when recalculating
+    std::string droneFormula;  // Lua expression: number of drones
+    std::string talentFormula; // Lua expression: number of talents
+    std::string droneTypeId;   // Pop type id to convert into for drones
+    std::string talentTypeId;  // Pop type id to convert into for talents
 };
 
 class PopCompositionConfigParser

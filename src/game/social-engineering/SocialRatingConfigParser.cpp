@@ -1,54 +1,38 @@
 #include "game/social-engineering/SocialRatingConfigParser.h"
 #include "game/effects/EffectConfigParser.h"
+#include "lib/config/ConfigFields.h"
+#include "lib/config/JsonConfigLoader.h"
 #include <nlohmann/json.hpp>
-#include <fstream>
-#include <iostream>
 #include <stdexcept>
-
-using json = nlohmann::json;
 
 namespace ac
 {
 
-SocialRatingConfigParser::SocialRatingConfigParser()
-{
-}
-
 std::vector<SocialRatingConfig_t> SocialRatingConfigParser::ParseConfig(const std::string& rConfigPath)
 {
-    std::cout << "Loading social rating configuration from: " << rConfigPath << "\n";
-
-    std::ifstream configFile(rConfigPath);
-    if (!configFile.is_open())
-    {
-        throw std::runtime_error("Could not open " + rConfigPath);
-    }
-
-    json configJson;
-    configFile >> configJson;
-
-    if (!configJson.is_array())
-    {
-        throw std::runtime_error("Expected array of social rating configs in '" + rConfigPath + "'");
-    }
-
-    std::vector<SocialRatingConfig_t> configs;
-    for (const auto& rRatingJson : configJson)
-    {
-        configs.push_back(ParseRatingConfig(rRatingJson));
-    }
-
-    std::cout << "Loaded " << configs.size() << " social rating configurations\n";
-    return configs;
+    return JsonConfigLoader::LoadFile<SocialRatingConfig_t>(
+        rConfigPath, "social rating",
+        [this](const nlohmann::json& rJson) { return ParseRatingConfig(rJson); });
 }
 
 SocialRatingConfig_t SocialRatingConfigParser::ParseRatingConfig(const nlohmann::json& rRatingJson)
 {
     SocialRatingConfig_t config;
-    config.id = rRatingJson["id"];
+    config.id = ConfigFields::ParseId(rRatingJson);
     config.rating = ParseSocialRatingId(config.id);
 
-    const auto& rLevels = rRatingJson["levels"];
+    if (!rRatingJson.contains("levels"))
+    {
+        throw std::runtime_error("Social rating '" + config.id
+                                 + "': missing required field 'levels'");
+    }
+    const auto& rLevels = rRatingJson.at("levels");
+    if (!rLevels.is_object())
+    {
+        throw std::runtime_error("Social rating '" + config.id
+                                 + "': 'levels' must be an object keyed by level");
+    }
+
     for (auto it = rLevels.begin(); it != rLevels.end(); ++it)
     {
         const int level = std::stoi(it.key());

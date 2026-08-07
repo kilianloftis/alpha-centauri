@@ -23,7 +23,7 @@ struct TechConfig_t
 class TechConfigParser
 {
 public:
-    TechConfigParser();
+    TechConfigParser() = default;
     ~TechConfigParser() = default;
 
     std::vector<TechConfig_t> ParseConfig(const std::string& configPath);
