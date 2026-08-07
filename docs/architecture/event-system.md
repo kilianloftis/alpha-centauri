@@ -78,6 +78,12 @@ graph TB
   - `Subscribe<T>(Handler)`: Subscribe to specific event type only
   - `Unsubscribe(SubscriptionId)`: Remove a subscription
   - `Publish(GameEvent)`: Publish an event to all handlers
+- **Reentrancy contract** (part of the mod-facing ABI): a handler may `Subscribe` or
+  `Unsubscribe` during dispatch. `Publish` snapshots the subscription ids and re-looks each one
+  up before invoking it, so a handler removed earlier in the same dispatch is **not** called, and
+  one added during dispatch does **not** see the in-flight event — it sees the next one. Iterating
+  the live handler list instead was undefined behaviour: subscribing reallocates the vector and
+  unsubscribing erases from it. `Signal::Emit` gives the same guarantee.
 - **Mod Access**: Full - this is the primary mod interface for events
 
 ### EventBridge

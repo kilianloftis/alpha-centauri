@@ -3,6 +3,7 @@
 #include "game/GameRulesConfig.h"
 #include "game/VisibilityConfig.h"
 #include "game/map/MapGenerationConfig.h"
+#include "graphics/Graphics.h"
 #include "lib/Signal.h"
 #include <string>
 
@@ -31,6 +32,9 @@ public:
     const MapGenerationConfig_t& GetMapGeneration() const { return m_mapGeneration; }
     void SetMapGeneration(const MapGenerationConfig_t& rConfig);
 
+    // Read once, when Engine builds the graphics backend; there is no runtime re-apply.
+    const GraphicsConfig_t& GetGraphics() const { return m_graphics; }
+
     // Missing file leaves defaults (pause off, shroud/fog on, default map generation).
     // Unreadable or corrupt file throws.
     void Load(const std::string& path = kDefaultPath);
@@ -44,6 +48,7 @@ private:
     GameRulesConfig_t m_gameRules;
     VisibilityConfig_t m_visibility;
     MapGenerationConfig_t m_mapGeneration;
+    GraphicsConfig_t m_graphics;
 };
 
 } // namespace ac

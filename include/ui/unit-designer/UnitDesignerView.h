@@ -3,6 +3,8 @@
 #include "ui/IGameView.h"
 #include "ui/unit-designer/UnitDesignerState.h"
 
+#include <functional>
+
 namespace ac
 {
 

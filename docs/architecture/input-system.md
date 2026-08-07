@@ -2,168 +2,119 @@
 
 ```mermaid
 graph TB
+    subgraph "Composition root"
+        Engine[Engine]
+        Queue[PlatformEventQueue<br/>owned by Engine]
+    end
+
+    subgraph "Windowing backend"
+        SFMLGraphics[SFMLGraphics::PumpEvents]
+        NullGraphics[NullGraphics::PumpEvents<br/>no-op]
+    end
+
     subgraph "Input Interface"
-        Input[Input<br/>(abstract base class)]
-        Methods[Virtual Methods:<br/>Initialize()<br/>CaptureKey()<br/>CaptureKeyAsync()<br/>CaptureMouse()<br/>CaptureMouseAsync()]
+        Input[Input<br/>abstract base class]
+        Methods[PollKey<br/>PollMouse<br/>GetLastMousePosition]
     end
 
-    subgraph "SFML Implementation"
+    subgraph "Implementations"
         SFMLInput[SFMLInput]
-        SFMLKeyboard[SFML Keyboard polling]
-        SFMLMouse[SFML Mouse polling]
-        AsyncCallbacks[Async callback support]
-    end
-
-    subgraph "Null Implementation"
         NullInput[NullInput]
-        ConsoleInput[Console stdin input]
     end
 
     subgraph "Key Mapping"
-        KeyMapping[KeyMapping]
-        KeyFromAscii[KeyFromAscii()]
-        KeyToAscii[KeyToAscii()]
-        KeyToString[KeyToString()]
-        KeyFromSfKey[KeyFromSfKey()]
+        KeyMapping[KeyMapping.cpp<br/>portable]
+        SfmlKeyMapping[SfmlKeyMapping.cpp<br/>USE_SFML only]
     end
 
-    subgraph "Key Event Queue"
-        SFMLKeyEventQueue[SFMLKeyEventQueue]
-        PushPending[PushPendingKeyEvent()]
-        PopPending[PopPendingKeyEvent()]
-        Queue[Internal key event queue]
-    end
+    Engine --> Queue
+    Engine -->|CreateGraphics rEvents| SFMLGraphics
+    Engine -->|CreateInput rEvents| SFMLInput
 
-    subgraph "Mouse Event Queue"
-        SFMLMouseEventQueue[SFMLMouseEventQueue]
-        PushPendingMouse[PushPendingMouseEvent()]
-        PopPendingMouse[PopPendingMouseEvent()]
-        MouseQueue[Internal mouse event queue]
-    end
+    SFMLGraphics -->|PushKey / PushMouse / RequestClose| Queue
+    NullGraphics -.->|writes nothing| Queue
+    Queue -->|PopKey / PopMouse| SFMLInput
+    Queue -->|PopKey / PopMouse| NullInput
 
-    subgraph "Factory"
-        Factory[CreateInput()]
-        CompileFlag[USE_SFML<br/>compile-time flag]
-    end
-
-    subgraph "Data Types"
-        KeyEnum[Key enum<br/>A-Z, 0-9, Space, Escape, Enter]
-        KeyEvent[KeyEvent struct<br/>Key key]
-        MouseButtonEnum[MouseButton enum<br/>Left, Right, Middle]
-        MouseEvent[MouseEvent struct<br/>MouseButton button<br/>int x, int y<br/>bool bPressed]
-    end
-
-    Input --> Methods
     SFMLInput -.->|implements| Input
     NullInput -.->|implements| Input
+    Input --> Methods
 
-    SFMLInput --> SFMLKeyboard
-    SFMLInput --> SFMLMouse
-    SFMLInput --> AsyncCallbacks
+    SFMLGraphics --> SfmlKeyMapping
+    SfmlKeyMapping --> KeyMapping
 
-    SFMLInput --> KeyMapping
-    SFMLInput --> SFMLKeyEventQueue
-    SFMLInput --> SFMLMouseEventQueue
-
-    KeyMapping --> KeyFromAscii
-    KeyMapping --> KeyToAscii
-    KeyMapping --> KeyToString
-    KeyMapping --> KeyFromSfKey
-
-    SFMLKeyEventQueue --> PushPending
-    SFMLKeyEventQueue --> PopPending
-    SFMLKeyEventQueue --> Queue
-
-    SFMLMouseEventQueue --> PushPendingMouse
-    SFMLMouseEventQueue --> PopPendingMouse
-    SFMLMouseEventQueue --> MouseQueue
-
-    Factory -->|if USE_SFML defined| SFMLInput
-    Factory -->|if USE_SFML not defined| NullInput
-    Factory --> CompileFlag
-
-    NullInput --> ConsoleInput
-    NullInput --> KeyMapping
-
-    Input --> KeyEnum
-    Input --> KeyEvent
-    Input --> MouseButtonEnum
-    Input --> MouseEvent
-
-    style Input fill:#bbf,stroke:#333,stroke-width:4px
-    style SFMLInput fill:#bfb,stroke:#333,stroke-width:2px
-    style NullInput fill:#fbb,stroke:#333,stroke-width:2px
-    style KeyMapping fill:#ff9,stroke:#333,stroke-width:2px
-    style SFMLKeyEventQueue fill:#ff9,stroke:#333,stroke-width:2px
-    style SFMLMouseEventQueue fill:#ff9,stroke:#333,stroke-width:2px
-    style Factory fill:#ff9,stroke:#333,stroke-width:2px
+    style Queue fill:#ff9,stroke:#333,stroke-width:3px
+    style Input fill:#bbf,stroke:#333,stroke-width:3px
 ```
+
+## The seam
+
+`PlatformEventQueue` is the only thing the windowing backend and the input backend share. The
+composition root (`Engine`) owns one and passes it to both factories.
+
+This is what makes the two independently substitutable. They previously communicated through
+file-scope `std::deque`s behind free `PushPendingKeyEvent_t` / `PopPendingKeyEvent` functions,
+filled from inside `SFMLGraphics::ProcessEvents_` — so `NullGraphics` paired with `SFMLInput`
+produced a live `Input` object that never saw a key, the pairing was a fiction, and multi-window
+use was impossible. Tests also shared one mutable process-wide queue.
+
+`Graphics::PumpEvents()` is separate from `Display()` for the same reason: pumping used to hang
+off the render call, which made rendering a prerequisite for receiving a keystroke.
 
 ## Component Overview
 
+### PlatformEventQueue
+- **Purpose**: Buffered keyboard/mouse events and the window-close request, between whatever
+  pumps a window and whatever implements `Input`.
+- **Producer side** (`PushKey`, `PushMouse`, `RequestClose`): called by the windowing backend.
+- **Consumer side** (`PopKey`, `PopMouse`, `TakeCloseRequest`): called by `Input` and by the
+  frame loop.
+- **`GetLastMousePosition()`**: where the pointer was last seen, for consumers that need a
+  position rather than an event (edge-scrolling). Empty until the first mouse event arrives —
+  it is an `optional`, not a sentinel coordinate.
+- Not thread-safe: pumped and drained from the same frame loop.
+
 ### Input (Abstract Base Class)
-- **Purpose**: Defines the interface for input handling operations
+- **Purpose**: Read buffered input, without knowing where it came from.
 - **Virtual Methods**:
-  - `Initialize()`: Initialize the input backend
-  - `CaptureKey()`: Synchronously capture a key press
-  - `CaptureKeyAsync(callback)`: Asynchronously capture a key press with callback
-  - `CaptureMouse()`: Synchronously capture a mouse click
-  - `CaptureMouseAsync(callback)`: Asynchronously capture a mouse click with callback
+  - `PollKey()` → `optional<KeyEvent_t>`: one buffered key event, or empty. Never blocks.
+  - `PollMouse()` → `optional<MouseEvent_t>`: likewise.
+  - `GetLastMousePosition()` → `optional<MousePosition_t>`.
+- **Whole events, not keys**: `PollKey` returns `KeyEvent_t` including its `ModifierState_t`.
+  The old `CaptureKey` popped a whole event and returned only the key, so any caller that needed
+  a chord had to use the misnamed `CaptureKeyAsync` and any caller that used `CaptureKey`
+  silently lost Ctrl/Alt/Shift.
+- **Poll, not async**: the old `*Async` pair scheduled nothing and behaved differently per
+  backend — SFML invoked the callback only when an event existed, Null always blocked on stdin
+  and then invoked it with a synthesized `Key_t::Unknown`. Callers drain in a `while` loop.
 
-### SFMLInput
-- **Purpose**: SFML-based input implementation
-- **Components**:
-  - `SFML Keyboard polling`: Polls SFML keyboard state
-  - `SFML Mouse polling`: Polls SFML mouse state with position tracking
-  - `Async callback support`: Wraps synchronous calls with callbacks
-- **Behavior**:
-  - `CaptureKey()`: Pops pending key event from SFMLKeyEventQueue
-  - `CaptureMouse()`: Blocking loop polling mouse buttons until click detected
-  - Returns mouse position with button type
-  - Supports Left, Right, and Middle mouse buttons
-
-### NullInput
-- **Purpose**: Console-based input implementation for testing/headless mode
-- **Behavior**:
-  - `CaptureKey()`: Reads character from stdin, converts to Key via KeyFromAscii
-  - `CaptureMouse()`: Reads "x y" or "n" from stdin for mouse coordinates
-  - Used when `USE_SFML` is not defined
-  - Allows game logic testing without graphics window
+### SFMLInput / NullInput
+Both read the shared queue and nothing else; the only difference is the log line. `NullInput` is
+a genuine null object: it never blocks and never synthesizes an event. It was previously a
+blocking console prompt selected as *the* non-SFML `Input`, which stalled the frame loop on the
+first tick of any headless run.
 
 ### KeyMapping
-- **Purpose**: Converts between different key representations
-- **Functions**:
-  - `KeyFromAscii(char)`: Convert ASCII character to Key enum
-  - `KeyToAscii(Key)`: Convert Key enum to ASCII character
-  - `KeyToString(Key)`: Convert Key enum to string representation
-  - `KeyFromSfKey(sf::Keyboard::Key)`: Convert SFML key to Key enum (SFML only)
-- **Usage**: Used by both SFMLInput and NullInput for key conversion
+- `KeyMapping.cpp` (portable, in `ac-core`): `KeyFromAscii`, `KeyToAscii`, `Key_tToString`.
+- `SfmlKeyMapping.cpp` (`USE_SFML` only, in the executable): `KeyFromSfKey`,
+  `MouseButtonFromSfButton`, `GetModifierState`. Split out so the portable half is testable
+  without linking SFML.
+- `Key_tToString` derives names from the enumerator via `magic_enum`, except `Num0`–`Num9`,
+  which display as bare digits. The hand-written switch it replaced had silently omitted
+  `F1`–`F12` while `KeyFromSfKey` mapped them.
+- `KeyFromSfKey` returns `nullopt` for an unmapped key. It used to return `Key_t::Unknown`, so
+  every caller that correctly tested the optional pushed a `KeyEvent_t{Unknown}` for Tab,
+  Backspace and all punctuation.
 
-### SFMLKeyEventQueue
-- **Purpose**: Queues key events from SFML graphics system
-- **Functions**:
-  - `PushPendingKeyEvent(Key)`: Add key event to queue
-  - `PopPendingKeyEvent()`: Remove and return key event from queue
-- **Integration**: Called by SFMLGraphics during event processing
-- **Flow**: SFML window events → SFMLGraphics → SFMLKeyEventQueue → SFMLInput
-
-### SFMLMouseEventQueue
-- **Purpose**: Queues mouse press and release events from SFML graphics system
-- **Functions**:
-  - `PushPendingMouseEvent(MouseEvent)`: Add mouse event to queue
-  - `PopPendingMouseEvent()`: Remove and return mouse event from queue
-- **MouseEvent_t**: Includes `bool bPressed` (`true` for `MouseButtonPressed`, `false` for `MouseButtonReleased`)
-- **Integration**: Called by SFMLGraphics during event processing
-- **Flow**: SFML window events → SFMLGraphics → SFMLMouseEventQueue → SFMLInput
-
-### CreateInput() Factory
-- **Purpose**: Factory function to create appropriate input implementation
-- **Selection**: Based on `USE_SFML` compile-time flag
-  - If defined: Returns `SFMLInput`
-  - If not defined: Returns `NullInput`
+### CreateInput() / CreateGraphics()
+- Selected by the `USE_SFML` compile-time flag; both take the shared `PlatformEventQueue&`.
+- `CreateGraphics` also takes a `GraphicsConfig_t` (window size, title, FPS cap, font path
+  candidates), so presentation is data rather than literals in the backend TU — and both
+  backends report the same window size instead of matching by copy.
 
 ### Data Types
-- **Key enum**: Represents keyboard keys (A-Z, 0-9, Space, Escape, Enter, Unknown)
-- **KeyEvent struct**: Contains a Key field
-- **MouseButton enum**: Represents mouse buttons (Left, Right, Middle, None)
-- **MouseEvent struct**: Contains MouseButton, x, y coordinates, modifier state, and `bPressed` flag indicating press vs. release
+- **`Key_t`**: A–Z, 0–9, Space, Escape, Enter, F1–F12, arrows, Unknown
+- **`KeyEvent_t`**: `Key_t` plus `ModifierState_t`
+- **`MouseButton_t`**: Left, Right, Middle, None
+- **`MouseEvent_t`**: button, x, y, `ModifierState_t`, and `bPressed` (press vs. release)
+- **`MousePosition_t`**: x, y

@@ -27,7 +27,11 @@ public:
     }
 
     void Unsubscribe(SubscriptionId id);
-    void Publish(GameEvent event);   // synchronous dispatch
+
+    // Synchronous dispatch. Safe to Subscribe/Unsubscribe from inside a handler: the handler
+    // list is snapshotted, one removed mid-dispatch is not called, and one added mid-dispatch
+    // does not see the in-flight event.
+    void Publish(GameEvent event);
 
 private:
     std::vector<std::pair<SubscriptionId, Handler>> m_handlers;

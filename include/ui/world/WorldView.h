@@ -59,7 +59,7 @@ public:
     void Render(Graphics& rGraphics) override;
     bool HandleKey(const KeyEvent_t& rEvent) override;
     void HandleMouse(const MouseEvent_t& rEvent) override;
-    void UpdateCameraInput(bool bEnabled);
+    void UpdateCameraInput(bool bEnabled, std::optional<MousePosition_t> mousePosition);
 
     // While CombatView is up, skip drawing the normal dashboard (combat panels cover it).
     void SetSuppressDashboard(bool bSuppress);

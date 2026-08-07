@@ -1,6 +1,5 @@
 #pragma once
 
-#include <functional>
 #include <memory>
 #include <optional>
 
@@ -18,14 +17,6 @@ enum class Key_t
     Enter,
     F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12,
     ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
-};
-
-enum class Modifier_t
-{
-    None,
-    Ctrl,
-    Alt,
-    Shift,
 };
 
 struct ModifierState_t
@@ -60,18 +51,32 @@ struct MouseEvent_t
     bool bPressed = true;
 };
 
+struct MousePosition_t
+{
+    int x = 0;
+    int y = 0;
+};
+
+// Poll-only, and never blocking: one buffered event per call, or nullopt when the queue is
+// empty. Callers drain in a loop. Both are whole events — a key without its modifiers cannot
+// express a chord, and KeyEvent_t's contract is that consumers read modifiers from the event.
 class Input
 {
 public:
     virtual ~Input() = default;
 
-    virtual void CaptureKeyAsync(std::function<void(KeyEvent_t)> callback) = 0;
-    virtual std::optional<Key_t>CaptureKey() = 0;
+    virtual std::optional<KeyEvent_t> PollKey() = 0;
+    virtual std::optional<MouseEvent_t> PollMouse() = 0;
 
-    virtual void CaptureMouseAsync(std::function<void(MouseEvent_t)> callback) = 0;
-    virtual std::optional<MouseEvent_t> CaptureMouse() = 0;
+    // Where the pointer was last seen, for consumers that need a position rather than an event
+    // (edge-scrolling). Empty until the backend has observed one.
+    virtual std::optional<MousePosition_t> GetLastMousePosition() const = 0;
 };
 
-std::unique_ptr<Input> CreateInput();
+class PlatformEventQueue;
+
+// rEvents is the queue the windowing backend writes into; the composition root owns it and
+// passes the same one to CreateGraphics.
+std::unique_ptr<Input> CreateInput(PlatformEventQueue& rEvents);
 
 } // namespace ac

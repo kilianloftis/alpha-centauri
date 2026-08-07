@@ -81,6 +81,8 @@ add_executable(effects-tests
     ui/ModalContractTests.cpp
     lib/SignalTests.cpp
     lib/ConfigLibraryTests.cpp
+    lib/EventBusTests.cpp
+    lib/PlatformEventQueueTests.cpp
 )
 
 target_link_libraries(effects-tests PRIVATE ac-core ac-turn-stages Catch2::Catch2WithMain)

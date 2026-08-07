@@ -2,8 +2,7 @@
 
 #include "graphics/Graphics.h"
 #include "input/KeyMapping.h"
-#include "input/KeyEventQueue.h"
-#include "input/MouseEventQueue.h"
+#include "input/PlatformEventQueue.h"
 #include <SFML/Graphics.hpp>
 #include <SFML/System/Sleep.hpp>
 #include <cmath>
@@ -33,8 +32,6 @@ namespace ac
 namespace
 {
 
-constexpr unsigned int k_DefaultWindowWidth  = 1280;
-constexpr unsigned int k_DefaultWindowHeight = 900;
 constexpr int          k_MaximizeWaitAttempts = 50;
 constexpr sf::Time     k_MaximizeWaitSlice    = sf::milliseconds(10);
 
@@ -78,18 +75,13 @@ void MaximizeNativeWindow_(sf::WindowBase& rWindow)
 #endif
 }
 
-} // namespace
-
-static const std::string k_FontPath1 = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
-static const std::string k_FontPath2 = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf";
-
 class SFMLGraphics : public Graphics
 {
 public:
-    SFMLGraphics()
-        : m_window(
-              sf::VideoMode(sf::Vector2u(k_DefaultWindowWidth, k_DefaultWindowHeight)),
-              "Alpha Centauri")
+    SFMLGraphics(PlatformEventQueue& rEvents, const GraphicsConfig_t& rConfig)
+        : m_rEvents(rEvents)
+        , m_window(sf::VideoMode(sf::Vector2u(rConfig.windowWidth, rConfig.windowHeight)),
+                   rConfig.windowTitle)
     {
         std::cout << "[SFMLGraphics] Creating window...\n";
         if (!m_window.isOpen())
@@ -102,7 +94,7 @@ public:
         // Maximize is applied asynchronously by the WM; wait briefly for the Resized event.
         for (int attempt = 0; attempt < k_MaximizeWaitAttempts; ++attempt)
         {
-            ProcessEvents_();
+            PumpInto_();
             if (m_window.getSize() != sizeBeforeMaximize)
             {
                 break;
@@ -110,17 +102,17 @@ public:
             sf::sleep(k_MaximizeWaitSlice);
         }
 
-        m_window.setFramerateLimit(60);
+        m_window.setFramerateLimit(rConfig.framerateLimit);
         m_window.setKeyRepeatEnabled(false);
         m_window.requestFocus();
         std::cout << "[SFMLGraphics] Window created.\n";
-        if (!m_font.openFromFile(k_FontPath1))
-        {
-            if (!m_font.openFromFile(k_FontPath2))
-            {
-                std::cerr << "[SFMLGraphics] Font loading failed.\n";
-            }
-        }
+
+        LoadFont_(rConfig.fontPaths);
+    }
+
+    void PumpEvents() override
+    {
+        PumpInto_();
     }
 
     void Clear() override
@@ -130,7 +122,6 @@ public:
 
     void Display() override
     {
-        ProcessEvents_();
         m_window.display();
     }
 
@@ -142,7 +133,8 @@ public:
             std::cerr << "[Graphics] Failed to load texture '" << path << "'.\n";
             return false;
         }
-        m_textures.emplace(id, std::move(texture));
+        // Assign, so reloading an id replaces the GPU data rather than keeping the first copy.
+        m_textures.insert_or_assign(id, std::move(texture));
         return true;
     }
 
@@ -163,10 +155,6 @@ public:
 
     void DrawText(const std::string& text, float x, float y, unsigned int size = 24, const Color_t& color = Color_t::White()) override
     {
-        if (m_font.getInfo().family.empty())
-        {
-            return;
-        }
         sf::Text drawable(m_font, text, size);
         drawable.setFillColor(sf::Color(color.r, color.g, color.b, color.a));
         drawable.setPosition({x, y});
@@ -220,63 +208,105 @@ public:
     }
 
 private:
-    void ProcessEvents_()
+    // Non-virtual, because the constructor's maximize wait pumps too and a virtual call there
+    // would not reach an override.
+    void PumpInto_()
     {
         while (auto event = m_window.pollEvent())
         {
-            if (event->is<sf::Event::Closed>())
-            {
-                // Ignore the close button: only Enter should close the window.
-                continue;
-            }
-
-            if (const auto* resized = event->getIf<sf::Event::Resized>())
-            {
-                m_window.setView(sf::View(sf::FloatRect({0.f, 0.f}, {static_cast<float>(resized->size.x), static_cast<float>(resized->size.y)})));
-            }
-
-            if (auto KeyEvent_t = event->getIf<sf::Event::KeyPressed>())
-            {
-                if (auto mapped = KeyFromSfKey(KeyEvent_t->code))
-                {
-                    PushPendingKeyEvent_t({*mapped, GetModifierState()});
-                }
-            }
-
-            if (auto mouseEvent = event->getIf<sf::Event::MouseButtonPressed>())
-            {
-                if (auto mappedKey = MouseButtonFromSfButton(mouseEvent->button))
-                {
-                    auto modifier = GetModifierState();
-                    PushPendingMouseEvent_t({*mappedKey, static_cast<int>(mouseEvent->position.x), static_cast<int>(mouseEvent->position.y), modifier, true});
-                }
-            }
-
-            if (auto mouseEvent = event->getIf<sf::Event::MouseButtonReleased>())
-            {
-                if (auto mappedKey = MouseButtonFromSfButton(mouseEvent->button))
-                {
-                    auto modifier = GetModifierState();
-                    PushPendingMouseEvent_t({*mappedKey, static_cast<int>(mouseEvent->position.x), static_cast<int>(mouseEvent->position.y), modifier, false});
-                }
-            }
-
-            if (auto mouseEvent = event->getIf<sf::Event::MouseMoved>())
-            {
-                PushPendingMouseEvent_t({MouseButton_t::None, static_cast<int>(mouseEvent->position.x), static_cast<int>(mouseEvent->position.y), {}, false});
-            }
+            DispatchEvent_(*event);
         }
     }
 
+    void LoadFont_(const std::vector<std::string>& rFontPaths)
+    {
+        for (const std::string& rPath : rFontPaths)
+        {
+            if (m_font.openFromFile(rPath))
+            {
+                return;
+            }
+        }
+
+        // The whole UI is text and rectangles, so "no font" is not a state this backend can
+        // usefully run in: it would present a black window with no diagnostic.
+        std::string tried;
+        for (const std::string& rPath : rFontPaths)
+        {
+            tried += "\n  " + rPath;
+        }
+        throw std::runtime_error("[SFMLGraphics] No usable font. Tried:"
+                                 + (tried.empty() ? std::string(" (none configured)") : tried));
+    }
+
+    void DispatchEvent_(const sf::Event& rEvent)
+    {
+        if (rEvent.is<sf::Event::Closed>())
+        {
+            // Recorded, not decided: what a close request means belongs to the engine.
+            m_rEvents.RequestClose();
+            return;
+        }
+
+        if (const auto* pResized = rEvent.getIf<sf::Event::Resized>())
+        {
+            m_window.setView(sf::View(sf::FloatRect(
+                {0.f, 0.f},
+                {static_cast<float>(pResized->size.x), static_cast<float>(pResized->size.y)})));
+            return;
+        }
+
+        if (const auto* pKey = rEvent.getIf<sf::Event::KeyPressed>())
+        {
+            if (auto mapped = KeyFromSfKey(pKey->code))
+            {
+                m_rEvents.PushKey({*mapped, GetModifierState()});
+            }
+            return;
+        }
+
+        if (const auto* pMouse = rEvent.getIf<sf::Event::MouseButtonPressed>())
+        {
+            PushMouseButton_(*pMouse, /*bPressed=*/true);
+            return;
+        }
+
+        if (const auto* pMouse = rEvent.getIf<sf::Event::MouseButtonReleased>())
+        {
+            PushMouseButton_(*pMouse, /*bPressed=*/false);
+            return;
+        }
+
+        if (const auto* pMoved = rEvent.getIf<sf::Event::MouseMoved>())
+        {
+            m_rEvents.PushMouse({MouseButton_t::None, static_cast<int>(pMoved->position.x),
+                                 static_cast<int>(pMoved->position.y), {}, false});
+        }
+    }
+
+    template <typename TMouseEvent>
+    void PushMouseButton_(const TMouseEvent& rEvent, bool bPressed)
+    {
+        if (auto mapped = MouseButtonFromSfButton(rEvent.button))
+        {
+            m_rEvents.PushMouse({*mapped, static_cast<int>(rEvent.position.x),
+                                 static_cast<int>(rEvent.position.y), GetModifierState(),
+                                 bPressed});
+        }
+    }
+
+    PlatformEventQueue& m_rEvents;
     sf::RenderWindow m_window;
     sf::Font m_font;
     std::unordered_map<std::string, sf::Texture> m_textures;
 };
 
+} // namespace
 
-std::unique_ptr<Graphics> CreateGraphics()
+std::unique_ptr<Graphics> CreateGraphics(PlatformEventQueue& rEvents,
+                                         const GraphicsConfig_t& rConfig)
 {
-    return std::make_unique<SFMLGraphics>();
+    return std::make_unique<SFMLGraphics>(rEvents, rConfig);
 }
 
 } // namespace ac

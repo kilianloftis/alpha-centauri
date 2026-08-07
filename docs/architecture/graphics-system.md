@@ -4,7 +4,7 @@
 graph TB
     subgraph "Graphics Interface"
         Graphics[Graphics<br/>(abstract base class)]
-        Methods[Virtual Methods:<br/>Initialize()<br/>Clear()<br/>Display()<br/>LoadTexture()<br/>DrawSprite()<br/>DrawText()]
+        Methods[Virtual Methods:<br/>PumpEvents()<br/>Clear()<br/>Display()<br/>LoadTexture()<br/>DrawSprite()<br/>DrawText()]
     end
 
     subgraph "SFML Implementation"
@@ -12,7 +12,7 @@ graph TB
         SFMLWindow[sf::RenderWindow]
         SFMLFont[sf::Font]
         TextureMap[unordered_map<string, sf::Texture>]
-        EventProcessing[ProcessEvents_()]
+        EventProcessing[PumpEvents → PlatformEventQueue]
     end
 
     subgraph "Null Implementation"
@@ -27,7 +27,7 @@ graph TB
 
     subgraph "Dependencies"
         KeyMapping[KeyMapping]
-        SFMLKeyEventQueue[SFMLKeyEventQueue]
+        PlatformEventQueue[PlatformEventQueue<br/>owned by Engine]
     end
 
     Graphics --> Methods
@@ -40,7 +40,7 @@ graph TB
     SFMLGraphics --> EventProcessing
 
     EventProcessing --> KeyMapping
-    EventProcessing --> SFMLKeyEventQueue
+    EventProcessing --> PlatformEventQueue
 
     Factory -->|if USE_SFML defined| SFMLGraphics
     Factory -->|if USE_SFML not defined| NullGraphics
@@ -59,7 +59,7 @@ graph TB
 ### Graphics (Abstract Base Class)
 - **Purpose**: Defines the interface for graphics rendering operations
 - **Virtual Methods**:
-  - `Initialize()`: Initialize the graphics backend
+  - `PumpEvents()`: Drain the window's event queue into the `PlatformEventQueue` this backend was constructed with. Deliberately **not** part of `Display()`: pumping used to hang off the render call, which made rendering a prerequisite for receiving a keystroke and gave a draw call hidden I/O side effects.
   - `Clear()`: Clear the render surface
   - `Display()`: Present the rendered frame
   - `LoadTexture(id, path)`: Load a texture from file
@@ -70,23 +70,23 @@ graph TB
 ### SFMLGraphics
 - **Purpose**: SFML-based graphics implementation
 - **Components**:
-  - `sf::RenderWindow`: SFML render window (800x600, 60 FPS)
-  - `sf::Font`: Font for text rendering (DejaVuSans or LiberationSans)
-  - `unordered_map<string, sf::Texture>`: Texture cache
-  - `ProcessEvents_()`: Processes SFML events and forwards key events
+  - `sf::RenderWindow`: SFML render window, sized/titled/FPS-capped from `GraphicsConfig_t`
+  - `sf::Font`: opened from the first usable path in `GraphicsConfig_t::fontPaths`. **Throws if none opens** — the entire UI is text and rectangles, so "no font" would present a black window with no diagnostic.
+  - `unordered_map<string, sf::Texture>`: Texture cache; `LoadTexture` replaces an existing id
+  - `PumpEvents()`: Translates SFML events and pushes them onto the shared `PlatformEventQueue`
 - **Dependencies**:
-  - Uses `KeyMapping` to convert SFML keys to internal Key enum
-  - Uses `SFMLKeyEventQueue` to queue key events for input system
-- **Behavior**:
-  - Ignores window close button (only Enter should close)
-  - Loads fonts from system paths with fallback options
+  - Uses `KeyMapping` (SFML half in `SfmlKeyMapping.cpp`) to convert SFML keys to `Key_t`
+  - Writes to `PlatformEventQueue`; it never names an `Input` implementation
+- **Window close**: a close request is *recorded* on the `PlatformEventQueue`, not acted on. `Engine::GameLoop_` takes it and calls `UIManager::RequestExit()`, so every quit path sets the same flag. What closing means is the engine's decision, not the backend's.
 
 ### NullGraphics
-- **Purpose**: Null graphics implementation for testing/headless mode
+- **Purpose**: Substitutable no-op backend for headless runs
 - **Behavior**:
-  - All methods are no-ops or log to console
+  - Draw calls do nothing and **report success**: a caller should not have to special-case headless to tell "did nothing" from "went wrong"
+  - `PumpEvents()` writes nothing, so with no other producer the queue stays empty and `Input` polls empty — never blocking
+  - `Display()` **paces the frame loop** to `GraphicsConfig_t::framerateLimit`. SFML's `setFramerateLimit` is the only pacing in the SFML build; without an equivalent here a headless run would spin at 100% CPU
+  - Reports the same window size as the SFML backend, from the shared `GraphicsConfig_t`
   - Used when `USE_SFML` is not defined
-  - Allows game logic testing without graphics
 
 ### CreateGraphics() Factory
 - **Purpose**: Factory function to create appropriate graphics implementation

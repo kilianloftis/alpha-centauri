@@ -1,7 +1,9 @@
 #pragma once
 
 #include "ui/IGameView.h"
+#include <functional>
 #include <memory>
+#include <unordered_map>
 #include <vector>
 
 namespace ac

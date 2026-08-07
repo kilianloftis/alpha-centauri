@@ -1,5 +1,6 @@
 #pragma once
 
+#include "input/PlatformEventQueue.h"
 #include "lib/Signal.h"
 
 #include <memory>
@@ -41,9 +42,13 @@ private:
     void GameLoop_();
     void ProcessTurn_();
 
+    // Declared before both backends: the graphics backend writes into it and the input backend
+    // reads from it, so it must outlive them.
+    PlatformEventQueue m_platformEvents;
+    // Before the backends too: the window is opened from these.
+    std::unique_ptr<GameSettings> m_pSettings;
     std::unique_ptr<Graphics> m_pGraphics;
     std::unique_ptr<Input> m_pInput;
-    std::unique_ptr<GameSettings> m_pSettings;
     // Declared before every live-state member below: Faction, BaseManager, and
     // TileEffectsContext all hold non-owning references into the definition data, so it
     // must outlive them. Members are destroyed in reverse declaration order, so GameState

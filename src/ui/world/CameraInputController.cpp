@@ -1,7 +1,6 @@
 #include "ui/world/CameraInputController.h"
 
 #include "game/map/WorldMap.h"
-#include "input/MouseEventQueue.h"
 #include "ui/style/UiStyle.h"
 #include "ui/world/MapViewport.h"
 #include "ui/world/WorldDisplay.h"
@@ -79,17 +78,16 @@ void CameraInputController::CenterOnTile(int tileX, int tileY)
     rViewport.SetCamera(cameraX, cameraY);
 }
 
-void CameraInputController::Update(bool bEnabled)
+void CameraInputController::Update(bool bEnabled, std::optional<MousePosition_t> mousePosition)
 {
-    if (!bEnabled || !HasLastMousePosition())
+    if (!bEnabled || !mousePosition)
     {
         m_edgeScrollAccumulatorX = 0.0f;
         m_edgeScrollAccumulatorY = 0.0f;
         return;
     }
 
-    const LastMousePosition_t mousePos = GetLastMousePosition();
-    ApplyEdgeScroll_(mousePos.x, mousePos.y);
+    ApplyEdgeScroll_(mousePosition->x, mousePosition->y);
 }
 
 void CameraInputController::ApplyEdgeScroll_(int mouseX, int mouseY)

@@ -1,5 +1,7 @@
 #include "game/GameSettings.h"
 
+#include "lib/config/ConfigFields.h"
+
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <stdexcept>
@@ -71,6 +73,39 @@ void LoadMapGeneration_(const nlohmann::json& rJson, MapGenerationConfig_t& rCon
     }
     rConfig.presetId = rMap.value("preset_id", rConfig.presetId);
     rConfig.seed = rMap.value("seed", rConfig.seed);
+}
+
+void LoadGraphics_(const nlohmann::json& rJson, GraphicsConfig_t& rConfig,
+                   const std::string& rPath)
+{
+    const nlohmann::json* pSection = FindSection_(rJson, "graphics", rPath);
+    if (!pSection)
+    {
+        return;
+    }
+
+    rConfig.windowWidth = pSection->value("window_width", rConfig.windowWidth);
+    rConfig.windowHeight = pSection->value("window_height", rConfig.windowHeight);
+    rConfig.windowTitle = pSection->value("window_title", rConfig.windowTitle);
+    rConfig.framerateLimit = pSection->value("framerate_limit", rConfig.framerateLimit);
+    if (pSection->contains("font_paths"))
+    {
+        // Replaces the defaults rather than appending: a player naming a font wants that font,
+        // and the built-in paths are only a guess at where a distro puts one.
+        rConfig.fontPaths =
+            ConfigFields::ParseStringArray(*pSection, "font_paths");
+    }
+
+    if (rConfig.windowWidth == 0 || rConfig.windowHeight == 0)
+    {
+        throw std::runtime_error("Game settings '" + rPath
+                                 + "': graphics.window_width and window_height must be > 0");
+    }
+    if (rConfig.fontPaths.empty())
+    {
+        throw std::runtime_error("Game settings '" + rPath
+                                 + "': graphics.font_paths must name at least one font");
+    }
 }
 
 void LoadGameRules_(const nlohmann::json& rJson, GameRulesConfig_t& rConfig,
@@ -162,6 +197,7 @@ void GameSettings::Load(const std::string& path)
     LoadVisibility_(json, visibility, path);
     LoadMapGeneration_(json, mapGeneration, path);
     ValidateMapGeneration_(mapGeneration, path);
+    LoadGraphics_(json, m_graphics, path);
     SetGameRules(gameRules);
     SetVisibility(visibility);
     SetMapGeneration(mapGeneration);
@@ -180,6 +216,13 @@ void GameSettings::Save(const std::string& path) const
         {"remove_fog", m_visibility.removeFog},
     };
     json["map_generation"] = MapGenerationToJson_(m_mapGeneration);
+    json["graphics"] = {
+        {"window_width", m_graphics.windowWidth},
+        {"window_height", m_graphics.windowHeight},
+        {"window_title", m_graphics.windowTitle},
+        {"framerate_limit", m_graphics.framerateLimit},
+        {"font_paths", m_graphics.fontPaths},
+    };
 
     std::ofstream file(path);
     if (!file.is_open())

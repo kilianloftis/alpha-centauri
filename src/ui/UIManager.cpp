@@ -45,22 +45,22 @@ void UIManager::ProcessInput()
 
 void UIManager::ProcessKeys_()
 {
-    m_rInput.CaptureKeyAsync([this](KeyEvent_t event)
+    while (auto event = m_rInput.PollKey())
     {
         IGameView* pActive = GetActiveView_();
-        if (pActive && pActive->HandleKey(event))
+        if (pActive && pActive->HandleKey(*event))
         {
-            return;
+            continue;
         }
         // Global view shortcuts (F2 research, E social engineering, ...) must not stack a
         // second overlay while one is already active, and must not push while the world view
         // has a blocking in-view modal (same gate as CanAdvanceTurn).
         if (!CanAdvanceTurn())
         {
-            return;
+            continue;
         }
-        HandleGlobalShortcut_(event.key);
-    });
+        HandleGlobalShortcut_(event->key);
+    }
 }
 
 void UIManager::RegisterViewShortcut(Key_t key, ViewFactory_t factory)
@@ -84,7 +84,7 @@ void UIManager::HandleGlobalShortcut_(Key_t key)
 
 void UIManager::ProcessMouse_()
 {
-    while (auto event = m_rInput.CaptureMouse())
+    while (auto event = m_rInput.PollMouse())
     {
         IGameView* pActive = GetActiveView_();
         if (pActive)
@@ -102,6 +102,10 @@ void UIManager::Update()
     // Engine::ProcessTurn_ (wired as WorldView's onProcessTurn) applies that gate itself.
     if (m_pWorldView)
     {
+        // Edge scrolling is an input-driven state change, so it belongs here rather than on
+        // the render path, where a second pass (screenshot, minimap) would apply it twice.
+        m_pWorldView->UpdateCameraInput(m_overlayStack.empty(),
+                                        m_rInput.GetLastMousePosition());
         m_pWorldView->ProcessPendingAutoEndTurn();
     }
 }
@@ -124,7 +128,6 @@ void UIManager::Render()
     m_rGraphics.Clear();
     if (m_pWorldView)
     {
-        m_pWorldView->UpdateCameraInput(m_overlayStack.empty());
         m_pWorldView->Render(m_rGraphics);
     }
     for (int i = static_cast<int>(m_overlayStack.size()) - 1; i >= 0; --i)

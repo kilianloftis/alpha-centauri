@@ -18,10 +18,9 @@ graph TB
 
     subgraph "Input System"
         Input[Input<br/>(abstract)]
-        SFMLInput[SFMLInput]
-        NullInput[NullInput]
-        KeyMapping[KeyMapping]
-        SFMLKeyEventQueue[SFMLKeyEventQueue]
+        BufferedInput[BufferedInput]
+        PlatformEventQueue[(PlatformEventQueue<br/>owned by Engine)]
+        SfmlKeyMapping[SfmlKeyMapping<br/>USE_SFML only]
     end
 
     subgraph "UI System"
@@ -124,10 +123,10 @@ graph TB
     Graphics --> SFMLGraphics
     Graphics --> NullGraphics
 
-    Input --> SFMLInput
-    Input --> NullInput
-    SFMLInput --> KeyMapping
-    SFMLInput --> SFMLKeyEventQueue
+    Input --> BufferedInput
+    BufferedInput --> PlatformEventQueue
+    SFMLGraphics --> PlatformEventQueue
+    SFMLGraphics --> SfmlKeyMapping
 
     TurnProcessor --> TurnStages
     TurnProcessor --> GameState
@@ -238,18 +237,18 @@ graph TB
 - **Components**:
   - `Graphics`: Abstract base class defining graphics operations
   - `SFMLGraphics`: SFML-based implementation
-  - `NullGraphics`: Null implementation for testing/headless mode
-- **Factory**: `CreateGraphics()` function creates appropriate implementation
+  - `NullGraphics`: Substitutable no-op backend for headless runs; also paces the frame loop
+- **Factory**: `CreateGraphics(PlatformEventQueue&, GraphicsConfig_t)` — the queue it writes into, and the presentation knobs
 
 ### Input System
 - **Purpose**: Abstract input handling interface
 - **Components**:
-  - `Input`: Abstract base class defining input operations
-  - `SFMLInput`: SFML-based implementation
-  - `NullInput`: Null implementation for testing/headless mode
-  - `KeyMapping`: Maps keys to game actions
-  - `SFMLKeyEventQueue`: Queues SFML key events
-- **Factory**: `CreateInput()` function creates appropriate implementation
+  - `Input`: Abstract base class — `PollKey` / `PollMouse` / `GetLastMousePosition`, never blocking
+  - `BufferedInput`: the only implementation; reads the shared queue and names no windowing library, so it serves every backend
+  - `PlatformEventQueue`: the seam between the windowing backend and `Input`, owned by `Engine`
+  - `SfmlKeyMapping`: SFML→engine key/button translation, compiled only under `USE_SFML`
+- **Factory**: `CreateInput(PlatformEventQueue&)`
+- **Details**: See `docs/architecture/input-system.md`
 
 ### Turn System
 - **Purpose**: Manages turn-based game logic and modding hooks. See

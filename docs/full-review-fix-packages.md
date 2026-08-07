@@ -911,6 +911,25 @@ Package 4 owns the constructor/null-policy half of these classes (two-phase-init
 
 **Note:** the review's `ResolveCurrentType`-hang finding no longer reproduced — an earlier package had already added the visited set.
 
+### Package 13 — Platform layer: event bus, graphics, input backends (2026-08-07)
+
+**Status:** complete — all four [H], all eight [M], and the [L] hygiene blocks.  
+**Prompt:** [`docs/full-review-fix-prompts/13-platform-backends.md`](full-review-fix-prompts/13-platform-backends.md)
+
+**Fixes landed:**
+- `EventBus::Publish` iterated the live handler list, so a handler that subscribed reallocated the vector mid-dispatch and one that unsubscribed erased from it — undefined behaviour on what the docs call the mod-facing ABI. It now snapshots subscription ids and re-looks each up, the same contract `Signal::Emit` already gave.
+- `Graphics` and `Input` are actually substitutable. Pending events lived in file-scope deques filled from inside `SFMLGraphics::Display()`, so `NullGraphics` + `SFMLInput` was a live `Input` that never saw a key. A `PlatformEventQueue` owned by `Engine` is now the seam, `PumpEvents()` is separate from `Display()`, and there is one `Input` implementation (`BufferedInput`) instead of two that had drifted into being identical.
+- Window-close policy moved out of the graphics TU, which was swallowing the event with the comment "only Enter should close". It is recorded on the queue and the engine routes it through `UIManager::RequestExit()`.
+- `KeyFromSfKey` returns `nullopt` for unmapped keys; it returned `Key_t::Unknown`, so every caller that correctly tested the optional pushed an `Unknown` event for Tab, Backspace and all punctuation.
+- A missing font throws instead of silently disabling every label; window size, title, FPS cap and font paths come from a `graphics` block in `user_settings.json`; `LoadTexture` replaces an existing id instead of keeping the first copy; `NullGraphics` reports success from loads and draws, as a substitutable null object should.
+- `NullInput` is a genuine null: it never blocks and never synthesizes an event, where it used to prompt and block on `std::cin` as *the* non-SFML backend.
+
+**Review follow-ups applied:** making `NullInput` non-blocking turned the headless build into a **100%-CPU spin loop** — the old `std::cin` block was the only thing idling the frame loop, and nothing could set the exit flag either. `NullGraphics::Display()` now paces frames. The two `Input` backends had become the same class once `SFMLInput` stopped touching SFML, so they collapsed into one. And the entire portable half of `KeyMapping` was dead — `KeyFromAscii`'s only caller was the console reader this package deleted — which I had *promoted* into `ac-core` and written tests for; deleted instead.
+
+**Resolved by deletion rather than repair:** the [M] "`Key_tToString` omits F1–F12". Nothing in the game renders a key name, so the drift was unobservable; a future keybinding display should use `magic_enum` rather than a fourth hand-written switch.
+
+**Not covered by tests:** the SFML mapping functions and the wiring between a real window and the queue — `USE_SFML` is defined only on the executable target, and no `Graphics` implementation is in the test target. Nothing would catch `PumpEvents` forgetting to push, or the loop losing its `PumpEvents()` call.
+
 ---
 
 ## Cross-package dependency sketch

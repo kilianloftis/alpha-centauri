@@ -57,10 +57,13 @@ namespace ac
 {
 
 Engine::Engine()
-    : m_pGraphics(CreateGraphics())
-    , m_pInput(CreateInput())
-    , m_pSettings(std::make_unique<GameSettings>())
+    : m_pSettings(std::make_unique<GameSettings>())
 {
+    // Settings first: the window this opens is sized, titled and fonted from them.
+    m_pSettings->Load();
+
+    m_pGraphics = CreateGraphics(m_platformEvents, m_pSettings->GetGraphics());
+    m_pInput = CreateInput(m_platformEvents);
     if (!m_pGraphics)
     {
         throw std::runtime_error("Failed to create graphics backend");
@@ -91,6 +94,18 @@ void Engine::GameLoop_()
 {
     while (!m_uiManager->ShouldExit())
     {
+        // Before anything reads input, and separate from Render.
+        m_pGraphics->PumpEvents();
+        if (m_platformEvents.TakeCloseRequest())
+        {
+            // Routed through the same exit flag as every other quit path, so "did the user
+            // quit?" has one answer.
+            // TODO: SMAC prompts to save before quitting; that UI flow does not exist yet, so
+            // the close button quits immediately.
+            m_uiManager->RequestExit();
+            continue;
+        }
+
         m_uiManager->ProcessInput();
         // Between input and paint: consumes UI-queued turn-advance requests (WorldView auto
         // end-turn) so Advance never runs from the Render path.
@@ -134,8 +149,7 @@ void Engine::Initialize_()
 
 void Engine::InitializeApp_()
 {
-    m_pSettings->Load();
-
+    // Settings are already loaded: the constructor needs them to open the window.
     UiStyle::Load("config/ui/style.json");
 
     // Every config parser + cross-config id validation (including unitFilter HasComponent).

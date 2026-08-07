@@ -139,9 +139,9 @@ void WorldView::Render(Graphics& rGraphics)
     }
 }
 
-void WorldView::UpdateCameraInput(bool bEnabled)
+void WorldView::UpdateCameraInput(bool bEnabled, std::optional<MousePosition_t> mousePosition)
 {
-    m_pCameraInputController->Update(bEnabled);
+    m_pCameraInputController->Update(bEnabled, mousePosition);
 }
 
 void WorldView::SetSuppressDashboard(bool bSuppress)

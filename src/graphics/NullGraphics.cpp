@@ -1,6 +1,10 @@
 #include "graphics/Graphics.h"
+#include "input/PlatformEventQueue.h"
+
+#include <chrono>
 #include <iostream>
 #include <memory>
+#include <thread>
 
 namespace ac
 {
@@ -8,67 +12,90 @@ namespace ac
 namespace
 {
 
+// A substitutable no-op, not a failing stub: loads and draws report success, because a caller
+// should not have to special-case headless to distinguish "did nothing" from "went wrong".
 class NullGraphics : public Graphics
 {
 public:
-NullGraphics()
+    explicit NullGraphics(const GraphicsConfig_t& rConfig)
+        : m_config(rConfig)
     {
         std::cout << "[Graphics] Null graphics backend selected. No rendering will occur.\n";
     }
 
-void Clear() override
+    void PumpEvents() override
     {
     }
 
-void Display() override
+    void Clear() override
     {
     }
 
-bool LoadTexture(const std::string& id, const std::string& path) override
+    // Paces the frame loop. SFML's setFramerateLimit is the only thing that stops the loop
+    // spinning, and a headless build has no window to provide it - without this a headless run
+    // pins a core for as long as it lives.
+    void Display() override
     {
-        std::cout << "[Graphics] Skipping loadTexture('" << id << "', '" << path << "') in null backend.\n";
-        return false;
+        if (m_config.framerateLimit == 0)
+        {
+            return;
+        }
+        const auto frame = std::chrono::microseconds(1000000 / m_config.framerateLimit);
+        const auto now = std::chrono::steady_clock::now();
+        const auto nextFrame = m_lastDisplay + frame;
+        if (now < nextFrame)
+        {
+            std::this_thread::sleep_for(nextFrame - now);
+        }
+        m_lastDisplay = std::chrono::steady_clock::now();
     }
 
-bool DrawSprite(const std::string& textureId, float x, float y) override
+    bool LoadTexture(const std::string&, const std::string&) override
     {
-        std::cout << "[Graphics] Skipping drawSprite('" << textureId << "', " << x << ", " << y << ") in null backend.\n";
-        return false;
+        return true;
     }
 
-void DrawText(const std::string& text, float x, float y, unsigned int size = 24, const Color_t& color = Color_t::White()) override
+    bool DrawSprite(const std::string&, float, float) override
     {
-        std::cout << "[Graphics] Skipping draw text: '" << text << "'\n";
+        return true;
     }
 
-void DrawRect(float x, float y, float width, float height, const Color_t& color, float thickness) override
-    {
-    }
-
-void DrawFilledRect(float x, float y, float width, float height, const Color_t& color) override
+    void DrawText(const std::string&, float, float, unsigned int, const Color_t&) override
     {
     }
 
-void DrawLine(float x1, float y1, float x2, float y2, const Color_t& color, float thickness) override
+    void DrawRect(float, float, float, float, const Color_t&, float) override
     {
     }
 
-unsigned int GetWindowWidth() const override
+    void DrawFilledRect(float, float, float, float, const Color_t&) override
     {
-        return 1280;
     }
 
-unsigned int GetWindowHeight() const override
+    void DrawLine(float, float, float, float, const Color_t&, float) override
     {
-        return 900;
     }
+
+    unsigned int GetWindowWidth() const override
+    {
+        return m_config.windowWidth;
+    }
+
+    unsigned int GetWindowHeight() const override
+    {
+        return m_config.windowHeight;
+    }
+
+private:
+    GraphicsConfig_t m_config;
+    std::chrono::steady_clock::time_point m_lastDisplay = std::chrono::steady_clock::now();
 };
 
 } // namespace
 
-std::unique_ptr<Graphics> CreateGraphics()
+std::unique_ptr<Graphics> CreateGraphics(PlatformEventQueue&, const GraphicsConfig_t& rConfig)
 {
-    return std::make_unique<NullGraphics>();
+    return std::make_unique<NullGraphics>(rConfig);
 }
 
 } // namespace ac

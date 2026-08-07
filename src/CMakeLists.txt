@@ -128,6 +128,8 @@ add_library(ac-core STATIC
     game/map/WorldGenerator.cpp
     game/stages/CustomTurnStage.cpp
     lib/Rational.cpp
+    input/BufferedInput.cpp
+    input/PlatformEventQueue.cpp
 )
 
 # Exhaustive-switch enforcement. Several enums (TerrainFeature_t, EffectScope_t, ...) are
@@ -245,9 +247,6 @@ target_link_libraries(ac-core PUBLIC fastnoiselite)
 add_executable(alpha-centauri
     main.cpp
     game/Engine.cpp
-    input/KeyMapping.cpp
-    input/KeyEventQueue.cpp
-    input/MouseEventQueue.cpp
     ui/TileHitTester.cpp
     ui/TileRenderer.cpp
     ui/UIManager.cpp
@@ -319,12 +318,16 @@ option(USE_SFML "Enable SFML rendering" ON)
 if(USE_SFML)
     find_package(SFML 3.0.1 COMPONENTS Graphics Window System REQUIRED)
     target_compile_definitions(alpha-centauri PRIVATE USE_SFML)
-    target_sources(alpha-centauri PRIVATE graphics/SFMLGraphics.cpp input/SFMLInput.cpp)
+    # Only the windowing backend differs per configuration; Input is one implementation over the
+    # shared PlatformEventQueue and lives in ac-core.
+    target_sources(alpha-centauri PRIVATE
+        graphics/SFMLGraphics.cpp
+        input/SfmlKeyMapping.cpp)
     target_link_libraries(alpha-centauri PRIVATE SFML::Graphics SFML::Window SFML::System)
     if(UNIX AND NOT APPLE)
         find_package(X11 REQUIRED)
         target_link_libraries(alpha-centauri PRIVATE X11::X11)
     endif()
 else()
-    target_sources(alpha-centauri PRIVATE graphics/NullGraphics.cpp input/NullInput.cpp)
+    target_sources(alpha-centauri PRIVATE graphics/NullGraphics.cpp)
 endif()

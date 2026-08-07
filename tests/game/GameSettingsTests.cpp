@@ -86,6 +86,7 @@ TEST_CASE("GameSettings Save groups keys by config struct", "[GameSettings]")
     CHECK(contents.find("remove_shroud") != std::string::npos);
     CHECK(contents.find("remove_fog") != std::string::npos);
     CHECK(contents.find("map_generation") != std::string::npos);
+    CHECK(contents.find("graphics") != std::string::npos);
     CHECK(contents.find("debug_options") == std::string::npos);
 
     std::filesystem::remove(path);
@@ -136,6 +137,62 @@ TEST_CASE("GameSettings Load keeps map_generation defaults when subsection is ab
     CHECK(loaded.IsPauseAtEndOfTurn());
     CHECK(loaded.GetMapGeneration().width == 200);
     CHECK(loaded.GetMapGeneration().presetId == "islands");
+
+    std::filesystem::remove(path);
+}
+
+TEST_CASE("GameSettings round-trips the graphics block", "[GameSettings]")
+{
+    // Window size, title, FPS and font paths were compile-time literals in the SFML TU, and
+    // NullGraphics carried its own copy of the size.
+    const std::filesystem::path path = TempSettingsPath("ac_settings_graphics.json");
+    std::filesystem::remove(path);
+
+    {
+        std::ofstream file(path);
+        file << R"({"graphics": {"window_width": 640, "window_height": 480,
+                    "window_title": "Modded", "framerate_limit": 30,
+                    "font_paths": ["/tmp/one.ttf", "/tmp/two.ttf"]}})" << '\n';
+    }
+
+    GameSettings loaded;
+    loaded.Load(path.string());
+    const GraphicsConfig_t& rGraphics = loaded.GetGraphics();
+    CHECK(rGraphics.windowWidth == 640);
+    CHECK(rGraphics.windowHeight == 480);
+    CHECK(rGraphics.windowTitle == "Modded");
+    CHECK(rGraphics.framerateLimit == 30);
+    REQUIRE(rGraphics.fontPaths.size() == 2);
+    CHECK(rGraphics.fontPaths[0] == "/tmp/one.ttf");
+
+    std::filesystem::remove(path);
+}
+
+TEST_CASE("GameSettings rejects an unusable graphics block", "[GameSettings]")
+{
+    const std::filesystem::path path = TempSettingsPath("ac_settings_bad_graphics.json");
+
+    SECTION("zero window size")
+    {
+        {
+            std::ofstream file(path);
+            file << R"({"graphics": {"window_width": 0}})" << '\n';
+        }
+        GameSettings loaded;
+        CHECK_THROWS_WITH(loaded.Load(path.string()),
+                          Catch::Matchers::ContainsSubstring("window_width"));
+    }
+
+    SECTION("no fonts named")
+    {
+        {
+            std::ofstream file(path);
+            file << R"({"graphics": {"font_paths": []}})" << '\n';
+        }
+        GameSettings loaded;
+        CHECK_THROWS_WITH(loaded.Load(path.string()),
+                          Catch::Matchers::ContainsSubstring("font_paths"));
+    }
 
     std::filesystem::remove(path);
 }
