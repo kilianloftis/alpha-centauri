@@ -358,6 +358,9 @@ struct BaseWorkableAreaDisplayStyle
     Color_t baseLabelColor{};
     Color_t workedTileTextColor{};
     Color_t unworkedTileTextColor{};
+    // Workable, but held by a neighbouring base / another faction / a supply crawler, so this
+    // base cannot take it. Distinct from unworked so a refused click is predictable.
+    Color_t unavailableTileTextColor{};
 };
 
 struct PopTypeSelectorPopupStyle

@@ -122,10 +122,10 @@ TEST_CASE("UserAssignBestAvailableWorker changes nothing when the tile is unavai
     baseB.GetWorkerAssignments().UnassignAll();
     REQUIRE(baseA.GetWorkerAssignments().AssignWorker(FirstPop(baseA), &shared));
 
-    // Every one of B's workers is idle; taking A's tile is impossible.
-    const int idleBefore = CountAssignedWorkers(baseB);
+    // Every one of B's workers is idle, so this takes the harmless first branch.
+    const int assignedBefore = CountAssignedWorkers(baseB);
     CHECK_FALSE(baseB.UserAssignBestAvailableWorker(&shared));
-    CHECK(CountAssignedWorkers(baseB) == idleBefore);
+    CHECK(CountAssignedWorkers(baseB) == assignedBefore);
     CHECK_FALSE(baseB.GetWorkerAssignments().IsTileWorkedByThisBase(&shared));
 
     // A tile outside the base's workable set is refused the same way.
@@ -134,6 +134,58 @@ TEST_CASE("UserAssignBestAvailableWorker changes nothing when the tile is unavai
     // A genuinely free tile in range still works.
     CHECK(baseB.UserAssignBestAvailableWorker(&fixture.At(5, 4)));
     CHECK(baseB.GetWorkerAssignments().IsTileWorkedByThisBase(&fixture.At(5, 4)));
+}
+
+TEST_CASE("A refused assignment does not demote a specialist", "[worker][index]")
+{
+    // The branch that actually had teeth: with no idle worker available, the old code
+    // converted a specialist back to a plain worker and *then* attempted the assignment,
+    // discarding the result — so a doomed request destroyed the specialist's role for nothing.
+    actest::BaseFixture fixture;
+    BaseManager& baseA = fixture.MakeBase(2, 2);
+    BaseManager& baseB = fixture.MakeBase(4, 4);
+    Tile& shared = fixture.At(3, 3);
+
+    // A takes the contested tile.
+    baseA.GetWorkerAssignments().UnassignAll();
+    REQUIRE(baseA.GetWorkerAssignments().AssignWorker(FirstPop(baseA), &shared));
+
+    // Every one of B's pops is a specialist, so there is no idle worker to place.
+    for (Pop& rPop : baseB.GetPopulation().Pops())
+    {
+        baseB.ConvertPop(rPop, "Doctor");
+    }
+    const int specialistsBefore = baseB.GetPopulation().GetSpecialistCount();
+    REQUIRE(specialistsBefore > 0);
+
+    CHECK_FALSE(baseB.UserAssignBestAvailableWorker(&shared));
+
+    // No specialist was spent on the failed attempt.
+    CHECK(baseB.GetPopulation().GetSpecialistCount() == specialistsBefore);
+    CHECK_FALSE(baseB.GetWorkerAssignments().IsTileWorkedByThisBase(&shared));
+}
+
+TEST_CASE("A refused assignment does not pull a worker off a productive tile", "[worker][index]")
+{
+    // The other paying branch: with no idle worker and no specialist, the old code unassigned
+    // the lowest-yield worker and then failed to place it, leaving it idle for nothing.
+    actest::BaseFixture fixture;
+    BaseManager& baseA = fixture.MakeBase(2, 2);
+    BaseManager& baseB = fixture.MakeBase(4, 4);
+    Tile& shared = fixture.At(3, 3);
+
+    baseA.GetWorkerAssignments().UnassignAll();
+    REQUIRE(baseA.GetWorkerAssignments().AssignWorker(FirstPop(baseA), &shared));
+
+    // B auto-assigns all its workers at construction, so none is idle and none is a specialist.
+    const int assignedBefore = CountAssignedWorkers(baseB);
+    REQUIRE(assignedBefore > 0);
+    REQUIRE(baseB.GetPopulation().GetSpecialistCount() == 0);
+
+    CHECK_FALSE(baseB.UserAssignBestAvailableWorker(&shared));
+
+    // Every worker that was producing still is.
+    CHECK(CountAssignedWorkers(baseB) == assignedBefore);
 }
 
 TEST_CASE("A base can never work another base's own tile", "[worker][index]")

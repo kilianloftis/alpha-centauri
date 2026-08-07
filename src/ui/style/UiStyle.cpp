@@ -447,6 +447,7 @@ BaseWorkableAreaDisplayStyle ParseBaseWorkableAreaDisplayStyle_(const nlohmann::
     s.baseLabelColor = ParseColor_(j, "base_label_color");
     s.workedTileTextColor = ParseColor_(j, "worked_tile_text_color");
     s.unworkedTileTextColor = ParseColor_(j, "unworked_tile_text_color");
+    s.unavailableTileTextColor = ParseColor_(j, "unavailable_tile_text_color");
     return s;
 }
 

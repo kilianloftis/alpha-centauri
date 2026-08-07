@@ -47,8 +47,18 @@ private:
     float m_startY = 0.f;
     std::vector<TileRect_t> m_tileRects;
 
+    // Who, if anyone, is working a tile in this base's radius. Overlapping radii are normal, so
+    // "not worked by me" and "free to take" are different questions.
+    enum class TileWorkState_t
+    {
+        Free,
+        WorkedByThisBase,
+        WorkedByOther,
+    };
+
     // Render a single workable tile
-    void RenderTile_(Graphics& rGraphics, const Tile& rTile, float x, float y, float size, bool bIsWorked);
+    void RenderTile_(Graphics& rGraphics, const Tile& rTile, float x, float y, float size,
+                     TileWorkState_t workState);
 };
 
 } // namespace ac

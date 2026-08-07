@@ -49,10 +49,9 @@ int PopContainer::GetSpecialistCount() const
     return CountPops_([](const Pop* p) { return p->IsSpecialist(); });
 }
 
-void PopContainer::AddPop(const std::string& typeId)
+void PopContainer::AddPop(const PopTypeConfig_t& rConfig)
 {
-    auto pPop = m_rRegistry.Create(typeId);
-    m_pops.push_back(std::move(pPop));
+    m_pops.push_back(m_rRegistry.Create(rConfig.id));
     m_revision.Bump();
 }
 

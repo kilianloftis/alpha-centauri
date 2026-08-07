@@ -67,7 +67,9 @@ void PopulationManager::AddPop(const std::string& typeId)
     {
         throw std::runtime_error("Cannot add pop: base is at max size");
     }
-    m_container.AddPop(typeId);
+    // Resolved like any conversion: creating a pop of an obsoleted type would seat something
+    // no conversion path can produce, which is the asymmetry this package removed.
+    m_container.AddPop(ResolveType_(typeId));
     NotifyPopGained_();
     m_riot.NotifyPopGrown(BuildRiotInputs_());
 }

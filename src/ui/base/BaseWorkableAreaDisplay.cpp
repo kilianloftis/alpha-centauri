@@ -68,12 +68,21 @@ void BaseWorkableAreaDisplay::Render(Graphics& rGraphics)
 
     for (const TileRect_t& entry : m_tileRects)
     {
-        // "Worked by this base", not "worked by anyone": RenderTile_ picks GetWorkedTileYield
-        // for a worked tile, and that only resolves against this base's pops. Asking the
-        // world-wide predicate painted a neighbour's (or an enemy's) tile as worked and then
-        // displayed 0 0 0 for it.
-        RenderTile_(rGraphics, *entry.pTile, entry.rect.x, entry.rect.y, m_tileSize,
-                    m_pBase->GetWorkerAssignments().IsTileWorkedByThisBase(entry.pTile));
+        // Both predicates: "worked by this base" decides which yield to show (GetWorkedTileYield
+        // only resolves against this base's pops, so asking the world-wide question painted a
+        // neighbour's tile as worked and then displayed 0 0 0), and "worked by anyone" separates
+        // a free tile from one this base cannot take.
+        const WorkerAssignmentManager& rAssignments = m_pBase->GetWorkerAssignments();
+        TileWorkState_t workState = TileWorkState_t::Free;
+        if (rAssignments.IsTileWorkedByThisBase(entry.pTile))
+        {
+            workState = TileWorkState_t::WorkedByThisBase;
+        }
+        else if (rAssignments.IsTileAssigned(entry.pTile))
+        {
+            workState = TileWorkState_t::WorkedByOther;
+        }
+        RenderTile_(rGraphics, *entry.pTile, entry.rect.x, entry.rect.y, m_tileSize, workState);
     }
 
     const float centerX = m_startX + style.gridCenterOffset * m_tileSize;
@@ -82,12 +91,14 @@ void BaseWorkableAreaDisplay::Render(Graphics& rGraphics)
     rGraphics.DrawText("BASE", centerX, centerY, style.baseLabelFontSize, style.baseLabelColor);
 }
 
-void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, const Tile& rTile, float x, float y, float size, bool bIsWorked)
+void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, const Tile& rTile, float x, float y,
+                                          float size, TileWorkState_t workState)
 {
     const auto& style = Style().baseWorkableAreaDisplay;
 
     rGraphics.DrawRect(x, y, size, size, style.tileBorderColor, style.tileBorderWidth);
 
+    const bool bIsWorked = workState == TileWorkState_t::WorkedByThisBase;
     const TileYieldView_t yield = bIsWorked
         ? m_pBase->GetWorkedTileYield(rTile)
         : m_pBase->GetPreviewTileYield(rTile);
@@ -103,7 +114,19 @@ void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, const Tile& rTile
     float textOffsetX = size * style.tileTextOffsetXRatio;
     float textOffsetY = size * style.tileTextOffsetYRatio;
 
-    Color_t textColor = bIsWorked ? style.workedTileTextColor : style.unworkedTileTextColor;
+    // Three states, not two. A tile held by a neighbouring base, another faction, or a supply
+    // crawler is workable-in-principle but not available to this base: showing it in the
+    // unworked colour with a full preview yield makes it look free, and clicking it is then
+    // silently refused. Dim it so the refusal is predictable.
+    Color_t textColor = style.unworkedTileTextColor;
+    if (bIsWorked)
+    {
+        textColor = style.workedTileTextColor;
+    }
+    else if (workState == TileWorkState_t::WorkedByOther)
+    {
+        textColor = style.unavailableTileTextColor;
+    }
     rGraphics.DrawText(oss.str(), x + textOffsetX, y + textOffsetY, style.tileFontSize, textColor);
 }
 

@@ -545,6 +545,9 @@
     ],
     "unworked_tile_text_color": [
       255, 255, 255, 255
+    ],
+    "unavailable_tile_text_color": [
+      120, 120, 120, 255
     ]
   },
   "pop_type_selector_popup": {

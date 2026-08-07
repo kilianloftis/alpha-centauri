@@ -43,8 +43,9 @@ public:
     int GetDroneCount() const;
     int GetSpecialistCount() const;
 
-    // Container operations
-    void AddPop(const std::string& typeId);
+    // Container operations. AddPop takes an already-resolved type for the same reason ConvertTo
+    // does: which types are legal is PopulationManager's decision, not the container's.
+    void AddPop(const PopTypeConfig_t& rConfig);
     void RemovePop();
 
     // Install an already-resolved type on a pop. The caller decides *which* type is legal —

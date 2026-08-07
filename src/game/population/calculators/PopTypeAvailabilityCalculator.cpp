@@ -62,6 +62,13 @@ const PopTypeConfig_t& PopTypeAvailabilityCalculator::ResolveCurrentType(
     const std::string& rTypeId,
     const std::vector<std::string>& rDiscoveredTechs) const
 {
+    // A config where two types obsolete each other (or one obsoletes itself) would otherwise
+    // spin here forever. Since every conversion path now walks this chain — including the
+    // per-turn composition pass for every base — a cycle would hang the game rather than
+    // report a config error, and a hang is not something the caller's try/catch can absorb.
+    std::unordered_set<std::string> visited;
+    visited.insert(rTypeId);
+
     std::string resolvedId = rTypeId;
     bool bChanged = true;
     while (bChanged)
@@ -81,6 +88,12 @@ const PopTypeConfig_t& PopTypeAvailabilityCalculator::ResolveCurrentType(
             {
                 if (rObsoletedId == resolvedId)
                 {
+                    if (!visited.insert(rConfig.id).second)
+                    {
+                        throw std::runtime_error(
+                            "Pop type obsolescence cycle involving '" + rConfig.id
+                            + "': check the 'obsoletes' lists in the pop type config");
+                    }
                     resolvedId = rConfig.id;
                     bChanged = true;
                     break;
