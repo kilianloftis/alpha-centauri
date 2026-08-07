@@ -58,7 +58,6 @@ private:
                              float ny,
                              const WorldGenPresetConfig_t& rPreset) const;
 
-    int RandomInt_(int min, int max);
     float RandomFloat_();
 };
 

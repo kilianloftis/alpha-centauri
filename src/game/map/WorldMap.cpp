@@ -2,6 +2,9 @@
 #include "game/map/MapUtils.h"
 #include "game/units/Unit.h"
 
+#include <stdexcept>
+#include <string>
+
 namespace ac
 {
 
@@ -9,7 +12,13 @@ WorldMap::WorldMap(int width, int height)
     : m_width(width)
     , m_height(height)
 {
-    m_tiles.reserve(width * height);
+    if (width <= 0 || height <= 0)
+    {
+        throw std::invalid_argument("WorldMap dimensions must be positive, got "
+                                    + std::to_string(width) + "x" + std::to_string(height));
+    }
+
+    m_tiles.reserve(static_cast<size_t>(width) * static_cast<size_t>(height));
     for (int y = 0; y < height; ++y)
     {
         for (int x = 0; x < width; ++x)
@@ -36,7 +45,7 @@ int WorldMap::GetHeight() const
 
 Tile* WorldMap::GetTile(int x, int y)
 {
-    if (y < 0 || y >= m_height || m_width <= 0)
+    if (y < 0 || y >= m_height)
     {
         return nullptr;
     }
@@ -46,7 +55,7 @@ Tile* WorldMap::GetTile(int x, int y)
 
 const Tile* WorldMap::GetTile(int x, int y) const
 {
-    if (y < 0 || y >= m_height || m_width <= 0)
+    if (y < 0 || y >= m_height)
     {
         return nullptr;
     }
@@ -54,12 +63,7 @@ const Tile* WorldMap::GetTile(int x, int y) const
     return m_tiles[GetTileIndex(x, y)].get();
 }
 
-std::vector<std::unique_ptr<Tile>>& WorldMap::GetTiles()
-{
-    return m_tiles;
-}
-
-const std::vector<std::unique_ptr<Tile>>& WorldMap::GetTiles() const
+std::span<const std::unique_ptr<Tile>> WorldMap::GetTiles() const
 {
     return m_tiles;
 }

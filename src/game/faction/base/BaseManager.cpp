@@ -10,6 +10,7 @@
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/buildings/BuildingConfig.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/map/ImprovementIds.h"
 #include "game/map/MapUtils.h"
 #include "game/map/WorldMap.h"
 #include "game/social-engineering/SocialRatingResolver.h"
@@ -84,7 +85,7 @@ BaseManager::BaseManager(
     , m_name(std::move(name))
 {
     // A base provides its own garrison defense bonus, modeled as the "Base" improvement.
-    m_rTileEffects.AddImprovementWithEffects(m_tile, "Base");
+    m_rTileEffects.AddImprovementWithEffects(m_tile, std::string(ImprovementIds::k_Base));
 
     m_pPopulation->OnGrowth.Connect([this]() {
         m_pPopulation->AddPop();
@@ -134,7 +135,7 @@ BaseManager::~BaseManager()
     // pop-on-destroy) can drop its reference before the object actually goes away — mirrors
     // UnitManager::OnUnitDestroyed's "signal before erase" contract.
     OnDestroyed.Emit();
-    m_rTileEffects.RemoveImprovementWithEffects(m_tile, "Base");
+    m_rTileEffects.RemoveImprovementWithEffects(m_tile, std::string(ImprovementIds::k_Base));
 }
 
 BaseSnapshot_t BaseManager::CaptureSnapshot() const

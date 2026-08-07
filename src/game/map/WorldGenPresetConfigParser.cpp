@@ -1,9 +1,11 @@
 #include "game/map/WorldGenPresetConfigParser.h"
 #include "lib/config/ConfigFields.h"
+#include "game/map/Tile.h"
+#include "lib/config/EnumNames.h"
 #include "lib/config/JsonConfigLoader.h"
 
-#include <magic_enum.hpp>
 #include <stdexcept>
+#include <string>
 
 namespace ac
 {
@@ -51,18 +53,22 @@ WorldGenPresetConfig_t WorldGenPresetConfigParser::ParsePresetConfig_(
         throw std::runtime_error("World gen preset '" + config.id
                                  + "' max_elevation must be >= 0");
     }
+    if (config.minElevation < k_MinElevation || config.maxElevation > k_MaxElevation)
+    {
+        throw std::runtime_error("World gen preset '" + config.id + "' elevation range ["
+                                 + std::to_string(config.minElevation) + ", "
+                                 + std::to_string(config.maxElevation) + "] is outside Planet's ["
+                                 + std::to_string(k_MinElevation) + ", "
+                                 + std::to_string(k_MaxElevation) + "]");
+    }
 
     return config;
 }
 
 WorldGenPreset_t WorldGenPresetConfigParser::ParseType_(const std::string& typeStr) const
 {
-    const auto parsed = magic_enum::enum_cast<WorldGenPreset_t>(typeStr);
-    if (!parsed.has_value())
-    {
-        throw std::runtime_error("Unknown world gen preset type: '" + typeStr + "'");
-    }
-    return parsed.value();
+    // Case-insensitive, matching every other enum-valued config field.
+    return EnumFromName<WorldGenPreset_t>(typeStr, "world gen preset type");
 }
 
 } // namespace ac

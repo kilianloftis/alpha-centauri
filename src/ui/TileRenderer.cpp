@@ -1,5 +1,6 @@
 #include "ui/TileRenderer.h"
 
+#include "game/map/ImprovementIds.h"
 #include "game/map/Tile.h"
 #include "graphics/Graphics.h"
 #include "ui/style/UiStyle.h"
@@ -99,7 +100,7 @@ Color_t TileRenderer::FillColor(const Tile& rTile, bool bFogged)
     {
         fill = s.fungusColor;
     }
-    else if (rTile.HasImprovement("Forest"))
+    else if (rTile.HasImprovement(ImprovementIds::k_Forest))
     {
         fill = s.forestColor;
     }

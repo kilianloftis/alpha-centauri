@@ -44,9 +44,13 @@ graph TB
 
     subgraph "Map System"
         Tile[Tile]
-        TileMap[(TileMap<br/>future)]
-        TileBonusRegistry[TileBonusRegistry]
-        TileBonusConfig[TileBonusConfig]
+        WorldMap[(WorldMap<br/>owns the tile grid)]
+        UnitPositionIndex[UnitPositionIndex]
+        WorkedTileIndex[WorkedTileIndex]
+        TerritoryMap[TerritoryMap]
+        ImprovementRegistry[ImprovementRegistry]
+        ImprovementConfig[ImprovementConfig_t]
+        WorldGenerator[WorldGenerator]
     end
 
     subgraph "GameDataContext (immutable definition data)"
@@ -88,7 +92,7 @@ graph TB
 
     subgraph "Configuration"
         TurnStagesConfig[config/turn_stages.json]
-        TileBonusConfigFile[config/tile_bonuses.json]
+        ImprovementsConfigFile[config/improvements.json]
     end
 
     subgraph "UI Components"
@@ -130,10 +134,15 @@ graph TB
     TurnStageFactory --> TurnStagesConfig
     TurnStageFactory --> TurnStages
     TurnStages --> HookContext
-    TileBonusRegistry --> TileBonusConfigFile
-    TileMap --> Tile
-    TileBonusRegistry --> TileBonusConfig
-    Tile --> TileBonusConfig
+    ImprovementRegistry --> ImprovementsConfigFile
+    WorldMap --> Tile
+    WorldMap --> UnitPositionIndex
+    WorldMap --> WorkedTileIndex
+    WorldMap --> TerritoryMap
+    ImprovementRegistry --> ImprovementConfig
+    Tile --> ImprovementConfig
+    WorldGenerator --> WorldMap
+    WorldGenerator --> ImprovementRegistry
     GameState --> FactionVector
     GameState --> WorldMap
     GameDataContext --> PopTypeRegistry
@@ -193,9 +202,10 @@ graph TB
     style Faction fill:#f9f,stroke:#333,stroke-width:2px
     style Signal fill:#f9f,stroke:#333,stroke-width:2px
     style Tile fill:#fbf,stroke:#333,stroke-width:2px
-    style TileMap fill:#fbf,stroke:#333,stroke-width:2px
-    style TileBonusRegistry fill:#fbf,stroke:#333,stroke-width:2px
-    style TileBonusConfig fill:#ff9,stroke:#333,stroke-width:2px
+    style WorldMap fill:#fbf,stroke:#333,stroke-width:2px
+    style ImprovementRegistry fill:#fbf,stroke:#333,stroke-width:2px
+    style ImprovementConfig fill:#ff9,stroke:#333,stroke-width:2px
+    style WorldGenerator fill:#fbf,stroke:#333,stroke-width:2px
     style EventBus fill:#bbf,stroke:#333,stroke-width:3px
     style EventBridge fill:#fbf,stroke:#333,stroke-width:2px
     style EffectConfig fill:#ffd,stroke:#333,stroke-width:3px
@@ -376,13 +386,13 @@ seed. (Persisting that seed into save state is still open — see the world-gene
 ### Map System
 - **Purpose**: Manages game world terrain and tile-based resource production
 - **Components**:
-  - `Tile`: Represents a single map tile with position (x,y), terrain characteristics (Moisture_t, Rockiness_t, Elevation), Rivers, Landmarks, Improvements, Bonus, and Worker assignment tracking
-  - `TileMap`: (Future) Container for the 2D grid of tiles
-  - `TileBonusRegistry`: Loads and provides access to tile bonus definitions
-  - `TileBonusConfig`: Data structure for bonus definitions (resource bonuses + sprite path)
+  - `Tile`: A single map tile — position (x,y), terrain characteristics (Moisture_t, Rockiness_t, elevation, river/aquifer/fungus), and its improvements. Holds no worked-tile or ownership state; those live in the world-scoped indexes below.
+  - `WorldMap`: Owns the tile grid plus `UnitPositionIndex`, `WorkedTileIndex` and `TerritoryMap`. Tile addresses are stable for its lifetime, so `GetTiles()` hands out a const-element span rather than the owning vector.
+  - `ImprovementRegistry` / `ImprovementConfig_t`: One config type covering terrain classifications, natural features, player-built improvements, tile bonuses (`frequency` > 0) and landmarks. There is no separate tile-bonus registry.
+  - `WorldGenerator`: Builds a `WorldMap` from a seed — elevation, moisture, rockiness, fungus, landmarks, aquifers/rivers, tile bonuses, in that order.
 - **Dependencies**:
   - Faction subsystems (particularly Military with Bases) work tiles for resources
-  - TileBonusRegistry loads from config/tile_bonuses.json
+  - ImprovementRegistry loads from config/improvements.json
 - **Details**: See `docs/architecture/map-system.md` for detailed architecture
 
 ### Unit Movement System
@@ -420,7 +430,8 @@ seed. (Persisting that seed into save state is still open — see the world-gene
 
 ### Configuration
 - **Turn Stages Config**: `config/turn_stages.json` - Loaded by HookSystem to define turn stages and hooks
-- **Tile Bonus Config**: `config/tile_bonuses.json` - Loaded by TileBonusRegistry to define tile bonus types and their resource bonuses
+- **Improvements Config**: `config/improvements.json` - Loaded by ImprovementRegistry; defines terrain features, improvements, tile bonuses and landmarks, with their effects and `excludes` coexistence rules
+- **World Gen Config**: `config/worldGen/` - `presets.json` (landmass recipes), `decoration.json` (moisture/rockiness/aquifer/fungus/bonus knobs), `landmarks.json` (placement recipes)
 - **Tech Config**: `config/techs.json` - Loaded by TechRegistry to define available technologies, their costs, and unlock chains
 
 ### Event System

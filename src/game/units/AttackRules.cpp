@@ -6,6 +6,7 @@
 #include "game/effects/EffectEnums.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/faction/UnitVisibility.h"
+#include "game/map/ImprovementIds.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
@@ -49,7 +50,7 @@ Unit* FindVisibleHostileOnTile(const Unit& rObserver, const Tile& rTile,
 {
     const Faction& rObserverFaction = rObserver.GetFaction();
     const FactionId_t observerId = rObserverFaction.GetFactionId();
-    const bool bBaseTile = rTile.HasImprovement("Base");
+    const bool bBaseTile = rTile.HasImprovement(ImprovementIds::k_Base);
     Unit* pEmbarkedInBase = nullptr;
     for (Unit* pUnit : rWorldMap.GetUnitsOnTile(rTile))
     {

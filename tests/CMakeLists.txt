@@ -56,6 +56,8 @@ add_executable(effects-tests
     game/LandmarkGenerationTests.cpp
     game/FungusGenerationTests.cpp
     game/TileBonusGenerationTests.cpp
+    game/MapRulesTests.cpp
+    game/WorldGenPipelineTests.cpp
     game/VisibilityTests.cpp
     game/UnitVisibilityTests.cpp
     game/MovementTests.cpp

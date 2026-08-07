@@ -73,14 +73,19 @@ int GrowPatch_(WorldMap& rWorld, Tile& rSeed, int targetSize, bool bWantLand, st
         return placed;
     }
 
+    // At most one frontier slot per tile, however many patch members reach it, so every draw
+    // is a distinct candidate.
+    std::unordered_set<const Tile*> enqueued{&rSeed};
     std::vector<Tile*> frontier;
-    ForEachOrthogonalNeighbor(rSeed, rWorld, [&](Tile* pNeighbor)
-    {
-        if (IsEligible_(*pNeighbor, bWantLand) && !TouchesForeignFungus_(*pNeighbor, rWorld, patch))
+    auto enqueue = [&](Tile* pNeighbor) {
+        if (IsEligible_(*pNeighbor, bWantLand) && !TouchesForeignFungus_(*pNeighbor, rWorld, patch)
+            && enqueued.insert(pNeighbor).second)
         {
             frontier.push_back(pNeighbor);
         }
-    });
+    };
+
+    ForEachOrthogonalNeighbor(rSeed, rWorld, enqueue);
 
     while (placed < targetSize && !frontier.empty())
     {
@@ -100,14 +105,7 @@ int GrowPatch_(WorldMap& rWorld, Tile& rSeed, int targetSize, bool bWantLand, st
         patch.insert(pNext);
         ++placed;
 
-        ForEachOrthogonalNeighbor(*pNext, rWorld, [&](Tile* pNeighbor)
-        {
-            if (IsEligible_(*pNeighbor, bWantLand)
-                && !TouchesForeignFungus_(*pNeighbor, rWorld, patch))
-            {
-                frontier.push_back(pNeighbor);
-            }
-        });
+        ForEachOrthogonalNeighbor(*pNext, rWorld, enqueue);
     }
 
     return placed;

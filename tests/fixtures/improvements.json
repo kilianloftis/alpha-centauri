@@ -38,6 +38,7 @@
   {
     "id": "River",
     "name": "River",
+    "excludes": ["Mine"],
     "effects": [
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "energy", "amount": 1, "op": "Add" } }
     ]
@@ -110,6 +111,7 @@
     "tags": ["land_terraform"],
     "turns_required": 4,
     "energy_cost": 0,
+    "excludes": ["Fungus"],
     "suppress_yield_sources": ["@landform"],
     "effects": [
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" } },

@@ -203,6 +203,30 @@ TEST_CASE("Raise and lower land change elevation", "[unit][terraform][mutate]")
     CHECK(tile.GetElevation() == 1000);
 }
 
+TEST_CASE("Lowering land stops at Planet's floor instead of throwing",
+          "[unit][terraform][mutate]")
+{
+    // A sea Former's LowerLand gate was unconditional, so on a deep-ocean tile the mutation
+    // drove elevation past the map's lower bound. Tile::SetElevation now rejects that, which
+    // would throw out of order execution - nothing catches between there and main().
+    FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    Unit& seaFormer =
+        fixture.MakeUnit(faction, 6, 4, {"test_sea_chassis", "test_terraformer"}, &base);
+    Tile& tile = fixture.At(6, 4);
+    tile.SetElevation(k_MinElevation + 500);
+
+    const ImprovementConfig_t& rLowerLand = fixture.improvements.Get("LowerLand");
+    CHECK_NOTHROW(ApplyTerraformResult(tile, rLowerLand, *fixture.ctx, fixture.map, seaFormer));
+    CHECK(tile.GetElevation() == k_MinElevation + 500);
+
+    // One more step of headroom and it still applies.
+    tile.SetElevation(k_MinElevation + 1000);
+    CHECK(ApplyTerraformResult(tile, rLowerLand, *fixture.ctx, fixture.map, seaFormer));
+    CHECK(tile.GetElevation() == k_MinElevation);
+}
+
 TEST_CASE("ApplyTerraformResult places Farm via rules helper", "[unit][terraform]")
 {
     FactionFixture fixture;

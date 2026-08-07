@@ -1,6 +1,9 @@
 #include "game/map/TileLayerResolver.h"
 
 #include "game/map/ImprovementConfigParser.h"
+#include "game/map/ImprovementIds.h"
+
+#include <stdexcept>
 
 namespace ac
 {
@@ -33,9 +36,9 @@ std::optional<std::string> ResolveMoistureLayer_(const Tile& rTile)
         case Moisture_t::Moist:
             return TileLayerContent::k_Moist;
         case Moisture_t::Arid:
-        default:
             return TileLayerContent::k_Arid;
     }
+    throw std::runtime_error("ResolveMoistureLayer_: unhandled Moisture_t");
 }
 
 std::optional<std::string> ResolveRockinessLayer_(const Tile& rTile)
@@ -52,12 +55,13 @@ std::optional<std::string> ResolveVegetationLayer_(const Tile& rTile)
 {
     // TODO: Define vegetation placement rules and mutual exclusivity (farm vs forest).
     // Boreholes and bases should exclude this layer via placement rules, not here.
-    if (rTile.HasImprovement(TileLayerContent::k_Farm))
+    // Probe with config ids, return sprite content ids: the two domains differ in case.
+    if (rTile.HasImprovement(ImprovementIds::k_Farm))
     {
         return TileLayerContent::k_Farm;
     }
 
-    if (rTile.HasImprovement(TileLayerContent::k_Forest))
+    if (rTile.HasImprovement(ImprovementIds::k_Forest))
     {
         return TileLayerContent::k_Forest;
     }
@@ -67,7 +71,7 @@ std::optional<std::string> ResolveVegetationLayer_(const Tile& rTile)
 
 std::optional<std::string> ResolveRoadLayer_(const Tile& rTile)
 {
-    if (rTile.HasImprovement(TileLayerContent::k_Road))
+    if (rTile.HasImprovement(ImprovementIds::k_Road))
     {
         return TileLayerContent::k_Road;
     }
@@ -83,9 +87,8 @@ std::optional<std::string> ResolveImprovementLayer_(const Tile& rTile)
     for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
     {
         const std::string& improvementId = pImprovement->id;
-        if (improvementId == TileLayerContent::k_Farm
-            || improvementId == TileLayerContent::k_Forest
-            || improvementId == TileLayerContent::k_Road)
+        if (improvementId == ImprovementIds::k_Farm || improvementId == ImprovementIds::k_Forest
+            || improvementId == ImprovementIds::k_Road)
         {
             continue;
         }

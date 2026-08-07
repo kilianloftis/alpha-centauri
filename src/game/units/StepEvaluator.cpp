@@ -3,6 +3,7 @@
 #include "game/Faction.h"
 #include "game/faction/FactionExploredMap.h"
 #include "game/faction/UnitVisibility.h"
+#include "game/map/ImprovementIds.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
@@ -23,7 +24,7 @@ bool IsHostileTo_(const Unit& rMover, const Unit& rOther)
         return false;
     }
     // Embarked cargo blocks only in a base (same eligibility as combat defense).
-    if (rOther.IsEmbarked() && !rOther.GetTile().HasImprovement("Base"))
+    if (rOther.IsEmbarked() && !rOther.GetTile().HasImprovement(ImprovementIds::k_Base))
     {
         return false;
     }

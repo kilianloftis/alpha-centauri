@@ -133,9 +133,34 @@ Territory overlap between factions is broken by crow-flies distance (`dx² + dy�
   - **Sea base** (`Tile::IsWater()`): Euclidean disk radius 3 (`dx² + dy² ≤ 10`), only contiguous sea the same way
   - Land bases never claim sea; sea bases never claim land
 - **Contested tiles**: among bases that can claim a tile, owner is the nearest base by Euclidean distance (`dx² + dy²`); ties go to the **lower `BaseId`**
+- **Rebuild preconditions**: `Rebuild` throws unless the grid has been `Reset` and its dimensions equal the world's, and throws if a base sits outside the grid. Returning quietly left every caller reading `k_NoFactionOwner` as though ownership were current, and a desynced `Reset` indexed out of bounds.
 - **Consumers**: territory-owned improvements (`owned_by_territory: true`, e.g. Sensor) stamp `ActiveEffect_t::ownerFaction` from `GetOwner` and only apply for that faction (defense aura / fog vision — see effects and visibility docs)
 
+### World Generation pipeline
+
+`WorldGenerator::Generate` runs a fixed stage order. It is load-bearing, not incidental:
+
+```mermaid
+graph LR
+    Elevation[Elevation<br/>FBM noise + landmass mask] --> Moisture[Moisture<br/>coastal / tropical / orographic]
+    Moisture --> Rockiness[Rockiness<br/>erosive-forces weights]
+    Rockiness --> Fungus[Fungus patches]
+    Fungus --> Landmarks[Landmarks<br/>stamp + sculpt]
+    Landmarks --> Rivers[Aquifers + RecomputeRivers]
+    Rivers --> Bonuses[Tile bonuses]
+```
+
+- **Landmarks before rivers**: landmark placement is the last stage that changes elevation (the Mount Planet sculpt raises peaks and roughens slopes) or stamps a `terminates_river` feature (BoreholeCluster). River tracing walks strictly downhill and stops at terminators, so it has to see the finished terrain. Run the other way round, rivers flowed down pre-sculpt slopes and straight through boreholes.
+- **Bonuses last**: landmarks exclude `@resource_bonus`, so bonuses must be placed against a tile set that already has its landmarks.
+- **Fungus before landmarks**: `PlaceFungus` reads neither rivers nor moisture, and `TheRuins` sets fungus on its own footprint.
+- **Rivers are a fixed point**: re-running `RecomputeRivers` on a finished world changes nothing. `WorldGenPipelineTests` pins this as the invariant of a correct order.
+- **One seed**: the caller (composition root) resolves one session seed and passes it in; every stage draws from `m_rng`. `MapGenerationConfig_t::seed` is the *request* (`0` = pick one), never re-read during generation — otherwise the seed reported for a session could not reproduce it.
+
 ### Tile Visual Layer System
+
+Two id domains meet here and must not be swapped: `TileLayerContent` holds lowercase **sprite** ids (`"farm"`), while `ImprovementIds` / `config/improvements.json` hold PascalCase **config** ids (`"Farm"`). The resolver probes tiles with config ids; the five fixed layers return `TileLayerContent` sprite ids.
+
+The Improvement layer is the exception: it returns the config id verbatim, because there is no sprite-id mapping for the open-ended set of improvements that can occupy it (Borehole, Monolith, …). Its rendering priority and exclusion rules are still a TODO in `ResolveImprovementLayer_`; whatever resolves them owes this layer a mapping too.
 
 ```mermaid
 graph TB
@@ -194,13 +219,21 @@ graph TB
 ### Tile Bonuses (special resources)
 - **Purpose**: Special resource bonuses on individual tiles (e.g. a nutrient-rich or mineral deposit).
 - **Modeling**: These are **not a separate system** — a tile bonus is just an `ImprovementConfig_t` entry in `config/improvements.json` like any other improvement. It grants resources via `ThisTile` `StatModifier` effects, sets `frequency` > 0 for world-gen placement weighting, and may carry a `spritePath`/`description` for rendering and lore. It lives in the tile's single improvements collection (`Tile::GetImprovements()`), with coexistence governed by `excludes`.
-- **Frequency System**: Higher `frequency` = more common during map generation; used by the world generator to weight placement. (World-gen does not yet place bonuses — it currently sets only terrain.)
+- **Frequency System**: Higher `frequency` = more common during map generation; `PlaceTileBonuses` weights its pick by it and stops at `decoration.json`'s `tile_bonuses.land_fraction`.
+
+### Improvement coexistence (`CanBuildImprovement`)
+- **One predicate, both directions**: a candidate may be placed unless the candidate's own `excludes` name a feature already on the tile, **or** a feature already on the tile names the candidate. Modders declare the relationship once, on whichever side reads better — `MountPlanet` excluding `@resource_bonus` is enough to keep `Nutrients` off it, without `Nutrients` naming every landmark.
+- Every placement path shares it: world-gen bonuses, landmark stamping, terraform orders, and fungus/forest spread. The incumbent side reads a tile's terrain-feature configs, which exist only after `Tile::BindImprovements` — so `WorldGenerator` binds the whole grid before its first stage, and an unbound tile never answers a coexistence question.
+- `clearedFeatureId` is the one escape hatch: a caller that removes a feature as part of the same placement (forest spread wipes fungus) names it, instead of mutating the tile to probe.
 
 ### WorldMap
 - **Purpose**: Container owning the tile grid plus world-scoped indexes (`WorkedTileIndex`, `UnitPositionIndex`, `TerritoryMap`).
 - **Responsibilities**:
-  - Store 2D grid of `Tile` instances; `GetTile(x, y)` (null out of bounds)
+  - Store 2D grid of `Tile` instances; `GetTile(x, y)` (null out of bounds, X wraps)
   - Expose worked-tile, unit-position, and territory indexes
+- **Invariants**:
+  - Both dimensions are positive — the constructor throws otherwise, rather than yielding a map whose every generation stage silently no-ops.
+  - Tile addresses are stable for the map's lifetime: units, bases, `UnitPositionIndex` and `WorkedTileIndex` all hold raw `Tile*`. `GetTiles()` therefore returns `std::span<const std::unique_ptr<Tile>>` — tiles stay mutable through the pointer, but the ownership vector cannot be cleared or reseated from outside.
 - **Note**: Older docs called this `TileMap`; the live type is `WorldMap`.
 
 ## Integration with Game Systems
@@ -242,10 +275,8 @@ graph TB
 
 ## Future Enhancements
 
-- **World Generation**: richer placement (rivers, fungus, tile bonuses) beyond elevation/moisture/rockiness
-- **Terraforming**: Ability to modify tile characteristics (moisture, elevation)
-- **Fungal Spread**: `Tile::GetHasFungus()` is presence-only today (manually settable, never placed by `WorldGenerator`); having fungus actually spread turn-over-turn is still future work
 - **Weather System**: Dynamic moisture/river modifications based on climate
-- **Improvement construction**: no UI/production flow lets a player actually build Farm/Mine/Bunker yet — `Tile::AddImprovement()` and `CanBuildImprovement()` exist but are unconsumed outside the automatic `"Base"` improvement and Engine test Sensors
+- **Orographic moisture after sculpting**: landmark sculpting is the last stage to change elevation, but moisture is derived before it, so a sculpted peak keeps its pre-sculpt moisture tier. Re-deriving moisture afterwards would re-roll tiers that landmark anchors were already chosen against (moisture ids are themselves `CanBuildImprovement` features) — resolving it needs a rule, not a reorder.
+- **Seed persistence**: `Engine` resolves one session seed and the whole map derives from it, but nothing writes it down — replaying a finished game waits on a save system.
 - **Combat system**: `ResolveTileDefenseMultiplier(tile, forFaction)` is ready to call but nothing resolves attacks yet
 - **Territory UI**: WorldDisplay shows Sensor markers; border/ownership tint is not implemented yet

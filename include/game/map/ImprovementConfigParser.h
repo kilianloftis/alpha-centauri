@@ -4,6 +4,7 @@
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace ac
@@ -68,9 +69,17 @@ struct ImprovementConfig_t
     std::vector<EffectConfig_t> effects;
 };
 
-// Returns true if none of rCandidate's excludes are present among rTile's current feature ids.
+// Coexistence, checked in both directions: rCandidate must not exclude anything already on the
+// tile, and nothing already on the tile may exclude rCandidate. Modders declare the relationship
+// once, on whichever side reads better, and every placement path honours it.
+//
+// clearedFeatureId names a feature the caller removes as part of the same placement (forest
+// spread wipes fungus), so it is treated as absent for both directions rather than the caller
+// mutating the tile to probe.
+//
 // Does not check requiredTech/turnsRequired/energyCost - those are construction-flow concerns.
-bool CanBuildImprovement(const Tile& rTile, const ImprovementConfig_t& rCandidate);
+bool CanBuildImprovement(const Tile& rTile, const ImprovementConfig_t& rCandidate,
+                         std::string_view clearedFeatureId = {});
 
 class ImprovementConfigParser
 {

@@ -1,9 +1,8 @@
 #include "game/map/WorldGenDecorationConfigParser.h"
 #include "game/map/MapGenerationConfig.h"
+#include "lib/config/EnumNames.h"
 
 #include <magic_enum.hpp>
-#include <algorithm>
-#include <cctype>
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <stdexcept>
@@ -14,13 +13,6 @@ namespace ac
 
 namespace
 {
-
-std::string ToLower_(std::string value)
-{
-    std::transform(value.begin(), value.end(), value.begin(),
-                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    return value;
-}
 
 MoistureDecorationConfig_t ParseMoisture_(const nlohmann::json& rJson)
 {
@@ -111,7 +103,7 @@ RockinessDecorationConfig_t ParseRockiness_(const nlohmann::json& rJson)
     RockinessDecorationConfig_t config;
     for (const ErosiveForces_t level : magic_enum::enum_values<ErosiveForces_t>())
     {
-        const std::string key = ToLower_(std::string(magic_enum::enum_name(level)));
+        const std::string key = EnumToLowerName(level);
         if (!rJson.contains(key))
         {
             throw std::runtime_error(

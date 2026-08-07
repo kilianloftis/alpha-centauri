@@ -6,6 +6,7 @@
 #include "lib/Rational.h"
 #include "game/effects/EffectConfigParser.h"
 
+#include <algorithm>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -93,14 +94,48 @@ TerraformResult_t ParseTerraformResult_(const nlohmann::json& improvementJson, s
 
 } // namespace
 
-bool CanBuildImprovement(const Tile& rTile, const ImprovementConfig_t& rCandidate)
+namespace
+{
+
+bool ExcludesId_(const ImprovementConfig_t& rFeature, const std::string& rId)
+{
+    return std::find(rFeature.excludes.begin(), rFeature.excludes.end(), rId)
+           != rFeature.excludes.end();
+}
+
+bool AnyExcludesCandidate_(const std::vector<const ImprovementConfig_t*>& rFeatures,
+                           const ImprovementConfig_t& rCandidate,
+                           std::string_view clearedFeatureId)
+{
+    for (const ImprovementConfig_t* pFeature : rFeatures)
+    {
+        if (!pFeature || pFeature->id == clearedFeatureId)
+        {
+            continue;
+        }
+        if (ExcludesId_(*pFeature, rCandidate.id))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+} // namespace
+
+bool CanBuildImprovement(const Tile& rTile, const ImprovementConfig_t& rCandidate,
+                         std::string_view clearedFeatureId)
 {
     for (const std::string& excludedId : rCandidate.excludes)
     {
-        if (rTile.HasFeature(excludedId))
+        if (excludedId != clearedFeatureId && rTile.HasFeature(excludedId))
+        {
             return false;
+        }
     }
-    return true;
+
+    return !AnyExcludesCandidate_(rTile.GetImprovements(), rCandidate, clearedFeatureId)
+           && !AnyExcludesCandidate_(rTile.GetTerrainFeatures(), rCandidate, clearedFeatureId);
 }
 
 std::vector<ImprovementConfig_t> ImprovementConfigParser::ParseConfig(const std::string& configPath)

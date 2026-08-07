@@ -5,6 +5,7 @@
 #include "game/effects/EffectEnums.h"
 #include "game/faction/FactionExploredMap.h"
 #include "game/map/ImprovementConfigParser.h"
+#include "game/map/ImprovementIds.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
@@ -22,7 +23,6 @@ namespace
 {
 
 constexpr std::string_view k_FungusId = magic_enum::enum_name(TerrainFeature_t::Fungus);
-constexpr const char* k_RoadId = "Road";
 
 } // namespace
 
@@ -114,7 +114,7 @@ int MoveCostCalculator::FeatureMoveCostFragments_(const ImprovementConfig_t& rCo
 
 std::optional<int> MoveCostCalculator::FungusAsRoadOverrideFragments_() const
 {
-    const ImprovementConfig_t* pRoad = m_rImprovements.Find(k_RoadId);
+    const ImprovementConfig_t* pRoad = m_rImprovements.Find(std::string(ImprovementIds::k_Road));
     if (!pRoad || !pRoad->moveCostOverrideFragments.has_value())
         return std::nullopt;
     return *pRoad->moveCostOverrideFragments;

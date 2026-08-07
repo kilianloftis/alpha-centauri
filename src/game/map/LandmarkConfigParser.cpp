@@ -1,10 +1,11 @@
 #include "game/map/LandmarkConfigParser.h"
 
+#include "game/map/Tile.h"
 #include "lib/config/ConfigFields.h"
+#include "lib/config/EnumNames.h"
 #include "lib/config/JsonConfigLoader.h"
 
 #include <algorithm>
-#include <cctype>
 #include <stdexcept>
 #include <unordered_set>
 
@@ -14,29 +15,43 @@ namespace ac
 namespace
 {
 
-std::string ToLower_(std::string value)
+LandmarkSculpt_t ParseSculpt_(const nlohmann::json& rShapeJson, const std::string& landmarkId)
 {
-    std::transform(value.begin(), value.end(), value.begin(),
-                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    return value;
-}
+    LandmarkSculpt_t sculpt;
+    if (!rShapeJson.contains("sculpt"))
+    {
+        return sculpt;
+    }
 
-LandmarkDomain_t ParseDomain_(const std::string& value)
-{
-    const std::string normalized = ToLower_(value);
-    if (normalized == "land")
+    const nlohmann::json& rJson = rShapeJson.at("sculpt");
+    if (!rJson.is_object())
     {
-        return LandmarkDomain_t::Land;
+        throw std::runtime_error("Landmark '" + landmarkId + "' sculpt must be an object");
     }
-    if (normalized == "water")
+
+    sculpt.peakElevation = rJson.value("peak_elevation", sculpt.peakElevation);
+    sculpt.baseElevation = rJson.value("base_elevation", sculpt.baseElevation);
+    sculpt.rockyCoreRadius = rJson.value("rocky_core_radius", sculpt.rockyCoreRadius);
+
+    if (sculpt.peakElevation < sculpt.baseElevation)
     {
-        return LandmarkDomain_t::Water;
+        throw std::runtime_error("Landmark '" + landmarkId
+                                 + "' sculpt peak_elevation must be >= base_elevation");
     }
-    if (normalized == "any")
+    if (sculpt.rockyCoreRadius < 0.0f)
     {
-        return LandmarkDomain_t::Any;
+        throw std::runtime_error("Landmark '" + landmarkId
+                                 + "' sculpt rocky_core_radius must be >= 0");
     }
-    throw std::runtime_error("Unknown landmark domain: '" + value + "'");
+    if (sculpt.baseElevation < k_MinElevation || sculpt.peakElevation > k_MaxElevation)
+    {
+        throw std::runtime_error("Landmark '" + landmarkId + "' sculpt elevations ["
+                                 + std::to_string(sculpt.baseElevation) + ", "
+                                 + std::to_string(sculpt.peakElevation)
+                                 + "] are outside Planet's [" + std::to_string(k_MinElevation)
+                                 + ", " + std::to_string(k_MaxElevation) + "]");
+    }
+    return sculpt;
 }
 
 LandmarkShape_t ParseShape_(const nlohmann::json& rJson, const std::string& landmarkId)
@@ -47,7 +62,7 @@ LandmarkShape_t ParseShape_(const nlohmann::json& rJson, const std::string& land
     }
 
     LandmarkShape_t shape;
-    const std::string kind = ToLower_(rJson.at("kind").get<std::string>());
+    const std::string kind = ToLowerAscii(rJson.at("kind").get<std::string>());
     if (kind == "disk")
     {
         shape.kind = LandmarkShapeKind_t::Disk;
@@ -81,6 +96,16 @@ LandmarkShape_t ParseShape_(const nlohmann::json& rJson, const std::string& land
         {
             shape.maskRows.push_back(row.get<std::string>());
         }
+        // All-blank rows expand to no footprint, which placement can only skip in silence.
+        const bool bHasCell = std::any_of(
+            shape.maskRows.begin(), shape.maskRows.end(), [](const std::string& rRow) {
+                return rRow.find_first_of("Xx") != std::string::npos;
+            });
+        if (!bHasCell)
+        {
+            throw std::runtime_error("Landmark '" + landmarkId
+                                     + "' mask rows contain no 'X' footprint cell");
+        }
     }
     else if (kind == "sculptor")
     {
@@ -96,6 +121,7 @@ LandmarkShape_t ParseShape_(const nlohmann::json& rJson, const std::string& land
             throw std::runtime_error(
                 "Landmark '" + landmarkId + "' sculptor radius must be >= 1");
         }
+        shape.sculpt = ParseSculpt_(rJson, landmarkId);
     }
     else
     {
@@ -113,7 +139,8 @@ LandmarkConfig_t ParseLandmark_(const nlohmann::json& rJson)
     {
         throw std::runtime_error("Landmark '" + config.id + "' has empty improvement_id");
     }
-    config.domain = ParseDomain_(rJson.value("domain", "land"));
+    config.domain =
+        EnumFromName<LandmarkDomain_t>(rJson.value("domain", "land"), "landmark domain");
     config.maxCount = rJson.value("max_count", 1);
     config.minSpacing = rJson.value("min_spacing", 16);
     config.setFungus = rJson.value("set_fungus", false);

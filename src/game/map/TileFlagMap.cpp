@@ -2,6 +2,8 @@
 
 #include "game/map/Tile.h"
 #include <algorithm>
+#include <stdexcept>
+#include <string>
 
 namespace ac
 {
@@ -70,11 +72,17 @@ bool TileFlagMap::Test(const Tile& rTile) const
 
 void TileFlagMap::Set(int x, int y)
 {
-    if (!IsSized() || !InBounds_(x, y))
+    if (!IsSized())
     {
-        return;
+        throw std::logic_error("TileFlagMap::Set before Reset");
     }
-    
+    if (!InBounds_(x, y))
+    {
+        throw std::out_of_range("TileFlagMap::Set (" + std::to_string(x) + ", " + std::to_string(y)
+                                + ") is outside " + std::to_string(m_width) + "x"
+                                + std::to_string(m_height));
+    }
+
     if (!m_flags[Index_(x, y)])
     {
         m_flags[Index_(x, y)] = 1;

@@ -17,6 +17,7 @@
 #include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
 #include <random>
+#include "game/map/ImprovementIds.h"
 #include "game/map/MapUtils.h"
 #include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
@@ -148,8 +149,9 @@ void Engine::StartNewGame_()
     // "pick one"; resolving it here (rather than letting each sub-object reach for
     // std::random_device) is what makes a session reproducible — every per-faction random
     // choice derives from this value.
-    // TODO: persist the resolved seed into settings/save state so a finished game can be
-    // replayed. That is package 10's world-generation item.
+    // TODO: persist the resolved seed once a save system exists. It must not go back through
+    // GameSettings::SetMapGeneration - that would turn `seed: 0` ("pick one") into a fixed seed
+    // for every later new game.
     const MapGenerationConfig_t& rWorldConfig = m_pSettings->GetMapGeneration();
     m_sessionSeed = rWorldConfig.seed != 0 ? rWorldConfig.seed : std::random_device{}();
     std::cout << "Session seed: " << m_sessionSeed << "\n";
@@ -415,7 +417,7 @@ void Engine::StartNewGame_()
             ForEachTileInChebyshevRadius(rBase.GetTile(), rMap, 2, /*includeOrigin=*/false,
                 [&](Tile* pTile, int distance)
                 {
-                    if (!pTile || !pTile->IsLand() || pTile->HasImprovement("Base"))
+                    if (!pTile || !pTile->IsLand() || pTile->HasImprovement(ImprovementIds::k_Base))
                     {
                         return;
                     }
@@ -423,7 +425,8 @@ void Engine::StartNewGame_()
                              && (pTile->GetX() + pTile->GetY()) % 2 == 0
                              && !pTile->GetHasFungus())
                     {
-                        rTileEffects.AddImprovementWithEffects(*pTile, "Forest");
+                        rTileEffects.AddImprovementWithEffects(
+                            *pTile, std::string(ImprovementIds::k_Forest));
                     }
                 });
             break;

@@ -46,12 +46,27 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
 
     auto pWorld = std::make_unique<WorldMap>(rConfig.width, rConfig.height);
 
+    // Bound before any stage runs: CanBuildImprovement reads a tile's terrain-feature configs
+    // to enforce the incumbent side of `excludes`, and those are empty until binding. An
+    // unbound tile answers a coexistence question differently from the same tile in play.
+    for (const auto& pTile : pWorld->GetTiles())
+    {
+        pTile->BindImprovements(rImprovements);
+    }
+
+    // Landmarks run before aquifers because they are the last stage that changes elevation
+    // (the Mount Planet sculpt) or stamps a terminates_river feature (BoreholeCluster), and
+    // RecomputeRivers has to see both. Bonuses stay last so @resource_bonus excludes apply.
+    // TODO: orographic moisture is still derived from pre-sculpt elevation. Re-running moisture
+    // after landmarks would re-roll the moisture tiers that landmark anchors were chosen
+    // against - moisture ids are themselves CanBuildImprovement features - so the resolution
+    // needs a rule, not a reorder.
     GenerateElevation_(*pWorld, rConfig, rPreset);
     GenerateMoisture_(*pWorld, rDecoration.moisture);
     GenerateRockiness_(*pWorld, rConfig.erosiveForces, rDecoration.rockiness);
-    GenerateAquifers_(*pWorld, rDecoration.aquifers);
     GenerateFungus_(*pWorld, rDecoration.fungus);
     GenerateLandmarks_(*pWorld, rLandmarks, rImprovements);
+    GenerateAquifers_(*pWorld, rDecoration.aquifers);
     GenerateTileBonuses_(*pWorld, rDecoration.tileBonuses, rImprovements);
 
     return pWorld;
@@ -64,12 +79,10 @@ void WorldGenerator::GenerateElevation_(WorldMap& rWorld,
     const int width = rWorld.GetWidth();
     const int height = rWorld.GetHeight();
     const int tileCount = width * height;
-    if (tileCount <= 0)
-    {
-        return;
-    }
 
-    FbmNoise noise(static_cast<int>(rConfig.seed == 0 ? m_rng() : rConfig.seed), rPreset);
+    // Drawn from m_rng, which the caller seeded: the map is a function of the one resolved
+    // session seed, never of rConfig.seed (the request, where 0 means "pick one").
+    FbmNoise noise(static_cast<int>(m_rng()), rPreset);
 
     const float invWidth = width > 1 ? 1.0f / static_cast<float>(width - 1) : 0.0f;
     const float invHeight = height > 1 ? 1.0f / static_cast<float>(height - 1) : 0.0f;
@@ -295,12 +308,6 @@ void WorldGenerator::GenerateTileBonuses_(WorldMap& rWorld,
                                           const ImprovementRegistry& rImprovements)
 {
     PlaceTileBonuses(rWorld, rBonuses, rImprovements, m_rng);
-}
-
-int WorldGenerator::RandomInt_(int min, int max)
-{
-    std::uniform_int_distribution<int> dist(min, max);
-    return dist(m_rng);
 }
 
 float WorldGenerator::RandomFloat_()

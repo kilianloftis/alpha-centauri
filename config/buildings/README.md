@@ -16,7 +16,7 @@ Each file must be a JSON array of building objects. Any number of files may coex
 |---|---|---|---|---|
 | `id` | string | Yes | — | Unique identifier used in code and save files |
 | `name` | string | No | `id` | Display name shown in the UI |
-| `mineral_cost` | int | No | `0` | Minerals required to construct |
+| `mineral_cost` | int | No | `0` | Minerals required to construct; must be a non-negative integer |
 | `required_tech` | string | No | `""` | Tech that must be discovered before the building is available; omit or empty = always available |
 | `allow_multiple` | bool | No | `false` | If true, a base may build more than one copy |
 | `secret_project` | bool | No | `false` | If true, only one faction in the world may own this building |
@@ -24,6 +24,21 @@ Each file must be a JSON array of building objects. Any number of files may coex
 | `effects` | Effect[] | No | `[]` | Structured list of gameplay effects (see below) |
 
 A flat per-turn bonus (the old `nutrients_bonus`) is a `StatModifier` effect with `scope: "ThisBase"`. A per-improvement bonus (the old `improvement_bonuses`) is a `TileYieldModifier` effect with a `HasImprovement` selector — see Effect Types below.
+
+### Load-time validation
+
+The parser fails the load rather than substituting a default, so a setting either applies or the game does not start:
+
+- **Unknown keys are rejected.** A typo'd `allow_multiples` is an error naming the building and the key, not a silently ignored line.
+- **Wrong-typed values are rejected.** `"allow_multiple": "yes"` is an error, where it used to parse as `false`.
+- **`mineral_cost` must be a non-negative integer.**
+- **`secret_project` and `allow_multiple` are mutually exclusive.** A secret project is unique in the world, so "more than one copy" is unexpressible.
+
+### Uniqueness at runtime
+
+A building that is not `allow_multiple` cannot be added twice to one base, and a `secret_project` cannot be added anywhere once any faction owns it *or* once a built copy has been destroyed (destruction tombstones it — nobody rebuilds it). This is enforced where a building is granted, so it also covers projects completed by production and buildings granted by another building's effect.
+
+Callers that can lose the race check `BuildingManager::CanAddBuilding` first: production drops the item and reports it rather than failing the turn. `AddBuilding` still throws if the invariant is violated, as a programmer-error backstop.
 
 ---
 

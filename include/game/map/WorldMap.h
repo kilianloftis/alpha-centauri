@@ -5,6 +5,7 @@
 #include "game/map/WorkedTileIndex.h"
 #include "game/map/TerritoryMap.h"
 #include <memory>
+#include <span>
 #include <vector>
 
 namespace ac
@@ -15,6 +16,7 @@ class Unit;
 class WorldMap
 {
 public:
+    // Throws unless both dimensions are positive: a zero-sized map has no valid tile.
     WorldMap(int width, int height);
     ~WorldMap();
 
@@ -30,9 +32,11 @@ public:
     int GetTileIndex(int x, int y) const;
     int GetTileIndex(const Tile& rTile) const;
 
-    // Get all tiles
-    std::vector<std::unique_ptr<Tile>>& GetTiles();
-    const std::vector<std::unique_ptr<Tile>>& GetTiles() const;
+    // All tiles, row-major. Const-element span, not the owning vector: units, bases,
+    // UnitPositionIndex and WorkedTileIndex all hold raw Tile*, so tile addresses must stay put
+    // for the lifetime of the map. Tiles remain mutable through the pointer; reseating and
+    // clearing are what the span forbids.
+    std::span<const std::unique_ptr<Tile>> GetTiles() const;
 
     // Unit occupancy: the single owner of unit-position state. Units register/unregister
     // themselves at construction/destruction; movement goes through

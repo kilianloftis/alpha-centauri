@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace ac
@@ -21,6 +22,17 @@ enum class LandmarkShapeKind_t
     Sculptor,  // named procedural footprint + optional terrain sculpt
 };
 
+// The one sculptor algorithm C++ implements: a radial peak that raises elevation towards the
+// anchor and roughens the slopes. Knobs are data so a modded volcano needs no rebuild.
+inline constexpr std::string_view k_MountPlanetSculptor = "mount_planet";
+
+struct LandmarkSculpt_t
+{
+    int peakElevation = 3500;      // elevation at the anchor, in meters
+    int baseElevation = 1000;      // elevation at the rim; tiles already higher are left alone
+    float rockyCoreRadius = 1.5f;  // within this distance the tile becomes Rocky, else Rolling
+};
+
 struct LandmarkShape_t
 {
     LandmarkShapeKind_t kind = LandmarkShapeKind_t::Disk;
@@ -29,6 +41,7 @@ struct LandmarkShape_t
     int innerRadius = 0;
     std::vector<std::string> maskRows;
     std::string sculptorId;
+    LandmarkSculpt_t sculpt;
 };
 
 // Placement recipe for one landmark type. Effects live on ImprovementConfig_t

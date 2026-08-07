@@ -2,6 +2,7 @@
 
 #include "game/effects/TileEffectsContext.h"
 #include "game/map/ImprovementConfigParser.h"
+#include "game/map/ImprovementIds.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
@@ -9,6 +10,7 @@
 
 #include <algorithm>
 #include <string>
+#include <string_view>
 
 namespace ac
 {
@@ -60,7 +62,7 @@ bool IsEligibleSpreadNeighbor_(const Tile& rNeighbor, bool wantSea,
     {
         return false;
     }
-    if (rNeighbor.HasImprovement("Base") || rNeighbor.HasImprovement(rConfig.id))
+    if (rNeighbor.HasImprovement(ImprovementIds::k_Base) || rNeighbor.HasImprovement(rConfig.id))
     {
         return false;
     }
@@ -78,6 +80,9 @@ Tile* PickBestSpreadNeighbor_(Tile& rOrigin, WorldMap& rWorldMap,
     Tile* pBest = nullptr;
     int bestScore = 0;
 
+    // Forest spread wipes fungus (SMAC), so Fungus must not block eligibility.
+    const std::string_view clearedFeature = wantSea ? std::string_view{} : ImprovementIds::k_Fungus;
+
     ForEachTileInChebyshevRadius(rOrigin, rWorldMap, 1, false,
         [&](Tile* pNeighbor, int /*distance*/)
         {
@@ -85,26 +90,13 @@ Tile* PickBestSpreadNeighbor_(Tile& rOrigin, WorldMap& rWorldMap,
             {
                 return;
             }
-
-            // Forest may land on fungus: clear temporarily so CanBuildImprovement's
-            // Fungus exclude does not block, matching SMAC (fungus is wiped on spread).
-            const bool hadFungus = !wantSea && pNeighbor->GetHasFungus();
-            if (hadFungus)
-            {
-                pNeighbor->SetHasFungus(false);
-            }
-            const bool canBuild = CanBuildImprovement(*pNeighbor, rConfig);
-            if (hadFungus)
-            {
-                pNeighbor->SetHasFungus(true);
-            }
-            if (!canBuild)
+            if (!CanBuildImprovement(*pNeighbor, rConfig, clearedFeature))
             {
                 return;
             }
 
             const int score = SpreadNeighborScore_(*pNeighbor);
-            if (score > bestScore)
+            if (!pBest || score > bestScore)
             {
                 bestScore = score;
                 pBest = pNeighbor;
@@ -130,19 +122,18 @@ bool TrySpreadTerraformFromTile(Tile& rOrigin, WorldMap& rWorldMap,
                                 TileEffectsContext& rTileEffects)
 {
     const bool wantSea = rOrigin.IsWater();
-    const char* improvementId = wantSea ? "KelpFarm" : "Forest";
+    const std::string_view improvementId =
+        wantSea ? ImprovementIds::k_KelpFarm : ImprovementIds::k_Forest;
     if (!rOrigin.HasImprovement(improvementId))
     {
         return false;
     }
 
-    const ImprovementConfig_t* pConfig = rTileEffects.GetImprovements().Find(improvementId);
-    if (!pConfig)
-    {
-        return false;
-    }
+    // Present by construction: ValidateTerrainFeatures proves both ids exist at load.
+    const ImprovementConfig_t& rConfig =
+        rTileEffects.GetImprovements().Get(std::string(improvementId));
 
-    Tile* pTarget = PickBestSpreadNeighbor_(rOrigin, rWorldMap, *pConfig, wantSea);
+    Tile* pTarget = PickBestSpreadNeighbor_(rOrigin, rWorldMap, rConfig, wantSea);
     if (!pTarget)
     {
         return false;
@@ -152,7 +143,7 @@ bool TrySpreadTerraformFromTile(Tile& rOrigin, WorldMap& rWorldMap,
     {
         pTarget->SetHasFungus(false);
     }
-    rTileEffects.AddImprovementWithEffects(*pTarget, improvementId);
+    rTileEffects.AddImprovementWithEffects(*pTarget, std::string(improvementId));
     return true;
 }
 

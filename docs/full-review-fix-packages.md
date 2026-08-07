@@ -835,6 +835,42 @@ Package 4 owns the constructor/null-policy half of these classes (two-phase-init
 
 **TODOs left rather than guessed:** whether the disengage roll is per round or per combat; the scope of "repeat" (decay, ownership change, per-action) for `risk_repeat`.
 
+### Package 9 — Buildings, secret projects, orbital (2026-08-06)
+
+**Status:** complete — both [H] and all five [M] fixed; the [L] hygiene block is batched into package 16.  
+**Prompt:** [`docs/full-review-fix-prompts/09-buildings-and-projects.md`](full-review-fix-prompts/09-buildings-and-projects.md)
+
+**Fixes landed:**
+- Uniqueness is enforced where a building is granted, not only where the build menu is drawn. Two bases that both listed a secret project when they queued it would both complete it, because `ProductionManager` → `OnProductionCompleted` → `AddBuilding` checked nothing.
+- `IsCompleted` answered two different questions with one method; split into `IsUnavailable` (tombstones included) and `IsOwnedByAnyFaction`, so a razed project no longer reads as somebody's.
+- `BuildingConfigParser` rejects wrong-typed values and unknown keys instead of substituting defaults — `"allow_multiple": "yes"` parsed as `false`, and a typo'd key was accepted and ignored.
+- `BuildingRegistry` uses the whole-set `Validate_` hook it inherited and never called: a stackable secret project and a negative `mineral_cost` are now load-time errors.
+- `BuildingConfig_t` moved to its own header so 14 consumers stop pulling `<nlohmann/json.hpp>`.
+
+**Review follow-ups applied:** the uniqueness enforcement was **fatal**. `AddBuilding` threw, and nothing catches between `BaseProduction` and `main()` — so completing a secret project in a second base, which a player can queue because both bases are offered it and nothing revokes a queued item, exited the process after the minerals were spent. `GrantBuilding` had the same shape, making the README's own `Merchant_Exchange` → `Energy_Bank` example lethal. Introduced `CanAddBuilding` for both callers to check first; production drops the item and reports it. Every test I had written called `AddBuilding` directly, which is exactly why the production path went unexamined. The header split had also repointed **zero** call sites, so its stated benefit did not exist.
+
+**TODOs left rather than guessed:** what happens to minerals already invested in a pre-empted build.
+
+### Package 10 — Map runtime and world generation (2026-08-07)
+
+**Status:** complete — all three [H], all nine [M], and both [L] hygiene blocks.  
+**Prompt:** [`docs/full-review-fix-prompts/10-map-and-worldgen.md`](full-review-fix-prompts/10-map-and-worldgen.md)
+
+**Fixes landed:**
+- Gameplay probes use config ids, not sprite content ids. `TileLayerResolver` matched `"farm"`/`"forest"`/`"road"` against a registry that spells them `"Farm"`/`"Forest"`/`"Road"`, so the Vegetation and Road layers could never populate and their improvements fell through into the Improvement layer. New `ImprovementIds` header keeps the two domains visibly apart.
+- Landmarks now run before the aquifer/river stage. Rivers were traced before the Mount Planet sculpt raised elevations and before `BoreholeCluster` stamped its `terminates_river` feature, so they flowed down pre-sculpt slopes and straight through boreholes. Pinned as an invariant: re-running the river pass on a finished world changes nothing.
+- `CanBuildImprovement` enforces `excludes` in both directions, so a modder declares the relationship once. `TileBonusGeneration`'s private reverse scan — which every other placement path lacked — is deleted.
+- Fungus is no longer cleared and restored on candidate tiles mid-selection to dodge an exclude; the caller names the feature it is about to remove instead.
+- Loud failures where there were silent ones: non-positive `WorldMap` dimensions, `TerritoryMap::Rebuild` against an unsized or mismatched grid (and a base outside it), an all-blank landmark mask, a `Forest`/`KelpFarm` entry missing from `improvements.json`, an out-of-range `Tile::SetElevation`, an out-of-bounds `TileFlagMap::Set`.
+- Mount Planet's peak/base elevation and rocky-core radius moved to `landmarks.json`; only the algorithm stays in C++.
+- The map is a function of the one resolved session seed — `GenerateElevation_` was re-reading `rConfig.seed` for its noise field, so the seed reported for a session could not reproduce it.
+
+**Review follow-ups applied:** the new elevation bound turned an existing sea-former `LowerLand` bug into a process kill (its gate was `return true` and the mutation was unclamped, unlike `RaiseLand`); the `Find` → `Get` change in `TerraformSpread` was **unreachable** and left the finding open, so the check moved to load time; and the new reverse `excludes` leg read `GetTerrainFeatures()`, which is empty until `BindImprovements` — world gen never bound its tiles, so terrain excludes were enforced in play but not during generation. One new test was hollow: no fixture terrain feature declared `excludes`, so deleting the whole reverse-terrain term left the suite green.
+
+**TODOs left rather than guessed:** the SMAC floor for sea-former land lowering; whether orographic moisture should be re-derived after landmark sculpting (doing so would re-roll the moisture tiers that landmark anchors were already chosen against).
+
+**Deferred:** save-game persistence of the resolved seed (no save system exists; writing it back through `GameSettings` would turn `seed: 0` into a fixed seed for every later game); `std::vector<Tile>` storage for `WorldMap`, which would also fix the const overload handing out mutable tiles.
+
 ---
 
 ## Cross-package dependency sketch

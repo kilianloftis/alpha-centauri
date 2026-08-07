@@ -94,8 +94,11 @@ std::vector<std::pair<int, int>> ExpandMask_(const std::vector<std::string>& rRo
     return cells;
 }
 
-void ApplyMountPlanetSculpt_(WorldMap& rWorld, int anchorX, int anchorY, int radius)
+void ApplyRadialPeakSculpt_(WorldMap& rWorld, int anchorX, int anchorY, int radius,
+                            const LandmarkSculpt_t& rSculpt)
 {
+    const float rise = static_cast<float>(rSculpt.peakElevation - rSculpt.baseElevation);
+
     for (int dy = -radius; dy <= radius; ++dy)
     {
         for (int dx = -radius; dx <= radius; ++dx)
@@ -111,12 +114,14 @@ void ApplyMountPlanetSculpt_(WorldMap& rWorld, int anchorX, int anchorY, int rad
             }
             const float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
             const float t = 1.0f - dist / static_cast<float>(radius + 1);
-            const int elev = std::min(3500, static_cast<int>(std::lround(1000.0f + t * 2500.0f)));
+            const int elev = std::min(
+                rSculpt.peakElevation,
+                static_cast<int>(std::lround(static_cast<float>(rSculpt.baseElevation) + t * rise)));
             if (pTile->GetElevation() < elev)
             {
                 pTile->SetElevation(elev);
             }
-            if (dist < 1.5f)
+            if (dist < rSculpt.rockyCoreRadius)
             {
                 pTile->SetRockiness(Rockiness_t::Rocky);
             }
@@ -172,9 +177,10 @@ bool TryStamp_(WorldMap& rWorld,
     }
 
     if (rLandmark.shape.kind == LandmarkShapeKind_t::Sculptor
-        && rLandmark.shape.sculptorId == "mount_planet")
+        && rLandmark.shape.sculptorId == k_MountPlanetSculptor)
     {
-        ApplyMountPlanetSculpt_(rWorld, anchorX, anchorY, rLandmark.shape.radius);
+        ApplyRadialPeakSculpt_(rWorld, anchorX, anchorY, rLandmark.shape.radius,
+                               rLandmark.shape.sculpt);
     }
 
     for (Tile* pTile : footprint)
@@ -201,7 +207,7 @@ std::vector<std::pair<int, int>> ExpandLandmarkShape(const LandmarkShape_t& rSha
     case LandmarkShapeKind_t::Mask:
         return ExpandMask_(rShape.maskRows);
     case LandmarkShapeKind_t::Sculptor:
-        if (rShape.sculptorId == "mount_planet")
+        if (rShape.sculptorId == k_MountPlanetSculptor)
         {
             return ExpandDisk_(rShape.radius);
         }
@@ -236,7 +242,8 @@ int PlaceLandmarks(WorldMap& rWorld,
         const std::vector<std::pair<int, int>> offsets = ExpandLandmarkShape(rLandmark.shape);
         if (offsets.empty())
         {
-            continue;
+            throw std::runtime_error("Landmark '" + rLandmark.id
+                                     + "' expands to an empty footprint and can never be placed");
         }
 
         std::vector<Tile*> candidates;

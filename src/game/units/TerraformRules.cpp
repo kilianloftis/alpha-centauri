@@ -7,6 +7,7 @@
 #include "game/faction/EconomyManager.h"
 #include "game/faction/ResearchManager.h"
 #include "game/faction/base/BaseTypes.h"
+#include "game/map/ImprovementIds.h"
 #include "game/map/MapUtils.h"
 #include "game/map/RiverGeneration.h"
 #include "game/map/TerritoryMap.h"
@@ -100,7 +101,9 @@ bool CanApplyMutation_(const Tile& rTile, const ImprovementConfig_t& rConfig, Un
             {
                 return rTile.GetElevation() >= 1000;
             }
-            return true;
+            // TODO: SMAC's floor for sea-former lowering is unknown; Planet's own floor is the
+            // only limit we can state.
+            return rTile.GetElevation() - 1000 >= k_MinElevation;
     }
     return false;
 }
@@ -115,7 +118,7 @@ int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId, const Wo
 
     for (const auto& pTile : rWorldMap.GetTiles())
     {
-        if (!pTile || !pTile->HasImprovement("Base"))
+        if (!pTile || !pTile->HasImprovement(ImprovementIds::k_Base))
         {
             continue;
         }
@@ -250,6 +253,10 @@ bool ApplyTerraformResult(Tile& rTile, const ImprovementConfig_t& rConfig,
         case TerraformResult_t::LowerLand:
         {
             if (rFormer.GetDomain() == UnitDomain_t::Land && rTile.GetElevation() < 1000)
+            {
+                return false;
+            }
+            if (rTile.GetElevation() - 1000 < k_MinElevation)
             {
                 return false;
             }

@@ -285,7 +285,7 @@ Caller contract: the faction must have been constructed against the session's `W
   - `GrowthCalculator`: Computes the nutrient threshold required for a base to grow one population. Stateful; accepts a `GrowthConfig` (loaded from `config/pop_growth.lua` via `GrowthConfigParser`) and a `LuaRuntime`. Growth/starvation decisions (stockpile ≥ required → grow; stockpile < 0 → starve) are made in the `Population` turn stage.
   - `GrowthConfigParser`: Loads `config/pop_growth.lua` and produces a `GrowthConfig` holding the `threshold_formula` Lua expression (variables: `base_size`, `growth_rating`)
   - `WorkerRoles`: Enum defining worker roles (Worker, Lab, Psych, Econ, Drone, Talent)
-  - `SecretProjectAvailabilityCalculator`: Queries all bases across all factions to determine whether a secret project building has already been completed by any faction; injected into `BuildingManager` and consulted by `GetBuildingsAvailableForConstruction`
+  - `SecretProjectAvailabilityCalculator`: Answers two distinct questions about a secret project, which used to be conflated into one. `IsUnavailable` — nobody may build it, because some faction holds it **or** the copy was destroyed (tombstoned via `GameState::MarkSecretProjectDestroyed`). `IsOwnedByAnyFaction` — some faction holds it right now, which is what a UI label, a victory check or diplomacy wants; a razed project answers `false`. Injected into `BuildingManager`; `CanAddBuilding` consults it at the point a building is granted, not only where the build menu is drawn
   - `Buildings`: Collection of building IDs in the base
   - `TileResources`: Resources (nutrients, energy, minerals) from worked tiles
   - `Position`: Map coordinates (x, y) used to calculate the workable tile radius

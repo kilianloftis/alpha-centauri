@@ -46,7 +46,12 @@
     "domain": "land",
     "max_count": 1,
     "min_spacing": 28,
-    "shape": { "kind": "sculptor", "id": "mount_planet", "radius": 4 }
+    "shape": {
+      "kind": "sculptor",
+      "id": "mount_planet",
+      "radius": 4,
+      "sculpt": { "peak_elevation": 3500, "base_elevation": 1000, "rocky_core_radius": 1.5 }
+    }
   },
   {
     "id": "SunnyMesa",

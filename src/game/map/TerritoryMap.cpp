@@ -7,6 +7,8 @@
 
 #include <limits>
 #include <queue>
+#include <stdexcept>
+#include <string>
 #include <utility>
 
 namespace ac
@@ -52,6 +54,14 @@ void ClaimFromBase_(const BaseManager& rBase, const WorldMap& rWorldMap,
     const BaseId_t baseId = rBase.GetBaseId();
     const int ox = rOrigin.GetX();
     const int oy = rOrigin.GetY();
+
+    if (ox < 0 || oy < 0 || ox >= width || oy >= height)
+    {
+        throw std::out_of_range("TerritoryMap: base " + std::to_string(baseId) + " sits at ("
+                                + std::to_string(ox) + ", " + std::to_string(oy)
+                                + "), outside the " + std::to_string(width) + "x"
+                                + std::to_string(height) + " territory grid");
+    }
 
     std::vector<uint8_t> visited(static_cast<size_t>(width) * static_cast<size_t>(height), 0);
     auto index = [width](int x, int y) {
@@ -117,7 +127,14 @@ void TerritoryMap::Rebuild(const WorldMap& rWorldMap, const std::vector<const Ba
 {
     if (!IsSized())
     {
-        return;
+        throw std::logic_error("TerritoryMap::Rebuild called before Reset");
+    }
+    if (rWorldMap.GetWidth() != m_width || rWorldMap.GetHeight() != m_height)
+    {
+        throw std::logic_error(
+            "TerritoryMap::Rebuild grid is " + std::to_string(m_width) + "x"
+            + std::to_string(m_height) + " but the world is "
+            + std::to_string(rWorldMap.GetWidth()) + "x" + std::to_string(rWorldMap.GetHeight()));
     }
 
     const size_t count = m_owners.size();

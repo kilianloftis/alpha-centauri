@@ -4,6 +4,7 @@
 #include <magic_enum.hpp>
 #include <algorithm>
 #include <cmath>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 
@@ -43,10 +44,6 @@ Tile::Tile(int x, int y)
     , m_bHasRiver(false)
     , m_bHasAquifer(false)
     , m_bHasFungus(false)
-{
-}
-
-Tile::~Tile()
 {
 }
 
@@ -94,6 +91,12 @@ Rockiness_t Tile::GetRockiness() const
 
 void Tile::SetElevation(int elevation)
 {
+    if (elevation < k_MinElevation || elevation > k_MaxElevation)
+    {
+        throw std::out_of_range("Tile elevation " + std::to_string(elevation) + " is outside ["
+                                + std::to_string(k_MinElevation) + ", "
+                                + std::to_string(k_MaxElevation) + "]");
+    }
     m_elevation = elevation;
     RefreshTerrainFeatures_();
 }

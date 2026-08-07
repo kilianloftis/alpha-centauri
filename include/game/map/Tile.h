@@ -1,6 +1,5 @@
 #pragma once
 
-#include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -50,12 +49,17 @@ std::string ToString(Moisture_t moisture);
 // cannot host kelp / sea terraform; shallower water is OceanShelf.
 inline constexpr int k_OceanShelfMinElevation = -2000;
 
+// Elevation is stored in meters and clamped to Planet's range by SetElevation. World-gen preset
+// minElevation/maxElevation must stay inside this.
+inline constexpr int k_MinElevation = -4000;
+inline constexpr int k_MaxElevation = 4000;
+
 class Tile
 {
 public:
     Tile();
     Tile(int x, int y);
-    ~Tile();
+    ~Tile() = default;
 
     int GetX() const;
     int GetY() const;
@@ -76,7 +80,7 @@ public:
     void SetRockiness(Rockiness_t rockiness);
     Rockiness_t GetRockiness() const;
 
-    void SetElevation(int elevation);  // in meters, range -4000 to 4000
+    void SetElevation(int elevation);  // in meters; throws outside [k_MinElevation, k_MaxElevation]
     int GetElevation() const;
 
     // Water threshold shared by landform rendering and territory: elevation < 0 is sea.

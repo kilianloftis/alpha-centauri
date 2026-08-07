@@ -263,7 +263,7 @@ TileEffectsContext::TileEffectsContext(WorldMap& rWorldMap, const ImprovementReg
 {
     // Mirror terrain enums/bools as ImprovementConfig_t pointers so hot-path collectors
     // (effects, move costs) never re-resolve string ids against the registry.
-    for (std::unique_ptr<Tile>& pTile : rWorldMap.GetTiles())
+    for (const std::unique_ptr<Tile>& pTile : rWorldMap.GetTiles())
     {
         pTile->BindImprovements(rImprovements);
     }

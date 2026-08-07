@@ -15,51 +15,10 @@ namespace ac
 namespace
 {
 
-// True if an existing feature on the tile lists rBonusId in its excludes list.
-bool TileExcludesBonus_(const Tile& rTile, const std::string& rBonusId)
-{
-    for (const ImprovementConfig_t* pFeature : rTile.GetImprovements())
-    {
-        if (!pFeature)
-        {
-            continue;
-        }
-        for (const std::string& rExcluded : pFeature->excludes)
-        {
-            if (rExcluded == rBonusId)
-            {
-                return true;
-            }
-        }
-    }
-    for (const ImprovementConfig_t* pFeature : rTile.GetTerrainFeatures())
-    {
-        if (!pFeature)
-        {
-            continue;
-        }
-        for (const std::string& rExcluded : pFeature->excludes)
-        {
-            if (rExcluded == rBonusId)
-            {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
 bool CanPlaceBonus_(const Tile& rTile, const ImprovementConfig_t& rBonus)
 {
-    if (!rTile.IsLand() || rTile.HasImprovement(rBonus.id))
-    {
-        return false;
-    }
-    if (!CanBuildImprovement(rTile, rBonus))
-    {
-        return false;
-    }
-    return !TileExcludesBonus_(rTile, rBonus.id);
+    return rTile.IsLand() && !rTile.HasImprovement(rBonus.id)
+           && CanBuildImprovement(rTile, rBonus);
 }
 
 const ImprovementConfig_t* PickWeightedBonus_(
