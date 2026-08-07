@@ -800,6 +800,23 @@ Package 4 owns the constructor/null-policy half of these classes (two-phase-init
 
 **Not started:** production-queue contract; ignored `precedence` key (TODO in place); `RemovePop` semantics; composition staleness; `psych_output` scope; minerals-per-row to config; untyped `BaseSnapshot_t` production id.
 
+### Package 7 — Units: movement and orders (2026-08-06)
+
+**Status:** both [H] and four of five [M] fixed; one [M] and the [L] hygiene block deferred with reasons.  
+**Prompt:** [`docs/full-review-fix-prompts/07-units-movement-and-orders.md`](full-review-fix-prompts/07-units-movement-and-orders.md)
+
+**Fixes landed:**
+- Stacking is per world, owned by `UnitPositionIndex` and enforced in `MoveUnit`, with `CanPlaceUnit` the single definition callers delegate to. It was a file-scope global consulted only by the planner, so any caller that moved without the step check could overstack, and the setting leaked between tests.
+- Hostile visibility sweeps the position index (occupied tiles only) instead of the whole map, twice per step — O(units) rather than O(tiles × units).
+- Terraform failure is reported at all three exits instead of completing silently after energy was spent; refund left as an open SMAC rule.
+- Sea-former domain rules read the `sea_terraform` config tag rather than a closed id list.
+- `EmbarkInto` enforces same-tile and `CanCarryPassenger` instead of documenting them as caller duties.
+- Conquest with a world but no `GameDataContext` throws — but only where a base is present, after a first attempt guarded every tile arrival.
+
+**Review follow-ups applied:** narrowed that over-broad conquest guard; collapsed a third copy of the placement predicate (two of which disagreed about embarked units); corrected the header's self-contradicting claims and `map-system.md`'s account of a `TryMoveUnit` API that no longer exists; added tests for the embarked exemption (load-bearing and previously unpinned) and `EmbarkInto`'s throws.
+
+**Deferred:** `NextStep`'s full Dijkstra per move fragment (wants a benchmark, sequenced with package 10); the `[L]` hygiene block (batched into package 16); and the *shape* of the `GameDataContext` dependency — removing `SetGameDataContext` needs the `GameState` god-facade split. Note the stacking rule ships off, so its new throw is not reachable in a real session today.
+
 ---
 
 ## Cross-package dependency sketch

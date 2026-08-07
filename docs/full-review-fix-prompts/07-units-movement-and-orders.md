@@ -21,7 +21,21 @@ which is why `UnitPositionTests` needed an RAII guard.
 The rule now lives on `UnitPositionIndex`, beside the occupancy it constrains, and is enforced
 in `MoveUnit` itself — the same mutation boundary that updates occupancy. Embarked passengers
 are exempt: they ride with their carrier and are not independent occupants. The test guard is
-gone; a test sets the rule on its own fixture's index.
+gone; a test sets the rule on its own fixture's index. `UnitPositionIndex::CanPlaceUnit` is the
+single definition of the predicate, which `MovementRules::CanPlaceUnitOnTile` delegates to —
+those two previously disagreed about whether an embarked unit counts as an occupant.
+
+**Not fully closed, deliberately:** `MoveUnit` is not the only way occupancy changes.
+`Register_` (unit creation — the caller checks, the index does not) and `Unit::Disembark` (an
+embarked unit becoming an independent occupant on a tile that already holds its carrier) both
+bypass the rule. So a new *move* cannot create a violation, but unloading a full transport in
+place can leave one standing. Closing it needs a decision about what unloading onto a full tile
+should *do* — refuse? bounce the passenger? — which is a game rule this codebase does not have,
+not a refactor. Recorded on `UnitPositionIndex`'s class comment.
+
+Note the rule ships **off** (`m_bSingleUnitPerTile` defaults false) and nothing in `src/` or
+`config/` enables it, so the new throw is currently unreachable in a real session. It is a
+structural fix, not a live bug fix.
 
 ### [H] Stop scanning the whole map for hostiles on every step — FIXED
 
@@ -62,17 +76,31 @@ the tag but a new id was treated as land-only. Now driven by the tag.
 which `MoveUnit` would still tow. It now enforces same-tile and `CanCarryPassenger` (which
 covers capacity, domain, faction, and carrier-is-not-itself-cargo), plus a self-carry guard.
 
-### [M] Conquest depends on a post-ctor nullable `GameDataContext` — FIXED
+### [M] Conquest depends on a post-ctor nullable `GameDataContext` — PARTIALLY FIXED
 
 With `m_pWorld` bound but `m_pGameData` unset, `ApplyArrivalEffects_` and post-combat conquest
-silently returned: no capture, no native raid, no diagnostic. No world at all remains a
-legitimate mode (movement-only harnesses); a world *without* game data is a wiring error and now
-throws saying so.
+silently returned: no capture, no native raid, no diagnostic. That silence is gone — both paths
+now throw, but only where a conquest is actually possible (a base is present on the tile). A
+first attempt guarded unconditionally, which turned every step onto ordinary ground into a hard
+error for a world that had not been handed its data; that was worse than the defect.
+
+**The finding's actual title is untouched:** `SetGameDataContext` and the nullable `m_pGameData`
+remain. Constructor injection is the right end state (`.devin/rules/coding-guidelines.md`:
+constructors produce valid objects) but is not available today — `GameState` constructs
+`UnitOrderExecutor` in its own constructor, passing itself as the world, and `GameState` has no
+`GameDataContext` at that point; `Engine` supplies it afterwards. Removing the setter means
+restructuring who owns the executor, which belongs with the deferred `GameState` god-facade
+split rather than here.
 
 ---
 
 ## Deferred
 
+- **[L] Hygiene block of the units model/orders section.** Not started, and not covered by the
+  fixes above: `MoveCostCalculator`'s `k_RoadId` magic id and its braceless `if`,
+  `StepEvaluator`'s `HasImprovement("Base")` literal, `TerraformRules`' magic 1000/3500
+  elevation bands, `UnitComponentConfigParser`'s weak field access. Pure hygiene, no behaviour
+  change; batched with package 16's codebase-wide sweep so the whole directory moves at once.
 - **[M] `NextStep` always runs a full Dijkstra.** `Pathfinder::NextStep` calls `FindPath` and
   returns `tiles.front()`, so every move fragment pays a full O(tiles log tiles) search plus two
   `tileCount`-sized vectors. The fix (early-exit Dijkstra that stops once the first step off the

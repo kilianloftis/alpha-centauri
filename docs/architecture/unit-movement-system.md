@@ -9,7 +9,7 @@ executor and pathfinder only consume its output and never inspect tile features 
 ```mermaid
 graph TD
     subgraph Rules
-        MovementRules[MovementRules<br/>terrain / unaided / CanEnterTile,<br/>ZOC, friendly occupant / base, stacking]
+        MovementRules[MovementRules<br/>terrain / unaided / CanEnterTile,<br/>ZOC, friendly occupant / base]
         TransportRules[TransportRules<br/>cargo domains / capacity / load sites,<br/>boarding, CanUnloadTo]
         MoveCostCalculator[MoveCostCalculator<br/>tile costs + fungus entry rules]
         EntryTerms[EntryTerms_t<br/>costFragments,<br/>bRequiresFullCost, bEndsTurn]
