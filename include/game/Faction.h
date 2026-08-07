@@ -7,7 +7,7 @@
 
 #include "game/IEffectsProvider.h"
 #include "game/IWorldEffectsSource.h"
-#include "game/buildings/BuildingConfigParser.h"
+#include "game/buildings/BuildingConfig.h"
 #include "game/faction/base/BaseTypes.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/FactionConfig.h"

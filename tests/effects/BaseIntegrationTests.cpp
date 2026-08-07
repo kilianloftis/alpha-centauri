@@ -6,7 +6,7 @@
 
 #include "game/GameSettings.h"
 #include "game/GameState.h"
-#include "game/buildings/BuildingConfigParser.h"
+#include "game/buildings/BuildingConfig.h"
 #include "game/faction/DiplomacyLedger.h"
 #include "game/faction/ResearchManager.h"
 #include "game/faction/base/population/PopulationManager.h"

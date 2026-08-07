@@ -56,10 +56,7 @@ int CountFactionOrbitalBuildings(const GameState& rGameState,
         throw std::runtime_error("CountFactionOrbitalBuildings: unknown faction id "
                                  + std::to_string(factionId));
     }
-    // Answered from the same tally BuildOrbitalCensus uses, so the two cannot disagree. They
-    // were separate walks — one counting `orbital` instances per base, the other checking the
-    // config then calling CountBuildings — which is two definitions of one number, free to
-    // drift the moment either changes.
+    // Same tally BuildOrbitalCensus uses, so the two cannot disagree.
     const std::unordered_map<BuildingId_t, int> counts = TallyOrbitalBuildings_(*pFaction);
     const auto it = counts.find(buildingId);
     // Owned nowhere, or owned but not orbital — both are genuinely zero, not a lookup failure.

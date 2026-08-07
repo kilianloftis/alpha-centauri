@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/buildings/BuildingConfigParser.h"
+#include "game/buildings/BuildingConfig.h"
 #include "lib/Revision.h"
 #include "game/effects/ActiveEffect.h"
 #include <string>
@@ -27,14 +27,20 @@ public:
                     const ResearchManager& rResearchManager);
     ~BuildingManager();
 
-    // Add a building by id. Throws if the factory cannot find the id.
+    // Whether buildingId may be added here: unknown ids and duplicates of a non-allowMultiple
+    // building are rejected, as is a secret project already built or destroyed anywhere in the
+    // world. Throws only if the id is unknown, or a secret project is queried without a
+    // SecretProjectAvailabilityCalculator.
+    bool CanAddBuilding(const BuildingId_t& buildingId) const;
+
+    // Add a building by id. Throws unless CanAddBuilding holds — callers that can legitimately
+    // lose a race (production completion) must check first.
     void AddBuilding(const BuildingId_t& buildingId);
 
     // Destroy the first building with the given id. No-op if not present.
     void DestroyBuilding(const BuildingId_t& buildingId);
 
-    // Whether this base currently holds at least one copy. Callers that must not report success
-    // for a no-op destroy (probe sabotage) check this first.
+    // Whether this base currently holds at least one copy.
     bool HasBuilding(const BuildingId_t& buildingId) const;
 
     // All currently constructed buildings.

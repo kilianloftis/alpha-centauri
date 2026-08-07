@@ -24,9 +24,8 @@ std::vector<BuildingConfig_t> BuildingConfigParser::ParseConfig(const std::strin
 namespace
 {
 
-// json::value() silently substitutes the default for a key of the wrong shape, so
-// "allow_multiple": "yes" or "mineral_cost": "40" parses as false / 0 and the modder is told
-// nothing. Check the type when the key is present, and name the building in the message.
+// Type-checks a present key and names the building in the failure, which nlohmann's own
+// type_error does not. An absent or null key takes defaultValue.
 template<typename T>
 T ParseTyped_(const nlohmann::json& rJson, const char* pKey, const BuildingId_t& rBuildingId,
               T defaultValue, bool (nlohmann::json::*pIsRightType)() const,
@@ -45,8 +44,6 @@ T ParseTyped_(const nlohmann::json& rJson, const char* pKey, const BuildingId_t&
     return rValue.get<T>();
 }
 
-// Keys the parser understands. A typo'd key would otherwise be accepted and ignored, so the
-// modder's setting silently never applies.
 const std::vector<std::string>& KnownBuildingKeys_()
 {
     static const std::vector<std::string> keys = {
@@ -73,10 +70,7 @@ BuildingConfig_t BuildingConfigParser::ParseBuildingConfig(const nlohmann::json&
         }
     }
 
-    // Optional. It is required by no rule and read by no code today — making it mandatory
-    // forced every modded building to supply a value that does nothing. Kept (rather than
-    // deleted) because config/buildings.json ships it on every entry and the build menu is the
-    // obvious future consumer; when something reads it, tighten this back up.
+    // Optional: nothing reads category yet. Tighten to required when something does.
     if (buildingJson.contains("category") && !buildingJson.at("category").is_null())
     {
         config.category = ParseGameCategoryField(buildingJson);

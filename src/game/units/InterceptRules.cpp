@@ -227,13 +227,27 @@ void MaybeDestroyInterceptSourceOnFail_(GameState& rGameState, Faction& rDefFact
                 "MaybeDestroyInterceptSourceOnFail_: faction owns no base holding building '"
                 + rCandidate.sourceId + "'");
         }
-        // Read the config before the copy is gone.
-        const BuildingConfig_t* pConfig =
-            rDefFaction.FindOwnedBuildingConfig(rCandidate.sourceId);
+        // Read the config off the base being mutated: a faction-wide lookup could return a live
+        // copy in another base and tombstone a project that was never destroyed.
+        const BuildingConfig_t* pConfig = nullptr;
+        for (const BuildingConfig_t* pHeld : pBase->GetBuildingManager().GetBuildings())
+        {
+            if (pHeld && pHeld->id == rCandidate.sourceId)
+            {
+                pConfig = pHeld;
+                break;
+            }
+        }
+        if (!pConfig)
+        {
+            throw std::logic_error(
+                "MaybeDestroyInterceptSourceOnFail_: base does not hold intercept source '"
+                + rCandidate.sourceId + "'");
+        }
+        const bool bSecretProject = pConfig->bIsSecretProject;
         pBase->GetBuildingManager().DestroyBuilding(rCandidate.sourceId);
         rDefFaction.NotifyBuildingDestroyed(pBase->GetBaseId(), rCandidate.sourceId);
-        // Same tombstone rule as raze and ASAT: a destroyed secret project stays destroyed.
-        if (pConfig && pConfig->bIsSecretProject)
+        if (bSecretProject)
         {
             rGameState.MarkSecretProjectDestroyed(rCandidate.sourceId);
         }

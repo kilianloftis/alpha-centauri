@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/buildings/BuildingConfigParser.h"
+#include "game/buildings/BuildingConfig.h"
 #include "game/research/TechConfigParser.h"
 #include "game/units/ProbeRules.h"
 

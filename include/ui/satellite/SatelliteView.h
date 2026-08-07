@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/buildings/BuildingConfigParser.h"
+#include "game/buildings/BuildingConfig.h"
 #include "game/faction/base/BaseTypes.h"
 #include "ui/IGameView.h"
 

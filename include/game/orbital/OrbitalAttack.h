@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/buildings/BuildingConfigParser.h"
+#include "game/buildings/BuildingConfig.h"
 
 #include <random>
 #include <vector>

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "game/IConstructable.h"
-#include "game/buildings/BuildingConfigParser.h"
+#include "game/buildings/BuildingConfig.h"
 #include "game/faction/base/BaseTypes.h"
 #include "game/faction/base/HomeBaseIndex.h"
 #include "game/map/WorkedTileIndex.h"

@@ -3,7 +3,7 @@
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
-#include "game/buildings/BuildingConfigParser.h"
+#include "game/buildings/BuildingConfig.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/InfiltrationRules.h"
 #include "game/faction/DiplomacyLedger.h"
@@ -109,13 +109,21 @@ bool ApplyDrainEnergy_(Unit& rProbe, BaseManager& rBase, GameState& rGameState,
 void DestroyBuildingAndNotify_(GameState& rGameState, BaseManager& rBase,
                                const BuildingId_t& rBuildingId)
 {
-    // Read the config before the copy is gone.
-    const BuildingConfig_t* pConfig = rBase.GetFaction().FindOwnedBuildingConfig(rBuildingId);
+    bool bSecretProject = false;
+    for (const BuildingConfig_t* pHeld : rBase.GetBuildingManager().GetBuildings())
+    {
+        if (pHeld && pHeld->id == rBuildingId)
+        {
+            bSecretProject = pHeld->bIsSecretProject;
+            break;
+        }
+    }
     rBase.GetBuildingManager().DestroyBuilding(rBuildingId);
     rBase.GetFaction().NotifyBuildingDestroyed(rBase.GetBaseId(), rBuildingId);
-    // Same tombstone rule as raze, ASAT and intercept: a sabotaged secret project stays gone
-    // rather than becoming buildable again.
-    if (pConfig && pConfig->bIsSecretProject)
+    // TODO: a sabotaged secret project is tombstoned, so one probe mission removes it from the
+    // world permanently for every faction. That is consistent with raze/ASAT/intercept but the
+    // SMAC rule for sabotage specifically is not recorded here.
+    if (bSecretProject)
     {
         rGameState.MarkSecretProjectDestroyed(rBuildingId);
     }

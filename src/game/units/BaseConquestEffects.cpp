@@ -3,7 +3,7 @@
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
-#include "game/buildings/BuildingConfigParser.h"
+#include "game/buildings/BuildingConfig.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include "game/faction/Military.h"

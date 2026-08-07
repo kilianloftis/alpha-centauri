@@ -38,15 +38,18 @@ void DestroyOneBuilding_(GameState& rGameState, Faction& rOwner, const BuildingI
                                + buildingId + "'");
     }
     const BaseId_t baseId = pBase->GetBaseId();
-    // Read the config before the copy is gone.
-    const BuildingConfig_t* pConfig = rOwner.FindOwnedBuildingConfig(buildingId);
+    bool bSecretProject = false;
+    for (const BuildingConfig_t* pHeld : pBase->GetBuildingManager().GetBuildings())
+    {
+        if (pHeld && pHeld->id == buildingId)
+        {
+            bSecretProject = pHeld->bIsSecretProject;
+            break;
+        }
+    }
     pBase->GetBuildingManager().DestroyBuilding(buildingId);
     rOwner.NotifyBuildingDestroyed(baseId, buildingId);
-    // One tombstone rule for every destruction path. Stock orbitals are not secret projects,
-    // but a modded orbital + secret_project building destroyed here would otherwise become
-    // buildable again — unlike the same building razed with its base, which BaseConquestEffects
-    // tombstones.
-    if (pConfig && pConfig->bIsSecretProject)
+    if (bSecretProject)
     {
         rGameState.MarkSecretProjectDestroyed(buildingId);
     }

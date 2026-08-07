@@ -7,9 +7,7 @@
 #include <string>
 #include <vector>
 
-// Data only. Deliberately separate from BuildingConfigParser.h so that including a building
-// config does not drag in <nlohmann/json.hpp> — this type is reached from BaseManager,
-// BuildingManager, the orbital census, probe effects and the UI, none of which parse JSON.
+// Data only, separate from BuildingConfigParser.h so consumers do not pull <nlohmann/json.hpp>.
 
 namespace ac
 {
@@ -20,8 +18,6 @@ struct BuildingConfig_t : public IConstructable
 {
     BuildingId_t id;
     std::string name;
-    // Every member has a default: a parser that forgets a field, or a struct built by hand in a
-    // test, must not start from indeterminate values.
     GameCategory_t category = GameCategory_t::Build;
     int mineralCost = 0;
     std::string requiredTech;  // empty if none — same convention as SocialPolicyConfig_t, etc.

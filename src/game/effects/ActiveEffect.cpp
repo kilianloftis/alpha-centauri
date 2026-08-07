@@ -3,7 +3,7 @@
 #include "game/IEffectsProvider.h"
 #include "game/Faction.h"
 #include "game/GameState.h"
-#include "game/buildings/BuildingConfigParser.h"
+#include "game/buildings/BuildingConfig.h"
 #include "game/effects/InfiltrationRules.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/faction/SocialEngineeringManager.h"
@@ -482,7 +482,11 @@ void DispatchInstantaneousEffects(const BuildingConfig_t& rBuilding, BaseManager
 
         if (const GrantBuildingEffect_t* pGrant = std::get_if<GrantBuildingEffect_t>(&effect.effect))
         {
-            rBase.GetBuildingManager().AddBuilding(pGrant->buildingId);
+            // A grant whose target the base already holds is an ordinary outcome, not an error.
+            if (rBase.GetBuildingManager().CanAddBuilding(pGrant->buildingId))
+            {
+                rBase.GetBuildingManager().AddBuilding(pGrant->buildingId);
+            }
         }
         else if (std::get_if<GrantTechEffect_t>(&effect.effect))
         {

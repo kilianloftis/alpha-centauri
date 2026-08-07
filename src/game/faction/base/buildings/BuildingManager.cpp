@@ -26,38 +26,36 @@ void BuildingManager::RebindResearch(const ResearchManager& rResearch)
     m_pResearch = &rResearch;
 }
 
-void BuildingManager::AddBuilding(const BuildingId_t& buildingId)
+bool BuildingManager::CanAddBuilding(const BuildingId_t& buildingId) const
 {
     const BuildingConfig_t& rConfig = m_rRegistry.Get(buildingId);
-
-    // Enforced here, at the single mutation point, rather than only where the build menu is
-    // generated. Filtering the menu does not stop two bases that both had a project listed when
-    // they queued it from both completing it — same faction, or two factions in one
-    // BaseProduction pass — which silently broke "only one faction in the world may own this"
-    // (config/buildings/README.md). ProductionManager -> OnProductionCompleted -> here is the
-    // path that actually grants a building, and it checked nothing.
     if (!rConfig.allowMultiple && DoesBuildingExist_(buildingId))
     {
-        throw std::runtime_error("BuildingManager::AddBuilding: '" + buildingId
-                                 + "' is already present in this base and is not allowMultiple");
+        return false;
     }
     if (rConfig.bIsSecretProject)
     {
         if (!m_pSecretProjectCalculator)
         {
             throw std::runtime_error(
-                "BuildingManager::AddBuilding: '" + buildingId + "' is a secret project, but "
+                "BuildingManager::CanAddBuilding: '" + buildingId + "' is a secret project, but "
                 "this base has no SecretProjectAvailabilityCalculator to check uniqueness");
         }
-        if (m_pSecretProjectCalculator->IsUnavailable(buildingId))
-        {
-            throw std::runtime_error("BuildingManager::AddBuilding: secret project '" + buildingId
-                                     + "' is already built or was destroyed; it cannot be built "
-                                       "again");
-        }
+        return !m_pSecretProjectCalculator->IsUnavailable(buildingId);
     }
+    return true;
+}
 
-    m_buildings.push_back(&rConfig);
+void BuildingManager::AddBuilding(const BuildingId_t& buildingId)
+{
+    if (!CanAddBuilding(buildingId))
+    {
+        throw std::runtime_error(
+            "BuildingManager::AddBuilding: '" + buildingId + "' cannot be added to this base "
+            "(already present and not allowMultiple, or a secret project that is built or "
+            "destroyed). Callers that can lose a race must ask CanAddBuilding first.");
+    }
+    m_buildings.push_back(&m_rRegistry.Get(buildingId));
     m_revision.Bump();
 }
 

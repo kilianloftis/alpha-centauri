@@ -1,7 +1,7 @@
 #include "game/EffectReferenceValidator.h"
 
 #include "game/GameDataContext.h"
-#include "game/buildings/BuildingConfigParser.h"
+#include "game/buildings/BuildingConfig.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"

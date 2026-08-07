@@ -11,11 +11,13 @@
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/buildings/BuildingManager.h"
+#include "game/faction/base/production/ProductionManager.h"
 #include "game/map/WorldMap.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
+#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <stdexcept>
@@ -27,13 +29,15 @@ using namespace actest;
 namespace
 {
 
+// Written outside the source tree: a fixture-directory temp file dirties git on every run and
+// risks contaminating anything that loads that directory wholesale.
 std::string WriteTempBuildings_(const std::string& rContents)
 {
-    const std::string path =
-        std::string(AC_TEST_FIXTURES_DIR) + "/building_parser_test_config.json";
+    const std::filesystem::path path =
+        std::filesystem::temp_directory_path() / "ac_building_parser_test.json";
     std::ofstream out(path);
     out << rContents;
-    return path;
+    return path.string();
 }
 
 
@@ -150,6 +154,29 @@ TEST_CASE("A destroyed secret project stays unavailable but is owned by nobody",
     BaseManager& aiBase = game.MakeBase(*game.pAi, 6, 6);
     CHECK_THROWS_AS(aiBase.GetBuildingManager().AddBuilding("test_secret_project"),
                     std::runtime_error);
+}
+
+TEST_CASE("Losing a secret-project race drops the item instead of killing the turn",
+          "[building][secret-project][production]")
+{
+    // The player can queue the same project in two of their own bases — both are offered it,
+    // and nothing revokes an already-queued item when one completes. Completing the second must
+    // not throw: nothing catches between here and main().
+    BuildingGame_ game;
+    BaseManager& winner = game.MakeBase(*game.pPlayer, 2, 2);
+    BaseManager& loser = game.MakeBase(*game.pPlayer, 6, 2);
+
+    winner.GetBuildingManager().AddBuilding("test_secret_project");
+    REQUIRE_FALSE(loser.GetBuildingManager().CanAddBuilding("test_secret_project"));
+
+    const BuildingConfig_t& rProject =
+        game.fixtures.dataContext.buildingRegistry->Get("test_secret_project");
+    loser.GetProduction().SetProduction(&rProject);
+    loser.GetProduction().SetMineralStockpile(10000); // far past any cost, so it completes now
+
+    CHECK_NOTHROW(loser.ApplyProduction());
+    CHECK(game.pPlayer->CountBuildings("test_secret_project") == 1);
+    CHECK_FALSE(loser.GetBuildingManager().HasBuilding("test_secret_project"));
 }
 
 TEST_CASE("The building parser rejects rather than silently defaulting", "[building][config]")
