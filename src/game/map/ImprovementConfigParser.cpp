@@ -260,6 +260,11 @@ ImprovementConfig_t ImprovementConfigParser::ParseImprovementConfig(const nlohma
     }
     config.turnsRequired = improvementJson.value("turns_required", 0);
     config.energyCost = improvementJson.value("energy_cost", 0);
+    if (config.energyCost < 0)
+    {
+        throw std::runtime_error("Improvement '" + config.id
+                                 + "': 'energy_cost' must be >= 0");
+    }
     config.requiredTech = ConfigFields::ParseRequiredTech(improvementJson);
     config.ownedByTerritory = improvementJson.value("owned_by_territory", false);
     config.frequency = improvementJson.value("frequency", 0);

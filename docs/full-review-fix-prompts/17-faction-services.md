@@ -167,3 +167,49 @@ real answer, but there is no AI diplomacy driving this yet and the queue's seman
 expiry, who may accept) are game rules that are not written down anywhere — inventing them here
 would be making up mechanics. Refusing to lose a proposal is the part that is unambiguously
 correct today.
+
+## Review follow-ups applied
+
+The multi-agent review of A+B+C could not run (it hit the account's monthly spend limit and
+returned nothing). I reviewed the three commits myself against the failure modes that have bitten
+this project repeatedly. One real finding, and several suspicions run down to nothing.
+
+**`energy_cost` was never validated non-negative — and commit A turned that into a crash.**
+`ImprovementConfigParser` accepted `"energy_cost": -5` verbatim. Before this package the terraform
+path did `GetEnergy() >= -5` (always true) and then `AddEnergy(-(-5))`, so a negative cost was an
+improvement that *paid* the player to build it — a silent config bug. Commit A routed that check
+through `CanAfford`, which treats a negative cost as a caller bug and throws, so the same config
+now crashes mid-order. That is exactly the "made something throw without tracing where the throw
+lands" shape. Fixed at the source: the parser rejects a negative `energy_cost` at load, naming the
+improvement, matching how `GrantEnergy` already rejects negative amounts. Two tests added, both
+revert-verified.
+
+**Run down and found sound:**
+- Every remaining `AddEnergy` call is genuine income (probe steal credit, faction turn income, the
+  receiving half of a trade, a council grant). `GrantEnergyEffect_t` is parse-validated `>= 0`, so
+  a council grant cannot be a spend in disguise.
+- `StealEnergyAmount_` clamps to the target's treasury read in the same call, with no mutation in
+  between, so the `SpendEnergy` it feeds cannot overdraw. Integer overflow in `energy * pop` would
+  produce a negative `share`, which both `max(0, ...)` terms drive to zero — still not an
+  overdraw.
+- `ProbeActionExecutor` returns early on a non-positive cost before reaching `CanAfford`, so probe
+  actions cannot hit the negative-cost throw.
+- Both `social_policies.json` files (shipped and fixture) carry the new `default` flag, and those
+  are the only two files any `SocialPolicyRegistry::Load` call site reads.
+- The rating memo's key is complete: only the constructor and `SetActivePolicy` write
+  `m_activePolicies`, and the latter bumps the revision. The constructor does not, but
+  `m_cachedRatingsRevision` starts at `UINT64_MAX`, so the first query cannot read an empty cache.
+- `visionRadius` is derived in exactly one place. No production path builds an
+  `ImprovementConfig_t` by hand; the two that do are tests unrelated to vision, where the `0`
+  default is correct.
+- `VisibilityRebuildScope` nests correctly through `DestroyUnit`'s self-recursion (each level
+  holds its own scope; the outermost rebuilds once), and a rebuild requested from the
+  first-contact handler during the final rebuild runs immediately rather than being lost — the
+  dirty flag is cleared before the rebuild and the depth is already zero.
+- Adding `DiplomaticProposeResult::Busy` breaks no switch: nothing outside the executor consumes
+  that enum yet.
+
+**Known and deliberate:** the scope's destructor performs the deferred rebuild, so anything that
+rebuild throws terminates. `RebuildFromSources`'s new throw is unreachable (the constructor sizes
+the map from a reference member), and swallowing in the destructor would leave a faction rendering
+stale vision with no diagnostic. Noted at the destructor rather than papered over.

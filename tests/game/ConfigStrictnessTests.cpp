@@ -1,5 +1,6 @@
 #include "TempConfigFile.h"
 
+#include "game/map/ImprovementRegistry.h"
 #include "game/population/pop-types/GrowthConfigParser.h"
 #include "game/population/pop-types/PopCompositionConfigParser.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
@@ -290,4 +291,50 @@ TEST_CASE("Pop types validate their references to other pop types", "[config][po
         ])");
         CHECK_NOTHROW(registry.Load(config.Path()));
     }
+}
+
+TEST_CASE("A negative improvement energy cost is rejected, by name", "[config][improvement]")
+{
+    // A terraform order spends this through EconomyManager::CanAfford, which treats a negative
+    // cost as a caller bug and throws. Before the treasury owned that rule, a negative cost was
+    // an improvement that paid the player to build it. Either way the config is wrong, and it
+    // should fail at load naming the improvement rather than mid-order.
+    TempConfigFile config("ac_improvement_negative_cost.json", R"([
+        { "id": "cheap_farm", "name": "Cheap Farm", "turns_required": 2, "energy_cost": -5 }
+    ])");
+
+    ImprovementRegistry registry;
+    CHECK_THROWS_WITH(registry.Load(config.Path()),
+                      Catch::Matchers::ContainsSubstring("cheap_farm")
+                          && Catch::Matchers::ContainsSubstring("energy_cost"));
+}
+
+TEST_CASE("An improvement's vision radius comes from its own Vision modifiers",
+          "[config][improvement]")
+{
+    // Resolved once at load; the visibility rebuild reads the field rather than re-resolving
+    // the effect per tile per rebuild.
+    TempConfigFile config("ac_improvement_vision.json", R"([
+        { "id": "watchtower", "name": "Watchtower", "effects": [
+            { "type": "StatModifier", "scope": "ThisTile",
+              "parameters": { "stat": "vision", "amount": 3, "op": "Add" } }
+        ]},
+        { "id": "plain_farm", "name": "Plain Farm", "effects": [
+            { "type": "StatModifier", "scope": "AllOwnerBases",
+              "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" } }
+        ]},
+        { "id": "aura_only", "name": "Aura Only", "effects": [
+            { "type": "StatModifier", "scope": "FactionGlobal",
+              "parameters": { "stat": "vision", "amount": 4, "op": "Add" } }
+        ]}
+    ])");
+
+    ImprovementRegistry registry;
+    registry.Load(config.Path());
+
+    CHECK(registry.Get("watchtower").visionRadius == 3);
+    CHECK(registry.Get("plain_farm").visionRadius == 0);
+    // Sight comes from ThisTile only: a faction-wide Vision modifier is a different axis and
+    // must not turn every copy of the improvement into a watchtower.
+    CHECK(registry.Get("aura_only").visionRadius == 0);
 }

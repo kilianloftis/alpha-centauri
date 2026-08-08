@@ -719,6 +719,10 @@ Faction::VisibilityRebuildScope::VisibilityRebuildScope(VisibilityRebuildScope&&
 
 Faction::VisibilityRebuildScope::~VisibilityRebuildScope()
 {
+    // The deferred rebuild runs here, so anything it can throw terminates. RebuildFromSources
+    // throws only on an unsized map, which Faction's constructor makes unreachable; the
+    // first-contact handler does not throw. Left to propagate deliberately: swallowing here
+    // would leave the faction rendering stale vision with no diagnostic.
     if (!m_pFaction)
     {
         return;
