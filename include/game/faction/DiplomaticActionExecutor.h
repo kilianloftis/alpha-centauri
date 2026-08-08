@@ -31,6 +31,14 @@ public:
     const std::optional<DiplomaticProposal_t>& GetPendingProposal() const { return m_pending; }
 
 private:
+    // What one side of a proposal costs its giver in total. Per-item validation against the
+    // full treasury lets two items each worth the whole balance both pass.
+    struct GiverCost_t
+    {
+        int credits = 0;
+        std::vector<BaseId_t> baseIds;
+    };
+
     bool Validate_(GameState& rState, const DiplomaticProposal_t& rProposal) const;
     bool ValidateItems_(GameState& rState,
                         FactionId_t giverId,
@@ -40,6 +48,11 @@ private:
                        FactionId_t giverId,
                        FactionId_t receiverId,
                        const TradeItem_t& rItem) const;
+    // Aggregate check over one giver's whole side: total credits against the treasury, and no
+    // base offered twice.
+    bool ValidateGiverTotals_(GameState& rState,
+                              FactionId_t giverId,
+                              const std::vector<TradeItem_t>& rItems) const;
     bool EvaluateResponse_(GameState& rState, FactionId_t recipientId) const;
     void Apply_(GameState& rState, const DiplomaticProposal_t& rProposal);
     void ApplyItems_(GameState& rState,

@@ -1,6 +1,7 @@
 #include "game/faction/EconomyManager.h"
 
 #include <stdexcept>
+#include <string>
 
 namespace ac
 {
@@ -17,6 +18,26 @@ void EconomyManager::AddEnergy(int amount)
 int EconomyManager::GetEnergy() const
 {
     return m_energy;
+}
+
+bool EconomyManager::CanAfford(int cost) const
+{
+    if (cost < 0)
+    {
+        throw std::invalid_argument("EconomyManager::CanAfford: negative cost "
+                                    + std::to_string(cost));
+    }
+    return m_energy >= cost;
+}
+
+void EconomyManager::SpendEnergy(int cost)
+{
+    if (!CanAfford(cost))
+    {
+        throw std::runtime_error("EconomyManager::SpendEnergy: cost " + std::to_string(cost)
+                                 + " exceeds treasury " + std::to_string(m_energy));
+    }
+    m_energy -= cost;
 }
 
 void EconomyManager::SetEnergyAllocation(const EnergyAllocation_t& allocation)

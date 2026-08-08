@@ -7,6 +7,7 @@
 #include "game/faction/EconomyManager.h"
 #include "game/faction/ResearchManager.h"
 #include "game/faction/TradeItem.h"
+#include "game/faction/base/BaseManager.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/production/ProductionManager.h"
@@ -14,6 +15,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <memory>
+#include <stdexcept>
 
 using namespace ac;
 using namespace actest;
@@ -255,4 +257,100 @@ TEST_CASE("Base transfer changes ownership", "[diplomacy][executor]")
     REQUIRE(rTransferred.GetProduction().GetCurrentProduction() != nullptr);
     CHECK(rTransferred.GetProduction().GetCurrentProduction()->GetId() == "farm_booster");
     CHECK(rTransferred.GetProduction().GetMineralStockpile() == 9);
+}
+
+TEST_CASE("A proposal is validated against its aggregate cost, not per item",
+          "[diplomacy][executor]")
+{
+    // Each TradeCredits_t was checked against the giver's *full* treasury independently, so two
+    // items each worth most of the balance both validated and both applied — ending the trade
+    // with a negative treasury and no error anywhere.
+    DiplomacyGame_ game;
+    game.pPlayer->GetEconomy().AddEnergy(60);
+
+    DiplomaticProposal_t proposal;
+    proposal.proposer = game.pPlayer->GetFactionId();
+    proposal.recipient = game.pAi->GetFactionId();
+    proposal.give.push_back(TradeCredits_t{50});
+    proposal.give.push_back(TradeCredits_t{50});
+
+    CHECK(game.pState->GetDiplomaticActionExecutor().Propose(*game.pState, proposal)
+          == DiplomaticProposeResult::Invalid);
+    CHECK(game.pPlayer->GetEconomy().GetEnergy() == 60);
+    CHECK(game.pAi->GetEconomy().GetEnergy() == 0);
+}
+
+TEST_CASE("Two affordable credit items in one proposal still go through",
+          "[diplomacy][executor]")
+{
+    DiplomacyGame_ game;
+    game.pPlayer->GetEconomy().AddEnergy(60);
+
+    DiplomaticProposal_t proposal;
+    proposal.proposer = game.pPlayer->GetFactionId();
+    proposal.recipient = game.pAi->GetFactionId();
+    proposal.give.push_back(TradeCredits_t{20});
+    proposal.give.push_back(TradeCredits_t{30});
+
+    CHECK(game.pState->GetDiplomaticActionExecutor().Propose(*game.pState, proposal)
+          == DiplomaticProposeResult::Accepted);
+    CHECK(game.pPlayer->GetEconomy().GetEnergy() == 10);
+    CHECK(game.pAi->GetEconomy().GetEnergy() == 50);
+}
+
+TEST_CASE("Each side of a proposal is costed against its own giver", "[diplomacy][executor]")
+{
+    // give and demand run in opposite directions; the aggregate must not be charged to one side.
+    DiplomacyGame_ game;
+    game.pPlayer->GetEconomy().AddEnergy(30);
+    game.pAi->GetEconomy().AddEnergy(30);
+
+    DiplomaticProposal_t proposal;
+    proposal.proposer = game.pPlayer->GetFactionId();
+    proposal.recipient = game.pAi->GetFactionId();
+    proposal.give.push_back(TradeCredits_t{25});
+    proposal.demand.push_back(TradeCredits_t{25});
+
+    CHECK(game.pState->GetDiplomaticActionExecutor().Propose(*game.pState, proposal)
+          == DiplomaticProposeResult::Accepted);
+    CHECK(game.pPlayer->GetEconomy().GetEnergy() == 30);
+    CHECK(game.pAi->GetEconomy().GetEnergy() == 30);
+}
+
+TEST_CASE("The same base cannot be offered twice in one proposal", "[diplomacy][executor]")
+{
+    DiplomacyGame_ game;
+    game.pState->GetDiplomacyLedger().SetStatus(
+        game.pPlayer->GetFactionId(), game.pAi->GetFactionId(), DiplomaticStatus::Pact);
+    BaseManager* pBase = game.pPlayer->CreateBase(
+        game.pState->AllocateBaseId(), "Gift", game.pState->GetWorldMap().GetTile(2, 2),
+        game.fixtures.dataContext, game.pState->GetTileEffects(),
+        game.pState->GetSecretProjectAvailability());
+    REQUIRE(pBase);
+
+    DiplomaticProposal_t proposal;
+    proposal.proposer = game.pPlayer->GetFactionId();
+    proposal.recipient = game.pAi->GetFactionId();
+    proposal.give.push_back(TradeBase_t{pBase->GetBaseId()});
+    proposal.give.push_back(TradeBase_t{pBase->GetBaseId()});
+
+    CHECK(game.pState->GetDiplomaticActionExecutor().Propose(*game.pState, proposal)
+          == DiplomaticProposeResult::Invalid);
+    CHECK(game.pPlayer->GetBaseCount() == 1);
+    CHECK(game.pAi->GetBaseCount() == 0);
+}
+
+TEST_CASE("EconomyManager owns the never-negative rule", "[faction][economy]")
+{
+    EconomyManager economy;
+    economy.AddEnergy(40);
+
+    CHECK(economy.CanAfford(40));
+    CHECK_FALSE(economy.CanAfford(41));
+    CHECK_THROWS_AS(economy.CanAfford(-1), std::invalid_argument);
+
+    economy.SpendEnergy(40);
+    CHECK(economy.GetEnergy() == 0);
+    CHECK_THROWS_AS(economy.SpendEnergy(1), std::runtime_error);
+    CHECK(economy.GetEnergy() == 0);
 }

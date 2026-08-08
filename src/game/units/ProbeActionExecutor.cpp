@@ -162,11 +162,12 @@ bool ProbeActionExecutor::TryPayProbeCost_(Unit& rUnit, const ProbeActionConfig_
     {
         return true;
     }
-    if (rUnit.GetFaction().GetEconomy().GetEnergy() < *cost)
+    EconomyManager& rEconomy = rUnit.GetFaction().GetEconomy();
+    if (!rEconomy.CanAfford(*cost))
     {
         return false;
     }
-    rUnit.GetFaction().GetEconomy().AddEnergy(-(*cost));
+    rEconomy.SpendEnergy(*cost);
     return true;
 }
 

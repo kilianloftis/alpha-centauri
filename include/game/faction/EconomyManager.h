@@ -20,9 +20,18 @@ public:
     EconomyManager();
     ~EconomyManager();
 
-    // Faction energy treasury.
+    // Faction energy treasury. AddEnergy is income; spending goes through SpendEnergy so the
+    // "never negative" rule lives here rather than in each caller.
     void AddEnergy(int amount);
     int GetEnergy() const;
+
+    // True if the treasury covers cost. A negative cost is a programming error, not an
+    // affordable purchase.
+    bool CanAfford(int cost) const;
+
+    // Deduct cost. Throws if cost is negative or exceeds the treasury — there is no
+    // bankruptcy rule, so an overdraft is a bug in the caller, not a game state.
+    void SpendEnergy(int cost);
 
     // Set the faction-wide energy allocation percentages.
     // Throws if the three percentages do not sum to 100.

@@ -8,8 +8,10 @@
 #include "game/faction/ResearchManager.h"
 #include "game/faction/base/BaseManager.h"
 
+#include <algorithm>
 #include <stdexcept>
 #include <type_traits>
+#include <variant>
 
 namespace ac
 {
@@ -188,7 +190,47 @@ bool DiplomaticActionExecutor::Validate_(GameState& rState,
     {
         return false;
     }
+
+    if (!ValidateGiverTotals_(rState, rProposal.proposer, rProposal.give))
+    {
+        return false;
+    }
+    if (!ValidateGiverTotals_(rState, rProposal.recipient, rProposal.demand))
+    {
+        return false;
+    }
     return true;
+}
+
+bool DiplomaticActionExecutor::ValidateGiverTotals_(GameState& rState,
+                                                    FactionId_t giverId,
+                                                    const std::vector<TradeItem_t>& rItems) const
+{
+    const Faction* pGiver = FindFaction_(rState, giverId);
+    if (!pGiver)
+    {
+        return false;
+    }
+
+    GiverCost_t cost;
+    for (const TradeItem_t& rItem : rItems)
+    {
+        if (const auto* pCredits = std::get_if<TradeCredits_t>(&rItem))
+        {
+            cost.credits += pCredits->amount;
+        }
+        else if (const auto* pBase = std::get_if<TradeBase_t>(&rItem))
+        {
+            if (std::find(cost.baseIds.begin(), cost.baseIds.end(), pBase->baseId)
+                != cost.baseIds.end())
+            {
+                return false;
+            }
+            cost.baseIds.push_back(pBase->baseId);
+        }
+    }
+
+    return pGiver->GetEconomy().CanAfford(cost.credits);
 }
 
 bool DiplomaticActionExecutor::ValidateItems_(GameState& rState,
@@ -311,7 +353,7 @@ void DiplomaticActionExecutor::ApplyItem_(GameState& rState,
             using T = std::decay_t<decltype(rConcrete)>;
             if constexpr (std::is_same_v<T, TradeCredits_t>)
             {
-                pGiver->GetEconomy().AddEnergy(-rConcrete.amount);
+                pGiver->GetEconomy().SpendEnergy(rConcrete.amount);
                 pReceiver->GetEconomy().AddEnergy(rConcrete.amount);
             }
             else if constexpr (std::is_same_v<T, TradeTechnology_t>)

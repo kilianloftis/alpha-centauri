@@ -378,7 +378,7 @@ bool UnitOrderExecutor::TryStartTerraform(Unit& rUnit, const std::string& improv
     }
 
     const int cost = TerraformEnergyCost(rUnit, *pConfig, rGameState);
-    rUnit.GetFaction().GetEconomy().AddEnergy(-cost);
+    rUnit.GetFaction().GetEconomy().SpendEnergy(cost);
     rUnit.SetOrder(TerraformOrder_t{improvementId, pConfig->turnsRequired});
     rUnit.SetMoveFragmentsRemaining(0);
     return true;

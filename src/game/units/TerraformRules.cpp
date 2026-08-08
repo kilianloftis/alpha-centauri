@@ -173,7 +173,7 @@ bool CanStartTerraform(const Unit& rUnit, const ImprovementConfig_t& rConfig,
     }
 
     const int cost = TerraformEnergyCost(rUnit, rConfig, rGameState);
-    return rUnit.GetFaction().GetEconomy().GetEnergy() >= cost;
+    return rUnit.GetFaction().GetEconomy().CanAfford(cost);
 }
 
 bool ApplyTerraformResult(Tile& rTile, const ImprovementConfig_t& rConfig,

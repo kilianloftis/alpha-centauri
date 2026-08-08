@@ -35,8 +35,13 @@ graph TB
 ## Component Overview
 
 ### EconomyManager
-- **Purpose**: Owns the faction-wide energy allocation split.
+- **Purpose**: Owns the faction energy treasury and the faction-wide allocation split.
 - **Responsibilities**:
+  - Hold the treasury. `AddEnergy` is income; spending goes through `SpendEnergy`, which throws
+    on a negative amount or one the treasury cannot cover, and `CanAfford` answers the question
+    beforehand. The "treasury never goes negative" rule belongs to the class that owns the
+    resource, not to each of its spenders — there is no bankruptcy rule, so an overdraft is a
+    caller bug and is loud.
   - Store the `EnergyAllocation_t` percentages for econ, labs, and psych.
   - Provide `SetEnergyAllocation()` / `GetEnergyAllocation()` for configuration (`SetEnergyAllocation` throws if the percentages do not sum to 100).
   - Calculate how much of a given base's collected energy goes to each category via `CalculateEnergyForEcon()`, `CalculateEnergyForLabs()`, and `CalculateEnergyForPsych()`.
