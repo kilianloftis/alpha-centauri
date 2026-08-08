@@ -74,9 +74,12 @@ Three separate half-built seams, each verified:
 1. **Hooks cannot see the game.** `Hook_t::callback` is `std::function<void()>`
    (`HookContext.h:15`) — no `GameState`, no `Faction`, no stage identity. A hook can therefore
    do nothing except side-effect through captured state, which no config-driven hook has.
-2. **`scriptPath` is parsed and never used.** `TurnStageConfigParser` fills it; nothing loads it.
-   The project has a `LuaRuntime` already (used for tech cost and pop composition), so the gap is
-   wiring, not capability.
+2. **`scriptPath` cannot be used.** `TurnStageConfigParser` parses it and then *throws* if it is
+   non-empty ("script loading is not available; remove the hook or bind a callback in C++"). That
+   is better than silently ignoring it — the review's "parsed and never loaded" reading was
+   checked and is not what the code does — but it means a hook is reachable only from C++, so a
+   config-only mod still cannot exist. The project already embeds a `LuaRuntime` (tech cost, pop
+   composition), so the gap is the scripting API, not the runtime.
 3. **`EventBridge` bridges bases only, and its TODO is stale.** The constructor comment says
    faction signals wait "once Faction gains a `FactionId_t`" — `Faction::GetFactionId()` has
    existed for many packages. Meanwhile `event-system.md` describes faction events as bridged.
@@ -130,3 +133,25 @@ Two were **kept and given a consumer instead**, because they are seams rather th
   every later one forever. Now tested.
 
 Two architecture docs named `SetCameraOffset` as a control point and were corrected.
+
+## Review follow-ups applied
+
+Reviewed inline (the multi-agent review is unavailable — the account's monthly spend limit was
+reached during package 17).
+
+**One correction to this document's own diagnosis:** I recorded `scriptPath` as "parsed and never
+used", following the review. It is actually parsed and *rejected* with an explicit message. The
+seam is closed deliberately rather than leaking silently, which is the better of the two
+behaviours; the text above now says so.
+
+**Checked and sound:**
+- Every `Hook_t::callback` assignment in the tree takes the new `HookArgs_t` parameter; the
+  compiler enforced this, since the signature change breaks any missed site.
+- The stage id set by the parser reaches the constructed stage: `TurnStageFactory` passes
+  `config.hookContext` into every creator, including the two `Custom*TurnStage` paths, so a hook
+  on a config-declared custom stage sees its own id.
+- `WireFaction` captures the faction **id**, not the object, so a bridged handler cannot dangle
+  if the faction moves; `WireBase`'s existing lambdas capture the base by reference, which is
+  safe because the wiring is keyed on that same object's lifetime.
+- Deleting fourteen methods changed no test outcome, which is the point: they had no callers.
+  The build is the check — a missed reference is a link error, not a silent behaviour change.
