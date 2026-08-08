@@ -1043,6 +1043,50 @@ expiry rules are game rules that are not written down anywhere).
 though the rules call for a diagram per major subsystem. Trade semantics changed here and there
 was nothing to update.
 
+### Package 16 — Architecture docs, mod seams, and hygiene sweep (2026-08-07)
+
+**Status:** both [H], the [M], and both [L] — with one [L] sub-item deliberately not done.
+Four commits.
+**Prompt:** [`docs/full-review-fix-prompts/16-architecture-docs-and-hygiene.md`](full-review-fix-prompts/16-architecture-docs-and-hygiene.md)
+
+**A — the documented graph matches the live graph.** `faction-system.md` was the worst: its
+diagram centred a `FactionManager` that does not exist, and its turn-processing section described
+`Faction::ProcessTurn()` delegating to `Economy::CalculateIncome()`, `Military::UpdateUnits()`,
+`Research::AdvanceResearch()` and `Diplomacy::UpdateRelations()` — five names, none of which
+exist. Turns are stage-driven; `Military` holds designs only; there is no per-faction diplomacy at
+all. Diagram rewritten from the live members. Also dropped `SFMLUIManager` / `NullUIManager` and
+the engine-level "HookSystem" from `high-level.md`, and the "global singleton" label from
+`TechRegistry` — a word that invites exactly the design packages 2–4 removed. **New**
+`docs/architecture/diplomacy-system.md`: the subsystem had no diagram and no prose, which is why
+package 17 changed trade semantics with nothing to update.
+
+**B — mod seams get a consumer.** Three half-built seams. `Hook_t::callback` was
+`std::function<void()>`, so a config-declared hook — which captures nothing — could observe
+nothing; it now receives the stage id, the `GameState` and the faction being processed.
+`EventBridge` bridged base pop signals only, while its TODO blamed a missing `FactionId_t` that
+`Faction` has had for many packages and the architecture doc claimed three faction bridges that
+did not exist; `EvTechDiscovered`, `EvBaseBuilt` and `EvDroneRiot` are now wired. `EvFactionElim`
+stays unpublished and now says why: **the game has no elimination path at all**, so there is no
+rule to observe and bridging it would mean inventing one. `tests/game/SampleModTests.cpp` is the
+worked consumer that makes any of this fail loudly.
+
+**C — hygiene.** Three enum classes gained `_t`, seven private parser methods gained the trailing
+underscore, and fourteen methods with a declaration, a definition and **no caller anywhere** were
+deleted. Two of the sixteen were kept and given a consumer instead, because they are seams rather
+than leftovers: `SetTileScorer` (now exercised by the sample mod) and
+`DiplomaticActionExecutor::Reject` (the other half of the one-slot proposal contract package 17
+strengthened).
+
+**Deliberately not done:** the `r`-prefix sweep over ~50 reference parameters. A textual rename
+cannot distinguish a reference parameter from a same-named local, so it would introduce fresh
+violations the compiler cannot catch — a large, unreviewable, behaviour-free diff with silent
+errors in it. Wants an AST-driven rename.
+
+**Review note:** the multi-agent review was unavailable from package 17 onward (monthly spend
+limit), so 16 and 17 were reviewed inline. Inline review still caught one thing here: this
+package's own analysis repeated the review's claim that `scriptPath` is "parsed and never used",
+when the parser actually *rejects* a non-empty `scriptPath` with an explicit message.
+
 ---
 
 ## Cross-package dependency sketch
