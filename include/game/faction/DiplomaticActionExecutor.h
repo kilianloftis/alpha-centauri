@@ -13,7 +13,10 @@ enum class DiplomaticProposeResult
     Accepted,
     PendingPlayer,
     Rejected,
-    Invalid
+    Invalid,
+    // A proposal already awaits the player. There is one slot, so accepting this one would
+    // discard a proposal whose proposer was already told to wait.
+    Busy
 };
 
 // Mutates diplomacy/economy/research state from proposals. Owned by GameState.

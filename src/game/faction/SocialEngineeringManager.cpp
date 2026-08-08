@@ -3,45 +3,21 @@
 #include "game/social-engineering/SocialRatingConfig.h"
 #include "game/social-engineering/SocialRatingRegistry.h"
 #include "game/social-engineering/SocialRatingResolver.h"
+#include <magic_enum.hpp>
 #include <map>
 #include <stdexcept>
 
 namespace ac
 {
 
-namespace
-{
-
-constexpr const char* k_DefaultPoliticsPolicyId      = "frontier";
-constexpr const char* k_DefaultEconomicsPolicyId     = "simple";
-constexpr const char* k_DefaultValuesPolicyId        = "survival";
-constexpr const char* k_DefaultFutureSocietyPolicyId = "none_future";
-
-} // namespace
-
 SocialEngineeringManager::SocialEngineeringManager(const SocialPolicyRegistry& rRegistry)
     : m_rRegistry(rRegistry)
 {
-    // Fail fast if the config doesn't provide these hardcoded defaults: without this check
-    // a missing/miscategorized default silently leaves GetActivePolicy() returning nullptr
-    // for that category forever, instead of failing at faction construction.
-    const std::map<SocialCategory_t, const char*> defaults = {
-        { SocialCategory_t::Politics,      k_DefaultPoliticsPolicyId },
-        { SocialCategory_t::Economics,     k_DefaultEconomicsPolicyId },
-        { SocialCategory_t::Values,        k_DefaultValuesPolicyId },
-        { SocialCategory_t::FutureSociety, k_DefaultFutureSocietyPolicyId }
-    };
-
-    for (const auto& [category, id] : defaults)
+    // Starting policies come from config (`"default": true`), not from ids compiled in here. A
+    // mod shipping its own policy set used to hard-fail every faction constructor.
+    for (const SocialCategory_t category : magic_enum::enum_values<SocialCategory_t>())
     {
-        const SocialPolicyConfig_t& rPolicy = m_rRegistry.Get(id); // throws if unknown
-        if (rPolicy.category != category)
-        {
-            throw std::runtime_error(
-                "SocialEngineeringManager: default policy '" + std::string(id)
-                + "' is not in its expected category");
-        }
-        m_activePolicies[category] = &rPolicy;
+        m_activePolicies[category] = &m_rRegistry.GetDefaultForCategory(category);
     }
 }
 
@@ -86,11 +62,22 @@ std::vector<ActiveEffect_t> SocialEngineeringManager::CollectEffects() const
     return result;
 }
 
+const std::map<SocialRatingId_t, int>& SocialEngineeringManager::AccumulatedRatings_() const
+{
+    const uint64_t revision = m_revision.Get();
+    if (m_cachedRatingsRevision != revision)
+    {
+        m_cachedRatings = AccumulateSocialRatings(CollectEffects());
+        m_cachedRatingsRevision = revision;
+    }
+    return m_cachedRatings;
+}
+
 int SocialEngineeringManager::GetSocialRating(SocialRatingId_t rating) const
 {
-    const std::map<SocialRatingId_t, int> totals = AccumulateSocialRatings(CollectEffects());
-    const auto it = totals.find(rating);
-    return it == totals.end() ? 0 : it->second;
+    const std::map<SocialRatingId_t, int>& rTotals = AccumulatedRatings_();
+    const auto it = rTotals.find(rating);
+    return it == rTotals.end() ? 0 : it->second;
 }
 
 std::vector<const SocialPolicyConfig_t*> SocialEngineeringManager::GetAvailablePolicies(

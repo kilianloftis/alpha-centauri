@@ -1,6 +1,7 @@
 [
   {
     "id": "frontier",
+    "default": true,
     "name": "Frontier",
     "category": "politics",
     "effects": []
@@ -39,6 +40,7 @@
   },
   {
     "id": "simple",
+    "default": true,
     "name": "Simple",
     "category": "economics",
     "effects": []
@@ -77,6 +79,7 @@
   },
   {
     "id": "survival",
+    "default": true,
     "name": "Survival",
     "category": "values",
     "effects": []
@@ -115,6 +118,7 @@
   },
   {
     "id": "none_future",
+    "default": true,
     "name": "None",
     "category": "future_society",
     "effects": []

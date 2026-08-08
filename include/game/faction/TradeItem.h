@@ -53,6 +53,39 @@ using TradeItem_t = std::variant<TradeCredits_t,
                                  TradeWorldMap_t,
                                  TradeDeclareVendetta_t>;
 
+// Categories of TradeItem_t the UI/AI can offer (relationship-gated, not ownership-gated).
+enum class TradeKind_t
+{
+    Credits,
+    Technology,
+    Base,
+    CommFrequency,
+    WorldMap,
+    DeclareVendetta
+};
+
+// One trait per alternative, next to the alternatives. A new TradeItem_t member without a
+// specialisation fails to compile at the GetAvailableTrades fold rather than silently dropping
+// out of the category list.
+template <typename T>
+struct TradeKindOf;
+
+template <> struct TradeKindOf<TradeCredits_t>
+{ static constexpr TradeKind_t value = TradeKind_t::Credits; };
+template <> struct TradeKindOf<TradeTechnology_t>
+{ static constexpr TradeKind_t value = TradeKind_t::Technology; };
+template <> struct TradeKindOf<TradeBase_t>
+{ static constexpr TradeKind_t value = TradeKind_t::Base; };
+template <> struct TradeKindOf<TradeCommFrequency_t>
+{ static constexpr TradeKind_t value = TradeKind_t::CommFrequency; };
+template <> struct TradeKindOf<TradeWorldMap_t>
+{ static constexpr TradeKind_t value = TradeKind_t::WorldMap; };
+template <> struct TradeKindOf<TradeDeclareVendetta_t>
+{ static constexpr TradeKind_t value = TradeKind_t::DeclareVendetta; };
+
+// The kind of a live item — the same mapping, applied to a value rather than a type.
+TradeKind_t KindOf(const TradeItem_t& rItem);
+
 std::string ToString(const TradeItem_t& rItem);
 
 struct DiplomaticProposal_t

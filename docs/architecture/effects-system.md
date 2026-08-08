@@ -408,6 +408,16 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 - **Returns**: `FactionEffects_t` (local pool). Composed view is
   `Faction::GetActiveEffects()`.
 
+### SocialEngineeringManager
+- **Starting policies come from config.** Each category declares exactly one policy with
+  `"default": true` in `social_policies.json`; `SocialPolicyRegistry::GetDefaultForCategory`
+  resolves it and throws, naming the category, when a category declares none or more than one.
+  The ids used to be compiled in, which meant a mod shipping its own policy set threw from every
+  faction constructor rather than from config load.
+- **`GetSocialRating` is memoized** against the manager's own `Revision` (bumped by
+  `SetActivePolicy`). Answering one axis re-collected every policy's effects and re-accumulated
+  the whole map, and the UI asks once per axis per frame.
+
 ### Social Ratings (two-level)
 - `SocialRatingModifier` effects are ordinary effects from **faction-internal** sources: a
   policy's faction-wide `+2 Growth`, a building's `ThisBase` `+1 Growth`, a pop/unit

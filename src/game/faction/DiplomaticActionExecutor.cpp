@@ -106,6 +106,13 @@ DiplomaticProposeResult DiplomaticActionExecutor::Propose(GameState& rState,
 
     if (pRecipient->IsPlayerControlled())
     {
+        // One slot: overwriting it stranded the earlier proposer, which had already been told
+        // to wait. A per-recipient queue needs ordering/expiry rules that are not written down
+        // anywhere yet, so refuse rather than lose the proposal.
+        if (m_pending.has_value())
+        {
+            return DiplomaticProposeResult::Busy;
+        }
         m_pending = rProposal;
         return DiplomaticProposeResult::PendingPlayer;
     }

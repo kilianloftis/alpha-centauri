@@ -354,3 +354,36 @@ TEST_CASE("EconomyManager owns the never-negative rule", "[faction][economy]")
     CHECK_THROWS_AS(economy.SpendEnergy(1), std::runtime_error);
     CHECK(economy.GetEnergy() == 0);
 }
+
+TEST_CASE("A second proposal to the player is refused, not silently dropped",
+          "[diplomacy][executor]")
+{
+    // There is one pending slot. Overwriting it stranded the first proposer, which had already
+    // been told PendingPlayer and would wait forever.
+    DiplomacyGame_ game;
+    DiplomaticProposal_t first;
+    first.proposer = game.pAi->GetFactionId();
+    first.recipient = game.pPlayer->GetFactionId();
+    first.requestedStatus = DiplomaticStatus::Truce;
+
+    DiplomaticProposal_t second;
+    second.proposer = game.pThird->GetFactionId();
+    second.recipient = game.pPlayer->GetFactionId();
+    second.requestedStatus = DiplomaticStatus::Truce;
+
+    DiplomaticActionExecutor& rExecutor = game.pState->GetDiplomaticActionExecutor();
+    REQUIRE(rExecutor.Propose(*game.pState, first) == DiplomaticProposeResult::PendingPlayer);
+    CHECK(rExecutor.Propose(*game.pState, second) == DiplomaticProposeResult::Busy);
+
+    // The first proposal is intact and is what Accept resolves.
+    REQUIRE(rExecutor.GetPendingProposal().has_value());
+    CHECK(rExecutor.GetPendingProposal()->proposer == game.pAi->GetFactionId());
+    REQUIRE(rExecutor.Accept(*game.pState));
+    CHECK(game.pState->GetDiplomacyLedger().HasTruce(game.pAi->GetFactionId(),
+                                                     game.pPlayer->GetFactionId()));
+    CHECK_FALSE(game.pState->GetDiplomacyLedger().HasTruce(game.pThird->GetFactionId(),
+                                                          game.pPlayer->GetFactionId()));
+
+    // The slot is free again once the player answers.
+    CHECK(rExecutor.Propose(*game.pState, second) == DiplomaticProposeResult::PendingPlayer);
+}

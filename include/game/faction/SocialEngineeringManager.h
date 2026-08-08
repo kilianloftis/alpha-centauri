@@ -4,6 +4,7 @@
 #include "game/effects/EffectEnums.h"
 #include "lib/Revision.h"
 #include "game/effects/ActiveEffect.h"
+#include <cstdint>
 #include <map>
 #include <string>
 #include <vector>
@@ -49,9 +50,17 @@ public:
     uint64_t GetRevision() const { return m_revision.Get(); }
 
 private:
+    // The accumulated map for every axis, rebuilt only when the policy selection changes.
+    // Answering one axis used to allocate a fresh effect vector and a fresh map per call, and
+    // the UI asks once per axis per frame.
+    const std::map<SocialRatingId_t, int>& AccumulatedRatings_() const;
+
     const SocialPolicyRegistry& m_rRegistry;
     std::map<SocialCategory_t, const SocialPolicyConfig_t*> m_activePolicies;
     Revision m_revision;
+    mutable std::map<SocialRatingId_t, int> m_cachedRatings;
+    // Starts at max so the first query cannot match revision 0 and read an empty cache.
+    mutable uint64_t m_cachedRatingsRevision = UINT64_MAX;
 };
 
 } // namespace ac

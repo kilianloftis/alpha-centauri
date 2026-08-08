@@ -20,7 +20,7 @@ bool HasKind_(const std::vector<DiplomaticActionKind>& rActions, DiplomaticActio
     return std::find(rActions.begin(), rActions.end(), kind) != rActions.end();
 }
 
-bool HasTrade_(const std::vector<TradeKind>& rKinds, TradeKind kind)
+bool HasTrade_(const std::vector<TradeKind_t>& rKinds, TradeKind_t kind)
 {
     return std::find(rKinds.begin(), rKinds.end(), kind) != rKinds.end();
 }
@@ -58,12 +58,12 @@ TEST_CASE("None status allows truce, vendetta, and ordinary trade", "[diplomacy]
     CHECK(HasKind_(actions, DiplomaticActionKind::Trade));
 
     const auto trades = GetAvailableTrades(ledger, 1, 2);
-    CHECK(HasTrade_(trades, TradeKind::Credits));
-    CHECK(HasTrade_(trades, TradeKind::Technology));
-    CHECK(HasTrade_(trades, TradeKind::CommFrequency));
-    CHECK(HasTrade_(trades, TradeKind::WorldMap));
-    CHECK_FALSE(HasTrade_(trades, TradeKind::Base));
-    CHECK_FALSE(HasTrade_(trades, TradeKind::DeclareVendetta));
+    CHECK(HasTrade_(trades, TradeKind_t::Credits));
+    CHECK(HasTrade_(trades, TradeKind_t::Technology));
+    CHECK(HasTrade_(trades, TradeKind_t::CommFrequency));
+    CHECK(HasTrade_(trades, TradeKind_t::WorldMap));
+    CHECK_FALSE(HasTrade_(trades, TradeKind_t::Base));
+    CHECK_FALSE(HasTrade_(trades, TradeKind_t::DeclareVendetta));
 }
 
 TEST_CASE("Vendetta blocks trade and allows only truce", "[diplomacy][actions]")
@@ -95,9 +95,9 @@ TEST_CASE("Bases and coordinated vendetta require Pact", "[diplomacy][actions]")
     CHECK(CanTrade(ledger, 1, 2, TradeCredits_t{1}));
     {
         const auto trades = GetAvailableTrades(ledger, 1, 2);
-        CHECK_FALSE(HasTrade_(trades, TradeKind::Base));
-        CHECK_FALSE(HasTrade_(trades, TradeKind::DeclareVendetta));
-        CHECK(HasTrade_(trades, TradeKind::Credits));
+        CHECK_FALSE(HasTrade_(trades, TradeKind_t::Base));
+        CHECK_FALSE(HasTrade_(trades, TradeKind_t::DeclareVendetta));
+        CHECK(HasTrade_(trades, TradeKind_t::Credits));
     }
 
     ledger.SetStatus(1, 2, DiplomaticStatus::Pact);
@@ -106,8 +106,8 @@ TEST_CASE("Bases and coordinated vendetta require Pact", "[diplomacy][actions]")
     CHECK(CanTrade(ledger, 1, 2, TradeCredits_t{1}));
     {
         const auto trades = GetAvailableTrades(ledger, 1, 2);
-        CHECK(HasTrade_(trades, TradeKind::Base));
-        CHECK(HasTrade_(trades, TradeKind::DeclareVendetta));
+        CHECK(HasTrade_(trades, TradeKind_t::Base));
+        CHECK(HasTrade_(trades, TradeKind_t::DeclareVendetta));
         CHECK(trades.size() == 6);
     }
 }
@@ -131,10 +131,10 @@ TEST_CASE("Treaty ladder Friendship and Pact", "[diplomacy][actions]")
     CHECK(CanDeclareVendetta(ledger, 1, 2));
 }
 
-TEST_CASE("DiplomaticActionKind and TradeKind ToString are non-empty", "[diplomacy][actions]")
+TEST_CASE("DiplomaticActionKind and TradeKind_t ToString are non-empty", "[diplomacy][actions]")
 {
     CHECK_FALSE(ToString(DiplomaticActionKind::ProposeTruce).empty());
     CHECK_FALSE(ToString(DiplomaticActionKind::Trade).empty());
-    CHECK_FALSE(ToString(TradeKind::Credits).empty());
-    CHECK_FALSE(ToString(TradeKind::DeclareVendetta).empty());
+    CHECK_FALSE(ToString(TradeKind_t::Credits).empty());
+    CHECK_FALSE(ToString(TradeKind_t::DeclareVendetta).empty());
 }

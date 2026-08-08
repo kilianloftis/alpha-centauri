@@ -19,17 +19,6 @@ enum class DiplomaticActionKind
     Trade
 };
 
-// Categories of TradeItem_t the UI/AI can offer (relationship-gated, not ownership-gated).
-enum class TradeKind
-{
-    Credits,
-    Technology,
-    Base,
-    CommFrequency,
-    WorldMap,
-    DeclareVendetta
-};
-
 bool CanProposeTruce(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t b);
 bool CanProposeFriendship(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t b);
 bool CanProposePact(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t b);
@@ -49,11 +38,11 @@ std::vector<DiplomaticActionKind> GetAvailableActions(const DiplomacyLedger& rLe
                                                       FactionId_t b);
 
 // Legal trade categories for the pair (empty under Vendetta / unknown).
-std::vector<TradeKind> GetAvailableTrades(const DiplomacyLedger& rLedger,
+std::vector<TradeKind_t> GetAvailableTrades(const DiplomacyLedger& rLedger,
                                           FactionId_t a,
                                           FactionId_t b);
 
 std::string ToString(DiplomaticActionKind kind);
-std::string ToString(TradeKind kind);
+std::string ToString(TradeKind_t kind);
 
 } // namespace ac

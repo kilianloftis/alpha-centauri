@@ -22,6 +22,8 @@ struct SocialPolicyConfig_t
     std::string name;
     SocialCategory_t category;
     std::string requiredTech;  // empty if none
+    // The policy every faction starts on in this category. Exactly one per category.
+    bool bDefault = false;
     std::vector<EffectConfig_t> effects;
 
     bool IsAvailable(const std::vector<std::string>& rDiscoveredTechIds) const
