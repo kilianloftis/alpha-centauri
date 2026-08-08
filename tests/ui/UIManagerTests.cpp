@@ -198,6 +198,24 @@ TEST_CASE("Camera input is driven from Update, not from Render", "[ui][manager]"
     fixture.manager.Update();
     CHECK(pWorld->cameraUpdateCount == 1);
     CHECK(pWorld->autoEndTurnCount == 1);
+
+}
+
+TEST_CASE("A queued auto end-turn survives an overlay instead of being dropped",
+          "[ui][manager]")
+{
+    // ProcessPendingAutoEndTurn clears its flag before calling through, and Engine's own gate
+    // then declines to advance — so calling it under an overlay silently loses the request.
+    ManagerFixture_ fixture;
+    FakeWorldView_* pWorld = fixture.AddWorldView();
+
+    fixture.PushOverlay();
+    fixture.manager.Update();
+    CHECK(pWorld->autoEndTurnCount == 0);
+
+    fixture.manager.PopView();
+    fixture.manager.Update();
+    CHECK(pWorld->autoEndTurnCount == 1);
 }
 
 TEST_CASE("Edge scrolling is disabled while an overlay covers the map", "[ui][manager]")

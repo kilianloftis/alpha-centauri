@@ -84,7 +84,7 @@ in the executable target next to the SFML backend, so tests could not link one a
 not enough — a keystroke that closed an overlay left it active for the entire following mouse
 drain. Pruning is now per event.
 
-Fourteen new tests: nine in `tests/ui/UIManagerTests.cpp`, five in
+Fourteen new tests: eight in `tests/ui/UIManagerTests.cpp`, six in
 `tests/ui/ViewFactoryTests.cpp`. `ListSelectorPopupTests` dropped its local stub for the shared
 recording one. Every new test was revert-verified against the pre-fix source — the factory test
 segfaults on the old null return, which is precisely the reported failure mode.
@@ -143,8 +143,10 @@ mid-callback, the button that was clicked. `SatelliteButtonListPanel` claimed mu
 selection but never updated `m_selectedId` or any button; it only looked right *because* the
 parent tore it down.
 
-**Chosen:** the panel caches its grid behind `Refresh()`, called on construction and after an
-orbital attack (the only census mutation reachable while the view is open). The list panel gained
+**Chosen:** the panel fills its grid in `Refresh()`, called from its constructor. Review caught
+that the post-attack `Refresh()` I first wired could never fire — the summary panel exists only
+in Summary mode, the Attack button only in OrbitalAttack mode — so the call and the pointer it
+needed are gone rather than left as documented-but-dead code. The list panel gained
 `SetSelected` / `SetItems` and now owns its selection; `Rebuild_()` survives only for a mode
 change, which genuinely replaces the layout.
 
@@ -177,3 +179,55 @@ Eleven tests, each revert-verified:
 `RecordingGraphics` now records draw **colours** as well as positions. Selection state in this
 UI is often nothing but a fill colour, so without it the list-panel tests could not have seen
 the defect at all — the same gap, one layer down, that package 14 hit with positions.
+
+## Review follow-ups applied
+
+Both commits were reviewed together. Nine findings; the two that mattered were the same failure
+mode this project keeps hitting.
+
+**The unit-designer fix was half-applied — the worst finding in the package.** Commit A filtered
+the *columns* by `requiredTech` but left the save gate (`HasAllMandatory`), the Save button's
+enabled state (`DesignStatsDisplay`) and the constructed `UnitDesign` reading the **whole** slot
+registry. A slot that is both `required: true` and tech-gated is therefore invisible, unfillable,
+and permanently missing: Save is dead for the rest of the game with no explanation, and
+`UnitDesign`'s constructor throws on a required slot with no component. Shipped config has no such
+slot today, but config is the supported extension point, and my own test fixture had quietly made
+the gated slot `required: false` — so the test I wrote could not have caught it. Fixed by building
+`m_availableSlots` once in the constructor and routing every consumer through it; the fixture slot
+is now `required: true`, and a new end-to-end test fills every visible slot through the real click
+path and saves. Revert-verified: pre-fix, the "Fill all required slots" hint never clears and no
+design is saved.
+
+**`FormatFactionBonuses` printed enumerator names at the player.** The line no longer lied, but it
+read `+20% GrowthRate`. Now split on capitals (`Growth Rate`) rather than adding a second
+hand-written table that would drift from `ParseStatId`. The test had hard-coded the defect.
+
+**The base-caching test did not test caching.** It asserted only that two paints draw the same
+number of strings — equally true of a snapshot rebuilt every frame, which is the thing being
+fixed. `BaseView` now exposes `GetSnapshotBuildCount()` for the same reason the council cache
+exposes `GetComputeCount()`. The tile assertions were also self-fulfilling: they picked the live
+getter *using* the snapshot's own work state, so a wrong work state could not fail. Work state is
+now asserted independently.
+
+**A dead branch I documented as live.** The post-attack `SatelliteSummaryPanel::Refresh()` can
+never fire — the summary panel exists only in Summary mode, the Attack button only in
+OrbitalAttack mode. Deleted, along with the pointer it needed, and the architecture doc corrected.
+
+**An invariant this package leans on was broken.** `UIManager::Update` called
+`ProcessPendingAutoEndTurn` unconditionally, with a comment (mine) asserting `Engine::ProcessTurn_`
+would gate it. It does — but only *after* `WorldView` has already cleared the pending flag, so a
+queued auto end-turn under an open overlay was silently dropped and never re-armed. Now gated on
+`CanAdvanceTurn()`. Pre-existing, but it sits on exactly the turn-gate invariant the base snapshot
+key depends on.
+
+**Also:** `HandleGlobalShortcut_` still swallowed a null view, contradicting commit A's policy;
+`~BaseView` now releases `m_elements` before `m_snapshot` dies (derived members are destroyed
+before the base subobject, so panels briefly held a dangling reference); doc test counts were
+wrong; `CreateBaseView` — the view the garrison-click change feeds — had no throw test; and
+several comments narrated the change rather than the code.
+
+**Confirmed sound by the review, not changed:** the snapshot key is complete for every mutation
+reachable with a base view open; the turn-gate argument holds (`Engine::ProcessTurn_` really does
+return early, and `HasOverlayView()` is true for a base view opened from the world screen);
+`m_snapshot`'s address is stable across refreshes; both new throws are unreachable on legitimate
+paths; and all three `ComputeVoteWeight` call sites were converted.

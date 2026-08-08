@@ -40,15 +40,11 @@ struct BaseDisplayKey_t
     bool operator==(const BaseDisplayKey_t&) const = default;
 };
 
-// The derived base values the panels display, computed once per change rather than once per
-// panel per frame. GrowthDisplay, ProductionDisplay and BaseWorkableAreaDisplay together drove
-// two full ResourceManager::ComputeWorked_ passes and twenty per-tile yield resolutions on
-// every paint, for numbers that only move when the player acts.
+// The derived base values the panels display. Each one costs a full ResourceManager worked-tile
+// pass or a per-tile yield resolution, so they are computed once per key change rather than per
+// panel per frame. Cheap reads (stockpiles, base name, population size) stay live.
 //
-// Cheap reads (stockpiles, the base name, population size) are deliberately NOT snapshotted:
-// they are plain member reads, and keeping them live keeps the staleness surface small.
-//
-// Tile state (terrain, improvements, resources) is not in the key because it cannot change
+// Tile state (terrain, improvements, resources) is absent from the key because it cannot change
 // while this view is open: terraforming resolves on turn advance, and UIManager refuses to
 // advance the turn while an overlay covers the map — pinned by "The turn gate closes for an
 // overlay and for an in-view modal" in tests/ui/UIManagerTests.cpp.

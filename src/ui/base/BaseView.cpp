@@ -108,7 +108,12 @@ BaseView::BaseView(
     m_elements.push_back(std::move(pUnitStack));
 }
 
-BaseView::~BaseView() = default;
+BaseView::~BaseView()
+{
+    // Panels hold const BaseDisplaySnapshot_t& into m_snapshot, which is a member of this class
+    // and therefore destroyed before IGameView's m_elements. Drop the panels first.
+    m_elements.clear();
+}
 
 void BaseView::Render(Graphics& rGraphics)
 {
@@ -129,13 +134,14 @@ void BaseView::Render(Graphics& rGraphics)
 
 void BaseView::RefreshSnapshot_()
 {
-    // Reading the key is a handful of counter loads; rebuilding is two full worked-resource
-    // passes and a yield resolution per workable tile, which is why it does not happen per frame.
+    // Reading the key is a handful of counter loads; rebuilding is two worked-resource passes
+    // and a yield resolution per workable tile.
     if (ReadBaseDisplayKey(m_rBase) == m_snapshot.key)
     {
         return;
     }
     m_snapshot = BuildBaseDisplaySnapshot(m_rBase);
+    ++m_snapshotBuildCount;
 }
 
 void BaseView::RefreshUnitStack_()

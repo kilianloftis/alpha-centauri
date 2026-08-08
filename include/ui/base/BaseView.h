@@ -3,6 +3,7 @@
 #include "ui/IGameView.h"
 #include "ui/base/BaseDisplaySnapshot.h"
 #include "lib/Signal.h"
+#include <cstdint>
 #include <memory>
 #include <vector>
 
@@ -33,6 +34,10 @@ public:
     void Render(Graphics& rGraphics) override;
     bool HandleKey(const KeyEvent_t& rEvent) override;
 
+    // How many times the snapshot was actually rebuilt. The avoided work is the point of the
+    // key, and it is not observable from what the panels draw.
+    uint64_t GetSnapshotBuildCount() const { return m_snapshotBuildCount; }
+
 private:
     void RefreshUnitStack_();
     void RefreshSnapshot_();
@@ -47,6 +52,7 @@ private:
     // Rebuilt only when one of its key inputs moves; panels hold a reference to it, so it must
     // be declared before m_elements (IGameView) is populated and must never be reallocated.
     BaseDisplaySnapshot_t m_snapshot;
+    uint64_t m_snapshotBuildCount = 1;
     // The base's owner at the moment this view was opened. Render() closes the view (rather
     // than keep rendering a base that changed hands out from under it) when
     // &m_rBase.GetFaction() no longer matches — see docs/architecture/high-level.md, "Object

@@ -13,15 +13,13 @@ class Faction;
 class PlanetaryCouncil;
 
 // PlanetaryCouncil::ComputeVoteWeight copies the faction's whole effect pool, appends the
-// council's and the world's, and resolves CouncilVotes modifiers over it. Both council panels
-// called it once per member per paint — and the info panel calls it a second time for the
-// tally, so a five-faction council resolved the stat fifteen times per frame for a number that
-// only moves when the council rebuilds, a faction's own effects change, or its population does.
+// council's and the world's, and resolves CouncilVotes modifiers over it. The panels ask for it
+// once per member per paint, so it is cached against the three things that move it: the council
+// revision, the faction's own effects version, and its population.
 //
-// Keyed on exactly those three inputs. Population is compared directly rather than through a
-// revision because no counter tracks it. In practice every population change also moves the
-// faction's effect-pool version (pops contribute effects), so the population field is defensive
-// rather than load-bearing — it costs one int compare and removes the need to rely on that.
+// Population is compared directly because no counter tracks it. Every population change also
+// moves the effect-pool version in practice, so the field is defensive; it costs one int
+// compare and removes the dependency on that coupling.
 class CouncilVoteWeightCache
 {
 public:

@@ -217,6 +217,9 @@ Views are rendered bottom-to-top through the stack. Each view renders its own `U
 - **Purpose**: Creates `IGameView` instances from game state and graphics context
 - **Dependencies**: `GameState`, `GameDataContext`, `Graphics`
 - **Owner**: `Engine` creates and owns it during initialization
+- **Methods**: `CreateWorldView`, `CreateBaseView`, `CreateResearchView`,
+  `CreateSocialEngineeringView`, `CreateUnitDesignerView`, `CreateSettingsView`,
+  `CreateCommlinksView`, `CreateCouncilVoteView`, `CreateSatelliteView`, `CreateCombatView`
 - **Missing player faction**: `RequirePlayerFaction_()` throws. Every `Create*View` that needs the
   player faction reaches it from a player action, and a session without a player faction is
   broken, not a UI state — the previous `return nullptr` was dereferenced by `PushView`, which now
@@ -243,8 +246,9 @@ each with an explicit key:
   population. `PlanetaryCouncil::ComputeVoteWeight` copies the whole effect pool and resolves
   `CouncilVotes` modifiers; both council panels called it per member per paint.
 - **`SatelliteSummaryPanel`** — the orbital-type list, faction list and census map are members
-  refreshed by `Refresh()`, called on construction and by `SatelliteView` after an orbital
-  attack, which is the only thing that can move the census while the view is open.
+  filled by `Refresh()`, called from the constructor. Nothing can move the census while Summary
+  mode is showing: an attack is reachable only from OrbitalAttack mode, and returning to Summary
+  builds a new panel.
 
 `SatelliteView` also stopped calling `Rebuild_()` on every selection: `SatelliteButtonListPanel`
 now applies selection to its own buttons (`SetSelected`) and replaces its contents
@@ -257,11 +261,8 @@ Every view, panel and input controller lives in the `ac-ui` static library, whic
 and depends only on the abstract `Graphics` / `Input` interfaces — never on a rendering backend.
 The `alpha-centauri` executable is `main.cpp` plus `Engine.cpp` plus the SFML backend. The
 layering the diagrams describe is therefore enforced by the build, and the test suite links
-`ac-ui` to drive real views against `actest::RecordingGraphics`, which records draw positions.
-- **Methods**:
-  - `CreateWorldView(...)`: Builds the world view
-  - `CreateBaseView(...)`: Builds a base view for the selected base
-  - `CreateResearchView(...)`: Builds the research view for the player faction
+`ac-ui` to drive real views against `actest::RecordingGraphics`, which records draw positions
+and colours.
 
 ### Factory: CreateUIManager()
 Returns `UIManagerImpl`, a platform-agnostic implementation (no compile-time flag needed).

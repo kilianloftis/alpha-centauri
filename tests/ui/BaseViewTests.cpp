@@ -82,9 +82,18 @@ TEST_CASE("The snapshot reports the same yields the panel used to query live", "
     CHECK(snapshot.nutrientsRequired == rBase.GetNutrientsRequired());
     CHECK(snapshot.mineralProduction == rBase.GetMineralProduction());
 
+    const WorkerAssignmentManager& rAssignments = rBase.GetWorkerAssignments();
     for (const auto& [pTile, rEntry] : snapshot.tiles)
     {
-        const TileYieldView_t live = rEntry.workState == TileWorkState_t::WorkedByThisBase
+        // Assert the work state itself, not just the yield picked using it — otherwise a wrong
+        // work state selects a wrong-but-matching live value and the check passes.
+        const TileWorkState_t expected =
+            rAssignments.IsTileWorkedByThisBase(pTile)  ? TileWorkState_t::WorkedByThisBase
+            : rAssignments.IsTileAssigned(pTile)        ? TileWorkState_t::WorkedByOther
+                                                        : TileWorkState_t::Free;
+        CHECK(rEntry.workState == expected);
+
+        const TileYieldView_t live = expected == TileWorkState_t::WorkedByThisBase
                                          ? rBase.GetWorkedTileYield(*pTile)
                                          : rBase.GetPreviewTileYield(*pTile);
         CHECK(rEntry.yield.effective.nutrients == live.effective.nutrients);
@@ -105,11 +114,17 @@ TEST_CASE("BaseView repaints without rebuilding the snapshot, and refreshes afte
     pView->Render(fixture.graphics);
     const size_t drawsPerFrame = fixture.graphics.texts.size();
     REQUIRE(drawsPerFrame > 0);
+    // Built once, at construction.
+    REQUIRE(pView->GetSnapshotBuildCount() == 1);
 
-    // Repainting an unchanged base must not change what is drawn.
-    fixture.graphics.texts.clear();
-    pView->Render(fixture.graphics);
-    CHECK(fixture.graphics.texts.size() == drawsPerFrame);
+    // Repainting an unchanged base draws the same thing and does no work.
+    for (int i = 0; i < 10; ++i)
+    {
+        fixture.graphics.texts.clear();
+        pView->Render(fixture.graphics);
+        CHECK(fixture.graphics.texts.size() == drawsPerFrame);
+    }
+    CHECK(pView->GetSnapshotBuildCount() == 1);
 
     // Freeing a worked tile changes the nutrient total; the panel must not keep painting the
     // pre-click snapshot.
@@ -123,6 +138,7 @@ TEST_CASE("BaseView repaints without rebuilding the snapshot, and refreshes afte
 
     fixture.graphics.texts.clear();
     pView->Render(fixture.graphics);
+    CHECK(pView->GetSnapshotBuildCount() == 2);
     CHECK(fixture.graphics.AnyTextContaining("Production: " + std::to_string(afterNutrients)));
     CHECK_FALSE(fixture.graphics.AnyTextContaining("Production: " + std::to_string(beforeNutrients)));
 }

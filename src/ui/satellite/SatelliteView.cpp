@@ -77,11 +77,8 @@ void SatelliteView::Render(Graphics& rGraphics)
         m_bPendingAttackRefresh = false;
         std::optional<std::string> outcome = std::move(m_pendingOutcomeMessage);
         m_pendingOutcomeMessage.reset();
-        // An attack is the one thing that moves the census while this view is open.
-        if (m_pSummaryPanel)
-        {
-            m_pSummaryPanel->Refresh();
-        }
+        // Only the target list needs it: an attack is reachable only in OrbitalAttack mode,
+        // and switching back to Summary rebuilds that panel, whose constructor re-censuses.
         RefreshTargetList_();
         if (outcome)
         {
@@ -132,9 +129,7 @@ void SatelliteView::SelectFaction_(FactionId_t factionId)
     m_selectedFactionId = factionId;
     m_selectedBuildingId.reset();
 
-    // Update the two lists in place. Rebuilding the view here destroyed and recreated the tabs,
-    // the Attack button and both panels — including, mid-callback, the very button that was
-    // clicked — and it is why the list panel's own selection handling was never exercised.
+    // In place: a full rebuild would destroy the button whose callback is running.
     if (m_pFactionList)
     {
         m_pFactionList->SetSelected(std::to_string(factionId));
@@ -247,7 +242,6 @@ void SatelliteView::CommenceAttack_(BuildingId_t attackerBuildingId,
 void SatelliteView::Rebuild_()
 {
     m_elements.clear();
-    m_pSummaryPanel = nullptr;
     m_pFactionList = nullptr;
     m_pTargetList = nullptr;
 
@@ -268,12 +262,11 @@ void SatelliteView::Rebuild_()
 
     if (m_mode == Mode_t::Summary)
     {
-        auto pSummary = std::make_unique<SatelliteSummaryPanel>(
+        // Its constructor takes the census; nothing can move the census in this mode.
+        m_elements.push_back(std::make_unique<SatelliteSummaryPanel>(
             m_rGameState,
             m_rBuildings,
-            ResolveLayout(topPanel, style.contentLayout));
-        m_pSummaryPanel = pSummary.get();
-        m_elements.push_back(std::move(pSummary));
+            ResolveLayout(topPanel, style.contentLayout)));
         return;
     }
 

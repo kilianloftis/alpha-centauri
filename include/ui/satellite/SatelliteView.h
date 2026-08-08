@@ -15,7 +15,6 @@ class GameState;
 class BuildingRegistry;
 class Graphics;
 class SatelliteButtonListPanel;
-class SatelliteSummaryPanel;
 
 class SatelliteView : public IGameView
 {
@@ -51,9 +50,7 @@ private:
     GameState& m_rGameState;
     const BuildingRegistry& m_rBuildings;
     Mode_t m_mode = Mode_t::Summary;
-    // Owned by m_elements; cleared and re-pointed by Rebuild_, which is the only thing that
-    // replaces them. Null in the mode that does not build them.
-    SatelliteSummaryPanel* m_pSummaryPanel = nullptr;
+    // Owned by m_elements; cleared and re-pointed by Rebuild_. Null in Summary mode.
     SatelliteButtonListPanel* m_pFactionList = nullptr;
     SatelliteButtonListPanel* m_pTargetList = nullptr;
     std::optional<FactionId_t> m_selectedFactionId;

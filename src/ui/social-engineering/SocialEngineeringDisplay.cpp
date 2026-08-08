@@ -17,6 +17,7 @@
 
 #include <array>
 #include <cctype>
+#include <string_view>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -51,6 +52,24 @@ std::string CapitalizeFirst(std::string text)
     if (!text.empty())
     {
         text[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(text[0])));
+    }
+    return text;
+}
+
+// "GrowthRate" -> "Growth Rate". Enumerator names reach the player through effect payloads
+// (StatId_t, RuleFlagId_t), and there is no wire-form map in that direction to reuse; splitting
+// on capitals beats a second hand-written table that would drift from ParseStatId.
+std::string HumanizeEnumName(std::string_view name)
+{
+    std::string text;
+    for (size_t i = 0; i < name.size(); ++i)
+    {
+        if (i > 0 && std::isupper(static_cast<unsigned char>(name[i]))
+            && !std::isupper(static_cast<unsigned char>(name[i - 1])))
+        {
+            text += ' ';
+        }
+        text += name[i];
     }
     return text;
 }
@@ -121,12 +140,12 @@ std::string FormatLevelEffect(const EffectConfig_t& rEffect)
         {
             oss << "%";
         }
-        oss << " " << CapitalizeFirst(std::string(magic_enum::enum_name(pModifier->stat)));
+        oss << " " << HumanizeEnumName(magic_enum::enum_name(pModifier->stat));
         return oss.str();
     }
     if (const auto* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.effect))
     {
-        return CapitalizeFirst(std::string(magic_enum::enum_name(pFlag->flag)));
+        return HumanizeEnumName(magic_enum::enum_name(pFlag->flag));
     }
     return {};
 }

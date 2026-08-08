@@ -26,9 +26,16 @@ UnitDesignerView::UnitDesignerView(
     : IGameView(layout)
     , m_rMilitary(rMilitary)
     , m_rComponentRegistry(rComponentRegistry)
-    , m_rSlotRegistry(rSlotRegistry)
     , m_rResearch(rResearch)
 {
+    for (const UnitSlotConfig_t& rSlot : rSlotRegistry.GetAll())
+    {
+        if (IsUnlocked_(rSlot.requiredTech))
+        {
+            m_availableSlots.push_back(rSlot);
+        }
+    }
+
     BuildUnitStatusPanel_(pUnitManager);
     BuildTopPanelElements_();
     BuildDesignListPanel_();
@@ -48,13 +55,8 @@ void UnitDesignerView::BuildTopPanelElements_()
     std::vector<SlotColumnPanel::SlotEntry_t> leftSlots;
     std::vector<SlotColumnPanel::SlotEntry_t> rightSlots;
 
-    for (const auto& rSlot : m_rSlotRegistry.GetAll())
+    for (const UnitSlotConfig_t& rSlot : m_availableSlots)
     {
-        if (!IsUnlocked_(rSlot.requiredTech))
-        {
-            continue;
-        }
-
         SlotColumnPanel::SlotEntry_t entry;
         entry.pSlotConfig = &rSlot;
         entry.getComponent = [this, slotId = rSlot.id]() -> const UnitComponentConfig_t*
@@ -91,7 +93,7 @@ void UnitDesignerView::BuildTopPanelElements_()
 
     m_elements.push_back(std::make_unique<DesignStatsDisplay>(
         &m_state,
-        &m_rSlotRegistry.GetAll(),
+        &m_availableSlots,
         ResolveLayout(topPanel, Style().unitDesignerView.designStatsLayout),
         [this]() { HandleSaveDesign_(); }
     ));
@@ -119,7 +121,7 @@ void UnitDesignerView::OnDesignSelected_(const UnitDesign* pDesign)
         return;
     }
 
-    for (const auto& rSlot : m_rSlotRegistry.GetAll())
+    for (const UnitSlotConfig_t& rSlot : m_availableSlots)
     {
         m_state.components[rSlot.id] = pDesign->GetComponentForSlot(rSlot.id);
     }
@@ -178,13 +180,13 @@ bool UnitDesignerView::IsUnlocked_(const std::string& rRequiredTech) const
 
 void UnitDesignerView::HandleSaveDesign_()
 {
-    if (!m_state.HasAllMandatory(m_rSlotRegistry.GetAll()))
+    if (!m_state.HasAllMandatory(m_availableSlots))
     {
         return;
     }
 
     const bool added = m_rMilitary.AddDesign(std::make_unique<UnitDesign>(
-        m_rSlotRegistry.GetAll(),
+        m_availableSlots,
         m_state.components
     ));
     if (!added)

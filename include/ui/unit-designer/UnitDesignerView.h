@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/units/UnitSlotConfig.h"
 #include "ui/IGameView.h"
 #include "ui/unit-designer/UnitDesignerState.h"
 
@@ -50,8 +51,12 @@ private:
 
     Military& m_rMilitary;
     const UnitComponentRegistry& m_rComponentRegistry;
-    const UnitSlotRegistry& m_rSlotRegistry;
     const ResearchManager& m_rResearch;
+    // The slots this faction has unlocked. Every consumer — the columns, the save gate, the
+    // saved design — must agree on this list: a required slot the player cannot see and cannot
+    // fill would otherwise make Save permanently dead, and UnitDesign's constructor throws on
+    // a required slot with no component.
+    std::vector<UnitSlotConfig_t> m_availableSlots;
     const UnitDesign* m_pSelectedDesign = nullptr;
     UnitDesignerState_t m_state;
 };

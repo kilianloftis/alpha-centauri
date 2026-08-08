@@ -20,7 +20,7 @@
     {
         "id": "armour",
         "display_name": "Armour",
-        "component_type": "armour",
+        "component_type": "armor",
         "required": true,
         "column": "right",
         "cost_modifier": 1.0,
@@ -30,7 +30,7 @@
         "id": "gated_ability",
         "display_name": "Gated Ability Slot",
         "component_type": "ability",
-        "required": false,
+        "required": true,
         "column": "right",
         "cost_modifier": 1.0,
         "required_tech": "advanced_build"

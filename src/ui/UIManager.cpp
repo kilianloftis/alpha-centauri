@@ -41,7 +41,7 @@ void UIManager::ProcessInput()
     PruneClosedViews_();
     ProcessKeys_();
     ProcessMouse_();
-    // A view closed by the last event handled must not remain the active view for Update().
+    // A view closed by the last event must not still be active for Update().
     PruneClosedViews_();
 }
 
@@ -94,10 +94,7 @@ void UIManager::HandleGlobalShortcut_(Key_t key)
         return;
     }
 
-    if (auto pView = it->second())
-    {
-        PushView(std::move(pView));
-    }
+    PushView(it->second());
 }
 
 void UIManager::ProcessMouse_()
@@ -116,16 +113,22 @@ void UIManager::ProcessMouse_()
 
 void UIManager::Update()
 {
-    // Only the world view queues an out-of-band advance request (auto end-turn); overlays
-    // resolve their own state through input. Package 1's Advance is idempotent to call when
-    // nothing is ready to resume, so no additional CanAdvanceTurn() gate is needed here —
-    // Engine::ProcessTurn_ (wired as WorldView's onProcessTurn) applies that gate itself.
-    if (m_pWorldView)
+    if (!m_pWorldView)
     {
-        // Edge scrolling is an input-driven state change, so it belongs here rather than on
-        // the render path, where a second pass (screenshot, minimap) would apply it twice.
-        m_pWorldView->UpdateCameraInput(m_overlayStack.empty(),
-                                        m_rInput.GetLastMousePosition());
+        return;
+    }
+
+    // Edge scrolling is an input-driven state change, so it belongs here rather than on the
+    // render path, where a second pass (screenshot, minimap) would apply it twice.
+    m_pWorldView->UpdateCameraInput(m_overlayStack.empty(), m_rInput.GetLastMousePosition());
+
+    // Only the world view queues an out-of-band advance request (auto end-turn). It must stay
+    // queued while the turn is gated: ProcessPendingAutoEndTurn clears the flag before calling
+    // through, and Engine::ProcessTurn_'s own gate then returns without advancing, so the
+    // request would be lost and never re-armed. WorldView already does this for its in-view
+    // modal; the overlay stack is the half it cannot see.
+    if (CanAdvanceTurn())
+    {
         m_pWorldView->ProcessPendingAutoEndTurn();
     }
 }
