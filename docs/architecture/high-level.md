@@ -229,7 +229,8 @@ graph TB
 - **Purpose**: Main game engine that coordinates all subsystems
 - **Responsibilities**:
   - Initialize and manage game loop
-  - Own and coordinate Graphics, Input, HookSystem, TurnProcessor, EventBridge, GameState, and ViewFactory
+  - Own and coordinate Graphics, Input, TurnProcessor, EventBridge, GameState, and ViewFactory
+    (hooks are per-stage `HookContext`s owned by the stages, not an engine-level system)
   - Owns `m_bShouldExit`; publishes `EvTurnStarted` directly to `EventBus` each turn
 
 ### Graphics System
@@ -322,6 +323,13 @@ seed. (Persisting that seed into save state is still open — see the world-gene
   - Each Faction owns its subsystems
 - **Details**: See `docs/architecture/faction-system.md` for detailed architecture
 
+### Diplomacy and Trade
+- **Purpose**: Pairwise relationships and the proposal/trade pipeline.
+- **Scope**: world, not per-faction. `DiplomacyLedger` and `DiplomaticActionExecutor` live on
+  `GameState`, because a relationship belongs to the pair; `Faction` owns only the state a trade
+  moves (treasury, techs, explored map, bases).
+- **Details**: See `docs/architecture/diplomacy-system.md`.
+
 ### Object lifetime and ownership transfer
 - **Purpose**: One protocol for what "destroy" and "transfer" mean for `Unit` and `BaseManager`,
   so gameplay effects, `EventBridge`, and UI invalidation all agree on it. See
@@ -413,22 +421,23 @@ seed. (Persisting that seed into save state is still open — see the world-gene
 - **Details**: See `docs/architecture/unit-movement-system.md` for detailed architecture
 
 ### UI System
-- **Purpose**: Abstract UI management with layered rendering
+- **Purpose**: View-stack management and layered rendering, with no backend dependency.
+- **Build target**: `ac-ui`, a static library over the abstract `Graphics` / `Input` interfaces.
+  It never links a rendering backend, so the test suite drives real views against a recording
+  `Graphics`. The executable is `main.cpp` + `Engine.cpp` + the SFML backend.
 - **Components**:
-  - `UIManager`: Abstract base class managing UI elements
-  - `SFMLUIManager`: SFML-based implementation
-  - `NullUIManager`: Null implementation for testing/headless mode
-  - `UIElement`: Abstract base for all UI elements (position, size, visibility)
-  - `UIWorldMap`: World map layer (bottom)
-  - `UIPanel`: Information panel at screen bottom
-  - `UIPopup`: Modal popup with dismiss button
-  - `ViewFactory`: Creates game views from game state and graphics context
-  - `ResearchView`: Research overlay view
-- **Factory**: `CreateUIManager()` function creates appropriate implementation
-- **Details**: See `docs/architecture/ui-system.md` for detailed architecture
+  - `UIManager`: one concrete class (there is no `SFMLUIManager` / `NullUIManager` — the backend
+    split lives in `Graphics` / `Input`). Owns the overlay stack plus one persistent `IWorldView`.
+  - `IGameView`: a screen or layer in the stack; `IWorldView` adds what the manager needs of the
+    map view specifically.
+  - `UIElement`: base for everything a view draws and hit-tests.
+  - `ViewFactory`: builds views from `GameState` + `GameDataContext`; throws rather than
+    returning a null view.
+- **Factory**: `CreateUIManager()` returns the concrete manager (no compile-time flag).
+- **Details**: See `docs/architecture/ui-system.md`.
 
 ### Configuration
-- **Turn Stages Config**: `config/turn_stages.json` - Loaded by HookSystem to define turn stages and hooks
+- **Turn Stages Config**: `config/turn_stages.json` - The stage order, and the pre/post/replace hooks each stage carries (`HookContext`)
 - **Improvements Config**: `config/improvements.json` - Loaded by ImprovementRegistry; defines terrain features, improvements, tile bonuses and landmarks, with their effects and `excludes` coexistence rules
 - **World Gen Config**: `config/worldGen/` - `presets.json` (landmass recipes), `decoration.json` (moisture/rockiness/aquifer/fungus/bonus knobs), `landmarks.json` (placement recipes)
 - **Tech Config**: `config/techs.json` - Loaded by TechRegistry to define available technologies, their costs, and unlock chains

@@ -2,156 +2,98 @@
 
 ```mermaid
 graph TB
-    subgraph "Engine Integration"
-        Engine[Engine]
-        TurnProcessor[TurnProcessor]
-        GameState[GameState]
+    subgraph "Session (GameState)"
+        GameState[GameState<br/>owns m_factions]
+        TurnProcessor[TurnProcessor<br/>Advance / StageResult_t]
+        DiplomacyLedger[DiplomacyLedger<br/>world-scoped pairwise status]
+        DiplomaticActionExecutor[DiplomaticActionExecutor]
+        PlanetaryCouncil[PlanetaryCouncil]
+        WorldMap[WorldMap]
+        EventBus[EventBus<br/>mod-facing]
     end
 
-    subgraph "Faction System"
-        Faction[Faction]
-        FactionManager[FactionManager]
-    end
-
-    subgraph "Faction Identity"
+    subgraph "Faction"
+        Faction[Faction<br/>owns every box below]
         FactionIdentity[FactionIdentity]
-        FactionName[FactionName<br/>string]
-        FactionLeader[FactionLeader<br/>string]
-        FactionColor[FactionColor<br/>enum]
-        FactionLogo[FactionLogo<br/>texture ID]
-    end
-
-    subgraph "AI Profile"
         AIProfile[AIProfile]
-        Personality[Personality<br/>aggressive, peaceful, etc.]
-        Priorities[Priorities<br/>research, economy, military]
-        BehaviorModifiers[BehaviorModifiers<br/>weights for decisions]
+        FactionFlavor[FactionFlavor<br/>base names, seeded]
+        EconomyManager[EconomyManager<br/>treasury + econ/labs/psych split]
+        Military[Military<br/>unit designs only]
+        ResearchManager[ResearchManager]
+        ResearchSelector[ResearchSelector]
+        SocialEngineeringManager[SocialEngineeringManager]
+        UnitManager[UnitManager<br/>owns Unit]
+        Bases[m_bases<br/>vector of BaseManager]
+        FactionEffectsPool[FactionEffectsPool]
+        FactionExploredMap[FactionExploredMap]
+        FactionVisibleMap[FactionVisibleMap]
+        FactionRevealedUnits[FactionRevealedUnits]
     end
 
-    subgraph "Economy Subsystem"
-        EconomyManager[EconomyManager]
-        EnergyAllocation[EnergyAllocation_t<br/>econ/labs/psych]
-        Minerals[Minerals<br/>int]
-        Energy[Energy<br/>int]
-        Credits[Credits<br/>int]
-        TradeRoutes[TradeRoutes<br/>vector]
-        IncomeCalculator[IncomeCalculator]
-    end
-
-    subgraph "Military Subsystem"
-        Military[Military]
-        Units[Units<br/>vector<Unit>]
-        Bases[Bases<br/>vector<Base>]
-        UnitFactory[UnitFactory]
+    subgraph "Base (BaseManager owns each)"
         BaseManager[BaseManager]
-    end
-
-    subgraph "Base Subsystem"
-        Base[Base]
-        WorkerAssignmentManager[WorkerAssignmentManager<br/>validates & auto-assigns]
-        PopContainer[PopContainer<br/>owns pop vector]
-        Pop[Pop<br/>WorkedTileClaim]
         PopulationManager[PopulationManager]
+        PopContainer[PopContainer<br/>owns Pop]
+        WorkerAssignmentManager[WorkerAssignmentManager]
+        BuildingManager[BuildingManager]
+        ResourceManager[ResourceManager]
         ProductionManager[ProductionManager]
+        HomeBaseIndex[HomeBaseIndex<br/>supported units]
     end
 
-    subgraph "Research Subsystem"
-        Research[Research]
-        TechTree[TechTree]
-        CurrentTechs[CurrentTechs<br/>set<TechID>]
-        ResearchQueue[ResearchQueue<br/>queue<TechID>]
-        ResearchProgress[ResearchProgress<br/>map<TechID, int>]
+    subgraph "Shared config (GameDataContext)"
+        TechRegistry[TechRegistry]
+        BuildingRegistry[BuildingRegistry]
+        SocialPolicyRegistry[SocialPolicyRegistry]
     end
 
-    subgraph "Diplomacy Subsystem"
-        Diplomacy[Diplomacy]
-        Relations[Relations<br/>map<FactionID, Relation>]
-        Treaties[Treaties<br/>vector<Treaty>]
-        AttitudeModifiers[AttitudeModifiers]
-    end
+    GameState --> Faction
+    GameState --> DiplomacyLedger
+    GameState --> DiplomaticActionExecutor
+    GameState --> PlanetaryCouncil
+    GameState --> WorldMap
+    GameState --> EventBus
+    TurnProcessor -->|stages read| GameState
 
-    subgraph "Data Structures"
-        Unit[Unit]
-        Base[Base]
-        Tech[Tech]
-        TechId[TechId<br/>int alias]
-        Treaty[Treaty]
-        Relation[Relation]
-    end
-
-    Engine --> GameState
-    Engine --> TurnProcessor
-    Engine --> FactionManager
-    
-    TurnProcessor --> FactionManager
-    FactionManager --> Faction
-    
     Faction --> FactionIdentity
     Faction --> AIProfile
+    Faction --> FactionFlavor
     Faction --> EconomyManager
     Faction --> Military
     Faction --> ResearchManager
-    Faction --> Diplomacy
-    
-    EconomyManager --> EnergyAllocation
-    
-    FactionIdentity --> FactionName
-    FactionIdentity --> FactionLeader
-    FactionIdentity --> FactionColor
-    FactionIdentity --> FactionLogo
-    
-    AIProfile --> Personality
-    AIProfile --> Priorities
-    AIProfile --> BehaviorModifiers
-    
-    EconomyManager --> Minerals
-    EconomyManager --> Energy
-    EconomyManager --> Credits
-    EconomyManager --> TradeRoutes
-    EconomyManager --> IncomeCalculator
-    
-    Military --> Units
-    Military --> Bases
-    Military --> UnitFactory
-    Military --> BaseManager
-    
-    ResearchManager --> TechRegistry
-    ResearchManager --> TechCostCalculator
-    ResearchManager --> DiscoveredTechs
-    ResearchManager --> CurrentTarget
-    ResearchManager --> AccumulatedPoints
-    ResearchManager --> PointsNeeded
-    
-    Diplomacy --> Relations
-    Diplomacy --> Treaties
-    Diplomacy --> AttitudeModifiers
-    
-    Military --> Unit
-    Military --> Base
-    BaseManager --> Base
-    Base --> PopulationManager
-    Base --> WorkerAssignmentManager
-    Base --> ProductionManager
+    Faction --> ResearchSelector
+    Faction --> SocialEngineeringManager
+    Faction --> UnitManager
+    Faction --> Bases
+    Faction --> FactionEffectsPool
+    Faction --> FactionExploredMap
+    Faction --> FactionVisibleMap
+    Faction --> FactionRevealedUnits
+
+    Bases --> BaseManager
+    BaseManager --> PopulationManager
+    BaseManager --> WorkerAssignmentManager
+    BaseManager --> BuildingManager
+    BaseManager --> ResourceManager
+    BaseManager --> ProductionManager
+    BaseManager --> HomeBaseIndex
     PopulationManager --> PopContainer
-    PopContainer --> Pop
-    WorkerAssignmentManager --> PopulationManager
-    WorkerAssignmentManager --> WorkedTileIndex[WorkedTileIndex<br/>world-scoped, on WorldMap]
-    ResearchManager --> Tech
-    ResearchManager --> TechId
-    TechRegistry --> Tech
-    TechRegistry --> TechId
-    Diplomacy --> Treaty
-    Diplomacy --> Relation
+    WorkerAssignmentManager -->|claims tiles in| WorldMap
+    ResourceManager -->|reads split from| EconomyManager
+
+    ResearchManager -->|borrows| TechRegistry
+    BuildingManager -->|borrows| BuildingRegistry
+    SocialEngineeringManager -->|borrows| SocialPolicyRegistry
+
+    DiplomaticActionExecutor -->|moves energy/tech/bases between| Faction
 
     style Faction fill:#f9f,stroke:#333,stroke-width:4px
-    style FactionManager fill:#fbf,stroke:#333,stroke-width:3px
-    style FactionIdentity fill:#bbf,stroke:#333,stroke-width:2px
-    style AIProfile fill:#bbf,stroke:#333,stroke-width:2px
-    style EconomyManager fill:#bfb,stroke:#333,stroke-width:2px
-    style Military fill:#bfb,stroke:#333,stroke-width:2px
-    style ResearchManager fill:#bfb,stroke:#333,stroke-width:2px
-    style Diplomacy fill:#bfb,stroke:#333,stroke-width:2px
-    style Pop fill:#bbf,stroke:#333,stroke-width:2px
+    style GameState fill:#fbf,stroke:#333,stroke-width:3px
+    style BaseManager fill:#bfb,stroke:#333,stroke-width:2px
+    style DiplomacyLedger fill:#fbf,stroke:#333,stroke-width:2px
+    style TechRegistry fill:#ffd,stroke:#333,stroke-width:2px
+    style BuildingRegistry fill:#ffd,stroke:#333,stroke-width:2px
+    style SocialPolicyRegistry fill:#ffd,stroke:#333,stroke-width:2px
 ```
 
 ## Component Overview
@@ -245,24 +187,19 @@ Caller contract: the faction must have been constructed against the session's `W
 - **Rationale**: Separated to allow different AI personalities and easy AI tuning
 
 ### Economy
-- **Purpose**: Manages faction's economic resources and income
+- **Purpose**: Owns the faction energy treasury and the faction-wide econ/labs/psych split.
 - **Responsibilities**:
-  - Track minerals, energy, and credits
-  - Manage trade routes
-  - Calculate income per turn
-  - Handle resource spending
-  - Own the faction-wide energy allocation split (`EconomyManager`)
-- **Implementation**: See `docs/architecture/economy-system.md` for the fine-grained economy subsystem design
-- **Rationale**: Economic logic is complex and should be isolated for testing
+  - Hold the treasury. `AddEnergy` is income; `SpendEnergy` / `CanAfford` are the spend path and
+    enforce "never negative" here rather than in each caller.
+  - Own the `EnergyAllocation_t` percentages every base's `ResourceManager` splits against.
+- **Not here**: minerals and nutrients are per-base stockpiles (`ProductionManager`,
+  `PopulationManager`); there are no credits distinct from energy, and no trade routes.
+- **Implementation**: See `docs/architecture/economy-system.md`.
 
 ### Military
-- **Purpose**: Manages faction's units and bases
-- **Responsibilities**:
-  - Own and manage all Unit instances
-  - Own and manage all Base instances
-  - Provide unit creation via UnitFactory
-  - Provide base management via BaseManager
-- **Rationale**: Military logic is substantial and benefits from separation
+- **Purpose**: Holds the faction's **unit designs**. That is all it does.
+- **Not here**: live units belong to `UnitManager` (which creates and destroys them and owns the
+  `Unit` objects); bases belong to `Faction::m_bases`. There is no `UnitFactory`.
 
 ### ResearchManager
 - **Purpose**: Manages faction's technological progress
@@ -275,20 +212,18 @@ Caller contract: the faction must have been constructed against the session's `W
 - **Composition**: Uses TechCostCalculator, references TechRegistry
 - **Rationale**: Research system is complex with its own data structures
 
-### Diplomacy
-- **Purpose**: Manages faction's relationships with other factions
-- **Responsibilities**:
-  - Track relations with all other factions
-  - Manage active treaties
-  - Apply attitude modifiers
-  - Handle diplomatic actions
-- **Rationale**: Diplomacy involves complex state and interactions between factions
+### Diplomacy — world-scoped, not a faction subsystem
+`Faction` owns no diplomacy object. Pairwise status lives in `DiplomacyLedger` on `GameState`,
+because a relationship is a property of the *pair*, not of either side; storing it per faction
+would mean two copies that can disagree. Proposals and trades run through
+`DiplomaticActionExecutor`, also on `GameState`.
+
+See `docs/architecture/diplomacy-system.md`.
 
 ### Base System
 - **Purpose**: Represents individual bases that provide resources for a faction
 - **Components**:
-  - `Base`: Main base class managing population, buildings, and resources
-  - `Population`: Abstract base class for population implementations
+  - `BaseManager`: the base. (Older docs called this `Base`; there is no separate `Base` type.)
   - `PopulationManager`: API surface for the population component; manages growth and riot state for a single base, and **owns population policy** — which types a pop may become (`ResolveType_` walks the obsolescence chain against discovered techs and is the single place a requested type becomes an actual one, so `AddPop`, `ConvertTo`, `ConvertToFallback` and composition reconciliation all apply the same rule) and how composition targets are reconciled (`ApplyCompositionTargets`). The rules deliberately do not live in `PopContainer`: when they did, the tech gate was applied on one conversion path and not another.
   - `IConstructable`: Abstract interface for any entity that can be queued for production; exposes `GetId()`, `GetName()`, and `GetMineralCost()`
   - `ProductionManager`: API surface for the production component; manages one active `IConstructable` at a time, tracks accumulated minerals, and emits `OnProductionCompleted` when the item is finished
@@ -333,14 +268,16 @@ Caller contract: the faction must have been constructed against the session's `W
 ## Integration with Engine
 
 ### Turn Processing Flow
-1. TurnProcessor iterates over FactionVector in GameState
-2. For each Faction, TurnProcessor calls Faction::ProcessTurn()
-3. Faction delegates to subsystems:
-   - Economy::CalculateIncome()
-   - Military::UpdateUnits()
-   - Research::AdvanceResearch()
-   - Diplomacy::UpdateRelations()
-4. AIProfile guides AI decision-making during turn
+Turns are **stage driven**, not faction driven. `Faction` has no `ProcessTurn`.
+
+1. `TurnProcessor::Advance(GameState&)` walks the stage list from `config/turn_stages.json`.
+2. A global stage runs once; a per-faction stage runs once per faction in `GameState::Factions()`.
+3. Each stage reads what it needs off `GameState` and the faction it was handed, and returns a
+   `StageResult_t` — `Complete` to move on, or `Yield` to hand control back to the UI and resume
+   at the same stage on the next `Advance` (this is how `PlayerActions` waits for the player).
+4. Stages self-register, so adding one is a new translation unit plus a config entry.
+
+See `docs/architecture/turn-system.md` for the stage list and the resume protocol.
 
 ### Engine Ownership
 - Engine owns GameState
@@ -350,11 +287,12 @@ Caller contract: the faction must have been constructed against the session's `W
 - This hierarchy ensures proper lifetime management
 
 ### Modding Integration
-- Faction definitions are loaded from configuration into `GameDataContext::factionRegistry`
-- FactionIdentity can be customized via config
-- AIProfile can be customized via config
-- TechTree can be extended via mods
-- HookSystem can inject custom logic into turn processing
+- Faction definitions load from config into `GameDataContext::factionRegistry`; `FactionIdentity`
+  and `AIProfile` are built from that config.
+- Techs, buildings, unit components, social policies and improvements are all registry-loaded
+  config; see `docs/architecture/high-level.md`, "Configuration".
+- `HookContext` (not a "HookSystem") lets a turn stage carry pre / post / replace hooks; see
+  `docs/architecture/event-system.md` for that seam and for the mod-facing `EventBus`.
 
 ## Design Rationale
 
@@ -374,6 +312,9 @@ Caller contract: the faction must have been constructed against the session's `W
 - Interface-based design allows different implementations
 
 ### Performance Considerations
-- FactionManager provides O(1) faction lookup by ID
-- Subsystems can be updated independently
-- Data-oriented design possible for Units and Bases collections
+- `GameState::FindFaction` is a linear scan over `m_factions`. Faction counts are single digits,
+  so this has never been the cost that mattered; the recomputation the reviews keep finding
+  (per-frame panel work, per-event visibility rebuilds) is.
+- Derived state is memoized against `Revision` counters rather than recomputed: the faction
+  effect pool, `BaseManager`'s composed base effects, the social-rating map, and the UI's
+  per-panel snapshots all follow the same pull-based invalidation pattern.

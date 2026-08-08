@@ -9,7 +9,7 @@ graph TB
     end
 
     subgraph "Data Management"
-        TechRegistry[TechRegistry<br/>global singleton]
+        TechRegistry[TechRegistry<br/>owned by GameDataContext]
         TechCostCalculator[TechCostCalculator]
     end
 

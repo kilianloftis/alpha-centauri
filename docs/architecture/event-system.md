@@ -87,17 +87,27 @@ graph TB
 - **Mod Access**: Full - this is the primary mod interface for events
 
 ### EventBridge
-- **Purpose**: Bridges internal signals to the mod-facing EventBus
-- **Characteristics**:
-  - Subscribes to all internal signals at startup
-  - Converts internal signal events to GameEvent variants
-  - Republishes events on the EventBus
-- **Current Bridges**:
-  - `faction.on_tech_discovered` → `EvTechDiscovered`
-  - `faction.on_base_built` → `EvBaseBuilt`
-  - `faction.on_eliminated` → `EvFactionElim`
-  - `turn_loop.on_turn_started` → `EvTurnStarted`
-- **Pattern**: One-way bridge from internal signals to EventBus (mods Publish, don't receive internal signals)
+- **Purpose**: Bridges internal `Signal`s to the mod-facing `EventBus`.
+- **Wiring**: per base, through `WireBase`, which is idempotent and keyed by object address —
+  identity-preserving transfer keeps the same base wired, while a *reconstructed* base (same
+  `BaseId_t`, new address) is wired again. `Faction::OnBaseAdded` drives it, so founding, load
+  and post-transfer adopt all wire without any caller remembering to.
+- **Pattern**: one-way. Mods observe `EventBus`; they never receive internal signals.
+
+#### What is actually bridged
+
+| Event | Source | Status |
+|---|---|---|
+| `EvBaseGainedPop` | `BaseManager::OnPopGained` | bridged |
+| `EvBaseLostPop` | `BaseManager::OnPopLost` | bridged |
+| `EvTurnStarted` | published directly by the `TurnStart` stage, not via the bridge | published |
+| `EvTechDiscovered` | — | **declared, never published**: `ResearchManager` has no discovery signal |
+| `EvBaseBuilt` | — | **declared, never published** |
+| `EvDroneRiot` | — | **declared, never published** |
+| `EvFactionElim` | — | **declared, never published**: there is no elimination path in the game at all, so there is nothing to observe. Bridging it would mean inventing the rule. |
+
+Four of seven declared events never fire. A mod subscribing to them would wait forever with no
+diagnostic, which is why this table exists rather than a list of intentions.
 
 ## Design Rationale
 
