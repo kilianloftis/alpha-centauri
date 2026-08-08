@@ -33,6 +33,14 @@ public:
     void Render(Graphics& rGraphics) override;
     void HandleMouseClick(const MouseEvent_t& rEvent) override;
 
+    // Selection is mutually exclusive within this panel, and it is this panel's own state.
+    // It was only ever honoured because the parent view tore the whole UI down and rebuilt it
+    // with a new selectedId; the panel itself never updated anything.
+    void SetSelected(const std::optional<std::string>& rSelectedId);
+
+    // Replace the list contents (the target list depends on which faction is selected).
+    void SetItems(std::vector<Item_t> items, const std::optional<std::string>& rSelectedId);
+
 private:
     void RebuildButtons_();
 

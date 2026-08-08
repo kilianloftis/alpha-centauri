@@ -12,12 +12,12 @@ class Graphics;
 class BaseNameDisplay : public UIElement
 {
 public:
-    BaseNameDisplay(const BaseManager* pBase, WindowLayout_t layout);
+    BaseNameDisplay(const BaseManager& rBase, WindowLayout_t layout);
 
     void Render(Graphics& rGraphics) override;
 
 private:
-    const BaseManager* m_pBase = nullptr;
+    const BaseManager& m_rBase;
 };
 
 } // namespace ac

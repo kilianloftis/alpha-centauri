@@ -68,7 +68,7 @@ void CouncilProposalInfoPanel::Render(Graphics& rGraphics)
             {
                 continue;
             }
-            const int weight = pCouncil->ComputeVoteWeight(*pMember, rConfig.voteWeight);
+            const int weight = m_weights.Get(*pCouncil, *pMember, rConfig.voteWeight);
             const auto it = pPending->electionVotes.find(pMember->GetFactionId());
             if (it == pPending->electionVotes.end())
             {
@@ -118,7 +118,7 @@ void CouncilProposalInfoPanel::Render(Graphics& rGraphics)
             {
                 continue;
             }
-            const int weight = pCouncil->ComputeVoteWeight(*pMember, rConfig.voteWeight);
+            const int weight = m_weights.Get(*pCouncil, *pMember, rConfig.voteWeight);
             switch (it->second)
             {
             case CouncilBallot_t::Yea:

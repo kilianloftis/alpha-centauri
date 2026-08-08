@@ -6,6 +6,8 @@
 #include "game/Faction.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
+#include "game/faction/base/BaseManager.h"
+#include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitSlotRegistry.h"
@@ -13,6 +15,7 @@
 #include "ui/style/UiStyle.h"
 
 #include <memory>
+#include <stdexcept>
 #include <string>
 
 namespace actest
@@ -57,8 +60,19 @@ struct ViewFixture : WorldFixture
         dataContext.unitSlotRegistry = std::make_unique<ac::UnitSlotRegistry>();
         dataContext.unitSlotRegistry->Load(FixturePath("unit_slots.json"));
 
+        auto pMap = std::make_unique<ac::WorldMap>(9, 9);
+        // Moist tiles so worked tiles actually yield something: a default WorldMap produces
+        // zero nutrients everywhere, which makes every yield assertion vacuously true.
+        for (int y = 0; y < pMap->GetHeight(); ++y)
+        {
+            for (int x = 0; x < pMap->GetWidth(); ++x)
+            {
+                pMap->GetTile(x, y)->SetMoisture(ac::Moisture_t::Wet);
+            }
+        }
+
         pState = std::make_unique<ac::GameState>(
-            std::make_unique<ac::WorldMap>(9, 9), improvements, &unitComponents, settings,
+            std::move(pMap), improvements, &unitComponents, settings,
             morale(), k_TestRngSeed);
 
         if (bWithPlayerFaction)
@@ -69,6 +83,18 @@ struct ViewFixture : WorldFixture
         }
 
         pFactory = std::make_unique<ac::ViewFactory>(*pState, dataContext, graphics, settings);
+    }
+
+    ac::BaseManager& MakeBase(int x, int y)
+    {
+        ac::BaseManager* pBase = pPlayer->CreateBase(
+            pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(x, y),
+            dataContext, pState->GetTileEffects(), pState->GetSecretProjectAvailability());
+        if (!pBase)
+        {
+            throw std::runtime_error("ViewFixture: base creation failed");
+        }
+        return *pBase;
     }
 
     static ac::WindowLayout_t FullScreen()

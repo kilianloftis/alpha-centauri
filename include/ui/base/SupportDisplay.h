@@ -12,12 +12,12 @@ class Graphics;
 class SupportDisplay : public UIElement
 {
 public:
-    SupportDisplay(const BaseManager* pBase, WindowLayout_t layout);
+    SupportDisplay(const BaseManager& rBase, WindowLayout_t layout);
 
     void Render(Graphics& rGraphics) override;
 
 private:
-    const BaseManager* m_pBase = nullptr;
+    const BaseManager& m_rBase;
 };
 
 } // namespace ac

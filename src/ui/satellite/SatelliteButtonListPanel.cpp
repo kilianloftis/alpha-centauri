@@ -53,6 +53,27 @@ void SatelliteButtonListPanel::RebuildButtons_()
     }
 }
 
+void SatelliteButtonListPanel::SetSelected(const std::optional<std::string>& rSelectedId)
+{
+    if (m_selectedId == rSelectedId)
+    {
+        return;
+    }
+    m_selectedId = rSelectedId;
+    for (size_t i = 0; i < m_buttons.size(); ++i)
+    {
+        m_buttons[i]->SetSelected(m_selectedId && *m_selectedId == m_items[i].id);
+    }
+}
+
+void SatelliteButtonListPanel::SetItems(std::vector<Item_t> items,
+                                        const std::optional<std::string>& rSelectedId)
+{
+    m_items = std::move(items);
+    m_selectedId = rSelectedId;
+    RebuildButtons_();
+}
+
 void SatelliteButtonListPanel::Render(Graphics& rGraphics)
 {
     const auto& style = Style().satelliteView;

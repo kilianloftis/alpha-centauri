@@ -6,6 +6,7 @@
 
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace ac
 {
@@ -13,6 +14,8 @@ namespace ac
 class GameState;
 class BuildingRegistry;
 class Graphics;
+class SatelliteButtonListPanel;
+class SatelliteSummaryPanel;
 
 class SatelliteView : public IGameView
 {
@@ -32,6 +35,9 @@ private:
     };
 
     void Rebuild_();
+    // Target list contents follow the selected faction; the faction list itself does not move.
+    void RefreshTargetList_();
+    std::vector<std::string> CollectMissingAttackPrerequisites_() const;
     void SetMode_(Mode_t mode);
     void SelectFaction_(FactionId_t factionId);
     void SelectTarget_(BuildingId_t buildingId);
@@ -45,6 +51,11 @@ private:
     GameState& m_rGameState;
     const BuildingRegistry& m_rBuildings;
     Mode_t m_mode = Mode_t::Summary;
+    // Owned by m_elements; cleared and re-pointed by Rebuild_, which is the only thing that
+    // replaces them. Null in the mode that does not build them.
+    SatelliteSummaryPanel* m_pSummaryPanel = nullptr;
+    SatelliteButtonListPanel* m_pFactionList = nullptr;
+    SatelliteButtonListPanel* m_pTargetList = nullptr;
     std::optional<FactionId_t> m_selectedFactionId;
     std::optional<BuildingId_t> m_selectedBuildingId;
     // Deferred so attacker-popup callbacks do not destroy the popup mid-stack.

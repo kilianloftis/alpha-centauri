@@ -2,6 +2,7 @@
 
 #include "graphics/Graphics.h"
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -19,6 +20,7 @@ public:
         float x = 0.0f;
         float y = 0.0f;
         unsigned int size = 0;
+        ac::Color_t color{};
     };
 
     struct RectDraw_t
@@ -28,6 +30,7 @@ public:
         float width = 0.0f;
         float height = 0.0f;
         bool bFilled = false;
+        ac::Color_t color{};
     };
 
     void PumpEvents() override {}
@@ -38,19 +41,21 @@ public:
     bool DrawSprite(const std::string&, float, float) override { return true; }
 
     void DrawText(const std::string& rText, float x, float y, unsigned int size,
-                  const ac::Color_t&) override
+                  const ac::Color_t& rColor) override
     {
-        texts.push_back(TextDraw_t{rText, x, y, size});
+        texts.push_back(TextDraw_t{rText, x, y, size, rColor});
     }
 
-    void DrawRect(float x, float y, float width, float height, const ac::Color_t&, float) override
+    void DrawRect(float x, float y, float width, float height, const ac::Color_t& rColor,
+                  float) override
     {
-        rects.push_back(RectDraw_t{x, y, width, height, false});
+        rects.push_back(RectDraw_t{x, y, width, height, false, rColor});
     }
 
-    void DrawFilledRect(float x, float y, float width, float height, const ac::Color_t&) override
+    void DrawFilledRect(float x, float y, float width, float height,
+                        const ac::Color_t& rColor) override
     {
-        rects.push_back(RectDraw_t{x, y, width, height, true});
+        rects.push_back(RectDraw_t{x, y, width, height, true, rColor});
     }
 
     void DrawLine(float, float, float, float, const ac::Color_t&, float) override {}
@@ -83,6 +88,20 @@ public:
             }
         }
         return false;
+    }
+
+    // The fill colour of the filled rect at (x, y), if one was drawn there. Selection state is
+    // often nothing but a fill colour, so a stub that dropped colours could not see it.
+    std::optional<ac::Color_t> FillColorAt(float x, float y) const
+    {
+        for (const RectDraw_t& rDraw : rects)
+        {
+            if (rDraw.bFilled && rDraw.x == x && rDraw.y == y)
+            {
+                return rDraw.color;
+            }
+        }
+        return std::nullopt;
     }
 
     // The y of the first drawn string containing rNeedle, or -1 if none.

@@ -222,6 +222,36 @@ Views are rendered bottom-to-top through the stack. Each view renders its own `U
   broken, not a UI state — the previous `return nullptr` was dereferenced by `PushView`, which now
   also rejects a null view.
 
+### Rendering from snapshots
+Panels paint from precomputed state rather than re-deriving it per frame. Three places do this,
+each with an explicit key:
+
+- **`BaseDisplaySnapshot_t`** (`include/ui/base/BaseDisplaySnapshot.h`) — nutrient/mineral
+  production, nutrients required, mineral cost, and the yield and work state of every workable
+  tile. `BaseView` owns one and rebuilds it only when `ReadBaseDisplayKey` moves: the faction's
+  effects version, the world `WorkedTileIndex` revision, the base's population revision, its
+  home-unit revision, and the current production item. Previously `GrowthDisplay`,
+  `ProductionDisplay` and `BaseWorkableAreaDisplay` between them drove two full
+  `ResourceManager::ComputeWorked_` passes and twenty per-tile yield resolutions on **every
+  paint**. Cheap reads (stockpiles, base name, population size) stay live and are deliberately
+  not in the snapshot.
+  Tile state is absent from the key because it cannot change while the view is open:
+  terraforming resolves on turn advance, and `UIManager` refuses to advance the turn while an
+  overlay covers the map.
+- **`CouncilVoteWeightCache`** (`include/ui/council/CouncilVoteWeightCache.h`) — one entry per
+  faction, keyed on the council revision, the faction's local effects version and its
+  population. `PlanetaryCouncil::ComputeVoteWeight` copies the whole effect pool and resolves
+  `CouncilVotes` modifiers; both council panels called it per member per paint.
+- **`SatelliteSummaryPanel`** — the orbital-type list, faction list and census map are members
+  refreshed by `Refresh()`, called on construction and by `SatelliteView` after an orbital
+  attack, which is the only thing that can move the census while the view is open.
+
+`SatelliteView` also stopped calling `Rebuild_()` on every selection: `SatelliteButtonListPanel`
+now applies selection to its own buttons (`SetSelected`) and replaces its contents
+(`SetItems`), so a click no longer destroys and recreates the tabs, the Attack button and both
+lists — including, mid-callback, the button that was clicked. `Rebuild_()` remains for a mode
+change, which genuinely replaces the layout.
+
 ### Build target: `ac-ui`
 Every view, panel and input controller lives in the `ac-ui` static library, which links `ac-core`
 and depends only on the abstract `Graphics` / `Input` interfaces — never on a rendering backend.

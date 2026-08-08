@@ -21,6 +21,31 @@ SatelliteSummaryPanel::SatelliteSummaryPanel(GameState& rGameState,
     , m_rGameState(rGameState)
     , m_rBuildings(rBuildings)
 {
+    Refresh();
+}
+
+void SatelliteSummaryPanel::Refresh()
+{
+    m_orbitalTypes.clear();
+    for (const BuildingConfig_t& rBuilding : m_rBuildings.GetAll())
+    {
+        if (rBuilding.orbital)
+        {
+            m_orbitalTypes.push_back(&rBuilding);
+        }
+    }
+
+    m_factions.clear();
+    for (const Faction& rFaction : m_rGameState.Factions())
+    {
+        m_factions.push_back(&rFaction);
+    }
+
+    m_counts.clear();
+    for (const OrbitalCensusEntry_t& rEntry : m_rGameState.GetOrbitalCensus())
+    {
+        m_counts[std::to_string(rEntry.factionId) + ":" + rEntry.buildingId] = rEntry.count;
+    }
 }
 
 void SatelliteSummaryPanel::Render(Graphics& rGraphics)
@@ -31,22 +56,7 @@ void SatelliteSummaryPanel::Render(Graphics& rGraphics)
     rGraphics.DrawRect(
         m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.borderColor);
 
-    std::vector<const BuildingConfig_t*> orbitalTypes;
-    for (const BuildingConfig_t& rBuilding : m_rBuildings.GetAll())
-    {
-        if (rBuilding.orbital)
-        {
-            orbitalTypes.push_back(&rBuilding);
-        }
-    }
-
-    std::vector<const Faction*> factions;
-    for (const Faction& rFaction : m_rGameState.Factions())
-    {
-        factions.push_back(&rFaction);
-    }
-
-    if (orbitalTypes.empty() || factions.empty())
+    if (m_orbitalTypes.empty() || m_factions.empty())
     {
         rGraphics.DrawText(
             "No orbital data",
@@ -57,15 +67,9 @@ void SatelliteSummaryPanel::Render(Graphics& rGraphics)
         return;
     }
 
-    std::unordered_map<std::string, int> counts;
-    for (const OrbitalCensusEntry_t& rEntry : m_rGameState.GetOrbitalCensus())
-    {
-        counts[std::to_string(rEntry.factionId) + ":" + rEntry.buildingId] = rEntry.count;
-    }
-
     // +1 column for faction names; +1 row for building headers.
-    const int cols = static_cast<int>(orbitalTypes.size()) + 1;
-    const int rows = static_cast<int>(factions.size()) + 1;
+    const int cols = static_cast<int>(m_orbitalTypes.size()) + 1;
+    const int rows = static_cast<int>(m_factions.size()) + 1;
     const float cellW = m_layout.width / static_cast<float>(cols);
     const float cellH = m_layout.height / static_cast<float>(rows);
     const float padX = style.paddingRatio * cellW;
@@ -79,7 +83,7 @@ void SatelliteSummaryPanel::Render(Graphics& rGraphics)
         {
             continue;
         }
-        const BuildingConfig_t* pBuilding = orbitalTypes[static_cast<size_t>(col - 1)];
+        const BuildingConfig_t* pBuilding = m_orbitalTypes[static_cast<size_t>(col - 1)];
         rGraphics.DrawText(
             pBuilding->name,
             x + padX,
@@ -96,7 +100,7 @@ void SatelliteSummaryPanel::Render(Graphics& rGraphics)
         {
             continue;
         }
-        const Faction* pFaction = factions[static_cast<size_t>(row - 1)];
+        const Faction* pFaction = m_factions[static_cast<size_t>(row - 1)];
         rGraphics.DrawText(
             pFaction->GetDefinition().identity.name,
             m_layout.x + padX,
@@ -104,13 +108,13 @@ void SatelliteSummaryPanel::Render(Graphics& rGraphics)
             style.factionFontSize,
             style.factionNameColor);
 
-        for (size_t col = 0; col < orbitalTypes.size(); ++col)
+        for (size_t col = 0; col < m_orbitalTypes.size(); ++col)
         {
-            const BuildingId_t& buildingId = orbitalTypes[col]->id;
+            const BuildingId_t& buildingId = m_orbitalTypes[col]->id;
             const std::string key =
                 std::to_string(pFaction->GetFactionId()) + ":" + buildingId;
-            const auto it = counts.find(key);
-            const int count = it != counts.end() ? it->second : 0;
+            const auto it = m_counts.find(key);
+            const int count = it != m_counts.end() ? it->second : 0;
             const float cellX = m_layout.x + static_cast<float>(col + 1) * cellW;
             rGraphics.DrawText(
                 std::to_string(count),

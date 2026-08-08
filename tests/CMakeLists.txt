@@ -80,6 +80,9 @@ add_executable(effects-tests
     game/PlanetaryCouncilTests.cpp
     ui/ModalContractTests.cpp
     ui/ListSelectorPopupTests.cpp
+    ui/BaseViewTests.cpp
+    ui/CouncilVoteWeightCacheTests.cpp
+    ui/SatelliteViewTests.cpp
     ui/UIManagerTests.cpp
     ui/ViewFactoryTests.cpp
     lib/SignalTests.cpp

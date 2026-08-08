@@ -92,8 +92,88 @@ segfaults on the old null return, which is precisely the reported failure mode.
 The `IWorldView` split has a second payoff beyond tests: `ac-ui` no longer compiles against a
 rendering backend, so the layering the architecture docs claimed is now enforced by the build.
 
-## Deferred to commit B
+## Verified diagnoses — commit B
 
-Per-frame recomputation: base panels calling live yield/production getters per element, council
-vote weights recomputed per frame with no revision key, the satellite summary reallocating census
-data per frame, and the satellite view rebuilding wholesale on each selection change.
+### [M] Base panels force full live yield/production work every frame
+
+`BaseWorkableAreaDisplay.cpp:71-72, 87-89`, `GrowthDisplay.cpp:46-51`,
+`ProductionDisplay.cpp:56-66`. Verified: `BuildBaseEffects_` **is** memoized on the pool version
+(prior review §1.1), but the getters above it are not — `GetNutrientProduction` and
+`GetMineralProduction` each run `ResourceManager::ComputeWorked_` in full (every worked tile,
+every supply crawler, the base tile), and the workable-area panel resolves a yield per tile. Two
+full passes plus twenty resolutions, sixty times a second, for numbers that move only on a click.
+
+**Chosen:** `BaseDisplaySnapshot_t`, owned by `BaseView`, rebuilt when `ReadBaseDisplayKey`
+moves — effects version, `WorkedTileIndex` revision, population revision, home-unit revision,
+current production.
+
+**Rejected — a plain per-frame snapshot** (which the review's fix text also offers). It cannot go
+stale, but it saves nothing: each panel already calls each getter once per paint, so computing
+them together once per frame is the same work. The cost being complained about is that it happens
+*at all*, every frame.
+
+**Why tile state is not in the key:** terraforming resolves on turn advance, and `UIManager`
+refuses to advance the turn while an overlay covers the map — pinned by the turn-gate test added
+in commit A. That invariant is what makes the short key sufficient, and it is written down next
+to the struct so a future change to overlay/turn behaviour lands on it.
+
+### [M] Council vote weights recomputed per frame with no revision cache
+
+`CouncilFactionVotesPanel.cpp:119`, `CouncilProposalInfoPanel.cpp:71,121`. `ComputeVoteWeight`
+copies the faction's local pool, appends council and world effects, and resolves stat modifiers.
+Called once per member in the votes panel and again per member in the info panel's tally: a
+five-member council resolved the stat fifteen times per paint.
+
+**Chosen:** `CouncilVoteWeightCache`, one entry per faction, keyed on council revision + local
+effects version + population + weighting mode. It carries a `GetComputeCount()` because the
+saved work is the entire point and is not observable from the returned weights — the first
+version of the test passed against a single-slot cache that recomputed on every read.
+
+**Honest limitation:** the population field is defensive. Every population change I could
+construct also moves the faction's local effects version (pops contribute effects), so no test
+isolates it. It costs one int compare and removes the dependency on that coupling.
+
+### [M] Satellite summary reallocates census data every frame; view rebuilds on every selection
+
+`SatelliteSummaryPanel.cpp:34-64` rebuilt the orbital-type vector, the faction pointer list and a
+string-keyed census map per paint, and `BuildOrbitalCensus` walks every faction's bases.
+`SatelliteView.cpp:120-138` called `Rebuild_()` from `SelectFaction_` / `SelectTarget_`,
+destroying and recreating the tabs, the Attack button and both list panels — including,
+mid-callback, the button that was clicked. `SatelliteButtonListPanel` claimed mutually-exclusive
+selection but never updated `m_selectedId` or any button; it only looked right *because* the
+parent tore it down.
+
+**Chosen:** the panel caches its grid behind `Refresh()`, called on construction and after an
+orbital attack (the only census mutation reachable while the view is open). The list panel gained
+`SetSelected` / `SetItems` and now owns its selection; `Rebuild_()` survives only for a mode
+change, which genuinely replaces the layout.
+
+**Also landed here**, being the same files and the same class of defect:
+- `OpenAttackerPopup_` threw away a null player faction silently; it now throws, matching the
+  factory's policy from commit A.
+- `OnAttackClicked_` returned with no feedback when no target was picked, while the Attack
+  control stayed enabled — a dead click. It now names what is missing.
+- Base panels take `const BaseManager&` / `PopulationManager&` instead of nullable pointers with
+  a throw buried in `Render`.
+- `BaseView` no longer takes a separate `Faction&`. It was only read by `HandlePopClick_`, which
+  is unreachable unless the view is editable, which `ViewFactory` grants only for the player's
+  own base — so it could only ever equal `m_rBase.GetFaction()`.
+
+## Test coverage — commit B
+
+Eleven tests, each revert-verified:
+
+- `tests/ui/BaseViewTests.cpp` (4) — the key is stable across paints and moves on an assignment
+  change; the snapshot covers exactly the tiles the panel draws; snapshot values equal the live
+  getters; and `BaseView` repaints without rebuilding yet still refreshes after a click. Verified
+  against both a never-refreshing snapshot and a key missing the worked-tile revision.
+- `tests/ui/CouncilVoteWeightCacheTests.cpp` (4) — repeated reads compute once; alternating
+  members compute twice, not ten times; a population change is picked up; modes do not share an
+  entry. Verified against a single-slot cache and against no caching at all.
+- `tests/ui/SatelliteViewTests.cpp` (3) — painting does not re-census but `Refresh()` does;
+  selection applies to the panel's own buttons and is exclusive; `SetItems` keeps the requested
+  selection.
+
+`RecordingGraphics` now records draw **colours** as well as positions. Selection state in this
+UI is often nothing but a fill colour, so without it the list-panel tests could not have seen
+the defect at all — the same gap, one layer down, that package 14 hit with positions.

@@ -116,7 +116,7 @@ void CouncilFactionVotesPanel::Render(Graphics& rGraphics)
 
         const std::string& rName = pMember->GetDefinition().identity.name;
         const std::string voteLabel = MemberVoteLabel_(*pCouncil, *pPending, rConfig, *pMember);
-        const int weight = pCouncil->ComputeVoteWeight(*pMember, rConfig.voteWeight);
+        const int weight = m_weights.Get(*pCouncil, *pMember, rConfig.voteWeight);
 
         rGraphics.DrawText(
             rName,

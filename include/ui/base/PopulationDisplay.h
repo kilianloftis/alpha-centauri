@@ -1,8 +1,8 @@
 #pragma once
 
-#include "ui/IGameView.h"
 #include "ui/UIElement.h"
 #include <functional>
+#include <vector>
 
 namespace ac
 {
@@ -17,7 +17,8 @@ using PopClickCallback_t = std::function<void(Pop&)>;
 class PopulationDisplay : public UIElement
 {
 public:
-    PopulationDisplay(PopulationManager* pPopulation, WindowLayout_t layout, PopClickCallback_t onPopClick);
+    PopulationDisplay(PopulationManager& rPopulation, WindowLayout_t layout,
+                      PopClickCallback_t onPopClick);
     ~PopulationDisplay() override = default;
 
     void Render(Graphics& rGraphics) override;
@@ -30,7 +31,7 @@ private:
         Pop* pPop;
     };
 
-    PopulationManager* m_pPopulation = nullptr;
+    PopulationManager& m_rPopulation;
     PopClickCallback_t m_onPopClick;
     std::vector<PopBox_t> m_popBoxes;
 };

@@ -13,6 +13,7 @@
 #include "graphics/Graphics.h"
 #include "ui/style/UiStyle.h"
 
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -76,7 +77,12 @@ void SatelliteView::Render(Graphics& rGraphics)
         m_bPendingAttackRefresh = false;
         std::optional<std::string> outcome = std::move(m_pendingOutcomeMessage);
         m_pendingOutcomeMessage.reset();
-        Rebuild_();
+        // An attack is the one thing that moves the census while this view is open.
+        if (m_pSummaryPanel)
+        {
+            m_pSummaryPanel->Refresh();
+        }
+        RefreshTargetList_();
         if (outcome)
         {
             ShowOutcome_(std::move(*outcome));
@@ -125,7 +131,15 @@ void SatelliteView::SelectFaction_(FactionId_t factionId)
     }
     m_selectedFactionId = factionId;
     m_selectedBuildingId.reset();
-    Rebuild_();
+
+    // Update the two lists in place. Rebuilding the view here destroyed and recreated the tabs,
+    // the Attack button and both panels — including, mid-callback, the very button that was
+    // clicked — and it is why the list panel's own selection handling was never exercised.
+    if (m_pFactionList)
+    {
+        m_pFactionList->SetSelected(std::to_string(factionId));
+    }
+    RefreshTargetList_();
 }
 
 void SatelliteView::SelectTarget_(BuildingId_t buildingId)
@@ -135,13 +149,43 @@ void SatelliteView::SelectTarget_(BuildingId_t buildingId)
         return;
     }
     m_selectedBuildingId = std::move(buildingId);
-    Rebuild_();
+    if (m_pTargetList)
+    {
+        m_pTargetList->SetSelected(m_selectedBuildingId);
+    }
+}
+
+std::vector<std::string> SatelliteView::CollectMissingAttackPrerequisites_() const
+{
+    std::vector<std::string> missing;
+    if (!m_selectedFactionId)
+    {
+        missing.push_back("a target faction");
+    }
+    if (!m_selectedBuildingId)
+    {
+        missing.push_back("a target satellite");
+    }
+    return missing;
 }
 
 void SatelliteView::OnAttackClicked_()
 {
-    if (!m_selectedFactionId || !m_selectedBuildingId)
+    // The Attack control is always enabled, so a dead click was the only feedback for
+    // "you have not picked a target yet".
+    const std::vector<std::string> missing = CollectMissingAttackPrerequisites_();
+    if (!missing.empty())
     {
+        std::string message = "Select ";
+        for (size_t i = 0; i < missing.size(); ++i)
+        {
+            if (i > 0)
+            {
+                message += " and ";
+            }
+            message += missing[i];
+        }
+        ShowOutcome_(message + " before attacking.");
         return;
     }
     OpenAttackerPopup_(*m_selectedFactionId, *m_selectedBuildingId);
@@ -158,10 +202,12 @@ void SatelliteView::ShowOutcome_(std::string message)
 void SatelliteView::OpenAttackerPopup_(FactionId_t targetFactionId,
                                        BuildingId_t targetBuildingId)
 {
+    // A missing player faction during a player-driven view is a broken session, not an empty
+    // state — contrast the explicit outcome string used when there are simply no attackers.
     Faction* pPlayer = m_rGameState.GetPlayerFaction();
     if (!pPlayer)
     {
-        return;
+        throw std::runtime_error("SatelliteView: no player faction; cannot open the attacker list");
     }
 
     auto attackers = m_rGameState.ListReadyOrbitalAttackers(*pPlayer);
@@ -201,6 +247,9 @@ void SatelliteView::CommenceAttack_(BuildingId_t attackerBuildingId,
 void SatelliteView::Rebuild_()
 {
     m_elements.clear();
+    m_pSummaryPanel = nullptr;
+    m_pFactionList = nullptr;
+    m_pTargetList = nullptr;
 
     const auto& style = Style().satelliteView;
     const WindowLayout_t topPanel = ResolveLayout(m_layout, Style().layouts.topPanel);
@@ -219,10 +268,12 @@ void SatelliteView::Rebuild_()
 
     if (m_mode == Mode_t::Summary)
     {
-        m_elements.push_back(std::make_unique<SatelliteSummaryPanel>(
+        auto pSummary = std::make_unique<SatelliteSummaryPanel>(
             m_rGameState,
             m_rBuildings,
-            ResolveLayout(topPanel, style.contentLayout)));
+            ResolveLayout(topPanel, style.contentLayout));
+        m_pSummaryPanel = pSummary.get();
+        m_elements.push_back(std::move(pSummary));
         return;
     }
 
@@ -252,12 +303,33 @@ void SatelliteView::Rebuild_()
         selectedFactionKey = std::to_string(*m_selectedFactionId);
     }
 
-    m_elements.push_back(std::make_unique<SatelliteButtonListPanel>(
+    auto pFactionList = std::make_unique<SatelliteButtonListPanel>(
         ResolveLayout(m_layout, Style().layouts.centerPanel),
         "Enemy Factions",
         std::move(factionItems),
         selectedFactionKey,
-        [this](const std::string& rId) { SelectFaction_(std::stoi(rId)); }));
+        [this](const std::string& rId) { SelectFaction_(std::stoi(rId)); });
+    m_pFactionList = pFactionList.get();
+    m_elements.push_back(std::move(pFactionList));
+
+    auto pTargetList = std::make_unique<SatelliteButtonListPanel>(
+        ResolveLayout(m_layout, Style().layouts.rightPanel),
+        "Orbital Targets",
+        std::vector<SatelliteButtonListPanel::Item_t>{},
+        m_selectedBuildingId,
+        [this](const std::string& rId) { SelectTarget_(rId); });
+    m_pTargetList = pTargetList.get();
+    m_elements.push_back(std::move(pTargetList));
+
+    RefreshTargetList_();
+}
+
+void SatelliteView::RefreshTargetList_()
+{
+    if (!m_pTargetList)
+    {
+        return;
+    }
 
     std::unordered_map<BuildingId_t, int> ownedCounts;
     if (m_selectedFactionId)
@@ -271,8 +343,7 @@ void SatelliteView::Rebuild_()
         }
     }
 
-    if (m_selectedBuildingId
-        && ownedCounts.find(*m_selectedBuildingId) == ownedCounts.end())
+    if (m_selectedBuildingId && ownedCounts.find(*m_selectedBuildingId) == ownedCounts.end())
     {
         m_selectedBuildingId.reset();
     }
@@ -294,12 +365,7 @@ void SatelliteView::Rebuild_()
             rBuilding.name + " (" + std::to_string(it->second) + ")"});
     }
 
-    m_elements.push_back(std::make_unique<SatelliteButtonListPanel>(
-        ResolveLayout(m_layout, Style().layouts.rightPanel),
-        "Orbital Targets",
-        std::move(targetItems),
-        m_selectedBuildingId,
-        [this](const std::string& rId) { SelectTarget_(rId); }));
+    m_pTargetList->SetItems(std::move(targetItems), m_selectedBuildingId);
 }
 
 } // namespace ac

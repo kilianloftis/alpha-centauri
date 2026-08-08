@@ -3,6 +3,7 @@
 #include "ui/UIElement.h"
 #include "input/Input.h"
 #include "game/map/Tile.h"
+#include "ui/base/BaseDisplaySnapshot.h"
 
 #include <functional>
 #include <utility>
@@ -11,9 +12,9 @@
 namespace ac
 {
 
-// Displays the workable area of a base (21 tiles in 5x5 pattern with corners removed)
-// Each tile shows: nutrients minerals energy
-// Worked tiles are shown in green
+// Displays the workable area of a base: the 20-tile ring in a 5x5 pattern with the corners
+// removed. The center is the base's own tile and is drawn separately.
+// Each tile shows: nutrients minerals energy. Worked tiles are shown in green.
 class BaseManager;
 
 class BaseWorkableAreaDisplay : public UIElement
@@ -22,7 +23,8 @@ public:
     using TileClickCallback_t = std::function<void(const Tile*)>;
     using BaseClickCallback_t = std::function<void()>;
 
-    BaseWorkableAreaDisplay(const BaseManager* pBase,
+    BaseWorkableAreaDisplay(const BaseManager& rBase,
+                            const BaseDisplaySnapshot_t& rSnapshot,
                             WindowLayout_t layout,
                             TileClickCallback_t onTileClicked,
                             BaseClickCallback_t onBaseClicked);
@@ -38,7 +40,8 @@ private:
     };
 
     void CacheTileRects_();
-    const BaseManager* m_pBase = nullptr;
+    const BaseManager& m_rBase;
+    const BaseDisplaySnapshot_t& m_rSnapshot;
     TileClickCallback_t m_onTileClicked;
     BaseClickCallback_t m_onBaseClicked;
 
@@ -47,18 +50,9 @@ private:
     float m_startY = 0.f;
     std::vector<TileRect_t> m_tileRects;
 
-    // Who, if anyone, is working a tile in this base's radius. Overlapping radii are normal, so
-    // "not worked by me" and "free to take" are different questions.
-    enum class TileWorkState_t
-    {
-        Free,
-        WorkedByThisBase,
-        WorkedByOther,
-    };
-
     // Render a single workable tile
-    void RenderTile_(Graphics& rGraphics, const Tile& rTile, float x, float y, float size,
-                     TileWorkState_t workState);
+    void RenderTile_(Graphics& rGraphics, float x, float y, float size,
+                     const TileDisplay_t& rTile);
 };
 
 } // namespace ac

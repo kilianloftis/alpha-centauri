@@ -26,13 +26,12 @@ namespace ac
 
 BaseView::BaseView(
     BaseManager& rBase,
-    const Faction& rFaction,
     WindowLayout_t layout,
     bool bEditable
 )
     : IGameView(layout)
     , m_rBase(rBase)
-    , m_rFaction(rFaction)
+    , m_snapshot(BuildBaseDisplaySnapshot(rBase))
     , m_pOwnerAtOpen(&rBase.GetFaction())
     , m_bEditable(bEditable)
     , m_destroyedConnection(rBase.OnDestroyed.ConnectScoped([this]() { m_bShouldClose = true; }))
@@ -51,16 +50,18 @@ BaseView::BaseView(
         onTileClick = [this](const Tile* pTile) { HandleTileClick_(pTile); };
         onBaseClick = [this]() { HandleBaseClicked_(); };
         onProductionClick = [this]() { HandleProductionDisplayClicked_(); };
-        onPopClick = [this](Pop& rPop) { HandlePopClick(rPop); };
+        onPopClick = [this](Pop& rPop) { HandlePopClick_(rPop); };
     }
 
     // TopPanel: Growth | Workable (60%) | Buildings
     m_elements.push_back(std::make_unique<GrowthDisplay>(
-        &m_rBase,
+        m_rBase,
+        m_snapshot,
         ResolveLayout(topPanel, bv.growthLayout)
     ));
     m_elements.push_back(std::make_unique<BaseWorkableAreaDisplay>(
-        &m_rBase,
+        m_rBase,
+        m_snapshot,
         ResolveLayout(topPanel, bv.workableLayout),
         std::move(onTileClick),
         std::move(onBaseClick)
@@ -72,7 +73,8 @@ BaseView::BaseView(
 
     // LeftPanel: Production (2/3) | Build Queue (1/3)
     m_elements.push_back(std::make_unique<ProductionDisplay>(
-        &m_rBase,
+        m_rBase,
+        m_snapshot,
         ResolveLayout(leftPanel, bv.productionLayout),
         std::move(onProductionClick)
     ));
@@ -83,18 +85,18 @@ BaseView::BaseView(
 
     // CenterPanel: Base Name (1/3) | Population (2/3)
     m_elements.push_back(std::make_unique<BaseNameDisplay>(
-        &m_rBase,
+        m_rBase,
         ResolveLayout(centerPanel, bv.baseNameLayout)
     ));
     m_elements.push_back(std::make_unique<PopulationDisplay>(
-        &m_rBase.GetPopulation(),
+        m_rBase.GetPopulation(),
         ResolveLayout(centerPanel, bv.populationLayout),
         std::move(onPopClick)
     ));
 
     // RightPanel: Support
     m_elements.push_back(std::make_unique<SupportDisplay>(
-        &m_rBase,
+        m_rBase,
         ResolveLayout(m_layout, Style().layouts.rightPanel)
     ));
 
@@ -120,8 +122,20 @@ void BaseView::Render(Graphics& rGraphics)
         return;
     }
 
+    RefreshSnapshot_();
     RefreshUnitStack_();
     IGameView::Render(rGraphics);
+}
+
+void BaseView::RefreshSnapshot_()
+{
+    // Reading the key is a handful of counter loads; rebuilding is two full worked-resource
+    // passes and a yield resolution per workable tile, which is why it does not happen per frame.
+    if (ReadBaseDisplayKey(m_rBase) == m_snapshot.key)
+    {
+        return;
+    }
+    m_snapshot = BuildBaseDisplaySnapshot(m_rBase);
 }
 
 void BaseView::RefreshUnitStack_()
@@ -210,14 +224,14 @@ void BaseView::HandleTileClick_(const Tile* pTile)
     }
 }
 
-void BaseView::HandlePopClick(Pop& rPop)
+void BaseView::HandlePopClick_(Pop& rPop)
 {
     if (!m_bEditable)
     {
         return;
     }
 
-    std::vector<const PopTypeConfig_t*> available = m_rFaction.GetAvailablePopTypes();
+    std::vector<const PopTypeConfig_t*> available = m_rBase.GetFaction().GetAvailablePopTypes();
     std::vector<std::string> rows;
     rows.reserve(available.size());
     for (const PopTypeConfig_t* pConfig : available)
@@ -230,12 +244,12 @@ void BaseView::HandlePopClick(Pop& rPop)
         "Select Pop Type", "No pop types available", std::move(rows),
         ResolveLayout(m_layout, Style().layouts.popupSmall),
         [this, &rPop, available = std::move(available)](size_t index) {
-            HandlePopTypeSelected(rPop, *available[index]);
+            HandlePopTypeSelected_(rPop, *available[index]);
         },
         Style().listSelectorPopup));
 }
 
-void BaseView::HandlePopTypeSelected(Pop& rPop, const PopTypeConfig_t& rConfig)
+void BaseView::HandlePopTypeSelected_(Pop& rPop, const PopTypeConfig_t& rConfig)
 {
     if (!m_bEditable)
     {

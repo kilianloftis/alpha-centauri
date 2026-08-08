@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ui/UIElement.h"
+#include "ui/council/CouncilVoteWeightCache.h"
 
 namespace ac
 {
@@ -17,6 +18,7 @@ public:
 
 private:
     GameState& m_rGameState;
+    CouncilVoteWeightCache m_weights;
 };
 
 } // namespace ac

@@ -2,28 +2,25 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "graphics/Graphics.h"
+#include "ui/base/BaseDisplaySnapshot.h"
 #include "ui/style/UiStyle.h"
 #include <sstream>
-#include <stdexcept>
 
 namespace ac
 {
 
 GrowthDisplay::GrowthDisplay(
-    const BaseManager* pBase,
+    const BaseManager& rBase,
+    const BaseDisplaySnapshot_t& rSnapshot,
     WindowLayout_t layout
 )
     : UIElement(layout)
-    , m_pBase(pBase)
+    , m_rBase(rBase)
+    , m_rSnapshot(rSnapshot)
 {}
 
 void GrowthDisplay::Render(Graphics& rGraphics)
 {
-    if (!m_pBase)
-    {
-        throw std::runtime_error("GrowthDisplay: No base manager set");
-    }
-
     const auto& style = Style().growthDisplay;
 
     rGraphics.DrawFilledRect(
@@ -39,15 +36,15 @@ void GrowthDisplay::Render(Graphics& rGraphics)
     rGraphics.DrawText("Growth", m_layout.x + leftPadding, m_layout.y, headerFontSize, style.textColor);
 
     std::ostringstream oss;
-    oss << "Stockpile: " << m_pBase->GetPopulation().GetNutrientStockpile();
+    oss << "Stockpile: " << m_rBase.GetPopulation().GetNutrientStockpile();
     rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y + lineHeight * style.stockpileLineIndex, entryFontSize, style.textColor);
 
     oss.str("");
-    oss << "Required: " << m_pBase->GetNutrientsRequired();
+    oss << "Required: " << m_rSnapshot.nutrientsRequired;
     rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y + lineHeight * style.requiredLineIndex, entryFontSize, style.textColor);
 
     oss.str("");
-    oss << "Production: " << m_pBase->GetNutrientProduction();
+    oss << "Production: " << m_rSnapshot.nutrientProduction;
     rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y + lineHeight * style.productionLineIndex, entryFontSize, style.textColor);
 }
 

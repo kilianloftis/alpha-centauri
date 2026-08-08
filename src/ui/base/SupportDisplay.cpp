@@ -7,24 +7,18 @@
 #include "ui/style/UiStyle.h"
 #include "ui/world/UnitMarkerRenderer.h"
 
-#include <stdexcept>
 
 namespace ac
 {
 
-SupportDisplay::SupportDisplay(const BaseManager* pBase, WindowLayout_t layout)
+SupportDisplay::SupportDisplay(const BaseManager& rBase, WindowLayout_t layout)
     : UIElement(layout)
-    , m_pBase(pBase)
+    , m_rBase(rBase)
 {
 }
 
 void SupportDisplay::Render(Graphics& rGraphics)
 {
-    if (!m_pBase)
-    {
-        throw std::runtime_error("SupportDisplay: No base manager set");
-    }
-
     const auto& s = Style().supportDisplay;
     rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, s.backgroundColor);
     rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, s.borderColor);
@@ -38,7 +32,7 @@ void SupportDisplay::Render(Graphics& rGraphics)
     float x = left;
     float y = m_layout.y + padding;
 
-    for (const Unit* pUnit : m_pBase->GetHomeUnits().GetUnits())
+    for (const Unit* pUnit : m_rBase.GetHomeUnits().GetUnits())
     {
         if (!pUnit)
         {

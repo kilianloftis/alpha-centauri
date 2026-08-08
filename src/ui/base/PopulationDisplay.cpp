@@ -37,19 +37,15 @@ int SpecialistTotalOutput(const Pop& rPop)
 
 } // namespace
 
-PopulationDisplay::PopulationDisplay(PopulationManager* pPopulation, WindowLayout_t layout, PopClickCallback_t onPopClick)
+PopulationDisplay::PopulationDisplay(PopulationManager& rPopulation, WindowLayout_t layout,
+                                     PopClickCallback_t onPopClick)
     : UIElement(layout)
-    , m_pPopulation(pPopulation)
+    , m_rPopulation(rPopulation)
     , m_onPopClick(std::move(onPopClick))
 {}
 
 void PopulationDisplay::Render(Graphics& rGraphics)
 {
-    if (!m_pPopulation)
-    {
-        throw std::runtime_error("PopulationDisplay: No population container set");
-    }
-
     const auto& style = Style().populationDisplay;
 
     rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.backgroundColor);
@@ -57,7 +53,7 @@ void PopulationDisplay::Render(Graphics& rGraphics)
     const unsigned int headerFontSize = static_cast<unsigned int>(m_layout.height * style.headerFontSizeRatio);
 
     std::ostringstream oss;
-    oss << "Population: " << m_pPopulation->GetSize();
+    oss << "Population: " << m_rPopulation.GetSize();
     const float leftPadding = m_layout.width * style.leftPaddingRatio;
     rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y, headerFontSize, style.headerTextColor);
 
@@ -68,8 +64,8 @@ void PopulationDisplay::Render(Graphics& rGraphics)
     m_popBoxes.clear();
 
     std::vector<Pop*> sortedPops;
-    sortedPops.reserve(m_pPopulation->GetSize());
-    for (Pop& rPop : m_pPopulation->Pops())
+    sortedPops.reserve(m_rPopulation.GetSize());
+    for (Pop& rPop : m_rPopulation.Pops())
         sortedPops.push_back(&rPop);
 
     std::stable_sort(sortedPops.begin(), sortedPops.end(),

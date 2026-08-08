@@ -276,6 +276,7 @@ add_library(ac-ui STATIC
     ui/council/CouncilFactionVotesPanel.cpp
     ui/council/CouncilProposalInfoPanel.cpp
     ui/council/CouncilVoteButton.cpp
+    ui/council/CouncilVoteWeightCache.cpp
     ui/satellite/SatelliteView.cpp
     ui/satellite/SatelliteLabeledButton.cpp
     ui/satellite/SatelliteSummaryPanel.cpp
@@ -284,6 +285,7 @@ add_library(ac-ui STATIC
     ui/satellite/OrbitalAttackOutcomePopup.cpp
     ui/PlaceholderPanel.cpp
     ui/base/BaseView.cpp
+    ui/base/BaseDisplaySnapshot.cpp
     ui/base/BaseNameDisplay.cpp
     ui/base/BaseWorkableAreaDisplay.cpp
     ui/base/GrowthDisplay.cpp

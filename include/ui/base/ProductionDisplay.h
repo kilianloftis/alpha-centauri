@@ -8,12 +8,14 @@ namespace ac
 
 class BaseManager;
 class Graphics;
+struct BaseDisplaySnapshot_t;
 
 class ProductionDisplay : public UIElement
 {
 public:
     ProductionDisplay(
-        const BaseManager* pBase,
+        const BaseManager& rBase,
+        const BaseDisplaySnapshot_t& rSnapshot,
         WindowLayout_t layout,
         std::function<void()> onClicked = nullptr
     );
@@ -24,7 +26,8 @@ public:
 
 private:
     std::function<void()> m_onClicked;
-    const BaseManager* m_pBase = nullptr;
+    const BaseManager& m_rBase;
+    const BaseDisplaySnapshot_t& m_rSnapshot;
 };
 
 } // namespace ac

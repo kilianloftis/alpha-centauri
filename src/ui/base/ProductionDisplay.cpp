@@ -2,31 +2,28 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/production/ProductionManager.h"
 #include "graphics/Graphics.h"
+#include "ui/base/BaseDisplaySnapshot.h"
 #include "ui/style/UiStyle.h"
 #include <functional>
 #include <sstream>
-#include <stdexcept>
 
 namespace ac
 {
 
 ProductionDisplay::ProductionDisplay(
-    const BaseManager* pBase,
+    const BaseManager& rBase,
+    const BaseDisplaySnapshot_t& rSnapshot,
     WindowLayout_t layout,
     std::function<void()> onClicked
 )
     : UIElement(layout)
     , m_onClicked(std::move(onClicked))
-    , m_pBase(pBase)
+    , m_rBase(rBase)
+    , m_rSnapshot(rSnapshot)
 {}
 
 void ProductionDisplay::Render(Graphics& rGraphics)
 {
-    if (!m_pBase)
-    {
-        throw std::runtime_error("ProductionDisplay: No base manager set");
-    }
-
     const auto& style = Style().productionDisplay;
 
     rGraphics.DrawFilledRect(
@@ -39,21 +36,21 @@ void ProductionDisplay::Render(Graphics& rGraphics)
     const float lineHeight   = m_layout.height * style.lineHeightRatio;
     const float leftPadding  = m_layout.width  * style.leftPaddingRatio;
 
-    const ProductionManager& rProduction = m_pBase->GetProduction();
-    const IConstructable* pCurrentProduction = rProduction.GetCurrentProduction();
-    const std::string header = pCurrentProduction ? "Production: " + pCurrentProduction->GetName() : "Production: (none)";
+    const std::string header = m_rSnapshot.bHasProduction
+                                   ? "Production: " + m_rSnapshot.productionName
+                                   : "Production: (none)";
     rGraphics.DrawText(header, m_layout.x + leftPadding, m_layout.y, headerFontSize, style.textColor);
 
     std::ostringstream oss;
 
-    oss << "Stockpile: " << rProduction.GetMineralStockpile();
+    oss << "Stockpile: " << m_rBase.GetProduction().GetMineralStockpile();
     rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y + lineHeight * style.stockpileLineIndex, entryFontSize, style.textColor);
 
     oss.str("");
     oss << "Required: ";
-    if (pCurrentProduction)
+    if (m_rSnapshot.bHasProduction)
     {
-        oss << m_pBase->GetMineralCost();
+        oss << m_rSnapshot.mineralCost;
     }
     else
     {
@@ -62,7 +59,7 @@ void ProductionDisplay::Render(Graphics& rGraphics)
     rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y + lineHeight * style.requiredLineIndex, entryFontSize, style.textColor);
 
     oss.str("");
-    oss << "Minerals/turn: " << m_pBase->GetMineralProduction();
+    oss << "Minerals/turn: " << m_rSnapshot.mineralProduction;
     rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y + lineHeight * style.productionLineIndex, entryFontSize, style.textColor);
 }
 

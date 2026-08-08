@@ -7,16 +7,19 @@
 #include "graphics/Graphics.h"
 #include "ui/style/UiStyle.h"
 #include <sstream>
+#include <stdexcept>
 
 namespace ac
 {
 
-BaseWorkableAreaDisplay::BaseWorkableAreaDisplay(const BaseManager* pBase,
+BaseWorkableAreaDisplay::BaseWorkableAreaDisplay(const BaseManager& rBase,
+                                                 const BaseDisplaySnapshot_t& rSnapshot,
                                                  WindowLayout_t layout,
                                                  TileClickCallback_t onTileClicked,
                                                  BaseClickCallback_t onBaseClicked)
     : UIElement(layout)
-    , m_pBase(pBase)
+    , m_rBase(rBase)
+    , m_rSnapshot(rSnapshot)
     , m_onTileClicked(std::move(onTileClicked))
     , m_onBaseClicked(std::move(onBaseClicked))
 {
@@ -25,11 +28,6 @@ BaseWorkableAreaDisplay::BaseWorkableAreaDisplay(const BaseManager* pBase,
 
 void BaseWorkableAreaDisplay::CacheTileRects_()
 {
-    if (!m_pBase)
-    {
-        throw std::runtime_error("BaseWorkableAreaDisplay: BaseManager is null");
-    }
-
     const auto& style = Style().baseWorkableAreaDisplay;
 
     m_tileSize = std::min(m_layout.width, m_layout.height) / static_cast<float>(style.gridDimension);
@@ -38,10 +36,10 @@ void BaseWorkableAreaDisplay::CacheTileRects_()
     m_startX = m_layout.x + (m_layout.width  - gridWidth)  / style.gridCenterOffset;
     m_startY = m_layout.y + (m_layout.height - gridHeight) / style.gridCenterOffset;
 
-    const Tile& rBaseTile = m_pBase->GetTile();
-    const int mapWidth = m_pBase->GetTileEffects().GetWorldMap().GetWidth();
+    const Tile& rBaseTile = m_rBase.GetTile();
+    const int mapWidth = m_rBase.GetTileEffects().GetWorldMap().GetWidth();
 
-    for (const Tile* pTile : m_pBase->GetWorkerAssignments().GetWorkableTiles())
+    for (const Tile* pTile : m_rBase.GetWorkerAssignments().GetWorkableTiles())
     {
         if (!pTile)
         {
@@ -68,21 +66,14 @@ void BaseWorkableAreaDisplay::Render(Graphics& rGraphics)
 
     for (const TileRect_t& entry : m_tileRects)
     {
-        // Both predicates: "worked by this base" decides which yield to show (GetWorkedTileYield
-        // only resolves against this base's pops, so asking the world-wide question painted a
-        // neighbour's tile as worked and then displayed 0 0 0), and "worked by anyone" separates
-        // a free tile from one this base cannot take.
-        const WorkerAssignmentManager& rAssignments = m_pBase->GetWorkerAssignments();
-        TileWorkState_t workState = TileWorkState_t::Free;
-        if (rAssignments.IsTileWorkedByThisBase(entry.pTile))
+        const auto it = m_rSnapshot.tiles.find(entry.pTile);
+        if (it == m_rSnapshot.tiles.end())
         {
-            workState = TileWorkState_t::WorkedByThisBase;
+            // The snapshot walks the same workable-tile list this panel cached, so a miss means
+            // the two disagree about the base's radius.
+            throw std::runtime_error("BaseWorkableAreaDisplay: workable tile missing from snapshot");
         }
-        else if (rAssignments.IsTileAssigned(entry.pTile))
-        {
-            workState = TileWorkState_t::WorkedByOther;
-        }
-        RenderTile_(rGraphics, *entry.pTile, entry.rect.x, entry.rect.y, m_tileSize, workState);
+        RenderTile_(rGraphics, entry.rect.x, entry.rect.y, m_tileSize, it->second);
     }
 
     const float centerX = m_startX + style.gridCenterOffset * m_tileSize;
@@ -91,22 +82,19 @@ void BaseWorkableAreaDisplay::Render(Graphics& rGraphics)
     rGraphics.DrawText("BASE", centerX, centerY, style.baseLabelFontSize, style.baseLabelColor);
 }
 
-void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, const Tile& rTile, float x, float y,
-                                          float size, TileWorkState_t workState)
+void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, float x, float y, float size,
+                                          const TileDisplay_t& rTile)
 {
     const auto& style = Style().baseWorkableAreaDisplay;
 
     rGraphics.DrawRect(x, y, size, size, style.tileBorderColor, style.tileBorderWidth);
 
-    const bool bIsWorked = workState == TileWorkState_t::WorkedByThisBase;
-    const TileYieldView_t yield = bIsWorked
-        ? m_pBase->GetWorkedTileYield(rTile)
-        : m_pBase->GetPreviewTileYield(rTile);
+    const bool bIsWorked = rTile.workState == TileWorkState_t::WorkedByThisBase;
     // Display the collectable (capped) totals; potential remains available on the view for
     // restriction callouts / tooltips.
-    const int nutrients = yield.effective.nutrients;
-    const int minerals = yield.effective.minerals;
-    const int energy = yield.effective.energy;
+    const int nutrients = rTile.yield.effective.nutrients;
+    const int minerals = rTile.yield.effective.minerals;
+    const int energy = rTile.yield.effective.energy;
 
     std::ostringstream oss;
     oss << nutrients << " " << minerals << " " << energy;
@@ -123,7 +111,7 @@ void BaseWorkableAreaDisplay::RenderTile_(Graphics& rGraphics, const Tile& rTile
     {
         textColor = style.workedTileTextColor;
     }
-    else if (workState == TileWorkState_t::WorkedByOther)
+    else if (rTile.workState == TileWorkState_t::WorkedByOther)
     {
         textColor = style.unavailableTileTextColor;
     }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ui/IGameView.h"
+#include "ui/base/BaseDisplaySnapshot.h"
 #include "lib/Signal.h"
 #include <memory>
 #include <vector>
@@ -20,9 +21,10 @@ struct PopTypeConfig_t;
 class BaseView : public IGameView
 {
 public:
+    // The base's owner is the only faction this view needs: pop types are offered only when
+    // the view is editable, which ViewFactory grants only for the player's own base.
     BaseView(
         BaseManager& rBase,
-        const Faction& rFaction,
         WindowLayout_t layout,
         bool bEditable
     );
@@ -33,20 +35,22 @@ public:
 
 private:
     void RefreshUnitStack_();
+    void RefreshSnapshot_();
     void HandleTileClick_(const Tile* pTile);
     void HandleBaseClicked_();
-    void HandlePopClick(Pop& rPop);
-    void HandlePopTypeSelected(Pop& rPop, const PopTypeConfig_t& rConfig);
+    void HandlePopClick_(Pop& rPop);
+    void HandlePopTypeSelected_(Pop& rPop, const PopTypeConfig_t& rConfig);
     void HandleProductionDisplayClicked_();
     void HandleUnitStackClicked_(Unit& rUnit);
 
     BaseManager& m_rBase;
-    const Faction& m_rFaction;
+    // Rebuilt only when one of its key inputs moves; panels hold a reference to it, so it must
+    // be declared before m_elements (IGameView) is populated and must never be reallocated.
+    BaseDisplaySnapshot_t m_snapshot;
     // The base's owner at the moment this view was opened. Render() closes the view (rather
     // than keep rendering a base that changed hands out from under it) when
     // &m_rBase.GetFaction() no longer matches — see docs/architecture/high-level.md, "Object
-    // lifetime". Distinct from m_rFaction, which is always the *viewing* player faction (used
-    // for editability / available pop types), not necessarily the base's owner.
+    // lifetime".
     Faction* m_pOwnerAtOpen;
     bool m_bEditable;
     UnitStackPanel* m_pUnitStackPanel = nullptr;
