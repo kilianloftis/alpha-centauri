@@ -278,11 +278,6 @@ int Faction::GetResearchPerTurn_() const
     return total;
 }
 
-std::optional<int> Faction::GetBreakthroughRate() const
-{
-    return m_pResearch->BreakthroughRate(GetResearchPerTurn_());
-}
-
 std::optional<int> Faction::GetTurnsUntilBreakthrough() const
 {
     return m_pResearch->GetTurnsUntilBreakthrough(GetResearchPerTurn_());

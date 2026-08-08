@@ -8,24 +8,21 @@ namespace ac
 {
 
 SocialEngineeringView::SocialEngineeringView(
-    Faction* pFaction,
-    const SocialPolicyRegistry* pPolicyRegistry,
-    const SocialRatingRegistry* pRatingRegistry,
+    Faction& rFaction,
+    const SocialPolicyRegistry& rPolicyRegistry,
+    const SocialRatingRegistry& rRatingRegistry,
     WindowLayout_t layout
 )
     : IGameView(layout)
-    , m_pFaction(pFaction)
-    , m_pPolicyRegistry(pPolicyRegistry)
-    , m_pRatingRegistry(pRatingRegistry)
 {
     m_elements.push_back(std::make_unique<SocialEngineeringDisplay>(
-        m_pFaction,
-        m_pPolicyRegistry,
-        m_pRatingRegistry,
+        rFaction,
+        rPolicyRegistry,
+        rRatingRegistry,
         ResolveLayout(m_layout, Style().layouts.topPanel)
     ));
     m_elements.push_back(std::make_unique<SocialEngineeringBottomPanel>(
-        m_pFaction,
+        rFaction,
         ResolveLayout(m_layout, Style().layouts.bottomPanel)
     ));
 }

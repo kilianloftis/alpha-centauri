@@ -92,9 +92,9 @@ std::unique_ptr<SocialEngineeringView> ViewFactory::CreateSocialEngineeringView(
     Faction* pFaction = RequirePlayerFaction_();
 
     return std::make_unique<SocialEngineeringView>(
-        pFaction,
-        m_rGameDataContext.socialPolicyRegistry.get(),
-        m_rGameDataContext.socialRatingRegistry.get(),
+        *pFaction,
+        *m_rGameDataContext.socialPolicyRegistry,
+        *m_rGameDataContext.socialRatingRegistry,
         layout
     );
 }

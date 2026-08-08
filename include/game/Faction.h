@@ -178,7 +178,6 @@ public:
 
     // Projected per-turn outputs summed across all bases.
     int GetNetIncomePerTurn() const;
-    std::optional<int> GetBreakthroughRate() const;
     std::optional<int> GetTurnsUntilBreakthrough() const;
 
     // Resource production — routes to all bases. Each base resolves against the composed

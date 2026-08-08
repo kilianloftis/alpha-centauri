@@ -201,14 +201,14 @@ void RenderPolicyCell(
     Graphics& rGraphics,
     const WindowLayout_t& rCell,
     const SocialPolicyConfig_t& rPolicy,
-    bool isActive,
+    bool bIsActive,
     unsigned int policyFontSize,
     unsigned int bonusFontSize,
     float horizontalPadding,
     float nameRowHeight
 )
 {
-    const Color_t policyColor = isActive
+    const Color_t policyColor = bIsActive
         ? Style().socialEngineeringDisplay.activePolicyColor
         : Style().socialEngineeringDisplay.inactivePolicyColor;
 
@@ -228,7 +228,7 @@ void RenderPolicyCell(
         policyColor
     );
 
-    if (isActive)
+    if (bIsActive)
     {
         rGraphics.DrawRect(
             rCell.x, rCell.y, rCell.width, rCell.height,
@@ -307,32 +307,19 @@ const SocialPolicyConfig_t* FindAvailablePolicyAt(
 } // namespace
 
 SocialEngineeringDisplay::SocialEngineeringDisplay(
-    Faction* pFaction,
-    const SocialPolicyRegistry* pPolicyRegistry,
-    const SocialRatingRegistry* pRatingRegistry,
+    Faction& rFaction,
+    const SocialPolicyRegistry& rPolicyRegistry,
+    const SocialRatingRegistry& rRatingRegistry,
     WindowLayout_t layout
 )
     : UIElement(layout)
-    , m_pFaction(pFaction)
-    , m_pPolicyRegistry(pPolicyRegistry)
-    , m_pRatingRegistry(pRatingRegistry)
+    , m_rFaction(rFaction)
+    , m_rPolicyRegistry(rPolicyRegistry)
+    , m_rRatingRegistry(rRatingRegistry)
 {}
 
 void SocialEngineeringDisplay::Render(Graphics& rGraphics)
 {
-    if (!m_pFaction)
-    {
-        throw std::runtime_error("SocialEngineeringDisplay: No faction set");
-    }
-    if (!m_pPolicyRegistry)
-    {
-        throw std::runtime_error("SocialEngineeringDisplay: No policy registry set");
-    }
-    if (!m_pRatingRegistry)
-    {
-        throw std::runtime_error("SocialEngineeringDisplay: No rating registry set");
-    }
-
     rGraphics.DrawFilledRect(
         m_layout.x, m_layout.y, m_layout.width, m_layout.height,
         Style().socialEngineeringDisplay.backgroundColor
@@ -370,7 +357,7 @@ void SocialEngineeringDisplay::Render(Graphics& rGraphics)
     const float verticalPadding =
         policyGridLayout.height * Style().socialEngineeringDisplay.verticalPaddingRatio;
 
-    const std::vector<std::string>& discoveredTechIds = m_pFaction->GetResearch().GetDiscoveredTechs();
+    const std::vector<std::string>& discoveredTechIds = m_rFaction.GetResearch().GetDiscoveredTechs();
 
     for (size_t categoryIndex = 0; categoryIndex < k_Categories.size(); ++categoryIndex)
     {
@@ -397,8 +384,8 @@ void SocialEngineeringDisplay::Render(Graphics& rGraphics)
             Style().socialEngineeringDisplay.categoryColor
         );
 
-        const std::vector<const SocialPolicyConfig_t*> policies = m_pPolicyRegistry->GetByCategory(category);
-        const SocialPolicyConfig_t* pActivePolicy = m_pFaction->GetSocialEngineering().GetActivePolicy(category);
+        const std::vector<const SocialPolicyConfig_t*> policies = m_rPolicyRegistry.GetByCategory(category);
+        const SocialPolicyConfig_t* pActivePolicy = m_rFaction.GetSocialEngineering().GetActivePolicy(category);
 
         const WindowLayout_t policyRowsBand = ResolveLayout(categoryBand, {
             0.0f,
@@ -427,12 +414,12 @@ void SocialEngineeringDisplay::Render(Graphics& rGraphics)
                 continue;
             }
 
-            const bool isActive = pActivePolicy && pActivePolicy->id == pPolicy->id;
+            const bool bIsActive = pActivePolicy && pActivePolicy->id == pPolicy->id;
             RenderPolicyCell(
                 rGraphics,
                 policyCell,
                 *pPolicy,
-                isActive,
+                bIsActive,
                 policyFontSize,
                 bonusFontSize,
                 horizontalPadding,
@@ -466,7 +453,7 @@ void SocialEngineeringDisplay::Render(Graphics& rGraphics)
     for (size_t ratingIndex = 0; ratingIndex < k_AllRatings.size(); ++ratingIndex)
     {
         const SocialRatingId_t rating = k_AllRatings[ratingIndex];
-        const int score = m_pFaction->GetSocialEngineering().GetSocialRating(rating);
+        const int score = m_rFaction.GetSocialEngineering().GetSocialRating(rating);
 
         std::ostringstream oss;
         oss << RatingDisplayName(rating) << ": " << score;
@@ -501,7 +488,7 @@ void SocialEngineeringDisplay::Render(Graphics& rGraphics)
     );
 
     rGraphics.DrawText(
-        GetFactionDisplayName(*m_pFaction),
+        GetFactionDisplayName(m_rFaction),
         factionNameRow.x + horizontalPadding,
         factionNameRow.y + verticalPadding,
         factionNameFontSize,
@@ -509,7 +496,7 @@ void SocialEngineeringDisplay::Render(Graphics& rGraphics)
     );
 
     rGraphics.DrawText(
-        FormatFactionBonuses(*m_pFaction, *m_pRatingRegistry),
+        FormatFactionBonuses(m_rFaction, m_rRatingRegistry),
         factionBonusRow.x + horizontalPadding,
         factionBonusRow.y + verticalPadding,
         factionBonusFontSize,
@@ -519,12 +506,12 @@ void SocialEngineeringDisplay::Render(Graphics& rGraphics)
 
 void SocialEngineeringDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
 {
-    if (rEvent.button != MouseButton_t::Left || !m_pFaction || !m_pPolicyRegistry)
+    if (rEvent.button != MouseButton_t::Left)
     {
         return;
     }
 
-    const std::vector<std::string>& discoveredTechIds = m_pFaction->GetResearch().GetDiscoveredTechs();
+    const std::vector<std::string>& discoveredTechIds = m_rFaction.GetResearch().GetDiscoveredTechs();
 
     const float clickX = static_cast<float>(rEvent.x);
     const float clickY = static_cast<float>(rEvent.y);
@@ -533,7 +520,7 @@ void SocialEngineeringDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
     {
         const SocialCategory_t category = k_Categories[categoryIndex];
         const std::vector<const SocialPolicyConfig_t*> policies =
-            m_pPolicyRegistry->GetByCategory(category);
+            m_rPolicyRegistry.GetByCategory(category);
         if (policies.empty())
         {
             continue;
@@ -549,7 +536,7 @@ void SocialEngineeringDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
             }
 
             const SocialPolicyConfig_t* pPolicy = FindAvailablePolicyAt(
-                *m_pPolicyRegistry,
+                m_rPolicyRegistry,
                 discoveredTechIds,
                 category,
                 policyIndex
@@ -559,7 +546,7 @@ void SocialEngineeringDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
                 return;
             }
 
-            m_pFaction->GetSocialEngineering().SetActivePolicy(*pPolicy);
+            m_rFaction.GetSocialEngineering().SetActivePolicy(*pPolicy);
             return;
         }
     }

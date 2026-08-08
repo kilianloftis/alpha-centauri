@@ -304,6 +304,23 @@ block, instead of borrowing `satelliteView`'s.
 **Already closed, re-checked:** the proposals popup's unreachable outside-click branch (package 14
 replaced that class with `ListSelectorPopup`).
 
+### Social engineering (two `[M]`s)
+
+**The breakthrough figure was the wrong number.** The label promises turns until breakthrough,
+but the call was `GetBreakthroughRate()`, which `ResearchManager` documents as *full* turns
+ignoring accumulated progress — so after any research at all the panel read too high. It uses
+`GetTurnsUntilBreakthrough()` now. `GetBreakthroughRate` and the `ResearchManager::BreakthroughRate`
+behind it had no other caller and are gone.
+
+**Nullable dependencies deferred to `Render`.** The display, the bottom panel and the view all
+took `Faction*` and registry pointers, validated nothing at construction, threw from `Render` and
+returned *silently* from `HandleMouseClick` — so a wiring bug surfaced mid-frame or, on the click
+path, not at all. All three take references. `SocialEngineeringView` stored three members it only
+forwarded; it stores none now.
+
+The hardcoded category/rating tables `[M]` in this slice was already closed by package 14
+(`magic_enum::enum_values`).
+
 ### Still open
 
 - **[M] Design list silently truncates overflow designs.** Boxes are laid out horizontally and

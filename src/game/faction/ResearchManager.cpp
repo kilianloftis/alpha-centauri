@@ -80,17 +80,6 @@ int ResearchManager::GetPointsNeededForCurrentTech() const
     return m_pointsNeededForCurrentTech;
 }
 
-std::optional<int> ResearchManager::BreakthroughRate(int researchPerTurn) const
-{
-    if (!m_pCurrentResearchTarget || researchPerTurn <= 0)
-    {
-        return std::nullopt;
-    }
-
-    RevalidatePointsNeeded_();
-    return (m_pointsNeededForCurrentTech + researchPerTurn - 1) / researchPerTurn;
-}
-
 std::optional<int> ResearchManager::GetTurnsUntilBreakthrough(int researchPerTurn) const
 {
     if (!m_pCurrentResearchTarget || researchPerTurn <= 0)

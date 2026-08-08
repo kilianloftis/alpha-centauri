@@ -13,9 +13,9 @@ class SocialEngineeringDisplay : public UIElement
 {
 public:
     SocialEngineeringDisplay(
-        Faction* pFaction,
-        const SocialPolicyRegistry* pPolicyRegistry,
-        const SocialRatingRegistry* pRatingRegistry,
+        Faction& rFaction,
+        const SocialPolicyRegistry& rPolicyRegistry,
+        const SocialRatingRegistry& rRatingRegistry,
         WindowLayout_t layout
     );
     ~SocialEngineeringDisplay() override = default;
@@ -24,9 +24,9 @@ public:
     void HandleMouseClick(const MouseEvent_t& rEvent) override;
 
 private:
-    Faction* m_pFaction = nullptr;
-    const SocialPolicyRegistry* m_pPolicyRegistry = nullptr;
-    const SocialRatingRegistry* m_pRatingRegistry = nullptr;
+    Faction& m_rFaction;
+    const SocialPolicyRegistry& m_rPolicyRegistry;
+    const SocialRatingRegistry& m_rRatingRegistry;
 };
 
 } // namespace ac

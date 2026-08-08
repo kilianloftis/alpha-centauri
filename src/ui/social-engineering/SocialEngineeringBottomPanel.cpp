@@ -30,19 +30,15 @@ std::string FormatTurnCount(std::optional<int> turns)
 } // namespace
 
 SocialEngineeringBottomPanel::SocialEngineeringBottomPanel(
-    const Faction* pFaction,
+    const Faction& rFaction,
     WindowLayout_t layout
 )
     : UIElement(layout)
-    , m_pFaction(pFaction)
+    , m_rFaction(rFaction)
 {}
 
 void SocialEngineeringBottomPanel::Render(Graphics& rGraphics)
 {
-    if (!m_pFaction)
-    {
-        throw std::runtime_error("SocialEngineeringBottomPanel: No faction set");
-    }
 
     rGraphics.DrawFilledRect(
         m_layout.x, m_layout.y, m_layout.width, m_layout.height,
@@ -74,7 +70,7 @@ void SocialEngineeringBottomPanel::Render(Graphics& rGraphics)
     });
 
     std::ostringstream oss;
-    oss << "Net Income: " << m_pFaction->GetNetIncomePerTurn() << " / turn";
+    oss << "Net Income: " << m_rFaction.GetNetIncomePerTurn() << " / turn";
     rGraphics.DrawText(
         oss.str(),
         incomeRow.x + horizontalPadding,
@@ -84,7 +80,10 @@ void SocialEngineeringBottomPanel::Render(Graphics& rGraphics)
     );
 
     oss.str("");
-    oss << "Research Breakthrough: " << FormatTurnCount(m_pFaction->GetBreakthroughRate());
+    // GetTurnsUntilBreakthrough, not GetBreakthroughRate: the label promises turns remaining,
+    // and the rate ignores accumulated progress, so the figure only ever read too high.
+    oss << "Research Breakthrough: "
+        << FormatTurnCount(m_rFaction.GetTurnsUntilBreakthrough());
     rGraphics.DrawText(
         oss.str(),
         breakthroughRow.x + horizontalPadding,

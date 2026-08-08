@@ -12,19 +12,16 @@ class SocialRatingRegistry;
 class SocialEngineeringView : public IGameView
 {
 public:
+    // Dead members after the children are built, so nothing is stored: the panels own the
+    // references they need.
     SocialEngineeringView(
-        Faction* pFaction,
-        const SocialPolicyRegistry* pPolicyRegistry,
-        const SocialRatingRegistry* pRatingRegistry,
+        Faction& rFaction,
+        const SocialPolicyRegistry& rPolicyRegistry,
+        const SocialRatingRegistry& rRatingRegistry,
         WindowLayout_t layout
     );
 
     bool HandleKey(const KeyEvent_t& rEvent) override;
-
-private:
-    Faction* m_pFaction = nullptr;
-    const SocialPolicyRegistry* m_pPolicyRegistry = nullptr;
-    const SocialRatingRegistry* m_pRatingRegistry = nullptr;
 };
 
 } // namespace ac

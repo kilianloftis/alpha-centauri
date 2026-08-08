@@ -45,10 +45,6 @@ public:
     int GetPointsNeededForCurrentTech() const;
     void RecalculatePointsNeeded();
 
-    // Full turns to complete the current target at researchPerTurn, ignoring accumulated
-    // progress. Empty when there is no target or researchPerTurn <= 0.
-    std::optional<int> BreakthroughRate(int researchPerTurn) const;
-
     // Turns remaining until the current target is discovered at researchPerTurn.
     // Empty when there is no target or researchPerTurn <= 0.
     std::optional<int> GetTurnsUntilBreakthrough(int researchPerTurn) const;

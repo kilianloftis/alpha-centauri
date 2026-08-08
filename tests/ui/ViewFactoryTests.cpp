@@ -10,6 +10,10 @@
 #include "game/faction/SocialEngineeringManager.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/GameSettings.h"
+#include "game/map/Tile.h"
+#include "game/effects/TileEffectsContext.h"
+#include "game/faction/base/resources/WorkerAssignmentManager.h"
+#include "game/faction/base/BaseManager.h"
 #include "game/units/UnitDesign.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -287,4 +291,56 @@ TEST_CASE("The council view refuses to run without a council", "[ui][council]")
     // Escape resolves a pending proposal before closing; with no council that is a broken
     // session, not a no-op.
     CHECK_THROWS_AS(pView->HandleKey(KeyEvent_t{Key_t::Escape, {}}), std::runtime_error);
+}
+
+TEST_CASE("The social-engineering panel reports turns remaining, not full duration",
+          "[ui][social]")
+{
+    // The label promises turns until breakthrough, but the call was GetBreakthroughRate, which
+    // ignores accumulated progress — so the figure only ever read too high.
+    ViewFixture fixture;
+    // Needs a base *and* energy: with no labs production the panel legitimately reports N/A.
+    ac::BaseManager& rBase = fixture.MakeBase(4, 4);
+    for (const ac::Tile* pTile : rBase.GetWorkerAssignments().GetWorkableTiles())
+    {
+        fixture.pState->GetTileEffects().AddImprovementWithEffects(
+            *fixture.pState->GetWorldMap().GetTile(pTile->GetX(), pTile->GetY()),
+            "ThermalBorehole");
+    }
+    ac::ResearchManager& rResearch = fixture.pPlayer->GetResearch();
+    rResearch.SetResearchTarget("build_tech");
+
+    auto pView = fixture.pFactory->CreateSocialEngineeringView(ViewFixture::FullScreen());
+    REQUIRE(pView);
+
+    pView->Render(fixture.graphics);
+    const std::string before = [&]
+    {
+        for (const auto& rDraw : fixture.graphics.texts)
+        {
+            if (rDraw.text.find("Research Breakthrough:") != std::string::npos)
+            {
+                return rDraw.text;
+            }
+        }
+        return std::string{};
+    }();
+    REQUIRE_FALSE(before.empty());
+
+    // Bank most of the cost. The remaining-turns figure must move; the full-duration one would
+    // not, because it ignores what has been accumulated.
+    rResearch.SetAccumulatedPoints(rResearch.GetPointsNeededForCurrentTech() - 1);
+
+    fixture.graphics.texts.clear();
+    pView->Render(fixture.graphics);
+    bool bFound = false;
+    for (const auto& rDraw : fixture.graphics.texts)
+    {
+        if (rDraw.text.find("Research Breakthrough:") != std::string::npos)
+        {
+            CHECK(rDraw.text != before);
+            bFound = true;
+        }
+    }
+    CHECK(bFound);
 }
