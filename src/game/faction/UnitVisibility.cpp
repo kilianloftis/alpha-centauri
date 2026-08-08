@@ -96,7 +96,7 @@ bool IsUnitVisibleTo(const Faction& rObserver, const Unit& rSubject,
     }
 
     const Tile& rTile = rSubject.GetTile();
-    if (rObserver.GetVisibleMap().IsSized() && !rObserver.GetVisibleMap().IsVisible(rTile))
+    if (!rObserver.GetVisibleMap().IsVisible(rTile))
     {
         return false;
     }

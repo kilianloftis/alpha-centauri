@@ -237,6 +237,29 @@ public:
     void BindWorldEffects(IWorldEffectsSource& rWorldEffects);
     void RebuildVisibility();
 
+    // Coalesces visibility rebuilds. While any scope is open, RebuildVisibility only marks the
+    // map dirty; the outermost scope performs one rebuild on destruction. A rebuild re-reveals
+    // from every unit and base, walks every tile for vision improvements, and then drives a
+    // first-contact sweep over every other faction — so a burst of unit events (sinking a loaded
+    // transport destroys the carrier and each passenger) must not pay for it once per event.
+    class VisibilityRebuildScope
+    {
+    public:
+        VisibilityRebuildScope(const VisibilityRebuildScope&) = delete;
+        VisibilityRebuildScope& operator=(const VisibilityRebuildScope&) = delete;
+        VisibilityRebuildScope(VisibilityRebuildScope&& rOther) noexcept;
+        VisibilityRebuildScope& operator=(VisibilityRebuildScope&&) = delete;
+        ~VisibilityRebuildScope();
+
+    private:
+        friend class Faction;
+        explicit VisibilityRebuildScope(Faction& rFaction);
+
+        Faction* m_pFaction;
+    };
+
+    VisibilityRebuildScope DeferVisibilityRebuild();
+
     // Session prefs (Engine/GameState owned). Used by RebuildVisibility to apply
     // GameRules.RemoveShroud / DebugOptions.RemoveFog without compiling them in.
     const GameSettings& GetSettings() const { return m_rSettings; }
@@ -304,6 +327,8 @@ private:
     IWorldEffectsSource* m_pWorldEffects = nullptr; // set by BindWorldEffects; optional
     GameState* m_pGameState = nullptr; // set by BindGameState; optional session back-pointer
     bool m_bFogRemoved = false; // sticky ApplyRemoveFog
+    int m_visibilityDeferralDepth = 0;
+    bool m_bVisibilityDirty = false;
     std::function<void()> m_onBaseListChanged;
     std::function<void(Faction&)> m_onVisibilityRebuilt;
 

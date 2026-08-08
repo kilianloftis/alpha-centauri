@@ -13,6 +13,7 @@
 #include "game/faction/FactionIdentity.h"
 #include <iostream>
 #include <stdexcept>
+#include <utility>
 #include "game/faction/AIProfile.h"
 #include "game/faction/FactionFlavor.h"
 #include "game/faction/EconomyManager.h"
@@ -705,8 +706,44 @@ void Faction::BindWorldEffects(IWorldEffectsSource& rWorldEffects)
     m_composedWorldStamp = UINT64_MAX;
 }
 
+Faction::VisibilityRebuildScope::VisibilityRebuildScope(Faction& rFaction)
+    : m_pFaction(&rFaction)
+{
+    ++m_pFaction->m_visibilityDeferralDepth;
+}
+
+Faction::VisibilityRebuildScope::VisibilityRebuildScope(VisibilityRebuildScope&& rOther) noexcept
+    : m_pFaction(std::exchange(rOther.m_pFaction, nullptr))
+{
+}
+
+Faction::VisibilityRebuildScope::~VisibilityRebuildScope()
+{
+    if (!m_pFaction)
+    {
+        return;
+    }
+    --m_pFaction->m_visibilityDeferralDepth;
+    if (m_pFaction->m_visibilityDeferralDepth == 0 && m_pFaction->m_bVisibilityDirty)
+    {
+        m_pFaction->m_bVisibilityDirty = false;
+        m_pFaction->RebuildVisibility();
+    }
+}
+
+Faction::VisibilityRebuildScope Faction::DeferVisibilityRebuild()
+{
+    return VisibilityRebuildScope(*this);
+}
+
 void Faction::RebuildVisibility()
 {
+    if (m_visibilityDeferralDepth > 0)
+    {
+        m_bVisibilityDirty = true;
+        return;
+    }
+
     m_visible.RebuildFromSources(*this, m_rWorldMap, m_explored);
     ApplyVisibilityRules(*this, m_rSettings);
     if (m_onVisibilityRebuilt)

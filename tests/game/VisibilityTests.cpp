@@ -9,6 +9,7 @@
 #include "game/faction/FactionVisibleMap.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/VisibilityRules.h"
+#include "game/map/ImprovementRegistry.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
 
@@ -281,4 +282,71 @@ TEST_CASE("OnVisibilityChanged toggles fog live without rebuild call sites", "[v
     visibility.removeFog = false;
     settings.SetVisibility(visibility);
     CHECK_FALSE(player.GetVisibleMap().IsVisible(0, 0));
+}
+
+TEST_CASE("A vision improvement's sight radius is resolved once, at config load",
+          "[visibility][fog]")
+{
+    // The radius was re-derived per improvement per tile on every rebuild, allocating a vector
+    // and running the stat resolver for data that cannot change after load.
+    actest::FactionFixture fixture;
+    const ImprovementConfig_t& rSensor = fixture.improvements.Get("Sensor");
+    CHECK(rSensor.visionRadius == 2);
+
+    // A non-vision improvement resolves to zero rather than to "some radius".
+    const ImprovementConfig_t& rFarm = fixture.improvements.Get("Farm");
+    CHECK(rFarm.visionRadius == 0);
+}
+
+TEST_CASE("Visibility rebuilds are coalesced inside a deferral scope", "[visibility][fog]")
+{
+    // A rebuild re-reveals from every source, walks every tile, and drives a first-contact
+    // sweep over every other faction. Bursts of unit events must not pay for it per event.
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+
+    int rebuilds = 0;
+    faction.SetOnVisibilityRebuilt([&rebuilds](Faction&) { ++rebuilds; });
+
+    {
+        Faction::VisibilityRebuildScope scope = faction.DeferVisibilityRebuild();
+        faction.RebuildVisibility();
+        faction.RebuildVisibility();
+        faction.RebuildVisibility();
+        CHECK(rebuilds == 0);
+    }
+    CHECK(rebuilds == 1);
+
+    // A scope that requested nothing rebuilds nothing.
+    {
+        Faction::VisibilityRebuildScope scope = faction.DeferVisibilityRebuild();
+    }
+    CHECK(rebuilds == 1);
+
+    // Outside a scope, a rebuild is immediate.
+    faction.RebuildVisibility();
+    CHECK(rebuilds == 2);
+}
+
+TEST_CASE("Sinking a loaded transport rebuilds visibility once", "[visibility][fog]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+
+    // A transport over open water carrying two land units: neither passenger survives the
+    // carrier's loss, so DestroyUnit recurses into both.
+    fixture.At(4, 4).SetElevation(-100);
+    Unit& rTransport =
+        fixture.MakeUnit(faction, 4, 4, {"test_sea_chassis", "test_transport_2"});
+    Unit& rFirst = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    Unit& rSecond = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    rFirst.EmbarkInto(rTransport);
+    rSecond.EmbarkInto(rTransport);
+    REQUIRE(rTransport.GetCargo().size() == 2);
+
+    int rebuilds = 0;
+    faction.SetOnVisibilityRebuilt([&rebuilds](Faction&) { ++rebuilds; });
+
+    faction.GetUnitManager().DestroyUnit(rTransport);
+    CHECK(rebuilds == 1);
 }

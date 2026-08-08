@@ -178,6 +178,21 @@ explored/visible maps from the world map and takes a first visibility reading.
   `Bind`/`Set` calls: a faction without a map used to make `RebuildVisibility` a silent no-op,
   so a base founded on a not-yet-wired faction produced no visibility, no territory rebuild and
   no first-contact check while every getter still returned plausible values.
+- **Visibility** is rebuilt from scratch whenever a vision source moves: every unit, every base,
+  and every tile carrying a vision-granting improvement. Because the map is a constructor
+  dependency, no live faction can have an unsized visible map, and `RebuildFromSources` throws
+  rather than treating "unsized" as "sees everything".
+  - The per-improvement sight radius is resolved **once at config load**
+    (`ImprovementConfig_t::visionRadius`), not per tile per rebuild — it derives only from the
+    improvement's own `ThisTile` `Vision` modifiers, which cannot change after load.
+  - `Faction::DeferVisibilityRebuild()` returns an RAII scope that coalesces rebuilds; the
+    outermost scope performs one. `UnitManager::DestroyUnit` holds one across its cargo
+    recursion, so sinking a loaded transport rebuilds once rather than once per hull. A rebuild
+    also drives a first-contact sweep over every other faction, which is what makes the
+    per-event cost compound.
+  - Still O(width × height) per rebuild for the improvement sweep: a world-level index of
+    vision tiles needs a mutation choke point that `Tile` does not currently have.
+
 - The **seed** drives every per-faction random choice (base names, the starting research
   target). It is injected rather than drawn from `std::random_device` inside `FactionFlavor` /
   `ResearchSelector`, because those choices are save-game state; `Engine` resolves one session

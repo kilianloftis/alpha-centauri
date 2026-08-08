@@ -70,6 +70,9 @@ Unit& UnitManager::CreateUnit(UnitId_t unitId, const UnitDesign& rDesign,
 
 void UnitManager::DestroyUnit(Unit& rUnit)
 {
+    // One rebuild for the carrier and everything aboard, not one per hull.
+    Faction::VisibilityRebuildScope visibilityScope = m_rFaction.DeferVisibilityRebuild();
+
     // Cargo that can hold the carrier's tile by itself is set down there — a ship sunk in
     // port does not drown the garrison; anything over open water goes down with it. Snapshot
     // first, since both branches clear the cargo links. Only passengers this manager owns are

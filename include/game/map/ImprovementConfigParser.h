@@ -67,6 +67,11 @@ struct ImprovementConfig_t
     std::optional<int> moveCostFragments;
     std::optional<int> moveCostOverrideFragments;
     std::vector<EffectConfig_t> effects;
+    // Fog sight range granted by this improvement's ThisTile Vision StatModifiers, resolved at
+    // parse. Derived purely from `effects`, and read on every visibility rebuild — resolving it
+    // per tile per rebuild allocated a vector and ran the stat resolver for static config data.
+    // Effect radius is a separate axis (auras); this is sight only.
+    int visionRadius = 0;
 };
 
 // Coexistence, checked in both directions: rCandidate must not exclude anything already on the

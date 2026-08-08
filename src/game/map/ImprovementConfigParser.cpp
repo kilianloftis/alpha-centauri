@@ -4,7 +4,9 @@
 #include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
 #include "lib/Rational.h"
+#include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfigParser.h"
+#include "game/effects/EffectEnums.h"
 
 #include <algorithm>
 #include <stdexcept>
@@ -12,6 +14,8 @@
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
+#include <variant>
+#include <vector>
 
 namespace ac
 {
@@ -215,6 +219,33 @@ void ImprovementConfigParser::ExpandTagReferences(std::vector<ImprovementConfig_
     }
 }
 
+// Sight radius from ThisTile Vision StatModifiers — same amount encoding as unit Vision
+// (Sensor declares amount: 2).
+int ResolveVisionRadius_(const ImprovementConfig_t& rConfig)
+{
+    int sight = 0;
+    for (const EffectConfig_t& rEffect : rConfig.effects)
+    {
+        if (rEffect.scope != EffectScope_t::ThisTile
+            || rEffect.persistence == EffectPersistence_t::Instantaneous)
+        {
+            continue;
+        }
+        const StatModifierEffect_t* pMod = std::get_if<StatModifierEffect_t>(&rEffect.effect);
+        if (!pMod || pMod->stat != StatId_t::Vision)
+        {
+            continue;
+        }
+
+        const ActiveEffect_t active(rEffect, rConfig.id);
+        const int range = FinalizeResolvedStat(
+            ResolveStatModifiers(std::vector<ActiveEffect_t>{active}, SeedFor(StatId_t::Vision))
+                .total);
+        sight = std::max(sight, range);
+    }
+    return sight;
+}
+
 ImprovementConfig_t ImprovementConfigParser::ParseImprovementConfig(const nlohmann::json& improvementJson)
 {
     ImprovementConfig_t config;
@@ -251,6 +282,7 @@ ImprovementConfig_t ImprovementConfigParser::ParseImprovementConfig(const nlohma
             ParseMoveCostFragments_(cost, "move_cost_override", config.id);
     }
     config.effects = EffectConfigParser::ParseEffects(improvementJson, EffectSourceKind_t::Improvement, config.id);
+    config.visionRadius = ResolveVisionRadius_(config);
 
     return config;
 }
