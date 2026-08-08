@@ -1,0 +1,38 @@
+[
+    {
+        "id": "chassis",
+        "display_name": "Chassis",
+        "component_type": "chassis",
+        "required": true,
+        "column": "left",
+        "cost_modifier": 1.0,
+        "required_tech": ""
+    },
+    {
+        "id": "weapon",
+        "display_name": "Weapon",
+        "component_type": "weapon",
+        "required": true,
+        "column": "left",
+        "cost_modifier": 1.0,
+        "required_tech": ""
+    },
+    {
+        "id": "armour",
+        "display_name": "Armour",
+        "component_type": "armour",
+        "required": true,
+        "column": "right",
+        "cost_modifier": 1.0,
+        "required_tech": ""
+    },
+    {
+        "id": "gated_ability",
+        "display_name": "Gated Ability Slot",
+        "component_type": "ability",
+        "required": false,
+        "column": "right",
+        "cost_modifier": 1.0,
+        "required_tech": "advanced_build"
+    }
+]

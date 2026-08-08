@@ -11,7 +11,7 @@ namespace ac
 
 class Graphics;
 class Input;
-class WorldView;
+class IWorldView;
 
 class UIManager
 {
@@ -29,7 +29,7 @@ public:
     void Render();
 
     void RegisterViewShortcut(Key_t key, ViewFactory_t factory);
-    void SetWorldView(std::unique_ptr<WorldView> pWorldView);
+    void SetWorldView(std::unique_ptr<IWorldView> pWorldView);
     void PushView(std::unique_ptr<IGameView> pView);
     void PopView();
     bool HasViews() const;
@@ -44,6 +44,7 @@ public:
     void RequestExit();
 
 private:
+    void PruneClosedViews_();
     void ProcessKeys_();
     void ProcessMouse_();
     IGameView* GetActiveView_();
@@ -51,7 +52,7 @@ private:
 
     Graphics& m_rGraphics;
     Input& m_rInput;
-    std::unique_ptr<WorldView> m_pWorldView;
+    std::unique_ptr<IWorldView> m_pWorldView;
     std::vector<std::unique_ptr<IGameView>> m_overlayStack;
     std::unordered_map<Key_t, ViewFactory_t> m_shortcutMap;
     bool m_bShouldExit = false;

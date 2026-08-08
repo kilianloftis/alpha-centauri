@@ -68,7 +68,11 @@ graph TB
 ## Data Flow: Selecting a Component
 
 1. Player clicks a slot in a `SlotColumnPanel` → triggers that slot's `onClicked` lambda
-2. `UnitDesignerView::ShowComponentSelector_()` filters `UnitComponentRegistry` by type
+2. `UnitDesignerView::ShowComponentSelector_()` filters `UnitComponentRegistry` by type **and by
+   `required_tech`** (`IsUnlocked_`). The same gate is applied to the slots themselves when the
+   columns are built, so a slot behind an undiscovered tech is not laid out at all — config
+   already locks both, and offering either let a player assemble and save a design that should
+   not exist
 3. A `ListSelectorPopup` is pushed onto `m_elements`, titled from the slot's `display_name` and
    styled from `Style().componentSelectorPopup` — its own instance of the shared style type
 4. Player picks an entry → popup calls the lambda that sets the matching field in `UnitDesignerState_t`

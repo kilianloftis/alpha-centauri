@@ -5,6 +5,7 @@
 #include "ui/unit-designer/DesignListPanel.h"
 #include "ui/unit-designer/UnitStatusPanel.h"
 #include "game/faction/Military.h"
+#include "game/faction/ResearchManager.h"
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitSlotRegistry.h"
 #include "game/units/UnitDesign.h"
@@ -18,6 +19,7 @@ UnitDesignerView::UnitDesignerView(
     Military& rMilitary,
     const UnitComponentRegistry& rComponentRegistry,
     const UnitSlotRegistry& rSlotRegistry,
+    const ResearchManager& rResearch,
     const UnitManager* pUnitManager,
     WindowLayout_t layout
 )
@@ -25,6 +27,7 @@ UnitDesignerView::UnitDesignerView(
     , m_rMilitary(rMilitary)
     , m_rComponentRegistry(rComponentRegistry)
     , m_rSlotRegistry(rSlotRegistry)
+    , m_rResearch(rResearch)
 {
     BuildUnitStatusPanel_(pUnitManager);
     BuildTopPanelElements_();
@@ -47,6 +50,11 @@ void UnitDesignerView::BuildTopPanelElements_()
 
     for (const auto& rSlot : m_rSlotRegistry.GetAll())
     {
+        if (!IsUnlocked_(rSlot.requiredTech))
+        {
+            continue;
+        }
+
         SlotColumnPanel::SlotEntry_t entry;
         entry.pSlotConfig = &rSlot;
         entry.getComponent = [this, slotId = rSlot.id]() -> const UnitComponentConfig_t*
@@ -140,7 +148,7 @@ void UnitDesignerView::ShowComponentSelector_(
     std::vector<const UnitComponentConfig_t*> available;
     for (const auto& rConfig : m_rComponentRegistry.GetAll())
     {
-        if (rConfig.type == rComponentType)
+        if (rConfig.type == rComponentType && IsUnlocked_(rConfig.requiredTech))
         {
             available.push_back(&rConfig);
         }
@@ -161,6 +169,11 @@ void UnitDesignerView::ShowComponentSelector_(
             onSelected(*available[index]);
         },
         Style().componentSelectorPopup));
+}
+
+bool UnitDesignerView::IsUnlocked_(const std::string& rRequiredTech) const
+{
+    return rRequiredTech.empty() || m_rResearch.HasDiscoveredTech(rRequiredTech);
 }
 
 void UnitDesignerView::HandleSaveDesign_()

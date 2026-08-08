@@ -11,8 +11,20 @@
 #include "graphics/Graphics.h"
 #include "ui/style/UiStyle.h"
 
+#include <stdexcept>
+
 namespace ac
 {
+
+Faction* ViewFactory::RequirePlayerFaction_() const
+{
+    Faction* pFaction = m_rGameState.GetPlayerFaction();
+    if (!pFaction)
+    {
+        throw std::runtime_error("ViewFactory: no player faction; cannot build a player view");
+    }
+    return pFaction;
+}
 
 ViewFactory::ViewFactory(
     GameState& rGameState,
@@ -58,11 +70,7 @@ std::unique_ptr<BaseView> ViewFactory::CreateBaseView(
     const WindowLayout_t& layout
 ) const
 {
-    const Faction* pFaction = m_rGameState.GetPlayerFaction();
-    if (!pFaction)
-    {
-        return nullptr;
-    }
+    const Faction* pFaction = RequirePlayerFaction_();
 
     const bool bEditable = (rBase.GetFactionId() == pFaction->GetFactionId());
     return std::make_unique<BaseView>(rBase, *pFaction, layout, bEditable);
@@ -72,11 +80,7 @@ std::unique_ptr<ResearchView> ViewFactory::CreateResearchView(
     const WindowLayout_t& layout
 ) const
 {
-    const Faction* pFaction = m_rGameState.GetPlayerFaction();
-    if (!pFaction)
-    {
-        return nullptr;
-    }
+    const Faction* pFaction = RequirePlayerFaction_();
 
     return std::make_unique<ResearchView>(&pFaction->GetResearch(), layout);
 }
@@ -85,11 +89,7 @@ std::unique_ptr<SocialEngineeringView> ViewFactory::CreateSocialEngineeringView(
     const WindowLayout_t& layout
 ) const
 {
-    Faction* pFaction = m_rGameState.GetPlayerFaction();
-    if (!pFaction)
-    {
-        return nullptr;
-    }
+    Faction* pFaction = RequirePlayerFaction_();
 
     return std::make_unique<SocialEngineeringView>(
         pFaction,
@@ -103,16 +103,13 @@ std::unique_ptr<UnitDesignerView> ViewFactory::CreateUnitDesignerView(
     const WindowLayout_t& layout
 ) const
 {
-    Faction* pFaction = m_rGameState.GetPlayerFaction();
-    if (!pFaction)
-    {
-        return nullptr;
-    }
+    Faction* pFaction = RequirePlayerFaction_();
 
     return std::make_unique<UnitDesignerView>(
         pFaction->GetMilitary(),
         *m_rGameDataContext.unitComponentRegistry,
         *m_rGameDataContext.unitSlotRegistry,
+        pFaction->GetResearch(),
         &pFaction->GetUnitManager(),
         layout
     );

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "game/units/CombatResolver.h"
-#include "ui/IGameView.h"
+#include "ui/IWorldView.h"
 #include "ui/world/CameraInputController.h"
 #include "ui/world/UnitOrderInputController.h"
 #include "ui/world/TerraformInputController.h"
@@ -28,7 +28,7 @@ class SelectedUnitPanel;
 class Tile;
 class UnitStackPanel;
 
-class WorldView : public IGameView
+class WorldView : public IWorldView
 {
 public:
     using OpenBaseCallback_t = std::function<void(BaseManager&)>;
@@ -59,7 +59,8 @@ public:
     void Render(Graphics& rGraphics) override;
     bool HandleKey(const KeyEvent_t& rEvent) override;
     void HandleMouse(const MouseEvent_t& rEvent) override;
-    void UpdateCameraInput(bool bEnabled, std::optional<MousePosition_t> mousePosition);
+    void UpdateCameraInput(bool bEnabled,
+                           std::optional<MousePosition_t> mousePosition) override;
 
     // While CombatView is up, skip drawing the normal dashboard (combat panels cover it).
     void SetSuppressDashboard(bool bSuppress);
@@ -67,7 +68,7 @@ public:
     // Runs the auto end-turn callback if one was queued by the last Update_() pass (Pause at
     // End of Turn off, no units left needing orders). Called from UIManager::Update(), between
     // ProcessInput and Render, so turn advance never runs on the paint path.
-    void ProcessPendingAutoEndTurn();
+    void ProcessPendingAutoEndTurn() override;
 
 private:
     void Update_();

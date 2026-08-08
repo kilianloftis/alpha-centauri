@@ -54,7 +54,7 @@ WorldView::WorldView(
     OpenCombatCallback_t onOpenCombat,
     std::function<void()> onOpenCommlinks
 )
-: IGameView(layout)
+: IWorldView(layout)
 , m_rGameState(rGameState)
 , m_rGameDataContext(rGameDataContext)
 , m_mapLayout(ResolveLayout(layout, Style().layouts.map))
@@ -136,7 +136,7 @@ void WorldView::Render(Graphics& rGraphics)
     m_pWorldDisplay->Render(rGraphics);
     if (!m_bSuppressDashboard)
     {
-        IGameView::Render(rGraphics);
+        IWorldView::Render(rGraphics);
     }
 }
 
@@ -545,10 +545,15 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
         // Unit pick uses IsUnitVisibleTo (fog / Conceal / contact reveal), not tile fog alone.
         SelectUnitAtTile_(worldX, worldY);
 
-        if (BaseManager* pBase = m_rGameState.FindBaseAt(worldX, worldY))
+        // Only when the click selected no unit: clicking a garrison selects the garrison, it
+        // does not jump into the base screen. Matches docs/architecture/ui-system.md.
+        if (!m_pSelectedUnit)
         {
-            m_onOpenBase(*pBase);
-            return;
+            if (BaseManager* pBase = m_rGameState.FindBaseAt(worldX, worldY))
+            {
+                m_onOpenBase(*pBase);
+                return;
+            }
         }
     }
 }

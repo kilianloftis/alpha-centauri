@@ -31,6 +31,21 @@ namespace
 constexpr auto k_Categories = magic_enum::enum_values<SocialCategory_t>();
 constexpr auto k_AllRatings = magic_enum::enum_values<SocialRatingId_t>();
 
+// Trims a trailing ".0" so whole numbers read as "+2" rather than "+2.000000".
+std::string FormatAmount(double amount)
+{
+    std::ostringstream oss;
+    if (amount == static_cast<long long>(amount))
+    {
+        oss << static_cast<long long>(amount);
+    }
+    else
+    {
+        oss << amount;
+    }
+    return oss.str();
+}
+
 std::string CapitalizeFirst(std::string text)
 {
     if (!text.empty())
@@ -93,6 +108,29 @@ std::string GetFactionDisplayName(const Faction& rFaction)
     return "Unknown";
 }
 
+// One social-rating level effect as a player-facing phrase. Effect kinds with no meaningful
+// short form return empty and are skipped.
+std::string FormatLevelEffect(const EffectConfig_t& rEffect)
+{
+    if (const auto* pModifier = std::get_if<StatModifierEffect_t>(&rEffect.effect))
+    {
+        std::ostringstream oss;
+        const double amount = pModifier->amount;
+        oss << (amount >= 0.0 ? "+" : "") << FormatAmount(amount);
+        if (pModifier->op == ModifierOp_t::AddPercent)
+        {
+            oss << "%";
+        }
+        oss << " " << CapitalizeFirst(std::string(magic_enum::enum_name(pModifier->stat)));
+        return oss.str();
+    }
+    if (const auto* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.effect))
+    {
+        return CapitalizeFirst(std::string(magic_enum::enum_name(pFlag->flag)));
+    }
+    return {};
+}
+
 std::string FormatFactionBonuses(
     const Faction& rFaction,
     const SocialRatingRegistry& rRegistry
@@ -109,17 +147,31 @@ std::string FormatFactionBonuses(
             continue;
         }
 
-        const SocialRatingConfig_t* pRatingConfig = rRegistry.Find(SocialRatingIdToString(rating));
-        if (!pRatingConfig)
+        // A non-zero rating whose axis has no table is a config defect, not an empty bonus
+        // line: ValidateEffectReferences rejects the modifier that produced it at load.
+        const SocialRatingConfig_t& rRatingConfig =
+            rRegistry.Get(SocialRatingIdToString(rating));
+
+        const std::vector<EffectConfig_t>* pLevelEffects =
+            FindSocialRatingLevelEffects(rRatingConfig, level);
+        if (!pLevelEffects)
         {
             continue;
         }
 
-        const std::vector<EffectConfig_t>* pLevelEffects =
-            FindSocialRatingLevelEffects(*pRatingConfig, level);
-        if (!pLevelEffects)
+        for (const EffectConfig_t& rEffect : *pLevelEffects)
         {
-            continue;
+            const std::string text = FormatLevelEffect(rEffect);
+            if (text.empty())
+            {
+                continue;
+            }
+            if (!first)
+            {
+                oss << ", ";
+            }
+            oss << text;
+            first = false;
         }
     }
 

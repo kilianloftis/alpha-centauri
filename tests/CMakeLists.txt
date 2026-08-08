@@ -80,21 +80,25 @@ add_executable(effects-tests
     game/PlanetaryCouncilTests.cpp
     ui/ModalContractTests.cpp
     ui/ListSelectorPopupTests.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../src/ui/ListSelectorPopup.cpp
+    ui/UIManagerTests.cpp
+    ui/ViewFactoryTests.cpp
     lib/SignalTests.cpp
     lib/ConfigLibraryTests.cpp
     lib/EventBusTests.cpp
     lib/PlatformEventQueueTests.cpp
 )
 
-target_link_libraries(effects-tests PRIVATE ac-core ac-turn-stages Catch2::Catch2WithMain)
+target_link_libraries(effects-tests PRIVATE ac-core ac-ui ac-turn-stages Catch2::Catch2WithMain)
 
 # For TestHelpers.h / GameFixtures.h.
 target_include_directories(effects-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Absolute path to the JSON fixture configs the registries load in tests.
+# AC_CONFIG_DIR is the shipped config: the view fixture loads the real UI style, which is one
+# of the few configs a test copy would silently drift from.
 target_compile_definitions(effects-tests PRIVATE
-    AC_TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+    AC_TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    AC_CONFIG_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../config")
 
 # CMAKE_RUNTIME_OUTPUT_DIRECTORY points at the repo root for the game binary;
 # keep test binaries inside the build tree.

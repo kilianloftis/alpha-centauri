@@ -5,6 +5,7 @@ graph TB
     subgraph "Core Abstractions"
         UIManager[UIManager<br/>(abstract base class)]
         IGameView[IGameView<br/>(interface)]
+        IWorldView[IWorldView<br/>extends IGameView<br/>what UIManager needs of the map view]
         UIElement[UIElement<br/>(abstract base class)]
         UIWorldMap[UIWorldMap<br/>extends UIElement]
         UIPanel[UIPanel<br/>extends UIElement]
@@ -17,7 +18,7 @@ graph TB
     end
 
     subgraph "Views"
-        WorldView[WorldView<br/>implements IGameView]
+        WorldView[WorldView<br/>implements IWorldView]
         BaseView[BaseView<br/>implements IGameView<br/>coordinates panels]
         ResearchView[ResearchView<br/>implements IGameView]
         WorldMapElement[WorldMapElement<br/>implements UIWorldMap]
@@ -65,6 +66,9 @@ graph TB
     GrowthDisplay -.->|implements| IBasePanel
 
     UIManager -->|manages stack of| IGameView
+    UIManagerImpl -->|holds persistent| IWorldView
+    IWorldView -.->|extends| IGameView
+    WorldView -.->|implements| IWorldView
     UIManagerImpl -.->|implements| UIManager
     Factory -->|returns| UIManagerImpl
 
@@ -79,6 +83,7 @@ graph TB
 
     style UIManager fill:#bbf,stroke:#333,stroke-width:4px
     style IGameView fill:#bbf,stroke:#333,stroke-width:4px
+    style IWorldView fill:#bbf,stroke:#333,stroke-width:2px
     style UIElement fill:#bbf,stroke:#333,stroke-width:2px
     style UIManagerImpl fill:#bfb,stroke:#333,stroke-width:2px
     style WorldView fill:#bfb,stroke:#333,stroke-width:2px
@@ -154,6 +159,16 @@ graph TB
   - `HandleMouse(MouseEvent_t&)`: Handle a mouse event (fallback after element routing)
   - `GetElements()`: Return owned `UIElement*` list for input hit-testing
 
+### IWorldView (Interface)
+- **Purpose**: What `UIManager` needs from the persistent map view, beyond `IGameView`:
+  `UpdateCameraInput(bool bEnabled, optional<MousePosition_t>)` and
+  `ProcessPendingAutoEndTurn()`. `BlocksTurnAdvance` is not here — `IGameView` already declares
+  it with a default.
+- **Why**: `UIManager` named `WorldView` concretely, so anything linking the manager also linked
+  `GameState`, every registry, and the map renderer. The manager's own rules (push/pop, when a
+  closed view stops receiving input, the turn gate) were untestable as a result.
+- **Implementer**: `WorldView`. Tests substitute a fake.
+
 ### UIManager (Abstract Base Class)
 - **Purpose**: Owned by `Engine`. Manages the view stack, routes input, triggers rendering.
 - **Virtual Methods**:
@@ -169,6 +184,15 @@ graph TB
 1. Key events → `topView.HandleKey()`
 2. Mouse button events → find first `UIElement` under cursor via `Contains()` → `element.HandleMouse()`; if not consumed, fallback to `topView.HandleMouse()`
 
+Closed views are pruned **per event**, not per frame and not per drain loop: one keystroke can
+close the top view, and the next event in the same batch must reach whatever is active now.
+Pruning used to happen inside `Render`, so a view closed by a keystroke kept receiving the whole
+subsequent mouse batch.
+
+Camera input (`UpdateCameraInput`) is driven from `Update`, not `Render`, so a second render pass
+in one tick cannot apply edge scrolling twice. Edge scrolling is disabled while an overlay covers
+the map.
+
 ### Render Order
 Views are rendered bottom-to-top through the stack. Each view renders its own `UIElement`s in its `Render()` method.
 
@@ -179,7 +203,7 @@ Views are rendered bottom-to-top through the stack. Each view renders its own `U
 - **Configurability**: `SetTileSize()` and `SetCameraOffset()` are the sole control points. Tile size is intentionally configurable to support zoom and per-platform tuning.
 - **Mouse hit-testing**: `WorldView::HandleMouse` reads the viewport state from `WorldDisplay` and translates screen-relative tile indices back to world tile coordinates by adding the camera offset.
 - **Unit Layer**: Unit markers are rendered on top of bases by querying `WorldMap::GetUnitsOnTile()` for each visible tile. Multiple units on the same tile are drawn side-by-side; faction coloring is a future TODO.
-- **Unit Selection**: Left-clicking a tile with units selects the first unit on that tile (`WorldView::SelectUnitAtTile_`). The selected unit is highlighted with a yellow border and is passed to `WorldDisplay` via `SetSelectedUnit()`. If the tile has no units, the click falls back to opening a base.
+- **Unit Selection**: Left-clicking a tile with units selects the first unit on that tile (`WorldView::SelectUnitAtTile_`). The selected unit is highlighted with a yellow border and is passed to `WorldDisplay` via `SetSelectedUnit()`. If the tile has no units, the click falls back to opening a base — a garrisoned base is selected as units, never opened, so clicking a stack cannot jump the player into the base screen.
 - **Unit Orders**: With a selected unit, the `H` key issues a `HoldOrder_t` via `UnitOrderInputController`. Order execution is delegated to the turn-processing `UnitOrderExecutor`.
 - **Move Orders**: Right-clicking and holding for one second, then releasing, assigns a `MoveOrder_t` to the selected unit for the tile under the cursor on release. Short right-clicks are ignored. `MouseEvent_t::bPressed` is used to distinguish press and release events.
 
@@ -193,6 +217,17 @@ Views are rendered bottom-to-top through the stack. Each view renders its own `U
 - **Purpose**: Creates `IGameView` instances from game state and graphics context
 - **Dependencies**: `GameState`, `GameDataContext`, `Graphics`
 - **Owner**: `Engine` creates and owns it during initialization
+- **Missing player faction**: `RequirePlayerFaction_()` throws. Every `Create*View` that needs the
+  player faction reaches it from a player action, and a session without a player faction is
+  broken, not a UI state — the previous `return nullptr` was dereferenced by `PushView`, which now
+  also rejects a null view.
+
+### Build target: `ac-ui`
+Every view, panel and input controller lives in the `ac-ui` static library, which links `ac-core`
+and depends only on the abstract `Graphics` / `Input` interfaces — never on a rendering backend.
+The `alpha-centauri` executable is `main.cpp` plus `Engine.cpp` plus the SFML backend. The
+layering the diagrams describe is therefore enforced by the build, and the test suite links
+`ac-ui` to drive real views against `actest::RecordingGraphics`, which records draw positions.
 - **Methods**:
   - `CreateWorldView(...)`: Builds the world view
   - `CreateBaseView(...)`: Builds a base view for the selected base

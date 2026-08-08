@@ -1,7 +1,8 @@
 // The one list-selector, which replaced six forked copies. Every behaviour that had drifted
 // between them lives here now, so it is tested once.
 
-#include "graphics/Graphics.h"
+#include "RecordingGraphics.h"
+
 #include "ui/ListSelectorPopup.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -14,31 +15,10 @@
 #include <vector>
 
 using namespace ac;
+using actest::RecordingGraphics;
 
 namespace
 {
-
-// Records nothing; the popup's geometry and routing are what these tests assert, not its pixels.
-class StubGraphics_ : public Graphics
-{
-public:
-    void PumpEvents() override {}
-    void Clear() override {}
-    void Display() override {}
-    bool LoadTexture(const std::string&, const std::string&) override { return true; }
-    bool DrawSprite(const std::string&, float, float) override { return true; }
-    void DrawText(const std::string& rText, float, float, unsigned int, const Color_t&) override
-    {
-        drawnText.push_back(rText);
-    }
-    void DrawRect(float, float, float, float, const Color_t&, float) override {}
-    void DrawFilledRect(float, float, float, float, const Color_t&) override {}
-    void DrawLine(float, float, float, float, const Color_t&, float) override {}
-    unsigned int GetWindowWidth() const override { return 1280; }
-    unsigned int GetWindowHeight() const override { return 900; }
-
-    std::vector<std::string> drawnText;
-};
 
 // 100 units tall with 10-unit rows and a 2-row header: 8 lines below the header.
 ListSelectorPopupStyle Style_()
@@ -128,18 +108,26 @@ TEST_CASE("A long list is bounded to the content area and scrolls", "[ui][select
     ListSelectorPopup popup("Title", "Empty", Rows_(20), k_Layout,
                             [&](size_t index) { selected = index; }, style);
 
-    StubGraphics_ graphics;
+    RecordingGraphics graphics;
     popup.Render(graphics);
 
     // Eight lines fit below the header, but the bottom one is reserved for the overflow
     // indicator, so seven rows are drawn and nothing beyond them.
-    CHECK(std::count(graphics.drawnText.begin(), graphics.drawnText.end(), "row6") == 1);
-    CHECK(std::count(graphics.drawnText.begin(), graphics.drawnText.end(), "row7") == 0);
+    CHECK(graphics.TextYs("row6").size() == 1);
+    CHECK(graphics.TextYs("row7").empty());
     // ...and the popup says there is more.
-    const bool bHasIndicator =
-        std::any_of(graphics.drawnText.begin(), graphics.drawnText.end(),
-                    [](const std::string& rText) { return rText.find(" of 20") != std::string::npos; });
-    CHECK(bHasIndicator);
+    CHECK(graphics.AnyTextContaining(" of 20"));
+
+    // The indicator must not sit on top of a row: it used to be drawn at the last row's y,
+    // where it overlapped that row's text and the row stayed clickable underneath it.
+    const float indicatorY = graphics.FirstTextYContaining(" of 20");
+    for (const std::string& rRow : {"row0", "row3", "row6"})
+    {
+        for (const float rowY : graphics.TextYs(rRow))
+        {
+            CHECK(rowY != indicatorY);
+        }
+    }
 
     // Scrolling brings later rows into reach, and a click reports the *absolute* index.
     for (int i = 0; i < 5; ++i)
@@ -173,12 +161,9 @@ TEST_CASE("A list that fits does not scroll or advertise overflow", "[ui][select
 
     CHECK_FALSE(popup.HandleKey(KeyEvent_t{Key_t::ArrowDown, {}}));
 
-    StubGraphics_ graphics;
+    RecordingGraphics graphics;
     popup.Render(graphics);
-    const bool bHasIndicator =
-        std::any_of(graphics.drawnText.begin(), graphics.drawnText.end(),
-                    [](const std::string& rText) { return rText.find(" of ") != std::string::npos; });
-    CHECK_FALSE(bHasIndicator);
+    CHECK_FALSE(graphics.AnyTextContaining(" of "));
 }
 
 TEST_CASE("An empty list shows its message and selects nothing", "[ui][selector]")
@@ -188,9 +173,9 @@ TEST_CASE("An empty list shows its message and selects nothing", "[ui][selector]
     ListSelectorPopup popup("Title", "Nothing here", {}, k_Layout,
                             [&](size_t) { bSelected = true; }, style);
 
-    StubGraphics_ graphics;
+    RecordingGraphics graphics;
     popup.Render(graphics);
-    CHECK(std::count(graphics.drawnText.begin(), graphics.drawnText.end(), "Nothing here") == 1);
+    CHECK(graphics.TextYs("Nothing here").size() == 1);
 
     // A click inside the popup body must not invent a selection.
     popup.HandleMouseClick(ClickAt_(5, 25));

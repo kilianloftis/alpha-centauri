@@ -1,7 +1,9 @@
 #include "ui/UIManager.h"
+
+#include <stdexcept>
 #include "ui/IGameView.h"
 #include "ui/UIElement.h"
-#include "ui/world/WorldView.h"
+#include "ui/IWorldView.h"
 #include "graphics/Graphics.h"
 #include "input/Input.h"
 #include <memory>
@@ -20,7 +22,7 @@ UIManager::UIManager(Graphics& rGraphics, Input& rInput)
 // complete type just to destroy a UIManager.
 UIManager::~UIManager() = default;
 
-void UIManager::SetWorldView(std::unique_ptr<WorldView> pWorldView)
+void UIManager::SetWorldView(std::unique_ptr<IWorldView> pWorldView)
 {
     m_pWorldView = std::move(pWorldView);
 }
@@ -36,10 +38,22 @@ IGameView* UIManager::GetActiveView_()
 
 void UIManager::ProcessInput()
 {
-    if (GetActiveView_())
+    PruneClosedViews_();
+    ProcessKeys_();
+    ProcessMouse_();
+    // A view closed by the last event handled must not remain the active view for Update().
+    PruneClosedViews_();
+}
+
+void UIManager::PruneClosedViews_()
+{
+    for (int i = static_cast<int>(m_overlayStack.size()) - 1; i >= 0; --i)
     {
-        ProcessKeys_();
-        ProcessMouse_();
+        if (m_overlayStack[i]->ShouldClose())
+        {
+            m_overlayStack[i]->OnPopped();
+            m_overlayStack.erase(m_overlayStack.begin() + i);
+        }
     }
 }
 
@@ -47,6 +61,10 @@ void UIManager::ProcessKeys_()
 {
     while (auto event = m_rInput.PollKey())
     {
+        // Per event, not per batch: one keystroke can close the top view, and the next event in
+        // the same drain must go to whatever is active *now*.
+        PruneClosedViews_();
+
         IGameView* pActive = GetActiveView_();
         if (pActive && pActive->HandleKey(*event))
         {
@@ -86,6 +104,8 @@ void UIManager::ProcessMouse_()
 {
     while (auto event = m_rInput.PollMouse())
     {
+        PruneClosedViews_();
+
         IGameView* pActive = GetActiveView_();
         if (pActive)
         {
@@ -130,14 +150,6 @@ void UIManager::Render()
     {
         m_pWorldView->Render(m_rGraphics);
     }
-    for (int i = static_cast<int>(m_overlayStack.size()) - 1; i >= 0; --i)
-    {
-        if (m_overlayStack[i]->ShouldClose())
-        {
-            m_overlayStack[i]->OnPopped();
-            m_overlayStack.erase(m_overlayStack.begin() + i);
-        }
-    }
     for (const auto& pView : m_overlayStack)
     {
         pView->Render(m_rGraphics);
@@ -147,6 +159,10 @@ void UIManager::Render()
 
 void UIManager::PushView(std::unique_ptr<IGameView> pView)
 {
+    if (!pView)
+    {
+        throw std::invalid_argument("UIManager::PushView was given no view");
+    }
     pView->OnPushed(m_rGraphics);
     m_overlayStack.push_back(std::move(pView));
 }

@@ -241,12 +241,11 @@ target_include_directories(fastnoiselite INTERFACE ${fastnoiselite_SOURCE_DIR}/C
 target_link_libraries(ac-core PUBLIC fastnoiselite)
 
 # ---------------------------------------------------------------------------
-# alpha-centauri: the game executable — engine loop, UI, and the selected
-# rendering/input backend on top of ac-core.
+# ac-ui: every view, panel and input controller. Depends only on the abstract
+# Graphics/Input interfaces, never on a rendering backend, so the test suite can link
+# it and drive views against a recording Graphics.
 # ---------------------------------------------------------------------------
-add_executable(alpha-centauri
-    main.cpp
-    game/Engine.cpp
+add_library(ac-ui STATIC
     ui/TileHitTester.cpp
     ui/TileRenderer.cpp
     ui/UIManager.cpp
@@ -305,7 +304,18 @@ add_executable(alpha-centauri
     ui/unit-designer/UnitDesignerView.cpp
 )
 
-target_link_libraries(alpha-centauri PRIVATE ac-core ac-turn-stages)
+target_link_libraries(ac-ui PUBLIC ac-core)
+
+# ---------------------------------------------------------------------------
+# alpha-centauri: the game executable — engine loop and the selected
+# rendering/input backend on top of ac-core and ac-ui.
+# ---------------------------------------------------------------------------
+add_executable(alpha-centauri
+    main.cpp
+    game/Engine.cpp
+)
+
+target_link_libraries(alpha-centauri PRIVATE ac-core ac-ui ac-turn-stages)
 
 option(USE_SFML "Enable SFML rendering" ON)
 if(USE_SFML)
