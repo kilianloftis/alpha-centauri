@@ -947,6 +947,56 @@ Package 4 owns the constructor/null-policy half of these classes (two-phase-init
 
 **Deferred, with reasons in the prompt:** the `UiStyle` singleton (290 `Style()` call sites across 61 files, in code with no automated coverage); threading the world-gen preset's elevation range into `TileRenderer` (the UI's duplicate copy is gone, but the renderer now uses Planet's absolute clamp, so a narrow-range preset still colours flat); and a draw-position-recording graphics stub, whose absence is why the indicator collision was found by review rather than by test.
 
+### Package 15 — UI: view correctness, null-safety and per-frame cost (2026-08-07)
+
+**Status:** all four [H] and about half the [M]. Landed as three commits — correctness, then
+per-frame cost, then review follow-ups — because the whole package in one diff would not have been
+reviewable.
+**Prompt:** [`docs/full-review-fix-prompts/15-ui-view-correctness.md`](full-review-fix-prompts/15-ui-view-correctness.md)
+
+**A — correctness.** A missing player faction throws in `ViewFactory` instead of returning a null
+view for `PushView` to dereference (and `PushView` rejects null). Clicking a garrisoned base
+selects the garrison instead of jumping into the base screen, which is what the architecture doc
+always said. `FormatFactionBonuses` resolved each rating's level effects and discarded them, so
+the faction bonus line read "None" for every faction in the game. The unit designer ignored
+`requiredTech` on both components and slots. `UIManager` prunes closed views per event rather than
+inside `Render`, so a keystroke that closes an overlay does not leave it consuming the rest of the
+input batch; camera input moved from the paint path to `Update`.
+
+**The UI test seam was the larger half of A.** `IWorldView` carves out what `UIManager` needs of
+the map view, so the manager no longer names `WorldView` and drags in `GameState`, every registry
+and the map renderer. `ac-ui` makes the 56 UI sources a backend-free static library, so the test
+target can link real views — the layering the diagrams claimed is now enforced by the build.
+`RecordingGraphics` records draw positions *and colours*; `ViewFixture` supplies a live session and
+the shipped style. It paid immediately: it caught that pruning between the key and mouse drains
+still let a closed overlay eat the whole following mouse batch.
+
+**B — per-frame cost.** Base panels drove two full `ResourceManager::ComputeWorked_` passes and
+twenty per-tile yield resolutions on *every paint*; they now read a `BaseDisplaySnapshot_t`
+rebuilt only when its key moves. Council vote weights (a full effect-pool copy plus a stat resolve,
+per member, per paint, twice over in the info panel) are cached per faction on the council
+revision. The satellite summary stopped re-censusing every faction's bases per frame, and selecting
+a faction or target no longer tears down and rebuilds the entire view mid-callback — the list panel
+owns its selection, which it had always claimed to and never did.
+
+**Review follow-ups — the package's own recurring failure mode, again.** The designer tech gate was
+applied to the *columns* only: the save gate, the Save button and the constructed `UnitDesign` all
+still read the whole slot registry, so a slot that is both required and tech-gated would be
+invisible, unfillable, and would kill Save permanently. My own fixture had made the gated slot
+optional, so the test I wrote could not have caught it. Also: the bonus line printed enumerator
+names at the player (`+20% GrowthRate`); the base-caching test asserted nothing about caching;
+a `Refresh()` call I documented as the census-update mechanism could never fire; and
+`UIManager::Update` dropped a queued auto end-turn under an overlay — pre-existing, but sitting on
+exactly the turn-gate invariant the new snapshot key depends on.
+
+**Coverage:** 728 tests, 28 new across five UI test files, every one revert-verified. The UI went
+from untestable to covered in this package.
+
+**Deferred:** roughly half the `[M]`s — settings-view descriptor invariants, research-view display
+names, commlinks proposal gating, modal capture for in-view popups, and the command/event seam for
+player actions on `BaseManager`. They are correctness-of-detail items in views the seam now
+reaches, so they are cheaper to do later than they were before this package.
+
 ---
 
 ## Cross-package dependency sketch
