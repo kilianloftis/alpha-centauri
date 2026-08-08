@@ -28,7 +28,10 @@ public:
     ~ResearchManager();
 
     void SetResearchTarget(TechId techId);
+    // The config *id* — wire form. Use GetResearchTargetName for anything a player reads.
     TechId GetResearchTarget() const;
+    // Player-facing name of the current target; empty when there is none.
+    const std::string& GetResearchTargetName() const;
     void ClearResearchTarget();
     bool HasResearchTarget() const;
 

@@ -5,9 +5,10 @@
 namespace ac
 {
 
-CurrentResearchPanel::CurrentResearchPanel(const ResearchManager* pResearch, WindowLayout_t layout)
+CurrentResearchPanel::CurrentResearchPanel(const ResearchManager& rResearch,
+                                           WindowLayout_t layout)
     : UIElement(layout)
-    , m_pResearch(pResearch)
+    , m_rResearch(rResearch)
 {}
 
 void CurrentResearchPanel::Render(Graphics& rGraphics)
@@ -23,12 +24,15 @@ void CurrentResearchPanel::Render(Graphics& rGraphics)
 
     rGraphics.DrawText("Current Research Target:", labelArea.x, labelArea.y, style.labelFontSize, style.labelColor);
 
-    if (m_pResearch && m_pResearch->HasResearchTarget())
+    // "None" means no target, and nothing else: a null manager used to collapse into the same
+    // branch, so a wiring bug looked like an idle faction.
+    if (m_rResearch.HasResearchTarget())
     {
-        rGraphics.DrawText(m_pResearch->GetResearchTarget(), targetArea.x, targetArea.y, style.targetFontSize, style.targetColor);
+        rGraphics.DrawText(m_rResearch.GetResearchTargetName(), targetArea.x, targetArea.y,
+                           style.targetFontSize, style.targetColor);
 
-        const int accumulated = m_pResearch->GetAccumulatedPoints();
-        const int needed      = m_pResearch->GetPointsNeededForCurrentTech();
+        const int accumulated = m_rResearch.GetAccumulatedPoints();
+        const int needed      = m_rResearch.GetPointsNeededForCurrentTech();
         const std::string progressText = std::to_string(accumulated) + " / " + std::to_string(needed) + " RP";
         rGraphics.DrawText(progressText, progressArea.x, progressArea.y, style.progressFontSize, style.progressColor);
     }

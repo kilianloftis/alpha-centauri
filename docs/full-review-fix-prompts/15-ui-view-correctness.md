@@ -231,3 +231,47 @@ reachable with a base view open; the turn-gate argument holds (`Engine::ProcessT
 return early, and `HasOverlayView()` is true for a base view opened from the world screen);
 `m_snapshot`'s address is stable across refreshes; both new throws are unreachable on legitimate
 paths; and all three `ComputeVoteWeight` call sites were converted.
+
+## Second pass (2026-08-08)
+
+Working the `[M]`s deferred when the package landed, now that `ViewFixture` makes views testable.
+
+### [M] Do not render a null `ResearchManager` as "None" — FIXED
+### [M] Show the tech display name, not the config id — FIXED
+
+`CurrentResearchPanel` painted `GetResearchTarget()`, which is the **wire-form id**: the player
+read `build_tech` where config carries `Build Tech`. `ResearchManager::GetResearchTargetName()`
+now exposes the display name, and `GetResearchTarget`'s comment says which of the two is which.
+
+The same line collapsed a null manager and "no target" into one "None" branch, so a wiring bug
+looked like an idle faction. Both the panel and `ResearchView` take `const ResearchManager&`, so
+"None" now means no target and nothing else.
+
+### [M] Unknown slot `column` values fall through to left — FIXED
+
+`UnitSlotConfig_t::column` was a free string, and everything that was not `"right"` became left —
+a typo silently moved a slot to the other side of the designer. It is now `SlotColumn_t`, parsed
+with an explicit case-insensitive cast that throws at load naming the slot and the bad value.
+
+### [M] Selected design and draft state desync after edits — FIXED
+
+Selecting a design copies it into the draft. Editing a slot afterwards changed only the draft,
+while `UnitStatusPanel` kept showing the saved design's name and active count and the list kept
+its box highlighted — two different designs on screen at once. Editing a slot now clears the
+selection, which is what `DesignListPanel::SetSelectedDesign` was written for; it had no caller
+because this bug was never fixed.
+
+**Test note:** the first version of the covering test passed against the unfixed code. The
+fixture's components carried no `unit_name`, so every saved design's name was empty, and clicking
+"the design named X" matched the first text drawn instead of the design box — the test never
+selected anything. The fixture components now have unit names and the test requires a non-empty
+one before clicking. Caught by revert-verify, which is the only reason it is not still vacuous.
+
+### Still open
+
+- **[M] Design list silently truncates overflow designs.** Boxes are laid out horizontally and
+  `Render` stops when the next one would overflow; the rest are invisible and unreachable. The
+  fix is a UI design decision — horizontal scroll, paging, or wrapping to rows — and each implies
+  different chrome. Not guessed at.
+- The council, commlinks, settings and social-engineering `[M]`s, and the command/event seam for
+  player actions on `BaseManager`.

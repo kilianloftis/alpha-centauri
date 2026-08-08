@@ -2,6 +2,7 @@
   {
     "id": "test_chassis",
     "name": "Test Chassis",
+    "unit_name": "Speeder",
     "type": "chassis",
     "domain": "land",
     "effects": [
@@ -201,6 +202,7 @@
   {
     "id": "test_weapon",
     "name": "Test Weapon",
+    "unit_name": "Laser",
     "type": "weapon",
     "effects": [
       {
@@ -216,6 +218,7 @@
   {
     "id": "test_weak_weapon",
     "name": "Test Weak Weapon",
+    "unit_name": "Hand Weapon",
     "type": "weapon",
     "effects": [
       {
@@ -231,6 +234,7 @@
   {
     "id": "test_armor",
     "name": "Test Armor",
+    "unit_name": "Plasteel",
     "type": "armor",
     "effects": [
       {

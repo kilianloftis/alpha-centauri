@@ -43,6 +43,12 @@ TechId ResearchManager::GetResearchTarget() const
     return m_pCurrentResearchTarget ? m_pCurrentResearchTarget->id : TechId{};
 }
 
+const std::string& ResearchManager::GetResearchTargetName() const
+{
+    static const std::string k_None;
+    return m_pCurrentResearchTarget ? m_pCurrentResearchTarget->name : k_None;
+}
+
 void ResearchManager::ClearResearchTarget()
 {
     m_pCurrentResearchTarget = nullptr;

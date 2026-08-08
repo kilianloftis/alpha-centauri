@@ -173,3 +173,69 @@ TEST_CASE("A design saves when every slot the player can see is filled", "[ui][u
     REQUIRE(ClickDrawnText(*pView, fixture.graphics, "Save"));
     CHECK(fixture.pPlayer->GetMilitary().GetDesigns().size() == before + 1);
 }
+
+TEST_CASE("The research panel shows the tech's name, not its config id", "[ui][research]")
+{
+    // The panel painted GetResearchTarget(), which is the wire-form id — the player read
+    // "build_tech" where config carries "Build Tech".
+    ViewFixture fixture;
+    fixture.pPlayer->GetResearch().SetResearchTarget("build_tech");
+
+    auto pView = fixture.pFactory->CreateResearchView(ViewFixture::FullScreen());
+    REQUIRE(pView);
+    pView->Render(fixture.graphics);
+
+    CHECK_FALSE(fixture.graphics.TextYs("Build Tech").empty());
+    CHECK(fixture.graphics.TextYs("build_tech").empty());
+    // A real target is never reported as "None".
+    CHECK(fixture.graphics.TextYs("None").empty());
+}
+
+TEST_CASE("The research panel reports no target as None", "[ui][research]")
+{
+    ViewFixture fixture;
+    fixture.pPlayer->GetResearch().ClearResearchTarget();
+
+    auto pView = fixture.pFactory->CreateResearchView(ViewFixture::FullScreen());
+    REQUIRE(pView);
+    pView->Render(fixture.graphics);
+
+    CHECK_FALSE(fixture.graphics.TextYs("None").empty());
+}
+
+TEST_CASE("Editing a slot drops the selected design instead of showing both", "[ui][unit-designer]")
+{
+    // Selecting a design copies it into the draft. Editing a slot then changed only the draft,
+    // while UnitStatusPanel kept showing the saved design's name and the list kept its
+    // highlight — two different designs on screen at once.
+    ViewFixture fixture;
+    auto pView = fixture.pFactory->CreateUnitDesignerView(ViewFixture::FullScreen());
+    REQUIRE(pView);
+
+    FillSlot(*pView, fixture.graphics, "Chassis", "Test Chassis");
+    FillSlot(*pView, fixture.graphics, "Weapon", "Test Weapon");
+    FillSlot(*pView, fixture.graphics, "Armour", "Test Armor");
+
+    fixture.graphics.texts.clear();
+    pView->Render(fixture.graphics);
+    REQUIRE(ClickDrawnText(*pView, fixture.graphics, "Save"));
+    REQUIRE(fixture.pPlayer->GetMilitary().GetDesigns().size() == 1);
+
+    const std::string designName = fixture.pPlayer->GetMilitary().GetDesigns().front()->GetName();
+    REQUIRE_FALSE(designName.empty());
+
+    // Select the saved design from the list: the status panel now names it.
+    fixture.graphics.texts.clear();
+    pView->Render(fixture.graphics);
+    REQUIRE(ClickDrawnText(*pView, fixture.graphics, designName));
+    fixture.graphics.texts.clear();
+    pView->Render(fixture.graphics);
+    REQUIRE(fixture.graphics.AnyTextContaining(designName));
+
+    // Change a slot. The draft is no longer that design, so nothing should still claim it is.
+    FillSlot(*pView, fixture.graphics, "Weapon", "Test Weak Weapon");
+
+    fixture.graphics.texts.clear();
+    pView->Render(fixture.graphics);
+    CHECK(fixture.graphics.AnyTextContaining("No design"));
+}

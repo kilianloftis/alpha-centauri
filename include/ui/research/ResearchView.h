@@ -11,11 +11,11 @@ class ResearchView : public IGameView
 {
 public:
 
-    explicit ResearchView(const ResearchManager* pResearch, WindowLayout_t layout);
+    explicit ResearchView(const ResearchManager& rResearch, WindowLayout_t layout);
 
     bool HandleKey(const KeyEvent_t& rEvent) override;
 private:
-    const ResearchManager* m_pResearch;
+    const ResearchManager& m_rResearch;
 };
 
 } // namespace ac

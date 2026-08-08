@@ -10,13 +10,13 @@ namespace ac
 class CurrentResearchPanel : public UIElement
 {
 public:
-    CurrentResearchPanel(const ResearchManager* pResearch, WindowLayout_t layout);
+    CurrentResearchPanel(const ResearchManager& rResearch, WindowLayout_t layout);
 
     void Render(Graphics& rGraphics) override;
     void HandleMouseClick(const MouseEvent_t& rEvent) override {}
 
 private:
-    const ResearchManager* m_pResearch = nullptr;
+    const ResearchManager& m_rResearch;
 };
 
 } // namespace ac

@@ -71,10 +71,11 @@ void UnitDesignerView::BuildTopPanelElements_()
                                    [this, slotId](const UnitComponentConfig_t& rComp)
             {
                 m_state.components[slotId] = &rComp;
+                ClearDesignSelection_();
             });
         };
 
-        if (rSlot.column == "right")
+        if (rSlot.column == SlotColumn_t::Right)
         {
             rightSlots.push_back(std::move(entry));
         }
@@ -106,11 +107,25 @@ void UnitDesignerView::BuildTopPanelElements_()
 
 void UnitDesignerView::BuildDesignListPanel_()
 {
-    m_elements.push_back(std::make_unique<DesignListPanel>(
+    auto pPanel = std::make_unique<DesignListPanel>(
         &m_rMilitary,
         ResolveLayout(m_layout, Style().layouts.bottomPanel),
         [this](const UnitDesign* pDesign) { OnDesignSelected_(pDesign); }
-    ));
+    );
+    m_pDesignList = pPanel.get();
+    m_elements.push_back(std::move(pPanel));
+}
+
+void UnitDesignerView::ClearDesignSelection_()
+{
+    // Selecting a design copies it into the draft. Once a slot changes, the draft is no longer
+    // that design — but UnitStatusPanel kept showing its name and active count while the slots
+    // and the stats panel showed the edit, and the list kept the box highlighted.
+    m_pSelectedDesign = nullptr;
+    if (m_pDesignList)
+    {
+        m_pDesignList->SetSelectedDesign(nullptr);
+    }
 }
 
 void UnitDesignerView::OnDesignSelected_(const UnitDesign* pDesign)

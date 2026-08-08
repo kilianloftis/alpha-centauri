@@ -1,6 +1,7 @@
 #include "TempConfigFile.h"
 
 #include "game/map/ImprovementRegistry.h"
+#include "game/units/UnitSlotRegistry.h"
 #include "game/population/pop-types/GrowthConfigParser.h"
 #include "game/population/pop-types/PopCompositionConfigParser.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
@@ -337,4 +338,37 @@ TEST_CASE("An improvement's vision radius comes from its own Vision modifiers",
     // Sight comes from ThisTile only: a faction-wide Vision modifier is a different axis and
     // must not turn every copy of the improvement into a watchtower.
     CHECK(registry.Get("aura_only").visionRadius == 0);
+}
+
+TEST_CASE("An unknown unit-slot column is rejected, by name", "[config][units]")
+{
+    // "column" was a free string, and everything that was not "right" became left — so a typo
+    // silently moved a slot to the other side of the designer with no diagnostic.
+    TempConfigFile config("ac_slot_bad_column.json", R"([
+        { "id": "reactor", "display_name": "Reactor", "component_type": "reactor",
+          "column": "middle" }
+    ])");
+
+    UnitSlotRegistry registry;
+    CHECK_THROWS_WITH(registry.Load(config.Path()),
+                      Catch::Matchers::ContainsSubstring("reactor")
+                          && Catch::Matchers::ContainsSubstring("middle"));
+}
+
+TEST_CASE("Unit-slot columns accept the shipped wire form", "[config][units]")
+{
+    TempConfigFile config("ac_slot_columns.json", R"([
+        { "id": "chassis", "display_name": "Chassis", "component_type": "chassis",
+          "column": "left" },
+        { "id": "reactor", "display_name": "Reactor", "component_type": "reactor",
+          "column": "right" },
+        { "id": "defaulted", "display_name": "Defaulted", "component_type": "ability" }
+    ])");
+
+    UnitSlotRegistry registry;
+    registry.Load(config.Path());
+    CHECK(registry.Get("chassis").column == SlotColumn_t::Left);
+    CHECK(registry.Get("reactor").column == SlotColumn_t::Right);
+    // Absent means left, as it always did.
+    CHECK(registry.Get("defaulted").column == SlotColumn_t::Left);
 }

@@ -82,7 +82,7 @@ std::unique_ptr<ResearchView> ViewFactory::CreateResearchView(
 {
     const Faction* pFaction = RequirePlayerFaction_();
 
-    return std::make_unique<ResearchView>(&pFaction->GetResearch(), layout);
+    return std::make_unique<ResearchView>(pFaction->GetResearch(), layout);
 }
 
 std::unique_ptr<SocialEngineeringView> ViewFactory::CreateSocialEngineeringView(

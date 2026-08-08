@@ -16,6 +16,7 @@ class UnitSlotRegistry;
 class ResearchManager;
 class UnitManager;
 class UnitDesign;
+class DesignListPanel;
 
 class UnitDesignerView : public IGameView
 {
@@ -40,6 +41,8 @@ private:
     void BuildTopPanelElements_();
     void BuildDesignListPanel_();
     void OnDesignSelected_(const UnitDesign* pDesign);
+    // Editing a slot makes the draft something other than the design the list is highlighting.
+    void ClearDesignSelection_();
 
     void ShowComponentSelector_(
         const std::string& rComponentType,
@@ -58,6 +61,8 @@ private:
     // a required slot with no component.
     std::vector<UnitSlotConfig_t> m_availableSlots;
     const UnitDesign* m_pSelectedDesign = nullptr;
+    // Owned by m_elements; built once in the constructor and never replaced.
+    DesignListPanel* m_pDesignList = nullptr;
     UnitDesignerState_t m_state;
 };
 
