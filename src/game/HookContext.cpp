@@ -68,16 +68,6 @@ bool HookContext::HasReplaceHooks() const
     return HasCallable_(m_replaceHooks);
 }
 
-bool HookContext::HasPreHooks() const
-{
-    return !m_preHooks.empty();
-}
-
-bool HookContext::HasPostHooks() const
-{
-    return !m_postHooks.empty();
-}
-
 bool HookContext::HasCallableHook() const
 {
     return HasCallable_(m_preHooks) || HasCallable_(m_postHooks) || HasCallable_(m_replaceHooks);

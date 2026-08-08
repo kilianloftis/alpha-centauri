@@ -180,11 +180,6 @@ void UIManager::PopView()
     m_overlayStack.pop_back();
 }
 
-bool UIManager::HasViews() const
-{
-    return m_pWorldView != nullptr;
-}
-
 bool UIManager::HasOverlayView() const
 {
     return !m_overlayStack.empty();

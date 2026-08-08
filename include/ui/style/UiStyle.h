@@ -540,7 +540,6 @@ public:
     // Loads config/ui/style.json (or an absolute/relative path to that file).
     static void Load(const std::string& filePath);
     static const UiStyle& Get();
-    static bool IsLoaded();
 
     LayoutsStyle layouts;
     ViewFactoryStyle viewFactory;

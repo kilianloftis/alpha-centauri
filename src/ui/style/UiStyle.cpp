@@ -710,9 +710,4 @@ const UiStyle& UiStyle::Get()
     return g_style;
 }
 
-bool UiStyle::IsLoaded()
-{
-    return g_loaded;
-}
-
 } // namespace ac

@@ -29,7 +29,7 @@ public:
     std::vector<TechConfig_t> ParseConfig(const std::string& configPath);
 
 private:
-    TechConfig_t ParseTechConfig(const nlohmann::json& techJson);
+    TechConfig_t ParseTechConfig_(const nlohmann::json& techJson);
 };
 
 } // namespace ac

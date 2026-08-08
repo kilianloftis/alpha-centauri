@@ -38,7 +38,7 @@ std::vector<TurnStageConfig_t> TurnStageConfigParser::ParseConfig(const std::str
 {
     std::vector<TurnStageConfig_t> stages = JsonConfigLoader::LoadFile<TurnStageConfig_t>(
         configPath, "turn stage",
-        [this](const nlohmann::json& rJson) { return ParseStageConfig(rJson); });
+        [this](const nlohmann::json& rJson) { return ParseStageConfig_(rJson); });
 
     std::unordered_set<std::string> seenIds;
     for (const TurnStageConfig_t& rConfig : stages)
@@ -51,7 +51,7 @@ std::vector<TurnStageConfig_t> TurnStageConfigParser::ParseConfig(const std::str
     return stages;
 }
 
-TurnStageConfig_t TurnStageConfigParser::ParseStageConfig(const nlohmann::json& stageJson)
+TurnStageConfig_t TurnStageConfigParser::ParseStageConfig_(const nlohmann::json& stageJson)
 {
     TurnStageConfig_t config;
     config.id = ConfigFields::ParseId(stageJson);
@@ -68,13 +68,13 @@ TurnStageConfig_t TurnStageConfigParser::ParseStageConfig(const nlohmann::json& 
 
     if (stageJson.contains("hooks"))
     {
-        ParseHooks(stageJson.at("hooks"), config.hookContext);
+        ParseHooks_(stageJson.at("hooks"), config.hookContext);
     }
 
     return config;
 }
 
-void TurnStageConfigParser::ParseHooks(const nlohmann::json& hooksJson, HookContext& rHookContext)
+void TurnStageConfigParser::ParseHooks_(const nlohmann::json& hooksJson, HookContext& rHookContext)
 {
     if (!hooksJson.is_object())
     {

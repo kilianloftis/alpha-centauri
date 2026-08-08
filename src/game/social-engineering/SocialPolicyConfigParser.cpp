@@ -12,15 +12,15 @@ std::vector<SocialPolicyConfig_t> SocialPolicyConfigParser::ParseConfig(const st
 {
     return JsonConfigLoader::LoadFile<SocialPolicyConfig_t>(
         configPath, "social policy",
-        [this](const nlohmann::json& rJson) { return ParsePolicyConfig(rJson); });
+        [this](const nlohmann::json& rJson) { return ParsePolicyConfig_(rJson); });
 }
 
-SocialPolicyConfig_t SocialPolicyConfigParser::ParsePolicyConfig(const nlohmann::json& policyJson)
+SocialPolicyConfig_t SocialPolicyConfigParser::ParsePolicyConfig_(const nlohmann::json& policyJson)
 {
     SocialPolicyConfig_t config;
     config.id = ConfigFields::ParseId(policyJson);
     config.name = ConfigFields::ParseName(policyJson, config.id);
-    config.category = ParseCategory(policyJson.at("category"));
+    config.category = ParseCategory_(policyJson.at("category"));
     config.requiredTech = ConfigFields::ParseRequiredTech(policyJson);
     config.bDefault = policyJson.value("default", false);
     config.effects = EffectConfigParser::ParseEffects(policyJson, EffectSourceKind_t::SocialPolicy, config.id);
@@ -28,7 +28,7 @@ SocialPolicyConfig_t SocialPolicyConfigParser::ParsePolicyConfig(const nlohmann:
     return config;
 }
 
-SocialCategory_t SocialPolicyConfigParser::ParseCategory(const std::string& category)
+SocialCategory_t SocialPolicyConfigParser::ParseCategory_(const std::string& category)
 {
     if (category == "politics")       return SocialCategory_t::Politics;
     if (category == "economics")      return SocialCategory_t::Economics;

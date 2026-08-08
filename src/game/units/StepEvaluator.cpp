@@ -117,33 +117,6 @@ bool StepEvaluator::IsTileInHostileZoc(const Unit& rMover, const Tile& rTile) co
     return IsTileInHostileZoc_(rMover, rTile, Knowledge_t::Objective);
 }
 
-bool StepEvaluator::HasHostileUnit(const Unit& rMover, const Tile& rTile) const
-{
-    bool bFound = false;
-    ForEachHostileOnTile_(rMover, rTile, m_rWorldMap, [&](Unit& /*rHostile*/)
-    {
-        bFound = true;
-        return false;
-    });
-    return bFound;
-}
-
-bool StepEvaluator::HasVisibleHostileUnit(const Unit& rMover, const Tile& rTile) const
-{
-    const Faction& rObserver = rMover.GetFaction();
-    bool bFound = false;
-    ForEachHostileOnTile_(rMover, rTile, m_rWorldMap, [&](Unit& rHostile)
-    {
-        if (IsUnitVisibleTo(rObserver, rHostile, m_rTileEffects))
-        {
-            bFound = true;
-            return false;
-        }
-        return true;
-    });
-    return bFound;
-}
-
 bool StepEvaluator::IsZocViolation_(const Unit& rMover, const Tile& rFrom, const Tile& rTo,
                                     Knowledge_t knowledge) const
 {

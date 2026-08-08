@@ -71,17 +71,6 @@ void WorkerAssignmentManager::ReleaseUserAssignment(Pop& rPop)
     rPop.SetTileClaim(WorkedTileClaim{});
 }
 
-void WorkerAssignmentManager::ReleaseAllUserAssignments()
-{
-    for (Pop& rPop : m_rPops.Pops())
-    {
-        if (rPop.IsWorker() && rPop.IsUserAssigned())
-        {
-            ReleaseUserAssignment(rPop);
-        }
-    }
-}
-
 bool WorkerAssignmentManager::AssignWorker(Pop& rPop, const Tile* pTile)
 {
     return Assign_(rPop, pTile, /*bUserAssigned*/false);
@@ -416,6 +405,5 @@ void WorkerAssignmentManager::ConvertToFallback_(Pop& rPop)
 {
     m_rPops.ConvertToFallback(rPop);
 }
-
 
 } // namespace ac

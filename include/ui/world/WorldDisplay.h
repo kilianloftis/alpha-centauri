@@ -32,16 +32,10 @@ public:
     // the next Render call.
     void SetPathPreview(const Path_t* pPath);
 
-    // Set the top-left tile coordinate of the visible viewport (X wraps).
-    void SetCameraOffset(int tileX, int tileY);
-
     MapViewport& GetViewport() { return m_viewport; }
     const MapViewport& GetViewport() const { return m_viewport; }
 
     float GetEffectiveTileSize() const;
-    int GetCameraX() const;
-    int GetCameraY() const;
-    int GetVisibleCols() const;
     int GetVisibleRows() const;
 
     // Unit marker layer: last-frame draw cache for combat overlays / hit animations.

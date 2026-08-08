@@ -40,7 +40,6 @@ public:
     // Screen cell for a world tile if it falls in the current camera window.
     std::optional<int> ScreenColOf(int worldX) const;
     bool ContainsWorldY(int worldY) const;
-    bool IsInView(int worldX, int worldY) const;
 
     float PixelX(int screenCol) const;
     float PixelYForWorldY(int worldY) const;

@@ -114,7 +114,7 @@ UI components use the Graphics interface to render game information.
 - **Methods**:
   - `Render(rGraphics)`: Render the visible viewport from the stored layout/camera
   - `SetSelectedUnit(pUnit)`: Highlight the player's selected unit
-  - `SetCameraOffset(tileX, tileY)`: Set the top-left tile of the viewport
+  - `GetViewport().SetCamera(tileX, tileY)`: Set the top-left tile of the viewport
 - **Tile Display Format**: Each tile shows `moisture rockiness elevation(km)` as integers
   - Moisture_t: 0=Arid, 1=Moist, 2=Wet
   - Rockiness_t: 0=Flat, 1=Rolling, 2=Rocky

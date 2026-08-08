@@ -18,7 +18,7 @@ std::vector<BuildingConfig_t> BuildingConfigParser::ParseConfig(const std::strin
 {
     return JsonConfigLoader::LoadPath<BuildingConfig_t>(
         configPath, "building",
-        [this](const nlohmann::json& rJson) { return ParseBuildingConfig(rJson); });
+        [this](const nlohmann::json& rJson) { return ParseBuildingConfig_(rJson); });
 }
 
 namespace
@@ -55,7 +55,7 @@ const std::vector<std::string>& KnownBuildingKeys_()
 
 } // namespace
 
-BuildingConfig_t BuildingConfigParser::ParseBuildingConfig(const nlohmann::json& buildingJson)
+BuildingConfig_t BuildingConfigParser::ParseBuildingConfig_(const nlohmann::json& buildingJson)
 {
     BuildingConfig_t config;
     config.id = ConfigFields::ParseId(buildingJson);

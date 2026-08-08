@@ -45,11 +45,7 @@ public:
     // a move — see UnitOrderExecutor::TryAttack.
     bool IsZocViolation(const Unit& rMover, const Tile& rFrom, const Tile& rTo) const;
 
-    // Destination has at least one unit from another faction.
-    bool HasHostileUnit(const Unit& rMover, const Tile& rTile) const;
 
-    // Destination has at least one hostile unit visible to rMover's faction.
-    bool HasVisibleHostileUnit(const Unit& rMover, const Tile& rTile) const;
 
     // Whether the edge rFrom → rTo is legal for rMover over objective world state.
     // Visibility / reveal / remaining moves are not consulted.

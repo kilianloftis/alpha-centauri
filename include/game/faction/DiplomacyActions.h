@@ -9,7 +9,7 @@
 namespace ac
 {
 
-enum class DiplomaticActionKind
+enum class DiplomaticActionKind_t
 {
     ProposeTruce,
     ProposeFriendship,
@@ -33,7 +33,7 @@ bool CanTrade(const DiplomacyLedger& rLedger,
               const TradeItem_t& rItem);
 
 // Primary UI/AI entry: legal actions for the pair (empty if not known).
-std::vector<DiplomaticActionKind> GetAvailableActions(const DiplomacyLedger& rLedger,
+std::vector<DiplomaticActionKind_t> GetAvailableActions(const DiplomacyLedger& rLedger,
                                                       FactionId_t a,
                                                       FactionId_t b);
 
@@ -42,7 +42,7 @@ std::vector<TradeKind_t> GetAvailableTrades(const DiplomacyLedger& rLedger,
                                           FactionId_t a,
                                           FactionId_t b);
 
-std::string ToString(DiplomaticActionKind kind);
+std::string ToString(DiplomaticActionKind_t kind);
 std::string ToString(TradeKind_t kind);
 
 } // namespace ac

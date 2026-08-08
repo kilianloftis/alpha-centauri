@@ -26,8 +26,8 @@ public:
     std::vector<TurnStageConfig_t> ParseConfig(const std::string& configPath);
 
 private:
-    TurnStageConfig_t ParseStageConfig(const nlohmann::json& stageJson);
-    void ParseHooks(const nlohmann::json& hooksJson, HookContext& rHookContext);
+    TurnStageConfig_t ParseStageConfig_(const nlohmann::json& stageJson);
+    void ParseHooks_(const nlohmann::json& hooksJson, HookContext& rHookContext);
     static Hook_t ParseHook_(const nlohmann::json& hookJson);
 };
 

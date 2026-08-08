@@ -137,8 +137,6 @@ public:
     BaseManager* GetHeadquarters();
     const BaseManager* GetHeadquarters() const;
 
-    // Returns buildings the faction has the technology to build.
-    std::vector<const BuildingConfig_t*> GetDiscoveredBuildings() const;
 
     // Sum of constructed copies of buildingId across all bases.
     int CountBuildings(const BuildingId_t& buildingId) const;

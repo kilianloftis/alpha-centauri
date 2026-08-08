@@ -11,7 +11,7 @@ namespace ac
 
 // Pairwise diplomatic standing between two factions.
 // Ordered from least to most aligned (excluding Vendetta, which is open hostility).
-enum class DiplomaticStatus
+enum class DiplomaticStatus_t
 {
     None, // no affiliation (default)
     Truce,
@@ -21,7 +21,7 @@ enum class DiplomaticStatus
 };
 
 // Empty string for None; otherwise the status name (Truce, Friendship, Pact, Vendetta).
-std::string ToString(DiplomaticStatus status);
+std::string ToString(DiplomaticStatus_t status);
 
 // World-scoped tracker for diplomatic state between factions.
 class DiplomacyLedger
@@ -30,8 +30,8 @@ public:
     DiplomacyLedger() = default;
     ~DiplomacyLedger() = default;
 
-    DiplomaticStatus GetStatus(FactionId_t a, FactionId_t b) const;
-    void SetStatus(FactionId_t a, FactionId_t b, DiplomaticStatus status);
+    DiplomaticStatus_t GetStatus(FactionId_t a, FactionId_t b) const;
+    void SetStatus(FactionId_t a, FactionId_t b, DiplomaticStatus_t status);
 
     bool HasTruce(FactionId_t a, FactionId_t b) const;
     bool HasFriendship(FactionId_t a, FactionId_t b) const;
@@ -55,7 +55,7 @@ public:
     void AddIntegrity(FactionId_t faction, int delta);
 
 private:
-    std::map<FactionPair, DiplomaticStatus> m_statuses;
+    std::map<FactionPair, DiplomaticStatus_t> m_statuses;
     std::map<FactionPair, bool> m_known;
     std::map<DirectedFactionPair, int> m_grievances;
     std::map<DirectedFactionPair, bool> m_infiltration;

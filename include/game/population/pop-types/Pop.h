@@ -43,8 +43,6 @@ public:
     // The fourth member of the partition above.
     bool IsPlainWorker() const;
 
-    // True if the player can manually assign this pop type
-    bool IsPlayerAssignable() const;
 
     // Swap this pop's type config in-place.
     // Clears tile assignment if the new type is not a worker.

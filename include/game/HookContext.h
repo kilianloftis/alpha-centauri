@@ -55,8 +55,6 @@ public:
     // True only when at least one replace hook has a callable callback. List presence alone
     // must not suppress built-in ExecuteImpl (unbound replace entries are inert).
     bool HasReplaceHooks() const;
-    bool HasPreHooks() const;
-    bool HasPostHooks() const;
 
     // True when any hook list contains a callable callback (Custom* construction guard).
     bool HasCallableHook() const;

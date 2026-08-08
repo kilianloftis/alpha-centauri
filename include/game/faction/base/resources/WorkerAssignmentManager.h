@@ -58,9 +58,6 @@ public:
     // Call AutoAssignWorkers() afterward to fill the vacancy.
     void ReleaseUserAssignment(Pop& rPop);
 
-    // Release all user-assigned pops so they are eligible for auto-assignment.
-    // Does NOT convert pops to fallback — call AutoAssignWorkers() afterward.
-    void ReleaseAllUserAssignments();
 
     // Remove the tile assignment for the given pop. No-op if not assigned.
     // Does not convert to fallback; use when the pop will be immediately repositioned or converted.

@@ -628,26 +628,6 @@ bool Faction::DiscoverCurrentResearch()
     return true;
 }
 
-std::vector<const BuildingConfig_t*> Faction::GetDiscoveredBuildings() const
-{
-    if (!m_rDataContext.buildingRegistry || !m_pResearch)
-    {
-        throw std::runtime_error("BuildingRegistry or ResearchManager not initialized");
-    }
-
-    const std::vector<std::string>& discoveredTechs = m_pResearch->GetDiscoveredTechs();
-
-    std::vector<const BuildingConfig_t*> discovered;
-    for (const BuildingConfig_t& rConfig : m_rDataContext.buildingRegistry->GetAll())
-    {
-        if (rConfig.IsAvailable(discoveredTechs))
-        {
-            discovered.push_back(&rConfig);
-        }
-    }
-    return discovered;
-}
-
 SocialEngineeringManager& Faction::GetSocialEngineering()
 {
     return *m_pSocialEngineering;

@@ -74,11 +74,6 @@ bool MapViewport::ContainsWorldY(int worldY) const
     return worldY >= RowStart() && worldY < RowEnd();
 }
 
-bool MapViewport::IsInView(int worldX, int worldY) const
-{
-    return ScreenColOf(worldX).has_value() && ContainsWorldY(worldY);
-}
-
 float MapViewport::PixelX(int screenCol) const
 {
     return m_layout.x + static_cast<float>(screenCol) * m_tileSize;

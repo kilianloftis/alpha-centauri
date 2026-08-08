@@ -49,11 +49,6 @@ bool Pop::IsPlainWorker() const
     return m_pConfig->role == PopRole_t::Worker;
 }
 
-bool Pop::IsPlayerAssignable() const
-{
-    return m_pConfig->bPlayerAssignable;
-}
-
 void Pop::Convert(const PopTypeConfig_t& rConfig)
 {
     m_pConfig = &rConfig;

@@ -90,3 +90,43 @@ noticed by the first modder.
 is an API design question, and inventing a scripting surface here would be making up the very
 mechanics the guidelines forbid guessing at. The context struct is the prerequisite either way;
 recorded as the next step rather than half-built.
+
+## Verified diagnoses — commit C
+
+### [L] Naming
+
+- **Three enum classes without `_t`**: `DiplomaticProposeResult`, `DiplomaticStatus`,
+  `DiplomaticActionKind`. Renamed across 10 files.
+- **Seven private parser methods without a trailing `_`**: `ParseStageConfig`, `ParseHooks`,
+  `ParseFactionDirectory`, `ParseBuildingConfig`, `ParseRatingConfig`, `ParseProposalConfig`
+  (and its three siblings), `ParseTechConfig`, `ParsePolicyConfig`, `ParseCategory`.
+
+**Not done — the `r`-prefix sweep on reference parameters.** About fifty parameters in headers
+take a reference without the `r` prefix (`buildingId`, `layout`, `effect`, `ctx`, …). A textual
+rename cannot distinguish a reference *parameter* from a same-named local variable in the same
+function, and renaming a local to `rFoo` would introduce a fresh violation in the other
+direction while the compiler stayed silent. Doing it properly needs the rename driven from the
+AST, not from grep. Recorded rather than half-applied — this is exactly the class of sweep where
+a mechanical edit produces a large, unreviewable, behaviour-free diff with silent errors in it.
+
+### [L] Dead code
+
+Sixteen public methods had a declaration and a definition and **no caller anywhere**, tests
+included. Fourteen were deleted:
+
+`ConsumePsych`, `WorldDisplay::SetCameraOffset` / `GetCameraX` / `GetCameraY` / `GetVisibleCols`
+(all superseded by `MapViewport`), `HookContext::HasPreHooks` / `HasPostHooks`,
+`UIManager::HasViews`, `UiStyle::IsLoaded`, `Pop::IsPlayerAssignable`,
+`StepEvaluator::HasHostileUnit` / `HasVisibleHostileUnit`, `Faction::GetDiscoveredBuildings`,
+`MapViewport::IsInView`, `WorkerAssignmentManager::ReleaseAllUserAssignments`.
+
+Two were **kept and given a consumer instead**, because they are seams rather than leftovers:
+
+- `WorkerAssignmentManager::SetTileScorer` — a declared customization point. An uncalled seam is
+  how the other three seams in this package came to be half-built, so the sample-mod test now
+  replaces the scorer and asserts the assignment follows it.
+- `DiplomaticActionExecutor::Reject` — the other half of the one-slot pending-proposal contract
+  that package 17 strengthened with `Busy`. Without `Reject` a declined proposal would block
+  every later one forever. Now tested.
+
+Two architecture docs named `SetCameraOffset` as a control point and were corrected.

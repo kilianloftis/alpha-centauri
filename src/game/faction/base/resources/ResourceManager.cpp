@@ -207,13 +207,6 @@ int ResourceManager::ConsumeLabs()
     return consumed;
 }
 
-int ResourceManager::ConsumePsych()
-{
-    int consumed = m_psych;
-    m_psych = 0;
-    return consumed;
-}
-
 void ResourceManager::ProduceNutrients_(const TileResources_t& worked, const BaseEffects_t& rBaseEffects)
 {
     m_nutrients += CalculateResource_(StatId_t::Nutrients, worked, rBaseEffects);

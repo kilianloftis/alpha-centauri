@@ -59,7 +59,7 @@ std::vector<FactionConfig_t> FactionConfigParser::ParseConfig(const std::string&
 
         for (const auto& rDir : factionDirs)
         {
-            configs.push_back(ParseFactionDirectory(rDir.filename().string(), rDir.string()));
+            configs.push_back(ParseFactionDirectory_(rDir.filename().string(), rDir.string()));
         }
     }
     else
@@ -71,7 +71,7 @@ std::vector<FactionConfig_t> FactionConfigParser::ParseConfig(const std::string&
     return configs;
 }
 
-FactionConfig_t FactionConfigParser::ParseFactionDirectory(const std::string& id,
+FactionConfig_t FactionConfigParser::ParseFactionDirectory_(const std::string& id,
                                                            const std::string& dirPath)
 {
     FactionConfig_t config;

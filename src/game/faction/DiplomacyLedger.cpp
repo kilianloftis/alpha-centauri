@@ -3,39 +3,39 @@
 namespace ac
 {
 
-std::string ToString(DiplomaticStatus status)
+std::string ToString(DiplomaticStatus_t status)
 {
     switch (status)
     {
-    case DiplomaticStatus::None:
+    case DiplomaticStatus_t::None:
         return {};
-    case DiplomaticStatus::Truce:
+    case DiplomaticStatus_t::Truce:
         return "Truce";
-    case DiplomaticStatus::Friendship:
+    case DiplomaticStatus_t::Friendship:
         return "Friendship";
-    case DiplomaticStatus::Pact:
+    case DiplomaticStatus_t::Pact:
         return "Pact";
-    case DiplomaticStatus::Vendetta:
+    case DiplomaticStatus_t::Vendetta:
         return "Vendetta";
     }
     return {};
 }
 
-DiplomaticStatus DiplomacyLedger::GetStatus(FactionId_t a, FactionId_t b) const
+DiplomaticStatus_t DiplomacyLedger::GetStatus(FactionId_t a, FactionId_t b) const
 {
     const FactionPair key = FactionPair::Canonical(a, b);
     const auto it = m_statuses.find(key);
     if (it == m_statuses.end())
     {
-        return DiplomaticStatus::None;
+        return DiplomaticStatus_t::None;
     }
     return it->second;
 }
 
-void DiplomacyLedger::SetStatus(FactionId_t a, FactionId_t b, DiplomaticStatus status)
+void DiplomacyLedger::SetStatus(FactionId_t a, FactionId_t b, DiplomaticStatus_t status)
 {
     const FactionPair key = FactionPair::Canonical(a, b);
-    if (status == DiplomaticStatus::None)
+    if (status == DiplomaticStatus_t::None)
     {
         m_statuses.erase(key);
         return;
@@ -45,22 +45,22 @@ void DiplomacyLedger::SetStatus(FactionId_t a, FactionId_t b, DiplomaticStatus s
 
 bool DiplomacyLedger::HasTruce(FactionId_t a, FactionId_t b) const
 {
-    return GetStatus(a, b) == DiplomaticStatus::Truce;
+    return GetStatus(a, b) == DiplomaticStatus_t::Truce;
 }
 
 bool DiplomacyLedger::HasFriendship(FactionId_t a, FactionId_t b) const
 {
-    return GetStatus(a, b) == DiplomaticStatus::Friendship;
+    return GetStatus(a, b) == DiplomaticStatus_t::Friendship;
 }
 
 bool DiplomacyLedger::HasPact(FactionId_t a, FactionId_t b) const
 {
-    return GetStatus(a, b) == DiplomaticStatus::Pact;
+    return GetStatus(a, b) == DiplomaticStatus_t::Pact;
 }
 
 bool DiplomacyLedger::HasVendetta(FactionId_t a, FactionId_t b) const
 {
-    return GetStatus(a, b) == DiplomaticStatus::Vendetta;
+    return GetStatus(a, b) == DiplomaticStatus_t::Vendetta;
 }
 
 bool DiplomacyLedger::AreKnown(FactionId_t a, FactionId_t b) const

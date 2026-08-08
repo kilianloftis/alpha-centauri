@@ -8,7 +8,7 @@ namespace ac
 
 class GameState;
 
-enum class DiplomaticProposeResult
+enum class DiplomaticProposeResult_t
 {
     Accepted,
     PendingPlayer,
@@ -25,7 +25,7 @@ class DiplomaticActionExecutor
 public:
     DiplomaticActionExecutor() = default;
 
-    DiplomaticProposeResult Propose(GameState& rState, const DiplomaticProposal_t& rProposal);
+    DiplomaticProposeResult_t Propose(GameState& rState, const DiplomaticProposal_t& rProposal);
 
     // Player UI response to a pending inbound offer.
     bool Accept(GameState& rState);

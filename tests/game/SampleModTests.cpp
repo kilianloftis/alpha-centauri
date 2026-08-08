@@ -15,6 +15,8 @@
 #include "game/faction/ResearchManager.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/population/PopulationManager.h"
+#include "game/faction/base/resources/WorkerAssignmentManager.h"
+#include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "lib/EventBus.h"
 #include "lib/GameEvent.h"
@@ -220,4 +222,28 @@ TEST_CASE("Wiring the same faction twice does not double-publish", "[mod][events
 
     harness.pFaction->GetResearch().AddDiscoveredTech("build_tech");
     CHECK(techEvents == 1);
+}
+
+TEST_CASE("A mod can replace the tile-scoring policy", "[mod][hooks]")
+{
+    // SetTileScorer is a declared customization seam with no consumer, which is how the other
+    // seams in this package came to be half-built. Exercising it here means a change that
+    // breaks it fails the suite.
+    ModHarness_ harness;
+    BaseManager& rBase = harness.MakeBase(4, 4);
+
+    int scored = 0;
+    const Tile* pPreferred = rBase.GetWorkerAssignments().GetWorkableTiles().front();
+
+    rBase.GetWorkerAssignments().SetTileScorer(
+        [&](const Tile& rTile)
+        {
+            ++scored;
+            // Rank the mod's chosen tile above everything else.
+            return &rTile == pPreferred ? 1000 : 0;
+        });
+    rBase.GetWorkerAssignments().ResetAllAssignments();
+
+    CHECK(scored > 0);
+    CHECK(rBase.GetWorkerAssignments().IsTileWorkedByThisBase(pPreferred));
 }

@@ -70,18 +70,18 @@ std::vector<CouncilProposalConfig_t> CouncilProposalConfigParser::ParseConfig(
 {
     return JsonConfigLoader::LoadFile<CouncilProposalConfig_t>(
         configPath, "council proposal",
-        [this](const nlohmann::json& rJson) { return ParseProposalConfig(rJson); });
+        [this](const nlohmann::json& rJson) { return ParseProposalConfig_(rJson); });
 }
 
-CouncilProposalConfig_t CouncilProposalConfigParser::ParseProposalConfig(
+CouncilProposalConfig_t CouncilProposalConfigParser::ParseProposalConfig_(
     const nlohmann::json& proposalJson)
 {
     CouncilProposalConfig_t config;
     config.id = ConfigFields::ParseId(proposalJson);
     config.name = ConfigFields::ParseName(proposalJson, config.id);
     config.description = proposalJson.value("description", std::string());
-    config.kind = ParseKind(proposalJson.value("kind", "standard"));
-    config.voteWeight = ParseVoteWeight(proposalJson.value("vote_weight", "representative"));
+    config.kind = ParseKind_(proposalJson.value("kind", "standard"));
+    config.voteWeight = ParseVoteWeight_(proposalJson.value("vote_weight", "representative"));
     config.voteThreshold = proposalJson.value("vote_threshold", 0.0);
     if (config.voteThreshold < 0.0 || config.voteThreshold > 1.0)
     {
@@ -100,7 +100,7 @@ CouncilProposalConfig_t CouncilProposalConfigParser::ParseProposalConfig(
     if (proposalJson.contains("election_outcome"))
     {
         config.electionOutcome =
-            ParseElectionOutcome(proposalJson.at("election_outcome").get<std::string>());
+            ParseElectionOutcome_(proposalJson.at("election_outcome").get<std::string>());
     }
     config.effects = EffectConfigParser::ParseEffects(
         proposalJson, EffectSourceKind_t::CouncilProposal, config.id);
@@ -111,21 +111,21 @@ CouncilProposalConfig_t CouncilProposalConfigParser::ParseProposalConfig(
     return config;
 }
 
-CouncilVoteWeight_t CouncilProposalConfigParser::ParseVoteWeight(const std::string& rValue) const
+CouncilVoteWeight_t CouncilProposalConfigParser::ParseVoteWeight_(const std::string& rValue) const
 {
     if (rValue == "representative") return CouncilVoteWeight_t::Representative;
     if (rValue == "population")     return CouncilVoteWeight_t::Population;
     throw std::runtime_error("Unknown council vote_weight: '" + rValue + "'");
 }
 
-CouncilProposalKind_t CouncilProposalConfigParser::ParseKind(const std::string& rValue) const
+CouncilProposalKind_t CouncilProposalConfigParser::ParseKind_(const std::string& rValue) const
 {
     if (rValue == "standard") return CouncilProposalKind_t::Standard;
     if (rValue == "election") return CouncilProposalKind_t::Election;
     throw std::runtime_error("Unknown council proposal kind: '" + rValue + "'");
 }
 
-CouncilElectionOutcome_t CouncilProposalConfigParser::ParseElectionOutcome(
+CouncilElectionOutcome_t CouncilProposalConfigParser::ParseElectionOutcome_(
     const std::string& rValue) const
 {
     if (rValue == "none")                 return CouncilElectionOutcome_t::None;

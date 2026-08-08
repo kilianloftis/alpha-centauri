@@ -17,7 +17,7 @@ public:
     std::vector<BuildingConfig_t> ParseConfig(const std::string& configPath);
 
 private:
-    BuildingConfig_t ParseBuildingConfig(const nlohmann::json& buildingJson);
+    BuildingConfig_t ParseBuildingConfig_(const nlohmann::json& buildingJson);
 };
 
 } // namespace ac

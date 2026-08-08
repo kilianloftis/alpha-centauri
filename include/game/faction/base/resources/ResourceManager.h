@@ -46,14 +46,6 @@ public:
     int ConsumeMinerals();
     int ConsumeEcon();
     int ConsumeLabs();
-    // TODO: psych is a silent sink. Energy is allocated to it every turn by the econ/labs/psych
-    // split and accumulated here, but nothing calls this — unlike ConsumeEcon and ConsumeLabs,
-    // which Faction drains each turn. So the player pays for psych and gets nothing back.
-    // Fixing it needs the SMAC rule for what psych buys (drone suppression / talent creation)
-    // and how it feeds PopCompositionCalculator, whose `psych_output` input is currently only
-    // specialist psych, not this. Deliberately not invented here; see
-    // docs/full-review-fix-prompts/06-base-economy-and-population.md.
-    int ConsumePsych();
 
     // Produce resources from worked tiles and allocate energy into stockpiles.
     // Called once per turn per base from the ResourceCollection stage.

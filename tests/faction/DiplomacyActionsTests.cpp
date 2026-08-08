@@ -15,7 +15,7 @@ void Meet_(DiplomacyLedger& rLedger)
     rLedger.SetKnown(1, 2);
 }
 
-bool HasKind_(const std::vector<DiplomaticActionKind>& rActions, DiplomaticActionKind kind)
+bool HasKind_(const std::vector<DiplomaticActionKind_t>& rActions, DiplomaticActionKind_t kind)
 {
     return std::find(rActions.begin(), rActions.end(), kind) != rActions.end();
 }
@@ -53,9 +53,9 @@ TEST_CASE("None status allows truce, vendetta, and ordinary trade", "[diplomacy]
     CHECK_FALSE(CanCancelTreaty(ledger, 1, 2));
 
     const auto actions = GetAvailableActions(ledger, 1, 2);
-    CHECK(HasKind_(actions, DiplomaticActionKind::ProposeTruce));
-    CHECK(HasKind_(actions, DiplomaticActionKind::DeclareVendetta));
-    CHECK(HasKind_(actions, DiplomaticActionKind::Trade));
+    CHECK(HasKind_(actions, DiplomaticActionKind_t::ProposeTruce));
+    CHECK(HasKind_(actions, DiplomaticActionKind_t::DeclareVendetta));
+    CHECK(HasKind_(actions, DiplomaticActionKind_t::Trade));
 
     const auto trades = GetAvailableTrades(ledger, 1, 2);
     CHECK(HasTrade_(trades, TradeKind_t::Credits));
@@ -70,7 +70,7 @@ TEST_CASE("Vendetta blocks trade and allows only truce", "[diplomacy][actions]")
 {
     DiplomacyLedger ledger;
     Meet_(ledger);
-    ledger.SetStatus(1, 2, DiplomaticStatus::Vendetta);
+    ledger.SetStatus(1, 2, DiplomaticStatus_t::Vendetta);
 
     CHECK(CanProposeTruce(ledger, 1, 2));
     CHECK_FALSE(CanDeclareVendetta(ledger, 1, 2));
@@ -79,9 +79,9 @@ TEST_CASE("Vendetta blocks trade and allows only truce", "[diplomacy][actions]")
     CHECK(GetAvailableTrades(ledger, 1, 2).empty());
 
     const auto actions = GetAvailableActions(ledger, 1, 2);
-    CHECK(HasKind_(actions, DiplomaticActionKind::ProposeTruce));
-    CHECK_FALSE(HasKind_(actions, DiplomaticActionKind::Trade));
-    CHECK_FALSE(HasKind_(actions, DiplomaticActionKind::DeclareVendetta));
+    CHECK(HasKind_(actions, DiplomaticActionKind_t::ProposeTruce));
+    CHECK_FALSE(HasKind_(actions, DiplomaticActionKind_t::Trade));
+    CHECK_FALSE(HasKind_(actions, DiplomaticActionKind_t::DeclareVendetta));
 }
 
 TEST_CASE("Bases and coordinated vendetta require Pact", "[diplomacy][actions]")
@@ -89,7 +89,7 @@ TEST_CASE("Bases and coordinated vendetta require Pact", "[diplomacy][actions]")
     DiplomacyLedger ledger;
     Meet_(ledger);
 
-    ledger.SetStatus(1, 2, DiplomaticStatus::Friendship);
+    ledger.SetStatus(1, 2, DiplomaticStatus_t::Friendship);
     CHECK_FALSE(CanTrade(ledger, 1, 2, TradeBase_t{1}));
     CHECK_FALSE(CanTrade(ledger, 1, 2, TradeDeclareVendetta_t{3}));
     CHECK(CanTrade(ledger, 1, 2, TradeCredits_t{1}));
@@ -100,7 +100,7 @@ TEST_CASE("Bases and coordinated vendetta require Pact", "[diplomacy][actions]")
         CHECK(HasTrade_(trades, TradeKind_t::Credits));
     }
 
-    ledger.SetStatus(1, 2, DiplomaticStatus::Pact);
+    ledger.SetStatus(1, 2, DiplomaticStatus_t::Pact);
     CHECK(CanTrade(ledger, 1, 2, TradeBase_t{1}));
     CHECK(CanTrade(ledger, 1, 2, TradeDeclareVendetta_t{3}));
     CHECK(CanTrade(ledger, 1, 2, TradeCredits_t{1}));
@@ -117,24 +117,24 @@ TEST_CASE("Treaty ladder Friendship and Pact", "[diplomacy][actions]")
     DiplomacyLedger ledger;
     Meet_(ledger);
 
-    ledger.SetStatus(1, 2, DiplomaticStatus::Truce);
+    ledger.SetStatus(1, 2, DiplomaticStatus_t::Truce);
     CHECK(CanProposeFriendship(ledger, 1, 2));
     CHECK(CanCancelTreaty(ledger, 1, 2));
 
-    ledger.SetStatus(1, 2, DiplomaticStatus::Friendship);
+    ledger.SetStatus(1, 2, DiplomaticStatus_t::Friendship);
     CHECK(CanProposePact(ledger, 1, 2));
     CHECK(CanCancelTreaty(ledger, 1, 2));
 
-    ledger.SetStatus(1, 2, DiplomaticStatus::Pact);
+    ledger.SetStatus(1, 2, DiplomaticStatus_t::Pact);
     CHECK_FALSE(CanProposePact(ledger, 1, 2));
     CHECK(CanCancelTreaty(ledger, 1, 2));
     CHECK(CanDeclareVendetta(ledger, 1, 2));
 }
 
-TEST_CASE("DiplomaticActionKind and TradeKind_t ToString are non-empty", "[diplomacy][actions]")
+TEST_CASE("DiplomaticActionKind_t and TradeKind_t ToString are non-empty", "[diplomacy][actions]")
 {
-    CHECK_FALSE(ToString(DiplomaticActionKind::ProposeTruce).empty());
-    CHECK_FALSE(ToString(DiplomaticActionKind::Trade).empty());
+    CHECK_FALSE(ToString(DiplomaticActionKind_t::ProposeTruce).empty());
+    CHECK_FALSE(ToString(DiplomaticActionKind_t::Trade).empty());
     CHECK_FALSE(ToString(TradeKind_t::Credits).empty());
     CHECK_FALSE(ToString(TradeKind_t::DeclareVendetta).empty());
 }

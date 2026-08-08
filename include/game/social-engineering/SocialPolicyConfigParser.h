@@ -17,8 +17,8 @@ public:
     std::vector<SocialPolicyConfig_t> ParseConfig(const std::string& configPath);
 
 private:
-    SocialPolicyConfig_t ParsePolicyConfig(const nlohmann::json& policyJson);
-    SocialCategory_t ParseCategory(const std::string& category);
+    SocialPolicyConfig_t ParsePolicyConfig_(const nlohmann::json& policyJson);
+    SocialCategory_t ParseCategory_(const std::string& category);
 };
 
 } // namespace ac

@@ -18,7 +18,7 @@ public:
     std::vector<FactionConfig_t> ParseConfig(const std::string& configPath);
 
 private:
-    FactionConfig_t ParseFactionDirectory(const std::string& id, const std::string& dirPath);
+    FactionConfig_t ParseFactionDirectory_(const std::string& id, const std::string& dirPath);
 
     static FactionIdentityConfig ParseIdentity(const nlohmann::json& j, const std::string& idFallback);
     static LeaderConfig ParseLeader(const nlohmann::json& j);

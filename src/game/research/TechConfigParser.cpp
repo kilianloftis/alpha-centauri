@@ -11,10 +11,10 @@ std::vector<TechConfig_t> TechConfigParser::ParseConfig(const std::string& confi
 {
     return JsonConfigLoader::LoadFile<TechConfig_t>(
         configPath, "tech",
-        [this](const nlohmann::json& rJson) { return ParseTechConfig(rJson); });
+        [this](const nlohmann::json& rJson) { return ParseTechConfig_(rJson); });
 }
 
-TechConfig_t TechConfigParser::ParseTechConfig(const nlohmann::json& techJson)
+TechConfig_t TechConfigParser::ParseTechConfig_(const nlohmann::json& techJson)
 {
     TechConfig_t config;
     config.id = ConfigFields::ParseId(techJson);

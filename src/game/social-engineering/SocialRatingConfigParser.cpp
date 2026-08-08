@@ -12,10 +12,10 @@ std::vector<SocialRatingConfig_t> SocialRatingConfigParser::ParseConfig(const st
 {
     return JsonConfigLoader::LoadFile<SocialRatingConfig_t>(
         rConfigPath, "social rating",
-        [this](const nlohmann::json& rJson) { return ParseRatingConfig(rJson); });
+        [this](const nlohmann::json& rJson) { return ParseRatingConfig_(rJson); });
 }
 
-SocialRatingConfig_t SocialRatingConfigParser::ParseRatingConfig(const nlohmann::json& rRatingJson)
+SocialRatingConfig_t SocialRatingConfigParser::ParseRatingConfig_(const nlohmann::json& rRatingJson)
 {
     SocialRatingConfig_t config;
     config.id = ConfigFields::ParseId(rRatingJson);

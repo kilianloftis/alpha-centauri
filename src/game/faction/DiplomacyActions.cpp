@@ -25,8 +25,8 @@ bool CanProposeTruce(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t 
     {
         return false;
     }
-    const DiplomaticStatus status = rLedger.GetStatus(a, b);
-    return status == DiplomaticStatus::None || status == DiplomaticStatus::Vendetta;
+    const DiplomaticStatus_t status = rLedger.GetStatus(a, b);
+    return status == DiplomaticStatus_t::None || status == DiplomaticStatus_t::Vendetta;
 }
 
 bool CanProposeFriendship(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t b)
@@ -35,7 +35,7 @@ bool CanProposeFriendship(const DiplomacyLedger& rLedger, FactionId_t a, Faction
     {
         return false;
     }
-    return rLedger.GetStatus(a, b) == DiplomaticStatus::Truce;
+    return rLedger.GetStatus(a, b) == DiplomaticStatus_t::Truce;
 }
 
 bool CanProposePact(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t b)
@@ -44,7 +44,7 @@ bool CanProposePact(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t b
     {
         return false;
     }
-    return rLedger.GetStatus(a, b) == DiplomaticStatus::Friendship;
+    return rLedger.GetStatus(a, b) == DiplomaticStatus_t::Friendship;
 }
 
 bool CanDeclareVendetta(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t b)
@@ -53,7 +53,7 @@ bool CanDeclareVendetta(const DiplomacyLedger& rLedger, FactionId_t a, FactionId
     {
         return false;
     }
-    return rLedger.GetStatus(a, b) != DiplomaticStatus::Vendetta;
+    return rLedger.GetStatus(a, b) != DiplomaticStatus_t::Vendetta;
 }
 
 bool CanCancelTreaty(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t b)
@@ -62,10 +62,10 @@ bool CanCancelTreaty(const DiplomacyLedger& rLedger, FactionId_t a, FactionId_t 
     {
         return false;
     }
-    const DiplomaticStatus status = rLedger.GetStatus(a, b);
-    return status == DiplomaticStatus::Truce
-        || status == DiplomaticStatus::Friendship
-        || status == DiplomaticStatus::Pact;
+    const DiplomaticStatus_t status = rLedger.GetStatus(a, b);
+    return status == DiplomaticStatus_t::Truce
+        || status == DiplomaticStatus_t::Friendship
+        || status == DiplomaticStatus_t::Pact;
 }
 
 bool CanTrade(const DiplomacyLedger& rLedger,
@@ -77,7 +77,7 @@ bool CanTrade(const DiplomacyLedger& rLedger,
     {
         return false;
     }
-    if (rLedger.GetStatus(a, b) == DiplomaticStatus::Vendetta)
+    if (rLedger.GetStatus(a, b) == DiplomaticStatus_t::Vendetta)
     {
         return false;
     }
@@ -121,53 +121,53 @@ std::vector<TradeKind_t> GetAvailableTrades(const DiplomacyLedger& rLedger,
     return kinds;
 }
 
-std::vector<DiplomaticActionKind> GetAvailableActions(const DiplomacyLedger& rLedger,
+std::vector<DiplomaticActionKind_t> GetAvailableActions(const DiplomacyLedger& rLedger,
                                                       FactionId_t a,
                                                       FactionId_t b)
 {
-    std::vector<DiplomaticActionKind> actions;
+    std::vector<DiplomaticActionKind_t> actions;
     if (CanProposeTruce(rLedger, a, b))
     {
-        actions.push_back(DiplomaticActionKind::ProposeTruce);
+        actions.push_back(DiplomaticActionKind_t::ProposeTruce);
     }
     if (CanProposeFriendship(rLedger, a, b))
     {
-        actions.push_back(DiplomaticActionKind::ProposeFriendship);
+        actions.push_back(DiplomaticActionKind_t::ProposeFriendship);
     }
     if (CanProposePact(rLedger, a, b))
     {
-        actions.push_back(DiplomaticActionKind::ProposePact);
+        actions.push_back(DiplomaticActionKind_t::ProposePact);
     }
     if (CanDeclareVendetta(rLedger, a, b))
     {
-        actions.push_back(DiplomaticActionKind::DeclareVendetta);
+        actions.push_back(DiplomaticActionKind_t::DeclareVendetta);
     }
     if (CanCancelTreaty(rLedger, a, b))
     {
-        actions.push_back(DiplomaticActionKind::CancelTreaty);
+        actions.push_back(DiplomaticActionKind_t::CancelTreaty);
     }
     if (!GetAvailableTrades(rLedger, a, b).empty())
     {
-        actions.push_back(DiplomaticActionKind::Trade);
+        actions.push_back(DiplomaticActionKind_t::Trade);
     }
     return actions;
 }
 
-std::string ToString(DiplomaticActionKind kind)
+std::string ToString(DiplomaticActionKind_t kind)
 {
     switch (kind)
     {
-    case DiplomaticActionKind::ProposeTruce:
+    case DiplomaticActionKind_t::ProposeTruce:
         return "Propose Truce";
-    case DiplomaticActionKind::ProposeFriendship:
+    case DiplomaticActionKind_t::ProposeFriendship:
         return "Propose Friendship";
-    case DiplomaticActionKind::ProposePact:
+    case DiplomaticActionKind_t::ProposePact:
         return "Propose Pact";
-    case DiplomaticActionKind::DeclareVendetta:
+    case DiplomaticActionKind_t::DeclareVendetta:
         return "Declare Vendetta";
-    case DiplomaticActionKind::CancelTreaty:
+    case DiplomaticActionKind_t::CancelTreaty:
         return "Cancel Treaty";
-    case DiplomaticActionKind::Trade:
+    case DiplomaticActionKind_t::Trade:
         return "Trade";
     }
     return "Unknown";

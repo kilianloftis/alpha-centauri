@@ -46,19 +46,19 @@ const Faction* FindFaction_(const GameState& rState, FactionId_t id)
 bool StatusRequestLegal_(const DiplomacyLedger& rLedger,
                          FactionId_t a,
                          FactionId_t b,
-                         DiplomaticStatus requested)
+                         DiplomaticStatus_t requested)
 {
     switch (requested)
     {
-    case DiplomaticStatus::Truce:
+    case DiplomaticStatus_t::Truce:
         return CanProposeTruce(rLedger, a, b);
-    case DiplomaticStatus::Friendship:
+    case DiplomaticStatus_t::Friendship:
         return CanProposeFriendship(rLedger, a, b);
-    case DiplomaticStatus::Pact:
+    case DiplomaticStatus_t::Pact:
         return CanProposePact(rLedger, a, b);
-    case DiplomaticStatus::Vendetta:
+    case DiplomaticStatus_t::Vendetta:
         return CanDeclareVendetta(rLedger, a, b);
-    case DiplomaticStatus::None:
+    case DiplomaticStatus_t::None:
         return CanCancelTreaty(rLedger, a, b);
     }
     return false;
@@ -90,18 +90,18 @@ const BaseManager* FindOwnedBase_(const Faction& rFaction, BaseId_t baseId)
 
 } // namespace
 
-DiplomaticProposeResult DiplomaticActionExecutor::Propose(GameState& rState,
+DiplomaticProposeResult_t DiplomaticActionExecutor::Propose(GameState& rState,
                                                           const DiplomaticProposal_t& rProposal)
 {
     if (!Validate_(rState, rProposal))
     {
-        return DiplomaticProposeResult::Invalid;
+        return DiplomaticProposeResult_t::Invalid;
     }
 
     Faction* pRecipient = FindFaction_(rState, rProposal.recipient);
     if (!pRecipient)
     {
-        return DiplomaticProposeResult::Invalid;
+        return DiplomaticProposeResult_t::Invalid;
     }
 
     if (pRecipient->IsPlayerControlled())
@@ -111,19 +111,19 @@ DiplomaticProposeResult DiplomaticActionExecutor::Propose(GameState& rState,
         // anywhere yet, so refuse rather than lose the proposal.
         if (m_pending.has_value())
         {
-            return DiplomaticProposeResult::Busy;
+            return DiplomaticProposeResult_t::Busy;
         }
         m_pending = rProposal;
-        return DiplomaticProposeResult::PendingPlayer;
+        return DiplomaticProposeResult_t::PendingPlayer;
     }
 
     if (!EvaluateResponse_(rState, rProposal.recipient))
     {
-        return DiplomaticProposeResult::Rejected;
+        return DiplomaticProposeResult_t::Rejected;
     }
 
     Apply_(rState, rProposal);
-    return DiplomaticProposeResult::Accepted;
+    return DiplomaticProposeResult_t::Accepted;
 }
 
 bool DiplomaticActionExecutor::Accept(GameState& rState)
@@ -382,7 +382,7 @@ void DiplomaticActionExecutor::ApplyItem_(GameState& rState,
             else if constexpr (std::is_same_v<T, TradeDeclareVendetta_t>)
             {
                 rState.GetDiplomacyLedger().SetStatus(
-                    receiverId, rConcrete.againstFactionId, DiplomaticStatus::Vendetta);
+                    receiverId, rConcrete.againstFactionId, DiplomaticStatus_t::Vendetta);
             }
         },
         rItem);

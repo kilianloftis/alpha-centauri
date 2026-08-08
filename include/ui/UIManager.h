@@ -32,7 +32,6 @@ public:
     void SetWorldView(std::unique_ptr<IWorldView> pWorldView);
     void PushView(std::unique_ptr<IGameView> pView);
     void PopView();
-    bool HasViews() const;
     bool HasOverlayView() const;
 
     // False while an overlay is on the stack, or the world view reports a blocking in-view

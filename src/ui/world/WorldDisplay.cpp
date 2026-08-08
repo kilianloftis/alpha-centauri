@@ -61,29 +61,9 @@ void WorldDisplay::SetSelectedUnit(const Unit* pUnit)
     m_unitMarkers.SetSelectedUnit(pUnit);
 }
 
-void WorldDisplay::SetCameraOffset(int tileX, int tileY)
-{
-    m_viewport.SetCamera(tileX, tileY);
-}
-
 float WorldDisplay::GetEffectiveTileSize() const
 {
     return m_viewport.TileSize();
-}
-
-int WorldDisplay::GetCameraX() const
-{
-    return m_viewport.CameraX();
-}
-
-int WorldDisplay::GetCameraY() const
-{
-    return m_viewport.CameraY();
-}
-
-int WorldDisplay::GetVisibleCols() const
-{
-    return m_viewport.VisibleCols();
 }
 
 int WorldDisplay::GetVisibleRows() const
