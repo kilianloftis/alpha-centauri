@@ -8,7 +8,7 @@
 namespace ac
 {
 
-struct LayoutsStyle
+struct LayoutsStyle_t
 {
     RatioLayout_t fullscreen{};
     RatioLayout_t map{};
@@ -23,13 +23,13 @@ struct LayoutsStyle
     RatioLayout_t popupSmall{};
 };
 
-struct ViewFactoryStyle
+struct ViewFactoryStyle_t
 {
     float fullscreenOriginX{};
     float fullscreenOriginY{};
 };
 
-struct TileRendererStyle
+struct TileRendererStyle_t
 {
     Color_t tileBorderColor{};
     Color_t fogTerrainColor{};
@@ -47,7 +47,7 @@ struct TileRendererStyle
     float tileTextOffsetYRatio{};
 };
 
-struct WorldDisplayStyle
+struct WorldDisplayStyle_t
 {
     float defaultTileScale{};
     float baseNameFontSizeRatio{};
@@ -74,13 +74,13 @@ struct WorldDisplayStyle
     Color_t monolithLabelColor{};
 };
 
-struct MinimapDisplayStyle
+struct MinimapDisplayStyle_t
 {
     Color_t viewportBorderColor{};
     float viewportBorderWidth{};
 };
 
-struct UnitMarkerStyle
+struct UnitMarkerStyle_t
 {
     float fontSizeRatio{};
     float widthRatio{};
@@ -98,7 +98,7 @@ struct UnitMarkerStyle
     Color_t initialTextColor{};
 };
 
-struct SelectedUnitPanelStyle
+struct SelectedUnitPanelStyle_t
 {
     Color_t backgroundColor{};
     Color_t borderColor{};
@@ -117,7 +117,7 @@ struct SelectedUnitPanelStyle
     float iconCenterRatio{};
 };
 
-struct LocationPanelStyle
+struct LocationPanelStyle_t
 {
     Color_t backgroundColor{};
     Color_t borderColor{};
@@ -129,7 +129,7 @@ struct LocationPanelStyle
     float textGapRatio{};
 };
 
-struct UnitStackPanelStyle
+struct UnitStackPanelStyle_t
 {
     Color_t backgroundColor{};
     Color_t borderColor{};
@@ -140,7 +140,7 @@ struct UnitStackPanelStyle
     float statFontRatio{};
 };
 
-struct InfoPanelStyle
+struct InfoPanelStyle_t
 {
     Color_t backgroundColor{};
     Color_t borderColor{};
@@ -151,7 +151,7 @@ struct InfoPanelStyle
     unsigned int fontSize{};
 };
 
-struct EndTurnButtonStyle
+struct EndTurnButtonStyle_t
 {
     Color_t idleFillColor{};
     Color_t readyFillColor{};
@@ -164,7 +164,7 @@ struct EndTurnButtonStyle
     RatioLayout_t layout{};
 };
 
-struct CommlinksButtonStyle
+struct CommlinksButtonStyle_t
 {
     Color_t fillColor{};
     Color_t borderColor{};
@@ -174,14 +174,14 @@ struct CommlinksButtonStyle
     float textPadY{};
 };
 
-struct WorldViewStyle
+struct WorldViewStyle_t
 {
     Color_t researchTextColor{};
     Color_t missionYearColor{};
     Color_t energyTextColor{};
 };
 
-struct CombatViewStyle
+struct CombatViewStyle_t
 {
     Color_t sideNameColor{};
     Color_t roundHeaderColor{};
@@ -191,13 +191,13 @@ struct CombatViewStyle
     Color_t hitLineColor{};
 };
 
-struct CombatPresentationStyle
+struct CombatPresentationStyle_t
 {
     int defaultDamageFlashMs{};
     int defaultInterRoundDelayMs{};
 };
 
-struct CameraInputStyle
+struct CameraInputStyle_t
 {
     float edgeZone{};
     float relativeMin{};
@@ -207,12 +207,12 @@ struct CameraInputStyle
     float edgeScrollSpeed{};
 };
 
-struct UnitOrderInputStyle
+struct UnitOrderInputStyle_t
 {
     int holdThresholdMs{};
 };
 
-struct CommlinksPanelStyle
+struct CommlinksPanelStyle_t
 {
     Color_t backgroundColor{};
     Color_t borderColor{};
@@ -230,7 +230,7 @@ struct CommlinksPanelStyle
     RatioLayout_t councilButtonLayout{};
 };
 
-struct CouncilVoteViewStyle
+struct CouncilVoteViewStyle_t
 {
     Color_t backgroundColor{};
     Color_t borderColor{};
@@ -251,7 +251,7 @@ struct CouncilVoteViewStyle
     RatioLayout_t voteButtonLayout{};
 };
 
-struct CurrentResearchPanelStyle
+struct CurrentResearchPanelStyle_t
 {
     RatioLayout_t labelLayout{};
     RatioLayout_t targetLayout{};
@@ -266,7 +266,7 @@ struct CurrentResearchPanelStyle
     unsigned int progressFontSize{};
 };
 
-struct SettingsPanelStyle
+struct SettingsPanelStyle_t
 {
     Color_t backgroundColor{};
     Color_t borderColor{};
@@ -278,7 +278,7 @@ struct SettingsPanelStyle
     RatioLayout_t rowLayout{};
 };
 
-struct BaseViewStyle
+struct BaseViewStyle_t
 {
     RatioLayout_t growthLayout{};
     RatioLayout_t workableLayout{};
@@ -289,7 +289,10 @@ struct BaseViewStyle
     RatioLayout_t populationLayout{};
 };
 
-struct GrowthDisplayStyle
+// Header plus stockpile / required / production lines. The growth and production panels are
+// the same widget with different numbers in it, so they share one type and one parser — kept
+// twice, a one-sided tweak silently desynced the two halves of the base screen.
+struct ResourceLinesPanelStyle_t
 {
     Color_t backgroundColor{};
     Color_t textColor{};
@@ -302,20 +305,7 @@ struct GrowthDisplayStyle
     float productionLineIndex{};
 };
 
-struct ProductionDisplayStyle
-{
-    Color_t backgroundColor{};
-    Color_t textColor{};
-    float headerFontSizeRatio{};
-    float entryFontSizeRatio{};
-    float lineHeightRatio{};
-    float leftPaddingRatio{};
-    float stockpileLineIndex{};
-    float requiredLineIndex{};
-    float productionLineIndex{};
-};
-
-struct PopulationDisplayStyle
+struct PopulationDisplayStyle_t
 {
     Color_t backgroundColor{};
     Color_t headerTextColor{};
@@ -333,7 +323,7 @@ struct PopulationDisplayStyle
     Color_t popLetterColor{};
 };
 
-struct SupportDisplayStyle
+struct SupportDisplayStyle_t
 {
     Color_t backgroundColor{};
     Color_t borderColor{};
@@ -342,7 +332,7 @@ struct SupportDisplayStyle
     float iconGapRatio{};
 };
 
-struct BaseWorkableAreaDisplayStyle
+struct BaseWorkableAreaDisplayStyle_t
 {
     int gridDimension{};
     float gridCenterOffset{};
@@ -363,7 +353,7 @@ struct BaseWorkableAreaDisplayStyle
 
 // Every modal list-selector's metrics. One type, so a tweak cannot land on one screen only;
 // distinct looks are distinct *instances* of it (see componentSelectorPopup).
-struct ListSelectorPopupStyle
+struct ListSelectorPopupStyle_t
 {
     float headerFontSizeRatio{};
     float entryFontSizeRatio{};
@@ -378,7 +368,7 @@ struct ListSelectorPopupStyle
     Color_t entryColor{};
 };
 
-struct SocialEngineeringDisplayStyle
+struct SocialEngineeringDisplayStyle_t
 {
     Color_t backgroundColor{};
     Color_t borderColor{};
@@ -408,7 +398,7 @@ struct SocialEngineeringDisplayStyle
     float factionBonusFontSizeRatio{};
 };
 
-struct SocialEngineeringBottomPanelStyle
+struct SocialEngineeringBottomPanelStyle_t
 {
     Color_t backgroundColor{};
     Color_t borderColor{};
@@ -419,14 +409,14 @@ struct SocialEngineeringBottomPanelStyle
     float valueFontSizeRatio{};
 };
 
-struct UnitDesignerViewStyle
+struct UnitDesignerViewStyle_t
 {
     RatioLayout_t leftSlotColumnLayout{};
     RatioLayout_t designStatsLayout{};
     RatioLayout_t rightSlotColumnLayout{};
 };
 
-struct SlotColumnPanelStyle
+struct SlotColumnPanelStyle_t
 {
     int visibleSlots{};
     float arrowHeightRatio{};
@@ -448,7 +438,7 @@ struct SlotColumnPanelStyle
     Color_t filledNameColor{};
 };
 
-struct DesignStatsDisplayStyle
+struct DesignStatsDisplayStyle_t
 {
     Color_t backgroundColor{};
     Color_t borderColor{};
@@ -467,7 +457,7 @@ struct DesignStatsDisplayStyle
     float horizontalPaddingMultiplier{};
 };
 
-struct DesignListPanelStyle
+struct DesignListPanelStyle_t
 {
     Color_t backgroundColor{};
     Color_t borderColor{};
@@ -486,7 +476,7 @@ struct DesignListPanelStyle
     float textVerticalRatio{};
 };
 
-struct UnitStatusPanelStyle
+struct UnitStatusPanelStyle_t
 {
     Color_t backgroundColor{};
     Color_t borderColor{};
@@ -501,7 +491,7 @@ struct UnitStatusPanelStyle
     float inProdLineIndex{};
 };
 
-struct SatelliteViewStyle
+struct SatelliteViewStyle_t
 {
     Color_t backgroundColor{};
     Color_t borderColor{};
@@ -541,45 +531,46 @@ public:
     static void Load(const std::string& filePath);
     static const UiStyle& Get();
 
-    LayoutsStyle layouts;
-    ViewFactoryStyle viewFactory;
-    TileRendererStyle tileRenderer;
-    WorldDisplayStyle worldDisplay;
-    MinimapDisplayStyle minimapDisplay;
-    UnitMarkerStyle unitMarker;
-    SelectedUnitPanelStyle selectedUnitPanel;
-    LocationPanelStyle locationPanel;
-    UnitStackPanelStyle unitStackPanel;
-    InfoPanelStyle infoPanel;
-    EndTurnButtonStyle endTurnButton;
-    CommlinksButtonStyle commlinksButton;
-    WorldViewStyle worldView;
-    CombatViewStyle combatView;
-    CombatPresentationStyle combatPresentation;
-    CameraInputStyle cameraInput;
-    UnitOrderInputStyle unitOrderInput;
-    CommlinksPanelStyle commlinksPanel;
-    CouncilVoteViewStyle councilVoteView;
-    CurrentResearchPanelStyle currentResearchPanel;
-    SettingsPanelStyle settingsPanel;
-    BaseViewStyle baseView;
-    GrowthDisplayStyle growthDisplay;
-    ProductionDisplayStyle productionDisplay;
-    PopulationDisplayStyle populationDisplay;
-    SupportDisplayStyle supportDisplay;
-    BaseWorkableAreaDisplayStyle baseWorkableAreaDisplay;
-    ListSelectorPopupStyle listSelectorPopup;
-    SocialEngineeringDisplayStyle socialEngineeringDisplay;
-    SocialEngineeringBottomPanelStyle socialEngineeringBottomPanel;
-    UnitDesignerViewStyle unitDesignerView;
-    SlotColumnPanelStyle slotColumnPanel;
+    LayoutsStyle_t layouts;
+    ViewFactoryStyle_t viewFactory;
+    TileRendererStyle_t tileRenderer;
+    WorldDisplayStyle_t worldDisplay;
+    MinimapDisplayStyle_t minimapDisplay;
+    UnitMarkerStyle_t unitMarker;
+    SelectedUnitPanelStyle_t selectedUnitPanel;
+    LocationPanelStyle_t locationPanel;
+    UnitStackPanelStyle_t unitStackPanel;
+    InfoPanelStyle_t infoPanel;
+    EndTurnButtonStyle_t endTurnButton;
+    CommlinksButtonStyle_t commlinksButton;
+    WorldViewStyle_t worldView;
+    CombatViewStyle_t combatView;
+    CombatPresentationStyle_t combatPresentation;
+    CameraInputStyle_t cameraInput;
+    UnitOrderInputStyle_t unitOrderInput;
+    CommlinksPanelStyle_t commlinksPanel;
+    CouncilVoteViewStyle_t councilVoteView;
+    CurrentResearchPanelStyle_t currentResearchPanel;
+    SettingsPanelStyle_t settingsPanel;
+    BaseViewStyle_t baseView;
+    // Two instances of one type: same widget, independent values.
+    ResourceLinesPanelStyle_t growthDisplay;
+    ResourceLinesPanelStyle_t productionDisplay;
+    PopulationDisplayStyle_t populationDisplay;
+    SupportDisplayStyle_t supportDisplay;
+    BaseWorkableAreaDisplayStyle_t baseWorkableAreaDisplay;
+    ListSelectorPopupStyle_t listSelectorPopup;
+    SocialEngineeringDisplayStyle_t socialEngineeringDisplay;
+    SocialEngineeringBottomPanelStyle_t socialEngineeringBottomPanel;
+    UnitDesignerViewStyle_t unitDesignerView;
+    SlotColumnPanelStyle_t slotColumnPanel;
     // Its own instance of the shared type: the unit designer's picker keeps distinct colours
     // and metrics without a second widget or a second style shape.
-    ListSelectorPopupStyle componentSelectorPopup;
-    DesignStatsDisplayStyle designStatsDisplay;
-    DesignListPanelStyle designListPanel;
-    UnitStatusPanelStyle unitStatusPanel;
-    SatelliteViewStyle satelliteView;
+    ListSelectorPopupStyle_t componentSelectorPopup;
+    DesignStatsDisplayStyle_t designStatsDisplay;
+    DesignListPanelStyle_t designListPanel;
+    UnitStatusPanelStyle_t unitStatusPanel;
+    SatelliteViewStyle_t satelliteView;
 };
 
 inline const UiStyle& Style()

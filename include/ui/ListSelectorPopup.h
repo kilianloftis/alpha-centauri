@@ -30,7 +30,7 @@ public:
                       std::vector<std::string> rows,
                       WindowLayout_t layout,
                       std::function<void(size_t)> onSelected,
-                      const ListSelectorPopupStyle& rStyle);
+                      const ListSelectorPopupStyle_t& rStyle);
 
     ~ListSelectorPopup() override = default;
 
@@ -50,7 +50,7 @@ private:
     std::string m_emptyMessage;
     std::vector<std::string> m_rows;
     std::function<void(size_t)> m_onSelected;
-    const ListSelectorPopupStyle& m_rStyle;
+    const ListSelectorPopupStyle_t& m_rStyle;
 
     // Index of the first row drawn; the arrow keys move it.
     size_t m_scrollOffset = 0;

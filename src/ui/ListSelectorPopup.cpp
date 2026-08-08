@@ -15,7 +15,7 @@ ListSelectorPopup::ListSelectorPopup(std::string title,
                                      std::vector<std::string> rows,
                                      WindowLayout_t layout,
                                      std::function<void(size_t)> onSelected,
-                                     const ListSelectorPopupStyle& rStyle)
+                                     const ListSelectorPopupStyle_t& rStyle)
     : UIElement(layout)
     , m_title(std::move(title))
     , m_emptyMessage(std::move(emptyMessage))

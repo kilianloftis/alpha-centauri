@@ -275,3 +275,29 @@ one before clicking. Caught by revert-verify, which is the only reason it is not
   different chrome. Not guessed at.
 - The council, commlinks, settings and social-engineering `[M]`s, and the command/event seam for
   player actions on `BaseManager`.
+
+## UiStyle (2026-08-08)
+
+The `[H]` "stop growing a process-global god-object style registry" is **still open**, and this is
+the sharpened statement of why.
+
+The blocker recorded when it was first deferred — "code with no automated coverage" — no longer
+holds: `ac-ui`, `ViewFixture` and `RecordingGraphics` mean a conversion can be verified. What
+remains is size: ~290 `Style()` call sites across 61 files, all of which would take a
+constructor-injected `const UiStyle&`. That is worth doing and wants to be its own package with
+its own review, not a tail-end sweep after four other second passes.
+
+Landed here, being the bounded parts:
+- The 36 style structs are config/POD types and now carry `_t`. Compiler-checked, so unlike the
+  reference-parameter sweep this one cannot silently mis-rename anything.
+- `GrowthDisplayStyle` and `ProductionDisplayStyle` were byte-identical twins with byte-identical
+  parsers; a one-sided tweak desynced the two halves of the base screen. Now one
+  `ResourceLinesPanelStyle_t` with two instances, matching how package 14 collapsed the popup
+  pair.
+- `ParseColor_` accepted arrays longer than four and dropped the extras, so a mis-edited style
+  file loaded silently. It now throws naming the key.
+- `docs/architecture/ui-system.md` had no mention of `UiStyle` at all despite it being a
+  cross-cutting UI dependency; it now documents both the mechanism and the open finding.
+
+The elevation-range `[M]` in this slice was already closed by package 14, and the `IsLoaded()`
+`[L]` by package 16's dead-code sweep.

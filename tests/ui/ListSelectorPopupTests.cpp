@@ -21,9 +21,9 @@ namespace
 {
 
 // 100 units tall with 10-unit rows and a 2-row header: 8 lines below the header.
-ListSelectorPopupStyle Style_()
+ListSelectorPopupStyle_t Style_()
 {
-    ListSelectorPopupStyle style{};
+    ListSelectorPopupStyle_t style{};
     style.headerFontSizeRatio = 0.1f;
     style.entryFontSizeRatio = 0.1f;
     style.lineHeightRatio = 0.1f;
@@ -56,7 +56,7 @@ TEST_CASE("A selector without a handler is rejected at construction", "[ui][sele
 {
     // Two of the six copies would silently do nothing on a click when the callback was empty,
     // leaving the popup open with no feedback.
-    const ListSelectorPopupStyle style = Style_();
+    const ListSelectorPopupStyle_t style = Style_();
     CHECK_THROWS_AS(
         ListSelectorPopup("Title", "Empty", Rows_(3), k_Layout, nullptr, style),
         std::invalid_argument);
@@ -64,7 +64,7 @@ TEST_CASE("A selector without a handler is rejected at construction", "[ui][sele
 
 TEST_CASE("Clicking a row reports its index", "[ui][selector]")
 {
-    const ListSelectorPopupStyle style = Style_();
+    const ListSelectorPopupStyle_t style = Style_();
     std::optional<size_t> selected;
     ListSelectorPopup popup("Title", "Empty", Rows_(3), k_Layout,
                             [&](size_t index) { selected = index; }, style);
@@ -80,7 +80,7 @@ TEST_CASE("A click outside the popup dismisses it without selecting", "[ui][sele
 {
     // Modal routing delivers outside presses to the modal itself. Only one of the six copies
     // had this branch; the rest could only be closed with Escape.
-    const ListSelectorPopupStyle style = Style_();
+    const ListSelectorPopupStyle_t style = Style_();
     bool bSelected = false;
     ListSelectorPopup popup("Title", "Empty", Rows_(3), k_Layout,
                             [&](size_t) { bSelected = true; }, style);
@@ -92,7 +92,7 @@ TEST_CASE("A click outside the popup dismisses it without selecting", "[ui][sele
 
 TEST_CASE("Escape closes the popup", "[ui][selector]")
 {
-    const ListSelectorPopupStyle style = Style_();
+    const ListSelectorPopupStyle_t style = Style_();
     ListSelectorPopup popup("Title", "Empty", Rows_(3), k_Layout, [](size_t) {}, style);
 
     CHECK(popup.HandleKey(KeyEvent_t{Key_t::Escape, {}}));
@@ -103,7 +103,7 @@ TEST_CASE("A long list is bounded to the content area and scrolls", "[ui][select
 {
     // CacheEntryRects_ used to walk the whole vector against a fixed line height with no clamp,
     // so rows past the chrome were painted outside Contains() - neither visible nor clickable.
-    const ListSelectorPopupStyle style = Style_();
+    const ListSelectorPopupStyle_t style = Style_();
     std::optional<size_t> selected;
     ListSelectorPopup popup("Title", "Empty", Rows_(20), k_Layout,
                             [&](size_t index) { selected = index; }, style);
@@ -141,7 +141,7 @@ TEST_CASE("A long list is bounded to the content area and scrolls", "[ui][select
 
 TEST_CASE("Scrolling stops at both ends of the list", "[ui][selector]")
 {
-    const ListSelectorPopupStyle style = Style_();
+    const ListSelectorPopupStyle_t style = Style_();
     ListSelectorPopup popup("Title", "Empty", Rows_(10), k_Layout, [](size_t) {}, style);
 
     // Already at the top.
@@ -156,7 +156,7 @@ TEST_CASE("Scrolling stops at both ends of the list", "[ui][selector]")
 
 TEST_CASE("A list that fits does not scroll or advertise overflow", "[ui][selector]")
 {
-    const ListSelectorPopupStyle style = Style_();
+    const ListSelectorPopupStyle_t style = Style_();
     ListSelectorPopup popup("Title", "Empty", Rows_(4), k_Layout, [](size_t) {}, style);
 
     CHECK_FALSE(popup.HandleKey(KeyEvent_t{Key_t::ArrowDown, {}}));
@@ -168,7 +168,7 @@ TEST_CASE("A list that fits does not scroll or advertise overflow", "[ui][select
 
 TEST_CASE("An empty list shows its message and selects nothing", "[ui][selector]")
 {
-    const ListSelectorPopupStyle style = Style_();
+    const ListSelectorPopupStyle_t style = Style_();
     bool bSelected = false;
     ListSelectorPopup popup("Title", "Nothing here", {}, k_Layout,
                             [&](size_t) { bSelected = true; }, style);

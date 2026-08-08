@@ -256,6 +256,25 @@ now applies selection to its own buttons (`SetSelected`) and replaces its conten
 lists — including, mid-callback, the button that was clicked. `Rebuild_()` remains for a mode
 change, which genuinely replaces the layout.
 
+### UiStyle — the theme, and its known shape problem
+All chrome (colours, font-size ratios, sub-layouts) comes from `config/ui/style.json`, parsed into
+`UiStyle` and read through the free function `Style()`. `Load` fails loudly on a missing file or
+key and commits into the global only after a full parse; `Get` throws if used before `Load`.
+
+**`UiStyle` is a process-global god object, and that is a known open finding.** It is a ~36-member
+typed bag plus a file-scope singleton, so every new panel needs a nested struct, a `UiStyle`
+member, a parser clone and another line in `Load` — open/closed growth — and tests cannot inject a
+theme without mutating process state. The fix is per-feature style types owned and passed down
+from the composition root, with `Style()` demoted to a bridge. Not done: it is ~290 call sites
+across 61 files. What *has* been closed is the reason it stayed frightening — the UI now has
+tests (`ac-ui`, `ViewFixture`, `RecordingGraphics`), so the conversion can be verified rather than
+eyeballed.
+
+Two smaller shapes are fixed: the growth and production panels share one
+`ResourceLinesPanelStyle_t` (two instances of one type) instead of two identical structs that
+could desync, and `ParseColor_` rejects an over-long array instead of silently dropping the
+extras.
+
 ### Build target: `ac-ui`
 Every view, panel and input controller lives in the `ac-ui` static library, which links `ac-core`
 and depends only on the abstract `Graphics` / `Input` interfaces — never on a rendering backend.

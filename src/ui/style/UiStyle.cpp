@@ -18,9 +18,10 @@ bool g_loaded = false;
 Color_t ParseColor_(const nlohmann::json& j, const char* key)
 {
     const auto& arr = j.at(key);
-    if (!arr.is_array() || arr.size() < 3)
+    if (!arr.is_array() || arr.size() < 3 || arr.size() > 4)
     {
-        throw std::runtime_error(std::string("Expected RGBA array for '") + key + "'");
+        throw std::runtime_error(std::string("Expected an RGB or RGBA array for '") + key
+                                 + "'; extra entries are a typo, not optional data");
     }
     const uint8_t a = arr.size() >= 4 ? arr.at(3).get<uint8_t>() : 255;
     return Color_t{
@@ -44,9 +45,9 @@ RatioLayout_t ParseLayout_(const nlohmann::json& j, const char* key)
         arr.at(3).get<float>()};
 }
 
-LayoutsStyle ParseLayoutsStyle_(const nlohmann::json& j)
+LayoutsStyle_t ParseLayoutsStyle_(const nlohmann::json& j)
 {
-    LayoutsStyle s{};
+    LayoutsStyle_t s{};
     s.fullscreen = ParseLayout_(j, "fullscreen");
     s.map = ParseLayout_(j, "map");
     s.topPanel = ParseLayout_(j, "top_panel");
@@ -61,17 +62,17 @@ LayoutsStyle ParseLayoutsStyle_(const nlohmann::json& j)
     return s;
 }
 
-ViewFactoryStyle ParseViewFactoryStyle_(const nlohmann::json& j)
+ViewFactoryStyle_t ParseViewFactoryStyle_(const nlohmann::json& j)
 {
-    ViewFactoryStyle s{};
+    ViewFactoryStyle_t s{};
     s.fullscreenOriginX = j.at("fullscreen_origin_x").get<float>();
     s.fullscreenOriginY = j.at("fullscreen_origin_y").get<float>();
     return s;
 }
 
-TileRendererStyle ParseTileRendererStyle_(const nlohmann::json& j)
+TileRendererStyle_t ParseTileRendererStyle_(const nlohmann::json& j)
 {
-    TileRendererStyle s{};
+    TileRendererStyle_t s{};
     s.tileBorderColor = ParseColor_(j, "tile_border_color");
     s.fogTerrainColor = ParseColor_(j, "fog_terrain_color");
     s.clearTerrainTextColor = ParseColor_(j, "clear_terrain_text_color");
@@ -89,9 +90,9 @@ TileRendererStyle ParseTileRendererStyle_(const nlohmann::json& j)
     return s;
 }
 
-WorldDisplayStyle ParseWorldDisplayStyle_(const nlohmann::json& j)
+WorldDisplayStyle_t ParseWorldDisplayStyle_(const nlohmann::json& j)
 {
-    WorldDisplayStyle s{};
+    WorldDisplayStyle_t s{};
     s.defaultTileScale = j.at("default_tile_scale").get<float>();
     s.baseNameFontSizeRatio = j.at("base_name_font_size_ratio").get<float>();
     s.baseTextOffsetRatio = j.at("base_text_offset_ratio").get<float>();
@@ -118,17 +119,17 @@ WorldDisplayStyle ParseWorldDisplayStyle_(const nlohmann::json& j)
     return s;
 }
 
-MinimapDisplayStyle ParseMinimapDisplayStyle_(const nlohmann::json& j)
+MinimapDisplayStyle_t ParseMinimapDisplayStyle_(const nlohmann::json& j)
 {
-    MinimapDisplayStyle s{};
+    MinimapDisplayStyle_t s{};
     s.viewportBorderColor = ParseColor_(j, "viewport_border_color");
     s.viewportBorderWidth = j.at("viewport_border_width").get<float>();
     return s;
 }
 
-UnitMarkerStyle ParseUnitMarkerStyle_(const nlohmann::json& j)
+UnitMarkerStyle_t ParseUnitMarkerStyle_(const nlohmann::json& j)
 {
-    UnitMarkerStyle s{};
+    UnitMarkerStyle_t s{};
     s.fontSizeRatio = j.at("font_size_ratio").get<float>();
     s.widthRatio = j.at("width_ratio").get<float>();
     s.heightRatio = j.at("height_ratio").get<float>();
@@ -146,9 +147,9 @@ UnitMarkerStyle ParseUnitMarkerStyle_(const nlohmann::json& j)
     return s;
 }
 
-SelectedUnitPanelStyle ParseSelectedUnitPanelStyle_(const nlohmann::json& j)
+SelectedUnitPanelStyle_t ParseSelectedUnitPanelStyle_(const nlohmann::json& j)
 {
-    SelectedUnitPanelStyle s{};
+    SelectedUnitPanelStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
     s.mutedTextColor = ParseColor_(j, "muted_text_color");
@@ -167,9 +168,9 @@ SelectedUnitPanelStyle ParseSelectedUnitPanelStyle_(const nlohmann::json& j)
     return s;
 }
 
-LocationPanelStyle ParseLocationPanelStyle_(const nlohmann::json& j)
+LocationPanelStyle_t ParseLocationPanelStyle_(const nlohmann::json& j)
 {
-    LocationPanelStyle s{};
+    LocationPanelStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
     s.mutedTextColor = ParseColor_(j, "muted_text_color");
@@ -181,9 +182,9 @@ LocationPanelStyle ParseLocationPanelStyle_(const nlohmann::json& j)
     return s;
 }
 
-UnitStackPanelStyle ParseUnitStackPanelStyle_(const nlohmann::json& j)
+UnitStackPanelStyle_t ParseUnitStackPanelStyle_(const nlohmann::json& j)
 {
-    UnitStackPanelStyle s{};
+    UnitStackPanelStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
     s.statTextColor = ParseColor_(j, "stat_text_color");
@@ -194,9 +195,9 @@ UnitStackPanelStyle ParseUnitStackPanelStyle_(const nlohmann::json& j)
     return s;
 }
 
-InfoPanelStyle ParseInfoPanelStyle_(const nlohmann::json& j)
+InfoPanelStyle_t ParseInfoPanelStyle_(const nlohmann::json& j)
 {
-    InfoPanelStyle s{};
+    InfoPanelStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
     s.defaultLineColor = ParseColor_(j, "default_line_color");
@@ -207,9 +208,9 @@ InfoPanelStyle ParseInfoPanelStyle_(const nlohmann::json& j)
     return s;
 }
 
-EndTurnButtonStyle ParseEndTurnButtonStyle_(const nlohmann::json& j)
+EndTurnButtonStyle_t ParseEndTurnButtonStyle_(const nlohmann::json& j)
 {
-    EndTurnButtonStyle s{};
+    EndTurnButtonStyle_t s{};
     s.idleFillColor = ParseColor_(j, "idle_fill_color");
     s.readyFillColor = ParseColor_(j, "ready_fill_color");
     s.borderColor = ParseColor_(j, "border_color");
@@ -222,9 +223,9 @@ EndTurnButtonStyle ParseEndTurnButtonStyle_(const nlohmann::json& j)
     return s;
 }
 
-CommlinksButtonStyle ParseCommlinksButtonStyle_(const nlohmann::json& j)
+CommlinksButtonStyle_t ParseCommlinksButtonStyle_(const nlohmann::json& j)
 {
-    CommlinksButtonStyle s{};
+    CommlinksButtonStyle_t s{};
     s.fillColor = ParseColor_(j, "fill_color");
     s.borderColor = ParseColor_(j, "border_color");
     s.labelColor = ParseColor_(j, "label_color");
@@ -234,18 +235,18 @@ CommlinksButtonStyle ParseCommlinksButtonStyle_(const nlohmann::json& j)
     return s;
 }
 
-WorldViewStyle ParseWorldViewStyle_(const nlohmann::json& j)
+WorldViewStyle_t ParseWorldViewStyle_(const nlohmann::json& j)
 {
-    WorldViewStyle s{};
+    WorldViewStyle_t s{};
     s.researchTextColor = ParseColor_(j, "research_text_color");
     s.missionYearColor = ParseColor_(j, "mission_year_color");
     s.energyTextColor = ParseColor_(j, "energy_text_color");
     return s;
 }
 
-CombatViewStyle ParseCombatViewStyle_(const nlohmann::json& j)
+CombatViewStyle_t ParseCombatViewStyle_(const nlohmann::json& j)
 {
-    CombatViewStyle s{};
+    CombatViewStyle_t s{};
     s.sideNameColor = ParseColor_(j, "side_name_color");
     s.roundHeaderColor = ParseColor_(j, "round_header_color");
     s.idleLabelColor = ParseColor_(j, "idle_label_color");
@@ -255,17 +256,17 @@ CombatViewStyle ParseCombatViewStyle_(const nlohmann::json& j)
     return s;
 }
 
-CombatPresentationStyle ParseCombatPresentationStyle_(const nlohmann::json& j)
+CombatPresentationStyle_t ParseCombatPresentationStyle_(const nlohmann::json& j)
 {
-    CombatPresentationStyle s{};
+    CombatPresentationStyle_t s{};
     s.defaultDamageFlashMs = j.at("default_damage_flash_ms").get<int>();
     s.defaultInterRoundDelayMs = j.at("default_inter_round_delay_ms").get<int>();
     return s;
 }
 
-CameraInputStyle ParseCameraInputStyle_(const nlohmann::json& j)
+CameraInputStyle_t ParseCameraInputStyle_(const nlohmann::json& j)
 {
-    CameraInputStyle s{};
+    CameraInputStyle_t s{};
     s.edgeZone = j.at("edge_zone").get<float>();
     s.relativeMin = j.at("relative_min").get<float>();
     s.relativeMax = j.at("relative_max").get<float>();
@@ -275,16 +276,16 @@ CameraInputStyle ParseCameraInputStyle_(const nlohmann::json& j)
     return s;
 }
 
-UnitOrderInputStyle ParseUnitOrderInputStyle_(const nlohmann::json& j)
+UnitOrderInputStyle_t ParseUnitOrderInputStyle_(const nlohmann::json& j)
 {
-    UnitOrderInputStyle s{};
+    UnitOrderInputStyle_t s{};
     s.holdThresholdMs = j.at("hold_threshold_ms").get<int>();
     return s;
 }
 
-CommlinksPanelStyle ParseCommlinksPanelStyle_(const nlohmann::json& j)
+CommlinksPanelStyle_t ParseCommlinksPanelStyle_(const nlohmann::json& j)
 {
-    CommlinksPanelStyle s{};
+    CommlinksPanelStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
     s.titleColor = ParseColor_(j, "title_color");
@@ -302,9 +303,9 @@ CommlinksPanelStyle ParseCommlinksPanelStyle_(const nlohmann::json& j)
     return s;
 }
 
-CouncilVoteViewStyle ParseCouncilVoteViewStyle_(const nlohmann::json& j)
+CouncilVoteViewStyle_t ParseCouncilVoteViewStyle_(const nlohmann::json& j)
 {
-    CouncilVoteViewStyle s{};
+    CouncilVoteViewStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
     s.factionNameColor = ParseColor_(j, "faction_name_color");
@@ -325,9 +326,9 @@ CouncilVoteViewStyle ParseCouncilVoteViewStyle_(const nlohmann::json& j)
     return s;
 }
 
-CurrentResearchPanelStyle ParseCurrentResearchPanelStyle_(const nlohmann::json& j)
+CurrentResearchPanelStyle_t ParseCurrentResearchPanelStyle_(const nlohmann::json& j)
 {
-    CurrentResearchPanelStyle s{};
+    CurrentResearchPanelStyle_t s{};
     s.labelLayout = ParseLayout_(j, "label_layout");
     s.targetLayout = ParseLayout_(j, "target_layout");
     s.progressLayout = ParseLayout_(j, "progress_layout");
@@ -342,9 +343,9 @@ CurrentResearchPanelStyle ParseCurrentResearchPanelStyle_(const nlohmann::json& 
     return s;
 }
 
-SettingsPanelStyle ParseSettingsPanelStyle_(const nlohmann::json& j)
+SettingsPanelStyle_t ParseSettingsPanelStyle_(const nlohmann::json& j)
 {
-    SettingsPanelStyle s{};
+    SettingsPanelStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
     s.titleColor = ParseColor_(j, "title_color");
@@ -356,9 +357,9 @@ SettingsPanelStyle ParseSettingsPanelStyle_(const nlohmann::json& j)
     return s;
 }
 
-BaseViewStyle ParseBaseViewStyle_(const nlohmann::json& j)
+BaseViewStyle_t ParseBaseViewStyle_(const nlohmann::json& j)
 {
-    BaseViewStyle s{};
+    BaseViewStyle_t s{};
     s.growthLayout = ParseLayout_(j, "growth_layout");
     s.workableLayout = ParseLayout_(j, "workable_layout");
     s.buildingsLayout = ParseLayout_(j, "buildings_layout");
@@ -369,9 +370,9 @@ BaseViewStyle ParseBaseViewStyle_(const nlohmann::json& j)
     return s;
 }
 
-GrowthDisplayStyle ParseGrowthDisplayStyle_(const nlohmann::json& j)
+ResourceLinesPanelStyle_t ParseResourceLinesPanelStyle_(const nlohmann::json& j)
 {
-    GrowthDisplayStyle s{};
+    ResourceLinesPanelStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
     s.textColor = ParseColor_(j, "text_color");
     s.headerFontSizeRatio = j.at("header_font_size_ratio").get<float>();
@@ -384,24 +385,9 @@ GrowthDisplayStyle ParseGrowthDisplayStyle_(const nlohmann::json& j)
     return s;
 }
 
-ProductionDisplayStyle ParseProductionDisplayStyle_(const nlohmann::json& j)
+PopulationDisplayStyle_t ParsePopulationDisplayStyle_(const nlohmann::json& j)
 {
-    ProductionDisplayStyle s{};
-    s.backgroundColor = ParseColor_(j, "background_color");
-    s.textColor = ParseColor_(j, "text_color");
-    s.headerFontSizeRatio = j.at("header_font_size_ratio").get<float>();
-    s.entryFontSizeRatio = j.at("entry_font_size_ratio").get<float>();
-    s.lineHeightRatio = j.at("line_height_ratio").get<float>();
-    s.leftPaddingRatio = j.at("left_padding_ratio").get<float>();
-    s.stockpileLineIndex = j.at("stockpile_line_index").get<float>();
-    s.requiredLineIndex = j.at("required_line_index").get<float>();
-    s.productionLineIndex = j.at("production_line_index").get<float>();
-    return s;
-}
-
-PopulationDisplayStyle ParsePopulationDisplayStyle_(const nlohmann::json& j)
-{
-    PopulationDisplayStyle s{};
+    PopulationDisplayStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
     s.headerTextColor = ParseColor_(j, "header_text_color");
     s.headerFontSizeRatio = j.at("header_font_size_ratio").get<float>();
@@ -419,9 +405,9 @@ PopulationDisplayStyle ParsePopulationDisplayStyle_(const nlohmann::json& j)
     return s;
 }
 
-SupportDisplayStyle ParseSupportDisplayStyle_(const nlohmann::json& j)
+SupportDisplayStyle_t ParseSupportDisplayStyle_(const nlohmann::json& j)
 {
-    SupportDisplayStyle s{};
+    SupportDisplayStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
     s.paddingRatio = j.at("padding_ratio").get<float>();
@@ -430,9 +416,9 @@ SupportDisplayStyle ParseSupportDisplayStyle_(const nlohmann::json& j)
     return s;
 }
 
-BaseWorkableAreaDisplayStyle ParseBaseWorkableAreaDisplayStyle_(const nlohmann::json& j)
+BaseWorkableAreaDisplayStyle_t ParseBaseWorkableAreaDisplayStyle_(const nlohmann::json& j)
 {
-    BaseWorkableAreaDisplayStyle s{};
+    BaseWorkableAreaDisplayStyle_t s{};
     s.gridDimension = j.at("grid_dimension").get<int>();
     s.gridCenterOffset = j.at("grid_center_offset").get<float>();
     s.backgroundColor = ParseColor_(j, "background_color");
@@ -449,9 +435,9 @@ BaseWorkableAreaDisplayStyle ParseBaseWorkableAreaDisplayStyle_(const nlohmann::
     return s;
 }
 
-ListSelectorPopupStyle ParseListSelectorPopupStyle_(const nlohmann::json& j)
+ListSelectorPopupStyle_t ParseListSelectorPopupStyle_(const nlohmann::json& j)
 {
-    ListSelectorPopupStyle s{};
+    ListSelectorPopupStyle_t s{};
     s.headerFontSizeRatio = j.at("header_font_size_ratio").get<float>();
     s.entryFontSizeRatio = j.at("entry_font_size_ratio").get<float>();
     s.lineHeightRatio = j.at("line_height_ratio").get<float>();
@@ -466,9 +452,9 @@ ListSelectorPopupStyle ParseListSelectorPopupStyle_(const nlohmann::json& j)
     return s;
 }
 
-SocialEngineeringDisplayStyle ParseSocialEngineeringDisplayStyle_(const nlohmann::json& j)
+SocialEngineeringDisplayStyle_t ParseSocialEngineeringDisplayStyle_(const nlohmann::json& j)
 {
-    SocialEngineeringDisplayStyle s{};
+    SocialEngineeringDisplayStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
     s.activePolicyColor = ParseColor_(j, "active_policy_color");
@@ -498,9 +484,9 @@ SocialEngineeringDisplayStyle ParseSocialEngineeringDisplayStyle_(const nlohmann
     return s;
 }
 
-SocialEngineeringBottomPanelStyle ParseSocialEngineeringBottomPanelStyle_(const nlohmann::json& j)
+SocialEngineeringBottomPanelStyle_t ParseSocialEngineeringBottomPanelStyle_(const nlohmann::json& j)
 {
-    SocialEngineeringBottomPanelStyle s{};
+    SocialEngineeringBottomPanelStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
     s.valueColor = ParseColor_(j, "value_color");
@@ -511,18 +497,18 @@ SocialEngineeringBottomPanelStyle ParseSocialEngineeringBottomPanelStyle_(const 
     return s;
 }
 
-UnitDesignerViewStyle ParseUnitDesignerViewStyle_(const nlohmann::json& j)
+UnitDesignerViewStyle_t ParseUnitDesignerViewStyle_(const nlohmann::json& j)
 {
-    UnitDesignerViewStyle s{};
+    UnitDesignerViewStyle_t s{};
     s.leftSlotColumnLayout = ParseLayout_(j, "left_slot_column_layout");
     s.designStatsLayout = ParseLayout_(j, "design_stats_layout");
     s.rightSlotColumnLayout = ParseLayout_(j, "right_slot_column_layout");
     return s;
 }
 
-SlotColumnPanelStyle ParseSlotColumnPanelStyle_(const nlohmann::json& j)
+SlotColumnPanelStyle_t ParseSlotColumnPanelStyle_(const nlohmann::json& j)
 {
-    SlotColumnPanelStyle s{};
+    SlotColumnPanelStyle_t s{};
     s.visibleSlots = j.at("visible_slots").get<int>();
     s.arrowHeightRatio = j.at("arrow_height_ratio").get<float>();
     s.labelFontSizeRatio = j.at("label_font_size_ratio").get<float>();
@@ -544,9 +530,9 @@ SlotColumnPanelStyle ParseSlotColumnPanelStyle_(const nlohmann::json& j)
     return s;
 }
 
-DesignStatsDisplayStyle ParseDesignStatsDisplayStyle_(const nlohmann::json& j)
+DesignStatsDisplayStyle_t ParseDesignStatsDisplayStyle_(const nlohmann::json& j)
 {
-    DesignStatsDisplayStyle s{};
+    DesignStatsDisplayStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
     s.incompleteTextColor = ParseColor_(j, "incomplete_text_color");
@@ -565,9 +551,9 @@ DesignStatsDisplayStyle ParseDesignStatsDisplayStyle_(const nlohmann::json& j)
     return s;
 }
 
-DesignListPanelStyle ParseDesignListPanelStyle_(const nlohmann::json& j)
+DesignListPanelStyle_t ParseDesignListPanelStyle_(const nlohmann::json& j)
 {
-    DesignListPanelStyle s{};
+    DesignListPanelStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
     s.emptyListTextColor = ParseColor_(j, "empty_list_text_color");
@@ -586,9 +572,9 @@ DesignListPanelStyle ParseDesignListPanelStyle_(const nlohmann::json& j)
     return s;
 }
 
-UnitStatusPanelStyle ParseUnitStatusPanelStyle_(const nlohmann::json& j)
+UnitStatusPanelStyle_t ParseUnitStatusPanelStyle_(const nlohmann::json& j)
 {
-    UnitStatusPanelStyle s{};
+    UnitStatusPanelStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
     s.mutedTextColor = ParseColor_(j, "muted_text_color");
@@ -603,9 +589,9 @@ UnitStatusPanelStyle ParseUnitStatusPanelStyle_(const nlohmann::json& j)
     return s;
 }
 
-SatelliteViewStyle ParseSatelliteViewStyle_(const nlohmann::json& j)
+SatelliteViewStyle_t ParseSatelliteViewStyle_(const nlohmann::json& j)
 {
-    SatelliteViewStyle s{};
+    SatelliteViewStyle_t s{};
     s.backgroundColor = ParseColor_(j, "background_color");
     s.borderColor = ParseColor_(j, "border_color");
     s.headerColor = ParseColor_(j, "header_color");
@@ -680,8 +666,8 @@ void UiStyle::Load(const std::string& filePath)
     style.currentResearchPanel = ParseCurrentResearchPanelStyle_(root.at("current_research_panel"));
     style.settingsPanel = ParseSettingsPanelStyle_(root.at("settings_panel"));
     style.baseView = ParseBaseViewStyle_(root.at("base_view"));
-    style.growthDisplay = ParseGrowthDisplayStyle_(root.at("growth_display"));
-    style.productionDisplay = ParseProductionDisplayStyle_(root.at("production_display"));
+    style.growthDisplay = ParseResourceLinesPanelStyle_(root.at("growth_display"));
+    style.productionDisplay = ParseResourceLinesPanelStyle_(root.at("production_display"));
     style.populationDisplay = ParsePopulationDisplayStyle_(root.at("population_display"));
     style.supportDisplay = ParseSupportDisplayStyle_(root.at("support_display"));
     style.baseWorkableAreaDisplay = ParseBaseWorkableAreaDisplayStyle_(root.at("base_workable_area_display"));

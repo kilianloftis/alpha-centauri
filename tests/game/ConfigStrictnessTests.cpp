@@ -2,6 +2,7 @@
 
 #include "game/map/ImprovementRegistry.h"
 #include "game/units/UnitSlotRegistry.h"
+#include "ui/style/UiStyle.h"
 #include "game/population/pop-types/GrowthConfigParser.h"
 #include "game/population/pop-types/PopCompositionConfigParser.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
@@ -371,4 +372,33 @@ TEST_CASE("Unit-slot columns accept the shipped wire form", "[config][units]")
     CHECK(registry.Get("reactor").column == SlotColumn_t::Right);
     // Absent means left, as it always did.
     CHECK(registry.Get("defaulted").column == SlotColumn_t::Left);
+}
+
+TEST_CASE("A colour with too many components is a typo, not extra data", "[config][ui]")
+{
+    // ParseColor_ read arr[0..3] and ignored anything past it, so a five-entry array — the shape
+    // a mis-edited style file produces — loaded silently with the extra dropped. Driven from the
+    // shipped style so the file is otherwise complete and the throw can only come from the
+    // colour it mutates.
+    std::ifstream in(std::string(AC_CONFIG_DIR) + "/ui/style.json");
+    REQUIRE(in.good());
+    std::string style((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+
+    const std::string key = "\"background_color\"";
+    const size_t at = style.find(key);
+    REQUIRE(at != std::string::npos);
+    const size_t open = style.find('[', at);
+    const size_t close = style.find(']', open);
+    REQUIRE(close != std::string::npos);
+    style.replace(open, close - open + 1, "[10, 20, 30, 40, 50]");
+
+    TempConfigFile config("ac_style_long_colour.json", style);
+    CHECK_THROWS_WITH(ac::UiStyle::Load(config.Path()),
+                      Catch::Matchers::ContainsSubstring("background_color"));
+}
+
+TEST_CASE("The shipped style file loads", "[config][ui]")
+{
+    // The counterpart: the mutation above is what breaks it, not the harness.
+    CHECK_NOTHROW(ac::UiStyle::Load(std::string(AC_CONFIG_DIR) + "/ui/style.json"));
 }
