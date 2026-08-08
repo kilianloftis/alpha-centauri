@@ -997,6 +997,52 @@ names, commlinks proposal gating, modal capture for in-view popups, and the comm
 player actions on `BaseManager`. They are correctness-of-detail items in views the seam now
 reaches, so they are cheaper to do later than they were before this package.
 
+### Package 17 — Faction services: treasury, SE, diplomacy, trade, visibility (2026-08-07)
+
+**Status:** all three [H] and five of six [M]. Four commits — treasury/trade, visibility, SE and
+diplomacy hygiene, then review follow-ups.
+**Prompt:** [`docs/full-review-fix-prompts/17-faction-services.md`](full-review-fix-prompts/17-faction-services.md)
+
+**A — the treasury owns its rule.** `AddEnergy` took any signed amount, so "spend" was
+`AddEnergy(-cost)` at four sites and "can I afford it" was re-implemented at three more. Every
+site did check, so nothing was broken — the defect was that the invariant lived in the callers.
+`SpendEnergy` / `CanAfford` moved it into the class that owns the resource. In the same commit,
+trade items were each validated against the giver's *full* treasury independently and then all
+applied: two credit items worth the whole balance both passed and both applied, ending the trade
+at a negative treasury with no error. Validation now accumulates per giver.
+
+**B — visibility.** `RebuildFromSources` walked every tile of the world and, per improvement,
+allocated a vector and ran the stat resolver to derive a sight radius that depends only on
+immutable registry data — on every unit create/destroy/release/adopt and every move, each rebuild
+then driving a first-contact sweep over every other faction. `visionRadius` is now resolved once
+by the parser, and `Faction::DeferVisibilityRebuild()` coalesces bursts, so sinking a loaded
+transport rebuilds once rather than once per hull. An unsized visible map throws instead of
+quietly meaning "sees everything".
+
+**C — social engineering and diplomacy.** Starting policies moved from four compiled-in ids to a
+`"default": true` flag validated at load, so a mod shipping its own policy set no longer throws
+from every faction constructor. `GetSocialRating` memoizes against the revision the class already
+owned (it rebuilt a vector and a map per axis, and the UI asks per axis per frame). `TradeKind_t`
+moved next to `TradeItem_t` with one trait per alternative, so `GetAvailableTrades` folds over the
+variant instead of two hand-kept parallel arrays. A second proposal to the player is refused
+rather than silently overwriting the first.
+
+**Review follow-up.** The multi-agent review could not run — it hit the account's monthly spend
+limit and returned nothing — so I reviewed the three commits inline. One real finding, and it was
+this package's own doing: `energy_cost` was never validated non-negative, and routing terraform
+through `CanAfford` turned a silent config bug (an improvement that *paid* you to build it) into a
+mid-order crash. Rejected at parse instead.
+
+**Deferred, with reasons in the prompt:** a staged-rollback trade transaction (a `TransferBaseTo`
+that throws mid-apply still half-applies a deal — wants save-game serialisation first); a
+world-level index of vision tiles to remove the remaining O(width × height) sweep (needs a
+mutation choke point `Tile` does not have); and a per-recipient proposal queue (its ordering and
+expiry rules are game rules that are not written down anywhere).
+
+**Gap handed to package 16:** there is no architecture document for diplomacy or trade at all,
+though the rules call for a diagram per major subsystem. Trade semantics changed here and there
+was nothing to update.
+
 ---
 
 ## Cross-package dependency sketch
