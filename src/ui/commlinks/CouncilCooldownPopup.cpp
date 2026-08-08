@@ -102,6 +102,16 @@ void CouncilCooldownPopup::Render(Graphics& rGraphics)
         entryFontSize,
         style.entryColor);
     textY += lineHeight;
+    // The one that actually applies to this player: which of the two intervals above they are
+    // subject to. It was passed in and then discarded, so the popup showed both generic
+    // intervals and left the player to guess which was theirs.
+    rGraphics.DrawText(
+        "Your cooldown: " + std::to_string(m_playerCooldownYears) + " years",
+        m_layout.x + padding,
+        textY,
+        entryFontSize,
+        style.entryColor);
+    textY += lineHeight;
 
     const std::string lastProposalText = m_lastProposedYear
         ? ("Last proposal: Mission Year " + std::to_string(*m_lastProposedYear))

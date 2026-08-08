@@ -1,6 +1,6 @@
 #include "ui/satellite/SatelliteView.h"
 
-#include "ui/satellite/OrbitalAttackOutcomePopup.h"
+#include "ui/NoticePopup.h"
 #include "ui/satellite/OrbitalAttackerPopup.h"
 #include "ui/satellite/SatelliteButtonListPanel.h"
 #include "ui/satellite/SatelliteLabeledButton.h"
@@ -189,8 +189,9 @@ void SatelliteView::OnAttackClicked_()
 void SatelliteView::ShowOutcome_(std::string message)
 {
     DismissOpenModals_();
-    m_elements.push_back(std::make_unique<OrbitalAttackOutcomePopup>(
+    m_elements.push_back(std::make_unique<NoticePopup>(
         ResolveLayout(m_layout, Style().layouts.popupSmall),
+        "Orbital Attack",
         std::move(message)));
 }
 

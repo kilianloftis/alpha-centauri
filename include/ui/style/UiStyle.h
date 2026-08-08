@@ -353,6 +353,17 @@ struct BaseWorkableAreaDisplayStyle_t
 
 // Every modal list-selector's metrics. One type, so a tweak cannot land on one screen only;
 // distinct looks are distinct *instances* of it (see componentSelectorPopup).
+// Chrome for NoticePopup. Its own block rather than borrowing satelliteView's — a generic
+// widget reading another screen's style is how a production tweak came to restyle council UI.
+struct NoticePopupStyle_t
+{
+    Color_t backgroundColor{};
+    Color_t borderColor{};
+    Color_t headerColor{};
+    Color_t messageColor{};
+    RatioLayout_t okButtonLayout{};
+};
+
 struct ListSelectorPopupStyle_t
 {
     float headerFontSizeRatio{};
@@ -560,6 +571,7 @@ public:
     SupportDisplayStyle_t supportDisplay;
     BaseWorkableAreaDisplayStyle_t baseWorkableAreaDisplay;
     ListSelectorPopupStyle_t listSelectorPopup;
+    NoticePopupStyle_t noticePopup;
     SocialEngineeringDisplayStyle_t socialEngineeringDisplay;
     SocialEngineeringBottomPanelStyle_t socialEngineeringBottomPanel;
     UnitDesignerViewStyle_t unitDesignerView;

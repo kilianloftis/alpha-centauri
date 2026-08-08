@@ -1,4 +1,4 @@
-#include "ui/satellite/OrbitalAttackOutcomePopup.h"
+#include "ui/NoticePopup.h"
 
 #include "ui/satellite/SatelliteLabeledButton.h"
 #include "graphics/Graphics.h"
@@ -8,22 +8,26 @@
 namespace ac
 {
 
-OrbitalAttackOutcomePopup::OrbitalAttackOutcomePopup(WindowLayout_t layout,
-                                                     std::string message,
-                                                     std::function<void()> onOk)
+NoticePopup::NoticePopup(WindowLayout_t layout,
+                         std::string title,
+                         std::string message,
+                         std::function<void()> onOk)
     : UIElement(layout)
+    , m_title(std::move(title))
     , m_message(std::move(message))
     , m_onOk(std::move(onOk))
 {
-    const auto& style = Style().satelliteView;
+    const NoticePopupStyle_t& rStyle = Style().noticePopup;
     m_pOkButton = std::make_unique<SatelliteLabeledButton>(
-        ResolveLayout(m_layout, style.outcomeOkLayout),
+        ResolveLayout(m_layout, rStyle.okButtonLayout),
         "OK",
         [this]() { Close_(); },
         /*bSelected*/ false);
 }
 
-void OrbitalAttackOutcomePopup::Close_()
+NoticePopup::~NoticePopup() = default;
+
+void NoticePopup::Close_()
 {
     m_bShouldClose = true;
     if (m_onOk)
@@ -32,39 +36,39 @@ void OrbitalAttackOutcomePopup::Close_()
     }
 }
 
-void OrbitalAttackOutcomePopup::Render(Graphics& rGraphics)
+void NoticePopup::Render(Graphics& rGraphics)
 {
     if (m_bShouldClose)
     {
         return;
     }
 
-    const auto& style = Style().satelliteView;
-    const auto& popupStyle = Style().listSelectorPopup;
-    const float padding = popupStyle.paddingRatio * m_layout.width;
+    const NoticePopupStyle_t& rStyle = Style().noticePopup;
+    const ListSelectorPopupStyle_t& rPopupStyle = Style().listSelectorPopup;
+    const float padding = rPopupStyle.paddingRatio * m_layout.width;
     const unsigned int headerFontSize =
-        static_cast<unsigned int>(m_layout.height * popupStyle.headerFontSizeRatio);
+        static_cast<unsigned int>(m_layout.height * rPopupStyle.headerFontSizeRatio);
     const unsigned int entryFontSize =
-        static_cast<unsigned int>(m_layout.height * popupStyle.entryFontSizeRatio);
+        static_cast<unsigned int>(m_layout.height * rPopupStyle.entryFontSizeRatio);
 
     rGraphics.DrawFilledRect(
-        m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.backgroundColor);
+        m_layout.x, m_layout.y, m_layout.width, m_layout.height, rStyle.backgroundColor);
     rGraphics.DrawRect(
-        m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.borderColor);
+        m_layout.x, m_layout.y, m_layout.width, m_layout.height, rStyle.borderColor);
 
     rGraphics.DrawText(
-        "Orbital Attack",
+        m_title,
         m_layout.x + padding,
         m_layout.y + padding,
         headerFontSize,
-        style.headerColor);
+        rStyle.headerColor);
 
     rGraphics.DrawText(
         m_message,
         m_layout.x + padding,
-        m_layout.y + m_layout.height * popupStyle.headerLineOffset * popupStyle.lineHeightRatio,
+        m_layout.y + m_layout.height * rPopupStyle.headerLineOffset * rPopupStyle.lineHeightRatio,
         entryFontSize,
-        style.cellColor);
+        rStyle.messageColor);
 
     if (m_pOkButton)
     {
@@ -72,7 +76,7 @@ void OrbitalAttackOutcomePopup::Render(Graphics& rGraphics)
     }
 }
 
-bool OrbitalAttackOutcomePopup::HandleKey(const KeyEvent_t& rEvent)
+bool NoticePopup::HandleKey(const KeyEvent_t& rEvent)
 {
     if (rEvent.key == Key_t::Escape || rEvent.key == Key_t::Enter)
     {
@@ -82,7 +86,7 @@ bool OrbitalAttackOutcomePopup::HandleKey(const KeyEvent_t& rEvent)
     return false;
 }
 
-void OrbitalAttackOutcomePopup::HandleMouseClick(const MouseEvent_t& rEvent)
+void NoticePopup::HandleMouseClick(const MouseEvent_t& rEvent)
 {
     if (m_bShouldClose || rEvent.button != MouseButton_t::Left)
     {

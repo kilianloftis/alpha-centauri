@@ -253,6 +253,7 @@ add_library(ac-ui STATIC
     ui/style/UiStyle.cpp
     ui/world/WorldView.cpp
     ui/ListSelectorPopup.cpp
+    ui/NoticePopup.cpp
     ui/world/CameraInputController.cpp
     ui/world/UnitOrderInputController.cpp
     ui/world/TerraformInputController.cpp
@@ -282,7 +283,6 @@ add_library(ac-ui STATIC
     ui/satellite/SatelliteSummaryPanel.cpp
     ui/satellite/SatelliteButtonListPanel.cpp
     ui/satellite/OrbitalAttackerPopup.cpp
-    ui/satellite/OrbitalAttackOutcomePopup.cpp
     ui/PlaceholderPanel.cpp
     ui/base/BaseView.cpp
     ui/base/BaseDisplaySnapshot.cpp

@@ -3,6 +3,7 @@
 #include "ui/commlinks/CouncilButton.h"
 #include "ui/commlinks/CouncilCooldownPopup.h"
 #include "ui/ListSelectorPopup.h"
+#include "ui/NoticePopup.h"
 #include "game/Faction.h"
 #include "game/GameState.h"
 #include "game/council/CouncilProposalConfig.h"
@@ -101,12 +102,29 @@ void CommlinksView::OpenCouncilProposals_()
         Style().listSelectorPopup));
 }
 
+void CommlinksView::ShowNotice_(std::string message)
+{
+    DismissOpenModals_();
+    m_elements.push_back(std::make_unique<NoticePopup>(
+        ResolveLayout(m_layout, Style().layouts.popupSmall),
+        "Planetary Council",
+        std::move(message)));
+}
+
 void CommlinksView::OnProposalSelected_(const CouncilProposalConfig_t& rProposal)
 {
     PlanetaryCouncil* pCouncil = m_rGameState.GetPlanetaryCouncil();
     Faction* pPlayer = m_rGameState.GetPlayerFaction();
-    if (!pCouncil || !pPlayer || pCouncil->GetPending())
+    if (!pCouncil || !pPlayer)
     {
+        return;
+    }
+
+    // The proposals popup closes itself on selection, so every gate below used to leave the
+    // player with a vanished list and no explanation. Only the cooldown one said anything.
+    if (pCouncil->GetPending())
+    {
+        ShowNotice_("The council is already considering a proposal.");
         return;
     }
     if (pCouncil->YearsUntilCanPropose(m_rGameState, *pPlayer) > 0)
@@ -114,9 +132,14 @@ void CommlinksView::OnProposalSelected_(const CouncilProposalConfig_t& rProposal
         OpenCouncilCooldownPopup_();
         return;
     }
-    if (!pCouncil->CanPropose(*pPlayer, rProposal.id)
-        || !pCouncil->HasCommlinksToAllMembers(m_rGameState, *pPlayer))
+    if (!pCouncil->HasCommlinksToAllMembers(m_rGameState, *pPlayer))
     {
+        ShowNotice_("You must have commlinks with every council member to propose.");
+        return;
+    }
+    if (!pCouncil->CanPropose(*pPlayer, rProposal.id))
+    {
+        ShowNotice_("You cannot propose " + rProposal.name + " right now.");
         return;
     }
 

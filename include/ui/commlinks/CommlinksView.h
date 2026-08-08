@@ -1,6 +1,8 @@
 #pragma once
 
 #include "ui/IGameView.h"
+
+#include <string>
 #include <functional>
 
 namespace ac
@@ -24,6 +26,7 @@ private:
     void OpenCouncilProposals_();
     void OpenCouncilCooldownPopup_();
     void OnProposalSelected_(const CouncilProposalConfig_t& rProposal);
+    void ShowNotice_(std::string message);
 
     GameState& m_rGameState;
     std::function<void()> m_onOpenCouncilVote;

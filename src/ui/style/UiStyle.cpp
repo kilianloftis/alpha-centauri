@@ -435,6 +435,17 @@ BaseWorkableAreaDisplayStyle_t ParseBaseWorkableAreaDisplayStyle_(const nlohmann
     return s;
 }
 
+NoticePopupStyle_t ParseNoticePopupStyle_(const nlohmann::json& j)
+{
+    NoticePopupStyle_t s{};
+    s.backgroundColor = ParseColor_(j, "background_color");
+    s.borderColor = ParseColor_(j, "border_color");
+    s.headerColor = ParseColor_(j, "header_color");
+    s.messageColor = ParseColor_(j, "message_color");
+    s.okButtonLayout = ParseLayout_(j, "ok_button_layout");
+    return s;
+}
+
 ListSelectorPopupStyle_t ParseListSelectorPopupStyle_(const nlohmann::json& j)
 {
     ListSelectorPopupStyle_t s{};
@@ -672,6 +683,7 @@ void UiStyle::Load(const std::string& filePath)
     style.supportDisplay = ParseSupportDisplayStyle_(root.at("support_display"));
     style.baseWorkableAreaDisplay = ParseBaseWorkableAreaDisplayStyle_(root.at("base_workable_area_display"));
     style.listSelectorPopup = ParseListSelectorPopupStyle_(root.at("list_selector_popup"));
+    style.noticePopup = ParseNoticePopupStyle_(root.at("notice_popup"));
     style.socialEngineeringDisplay = ParseSocialEngineeringDisplayStyle_(root.at("social_engineering_display"));
     style.socialEngineeringBottomPanel = ParseSocialEngineeringBottomPanelStyle_(root.at("social_engineering_bottom_panel"));
     style.unitDesignerView = ParseUnitDesignerViewStyle_(root.at("unit_designer_view"));

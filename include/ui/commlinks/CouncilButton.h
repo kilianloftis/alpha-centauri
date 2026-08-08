@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ui/UIElement.h"
-#include "graphics/Graphics.h"
+
 #include <functional>
 
 namespace ac

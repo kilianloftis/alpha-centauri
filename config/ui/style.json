@@ -789,6 +789,23 @@
     "active_count_line_index": 2.0,
     "in_prod_line_index": 3.0
   },
+  "notice_popup": {
+    "background_color": [
+      30, 30, 50, 255
+    ],
+    "border_color": [
+      80, 80, 120, 255
+    ],
+    "header_color": [
+      255, 255, 255, 255
+    ],
+    "message_color": [
+      255, 255, 255, 255
+    ],
+    "ok_button_layout": [
+      0.30, 0.72, 0.40, 0.18
+    ]
+  },
   "satellite_view": {
     "background_color": [
       30, 30, 50, 255

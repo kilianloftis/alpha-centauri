@@ -267,6 +267,43 @@ fixture's components carried no `unit_name`, so every saved design's name was em
 selected anything. The fixture components now have unit names and the test requires a non-empty
 one before clicking. Caught by revert-verify, which is the only reason it is not still vacuous.
 
+### Third pass (2026-08-08) — settings, council, commlinks
+
+**Settings panel (four `[M]`s).** It toggled and called `GameSettings::Save()` on **any** mouse
+button that reached it, so a right-click flipped a preference and wrote `user_settings.json`;
+now left-button only. `Render` branched `Bool` vs *else*, and the else always called
+`getValueText`, so a new `SettingRowKind_t` would have called a null function pointer — the
+switch is exhaustive and throws on an unhandled kind. `RequireCallbacks_` rejects a row whose
+kind and callbacks disagree, including a `NewGameOnly` `Bool` row, which nothing can ever toggle
+because the panel has no new-game/in-progress flag: that is a table error, not a disabled
+control, and saying so is the honest version of the review's "until then, do not use
+`NewGameOnly` on `Bool` rows". `Render` and `HandleMouseClick` now walk the table through one
+`ForEachRow_`, so paint and hit-testing cannot drift.
+
+**Council vote view (`[M]` silent no-ops).** `TryResolveAndClose_`, `OpenBallotSelector_` and both
+cast callbacks returned quietly on a missing council or player faction — a Vote button that did
+nothing, with no diagnostic. They throw now; the view exists only for an active vote.
+
+**`[M]` `Resolve` from the cast callback is uncaught — re-checked, and the premise is stale.**
+The finding assumed `Resolve` throws when not all members have voted. That precondition was
+removed by the council package (absentees abstain), and its only remaining throw is "no pending
+proposal", which both call sites guard immediately before. The throw is unreachable, so a
+`try`/`catch` here would only swallow a real bug. No change, deliberately.
+
+**Commlinks (`[M]` silent gates, `[M]` unused `playerCooldownYears`).** The proposals list closes
+itself on selection, so every gate except cooldown left the player with a vanished list and no
+explanation. All three now say what happened. The cooldown popup was handed the player's own
+cooldown and drew only the generic member/governor intervals, leaving them to guess which
+applied; it draws theirs.
+
+**Consolidation:** `OrbitalAttackOutcomePopup` was already a generic title/message/OK popup, and
+the council gates needed exactly that widget. Rather than write a second one — which is how the
+seven list-picker clones in package 14 began — it moved to `ui/NoticePopup` with its own style
+block, instead of borrowing `satelliteView`'s.
+
+**Already closed, re-checked:** the proposals popup's unreachable outside-click branch (package 14
+replaced that class with `ListSelectorPopup`).
+
 ### Still open
 
 - **[M] Design list silently truncates overflow designs.** Boxes are laid out horizontally and

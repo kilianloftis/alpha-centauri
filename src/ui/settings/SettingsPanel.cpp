@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <cstdio>
+#include <stdexcept>
 #include <string>
 
 namespace ac
@@ -16,7 +17,7 @@ namespace
 
 bool GetPauseAtEndOfTurn_(const GameSettings& rSettings)
 {
-    return rSettings.GetGameRules().pauseAtEndOfTurn;
+    return rSettings.IsPauseAtEndOfTurn();
 }
 
 void SetPauseAtEndOfTurn_(GameSettings& rSettings, bool value)
@@ -122,6 +123,54 @@ WindowLayout_t RowAt_(const WindowLayout_t& rBase, int index, float rowHeight)
     return row;
 }
 
+// Walk the table once, handing each row its on-screen area. Render and HandleMouseClick used to
+// each recompute the row count, the row height and the area, so a change to one could silently
+// paint rows where the other did not click them.
+template <typename Visitor>
+void ForEachRow_(const WindowLayout_t& rRowArea, Visitor&& visit)
+{
+    constexpr int kRowCount = static_cast<int>(std::size(k_SettingDescriptors));
+    const float rowHeight = 1.0f / static_cast<float>(kRowCount);
+    for (int i = 0; i < kRowCount; ++i)
+    {
+        visit(k_SettingDescriptors[static_cast<size_t>(i)], RowAt_(rRowArea, i, rowHeight));
+    }
+}
+
+// A descriptor row must carry the callbacks its kind uses. A mismatched table entry is a
+// programming error in this file, and calling a null function pointer is undefined behaviour.
+void RequireCallbacks_(const SettingDescriptor_t& rRow)
+{
+    const std::string label = rRow.label ? rRow.label : "<unlabelled>";
+    switch (rRow.kind)
+    {
+    case SettingRowKind_t::Header:
+        return;
+    case SettingRowKind_t::Bool:
+        if (!rRow.getBool || !rRow.setBool)
+        {
+            throw std::runtime_error("Setting row '" + label + "' is Bool but has no getBool/setBool");
+        }
+        // Nothing can edit a NewGameOnly bool: the panel has no new-game/in-progress flag, so
+        // HandleMouseClick skips it forever. Until that flag exists, such a row is a table error
+        // rather than a disabled control.
+        if (rRow.scope == SettingScope_t::NewGameOnly)
+        {
+            throw std::runtime_error("Setting row '" + label
+                                     + "' is a NewGameOnly Bool, which nothing can ever toggle");
+        }
+        return;
+    case SettingRowKind_t::ReadOnlyValue:
+        if (!rRow.getValueText)
+        {
+            throw std::runtime_error("Setting row '" + label
+                                     + "' is ReadOnlyValue but has no getValueText");
+        }
+        return;
+    }
+    throw std::runtime_error("Setting row '" + label + "' has an unhandled kind");
+}
+
 } // namespace
 
 SettingsPanel::SettingsPanel(GameSettings& rSettings, WindowLayout_t layout)
@@ -132,70 +181,74 @@ SettingsPanel::SettingsPanel(GameSettings& rSettings, WindowLayout_t layout)
 
 void SettingsPanel::Render(Graphics& rGraphics)
 {
-    const auto& style = Style().settingsPanel;
+    const SettingsPanelStyle_t& rStyle = Style().settingsPanel;
 
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.backgroundColor);
-    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, style.borderColor);
+    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, rStyle.backgroundColor);
+    rGraphics.DrawRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height, rStyle.borderColor);
 
-    const WindowLayout_t titleArea = ResolveLayout(m_layout, style.titleLayout);
-    const WindowLayout_t rowArea = ResolveLayout(m_layout, style.rowLayout);
+    const WindowLayout_t titleArea = ResolveLayout(m_layout, rStyle.titleLayout);
+    const WindowLayout_t rowArea = ResolveLayout(m_layout, rStyle.rowLayout);
 
-    rGraphics.DrawText("Settings", titleArea.x, titleArea.y, style.titleFontSize, style.titleColor);
+    rGraphics.DrawText("Settings", titleArea.x, titleArea.y, rStyle.titleFontSize, rStyle.titleColor);
 
-    constexpr int kRowCount = static_cast<int>(std::size(k_SettingDescriptors));
-    const float rowHeight = 1.0f / static_cast<float>(kRowCount);
-    for (int i = 0; i < kRowCount; ++i)
+    ForEachRow_(rowArea, [&](const SettingDescriptor_t& rRow, const WindowLayout_t& rArea)
     {
-        const SettingDescriptor_t& rRow = k_SettingDescriptors[static_cast<size_t>(i)];
-        const WindowLayout_t area = RowAt_(rowArea, i, rowHeight);
-        if (rRow.kind == SettingRowKind_t::Header)
-        {
-            rGraphics.DrawText(rRow.label, area.x, area.y, style.rowFontSize, style.titleColor);
-            continue;
-        }
+        RequireCallbacks_(rRow);
 
-        std::string text;
-        if (rRow.kind == SettingRowKind_t::Bool)
+        // Exhaustive: a new SettingRowKind_t must be handled here rather than falling into the
+        // read-only branch and calling whatever function pointer happens to be null.
+        switch (rRow.kind)
         {
-            const char* status = rRow.getBool(m_rSettings) ? "On" : "Off";
-            text = std::string(rRow.label) + ": " + status;
+        case SettingRowKind_t::Header:
+            rGraphics.DrawText(rRow.label, rArea.x, rArea.y, rStyle.rowFontSize,
+                               rStyle.titleColor);
+            return;
+        case SettingRowKind_t::Bool:
+        {
+            const char* pStatus = rRow.getBool(m_rSettings) ? "On" : "Off";
+            rGraphics.DrawText(std::string(rRow.label) + ": " + pStatus, rArea.x, rArea.y,
+                               rStyle.rowFontSize, rStyle.rowColor);
+            return;
         }
-        else
+        case SettingRowKind_t::ReadOnlyValue:
         {
-            text = std::string(rRow.label) + ": " + rRow.getValueText(m_rSettings);
+            std::string text = std::string(rRow.label) + ": " + rRow.getValueText(m_rSettings);
             if (rRow.scope == SettingScope_t::NewGameOnly)
             {
                 text += " (new game)";
             }
+            rGraphics.DrawText(text, rArea.x, rArea.y, rStyle.rowFontSize, rStyle.rowColor);
+            return;
         }
-
-        rGraphics.DrawText(text, area.x, area.y, style.rowFontSize, style.rowColor);
-    }
+        }
+        throw std::runtime_error("SettingsPanel: unhandled setting row kind");
+    });
 }
 
 void SettingsPanel::HandleMouseClick(const MouseEvent_t& rEvent)
 {
-    const WindowLayout_t rowArea = ResolveLayout(m_layout, Style().settingsPanel.rowLayout);
-
-    constexpr int kRowCount = static_cast<int>(std::size(k_SettingDescriptors));
-    const float rowHeight = 1.0f / static_cast<float>(kRowCount);
-    for (int i = 0; i < kRowCount; ++i)
+    // Every peer element requires the left button. This one acted on any button that reached
+    // it, so a right-click flipped a preference and wrote user_settings.json.
+    if (rEvent.button != MouseButton_t::Left)
     {
-        const SettingDescriptor_t& rRow = k_SettingDescriptors[static_cast<size_t>(i)];
-        if (rRow.kind != SettingRowKind_t::Bool || rRow.scope == SettingScope_t::NewGameOnly)
-        {
-            continue;
-        }
-        const WindowLayout_t area = RowAt_(rowArea, i, rowHeight);
-        if (!ContainsMouseCoord(area, rEvent))
-        {
-            continue;
-        }
-
-        rRow.setBool(m_rSettings, !rRow.getBool(m_rSettings));
-        m_rSettings.Save();
         return;
     }
+
+    const WindowLayout_t rowArea = ResolveLayout(m_layout, Style().settingsPanel.rowLayout);
+
+    bool bHandled = false;
+    ForEachRow_(rowArea, [&](const SettingDescriptor_t& rRow, const WindowLayout_t& rArea)
+    {
+        if (bHandled || rRow.kind != SettingRowKind_t::Bool
+            || !ContainsMouseCoord(rArea, rEvent))
+        {
+            return;
+        }
+        RequireCallbacks_(rRow);
+        rRow.setBool(m_rSettings, !rRow.getBool(m_rSettings));
+        m_rSettings.Save();
+        bHandled = true;
+    });
 }
 
 } // namespace ac

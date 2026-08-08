@@ -9,6 +9,7 @@
 #include "game/faction/ResearchManager.h"
 #include "game/faction/SocialEngineeringManager.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
+#include "game/GameSettings.h"
 #include "game/units/UnitDesign.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -238,4 +239,52 @@ TEST_CASE("Editing a slot drops the selected design instead of showing both", "[
     fixture.graphics.texts.clear();
     pView->Render(fixture.graphics);
     CHECK(fixture.graphics.AnyTextContaining("No design"));
+}
+
+TEST_CASE("The settings panel ignores non-left clicks", "[ui][settings]")
+{
+    // It toggled and saved on any button that reached it, so a right-click flipped a preference
+    // and wrote user_settings.json.
+    ViewFixture fixture;
+    auto pView = fixture.pFactory->CreateSettingsView(ViewFixture::FullScreen());
+    REQUIRE(pView);
+
+    pView->Render(fixture.graphics);
+    const bool before = fixture.settings.IsPauseAtEndOfTurn();
+
+    // Locate the row by the text it drew, so the test does not re-derive the panel's layout.
+    int rowX = -1;
+    int rowY = -1;
+    for (const auto& rDraw : fixture.graphics.texts)
+    {
+        if (rDraw.text.find("Pause at End of Turn") != std::string::npos)
+        {
+            rowX = static_cast<int>(rDraw.x) + 2;
+            rowY = static_cast<int>(rDraw.y) + 2;
+            break;
+        }
+    }
+    REQUIRE(rowX >= 0);
+
+    pView->HandleMouse(MouseEvent_t{MouseButton_t::Right, rowX, rowY, {}, true});
+    CHECK(fixture.settings.IsPauseAtEndOfTurn() == before);
+
+    // The same point with the left button does toggle it, so the coordinates are right.
+    pView->HandleMouse(MouseEvent_t{MouseButton_t::Left, rowX, rowY, {}, true});
+    CHECK(fixture.settings.IsPauseAtEndOfTurn() != before);
+}
+
+TEST_CASE("The council view refuses to run without a council", "[ui][council]")
+{
+    // The view exists only for an active vote. Every path returned quietly on a missing council
+    // or player, leaving a Vote button that did nothing.
+    ViewFixture fixture;
+    REQUIRE(fixture.pState->GetPlanetaryCouncil() == nullptr);
+
+    auto pView = fixture.pFactory->CreateCouncilVoteView(ViewFixture::FullScreen());
+    REQUIRE(pView);
+
+    // Escape resolves a pending proposal before closing; with no council that is a broken
+    // session, not a no-op.
+    CHECK_THROWS_AS(pView->HandleKey(KeyEvent_t{Key_t::Escape, {}}), std::runtime_error);
 }
