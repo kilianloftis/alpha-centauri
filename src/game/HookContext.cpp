@@ -18,35 +18,35 @@ void HookContext::AddReplaceHook(const Hook_t& hook)
     m_replaceHooks.push_back(hook);
 }
 
-void HookContext::ExecutePreHooks()
+void HookContext::ExecutePreHooks(const HookArgs_t& rArgs)
 {
-    for (const auto& hook : m_preHooks)
+    for (const Hook_t& rHook : m_preHooks)
     {
-        if (hook.callback)
+        if (rHook.callback)
         {
-            hook.callback();
+            rHook.callback(rArgs);
         }
     }
 }
 
-void HookContext::ExecutePostHooks()
+void HookContext::ExecutePostHooks(const HookArgs_t& rArgs)
 {
-    for (const auto& hook : m_postHooks)
+    for (const Hook_t& rHook : m_postHooks)
     {
-        if (hook.callback)
+        if (rHook.callback)
         {
-            hook.callback();
+            rHook.callback(rArgs);
         }
     }
 }
 
-void HookContext::ExecuteReplaceHooks()
+void HookContext::ExecuteReplaceHooks(const HookArgs_t& rArgs)
 {
-    for (const auto& hook : m_replaceHooks)
+    for (const Hook_t& rHook : m_replaceHooks)
     {
-        if (hook.callback)
+        if (rHook.callback)
         {
-            hook.callback();
+            rHook.callback(rArgs);
         }
     }
 }

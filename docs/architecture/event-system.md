@@ -96,20 +96,39 @@ graph TB
 
 #### What is actually bridged
 
-| Event | Source | Status |
+| Event | Source | Wired by |
 |---|---|---|
-| `EvBaseGainedPop` | `BaseManager::OnPopGained` | bridged |
-| `EvBaseLostPop` | `BaseManager::OnPopLost` | bridged |
-| `EvTurnStarted` | published directly by the `TurnStart` stage, not via the bridge | published |
-| `EvTechDiscovered` | — | **declared, never published**: `ResearchManager` has no discovery signal |
-| `EvBaseBuilt` | — | **declared, never published** |
-| `EvDroneRiot` | — | **declared, never published** |
-| `EvFactionElim` | — | **declared, never published**: there is no elimination path in the game at all, so there is nothing to observe. Bridging it would mean inventing the rule. |
+| `EvBaseGainedPop` | `BaseManager::OnPopGained` | `WireBase` |
+| `EvBaseLostPop` | `BaseManager::OnPopLost` | `WireBase` |
+| `EvDroneRiot` | `BaseManager::OnIsRioting` | `WireBase` |
+| `EvTechDiscovered` | `ResearchManager::OnTechDiscovered` | `WireFaction` |
+| `EvBaseBuilt` | `Faction::OnBaseAdded` | `WireFaction` |
+| `EvTurnStarted` | published directly by the `TurnStart` stage | — (not via the bridge) |
+| `EvFactionElim` | — | **never published.** The game has no elimination path at all — nothing removes a faction from `GameState` — so there is no signal to observe. This waits on elimination being implemented, not on wiring. |
 
-Four of seven declared events never fire. A mod subscribing to them would wait forever with no
-diagnostic, which is why this table exists rather than a list of intentions.
+`WireFaction` is idempotent per faction object, matching `WireBase`: wiring twice would deliver
+every event twice to every mod.
+
+`tests/game/SampleModTests.cpp` is the worked consumer for this table — it subscribes as a mod
+would and asserts the events arrive, so an event that stops firing fails the suite.
 
 ## Design Rationale
+
+### Turn-stage hooks
+
+The other half of the mod surface. `config/turn_stages.json` declares `pre` / `post` / `replace`
+hooks per stage; `HookContext` holds them, and `TurnStageBase` fires them around the stage body
+(a callable `replace` hook suppresses the built-in body entirely).
+
+Each hook receives a `HookArgs_t`: the stage id, the `GameState`, and the `Faction` being
+processed (null for a global stage, and for the pre/post hooks that fire on stage entry and exit
+rather than per faction). Without that argument a config-declared hook had captured nothing and
+could therefore observe nothing — the seam existed but could not host a consumer.
+
+**Not yet built:** `Hook_t::scriptPath` is parsed and never loaded. The project already embeds a
+`LuaRuntime`, so this is wiring rather than capability — but "what a mod script may call" is an
+API design question, and the context argument above is the prerequisite either way. A hook is
+therefore still only reachable from C++ today.
 
 ### Two-Layer Architecture
 - **Layer 1 (Signal<T>)**: Optimized for engine performance

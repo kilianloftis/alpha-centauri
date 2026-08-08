@@ -198,6 +198,7 @@ void ResearchManager::AddDiscoveredTech(TechId techId)
     }
     m_discoveredTechs.push_back(techId);
     m_revision.Bump();
+    OnTechDiscovered.Emit(m_discoveredTechs.back());
 }
 
 std::vector<const TechConfig_t*> ResearchManager::GetAvailableTechs() const

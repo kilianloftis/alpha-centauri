@@ -32,16 +32,16 @@ public:
 
     virtual ~TurnStageBase() = default;
 
-    void OnEnter()
+    void OnEnter(GameState& rGameState)
     {
-        m_hookContext.ExecutePreHooks();
+        m_hookContext.ExecutePreHooks(MakeArgs_(rGameState, nullptr));
         OnEnterImpl();
     }
 
-    void OnExit()
+    void OnExit(GameState& rGameState)
     {
         OnExitImpl();
-        m_hookContext.ExecutePostHooks();
+        m_hookContext.ExecutePostHooks(MakeArgs_(rGameState, nullptr));
     }
 
 protected:
@@ -51,9 +51,14 @@ protected:
         return m_hookContext.HasReplaceHooks();
     }
 
-    void ExecuteReplaceHooks()
+    void ExecuteReplaceHooks(GameState& rGameState, Faction* pFaction)
     {
-        m_hookContext.ExecuteReplaceHooks();
+        m_hookContext.ExecuteReplaceHooks(MakeArgs_(rGameState, pFaction));
+    }
+
+    HookArgs_t MakeArgs_(GameState& rGameState, Faction* pFaction) const
+    {
+        return HookArgs_t{m_hookContext.GetStageId(), rGameState, pFaction};
     }
 
     virtual void OnEnterImpl() {}
@@ -72,7 +77,7 @@ public:
     {
         if (HasReplaceHooks())
         {
-            ExecuteReplaceHooks();
+            ExecuteReplaceHooks(rGameState, nullptr);
             return StageResult_t::Continue;
         }
         return ExecuteImpl(rGameState);
@@ -92,7 +97,7 @@ public:
     {
         if (HasReplaceHooks())
         {
-            ExecuteReplaceHooks();
+            ExecuteReplaceHooks(rGameState, &rFaction);
             return StageResult_t::Continue;
         }
         return ExecuteImpl(rGameState, rFaction);

@@ -30,9 +30,9 @@ public:
     void Reset();
 
 private:
-    void CompleteStage_(TurnStageBase& rStage);
-    void AbortStage_(TurnStageBase& rStage);
-    void EnsureEntered_(TurnStageBase& rStage);
+    void CompleteStage_(TurnStageBase& rStage, GameState& rGameState);
+    void AbortStage_(TurnStageBase& rStage, GameState& rGameState);
+    void EnsureEntered_(TurnStageBase& rStage, GameState& rGameState);
     StageResult_t ExecuteCurrentStage_(GameState& rGameState);
     StageResult_t ExecuteGlobalStage_(GlobalTurnStage& rStage, GameState& rGameState);
     StageResult_t ExecutePerFactionStage_(PerFactionTurnStage& rStage, GameState& rGameState);

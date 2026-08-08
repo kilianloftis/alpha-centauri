@@ -8,6 +8,7 @@ namespace ac
 
 class EventBus;
 class BaseManager;
+class Faction;
 
 class EventBridge
 {
@@ -23,9 +24,14 @@ public:
     // address and must be wired again — keying by id would silently leave it unwired.
     void WireBase(BaseManager& rBase);
 
+    // Wire a faction's own signals (tech discovery, and base-built via OnBaseAdded). Idempotent
+    // per faction object, same reasoning as WireBase.
+    void WireFaction(Faction& rFaction);
+
 private:
     EventBus& m_rBus;
     std::unordered_set<const BaseManager*> m_wiredBases;
+    std::unordered_set<const Faction*> m_wiredFactions;
 };
 
 } // namespace ac

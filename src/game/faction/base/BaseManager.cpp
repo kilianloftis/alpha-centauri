@@ -102,6 +102,9 @@ BaseManager::BaseManager(
     m_pPopulation->OnPopLost.Connect([this](int newSize) {
         OnPopLost.Emit(newSize);
     });
+    m_pPopulation->OnIsRioting.Connect([this]() {
+        OnIsRioting.Emit();
+    });
 
     m_pProduction->OnProductionCompleted.Connect([this](const std::string& itemId) {
         GameState* pGameState = m_pFaction->GetGameState();

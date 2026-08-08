@@ -72,6 +72,7 @@ add_executable(effects-tests
     game/BuildingInvariantTests.cpp
     game/CompositionRootTests.cpp
     game/LifetimeTransferTests.cpp
+    game/SampleModTests.cpp
     game/TurnProcessorTests.cpp
     game/TurnStageConfigTests.cpp
     game/PlayerActionsStageTests.cpp

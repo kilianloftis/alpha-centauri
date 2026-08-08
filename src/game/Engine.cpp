@@ -244,6 +244,9 @@ void Engine::StartNewGame_()
             m_pGameState->GetSecretProjectAvailability());
 
         Faction& rFaction = m_pGameState->AddFaction(std::move(pFaction));
+        // After AddFaction: the faction's id and subsystems are final, and the bridge captures
+        // the id rather than the object.
+        m_eventBridge->WireFaction(rFaction);
 
         // Temporary orbital satellites so the satellite summary / ASAT view has something to show.
         {

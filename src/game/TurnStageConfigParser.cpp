@@ -55,6 +55,7 @@ TurnStageConfig_t TurnStageConfigParser::ParseStageConfig(const nlohmann::json& 
 {
     TurnStageConfig_t config;
     config.id = ConfigFields::ParseId(stageJson);
+    config.hookContext = HookContext(config.id);
     config.name = ConfigFields::ParseName(stageJson, config.id);
     config.description = stageJson.value("description", "");
 

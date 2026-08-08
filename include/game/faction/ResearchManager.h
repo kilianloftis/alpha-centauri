@@ -3,6 +3,7 @@
 #include "game/research/TechRegistry.h"
 #include "game/research/TechCostCalculator.h"
 #include "lib/Revision.h"
+#include "lib/Signal.h"
 #include <cstdint>
 #include <optional>
 #include <vector>
@@ -55,6 +56,9 @@ public:
     const std::vector<TechId>& GetDiscoveredTechs() const;
     bool HasDiscoveredTech(TechId techId) const;
     void AddDiscoveredTech(TechId techId);
+
+    // Emitted after a tech joins the discovered set. Bridged to the mod-facing EvTechDiscovered.
+    Signal<const TechId&> OnTechDiscovered;
 
     std::vector<const TechConfig_t*> GetAvailableTechs() const;
 

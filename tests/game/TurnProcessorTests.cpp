@@ -354,7 +354,7 @@ TEST_CASE("TurnProcessor runs OnExit/post hooks when Execute throws",
     HookContext hooks;
     Hook_t post;
     post.modId = "test";
-    post.callback = [&]() { ++postCount; };
+    post.callback = [&](const HookArgs_t&) { ++postCount; };
     hooks.AddPostHook(post);
 
     GlobalTurnStageRegistry_t global;

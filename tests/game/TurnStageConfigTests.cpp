@@ -109,7 +109,7 @@ TEST_CASE("Custom turn stage with callable hook constructs", "[TurnStageConfig]"
     HookContext hooks;
     Hook_t hook;
     hook.modId = "mod";
-    hook.callback = []() {};
+    hook.callback = [](const HookArgs_t&) {};
     hooks.AddReplaceHook(hook);
     CHECK_NOTHROW(CustomGlobalTurnStage(std::move(hooks), "Custom"));
 }

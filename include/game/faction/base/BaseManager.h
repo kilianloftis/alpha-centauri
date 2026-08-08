@@ -108,6 +108,7 @@ public:
     // Signals forwarded from PopulationManager
     Signal<int> OnPopGained;
     Signal<int> OnPopLost;
+    Signal<> OnIsRioting;
 
     // Signals forwarded from ProductionManager
     Signal<std::string> OnProductionCompleted;

@@ -29,18 +29,18 @@ void TurnProcessor::Reset()
     m_resumeFactionId = 0;
 }
 
-void TurnProcessor::CompleteStage_(TurnStageBase& rStage)
+void TurnProcessor::CompleteStage_(TurnStageBase& rStage, GameState& rGameState)
 {
     // Clear entered before OnExit so a throw from OnExit cannot double-run post hooks via Abort.
     m_bStageEntered = false;
     m_completedFactionIds.clear();
     m_bHasResumeFaction = false;
     m_resumeFactionId = 0;
-    rStage.OnExit();
+    rStage.OnExit(rGameState);
     ++m_stageIndex;
 }
 
-void TurnProcessor::AbortStage_(TurnStageBase& rStage)
+void TurnProcessor::AbortStage_(TurnStageBase& rStage, GameState& rGameState)
 {
     if (!m_bStageEntered)
     {
@@ -53,14 +53,14 @@ void TurnProcessor::AbortStage_(TurnStageBase& rStage)
     m_completedFactionIds.clear();
     m_bHasResumeFaction = false;
     m_resumeFactionId = 0;
-    rStage.OnExit();
+    rStage.OnExit(rGameState);
 }
 
-void TurnProcessor::EnsureEntered_(TurnStageBase& rStage)
+void TurnProcessor::EnsureEntered_(TurnStageBase& rStage, GameState& rGameState)
 {
     if (!m_bStageEntered)
     {
-        rStage.OnEnter();
+        rStage.OnEnter(rGameState);
         m_bStageEntered = true;
     }
 }
@@ -69,7 +69,7 @@ StageResult_t TurnProcessor::ExecuteGlobalStage_(GlobalTurnStage& rStage, GameSt
 {
     try
     {
-        EnsureEntered_(rStage);
+        EnsureEntered_(rStage, rGameState);
 
         const StageResult_t result = rStage.Execute(rGameState);
         if (result == StageResult_t::Yield)
@@ -77,12 +77,12 @@ StageResult_t TurnProcessor::ExecuteGlobalStage_(GlobalTurnStage& rStage, GameSt
             return StageResult_t::Yield;
         }
 
-        CompleteStage_(rStage);
+        CompleteStage_(rStage, rGameState);
         return StageResult_t::Continue;
     }
     catch (...)
     {
-        AbortStage_(rStage);
+        AbortStage_(rStage, rGameState);
         throw;
     }
 }
@@ -92,7 +92,7 @@ StageResult_t TurnProcessor::ExecutePerFactionStage_(PerFactionTurnStage& rStage
 {
     try
     {
-        EnsureEntered_(rStage);
+        EnsureEntered_(rStage, rGameState);
 
         if (m_bHasResumeFaction)
         {
@@ -136,12 +136,12 @@ StageResult_t TurnProcessor::ExecutePerFactionStage_(PerFactionTurnStage& rStage
             m_bHasResumeFaction = false;
         }
 
-        CompleteStage_(rStage);
+        CompleteStage_(rStage, rGameState);
         return StageResult_t::Continue;
     }
     catch (...)
     {
-        AbortStage_(rStage);
+        AbortStage_(rStage, rGameState);
         throw;
     }
 }
