@@ -76,8 +76,15 @@ void PopulationManager::AddPop(const std::string& typeId)
 
 void PopulationManager::RemovePop()
 {
+    OnPopRemoved.Emit(m_container.NextRemoved());
     m_container.RemovePop();
     NotifyPopLost_();
+    // Targets are a function of base size, so a removal invalidates them immediately. Conquest,
+    // a probe pop-kill and starvation all shrink a base mid-turn and used to leave the
+    // drone/talent split describing the size the base no longer has until the next Population
+    // stage. Not done on AddPop: the caller there names the type it wants, and reconciling
+    // inside the add would silently overwrite it.
+    RecalculateComposition();
 }
 
 const PopTypeConfig_t& PopulationManager::ResolveType_(const std::string& typeId) const

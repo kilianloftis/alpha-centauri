@@ -54,13 +54,26 @@ void PopContainer::AddPop(const PopTypeConfig_t& rConfig)
     m_revision.Bump();
 }
 
+Pop& PopContainer::NextRemoved()
+{
+    if (m_pops.empty())
+    {
+        throw std::runtime_error("PopContainer::NextRemoved: base has no population");
+    }
+    return *m_pops.back();
+}
+
 void PopContainer::RemovePop()
 {
-    if (!m_pops.empty())
+    if (m_pops.empty())
     {
-        m_pops.pop_back();
-        m_revision.Bump();
+        throw std::runtime_error("PopContainer::RemovePop: base has no population");
     }
+    // TODO: which pop starves is a game rule this project has not written down. pop_back takes
+    // the most recently added, which after composition reconciliation can be a talent while
+    // drones remain. Needs the SMAC rule before it can be anything else.
+    m_pops.pop_back();
+    m_revision.Bump();
 }
 
 void PopContainer::ConvertTo(Pop& rPop, const PopTypeConfig_t& rConfig)

@@ -144,6 +144,10 @@ public:
     // Signals
     Signal<int> OnPopGained;   // new size
     Signal<int> OnPopLost;     // new size
+    // Emitted with the pop about to be removed, while it is still valid, so an observer can
+    // drop its reference — the guarantee UnitManager::OnUnitDestroyed already provides.
+    // OnPopLost follows with the new size once the pop is gone.
+    Signal<Pop&> OnPopRemoved;
 
     // Riot signals
     Signal<> OnWillRiot;    // conditions met after growth, riot not yet active

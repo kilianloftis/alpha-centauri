@@ -17,7 +17,19 @@ public:
     ProductionManager();
     ~ProductionManager();
 
-    // Set the item to produce. Pass nullptr to clear production.
+    // Set the item to produce; nullptr clears it. Setting the item already queued is a no-op
+    // and does not re-announce a change.
+    //
+    // Contract, stated because it was not: **the mineral stockpile is never touched here.**
+    // Switching carries the full stockpile to the new item, and clearing keeps it for whatever
+    // is queued next. Completion (ApplyProduction) is the only thing that spends it.
+    // TODO: SMAC penalises switching between production categories (unit / facility / project).
+    // That rule is not implemented; carrying the full stockpile is the placeholder, not a
+    // decision. It needs the penalty rule before it can be anything else.
+    //
+    // The item is not validated against what this base may actually build — BaseManager owns
+    // that question (GetConstructable), and its availability calculator is optional, so the
+    // check cannot live here.
     void SetProduction(const IConstructable* pItem);
 
     // The item currently being produced, or nullptr if none.

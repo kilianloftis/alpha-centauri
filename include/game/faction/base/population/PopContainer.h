@@ -33,6 +33,9 @@ public:
     auto Pops() { return DerefView(m_pops); }
     auto Pops() const { return DerefView(m_pops); }
 
+    // The pop RemovePop would take next. Throws on an empty base — the same precondition.
+    Pop& NextRemoved();
+
     // Population counts by type.
     // GetWorkerCount is every tile-capable pop — plain workers *and* drones *and* talents — so
     // it does not partition the population against the counts below. Callers that need the

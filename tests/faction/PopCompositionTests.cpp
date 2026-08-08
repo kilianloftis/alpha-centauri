@@ -18,6 +18,8 @@
 #include "lib/LuaRuntime.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <fstream>
+#include <filesystem>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <string>
@@ -225,4 +227,51 @@ TEST_CASE("Converting to or from a specialist recalculates composition",
     pops.ConvertToDefaultPopType(*pWorker);
     CHECK(pops.GetSpecialistCount() == 0);
     CHECK(pops.GetTalentCount() == 0);
+}
+
+TEST_CASE("Shrinking a base reconciles composition immediately", "[population][composition]")
+{
+    // Composition targets are a function of base size. Conquest, a probe pop-kill and starvation
+    // all shrink a base mid-turn, and the split used to keep describing the old size until the
+    // next Population stage — so the base screen showed a drone count for a base that no longer
+    // had that many pops.
+    actest::PopRulesFixture reg;
+    LuaRuntime lua;
+    PopCompositionConfigParser parser;
+
+    // One drone per two pops, so the target moves when the size does.
+    const std::filesystem::path path =
+        std::filesystem::temp_directory_path() / "ac_comp_halfdrones.lua";
+    {
+        std::ofstream out(path);
+        out << R"LUA(return {
+    drone_formula  = 'math.floor(base_size / 2)',
+    talent_formula = '0',
+    drone_type     = 'Drone',
+    talent_type    = 'Talent',
+})LUA";
+    }
+    const PopCompositionConfig_t config = parser.ParseConfig(path.string(), lua);
+    PopCompositionCalculator calculator(config, lua);
+    GrowthConfig_t growth;
+
+    PopulationManager pops(reg.popTypes, *reg.availability, growth, calculator, *reg.research,
+                           /*initialSize*/ 0);
+    for (int i = 0; i < 4; ++i)
+    {
+        pops.AddPop("Worker");
+    }
+    pops.RecalculateComposition();
+    REQUIRE(pops.GetSize() == 4);
+    REQUIRE(pops.GetDroneCount() == 2);
+
+    // Two pops die. Without reconciliation on removal the drone count stays at 2 for a size-2
+    // base, which the formula says should be 1.
+    pops.RemovePop();
+    pops.RemovePop();
+
+    CHECK(pops.GetSize() == 2);
+    CHECK(pops.GetDroneCount() == 1);
+
+    std::filesystem::remove(path);
 }

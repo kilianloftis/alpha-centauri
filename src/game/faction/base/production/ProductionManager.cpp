@@ -20,6 +20,11 @@ void ProductionManager::SetProduction(const IConstructable* pItem)
         return;
     }
 
+    if (pItem == m_pCurrentItem)
+    {
+        return;
+    }
+
     m_pCurrentItem = pItem;
     OnProductionChanged.Emit();
 }

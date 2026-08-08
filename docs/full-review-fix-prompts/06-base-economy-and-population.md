@@ -75,19 +75,59 @@ what they include.
 
 ---
 
+## Second pass (2026-08-08)
+
+Four of the seven remaining `[M]`s are now addressed; the reasoning for the other three is below.
+
+### [M] `RemovePop` is silent, arbitrary, and unobservable — FIXED (the first two)
+
+`PopulationManager::OnPopRemoved` now carries the `Pop&` and fires **before** the erase, so an
+observer can drop its reference while it is still valid — the same guarantee
+`UnitManager::OnUnitDestroyed` has provided for units since the lifetime work. `OnPopLost(int)`
+still follows with the new size. Removing from an empty base now throws instead of silently
+doing nothing.
+
+That throw needed its landing traced, and it had one: `BaseManager`'s starvation handler called
+`RemovePop()` unguarded, and starvation fires whenever the stockpile goes negative *regardless of
+size* — so a size-1 base starving twice would have crashed. Nothing removes a base at size zero,
+so this is reachable in a normal game. The handler now returns early at size zero, with a TODO
+that SMAC destroys such a base and that implementing it needs the rule for its buildings,
+garrison and worked tiles.
+
+**Still open:** *which* pop is removed. `pop_back` takes the most recently added, which after
+reconciliation can be a talent while drones remain. That is a game rule this project has not
+written down, so it is a TODO at the call site rather than a guess.
+
+### [M] Composition goes stale on every size change except growth — FIXED
+
+`RemovePop` now reconciles. Conquest, probe pop-kills and starvation all shrink a base mid-turn,
+and the drone/talent split used to keep describing the old size until the next Population stage.
+
+**Deliberately not applied to `AddPop`:** the first attempt did, and it broke `AddPop("Talent")` —
+the caller names a type, and reconciling inside the add silently overwrites it with whatever the
+formula says. Reconciliation belongs where the size moves with no caller intent about types.
+
+### [M] The production queue has no contract — PARTLY FIXED
+
+The contract is now stated on `SetProduction`: the mineral stockpile is never touched, so
+switching carries the full stockpile and only completion spends it. Setting the item already
+queued no longer re-announces a change.
+
+**Still open, and it is a rule:** SMAC penalises switching between production categories. Carrying
+the full stockpile is the placeholder, not a decision, and it is marked as such. Validating the
+item against what the base may build cannot live in `ProductionManager` either — `BaseManager`
+owns that question and its availability calculator is optional.
+
+### [M] The `precedence` config key is parsed and ignored — ALREADY CLOSED
+
+Re-checked: `PopCompositionConfigParser` *throws* on a non-empty `precedence`
+("not implemented; remove it"). The key is rejected loudly, not silently ignored, so the finding
+as written no longer describes the code. The hardcoded drone-then-talent order remains, with its
+TODO.
+
 ## Not started
 
 Each of these is confirmed present; none is addressed.
-
-- **[M] The production queue has no contract** for switching, surplus carry, or invalid input;
-  `SetProduction` accepts any pointer and no layer validates the item.
-- **[M] The `precedence` config key is parsed and ignored**, and the hardcoded order
-  (drones first, then talents) contradicts what `config/pop_composition.lua` ships. A TODO now
-  marks the spot in `PopulationManager::ApplyCompositionTargets`.
-- **[M] `RemovePop` is silent, arbitrary, and unobservable** (always `pop_back`, no `Pop&` in
-  the signal, so an observer cannot invalidate a reference — the mirror of the guarantee
-  `UnitManager::OnUnitDestroyed` provides).
-- **[M] Composition goes stale on every size change except growth.**
 - **[M] Composition's `psych_output` is specialist psych only** (see the psych TODO above —
   same rule gap).
 - **[M] Production's minerals-per-row is the one game number still in code**
