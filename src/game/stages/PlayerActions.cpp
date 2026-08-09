@@ -33,7 +33,7 @@ void PlayerActions::OnExitImpl()
 
 bool PlayerActions::DoesUnitRequireOrders_(const Unit& rUnit)
 {
-    return !rUnit.GetOrder().has_value() && rUnit.GetMoveFragmentsRemaining() > 0;
+    return rUnit.RequiresOrders();
 }
 
 StageResult_t PlayerActions::ExecuteImpl(GameState& rGameState, Faction& rFaction)

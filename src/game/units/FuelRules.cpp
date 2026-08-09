@@ -6,10 +6,18 @@
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
 #include "game/faction/UnitManager.h"
+#include "game/map/MapUtils.h"
+#include "game/map/TerritoryMap.h"
 #include "game/map/WorldMap.h"
+#include "game/units/MovementConstants.h"
+#include "game/units/Pathfinder.h"
 #include "game/units/TransportRules.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDomain.h"
+#include "game/units/UnitOrder.h"
+
+#include <climits>
+#include <vector>
 
 namespace ac
 {
@@ -33,6 +41,52 @@ bool UnitProjectsRefuelsAir_(const Unit& rUnit)
     return false;
 }
 
+// Pads / carriers the mover could reach this turn (Chebyshev radius = remaining move points).
+// Pathfinding still decides real reachability and cost.
+void CollectFriendlyRefuelTiles_(const Unit& rUnit, const WorldMap& rWorldMap,
+                                 std::vector<const Tile*>& rOut)
+{
+    const int rangePoints =
+        rUnit.GetMoveFragmentsRemaining() / MovementConstants_t::k_moveFragmentsPerPoint;
+    if (rangePoints <= 0)
+    {
+        return;
+    }
+
+    const FactionId_t factionId = rUnit.GetFaction().GetFactionId();
+    const Tile& rOrigin = rUnit.GetTile();
+
+    // One disk pass: territory pads, plus boardable RefuelsAir carriers already in range
+    // (GetUnitsOnTile) instead of scanning the whole faction roster.
+    ForEachTileInChebyshevRadius(rOrigin, rWorldMap, rangePoints, /*includeOrigin=*/true,
+        [&](const Tile* pTile, int /*distance*/)
+        {
+            if (!pTile)
+            {
+                return;
+            }
+
+            if (ResolveFlag(*pTile, RuleFlagId_t::RefuelsAir)
+                && rWorldMap.GetTerritory().GetOwner(*pTile) == factionId)
+            {
+                rOut.push_back(pTile);
+            }
+
+            for (const Unit* pOccupant : rWorldMap.GetUnitsOnTile(*pTile))
+            {
+                if (!pOccupant || pOccupant == &rUnit || !UnitProjectsRefuelsAir_(*pOccupant))
+                {
+                    continue;
+                }
+                if (!CanCarryPassenger(*pOccupant, rUnit))
+                {
+                    continue;
+                }
+                rOut.push_back(pTile);
+            }
+        });
+}
+
 } // namespace
 
 bool IsRefuelSite(const Unit& rUnit)
@@ -50,6 +104,98 @@ bool IsRefuelSite(const Unit& rUnit)
     }
     const Unit* pCarrier = rUnit.GetCarrier();
     return pCarrier && UnitProjectsRefuelsAir_(*pCarrier);
+}
+
+namespace
+{
+
+int OutOfFuelDamage_(const Unit& rUnit)
+{
+    const int maxHp = ResolveStat(rUnit, StatId_t::HitPoints);
+    const int damagePercent = ResolveStat(rUnit, StatId_t::DamageFromOutOfFuel);
+    return FinalizeResolvedStat(maxHp * (damagePercent / 100.0));
+}
+
+// Mirrors ProcessFuelAtTurnEnd's away-from-pad outcome without mutating: after optional
+// carrier land, would remaining-move fuel burn hit 0 and out-of-fuel damage kill the unit?
+bool WouldBeDestroyedWithoutRefuelThisTurn_(const Unit& rUnit, const WorldMap& rWorldMap)
+{
+    if (!rUnit.GetDesign().UsesFuel())
+    {
+        return false;
+    }
+
+    if (!rUnit.IsEmbarked() && rUnit.GetDomain() == UnitDomain_t::Air
+        && FindBoardableTransport(rUnit, rUnit.GetTile(), rWorldMap))
+    {
+        return false;
+    }
+
+    if (IsRefuelSite(rUnit))
+    {
+        return false;
+    }
+
+    const int movesRemaining =
+        rUnit.GetMoveFragmentsRemaining() / MovementConstants_t::k_moveFragmentsPerPoint;
+    if (rUnit.GetCurrentFuel() - movesRemaining > 0)
+    {
+        return false;
+    }
+
+    return rUnit.GetCurrentHp() - OutOfFuelDamage_(rUnit) <= 0;
+}
+
+} // namespace
+
+bool NeedsAutoReturnToFuel(const Unit& rUnit, const WorldMap& rWorldMap)
+{
+    if (rUnit.GetOrder().has_value() || rUnit.GetMoveFragmentsRemaining() <= 0)
+    {
+        return false;
+    }
+
+    return WouldBeDestroyedWithoutRefuelThisTurn_(rUnit, rWorldMap);
+}
+
+bool TryAssignAutoReturnToFuel(Unit& rUnit, const Pathfinder& rPathfinder)
+{
+    const WorldMap& rWorldMap = rPathfinder.GetWorldMap();
+    if (!NeedsAutoReturnToFuel(rUnit, rWorldMap))
+    {
+        return false;
+    }
+
+    std::vector<const Tile*> candidates;
+    CollectFriendlyRefuelTiles_(rUnit, rWorldMap, candidates);
+
+    const int remainingFragments = rUnit.GetMoveFragmentsRemaining();
+    const Tile* pBest = nullptr;
+    int bestCost = INT_MAX;
+    for (const Tile* pDest : candidates)
+    {
+        if (!pDest || pDest == &rUnit.GetTile())
+        {
+            continue;
+        }
+
+        const Path_t path = rPathfinder.FindPath(rUnit, *pDest);
+        if (!path.bReachable || path.totalCostFragments > remainingFragments
+            || path.totalCostFragments >= bestCost)
+        {
+            continue;
+        }
+        bestCost = path.totalCostFragments;
+        pBest = pDest;
+    }
+
+    if (!pBest)
+    {
+        return false;
+    }
+
+    rUnit.SetOrder(MoveOrder_t{pBest});
+    return true;
 }
 
 void ProcessFuelAtTurnEnd(Unit& rUnit, const WorldMap& rWorldMap)
@@ -79,9 +225,7 @@ void ProcessFuelAtTurnEnd(Unit& rUnit, const WorldMap& rWorldMap)
         return;
     }
 
-    const int maxHp = ResolveStat(rUnit, StatId_t::HitPoints);
-    const int damagePercent = ResolveStat(rUnit, StatId_t::DamageFromOutOfFuel);
-    const int damage = FinalizeResolvedStat(maxHp * (damagePercent / 100.0));
+    const int damage = OutOfFuelDamage_(rUnit);
     rUnit.SetCurrentHp(rUnit.GetCurrentHp() - damage);
     if (rUnit.GetCurrentHp() <= 0)
     {

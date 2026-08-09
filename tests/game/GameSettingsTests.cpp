@@ -28,6 +28,7 @@ TEST_CASE("GameSettings Load leaves defaults when file is missing", "[GameSettin
     GameSettings settings;
     settings.Load(path.string());
     CHECK_FALSE(settings.IsPauseAtEndOfTurn());
+    CHECK(settings.IsAutoReturnLowFuelAir());
     CHECK_FALSE(settings.GetVisibility().removeShroud);
     CHECK_FALSE(settings.GetVisibility().removeFog);
     CHECK(settings.GetMapGeneration().width == 200);
@@ -62,6 +63,32 @@ TEST_CASE("GameSettings Save and Load round-trip pause_at_end_of_turn", "[GameSe
     std::filesystem::remove(path);
 }
 
+TEST_CASE("GameSettings Save and Load round-trip auto_return_low_fuel_air", "[GameSettings]")
+{
+    const std::filesystem::path path = TempSettingsPath("ac_settings_auto_return.json");
+    std::filesystem::remove(path);
+
+    {
+        GameSettings settings;
+        CHECK(settings.IsAutoReturnLowFuelAir());
+        settings.SetAutoReturnLowFuelAir(false);
+        settings.Save(path.string());
+    }
+
+    GameSettings loaded;
+    loaded.Load(path.string());
+    CHECK_FALSE(loaded.IsAutoReturnLowFuelAir());
+
+    loaded.SetAutoReturnLowFuelAir(true);
+    loaded.Save(path.string());
+
+    GameSettings reloaded;
+    reloaded.Load(path.string());
+    CHECK(reloaded.IsAutoReturnLowFuelAir());
+
+    std::filesystem::remove(path);
+}
+
 TEST_CASE("GameSettings Save groups keys by config struct", "[GameSettings]")
 {
     // remove_shroud used to be written under game_rules and remove_fog under debug_options, so
@@ -82,6 +109,7 @@ TEST_CASE("GameSettings Save groups keys by config struct", "[GameSettings]")
     std::string contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     CHECK(contents.find("game_rules") != std::string::npos);
     CHECK(contents.find("pause_at_end_of_turn") != std::string::npos);
+    CHECK(contents.find("auto_return_low_fuel_air") != std::string::npos);
     CHECK(contents.find("visibility") != std::string::npos);
     CHECK(contents.find("remove_shroud") != std::string::npos);
     CHECK(contents.find("remove_fog") != std::string::npos);

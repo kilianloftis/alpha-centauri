@@ -25,6 +25,8 @@ private:
     float DrawName_(Graphics& rGraphics, float textX, float textY, unsigned int fontSize) const;
     float DrawStats_(Graphics& rGraphics, float textX, float textY, unsigned int fontSize) const;
     float DrawMoves_(Graphics& rGraphics, float textX, float textY, unsigned int fontSize) const;
+    // Advances textY unchanged when the design does not track fuel.
+    float DrawFuel_(Graphics& rGraphics, float textX, float textY, unsigned int fontSize) const;
     float DrawOrders_(Graphics& rGraphics, float textX, float textY, unsigned int fontSize) const;
     void DrawHomeBase_(Graphics& rGraphics, float textX, float textY, unsigned int fontSize) const;
 

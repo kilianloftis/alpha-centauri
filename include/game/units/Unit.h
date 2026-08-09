@@ -126,6 +126,9 @@ public:
     // True while a SupplyCrawl order is active and the unit holds a worked-tile claim.
     bool IsSupplyCrawling() const;
 
+    // True when the unit still needs an order this turn (moves left and no active order).
+    bool RequiresOrders() const;
+
     // Attack history for the disengage rule: a unit that attacked on its current or previous
     // turn may not disengage. MarkAttacked is called by UnitOrderExecutor::TryAttack;
     // AdvanceAttackHistory shifts this-turn → last-turn at TurnStart.

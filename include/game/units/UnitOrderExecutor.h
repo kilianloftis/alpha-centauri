@@ -67,6 +67,9 @@ public:
     // capture it or trigger a native raid.
     OrderProgress_t Execute(Unit& rUnit);
 
+    // Drop turn-scoped orders (currently SkipTurn) when moves refresh at TurnStart.
+    void OnTurnStart(Unit& rUnit);
+
     // Apply one legal empty-tile step (MoveUnit + spend tile move-cost fragments). On
     // BlockedByOccupant / BlockedByZoc, contact-reveals the attributed blocking units.
     // Newly revealed hostiles (contact or fog) cancel a pending MoveOrder on rMover.
@@ -119,6 +122,7 @@ private:
     OrderProgress_t Execute_(Unit& rUnit, HoldOrder_t& rOrder);
     OrderProgress_t Execute_(Unit& rUnit, HoldUntilHealedOrder_t& rOrder);
     OrderProgress_t Execute_(Unit& rUnit, HoldForTurnsOrder_t& rOrder);
+    OrderProgress_t Execute_(Unit& rUnit, SkipTurnOrder_t& rOrder);
     OrderProgress_t Execute_(Unit& rUnit, SupplyCrawlOrder_t& rOrder);
     OrderProgress_t Execute_(Unit& rUnit, TerraformOrder_t& rOrder);
 

@@ -47,6 +47,13 @@ struct HoldForTurnsOrder_t
     std::string ToString() const;
 };
 
+// Skip the rest of this turn without spending moves. Persists as an order (so the unit
+// stays out of needs-orders and can be cancelled) until UnitOrderExecutor::OnTurnStart.
+struct SkipTurnOrder_t
+{
+    std::string ToString() const;
+};
+
 // Park on the current tile and harvest one resource type for the unit's home base.
 // resource must be Nutrients, Minerals, or Energy.
 struct SupplyCrawlOrder_t
@@ -71,6 +78,7 @@ using UnitOrder_t = std::variant<
     HoldOrder_t,
     HoldUntilHealedOrder_t,
     HoldForTurnsOrder_t,
+    SkipTurnOrder_t,
     SupplyCrawlOrder_t,
     TerraformOrder_t>;
 

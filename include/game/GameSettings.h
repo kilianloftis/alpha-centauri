@@ -29,13 +29,17 @@ public:
     bool IsPauseAtEndOfTurn() const { return m_gameRules.pauseAtEndOfTurn; }
     void SetPauseAtEndOfTurn(bool value);
 
+    bool IsAutoReturnLowFuelAir() const { return m_gameRules.autoReturnLowFuelAir; }
+    void SetAutoReturnLowFuelAir(bool value);
+
     const MapGenerationConfig_t& GetMapGeneration() const { return m_mapGeneration; }
     void SetMapGeneration(const MapGenerationConfig_t& rConfig);
 
     // Read once, when Engine builds the graphics backend; there is no runtime re-apply.
     const GraphicsConfig_t& GetGraphics() const { return m_graphics; }
 
-    // Missing file leaves defaults (pause off, shroud/fog on, default map generation).
+    // Missing file leaves defaults (pause off, lethal low-fuel auto-return on, shroud/fog
+    // on, default map generation).
     // Unreadable or corrupt file throws. Remembers the path, so Save() round-trips to wherever
     // this object was loaded from.
     void Load(const std::string& path = kDefaultPath);

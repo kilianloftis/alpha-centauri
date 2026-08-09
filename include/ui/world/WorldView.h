@@ -82,6 +82,8 @@ private:
     // After an order/action — keep the selection if that unit still needs orders
     // (e.g. a short move with moves left); otherwise jump to the next unit that does.
     void SelectNextAvailableUnit_();
+    // SMAC-style home path when auto-selected and this turn's out-of-fuel would be lethal.
+    void TryAutoReturnLowFuel_(Unit& rUnit);
     Unit* GetControllableSelectedUnit_() const;
     bool PlayerUnitsNeedOrders_() const;
     static bool UnitRequiresOrders_(const Unit& rUnit);

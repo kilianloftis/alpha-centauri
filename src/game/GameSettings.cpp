@@ -115,6 +115,8 @@ void LoadGameRules_(const nlohmann::json& rJson, GameRulesConfig_t& rConfig,
     {
         rConfig.pauseAtEndOfTurn =
             pSection->value("pause_at_end_of_turn", rConfig.pauseAtEndOfTurn);
+        rConfig.autoReturnLowFuelAir =
+            pSection->value("auto_return_low_fuel_air", rConfig.autoReturnLowFuelAir);
     }
 }
 
@@ -169,6 +171,13 @@ void GameSettings::SetPauseAtEndOfTurn(bool value)
     SetGameRules(rules);
 }
 
+void GameSettings::SetAutoReturnLowFuelAir(bool value)
+{
+    GameRulesConfig_t rules = m_gameRules;
+    rules.autoReturnLowFuelAir = value;
+    SetGameRules(rules);
+}
+
 void GameSettings::SetMapGeneration(const MapGenerationConfig_t& rConfig)
 {
     if (m_mapGeneration == rConfig)
@@ -216,6 +225,7 @@ void GameSettings::Save(const std::string& path) const
     nlohmann::json json;
     json["game_rules"] = {
         {"pause_at_end_of_turn", m_gameRules.pauseAtEndOfTurn},
+        {"auto_return_low_fuel_air", m_gameRules.autoReturnLowFuelAir},
     };
     json["visibility"] = {
         {"remove_shroud", m_visibility.removeShroud},

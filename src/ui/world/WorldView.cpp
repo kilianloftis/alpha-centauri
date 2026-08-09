@@ -20,6 +20,7 @@
 #include "game/faction/UnitManager.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/units/FuelRules.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
@@ -178,7 +179,7 @@ bool WorldView::PlayerUnitsNeedOrders_() const
 
 bool WorldView::UnitRequiresOrders_(const Unit& rUnit)
 {
-    return !rUnit.GetOrder().has_value() && rUnit.GetMoveFragmentsRemaining() > 0;
+    return rUnit.RequiresOrders();
 }
 
 void WorldView::SetSelectedUnit_(Unit* pUnit, bool bManualSelection)
@@ -191,6 +192,12 @@ void WorldView::SetSelectedUnit_(Unit* pUnit, bool bManualSelection)
     if (pUnit)
     {
         m_pSelectedTile = &pUnit->GetTile();
+        // Manual pick cancels skip-turn so the player can issue a real order.
+        if (bManualSelection && pUnit->GetOrder().has_value()
+            && std::holds_alternative<SkipTurnOrder_t>(*pUnit->GetOrder()))
+        {
+            pUnit->ClearOrder();
+        }
     }
 
     if (bSelectionChanged && pUnit && !bManualSelection)
@@ -205,6 +212,25 @@ void WorldView::SetSelectedTile_(const Tile* pTile)
     m_pSelectedTile = pTile;
 }
 
+void WorldView::TryAutoReturnLowFuel_(Unit& rUnit)
+{
+    if (!m_rGameState.GetSettings().IsAutoReturnLowFuelAir())
+    {
+        return;
+    }
+    if (!TryAssignAutoReturnToFuel(rUnit, m_rGameState.GetPathfinder()))
+    {
+        return;
+    }
+
+    const OrderProgress_t progress = m_rGameState.GetUnitOrderExecutor().Execute(rUnit);
+    if (progress == OrderProgress_t::UnitDestroyed)
+    {
+        SetSelectedUnit_(nullptr, false);
+    }
+    SelectNextAvailableUnit_();
+}
+
 void WorldView::SelectNextAvailableUnit_()
 {
     // Short moves clear the order but leave move fragments — stay on this unit so the
@@ -217,9 +243,12 @@ void WorldView::SelectNextAvailableUnit_()
     }
 
     const Faction* pPlayer = m_rGameState.GetPlayerFaction();
-    SetSelectedUnit_(
-        pPlayer ? pPlayer->GetUnitManager().GetNextAvailableUnit() : nullptr,
-        false);
+    Unit* pNext = pPlayer ? pPlayer->GetUnitManager().GetNextAvailableUnit() : nullptr;
+    SetSelectedUnit_(pNext, false);
+    if (pNext)
+    {
+        TryAutoReturnLowFuel_(*pNext);
+    }
 }
 
 void WorldView::SelectNextAvailableUnitIfNeeded_()
@@ -246,6 +275,7 @@ void WorldView::SelectNextAvailableUnitIfNeeded_()
     if (Unit* pNext = pPlayer->GetUnitManager().GetNextAvailableUnit())
     {
         SetSelectedUnit_(pNext, false);
+        TryAutoReturnLowFuel_(*pNext);
     }
 }
 

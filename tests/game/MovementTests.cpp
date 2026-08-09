@@ -550,6 +550,30 @@ TEST_CASE("TurnStart restores move fragments", "[movement][turn]")
     CHECK(unit.GetMoveFragmentsRemaining() == 2 * k_point);
 }
 
+TEST_CASE("TurnStart clears SkipTurn via UnitOrderExecutor so the unit needs orders again",
+          "[movement][turn][unit-order]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& faction = fixture.MakeFaction();
+    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    REQUIRE(unit.GetMoveFragmentsRemaining() > 0);
+    unit.SetOrder(SkipTurnOrder_t{});
+    REQUIRE_FALSE(faction.GetUnitManager().HasUnitsRequiringOrders());
+
+    GameSettings settings;
+    GameState state(std::make_unique<WorldMap>(3, 3), fixture.improvements, &fixture.unitComponents,
+                    settings, *fixture.dataContext.moraleCalculator, actest::k_TestRngSeed);
+    Faction& rOwned = state.AddFaction(std::move(fixture.factions[0]));
+
+    TurnStart stage(HookContext{});
+    stage.Execute(state);
+
+    CHECK_FALSE(unit.GetOrder().has_value());
+    CHECK(unit.GetMoveFragmentsRemaining() == 2 * k_point);
+    CHECK(rOwned.GetUnitManager().HasUnitsRequiringOrders());
+}
+
 TEST_CASE("Fungus entry charges across turns until cost is paid", "[movement][fungus]")
 {
     FactionFixture fixture;

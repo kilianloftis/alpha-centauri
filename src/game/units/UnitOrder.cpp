@@ -36,6 +36,11 @@ std::string HoldForTurnsOrder_t::ToString() const
         + (turnsRemaining == 1 ? " turn" : " turns");
 }
 
+std::string SkipTurnOrder_t::ToString() const
+{
+    return "Skip turn";
+}
+
 std::string SupplyCrawlOrder_t::ToString() const
 {
     switch (resource)

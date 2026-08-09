@@ -338,6 +338,24 @@ void Engine::StartNewGame_()
                 const UnitDesign& rCrawlerDesign = addDesign(
                     std::make_unique<UnitDesign>(rSlots, crawlerParts), "supply crawler");
 
+                std::unordered_map<std::string, const UnitComponentConfig_t*> needlejetParts = {
+                    {"chassis", resolve("Needlejet")},
+                    {"weapon",  resolve("Missile_Weapons")},
+                    {"armour",  resolve("No_Armour")},
+                    {"reactor", resolve("Fission_Plant")},
+                };
+                const UnitDesign& rNeedlejetDesign = addDesign(
+                    std::make_unique<UnitDesign>(rSlots, needlejetParts), "needlejet");
+
+                std::unordered_map<std::string, const UnitComponentConfig_t*> missileParts = {
+                    {"chassis", resolve("Missile")},
+                    {"weapon",  resolve("Missile_Weapons")},
+                    {"armour",  resolve("No_Armour")},
+                    {"reactor", resolve("Fission_Plant")},
+                };
+                const UnitDesign& rMissileDesign = addDesign(
+                    std::make_unique<UnitDesign>(rSlots, missileParts), "missile");
+
                 // Vision-1 HoverTank scout beside the base (Deep Radar would stack to 2).
                 rFaction.GetUnitManager().CreateUnit(
                     m_pGameState->AllocateUnitId(), rBasicDesign, rPositions,
@@ -351,6 +369,12 @@ void Engine::StartNewGame_()
                 rFaction.GetUnitManager().CreateUnit(
                     m_pGameState->AllocateUnitId(), rProbeDesign, rPositions,
                     *rMap.GetTile(startX + 1, startY - 1), pBase);
+                rFaction.GetUnitManager().CreateUnit(
+                    m_pGameState->AllocateUnitId(), rNeedlejetDesign, rPositions,
+                    *rMap.GetTile(startX, startY), pBase);
+                rFaction.GetUnitManager().CreateUnit(
+                    m_pGameState->AllocateUnitId(), rMissileDesign, rPositions,
+                    *rMap.GetTile(startX, startY), pBase);
             }
             else
             {

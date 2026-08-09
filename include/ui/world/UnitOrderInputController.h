@@ -86,6 +86,10 @@ private:
             rUnit.SetOrder(HoldOrder_t{});
             m_bOrderAssigned = true;
         } },
+        { Key_t::Space, [this](Unit& rUnit) {
+            rUnit.SetOrder(SkipTurnOrder_t{});
+            m_bOrderAssigned = true;
+        } },
     };
 
     bool m_bOrderAssigned = false;

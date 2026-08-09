@@ -188,7 +188,7 @@ Unit* UnitManager::GetNextAvailableUnit(const Unit* pAfter) const
 {
     auto requiresOrders = [](const Unit& rUnit)
     {
-        return !rUnit.GetOrder().has_value() && rUnit.GetMoveFragmentsRemaining() > 0;
+        return rUnit.RequiresOrders();
     };
 
     Unit* pFirst = nullptr;

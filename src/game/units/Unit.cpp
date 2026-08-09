@@ -344,6 +344,11 @@ bool Unit::IsSupplyCrawling() const
         && std::holds_alternative<SupplyCrawlOrder_t>(*m_order);
 }
 
+bool Unit::RequiresOrders() const
+{
+    return !m_order.has_value() && m_moveFragmentsRemaining > 0;
+}
+
 bool Unit::HasAttackedThisTurn() const { return m_bAttackedThisTurn; }
 bool Unit::HasAttackedLastTurn() const { return m_bAttackedLastTurn; }
 void Unit::MarkAttacked()              { m_bAttackedThisTurn = true; }

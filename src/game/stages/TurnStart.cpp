@@ -5,6 +5,7 @@
 #include "game/faction/UnitManager.h"
 #include "game/units/MovementConstants.h"
 #include "game/units/Unit.h"
+#include "game/units/UnitOrderExecutor.h"
 #include "lib/EventBus.h"
 #include "lib/GameEvent.h"
 #include <iostream>
@@ -26,12 +27,14 @@ StageResult_t TurnStart::ExecuteImpl(GameState& rGameState)
 
     std::cout << "\n--- Mission Year " << rGameState.GetMissionYear() << " ---\n";
 
+    UnitOrderExecutor& rOrders = rGameState.GetUnitOrderExecutor();
     for (Faction& rFaction : rGameState.Factions())
     {
         for (Unit& rUnit : rFaction.GetUnitManager().Units())
         {
             rUnit.SetMoveFragmentsRemaining(
                 rUnit.GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint);
+            rOrders.OnTurnStart(rUnit);
             rUnit.AdvanceAttackHistory();
         }
     }

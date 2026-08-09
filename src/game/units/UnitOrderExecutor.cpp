@@ -418,6 +418,15 @@ OrderProgress_t UnitOrderExecutor::Execute(Unit& rUnit)
     return progress;
 }
 
+void UnitOrderExecutor::OnTurnStart(Unit& rUnit)
+{
+    if (rUnit.GetOrder().has_value()
+        && std::holds_alternative<SkipTurnOrder_t>(*rUnit.GetOrder()))
+    {
+        rUnit.ClearOrder();
+    }
+}
+
 OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, MoveOrder_t& rOrder)
 {
     if (!rOrder.pDestination)
@@ -508,6 +517,15 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, HoldForTurnsOrder_t& rO
     --rOrder.turnsRemaining;
     return rOrder.turnsRemaining == 0 ? OrderProgress_t::Complete
                                       : OrderProgress_t::Continue;
+}
+
+OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, SkipTurnOrder_t& rOrder)
+{
+    // Persist for the rest of this turn (needs-orders exclusion / cancellable). Cleared in
+    // OnTurnStart when moves refresh — not here, or a mid-pass Yield would re-prompt.
+    (void)rUnit;
+    (void)rOrder;
+    return OrderProgress_t::Continue;
 }
 
 OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, SupplyCrawlOrder_t& rOrder)

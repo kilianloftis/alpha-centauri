@@ -25,6 +25,16 @@ void SetPauseAtEndOfTurn_(GameSettings& rSettings, bool value)
     rSettings.SetPauseAtEndOfTurn(value);
 }
 
+bool GetAutoReturnLowFuelAir_(const GameSettings& rSettings)
+{
+    return rSettings.IsAutoReturnLowFuelAir();
+}
+
+void SetAutoReturnLowFuelAir_(GameSettings& rSettings, bool value)
+{
+    rSettings.SetAutoReturnLowFuelAir(value);
+}
+
 bool GetRemoveShroud_(const GameSettings& rSettings)
 {
     return rSettings.GetVisibility().removeShroud;
@@ -91,6 +101,8 @@ const SettingDescriptor_t k_SettingDescriptors[] = {
     {"Game Rules", SettingRowKind_t::Header},
     {"Pause at End of Turn", SettingRowKind_t::Bool, SettingScope_t::Always,
      GetPauseAtEndOfTurn_, SetPauseAtEndOfTurn_},
+    {"Auto-Return Low-Fuel Aircraft", SettingRowKind_t::Bool, SettingScope_t::Always,
+     GetAutoReturnLowFuelAir_, SetAutoReturnLowFuelAir_},
     {"Visibility", SettingRowKind_t::Header},
     {"Remove Shroud", SettingRowKind_t::Bool, SettingScope_t::Always,
      GetRemoveShroud_, SetRemoveShroud_},

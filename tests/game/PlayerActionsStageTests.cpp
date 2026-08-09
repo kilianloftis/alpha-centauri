@@ -203,6 +203,60 @@ TEST_CASE("PlayerActions resets interaction phase when active faction changes",
     CHECK(stage.Execute(*game.pState, rOther) == StageResult_t::Yield);
 }
 
+TEST_CASE("SkipTurn persists without spending moves or re-opening needs-orders",
+          "[PlayerActions][unit-order]")
+{
+    PlayerActionsGame_ game;
+    Unit& skipped = game.MakeUnit(2, 2);
+    Unit& awaiting = game.MakeUnit(4, 4);
+    const int skippedMoves = skipped.GetMoveFragmentsRemaining();
+    const int awaitingMoves = awaiting.GetMoveFragmentsRemaining();
+    REQUIRE(skippedMoves > 0);
+    REQUIRE(awaitingMoves > 0);
+
+    skipped.SetOrder(SkipTurnOrder_t{});
+    CHECK(game.pPlayer->GetUnitManager().GetNextAvailableUnit() == &awaiting);
+    CHECK(game.pPlayer->GetUnitManager().HasUnitsRequiringOrders());
+
+    awaiting.SetOrder(SkipTurnOrder_t{});
+    CHECK_FALSE(game.pPlayer->GetUnitManager().HasUnitsRequiringOrders());
+
+    PlayerActions stage(HookContext{});
+    CHECK(stage.Execute(*game.pState, *game.pPlayer) == StageResult_t::Yield); // interaction
+    // Both SkipTurns Continue (order kept); stage Continues with no needs-orders Yield.
+    CHECK(stage.Execute(*game.pState, *game.pPlayer) == StageResult_t::Continue);
+
+    REQUIRE(skipped.GetOrder().has_value());
+    REQUIRE(awaiting.GetOrder().has_value());
+    CHECK(std::holds_alternative<SkipTurnOrder_t>(*skipped.GetOrder()));
+    CHECK(std::holds_alternative<SkipTurnOrder_t>(*awaiting.GetOrder()));
+    CHECK(skipped.GetMoveFragmentsRemaining() == skippedMoves);
+    CHECK(awaiting.GetMoveFragmentsRemaining() == awaitingMoves);
+    CHECK_FALSE(game.pPlayer->GetUnitManager().HasUnitsRequiringOrders());
+}
+
+TEST_CASE("SkipTurn stays out of needs-orders when another unit yields mid-pass",
+          "[PlayerActions][unit-order]")
+{
+    PlayerActionsGame_ game;
+    Unit& skipped = game.MakeUnit(2, 2);
+    Unit& shortHold = game.MakeUnit(4, 4);
+    const int skippedMoves = skipped.GetMoveFragmentsRemaining();
+    skipped.SetOrder(SkipTurnOrder_t{});
+    shortHold.SetOrder(HoldForTurnsOrder_t{1});
+
+    PlayerActions stage(HookContext{});
+    CHECK(stage.Execute(*game.pState, *game.pPlayer) == StageResult_t::Yield); // interaction
+    // shortHold Completes and still needs orders → Yield. SkipTurn order still held.
+    CHECK(stage.Execute(*game.pState, *game.pPlayer) == StageResult_t::Yield);
+
+    CHECK_FALSE(shortHold.GetOrder().has_value());
+    REQUIRE(skipped.GetOrder().has_value());
+    CHECK(std::holds_alternative<SkipTurnOrder_t>(*skipped.GetOrder()));
+    CHECK(skipped.GetMoveFragmentsRemaining() == skippedMoves);
+    CHECK(game.pPlayer->GetUnitManager().GetNextAvailableUnit() == &shortHold);
+}
+
 TEST_CASE("Population stage invokes riot and golden-age end-of-turn updates",
           "[Population][TurnProcessor]")
 {

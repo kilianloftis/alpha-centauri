@@ -16,6 +16,7 @@ TEST_CASE("Unit orders have display strings", "[unit-order]")
     CHECK(HoldUntilHealedOrder_t{}.ToString() == "Hold until healed");
     CHECK(HoldForTurnsOrder_t{1}.ToString() == "Hold for 1 turn");
     CHECK(HoldForTurnsOrder_t{3}.ToString() == "Hold for 3 turns");
+    CHECK(SkipTurnOrder_t{}.ToString() == "Skip turn");
     CHECK(SupplyCrawlOrder_t{StatId_t::Nutrients}.ToString() == "Supply Nutrients");
     CHECK(SupplyCrawlOrder_t{StatId_t::Minerals}.ToString() == "Supply Minerals");
     CHECK(SupplyCrawlOrder_t{StatId_t::Energy}.ToString() == "Supply Energy");

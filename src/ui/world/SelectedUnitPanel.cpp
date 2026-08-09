@@ -50,6 +50,13 @@ void SelectedUnitPanel::Render(Graphics& rGraphics)
     textY = DrawName_(rGraphics, textX, textY, fontSize) + textGap;
     textY = DrawStats_(rGraphics, textX, textY, fontSize) + textGap;
     textY = DrawMoves_(rGraphics, textX, textY, fontSize) + textGap;
+    {
+        const float fuelY = DrawFuel_(rGraphics, textX, textY, fontSize);
+        if (fuelY != textY)
+        {
+            textY = fuelY + textGap;
+        }
+    }
     textY = DrawOrders_(rGraphics, textX, textY, fontSize) + textGap;
     DrawHomeBase_(rGraphics, textX, textY, fontSize);
 }
@@ -137,6 +144,20 @@ float SelectedUnitPanel::DrawMoves_(Graphics& rGraphics, float textX, float text
     oss.precision(remainingFragments % MovementConstants_t::k_moveFragmentsPerPoint == 0 ? 0 : 1);
     oss << "Moves: " << remainingPoints << "/" << maxPoints;
 
+    rGraphics.DrawText(oss.str(), textX, textY, fontSize, Style().selectedUnitPanel.bodyTextColor);
+    return textY + static_cast<float>(fontSize);
+}
+
+float SelectedUnitPanel::DrawFuel_(Graphics& rGraphics, float textX, float textY,
+                                   unsigned int fontSize) const
+{
+    if (!m_pSelectedUnit->GetDesign().UsesFuel())
+    {
+        return textY;
+    }
+
+    std::ostringstream oss;
+    oss << "Fuel: " << m_pSelectedUnit->GetCurrentFuel() << "/" << m_pSelectedUnit->GetMaxFuel();
     rGraphics.DrawText(oss.str(), textX, textY, fontSize, Style().selectedUnitPanel.bodyTextColor);
     return textY + static_cast<float>(fontSize);
 }

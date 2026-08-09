@@ -259,3 +259,87 @@ TEST_CASE("Chassis without turns_of_fuel ignores turn-end fuel processing", "[fu
     CHECK(grav.GetCurrentHp() == grav.GetStat(StatId_t::HitPoints));
     CHECK(CountUnits_(faction) == 1);
 }
+
+TEST_CASE("NeedsAutoReturnToFuel when this turn's out-of-fuel damage would destroy", "[fuel]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& faction = fixture.MakeFaction();
+    Unit& jet = fixture.MakeUnit(faction, 4, 4, {"test_fuel_flight_chassis"});
+    Unit& copter = fixture.MakeUnit(faction, 5, 4, {"test_copter_chassis"});
+
+    REQUIRE(jet.GetMaxFuel() == 8);
+    REQUIRE(jet.GetMovementPoints() == 4);
+    REQUIRE(jet.GetStat(StatId_t::DamageFromOutOfFuel) == 100);
+    REQUIRE(copter.GetStat(StatId_t::DamageFromOutOfFuel) == 30);
+
+    CHECK_FALSE(NeedsAutoReturnToFuel(jet, fixture.map)); // full tank survives this turn's burn
+    jet.SetCurrentFuel(4);
+    CHECK(NeedsAutoReturnToFuel(jet, fixture.map));
+    jet.SetCurrentFuel(3);
+    CHECK(NeedsAutoReturnToFuel(jet, fixture.map));
+
+    // Healthy Copter: 30% damage is non-lethal, so no auto-return even at empty tank.
+    CHECK_FALSE(NeedsAutoReturnToFuel(copter, fixture.map));
+    copter.SetCurrentFuel(0);
+    CHECK_FALSE(NeedsAutoReturnToFuel(copter, fixture.map));
+
+    // Wounded Copter that would die from 30% of max HP does auto-return.
+    copter.SetCurrentHp(3);
+    CHECK(NeedsAutoReturnToFuel(copter, fixture.map));
+
+    jet.SetCurrentFuel(4);
+    fixture.MakeFactionBase(faction, 4, 4);
+    CHECK(IsRefuelSite(jet));
+    CHECK_FALSE(NeedsAutoReturnToFuel(jet, fixture.map));
+}
+
+TEST_CASE("TryAssignAutoReturnToFuel paths to nearest friendly base", "[fuel]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& faction = fixture.MakeFaction();
+    fixture.MakeFactionBase(faction, 1, 4);
+    fixture.MakeFactionBase(faction, 8, 4);
+    Unit& jet = fixture.MakeUnit(faction, 4, 4, {"test_fuel_flight_chassis"});
+    jet.SetCurrentFuel(jet.GetMovementPoints());
+
+    FuelHarness_ harness(fixture);
+    REQUIRE(NeedsAutoReturnToFuel(jet, fixture.map));
+    REQUIRE(TryAssignAutoReturnToFuel(jet, harness.pathfinder));
+    REQUIRE(jet.GetOrder().has_value());
+    const MoveOrder_t* pMove = std::get_if<MoveOrder_t>(&*jet.GetOrder());
+    REQUIRE(pMove);
+    REQUIRE(pMove->pDestination);
+    CHECK(pMove->pDestination == &fixture.At(1, 4));
+}
+
+TEST_CASE("TryAssignAutoReturnToFuel does not fire when this turn would not be lethal", "[fuel]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& faction = fixture.MakeFaction();
+    fixture.MakeFactionBase(faction, 1, 4);
+    Unit& jet = fixture.MakeUnit(faction, 4, 4, {"test_fuel_flight_chassis"});
+    REQUIRE(jet.GetCurrentFuel() == 8);
+
+    FuelHarness_ harness(fixture);
+    CHECK_FALSE(TryAssignAutoReturnToFuel(jet, harness.pathfinder));
+    CHECK_FALSE(jet.GetOrder().has_value());
+}
+
+TEST_CASE("TryAssignAutoReturnToFuel ignores refuel sites beyond remaining moves", "[fuel]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& faction = fixture.MakeFaction();
+    // Chebyshev distance 5 on Y (no wrap); jet has 4 move points.
+    fixture.MakeFactionBase(faction, 0, 5);
+    Unit& jet = fixture.MakeUnit(faction, 0, 0, {"test_fuel_flight_chassis"});
+    jet.SetCurrentFuel(jet.GetMovementPoints());
+
+    FuelHarness_ harness(fixture);
+    REQUIRE(NeedsAutoReturnToFuel(jet, fixture.map));
+    CHECK_FALSE(TryAssignAutoReturnToFuel(jet, harness.pathfinder));
+    CHECK_FALSE(jet.GetOrder().has_value());
+}
