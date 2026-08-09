@@ -6,6 +6,7 @@
 #include "game/population/calculators/RiotCalculator.h"
 #include "game/population/calculators/GoldenAgeCalculator.h"
 
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -149,6 +150,11 @@ public:
     // OnPopLost follows with the new size once the pop is gone.
     Signal<Pop&> OnPopRemoved;
 
+    // How much a pop is currently worth, for deciding which one is lost when the base shrinks.
+    // Injected because the answer needs tile yields, which only BaseManager can resolve — the
+    // same shape as WorkerAssignmentManager::SetTileScorer. Unset means every pop scores equal.
+    void SetPopValuator(std::function<int(const Pop&)> valuator);
+
     // Riot signals
     Signal<> OnWillRiot;    // conditions met after growth, riot not yet active
     Signal<> OnIsRioting;   // end-of-turn: conditions still met, riot now active
@@ -176,6 +182,7 @@ private:
     int m_nutrientStockpile = 0;
     int m_compositionBatchDepth = 0;
     bool m_bCompositionDirty = false;
+    std::function<int(const Pop&)> m_popValuator;
 
     RiotCalculator m_riot;
     GoldenAgeCalculator m_goldenAge;
@@ -185,6 +192,9 @@ private:
     void NotifyPopGained_();
     void NotifyPopLost_();
     void MaybeRecalculateComposition_();
+    // Specialists last; within a group, the pop producing the least. See
+    // docs/game-rules-decisions.md, "Which pop is lost when a base shrinks".
+    Pop& SelectDoomedPop_();
     const std::string& GetDefaultPopType_() const;
     // Requested type id -> the type a pop actually becomes, walking the obsolescence chain
     // against currently discovered techs. The one place that rule is applied.

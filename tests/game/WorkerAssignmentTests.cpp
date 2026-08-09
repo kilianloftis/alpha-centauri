@@ -260,11 +260,16 @@ TEST_CASE("Destroying a pop releases its worked tile", "[worker][index]")
     Tile& tile = fixture.At(3, 3);
 
     base.GetWorkerAssignments().UnassignAll();
-    // RemovePop destroys the most recently added pop, so assign that one.
     REQUIRE(base.GetWorkerAssignments().AssignWorker(LastPop(base), &tile));
     REQUIRE(fixture.map.GetWorkedTiles().IsWorked(tile));
 
-    base.GetPopulation().RemovePop();
+    // Which pop dies is a rule now (least productive first, specialists last), so drain the
+    // base rather than assume the assigned one goes first: the invariant under test is that a
+    // removed pop releases its tile, whenever its turn comes.
+    while (base.GetPopulation().GetSize() > 0)
+    {
+        base.GetPopulation().RemovePop();
+    }
 
     CHECK_FALSE(fixture.map.GetWorkedTiles().IsWorked(tile));
 }

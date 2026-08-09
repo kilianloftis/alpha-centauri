@@ -23,6 +23,15 @@ added pop and so could take a talent while drones remained.
 
 **Applies to** every shrink path: starvation, conquest, probe pop-kill, `EnforceMaxSize_`.
 
+**Implemented** 2026-08-08. `PopulationManager::SelectDoomedPop_` orders candidates by
+`(isSpecialist, value)` and takes the minimum, so any non-specialist outranks any specialist and
+the lowest producer within a group goes first; ties keep the earliest pop, which makes the choice
+deterministic rather than allocation-order dependent. The value itself is injected by
+`BaseManager` (`SetPopValuator`) because only it can resolve a worked tile's yield — the same
+shape as `WorkerAssignmentManager::SetTileScorer`. An unassigned worker scores zero, so idle pops
+go before productive ones. `PopContainer` lost `RemovePop`/`NextRemoved` and gained
+`Remove(Pop&)`: which pop dies is policy, and the container only owns storage.
+
 ## 2. A base that reaches size zero
 
 **Rule:** it is razed. There is to be **one** raze pathway — the existing

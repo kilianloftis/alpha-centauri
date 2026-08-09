@@ -33,8 +33,9 @@ public:
     auto Pops() { return DerefView(m_pops); }
     auto Pops() const { return DerefView(m_pops); }
 
-    // The pop RemovePop would take next. Throws on an empty base — the same precondition.
-    Pop& NextRemoved();
+    // Remove a specific pop. Which pop dies is population *policy* and lives in
+    // PopulationManager; the container only owns the storage.
+    void Remove(Pop& rPop);
 
     // Population counts by type.
     // GetWorkerCount is every tile-capable pop — plain workers *and* drones *and* talents — so
@@ -49,7 +50,6 @@ public:
     // Container operations. AddPop takes an already-resolved type for the same reason ConvertTo
     // does: which types are legal is PopulationManager's decision, not the container's.
     void AddPop(const PopTypeConfig_t& rConfig);
-    void RemovePop();
 
     // Install an already-resolved type on a pop. The caller decides *which* type is legal —
     // see PopulationManager::ConvertTo, which resolves the id through the obsolescence chain

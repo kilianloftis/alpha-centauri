@@ -8,6 +8,7 @@
 #include "game/faction/ResearchManager.h"
 #include <iostream>
 #include <stdexcept>
+#include <utility>
 
 namespace ac
 {
@@ -74,10 +75,40 @@ void PopulationManager::AddPop(const std::string& typeId)
     m_riot.NotifyPopGrown(BuildRiotInputs_());
 }
 
+void PopulationManager::SetPopValuator(std::function<int(const Pop&)> valuator)
+{
+    m_popValuator = std::move(valuator);
+}
+
+Pop& PopulationManager::SelectDoomedPop_()
+{
+    // Specialists are taken last, so the comparison key leads with "is a specialist" — false
+    // sorts first. Within a group the pop producing the least total resource goes; ties keep
+    // the earliest, which makes the choice deterministic rather than allocation-order dependent.
+    Pop* pDoomed = nullptr;
+    std::pair<bool, int> worst;
+    for (Pop& rPop : m_container.Pops())
+    {
+        const std::pair<bool, int> key{rPop.IsSpecialist(),
+                                       m_popValuator ? m_popValuator(rPop) : 0};
+        if (!pDoomed || key < worst)
+        {
+            pDoomed = &rPop;
+            worst = key;
+        }
+    }
+    if (!pDoomed)
+    {
+        throw std::runtime_error("PopulationManager::RemovePop: base has no population");
+    }
+    return *pDoomed;
+}
+
 void PopulationManager::RemovePop()
 {
-    OnPopRemoved.Emit(m_container.NextRemoved());
-    m_container.RemovePop();
+    Pop& rDoomed = SelectDoomedPop_();
+    OnPopRemoved.Emit(rDoomed);
+    m_container.Remove(rDoomed);
 
     // Targets are a function of base size, so a removal invalidates them immediately. Conquest,
     // a probe pop-kill and starvation all shrink a base mid-turn and used to leave the

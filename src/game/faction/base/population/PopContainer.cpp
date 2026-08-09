@@ -1,6 +1,7 @@
 #include "game/faction/base/population/PopContainer.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
+#include <algorithm>
 #include <stdexcept>
 
 namespace ac
@@ -54,25 +55,15 @@ void PopContainer::AddPop(const PopTypeConfig_t& rConfig)
     m_revision.Bump();
 }
 
-Pop& PopContainer::NextRemoved()
+void PopContainer::Remove(Pop& rPop)
 {
-    if (m_pops.empty())
+    const auto it = std::find_if(m_pops.begin(), m_pops.end(),
+        [&rPop](const std::unique_ptr<Pop>& pPop) { return pPop.get() == &rPop; });
+    if (it == m_pops.end())
     {
-        throw std::runtime_error("PopContainer::NextRemoved: base has no population");
+        throw std::runtime_error("PopContainer::Remove: pop does not belong to this base");
     }
-    return *m_pops.back();
-}
-
-void PopContainer::RemovePop()
-{
-    if (m_pops.empty())
-    {
-        throw std::runtime_error("PopContainer::RemovePop: base has no population");
-    }
-    // TODO: which pop starves is a game rule this project has not written down. pop_back takes
-    // the most recently added, which after composition reconciliation can be a talent while
-    // drones remain. Needs the SMAC rule before it can be anything else.
-    m_pops.pop_back();
+    m_pops.erase(it);
     m_revision.Bump();
 }
 

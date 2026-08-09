@@ -8,6 +8,9 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 
+#include "game/faction/base/resources/WorkerAssignmentManager.h"
+#include "game/population/pop-types/Pop.h"
+#include "game/map/Tile.h"
 #include <catch2/catch_test_macros.hpp>
 #include <limits>
 #include <stdexcept>
@@ -147,4 +150,87 @@ TEST_CASE("A base that has already lost its last pop does not starve further",
 
     CHECK_NOTHROW(rPopulation.ApplyGrowth(-10, {}));
     CHECK(rPopulation.GetSize() == 0);
+}
+
+TEST_CASE("A shrinking base loses its least productive pop", "[population][growth]")
+{
+    // Rule: specialists last; within a group, the pop producing the least total resource.
+    // See docs/game-rules-decisions.md. Previously it was always the most recently added,
+    // which could take a talent working a good tile while an idle worker sat beside it.
+    actest::BaseFixture fixture;
+    ac::BaseManager& rBase = fixture.MakeBase(4, 4);
+    ac::PopulationManager& rPopulation = rBase.GetPopulation();
+
+    rBase.GetWorkerAssignments().UnassignAll();
+    REQUIRE(rPopulation.GetSize() >= 2);
+
+    // The tile has to be worth something, or "productive" ties with "idle" at zero.
+    fixture.At(3, 3).SetMoisture(ac::Moisture_t::Wet);
+
+    // One pop works a tile; the rest are idle and therefore worth nothing. It must be the
+    // *last* pop: the rule this replaced always took the most recently added, so making the
+    // first pop productive would pass under either rule.
+    ac::Pop* pProductive = nullptr;
+    for (ac::Pop& rPop : rPopulation.Pops())
+    {
+        if (rPop.IsWorker())
+        {
+            pProductive = &rPop;
+        }
+    }
+    REQUIRE(pProductive != nullptr);
+    REQUIRE(rBase.GetWorkerAssignments().AssignWorker(*pProductive, &fixture.At(3, 3)));
+    REQUIRE(pProductive->GetTile() != nullptr);
+
+    // Every idle pop goes before the one that is actually producing.
+    const int idleCount = rPopulation.GetSize() - 1;
+    for (int i = 0; i < idleCount; ++i)
+    {
+        rPopulation.RemovePop();
+        CHECK(pProductive->GetTile() != nullptr);
+    }
+    CHECK(rPopulation.GetSize() == 1);
+}
+
+TEST_CASE("Specialists are the last pops lost", "[population][growth]")
+{
+    actest::BaseFixture fixture;
+    ac::BaseManager& rBase = fixture.MakeBase(4, 4);
+    ac::PopulationManager& rPopulation = rBase.GetPopulation();
+
+    rBase.GetWorkerAssignments().UnassignAll();
+    REQUIRE(rPopulation.GetSize() >= 2);
+
+    // Convert the *last* pop to a specialist — the one the previous rule would have taken
+    // first — and leave every worker idle, so on raw output the specialist is the more valuable
+    // pop. It must still be taken last.
+    ac::Pop* pLastWorker = nullptr;
+    for (ac::Pop& rPop : rPopulation.Pops())
+    {
+        if (rPop.IsWorker())
+        {
+            pLastWorker = &rPop;
+        }
+    }
+    REQUIRE(pLastWorker != nullptr);
+    rBase.ConvertPop(*pLastWorker, "Doctor");
+    ac::Pop* pSpecialist = pLastWorker->IsSpecialist() ? pLastWorker : nullptr;
+    if (!pSpecialist)
+    {
+        SUCCEED("fixture pop types offer no specialist to convert to");
+        return;
+    }
+
+    const int workerCount = rPopulation.GetSize() - 1;
+    for (int i = 0; i < workerCount; ++i)
+    {
+        rPopulation.RemovePop();
+    }
+    REQUIRE(rPopulation.GetSize() == 1);
+    bool bSurvivorIsSpecialist = false;
+    for (const ac::Pop& rPop : rPopulation.Pops())
+    {
+        bSurvivorIsSpecialist = rPop.IsSpecialist();
+    }
+    CHECK(bSurvivorIsSpecialist);
 }
