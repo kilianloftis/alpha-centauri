@@ -104,16 +104,7 @@ bool MaybeRazeBase_(BaseManager& rBase, GameState& rGameState, BaseConquestResul
         return false;
     }
 
-    for (const BuildingConfig_t* pBuilding : rBase.GetBuildingManager().GetBuildings())
-    {
-        if (pBuilding && pBuilding->bIsSecretProject)
-        {
-            rGameState.MarkSecretProjectDestroyed(pBuilding->id);
-        }
-    }
-
-    Faction& rOwner = rBase.GetFaction();
-    rOwner.ExtractBase(rBase.GetBaseId());
+    rGameState.RazeBase(rBase);
     rResult.bBaseRazed = true;
     rResult.outcome = BaseConquestOutcome_t::Razed;
     return true;

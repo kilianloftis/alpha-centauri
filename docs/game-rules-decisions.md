@@ -37,8 +37,17 @@ go before productive ones. `PopContainer` lost `RemovePop`/`NextRemoved` and gai
 **Rule:** it is razed. There is to be **one** raze pathway — the existing
 `Faction::ExtractBase` / raze path — not a second one written for this case.
 
-**Replaces:** the guard added in `BaseManager`'s starvation handler, which currently returns early
-at size zero and leaves an empty base alive forever.
+**Replaces:** the guard added in `BaseManager`'s starvation handler, which returned early at size
+zero and left an empty base alive forever.
+
+**Implemented** 2026-08-08. `GameState::RazeBase` is now the one pathway: it tombstones any
+secret project the base held and removes the base from its owner. Conquest's razing was inlined
+in `BaseConquestEffects` and now calls it, so the two cannot drift.
+
+The Population stage razes any base it finds at size zero — collected first, then razed after the
+loop, because razing destroys the `BaseManager` and would otherwise invalidate the iteration.
+Not done from the starvation handler itself: that lambda is one of the base's own signals, and
+razing from inside it would destroy the object mid-callback.
 
 ## 3. Production retooling penalty
 

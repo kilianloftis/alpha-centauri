@@ -505,3 +505,30 @@ TEST_CASE("NoConquestRepair leaves the capturer damaged", "[unit][conquest]")
     REQUIRE(game.pPlayer->GetBaseCount() == 1);
     CHECK(attacker.GetCurrentHp() == 1);
 }
+
+TEST_CASE("A base that starves to nothing is razed through the conquest pathway",
+          "[base][raze]")
+{
+    // Rule: a base at size zero is destroyed, and there is one raze pathway — the same one
+    // conquest uses, so secret-project tombstoning cannot drift between them.
+    // See docs/game-rules-decisions.md.
+    ConquestGame_ game;
+    BaseManager& rBase = game.MakeBase(*game.pAi, 4, 4);
+    const BaseId_t baseId = rBase.GetBaseId();
+    REQUIRE(game.pAi->GetBaseCount() == 1);
+
+    while (rBase.GetPopulation().GetSize() > 0)
+    {
+        rBase.GetPopulation().RemovePop();
+    }
+
+    game.pState->RazeBase(rBase);
+
+    CHECK(game.pAi->GetBaseCount() == 0);
+    bool bStillPresent = false;
+    for (const BaseManager& rRemaining : game.pAi->Bases())
+    {
+        bStillPresent = bStillPresent || rRemaining.GetBaseId() == baseId;
+    }
+    CHECK_FALSE(bStillPresent);
+}

@@ -1,4 +1,6 @@
 #include "game/GameState.h"
+#include "game/buildings/BuildingConfig.h"
+#include "game/faction/base/buildings/BuildingManager.h"
 
 #include "game/GameSettings.h"
 #include "game/faction/FactionIdentity.h"
@@ -500,6 +502,18 @@ void GameState::RebuildTerritory()
 const SecretProjectAvailabilityCalculator& GameState::GetSecretProjectAvailability() const
 {
     return m_secretProjectAvailability;
+}
+
+void GameState::RazeBase(BaseManager& rBase)
+{
+    for (const BuildingConfig_t* pBuilding : rBase.GetBuildingManager().GetBuildings())
+    {
+        if (pBuilding && pBuilding->bIsSecretProject)
+        {
+            MarkSecretProjectDestroyed(pBuilding->id);
+        }
+    }
+    rBase.GetFaction().ExtractBase(rBase.GetBaseId());
 }
 
 void GameState::MarkSecretProjectDestroyed(const std::string& buildingId)

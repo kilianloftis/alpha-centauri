@@ -111,12 +111,9 @@ BaseManager::BaseManager(
         m_pPopulation->AddPop();
     });
     m_pPopulation->OnStarvation.Connect([this]() {
-        // A base that has already lost its last pop cannot starve further. Starvation fires
-        // whenever the stockpile goes negative, which keeps happening at size 0 because nothing
-        // removes the base.
-        // TODO: SMAC destroys a base that reaches size 0. Implementing that needs the rule for
-        // what happens to its buildings, garrison and worked tiles — until then the base
-        // persists empty rather than being razed here.
+        // A base that has already lost its last pop cannot starve further. It is razed by the
+        // Population stage at the end of the turn (GameState::RazeBase), not here: razing
+        // destroys this BaseManager, and this lambda is one of its own signal handlers.
         if (m_pPopulation->GetSize() == 0)
         {
             return;
