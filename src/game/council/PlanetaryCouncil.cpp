@@ -462,6 +462,13 @@ bool PlanetaryCouncil::VetoPending(const Faction& rGovernor)
     {
         return false;
     }
+    // Governor rules do not apply to elections (docs/game-rules-decisions.md #5): the office
+    // cannot be defended by its incumbent. This is why VetoUnanimouslyOverruled_ may read
+    // standard ballots — an election never reaches it.
+    if (m_rRegistry.Get(m_pending->proposalId).kind == CouncilProposalKind_t::Election)
+    {
+        return false;
+    }
     m_pending->vetoed = true;
     m_revision.Bump();
     return true;
@@ -473,7 +480,8 @@ bool PlanetaryCouncil::VetoUnanimouslyOverruled_() const
     {
         return false;
     }
-    // A veto stands unless every council member other than the governor voted Yea.
+    // A veto stands unless every council member other than the governor voted Yea. Standard
+    // ballots only, which is correct because an election cannot be vetoed (see VetoPending).
     for (const Faction* pMember : m_members)
     {
         if (pMember == m_pGovernor)

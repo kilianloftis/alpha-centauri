@@ -10,9 +10,8 @@ namespace ac
 EventBridge::EventBridge(EventBus& rBus)
     : m_rBus(rBus)
 {
-    // TODO: EvFactionElim has no source. The game has no elimination path at all — nothing
-    // removes a faction from GameState — so there is no signal to bridge and no rule to
-    // observe. This waits on elimination being implemented, not on wiring.
+    // Faction-scoped signals are wired per faction by WireFaction; there is nothing to do at
+    // construction. There is deliberately no elimination event — factions are never removed.
 }
 
 void EventBridge::WireBase(BaseManager& rBase)

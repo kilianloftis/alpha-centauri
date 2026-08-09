@@ -77,17 +77,21 @@ favours the player.
 **Rule:** factions are **never removed** from the game. A defeated faction's leader can be freed
 to re-establish it, so the faction object must persist.
 
-**Consequence:** `EvFactionElim` in the mod-facing event catalogue describes an event that will
-never occur and should be **removed or redefined** (e.g. "faction lost its last base") rather than
-left declared and unpublishable.
+**Consequence:** `EvFactionElim` described an event that can never occur.
+
+**Implemented** 2026-08-08. Removed from the mod-facing catalogue rather than left as a promise
+the rules cannot keep. If "faction lost its last base" turns out to be worth publishing, that is
+a different event with a different name.
 
 ## 5. Council election veto
 
 **Rule:** governor rules do **not** apply to elections.
 
 **Consequence:** `VetoUnanimouslyOverruled_` reading standard ballots during an election is not a
-gap to fill — the veto/overrule path simply does not apply to elections, and the code should say
-so instead of computing a meaningless tally.
+gap to fill — the veto/overrule path simply does not apply to elections.
+
+**Implemented** 2026-08-08. `VetoPending` refuses an election outright, so the overrule check can
+never see one; both sites say why. The office cannot be defended by its incumbent.
 
 ## 6. Psych
 

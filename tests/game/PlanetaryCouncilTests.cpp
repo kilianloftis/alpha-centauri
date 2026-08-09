@@ -1025,3 +1025,32 @@ TEST_CASE("CastElectionVote rejects an ineligible governor candidate", "[council
     // Abstaining is always allowed.
     CHECK_NOTHROW(rCouncil.CastElectionVote(*game.pB, nullptr));
 }
+
+TEST_CASE("The governor cannot veto an election", "[council][veto]")
+{
+    // Governor rules do not apply to elections — the office cannot be defended by its incumbent.
+    // See docs/game-rules-decisions.md #5. This is also why VetoUnanimouslyOverruled_ may read
+    // standard ballots: an election never reaches it.
+    CouncilGame_ game;
+    PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
+
+    // Elect a governor, then have that governor propose another election.
+    game.GiveAllCommlinksTo(*game.pA);
+    game.AdvancePastProposeCooldown(*game.pA);
+    rCouncil.Propose(*game.pState, *game.pA, "elect_planetary_governor");
+    for (Faction* pMember : rCouncil.Members())
+    {
+        rCouncil.CastElectionVote(*pMember, game.pA);
+    }
+    REQUIRE(rCouncil.Resolve(*game.pState) == ResolveProposalResult_t::Passed);
+    REQUIRE(rCouncil.GetPlanetaryGovernor() == game.pA);
+
+    Faction& rGovernor = *rCouncil.GetPlanetaryGovernor();
+    game.AdvancePastProposeCooldown(rGovernor);
+    rCouncil.Propose(*game.pState, rGovernor, "elect_planetary_governor");
+    REQUIRE(rCouncil.GetPending() != nullptr);
+
+    // A standard proposal would be vetoable by its governor; an election is not.
+    CHECK_FALSE(rCouncil.VetoPending(rGovernor));
+    CHECK_FALSE(rCouncil.GetPending()->vetoed);
+}

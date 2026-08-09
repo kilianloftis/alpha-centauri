@@ -104,7 +104,11 @@ graph TB
 | `EvTechDiscovered` | `ResearchManager::OnTechDiscovered` | `WireFaction` |
 | `EvBaseBuilt` | `Faction::OnBaseAdded` | `WireFaction` |
 | `EvTurnStarted` | published directly by the `TurnStart` stage | — (not via the bridge) |
-| `EvFactionElim` | — | **never published.** The game has no elimination path at all — nothing removes a faction from `GameState` — so there is no signal to observe. This waits on elimination being implemented, not on wiring. |
+
+There is deliberately **no** faction-elimination event: factions are never removed from the game,
+because a defeated faction's leader can be freed to re-establish it. `EvFactionElim` was declared
+and unpublishable, and has been removed rather than left as a promise the rules cannot keep — see
+`docs/game-rules-decisions.md`.
 
 `WireFaction` is idempotent per faction object, matching `WireBase`: wiring twice would deliver
 every event twice to every mod.

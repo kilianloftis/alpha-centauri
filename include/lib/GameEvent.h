@@ -27,10 +27,9 @@ struct EvBaseBuilt
     BaseId_t baseId;
 };
 
-struct EvFactionElim
-{
-    FactionId_t factionId;
-};
+// No EvFactionElim: factions are never removed from the game — a defeated faction's leader can
+// be freed to re-establish it — so there is no elimination to observe. See
+// docs/game-rules-decisions.md.
 
 struct EvDroneRiot
 {
@@ -56,7 +55,6 @@ using GameEvent = std::variant<
     EvTurnStarted,
     EvTechDiscovered,
     EvBaseBuilt,
-    EvFactionElim,
     EvDroneRiot,
     EvBaseGainedPop,
     EvBaseLostPop
