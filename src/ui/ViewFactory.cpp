@@ -7,6 +7,7 @@
 #include "game/faction/Military.h"
 #include "game/faction/ResearchManager.h"
 #include "game/units/UnitComponentRegistry.h"
+#include "game/units/UnitDesignAvailability.h"
 #include "game/units/UnitSlotRegistry.h"
 #include "graphics/Graphics.h"
 #include "ui/style/UiStyle.h"
@@ -104,12 +105,13 @@ std::unique_ptr<UnitDesignerView> ViewFactory::CreateUnitDesignerView(
 ) const
 {
     Faction* pFaction = RequirePlayerFaction_();
+    const std::vector<std::string>& rDiscoveredTechs =
+        pFaction->GetResearch().GetDiscoveredTechs();
 
     return std::make_unique<UnitDesignerView>(
         pFaction->GetMilitary(),
-        *m_rGameDataContext.unitComponentRegistry,
-        *m_rGameDataContext.unitSlotRegistry,
-        pFaction->GetResearch(),
+        GetAvailableUnitSlots(*m_rGameDataContext.unitSlotRegistry, rDiscoveredTechs),
+        GetAvailableUnitComponents(*m_rGameDataContext.unitComponentRegistry, rDiscoveredTechs),
         &pFaction->GetUnitManager(),
         layout
     );

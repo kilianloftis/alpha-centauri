@@ -3,6 +3,7 @@
 #include "game/effects/EffectConfig.h"
 #include "game/units/UnitDomain.h"
 
+#include <algorithm>
 #include <optional>
 #include <string>
 #include <vector>
@@ -42,6 +43,17 @@ struct UnitComponentConfig_t
     // Display-only annotations for FormatCombatRating (not gameplay effects).
     std::vector<CombatRatingModifier_t> combatRatingModifiers;
     std::vector<std::string> combatRatingLabels;
+
+    // Empty requiredTech = always available (matches BuildingConfig_t::IsAvailable).
+    bool IsAvailable(const std::vector<std::string>& rDiscoveredTechs) const
+    {
+        if (requiredTech.empty())
+        {
+            return true;
+        }
+        return std::find(rDiscoveredTechs.begin(), rDiscoveredTechs.end(), requiredTech)
+               != rDiscoveredTechs.end();
+    }
 };
 
 } // namespace ac

@@ -5,9 +5,6 @@
 #include "ui/unit-designer/DesignListPanel.h"
 #include "ui/unit-designer/UnitStatusPanel.h"
 #include "game/faction/Military.h"
-#include "game/faction/ResearchManager.h"
-#include "game/units/UnitComponentRegistry.h"
-#include "game/units/UnitSlotRegistry.h"
 #include "game/units/UnitDesign.h"
 #include "input/Input.h"
 #include "ui/style/UiStyle.h"
@@ -17,25 +14,16 @@ namespace ac
 
 UnitDesignerView::UnitDesignerView(
     Military& rMilitary,
-    const UnitComponentRegistry& rComponentRegistry,
-    const UnitSlotRegistry& rSlotRegistry,
-    const ResearchManager& rResearch,
+    std::vector<UnitSlotConfig_t> availableSlots,
+    std::vector<const UnitComponentConfig_t*> availableComponents,
     const UnitManager* pUnitManager,
     WindowLayout_t layout
 )
     : IGameView(layout)
     , m_rMilitary(rMilitary)
-    , m_rComponentRegistry(rComponentRegistry)
-    , m_rResearch(rResearch)
+    , m_availableSlots(std::move(availableSlots))
+    , m_availableComponents(std::move(availableComponents))
 {
-    for (const UnitSlotConfig_t& rSlot : rSlotRegistry.GetAll())
-    {
-        if (IsUnlocked_(rSlot.requiredTech))
-        {
-            m_availableSlots.push_back(rSlot);
-        }
-    }
-
     BuildUnitStatusPanel_(pUnitManager);
     BuildTopPanelElements_();
     BuildDesignListPanel_();
@@ -163,11 +151,11 @@ void UnitDesignerView::ShowComponentSelector_(
 )
 {
     std::vector<const UnitComponentConfig_t*> available;
-    for (const auto& rConfig : m_rComponentRegistry.GetAll())
+    for (const UnitComponentConfig_t* pConfig : m_availableComponents)
     {
-        if (rConfig.type == rComponentType && IsUnlocked_(rConfig.requiredTech))
+        if (pConfig->type == rComponentType)
         {
-            available.push_back(&rConfig);
+            available.push_back(pConfig);
         }
     }
 
@@ -186,11 +174,6 @@ void UnitDesignerView::ShowComponentSelector_(
             onSelected(*available[index]);
         },
         Style().componentSelectorPopup));
-}
-
-bool UnitDesignerView::IsUnlocked_(const std::string& rRequiredTech) const
-{
-    return rRequiredTech.empty() || m_rResearch.HasDiscoveredTech(rRequiredTech);
 }
 
 void UnitDesignerView::HandleSaveDesign_()

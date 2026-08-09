@@ -73,6 +73,7 @@ add_library(ac-core STATIC
     game/orbital/OrbitalCensus.cpp
     game/units/Unit.cpp
     game/units/UnitDesign.cpp
+    game/units/UnitDesignAvailability.cpp
     game/units/UnitOrder.cpp
     game/units/UnitOrderExecutor.cpp
     game/units/CombatResolver.cpp

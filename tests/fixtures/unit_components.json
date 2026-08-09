@@ -1045,5 +1045,12 @@
         }
       }
     ]
+  },
+  {
+    "id": "test_gated_ability",
+    "name": "Test Gated Ability",
+    "type": "ability",
+    "required_tech": "advanced_build",
+    "effects": []
   }
 ]
