@@ -20,9 +20,21 @@ inline std::string CategoryName(SocialCategory_t category)
 class SocialPolicyRegistry : public Registry<SocialPolicyConfig_t, SocialPolicyConfigParser>
 {
 public:
-    // The starting policy for a category, from the config's `default: true` flag. Throws when a
-    // category has no default or more than one: a faction cannot be constructed without one, and
-    // the failure belongs at config load naming the category, not at every faction constructor.
+    // Exactly one default per category, checked at load. Deferring it to the first faction
+    // constructor meant a mod's policy file loaded clean and then threw from deep inside
+    // session setup, naming a category rather than the file that was wrong.
+    void Validate_() override
+    {
+        for (const SocialCategory_t category : magic_enum::enum_values<SocialCategory_t>())
+        {
+            GetDefaultForCategory(category);
+        }
+    }
+
+    // The starting policy for a category, from the config's `default: true` flag. Validate_
+    // has already rejected a file that does not declare exactly one per category, so by the
+    // time anyone calls this the answer exists; it still throws rather than return null so a
+    // registry built some other way cannot silently hand back nothing.
     const SocialPolicyConfig_t& GetDefaultForCategory(SocialCategory_t category) const
     {
         const SocialPolicyConfig_t* pDefault = nullptr;

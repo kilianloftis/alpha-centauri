@@ -39,7 +39,6 @@ SocialEngineeringBottomPanel::SocialEngineeringBottomPanel(
 
 void SocialEngineeringBottomPanel::Render(Graphics& rGraphics)
 {
-
     rGraphics.DrawFilledRect(
         m_layout.x, m_layout.y, m_layout.width, m_layout.height,
         Style().socialEngineeringBottomPanel.backgroundColor

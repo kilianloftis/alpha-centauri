@@ -862,9 +862,6 @@
     "attacker_cancel_layout": [
       0.54, 0.78, 0.36, 0.14
     ],
-    "outcome_ok_layout": [
-      0.30, 0.72, 0.40, 0.18
-    ],
     "list_button_height": 36.0,
     "list_button_gap": 6.0,
     "list_header_height": 22.0,

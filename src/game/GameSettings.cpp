@@ -181,6 +181,7 @@ void GameSettings::SetMapGeneration(const MapGenerationConfig_t& rConfig)
 
 void GameSettings::Load(const std::string& path)
 {
+    m_path = path;
     std::ifstream file(path);
     if (!file.is_open())
     {
@@ -201,6 +202,11 @@ void GameSettings::Load(const std::string& path)
     SetGameRules(gameRules);
     SetVisibility(visibility);
     SetMapGeneration(mapGeneration);
+}
+
+void GameSettings::Save() const
+{
+    Save(m_path);
 }
 
 void GameSettings::Save(const std::string& path) const

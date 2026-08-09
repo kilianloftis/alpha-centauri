@@ -163,12 +163,16 @@ Caller contract: the faction must have been constructed against the session's `W
   - Coordinate all faction subsystems
   - Provide unified interface for faction operations
   - Manage faction-specific state
-  - Handle turn processing for the faction
-- **Composition**: Owns FactionIdentity, AIProfile, Economy, Military, Research, Diplomacy
-- **Signals**: Emits internal signals for engine communication:
-  - `on_tech_discovered`: Fired when a technology is discovered
-  - `on_base_built`: Fired when a new base is constructed
-  - `on_eliminated`: Fired when the faction is eliminated from the game
+- **Composition**: owns `FactionIdentity`, `AIProfile`, `FactionFlavor`, `EconomyManager`,
+  `Military`, `ResearchManager`, `ResearchSelector`, `SocialEngineeringManager`, `UnitManager`,
+  its `m_bases`, its effects pool, and its explored/visible/revealed-unit maps. **Not**
+  diplomacy — that is world-scoped (see below).
+- **Turn processing is not here.** `Faction` has no `ProcessTurn`; stages drive the turn.
+- **Signals**: exactly one — `OnBaseAdded(BaseManager&)`, which `EventBridge` uses to wire each
+  base and to publish `EvBaseBuilt`. Tech discovery is `ResearchManager::OnTechDiscovered`.
+  There is **no** elimination signal: factions are never removed from the game (a defeated
+  faction's leader can be freed to re-establish it), so there is nothing to observe. See
+  `docs/game-rules-decisions.md`.
 
 ### FactionIdentity
 - **Purpose**: Static faction information (name, leader, visual identity)
@@ -232,16 +236,13 @@ See `docs/architecture/diplomacy-system.md`.
   - **Obsolescence** (`obsoletes`): transitive and closed over the whole graph, *not* gated on intermediate steps' techs — if Transcend obsoletes Empath and Empath obsoletes Doctor, then Transcend obsoletes Doctor even in a tech order that skipped Empath. `PopTypeAvailabilityCalculator::GetAvailable` and `ResolveCurrentType` are both phrased in terms of one walk, so they cannot disagree; a type is assignable exactly when it is `player_assignable`, its tech is discovered, and `ResolveCurrentType` returns the type itself. Cycles are rejected by `PopTypeRegistry` at load, since the walk is on the per-turn path for every pop of every base.
   - `PopContainer`: Storage for a single base's `Pop` instances — the vector, the counts, and the revision. Owns no population policy: `AddPop` and `ConvertTo` take an already-resolved `PopTypeConfig_t`, because deciding which types are legal is `PopulationManager`'s job. Note `GetWorkerCount()` is every tile-capable pop (plain workers *and* drones *and* talents) and so does not partition the population against `GetDroneCount`/`GetTalentCount`/`GetSpecialistCount`; `GetPlainWorkerCount()` is the disjoint bucket.
   - `Pop`: Individual population unit; holds a `WorkedTileClaim` when assigned as a worker (`GetTile()` reads it), which releases the tile automatically when the pop dies, converts to a non-worker type, or is reassigned
-  - `PopFactory`: Creates individual `Pop` instances from config (looked up via `PopTypeRegistry`)
   - `RiotCalculator`: Tracks drone riot state and emits `will_riot`, `is_rioting`, and `riot_ended`. Two sources keep a riot alive and they expire differently: the **natural condition** (drones exceed the composition's talent target) is recomputed on every `Update`, while a **forced riot** (probe Incite Drone Riots) lasts a fixed number of end-of-turn passes. A forced riot needs its own lifetime precisely because the action does not change composition — the natural condition cannot sustain it.
   - `GrowthCalculator`: Computes the nutrient threshold required for a base to grow one population, from `GrowthConfig_t`. Growth/starvation decisions (stockpile ≥ required → grow; stockpile < 0 → starve) are made in the `Population` turn stage.
   - `GrowthConfigParser`: Loads `config/pop_growth.json` and produces a `GrowthConfig_t` holding `nutrients_per_pop` and `max_base_size`. Both keys are required and must be positive integers — a `nutrients_per_pop` of 0 makes the growth threshold identically 0, so every base would grow every turn.
-  - `WorkerRoles`: Enum defining worker roles (Worker, Lab, Psych, Econ, Drone, Talent)
   - `SecretProjectAvailabilityCalculator`: Answers two distinct questions about a secret project, which used to be conflated into one. `IsUnavailable` — nobody may build it, because some faction holds it **or** the copy was destroyed (tombstoned via `GameState::MarkSecretProjectDestroyed`). `IsOwnedByAnyFaction` — some faction holds it right now, which is what a UI label, a victory check or diplomacy wants; a razed project answers `false`. Injected into `BuildingManager`; `CanAddBuilding` consults it at the point a building is granted, not only where the build menu is drawn
   - `Buildings`: Collection of building IDs in the base
   - `TileResources`: Resources (nutrients, energy, minerals) from worked tiles
   - `Position`: Map coordinates (x, y) used to calculate the workable tile radius
-  - `TradeRoutes`: Collection of trade routes providing additional energy
 - **Responsibilities**:
   - Manage population growth and size (1-8 initially, expandable with buildings)
   - Expose the set of workable tiles via `WorkerAssignmentManager::GetWorkableTiles()` (5×5 grid minus corners, Manhattan distance ≤ 3 within [-2,2] offsets, 20 tiles, excluding own tile). Tiles already worked by another base — including another faction's — cannot be worked (enforced by `WorkedTileIndex`); enemy-unit blocking is a TODO pending unit implementation.
@@ -273,7 +274,7 @@ Turns are **stage driven**, not faction driven. `Faction` has no `ProcessTurn`.
 1. `TurnProcessor::Advance(GameState&)` walks the stage list from `config/turn_stages.json`.
 2. A global stage runs once; a per-faction stage runs once per faction in `GameState::Factions()`.
 3. Each stage reads what it needs off `GameState` and the faction it was handed, and returns a
-   `StageResult_t` — `Complete` to move on, or `Yield` to hand control back to the UI and resume
+   `StageResult_t` — `Continue` to move on, or `Yield` to hand control back to the UI and resume
    at the same stage on the next `Advance` (this is how `PlayerActions` waits for the player).
 4. Stages self-register, so adding one is a new translation unit plus a config entry.
 

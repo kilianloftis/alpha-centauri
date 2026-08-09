@@ -155,3 +155,53 @@ behaviours; the text above now says so.
   safe because the wiring is keyed on that same object's lifetime.
 - Deleting fourteen methods changed no test outcome, which is the point: they had no callers.
   The build is the check — a missed reference is a link error, not a silent behaviour change.
+
+## Independent review follow-ups (2026-08-08)
+
+The first outside review of `c41a45f..HEAD`. It found **no reachable crash or wrong-behaviour
+defect in the code changes**, traced every new throw to its callers and confirmed none is
+reachable, and confirmed the caches' keys are complete. What it did find was concentrated in the
+documentation deliverable and in test coverage — which is fair, since that is where the
+self-review had no second pair of eyes.
+
+**Behaviour fixed:**
+- `PopulationManager::RemovePop` reconciled composition *after* emitting `OnPopLost`, so every
+  observer of that signal — including `EventBridge`'s mod-facing `EvBaseLostPop` — read the
+  drone/talent split for the size the base no longer had. The staleness the second pass set out
+  to remove had simply moved into the observers. It reconciles first now, and through
+  `MaybeRecalculateComposition_`, so it honours `BatchCompositionUpdate` like the other entry
+  point (renamed from `MaybeRecalculateCompositionAfterSpecialistChange_`, which no longer
+  described what it does).
+- `GameSettings` now remembers where it was loaded from, and `Save()` writes there. The settings
+  UI saves on every toggle against a path relative to the working directory, so the new
+  settings-panel test **overwrote the developer's real `user_settings.json`**. Found because the
+  file showed up dirty in `git status`, not because anything failed.
+
+**Claim made true rather than corrected:** the package doc said the `"default": true` social
+policy flag "fails at config load with the offending category named". It did not — the only
+caller was `SocialEngineeringManager`'s constructor, so a bad mod file still threw from deep
+inside session setup. `SocialPolicyRegistry::Validate_` now enforces it during `Load`, which is
+what was claimed and what the `Registry` base was built for.
+
+**Coverage gap closed:** the three load-time validators added by these packages
+(`energy_cost >= 0`, unit-slot `column`, one social-policy default per category) were pinned only
+against synthetic fixtures. Nothing loaded the *shipped* configs, so a bad edit to
+`config/social_policies.json` — a file this range edited — would crash at faction construction
+with the whole suite green. Four tests now load the real improvement, unit-slot, social-policy,
+tech and building configs.
+
+**Documentation corrected:**
+- `event-system.md` repeated the exact claim this package recorded as fixed: that `scriptPath` is
+  "parsed and never loaded". It is *rejected* at load. Getting that wrong in the doc that ships
+  with the fix is the same failure mode, one layer out.
+- `faction-system.md` still listed `Diplomacy` in `Faction`'s composition (contradicted thirty
+  lines later by the same document), three faction signals that do not exist, `StageResult_t`'s
+  enumerator as `Complete` rather than `Continue`, and `PopFactory` / `WorkerRoles` /
+  `TradeRoutes` among the base components. The diagram was rewritten from the live members; the
+  prose beneath it was not. Fixed in one place, left a second copy — in the package chartered to
+  remove exactly that.
+- `diplomacy-system.md` said the ledger has four axes and omitted `m_integrity`.
+- `FactionVisibleMap.h` still documented `RebuildFromSources` as a no-op on an unsized map.
+
+**Hygiene:** the `NoticePopup` move orphaned `SatelliteViewStyle_t::outcomeOkLayout`, which stayed
+a *required* key every config had to supply and nothing read.

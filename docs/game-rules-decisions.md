@@ -1,0 +1,88 @@
+# Game rules — decisions of record
+
+Rules the review packages hit and deliberately did not invent. Each was left as a TODO at its
+call site until the project owner ruled on it. Recorded here so the TODOs can be closed against a
+written rule rather than a guess.
+
+Decided 2026-08-08.
+
+---
+
+## 1. Which pop is lost when a base shrinks
+
+**Rule:** specialists are taken **last**. Within whichever group is being drawn from — tile
+workers first (which includes drones and talents), or specialists only if there are no tile
+workers left — take the pop **producing the least total resource**.
+
+"Total resource" is the sum of what that pop currently contributes: for a tile worker, the
+nutrients + minerals + energy of its worked tile; for a specialist, its econ + labs + psych
+output.
+
+**Replaces:** `PopContainer::RemovePop`'s unconditional `pop_back`, which took the most recently
+added pop and so could take a talent while drones remained.
+
+**Applies to** every shrink path: starvation, conquest, probe pop-kill, `EnforceMaxSize_`.
+
+## 2. A base that reaches size zero
+
+**Rule:** it is razed. There is to be **one** raze pathway — the existing
+`Faction::ExtractBase` / raze path — not a second one written for this case.
+
+**Replaces:** the guard added in `BaseManager`'s starvation handler, which currently returns early
+at size zero and leaves an empty base alive forever.
+
+## 3. Production retooling penalty
+
+**Never implemented** — the review recorded it as "carried the full stockpile", which was
+accurate; there is no penalty code anywhere in the tree.
+
+**Rule:** when switching production, if **more than 10 minerals** have been spent toward the
+current item, **50% of the spent minerals are lost**.
+
+- Switching **back to the original** item incurs **no** penalty.
+- Switching to a **third** item applies the penalty **again**.
+- The "original" is tracked for the current turn at least; it need not survive a turn boundary.
+
+## 4. Faction elimination
+
+**Rule:** factions are **never removed** from the game. A defeated faction's leader can be freed
+to re-establish it, so the faction object must persist.
+
+**Consequence:** `EvFactionElim` in the mod-facing event catalogue describes an event that will
+never occur and should be **removed or redefined** (e.g. "faction lost its last base") rather than
+left declared and unpublishable.
+
+## 5. Council election veto
+
+**Rule:** governor rules do **not** apply to elections.
+
+**Consequence:** `VetoUnanimouslyOverruled_` reading standard ballots during an election is not a
+gap to fill — the veto/overrule path simply does not apply to elections, and the code should say
+so instead of computing a meaningless tally.
+
+## 6. Psych
+
+**Rule:** psych is **not** redistributed the way econ and labs are. A base **collects** psych and
+applies it to **its own** population.
+
+Psych may originate from anywhere the effect system reaches:
+- base facilities,
+- secret projects (commonly +psych at *all* of the owning faction's bases),
+- the faction economy, which allocates a share of energy into psych **to distribute to bases**.
+
+**Consequence:** composition's `psych_output` counting specialist psych only is wrong — it is one
+source among several. The psych model is a feature in its own right, not a bug fix.
+
+---
+
+## Deferred by decision, not by uncertainty
+
+- **Mid-proposal trade failure should crash.** A `TransferBaseTo` that throws part-way through a
+  multi-item trade is a programming error, and the game should fail loudly. No rollback machinery
+  is wanted. Current behaviour (the exception propagates) is therefore correct as it stands.
+- **A diplomatic proposal queue is not needed.** Turns are sequential; one pending slot with a
+  `Busy` refusal is sufficient until and unless multiplayer happens.
+- **Player-action command/event seam:** wanted, but after the core game.
+- **Lua mod scripting:** wanted, but after the core game.
+- **No `[a-b of N]` overflow indicators anywhere.** Lists scroll; they do not annotate themselves
+  with counts. This applies to existing indicators as well as new ones.

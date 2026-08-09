@@ -68,7 +68,7 @@ TEST_CASE("SocialEngineeringManager: a mod's own ids work as long as each catego
     std::filesystem::remove(path);
 }
 
-TEST_CASE("SocialEngineeringManager: throws naming the category that declares no default",
+TEST_CASE("A social-policy file with no default for a category is rejected at load",
           "[social-engineering][validation]")
 {
     const std::filesystem::path path = WriteTempJson("ac_sem_missing.json", R"([
@@ -77,15 +77,15 @@ TEST_CASE("SocialEngineeringManager: throws naming the category that declares no
         { "id": "survival",    "name": "Survival",    "category": "values",         "default": true, "effects": [] },
         { "id": "none_future", "name": "None",        "category": "future_society", "effects": [] }
     ])");
+    // At load, not at the first faction constructor: a mod's file used to load clean and then
+    // throw from deep inside session setup.
     SocialPolicyRegistry registry;
-    registry.Load(path.string());
-
-    CHECK_THROWS_WITH(SocialEngineeringManager(registry),
+    CHECK_THROWS_WITH(registry.Load(path.string()),
                       Catch::Matchers::ContainsSubstring("FutureSociety"));
     std::filesystem::remove(path);
 }
 
-TEST_CASE("SocialEngineeringManager: throws when a category declares two defaults",
+TEST_CASE("A social-policy file with two defaults for a category is rejected at load",
           "[social-engineering][validation]")
 {
     // Ambiguity is a config error, not a coin flip over which policy a faction starts on.
@@ -97,9 +97,7 @@ TEST_CASE("SocialEngineeringManager: throws when a category declares two default
         { "id": "none_future",  "name": "None",         "category": "future_society", "default": true, "effects": [] }
     ])");
     SocialPolicyRegistry registry;
-    registry.Load(path.string());
-
-    CHECK_THROWS_WITH(SocialEngineeringManager(registry),
+    CHECK_THROWS_WITH(registry.Load(path.string()),
                       Catch::Matchers::ContainsSubstring("Politics"));
     std::filesystem::remove(path);
 }

@@ -50,6 +50,10 @@ struct ViewFixture : WorldFixture
     {
         EnsureStyleLoaded();
 
+        // The settings UI saves on every toggle. Without this, a test that clicks a settings row
+        // rewrites the developer's real user_settings.json in the working directory.
+        settings.SetSavePath(std::string(AC_TEST_FIXTURES_DIR) + "/../../build/test_settings.json");
+
         factionDefinition.id = "test_faction";
         factionDefinition.identity.name = "Test Faction";
 

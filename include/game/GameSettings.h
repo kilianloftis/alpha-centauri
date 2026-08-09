@@ -36,9 +36,21 @@ public:
     const GraphicsConfig_t& GetGraphics() const { return m_graphics; }
 
     // Missing file leaves defaults (pause off, shroud/fog on, default map generation).
-    // Unreadable or corrupt file throws.
+    // Unreadable or corrupt file throws. Remembers the path, so Save() round-trips to wherever
+    // this object was loaded from.
     void Load(const std::string& path = kDefaultPath);
-    void Save(const std::string& path = kDefaultPath) const;
+
+    // Writes to the remembered path. A settings object that has never been loaded writes to
+    // kDefaultPath *relative to the current working directory*, which is why the path is
+    // remembered rather than defaulted at every call site: the settings UI saves on every
+    // toggle, and a process run from elsewhere would otherwise scribble a fresh file there.
+    void Save() const;
+    void Save(const std::string& path) const;
+
+    // Point this object at a different file without reading it. For tests and for any future
+    // profile switching; without it, exercising the settings UI overwrites the developer's own
+    // user_settings.json.
+    void SetSavePath(std::string path) { m_path = std::move(path); }
 
     Signal<> OnGameRulesChanged;
     Signal<> OnVisibilityChanged;
@@ -49,6 +61,8 @@ private:
     VisibilityConfig_t m_visibility;
     MapGenerationConfig_t m_mapGeneration;
     GraphicsConfig_t m_graphics;
+    // Where Save() writes. Set by Load / SetSavePath; kDefaultPath until then.
+    std::string m_path = kDefaultPath;
 };
 
 } // namespace ac

@@ -81,8 +81,8 @@ its treasury, its discovered techs, its explored map, its bases.
 
 ## DiplomacyLedger
 
-Four axes, and **two of them are directional** — which is why they are separate maps rather than
-fields of one relationship record:
+Five axes. Two are directional and one is per-faction rather than pairwise, which is why they are
+separate maps rather than fields of one relationship record:
 
 | Axis | Key | Meaning |
 |---|---|---|
@@ -90,6 +90,7 @@ fields of one relationship record:
 | `m_known` | `FactionPair` (symmetric) | the two have met; a precondition for every action |
 | `m_grievances` | `DirectedFactionPair` | how much **holder** resents **against** — A may resent B without B resenting A |
 | `m_infiltration` | `DirectedFactionPair` | **infiltrator** has a probe foothold in **target** — emphatically one-way |
+| `m_integrity` | `FactionId_t` | a faction's own reputation for keeping its word; not about any pair |
 
 - **Known-ness** is set by `FirstContactResolver` during visibility rebuilds, and by
   `TradeCommFrequency_t` as a trade item (introducing a third party).

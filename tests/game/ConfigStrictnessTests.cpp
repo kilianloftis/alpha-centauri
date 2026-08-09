@@ -1,6 +1,9 @@
 #include "TempConfigFile.h"
 
 #include "game/map/ImprovementRegistry.h"
+#include <magic_enum.hpp>
+#include "game/social-engineering/SocialPolicyRegistry.h"
+#include "game/buildings/BuildingRegistry.h"
 #include "game/units/UnitSlotRegistry.h"
 #include "ui/style/UiStyle.h"
 #include "game/population/pop-types/GrowthConfigParser.h"
@@ -401,4 +404,44 @@ TEST_CASE("The shipped style file loads", "[config][ui]")
 {
     // The counterpart: the mutation above is what breaks it, not the harness.
     CHECK_NOTHROW(ac::UiStyle::Load(std::string(AC_CONFIG_DIR) + "/ui/style.json"));
+}
+
+// The shipped configs, loaded through the same registries the game uses. The validators added
+// by the review packages (improvement energy_cost >= 0, unit-slot column, exactly one
+// "default": true social policy per category) all live at load time, and every test for them
+// used a synthetic fixture — so a bad edit to a real config file crashed at faction
+// construction with the whole suite green.
+TEST_CASE("The shipped improvement config loads", "[config][shipped]")
+{
+    ImprovementRegistry registry;
+    CHECK_NOTHROW(registry.Load(std::string(AC_CONFIG_DIR) + "/improvements.json"));
+}
+
+TEST_CASE("The shipped unit-slot config loads", "[config][shipped]")
+{
+    UnitSlotRegistry registry;
+    CHECK_NOTHROW(registry.Load(std::string(AC_CONFIG_DIR) + "/unit_slot_config.json"));
+}
+
+TEST_CASE("The shipped social policies declare exactly one default per category",
+          "[config][shipped]")
+{
+    SocialPolicyRegistry registry;
+    REQUIRE_NOTHROW(registry.Load(std::string(AC_CONFIG_DIR) + "/social_policies.json"));
+
+    // GetDefaultForCategory is where the rule is enforced; nothing calls it during Load, so a
+    // missing or duplicated default reaches a faction constructor instead.
+    for (const SocialCategory_t category : magic_enum::enum_values<SocialCategory_t>())
+    {
+        CHECK_NOTHROW(registry.GetDefaultForCategory(category));
+    }
+}
+
+TEST_CASE("The shipped tech and building configs load", "[config][shipped]")
+{
+    TechRegistry techs;
+    CHECK_NOTHROW(techs.Load(std::string(AC_CONFIG_DIR) + "/techs.json"));
+
+    BuildingRegistry buildings;
+    CHECK_NOTHROW(buildings.Load(std::string(AC_CONFIG_DIR) + "/buildings"));
 }

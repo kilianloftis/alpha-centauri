@@ -527,7 +527,6 @@ struct SatelliteViewStyle_t
     RatioLayout_t attackerListLayout{};
     RatioLayout_t attackerConfirmLayout{};
     RatioLayout_t attackerCancelLayout{};
-    RatioLayout_t outcomeOkLayout{};
     float listButtonHeight{};
     float listButtonGap{};
     float listHeaderHeight{};

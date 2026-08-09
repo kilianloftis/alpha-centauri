@@ -184,7 +184,7 @@ private:
 
     void NotifyPopGained_();
     void NotifyPopLost_();
-    void MaybeRecalculateCompositionAfterSpecialistChange_();
+    void MaybeRecalculateComposition_();
     const std::string& GetDefaultPopType_() const;
     // Requested type id -> the type a pop actually becomes, walking the obsolescence chain
     // against currently discovered techs. The one place that rule is applied.

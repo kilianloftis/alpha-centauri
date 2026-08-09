@@ -125,10 +125,11 @@ processed (null for a global stage, and for the pre/post hooks that fire on stag
 rather than per faction). Without that argument a config-declared hook had captured nothing and
 could therefore observe nothing — the seam existed but could not host a consumer.
 
-**Not yet built:** `Hook_t::scriptPath` is parsed and never loaded. The project already embeds a
-`LuaRuntime`, so this is wiring rather than capability — but "what a mod script may call" is an
-API design question, and the context argument above is the prerequisite either way. A hook is
-therefore still only reachable from C++ today.
+**Not yet built:** `Hook_t::scriptPath` **is rejected at load** — `TurnStageConfigParser` throws
+on a non-empty value ("script loading is not available; remove the hook or bind a callback in
+C++") rather than accepting one it cannot honour. A hook is therefore reachable only from C++
+today. The project already embeds a `LuaRuntime`, so what is missing is the scripting API — what
+a mod script may call — not the runtime.
 
 ### Two-Layer Architecture
 - **Layer 1 (Signal<T>)**: Optimized for engine performance

@@ -626,7 +626,6 @@ SatelliteViewStyle_t ParseSatelliteViewStyle_(const nlohmann::json& j)
     s.attackerListLayout = ParseLayout_(j, "attacker_list_layout");
     s.attackerConfirmLayout = ParseLayout_(j, "attacker_confirm_layout");
     s.attackerCancelLayout = ParseLayout_(j, "attacker_cancel_layout");
-    s.outcomeOkLayout = ParseLayout_(j, "outcome_ok_layout");
     s.listButtonHeight = j.at("list_button_height").get<float>();
     s.listButtonGap = j.at("list_button_gap").get<float>();
     s.listHeaderHeight = j.at("list_header_height").get<float>();

@@ -42,7 +42,8 @@ public:
 
     // Clear current visibility, then reveal from every unit, base, and owned Sensor
     // (vision improvements) of rFaction. Newly visible tiles are also marked on rExplored.
-    // No-op if this map is unsized. Does not clear the RemoveFog bypass flag.
+    // Throws if this map is unsized — a faction always has one, so an unsized map is a wiring
+    // bug rather than a reason to see everything. Does not clear the RemoveFog bypass flag.
     void RebuildFromSources(const Faction& rFaction, const WorldMap& rWorldMap,
         FactionExploredMap& rExplored);
 
