@@ -37,6 +37,7 @@ add_library(ac-core STATIC
     game/faction/base/HomeBaseIndex.cpp
     game/faction/base/buildings/BuildingManager.cpp
     game/faction/base/production/ProductionManager.cpp
+    game/faction/base/production/ProductionConfigParser.cpp
     game/faction/base/production/ProductionCostCalculator.cpp
     game/faction/base/resources/ResourceManager.cpp
     game/faction/base/resources/WorkerAssignmentManager.cpp

@@ -58,6 +58,7 @@ BaseManager::BaseManager(
     const PopTypeRegistry& rPopTypeRegistry,
     const PopTypeAvailabilityCalculator& rPopTypeAvailabilityCalculator,
     const GrowthConfig_t& rGrowthConfig,
+    const ProductionConfig_t& rProductionConfig,
     PopCompositionCalculator& rCompositionCalculator,
     const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
     TileEffectsContext& rTileEffects,
@@ -81,7 +82,7 @@ BaseManager::BaseManager(
                                                      rFaction.GetResearch()))
     , m_pResources(std::make_unique<ResourceManager>(
           *m_pWorkerAssignments, rFaction.GetEconomy(), m_tile, m_rTileEffects, m_homeUnits))
-    , m_pProduction(std::make_unique<ProductionManager>())
+    , m_pProduction(std::make_unique<ProductionManager>(rProductionConfig))
     , m_name(std::move(name))
 {
     // A base provides its own garrison defense bonus, modeled as the "Base" improvement.

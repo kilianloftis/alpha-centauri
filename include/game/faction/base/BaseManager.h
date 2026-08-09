@@ -3,6 +3,7 @@
 #include "game/IConstructable.h"
 #include "game/buildings/BuildingConfig.h"
 #include "game/faction/base/BaseTypes.h"
+#include "game/faction/base/production/ProductionConfigParser.h"
 #include "game/faction/base/HomeBaseIndex.h"
 #include "game/map/WorkedTileIndex.h"
 #include "game/effects/ActiveEffect.h"
@@ -87,6 +88,7 @@ public:
         const PopTypeRegistry& rPopTypeRegistry,
         const PopTypeAvailabilityCalculator& rPopTypeAvailabilityCalculator,
         const GrowthConfig_t& rGrowthConfig,
+        const ProductionConfig_t& rProductionConfig,
         PopCompositionCalculator& rCompositionCalculator,
         const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
         TileEffectsContext& rTileEffects,

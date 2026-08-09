@@ -20,6 +20,7 @@ struct GameDataPaths
     std::string factions = "config/factions";
     std::string popComposition = "config/pop_composition.lua";
     std::string popGrowth = "config/pop_growth.json";
+    std::string production = "config/production.json";
     std::string techCost = "config/tech_cost.lua";
     std::string worldGenPresets = "config/worldGen/presets.json";
     std::string worldGenDecoration = "config/worldGen/decoration.json";

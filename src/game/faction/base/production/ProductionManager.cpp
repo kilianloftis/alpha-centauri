@@ -4,8 +4,9 @@
 namespace ac
 {
 
-ProductionManager::ProductionManager()
-    : m_pCurrentItem(nullptr)
+ProductionManager::ProductionManager(const ProductionConfig_t& rConfig)
+    : m_rConfig(rConfig)
+    , m_pCurrentItem(nullptr)
     , m_mineralStockpile(0)
 {
 }
@@ -25,8 +26,27 @@ void ProductionManager::SetProduction(const IConstructable* pItem)
         return;
     }
 
+    ApplyRetoolPenalty_(pItem);
     m_pCurrentItem = pItem;
     OnProductionChanged.Emit();
+}
+
+void ProductionManager::ApplyRetoolPenalty_(const IConstructable* pNewItem)
+{
+    // Free to go back to what the base was building when the turn handed over.
+    if (pNewItem == m_pTurnOriginalItem)
+    {
+        return;
+    }
+    if (m_mineralStockpile <= m_rConfig.retoolPenaltyThreshold)
+    {
+        return;
+    }
+
+    // Integer division rounds the loss down, so the remainder favours the player.
+    const int forfeited =
+        m_mineralStockpile * m_rConfig.retoolPenaltyNumerator / m_rConfig.retoolPenaltyDenominator;
+    m_mineralStockpile -= forfeited;
 }
 
 const IConstructable* ProductionManager::GetCurrentProduction() const
@@ -45,7 +65,8 @@ int ProductionManager::GetMineralCost(const BaseEffects_t& rBaseEffects) const
     {
         return 0;
     }
-    return ProductionCostCalculator::ComputeCost(m_pCurrentItem->GetBaseCost(), rBaseEffects);
+    return ProductionCostCalculator::ComputeCost(m_pCurrentItem->GetBaseCost(),
+                                                 m_rConfig.mineralsPerRow, rBaseEffects);
 }
 
 int ProductionManager::GetMineralStockpile() const
@@ -62,17 +83,22 @@ std::string ProductionManager::ApplyProduction(int minerals, const BaseEffects_t
 {
     if (!HasProduction())
     {
+        m_pTurnOriginalItem = nullptr;
         return std::string();
     }
 
     m_mineralStockpile += minerals;
 
+    std::string completed;
     if (m_mineralStockpile >= GetMineralCost(rBaseEffects))
     {
-        return CompleteProduction();
+        completed = CompleteProduction();
     }
 
-    return std::string();
+    // Whatever is queued once this turn's minerals are banked is what the player sees when
+    // PlayerActions hands over, so it is the item a retool this turn is measured against.
+    m_pTurnOriginalItem = m_pCurrentItem;
+    return completed;
 }
 
 std::string ProductionManager::CompleteProduction()

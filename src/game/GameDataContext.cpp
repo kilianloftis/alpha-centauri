@@ -12,6 +12,7 @@
 #include "game/map/WorldGenPresetRegistry.h"
 #include "game/population/calculators/PopCompositionCalculator.h"
 #include "game/population/calculators/PopTypeAvailabilityCalculator.h"
+#include "game/faction/base/production/ProductionConfigParser.h"
 #include "game/population/pop-types/GrowthConfigParser.h"
 #include "game/population/pop-types/PopCompositionConfigParser.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
@@ -57,6 +58,7 @@ void ThrowIfIncomplete(const GameDataContext& rData)
         {rData.popTypeRegistry.get(), "popTypeRegistry"},
         {rData.popCompositionConfig.get(), "popCompositionConfig"},
         {rData.growthConfig.get(), "growthConfig"},
+        {rData.productionConfig.get(), "productionConfig"},
         {rData.techCostConfig.get(), "techCostConfig"},
         {rData.improvementRegistry.get(), "improvementRegistry"},
         {rData.worldGenPresetRegistry.get(), "worldGenPresetRegistry"},
@@ -204,6 +206,10 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
     GrowthConfigParser growthParser;
     rData.growthConfig =
         std::make_unique<GrowthConfig_t>(growthParser.ParseConfig(rPaths.popGrowth));
+
+    ProductionConfigParser productionParser;
+    rData.productionConfig =
+        std::make_unique<ProductionConfig_t>(productionParser.ParseConfig(rPaths.production));
 
     TechCostConfigParser techCostParser;
     rData.techCostConfig = std::make_unique<TechCostConfig_t>(

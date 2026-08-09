@@ -10,6 +10,7 @@
 #include "game/faction/SocialEngineeringManager.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/production/ProductionConfigParser.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/resources/ResourceManager.h"
 #include "game/GameSettings.h"
@@ -132,6 +133,8 @@ struct WorldFixture
         dataContext.popTypeRegistry = std::make_unique<ac::PopTypeRegistry>();
         dataContext.popTypeRegistry->Load(FixturePath("pop_types.json"));
         dataContext.growthConfig = std::make_unique<ac::GrowthConfig_t>();
+        dataContext.productionConfig = std::make_unique<ac::ProductionConfig_t>(
+            ac::ProductionConfigParser{}.ParseConfig(FixturePath("production.json")));
         dataContext.techRegistry = std::make_unique<ac::TechRegistry>();
         dataContext.techRegistry->Load(FixturePath("techs.json"));
         // Trivial formula; tests that care about tech cost supply their own.
@@ -194,6 +197,7 @@ struct BaseFixture : WorldFixture
             *dataContext.popTypeRegistry,
             *dataContext.popTypeAvailabilityCalculator,
             *dataContext.growthConfig,
+            *dataContext.productionConfig,
             *dataContext.popCompositionCalculator,
             // The one optional dependency: it needs a GameState, which this fixture has no
             // reason to build. Only GetBuildingsAvailableForConstruction requires it.
@@ -280,6 +284,7 @@ struct FactionFixture : BaseFixture
             *dataContext.popTypeRegistry,
             *dataContext.popTypeAvailabilityCalculator,
             *dataContext.growthConfig,
+            *dataContext.productionConfig,
             *dataContext.popCompositionCalculator,
             /*secretProjectCalculator*/ nullptr,
             *ctx);

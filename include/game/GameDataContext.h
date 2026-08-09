@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/faction/base/production/ProductionConfigParser.h"
 #include "game/GameDataPaths.h"
 #include "game/effects/EffectConfig.h"
 
@@ -65,6 +66,7 @@ struct GameDataContext
     std::unique_ptr<PopTypeRegistry> popTypeRegistry;
     std::unique_ptr<PopCompositionConfig_t> popCompositionConfig;
     std::unique_ptr<GrowthConfig_t> growthConfig;
+    std::unique_ptr<ProductionConfig_t> productionConfig;
     std::unique_ptr<TechCostConfig_t> techCostConfig;
     std::unique_ptr<ImprovementRegistry> improvementRegistry;
     std::unique_ptr<WorldGenPresetRegistry> worldGenPresetRegistry;

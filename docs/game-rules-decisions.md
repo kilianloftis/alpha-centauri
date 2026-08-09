@@ -43,6 +43,17 @@ current item, **50% of the spent minerals are lost**.
 - Switching to a **third** item applies the penalty **again**.
 - The "original" is tracked for the current turn at least; it need not survive a turn boundary.
 
+**Implemented** 2026-08-08. `ApplyProduction` marks the item in place once that turn's minerals
+are banked — the last thing to touch production before `PlayerActions` hands the player control —
+and `SetProduction` charges the penalty when switching to anything else. Numbers live in
+`config/production.json` (`retool_penalty_threshold`, `retool_penalty_numerator`,
+`retool_penalty_denominator`), which also became the home for `minerals_per_row` — the game
+number package 6 recorded as "the one still in code", with nowhere to put it.
+
+Clearing production (`nullptr`) is not charged: the player has not committed to anything else,
+and re-queuing pays on the way in. Integer division rounds the forfeit down, so an odd stockpile
+favours the player.
+
 ## 4. Faction elimination
 
 **Rule:** factions are **never removed** from the game. A defeated faction's leader can be freed

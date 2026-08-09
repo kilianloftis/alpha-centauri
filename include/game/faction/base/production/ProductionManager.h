@@ -2,6 +2,7 @@
 
 #include "game/IConstructable.h"
 #include "game/effects/ActiveEffect.h"
+#include "game/faction/base/production/ProductionConfigParser.h"
 #include "lib/Signal.h"
 #include <string>
 
@@ -14,18 +15,22 @@ namespace ac
 class ProductionManager
 {
 public:
-    ProductionManager();
+    // rConfig supplies the retooling rule and the minerals-per-row rate; it outlives every
+    // base (GameDataContext owns it).
+    explicit ProductionManager(const ProductionConfig_t& rConfig);
     ~ProductionManager();
 
     // Set the item to produce; nullptr clears it. Setting the item already queued is a no-op
     // and does not re-announce a change.
     //
-    // Contract, stated because it was not: **the mineral stockpile is never touched here.**
-    // Switching carries the full stockpile to the new item, and clearing keeps it for whatever
-    // is queued next. Completion (ApplyProduction) is the only thing that spends it.
-    // TODO: SMAC penalises switching between production categories (unit / facility / project).
-    // That rule is not implemented; carrying the full stockpile is the placeholder, not a
-    // decision. It needs the penalty rule before it can be anything else.
+    // **Retooling.** Switching away from the item the base started this turn on forfeits a
+    // share of the minerals already spent (config: retool_penalty_*), but only once more than
+    // the threshold has accumulated. Switching *back* to the turn's original item is free;
+    // switching on to a third item pays again. Clearing production keeps the stockpile — the
+    // player has not committed to anything else yet, and re-queuing pays on the way in.
+    //
+    // ApplyProduction marks the item in place at that moment as the turn's original, which is
+    // the last thing to touch production before PlayerActions hands control to the player.
     //
     // The item is not validated against what this base may actually build — BaseManager owns
     // that question (GetConstructable), and its availability calculator is optional, so the
@@ -61,10 +66,14 @@ public:
     Signal<> OnProductionChanged;
 
 private:
+    // Charging the penalty: what this base was producing when the player got control this turn.
+    const IConstructable* m_pTurnOriginalItem = nullptr;
+    const ProductionConfig_t& m_rConfig;
     const IConstructable* m_pCurrentItem = nullptr;
     int m_mineralStockpile = 0;
 
     void ResetProduction_();
+    void ApplyRetoolPenalty_(const IConstructable* pNewItem);
 };
 
 } // namespace ac
