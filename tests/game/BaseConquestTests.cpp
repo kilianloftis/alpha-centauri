@@ -19,6 +19,7 @@
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "game/units/UnitComponentRegistry.h"
+#include "game/units/MovementConstants.h"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -346,8 +347,12 @@ TEST_CASE("Needlejet can clear a garrison but cannot capture on entry", "[unit][
     CHECK((*game.pAi->Bases().begin()).GetBaseId() == baseId);
     CHECK((*game.pAi->Bases().begin()).GetPopulation().GetSize() == 2);
     CHECK(game.pPlayer->GetBaseCount() == 0);
-    REQUIRE(attacker.GetMoveFragmentsRemaining() > 0);
+    // Needlejet stand-in has AttackingEndsTurn — the strike spends the rest of the turn.
+    CHECK(attacker.GetMoveFragmentsRemaining() == 0);
 
+    // Capture veto is independent of the attack spend; restore moves to attempt entry.
+    attacker.SetMoveFragmentsRemaining(
+        attacker.GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint);
     MoveOrder_t order;
     REQUIRE(game.pState->GetUnitOrderExecutor().TryStep(attacker, rBase.GetTile(), order).bEntered);
     REQUIRE(game.pAi->GetBaseCount() == 1);

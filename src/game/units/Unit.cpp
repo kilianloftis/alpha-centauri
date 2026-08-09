@@ -61,7 +61,7 @@ Unit::Unit(UnitId_t unitId,
     // Members used by ResolveStat are initialised above; seed after the mem-init list.
     // ProducedAtThisBase StartingExperience needs m_producedAtBaseId before this resolve.
     m_currentHp = ResolveStat(*this, StatId_t::HitPoints);
-    m_currentFuel = ResolveStat(*this, StatId_t::Fuel);
+    m_currentFuel = GetMaxFuel();
     m_moveFragmentsRemaining =
         GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint;
     m_xp = m_rMorale.BaseIntrinsicXp(*this)
@@ -215,6 +215,7 @@ void Unit::RebindFaction(Faction& rFaction)
 
 int Unit::GetCurrentHp() const              { return m_currentHp; }
 int Unit::GetCurrentFuel() const            { return m_currentFuel; }
+int Unit::GetMaxFuel() const                { return m_rDesign.MaxFuel(); }
 int Unit::GetMovementPoints() const         { return ResolveStat(*this, StatId_t::Movement); }
 int Unit::GetMoveFragmentsRemaining() const { return m_moveFragmentsRemaining; }
 int Unit::GetXp() const                     { return m_xp; }
@@ -228,13 +229,34 @@ void Unit::SetCurrentHp(int hp)
 }
 void Unit::SetCurrentFuel(int fuel)
 {
-    m_currentFuel = std::clamp(fuel, 0, ResolveStat(*this, StatId_t::Fuel));
+    m_currentFuel = std::clamp(fuel, 0, GetMaxFuel());
 }
 void Unit::SetMoveFragmentsRemaining(int fragments)
 {
     const int maxFragments =
         GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint;
     m_moveFragmentsRemaining = std::clamp(fragments, 0, maxFragments);
+}
+void Unit::SpendMoveFragments(int fragments)
+{
+    if (fragments <= 0)
+    {
+        return;
+    }
+    SetMoveFragmentsRemaining(m_moveFragmentsRemaining - fragments);
+    if (!m_rDesign.UsesFuel())
+    {
+        return;
+    }
+    const int pointsSpent = fragments / MovementConstants_t::k_moveFragmentsPerPoint;
+    if (pointsSpent > 0)
+    {
+        SetCurrentFuel(m_currentFuel - pointsSpent);
+    }
+}
+void Unit::SpendRemainingMoveFragments()
+{
+    SpendMoveFragments(m_moveFragmentsRemaining);
 }
 void Unit::SetXp(int xp)
 {

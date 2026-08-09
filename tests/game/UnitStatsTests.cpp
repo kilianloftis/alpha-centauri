@@ -48,7 +48,7 @@ TEST_CASE("A fresh unit starts at its live resolved maxima", "[unit][stats]")
     Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
 
     CHECK(unit.GetCurrentHp() == unit.GetStat(StatId_t::HitPoints));
-    CHECK(unit.GetCurrentFuel() == unit.GetStat(StatId_t::Fuel));
+    CHECK(unit.GetCurrentFuel() == unit.GetMaxFuel());
     CHECK(unit.GetMovementPoints() == unit.GetStat(StatId_t::Movement));
     CHECK(unit.GetMoveFragmentsRemaining()
           == unit.GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint);
@@ -72,8 +72,8 @@ TEST_CASE("Current-stat setters clamp to [0, live max]", "[unit][stats]")
 
     unit.SetCurrentFuel(-1);
     CHECK(unit.GetCurrentFuel() == 0);
-    unit.SetCurrentFuel(unit.GetStat(StatId_t::Fuel) + 100);
-    CHECK(unit.GetCurrentFuel() == unit.GetStat(StatId_t::Fuel));
+    unit.SetCurrentFuel(unit.GetMaxFuel() + 100);
+    CHECK(unit.GetCurrentFuel() == unit.GetMaxFuel());
 
     unit.SetMoveFragmentsRemaining(-3);
     CHECK(unit.GetMoveFragmentsRemaining() == 0);

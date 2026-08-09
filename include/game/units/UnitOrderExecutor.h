@@ -102,9 +102,9 @@ public:
     Unit* FindVisibleHostileOnTile(const Unit& rObserver, const Tile& rTile) const;
 
     // Attach rPassenger to the first boardable transport on its tile (L key / UI).
-    bool TryAttachToTransport(Unit& rPassenger, bool bRefuelOnAttach = false);
+    bool TryAttachToTransport(Unit& rPassenger);
 
-    // Landing / stranded path: attach with refuel when possible.
+    // Landing / stranded path: attach when a boardable carrier is present.
     bool TryAutoAttachWhenMustLand(Unit& rPassenger);
 
     // Air carrier: unload all passengers onto the current tile (Shift+U).
@@ -123,8 +123,8 @@ private:
     OrderProgress_t Execute_(Unit& rUnit, TerraformOrder_t& rOrder);
 
     void RevealBlockingUnits_(Unit& rMover, const StepEvaluation_t& rEval);
-    // Position + move-cost only; the arrival side effects below are applied by the caller.
-    void EnterTile_(Unit& rMover, const Tile& rTo, int remainingAfter);
+    // Position only; caller spends moves (SpendMoveFragments) before enter.
+    void EnterTile_(Unit& rMover, const Tile& rTo);
     // Returns false when the arrival destroyed rMover (native raid).
     bool ApplyArrivalEffects_(Unit& rMover, bool bWasEmbarked);
     StepResult_t SpendMovesAndEnter_(Unit& rMover, const Tile& rTo, MoveOrder_t& rMoveOrder);

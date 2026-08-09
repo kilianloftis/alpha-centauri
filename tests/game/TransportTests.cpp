@@ -252,7 +252,7 @@ TEST_CASE("Carrier Deck allows air passengers; without it air cannot board", "[t
     CHECK(air.GetCarrier() == &carrier);
 }
 
-TEST_CASE("Must-land attach refuels; air carrier loads at Base/Airbase or carrier deck",
+TEST_CASE("Must-land attach boards carrier; air carrier loads at Base/Airbase or carrier deck",
           "[transport]")
 {
     FactionFixture fixture;
@@ -267,7 +267,9 @@ TEST_CASE("Must-land attach refuels; air carrier loads at Base/Airbase or carrie
     air.SetCurrentFuel(0);
     REQUIRE(harness.orders.TryAutoAttachWhenMustLand(air));
     CHECK(air.IsEmbarked());
-    CHECK(air.GetCurrentFuel() == air.GetStat(StatId_t::Fuel));
+    CHECK(air.GetCarrier() == &carrier);
+    // Refuel is TurnEnd / IsRefuelSite, not attach.
+    CHECK(air.GetCurrentFuel() == 0);
 
     Unit& airTransport = fixture.MakeUnit(faction, 4, 4, {"test_flight_chassis", "test_air_transport"});
     Unit& land = fixture.MakeUnit(faction, 3, 4, {"test_chassis"});

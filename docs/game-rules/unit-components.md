@@ -49,8 +49,8 @@ A weapon with `"attack": { "base": 10 }` combined with a reactor providing `"att
 | `movement` | chassis | Movement points per turn |
 | `hit_points` | reactor | Unit HP |
 | `disengage_chance` | chassis | % chance to disengage from combat |
-| `fuel` | chassis | Fuel capacity; `0` means unlimited |
-| `damage_from_out_of_fuel` | chassis | Damage taken per turn when out of fuel |
+| `turns_of_fuel` | chassis | Turns of fuel; max fuel = turns × movement. Omit or `0` = unlimited (no fuel tracking) |
+| `damage_from_out_of_fuel` | chassis | Percent of max HP applied when ending a turn at 0 fuel away from a refuel site |
 | `cargo_capacity` | chassis | Number of units that can be transported |
 | `difficult_terrain_cost` | chassis | Movement cost over difficult terrain |
 | `cost_multiplier` | reactor | Applied as a geometric multiplier to the total unit mineral cost |
@@ -69,6 +69,7 @@ Boolean properties. A flag is `true` on the unit if **any** equipped component h
 |---|---|
 | `flight` | Unit can fly, ignoring terrain movement costs |
 | `single_use` | Unit is expended on use |
+| `attacking_ends_turn` | Attack spends all remaining moves (Needlejet: one strike per turn) |
 
 New flags can be added freely in JSON without any code changes.
 

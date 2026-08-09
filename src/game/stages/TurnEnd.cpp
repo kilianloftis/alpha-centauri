@@ -1,6 +1,7 @@
 #include "game/stages/TurnEnd.h"
 #include "game/GameState.h"
 #include "game/TurnStageRegistrar.h"
+#include "game/units/FuelRules.h"
 #include <iostream>
 
 namespace ac
@@ -13,9 +14,10 @@ TurnEnd::TurnEnd(HookContext hookContext)
 {
 }
 
-StageResult_t TurnEnd::ExecuteImpl(GameState& /*rGameState*/)
+StageResult_t TurnEnd::ExecuteImpl(GameState& rGameState)
 {
     std::cout << "Executing TurnEnd stage\n";
+    ProcessAllFuelAtTurnEnd(rGameState);
     return StageResult_t::Continue;
 }
 

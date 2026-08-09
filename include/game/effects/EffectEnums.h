@@ -27,7 +27,9 @@ enum class StatId_t
     // Damage received per lost psi-combat round. Reactors set this to their tier.
     PsiDamage,
     DisengageChance,
-    Fuel,
+    // Turns of fuel capacity; max fuel pool = TurnsOfFuel × Movement. 0 = unlimited / no tracking.
+    TurnsOfFuel,
+    // Percent of max HP applied when a fueled unit ends a turn at 0 fuel away from a refuel site.
     DamageFromOutOfFuel,
     CargoCapacity,
     DifficultTerrainCost,
@@ -107,7 +109,7 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::HitPoints:
         case StatId_t::PsiDamage:
         case StatId_t::DisengageChance:
-        case StatId_t::Fuel:
+        case StatId_t::TurnsOfFuel:
         case StatId_t::DamageFromOutOfFuel:
         case StatId_t::CargoCapacity:
         case StatId_t::DifficultTerrainCost:
@@ -162,7 +164,7 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "hit_points")              return StatId_t::HitPoints;
     if (rStat == "psi_damage")              return StatId_t::PsiDamage;
     if (rStat == "disengage_chance")        return StatId_t::DisengageChance;
-    if (rStat == "fuel")                    return StatId_t::Fuel;
+    if (rStat == "turns_of_fuel")           return StatId_t::TurnsOfFuel;
     if (rStat == "damage_from_out_of_fuel") return StatId_t::DamageFromOutOfFuel;
     if (rStat == "cargo_capacity")          return StatId_t::CargoCapacity;
     if (rStat == "difficult_terrain_cost")  return StatId_t::DifficultTerrainCost;
@@ -235,6 +237,8 @@ enum class RuleFlagId_t
 
     // Sole capture veto: chassis (Needlejet / Missile) or noncombat weapon modules.
     CannotCaptureBases,
+    // Attack spends all remaining moves (Needlejet: one strike per turn).
+    AttackingEndsTurn,
     // Capturing this unit does not fully repair it (e.g. Battle Ogre).
     NoConquestRepair,
     // Base flag: skip population loss when the last defender falls.
@@ -298,6 +302,7 @@ inline RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "supply_crawl")                return RuleFlagId_t::SupplyCrawl;
     if (rFlag == "probe_team")                  return RuleFlagId_t::ProbeTeam;
     if (rFlag == "cannot_capture_bases")        return RuleFlagId_t::CannotCaptureBases;
+    if (rFlag == "attacking_ends_turn")         return RuleFlagId_t::AttackingEndsTurn;
     if (rFlag == "no_conquest_repair")          return RuleFlagId_t::NoConquestRepair;
     if (rFlag == "prevents_conquest_pop_loss")  return RuleFlagId_t::PreventsConquestPopLoss;
     if (rFlag == "prevents_disengage")          return RuleFlagId_t::PreventsDisengage;

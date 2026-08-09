@@ -13,8 +13,6 @@ namespace ac
 namespace
 {
 
-constexpr int k_NoFuel = 0;
-
 } // namespace
 
 DesignStatsDisplay::DesignStatsDisplay(
@@ -83,9 +81,9 @@ void DesignStatsDisplay::Render(Graphics& rGraphics)
     drawStat("Defense",  design.GetStat(StatId_t::Defense));
     drawStat("Movement", design.GetMovementPoints());
     drawStat("HP",       design.GetStat(StatId_t::HitPoints));
-    if (design.GetStat(StatId_t::Fuel) > k_NoFuel)
+    if (design.UsesFuel())
     {
-        drawStat("Fuel", design.GetStat(StatId_t::Fuel));
+        drawStat("Fuel", design.MaxFuel());
     }
     drawStat("Cost", design.GetBaseCost());
 

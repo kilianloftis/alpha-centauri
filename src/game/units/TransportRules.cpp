@@ -155,7 +155,7 @@ bool CanUnloadTo(const Unit& rPassenger, const Tile& rFrom, const Tile& rTo,
     return CanEnterTile(rPassenger, rTo, rWorldMap);
 }
 
-bool TryAttachToTransport(Unit& rPassenger, const WorldMap& rWorldMap, bool bRefuelOnAttach)
+bool TryAttachToTransport(Unit& rPassenger, const WorldMap& rWorldMap)
 {
     if (rPassenger.IsEmbarked())
     {
@@ -167,10 +167,6 @@ bool TryAttachToTransport(Unit& rPassenger, const WorldMap& rWorldMap, bool bRef
         return false;
     }
     rPassenger.EmbarkInto(*pCarrier);
-    if (bRefuelOnAttach)
-    {
-        rPassenger.SetCurrentFuel(rPassenger.GetStat(StatId_t::Fuel));
-    }
     return true;
 }
 
@@ -180,12 +176,12 @@ bool TryAutoAttachOnEntry(Unit& rPassenger, const WorldMap& rWorldMap)
     {
         return false;
     }
-    return TryAttachToTransport(rPassenger, rWorldMap, /*bRefuelOnAttach=*/false);
+    return TryAttachToTransport(rPassenger, rWorldMap);
 }
 
 bool TryAutoAttachWhenMustLand(Unit& rPassenger, const WorldMap& rWorldMap)
 {
-    return TryAttachToTransport(rPassenger, rWorldMap, /*bRefuelOnAttach=*/true);
+    return TryAttachToTransport(rPassenger, rWorldMap);
 }
 
 bool SurvivesCarrierLoss(const Unit& rPassenger, const Tile& rTile)

@@ -85,6 +85,8 @@ public:
 
     int GetCurrentHp() const;
     int GetCurrentFuel() const;
+    // Design max fuel pool (TurnsOfFuel × Movement); 0 when the design does not use fuel.
+    int GetMaxFuel() const;
     // Chassis Movement stat in move-points (not fragments).
     int GetMovementPoints() const;
     // Remaining movement in fragments (k_moveFragmentsPerPoint per Movement point).
@@ -93,8 +95,14 @@ public:
 
     void SetCurrentHp(int hp);
     void SetCurrentFuel(int fuel);
-    // Clamps to [0, MovementPoints * k_moveFragmentsPerPoint].
+    // Clamps to [0, MovementPoints * k_moveFragmentsPerPoint]. Does not burn fuel
+    // (TurnStart refresh, test setup). Gameplay spend uses SpendMoveFragments.
     void SetMoveFragmentsRemaining(int fragments);
+    // Subtract remaining fragments and, when the design uses fuel, burn the matching
+    // move-points of fuel (attacks, steps, and other intentional move spends).
+    void SpendMoveFragments(int fragments);
+    // Spend whatever move fragments remain (end-turn actions, AttackingEndsTurn, …).
+    void SpendRemainingMoveFragments();
     void SetXp(int xp);
     // Claims rHomeBase's HomeBaseIndex (or clears). Replaces any previous home claim.
     void SetHomeBase(BaseManager* pHomeBase);

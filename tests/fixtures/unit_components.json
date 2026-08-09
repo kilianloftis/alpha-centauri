@@ -905,8 +905,85 @@
         "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": {
-          "stat": "fuel",
+          "stat": "turns_of_fuel",
+          "amount": 2
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "damage_from_out_of_fuel",
+          "amount": 100
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "flight"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "attacking_ends_turn"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "cannot_capture_bases"
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_copter_chassis",
+    "name": "Test Copter Chassis",
+    "type": "chassis",
+    "domain": "air",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "movement",
+          "amount": 4
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "vision",
           "amount": 1
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "hit_points",
+          "amount": 10
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "turns_of_fuel",
+          "amount": 1
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "damage_from_out_of_fuel",
+          "amount": 30
         }
       },
       {

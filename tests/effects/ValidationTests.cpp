@@ -106,7 +106,7 @@ static_assert(KindFor(StatId_t::Vision) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::HitPoints) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::PsiDamage) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::DisengageChance) == StatKind_t::Additive);
-static_assert(KindFor(StatId_t::Fuel) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::TurnsOfFuel) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::DamageFromOutOfFuel) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::CargoCapacity) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::DifficultTerrainCost) == StatKind_t::Additive);

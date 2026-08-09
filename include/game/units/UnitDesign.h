@@ -46,6 +46,11 @@ public:
     // Chassis Movement stat in move-points (not fragments).
     int GetMovementPoints() const;
 
+    // Cached at construction from component TurnsOfFuel / Movement (design properties).
+    bool UsesFuel() const;
+    // Max fuel pool in move-points: TurnsOfFuel × Movement (0 when !UsesFuel).
+    int MaxFuel() const;
+
     // Domain of the design's chassis component (required on every valid design).
     UnitDomain_t GetDomain() const;
 
@@ -58,6 +63,8 @@ private:
     std::string m_name;
     std::vector<std::pair<UnitSlotConfig_t, const UnitComponentConfig_t*>> m_slotComponents;
     std::vector<const UnitComponentConfig_t*> m_components; // non-null only; stable after construction
+    bool m_bUsesFuel = false;
+    int m_maxFuel = 0;
 };
 
 } // namespace ac

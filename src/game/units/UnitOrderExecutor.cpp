@@ -140,9 +140,9 @@ Unit* UnitOrderExecutor::FindVisibleHostileOnTile(const Unit& rObserver,
     return ac::FindVisibleHostileOnTile(rObserver, rTile, m_rWorldMap, m_rTileEffects);
 }
 
-bool UnitOrderExecutor::TryAttachToTransport(Unit& rPassenger, bool bRefuelOnAttach)
+bool UnitOrderExecutor::TryAttachToTransport(Unit& rPassenger)
 {
-    return ac::TryAttachToTransport(rPassenger, m_rWorldMap, bRefuelOnAttach);
+    return ac::TryAttachToTransport(rPassenger, m_rWorldMap);
 }
 
 bool UnitOrderExecutor::TryAutoAttachWhenMustLand(Unit& rPassenger)
@@ -183,7 +183,7 @@ bool UnitOrderExecutor::ApplyArrivalEffects_(Unit& rMover, bool bWasEmbarked)
     return !m_pWorld->ResolveBaseEntryConquest(rMover, *m_pGameData, m_rRng).bActorDestroyed;
 }
 
-void UnitOrderExecutor::EnterTile_(Unit& rMover, const Tile& rTo, int remainingAfter)
+void UnitOrderExecutor::EnterTile_(Unit& rMover, const Tile& rTo)
 {
     if (rMover.IsEmbarked())
     {
@@ -191,7 +191,6 @@ void UnitOrderExecutor::EnterTile_(Unit& rMover, const Tile& rTo, int remainingA
     }
 
     m_rWorldMap.GetUnitPositions().MoveUnit(rMover, rTo);
-    rMover.SetMoveFragmentsRemaining(remainingAfter);
 }
 
 StepResult_t UnitOrderExecutor::SpendMovesAndEnter_(Unit& rMover, const Tile& rTo,
@@ -211,7 +210,7 @@ StepResult_t UnitOrderExecutor::SpendMovesAndEnter_(Unit& rMover, const Tile& rT
         {
             // Bank this turn's fragments toward the entry price and stay put.
             rMoveOrder.chargeFragmentsPaid += available;
-            rMover.SetMoveFragmentsRemaining(0);
+            rMover.SpendRemainingMoveFragments();
             return {};
         }
     }
@@ -219,11 +218,18 @@ StepResult_t UnitOrderExecutor::SpendMovesAndEnter_(Unit& rMover, const Tile& rT
     rMoveOrder.pChargeTile = nullptr;
     rMoveOrder.chargeFragmentsPaid = 0;
 
-    // Standard terrain admits any positive balance (SetMoveFragmentsRemaining clamps a
-    // negative result to 0); end-turn entries wipe whatever would remain.
-    const int remainingAfter = terms.bEndsTurn ? 0 : available - terms.costFragments;
+    // Standard terrain admits any positive balance (SpendMoveFragments clamps a negative
+    // result to 0); end-turn entries spend whatever remains.
+    if (terms.bEndsTurn)
+    {
+        rMover.SpendRemainingMoveFragments();
+    }
+    else
+    {
+        rMover.SpendMoveFragments(terms.costFragments);
+    }
     const bool bWasEmbarked = rMover.IsEmbarked();
-    EnterTile_(rMover, rTo, remainingAfter);
+    EnterTile_(rMover, rTo);
 
     StepResult_t result;
     result.bEntered = true;
@@ -301,11 +307,18 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
     if (!result.bAttackerDestroyed)
     {
         rAttacker.MarkAttacked();
-        // Combat never moves either side; it only costs one movement point. Capture of an
-        // emptied base is a later step onto the tile while moves remain.
-        rAttacker.SetMoveFragmentsRemaining(
-            rAttacker.GetMoveFragmentsRemaining()
-            - MovementConstants_t::k_moveFragmentsPerPoint);
+        // Combat never moves either side. Default cost is one movement point (and one fuel
+        // point when the design tracks fuel). AttackingEndsTurn (Needlejet) spends the rest
+        // of the turn's moves instead. Capture of an emptied base is a later step onto the
+        // tile while moves remain.
+        if (rAttacker.GetFlag(RuleFlagId_t::AttackingEndsTurn))
+        {
+            rAttacker.SpendRemainingMoveFragments();
+        }
+        else
+        {
+            rAttacker.SpendMoveFragments(MovementConstants_t::k_moveFragmentsPerPoint);
+        }
         rAttacker.ClearOrder();
         if (ExpendIfSingleUse_(rAttacker) == OrderProgress_t::Expended)
         {
@@ -380,7 +393,7 @@ bool UnitOrderExecutor::TryStartTerraform(Unit& rUnit, const std::string& improv
     const int cost = TerraformEnergyCost(rUnit, *pConfig, rGameState);
     rUnit.GetFaction().GetEconomy().SpendEnergy(cost);
     rUnit.SetOrder(TerraformOrder_t{improvementId, pConfig->turnsRequired});
-    rUnit.SetMoveFragmentsRemaining(0);
+    rUnit.SpendRemainingMoveFragments();
     return true;
 }
 

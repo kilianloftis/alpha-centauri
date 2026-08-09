@@ -73,6 +73,10 @@ UnitDesign::UnitDesign(
     appendUnitNamePart(GetComponentForSlot("weapon"));
     appendUnitNamePart(GetComponentForSlot("armour"));
     appendUnitNamePart(GetComponentForSlot("chassis"));
+
+    const int turnsOfFuel = ResolveStat(*this, StatId_t::TurnsOfFuel);
+    m_bUsesFuel = turnsOfFuel > 0;
+    m_maxFuel = m_bUsesFuel ? turnsOfFuel * GetMovementPoints() : 0;
 }
 
 const std::string& UnitDesign::GetId() const   { return m_id; }
@@ -142,6 +146,16 @@ bool UnitDesign::GetFlag(RuleFlagId_t flagId) const
 int UnitDesign::GetMovementPoints() const
 {
     return GetStat(StatId_t::Movement);
+}
+
+bool UnitDesign::UsesFuel() const
+{
+    return m_bUsesFuel;
+}
+
+int UnitDesign::MaxFuel() const
+{
+    return m_maxFuel;
 }
 
 UnitDomain_t UnitDesign::GetDomain() const

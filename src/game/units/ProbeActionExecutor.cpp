@@ -263,7 +263,7 @@ void ProbeActionExecutor::FinalizeProbeSuccess_(Unit& rUnit,
                                                 ProbeActionResult_t& rResult) const
 {
     TryPromoteProbeMission(rUnit, m_rMorale);
-    rUnit.SetMoveFragmentsRemaining(0);
+    rUnit.SpendRemainingMoveFragments();
     rUnit.ClearOrder();
     rResult.outcome = ProbeActionOutcome_t::Succeeded;
 }

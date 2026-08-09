@@ -31,7 +31,7 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("hit_points") == StatId_t::HitPoints);
     CHECK(ParseStatId("psi_damage") == StatId_t::PsiDamage);
     CHECK(ParseStatId("disengage_chance") == StatId_t::DisengageChance);
-    CHECK(ParseStatId("fuel") == StatId_t::Fuel);
+    CHECK(ParseStatId("turns_of_fuel") == StatId_t::TurnsOfFuel);
     CHECK(ParseStatId("damage_from_out_of_fuel") == StatId_t::DamageFromOutOfFuel);
     CHECK(ParseStatId("cargo_capacity") == StatId_t::CargoCapacity);
     CHECK(ParseStatId("difficult_terrain_cost")
@@ -96,6 +96,8 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
     CHECK(ParseRuleFlagId("probe_team") == RuleFlagId_t::ProbeTeam);
     CHECK(ParseRuleFlagId("cannot_capture_bases")
           == RuleFlagId_t::CannotCaptureBases);
+    CHECK(ParseRuleFlagId("attacking_ends_turn")
+          == RuleFlagId_t::AttackingEndsTurn);
     CHECK(ParseRuleFlagId("no_conquest_repair")
           == RuleFlagId_t::NoConquestRepair);
     CHECK(ParseRuleFlagId("prevents_conquest_pop_loss")

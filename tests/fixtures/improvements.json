@@ -206,6 +206,16 @@
     ]
   },
   {
+    "id": "Airbase",
+    "name": "Airbase",
+    "turns_required": 10,
+    "energy_cost": 0,
+    "effects": [
+      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "refuels_air" } },
+      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "loads_air_transport" } }
+    ]
+  },
+  {
     "id": "Sensor",
     "name": "Sensor",
     "turns_required": 4,
