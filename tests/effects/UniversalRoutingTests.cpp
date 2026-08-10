@@ -208,6 +208,9 @@ TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other fact
     BaseManager& baseB = fixture.MakeFactionBase(factionB, 6, 6);
 
     baseA.GetBuildingManager().AddBuilding("world_beacon"); // +10 energy, WorldGlobal
+    // HQ on each base so inefficiency does not mask the WorldGlobal energy under test.
+    baseA.GetBuildingManager().AddBuilding("Headquarters");
+    baseB.GetBuildingManager().AddBuilding("Headquarters");
 
     SECTION("CollectWorldExtras gathers the other faction's WorldGlobal effects only")
     {

@@ -1,11 +1,17 @@
 #include "game/faction/base/resources/ResourceManager.h"
 #include "game/faction/EconomyManager.h"
+#include "game/Faction.h"
+#include "game/faction/base/BaseManager.h"
 #include "game/faction/base/HomeBaseIndex.h"
+#include "game/faction/base/resources/Inefficiency.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
+#include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
+#include "game/map/WorldMap.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/effects/EffectConfig.h"
+#include "game/effects/EffectEnums.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitOrder.h"
 
@@ -72,11 +78,15 @@ TileResources_t CollectSupplyCrawlYield_(const HomeBaseIndex& rHomeUnits,
 ResourceManager::ResourceManager(
     const WorkerAssignmentManager& rWorkerAssignments,
     const EconomyManager& rEconomy,
+    const BaseManager& rBase,
+    const SocialRatingRegistry& rSocialRatings,
     const Tile& rBaseTile,
     const TileEffectsContext& rTileEffects,
     const HomeBaseIndex& rHomeUnits)
     : m_rWorkerAssignments(rWorkerAssignments)
     , m_pEconomy(&rEconomy)
+    , m_rBase(rBase)
+    , m_rSocialRatings(rSocialRatings)
     , m_rBaseTile(rBaseTile)
     , m_rTileEffects(rTileEffects)
     , m_rHomeUnits(rHomeUnits)
@@ -142,10 +152,20 @@ int ResourceManager::GetEnergyProduction(const BaseEffects_t& rBaseEffects) cons
 
 int ResourceManager::ApplyInefficiency_(int energy) const
 {
-    // TODO(economy): SMAC-style inefficiency reduces energy before the econ/labs/psych split.
-    // Needs distance from headquarters and this base's efficiency rate (social-engineering
-    // Efficiency rating plus local sources). Stub: no loss.
-    return energy;
+    // HQ never loses energy to inefficiency (distance 0, and regardless of Efficiency rating).
+    const BaseManager* pHq = m_rBase.GetFaction().GetHeadquarters();
+    if (pHq == &m_rBase)
+    {
+        return energy;
+    }
+
+    const int distance = pHq
+        ? TabletopDiagonalDistance(m_rBaseTile, pHq->GetTile(),
+                                   m_rTileEffects.GetWorldMap().GetWidth())
+        : k_DefaultInefficiencyHqDistance;
+    const int denominator = InefficiencyDenominatorForRating(
+        m_rSocialRatings, m_rBase.GetEffectiveSocialRating(SocialRatingId_t::Efficiency));
+    return energy - CalculateInefficiencyLoss(energy, distance, denominator);
 }
 
 int ResourceManager::AllocatableEnergy_(const BaseEffects_t& rBaseEffects) const

@@ -242,7 +242,8 @@ TEST_CASE("Base-level Labs AddPercent seeds from the energy split, not zero",
     Faction& faction = fixture.MakeFaction();
     BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
 
-    // Flat +10 energy → default 50% labs split = 5.
+    // Flat +10 energy at HQ → default 50% labs split = 5 (no inefficiency).
+    base.GetBuildingManager().AddBuilding("Headquarters");
     base.GetBuildingManager().AddBuilding("world_beacon");
     const int labsBefore = base.GetLabsProduction();
     REQUIRE(labsBefore == 5);

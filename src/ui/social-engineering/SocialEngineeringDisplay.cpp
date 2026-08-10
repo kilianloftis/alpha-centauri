@@ -133,6 +133,11 @@ std::string FormatLevelEffect(const EffectConfig_t& rEffect)
 {
     if (const auto* pModifier = std::get_if<StatModifierEffect_t>(&rEffect.effect))
     {
+        // Internal energy-pipeline parameter, not a player-facing bonus line.
+        if (pModifier->stat == StatId_t::InefficiencyDenominator)
+        {
+            return {};
+        }
         std::ostringstream oss;
         const double amount = pModifier->amount;
         oss << (amount >= 0.0 ? "+" : "") << FormatAmount(amount);

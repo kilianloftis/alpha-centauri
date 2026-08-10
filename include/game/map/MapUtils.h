@@ -59,6 +59,18 @@ inline bool AreChebyshevAdjacent(const Tile& rA, const Tile& rB, int mapWidth)
     return ChebyshevDistance(rA, rB, mapWidth) == 1;
 }
 
+// SMAC tabletop / "two-diagonal" distance on a horizontally wrapping map (Y does not wrap):
+// longer + shorter/2, where longer/shorter are |DeltaX| and |dy|. Used by energy
+// inefficiency (HQ distance). Integer half of the shorter leg (floor).
+inline int TabletopDiagonalDistance(const Tile& rA, const Tile& rB, int mapWidth)
+{
+    const int dx = std::abs(DeltaX(rA.GetX(), rB.GetX(), mapWidth));
+    const int dy = std::abs(rA.GetY() - rB.GetY());
+    const int longer = std::max(dx, dy);
+    const int shorter = std::min(dx, dy);
+    return longer + shorter / 2;
+}
+
 // Orthogonal (4-way) neighbors in fixed order N, E, S, W. X wraps; Y may be null (skipped).
 // Used by river downhill flow — not Chebyshev/diagonal.
 template<typename WorldMapT, typename Fn>

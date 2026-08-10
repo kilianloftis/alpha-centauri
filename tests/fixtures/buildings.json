@@ -693,6 +693,19 @@
     "category": "discover"
   },
   {
+    "id": "Headquarters",
+    "name": "Headquarters",
+    "mineral_cost": 0,
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisBase",
+        "parameters": { "flag": "headquarters" }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
     "id": "drone_hall",
     "name": "Drone Hall (+2 drones at this base)",
     "effects": [

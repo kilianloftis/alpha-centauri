@@ -52,6 +52,7 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("commerce_rate") == StatId_t::CommerceRate);
     CHECK(ParseStatId("council_votes") == StatId_t::CouncilVotes);
     CHECK(ParseStatId("commerce_energy_bonus") == StatId_t::CommerceEnergyBonus);
+    CHECK(ParseStatId("inefficiency_denominator") == StatId_t::InefficiencyDenominator);
 
     CHECK_THROWS(ParseStatId("not_a_stat"));
     CHECK_THROWS(ParseStatId(""));

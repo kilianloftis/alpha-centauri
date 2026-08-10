@@ -39,6 +39,30 @@
     ]
   },
   {
+    "id": "efficiency_policy",
+    "name": "Efficiency Policy (+2 Efficiency rating, faction-wide)",
+    "category": "economics",
+    "effects": [
+      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "efficiency", "amount": 2 } }
+    ]
+  },
+  {
+    "id": "low_efficiency_policy",
+    "name": "Low Efficiency Policy (-2 Efficiency rating, faction-wide)",
+    "category": "economics",
+    "effects": [
+      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "efficiency", "amount": -2 } }
+    ]
+  },
+  {
+    "id": "collapse_efficiency_policy",
+    "name": "Collapse Efficiency Policy (-4 Efficiency rating, faction-wide)",
+    "category": "economics",
+    "effects": [
+      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "efficiency", "amount": -4 } }
+    ]
+  },
+  {
     "id": "morale_policy",
     "name": "Morale Policy (+2 Morale rating, faction-wide)",
     "category": "values",

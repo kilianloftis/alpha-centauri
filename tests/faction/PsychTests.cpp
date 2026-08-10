@@ -22,6 +22,7 @@ TEST_CASE("Energy-psych stays at the producing base; effect psych stacks locally
     Faction& faction = fixture.MakeFaction();
 
     // Large base (size 5) has no local energy; small base (size 3) has +10 energy.
+    // HQ on small so inefficiency does not reduce the energy-psych share under test.
     // Psych 10% of 10 = 1 stays at the small base — it is not redistributed.
     BaseManager& large = fixture.MakeFactionBase(faction, 2, 2);
     BaseManager& small = fixture.MakeFactionBase(faction, 6, 6);
@@ -30,6 +31,7 @@ TEST_CASE("Energy-psych stays at the producing base; effect psych stacks locally
     REQUIRE(large.GetPopulation().GetSize() == 5);
     REQUIRE(small.GetPopulation().GetSize() == 3);
 
+    small.GetBuildingManager().AddBuilding("Headquarters");
     small.GetBuildingManager().AddBuilding("energy_tap");
 
     CHECK(large.GetPsychProduction() == 0);
@@ -59,7 +61,8 @@ TEST_CASE("Default energy split at a base: 40/50/10 of post-inefficiency energy"
     Faction& faction = fixture.MakeFaction();
     BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
 
-    // +10 energy, inefficiency stub leaves it intact → econ 4, labs 5, psych 1.
+    // HQ: no inefficiency. +10 energy → econ 4, labs 5, psych 1.
+    base.GetBuildingManager().AddBuilding("Headquarters");
     base.GetBuildingManager().AddBuilding("energy_tap");
     CHECK(base.GetEconProduction() == 4);
     CHECK(base.GetLabsProduction() == 5);

@@ -81,7 +81,8 @@ BaseManager::BaseManager(
     , m_pBuildings(std::make_unique<BuildingManager>(rBuildingRegistry, pSecretProjectCalculator,
                                                      rFaction.GetResearch()))
     , m_pResources(std::make_unique<ResourceManager>(
-          *m_pWorkerAssignments, rFaction.GetEconomy(), m_tile, m_rTileEffects, m_homeUnits))
+          *m_pWorkerAssignments, rFaction.GetEconomy(), *this, m_rSocialRatings, m_tile,
+          m_rTileEffects, m_homeUnits))
     , m_pProduction(std::make_unique<ProductionManager>(rProductionConfig))
     , m_name(std::move(name))
 {

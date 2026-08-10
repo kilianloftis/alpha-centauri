@@ -11,7 +11,9 @@ namespace ac
 class WorkerAssignmentManager;
 class EconomyManager;
 class BuildingManager;
+class BaseManager;
 class HomeBaseIndex;
+class SocialRatingRegistry;
 class Tile;
 class TileEffectsContext;
 
@@ -20,7 +22,7 @@ class TileEffectsContext;
 //
 // Energy pipeline (per base, each turn):
 //   1. Produce energy (tiles, crawlers, buildings, Energy StatModifiers)
-//   2. Apply inefficiency (stub; will use HQ distance + efficiency rating)
+//   2. Apply inefficiency (HQ tabletop-diagonal distance + Efficiency SE rating)
 //   3. Split into econ / labs / psych via the faction EconomyManager percentages
 //   4. Apply Econ / Labs / Psych StatModifiers to each category
 // Faction CollectIncome / CollectResearch take econ and labs; psych stays here for composition.
@@ -31,9 +33,14 @@ public:
     // absent. They were pointers re-checked at every single use, with "not set" throws that no
     // caller could ever trigger. (The BuildingManager parameter this used to take was stored
     // and never read.)
+    // rBase is the owning BaseManager (same object for life; ownership transfer rebinds the
+    // faction underneath it). Used for Efficiency rating and HQ identity.
+    // rSocialRatings supplies the Efficiency level → inefficiency_denominator table.
     ResourceManager(
         const WorkerAssignmentManager& rWorkerAssignments,
         const EconomyManager& rEconomy,
+        const BaseManager& rBase,
+        const SocialRatingRegistry& rSocialRatings,
         const Tile& rBaseTile,
         const TileEffectsContext& rTileEffects,
         const HomeBaseIndex& rHomeUnits);
@@ -72,6 +79,8 @@ private:
     const WorkerAssignmentManager& m_rWorkerAssignments;
     // Re-pointed by RebindEconomy on ownership transfer; always the current owner's.
     const EconomyManager* m_pEconomy;
+    const BaseManager& m_rBase;
+    const SocialRatingRegistry& m_rSocialRatings;
     const Tile& m_rBaseTile;
     const TileEffectsContext& m_rTileEffects;
     const HomeBaseIndex& m_rHomeUnits;

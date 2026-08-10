@@ -75,7 +75,12 @@ enum class StatId_t
     // representative elections seed with 1. Buildings / projects / faction bonuses modify this.
     CouncilVotes,
     // Bonus energy credited per commerce transaction at each base (Additive; Planetary Governor).
-    CommerceEnergyBonus
+    CommerceEnergyBonus,
+
+    // Absolute denominator for energy inefficiency: loss = Energy × Distance / denom.
+    // Efficiency SE levels emit this as Add with the table value (64, 56, …, 0). Denom ≤ 0
+    // means 100% loss. Resolved from the efficiency rating table, not stacked as a live seed.
+    InefficiencyDenominator
     // TODO: add more stats as they are defined
 };
 
@@ -125,7 +130,8 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::ProbeDefense:
         case StatId_t::TechCost:
         case StatId_t::CouncilVotes:
-        case StatId_t::CommerceEnergyBonus:  return StatKind_t::Additive;
+        case StatId_t::CommerceEnergyBonus:
+        case StatId_t::InefficiencyDenominator: return StatKind_t::Additive;
         case StatId_t::CostMultiplier:
         case StatId_t::ProbeActionCost:
         case StatId_t::ProbeFailureScale:
@@ -191,6 +197,7 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "commerce_rate")           return StatId_t::CommerceRate;
     if (rStat == "council_votes")           return StatId_t::CouncilVotes;
     if (rStat == "commerce_energy_bonus")   return StatId_t::CommerceEnergyBonus;
+    if (rStat == "inefficiency_denominator") return StatId_t::InefficiencyDenominator;
     throw std::runtime_error("Unknown stat id: '" + rStat + "'");
 }
 

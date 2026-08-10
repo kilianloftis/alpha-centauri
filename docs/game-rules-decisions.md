@@ -113,8 +113,12 @@ StatModifiers), on top of the local energy-psych share.
 **Consequence:** composition's `psych_output` counting specialist psych only is wrong — it is one
 source among several.
 
-**Implemented** 2026-08-09 (per-base pipeline + ConsumePsych; inefficiency stubbed). Composition
-still needs to consume the stockpile and feed full psych into the talent formula — next step.
+**Implemented** 2026-08-09 (per-base pipeline + ConsumePsych). Inefficiency implemented
+2026-08-09: tabletop-diagonal HQ distance + Efficiency SE rating
+(`Inefficiency = Energy × Distance / denominator`, with per-level denominators in
+`social_rating_effects.json`; no HQ → Distance 16; HQ base loses nothing; loss capped
+at Energy; denom 0 → 100% loss). Composition still needs to consume the stockpile and
+feed full psych into the talent formula — next step.
 
 ---
 
