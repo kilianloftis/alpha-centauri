@@ -181,7 +181,9 @@ public:
     std::optional<int> GetTurnsUntilBreakthrough() const;
 
     // Resource production — routes to all bases. Each base resolves against the composed
-    // provider pool (local + world/council via GetActiveEffects).
+    // provider pool (local + world/council via GetActiveEffects), applies inefficiency,
+    // splits energy into econ/labs/psych locally, then stockpiles. Faction collection of
+    // econ/labs is CollectIncome / CollectResearch; psych stays at the base.
     void ProduceBaseResources();
 
     // Apply growth to all bases, incorporating GrowthRate stat effects.

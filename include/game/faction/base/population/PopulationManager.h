@@ -55,6 +55,8 @@ public:
     int GetPlainWorkerCount() const { return m_container.GetPlainWorkerCount(); }
     int GetTalentCount() const { return m_container.GetTalentCount(); }
     int GetDroneCount() const { return m_container.GetDroneCount(); }
+    // Weighted drone count for riots (Super Drone = 2).
+    int GetRiotContribution() const { return m_container.GetRiotContribution(); }
     int GetSpecialistCount() const { return m_container.GetSpecialistCount(); }
 
     // Bumped on every pop mutation (add/remove/convert); consumed by effect-pool caches.

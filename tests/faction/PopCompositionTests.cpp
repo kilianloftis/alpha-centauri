@@ -36,12 +36,18 @@ TEST_CASE("Pop role predicates: drone, talent, plain worker, specialist", "[popu
     CHECK_FALSE(worker.IsDrone());
     CHECK_FALSE(worker.IsTalent());
     CHECK_FALSE(worker.IsSpecialist());
+    CHECK(worker.GetRiotContribution() == 0);
 
     const Pop drone(reg.popTypes.Get("Drone"));
     CHECK(drone.IsDrone());
     CHECK(drone.IsWorker());
     CHECK_FALSE(drone.IsPlainWorker());
     CHECK_FALSE(drone.IsTalent());
+    CHECK(drone.GetRiotContribution() == 1);
+
+    const Pop superDrone(reg.popTypes.Get("SuperDrone"));
+    CHECK(superDrone.IsDrone());
+    CHECK(superDrone.GetRiotContribution() == 2);
 
     const Pop talent(reg.popTypes.Get("Talent"));
     CHECK(talent.IsTalent());
@@ -53,6 +59,26 @@ TEST_CASE("Pop role predicates: drone, talent, plain worker, specialist", "[popu
     CHECK(doctor.IsSpecialist());
     CHECK_FALSE(doctor.IsPlainWorker());
     CHECK_FALSE(doctor.IsWorker());
+}
+
+TEST_CASE("Super Drone counts as two drones for riot weight", "[population][riot]")
+{
+    actest::PopRulesFixture reg;
+    LuaRuntime lua;
+    PopCompositionConfigParser parser;
+    const PopCompositionConfig_t config =
+        parser.ParseConfig(actest::FixturePath("pop_composition.lua"), lua);
+    PopCompositionCalculator calculator(config, lua);
+    GrowthConfig_t growth;
+
+    PopulationManager pops(reg.popTypes, *reg.availability, growth, calculator, *reg.research,
+                           /*initialSize*/ 0);
+    pops.AddPop("SuperDrone");
+    pops.AddPop("Drone");
+
+    // Head-count is 2 drones; riot weight is 2 + 1.
+    CHECK(pops.GetDroneCount() == 2);
+    CHECK(pops.GetRiotContribution() == 3);
 }
 
 TEST_CASE("ApplyCompositionTargets uses configured type ids and skips existing drones",

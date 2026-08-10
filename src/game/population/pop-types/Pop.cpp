@@ -49,6 +49,11 @@ bool Pop::IsPlainWorker() const
     return m_pConfig->role == PopRole_t::Worker;
 }
 
+int Pop::GetRiotContribution() const
+{
+    return m_pConfig->riotContribution;
+}
+
 void Pop::Convert(const PopTypeConfig_t& rConfig)
 {
     m_pConfig = &rConfig;

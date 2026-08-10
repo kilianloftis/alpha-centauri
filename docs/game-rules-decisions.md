@@ -93,18 +93,28 @@ gap to fill — the veto/overrule path simply does not apply to elections.
 **Implemented** 2026-08-08. `VetoPending` refuses an election outright, so the overrule check can
 never see one; both sites say why. The office cannot be defended by its incumbent.
 
-## 6. Psych
+## 6. Psych / energy economy
 
-**Rule:** psych is **not** redistributed the way econ and labs are. A base **collects** psych and
-applies it to **its own** population.
+**Rule:** energy is produced and allocated **per base**. There is no faction-wide energy pool
+that is later redistributed.
 
-Psych may originate from anywhere the effect system reaches:
-- base facilities,
-- secret projects (commonly +psych at *all* of the owning faction's bases),
-- the faction economy, which allocates a share of energy into psych **to distribute to bases**.
+Pipeline at each base:
+1. Produce energy (tiles, crawlers, buildings, Energy StatModifiers — any source).
+2. Apply inefficiency (distance from HQ + base efficiency rate from SE + local sources).
+3. Split post-inefficiency energy into labs / econ / psych via the faction EconomyManager
+   percentages (floored labs/psych; residual econ).
+4. Apply Econ / Labs / Psych StatModifiers to each category.
+5. Faction collects econ (treasury) and labs (research). Psych stays at the base and is
+   consumed when calculating population composition.
+
+Psych may also originate from facilities, secret projects, and specialists (Psych
+StatModifiers), on top of the local energy-psych share.
 
 **Consequence:** composition's `psych_output` counting specialist psych only is wrong — it is one
-source among several. The psych model is a feature in its own right, not a bug fix.
+source among several.
+
+**Implemented** 2026-08-09 (per-base pipeline + ConsumePsych; inefficiency stubbed). Composition
+still needs to consume the stockpile and feed full psych into the talent formula — next step.
 
 ---
 

@@ -275,7 +275,8 @@ bool PopulationManager::IsDestroyed() const
 RiotConditionInputs_t PopulationManager::BuildRiotInputs_() const
 {
     RiotConditionInputs_t inputs;
-    inputs.droneCount = m_container.GetDroneCount();
+    // Weighted: Super Drone contributes 2. Head-count GetDroneCount is for composition only.
+    inputs.droneCount = m_container.GetRiotContribution();
     inputs.talentCount = m_container.GetTalentCount();
     PopCompositionInputs_t compInputs;
     compInputs.baseSize = m_container.GetSize();

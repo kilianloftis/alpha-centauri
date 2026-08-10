@@ -29,6 +29,9 @@ struct PopTypeConfig_t
     bool bIsDefault = false;
     bool bCanWorkTile = false;
     bool bPlayerAssignable = false;
+    // How many drones this pop counts as for riot. Defaults to 1 for role=drone, else 0.
+    // Super Drone overrides to 2.
+    int riotContribution = 0;
     std::vector<std::string> obsoletes;
     std::string requiredTech;
     std::string fallbackPopTypeId;

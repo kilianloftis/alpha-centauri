@@ -130,7 +130,12 @@ public:
     int GetMineralProduction() const;
     int GetEconProduction() const;
     int GetLabsProduction() const;
+    // Local energy-psych share + this base's Psych StatModifiers.
     int GetPsychProduction() const;
+
+    // Composition modifiers from StatModifier(drones/talents) effects at this base.
+    int GetDroneModifier() const;
+    int GetTalentModifier() const;
 
     // Resource subsystem: per-turn stockpiles and their consumption.
     ResourceManager& GetResources();
@@ -160,8 +165,8 @@ public:
     // Returns 0 when nothing is queued.
     int GetMineralCost() const;
 
-    // Collect resources from worked tiles and allocate energy to categories.
-    // Called once per turn per base during ResourceCollection stage.
+    // Collect nutrients/minerals and allocate energy into econ/labs/psych stockpiles.
+    // Called once per turn per base during ResourceCollection (via Faction::ProduceBaseResources).
     // Resolves against the composed provider pool (BuildBaseEffects_ memo).
     void ProduceResources();
 

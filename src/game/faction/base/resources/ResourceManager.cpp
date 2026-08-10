@@ -135,6 +135,24 @@ int ResourceManager::GetMineralProduction(const BaseEffects_t& rBaseEffects) con
     return CalculateResource_(StatId_t::Minerals, ComputeWorked_(rBaseEffects), rBaseEffects);
 }
 
+int ResourceManager::GetEnergyProduction(const BaseEffects_t& rBaseEffects) const
+{
+    return CalculateResource_(StatId_t::Energy, ComputeWorked_(rBaseEffects), rBaseEffects);
+}
+
+int ResourceManager::ApplyInefficiency_(int energy) const
+{
+    // TODO(economy): SMAC-style inefficiency reduces energy before the econ/labs/psych split.
+    // Needs distance from headquarters and this base's efficiency rate (social-engineering
+    // Efficiency rating plus local sources). Stub: no loss.
+    return energy;
+}
+
+int ResourceManager::AllocatableEnergy_(const BaseEffects_t& rBaseEffects) const
+{
+    return ApplyInefficiency_(GetEnergyProduction(rBaseEffects));
+}
+
 int ResourceManager::CalculateEcon_(int energy, const BaseEffects_t& rBaseEffects) const
 {
     // FilterBaseLevelByStatId, not FilterByStatId: base-level resolution must never pick up
@@ -166,17 +184,17 @@ int ResourceManager::CalculatePsych_(int energy, const BaseEffects_t& rBaseEffec
 
 int ResourceManager::GetEconProduction(const BaseEffects_t& rBaseEffects) const
 {
-    return CalculateEcon_(CalculateResource_(StatId_t::Energy, ComputeWorked_(rBaseEffects), rBaseEffects), rBaseEffects);
+    return CalculateEcon_(AllocatableEnergy_(rBaseEffects), rBaseEffects);
 }
 
 int ResourceManager::GetLabsProduction(const BaseEffects_t& rBaseEffects) const
 {
-    return CalculateLabs_(CalculateResource_(StatId_t::Energy, ComputeWorked_(rBaseEffects), rBaseEffects), rBaseEffects);
+    return CalculateLabs_(AllocatableEnergy_(rBaseEffects), rBaseEffects);
 }
 
 int ResourceManager::GetPsychProduction(const BaseEffects_t& rBaseEffects) const
 {
-    return CalculatePsych_(CalculateResource_(StatId_t::Energy, ComputeWorked_(rBaseEffects), rBaseEffects), rBaseEffects);
+    return CalculatePsych_(AllocatableEnergy_(rBaseEffects), rBaseEffects);
 }
 
 int ResourceManager::ConsumeNutrients()
@@ -207,6 +225,13 @@ int ResourceManager::ConsumeLabs()
     return consumed;
 }
 
+int ResourceManager::ConsumePsych()
+{
+    int consumed = m_psych;
+    m_psych = 0;
+    return consumed;
+}
+
 void ResourceManager::ProduceNutrients_(const TileResources_t& worked, const BaseEffects_t& rBaseEffects)
 {
     m_nutrients += CalculateResource_(StatId_t::Nutrients, worked, rBaseEffects);
@@ -219,7 +244,8 @@ void ResourceManager::ProduceMinerals_(const TileResources_t& worked, const Base
 
 void ResourceManager::AllocateEnergy_(const TileResources_t& worked, const BaseEffects_t& rBaseEffects)
 {
-    const int energy = CalculateResource_(StatId_t::Energy, worked, rBaseEffects);
+    const int energy = ApplyInefficiency_(
+        CalculateResource_(StatId_t::Energy, worked, rBaseEffects));
 
     m_econ  += CalculateEcon_(energy, rBaseEffects);
     m_labs  += CalculateLabs_(energy, rBaseEffects);

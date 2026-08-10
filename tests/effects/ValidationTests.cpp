@@ -99,6 +99,8 @@ static_assert(KindFor(StatId_t::Energy) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Econ) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Labs) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Psych) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::Drones) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::Talents) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Attack) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Defense) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Movement) == StatKind_t::Additive);

@@ -74,22 +74,22 @@
     "id": "police",
     "levels": {
       "-5": [
-        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "psych", "amount": -5, "op": "Add" } }
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "drones", "amount": 5, "op": "Add" } }
       ],
       "-3": [
-        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "psych", "amount": -3, "op": "Add" } }
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "drones", "amount": 3, "op": "Add" } }
       ],
       "-1": [
-        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "psych", "amount": -1, "op": "Add" } }
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "drones", "amount": 1, "op": "Add" } }
       ],
       "1": [
-        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "psych", "amount": 1, "op": "Add" } }
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "drones", "amount": -1, "op": "Add" } }
       ],
       "2": [
-        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "psych", "amount": 2, "op": "Add" } }
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "drones", "amount": -2, "op": "Add" } }
       ],
       "3": [
-        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "psych", "amount": 3, "op": "Add" } }
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "drones", "amount": -3, "op": "Add" } }
       ]
     }
   },

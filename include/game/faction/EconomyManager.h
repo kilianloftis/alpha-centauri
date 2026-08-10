@@ -38,9 +38,10 @@ public:
     void SetEnergyAllocation(const EnergyAllocation_t& allocation);
     EnergyAllocation_t GetEnergyAllocation() const;
 
-    // Split a base's collected energy into econ / labs / psych.
+    // Split a base's allocatable energy into econ / labs / psych.
     // Labs and psych use floored percentage shares; economy receives the remainder
     // (SMAC residual-economy rule). The three results always sum to totalEnergy.
+    // Each base keeps its own shares; only econ/labs are later collected faction-wide.
     int CalculateEnergyForEcon(int totalEnergy) const;
     int CalculateEnergyForLabs(int totalEnergy) const;
     int CalculateEnergyForPsych(int totalEnergy) const;

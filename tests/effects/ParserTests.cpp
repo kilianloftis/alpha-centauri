@@ -24,6 +24,8 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("econ") == StatId_t::Econ);
     CHECK(ParseStatId("labs") == StatId_t::Labs);
     CHECK(ParseStatId("psych") == StatId_t::Psych);
+    CHECK(ParseStatId("drones") == StatId_t::Drones);
+    CHECK(ParseStatId("talents") == StatId_t::Talents);
     CHECK(ParseStatId("attack") == StatId_t::Attack);
     CHECK(ParseStatId("defense") == StatId_t::Defense);
     CHECK(ParseStatId("movement") == StatId_t::Movement);

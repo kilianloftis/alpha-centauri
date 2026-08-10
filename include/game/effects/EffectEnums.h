@@ -13,10 +13,15 @@ enum class StatId_t
     Minerals,
     Energy,
 
-    // Base output, allocated directly (specialists) rather than via energy allocation
+    // Base output: seed from this base's post-inefficiency energy split, plus flat Add
+    // from facilities / specialists.
     Econ,
     Labs,
     Psych,
+
+    // Composition modifiers: add/remove drones or talents at a base (Police SE, facilities).
+    Drones,
+    Talents,
 
     // Unit stats
     Attack,
@@ -102,6 +107,8 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::Econ:
         case StatId_t::Labs:
         case StatId_t::Psych:
+        case StatId_t::Drones:
+        case StatId_t::Talents:
         case StatId_t::Attack:
         case StatId_t::Defense:
         case StatId_t::Movement:
@@ -157,6 +164,8 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "econ")                    return StatId_t::Econ;
     if (rStat == "labs")                    return StatId_t::Labs;
     if (rStat == "psych")                   return StatId_t::Psych;
+    if (rStat == "drones")                  return StatId_t::Drones;
+    if (rStat == "talents")                 return StatId_t::Talents;
     if (rStat == "attack")                  return StatId_t::Attack;
     if (rStat == "defense")                 return StatId_t::Defense;
     if (rStat == "movement")                return StatId_t::Movement;

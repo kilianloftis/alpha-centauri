@@ -48,6 +48,15 @@ PopTypeConfig_t PopTypeConfigParser::ParsePopTypeConfig(const nlohmann::json& po
     config.obsoletes             = ConfigFields::ParseStringArray(popJson, "obsoletes");
     config.effects               = EffectConfigParser::ParseEffects(popJson, EffectSourceKind_t::PopType, config.id);
 
+    // Riot weight: drones default to 1, everyone else to 0. Explicit override for Super Drone.
+    const int defaultRiot = (config.role == PopRole_t::Drone) ? 1 : 0;
+    config.riotContribution = popJson.value("riot_contribution", defaultRiot);
+    if (config.riotContribution < 0)
+    {
+        throw std::runtime_error("Pop type '" + config.id
+                                 + "': riot_contribution must be >= 0");
+    }
+
     return config;
 }
 

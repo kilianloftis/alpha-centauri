@@ -3,7 +3,6 @@
 
 #include "game/buildings/BuildingRegistry.h"
 
-#include <algorithm>
 #include <cstdint>
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/GameDataContext.h"

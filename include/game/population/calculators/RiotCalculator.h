@@ -7,7 +7,8 @@
 namespace ac
 {
 
-// Inputs for the natural riot condition: drones outnumber the talent target.
+// Inputs for the natural riot condition: weighted drones outnumber the talent target.
+// droneCount is the sum of pop riot_contribution (Super Drone = 2), not head-count.
 struct RiotConditionInputs_t
 {
     int droneCount = 0;

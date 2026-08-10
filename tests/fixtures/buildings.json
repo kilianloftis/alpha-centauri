@@ -678,5 +678,54 @@
     "name": "Test Facility B",
     "effects": [],
     "category": "build"
+  },
+  {
+    "id": "energy_tap",
+    "name": "Energy Tap (+10 energy at this base)",
+    "allow_multiple": true,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": { "stat": "energy", "amount": 10, "op": "Add" }
+      }
+    ],
+    "category": "discover"
+  },
+  {
+    "id": "drone_hall",
+    "name": "Drone Hall (+2 drones at this base)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": { "stat": "drones", "amount": 2, "op": "Add" }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "talent_academy",
+    "name": "Talent Academy (+1 talent at this base)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": { "stat": "talents", "amount": 1, "op": "Add" }
+      }
+    ],
+    "category": "discover"
+  },
+  {
+    "id": "punishment_sphere",
+    "name": "Punishment Sphere (-1 talent at this base)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": { "stat": "talents", "amount": -1, "op": "Add" }
+      }
+    ],
+    "category": "conquer"
   }
 ]

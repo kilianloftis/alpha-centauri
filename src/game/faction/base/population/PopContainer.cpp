@@ -49,6 +49,16 @@ int PopContainer::GetSpecialistCount() const
     return CountPops_([](const Pop* p) { return p->IsSpecialist(); });
 }
 
+int PopContainer::GetRiotContribution() const
+{
+    int total = 0;
+    for (const auto& pPop : m_pops)
+    {
+        total += pPop->GetRiotContribution();
+    }
+    return total;
+}
+
 void PopContainer::AddPop(const PopTypeConfig_t& rConfig)
 {
     m_pops.push_back(m_rRegistry.Create(rConfig.id));

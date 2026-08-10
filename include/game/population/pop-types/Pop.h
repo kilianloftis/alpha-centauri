@@ -43,6 +43,9 @@ public:
     // The fourth member of the partition above.
     bool IsPlainWorker() const;
 
+    // Weighted drone count for riot (1 for a normal Drone, 2 for Super Drone).
+    int GetRiotContribution() const;
+
 
     // Swap this pop's type config in-place.
     // Clears tile assignment if the new type is not a worker.

@@ -47,6 +47,9 @@ public:
     int GetDroneCount() const;
     int GetSpecialistCount() const;
 
+    // Sum of each pop's riot_contribution (Super Drone counts as 2).
+    int GetRiotContribution() const;
+
     // Container operations. AddPop takes an already-resolved type for the same reason ConvertTo
     // does: which types are legal is PopulationManager's decision, not the container's.
     void AddPop(const PopTypeConfig_t& rConfig);

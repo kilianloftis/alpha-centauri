@@ -23,6 +23,18 @@
     "effects": []
   },
   {
+    "id": "SuperDrone",
+    "name": "Super Drone",
+    "role": "drone",
+    "display_glyph": "S",
+    "can_work_tile": true,
+    "player_assignable": false,
+    "fallback_pop_type": "Doctor",
+    "riot_contribution": 2,
+    "obsoletes": [],
+    "effects": []
+  },
+  {
     "id": "Talent",
     "name": "Talent",
     "role": "talent",

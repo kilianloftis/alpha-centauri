@@ -264,6 +264,20 @@ int BaseManager::GetPsychProduction() const
     return m_pResources->GetPsychProduction(BuildBaseEffects_());
 }
 
+int BaseManager::GetDroneModifier() const
+{
+    return FinalizeResolvedStat(
+        ResolveStatModifiers(FilterBaseLevelByStatId(BuildBaseEffects_(), StatId_t::Drones), 0.0)
+            .total);
+}
+
+int BaseManager::GetTalentModifier() const
+{
+    return FinalizeResolvedStat(
+        ResolveStatModifiers(FilterBaseLevelByStatId(BuildBaseEffects_(), StatId_t::Talents), 0.0)
+            .total);
+}
+
 BuildingManager& BaseManager::GetBuildingManager()
 {
     return *m_pBuildings;
