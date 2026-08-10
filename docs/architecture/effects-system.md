@@ -661,8 +661,12 @@ Water+Base) and unconditional `Attack` for channel-crossing fights. `Water` is a
 improvement entry covering any sea tile (`elevation < 0`), and it **stacks** with the depth
 band rather than replacing it: a submerged tile carries `Water` plus exactly one of `Ocean` /
 `OceanShelf` (split at `k_OceanShelfMinElevation`), in that order. Put rules shared by all sea
-tiles on `Water`; shelf-only rules stay on `OceanShelf` (+1 nutrient), and deep `Ocean` is
-excluded by sea terraform. `AttackerIsEmbarked` is available for mod-scoped attack grants.
+tiles on `Water` — including `suppress_yield_sources` for rockiness, moisture, river, and
+`@resource_bonus` (sea tiles still carry those landform features, but they must not contribute
+yield). Shelf-only rules stay on `OceanShelf` (+1 nutrient); deep `Ocean` adds nothing and is
+excluded by sea terraform. Do not suppress `@landform` from `Water`: that tag includes
+`OceanShelf` and would erase the shelf nutrient. `AttackerIsEmbarked` is available for
+mod-scoped attack grants.
 
 **Tile capability flags** are the `ThisTile`-scoped subset, resolved by two helpers in
 `ActiveEffect.h` rather than by a hand-rolled scan:

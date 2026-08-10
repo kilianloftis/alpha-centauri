@@ -47,6 +47,9 @@
     "id": "Water",
     "name": "Water",
     "tags": ["landform"],
+    "suppress_yield_sources": [
+      "Flat", "Rolling", "Rocky", "Arid", "Moist", "Wet", "River", "@resource_bonus"
+    ],
     "effects": []
   },
   {

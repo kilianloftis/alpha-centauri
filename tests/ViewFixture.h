@@ -86,6 +86,14 @@ struct ViewFixture : WorldFixture
                 dataContext, pState->GetWorldMap(), settings, k_TestFactionSeed));
         }
 
+        // WorldView loads terraform hotkeys from this path at construction; relative defaults
+        // break under ctest's build-dir cwd. It also dereferences improvementRegistry to
+        // validate those binding ids — GameState uses WorldFixture::improvements separately.
+        dataContext.paths.terraformBindings =
+            std::string(AC_CONFIG_DIR) + "/ui/terraform_bindings.json";
+        dataContext.improvementRegistry = std::make_unique<ac::ImprovementRegistry>();
+        dataContext.improvementRegistry->Load(std::string(AC_CONFIG_DIR) + "/improvements.json");
+
         pFactory = std::make_unique<ac::ViewFactory>(*pState, dataContext, graphics, settings);
     }
 

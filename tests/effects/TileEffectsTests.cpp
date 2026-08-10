@@ -364,19 +364,34 @@ TEST_CASE("CanBuildImprovement: excludes-list features block construction", "[ef
     CHECK(CanBuildImprovement(tile, *pFarm));
 }
 
-TEST_CASE("ResolveTileYield: OceanShelf adds nutrients; Ocean does not",
+TEST_CASE("ResolveTileYield: sea suppresses landform/resource yields; OceanShelf is +1 nutrient",
           "[effects][tile][yield]")
 {
     actest::WorldFixture world;
     Tile& tile = world.At(4, 4);
+    // Rockiness/moisture remain bound on sea tiles; Water must suppress their yield.
+    tile.SetRockiness(Rockiness_t::Rocky);
+    tile.SetMoisture(Moisture_t::Wet);
+    tile.SetHasRiver(true);
+    world.ctx->AddImprovementWithEffects(tile, "Nutrients");
 
     tile.SetElevation(-100); // OceanShelf
     CHECK(tile.HasFeature("OceanShelf"));
-    CHECK(world.ctx->ResolveTileYield(tile).effective.nutrients == 1);
+    {
+        const TileResources_t yield = world.ctx->ResolveTileYield(tile).effective;
+        CHECK(yield.nutrients == 1);
+        CHECK(yield.minerals == 0);
+        CHECK(yield.energy == 0);
+    }
 
     tile.SetElevation(k_OceanShelfMinElevation - 1); // Ocean
     CHECK(tile.HasFeature("Ocean"));
-    CHECK(world.ctx->ResolveTileYield(tile).effective.nutrients == 0);
+    {
+        const TileResources_t yield = world.ctx->ResolveTileYield(tile).effective;
+        CHECK(yield.nutrients == 0);
+        CHECK(yield.minerals == 0);
+        CHECK(yield.energy == 0);
+    }
 }
 
 TEST_CASE("Terrain features: Water stacks with its depth band, general before specific",

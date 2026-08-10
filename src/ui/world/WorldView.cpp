@@ -572,19 +572,17 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
 
         SetSelectedTile_(pClickedTile);
 
+        // Base takes priority over garrison selection: the base screen has its own unit stack
+        // for picking units on the tile. Matches docs/architecture/ui-system.md.
+        if (BaseManager* pBase = m_rGameState.FindBaseAt(worldX, worldY))
+        {
+            SetSelectedUnit_(nullptr, true);
+            m_onOpenBase(*pBase);
+            return;
+        }
+
         // Unit pick uses IsUnitVisibleTo (fog / Conceal / contact reveal), not tile fog alone.
         SelectUnitAtTile_(worldX, worldY);
-
-        // Only when the click selected no unit: clicking a garrison selects the garrison, it
-        // does not jump into the base screen. Matches docs/architecture/ui-system.md.
-        if (!m_pSelectedUnit)
-        {
-            if (BaseManager* pBase = m_rGameState.FindBaseAt(worldX, worldY))
-            {
-                m_onOpenBase(*pBase);
-                return;
-            }
-        }
     }
 }
 
