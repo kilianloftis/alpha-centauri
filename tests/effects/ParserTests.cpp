@@ -38,6 +38,8 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("cargo_capacity") == StatId_t::CargoCapacity);
     CHECK(ParseStatId("difficult_terrain_cost")
           == StatId_t::DifficultTerrainCost);
+    CHECK(ParseStatId("mineral_upkeep") == StatId_t::MineralUpkeep);
+    CHECK(ParseStatId("free_unit_support") == StatId_t::FreeUnitSupport);
     CHECK(ParseStatId("cost_multiplier") == StatId_t::CostMultiplier);
     CHECK(ParseStatId("probe_action_cost") == StatId_t::ProbeActionCost);
     CHECK(ParseStatId("probe_defense") == StatId_t::ProbeDefense);

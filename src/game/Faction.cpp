@@ -582,6 +582,17 @@ void Faction::ProduceBaseResources()
     }
 }
 
+void Faction::ApplyMineralSupport()
+{
+    for (const auto& pBase : m_bases)
+    {
+        if (pBase)
+        {
+            pBase->ApplyMineralSupport();
+        }
+    }
+}
+
 void Faction::ApplyBaseGrowth()
 {
     for (const auto& pBase : m_bases)

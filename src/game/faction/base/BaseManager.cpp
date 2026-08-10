@@ -5,6 +5,7 @@
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/production/ProductionManager.h"
 #include "game/faction/base/resources/ResourceManager.h"
+#include "game/faction/base/resources/MineralSupport.h"
 #include "game/faction/EconomyManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopulationManager.h"
@@ -380,6 +381,11 @@ int BaseManager::GetEffectiveSocialRating(SocialRatingId_t rating) const
 void BaseManager::ProduceResources()
 {
     m_pResources->ProduceResources(BuildBaseEffects_());
+}
+
+void BaseManager::ApplyMineralSupport()
+{
+    ApplyMineralSupportAtBase(*this);
 }
 
 ResourceManager& BaseManager::GetResources()

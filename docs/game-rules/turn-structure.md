@@ -10,16 +10,18 @@ Energy allocation
 -Economy/Labs/Psych sliders applied
 Research accumulation
 -Lab output added; tech discovered if threshold met
+Upkeep & social effects
+- Unit mineral support (charged against this turn's mineral bank; surplus units disbanded)
+- Facility costs (future)
 Base production
--Minerals spent; units or facilities completed
+-Remaining minerals spent; units or facilities completed
 -- Facilities
 -- Units
 -- Terraforming
 -- Secret projects
 Population & nutrients
 - Nutrient surplus/deficit applied; bases may grow or shrink
-Upkeep & social effects
-- Unit support, facility costs, drone/talent balance
+- Drone/talent balance
 Player Actions
 World events
 - Mindworms, fungus, disasters, monolith effects

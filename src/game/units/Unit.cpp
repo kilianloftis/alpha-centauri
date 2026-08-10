@@ -217,6 +217,10 @@ int Unit::GetCurrentHp() const              { return m_currentHp; }
 int Unit::GetCurrentFuel() const            { return m_currentFuel; }
 int Unit::GetMaxFuel() const                { return m_rDesign.MaxFuel(); }
 int Unit::GetMovementPoints() const         { return ResolveStat(*this, StatId_t::Movement); }
+int Unit::GetMineralUpkeep() const
+{
+    return std::max(0, ResolveStat(*this, StatId_t::MineralUpkeep));
+}
 int Unit::GetMoveFragmentsRemaining() const { return m_moveFragmentsRemaining; }
 int Unit::GetXp() const                     { return m_xp; }
 

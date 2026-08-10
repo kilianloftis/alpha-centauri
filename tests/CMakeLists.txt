@@ -73,6 +73,7 @@ add_executable(effects-tests
     game/TerritoryTests.cpp
     game/WorkerAssignmentTests.cpp
     game/HomeBaseTests.cpp
+    game/MineralSupportTests.cpp
     game/BuildingInvariantTests.cpp
     game/CompositionRootTests.cpp
     game/LifetimeTransferTests.cpp

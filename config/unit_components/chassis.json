@@ -11,18 +11,42 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "movement", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "movement",
+          "amount": 1,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "vision", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "mineral_upkeep",
+          "amount": 1,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "attack", "amount": 25, "op": "AddPercent" },
-        "condition": { "kind": "TargetTileHas", "value": "Base" }
+        "parameters": {
+          "stat": "vision",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "attack",
+          "amount": 25,
+          "op": "AddPercent"
+        },
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "Base"
+        }
       }
     ]
   },
@@ -38,17 +62,38 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "movement", "amount": 2, "op": "Add" }
+        "parameters": {
+          "stat": "movement",
+          "amount": 2,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "vision", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "mineral_upkeep",
+          "amount": 1,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "disengage_chance", "amount": 25, "op": "Add" }
+        "parameters": {
+          "stat": "vision",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "disengage_chance",
+          "amount": 25,
+          "op": "Add"
+        }
       }
     ]
   },
@@ -64,17 +109,38 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "movement", "amount": 2, "op": "Add" }
+        "parameters": {
+          "stat": "movement",
+          "amount": 2,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "vision", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "mineral_upkeep",
+          "amount": 1,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "cargo_capacity", "amount": 2, "op": "Add" }
+        "parameters": {
+          "stat": "vision",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "cargo_capacity",
+          "amount": 2,
+          "op": "Add"
+        }
       }
     ]
   },
@@ -90,17 +156,36 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "movement", "amount": 3, "op": "Add" }
+        "parameters": {
+          "stat": "movement",
+          "amount": 3,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "vision", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "mineral_upkeep",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "vision",
+          "amount": 1,
+          "op": "Add"
+        }
       },
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "ignores_difficult_terrain" }
+        "parameters": {
+          "flag": "ignores_difficult_terrain"
+        }
       }
     ]
   },
@@ -116,17 +201,36 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "movement", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "movement",
+          "amount": 1,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "vision", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "mineral_upkeep",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "vision",
+          "amount": 1,
+          "op": "Add"
+        }
       },
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "forces_psi_combat" }
+        "parameters": {
+          "flag": "forces_psi_combat"
+        }
       }
     ]
   },
@@ -142,32 +246,61 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "movement", "amount": 8, "op": "Add" }
+        "parameters": {
+          "stat": "movement",
+          "amount": 8,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "vision", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "mineral_upkeep",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "vision",
+          "amount": 1,
+          "op": "Add"
+        }
       },
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "single_use" }
+        "parameters": {
+          "flag": "single_use"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "turns_of_fuel", "amount": 2, "op": "Add" }
+        "parameters": {
+          "stat": "turns_of_fuel",
+          "amount": 2,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "damage_from_out_of_fuel", "amount": 100, "op": "Add" }
+        "parameters": {
+          "stat": "damage_from_out_of_fuel",
+          "amount": 100,
+          "op": "Add"
+        }
       },
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "cannot_capture_bases" }
+        "parameters": {
+          "flag": "cannot_capture_bases"
+        }
       }
     ]
   },
@@ -183,32 +316,61 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "movement", "amount": 8, "op": "Add" }
+        "parameters": {
+          "stat": "movement",
+          "amount": 8,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "vision", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "mineral_upkeep",
+          "amount": 1,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "turns_of_fuel", "amount": 2, "op": "Add" }
+        "parameters": {
+          "stat": "vision",
+          "amount": 1,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "damage_from_out_of_fuel", "amount": 100, "op": "Add" }
+        "parameters": {
+          "stat": "turns_of_fuel",
+          "amount": 2,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "damage_from_out_of_fuel",
+          "amount": 100,
+          "op": "Add"
+        }
       },
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "attacking_ends_turn" }
+        "parameters": {
+          "flag": "attacking_ends_turn"
+        }
       },
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "cannot_capture_bases" }
+        "parameters": {
+          "flag": "cannot_capture_bases"
+        }
       }
     ]
   },
@@ -224,27 +386,54 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "movement", "amount": 8, "op": "Add" }
+        "parameters": {
+          "stat": "movement",
+          "amount": 8,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "vision", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "mineral_upkeep",
+          "amount": 1,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "turns_of_fuel", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "vision",
+          "amount": 1,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "damage_from_out_of_fuel", "amount": 30, "op": "Add" }
+        "parameters": {
+          "stat": "turns_of_fuel",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "damage_from_out_of_fuel",
+          "amount": 30,
+          "op": "Add"
+        }
       },
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "cannot_capture_bases" }
+        "parameters": {
+          "flag": "cannot_capture_bases"
+        }
       }
     ]
   },
@@ -260,12 +449,29 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "movement", "amount": 6, "op": "Add" }
+        "parameters": {
+          "stat": "movement",
+          "amount": 6,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "vision", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "mineral_upkeep",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "vision",
+          "amount": 1,
+          "op": "Add"
+        }
       }
     ]
   }

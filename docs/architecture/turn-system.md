@@ -39,9 +39,9 @@ graph TB
         ResourceCollection[ResourceCollection]
         IncomeCollection[IncomeCollection]
         ResearchAccumulation[ResearchAccumulation]
+        Upkeep[Upkeep]
         BaseProduction[BaseProduction]
         Population[Population]
-        Upkeep[Upkeep]
         PlayerActions[PlayerActions]
     end
 
@@ -87,9 +87,9 @@ graph TB
     PerFactionTurnStage --> ResourceCollection
     PerFactionTurnStage --> IncomeCollection
     PerFactionTurnStage --> ResearchAccumulation
+    PerFactionTurnStage --> Upkeep
     PerFactionTurnStage --> BaseProduction
     PerFactionTurnStage --> Population
-    PerFactionTurnStage --> Upkeep
     PerFactionTurnStage --> PlayerActions
     PerFactionTurnStage --> CustomPerFactionTurnStage
 

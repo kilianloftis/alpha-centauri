@@ -89,6 +89,9 @@ public:
     int GetMaxFuel() const;
     // Chassis Movement stat in move-points (not fragments).
     int GetMovementPoints() const;
+
+    // Live mineral support cost (design + FactionUnits), floored at 0.
+    int GetMineralUpkeep() const;
     // Remaining movement in fragments (k_moveFragmentsPerPoint per Movement point).
     int GetMoveFragmentsRemaining() const;
     int GetXp() const;

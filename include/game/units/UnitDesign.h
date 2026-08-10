@@ -46,6 +46,9 @@ public:
     // Chassis Movement stat in move-points (not fragments).
     int GetMovementPoints() const;
 
+    // Intrinsic mineral support cost (component MineralUpkeep), floored at 0.
+    int GetMineralUpkeep() const;
+
     // Cached at construction from component TurnsOfFuel / Movement (design properties).
     bool UsesFuel() const;
     // Max fuel pool in move-points: TurnsOfFuel × Movement (0 when !UsesFuel).

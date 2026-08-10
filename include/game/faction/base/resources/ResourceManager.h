@@ -66,6 +66,11 @@ public:
     int ConsumeLabs();
     int ConsumePsych();
 
+    // Current per-turn mineral bank (filled by ProduceResources; drained by support / production).
+    int GetMineralBank() const;
+    // Deduct up to `amount` from the mineral bank. `amount` must be >= 0 and <= bank.
+    void SpendMinerals(int amount);
+
     // Produce nutrients/minerals and allocate energy into econ/labs/psych stockpiles.
     // Called once per turn per base from the ResourceCollection stage.
     void ProduceResources(const BaseEffects_t& rBaseEffects);

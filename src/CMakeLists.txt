@@ -40,6 +40,7 @@ add_library(ac-core STATIC
     game/faction/base/production/ProductionConfigParser.cpp
     game/faction/base/production/ProductionCostCalculator.cpp
     game/faction/base/resources/ResourceManager.cpp
+    game/faction/base/resources/MineralSupport.cpp
     game/faction/base/resources/WorkerAssignmentManager.cpp
     game/faction/EconomyManager.cpp
     game/faction/base/population/PopulationManager.cpp

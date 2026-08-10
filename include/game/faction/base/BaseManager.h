@@ -170,6 +170,10 @@ public:
     // Resolves against the composed provider pool (BuildBaseEffects_ memo).
     void ProduceResources();
 
+    // Charge home-unit mineral support against this turn's mineral bank; disband if short.
+    // Called once per turn per base during Upkeep (via Faction::ApplyMineralSupport).
+    void ApplyMineralSupport();
+
     // Apply nutrients produced this turn: add to stockpile, grow or starve if threshold is met.
     // GrowthRate modifiers resolve against the same memoized base effect list.
     void ApplyGrowth();

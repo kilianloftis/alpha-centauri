@@ -15,6 +15,7 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitOrder.h"
 
+#include <stdexcept>
 #include <variant>
 
 namespace ac
@@ -226,9 +227,27 @@ int ResourceManager::ConsumeNutrients()
 
 int ResourceManager::ConsumeMinerals()
 {
-    int consumed = m_minerals;
-    m_minerals = 0;
-    return consumed;
+    int all = m_minerals;
+    SpendMinerals(all);
+    return all;
+}
+
+int ResourceManager::GetMineralBank() const
+{
+    return m_minerals;
+}
+
+void ResourceManager::SpendMinerals(int amount)
+{
+    if (amount < 0)
+    {
+        throw std::invalid_argument("SpendMinerals: amount must be non-negative");
+    }
+    if (amount > m_minerals)
+    {
+        throw std::runtime_error("SpendMinerals: amount exceeds mineral bank");
+    }
+    m_minerals -= amount;
 }
 
 int ResourceManager::ConsumeEcon()

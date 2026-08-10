@@ -1,6 +1,7 @@
 #include "game/units/UnitDesign.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
+#include <algorithm>
 #include <stdexcept>
 #include <sstream>
 
@@ -146,6 +147,11 @@ bool UnitDesign::GetFlag(RuleFlagId_t flagId) const
 int UnitDesign::GetMovementPoints() const
 {
     return GetStat(StatId_t::Movement);
+}
+
+int UnitDesign::GetMineralUpkeep() const
+{
+    return std::max(0, GetStat(StatId_t::MineralUpkeep));
 }
 
 bool UnitDesign::UsesFuel() const

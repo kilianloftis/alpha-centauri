@@ -186,6 +186,10 @@ public:
     // econ/labs is CollectIncome / CollectResearch; psych stays at the base.
     void ProduceBaseResources();
 
+    // Charge mineral support at every base (home units vs this turn's mineral bank).
+    // Called from Upkeep before BaseProduction spends the remainder on the build queue.
+    void ApplyMineralSupport();
+
     // Apply growth to all bases, incorporating GrowthRate stat effects.
     void ApplyBaseGrowth();
 

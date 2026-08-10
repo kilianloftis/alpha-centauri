@@ -44,6 +44,17 @@
     }
   },
   {
+    "id": "Upkeep",
+    "name": "Upkeep",
+    "description": "Unit mineral support (and future facility upkeep); runs before BaseProduction so support claims minerals first",
+    "repeatForEachFaction": true,
+    "hooks": {
+      "pre": [],
+      "post": [],
+      "replace": []
+    }
+  },
+  {
     "id": "BaseProduction",
     "name": "Base Production",
     "description": "Handles production in all bases",
@@ -58,17 +69,6 @@
     "id": "Population",
     "name": "Population",
     "description": "Processes population changes and drone/talent balance",
-    "repeatForEachFaction": true,
-    "hooks": {
-      "pre": [],
-      "post": [],
-      "replace": []
-    }
-  },
-  {
-    "id": "Upkeep",
-    "name": "Upkeep",
-    "description": "Deducts upkeep costs for units and facilities",
     "repeatForEachFaction": true,
     "hooks": {
       "pre": [],

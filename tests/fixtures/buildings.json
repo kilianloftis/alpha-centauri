@@ -740,5 +740,41 @@
       }
     ],
     "category": "conquer"
+  },
+  {
+    "id": "free_support_depot",
+    "name": "Free Support Depot (+2 free unit support at this base)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": { "stat": "free_unit_support", "amount": 2, "op": "Add" }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "support_cost_penalty",
+    "name": "Support Cost Penalty (+1 mineral upkeep on all faction units)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionUnits",
+        "parameters": { "stat": "mineral_upkeep", "amount": 1, "op": "Add" }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "mineral_cache",
+    "name": "Mineral Cache (+50 minerals at this base)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": { "stat": "minerals", "amount": 50, "op": "Add" }
+      }
+    ],
+    "category": "build"
   }
 ]

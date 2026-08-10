@@ -38,6 +38,11 @@ enum class StatId_t
     DamageFromOutOfFuel,
     CargoCapacity,
     DifficultTerrainCost,
+    // Minerals spent each turn to keep a live unit supported by its home base. Chassis
+    // baseline is typically 1; abilities / FactionUnits SE can raise or zero it. Floor at 0.
+    MineralUpkeep,
+    // How many positive-upkeep home units a base may support at zero mineral cost (SE Support).
+    FreeUnitSupport,
     CostMultiplier,
     // Multiplier on enemy probe mind-control / subversion energy costs (PureMultiplier).
     // SE Probe levels emit AddPercent; resolved from the target base's effect list.
@@ -125,6 +130,8 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::DamageFromOutOfFuel:
         case StatId_t::CargoCapacity:
         case StatId_t::DifficultTerrainCost:
+        case StatId_t::MineralUpkeep:
+        case StatId_t::FreeUnitSupport:
         case StatId_t::StartingExperience:
         case StatId_t::MoraleBonus:
         case StatId_t::ProbeDefense:
@@ -183,6 +190,8 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "damage_from_out_of_fuel") return StatId_t::DamageFromOutOfFuel;
     if (rStat == "cargo_capacity")          return StatId_t::CargoCapacity;
     if (rStat == "difficult_terrain_cost")  return StatId_t::DifficultTerrainCost;
+    if (rStat == "mineral_upkeep")          return StatId_t::MineralUpkeep;
+    if (rStat == "free_unit_support")       return StatId_t::FreeUnitSupport;
     if (rStat == "cost_multiplier")         return StatId_t::CostMultiplier;
     if (rStat == "probe_action_cost")       return StatId_t::ProbeActionCost;
     if (rStat == "probe_defense")           return StatId_t::ProbeDefense;
