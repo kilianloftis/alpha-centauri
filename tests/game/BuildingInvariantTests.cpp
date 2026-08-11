@@ -237,4 +237,13 @@ TEST_CASE("BuildingRegistry validates the whole set", "[building][config]")
         CHECK_THROWS_WITH(registry.Load(path),
                           Catch::Matchers::ContainsSubstring("mineral_cost"));
     }
+
+    SECTION("a negative upkeep is rejected")
+    {
+        const std::string path = WriteTempBuildings_(R"([
+            { "id": "leaky", "name": "Leaky", "upkeep": -1 }
+        ])");
+        CHECK_THROWS_WITH(registry.Load(path),
+                          Catch::Matchers::ContainsSubstring("upkeep"));
+    }
 }

@@ -46,7 +46,7 @@
   {
     "id": "Upkeep",
     "name": "Upkeep",
-    "description": "Unit mineral support (and future facility upkeep); runs before BaseProduction so support claims minerals first",
+    "description": "Unit mineral support and facility energy upkeep; runs before BaseProduction so support claims minerals first",
     "repeatForEachFaction": true,
     "hooks": {
       "pre": [],

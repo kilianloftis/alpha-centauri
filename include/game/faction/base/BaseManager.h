@@ -2,6 +2,7 @@
 
 #include "game/IConstructable.h"
 #include "game/buildings/BuildingConfig.h"
+#include "game/buildings/BuildingUpkeep.h"
 #include "game/faction/base/BaseTypes.h"
 #include "game/faction/base/production/ProductionConfigParser.h"
 #include "game/faction/base/HomeBaseIndex.h"
@@ -175,6 +176,10 @@ public:
     // Charge home-unit mineral support against this turn's mineral bank; disband if short.
     // Called once per turn per base during Upkeep (via Faction::ApplyMineralSupport).
     void ApplyMineralSupport();
+
+    // Constructed-facility energy upkeep for this base (FacilityEnergyUpkeep mods applied).
+    std::vector<BuildingUpkeepLine_t> GetBuildingUpkeepByType() const;
+    int GetBuildingUpkeep() const;
 
     // Apply nutrients produced this turn: add to stockpile, grow or starve if threshold is met.
     // GrowthRate modifiers resolve against the same memoized base effect list.

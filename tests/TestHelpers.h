@@ -41,7 +41,8 @@ public:
                                       std::optional<ac::TileSelector_t> selector = std::nullopt,
                                       std::optional<ac::Condition_t> condition = std::nullopt,
                                       ac::EffectPersistence_t persistence = ac::EffectPersistence_t::Continuous,
-                                      std::optional<ac::UnitFilter_t> unitFilter = std::nullopt)
+                                      std::optional<ac::UnitFilter_t> unitFilter = std::nullopt,
+                                      std::optional<ac::BuildingFilter_t> buildingFilter = std::nullopt)
     {
         ac::StatModifierEffect_t modifier;
         modifier.stat = stat;
@@ -55,6 +56,7 @@ public:
         config.persistence = persistence;
         config.condition = std::move(condition);
         config.unitFilter = std::move(unitFilter);
+        config.buildingFilter = std::move(buildingFilter);
         return Add(std::move(config));
     }
 

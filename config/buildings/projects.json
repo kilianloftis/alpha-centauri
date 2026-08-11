@@ -14,7 +14,8 @@
       }
     ],
     "category": "grow",
-    "required_tech": "test_tech_1"
+    "required_tech": "test_tech_1",
+    "upkeep": 2
   },
   {
     "id": "Hunter_Seeker_Algorithm",
@@ -26,16 +27,23 @@
         "type": "RuleFlag",
         "scope": "FactionGlobal",
         "persistence": "Continuous",
-        "parameters": { "flag": "blocks_probe_teams" }
+        "parameters": {
+          "flag": "blocks_probe_teams"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "FactionGlobal",
         "persistence": "Continuous",
-        "parameters": { "stat": "probe_success_scale", "amount": -50, "op": "AddPercent" }
+        "parameters": {
+          "stat": "probe_success_scale",
+          "amount": -50,
+          "op": "AddPercent"
+        }
       }
     ],
     "category": "conquer",
-    "required_tech": "planetary_networks"
+    "required_tech": "planetary_networks",
+    "upkeep": 2
   }
 ]

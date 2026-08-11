@@ -40,7 +40,8 @@
       }
     ],
     "category": "grow",
-    "required_tech": "test_tech_1"
+    "required_tech": "test_tech_1",
+    "upkeep": 2
   },
   {
     "id": "Recycling_Tanks",
@@ -57,7 +58,8 @@
       }
     ],
     "category": "grow",
-    "required_tech": "test_tech_2"
+    "required_tech": "test_tech_2",
+    "upkeep": 2
   },
   {
     "id": "Sky_Hydroponics_Lab",
@@ -77,7 +79,8 @@
       }
     ],
     "category": "grow",
-    "required_tech": "orbital_spaceflight"
+    "required_tech": "orbital_spaceflight",
+    "upkeep": 2
   },
   {
     "id": "Orbital_Power_Transmitter",
@@ -97,7 +100,8 @@
       }
     ],
     "category": "discover",
-    "required_tech": "orbital_spaceflight"
+    "required_tech": "orbital_spaceflight",
+    "upkeep": 2
   },
   {
     "id": "Nessus_Mining_Station",
@@ -117,7 +121,8 @@
       }
     ],
     "category": "build",
-    "required_tech": "orbital_spaceflight"
+    "required_tech": "orbital_spaceflight",
+    "upkeep": 2
   },
   {
     "id": "Orbital_Defense_Pod",
@@ -143,12 +148,19 @@
           "cooldown_turns": 1,
           "chance_of_destruction_on_fail": 0
         },
-        "unitFilter": { "kind": "Domain", "domain": "orbital" },
-        "condition": { "kind": "TargetTileHas", "value": "Base" }
+        "unitFilter": {
+          "kind": "Domain",
+          "domain": "orbital"
+        },
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "Base"
+        }
       }
     ],
     "category": "conquer",
-    "required_tech": "advanced_spaceflight"
+    "required_tech": "advanced_spaceflight",
+    "upkeep": 2
   },
   {
     "id": "Aerospace_Complex",
@@ -158,7 +170,10 @@
       {
         "type": "StatModifier",
         "scope": "ProducedAtThisBase",
-        "unitFilter": { "kind": "Domain", "domain": "air" },
+        "unitFilter": {
+          "kind": "Domain",
+          "domain": "air"
+        },
         "parameters": {
           "stat": "starting_experience",
           "amount": 2,
@@ -167,7 +182,8 @@
       }
     ],
     "category": "conquer",
-    "required_tech": "test_tech_1"
+    "required_tech": "test_tech_1",
+    "upkeep": 2
   },
   {
     "id": "Command_Center",
@@ -177,7 +193,10 @@
       {
         "type": "StatModifier",
         "scope": "ProducedAtThisBase",
-        "unitFilter": { "kind": "Domain", "domain": "land" },
+        "unitFilter": {
+          "kind": "Domain",
+          "domain": "land"
+        },
         "parameters": {
           "stat": "starting_experience",
           "amount": 2,
@@ -186,17 +205,20 @@
       }
     ],
     "category": "conquer",
-    "required_tech": "test_tech_1"
+    "required_tech": "test_tech_1",
+    "upkeep": 2
   },
   {
     "id": "Childrens_Creche",
-    "name": "Children's Crèche",
+    "name": "Children's Cr\u00e8che",
     "mineral_cost": 8,
     "effects": [
       {
         "type": "RuleFlag",
         "scope": "ThisBase",
-        "parameters": { "flag": "creche" }
+        "parameters": {
+          "flag": "creche"
+        }
       },
       {
         "type": "StatModifier",
@@ -205,9 +227,16 @@
         "condition": {
           "kind": "AllOf",
           "conditions": [
-            { "kind": "IsDefending" },
-            { "kind": "TargetTileHas", "value": "Base" },
-            { "kind": "OriginBaseIsTargetBase" }
+            {
+              "kind": "IsDefending"
+            },
+            {
+              "kind": "TargetTileHas",
+              "value": "Base"
+            },
+            {
+              "kind": "OriginBaseIsTargetBase"
+            }
           ]
         },
         "parameters": {
@@ -218,7 +247,8 @@
       }
     ],
     "category": "build",
-    "required_tech": "test_tech_1"
+    "required_tech": "test_tech_1",
+    "upkeep": 2
   },
   {
     "id": "Headquarters",
@@ -228,11 +258,14 @@
       {
         "type": "RuleFlag",
         "scope": "ThisBase",
-        "parameters": { "flag": "headquarters" }
+        "parameters": {
+          "flag": "headquarters"
+        }
       }
     ],
     "category": "conquer",
-    "required_tech": ""
+    "required_tech": "",
+    "upkeep": 2
   },
   {
     "id": "Covert_Ops_Center",
@@ -243,11 +276,16 @@
         "type": "StatModifier",
         "scope": "ThisBase",
         "persistence": "Continuous",
-        "parameters": { "stat": "probe_defense", "amount": 2, "op": "Add" }
+        "parameters": {
+          "stat": "probe_defense",
+          "amount": 2,
+          "op": "Add"
+        }
       }
     ],
     "category": "conquer",
-    "required_tech": "planetary_networks"
+    "required_tech": "planetary_networks",
+    "upkeep": 2
   },
   {
     "id": "Perimeter_Defense",
@@ -257,10 +295,13 @@
       {
         "type": "RuleFlag",
         "scope": "ThisBase",
-        "parameters": { "flag": "prevents_conquest_pop_loss" }
+        "parameters": {
+          "flag": "prevents_conquest_pop_loss"
+        }
       }
     ],
     "category": "conquer",
-    "required_tech": "test_tech_1"
+    "required_tech": "test_tech_1",
+    "upkeep": 2
   }
 ]

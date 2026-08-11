@@ -41,6 +41,7 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("mineral_upkeep") == StatId_t::MineralUpkeep);
     CHECK(ParseStatId("free_unit_support") == StatId_t::FreeUnitSupport);
     CHECK(ParseStatId("cost_multiplier") == StatId_t::CostMultiplier);
+    CHECK(ParseStatId("facility_energy_upkeep") == StatId_t::FacilityEnergyUpkeep);
     CHECK(ParseStatId("probe_action_cost") == StatId_t::ProbeActionCost);
     CHECK(ParseStatId("probe_defense") == StatId_t::ProbeDefense);
     CHECK(ParseStatId("probe_failure_scale") == StatId_t::ProbeFailureScale);
@@ -561,6 +562,64 @@ TEST_CASE("ParseEffectConfig: unitFilter", "[effects][parser][unitFilter]")
     SECTION("unknown domain throws")
     {
         CHECK_THROWS(EffectConfigParser::ParseUnitDomain("space"));
+    }
+}
+
+TEST_CASE("ParseEffectConfig: buildingFilter", "[effects][parser][buildingFilter]")
+{
+    SECTION("All filter")
+    {
+        const json effectJson = json::parse(R"({
+            "type": "StatModifier",
+            "scope": "FactionGlobal",
+            "buildingFilter": { "kind": "All" },
+            "parameters": { "stat": "facility_energy_upkeep", "amount": -50, "op": "AddPercent" }
+        })");
+        const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
+        REQUIRE(config.buildingFilter.has_value());
+        CHECK(std::holds_alternative<BuildingFilterAll_t>(*config.buildingFilter));
+    }
+
+    SECTION("BuildingId filter")
+    {
+        const json effectJson = json::parse(R"({
+            "type": "StatModifier",
+            "scope": "FactionGlobal",
+            "buildingFilter": { "kind": "BuildingId", "building": "Recycling_Tanks" },
+            "parameters": { "stat": "facility_energy_upkeep", "amount": -50, "op": "AddPercent" }
+        })");
+        const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
+        REQUIRE(config.buildingFilter.has_value());
+        const auto* pId = std::get_if<BuildingFilterId_t>(&*config.buildingFilter);
+        REQUIRE(pId);
+        CHECK(pId->buildingId == "Recycling_Tanks");
+    }
+
+    SECTION("Category filter")
+    {
+        const json effectJson = json::parse(R"({
+            "type": "StatModifier",
+            "scope": "FactionGlobal",
+            "buildingFilter": { "kind": "Category", "category": "grow" },
+            "parameters": { "stat": "facility_energy_upkeep", "amount": -25, "op": "AddPercent" }
+        })");
+        const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
+        REQUIRE(config.buildingFilter.has_value());
+        const auto* pCat = std::get_if<BuildingFilterCategory_t>(&*config.buildingFilter);
+        REQUIRE(pCat);
+        CHECK(pCat->category == GameCategory_t::Grow);
+    }
+
+    SECTION("unknown buildingFilter kind throws")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseBuildingFilter(
+            json::parse(R"({ "kind": "Everything" })")));
+    }
+
+    SECTION("BuildingId requires building id")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseBuildingFilter(
+            json::parse(R"({ "kind": "BuildingId" })")));
     }
 }
 

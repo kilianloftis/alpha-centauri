@@ -137,6 +137,12 @@ bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx
 // effects that do not apply to this unit.
 bool UnitFilterSatisfied(const EffectConfig_t& config, const Unit& rUnit);
 
+struct BuildingConfig_t;
+
+// True if config carries no buildingFilter, or its buildingFilter matches rBuilding
+// (All / BuildingId / Category). Used when resolving FacilityEnergyUpkeep per type.
+bool BuildingFilterSatisfied(const EffectConfig_t& config, const BuildingConfig_t& rBuilding);
+
 // Appends non-Instantaneous effects from a config list as ActiveEffect_t instances.
 // Used by building, pop, unit, and tile effect collection; pOriginBase is recorded when
 // TagsOriginBase(scope) (ThisBase, ProducedAtThisBase, FactionUnits). This (and its

@@ -12,7 +12,7 @@ Research accumulation
 -Lab output added; tech discovered if threshold met
 Upkeep & social effects
 - Unit mineral support (charged against this turn's mineral bank; surplus units disbanded)
-- Facility costs (future)
+- Facility energy upkeep (summed across owned buildings; deducted from the faction energy treasury)
 Base production
 -Remaining minerals spent; units or facilities completed
 -- Facilities

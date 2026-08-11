@@ -47,7 +47,7 @@ T ParseTyped_(const nlohmann::json& rJson, const char* pKey, const BuildingId_t&
 const std::vector<std::string>& KnownBuildingKeys_()
 {
     static const std::vector<std::string> keys = {
-        "id", "name", "category", "mineral_cost", "required_tech",
+        "id", "name", "category", "mineral_cost", "upkeep", "required_tech",
         "allow_multiple", "secret_project", "orbital", "effects",
     };
     return keys;
@@ -77,6 +77,8 @@ BuildingConfig_t BuildingConfigParser::ParseBuildingConfig_(const nlohmann::json
     }
     config.mineralCost = ParseTyped_<int>(buildingJson, "mineral_cost", config.id, 0,
                                           &nlohmann::json::is_number_integer, "an integer");
+    config.upkeep = ParseTyped_<int>(buildingJson, "upkeep", config.id, 0,
+                                    &nlohmann::json::is_number_integer, "an integer");
     config.allowMultiple = ParseTyped_<bool>(buildingJson, "allow_multiple", config.id, false,
                                              &nlohmann::json::is_boolean, "a boolean");
     config.bIsSecretProject = ParseTyped_<bool>(buildingJson, "secret_project", config.id, false,

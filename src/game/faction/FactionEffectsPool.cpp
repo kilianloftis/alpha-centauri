@@ -8,6 +8,8 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/population/PopulationManager.h"
+#include "game/research/TechConfigParser.h"
+#include "game/research/TechRegistry.h"
 #include "game/social-engineering/SocialRatingResolver.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
@@ -94,6 +96,24 @@ std::vector<ActiveEffect_t> FactionEffectsPool::CollectDefinitionEffects_() cons
     return result;
 }
 
+std::vector<ActiveEffect_t> FactionEffectsPool::CollectDiscoveredTechEffects_() const
+{
+    std::vector<ActiveEffect_t> result;
+    const ResearchManager& rResearch = m_rFaction.GetResearch();
+    const TechRegistry& rTechs = rResearch.GetTechRegistry();
+    for (const TechId& rTechId : rResearch.GetDiscoveredTechs())
+    {
+        // Discovered ids may be removed_by_tech gate tokens with no TechConfig entry.
+        const TechConfig_t* pTech = rTechs.Find(rTechId);
+        if (!pTech)
+        {
+            continue;
+        }
+        AppendActiveEffects(pTech->effects, nullptr, pTech->id, result);
+    }
+    return result;
+}
+
 std::vector<ActiveEffect_t> FactionEffectsPool::CollectTileYieldRuleEffects_() const
 {
     std::vector<ActiveEffect_t> result;
@@ -151,6 +171,10 @@ void FactionEffectsPool::Rebuild_() const
     const std::vector<ActiveEffect_t> defEffects = CollectDefinitionEffects_();
     factionEffects.effects.insert(factionEffects.effects.end(), defEffects.begin(),
                                   defEffects.end());
+
+    const std::vector<ActiveEffect_t> techEffects = CollectDiscoveredTechEffects_();
+    factionEffects.effects.insert(factionEffects.effects.end(), techEffects.begin(),
+                                  techEffects.end());
 
     const std::vector<ActiveEffect_t> buildingEffects = CollectBuildingEffects_();
     factionEffects.effects.insert(factionEffects.effects.end(), buildingEffects.begin(),

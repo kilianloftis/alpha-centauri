@@ -45,6 +45,9 @@ enum class StatId_t
     // Support SE levels emit absolute FreeUnitSupport Adds (level 0 = 2); facilities Add on top.
     FreeUnitSupport,
     CostMultiplier,
+    // Multiplier on constructed-facility energy upkeep (PureMultiplier). Tech and (later)
+    // difficulty emit AddPercent; resolved per building type with optional buildingFilter.
+    FacilityEnergyUpkeep,
     // Multiplier on enemy probe mind-control / subversion energy costs (PureMultiplier).
     // SE Probe levels emit AddPercent; resolved from the target base's effect list.
     ProbeActionCost,
@@ -145,6 +148,7 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::CommerceEnergyBonus:
         case StatId_t::InefficiencyDenominator: return StatKind_t::Additive;
         case StatId_t::CostMultiplier:
+        case StatId_t::FacilityEnergyUpkeep:
         case StatId_t::ProbeActionCost:
         case StatId_t::ProbeFailureScale:
         case StatId_t::ProbeSuccessScale:
@@ -198,6 +202,7 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "mineral_upkeep")          return StatId_t::MineralUpkeep;
     if (rStat == "free_unit_support")       return StatId_t::FreeUnitSupport;
     if (rStat == "cost_multiplier")         return StatId_t::CostMultiplier;
+    if (rStat == "facility_energy_upkeep")  return StatId_t::FacilityEnergyUpkeep;
     if (rStat == "probe_action_cost")       return StatId_t::ProbeActionCost;
     if (rStat == "probe_defense")           return StatId_t::ProbeDefense;
     if (rStat == "probe_failure_scale")     return StatId_t::ProbeFailureScale;
@@ -490,6 +495,7 @@ enum class EffectSourceKind_t
     CouncilRules,
     ProbeAction,
     TileYieldRules,
+    Tech,
 };
 
 } // namespace ac

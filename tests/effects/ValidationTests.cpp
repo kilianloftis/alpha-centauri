@@ -118,6 +118,7 @@ static_assert(KindFor(StatId_t::StartingExperience) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::StartingMinerals) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::MoraleBonus) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::CostMultiplier) == StatKind_t::PureMultiplier);
+static_assert(KindFor(StatId_t::FacilityEnergyUpkeep) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::ProbeActionCost) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::ProbeDefense) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::ProbeFailureScale) == StatKind_t::PureMultiplier);
@@ -136,6 +137,7 @@ static_assert(KindFor(StatId_t::InefficiencyDenominator) == StatKind_t::Additive
 static_assert(SeedFor(StatId_t::Nutrients) == 0.0);
 static_assert(SeedFor(StatId_t::Attack) == 0.0);
 static_assert(SeedFor(StatId_t::CostMultiplier) == 1.0);
+static_assert(SeedFor(StatId_t::FacilityEnergyUpkeep) == 1.0);
 
 TEST_CASE("ValidateEffectReferences: GrantBuilding targets must exist", "[effects][validation]")
 {
@@ -241,6 +243,29 @@ TEST_CASE("ValidateTerrainFeatures: every intrinsic terrain id must have an impr
     incomplete.Load(actest::FixturePath("improvements_missing_terrain.json"));
     CHECK_THROWS_WITH(ValidateTerrainFeatures(incomplete),
                       Catch::Matchers::ContainsSubstring("Aquifer"));
+}
+
+TEST_CASE("ValidateEffectReferences: BuildingId buildingFilter ids must exist",
+          "[effects][validation][buildingFilter]")
+{
+    BuildingRegistry buildings;
+    buildings.Load(actest::FixturePath("buildings.json"));
+
+    actest::EffectPool pool;
+    const std::vector<EffectConfig_t> good = {
+        pool.StatMod(StatId_t::FacilityEnergyUpkeep, -50.0, ModifierOp_t::AddPercent,
+                     EffectScope_t::FactionGlobal, std::nullopt, std::nullopt,
+                     EffectPersistence_t::Continuous, std::nullopt,
+                     BuildingFilterId_t{"upkeep_hall"})};
+    CHECK_NOTHROW(ValidateEffectReferences(good, "src", &buildings, nullptr, nullptr));
+
+    const std::vector<EffectConfig_t> bad = {
+        pool.StatMod(StatId_t::FacilityEnergyUpkeep, -50.0, ModifierOp_t::AddPercent,
+                     EffectScope_t::FactionGlobal, std::nullopt, std::nullopt,
+                     EffectPersistence_t::Continuous, std::nullopt,
+                     BuildingFilterId_t{"no_such_building"})};
+    CHECK_THROWS_WITH(ValidateEffectReferences(bad, "src", &buildings, nullptr, nullptr),
+                      Catch::Matchers::ContainsSubstring("no_such_building"));
 }
 
 TEST_CASE("ValidateEffectReferences: HasComponent unitFilter ids must exist",

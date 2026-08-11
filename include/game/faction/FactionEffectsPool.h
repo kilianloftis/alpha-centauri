@@ -52,6 +52,9 @@ private:
     // Permanent bonuses from the faction definition config.
     std::vector<ActiveEffect_t> CollectDefinitionEffects_() const;
 
+    // Continuous effects declared on techs this faction has discovered.
+    std::vector<ActiveEffect_t> CollectDiscoveredTechEffects_() const;
+
     // Universal tile-yield rules (TileResourceCap, etc.) from GameDataContext.
     std::vector<ActiveEffect_t> CollectTileYieldRuleEffects_() const;
 

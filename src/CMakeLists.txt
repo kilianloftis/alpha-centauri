@@ -69,6 +69,7 @@ add_library(ac-core STATIC
     game/TurnStageConfigParser.cpp
     game/HookContext.cpp
     game/buildings/BuildingConfigParser.cpp
+    game/buildings/BuildingUpkeep.cpp
     game/buildings/SecretProjectAvailabilityCalculator.cpp
     game/orbital/OrbitalAttack.cpp
     game/orbital/OrbitalCensus.cpp

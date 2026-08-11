@@ -175,7 +175,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 - **Values**:
   - Base resources: `Nutrients`, `Minerals`, `Energy`.
   - Base output allocated directly rather than via energy split: `Econ`, `Labs`, `Psych`.
-  - Unit stats: `Attack`, `Defense`, `Movement`, `HitPoints`, `DisengageChance`, `TurnsOfFuel`, `DamageFromOutOfFuel`, `CargoCapacity`, `DifficultTerrainCost`, `MineralUpkeep` (home-base mineral support cost; floored at 0), `FreeUnitSupport` (base-level free support slots), `CostMultiplier` (also used for base production cost after Industry rating expansion), `StartingExperience` (seeded into unit XP at spawn), `StartingMinerals` (credited to a new base's production stockpile at founding; resolved from the new base's effects plus the founding unit).
+  - Unit stats: `Attack`, `Defense`, `Movement`, `HitPoints`, `DisengageChance`, `TurnsOfFuel`, `DamageFromOutOfFuel`, `CargoCapacity`, `DifficultTerrainCost`, `MineralUpkeep` (home-base mineral support cost; floored at 0), `FreeUnitSupport` (base-level free support slots), `CostMultiplier` (also used for base production cost after Industry rating expansion), `FacilityEnergyUpkeep` (PureMultiplier on constructed-facility energy maintenance; optional `buildingFilter`), `StartingExperience` (seeded into unit XP at spawn), `StartingMinerals` (credited to a new base's production stockpile at founding; resolved from the new base's effects plus the founding unit).
   - Population modifier: `GrowthRate` (`AddPercent`, base = 100%) — modifies the faction-wide population growth rate.
   - Terrain mutation: `MoistureTier` — resolved back into `Tile::SetMoisture` by `RecomputeMoisture`; not a runtime-queried stat (see Tile Improvement Effects).
 - **Consumers**: `StatModifierEffect_t::stat`. `Defense` is also the target stat for tile-granted combat bonuses (rockiness, fungus, improvements) — see Tile Improvement Effects below.
@@ -383,8 +383,8 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   extras are composed later by `Faction::GetActiveEffects` — they never enter this rebuild.
 - **Pipeline** (strict order):
   1. **Collect** raw continuous contributors: tile-yield rules, faction definition,
-     constructed buildings (no grant expand yet), social engineering, pop faction-lane,
-     unit faction-lane.
+     discovered-tech `effects[]`, constructed buildings (no grant expand yet), social
+     engineering, pop faction-lane, unit faction-lane.
   2. **Gate** `removed_by_tech` (erase effects whose tech is already discovered). Every
      expansion below is bracketed by this gate: a derivative outlives its producer
      otherwise, and derivatives (a granted building's effects, a rating level's effects)

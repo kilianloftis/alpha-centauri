@@ -1,4 +1,5 @@
 #include "game/research/TechConfigParser.h"
+#include "game/effects/EffectConfigParser.h"
 #include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
 #include <nlohmann/json.hpp>
@@ -35,6 +36,8 @@ TechConfig_t TechConfigParser::ParseTechConfig_(const nlohmann::json& techJson)
         throw std::runtime_error("Tech '" + config.id + "': 'cost' must not be negative");
     }
     config.prerequisites = ConfigFields::ParseStringArray(techJson, "prerequisites");
+    config.effects = EffectConfigParser::ParseEffects(
+        techJson, EffectSourceKind_t::Tech, config.id);
 
     return config;
 }

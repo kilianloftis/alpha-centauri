@@ -2,8 +2,7 @@
 #include "game/Faction.h"
 
 #include "game/buildings/BuildingRegistry.h"
-
-#include <cstdint>
+#include "game/buildings/BuildingUpkeep.h"
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/GameDataContext.h"
 #include "game/map/WorldMap.h"
@@ -123,7 +122,7 @@ int Faction::GetNetIncomePerTurn() const
             total += pBase->GetEconProduction();
         }
     }
-    return total;
+    return total - GetBuildingUpkeep();
 }
 
 int Faction::TotalPopulation() const
@@ -590,6 +589,39 @@ void Faction::ApplyMineralSupport()
         {
             pBase->ApplyMineralSupport();
         }
+    }
+}
+
+int Faction::GetBuildingUpkeep() const
+{
+    int total = 0;
+    for (const BaseManager& rBase : Bases())
+    {
+        total += rBase.GetBuildingUpkeep();
+    }
+    return total;
+}
+
+std::vector<BuildingUpkeepLine_t> Faction::GetBuildingUpkeepByType() const
+{
+    // Faction-wide UI rollup: faction-lane FacilityEnergyUpkeep only (pOriginBase null),
+    // so ThisBase-scoped mods appear on the base panel instead.
+    std::vector<const BuildingConfig_t*> owned;
+    for (const BaseManager& rBase : Bases())
+    {
+        const std::vector<const BuildingConfig_t*>& rBuildings =
+            rBase.GetBuildingManager().GetBuildings();
+        owned.insert(owned.end(), rBuildings.begin(), rBuildings.end());
+    }
+    return TallyBuildingUpkeepByType(owned, GetActiveEffects().effects, nullptr);
+}
+
+void Faction::ApplyBuildingUpkeep()
+{
+    const int cost = GetBuildingUpkeep();
+    if (cost > 0)
+    {
+        m_pEconomy->SpendEnergy(cost);
     }
 }
 

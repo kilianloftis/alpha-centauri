@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/effects/EffectEnums.h"
+#include "game/GameCategory.h"
 #include "game/units/UnitDomain.h"
 
 #include <optional>
@@ -310,6 +311,25 @@ struct UnitFilterHasFlag_t
 using UnitFilter_t =
     std::variant<UnitFilterDomain_t, UnitFilterHasComponent_t, UnitFilterHasFlag_t>;
 
+// Restricts which buildings a FacilityEnergyUpkeep (or similar) modifier applies to.
+// Absent buildingFilter = all buildings. Distinct from unitFilter.
+struct BuildingFilterAll_t
+{
+};
+
+struct BuildingFilterId_t
+{
+    std::string buildingId;
+};
+
+struct BuildingFilterCategory_t
+{
+    GameCategory_t category = GameCategory_t::Build;
+};
+
+using BuildingFilter_t =
+    std::variant<BuildingFilterAll_t, BuildingFilterId_t, BuildingFilterCategory_t>;
+
 // Restricts which *other* factions a cross-faction effect applies to (see FactionFilterKind_t).
 // Absent + WorldGlobal → every other faction. Absent + other scopes → no automatic targets.
 struct FactionFilter_t
@@ -329,6 +349,9 @@ struct EffectConfig_t
     // Absent = applies to every unit that receives this effect. When present, CollectLiveUnitEffects
     // drops the effect for units that do not match (e.g. Domain=Air for Aerospace Complex).
     std::optional<UnitFilter_t> unitFilter;
+    // Absent = applies to every building when resolving FacilityEnergyUpkeep. When present,
+    // only matching building types receive the modifier (All / BuildingId / Category).
+    std::optional<BuildingFilter_t> buildingFilter;
     // Absent = default target set from scope (WorldGlobal → all other factions). When present,
     // further restricts which factions a directed cross-faction effect applies to.
     std::optional<FactionFilter_t> factionFilter;

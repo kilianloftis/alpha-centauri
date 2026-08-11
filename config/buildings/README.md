@@ -17,6 +17,7 @@ Each file must be a JSON array of building objects. Any number of files may coex
 | `id` | string | Yes | — | Unique identifier used in code and save files |
 | `name` | string | No | `id` | Display name shown in the UI |
 | `mineral_cost` | int | No | `0` | Minerals required to construct; must be a non-negative integer |
+| `upkeep` | int | No | `0` | Base energy credits charged per turn per owned **constructed** copy. Effective cost is `upkeep × FacilityEnergyUpkeep` modifiers (PureMultiplier; techs use `buildingFilter` to target All / BuildingId / Category). Continuous `GrantBuilding` expansions are not constructed and pay nothing. UI: `BuildingConfig_t::GetUpkeep()` (base), `BaseManager::GetBuildingUpkeepByType()` / `Faction::GetBuildingUpkeepByType()` (resolved). |
 | `required_tech` | string | No | `""` | Tech that must be discovered before the building is available; omit or empty = always available |
 | `allow_multiple` | bool | No | `false` | If true, a base may build more than one copy |
 | `secret_project` | bool | No | `false` | If true, only one faction in the world may own this building |
@@ -32,6 +33,7 @@ The parser fails the load rather than substituting a default, so a setting eithe
 - **Unknown keys are rejected.** A typo'd `allow_multiples` is an error naming the building and the key, not a silently ignored line.
 - **Wrong-typed values are rejected.** `"allow_multiple": "yes"` is an error, where it used to parse as `false`.
 - **`mineral_cost` must be a non-negative integer.**
+- **`upkeep` must be a non-negative integer.**
 - **`secret_project` and `allow_multiple` are mutually exclusive.** A secret project is unique in the world, so "more than one copy" is unexpressible.
 
 ### Uniqueness at runtime
@@ -52,13 +54,15 @@ Each entry in `effects` describes a single gameplay effect applied when the buil
 | `scope` | string | Yes | — | Who is affected (see Scopes below) |
 | `persistence` | string | No | `"Continuous"` | When the effect applies (see Persistence below) |
 | `condition` | string | No | `""` | Optional Lua expression; effect is suppressed when it evaluates to false |
+| `unitFilter` | object | No | absent | Restricts which units receive the effect (`Domain` / `HasComponent` / `HasFlag`) |
+| `buildingFilter` | object | No | absent (= all buildings) | Restricts which building types receive FacilityEnergyUpkeep (and similar) modifiers: `{ "kind": "All" }`, `{ "kind": "BuildingId", "building": "..." }`, or `{ "kind": "Category", "category": "grow" }` |
 | `parameters` | object | No | `{}` | Key/value strings interpreted by the effect handler |
 
 ### Effect Types
 
 | Value | Description |
 |---|---|
-| `GrantBuilding` | Instantly grants another building by ID (`parameters.building_id`) |
+| `GrantBuilding` | Instantly grants another building by ID (`parameters.building_id`). Continuous grants expand the target's effects only (no constructed copy, no maintenance). Instantaneous grants call `AddBuilding` and the real facility pays upkeep normally. |
 | `GrantTech` | Instantly grants a technology by ID (`parameters.tech_id`) |
 | `GrantUnit` | Spawns a unit (`parameters.unit_design_id`) |
 | `StatModifier` | Adds or multiplies a named stat (`parameters.stat`, `parameters.amount`, `parameters.op`) |
@@ -129,6 +133,7 @@ Any effect may carry an optional top-level `condition` object making it situatio
   "id": "Recycling_Tanks",
   "name": "Recycling Tanks",
   "mineral_cost": 5,
+  "upkeep": 2,
   "required_tech": "ecology",
   "effects": [
     {
@@ -147,6 +152,7 @@ Any effect may carry an optional top-level `condition` object making it situatio
   "id": "Human_Genome_Project",
   "name": "Human Genome Project",
   "mineral_cost": 200,
+  "upkeep": 2,
   "secret_project": true,
   "required_tech": "biogenetics",
   "effects": [
@@ -166,6 +172,7 @@ Any effect may carry an optional top-level `condition` object making it situatio
   "id": "Merchant_Exchange",
   "name": "Merchant Exchange",
   "mineral_cost": 80,
+  "upkeep": 2,
   "secret_project": true,
   "required_tech": "industrial_economics",
   "effects": [

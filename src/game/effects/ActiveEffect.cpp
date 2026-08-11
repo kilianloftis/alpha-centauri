@@ -393,6 +393,36 @@ bool UnitFilterSatisfied(const EffectConfig_t& config, const Unit& rUnit)
         *config.unitFilter);
 }
 
+bool BuildingFilterSatisfied(const EffectConfig_t& config, const BuildingConfig_t& rBuilding)
+{
+    if (!config.buildingFilter)
+    {
+        return true;
+    }
+    return std::visit(
+        [&](const auto& rAlt) -> bool
+        {
+            using T = std::decay_t<decltype(rAlt)>;
+            if constexpr (std::is_same_v<T, BuildingFilterAll_t>)
+            {
+                return true;
+            }
+            else if constexpr (std::is_same_v<T, BuildingFilterId_t>)
+            {
+                return rBuilding.id == rAlt.buildingId;
+            }
+            else if constexpr (std::is_same_v<T, BuildingFilterCategory_t>)
+            {
+                return rBuilding.category == rAlt.category;
+            }
+            else
+            {
+                static_assert(k_AlwaysFalse<T>, "Unhandled BuildingFilter_t alternative");
+            }
+        },
+        *config.buildingFilter);
+}
+
 BaseEffects_t FilterForBase(const FactionEffects_t& rFactionEffects, const BaseManager& rBase)
 {
     BaseEffects_t matching;

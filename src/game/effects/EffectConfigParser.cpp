@@ -637,6 +637,31 @@ UnitFilter_t ParseUnitFilter(const nlohmann::json& filterJson)
     throw std::runtime_error("Unknown unitFilter kind: '" + kindStr + "'");
 }
 
+BuildingFilter_t ParseBuildingFilter(const nlohmann::json& filterJson)
+{
+    const std::string kindStr = filterJson.value("kind", "");
+    if (kindStr == "All")
+    {
+        return BuildingFilterAll_t{};
+    }
+    if (kindStr == "BuildingId")
+    {
+        const std::string buildingId = filterJson.value("building", "");
+        if (buildingId.empty())
+        {
+            throw std::runtime_error(
+                "BuildingId buildingFilter requires a non-empty 'building' id");
+        }
+        return BuildingFilterId_t{buildingId};
+    }
+    if (kindStr == "Category")
+    {
+        return BuildingFilterCategory_t{ParseGameCategoryField(filterJson)};
+    }
+
+    throw std::runtime_error("Unknown buildingFilter kind: '" + kindStr + "'");
+}
+
 FactionFilter_t ParseFactionFilter(const nlohmann::json& filterJson)
 {
     FactionFilter_t filter;
@@ -683,6 +708,10 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
     if (effectJson.contains("unitFilter"))
     {
         effect.unitFilter = ParseUnitFilter(effectJson.at("unitFilter"));
+    }
+    if (effectJson.contains("buildingFilter"))
+    {
+        effect.buildingFilter = ParseBuildingFilter(effectJson.at("buildingFilter"));
     }
     if (effectJson.contains("factionFilter"))
     {
@@ -734,6 +763,7 @@ void ValidateScopeForSource(EffectScope_t scope, EffectSourceKind_t sourceKind,
         case EffectSourceKind_t::CouncilRules:
         case EffectSourceKind_t::ProbeAction:
         case EffectSourceKind_t::TileYieldRules:
+        case EffectSourceKind_t::Tech:
             bCanSupplyOriginBase = false;
             break;
         }

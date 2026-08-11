@@ -65,6 +65,8 @@ public:
     // removed_by_tech effects drop out of the pool on the next Get.
     uint64_t GetRevision() const { return m_revision.Get(); }
 
+    const TechRegistry& GetTechRegistry() const { return m_rTechRegistry; }
+
 private:
     const TechRegistry& m_rTechRegistry;
     const TechCostCalculator& m_rTechCostCalculator;

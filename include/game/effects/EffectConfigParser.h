@@ -40,6 +40,11 @@ UnitDomain_t ParseUnitDomain(const std::string& rDomain);
 // ({ "kind": "Domain", "domain": "air" } or { "kind": "HasComponent", "component": "..." }).
 UnitFilter_t ParseUnitFilter(const nlohmann::json& filterJson);
 
+// Parses a BuildingFilter_t from a buildingFilter JSON object
+// ({ "kind": "All" }, { "kind": "BuildingId", "building": "..." },
+//  { "kind": "Category", "category": "grow" }).
+BuildingFilter_t ParseBuildingFilter(const nlohmann::json& filterJson);
+
 // Parses a FactionFilter_t from a factionFilter JSON object
 // ({ "kind": "ActionTarget" } or { "kind": "CouncilMembers" }).
 FactionFilter_t ParseFactionFilter(const nlohmann::json& filterJson);

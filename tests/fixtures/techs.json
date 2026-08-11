@@ -29,5 +29,24 @@
     "category": "build",
     "cost": 20,
     "prerequisites": ["build_tech"]
+  },
+  {
+    "id": "efficient_maintenance",
+    "name": "Efficient Maintenance",
+    "category": "build",
+    "cost": 15,
+    "prerequisites": ["advanced_build"],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "facility_energy_upkeep",
+          "amount": -50,
+          "op": "AddPercent"
+        },
+        "buildingFilter": { "kind": "BuildingId", "building": "upkeep_hall" }
+      }
+    ]
   }
 ]

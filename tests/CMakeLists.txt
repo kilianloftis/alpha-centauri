@@ -74,6 +74,7 @@ add_executable(effects-tests
     game/WorkerAssignmentTests.cpp
     game/HomeBaseTests.cpp
     game/MineralSupportTests.cpp
+    game/BuildingUpkeepTests.cpp
     game/BuildingInvariantTests.cpp
     game/CompositionRootTests.cpp
     game/LifetimeTransferTests.cpp

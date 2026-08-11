@@ -393,6 +393,17 @@ void BaseManager::ApplyMineralSupport()
     ApplyMineralSupportAtBase(*this);
 }
 
+std::vector<BuildingUpkeepLine_t> BaseManager::GetBuildingUpkeepByType() const
+{
+    return TallyBuildingUpkeepByType(m_pBuildings->GetBuildings(),
+                                     GetFaction().GetActiveEffects().effects, this);
+}
+
+int BaseManager::GetBuildingUpkeep() const
+{
+    return SumBuildingUpkeep(GetBuildingUpkeepByType());
+}
+
 ResourceManager& BaseManager::GetResources()
 {
     return *m_pResources;

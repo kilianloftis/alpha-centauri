@@ -8,6 +8,7 @@
 #include "game/IEffectsProvider.h"
 #include "game/IWorldEffectsSource.h"
 #include "game/buildings/BuildingConfig.h"
+#include "game/buildings/BuildingUpkeep.h"
 #include "game/faction/base/BaseTypes.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/FactionConfig.h"
@@ -189,6 +190,18 @@ public:
     // Charge mineral support at every base (home units vs this turn's mineral bank).
     // Called from Upkeep before BaseProduction spends the remainder on the build queue.
     void ApplyMineralSupport();
+
+    // Sum of BuildingConfig_t::upkeep across every constructed building copy (all bases).
+    // Continuous GrantBuilding expansions are not constructed and are not included.
+    int GetBuildingUpkeep() const;
+
+    // Constructed buildings across all bases, grouped by type for UI (name, count, upkeep).
+    std::vector<BuildingUpkeepLine_t> GetBuildingUpkeepByType() const;
+
+    // Deduct GetBuildingUpkeep() from the faction energy treasury.
+    // Called from Upkeep after IncomeCollection has banked this turn's econ.
+    // Throws if the treasury cannot cover the cost (no auto-sell yet).
+    void ApplyBuildingUpkeep();
 
     // Apply growth to all bases, incorporating GrowthRate stat effects.
     void ApplyBaseGrowth();

@@ -20,6 +20,8 @@ struct BuildingConfig_t : public IConstructable
     std::string name;
     GameCategory_t category = GameCategory_t::Build;
     int mineralCost = 0;
+    // Per-turn energy-credit maintenance; summed across owned copies and charged in Upkeep.
+    int upkeep = 0;
     std::string requiredTech;  // empty if none — same convention as SocialPolicyConfig_t, etc.
     bool allowMultiple = false;
     bool bIsSecretProject = false;
@@ -30,6 +32,8 @@ struct BuildingConfig_t : public IConstructable
     const std::string& GetId() const override { return id; }
     const std::string& GetName() const override { return name; }
     int GetBaseCost() const override { return mineralCost; }
+    // Per-turn energy-credit maintenance for this building type (UI / upkeep stage).
+    int GetUpkeep() const { return upkeep; }
 
     // Empty requiredTech = always available (matches SocialPolicyConfig_t::IsAvailable).
     bool IsAvailable(const std::vector<std::string>& discoveredTechs) const

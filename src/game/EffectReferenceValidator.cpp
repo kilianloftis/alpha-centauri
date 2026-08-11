@@ -202,6 +202,17 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
                 }
             }
         }
+
+        if (rEffect.buildingFilter && pBuildings)
+        {
+            if (const auto* pId = std::get_if<BuildingFilterId_t>(&*rEffect.buildingFilter))
+            {
+                if (!pBuildings->Find(pId->buildingId))
+                {
+                    ThrowBadReference(rSourceId, "buildingFilter building", pId->buildingId);
+                }
+            }
+        }
     }
 }
 
@@ -240,6 +251,10 @@ void ValidateEffectReferences(const GameDataContext& rData)
     };
 
     for (const BuildingConfig_t& rConfig : rBuildings.GetAll())
+    {
+        validate(rConfig.effects, rConfig.id);
+    }
+    for (const TechConfig_t& rConfig : rTechs.GetAll())
     {
         validate(rConfig.effects, rConfig.id);
     }

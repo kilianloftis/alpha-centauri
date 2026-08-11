@@ -23,6 +23,8 @@ StageResult_t Upkeep::ExecuteImpl(GameState& rGameState, Faction& rFaction)
     // Mineral support runs after ResourceCollection banks minerals and before BaseProduction
     // spends the remainder on the build queue.
     rFaction.ApplyMineralSupport();
+    // Facility energy upkeep runs after IncomeCollection has banked this turn's econ.
+    rFaction.ApplyBuildingUpkeep();
     return StageResult_t::Continue;
 }
 

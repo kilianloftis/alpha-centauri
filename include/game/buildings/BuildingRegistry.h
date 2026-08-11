@@ -30,6 +30,11 @@ protected:
                 throw std::runtime_error("Building '" + rConfig.id
                                          + "': mineral_cost must not be negative");
             }
+            if (rConfig.upkeep < 0)
+            {
+                throw std::runtime_error("Building '" + rConfig.id
+                                         + "': upkeep must not be negative");
+            }
         }
     }
 };

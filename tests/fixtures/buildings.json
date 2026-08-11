@@ -2,6 +2,7 @@
   {
     "id": "granted_hall",
     "name": "Granted Hall",
+    "upkeep": 5,
     "effects": [
       {
         "type": "StatModifier",
@@ -686,6 +687,14 @@
     "id": "test_facility_a",
     "name": "Test Facility A",
     "allow_multiple": true,
+    "effects": [],
+    "category": "build"
+  },
+  {
+    "id": "upkeep_hall",
+    "name": "Upkeep Hall",
+    "allow_multiple": true,
+    "upkeep": 2,
     "effects": [],
     "category": "build"
   },
