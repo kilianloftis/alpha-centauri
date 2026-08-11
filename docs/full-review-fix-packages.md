@@ -1087,6 +1087,60 @@ limit), so 16 and 17 were reviewed inline. Inline review still caught one thing 
 package's own analysis repeated the review's claim that `scriptPath` is "parsed and never used",
 when the parser actually *rejects* a non-empty `scriptPath` with an explicit message.
 
+## Package 18 — UiStyle: from process global to injected per-feature style
+
+**Priority:** The last unaddressed [H] in the review. Deferred three times; its stated blocker is gone.
+**Theme:** An element is handed the style it draws with, like every other dependency it takes.
+
+### Findings included
+
+| Sev | Title | Primary locus |
+|-----|-------|---------------|
+| [H] | Stop growing a process-global god-object style registry | `ui/style/UiStyle`, 53 UI files |
+
+### Problem statement
+
+`UiStyle` is a 36-member typed bag *and* a file-scope singleton reached through `Style()`. UI code
+cannot take a `const UiStyle&` at construction, and a test cannot supply an alternate theme
+without mutating process state — so `ViewFixture` loads the shipped `config/ui/style.json` once
+per process because it has no other option.
+
+### Why now
+
+It was deferred three times for one reason: the UI had no automated coverage, so a sweep this size
+could only be eyeballed. Package 15 removed that — `ac-ui` makes the UI a backend-free library the
+test target links, and `ViewFixture` / `RecordingGraphics` construct and drive real views. A
+conversion can now be verified.
+
+### What measurement changed
+
+268 `Style()` call sites across 53 files, none outside `src/ui/`. But **almost every file reads
+exactly one section** — the worst case is four (`WorldView`), and `Style().layouts` is the only
+genuinely shared one (10 files). So this is not "thread a 36-member object through 268 sites"; it
+is "each element takes the one struct it reads", which is the narrow named dependency the
+guidelines ask for. That makes the package far smaller than the finding's framing suggests.
+
+### Likely fix direction
+
+Leaves take their section by reference; views hold what their children need; `ViewFactory` owns
+the `UiStyle_t` and hands out slices; `Engine` loads it like `LoadGameData` loads
+`GameDataContext`. Then delete `Style()` and the globals — no bridge, because a bridge that
+compiles is a bridge that gets used. One directory per commit, each compiler-checked.
+
+### Acceptance
+
+**At least one test must inject a non-default style and assert the element drew with it.** Without
+that the package has moved code without buying the capability the finding is about.
+
+### Key files
+
+`include/ui/style/UiStyle.h`, `src/ui/style/UiStyle.cpp`, every file under `src/ui/`,
+`src/game/Engine.cpp`, `tests/ViewFixture.h`.
+
+### Analysis output path
+
+`docs/full-review-fix-prompts/18-uistyle-injection.md`
+
 ---
 
 ## Cross-package dependency sketch
