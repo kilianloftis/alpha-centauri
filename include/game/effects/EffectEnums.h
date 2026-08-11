@@ -41,7 +41,8 @@ enum class StatId_t
     // Minerals spent each turn to keep a live unit supported by its home base. Chassis
     // baseline is typically 1; abilities / FactionUnits SE can raise or zero it. Floor at 0.
     MineralUpkeep,
-    // How many positive-upkeep home units a base may support at zero mineral cost (SE Support).
+    // How many positive-upkeep home units a base may support at zero mineral cost.
+    // Support SE levels emit absolute FreeUnitSupport Adds (level 0 = 2); facilities Add on top.
     FreeUnitSupport,
     CostMultiplier,
     // Multiplier on enemy probe mind-control / subversion energy costs (PureMultiplier).

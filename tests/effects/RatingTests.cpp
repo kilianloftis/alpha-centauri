@@ -97,23 +97,55 @@ TEST_CASE("ResolveSocialRatingLevelEffects: maps accumulated levels through the 
               == Approx(110.0));
     }
 
-    SECTION("in-range missing levels still produce no effects")
+    SECTION("in-range missing levels still produce no effects for that axis")
     {
         // Fixture industry levels: {-1, 1, 2}. Total 0 is inside [-1, 2] but unlisted.
         const BaseEffects_t ratingSource{{
             Active(pool.RatingMod(SocialRatingId_t::Industry, 1), "policy"),
             Active(pool.RatingMod(SocialRatingId_t::Industry, -1), "malus"),
         }};
-        CHECK(ResolveSocialRatingLevelEffects(ratingSource, fixture.socialRatings()).empty());
+        const std::vector<ActiveEffect_t> levelEffects =
+            ResolveSocialRatingLevelEffects(ratingSource, fixture.socialRatings());
+        for (const ActiveEffect_t& rEffect : levelEffects)
+        {
+            CHECK(rEffect.sourceId.find("se_rating_industry_") == std::string::npos);
+        }
     }
 
-    SECTION("modifiers that cancel to zero produce no effects")
+    SECTION("modifiers that cancel to zero use the axis level-0 row when configured")
     {
         const BaseEffects_t ratingSource{{
             Active(pool.RatingMod(SocialRatingId_t::Growth, 2), "policy"),
             Active(pool.RatingMod(SocialRatingId_t::Growth, -2), "malus"),
         }};
-        CHECK(ResolveSocialRatingLevelEffects(ratingSource, fixture.socialRatings()).empty());
+        const std::vector<ActiveEffect_t> levelEffects =
+            ResolveSocialRatingLevelEffects(ratingSource, fixture.socialRatings());
+        // Growth has no level 0 — cancelled Growth contributes nothing.
+        CHECK(ResolveStatModifiers(FilterByStatId(levelEffects, StatId_t::Nutrients), 0.0).total
+              == Approx(0.0));
+        // Support level 0 still expands (absolute free_unit_support = 2).
+        CHECK(ResolveStatModifiers(FilterByStatId(levelEffects, StatId_t::FreeUnitSupport), 0.0)
+                  .total
+              == Approx(2.0));
+    }
+
+    SECTION("untouched axes still expand a configured level-0 row")
+    {
+        const BaseEffects_t ratingSource{{}};
+        const std::vector<ActiveEffect_t> levelEffects =
+            ResolveSocialRatingLevelEffects(ratingSource, fixture.socialRatings());
+        CHECK(ResolveStatModifiers(FilterByStatId(levelEffects, StatId_t::FreeUnitSupport), 0.0)
+                  .total
+              == Approx(2.0));
+        bool foundSupportZero = false;
+        for (const ActiveEffect_t& rEffect : levelEffects)
+        {
+            if (rEffect.sourceId == "se_rating_support_0")
+            {
+                foundSupportZero = true;
+            }
+        }
+        CHECK(foundSupportZero);
     }
 }
 

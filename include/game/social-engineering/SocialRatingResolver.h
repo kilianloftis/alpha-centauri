@@ -48,9 +48,10 @@ int ClampSocialRatingTotal(const SocialRatingConfig_t& rConfig, int total);
 const std::vector<EffectConfig_t>* FindSocialRatingLevelEffects(
     const SocialRatingConfig_t& rConfig, int total);
 
-// Base lane: accumulates rRatingSource and returns the gameplay effects each non-zero
+// Base lane: accumulates rRatingSource and returns the gameplay effects each axis's
 // level maps to (via the rating registry's levelEffects table, SMAC clamp-at-extremes),
-// with sourceId "se_rating_<axis>_<level>" using the clamped level.
+// with sourceId "se_rating_<axis>_<level>" using the clamped level. Axes with no modifiers
+// still expand their level-0 row when configured (Support free slots, Efficiency denom).
 //
 // Takes BaseEffects_t because accumulation is only meaningful after the list has been
 // filtered to its final base context (FilterForBase + pop merge) — that is what

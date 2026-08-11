@@ -59,23 +59,33 @@
   {
     "id": "support",
     "levels": {
+      "-4": [
+        { "type": "StatModifier", "scope": "FactionUnits", "persistence": "Continuous", "parameters": { "stat": "mineral_upkeep", "amount": 1, "op": "Add" } },
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "free_unit_support", "amount": 0, "op": "Add" } },
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "starting_minerals", "amount": -10, "op": "Add" } }
+      ],
       "-3": [
-        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "psych", "amount": -3, "op": "Add" } }
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "free_unit_support", "amount": 0, "op": "Add" } },
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "starting_minerals", "amount": -10, "op": "Add" } }
       ],
       "-2": [
-        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "psych", "amount": -2, "op": "Add" } }
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "free_unit_support", "amount": 1, "op": "Add" } },
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "starting_minerals", "amount": -10, "op": "Add" } }
       ],
       "-1": [
-        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "psych", "amount": -1, "op": "Add" } }
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "free_unit_support", "amount": 1, "op": "Add" } }
+      ],
+      "0": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "free_unit_support", "amount": 2, "op": "Add" } }
       ],
       "1": [
-        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "psych", "amount": 1, "op": "Add" } }
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "free_unit_support", "amount": 3, "op": "Add" } }
       ],
       "2": [
-        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "psych", "amount": 2, "op": "Add" } }
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "free_unit_support", "amount": 4, "op": "Add" } }
       ],
       "3": [
-        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "psych", "amount": 3, "op": "Add" } }
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "free_unit_support", "amount": 4, "op": "Add" } }
       ]
     }
   },

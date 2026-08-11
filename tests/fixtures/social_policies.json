@@ -63,6 +63,30 @@
     ]
   },
   {
+    "id": "support_policy",
+    "name": "Support Policy (+2 Support rating, faction-wide)",
+    "category": "politics",
+    "effects": [
+      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "support", "amount": 2 } }
+    ]
+  },
+  {
+    "id": "low_support_policy",
+    "name": "Low Support Policy (-2 Support rating, faction-wide)",
+    "category": "politics",
+    "effects": [
+      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "support", "amount": -2 } }
+    ]
+  },
+  {
+    "id": "collapse_support_policy",
+    "name": "Collapse Support Policy (-4 Support rating, faction-wide)",
+    "category": "politics",
+    "effects": [
+      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "support", "amount": -4 } }
+    ]
+  },
+  {
     "id": "morale_policy",
     "name": "Morale Policy (+2 Morale rating, faction-wide)",
     "category": "values",

@@ -14,8 +14,11 @@ namespace ac
 namespace
 {
 
-// Maps each non-zero accumulated level through the registry table and appends that level's
+// Maps each axis's accumulated total through the registry table and appends that level's
 // gameplay effects to rOut with sourceId "se_rating_<axis>_<level>" (clamped level).
+// Walks every configured axis (not only those with modifiers) so level-0 rows — Support's
+// free unit slots, Efficiency's denominator — apply when the axis is untouched. Accumulators
+// that cancel to 0 use the same level-0 row when present; axes with no 0 entry stay inert.
 // appendLane, when set, keeps only level effects on that lane — the faction lane emits
 // FactionUnits only, while the base lane takes the whole level.
 void AppendRatingLevelEffects_(const std::map<SocialRatingId_t, int>& rTotals,
@@ -23,40 +26,31 @@ void AppendRatingLevelEffects_(const std::map<SocialRatingId_t, int>& rTotals,
                                std::optional<EffectLane_t> appendLane,
                                std::vector<ActiveEffect_t>& rOut)
 {
-    for (const auto& [rating, total] : rTotals)
+    for (const SocialRatingConfig_t& rRatingConfig : rRatings.GetAll())
     {
-        if (total == 0)
-        {
-            continue;
-        }
+        const SocialRatingId_t rating = ParseSocialRatingId(rRatingConfig.id);
+        const auto totalIt = rTotals.find(rating);
+        const int total = totalIt == rTotals.end() ? 0 : totalIt->second;
 
-        // A non-zero total means something declared a modifier on this axis, so a missing table
-        // is a config defect rather than "this axis does nothing". ValidateEffectReferences
-        // rejects such a modifier at load; this is the backstop, and it names the axis because
-        // Registry::Get's message would not say what kind of id it failed to find.
-        const std::string axisId = SocialRatingIdToString(rating);
-        const SocialRatingConfig_t* pRatingConfig = rRatings.Find(axisId);
-        if (!pRatingConfig)
-        {
-            throw std::runtime_error("Social rating axis '" + axisId + "' accumulated "
-                                     + std::to_string(total)
-                                     + " but has no table in the social rating registry");
-        }
-        const SocialRatingConfig_t& rRatingConfig = *pRatingConfig;
-
-        // SMAC: out-of-range totals use the extreme configured level's effects. In-range
-        // missing keys (including typical absent 0) still produce nothing.
+        // A non-zero total means something declared a modifier on this axis, so a missing
+        // table row after clamp is a config defect. ValidateEffectReferences rejects a
+        // modifier with no axis table at load; this is the backstop for a sparse gap.
         const std::vector<EffectConfig_t>* pLevelEffects =
             FindSocialRatingLevelEffects(rRatingConfig, total);
         if (!pLevelEffects)
         {
+            if (total != 0)
+            {
+                throw std::runtime_error("Social rating axis '" + rRatingConfig.id
+                                         + "' accumulated " + std::to_string(total)
+                                         + " but has no level effects for the clamped level");
+            }
             continue;
         }
 
-        // Non-null level effects imply a non-empty table, so clamping is safe here.
         const int level = ClampSocialRatingTotal(rRatingConfig, total);
-        const std::string sourceId = "se_rating_" + SocialRatingIdToString(rating)
-                                     + "_" + std::to_string(level);
+        const std::string sourceId =
+            "se_rating_" + rRatingConfig.id + "_" + std::to_string(level);
         for (const EffectConfig_t& rEffect : *pLevelEffects)
         {
             if (appendLane && LaneFor(rEffect.scope) != *appendLane)

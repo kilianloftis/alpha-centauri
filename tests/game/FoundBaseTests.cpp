@@ -205,6 +205,40 @@ TEST_CASE("TryFoundBase stacks founding-unit and AllOwnerBases StartingMinerals"
     CHECK(pNew->GetProduction().GetMineralStockpile() == 15);
 }
 
+TEST_CASE("Support -2 cancels the colony pod's 10 free founding minerals",
+          "[unit][found-base][starting-minerals][support][rating]")
+{
+    FoundBaseGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 4, 4);
+    game.pPlayer->GetSocialEngineering().SetActivePolicy(
+        game.fixtures.socialPolicies().Get("low_support_policy"));
+    REQUIRE(home.GetEffectiveSocialRating(SocialRatingId_t::Support) == -2);
+
+    Unit& pod = game.MakeUnit(*game.pPlayer, 7, 4, {"test_chassis", "test_colony_pod"}, &home);
+    BaseManager* pNew = game.pState->GetUnitOrderExecutor().TryFoundBase(
+        pod, *game.pState, game.fixtures.dataContext);
+    REQUIRE(pNew);
+    // Pod +10 offset by Support ≤ -2 StartingMinerals -10.
+    CHECK(pNew->GetProduction().GetMineralStockpile() == 0);
+}
+
+TEST_CASE("Support -2 still allows project StartingMinerals above the cancelled 10",
+          "[unit][found-base][starting-minerals][support][rating]")
+{
+    FoundBaseGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 4, 4);
+    home.GetBuildingManager().AddBuilding("founding_minerals_project");
+    game.pPlayer->GetSocialEngineering().SetActivePolicy(
+        game.fixtures.socialPolicies().Get("low_support_policy"));
+
+    Unit& pod = game.MakeUnit(*game.pPlayer, 7, 4, {"test_chassis", "test_colony_pod"}, &home);
+    BaseManager* pNew = game.pState->GetUnitOrderExecutor().TryFoundBase(
+        pod, *game.pState, game.fixtures.dataContext);
+    REQUIRE(pNew);
+    // Pod 10 + project 5 + Support -10 → 5.
+    CHECK(pNew->GetProduction().GetMineralStockpile() == 5);
+}
+
 TEST_CASE("Founding minerals above the retool threshold may switch freely",
           "[unit][found-base][starting-minerals][retool]")
 {
