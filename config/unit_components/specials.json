@@ -21,6 +21,11 @@
         "type": "RuleFlag",
         "scope": "ThisUnit",
         "parameters": { "flag": "cannot_capture_bases" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "starting_minerals", "amount": 10, "op": "Add" }
       }
     ]
   },

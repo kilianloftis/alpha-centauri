@@ -182,6 +182,7 @@ TEST_CASE("Non-combat specials resolve capability flags and cargo capacity", "[u
         CHECK(ResolveFlag(design, RuleFlagId_t::SingleUse));
         CHECK(ResolveFlag(design, RuleFlagId_t::FoundBase));
         CHECK(ResolveStat(design, StatId_t::Attack) == 0);
+        CHECK(ResolveStat(design, StatId_t::StartingMinerals) == 10);
     }
 
     SECTION("Transport")

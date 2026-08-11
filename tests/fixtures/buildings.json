@@ -776,5 +776,21 @@
       }
     ],
     "category": "build"
+  },
+  {
+    "id": "founding_minerals_project",
+    "name": "Test Project (+5 starting minerals to all owner bases)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "AllOwnerBases",
+        "parameters": {
+          "stat": "starting_minerals",
+          "amount": 5,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "discover"
   }
 ]

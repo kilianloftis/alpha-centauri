@@ -58,6 +58,9 @@ enum class StatId_t
     ProbeSuccessScale,
     // XP granted when a unit is created (seeded into Unit::m_xp at spawn; not a live max).
     StartingExperience,
+    // Minerals credited to a newly founded base's production stockpile (resolved once at
+    // founding from the new base's effect list plus the founding unit). Not a live yield.
+    StartingMinerals,
     // Live morale-level offset (SE Morale, Creche in-base, etc.). Added to Unit::m_xp when
     // computing effective combat morale; not seeded into m_xp.
     MoraleBonus,
@@ -133,6 +136,7 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::MineralUpkeep:
         case StatId_t::FreeUnitSupport:
         case StatId_t::StartingExperience:
+        case StatId_t::StartingMinerals:
         case StatId_t::MoraleBonus:
         case StatId_t::ProbeDefense:
         case StatId_t::TechCost:
@@ -198,6 +202,7 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "probe_failure_scale")     return StatId_t::ProbeFailureScale;
     if (rStat == "probe_success_scale")     return StatId_t::ProbeSuccessScale;
     if (rStat == "starting_experience")     return StatId_t::StartingExperience;
+    if (rStat == "starting_minerals")       return StatId_t::StartingMinerals;
     if (rStat == "morale_bonus")            return StatId_t::MoraleBonus;
     if (rStat == "positive_morale_scale")   return StatId_t::PositiveMoraleScale;
     if (rStat == "growth_rate")             return StatId_t::GrowthRate;

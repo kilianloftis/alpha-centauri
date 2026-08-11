@@ -8,6 +8,9 @@
 #include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/buildings/BuildingConfig.h"
+#include "game/faction/base/buildings/BuildingManager.h"
+#include "game/faction/base/production/ProductionManager.h"
 #include "game/units/FoundBaseRules.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitOrderExecutor.h"
@@ -183,6 +186,53 @@ TEST_CASE("TryFoundBase creates a base; SingleUse expends the colony pod", "[uni
     CHECK(game.pPlayer->GetBaseCount() == 2);
     CHECK(CountUnits_(*game.pPlayer) == 0);
     CHECK(game.pState->FindBaseAt(7, 4) == pNew);
+    // Colony pod's StartingMinerals Add 10 lands in the new base's production stockpile.
+    CHECK(pNew->GetProduction().GetMineralStockpile() == 10);
+}
+
+TEST_CASE("TryFoundBase stacks founding-unit and AllOwnerBases StartingMinerals",
+          "[unit][found-base][starting-minerals]")
+{
+    FoundBaseGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 4, 4);
+    home.GetBuildingManager().AddBuilding("founding_minerals_project");
+
+    Unit& pod = game.MakeUnit(*game.pPlayer, 7, 4, {"test_chassis", "test_colony_pod"}, &home);
+    BaseManager* pNew = game.pState->GetUnitOrderExecutor().TryFoundBase(
+        pod, *game.pState, game.fixtures.dataContext);
+    REQUIRE(pNew);
+    // Pod 10 + project AllOwnerBases +5.
+    CHECK(pNew->GetProduction().GetMineralStockpile() == 15);
+}
+
+TEST_CASE("Founding minerals above the retool threshold may switch freely",
+          "[unit][found-base][starting-minerals][retool]")
+{
+    // Null turn original ⇒ free queue/switch — covered in ProductionCostTests. Here assert
+    // the founding path credits a bank that survives queue/switch (stock fixtures have zero
+    // mineral_cost and would complete).
+    FoundBaseGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 4, 4);
+    Unit& pod =
+        game.MakeUnit(*game.pPlayer, 7, 4, {"test_chassis", "test_colony_pod_rich"}, &home);
+
+    BaseManager* pNew = game.pState->GetUnitOrderExecutor().TryFoundBase(
+        pod, *game.pState, game.fixtures.dataContext);
+    REQUIRE(pNew);
+    REQUIRE(pNew->GetProduction().GetMineralStockpile() == 40);
+
+    const BuildingConfig_t* pFacilityA =
+        game.fixtures.dataContext.buildingRegistry->Find("test_facility_a");
+    const BuildingConfig_t* pFacilityB =
+        game.fixtures.dataContext.buildingRegistry->Find("test_facility_b");
+    REQUIRE(pFacilityA);
+    REQUIRE(pFacilityB);
+
+    ProductionManager& rProd = pNew->GetProduction();
+    rProd.SetProduction(pFacilityA);
+    CHECK(rProd.GetMineralStockpile() == 40);
+    rProd.SetProduction(pFacilityB);
+    CHECK(rProd.GetMineralStockpile() == 40);
 }
 
 TEST_CASE("TryFoundBase without SingleUse leaves the unit alive", "[unit][found-base]")

@@ -33,6 +33,11 @@ void ProductionManager::SetProduction(const IConstructable* pItem)
 
 void ProductionManager::ApplyRetoolPenalty_(const IConstructable* pNewItem)
 {
+    // No turn original yet
+    if (!m_pTurnOriginalItem)
+    {
+        return;
+    }
     // Free to go back to what the base was building when the turn handed over.
     if (pNewItem == m_pTurnOriginalItem)
     {

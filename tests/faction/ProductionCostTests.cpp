@@ -176,3 +176,24 @@ TEST_CASE("The turn's original item follows production, turn by turn", "[product
     production.SetProduction(&itemA);
     CHECK(production.GetMineralStockpile() == 20);
 }
+
+TEST_CASE("Null turn original skips retool until ApplyProduction stamps one",
+          "[production][retool]")
+{
+    // Fresh manager (and founding mineral banks) have no turn original — queue/switch free
+    // until ApplyProduction banks with something queued.
+    const StubConstructable itemA{"a", "A"};
+    const StubConstructable itemB{"b", "B"};
+
+    ProductionManager production(k_TestConfig);
+    production.SetMineralStockpile(40);
+
+    production.SetProduction(&itemA);
+    CHECK(production.GetMineralStockpile() == 40);
+    production.SetProduction(&itemB);
+    CHECK(production.GetMineralStockpile() == 40);
+
+    production.ApplyProduction(0, BaseEffects_t{});
+    production.SetProduction(&itemA);
+    CHECK(production.GetMineralStockpile() == 20);
+}

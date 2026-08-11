@@ -546,6 +546,52 @@
         "parameters": {
           "flag": "cannot_capture_bases"
         }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "starting_minerals",
+          "amount": 10,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_colony_pod_rich",
+    "name": "Test Colony Pod With Extra Starting Minerals",
+    "type": "weapon",
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "found_base"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "single_use"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "cannot_capture_bases"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "starting_minerals",
+          "amount": 40,
+          "op": "Add"
+        }
       }
     ]
   },

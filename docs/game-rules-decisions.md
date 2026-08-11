@@ -68,9 +68,16 @@ and `SetProduction` charges the penalty when switching to anything else. Numbers
 `retool_penalty_denominator`), which also became the home for `minerals_per_row` — the game
 number package 6 recorded as "the one still in code", with nowhere to put it.
 
-Clearing production (`nullptr`) is not charged: the player has not committed to anything else,
-and re-queuing pays on the way in. Integer division rounds the forfeit down, so an odd stockpile
-favours the player.
+Clearing production (`nullptr`) is not charged: the stockpile is kept. Re-queuing pays once a
+turn original exists; while the turn original is still null (fresh base, or last
+`ApplyProduction` had nothing queued), queue and switch stay free. Integer division rounds the
+forfeit down, so an odd stockpile favours the player.
+
+**Founding minerals:** `StartingMinerals` effects (colony pod, SE, secret projects, …) are
+credited into the new base's production stockpile once at founding (`TryFoundBase` only —
+never on transfer or snapshot restore). Retooling is free while the turn original is still
+null (a fresh base has none); once `ApplyProduction` banks a turn with something queued and
+stamps an original, ordinary retooling rules apply.
 
 ## 4. Faction elimination
 

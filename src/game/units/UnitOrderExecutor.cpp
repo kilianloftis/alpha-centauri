@@ -370,6 +370,9 @@ BaseManager* UnitOrderExecutor::TryFoundBase(Unit& rUnit, GameState& rGameState,
         rGameState.GetTileEffects(),
         rGameState.GetSecretProjectAvailability());
 
+    // Before SingleUse destroy: founding-unit StartingMinerals still resolve on the pod.
+    ApplyStartingMinerals(*pBase, &rUnit);
+
     if (ExpendIfSingleUse_(rUnit) == OrderProgress_t::Expended)
     {
         rFaction.GetUnitManager().DestroyUnit(rUnit);

@@ -46,6 +46,7 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("probe_failure_scale") == StatId_t::ProbeFailureScale);
     CHECK(ParseStatId("probe_success_scale") == StatId_t::ProbeSuccessScale);
     CHECK(ParseStatId("starting_experience") == StatId_t::StartingExperience);
+    CHECK(ParseStatId("starting_minerals") == StatId_t::StartingMinerals);
     CHECK(ParseStatId("morale_bonus") == StatId_t::MoraleBonus);
     CHECK(ParseStatId("positive_morale_scale") == StatId_t::PositiveMoraleScale);
     CHECK(ParseStatId("growth_rate") == StatId_t::GrowthRate);
