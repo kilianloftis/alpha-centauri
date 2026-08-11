@@ -31,6 +31,33 @@ void ProductionManager::SetProduction(const IConstructable* pItem)
     OnProductionChanged.Emit();
 }
 
+void ProductionManager::RebindProductionItem(const IConstructable* pItem)
+{
+    if (pItem == m_pCurrentItem)
+    {
+        return;
+    }
+
+    if (!pItem)
+    {
+        const bool bHadProduction = HasProduction();
+        m_pCurrentItem = nullptr;
+        m_pTurnOriginalItem = nullptr;
+        if (bHadProduction)
+        {
+            OnProductionChanged.Emit();
+        }
+        return;
+    }
+
+    // Same logical item, new backing pointer: keep turn-original continuity for retool.
+    if (m_pTurnOriginalItem == m_pCurrentItem)
+    {
+        m_pTurnOriginalItem = pItem;
+    }
+    m_pCurrentItem = pItem;
+}
+
 void ProductionManager::ApplyRetoolPenalty_(const IConstructable* pNewItem)
 {
     // No turn original yet

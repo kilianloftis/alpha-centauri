@@ -151,7 +151,7 @@ public:
     // This base's building effects, with ThisBase-scoped ones stamped with this base's identity.
     std::vector<ActiveEffect_t> CollectBuildingEffects() const;
 
-    // Items this base can currently construct.
+    // Items this base can currently construct (available buildings plus all saved unit designs).
     std::vector<const IConstructable*> GetConstructable() const;
 
     // Production subsystem.

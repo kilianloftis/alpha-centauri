@@ -375,13 +375,22 @@ BaseManager* Faction::CreateBaseFromSnapshot(
 
     if (!rSnapshot.productionItemId.empty())
     {
-        if (!rDataContext.buildingRegistry)
+        const IConstructable* pItem = nullptr;
+        if (rDataContext.buildingRegistry)
+        {
+            pItem = rDataContext.buildingRegistry->Find(rSnapshot.productionItemId);
+        }
+        if (!pItem)
+        {
+            pItem = GetMilitary().GetDesign(rSnapshot.productionItemId);
+        }
+        if (!pItem)
         {
             throw std::runtime_error(
-                "Faction::CreateBaseFromSnapshot: building registry is null");
+                "Faction::CreateBaseFromSnapshot: unknown production item '"
+                + rSnapshot.productionItemId + "'");
         }
-        pBase->GetProduction().SetProduction(
-            &rDataContext.buildingRegistry->Get(rSnapshot.productionItemId));
+        pBase->GetProduction().SetProduction(pItem);
     }
     pBase->GetProduction().SetMineralStockpile(rSnapshot.mineralStockpile);
 

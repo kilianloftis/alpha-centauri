@@ -107,6 +107,18 @@ bool UnitDesign::HasComponent(const std::string& rComponentId) const
     return false;
 }
 
+bool UnitDesign::IsAvailable(const std::vector<std::string>& rDiscoveredTechs) const
+{
+    for (const UnitComponentConfig_t* pComp : m_components)
+    {
+        if (pComp && !pComp->IsAvailable(rDiscoveredTechs))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 std::vector<ActiveEffect_t> UnitDesign::CollectEffects() const
 {
     return CollectUnitEffects(m_components);

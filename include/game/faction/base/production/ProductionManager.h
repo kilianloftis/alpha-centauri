@@ -10,8 +10,7 @@ namespace ac
 {
 
 // ProductionManager is the API surface for the production component.
-// A base can build one item at a time.
-// TODO: Extend to unit production once unit definitions with mineral costs exist.
+// A base can build one item at a time (building or unit design — both are IConstructable).
 class ProductionManager
 {
 public:
@@ -36,6 +35,12 @@ public:
     // that question (GetConstructable), and its availability calculator is optional, so the
     // check cannot live here.
     void SetProduction(const IConstructable* pItem);
+
+    // Replace the queued constructable pointer without retooling. Used when the logical item
+    // is unchanged but the backing object moved (base ownership transfer re-homing a unit
+    // design onto the new owner's Military), or to clear a queue that can no longer resolve
+    // (nullptr — mineral stockpile kept, turn original cleared).
+    void RebindProductionItem(const IConstructable* pItem);
 
     // The item currently being produced, or nullptr if none.
     const IConstructable* GetCurrentProduction() const;

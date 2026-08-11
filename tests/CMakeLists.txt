@@ -29,6 +29,7 @@ add_executable(effects-tests
     faction/DiplomaticActionExecutorTests.cpp
     faction/FirstContactTests.cpp
     faction/ProductionCostTests.cpp
+    faction/UnitProductionTests.cpp
     faction/GrowthTests.cpp
     faction/BuildingTechGateTests.cpp
     faction/PopCompositionTests.cpp

@@ -31,6 +31,10 @@ public:
     // True if any filled slot carries a component with the given id.
     bool HasComponent(const std::string& rComponentId) const;
 
+    // True when every filled component's requiredTech is discovered (empty requiredTech
+    // always passes). Used when deciding whether a transferred base may keep a queued design.
+    bool IsAvailable(const std::vector<std::string>& rDiscoveredTechs) const;
+
     // All continuous effects attached to this design's components, as ActiveEffect_t
     // instances (sourceId = component id). The single way anything outside UnitDesign
     // consumes component effects — live-unit stat resolution, faction-lane collection,

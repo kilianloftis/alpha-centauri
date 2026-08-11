@@ -2,6 +2,9 @@
 #include "game/Faction.h"
 #include "game/GameState.h"
 #include "game/IEffectsProvider.h"
+#include "game/faction/Military.h"
+#include "game/faction/UnitManager.h"
+#include "game/faction/ResearchManager.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/production/ProductionManager.h"
 #include "game/faction/base/resources/ResourceManager.h"
@@ -15,6 +18,7 @@
 #include "game/map/MapUtils.h"
 #include "game/map/WorldMap.h"
 #include "game/social-engineering/SocialRatingResolver.h"
+#include "game/units/UnitDesign.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/TileEffectsContext.h"
 #include <iostream>
@@ -140,24 +144,46 @@ BaseManager::BaseManager(
         if (!pGameState)
         {
             throw std::runtime_error(
-                "BaseManager: Faction has no GameState bound; cannot dispatch Instantaneous effects");
+                "BaseManager: Faction has no GameState bound; cannot complete production");
         }
-        // Losing a race for a secret project, or finishing a copy of something already here, is
-        // an ordinary game outcome — the player can queue the same project in two bases, and
-        // both are offered it. Report and drop the item; AddBuilding's throw stays a
-        // programmer-error backstop.
-        // TODO: SMAC's rule for a pre-empted build (refund the minerals? auto-switch?) is not
-        // recorded here, so the stockpile is simply left as ProductionManager set it.
-        if (!m_pBuildings->CanAddBuilding(itemId))
+
+        if (const BuildingConfig_t* pBuilding = m_rBuildingRegistry.Find(itemId))
         {
-            std::cerr << "Base " << m_baseId << " completed '" << itemId
-                      << "' but can no longer hold it (already built here, or the secret project "
-                         "was claimed elsewhere); the item was dropped\n";
+            // Losing a race for a secret project, or finishing a copy of something already here, is
+            // an ordinary game outcome — the player can queue the same project in two bases, and
+            // both are offered it. Report and drop the item; AddBuilding's throw stays a
+            // programmer-error backstop.
+            // TODO: SMAC's rule for a pre-empted build (refund the minerals? auto-switch?) is not
+            // recorded here, so the stockpile is simply left as ProductionManager set it.
+            if (!m_pBuildings->CanAddBuilding(itemId))
+            {
+                std::cerr << "Base " << m_baseId << " completed '" << itemId
+                          << "' but can no longer hold it (already built here, or the secret project "
+                             "was claimed elsewhere); the item was dropped\n";
+                return;
+            }
+            m_pBuildings->AddBuilding(itemId);
+            DispatchInstantaneousEffects(*pBuilding, *this, *pGameState);
+            OnProductionCompleted.Emit(itemId);
             return;
         }
-        m_pBuildings->AddBuilding(itemId);
-        DispatchInstantaneousEffects(m_rBuildingRegistry.Get(itemId), *this, *pGameState);
-        OnProductionCompleted.Emit(itemId);
+
+        if (const UnitDesign* pDesign = m_pFaction->GetMilitary().GetDesign(itemId))
+        {
+            m_pFaction->GetUnitManager().CreateUnit(
+                pGameState->AllocateUnitId(),
+                *pDesign,
+                pGameState->GetWorldMap().GetUnitPositions(),
+                m_tile,
+                this,
+                this);
+            OnProductionCompleted.Emit(itemId);
+            return;
+        }
+
+        throw std::runtime_error(
+            "BaseManager: completed production item '" + itemId
+            + "' is neither a known building nor a unit design of this faction");
     });
 }
 
@@ -306,6 +332,10 @@ std::vector<const IConstructable*> BaseManager::GetConstructable() const
     for (const BuildingConfig_t* pBuilding : m_pBuildings->GetBuildingsAvailableForConstruction())
     {
         available.push_back(pBuilding);
+    }
+    for (const std::unique_ptr<UnitDesign>& pDesign : m_pFaction->GetMilitary().GetDesigns())
+    {
+        available.push_back(pDesign.get());
     }
     return available;
 }
@@ -479,6 +509,34 @@ void BaseManager::RebindFaction(Faction& rFaction)
     // The cached BuildBaseEffects_ result was built from the old owner's pool; force a
     // rebuild against the new provider even if version numbers happen to collide.
     m_cachedPoolVersion.reset();
+
+    // Buildings live in the shared registry, so a queued building pointer stays valid when
+    // the new owner has its required tech. Unit designs are owned by Military: re-home to the
+    // new owner's copy when they have the design and the component techs, otherwise clear
+    // (mineral stockpile kept either way).
+    if (const IConstructable* pItem = m_pProduction->GetCurrentProduction())
+    {
+        const std::vector<std::string>& rTechs = rFaction.GetResearch().GetDiscoveredTechs();
+        if (const BuildingConfig_t* pBuilding = m_rBuildingRegistry.Find(pItem->GetId()))
+        {
+            if (!pBuilding->IsAvailable(rTechs))
+            {
+                m_pProduction->RebindProductionItem(nullptr);
+            }
+        }
+        else
+        {
+            const UnitDesign* pDesign = rFaction.GetMilitary().GetDesign(pItem->GetId());
+            if (!pDesign || !pDesign->IsAvailable(rTechs))
+            {
+                m_pProduction->RebindProductionItem(nullptr);
+            }
+            else
+            {
+                m_pProduction->RebindProductionItem(pDesign);
+            }
+        }
+    }
 }
 
 int BaseManager::GetBaseId() const

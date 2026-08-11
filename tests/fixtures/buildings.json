@@ -691,6 +691,13 @@
     "category": "build"
   },
   {
+    "id": "test_gated_facility",
+    "name": "Test Gated Facility",
+    "required_tech": "advanced_build",
+    "effects": [],
+    "category": "build"
+  },
+  {
     "id": "upkeep_hall",
     "name": "Upkeep Hall",
     "allow_multiple": true,
