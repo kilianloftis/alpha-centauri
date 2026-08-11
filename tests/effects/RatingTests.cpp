@@ -378,6 +378,34 @@ TEST_CASE("Base-level Labs AddPercent seeds from the energy split, not zero",
     CHECK(base.GetResources().ConsumeLabs() == expected);
 }
 
+TEST_CASE("Research rating AddPercent scales labs from the energy split",
+          "[effects][rating][research]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+
+    base.GetBuildingManager().AddBuilding("Headquarters");
+    base.GetBuildingManager().AddBuilding("world_beacon");
+    const int labsBefore = base.GetLabsProduction();
+    REQUIRE(labsBefore == 5);
+
+    faction.GetSocialEngineering().SetActivePolicy(fixture.socialPolicies().Get("research_policy"));
+    CHECK(base.GetEffectiveSocialRating(SocialRatingId_t::Research) == 2);
+
+    // Level 2: +20% labs → 5 * 1.2 = 6.
+    const int expected = FinalizeResolvedStat(static_cast<double>(labsBefore) * 1.2);
+    CHECK(expected == 6);
+    CHECK(base.GetLabsProduction() == expected);
+
+    faction.GetSocialEngineering().SetActivePolicy(
+        fixture.socialPolicies().Get("low_research_policy"));
+    CHECK(base.GetEffectiveSocialRating(SocialRatingId_t::Research) == -2);
+    // Level -2: -20% labs → 5 * 0.8 = 4.
+    CHECK(base.GetLabsProduction()
+          == FinalizeResolvedStat(static_cast<double>(labsBefore) * 0.8));
+}
+
 TEST_CASE("Faction-lane rating expand ignores ThisBase modifiers across multiple bases",
           "[effects][rating]")
 {

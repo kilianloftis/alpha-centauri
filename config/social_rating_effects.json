@@ -236,23 +236,35 @@
   {
     "id": "research",
     "levels": {
+      "-5": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "labs", "amount": -50, "op": "AddPercent" } }
+      ],
+      "-4": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "labs", "amount": -40, "op": "AddPercent" } }
+      ],
       "-3": [
-        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "labs", "amount": -3, "op": "Add" } }
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "labs", "amount": -30, "op": "AddPercent" } }
       ],
       "-2": [
-        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "labs", "amount": -2, "op": "Add" } }
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "labs", "amount": -20, "op": "AddPercent" } }
       ],
       "-1": [
-        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "labs", "amount": -1, "op": "Add" } }
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "labs", "amount": -10, "op": "AddPercent" } }
       ],
       "1": [
-        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "labs", "amount": 1, "op": "Add" } }
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "labs", "amount": 10, "op": "AddPercent" } }
       ],
       "2": [
-        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "labs", "amount": 2, "op": "Add" } }
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "labs", "amount": 20, "op": "AddPercent" } }
       ],
       "3": [
-        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "labs", "amount": 3, "op": "Add" } }
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "labs", "amount": 30, "op": "AddPercent" } }
+      ],
+      "4": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "labs", "amount": 40, "op": "AddPercent" } }
+      ],
+      "5": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "labs", "amount": 50, "op": "AddPercent" } }
       ]
     }
   },

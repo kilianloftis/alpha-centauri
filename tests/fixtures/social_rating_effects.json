@@ -235,5 +235,22 @@
           "parameters": { "flag": "probe_subversion_immune" } }
       ]
     }
+  },
+  {
+    "id": "research",
+    "levels": {
+      "-5": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "labs", "amount": -50, "op": "AddPercent" } }
+      ],
+      "-2": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "labs", "amount": -20, "op": "AddPercent" } }
+      ],
+      "2": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "labs", "amount": 20, "op": "AddPercent" } }
+      ],
+      "5": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "labs", "amount": 50, "op": "AddPercent" } }
+      ]
+    }
   }
 ]

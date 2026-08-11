@@ -55,6 +55,22 @@
     ]
   },
   {
+    "id": "research_policy",
+    "name": "Research Policy (+2 Research rating, faction-wide)",
+    "category": "values",
+    "effects": [
+      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "research", "amount": 2 } }
+    ]
+  },
+  {
+    "id": "low_research_policy",
+    "name": "Low Research Policy (-2 Research rating, faction-wide)",
+    "category": "values",
+    "effects": [
+      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "research", "amount": -2 } }
+    ]
+  },
+  {
     "id": "efficiency_policy",
     "name": "Efficiency Policy (+2 Efficiency rating, faction-wide)",
     "category": "economics",
