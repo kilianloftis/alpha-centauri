@@ -341,6 +341,21 @@ TEST_CASE("ParseEffectConfig: StatModifier tile selectors", "[effects][parser]")
         CHECK(std::holds_alternative<TileSelectorBaseTile_t>(*pMod->selector));
     }
 
+    SECTION("AnyTile selector")
+    {
+        const json effectJson = json::parse(R"({
+            "type": "StatModifier",
+            "scope": "AllOwnerBases",
+            "parameters": { "stat": "energy", "amount": 1, "selector": { "kind": "AnyTile" } }
+        })");
+
+        const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
+        const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
+        REQUIRE(pMod != nullptr);
+        REQUIRE(pMod->selector.has_value());
+        CHECK(std::holds_alternative<TileSelectorAnyTile_t>(*pMod->selector));
+    }
+
     SECTION("HasImprovement without an improvement id throws")
     {
         const json selectorJson = json::parse(R"({ "kind": "HasImprovement" })");
@@ -425,6 +440,13 @@ TEST_CASE("ParseEffectConfig: conditions", "[effects][parser][condition]")
     {
         CHECK_THROWS(EffectConfigParser::ParseCondition(
             json::parse(R"({ "kind": "TargetIsShiny", "value": "x" })")));
+    }
+
+    SECTION("IsHeadquarters condition")
+    {
+        const Condition_t condition = EffectConfigParser::ParseCondition(
+            json::parse(R"({ "kind": "IsHeadquarters" })"));
+        CHECK(std::holds_alternative<IsHeadquarters_t>(condition.AsVariant()));
     }
 }
 

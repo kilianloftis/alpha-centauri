@@ -390,6 +390,22 @@
     "category": "discover"
   },
   {
+    "id": "minerals_amplifier",
+    "name": "Minerals Amplifier (-10% minerals at this base)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "minerals",
+          "amount": -10,
+          "op": "AddPercent"
+        }
+      }
+    ],
+    "category": "discover"
+  },
+  {
     "id": "growth_shrine",
     "name": "Growth Shrine (+1 Growth rating in this base only)",
     "effects": [

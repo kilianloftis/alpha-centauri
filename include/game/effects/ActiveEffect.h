@@ -97,11 +97,13 @@ enum class CombatRole_t
 // targetTile so amount_source (e.g. ElevationEnergySeed) can read the host tile.
 // combatRole enables IsDefending (SE Morale defense-in-base extras).
 // pAttacker enables AttackerIsEmbarked (and future attacker-side conditions).
+// pBase enables IsHeadquarters (Economy SE energy-at-HQ) for base-level resource resolve.
 struct EffectContext_t
 {
     const Tile* targetTile = nullptr;
     CombatRole_t combatRole = CombatRole_t::None;
     const Unit* pAttacker = nullptr;
+    const BaseManager* pBase = nullptr;
 };
 
 // Resolves a StatModifier's effective contribution amount. Literal `amount` when
@@ -313,20 +315,35 @@ inline auto FilterByStatIdInContext(std::vector<ActiveEffect_t>&& effects,
                                     StatId_t statId, const EffectContext_t& ctx) = delete;
 
 // Like FilterByStatId, but for base-level resolution only: excludes per-tile modifiers
-// (StatModifiers carrying a tile selector) and condition-carrying effects. Selector
+// (StatModifiers carrying a tile selector) and amountSource modifiers. Selector
 // modifiers have already been applied per worked tile and must not be counted a second
 // time. Accepting BaseEffects_t (never a raw vector or the pool) makes running this
 // filter at any other stage a compile error instead of a doc violation.
-inline auto FilterBaseLevelByStatId(const BaseEffects_t& rBaseEffects, StatId_t statId)
+//
+// Without pCtx (or with a null pCtx): condition-carrying effects are excluded (context-free).
+// With pCtx: unconditional modifiers plus condition-satisfied ones (e.g. IsHeadquarters
+// when EffectContext_t::pBase is set) are included.
+inline auto FilterBaseLevelByStatId(const BaseEffects_t& rBaseEffects, StatId_t statId,
+                                    const EffectContext_t* pCtx = nullptr)
 {
-    return rBaseEffects.effects | std::views::filter([statId](const ActiveEffect_t& effect)
+    return rBaseEffects.effects | std::views::filter([statId, pCtx](const ActiveEffect_t& effect)
     {
         const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
-        return pStatModifier && pStatModifier->stat == statId && !pStatModifier->selector
-            && !effect.config->condition && !pStatModifier->amountSource;
+        if (!pStatModifier || pStatModifier->stat != statId || pStatModifier->selector
+            || pStatModifier->amountSource)
+        {
+            return false;
+        }
+        if (!effect.config->condition)
+        {
+            return true;
+        }
+        return pCtx != nullptr
+            && ConditionSatisfied(*effect.config, *pCtx, effect.originBase);
     });
 }
-inline auto FilterBaseLevelByStatId(BaseEffects_t&& rBaseEffects, StatId_t statId) = delete;
+inline auto FilterBaseLevelByStatId(BaseEffects_t&& rBaseEffects, StatId_t statId,
+                                    const EffectContext_t* pCtx = nullptr) = delete;
 
 // Narrows the faction pool to the effects that apply to the given base: ThisBase effects
 // originating from it, plus all AllOwnerBases, FactionGlobal, and WorldGlobal effects.

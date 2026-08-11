@@ -129,9 +129,10 @@ int ResourceManager::CalculateResource_(StatId_t stat, const TileResources_t& wo
     // Per-tile yield modifiers are already folded into `worked`; only base-level
     // (non-selector) stat modifiers remain. Seed with the worked value so AddPercent
     // scales it (SeedFor is 0 for Additive and would discard percents).
+    const EffectContext_t ctx{.pBase = &m_rBase};
     const int workedVal = GetResourceValue_(worked, stat);
     return FinalizeResolvedStat(
-        ResolveStatModifiers(FilterBaseLevelByStatId(rBaseEffects, stat),
+        ResolveStatModifiers(FilterBaseLevelByStatId(rBaseEffects, stat, &ctx),
                              static_cast<double>(workedVal))
             .total);
 }

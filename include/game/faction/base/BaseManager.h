@@ -128,6 +128,8 @@ public:
     // Resource production per turn (calculated live).
     int GetNutrientProduction() const;
     int GetMineralProduction() const;
+    // Pre-inefficiency energy from worked tiles + flat Energy mods (Economy SE, etc.).
+    int GetEnergyProduction() const;
     int GetEconProduction() const;
     int GetLabsProduction() const;
     // Local energy-psych share + this base's Psych StatModifiers.

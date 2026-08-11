@@ -105,6 +105,11 @@ inline ac::TileSelector_t BaseTileSelector()
     return ac::TileSelectorBaseTile_t{};
 }
 
+inline ac::TileSelector_t AnyTileSelector()
+{
+    return ac::TileSelectorAnyTile_t{};
+}
+
 inline ac::TileSelector_t ImprovementSelector(std::string improvementId)
 {
     return ac::TileSelectorHasImprovement_t{std::move(improvementId)};

@@ -3,6 +3,7 @@
 //
 // FilterForBase requires real BaseManager identities and lives in BaseIntegrationTests.cpp.
 
+#include "GameFixtures.h"
 #include "TestHelpers.h"
 
 #include "game/map/ImprovementConfigParser.h"
@@ -11,6 +12,7 @@
 #include "game/effects/EffectConfig.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <ranges>
 
 using namespace ac;
 using actest::Active;
@@ -72,6 +74,37 @@ TEST_CASE("FilterBaseLevelByStatId: excludes both selector-carrying and conditio
     const std::vector<ActiveEffect_t> matching = actest::Materialize(FilterBaseLevelByStatId(baseEffects, StatId_t::Nutrients));
     REQUIRE(matching.size() == 1);
     CHECK(matching[0].sourceId == "flat");
+}
+
+TEST_CASE("FilterBaseLevelByStatId with context includes satisfied conditions",
+          "[effects][filter][condition]")
+{
+    actest::EffectPool pool;
+    const BaseEffects_t baseEffects{{
+        Active(pool.StatMod(StatId_t::Energy, -1.0, ModifierOp_t::Add, EffectScope_t::AllOwnerBases,
+                            std::nullopt, IsHeadquarters_t{}), "hq_only"),
+        Active(pool.StatMod(StatId_t::Energy, 2.0), "flat"),
+    }};
+
+    // Without context: HQ-gated modifier stays out of base-level resolution.
+    CHECK(std::ranges::distance(FilterBaseLevelByStatId(baseEffects, StatId_t::Energy)) == 1);
+
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& hq = fixture.MakeFactionBase(faction, 2, 2);
+    hq.GetBuildingManager().AddBuilding("Headquarters");
+    BaseManager& remote = fixture.MakeFactionBase(faction, 6, 6);
+
+    const EffectContext_t hqCtx{.pBase = &hq};
+    const auto hqMatching = actest::Materialize(
+        FilterBaseLevelByStatId(baseEffects, StatId_t::Energy, &hqCtx));
+    REQUIRE(hqMatching.size() == 2);
+
+    const EffectContext_t remoteCtx{.pBase = &remote};
+    const auto remoteMatching = actest::Materialize(
+        FilterBaseLevelByStatId(baseEffects, StatId_t::Energy, &remoteCtx));
+    REQUIRE(remoteMatching.size() == 1);
+    CHECK(remoteMatching[0].sourceId == "flat");
 }
 
 TEST_CASE("ConditionSatisfied: no condition always applies", "[effects][condition]")

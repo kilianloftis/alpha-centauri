@@ -39,6 +39,22 @@
     ]
   },
   {
+    "id": "low_economy_policy",
+    "name": "Low Economy Policy (-1 Economy rating, faction-wide)",
+    "category": "economics",
+    "effects": [
+      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "economy", "amount": -1 } }
+    ]
+  },
+  {
+    "id": "high_economy_policy",
+    "name": "High Economy Policy (+4 Economy rating, faction-wide)",
+    "category": "economics",
+    "effects": [
+      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "economy", "amount": 4 } }
+    ]
+  },
+  {
     "id": "efficiency_policy",
     "name": "Efficiency Policy (+2 Efficiency rating, faction-wide)",
     "category": "economics",

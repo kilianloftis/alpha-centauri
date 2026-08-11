@@ -517,6 +517,10 @@ Condition_t ParseCondition(const nlohmann::json& conditionJson)
     {
         return AttackerIsEmbarked_t{};
     }
+    if (kindStr == "IsHeadquarters")
+    {
+        return IsHeadquarters_t{};
+    }
     if (kindStr == "AllOf")
     {
         const bool bHasValues = conditionJson.contains("values")
@@ -580,6 +584,10 @@ TileSelector_t ParseTileSelector(const nlohmann::json& selectorJson)
             throw std::runtime_error("HasImprovement selector requires a non-empty 'improvement' id");
         }
         return TileSelectorHasImprovement_t{improvementId};
+    }
+    if (kindStr == "AnyTile")
+    {
+        return TileSelectorAnyTile_t{};
     }
 
     throw std::runtime_error("Unknown tile selector kind: '" + kindStr + "'");

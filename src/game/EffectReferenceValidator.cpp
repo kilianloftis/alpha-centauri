@@ -174,7 +174,8 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
                         }
                         else if constexpr (std::is_same_v<T, IsDefending_t>
                                            || std::is_same_v<T, OriginBaseIsTargetBase_t>
-                                           || std::is_same_v<T, AttackerIsEmbarked_t>)
+                                           || std::is_same_v<T, AttackerIsEmbarked_t>
+                                           || std::is_same_v<T, IsHeadquarters_t>)
                         {
                             // Parameterless predicates: no config ids to resolve.
                         }

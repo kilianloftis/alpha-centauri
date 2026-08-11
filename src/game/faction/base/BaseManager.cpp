@@ -251,6 +251,11 @@ int BaseManager::GetMineralProduction() const
     return m_pResources->GetMineralProduction(BuildBaseEffects_());
 }
 
+int BaseManager::GetEnergyProduction() const
+{
+    return m_pResources->GetEnergyProduction(BuildBaseEffects_());
+}
+
 int BaseManager::GetEconProduction() const
 {
     return m_pResources->GetEconProduction(BuildBaseEffects_());

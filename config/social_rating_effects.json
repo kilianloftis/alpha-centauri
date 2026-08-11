@@ -3,24 +3,44 @@
     "id": "economy",
     "levels": {
       "-3": [
-        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "energy", "amount": -3, "op": "Add" } }
-      ],
-      "-2": [
         { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "energy", "amount": -2, "op": "Add" } }
       ],
-      "-1": [
+      "-2": [
         { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "energy", "amount": -1, "op": "Add" } }
+      ],
+      "-1": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous",
+          "condition": { "kind": "IsHeadquarters" },
+          "parameters": { "stat": "energy", "amount": -1, "op": "Add" } }
       ],
       "1": [
         { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "energy", "amount": 1, "op": "Add" } }
       ],
       "2": [
-        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "energy", "amount": 2, "op": "Add" } },
-        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "minerals", "amount": -10, "op": "AddPercent" } }
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous",
+          "parameters": { "stat": "energy", "amount": 1, "op": "Add", "selector": { "kind": "AnyTile" } } }
       ],
       "3": [
-        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "energy", "amount": 3, "op": "Add" } },
-        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "minerals", "amount": -20, "op": "AddPercent" } }
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous",
+          "parameters": { "stat": "energy", "amount": 1, "op": "Add", "selector": { "kind": "AnyTile" } } },
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous",
+          "parameters": { "stat": "commerce_energy_bonus", "amount": 1, "op": "Add" } }
+      ],
+      "4": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous",
+          "parameters": { "stat": "energy", "amount": 1, "op": "Add", "selector": { "kind": "AnyTile" } } },
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous",
+          "parameters": { "stat": "energy", "amount": 2, "op": "Add" } },
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous",
+          "parameters": { "stat": "commerce_energy_bonus", "amount": 2, "op": "Add" } }
+      ],
+      "5": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous",
+          "parameters": { "stat": "energy", "amount": 1, "op": "Add", "selector": { "kind": "AnyTile" } } },
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous",
+          "parameters": { "stat": "energy", "amount": 4, "op": "Add" } },
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous",
+          "parameters": { "stat": "commerce_energy_bonus", "amount": 3, "op": "Add" } }
       ]
     }
   },

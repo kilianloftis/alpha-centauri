@@ -60,7 +60,7 @@ struct InfiltrationEffect_t
 };
 
 // Which worked tiles a selector-carrying StatModifier applies to. Sum type so BaseTile vs
-// HasImprovement cannot carry mismatched fields.
+// HasImprovement vs AnyTile cannot carry mismatched fields.
 struct TileSelectorBaseTile_t
 {
 };
@@ -70,7 +70,14 @@ struct TileSelectorHasImprovement_t
     std::string improvement; // feature id matched via Tile::HasFeature
 };
 
-using TileSelector_t = std::variant<TileSelectorBaseTile_t, TileSelectorHasImprovement_t>;
+// Matches every worked tile (and the free base-center tile). Used by Economy SE ≥ 2
+// ("+1 energy each square").
+struct TileSelectorAnyTile_t
+{
+};
+
+using TileSelector_t = std::variant<TileSelectorBaseTile_t, TileSelectorHasImprovement_t,
+                                    TileSelectorAnyTile_t>;
 
 struct StatModifierEffect_t
 {
@@ -260,11 +267,19 @@ struct AttackerIsEmbarked_t
 {
 };
 
+// True when EffectContext_t::pBase has the Headquarters rule flag (Economy SE −1
+// energy-at-HQ). Requires pBase in the resolve context.
+struct IsHeadquarters_t
+{
+};
+
 struct Condition_t : std::variant<TargetTileHas_t, AllOf_t, IsDefending_t,
-                                  OriginBaseIsTargetBase_t, AttackerIsEmbarked_t>
+                                  OriginBaseIsTargetBase_t, AttackerIsEmbarked_t,
+                                  IsHeadquarters_t>
 {
     using Variant = std::variant<TargetTileHas_t, AllOf_t, IsDefending_t,
-                                 OriginBaseIsTargetBase_t, AttackerIsEmbarked_t>;
+                                 OriginBaseIsTargetBase_t, AttackerIsEmbarked_t,
+                                 IsHeadquarters_t>;
     using Variant::Variant;
     using Variant::operator=;
 

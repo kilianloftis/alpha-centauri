@@ -11,6 +11,7 @@
 #include "game/faction/base/production/ProductionManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/map/Tile.h"
+#include "game/population/pop-types/Pop.h"
 #include "game/social-engineering/SocialRatingResolver.h"
 #include "game/effects/ActiveEffect.h"
 
@@ -235,8 +236,97 @@ TEST_CASE("Rating modifiers are honored from any source: a building's FactionGlo
     CHECK(baseB.GetNutrientProduction() == 1);
 }
 
-TEST_CASE("Economy rating minerals AddPercent scales worked minerals",
+TEST_CASE("Economy rating +2 adds one energy per worked square",
           "[effects][rating][economy]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+
+    // Flat land so tile energy is stable; workers + free base center are the worked set.
+    for (int dx = -1; dx <= 1; ++dx)
+    {
+        for (int dy = -1; dy <= 1; ++dy)
+        {
+            fixture.At(4 + dx, 4 + dy).SetRockiness(Rockiness_t::Flat);
+        }
+    }
+    base.GetWorkerAssignments().AutoAssignWorkers();
+
+    int workedTiles = 1; // base center is always worked for free
+    for (const Pop& rPop : base.GetPopulation().Pops())
+    {
+        if (rPop.GetTile() != nullptr)
+        {
+            ++workedTiles;
+        }
+    }
+    REQUIRE(workedTiles >= 2);
+
+    const int energyBefore = base.GetResources().GetEnergyProduction(base.GetBaseEffects());
+    faction.GetSocialEngineering().SetActivePolicy(fixture.socialPolicies().Get("economy_policy"));
+    CHECK(base.GetEffectiveSocialRating(SocialRatingId_t::Economy) == 2);
+    CHECK(base.GetResources().GetEnergyProduction(base.GetBaseEffects())
+          == energyBefore + workedTiles);
+}
+
+TEST_CASE("Economy rating -1 subtracts energy only at the headquarters base",
+          "[effects][rating][economy]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& hq = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& remote = fixture.MakeFactionBase(faction, 6, 6);
+    hq.GetBuildingManager().AddBuilding("Headquarters");
+
+    const int hqBefore = hq.GetResources().GetEnergyProduction(hq.GetBaseEffects());
+    const int remoteBefore = remote.GetResources().GetEnergyProduction(remote.GetBaseEffects());
+
+    faction.GetSocialEngineering().SetActivePolicy(
+        fixture.socialPolicies().Get("low_economy_policy"));
+    CHECK(hq.GetEffectiveSocialRating(SocialRatingId_t::Economy) == -1);
+    CHECK(remote.GetEffectiveSocialRating(SocialRatingId_t::Economy) == -1);
+
+    CHECK(hq.GetResources().GetEnergyProduction(hq.GetBaseEffects()) == hqBefore - 1);
+    CHECK(remote.GetResources().GetEnergyProduction(remote.GetBaseEffects()) == remoteBefore);
+}
+
+TEST_CASE("Economy rating +4 adds per-square energy, flat energy, and commerce bonus",
+          "[effects][rating][economy]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    base.GetWorkerAssignments().AutoAssignWorkers();
+
+    int workedTiles = 1;
+    for (const Pop& rPop : base.GetPopulation().Pops())
+    {
+        if (rPop.GetTile() != nullptr)
+        {
+            ++workedTiles;
+        }
+    }
+
+    const int energyBefore = base.GetResources().GetEnergyProduction(base.GetBaseEffects());
+    faction.GetSocialEngineering().SetActivePolicy(
+        fixture.socialPolicies().Get("high_economy_policy"));
+    CHECK(base.GetEffectiveSocialRating(SocialRatingId_t::Economy) == 4);
+
+    // Level 4: +1 energy/sq + +2 energy/base.
+    CHECK(base.GetResources().GetEnergyProduction(base.GetBaseEffects())
+          == energyBefore + workedTiles + 2);
+
+    const int commerceBonus = FinalizeResolvedStat(
+        ResolveStatModifiers(
+            FilterBaseLevelByStatId(base.GetBaseEffects(), StatId_t::CommerceEnergyBonus),
+            SeedFor(StatId_t::CommerceEnergyBonus))
+            .total);
+    CHECK(commerceBonus == 2);
+}
+
+TEST_CASE("Base-level minerals AddPercent scales worked minerals",
+          "[effects][rating][minerals]")
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
@@ -256,9 +346,7 @@ TEST_CASE("Economy rating minerals AddPercent scales worked minerals",
     const int worked = base.GetMineralProduction();
     REQUIRE(worked >= 8);
 
-    faction.GetSocialEngineering().SetActivePolicy(fixture.socialPolicies().Get("economy_policy"));
-    CHECK(base.GetEffectiveSocialRating(SocialRatingId_t::Economy) == 2);
-
+    base.GetBuildingManager().AddBuilding("minerals_amplifier");
     const int expected = FinalizeResolvedStat(static_cast<double>(worked) * 0.9);
     REQUIRE(expected < worked);
     CHECK(base.GetMineralProduction() == expected);

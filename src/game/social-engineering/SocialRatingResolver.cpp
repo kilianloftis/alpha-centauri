@@ -16,9 +16,10 @@ namespace
 
 // Maps each axis's accumulated total through the registry table and appends that level's
 // gameplay effects to rOut with sourceId "se_rating_<axis>_<level>" (clamped level).
-// Walks every configured axis (not only those with modifiers) so level-0 rows — Support's
-// free unit slots, Efficiency's denominator — apply when the axis is untouched. Accumulators
-// that cancel to 0 use the same level-0 row when present; axes with no 0 entry stay inert.
+// Walks every configured axis (not only those with modifiers) so an explicit level-0 row
+// (Support free slots, Efficiency denom) applies when the axis is untouched. Total 0 never
+// clamps into a sparse table's extremes — only an exact "0" key expands. Non-zero totals
+// still clamp to the nearest configured extreme (SMAC).
 // appendLane, when set, keeps only level effects on that lane — the faction lane emits
 // FactionUnits only, while the base lane takes the whole level.
 void AppendRatingLevelEffects_(const std::map<SocialRatingId_t, int>& rTotals,
@@ -32,23 +33,33 @@ void AppendRatingLevelEffects_(const std::map<SocialRatingId_t, int>& rTotals,
         const auto totalIt = rTotals.find(rating);
         const int total = totalIt == rTotals.end() ? 0 : totalIt->second;
 
-        // A non-zero total means something declared a modifier on this axis, so a missing
-        // table row after clamp is a config defect. ValidateEffectReferences rejects a
-        // modifier with no axis table at load; this is the backstop for a sparse gap.
-        const std::vector<EffectConfig_t>* pLevelEffects =
-            FindSocialRatingLevelEffects(rRatingConfig, total);
-        if (!pLevelEffects)
+        const std::vector<EffectConfig_t>* pLevelEffects = nullptr;
+        int level = 0;
+        if (total == 0)
         {
-            if (total != 0)
+            // Exact level 0 only — do not ClampSocialRatingTotal(0) into a table whose
+            // lowest key is e.g. Growth 2.
+            const auto zeroIt = rRatingConfig.levelEffects.find(0);
+            if (zeroIt == rRatingConfig.levelEffects.end())
             {
+                continue;
+            }
+            pLevelEffects = &zeroIt->second;
+            level = 0;
+        }
+        else
+        {
+            pLevelEffects = FindSocialRatingLevelEffects(rRatingConfig, total);
+            if (!pLevelEffects)
+            {
+                // Non-zero total with no row after clamp: config defect (sparse gap).
                 throw std::runtime_error("Social rating axis '" + rRatingConfig.id
                                          + "' accumulated " + std::to_string(total)
                                          + " but has no level effects for the clamped level");
             }
-            continue;
+            level = ClampSocialRatingTotal(rRatingConfig, total);
         }
 
-        const int level = ClampSocialRatingTotal(rRatingConfig, total);
         const std::string sourceId =
             "se_rating_" + rRatingConfig.id + "_" + std::to_string(level);
         for (const EffectConfig_t& rEffect : *pLevelEffects)

@@ -230,6 +230,23 @@ TEST_CASE("ResolveTileYield with base effects: BaseTile selector applies only to
     CHECK(world.ctx->ResolveTileYield(tile, false, baseEffects).effective.energy == 0);
 }
 
+TEST_CASE("ResolveTileYield with base effects: AnyTile selector applies to every worked tile",
+          "[effects][tile][yield][selector]")
+{
+    actest::WorldFixture world;
+    Tile& center = world.At(4, 4);
+    Tile& outer = world.At(5, 4);
+
+    actest::EffectPool pool;
+    const BaseEffects_t baseEffects{{
+        actest::Active(pool.StatMod(StatId_t::Energy, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
+                                    actest::AnyTileSelector()), "economy_sq"),
+    }};
+
+    CHECK(world.ctx->ResolveTileYield(center, true, baseEffects).effective.energy == 1);
+    CHECK(world.ctx->ResolveTileYield(outer, false, baseEffects).effective.energy == 1);
+}
+
 TEST_CASE("ResolveTileYield with base effects: flat (non-selector) modifiers are NOT applied per tile",
           "[effects][tile][yield][selector]")
 {

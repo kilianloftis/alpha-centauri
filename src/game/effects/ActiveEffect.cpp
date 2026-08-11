@@ -321,6 +321,11 @@ bool ConditionBodySatisfied_(const Condition_t& condition, const EffectContext_t
             {
                 return ctx.pAttacker != nullptr && ctx.pAttacker->IsEmbarked();
             }
+            else if constexpr (std::is_same_v<T, IsHeadquarters_t>)
+            {
+                return ctx.pBase != nullptr
+                    && ResolveFlag(*ctx.pBase, RuleFlagId_t::Headquarters);
+            }
             else if constexpr (std::is_same_v<T, AllOf_t>)
             {
                 if (rAlt.conditions.empty())
