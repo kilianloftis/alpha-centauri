@@ -507,10 +507,55 @@ std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile)
     return result;
 }
 
-void DispatchInstantaneousEffects(const BuildingConfig_t& rBuilding, BaseManager& rBase,
+int ApplyModifyPopulation(BaseManager& rBase, const ModifyPopulationEffect_t& rEffect)
+{
+    PopulationManager& rPops = rBase.GetPopulation();
+    const int size = rPops.GetSize();
+
+    int delta = 0;
+    switch (rEffect.op)
+    {
+    case ModifierOp_t::Add:
+        delta = rEffect.amount;
+        break;
+    case ModifierOp_t::AddPercent:
+        delta = (size * rEffect.amount) / 100;
+        break;
+    case ModifierOp_t::MultiplyGeometric:
+        throw std::runtime_error(
+            "ApplyModifyPopulation: MultiplyGeometric is not supported");
+    }
+
+    if (delta < 0)
+    {
+        const int toRemove = -delta;
+        int removed = 0;
+        while (removed < toRemove && rPops.GetSize() > rEffect.minSize)
+        {
+            rPops.RemovePop();
+            ++removed;
+        }
+        return -removed;
+    }
+
+    if (delta > 0)
+    {
+        int added = 0;
+        while (added < delta && rPops.CanGrow())
+        {
+            rPops.AddPop();
+            ++added;
+        }
+        return added;
+    }
+
+    return 0;
+}
+
+void DispatchInstantaneousEffects(std::span<const EffectConfig_t> rEffects, BaseManager& rBase,
                                   GameState& rGameState)
 {
-    for (const EffectConfig_t& effect : rBuilding.effects)
+    for (const EffectConfig_t& effect : rEffects)
     {
         if (effect.persistence != EffectPersistence_t::Instantaneous)
             continue;
@@ -525,15 +570,40 @@ void DispatchInstantaneousEffects(const BuildingConfig_t& rBuilding, BaseManager
         }
         else if (std::get_if<GrantTechEffect_t>(&effect.effect))
         {
-            std::cerr << "[TODO] Instantaneous GrantTech from '" << rBuilding.id << "' not yet implemented\n";
+            std::cerr << "[TODO] Instantaneous GrantTech not yet implemented\n";
         }
         else if (std::get_if<GrantUnitEffect_t>(&effect.effect))
         {
-            std::cerr << "[TODO] Instantaneous GrantUnit from '" << rBuilding.id << "' not yet implemented\n";
+            std::cerr << "[TODO] Instantaneous GrantUnit not yet implemented\n";
         }
         else if (std::get_if<InfiltrationEffect_t>(&effect.effect))
         {
             ApplyInfiltrationEffect(rGameState, rBase.GetFaction(), effect);
+        }
+        else if (const ModifyPopulationEffect_t* pModify =
+                     std::get_if<ModifyPopulationEffect_t>(&effect.effect))
+        {
+            ApplyModifyPopulation(rBase, *pModify);
+        }
+    }
+}
+
+void DispatchInstantaneousEffects(const BuildingConfig_t& rBuilding, BaseManager& rBase,
+                                  GameState& rGameState)
+{
+    DispatchInstantaneousEffects(std::span<const EffectConfig_t>{rBuilding.effects}, rBase,
+                                 rGameState);
+}
+
+void DispatchInstantaneousEffects(const UnitDesign& rDesign, BaseManager& rBase,
+                                  GameState& rGameState)
+{
+    for (const UnitComponentConfig_t* pComp : rDesign.GetComponents())
+    {
+        if (pComp)
+        {
+            DispatchInstantaneousEffects(std::span<const EffectConfig_t>{pComp->effects}, rBase,
+                                         rGameState);
         }
     }
 }

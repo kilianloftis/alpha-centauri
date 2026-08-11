@@ -336,6 +336,33 @@ void ParseInterceptAttempt_(const nlohmann::json& parameters, EffectConfig_t& rE
     rEffect.effect = intercept;
 }
 
+void ParseModifyPopulation_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
+{
+    if (rEffect.persistence != EffectPersistence_t::Instantaneous)
+    {
+        throw std::runtime_error("ModifyPopulation requires persistence Instantaneous");
+    }
+    RequireScope_(
+        rEffect.scope,
+        {EffectScope_t::ThisBase},
+        "ModifyPopulation requires scope ThisBase");
+
+    ModifyPopulationEffect_t modify;
+    modify.amount = static_cast<int>(RequireNumber(parameters, "amount"));
+    modify.op = ParseModifierOp(parameters.value("op", "Add"));
+    if (modify.op != ModifierOp_t::Add && modify.op != ModifierOp_t::AddPercent)
+    {
+        throw std::runtime_error(
+            "ModifyPopulation op must be Add or AddPercent");
+    }
+    modify.minSize = static_cast<int>(ParseNumber(parameters, "min_size", 0.0));
+    if (modify.minSize < 0)
+    {
+        throw std::runtime_error("ModifyPopulation 'min_size' must be >= 0");
+    }
+    rEffect.effect = modify;
+}
+
 void ParseTransportParams_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
 {
     RequireScope_(
@@ -408,6 +435,7 @@ const std::unordered_map<std::string, ParseEffectFn_>& EffectTypeParsers_()
         {"OrbitalAttack", ParseOrbitalAttack_},
         {"InterceptAttempt", ParseInterceptAttempt_},
         {"TransportParams", ParseTransportParams_},
+        {"ModifyPopulation", ParseModifyPopulation_},
     };
     return k_Parsers;
 }
@@ -730,8 +758,8 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
     return effect;
 }
 
-void ValidateScopeForSource(EffectScope_t scope, EffectSourceKind_t sourceKind,
-                            const std::string& rSourceId)
+void ValidateScopeForSource(EffectScope_t scope, EffectPersistence_t persistence,
+                            EffectSourceKind_t sourceKind, const std::string& rSourceId)
 {
     if (scope == EffectScope_t::ThisPop && sourceKind != EffectSourceKind_t::PopType)
     {
@@ -757,11 +785,16 @@ void ValidateScopeForSource(EffectScope_t scope, EffectSourceKind_t sourceKind,
             bCanSupplyOriginBase = true;
             break;
         case EffectSourceKind_t::UnitComponent:
+        case EffectSourceKind_t::ProbeAction:
+            // Instantaneous ThisBase fires against the producing / mission-target base.
+            // Continuous ThisBase (and any ProducedAtThisBase) still needs a pool origin.
+            bCanSupplyOriginBase = persistence == EffectPersistence_t::Instantaneous
+                && scope == EffectScope_t::ThisBase;
+            break;
         case EffectSourceKind_t::Improvement:
         case EffectSourceKind_t::Faction:
         case EffectSourceKind_t::CouncilProposal:
         case EffectSourceKind_t::CouncilRules:
-        case EffectSourceKind_t::ProbeAction:
         case EffectSourceKind_t::TileYieldRules:
         case EffectSourceKind_t::Tech:
             bCanSupplyOriginBase = false;
@@ -774,7 +807,8 @@ void ValidateScopeForSource(EffectScope_t scope, EffectSourceKind_t sourceKind,
             throw std::runtime_error(
                 "Effect on '" + rSourceId + "': scope " + pScopeName
                 + " requires a source that can supply an origin base "
-                  "(Building, PopType, SocialPolicy, or SocialRating)");
+                  "(Building, PopType, SocialPolicy, or SocialRating; or Instantaneous "
+                  "ThisBase on UnitComponent / ProbeAction)");
         }
     }
 }
@@ -804,7 +838,7 @@ std::vector<EffectConfig_t> ParseEffects(const nlohmann::json& rContainerJson,
     std::vector<EffectConfig_t> effects = ParseEffects(rContainerJson);
     for (const EffectConfig_t& rEffect : effects)
     {
-        ValidateScopeForSource(rEffect.scope, sourceKind, rSourceId);
+        ValidateScopeForSource(rEffect.scope, rEffect.persistence, sourceKind, rSourceId);
     }
     return effects;
 }

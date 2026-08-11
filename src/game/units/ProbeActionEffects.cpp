@@ -200,18 +200,29 @@ bool ApplyMindControlBase_(Faction& rActor, BaseManager& rBase, ProbeActionResul
     return true;
 }
 
-bool ApplyGeneticPlague_(BaseManager& rBase, ProbeActionResult_t& rResult)
+bool ApplyGeneticPlague_(BaseManager& rBase, const ProbeActionConfig_t& rAction,
+                         ProbeActionResult_t& rResult)
 {
-    const int kill = rBase.GetPopulation().GetSize() / 2;
-    for (int i = 0; i < kill; ++i)
+    int killed = 0;
+    for (const EffectConfig_t& rEffect : rAction.effects)
     {
-        if (rBase.GetPopulation().GetSize() <= 1)
+        if (rEffect.persistence != EffectPersistence_t::Instantaneous)
         {
-            break;
+            continue;
         }
-        rBase.GetPopulation().RemovePop();
+        const ModifyPopulationEffect_t* pModify =
+            std::get_if<ModifyPopulationEffect_t>(&rEffect.effect);
+        if (!pModify)
+        {
+            continue;
+        }
+        const int delta = ApplyModifyPopulation(rBase, *pModify);
+        if (delta < 0)
+        {
+            killed += -delta;
+        }
     }
-    rResult.detail = ProbePopulationKilled_t{kill};
+    rResult.detail = ProbePopulationKilled_t{killed};
     return true;
 }
 
@@ -248,7 +259,7 @@ bool ApplyBaseAction_(Unit& rProbe, const ProbeActionConfig_t& rAction, BaseMana
         case ProbeActionId_t::TotalThoughtControl:
             return ApplyMindControlBase_(rActor, rBase, rResult);
         case ProbeActionId_t::GeneticPlague:
-            return ApplyGeneticPlague_(rBase, rResult);
+            return ApplyGeneticPlague_(rBase, rAction, rResult);
         case ProbeActionId_t::SubvertUnit:
             break;
     }

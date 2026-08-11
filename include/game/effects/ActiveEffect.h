@@ -439,13 +439,28 @@ std::vector<ActiveEffect_t> CollectFromPops(const PopulationManager& rPops, cons
 // Never enters the base-wide active effects pool (FilterForBase always excludes ThisTile).
 std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile);
 
-// Fire all Instantaneous effects declared on rBuilding against rBase.
+// Apply one Instantaneous ModifyPopulation mutation. Returns the signed size delta actually
+// applied (negative when pops were removed). Honors minSize when shrinking; stops adding when
+// CanGrow() is false.
+int ApplyModifyPopulation(BaseManager& rBase, const ModifyPopulationEffect_t& rEffect);
+
+// Fire all Instantaneous effects in rEffects against rBase.
 // GrantBuilding: adds the granted building to the base immediately.
 // GrantTech / GrantUnit: logged as TODO stubs until those systems are wired.
 // Infiltration: always applies via ApplyInfiltrationEffect (needs a live session GameState).
+// ModifyPopulation: ApplyModifyPopulation.
 // Continuous Infiltration is honored at query time via HasInfiltration — no dispatch.
-// Call this right after a building is added to the base (e.g. from OnProductionCompleted).
+void DispatchInstantaneousEffects(std::span<const EffectConfig_t> rEffects, BaseManager& rBase,
+                                  GameState& rGameState);
+
+// Call right after a building is added to the base (e.g. from OnProductionCompleted).
 void DispatchInstantaneousEffects(const BuildingConfig_t& rBuilding, BaseManager& rBase,
+                                  GameState& rGameState);
+
+// Instantaneous effects on a design's filled components (e.g. colony-pod pop cost). Call right
+// after CreateUnit on production complete — not from CreateUnit itself (escape pods / starting
+// units must not pay production Instantaneous costs).
+void DispatchInstantaneousEffects(const UnitDesign& rDesign, BaseManager& rBase,
                                   GameState& rGameState);
 
 } // namespace ac

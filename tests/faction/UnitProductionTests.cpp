@@ -16,6 +16,8 @@
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitSlotConfig.h"
+#include "game/effects/EffectEnums.h"
+#include "game/faction/base/population/PopulationManager.h"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -138,6 +140,43 @@ TEST_CASE("All unit designs appear in the base constructable list", "[production
     const BuildingConfig_t* pFacility = game.fixtures.buildings().Find("test_facility_a");
     REQUIRE(pFacility != nullptr);
     CHECK(ConstructableContains_(available, pFacility));
+}
+
+TEST_CASE("Completing colony pod production decreases base population by 1",
+          "[production][unit][population]")
+{
+    UnitProductionGame_ game;
+    BaseManager& base = game.MakeBase(4, 4);
+    REQUIRE(base.GetPopulation().GetSize() == 3);
+
+    const UnitDesign& rPod =
+        game.AddDesign({"test_chassis", "test_colony_pod", "test_armor"});
+    base.GetProduction().SetProduction(&rPod);
+    base.GetProduction().SetMineralStockpile(base.GetMineralCost());
+
+    CHECK(base.ApplyProduction() == rPod.GetId());
+    CHECK(base.GetPopulation().GetSize() == 2);
+
+    const std::vector<Unit*>& onTile =
+        game.pState->GetWorldMap().GetUnitPositions().GetUnitsOnTile(base.GetTile());
+    REQUIRE(onTile.size() == 1);
+    CHECK(onTile.front()->GetFlag(RuleFlagId_t::FoundBase));
+}
+
+TEST_CASE("CreateUnit without production does not apply Instantaneous component effects",
+          "[production][unit][population]")
+{
+    UnitProductionGame_ game;
+    BaseManager& base = game.MakeBase(4, 4);
+    REQUIRE(base.GetPopulation().GetSize() == 3);
+
+    const UnitDesign& rPod =
+        game.AddDesign({"test_chassis", "test_colony_pod", "test_armor"});
+    game.pFaction->GetUnitManager().CreateUnit(
+        game.pState->AllocateUnitId(), rPod, game.pState->GetWorldMap().GetUnitPositions(),
+        base.GetTile(), &base, &base);
+
+    CHECK(base.GetPopulation().GetSize() == 3);
 }
 
 TEST_CASE("Completing unit production places the unit on the base tile", "[production][unit]")

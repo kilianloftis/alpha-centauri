@@ -405,6 +405,67 @@ TEST_CASE("sabotage_random effect picks randomly among non-HQ buildings",
     CHECK(seen.size() == 2);
 }
 
+TEST_CASE("genetic_plague halves base population via ModifyPopulation effect",
+          "[probe][action][plague]")
+{
+    ProbeGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 4, 4);
+    while (enemy.GetPopulation().GetSize() < 5)
+    {
+        enemy.GetPopulation().AddPop();
+    }
+    REQUIRE(enemy.GetPopulation().GetSize() == 5);
+
+    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+    const ProbeActionConfig_t* pAction =
+        game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::GeneticPlague);
+    REQUIRE(pAction);
+
+    const std::optional<ProbeTarget_t> target = ResolveProbeTarget(
+        probe, enemy.GetTile(), ProbeTargetKind_t::Base, *game.pState);
+    REQUIRE(target.has_value());
+
+    ProbeActionResult_t result;
+    std::mt19937 rng(actest::k_TestRngSeed);
+    REQUIRE(ApplyProbeActionEffect(probe, *pAction, *target, *game.pState,
+                                   game.fixtures.dataContext, {}, result, rng));
+    CHECK(enemy.GetPopulation().GetSize() == 3);
+    const auto* pKilled = std::get_if<ProbePopulationKilled_t>(&result.detail);
+    REQUIRE(pKilled);
+    CHECK(pKilled->count == 2);
+}
+
+TEST_CASE("genetic_plague never empties a base (min_size 1)", "[probe][action][plague]")
+{
+    ProbeGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 1, 1);
+    BaseManager& enemy = game.MakeBase(*game.pAi, 4, 4);
+    while (enemy.GetPopulation().GetSize() > 1)
+    {
+        enemy.GetPopulation().RemovePop();
+    }
+    REQUIRE(enemy.GetPopulation().GetSize() == 1);
+
+    Unit& probe = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "Probe_Team"}, &home);
+    const ProbeActionConfig_t* pAction =
+        game.fixtures.dataContext.probeActionsConfig->Find(ProbeActionId_t::GeneticPlague);
+    REQUIRE(pAction);
+
+    const std::optional<ProbeTarget_t> target = ResolveProbeTarget(
+        probe, enemy.GetTile(), ProbeTargetKind_t::Base, *game.pState);
+    REQUIRE(target.has_value());
+
+    ProbeActionResult_t result;
+    std::mt19937 rng(actest::k_TestRngSeed);
+    REQUIRE(ApplyProbeActionEffect(probe, *pAction, *target, *game.pState,
+                                   game.fixtures.dataContext, {}, result, rng));
+    CHECK(enemy.GetPopulation().GetSize() == 1);
+    const auto* pKilled = std::get_if<ProbePopulationKilled_t>(&result.detail);
+    REQUIRE(pKilled);
+    CHECK(pKilled->count == 0);
+}
+
 // Ordering contract: a probe may only act on something its faction can actually see, so a
 // concealed occupant resolves to no target and the click stays a move. Bumping into it
 // contact-reveals it (UnitOrderExecutor::RevealBlockingUnits_ on a blocked step), and the

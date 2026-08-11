@@ -177,6 +177,7 @@ BaseManager::BaseManager(
                 m_tile,
                 this,
                 this);
+            DispatchInstantaneousEffects(*pDesign, *this, *pGameState);
             OnProductionCompleted.Emit(itemId);
             return;
         }

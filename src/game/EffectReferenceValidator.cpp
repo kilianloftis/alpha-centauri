@@ -120,6 +120,7 @@ struct EffectPayloadValidator
     void operator()(const InterceptAttemptEffect_t&) const {}
     void operator()(const TransportParamsEffect_t&) const {}
     void operator()(const PermissionEffect_t&) const {}
+    void operator()(const ModifyPopulationEffect_t&) const {}
 };
 
 } // namespace

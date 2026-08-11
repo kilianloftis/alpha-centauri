@@ -623,6 +623,55 @@ TEST_CASE("ParseEffectConfig: buildingFilter", "[effects][parser][buildingFilter
     }
 }
 
+TEST_CASE("ParseEffectConfig: ModifyPopulation Instantaneous ThisBase", "[effects][parser]")
+{
+    const json absJson = json::parse(R"({
+        "type": "ModifyPopulation",
+        "scope": "ThisBase",
+        "persistence": "Instantaneous",
+        "parameters": { "amount": -1 }
+    })");
+    const EffectConfig_t absConfig = EffectConfigParser::ParseEffectConfig(absJson);
+    CHECK(absConfig.persistence == EffectPersistence_t::Instantaneous);
+    CHECK(absConfig.scope == EffectScope_t::ThisBase);
+    const auto* pAbs = std::get_if<ModifyPopulationEffect_t>(&absConfig.effect);
+    REQUIRE(pAbs != nullptr);
+    CHECK(pAbs->amount == -1);
+    CHECK(pAbs->op == ModifierOp_t::Add);
+    CHECK(pAbs->minSize == 0);
+
+    const json pctJson = json::parse(R"({
+        "type": "ModifyPopulation",
+        "scope": "ThisBase",
+        "persistence": "Instantaneous",
+        "parameters": { "amount": -50, "op": "AddPercent", "min_size": 1 }
+    })");
+    const EffectConfig_t pctConfig = EffectConfigParser::ParseEffectConfig(pctJson);
+    const auto* pPct = std::get_if<ModifyPopulationEffect_t>(&pctConfig.effect);
+    REQUIRE(pPct != nullptr);
+    CHECK(pPct->amount == -50);
+    CHECK(pPct->op == ModifierOp_t::AddPercent);
+    CHECK(pPct->minSize == 1);
+
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "ModifyPopulation", "scope": "ThisBase",
+        "parameters": { "amount": -1 }
+    })")));
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "ModifyPopulation", "scope": "FactionGlobal",
+        "persistence": "Instantaneous", "parameters": { "amount": -1 }
+    })")));
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "ModifyPopulation", "scope": "ThisBase",
+        "persistence": "Instantaneous", "parameters": {}
+    })")));
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "ModifyPopulation", "scope": "ThisBase",
+        "persistence": "Instantaneous",
+        "parameters": { "amount": -1, "op": "MultiplyGeometric" }
+    })")));
+}
+
 TEST_CASE("ParseEffectConfig: grant effects require their id parameter", "[effects][parser]")
 {
     const json grantBuilding = json::parse(R"({
@@ -933,36 +982,59 @@ TEST_CASE("ValidateScopeForSource: rejects only the certainly-impossible combina
 {
     // ThisPop can only ever resolve against a pop type; ThisUnit against a unit component.
     CHECK_THROWS(EffectConfigParser::ValidateScopeForSource(
-        EffectScope_t::ThisPop, EffectSourceKind_t::Building, "some_building"));
+        EffectScope_t::ThisPop, EffectPersistence_t::Continuous, EffectSourceKind_t::Building,
+        "some_building"));
     CHECK_THROWS(EffectConfigParser::ValidateScopeForSource(
-        EffectScope_t::ThisUnit, EffectSourceKind_t::PopType, "some_pop"));
+        EffectScope_t::ThisUnit, EffectPersistence_t::Continuous, EffectSourceKind_t::PopType,
+        "some_pop"));
 
     CHECK_NOTHROW(EffectConfigParser::ValidateScopeForSource(
-        EffectScope_t::ThisPop, EffectSourceKind_t::PopType, "some_pop"));
+        EffectScope_t::ThisPop, EffectPersistence_t::Continuous, EffectSourceKind_t::PopType,
+        "some_pop"));
     CHECK_NOTHROW(EffectConfigParser::ValidateScopeForSource(
-        EffectScope_t::ThisUnit, EffectSourceKind_t::UnitComponent, "some_component"));
+        EffectScope_t::ThisUnit, EffectPersistence_t::Continuous, EffectSourceKind_t::UnitComponent,
+        "some_component"));
 
     // ThisBase / ProducedAtThisBase need an origin base (or pop-merge path).
     CHECK_THROWS(EffectConfigParser::ValidateScopeForSource(
-        EffectScope_t::ThisBase, EffectSourceKind_t::UnitComponent, "sensor_pod"));
+        EffectScope_t::ThisBase, EffectPersistence_t::Continuous, EffectSourceKind_t::UnitComponent,
+        "sensor_pod"));
     CHECK_THROWS(EffectConfigParser::ValidateScopeForSource(
-        EffectScope_t::ProducedAtThisBase, EffectSourceKind_t::Improvement, "monolith"));
+        EffectScope_t::ProducedAtThisBase, EffectPersistence_t::Instantaneous,
+        EffectSourceKind_t::UnitComponent, "colony_pod"));
     CHECK_THROWS(EffectConfigParser::ValidateScopeForSource(
-        EffectScope_t::ThisBase, EffectSourceKind_t::CouncilProposal, "trade_pact"));
+        EffectScope_t::ProducedAtThisBase, EffectPersistence_t::Continuous,
+        EffectSourceKind_t::Improvement, "monolith"));
     CHECK_THROWS(EffectConfigParser::ValidateScopeForSource(
-        EffectScope_t::ThisBase, EffectSourceKind_t::TileYieldRules, "tile_yield_rules"));
+        EffectScope_t::ThisBase, EffectPersistence_t::Continuous, EffectSourceKind_t::CouncilProposal,
+        "trade_pact"));
+    CHECK_THROWS(EffectConfigParser::ValidateScopeForSource(
+        EffectScope_t::ThisBase, EffectPersistence_t::Continuous, EffectSourceKind_t::TileYieldRules,
+        "tile_yield_rules"));
     CHECK_NOTHROW(EffectConfigParser::ValidateScopeForSource(
-        EffectScope_t::ThisBase, EffectSourceKind_t::Building, "recycling_tanks"));
+        EffectScope_t::ThisBase, EffectPersistence_t::Continuous, EffectSourceKind_t::Building,
+        "recycling_tanks"));
     CHECK_NOTHROW(EffectConfigParser::ValidateScopeForSource(
-        EffectScope_t::ProducedAtThisBase, EffectSourceKind_t::Building, "aerospace"));
+        EffectScope_t::ProducedAtThisBase, EffectPersistence_t::Continuous,
+        EffectSourceKind_t::Building, "aerospace"));
+    // Instantaneous ThisBase on unit components / probe actions (production cost, genetic plague).
+    CHECK_NOTHROW(EffectConfigParser::ValidateScopeForSource(
+        EffectScope_t::ThisBase, EffectPersistence_t::Instantaneous,
+        EffectSourceKind_t::UnitComponent, "Colony_Pod"));
+    CHECK_NOTHROW(EffectConfigParser::ValidateScopeForSource(
+        EffectScope_t::ThisBase, EffectPersistence_t::Instantaneous, EffectSourceKind_t::ProbeAction,
+        "genetic_plague"));
 
     // Legal-but-inert: faction-lane on improvement (pending territory) still loads.
     CHECK_NOTHROW(EffectConfigParser::ValidateScopeForSource(
-        EffectScope_t::FactionGlobal, EffectSourceKind_t::Improvement, "monolith"));
+        EffectScope_t::FactionGlobal, EffectPersistence_t::Continuous,
+        EffectSourceKind_t::Improvement, "monolith"));
     CHECK_NOTHROW(EffectConfigParser::ValidateScopeForSource(
-        EffectScope_t::ThisTile, EffectSourceKind_t::UnitComponent, "sensor_pod"));
+        EffectScope_t::ThisTile, EffectPersistence_t::Continuous, EffectSourceKind_t::UnitComponent,
+        "sensor_pod"));
     CHECK_NOTHROW(EffectConfigParser::ValidateScopeForSource(
-        EffectScope_t::WorldGlobal, EffectSourceKind_t::Building, "beacon"));
+        EffectScope_t::WorldGlobal, EffectPersistence_t::Continuous, EffectSourceKind_t::Building,
+        "beacon"));
 }
 
 TEST_CASE("ParseEffects with a source kind validates every entry", "[effects][parser][validation]")

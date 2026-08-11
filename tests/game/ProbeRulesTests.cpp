@@ -66,6 +66,15 @@ TEST_CASE("ProbeActionConfigParser loads SMAC defaults", "[probe][config]")
     REQUIRE(config.Find(ProbeActionId_t::SubvertUnit)->cost.has_value());
     CHECK(config.Find(ProbeActionId_t::SubvertUnit)->cost->energyBias == 800);
     CHECK(config.Find(ProbeActionId_t::SubvertUnit)->target == ProbeTargetKind_t::Unit);
+
+    REQUIRE(config.Find(ProbeActionId_t::GeneticPlague) != nullptr);
+    REQUIRE(config.Find(ProbeActionId_t::GeneticPlague)->effects.size() == 1);
+    const auto* pPlague = std::get_if<ModifyPopulationEffect_t>(
+        &config.Find(ProbeActionId_t::GeneticPlague)->effects.front().effect);
+    REQUIRE(pPlague);
+    CHECK(pPlague->amount == -50);
+    CHECK(pPlague->op == ModifierOp_t::AddPercent);
+    CHECK(pPlague->minSize == 1);
 }
 
 TEST_CASE("SE Probe negative levels emit probe_defense for success math", "[probe][config][se]")

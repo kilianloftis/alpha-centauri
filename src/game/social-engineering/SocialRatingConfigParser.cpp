@@ -40,8 +40,9 @@ SocialRatingConfig_t SocialRatingConfigParser::ParseRatingConfig_(const nlohmann
         for (const auto& rEffectJson : it.value())
         {
             EffectConfig_t effect = EffectConfigParser::ParseEffectConfig(rEffectJson);
-            EffectConfigParser::ValidateScopeForSource(effect.scope, EffectSourceKind_t::SocialRating,
-                                                      config.id + " level " + it.key());
+            EffectConfigParser::ValidateScopeForSource(
+                effect.scope, effect.persistence, EffectSourceKind_t::SocialRating,
+                config.id + " level " + it.key());
             effects.push_back(std::move(effect));
         }
         config.levelEffects[level] = std::move(effects);

@@ -209,6 +209,16 @@ struct PermissionEffect_t
     PermissionId_t permission = PermissionId_t::Attack;
 };
 
+// Instantaneous base-size mutation (colony-pod production cost, genetic plague, …).
+// Add: `amount` is a signed absolute delta. AddPercent: delta = size * amount / 100
+// (integer division toward zero; −50 on size 5 → −2). Never shrinks below minSize.
+struct ModifyPopulationEffect_t
+{
+    int amount = 0;
+    ModifierOp_t op = ModifierOp_t::Add;
+    int minSize = 0;
+};
+
 using EffectVariant_t = std::variant<
     GrantBuildingEffect_t,
     GrantTechEffect_t,
@@ -227,7 +237,8 @@ using EffectVariant_t = std::variant<
     OrbitalAttackEffect_t,
     InterceptAttemptEffect_t,
     TransportParamsEffect_t,
-    PermissionEffect_t
+    PermissionEffect_t,
+    ModifyPopulationEffect_t
 >;
 
 // Runtime predicates on EffectConfig_t. Sum type so kind/parameter mismatches are

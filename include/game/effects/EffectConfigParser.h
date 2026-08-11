@@ -55,10 +55,11 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson);
 
 // Throws if scope can never be resolved for the given source kind (ThisPop off a pop type,
 // ThisUnit off a unit component, ThisBase/ProducedAtThisBase off a source that cannot supply
-// an origin base). Deliberately leaves intentional legal-but-inert combos alone (e.g.
-// faction-lane effects on improvements, pending territory).
-void ValidateScopeForSource(EffectScope_t scope, EffectSourceKind_t sourceKind,
-                            const std::string& rSourceId);
+// an origin base). Instantaneous ThisBase is allowed on UnitComponent / ProbeAction (fired at
+// production complete / probe success against a concrete base). Deliberately leaves intentional
+// legal-but-inert combos alone (e.g. faction-lane effects on improvements, pending territory).
+void ValidateScopeForSource(EffectScope_t scope, EffectPersistence_t persistence,
+                            EffectSourceKind_t sourceKind, const std::string& rSourceId);
 
 // Parses the "effects" array of rContainerJson, if present. Returns {} otherwise.
 std::vector<EffectConfig_t> ParseEffects(const nlohmann::json& rContainerJson);

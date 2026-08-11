@@ -37,9 +37,14 @@ public:
 
     // All continuous effects attached to this design's components, as ActiveEffect_t
     // instances (sourceId = component id). The single way anything outside UnitDesign
-    // consumes component effects — live-unit stat resolution, faction-lane collection,
-    // and tile aura scans all work on this list; the component set stays private.
+    // consumes continuous component effects — live-unit stat resolution, faction-lane
+    // collection, and tile aura scans all work on this list; Instantaneous production
+    // effects are dispatched via GetComponents() + DispatchInstantaneousEffects.
     std::vector<ActiveEffect_t> CollectEffects() const;
+
+    // Filled (non-null) components in slot order. Instantaneous production-complete
+    // dispatch walks these; continuous consumers should prefer CollectEffects().
+    const std::vector<const UnitComponentConfig_t*>& GetComponents() const { return m_components; }
 
     // Intrinsic (component-only) stat / flag resolution. Prefer the free ResolveStat /
     // ResolveFlag overloads; these forward to them.

@@ -87,7 +87,15 @@
       "target": "base",
       "risk": 0,
       "atrocity": true,
-      "required_tech": "gene_splicing"
+      "required_tech": "gene_splicing",
+      "effects": [
+        {
+          "type": "ModifyPopulation",
+          "scope": "ThisBase",
+          "persistence": "Instantaneous",
+          "parameters": { "amount": -50, "op": "AddPercent", "min_size": 1 }
+        }
+      ]
     },
     {
       "id": "subvert_unit",

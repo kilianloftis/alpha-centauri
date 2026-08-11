@@ -555,6 +555,14 @@
           "amount": 10,
           "op": "Add"
         }
+      },
+      {
+        "type": "ModifyPopulation",
+        "scope": "ThisBase",
+        "persistence": "Instantaneous",
+        "parameters": {
+          "amount": -1
+        }
       }
     ]
   },
@@ -591,6 +599,14 @@
           "stat": "starting_minerals",
           "amount": 40,
           "op": "Add"
+        }
+      },
+      {
+        "type": "ModifyPopulation",
+        "scope": "ThisBase",
+        "persistence": "Instantaneous",
+        "parameters": {
+          "amount": -1
         }
       }
     ]
