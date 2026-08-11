@@ -49,8 +49,7 @@ void ProductionManager::ApplyRetoolPenalty_(const IConstructable* pNewItem)
     }
 
     // Integer division rounds the loss down, so the remainder favours the player.
-    const int forfeited =
-        m_mineralStockpile * m_rConfig.retoolPenaltyNumerator / m_rConfig.retoolPenaltyDenominator;
+    const int forfeited = m_mineralStockpile * m_rConfig.retoolPenaltyPercent / 100;
     m_mineralStockpile -= forfeited;
 }
 
@@ -70,8 +69,7 @@ int ProductionManager::GetMineralCost(const BaseEffects_t& rBaseEffects) const
     {
         return 0;
     }
-    return ProductionCostCalculator::ComputeCost(m_pCurrentItem->GetBaseCost(),
-                                                 m_rConfig.mineralsPerRow, rBaseEffects);
+    return ProductionCostCalculator::ComputeCost(m_pCurrentItem->GetBaseCost(), rBaseEffects);
 }
 
 int ProductionManager::GetMineralStockpile() const

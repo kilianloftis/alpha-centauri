@@ -458,7 +458,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 - **Industry rating → production cost**: the industry axis's levels map to `CostMultiplier`
   `AddPercent` modifiers (±10% per level, matching SMAC's ±10% mineral-cost change), which
   `ProductionCostCalculator::ComputeCost` resolves from the base effect list
-  (`baseCost * 10 * CostMultiplier`). Same seam as Growth: the rating table defines the
+  (`baseCost * CostMultiplier`). Same seam as Growth: the rating table defines the
   gameplay effects; the calculator never sees the raw Industry score.
 
 ### ResourceManager Integration

@@ -209,12 +209,12 @@ TEST_CASE("Industry rating affects production cost via CostMultiplier modifiers"
     } item;
 
     base.GetProduction().SetProduction(&item);
-    CHECK(base.GetMineralCost() == 100); // Industry 0 → multiplier 1.0
+    CHECK(base.GetMineralCost() == 10); // Industry 0 → multiplier 1.0
 
     // Policy: +2 Industry → level 2 → CostMultiplier -20% → 0.8
     faction.GetSocialEngineering().SetActivePolicy(fixture.socialPolicies().Get("industry_policy"));
     CHECK(base.GetEffectiveSocialRating(SocialRatingId_t::Industry) == 2);
-    CHECK(base.GetMineralCost() == 80);
+    CHECK(base.GetMineralCost() == 8);
 }
 
 TEST_CASE("Rating modifiers are honored from any source: a building's FactionGlobal rating",

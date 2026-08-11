@@ -15,8 +15,7 @@ namespace ac
 class ProductionManager
 {
 public:
-    // rConfig supplies the retooling rule and the minerals-per-row rate; it outlives every
-    // base (GameDataContext owns it).
+    // rConfig supplies the retooling rule; it outlives every base (GameDataContext owns it).
     explicit ProductionManager(const ProductionConfig_t& rConfig);
     ~ProductionManager();
 

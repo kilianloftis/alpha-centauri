@@ -7,8 +7,7 @@
 namespace ac
 {
 
-int ProductionCostCalculator::ComputeCost(int baseCost, int mineralsPerRow,
-                                          const BaseEffects_t& rBaseEffects)
+int ProductionCostCalculator::ComputeCost(int baseCost, const BaseEffects_t& rBaseEffects)
 {
     // CostMultiplier is PureMultiplier (seed 1.0). Industry rating levels emit AddPercent
     // contributions here via ResolveSocialRatingLevelEffects — same seam as GrowthRate.
@@ -16,7 +15,7 @@ int ProductionCostCalculator::ComputeCost(int baseCost, int mineralsPerRow,
         FilterBaseLevelByStatId(rBaseEffects, StatId_t::CostMultiplier),
         SeedFor(StatId_t::CostMultiplier)).total;
 
-    return std::max(1, static_cast<int>(std::lround(baseCost * mineralsPerRow * multiplier)));
+    return std::max(1, static_cast<int>(std::lround(baseCost * multiplier)));
 }
 
 } // namespace ac

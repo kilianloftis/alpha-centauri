@@ -64,9 +64,9 @@ current item, **50% of the spent minerals are lost**.
 **Implemented** 2026-08-08. `ApplyProduction` marks the item in place once that turn's minerals
 are banked — the last thing to touch production before `PlayerActions` hands the player control —
 and `SetProduction` charges the penalty when switching to anything else. Numbers live in
-`config/production.json` (`retool_penalty_threshold`, `retool_penalty_numerator`,
-`retool_penalty_denominator`), which also became the home for `minerals_per_row` — the game
-number package 6 recorded as "the one still in code", with nowhere to put it.
+`config/production.json` (`retool_penalty_threshold`, `retool_penalty_percent`). Production
+cost is `baseCost * CostMultiplier` (Industry via effects); SMAC's "minerals per row" is a UI
+presentation of progress, not a cost factor, and is not configured here.
 
 Clearing production (`nullptr`) is not charged: the stockpile is kept. Re-queuing pays once a
 turn original exists; while the turn original is still null (fresh base, or last

@@ -1,6 +1,4 @@
 {
-  "minerals_per_row": 10,
   "retool_penalty_threshold": 10,
-  "retool_penalty_numerator": 1,
-  "retool_penalty_denominator": 2
+  "retool_penalty_percent": 50
 }
