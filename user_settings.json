@@ -1,10 +1,17 @@
 {
   "game_rules": {
+    "auto_return_low_fuel_air": true,
     "pause_at_end_of_turn": true
   },
-  "visibility": {
-    "remove_shroud": false,
-    "remove_fog": false
+  "graphics": {
+    "font_paths": [
+      "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+      "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
+    ],
+    "framerate_limit": 60,
+    "window_height": 900,
+    "window_title": "Alpha Centauri",
+    "window_width": 1280
   },
   "map_generation": {
     "erosive_forces": "Average",
@@ -13,5 +20,9 @@
     "preset_id": "pangea",
     "seed": 0,
     "width": 200
+  },
+  "visibility": {
+    "remove_fog": false,
+    "remove_shroud": true
   }
 }

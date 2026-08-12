@@ -52,7 +52,9 @@ struct ImprovementConfig_t
     // a property of the improvement, not of individual effects.
     bool ownedByTerritory = false;
     int frequency = 0;                 // world-gen spawn weight; 0 = not randomly placed
-    std::string spritePath;            // optional sprite override (used for tile bonuses)
+    // Optional world-map sprite. Empty or a missing file → TileRenderer paints a procedural
+    // fallback (landform rings/centers today; tile bonuses simply omit the overlay).
+    std::string spritePath;
     TerraformResult_t terraformResult = TerraformResult_t::Place;
     // Feature/improvement ids whose yield StatModifiers are dropped while this improvement
     // is present (Forest suppresses landform; Borehole suppresses most terraform).

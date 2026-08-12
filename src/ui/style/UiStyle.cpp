@@ -74,19 +74,20 @@ TileRendererStyle_t ParseTileRendererStyle_(const nlohmann::json& j)
 {
     TileRendererStyle_t s{};
     s.tileBorderColor = ParseColor_(j, "tile_border_color");
-    s.fogTerrainColor = ParseColor_(j, "fog_terrain_color");
-    s.clearTerrainTextColor = ParseColor_(j, "clear_terrain_text_color");
     s.waterLowColor = ParseColor_(j, "water_low_color");
     s.waterHighColor = ParseColor_(j, "water_high_color");
     s.landLowColor = ParseColor_(j, "land_low_color");
     s.landHighColor = ParseColor_(j, "land_high_color");
     s.forestColor = ParseColor_(j, "forest_color");
     s.fungusColor = ParseColor_(j, "fungus_color");
+    s.moistCenterColor = ParseColor_(j, "moist_center_color");
+    s.wetCenterColor = ParseColor_(j, "wet_center_color");
+    s.rollingRingColor = ParseColor_(j, "rolling_ring_color");
+    s.rockyRingColor = ParseColor_(j, "rocky_ring_color");
     s.fogFillDimRatio = j.at("fog_fill_dim_ratio").get<float>();
     s.tileBorderWidth = j.at("tile_border_width").get<float>();
-    s.tileFontSize = j.at("tile_font_size").get<unsigned int>();
-    s.tileTextOffsetXRatio = j.at("tile_text_offset_x_ratio").get<float>();
-    s.tileTextOffsetYRatio = j.at("tile_text_offset_y_ratio").get<float>();
+    s.landformRingOuterInsetRatio = j.at("landform_ring_outer_inset_ratio").get<float>();
+    s.landformRingInnerInsetRatio = j.at("landform_ring_inner_inset_ratio").get<float>();
     return s;
 }
 

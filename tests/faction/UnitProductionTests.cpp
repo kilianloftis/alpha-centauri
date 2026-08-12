@@ -336,7 +336,7 @@ TEST_CASE("BaseProduction AI auto-defers abandon without yielding",
     CHECK(game.pOther->GetUnitManager().Units().empty());
 }
 
-TEST_CASE("BaseProduction enqueues notice then idle after empty-queue completion",
+TEST_CASE("BaseProduction enqueues notice, OpenView Base, then idle after empty-queue completion",
           "[production][BaseProduction][PlayerInteraction]")
 {
     UnitProductionGame_ game;
@@ -355,9 +355,18 @@ TEST_CASE("BaseProduction enqueues notice then idle after empty-queue completion
 
     processor.Advance(*game.pState);
 
-    REQUIRE(game.pState->GetPlayerInteractions().Size() == 2);
+    // TEMP OpenView Base is in the completion spine until that demo hook is removed.
+    REQUIRE(game.pState->GetPlayerInteractions().Size() == 3);
     CHECK(std::holds_alternative<NoticeInteraction_t>(
         game.pState->GetPlayerInteractions().Front()->payload));
+    game.pState->GetPlayerInteractions().CompleteFront();
+    REQUIRE(game.pState->GetPlayerInteractions().Front());
+    {
+        const auto& rOpen =
+            std::get<OpenViewInteraction_t>(game.pState->GetPlayerInteractions().Front()->payload);
+        CHECK(rOpen.view == OpenViewInteraction_t::View_t::Base);
+        CHECK(rOpen.baseId == base.GetBaseId());
+    }
     game.pState->GetPlayerInteractions().CompleteFront();
     REQUIRE(game.pState->GetPlayerInteractions().Front());
     CHECK(std::holds_alternative<ProductionIdleInteraction_t>(

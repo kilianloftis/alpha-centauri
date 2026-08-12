@@ -4,6 +4,7 @@
 #include "game/council/PlanetaryCouncil.h"
 #include "game/GameSettings.h"
 #include "game/Faction.h"
+#include "game/faction/EconomyManager.h"
 #include "game/TurnStageFactory.h"
 #include "game/TurnProcessor.h"
 #include "graphics/Graphics.h"
@@ -13,9 +14,7 @@
 #include "game/EventBridge.h"
 #include "lib/GameEvent.h"
 #include "game/faction/base/BaseManager.h"
-#include "game/faction/base/buildings/BuildingManager.h"
 #include "game/GameDataContext.h"
-#include "game/buildings/BuildingRegistry.h"
 #include <random>
 #include "game/map/ImprovementIds.h"
 #include "game/map/MapUtils.h"
@@ -252,28 +251,7 @@ void Engine::StartNewGame_()
         // After AddFaction: the faction's id and subsystems are final, and the bridge captures
         // the id rather than the object.
         m_eventBridge->WireFaction(rFaction);
-
-        // Temporary orbital satellites so the satellite summary / ASAT view has something to show.
-        {
-            BuildingManager& rBuildings = pBase->GetBuildingManager();
-            if (bIsPlayerControlled)
-            {
-                rBuildings.AddBuilding("Sky_Hydroponics_Lab");
-                rBuildings.AddBuilding("Sky_Hydroponics_Lab");
-                rBuildings.AddBuilding("Orbital_Power_Transmitter");
-                rBuildings.AddBuilding("Orbital_Defense_Pod");
-                rBuildings.AddBuilding("Orbital_Defense_Pod");
-            }
-            else
-            {
-                // Vary AI starting orbitals so the attack target list is interesting.
-                rBuildings.AddBuilding("Sky_Hydroponics_Lab");
-                rBuildings.AddBuilding("Nessus_Mining_Station");
-                rBuildings.AddBuilding("Nessus_Mining_Station");
-                rBuildings.AddBuilding("Orbital_Power_Transmitter");
-                rBuildings.AddBuilding("Orbital_Defense_Pod");
-            }
-        }
+        rFaction.GetEconomy().AddEnergy(10);
 
         // Temporary test units so fog-of-war vision and specials are easy to exercise.
         {

@@ -1,5 +1,6 @@
 #include "ui/TileRenderer.h"
 
+#include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/Tile.h"
 #include "graphics/Graphics.h"
@@ -7,7 +8,10 @@
 
 #include <algorithm>
 #include <cmath>
-#include <sstream>
+#include <filesystem>
+#include <string>
+#include <string_view>
+#include <unordered_map>
 
 namespace ac
 {
@@ -15,40 +19,19 @@ namespace ac
 namespace
 {
 
-constexpr int   k_MoistureWetValue       = 2;
-constexpr int   k_MoistureMoistValue     = 1;
-constexpr int   k_MoistureAridValue      = 0;
-constexpr int   k_RockinessRockyValue    = 2;
-constexpr int   k_RockinessRollingValue  = 1;
-constexpr int   k_RockinessFlatValue     = 0;
-constexpr int   k_ElevationMetersPerKm   = 1000;
-
-int MoistureToInt_(Moisture_t moisture)
+enum class SpriteCacheState_t
 {
-    switch (moisture)
-    {
-        case Moisture_t::Wet:
-            return k_MoistureWetValue;
-        case Moisture_t::Moist:
-            return k_MoistureMoistValue;
-        case Moisture_t::Arid:
-        default:
-            return k_MoistureAridValue;
-    }
-}
+    Untried,
+    Loaded,
+    Missing,
+};
 
-int RockinessToInt_(Rockiness_t rockiness)
+// Paths already probed this process. Assets are static for a run; avoid re-statting / reloading
+// every visible tile every frame.
+std::unordered_map<std::string, SpriteCacheState_t>& SpriteCache_()
 {
-    switch (rockiness)
-    {
-        case Rockiness_t::Rocky:
-            return k_RockinessRockyValue;
-        case Rockiness_t::Rolling:
-            return k_RockinessRollingValue;
-        case Rockiness_t::Flat:
-        default:
-            return k_RockinessFlatValue;
-    }
+    static std::unordered_map<std::string, SpriteCacheState_t> cache;
+    return cache;
 }
 
 uint8_t LerpChannel_(uint8_t a, uint8_t b, float t)
@@ -87,6 +70,75 @@ float Remap01_(float value, float inMin, float inMax)
     return (value - inMin) / (inMax - inMin);
 }
 
+const ImprovementConfig_t* FindTerrainFeature_(const Tile& rTile, std::string_view id)
+{
+    for (const ImprovementConfig_t* pFeature : rTile.GetTerrainFeatures())
+    {
+        if (pFeature && pFeature->id == id)
+        {
+            return pFeature;
+        }
+    }
+    return nullptr;
+}
+
+// True when a sprite was drawn. Empty path, missing file, or load/draw failure → false so the
+// caller can paint the procedural fallback.
+bool TryDrawSprite_(Graphics& rGraphics, const std::string& path, float x, float y)
+{
+    if (path.empty())
+    {
+        return false;
+    }
+
+    SpriteCacheState_t& rState = SpriteCache_()[path];
+    if (rState == SpriteCacheState_t::Missing)
+    {
+        return false;
+    }
+    if (rState == SpriteCacheState_t::Untried)
+    {
+        if (!std::filesystem::exists(path) || !rGraphics.LoadTexture(path, path))
+        {
+            rState = SpriteCacheState_t::Missing;
+            return false;
+        }
+        rState = SpriteCacheState_t::Loaded;
+    }
+
+    return rGraphics.DrawSprite(path, x, y);
+}
+
+bool TryDrawFeatureSprite_(Graphics& rGraphics, const Tile& rTile, std::string_view featureId,
+                           float x, float y)
+{
+    const ImprovementConfig_t* pFeature = FindTerrainFeature_(rTile, featureId);
+    if (!pFeature)
+    {
+        return false;
+    }
+    return TryDrawSprite_(rGraphics, pFeature->spritePath, x, y);
+}
+
+void DrawInsetRect_(Graphics& rGraphics, float x, float y, float size, float insetRatio,
+                    const Color_t& color)
+{
+    const float inset = size * insetRatio;
+    const float span = size - 2.0f * inset;
+    if (span <= 0.0f)
+    {
+        return;
+    }
+    rGraphics.DrawFilledRect(x + inset, y + inset, span, span, color);
+}
+
+void DrawRockinessRing_(Graphics& rGraphics, float x, float y, float size, const Color_t& ringColor,
+                        const Color_t& holeColor, float outerInsetRatio, float innerInsetRatio)
+{
+    DrawInsetRect_(rGraphics, x, y, size, outerInsetRatio, ringColor);
+    DrawInsetRect_(rGraphics, x, y, size, innerInsetRatio, holeColor);
+}
+
 } // namespace
 
 Color_t TileRenderer::FillColor(const Tile& rTile, bool bFogged)
@@ -106,8 +158,8 @@ Color_t TileRenderer::FillColor(const Tile& rTile, bool bFogged)
     }
     else if (rTile.IsWater())
     {
-        // Water: darker at depth, lighter near sea level (-1). The domain is Planet's own
-        // elevation range, not a UI copy of it that a world-gen change could leave behind.
+        // Water: darker at depth, lighter near sea level (-1) — same continuous elevation
+        // remap as land, using Planet's elevation clamp.
         const float t = Remap01_(static_cast<float>(elevation),
                                  static_cast<float>(k_MinElevation),
                                  -1.0f);
@@ -133,24 +185,54 @@ void TileRenderer::Render(Graphics& rGraphics, const Tile& rTile, float x, float
                           bool bFogged)
 {
     const auto& s = Style().tileRenderer;
+    const Color_t baseFill = FillColor(rTile, bFogged);
 
-    rGraphics.DrawFilledRect(x, y, size, size, FillColor(rTile, bFogged));
+    rGraphics.DrawFilledRect(x, y, size, size, baseFill);
+
+    // Moisture/rockiness landform cues only on bare land. Water already reads as sea from the
+    // blue fill; fungus/forest stand in for vegetation sprites until those assets exist.
+    const bool bLandformOverlay = rTile.IsLand()
+                                  && !rTile.GetHasFungus()
+                                  && !rTile.HasImprovement(ImprovementIds::k_Forest);
+    if (bLandformOverlay)
+    {
+        const float dim = bFogged ? s.fogFillDimRatio : 1.0f;
+        const Rockiness_t rockiness = rTile.GetRockiness();
+        if (rockiness == Rockiness_t::Rolling || rockiness == Rockiness_t::Rocky)
+        {
+            const std::string featureId = ToString(rockiness);
+            if (!TryDrawFeatureSprite_(rGraphics, rTile, featureId, x, y))
+            {
+                const Color_t ring = DimColor_(
+                    rockiness == Rockiness_t::Rocky ? s.rockyRingColor : s.rollingRingColor, dim);
+                DrawRockinessRing_(rGraphics, x, y, size, ring, baseFill,
+                                   s.landformRingOuterInsetRatio, s.landformRingInnerInsetRatio);
+            }
+        }
+
+        const Moisture_t moisture = rTile.GetMoisture();
+        if (moisture == Moisture_t::Moist || moisture == Moisture_t::Wet)
+        {
+            const std::string featureId = ToString(moisture);
+            if (!TryDrawFeatureSprite_(rGraphics, rTile, featureId, x, y))
+            {
+                const Color_t center = DimColor_(
+                    moisture == Moisture_t::Wet ? s.wetCenterColor : s.moistCenterColor, dim);
+                DrawInsetRect_(rGraphics, x, y, size, s.landformRingInnerInsetRatio, center);
+            }
+        }
+    }
+
+    // Optional sprites for placed improvements (tile bonuses, etc.). Missing assets are skipped.
+    for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
+    {
+        if (pImprovement)
+        {
+            (void)TryDrawSprite_(rGraphics, pImprovement->spritePath, x, y);
+        }
+    }
+
     rGraphics.DrawRect(x, y, size, size, s.tileBorderColor, s.tileBorderWidth);
-
-    const int moisture = MoistureToInt_(rTile.GetMoisture());
-    const int rockiness = RockinessToInt_(rTile.GetRockiness());
-    const int elevationKm = rTile.GetElevation() / k_ElevationMetersPerKm;
-
-    std::ostringstream oss;
-    oss << moisture << " " << rockiness << " " << elevationKm;
-
-    const Color_t textColor = bFogged ? s.fogTerrainColor : s.clearTerrainTextColor;
-    rGraphics.DrawText(
-        oss.str(),
-        x + size * s.tileTextOffsetXRatio,
-        y + size * s.tileTextOffsetYRatio,
-        s.tileFontSize,
-        textColor);
 }
 
 } // namespace ac

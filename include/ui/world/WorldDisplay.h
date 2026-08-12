@@ -17,8 +17,9 @@ class Tile;
 struct Path_t;
 
 // Displays the world map as a grid of tiles.
-// Each tile shows: moisture rockiness elevation(km). Bases, Sensors, Monoliths, and units
-// are read live from GameState / WorldMap — no per-frame DTO rebuild.
+// Each tile is painted by TileRenderer (elevation fill + landform sprites / procedural
+// moisture center and rockiness ring). Bases, Sensors, Monoliths, and units are read live
+// from GameState / WorldMap — no per-frame DTO rebuild.
 class WorldDisplay
 {
 public:

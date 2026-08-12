@@ -42,14 +42,8 @@
     "tile_border_color": [
       80, 80, 80, 255
     ],
-    "fog_terrain_color": [
-      110, 110, 110, 255
-    ],
-    "clear_terrain_text_color": [
-      255, 255, 255, 255
-    ],
     "water_low_color": [
-      8, 24, 72, 255
+      6, 18, 56, 255
     ],
     "water_high_color": [
       64, 140, 210, 255
@@ -66,11 +60,22 @@
     "fungus_color": [
       220, 80, 180, 255
     ],
+    "moist_center_color": [
+      150, 200, 100, 255
+    ],
+    "wet_center_color": [
+      40, 110, 50, 255
+    ],
+    "rolling_ring_color": [
+      190, 190, 190, 255
+    ],
+    "rocky_ring_color": [
+      70, 70, 70, 255
+    ],
     "fog_fill_dim_ratio": 0.55,
     "tile_border_width": -1.0,
-    "tile_font_size": 14,
-    "tile_text_offset_x_ratio": 0.1,
-    "tile_text_offset_y_ratio": 0.3
+    "landform_ring_outer_inset_ratio": 0.12,
+    "landform_ring_inner_inset_ratio": 0.32
   },
   "world_display": {
     "default_tile_scale": 0.1,

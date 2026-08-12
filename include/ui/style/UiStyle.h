@@ -32,19 +32,23 @@ struct ViewFactoryStyle_t
 struct TileRendererStyle_t
 {
     Color_t tileBorderColor{};
-    Color_t fogTerrainColor{};
-    Color_t clearTerrainTextColor{};
     Color_t waterLowColor{};
     Color_t waterHighColor{};
     Color_t landLowColor{};
     Color_t landHighColor{};
     Color_t forestColor{};
     Color_t fungusColor{};
+    // Procedural landform fallback when sprite_path is missing or the asset fails to load.
+    Color_t moistCenterColor{};
+    Color_t wetCenterColor{};
+    Color_t rollingRingColor{};
+    Color_t rockyRingColor{};
     float fogFillDimRatio{};
     float tileBorderWidth{};
-    unsigned int tileFontSize{};
-    float tileTextOffsetXRatio{};
-    float tileTextOffsetYRatio{};
+    // Insets as a fraction of tile size: ring sits between outer and inner; moisture fills
+    // the center (same inner inset so it plugs the ring hole).
+    float landformRingOuterInsetRatio{};
+    float landformRingInnerInsetRatio{};
 };
 
 struct WorldDisplayStyle_t
