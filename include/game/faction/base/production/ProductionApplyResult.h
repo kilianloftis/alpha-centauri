@@ -1,5 +1,8 @@
 #pragma once
 
+#include "game/PauseOnEventsConfig.h"
+
+#include <optional>
 #include <string>
 
 namespace ac
@@ -18,6 +21,9 @@ struct ProductionApplyResult_t
 {
     ProductionApplyKind_t kind = ProductionApplyKind_t::Idle;
     std::string completedId;
+    // Set when kind is Completed: facility vs combat/non-combat unit (for pause-on-event).
+    std::optional<PauseOnEventId_t> completedEvent;
+    std::string completedName;
 };
 
 } // namespace ac

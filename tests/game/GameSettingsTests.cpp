@@ -31,6 +31,8 @@ TEST_CASE("GameSettings Load leaves defaults when file is missing", "[GameSettin
     CHECK(settings.IsAutoReturnLowFuelAir());
     CHECK_FALSE(settings.GetVisibility().removeShroud);
     CHECK_FALSE(settings.GetVisibility().removeFog);
+    CHECK(settings.GetPauseOnEvents().newFacilityBuilt);
+    CHECK(settings.GetPauseOnEvents().buildOrdersOutOfDate);
     CHECK(settings.GetMapGeneration().width == 200);
     CHECK(settings.GetMapGeneration().height == 150);
     CHECK(settings.GetMapGeneration().oceanCoverage == Approx(0.6f));
@@ -113,6 +115,9 @@ TEST_CASE("GameSettings Save groups keys by config struct", "[GameSettings]")
     CHECK(contents.find("visibility") != std::string::npos);
     CHECK(contents.find("remove_shroud") != std::string::npos);
     CHECK(contents.find("remove_fog") != std::string::npos);
+    CHECK(contents.find("pause_on_events") != std::string::npos);
+    CHECK(contents.find("new_facility_built") != std::string::npos);
+    CHECK(contents.find("build_orders_out_of_date") != std::string::npos);
     CHECK(contents.find("map_generation") != std::string::npos);
     CHECK(contents.find("graphics") != std::string::npos);
     CHECK(contents.find("debug_options") == std::string::npos);
@@ -283,6 +288,50 @@ TEST_CASE("GameSettings Save and Load round-trip remove_shroud and remove_fog", 
     CHECK(loaded.GetVisibility().removeFog);
 
     std::filesystem::remove(path);
+}
+
+TEST_CASE("GameSettings Save and Load round-trip pause_on_events", "[GameSettings]")
+{
+    const std::filesystem::path path = TempSettingsPath("ac_settings_pause_on_events.json");
+    std::filesystem::remove(path);
+
+    {
+        GameSettings settings;
+        PauseOnEventsConfig_t config = settings.GetPauseOnEvents();
+        config.newFacilityBuilt = false;
+        config.droneRiots = false;
+        config.buildOrdersOutOfDate = false;
+        settings.SetPauseOnEvents(config);
+        settings.Save(path.string());
+    }
+
+    GameSettings loaded;
+    loaded.Load(path.string());
+    CHECK_FALSE(loaded.GetPauseOnEvents().newFacilityBuilt);
+    CHECK(loaded.GetPauseOnEvents().combatUnitBuilt);
+    CHECK_FALSE(loaded.GetPauseOnEvents().droneRiots);
+    CHECK_FALSE(loaded.GetPauseOnEvents().buildOrdersOutOfDate);
+
+    std::filesystem::remove(path);
+}
+
+TEST_CASE("GameSettings SetPauseOnEvents emits only on change", "[GameSettings]")
+{
+    GameSettings settings;
+    int emissions = 0;
+    auto connection = settings.OnPauseOnEventsChanged.ConnectScoped([&]() { ++emissions; });
+
+    PauseOnEventsConfig_t config = settings.GetPauseOnEvents();
+    config.newFacilityBuilt = false;
+    settings.SetPauseOnEvents(config);
+    CHECK(emissions == 1);
+
+    settings.SetPauseOnEvents(config);
+    CHECK(emissions == 1);
+
+    config.newFacilityBuilt = true;
+    settings.SetPauseOnEvents(config);
+    CHECK(emissions == 2);
 }
 
 TEST_CASE("GameSettings SetVisibility emits OnVisibilityChanged only on change", "[GameSettings]")

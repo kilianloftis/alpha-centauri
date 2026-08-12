@@ -1,8 +1,10 @@
 #include "ui/InteractionPresenter.h"
 
 #include "game/Faction.h"
+#include "game/GameSettings.h"
 #include "game/GameState.h"
 #include "game/IConstructable.h"
+#include "game/PauseOnEventsConfig.h"
 #include "game/PlayerInteractionQueue.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/production/ProductionManager.h"
@@ -110,6 +112,12 @@ void InteractionPresenter::CompleteAndAdvance_()
 
 void InteractionPresenter::PresentNotice_(const NoticeInteraction_t& rNotice)
 {
+    if (!m_rGameState.GetSettings().GetPauseOnEvents().Allows(rNotice.event))
+    {
+        CompleteAndAdvance_();
+        return;
+    }
+
     if (rNotice.cameraTile.has_value())
     {
         m_rWorldView.CenterOnTile(rNotice.cameraTile->first, rNotice.cameraTile->second);
@@ -162,6 +170,7 @@ void InteractionPresenter::PresentProductionAbandon_(const ProductionAbandonInte
         CompleteAndAdvance_();
         return;
     }
+
     FocusBase_(*pBase);
 
     std::string itemName = "production";
@@ -200,25 +209,32 @@ void InteractionPresenter::PresentProductionIdle_(const ProductionIdleInteractio
         CompleteAndAdvance_();
         return;
     }
+
+    const PauseOnEventId_t gate = rIdle.completedEvent.value_or(
+        PauseOnEventId_t::BuildOrdersOutOfDate);
+    if (!m_rGameState.GetSettings().GetPauseOnEvents().Allows(gate))
+    {
+        CompleteAndAdvance_();
+        return;
+    }
+
     FocusBase_(*pBase);
 
     const std::string title = rIdle.afterCompletion
-        ? ("Assign production at " + pBase->GetName() + "?")
+        ? ("Base '" + pBase->GetName() + "' completed " + rIdle.completedItemName + ".")
         : ("No production at " + pBase->GetName());
     const BaseId_t baseId = rIdle.baseId;
     const FactionId_t factionId = rIdle.factionId;
 
     PushChoice_(
         title,
-        {"Assign production", "Later"},
+        {"Continue", "Zoom to base control"},
         [this, baseId, factionId](std::size_t index) {
-            if (index != 0)
+            if (index != 1)
             {
                 CompleteAndAdvance_();
                 return;
             }
-            // The prompt itself is answered; the base view is the follow-up, so complete now
-            // and only resume the turn once that view closes.
             m_rGameState.GetPlayerInteractions().CompleteFront();
             BaseManager* pOpen = FindAudienceBase_(factionId, baseId);
             if (!pOpen)

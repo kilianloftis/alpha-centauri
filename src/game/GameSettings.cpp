@@ -130,6 +130,35 @@ void LoadVisibility_(const nlohmann::json& rJson, VisibilityConfig_t& rConfig,
     }
 }
 
+void LoadPauseOnEvents_(const nlohmann::json& rJson, PauseOnEventsConfig_t& rConfig,
+                        const std::string& rPath)
+{
+    if (const nlohmann::json* pSection = FindSection_(rJson, "pause_on_events", rPath))
+    {
+        rConfig.newFacilityBuilt =
+            pSection->value("new_facility_built", rConfig.newFacilityBuilt);
+        rConfig.nonCombatUnitBuilt =
+            pSection->value("non_combat_unit_built", rConfig.nonCombatUnitBuilt);
+        rConfig.combatUnitBuilt =
+            pSection->value("combat_unit_built", rConfig.combatUnitBuilt);
+        rConfig.prototypeBuilt = pSection->value("prototype_built", rConfig.prototypeBuilt);
+        rConfig.droneRiots = pSection->value("drone_riots", rConfig.droneRiots);
+        rConfig.endOfDroneRiots =
+            pSection->value("end_of_drone_riots", rConfig.endOfDroneRiots);
+        rConfig.goldenAgeStarts =
+            pSection->value("golden_age_starts", rConfig.goldenAgeStarts);
+        rConfig.endOfGoldenAge =
+            pSection->value("end_of_golden_age", rConfig.endOfGoldenAge);
+        rConfig.nutrientLow = pSection->value("nutrient_low", rConfig.nutrientLow);
+        rConfig.buildOrdersOutOfDate =
+            pSection->value("build_orders_out_of_date", rConfig.buildOrdersOutOfDate);
+        rConfig.populationLimitReached =
+            pSection->value("population_limit_reached", rConfig.populationLimitReached);
+        rConfig.delayInTranscendence =
+            pSection->value("delay_in_transcendence", rConfig.delayInTranscendence);
+    }
+}
+
 nlohmann::json MapGenerationToJson_(const MapGenerationConfig_t& rConfig)
 {
     return nlohmann::json{
@@ -162,6 +191,16 @@ void GameSettings::SetVisibility(const VisibilityConfig_t& rConfig)
     }
     m_visibility = rConfig;
     OnVisibilityChanged.Emit();
+}
+
+void GameSettings::SetPauseOnEvents(const PauseOnEventsConfig_t& rConfig)
+{
+    if (m_pauseOnEvents == rConfig)
+    {
+        return;
+    }
+    m_pauseOnEvents = rConfig;
+    OnPauseOnEventsChanged.Emit();
 }
 
 void GameSettings::SetPauseAtEndOfTurn(bool value)
@@ -202,14 +241,17 @@ void GameSettings::Load(const std::string& path)
 
     GameRulesConfig_t gameRules;
     VisibilityConfig_t visibility;
+    PauseOnEventsConfig_t pauseOnEvents;
     MapGenerationConfig_t mapGeneration;
     LoadGameRules_(json, gameRules, path);
     LoadVisibility_(json, visibility, path);
+    LoadPauseOnEvents_(json, pauseOnEvents, path);
     LoadMapGeneration_(json, mapGeneration, path);
     ValidateMapGeneration_(mapGeneration, path);
     LoadGraphics_(json, m_graphics, path);
     SetGameRules(gameRules);
     SetVisibility(visibility);
+    SetPauseOnEvents(pauseOnEvents);
     SetMapGeneration(mapGeneration);
 }
 
@@ -230,6 +272,20 @@ void GameSettings::Save(const std::string& path) const
     json["visibility"] = {
         {"remove_shroud", m_visibility.removeShroud},
         {"remove_fog", m_visibility.removeFog},
+    };
+    json["pause_on_events"] = {
+        {"new_facility_built", m_pauseOnEvents.newFacilityBuilt},
+        {"non_combat_unit_built", m_pauseOnEvents.nonCombatUnitBuilt},
+        {"combat_unit_built", m_pauseOnEvents.combatUnitBuilt},
+        {"prototype_built", m_pauseOnEvents.prototypeBuilt},
+        {"drone_riots", m_pauseOnEvents.droneRiots},
+        {"end_of_drone_riots", m_pauseOnEvents.endOfDroneRiots},
+        {"golden_age_starts", m_pauseOnEvents.goldenAgeStarts},
+        {"end_of_golden_age", m_pauseOnEvents.endOfGoldenAge},
+        {"nutrient_low", m_pauseOnEvents.nutrientLow},
+        {"build_orders_out_of_date", m_pauseOnEvents.buildOrdersOutOfDate},
+        {"population_limit_reached", m_pauseOnEvents.populationLimitReached},
+        {"delay_in_transcendence", m_pauseOnEvents.delayInTranscendence},
     };
     json["map_generation"] = MapGenerationToJson_(m_mapGeneration);
     json["graphics"] = {

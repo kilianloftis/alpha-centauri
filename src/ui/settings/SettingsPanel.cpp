@@ -59,6 +59,33 @@ void SetRemoveFog_(GameSettings& rSettings, bool value)
     rSettings.SetVisibility(visibility);
 }
 
+#define PAUSE_BOOL(Name, field)                                                                     \
+    bool Get##Name##_(const GameSettings& rSettings)                                               \
+    {                                                                                              \
+        return rSettings.GetPauseOnEvents().field;                                                 \
+    }                                                                                              \
+    void Set##Name##_(GameSettings& rSettings, bool value)                                         \
+    {                                                                                              \
+        PauseOnEventsConfig_t config = rSettings.GetPauseOnEvents();                               \
+        config.field = value;                                                                      \
+        rSettings.SetPauseOnEvents(config);                                                        \
+    }
+
+PAUSE_BOOL(NewFacilityBuilt, newFacilityBuilt)
+PAUSE_BOOL(NonCombatUnitBuilt, nonCombatUnitBuilt)
+PAUSE_BOOL(CombatUnitBuilt, combatUnitBuilt)
+PAUSE_BOOL(PrototypeBuilt, prototypeBuilt)
+PAUSE_BOOL(DroneRiots, droneRiots)
+PAUSE_BOOL(EndOfDroneRiots, endOfDroneRiots)
+PAUSE_BOOL(GoldenAgeStarts, goldenAgeStarts)
+PAUSE_BOOL(EndOfGoldenAge, endOfGoldenAge)
+PAUSE_BOOL(NutrientLow, nutrientLow)
+PAUSE_BOOL(BuildOrdersOutOfDate, buildOrdersOutOfDate)
+PAUSE_BOOL(PopulationLimitReached, populationLimitReached)
+PAUSE_BOOL(DelayInTranscendence, delayInTranscendence)
+
+#undef PAUSE_BOOL
+
 std::string GetMapWidthText_(const GameSettings& rSettings)
 {
     return std::to_string(rSettings.GetMapGeneration().width);
@@ -108,6 +135,31 @@ const SettingDescriptor_t k_SettingDescriptors[] = {
      GetRemoveShroud_, SetRemoveShroud_},
     {"Remove Fog", SettingRowKind_t::Bool, SettingScope_t::Always,
      GetRemoveFog_, SetRemoveFog_},
+    {"Pause on Events", SettingRowKind_t::Header},
+    {"New Facility Built", SettingRowKind_t::Bool, SettingScope_t::Always,
+     GetNewFacilityBuilt_, SetNewFacilityBuilt_},
+    {"Non-Combat Unit Built", SettingRowKind_t::Bool, SettingScope_t::Always,
+     GetNonCombatUnitBuilt_, SetNonCombatUnitBuilt_},
+    {"Combat Unit Built", SettingRowKind_t::Bool, SettingScope_t::Always,
+     GetCombatUnitBuilt_, SetCombatUnitBuilt_},
+    {"Prototype Built", SettingRowKind_t::Bool, SettingScope_t::Always,
+     GetPrototypeBuilt_, SetPrototypeBuilt_},
+    {"Drone Riots", SettingRowKind_t::Bool, SettingScope_t::Always,
+     GetDroneRiots_, SetDroneRiots_},
+    {"End of Drone Riots", SettingRowKind_t::Bool, SettingScope_t::Always,
+     GetEndOfDroneRiots_, SetEndOfDroneRiots_},
+    {"Golden Age Starts", SettingRowKind_t::Bool, SettingScope_t::Always,
+     GetGoldenAgeStarts_, SetGoldenAgeStarts_},
+    {"End of Golden Age", SettingRowKind_t::Bool, SettingScope_t::Always,
+     GetEndOfGoldenAge_, SetEndOfGoldenAge_},
+    {"Nutrient Low", SettingRowKind_t::Bool, SettingScope_t::Always,
+     GetNutrientLow_, SetNutrientLow_},
+    {"Build Orders Out of Date", SettingRowKind_t::Bool, SettingScope_t::Always,
+     GetBuildOrdersOutOfDate_, SetBuildOrdersOutOfDate_},
+    {"Population Limit Reached", SettingRowKind_t::Bool, SettingScope_t::Always,
+     GetPopulationLimitReached_, SetPopulationLimitReached_},
+    {"Delay in Transcendence", SettingRowKind_t::Bool, SettingScope_t::Always,
+     GetDelayInTranscendence_, SetDelayInTranscendence_},
     {"Map Generation", SettingRowKind_t::Header, SettingScope_t::NewGameOnly},
     {"Width", SettingRowKind_t::ReadOnlyValue, SettingScope_t::NewGameOnly,
      nullptr, nullptr, GetMapWidthText_},

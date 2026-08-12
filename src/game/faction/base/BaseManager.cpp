@@ -1,6 +1,7 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/Faction.h"
 #include "game/GameState.h"
+#include "game/IConstructable.h"
 #include "game/IEffectsProvider.h"
 #include "game/faction/Military.h"
 #include "game/faction/UnitManager.h"
@@ -20,7 +21,9 @@
 #include "game/social-engineering/SocialRatingResolver.h"
 #include "game/units/UnitDesign.h"
 #include "game/effects/ActiveEffect.h"
+#include "game/effects/EffectEnums.h"
 #include "game/effects/TileEffectsContext.h"
+#include "game/PauseOnEventsConfig.h"
 #include <iostream>
 #include <stdexcept>
 
@@ -49,6 +52,24 @@ WorkedTileClaim ClaimCenterTile_(TileEffectsContext& rTileEffects, const Tile& t
     // in its radius. Throws only if the tile is another base's own tile, which a founding
     // flow must never allow.
     return rTileEffects.GetWorldMap().GetWorkedTiles().ClaimDisplacing(tile, /*bUserAssigned*/false);
+}
+
+PauseOnEventId_t ClassifyCompletedItem_(const IConstructable& rItem)
+{
+    if (dynamic_cast<const BuildingConfig_t*>(&rItem))
+    {
+        return PauseOnEventId_t::NewFacilityBuilt;
+    }
+    if (const UnitDesign* pDesign = dynamic_cast<const UnitDesign*>(&rItem))
+    {
+        if (pDesign->GetStat(StatId_t::Attack) > 0
+            || pDesign->GetFlag(RuleFlagId_t::ForcesPsiCombat))
+        {
+            return PauseOnEventId_t::CombatUnitBuilt;
+        }
+        return PauseOnEventId_t::NonCombatUnitBuilt;
+    }
+    return PauseOnEventId_t::NewFacilityBuilt;
 }
 
 } // namespace
@@ -386,8 +407,12 @@ ProductionApplyResult_t BaseManager::ApplyProduction()
         return ProductionApplyResult_t{ProductionApplyKind_t::AwaitingAbandonConfirm, {}};
     }
 
+    const IConstructable& rItem = *m_pProduction->GetCurrentProduction();
+    const PauseOnEventId_t completedEvent = ClassifyCompletedItem_(rItem);
+    const std::string completedName = rItem.GetName();
     return ProductionApplyResult_t{ProductionApplyKind_t::Completed,
-                                  m_pProduction->CompleteProduction()};
+                                  m_pProduction->CompleteProduction(), completedEvent,
+                                  completedName};
 }
 
 bool BaseManager::HasPendingProductionAbandonConfirm() const

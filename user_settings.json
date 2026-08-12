@@ -21,6 +21,20 @@
     "seed": 0,
     "width": 200
   },
+  "pause_on_events": {
+    "new_facility_built": true,
+    "non_combat_unit_built": true,
+    "combat_unit_built": true,
+    "prototype_built": true,
+    "drone_riots": true,
+    "end_of_drone_riots": true,
+    "golden_age_starts": true,
+    "end_of_golden_age": true,
+    "nutrient_low": true,
+    "build_orders_out_of_date": true,
+    "population_limit_reached": true,
+    "delay_in_transcendence": true
+  },
   "visibility": {
     "remove_fog": false,
     "remove_shroud": true

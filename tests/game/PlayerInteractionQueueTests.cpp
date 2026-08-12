@@ -18,12 +18,14 @@ TEST_CASE("PlayerInteractionQueue is FIFO and reports pending for audience",
     CHECK_FALSE(queue.HasPendingFor(1));
 
     QueuedInteraction_t first;
-    first.payload = NoticeInteraction_t{"A", "body", std::nullopt};
+    first.payload = NoticeInteraction_t{PauseOnEventId_t::NewFacilityBuilt, "A", "body",
+                                       std::nullopt};
     first.audience = 1;
     queue.Enqueue(std::move(first));
 
     QueuedInteraction_t second;
-    second.payload = NoticeInteraction_t{"B", "body", std::nullopt};
+    second.payload = NoticeInteraction_t{PauseOnEventId_t::CombatUnitBuilt, "B", "body",
+                                        std::nullopt};
     second.audience = 1;
     queue.Enqueue(std::move(second));
 

@@ -336,7 +336,7 @@ TEST_CASE("BaseProduction AI auto-defers abandon without yielding",
     CHECK(game.pOther->GetUnitManager().Units().empty());
 }
 
-TEST_CASE("BaseProduction enqueues notice, OpenView Base, then idle after empty-queue completion",
+TEST_CASE("BaseProduction enqueues one idle prompt after empty-queue completion",
           "[production][BaseProduction][PlayerInteraction]")
 {
     UnitProductionGame_ game;
@@ -355,22 +355,16 @@ TEST_CASE("BaseProduction enqueues notice, OpenView Base, then idle after empty-
 
     processor.Advance(*game.pState);
 
-    // TEMP OpenView Base is in the completion spine until that demo hook is removed.
-    REQUIRE(game.pState->GetPlayerInteractions().Size() == 3);
-    CHECK(std::holds_alternative<NoticeInteraction_t>(
-        game.pState->GetPlayerInteractions().Front()->payload));
-    game.pState->GetPlayerInteractions().CompleteFront();
-    REQUIRE(game.pState->GetPlayerInteractions().Front());
+    REQUIRE(game.pState->GetPlayerInteractions().Size() == 1);
     {
-        const auto& rOpen =
-            std::get<OpenViewInteraction_t>(game.pState->GetPlayerInteractions().Front()->payload);
-        CHECK(rOpen.view == OpenViewInteraction_t::View_t::Base);
-        CHECK(rOpen.baseId == base.GetBaseId());
+        const auto& rIdle = std::get<ProductionIdleInteraction_t>(
+            game.pState->GetPlayerInteractions().Front()->payload);
+        CHECK(rIdle.afterCompletion);
+        CHECK(rIdle.completedEvent == PauseOnEventId_t::CombatUnitBuilt);
+        CHECK(rIdle.baseId == base.GetBaseId());
+        CHECK(rIdle.completedItemId == rDesign.GetId());
+        CHECK(rIdle.completedItemName == rDesign.GetId());
     }
-    game.pState->GetPlayerInteractions().CompleteFront();
-    REQUIRE(game.pState->GetPlayerInteractions().Front());
-    CHECK(std::holds_alternative<ProductionIdleInteraction_t>(
-        game.pState->GetPlayerInteractions().Front()->payload));
 
     game.pState->GetPlayerInteractions().CompleteFront();
     processor.Advance(*game.pState);

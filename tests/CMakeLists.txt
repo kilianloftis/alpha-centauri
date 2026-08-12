@@ -96,6 +96,7 @@ add_executable(effects-tests
     ui/ViewFactoryTests.cpp
     ui/WorldViewTests.cpp
     ui/TileRendererTests.cpp
+    ui/InteractionPresenterTests.cpp
     lib/SignalTests.cpp
     lib/ConfigLibraryTests.cpp
     lib/EventBusTests.cpp

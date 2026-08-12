@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/faction/base/BaseTypes.h"
+#include "game/PauseOnEventsConfig.h"
 #include "lib/GameEvent.h"
 
 #include <optional>
@@ -11,8 +12,10 @@ namespace ac
 {
 
 // Informational notice (OK to dismiss). Optional camera focus on a tile.
+// `event` selects the PauseOnEventsConfig_t flag that can skip presentation.
 struct NoticeInteraction_t
 {
+    PauseOnEventId_t event = PauseOnEventId_t::NewFacilityBuilt;
     std::string title;
     std::string body;
     std::optional<TileCoord_t> cameraTile;
@@ -40,13 +43,15 @@ struct ProductionAbandonInteraction_t
     BaseId_t baseId = 0;
 };
 
-// Production finished with an empty queue; offer to assign or skip.
+// Production finished with an empty queue; offer Continue or Zoom to base control.
 struct ProductionIdleInteraction_t
 {
     FactionId_t factionId = 0;
     BaseId_t baseId = 0;
     bool afterCompletion = false;
     std::string completedItemId;
+    std::string completedItemName;
+    std::optional<PauseOnEventId_t> completedEvent;
 };
 
 using PlayerInteraction_t = std::variant<

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/GameRulesConfig.h"
+#include "game/PauseOnEventsConfig.h"
 #include "game/VisibilityConfig.h"
 #include "game/map/MapGenerationConfig.h"
 #include "graphics/Graphics.h"
@@ -25,6 +26,9 @@ public:
     const VisibilityConfig_t& GetVisibility() const { return m_visibility; }
     void SetVisibility(const VisibilityConfig_t& rConfig);
 
+    const PauseOnEventsConfig_t& GetPauseOnEvents() const { return m_pauseOnEvents; }
+    void SetPauseOnEvents(const PauseOnEventsConfig_t& rConfig);
+
     // Convenience accessors used by UI and turn flow.
     bool IsPauseAtEndOfTurn() const { return m_gameRules.pauseAtEndOfTurn; }
     void SetPauseAtEndOfTurn(bool value);
@@ -39,7 +43,7 @@ public:
     const GraphicsConfig_t& GetGraphics() const { return m_graphics; }
 
     // Missing file leaves defaults (pause off, lethal low-fuel auto-return on, shroud/fog
-    // on, default map generation).
+    // on, all pause-on-events prompts on, default map generation).
     // Unreadable or corrupt file throws. Remembers the path, so Save() round-trips to wherever
     // this object was loaded from.
     void Load(const std::string& path = kDefaultPath);
@@ -58,11 +62,13 @@ public:
 
     Signal<> OnGameRulesChanged;
     Signal<> OnVisibilityChanged;
+    Signal<> OnPauseOnEventsChanged;
     Signal<> OnMapGenerationChanged;
 
 private:
     GameRulesConfig_t m_gameRules;
     VisibilityConfig_t m_visibility;
+    PauseOnEventsConfig_t m_pauseOnEvents;
     MapGenerationConfig_t m_mapGeneration;
     GraphicsConfig_t m_graphics;
     // Where Save() writes. Set by Load / SetSavePath; kDefaultPath until then.

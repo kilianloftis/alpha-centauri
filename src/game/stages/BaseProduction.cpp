@@ -66,20 +66,12 @@ StageResult_t BaseProduction::HandleProductionCompleted_(GameState& rGameState, 
         return StageResult_t::Continue;
     }
 
-    // Queue empty after completion → notice (spine demo) then assign/skip choice.
+    // Queue empty after completion → one popup: what finished, Continue or Zoom to base.
     if (rBase.GetProduction().HasProduction())
     {
         return StageResult_t::Continue;
     }
 
-    const Tile& rTile = rBase.GetTile();
-    EnqueueForPlayer_(
-        rGameState,
-        NoticeInteraction_t{
-            "Production complete",
-            "Base '" + rBase.GetName() + "' finished " + rResult.completedId + ".",
-            TileCoord_t{rTile.GetX(), rTile.GetY()},
-        });
     EnqueueForPlayer_(
         rGameState,
         ProductionIdleInteraction_t{
@@ -87,6 +79,8 @@ StageResult_t BaseProduction::HandleProductionCompleted_(GameState& rGameState, 
             rBase.GetBaseId(),
             true,
             rResult.completedId,
+            rResult.completedName.empty() ? rResult.completedId : rResult.completedName,
+            rResult.completedEvent,
         });
     m_awaitingBaseId = rBase.GetBaseId();
     return StageResult_t::Yield;
