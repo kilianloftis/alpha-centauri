@@ -109,26 +109,24 @@ void ProductionManager::SetMineralStockpile(int amount)
     m_mineralStockpile = amount;
 }
 
-std::string ProductionManager::ApplyProduction(int minerals, const BaseEffects_t& rBaseEffects)
+void ProductionManager::BankProduction(int minerals)
 {
     if (!HasProduction())
     {
         m_pTurnOriginalItem = nullptr;
-        return std::string();
+        return;
     }
 
     m_mineralStockpile += minerals;
 
-    std::string completed;
-    if (m_mineralStockpile >= GetMineralCost(rBaseEffects))
-    {
-        completed = CompleteProduction();
-    }
-
     // Whatever is queued once this turn's minerals are banked is what the player sees when
     // PlayerActions hands over, so it is the item a retool this turn is measured against.
     m_pTurnOriginalItem = m_pCurrentItem;
-    return completed;
+}
+
+bool ProductionManager::IsReadyToComplete(const BaseEffects_t& rBaseEffects) const
+{
+    return HasProduction() && m_mineralStockpile >= GetMineralCost(rBaseEffects);
 }
 
 std::string ProductionManager::CompleteProduction()
@@ -141,6 +139,8 @@ std::string ProductionManager::CompleteProduction()
     std::string completed = m_pCurrentItem->GetId();
     m_mineralStockpile = 0;
     ResetProduction_();
+    // Queue is empty; no turn original until the next BankProduction with something queued.
+    m_pTurnOriginalItem = nullptr;
     OnProductionCompleted.Emit(completed);
     return completed;
 }

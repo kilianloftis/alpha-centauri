@@ -167,8 +167,10 @@ void ListSelectorPopup::HandleMouseClick(const MouseEvent_t& rEvent)
     {
         if (ContainsMouseCoord(m_entryRects[i], rEvent))
         {
-            m_onSelected(m_scrollOffset + i);
+            // Close before the callback: a handler that resumes turn processing is gated on
+            // this popup no longer counting as an open modal (IGameView::HasModalElement).
             m_bShouldClose = true;
+            m_onSelected(m_scrollOffset + i);
             return;
         }
     }

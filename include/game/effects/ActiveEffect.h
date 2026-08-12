@@ -444,6 +444,18 @@ std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile);
 // CanGrow() is false.
 int ApplyModifyPopulation(BaseManager& rBase, const ModifyPopulationEffect_t& rEffect);
 
+// Signed size delta for one ModifyPopulation against a base of `size` (no mutation). The one
+// place the op is interpreted — ApplyModifyPopulation applies exactly this. Shrinks honor
+// minSize; growth is uncapped here (only the applying side knows CanGrow, and the completion
+// gates below only care about emptying).
+int PredictModifyPopulationDelta(int size, const ModifyPopulationEffect_t& rEffect);
+
+// Final population size after applying every Instantaneous ModifyPopulation in order.
+int PredictInstantaneousPopulationSize(std::span<const EffectConfig_t> rEffects, int size);
+
+// Same for a unit design's filled components (production Instantaneous costs).
+int PredictUnitProductionPopulationSize(const UnitDesign& rDesign, int size);
+
 // Fire all Instantaneous effects in rEffects against rBase.
 // GrantBuilding: adds the granted building to the base immediately.
 // GrantTech / GrantUnit: logged as TODO stubs until those systems are wired.

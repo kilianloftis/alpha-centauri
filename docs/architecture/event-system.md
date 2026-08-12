@@ -62,7 +62,10 @@ graph TB
   - Type-safe at compile time
 - **Usage**: Engine modules wire directly to each other at startup
   - Combat resolver connects to faction.on_eliminated for victory checks
-  - UI connects to faction.on_tech_discovered for tech popups
+  - Tech discovery for the **player UI** is not driven from this signal alone: stages
+    enqueue on `PlayerInteractionQueue` (see
+    [player-interaction-system.md](player-interaction-system.md)). Internal signals may
+    still notify engine peers; `EventBridge` republishes to the mod-facing bus.
 - **Performance**: Fast, no string lookups, no variant boxing
 - **Mod Access**: None - this is engine-internal only
 

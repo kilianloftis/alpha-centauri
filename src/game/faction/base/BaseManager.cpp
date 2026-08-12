@@ -139,6 +139,11 @@ BaseManager::BaseManager(
         OnIsRioting.Emit();
     });
 
+    m_pProduction->OnProductionChanged.Connect([this]() {
+        // Switching or clearing the queue cancels an unresolved abandon prompt.
+        m_bPendingProductionAbandonConfirm = false;
+    });
+
     m_pProduction->OnProductionCompleted.Connect([this](const std::string& itemId) {
         GameState* pGameState = m_pFaction->GetGameState();
         if (!pGameState)
@@ -351,9 +356,88 @@ const ProductionManager& BaseManager::GetProduction() const
     return *m_pProduction;
 }
 
-std::string BaseManager::ApplyProduction()
+ProductionApplyResult_t BaseManager::ApplyProduction()
 {
-    return m_pProduction->ApplyProduction(m_pResources->ConsumeMinerals(), BuildBaseEffects_());
+    if (m_bPendingProductionAbandonConfirm)
+    {
+        // Minerals were already banked when the prompt opened; wait for Confirm / Defer.
+        return ProductionApplyResult_t{ProductionApplyKind_t::AwaitingAbandonConfirm, {}};
+    }
+
+    if (!m_pProduction->HasProduction())
+    {
+        // ConsumeMinerals is skipped when BaseProduction does not call us for empty queues;
+        // still handle a direct call with nothing queued.
+        return ProductionApplyResult_t{ProductionApplyKind_t::Idle, {}};
+    }
+
+    const BaseEffects_t effects = BuildBaseEffects_();
+    const int minerals = m_pResources->ConsumeMinerals();
+    m_pProduction->BankProduction(minerals);
+
+    if (!m_pProduction->IsReadyToComplete(effects))
+    {
+        return ProductionApplyResult_t{ProductionApplyKind_t::InProgress, {}};
+    }
+
+    if (WouldEmptyBaseOnProductionComplete_())
+    {
+        m_bPendingProductionAbandonConfirm = true;
+        return ProductionApplyResult_t{ProductionApplyKind_t::AwaitingAbandonConfirm, {}};
+    }
+
+    return ProductionApplyResult_t{ProductionApplyKind_t::Completed,
+                                  m_pProduction->CompleteProduction()};
+}
+
+bool BaseManager::HasPendingProductionAbandonConfirm() const
+{
+    return m_bPendingProductionAbandonConfirm;
+}
+
+std::string BaseManager::ConfirmProductionAbandon()
+{
+    if (!m_bPendingProductionAbandonConfirm)
+    {
+        throw std::runtime_error(
+            "BaseManager::ConfirmProductionAbandon: no pending abandon confirmation");
+    }
+    // Clear before CompleteProduction: ResetProduction_ emits OnProductionChanged which
+    // would also clear the flag, but Confirm must own the transition explicitly.
+    m_bPendingProductionAbandonConfirm = false;
+    return m_pProduction->CompleteProduction();
+}
+
+void BaseManager::DeferProductionAbandon()
+{
+    if (!m_bPendingProductionAbandonConfirm)
+    {
+        throw std::runtime_error(
+            "BaseManager::DeferProductionAbandon: no pending abandon confirmation");
+    }
+    m_bPendingProductionAbandonConfirm = false;
+    // Excess / invested minerals are lost; the item stays queued for a fresh stockpile.
+    m_pProduction->SetMineralStockpile(0);
+}
+
+bool BaseManager::WouldEmptyBaseOnProductionComplete_() const
+{
+    const IConstructable* pItem = m_pProduction->GetCurrentProduction();
+    if (!pItem)
+    {
+        return false;
+    }
+
+    const int size = m_pPopulation->GetSize();
+    if (const BuildingConfig_t* pBuilding = m_rBuildingRegistry.Find(pItem->GetId()))
+    {
+        return PredictInstantaneousPopulationSize(pBuilding->effects, size) <= 0;
+    }
+    if (const UnitDesign* pDesign = m_pFaction->GetMilitary().GetDesign(pItem->GetId()))
+    {
+        return PredictUnitProductionPopulationSize(*pDesign, size) <= 0;
+    }
+    return false;
 }
 
 int BaseManager::GetMineralCost() const

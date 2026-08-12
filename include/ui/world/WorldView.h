@@ -70,6 +70,11 @@ public:
     // ProcessInput and Render, so turn advance never runs on the paint path.
     void ProcessPendingAutoEndTurn() override;
 
+    // InteractionPresenter: camera focus and in-view modals for queue Front items.
+    void CenterOnTile(int tileX, int tileY);
+    void PushModal(std::unique_ptr<UIElement> pElement);
+    WindowLayout_t GetPopupLayout() const;
+
 private:
     void Update_();
     void SetSelectedUnit_(Unit* pUnit, bool bManualSelection);

@@ -511,20 +511,7 @@ int ApplyModifyPopulation(BaseManager& rBase, const ModifyPopulationEffect_t& rE
 {
     PopulationManager& rPops = rBase.GetPopulation();
     const int size = rPops.GetSize();
-
-    int delta = 0;
-    switch (rEffect.op)
-    {
-    case ModifierOp_t::Add:
-        delta = rEffect.amount;
-        break;
-    case ModifierOp_t::AddPercent:
-        delta = (size * rEffect.amount) / 100;
-        break;
-    case ModifierOp_t::MultiplyGeometric:
-        throw std::runtime_error(
-            "ApplyModifyPopulation: MultiplyGeometric is not supported");
-    }
+    const int delta = PredictModifyPopulationDelta(size, rEffect);
 
     if (delta < 0)
     {
@@ -550,6 +537,65 @@ int ApplyModifyPopulation(BaseManager& rBase, const ModifyPopulationEffect_t& rE
     }
 
     return 0;
+}
+
+int PredictModifyPopulationDelta(int size, const ModifyPopulationEffect_t& rEffect)
+{
+    int delta = 0;
+    switch (rEffect.op)
+    {
+    case ModifierOp_t::Add:
+        delta = rEffect.amount;
+        break;
+    case ModifierOp_t::AddPercent:
+        delta = (size * rEffect.amount) / 100;
+        break;
+    case ModifierOp_t::MultiplyGeometric:
+        throw std::runtime_error(
+            "PredictModifyPopulationDelta: MultiplyGeometric is not supported");
+    }
+
+    if (delta < 0)
+    {
+        const int toRemove = -delta;
+        const int canRemove = std::max(0, size - rEffect.minSize);
+        return -std::min(toRemove, canRemove);
+    }
+    return delta;
+}
+
+int PredictInstantaneousPopulationSize(std::span<const EffectConfig_t> rEffects, int size)
+{
+    int current = size;
+    for (const EffectConfig_t& rEffect : rEffects)
+    {
+        if (rEffect.persistence != EffectPersistence_t::Instantaneous)
+        {
+            continue;
+        }
+        const ModifyPopulationEffect_t* pModify =
+            std::get_if<ModifyPopulationEffect_t>(&rEffect.effect);
+        if (!pModify)
+        {
+            continue;
+        }
+        current += PredictModifyPopulationDelta(current, *pModify);
+    }
+    return current;
+}
+
+int PredictUnitProductionPopulationSize(const UnitDesign& rDesign, int size)
+{
+    int current = size;
+    for (const UnitComponentConfig_t* pComp : rDesign.GetComponents())
+    {
+        if (!pComp)
+        {
+            continue;
+        }
+        current = PredictInstantaneousPopulationSize(pComp->effects, current);
+    }
+    return current;
 }
 
 void DispatchInstantaneousEffects(std::span<const EffectConfig_t> rEffects, BaseManager& rBase,

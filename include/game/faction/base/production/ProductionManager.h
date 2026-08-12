@@ -26,9 +26,9 @@ public:
     // the threshold has accumulated. Switching *back* to the turn's original item is free;
     // switching on to a third item pays again. No turn original yet (null) — free to queue and
     // switch. Clearing production keeps the stockpile; re-queuing pays only once a turn
-    // original exists (ApplyProduction stamped one).
+    // original exists (BankProduction stamped one).
     //
-    // ApplyProduction marks the item in place at that moment as the turn's original, which is
+    // BankProduction marks the item in place at that moment as the turn's original, which is
     // the last thing to touch production before PlayerActions hands control to the player.
     //
     // The item is not validated against what this base may actually build — BaseManager owns
@@ -56,15 +56,17 @@ public:
     int GetMineralStockpile() const;
     void SetMineralStockpile(int amount);
 
-    // Apply minerals produced this turn: add to stockpile, complete if cost is met.
-    // rBaseEffects is forwarded to GetMineralCost. Returns the completed item id,
-    // or empty string if construction is ongoing.
+    // Add this turn's minerals to the stockpile without completing: BaseManager decides
+    // whether completion is allowed (abandon confirmation) and calls CompleteProduction.
     //
     // Also stamps m_pTurnOriginalItem from the item then queued (or clears it when empty).
     // Until that stamp exists, SetProduction does not retool — there is no "original" to
     // switch away from (fresh bases, including a founding mineral bank, stay free until
-    // the first ApplyProduction that banks with something queued).
-    std::string ApplyProduction(int minerals, const BaseEffects_t& rBaseEffects);
+    // the first BankProduction that banks with something queued).
+    void BankProduction(int minerals);
+
+    // True when something is queued and the stockpile meets its effective cost.
+    bool IsReadyToComplete(const BaseEffects_t& rBaseEffects) const;
 
     // Complete the current production immediately and return its id.
     std::string CompleteProduction();
@@ -77,8 +79,8 @@ public:
 
 private:
     // Charging the penalty: what this base was producing when the player got control this turn.
-    // Null means no turn original yet (new base / ApplyProduction with nothing queued) —
-    // retool does not apply until ApplyProduction stamps a non-null original.
+    // Null means no turn original yet (new base / BankProduction with nothing queued) —
+    // retool does not apply until BankProduction stamps a non-null original.
     const IConstructable* m_pTurnOriginalItem = nullptr;
     const ProductionConfig_t& m_rConfig;
     const IConstructable* m_pCurrentItem = nullptr;

@@ -151,6 +151,23 @@ int Faction::CountBuildings(const BuildingId_t& buildingId) const
     return total;
 }
 
+BaseManager* Faction::FindBase(BaseId_t baseId)
+{
+    return const_cast<BaseManager*>(static_cast<const Faction*>(this)->FindBase(baseId));
+}
+
+const BaseManager* Faction::FindBase(BaseId_t baseId) const
+{
+    for (const BaseManager& rBase : Bases())
+    {
+        if (rBase.GetBaseId() == baseId)
+        {
+            return &rBase;
+        }
+    }
+    return nullptr;
+}
+
 BaseManager* Faction::FindBaseWithBuilding(const BuildingId_t& buildingId)
 {
     return const_cast<BaseManager*>(

@@ -45,6 +45,7 @@
 #include "game/map/WorldGenerator.h"
 #include "ui/UIManager.h"
 #include "ui/ViewFactory.h"
+#include "ui/InteractionPresenter.h"
 #include "ui/style/UiStyle.h"
 #include <functional>
 #include <iostream>
@@ -110,6 +111,10 @@ void Engine::GameLoop_()
         // Between input and paint: consumes UI-queued turn-advance requests (WorldView auto
         // end-turn) so Advance never runs from the Render path.
         m_uiManager->Update();
+        if (m_interactionPresenter)
+        {
+            m_interactionPresenter->Update();
+        }
         m_uiManager->Render();
     }
 }
@@ -532,6 +537,7 @@ void Engine::InitializeUi_()
                 }));
         }
     );
+    WorldView& rWorldView = *pWorldView;
     m_uiManager->RegisterViewShortcut(Key_t::F2, [this, fullscreen]() -> std::unique_ptr<IGameView> {
         return m_viewFactory->CreateResearchView(fullscreen);
     });
@@ -548,6 +554,13 @@ void Engine::InitializeUi_()
         return m_viewFactory->CreateSatelliteView(fullscreen);
     });
     m_uiManager->SetWorldView(std::move(pWorldView));
+
+    m_interactionPresenter = std::make_unique<InteractionPresenter>(
+        *m_pGameState,
+        *m_uiManager,
+        *m_viewFactory,
+        rWorldView,
+        [this]() { ProcessTurn_(); });
 
     // Start processing until the first interactive yield.
     m_turnProcessor->Advance(*m_pGameState);

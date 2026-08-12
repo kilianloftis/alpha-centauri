@@ -41,13 +41,9 @@ StageResult_t Population::ExecuteImpl(GameState& rGameState, Faction& rFaction)
     // A base that starves to nothing is razed, through the same pathway conquest uses.
     for (const BaseId_t baseId : depopulated)
     {
-        for (BaseManager& rBase : rFaction.Bases())
+        if (BaseManager* pBase = rFaction.FindBase(baseId))
         {
-            if (rBase.GetBaseId() == baseId)
-            {
-                rGameState.RazeBase(rBase);
-                break;
-            }
+            rGameState.RazeBase(*pBase);
         }
     }
     return StageResult_t::Continue;

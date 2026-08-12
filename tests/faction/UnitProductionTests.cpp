@@ -6,23 +6,31 @@
 #include "game/Faction.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
+#include "game/HookContext.h"
+#include "game/TurnProcessor.h"
+#include "game/TurnStages.h"
 #include "game/faction/Military.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/production/ProductionManager.h"
+#include "game/faction/base/production/ProductionApplyResult.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
+#include "game/stages/BaseProduction.h"
+#include "game/PlayerInteraction.h"
+#include "game/PlayerInteractionQueue.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitSlotConfig.h"
 #include "game/effects/EffectEnums.h"
-#include "game/faction/base/population/PopulationManager.h"
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
 #include <memory>
+#include <ranges>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -59,6 +67,14 @@ std::unique_ptr<UnitDesign> MakeFixtureDesign_(FactionFixture& rFixtures,
     }
     return std::make_unique<UnitDesign>(slots, assigned);
 }
+
+class AlwaysYieldStage_ : public GlobalTurnStage
+{
+public:
+    using GlobalTurnStage::GlobalTurnStage;
+protected:
+    StageResult_t ExecuteImpl(GameState&) override { return StageResult_t::Yield; }
+};
 
 struct UnitProductionGame_
 {
@@ -154,13 +170,90 @@ TEST_CASE("Completing colony pod production decreases base population by 1",
     base.GetProduction().SetProduction(&rPod);
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
 
-    CHECK(base.ApplyProduction() == rPod.GetId());
+    const ProductionApplyResult_t applied = base.ApplyProduction();
+    CHECK(applied.kind == ProductionApplyKind_t::Completed);
+    CHECK(applied.completedId == rPod.GetId());
     CHECK(base.GetPopulation().GetSize() == 2);
 
     const std::vector<Unit*>& onTile =
         game.pState->GetWorldMap().GetUnitPositions().GetUnitsOnTile(base.GetTile());
     REQUIRE(onTile.size() == 1);
     CHECK(onTile.front()->GetFlag(RuleFlagId_t::FoundBase));
+}
+
+TEST_CASE("Colony pod that would empty the base opens abandon confirmation",
+          "[production][unit][population][abandon]")
+{
+    UnitProductionGame_ game;
+    BaseManager& base = game.MakeBase(4, 4);
+    while (base.GetPopulation().GetSize() > 1)
+    {
+        base.GetPopulation().RemovePop();
+    }
+    REQUIRE(base.GetPopulation().GetSize() == 1);
+
+    const UnitDesign& rPod =
+        game.AddDesign({"test_chassis", "test_colony_pod", "test_armor"});
+    base.GetProduction().SetProduction(&rPod);
+    base.GetProduction().SetMineralStockpile(base.GetMineralCost());
+
+    const ProductionApplyResult_t applied = base.ApplyProduction();
+    CHECK(applied.kind == ProductionApplyKind_t::AwaitingAbandonConfirm);
+    CHECK(base.HasPendingProductionAbandonConfirm());
+    CHECK(base.GetPopulation().GetSize() == 1);
+    CHECK(base.GetProduction().HasProduction());
+    CHECK(base.GetProduction().GetMineralStockpile() >= base.GetMineralCost());
+    CHECK(game.pFaction->GetUnitManager().Units().empty());
+}
+
+TEST_CASE("ConfirmProductionAbandon completes the unit and empties the base",
+          "[production][unit][population][abandon]")
+{
+    UnitProductionGame_ game;
+    BaseManager& base = game.MakeBase(4, 4);
+    while (base.GetPopulation().GetSize() > 1)
+    {
+        base.GetPopulation().RemovePop();
+    }
+
+    const UnitDesign& rPod =
+        game.AddDesign({"test_chassis", "test_colony_pod", "test_armor"});
+    base.GetProduction().SetProduction(&rPod);
+    base.GetProduction().SetMineralStockpile(base.GetMineralCost());
+    REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::AwaitingAbandonConfirm);
+    REQUIRE(base.HasPendingProductionAbandonConfirm());
+
+    CHECK(base.ConfirmProductionAbandon() == rPod.GetId());
+    CHECK_FALSE(base.HasPendingProductionAbandonConfirm());
+    CHECK(base.GetPopulation().GetSize() == 0);
+    CHECK_FALSE(base.GetProduction().HasProduction());
+    CHECK(std::ranges::distance(game.pFaction->GetUnitManager().Units()) == 1);
+}
+
+TEST_CASE("DeferProductionAbandon keeps the base and loses minerals",
+          "[production][unit][population][abandon]")
+{
+    UnitProductionGame_ game;
+    BaseManager& base = game.MakeBase(4, 4);
+    while (base.GetPopulation().GetSize() > 1)
+    {
+        base.GetPopulation().RemovePop();
+    }
+
+    const UnitDesign& rPod =
+        game.AddDesign({"test_chassis", "test_colony_pod", "test_armor"});
+    base.GetProduction().SetProduction(&rPod);
+    base.GetProduction().SetMineralStockpile(base.GetMineralCost() + 5);
+    REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::AwaitingAbandonConfirm);
+    REQUIRE(base.HasPendingProductionAbandonConfirm());
+
+    base.DeferProductionAbandon();
+    CHECK_FALSE(base.HasPendingProductionAbandonConfirm());
+    CHECK(base.GetPopulation().GetSize() == 1);
+    CHECK(base.GetProduction().HasProduction());
+    CHECK(base.GetProduction().GetCurrentProduction() == &rPod);
+    CHECK(base.GetProduction().GetMineralStockpile() == 0);
+    CHECK(game.pFaction->GetUnitManager().Units().empty());
 }
 
 TEST_CASE("CreateUnit without production does not apply Instantaneous component effects",
@@ -179,6 +272,103 @@ TEST_CASE("CreateUnit without production does not apply Instantaneous component 
     CHECK(base.GetPopulation().GetSize() == 3);
 }
 
+TEST_CASE("BaseProduction yields for player abandon confirm and resumes after defer",
+          "[production][BaseProduction][abandon]")
+{
+    UnitProductionGame_ game;
+    BaseManager& base = game.MakeBase(4, 4);
+    while (base.GetPopulation().GetSize() > 1)
+    {
+        base.GetPopulation().RemovePop();
+    }
+
+    const UnitDesign& rPod =
+        game.AddDesign({"test_chassis", "test_colony_pod", "test_armor"});
+    base.GetProduction().SetProduction(&rPod);
+    base.GetProduction().SetMineralStockpile(base.GetMineralCost());
+
+    PerFactionTurnStageRegistry_t perFaction;
+    perFaction["BaseProduction"] = std::make_unique<BaseProduction>(HookContext{});
+    GlobalTurnStageRegistry_t global;
+    global["Stop"] = std::make_unique<AlwaysYieldStage_>(HookContext{});
+    TurnProcessor processor(std::move(global), std::move(perFaction),
+                            {"BaseProduction", "Stop"});
+
+    processor.Advance(*game.pState);
+    CHECK(base.HasPendingProductionAbandonConfirm());
+    CHECK(base.GetPopulation().GetSize() == 1);
+    REQUIRE(game.pState->GetPlayerInteractions().Front());
+    CHECK(std::holds_alternative<ProductionAbandonInteraction_t>(
+        game.pState->GetPlayerInteractions().Front()->payload));
+
+    base.DeferProductionAbandon();
+    game.pState->GetPlayerInteractions().CompleteFront();
+    processor.Advance(*game.pState);
+
+    CHECK_FALSE(base.HasPendingProductionAbandonConfirm());
+    CHECK(game.pState->GetPlayerInteractions().Empty());
+    CHECK(base.GetPopulation().GetSize() == 1);
+    CHECK(base.GetProduction().GetMineralStockpile() == 0);
+    CHECK(base.GetProduction().HasProduction());
+}
+
+TEST_CASE("BaseProduction AI auto-defers abandon without yielding",
+          "[production][BaseProduction][abandon]")
+{
+    UnitProductionGame_ game;
+    // pOther is not player-controlled.
+    BaseManager& base = game.MakeBase(*game.pOther, 4, 4);
+    while (base.GetPopulation().GetSize() > 1)
+    {
+        base.GetPopulation().RemovePop();
+    }
+
+    const UnitDesign& rPod =
+        game.AddDesign(*game.pOther, {"test_chassis", "test_colony_pod", "test_armor"});
+    base.GetProduction().SetProduction(&rPod);
+    base.GetProduction().SetMineralStockpile(base.GetMineralCost());
+
+    BaseProduction stage(HookContext{});
+    CHECK(stage.Execute(*game.pState, *game.pOther) == StageResult_t::Continue);
+    CHECK_FALSE(base.HasPendingProductionAbandonConfirm());
+    CHECK(base.GetPopulation().GetSize() == 1);
+    CHECK(base.GetProduction().GetMineralStockpile() == 0);
+    CHECK(game.pOther->GetUnitManager().Units().empty());
+}
+
+TEST_CASE("BaseProduction enqueues notice then idle after empty-queue completion",
+          "[production][BaseProduction][PlayerInteraction]")
+{
+    UnitProductionGame_ game;
+    BaseManager& base = game.MakeBase(4, 4);
+    const UnitDesign& rDesign =
+        game.AddDesign({"test_chassis", "test_weapon", "test_armor"});
+    base.GetProduction().SetProduction(&rDesign);
+    base.GetProduction().SetMineralStockpile(base.GetMineralCost());
+
+    PerFactionTurnStageRegistry_t perFaction;
+    perFaction["BaseProduction"] = std::make_unique<BaseProduction>(HookContext{});
+    GlobalTurnStageRegistry_t global;
+    global["Stop"] = std::make_unique<AlwaysYieldStage_>(HookContext{});
+    TurnProcessor processor(std::move(global), std::move(perFaction),
+                            {"BaseProduction", "Stop"});
+
+    processor.Advance(*game.pState);
+
+    REQUIRE(game.pState->GetPlayerInteractions().Size() == 2);
+    CHECK(std::holds_alternative<NoticeInteraction_t>(
+        game.pState->GetPlayerInteractions().Front()->payload));
+    game.pState->GetPlayerInteractions().CompleteFront();
+    REQUIRE(game.pState->GetPlayerInteractions().Front());
+    CHECK(std::holds_alternative<ProductionIdleInteraction_t>(
+        game.pState->GetPlayerInteractions().Front()->payload));
+
+    game.pState->GetPlayerInteractions().CompleteFront();
+    processor.Advance(*game.pState);
+    CHECK(game.pState->GetPlayerInteractions().Empty());
+    CHECK_FALSE(base.GetProduction().HasProduction());
+}
+
 TEST_CASE("Completing unit production places the unit on the base tile", "[production][unit]")
 {
     UnitProductionGame_ game;
@@ -192,7 +382,9 @@ TEST_CASE("Completing unit production places the unit on the base tile", "[produ
     REQUIRE(base.GetMineralCost() >= 1);
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
 
-    CHECK(base.ApplyProduction() == rDesign.GetId());
+    const ProductionApplyResult_t applied = base.ApplyProduction();
+    CHECK(applied.kind == ProductionApplyKind_t::Completed);
+    CHECK(applied.completedId == rDesign.GetId());
     CHECK_FALSE(base.GetProduction().HasProduction());
 
     const std::vector<Unit*>& onTile =

@@ -9,6 +9,7 @@
 #include "game/map/WorldMap.h"
 #include "game/orbital/OrbitalAttack.h"
 #include "game/orbital/OrbitalCensus.h"
+#include "game/PlayerInteractionQueue.h"
 #include "game/units/MoraleCalculator.h"
 #include "game/units/MoveCostCalculator.h"
 #include "game/units/StepEvaluator.h"
@@ -86,6 +87,11 @@ public:
 
     EventBus& GetEventBus();
     const EventBus& GetEventBus() const;
+
+    // Mid-turn player notices / choices / open-view requests. Stages Enqueue and Yield;
+    // InteractionPresenter presents Front and CompleteFront after resolution.
+    PlayerInteractionQueue& GetPlayerInteractions();
+    const PlayerInteractionQueue& GetPlayerInteractions() const;
 
     // Factions. Registration only: the faction is already valid when it arrives (world map and
     // settings are constructor dependencies). This adds the session wiring that must close over
@@ -206,6 +212,7 @@ private:
     const MoraleCalculator& m_rMorale;
     Signal<>::ScopedConnection m_visibilitySettingsChanged;
     std::unique_ptr<EventBus> m_pEventBus;
+    PlayerInteractionQueue m_playerInteractions;
     // WorldMap and TileEffectsContext are declared before m_factions so they outlive all
     // BaseManagers (which hold TileEffectsContext& references). Members are destroyed in
     // reverse declaration order, so m_factions is destroyed before these two.

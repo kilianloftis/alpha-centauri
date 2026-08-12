@@ -130,12 +130,20 @@ the **same** stage (and, for per-faction stages, the **same** faction until that
 `Continue`s). UI / Engine must not assume turns are atomic — overlays and player input may
 sit between `Advance` calls (see UI modal gating; package 2).
 
+Mid-stage player prompts (production abandon, tech notices, …) use the
+[player interaction queue](player-interaction-system.md): stages `Enqueue` + `Yield` when
+`HasPendingFor` the player; `InteractionPresenter` maps `Front` to Notice / OpenView and
+calls `CompleteFront` then `ProcessTurn_` after resolution.
+`YieldingPerFactionTurnStage` shares faction-bind, `PlayerHasPending_` and
+`EnqueueForPlayer_` for `BaseProduction` and `PlayerActions` (entity loops stay separate).
+
 `PlayerActions` for a player faction:
 
-1. First enter of a pass → `Yield` (`AwaitingInteraction`) so the player can issue orders.
-2. Resume (End Turn) → resolve pending multi-turn orders; if a unit still needs orders →
+1. Queued player interactions `Yield` first, in either phase (`PlayerHasPending_`).
+2. First enter of a pass → `Yield` (`AwaitingInteraction`) so the player can issue orders.
+3. Resume (End Turn) → resolve pending multi-turn orders; if a unit still needs orders →
    `Yield` again without re-executing units already advanced this pass.
-3. When the faction pass `Continue`s (or the stage exits), phase and the advanced-unit set
+4. When the faction pass `Continue`s (or the stage exits), phase and the advanced-unit set
    reset so a later player still gets the interaction gate.
 
 ### TurnProcessor (`TurnProcessor.{h,cpp}`)

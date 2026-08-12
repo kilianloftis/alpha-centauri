@@ -15,14 +15,13 @@ namespace ac
 namespace { TurnStageRegistrar<PlayerActions> g_registrar("PlayerActions"); }
 
 PlayerActions::PlayerActions(HookContext hookContext)
-    : PerFactionTurnStage(std::move(hookContext))
+    : YieldingPerFactionTurnStage(std::move(hookContext))
 {
 }
 
-void PlayerActions::ResetPassState_()
+void PlayerActions::OnResetPassState_()
 {
     m_phase = Phase_t::AwaitingInteraction;
-    m_activeFactionId.reset();
     m_advancedUnitIds.clear();
 }
 
@@ -38,15 +37,16 @@ bool PlayerActions::DoesUnitRequireOrders_(const Unit& rUnit)
 
 StageResult_t PlayerActions::ExecuteImpl(GameState& rGameState, Faction& rFaction)
 {
-    const FactionId_t factionId = rFaction.GetFactionId();
-    if (m_activeFactionId.has_value() && *m_activeFactionId != factionId)
-    {
-        // Prior pass abandoned (e.g. resume faction eliminated while yielded).
-        ResetPassState_();
-    }
-    m_activeFactionId = factionId;
+    EnsureActiveFaction_(rFaction);
 
     const bool bPlayer = rFaction.IsPlayerControlled();
+
+    // Queued interactions come first, in either phase: the player answers them before being
+    // handed the orders phase, and before any order resolves on the way out.
+    if (bPlayer && PlayerHasPending_(rGameState))
+    {
+        return StageResult_t::Yield;
+    }
 
     if (bPlayer && m_phase == Phase_t::AwaitingInteraction)
     {

@@ -60,6 +60,7 @@ add_library(ac-core STATIC
     lib/LuaRuntime.cpp
     lib/config/ConfigFields.cpp
     game/EventBridge.cpp
+    game/PlayerInteractionQueue.cpp
     game/effects/ActiveEffect.cpp
     game/effects/EffectConfigParser.cpp
     game/effects/InfiltrationRules.cpp
@@ -150,6 +151,7 @@ endif()
 # drop them at link time and every stage would fall through to Custom*TurnStage.
 # An OBJECT library is always pulled into the final link, so the registrars run.
 add_library(ac-turn-stages OBJECT
+    game/stages/YieldingPerFactionTurnStage.cpp
     game/stages/TurnStart.cpp
     game/stages/ResourceCollection.cpp
     game/stages/IncomeCollection.cpp
@@ -255,6 +257,7 @@ add_library(ac-ui STATIC
     ui/TileRenderer.cpp
     ui/UIManager.cpp
     ui/ViewFactory.cpp
+    ui/InteractionPresenter.cpp
     ui/style/UiStyle.cpp
     ui/world/WorldView.cpp
     ui/ListSelectorPopup.cpp

@@ -82,6 +82,7 @@ add_executable(effects-tests
     game/SampleModTests.cpp
     game/TurnProcessorTests.cpp
     game/TurnStageConfigTests.cpp
+    game/PlayerInteractionQueueTests.cpp
     game/PlayerActionsStageTests.cpp
     game/GameSettingsTests.cpp
     game/RequiredTechValidatorTests.cpp

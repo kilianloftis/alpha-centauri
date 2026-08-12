@@ -15,6 +15,8 @@
 #include "game/faction/FactionExploredMap.h"
 #include "game/faction/UnitVisibility.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/production/ProductionManager.h"
+#include "game/IConstructable.h"
 #include "game/faction/EconomyManager.h"
 #include "game/faction/ResearchManager.h"
 #include "game/faction/UnitManager.h"
@@ -33,6 +35,7 @@
 #include <magic_enum.hpp>
 #include <string>
 #include <memory>
+#include <stdexcept>
 
 namespace ac
 {
@@ -175,6 +178,26 @@ bool WorldView::PlayerUnitsNeedOrders_() const
         return false;
     }
     return pPlayer->GetUnitManager().HasUnitsRequiringOrders();
+}
+
+void WorldView::CenterOnTile(int tileX, int tileY)
+{
+    m_pCameraInputController->CenterOnTile(tileX, tileY);
+}
+
+void WorldView::PushModal(std::unique_ptr<UIElement> pElement)
+{
+    if (!pElement)
+    {
+        throw std::invalid_argument("WorldView::PushModal was given no element");
+    }
+    DismissOpenModals_();
+    m_elements.push_back(std::move(pElement));
+}
+
+WindowLayout_t WorldView::GetPopupLayout() const
+{
+    return ResolveLayout(m_layout, Style().layouts.popupSmall);
 }
 
 bool WorldView::UnitRequiresOrders_(const Unit& rUnit)

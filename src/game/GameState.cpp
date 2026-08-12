@@ -131,6 +131,16 @@ const EventBus& GameState::GetEventBus() const
     return *m_pEventBus;
 }
 
+PlayerInteractionQueue& GameState::GetPlayerInteractions()
+{
+    return m_playerInteractions;
+}
+
+const PlayerInteractionQueue& GameState::GetPlayerInteractions() const
+{
+    return m_playerInteractions;
+}
+
 uint64_t GameState::GetWorldCompositionStamp(const Faction& rFor) const
 {
     // Mix peer local-pool versions and council revision. Using local versions (not composed)

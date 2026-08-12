@@ -4,6 +4,7 @@
 #include "game/buildings/BuildingConfig.h"
 #include "game/buildings/BuildingUpkeep.h"
 #include "game/faction/base/BaseTypes.h"
+#include "game/faction/base/production/ProductionApplyResult.h"
 #include "game/faction/base/production/ProductionConfigParser.h"
 #include "game/faction/base/HomeBaseIndex.h"
 #include "game/map/WorkedTileIndex.h"
@@ -159,9 +160,22 @@ public:
     const ProductionManager& GetProduction() const;
 
     // Collect minerals from ResourceManager and apply to production this turn.
-    // Completes construction if the stockpile meets the cost.
-    // Returns the completed item id, or empty string if construction is ongoing.
-    std::string ApplyProduction();
+    // Completes construction if the stockpile meets the cost — unless completing would leave
+    // the base at size <= 0, in which case kind is AwaitingAbandonConfirm until
+    // ConfirmProductionAbandon or DeferProductionAbandon.
+    ProductionApplyResult_t ApplyProduction();
+
+    // True when ApplyProduction returned AwaitingAbandonConfirm and the player has not yet
+    // Confirm'd or Defer'd.
+    bool HasPendingProductionAbandonConfirm() const;
+
+    // Complete the pending item (unit/building Instantaneous effects may raze via size 0).
+    // Throws if nothing is pending. Returns the completed item id.
+    std::string ConfirmProductionAbandon();
+
+    // Keep the queued item, set mineral stockpile to 0 (progress / excess lost). Throws if
+    // nothing is pending.
+    void DeferProductionAbandon();
 
     // Effective mineral cost of the current production item after CostMultiplier effects
     // (e.g. Industry social-rating levels expanded into the base effect list).
@@ -280,6 +294,12 @@ private:
     std::unique_ptr<ResourceManager> m_pResources;
     std::unique_ptr<ProductionManager> m_pProduction;
     std::string m_name;
+
+    // Set when ApplyProduction is ready to finish an item that would leave size <= 0.
+    // Cleared by ConfirmProductionAbandon / DeferProductionAbandon, or when production changes.
+    bool m_bPendingProductionAbandonConfirm = false;
+
+    bool WouldEmptyBaseOnProductionComplete_() const;
 
     // Memoized BuildBaseEffects_ result, keyed on the provider's pool version
     // (empty = never built).

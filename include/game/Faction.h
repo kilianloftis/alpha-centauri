@@ -126,6 +126,10 @@ public:
     auto Bases() const { return DerefView(m_bases); }
     size_t GetBaseCount() const { return m_bases.size(); }
 
+    // Base with this id, or nullptr.
+    BaseManager* FindBase(BaseId_t baseId);
+    const BaseManager* FindBase(BaseId_t baseId) const;
+
     // Fired at the end of AddBase for every insertion — founding, load, and post-transfer
     // adopt alike. The single hook EventBridge wires from (see EventBridge::WireBase);
     // conquest/probe/diplomacy callers do not need to remember to wire anything themselves.
