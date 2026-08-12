@@ -76,6 +76,22 @@ TEST_CASE("Clicking a row reports its index", "[ui][selector]")
     CHECK(popup.ShouldClose());
 }
 
+TEST_CASE("The popup is already closing when the handler runs", "[ui][selector]")
+{
+    // A handler may resume turn processing, and IGameView::HasModalElement / CanAdvanceTurn
+    // count a modal that is not yet closing as a reason to refuse Advance. Selecting first and
+    // closing after left such a handler's advance silently dropped.
+    const ListSelectorPopupStyle_t style = Style_();
+    bool bClosingDuringHandler = false;
+    const ListSelectorPopup* pPopup = nullptr;
+    ListSelectorPopup popup("Title", "Empty", Rows_(3), k_Layout,
+                            [&](size_t) { bClosingDuringHandler = pPopup->ShouldClose(); }, style);
+    pPopup = &popup;
+
+    popup.HandleMouseClick(ClickAt_(5, 25));
+    CHECK(bClosingDuringHandler);
+}
+
 TEST_CASE("A click outside the popup dismisses it without selecting", "[ui][selector]")
 {
     // Modal routing delivers outside presses to the modal itself. Only one of the six copies

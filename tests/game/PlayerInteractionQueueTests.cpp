@@ -4,6 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <variant>
 
@@ -39,4 +40,13 @@ TEST_CASE("PlayerInteractionQueue is FIFO and reports pending for audience",
     queue.CompleteFront();
     CHECK(queue.Empty());
     CHECK_FALSE(queue.HasPendingFor(1));
+}
+
+TEST_CASE("Completing nothing is a programmer error, not a silent no-op",
+          "[PlayerInteraction][queue]")
+{
+    // A no-op would let a double-complete drop the *next* player's prompt instead, which
+    // strands turn processing on a stage that is still yielding for it.
+    PlayerInteractionQueue queue;
+    CHECK_THROWS_AS(queue.CompleteFront(), std::runtime_error);
 }
