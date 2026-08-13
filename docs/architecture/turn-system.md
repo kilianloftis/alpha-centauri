@@ -37,6 +37,8 @@ graph TB
 
     subgraph "Built-in Per-Faction Stages"
         ResourceCollection[ResourceCollection]
+        UnitSupport[UnitSupport]
+        SurplusConversion[SurplusConversion]
         IncomeCollection[IncomeCollection]
         ResearchAccumulation[ResearchAccumulation]
         Upkeep[Upkeep]
@@ -85,6 +87,8 @@ graph TB
     GlobalTurnStage --> Save
     GlobalTurnStage --> CustomGlobalTurnStage
     PerFactionTurnStage --> ResourceCollection
+    PerFactionTurnStage --> UnitSupport
+    PerFactionTurnStage --> SurplusConversion
     PerFactionTurnStage --> IncomeCollection
     PerFactionTurnStage --> ResearchAccumulation
     PerFactionTurnStage --> Upkeep
@@ -179,9 +183,22 @@ calls `CompleteFront` then `ProcessTurn_` after resolution.
   private year×area seed).
 - **`Population`**: growth, composition recalculation, then
   `CheckRiotEndOfTurn` / `CheckGoldenAgeEndOfTurn` per base.
-- **`ResourceCollection`**: `ProduceBaseResources`, then mineral support, then surplus
-  conversion (stockpile leftover / waste) so income and research see those credits this turn.
-- **`Upkeep`**: facility energy upkeep (after income). Mineral support is not here.
+- **`ResourceCollection`**: `ProduceBaseResources` only.
+- **`UnitSupport`**: `ApplyMineralSupport` — home-unit support charged against the mineral
+  bank ResourceCollection just filled; surplus units disband.
+- **`SurplusConversion`**: `ConvertSurplusMinerals` — whatever support left goes through the
+  base's queued stockpile item (or is wasted when none is available). Ordered before
+  `IncomeCollection` / `ResearchAccumulation` so converted econ and labs are spent this turn.
+- **`Upkeep`**: deploy-record pruning and facility energy upkeep (after income).
+
+  The three mineral phases are separate stages rather than one because the ordering is a
+  game rule, and `turn_stages.json` is where turn order is expressed and where a mod can
+  change it. Exactly one stage drains the mineral bank per turn: `SurplusConversion` for
+  stockpile and empty queues, `BaseProduction` for real build items. `ApplyProduction` must
+  not convert on the stockpile path even when it finds a non-empty bank — conversion is only
+  correct before `IncomeCollection` / `ResearchAccumulation`. The bank accumulates across
+  turns (`ResourceManager::ProduceMinerals_`), so minerals left standing convert next turn at
+  the right stage rather than being lost.
 - **`PlayerActions`**: interactive yield + idempotent order resolution (above).
 
 ### Configuration (`config/turn_stages.json`)

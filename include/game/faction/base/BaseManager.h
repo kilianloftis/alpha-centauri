@@ -198,14 +198,17 @@ public:
     void ProduceResources();
 
     // Charge home-unit mineral support against this turn's mineral bank; disband if short.
-    // Called once per turn per base during ResourceCollection (via Faction::ApplyMineralSupport),
+    // Called once per turn per base during UnitSupport (via Faction::ApplyMineralSupport),
     // after ProduceResources and before ConvertSurplusMinerals.
     void ApplyMineralSupport();
 
     // After support: if the queue is a stockpile (or the empty-queue fallback), convert the
     // remaining mineral bank via MineralsConverted effects and credit outputs. If nothing is
     // queued and no stockpile is available, waste the remainder. A real build item leaves
-    // the bank for ApplyProduction. Called from ResourceCollection after mineral support.
+    // the bank for ApplyProduction. Called from the SurplusConversion stage, which is the
+    // only place stockpile conversion may happen: it is ordered before IncomeCollection /
+    // ResearchAccumulation, and converting anywhere later would credit econ and labs after
+    // those stages had drained them.
     void ConvertSurplusMinerals();
 
     // Constructed-facility energy upkeep for this base (FacilityEnergyUpkeep mods applied).

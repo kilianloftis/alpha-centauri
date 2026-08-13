@@ -437,7 +437,9 @@ ProductionApplyResult_t BaseManager::ApplyProduction()
     EnsureFallbackProduction_();
     if (!m_pProduction->HasProduction())
     {
-        // Surplus conversion already wasted the bank when no stockpile was available.
+        // No queue and no stockpile to fall back on: the minerals are wasted. Usually
+        // already drained by SurplusConversion; draining again keeps the bank empty on
+        // every path out of this function.
         m_pResources->ConsumeMinerals();
         return ProductionApplyResult_t{ProductionApplyKind_t::Idle, {}};
     }
@@ -445,9 +447,13 @@ ProductionApplyResult_t BaseManager::ApplyProduction()
     const IConstructable* pItem = m_pProduction->GetCurrentProduction();
     if (pItem && pItem->NeverCompletes())
     {
-        // Surplus minerals were converted (or wasted) in ConvertSurplusMinerals. Stamp the
-        // turn without banking: an existing production stockpile (founding minerals, leftover
-        // from a previous item) is left untouched.
+        // Deliberately does not convert: SurplusConversion owns that, and it runs before
+        // IncomeCollection / ResearchAccumulation. Converting here instead would credit econ
+        // and labs after those stages had already drained them. A bank still standing at this
+        // point (queue switched onto a stockpile after SurplusConversion ran) is left alone —
+        // ResourceManager accumulates, so those minerals convert next turn at the right stage.
+        // Stamp the turn without banking: an existing production stockpile (founding
+        // minerals, leftover from a previous item) is left untouched.
         m_pProduction->BankProduction(0);
         return ProductionApplyResult_t{ProductionApplyKind_t::InProgress, {}};
     }

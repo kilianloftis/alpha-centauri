@@ -2,7 +2,9 @@ Turn start
 New year begins
 Resource collection
 - Nutrients, minerals, energy tallied per base
+Unit support
 - Unit mineral support (charged against this turn's mineral bank; surplus units disbanded)
+Surplus conversion
 - Leftover minerals convert if a stockpile is queued (else left for production, or wasted)
 Income collection
 - Econ stockpile transferred to the faction energy pool

@@ -42,6 +42,28 @@ TEST_CASE("TurnStageConfigParser loads default turn_stages.json", "[TurnStageCon
     }
 }
 
+// Every stock stage id must resolve to a registered creator of the matching kind. Without
+// this, a typo or a wrong repeatForEachFaction flag in turn_stages.json only fails at
+// startup: the parser accepts unknown ids as mod stages, so parsing alone proves nothing.
+TEST_CASE("Every stock turn stage id resolves to a built-in creator", "[TurnStageConfig]")
+{
+    TurnStageFactory factory;
+    factory.LoadConfig(StockTurnStagesPath_());
+    const TurnStageRegistries_t registries = factory.CreateStages();
+
+    const size_t created = registries.global.size() + registries.perFaction.size();
+    CHECK(created == factory.GetStageConfigs().size());
+
+    for (const auto& rStage : factory.GetStageConfigs())
+    {
+        const bool bGlobal = registries.global.contains(rStage.id);
+        const bool bPerFaction = registries.perFaction.contains(rStage.id);
+        INFO("stage id: " << rStage.id);
+        CHECK(bGlobal != bPerFaction);
+        CHECK(bPerFaction == rStage.bRepeatForEachFaction);
+    }
+}
+
 TEST_CASE("TurnStageConfigParser rejects scriptPath hooks", "[TurnStageConfig]")
 {
     const std::string path = WriteTempJson_(R"([

@@ -192,11 +192,13 @@ public:
     void ProduceBaseResources();
 
     // Charge mineral support at every base (home units vs this turn's mineral bank).
-    // Called from ResourceCollection after ProduceBaseResources and before ConvertSurplusMinerals.
+    // Called from the UnitSupport stage, after ResourceCollection has banked minerals and
+    // before SurplusConversion claims what is left.
     void ApplyMineralSupport();
 
-    // Convert leftover minerals at every base (stockpile recipe or waste). Called from
-    // ResourceCollection after ApplyMineralSupport so income / research / growth see credits
+    // Convert leftover minerals at every base (stockpile recipe or waste). Called from the
+    // SurplusConversion stage, which turn_stages.json orders after UnitSupport and before
+    // IncomeCollection / ResearchAccumulation so income / research / growth see the credits
     // this turn.
     void ConvertSurplusMinerals();
 
