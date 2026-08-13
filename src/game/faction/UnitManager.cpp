@@ -63,6 +63,8 @@ Unit& UnitManager::CreateUnit(UnitId_t unitId, const UnitDesign& rDesign,
                                         m_rMorale, pProducedAt);
     Unit& rUnit = *pUnit;
     m_units.push_back(std::move(pUnit));
+    // After construction: the unit latches Military::IsPrototype in its constructor, and this
+    // is what makes the next one of the same design ordinary.
     m_rFaction.GetMilitary().RecordBuiltComponents(rDesign);
     m_revision.Bump();
     m_rFaction.RebuildVisibility();

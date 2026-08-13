@@ -319,8 +319,9 @@ struct UnitFilterHasFlag_t
     RuleFlagId_t flag = RuleFlagId_t::Flight;
 };
 
-// True while this unit's design still has a component the faction has never fielded.
-// Evaluated at CollectLiveUnitEffects time (before RecordBuiltComponents on a fresh spawn).
+// True when the unit was created carrying a component its faction had never fielded.
+// Reads Unit::IsPrototype, latched at construction, so it stays a context-free identity
+// predicate like the filters above rather than a live read of the faction's build ledger.
 struct UnitFilterIsPrototype_t
 {
 };

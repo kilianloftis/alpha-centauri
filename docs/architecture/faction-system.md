@@ -201,7 +201,19 @@ Caller contract: the faction must have been constructed against the session's `W
 - **Implementation**: See `docs/architecture/economy-system.md`.
 
 ### Military
-- **Purpose**: Holds the faction's **unit designs**. That is all it does.
+- **Purpose**: Holds the faction's **unit designs** and the **built-component ledger** backing
+  prototypes.
+- **Prototype ledger**: `RecordBuiltComponents` marks every filled component of a design as
+  fielded; `UnitManager::CreateUnit` calls it for *every* unit the faction gains, so starting
+  units, produced units and conquest spawns all share one ledger. `IsPrototype(design)` is true
+  while any filled component is still unfielded — several unknown components on one design are
+  still a single prototype.
+- **Two consumers, one question**: `BaseManager::IsCurrentProductionPrototype_` asks it for the
+  mineral surcharge (`production.json` `prototype_surcharge_percent`), and `Unit`'s constructor
+  asks it once and latches the answer into `Unit::IsPrototype()`, which the `IsPrototype`
+  `UnitFilter_t` reads. The latch is what keeps the filter a context-free identity predicate:
+  the ledger keeps moving as the faction builds, but a unit's prototype status is fixed at
+  construction.
 - **Not here**: live units belong to `UnitManager` (which creates and destroys them and owns the
   `Unit` objects); bases belong to `Faction::m_bases`. There is no `UnitFactory`.
 

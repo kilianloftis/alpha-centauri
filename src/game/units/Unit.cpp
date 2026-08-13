@@ -1,6 +1,7 @@
 #include "game/units/Unit.h"
 
 #include "game/Faction.h"
+#include "game/faction/Military.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
@@ -46,6 +47,13 @@ Unit::Unit(UnitId_t unitId,
     , m_currentFuel(0)
     , m_moveFragmentsRemaining(0)
     , m_xp(0)
+    // Latched before UnitManager records the design, so the StartingExperience resolve below
+    // and every later IsPrototype() read see the same answer.
+    // TODO: units the faction never paid for (Engine's starting units, BaseConquestEffects
+    // escape pods) latch true here and collect the prototype StartingExperience for free.
+    // Whether the bonus is meant to be "first of its kind" or "first one you built" is a
+    // rules decision that is not recorded anywhere.
+    , m_bPrototype(rFaction.GetMilitary().IsPrototype(rDesign))
     , m_bRegistered(false)
 {
     if (pHomeBase)
@@ -223,6 +231,7 @@ int Unit::GetMineralUpkeep() const
 }
 int Unit::GetMoveFragmentsRemaining() const { return m_moveFragmentsRemaining; }
 int Unit::GetXp() const                     { return m_xp; }
+bool Unit::IsPrototype() const              { return m_bPrototype; }
 
 // Current stats are clamped to [0, live max] so the invariant 0 <= current <= max holds
 // regardless of caller arithmetic (overkill damage, refuel past capacity, ...). The maxima

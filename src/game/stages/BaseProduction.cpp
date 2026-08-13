@@ -26,7 +26,6 @@ BaseProduction::BaseProduction(HookContext hookContext)
 void BaseProduction::OnResetPassState_()
 {
     m_processedBaseIds.clear();
-    m_awaitingBaseId.reset();
 }
 
 void BaseProduction::OnExitImpl()
@@ -51,7 +50,6 @@ StageResult_t BaseProduction::HandleAbandonConfirm_(GameState& rGameState, Facti
 
     EnqueueForPlayer_(rGameState,
                       ProductionAbandonInteraction_t{rFaction.GetFactionId(), rBase.GetBaseId()});
-    m_awaitingBaseId = rBase.GetBaseId();
     std::cout << "  Base '" << rBase.GetName()
               << "' awaiting abandon confirmation for production\n";
     return StageResult_t::Yield;
@@ -82,7 +80,6 @@ StageResult_t BaseProduction::HandleProductionCompleted_(GameState& rGameState, 
             rResult.completedName.empty() ? rResult.completedId : rResult.completedName,
             rResult.completedEvent,
         });
-    m_awaitingBaseId = rBase.GetBaseId();
     return StageResult_t::Yield;
 }
 
@@ -169,16 +166,19 @@ StageResult_t BaseProduction::ProcessBase_(GameState& rGameState, Faction& rFact
     const ProductionApplyResult_t result = rBase.ApplyProduction();
     LogProductionTick_(rBase, result);
 
-    HandleApplyResult_(rGameState, rFaction, rBase, result);
-    if (result.kind == ProductionApplyKind_t::Completed)
+    const StageResult_t applyResult = HandleApplyResult_(rGameState, rFaction, rBase, result);
+    if (result.kind != ProductionApplyKind_t::Completed)
     {
-        ReevaluateProcessedBases_(rGameState, rFaction);
+        return applyResult;
     }
-    if (PlayerHasPending_(rGameState))
+
+    // The completed item may have been a prototype, which drops the surcharge on every other
+    // queue this faction owns. Bases already visited this pass get a second look.
+    if (ReevaluateProcessedBases_(rGameState, rFaction) == StageResult_t::Yield)
     {
         return StageResult_t::Yield;
     }
-    return StageResult_t::Continue;
+    return applyResult;
 }
 
 StageResult_t BaseProduction::ExecuteImpl(GameState& rGameState, Faction& rFaction)
@@ -194,14 +194,8 @@ StageResult_t BaseProduction::ExecuteImpl(GameState& rGameState, Faction& rFacti
     {
         return StageResult_t::Yield;
     }
-    if (m_awaitingBaseId.has_value())
-    {
-        m_processedBaseIds.insert(*m_awaitingBaseId);
-        m_awaitingBaseId.reset();
-    }
 
-    if (ReevaluateProcessedBases_(rGameState, rFaction) == StageResult_t::Yield
-        || PlayerHasPending_(rGameState))
+    if (ReevaluateProcessedBases_(rGameState, rFaction) == StageResult_t::Yield)
     {
         return StageResult_t::Yield;
     }
@@ -214,11 +208,14 @@ StageResult_t BaseProduction::ExecuteImpl(GameState& rGameState, Faction& rFacti
             continue;
         }
 
+        // Marked before the call, not after: ProcessBase_ can yield from any of several
+        // nested paths, and a base that has already had ConsumeMinerals/BankProduction run
+        // must not be revisited when the pass resumes.
+        m_processedBaseIds.insert(baseId);
         if (ProcessBase_(rGameState, rFaction, rBase) == StageResult_t::Yield)
         {
             return StageResult_t::Yield;
         }
-        m_processedBaseIds.insert(baseId);
     }
 
     ResetPassState_();

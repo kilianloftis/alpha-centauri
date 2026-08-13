@@ -28,8 +28,6 @@ public:
     // UnitManager::CreateUnit so starting units and produced units share one ledger.
     void RecordBuiltComponents(const UnitDesign& rDesign);
 
-    bool HasBuiltComponent(const std::string& rComponentId) const;
-
 private:
     std::vector<std::unique_ptr<UnitDesign>> m_designs;
     std::unordered_set<std::string> m_builtComponentIds;

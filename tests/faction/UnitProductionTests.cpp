@@ -10,11 +10,11 @@
 #include "game/TurnProcessor.h"
 #include "game/TurnStages.h"
 #include "game/faction/Military.h"
-#include "game/faction/Military.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/population/PopulationManager.h"
+#include "game/faction/base/resources/ResourceManager.h"
 #include "game/faction/base/production/ProductionManager.h"
 #include "game/faction/base/production/ProductionApplyResult.h"
 #include "game/faction/base/production/ProductionCostCalculator.h"
@@ -661,7 +661,7 @@ TEST_CASE("CreateUnit applies prototype StartingExperience then unlocks the comp
         game.pState->AllocateUnitId(), rDesign, game.pState->GetWorldMap().GetUnitPositions(),
         *game.pState->GetWorldMap().GetTile(0, 0), &base, &base);
     CHECK(spawned.GetXp() == 2);
-    CHECK(spawned.GetStat(StatId_t::StartingExperience) == 0);
+    CHECK(spawned.GetStat(StatId_t::StartingExperience) == 1);
     CHECK_FALSE(game.pFaction->GetMilitary().IsPrototype(rDesign));
 
     base.GetProduction().SetProduction(&rDesign);
@@ -701,4 +701,113 @@ TEST_CASE("BaseProduction completes a sibling queue when a prototype finishes",
     CHECK_FALSE(second.GetProduction().HasProduction());
     CHECK(std::ranges::distance(game.pFaction->GetUnitManager().Units()) == 2);
     CHECK(game.pState->GetPlayerInteractions().Size() >= 1);
+}
+
+TEST_CASE("A base that already ticked is not revisited when a sibling completion yields",
+          "[production][unit][prototype][BaseProduction]")
+{
+    UnitProductionGame_ game;
+    // Creation order is iteration order. The laggard ticks first and stalls on the surcharge;
+    // the finisher then completes the prototype, which drops the laggard's cost and makes
+    // ReevaluateProcessedBases_ complete it — yielding from inside the finisher's own tick.
+    BaseManager& laggard = game.MakeBase(2, 2);
+    BaseManager& finisher = game.MakeBase(6, 6);
+    const UnitDesign& rDesign =
+        game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
+
+    laggard.GetProduction().SetProduction(&rDesign);
+    finisher.GetProduction().SetProduction(&rDesign);
+    const int standardCost =
+        ProductionCostCalculator::ComputeCost(rDesign.GetBaseCost(), BaseEffects_t{}, 0);
+    const int prototypeCost = finisher.GetMineralCost();
+    REQUIRE(prototypeCost > standardCost);
+
+    laggard.GetProduction().SetMineralStockpile(standardCost);
+    finisher.GetProduction().SetMineralStockpile(prototypeCost);
+
+    PerFactionTurnStageRegistry_t perFaction;
+    perFaction["BaseProduction"] = std::make_unique<BaseProduction>(HookContext{});
+    GlobalTurnStageRegistry_t global;
+    global["Stop"] = std::make_unique<AlwaysYieldStage_>(HookContext{});
+    TurnProcessor processor(std::move(global), std::move(perFaction),
+                            {"BaseProduction", "Stop"});
+
+    processor.Advance(*game.pState);
+    REQUIRE_FALSE(finisher.GetProduction().HasProduction());
+    REQUIRE_FALSE(laggard.GetProduction().HasProduction());
+
+    while (!game.pState->GetPlayerInteractions().Empty())
+    {
+        game.pState->GetPlayerInteractions().CompleteFront();
+    }
+
+    REQUIRE(std::ranges::distance(game.pFaction->GetUnitManager().Units()) == 2);
+
+    // The player answers the prompt by queueing something new at the base that already banked
+    // and completed this turn, and that base now has minerals worth banking. Resuming the pass
+    // must not tick it a second time: doing so would bank its income twice in one turn and,
+    // here, complete a second unit off the back of it.
+    finisher.GetBuildingManager().AddBuilding("mineral_cache");
+    finisher.GetProduction().SetProduction(&rDesign);
+    finisher.GetProduction().SetMineralStockpile(0);
+    finisher.ProduceResources();
+    const int bankedBefore = finisher.GetResources().GetMineralBank();
+    REQUIRE(bankedBefore >= standardCost);
+
+    processor.Advance(*game.pState);
+
+    CHECK(finisher.GetResources().GetMineralBank() == bankedBefore);
+    CHECK(finisher.GetProduction().GetMineralStockpile() == 0);
+    CHECK(finisher.GetProduction().HasProduction());
+    CHECK(std::ranges::distance(game.pFaction->GetUnitManager().Units()) == 2);
+}
+
+TEST_CASE("A unit keeps the prototype status it was built with after the ledger moves on",
+          "[production][unit][prototype]")
+{
+    UnitProductionGame_ game;
+    BaseManager& base = game.MakeBase(4, 4);
+    const UnitDesign& rDesign =
+        game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
+
+    base.GetProduction().SetProduction(&rDesign);
+    base.GetProduction().SetMineralStockpile(base.GetMineralCost());
+    REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
+
+    const std::vector<Unit*>& onTile =
+        game.pState->GetWorldMap().GetUnitPositions().GetUnitsOnTile(base.GetTile());
+    REQUIRE(onTile.size() == 1);
+    const Unit& rPrototype = *onTile.front();
+
+    // The faction has fielded the design, so the ledger no longer calls it a prototype...
+    REQUIRE_FALSE(game.pFaction->GetMilitary().IsPrototype(rDesign));
+    // ...but the unit built as one still is, and a live re-resolve of the effect agrees with
+    // the XP that was baked at construction rather than silently dropping to 0.
+    CHECK(rPrototype.IsPrototype());
+    CHECK(rPrototype.GetXp() == 2);
+    CHECK(rPrototype.GetStat(StatId_t::StartingExperience) == 1);
+
+    BaseManager& second = game.MakeBase(6, 6);
+    second.GetProduction().SetProduction(&rDesign);
+    second.GetProduction().SetMineralStockpile(second.GetMineralCost());
+    REQUIRE(second.ApplyProduction().kind == ProductionApplyKind_t::Completed);
+
+    const std::vector<Unit*>& onSecondTile =
+        game.pState->GetWorldMap().GetUnitPositions().GetUnitsOnTile(second.GetTile());
+    REQUIRE(onSecondTile.size() == 1);
+    CHECK_FALSE(onSecondTile.front()->IsPrototype());
+    CHECK(onSecondTile.front()->GetXp() == 1);
+    CHECK(onSecondTile.front()->GetStat(StatId_t::StartingExperience) == 0);
+}
+
+TEST_CASE("A facility never takes the prototype surcharge", "[production][prototype]")
+{
+    UnitProductionGame_ game;
+    BaseManager& base = game.MakeBase(4, 4);
+    const BuildingConfig_t* pFacility = game.fixtures.buildings().Find("test_facility_a");
+    REQUIRE(pFacility != nullptr);
+
+    base.GetProduction().SetProduction(pFacility);
+    CHECK(base.GetMineralCost()
+          == ProductionCostCalculator::ComputeCost(pFacility->GetBaseCost(), BaseEffects_t{}, 0));
 }

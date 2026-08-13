@@ -42,7 +42,10 @@ ProductionConfig_t ProductionConfigParser::ParseConfig(const std::string& config
             ProductionConfig_t config;
             config.retoolPenaltyThreshold = read("retool_penalty_threshold", 0);
             config.retoolPenaltyPercent = read("retool_penalty_percent", 0, 100);
-            config.prototypeSurchargePercent = read("prototype_surcharge_percent", 0, 100);
+            // No upper bound: unlike the retool penalty (a percentage *of* a stockpile, so
+            // >100 is meaningless), a surcharge above 100% is a coherent thing for a mod to ask
+            // for — a prototype that costs triple.
+            config.prototypeSurchargePercent = read("prototype_surcharge_percent", 0);
             config.effects = EffectConfigParser::ParseEffects(
                 rJson, EffectSourceKind_t::Production, "production");
             return config;

@@ -429,6 +429,10 @@ ProductionApplyResult_t BaseManager::FinishProductionIfReady_(const BaseEffects_
     }
 
     const IConstructable& rItem = *m_pProduction->GetCurrentProduction();
+    // TODO: a prototype reports PrototypeBuilt instead of CombatUnitBuilt / NonCombatUnitBuilt,
+    // so a player who wants combat-unit pauses but not prototype pauses gets no prompt at all
+    // for a prototype combat unit. Whether prototype overrides the item classification or the
+    // two gates should both be consulted is an unrecorded UI rules decision.
     const PauseOnEventId_t completedEvent =
         bPrototype ? PauseOnEventId_t::PrototypeBuilt : ClassifyCompletedItem_(rItem);
     const std::string completedName = rItem.GetName();
@@ -494,12 +498,11 @@ int BaseManager::GetMineralCost() const
 
 bool BaseManager::IsCurrentProductionPrototype_() const
 {
-    const IConstructable* pItem = m_pProduction->GetCurrentProduction();
-    if (!pItem)
-    {
-        return false;
-    }
-    const UnitDesign* pDesign = m_pFaction->GetMilitary().GetDesign(pItem->GetId());
+    // Same test ClassifyCompletedItem_ uses. Resolving the design by id instead would scan
+    // every design of the faction on a call GetMineralCost makes from render paths, and would
+    // mistake a building for a unit if the two ever shared an id.
+    const UnitDesign* pDesign =
+        dynamic_cast<const UnitDesign*>(m_pProduction->GetCurrentProduction());
     return pDesign && m_pFaction->GetMilitary().IsPrototype(*pDesign);
 }
 

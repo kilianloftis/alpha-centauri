@@ -19,7 +19,6 @@
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
-#include "game/faction/Military.h"
 #include "game/effects/EffectConfig.h"
 #include <algorithm>
 #include <cmath>
@@ -388,7 +387,7 @@ bool UnitFilterSatisfied(const EffectConfig_t& config, const Unit& rUnit)
             }
             else if constexpr (std::is_same_v<T, UnitFilterIsPrototype_t>)
             {
-                return rUnit.GetFaction().GetMilitary().IsPrototype(rUnit.GetDesign());
+                return rUnit.IsPrototype();
             }
             else
             {

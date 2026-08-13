@@ -19,7 +19,8 @@ struct ProductionConfig_t
     // percent / 100, rounded down so the remainder favours the player.
     int retoolPenaltyPercent = 50;
     // Extra mineral cost for a prototype unit (first fielding of any component on the
-    // design). Applied once even if several components are new. 50 means 50% more.
+    // design). Applied once even if several components are new. 50 means 50% more; no upper
+    // bound, so a mod can make prototypes arbitrarily expensive.
     int prototypeSurchargePercent = 50;
     // Continuous effects merged into every faction pool (source id "production"). Prototype
     // starting XP is a FactionUnits StartingExperience StatModifier with unitFilter IsPrototype.

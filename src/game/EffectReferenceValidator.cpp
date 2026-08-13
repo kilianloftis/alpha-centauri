@@ -12,6 +12,7 @@
 #include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/faction/FactionConfig.h"
 #include "game/faction/FactionRegistry.h"
+#include "game/faction/base/production/ProductionConfigParser.h"
 #include "game/council/CouncilProposalConfig.h"
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/council/CouncilRulesConfig.h"
@@ -244,6 +245,8 @@ void ValidateEffectReferences(const GameDataContext& rData)
         RequireRegistry(rData.councilRules, "councilRules");
     const ProbeActionsConfig_t& rProbeActions =
         RequireRegistry(rData.probeActionsConfig, "probeActionsConfig");
+    const ProductionConfig_t& rProductionConfig =
+        RequireRegistry(rData.productionConfig, "productionConfig");
 
     auto validate = [&](const std::vector<EffectConfig_t>& rEffects, const std::string& rSourceId)
     {
@@ -298,10 +301,7 @@ void ValidateEffectReferences(const GameDataContext& rData)
     }
     // tileYieldRules is a plain vector on GameDataContext (always present; may be empty).
     validate(rData.tileYieldRules, "tile_yield_rules");
-    if (rData.productionConfig)
-    {
-        validate(rData.productionConfig->effects, "production");
-    }
+    validate(rProductionConfig.effects, "production");
 }
 
 } // namespace ac

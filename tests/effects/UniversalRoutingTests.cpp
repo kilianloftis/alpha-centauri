@@ -136,10 +136,12 @@ TEST_CASE("ProducedAtThisBase unitFilter Domain: Aerospace Complex only boosts a
     Unit& land = fixture.MakeUnit(faction, 4, 4, {"test_chassis"}, &base);
     Unit& air = fixture.MakeUnit(faction, 5, 4, {"test_flight_chassis"}, &base);
 
+    // Both are the first of their components, so both are prototypes. GetStat re-resolves the
+    // same effects that seeded GetXp, so the two must agree.
     CHECK(land.GetXp() == 2); // base_intrinsic + prototype StartingExperience
-    CHECK(land.GetStat(StatId_t::StartingExperience) == 0);
+    CHECK(land.GetStat(StatId_t::StartingExperience) == 1);
     CHECK(air.GetXp() == 4); // base_intrinsic 1 + prototype 1 + Aerospace 2
-    CHECK(air.GetStat(StatId_t::StartingExperience) == 2);
+    CHECK(air.GetStat(StatId_t::StartingExperience) == 3);
 }
 
 TEST_CASE("ProducedAtThisBase StartingExperience requires matching production base",

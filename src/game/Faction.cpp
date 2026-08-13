@@ -58,8 +58,7 @@ Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
           *rDataContext.socialPolicyRegistry))
     , m_pUnits(std::make_unique<UnitManager>(*this, *rDataContext.moraleCalculator))
     , m_effectsPool(*this, *rDataContext.buildingRegistry, m_baseListRevision,
-
-        rDataContext.tileYieldRules, *rDataContext.socialRatingRegistry,
+                    rDataContext.tileYieldRules, *rDataContext.socialRatingRegistry,
                     rDataContext.productionConfig->effects)
     , m_rWorldMap(rWorldMap)
     , m_rSettings(rSettings)

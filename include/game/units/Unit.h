@@ -95,6 +95,10 @@ public:
     // Remaining movement in fragments (k_moveFragmentsPerPoint per Movement point).
     int GetMoveFragmentsRemaining() const;
     int GetXp() const;
+    // True when this unit's design carried a component its faction had never fielded at the
+    // moment the unit was created. Fixed for life: the faction's build ledger keeps moving,
+    // but what a given unit was when it rolled off the line does not.
+    bool IsPrototype() const;
 
     void SetCurrentHp(int hp);
     void SetCurrentFuel(int fuel);
@@ -182,6 +186,9 @@ private:
     int m_currentFuel;
     int m_moveFragmentsRemaining;
     int m_xp;
+    // Latched from Military::IsPrototype before the ledger records this design, so the
+    // StartingExperience resolve below sees it and every later read agrees with that resolve.
+    bool m_bPrototype;
     std::optional<UnitOrder_t> m_order;
     // Held while supply-crawling (Pop-equivalent); releases the tile when destroyed/cleared.
     WorkedTileClaim m_tileClaim;

@@ -51,7 +51,7 @@ public:
     // Effective mineral cost of the current production item after CostMultiplier effects
     // in rBaseEffects (e.g. Industry social-rating levels). Returns 0 when nothing is queued.
     // bPrototype applies production.json prototype_surcharge_percent (50% more minerals).
-    int GetMineralCost(const BaseEffects_t& rBaseEffects, bool bPrototype = false) const;
+    int GetMineralCost(const BaseEffects_t& rBaseEffects, bool bPrototype) const;
 
     // Mineral stockpile owned by this manager.
     int GetMineralStockpile() const;
@@ -67,7 +67,7 @@ public:
     void BankProduction(int minerals);
 
     // True when something is queued and the stockpile meets its effective cost.
-    bool IsReadyToComplete(const BaseEffects_t& rBaseEffects, bool bPrototype = false) const;
+    bool IsReadyToComplete(const BaseEffects_t& rBaseEffects, bool bPrototype) const;
 
     // Complete the current production immediately and return its id.
     std::string CompleteProduction();

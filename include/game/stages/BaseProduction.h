@@ -5,7 +5,6 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/production/ProductionApplyResult.h"
 
-#include <optional>
 #include <unordered_set>
 
 namespace ac
@@ -14,8 +13,8 @@ namespace ac
 class Faction;
 
 // Per-faction mineral banking / completion. Owns only turn-pass resume state (which bases
-// already ticked, which base is waiting on a player interaction). Production rules
-// and abandon pending live on BaseManager; queue + presenter own the UI prompt.
+// already ticked). Production rules and abandon pending live on BaseManager; queue +
+// presenter own the UI prompt.
 class BaseProduction : public YieldingPerFactionTurnStage
 {
 public:
@@ -40,7 +39,6 @@ private:
     static void LogProductionTick_(const BaseManager& rBase, const ProductionApplyResult_t& rResult);
 
     std::unordered_set<BaseId_t> m_processedBaseIds;
-    std::optional<BaseId_t> m_awaitingBaseId;
 };
 
 } // namespace ac

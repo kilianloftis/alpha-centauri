@@ -51,24 +51,24 @@ TEST_CASE("Production cost applies CostMultiplier effects like GrowthRate", "[pr
 
     SECTION("no CostMultiplier effects is normal rate (base_cost)")
     {
-        CHECK(ProductionCostCalculator::ComputeCost(10, BaseEffects_t{}) == 10);
+        CHECK(ProductionCostCalculator::ComputeCost(10, BaseEffects_t{}, 0) == 10);
     }
 
     SECTION("negative CostMultiplier AddPercent reduces cost (Industry +)")
     {
-        CHECK(ProductionCostCalculator::ComputeCost(10, WithCostPercent(pool, -10.0)) == 9);
-        CHECK(ProductionCostCalculator::ComputeCost(10, WithCostPercent(pool, -50.0)) == 5);
+        CHECK(ProductionCostCalculator::ComputeCost(10, WithCostPercent(pool, -10.0), 0) == 9);
+        CHECK(ProductionCostCalculator::ComputeCost(10, WithCostPercent(pool, -50.0), 0) == 5);
     }
 
     SECTION("positive CostMultiplier AddPercent raises cost (Industry -)")
     {
-        CHECK(ProductionCostCalculator::ComputeCost(10, WithCostPercent(pool, 10.0)) == 11);
-        CHECK(ProductionCostCalculator::ComputeCost(10, WithCostPercent(pool, 30.0)) == 13);
+        CHECK(ProductionCostCalculator::ComputeCost(10, WithCostPercent(pool, 10.0), 0) == 11);
+        CHECK(ProductionCostCalculator::ComputeCost(10, WithCostPercent(pool, 30.0), 0) == 13);
     }
 
     SECTION("CostMultiplier that zeroes the cost still floors at 1")
     {
-        CHECK(ProductionCostCalculator::ComputeCost(10, WithCostPercent(pool, -100.0)) == 1);
+        CHECK(ProductionCostCalculator::ComputeCost(10, WithCostPercent(pool, -100.0), 0) == 1);
     }
 
     SECTION("prototype surcharge is 50% more minerals and does not stack in the calculator")
@@ -85,16 +85,16 @@ TEST_CASE("ProductionManager resolves cost from base effects", "[production][cos
     production.SetProduction(&item);
 
     actest::EffectPool pool;
-    CHECK(production.GetMineralCost(BaseEffects_t{}) == 10);
-    CHECK(production.GetMineralCost(WithCostPercent(pool, -20.0)) == 8);
+    CHECK(production.GetMineralCost(BaseEffects_t{}, false) == 10);
+    CHECK(production.GetMineralCost(WithCostPercent(pool, -20.0), false) == 8);
 
     production.BankProduction(5);
-    CHECK_FALSE(production.IsReadyToComplete(BaseEffects_t{}));
+    CHECK_FALSE(production.IsReadyToComplete(BaseEffects_t{}, false));
     CHECK(production.GetMineralStockpile() == 5);
     CHECK(production.HasProduction());
 
     production.BankProduction(5);
-    REQUIRE(production.IsReadyToComplete(BaseEffects_t{}));
+    REQUIRE(production.IsReadyToComplete(BaseEffects_t{}, false));
     CHECK(production.CompleteProduction() == "stub_item");
     CHECK_FALSE(production.HasProduction());
 }

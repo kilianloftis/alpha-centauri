@@ -8,6 +8,7 @@
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/council/CouncilRulesConfig.h"
 #include "game/faction/FactionRegistry.h"
+#include "game/faction/base/production/ProductionConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/TerrainFeatureValidation.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
@@ -53,6 +54,7 @@ void FillEffectReferenceContext(GameDataContext& rData)
     rData.councilProposalRegistry = std::make_unique<CouncilProposalRegistry>();
     rData.councilRules = std::make_unique<CouncilRulesConfig_t>();
     rData.probeActionsConfig = std::make_unique<ProbeActionsConfig_t>();
+    rData.productionConfig = std::make_unique<ProductionConfig_t>();
 }
 
 } // namespace

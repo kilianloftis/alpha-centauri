@@ -67,9 +67,4 @@ void Military::RecordBuiltComponents(const UnitDesign& rDesign)
     }
 }
 
-bool Military::HasBuiltComponent(const std::string& rComponentId) const
-{
-    return m_builtComponentIds.contains(rComponentId);
-}
-
 } // namespace ac
