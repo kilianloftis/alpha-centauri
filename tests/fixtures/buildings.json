@@ -296,6 +296,31 @@
     "category": "conquer"
   },
   {
+    "id": "Skunkworks",
+    "name": "Skunkworks (no prototype surcharge / retool penalty)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "prototype_surcharge_scale",
+          "amount": 0,
+          "op": "MultiplyGeometric"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "retool_penalty_scale",
+          "amount": 0,
+          "op": "MultiplyGeometric"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
     "id": "Command_Center",
     "name": "Command Center (+2 starting XP to land units)",
     "effects": [

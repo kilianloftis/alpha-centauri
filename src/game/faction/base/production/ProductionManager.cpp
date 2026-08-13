@@ -1,5 +1,9 @@
 #include "game/faction/base/production/ProductionManager.h"
 #include "game/faction/base/production/ProductionCostCalculator.h"
+#include "game/effects/EffectEnums.h"
+
+#include <algorithm>
+#include <cmath>
 
 namespace ac
 {
@@ -13,7 +17,8 @@ ProductionManager::ProductionManager(const ProductionConfig_t& rConfig)
 
 ProductionManager::~ProductionManager() = default;
 
-void ProductionManager::SetProduction(const IConstructable* pItem)
+void ProductionManager::SetProduction(const IConstructable* pItem,
+                                      const BaseEffects_t& rBaseEffects)
 {
     if (!pItem)
     {
@@ -26,7 +31,7 @@ void ProductionManager::SetProduction(const IConstructable* pItem)
         return;
     }
 
-    ApplyRetoolPenalty_(pItem);
+    ApplyRetoolPenalty_(pItem, rBaseEffects);
     m_pCurrentItem = pItem;
     OnProductionChanged.Emit();
 }
@@ -58,7 +63,8 @@ void ProductionManager::RebindProductionItem(const IConstructable* pItem)
     m_pCurrentItem = pItem;
 }
 
-void ProductionManager::ApplyRetoolPenalty_(const IConstructable* pNewItem)
+void ProductionManager::ApplyRetoolPenalty_(const IConstructable* pNewItem,
+                                            const BaseEffects_t& rBaseEffects)
 {
     // No turn original yet
     if (!m_pTurnOriginalItem)
@@ -75,8 +81,14 @@ void ProductionManager::ApplyRetoolPenalty_(const IConstructable* pNewItem)
         return;
     }
 
-    // Integer division rounds the loss down, so the remainder favours the player.
-    const int forfeited = m_mineralStockpile * m_rConfig.retoolPenaltyPercent / 100;
+    // Integer division rounds the loss down, so the remainder favours the player. Scale
+    // afterward so RetoolPenaltyScale 0 (Skunkworks) cancels the forfeit without changing
+    // threshold / percent semantics when scale is 1.
+    const int baseForfeit = m_mineralStockpile * m_rConfig.retoolPenaltyPercent / 100;
+    const double scale = ResolveStatModifiers(
+        FilterBaseLevelByStatId(rBaseEffects, StatId_t::RetoolPenaltyScale),
+        SeedFor(StatId_t::RetoolPenaltyScale)).total;
+    const int forfeited = std::max(0, static_cast<int>(std::lround(baseForfeit * scale)));
     m_mineralStockpile -= forfeited;
 }
 

@@ -542,6 +542,57 @@ TEST_CASE("A unit is a prototype when any component is new to the faction",
     CHECK(onTile.front()->GetXp() == 2);
 }
 
+TEST_CASE("Skunkworks cancels prototype mineral surcharge but not prototype XP",
+          "[production][unit][prototype]")
+{
+    UnitProductionGame_ game;
+    BaseManager& withSkunk = game.MakeBase(2, 2);
+    BaseManager& without = game.MakeBase(6, 6);
+    withSkunk.GetBuildingManager().AddBuilding("Skunkworks");
+    const UnitDesign& rDesign =
+        game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
+
+    withSkunk.GetProduction().SetProduction(&rDesign);
+    without.GetProduction().SetProduction(&rDesign);
+
+    const int standardCost =
+        ProductionCostCalculator::ComputeCost(rDesign.GetBaseCost(), BaseEffects_t{}, 0);
+    const int prototypeCost =
+        ProductionCostCalculator::ComputeCost(rDesign.GetBaseCost(), BaseEffects_t{}, 50);
+    REQUIRE(prototypeCost > standardCost);
+
+    CHECK(withSkunk.GetMineralCost() == standardCost);
+    CHECK(without.GetMineralCost() == prototypeCost);
+
+    withSkunk.GetProduction().SetMineralStockpile(standardCost);
+    REQUIRE(withSkunk.ApplyProduction().kind == ProductionApplyKind_t::Completed);
+
+    const std::vector<Unit*>& onTile =
+        game.pState->GetWorldMap().GetUnitPositions().GetUnitsOnTile(withSkunk.GetTile());
+    REQUIRE(onTile.size() == 1);
+    CHECK(onTile.front()->IsPrototype());
+    CHECK(onTile.front()->GetXp() == 2);
+    CHECK_FALSE(game.pFaction->GetMilitary().IsPrototype(rDesign));
+}
+
+TEST_CASE("Skunkworks cancels retool penalty", "[production][retool][prototype]")
+{
+    UnitProductionGame_ game;
+    BaseManager& base = game.MakeBase(4, 4);
+    base.GetBuildingManager().AddBuilding("Skunkworks");
+    const UnitDesign& rFirst =
+        game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
+    const UnitDesign& rSecond =
+        game.AddDesign({"test_chassis", "test_costly_weapon_alt", "test_costly_armor"});
+
+    base.GetProduction().SetProduction(&rFirst, base.GetBaseEffects());
+    base.GetProduction().BankProduction(0);
+    base.GetProduction().SetMineralStockpile(40);
+
+    base.GetProduction().SetProduction(&rSecond, base.GetBaseEffects());
+    CHECK(base.GetProduction().GetMineralStockpile() == 40);
+}
+
 TEST_CASE("Prototype StartingExperience stacks with ProducedAtThisBase train bonuses",
           "[production][unit][prototype]")
 {
@@ -660,8 +711,32 @@ TEST_CASE("CreateUnit applies prototype StartingExperience then unlocks the comp
     Unit& spawned = game.pFaction->GetUnitManager().CreateUnit(
         game.pState->AllocateUnitId(), rDesign, game.pState->GetWorldMap().GetUnitPositions(),
         *game.pState->GetWorldMap().GetTile(0, 0), &base, &base);
+    CHECK(spawned.IsPrototype());
     CHECK(spawned.GetXp() == 2);
     CHECK(spawned.GetStat(StatId_t::StartingExperience) == 1);
+    CHECK_FALSE(game.pFaction->GetMilitary().IsPrototype(rDesign));
+
+    base.GetProduction().SetProduction(&rDesign);
+    CHECK(base.GetMineralCost()
+          == ProductionCostCalculator::ComputeCost(rDesign.GetBaseCost(), BaseEffects_t{}, 0));
+}
+
+TEST_CASE("Free CreateUnit does not latch prototype but still unlocks the ledger",
+          "[production][unit][prototype]")
+{
+    UnitProductionGame_ game;
+    BaseManager& base = game.MakeBase(4, 4);
+    const UnitDesign& rDesign =
+        game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
+    REQUIRE(game.pFaction->GetMilitary().IsPrototype(rDesign));
+
+    // Home only — Engine starting units / gift path. Not "built".
+    Unit& gifted = game.pFaction->GetUnitManager().CreateUnit(
+        game.pState->AllocateUnitId(), rDesign, game.pState->GetWorldMap().GetUnitPositions(),
+        *game.pState->GetWorldMap().GetTile(0, 0), &base);
+    CHECK_FALSE(gifted.IsPrototype());
+    CHECK(gifted.GetXp() == 1);
+    CHECK(gifted.GetStat(StatId_t::StartingExperience) == 0);
     CHECK_FALSE(game.pFaction->GetMilitary().IsPrototype(rDesign));
 
     base.GetProduction().SetProduction(&rDesign);

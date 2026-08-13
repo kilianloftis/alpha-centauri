@@ -43,6 +43,27 @@ BaseEffects_t WithCostPercent(actest::EffectPool& rPool, double addPercent)
     }};
 }
 
+BaseEffects_t WithSurchargeScale(actest::EffectPool& rPool, double geometricFactor)
+{
+    return BaseEffects_t{{
+        Active(rPool.StatMod(StatId_t::PrototypeSurchargeScale, geometricFactor,
+                             ModifierOp_t::MultiplyGeometric),
+               "skunkworks"),
+    }};
+}
+
+BaseEffects_t WithCostAndSurchargeScale(actest::EffectPool& rPool, double costAddPercent,
+                                        double surchargeGeometric)
+{
+    return BaseEffects_t{{
+        Active(rPool.StatMod(StatId_t::CostMultiplier, costAddPercent, ModifierOp_t::AddPercent),
+               "industry"),
+        Active(rPool.StatMod(StatId_t::PrototypeSurchargeScale, surchargeGeometric,
+                             ModifierOp_t::MultiplyGeometric),
+               "skunkworks"),
+    }};
+}
+
 } // namespace
 
 TEST_CASE("Production cost applies CostMultiplier effects like GrowthRate", "[production][cost]")
@@ -75,6 +96,19 @@ TEST_CASE("Production cost applies CostMultiplier effects like GrowthRate", "[pr
     {
         CHECK(ProductionCostCalculator::ComputeCost(10, BaseEffects_t{}, 50) == 15);
         CHECK(ProductionCostCalculator::ComputeCost(10, WithCostPercent(pool, -20.0), 50) == 12);
+    }
+
+    SECTION("PrototypeSurchargeScale 0 cancels only the surcharge term")
+    {
+        CHECK(ProductionCostCalculator::ComputeCost(10, WithSurchargeScale(pool, 0.0), 50) == 10);
+        CHECK(ProductionCostCalculator::ComputeCost(
+                  10, WithCostAndSurchargeScale(pool, -20.0, 0.0), 50)
+              == 8);
+    }
+
+    SECTION("PrototypeSurchargeScale default seed leaves the full surcharge")
+    {
+        CHECK(ProductionCostCalculator::ComputeCost(10, WithSurchargeScale(pool, 1.0), 50) == 15);
     }
 }
 
@@ -127,6 +161,25 @@ TEST_CASE("Retooling forfeits half the minerals spent past the threshold", "[pro
 
     production.SetProduction(&itemB);
     CHECK(production.GetMineralStockpile() == 20);
+}
+
+TEST_CASE("RetoolPenaltyScale 0 cancels the forfeit", "[production][retool]")
+{
+    const StubConstructable itemA = RetoolItem("a", "A");
+    const StubConstructable itemB = RetoolItem("b", "B");
+    actest::EffectPool pool;
+    const BaseEffects_t noRetool{{
+        Active(pool.StatMod(StatId_t::RetoolPenaltyScale, 0.0, ModifierOp_t::MultiplyGeometric),
+               "skunkworks"),
+    }};
+
+    ProductionManager production(k_TestConfig);
+    production.SetProduction(&itemA);
+    production.BankProduction(0);
+    production.SetMineralStockpile(40);
+
+    production.SetProduction(&itemB, noRetool);
+    CHECK(production.GetMineralStockpile() == 40);
 }
 
 TEST_CASE("Retooling is free at or below the threshold", "[production][retool]")

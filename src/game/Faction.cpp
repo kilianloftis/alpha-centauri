@@ -408,7 +408,7 @@ BaseManager* Faction::CreateBaseFromSnapshot(
                 "Faction::CreateBaseFromSnapshot: unknown production item '"
                 + rSnapshot.productionItemId + "'");
         }
-        pBase->GetProduction().SetProduction(pItem);
+        pBase->GetProduction().SetProduction(pItem, pBase->GetBaseEffects());
     }
     pBase->GetProduction().SetMineralStockpile(rSnapshot.mineralStockpile);
 

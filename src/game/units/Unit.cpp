@@ -47,20 +47,19 @@ Unit::Unit(UnitId_t unitId,
     , m_currentFuel(0)
     , m_moveFragmentsRemaining(0)
     , m_xp(0)
-    // Latched before UnitManager records the design, so the StartingExperience resolve below
-    // and every later IsPrototype() read see the same answer.
-    // TODO: units the faction never paid for (Engine's starting units, BaseConquestEffects
-    // escape pods) latch true here and collect the prototype StartingExperience for free.
-    // Whether the bonus is meant to be "first of its kind" or "first one you built" is a
-    // rules decision that is not recorded anywhere.
-    , m_bPrototype(rFaction.GetMilitary().IsPrototype(rDesign))
+    // Prototype XP is "first one you built" (docs/game-rules-decisions.md): only an explicit
+    // production base latches true. Free spawns (Engine starting units, escape pods) still
+    // unlock the ledger via UnitManager::RecordBuiltComponents, but do not collect the bonus.
+    // Latch before that record so StartingExperience below and later IsPrototype() agree.
+    , m_bPrototype(pProducedAt != nullptr && rFaction.GetMilitary().IsPrototype(rDesign))
     , m_bRegistered(false)
 {
     if (pHomeBase)
     {
         m_homeBaseClaim = pHomeBase->GetHomeUnits().Claim(*this);
     }
-    // Production base is independent of home; default to home when the caller omits it.
+    // Production base is independent of home; default to home when the caller omits it
+    // (train-bonus bookkeeping only — not a prototype signal; see m_bPrototype above).
     if (BaseManager* pBuiltAt = pProducedAt ? pProducedAt : pHomeBase)
     {
         m_producedAtBaseId = pBuiltAt->GetBaseId();

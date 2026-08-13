@@ -186,6 +186,34 @@
     "upkeep": 2
   },
   {
+    "id": "Skunkworks",
+    "name": "Skunkworks",
+    "mineral_cost": 8,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "prototype_surcharge_scale",
+          "amount": 0,
+          "op": "MultiplyGeometric"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "retool_penalty_scale",
+          "amount": 0,
+          "op": "MultiplyGeometric"
+        }
+      }
+    ],
+    "category": "conquer",
+    "required_tech": "test_tech_1",
+    "upkeep": 1
+  },
+  {
     "id": "Command_Center",
     "name": "Command Center",
     "mineral_cost": 10,

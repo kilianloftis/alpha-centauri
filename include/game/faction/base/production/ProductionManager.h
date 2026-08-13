@@ -19,14 +19,16 @@ public:
     ~ProductionManager();
 
     // Set the item to produce; nullptr clears it. Setting the item already queued is a no-op
-    // and does not re-announce a change.
+    // and does not re-announce a change. rBaseEffects scales the retool forfeit via
+    // RetoolPenaltyScale (omit / empty → seed 1.0). Callers with a live base should pass
+    // BaseManager::GetBaseEffects() so Skunkworks and similar apply.
     //
     // **Retooling.** Switching away from the item the base started this turn on forfeits a
-    // share of the minerals already spent (config: retool_penalty_*), but only once more than
-    // the threshold has accumulated. Switching *back* to the turn's original item is free;
-    // switching on to a third item pays again. No turn original yet (null) — free to queue and
-    // switch. Clearing production keeps the stockpile; re-queuing pays only once a turn
-    // original exists (BankProduction stamped one).
+    // share of the minerals already spent (config: retool_penalty_*, scaled by
+    // RetoolPenaltyScale), but only once more than the threshold has accumulated. Switching
+    // *back* to the turn's original item is free; switching on to a third item pays again.
+    // No turn original yet (null) — free to queue and switch. Clearing production keeps the
+    // stockpile; re-queuing pays only once a turn original exists (BankProduction stamped one).
     //
     // BankProduction marks the item in place at that moment as the turn's original, which is
     // the last thing to touch production before PlayerActions hands control to the player.
@@ -34,7 +36,8 @@ public:
     // The item is not validated against what this base may actually build — BaseManager owns
     // that question (GetConstructable), and its availability calculator is optional, so the
     // check cannot live here.
-    void SetProduction(const IConstructable* pItem);
+    void SetProduction(const IConstructable* pItem,
+                       const BaseEffects_t& rBaseEffects = {});
 
     // Replace the queued constructable pointer without retooling. Used when the logical item
     // is unchanged but the backing object moved (base ownership transfer re-homing a unit
@@ -50,7 +53,8 @@ public:
 
     // Effective mineral cost of the current production item after CostMultiplier effects
     // in rBaseEffects (e.g. Industry social-rating levels). Returns 0 when nothing is queued.
-    // bPrototype applies production.json prototype_surcharge_percent (50% more minerals).
+    // bPrototype applies production.json prototype_surcharge_percent, scaled by
+    // PrototypeSurchargeScale from rBaseEffects (Skunkworks zeros the extra).
     int GetMineralCost(const BaseEffects_t& rBaseEffects, bool bPrototype) const;
 
     // Mineral stockpile owned by this manager.
@@ -88,7 +92,7 @@ private:
     int m_mineralStockpile = 0;
 
     void ResetProduction_();
-    void ApplyRetoolPenalty_(const IConstructable* pNewItem);
+    void ApplyRetoolPenalty_(const IConstructable* pNewItem, const BaseEffects_t& rBaseEffects);
 };
 
 } // namespace ac

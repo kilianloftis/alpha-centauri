@@ -209,11 +209,13 @@ Caller contract: the faction must have been constructed against the session's `W
   while any filled component is still unfielded — several unknown components on one design are
   still a single prototype.
 - **Two consumers, one question**: `BaseManager::IsCurrentProductionPrototype_` asks it for the
-  mineral surcharge (`production.json` `prototype_surcharge_percent`), and `Unit`'s constructor
-  asks it once and latches the answer into `Unit::IsPrototype()`, which the `IsPrototype`
-  `UnitFilter_t` reads. The latch is what keeps the filter a context-free identity predicate:
-  the ledger keeps moving as the faction builds, but a unit's prototype status is fixed at
-  construction.
+  mineral surcharge (`production.json` `prototype_surcharge_percent`, scaled by base
+  `PrototypeSurchargeScale` so Skunkworks can zero the extra without touching XP), and `Unit`'s
+  constructor asks it once — only when `pProducedAt` is set ("first one you built"; see
+  `docs/game-rules-decisions.md`) — and latches the answer into `Unit::IsPrototype()`, which
+  the `IsPrototype` `UnitFilter_t` reads. The latch is what keeps the filter a context-free
+  identity predicate: the ledger keeps moving as the faction builds, but a unit's prototype
+  status is fixed at construction. Free spawns still unlock the ledger without latching.
 - **Not here**: live units belong to `UnitManager` (which creates and destroys them and owns the
   `Unit` objects); bases belong to `Faction::m_bases`. There is no `UnitFactory`.
 

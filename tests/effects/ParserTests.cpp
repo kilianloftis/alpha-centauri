@@ -41,6 +41,8 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("mineral_upkeep") == StatId_t::MineralUpkeep);
     CHECK(ParseStatId("free_unit_support") == StatId_t::FreeUnitSupport);
     CHECK(ParseStatId("cost_multiplier") == StatId_t::CostMultiplier);
+    CHECK(ParseStatId("prototype_surcharge_scale") == StatId_t::PrototypeSurchargeScale);
+    CHECK(ParseStatId("retool_penalty_scale") == StatId_t::RetoolPenaltyScale);
     CHECK(ParseStatId("facility_energy_upkeep") == StatId_t::FacilityEnergyUpkeep);
     CHECK(ParseStatId("probe_action_cost") == StatId_t::ProbeActionCost);
     CHECK(ParseStatId("probe_defense") == StatId_t::ProbeDefense);

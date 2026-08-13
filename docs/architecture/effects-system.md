@@ -175,7 +175,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 - **Values**:
   - Base resources: `Nutrients`, `Minerals`, `Energy`.
   - Base output allocated directly rather than via energy split: `Econ`, `Labs`, `Psych`.
-  - Unit stats: `Attack`, `Defense`, `Movement`, `HitPoints`, `DisengageChance`, `TurnsOfFuel`, `DamageFromOutOfFuel`, `CargoCapacity`, `DifficultTerrainCost`, `MineralUpkeep` (home-base mineral support cost; floored at 0), `FreeUnitSupport` (base-level free support slots), `CostMultiplier` (also used for base production cost after Industry rating expansion), `FacilityEnergyUpkeep` (PureMultiplier on constructed-facility energy maintenance; optional `buildingFilter`), `StartingExperience` (seeded into unit XP at spawn), `StartingMinerals` (credited to a new base's production stockpile at founding; resolved from the new base's effects plus the founding unit).
+  - Unit stats: `Attack`, `Defense`, `Movement`, `HitPoints`, `DisengageChance`, `TurnsOfFuel`, `DamageFromOutOfFuel`, `CargoCapacity`, `DifficultTerrainCost`, `MineralUpkeep` (home-base mineral support cost; floored at 0), `FreeUnitSupport` (base-level free support slots), `CostMultiplier` (also used for base production cost after Industry rating expansion), `PrototypeSurchargeScale` (PureMultiplier on the prototype mineral *extra* only; Skunkworks uses `MultiplyGeometric` 0 on `ThisBase`), `RetoolPenaltyScale` (PureMultiplier on the retool forfeit; Skunkworks zeros it the same way), `FacilityEnergyUpkeep` (PureMultiplier on constructed-facility energy maintenance; optional `buildingFilter`), `StartingExperience` (seeded into unit XP at spawn), `StartingMinerals` (credited to a new base's production stockpile at founding; resolved from the new base's effects plus the founding unit).
   - Population modifier: `GrowthRate` (`AddPercent`, base = 100%) — modifies the faction-wide population growth rate.
   - Terrain mutation: `MoistureTier` — resolved back into `Tile::SetMoisture` by `RecomputeMoisture`; not a runtime-queried stat (see Tile Improvement Effects).
 - **Consumers**: `StatModifierEffect_t::stat`. `Defense` is also the target stat for tile-granted combat bonuses (rockiness, fungus, improvements) — see Tile Improvement Effects below.
@@ -226,7 +226,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 
 ### UnitFilter_t
 - **Purpose**: Restricts which units an effect applies to in `CollectLiveUnitEffects` (context-free identity predicates, not combat situations).
-- **Shape**: `std::variant` of `UnitFilterDomain_t` / `UnitFilterHasComponent_t` / `UnitFilterHasFlag_t` / `UnitFilterIsPrototype_t` with required fields as plain members. `IsPrototype` reads `Unit::IsPrototype()`, latched in the constructor from `Military::IsPrototype` before the faction's ledger records the design (prototype starting XP). It is deliberately *not* a live read of the ledger: that would make the filter answer differently before and after the unit spawned, and only the constructor's resolve would ever see `true`.
+- **Shape**: `std::variant` of `UnitFilterDomain_t` / `UnitFilterHasComponent_t` / `UnitFilterHasFlag_t` / `UnitFilterIsPrototype_t` with required fields as plain members. `IsPrototype` reads `Unit::IsPrototype()`, latched in the constructor from `Military::IsPrototype` when the unit was produced (`pProducedAt` set — "first one you built") before the faction's ledger records the design. It is deliberately *not* a live read of the ledger: that would make the filter answer differently before and after the unit spawned, and only the constructor's resolve would ever see `true`.
 
 ### ModifierOp_t
 - **Purpose**: Describes how a stat modifier combines with the running total.
@@ -458,8 +458,10 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 - **Industry rating → production cost**: the industry axis's levels map to `CostMultiplier`
   `AddPercent` modifiers (±10% per level, matching SMAC's ±10% mineral-cost change), which
   `ProductionCostCalculator::ComputeCost` resolves from the base effect list
-  (`baseCost * CostMultiplier`). Same seam as Growth: the rating table defines the
-  gameplay effects; the calculator never sees the raw Industry score.
+  (`baseCost * CostMultiplier * (1 + surchargePercent/100 * PrototypeSurchargeScale)` when
+  prototyping). Same seam as Growth: the rating table defines the gameplay effects; the
+  calculator never sees the raw Industry score. Skunkworks zeros only the surcharge term via
+  `PrototypeSurchargeScale`.
 
 ### ResourceManager Integration
 - **Purpose**: Applies active effects to base resource production.

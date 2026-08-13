@@ -120,6 +120,8 @@ static_assert(KindFor(StatId_t::StartingExperience) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::StartingMinerals) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::MoraleBonus) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::CostMultiplier) == StatKind_t::PureMultiplier);
+static_assert(KindFor(StatId_t::PrototypeSurchargeScale) == StatKind_t::PureMultiplier);
+static_assert(KindFor(StatId_t::RetoolPenaltyScale) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::FacilityEnergyUpkeep) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::ProbeActionCost) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::ProbeDefense) == StatKind_t::Additive);
@@ -139,6 +141,8 @@ static_assert(KindFor(StatId_t::InefficiencyDenominator) == StatKind_t::Additive
 static_assert(SeedFor(StatId_t::Nutrients) == 0.0);
 static_assert(SeedFor(StatId_t::Attack) == 0.0);
 static_assert(SeedFor(StatId_t::CostMultiplier) == 1.0);
+static_assert(SeedFor(StatId_t::PrototypeSurchargeScale) == 1.0);
+static_assert(SeedFor(StatId_t::RetoolPenaltyScale) == 1.0);
 static_assert(SeedFor(StatId_t::FacilityEnergyUpkeep) == 1.0);
 
 TEST_CASE("ValidateEffectReferences: GrantBuilding targets must exist", "[effects][validation]")

@@ -45,6 +45,13 @@ enum class StatId_t
     // Support SE levels emit absolute FreeUnitSupport Adds (level 0 = 2); facilities Add on top.
     FreeUnitSupport,
     CostMultiplier,
+    // Scales the prototype mineral surcharge term only (PureMultiplier, seed 1.0). Production
+    // cost uses baseCost * CostMultiplier * (1 + surchargePercent/100 * this). Skunkworks emits
+    // MultiplyGeometric 0 on ThisBase so the extra is cancelled without making the unit free.
+    PrototypeSurchargeScale,
+    // Scales the retool mineral forfeit (PureMultiplier, seed 1.0). ApplyRetoolPenalty_ uses
+    // stockpile * retoolPercent/100 * this. Skunkworks emits MultiplyGeometric 0 on ThisBase.
+    RetoolPenaltyScale,
     // Multiplier on constructed-facility energy upkeep (PureMultiplier). Tech and (later)
     // difficulty emit AddPercent; resolved per building type with optional buildingFilter.
     FacilityEnergyUpkeep,
@@ -148,6 +155,8 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::CommerceEnergyBonus:
         case StatId_t::InefficiencyDenominator: return StatKind_t::Additive;
         case StatId_t::CostMultiplier:
+        case StatId_t::PrototypeSurchargeScale:
+        case StatId_t::RetoolPenaltyScale:
         case StatId_t::FacilityEnergyUpkeep:
         case StatId_t::ProbeActionCost:
         case StatId_t::ProbeFailureScale:
@@ -202,6 +211,8 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "mineral_upkeep")          return StatId_t::MineralUpkeep;
     if (rStat == "free_unit_support")       return StatId_t::FreeUnitSupport;
     if (rStat == "cost_multiplier")         return StatId_t::CostMultiplier;
+    if (rStat == "prototype_surcharge_scale") return StatId_t::PrototypeSurchargeScale;
+    if (rStat == "retool_penalty_scale")     return StatId_t::RetoolPenaltyScale;
     if (rStat == "facility_energy_upkeep")  return StatId_t::FacilityEnergyUpkeep;
     if (rStat == "probe_action_cost")       return StatId_t::ProbeActionCost;
     if (rStat == "probe_defense")           return StatId_t::ProbeDefense;

@@ -285,7 +285,7 @@ void BaseView::HandleProductionDisplayClicked_()
         "Select Production", "Nothing available to build", std::move(rows),
         ResolveLayout(m_layout, Style().layouts.topPanel),
         [this, available = std::move(available)](size_t index) {
-            m_rBase.GetProduction().SetProduction(available[index]);
+            m_rBase.GetProduction().SetProduction(available[index], m_rBase.GetBaseEffects());
         },
         Style().listSelectorPopup));
 }

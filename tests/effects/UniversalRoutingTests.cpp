@@ -133,11 +133,12 @@ TEST_CASE("ProducedAtThisBase unitFilter Domain: Aerospace Complex only boosts a
     BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
     base.GetBuildingManager().AddBuilding("Aerospace_Complex");
 
-    Unit& land = fixture.MakeUnit(faction, 4, 4, {"test_chassis"}, &base);
-    Unit& air = fixture.MakeUnit(faction, 5, 4, {"test_flight_chassis"}, &base);
+    // Explicit producedAt: prototypes are "first one you built", not free fieldings.
+    Unit& land = fixture.MakeUnit(faction, 4, 4, {"test_chassis"}, &base, &base);
+    Unit& air = fixture.MakeUnit(faction, 5, 4, {"test_flight_chassis"}, &base, &base);
 
-    // Both are the first of their components, so both are prototypes. GetStat re-resolves the
-    // same effects that seeded GetXp, so the two must agree.
+    // Both are the first built of their components, so both are prototypes. GetStat re-resolves
+    // the same effects that seeded GetXp, so the two must agree.
     CHECK(land.GetXp() == 2); // base_intrinsic + prototype StartingExperience
     CHECK(land.GetStat(StatId_t::StartingExperience) == 1);
     CHECK(air.GetXp() == 4); // base_intrinsic 1 + prototype 1 + Aerospace 2
@@ -153,20 +154,22 @@ TEST_CASE("ProducedAtThisBase StartingExperience requires matching production ba
     BaseManager& otherBase = fixture.MakeFactionBase(faction, 6, 6);
     withComplex.GetBuildingManager().AddBuilding("Aerospace_Complex");
 
-    Unit& airBuiltThere = fixture.MakeUnit(faction, 3, 3, {"test_flight_chassis"}, &withComplex);
-    Unit& airBuiltElsewhere = fixture.MakeUnit(faction, 5, 5, {"test_flight_chassis"}, &otherBase);
+    Unit& airBuiltThere =
+        fixture.MakeUnit(faction, 3, 3, {"test_flight_chassis"}, &withComplex, &withComplex);
+    Unit& airBuiltElsewhere =
+        fixture.MakeUnit(faction, 5, 5, {"test_flight_chassis"}, &otherBase, &otherBase);
     Unit& airNoBase = fixture.MakeUnit(faction, 4, 4, {"test_flight_chassis"});
     // Home reassigned away from the production base must not strip train XP.
     Unit& airRehomed = fixture.MakeUnit(faction, 7, 7, {"test_flight_chassis"}, &withComplex,
                                         &withComplex);
     airRehomed.SetHomeBase(&otherBase);
 
-    CHECK(airBuiltThere.GetXp() == 4);
-    CHECK(airBuiltElsewhere.GetXp() == 1);
+    CHECK(airBuiltThere.GetXp() == 4); // intrinsic + prototype + Aerospace
+    CHECK(airBuiltElsewhere.GetXp() == 1); // chassis already fielded; wrong base for Aerospace
     CHECK(airNoBase.GetXp() == 1);
     CHECK(airRehomed.GetHomeBase() == &otherBase);
     CHECK(airRehomed.GetProducedAtBase() == &withComplex);
-    CHECK(airRehomed.GetXp() == 3);
+    CHECK(airRehomed.GetXp() == 3); // Aerospace only; chassis already fielded
     CHECK(airRehomed.GetStat(StatId_t::StartingExperience) == 2);
 }
 

@@ -20,7 +20,7 @@ function default_parallel_jobs() {
   local mem_gb=$((mem_kb / 1024 / 1024))
 
   if (( mem_gb < 16 )); then
-    echo 2
+    echo 4
   else
     echo 16
   fi

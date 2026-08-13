@@ -66,7 +66,9 @@ are banked — the last thing to touch production before `PlayerActions` hands t
 and `SetProduction` charges the penalty when switching to anything else. Numbers live in
 `config/production.json` (`retool_penalty_threshold`, `retool_penalty_percent`). Production
 cost is `baseCost * CostMultiplier` (Industry via effects); SMAC's "minerals per row" is a UI
-presentation of progress, not a cost factor, and is not configured here.
+presentation of progress, not a cost factor, and is not configured here. The forfeit is scaled
+by `RetoolPenaltyScale` from the base's effects (Skunkworks `MultiplyGeometric` 0 cancels it);
+callers with a live base pass `GetBaseEffects()` into `SetProduction`.
 
 Clearing production (`nullptr`) is not charged: the stockpile is kept. Re-queuing pays once a
 turn original exists; while the turn original is still null (fresh base, or last
@@ -126,6 +128,27 @@ source among several.
 `social_rating_effects.json`; no HQ → Distance 16; HQ base loses nothing; loss capped
 at Energy; denom 0 → 100% loss). Composition still needs to consume the stockpile and
 feed full psych into the talent formula — next step.
+
+## 7. Prototype StartingExperience — first one you built
+
+**Rule:** `Unit::IsPrototype()` (and therefore the production.json prototype
+`StartingExperience` bonus) applies only to a unit the faction **produced**. Free
+spawns — Engine starting units, BaseConquestEffects escape pods, and any other
+`CreateUnit` without an explicit production base — do **not** latch as prototypes
+and do not collect the bonus.
+
+**Ledger unchanged:** every `CreateUnit` still calls `Military::RecordBuiltComponents`,
+so a free scout still unlocks those components for the mineral surcharge. The next
+*built* copy is ordinary (no surcharge, no prototype XP).
+
+**Signal:** `Unit`'s constructor latches prototype only when `pProducedAt != nullptr`
+and `Military::IsPrototype(design)` is true at that moment. Production completion
+passes the building base as `pProducedAt`; gift paths omit it.
+
+**Replaces:** the Unit.cpp TODO that left "first of its kind" vs "first one you built"
+undecided while free units collected the bonus.
+
+**Implemented** 2026-08-12.
 
 ---
 

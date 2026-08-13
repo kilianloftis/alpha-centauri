@@ -18,7 +18,12 @@ int ProductionCostCalculator::ComputeCost(int baseCost, const BaseEffects_t& rBa
 
     if (surchargePercent > 0)
     {
-        multiplier *= (1.0 + static_cast<double>(surchargePercent) / 100.0);
+        // Scale only the extra surcharge term so MultiplyGeometric 0 (Skunkworks) returns
+        // ordinary cost rather than zeroing the whole production bill.
+        const double scale = ResolveStatModifiers(
+            FilterBaseLevelByStatId(rBaseEffects, StatId_t::PrototypeSurchargeScale),
+            SeedFor(StatId_t::PrototypeSurchargeScale)).total;
+        multiplier *= (1.0 + static_cast<double>(surchargePercent) / 100.0 * scale);
     }
 
     return std::max(1, static_cast<int>(std::lround(baseCost * multiplier)));

@@ -40,8 +40,9 @@ public:
     // other way to change a unit's position. Placement legality is the caller's job
     // (UnitManager::CreateUnit). unitId must be unique for the life of the game
     // (WorldMap's unit IdAllocator).
-    // pProducedAt is the base that built this unit (train bonuses). Distinct from pHomeBase;
-    // when null, defaults to pHomeBase so typical CreateUnit(home) keeps both aligned.
+    // pProducedAt is the base that built this unit (train bonuses + prototype latch). Distinct
+    // from pHomeBase; when null, produced-at bookkeeping defaults to pHomeBase but the unit is
+    // not a prototype (free spawns / CreateUnit(home) only). Production passes both as this.
     // rMorale is the game-wide calculator owned by GameDataContext (supplied by the owning
     // UnitManager); used here only to seed intrinsic XP and clamp SetXp.
     Unit(UnitId_t unitId,
@@ -186,8 +187,9 @@ private:
     int m_currentFuel;
     int m_moveFragmentsRemaining;
     int m_xp;
-    // Latched from Military::IsPrototype before the ledger records this design, so the
-    // StartingExperience resolve below sees it and every later read agrees with that resolve.
+    // Latched at construction: true only when this unit was produced (explicit pProducedAt)
+    // and Military::IsPrototype was true before the ledger recorded the design. Free spawns
+    // never latch; see docs/game-rules-decisions.md ("first one you built").
     bool m_bPrototype;
     std::optional<UnitOrder_t> m_order;
     // Held while supply-crawling (Pop-equivalent); releases the tile when destroyed/cleared.
