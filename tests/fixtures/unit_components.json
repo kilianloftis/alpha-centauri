@@ -1193,5 +1193,56 @@
         }
       }
     ]
+  },
+  {
+    "id": "test_costly_weapon",
+    "name": "Test Costly Weapon",
+    "unit_name": "Missile",
+    "type": "weapon",
+    "mineral_cost": 20,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "attack",
+          "amount": 4
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_costly_weapon_alt",
+    "name": "Test Costly Weapon Alt",
+    "unit_name": "Particle",
+    "type": "weapon",
+    "mineral_cost": 20,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "attack",
+          "amount": 4
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_costly_armor",
+    "name": "Test Costly Armor",
+    "unit_name": "Silksteel",
+    "type": "armor",
+    "mineral_cost": 20,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "defense",
+          "amount": 3
+        }
+      }
+    ]
   }
 ]

@@ -136,9 +136,9 @@ TEST_CASE("ProducedAtThisBase unitFilter Domain: Aerospace Complex only boosts a
     Unit& land = fixture.MakeUnit(faction, 4, 4, {"test_chassis"}, &base);
     Unit& air = fixture.MakeUnit(faction, 5, 4, {"test_flight_chassis"}, &base);
 
-    CHECK(land.GetXp() == 1); // base_intrinsic only
+    CHECK(land.GetXp() == 2); // base_intrinsic + prototype StartingExperience
     CHECK(land.GetStat(StatId_t::StartingExperience) == 0);
-    CHECK(air.GetXp() == 3); // base_intrinsic 1 + Aerospace 2
+    CHECK(air.GetXp() == 4); // base_intrinsic 1 + prototype 1 + Aerospace 2
     CHECK(air.GetStat(StatId_t::StartingExperience) == 2);
 }
 
@@ -159,7 +159,7 @@ TEST_CASE("ProducedAtThisBase StartingExperience requires matching production ba
                                         &withComplex);
     airRehomed.SetHomeBase(&otherBase);
 
-    CHECK(airBuiltThere.GetXp() == 3);
+    CHECK(airBuiltThere.GetXp() == 4);
     CHECK(airBuiltElsewhere.GetXp() == 1);
     CHECK(airNoBase.GetXp() == 1);
     CHECK(airRehomed.GetHomeBase() == &otherBase);

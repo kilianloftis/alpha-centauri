@@ -319,8 +319,15 @@ struct UnitFilterHasFlag_t
     RuleFlagId_t flag = RuleFlagId_t::Flight;
 };
 
+// True while this unit's design still has a component the faction has never fielded.
+// Evaluated at CollectLiveUnitEffects time (before RecordBuiltComponents on a fresh spawn).
+struct UnitFilterIsPrototype_t
+{
+};
+
 using UnitFilter_t =
-    std::variant<UnitFilterDomain_t, UnitFilterHasComponent_t, UnitFilterHasFlag_t>;
+    std::variant<UnitFilterDomain_t, UnitFilterHasComponent_t, UnitFilterHasFlag_t,
+                 UnitFilterIsPrototype_t>;
 
 // Restricts which buildings a FacilityEnergyUpkeep (or similar) modifier applies to.
 // Absent buildingFilter = all buildings. Distinct from unitFilter.

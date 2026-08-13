@@ -1,4 +1,17 @@
 {
   "retool_penalty_threshold": 10,
-  "retool_penalty_percent": 50
+  "retool_penalty_percent": 50,
+  "prototype_surcharge_percent": 50,
+  "effects": [
+    {
+      "type": "StatModifier",
+      "scope": "FactionUnits",
+      "unitFilter": { "kind": "IsPrototype" },
+      "parameters": {
+        "stat": "starting_experience",
+        "amount": 1,
+        "op": "Add"
+      }
+    }
+  ]
 }

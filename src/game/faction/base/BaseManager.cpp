@@ -396,7 +396,28 @@ ProductionApplyResult_t BaseManager::ApplyProduction()
     const int minerals = m_pResources->ConsumeMinerals();
     m_pProduction->BankProduction(minerals);
 
-    if (!m_pProduction->IsReadyToComplete(effects))
+    return FinishProductionIfReady_(effects);
+}
+
+ProductionApplyResult_t BaseManager::TryCompleteReadyProduction()
+{
+    if (m_bPendingProductionAbandonConfirm)
+    {
+        return ProductionApplyResult_t{ProductionApplyKind_t::AwaitingAbandonConfirm, {}};
+    }
+
+    if (!m_pProduction->HasProduction())
+    {
+        return ProductionApplyResult_t{ProductionApplyKind_t::Idle, {}};
+    }
+
+    return FinishProductionIfReady_(BuildBaseEffects_());
+}
+
+ProductionApplyResult_t BaseManager::FinishProductionIfReady_(const BaseEffects_t& rEffects)
+{
+    const bool bPrototype = IsCurrentProductionPrototype_();
+    if (!m_pProduction->IsReadyToComplete(rEffects, bPrototype))
     {
         return ProductionApplyResult_t{ProductionApplyKind_t::InProgress, {}};
     }
@@ -408,7 +429,8 @@ ProductionApplyResult_t BaseManager::ApplyProduction()
     }
 
     const IConstructable& rItem = *m_pProduction->GetCurrentProduction();
-    const PauseOnEventId_t completedEvent = ClassifyCompletedItem_(rItem);
+    const PauseOnEventId_t completedEvent =
+        bPrototype ? PauseOnEventId_t::PrototypeBuilt : ClassifyCompletedItem_(rItem);
     const std::string completedName = rItem.GetName();
     return ProductionApplyResult_t{ProductionApplyKind_t::Completed,
                                   m_pProduction->CompleteProduction(), completedEvent,
@@ -467,7 +489,18 @@ bool BaseManager::WouldEmptyBaseOnProductionComplete_() const
 
 int BaseManager::GetMineralCost() const
 {
-    return m_pProduction->GetMineralCost(BuildBaseEffects_());
+    return m_pProduction->GetMineralCost(BuildBaseEffects_(), IsCurrentProductionPrototype_());
+}
+
+bool BaseManager::IsCurrentProductionPrototype_() const
+{
+    const IConstructable* pItem = m_pProduction->GetCurrentProduction();
+    if (!pItem)
+    {
+        return false;
+    }
+    const UnitDesign* pDesign = m_pFaction->GetMilitary().GetDesign(pItem->GetId());
+    return pDesign && m_pFaction->GetMilitary().IsPrototype(*pDesign);
 }
 
 BaseEffects_t BaseManager::CollectBaseLocalEffects_(const FactionEffects_t& rFactionEffects) const

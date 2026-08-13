@@ -52,7 +52,7 @@ TEST_CASE("A fresh unit starts at its live resolved maxima", "[unit][stats]")
     CHECK(unit.GetMovementPoints() == unit.GetStat(StatId_t::Movement));
     CHECK(unit.GetMoveFragmentsRemaining()
           == unit.GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint);
-    CHECK(unit.GetXp() == 1); // base_intrinsic (Green)
+    CHECK(unit.GetXp() == 2); // base_intrinsic (Green) + prototype StartingExperience
     CHECK(unit.GetStat(StatId_t::StartingExperience) == 0);
 }
 

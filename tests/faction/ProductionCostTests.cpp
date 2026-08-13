@@ -70,6 +70,12 @@ TEST_CASE("Production cost applies CostMultiplier effects like GrowthRate", "[pr
     {
         CHECK(ProductionCostCalculator::ComputeCost(10, WithCostPercent(pool, -100.0)) == 1);
     }
+
+    SECTION("prototype surcharge is 50% more minerals and does not stack in the calculator")
+    {
+        CHECK(ProductionCostCalculator::ComputeCost(10, BaseEffects_t{}, 50) == 15);
+        CHECK(ProductionCostCalculator::ComputeCost(10, WithCostPercent(pool, -20.0), 50) == 12);
+    }
 }
 
 TEST_CASE("ProductionManager resolves cost from base effects", "[production][cost]")

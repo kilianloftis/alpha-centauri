@@ -1,4 +1,5 @@
 #include "game/faction/base/production/ProductionConfigParser.h"
+#include "game/effects/EffectConfigParser.h"
 #include "lib/config/JsonConfigLoader.h"
 #include <nlohmann/json.hpp>
 #include <stdexcept>
@@ -41,6 +42,9 @@ ProductionConfig_t ProductionConfigParser::ParseConfig(const std::string& config
             ProductionConfig_t config;
             config.retoolPenaltyThreshold = read("retool_penalty_threshold", 0);
             config.retoolPenaltyPercent = read("retool_penalty_percent", 0, 100);
+            config.prototypeSurchargePercent = read("prototype_surcharge_percent", 0, 100);
+            config.effects = EffectConfigParser::ParseEffects(
+                rJson, EffectSourceKind_t::Production, "production");
             return config;
         });
 }

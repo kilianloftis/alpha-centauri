@@ -44,4 +44,32 @@ const UnitDesign* Military::GetDesign(const std::string& designId) const
     return nullptr;
 }
 
+bool Military::IsPrototype(const UnitDesign& rDesign) const
+{
+    for (const UnitComponentConfig_t* pComp : rDesign.GetComponents())
+    {
+        if (pComp && !m_builtComponentIds.contains(pComp->id))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+void Military::RecordBuiltComponents(const UnitDesign& rDesign)
+{
+    for (const UnitComponentConfig_t* pComp : rDesign.GetComponents())
+    {
+        if (pComp)
+        {
+            m_builtComponentIds.insert(pComp->id);
+        }
+    }
+}
+
+bool Military::HasBuiltComponent(const std::string& rComponentId) const
+{
+    return m_builtComponentIds.contains(rComponentId);
+}
+
 } // namespace ac

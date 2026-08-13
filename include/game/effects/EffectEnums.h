@@ -496,6 +496,7 @@ enum class EffectSourceKind_t
     ProbeAction,
     TileYieldRules,
     Tech,
+    Production,
 };
 
 } // namespace ac

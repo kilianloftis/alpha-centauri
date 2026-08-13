@@ -7,6 +7,7 @@
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/Faction.h"
+#include "game/faction/Military.h"
 #include <algorithm>
 #include <stdexcept>
 #include <string>
@@ -62,6 +63,7 @@ Unit& UnitManager::CreateUnit(UnitId_t unitId, const UnitDesign& rDesign,
                                         m_rMorale, pProducedAt);
     Unit& rUnit = *pUnit;
     m_units.push_back(std::move(pUnit));
+    m_rFaction.GetMilitary().RecordBuiltComponents(rDesign);
     m_revision.Bump();
     m_rFaction.RebuildVisibility();
     OnUnitCreated.Emit(rUnit);

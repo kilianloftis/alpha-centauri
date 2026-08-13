@@ -23,12 +23,14 @@ FactionEffectsPool::FactionEffectsPool(const Faction& rFaction,
                                        const BuildingRegistry& rBuildingRegistry,
                                        const Revision& rBaseListRevision,
                                        const std::vector<EffectConfig_t>& rTileYieldRules,
-                                       const SocialRatingRegistry& rSocialRatings)
+                                       const SocialRatingRegistry& rSocialRatings,
+                                       const std::vector<EffectConfig_t>& rProductionEffects)
     : m_rFaction(rFaction)
     , m_rBuildingRegistry(rBuildingRegistry)
     , m_rBaseListRevision(rBaseListRevision)
     , m_rTileYieldRules(rTileYieldRules)
     , m_rSocialRatings(rSocialRatings)
+    , m_rProductionEffects(rProductionEffects)
 {
 }
 
@@ -121,6 +123,13 @@ std::vector<ActiveEffect_t> FactionEffectsPool::CollectTileYieldRuleEffects_() c
     return result;
 }
 
+std::vector<ActiveEffect_t> FactionEffectsPool::CollectProductionEffects_() const
+{
+    std::vector<ActiveEffect_t> result;
+    AppendActiveEffects(m_rProductionEffects, nullptr, "production", result);
+    return result;
+}
+
 void FactionEffectsPool::ApplyRemovedByTech_(FactionEffects_t& rEffects,
                                              const ResearchManager& rResearch)
 {
@@ -167,6 +176,10 @@ void FactionEffectsPool::Rebuild_() const
     const std::vector<ActiveEffect_t> tileYieldRules = CollectTileYieldRuleEffects_();
     factionEffects.effects.insert(factionEffects.effects.end(), tileYieldRules.begin(),
                                   tileYieldRules.end());
+
+    const std::vector<ActiveEffect_t> productionEffects = CollectProductionEffects_();
+    factionEffects.effects.insert(factionEffects.effects.end(), productionEffects.begin(),
+                                  productionEffects.end());
 
     const std::vector<ActiveEffect_t> defEffects = CollectDefinitionEffects_();
     factionEffects.effects.insert(factionEffects.effects.end(), defEffects.begin(),

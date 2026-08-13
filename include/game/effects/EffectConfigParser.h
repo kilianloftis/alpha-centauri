@@ -37,7 +37,8 @@ TileSelector_t ParseTileSelector(const nlohmann::json& selectorJson);
 UnitDomain_t ParseUnitDomain(const std::string& rDomain);
 
 // Parses a UnitFilter_t from a unitFilter JSON object
-// ({ "kind": "Domain", "domain": "air" } or { "kind": "HasComponent", "component": "..." }).
+// ({ "kind": "Domain", "domain": "air" }, { "kind": "HasComponent", "component": "..." },
+//  { "kind": "HasFlag", "flag": "..." }, or { "kind": "IsPrototype" }).
 UnitFilter_t ParseUnitFilter(const nlohmann::json& filterJson);
 
 // Parses a BuildingFilter_t from a buildingFilter JSON object

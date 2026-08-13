@@ -30,6 +30,9 @@ protected:
 private:
     // Continue = this base is done for the pass; Yield = stop and wait on the player.
     StageResult_t ProcessBase_(GameState& rGameState, Faction& rFaction, BaseManager& rBase);
+    StageResult_t HandleApplyResult_(GameState& rGameState, Faction& rFaction, BaseManager& rBase,
+                                     const ProductionApplyResult_t& rResult);
+    StageResult_t ReevaluateProcessedBases_(GameState& rGameState, Faction& rFaction);
     StageResult_t HandleAbandonConfirm_(GameState& rGameState, Faction& rFaction, BaseManager& rBase);
     StageResult_t HandleProductionCompleted_(GameState& rGameState, Faction& rFaction,
                                             BaseManager& rBase,

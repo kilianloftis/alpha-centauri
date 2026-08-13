@@ -90,13 +90,15 @@ bool ProductionManager::HasProduction() const
     return m_pCurrentItem != nullptr;
 }
 
-int ProductionManager::GetMineralCost(const BaseEffects_t& rBaseEffects) const
+int ProductionManager::GetMineralCost(const BaseEffects_t& rBaseEffects, bool bPrototype) const
 {
     if (!m_pCurrentItem)
     {
         return 0;
     }
-    return ProductionCostCalculator::ComputeCost(m_pCurrentItem->GetBaseCost(), rBaseEffects);
+    const int surcharge = bPrototype ? m_rConfig.prototypeSurchargePercent : 0;
+    return ProductionCostCalculator::ComputeCost(m_pCurrentItem->GetBaseCost(), rBaseEffects,
+                                                 surcharge);
 }
 
 int ProductionManager::GetMineralStockpile() const
@@ -124,9 +126,9 @@ void ProductionManager::BankProduction(int minerals)
     m_pTurnOriginalItem = m_pCurrentItem;
 }
 
-bool ProductionManager::IsReadyToComplete(const BaseEffects_t& rBaseEffects) const
+bool ProductionManager::IsReadyToComplete(const BaseEffects_t& rBaseEffects, bool bPrototype) const
 {
-    return HasProduction() && m_mineralStockpile >= GetMineralCost(rBaseEffects);
+    return HasProduction() && m_mineralStockpile >= GetMineralCost(rBaseEffects, bPrototype);
 }
 
 std::string ProductionManager::CompleteProduction()

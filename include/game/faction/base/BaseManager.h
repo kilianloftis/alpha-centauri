@@ -165,6 +165,11 @@ public:
     // ConfirmProductionAbandon or DeferProductionAbandon.
     ProductionApplyResult_t ApplyProduction();
 
+    // Complete the queued item if the stockpile already meets the current cost, without
+    // banking this turn's minerals. Used when a sibling prototype finishes and this queue's
+    // surcharge drops. Does not consume resources.
+    ProductionApplyResult_t TryCompleteReadyProduction();
+
     // True when ApplyProduction returned AwaitingAbandonConfirm and the player has not yet
     // Confirm'd or Defer'd.
     bool HasPendingProductionAbandonConfirm() const;
@@ -178,8 +183,9 @@ public:
     void DeferProductionAbandon();
 
     // Effective mineral cost of the current production item after CostMultiplier effects
-    // (e.g. Industry social-rating levels expanded into the base effect list).
-    // Returns 0 when nothing is queued.
+    // (e.g. Industry social-rating levels expanded into the base effect list) and the
+    // prototype surcharge when the queued unit fields a component this faction has not
+    // built. Returns 0 when nothing is queued.
     int GetMineralCost() const;
 
     // Collect nutrients/minerals and allocate energy into econ/labs/psych stockpiles.
@@ -300,6 +306,8 @@ private:
     bool m_bPendingProductionAbandonConfirm = false;
 
     bool WouldEmptyBaseOnProductionComplete_() const;
+    bool IsCurrentProductionPrototype_() const;
+    ProductionApplyResult_t FinishProductionIfReady_(const BaseEffects_t& rEffects);
 
     // Memoized BuildBaseEffects_ result, keyed on the provider's pool version
     // (empty = never built).

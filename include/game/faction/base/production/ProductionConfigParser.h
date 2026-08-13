@@ -1,6 +1,9 @@
 #pragma once
 
+#include "game/effects/EffectConfig.h"
+
 #include <string>
+#include <vector>
 
 namespace ac
 {
@@ -15,6 +18,12 @@ struct ProductionConfig_t
     // Percent of the stockpile forfeited on a retool (SMAC is 50). Integer math: stockpile *
     // percent / 100, rounded down so the remainder favours the player.
     int retoolPenaltyPercent = 50;
+    // Extra mineral cost for a prototype unit (first fielding of any component on the
+    // design). Applied once even if several components are new. 50 means 50% more.
+    int prototypeSurchargePercent = 50;
+    // Continuous effects merged into every faction pool (source id "production"). Prototype
+    // starting XP is a FactionUnits StartingExperience StatModifier with unitFilter IsPrototype.
+    std::vector<EffectConfig_t> effects;
 };
 
 class ProductionConfigParser

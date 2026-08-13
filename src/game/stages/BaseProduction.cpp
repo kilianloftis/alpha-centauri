@@ -108,21 +108,75 @@ void BaseProduction::LogProductionTick_(const BaseManager& rBase,
     }
 }
 
+StageResult_t BaseProduction::HandleApplyResult_(GameState& rGameState, Faction& rFaction,
+                                                BaseManager& rBase,
+                                                const ProductionApplyResult_t& rResult)
+{
+    switch (rResult.kind)
+    {
+    case ProductionApplyKind_t::AwaitingAbandonConfirm:
+        return HandleAbandonConfirm_(rGameState, rFaction, rBase);
+    case ProductionApplyKind_t::Completed:
+        return HandleProductionCompleted_(rGameState, rFaction, rBase, rResult);
+    case ProductionApplyKind_t::Idle:
+    case ProductionApplyKind_t::InProgress:
+        break;
+    }
+    return StageResult_t::Continue;
+}
+
+StageResult_t BaseProduction::ReevaluateProcessedBases_(GameState& rGameState, Faction& rFaction)
+{
+    bool bProgress = true;
+    while (bProgress)
+    {
+        bProgress = false;
+        for (BaseManager& rBase : rFaction.Bases())
+        {
+            if (!m_processedBaseIds.contains(rBase.GetBaseId()))
+            {
+                continue;
+            }
+            if (rBase.HasPendingProductionAbandonConfirm())
+            {
+                continue;
+            }
+
+            const ProductionApplyResult_t result = rBase.TryCompleteReadyProduction();
+            if (result.kind != ProductionApplyKind_t::Completed
+                && result.kind != ProductionApplyKind_t::AwaitingAbandonConfirm)
+            {
+                continue;
+            }
+
+            LogProductionTick_(rBase, result);
+            if (result.kind == ProductionApplyKind_t::Completed)
+            {
+                bProgress = true;
+            }
+            if (HandleApplyResult_(rGameState, rFaction, rBase, result) == StageResult_t::Yield)
+            {
+                return StageResult_t::Yield;
+            }
+        }
+    }
+    return StageResult_t::Continue;
+}
+
 StageResult_t BaseProduction::ProcessBase_(GameState& rGameState, Faction& rFaction,
                                            BaseManager& rBase)
 {
     const ProductionApplyResult_t result = rBase.ApplyProduction();
     LogProductionTick_(rBase, result);
 
-    switch (result.kind)
+    HandleApplyResult_(rGameState, rFaction, rBase, result);
+    if (result.kind == ProductionApplyKind_t::Completed)
     {
-    case ProductionApplyKind_t::AwaitingAbandonConfirm:
-        return HandleAbandonConfirm_(rGameState, rFaction, rBase);
-    case ProductionApplyKind_t::Completed:
-        return HandleProductionCompleted_(rGameState, rFaction, rBase, result);
-    case ProductionApplyKind_t::Idle:
-    case ProductionApplyKind_t::InProgress:
-        break;
+        ReevaluateProcessedBases_(rGameState, rFaction);
+    }
+    if (PlayerHasPending_(rGameState))
+    {
+        return StageResult_t::Yield;
     }
     return StageResult_t::Continue;
 }
@@ -144,6 +198,12 @@ StageResult_t BaseProduction::ExecuteImpl(GameState& rGameState, Faction& rFacti
     {
         m_processedBaseIds.insert(*m_awaitingBaseId);
         m_awaitingBaseId.reset();
+    }
+
+    if (ReevaluateProcessedBases_(rGameState, rFaction) == StageResult_t::Yield
+        || PlayerHasPending_(rGameState))
+    {
+        return StageResult_t::Yield;
     }
 
     for (BaseManager& rBase : rFaction.Bases())

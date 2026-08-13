@@ -661,6 +661,10 @@ UnitFilter_t ParseUnitFilter(const nlohmann::json& filterJson)
         }
         return UnitFilterHasFlag_t{ParseRuleFlagId(flagId)};
     }
+    if (kindStr == "IsPrototype")
+    {
+        return UnitFilterIsPrototype_t{};
+    }
 
     throw std::runtime_error("Unknown unitFilter kind: '" + kindStr + "'");
 }
@@ -797,6 +801,7 @@ void ValidateScopeForSource(EffectScope_t scope, EffectPersistence_t persistence
         case EffectSourceKind_t::CouncilRules:
         case EffectSourceKind_t::TileYieldRules:
         case EffectSourceKind_t::Tech:
+        case EffectSourceKind_t::Production:
             bCanSupplyOriginBase = false;
             break;
         }

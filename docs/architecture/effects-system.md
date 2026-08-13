@@ -226,7 +226,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 
 ### UnitFilter_t
 - **Purpose**: Restricts which units an effect applies to in `CollectLiveUnitEffects` (context-free identity predicates, not combat situations).
-- **Shape**: `std::variant` of `UnitFilterDomain_t` / `UnitFilterHasComponent_t` / `UnitFilterHasFlag_t` with required fields as plain members.
+- **Shape**: `std::variant` of `UnitFilterDomain_t` / `UnitFilterHasComponent_t` / `UnitFilterHasFlag_t` / `UnitFilterIsPrototype_t` with required fields as plain members. `IsPrototype` is true while the unit's design still has a component the owning faction has never fielded (prototype starting XP).
 
 ### ModifierOp_t
 - **Purpose**: Describes how a stat modifier combines with the running total.

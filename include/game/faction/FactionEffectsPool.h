@@ -19,7 +19,7 @@ class SocialRatingRegistry;
 class FactionEffectsPool
 {
 public:
-    // All four data dependencies come from GameDataContext, which the composition root always
+    // All data dependencies come from GameDataContext, which the composition root always
     // supplies complete. They were optional pointers whose null branches silently dropped
     // whole effect lanes — no buildings, no tile-yield rules, no social-rating expansion —
     // with no diagnostic, which is how fixture factions came to resolve ratings differently
@@ -28,7 +28,8 @@ public:
                        const BuildingRegistry& rBuildingRegistry,
                        const Revision& rBaseListRevision,
                        const std::vector<EffectConfig_t>& rTileYieldRules,
-                       const SocialRatingRegistry& rSocialRatings);
+                       const SocialRatingRegistry& rSocialRatings,
+                       const std::vector<EffectConfig_t>& rProductionEffects);
 
     // The validated local pool. Valid until the next effect-source mutation on the owner.
     const FactionEffects_t& Get() const;
@@ -58,6 +59,9 @@ private:
     // Universal tile-yield rules (TileResourceCap, etc.) from GameDataContext.
     std::vector<ActiveEffect_t> CollectTileYieldRuleEffects_() const;
 
+    // Production.json continuous effects (prototype StartingExperience, …).
+    std::vector<ActiveEffect_t> CollectProductionEffects_() const;
+
     // Erase effects whose removedByTech is already discovered.
     static void ApplyRemovedByTech_(FactionEffects_t& rEffects, const ResearchManager& rResearch);
 
@@ -78,6 +82,7 @@ private:
     const Revision& m_rBaseListRevision;
     const std::vector<EffectConfig_t>& m_rTileYieldRules;
     const SocialRatingRegistry& m_rSocialRatings;
+    const std::vector<EffectConfig_t>& m_rProductionEffects;
 
     // The empty initial stamp never equals a real collection, so no "never built"
     // sentinel is needed. m_scratchRevisions is reused between validations to keep the

@@ -539,6 +539,20 @@ TEST_CASE("ParseEffectConfig: unitFilter", "[effects][parser][unitFilter]")
         CHECK(pComp->component == "test_weapon");
     }
 
+    SECTION("IsPrototype filter")
+    {
+        const json effectJson = json::parse(R"({
+            "type": "StatModifier",
+            "scope": "FactionUnits",
+            "unitFilter": { "kind": "IsPrototype" },
+            "parameters": { "stat": "starting_experience", "amount": 1 }
+        })");
+
+        const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
+        REQUIRE(config.unitFilter.has_value());
+        CHECK(std::holds_alternative<UnitFilterIsPrototype_t>(*config.unitFilter));
+    }
+
     SECTION("Domain without domain throws")
     {
         CHECK_THROWS(EffectConfigParser::ParseUnitFilter(json::parse(R"({ "kind": "Domain" })")));
@@ -1011,6 +1025,9 @@ TEST_CASE("ValidateScopeForSource: rejects only the certainly-impossible combina
     CHECK_THROWS(EffectConfigParser::ValidateScopeForSource(
         EffectScope_t::ThisBase, EffectPersistence_t::Continuous, EffectSourceKind_t::TileYieldRules,
         "tile_yield_rules"));
+    CHECK_THROWS(EffectConfigParser::ValidateScopeForSource(
+        EffectScope_t::ThisBase, EffectPersistence_t::Continuous, EffectSourceKind_t::Production,
+        "production"));
     CHECK_NOTHROW(EffectConfigParser::ValidateScopeForSource(
         EffectScope_t::ThisBase, EffectPersistence_t::Continuous, EffectSourceKind_t::Building,
         "recycling_tanks"));

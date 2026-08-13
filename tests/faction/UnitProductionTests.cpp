@@ -10,11 +10,15 @@
 #include "game/TurnProcessor.h"
 #include "game/TurnStages.h"
 #include "game/faction/Military.h"
+#include "game/faction/Military.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/production/ProductionManager.h"
 #include "game/faction/base/production/ProductionApplyResult.h"
+#include "game/faction/base/production/ProductionCostCalculator.h"
+#include "game/effects/ActiveEffect.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
 #include "game/stages/BaseProduction.h"
@@ -360,7 +364,7 @@ TEST_CASE("BaseProduction enqueues one idle prompt after empty-queue completion"
         const auto& rIdle = std::get<ProductionIdleInteraction_t>(
             game.pState->GetPlayerInteractions().Front()->payload);
         CHECK(rIdle.afterCompletion);
-        CHECK(rIdle.completedEvent == PauseOnEventId_t::CombatUnitBuilt);
+        CHECK(rIdle.completedEvent == PauseOnEventId_t::PrototypeBuilt);
         CHECK(rIdle.baseId == base.GetBaseId());
         CHECK(rIdle.completedItemId == rDesign.GetId());
         CHECK(rIdle.completedItemName == rDesign.GetId());
@@ -508,4 +512,193 @@ TEST_CASE("Transfer rebinds queued unit design when the new owner has it and its
     REQUIRE(base.GetProduction().GetCurrentProduction() != nullptr);
     CHECK(base.GetProduction().GetCurrentProduction() == &rReceiverDesign);
     CHECK(base.GetProduction().GetMineralStockpile() == 9);
+}
+
+TEST_CASE("A unit is a prototype when any component is new to the faction",
+          "[production][unit][prototype]")
+{
+    UnitProductionGame_ game;
+    BaseManager& base = game.MakeBase(4, 4);
+    const UnitDesign& rDesign =
+        game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
+
+    REQUIRE(game.pFaction->GetMilitary().IsPrototype(rDesign));
+
+    base.GetProduction().SetProduction(&rDesign);
+    const int prototypeCost = base.GetMineralCost();
+    const int expected =
+        ProductionCostCalculator::ComputeCost(rDesign.GetBaseCost(), BaseEffects_t{}, 50);
+    CHECK(rDesign.GetBaseCost() == 40);
+    CHECK(prototypeCost == expected);
+    CHECK(prototypeCost > rDesign.GetBaseCost());
+
+    base.GetProduction().SetMineralStockpile(prototypeCost);
+    REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
+
+    CHECK_FALSE(game.pFaction->GetMilitary().IsPrototype(rDesign));
+    const std::vector<Unit*>& onTile =
+        game.pState->GetWorldMap().GetUnitPositions().GetUnitsOnTile(base.GetTile());
+    REQUIRE(onTile.size() == 1);
+    CHECK(onTile.front()->GetXp() == 2);
+}
+
+TEST_CASE("Prototype StartingExperience stacks with ProducedAtThisBase train bonuses",
+          "[production][unit][prototype]")
+{
+    UnitProductionGame_ game;
+    BaseManager& base = game.MakeBase(4, 4);
+    base.GetBuildingManager().AddBuilding("Aerospace_Complex");
+    const UnitDesign& rDesign =
+        game.AddDesign({"test_flight_chassis", "test_costly_weapon", "test_costly_armor"});
+
+    base.GetProduction().SetProduction(&rDesign);
+    base.GetProduction().SetMineralStockpile(base.GetMineralCost());
+    REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
+
+    const std::vector<Unit*>& onTile =
+        game.pState->GetWorldMap().GetUnitPositions().GetUnitsOnTile(base.GetTile());
+    REQUIRE(onTile.size() == 1);
+    CHECK(onTile.front()->GetXp() == 4);
+}
+
+TEST_CASE("Several new components still apply a single prototype surcharge",
+          "[production][unit][prototype]")
+{
+    UnitProductionGame_ game;
+    BaseManager& base = game.MakeBase(4, 4);
+    const UnitDesign& rDesign =
+        game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
+    base.GetProduction().SetProduction(&rDesign);
+
+    CHECK(base.GetMineralCost()
+          == ProductionCostCalculator::ComputeCost(rDesign.GetBaseCost(), BaseEffects_t{}, 50));
+    CHECK(base.GetMineralCost()
+          != ProductionCostCalculator::ComputeCost(rDesign.GetBaseCost(), BaseEffects_t{}, 150));
+}
+
+TEST_CASE("Fielding a unit removes the prototype penalty from other queues of that faction",
+          "[production][unit][prototype]")
+{
+    UnitProductionGame_ game;
+    BaseManager& first = game.MakeBase(2, 2);
+    BaseManager& second = game.MakeBase(6, 6);
+    const UnitDesign& rDesign =
+        game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
+
+    first.GetProduction().SetProduction(&rDesign);
+    second.GetProduction().SetProduction(&rDesign);
+    const int prototypeCost = first.GetMineralCost();
+    const int standardCost =
+        ProductionCostCalculator::ComputeCost(rDesign.GetBaseCost(), BaseEffects_t{}, 0);
+    REQUIRE(prototypeCost > standardCost);
+
+    first.GetProduction().SetMineralStockpile(standardCost);
+    CHECK(first.ApplyProduction().kind == ProductionApplyKind_t::InProgress);
+
+    second.GetProduction().SetMineralStockpile(prototypeCost);
+    const ProductionApplyResult_t finished = second.ApplyProduction();
+    REQUIRE(finished.kind == ProductionApplyKind_t::Completed);
+    CHECK(finished.completedEvent == PauseOnEventId_t::PrototypeBuilt);
+
+    CHECK(first.GetMineralCost() == standardCost);
+    CHECK(first.GetProduction().HasProduction());
+    CHECK(first.TryCompleteReadyProduction().kind == ProductionApplyKind_t::Completed);
+    CHECK_FALSE(first.GetProduction().HasProduction());
+}
+
+TEST_CASE("A remaining unbuilt component keeps other designs as prototypes",
+          "[production][unit][prototype]")
+{
+    UnitProductionGame_ game;
+    BaseManager& base = game.MakeBase(4, 4);
+    const UnitDesign& rFirst =
+        game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
+    const UnitDesign& rSecond =
+        game.AddDesign({"test_chassis", "test_costly_weapon_alt", "test_costly_armor"});
+
+    base.GetProduction().SetProduction(&rFirst);
+    base.GetProduction().SetMineralStockpile(base.GetMineralCost());
+    REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
+
+    CHECK_FALSE(game.pFaction->GetMilitary().IsPrototype(rFirst));
+    REQUIRE(game.pFaction->GetMilitary().IsPrototype(rSecond));
+
+    BaseManager& other = game.MakeBase(6, 6);
+    other.GetProduction().SetProduction(&rSecond);
+    CHECK(other.GetMineralCost()
+          == ProductionCostCalculator::ComputeCost(rSecond.GetBaseCost(), BaseEffects_t{}, 50));
+}
+
+TEST_CASE("Prototype knowledge is per faction", "[production][unit][prototype]")
+{
+    UnitProductionGame_ game;
+    BaseManager& playerBase = game.MakeBase(2, 2);
+    BaseManager& aiBase = game.MakeBase(*game.pOther, 6, 6);
+    const UnitDesign& rPlayer =
+        game.AddDesign(*game.pFaction, {"test_chassis", "test_costly_weapon", "test_costly_armor"});
+    const UnitDesign& rAi =
+        game.AddDesign(*game.pOther, {"test_chassis", "test_costly_weapon", "test_costly_armor"});
+
+    playerBase.GetProduction().SetProduction(&rPlayer);
+    playerBase.GetProduction().SetMineralStockpile(playerBase.GetMineralCost());
+    REQUIRE(playerBase.ApplyProduction().kind == ProductionApplyKind_t::Completed);
+
+    aiBase.GetProduction().SetProduction(&rAi);
+    CHECK(game.pOther->GetMilitary().IsPrototype(rAi));
+    CHECK(aiBase.GetMineralCost()
+          == ProductionCostCalculator::ComputeCost(rAi.GetBaseCost(), BaseEffects_t{}, 50));
+}
+
+TEST_CASE("CreateUnit applies prototype StartingExperience then unlocks the components",
+          "[production][unit][prototype]")
+{
+    UnitProductionGame_ game;
+    BaseManager& base = game.MakeBase(4, 4);
+    const UnitDesign& rDesign =
+        game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
+
+    Unit& spawned = game.pFaction->GetUnitManager().CreateUnit(
+        game.pState->AllocateUnitId(), rDesign, game.pState->GetWorldMap().GetUnitPositions(),
+        *game.pState->GetWorldMap().GetTile(0, 0), &base, &base);
+    CHECK(spawned.GetXp() == 2);
+    CHECK(spawned.GetStat(StatId_t::StartingExperience) == 0);
+    CHECK_FALSE(game.pFaction->GetMilitary().IsPrototype(rDesign));
+
+    base.GetProduction().SetProduction(&rDesign);
+    CHECK(base.GetMineralCost()
+          == ProductionCostCalculator::ComputeCost(rDesign.GetBaseCost(), BaseEffects_t{}, 0));
+}
+
+TEST_CASE("BaseProduction completes a sibling queue when a prototype finishes",
+          "[production][unit][prototype][BaseProduction]")
+{
+    UnitProductionGame_ game;
+    BaseManager& first = game.MakeBase(2, 2);
+    BaseManager& second = game.MakeBase(6, 6);
+    const UnitDesign& rDesign =
+        game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
+
+    first.GetProduction().SetProduction(&rDesign);
+    second.GetProduction().SetProduction(&rDesign);
+    const int standardCost =
+        ProductionCostCalculator::ComputeCost(rDesign.GetBaseCost(), BaseEffects_t{}, 0);
+    const int prototypeCost = first.GetMineralCost();
+    REQUIRE(prototypeCost > standardCost);
+
+    first.GetProduction().SetMineralStockpile(standardCost);
+    second.GetProduction().SetMineralStockpile(prototypeCost);
+
+    PerFactionTurnStageRegistry_t perFaction;
+    perFaction["BaseProduction"] = std::make_unique<BaseProduction>(HookContext{});
+    GlobalTurnStageRegistry_t global;
+    global["Stop"] = std::make_unique<AlwaysYieldStage_>(HookContext{});
+    TurnProcessor processor(std::move(global), std::move(perFaction),
+                            {"BaseProduction", "Stop"});
+
+    processor.Advance(*game.pState);
+
+    CHECK_FALSE(first.GetProduction().HasProduction());
+    CHECK_FALSE(second.GetProduction().HasProduction());
+    CHECK(std::ranges::distance(game.pFaction->GetUnitManager().Units()) == 2);
+    CHECK(game.pState->GetPlayerInteractions().Size() >= 1);
 }

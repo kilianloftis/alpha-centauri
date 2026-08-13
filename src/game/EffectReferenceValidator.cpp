@@ -298,6 +298,10 @@ void ValidateEffectReferences(const GameDataContext& rData)
     }
     // tileYieldRules is a plain vector on GameDataContext (always present; may be empty).
     validate(rData.tileYieldRules, "tile_yield_rules");
+    if (rData.productionConfig)
+    {
+        validate(rData.productionConfig->effects, "production");
+    }
 }
 
 } // namespace ac
