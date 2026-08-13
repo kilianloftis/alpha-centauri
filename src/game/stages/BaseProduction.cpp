@@ -64,12 +64,8 @@ StageResult_t BaseProduction::HandleProductionCompleted_(GameState& rGameState, 
         return StageResult_t::Continue;
     }
 
-    // Queue empty after completion → one popup: what finished, Continue or Zoom to base.
-    if (rBase.GetProduction().HasProduction())
-    {
-        return StageResult_t::Continue;
-    }
-
+    // Production finished — Stockpile Energy is already queued as the fallback. Still offer
+    // Continue / Zoom so the player can pick the next real item.
     EnqueueForPlayer_(
         rGameState,
         ProductionIdleInteraction_t{
@@ -99,6 +95,12 @@ void BaseProduction::LogProductionTick_(const BaseManager& rBase,
     const ProductionManager& rProduction = rBase.GetProduction();
     if (const IConstructable* pItem = rProduction.GetCurrentProduction())
     {
+        if (pItem->NeverCompletes())
+        {
+            std::cout << "  Base '" << rBase.GetName() << "' stockpiling '" << pItem->GetName()
+                      << "'\n";
+            return;
+        }
         std::cout << "  Base '" << rBase.GetName() << "' producing '" << pItem->GetName()
                   << "' (" << rProduction.GetMineralStockpile() << "/" << rBase.GetMineralCost()
                   << " minerals)\n";
@@ -209,7 +211,7 @@ StageResult_t BaseProduction::ExecuteImpl(GameState& rGameState, Faction& rFacti
         }
 
         // Marked before the call, not after: ProcessBase_ can yield from any of several
-        // nested paths, and a base that has already had ConsumeMinerals/BankProduction run
+        // nested paths, and a base that has already had BankProduction run
         // must not be revisited when the pass resumes.
         m_processedBaseIds.insert(baseId);
         if (ProcessBase_(rGameState, rFaction, rBase) == StageResult_t::Yield)

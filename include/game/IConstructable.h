@@ -19,6 +19,10 @@ public:
 
     // Base mineral cost to construct this entity (before industry modifiers).
     virtual int GetBaseCost() const = 0;
+
+    // True for stockpile production items that convert minerals forever rather than
+    // finishing at a cost. Cost is 0 and IsReadyToComplete is always false.
+    virtual bool NeverCompletes() const { return false; }
 };
 
 } // namespace ac

@@ -11,7 +11,7 @@ namespace ac
 // Outcome of BaseManager::ApplyProduction (one mineral-banking tick).
 enum class ProductionApplyKind_t
 {
-    Idle,                   // nothing queued
+    Idle,                   // nothing queued and no available stockpile fallback
     InProgress,             // banked; cost not yet met
     Completed,              // item finished; completedId set
     AwaitingAbandonConfirm, // would empty the base; Confirm / Defer required

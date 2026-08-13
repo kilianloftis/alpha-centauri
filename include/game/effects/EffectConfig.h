@@ -85,12 +85,17 @@ struct StatModifierEffect_t
     StatId_t stat = StatId_t::Nutrients;
     double amount = 0.0;
     ModifierOp_t op = ModifierOp_t::Add;
-    // When set, `amount` scales a runtime tile value instead of being a literal add.
+    // When set, `amount` scales a runtime value instead of being a literal add.
     // ElevationEnergySeed: contribution = GetElevationEnergySeed() * amount (per-band scale).
-    // Requires EffectContext_t::targetTile at resolve time; excluded from context-free filters.
+    //   Requires EffectContext_t::targetTile; energy + ThisTile only.
+    // MineralsConverted: contribution = mineralsConverted * amount (output per mineral).
+    //   Requires EffectContext_t::mineralsConverted; stockpile-output stats + ThisBase only.
+    // Excluded from context-free filters; MineralsConverted is resolved only during
+    // stockpile conversion, not FilterBaseLevelByStatId.
     enum class AmountSource_t
     {
         ElevationEnergySeed,
+        MineralsConverted,
     };
     std::optional<AmountSource_t> amountSource;
     // When set, this modifier is a per-tile yield modifier: it applies to each worked tile
@@ -101,6 +106,31 @@ struct StatModifierEffect_t
     // When true, this contribution is added after per-tile resource caps (classic SMAC
     // resource-bonus specials). Only valid on nutrients/minerals/energy.
     bool applyAfterRestriction = false;
+};
+
+// Stats MineralsConverted may target (stockpile conversion outputs). Minerals are the
+// input, not an output.
+inline bool IsStockpileOutputStat(StatId_t stat)
+{
+    switch (stat)
+    {
+    case StatId_t::Nutrients:
+    case StatId_t::Energy:
+    case StatId_t::Econ:
+    case StatId_t::Labs:
+    case StatId_t::Psych:
+        return true;
+    default:
+        return false;
+    }
+}
+
+inline constexpr StatId_t k_StockpileOutputStats[] = {
+    StatId_t::Nutrients,
+    StatId_t::Energy,
+    StatId_t::Econ,
+    StatId_t::Labs,
+    StatId_t::Psych,
 };
 
 // Caps one tile resource at `max`. Lift the cap by putting `removed_by_tech` on the

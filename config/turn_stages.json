@@ -13,7 +13,7 @@
   {
     "id": "ResourceCollection",
     "name": "Resource Collection",
-    "description": "Collects resources from all bases for each faction",
+    "description": "Collects resources from all bases, charges mineral support, then converts leftover minerals if a stockpile is queued",
     "repeatForEachFaction": true,
     "hooks": {
       "pre": [],
@@ -46,7 +46,7 @@
   {
     "id": "Upkeep",
     "name": "Upkeep",
-    "description": "Unit mineral support and facility energy upkeep; runs before BaseProduction so support claims minerals first",
+    "description": "Unit mineral support ran in ResourceCollection; this stage charges facility energy upkeep after income",
     "repeatForEachFaction": true,
     "hooks": {
       "pre": [],

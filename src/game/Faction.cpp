@@ -619,6 +619,17 @@ void Faction::ApplyMineralSupport()
     }
 }
 
+void Faction::ConvertSurplusMinerals()
+{
+    for (const auto& pBase : m_bases)
+    {
+        if (pBase)
+        {
+            pBase->ConvertSurplusMinerals();
+        }
+    }
+}
+
 int Faction::GetBuildingUpkeep() const
 {
     int total = 0;

@@ -1,20 +1,19 @@
 Turn start
 New year begins
-Income collection
--Nutrients, minerals, energy tallied per base
--- Nutrients
--- Minerals
--- Energy
--- Commerce
-Energy allocation
--Economy/Labs/Psych sliders applied
-Research accumulation
--Lab output added; tech discovered if threshold met
-Upkeep & social effects
+Resource collection
+- Nutrients, minerals, energy tallied per base
 - Unit mineral support (charged against this turn's mineral bank; surplus units disbanded)
+- Leftover minerals convert if a stockpile is queued (else left for production, or wasted)
+Income collection
+- Econ stockpile transferred to the faction energy pool
+Energy allocation
+- Economy/Labs/Psych sliders applied during collection
+Research accumulation
+- Lab output added; tech discovered if threshold met
+Upkeep
 - Facility energy upkeep (summed across owned buildings; deducted from the faction energy treasury)
 Base production
--Remaining minerals spent; units or facilities completed
+- Remaining minerals spent on the queued unit or facility
 -- Facilities
 -- Units
 -- Terraforming

@@ -20,9 +20,8 @@ StageResult_t Upkeep::ExecuteImpl(GameState& rGameState, Faction& rFaction)
     // Retire ASAT / interceptor deploy records that have come off cooldown. Done here rather
     // than inside CountReadyBuildings so that query stays pure (see Faction::CountReadyBuildings).
     rFaction.PruneExpiredDeploys(rGameState.GetMissionYear());
-    // Mineral support runs after ResourceCollection banks minerals and before BaseProduction
-    // spends the remainder on the build queue.
-    rFaction.ApplyMineralSupport();
+    // Mineral support and surplus conversion run in ResourceCollection so leftover minerals
+    // are allocated before IncomeCollection / ResearchAccumulation drain econ and labs.
     // Facility energy upkeep runs after IncomeCollection has banked this turn's econ.
     rFaction.ApplyBuildingUpkeep();
     return StageResult_t::Continue;

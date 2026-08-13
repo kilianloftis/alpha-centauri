@@ -8,6 +8,8 @@
 #include "game/GameSettings.h"
 #include "game/GameState.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/effects/EffectConfig.h"
+#include "game/effects/EffectEnums.h"
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/buildings/BuildingManager.h"
@@ -22,6 +24,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <variant>
 
 using namespace ac;
 using namespace actest;
@@ -212,6 +215,147 @@ TEST_CASE("The building parser rejects rather than silently defaulting", "[build
         ])");
         CHECK_NOTHROW(registry.Load(path));
     }
+
+    SECTION("a stockpile with a mineral cost is rejected")
+    {
+        const std::string path = WriteTempBuildings_(R"([
+            { "id": "paid_stock", "name": "Paid", "stockpile": true,
+              "mineral_cost": 10,
+              "effects": [{
+                "type": "StatModifier", "scope": "ThisBase",
+                "parameters": { "stat": "energy", "amount": 0.5,
+                                "amount_source": "MineralsConverted" }
+              }] }
+        ])");
+        CHECK_THROWS_WITH(registry.Load(path),
+                          Catch::Matchers::ContainsSubstring("paid_stock")
+                              && Catch::Matchers::ContainsSubstring("mineral_cost"));
+    }
+
+    SECTION("mineral_cost 0 is still rejected on a stockpile")
+    {
+        const std::string path = WriteTempBuildings_(R"([
+            { "id": "zero_cost_stock", "name": "Zero", "stockpile": true,
+              "mineral_cost": 0,
+              "effects": [{
+                "type": "StatModifier", "scope": "ThisBase",
+                "parameters": { "stat": "energy", "amount": 0.5,
+                                "amount_source": "MineralsConverted" }
+              }] }
+        ])");
+        CHECK_THROWS_WITH(registry.Load(path),
+                          Catch::Matchers::ContainsSubstring("zero_cost_stock")
+                              && Catch::Matchers::ContainsSubstring("mineral_cost"));
+    }
+
+    SECTION("a valid stockpile item loads")
+    {
+        const std::string path = WriteTempBuildings_(R"([
+            { "id": "Stockpile_Energy", "name": "Stockpile Energy",
+              "stockpile": true,
+              "effects": [{
+                "type": "StatModifier", "scope": "ThisBase",
+                "parameters": { "stat": "energy", "amount": 0.5,
+                                "amount_source": "MineralsConverted" }
+              }] }
+        ])");
+        CHECK_NOTHROW(registry.Load(path));
+        const BuildingConfig_t* pStockpile = registry.Find("Stockpile_Energy");
+        REQUIRE(pStockpile != nullptr);
+        CHECK(pStockpile->IsStockpile());
+        CHECK(pStockpile->NeverCompletes());
+        CHECK(pStockpile->GetBaseCost() == 0);
+        REQUIRE(pStockpile->effects.size() == 1);
+        const auto* pMod = std::get_if<StatModifierEffect_t>(&pStockpile->effects.front().effect);
+        REQUIRE(pMod != nullptr);
+        REQUIRE(pMod->amountSource.has_value());
+        CHECK(*pMod->amountSource == StatModifierEffect_t::AmountSource_t::MineralsConverted);
+        CHECK(pMod->stat == StatId_t::Energy);
+        CHECK(pMod->amount == 0.5);
+    }
+
+    SECTION("stockpile requires a MineralsConverted yield")
+    {
+        const std::string path = WriteTempBuildings_(R"([
+            { "id": "bare_stock", "name": "Bare", "stockpile": true }
+        ])");
+        CHECK_THROWS_WITH(registry.Load(path),
+                          Catch::Matchers::ContainsSubstring("bare_stock")
+                              && Catch::Matchers::ContainsSubstring("MineralsConverted"));
+    }
+
+    SECTION("MineralsConverted on minerals is rejected")
+    {
+        const std::string path = WriteTempBuildings_(R"([
+            { "id": "min_stock", "name": "Min", "stockpile": true,
+              "effects": [{
+                "type": "StatModifier", "scope": "ThisBase",
+                "parameters": { "stat": "minerals", "amount": 1,
+                                "amount_source": "MineralsConverted" }
+              }] }
+        ])");
+        CHECK_THROWS_WITH(registry.Load(path),
+                          Catch::Matchers::ContainsSubstring("MineralsConverted"));
+    }
+
+    SECTION("MineralsConverted amount must be positive")
+    {
+        const std::string path = WriteTempBuildings_(R"([
+            { "id": "zero_rate", "name": "Zero", "stockpile": true,
+              "effects": [{
+                "type": "StatModifier", "scope": "ThisBase",
+                "parameters": { "stat": "energy", "amount": 0,
+                                "amount_source": "MineralsConverted" }
+              }] }
+        ])");
+        CHECK_THROWS_WITH(registry.Load(path),
+                          Catch::Matchers::ContainsSubstring("amount")
+                              && Catch::Matchers::ContainsSubstring("MineralsConverted"));
+    }
+
+    SECTION("required_tech and extra yield modifiers are allowed on a stockpile")
+    {
+        const std::string path = WriteTempBuildings_(R"([
+            { "id": "gated_stock", "name": "Gated", "stockpile": true,
+              "required_tech": "advanced_build",
+              "effects": [
+                { "type": "StatModifier", "scope": "ThisBase",
+                  "parameters": { "stat": "labs", "amount": 1,
+                                  "amount_source": "MineralsConverted" } },
+                { "type": "StatModifier", "scope": "ThisBase",
+                  "parameters": { "stat": "labs", "amount": 25, "op": "AddPercent" } }
+              ] }
+        ])");
+        CHECK_NOTHROW(registry.Load(path));
+        const BuildingConfig_t& rStockpile = registry.Get("gated_stock");
+        CHECK(rStockpile.requiredTech == "advanced_build");
+        CHECK(rStockpile.effects.size() == 2);
+    }
+
+    SECTION("produces on a building is an unknown key")
+    {
+        const std::string path = WriteTempBuildings_(R"([
+            { "id": "hall", "name": "Hall", "produces": "energy", "rate": 0.5 }
+        ])");
+        CHECK_THROWS_WITH(registry.Load(path),
+                          Catch::Matchers::ContainsSubstring("hall")
+                              && Catch::Matchers::ContainsSubstring("produces"));
+    }
+
+    SECTION("MineralsConverted on a non-stockpile item is rejected")
+    {
+        const std::string path = WriteTempBuildings_(R"([
+            { "id": "hall", "name": "Hall",
+              "effects": [{
+                "type": "StatModifier", "scope": "ThisBase",
+                "parameters": { "stat": "energy", "amount": 0.5,
+                                "amount_source": "MineralsConverted" }
+              }] }
+        ])");
+        CHECK_THROWS_WITH(registry.Load(path),
+                          Catch::Matchers::ContainsSubstring("hall")
+                              && Catch::Matchers::ContainsSubstring("MineralsConverted"));
+    }
 }
 
 TEST_CASE("BuildingRegistry validates the whole set", "[building][config]")
@@ -245,5 +389,27 @@ TEST_CASE("BuildingRegistry validates the whole set", "[building][config]")
         ])");
         CHECK_THROWS_WITH(registry.Load(path),
                           Catch::Matchers::ContainsSubstring("upkeep"));
+    }
+
+    SECTION("two stockpile items are allowed; first available is the first in load order")
+    {
+        const std::string path = WriteTempBuildings_(R"([
+            { "id": "stock_a", "name": "A", "stockpile": true,
+              "required_tech": "advanced_build",
+              "effects": [{
+                "type": "StatModifier", "scope": "ThisBase",
+                "parameters": { "stat": "energy", "amount": 0.5,
+                                "amount_source": "MineralsConverted" }
+              }] },
+            { "id": "stock_b", "name": "B", "stockpile": true,
+              "effects": [{
+                "type": "StatModifier", "scope": "ThisBase",
+                "parameters": { "stat": "labs", "amount": 1,
+                                "amount_source": "MineralsConverted" }
+              }] }
+        ])");
+        CHECK_NOTHROW(registry.Load(path));
+        CHECK(registry.FindFirstAvailableStockpile({})->id == "stock_b");
+        CHECK(registry.FindFirstAvailableStockpile({"advanced_build"})->id == "stock_a");
     }
 }

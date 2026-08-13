@@ -192,8 +192,13 @@ public:
     void ProduceBaseResources();
 
     // Charge mineral support at every base (home units vs this turn's mineral bank).
-    // Called from Upkeep before BaseProduction spends the remainder on the build queue.
+    // Called from ResourceCollection after ProduceBaseResources and before ConvertSurplusMinerals.
     void ApplyMineralSupport();
+
+    // Convert leftover minerals at every base (stockpile recipe or waste). Called from
+    // ResourceCollection after ApplyMineralSupport so income / research / growth see credits
+    // this turn.
+    void ConvertSurplusMinerals();
 
     // Sum of BuildingConfig_t::upkeep across every constructed building copy (all bases).
     // Continuous GrantBuilding expansions are not constructed and are not included.

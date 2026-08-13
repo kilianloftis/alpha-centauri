@@ -251,6 +251,34 @@ void ResourceManager::SpendMinerals(int amount)
     m_minerals -= amount;
 }
 
+void ResourceManager::AddResource(StatId_t stat, int amount)
+{
+    if (amount < 0)
+    {
+        throw std::invalid_argument("AddResource: amount must be non-negative");
+    }
+    switch (stat)
+    {
+    case StatId_t::Nutrients:
+        m_nutrients += amount;
+        return;
+    case StatId_t::Minerals:
+        m_minerals += amount;
+        return;
+    case StatId_t::Econ:
+        m_econ += amount;
+        return;
+    case StatId_t::Labs:
+        m_labs += amount;
+        return;
+    case StatId_t::Psych:
+        m_psych += amount;
+        return;
+    default:
+        throw std::invalid_argument("AddResource: stat is not a resource bank");
+    }
+}
+
 int ResourceManager::ConsumeEcon()
 {
     int consumed = m_econ;

@@ -27,9 +27,10 @@ public:
                     const ResearchManager& rResearchManager);
     ~BuildingManager();
 
-    // Whether buildingId may be added here: unknown ids and duplicates of a non-allowMultiple
-    // building are rejected, as is a secret project already built or destroyed anywhere in the
-    // world. Throws only if the id is unknown, or a secret project is queried without a
+    // Whether buildingId may be added here: unknown ids, stockpile production items (never
+    // constructed), and duplicates of a non-allowMultiple building are rejected, as is a
+    // secret project already built or destroyed anywhere in the world. Throws only if the id
+    // is unknown, or a secret project is queried without a
     // SecretProjectAvailabilityCalculator.
     bool CanAddBuilding(const BuildingId_t& buildingId) const;
 

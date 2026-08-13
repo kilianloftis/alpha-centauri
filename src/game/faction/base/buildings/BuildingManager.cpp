@@ -29,6 +29,10 @@ void BuildingManager::RebindResearch(const ResearchManager& rResearch)
 bool BuildingManager::CanAddBuilding(const BuildingId_t& buildingId) const
 {
     const BuildingConfig_t& rConfig = m_rRegistry.Get(buildingId);
+    if (rConfig.IsStockpile())
+    {
+        return false;
+    }
     if (!rConfig.allowMultiple && DoesBuildingExist_(buildingId))
     {
         return false;
@@ -116,6 +120,8 @@ std::vector<const BuildingConfig_t*> BuildingManager::GetBuildingsAvailableForCo
     {
         const bool bSecretProjectCompleted = rBuilding.bIsSecretProject
                 && m_pSecretProjectCalculator->IsUnavailable(rBuilding.id);
+        // Stockpile items stay in this list so the build menu can queue them, even though
+        // CanAddBuilding is false (they are never constructed as facilities).
         if (rBuilding.IsAvailable(discoveredTechs)
                 && (rBuilding.allowMultiple || !DoesBuildingExist_(rBuilding.id))
                 && !bSecretProjectCompleted)

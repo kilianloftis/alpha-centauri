@@ -233,3 +233,28 @@ TEST_CASE("ResolveStatModifiers: amount_source ElevationEnergySeed scales seed b
     CHECK(std::ranges::distance(FilterByStatId(effects, StatId_t::Energy)) == 0);
     CHECK(std::ranges::distance(FilterByStatIdInContext(effects, StatId_t::Energy, ctx)) == 1);
 }
+
+TEST_CASE("ResolveStatModifiers: amount_source MineralsConverted scales by minerals",
+          "[effects][math][amount_source]")
+{
+    actest::EffectPool pool;
+    StatModifierEffect_t mod;
+    mod.stat = StatId_t::Energy;
+    mod.amount = 0.5;
+    mod.op = ModifierOp_t::Add;
+    mod.amountSource = StatModifierEffect_t::AmountSource_t::MineralsConverted;
+
+    EffectConfig_t config;
+    config.effect = mod;
+    config.scope = EffectScope_t::ThisBase;
+    config.persistence = EffectPersistence_t::Continuous;
+    const EffectConfig_t& rConfig = pool.Add(std::move(config));
+
+    const EffectContext_t ctx{.mineralsConverted = 5};
+    const std::vector<ActiveEffect_t> effects = {Active(rConfig, "stockpile")};
+
+    CHECK(ResolveStatModifiers(effects, 0.0, &ctx).total == Approx(2.5));
+    CHECK(ResolveStatModifiers(effects, 0.0, nullptr).total == Approx(0.0));
+    CHECK(std::ranges::distance(FilterByStatId(effects, StatId_t::Energy)) == 0);
+    CHECK(std::ranges::distance(FilterStockpileYieldByStatId(effects, StatId_t::Energy, ctx)) == 1);
+}

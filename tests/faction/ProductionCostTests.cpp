@@ -133,6 +133,28 @@ TEST_CASE("ProductionManager resolves cost from base effects", "[production][cos
     CHECK_FALSE(production.HasProduction());
 }
 
+TEST_CASE("A never-completing item has no mineral cost and is never ready",
+          "[production][stockpile]")
+{
+    struct NeverCompleteItem : StubConstructable
+    {
+        bool NeverCompletes() const override { return true; }
+    };
+
+    NeverCompleteItem item;
+    item.baseCost = 0;
+    ProductionManager production(k_TestConfig);
+    production.SetProduction(&item);
+    production.SetMineralStockpile(100);
+
+    CHECK(production.GetMineralCost(BaseEffects_t{}, false) == 0);
+    CHECK_FALSE(production.IsReadyToComplete(BaseEffects_t{}, false));
+
+    production.BankProduction(10);
+    CHECK(production.GetMineralStockpile() == 110);
+    CHECK_FALSE(production.IsReadyToComplete(BaseEffects_t{}, false));
+}
+
 // Retooling. Switching away from what the base started the turn on forfeits half the minerals
 // already spent, once more than the threshold has accumulated; switching back is free; switching
 // on to a third item pays again. See docs/game-rules-decisions.md.

@@ -24,6 +24,7 @@
 #include "game/effects/EffectEnums.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/PauseOnEventsConfig.h"
+#include <cmath>
 #include <iostream>
 #include <stdexcept>
 
@@ -70,6 +71,49 @@ PauseOnEventId_t ClassifyCompletedItem_(const IConstructable& rItem)
         return PauseOnEventId_t::NonCombatUnitBuilt;
     }
     return PauseOnEventId_t::NewFacilityBuilt;
+}
+
+int StockpileStatYield_(const std::vector<ActiveEffect_t>& rEffects, StatId_t stat, int minerals,
+                        const BaseManager& rBase)
+{
+    const EffectContext_t ctx{.pBase = &rBase, .mineralsConverted = minerals};
+    const double total =
+        ResolveStatModifiers(FilterStockpileYieldByStatId(rEffects, stat, ctx), 0.0, &ctx)
+            .total;
+    if (total <= 0.0)
+    {
+        return 0;
+    }
+    return static_cast<int>(std::ceil(total));
+}
+
+void CreditStockpileOutput_(BaseManager& rBase, StatId_t resource, int amount)
+{
+    if (amount <= 0)
+    {
+        return;
+    }
+    if (resource == StatId_t::Energy)
+    {
+        rBase.GetFaction().GetEconomy().AddEnergy(amount);
+        return;
+    }
+    rBase.GetResources().AddResource(resource, amount);
+}
+
+void ApplyStockpileConversion_(const BuildingConfig_t& rStockpile, int minerals, BaseManager& rBase)
+{
+    if (minerals <= 0)
+    {
+        return;
+    }
+
+    std::vector<ActiveEffect_t> effects;
+    AppendActiveEffects(rStockpile.effects, &rBase, rStockpile.id, effects);
+    for (const StatId_t stat : k_StockpileOutputStats)
+    {
+        CreditStockpileOutput_(rBase, stat, StockpileStatYield_(effects, stat, minerals, rBase));
+    }
 }
 
 } // namespace
@@ -163,7 +207,12 @@ BaseManager::BaseManager(
     m_pProduction->OnProductionChanged.Connect([this]() {
         // Switching or clearing the queue cancels an unresolved abandon prompt.
         m_bPendingProductionAbandonConfirm = false;
+        // Clearing (complete, probe wipe, transfer of an unavailable item) falls back to
+        // the first available stockpile so a base is never left with an empty queue when
+        // one exists and is unlocked.
+        EnsureFallbackProduction_();
     });
+    EnsureFallbackProduction_();
 
     m_pProduction->OnProductionCompleted.Connect([this](const std::string& itemId) {
         GameState* pGameState = m_pFaction->GetGameState();
@@ -385,11 +434,22 @@ ProductionApplyResult_t BaseManager::ApplyProduction()
         return ProductionApplyResult_t{ProductionApplyKind_t::AwaitingAbandonConfirm, {}};
     }
 
+    EnsureFallbackProduction_();
     if (!m_pProduction->HasProduction())
     {
-        // ConsumeMinerals is skipped when BaseProduction does not call us for empty queues;
-        // still handle a direct call with nothing queued.
+        // Surplus conversion already wasted the bank when no stockpile was available.
+        m_pResources->ConsumeMinerals();
         return ProductionApplyResult_t{ProductionApplyKind_t::Idle, {}};
+    }
+
+    const IConstructable* pItem = m_pProduction->GetCurrentProduction();
+    if (pItem && pItem->NeverCompletes())
+    {
+        // Surplus minerals were converted (or wasted) in ConvertSurplusMinerals. Stamp the
+        // turn without banking: an existing production stockpile (founding minerals, leftover
+        // from a previous item) is left untouched.
+        m_pProduction->BankProduction(0);
+        return ProductionApplyResult_t{ProductionApplyKind_t::InProgress, {}};
     }
 
     const BaseEffects_t effects = BuildBaseEffects_();
@@ -412,6 +472,20 @@ ProductionApplyResult_t BaseManager::TryCompleteReadyProduction()
     }
 
     return FinishProductionIfReady_(BuildBaseEffects_());
+}
+
+void BaseManager::EnsureFallbackProduction_()
+{
+    if (m_pProduction->HasProduction())
+    {
+        return;
+    }
+    const BuildingConfig_t* pStockpile = m_rBuildingRegistry.FindFirstAvailableStockpile(
+        m_pFaction->GetResearch().GetDiscoveredTechs());
+    if (pStockpile)
+    {
+        m_pProduction->SetProduction(pStockpile);
+    }
 }
 
 ProductionApplyResult_t BaseManager::FinishProductionIfReady_(const BaseEffects_t& rEffects)
@@ -567,6 +641,28 @@ void BaseManager::ProduceResources()
 void BaseManager::ApplyMineralSupport()
 {
     ApplyMineralSupportAtBase(*this);
+}
+
+void BaseManager::ConvertSurplusMinerals()
+{
+    EnsureFallbackProduction_();
+    if (!m_pProduction->HasProduction())
+    {
+        m_pResources->ConsumeMinerals();
+        return;
+    }
+
+    const IConstructable* pItem = m_pProduction->GetCurrentProduction();
+    if (!pItem || !pItem->NeverCompletes())
+    {
+        return;
+    }
+
+    const int minerals = m_pResources->ConsumeMinerals();
+    if (const BuildingConfig_t* pStockpile = m_rBuildingRegistry.Find(pItem->GetId()))
+    {
+        ApplyStockpileConversion_(*pStockpile, minerals, *this);
+    }
 }
 
 std::vector<BuildingUpkeepLine_t> BaseManager::GetBuildingUpkeepByType() const

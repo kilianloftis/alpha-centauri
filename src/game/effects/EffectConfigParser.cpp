@@ -1,6 +1,7 @@
 #include "game/effects/EffectConfigParser.h"
 
 #include <magic_enum.hpp>
+#include <cmath>
 #include <cstddef>
 #include <stdexcept>
 #include <string>
@@ -128,17 +129,48 @@ void ParseStatModifier_(const nlohmann::json& parameters, EffectConfig_t& rEffec
         }
         statModifier.amountSource =
             ParseAmountSource(parameters.at("amount_source").get<std::string>());
-        // amount is the per-band scale when amount_source is set (default 1).
+        // amount is the per-source scale when amount_source is set (default 1).
         statModifier.amount = ParseNumber(parameters, "amount", 1.0);
-        if (statModifier.stat != StatId_t::Energy)
+        switch (*statModifier.amountSource)
         {
-            throw std::runtime_error(
-                "StatModifier 'amount_source' is only valid on the energy stat, got '"
-                + parameters.value("stat", "") + "'");
-        }
-        if (rEffect.scope != EffectScope_t::ThisTile)
-        {
-            throw std::runtime_error("StatModifier 'amount_source' requires scope ThisTile");
+        case StatModifierEffect_t::AmountSource_t::ElevationEnergySeed:
+            if (statModifier.stat != StatId_t::Energy)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' ElevationEnergySeed is only valid on the energy "
+                    "stat, got '"
+                    + parameters.value("stat", "") + "'");
+            }
+            if (rEffect.scope != EffectScope_t::ThisTile)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' ElevationEnergySeed requires scope ThisTile");
+            }
+            break;
+        case StatModifierEffect_t::AmountSource_t::MineralsConverted:
+            if (!IsStockpileOutputStat(statModifier.stat))
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' MineralsConverted is only valid on nutrients, "
+                    "energy, econ, labs, or psych, got '"
+                    + parameters.value("stat", "") + "'");
+            }
+            if (rEffect.scope != EffectScope_t::ThisBase)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' MineralsConverted requires scope ThisBase");
+            }
+            if (rEffect.persistence != EffectPersistence_t::Continuous)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' MineralsConverted requires persistence Continuous");
+            }
+            if (statModifier.amount <= 0.0 || !std::isfinite(statModifier.amount))
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' MineralsConverted requires amount > 0");
+            }
+            break;
         }
     }
     else
@@ -158,6 +190,12 @@ void ParseStatModifier_(const nlohmann::json& parameters, EffectConfig_t& rEffec
                 "stats (nutrients/minerals/energy), got '" + parameters.value("stat", "") + "'");
         }
         statModifier.selector = ParseTileSelector(parameters.at("selector"));
+        if (statModifier.amountSource
+            == StatModifierEffect_t::AmountSource_t::MineralsConverted)
+        {
+            throw std::runtime_error(
+                "StatModifier 'amount_source' MineralsConverted cannot carry a tile selector");
+        }
     }
     statModifier.applyAfterRestriction = parameters.value("apply_after_restriction", false);
     if (statModifier.applyAfterRestriction && !IsTileResourceStat_(statModifier.stat))

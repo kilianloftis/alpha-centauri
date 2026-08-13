@@ -305,6 +305,87 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
             }
         })")));
     }
+
+    SECTION("MineralsConverted on energy ThisBase")
+    {
+        const json effectJson = json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisBase",
+            "parameters": {
+                "stat": "energy",
+                "amount_source": "MineralsConverted",
+                "amount": 0.5,
+                "op": "Add"
+            }
+        })");
+
+        const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
+        const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
+        REQUIRE(pMod != nullptr);
+        REQUIRE(pMod->amountSource.has_value());
+        CHECK(*pMod->amountSource == StatModifierEffect_t::AmountSource_t::MineralsConverted);
+        CHECK(pMod->amount == Approx(0.5));
+        CHECK(pMod->stat == StatId_t::Energy);
+    }
+
+    SECTION("MineralsConverted on nutrients is OK")
+    {
+        CHECK_NOTHROW(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisBase",
+            "parameters": { "stat": "nutrients", "amount_source": "MineralsConverted", "amount": 1 }
+        })")));
+    }
+
+    SECTION("MineralsConverted on minerals throws")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisBase",
+            "parameters": { "stat": "minerals", "amount_source": "MineralsConverted" }
+        })")));
+    }
+
+    SECTION("MineralsConverted outside ThisBase throws")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisTile",
+            "parameters": { "stat": "energy", "amount_source": "MineralsConverted" }
+        })")));
+    }
+
+    SECTION("MineralsConverted Instantaneous throws")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisBase",
+            "persistence": "Instantaneous",
+            "parameters": { "stat": "energy", "amount_source": "MineralsConverted" }
+        })")));
+    }
+
+    SECTION("MineralsConverted amount 0 throws")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisBase",
+            "parameters": { "stat": "energy", "amount": 0, "amount_source": "MineralsConverted" }
+        })")));
+    }
+
+    SECTION("MineralsConverted with a tile selector throws")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisBase",
+            "parameters": {
+                "stat": "energy",
+                "amount_source": "MineralsConverted",
+                "selector": { "kind": "BaseTile" }
+            }
+        })")));
+    }
 }
 
 TEST_CASE("ParseEffectConfig: StatModifier tile selectors", "[effects][parser]")

@@ -107,6 +107,36 @@ TEST_CASE("FilterBaseLevelByStatId with context includes satisfied conditions",
     CHECK(remoteMatching[0].sourceId == "flat");
 }
 
+TEST_CASE("FilterBaseLevelByStatId excludes MineralsConverted; FilterStockpileYieldByStatId keeps it",
+          "[effects][filter][amount_source]")
+{
+    actest::EffectPool pool;
+    StatModifierEffect_t converted;
+    converted.stat = StatId_t::Energy;
+    converted.amount = 0.5;
+    converted.op = ModifierOp_t::Add;
+    converted.amountSource = StatModifierEffect_t::AmountSource_t::MineralsConverted;
+    EffectConfig_t convertedConfig;
+    convertedConfig.effect = converted;
+    convertedConfig.scope = EffectScope_t::ThisBase;
+    convertedConfig.persistence = EffectPersistence_t::Continuous;
+
+    const BaseEffects_t baseEffects{{
+        Active(pool.StatMod(StatId_t::Energy, 2.0), "flat"),
+        Active(pool.Add(std::move(convertedConfig)), "converted"),
+    }};
+
+    const std::vector<ActiveEffect_t> baseLevel =
+        actest::Materialize(FilterBaseLevelByStatId(baseEffects, StatId_t::Energy));
+    REQUIRE(baseLevel.size() == 1);
+    CHECK(baseLevel[0].sourceId == "flat");
+
+    const EffectContext_t ctx{.mineralsConverted = 4};
+    const std::vector<ActiveEffect_t> stockpile =
+        actest::Materialize(FilterStockpileYieldByStatId(baseEffects.effects, StatId_t::Energy, ctx));
+    REQUIRE(stockpile.size() == 2);
+}
+
 TEST_CASE("ConditionSatisfied: no condition always applies", "[effects][condition]")
 {
     actest::EffectPool pool;

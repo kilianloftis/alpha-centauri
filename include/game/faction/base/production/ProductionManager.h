@@ -52,7 +52,8 @@ public:
     bool HasProduction() const;
 
     // Effective mineral cost of the current production item after CostMultiplier effects
-    // in rBaseEffects (e.g. Industry social-rating levels). Returns 0 when nothing is queued.
+    // in rBaseEffects (e.g. Industry social-rating levels). Returns 0 when nothing is queued
+    // or the item never completes (stockpile).
     // bPrototype applies production.json prototype_surcharge_percent, scaled by
     // PrototypeSurchargeScale from rBaseEffects (Skunkworks zeros the extra).
     int GetMineralCost(const BaseEffects_t& rBaseEffects, bool bPrototype) const;
@@ -70,7 +71,7 @@ public:
     // the first BankProduction that banks with something queued).
     void BankProduction(int minerals);
 
-    // True when something is queued and the stockpile meets its effective cost.
+    // True when something is queued, it can complete, and the stockpile meets its effective cost.
     bool IsReadyToComplete(const BaseEffects_t& rBaseEffects, bool bPrototype) const;
 
     // Complete the current production immediately and return its id.

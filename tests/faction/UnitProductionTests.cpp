@@ -142,6 +142,18 @@ bool ConstructableContains_(const std::vector<const IConstructable*>& rAvailable
     return std::find(rAvailable.begin(), rAvailable.end(), pItem) != rAvailable.end();
 }
 
+const BuildingConfig_t* StockpileEnergyOf_(UnitProductionGame_& rGame)
+{
+    const BuildingConfig_t* pStockpile = rGame.fixtures.buildings().Find("Stockpile_Energy");
+    REQUIRE(pStockpile != nullptr);
+    return pStockpile;
+}
+
+void CheckQueuedStockpileEnergy_(const BaseManager& rBase, UnitProductionGame_& rGame)
+{
+    CHECK(rBase.GetProduction().GetCurrentProduction() == StockpileEnergyOf_(rGame));
+}
+
 } // namespace
 
 TEST_CASE("All unit designs appear in the base constructable list", "[production][unit]")
@@ -230,7 +242,7 @@ TEST_CASE("ConfirmProductionAbandon completes the unit and empties the base",
     CHECK(base.ConfirmProductionAbandon() == rPod.GetId());
     CHECK_FALSE(base.HasPendingProductionAbandonConfirm());
     CHECK(base.GetPopulation().GetSize() == 0);
-    CHECK_FALSE(base.GetProduction().HasProduction());
+    CheckQueuedStockpileEnergy_(base, game);
     CHECK(std::ranges::distance(game.pFaction->GetUnitManager().Units()) == 1);
 }
 
@@ -340,7 +352,7 @@ TEST_CASE("BaseProduction AI auto-defers abandon without yielding",
     CHECK(game.pOther->GetUnitManager().Units().empty());
 }
 
-TEST_CASE("BaseProduction enqueues one idle prompt after empty-queue completion",
+TEST_CASE("BaseProduction enqueues an idle prompt after completion and queues Stockpile Energy",
           "[production][BaseProduction][PlayerInteraction]")
 {
     UnitProductionGame_ game;
@@ -373,7 +385,7 @@ TEST_CASE("BaseProduction enqueues one idle prompt after empty-queue completion"
     game.pState->GetPlayerInteractions().CompleteFront();
     processor.Advance(*game.pState);
     CHECK(game.pState->GetPlayerInteractions().Empty());
-    CHECK_FALSE(base.GetProduction().HasProduction());
+    CheckQueuedStockpileEnergy_(base, game);
 }
 
 TEST_CASE("Completing unit production places the unit on the base tile", "[production][unit]")
@@ -392,7 +404,7 @@ TEST_CASE("Completing unit production places the unit on the base tile", "[produ
     const ProductionApplyResult_t applied = base.ApplyProduction();
     CHECK(applied.kind == ProductionApplyKind_t::Completed);
     CHECK(applied.completedId == rDesign.GetId());
-    CHECK_FALSE(base.GetProduction().HasProduction());
+    CheckQueuedStockpileEnergy_(base, game);
 
     const std::vector<Unit*>& onTile =
         game.pState->GetWorldMap().GetUnitPositions().GetUnitsOnTile(base.GetTile());
@@ -443,7 +455,7 @@ TEST_CASE("Transfer clears queued building when the new owner lacks its required
 
     game.pFaction->TransferBaseTo(base.GetBaseId(), *game.pOther);
 
-    CHECK_FALSE(base.GetProduction().HasProduction());
+    CheckQueuedStockpileEnergy_(base, game);
     CHECK(base.GetProduction().GetMineralStockpile() == 12);
 }
 
@@ -487,7 +499,7 @@ TEST_CASE("Transfer clears queued unit design when the new owner lacks component
 
     game.pFaction->TransferBaseTo(base.GetBaseId(), *game.pOther);
 
-    CHECK_FALSE(base.GetProduction().HasProduction());
+    CheckQueuedStockpileEnergy_(base, game);
     CHECK(base.GetProduction().GetMineralStockpile() == 9);
 }
 
@@ -654,7 +666,7 @@ TEST_CASE("Fielding a unit removes the prototype penalty from other queues of th
     CHECK(first.GetMineralCost() == standardCost);
     CHECK(first.GetProduction().HasProduction());
     CHECK(first.TryCompleteReadyProduction().kind == ProductionApplyKind_t::Completed);
-    CHECK_FALSE(first.GetProduction().HasProduction());
+    CheckQueuedStockpileEnergy_(first, game);
 }
 
 TEST_CASE("A remaining unbuilt component keeps other designs as prototypes",
@@ -772,8 +784,8 @@ TEST_CASE("BaseProduction completes a sibling queue when a prototype finishes",
 
     processor.Advance(*game.pState);
 
-    CHECK_FALSE(first.GetProduction().HasProduction());
-    CHECK_FALSE(second.GetProduction().HasProduction());
+    CheckQueuedStockpileEnergy_(first, game);
+    CheckQueuedStockpileEnergy_(second, game);
     CHECK(std::ranges::distance(game.pFaction->GetUnitManager().Units()) == 2);
     CHECK(game.pState->GetPlayerInteractions().Size() >= 1);
 }
@@ -808,8 +820,8 @@ TEST_CASE("A base that already ticked is not revisited when a sibling completion
                             {"BaseProduction", "Stop"});
 
     processor.Advance(*game.pState);
-    REQUIRE_FALSE(finisher.GetProduction().HasProduction());
-    REQUIRE_FALSE(laggard.GetProduction().HasProduction());
+    CheckQueuedStockpileEnergy_(finisher, game);
+    CheckQueuedStockpileEnergy_(laggard, game);
 
     while (!game.pState->GetPlayerInteractions().Empty())
     {

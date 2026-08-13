@@ -51,7 +51,7 @@ struct BaseSnapshot_t
     Tile* pTile = nullptr;
     int populationSize = 0;
     std::vector<std::string> buildingIds;
-    // Empty when nothing is queued.
+    // Empty when nothing is queued (no stockpile-energy fallback configured).
     std::string productionItemId;
     int mineralStockpile = 0;  // progress toward current production
     int nutrientStockpile = 0; // growth bank
@@ -152,7 +152,8 @@ public:
     // This base's building effects, with ThisBase-scoped ones stamped with this base's identity.
     std::vector<ActiveEffect_t> CollectBuildingEffects() const;
 
-    // Items this base can currently construct (available buildings plus all saved unit designs).
+    // Items this base can currently construct (available buildings — including stockpile
+    // items — plus all saved unit designs).
     std::vector<const IConstructable*> GetConstructable() const;
 
     // Production subsystem.
@@ -160,9 +161,12 @@ public:
     const ProductionManager& GetProduction() const;
 
     // Collect minerals from ResourceManager and apply to production this turn.
-    // Completes construction if the stockpile meets the cost — unless completing would leave
-    // the base at size <= 0, in which case kind is AwaitingAbandonConfirm until
-    // ConfirmProductionAbandon or DeferProductionAbandon.
+    // Surplus minerals were already converted or wasted by ConvertSurplusMinerals (after
+    // support, before income). A stockpile item never completes: this tick stamps the turn
+    // without banking. An empty queue is Idle. Completes construction if the production
+    // stockpile meets the cost — unless completing would leave the base at size <= 0, in
+    // which case kind is AwaitingAbandonConfirm until ConfirmProductionAbandon or
+    // DeferProductionAbandon.
     ProductionApplyResult_t ApplyProduction();
 
     // Complete the queued item if the stockpile already meets the current cost, without
@@ -185,7 +189,7 @@ public:
     // Effective mineral cost of the current production item after CostMultiplier effects
     // (e.g. Industry social-rating levels expanded into the base effect list) and the
     // prototype surcharge when the queued unit fields a component this faction has not
-    // built. Returns 0 when nothing is queued.
+    // built. Returns 0 when nothing is queued or the item never completes (stockpile).
     int GetMineralCost() const;
 
     // Collect nutrients/minerals and allocate energy into econ/labs/psych stockpiles.
@@ -194,8 +198,15 @@ public:
     void ProduceResources();
 
     // Charge home-unit mineral support against this turn's mineral bank; disband if short.
-    // Called once per turn per base during Upkeep (via Faction::ApplyMineralSupport).
+    // Called once per turn per base during ResourceCollection (via Faction::ApplyMineralSupport),
+    // after ProduceResources and before ConvertSurplusMinerals.
     void ApplyMineralSupport();
+
+    // After support: if the queue is a stockpile (or the empty-queue fallback), convert the
+    // remaining mineral bank via MineralsConverted effects and credit outputs. If nothing is
+    // queued and no stockpile is available, waste the remainder. A real build item leaves
+    // the bank for ApplyProduction. Called from ResourceCollection after mineral support.
+    void ConvertSurplusMinerals();
 
     // Constructed-facility energy upkeep for this base (FacilityEnergyUpkeep mods applied).
     std::vector<BuildingUpkeepLine_t> GetBuildingUpkeepByType() const;
@@ -308,6 +319,8 @@ private:
     bool WouldEmptyBaseOnProductionComplete_() const;
     bool IsCurrentProductionPrototype_() const;
     ProductionApplyResult_t FinishProductionIfReady_(const BaseEffects_t& rEffects);
+    // Queue the first available stockpile when nothing is selected. No-op if none exists.
+    void EnsureFallbackProduction_();
 
     // Memoized BuildBaseEffects_ result, keyed on the provider's pool version
     // (empty = never built).

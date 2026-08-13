@@ -835,6 +835,24 @@
     "category": "build"
   },
   {
+    "id": "Stockpile_Energy",
+    "name": "Stockpile Energy",
+    "stockpile": true,
+    "category": "build",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "energy",
+          "amount": 0.5,
+          "amount_source": "MineralsConverted",
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
     "id": "founding_minerals_project",
     "name": "Test Project (+5 starting minerals to all owner bases)",
     "effects": [

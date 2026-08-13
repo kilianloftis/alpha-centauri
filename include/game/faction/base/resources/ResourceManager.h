@@ -2,6 +2,7 @@
 
 #include "game/faction/base/BaseTypes.h"
 #include "game/effects/ActiveEffect.h"
+#include "game/effects/EffectEnums.h"
 #include <memory>
 #include <vector>
 
@@ -58,18 +59,24 @@ public:
     int GetPsychProduction(const BaseEffects_t& rBaseEffects) const;
 
     // Consume the full accumulated stockpile, returning the amount consumed.
-    // Called by the appropriate turn stage (e.g. ConsumeMinerals during BaseProduction).
-    // ConsumePsych is for pop composition (not yet wired).
+    // Called by the appropriate turn stage (e.g. ConsumeMinerals during surplus conversion
+    // or BaseProduction). ConsumePsych is for pop composition (not yet wired).
     int ConsumeNutrients();
     int ConsumeMinerals();
     int ConsumeEcon();
     int ConsumeLabs();
     int ConsumePsych();
 
-    // Current per-turn mineral bank (filled by ProduceResources; drained by support / production).
+    // Current per-turn mineral bank (filled by ProduceResources; drained by support /
+    // surplus conversion / production).
     int GetMineralBank() const;
     // Deduct up to `amount` from the mineral bank. `amount` must be >= 0 and <= bank.
     void SpendMinerals(int amount);
+
+    // Credit `amount` into a per-turn resource bank (nutrients / minerals / econ / labs / psych).
+    // Used by stockpile surplus conversion. `amount` must be >= 0. Energy credits go through
+    // EconomyManager, not here.
+    void AddResource(StatId_t stat, int amount);
 
     // Produce nutrients/minerals and allocate energy into econ/labs/psych stockpiles.
     // Called once per turn per base from the ResourceCollection stage.

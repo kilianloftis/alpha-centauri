@@ -21,6 +21,10 @@ StageResult_t ResourceCollection::ExecuteImpl(GameState& /*rGameState*/, Faction
 
     // World/council extras are already in Faction::GetActiveEffects via BindWorldEffects.
     rFaction.ProduceBaseResources();
+    // Support claims this turn's minerals first; leftover is converted if a stockpile is
+    // queued (or wasted) so income / research / growth see those credits this turn.
+    rFaction.ApplyMineralSupport();
+    rFaction.ConvertSurplusMinerals();
     return StageResult_t::Continue;
 }
 

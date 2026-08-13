@@ -179,6 +179,9 @@ calls `CompleteFront` then `ProcessTurn_` after resolution.
   private year×area seed).
 - **`Population`**: growth, composition recalculation, then
   `CheckRiotEndOfTurn` / `CheckGoldenAgeEndOfTurn` per base.
+- **`ResourceCollection`**: `ProduceBaseResources`, then mineral support, then surplus
+  conversion (stockpile leftover / waste) so income and research see those credits this turn.
+- **`Upkeep`**: facility energy upkeep (after income). Mineral support is not here.
 - **`PlayerActions`**: interactive yield + idempotent order resolution (above).
 
 ### Configuration (`config/turn_stages.json`)

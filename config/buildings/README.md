@@ -16,13 +16,14 @@ Each file must be a JSON array of building objects. Any number of files may coex
 |---|---|---|---|---|
 | `id` | string | Yes | — | Unique identifier used in code and save files |
 | `name` | string | No | `id` | Display name shown in the UI |
-| `mineral_cost` | int | No | `0` | Minerals required to construct; must be a non-negative integer |
+| `mineral_cost` | int | No | `0` | Minerals required to construct; must be a non-negative integer. **Omit on stockpile items** — the field does not apply. |
 | `upkeep` | int | No | `0` | Base energy credits charged per turn per owned **constructed** copy. Effective cost is `upkeep × FacilityEnergyUpkeep` modifiers (PureMultiplier; techs use `buildingFilter` to target All / BuildingId / Category). Continuous `GrantBuilding` expansions are not constructed and pay nothing. UI: `BuildingConfig_t::GetUpkeep()` (base), `BaseManager::GetBuildingUpkeepByType()` / `Faction::GetBuildingUpkeepByType()` (resolved). |
 | `required_tech` | string | No | `""` | Tech that must be discovered before the building is available; omit or empty = always available |
 | `allow_multiple` | bool | No | `false` | If true, a base may build more than one copy |
 | `secret_project` | bool | No | `false` | If true, only one faction in the world may own this building |
 | `orbital` | bool | No | `false` | If true, ownership counts are public to all factions (satellite census) |
-| `effects` | Effect[] | No | `[]` | Structured list of gameplay effects (see below) |
+| `stockpile` | bool | No | `false` | If true, this is a never-completing production item. After mineral support, leftover minerals convert via `MineralsConverted` StatModifiers on `effects` (output per mineral, rounded up per stat) during ResourceCollection, so income / research / growth see the credits this turn. Stockpile items cannot be constructed as facilities, but they remain selectable from the build menu. If the queue is empty, the base falls back to the **first available** stockpile in load order (tech gate applied). If none is available, the queue stays empty and excess minerals are wasted. |
+| `effects` | Effect[] | if `stockpile` | `[]` | Structured list of gameplay effects (see below). On a stockpile item, yield is specified with `amount_source: "MineralsConverted"` (and optional extra StatModifiers on the same stats). These do not apply as a constructed building. |
 
 A flat per-turn bonus (the old `nutrients_bonus`) is a `StatModifier` effect with `scope: "ThisBase"`. A per-improvement bonus (the old `improvement_bonuses`) is a `TileYieldModifier` effect with a `HasImprovement` selector — see Effect Types below.
 
@@ -35,6 +36,8 @@ The parser fails the load rather than substituting a default, so a setting eithe
 - **`mineral_cost` must be a non-negative integer.**
 - **`upkeep` must be a non-negative integer.**
 - **`secret_project` and `allow_multiple` are mutually exclusive.** A secret project is unique in the world, so "more than one copy" is unexpressible.
+- **A `stockpile` item cannot have `mineral_cost`** (the field does not apply; cost is always 0). Combining it with upkeep, `secret_project`, `orbital`, or `allow_multiple` is rejected. `required_tech` is allowed.
+- **A `stockpile` item requires at least one `StatModifier` with `amount_source: "MineralsConverted"`** on nutrients / energy / econ / labs / psych, `scope: ThisBase`, `op: Add`, `amount` > 0. Multiple modifiers on different stats credit multiple outputs. Extra StatModifiers on those stats (e.g. `AddPercent`) modify the resolved yield. `MineralsConverted` on a non-stockpile item is rejected.
 
 ### Uniqueness at runtime
 
@@ -160,6 +163,30 @@ Any effect may carry an optional top-level `condition` object making it situatio
       "type": "RuleFlag",
       "scope": "FactionGlobal",
       "parameters": { "flag": "population_boom" }
+    }
+  ]
+}
+```
+
+### Stockpile Energy
+
+Never-completing production item. After mineral support, leftover minerals convert into energy at 0.5 per mineral (`ceil`). Selectable from the build menu; never constructed as a facility. `mineral_cost` is omitted — the field does not apply.
+
+```json
+{
+  "id": "Stockpile_Energy",
+  "name": "Stockpile Energy",
+  "stockpile": true,
+  "effects": [
+    {
+      "type": "StatModifier",
+      "scope": "ThisBase",
+      "parameters": {
+        "stat": "energy",
+        "amount": 0.5,
+        "amount_source": "MineralsConverted",
+        "op": "Add"
+      }
     }
   ]
 }

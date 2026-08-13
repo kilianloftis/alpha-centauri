@@ -104,7 +104,7 @@ bool ProductionManager::HasProduction() const
 
 int ProductionManager::GetMineralCost(const BaseEffects_t& rBaseEffects, bool bPrototype) const
 {
-    if (!m_pCurrentItem)
+    if (!m_pCurrentItem || m_pCurrentItem->NeverCompletes())
     {
         return 0;
     }
@@ -140,7 +140,8 @@ void ProductionManager::BankProduction(int minerals)
 
 bool ProductionManager::IsReadyToComplete(const BaseEffects_t& rBaseEffects, bool bPrototype) const
 {
-    return HasProduction() && m_mineralStockpile >= GetMineralCost(rBaseEffects, bPrototype);
+    return HasProduction() && !m_pCurrentItem->NeverCompletes()
+        && m_mineralStockpile >= GetMineralCost(rBaseEffects, bPrototype);
 }
 
 std::string ProductionManager::CompleteProduction()
