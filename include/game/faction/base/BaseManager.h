@@ -28,6 +28,7 @@ class EconomyManager;
 class ResourceManager;
 class BuildingManager;
 class BuildingRegistry;
+class StockpileRegistry;
 class ProductionManager;
 class ResearchManager;
 class SocialRatingRegistry;
@@ -86,6 +87,7 @@ public:
         std::string name,
         Tile& tile,
         const BuildingRegistry& rBuildingRegistry,
+        const StockpileRegistry& rStockpileRegistry,
         const SocialRatingRegistry& rSocialRatingRegistry,
         const PopTypeRegistry& rPopTypeRegistry,
         const PopTypeAvailabilityCalculator& rPopTypeAvailabilityCalculator,
@@ -152,8 +154,14 @@ public:
     // This base's building effects, with ThisBase-scoped ones stamped with this base's identity.
     std::vector<ActiveEffect_t> CollectBuildingEffects() const;
 
-    // Items this base can currently construct (available buildings — including stockpile
-    // items — plus all saved unit designs).
+    // Buildings this base currently receives via continuous GrantBuilding (Secret Project,
+    // etc.). Unique by id, not stored on BuildingManager. Includes a grant of a building
+    // this base has also constructed, so the UI can mark those copies.
+    std::vector<const BuildingConfig_t*> GetGrantedBuildings() const;
+
+    // Items this base can currently queue: available buildings, available stockpile items,
+    // and all saved unit designs. "Constructable" in the build-menu sense — a stockpile is
+    // selectable but never completes into a facility.
     std::vector<const IConstructable*> GetConstructable() const;
 
     // Production subsystem.
@@ -302,6 +310,9 @@ private:
     // so units never keep a dangling BaseManager*.
     HomeBaseIndex m_homeUnits;
     const BuildingRegistry& m_rBuildingRegistry;
+    // Declared before m_pProduction: the default-item provider handed to ProductionManager
+    // reads this registry while that member is being constructed.
+    const StockpileRegistry& m_rStockpileRegistry;
     const SocialRatingRegistry& m_rSocialRatings;
     // Always the owning faction (set in the ctor, re-pointed by RebindFaction). A pointer only
     // because it is rebindable; never null.
@@ -322,8 +333,6 @@ private:
     bool WouldEmptyBaseOnProductionComplete_() const;
     bool IsCurrentProductionPrototype_() const;
     ProductionApplyResult_t FinishProductionIfReady_(const BaseEffects_t& rEffects);
-    // Queue the first available stockpile when nothing is selected. No-op if none exists.
-    void EnsureFallbackProduction_();
 
     // Memoized BuildBaseEffects_ result, keyed on the provider's pool version
     // (empty = never built).

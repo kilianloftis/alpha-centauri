@@ -5,6 +5,7 @@
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/stockpiles/StockpileRegistry.h"
 #include "game/faction/EconomyManager.h"
 #include "game/faction/ResearchManager.h"
 #include "game/faction/SocialEngineeringManager.h"
@@ -130,6 +131,8 @@ struct WorldFixture
         dataContext.luaRuntime = std::make_unique<ac::LuaRuntime>();
         dataContext.buildingRegistry = std::make_unique<ac::BuildingRegistry>();
         dataContext.buildingRegistry->Load(FixturePath("buildings.json"));
+        dataContext.stockpileRegistry = std::make_unique<ac::StockpileRegistry>();
+        dataContext.stockpileRegistry->Load(FixturePath("stockpiles.json"));
         dataContext.popTypeRegistry = std::make_unique<ac::PopTypeRegistry>();
         dataContext.popTypeRegistry->Load(FixturePath("pop_types.json"));
         dataContext.growthConfig = std::make_unique<ac::GrowthConfig_t>();
@@ -185,6 +188,8 @@ struct BaseFixture : WorldFixture
 
     ac::BuildingRegistry& buildings() { return *dataContext.buildingRegistry; }
     const ac::BuildingRegistry& buildings() const { return *dataContext.buildingRegistry; }
+    ac::StockpileRegistry& stockpiles() { return *dataContext.stockpileRegistry; }
+    const ac::StockpileRegistry& stockpiles() const { return *dataContext.stockpileRegistry; }
     ac::PopTypeRegistry& popTypes() { return *dataContext.popTypeRegistry; }
     const ac::PopTypeRegistry& popTypes() const { return *dataContext.popTypeRegistry; }
 
@@ -193,6 +198,7 @@ struct BaseFixture : WorldFixture
         bases.push_back(std::make_unique<ac::BaseManager>(
             *pOwnerFaction, nextBaseId++, "TestBase", At(x, y),
             *dataContext.buildingRegistry,
+            *dataContext.stockpileRegistry,
             *dataContext.socialRatingRegistry,
             *dataContext.popTypeRegistry,
             *dataContext.popTypeAvailabilityCalculator,
@@ -280,6 +286,7 @@ struct FactionFixture : BaseFixture
         auto pBase = std::make_unique<ac::BaseManager>(
             rFaction, nextBaseId++, "TestBase", At(x, y),
             *dataContext.buildingRegistry,
+            *dataContext.stockpileRegistry,
             *dataContext.socialRatingRegistry,
             *dataContext.popTypeRegistry,
             *dataContext.popTypeAvailabilityCalculator,

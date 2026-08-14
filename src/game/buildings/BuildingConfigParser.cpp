@@ -49,24 +49,9 @@ const std::vector<std::string>& KnownBuildingKeys_()
 {
     static const std::vector<std::string> keys = {
         "id", "name", "category", "mineral_cost", "upkeep", "required_tech",
-        "allow_multiple", "secret_project", "orbital", "stockpile",
-        "effects",
+        "allow_multiple", "secret_project", "orbital", "effects",
     };
     return keys;
-}
-
-int CountMineralsConverted_(const std::vector<EffectConfig_t>& rEffects)
-{
-    int count = 0;
-    for (const EffectConfig_t& rEffect : rEffects)
-    {
-        const auto* pMod = std::get_if<StatModifierEffect_t>(&rEffect.effect);
-        if (pMod && pMod->amountSource == StatModifierEffect_t::AmountSource_t::MineralsConverted)
-        {
-            ++count;
-        }
-    }
-    return count;
 }
 
 } // namespace
@@ -107,55 +92,8 @@ BuildingConfig_t BuildingConfigParser::ParseBuildingConfig_(const nlohmann::json
     }
     config.requiredTech = ConfigFields::ParseRequiredTech(buildingJson);
     config.effects = EffectConfigParser::ParseEffects(buildingJson, EffectSourceKind_t::Building, config.id);
-    config.bStockpile = ParseTyped_<bool>(buildingJson, "stockpile", config.id, false,
-                                          &nlohmann::json::is_boolean, "a boolean");
-
-    const int mineralsConvertedCount = CountMineralsConverted_(config.effects);
-    if (!config.bStockpile)
-    {
-        if (mineralsConvertedCount > 0)
-        {
-            throw std::runtime_error(
-                "Building '" + config.id
-                + "': amount_source MineralsConverted is only valid on stockpile items");
-        }
-        config.mineralCost = ParseTyped_<int>(buildingJson, "mineral_cost", config.id, 0,
-                                              &nlohmann::json::is_number_integer, "an integer");
-        return config;
-    }
-
-    if (buildingJson.contains("mineral_cost"))
-    {
-        throw std::runtime_error(
-            "Building '" + config.id
-            + "': stockpile item cannot have mineral_cost (the field does not apply)");
-    }
-    if (mineralsConvertedCount == 0)
-    {
-        throw std::runtime_error(
-            "Building '" + config.id
-            + "': stockpile item requires a StatModifier with amount_source MineralsConverted");
-    }
-
-    const auto failStockpile = [&](const char* pMessage) {
-        throw std::runtime_error("Building '" + config.id + "': stockpile item " + pMessage);
-    };
-    if (config.upkeep != 0)
-    {
-        failStockpile("must have upkeep 0");
-    }
-    if (config.bIsSecretProject)
-    {
-        failStockpile("cannot be a secret_project");
-    }
-    if (config.orbital)
-    {
-        failStockpile("cannot be orbital");
-    }
-    if (config.allowMultiple)
-    {
-        failStockpile("cannot set allow_multiple");
-    }
+    config.mineralCost = ParseTyped_<int>(buildingJson, "mineral_cost", config.id, 0,
+                                          &nlohmann::json::is_number_integer, "an integer");
 
     return config;
 }

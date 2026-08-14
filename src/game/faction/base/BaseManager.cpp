@@ -15,6 +15,9 @@
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/buildings/BuildingConfig.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/stockpiles/StockpileConfig.h"
+#include "game/stockpiles/StockpileConversion.h"
+#include "game/stockpiles/StockpileRegistry.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/MapUtils.h"
 #include "game/map/WorldMap.h"
@@ -27,6 +30,7 @@
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
+#include <unordered_set>
 
 namespace ac
 {
@@ -73,49 +77,6 @@ PauseOnEventId_t ClassifyCompletedItem_(const IConstructable& rItem)
     return PauseOnEventId_t::NewFacilityBuilt;
 }
 
-int StockpileStatYield_(const std::vector<ActiveEffect_t>& rEffects, StatId_t stat, int minerals,
-                        const BaseManager& rBase)
-{
-    const EffectContext_t ctx{.pBase = &rBase, .mineralsConverted = minerals};
-    const double total =
-        ResolveStatModifiers(FilterStockpileYieldByStatId(rEffects, stat, ctx), 0.0, &ctx)
-            .total;
-    if (total <= 0.0)
-    {
-        return 0;
-    }
-    return static_cast<int>(std::ceil(total));
-}
-
-void CreditStockpileOutput_(BaseManager& rBase, StatId_t resource, int amount)
-{
-    if (amount <= 0)
-    {
-        return;
-    }
-    if (resource == StatId_t::Energy)
-    {
-        rBase.GetFaction().GetEconomy().AddEnergy(amount);
-        return;
-    }
-    rBase.GetResources().AddResource(resource, amount);
-}
-
-void ApplyStockpileConversion_(const BuildingConfig_t& rStockpile, int minerals, BaseManager& rBase)
-{
-    if (minerals <= 0)
-    {
-        return;
-    }
-
-    std::vector<ActiveEffect_t> effects;
-    AppendActiveEffects(rStockpile.effects, &rBase, rStockpile.id, effects);
-    for (const StatId_t stat : k_StockpileOutputStats)
-    {
-        CreditStockpileOutput_(rBase, stat, StockpileStatYield_(effects, stat, minerals, rBase));
-    }
-}
-
 } // namespace
 
 BaseManager::BaseManager(
@@ -124,6 +85,7 @@ BaseManager::BaseManager(
     std::string name,
     Tile& tile,
     const BuildingRegistry& rBuildingRegistry,
+    const StockpileRegistry& rStockpileRegistry,
     const SocialRatingRegistry& rSocialRatingRegistry,
     const PopTypeRegistry& rPopTypeRegistry,
     const PopTypeAvailabilityCalculator& rPopTypeAvailabilityCalculator,
@@ -140,6 +102,7 @@ BaseManager::BaseManager(
     , m_centerTileClaim(ClaimCenterTile_(rTileEffects, tile))
     , m_homeUnits(*this)
     , m_rBuildingRegistry(rBuildingRegistry)
+    , m_rStockpileRegistry(rStockpileRegistry)
     , m_rSocialRatings(rSocialRatingRegistry)
     , m_pEffectsProvider(&rFaction)
     , m_pPopulation(std::make_unique<PopulationManager>(
@@ -153,7 +116,12 @@ BaseManager::BaseManager(
     , m_pResources(std::make_unique<ResourceManager>(
           *m_pWorkerAssignments, rFaction.GetEconomy(), *this, m_rSocialRatings, m_tile,
           m_rTileEffects, m_homeUnits))
-    , m_pProduction(std::make_unique<ProductionManager>(rProductionConfig))
+    , m_pProduction(std::make_unique<ProductionManager>(
+          rProductionConfig,
+          [this]() -> const IConstructable* {
+              return m_rStockpileRegistry.FindFallback(
+                  m_pFaction->GetResearch().GetDiscoveredTechs());
+          }))
     , m_name(std::move(name))
 {
     // A base provides its own garrison defense bonus, modeled as the "Base" improvement.
@@ -207,12 +175,7 @@ BaseManager::BaseManager(
     m_pProduction->OnProductionChanged.Connect([this]() {
         // Switching or clearing the queue cancels an unresolved abandon prompt.
         m_bPendingProductionAbandonConfirm = false;
-        // Clearing (complete, probe wipe, transfer of an unavailable item) falls back to
-        // the first available stockpile so a base is never left with an empty queue when
-        // one exists and is unlocked.
-        EnsureFallbackProduction_();
     });
-    EnsureFallbackProduction_();
 
     m_pProduction->OnProductionCompleted.Connect([this](const std::string& itemId) {
         GameState* pGameState = m_pFaction->GetGameState();
@@ -402,12 +365,42 @@ std::vector<ActiveEffect_t> BaseManager::CollectBuildingEffects() const
     return m_pBuildings->CollectEffects(*this);
 }
 
+std::vector<const BuildingConfig_t*> BaseManager::GetGrantedBuildings() const
+{
+    std::vector<const BuildingConfig_t*> granted;
+    std::unordered_set<BuildingId_t> seen;
+    for (const ActiveEffect_t& rEffect : GetBaseEffects().effects)
+    {
+        const GrantBuildingEffect_t* pGrant =
+            std::get_if<GrantBuildingEffect_t>(&rEffect.config->effect);
+        if (!pGrant)
+        {
+            continue;
+        }
+        if (!seen.insert(pGrant->buildingId).second)
+        {
+            continue;
+        }
+        granted.push_back(&m_rBuildingRegistry.Get(pGrant->buildingId));
+    }
+    return granted;
+}
+
 std::vector<const IConstructable*> BaseManager::GetConstructable() const
 {
     std::vector<const IConstructable*> available;
     for (const BuildingConfig_t* pBuilding : m_pBuildings->GetBuildingsAvailableForConstruction())
     {
         available.push_back(pBuilding);
+    }
+    const std::vector<std::string>& rDiscoveredTechs =
+        m_pFaction->GetResearch().GetDiscoveredTechs();
+    for (const StockpileConfig_t& rStockpile : m_rStockpileRegistry.GetAll())
+    {
+        if (rStockpile.IsAvailable(rDiscoveredTechs))
+        {
+            available.push_back(&rStockpile);
+        }
     }
     for (const std::unique_ptr<UnitDesign>& pDesign : m_pFaction->GetMilitary().GetDesigns())
     {
@@ -434,7 +427,6 @@ ProductionApplyResult_t BaseManager::ApplyProduction()
         return ProductionApplyResult_t{ProductionApplyKind_t::AwaitingAbandonConfirm, {}};
     }
 
-    EnsureFallbackProduction_();
     if (!m_pProduction->HasProduction())
     {
         // No queue and no stockpile to fall back on: the minerals are wasted. Usually
@@ -478,20 +470,6 @@ ProductionApplyResult_t BaseManager::TryCompleteReadyProduction()
     }
 
     return FinishProductionIfReady_(BuildBaseEffects_());
-}
-
-void BaseManager::EnsureFallbackProduction_()
-{
-    if (m_pProduction->HasProduction())
-    {
-        return;
-    }
-    const BuildingConfig_t* pStockpile = m_rBuildingRegistry.FindFirstAvailableStockpile(
-        m_pFaction->GetResearch().GetDiscoveredTechs());
-    if (pStockpile)
-    {
-        m_pProduction->SetProduction(pStockpile);
-    }
 }
 
 ProductionApplyResult_t BaseManager::FinishProductionIfReady_(const BaseEffects_t& rEffects)
@@ -651,24 +629,21 @@ void BaseManager::ApplyMineralSupport()
 
 void BaseManager::ConvertSurplusMinerals()
 {
-    EnsureFallbackProduction_();
-    if (!m_pProduction->HasProduction())
+    const IConstructable* pItem = m_pProduction->GetCurrentProduction();
+    if (!pItem)
     {
+        // No queue and no stockpile available anywhere: nothing can absorb the surplus.
         m_pResources->ConsumeMinerals();
         return;
     }
-
-    const IConstructable* pItem = m_pProduction->GetCurrentProduction();
-    if (!pItem || !pItem->NeverCompletes())
+    if (!pItem->NeverCompletes())
     {
+        // A real build item: the bank stays for ApplyProduction to spend.
         return;
     }
 
-    const int minerals = m_pResources->ConsumeMinerals();
-    if (const BuildingConfig_t* pStockpile = m_rBuildingRegistry.Find(pItem->GetId()))
-    {
-        ApplyStockpileConversion_(*pStockpile, minerals, *this);
-    }
+    const StockpileConfig_t& rStockpile = m_rStockpileRegistry.Get(pItem->GetId());
+    ApplyStockpileConversionAtBase(*this, rStockpile);
 }
 
 std::vector<BuildingUpkeepLine_t> BaseManager::GetBuildingUpkeepByType() const

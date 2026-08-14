@@ -256,5 +256,4 @@ TEST_CASE("ResolveStatModifiers: amount_source MineralsConverted scales by miner
     CHECK(ResolveStatModifiers(effects, 0.0, &ctx).total == Approx(2.5));
     CHECK(ResolveStatModifiers(effects, 0.0, nullptr).total == Approx(0.0));
     CHECK(std::ranges::distance(FilterByStatId(effects, StatId_t::Energy)) == 0);
-    CHECK(std::ranges::distance(FilterStockpileYieldByStatId(effects, StatId_t::Energy, ctx)) == 1);
 }

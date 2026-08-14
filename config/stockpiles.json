@@ -1,0 +1,19 @@
+[
+  {
+    "id": "Stockpile_Energy",
+    "name": "Stockpile Energy",
+    "rounding": "up",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "econ",
+          "amount": 0.5,
+          "amount_source": "MineralsConverted",
+          "op": "Add"
+        }
+      }
+    ]
+  }
+]

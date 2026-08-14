@@ -417,6 +417,20 @@ SupportDisplayStyle_t ParseSupportDisplayStyle_(const nlohmann::json& j)
     return s;
 }
 
+BuildingsDisplayStyle_t ParseBuildingsDisplayStyle_(const nlohmann::json& j)
+{
+    BuildingsDisplayStyle_t s{};
+    s.backgroundColor = ParseColor_(j, "background_color");
+    s.textColor = ParseColor_(j, "text_color");
+    s.grantedTextColor = ParseColor_(j, "granted_text_color");
+    s.headerFontSizeRatio = j.at("header_font_size_ratio").get<float>();
+    s.entryFontSizeRatio = j.at("entry_font_size_ratio").get<float>();
+    s.lineHeightRatio = j.at("line_height_ratio").get<float>();
+    s.leftPaddingRatio = j.at("left_padding_ratio").get<float>();
+    s.headerLineOffset = j.at("header_line_offset").get<float>();
+    return s;
+}
+
 BaseWorkableAreaDisplayStyle_t ParseBaseWorkableAreaDisplayStyle_(const nlohmann::json& j)
 {
     BaseWorkableAreaDisplayStyle_t s{};
@@ -681,6 +695,7 @@ void UiStyle::Load(const std::string& filePath)
     style.productionDisplay = ParseResourceLinesPanelStyle_(root.at("production_display"));
     style.populationDisplay = ParsePopulationDisplayStyle_(root.at("population_display"));
     style.supportDisplay = ParseSupportDisplayStyle_(root.at("support_display"));
+    style.buildingsDisplay = ParseBuildingsDisplayStyle_(root.at("buildings_display"));
     style.baseWorkableAreaDisplay = ParseBaseWorkableAreaDisplayStyle_(root.at("base_workable_area_display"));
     style.listSelectorPopup = ParseListSelectorPopupStyle_(root.at("list_selector_popup"));
     style.noticePopup = ParseNoticePopupStyle_(root.at("notice_popup"));

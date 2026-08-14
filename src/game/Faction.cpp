@@ -2,6 +2,7 @@
 #include "game/Faction.h"
 
 #include "game/buildings/BuildingRegistry.h"
+#include "game/stockpiles/StockpileRegistry.h"
 #include "game/buildings/BuildingUpkeep.h"
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/GameDataContext.h"
@@ -374,6 +375,7 @@ BaseManager* Faction::CreateBaseFromSnapshot(
     auto pBase = std::make_unique<BaseManager>(
         *this, rSnapshot.baseId, rSnapshot.name, *rSnapshot.pTile,
         *rDataContext.buildingRegistry,
+        *rDataContext.stockpileRegistry,
         *rDataContext.socialRatingRegistry,
         *rDataContext.popTypeRegistry,
         *rDataContext.popTypeAvailabilityCalculator,
@@ -397,6 +399,10 @@ BaseManager* Faction::CreateBaseFromSnapshot(
         if (rDataContext.buildingRegistry)
         {
             pItem = rDataContext.buildingRegistry->Find(rSnapshot.productionItemId);
+        }
+        if (!pItem && rDataContext.stockpileRegistry)
+        {
+            pItem = rDataContext.stockpileRegistry->Find(rSnapshot.productionItemId);
         }
         if (!pItem)
         {
@@ -577,6 +583,7 @@ BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile*
     auto pBase = std::make_unique<BaseManager>(
         *this, baseId, name, *pTile,
         *rDataContext.buildingRegistry,
+        *rDataContext.stockpileRegistry,
         *rDataContext.socialRatingRegistry,
         *rDataContext.popTypeRegistry,
         *rDataContext.popTypeAvailabilityCalculator,

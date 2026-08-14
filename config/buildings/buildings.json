@@ -316,24 +316,6 @@
     "upkeep": 2
   },
   {
-    "id": "Stockpile_Energy",
-    "name": "Stockpile Energy",
-    "stockpile": true,
-    "category": "build",
-    "effects": [
-      {
-        "type": "StatModifier",
-        "scope": "ThisBase",
-        "parameters": {
-          "stat": "energy",
-          "amount": 0.5,
-          "amount_source": "MineralsConverted",
-          "op": "Add"
-        }
-      }
-    ]
-  },
-  {
     "id": "Perimeter_Defense",
     "name": "Perimeter Defense",
     "mineral_cost": 10,

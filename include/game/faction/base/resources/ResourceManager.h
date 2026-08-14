@@ -73,10 +73,19 @@ public:
     // Deduct up to `amount` from the mineral bank. `amount` must be >= 0 and <= bank.
     void SpendMinerals(int amount);
 
-    // Credit `amount` into a per-turn resource bank (nutrients / minerals / econ / labs / psych).
-    // Used by stockpile surplus conversion. `amount` must be >= 0. Energy credits go through
-    // EconomyManager, not here.
+    // Credit `amount` into a per-turn resource bank (nutrients / econ / labs / psych).
+    // Used by stockpile surplus conversion; `amount` must be >= 0. Minerals and energy throw:
+    // minerals are the conversion input, and energy is not a bank — see AddAllocatedEnergy.
     void AddResource(StatId_t stat, int amount);
+
+    // Credit `energy` the way collected energy is credited: inefficiency first, then the
+    // faction's econ/labs/psych split. For stockpile conversion, which happens after
+    // ProduceResources has already allocated this turn's tile energy. `energy` must be >= 0.
+    //
+    // Applies the split only — not the flat Econ/Labs/Psych StatModifiers that
+    // CalculateEcon_/Labs_/Psych_ seed on top of it. Those were already applied this turn;
+    // running them again here would pay every facility's flat bonus twice.
+    void AddAllocatedEnergy(int energy);
 
     // Produce nutrients/minerals and allocate energy into econ/labs/psych stockpiles.
     // Called once per turn per base from the ResourceCollection stage.

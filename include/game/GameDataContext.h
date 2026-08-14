@@ -11,6 +11,7 @@ namespace ac
 {
 
 class BuildingRegistry;
+class StockpileRegistry;
 class UnitComponentRegistry;
 class UnitSlotRegistry;
 class PopTypeRegistry;
@@ -57,6 +58,7 @@ struct GameDataContext
 
     // --- Registries and config structs (definition data) ---
     std::unique_ptr<BuildingRegistry> buildingRegistry;
+    std::unique_ptr<StockpileRegistry> stockpileRegistry;
     std::unique_ptr<UnitComponentRegistry> unitComponentRegistry;
     std::unique_ptr<UnitSlotRegistry> unitSlotRegistry;
     std::unique_ptr<TechRegistry> techRegistry;
@@ -98,10 +100,11 @@ struct GameDataContext
 
 // Single entry point that runs every config parser and returns a *complete* context. Load
 // order is deliberate: registries that are reference targets (techs, improvements, unit
-// components) load before configs that may cite them, then ValidateEffectReferences /
-// ValidateRequiredTechReferences run once everything is present — so a typo'd unitFilter
-// HasComponent id (or grant/tech/selector id) fails here instead of becoming a silent no-op.
-// Formula configs and the calculators built from them load last.
+// components) load before configs that may cite them; effect-declaring configs (including
+// production) load next; then ValidateEffectReferences / ValidateRequiredTechReferences run
+// once everything they walk is present — so a typo'd unitFilter HasComponent id (or
+// grant/tech/selector id) fails here instead of becoming a silent no-op. Formula configs
+// and the calculators built from them load last.
 //
 // Returns by value rather than filling a caller-supplied bag so there is no window in which a
 // half-populated context is observable: every member is non-null when this returns, or it threw.

@@ -1,6 +1,7 @@
 #include "ui/base/BaseView.h"
 #include "ui/base/BaseNameDisplay.h"
 #include "ui/base/BaseWorkableAreaDisplay.h"
+#include "ui/base/BuildingsDisplay.h"
 #include "ui/base/GrowthDisplay.h"
 #include "ui/base/ProductionDisplay.h"
 #include "ui/base/PopulationDisplay.h"
@@ -66,8 +67,8 @@ BaseView::BaseView(
         std::move(onTileClick),
         std::move(onBaseClick)
     ));
-    m_elements.push_back(std::make_unique<PlaceholderPanel>(
-        "Buildings",
+    m_elements.push_back(std::make_unique<BuildingsDisplay>(
+        m_rBase,
         ResolveLayout(topPanel, bv.buildingsLayout)
     ));
 

@@ -6,6 +6,8 @@ Unit support
 - Unit mineral support (charged against this turn's mineral bank; surplus units disbanded)
 Surplus conversion
 - Leftover minerals convert if a stockpile is queued (else left for production, or wasted)
+- Stockpile output credits the base's nutrient/econ/labs/psych banks, so econ reaches the
+  treasury during the income step below
 Income collection
 - Econ stockpile transferred to the faction energy pool
 Energy allocation

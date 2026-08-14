@@ -151,9 +151,10 @@ void ParseStatModifier_(const nlohmann::json& parameters, EffectConfig_t& rEffec
             if (!IsStockpileOutputStat(statModifier.stat))
             {
                 throw std::runtime_error(
-                    "StatModifier 'amount_source' MineralsConverted is only valid on nutrients, "
-                    "energy, econ, labs, or psych, got '"
-                    + parameters.value("stat", "") + "'");
+                    "StatModifier 'amount_source' MineralsConverted is only valid on a stockpile "
+                    "output stat (nutrients, energy, econ, labs, psych), got '"
+                    + parameters.value("stat", "")
+                    + "'. Minerals are the conversion input, so converting to them is a loop");
             }
             if (rEffect.scope != EffectScope_t::ThisBase)
             {
@@ -800,9 +801,23 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
     return effect;
 }
 
-void ValidateScopeForSource(EffectScope_t scope, EffectPersistence_t persistence,
-                            EffectSourceKind_t sourceKind, const std::string& rSourceId)
+void ValidateEffectForSource(const EffectConfig_t& rEffect, EffectSourceKind_t sourceKind,
+                             const std::string& rSourceId)
 {
+    const EffectScope_t scope = rEffect.scope;
+    const EffectPersistence_t persistence = rEffect.persistence;
+
+    const auto* pStatModifier = std::get_if<StatModifierEffect_t>(&rEffect.effect);
+    if (pStatModifier
+        && pStatModifier->amountSource == StatModifierEffect_t::AmountSource_t::MineralsConverted
+        && sourceKind != EffectSourceKind_t::Stockpile)
+    {
+        throw std::runtime_error(
+            "Effect on '" + rSourceId
+            + "': amount_source MineralsConverted is only valid on a stockpile config — nothing "
+              "else converts minerals, so it would never resolve");
+    }
+
     if (scope == EffectScope_t::ThisPop && sourceKind != EffectSourceKind_t::PopType)
     {
         throw std::runtime_error("Effect on '" + rSourceId
@@ -824,6 +839,8 @@ void ValidateScopeForSource(EffectScope_t scope, EffectPersistence_t persistence
         case EffectSourceKind_t::PopType:
         case EffectSourceKind_t::SocialPolicy:
         case EffectSourceKind_t::SocialRating:
+        // Stockpile effects are stamped with the converting base at conversion time.
+        case EffectSourceKind_t::Stockpile:
             bCanSupplyOriginBase = true;
             break;
         case EffectSourceKind_t::UnitComponent:
@@ -881,7 +898,7 @@ std::vector<EffectConfig_t> ParseEffects(const nlohmann::json& rContainerJson,
     std::vector<EffectConfig_t> effects = ParseEffects(rContainerJson);
     for (const EffectConfig_t& rEffect : effects)
     {
-        ValidateScopeForSource(rEffect.scope, rEffect.persistence, sourceKind, rSourceId);
+        ValidateEffectForSource(rEffect, sourceKind, rSourceId);
     }
     return effects;
 }

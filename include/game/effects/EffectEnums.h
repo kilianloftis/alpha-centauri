@@ -508,6 +508,7 @@ enum class EffectSourceKind_t
     TileYieldRules,
     Tech,
     Production,
+    Stockpile,
 };
 
 } // namespace ac

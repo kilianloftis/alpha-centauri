@@ -27,19 +27,13 @@ struct BuildingConfig_t : public IConstructable
     bool bIsSecretProject = false;
     // Public orbital census: counts of buildings with this flag are visible to all factions.
     bool orbital = false;
-    // Never-completing production item: each turn converts this base's minerals via
-    // MineralsConverted StatModifiers on `effects`. Unused unless bStockpile.
-    bool bStockpile = false;
     std::vector<EffectConfig_t> effects;
 
     const std::string& GetId() const override { return id; }
     const std::string& GetName() const override { return name; }
     int GetBaseCost() const override { return mineralCost; }
-    bool NeverCompletes() const override { return bStockpile; }
     // Per-turn energy-credit maintenance for this building type (UI / upkeep stage).
     int GetUpkeep() const { return upkeep; }
-
-    bool IsStockpile() const { return bStockpile; }
 
     // Empty requiredTech = always available (matches SocialPolicyConfig_t::IsAvailable).
     bool IsAvailable(const std::vector<std::string>& discoveredTechs) const

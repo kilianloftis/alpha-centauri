@@ -3,6 +3,7 @@
 #include "game/EffectReferenceValidator.h"
 #include "game/RequiredTechValidator.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/stockpiles/StockpileRegistry.h"
 #include "game/faction/FactionRegistry.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/TerrainFeatureValidation.h"
@@ -49,6 +50,7 @@ void ThrowIfIncomplete(const GameDataContext& rData)
     // diagnostic a modder can act on.
     const std::pair<const void*, const char*> required[] = {
         {rData.buildingRegistry.get(), "buildingRegistry"},
+        {rData.stockpileRegistry.get(), "stockpileRegistry"},
         {rData.unitComponentRegistry.get(), "unitComponentRegistry"},
         {rData.unitSlotRegistry.get(), "unitSlotRegistry"},
         {rData.techRegistry.get(), "techRegistry"},
@@ -113,6 +115,9 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
     rData.buildingRegistry = std::make_unique<BuildingRegistry>();
     rData.buildingRegistry->Load(rPaths.buildings);
 
+    rData.stockpileRegistry = std::make_unique<StockpileRegistry>();
+    rData.stockpileRegistry->Load(rPaths.stockpiles);
+
     rData.socialPolicyRegistry = std::make_unique<SocialPolicyRegistry>();
     rData.socialPolicyRegistry->Load(rPaths.socialPolicies);
 
@@ -174,6 +179,12 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
     rData.councilRules =
         std::make_unique<CouncilRulesConfig_t>(councilRulesParser.ParseConfig(rPaths.councilRules));
 
+    // Effect-declaring, not a Lua formula: prototype starting-XP (and any other universal
+    // production rules) live here, so ValidateEffectReferences must see this before it runs.
+    ProductionConfigParser productionParser;
+    rData.productionConfig =
+        std::make_unique<ProductionConfig_t>(productionParser.ParseConfig(rPaths.production));
+
     // Cross-config id checks — only safe once every registry above is loaded.
     ValidateTerrainFeatures(*rData.improvementRegistry);
     ValidateEffectReferences(rData);
@@ -206,10 +217,6 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
     GrowthConfigParser growthParser;
     rData.growthConfig =
         std::make_unique<GrowthConfig_t>(growthParser.ParseConfig(rPaths.popGrowth));
-
-    ProductionConfigParser productionParser;
-    rData.productionConfig =
-        std::make_unique<ProductionConfig_t>(productionParser.ParseConfig(rPaths.production));
 
     TechCostConfigParser techCostParser;
     rData.techCostConfig = std::make_unique<TechCostConfig_t>(

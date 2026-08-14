@@ -515,6 +515,22 @@
       255, 255, 255, 255
     ]
   },
+  "buildings_display": {
+    "background_color": [
+      20, 20, 20, 255
+    ],
+    "text_color": [
+      255, 255, 255, 255
+    ],
+    "granted_text_color": [
+      140, 140, 140, 255
+    ],
+    "header_font_size_ratio": 0.04,
+    "entry_font_size_ratio": 0.03,
+    "line_height_ratio": 0.05,
+    "left_padding_ratio": 0.02,
+    "header_line_offset": 1.0
+  },
   "support_display": {
     "background_color": [
       20, 20, 40, 255

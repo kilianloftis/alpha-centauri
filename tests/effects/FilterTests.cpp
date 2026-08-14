@@ -107,7 +107,12 @@ TEST_CASE("FilterBaseLevelByStatId with context includes satisfied conditions",
     CHECK(remoteMatching[0].sourceId == "flat");
 }
 
-TEST_CASE("FilterBaseLevelByStatId excludes MineralsConverted; FilterStockpileYieldByStatId keeps it",
+// Stockpile yield is resolved by StockpileConversion.cpp against the stockpile config's own
+// effects, never against the base pool. If a MineralsConverted modifier ever reached the base
+// lane it would be added to that stat every turn with no minerals consumed, so the exclusion
+// here is the guard that keeps the two lanes apart. The conversion side is covered by the
+// end-to-end yields in StockpileEnergyTests.
+TEST_CASE("FilterBaseLevelByStatId excludes MineralsConverted",
           "[effects][filter][amount_source]")
 {
     actest::EffectPool pool;
@@ -130,11 +135,6 @@ TEST_CASE("FilterBaseLevelByStatId excludes MineralsConverted; FilterStockpileYi
         actest::Materialize(FilterBaseLevelByStatId(baseEffects, StatId_t::Energy));
     REQUIRE(baseLevel.size() == 1);
     CHECK(baseLevel[0].sourceId == "flat");
-
-    const EffectContext_t ctx{.mineralsConverted = 4};
-    const std::vector<ActiveEffect_t> stockpile =
-        actest::Materialize(FilterStockpileYieldByStatId(baseEffects.effects, StatId_t::Energy, ctx));
-    REQUIRE(stockpile.size() == 2);
 }
 
 TEST_CASE("ConditionSatisfied: no condition always applies", "[effects][condition]")

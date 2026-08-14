@@ -8,11 +8,16 @@
 namespace ac
 {
 
-ProductionManager::ProductionManager(const ProductionConfig_t& rConfig)
+ProductionManager::ProductionManager(const ProductionConfig_t& rConfig,
+                                     std::function<const IConstructable*()> defaultItemProvider)
     : m_rConfig(rConfig)
+    , m_defaultItemProvider(std::move(defaultItemProvider))
     , m_pCurrentItem(nullptr)
     , m_mineralStockpile(0)
 {
+    // A base starts on the default rather than idle. Nothing is connected to
+    // OnProductionChanged yet, so this seeds the queue without announcing anything.
+    ResetProduction_();
 }
 
 ProductionManager::~ProductionManager() = default;
@@ -45,13 +50,8 @@ void ProductionManager::RebindProductionItem(const IConstructable* pItem)
 
     if (!pItem)
     {
-        const bool bHadProduction = HasProduction();
-        m_pCurrentItem = nullptr;
         m_pTurnOriginalItem = nullptr;
-        if (bHadProduction)
-        {
-            OnProductionChanged.Emit();
-        }
+        ResetProduction_();
         return;
     }
 
@@ -162,12 +162,13 @@ std::string ProductionManager::CompleteProduction()
 
 void ProductionManager::ResetProduction_()
 {
-    bool bHadProduction = HasProduction();
-    m_pCurrentItem = nullptr;
-    if (bHadProduction)
+    const IConstructable* pDefault = m_defaultItemProvider ? m_defaultItemProvider() : nullptr;
+    if (pDefault == m_pCurrentItem)
     {
-        OnProductionChanged.Emit();
+        return;
     }
+    m_pCurrentItem = pDefault;
+    OnProductionChanged.Emit();
 }
 
 } // namespace ac

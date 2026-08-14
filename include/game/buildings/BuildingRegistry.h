@@ -39,21 +39,6 @@ protected:
             }
         }
     }
-
-public:
-    // First stockpile whose required_tech is satisfied, in registry order. nullptr if none.
-    const BuildingConfig_t* FindFirstAvailableStockpile(
-        const std::vector<std::string>& rDiscoveredTechs) const
-    {
-        for (const BuildingConfig_t& rConfig : this->GetAll())
-        {
-            if (rConfig.IsStockpile() && rConfig.IsAvailable(rDiscoveredTechs))
-            {
-                return &rConfig;
-            }
-        }
-        return nullptr;
-    }
 };
 
 } // namespace ac

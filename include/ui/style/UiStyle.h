@@ -336,6 +336,19 @@ struct SupportDisplayStyle_t
     float iconGapRatio{};
 };
 
+struct BuildingsDisplayStyle_t
+{
+    Color_t backgroundColor{};
+    Color_t textColor{};
+    // Continuous GrantBuilding rows (and constructed copies that are also granted).
+    Color_t grantedTextColor{};
+    float headerFontSizeRatio{};
+    float entryFontSizeRatio{};
+    float lineHeightRatio{};
+    float leftPaddingRatio{};
+    float headerLineOffset{};
+};
+
 struct BaseWorkableAreaDisplayStyle_t
 {
     int gridDimension{};
@@ -572,6 +585,7 @@ public:
     ResourceLinesPanelStyle_t productionDisplay;
     PopulationDisplayStyle_t populationDisplay;
     SupportDisplayStyle_t supportDisplay;
+    BuildingsDisplayStyle_t buildingsDisplay;
     BaseWorkableAreaDisplayStyle_t baseWorkableAreaDisplay;
     ListSelectorPopupStyle_t listSelectorPopup;
     NoticePopupStyle_t noticePopup;

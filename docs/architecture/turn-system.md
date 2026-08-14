@@ -189,6 +189,9 @@ calls `CompleteFront` then `ProcessTurn_` after resolution.
 - **`SurplusConversion`**: `ConvertSurplusMinerals` — whatever support left goes through the
   base's queued stockpile item (or is wasted when none is available). Ordered before
   `IncomeCollection` / `ResearchAccumulation` so converted econ and labs are spent this turn.
+  Stockpiles are their own config family (`config/stockpiles.json`, `StockpileRegistry`), not
+  buildings; `BaseManager::ConvertSurplusMinerals` delegates to `ApplyStockpileConversionAtBase`,
+  which resolves the stockpile config's own effects and never touches the base effect pool.
 - **`Upkeep`**: deploy-record pruning and facility energy upkeep (after income).
 
   The three mineral phases are separate stages rather than one because the ordering is a

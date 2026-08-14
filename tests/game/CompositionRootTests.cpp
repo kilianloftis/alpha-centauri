@@ -14,6 +14,7 @@
 #include "game/GameSettings.h"
 #include "game/GameState.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/stockpiles/StockpileRegistry.h"
 #include "game/faction/DiplomacyLedger.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/map/TerritoryMap.h"
@@ -23,10 +24,37 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
+#include <filesystem>
 #include <memory>
 
 using namespace ac;
 using namespace actest;
+
+// The fixtures assemble a narrower context by hand, so nothing else here parses the config
+// the game actually ships. Without this, a malformed or missing file under config/ — a new
+// registry wired into LoadGameData but never given its json, say — first fails at startup.
+TEST_CASE("LoadGameData parses the shipping config", "[composition][gamedata]")
+{
+    const std::filesystem::path repoRoot =
+        std::filesystem::path(AC_TEST_FIXTURES_DIR) / ".." / "..";
+    const std::filesystem::path previousDir = std::filesystem::current_path();
+    std::filesystem::current_path(repoRoot);
+
+    try
+    {
+        const GameDataContext data = LoadGameData();
+        CHECK_NOTHROW(ThrowIfIncomplete(data));
+        // Every stockpile the stock config ships must be selectable as the empty-queue
+        // default, or bases silently waste their surplus.
+        CHECK(data.stockpileRegistry->FindFallback({}) != nullptr);
+    }
+    catch (...)
+    {
+        std::filesystem::current_path(previousDir);
+        throw;
+    }
+    std::filesystem::current_path(previousDir);
+}
 
 TEST_CASE("ThrowIfIncomplete names the missing member", "[composition][gamedata]")
 {
@@ -50,6 +78,10 @@ TEST_CASE("ThrowIfIncomplete reports the first member still missing", "[composit
                       Catch::Matchers::ContainsSubstring("buildingRegistry"));
 
     data.buildingRegistry = std::make_unique<BuildingRegistry>();
+    CHECK_THROWS_WITH(ThrowIfIncomplete(data),
+                      Catch::Matchers::ContainsSubstring("stockpileRegistry"));
+
+    data.stockpileRegistry = std::make_unique<StockpileRegistry>();
     CHECK_THROWS_WITH(ThrowIfIncomplete(data),
                       Catch::Matchers::ContainsSubstring("unitComponentRegistry"));
 }

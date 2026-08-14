@@ -34,7 +34,8 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
 
 // Walks every loaded config that declares effects (buildings, techs, improvements, pop types,
 // unit components, social policies, social rating tables, factions, council proposals,
-// council governor effects, probe actions, tile yield rules) and validates each list via
+// council governor effects, probe actions, tile yield rules, production) and validates each
+// list via
 // the overload above. Throws if any target registry or walked effect-source unique_ptr that
 // LoadGameData always installs is null — never silently no-ops the whole check. Call once
 // from LoadGameData after all registries are loaded so a typo'd id fails at startup with

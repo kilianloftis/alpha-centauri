@@ -3,6 +3,7 @@
 #include "game/GameDataContext.h"
 #include "game/buildings/BuildingConfig.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/stockpiles/StockpileRegistry.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
@@ -224,6 +225,8 @@ void ValidateEffectReferences(const GameDataContext& rData)
     // for that family would otherwise pass vacuously.
     const BuildingRegistry& rBuildings =
         RequireRegistry(rData.buildingRegistry, "buildingRegistry");
+    const StockpileRegistry& rStockpiles =
+        RequireRegistry(rData.stockpileRegistry, "stockpileRegistry");
     const ImprovementRegistry& rImprovements =
         RequireRegistry(rData.improvementRegistry, "improvementRegistry");
     const TechRegistry& rTechs = RequireRegistry(rData.techRegistry, "techRegistry");
@@ -255,6 +258,10 @@ void ValidateEffectReferences(const GameDataContext& rData)
     };
 
     for (const BuildingConfig_t& rConfig : rBuildings.GetAll())
+    {
+        validate(rConfig.effects, rConfig.id);
+    }
+    for (const StockpileConfig_t& rConfig : rStockpiles.GetAll())
     {
         validate(rConfig.effects, rConfig.id);
     }

@@ -22,6 +22,8 @@
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
 #include "game/stages/BaseProduction.h"
+#include "game/stockpiles/StockpileConfig.h"
+#include "game/stockpiles/StockpileRegistry.h"
 #include "game/PlayerInteraction.h"
 #include "game/PlayerInteractionQueue.h"
 #include "game/units/Unit.h"
@@ -142,9 +144,9 @@ bool ConstructableContains_(const std::vector<const IConstructable*>& rAvailable
     return std::find(rAvailable.begin(), rAvailable.end(), pItem) != rAvailable.end();
 }
 
-const BuildingConfig_t* StockpileEnergyOf_(UnitProductionGame_& rGame)
+const StockpileConfig_t* StockpileEnergyOf_(UnitProductionGame_& rGame)
 {
-    const BuildingConfig_t* pStockpile = rGame.fixtures.buildings().Find("Stockpile_Energy");
+    const StockpileConfig_t* pStockpile = rGame.fixtures.stockpiles().Find("Stockpile_Energy");
     REQUIRE(pStockpile != nullptr);
     return pStockpile;
 }

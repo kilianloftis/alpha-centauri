@@ -118,7 +118,7 @@ routes through it (`FilterForBase`, `AppendFactionLaneEffects`,
 routing decision in `LaneFor`'s exhaustive switch and every collector follows automatically.
 `tests/effects/ValidationTests.cpp` pins each scope's lane with `static_assert`s.
 
-Load-time validation (`EffectConfigParser::ValidateScopeForSource`) rejects the
+Load-time validation (`EffectConfigParser::ValidateEffectForSource`) rejects the
 certainly-impossible combinations — with a clear error:
 
 - `ThisPop` only on a pop type
@@ -495,10 +495,10 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   - `ParseTileSelector` — parses a `TileSelector_t` from a `selector` JSON object. Called by the `StatModifier` branch when a `selector` field is present, making that modifier a per-tile yield modifier. A `selector` on any stat other than `nutrients`/`minerals`/`energy` is rejected at parse time — selectors only take part in tile-yield resolution, so such a modifier would silently never apply.
   - `ParseEffectConfig` — parses one entry of an `effects` array (`type`/`scope`/`persistence`/`condition`/`parameters`) into an `EffectConfig_t`. Required keys `type` and `scope` use `.at()` (missing → throw). Dispatches on `type` via a static table of per-type parse functions (one focused function per `EffectVariant_t` alternative). Additional strictness:
     - Nonzero `radius` requires `scope: ThisTile`.
-    - `StatModifier` with `amount_source` requires `op: Add` (or omitted op, which defaults to Add). `ElevationEnergySeed` is energy + `ThisTile`. `MineralsConverted` is a stockpile-output stat (nutrients / energy / econ / labs / psych) + `ThisBase`, and is only valid on stockpile buildings.
+    - `StatModifier` with `amount_source` requires `op: Add` (or omitted op, which defaults to Add). `ElevationEnergySeed` is energy + `ThisTile`. `MineralsConverted` is a stockpile-output stat (`k_StockpileOutputStats`: nutrients / energy / econ / labs / psych — not minerals, the input) + `ThisBase` + Continuous + positive amount; `ValidateEffectForSource` further restricts it to `EffectSourceKind_t::Stockpile`, since nothing else converts minerals. `energy` is not a bank, so conversion routes it through `ResourceManager::AddAllocatedEnergy` (inefficiency, then the econ/labs/psych split) rather than crediting it directly — using the faction's split math alone, never `CalculateEcon_`/`Labs_`/`Psych_`, which would re-apply flat modifiers already paid during collection.
     - Balance keys listed under `RequireNumber` above have no C++ invent-defaults.
-  - `ParseEffects` — parses the `effects` array of a containing JSON object, returning `{}` if absent; throws if `"effects"` is present but not an array. The validating overload takes an `EffectSourceKind_t` (`Building`, `UnitComponent`, `PopType`, `Improvement`, `SocialPolicy`, `SocialRating`, `Faction`, `CouncilProposal`, `CouncilRules`, `ProbeAction`, `TileYieldRules`) and runs `ValidateScopeForSource` on every entry.
-- **Consumers**: Every effect-declaring config parser calls `EffectConfigParser::ParseEffects` (or `ParseEffectConfig` + `ValidateScopeForSource`). Council proposal / governor parsers add a second honored-shape check after scope validation (see council-system.md).
+  - `ParseEffects` — parses the `effects` array of a containing JSON object, returning `{}` if absent; throws if `"effects"` is present but not an array. The validating overload takes an `EffectSourceKind_t` (`Building`, `UnitComponent`, `PopType`, `Improvement`, `SocialPolicy`, `SocialRating`, `Faction`, `CouncilProposal`, `CouncilRules`, `ProbeAction`, `TileYieldRules`, `Stockpile`) and runs `ValidateEffectForSource` on every entry.
+- **Consumers**: Every effect-declaring config parser calls `EffectConfigParser::ParseEffects` (or `ParseEffectConfig` + `ValidateEffectForSource`). Council proposal / governor parsers add a second honored-shape check after scope validation (see council-system.md).
 
 ### EffectReferenceValidator (post-load id validation)
 
@@ -528,7 +528,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   effects silently.
 - **Coverage**: every effect-declaring config — buildings, improvements, pop types, unit
   components, social policies, each rating level's effect list, factions, council proposals,
-  council governor effects, probe actions, and `tileYieldRules`.
+  council governor effects, probe actions, `tileYieldRules`, and production.
 - Deliberately **not** part of `Registry::Validate_`: test fixtures intentionally contain
   dangling grant ids (to test that expansion skips unknown targets), and single registries
   can't see cross-registry references anyway.
@@ -608,7 +608,7 @@ parsed and collected identically everywhere.
 1. **Parse**: add an `EffectSourceKind_t` enumerator (`EffectEnums.h`) and call
    `config.effects = EffectConfigParser::ParseEffects(json, EffectSourceKind_t::X, config.id);`
    in the config parser — exactly what `BuildingConfigParser`, `PopTypeConfigParser`, etc.
-   do. Only add a `ValidateScopeForSource` rejection if a scope is *certainly impossible*
+   do. Only add a `ValidateEffectForSource` rejection if a scope is *certainly impossible*
    for the source; scopes whose anchor concept is pending stay legal-but-inert (see
    Universal scope routing).
 2. **Collect**: never hand-roll the config→`ActiveEffect_t` loop — use a collection helper,

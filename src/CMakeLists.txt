@@ -72,6 +72,8 @@ add_library(ac-core STATIC
     game/buildings/BuildingConfigParser.cpp
     game/buildings/BuildingUpkeep.cpp
     game/buildings/SecretProjectAvailabilityCalculator.cpp
+    game/stockpiles/StockpileConfigParser.cpp
+    game/stockpiles/StockpileConversion.cpp
     game/orbital/OrbitalAttack.cpp
     game/orbital/OrbitalCensus.cpp
     game/units/Unit.cpp
@@ -302,6 +304,7 @@ add_library(ac-ui STATIC
     ui/base/ProductionDisplay.cpp
     ui/base/PopulationDisplay.cpp
     ui/base/SupportDisplay.cpp
+    ui/base/BuildingsDisplay.cpp
     ui/research/ResearchView.cpp
     ui/research/CurrentResearchPanel.cpp
     ui/settings/SettingsView.cpp

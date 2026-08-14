@@ -78,6 +78,7 @@ add_executable(effects-tests
     game/MineralSupportTests.cpp
     game/BuildingUpkeepTests.cpp
     game/BuildingInvariantTests.cpp
+    game/StockpileConfigTests.cpp
     game/CompositionRootTests.cpp
     game/LifetimeTransferTests.cpp
     game/SampleModTests.cpp

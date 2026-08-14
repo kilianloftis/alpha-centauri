@@ -5,6 +5,7 @@
 #include "game/EffectReferenceValidator.h"
 #include "game/GameDataContext.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/stockpiles/StockpileRegistry.h"
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/council/CouncilRulesConfig.h"
 #include "game/faction/FactionRegistry.h"
@@ -44,6 +45,7 @@ EffectConfig_t GrantBuilding(std::string buildingId)
 void FillEffectReferenceContext(GameDataContext& rData)
 {
     rData.buildingRegistry = std::make_unique<BuildingRegistry>();
+    rData.stockpileRegistry = std::make_unique<StockpileRegistry>();
     rData.improvementRegistry = std::make_unique<ImprovementRegistry>();
     rData.techRegistry = std::make_unique<TechRegistry>();
     rData.unitComponentRegistry = std::make_unique<UnitComponentRegistry>();
@@ -312,6 +314,12 @@ TEST_CASE("ValidateEffectReferences(GameDataContext): null required registry thr
     CHECK_THROWS_WITH(ValidateEffectReferences(missingTech),
                       Catch::Matchers::ContainsSubstring("techRegistry"));
 
+    GameDataContext missingProduction;
+    FillEffectReferenceContext(missingProduction);
+    missingProduction.productionConfig.reset();
+    CHECK_THROWS_WITH(ValidateEffectReferences(missingProduction),
+                      Catch::Matchers::ContainsSubstring("productionConfig"));
+
     GameDataContext complete;
     FillEffectReferenceContext(complete);
     CHECK_NOTHROW(ValidateEffectReferences(complete));
@@ -354,6 +362,39 @@ TEST_CASE("ValidateEffectReferences(GameDataContext): probe action effect ids ar
 
         CHECK_THROWS_WITH(ValidateEffectReferences(data),
                           Catch::Matchers::ContainsSubstring("probe_action:infiltrate")
+                              && Catch::Matchers::ContainsSubstring("no_such_building"));
+    }
+
+    std::filesystem::remove(buildingsPath);
+}
+
+TEST_CASE("ValidateEffectReferences(GameDataContext): production effect ids are checked",
+          "[effects][validation][production]")
+{
+    const std::filesystem::path buildingsPath =
+        std::filesystem::temp_directory_path() / "ac_production_effect_buildings.json";
+    {
+        std::ofstream out(buildingsPath);
+        out << R"([
+            { "id": "granted_hall", "name": "Granted Hall", "mineral_cost": 10, "category": "grow" }
+        ])";
+    }
+
+    GameDataContext data;
+    FillEffectReferenceContext(data);
+    data.buildingRegistry->Load(buildingsPath.string());
+
+    SECTION("known GrantBuilding on production does not throw")
+    {
+        data.productionConfig->effects = {GrantBuilding("granted_hall")};
+        CHECK_NOTHROW(ValidateEffectReferences(data));
+    }
+
+    SECTION("unknown GrantBuilding throws naming production")
+    {
+        data.productionConfig->effects = {GrantBuilding("no_such_building")};
+        CHECK_THROWS_WITH(ValidateEffectReferences(data),
+                          Catch::Matchers::ContainsSubstring("production")
                               && Catch::Matchers::ContainsSubstring("no_such_building"));
     }
 

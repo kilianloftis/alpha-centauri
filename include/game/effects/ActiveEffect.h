@@ -333,9 +333,10 @@ inline auto FilterByStatIdInContext(std::vector<ActiveEffect_t>&& effects,
 // (StatModifiers carrying a tile selector) and amountSource modifiers. Selector
 // modifiers have already been applied per worked tile and must not be counted a second
 // time. Amount sources are context-specific: ElevationEnergySeed is tile yield,
-// MineralsConverted is stockpile conversion (FilterStockpileYieldByStatId). Accepting
-// BaseEffects_t (never a raw vector or the pool) makes running this filter at any other
-// stage a compile error instead of a doc violation.
+// MineralsConverted is stockpile conversion (StockpileConversion.cpp, which resolves the
+// stockpile config's own effects and never consults this pool). Accepting BaseEffects_t
+// (never a raw vector or the pool) makes running this filter at any other stage a compile
+// error instead of a doc violation.
 //
 // Without pCtx (or with a null pCtx): condition-carrying effects are excluded (context-free).
 // With pCtx: unconditional modifiers plus condition-satisfied ones (e.g. IsHeadquarters
@@ -361,35 +362,6 @@ inline auto FilterBaseLevelByStatId(const BaseEffects_t& rBaseEffects, StatId_t 
 }
 inline auto FilterBaseLevelByStatId(BaseEffects_t&& rBaseEffects, StatId_t statId,
                                     const EffectContext_t* pCtx = nullptr) = delete;
-
-// Stockpile conversion: ThisBase modifiers for `statId`, including MineralsConverted
-// (scaled by ctx.mineralsConverted). Tile selectors and other amount sources stay out.
-inline auto FilterStockpileYieldByStatId(const std::vector<ActiveEffect_t>& effects,
-                                         StatId_t statId, const EffectContext_t& ctx)
-{
-    return effects | std::views::filter([statId, ctx](const ActiveEffect_t& effect)
-    {
-        const StatModifierEffect_t* pStatModifier =
-            std::get_if<StatModifierEffect_t>(&effect.config->effect);
-        if (!pStatModifier || pStatModifier->stat != statId || pStatModifier->selector)
-        {
-            return false;
-        }
-        if (pStatModifier->amountSource
-            && *pStatModifier->amountSource
-                   != StatModifierEffect_t::AmountSource_t::MineralsConverted)
-        {
-            return false;
-        }
-        if (!effect.config->condition)
-        {
-            return true;
-        }
-        return ConditionSatisfied(*effect.config, ctx, effect.originBase);
-    });
-}
-inline auto FilterStockpileYieldByStatId(std::vector<ActiveEffect_t>&& effects, StatId_t statId,
-                                         const EffectContext_t& ctx) = delete;
 
 // Narrows the faction pool to the effects that apply to the given base: ThisBase effects
 // originating from it, plus all AllOwnerBases, FactionGlobal, and WorldGlobal effects.

@@ -4,6 +4,7 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/faction/base/production/ProductionConfigParser.h"
 #include "lib/Signal.h"
+#include <functional>
 #include <string>
 
 namespace ac
@@ -15,10 +16,20 @@ class ProductionManager
 {
 public:
     // rConfig supplies the retooling rule; it outlives every base (GameDataContext owns it).
-    explicit ProductionManager(const ProductionConfig_t& rConfig);
+    //
+    // defaultItemProvider answers "what should this base build when nothing is chosen?" —
+    // the first available stockpile, or nullptr when a mod ships none. It is consulted
+    // whenever the queue would otherwise become empty (construction, completion, clearing),
+    // which is what makes "a base is never idle while a stockpile is available" an invariant
+    // of this class rather than a fix-up its owner applies after the fact. Selecting the
+    // default never charges the retool penalty: the player did not choose it.
+    ProductionManager(const ProductionConfig_t& rConfig,
+                      std::function<const IConstructable*()> defaultItemProvider);
     ~ProductionManager();
 
-    // Set the item to produce; nullptr clears it. Setting the item already queued is a no-op
+    // Set the item to produce; nullptr resets to the default item (see the constructor), not
+    // to an empty queue — a base only goes idle when no default exists. Setting the item
+    // already queued is a no-op
     // and does not re-announce a change. rBaseEffects scales the retool forfeit via
     // RetoolPenaltyScale (omit / empty → seed 1.0). Callers with a live base should pass
     // BaseManager::GetBaseEffects() so Skunkworks and similar apply.
@@ -41,8 +52,10 @@ public:
 
     // Replace the queued constructable pointer without retooling. Used when the logical item
     // is unchanged but the backing object moved (base ownership transfer re-homing a unit
-    // design onto the new owner's Military), or to clear a queue that can no longer resolve
-    // (nullptr — mineral stockpile kept, turn original cleared).
+    // design onto the new owner's Military), or to drop a queue that can no longer resolve
+    // (nullptr — falls back to the default item, mineral stockpile kept, turn original
+    // cleared). Compares the outgoing pointer without dereferencing it, so the caller may
+    // pass nullptr for an item that has already been destroyed.
     void RebindProductionItem(const IConstructable* pItem);
 
     // The item currently being produced, or nullptr if none.
@@ -89,9 +102,12 @@ private:
     // retool does not apply until BankProduction stamps a non-null original.
     const IConstructable* m_pTurnOriginalItem = nullptr;
     const ProductionConfig_t& m_rConfig;
+    std::function<const IConstructable*()> m_defaultItemProvider;
     const IConstructable* m_pCurrentItem = nullptr;
     int m_mineralStockpile = 0;
 
+    // Queue the default item (or leave the queue empty when there is none), announcing the
+    // change if it moved. Never charges retool: the player did not pick this.
     void ResetProduction_();
     void ApplyRetoolPenalty_(const IConstructable* pNewItem, const BaseEffects_t& rBaseEffects);
 };

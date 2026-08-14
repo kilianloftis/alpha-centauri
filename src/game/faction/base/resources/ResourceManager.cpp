@@ -262,9 +262,6 @@ void ResourceManager::AddResource(StatId_t stat, int amount)
     case StatId_t::Nutrients:
         m_nutrients += amount;
         return;
-    case StatId_t::Minerals:
-        m_minerals += amount;
-        return;
     case StatId_t::Econ:
         m_econ += amount;
         return;
@@ -275,8 +272,24 @@ void ResourceManager::AddResource(StatId_t stat, int amount)
         m_psych += amount;
         return;
     default:
-        throw std::invalid_argument("AddResource: stat is not a resource bank");
+        // Minerals are deliberately absent: the only caller is stockpile conversion, whose
+        // input is the mineral bank, so crediting minerals here would be a feedback loop.
+        // Energy is absent because it is not a bank; it goes through AddAllocatedEnergy.
+        throw std::invalid_argument(
+            "AddResource: stat is not a creditable resource bank (nutrients, econ, labs, psych)");
     }
+}
+
+void ResourceManager::AddAllocatedEnergy(int energy)
+{
+    if (energy < 0)
+    {
+        throw std::invalid_argument("AddAllocatedEnergy: energy must be non-negative");
+    }
+    const int allocatable = ApplyInefficiency_(energy);
+    m_econ  += m_pEconomy->CalculateEnergyForEcon(allocatable);
+    m_labs  += m_pEconomy->CalculateEnergyForLabs(allocatable);
+    m_psych += m_pEconomy->CalculateEnergyForPsych(allocatable);
 }
 
 int ResourceManager::ConsumeEcon()

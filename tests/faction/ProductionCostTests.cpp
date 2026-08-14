@@ -114,7 +114,7 @@ TEST_CASE("Production cost applies CostMultiplier effects like GrowthRate", "[pr
 
 TEST_CASE("ProductionManager resolves cost from base effects", "[production][cost]")
 {
-    ProductionManager production(k_TestConfig);
+    ProductionManager production(k_TestConfig, nullptr);
     StubConstructable item;
     production.SetProduction(&item);
 
@@ -143,7 +143,7 @@ TEST_CASE("A never-completing item has no mineral cost and is never ready",
 
     NeverCompleteItem item;
     item.baseCost = 0;
-    ProductionManager production(k_TestConfig);
+    ProductionManager production(k_TestConfig, nullptr);
     production.SetProduction(&item);
     production.SetMineralStockpile(100);
 
@@ -176,7 +176,7 @@ TEST_CASE("Retooling forfeits half the minerals spent past the threshold", "[pro
     const StubConstructable itemA = RetoolItem("a", "A");
     const StubConstructable itemB = RetoolItem("b", "B");
 
-    ProductionManager production(k_TestConfig);
+    ProductionManager production(k_TestConfig, nullptr);
     production.SetProduction(&itemA);
     production.BankProduction(0); // marks A as this turn's original
     production.SetMineralStockpile(40);
@@ -195,7 +195,7 @@ TEST_CASE("RetoolPenaltyScale 0 cancels the forfeit", "[production][retool]")
                "skunkworks"),
     }};
 
-    ProductionManager production(k_TestConfig);
+    ProductionManager production(k_TestConfig, nullptr);
     production.SetProduction(&itemA);
     production.BankProduction(0);
     production.SetMineralStockpile(40);
@@ -209,7 +209,7 @@ TEST_CASE("Retooling is free at or below the threshold", "[production][retool]")
     const StubConstructable itemA = RetoolItem("a", "A");
     const StubConstructable itemB = RetoolItem("b", "B");
 
-    ProductionManager production(k_TestConfig);
+    ProductionManager production(k_TestConfig, nullptr);
     production.SetProduction(&itemA);
     production.BankProduction(0);
     production.SetMineralStockpile(k_TestConfig.retoolPenaltyThreshold);
@@ -223,7 +223,7 @@ TEST_CASE("Switching back to the turn's original item is free", "[production][re
     const StubConstructable itemA = RetoolItem("a", "A");
     const StubConstructable itemB = RetoolItem("b", "B");
 
-    ProductionManager production(k_TestConfig);
+    ProductionManager production(k_TestConfig, nullptr);
     production.SetProduction(&itemA);
     production.BankProduction(0);
     production.SetMineralStockpile(40);
@@ -242,7 +242,7 @@ TEST_CASE("Switching on to a third item pays again", "[production][retool]")
     const StubConstructable itemB = RetoolItem("b", "B");
     const StubConstructable itemC = RetoolItem("c", "C");
 
-    ProductionManager production(k_TestConfig);
+    ProductionManager production(k_TestConfig, nullptr);
     production.SetProduction(&itemA);
     production.BankProduction(0);
     production.SetMineralStockpile(40);
@@ -260,7 +260,7 @@ TEST_CASE("The turn's original item follows production, turn by turn", "[product
     const StubConstructable itemA = RetoolItem("a", "A");
     const StubConstructable itemB = RetoolItem("b", "B");
 
-    ProductionManager production(k_TestConfig);
+    ProductionManager production(k_TestConfig, nullptr);
     production.SetProduction(&itemA);
     production.BankProduction(0);
     production.SetMineralStockpile(40);
@@ -282,7 +282,7 @@ TEST_CASE("Null turn original skips retool until BankProduction stamps one",
     const StubConstructable itemA = RetoolItem("a", "A");
     const StubConstructable itemB = RetoolItem("b", "B");
 
-    ProductionManager production(k_TestConfig);
+    ProductionManager production(k_TestConfig, nullptr);
     production.SetMineralStockpile(40);
 
     production.SetProduction(&itemA);

@@ -306,13 +306,13 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         })")));
     }
 
-    SECTION("MineralsConverted on energy ThisBase")
+    SECTION("MineralsConverted on econ ThisBase")
     {
         const json effectJson = json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisBase",
             "parameters": {
-                "stat": "energy",
+                "stat": "econ",
                 "amount_source": "MineralsConverted",
                 "amount": 0.5,
                 "op": "Add"
@@ -325,7 +325,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         REQUIRE(pMod->amountSource.has_value());
         CHECK(*pMod->amountSource == StatModifierEffect_t::AmountSource_t::MineralsConverted);
         CHECK(pMod->amount == Approx(0.5));
-        CHECK(pMod->stat == StatId_t::Energy);
+        CHECK(pMod->stat == StatId_t::Econ);
     }
 
     SECTION("MineralsConverted on nutrients is OK")
@@ -346,12 +346,23 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         })")));
     }
 
+    // Energy is a legal output; conversion routes it through the slider split rather than
+    // crediting a bank directly.
+    SECTION("MineralsConverted on energy is OK")
+    {
+        CHECK_NOTHROW(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisBase",
+            "parameters": { "stat": "energy", "amount_source": "MineralsConverted", "amount": 1 }
+        })")));
+    }
+
     SECTION("MineralsConverted outside ThisBase throws")
     {
         CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisTile",
-            "parameters": { "stat": "energy", "amount_source": "MineralsConverted" }
+            "parameters": { "stat": "econ", "amount_source": "MineralsConverted" }
         })")));
     }
 
@@ -361,7 +372,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
             "type": "StatModifier",
             "scope": "ThisBase",
             "persistence": "Instantaneous",
-            "parameters": { "stat": "energy", "amount_source": "MineralsConverted" }
+            "parameters": { "stat": "econ", "amount_source": "MineralsConverted" }
         })")));
     }
 
@@ -370,7 +381,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisBase",
-            "parameters": { "stat": "energy", "amount": 0, "amount_source": "MineralsConverted" }
+            "parameters": { "stat": "econ", "amount": 0, "amount_source": "MineralsConverted" }
         })")));
     }
 
@@ -380,7 +391,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
             "type": "StatModifier",
             "scope": "ThisBase",
             "parameters": {
-                "stat": "energy",
+                "stat": "econ",
                 "amount_source": "MineralsConverted",
                 "selector": { "kind": "BaseTile" }
             }
@@ -1074,65 +1085,81 @@ TEST_CASE("ParseEffects: non-array effects throws", "[effects][parser]")
     })")));
 }
 
-TEST_CASE("ValidateScopeForSource: rejects only the certainly-impossible combinations",
+namespace
+{
+
+// ValidateEffectForSource takes the whole effect (it also checks amount_source). These cases
+// only vary scope / persistence, so they build a default StatModifier carrying them.
+void ValidateScopeForSource_(EffectScope_t scope, EffectPersistence_t persistence,
+                             EffectSourceKind_t sourceKind, const std::string& rSourceId)
+{
+    EffectConfig_t effect;
+    effect.scope = scope;
+    effect.persistence = persistence;
+    EffectConfigParser::ValidateEffectForSource(effect, sourceKind, rSourceId);
+}
+
+} // namespace
+
+TEST_CASE("ValidateEffectForSource: rejects only the certainly-impossible combinations",
           "[effects][parser][validation]")
 {
     // ThisPop can only ever resolve against a pop type; ThisUnit against a unit component.
-    CHECK_THROWS(EffectConfigParser::ValidateScopeForSource(
+    CHECK_THROWS(ValidateScopeForSource_(
         EffectScope_t::ThisPop, EffectPersistence_t::Continuous, EffectSourceKind_t::Building,
         "some_building"));
-    CHECK_THROWS(EffectConfigParser::ValidateScopeForSource(
+    CHECK_THROWS(ValidateScopeForSource_(
         EffectScope_t::ThisUnit, EffectPersistence_t::Continuous, EffectSourceKind_t::PopType,
         "some_pop"));
 
-    CHECK_NOTHROW(EffectConfigParser::ValidateScopeForSource(
+    CHECK_NOTHROW(ValidateScopeForSource_(
         EffectScope_t::ThisPop, EffectPersistence_t::Continuous, EffectSourceKind_t::PopType,
         "some_pop"));
-    CHECK_NOTHROW(EffectConfigParser::ValidateScopeForSource(
+    CHECK_NOTHROW(ValidateScopeForSource_(
         EffectScope_t::ThisUnit, EffectPersistence_t::Continuous, EffectSourceKind_t::UnitComponent,
         "some_component"));
 
     // ThisBase / ProducedAtThisBase need an origin base (or pop-merge path).
-    CHECK_THROWS(EffectConfigParser::ValidateScopeForSource(
+    CHECK_THROWS(ValidateScopeForSource_(
         EffectScope_t::ThisBase, EffectPersistence_t::Continuous, EffectSourceKind_t::UnitComponent,
         "sensor_pod"));
-    CHECK_THROWS(EffectConfigParser::ValidateScopeForSource(
+    CHECK_THROWS(ValidateScopeForSource_(
         EffectScope_t::ProducedAtThisBase, EffectPersistence_t::Instantaneous,
         EffectSourceKind_t::UnitComponent, "colony_pod"));
-    CHECK_THROWS(EffectConfigParser::ValidateScopeForSource(
+    CHECK_THROWS(ValidateScopeForSource_(
         EffectScope_t::ProducedAtThisBase, EffectPersistence_t::Continuous,
         EffectSourceKind_t::Improvement, "monolith"));
-    CHECK_THROWS(EffectConfigParser::ValidateScopeForSource(
+    CHECK_THROWS(ValidateScopeForSource_(
         EffectScope_t::ThisBase, EffectPersistence_t::Continuous, EffectSourceKind_t::CouncilProposal,
         "trade_pact"));
-    CHECK_THROWS(EffectConfigParser::ValidateScopeForSource(
+    CHECK_THROWS(ValidateScopeForSource_(
         EffectScope_t::ThisBase, EffectPersistence_t::Continuous, EffectSourceKind_t::TileYieldRules,
         "tile_yield_rules"));
-    CHECK_THROWS(EffectConfigParser::ValidateScopeForSource(
+    CHECK_THROWS(ValidateScopeForSource_(
         EffectScope_t::ThisBase, EffectPersistence_t::Continuous, EffectSourceKind_t::Production,
         "production"));
-    CHECK_NOTHROW(EffectConfigParser::ValidateScopeForSource(
+    CHECK_NOTHROW(ValidateScopeForSource_(
         EffectScope_t::ThisBase, EffectPersistence_t::Continuous, EffectSourceKind_t::Building,
         "recycling_tanks"));
-    CHECK_NOTHROW(EffectConfigParser::ValidateScopeForSource(
+    CHECK_NOTHROW(ValidateScopeForSource_(
         EffectScope_t::ProducedAtThisBase, EffectPersistence_t::Continuous,
         EffectSourceKind_t::Building, "aerospace"));
     // Instantaneous ThisBase on unit components / probe actions (production cost, genetic plague).
-    CHECK_NOTHROW(EffectConfigParser::ValidateScopeForSource(
+    CHECK_NOTHROW(ValidateScopeForSource_(
         EffectScope_t::ThisBase, EffectPersistence_t::Instantaneous,
         EffectSourceKind_t::UnitComponent, "Colony_Pod"));
-    CHECK_NOTHROW(EffectConfigParser::ValidateScopeForSource(
+    CHECK_NOTHROW(ValidateScopeForSource_(
         EffectScope_t::ThisBase, EffectPersistence_t::Instantaneous, EffectSourceKind_t::ProbeAction,
         "genetic_plague"));
 
     // Legal-but-inert: faction-lane on improvement (pending territory) still loads.
-    CHECK_NOTHROW(EffectConfigParser::ValidateScopeForSource(
+    CHECK_NOTHROW(ValidateScopeForSource_(
         EffectScope_t::FactionGlobal, EffectPersistence_t::Continuous,
         EffectSourceKind_t::Improvement, "monolith"));
-    CHECK_NOTHROW(EffectConfigParser::ValidateScopeForSource(
+    CHECK_NOTHROW(ValidateScopeForSource_(
         EffectScope_t::ThisTile, EffectPersistence_t::Continuous, EffectSourceKind_t::UnitComponent,
         "sensor_pod"));
-    CHECK_NOTHROW(EffectConfigParser::ValidateScopeForSource(
+    CHECK_NOTHROW(ValidateScopeForSource_(
         EffectScope_t::WorldGlobal, EffectPersistence_t::Continuous, EffectSourceKind_t::Building,
         "beacon"));
 }

@@ -54,13 +54,15 @@ FactionFilter_t ParseFactionFilter(const nlohmann::json& filterJson);
 // (type/scope/persistence/condition/unitFilter/factionFilter/radius/parameters).
 EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson);
 
-// Throws if scope can never be resolved for the given source kind (ThisPop off a pop type,
-// ThisUnit off a unit component, ThisBase/ProducedAtThisBase off a source that cannot supply
-// an origin base). Instantaneous ThisBase is allowed on UnitComponent / ProbeAction (fired at
-// production complete / probe success against a concrete base). Deliberately leaves intentional
+// Throws if the effect can never be resolved for the given source kind: a scope with no
+// resolvable anchor (ThisPop off a pop type, ThisUnit off a unit component,
+// ThisBase/ProducedAtThisBase off a source that cannot supply an origin base), or an
+// amount_source only one kind of config can feed (MineralsConverted off a stockpile).
+// Instantaneous ThisBase is allowed on UnitComponent / ProbeAction (fired at production
+// complete / probe success against a concrete base). Deliberately leaves intentional
 // legal-but-inert combos alone (e.g. faction-lane effects on improvements, pending territory).
-void ValidateScopeForSource(EffectScope_t scope, EffectPersistence_t persistence,
-                            EffectSourceKind_t sourceKind, const std::string& rSourceId);
+void ValidateEffectForSource(const EffectConfig_t& rEffect, EffectSourceKind_t sourceKind,
+                             const std::string& rSourceId);
 
 // Parses the "effects" array of rContainerJson, if present. Returns {} otherwise.
 std::vector<EffectConfig_t> ParseEffects(const nlohmann::json& rContainerJson);

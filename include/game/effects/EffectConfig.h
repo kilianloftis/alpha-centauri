@@ -4,6 +4,8 @@
 #include "game/GameCategory.h"
 #include "game/units/UnitDomain.h"
 
+#include <algorithm>
+#include <iterator>
 #include <optional>
 #include <string>
 #include <variant>
@@ -108,23 +110,14 @@ struct StatModifierEffect_t
     bool applyAfterRestriction = false;
 };
 
-// Stats MineralsConverted may target (stockpile conversion outputs). Minerals are the
-// input, not an output.
-inline bool IsStockpileOutputStat(StatId_t stat)
-{
-    switch (stat)
-    {
-    case StatId_t::Nutrients:
-    case StatId_t::Energy:
-    case StatId_t::Econ:
-    case StatId_t::Labs:
-    case StatId_t::Psych:
-        return true;
-    default:
-        return false;
-    }
-}
-
+// Stats a MineralsConverted modifier may target.
+//
+// Minerals are excluded because they are the input — converting minerals into minerals is a
+// feedback loop, not a recipe. Everything else here is a per-turn base bank a stockpile can
+// credit directly, except Energy: "energy" at a base is not a bank, so converted energy is
+// run through inefficiency and the econ/labs/psych slider split exactly like collected
+// energy (ResourceManager::AddAllocatedEnergy). Crediting `econ` instead skips the sliders
+// and reaches the treasury whole — IncomeCollection runs after SurplusConversion.
 inline constexpr StatId_t k_StockpileOutputStats[] = {
     StatId_t::Nutrients,
     StatId_t::Energy,
@@ -132,6 +125,12 @@ inline constexpr StatId_t k_StockpileOutputStats[] = {
     StatId_t::Labs,
     StatId_t::Psych,
 };
+
+inline bool IsStockpileOutputStat(StatId_t stat)
+{
+    return std::find(std::begin(k_StockpileOutputStats), std::end(k_StockpileOutputStats), stat)
+           != std::end(k_StockpileOutputStats);
+}
 
 // Caps one tile resource at `max`. Lift the cap by putting `removed_by_tech` on the
 // EffectConfig_t (FactionEffectsPool drops it once that tech is discovered).
