@@ -1,19 +1,23 @@
 #include "ui/base/BaseView.h"
 #include "ui/base/BaseNameDisplay.h"
 #include "ui/base/BaseWorkableAreaDisplay.h"
+#include "ui/base/BuildQueueDisplay.h"
 #include "ui/base/BuildingsDisplay.h"
 #include "ui/base/GrowthDisplay.h"
+#include "ui/base/HurryProductionPopup.h"
 #include "ui/base/ProductionDisplay.h"
 #include "ui/base/PopulationDisplay.h"
 #include "ui/base/SupportDisplay.h"
 #include "ui/ListSelectorPopup.h"
-#include "ui/PlaceholderPanel.h"
+#include "ui/NoticePopup.h"
 #include "ui/world/UnitStackPanel.h"
 #include "game/population/pop-types/Pop.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/production/HurryProductionCalculator.h"
 #include "game/faction/base/production/ProductionManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
+#include "game/faction/EconomyManager.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
@@ -45,12 +49,14 @@ BaseView::BaseView(
     BaseWorkableAreaDisplay::TileClickCallback_t onTileClick;
     BaseWorkableAreaDisplay::BaseClickCallback_t onBaseClick;
     std::function<void()> onProductionClick;
+    std::function<void()> onHurryClick;
     PopClickCallback_t onPopClick;
     if (m_bEditable)
     {
         onTileClick = [this](const Tile* pTile) { HandleTileClick_(pTile); };
         onBaseClick = [this]() { HandleBaseClicked_(); };
         onProductionClick = [this]() { HandleProductionDisplayClicked_(); };
+        onHurryClick = [this]() { HandleHurryClicked_(); };
         onPopClick = [this](Pop& rPop) { HandlePopClick_(rPop); };
     }
 
@@ -79,9 +85,10 @@ BaseView::BaseView(
         ResolveLayout(leftPanel, bv.productionLayout),
         std::move(onProductionClick)
     ));
-    m_elements.push_back(std::make_unique<PlaceholderPanel>(
-        "Build Queue",
-        ResolveLayout(leftPanel, bv.buildQueueLayout)
+    m_elements.push_back(std::make_unique<BuildQueueDisplay>(
+        m_rBase,
+        ResolveLayout(leftPanel, bv.buildQueueLayout),
+        std::move(onHurryClick)
     ));
 
     // CenterPanel: Base Name (1/3) | Population (2/3)
@@ -289,6 +296,47 @@ void BaseView::HandleProductionDisplayClicked_()
             m_rBase.GetProduction().SetProduction(available[index], m_rBase.GetBaseEffects());
         },
         Style().listSelectorPopup));
+}
+
+void BaseView::HandleHurryClicked_()
+{
+    if (!m_bEditable)
+    {
+        return;
+    }
+
+    const HurryQuote_t quote = m_rBase.QuoteHurry();
+    if (!quote.bAvailable || quote.creditCost <= 0)
+    {
+        return;
+    }
+
+    DismissOpenModals_();
+    m_elements.push_back(std::make_unique<HurryProductionPopup>(
+        ResolveLayout(m_layout, Style().layouts.popupSmall),
+        quote.creditCost,
+        [this](int credits) { HandleHurryConfirmed_(credits); },
+        Style().hurryProductionPopup));
+}
+
+void BaseView::HandleHurryConfirmed_(int credits)
+{
+    if (!m_bEditable || credits <= 0)
+    {
+        return;
+    }
+
+    if (!m_rBase.GetFaction().GetEconomy().CanAfford(credits))
+    {
+        DismissOpenModals_();
+        m_elements.push_back(std::make_unique<NoticePopup>(
+            ResolveLayout(m_layout, Style().layouts.popupSmall),
+            "Hurry",
+            "Not enough energy credits."));
+        return;
+    }
+
+    m_rBase.HurryProduction(credits);
 }
 
 } // namespace ac

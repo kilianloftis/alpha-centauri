@@ -31,7 +31,7 @@ BaseDisplaySnapshot_t BuildBaseDisplaySnapshot(const BaseManager& rBase)
 
     snapshot.nutrientProduction = rBase.GetNutrientProduction();
     snapshot.nutrientsRequired = rBase.GetNutrientsRequired();
-    snapshot.mineralProduction = rBase.GetMineralProduction();
+    snapshot.mineralProduction = rBase.GetMineralsForProduction();
 
     const IConstructable* pProduction = rBase.GetProduction().GetCurrentProduction();
     snapshot.bHasProduction = pProduction != nullptr;

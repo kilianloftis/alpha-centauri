@@ -603,6 +603,18 @@ BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile*
 
     BaseManager* pRawBase = pBase.get();
     AddBase(std::move(pBase));
+
+    // Founding while the faction has no HQ installs Headquarters here. ResourceManager bills
+    // k_DefaultInefficiencyHqDistance (16) when GetHeadquarters() is null, so a first base
+    // without the flag loses half its energy before IncomeCollection — credits fall even as
+    // tile production rises. Transfers use AddBase, not CreateBase, and do not grant.
+    if (GetHeadquarters() == nullptr
+        && rDataContext.buildingRegistry->Find("Headquarters")
+        && pRawBase->GetBuildingManager().CanAddBuilding("Headquarters"))
+    {
+        pRawBase->GetBuildingManager().AddBuilding("Headquarters");
+    }
+
     return pRawBase;
 }
 

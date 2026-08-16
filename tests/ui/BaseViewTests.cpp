@@ -3,17 +3,25 @@
 
 #include "ViewFixture.h"
 
+#include "game/buildings/BuildingConfig.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/population/PopulationManager.h"
+#include "game/faction/base/production/HurryProductionCalculator.h"
+#include "game/faction/base/production/ProductionManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
+#include "game/faction/EconomyManager.h"
+#include "game/Faction.h"
 #include "game/map/Tile.h"
 #include "game/population/pop-types/Pop.h"
 #include "ui/base/BaseDisplaySnapshot.h"
 #include "ui/base/BuildingsDisplay.h"
 #include "ui/style/UiStyle.h"
+#include "ui/UIElement.h"
 
 #include <catch2/catch_test_macros.hpp>
+
+#include <optional>
 
 using namespace ac;
 using actest::RecordingGraphics;
@@ -103,7 +111,7 @@ TEST_CASE("The snapshot reports the same yields the panel used to query live", "
     const BaseDisplaySnapshot_t snapshot = BuildBaseDisplaySnapshot(rBase);
     CHECK(snapshot.nutrientProduction == rBase.GetNutrientProduction());
     CHECK(snapshot.nutrientsRequired == rBase.GetNutrientsRequired());
-    CHECK(snapshot.mineralProduction == rBase.GetMineralProduction());
+    CHECK(snapshot.mineralProduction == rBase.GetMineralsForProduction());
 
     const WorkerAssignmentManager& rAssignments = rBase.GetWorkerAssignments();
     for (const auto& [pTile, rEntry] : snapshot.tiles)
@@ -279,4 +287,145 @@ TEST_CASE("A faction-global grant appears on every base in the granted colour", 
     const RecordingGraphics::TextDraw_t* pGranted = DrawnText_(fixture.graphics, "Granted Hall");
     REQUIRE(pGranted != nullptr);
     CHECK(SameColor_(pGranted->color, Style().buildingsDisplay.grantedTextColor));
+}
+
+namespace
+{
+
+MouseEvent_t ClickHurryButton_(const WindowLayout_t& rScreen)
+{
+    const WindowLayout_t left = ResolveLayout(rScreen, Style().layouts.leftPanel);
+    const WindowLayout_t queue = ResolveLayout(left, Style().baseView.buildQueueLayout);
+    const WindowLayout_t hurry = ResolveLayout(queue, Style().buildQueueDisplay.hurryButtonLayout);
+    return MouseEvent_t{
+        MouseButton_t::Left,
+        static_cast<int>(hurry.x + hurry.width * 0.5f),
+        static_cast<int>(hurry.y + hurry.height * 0.5f),
+        {},
+        true};
+}
+
+const BuildingConfig_t* QueueHurryFacility_(BaseManager& rBase, ViewFixture& rFixture)
+{
+    const BuildingConfig_t* pFacility = rFixture.dataContext.buildingRegistry->Find("test_hurry_facility");
+    REQUIRE(pFacility != nullptr);
+    rBase.GetProduction().SetProduction(pFacility);
+    rBase.GetProduction().SetMineralStockpile(0);
+    return pFacility;
+}
+
+} // namespace
+
+TEST_CASE("BaseView draws Hurry on the build queue", "[ui][base][hurry]")
+{
+    ViewFixture fixture;
+    BaseManager& rBase = fixture.MakeBase(4, 4);
+    auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());
+    REQUIRE(pView);
+    pView->Render(fixture.graphics);
+    CHECK(fixture.graphics.AnyTextContaining("Build Queue"));
+    CHECK(fixture.graphics.AnyTextContaining("Hurry"));
+}
+
+TEST_CASE("Hurry does nothing when the queued item cannot be hurried", "[ui][base][hurry]")
+{
+    ViewFixture fixture;
+    BaseManager& rBase = fixture.MakeBase(4, 4);
+    REQUIRE_FALSE(rBase.QuoteHurry().bAvailable);
+
+    auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());
+    REQUIRE(pView);
+    pView->HandleMouse(ClickHurryButton_(ViewFixture::FullScreen()));
+    CHECK_FALSE(pView->HasModalElement());
+}
+
+TEST_CASE("Clicking Hurry opens a popup quoting the finish cost", "[ui][base][hurry]")
+{
+    ViewFixture fixture;
+    BaseManager& rBase = fixture.MakeBase(4, 4);
+    QueueHurryFacility_(rBase, fixture);
+
+    const HurryQuote_t quote = rBase.QuoteHurry();
+    REQUIRE(quote.bAvailable);
+    REQUIRE(quote.creditCost > 0);
+
+    auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());
+    REQUIRE(pView);
+    pView->HandleMouse(ClickHurryButton_(ViewFixture::FullScreen()));
+    CHECK(pView->HasModalElement());
+
+    fixture.graphics.texts.clear();
+    pView->Render(fixture.graphics);
+    CHECK(fixture.graphics.AnyTextContaining(
+        "Finishing construction costs " + std::to_string(quote.creditCost) + " credits."));
+    CHECK(fixture.graphics.AnyTextContaining(std::to_string(quote.creditCost)));
+    CHECK(fixture.graphics.AnyTextContaining("OK"));
+    CHECK(fixture.graphics.AnyTextContaining("Cancel"));
+}
+
+TEST_CASE("Confirming Hurry spends the quoted credits", "[ui][base][hurry]")
+{
+    ViewFixture fixture;
+    BaseManager& rBase = fixture.MakeBase(4, 4);
+    QueueHurryFacility_(rBase, fixture);
+    const HurryQuote_t quote = rBase.QuoteHurry();
+    REQUIRE(quote.creditCost > 0);
+    rBase.GetFaction().GetEconomy().AddEnergy(quote.creditCost);
+
+    auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());
+    REQUIRE(pView);
+    pView->HandleMouse(ClickHurryButton_(ViewFixture::FullScreen()));
+    CHECK(pView->HandleKey(KeyEvent_t{Key_t::Enter, {}}));
+    CHECK_FALSE(pView->HasModalElement());
+    CHECK(rBase.GetFaction().GetEconomy().GetEnergy() == 0);
+}
+
+TEST_CASE("Hurry that the treasury cannot cover explains why rather than throwing",
+          "[ui][base][hurry]")
+{
+    ViewFixture fixture;
+    BaseManager& rBase = fixture.MakeBase(4, 4);
+    QueueHurryFacility_(rBase, fixture);
+    REQUIRE(rBase.QuoteHurry().creditCost > 1);
+    rBase.GetFaction().GetEconomy().AddEnergy(1);
+
+    auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());
+    REQUIRE(pView);
+    pView->HandleMouse(ClickHurryButton_(ViewFixture::FullScreen()));
+    CHECK(pView->HandleKey(KeyEvent_t{Key_t::Enter, {}}));
+    CHECK(pView->HasModalElement());
+    CHECK(rBase.GetFaction().GetEconomy().GetEnergy() == 1);
+
+    fixture.graphics.texts.clear();
+    pView->Render(fixture.graphics);
+    CHECK(fixture.graphics.AnyTextContaining("Not enough energy credits."));
+}
+
+TEST_CASE("A stockpile queue shows no turns to completion", "[ui][base][production]")
+{
+    ViewFixture fixture;
+    BaseManager& rBase = fixture.MakeBase(4, 4);
+    CHECK_FALSE(rBase.GetTurnsToProductionCompletion().has_value());
+
+    auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());
+    REQUIRE(pView);
+    pView->Render(fixture.graphics);
+    CHECK(fixture.graphics.AnyTextContaining("Turns: -"));
+}
+
+TEST_CASE("BaseView shows turns to completion for a queued facility", "[ui][base][production]")
+{
+    ViewFixture fixture;
+    BaseManager& rBase = fixture.MakeBase(4, 4);
+    QueueHurryFacility_(rBase, fixture);
+    rBase.GetBuildingManager().AddBuilding("mineral_cache");
+
+    const std::optional<int> turns = rBase.GetTurnsToProductionCompletion();
+    REQUIRE(turns.has_value());
+    REQUIRE(*turns >= 1);
+
+    auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());
+    REQUIRE(pView);
+    pView->Render(fixture.graphics);
+    CHECK(fixture.graphics.AnyTextContaining("Turns: " + std::to_string(*turns)));
 }

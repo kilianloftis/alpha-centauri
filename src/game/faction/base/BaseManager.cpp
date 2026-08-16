@@ -325,6 +325,36 @@ int BaseManager::GetMineralProduction() const
     return m_pResources->GetMineralProduction(BuildBaseEffects_());
 }
 
+int BaseManager::GetMineralSupportCost() const
+{
+    return MineralSupportCost(*this);
+}
+
+int BaseManager::GetMineralsForProduction() const
+{
+    return std::max(0, GetMineralProduction() - GetMineralSupportCost());
+}
+
+std::optional<int> BaseManager::GetTurnsToProductionCompletion() const
+{
+    const IConstructable* pItem = m_pProduction->GetCurrentProduction();
+    if (!pItem || pItem->NeverCompletes())
+    {
+        return std::nullopt;
+    }
+    const int remaining = std::max(0, GetMineralCost() - m_pProduction->GetMineralStockpile());
+    if (remaining == 0)
+    {
+        return 1;
+    }
+    const int rate = GetMineralsForProduction();
+    if (rate <= 0)
+    {
+        return std::nullopt;
+    }
+    return (remaining + rate - 1) / rate;
+}
+
 int BaseManager::GetEnergyProduction() const
 {
     return m_pResources->GetEnergyProduction(BuildBaseEffects_());

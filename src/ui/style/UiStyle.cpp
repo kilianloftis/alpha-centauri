@@ -371,6 +371,50 @@ BaseViewStyle_t ParseBaseViewStyle_(const nlohmann::json& j)
     return s;
 }
 
+BuildQueueDisplayStyle_t ParseBuildQueueDisplayStyle_(const nlohmann::json& j)
+{
+    BuildQueueDisplayStyle_t s{};
+    s.backgroundColor = ParseColor_(j, "background_color");
+    s.textColor = ParseColor_(j, "text_color");
+    s.hurryFillColor = ParseColor_(j, "hurry_fill_color");
+    s.hurryDisabledFillColor = ParseColor_(j, "hurry_disabled_fill_color");
+    s.hurryBorderColor = ParseColor_(j, "hurry_border_color");
+    s.hurryLabelColor = ParseColor_(j, "hurry_label_color");
+    s.hurryDisabledLabelColor = ParseColor_(j, "hurry_disabled_label_color");
+    s.headerFontSizeRatio = j.at("header_font_size_ratio").get<float>();
+    s.leftPaddingRatio = j.at("left_padding_ratio").get<float>();
+    s.hurryFontSizeRatio = j.at("hurry_font_size_ratio").get<float>();
+    s.hurryTextPadXRatio = j.at("hurry_text_pad_x_ratio").get<float>();
+    s.hurryTextPadYRatio = j.at("hurry_text_pad_y_ratio").get<float>();
+    s.hurryButtonLayout = ParseLayout_(j, "hurry_button_layout");
+    return s;
+}
+
+HurryProductionPopupStyle_t ParseHurryProductionPopupStyle_(const nlohmann::json& j)
+{
+    HurryProductionPopupStyle_t s{};
+    s.backgroundColor = ParseColor_(j, "background_color");
+    s.borderColor = ParseColor_(j, "border_color");
+    s.headerColor = ParseColor_(j, "header_color");
+    s.messageColor = ParseColor_(j, "message_color");
+    s.fieldFillColor = ParseColor_(j, "field_fill_color");
+    s.fieldBorderColor = ParseColor_(j, "field_border_color");
+    s.fieldTextColor = ParseColor_(j, "field_text_color");
+    s.buttonFillColor = ParseColor_(j, "button_fill_color");
+    s.buttonBorderColor = ParseColor_(j, "button_border_color");
+    s.buttonLabelColor = ParseColor_(j, "button_label_color");
+    s.headerFontSizeRatio = j.at("header_font_size_ratio").get<float>();
+    s.entryFontSizeRatio = j.at("entry_font_size_ratio").get<float>();
+    s.paddingRatio = j.at("padding_ratio").get<float>();
+    s.buttonFontSizeRatio = j.at("button_font_size_ratio").get<float>();
+    s.buttonTextPadXRatio = j.at("button_text_pad_x_ratio").get<float>();
+    s.buttonTextPadYRatio = j.at("button_text_pad_y_ratio").get<float>();
+    s.fieldLayout = ParseLayout_(j, "field_layout");
+    s.okButtonLayout = ParseLayout_(j, "ok_button_layout");
+    s.cancelButtonLayout = ParseLayout_(j, "cancel_button_layout");
+    return s;
+}
+
 ResourceLinesPanelStyle_t ParseResourceLinesPanelStyle_(const nlohmann::json& j)
 {
     ResourceLinesPanelStyle_t s{};
@@ -383,6 +427,7 @@ ResourceLinesPanelStyle_t ParseResourceLinesPanelStyle_(const nlohmann::json& j)
     s.stockpileLineIndex = j.at("stockpile_line_index").get<float>();
     s.requiredLineIndex = j.at("required_line_index").get<float>();
     s.productionLineIndex = j.at("production_line_index").get<float>();
+    s.turnsLineIndex = j.at("turns_line_index").get<float>();
     return s;
 }
 
@@ -697,8 +742,10 @@ void UiStyle::Load(const std::string& filePath)
     style.supportDisplay = ParseSupportDisplayStyle_(root.at("support_display"));
     style.buildingsDisplay = ParseBuildingsDisplayStyle_(root.at("buildings_display"));
     style.baseWorkableAreaDisplay = ParseBaseWorkableAreaDisplayStyle_(root.at("base_workable_area_display"));
+    style.buildQueueDisplay = ParseBuildQueueDisplayStyle_(root.at("build_queue_display"));
     style.listSelectorPopup = ParseListSelectorPopupStyle_(root.at("list_selector_popup"));
     style.noticePopup = ParseNoticePopupStyle_(root.at("notice_popup"));
+    style.hurryProductionPopup = ParseHurryProductionPopupStyle_(root.at("hurry_production_popup"));
     style.socialEngineeringDisplay = ParseSocialEngineeringDisplayStyle_(root.at("social_engineering_display"));
     style.socialEngineeringBottomPanel = ParseSocialEngineeringBottomPanelStyle_(root.at("social_engineering_bottom_panel"));
     style.unitDesignerView = ParseUnitDesignerViewStyle_(root.at("unit_designer_view"));

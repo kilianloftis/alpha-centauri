@@ -252,8 +252,9 @@ TEST_CASE("Base transfer changes ownership", "[diplomacy][executor]")
     CHECK(rTransferred.GetName() == "Gift");
     CHECK(rTransferred.GetPopulation().GetSize() == popSize);
     CHECK(rTransferred.GetPopulation().GetNutrientStockpile() == 17);
-    REQUIRE(rTransferred.GetBuildingManager().GetBuildings().size() == 1);
-    CHECK(rTransferred.GetBuildingManager().GetBuildings()[0]->id == "flat_nutrient");
+    CHECK(rTransferred.GetBuildingManager().HasBuilding("Headquarters"));
+    CHECK(rTransferred.GetBuildingManager().HasBuilding("flat_nutrient"));
+    CHECK(rTransferred.GetBuildingManager().GetBuildings().size() == 2);
     REQUIRE(rTransferred.GetProduction().GetCurrentProduction() != nullptr);
     CHECK(rTransferred.GetProduction().GetCurrentProduction()->GetId() == "farm_booster");
     CHECK(rTransferred.GetProduction().GetMineralStockpile() == 9);

@@ -369,8 +369,11 @@ TEST_CASE("A failed intercept destroys the firing base's copy, not another base'
     REQUIRE(result);
 
     // The base that actually fired lost its copy; the uninvolved base kept its own.
+    // firstBase is the faction's first founded base, so it also holds Headquarters.
     CHECK(defendingBase.GetBuildingManager().GetBuildings().empty());
-    CHECK(firstBase.GetBuildingManager().GetBuildings().size() == 1);
+    CHECK(firstBase.GetBuildingManager().HasBuilding("Headquarters"));
+    CHECK(firstBase.GetBuildingManager().HasBuilding("test_odp_thisbase_miss_destroy"));
+    CHECK(firstBase.GetBuildingManager().GetBuildings().size() == 2);
     CHECK(game.pPlayer->CountBuildings("test_odp_thisbase_miss_destroy") == 1);
 
     // And the survivor is usable: its deploy record was erased with the copy that spent it.

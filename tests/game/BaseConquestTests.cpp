@@ -287,7 +287,7 @@ TEST_CASE("Killing the last defender cuts pop; stepping in captures, destroys fa
     MoveOrder_t order;
     REQUIRE(game.pState->GetUnitOrderExecutor().TryStep(attacker, rBase.GetTile(), order).bEntered);
 
-    // Capture pop (-1); non-SP facility destroyed, SP kept.
+    // Capture pop (-1); at least one non-SP facility destroyed, SP kept.
     CHECK(game.pAi->GetBaseCount() == 0);
     REQUIRE(game.pPlayer->GetBaseCount() == 1);
     BaseManager& rCaptured = *game.pPlayer->Bases().begin();
@@ -297,8 +297,11 @@ TEST_CASE("Killing the last defender cuts pop; stepping in captures, destroys fa
     CHECK(rCaptured.GetBaseId() == rBase.GetBaseId());
     CHECK(&rCaptured.GetFaction() == game.pPlayer);
     CHECK(rCaptured.GetPopulation().GetSize() == 2);
-    REQUIRE(rCaptured.GetBuildingManager().GetBuildings().size() == 1);
-    CHECK(rCaptured.GetBuildingManager().GetBuildings().front()->id == "test_secret_project");
+    CHECK(rCaptured.GetBuildingManager().HasBuilding("test_secret_project"));
+    const bool bKeptBothNonSp =
+        rCaptured.GetBuildingManager().HasBuilding("test_facility_a")
+        && rCaptured.GetBuildingManager().HasBuilding("Headquarters");
+    CHECK_FALSE(bKeptBothNonSp);
     CHECK(attacker.GetCurrentHp() == attacker.GetStat(StatId_t::HitPoints));
 }
 
@@ -427,9 +430,11 @@ TEST_CASE("Native life raids an undefended base then disappears", "[unit][conque
     CHECK(CountUnits_(*game.pPlayer) == nativesBefore - 1);
 
     const BaseManager& rRaided = *game.pAi->Bases().begin();
-    const bool bFacilityGone = rRaided.GetBuildingManager().GetBuildings().empty();
+    // Founding granted Headquarters, so the raid starts with two destroyable facilities.
+    // Destroying one leaves a building; emptying the list is no longer the facility outcome.
+    const bool bFacilityDestroyed = rRaided.GetBuildingManager().GetBuildings().size() == 1;
     const bool bPopLost = rRaided.GetPopulation().GetSize() == 2;
-    CHECK(bFacilityGone != bPopLost);
+    CHECK(bFacilityDestroyed != bPopLost);
 }
 
 TEST_CASE("Human conquering Progenitor reduces population to one and spawns escape pods",

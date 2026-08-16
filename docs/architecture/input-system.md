@@ -104,7 +104,8 @@ first tick of any headless run.
   `F1`–`F12` while `KeyFromSfKey` mapped them.
 - `KeyFromSfKey` returns `nullopt` for an unmapped key. It used to return `Key_t::Unknown`, so
   every caller that correctly tested the optional pushed a `KeyEvent_t{Unknown}` for Tab,
-  Backspace and all punctuation.
+  Backspace and all punctuation. Numpad 0–9 map onto `Num0`–`Num9`, so a numeric field does
+  not need a second key path.
 
 ### CreateInput() / CreateGraphics()
 - Selected by the `USE_SFML` compile-time flag; both take the shared `PlatformEventQueue&`.
@@ -113,7 +114,7 @@ first tick of any headless run.
   backends report the same window size instead of matching by copy.
 
 ### Data Types
-- **`Key_t`**: A–Z, 0–9, Space, Escape, Enter, F1–F12, arrows, Unknown
+- **`Key_t`**: A–Z, 0–9, Space, Escape, Enter, Backspace, F1–F12, arrows, Unknown
 - **`KeyEvent_t`**: `Key_t` plus `ModifierState_t`
 - **`MouseButton_t`**: Left, Right, Middle, None
 - **`MouseEvent_t`**: button, x, y, `ModifierState_t`, and `bPressed` (press vs. release)

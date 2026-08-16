@@ -143,6 +143,15 @@ public:
     // Resource production per turn (calculated live).
     int GetNutrientProduction() const;
     int GetMineralProduction() const;
+    // Home-unit mineral support this turn (free slots applied; current roster, no disband).
+    int GetMineralSupportCost() const;
+    // Minerals that ConvertMinerals will bank if the current roster stays: production minus
+    // support, floored at 0. The production panel shows this, not the gross yield.
+    int GetMineralsForProduction() const;
+    // Turns until the queued item reaches cost at GetMineralsForProduction(). Empty when
+    // nothing is queued, the item never completes, or the rate is 0 with minerals still owed.
+    // Already-met cost is 1 (completes this turn).
+    std::optional<int> GetTurnsToProductionCompletion() const;
     // Pre-inefficiency energy from worked tiles + flat Energy mods (Economy SE, etc.).
     int GetEnergyProduction() const;
     int GetEconProduction() const;

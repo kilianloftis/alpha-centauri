@@ -46,6 +46,8 @@ private:
     void HandlePopClick_(Pop& rPop);
     void HandlePopTypeSelected_(Pop& rPop, const PopTypeConfig_t& rConfig);
     void HandleProductionDisplayClicked_();
+    void HandleHurryClicked_();
+    void HandleHurryConfirmed_(int credits);
     void HandleUnitStackClicked_(Unit& rUnit);
 
     BaseManager& m_rBase;

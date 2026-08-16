@@ -73,6 +73,11 @@ int SumCharges_(const std::vector<int>& rCharges)
 
 } // namespace
 
+int MineralSupportCost(const BaseManager& rBase)
+{
+    return SumCharges_(ComputeCharges_(rBase));
+}
+
 void ApplyMineralSupportAtBase(BaseManager& rBase)
 {
     ResourceManager& rResources = rBase.GetResources();

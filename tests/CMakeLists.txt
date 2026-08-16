@@ -92,6 +92,7 @@ add_executable(effects-tests
     game/PlanetaryCouncilTests.cpp
     ui/ModalContractTests.cpp
     ui/ListSelectorPopupTests.cpp
+    ui/HurryProductionPopupTests.cpp
     ui/BaseViewTests.cpp
     ui/CouncilVoteWeightCacheTests.cpp
     ui/SatelliteViewTests.cpp

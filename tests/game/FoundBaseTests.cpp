@@ -188,6 +188,24 @@ TEST_CASE("TryFoundBase creates a base; SingleUse expends the colony pod", "[uni
     CHECK(game.pState->FindBaseAt(7, 4) == pNew);
     // Colony pod's StartingMinerals Add 10 lands in the new base's production stockpile.
     CHECK(pNew->GetProduction().GetMineralStockpile() == 10);
+    CHECK(game.pPlayer->GetHeadquarters() == &home);
+    CHECK(home.GetBuildingManager().HasBuilding("Headquarters"));
+    CHECK_FALSE(pNew->GetBuildingManager().HasBuilding("Headquarters"));
+}
+
+TEST_CASE("The first founded base is Headquarters and keeps all energy", "[unit][found-base][hq]")
+{
+    FoundBaseGame_ game;
+    REQUIRE(game.pPlayer->GetHeadquarters() == nullptr);
+
+    BaseManager& home = game.MakeBase(*game.pPlayer, 4, 4);
+    CHECK(game.pPlayer->GetHeadquarters() == &home);
+    CHECK(home.GetBuildingManager().HasBuilding("Headquarters"));
+    CHECK(home.GetBuildingUpkeep() == 0);
+
+    // HQ short-circuits inefficiency: allocatable energy equals pre-inefficiency production.
+    CHECK(home.GetEconProduction() + home.GetLabsProduction() + home.GetPsychProduction()
+          == home.GetEnergyProduction());
 }
 
 TEST_CASE("TryFoundBase stacks founding-unit and AllOwnerBases StartingMinerals",

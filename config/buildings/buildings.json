@@ -293,7 +293,7 @@
     ],
     "category": "conquer",
     "required_tech": "",
-    "upkeep": 2
+    "upkeep": 0
   },
   {
     "id": "Covert_Ops_Center",

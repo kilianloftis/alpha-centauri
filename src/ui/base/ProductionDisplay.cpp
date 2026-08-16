@@ -61,6 +61,18 @@ void ProductionDisplay::Render(Graphics& rGraphics)
     oss.str("");
     oss << "Minerals/turn: " << m_rSnapshot.mineralProduction;
     rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y + lineHeight * style.productionLineIndex, entryFontSize, style.textColor);
+
+    oss.str("");
+    oss << "Turns: ";
+    if (const std::optional<int> turns = m_rBase.GetTurnsToProductionCompletion())
+    {
+        oss << *turns;
+    }
+    else
+    {
+        oss << "-";
+    }
+    rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y + lineHeight * style.turnsLineIndex, entryFontSize, style.textColor);
 }
 
 void ProductionDisplay::HandleMouseClick(const MouseEvent_t& rEvent)

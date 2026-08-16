@@ -116,7 +116,8 @@ public:
     void TransferBaseTo(BaseId_t baseId, Faction& rReceiver);
     // Factory method: unpacks the individual registries/calculators BaseManager needs from
     // rDataContext (a composition-root-supplied bag) so BaseManager itself can declare narrow,
-    // named dependencies instead of taking the whole context.
+    // named dependencies instead of taking the whole context. If the faction has no
+    // Headquarters, the new base is granted that building (first-base / rebuilt-HQ founding).
     BaseManager* CreateBase(BaseId_t baseId, const std::string& name, Tile* pTile,
                             const GameDataContext& rDataContext,
                             TileEffectsContext& rTileEffects,

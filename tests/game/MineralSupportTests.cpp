@@ -6,8 +6,10 @@
 #include "TestHelpers.h"
 
 #include "game/Faction.h"
+#include "game/buildings/BuildingConfig.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/production/ProductionManager.h"
 #include "game/faction/base/resources/ResourceManager.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitComponentConfig.h"
@@ -269,6 +271,65 @@ TEST_CASE("Insufficient minerals disband newest charged home units first", "[uni
     CHECK(base.GetHomeUnits().GetUnits()[1] == &b);
     CHECK(base.GetResources().GetMineralBank() == 0);
     CHECK_FALSE(UnitStillLive_(faction, cId));
+}
+
+TEST_CASE("Minerals for production are yield after unit support", "[unit][support][production]")
+{
+    FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+
+    base.GetBuildingManager().AddBuilding("mineral_cache");
+    const int gross = base.GetMineralProduction();
+    REQUIRE(gross > 1);
+    CHECK(base.GetMineralSupportCost() == 0);
+    CHECK(base.GetMineralsForProduction() == gross);
+
+    // Support 0 covers two chassis; the third costs 1 mineral.
+    fixture.MakeUnit(faction, 5, 4, {"test_chassis"}, &base);
+    fixture.MakeUnit(faction, 6, 4, {"test_chassis"}, &base);
+    fixture.MakeUnit(faction, 7, 4, {"test_chassis"}, &base);
+
+    CHECK(base.GetMineralSupportCost() == 1);
+    CHECK(base.GetMineralsForProduction() == gross - 1);
+    CHECK(base.GetMineralsForProduction() == base.GetMineralProduction() - 1);
+}
+
+TEST_CASE("Turns to completion is remaining minerals over after-support rate, rounded up",
+          "[production][support]")
+{
+    FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    const BuildingConfig_t* pFacility = fixture.buildings().Find("test_hurry_facility");
+    REQUIRE(pFacility != nullptr);
+    base.GetProduction().SetProduction(pFacility);
+    base.GetProduction().SetMineralStockpile(0);
+
+    CHECK_FALSE(base.GetTurnsToProductionCompletion().has_value());
+
+    base.GetBuildingManager().AddBuilding("mineral_cache");
+    const int rate = base.GetMineralsForProduction();
+    const int cost = base.GetMineralCost();
+    REQUIRE(rate > 0);
+    REQUIRE(cost > 0);
+    CHECK(base.GetTurnsToProductionCompletion() == (cost + rate - 1) / rate);
+
+    base.GetProduction().SetMineralStockpile(cost - 1);
+    CHECK(base.GetTurnsToProductionCompletion() == 1);
+
+    base.GetProduction().SetMineralStockpile(cost);
+    CHECK(base.GetTurnsToProductionCompletion() == 1);
+}
+
+TEST_CASE("A stockpile has no turns to completion", "[production][stockpile]")
+{
+    FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    REQUIRE(base.GetProduction().GetCurrentProduction() != nullptr);
+    REQUIRE(base.GetProduction().GetCurrentProduction()->NeverCompletes());
+    CHECK_FALSE(base.GetTurnsToProductionCompletion().has_value());
 }
 
 TEST_CASE("Mineral support leaves remainder for production", "[unit][support]")

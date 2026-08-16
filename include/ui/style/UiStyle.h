@@ -293,6 +293,46 @@ struct BaseViewStyle_t
     RatioLayout_t populationLayout{};
 };
 
+struct BuildQueueDisplayStyle_t
+{
+    Color_t backgroundColor{};
+    Color_t textColor{};
+    Color_t hurryFillColor{};
+    Color_t hurryDisabledFillColor{};
+    Color_t hurryBorderColor{};
+    Color_t hurryLabelColor{};
+    Color_t hurryDisabledLabelColor{};
+    float headerFontSizeRatio{};
+    float leftPaddingRatio{};
+    float hurryFontSizeRatio{};
+    float hurryTextPadXRatio{};
+    float hurryTextPadYRatio{};
+    RatioLayout_t hurryButtonLayout{};
+};
+
+struct HurryProductionPopupStyle_t
+{
+    Color_t backgroundColor{};
+    Color_t borderColor{};
+    Color_t headerColor{};
+    Color_t messageColor{};
+    Color_t fieldFillColor{};
+    Color_t fieldBorderColor{};
+    Color_t fieldTextColor{};
+    Color_t buttonFillColor{};
+    Color_t buttonBorderColor{};
+    Color_t buttonLabelColor{};
+    float headerFontSizeRatio{};
+    float entryFontSizeRatio{};
+    float paddingRatio{};
+    float buttonFontSizeRatio{};
+    float buttonTextPadXRatio{};
+    float buttonTextPadYRatio{};
+    RatioLayout_t fieldLayout{};
+    RatioLayout_t okButtonLayout{};
+    RatioLayout_t cancelButtonLayout{};
+};
+
 // Header plus stockpile / required / production lines. The growth and production panels are
 // the same widget with different numbers in it, so they share one type and one parser — kept
 // twice, a one-sided tweak silently desynced the two halves of the base screen.
@@ -307,6 +347,7 @@ struct ResourceLinesPanelStyle_t
     float stockpileLineIndex{};
     float requiredLineIndex{};
     float productionLineIndex{};
+    float turnsLineIndex{};
 };
 
 struct PopulationDisplayStyle_t
@@ -587,8 +628,10 @@ public:
     SupportDisplayStyle_t supportDisplay;
     BuildingsDisplayStyle_t buildingsDisplay;
     BaseWorkableAreaDisplayStyle_t baseWorkableAreaDisplay;
+    BuildQueueDisplayStyle_t buildQueueDisplay;
     ListSelectorPopupStyle_t listSelectorPopup;
     NoticePopupStyle_t noticePopup;
+    HurryProductionPopupStyle_t hurryProductionPopup;
     SocialEngineeringDisplayStyle_t socialEngineeringDisplay;
     SocialEngineeringBottomPanelStyle_t socialEngineeringBottomPanel;
     UnitDesignerViewStyle_t unitDesignerView;

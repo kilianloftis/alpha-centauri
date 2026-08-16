@@ -54,6 +54,7 @@ struct BaseDisplaySnapshot_t
 
     int nutrientProduction = 0;
     int nutrientsRequired = 0;
+    // Minerals that will bank into the queued item this turn (after unit support).
     int mineralProduction = 0;
     int mineralCost = 0;
     bool bHasProduction = false;
