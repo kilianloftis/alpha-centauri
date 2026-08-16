@@ -3,12 +3,40 @@
 #include "game/effects/EffectConfig.h"
 #include "game/ConstructableKind.h"
 
+#include <optional>
+#include <stdexcept>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
 namespace ac
 {
+
+// What a scrap formula pays out. JSON wire names are the snake_case spellings below.
+enum class ScrapRefundType_t
+{
+    EnergyCredits,
+};
+
+inline std::string_view ScrapRefundTypeToString(ScrapRefundType_t type)
+{
+    switch (type)
+    {
+    case ScrapRefundType_t::EnergyCredits:
+        return "energy_credits";
+    }
+    throw std::logic_error("ScrapRefundTypeToString: unhandled enumerator");
+}
+
+inline ScrapRefundType_t ParseScrapRefundType(const std::string& rType)
+{
+    if (rType == "energy_credits")
+    {
+        return ScrapRefundType_t::EnergyCredits;
+    }
+    throw std::runtime_error("Unknown scrap refund type: '" + rType + "'");
+}
 
 struct HurryKindConfig_t
 {
@@ -25,6 +53,22 @@ struct HurryKindConfig_t
     int belowThresholdMultiplier = 2;
 };
 
+struct ScrapKindConfig_t
+{
+    // Lua expression returning a whole refund amount. Variable `minerals` is the item's
+    // listed mineral cost. A non-integer result is a config error (use floor).
+    std::string formula;
+    ScrapRefundType_t refundType = ScrapRefundType_t::EnergyCredits;
+};
+
+// Hurry and scrap for one IConstructable kind. Either block may be absent — that mechanic
+// is then off for the kind. A kind listed in production.json kinds must have at least one.
+struct ProductionKindConfig_t
+{
+    std::optional<HurryKindConfig_t> hurry;
+    std::optional<ScrapKindConfig_t> scrap;
+};
+
 struct ProductionConfig_t
 {
     // Retooling: switching production away from what the base started the turn on forfeits a
@@ -39,10 +83,10 @@ struct ProductionConfig_t
     // design). Applied once even if several components are new. 50 means 50% more; no upper
     // bound, so a mod can make prototypes arbitrarily expensive.
     int prototypeSurchargePercent = 50;
-    // Hurry rules keyed by IConstructable::GetConstructableKind(). A kind with no entry
-    // cannot be hurried (stockpiles have none), so removing one — or shipping an empty
-    // object — switches the mechanic off for it.
-    std::unordered_map<ConstructableKind_t, HurryKindConfig_t> hurryKinds;
+    // Per constructable kind: hurry and/or scrap. A kind with no entry cannot be hurried or
+    // scrapped. An empty kinds object turns both mechanics off. Stockpile is rejected (those
+    // items never complete). Secret-project scrap is rejected (destruction tombstones them).
+    std::unordered_map<ConstructableKind_t, ProductionKindConfig_t> kinds;
     // Continuous effects merged into every faction pool (source id "production"). Prototype
     // starting XP is a FactionUnits StartingExperience StatModifier with unitFilter IsPrototype.
     std::vector<EffectConfig_t> effects;
@@ -55,9 +99,9 @@ public:
     ~ProductionConfigParser() = default;
 
     // Load production.json. Throws if the file cannot be opened or parsed, if threshold or
-    // percent is negative, if percent exceeds 100, or if the hurry block is missing or a kind
-    // entry is malformed. Formula strings are not evaluated here: a broken one throws where
-    // it is used, as tech-cost and pop-composition formulas do.
+    // percent is negative, if retool percent exceeds 100, or if the kinds block is missing
+    // or a kind/hurry/scrap entry is malformed. Formula strings are not evaluated here: a
+    // broken one throws where it is used, as tech-cost and pop-composition formulas do.
     ProductionConfig_t ParseConfig(const std::string& configPath);
 };
 

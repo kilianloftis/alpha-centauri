@@ -7,6 +7,7 @@
 #include "game/faction/base/production/ProductionApplyResult.h"
 #include "game/faction/base/production/ProductionConfigParser.h"
 #include "game/faction/base/production/HurryProductionCalculator.h"
+#include "game/faction/base/production/ScrapRefundCalculator.h"
 #include "game/faction/base/HomeBaseIndex.h"
 #include "game/map/WorkedTileIndex.h"
 #include "game/effects/ActiveEffect.h"
@@ -104,6 +105,7 @@ public:
         const GrowthConfig_t& rGrowthConfig,
         const ProductionConfig_t& rProductionConfig,
         const HurryProductionCalculator& rHurryCalculator,
+        const ScrapRefundCalculator& rScrapCalculator,
         PopCompositionCalculator& rCompositionCalculator,
         const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
         TileEffectsContext& rTileEffects,
@@ -231,6 +233,17 @@ public:
     // item cannot be hurried, or if the treasury cannot cover the charge.
     HurryResult_t HurryProduction(int energyCredits);
 
+    // Energy credits granted if this constructed copy is scrapped now. Empty when the id is
+    // not held here, the copy is a secret project, the kind has no scrap formula, or the
+    // configured refund_type is not energy credits.
+    std::optional<int> QuoteScrapBuilding(const BuildingId_t& buildingId) const;
+
+    // Player scrap: destroy one constructed copy and credit QuoteScrapBuilding to the faction
+    // treasury. Combat / probe / raze / orbital destruction must not call this — they destroy
+    // without a refund. Throws if QuoteScrapBuilding is empty. Returns the credits granted
+    // (0 when the listed mineral cost is 0 or 1).
+    int ScrapBuilding(const BuildingId_t& buildingId);
+
     // Collect nutrients/minerals and allocate energy into econ/labs/psych stockpiles.
     // Called once per turn per base during ResourceCollection (via Faction::ProduceBaseResources).
     // Resolves against the composed provider pool (BuildBaseEffects_ memo).
@@ -344,6 +357,7 @@ private:
     const StockpileRegistry& m_rStockpileRegistry;
     const SocialRatingRegistry& m_rSocialRatings;
     const HurryProductionCalculator& m_rHurryCalculator;
+    const ScrapRefundCalculator& m_rScrapCalculator;
     // Always the owning faction (set in the ctor, re-pointed by RebindFaction). A pointer only
     // because it is rebindable; never null.
     const IEffectsProvider* m_pEffectsProvider = nullptr;

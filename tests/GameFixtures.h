@@ -12,6 +12,7 @@
 #include "game/faction/UnitManager.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/production/HurryProductionCalculator.h"
+#include "game/faction/base/production/ScrapRefundCalculator.h"
 #include "game/faction/base/production/ProductionConfigParser.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/resources/ResourceManager.h"
@@ -142,6 +143,9 @@ struct WorldFixture
         dataContext.hurryProductionCalculator =
             std::make_unique<ac::HurryProductionCalculator>(*dataContext.productionConfig,
                                                            *dataContext.luaRuntime);
+        dataContext.scrapRefundCalculator =
+            std::make_unique<ac::ScrapRefundCalculator>(*dataContext.productionConfig,
+                                                        *dataContext.luaRuntime);
         dataContext.techRegistry = std::make_unique<ac::TechRegistry>();
         dataContext.techRegistry->Load(FixturePath("techs.json"));
         // Trivial formula; tests that care about tech cost supply their own.
@@ -209,6 +213,7 @@ struct BaseFixture : WorldFixture
             *dataContext.growthConfig,
             *dataContext.productionConfig,
             *dataContext.hurryProductionCalculator,
+            *dataContext.scrapRefundCalculator,
             *dataContext.popCompositionCalculator,
             // The one optional dependency: it needs a GameState, which this fixture has no
             // reason to build. Only GetBuildingsAvailableForConstruction requires it.
@@ -298,6 +303,7 @@ struct FactionFixture : BaseFixture
             *dataContext.growthConfig,
             *dataContext.productionConfig,
             *dataContext.hurryProductionCalculator,
+            *dataContext.scrapRefundCalculator,
             *dataContext.popCompositionCalculator,
             /*secretProjectCalculator*/ nullptr,
             *ctx);

@@ -36,7 +36,7 @@ struct HurrySpend_t
     int mineralsAdded = 0;
 };
 
-// Energy-for-minerals math. Formulas live in production.json per hurry kind, so this owns
+// Energy-for-minerals math. Formulas live in production.json kinds.<kind>.hurry, so this owns
 // no rules of its own beyond how a partial payment is priced.
 //
 // **Marginal pricing.** Buying k minerals costs what it takes off the finish price:

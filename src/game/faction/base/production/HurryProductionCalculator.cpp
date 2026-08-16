@@ -93,8 +93,12 @@ HurrySpend_t HurryProductionCalculator::ApplyCredits(const HurryInputs_t& rInput
 
 const HurryKindConfig_t* HurryProductionCalculator::FindKind_(ConstructableKind_t kind) const
 {
-    const auto it = m_pConfig->hurryKinds.find(kind);
-    return it == m_pConfig->hurryKinds.end() ? nullptr : &it->second;
+    const auto it = m_pConfig->kinds.find(kind);
+    if (it == m_pConfig->kinds.end() || !it->second.hurry)
+    {
+        return nullptr;
+    }
+    return &*it->second.hurry;
 }
 
 const HurryKindConfig_t& HurryProductionCalculator::RequireKind_(ConstructableKind_t kind) const

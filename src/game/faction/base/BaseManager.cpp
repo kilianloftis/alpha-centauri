@@ -99,6 +99,7 @@ BaseManager::BaseManager(
     const GrowthConfig_t& rGrowthConfig,
     const ProductionConfig_t& rProductionConfig,
     const HurryProductionCalculator& rHurryCalculator,
+    const ScrapRefundCalculator& rScrapCalculator,
     PopCompositionCalculator& rCompositionCalculator,
     const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
     TileEffectsContext& rTileEffects,
@@ -113,6 +114,7 @@ BaseManager::BaseManager(
     , m_rStockpileRegistry(rStockpileRegistry)
     , m_rSocialRatings(rSocialRatingRegistry)
     , m_rHurryCalculator(rHurryCalculator)
+    , m_rScrapCalculator(rScrapCalculator)
     , m_pEffectsProvider(&rFaction)
     , m_pPopulation(std::make_unique<PopulationManager>(
           rPopTypeRegistry, rPopTypeAvailabilityCalculator, rGrowthConfig, rCompositionCalculator,
@@ -616,6 +618,48 @@ HurryResult_t BaseManager::HurryProduction(int energyCredits)
     result.mineralsAdded = spend.mineralsAdded;
     result.production = TryCompleteReadyProduction();
     return result;
+}
+
+std::optional<int> BaseManager::QuoteScrapBuilding(const BuildingId_t& buildingId) const
+{
+    for (const BuildingConfig_t* pBuilding : m_pBuildings->GetBuildings())
+    {
+        if (!pBuilding || pBuilding->id != buildingId)
+        {
+            continue;
+        }
+        if (pBuilding->bIsSecretProject)
+        {
+            return std::nullopt;
+        }
+        const ScrapQuote_t quote = m_rScrapCalculator.Quote(pBuilding->mineralCost,
+                                                            ConstructableKind_t::Building);
+        if (!quote.bAvailable || quote.refundType != ScrapRefundType_t::EnergyCredits)
+        {
+            return std::nullopt;
+        }
+        return quote.amount;
+    }
+    return std::nullopt;
+}
+
+int BaseManager::ScrapBuilding(const BuildingId_t& buildingId)
+{
+    const std::optional<int> refund = QuoteScrapBuilding(buildingId);
+    if (!refund)
+    {
+        throw std::runtime_error(
+            "BaseManager::ScrapBuilding: '" + buildingId
+            + "' cannot be scrapped at this base (not constructed, or a secret project)");
+    }
+
+    m_pBuildings->DestroyBuilding(buildingId);
+    m_pFaction->NotifyBuildingDestroyed(m_baseId, buildingId);
+    if (*refund > 0)
+    {
+        m_pFaction->GetEconomy().AddEnergy(*refund);
+    }
+    return *refund;
 }
 
 bool BaseManager::IsCurrentProductionPrototype_() const

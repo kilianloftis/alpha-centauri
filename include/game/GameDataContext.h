@@ -24,6 +24,7 @@ class PopCompositionCalculator;
 struct GrowthConfig_t;
 class LuaRuntime;
 class HurryProductionCalculator;
+class ScrapRefundCalculator;
 struct TechCostConfig_t;
 class TechCostCalculator;
 class PopTypeAvailabilityCalculator;
@@ -88,6 +89,7 @@ struct GameDataContext
     std::unique_ptr<PopCompositionCalculator> popCompositionCalculator;
     std::unique_ptr<TechCostCalculator> techCostCalculator;
     std::unique_ptr<HurryProductionCalculator> hurryProductionCalculator;
+    std::unique_ptr<ScrapRefundCalculator> scrapRefundCalculator;
     std::unique_ptr<PopTypeAvailabilityCalculator> popTypeAvailabilityCalculator;
     // Stateless view over moraleConfig — reads no live save-game state, so it belongs here
     // beside techCostCalculator rather than on GameState. Every faction, unit, and combat

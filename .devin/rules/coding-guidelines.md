@@ -32,6 +32,21 @@ All code should be written with moddability and customization in mind:
 - Use configuration files or parameters for customizable behavior
 - Provide hooks for lua or binary plugins
 
+### Calculators
+A calculator's numeric rates, percents, thresholds, and formulas belong in JSON (or the Lua
+formula file that JSON already points at). Do not hard-code those values in the calculator,
+and do not invent a C++ default that silently substitutes for a missing key.
+
+- Put the parameters in the config file that already owns that subsystem (`production.json`
+  for production/hurry/scrap, `pop_growth.json` for growth, and so on).
+- The parser requires the keys and rejects invalid values at load. An empty `kinds` object
+  may turn hurry and scrap off for every kind.
+- The calculator reads `ProductionConfig_t` (or the equivalent config struct). Tests that
+  care about a rate construct that config; they do not bake the shipping number into the
+  calculator.
+- Effects that already live in the effect list (`CostMultiplier`, and so on) stay effects.
+  This rule is for the calculator's own coefficients.
+
 ## Code Formatting
 
 ### Naming Conventions

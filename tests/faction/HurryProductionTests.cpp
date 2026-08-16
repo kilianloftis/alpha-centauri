@@ -31,11 +31,10 @@ ProductionConfig_t SmacHurryConfig()
                          int belowThresholdMultiplier = 2) {
         return HurryKindConfig_t{std::move(formula), mineralThreshold, belowThresholdMultiplier};
     };
-    config.hurryKinds = {
-        {ConstructableKind_t::Building, kind("2 * minerals")},
-        {ConstructableKind_t::SecretProject, kind("4 * minerals")},
-        {ConstructableKind_t::Unit, kind("floor(minerals * (2 + 0.05 * minerals))")},
-    };
+    config.kinds[ConstructableKind_t::Building].hurry = kind("2 * minerals");
+    config.kinds[ConstructableKind_t::SecretProject].hurry = kind("4 * minerals");
+    config.kinds[ConstructableKind_t::Unit].hurry =
+        kind("floor(minerals * (2 + 0.05 * minerals))");
     return config;
 }
 
@@ -109,8 +108,8 @@ TEST_CASE("Hurry quote uses the formula for the item kind", "[production][hurry]
     SECTION("a kind can use its own mineral_threshold and multiplier")
     {
         ProductionConfig_t custom = SmacHurryConfig();
-        custom.hurryKinds.at(ConstructableKind_t::Building).mineralThreshold = 8;
-        custom.hurryKinds.at(ConstructableKind_t::Building).belowThresholdMultiplier = 4;
+        custom.kinds.at(ConstructableKind_t::Building).hurry->mineralThreshold = 8;
+        custom.kinds.at(ConstructableKind_t::Building).hurry->belowThresholdMultiplier = 4;
         const HurryProductionCalculator customCalculator(custom, lua);
         // Building: 20 remaining from empty, 8 minerals billed 4×, 12 billed once → 44.
         const HurryQuote_t building = customCalculator.Quote(Inputs(20, 0, ConstructableKind_t::Building));
@@ -153,7 +152,7 @@ TEST_CASE("Hurry quote uses the formula for the item kind", "[production][hurry]
     SECTION("dropping a kind from the config switches hurry off for it")
     {
         ProductionConfig_t noBuildings = SmacHurryConfig();
-        noBuildings.hurryKinds.erase(ConstructableKind_t::Building);
+        noBuildings.kinds.at(ConstructableKind_t::Building).hurry.reset();
         const HurryProductionCalculator restricted(noBuildings, lua);
         CHECK_FALSE(restricted.Quote(Inputs(20, 0, ConstructableKind_t::Building)).bAvailable);
         CHECK(restricted.Quote(Inputs(20, 0, ConstructableKind_t::Unit)).bAvailable);
@@ -246,7 +245,7 @@ TEST_CASE("Paying a hurry in instalments costs what paying it at once costs",
     }
 }
 
-TEST_CASE("Production config requires hurry kinds", "[production][hurry][config]")
+TEST_CASE("Production config groups hurry under kinds", "[production][hurry][config]")
 {
     SECTION("shipping shape loads")
     {
@@ -254,19 +253,21 @@ TEST_CASE("Production config requires hurry kinds", "[production][hurry][config]
             "retool_penalty_threshold": 10,
             "retool_penalty_percent": 50,
             "prototype_surcharge_percent": 50,
-            "hurry": {
+            "kinds": {
                 "building": {
-                    "formula": "2 * minerals",
-                    "mineral_threshold": 8,
-                    "below_threshold_multiplier": 3
+                    "hurry": {
+                        "formula": "2 * minerals",
+                        "mineral_threshold": 8,
+                        "below_threshold_multiplier": 3
+                    }
                 }
             }
         })");
         const ProductionConfig_t config = ProductionConfigParser{}.ParseConfig(file.Path());
-        REQUIRE(config.hurryKinds.count(ConstructableKind_t::Building) == 1);
-        CHECK(config.hurryKinds.at(ConstructableKind_t::Building).formula == "2 * minerals");
-        CHECK(config.hurryKinds.at(ConstructableKind_t::Building).mineralThreshold == 8);
-        CHECK(config.hurryKinds.at(ConstructableKind_t::Building).belowThresholdMultiplier == 3);
+        REQUIRE(config.kinds.at(ConstructableKind_t::Building).hurry.has_value());
+        CHECK(config.kinds.at(ConstructableKind_t::Building).hurry->formula == "2 * minerals");
+        CHECK(config.kinds.at(ConstructableKind_t::Building).hurry->mineralThreshold == 8);
+        CHECK(config.kinds.at(ConstructableKind_t::Building).hurry->belowThresholdMultiplier == 3);
     }
 
     SECTION("kinds do not share mineral_threshold or multiplier")
@@ -275,40 +276,44 @@ TEST_CASE("Production config requires hurry kinds", "[production][hurry][config]
             "retool_penalty_threshold": 40,
             "retool_penalty_percent": 50,
             "prototype_surcharge_percent": 50,
-            "hurry": {
+            "kinds": {
                 "building": {
-                    "formula": "2 * minerals",
-                    "mineral_threshold": 10,
-                    "below_threshold_multiplier": 2
+                    "hurry": {
+                        "formula": "2 * minerals",
+                        "mineral_threshold": 10,
+                        "below_threshold_multiplier": 2
+                    }
                 },
                 "unit": {
-                    "formula": "3 * minerals",
-                    "mineral_threshold": 0,
-                    "below_threshold_multiplier": 1
+                    "hurry": {
+                        "formula": "3 * minerals",
+                        "mineral_threshold": 0,
+                        "below_threshold_multiplier": 1
+                    }
                 }
             }
         })");
         const ProductionConfig_t config = ProductionConfigParser{}.ParseConfig(file.Path());
         CHECK(config.retoolPenaltyThreshold == 40);
-        CHECK(config.hurryKinds.at(ConstructableKind_t::Building).mineralThreshold == 10);
-        CHECK(config.hurryKinds.at(ConstructableKind_t::Building).belowThresholdMultiplier == 2);
-        CHECK(config.hurryKinds.at(ConstructableKind_t::Unit).mineralThreshold == 0);
-        CHECK(config.hurryKinds.at(ConstructableKind_t::Unit).belowThresholdMultiplier == 1);
+        CHECK(config.kinds.at(ConstructableKind_t::Building).hurry->mineralThreshold == 10);
+        CHECK(config.kinds.at(ConstructableKind_t::Building).hurry->belowThresholdMultiplier == 2);
+        CHECK(config.kinds.at(ConstructableKind_t::Unit).hurry->mineralThreshold == 0);
+        CHECK(config.kinds.at(ConstructableKind_t::Unit).hurry->belowThresholdMultiplier == 1);
     }
 
-    SECTION("an empty hurry object disables hurrying rather than failing to load")
+    SECTION("an empty kinds object disables hurrying rather than failing to load")
     {
         const TempConfigFile file("hurry_empty.json", R"({
             "retool_penalty_threshold": 10,
             "retool_penalty_percent": 50,
             "prototype_surcharge_percent": 50,
-            "hurry": {}
+            "kinds": {}
         })");
         const ProductionConfig_t config = ProductionConfigParser{}.ParseConfig(file.Path());
-        CHECK(config.hurryKinds.empty());
+        CHECK(config.kinds.empty());
     }
 
-    SECTION("missing hurry object throws")
+    SECTION("missing kinds object throws")
     {
         const TempConfigFile file("hurry_missing.json", R"({
             "retool_penalty_threshold": 10,
@@ -316,7 +321,7 @@ TEST_CASE("Production config requires hurry kinds", "[production][hurry][config]
             "prototype_surcharge_percent": 50
         })");
         CHECK_THROWS_WITH(ProductionConfigParser{}.ParseConfig(file.Path()),
-                          Catch::Matchers::ContainsSubstring("hurry"));
+                          Catch::Matchers::ContainsSubstring("kinds"));
     }
 
     SECTION("a kind missing mineral_threshold throws")
@@ -325,10 +330,10 @@ TEST_CASE("Production config requires hurry kinds", "[production][hurry][config]
             "retool_penalty_threshold": 10,
             "retool_penalty_percent": 50,
             "prototype_surcharge_percent": 50,
-            "hurry": { "building": { "formula": "1", "below_threshold_multiplier": 2 } }
+            "kinds": { "building": { "hurry": { "formula": "1", "below_threshold_multiplier": 2 } } }
         })");
         CHECK_THROWS_WITH(ProductionConfigParser{}.ParseConfig(file.Path()),
-                          Catch::Matchers::ContainsSubstring("hurry.building")
+                          Catch::Matchers::ContainsSubstring("kinds.building.hurry")
                               && Catch::Matchers::ContainsSubstring("mineral_threshold"));
     }
 
@@ -338,7 +343,7 @@ TEST_CASE("Production config requires hurry kinds", "[production][hurry][config]
             "retool_penalty_threshold": 10,
             "retool_penalty_percent": 50,
             "prototype_surcharge_percent": 50,
-            "hurry": { "building": { "formula": "1", "mineral_threshold": 10 } }
+            "kinds": { "building": { "hurry": { "formula": "1", "mineral_threshold": 10 } } }
         })");
         CHECK_THROWS_WITH(ProductionConfigParser{}.ParseConfig(file.Path()),
                           Catch::Matchers::ContainsSubstring("below_threshold_multiplier"));
@@ -350,7 +355,8 @@ TEST_CASE("Production config requires hurry kinds", "[production][hurry][config]
             "retool_penalty_threshold": 10,
             "retool_penalty_percent": 50,
             "prototype_surcharge_percent": 50,
-            "hurry": { "building": { "mineral_threshold": 10, "below_threshold_multiplier": 2 } }
+            "kinds": { "building": { "hurry": { "mineral_threshold": 10,
+                                                "below_threshold_multiplier": 2 } } }
         })");
         CHECK_THROWS_WITH(ProductionConfigParser{}.ParseConfig(file.Path()),
                           Catch::Matchers::ContainsSubstring("formula"));
@@ -362,8 +368,8 @@ TEST_CASE("Production config requires hurry kinds", "[production][hurry][config]
             "retool_penalty_threshold": 10,
             "retool_penalty_percent": 50,
             "prototype_surcharge_percent": 50,
-            "hurry": { "building": { "formula": "1", "mineral_threshold": 10,
-                                     "below_threshold_multiplier": 0 } }
+            "kinds": { "building": { "hurry": { "formula": "1", "mineral_threshold": 10,
+                                                "below_threshold_multiplier": 0 } } }
         })");
         CHECK_THROWS_WITH(ProductionConfigParser{}.ParseConfig(file.Path()),
                           Catch::Matchers::ContainsSubstring("below_threshold_multiplier"));
@@ -375,28 +381,29 @@ TEST_CASE("Production config requires hurry kinds", "[production][hurry][config]
             "retool_penalty_threshold": 10,
             "retool_penalty_percent": 50,
             "prototype_surcharge_percent": 50,
-            "hurry": { "wonder": { "formula": "1", "mineral_threshold": 10,
-                                   "below_threshold_multiplier": 2 } }
+            "kinds": { "wonder": { "hurry": { "formula": "1", "mineral_threshold": 10,
+                                              "below_threshold_multiplier": 2 } } }
         })");
         CHECK_THROWS_WITH(ProductionConfigParser{}.ParseConfig(file.Path()),
-                          Catch::Matchers::ContainsSubstring("hurry.wonder")
+                          Catch::Matchers::ContainsSubstring("kinds.wonder")
                               && Catch::Matchers::ContainsSubstring("known constructable kind"));
     }
 
-    SECTION("stockpile cannot be a hurry kind")
+    SECTION("stockpile cannot be a production kind")
     {
         const TempConfigFile file("hurry_stockpile.json", R"({
             "retool_penalty_threshold": 10,
             "retool_penalty_percent": 50,
             "prototype_surcharge_percent": 50,
-            "hurry": { "stockpile": { "formula": "1", "mineral_threshold": 10,
-                                      "below_threshold_multiplier": 2 } }
+            "kinds": { "stockpile": { "hurry": { "formula": "1", "mineral_threshold": 10,
+                                                 "below_threshold_multiplier": 2 } } }
         })");
         CHECK_THROWS_WITH(ProductionConfigParser{}.ParseConfig(file.Path()),
-                          Catch::Matchers::ContainsSubstring("hurry.stockpile")
-                              && Catch::Matchers::ContainsSubstring("cannot be hurried"));
+                          Catch::Matchers::ContainsSubstring("kinds.stockpile")
+                              && Catch::Matchers::ContainsSubstring("omit it from kinds"));
     }
 }
+
 
 TEST_CASE("Hurry spends treasury credits into the production stockpile",
           "[production][hurry][base]")

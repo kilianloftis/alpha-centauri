@@ -18,6 +18,7 @@
 #include "game/population/pop-types/PopCompositionConfigParser.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
 #include "game/faction/base/production/HurryProductionCalculator.h"
+#include "game/faction/base/production/ScrapRefundCalculator.h"
 #include "game/research/TechCostCalculator.h"
 #include "game/research/TechCostConfig.h"
 #include "game/research/TechRegistry.h"
@@ -75,6 +76,7 @@ void ThrowIfIncomplete(const GameDataContext& rData)
         {rData.popCompositionCalculator.get(), "popCompositionCalculator"},
         {rData.techCostCalculator.get(), "techCostCalculator"},
         {rData.hurryProductionCalculator.get(), "hurryProductionCalculator"},
+        {rData.scrapRefundCalculator.get(), "scrapRefundCalculator"},
         {rData.popTypeAvailabilityCalculator.get(), "popTypeAvailabilityCalculator"},
         {rData.moraleCalculator.get(), "moraleCalculator"},
     };
@@ -228,6 +230,8 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
 
     rData.hurryProductionCalculator = std::make_unique<HurryProductionCalculator>(
         *rData.productionConfig, *rData.luaRuntime);
+    rData.scrapRefundCalculator =
+        std::make_unique<ScrapRefundCalculator>(*rData.productionConfig, *rData.luaRuntime);
 
     rData.moraleCalculator = std::make_unique<MoraleCalculator>(*rData.moraleConfig);
 

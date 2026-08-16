@@ -8,7 +8,8 @@ namespace ac
 {
 
 // Closed set of IConstructable types. JSON wire names are the snake_case spellings below.
-// Hurry looks these up in production.json; a kind with no entry there cannot be hurried.
+// production.json kinds looks these up; a kind with no hurry/scrap entry cannot use that
+// mechanic.
 enum class ConstructableKind_t
 {
     Building,

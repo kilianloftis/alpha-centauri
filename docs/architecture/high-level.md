@@ -60,6 +60,7 @@ graph TB
         PopCompositionConfig_t[PopCompositionConfig_t]
         PopCompositionCalculator[PopCompositionCalculator]
         HurryProductionCalculator[HurryProductionCalculator]
+        ScrapRefundCalculator[ScrapRefundCalculator]
         LuaRuntime[LuaRuntime]
     end
 
@@ -154,6 +155,7 @@ graph TB
     GameDataContext --> PopCompositionConfig_t
     GameDataContext --> PopCompositionCalculator
     GameDataContext --> HurryProductionCalculator
+    GameDataContext --> ScrapRefundCalculator
     HurryProductionCalculator --> LuaRuntime
     GameDataContext --> LuaRuntime
     FactionVector --> Faction
@@ -287,7 +289,8 @@ graph TB
   - `PopTypeRegistry`: All pop type definitions loaded from `config/pop_types.json`
   - `PopCompositionConfig_t`: Composition formula config loaded via Lua
   - `PopCompositionCalculator`: Evaluates composition formulas at runtime
-  - `HurryProductionCalculator`: Prices energy-for-minerals hurrying from the `production.json` hurry formulas; borrowed by every `BaseManager`
+  - `HurryProductionCalculator`: Prices energy-for-minerals hurrying from `production.json` `kinds.<kind>.hurry`; borrowed by every `BaseManager`
+  - `ScrapRefundCalculator`: Prices player scrap from `production.json` `kinds.<kind>.scrap`; borrowed by every `BaseManager`
   - `LuaRuntime`: Shared Lua state used to load and evaluate config scripts
 - **Note**: Implemented as a plain struct with public `unique_ptr` members (no getters/setters needed)
 - **Valid by construction**: `LoadGameData(paths)` is a *factory* — it returns a fully populated

@@ -156,7 +156,7 @@ undecided while free units collected the bonus.
 
 **Implemented** 2026-08-15, with the shape of the mechanic settled and the numbers not. Energy
 credits buy minerals into the queued item's stockpile; the price per item class is a Lua
-expression in `config/production.json` `hurry.<kind>.formula`, keyed by
+expression in `config/production.json` `kinds.<kind>.hurry.formula`, keyed by
 `IConstructable::GetConstructableKind()`. A kind with no hurry entry cannot be hurried, which is also how
 stockpiles are excluded and how a mod turns the mechanic off.
 
