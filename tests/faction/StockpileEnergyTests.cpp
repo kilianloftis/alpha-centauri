@@ -13,7 +13,7 @@
 #include "game/faction/EconomyManager.h"
 #include "game/stages/IncomeCollection.h"
 #include "game/stages/ResourceCollection.h"
-#include "game/stages/SurplusConversion.h"
+#include "game/stages/MineralConversion.h"
 #include "game/stages/UnitSupport.h"
 #include "game/faction/ResearchManager.h"
 #include "game/GameSettings.h"
@@ -143,7 +143,7 @@ std::string WriteTempBuildings_(const std::string& rContents)
 }
 
 // Econ is the stock stockpile output: it reaches the treasury via IncomeCollection, which
-// turn_stages.json orders after SurplusConversion.
+// turn_stages.json orders after MineralConversion.
 int TakeEcon_(BaseManager& rBase)
 {
     return rBase.GetResources().ConsumeEcon();
@@ -221,7 +221,7 @@ TEST_CASE("Stockpile Energy converts this turn's minerals and never completes",
     LeaveMineralBank_(base, 5);
     (void)TakeEcon_(base);
 
-    base.ConvertSurplusMinerals();
+    base.ConvertMinerals();
     // ceil(5 * 0.5) = 3 — the stock rounding is "up", so an odd mineral favours the player.
     CHECK(TakeEcon_(base) == 3);
     CHECK(base.GetResources().GetMineralBank() == 0);
@@ -246,7 +246,7 @@ TEST_CASE("Stockpile rounding is taken from config, not assumed", "[production][
         BaseManager& base = MakeBaseWithStockpiles_(fixtures, faction, registry);
         LeaveMineralBank_(base, minerals);
         (void)TakeEcon_(base);
-        base.ConvertSurplusMinerals();
+        base.ConvertMinerals();
         return TakeEcon_(base);
     };
 
@@ -278,7 +278,7 @@ TEST_CASE("A stockpile converts zero minerals to zero output", "[production][sto
     LeaveMineralBank_(base, 0);
     (void)TakeEcon_(base);
 
-    base.ConvertSurplusMinerals();
+    base.ConvertMinerals();
     CHECK(TakeEcon_(base) == 0);
     CHECK(base.ApplyProduction().kind == ProductionApplyKind_t::InProgress);
 }
@@ -350,7 +350,7 @@ TEST_CASE("Percentage modifiers on the stockpile scale conversion yield",
 
     LeaveMineralBank_(base, 5);
     (void)TakeEcon_(base);
-    base.ConvertSurplusMinerals();
+    base.ConvertMinerals();
     // 5 * 0.5 = 2.5, AddPercent 100 -> 5.0
     CHECK(TakeEcon_(base) == 5);
 }
@@ -372,7 +372,7 @@ TEST_CASE("Converted energy goes through the slider split", "[production][stockp
 
     LeaveMineralBank_(base, 10);
     DrainEnergyBanks_(base);
-    base.ConvertSurplusMinerals();
+    base.ConvertMinerals();
 
     CHECK(base.GetResources().ConsumeLabs() > 0);
     CHECK(base.GetResources().ConsumeEcon() == 0);
@@ -413,7 +413,7 @@ TEST_CASE("Converted energy does not re-apply flat econ modifiers",
     LeaveMineralBank_(base, 10);
     const int collectedWithout = TakeEcon_(base);
     DrainEnergyBanks_(base);
-    base.ConvertSurplusMinerals();
+    base.ConvertMinerals();
     const int convertedWithout = TakeEcon_(base);
     REQUIRE(convertedWithout > 0);
 
@@ -422,7 +422,7 @@ TEST_CASE("Converted energy does not re-apply flat econ modifiers",
     // The facility is live — collection pays its flat +7 once...
     REQUIRE(TakeEcon_(base) == collectedWithout + 7);
     DrainEnergyBanks_(base);
-    base.ConvertSurplusMinerals();
+    base.ConvertMinerals();
     // ...and conversion must not pay it again.
     CHECK(TakeEcon_(base) == convertedWithout);
 }
@@ -440,7 +440,7 @@ TEST_CASE("A nutrient stockpile credits the nutrient bank", "[production][stockp
 
     LeaveMineralBank_(base, 4);
     (void)base.GetResources().ConsumeNutrients();
-    base.ConvertSurplusMinerals();
+    base.ConvertMinerals();
     CHECK(base.GetResources().ConsumeNutrients() == 4);
 }
 
@@ -466,7 +466,7 @@ TEST_CASE("A stockpile can credit more than one output stat", "[production][stoc
     LeaveMineralBank_(base, 4);
     (void)base.GetResources().ConsumeNutrients();
     (void)TakeEcon_(base);
-    base.ConvertSurplusMinerals();
+    base.ConvertMinerals();
     CHECK(TakeEcon_(base) == 2);                       // floor(4 * 0.5)
     CHECK(base.GetResources().ConsumeNutrients() == 1); // floor(4 * 0.25)
 }
@@ -526,14 +526,36 @@ TEST_CASE("With no available stockpile, the queue stays empty and minerals are w
 
     LeaveMineralBank_(base, 5);
     (void)TakeEcon_(base);
-    base.ConvertSurplusMinerals();
+    base.ConvertMinerals();
     CHECK_FALSE(base.GetProduction().HasProduction());
     CHECK(base.GetResources().GetMineralBank() == 0);
     CHECK(TakeEcon_(base) == 0);
     CHECK(base.ApplyProduction().kind == ProductionApplyKind_t::Idle);
 }
 
-// Conversion belongs to SurplusConversion, which runs before IncomeCollection and
+// MineralConversion is the leftover-bank drain. ApplyProduction on an idle base must not be
+// a second waste path, or minerals filled after that stage vanish instead of converting next
+// turn.
+TEST_CASE("ApplyProduction on an empty queue leaves the mineral bank", "[production][stockpile]")
+{
+    StockpileRegistry registry;
+    registry.Load(WriteTempStockpiles_(
+        std::string("[")
+        + StockpileJson_("gated", "Gated", "econ", "0.5", "down",
+                         R"(, "required_tech": "advanced_build")")
+        + "]"));
+
+    FactionFixture fixtures;
+    Faction& faction = fixtures.MakeFaction();
+    BaseManager& base = MakeBaseWithStockpiles_(fixtures, faction, registry);
+    CHECK_FALSE(base.GetProduction().HasProduction());
+
+    LeaveMineralBank_(base, 5);
+    REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::Idle);
+    CHECK(base.GetResources().GetMineralBank() == 5);
+}
+
+// Conversion belongs to MineralConversion, which runs before IncomeCollection and
 // ResearchAccumulation. ApplyProduction must not convert as a side effect, or econ and labs
 // credited there would arrive after those stages had already drained the banks.
 TEST_CASE("ApplyProduction does not convert surplus minerals", "[production][stockpile]")
@@ -565,7 +587,7 @@ TEST_CASE("Mineral support claims the bank before stockpile conversion",
     base.ApplyMineralSupport();
     CHECK(base.GetResources().GetMineralBank() == 4);
 
-    base.ConvertSurplusMinerals();
+    base.ConvertMinerals();
     // ceil(4 * 0.5) = 2
     CHECK(TakeEcon_(base) == 2);
     CHECK(base.GetResources().GetMineralBank() == 0);
@@ -579,14 +601,14 @@ TEST_CASE("Stockpile econ reaches the treasury the same turn", "[production][sto
 
     LeaveMineralBank_(base, 8);
     (void)TakeEcon_(base);
-    base.ConvertSurplusMinerals();
+    base.ConvertMinerals();
     CHECK(faction.CollectIncome() == 4); // ceil(8 * 0.5)
 }
 
-// Every other test here calls ConvertSurplusMinerals directly, so none of them would notice
-// if turn_stages.json ordered SurplusConversion after IncomeCollection. This one runs the
+// Every other test here calls ConvertMinerals directly, so none of them would notice
+// if turn_stages.json ordered MineralConversion after IncomeCollection. This one runs the
 // real stage sequence: converted econ only reaches the treasury this turn because
-// SurplusConversion is ordered ahead of IncomeCollection.
+// MineralConversion is ordered ahead of IncomeCollection.
 TEST_CASE("The stage sequence converts and banks surplus in the same turn",
           "[production][stockpile][stages]")
 {
@@ -614,13 +636,13 @@ TEST_CASE("The stage sequence converts and banks surplus in the same turn",
     PerFactionTurnStageRegistry_t perFaction;
     perFaction["ResourceCollection"] = std::make_unique<ResourceCollection>(HookContext{});
     perFaction["UnitSupport"] = std::make_unique<UnitSupport>(HookContext{});
-    perFaction["SurplusConversion"] = std::make_unique<SurplusConversion>(HookContext{});
+    perFaction["MineralConversion"] = std::make_unique<MineralConversion>(HookContext{});
     perFaction["IncomeCollection"] = std::make_unique<IncomeCollection>(HookContext{});
     GlobalTurnStageRegistry_t global;
     global["Stop"] = std::make_unique<AlwaysYieldStage_>(HookContext{});
     TurnProcessor processor(
         std::move(global), std::move(perFaction),
-        {"ResourceCollection", "UnitSupport", "SurplusConversion", "IncomeCollection", "Stop"});
+        {"ResourceCollection", "UnitSupport", "MineralConversion", "IncomeCollection", "Stop"});
 
     const int energyBefore = faction.GetEconomy().GetEnergy();
     const int mineralsPerTurn = pBase->GetMineralProduction();
@@ -673,7 +695,28 @@ TEST_CASE("A base restored from a snapshot keeps its queued stockpile",
     CHECK(pRestored->GetProduction().GetMineralStockpile() == 12);
 }
 
-TEST_CASE("A real production item keeps leftover minerals for ApplyProduction",
+TEST_CASE("ConvertMinerals banks leftover minerals into a real production item",
+          "[production][stockpile]")
+{
+    FactionFixture fixtures;
+    Faction& faction = fixtures.MakeFaction();
+    BaseManager& base = fixtures.MakeFactionBase(faction, 4, 4);
+    const BuildingConfig_t* pFacility = fixtures.buildings().Find("test_facility_a");
+    REQUIRE(pFacility != nullptr);
+
+    base.GetProduction().SetProduction(pFacility);
+    const int stockpileBefore = base.GetProduction().GetMineralStockpile();
+    LeaveMineralBank_(base, 5);
+    base.ConvertMinerals();
+    CHECK(base.GetResources().GetMineralBank() == 0);
+    CHECK(base.GetProduction().GetMineralStockpile() == stockpileBefore + 5);
+    CHECK(base.GetProduction().GetCurrentProduction() == pFacility);
+}
+
+// ConvertMinerals claims leftover minerals; ApplyProduction must not also drain the bank,
+// or a skipped conversion (or a bank filled after that stage) vanishes instead of landing
+// next turn.
+TEST_CASE("ApplyProduction does not drain the mineral bank for a real production item",
           "[production][stockpile]")
 {
     FactionFixture fixtures;
@@ -684,7 +727,6 @@ TEST_CASE("A real production item keeps leftover minerals for ApplyProduction",
 
     base.GetProduction().SetProduction(pFacility);
     LeaveMineralBank_(base, 5);
-    base.ConvertSurplusMinerals();
+    (void)base.ApplyProduction();
     CHECK(base.GetResources().GetMineralBank() == 5);
-    CHECK(base.GetProduction().GetCurrentProduction() == pFacility);
 }

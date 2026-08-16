@@ -5,11 +5,11 @@
 namespace ac
 {
 
-class SurplusConversion : public PerFactionTurnStage
+class MineralConversion : public PerFactionTurnStage
 {
 public:
-    explicit SurplusConversion(HookContext hookContext);
-    ~SurplusConversion() = default;
+    explicit MineralConversion(HookContext hookContext);
+    ~MineralConversion() = default;
 
 protected:
     StageResult_t ExecuteImpl(GameState& rGameState, Faction& rFaction) override;

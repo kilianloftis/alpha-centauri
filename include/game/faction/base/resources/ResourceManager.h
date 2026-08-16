@@ -59,8 +59,8 @@ public:
     int GetPsychProduction(const BaseEffects_t& rBaseEffects) const;
 
     // Consume the full accumulated stockpile, returning the amount consumed.
-    // Called by the appropriate turn stage (e.g. ConsumeMinerals during surplus conversion
-    // or BaseProduction). ConsumePsych is for pop composition (not yet wired).
+    // ConsumeMinerals is the leftover-bank drain in ConvertMinerals (MineralConversion).
+    // ConsumePsych is for pop composition (not yet wired).
     int ConsumeNutrients();
     int ConsumeMinerals();
     int ConsumeEcon();
@@ -68,7 +68,7 @@ public:
     int ConsumePsych();
 
     // Current per-turn mineral bank (filled by ProduceResources; drained by support /
-    // surplus conversion / production).
+    // MineralConversion).
     int GetMineralBank() const;
     // Deduct up to `amount` from the mineral bank. `amount` must be >= 0 and <= bank.
     void SpendMinerals(int amount);

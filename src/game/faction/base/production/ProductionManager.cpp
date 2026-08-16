@@ -133,8 +133,9 @@ void ProductionManager::BankProduction(int minerals)
 
     m_mineralStockpile += minerals;
 
-    // Whatever is queued once this turn's minerals are banked is what the player sees when
-    // PlayerActions hands over, so it is the item a retool this turn is measured against.
+    // Whatever is queued once leftover minerals are claimed (and again when ApplyProduction
+    // stamps 0) is what the player sees when PlayerActions hands over, so it is the item a
+    // retool this turn is measured against.
     m_pTurnOriginalItem = m_pCurrentItem;
 }
 
@@ -144,17 +145,23 @@ bool ProductionManager::IsReadyToComplete(const BaseEffects_t& rBaseEffects, boo
         && m_mineralStockpile >= GetMineralCost(rBaseEffects, bPrototype);
 }
 
-std::string ProductionManager::CompleteProduction()
+std::string ProductionManager::CompleteProduction(const BaseEffects_t& rBaseEffects,
+                                                  bool bPrototype)
 {
     if (!HasProduction())
     {
         return std::string();
     }
 
+    // Cost first: ResetProduction_ replaces the item, after which GetMineralCost is 0.
+    const int cost = GetMineralCost(rBaseEffects, bPrototype);
+    const int leftover = std::max(0, m_mineralStockpile - cost);
+    m_mineralStockpile = std::min(leftover, m_rConfig.retoolPenaltyThreshold);
+
     std::string completed = m_pCurrentItem->GetId();
-    m_mineralStockpile = 0;
     ResetProduction_();
-    // Queue is empty; no turn original until the next BankProduction with something queued.
+    // The default fallback is not a player choice, so there is no turn original until the
+    // next BankProduction with something queued.
     m_pTurnOriginalItem = nullptr;
     OnProductionCompleted.Emit(completed);
     return completed;

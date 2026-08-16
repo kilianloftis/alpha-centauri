@@ -157,7 +157,7 @@ add_library(ac-turn-stages OBJECT
     game/stages/TurnStart.cpp
     game/stages/ResourceCollection.cpp
     game/stages/UnitSupport.cpp
-    game/stages/SurplusConversion.cpp
+    game/stages/MineralConversion.cpp
     game/stages/IncomeCollection.cpp
     game/stages/ResearchAccumulation.cpp
     game/stages/BaseProduction.cpp

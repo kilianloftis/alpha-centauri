@@ -211,7 +211,7 @@ StageResult_t BaseProduction::ExecuteImpl(GameState& rGameState, Faction& rFacti
         }
 
         // Marked before the call, not after: ProcessBase_ can yield from any of several
-        // nested paths, and a base that has already had BankProduction run
+        // nested paths, and a base that has already had ApplyProduction run
         // must not be revisited when the pass resumes.
         m_processedBaseIds.insert(baseId);
         if (ProcessBase_(rGameState, rFaction, rBase) == StageResult_t::Yield)

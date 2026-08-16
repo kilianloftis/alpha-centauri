@@ -75,8 +75,10 @@ public:
     int GetMineralStockpile() const;
     void SetMineralStockpile(int amount);
 
-    // Add this turn's minerals to the stockpile without completing: BaseManager decides
-    // whether completion is allowed (abandon confirmation) and calls CompleteProduction.
+    // Add minerals to the stockpile without completing: ConvertMinerals banks this turn's
+    // leftover mineral bank here for a real build item. ApplyProduction stamps with 0.
+    // BaseManager still decides whether completion is allowed (abandon confirmation) and
+    // calls CompleteProduction.
     //
     // Also stamps m_pTurnOriginalItem from the item then queued (or clears it when empty).
     // Until that stamp exists, SetProduction does not retool — there is no "original" to
@@ -87,8 +89,13 @@ public:
     // True when something is queued, it can complete, and the stockpile meets its effective cost.
     bool IsReadyToComplete(const BaseEffects_t& rBaseEffects, bool bPrototype) const;
 
-    // Complete the current production immediately and return its id.
-    std::string CompleteProduction();
+    // Complete the current production immediately and return its id. Spends the item's
+    // effective cost (same rBaseEffects / bPrototype as IsReadyToComplete); leftover
+    // minerals stay on the stockpile — and therefore on whatever is queued next — up to
+    // retoolPenaltyThreshold. The rest is lost, so choosing the next item is a free retool.
+    // Completing also clears the turn original: the default fallback is not a player choice.
+    std::string CompleteProduction(const BaseEffects_t& rBaseEffects = {},
+                                   bool bPrototype = false);
 
     // Emitted when a production item is completed, with the completed item id.
     Signal<std::string> OnProductionCompleted;

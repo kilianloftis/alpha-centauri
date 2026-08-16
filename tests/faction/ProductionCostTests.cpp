@@ -131,6 +131,7 @@ TEST_CASE("ProductionManager resolves cost from base effects", "[production][cos
     REQUIRE(production.IsReadyToComplete(BaseEffects_t{}, false));
     CHECK(production.CompleteProduction() == "stub_item");
     CHECK_FALSE(production.HasProduction());
+    CHECK(production.GetMineralStockpile() == 0);
 }
 
 TEST_CASE("A never-completing item has no mineral cost and is never ready",
@@ -293,4 +294,94 @@ TEST_CASE("Null turn original skips retool until BankProduction stamps one",
     production.BankProduction(0);
     production.SetProduction(&itemA);
     CHECK(production.GetMineralStockpile() == 20);
+}
+
+// Completion leftover. Minerals past the item's effective cost stay on the next queued item
+// (the default fallback, or whatever the player queues next), but only up to the retool
+// threshold — so choosing the next build is a free switch. See CompleteProduction.
+TEST_CASE("Completion leftover minerals carry to the next item up to the retool threshold",
+          "[production][retool]")
+{
+    StubConstructable item;
+    item.baseCost = 10;
+    StubConstructable nextDefault{"next", "Next"};
+    nextDefault.baseCost = 100;
+
+    ProductionManager production(k_TestConfig, [&] { return &nextDefault; });
+    production.SetProduction(&item);
+
+    SECTION("exact cost leaves nothing")
+    {
+        production.SetMineralStockpile(10);
+        CHECK(production.CompleteProduction() == "stub_item");
+        CHECK(production.GetCurrentProduction() == &nextDefault);
+        CHECK(production.GetMineralStockpile() == 0);
+    }
+
+    SECTION("leftover below the threshold is kept in full")
+    {
+        production.SetMineralStockpile(17);
+        CHECK(production.CompleteProduction() == "stub_item");
+        CHECK(production.GetCurrentProduction() == &nextDefault);
+        CHECK(production.GetMineralStockpile() == 7);
+    }
+
+    SECTION("leftover above the threshold is capped")
+    {
+        production.SetMineralStockpile(40);
+        CHECK(production.CompleteProduction() == "stub_item");
+        CHECK(production.GetCurrentProduction() == &nextDefault);
+        CHECK(production.GetMineralStockpile() == k_TestConfig.retoolPenaltyThreshold);
+    }
+}
+
+TEST_CASE("Completion leftover uses the effective cost including prototype surcharge",
+          "[production][retool][prototype]")
+{
+    StubConstructable item;
+    item.baseCost = 10; // 50% surcharge → 15
+    ProductionManager production(k_TestConfig, nullptr);
+    production.SetProduction(&item);
+    production.SetMineralStockpile(20);
+
+    CHECK(production.CompleteProduction({}, true) == "stub_item");
+    CHECK(production.GetMineralStockpile() == 5);
+}
+
+TEST_CASE("Completion leftover uses CostMultiplier when computing what was spent",
+          "[production][retool][cost]")
+{
+    actest::EffectPool pool;
+    StubConstructable item;
+    item.baseCost = 10; // -20% Industry → 8
+    ProductionManager production(k_TestConfig, nullptr);
+    production.SetProduction(&item);
+    production.SetMineralStockpile(12);
+
+    CHECK(production.CompleteProduction(WithCostPercent(pool, -20.0), false) == "stub_item");
+    CHECK(production.GetMineralStockpile() == 4);
+}
+
+TEST_CASE("Completion leftover on the next item is a free retool", "[production][retool]")
+{
+    StubConstructable item;
+    item.baseCost = 10;
+    StubConstructable nextDefault{"stockpile", "Stockpile"};
+    const StubConstructable playerPick = RetoolItem("pick", "Pick");
+
+    ProductionManager production(k_TestConfig, [&] { return &nextDefault; });
+    production.SetProduction(&item);
+    production.BankProduction(0);
+    production.SetMineralStockpile(40);
+
+    REQUIRE(production.CompleteProduction() == "stub_item");
+    REQUIRE(production.GetCurrentProduction() == &nextDefault);
+    REQUIRE(production.GetMineralStockpile() == k_TestConfig.retoolPenaltyThreshold);
+
+    // Next turn's BankProduction would stamp the fallback as original; leftover is still
+    // at the threshold, so picking a real build does not forfeit.
+    production.BankProduction(0);
+    production.SetProduction(&playerPick);
+    CHECK(production.GetCurrentProduction() == &playerPick);
+    CHECK(production.GetMineralStockpile() == k_TestConfig.retoolPenaltyThreshold);
 }

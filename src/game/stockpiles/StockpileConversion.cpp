@@ -75,9 +75,9 @@ int StatYield_(const std::vector<ActiveEffect_t>& rEffects, StatId_t stat,
 
 } // namespace
 
-void ApplyStockpileConversionAtBase(BaseManager& rBase, const StockpileConfig_t& rStockpile)
+void ApplyStockpileConversionAtBase(BaseManager& rBase, const StockpileConfig_t& rStockpile,
+                                    int minerals)
 {
-    const int minerals = rBase.GetResources().ConsumeMinerals();
     if (minerals <= 0)
     {
         return;

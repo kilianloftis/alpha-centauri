@@ -168,17 +168,16 @@ public:
     ProductionManager& GetProduction();
     const ProductionManager& GetProduction() const;
 
-    // Collect minerals from ResourceManager and apply to production this turn.
-    // Surplus minerals were already converted or wasted by ConvertSurplusMinerals (after
-    // support, before income). A stockpile item never completes: this tick stamps the turn
-    // without banking. An empty queue is Idle. Completes construction if the production
-    // stockpile meets the cost — unless completing would leave the base at size <= 0, in
-    // which case kind is AwaitingAbandonConfirm until ConfirmProductionAbandon or
-    // DeferProductionAbandon.
+    // Stamp this turn's original item (BankProduction 0) and TryCompleteReadyProduction.
+    // ConvertMinerals already claimed the leftover mineral bank (banked into a real item,
+    // converted, or wasted). Completes construction if the production stockpile meets the
+    // cost — unless completing would leave the base at size <= 0, in which case kind is
+    // AwaitingAbandonConfirm until ConfirmProductionAbandon or DeferProductionAbandon.
     ProductionApplyResult_t ApplyProduction();
 
     // Complete the queued item if the stockpile already meets the current cost, without
-    // banking this turn's minerals. Used when a sibling prototype finishes and this queue's
+    // touching this turn's mineral bank. ApplyProduction stamps first, then calls this; the
+    // BaseProduction pass also calls it when a sibling prototype finishes and this queue's
     // surcharge drops. Does not consume resources.
     ProductionApplyResult_t TryCompleteReadyProduction();
 
@@ -207,17 +206,15 @@ public:
 
     // Charge home-unit mineral support against this turn's mineral bank; disband if short.
     // Called once per turn per base during UnitSupport (via Faction::ApplyMineralSupport),
-    // after ProduceResources and before ConvertSurplusMinerals.
+    // after ProduceResources and before ConvertMinerals.
     void ApplyMineralSupport();
 
-    // After support: if the queue is a stockpile (or the empty-queue fallback), convert the
-    // remaining mineral bank via MineralsConverted effects and credit outputs. If nothing is
-    // queued and no stockpile is available, waste the remainder. A real build item leaves
-    // the bank for ApplyProduction. Called from the SurplusConversion stage, which is the
-    // only place stockpile conversion may happen: it is ordered before IncomeCollection /
-    // ResearchAccumulation, and converting anywhere later would credit econ and labs after
-    // those stages had drained them.
-    void ConvertSurplusMinerals();
+    // After support: consume the remaining mineral bank. A real build item banks it into
+    // production (without completing). A stockpile queue converts it via MineralsConverted
+    // effects; an empty queue wastes it. Called from the MineralConversion stage — the only
+    // drain of leftover minerals, ordered before IncomeCollection / ResearchAccumulation
+    // so stockpile econ and labs are spent this turn.
+    void ConvertMinerals();
 
     // Constructed-facility energy upkeep for this base (FacilityEnergyUpkeep mods applied).
     std::vector<BuildingUpkeepLine_t> GetBuildingUpkeepByType() const;
@@ -332,7 +329,6 @@ private:
 
     bool WouldEmptyBaseOnProductionComplete_() const;
     bool IsCurrentProductionPrototype_() const;
-    ProductionApplyResult_t FinishProductionIfReady_(const BaseEffects_t& rEffects);
 
     // Memoized BuildBaseEffects_ result, keyed on the provider's pool version
     // (empty = never built).

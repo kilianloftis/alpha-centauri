@@ -24,7 +24,7 @@
   {
     "id": "UnitSupport",
     "name": "Unit Support",
-    "description": "Charges home-unit mineral support against this turn's mineral bank; disbands units the base cannot support. Must run after ResourceCollection has banked minerals and before SurplusConversion",
+    "description": "Charges home-unit mineral support against this turn's mineral bank; disbands units the base cannot support. Must run after ResourceCollection has banked minerals and before MineralConversion",
     "repeatForEachFaction": true,
     "hooks": {
       "pre": [],
@@ -33,9 +33,9 @@
     }
   },
   {
-    "id": "SurplusConversion",
-    "name": "Surplus Conversion",
-    "description": "Converts each base's leftover minerals through its queued stockpile item, or wastes them when no stockpile is available. Must run after UnitSupport has taken its share and before IncomeCollection / ResearchAccumulation drain econ and labs",
+    "id": "MineralConversion",
+    "name": "Mineral Conversion",
+    "description": "Converts minerals into other resources. Must run after UnitSupport has taken its share and before IncomeCollection / ResearchAccumulation drain econ and labs",
     "repeatForEachFaction": true,
     "hooks": {
       "pre": [],

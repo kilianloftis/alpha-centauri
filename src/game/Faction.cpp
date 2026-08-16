@@ -626,13 +626,13 @@ void Faction::ApplyMineralSupport()
     }
 }
 
-void Faction::ConvertSurplusMinerals()
+void Faction::ConvertMinerals()
 {
     for (const auto& pBase : m_bases)
     {
         if (pBase)
         {
-            pBase->ConvertSurplusMinerals();
+            pBase->ConvertMinerals();
         }
     }
 }

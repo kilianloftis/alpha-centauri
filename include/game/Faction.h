@@ -193,14 +193,14 @@ public:
 
     // Charge mineral support at every base (home units vs this turn's mineral bank).
     // Called from the UnitSupport stage, after ResourceCollection has banked minerals and
-    // before SurplusConversion claims what is left.
+    // before MineralConversion claims what is left.
     void ApplyMineralSupport();
 
-    // Convert leftover minerals at every base (stockpile recipe or waste). Called from the
-    // SurplusConversion stage, which turn_stages.json orders after UnitSupport and before
-    // IncomeCollection / ResearchAccumulation so income / research / growth see the credits
-    // this turn.
-    void ConvertSurplusMinerals();
+    // Claim leftover minerals at every base (bank into a real build, convert a stockpile,
+    // or waste). Called from the MineralConversion stage, which turn_stages.json orders
+    // after UnitSupport and before IncomeCollection / ResearchAccumulation so stockpile
+    // income / research see the credits this turn.
+    void ConvertMinerals();
 
     // Sum of BuildingConfig_t::upkeep across every constructed building copy (all bases).
     // Continuous GrantBuilding expansions are not constructed and are not included.

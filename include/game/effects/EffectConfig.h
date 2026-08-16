@@ -117,7 +117,7 @@ struct StatModifierEffect_t
 // credit directly, except Energy: "energy" at a base is not a bank, so converted energy is
 // run through inefficiency and the econ/labs/psych slider split exactly like collected
 // energy (ResourceManager::AddAllocatedEnergy). Crediting `econ` instead skips the sliders
-// and reaches the treasury whole — IncomeCollection runs after SurplusConversion.
+// and reaches the treasury whole — IncomeCollection runs after MineralConversion.
 inline constexpr StatId_t k_StockpileOutputStats[] = {
     StatId_t::Nutrients,
     StatId_t::Energy,

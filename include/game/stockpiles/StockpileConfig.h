@@ -23,7 +23,7 @@ enum class StockpileRounding_t
     Nearest,
 };
 
-// A never-completing production item. Each turn the SurplusConversion stage feeds the base's
+// A never-completing production item. Each turn the MineralConversion stage feeds the base's
 // leftover minerals through the MineralsConverted StatModifiers in `effects` and credits the
 // results. Selectable from the build menu and used as the empty-queue fallback.
 //

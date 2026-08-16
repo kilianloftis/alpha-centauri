@@ -832,10 +832,11 @@ TEST_CASE("A base that already ticked is not revisited when a sibling completion
 
     REQUIRE(std::ranges::distance(game.pFaction->GetUnitManager().Units()) == 2);
 
-    // The player answers the prompt by queueing something new at the base that already banked
-    // and completed this turn, and that base now has minerals worth banking. Resuming the pass
-    // must not tick it a second time: doing so would bank its income twice in one turn and,
-    // here, complete a second unit off the back of it.
+    // The player answers the prompt by queueing something new at the base that already
+    // completed this turn, and that base now has minerals in its resource bank. Resuming
+    // the pass must not tick it a second time: doing so used to bank income twice in one
+    // turn and complete a second unit off the back of it. ConvertMinerals already ran
+    // earlier; ApplyProduction must still not consume the leftover bank.
     finisher.GetBuildingManager().AddBuilding("mineral_cache");
     finisher.GetProduction().SetProduction(&rDesign);
     finisher.GetProduction().SetMineralStockpile(0);

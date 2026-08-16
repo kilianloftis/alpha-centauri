@@ -423,38 +423,14 @@ ProductionApplyResult_t BaseManager::ApplyProduction()
 {
     if (m_bPendingProductionAbandonConfirm)
     {
-        // Minerals were already banked when the prompt opened; wait for Confirm / Defer.
+        // ConvertMinerals already claimed the bank; wait for Confirm / Defer.
         return ProductionApplyResult_t{ProductionApplyKind_t::AwaitingAbandonConfirm, {}};
     }
 
-    if (!m_pProduction->HasProduction())
-    {
-        // No queue and no stockpile to fall back on: the minerals are wasted. Usually
-        // already drained by SurplusConversion; draining again keeps the bank empty on
-        // every path out of this function.
-        m_pResources->ConsumeMinerals();
-        return ProductionApplyResult_t{ProductionApplyKind_t::Idle, {}};
-    }
-
-    const IConstructable* pItem = m_pProduction->GetCurrentProduction();
-    if (pItem && pItem->NeverCompletes())
-    {
-        // Deliberately does not convert: SurplusConversion owns that, and it runs before
-        // IncomeCollection / ResearchAccumulation. Converting here instead would credit econ
-        // and labs after those stages had already drained them. A bank still standing at this
-        // point (queue switched onto a stockpile after SurplusConversion ran) is left alone —
-        // ResourceManager accumulates, so those minerals convert next turn at the right stage.
-        // Stamp the turn without banking: an existing production stockpile (founding
-        // minerals, leftover from a previous item) is left untouched.
-        m_pProduction->BankProduction(0);
-        return ProductionApplyResult_t{ProductionApplyKind_t::InProgress, {}};
-    }
-
-    const BaseEffects_t effects = BuildBaseEffects_();
-    const int minerals = m_pResources->ConsumeMinerals();
-    m_pProduction->BankProduction(minerals);
-
-    return FinishProductionIfReady_(effects);
+    // Stamp the turn original without adding minerals: ConvertMinerals already moved this
+    // turn's leftover bank onto a real item (or converted / wasted it).
+    m_pProduction->BankProduction(0);
+    return TryCompleteReadyProduction();
 }
 
 ProductionApplyResult_t BaseManager::TryCompleteReadyProduction()
@@ -469,11 +445,7 @@ ProductionApplyResult_t BaseManager::TryCompleteReadyProduction()
         return ProductionApplyResult_t{ProductionApplyKind_t::Idle, {}};
     }
 
-    return FinishProductionIfReady_(BuildBaseEffects_());
-}
-
-ProductionApplyResult_t BaseManager::FinishProductionIfReady_(const BaseEffects_t& rEffects)
-{
+    const BaseEffects_t& rEffects = BuildBaseEffects_();
     const bool bPrototype = IsCurrentProductionPrototype_();
     if (!m_pProduction->IsReadyToComplete(rEffects, bPrototype))
     {
@@ -495,8 +467,8 @@ ProductionApplyResult_t BaseManager::FinishProductionIfReady_(const BaseEffects_
         bPrototype ? PauseOnEventId_t::PrototypeBuilt : ClassifyCompletedItem_(rItem);
     const std::string completedName = rItem.GetName();
     return ProductionApplyResult_t{ProductionApplyKind_t::Completed,
-                                  m_pProduction->CompleteProduction(), completedEvent,
-                                  completedName};
+                                  m_pProduction->CompleteProduction(rEffects, bPrototype),
+                                  completedEvent, completedName};
 }
 
 bool BaseManager::HasPendingProductionAbandonConfirm() const
@@ -514,7 +486,8 @@ std::string BaseManager::ConfirmProductionAbandon()
     // Clear before CompleteProduction: ResetProduction_ emits OnProductionChanged which
     // would also clear the flag, but Confirm must own the transition explicitly.
     m_bPendingProductionAbandonConfirm = false;
-    return m_pProduction->CompleteProduction();
+    return m_pProduction->CompleteProduction(BuildBaseEffects_(),
+                                             IsCurrentProductionPrototype_());
 }
 
 void BaseManager::DeferProductionAbandon()
@@ -627,23 +600,21 @@ void BaseManager::ApplyMineralSupport()
     ApplyMineralSupportAtBase(*this);
 }
 
-void BaseManager::ConvertSurplusMinerals()
+void BaseManager::ConvertMinerals()
 {
     const IConstructable* pItem = m_pProduction->GetCurrentProduction();
-    if (!pItem)
+    const int minerals = m_pResources->ConsumeMinerals();
+    if (pItem && !pItem->NeverCompletes())
     {
-        // No queue and no stockpile available anywhere: nothing can absorb the surplus.
-        m_pResources->ConsumeMinerals();
+        m_pProduction->BankProduction(minerals);
         return;
     }
-    if (!pItem->NeverCompletes())
+    if (!pItem || minerals <= 0)
     {
-        // A real build item: the bank stays for ApplyProduction to spend.
         return;
     }
 
-    const StockpileConfig_t& rStockpile = m_rStockpileRegistry.Get(pItem->GetId());
-    ApplyStockpileConversionAtBase(*this, rStockpile);
+    ApplyStockpileConversionAtBase(*this, m_rStockpileRegistry.Get(pItem->GetId()), minerals);
 }
 
 std::vector<BuildingUpkeepLine_t> BaseManager::GetBuildingUpkeepByType() const
