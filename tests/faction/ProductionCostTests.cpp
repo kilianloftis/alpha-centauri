@@ -34,6 +34,10 @@ struct StubConstructable : IConstructable
     const std::string& GetId() const override { return id; }
     const std::string& GetName() const override { return name; }
     int GetBaseCost() const override { return baseCost; }
+    ConstructableKind_t GetConstructableKind() const override
+    {
+        return ConstructableKind_t::Building;
+    }
 };
 
 BaseEffects_t WithCostPercent(actest::EffectPool& rPool, double addPercent)

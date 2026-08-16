@@ -1,5 +1,7 @@
 #pragma once
 
+#include "game/ConstructableKind.h"
+
 #include <string>
 
 namespace ac
@@ -23,6 +25,10 @@ public:
     // True for stockpile production items that convert minerals forever rather than
     // finishing at a cost. Cost is 0 and IsReadyToComplete is always false.
     virtual bool NeverCompletes() const { return false; }
+
+    // What this item is. Hurry, completion, and the build menu all key off this rather than
+    // RTTI. Every constructable answers — there is no "none".
+    virtual ConstructableKind_t GetConstructableKind() const = 0;
 };
 
 } // namespace ac

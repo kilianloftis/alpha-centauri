@@ -32,6 +32,10 @@ struct BuildingConfig_t : public IConstructable
     const std::string& GetId() const override { return id; }
     const std::string& GetName() const override { return name; }
     int GetBaseCost() const override { return mineralCost; }
+    ConstructableKind_t GetConstructableKind() const override
+    {
+        return bIsSecretProject ? ConstructableKind_t::SecretProject : ConstructableKind_t::Building;
+    }
     // Per-turn energy-credit maintenance for this building type (UI / upkeep stage).
     int GetUpkeep() const { return upkeep; }
 

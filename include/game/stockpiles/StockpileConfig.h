@@ -47,6 +47,10 @@ struct StockpileConfig_t : public IConstructable
     const std::string& GetName() const override { return name; }
     int GetBaseCost() const override { return 0; }
     bool NeverCompletes() const override { return true; }
+    ConstructableKind_t GetConstructableKind() const override
+    {
+        return ConstructableKind_t::Stockpile;
+    }
 
     bool IsAvailable(const std::vector<std::string>& discoveredTechs) const
     {

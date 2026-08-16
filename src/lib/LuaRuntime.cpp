@@ -38,6 +38,23 @@ const sol::state& LuaRuntime::GetState() const
     return m_lua;
 }
 
+sol::protected_function& LuaRuntime::LoadChunk_(const std::string& formula)
+{
+    const auto it = m_chunks.find(formula);
+    if (it != m_chunks.end())
+    {
+        return it->second;
+    }
+
+    sol::load_result chunk = m_lua.load("return " + formula);
+    if (!chunk.valid())
+    {
+        const sol::error err = chunk;
+        throw std::runtime_error("Lua formula error (\"" + formula + "\"): " + err.what());
+    }
+    return m_chunks.emplace(formula, chunk.get<sol::protected_function>()).first->second;
+}
+
 int LuaRuntime::EvalInt(const std::string& formula,
                         const std::unordered_map<std::string, int>& vars)
 {
@@ -45,6 +62,9 @@ int LuaRuntime::EvalInt(const std::string& formula,
     {
         throw std::runtime_error("Lua formula is empty");
     }
+
+    // Before the globals are set: a formula that does not compile cannot leave any behind.
+    sol::protected_function& rChunk = LoadChunk_(formula);
 
     // Globals, not a per-call environment: config scripts define helper functions whose _ENV is
     // the globals table, so a formula calling one must see these there. Cleared on the way out
@@ -63,8 +83,7 @@ int LuaRuntime::EvalInt(const std::string& formula,
     lua_Number number = 0.0;
     try
     {
-        sol::protected_function_result result =
-            m_lua.safe_script("return " + formula, sol::script_pass_on_error);
+        sol::protected_function_result result = rChunk();
 
         if (!result.valid())
         {

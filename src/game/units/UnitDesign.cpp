@@ -82,6 +82,10 @@ UnitDesign::UnitDesign(
 
 const std::string& UnitDesign::GetId() const   { return m_id; }
 const std::string& UnitDesign::GetName() const { return m_name; }
+ConstructableKind_t UnitDesign::GetConstructableKind() const
+{
+    return ConstructableKind_t::Unit;
+}
 
 const UnitComponentConfig_t* UnitDesign::GetComponentForSlot(const std::string& rSlotId) const
 {

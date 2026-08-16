@@ -381,6 +381,7 @@ BaseManager* Faction::CreateBaseFromSnapshot(
         *rDataContext.popTypeAvailabilityCalculator,
         *rDataContext.growthConfig,
         *rDataContext.productionConfig,
+        *rDataContext.hurryProductionCalculator,
         *rDataContext.popCompositionCalculator,
         &rSecretProjectAvailability,
         rTileEffects,
@@ -589,6 +590,7 @@ BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile*
         *rDataContext.popTypeAvailabilityCalculator,
         *rDataContext.growthConfig,
         *rDataContext.productionConfig,
+        *rDataContext.hurryProductionCalculator,
         *rDataContext.popCompositionCalculator,
         &rSecretProjectAvailability,
         rTileEffects);

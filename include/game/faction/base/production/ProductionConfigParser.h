@@ -1,12 +1,29 @@
 #pragma once
 
 #include "game/effects/EffectConfig.h"
+#include "game/ConstructableKind.h"
 
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace ac
 {
+
+struct HurryKindConfig_t
+{
+    // Lua expression returning a whole credit cost. Variable `minerals` is the billed count
+    // (remaining, with below-threshold minerals counted extra). Also bound: remaining,
+    // stockpile, mineral_threshold, below_threshold_multiplier.
+    std::string formula;
+    // A base whose stockpile has not reached this many minerals is billed extra for the ones
+    // that would take it there. Per-kind so a facility and a unit need not share a band.
+    // Deliberately independent of retoolPenaltyThreshold.
+    // TODO: the SMAC rule this stands in for is unverified — confirm the real mineral_threshold.
+    int mineralThreshold = 10;
+    // How many times each of those below-threshold minerals is billed. 1 disables the extra.
+    int belowThresholdMultiplier = 2;
+};
 
 struct ProductionConfig_t
 {
@@ -22,6 +39,10 @@ struct ProductionConfig_t
     // design). Applied once even if several components are new. 50 means 50% more; no upper
     // bound, so a mod can make prototypes arbitrarily expensive.
     int prototypeSurchargePercent = 50;
+    // Hurry rules keyed by IConstructable::GetConstructableKind(). A kind with no entry
+    // cannot be hurried (stockpiles have none), so removing one — or shipping an empty
+    // object — switches the mechanic off for it.
+    std::unordered_map<ConstructableKind_t, HurryKindConfig_t> hurryKinds;
     // Continuous effects merged into every faction pool (source id "production"). Prototype
     // starting XP is a FactionUnits StartingExperience StatModifier with unitFilter IsPrototype.
     std::vector<EffectConfig_t> effects;
@@ -34,7 +55,9 @@ public:
     ~ProductionConfigParser() = default;
 
     // Load production.json. Throws if the file cannot be opened or parsed, if threshold or
-    // percent is negative, or if percent exceeds 100.
+    // percent is negative, if percent exceeds 100, or if the hurry block is missing or a kind
+    // entry is malformed. Formula strings are not evaluated here: a broken one throws where
+    // it is used, as tech-cost and pop-composition formulas do.
     ProductionConfig_t ParseConfig(const std::string& configPath);
 };
 

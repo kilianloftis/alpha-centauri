@@ -716,6 +716,14 @@
     "category": "build"
   },
   {
+    "id": "test_hurry_facility",
+    "name": "Test Hurry Facility",
+    "mineral_cost": 20,
+    "allow_multiple": true,
+    "effects": [],
+    "category": "build"
+  },
+  {
     "id": "test_gated_facility",
     "name": "Test Gated Facility",
     "required_tech": "advanced_build",

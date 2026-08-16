@@ -2,6 +2,23 @@
   "retool_penalty_threshold": 10,
   "retool_penalty_percent": 50,
   "prototype_surcharge_percent": 50,
+  "hurry": {
+    "building": {
+      "formula": "2 * minerals",
+      "mineral_threshold": 10,
+      "below_threshold_multiplier": 2
+    },
+    "secret_project": {
+      "formula": "4 * minerals",
+      "mineral_threshold": 10,
+      "below_threshold_multiplier": 2
+    },
+    "unit": {
+      "formula": "floor(minerals * (2 + 0.05 * minerals))",
+      "mineral_threshold": 10,
+      "below_threshold_multiplier": 2
+    }
+  },
   "effects": [
     {
       "type": "StatModifier",

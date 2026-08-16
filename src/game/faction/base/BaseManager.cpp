@@ -27,9 +27,11 @@
 #include "game/effects/EffectEnums.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/PauseOnEventsConfig.h"
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
+#include <string>
 #include <unordered_set>
 
 namespace ac
@@ -61,20 +63,25 @@ WorkedTileClaim ClaimCenterTile_(TileEffectsContext& rTileEffects, const Tile& t
 
 PauseOnEventId_t ClassifyCompletedItem_(const IConstructable& rItem)
 {
-    if (dynamic_cast<const BuildingConfig_t*>(&rItem))
+    switch (rItem.GetConstructableKind())
     {
+    case ConstructableKind_t::Building:
+    case ConstructableKind_t::SecretProject:
         return PauseOnEventId_t::NewFacilityBuilt;
-    }
-    if (const UnitDesign* pDesign = dynamic_cast<const UnitDesign*>(&rItem))
+    case ConstructableKind_t::Unit:
     {
-        if (pDesign->GetStat(StatId_t::Attack) > 0
-            || pDesign->GetFlag(RuleFlagId_t::ForcesPsiCombat))
+        const auto* pDesign = dynamic_cast<const UnitDesign*>(&rItem);
+        if (pDesign && (pDesign->GetStat(StatId_t::Attack) > 0
+                        || pDesign->GetFlag(RuleFlagId_t::ForcesPsiCombat)))
         {
             return PauseOnEventId_t::CombatUnitBuilt;
         }
         return PauseOnEventId_t::NonCombatUnitBuilt;
     }
-    return PauseOnEventId_t::NewFacilityBuilt;
+    case ConstructableKind_t::Stockpile:
+        throw std::logic_error("ClassifyCompletedItem_: a stockpile cannot complete");
+    }
+    throw std::logic_error("ClassifyCompletedItem_: unhandled constructable kind");
 }
 
 } // namespace
@@ -91,6 +98,7 @@ BaseManager::BaseManager(
     const PopTypeAvailabilityCalculator& rPopTypeAvailabilityCalculator,
     const GrowthConfig_t& rGrowthConfig,
     const ProductionConfig_t& rProductionConfig,
+    const HurryProductionCalculator& rHurryCalculator,
     PopCompositionCalculator& rCompositionCalculator,
     const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
     TileEffectsContext& rTileEffects,
@@ -104,6 +112,7 @@ BaseManager::BaseManager(
     , m_rBuildingRegistry(rBuildingRegistry)
     , m_rStockpileRegistry(rStockpileRegistry)
     , m_rSocialRatings(rSocialRatingRegistry)
+    , m_rHurryCalculator(rHurryCalculator)
     , m_pEffectsProvider(&rFaction)
     , m_pPopulation(std::make_unique<PopulationManager>(
           rPopTypeRegistry, rPopTypeAvailabilityCalculator, rGrowthConfig, rCompositionCalculator,
@@ -525,6 +534,58 @@ bool BaseManager::WouldEmptyBaseOnProductionComplete_() const
 int BaseManager::GetMineralCost() const
 {
     return m_pProduction->GetMineralCost(BuildBaseEffects_(), IsCurrentProductionPrototype_());
+}
+
+HurryInputs_t BaseManager::BuildHurryInputs_(const IConstructable& rItem) const
+{
+    const int stockpile = m_pProduction->GetMineralStockpile();
+    return HurryInputs_t{std::max(0, GetMineralCost() - stockpile), stockpile,
+                         rItem.GetConstructableKind()};
+}
+
+HurryQuote_t BaseManager::QuoteHurry() const
+{
+    const IConstructable* pItem = m_pProduction->GetCurrentProduction();
+    if (!pItem)
+    {
+        return {};
+    }
+    return m_rHurryCalculator.Quote(BuildHurryInputs_(*pItem));
+}
+
+HurryResult_t BaseManager::HurryProduction(int energyCredits)
+{
+    if (energyCredits <= 0)
+    {
+        throw std::invalid_argument("BaseManager::HurryProduction: energyCredits "
+                                    + std::to_string(energyCredits) + " must be positive");
+    }
+
+    const IConstructable* pItem = m_pProduction->GetCurrentProduction();
+    if (!pItem)
+    {
+        throw std::runtime_error("BaseManager::HurryProduction: nothing is queued, so there is "
+                                 "nothing that can be hurried");
+    }
+
+    // ApplyCredits throws for a kind with no formula — a stockpile, or one a mod switched off.
+    const HurrySpend_t spend =
+        m_rHurryCalculator.ApplyCredits(BuildHurryInputs_(*pItem), energyCredits);
+    HurryResult_t result;
+    result.production = ProductionApplyResult_t{ProductionApplyKind_t::InProgress, {}};
+    if (spend.creditsSpent <= 0)
+    {
+        return result;
+    }
+
+    // SpendEnergy owns the overdraft rule and throws before anything is granted.
+    m_pFaction->GetEconomy().SpendEnergy(spend.creditsSpent);
+    m_pProduction->SetMineralStockpile(m_pProduction->GetMineralStockpile()
+                                       + spend.mineralsAdded);
+    result.creditsSpent = spend.creditsSpent;
+    result.mineralsAdded = spend.mineralsAdded;
+    result.production = TryCompleteReadyProduction();
+    return result;
 }
 
 bool BaseManager::IsCurrentProductionPrototype_() const

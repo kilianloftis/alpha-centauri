@@ -42,6 +42,7 @@ graph TB
     end
 
     subgraph "Shared config (GameDataContext)"
+        HurryProductionCalculator[HurryProductionCalculator]
         TechRegistry[TechRegistry]
         BuildingRegistry[BuildingRegistry]
         SocialPolicyRegistry[SocialPolicyRegistry]
@@ -76,6 +77,7 @@ graph TB
     BaseManager --> BuildingManager
     BaseManager --> ResourceManager
     BaseManager --> ProductionManager
+    BaseManager -->|borrows| HurryProductionCalculator
     BaseManager --> HomeBaseIndex
     PopulationManager --> PopContainer
     WorkerAssignmentManager -->|claims tiles in| WorldMap
@@ -245,6 +247,7 @@ See `docs/architecture/diplomacy-system.md`.
   - `PopulationManager`: API surface for the population component; manages growth and riot state for a single base, and **owns population policy** — which types a pop may become (`ResolveType_` walks the obsolescence chain against discovered techs and is the single place a requested type becomes an actual one, so `AddPop`, `ConvertTo`, `ConvertToFallback` and composition reconciliation all apply the same rule) and how composition targets are reconciled (`ApplyCompositionTargets`). The rules deliberately do not live in `PopContainer`: when they did, the tech gate was applied on one conversion path and not another.
   - `IConstructable`: Abstract interface for any entity that can be queued for production; exposes `GetId()`, `GetName()`, and `GetMineralCost()`
   - `ProductionManager`: API surface for the production component; manages one active `IConstructable` at a time, tracks accumulated minerals, and emits `OnProductionCompleted` when the item is finished
+  - `HurryProductionCalculator`: Prices hurrying — energy credits bought into the mineral stockpile. Owned by `GameDataContext` beside `TechCostCalculator` (it pairs `ProductionConfig_t` with the shared `LuaRuntime`), and borrowed by every `BaseManager`, so no base or faction has to carry a Lua handle of its own. `BaseManager::QuoteHurry` / `HurryProduction` are the only callers. Each kind in `production.json` `hurry` carries its own formula, `mineral_threshold`, and `below_threshold_multiplier`, keyed by `IConstructable::GetConstructableKind()`; a kind with no hurry entry cannot be hurried, which is how a mod switches the mechanic off for stockpiles, an item class, or the whole game. Partial payments are priced **marginally** — buying `k` minerals costs what it removes from the finish price — so paying in instalments always totals the quoted price
   - `WorkerAssignmentManager`: Owns the set of workable tiles and the tile-scoring policy; holds a reference to the base's `PopulationManager` and to the world-scoped `WorkedTileIndex`; validates worker-to-tile assignments and runs auto-assignment. An assignment is a `WorkedTileClaim` minted by `WorkedTileIndex::TryClaim` and held by the `Pop`; the claim also carries the user-assigned flag, so the manager can skip user-assigned pops during auto-assignment and the flag can never outlive the assignment (see `docs/architecture/map-system.md`, "WorkedTileIndex").
   - **Pop roles** (`PopRole_t`, config key `role`, required): `worker`, `drone`, `talent`, `specialist`. A closed partition — every pop is exactly one — so `IsPlainWorker()` / `IsDrone()` / `IsTalent()` / `IsSpecialist()` cannot overlap. Role is declared, not inferred: it used to be read off `riot_contribution` / `golden_age_contribution` magnitudes, which made role and magnitude the same knob and left a non-worker with a golden-age contribution counting as both specialist and talent. `PopTypeRegistry` rejects `role: specialist` with `can_work_tile: true` and vice versa, so `IsWorker()` (the capability) and `IsSpecialist()` (the role) stay consistent.
   - **Obsolescence** (`obsoletes`): transitive and closed over the whole graph, *not* gated on intermediate steps' techs — if Transcend obsoletes Empath and Empath obsoletes Doctor, then Transcend obsoletes Doctor even in a tech order that skipped Empath. `PopTypeAvailabilityCalculator::GetAvailable` and `ResolveCurrentType` are both phrased in terms of one walk, so they cannot disagree; a type is assignable exactly when it is `player_assignable`, its tech is discovered, and `ResolveCurrentType` returns the type itself. Cycles are rejected by `PopTypeRegistry` at load, since the walk is on the per-turn path for every pop of every base.

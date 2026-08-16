@@ -156,3 +156,21 @@ TEST_CASE("LuaRuntime::EvalInt does not leak variables between calls", "[lib][lu
     CHECK_THROWS(lua.EvalInt("nope +", {{"leftover", 3}}));
     CHECK_THROWS(lua.EvalInt("leftover", {}));
 }
+
+TEST_CASE("LuaRuntime::EvalInt reuses a compiled formula without reusing its inputs",
+          "[lib][lua]")
+{
+    // The chunk for a formula is compiled once and kept; it must still read whatever globals
+    // the current call set, not the ones it was first compiled against.
+    LuaRuntime lua;
+
+    CHECK(lua.EvalInt("size * 2", {{"size", 5}}) == 10);
+    CHECK(lua.EvalInt("size * 2", {{"size", 21}}) == 42);
+    CHECK(lua.EvalInt("size * 2", {{"size", 0}}) == 0);
+
+    // A formula that does not compile is not kept, so it fails the same way every time.
+    CHECK_THROWS_WITH(lua.EvalInt("still not lua", {}),
+                      Catch::Matchers::ContainsSubstring("still not lua"));
+    CHECK_THROWS_WITH(lua.EvalInt("still not lua", {}),
+                      Catch::Matchers::ContainsSubstring("still not lua"));
+}

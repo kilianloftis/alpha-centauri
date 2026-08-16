@@ -25,6 +25,7 @@ public:
     const std::string& GetId() const override;
     const std::string& GetName() const override;
     int GetBaseCost() const override;
+    ConstructableKind_t GetConstructableKind() const override;
 
     const UnitComponentConfig_t* GetComponentForSlot(const std::string& rSlotId) const;
 

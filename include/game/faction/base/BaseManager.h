@@ -6,6 +6,7 @@
 #include "game/faction/base/BaseTypes.h"
 #include "game/faction/base/production/ProductionApplyResult.h"
 #include "game/faction/base/production/ProductionConfigParser.h"
+#include "game/faction/base/production/HurryProductionCalculator.h"
 #include "game/faction/base/HomeBaseIndex.h"
 #include "game/map/WorkedTileIndex.h"
 #include "game/effects/ActiveEffect.h"
@@ -42,6 +43,15 @@ class PopCompositionCalculator;
 class SecretProjectAvailabilityCalculator;
 
 using BaseId_t = int;
+
+// Outcome of BaseManager::HurryProduction: what the treasury paid for, and what the resulting
+// stockpile did to the queued item.
+struct HurryResult_t
+{
+    int creditsSpent = 0;
+    int mineralsAdded = 0;
+    ProductionApplyResult_t production;
+};
 
 // Non-recomputable state needed to destroy a base and rebuild it under a new owner.
 // Worked tiles and pop roles are omitted — recalculated after reconstruct (psych changes).
@@ -93,6 +103,7 @@ public:
         const PopTypeAvailabilityCalculator& rPopTypeAvailabilityCalculator,
         const GrowthConfig_t& rGrowthConfig,
         const ProductionConfig_t& rProductionConfig,
+        const HurryProductionCalculator& rHurryCalculator,
         PopCompositionCalculator& rCompositionCalculator,
         const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
         TileEffectsContext& rTileEffects,
@@ -198,6 +209,18 @@ public:
     // prototype surcharge when the queued unit fields a component this faction has not
     // built. Returns 0 when nothing is queued or the item never completes (stockpile).
     int GetMineralCost() const;
+
+    // Energy-credit cost to finish the queued item outright. bAvailable is false when nothing
+    // is queued or the item's kind has no hurry entry (stockpiles, and anything a mod has
+    // switched off) — that is the "grey the button out" answer, not an error.
+    HurryQuote_t QuoteHurry() const;
+
+    // Spend up to energyCredits from the owning faction treasury on minerals for the queued
+    // item, at the price QuoteHurry reports. Credits that would not buy a whole mineral are
+    // left unspent. Completes immediately when the stockpile then meets cost (same
+    // abandon-confirm gate as ApplyProduction). Throws if credits is not positive, if the
+    // item cannot be hurried, or if the treasury cannot cover the charge.
+    HurryResult_t HurryProduction(int energyCredits);
 
     // Collect nutrients/minerals and allocate energy into econ/labs/psych stockpiles.
     // Called once per turn per base during ResourceCollection (via Faction::ProduceBaseResources).
@@ -311,6 +334,7 @@ private:
     // reads this registry while that member is being constructed.
     const StockpileRegistry& m_rStockpileRegistry;
     const SocialRatingRegistry& m_rSocialRatings;
+    const HurryProductionCalculator& m_rHurryCalculator;
     // Always the owning faction (set in the ctor, re-pointed by RebindFaction). A pointer only
     // because it is rebindable; never null.
     const IEffectsProvider* m_pEffectsProvider = nullptr;
@@ -329,6 +353,8 @@ private:
 
     bool WouldEmptyBaseOnProductionComplete_() const;
     bool IsCurrentProductionPrototype_() const;
+    // What the queued item still needs, shared by the quote and the spend.
+    HurryInputs_t BuildHurryInputs_(const IConstructable& rItem) const;
 
     // Memoized BuildBaseEffects_ result, keyed on the provider's pool version
     // (empty = never built).

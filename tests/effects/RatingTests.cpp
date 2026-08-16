@@ -206,6 +206,10 @@ TEST_CASE("Industry rating affects production cost via CostMultiplier modifiers"
         const std::string& GetId() const override { return id; }
         const std::string& GetName() const override { return name; }
         int GetBaseCost() const override { return 10; }
+        ConstructableKind_t GetConstructableKind() const override
+        {
+            return ConstructableKind_t::Building;
+        }
     } item;
 
     base.GetProduction().SetProduction(&item);

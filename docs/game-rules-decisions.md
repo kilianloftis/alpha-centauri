@@ -152,6 +152,33 @@ undecided while free units collected the bonus.
 
 ---
 
+## 8. Hurrying production — open questions
+
+**Implemented** 2026-08-15, with the shape of the mechanic settled and the numbers not. Energy
+credits buy minerals into the queued item's stockpile; the price per item class is a Lua
+expression in `config/production.json` `hurry.<kind>.formula`, keyed by
+`IConstructable::GetConstructableKind()`. A kind with no hurry entry cannot be hurried, which is also how
+stockpiles are excluded and how a mod turns the mechanic off.
+
+Two things in it are **not** rules of record, and are marked TODO at the config:
+
+- **The below-threshold surcharge.** Minerals still needed while the stockpile sits under
+  that kind's `mineral_threshold` are billed `below_threshold_multiplier` times. Both numbers
+  live on the kind so a facility and a unit need not share a band. The multiplier stands in
+  for SMAC's doubling of the cheap early minerals; the mineral_threshold it triggers on is a
+  guess. It is deliberately independent of `retool_penalty_threshold` — they happen to ship at
+  the same value, but retooling and hurrying are unrelated mechanics.
+- **Whether partial payment should exist at all.** SMAC hurries an item outright. This
+  implementation lets the player buy any number of minerals they can afford. The *pricing* of a
+  partial buy is settled and not a guess: buying `k` minerals costs what it takes off the finish
+  price, so instalments always total the quoted price. That is the only model that holds under a
+  formula which is not linear — pricing an instalment as a flat fraction of the finish cost let a
+  player pay 41 credits for a 60-credit unit by buying a mineral at a time. If the rule turns out
+  to be all-or-nothing, `HurryProductionCalculator::ApplyCredits` and `HurrySpend_t` come out and
+  `QuoteHurry` is the whole API.
+
+---
+
 ## Deferred by decision, not by uncertainty
 
 - **Mid-proposal trade failure should crash.** A `TransferBaseTo` that throws part-way through a
