@@ -21,6 +21,7 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("nutrients") == StatId_t::Nutrients);
     CHECK(ParseStatId("minerals") == StatId_t::Minerals);
     CHECK(ParseStatId("energy") == StatId_t::Energy);
+    CHECK(ParseStatId("energy_credits") == StatId_t::EnergyCredits);
     CHECK(ParseStatId("econ") == StatId_t::Econ);
     CHECK(ParseStatId("labs") == StatId_t::Labs);
     CHECK(ParseStatId("psych") == StatId_t::Psych);
@@ -59,6 +60,7 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("council_votes") == StatId_t::CouncilVotes);
     CHECK(ParseStatId("commerce_energy_bonus") == StatId_t::CommerceEnergyBonus);
     CHECK(ParseStatId("inefficiency_denominator") == StatId_t::InefficiencyDenominator);
+    CHECK(ParseStatId("scrap_refund") == StatId_t::ScrapRefund);
 
     CHECK_THROWS(ParseStatId("not_a_stat"));
     CHECK_THROWS(ParseStatId(""));

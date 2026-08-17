@@ -247,6 +247,17 @@ public:
     // faction.
     void TransferUnitTo(UnitId_t unitId, Faction& rReceiver);
 
+    // Amount and sink if this unit were scrapped now. Empty when kinds.unit has no
+    // default_scrap. A base-destined refund goes to the closest friendly base, and pays 0
+    // when the unit is off this faction's territory — the unit can still be scrapped.
+    // Throws if the unit is not this faction's.
+    std::optional<ScrapPayout_t> QuoteScrapUnit(const Unit& rUnit) const;
+
+    // Player scrap: destroy the unit and credit QuoteScrapUnit. Combat, support disband, and
+    // other DestroyUnit paths do not refund. Throws if QuoteScrapUnit is empty. Returns the
+    // amount granted.
+    int ScrapUnit(Unit& rUnit);
+
     // Fog of war: permanent explored memory and currently-visible tiles as separate maps.
     // The constructor sizes both from the world map and takes a first reading;
     // RebuildVisibility refreshes current vision from units/bases (and grows explored). Unit
@@ -373,6 +384,12 @@ private:
     void MigrateBuildingDeploys_(BaseId_t baseId, Faction& rReceiver);
     // Drop every deploy record for baseId (base destroyed: razed on capture).
     void DropBuildingDeploys_(BaseId_t baseId);
+
+    // Base that receives a unit's base-destined scrap refund on rTile: the closest live base
+    // by TabletopDiagonalDistance (horizontal wrap), then lower BaseId. Empty when rTile is
+    // outside this faction's territory or the faction holds no bases.
+    // TODO: SMAC's nearest-base metric for unit disband is not recorded.
+    std::optional<BaseId_t> ScrapDestinationFor_(const Tile& rTile) const;
 
     // ASAT / intercept deploy cooldowns, keyed by (baseId, buildingId) — the base attribution
     // is the calling site's best-effort pick of "a base holding a copy," not a tracked

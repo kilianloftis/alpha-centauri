@@ -100,6 +100,7 @@ static_assert(!TagsOriginBase(EffectScope_t::ThisTile));
 static_assert(KindFor(StatId_t::Nutrients) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Minerals) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Energy) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::EnergyCredits) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Econ) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Labs) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Psych) == StatKind_t::Additive);
@@ -137,6 +138,7 @@ static_assert(KindFor(StatId_t::CommerceRate) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::CouncilVotes) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::CommerceEnergyBonus) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::InefficiencyDenominator) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::ScrapRefund) == StatKind_t::RawScaled);
 
 // SeedFor derives the context-free seed from the kind; RawScaled stats have none (SeedFor
 // throws for them, which is not constexpr-evaluable, so no pin here).

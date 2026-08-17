@@ -9,9 +9,10 @@
         "mineral_threshold": 10,
         "below_threshold_multiplier": 2
       },
-      "scrap": {
+      "default_scrap": {
         "formula": "floor(minerals / 2)",
-        "refund_type": "energy_credits"
+        "refund_type": "energy_credits",
+        "refund_ceiling_percent": 100
       }
     },
     "secret_project": {
@@ -26,6 +27,11 @@
         "formula": "floor(minerals * (2 + 0.05 * minerals))",
         "mineral_threshold": 10,
         "below_threshold_multiplier": 2
+      },
+      "default_scrap": {
+        "formula": "floor(minerals / 2)",
+        "refund_type": "minerals",
+        "refund_ceiling_percent": 100
       }
     }
   },

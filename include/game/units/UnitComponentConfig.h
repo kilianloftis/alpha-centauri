@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/effects/EffectConfig.h"
+#include "game/faction/base/production/ScrapConfig.h"
 #include "game/units/UnitDomain.h"
 
 #include <algorithm>
@@ -40,6 +41,9 @@ struct UnitComponentConfig_t
     // Required when type == "chassis"; must be unset for other component types.
     std::optional<UnitDomain_t> domain;
     std::vector<EffectConfig_t> effects;
+    // Optional partial override of kinds.unit.default_scrap, folded per design by
+    // MergeScrapOverride: later occupied slots win on a given key.
+    std::optional<ScrapOverride_t> scrap;
     // Display-only annotations for FormatCombatRating (not gameplay effects).
     std::vector<CombatRatingModifier_t> combatRatingModifiers;
     std::vector<std::string> combatRatingLabels;

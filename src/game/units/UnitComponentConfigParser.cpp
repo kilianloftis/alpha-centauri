@@ -2,6 +2,7 @@
 #include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
 #include "game/effects/EffectConfigParser.h"
+#include "game/faction/base/production/ScrapConfigParser.h"
 
 #include <stdexcept>
 
@@ -94,6 +95,11 @@ UnitComponentConfig_t UnitComponentConfigParser::ParseComponentConfig(const nloh
     config.effects = EffectConfigParser::ParseEffects(rComponentJson, EffectSourceKind_t::UnitComponent, config.id);
     config.combatRatingModifiers = ParseCombatRatingModifiers_(rComponentJson, config.id);
     config.combatRatingLabels = ParseCombatRatingLabels_(rComponentJson, config.id);
+    if (rComponentJson.contains("scrap"))
+    {
+        config.scrap = ScrapConfigParser::ParseOverride(rComponentJson.at("scrap"),
+                                                "Component '" + config.id + "' scrap");
+    }
 
     const bool bHasDomain = rComponentJson.contains("domain");
     if (config.type == "chassis")

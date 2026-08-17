@@ -173,9 +173,10 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 ### StatId_t
 - **Purpose**: Identifies a stat or resource. Defined in `include/game/effects/EffectEnums.h` so it can be shared across the game and effects systems.
 - **Values**:
-  - Base resources: `Nutrients`, `Minerals`, `Energy`.
+  - Base resources: `Nutrients`, `Minerals`, `Energy`. `EnergyCredits` is the spendable
+    faction treasury (`EconomyManager`), not tile energy.
   - Base output allocated directly rather than via energy split: `Econ`, `Labs`, `Psych`.
-  - Unit stats: `Attack`, `Defense`, `Movement`, `HitPoints`, `DisengageChance`, `TurnsOfFuel`, `DamageFromOutOfFuel`, `CargoCapacity`, `DifficultTerrainCost`, `MineralUpkeep` (home-base mineral support cost; floored at 0), `FreeUnitSupport` (base-level free support slots), `CostMultiplier` (also used for base production cost after Industry rating expansion), `PrototypeSurchargeScale` (PureMultiplier on the prototype mineral *extra* only; Skunkworks uses `MultiplyGeometric` 0 on `ThisBase`), `RetoolPenaltyScale` (PureMultiplier on the retool forfeit; Skunkworks zeros it the same way), `FacilityEnergyUpkeep` (PureMultiplier on constructed-facility energy maintenance; optional `buildingFilter`), `StartingExperience` (seeded into unit XP at spawn), `StartingMinerals` (credited to a new base's production stockpile at founding; resolved from the new base's effects plus the founding unit).
+  - Unit stats: `Attack`, `Defense`, `Movement`, `HitPoints`, `DisengageChance`, `TurnsOfFuel`, `DamageFromOutOfFuel`, `CargoCapacity`, `DifficultTerrainCost`, `MineralUpkeep` (home-base mineral support cost; floored at 0), `FreeUnitSupport` (base-level free support slots), `CostMultiplier` (also used for base production cost after Industry rating expansion), `PrototypeSurchargeScale` (PureMultiplier on the prototype mineral *extra* only; Skunkworks uses `MultiplyGeometric` 0 on `ThisBase`), `RetoolPenaltyScale` (PureMultiplier on the retool forfeit; Skunkworks zeros it the same way), `FacilityEnergyUpkeep` (PureMultiplier on constructed-facility energy maintenance; optional `buildingFilter`), `StartingExperience` (seeded into unit XP at spawn), `StartingMinerals` (credited to a new base's production stockpile at founding; resolved from the new base's effects plus the founding unit), `ScrapRefund` (RawScaled: player-scrap amount after the kind formula or config override; bonuses stack, then `refund_ceiling_percent` clamps).
   - Population modifier: `GrowthRate` (`AddPercent`, base = 100%) — modifies the faction-wide population growth rate.
   - Terrain mutation: `MoistureTier` — resolved back into `Tile::SetMoisture` by `RecomputeMoisture`; not a runtime-queried stat (see Tile Improvement Effects).
 - **Consumers**: `StatModifierEffect_t::stat`. `Defense` is also the target stat for tile-granted combat bonuses (rockiness, fungus, improvements) — see Tile Improvement Effects below.
@@ -187,7 +188,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   `PureMultiplier` (the stat *is* a multiplier, resolved purely through
   `AddPercent`/`MultiplyGeometric`; seed `1.0` — a `0.0` seed silently collapses to 0), or
   `RawScaled` (modifiers scale a raw value only the resolve site knows: `GrowthRate`'s 100%
-  baseline, `MoistureTier`'s base tier).
+  baseline, `MoistureTier`'s base tier, `ScrapRefund`'s formula amount).
 - **`constexpr KindFor(StatId_t) -> StatKind_t`**: exhaustive switch — adding a `StatId_t` forces a
   seed-semantics decision the same way adding a scope forces a routing decision in `LaneFor`.
   `tests/effects/ValidationTests.cpp` pins every stat's kind with `static_assert`s.

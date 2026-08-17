@@ -77,7 +77,7 @@ Spatial helpers live in `include/game/map/MapUtils.h`. The map uses three cohere
 | Metric | Definition | Used for |
 |--------|------------|----------|
 | **Chebyshev** | `max(\|dx\|, \|dy\|)` (king-move / square) | Unit/base/Sensor **sight**, improvement **auras** (Sensor defense, Mirror, Condenser), unit ThisTile auras — `ForEachTileInChebyshevRadius` |
-| **Tabletop diagonal** | `longer + shorter/2` on `\|DeltaX\|` and `\|dy\|` | Energy **inefficiency** HQ distance — `TabletopDiagonalDistance` |
+| **Tabletop diagonal** | `longer + shorter/2` on `\|DeltaX\|` and `\|dy\|` | Energy **inefficiency** HQ distance, unit-scrap closest friendly base — `TabletopDiagonalDistance` |
 | **Euclidean disk** | `dx² + dy² ≤ R² + 1` | **Base workable area** (`R = 2`), **territory claim radius** (land `R = 7`, sea `R = 3`) — `InEuclideanRadius` / `ForEachTileInEuclideanRadius` |
 
 Territory overlap between factions is broken by crow-flies distance (`dx² + dy²`) to the claiming base, then lower `BaseId` — not by Chebyshev.

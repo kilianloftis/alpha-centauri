@@ -7,10 +7,14 @@
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/GameDataContext.h"
 #include "game/map/WorldMap.h"
+#include "game/map/MapUtils.h"
+#include "game/faction/base/production/ScrapRefundCalculator.h"
+#include "game/faction/base/production/ScrapPayout.h"
 #include "game/faction/base/resources/ResourceManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/FactionIdentity.h"
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <utility>
 #include "game/faction/AIProfile.h"
@@ -547,6 +551,74 @@ void Faction::TransferUnitTo(UnitId_t unitId, Faction& rReceiver)
             ReleaseAndAdopt_(*this, rReceiver, *pPassenger);
         }
     }
+}
+
+std::optional<BaseId_t> Faction::ScrapDestinationFor_(const Tile& rTile) const
+{
+    if (m_rWorldMap.GetTerritory().GetOwner(rTile) != m_factionId)
+    {
+        return std::nullopt;
+    }
+
+    std::optional<BaseId_t> bestId;
+    int bestDist = std::numeric_limits<int>::max();
+    const int mapWidth = m_rWorldMap.GetWidth();
+    for (const BaseManager& rBase : Bases())
+    {
+        const int dist = TabletopDiagonalDistance(rTile, rBase.GetTile(), mapWidth);
+        const BaseId_t id = rBase.GetBaseId();
+        if (!bestId || dist < bestDist || (dist == bestDist && id < *bestId))
+        {
+            bestDist = dist;
+            bestId = id;
+        }
+    }
+    return bestId;
+}
+
+std::optional<ScrapPayout_t> Faction::QuoteScrapUnit(const Unit& rUnit) const
+{
+    if (&rUnit.GetFaction() != this)
+    {
+        throw std::invalid_argument("Faction::QuoteScrapUnit: unit is not owned by this faction");
+    }
+    if (!m_rDataContext.scrapRefundCalculator)
+    {
+        throw std::runtime_error(
+            "Faction::QuoteScrapUnit: no ScrapRefundCalculator on GameDataContext");
+    }
+
+    ScrapOverride_t override;
+    for (const UnitComponentConfig_t* pComponent : rUnit.GetDesign().GetComponents())
+    {
+        if (pComponent && pComponent->scrap)
+        {
+            MergeScrapOverride(*pComponent->scrap, override);
+        }
+    }
+
+    const ScrapQuote_t quote = m_rDataContext.scrapRefundCalculator->Quote(
+        rUnit.GetDesign().GetBaseCost(), ConstructableKind_t::Unit, override,
+        CollectLiveUnitEffects(rUnit));
+    if (!quote.bAvailable)
+    {
+        return std::nullopt;
+    }
+    return PlanScrapPayout(quote, ScrapDestinationFor_(rUnit.GetTile()));
+}
+
+int Faction::ScrapUnit(Unit& rUnit)
+{
+    const std::optional<ScrapPayout_t> payout = QuoteScrapUnit(rUnit);
+    if (!payout)
+    {
+        throw std::runtime_error(
+            "Faction::ScrapUnit: this unit cannot be scrapped (no kinds.unit default_scrap)");
+    }
+
+    const int granted = CreditScrapRefund(*payout, *this);
+    GetUnitManager().DestroyUnit(rUnit);
+    return granted;
 }
 
 BaseManager* Faction::GetHeadquarters()

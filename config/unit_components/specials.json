@@ -110,7 +110,8 @@
         "scope": "ThisUnit",
         "parameters": { "flag": "cannot_capture_bases" }
       }
-    ]
+    ],
+    "scrap": { "formula": "minerals" }
   },
   {
     "id": "Terraformer",

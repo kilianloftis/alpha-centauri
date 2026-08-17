@@ -3,6 +3,7 @@
 #include "game/GameCategory.h"
 #include "game/IConstructable.h"
 #include "game/effects/EffectConfig.h"
+#include "game/faction/base/production/ScrapConfig.h"
 #include <algorithm>
 #include <string>
 #include <vector>
@@ -28,6 +29,8 @@ struct BuildingConfig_t : public IConstructable
     // Public orbital census: counts of buildings with this flag are visible to all factions.
     bool orbital = false;
     std::vector<EffectConfig_t> effects;
+    // Optional partial override of kinds.building.default_scrap. Secret projects reject this.
+    std::optional<ScrapOverride_t> scrap;
 
     const std::string& GetId() const override { return id; }
     const std::string& GetName() const override { return name; }

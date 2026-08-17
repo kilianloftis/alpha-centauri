@@ -504,6 +504,7 @@
     "id": "test_supply_crawler",
     "name": "Test Supply Crawler",
     "type": "weapon",
+    "mineral_cost": 5,
     "effects": [
       {
         "type": "RuleFlag",
@@ -519,7 +520,10 @@
           "flag": "cannot_capture_bases"
         }
       }
-    ]
+    ],
+    "scrap": {
+      "formula": "minerals"
+    }
   },
   {
     "id": "test_colony_pod",

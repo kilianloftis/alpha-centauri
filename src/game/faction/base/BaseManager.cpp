@@ -620,7 +620,7 @@ HurryResult_t BaseManager::HurryProduction(int energyCredits)
     return result;
 }
 
-std::optional<int> BaseManager::QuoteScrapBuilding(const BuildingId_t& buildingId) const
+std::optional<ScrapPayout_t> BaseManager::QuoteScrapBuilding(const BuildingId_t& buildingId) const
 {
     for (const BuildingConfig_t* pBuilding : m_pBuildings->GetBuildings())
     {
@@ -632,21 +632,23 @@ std::optional<int> BaseManager::QuoteScrapBuilding(const BuildingId_t& buildingI
         {
             return std::nullopt;
         }
-        const ScrapQuote_t quote = m_rScrapCalculator.Quote(pBuilding->mineralCost,
-                                                            ConstructableKind_t::Building);
-        if (!quote.bAvailable || quote.refundType != ScrapRefundType_t::EnergyCredits)
+        const ScrapQuote_t quote =
+            m_rScrapCalculator.Quote(pBuilding->mineralCost, ConstructableKind_t::Building,
+                                     pBuilding->scrap.value_or(ScrapOverride_t{}),
+                                     BuildBaseEffects_().effects);
+        if (!quote.bAvailable)
         {
             return std::nullopt;
         }
-        return quote.amount;
+        return PlanScrapPayout(quote, m_baseId);
     }
     return std::nullopt;
 }
 
 int BaseManager::ScrapBuilding(const BuildingId_t& buildingId)
 {
-    const std::optional<int> refund = QuoteScrapBuilding(buildingId);
-    if (!refund)
+    const std::optional<ScrapPayout_t> payout = QuoteScrapBuilding(buildingId);
+    if (!payout)
     {
         throw std::runtime_error(
             "BaseManager::ScrapBuilding: '" + buildingId
@@ -655,11 +657,7 @@ int BaseManager::ScrapBuilding(const BuildingId_t& buildingId)
 
     m_pBuildings->DestroyBuilding(buildingId);
     m_pFaction->NotifyBuildingDestroyed(m_baseId, buildingId);
-    if (*refund > 0)
-    {
-        m_pFaction->GetEconomy().AddEnergy(*refund);
-    }
-    return *refund;
+    return CreditScrapRefund(*payout, *m_pFaction);
 }
 
 bool BaseManager::IsCurrentProductionPrototype_() const

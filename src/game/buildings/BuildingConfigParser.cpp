@@ -2,6 +2,7 @@
 #include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
 #include "game/effects/EffectConfigParser.h"
+#include "game/faction/base/production/ScrapConfigParser.h"
 #include <algorithm>
 #include <nlohmann/json.hpp>
 #include <stdexcept>
@@ -49,7 +50,7 @@ const std::vector<std::string>& KnownBuildingKeys_()
 {
     static const std::vector<std::string> keys = {
         "id", "name", "category", "mineral_cost", "upkeep", "required_tech",
-        "allow_multiple", "secret_project", "orbital", "effects",
+        "allow_multiple", "secret_project", "orbital", "effects", "scrap",
     };
     return keys;
 }
@@ -94,6 +95,16 @@ BuildingConfig_t BuildingConfigParser::ParseBuildingConfig_(const nlohmann::json
     config.effects = EffectConfigParser::ParseEffects(buildingJson, EffectSourceKind_t::Building, config.id);
     config.mineralCost = ParseTyped_<int>(buildingJson, "mineral_cost", config.id, 0,
                                           &nlohmann::json::is_number_integer, "an integer");
+    if (buildingJson.contains("scrap"))
+    {
+        if (config.bIsSecretProject)
+        {
+            throw std::runtime_error("Building '" + config.id
+                                     + "': secret projects cannot declare scrap");
+        }
+        config.scrap = ScrapConfigParser::ParseOverride(buildingJson.at("scrap"),
+                                                "Building '" + config.id + "' scrap");
+    }
 
     return config;
 }

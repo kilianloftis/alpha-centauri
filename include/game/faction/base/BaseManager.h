@@ -8,6 +8,7 @@
 #include "game/faction/base/production/ProductionConfigParser.h"
 #include "game/faction/base/production/HurryProductionCalculator.h"
 #include "game/faction/base/production/ScrapRefundCalculator.h"
+#include "game/faction/base/production/ScrapPayout.h"
 #include "game/faction/base/HomeBaseIndex.h"
 #include "game/map/WorkedTileIndex.h"
 #include "game/effects/ActiveEffect.h"
@@ -42,8 +43,6 @@ class PopTypeAvailabilityCalculator;
 struct GrowthConfig_t;
 class PopCompositionCalculator;
 class SecretProjectAvailabilityCalculator;
-
-using BaseId_t = int;
 
 // Outcome of BaseManager::HurryProduction: what the treasury paid for, and what the resulting
 // stockpile did to the queued item.
@@ -233,15 +232,14 @@ public:
     // item cannot be hurried, or if the treasury cannot cover the charge.
     HurryResult_t HurryProduction(int energyCredits);
 
-    // Energy credits granted if this constructed copy is scrapped now. Empty when the id is
-    // not held here, the copy is a secret project, the kind has no scrap formula, or the
-    // configured refund_type is not energy credits.
-    std::optional<int> QuoteScrapBuilding(const BuildingId_t& buildingId) const;
+    // Amount and sink if this constructed copy is scrapped now. Empty when the id is not held
+    // here, the copy is a secret project, or the kind has no default_scrap. Base-destined
+    // refunds land in this base.
+    std::optional<ScrapPayout_t> QuoteScrapBuilding(const BuildingId_t& buildingId) const;
 
-    // Player scrap: destroy one constructed copy and credit QuoteScrapBuilding to the faction
-    // treasury. Combat / probe / raze / orbital destruction must not call this — they destroy
-    // without a refund. Throws if QuoteScrapBuilding is empty. Returns the credits granted
-    // (0 when the listed mineral cost is 0 or 1).
+    // Player scrap: destroy one constructed copy and credit QuoteScrapBuilding. Combat /
+    // probe / raze / orbital destruction must not call this — they destroy without a refund.
+    // Throws if QuoteScrapBuilding is empty. Returns the amount granted.
     int ScrapBuilding(const BuildingId_t& buildingId);
 
     // Collect nutrients/minerals and allocate energy into econ/labs/psych stockpiles.

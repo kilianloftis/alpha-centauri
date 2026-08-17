@@ -61,7 +61,8 @@ inline bool AreChebyshevAdjacent(const Tile& rA, const Tile& rB, int mapWidth)
 
 // SMAC tabletop / "two-diagonal" distance on a horizontally wrapping map (Y does not wrap):
 // longer + shorter/2, where longer/shorter are |DeltaX| and |dy|. Used by energy
-// inefficiency (HQ distance). Integer half of the shorter leg (floor).
+// inefficiency (HQ distance) and unit-scrap closest-base. Integer half of the shorter
+// leg (floor).
 inline int TabletopDiagonalDistance(const Tile& rA, const Tile& rB, int mapWidth)
 {
     const int dx = std::abs(DeltaX(rA.GetX(), rB.GetX(), mapWidth));

@@ -1,4 +1,5 @@
 #include "game/faction/base/production/ProductionConfigParser.h"
+#include "game/faction/base/production/ScrapConfigParser.h"
 #include "game/effects/EffectConfigParser.h"
 #include "game/ConstructableKind.h"
 #include "lib/config/JsonConfigLoader.h"
@@ -110,49 +111,6 @@ ProductionConfig_t ProductionConfigParser::ParseConfig(const std::string& config
                 return kind;
             };
 
-            const auto parseScrap = [&](const std::string& rKindPath, ConstructableKind_t kindId,
-                                        const nlohmann::json& rValue) -> ScrapKindConfig_t {
-                const auto failScrap = [&](const std::string& rMessage) {
-                    fail(rKindPath + ".scrap " + rMessage);
-                };
-                if (kindId == ConstructableKind_t::SecretProject)
-                {
-                    failScrap("cannot be configured; secret projects cannot be scrapped");
-                }
-                if (!rValue.is_object())
-                {
-                    failScrap("must be an object with formula and refund_type");
-                }
-                for (const auto& [rKey, rUnused] : rValue.items())
-                {
-                    if (rKey != "formula" && rKey != "refund_type")
-                    {
-                        failScrap("unknown key '" + rKey + "'");
-                    }
-                }
-                if (!rValue.contains("formula") || !rValue.at("formula").is_string()
-                    || rValue.at("formula").get<std::string>().empty())
-                {
-                    failScrap("formula must be a non-empty string");
-                }
-                if (!rValue.contains("refund_type") || !rValue.at("refund_type").is_string()
-                    || rValue.at("refund_type").get<std::string>().empty())
-                {
-                    failScrap("refund_type must be a non-empty string");
-                }
-                ScrapKindConfig_t kind;
-                kind.formula = rValue.at("formula").get<std::string>();
-                try
-                {
-                    kind.refundType = ParseScrapRefundType(rValue.at("refund_type").get<std::string>());
-                }
-                catch (const std::runtime_error&)
-                {
-                    failScrap("refund_type is not a known scrap refund type");
-                }
-                return kind;
-            };
-
             // An empty object is legal: it turns hurrying and scrap off entirely. Each remaining
             // key is a constructable kind; stockpile is rejected because those items never
             // complete.
@@ -178,11 +136,11 @@ ProductionConfig_t ProductionConfigParser::ParseConfig(const std::string& config
                 }
                 if (!rValue.is_object())
                 {
-                    fail(kindPath + " must be an object with hurry and/or scrap");
+                    fail(kindPath + " must be an object with hurry and/or default_scrap");
                 }
                 for (const auto& [rKey, rUnused] : rValue.items())
                 {
-                    if (rKey != "hurry" && rKey != "scrap")
+                    if (rKey != "hurry" && rKey != "default_scrap")
                     {
                         fail(kindPath + " unknown key '" + rKey + "'");
                     }
@@ -192,13 +150,27 @@ ProductionConfig_t ProductionConfigParser::ParseConfig(const std::string& config
                 {
                     kindConfig.hurry = parseHurry(kindPath, rValue.at("hurry"));
                 }
-                if (rValue.contains("scrap"))
+                if (rValue.contains("default_scrap"))
                 {
-                    kindConfig.scrap = parseScrap(kindPath, kindId, rValue.at("scrap"));
+                    if (kindId == ConstructableKind_t::SecretProject)
+                    {
+                        fail(kindPath
+                             + ".default_scrap cannot be configured; secret projects cannot be "
+                               "scrapped");
+                    }
+                    try
+                    {
+                        kindConfig.defaultScrap = ScrapConfigParser::ParseKindConfig(
+                            rValue.at("default_scrap"), kindPath + ".default_scrap");
+                    }
+                    catch (const std::runtime_error& rError)
+                    {
+                        fail(rError.what());
+                    }
                 }
-                if (!kindConfig.hurry && !kindConfig.scrap)
+                if (!kindConfig.hurry && !kindConfig.defaultScrap)
                 {
-                    fail(kindPath + " must include hurry or scrap");
+                    fail(kindPath + " must include hurry or default_scrap");
                 }
                 config.kinds.emplace(kindId, std::move(kindConfig));
             }

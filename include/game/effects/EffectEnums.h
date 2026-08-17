@@ -13,6 +13,9 @@ enum class StatId_t
     Minerals,
     Energy,
 
+    // Spendable faction treasury (`EconomyManager`). Not tile energy yield.
+    EnergyCredits,
+
     // Base output: seed from this base's post-inefficiency energy split, plus flat Add
     // from facilities / specialists.
     Econ,
@@ -99,7 +102,12 @@ enum class StatId_t
     // Absolute denominator for energy inefficiency: loss = Energy × Distance / denom.
     // Efficiency SE levels emit this as Add with the table value (64, 56, …, 0). Denom ≤ 0
     // means 100% loss. Resolved from the efficiency rating table, not stacked as a live seed.
-    InefficiencyDenominator
+    InefficiencyDenominator,
+
+    // Player-scrap refund after the kind formula (or config override). RawScaled: seed is
+    // the formula amount. Add / AddPercent stack, then production.json refund_ceiling_percent
+    // clamps. Not a live yield.
+    ScrapRefund
     // TODO: add more stats as they are defined
 };
 
@@ -128,6 +136,7 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::Nutrients:
         case StatId_t::Minerals:
         case StatId_t::Energy:
+        case StatId_t::EnergyCredits:
         case StatId_t::Econ:
         case StatId_t::Labs:
         case StatId_t::Psych:
@@ -164,7 +173,8 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::PositiveMoraleScale:
         case StatId_t::CommerceRate:         return StatKind_t::PureMultiplier;
         case StatId_t::GrowthRate:
-        case StatId_t::MoistureTier:         return StatKind_t::RawScaled;
+        case StatId_t::MoistureTier:
+        case StatId_t::ScrapRefund:          return StatKind_t::RawScaled;
     }
     return StatKind_t::Additive; // unreachable; all enumerators handled above
 }
@@ -192,6 +202,7 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "nutrients")               return StatId_t::Nutrients;
     if (rStat == "minerals")                return StatId_t::Minerals;
     if (rStat == "energy")                  return StatId_t::Energy;
+    if (rStat == "energy_credits")          return StatId_t::EnergyCredits;
     if (rStat == "econ")                    return StatId_t::Econ;
     if (rStat == "labs")                    return StatId_t::Labs;
     if (rStat == "psych")                   return StatId_t::Psych;
@@ -229,6 +240,7 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "council_votes")           return StatId_t::CouncilVotes;
     if (rStat == "commerce_energy_bonus")   return StatId_t::CommerceEnergyBonus;
     if (rStat == "inefficiency_denominator") return StatId_t::InefficiencyDenominator;
+    if (rStat == "scrap_refund")             return StatId_t::ScrapRefund;
     throw std::runtime_error("Unknown stat id: '" + rStat + "'");
 }
 

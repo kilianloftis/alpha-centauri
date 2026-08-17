@@ -61,6 +61,7 @@ graph TB
         PopCompositionCalculator[PopCompositionCalculator]
         HurryProductionCalculator[HurryProductionCalculator]
         ScrapRefundCalculator[ScrapRefundCalculator]
+        ScrapPayout[ScrapPayout<br/>plan + credit]
         LuaRuntime[LuaRuntime]
     end
 
@@ -156,6 +157,8 @@ graph TB
     GameDataContext --> PopCompositionCalculator
     GameDataContext --> HurryProductionCalculator
     GameDataContext --> ScrapRefundCalculator
+    ScrapRefundCalculator --> LuaRuntime
+    ScrapPayout -->|consumes quote| ScrapRefundCalculator
     HurryProductionCalculator --> LuaRuntime
     GameDataContext --> LuaRuntime
     FactionVector --> Faction
@@ -290,7 +293,7 @@ graph TB
   - `PopCompositionConfig_t`: Composition formula config loaded via Lua
   - `PopCompositionCalculator`: Evaluates composition formulas at runtime
   - `HurryProductionCalculator`: Prices energy-for-minerals hurrying from `production.json` `kinds.<kind>.hurry`; borrowed by every `BaseManager`
-  - `ScrapRefundCalculator`: Prices player scrap from `production.json` `kinds.<kind>.scrap`; borrowed by every `BaseManager`
+  - `ScrapRefundCalculator`: Prices player scrap from `production.json` `kinds.<kind>.default_scrap`; unit/building configs may override formula and refund_type (`StatId_t` whitelist). Borrowed by `BaseManager` (buildings) and `Faction` (units). Where the refund *lands* is `ScrapPayout`'s job, not the calculator's
   - `LuaRuntime`: Shared Lua state used to load and evaluate config scripts
 - **Note**: Implemented as a plain struct with public `unique_ptr` members (no getters/setters needed)
 - **Valid by construction**: `LoadGameData(paths)` is a *factory* — it returns a fully populated

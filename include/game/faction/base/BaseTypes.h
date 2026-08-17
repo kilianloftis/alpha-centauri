@@ -8,6 +8,7 @@ namespace ac
 {
 
 using FactionId_t = int;
+using BaseId_t = int;
 
 struct TradeRoute_t
 {

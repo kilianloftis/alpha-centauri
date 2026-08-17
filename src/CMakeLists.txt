@@ -40,6 +40,8 @@ add_library(ac-core STATIC
     game/faction/base/production/ProductionConfigParser.cpp
     game/faction/base/production/ProductionCostCalculator.cpp
     game/faction/base/production/HurryProductionCalculator.cpp
+    game/faction/base/production/ScrapConfigParser.cpp
+    game/faction/base/production/ScrapPayout.cpp
     game/faction/base/production/ScrapRefundCalculator.cpp
     game/faction/base/resources/ResourceManager.cpp
     game/faction/base/resources/MineralSupport.cpp
