@@ -4,6 +4,7 @@
 
 #include "game/faction/base/production/ScrapRefundCalculator.h"
 #include "game/faction/base/production/ProductionConfigParser.h"
+#include "game/faction/base/production/ScrapConfigParser.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
 #include "lib/LuaRuntime.h"
@@ -11,6 +12,7 @@
 #include "GameFixtures.h"
 #include "TempConfigFile.h"
 
+#include "game/buildings/BuildingConfig.h"
 #include "game/ConstructableKind.h"
 #include "game/Faction.h"
 #include "game/GameSettings.h"
@@ -23,6 +25,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
+
+#include <nlohmann/json.hpp>
 
 #include <memory>
 #include <stdexcept>
@@ -110,6 +114,20 @@ TEST_CASE("A constructable kind with no scrap entry cannot be scrapped", "[build
     CHECK_FALSE(calculator.Quote(20, ConstructableKind_t::Building).bAvailable);
 }
 
+TEST_CASE("A null formula override denies scrap even when the kind has a default",
+          "[building][scrap]")
+{
+    LuaRuntime lua;
+    const ProductionConfig_t config = ScrapConfig("floor(minerals / 2)");
+    const ScrapRefundCalculator calculator(config, lua);
+    REQUIRE(calculator.Quote(20, ConstructableKind_t::Building).bAvailable);
+
+    ScrapOverride_t deny;
+    deny.formula = "";
+    CHECK(ScrapOverrideDenies(deny));
+    CHECK_FALSE(calculator.Quote(20, ConstructableKind_t::Building, deny).bAvailable);
+}
+
 TEST_CASE("Scrapping a building grants half its mineral cost as energy and removes it",
           "[building][scrap]")
 {
@@ -120,12 +138,12 @@ TEST_CASE("Scrapping a building grants half its mineral cost as energy and remov
 
     base.GetBuildingManager().AddBuilding("test_hurry_facility");
     REQUIRE(base.GetBuildingManager().HasBuilding("test_hurry_facility"));
-    REQUIRE(base.QuoteScrapBuilding("test_hurry_facility")->amount == 10);
+    REQUIRE(faction.QuoteScrapBuilding(base, "test_hurry_facility")->amount == 10);
 
-    CHECK(base.ScrapBuilding("test_hurry_facility") == 10);
+    CHECK(faction.ScrapBuilding(base, "test_hurry_facility") == 10);
     CHECK(faction.GetEconomy().GetEnergy() == 10);
     CHECK_FALSE(base.GetBuildingManager().HasBuilding("test_hurry_facility"));
-    CHECK_FALSE(base.QuoteScrapBuilding("test_hurry_facility").has_value());
+    CHECK_FALSE(faction.QuoteScrapBuilding(base, "test_hurry_facility").has_value());
 }
 
 TEST_CASE("Destroying a building without scrap grants no energy", "[building][scrap]")
@@ -151,10 +169,37 @@ TEST_CASE("Scrapping one allow-multiple copy leaves the others and refunds once"
     base.GetBuildingManager().AddBuilding("test_hurry_facility");
     base.GetBuildingManager().AddBuilding("test_hurry_facility");
 
-    CHECK(base.ScrapBuilding("test_hurry_facility") == 10);
+    CHECK(faction.QuoteScrapBuilding(base, "test_hurry_facility")->amount == 10);
+    CHECK(faction.QuoteScrapBuildings("test_hurry_facility")->amount == 20);
+
+    CHECK(faction.ScrapBuilding(base, "test_hurry_facility") == 10);
     CHECK(faction.GetEconomy().GetEnergy() == 10);
     CHECK(base.GetBuildingManager().HasBuilding("test_hurry_facility"));
     CHECK(base.GetBuildingManager().GetBuildings().size() == 1);
+    CHECK(faction.QuoteScrapBuildings("test_hurry_facility")->amount == 10);
+}
+
+TEST_CASE("Scrapping a building type removes it from every base and refunds each copy",
+          "[building][scrap]")
+{
+    FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& baseA = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& baseB = fixture.MakeFactionBase(faction, 5, 5);
+    baseA.GetBuildingManager().AddBuilding("test_hurry_facility");
+    baseB.GetBuildingManager().AddBuilding("test_hurry_facility");
+    baseB.GetBuildingManager().AddBuilding("test_facility_b");
+    REQUIRE(faction.QuoteScrapBuilding(baseA, "test_hurry_facility")->amount == 10);
+    REQUIRE(faction.QuoteScrapBuilding(baseB, "test_hurry_facility")->amount == 10);
+    REQUIRE(faction.QuoteScrapBuildings("test_hurry_facility")->amount == 20);
+
+    CHECK(faction.ScrapBuildings("test_hurry_facility") == 20);
+    CHECK(faction.GetEconomy().GetEnergy() == 20);
+    CHECK_FALSE(baseA.GetBuildingManager().HasBuilding("test_hurry_facility"));
+    CHECK_FALSE(baseB.GetBuildingManager().HasBuilding("test_hurry_facility"));
+    CHECK(baseB.GetBuildingManager().HasBuilding("test_facility_b"));
+    CHECK_FALSE(faction.QuoteScrapBuildings("test_hurry_facility").has_value());
+    CHECK(faction.CountBuildings("test_hurry_facility") == 0);
 }
 
 TEST_CASE("Scrap of a building this base does not hold is an error", "[building][scrap]")
@@ -163,10 +208,30 @@ TEST_CASE("Scrap of a building this base does not hold is an error", "[building]
     Faction& faction = fixture.MakeFaction();
     BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
 
-    CHECK_FALSE(base.QuoteScrapBuilding("test_hurry_facility").has_value());
-    CHECK_THROWS_WITH(base.ScrapBuilding("test_hurry_facility"),
+    CHECK_FALSE(faction.QuoteScrapBuilding(base, "test_hurry_facility").has_value());
+    CHECK_FALSE(faction.QuoteScrapBuildings("test_hurry_facility").has_value());
+    CHECK_THROWS_WITH(faction.ScrapBuilding(base, "test_hurry_facility"),
+                      Catch::Matchers::ContainsSubstring("cannot be scrapped"));
+    CHECK_THROWS_WITH(faction.ScrapBuildings("test_hurry_facility"),
                       Catch::Matchers::ContainsSubstring("cannot be scrapped"));
     CHECK(faction.GetEconomy().GetEnergy() == 0);
+}
+
+TEST_CASE("Scrap of a building at another faction's base is an error", "[building][scrap]")
+{
+    FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    Faction& other = fixture.MakeFaction();
+    BaseManager& foreign = fixture.MakeFactionBase(other, 5, 5);
+    foreign.GetBuildingManager().AddBuilding("test_hurry_facility");
+
+    CHECK_THROWS_WITH(faction.QuoteScrapBuilding(foreign, "test_hurry_facility"),
+                      Catch::Matchers::ContainsSubstring("not owned by this faction"));
+    CHECK_THROWS_WITH(faction.ScrapBuilding(foreign, "test_hurry_facility"),
+                      Catch::Matchers::ContainsSubstring("not owned by this faction"));
+    CHECK(foreign.GetBuildingManager().HasBuilding("test_hurry_facility"));
+    CHECK(faction.GetEconomy().GetEnergy() == 0);
+    CHECK(other.GetEconomy().GetEnergy() == 0);
 }
 
 TEST_CASE("A secret project cannot be scrapped", "[building][scrap][secret-project]")
@@ -191,13 +256,38 @@ TEST_CASE("A secret project cannot be scrapped", "[building][scrap][secret-proje
     REQUIRE(pBase != nullptr);
 
     pBase->GetBuildingManager().AddBuilding("test_secret_project");
-    CHECK_FALSE(pBase->QuoteScrapBuilding("test_secret_project").has_value());
-    CHECK_THROWS_WITH(pBase->ScrapBuilding("test_secret_project"),
+    CHECK_FALSE(faction.QuoteScrapBuilding(*pBase, "test_secret_project").has_value());
+    CHECK_FALSE(faction.QuoteScrapBuildings("test_secret_project").has_value());
+    CHECK_THROWS_WITH(faction.ScrapBuilding(*pBase, "test_secret_project"),
                       Catch::Matchers::ContainsSubstring("secret project"));
+    CHECK_THROWS_WITH(faction.ScrapBuildings("test_secret_project"),
+                      Catch::Matchers::ContainsSubstring("cannot be scrapped"));
     CHECK(pBase->GetBuildingManager().HasBuilding("test_secret_project"));
     CHECK(faction.GetEconomy().GetEnergy() == 0);
     CHECK(pState->GetSecretProjectAvailability().IsOwnedByAnyFaction("test_secret_project"));
     CHECK_FALSE(pState->IsSecretProjectDestroyed("test_secret_project"));
+}
+
+TEST_CASE("Headquarters cannot be scrapped", "[building][scrap][hq]")
+{
+    FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+    base.GetBuildingManager().AddBuilding("Headquarters");
+    REQUIRE(base.GetBuildingManager().HasBuilding("Headquarters"));
+    const BuildingConfig_t* pHq = fixture.buildings().Find("Headquarters");
+    REQUIRE(pHq);
+    REQUIRE(pHq->scrap.has_value());
+    CHECK(ScrapOverrideDenies(*pHq->scrap));
+
+    CHECK_FALSE(faction.QuoteScrapBuilding(base, "Headquarters").has_value());
+    CHECK_FALSE(faction.QuoteScrapBuildings("Headquarters").has_value());
+    CHECK_THROWS_WITH(faction.ScrapBuilding(base, "Headquarters"),
+                      Catch::Matchers::ContainsSubstring("cannot be scrapped"));
+    CHECK_THROWS_WITH(faction.ScrapBuildings("Headquarters"),
+                      Catch::Matchers::ContainsSubstring("cannot be scrapped"));
+    CHECK(base.GetBuildingManager().HasBuilding("Headquarters"));
+    CHECK(faction.GetEconomy().GetEnergy() == 0);
 }
 
 TEST_CASE("Production config groups default_scrap under kinds", "[building][scrap][config]")
@@ -387,4 +477,17 @@ TEST_CASE("Production config groups default_scrap under kinds", "[building][scra
                           Catch::Matchers::ContainsSubstring("kinds.secret_project.default_scrap")
                               && Catch::Matchers::ContainsSubstring("cannot be scrapped"));
     }
+}
+
+TEST_CASE("A scrap override may clear the formula to deny scrap", "[building][scrap][config]")
+{
+    const ScrapOverride_t deny =
+        ScrapConfigParser::ParseOverride(nlohmann::json::parse(R"({"formula": null})"), "test");
+    CHECK(ScrapOverrideDenies(deny));
+    CHECK(deny.formula == "");
+
+    CHECK_THROWS_WITH(
+        ScrapConfigParser::ParseOverride(
+            nlohmann::json::parse(R"({"formula": null, "refund_type": "minerals"})"), "test"),
+        Catch::Matchers::ContainsSubstring("null formula"));
 }

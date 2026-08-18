@@ -204,13 +204,13 @@ Views are rendered bottom-to-top through the stack. Each view renders its own `U
 - **Mouse hit-testing**: `WorldView::HandleMouse` reads the viewport state from `WorldDisplay` and translates screen-relative tile indices back to world tile coordinates by adding the camera offset.
 - **Unit Layer**: Unit markers are rendered on top of bases by querying `WorldMap::GetUnitsOnTile()` for each visible tile. Multiple units on the same tile are drawn side-by-side; faction coloring is a future TODO.
 - **Unit Selection**: Left-clicking a tile with a base opens that base (`m_onOpenBase`), even when units are garrisoned there — the base screen's unit stack is how the player picks a unit on a base tile. Otherwise, left-clicking a tile with units selects the first visible unit on that tile (`WorldView::SelectUnitAtTile_`). The selected unit is highlighted with a yellow border and is passed to `WorldDisplay` via `SetSelectedUnit()`.
-- **Unit Orders**: With a selected unit, the `H` key issues a `HoldOrder_t` via `UnitOrderInputController`. Order execution is delegated to the turn-processing `UnitOrderExecutor`.
+- **Unit Orders**: With a selected unit, the `H` key issues a `HoldOrder_t` via `UnitOrderInputController`. `Shift+D` opens Disband Units (`Disband`, `Self Destruct`, `Cancel`); `Disband` quotes `Faction::QuoteScrapUnit` and confirms before `ScrapUnit`. `Self Destruct` is a stub notice. Order execution is delegated to the turn-processing `UnitOrderExecutor`.
 - **Move Orders**: Right-clicking and holding for one second, then releasing, assigns a `MoveOrder_t` to the selected unit for the tile under the cursor on release. Short right-clicks are ignored. `MouseEvent_t::bPressed` is used to distinguish press and release events.
 
 ### WorldView Input Routing
 - **Coordinator**: `WorldView::HandleKey` and `WorldView::HandleMouse` are thin coordinators that dispatch to owned sub-controllers before handling view-lifecycle input themselves.
 - **CameraInputController**: Owned by `WorldView`; constructed with `WorldDisplay&` and `WorldMap&`. Handles arrow-key camera panning and will later own mouse edge-scroll state (last mouse position, scroll accumulator).
-- **UnitOrderInputController**: Owned by `WorldView`; constructed with no dependencies. Dispatches hotkeys to unit orders through a `Key_t` → `std::function<void(Unit&)>` table (`H` → `HoldOrder_t`). Also handles right-click-and-hold for `MoveOrder_t`.
+- **UnitOrderInputController**: Owned by `WorldView`; constructed with no dependencies. Dispatches hotkeys to unit orders through a `Key_t` → `std::function<void(Unit&)>` table (`H` → `HoldOrder_t`), plus request flags for `O` (supply crawl), `B` (found base), `L` (attach), `Shift+U` (unload), and `Shift+D` (disband). Also handles right-click-and-hold for `MoveOrder_t`.
 - **Dispatch order**: `HandleKey` tries the order controller, then the camera controller, then handles `Escape` and `Enter` directly. `HandleMouse` tries the order controller, then the camera controller, then handles left-click unit selection and base opening.
 
 ### ViewFactory
@@ -289,9 +289,18 @@ Returns `UIManagerImpl`, a platform-agnostic implementation (no compile-time fla
 ### ListSelectorPopup — the one list picker
 
 Every "pick one of these" modal is a `ListSelectorPopup`: production, pop types, probe actions,
-supply-crawl resources, unit components, council proposals, council ballots. It takes a title, an
-empty-list message, a vector of row labels, and `onSelected(size_t index)`; the caller keeps its
-own payload vector and indexes into it.
+supply-crawl resources, unit components, council proposals, council ballots, scrap and disband
+menus. It takes a title, an empty-list message, and a vector of `PopupChoice_t` — a label and the
+`std::function<void()>` that row runs. There is one constructor and one dispatch path.
+
+A row carrying its own action is what keeps the arity open and the call sites short. Callers
+picking from a payload vector bind the payload into the action rather than keeping a parallel
+label array and an index, and a menu of named actions is just N choices — no subclass, no
+index-to-handler mapping. The earlier two-callback constructor fixed the arity at two, so a
+three-row menu had to re-implement the dispatch it was meant to supply; both copies are gone.
+
+`MakeConfirmPopup` (`ui/ConfirmPopup.h`) is the one shared shape: OK plus a Cancel that does
+nothing, so the dismiss path is a visible row rather than folklore.
 
 Seven near-identical copies preceded it and had already diverged — outside-click dismiss existed
 in one, null-checking in another, and none clipped a long list. Consolidating means those rules
@@ -302,10 +311,25 @@ have one owner:
   that would still be clickable underneath it. Arrow keys scroll.
 - **Outside click dismisses**, which is reachable because modal routing delivers every press to
   the top modal (see below).
-- **An absent handler throws at construction.** A selector whose click does nothing is a
+- **A choice without an action throws at construction.** A row whose click does nothing is a
   programmer error, not a state to render.
 - **Style is a constructor parameter**, not a lookup, so a screen can keep its own colours and
   metrics (the unit designer's picker does) without a second widget or a second style type.
+
+### Display click callbacks pass the object, not a key
+
+`UnitStackPanel` reports `Unit&`, `PopulationDisplay` reports `Pop&`,
+`BaseWorkableAreaDisplay` reports `const Tile*`, and `BuildingsDisplay` reports
+`const BuildingConfig_t&`. A display has already resolved the thing under the cursor by the time
+it hit-tests; handing back an id makes the view repeat that lookup, and the two copies drift.
+`BuildingsDisplay` did hand back a `BuildingId_t`, and `BaseView` re-scanned `GetBuildings()` to
+recover the name — with a different miss path and a different answer for a building that is both
+constructed and granted.
+
+The object, not the display's rendered label: the buildings list prefixes a constructed copy that
+is also granted with `*`, which is list chrome and wrong as a popup title. Each caller renders the
+object for its own context. Granted-only rows are still clickable; scrap quoting denies them
+because they are not a constructed copy.
 
 ### Modal / overlay contract and turn gating
 

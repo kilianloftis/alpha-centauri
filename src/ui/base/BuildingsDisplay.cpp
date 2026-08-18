@@ -20,10 +20,74 @@ constexpr const char* k_GrantedAndConstructedPrefix = "* ";
 
 } // namespace
 
-BuildingsDisplay::BuildingsDisplay(const BaseManager& rBase, WindowLayout_t layout)
+BuildingsDisplay::BuildingsDisplay(const BaseManager& rBase,
+                                   WindowLayout_t layout,
+                                   BuildingClickCallback_t onBuildingClick)
     : UIElement(layout)
     , m_rBase(rBase)
+    , m_onBuildingClick(std::move(onBuildingClick))
 {
+}
+
+std::vector<BuildingsDisplay::BuildingRow_t> BuildingsDisplay::Rows_() const
+{
+    const auto& style = Style().buildingsDisplay;
+    const BuildingManager& rBuildings = m_rBase.GetBuildingManager();
+    const std::vector<const BuildingConfig_t*> granted = m_rBase.GetGrantedBuildings();
+    std::unordered_set<BuildingId_t> grantedIds;
+    for (const BuildingConfig_t* pGranted : granted)
+    {
+        if (pGranted)
+        {
+            grantedIds.insert(pGranted->id);
+        }
+    }
+
+    const float lineHeight = m_layout.height * style.lineHeightRatio;
+    const float bottom = m_layout.y + m_layout.height;
+    float y = m_layout.y + lineHeight * style.headerLineOffset;
+
+    std::vector<BuildingRow_t> rows;
+    for (const BuildingConfig_t* pBuilding : rBuildings.GetBuildings())
+    {
+        if (!pBuilding)
+        {
+            continue;
+        }
+        if (y + lineHeight > bottom)
+        {
+            return rows;
+        }
+        const bool bGranted = grantedIds.count(pBuilding->id) != 0;
+        BuildingRow_t row;
+        row.pConfig = pBuilding;
+        row.label = bGranted ? std::string(k_GrantedAndConstructedPrefix) + pBuilding->GetName()
+                             : pBuilding->GetName();
+        row.color = bGranted ? style.grantedTextColor : style.textColor;
+        row.bounds = WindowLayout_t{m_layout.x, y, m_layout.width, lineHeight};
+        rows.push_back(std::move(row));
+        y += lineHeight;
+    }
+
+    for (const BuildingConfig_t* pGranted : granted)
+    {
+        if (!pGranted || rBuildings.HasBuilding(pGranted->id))
+        {
+            continue;
+        }
+        if (y + lineHeight > bottom)
+        {
+            break;
+        }
+        BuildingRow_t row;
+        row.pConfig = pGranted;
+        row.label = pGranted->GetName();
+        row.color = style.grantedTextColor;
+        row.bounds = WindowLayout_t{m_layout.x, y, m_layout.width, lineHeight};
+        rows.push_back(std::move(row));
+        y += lineHeight;
+    }
+    return rows;
 }
 
 void BuildingsDisplay::Render(Graphics& rGraphics)
@@ -37,60 +101,30 @@ void BuildingsDisplay::Render(Graphics& rGraphics)
         static_cast<unsigned int>(m_layout.height * style.headerFontSizeRatio);
     const unsigned int entryFontSize =
         static_cast<unsigned int>(m_layout.height * style.entryFontSizeRatio);
-    const float lineHeight = m_layout.height * style.lineHeightRatio;
     const float leftPadding = m_layout.width * style.leftPaddingRatio;
-    const float bottom = m_layout.y + m_layout.height;
 
     rGraphics.DrawText(
         "Buildings", m_layout.x + leftPadding, m_layout.y, headerFontSize, style.textColor);
 
-    const BuildingManager& rBuildings = m_rBase.GetBuildingManager();
-    const std::vector<const BuildingConfig_t*> granted = m_rBase.GetGrantedBuildings();
-    std::unordered_set<BuildingId_t> grantedIds;
-    for (const BuildingConfig_t* pGranted : granted)
+    for (const BuildingRow_t& rRow : Rows_())
     {
-        if (pGranted)
-        {
-            grantedIds.insert(pGranted->id);
-        }
+        rGraphics.DrawText(rRow.label, rRow.bounds.x + leftPadding, rRow.bounds.y, entryFontSize,
+                           rRow.color);
+    }
+}
+
+void BuildingsDisplay::HandleMouseClick(const MouseEvent_t& rEvent)
+{
+    if (!m_onBuildingClick || rEvent.button != MouseButton_t::Left)
+    {
+        return;
     }
 
-    float y = m_layout.y + lineHeight * style.headerLineOffset;
-    auto drawRow = [&](const std::string& rLabel, const Color_t& rColor) {
-        if (y + lineHeight > bottom)
-        {
-            return false;
-        }
-        rGraphics.DrawText(rLabel, m_layout.x + leftPadding, y, entryFontSize, rColor);
-        y += lineHeight;
-        return true;
-    };
-
-    for (const BuildingConfig_t* pBuilding : rBuildings.GetBuildings())
+    for (const BuildingRow_t& rRow : Rows_())
     {
-        if (!pBuilding)
+        if (ContainsMouseCoord(rRow.bounds, rEvent) && rRow.pConfig)
         {
-            continue;
-        }
-        const bool bGranted = grantedIds.count(pBuilding->id) != 0;
-        const std::string label =
-            bGranted ? std::string(k_GrantedAndConstructedPrefix) + pBuilding->GetName()
-                     : pBuilding->GetName();
-        const Color_t& rColor = bGranted ? style.grantedTextColor : style.textColor;
-        if (!drawRow(label, rColor))
-        {
-            return;
-        }
-    }
-
-    for (const BuildingConfig_t* pGranted : granted)
-    {
-        if (!pGranted || rBuildings.HasBuilding(pGranted->id))
-        {
-            continue;
-        }
-        if (!drawRow(pGranted->GetName(), style.grantedTextColor))
-        {
+            m_onBuildingClick(*rRow.pConfig);
             return;
         }
     }

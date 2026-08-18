@@ -338,6 +338,19 @@
     "category": "conquer"
   },
   {
+    "id": "Command_Nexus",
+    "name": "Command Nexus",
+    "secret_project": true,
+    "effects": [
+      {
+        "type": "GrantBuilding",
+        "scope": "AllOwnerBases",
+        "parameters": { "building_id": "Command_Center" }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
     "id": "Childrens_Creche",
     "name": "Children's Crèche",
     "effects": [
@@ -769,6 +782,7 @@
         "parameters": { "flag": "headquarters" }
       }
     ],
+    "scrap": { "formula": null },
     "category": "conquer"
   },
   {

@@ -31,6 +31,10 @@ ScrapQuote_t ScrapRefundCalculator::Quote(int mineralCost,
     {
         return {};
     }
+    if (ScrapOverrideDenies(rOverride))
+    {
+        return {};
+    }
 
     const std::string& rFormula = rOverride.formula ? *rOverride.formula : pKind->formula;
     const std::unordered_map<std::string, int> vars = {{"minerals", mineralCost}};

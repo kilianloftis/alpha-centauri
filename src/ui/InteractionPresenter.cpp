@@ -181,24 +181,28 @@ void InteractionPresenter::PresentProductionAbandon_(const ProductionAbandonInte
     const BaseId_t baseId = rAbandon.baseId;
     const FactionId_t factionId = rAbandon.factionId;
 
-    PushChoice_(
-        "Abandon " + pBase->GetName() + "?",
-        {"Complete " + itemName + " (abandon base)", "Defer (lose minerals)"},
-        [this, baseId, factionId](std::size_t index) {
-            BaseManager* pResolve = FindAudienceBase_(factionId, baseId);
-            if (pResolve && pResolve->HasPendingProductionAbandonConfirm())
+    auto resolveAbandon = [this, baseId, factionId](bool bConfirm)
+    {
+        BaseManager* pResolve = FindAudienceBase_(factionId, baseId);
+        if (pResolve && pResolve->HasPendingProductionAbandonConfirm())
+        {
+            if (bConfirm)
             {
-                if (index == 0)
-                {
-                    pResolve->ConfirmProductionAbandon();
-                }
-                else
-                {
-                    pResolve->DeferProductionAbandon();
-                }
+                pResolve->ConfirmProductionAbandon();
             }
-            CompleteAndAdvance_();
-        });
+            else
+            {
+                pResolve->DeferProductionAbandon();
+            }
+        }
+        CompleteAndAdvance_();
+    };
+
+    std::vector<PopupChoice_t> choices;
+    choices.push_back({"Complete " + itemName + " (abandon base)",
+                       [resolveAbandon] { resolveAbandon(true); }});
+    choices.push_back({"Defer (lose minerals)", [resolveAbandon] { resolveAbandon(false); }});
+    PushChoice_("Abandon " + pBase->GetName() + "?", std::move(choices));
 }
 
 void InteractionPresenter::PresentProductionIdle_(const ProductionIdleInteraction_t& rIdle)
@@ -226,24 +230,21 @@ void InteractionPresenter::PresentProductionIdle_(const ProductionIdleInteractio
     const BaseId_t baseId = rIdle.baseId;
     const FactionId_t factionId = rIdle.factionId;
 
-    PushChoice_(
-        title,
-        {"Continue", "Zoom to base control"},
-        [this, baseId, factionId](std::size_t index) {
-            if (index != 1)
-            {
-                CompleteAndAdvance_();
-                return;
-            }
-            m_rGameState.GetPlayerInteractions().CompleteFront();
-            BaseManager* pOpen = FindAudienceBase_(factionId, baseId);
-            if (!pOpen)
-            {
-                m_onAdvance();
-                return;
-            }
-            OpenView_(m_rViews.CreateBaseView(*pOpen), [this]() { m_onAdvance(); });
-        });
+    std::vector<PopupChoice_t> choices;
+    choices.push_back({"Continue", [this] { CompleteAndAdvance_(); }});
+    choices.push_back({"Zoom to base control",
+                       [this, baseId, factionId]
+                       {
+                           m_rGameState.GetPlayerInteractions().CompleteFront();
+                           BaseManager* pOpen = FindAudienceBase_(factionId, baseId);
+                           if (!pOpen)
+                           {
+                               m_onAdvance();
+                               return;
+                           }
+                           OpenView_(m_rViews.CreateBaseView(*pOpen), [this] { m_onAdvance(); });
+                       }});
+    PushChoice_(title, std::move(choices));
 }
 
 BaseManager* InteractionPresenter::FindAudienceBase_(FactionId_t factionId, BaseId_t baseId)
@@ -262,16 +263,13 @@ void InteractionPresenter::FocusBase_(const BaseManager& rBase)
     m_rWorldView.CenterOnTile(rTile.GetX(), rTile.GetY());
 }
 
-void InteractionPresenter::PushChoice_(std::string title,
-                                       std::vector<std::string> options,
-                                       std::function<void(std::size_t)> onPick)
+void InteractionPresenter::PushChoice_(std::string title, std::vector<PopupChoice_t> choices)
 {
     m_rWorldView.PushModal(std::make_unique<ListSelectorPopup>(
         std::move(title),
         "No options",
-        std::move(options),
+        std::move(choices),
         m_rWorldView.GetPopupLayout(),
-        std::move(onPick),
         Style().listSelectorPopup));
 }
 

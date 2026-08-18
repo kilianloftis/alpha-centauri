@@ -20,7 +20,8 @@ public:
                                              const std::string& rPath);
 
     // formula and refund_type are both optional, but at least one must be present — an empty
-    // override is a config mistake, not a no-op.
+    // override is a config mistake, not a no-op. `"formula": null` clears the kind formula
+    // and denies scrap; it cannot be paired with refund_type.
     static ScrapOverride_t ParseOverride(const nlohmann::json& rValue, const std::string& rPath);
 };
 

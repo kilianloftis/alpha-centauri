@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/PlayerInteraction.h"
+#include "ui/ListSelectorPopup.h"
 
 #include <cstddef>
 #include <functional>
@@ -45,9 +46,7 @@ private:
 
     BaseManager* FindAudienceBase_(FactionId_t factionId, BaseId_t baseId);
     void FocusBase_(const BaseManager& rBase);
-    void PushChoice_(std::string title,
-                     std::vector<std::string> options,
-                     std::function<void(std::size_t)> onPick);
+    void PushChoice_(std::string title, std::vector<PopupChoice_t> choices);
     // Push a full-screen overlay; onClosed runs once the overlay stack empties again.
     void OpenView_(std::unique_ptr<IGameView> pView, std::function<void()> onClosed);
 

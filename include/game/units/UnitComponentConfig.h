@@ -42,7 +42,8 @@ struct UnitComponentConfig_t
     std::optional<UnitDomain_t> domain;
     std::vector<EffectConfig_t> effects;
     // Optional partial override of kinds.unit.default_scrap, folded per design by
-    // MergeScrapOverride: later occupied slots win on a given key.
+    // MergeScrapOverride: later occupied slots win on a given key. `"formula": null` denies
+    // scrap.
     std::optional<ScrapOverride_t> scrap;
     // Display-only annotations for FormatCombatRating (not gameplay effects).
     std::vector<CombatRatingModifier_t> combatRatingModifiers;

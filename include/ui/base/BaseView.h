@@ -2,10 +2,10 @@
 
 #include "ui/IGameView.h"
 #include "ui/base/BaseDisplaySnapshot.h"
+#include "game/buildings/BuildingConfig.h"
 #include "lib/Signal.h"
 #include <cstdint>
 #include <memory>
-#include <vector>
 
 namespace ac
 {
@@ -48,6 +48,9 @@ private:
     void HandleProductionDisplayClicked_();
     void HandleHurryClicked_();
     void HandleHurryConfirmed_(int credits);
+    void HandleBuildingClicked_(const BuildingConfig_t& rBuilding);
+    void HandleScrapChoice_(const BuildingId_t& buildingId, bool bAllBases);
+    void HandleScrapConfirmed_(const BuildingId_t& buildingId, bool bAllBases);
     void HandleUnitStackClicked_(Unit& rUnit);
 
     BaseManager& m_rBase;

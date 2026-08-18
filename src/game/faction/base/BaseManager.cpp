@@ -620,7 +620,7 @@ HurryResult_t BaseManager::HurryProduction(int energyCredits)
     return result;
 }
 
-std::optional<ScrapPayout_t> BaseManager::QuoteScrapBuilding(const BuildingId_t& buildingId) const
+std::optional<ScrapPayout_t> BaseManager::QuoteScrapBuilding_(const BuildingId_t& buildingId) const
 {
     for (const BuildingConfig_t* pBuilding : m_pBuildings->GetBuildings())
     {
@@ -645,13 +645,13 @@ std::optional<ScrapPayout_t> BaseManager::QuoteScrapBuilding(const BuildingId_t&
     return std::nullopt;
 }
 
-int BaseManager::ScrapBuilding(const BuildingId_t& buildingId)
+int BaseManager::ScrapBuilding_(const BuildingId_t& buildingId)
 {
-    const std::optional<ScrapPayout_t> payout = QuoteScrapBuilding(buildingId);
+    const std::optional<ScrapPayout_t> payout = QuoteScrapBuilding_(buildingId);
     if (!payout)
     {
         throw std::runtime_error(
-            "BaseManager::ScrapBuilding: '" + buildingId
+            "Faction::ScrapBuilding: '" + buildingId
             + "' cannot be scrapped at this base (not constructed, or a secret project)");
     }
 

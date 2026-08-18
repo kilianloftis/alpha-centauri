@@ -28,6 +28,13 @@ bool UnitOrderInputController::HandleKey(const KeyEvent_t& rEvent, Unit* pSelect
         return true;
     }
 
+    // Shift+D: WorldView opens Disband Units (Disband / Self Destruct / Cancel).
+    if (rEvent.key == Key_t::D && rEvent.modifier.bShift)
+    {
+        m_bDisbandRequested = true;
+        return true;
+    }
+
     // L: WorldView tries attach; on failure terraform may still handle L.
     if (rEvent.key == Key_t::L)
     {
@@ -99,6 +106,7 @@ void UnitOrderInputController::ClearRequestFlags_()
     m_bFoundBaseRequested = false;
     m_bAttachTransportRequested = false;
     m_bUnloadTransportRequested = false;
+    m_bDisbandRequested = false;
     m_bProbeActionRequested = false;
     m_pInteractTarget = nullptr;
 }

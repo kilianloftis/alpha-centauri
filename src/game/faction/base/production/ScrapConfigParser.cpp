@@ -116,7 +116,22 @@ ScrapOverride_t ScrapConfigParser::ParseOverride(const nlohmann::json& rValue,
     RejectUnknownKeys_(rValue, rPath, {"formula", "refund_type"});
 
     ScrapOverride_t override;
-    override.formula = OptionalString_(rValue, rPath, "formula");
+    if (rValue.contains("formula"))
+    {
+        const nlohmann::json& rFormula = rValue.at("formula");
+        if (rFormula.is_null())
+        {
+            if (rValue.contains("refund_type"))
+            {
+                Fail_(rPath, "a null formula denies scrap; omit refund_type");
+            }
+            override.formula = "";
+        }
+        else
+        {
+            override.formula = OptionalString_(rValue, rPath, "formula");
+        }
+    }
     override.refundType = OptionalRefundType_(rValue, rPath);
     if (!override.formula && !override.refundType)
     {

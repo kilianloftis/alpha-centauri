@@ -247,6 +247,29 @@ public:
     // faction.
     void TransferUnitTo(UnitId_t unitId, Faction& rReceiver);
 
+    // Amount and sink if one constructed copy of this type were scrapped at rBase now.
+    // Empty when the id is not held there, the copy is a secret project, the kind has no
+    // default_scrap, or the item override cleared the formula. Base-destined refunds land at
+    // rBase. Throws if rBase is not this faction's.
+    std::optional<ScrapPayout_t> QuoteScrapBuilding(const BaseManager& rBase,
+                                                   const BuildingId_t& buildingId) const;
+
+    // Player scrap: destroy one constructed copy at rBase and credit QuoteScrapBuilding.
+    // Combat / probe / raze / orbital destruction must not call this. Throws if rBase is
+    // not this faction's, or QuoteScrapBuilding is empty. Returns the amount granted.
+    int ScrapBuilding(BaseManager& rBase, const BuildingId_t& buildingId);
+
+    // Same quote over every constructed copy of this type across this faction's bases.
+    // Empty when no base holds a copy QuoteScrapBuilding would accept. Amount is the sum of
+    // those per-copy quotes. destBaseId is set only when every copy pays into the same sink
+    // (none for the treasury).
+    std::optional<ScrapPayout_t> QuoteScrapBuildings(const BuildingId_t& buildingId) const;
+
+    // Player scrap: destroy every constructed copy of that type at every base, each through
+    // ScrapBuilding. Same combat / probe / raze / orbital restriction. Throws if
+    // QuoteScrapBuildings is empty. Returns the amount granted.
+    int ScrapBuildings(const BuildingId_t& buildingId);
+
     // Amount and sink if this unit were scrapped now. Empty when kinds.unit has no
     // default_scrap. A base-destined refund goes to the closest friendly base, and pays 0
     // when the unit is off this faction's territory — the unit can still be scrapped.

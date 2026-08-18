@@ -26,12 +26,19 @@ struct ScrapKindConfig_t
 };
 
 // Partial scrap override on a unit component or building. Specified keys replace
-// kinds.<kind>.default_scrap; omitted keys keep the kind default.
+// kinds.<kind>.default_scrap; omitted keys keep the kind default. JSON `"formula": null`
+// stores an empty string and denies scrap — Quote is then unavailable, same as a kind with
+// no default_scrap.
 struct ScrapOverride_t
 {
     std::optional<std::string> formula;
     std::optional<StatId_t> refundType;
 };
+
+inline bool ScrapOverrideDenies(const ScrapOverride_t& rOverride)
+{
+    return rOverride.formula.has_value() && rOverride.formula->empty();
+}
 
 // Layer rFrom over rInto key by key: a key rFrom leaves unset keeps rInto's value. Unit
 // designs fold every component's override this way, so the last occupied slot wins per key.

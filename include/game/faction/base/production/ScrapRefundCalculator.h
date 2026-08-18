@@ -24,9 +24,9 @@ struct ScrapQuote_t
 // Default formula, refund_type, and refund_ceiling_percent live in production.json
 // kinds.<kind>.default_scrap. Variable `minerals` is listed mineral cost. A kind with no
 // default_scrap cannot be scrapped. Unit components and buildings may override formula and
-// refund_type. ScrapRefund StatModifiers then scale the formula amount; the kind's ceiling
-// clamps last, so an item override can change what a refund is paid in but never mint more
-// than the kind allows.
+// refund_type, or set formula to null to deny scrap. ScrapRefund StatModifiers then scale
+// the formula amount; the kind's ceiling clamps last, so an item override can change what a
+// refund is paid in but never mint more than the kind allows.
 //
 // This prices only — where the refund lands is ScrapPayout's job.
 class ScrapRefundCalculator
@@ -37,8 +37,8 @@ public:
     ~ScrapRefundCalculator() = default;
 
     // Amount and payout type for this mineral cost and kind. Unavailable when the kind has
-    // no default_scrap. Throws if mineralCost is negative, or if the formula (after bonuses)
-    // returns a negative amount.
+    // no default_scrap, or rOverride cleared the formula. Throws if mineralCost is negative,
+    // or if the formula (after bonuses) returns a negative amount.
     ScrapQuote_t Quote(int mineralCost,
                        ConstructableKind_t kind,
                        const ScrapOverride_t& rOverride = {},

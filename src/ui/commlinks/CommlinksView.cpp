@@ -85,21 +85,18 @@ void CommlinksView::OpenCouncilProposals_()
         }
     }
 
-    std::vector<std::string> rows;
-    rows.reserve(available.size());
+    std::vector<PopupChoice_t> choices;
+    choices.reserve(available.size());
     for (const CouncilProposalConfig_t* pProposal : available)
     {
-        rows.push_back(pProposal->name);
+        choices.push_back({pProposal->name,
+                           [this, pProposal] { OnProposalSelected_(*pProposal); }});
     }
 
     DismissOpenModals_();
     m_elements.push_back(std::make_unique<ListSelectorPopup>(
-        "Council Proposals", "No proposals available", std::move(rows),
-        ResolveLayout(m_layout, Style().layouts.topPanel),
-        [this, available = std::move(available)](size_t index) {
-            OnProposalSelected_(*available[index]);
-        },
-        Style().listSelectorPopup));
+        "Council Proposals", "No proposals available", std::move(choices),
+        ResolveLayout(m_layout, Style().layouts.topPanel), Style().listSelectorPopup));
 }
 
 void CommlinksView::ShowNotice_(std::string message)

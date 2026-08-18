@@ -232,16 +232,6 @@ public:
     // item cannot be hurried, or if the treasury cannot cover the charge.
     HurryResult_t HurryProduction(int energyCredits);
 
-    // Amount and sink if this constructed copy is scrapped now. Empty when the id is not held
-    // here, the copy is a secret project, or the kind has no default_scrap. Base-destined
-    // refunds land in this base.
-    std::optional<ScrapPayout_t> QuoteScrapBuilding(const BuildingId_t& buildingId) const;
-
-    // Player scrap: destroy one constructed copy and credit QuoteScrapBuilding. Combat /
-    // probe / raze / orbital destruction must not call this — they destroy without a refund.
-    // Throws if QuoteScrapBuilding is empty. Returns the amount granted.
-    int ScrapBuilding(const BuildingId_t& buildingId);
-
     // Collect nutrients/minerals and allocate energy into econ/labs/psych stockpiles.
     // Called once per turn per base during ResourceCollection (via Faction::ProduceBaseResources).
     // Resolves against the composed provider pool (BuildBaseEffects_ memo).
@@ -316,6 +306,8 @@ public:
     Signal<> OnDestroyed;
 
 private:
+    friend class Faction;
+
     // FilterForBase over a faction-wide pool, plus this base's own pop-generated ThisBase
     // effects — everything from that pool that applies to this base, before rating
     // expansion. Called with the composed pool for resolution (BuildBaseEffects_) and with
@@ -376,6 +368,11 @@ private:
     bool IsCurrentProductionPrototype_() const;
     // What the queued item still needs, shared by the quote and the spend.
     HurryInputs_t BuildHurryInputs_(const IConstructable& rItem) const;
+
+    // Per-copy price and destroy. Faction::QuoteScrapBuilding / ScrapBuilding are the
+    // player-order entry; these exist so the empire-wide pair can reuse the same path.
+    std::optional<ScrapPayout_t> QuoteScrapBuilding_(const BuildingId_t& buildingId) const;
+    int ScrapBuilding_(const BuildingId_t& buildingId);
 
     // Memoized BuildBaseEffects_ result, keyed on the provider's pool version
     // (empty = never built).

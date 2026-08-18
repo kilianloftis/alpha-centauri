@@ -8,13 +8,18 @@
 #include "ui/base/ProductionDisplay.h"
 #include "ui/base/PopulationDisplay.h"
 #include "ui/base/SupportDisplay.h"
+#include "ui/ConfirmPopup.h"
 #include "ui/ListSelectorPopup.h"
 #include "ui/NoticePopup.h"
+#include "ui/ScrapRefundText.h"
 #include "ui/world/UnitStackPanel.h"
 #include "game/population/pop-types/Pop.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/production/HurryProductionCalculator.h"
+#include "game/faction/base/production/ScrapConfig.h"
+#include "game/faction/base/production/ScrapPayout.h"
 #include "game/faction/base/production/ProductionManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/EconomyManager.h"
@@ -24,7 +29,10 @@
 #include "game/Faction.h"
 #include "ui/style/UiStyle.h"
 #include "graphics/Graphics.h"
+#include <optional>
+#include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace ac
 {
@@ -51,6 +59,7 @@ BaseView::BaseView(
     std::function<void()> onProductionClick;
     std::function<void()> onHurryClick;
     PopClickCallback_t onPopClick;
+    BuildingClickCallback_t onBuildingClick;
     if (m_bEditable)
     {
         onTileClick = [this](const Tile* pTile) { HandleTileClick_(pTile); };
@@ -58,6 +67,8 @@ BaseView::BaseView(
         onProductionClick = [this]() { HandleProductionDisplayClicked_(); };
         onHurryClick = [this]() { HandleHurryClicked_(); };
         onPopClick = [this](Pop& rPop) { HandlePopClick_(rPop); };
+        onBuildingClick = [this](const BuildingConfig_t& rBuilding)
+        { HandleBuildingClicked_(rBuilding); };
     }
 
     // TopPanel: Growth | Workable (60%) | Buildings
@@ -75,7 +86,8 @@ BaseView::BaseView(
     ));
     m_elements.push_back(std::make_unique<BuildingsDisplay>(
         m_rBase,
-        ResolveLayout(topPanel, bv.buildingsLayout)
+        ResolveLayout(topPanel, bv.buildingsLayout),
+        std::move(onBuildingClick)
     ));
 
     // LeftPanel: Production (2/3) | Build Queue (1/3)
@@ -245,22 +257,17 @@ void BaseView::HandlePopClick_(Pop& rPop)
         return;
     }
 
-    std::vector<const PopTypeConfig_t*> available = m_rBase.GetFaction().GetAvailablePopTypes();
-    std::vector<std::string> rows;
-    rows.reserve(available.size());
-    for (const PopTypeConfig_t* pConfig : available)
+    std::vector<PopupChoice_t> choices;
+    for (const PopTypeConfig_t* pConfig : m_rBase.GetFaction().GetAvailablePopTypes())
     {
-        rows.push_back(pConfig->name);
+        choices.push_back(
+            {pConfig->name, [this, &rPop, pConfig] { HandlePopTypeSelected_(rPop, *pConfig); }});
     }
 
     DismissOpenModals_();
     m_elements.push_back(std::make_unique<ListSelectorPopup>(
-        "Select Pop Type", "No pop types available", std::move(rows),
-        ResolveLayout(m_layout, Style().layouts.popupSmall),
-        [this, &rPop, available = std::move(available)](size_t index) {
-            HandlePopTypeSelected_(rPop, *available[index]);
-        },
-        Style().listSelectorPopup));
+        "Select Pop Type", "No pop types available", std::move(choices),
+        ResolveLayout(m_layout, Style().layouts.popupSmall), Style().listSelectorPopup));
 }
 
 void BaseView::HandlePopTypeSelected_(Pop& rPop, const PopTypeConfig_t& rConfig)
@@ -280,22 +287,21 @@ void BaseView::HandleProductionDisplayClicked_()
         return;
     }
 
-    std::vector<const IConstructable*> available = m_rBase.GetConstructable();
-    std::vector<std::string> rows;
-    rows.reserve(available.size());
-    for (const IConstructable* pItem : available)
+    std::vector<PopupChoice_t> choices;
+    for (const IConstructable* pItem : m_rBase.GetConstructable())
     {
-        rows.push_back(pItem->GetName());
+        choices.push_back({pItem->GetName(),
+                           [this, pItem]
+                           {
+                               m_rBase.GetProduction().SetProduction(pItem,
+                                                                     m_rBase.GetBaseEffects());
+                           }});
     }
 
     DismissOpenModals_();
     m_elements.push_back(std::make_unique<ListSelectorPopup>(
-        "Select Production", "Nothing available to build", std::move(rows),
-        ResolveLayout(m_layout, Style().layouts.topPanel),
-        [this, available = std::move(available)](size_t index) {
-            m_rBase.GetProduction().SetProduction(available[index], m_rBase.GetBaseEffects());
-        },
-        Style().listSelectorPopup));
+        "Select Production", "Nothing available to build", std::move(choices),
+        ResolveLayout(m_layout, Style().layouts.topPanel), Style().listSelectorPopup));
 }
 
 void BaseView::HandleHurryClicked_()
@@ -337,6 +343,89 @@ void BaseView::HandleHurryConfirmed_(int credits)
     }
 
     m_rBase.HurryProduction(credits);
+}
+
+void BaseView::HandleBuildingClicked_(const BuildingConfig_t& rBuilding)
+{
+    if (!m_bEditable)
+    {
+        return;
+    }
+
+    const BuildingId_t buildingId = rBuilding.id;
+    std::vector<PopupChoice_t> choices;
+    choices.push_back(
+        {"Scrap Building",
+         [this, buildingId] { HandleScrapChoice_(buildingId, /*bAllBases*/ false); }});
+    choices.push_back(
+        {"Scrap this building at all bases",
+         [this, buildingId] { HandleScrapChoice_(buildingId, /*bAllBases*/ true); }});
+
+    DismissOpenModals_();
+    m_elements.push_back(std::make_unique<ListSelectorPopup>(
+        rBuilding.GetName(), "This building cannot be scrapped", std::move(choices),
+        ResolveLayout(m_layout, Style().layouts.popupSmall), Style().listSelectorPopup));
+}
+
+void BaseView::HandleScrapChoice_(const BuildingId_t& buildingId, bool bAllBases)
+{
+    if (!m_bEditable)
+    {
+        return;
+    }
+
+    Faction& rFaction = m_rBase.GetFaction();
+    const std::optional<ScrapPayout_t> payout =
+        bAllBases ? rFaction.QuoteScrapBuildings(buildingId)
+                  : rFaction.QuoteScrapBuilding(m_rBase, buildingId);
+
+    if (!payout)
+    {
+        DismissOpenModals_();
+        m_elements.push_back(std::make_unique<NoticePopup>(
+            ResolveLayout(m_layout, Style().layouts.popupSmall),
+            "Scrap",
+            "This building cannot be scrapped."));
+        return;
+    }
+
+    DismissOpenModals_();
+    m_elements.push_back(MakeConfirmPopup(
+        FormatScrapConfirm(*payout, rFaction),
+        ResolveLayout(m_layout, Style().layouts.popupSmall),
+        [this, buildingId, bAllBases] { HandleScrapConfirmed_(buildingId, bAllBases); },
+        Style().listSelectorPopup));
+}
+
+void BaseView::HandleScrapConfirmed_(const BuildingId_t& buildingId, bool bAllBases)
+{
+    if (!m_bEditable)
+    {
+        return;
+    }
+
+    Faction& rFaction = m_rBase.GetFaction();
+    const std::optional<ScrapPayout_t> payout =
+        bAllBases ? rFaction.QuoteScrapBuildings(buildingId)
+                  : rFaction.QuoteScrapBuilding(m_rBase, buildingId);
+    if (!payout)
+    {
+        DismissOpenModals_();
+        m_elements.push_back(std::make_unique<NoticePopup>(
+            ResolveLayout(m_layout, Style().layouts.popupSmall),
+            "Scrap",
+            "This building cannot be scrapped."));
+        return;
+    }
+
+    if (bAllBases)
+    {
+        rFaction.ScrapBuildings(buildingId);
+    }
+    else
+    {
+        rFaction.ScrapBuilding(m_rBase, buildingId);
+    }
 }
 
 } // namespace ac

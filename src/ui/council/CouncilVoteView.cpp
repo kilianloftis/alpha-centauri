@@ -117,38 +117,41 @@ void CouncilVoteView::OpenBallotSelector_()
         // "two most populous factions" rule was decided by the UI — and now that the council
         // enforces it, offering an ineligible candidate would throw on selection.
         std::vector<Faction*> candidates = rCouncil.EligibleCandidates(rConfig);
-        std::vector<std::string> rows;
-        rows.reserve(candidates.size() + 1);
-        for (const Faction* pCandidate : candidates)
+        std::vector<PopupChoice_t> choices;
+        choices.reserve(candidates.size() + 1);
+        for (Faction* pCandidate : candidates)
         {
-            rows.push_back(pCandidate->GetDefinition().identity.name);
+            choices.push_back({pCandidate->GetDefinition().identity.name,
+                               [this, pCandidate] { CastElectionVote_(pCandidate); }});
         }
-        rows.push_back("Abstain");
-        candidates.push_back(nullptr); // trailing abstain, so index maps straight across
+        choices.push_back({"Abstain", [this] { CastElectionVote_(nullptr); }});
 
         m_elements.push_back(std::make_unique<ListSelectorPopup>(
-            "Cast Ballot", "No candidates", std::move(rows), popupLayout,
-            [this, candidates = std::move(candidates)](size_t index) {
-                RequireCouncil_(m_rGameState).CastElectionVote(RequirePlayer_(m_rGameState),
-                                                               candidates[index]);
-                TryResolveAndClose_();
-            },
+            "Cast Ballot", "No candidates", std::move(choices), popupLayout,
             Style().listSelectorPopup));
         return;
     }
 
-    static constexpr std::array<CouncilBallot_t, 3> k_Ballots = {
-        CouncilBallot_t::Yea, CouncilBallot_t::Nay, CouncilBallot_t::Abstain};
+    std::vector<PopupChoice_t> choices;
+    choices.push_back({"Yea", [this] { CastBallot_(CouncilBallot_t::Yea); }});
+    choices.push_back({"Nay", [this] { CastBallot_(CouncilBallot_t::Nay); }});
+    choices.push_back({"Abstain", [this] { CastBallot_(CouncilBallot_t::Abstain); }});
 
     m_elements.push_back(std::make_unique<ListSelectorPopup>(
-        "Cast Ballot", "No ballot options", std::vector<std::string>{"Yea", "Nay", "Abstain"},
-        popupLayout,
-        [this](size_t index) {
-            RequireCouncil_(m_rGameState).CastVote(RequirePlayer_(m_rGameState),
-                                                   k_Ballots[index]);
-            TryResolveAndClose_();
-        },
+        "Cast Ballot", "No ballot options", std::move(choices), popupLayout,
         Style().listSelectorPopup));
+}
+
+void CouncilVoteView::CastElectionVote_(Faction* pCandidate)
+{
+    RequireCouncil_(m_rGameState).CastElectionVote(RequirePlayer_(m_rGameState), pCandidate);
+    TryResolveAndClose_();
+}
+
+void CouncilVoteView::CastBallot_(CouncilBallot_t ballot)
+{
+    RequireCouncil_(m_rGameState).CastVote(RequirePlayer_(m_rGameState), ballot);
+    TryResolveAndClose_();
 }
 
 } // namespace ac

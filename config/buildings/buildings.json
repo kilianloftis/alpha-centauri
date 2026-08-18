@@ -237,6 +237,21 @@
     "upkeep": 2
   },
   {
+    "id": "Command_Nexus",
+    "name": "Command Nexus",
+    "mineral_cost": 30,
+    "secret_project": true,
+    "effects": [
+      {
+        "type": "GrantBuilding",
+        "scope": "AllOwnerBases",
+        "parameters": { "building_id": "Command_Center" }
+      }
+    ],
+    
+    "category": "conquer"
+  },
+  {
     "id": "Childrens_Creche",
     "name": "Children's Cr\u00e8che",
     "mineral_cost": 8,
@@ -291,6 +306,7 @@
         }
       }
     ],
+    "scrap": { "formula": null },
     "category": "conquer",
     "required_tech": "",
     "upkeep": 0

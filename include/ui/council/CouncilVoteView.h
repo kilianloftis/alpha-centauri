@@ -1,10 +1,12 @@
 #pragma once
 
+#include "game/council/PlanetaryCouncil.h"
 #include "ui/IGameView.h"
 
 namespace ac
 {
 
+class Faction;
 class GameState;
 
 class CouncilVoteView : public IGameView
@@ -16,6 +18,8 @@ public:
 
 private:
     void OpenBallotSelector_();
+    void CastElectionVote_(Faction* pCandidate);
+    void CastBallot_(CouncilBallot_t ballot);
     void TryResolveAndClose_();
 
     GameState& m_rGameState;

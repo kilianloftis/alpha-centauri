@@ -3,7 +3,10 @@
 #include "ui/world/InfoPanelElement.h"
 #include "ui/world/LocationPanel.h"
 #include "ui/world/SelectedUnitPanel.h"
+#include "ui/ConfirmPopup.h"
 #include "ui/ListSelectorPopup.h"
+#include "ui/NoticePopup.h"
+#include "ui/ScrapRefundText.h"
 #include "ui/world/UnitStackPanel.h"
 #include "ui/world/CommlinksButton.h"
 #include "ui/world/EndTurnButton.h"
@@ -35,7 +38,9 @@
 #include <magic_enum.hpp>
 #include <string>
 #include <memory>
+#include <optional>
 #include <stdexcept>
+#include <vector>
 
 namespace ac
 {
@@ -400,28 +405,33 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
         else if (m_pUnitOrderInputController->WasSupplyCrawlRequested() && pControllable)
         {
             Unit* pUnit = pControllable;
-            std::vector<std::string> rows;
+            std::vector<PopupChoice_t> choices;
             for (const StatId_t resource : k_CrawlResources)
             {
-                rows.push_back(std::string(magic_enum::enum_name(resource)));
+                choices.push_back({std::string(magic_enum::enum_name(resource)),
+                                   [this, pUnit, resource]
+                                   {
+                                       if (m_pSelectedUnit != pUnit)
+                                       {
+                                           return;
+                                       }
+                                       if (pUnit->TryStartSupplyCrawl(resource))
+                                       {
+                                           SelectNextAvailableUnit_();
+                                       }
+                                   }});
             }
 
             DismissOpenModals_();
             m_elements.push_back(std::make_unique<ListSelectorPopup>(
-                "Supply Crawl", "No resources available", std::move(rows),
+                "Supply Crawl", "No resources available", std::move(choices),
                 ResolveLayout(m_layout, Style().layouts.popupSmall),
-                [this, pUnit](size_t index) {
-                    const StatId_t resource = k_CrawlResources[index];
-                    if (m_pSelectedUnit != pUnit)
-                    {
-                        return;
-                    }
-                    if (pUnit->TryStartSupplyCrawl(resource))
-                    {
-                        SelectNextAvailableUnit_();
-                    }
-                },
                 Style().listSelectorPopup));
+            return true;
+        }
+        else if (m_pUnitOrderInputController->WasDisbandRequested() && pControllable)
+        {
+            OpenDisbandMenu_(*pControllable);
             return true;
         }
         else if (m_pUnitOrderInputController->WasFoundBaseRequested() && pControllable)
@@ -659,35 +669,32 @@ void WorldView::TryOpenProbeActions_(Unit& rProbe, const Tile& rTargetTile)
     Unit* pProbe = &rProbe;
     const Tile* pTargetTile = &rTargetTile;
 
-    std::vector<std::string> rows;
-    std::vector<ProbeActionId_t> actionIds;
-    rows.reserve(actions.size());
-    actionIds.reserve(actions.size());
+    std::vector<PopupChoice_t> choices;
+    choices.reserve(actions.size());
     for (const auto& [id, rLabel] : actions)
     {
-        actionIds.push_back(id);
-        rows.push_back(rLabel);
+        choices.push_back({rLabel,
+                           [this, pProbe, pTargetTile, id]
+                           {
+                               if (m_pSelectedUnit != pProbe)
+                               {
+                                   return;
+                               }
+                               const ProbeActionResult_t result =
+                                   m_rGameState.GetProbeActions().TryProbeAction(
+                                       *pProbe, id, *pTargetTile, m_rGameState,
+                                       m_rGameDataContext);
+                               if (result.outcome != ProbeActionOutcome_t::Rejected)
+                               {
+                                   SelectNextAvailableUnit_();
+                               }
+                           }});
     }
 
     DismissOpenModals_();
     m_elements.push_back(std::make_unique<ListSelectorPopup>(
-        "Probe Actions", "No actions available", std::move(rows),
-        ResolveLayout(m_layout, Style().layouts.popupSmall),
-        [this, pProbe, pTargetTile, actionIds = std::move(actionIds)](size_t index) {
-            const ProbeActionId_t actionId = actionIds[index];
-            if (m_pSelectedUnit != pProbe)
-            {
-                return;
-            }
-            const ProbeActionResult_t result =
-                m_rGameState.GetProbeActions().TryProbeAction(
-                    *pProbe, actionId, *pTargetTile, m_rGameState, m_rGameDataContext);
-            if (result.outcome != ProbeActionOutcome_t::Rejected)
-            {
-                SelectNextAvailableUnit_();
-            }
-        },
-        Style().listSelectorPopup));
+        "Probe Actions", "No actions available", std::move(choices),
+        ResolveLayout(m_layout, Style().layouts.popupSmall), Style().listSelectorPopup));
 }
 
 std::string WorldView::FindUnitNameOnTile_(const Tile& rTile) const
@@ -745,6 +752,90 @@ Unit* WorldView::GetControllableSelectedUnit_() const
         return m_pSelectedUnit;
     }
     return nullptr;
+}
+
+void WorldView::OpenDisbandMenu_(Unit& rUnit)
+{
+    Unit* pUnit = &rUnit;
+    std::vector<PopupChoice_t> choices;
+    choices.push_back({"Disband",
+                       [this, pUnit]
+                       {
+                           if (m_pSelectedUnit == pUnit)
+                           {
+                               HandleDisbandChoice_(*pUnit);
+                           }
+                       }});
+    choices.push_back({"Self Destruct",
+                       [this, pUnit]
+                       {
+                           if (m_pSelectedUnit == pUnit)
+                           {
+                               ShowSelfDestructStub_();
+                           }
+                       }});
+    choices.push_back({"Cancel", [] {}});
+
+    DismissOpenModals_();
+    m_elements.push_back(std::make_unique<ListSelectorPopup>(
+        "Disband Units", "", std::move(choices),
+        ResolveLayout(m_layout, Style().layouts.popupSmall), Style().listSelectorPopup));
+}
+
+void WorldView::HandleDisbandChoice_(Unit& rUnit)
+{
+    Faction& rFaction = rUnit.GetFaction();
+    const std::optional<ScrapPayout_t> payout = rFaction.QuoteScrapUnit(rUnit);
+    if (!payout)
+    {
+        DismissOpenModals_();
+        m_elements.push_back(std::make_unique<NoticePopup>(
+            ResolveLayout(m_layout, Style().layouts.popupSmall),
+            "Disband",
+            "This unit cannot be disbanded."));
+        return;
+    }
+
+    Unit* pUnit = &rUnit;
+    DismissOpenModals_();
+    m_elements.push_back(MakeConfirmPopup(
+        FormatScrapConfirm(*payout, rFaction),
+        ResolveLayout(m_layout, Style().layouts.popupSmall),
+        [this, pUnit]
+        {
+            if (m_pSelectedUnit != pUnit)
+            {
+                return;
+            }
+            HandleDisbandConfirmed_(*pUnit);
+        },
+        Style().listSelectorPopup));
+}
+
+void WorldView::HandleDisbandConfirmed_(Unit& rUnit)
+{
+    Faction& rFaction = rUnit.GetFaction();
+    if (!rFaction.QuoteScrapUnit(rUnit))
+    {
+        DismissOpenModals_();
+        m_elements.push_back(std::make_unique<NoticePopup>(
+            ResolveLayout(m_layout, Style().layouts.popupSmall),
+            "Disband",
+            "This unit cannot be disbanded."));
+        return;
+    }
+
+    rFaction.ScrapUnit(rUnit);
+    SelectNextAvailableUnit_();
+}
+
+void WorldView::ShowSelfDestructStub_()
+{
+    DismissOpenModals_();
+    m_elements.push_back(std::make_unique<NoticePopup>(
+        ResolveLayout(m_layout, Style().layouts.popupSmall),
+        "Self Destruct",
+        "Self Destruct is not implemented."));
 }
 
 } // namespace ac

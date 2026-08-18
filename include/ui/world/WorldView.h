@@ -95,6 +95,10 @@ private:
     void TryBeginAttack_(Unit& rAttacker, const Tile& rTargetTile);
     void TryOpenProbeActions_(Unit& rProbe, const Tile& rTargetTile);
     std::string FindUnitNameOnTile_(const Tile& rTile) const;
+    void OpenDisbandMenu_(Unit& rUnit);
+    void HandleDisbandChoice_(Unit& rUnit);
+    void HandleDisbandConfirmed_(Unit& rUnit);
+    void ShowSelfDestructStub_();
 
     GameState& m_rGameState;
     GameDataContext& m_rGameDataContext;

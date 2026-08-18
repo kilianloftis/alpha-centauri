@@ -159,21 +159,17 @@ void UnitDesignerView::ShowComponentSelector_(
         }
     }
 
-    std::vector<std::string> rows;
-    rows.reserve(available.size());
+    std::vector<PopupChoice_t> choices;
+    choices.reserve(available.size());
     for (const UnitComponentConfig_t* pConfig : available)
     {
-        rows.push_back(pConfig->name);
+        choices.push_back({pConfig->name, [onSelected, pConfig] { onSelected(*pConfig); }});
     }
 
     DismissOpenModals_();
     m_elements.push_back(std::make_unique<ListSelectorPopup>(
-        "Select " + rSlotDisplayName, "No components available", std::move(rows),
-        ResolveLayout(m_layout, Style().layouts.popupSmall),
-        [available = std::move(available), onSelected = std::move(onSelected)](size_t index) {
-            onSelected(*available[index]);
-        },
-        Style().componentSelectorPopup));
+        "Select " + rSlotDisplayName, "No components available", std::move(choices),
+        ResolveLayout(m_layout, Style().layouts.popupSmall), Style().componentSelectorPopup));
 }
 
 void UnitDesignerView::HandleSaveDesign_()

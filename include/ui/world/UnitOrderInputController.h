@@ -56,6 +56,9 @@ public:
     // True after Shift+U. WorldView runs TryUnloadTransport.
     bool WasUnloadTransportRequested() const { return m_bUnloadTransportRequested; }
 
+    // True after Shift+D. WorldView opens Disband / Self Destruct / Cancel.
+    bool WasDisbandRequested() const { return m_bDisbandRequested; }
+
     // Non-null while a left-click hold has exceeded the threshold and the path is valid.
     const Path_t* GetPathPreview() const;
 
@@ -99,6 +102,7 @@ private:
     bool m_bFoundBaseRequested = false;
     bool m_bAttachTransportRequested = false;
     bool m_bUnloadTransportRequested = false;
+    bool m_bDisbandRequested = false;
     const Tile* m_pInteractTarget = nullptr;
 
     // Left-click long-press path preview.

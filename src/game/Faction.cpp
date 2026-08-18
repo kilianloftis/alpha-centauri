@@ -576,6 +576,88 @@ std::optional<BaseId_t> Faction::ScrapDestinationFor_(const Tile& rTile) const
     return bestId;
 }
 
+std::optional<ScrapPayout_t> Faction::QuoteScrapBuilding(const BaseManager& rBase,
+                                                        const BuildingId_t& buildingId) const
+{
+    if (&rBase.GetFaction() != this)
+    {
+        throw std::invalid_argument(
+            "Faction::QuoteScrapBuilding: base is not owned by this faction");
+    }
+    return rBase.QuoteScrapBuilding_(buildingId);
+}
+
+int Faction::ScrapBuilding(BaseManager& rBase, const BuildingId_t& buildingId)
+{
+    if (&rBase.GetFaction() != this)
+    {
+        throw std::invalid_argument(
+            "Faction::ScrapBuilding: base is not owned by this faction");
+    }
+    return rBase.ScrapBuilding_(buildingId);
+}
+
+std::optional<ScrapPayout_t> Faction::QuoteScrapBuildings(const BuildingId_t& buildingId) const
+{
+    std::optional<ScrapPayout_t> total;
+    for (const BaseManager& rBase : Bases())
+    {
+        const std::optional<ScrapPayout_t> one = QuoteScrapBuilding(rBase, buildingId);
+        if (!one)
+        {
+            continue;
+        }
+
+        int copies = 0;
+        for (const BuildingConfig_t* pBuilding : rBase.GetBuildingManager().GetBuildings())
+        {
+            if (pBuilding && pBuilding->id == buildingId)
+            {
+                ++copies;
+            }
+        }
+
+        if (!total)
+        {
+            total = *one;
+            total->amount = 0;
+        }
+        else if (one->refundType != total->refundType)
+        {
+            throw std::logic_error(
+                "Faction::QuoteScrapBuildings: '" + buildingId
+                + "' quoted mixed refund types");
+        }
+        else if (one->destBaseId != total->destBaseId)
+        {
+            total->destBaseId.reset();
+        }
+        total->amount += one->amount * copies;
+    }
+    return total;
+}
+
+int Faction::ScrapBuildings(const BuildingId_t& buildingId)
+{
+    const std::optional<ScrapPayout_t> payout = QuoteScrapBuildings(buildingId);
+    if (!payout)
+    {
+        throw std::runtime_error(
+            "Faction::ScrapBuildings: '" + buildingId
+            + "' cannot be scrapped (not constructed at any base, or a secret project)");
+    }
+
+    int granted = 0;
+    for (BaseManager& rBase : Bases())
+    {
+        while (QuoteScrapBuilding(rBase, buildingId).has_value())
+        {
+            granted += ScrapBuilding(rBase, buildingId);
+        }
+    }
+    return granted;
+}
+
 std::optional<ScrapPayout_t> Faction::QuoteScrapUnit(const Unit& rUnit) const
 {
     if (&rUnit.GetFaction() != this)

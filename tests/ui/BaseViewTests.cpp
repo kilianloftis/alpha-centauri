@@ -314,6 +314,26 @@ const BuildingConfig_t* QueueHurryFacility_(BaseManager& rBase, ViewFixture& rFi
     return pFacility;
 }
 
+MouseEvent_t ClickAtDrawnText_(const RecordingGraphics& rGraphics, const std::string& rLabel)
+{
+    const RecordingGraphics::TextDraw_t* pDraw = nullptr;
+    for (const RecordingGraphics::TextDraw_t& rDraw : rGraphics.texts)
+    {
+        if (rDraw.text == rLabel)
+        {
+            pDraw = &rDraw;
+            break;
+        }
+    }
+    REQUIRE(pDraw != nullptr);
+    return MouseEvent_t{
+        MouseButton_t::Left,
+        static_cast<int>(pDraw->x + 4.0f),
+        static_cast<int>(pDraw->y + 2.0f),
+        {},
+        true};
+}
+
 } // namespace
 
 TEST_CASE("BaseView draws Hurry on the build queue", "[ui][base][hurry]")
@@ -428,4 +448,245 @@ TEST_CASE("BaseView shows turns to completion for a queued facility", "[ui][base
     REQUIRE(pView);
     pView->Render(fixture.graphics);
     CHECK(fixture.graphics.AnyTextContaining("Turns: " + std::to_string(*turns)));
+}
+
+TEST_CASE("Clicking a constructed building offers scrap here or scrap everywhere",
+          "[ui][base][scrap]")
+{
+    ViewFixture fixture;
+    BaseManager& rBase = fixture.MakeBase(4, 4);
+    rBase.GetBuildingManager().AddBuilding("test_hurry_facility");
+
+    auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());
+    REQUIRE(pView);
+    pView->Render(fixture.graphics);
+    pView->HandleMouse(ClickAtDrawnText_(fixture.graphics, "Test Hurry Facility"));
+    CHECK(pView->HasModalElement());
+
+    fixture.graphics.texts.clear();
+    pView->Render(fixture.graphics);
+    CHECK(fixture.graphics.AnyTextContaining("Test Hurry Facility"));
+    CHECK(fixture.graphics.AnyTextContaining("Scrap Building"));
+    CHECK(fixture.graphics.AnyTextContaining("Scrap this building at all bases"));
+}
+
+TEST_CASE("Dismissing the scrap menu leaves the building in place", "[ui][base][scrap]")
+{
+    ViewFixture fixture;
+    BaseManager& rBase = fixture.MakeBase(4, 4);
+    rBase.GetBuildingManager().AddBuilding("test_hurry_facility");
+
+    auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());
+    REQUIRE(pView);
+    pView->Render(fixture.graphics);
+    pView->HandleMouse(ClickAtDrawnText_(fixture.graphics, "Test Hurry Facility"));
+    CHECK(pView->HandleKey(KeyEvent_t{Key_t::Escape, {}}));
+    CHECK_FALSE(pView->HasModalElement());
+    CHECK(rBase.GetBuildingManager().HasBuilding("test_hurry_facility"));
+    CHECK(rBase.GetFaction().GetEconomy().GetEnergy() == 0);
+}
+
+TEST_CASE("Confirming scrap of one copy quotes the refund and then grants it",
+          "[ui][base][scrap]")
+{
+    ViewFixture fixture;
+    BaseManager& rBase = fixture.MakeBase(4, 4);
+    rBase.GetBuildingManager().AddBuilding("test_hurry_facility");
+
+    const auto payout = rBase.GetFaction().QuoteScrapBuilding(rBase, "test_hurry_facility");
+    REQUIRE(payout.has_value());
+    REQUIRE(payout->amount == 10);
+
+    auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());
+    REQUIRE(pView);
+    pView->Render(fixture.graphics);
+    pView->HandleMouse(ClickAtDrawnText_(fixture.graphics, "Test Hurry Facility"));
+    fixture.graphics.texts.clear();
+    pView->Render(fixture.graphics);
+    pView->HandleMouse(ClickAtDrawnText_(fixture.graphics, "Scrap Building"));
+    CHECK(pView->HasModalElement());
+
+    fixture.graphics.texts.clear();
+    pView->Render(fixture.graphics);
+    CHECK(fixture.graphics.AnyTextContaining("Refund 10 energy credits?"));
+    CHECK(fixture.graphics.AnyTextContaining("OK"));
+    CHECK(fixture.graphics.AnyTextContaining("Cancel"));
+
+    pView->HandleMouse(ClickAtDrawnText_(fixture.graphics, "OK"));
+    CHECK_FALSE(pView->HasModalElement());
+    CHECK_FALSE(rBase.GetBuildingManager().HasBuilding("test_hurry_facility"));
+    CHECK(rBase.GetFaction().GetEconomy().GetEnergy() == 10);
+}
+
+TEST_CASE("Cancel on the scrap confirm leaves the building in place", "[ui][base][scrap]")
+{
+    ViewFixture fixture;
+    BaseManager& rBase = fixture.MakeBase(4, 4);
+    rBase.GetBuildingManager().AddBuilding("test_hurry_facility");
+
+    auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());
+    REQUIRE(pView);
+    pView->Render(fixture.graphics);
+    pView->HandleMouse(ClickAtDrawnText_(fixture.graphics, "Test Hurry Facility"));
+    fixture.graphics.texts.clear();
+    pView->Render(fixture.graphics);
+    pView->HandleMouse(ClickAtDrawnText_(fixture.graphics, "Scrap Building"));
+    fixture.graphics.texts.clear();
+    pView->Render(fixture.graphics);
+    pView->HandleMouse(ClickAtDrawnText_(fixture.graphics, "Cancel"));
+    CHECK_FALSE(pView->HasModalElement());
+    CHECK(rBase.GetBuildingManager().HasBuilding("test_hurry_facility"));
+    CHECK(rBase.GetFaction().GetEconomy().GetEnergy() == 0);
+}
+
+TEST_CASE("Confirming scrap at all bases removes every copy and refunds each",
+          "[ui][base][scrap]")
+{
+    ViewFixture fixture;
+    BaseManager& rHere = fixture.MakeBase(2, 2);
+    BaseManager& rThere = fixture.MakeBase(5, 5);
+    rHere.GetBuildingManager().AddBuilding("test_hurry_facility");
+    rThere.GetBuildingManager().AddBuilding("test_hurry_facility");
+
+    auto pView = fixture.pFactory->CreateBaseView(rHere, ViewFixture::FullScreen());
+    REQUIRE(pView);
+    pView->Render(fixture.graphics);
+    pView->HandleMouse(ClickAtDrawnText_(fixture.graphics, "Test Hurry Facility"));
+    fixture.graphics.texts.clear();
+    pView->Render(fixture.graphics);
+    pView->HandleMouse(ClickAtDrawnText_(fixture.graphics, "Scrap this building at all bases"));
+
+    fixture.graphics.texts.clear();
+    pView->Render(fixture.graphics);
+    CHECK(fixture.graphics.AnyTextContaining("Refund 20 energy credits?"));
+
+    pView->HandleMouse(ClickAtDrawnText_(fixture.graphics, "OK"));
+    CHECK_FALSE(rHere.GetBuildingManager().HasBuilding("test_hurry_facility"));
+    CHECK_FALSE(rThere.GetBuildingManager().HasBuilding("test_hurry_facility"));
+    CHECK(rHere.GetFaction().GetEconomy().GetEnergy() == 20);
+}
+
+TEST_CASE("A secret project explains that it cannot be scrapped instead of quoting a refund",
+          "[ui][base][scrap][secret-project]")
+{
+    ViewFixture fixture;
+    BaseManager& rBase = fixture.MakeBase(4, 4);
+    rBase.GetBuildingManager().AddBuilding("test_secret_project");
+
+    auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());
+    REQUIRE(pView);
+    pView->Render(fixture.graphics);
+    pView->HandleMouse(ClickAtDrawnText_(fixture.graphics, "Test Secret Project"));
+    fixture.graphics.texts.clear();
+    pView->Render(fixture.graphics);
+    pView->HandleMouse(ClickAtDrawnText_(fixture.graphics, "Scrap Building"));
+    CHECK(pView->HasModalElement());
+
+    fixture.graphics.texts.clear();
+    pView->Render(fixture.graphics);
+    CHECK(fixture.graphics.AnyTextContaining("This building cannot be scrapped."));
+    CHECK(rBase.GetBuildingManager().HasBuilding("test_secret_project"));
+    CHECK(rBase.GetFaction().GetEconomy().GetEnergy() == 0);
+}
+
+TEST_CASE("Headquarters explains that it cannot be scrapped instead of quoting a refund",
+          "[ui][base][scrap][hq]")
+{
+    ViewFixture fixture;
+    BaseManager& rBase = fixture.MakeBase(4, 4);
+    REQUIRE(rBase.GetBuildingManager().HasBuilding("Headquarters"));
+
+    auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());
+    REQUIRE(pView);
+    pView->Render(fixture.graphics);
+    pView->HandleMouse(ClickAtDrawnText_(fixture.graphics, "Headquarters"));
+    fixture.graphics.texts.clear();
+    pView->Render(fixture.graphics);
+    pView->HandleMouse(ClickAtDrawnText_(fixture.graphics, "Scrap Building"));
+    CHECK(pView->HasModalElement());
+
+    fixture.graphics.texts.clear();
+    pView->Render(fixture.graphics);
+    CHECK(fixture.graphics.AnyTextContaining("This building cannot be scrapped."));
+    CHECK(rBase.GetBuildingManager().HasBuilding("Headquarters"));
+    CHECK(rBase.GetFaction().GetEconomy().GetEnergy() == 0);
+}
+
+TEST_CASE("The scrap menu titles a granted copy by name, without the list's marker",
+          "[ui][base][scrap]")
+{
+    // The buildings list marks a constructed copy that is also granted with "*". That marker is
+    // list chrome, not the building's name, so the menu must not inherit it - which is what the
+    // view's own second lookup of the name used to guard against by accident.
+    ViewFixture fixture;
+    BaseManager& rBase = fixture.MakeBase(4, 4);
+    rBase.GetBuildingManager().AddBuilding("grantor_global");
+    rBase.GetBuildingManager().AddBuilding("granted_hall");
+
+    auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());
+    REQUIRE(pView);
+    pView->Render(fixture.graphics);
+    // The marked form is the only one on screen while the list is all there is.
+    REQUIRE(DrawnText_(fixture.graphics, "* Granted Hall") != nullptr);
+    REQUIRE(DrawnText_(fixture.graphics, "Granted Hall") == nullptr);
+
+    pView->HandleMouse(ClickAtDrawnText_(fixture.graphics, "* Granted Hall"));
+    REQUIRE(pView->HasModalElement());
+
+    fixture.graphics.texts.clear();
+    pView->Render(fixture.graphics);
+    CHECK(DrawnText_(fixture.graphics, "Granted Hall") != nullptr);
+    CHECK(fixture.graphics.AnyTextContaining("Scrap Building"));
+}
+
+TEST_CASE("Clicking a granted-only building offers scrap and then denies it",
+          "[ui][base][scrap]")
+{
+    ViewFixture fixture;
+    BaseManager& rGrantorBase = fixture.MakeBase(4, 4);
+    BaseManager& rOtherBase = fixture.MakeBase(6, 6);
+    rGrantorBase.GetBuildingManager().AddBuilding("grantor_global");
+    REQUIRE_FALSE(rOtherBase.GetBuildingManager().HasBuilding("granted_hall"));
+
+    auto pView = fixture.pFactory->CreateBaseView(rOtherBase, ViewFixture::FullScreen());
+    REQUIRE(pView);
+    pView->Render(fixture.graphics);
+    pView->HandleMouse(ClickAtDrawnText_(fixture.graphics, "Granted Hall"));
+    CHECK(pView->HasModalElement());
+
+    fixture.graphics.texts.clear();
+    pView->Render(fixture.graphics);
+    CHECK(fixture.graphics.AnyTextContaining("Scrap Building"));
+    pView->HandleMouse(ClickAtDrawnText_(fixture.graphics, "Scrap Building"));
+    CHECK(pView->HasModalElement());
+
+    fixture.graphics.texts.clear();
+    pView->Render(fixture.graphics);
+    CHECK(fixture.graphics.AnyTextContaining("This building cannot be scrapped."));
+    CHECK_FALSE(rOtherBase.GetBuildingManager().HasBuilding("granted_hall"));
+}
+
+TEST_CASE("A Command Nexus grant offers scrap and then denies it", "[ui][base][scrap]")
+{
+    ViewFixture fixture;
+    BaseManager& rBase = fixture.MakeBase(4, 4);
+    rBase.GetBuildingManager().AddBuilding("Command_Nexus");
+    REQUIRE_FALSE(rBase.GetBuildingManager().HasBuilding("Command_Center"));
+
+    auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());
+    REQUIRE(pView);
+    pView->Render(fixture.graphics);
+    pView->HandleMouse(
+        ClickAtDrawnText_(fixture.graphics, "Command Center (+2 starting XP to land units)"));
+    CHECK(pView->HasModalElement());
+
+    fixture.graphics.texts.clear();
+    pView->Render(fixture.graphics);
+    pView->HandleMouse(ClickAtDrawnText_(fixture.graphics, "Scrap Building"));
+
+    fixture.graphics.texts.clear();
+    pView->Render(fixture.graphics);
+    CHECK(fixture.graphics.AnyTextContaining("This building cannot be scrapped."));
+    CHECK_FALSE(rBase.GetBuildingManager().HasBuilding("Command_Center"));
+    CHECK(rBase.GetBuildingManager().HasBuilding("Command_Nexus"));
 }
