@@ -25,6 +25,7 @@ LuaRuntime::LuaRuntime()
         "abs   = math.abs\n"
         "max   = math.max\n"
         "min   = math.min\n"
+        "sqrt  = math.sqrt\n"
     );
 }
 

@@ -41,6 +41,7 @@ class Faction;
 class PopTypeRegistry;
 class PopTypeAvailabilityCalculator;
 struct GrowthConfig_t;
+class DroneCalculator;
 class PopCompositionCalculator;
 class SecretProjectAvailabilityCalculator;
 
@@ -105,6 +106,7 @@ public:
         const ProductionConfig_t& rProductionConfig,
         const HurryProductionCalculator& rHurryCalculator,
         const ScrapRefundCalculator& rScrapCalculator,
+        DroneCalculator& rDroneCalculator,
         PopCompositionCalculator& rCompositionCalculator,
         const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
         TileEffectsContext& rTileEffects,

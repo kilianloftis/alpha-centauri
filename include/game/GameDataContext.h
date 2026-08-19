@@ -19,6 +19,7 @@ class TechRegistry;
 class SocialPolicyRegistry;
 class SocialRatingRegistry;
 class FactionRegistry;
+class DroneCalculator;
 struct PopCompositionConfig_t;
 class PopCompositionCalculator;
 struct GrowthConfig_t;
@@ -86,6 +87,7 @@ struct GameDataContext
 
     // --- Calculators / services (built from the data above) ---
     std::unique_ptr<LuaRuntime> luaRuntime;
+    std::unique_ptr<DroneCalculator> droneCalculator;
     std::unique_ptr<PopCompositionCalculator> popCompositionCalculator;
     std::unique_ptr<TechCostCalculator> techCostCalculator;
     std::unique_ptr<HurryProductionCalculator> hurryProductionCalculator;

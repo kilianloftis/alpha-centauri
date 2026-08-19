@@ -19,7 +19,7 @@ struct GameDataPaths
     std::string socialPolicies = "config/social_policies.json";
     std::string socialRatings = "config/social_rating_effects.json";
     std::string factions = "config/factions";
-    std::string popComposition = "config/pop_composition.lua";
+    std::string popComposition = "config/pop_composition.json";
     std::string popGrowth = "config/pop_growth.json";
     std::string production = "config/production.json";
     std::string techCost = "config/tech_cost.lua";

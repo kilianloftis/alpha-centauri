@@ -3,6 +3,7 @@
 
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 
 namespace ac
 {
@@ -22,28 +23,21 @@ const PopCompositionConfig_t& PopCompositionCalculator::GetConfig() const
 PopCompositionResult_t PopCompositionCalculator::Calculate(const PopCompositionInputs_t& rInputs)
 {
     const std::unordered_map<std::string, int> vars = {
-        {"base_size",               rInputs.baseSize},
         {"psych_output",            rInputs.psychOutput},
-        {"faction_drone_modifier",  rInputs.factionDroneModifier},
         {"faction_talent_modifier", rInputs.factionTalentModifier},
     };
 
-    // A negative target can only come from a formula that computed one, since EvalInt throws
-    // rather than returning 0. That is a config error, not something to normalize away.
-    const auto evaluate = [&](const std::string& rFormula, const char* what) {
-        const int value = m_rLua.EvalInt(rFormula, vars);
-        if (value < 0)
-        {
-            throw std::runtime_error("Pop composition " + std::string(what) + " formula ('"
-                                     + rFormula + "') produced " + std::to_string(value)
-                                     + "; targets must not be negative");
-        }
-        return value;
-    };
+    const int targetTalents = m_rLua.EvalInt(m_rConfig.talentFormula, vars);
+    if (targetTalents < 0)
+    {
+        throw std::runtime_error("Pop composition talent formula ('" + m_rConfig.talentFormula
+                                 + "') produced " + std::to_string(targetTalents)
+                                 + "; targets must not be negative");
+    }
 
     PopCompositionResult_t result;
-    result.targetDrones = evaluate(m_rConfig.droneFormula, "drone");
-    result.targetTalents = evaluate(m_rConfig.talentFormula, "talent");
+    result.targetDrones = rInputs.targetDrones;
+    result.targetTalents = targetTalents;
     return result;
 }
 

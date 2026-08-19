@@ -129,6 +129,7 @@ TEST_CASE("CollectFromPops: only ThisBase-scoped pop effects enter the base pool
     PopulationManager pops(*fixture.dataContext.popTypeRegistry,
                            *fixture.dataContext.popTypeAvailabilityCalculator,
                            *fixture.dataContext.growthConfig,
+                           *fixture.dataContext.droneCalculator,
                            *fixture.dataContext.popCompositionCalculator,
                            fixture.pOwnerFaction->GetResearch(), 0);
     pops.AddPop("Doctor");

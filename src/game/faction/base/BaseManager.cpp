@@ -1,11 +1,13 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/Faction.h"
+#include "game/GameSettings.h"
 #include "game/GameState.h"
 #include "game/IConstructable.h"
 #include "game/IEffectsProvider.h"
 #include "game/faction/Military.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/ResearchManager.h"
+#include "game/faction/SocialEngineeringManager.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/production/ProductionManager.h"
 #include "game/faction/base/resources/ResourceManager.h"
@@ -13,6 +15,7 @@
 #include "game/faction/EconomyManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopulationManager.h"
+#include "game/population/calculators/DroneCalculator.h"
 #include "game/buildings/BuildingConfig.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/stockpiles/StockpileConfig.h"
@@ -100,6 +103,7 @@ BaseManager::BaseManager(
     const ProductionConfig_t& rProductionConfig,
     const HurryProductionCalculator& rHurryCalculator,
     const ScrapRefundCalculator& rScrapCalculator,
+    DroneCalculator& rDroneCalculator,
     PopCompositionCalculator& rCompositionCalculator,
     const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
     TileEffectsContext& rTileEffects,
@@ -117,8 +121,8 @@ BaseManager::BaseManager(
     , m_rScrapCalculator(rScrapCalculator)
     , m_pEffectsProvider(&rFaction)
     , m_pPopulation(std::make_unique<PopulationManager>(
-          rPopTypeRegistry, rPopTypeAvailabilityCalculator, rGrowthConfig, rCompositionCalculator,
-          rFaction.GetResearch(), initialPopulation))
+          rPopTypeRegistry, rPopTypeAvailabilityCalculator, rGrowthConfig, rDroneCalculator,
+          rCompositionCalculator, rFaction.GetResearch(), initialPopulation))
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(
           ComputeWorkableTiles_(rTileEffects, tile), *m_pPopulation, rTileEffects,
           rTileEffects.GetWorldMap().GetWorkedTiles()))
@@ -135,6 +139,30 @@ BaseManager::BaseManager(
           }))
     , m_name(std::move(name))
 {
+    m_pPopulation->SetDroneInputSupplier([this]() {
+        DroneInputs_t inputs;
+        inputs.baseSize = m_pPopulation->GetSize();
+        inputs.socialDroneModifier = GetDroneModifier();
+        inputs.factionBaseCount = static_cast<int>(m_pFaction->GetBaseCount());
+        inputs.difficulty =
+            static_cast<int>(m_pFaction->GetSettings().GetGameRules().difficulty);
+        inputs.efficiency =
+            m_pFaction->GetSocialEngineering().GetSocialRating(SocialRatingId_t::Efficiency);
+        const WorldMap& rMap = m_rTileEffects.GetWorldMap();
+        inputs.mapWidth = rMap.GetWidth();
+        inputs.mapHeight = rMap.GetHeight();
+        inputs.baseId = m_baseId;
+        // TODO: garrisonCount, turnsSinceConquered
+        // Resolve the bureaucracy multiplier from this base's effects (seed = 1.0).
+        const FactionEffects_t& factionEffects = CollectActiveEffects(*m_pEffectsProvider);
+        const BaseEffects_t baseEffects = FilterForBase(factionEffects, *this);
+        const double bureauMult = ResolveStatModifiersTotal(
+            FilterBaseLevelByStatId(baseEffects, StatId_t::BureaucracyMultiplier),
+            SeedFor(StatId_t::BureaucracyMultiplier));
+        inputs.bureaucracyMultiplierPercent = static_cast<int>(std::lround(bureauMult * 100.0));
+        return inputs;
+    });
+
     // A base provides its own garrison defense bonus, modeled as the "Base" improvement.
     m_rTileEffects.AddImprovementWithEffects(m_tile, std::string(ImprovementIds::k_Base));
 

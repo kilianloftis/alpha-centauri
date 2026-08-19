@@ -107,6 +107,7 @@ BaseManager& MakeBaseWithStockpiles_(FactionFixture& rFixtures, Faction& rFactio
         *rFixtures.dataContext.productionConfig,
         *rFixtures.dataContext.hurryProductionCalculator,
         *rFixtures.dataContext.scrapRefundCalculator,
+        *rFixtures.dataContext.droneCalculator,
         *rFixtures.dataContext.popCompositionCalculator,
         nullptr,
         *rFixtures.ctx);
@@ -129,6 +130,7 @@ BaseManager& MakeBaseWith_(FactionFixture& rFixtures, Faction& rFaction,
         *rFixtures.dataContext.productionConfig,
         *rFixtures.dataContext.hurryProductionCalculator,
         *rFixtures.dataContext.scrapRefundCalculator,
+        *rFixtures.dataContext.droneCalculator,
         *rFixtures.dataContext.popCompositionCalculator,
         nullptr,
         *rFixtures.ctx);

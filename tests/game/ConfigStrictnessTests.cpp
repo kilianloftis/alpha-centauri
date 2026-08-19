@@ -200,31 +200,61 @@ TEST_CASE("Growth config requires its keys and positive values", "[config][popul
     }
 }
 
-TEST_CASE("Pop composition requires formulas and rejects the unimplemented key",
+TEST_CASE("Pop composition requires formulas and rejects unknown keys",
           "[config][population]")
 {
-    LuaRuntime lua;
     PopCompositionConfigParser parser;
 
-    SECTION("an empty formula would mean zero drones forever")
+    SECTION("an empty drone formula would mean zero drones forever")
     {
-        const TempConfigFile config("ac_comp_empty.lua", R"(return {
-            drone_formula = "", talent_formula = "0",
-            drone_type = "Drone", talent_type = "Talent",
+        const TempConfigFile config("ac_comp_empty_drone.json", R"({
+            "bureaucracy_limit_formula": "1",
+            "drone_formula": "",
+            "drone_type": "Drone",
+            "talent_formula": "0",
+            "talent_type": "Talent"
         })");
-        CHECK_THROWS_WITH(parser.ParseConfig(config.Path(), lua),
+        CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
                           Catch::Matchers::ContainsSubstring("drone_formula"));
     }
 
-    SECTION("precedence is refused rather than silently ignored")
+    SECTION("an empty talent formula would mean zero talents forever")
     {
-        const TempConfigFile config("ac_comp_precedence.lua", R"(return {
-            drone_formula = "0", talent_formula = "0",
-            drone_type = "Drone", talent_type = "Talent",
-            precedence = { "Talent", "Drone" },
+        const TempConfigFile config("ac_comp_empty_talent.json", R"({
+            "bureaucracy_limit_formula": "1",
+            "drone_formula": "0",
+            "drone_type": "Drone",
+            "talent_formula": "",
+            "talent_type": "Talent"
         })");
-        CHECK_THROWS_WITH(parser.ParseConfig(config.Path(), lua),
-                          Catch::Matchers::ContainsSubstring("not implemented"));
+        CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
+                          Catch::Matchers::ContainsSubstring("talent_formula"));
+    }
+
+    SECTION("an empty bureaucracy limit would make residue modulo undefined")
+    {
+        const TempConfigFile config("ac_comp_empty_limit.json", R"({
+            "bureaucracy_limit_formula": "",
+            "drone_formula": "0",
+            "drone_type": "Drone",
+            "talent_formula": "0",
+            "talent_type": "Talent"
+        })");
+        CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
+                          Catch::Matchers::ContainsSubstring("bureaucracy_limit_formula"));
+    }
+    SECTION("unknown keys are refused rather than silently ignored")
+    {
+        const TempConfigFile config("ac_comp_unknown.json", R"({
+            "bureaucracy_limit_formula": "1",
+            "drone_formula": "0",
+            "drone_type": "Drone",
+            "talent_formula": "0",
+            "talent_type": "Talent",
+            "precedence": ["Talent", "Drone"]
+        })");
+        CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
+                          Catch::Matchers::ContainsSubstring("unknown key"));
     }
 }
 

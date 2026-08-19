@@ -1,7 +1,7 @@
 #pragma once
 
 #include "game/faction/base/population/PopContainer.h"
-#include "game/population/calculators/GrowthCalculator.h"
+#include "game/population/calculators/DroneCalculator.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/population/calculators/RiotCalculator.h"
 #include "game/population/calculators/GoldenAgeCalculator.h"
@@ -17,6 +17,7 @@ struct RiotConditionInputs_t;
 struct GrowthConfig_t;
 class PopTypeRegistry;
 class PopTypeAvailabilityCalculator;
+class DroneCalculator;
 class PopCompositionCalculator;
 struct PopCompositionResult_t;
 class ResearchManager;
@@ -35,10 +36,15 @@ public:
     PopulationManager(const PopTypeRegistry& rPopTypeRegistry,
                       const PopTypeAvailabilityCalculator& rPopTypeAvailabilityCalculator,
                       const GrowthConfig_t& rGrowthConfig,
+                      DroneCalculator& rDroneCalculator,
                       PopCompositionCalculator& rCompositionCalculator,
                       const ResearchManager& rResearchManager,
                       int initialSize);
     ~PopulationManager();
+
+    // Supplies faction- and base-scoped drone formula inputs. When unset, only base_size is
+    // filled from the local population.
+    void SetDroneInputSupplier(std::function<DroneInputs_t()> supplier);
 
     // Population size management
     int GetSize() const;
@@ -179,7 +185,9 @@ private:
     // A pointer only because RebindResearch re-points it when the base changes owner.
     const ResearchManager* m_pResearch;
     const GrowthConfig_t& m_rGrowthConfig;
+    DroneCalculator& m_rDroneCalculator;
     PopCompositionCalculator& m_rCompositionCalculator;
+    std::function<DroneInputs_t()> m_droneInputSupplier;
     int m_maxSize;
     int m_nutrientStockpile = 0;
     int m_compositionBatchDepth = 0;
@@ -190,6 +198,7 @@ private:
     GoldenAgeCalculator m_goldenAge;
 
     RiotConditionInputs_t BuildRiotInputs_() const;
+    DroneInputs_t BuildDroneInputs_() const;
 
     void NotifyPopGained_();
     void NotifyPopLost_();

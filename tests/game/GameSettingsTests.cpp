@@ -38,6 +38,7 @@ TEST_CASE("GameSettings Load leaves defaults when file is missing", "[GameSettin
     CHECK(settings.GetMapGeneration().oceanCoverage == Approx(0.6f));
     CHECK(settings.GetMapGeneration().erosiveForces == ErosiveForces_t::Average);
     CHECK(settings.GetMapGeneration().presetId == "islands");
+    CHECK(settings.GetGameRules().difficulty == Difficulty_t::Citizen);
 }
 
 TEST_CASE("GameSettings Save and Load round-trip pause_at_end_of_turn", "[GameSettings]")
@@ -61,6 +62,26 @@ TEST_CASE("GameSettings Save and Load round-trip pause_at_end_of_turn", "[GameSe
     GameSettings reloaded;
     reloaded.Load(path.string());
     CHECK_FALSE(reloaded.IsPauseAtEndOfTurn());
+
+    std::filesystem::remove(path);
+}
+
+TEST_CASE("GameSettings Save and Load round-trip difficulty", "[GameSettings]")
+{
+    const std::filesystem::path path = TempSettingsPath("ac_settings_difficulty.json");
+    std::filesystem::remove(path);
+
+    {
+        GameSettings settings;
+        GameRulesConfig_t rules = settings.GetGameRules();
+        rules.difficulty = Difficulty_t::Transcend;
+        settings.SetGameRules(rules);
+        settings.Save(path.string());
+    }
+
+    GameSettings loaded;
+    loaded.Load(path.string());
+    CHECK(loaded.GetGameRules().difficulty == Difficulty_t::Transcend);
 
     std::filesystem::remove(path);
 }

@@ -1,53 +1,57 @@
 #include "game/population/pop-types/PopCompositionConfigParser.h"
-#include "lib/LuaRuntime.h"
+#include "lib/config/JsonConfigLoader.h"
+
+#include <nlohmann/json.hpp>
+#include <algorithm>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace ac
 {
 
-PopCompositionConfig_t PopCompositionConfigParser::ParseConfig(const std::string& scriptPath,
-                                                             LuaRuntime& rLua)
+PopCompositionConfig_t PopCompositionConfigParser::ParseConfig(const std::string& configPath)
 {
-    PopCompositionConfig_t config;
+    return JsonConfigLoader::LoadObjectFile<PopCompositionConfig_t>(
+        configPath, "pop composition", [&configPath](const nlohmann::json& rJson) {
+            const auto fail = [&](const std::string& rMessage) {
+                throw std::runtime_error("Pop composition config '" + configPath + "': "
+                                         + rMessage);
+            };
 
-    sol::state& lua = rLua.GetState();
+            static const std::vector<std::string> knownKeys = {
+                "bureaucracy_limit_formula", "drone_formula", "drone_type",
+                "talent_formula", "talent_type",
+            };
+            for (const auto& [rKey, rUnused] : rJson.items())
+            {
+                if (std::find(knownKeys.begin(), knownKeys.end(), rKey) == knownKeys.end())
+                {
+                    fail("unknown key '" + rKey + "'");
+                }
+            }
 
-    sol::protected_function_result result =
-        lua.safe_script_file(scriptPath, sol::script_pass_on_error);
+            const auto requireNonEmptyString = [&](const char* key) {
+                if (!rJson.contains(key) || !rJson.at(key).is_string())
+                {
+                    fail(std::string("'") + key + "' must be a non-empty string");
+                }
+                const std::string value = rJson.at(key).get<std::string>();
+                if (value.empty())
+                {
+                    fail(std::string("'") + key + "' must be a non-empty string");
+                }
+                return value;
+            };
 
-    if (!result.valid())
-    {
-        sol::error err = result;
-        throw std::runtime_error("Failed to load pop composition script '" + scriptPath
-                                 + "': " + err.what());
-    }
-
-    sol::table tbl = result;
-
-    const auto requireString = [&](const char* key) {
-        const std::string value = tbl.get_or(key, std::string(""));
-        if (value.empty())
-        {
-            throw std::runtime_error("pop composition script '" + scriptPath + "' must set "
-                                     + key + " to a non-empty value");
-        }
-        return value;
-    };
-
-    config.droneFormula = requireString("drone_formula");
-    config.talentFormula = requireString("talent_formula");
-    config.droneTypeId = requireString("drone_type");
-    config.talentTypeId = requireString("talent_type");
-
-    // TODO: recalculation order is not implemented. Rejected rather than ignored so a modder
-    // who sets it learns it does nothing.
-    if (tbl["precedence"].valid())
-    {
-        throw std::runtime_error("pop composition script '" + scriptPath
-                                 + "' sets 'precedence', which is not implemented; remove it");
-    }
-
-    return config;
+            PopCompositionConfig_t config;
+            config.bureaucracyLimitFormula = requireNonEmptyString("bureaucracy_limit_formula");
+            config.droneFormula = requireNonEmptyString("drone_formula");
+            config.droneTypeId = requireNonEmptyString("drone_type");
+            config.talentFormula = requireNonEmptyString("talent_formula");
+            config.talentTypeId = requireNonEmptyString("talent_type");
+            return config;
+        });
 }
 
 } // namespace ac

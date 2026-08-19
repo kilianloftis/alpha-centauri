@@ -1,5 +1,6 @@
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/population/calculators/GrowthCalculator.h"
+#include "game/population/calculators/DroneCalculator.h"
 #include "game/population/calculators/PopCompositionCalculator.h"
 #include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
@@ -16,6 +17,7 @@ namespace ac
 PopulationManager::PopulationManager(const PopTypeRegistry& rPopTypeRegistry,
                                      const PopTypeAvailabilityCalculator& rPopTypeAvailabilityCalculator,
                                      const GrowthConfig_t& rGrowthConfig,
+                                     DroneCalculator& rDroneCalculator,
                                      PopCompositionCalculator& rCompositionCalculator,
                                      const ResearchManager& rResearchManager,
                                      int initialSize)
@@ -24,6 +26,7 @@ PopulationManager::PopulationManager(const PopTypeRegistry& rPopTypeRegistry,
     , m_rAvailabilityCalculator(rPopTypeAvailabilityCalculator)
     , m_pResearch(&rResearchManager)
     , m_rGrowthConfig(rGrowthConfig)
+    , m_rDroneCalculator(rDroneCalculator)
     , m_rCompositionCalculator(rCompositionCalculator)
     // The cap comes from pop_growth.json; there is no second, compiled-in default to drift.
     , m_maxSize(rGrowthConfig.maxBaseSize)
@@ -272,14 +275,29 @@ bool PopulationManager::IsDestroyed() const
     return m_container.GetSize() == 0;
 }
 
+void PopulationManager::SetDroneInputSupplier(std::function<DroneInputs_t()> supplier)
+{
+    m_droneInputSupplier = std::move(supplier);
+}
+
+DroneInputs_t PopulationManager::BuildDroneInputs_() const
+{
+    if (m_droneInputSupplier)
+    {
+        return m_droneInputSupplier();
+    }
+    DroneInputs_t inputs;
+    inputs.baseSize = m_container.GetSize();
+    return inputs;
+}
+
 RiotConditionInputs_t PopulationManager::BuildRiotInputs_() const
 {
     RiotConditionInputs_t inputs;
-    // Weighted: Super Drone contributes 2. Head-count GetDroneCount is for composition only.
     inputs.droneCount = m_container.GetRiotContribution();
     inputs.talentCount = m_container.GetTalentCount();
     PopCompositionInputs_t compInputs;
-    compInputs.baseSize = m_container.GetSize();
+    compInputs.targetDrones = m_rDroneCalculator.Calculate(BuildDroneInputs_());
     compInputs.psychOutput = m_container.ComputePsychOutput();
     inputs.targetTalents = m_rCompositionCalculator.Calculate(compInputs).targetTalents;
     return inputs;
@@ -288,9 +306,9 @@ RiotConditionInputs_t PopulationManager::BuildRiotInputs_() const
 void PopulationManager::RecalculateComposition()
 {
     PopCompositionInputs_t inputs;
-    inputs.baseSize = m_container.GetSize();
+    inputs.targetDrones = m_rDroneCalculator.Calculate(BuildDroneInputs_());
     inputs.psychOutput = m_container.ComputePsychOutput();
-    // TODO: supply faction drone/talent modifiers once faction modifiers are accessible here
+    // TODO: supply faction talent modifiers once faction modifiers are accessible here
     const PopCompositionResult_t targets = m_rCompositionCalculator.Calculate(inputs);
     const PopCompositionConfig_t& rConfig = m_rCompositionCalculator.GetConfig();
 

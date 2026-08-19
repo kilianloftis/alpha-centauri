@@ -24,6 +24,7 @@
 #include "lib/LuaRuntime.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/population/calculators/DroneCalculator.h"
 #include "game/population/calculators/PopCompositionCalculator.h"
 #include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "game/population/pop-types/GrowthConfigParser.h"
@@ -162,8 +163,9 @@ struct WorldFixture
         dataContext.popTypeAvailabilityCalculator =
             std::make_unique<ac::PopTypeAvailabilityCalculator>(*dataContext.popTypeRegistry);
         dataContext.popCompositionConfig = std::make_unique<ac::PopCompositionConfig_t>(
-            ac::PopCompositionConfigParser{}.ParseConfig(FixturePath("pop_composition.lua"),
-                                                        *dataContext.luaRuntime));
+            ac::PopCompositionConfigParser{}.ParseConfig(FixturePath("pop_composition.json")));
+        dataContext.droneCalculator = std::make_unique<ac::DroneCalculator>(
+            *dataContext.popCompositionConfig, *dataContext.luaRuntime);
         dataContext.popCompositionCalculator = std::make_unique<ac::PopCompositionCalculator>(
             *dataContext.popCompositionConfig, *dataContext.luaRuntime);
     }
@@ -214,6 +216,7 @@ struct BaseFixture : WorldFixture
             *dataContext.productionConfig,
             *dataContext.hurryProductionCalculator,
             *dataContext.scrapRefundCalculator,
+            *dataContext.droneCalculator,
             *dataContext.popCompositionCalculator,
             // The one optional dependency: it needs a GameState, which this fixture has no
             // reason to build. Only GetBuildingsAvailableForConstruction requires it.
@@ -304,6 +307,7 @@ struct FactionFixture : BaseFixture
             *dataContext.productionConfig,
             *dataContext.hurryProductionCalculator,
             *dataContext.scrapRefundCalculator,
+            *dataContext.droneCalculator,
             *dataContext.popCompositionCalculator,
             /*secretProjectCalculator*/ nullptr,
             *ctx);

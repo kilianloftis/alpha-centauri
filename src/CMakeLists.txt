@@ -53,6 +53,7 @@ add_library(ac-core STATIC
     game/population/pop-types/PopTypeConfigParser.cpp
     game/population/pop-types/PopCompositionConfigParser.cpp
     game/population/pop-types/GrowthConfigParser.cpp
+    game/population/calculators/DroneCalculator.cpp
     game/population/calculators/PopCompositionCalculator.cpp
     game/population/calculators/RiotCalculator.cpp
     game/population/calculators/GrowthCalculator.cpp

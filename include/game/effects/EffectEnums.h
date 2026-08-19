@@ -93,6 +93,8 @@ enum class StatId_t
 
     // Planetary commerce income multiplier (PureMultiplier; Global Trade Pact uses AddPercent).
     CommerceRate,
+    // Multiplier applied to bureaucracy/drone formulas (PureMultiplier; seed 1.0).
+    BureaucracyMultiplier,
     // Extra council votes (Additive). Population elections seed with total population;
     // representative elections seed with 1. Buildings / projects / faction bonuses modify this.
     CouncilVotes,
@@ -172,6 +174,7 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::ProbeSuccessScale:
         case StatId_t::PositiveMoraleScale:
         case StatId_t::CommerceRate:         return StatKind_t::PureMultiplier;
+        case StatId_t::BureaucracyMultiplier: return StatKind_t::PureMultiplier;
         case StatId_t::GrowthRate:
         case StatId_t::MoistureTier:
         case StatId_t::ScrapRefund:          return StatKind_t::RawScaled;
@@ -237,6 +240,7 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "tech_cost")               return StatId_t::TechCost;
     if (rStat == "moisture_tier")           return StatId_t::MoistureTier;
     if (rStat == "commerce_rate")           return StatId_t::CommerceRate;
+    if (rStat == "bureaucracy_multiplier") return StatId_t::BureaucracyMultiplier;
     if (rStat == "council_votes")           return StatId_t::CouncilVotes;
     if (rStat == "commerce_energy_bonus")   return StatId_t::CommerceEnergyBonus;
     if (rStat == "inefficiency_denominator") return StatId_t::InefficiencyDenominator;

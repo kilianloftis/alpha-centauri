@@ -49,30 +49,48 @@
     "levels": {
       "-4": [
         { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "inefficiency_denominator", "amount": 0, "op": "Add" } }
+      ,
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "bureaucracy_multiplier", "amount": 4, "op": "MultiplyGeometric" } }
       ],
       "-3": [
         { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "inefficiency_denominator", "amount": 8, "op": "Add" } }
+      ,
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "bureaucracy_multiplier", "amount": 4, "op": "MultiplyGeometric" } }
       ],
       "-2": [
         { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "inefficiency_denominator", "amount": 16, "op": "Add" } }
+      ,
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "bureaucracy_multiplier", "amount": 4, "op": "MultiplyGeometric" } }
       ],
       "-1": [
         { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "inefficiency_denominator", "amount": 24, "op": "Add" } }
+      ,
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "bureaucracy_multiplier", "amount": 4, "op": "MultiplyGeometric" } }
       ],
       "0": [
         { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "inefficiency_denominator", "amount": 32, "op": "Add" } }
+      ,
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "bureaucracy_multiplier", "amount": 4, "op": "MultiplyGeometric" } }
       ],
       "1": [
         { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "inefficiency_denominator", "amount": 40, "op": "Add" } }
-      ],
+      ,
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "bureaucracy_multiplier", "amount": 5, "op": "MultiplyGeometric" } }
+      ], 
       "2": [
         { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "inefficiency_denominator", "amount": 48, "op": "Add" } }
+      ,
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "bureaucracy_multiplier", "amount": 6, "op": "MultiplyGeometric" } }
       ],
       "3": [
         { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "inefficiency_denominator", "amount": 56, "op": "Add" } }
+      ,
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "bureaucracy_multiplier", "amount": 7, "op": "MultiplyGeometric" } }
       ],
       "4": [
         { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "inefficiency_denominator", "amount": 64, "op": "Add" } }
+      ,
+        { "type": "StatModifier", "scope": "AllOwnerBases", "persistence": "Continuous", "parameters": { "stat": "bureaucracy_multiplier", "amount": 8, "op": "MultiplyGeometric" } }
       ]
     }
   },

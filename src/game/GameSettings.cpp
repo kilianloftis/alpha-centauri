@@ -1,6 +1,7 @@
 #include "game/GameSettings.h"
 
 #include "lib/config/ConfigFields.h"
+#include "lib/config/EnumNames.h"
 
 #include <nlohmann/json.hpp>
 #include <fstream>
@@ -117,6 +118,17 @@ void LoadGameRules_(const nlohmann::json& rJson, GameRulesConfig_t& rConfig,
             pSection->value("pause_at_end_of_turn", rConfig.pauseAtEndOfTurn);
         rConfig.autoReturnLowFuelAir =
             pSection->value("auto_return_low_fuel_air", rConfig.autoReturnLowFuelAir);
+        if (pSection->contains("difficulty"))
+        {
+            if (!pSection->at("difficulty").is_string())
+            {
+                throw std::runtime_error("Game settings '" + rPath
+                                         + "': game_rules.difficulty must be a string");
+            }
+            rConfig.difficulty =
+                EnumFromName<Difficulty_t>(pSection->at("difficulty").get<std::string>(),
+                                           "difficulty");
+        }
     }
 }
 
@@ -268,6 +280,7 @@ void GameSettings::Save(const std::string& path) const
     json["game_rules"] = {
         {"pause_at_end_of_turn", m_gameRules.pauseAtEndOfTurn},
         {"auto_return_low_fuel_air", m_gameRules.autoReturnLowFuelAir},
+        {"difficulty", EnumToLowerName(m_gameRules.difficulty)},
     };
     json["visibility"] = {
         {"remove_shroud", m_visibility.removeShroud},

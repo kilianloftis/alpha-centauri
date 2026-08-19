@@ -11,6 +11,7 @@
 #include "game/map/LandmarkConfigParser.h"
 #include "game/map/WorldGenDecorationConfigParser.h"
 #include "game/map/WorldGenPresetRegistry.h"
+#include "game/population/calculators/DroneCalculator.h"
 #include "game/population/calculators/PopCompositionCalculator.h"
 #include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "game/faction/base/production/ProductionConfigParser.h"
@@ -73,6 +74,7 @@ void ThrowIfIncomplete(const GameDataContext& rData)
         {rData.councilProposalRegistry.get(), "councilProposalRegistry"},
         {rData.councilRules.get(), "councilRules"},
         {rData.luaRuntime.get(), "luaRuntime"},
+        {rData.droneCalculator.get(), "droneCalculator"},
         {rData.popCompositionCalculator.get(), "popCompositionCalculator"},
         {rData.techCostCalculator.get(), "techCostCalculator"},
         {rData.hurryProductionCalculator.get(), "hurryProductionCalculator"},
@@ -199,7 +201,7 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
 
     PopCompositionConfigParser compositionParser;
     rData.popCompositionConfig = std::make_unique<PopCompositionConfig_t>(
-        compositionParser.ParseConfig(rPaths.popComposition, *rData.luaRuntime));
+        compositionParser.ParseConfig(rPaths.popComposition));
     {
         const PopCompositionConfig_t& rComposition = *rData.popCompositionConfig;
         if (!rData.popTypeRegistry->Find(rComposition.droneTypeId))
@@ -215,6 +217,8 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
                 + "' is not a known pop type");
         }
     }
+    rData.droneCalculator =
+        std::make_unique<DroneCalculator>(*rData.popCompositionConfig, *rData.luaRuntime);
     rData.popCompositionCalculator = std::make_unique<PopCompositionCalculator>(
         *rData.popCompositionConfig, *rData.luaRuntime);
 

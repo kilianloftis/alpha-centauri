@@ -8,6 +8,7 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/population/calculators/GoldenAgeCalculator.h"
 #include "game/population/calculators/GrowthCalculator.h"
+#include "game/population/calculators/DroneCalculator.h"
 #include "game/population/calculators/PopCompositionCalculator.h"
 #include "game/population/pop-types/GrowthConfigParser.h"
 #include "lib/LuaRuntime.h"
@@ -341,29 +342,45 @@ TEST_CASE("A pop type whose role contradicts can_work_tile is rejected",
                           && Catch::Matchers::ContainsSubstring("can_work_tile"));
 }
 
-TEST_CASE("A negative composition target is a config error", "[population][composition]")
+TEST_CASE("A negative drone target is a config error", "[population][composition]")
 {
-    // Negative results were floored to 0, so a formula typo producing -1 was indistinguishable
-    // from "no drones". EvalInt throws rather than returning 0 now, so a negative can only come
-    // from a formula that genuinely computed one.
     LuaRuntime lua;
 
     PopCompositionConfig_t config;
+    config.bureaucracyLimitFormula = "1";
     config.droneFormula = "base_size - 10";
-    config.talentFormula = "0";
     config.droneTypeId = "Drone";
+    DroneCalculator droneCalculator(config, lua);
+
+    DroneInputs_t inputs;
+    inputs.baseSize = 3;
+    CHECK_THROWS_WITH(droneCalculator.Calculate(inputs),
+                      Catch::Matchers::ContainsSubstring("Drone")
+                          && Catch::Matchers::ContainsSubstring("-7"));
+
+    inputs.baseSize = 12;
+    CHECK(droneCalculator.Calculate(inputs) == 2);
+}
+
+TEST_CASE("A negative talent target is a config error", "[population][composition]")
+{
+    LuaRuntime lua;
+
+    PopCompositionConfig_t config;
+    config.talentFormula = "psych_output - 10";
     config.talentTypeId = "Talent";
 
     PopCompositionCalculator calculator(config, lua);
 
     PopCompositionInputs_t inputs;
-    inputs.baseSize = 3;
+    inputs.targetDrones = 0;
+    inputs.psychOutput = 3;
     CHECK_THROWS_WITH(calculator.Calculate(inputs),
-                      Catch::Matchers::ContainsSubstring("drone")
+                      Catch::Matchers::ContainsSubstring("talent")
                           && Catch::Matchers::ContainsSubstring("-7"));
 
-    inputs.baseSize = 12;
-    CHECK(calculator.Calculate(inputs).targetDrones == 2);
+    inputs.psychOutput = 12;
+    CHECK(calculator.Calculate(inputs).targetTalents == 2);
 }
 
 TEST_CASE("Growth threshold saturates instead of overflowing", "[population][growth]")
@@ -383,4 +400,98 @@ TEST_CASE("Growth threshold saturates instead of overflowing", "[population][gro
     normal.nutrientsPerPop = 10;
     normal.maxBaseSize = 8;
     CHECK(GrowthCalculator::ComputeNutrientsRequired(normal, 3, noEffects) == 30);
+}
+
+namespace
+{
+
+PopCompositionConfig_t BureaucracyConfig_()
+{
+    PopCompositionConfig_t config;
+    config.bureaucracyLimitFormula =
+        "floor((8 - difficulty) * (4 + max(efficiency, 0)) * sqrt(map_width * map_height) / sqrt(3200) / 2)";
+    config.droneFormula =
+        "max(0, min(base_size, floor((residue + faction_base_count - bureaucracy_limit) / bureaucracy_limit)) + social_drone_modifier)";
+    config.droneTypeId = "Drone";
+    config.talentFormula = "0";
+    config.talentTypeId = "Talent";
+    return config;
+}
+
+DroneInputs_t StandardMapInputs_()
+{
+    DroneInputs_t inputs;
+    inputs.difficulty = static_cast<int>(Difficulty_t::Citizen);
+    inputs.efficiency = 0;
+    inputs.mapWidth = 80;
+    inputs.mapHeight = 40;
+    inputs.baseSize = 8;
+    inputs.factionBaseCount = 16;
+    return inputs;
+}
+
+} // namespace
+
+TEST_CASE("Bureaucracy limit uses difficulty, floored-zero efficiency, and map root",
+          "[population][drones][bureaucracy]")
+{
+    LuaRuntime lua;
+    const PopCompositionConfig_t config = BureaucracyConfig_();
+    DroneCalculator calculator(config, lua);
+
+    const DroneInputs_t citizen = StandardMapInputs_();
+    CHECK(calculator.CalculateLimit(citizen) == 16);
+
+    DroneInputs_t negativeEfficiency = citizen;
+    negativeEfficiency.efficiency = -3;
+    CHECK(calculator.CalculateLimit(negativeEfficiency) == 16);
+
+    DroneInputs_t planned = citizen;
+    planned.efficiency = 2;
+    CHECK(calculator.CalculateLimit(planned) == 24);
+
+    DroneInputs_t thinker = citizen;
+    thinker.difficulty = static_cast<int>(Difficulty_t::Thinker);
+    CHECK(calculator.CalculateLimit(thinker) == 8);
+
+    DroneInputs_t transcend = citizen;
+    transcend.difficulty = static_cast<int>(Difficulty_t::Transcend);
+    CHECK(calculator.CalculateLimit(transcend) == 6);
+}
+
+TEST_CASE("Bureaucracy drones appear only past the limit and follow residue classes",
+          "[population][drones][bureaucracy]")
+{
+    LuaRuntime lua;
+    const PopCompositionConfig_t config = BureaucracyConfig_();
+    DroneCalculator calculator(config, lua);
+    const DroneInputs_t atLimit = StandardMapInputs_();
+    CHECK(calculator.Calculate(atLimit) == 0);
+
+    DroneInputs_t doubleLimit = atLimit;
+    doubleLimit.factionBaseCount = 32;
+    CHECK(calculator.Calculate(doubleLimit) == 1);
+
+    DroneInputs_t over = atLimit;
+    over.baseId = 42;
+    over.factionBaseCount = 17;
+    const int residue = static_cast<int>(StableBaseHash(42) % 16);
+    CHECK(calculator.Calculate(over) == (residue + 1) / 16);
+
+    DroneInputs_t crowded = atLimit;
+    crowded.factionBaseCount = 144;
+    crowded.baseSize = 3;
+    CHECK(calculator.Calculate(crowded) == 3);
+}
+
+TEST_CASE("A non-positive bureaucracy limit is a config error", "[population][drones][bureaucracy]")
+{
+    LuaRuntime lua;
+    PopCompositionConfig_t config = BureaucracyConfig_();
+    config.bureaucracyLimitFormula = "0";
+    DroneCalculator calculator(config, lua);
+
+    CHECK_THROWS_WITH(calculator.Calculate(StandardMapInputs_()),
+                      Catch::Matchers::ContainsSubstring("limit")
+                          && Catch::Matchers::ContainsSubstring("0"));
 }
