@@ -35,8 +35,9 @@ struct BaseConquestResult_t
     bool bActorDestroyed = false;
 };
 
-// After the last owner unit on a base tile is destroyed: pop loss (unless
-// PreventsConquestPopLoss), then native raid if applicable. Capture requires entry.
+// After the last owner unit on a base tile is destroyed: last-defender pop loss
+// (RawScaled LastDefenderPopLoss, seed last_defender_pop_loss), then native raid if
+// applicable. Capture requires entry.
 BaseConquestResult_t ResolvePostCombatBaseConquest(Unit& rAttacker,
                                                    const Tile& rDefenderTile,
                                                    GameState& rGameState,

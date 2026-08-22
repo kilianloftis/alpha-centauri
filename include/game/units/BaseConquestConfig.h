@@ -1,5 +1,7 @@
 #pragma once
 
+#include "game/effects/EffectConfig.h"
+
 #include <string>
 #include <vector>
 
@@ -16,11 +18,11 @@ struct EscapeColonyPodConfig_t
 
 struct BaseConquestConfig_t
 {
-    int lastDefenderPopLoss = 1;
-    int capturePopLoss = 1;
-    // Uniform count in [min, floor(eligible * maxPercent / 100)], inclusive.
-    int captureFacilitiesDestroyedMin = 0;
-    int captureFacilitiesDestroyedMaxPercent = 50;
+    // Continuous effects injected into every faction's pool: the LastDefenderPopLoss,
+    // CapturePopLoss, CaptureFacilitiesDestroyedMin and CaptureFacilitiesDestroyedMaxPercent
+    // baselines, each an Add. Every numeric conquest tunable is a modifiable stat rather than
+    // a hard-coded seed, so a mod can shift any of them without touching C++.
+    std::vector<EffectConfig_t> effects;
     EscapeColonyPodConfig_t escapeColonyPod;
 };
 

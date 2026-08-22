@@ -76,7 +76,38 @@
     "id": "fusion_power",
     "name": "Fusion Power",
     "category": "discover",
-    "cost": 60
+    "cost": 60,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "facility_energy_upkeep",
+          "amount": 1,
+          "op": "Add"
+        },
+        "buildingFilter": { "kind": "BuildingId", "building": "Command_Center" }
+      }
+    ]
+  },
+  {
+    "id": "quantum_power",
+    "name": "Quantum Power",
+    "category": "discover",
+    "cost": 120,
+    "prerequisites": ["fusion_power"],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "facility_energy_upkeep",
+          "amount": 1,
+          "op": "Add"
+        },
+        "buildingFilter": { "kind": "BuildingId", "building": "Command_Center" }
+      }
+    ]
   },
   {
     "id": "mind_machine_interface",

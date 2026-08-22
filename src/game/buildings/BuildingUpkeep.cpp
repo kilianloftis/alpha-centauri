@@ -1,10 +1,8 @@
 #include "game/buildings/BuildingUpkeep.h"
 
-#include "game/effects/EffectEnums.h"
 #include "game/faction/base/BaseManager.h"
 
 #include <algorithm>
-#include <cmath>
 #include <unordered_map>
 
 namespace ac
@@ -62,10 +60,10 @@ int ResolveFacilityEnergyUpkeepPerCopy(const BuildingConfig_t& rBuilding,
     const std::vector<ActiveEffect_t> effects(rEffects.begin(), rEffects.end());
     const std::vector<ActiveEffect_t> matching =
         MatchingFacilityUpkeepEffects_(rBuilding, effects, pOriginBase);
-    const double multiplier = ResolveStatModifiers(
-        matching, SeedFor(StatId_t::FacilityEnergyUpkeep)).total;
-    const long rounded = std::lround(static_cast<double>(rBuilding.upkeep) * multiplier);
-    return static_cast<int>(std::max(0L, rounded));
+    // FacilityEnergyUpkeep is RawScaled: seed with the building's base upkeep.
+    const int resolved = FinalizeResolvedStat(
+        ResolveStatModifiers(matching, static_cast<double>(rBuilding.upkeep)).total);
+    return std::max(0, resolved);
 }
 
 std::vector<BuildingUpkeepLine_t> TallyBuildingUpkeepByType(
@@ -92,11 +90,9 @@ std::vector<BuildingUpkeepLine_t> TallyBuildingUpkeepByType(
     {
         const std::vector<ActiveEffect_t> matching =
             MatchingFacilityUpkeepEffects_(*rLine.pConfig, effects, pOriginBase);
-        const double multiplier = ResolveStatModifiers(
-            matching, SeedFor(StatId_t::FacilityEnergyUpkeep)).total;
-        const long rounded =
-            std::lround(static_cast<double>(rLine.pConfig->upkeep) * multiplier);
-        rLine.upkeepPerCopy = static_cast<int>(std::max(0L, rounded));
+        const int resolved = FinalizeResolvedStat(
+            ResolveStatModifiers(matching, static_cast<double>(rLine.pConfig->upkeep)).total);
+        rLine.upkeepPerCopy = std::max(0, resolved);
         lines.push_back(rLine);
     }
     std::sort(lines.begin(), lines.end(),

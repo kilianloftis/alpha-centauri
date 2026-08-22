@@ -53,6 +53,18 @@ int RemovePopulation_(BaseManager& rBase, int amount)
     return removed;
 }
 
+// Every base_conquest stat is Additive: base_conquest.json Adds the baseline, facilities
+// and difficulty stack on top. Pop loss is resolved before facilities are destroyed so a
+// ThisBase clamp still counts even if the building granting it is then randomly demolished.
+int ResolveBaseConquestStat_(const BaseManager& rBase, StatId_t stat)
+{
+    const int resolved = FinalizeResolvedStat(
+        ResolveStatModifiers(FilterBaseLevelByStatId(rBase.GetBaseEffects(), stat),
+                             SeedFor(stat))
+            .total);
+    return std::max(0, resolved);
+}
+
 std::vector<const BuildingConfig_t*> DestroyableFacilities_(const BaseManager& rBase)
 {
     std::vector<const BuildingConfig_t*> candidates;
@@ -66,8 +78,7 @@ std::vector<const BuildingConfig_t*> DestroyableFacilities_(const BaseManager& r
     return candidates;
 }
 
-int DestroyRandomFacilities_(BaseManager& rBase, const BaseConquestConfig_t& rConfig,
-                             std::mt19937& rRng)
+int DestroyRandomFacilities_(BaseManager& rBase, std::mt19937& rRng)
 {
     std::vector<const BuildingConfig_t*> candidates = DestroyableFacilities_(rBase);
     if (candidates.empty())
@@ -75,12 +86,15 @@ int DestroyRandomFacilities_(BaseManager& rBase, const BaseConquestConfig_t& rCo
         return 0;
     }
 
-    // Both bounds clamp to what the base actually has, so the range is never inverted.
+    // Both bounds clamp to what the base actually has, so no modifier can invert the range
+    // or push it past the eligible count — the resolved stats need no other validation.
     const int eligible = static_cast<int>(candidates.size());
-    const int minCount = std::min(rConfig.captureFacilitiesDestroyedMin, eligible);
+    const int minCount = std::clamp(
+        ResolveBaseConquestStat_(rBase, StatId_t::CaptureFacilitiesDestroyedMin), 0, eligible);
+    const int maxPercent = std::clamp(
+        ResolveBaseConquestStat_(rBase, StatId_t::CaptureFacilitiesDestroyedMaxPercent), 0, 100);
     const int maxCount =
-        std::min(std::max(minCount, eligible * rConfig.captureFacilitiesDestroyedMaxPercent / 100),
-                 eligible);
+        std::min(std::max(minCount, eligible * maxPercent / 100), eligible);
 
     std::uniform_int_distribution<int> countDist(minCount, maxCount);
     const int toDestroy = countDist(rRng);
@@ -245,10 +259,8 @@ BaseConquestResult_t ApplyLastDefenderCasualty_(BaseManager& rBase, GameState& r
     BaseConquestResult_t result;
     result.outcome = BaseConquestOutcome_t::LastDefenderCasualty;
 
-    if (!ResolveFlag(rBase, RuleFlagId_t::PreventsConquestPopLoss))
-    {
-        result.populationLost = RemovePopulation_(rBase, rConfig.lastDefenderPopLoss);
-    }
+    result.populationLost = RemovePopulation_(
+        rBase, ResolveBaseConquestStat_(rBase, StatId_t::LastDefenderPopLoss));
 
     MaybeRazeBase_(rBase, rGameState, result);
     return result;
@@ -296,16 +308,21 @@ BaseConquestResult_t ApplyCapture_(Unit& rCapturer, BaseManager& rBase, GameStat
     Faction& rNewOwner = rCapturer.GetFaction();
     const BaseId_t baseId = rBase.GetBaseId();
 
-    result.facilitiesDestroyed = DestroyRandomFacilities_(rBase, rConfig, rRng);
+    const bool bCrossSpecies =
+        IsCrossSpeciesConquest(rNewOwner.GetDefinition().identity.species,
+                               rOldOwner.GetDefinition().identity.species);
+    const int capturePopLoss =
+        bCrossSpecies ? 0 : ResolveBaseConquestStat_(rBase, StatId_t::CapturePopLoss);
 
-    if (IsCrossSpeciesConquest(rNewOwner.GetDefinition().identity.species,
-                               rOldOwner.GetDefinition().identity.species))
+    result.facilitiesDestroyed = DestroyRandomFacilities_(rBase, rRng);
+
+    if (bCrossSpecies)
     {
         ApplySpeciesClashPopulation_(rBase, rGameState, rDataContext, rConfig, rRng, result);
     }
     else
     {
-        result.populationLost = RemovePopulation_(rBase, rConfig.capturePopLoss);
+        result.populationLost = RemovePopulation_(rBase, capturePopLoss);
     }
 
     if (MaybeRazeBase_(rBase, rGameState, result))

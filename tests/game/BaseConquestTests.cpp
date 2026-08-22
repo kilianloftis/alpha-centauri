@@ -74,9 +74,10 @@ struct ConquestGame_
             std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
             *fixtures.dataContext.moraleCalculator, actest::k_TestRngSeed);
 
-        fixtures.dataContext.baseConquestConfig = std::make_unique<BaseConquestConfig_t>();
-        fixtures.dataContext.baseConquestConfig->captureFacilitiesDestroyedMin = 1;
-        fixtures.dataContext.baseConquestConfig->captureFacilitiesDestroyedMaxPercent = 100;
+        actest::SetBaseConquestStat(*fixtures.dataContext.baseConquestConfig,
+                                    StatId_t::CaptureFacilitiesDestroyedMin, 1);
+        actest::SetBaseConquestStat(*fixtures.dataContext.baseConquestConfig,
+                                    StatId_t::CaptureFacilitiesDestroyedMaxPercent, 100);
         fixtures.dataContext.baseConquestConfig->escapeColonyPod.componentIds = {
             "test_chassis", "test_colony_pod"};
         fixtures.dataContext.unitComponentRegistry =
@@ -305,7 +306,7 @@ TEST_CASE("Killing the last defender cuts pop; stepping in captures, destroys fa
     CHECK(attacker.GetCurrentHp() == attacker.GetStat(StatId_t::HitPoints));
 }
 
-TEST_CASE("Perimeter Defense skips last-defender pop loss; capture pop applies on entry",
+TEST_CASE("Perimeter Defense MaxClamp 0 skips last-defender loss; capture loss still applies",
           "[unit][conquest]")
 {
     ConquestGame_ game;
@@ -322,6 +323,61 @@ TEST_CASE("Perimeter Defense skips last-defender pop loss; capture pop applies o
 
     CHECK(game.pPlayer->GetBaseCount() == 0);
     CHECK((*game.pAi->Bases().begin()).GetPopulation().GetSize() == 3);
+    REQUIRE(attacker.GetMoveFragmentsRemaining() > 0);
+
+    MoveOrder_t order;
+    REQUIRE(game.pState->GetUnitOrderExecutor().TryStep(attacker, rBase.GetTile(), order).bEntered);
+
+    REQUIRE(game.pPlayer->GetBaseCount() == 1);
+    CHECK((*game.pPlayer->Bases().begin()).GetPopulation().GetSize() == 2);
+}
+
+TEST_CASE("A facility can clamp capture facility destruction to nothing", "[unit][conquest]")
+{
+    // ConquestGame_ sets min 1 / max 100%, so without the shield at least one facility goes.
+    ConquestGame_ game;
+    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/4);
+    rBase.GetBuildingManager().AddBuilding("test_facility_a");
+    rBase.GetBuildingManager().AddBuilding("test_facility_b");
+    rBase.GetBuildingManager().AddBuilding("test_capture_facility_shield");
+
+    Unit& attacker = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon"});
+    Unit& defender = game.MakeUnit(*game.pAi, 5, 4, {"test_chassis"}, &rBase);
+
+    auto result = game.pState->GetUnitOrderExecutor().TryAttack(
+        attacker, defender.GetTile());
+    REQUIRE(result.has_value());
+    REQUIRE(result->bDefenderDestroyed);
+
+    MoveOrder_t order;
+    REQUIRE(game.pState->GetUnitOrderExecutor().TryStep(attacker, rBase.GetTile(), order).bEntered);
+
+    REQUIRE(game.pPlayer->GetBaseCount() == 1);
+    BaseManager& rCaptured = *game.pPlayer->Bases().begin();
+    CHECK(rCaptured.GetBuildingManager().HasBuilding("test_facility_a"));
+    CHECK(rCaptured.GetBuildingManager().HasBuilding("test_facility_b"));
+    CHECK(rCaptured.GetBuildingManager().HasBuilding("test_capture_facility_shield"));
+}
+
+TEST_CASE("LastDefenderPopLoss MaxClamp leaves CapturePopLoss untouched", "[unit][conquest]")
+{
+    ConquestGame_ game;
+    actest::SetBaseConquestStat(*game.fixtures.dataContext.baseConquestConfig,
+                                StatId_t::LastDefenderPopLoss, 3);
+    actest::SetBaseConquestStat(*game.fixtures.dataContext.baseConquestConfig,
+                                StatId_t::CapturePopLoss, 3);
+    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/6);
+    rBase.GetBuildingManager().AddBuilding("test_last_defender_pop_loss_cap");
+
+    Unit& attacker = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon"});
+    Unit& defender = game.MakeUnit(*game.pAi, 5, 4, {"test_chassis"}, &rBase);
+
+    auto result = game.pState->GetUnitOrderExecutor().TryAttack(
+        attacker, defender.GetTile());
+    REQUIRE(result.has_value());
+    REQUIRE(result->bDefenderDestroyed);
+
+    CHECK((*game.pAi->Bases().begin()).GetPopulation().GetSize() == 5);
     REQUIRE(attacker.GetMoveFragmentsRemaining() > 0);
 
     MoveOrder_t order;

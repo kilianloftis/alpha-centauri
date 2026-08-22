@@ -26,6 +26,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <set>
+#include <limits>
 #include <string_view>
 #include <type_traits>
 #include <variant>
@@ -277,6 +278,9 @@ double ApplyModifierStack(double base, const std::vector<std::pair<double, Modif
     double addTotal = base;
     double arithmeticFactor = 1.0;
     double geometricFactor = 1.0;
+    // Infinite bounds are the no-clamp identity, so no "was one present" flag is needed.
+    double maxClamp = std::numeric_limits<double>::infinity();
+    double minClamp = -std::numeric_limits<double>::infinity();
     for (const auto& [amount, op] : contributions)
     {
         switch (op)
@@ -284,9 +288,13 @@ double ApplyModifierStack(double base, const std::vector<std::pair<double, Modif
             case ModifierOp_t::Add:               addTotal += amount; break;
             case ModifierOp_t::AddPercent:        arithmeticFactor += amount / 100.0; break;
             case ModifierOp_t::MultiplyGeometric: geometricFactor *= amount; break;
+            case ModifierOp_t::MaxClamp:          maxClamp = std::min(maxClamp, amount); break;
+            case ModifierOp_t::MinClamp:          minClamp = std::max(minClamp, amount); break;
         }
     }
-    return addTotal * arithmeticFactor * geometricFactor;
+    const double result = addTotal * arithmeticFactor * geometricFactor;
+    // MinClamp applied last, so it wins when a MinClamp and a MaxClamp cross.
+    return std::max(std::min(result, maxClamp), minClamp);
 }
 
 const FactionEffects_t& CollectActiveEffects(const IEffectsProvider& rProvider)
@@ -427,6 +435,16 @@ bool BuildingFilterSatisfied(const EffectConfig_t& config, const BuildingConfig_
         *config.buildingFilter);
 }
 
+bool FactionFilterMatchesOwner(const EffectConfig_t& rConfig, bool bPlayerControlled)
+{
+    if (!rConfig.factionFilter
+        || rConfig.factionFilter->kind != FactionFilterKind_t::PlayerType)
+    {
+        return true;
+    }
+    return (rConfig.factionFilter->playerType == PlayerType_t::Player) == bPlayerControlled;
+}
+
 BaseEffects_t FilterForBase(const FactionEffects_t& rFactionEffects, const BaseManager& rBase)
 {
     BaseEffects_t matching;
@@ -557,6 +575,10 @@ int PredictModifyPopulationDelta(int size, const ModifyPopulationEffect_t& rEffe
     case ModifierOp_t::MultiplyGeometric:
         throw std::runtime_error(
             "PredictModifyPopulationDelta: MultiplyGeometric is not supported");
+    case ModifierOp_t::MaxClamp:
+    case ModifierOp_t::MinClamp:
+        throw std::runtime_error(
+            "PredictModifyPopulationDelta: clamp ops are not supported");
     }
 
     if (delta < 0)

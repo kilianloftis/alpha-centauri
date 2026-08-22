@@ -17,6 +17,8 @@
 #include "game/council/CouncilProposalConfig.h"
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/council/CouncilRulesConfig.h"
+#include "game/DifficultyConfig.h"
+#include "game/units/BaseConquestConfig.h"
 #include "game/social-engineering/SocialRatingConfig.h"
 #include "game/social-engineering/SocialRatingRegistry.h"
 #include "game/units/UnitComponentConfig.h"
@@ -250,6 +252,8 @@ void ValidateEffectReferences(const GameDataContext& rData)
         RequireRegistry(rData.probeActionsConfig, "probeActionsConfig");
     const ProductionConfig_t& rProductionConfig =
         RequireRegistry(rData.productionConfig, "productionConfig");
+    const DifficultyConfig_t& rDifficultyConfig =
+        RequireRegistry(rData.difficultyConfig, "difficultyConfig");
 
     auto validate = [&](const std::vector<EffectConfig_t>& rEffects, const std::string& rSourceId)
     {
@@ -309,6 +313,12 @@ void ValidateEffectReferences(const GameDataContext& rData)
     // tileYieldRules is a plain vector on GameDataContext (always present; may be empty).
     validate(rData.tileYieldRules, "tile_yield_rules");
     validate(rProductionConfig.effects, "production");
+    validate(RequireRegistry(rData.baseConquestConfig, "baseConquestConfig").effects,
+             "base_conquest");
+    for (const DifficultyLevel_t& rLevel : rDifficultyConfig.levels)
+    {
+        validate(rLevel.effects, "difficulty:" + rLevel.id);
+    }
 }
 
 } // namespace ac

@@ -1,0 +1,561 @@
+{
+  "default": "talent",
+  "levels": [
+    {
+      "id": "citizen",
+      "name": "Citizen",
+      "rules": {
+        "random_events_after_turn": 75,
+        "research_disabled_turns": 5,
+        "ai_secret_projects_require_human_prereq": true,
+        "colony_pod_preserves_size_1_base": true,
+        "no_power_overloads": true,
+        "no_incited_pact_treaty_scripts": true,
+        "ai_auto_personality": false,
+        "combat_handicap": true,
+        "combat_handicap_natives_only": false
+      },
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "size_free_drones",
+            "amount": 6,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "bureaucracy_free_drones",
+            "amount": 8,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "last_defender_pop_loss",
+            "amount": 0,
+            "op": "MaxClamp"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "facility_energy_upkeep",
+            "amount": 0,
+            "op": "MaxClamp"
+          },
+          "buildingFilter": {
+            "kind": "BuildingId",
+            "building": "Command_Center"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "prototype_surcharge_scale",
+            "amount": 0,
+            "op": "MultiplyGeometric"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "retool_penalty_scale",
+            "amount": 0,
+            "op": "MultiplyGeometric"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "ecological_damage",
+            "amount": 3,
+            "op": "MultiplyGeometric"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "tech_cost_diff",
+            "amount": 1,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "bureaucracy_difficulty",
+            "amount": 0,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "AI"
+          },
+          "parameters": {
+            "stat": "cost_multiplier",
+            "amount": 30,
+            "op": "AddPercent"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "AI"
+          },
+          "parameters": {
+            "stat": "probe_action_cost",
+            "amount": -50,
+            "op": "AddPercent"
+          }
+        }
+      ]
+    },
+    {
+      "id": "specialist",
+      "name": "Specialist",
+      "rules": {
+        "random_events_after_turn": 65,
+        "research_disabled_turns": 5,
+        "ai_secret_projects_require_human_prereq": true,
+        "colony_pod_preserves_size_1_base": true,
+        "no_power_overloads": true,
+        "ai_auto_personality": false,
+        "combat_handicap": true,
+        "combat_handicap_natives_only": false
+      },
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "size_free_drones",
+            "amount": 5,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "bureaucracy_free_drones",
+            "amount": 7,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "facility_energy_upkeep",
+            "amount": 1,
+            "op": "MaxClamp"
+          },
+          "buildingFilter": {
+            "kind": "BuildingId",
+            "building": "Command_Center"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "prototype_surcharge_scale",
+            "amount": 0,
+            "op": "MultiplyGeometric"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "retool_penalty_scale",
+            "amount": 0,
+            "op": "MultiplyGeometric"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "ecological_damage",
+            "amount": 3,
+            "op": "MultiplyGeometric"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "tech_cost_diff",
+            "amount": 2,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "bureaucracy_difficulty",
+            "amount": 1,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "AI"
+          },
+          "parameters": {
+            "stat": "cost_multiplier",
+            "amount": 20,
+            "op": "AddPercent"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "AI"
+          },
+          "parameters": {
+            "stat": "probe_action_cost",
+            "amount": -50,
+            "op": "AddPercent"
+          }
+        }
+      ]
+    },
+    {
+      "id": "talent",
+      "name": "Talent",
+      "rules": {
+        "random_events_after_turn": 55,
+        "ai_secret_projects_require_human_prereq": true,
+        "combat_handicap": true,
+        "combat_handicap_natives_only": true
+      },
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "size_free_drones",
+            "amount": 4,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "bureaucracy_free_drones",
+            "amount": 6,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "facility_energy_upkeep",
+            "amount": 1,
+            "op": "MaxClamp"
+          },
+          "buildingFilter": {
+            "kind": "BuildingId",
+            "building": "Command_Center"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "ecological_damage",
+            "amount": 3,
+            "op": "MultiplyGeometric"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "tech_cost_diff",
+            "amount": 3,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "bureaucracy_difficulty",
+            "amount": 2,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "AI"
+          },
+          "parameters": {
+            "stat": "cost_multiplier",
+            "amount": 10,
+            "op": "AddPercent"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "AI"
+          },
+          "parameters": {
+            "stat": "probe_action_cost",
+            "amount": -50,
+            "op": "AddPercent"
+          }
+        }
+      ]
+    },
+    {
+      "id": "librarian",
+      "name": "Librarian",
+      "rules": {
+        "random_events_after_turn": 45
+      },
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "size_free_drones",
+            "amount": 3,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "bureaucracy_free_drones",
+            "amount": 5,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "facility_energy_upkeep",
+            "amount": 2,
+            "op": "MaxClamp"
+          },
+          "buildingFilter": {
+            "kind": "BuildingId",
+            "building": "Command_Center"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "ecological_damage",
+            "amount": 3,
+            "op": "MultiplyGeometric"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "tech_cost_diff",
+            "amount": 3,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "bureaucracy_difficulty",
+            "amount": 3,
+            "op": "Add"
+          }
+        }
+      ]
+    },
+    {
+      "id": "thinker",
+      "name": "Thinker",
+      "rules": {
+        "random_events_after_turn": 35
+      },
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "size_free_drones",
+            "amount": 2,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "bureaucracy_free_drones",
+            "amount": 4,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "facility_energy_upkeep",
+            "amount": 3,
+            "op": "MaxClamp"
+          },
+          "buildingFilter": {
+            "kind": "BuildingId",
+            "building": "Command_Center"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "ecological_damage",
+            "amount": 5,
+            "op": "MultiplyGeometric"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "tech_cost_diff",
+            "amount": 4,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "bureaucracy_difficulty",
+            "amount": 4,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "AI"
+          },
+          "parameters": {
+            "stat": "cost_multiplier",
+            "amount": -20,
+            "op": "AddPercent"
+          }
+        }
+      ]
+    },
+    {
+      "id": "transcend",
+      "name": "Transcend",
+      "rules": {
+        "random_events_after_turn": 25
+      },
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "size_free_drones",
+            "amount": 1,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "bureaucracy_free_drones",
+            "amount": 3,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "ecological_damage",
+            "amount": 5,
+            "op": "MultiplyGeometric"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "tech_cost_diff",
+            "amount": 5,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "bureaucracy_difficulty",
+            "amount": 5,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "factionFilter": {
+            "kind": "PlayerType",
+            "type": "AI"
+          },
+          "parameters": {
+            "stat": "cost_multiplier",
+            "amount": -30,
+            "op": "AddPercent"
+          }
+        }
+      ]
+    }
+  ]
+}

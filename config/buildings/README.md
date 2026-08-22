@@ -17,7 +17,7 @@ Each file must be a JSON array of building objects. Any number of files may coex
 | `id` | string | Yes | — | Unique identifier used in code and save files |
 | `name` | string | No | `id` | Display name shown in the UI |
 | `mineral_cost` | int | No | `0` | Minerals required to construct; must be a non-negative integer |
-| `upkeep` | int | No | `0` | Base energy credits charged per turn per owned **constructed** copy. Effective cost is `upkeep × FacilityEnergyUpkeep` modifiers (PureMultiplier; techs use `buildingFilter` to target All / BuildingId / Category). Continuous `GrantBuilding` expansions are not constructed and pay nothing. UI: `BuildingConfig_t::GetUpkeep()` (base), `BaseManager::GetBuildingUpkeepByType()` / `Faction::GetBuildingUpkeepByType()` (resolved). |
+| `upkeep` | int | No | `0` | Base energy credits charged per turn per owned **constructed** copy. Effective cost is RawScaled `FacilityEnergyUpkeep` (seed = `upkeep`; techs use `buildingFilter` to target All / BuildingId / Category). Continuous `GrantBuilding` expansions are not constructed and pay nothing. UI: `BuildingConfig_t::GetUpkeep()` (base), `BaseManager::GetBuildingUpkeepByType()` / `Faction::GetBuildingUpkeepByType()` (resolved). |
 | `required_tech` | string | No | `""` | Tech that must be discovered before the building is available; omit or empty = always available |
 | `allow_multiple` | bool | No | `false` | If true, a base may build more than one copy |
 | `secret_project` | bool | No | `false` | If true, only one faction in the world may own this building |
@@ -73,7 +73,7 @@ Each entry in `effects` describes a single gameplay effect applied when the buil
 | `OrbitalAttack` | ASAT charge against other factions' `orbital` buildings (`parameters.chance`, `parameters.cooldown_turns`, `parameters.chance_of_destruction_on_fail`) |
 | `InterceptAttempt` | Pre-combat intercept (`parameters.chance`, optional `cooldown_turns`, `chance_of_destruction_on_fail`; requires `unitFilter`) |
 
-`amount`/`value` accept either a JSON number or a numeric string. `op` is one of `Add`, `AddPercent` (amount in percent points, e.g. `25` = +25%), `MultiplyGeometric` (factor form, e.g. `0.5`) — defaults to `Add`.
+`amount`/`value` accept either a JSON number or a numeric string. `op` is one of `Add`, `AddPercent` (amount in percent points, e.g. `25` = +25%), `MultiplyGeometric` (factor form, e.g. `0.5`), `MaxClamp`, `MinClamp` — defaults to `Add`.
 
 Any effect may carry an optional top-level `condition` object making it situational, e.g. a combat bonus that only applies against certain targets:
 

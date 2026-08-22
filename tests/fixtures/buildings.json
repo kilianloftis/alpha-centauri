@@ -253,13 +253,23 @@
       {
         "type": "Permission",
         "scope": "FactionUnits",
-        "parameters": { "permission": "Enter" },
-        "condition": { "kind": "AllOf", "values": ["Water", "Base"] }
+        "parameters": {
+          "permission": "Enter"
+        },
+        "condition": {
+          "kind": "AllOf",
+          "values": [
+            "Water",
+            "Base"
+          ]
+        }
       },
       {
         "type": "Permission",
         "scope": "FactionUnits",
-        "parameters": { "permission": "Attack" }
+        "parameters": {
+          "permission": "Attack"
+        }
       }
     ],
     "category": "conquer"
@@ -285,7 +295,10 @@
       {
         "type": "StatModifier",
         "scope": "ProducedAtThisBase",
-        "unitFilter": { "kind": "Domain", "domain": "air" },
+        "unitFilter": {
+          "kind": "Domain",
+          "domain": "air"
+        },
         "parameters": {
           "stat": "starting_experience",
           "amount": 2,
@@ -327,7 +340,10 @@
       {
         "type": "StatModifier",
         "scope": "ProducedAtThisBase",
-        "unitFilter": { "kind": "Domain", "domain": "land" },
+        "unitFilter": {
+          "kind": "Domain",
+          "domain": "land"
+        },
         "parameters": {
           "stat": "starting_experience",
           "amount": 2,
@@ -335,7 +351,8 @@
         }
       }
     ],
-    "category": "conquer"
+    "category": "conquer",
+    "upkeep": 1
   },
   {
     "id": "Command_Nexus",
@@ -345,19 +362,23 @@
       {
         "type": "GrantBuilding",
         "scope": "AllOwnerBases",
-        "parameters": { "building_id": "Command_Center" }
+        "parameters": {
+          "building_id": "Command_Center"
+        }
       }
     ],
     "category": "conquer"
   },
   {
     "id": "Childrens_Creche",
-    "name": "Children's Crèche",
+    "name": "Children's Cr\u00e8che",
     "effects": [
       {
         "type": "RuleFlag",
         "scope": "ThisBase",
-        "parameters": { "flag": "creche" }
+        "parameters": {
+          "flag": "creche"
+        }
       },
       {
         "type": "StatModifier",
@@ -365,9 +386,16 @@
         "condition": {
           "kind": "AllOf",
           "conditions": [
-            { "kind": "IsDefending" },
-            { "kind": "TargetTileHas", "value": "Base" },
-            { "kind": "OriginBaseIsTargetBase" }
+            {
+              "kind": "IsDefending"
+            },
+            {
+              "kind": "TargetTileHas",
+              "value": "Base"
+            },
+            {
+              "kind": "OriginBaseIsTargetBase"
+            }
           ]
         },
         "parameters": {
@@ -386,7 +414,10 @@
       {
         "type": "StatModifier",
         "scope": "FactionUnits",
-        "unitFilter": { "kind": "HasComponent", "component": "test_weapon" },
+        "unitFilter": {
+          "kind": "HasComponent",
+          "component": "test_weapon"
+        },
         "parameters": {
           "stat": "attack",
           "amount": 1,
@@ -578,7 +609,11 @@
       {
         "type": "StatModifier",
         "scope": "AllOwnerBases",
-        "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 1,
+          "op": "Add"
+        }
       }
     ],
     "category": "grow"
@@ -592,7 +627,11 @@
       {
         "type": "StatModifier",
         "scope": "AllOwnerBases",
-        "parameters": { "stat": "energy", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "energy",
+          "amount": 1,
+          "op": "Add"
+        }
       }
     ],
     "category": "discover"
@@ -606,14 +645,26 @@
       {
         "type": "OrbitalAttack",
         "scope": "FactionGlobal",
-        "parameters": { "chance": 100, "cooldown_turns": 1 }
+        "parameters": {
+          "chance": 100,
+          "cooldown_turns": 1
+        }
       },
       {
         "type": "InterceptAttempt",
         "scope": "FactionGlobal",
-        "parameters": { "chance": 100, "cooldown_turns": 1 },
-        "unitFilter": { "kind": "Domain", "domain": "orbital" },
-        "condition": { "kind": "TargetTileHas", "value": "Base" }
+        "parameters": {
+          "chance": 100,
+          "cooldown_turns": 1
+        },
+        "unitFilter": {
+          "kind": "Domain",
+          "domain": "orbital"
+        },
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "Base"
+        }
       }
     ],
     "category": "conquer"
@@ -627,14 +678,26 @@
       {
         "type": "OrbitalAttack",
         "scope": "FactionGlobal",
-        "parameters": { "chance": 0, "cooldown_turns": 1 }
+        "parameters": {
+          "chance": 0,
+          "cooldown_turns": 1
+        }
       },
       {
         "type": "InterceptAttempt",
         "scope": "FactionGlobal",
-        "parameters": { "chance": 0, "cooldown_turns": 1 },
-        "unitFilter": { "kind": "Domain", "domain": "orbital" },
-        "condition": { "kind": "TargetTileHas", "value": "Base" }
+        "parameters": {
+          "chance": 0,
+          "cooldown_turns": 1
+        },
+        "unitFilter": {
+          "kind": "Domain",
+          "domain": "orbital"
+        },
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "Base"
+        }
       }
     ],
     "category": "conquer"
@@ -662,8 +725,14 @@
           "cooldown_turns": 1,
           "chance_of_destruction_on_fail": 100
         },
-        "unitFilter": { "kind": "Domain", "domain": "orbital" },
-        "condition": { "kind": "TargetTileHas", "value": "Base" }
+        "unitFilter": {
+          "kind": "Domain",
+          "domain": "orbital"
+        },
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "Base"
+        }
       }
     ],
     "category": "conquer"
@@ -682,8 +751,14 @@
           "cooldown_turns": 1,
           "chance_of_destruction_on_fail": 100
         },
-        "unitFilter": { "kind": "Domain", "domain": "orbital" },
-        "condition": { "kind": "TargetTileHas", "value": "Base" }
+        "unitFilter": {
+          "kind": "Domain",
+          "domain": "orbital"
+        },
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "Base"
+        }
       }
     ],
     "category": "conquer"
@@ -695,9 +770,17 @@
       {
         "type": "InterceptAttempt",
         "scope": "ThisBase",
-        "parameters": { "chance": 100 },
-        "unitFilter": { "kind": "Domain", "domain": "orbital" },
-        "condition": { "kind": "TargetTileHas", "value": "Base" }
+        "parameters": {
+          "chance": 100
+        },
+        "unitFilter": {
+          "kind": "Domain",
+          "domain": "orbital"
+        },
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "Base"
+        }
       }
     ],
     "category": "conquer"
@@ -707,9 +790,58 @@
     "name": "Perimeter Defense",
     "effects": [
       {
-        "type": "RuleFlag",
+        "type": "StatModifier",
         "scope": "ThisBase",
-        "parameters": { "flag": "prevents_conquest_pop_loss" }
+        "persistence": "Continuous",
+        "parameters": {
+          "stat": "last_defender_pop_loss",
+          "amount": 0,
+          "op": "MaxClamp"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "test_last_defender_pop_loss_cap",
+    "name": "Test Last Defender Pop Loss Cap",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "persistence": "Continuous",
+        "parameters": {
+          "stat": "last_defender_pop_loss",
+          "amount": 1,
+          "op": "MaxClamp"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "test_capture_facility_shield",
+    "name": "Test Capture Facility Shield",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "persistence": "Continuous",
+        "parameters": {
+          "stat": "capture_facilities_destroyed_min",
+          "amount": 0,
+          "op": "MaxClamp"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "persistence": "Continuous",
+        "parameters": {
+          "stat": "capture_facilities_destroyed_max_percent",
+          "amount": 0,
+          "op": "MaxClamp"
+        }
       }
     ],
     "category": "conquer"
@@ -765,7 +897,11 @@
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "parameters": { "stat": "energy", "amount": 10, "op": "Add" }
+        "parameters": {
+          "stat": "energy",
+          "amount": 10,
+          "op": "Add"
+        }
       }
     ],
     "category": "discover"
@@ -779,10 +915,14 @@
       {
         "type": "RuleFlag",
         "scope": "ThisBase",
-        "parameters": { "flag": "headquarters" }
+        "parameters": {
+          "flag": "headquarters"
+        }
       }
     ],
-    "scrap": { "formula": null },
+    "scrap": {
+      "formula": null
+    },
     "category": "conquer"
   },
   {
@@ -792,7 +932,11 @@
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "parameters": { "stat": "drones", "amount": 2, "op": "Add" }
+        "parameters": {
+          "stat": "drones",
+          "amount": 2,
+          "op": "Add"
+        }
       }
     ],
     "category": "conquer"
@@ -804,7 +948,11 @@
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "parameters": { "stat": "talents", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "talents",
+          "amount": 1,
+          "op": "Add"
+        }
       }
     ],
     "category": "discover"
@@ -816,7 +964,11 @@
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "parameters": { "stat": "talents", "amount": -1, "op": "Add" }
+        "parameters": {
+          "stat": "talents",
+          "amount": -1,
+          "op": "Add"
+        }
       }
     ],
     "category": "conquer"
@@ -828,7 +980,11 @@
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "parameters": { "stat": "free_unit_support", "amount": 2, "op": "Add" }
+        "parameters": {
+          "stat": "free_unit_support",
+          "amount": 2,
+          "op": "Add"
+        }
       }
     ],
     "category": "conquer"
@@ -840,7 +996,11 @@
       {
         "type": "StatModifier",
         "scope": "FactionUnits",
-        "parameters": { "stat": "mineral_upkeep", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "mineral_upkeep",
+          "amount": 1,
+          "op": "Add"
+        }
       }
     ],
     "category": "conquer"
@@ -852,7 +1012,11 @@
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "parameters": { "stat": "minerals", "amount": 50, "op": "Add" }
+        "parameters": {
+          "stat": "minerals",
+          "amount": 50,
+          "op": "Add"
+        }
       }
     ],
     "category": "build"

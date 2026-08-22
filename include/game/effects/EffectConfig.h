@@ -383,6 +383,9 @@ using BuildingFilter_t =
 struct FactionFilter_t
 {
     FactionFilterKind_t kind = FactionFilterKind_t::ActionTarget;
+    // Only valid when kind == PlayerType: whether the filter matches Player-controlled
+    // factions or AI-controlled factions.
+    PlayerType_t playerType = PlayerType_t::Player;
 };
 
 struct EffectConfig_t

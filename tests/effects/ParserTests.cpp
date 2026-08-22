@@ -61,6 +61,11 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("commerce_energy_bonus") == StatId_t::CommerceEnergyBonus);
     CHECK(ParseStatId("inefficiency_denominator") == StatId_t::InefficiencyDenominator);
     CHECK(ParseStatId("scrap_refund") == StatId_t::ScrapRefund);
+    CHECK(ParseStatId("last_defender_pop_loss") == StatId_t::LastDefenderPopLoss);
+    CHECK(ParseStatId("capture_pop_loss") == StatId_t::CapturePopLoss);
+    CHECK(ParseStatId("ecological_damage") == StatId_t::EcologicalDamage);
+    CHECK(ParseStatId("tech_cost_diff") == StatId_t::TechCostDiff);
+    CHECK(ParseStatId("bureaucracy_difficulty") == StatId_t::BureaucracyDifficulty);
 
     CHECK_THROWS(ParseStatId("not_a_stat"));
     CHECK_THROWS(ParseStatId(""));
@@ -73,6 +78,8 @@ TEST_CASE("ParseModifierOp / ParseEffectScope / ParseEffectPersistence mappings"
     CHECK(EffectConfigParser::ParseModifierOp("Add") == ModifierOp_t::Add);
     CHECK(EffectConfigParser::ParseModifierOp("AddPercent") == ModifierOp_t::AddPercent);
     CHECK(EffectConfigParser::ParseModifierOp("MultiplyGeometric") == ModifierOp_t::MultiplyGeometric);
+    CHECK(EffectConfigParser::ParseModifierOp("MaxClamp") == ModifierOp_t::MaxClamp);
+    CHECK(EffectConfigParser::ParseModifierOp("MinClamp") == ModifierOp_t::MinClamp);
     CHECK_THROWS(EffectConfigParser::ParseModifierOp("Multiply"));
 
     CHECK(EffectConfigParser::ParseEffectScope("ThisBase") == EffectScope_t::ThisBase);
@@ -111,8 +118,6 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
           == RuleFlagId_t::AttackingEndsTurn);
     CHECK(ParseRuleFlagId("no_conquest_repair")
           == RuleFlagId_t::NoConquestRepair);
-    CHECK(ParseRuleFlagId("prevents_conquest_pop_loss")
-          == RuleFlagId_t::PreventsConquestPopLoss);
     CHECK(ParseRuleFlagId("headquarters") == RuleFlagId_t::Headquarters);
     CHECK(ParseRuleFlagId("probe_subversion_immune")
           == RuleFlagId_t::ProbeSubversionImmune);
@@ -128,6 +133,7 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
           == RuleFlagId_t::AtrocitiesForbidden);
     CHECK_THROWS(ParseRuleFlagId("hover"));
     CHECK_THROWS(ParseRuleFlagId("sea"));
+    CHECK_THROWS(ParseRuleFlagId("prevents_conquest_pop_loss"));
 
     CHECK(ParseSocialRatingId("economy") == SocialRatingId_t::Economy);
     CHECK(ParseSocialRatingId("efficiency") == SocialRatingId_t::Efficiency);
@@ -963,6 +969,16 @@ TEST_CASE("ParseEffectConfig: Infiltration uses scope + factionFilter", "[effect
     })"));
     REQUIRE(probe.factionFilter);
     CHECK(probe.factionFilter->kind == FactionFilterKind_t::ActionTarget);
+
+    const EffectConfig_t aiFilter = EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "Infiltration",
+        "scope": "FactionGlobal",
+        "persistence": "Continuous",
+        "factionFilter": { "kind": "PlayerType", "type": "AI" }
+    })"));
+    REQUIRE(aiFilter.factionFilter);
+    CHECK(aiFilter.factionFilter->kind == FactionFilterKind_t::PlayerType);
+    CHECK(aiFilter.factionFilter->playerType == PlayerType_t::AI);
 
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "Infiltration", "scope": "FactionGlobal", "persistence": "Continuous"

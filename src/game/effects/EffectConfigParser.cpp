@@ -745,6 +745,19 @@ FactionFilter_t ParseFactionFilter(const nlohmann::json& filterJson)
     {
         filter.kind = FactionFilterKind_t::CouncilMembers;
     }
+    else if (kindStr == "PlayerType")
+    {
+        filter.kind = FactionFilterKind_t::PlayerType;
+        const std::string typeStr = filterJson.value("type", "");
+        const auto playerType =
+            magic_enum::enum_cast<PlayerType_t>(typeStr, magic_enum::case_insensitive);
+        if (!playerType)
+        {
+            throw std::runtime_error("PlayerType factionFilter requires 'type' Player or AI, got '"
+                                     + typeStr + "'");
+        }
+        filter.playerType = *playerType;
+    }
     else
     {
         throw std::runtime_error("Unknown factionFilter kind: '" + kindStr + "'");
@@ -857,6 +870,8 @@ void ValidateEffectForSource(const EffectConfig_t& rEffect, EffectSourceKind_t s
         case EffectSourceKind_t::TileYieldRules:
         case EffectSourceKind_t::Tech:
         case EffectSourceKind_t::Production:
+        case EffectSourceKind_t::Difficulty:
+        case EffectSourceKind_t::BaseConquest:
             bCanSupplyOriginBase = false;
             break;
         }

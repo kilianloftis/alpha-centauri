@@ -17,7 +17,7 @@ struct BuildingUpkeepLine_t
 {
     const BuildingConfig_t* pConfig = nullptr;
     int count = 0;
-    // Resolved FacilityEnergyUpkeep (config base × matching PureMultiplier mods). Set by tally.
+    // Resolved FacilityEnergyUpkeep (RawScaled from config base + matching mods). Set by tally.
     int upkeepPerCopy = 0;
 
     int UpkeepPerCopy() const { return upkeepPerCopy; }

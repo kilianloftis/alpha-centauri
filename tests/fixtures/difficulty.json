@@ -1,0 +1,101 @@
+{
+  "default": "talent",
+  "levels": [
+    {
+      "id": "citizen",
+      "name": "Citizen",
+      "rules": {},
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "bureaucracy_difficulty",
+            "amount": 0,
+            "op": "Add"
+          }
+        }
+      ]
+    },
+    {
+      "id": "specialist",
+      "name": "Specialist",
+      "rules": {},
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "bureaucracy_difficulty",
+            "amount": 1,
+            "op": "Add"
+          }
+        }
+      ]
+    },
+    {
+      "id": "talent",
+      "name": "Talent",
+      "rules": {},
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "bureaucracy_difficulty",
+            "amount": 2,
+            "op": "Add"
+          }
+        }
+      ]
+    },
+    {
+      "id": "librarian",
+      "name": "Librarian",
+      "rules": {},
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "bureaucracy_difficulty",
+            "amount": 3,
+            "op": "Add"
+          }
+        }
+      ]
+    },
+    {
+      "id": "thinker",
+      "name": "Thinker",
+      "rules": {},
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "bureaucracy_difficulty",
+            "amount": 4,
+            "op": "Add"
+          }
+        }
+      ]
+    },
+    {
+      "id": "transcend",
+      "name": "Transcend",
+      "rules": {},
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "FactionGlobal",
+          "parameters": {
+            "stat": "bureaucracy_difficulty",
+            "amount": 5,
+            "op": "Add"
+          }
+        }
+      ]
+    }
+  ]
+}

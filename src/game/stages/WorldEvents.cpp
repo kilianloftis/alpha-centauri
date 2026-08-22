@@ -15,6 +15,8 @@ WorldEvents::WorldEvents(HookContext hookContext)
 
 StageResult_t WorldEvents::ExecuteImpl(GameState& rGameState)
 {
+    // TODO(difficulty): gate random events on the session level's
+    // rules.randomEventsAfterTurn vs years/turns.
     SpreadTerraformImprovements(rGameState.GetWorldMap(), rGameState.GetTileEffects(),
                                 rGameState.GetYearsSinceFirstPlayableYear(), rGameState.GetRng());
     return StageResult_t::Continue;

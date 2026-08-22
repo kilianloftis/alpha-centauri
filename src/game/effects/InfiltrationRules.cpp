@@ -69,6 +69,16 @@ bool FactionFilterCoversTarget(const EffectConfig_t& rConfig,
             return actionTarget.has_value() && *actionTarget == candidate;
         case FactionFilterKind_t::CouncilMembers:
             return IsCouncilMemberTarget_(rState, candidate);
+        case FactionFilterKind_t::PlayerType:
+        {
+            const Faction* pCandidate = rState.FindFaction(candidate);
+            if (!pCandidate)
+            {
+                return false;
+            }
+            const bool bIsPlayer = pCandidate->IsPlayerControlled();
+            return (rConfig.factionFilter->playerType == PlayerType_t::Player) == bIsPlayer;
+        }
     }
     return false;
 }

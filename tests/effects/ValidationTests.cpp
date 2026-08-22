@@ -19,6 +19,8 @@
 #include "game/units/ProbeActionConfig.h"
 #include "game/units/UnitComponentRegistry.h"
 #include "game/effects/EffectConfig.h"
+#include "game/DifficultyConfig.h"
+#include "game/units/BaseConquestConfig.h"
 
 #include "TestHelpers.h"
 
@@ -57,6 +59,8 @@ void FillEffectReferenceContext(GameDataContext& rData)
     rData.councilRules = std::make_unique<CouncilRulesConfig_t>();
     rData.probeActionsConfig = std::make_unique<ProbeActionsConfig_t>();
     rData.productionConfig = std::make_unique<ProductionConfig_t>();
+    rData.difficultyConfig = std::make_unique<DifficultyConfig_t>();
+    rData.baseConquestConfig = std::make_unique<BaseConquestConfig_t>();
 }
 
 } // namespace
@@ -119,13 +123,15 @@ static_assert(KindFor(StatId_t::CargoCapacity) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::DifficultTerrainCost) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::MineralUpkeep) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::FreeUnitSupport) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::SizeFreeDrones) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::BureaucracyFreeDrones) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::StartingExperience) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::StartingMinerals) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::MoraleBonus) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::CostMultiplier) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::PrototypeSurchargeScale) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::RetoolPenaltyScale) == StatKind_t::PureMultiplier);
-static_assert(KindFor(StatId_t::FacilityEnergyUpkeep) == StatKind_t::PureMultiplier);
+static_assert(KindFor(StatId_t::FacilityEnergyUpkeep) == StatKind_t::RawScaled);
 static_assert(KindFor(StatId_t::ProbeActionCost) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::ProbeDefense) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::ProbeFailureScale) == StatKind_t::PureMultiplier);
@@ -133,12 +139,20 @@ static_assert(KindFor(StatId_t::ProbeSuccessScale) == StatKind_t::PureMultiplier
 static_assert(KindFor(StatId_t::PositiveMoraleScale) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::GrowthRate) == StatKind_t::RawScaled);
 static_assert(KindFor(StatId_t::TechCost) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::TechCostDiff) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::BureaucracyDifficulty) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::MoistureTier) == StatKind_t::RawScaled);
 static_assert(KindFor(StatId_t::CommerceRate) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::CouncilVotes) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::CommerceEnergyBonus) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::InefficiencyDenominator) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::ScrapRefund) == StatKind_t::RawScaled);
+// Additive, not RawScaled: base_conquest.json's effects list supplies the whole baseline.
+static_assert(KindFor(StatId_t::LastDefenderPopLoss) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::CapturePopLoss) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::CaptureFacilitiesDestroyedMin) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::CaptureFacilitiesDestroyedMaxPercent) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::EcologicalDamage) == StatKind_t::RawScaled);
 
 // SeedFor derives the context-free seed from the kind; RawScaled stats have none (SeedFor
 // throws for them, which is not constexpr-evaluable, so no pin here).
@@ -147,7 +161,6 @@ static_assert(SeedFor(StatId_t::Attack) == 0.0);
 static_assert(SeedFor(StatId_t::CostMultiplier) == 1.0);
 static_assert(SeedFor(StatId_t::PrototypeSurchargeScale) == 1.0);
 static_assert(SeedFor(StatId_t::RetoolPenaltyScale) == 1.0);
-static_assert(SeedFor(StatId_t::FacilityEnergyUpkeep) == 1.0);
 
 TEST_CASE("ValidateEffectReferences: GrantBuilding targets must exist", "[effects][validation]")
 {

@@ -38,7 +38,8 @@ TEST_CASE("GameSettings Load leaves defaults when file is missing", "[GameSettin
     CHECK(settings.GetMapGeneration().oceanCoverage == Approx(0.6f));
     CHECK(settings.GetMapGeneration().erosiveForces == ErosiveForces_t::Average);
     CHECK(settings.GetMapGeneration().presetId == "islands");
-    CHECK(settings.GetGameRules().difficulty == Difficulty_t::Citizen);
+    // Empty, not a hard-coded level: difficulty.json's "default" owns the shipping choice.
+    CHECK(settings.GetGameRules().difficultyId.empty());
 }
 
 TEST_CASE("GameSettings Save and Load round-trip pause_at_end_of_turn", "[GameSettings]")
@@ -74,14 +75,14 @@ TEST_CASE("GameSettings Save and Load round-trip difficulty", "[GameSettings]")
     {
         GameSettings settings;
         GameRulesConfig_t rules = settings.GetGameRules();
-        rules.difficulty = Difficulty_t::Transcend;
+        rules.difficultyId = "transcend";
         settings.SetGameRules(rules);
         settings.Save(path.string());
     }
 
     GameSettings loaded;
     loaded.Load(path.string());
-    CHECK(loaded.GetGameRules().difficulty == Difficulty_t::Transcend);
+    CHECK(loaded.GetGameRules().difficultyId == "transcend");
 
     std::filesystem::remove(path);
 }

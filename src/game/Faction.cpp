@@ -1,11 +1,14 @@
 #include "game/faction/VisibilityRules.h"
 #include "game/Faction.h"
+#include "game/GameSettings.h"
 
 #include "game/buildings/BuildingRegistry.h"
 #include "game/stockpiles/StockpileRegistry.h"
 #include "game/buildings/BuildingUpkeep.h"
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/GameDataContext.h"
+#include "game/DifficultyConfig.h"
+#include "game/units/BaseConquestConfig.h"
 #include "game/map/WorldMap.h"
 #include "game/map/MapUtils.h"
 #include "game/faction/base/production/ScrapRefundCalculator.h"
@@ -64,7 +67,8 @@ Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
     , m_pUnits(std::make_unique<UnitManager>(*this, *rDataContext.moraleCalculator))
     , m_effectsPool(*this, *rDataContext.buildingRegistry, m_baseListRevision,
                     rDataContext.tileYieldRules, *rDataContext.socialRatingRegistry,
-                    rDataContext.productionConfig->effects)
+                    rDataContext.productionConfig->effects,
+                    rDataContext.baseConquestConfig->effects)
     , m_rWorldMap(rWorldMap)
     , m_rSettings(rSettings)
 {

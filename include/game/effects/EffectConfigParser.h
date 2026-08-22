@@ -47,7 +47,8 @@ UnitFilter_t ParseUnitFilter(const nlohmann::json& filterJson);
 BuildingFilter_t ParseBuildingFilter(const nlohmann::json& filterJson);
 
 // Parses a FactionFilter_t from a factionFilter JSON object
-// ({ "kind": "ActionTarget" } or { "kind": "CouncilMembers" }).
+// ({ "kind": "ActionTarget" }, { "kind": "CouncilMembers" }, or
+//  { "kind": "PlayerType", "type": "Player" | "AI" }).
 FactionFilter_t ParseFactionFilter(const nlohmann::json& filterJson);
 
 // Parses a single entry of an "effects" JSON array

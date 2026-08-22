@@ -44,6 +44,12 @@ enum class StatId_t
     // Minerals spent each turn to keep a live unit supported by its home base. Chassis
     // baseline is typically 1; abilities / FactionUnits SE can raise or zero it. Floor at 0.
     MineralUpkeep,
+    // Drones made content by base-size rules, before any other drone source (Additive).
+    // Difficulty is the only emitter; the count is the whole value, not a scale on base size.
+    SizeFreeDrones,
+    // Drones made content by the bureaucracy calculation (Additive). Difficulty-only, same
+    // shape as SizeFreeDrones.
+    BureaucracyFreeDrones,
     // How many positive-upkeep home units a base may support at zero mineral cost.
     // Support SE levels emit absolute FreeUnitSupport Adds (level 0 = 2); facilities Add on top.
     FreeUnitSupport,
@@ -55,8 +61,9 @@ enum class StatId_t
     // Scales the retool mineral forfeit (PureMultiplier, seed 1.0). ApplyRetoolPenalty_ uses
     // stockpile * retoolPercent/100 * this. Skunkworks emits MultiplyGeometric 0 on ThisBase.
     RetoolPenaltyScale,
-    // Multiplier on constructed-facility energy upkeep (PureMultiplier). Tech and (later)
-    // difficulty emit AddPercent; resolved per building type with optional buildingFilter.
+    // Constructed-facility energy upkeep (RawScaled: seed is BuildingConfig_t::upkeep).
+    // Tech tiers emit Add; percent cuts (and later difficulty MaxClamp) scale the raw value.
+    // Resolved per building type with optional buildingFilter.
     FacilityEnergyUpkeep,
     // Multiplier on enemy probe mind-control / subversion energy costs (PureMultiplier).
     // SE Probe levels emit AddPercent; resolved from the target base's effect list.
@@ -88,6 +95,10 @@ enum class StatId_t
     // Research tech cost percentage modifier (Add, base = 0; negative = cheaper)
     TechCost,
 
+    // Difficulty ordinal fed to tech_cost.lua as `diff` (Additive; shipping 1=Citizen … 5=
+    // Transcend). Difficulty-only; not a percentage and not stacked with TechCost.
+    TechCostDiff,
+
     // Tile terrain mutation (resolved back into Tile::SetMoisture, not a runtime-queried stat)
     MoistureTier,
 
@@ -95,6 +106,9 @@ enum class StatId_t
     CommerceRate,
     // Multiplier applied to bureaucracy/drone formulas (PureMultiplier; seed 1.0).
     BureaucracyMultiplier,
+    // Difficulty ordinal fed to pop_composition.json's bureaucracy_limit_formula as
+    // `difficulty` (Additive; shipping 0=Citizen … 5=Transcend). Difficulty-only.
+    BureaucracyDifficulty,
     // Extra council votes (Additive). Population elections seed with total population;
     // representative elections seed with 1. Buildings / projects / faction bonuses modify this.
     CouncilVotes,
@@ -109,7 +123,31 @@ enum class StatId_t
     // Player-scrap refund after the kind formula (or config override). RawScaled: seed is
     // the formula amount. Add / AddPercent stack, then production.json refund_ceiling_percent
     // clamps. Not a live yield.
-    ScrapRefund
+    ScrapRefund,
+
+    // Population removed when the last defender of a base falls (Additive). base_conquest.json
+    // supplies the baseline Add; Perimeter Defense and Citizen difficulty emit MaxClamp 0.
+    // Floored at 0 at the resolve site — population cannot go negative.
+    LastDefenderPopLoss,
+
+    // Lower bound on facilities destroyed when a base is captured (Additive).
+    // base_conquest.json Adds the baseline; clamped against the eligible count at the
+    // resolve site, so no modifier can invert the range.
+    CaptureFacilitiesDestroyedMin,
+
+    // Upper bound on facilities destroyed on capture, as a percent of the eligible count
+    // (Additive — the value is a percent, so a percent-of-a-percent AddPercent would not
+    // mean what a modder expects; use Add). Clamped against the eligible count.
+    CaptureFacilitiesDestroyedMaxPercent,
+
+    // Population removed when a base is captured by a same-species faction (Additive).
+    // base_conquest.json supplies the baseline Add. Independent of LastDefenderPopLoss —
+    // nothing in the shipping config modifies it. Floored at 0 at the resolve site.
+    CapturePopLoss,
+
+    // Ecological damage accrued from terraforming / population (RawScaled: seed is the raw
+    // accrued amount the resolve site holds). Difficulty emits MultiplyGeometric.
+    EcologicalDamage
     // TODO: add more stats as they are defined
 };
 
@@ -126,8 +164,9 @@ enum class StatKind_t
     // contributions; the seed is the identity 1.0 (a 0.0 seed collapses the result to 0).
     PureMultiplier,
     // Modifiers scale a raw value only the resolve site knows (GrowthRate's 100% baseline,
-    // MoistureTier's base tier). No universal seed exists — SeedFor throws, forcing the
-    // caller to pass the raw value explicitly.
+    // MoistureTier's base tier, FacilityEnergyUpkeep's building upkeep,
+    // ScrapRefund's formula amount). No universal seed
+    // exists — SeedFor throws, forcing the caller to pass the raw value explicitly.
     RawScaled,
 };
 
@@ -162,13 +201,20 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::MoraleBonus:
         case StatId_t::ProbeDefense:
         case StatId_t::TechCost:
+        case StatId_t::LastDefenderPopLoss:
+        case StatId_t::CapturePopLoss:
+        case StatId_t::CaptureFacilitiesDestroyedMin:
+        case StatId_t::CaptureFacilitiesDestroyedMaxPercent:
+        case StatId_t::TechCostDiff:
+        case StatId_t::BureaucracyDifficulty:
+        case StatId_t::SizeFreeDrones:
+        case StatId_t::BureaucracyFreeDrones:
         case StatId_t::CouncilVotes:
         case StatId_t::CommerceEnergyBonus:
         case StatId_t::InefficiencyDenominator: return StatKind_t::Additive;
         case StatId_t::CostMultiplier:
         case StatId_t::PrototypeSurchargeScale:
         case StatId_t::RetoolPenaltyScale:
-        case StatId_t::FacilityEnergyUpkeep:
         case StatId_t::ProbeActionCost:
         case StatId_t::ProbeFailureScale:
         case StatId_t::ProbeSuccessScale:
@@ -177,7 +223,9 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::BureaucracyMultiplier: return StatKind_t::PureMultiplier;
         case StatId_t::GrowthRate:
         case StatId_t::MoistureTier:
-        case StatId_t::ScrapRefund:          return StatKind_t::RawScaled;
+        case StatId_t::FacilityEnergyUpkeep:
+        case StatId_t::ScrapRefund:
+        case StatId_t::EcologicalDamage:    return StatKind_t::RawScaled;
     }
     return StatKind_t::Additive; // unreachable; all enumerators handled above
 }
@@ -211,6 +259,8 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "psych")                   return StatId_t::Psych;
     if (rStat == "drones")                  return StatId_t::Drones;
     if (rStat == "talents")                 return StatId_t::Talents;
+    if (rStat == "size_free_drones")        return StatId_t::SizeFreeDrones;
+    if (rStat == "bureaucracy_free_drones") return StatId_t::BureaucracyFreeDrones;
     if (rStat == "attack")                  return StatId_t::Attack;
     if (rStat == "defense")                 return StatId_t::Defense;
     if (rStat == "movement")                return StatId_t::Movement;
@@ -238,13 +288,22 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "positive_morale_scale")   return StatId_t::PositiveMoraleScale;
     if (rStat == "growth_rate")             return StatId_t::GrowthRate;
     if (rStat == "tech_cost")               return StatId_t::TechCost;
+    if (rStat == "tech_cost_diff")          return StatId_t::TechCostDiff;
     if (rStat == "moisture_tier")           return StatId_t::MoistureTier;
     if (rStat == "commerce_rate")           return StatId_t::CommerceRate;
     if (rStat == "bureaucracy_multiplier") return StatId_t::BureaucracyMultiplier;
+    if (rStat == "bureaucracy_difficulty")  return StatId_t::BureaucracyDifficulty;
     if (rStat == "council_votes")           return StatId_t::CouncilVotes;
     if (rStat == "commerce_energy_bonus")   return StatId_t::CommerceEnergyBonus;
     if (rStat == "inefficiency_denominator") return StatId_t::InefficiencyDenominator;
     if (rStat == "scrap_refund")             return StatId_t::ScrapRefund;
+    if (rStat == "last_defender_pop_loss")   return StatId_t::LastDefenderPopLoss;
+    if (rStat == "capture_pop_loss")         return StatId_t::CapturePopLoss;
+    if (rStat == "capture_facilities_destroyed_min")
+        return StatId_t::CaptureFacilitiesDestroyedMin;
+    if (rStat == "capture_facilities_destroyed_max_percent")
+        return StatId_t::CaptureFacilitiesDestroyedMaxPercent;
+    if (rStat == "ecological_damage")        return StatId_t::EcologicalDamage;
     throw std::runtime_error("Unknown stat id: '" + rStat + "'");
 }
 
@@ -304,8 +363,6 @@ enum class RuleFlagId_t
     AttackingEndsTurn,
     // Capturing this unit does not fully repair it (e.g. Battle Ogre).
     NoConquestRepair,
-    // Base flag: skip population loss when the last defender falls.
-    PreventsConquestPopLoss,
 
     // Unit / tile flags
     // Blocks the *opponent* from disengaging when carried ThisUnit (Comm Jammer), or blocks
@@ -367,7 +424,6 @@ inline RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "cannot_capture_bases")        return RuleFlagId_t::CannotCaptureBases;
     if (rFlag == "attacking_ends_turn")         return RuleFlagId_t::AttackingEndsTurn;
     if (rFlag == "no_conquest_repair")          return RuleFlagId_t::NoConquestRepair;
-    if (rFlag == "prevents_conquest_pop_loss")  return RuleFlagId_t::PreventsConquestPopLoss;
     if (rFlag == "prevents_disengage")          return RuleFlagId_t::PreventsDisengage;
     if (rFlag == "refuels_air")                 return RuleFlagId_t::RefuelsAir;
     if (rFlag == "loads_air_transport")         return RuleFlagId_t::LoadsAirTransport;
@@ -477,7 +533,13 @@ enum class ModifierOp_t
     // amount is in percent points (25 = +25%, -25 = -25%), matching the UI's bonus display.
     // All AddPercent contributions sum into a single arithmetic factor before the geometric step.
     AddPercent,
-    MultiplyGeometric
+    MultiplyGeometric,
+    // Clamps bound the value *after* the Add / AddPercent / MultiplyGeometric math. The
+    // tightest clamp of each kind wins; when a MinClamp and a MaxClamp cross, MinClamp wins.
+    // Clamp the resolved stat value to be <= amount.
+    MaxClamp,
+    // Clamp the resolved stat value to be >= amount.
+    MinClamp,
 };
 
 // Instantaneous world-state mutation id (sea level / climate) for WorldParameterEffect_t.
@@ -503,6 +565,16 @@ enum class FactionFilterKind_t
     ActionTarget,
     // Other factions on the PlanetaryCouncil member list. Matches nobody when no council exists.
     CouncilMembers,
+    // Matches factions by whether they are player-controlled or AI-controlled. When used,
+    // the concrete value is stored on the FactionFilter_t as PlayerType (see EffectConfig.h).
+    PlayerType,
+};
+
+// Whether the faction is a human player or an AI.
+enum class PlayerType_t
+{
+    Player,
+    AI,
 };
 
 // Which kind of config declared an effects array. Used for the minimal load-time scope
@@ -525,6 +597,8 @@ enum class EffectSourceKind_t
     Tech,
     Production,
     Stockpile,
+    Difficulty,
+    BaseConquest,
 };
 
 } // namespace ac

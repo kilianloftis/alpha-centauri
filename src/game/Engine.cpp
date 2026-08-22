@@ -3,6 +3,7 @@
 #include "game/council/CouncilAiStub.h"
 #include "game/council/PlanetaryCouncil.h"
 #include "game/GameSettings.h"
+#include "game/DifficultyConfig.h"
 #include "game/Faction.h"
 #include "game/faction/EconomyManager.h"
 #include "game/TurnStageFactory.h"
@@ -159,6 +160,11 @@ void Engine::InitializeApp_()
     // Every config parser + cross-config id validation (including unitFilter HasComponent).
     // Returns complete or throws: nothing downstream has to check a member for null.
     m_gameDataContext = std::make_unique<GameDataContext>(LoadGameData());
+
+    // Settings name a difficulty by id; reject an unknown one here, where the message can
+    // still point at the settings file, rather than from the first Faction constructor.
+    m_gameDataContext->difficultyConfig->RequireForSession(
+        m_pSettings->GetGameRules().difficultyId);
 }
 
 void Engine::StartNewGame_()

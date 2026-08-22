@@ -116,7 +116,13 @@ void ResearchManager::ComputePointsNeeded_() const
     {
         const FactionEffects_t& rFactionEffects = m_pEffectsProvider->GetActiveEffects();
         inputs.factionTechCostModifier = FinalizeResolvedStat(
-            ResolveStatModifiers(FilterByStatId(rFactionEffects.effects, StatId_t::TechCost), 0.0).total);
+            ResolveStatModifiers(FilterByStatId(rFactionEffects.effects, StatId_t::TechCost),
+                                 SeedFor(StatId_t::TechCost))
+                .total);
+        inputs.diff = FinalizeResolvedStat(
+            ResolveStatModifiers(FilterByStatId(rFactionEffects.effects, StatId_t::TechCostDiff),
+                                 SeedFor(StatId_t::TechCostDiff))
+                .total);
         m_costEffectsVersion = m_pEffectsProvider->GetEffectsVersion();
     }
     else
@@ -124,7 +130,7 @@ void ResearchManager::ComputePointsNeeded_() const
         m_costEffectsVersion = 0;
     }
     m_costResearchRevision = GetRevision();
-    // All other fields are placeholder defaults (diff=1, turns=0, bIsAI=false, etc.)
+    // Remaining fields are placeholder defaults (turns=0, bIsAI=false, etc.)
 
     m_pointsNeededForCurrentTech = m_rTechCostCalculator.CalculateCost(*m_pCurrentResearchTarget, inputs);
 }
@@ -146,6 +152,8 @@ void ResearchManager::RevalidatePointsNeeded_() const
 
 bool ResearchManager::CanDiscoverTech() const
 {
+    // TODO(difficulty): when rules.research_disabled_turns > 0, block discovery/labs for the
+    // first N turns of the session (Citizen/Specialist).
     if (!m_pCurrentResearchTarget)
     {
         return false;

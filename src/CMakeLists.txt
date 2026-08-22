@@ -6,6 +6,8 @@ add_library(ac-core STATIC
     game/GameState.cpp
     game/GameSettings.cpp
     game/GameDataContext.cpp
+    game/DifficultyConfig.cpp
+    game/DifficultyConfigParser.cpp
     game/EffectReferenceValidator.cpp
     game/RequiredTechValidator.cpp
     game/Faction.cpp

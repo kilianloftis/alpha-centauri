@@ -1,6 +1,9 @@
 #include "game/faction/FactionEffectsPool.h"
 
 #include "game/Faction.h"
+#include "game/GameDataContext.h"
+#include "game/GameSettings.h"
+#include "game/DifficultyConfig.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/faction/ResearchManager.h"
 #include "game/faction/SocialEngineeringManager.h"
@@ -24,13 +27,15 @@ FactionEffectsPool::FactionEffectsPool(const Faction& rFaction,
                                        const Revision& rBaseListRevision,
                                        const std::vector<EffectConfig_t>& rTileYieldRules,
                                        const SocialRatingRegistry& rSocialRatings,
-                                       const std::vector<EffectConfig_t>& rProductionEffects)
+                                       const std::vector<EffectConfig_t>& rProductionEffects,
+                                       const std::vector<EffectConfig_t>& rBaseConquestEffects)
     : m_rFaction(rFaction)
     , m_rBuildingRegistry(rBuildingRegistry)
     , m_rBaseListRevision(rBaseListRevision)
     , m_rTileYieldRules(rTileYieldRules)
     , m_rSocialRatings(rSocialRatings)
     , m_rProductionEffects(rProductionEffects)
+    , m_rBaseConquestEffects(rBaseConquestEffects)
 {
 }
 
@@ -123,6 +128,35 @@ std::vector<ActiveEffect_t> FactionEffectsPool::CollectTileYieldRuleEffects_() c
     return result;
 }
 
+std::vector<ActiveEffect_t> FactionEffectsPool::CollectBaseConquestEffects_() const
+{
+    std::vector<ActiveEffect_t> result;
+    AppendActiveEffects(m_rBaseConquestEffects, nullptr, "base_conquest", result);
+    return result;
+}
+
+std::vector<ActiveEffect_t> FactionEffectsPool::CollectDifficultyEffects_() const
+{
+    const GameDataContext& rData = m_rFaction.GetDataContext();
+    if (!rData.difficultyConfig)
+    {
+        throw std::runtime_error("FactionEffectsPool: GameDataContext has no difficultyConfig");
+    }
+    const DifficultyLevel_t& rLevel = rData.difficultyConfig->RequireForSession(
+        m_rFaction.GetSettings().GetGameRules().difficultyId);
+
+    // Append from the level's own storage, then drop the entries this faction does not
+    // match. ActiveEffect_t borrows EffectConfig_t by pointer, so filtering into a local
+    // vector first would leave every pointer dangling the moment it went out of scope.
+    std::vector<ActiveEffect_t> result;
+    AppendActiveEffects(rLevel.effects, nullptr, "difficulty", result);
+    const bool bPlayerControlled = m_rFaction.IsPlayerControlled();
+    std::erase_if(result, [bPlayerControlled](const ActiveEffect_t& rEffect) {
+        return !FactionFilterMatchesOwner(*rEffect.config, bPlayerControlled);
+    });
+    return result;
+}
+
 std::vector<ActiveEffect_t> FactionEffectsPool::CollectProductionEffects_() const
 {
     std::vector<ActiveEffect_t> result;
@@ -149,6 +183,8 @@ void FactionEffectsPool::CollectRevisions_(std::vector<uint64_t>& rOut) const
     rOut.push_back(m_rFaction.GetResearch().GetRevision());
     rOut.push_back(m_rFaction.GetSocialEngineering().GetRevision());
     rOut.push_back(m_rFaction.GetUnitManager().GetRevision());
+    // Difficulty is changeable mid-campaign; a rules change must invalidate the pool.
+    rOut.push_back(m_rFaction.GetSettings().GetGameRulesRevision().Get());
     for (const BaseManager& rBase : m_rFaction.Bases())
     {
         rOut.push_back(rBase.GetBuildingManager().GetRevision());
@@ -176,6 +212,14 @@ void FactionEffectsPool::Rebuild_() const
     const std::vector<ActiveEffect_t> tileYieldRules = CollectTileYieldRuleEffects_();
     factionEffects.effects.insert(factionEffects.effects.end(), tileYieldRules.begin(),
                                   tileYieldRules.end());
+
+    const std::vector<ActiveEffect_t> conquestEffects = CollectBaseConquestEffects_();
+    factionEffects.effects.insert(factionEffects.effects.end(), conquestEffects.begin(),
+                                  conquestEffects.end());
+
+    const std::vector<ActiveEffect_t> diffEffects = CollectDifficultyEffects_();
+    factionEffects.effects.insert(factionEffects.effects.end(), diffEffects.begin(),
+                                  diffEffects.end());
 
     const std::vector<ActiveEffect_t> productionEffects = CollectProductionEffects_();
     factionEffects.effects.insert(factionEffects.effects.end(), productionEffects.begin(),

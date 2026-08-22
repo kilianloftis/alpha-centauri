@@ -5,6 +5,7 @@
 #include "game/VisibilityConfig.h"
 #include "game/map/MapGenerationConfig.h"
 #include "graphics/Graphics.h"
+#include "lib/Revision.h"
 #include "lib/Signal.h"
 #include <string>
 
@@ -22,6 +23,9 @@ public:
 
     const GameRulesConfig_t& GetGameRules() const { return m_gameRules; }
     void SetGameRules(const GameRulesConfig_t& rConfig);
+    // Bumped whenever game rules actually change. FactionEffectsPool samples it so a
+    // mid-campaign difficulty switch invalidates every faction's cached effect list.
+    const Revision& GetGameRulesRevision() const { return m_gameRulesRevision; }
 
     const VisibilityConfig_t& GetVisibility() const { return m_visibility; }
     void SetVisibility(const VisibilityConfig_t& rConfig);
@@ -67,6 +71,7 @@ public:
 
 private:
     GameRulesConfig_t m_gameRules;
+    Revision m_gameRulesRevision;
     VisibilityConfig_t m_visibility;
     PauseOnEventsConfig_t m_pauseOnEvents;
     MapGenerationConfig_t m_mapGeneration;

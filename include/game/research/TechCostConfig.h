@@ -12,7 +12,8 @@ struct TechCostInputs_t
 {
     int techs = 0;                   // TECHS: discovered techs (excl. starting) + varA - varB
     int mostTechs = 0;               // MOSTTECHS: max techs by any faction + varA
-    int diff = 1;                    // 1=Citizen, 2=Specialist, 3=Talent/Librarian, 4=Thinker, 5=Transcend
+    // From StatId_t::TechCostDiff (difficulty Add). Shipping: 1=Citizen … 5=Transcend.
+    int diff = 1;
     int turns = 0;                   // Number of turns elapsed
     bool bIsAI = false;
     bool bTechStagnation = false;

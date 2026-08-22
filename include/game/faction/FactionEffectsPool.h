@@ -29,7 +29,8 @@ public:
                        const Revision& rBaseListRevision,
                        const std::vector<EffectConfig_t>& rTileYieldRules,
                        const SocialRatingRegistry& rSocialRatings,
-                       const std::vector<EffectConfig_t>& rProductionEffects);
+                       const std::vector<EffectConfig_t>& rProductionEffects,
+                       const std::vector<EffectConfig_t>& rBaseConquestEffects);
 
     // The validated local pool. Valid until the next effect-source mutation on the owner.
     const FactionEffects_t& Get() const;
@@ -62,6 +63,14 @@ private:
     // Production.json continuous effects (prototype StartingExperience, …).
     std::vector<ActiveEffect_t> CollectProductionEffects_() const;
 
+    // base_conquest.json continuous effects (pop-loss baselines).
+    std::vector<ActiveEffect_t> CollectBaseConquestEffects_() const;
+
+    // Session difficulty continuous effects, re-resolved from the owner's GameDataContext
+    // and current game rules. Not cached at construction: difficulty is changeable
+    // mid-campaign, and CollectRevisions_ samples the game-rules revision to catch it.
+    std::vector<ActiveEffect_t> CollectDifficultyEffects_() const;
+
     // Erase effects whose removedByTech is already discovered.
     static void ApplyRemovedByTech_(FactionEffects_t& rEffects, const ResearchManager& rResearch);
 
@@ -83,6 +92,7 @@ private:
     const std::vector<EffectConfig_t>& m_rTileYieldRules;
     const SocialRatingRegistry& m_rSocialRatings;
     const std::vector<EffectConfig_t>& m_rProductionEffects;
+    const std::vector<EffectConfig_t>& m_rBaseConquestEffects;
 
     // The empty initial stamp never equals a real collection, so no "never built"
     // sentinel is needed. m_scratchRevisions is reused between validations to keep the

@@ -40,8 +40,10 @@
 #include "game/units/MoraleCalculator.h"
 #include "game/units/MoraleConfig.h"
 #include "game/units/MoraleConfigParser.h"
+#include "game/units/BaseConquestConfig.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/effects/TileYieldRulesConfigParser.h"
+#include "game/DifficultyConfigParser.h"
 
 #include <deque>
 #include <memory>
@@ -102,6 +104,32 @@ struct PopTypeRegistryOnly
 // A small world with the fixture improvement and unit-component registries loaded and a
 // TileEffectsContext over them. Note: TileEffectsContext caches the max effect radius at
 // construction, so the registries must be loaded first — hence the unique_ptr.
+// Every base_conquest tunable is a baseline Add in its effects list, so tests set one by
+// rewriting that Add's amount in place. Replacing BaseConquestConfig_t wholesale would
+// dangle the reference FactionEffectsPool holds into `effects`, so never do that; editing an
+// existing entry is safe because the pool resolves through a pointer to it.
+inline void SetBaseConquestStat(ac::BaseConquestConfig_t& rConfig, ac::StatId_t stat, int amount)
+{
+    for (ac::EffectConfig_t& rEffect : rConfig.effects)
+    {
+        auto* pMod = std::get_if<ac::StatModifierEffect_t>(&rEffect.effect);
+        if (pMod && pMod->stat == stat)
+        {
+            pMod->amount = amount;
+            return;
+        }
+    }
+    ac::EffectConfig_t effect;
+    effect.scope = ac::EffectScope_t::FactionGlobal;
+    effect.persistence = ac::EffectPersistence_t::Continuous;
+    ac::StatModifierEffect_t modifier;
+    modifier.stat = stat;
+    modifier.amount = amount;
+    modifier.op = ac::ModifierOp_t::Add;
+    effect.effect = modifier;
+    rConfig.effects.push_back(effect);
+}
+
 struct WorldFixture
 {
     // Declared first so it is destroyed last: factions, bases, and units created by the
@@ -168,6 +196,18 @@ struct WorldFixture
             *dataContext.popCompositionConfig, *dataContext.luaRuntime);
         dataContext.popCompositionCalculator = std::make_unique<ac::PopCompositionCalculator>(
             *dataContext.popCompositionConfig, *dataContext.luaRuntime);
+        dataContext.difficultyConfig = std::make_unique<ac::DifficultyConfig_t>(
+            ac::DifficultyConfigParser{}.ParseConfig(FixturePath("difficulty.json")));
+        // Built here, before any Faction exists: FactionEffectsPool holds a reference into
+        // `effects`, so a test replacing this config later would dangle it.
+        dataContext.baseConquestConfig = std::make_unique<ac::BaseConquestConfig_t>();
+        SetBaseConquestStat(*dataContext.baseConquestConfig,
+                            ac::StatId_t::LastDefenderPopLoss, 1);
+        SetBaseConquestStat(*dataContext.baseConquestConfig, ac::StatId_t::CapturePopLoss, 1);
+        SetBaseConquestStat(*dataContext.baseConquestConfig,
+                            ac::StatId_t::CaptureFacilitiesDestroyedMin, 0);
+        SetBaseConquestStat(*dataContext.baseConquestConfig,
+                            ac::StatId_t::CaptureFacilitiesDestroyedMaxPercent, 50);
     }
 
     ac::MoraleCalculator& morale() const { return *dataContext.moraleCalculator; }

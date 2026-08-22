@@ -181,11 +181,19 @@ Conquest is split so the predicates stay testable without a live world:
 Two entry points, reached from `UnitOrderExecutor`:
 
 - `ResolvePostCombatBaseConquest` — after the last garrison on a base tile dies. Applies
-  last-defender population loss (unless the base has `PreventsConquestPopLoss`), then a
+  last-defender population loss (Additive `LastDefenderPopLoss`; `base_conquest.json` Adds the
+  baseline, Perimeter Defense and Citizen difficulty `MaxClamp` 0 cancel it), then a
   native raid if the attacker is native life. **Capture requires stepping onto the tile**, so
   combat alone never transfers ownership.
 - `ResolveBaseEntryConquest` — a unit entered an ungarrisoned foreign base tile. Native life
-  raids; anything else captures if `CanCaptureBase`.
+  raids; anything else captures if `CanCaptureBase`. Same-species capture pop loss is the
+  separate Additive `CapturePopLoss`, resolved before random facility destruction so a
+  `ThisBase` clamp still counts if the granting building is then demolished. How many
+  facilities are destroyed is likewise resolved from the base's effects — Additive
+  `CaptureFacilitiesDestroyedMin` and `CaptureFacilitiesDestroyedMaxPercent`, each clamped
+  against the eligible count so no modifier can invert the range. It is independent
+  of `LastDefenderPopLoss`: Perimeter Defense guards the last-defender case only, and nothing
+  in the shipping config modifies capture loss.
 
 Razing (population reaching zero) tombstones the base's Secret Projects through
 `GameState::MarkSecretProjectDestroyed`, so no faction can rebuild them.

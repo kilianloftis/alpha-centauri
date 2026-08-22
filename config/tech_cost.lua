@@ -3,7 +3,8 @@
 -- Variables set by the engine before evaluating cost_formula:
 --   techs                : TECHS (discovered techs excl. starting + varA - varB)
 --   most_techs           : MOSTTECHS (max discovered by any faction + varA)
---   diff                 : 1=Citizen, 2=Specialist, 3=Talent/Librarian, 4=Thinker, 5=Transcend
+--   diff                 : TechCostDiff from difficulty (1=Citizen, 2=Specialist,
+--                          3=Talent/Librarian, 4=Thinker, 5=Transcend)
 --   turns                : number of turns elapsed
 --   is_ai                : 1 if AI faction, 0 if human
 --   tech_stagnation      : 1 if tech stagnation is active, 0 otherwise

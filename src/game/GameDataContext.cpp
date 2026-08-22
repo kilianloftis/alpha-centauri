@@ -34,6 +34,7 @@
 #include "game/units/BaseConquestConfigParser.h"
 #include "game/council/CouncilProposalRegistry.h"
 #include "game/council/CouncilRulesConfigParser.h"
+#include "game/DifficultyConfigParser.h"
 #include "lib/LuaRuntime.h"
 
 #include <stdexcept>
@@ -73,6 +74,7 @@ void ThrowIfIncomplete(const GameDataContext& rData)
         {rData.baseConquestConfig.get(), "baseConquestConfig"},
         {rData.councilProposalRegistry.get(), "councilProposalRegistry"},
         {rData.councilRules.get(), "councilRules"},
+        {rData.difficultyConfig.get(), "difficultyConfig"},
         {rData.luaRuntime.get(), "luaRuntime"},
         {rData.droneCalculator.get(), "droneCalculator"},
         {rData.popCompositionCalculator.get(), "popCompositionCalculator"},
@@ -190,6 +192,10 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
     ProductionConfigParser productionParser;
     rData.productionConfig =
         std::make_unique<ProductionConfig_t>(productionParser.ParseConfig(rPaths.production));
+
+    DifficultyConfigParser difficultyParser;
+    rData.difficultyConfig =
+        std::make_unique<DifficultyConfig_t>(difficultyParser.ParseConfig(rPaths.difficulty));
 
     // Cross-config id checks — only safe once every registry above is loaded.
     ValidateTerrainFeatures(*rData.improvementRegistry);

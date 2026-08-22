@@ -92,6 +92,38 @@ TEST_CASE("ApplyModifierStack: combined ops follow (base+adds) * arithmetic * ge
     CHECK(ApplyModifierStack(2.0, stack) == Approx(4.5));
 }
 
+TEST_CASE("ApplyModifierStack: clamps bound the value after the arithmetic", "[effects][math]")
+{
+    // The clamp sees (2 + 4) * 1.5 = 9, not the 2.0 seed.
+    const auto capped = Stack({{4.0, ModifierOp_t::Add},
+                               {50.0, ModifierOp_t::AddPercent},
+                               {5.0, ModifierOp_t::MaxClamp}});
+    CHECK(ApplyModifierStack(2.0, capped) == Approx(5.0));
+
+    // A clamp that is not reached leaves the value alone.
+    CHECK(ApplyModifierStack(2.0, Stack({{99.0, ModifierOp_t::MaxClamp}})) == Approx(2.0));
+    CHECK(ApplyModifierStack(2.0, Stack({{1.0, ModifierOp_t::MinClamp}})) == Approx(2.0));
+    CHECK(ApplyModifierStack(2.0, Stack({{7.0, ModifierOp_t::MinClamp}})) == Approx(7.0));
+}
+
+TEST_CASE("ApplyModifierStack: the tightest clamp of each kind wins", "[effects][math]")
+{
+    CHECK(ApplyModifierStack(10.0, Stack({{5.0, ModifierOp_t::MaxClamp},
+                                          {3.0, ModifierOp_t::MaxClamp}})) == Approx(3.0));
+    CHECK(ApplyModifierStack(0.0, Stack({{5.0, ModifierOp_t::MinClamp},
+                                         {7.0, ModifierOp_t::MinClamp}})) == Approx(7.0));
+
+    // Crossed bounds: MinClamp is applied last and therefore wins.
+    CHECK(ApplyModifierStack(4.0, Stack({{1.0, ModifierOp_t::MaxClamp},
+                                         {6.0, ModifierOp_t::MinClamp}})) == Approx(6.0));
+}
+
+TEST_CASE("ApplyModifierStack: a MaxClamp 0 zeroes a RawScaled seed", "[effects][math]")
+{
+    // How Perimeter Defense and Citizen difficulty cancel a pop-loss seed.
+    CHECK(ApplyModifierStack(3.0, Stack({{0.0, ModifierOp_t::MaxClamp}})) == Approx(0.0));
+}
+
 TEST_CASE("ApplyModifierStack: result does not depend on contribution order", "[effects][math]")
 {
     // An Add listed after a percent/geometric contribution still lands in the additive pool.

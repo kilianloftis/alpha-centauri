@@ -96,6 +96,7 @@ graph TB
     subgraph "Configuration"
         TurnStagesConfig[config/turn_stages.json]
         ImprovementsConfigFile[config/improvements.json]
+        DifficultyConfigFile[config/difficulty.json]
     end
 
     subgraph "UI Components"
@@ -108,6 +109,7 @@ graph TB
     main --> Engine
     Engine --> GameState
     Engine --> GameDataContext
+    DifficultyConfigFile --> GameDataContext
     Engine --> Graphics
     Engine --> Input
     Engine --> TurnStageFactory
@@ -294,6 +296,7 @@ graph TB
   - `PopCompositionCalculator`: Evaluates composition formulas at runtime
   - `HurryProductionCalculator`: Prices energy-for-minerals hurrying from `production.json` `kinds.<kind>.hurry`; borrowed by every `BaseManager`
   - `ScrapRefundCalculator`: Prices player scrap from `production.json` `kinds.<kind>.default_scrap`; unit/building configs may override formula and refund_type (`StatId_t` whitelist), or set `"formula": null` to deny scrap. Borrowed by `BaseManager` (buildings) and `Faction` (units). Where the refund *lands* is `ScrapPayout`'s job, not the calculator's
+  - `DifficultyConfig_t`: Session difficulty levels loaded from `config/difficulty.json`. Each level carries an `effects` list (injected per faction into `FactionEffectsPool`) and a `DifficultyRules_t` of non-effect knobs. `GameRulesConfig_t::difficultyId` selects one; empty defers to the file's `default`. See [difficulty-system.md](difficulty-system.md)
   - `LuaRuntime`: Shared Lua state used to load and evaluate config scripts
 - **Note**: Implemented as a plain struct with public `unique_ptr` members (no getters/setters needed)
 - **Valid by construction**: `LoadGameData(paths)` is a *factory* — it returns a fully populated

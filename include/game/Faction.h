@@ -326,6 +326,9 @@ public:
     // GameRules.RemoveShroud / DebugOptions.RemoveFog without compiling them in.
     const GameSettings& GetSettings() const { return m_rSettings; }
 
+    // Read by FactionEffectsPool to re-resolve the session difficulty on rebuild.
+    const GameDataContext& GetDataContext() const { return m_rDataContext; }
+
     // Optional session back-pointer (GameState::AttachToSession). Required for Instantaneous
     // Infiltration dispatch on production completion; null when the faction is unbound.
     void BindGameState(GameState& rGameState) { m_pGameState = &rGameState; }

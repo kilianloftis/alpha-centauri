@@ -275,3 +275,35 @@ TEST_CASE("Discovered tech FacilityEnergyUpkeep reduces maintenance", "[building
     CHECK(lines[1].pConfig->id == "upkeep_hall");
     CHECK(lines[1].UpkeepPerCopy() == 1);
 }
+
+TEST_CASE("Fusion and Quantum Power raise Command Center upkeep", "[building][upkeep][tech]")
+{
+    FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    base.GetBuildingManager().AddBuilding("Command_Center");
+    base.GetBuildingManager().AddBuilding("upkeep_hall");
+
+    // Base Command Center upkeep 1; fusion/quantum each Add +1 on that building only.
+    CHECK(faction.GetBuildingUpkeep() == 3); // 1 + 2
+
+    faction.GetResearch().AddDiscoveredTech("fusion_power");
+    CHECK(faction.GetBuildingUpkeep() == 4); // 2 + 2
+
+    faction.GetResearch().AddDiscoveredTech("quantum_power");
+    CHECK(faction.GetBuildingUpkeep() == 5); // 3 + 2
+
+    const std::vector<BuildingUpkeepLine_t> lines = faction.GetBuildingUpkeepByType();
+    REQUIRE(lines.size() == 2);
+    CHECK(lines[0].pConfig->id == "Command_Center");
+    CHECK(lines[0].UpkeepPerCopy() == 3);
+    CHECK(lines[1].pConfig->id == "upkeep_hall");
+    CHECK(lines[1].UpkeepPerCopy() == 2);
+}
+
+TEST_CASE("Stock Command Center upkeep starts at 1", "[building][upkeep]")
+{
+    BuildingRegistry registry;
+    registry.Load(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/buildings/buildings.json");
+    CHECK(registry.Get("Command_Center").upkeep == 1);
+}

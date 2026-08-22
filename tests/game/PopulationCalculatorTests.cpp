@@ -421,7 +421,7 @@ PopCompositionConfig_t BureaucracyConfig_()
 DroneInputs_t StandardMapInputs_()
 {
     DroneInputs_t inputs;
-    inputs.difficulty = static_cast<int>(Difficulty_t::Citizen);
+    inputs.difficulty = 0; // citizen
     inputs.efficiency = 0;
     inputs.mapWidth = 80;
     inputs.mapHeight = 40;
@@ -451,11 +451,11 @@ TEST_CASE("Bureaucracy limit uses difficulty, floored-zero efficiency, and map r
     CHECK(calculator.CalculateLimit(planned) == 24);
 
     DroneInputs_t thinker = citizen;
-    thinker.difficulty = static_cast<int>(Difficulty_t::Thinker);
+    thinker.difficulty = 4; // thinker
     CHECK(calculator.CalculateLimit(thinker) == 8);
 
     DroneInputs_t transcend = citizen;
-    transcend.difficulty = static_cast<int>(Difficulty_t::Transcend);
+    transcend.difficulty = 5; // transcend
     CHECK(calculator.CalculateLimit(transcend) == 6);
 }
 

@@ -59,7 +59,6 @@ struct AttackGame_
             std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
             *fixtures.dataContext.moraleCalculator, actest::k_TestRngSeed);
 
-        fixtures.dataContext.baseConquestConfig = std::make_unique<BaseConquestConfig_t>();
         fixtures.dataContext.unitComponentRegistry =
             std::make_unique<UnitComponentRegistry>();
         fixtures.dataContext.unitComponentRegistry->Load(FixturePath("unit_components.json"));

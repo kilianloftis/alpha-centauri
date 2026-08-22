@@ -100,6 +100,8 @@ bool CombatResolver::TryDisengage_(Unit& rCandidate, CombatSide_t side, int star
 
 CombatResult_t CombatResolver::Resolve(Unit& rAttacker, Unit& rDefender)
 {
+    // TODO(difficulty): apply combat handicap from rules.combat_handicap /
+    // combat_handicap_natives_only once magnitude is known (do not invent percents).
     CombatResult_t result;
     result.attackerId = rAttacker.GetUnitId();
     result.defenderId = rDefender.GetUnitId();

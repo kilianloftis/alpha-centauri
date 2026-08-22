@@ -2,6 +2,7 @@
 #include "game/Faction.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
+#include "game/DifficultyConfig.h"
 #include "game/IConstructable.h"
 #include "game/IEffectsProvider.h"
 #include "game/faction/Military.h"
@@ -144,8 +145,6 @@ BaseManager::BaseManager(
         inputs.baseSize = m_pPopulation->GetSize();
         inputs.socialDroneModifier = GetDroneModifier();
         inputs.factionBaseCount = static_cast<int>(m_pFaction->GetBaseCount());
-        inputs.difficulty =
-            static_cast<int>(m_pFaction->GetSettings().GetGameRules().difficulty);
         inputs.efficiency =
             m_pFaction->GetSocialEngineering().GetSocialRating(SocialRatingId_t::Efficiency);
         const WorldMap& rMap = m_rTileEffects.GetWorldMap();
@@ -153,9 +152,15 @@ BaseManager::BaseManager(
         inputs.mapHeight = rMap.GetHeight();
         inputs.baseId = m_baseId;
         // TODO: garrisonCount, turnsSinceConquered
-        // Resolve the bureaucracy multiplier from this base's effects (seed = 1.0).
         const FactionEffects_t& factionEffects = CollectActiveEffects(*m_pEffectsProvider);
         const BaseEffects_t baseEffects = FilterForBase(factionEffects, *this);
+        inputs.difficulty = FinalizeResolvedStat(
+            ResolveStatModifiers(
+                FilterBaseLevelByStatId(baseEffects, StatId_t::BureaucracyDifficulty),
+                SeedFor(StatId_t::BureaucracyDifficulty))
+                .total);
+        // TODO(difficulty): consume SizeFreeDrones / BureaucracyFreeDrones from base effects
+        // when pop composition is rewritten; drop BureaucracyDifficulty from the Lua formulas.
         const double bureauMult = ResolveStatModifiersTotal(
             FilterBaseLevelByStatId(baseEffects, StatId_t::BureaucracyMultiplier),
             SeedFor(StatId_t::BureaucracyMultiplier));

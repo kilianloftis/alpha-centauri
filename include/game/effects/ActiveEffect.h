@@ -152,6 +152,11 @@ struct BuildingConfig_t;
 // (All / BuildingId / Category). Used when resolving FacilityEnergyUpkeep per type.
 bool BuildingFilterSatisfied(const EffectConfig_t& config, const BuildingConfig_t& rBuilding);
 
+// True when config has no PlayerType factionFilter, or that filter matches the owning
+// faction's player/AI control. Used when injecting continuous effects into a faction pool
+// (difficulty). Distinct from FactionFilterCoversTarget (cross-faction targets only).
+bool FactionFilterMatchesOwner(const EffectConfig_t& rConfig, bool bPlayerControlled);
+
 // Appends non-Instantaneous effects from a config list as ActiveEffect_t instances.
 // Used by building, pop, unit, and tile effect collection; pOriginBase is recorded when
 // TagsOriginBase(scope) (ThisBase, ProducedAtThisBase, FactionUnits). This (and its

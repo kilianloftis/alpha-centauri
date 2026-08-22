@@ -1,7 +1,6 @@
 #include "game/GameSettings.h"
 
 #include "lib/config/ConfigFields.h"
-#include "lib/config/EnumNames.h"
 
 #include <nlohmann/json.hpp>
 #include <fstream>
@@ -125,9 +124,7 @@ void LoadGameRules_(const nlohmann::json& rJson, GameRulesConfig_t& rConfig,
                 throw std::runtime_error("Game settings '" + rPath
                                          + "': game_rules.difficulty must be a string");
             }
-            rConfig.difficulty =
-                EnumFromName<Difficulty_t>(pSection->at("difficulty").get<std::string>(),
-                                           "difficulty");
+            rConfig.difficultyId = pSection->at("difficulty").get<std::string>();
         }
     }
 }
@@ -192,6 +189,7 @@ void GameSettings::SetGameRules(const GameRulesConfig_t& rConfig)
         return;
     }
     m_gameRules = rConfig;
+    m_gameRulesRevision.Bump();
     OnGameRulesChanged.Emit();
 }
 
@@ -280,7 +278,7 @@ void GameSettings::Save(const std::string& path) const
     json["game_rules"] = {
         {"pause_at_end_of_turn", m_gameRules.pauseAtEndOfTurn},
         {"auto_return_low_fuel_air", m_gameRules.autoReturnLowFuelAir},
-        {"difficulty", EnumToLowerName(m_gameRules.difficulty)},
+        {"difficulty", m_gameRules.difficultyId},
     };
     json["visibility"] = {
         {"remove_shroud", m_visibility.removeShroud},
