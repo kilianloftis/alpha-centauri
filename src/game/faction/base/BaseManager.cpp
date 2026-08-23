@@ -32,7 +32,6 @@
 #include "game/effects/TileEffectsContext.h"
 #include "game/PauseOnEventsConfig.h"
 #include <algorithm>
-#include <cmath>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -145,26 +144,21 @@ BaseManager::BaseManager(
         inputs.baseSize = m_pPopulation->GetSize();
         inputs.socialDroneModifier = GetDroneModifier();
         inputs.factionBaseCount = static_cast<int>(m_pFaction->GetBaseCount());
-        inputs.efficiency =
-            m_pFaction->GetSocialEngineering().GetSocialRating(SocialRatingId_t::Efficiency);
         const WorldMap& rMap = m_rTileEffects.GetWorldMap();
         inputs.mapWidth = rMap.GetWidth();
         inputs.mapHeight = rMap.GetHeight();
         inputs.baseId = m_baseId;
         // TODO: garrisonCount, turnsSinceConquered
-        const FactionEffects_t& factionEffects = CollectActiveEffects(*m_pEffectsProvider);
-        const BaseEffects_t baseEffects = FilterForBase(factionEffects, *this);
-        inputs.difficulty = FinalizeResolvedStat(
+        // GetBaseEffects includes SE rating expansion (Efficiency → Bureaucracy MultiplyGeometric).
+        const BaseEffects_t& rBaseEffects = GetBaseEffects();
+        inputs.bureaucracy = ResolveStatModifiersTotal(
+            FilterBaseLevelByStatId(rBaseEffects, StatId_t::Bureaucracy),
+            SeedFor(StatId_t::Bureaucracy));
+        inputs.sizeFreeDrones = FinalizeResolvedStat(
             ResolveStatModifiers(
-                FilterBaseLevelByStatId(baseEffects, StatId_t::BureaucracyDifficulty),
-                SeedFor(StatId_t::BureaucracyDifficulty))
+                FilterBaseLevelByStatId(rBaseEffects, StatId_t::SizeFreeDrones),
+                SeedFor(StatId_t::SizeFreeDrones))
                 .total);
-        // TODO(difficulty): consume SizeFreeDrones / BureaucracyFreeDrones from base effects
-        // when pop composition is rewritten; drop BureaucracyDifficulty from the Lua formulas.
-        const double bureauMult = ResolveStatModifiersTotal(
-            FilterBaseLevelByStatId(baseEffects, StatId_t::BureaucracyMultiplier),
-            SeedFor(StatId_t::BureaucracyMultiplier));
-        inputs.bureaucracyMultiplierPercent = static_cast<int>(std::lround(bureauMult * 100.0));
         return inputs;
     });
 

@@ -29,9 +29,9 @@
           "type": "StatModifier",
           "scope": "FactionGlobal",
           "parameters": {
-            "stat": "bureaucracy_free_drones",
+            "stat": "bureaucracy",
             "amount": 8,
-            "op": "Add"
+            "op": "MultiplyGeometric"
           }
         },
         {
@@ -94,15 +94,6 @@
         },
         {
           "type": "StatModifier",
-          "scope": "FactionGlobal",
-          "parameters": {
-            "stat": "bureaucracy_difficulty",
-            "amount": 0,
-            "op": "Add"
-          }
-        },
-        {
-          "type": "StatModifier",
           "scope": "AllOwnerBases",
           "factionFilter": {
             "kind": "PlayerType",
@@ -156,9 +147,9 @@
           "type": "StatModifier",
           "scope": "FactionGlobal",
           "parameters": {
-            "stat": "bureaucracy_free_drones",
+            "stat": "bureaucracy",
             "amount": 7,
-            "op": "Add"
+            "op": "MultiplyGeometric"
           }
         },
         {
@@ -207,15 +198,6 @@
           "parameters": {
             "stat": "tech_cost_diff",
             "amount": 2,
-            "op": "Add"
-          }
-        },
-        {
-          "type": "StatModifier",
-          "scope": "FactionGlobal",
-          "parameters": {
-            "stat": "bureaucracy_difficulty",
-            "amount": 1,
             "op": "Add"
           }
         },
@@ -270,9 +252,9 @@
           "type": "StatModifier",
           "scope": "FactionGlobal",
           "parameters": {
-            "stat": "bureaucracy_free_drones",
+            "stat": "bureaucracy",
             "amount": 6,
-            "op": "Add"
+            "op": "MultiplyGeometric"
           }
         },
         {
@@ -303,15 +285,6 @@
           "parameters": {
             "stat": "tech_cost_diff",
             "amount": 3,
-            "op": "Add"
-          }
-        },
-        {
-          "type": "StatModifier",
-          "scope": "FactionGlobal",
-          "parameters": {
-            "stat": "bureaucracy_difficulty",
-            "amount": 2,
             "op": "Add"
           }
         },
@@ -363,9 +336,9 @@
           "type": "StatModifier",
           "scope": "FactionGlobal",
           "parameters": {
-            "stat": "bureaucracy_free_drones",
+            "stat": "bureaucracy",
             "amount": 5,
-            "op": "Add"
+            "op": "MultiplyGeometric"
           }
         },
         {
@@ -395,15 +368,6 @@
           "scope": "FactionGlobal",
           "parameters": {
             "stat": "tech_cost_diff",
-            "amount": 3,
-            "op": "Add"
-          }
-        },
-        {
-          "type": "StatModifier",
-          "scope": "FactionGlobal",
-          "parameters": {
-            "stat": "bureaucracy_difficulty",
             "amount": 3,
             "op": "Add"
           }
@@ -430,9 +394,9 @@
           "type": "StatModifier",
           "scope": "FactionGlobal",
           "parameters": {
-            "stat": "bureaucracy_free_drones",
+            "stat": "bureaucracy",
             "amount": 4,
-            "op": "Add"
+            "op": "MultiplyGeometric"
           }
         },
         {
@@ -462,15 +426,6 @@
           "scope": "FactionGlobal",
           "parameters": {
             "stat": "tech_cost_diff",
-            "amount": 4,
-            "op": "Add"
-          }
-        },
-        {
-          "type": "StatModifier",
-          "scope": "FactionGlobal",
-          "parameters": {
-            "stat": "bureaucracy_difficulty",
             "amount": 4,
             "op": "Add"
           }
@@ -510,9 +465,9 @@
           "type": "StatModifier",
           "scope": "FactionGlobal",
           "parameters": {
-            "stat": "bureaucracy_free_drones",
+            "stat": "bureaucracy",
             "amount": 3,
-            "op": "Add"
+            "op": "MultiplyGeometric"
           }
         },
         {
@@ -529,15 +484,6 @@
           "scope": "FactionGlobal",
           "parameters": {
             "stat": "tech_cost_diff",
-            "amount": 5,
-            "op": "Add"
-          }
-        },
-        {
-          "type": "StatModifier",
-          "scope": "FactionGlobal",
-          "parameters": {
-            "stat": "bureaucracy_difficulty",
             "amount": 5,
             "op": "Add"
           }

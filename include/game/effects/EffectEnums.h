@@ -44,12 +44,9 @@ enum class StatId_t
     // Minerals spent each turn to keep a live unit supported by its home base. Chassis
     // baseline is typically 1; abilities / FactionUnits SE can raise or zero it. Floor at 0.
     MineralUpkeep,
-    // Drones made content by base-size rules, before any other drone source (Additive).
-    // Difficulty is the only emitter; the count is the whole value, not a scale on base size.
+    // Free population before size-based drones (Additive). Difficulty emits 6…1; every pop
+    // past this count is a size drone. Not a SMAC-style size divisor.
     SizeFreeDrones,
-    // Drones made content by the bureaucracy calculation (Additive). Difficulty-only, same
-    // shape as SizeFreeDrones.
-    BureaucracyFreeDrones,
     // How many positive-upkeep home units a base may support at zero mineral cost.
     // Support SE levels emit absolute FreeUnitSupport Adds (level 0 = 2); facilities Add on top.
     FreeUnitSupport,
@@ -104,11 +101,9 @@ enum class StatId_t
 
     // Planetary commerce income multiplier (PureMultiplier; Global Trade Pact uses AddPercent).
     CommerceRate,
-    // Multiplier applied to bureaucracy/drone formulas (PureMultiplier; seed 1.0).
-    BureaucracyMultiplier,
-    // Difficulty ordinal fed to pop_composition.json's bureaucracy_limit_formula as
-    // `difficulty` (Additive; shipping 0=Citizen … 5=Transcend). Difficulty-only.
-    BureaucracyDifficulty,
+    // Bureaucracy base-limit product factor (PureMultiplier; seed 1.0). Difficulty and
+    // Efficiency SE emit MultiplyGeometric; pop_composition.json multiplies by map root.
+    Bureaucracy,
     // Extra council votes (Additive). Population elections seed with total population;
     // representative elections seed with 1. Buildings / projects / faction bonuses modify this.
     CouncilVotes,
@@ -206,9 +201,7 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::CaptureFacilitiesDestroyedMin:
         case StatId_t::CaptureFacilitiesDestroyedMaxPercent:
         case StatId_t::TechCostDiff:
-        case StatId_t::BureaucracyDifficulty:
         case StatId_t::SizeFreeDrones:
-        case StatId_t::BureaucracyFreeDrones:
         case StatId_t::CouncilVotes:
         case StatId_t::CommerceEnergyBonus:
         case StatId_t::InefficiencyDenominator: return StatKind_t::Additive;
@@ -219,8 +212,8 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::ProbeFailureScale:
         case StatId_t::ProbeSuccessScale:
         case StatId_t::PositiveMoraleScale:
-        case StatId_t::CommerceRate:         return StatKind_t::PureMultiplier;
-        case StatId_t::BureaucracyMultiplier: return StatKind_t::PureMultiplier;
+        case StatId_t::CommerceRate:
+        case StatId_t::Bureaucracy:          return StatKind_t::PureMultiplier;
         case StatId_t::GrowthRate:
         case StatId_t::MoistureTier:
         case StatId_t::FacilityEnergyUpkeep:
@@ -260,7 +253,6 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "drones")                  return StatId_t::Drones;
     if (rStat == "talents")                 return StatId_t::Talents;
     if (rStat == "size_free_drones")        return StatId_t::SizeFreeDrones;
-    if (rStat == "bureaucracy_free_drones") return StatId_t::BureaucracyFreeDrones;
     if (rStat == "attack")                  return StatId_t::Attack;
     if (rStat == "defense")                 return StatId_t::Defense;
     if (rStat == "movement")                return StatId_t::Movement;
@@ -291,8 +283,7 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "tech_cost_diff")          return StatId_t::TechCostDiff;
     if (rStat == "moisture_tier")           return StatId_t::MoistureTier;
     if (rStat == "commerce_rate")           return StatId_t::CommerceRate;
-    if (rStat == "bureaucracy_multiplier") return StatId_t::BureaucracyMultiplier;
-    if (rStat == "bureaucracy_difficulty")  return StatId_t::BureaucracyDifficulty;
+    if (rStat == "bureaucracy")             return StatId_t::Bureaucracy;
     if (rStat == "council_votes")           return StatId_t::CouncilVotes;
     if (rStat == "commerce_energy_bonus")   return StatId_t::CommerceEnergyBonus;
     if (rStat == "inefficiency_denominator") return StatId_t::InefficiencyDenominator;

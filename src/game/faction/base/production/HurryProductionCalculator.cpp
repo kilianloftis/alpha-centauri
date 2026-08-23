@@ -123,12 +123,12 @@ int HurryProductionCalculator::FinishCost_(const HurryKindConfig_t& rKind, int r
 
     const int billed = BilledMinerals(remaining, stockpile, rKind.mineralThreshold,
                                       rKind.belowThresholdMultiplier);
-    const std::unordered_map<std::string, int> vars = {
-        {"minerals", billed},
-        {"remaining", remaining},
-        {"stockpile", stockpile},
-        {"mineral_threshold", rKind.mineralThreshold},
-        {"below_threshold_multiplier", rKind.belowThresholdMultiplier},
+    const std::unordered_map<std::string, double> vars = {
+        {"minerals",                   static_cast<double>(billed)},
+        {"remaining",                  static_cast<double>(remaining)},
+        {"stockpile",                  static_cast<double>(stockpile)},
+        {"mineral_threshold",          static_cast<double>(rKind.mineralThreshold)},
+        {"below_threshold_multiplier", static_cast<double>(rKind.belowThresholdMultiplier)},
     };
     const int cost = m_pLua->EvalInt(rKind.formula, vars);
     if (cost <= 0)

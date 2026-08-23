@@ -65,7 +65,7 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("capture_pop_loss") == StatId_t::CapturePopLoss);
     CHECK(ParseStatId("ecological_damage") == StatId_t::EcologicalDamage);
     CHECK(ParseStatId("tech_cost_diff") == StatId_t::TechCostDiff);
-    CHECK(ParseStatId("bureaucracy_difficulty") == StatId_t::BureaucracyDifficulty);
+    CHECK(ParseStatId("bureaucracy") == StatId_t::Bureaucracy);
 
     CHECK_THROWS(ParseStatId("not_a_stat"));
     CHECK_THROWS(ParseStatId(""));

@@ -57,7 +57,7 @@ sol::protected_function& LuaRuntime::LoadChunk_(const std::string& formula)
 }
 
 int LuaRuntime::EvalInt(const std::string& formula,
-                        const std::unordered_map<std::string, int>& vars)
+                        const std::unordered_map<std::string, double>& vars)
 {
     if (formula.empty())
     {

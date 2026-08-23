@@ -143,8 +143,9 @@ Difficulty stats split cleanly by whether the resolve site holds a raw number:
 
 | Stat | Kind | Seed |
 |---|---|---|
-| `SizeFreeDrones`, `BureaucracyFreeDrones` | Additive | `0.0` — difficulty is the sole source; the count *is* the value |
-| `TechCostDiff`, `BureaucracyDifficulty` | Additive | `0.0` — ordinals fed to the Lua formulas |
+| `SizeFreeDrones` | Additive | `0.0` — free pops before size drones; difficulty is the sole source |
+| `Bureaucracy` | PureMultiplier | `1.0` — difficulty and Efficiency SE emit MultiplyGeometric; map root stays in the Lua limit formula |
+| `TechCostDiff` | Additive | `0.0` — ordinals fed to the Lua formulas |
 | `LastDefenderPopLoss`, `CapturePopLoss` | Additive | `0.0` — `base_conquest.json`'s effects list Adds the baseline |
 | `FacilityEnergyUpkeep` | RawScaled | `BuildingConfig_t::upkeep` |
 | `EcologicalDamage` | RawScaled | the accrued amount the resolve site holds |

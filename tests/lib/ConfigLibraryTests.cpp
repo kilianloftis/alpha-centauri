@@ -136,6 +136,12 @@ TEST_CASE("LuaRuntime::EvalInt fails loudly rather than returning zero", "[lib][
         CHECK(lua.EvalInt("floor(7 / 2)", {}) == 3);
     }
 
+    SECTION("fractional inputs are accepted when the result is whole")
+    {
+        CHECK(lua.EvalInt("floor(factor * 8 + 0.5)", {{"factor", 0.5}}) == 4);
+        CHECK(lua.EvalInt("floor(bureaucracy * 0.5 + 0.5)", {{"bureaucracy", 12.0}}) == 6);
+    }
+
     SECTION("a non-numeric result is rejected")
     {
         CHECK_THROWS_WITH(lua.EvalInt("'text'", {}),

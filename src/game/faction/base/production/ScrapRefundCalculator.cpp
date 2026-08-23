@@ -37,7 +37,8 @@ ScrapQuote_t ScrapRefundCalculator::Quote(int mineralCost,
     }
 
     const std::string& rFormula = rOverride.formula ? *rOverride.formula : pKind->formula;
-    const std::unordered_map<std::string, int> vars = {{"minerals", mineralCost}};
+    const std::unordered_map<std::string, double> vars = {
+        {"minerals", static_cast<double>(mineralCost)}};
     const int formulaAmount = m_pLua->EvalInt(rFormula, vars);
     if (formulaAmount < 0)
     {

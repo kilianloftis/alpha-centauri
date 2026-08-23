@@ -11,8 +11,10 @@ class LuaRuntime;
 
 struct DroneInputs_t
 {
-    int difficulty = 0;
-    int efficiency = 0;
+    // Resolved PureMultiplier Bureaucracy (Citizen + Efficiency 0 → 32). May be fractional.
+    double bureaucracy = 1.0;
+    // Resolved SizeFreeDrones: pops at or below this are free of size drones.
+    int sizeFreeDrones = 0;
     int mapWidth = 0;
     int mapHeight = 0;
     int baseId = 0;
@@ -21,8 +23,6 @@ struct DroneInputs_t
     int garrisonCount = 0;
     int socialDroneModifier = 0;
     int turnsSinceConquered = 0;
-    // Percent representation of the bureaucracy multiplier (100 == 1.0)
-    int bureaucracyMultiplierPercent = 100;
 };
 
 uint64_t StableBaseHash(int baseId);

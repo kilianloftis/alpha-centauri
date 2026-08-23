@@ -20,13 +20,16 @@ public:
     sol::state& GetState();
     const sol::state& GetState() const;
 
-    // Evaluate a formula string as a Lua expression with named integer variables.
+    // Evaluate a formula string as a Lua expression with named numeric variables.
     // The expression is wrapped as "return <formula>" and executed.
     //
     // Each distinct formula is compiled once and the chunk kept: callers evaluate the same
     // handful of config strings over and over (hurry pricing bisects over one), and compiling
     // per call cost an order of magnitude more than running the result. A formula that fails
     // to compile is not kept, so a later call reports the same error rather than a stale hit.
+    //
+    // Returns a whole number (int). Inputs may be fractional — PureMultiplier stats and map
+    // roots need doubles — but the formula result must be integral or EvalInt throws.
     //
     // Throws if the formula is empty, fails to evaluate (the Lua message is included), returns
     // a non-number, returns a fractional value, or returns something outside int range. A
@@ -35,7 +38,7 @@ public:
     // vars are visible to the formula as globals and are cleared afterwards, so a formula that
     // omits an input cannot read a previous call's value.
     int EvalInt(const std::string& formula,
-                const std::unordered_map<std::string, int>& vars);
+                const std::unordered_map<std::string, double>& vars);
 
 private:
     // Compiled "return <formula>" for a formula string, compiling it on first use. Throws if

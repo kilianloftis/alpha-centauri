@@ -229,6 +229,12 @@ struct BaseFixture : WorldFixture
     int nextBaseId = 1;
 
     BaseFixture()
+        : BaseFixture(9, 9)
+    {
+    }
+
+    explicit BaseFixture(int width, int height)
+        : WorldFixture(width, height)
     {
         ownerDefinition.id = "test_base_owner";
         pOwnerFaction = std::make_unique<ac::Faction>(
@@ -280,6 +286,12 @@ struct FactionFixture : BaseFixture
     int nextUnitId = 1;
 
     FactionFixture()
+        : FactionFixture(9, 9)
+    {
+    }
+
+    explicit FactionFixture(int width, int height)
+        : BaseFixture(width, height)
     {
         factionDefinition.id = "test_faction";
         // NOTE: do not (re)load dataContext.tileYieldRules here. WorldFixture already parsed

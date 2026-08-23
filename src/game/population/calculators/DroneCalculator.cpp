@@ -25,12 +25,10 @@ DroneCalculator::DroneCalculator(const PopCompositionConfig_t& rConfig, LuaRunti
 
 int DroneCalculator::CalculateLimit(const DroneInputs_t& rInputs) const
 {
-    const std::unordered_map<std::string, int> vars = {
-        {"difficulty",  rInputs.difficulty},
-        {"efficiency",  rInputs.efficiency},
-        {"map_width",   rInputs.mapWidth},
-        {"map_height",  rInputs.mapHeight},
-        {"bureaucracy_multiplier", rInputs.bureaucracyMultiplierPercent},
+    const std::unordered_map<std::string, double> vars = {
+        {"bureaucracy", static_cast<double>(rInputs.bureaucracy)},
+        {"map_width",   static_cast<double>(rInputs.mapWidth)},
+        {"map_height",  static_cast<double>(rInputs.mapHeight)},
     };
 
     const int limit = m_rLua.EvalInt(m_rConfig.bureaucracyLimitFormula, vars);
@@ -49,20 +47,19 @@ int DroneCalculator::Calculate(const DroneInputs_t& rInputs) const
     const int residue =
         static_cast<int>(StableBaseHash(rInputs.baseId) % static_cast<uint64_t>(limit));
 
-    const std::unordered_map<std::string, int> vars = {
-        {"difficulty",              rInputs.difficulty},
-        {"efficiency",              rInputs.efficiency},
-        {"map_width",               rInputs.mapWidth},
-        {"map_height",              rInputs.mapHeight},
-        {"base_id",                 rInputs.baseId},
-        {"base_size",               rInputs.baseSize},
-        {"faction_base_count",      rInputs.factionBaseCount},
-        {"garrison_count",          rInputs.garrisonCount},
-        {"social_drone_modifier",   rInputs.socialDroneModifier},
-        {"turns_since_conquered",   rInputs.turnsSinceConquered},
-        {"bureaucracy_limit",       limit},
-        {"bureaucracy_multiplier",  rInputs.bureaucracyMultiplierPercent},
-        {"residue",                 residue},
+    const std::unordered_map<std::string, double> vars = {
+        {"bureaucracy",             rInputs.bureaucracy},
+        {"map_width",               static_cast<double>(rInputs.mapWidth)},
+        {"map_height",              static_cast<double>(rInputs.mapHeight)},
+        {"base_id",                 static_cast<double>(rInputs.baseId)},
+        {"base_size",               static_cast<double>(rInputs.baseSize)},
+        {"faction_base_count",      static_cast<double>(rInputs.factionBaseCount)},
+        {"garrison_count",          static_cast<double>(rInputs.garrisonCount)},
+        {"social_drone_modifier",   static_cast<double>(rInputs.socialDroneModifier)},
+        {"turns_since_conquered",   static_cast<double>(rInputs.turnsSinceConquered)},
+        {"size_free_drones",        static_cast<double>(rInputs.sizeFreeDrones)},
+        {"bureaucracy_limit",       static_cast<double>(limit)},
+        {"residue",                 static_cast<double>(residue)},
     };
 
     const int value = m_rLua.EvalInt(m_rConfig.droneFormula, vars);

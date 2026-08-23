@@ -22,9 +22,9 @@ const PopCompositionConfig_t& PopCompositionCalculator::GetConfig() const
 
 PopCompositionResult_t PopCompositionCalculator::Calculate(const PopCompositionInputs_t& rInputs)
 {
-    const std::unordered_map<std::string, int> vars = {
-        {"psych_output",            rInputs.psychOutput},
-        {"faction_talent_modifier", rInputs.factionTalentModifier},
+    const std::unordered_map<std::string, double> vars = {
+        {"psych_output",            static_cast<double>(rInputs.psychOutput)},
+        {"faction_talent_modifier", static_cast<double>(rInputs.factionTalentModifier)},
     };
 
     const int targetTalents = m_rLua.EvalInt(m_rConfig.talentFormula, vars);

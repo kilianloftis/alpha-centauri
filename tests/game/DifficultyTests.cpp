@@ -11,7 +11,12 @@
 #include "game/effects/EffectEnums.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/buildings/BuildingManager.h"
+#include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/production/ProductionCostCalculator.h"
+#include "game/population/calculators/DroneCalculator.h"
+#include "game/population/calculators/PopCompositionCalculator.h"
+#include "game/population/pop-types/PopCompositionConfigParser.h"
+#include "game/social-engineering/SocialRatingRegistry.h"
 #include "game/units/UnitDesign.h"
 
 #include <catch2/catch_approx.hpp>
@@ -20,6 +25,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <vector>
 
 using namespace ac;
 using namespace actest;
@@ -142,8 +148,7 @@ TEST_CASE("Citizen MaxClamp cancels the last-defender baseline only", "[difficul
     CHECK(ResolveBaseStat_(rBase, StatId_t::CapturePopLoss, 0.0) == Approx(1.0));
 }
 
-TEST_CASE("SizeFreeDrones and BureaucracyFreeDrones follow the difficulty matrix",
-          "[difficulty][effects]")
+TEST_CASE("SizeFreeDrones follows the difficulty matrix", "[difficulty][effects]")
 {
     FactionFixture fixtures;
     UseShippingDifficulty_(fixtures, "talent");
@@ -152,7 +157,6 @@ TEST_CASE("SizeFreeDrones and BureaucracyFreeDrones follow the difficulty matrix
     BaseManager& rBase = fixtures.MakeFactionBase(rFaction, 3, 3);
 
     CHECK(ResolveBaseStat_(rBase, StatId_t::SizeFreeDrones, 0.0) == Approx(4.0));
-    CHECK(ResolveBaseStat_(rBase, StatId_t::BureaucracyFreeDrones, 0.0) == Approx(6.0));
 }
 
 TEST_CASE("EcologicalDamage MultiplyGeometric is present on Talent", "[difficulty][effects]")
@@ -183,22 +187,74 @@ TEST_CASE("TechCostDiff follows difficulty banding", "[difficulty][effects]")
     CHECK(resolveDiff("transcend") == Approx(5.0));
 }
 
-TEST_CASE("BureaucracyDifficulty follows difficulty ordinals", "[difficulty][effects]")
+TEST_CASE("Bureaucracy PureMultiplier multiplies difficulty and Efficiency",
+          "[difficulty][effects][bureaucracy]")
 {
-    const auto resolve = [](const char* difficultyId) {
+    const auto resolveBureaucracy = [](const char* difficultyId) {
         FactionFixture fixtures;
         UseShippingDifficulty_(fixtures, difficultyId);
+        // Shipping Efficiency SE emits MultiplyGeometric on bureaucracy; fixture SE does not.
+        fixtures.dataContext.socialRatingRegistry = std::make_unique<SocialRatingRegistry>();
+        fixtures.dataContext.socialRatingRegistry->Load(
+            std::string(AC_TEST_FIXTURES_DIR) + "/../../config/social_rating_effects.json");
         Faction& rFaction = fixtures.MakeFaction();
         BaseManager& rBase = fixtures.MakeFactionBase(rFaction, 3, 3);
-        return ResolveBaseStat_(rBase, StatId_t::BureaucracyDifficulty, 0.0);
+        return ResolveBaseStat_(rBase, StatId_t::Bureaucracy, 1.0);
     };
 
-    CHECK(resolve("citizen") == Approx(0.0));
-    CHECK(resolve("specialist") == Approx(1.0));
-    CHECK(resolve("talent") == Approx(2.0));
-    CHECK(resolve("librarian") == Approx(3.0));
-    CHECK(resolve("thinker") == Approx(4.0));
-    CHECK(resolve("transcend") == Approx(5.0));
+    // Difficulty geometric × Efficiency 0 geometric (×4).
+    CHECK(resolveBureaucracy("citizen") == Approx(32.0));   // 8 * 4
+    CHECK(resolveBureaucracy("talent") == Approx(24.0));    // 6 * 4
+    CHECK(resolveBureaucracy("librarian") == Approx(20.0)); // 5 * 4
+    CHECK(resolveBureaucracy("transcend") == Approx(12.0)); // 3 * 4
+}
+
+TEST_CASE("Bureaucracy drones distribute past the limit end-to-end",
+          "[difficulty][effects][bureaucracy][drones]")
+{
+    // Citizen + Efficiency 0 on 80×40 → limit 16.
+    FactionFixture fixtures(80, 40);
+    UseShippingDifficulty_(fixtures, "citizen");
+    fixtures.dataContext.socialRatingRegistry = std::make_unique<SocialRatingRegistry>();
+    fixtures.dataContext.socialRatingRegistry->Load(
+        std::string(AC_TEST_FIXTURES_DIR) + "/../../config/social_rating_effects.json");
+    fixtures.dataContext.popCompositionConfig = std::make_unique<PopCompositionConfig_t>(
+        PopCompositionConfigParser{}.ParseConfig(
+            std::string(AC_TEST_FIXTURES_DIR) + "/../../config/pop_composition.json"));
+    fixtures.dataContext.droneCalculator = std::make_unique<DroneCalculator>(
+        *fixtures.dataContext.popCompositionConfig, *fixtures.dataContext.luaRuntime);
+    fixtures.dataContext.popCompositionCalculator = std::make_unique<PopCompositionCalculator>(
+        *fixtures.dataContext.popCompositionConfig, *fixtures.dataContext.luaRuntime);
+
+    Faction& rFaction = fixtures.MakeFaction();
+    std::vector<BaseManager*> bases;
+    int x = 0;
+    int y = 0;
+    for (int i = 0; i < 16; ++i)
+    {
+        bases.push_back(&fixtures.MakeFactionBase(rFaction, x, y));
+        x += 2;
+        if (x >= 80)
+        {
+            x = 0;
+            y += 2;
+        }
+    }
+    for (BaseManager* pBase : bases)
+    {
+        pBase->GetPopulation().RecalculateComposition();
+        CHECK(pBase->GetPopulation().GetDroneCount() == 0);
+    }
+
+    BaseManager& rOver = fixtures.MakeFactionBase(rFaction, x, y);
+    bases.push_back(&rOver);
+    for (BaseManager* pBase : bases)
+    {
+        pBase->GetPopulation().RecalculateComposition();
+    }
+
+    const int residue = static_cast<int>(StableBaseHash(rOver.GetBaseId()) % 16);
+    CHECK(rOver.GetPopulation().GetDroneCount() == (residue + 1) / 16);
 }
 
 TEST_CASE("ProbeActionCost -50 applies to AI bases on Citizen", "[difficulty][effects]")

@@ -409,9 +409,9 @@ PopCompositionConfig_t BureaucracyConfig_()
 {
     PopCompositionConfig_t config;
     config.bureaucracyLimitFormula =
-        "floor((8 - difficulty) * (4 + max(efficiency, 0)) * sqrt(map_width * map_height) / sqrt(3200) / 2)";
+        "math.floor(bureaucracy * math.sqrt(map_width * map_height) / math.sqrt(12800) + 0.5)";
     config.droneFormula =
-        "max(0, min(base_size, floor((residue + faction_base_count - bureaucracy_limit) / bureaucracy_limit)) + social_drone_modifier)";
+        "max(0, min(base_size, floor((residue + faction_base_count - bureaucracy_limit) / bureaucracy_limit) + max(0, base_size - size_free_drones) + social_drone_modifier))";
     config.droneTypeId = "Drone";
     config.talentFormula = "0";
     config.talentTypeId = "Talent";
@@ -421,18 +421,19 @@ PopCompositionConfig_t BureaucracyConfig_()
 DroneInputs_t StandardMapInputs_()
 {
     DroneInputs_t inputs;
-    inputs.difficulty = 0; // citizen
-    inputs.efficiency = 0;
+    inputs.bureaucracy = 32; // Citizen × Efficiency 0 → 8 * 4
     inputs.mapWidth = 80;
     inputs.mapHeight = 40;
     inputs.baseSize = 8;
+    // High enough that size drones do not interfere with bureaucracy-only cases.
+    inputs.sizeFreeDrones = 100;
     inputs.factionBaseCount = 16;
     return inputs;
 }
 
 } // namespace
 
-TEST_CASE("Bureaucracy limit uses difficulty, floored-zero efficiency, and map root",
+TEST_CASE("Bureaucracy limit uses resolved bureaucracy and map root",
           "[population][drones][bureaucracy]")
 {
     LuaRuntime lua;
@@ -442,21 +443,50 @@ TEST_CASE("Bureaucracy limit uses difficulty, floored-zero efficiency, and map r
     const DroneInputs_t citizen = StandardMapInputs_();
     CHECK(calculator.CalculateLimit(citizen) == 16);
 
-    DroneInputs_t negativeEfficiency = citizen;
-    negativeEfficiency.efficiency = -3;
-    CHECK(calculator.CalculateLimit(negativeEfficiency) == 16);
+    // Efficiency ≤ 0 still emits MultiplyGeometric 4 → same factor as citizen.
+    DroneInputs_t negEffSameAsCitizen = citizen;
+    CHECK(calculator.CalculateLimit(negEffSameAsCitizen) == 16);
 
     DroneInputs_t planned = citizen;
-    planned.efficiency = 2;
+    planned.bureaucracy = 48; // 8 * 6
     CHECK(calculator.CalculateLimit(planned) == 24);
 
     DroneInputs_t thinker = citizen;
-    thinker.difficulty = 4; // thinker
+    thinker.bureaucracy = 16; // 4 * 4
     CHECK(calculator.CalculateLimit(thinker) == 8);
 
     DroneInputs_t transcend = citizen;
-    transcend.difficulty = 5; // transcend
+    transcend.bureaucracy = 12; // 3 * 4
     CHECK(calculator.CalculateLimit(transcend) == 6);
+}
+
+TEST_CASE("Bureaucracy limit rounds to nearest after the full product",
+          "[population][drones][bureaucracy]")
+{
+    LuaRuntime lua;
+    const PopCompositionConfig_t config = BureaucracyConfig_();
+    DroneCalculator calculator(config, lua);
+
+    DroneInputs_t inputs;
+    inputs.bureaucracy = 12; // Transcend × Efficiency 0
+    inputs.sizeFreeDrones = 100;
+
+    inputs.mapWidth = 110;
+    inputs.mapHeight = 70;
+    CHECK(calculator.CalculateLimit(inputs) == 9);
+
+    inputs.mapWidth = 70;
+    inputs.mapHeight = 45;
+    CHECK(calculator.CalculateLimit(inputs) == 6);
+
+    inputs.bureaucracy = 20; // Librarian × Efficiency 0
+    inputs.mapWidth = 110;
+    inputs.mapHeight = 70;
+    CHECK(calculator.CalculateLimit(inputs) == 16);
+
+    inputs.mapWidth = 70;
+    inputs.mapHeight = 45;
+    CHECK(calculator.CalculateLimit(inputs) == 10);
 }
 
 TEST_CASE("Bureaucracy drones appear only past the limit and follow residue classes",
@@ -482,6 +512,63 @@ TEST_CASE("Bureaucracy drones appear only past the limit and follow residue clas
     crowded.factionBaseCount = 144;
     crowded.baseSize = 3;
     CHECK(calculator.Calculate(crowded) == 3);
+}
+
+TEST_CASE("Bureaucracy limit preserves fractional bureaucracy through the product",
+          "[population][drones][bureaucracy]")
+{
+    LuaRuntime lua;
+    const PopCompositionConfig_t config = BureaucracyConfig_();
+    DroneCalculator calculator(config, lua);
+
+    DroneInputs_t inputs = StandardMapInputs_();
+    inputs.bureaucracy = 32.0 * 0.5; // MultiplyGeometric 0.5 on Citizen×Efficiency
+    CHECK(calculator.CalculateLimit(inputs) == 8);
+}
+
+TEST_CASE("Size drones appear for every pop past SizeFreeDrones",
+          "[population][drones][size]")
+{
+    LuaRuntime lua;
+    const PopCompositionConfig_t config = BureaucracyConfig_();
+    DroneCalculator calculator(config, lua);
+
+    // Under the bureaucracy limit so only size contributes.
+    DroneInputs_t inputs = StandardMapInputs_();
+    inputs.factionBaseCount = 1;
+    inputs.sizeFreeDrones = 4; // Talent
+
+    inputs.baseSize = 4;
+    CHECK(calculator.Calculate(inputs) == 0);
+
+    inputs.baseSize = 5;
+    CHECK(calculator.Calculate(inputs) == 1);
+
+    inputs.baseSize = 8;
+    CHECK(calculator.Calculate(inputs) == 4);
+
+    inputs.sizeFreeDrones = 6; // Citizen
+    inputs.baseSize = 6;
+    CHECK(calculator.Calculate(inputs) == 0);
+    inputs.baseSize = 7;
+    CHECK(calculator.Calculate(inputs) == 1);
+}
+
+TEST_CASE("Size and bureaucracy drone contributions stack, capped by base size",
+          "[population][drones][size][bureaucracy]")
+{
+    LuaRuntime lua;
+    const PopCompositionConfig_t config = BureaucracyConfig_();
+    DroneCalculator calculator(config, lua);
+
+    DroneInputs_t inputs = StandardMapInputs_();
+    inputs.sizeFreeDrones = 4;
+    inputs.baseSize = 6;          // 2 size drones
+    inputs.factionBaseCount = 32; // 1 bureaucracy drone at double the limit
+    CHECK(calculator.Calculate(inputs) == 3);
+
+    inputs.baseSize = 2; // size drones 0; bureaucracy still wants 1 → capped at 2
+    CHECK(calculator.Calculate(inputs) == 1);
 }
 
 TEST_CASE("A non-positive bureaucracy limit is a config error", "[population][drones][bureaucracy]")

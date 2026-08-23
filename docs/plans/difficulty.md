@@ -114,13 +114,11 @@ Covered end-to-end once config+pool land (stats already exist): AI `CostMultipli
 
 ---
 
-## Drones note (`SizeFreeDrones` vs divisor)
+## Drones note (`SizeFreeDrones`)
 
-Product language is a **size divisor**, not free bureaucracy drones.
-
-- Prefer `rules.size_drone_divisor` = 6…1 fed into pop composition (same spirit as the old `drone_divisor` plan), **or** emit `SizeFreeDrones` so composition resolves RawScaled with seed = base size.
-- `BureaucracyFreeDrones` / bureaucracy limit stay on the existing difficulty ordinal in Lua — separate from “N pop before drones.”
-- Composition test target: Talent divisor 4 → first drone at size 4; Citizen 6 → first at size 6.
+`SizeFreeDrones` is free population before size drones: `max(0, base_size - size_free_drones)`.
+Talent emits 4 → first size drone at size 5; Citizen 6 → first at size 7. Stacks with
+bureaucracy drones in `pop_composition.json`'s `drone_formula`.
 
 ---
 

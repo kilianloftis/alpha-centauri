@@ -10,9 +10,9 @@
           "type": "StatModifier",
           "scope": "FactionGlobal",
           "parameters": {
-            "stat": "bureaucracy_difficulty",
-            "amount": 0,
-            "op": "Add"
+            "stat": "bureaucracy",
+            "amount": 8,
+            "op": "MultiplyGeometric"
           }
         }
       ]
@@ -26,9 +26,9 @@
           "type": "StatModifier",
           "scope": "FactionGlobal",
           "parameters": {
-            "stat": "bureaucracy_difficulty",
-            "amount": 1,
-            "op": "Add"
+            "stat": "bureaucracy",
+            "amount": 7,
+            "op": "MultiplyGeometric"
           }
         }
       ]
@@ -42,9 +42,9 @@
           "type": "StatModifier",
           "scope": "FactionGlobal",
           "parameters": {
-            "stat": "bureaucracy_difficulty",
-            "amount": 2,
-            "op": "Add"
+            "stat": "bureaucracy",
+            "amount": 6,
+            "op": "MultiplyGeometric"
           }
         }
       ]
@@ -58,9 +58,9 @@
           "type": "StatModifier",
           "scope": "FactionGlobal",
           "parameters": {
-            "stat": "bureaucracy_difficulty",
-            "amount": 3,
-            "op": "Add"
+            "stat": "bureaucracy",
+            "amount": 5,
+            "op": "MultiplyGeometric"
           }
         }
       ]
@@ -74,9 +74,9 @@
           "type": "StatModifier",
           "scope": "FactionGlobal",
           "parameters": {
-            "stat": "bureaucracy_difficulty",
+            "stat": "bureaucracy",
             "amount": 4,
-            "op": "Add"
+            "op": "MultiplyGeometric"
           }
         }
       ]
@@ -90,9 +90,9 @@
           "type": "StatModifier",
           "scope": "FactionGlobal",
           "parameters": {
-            "stat": "bureaucracy_difficulty",
-            "amount": 5,
-            "op": "Add"
+            "stat": "bureaucracy",
+            "amount": 3,
+            "op": "MultiplyGeometric"
           }
         }
       ]

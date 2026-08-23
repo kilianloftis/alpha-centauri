@@ -124,7 +124,6 @@ static_assert(KindFor(StatId_t::DifficultTerrainCost) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::MineralUpkeep) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::FreeUnitSupport) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::SizeFreeDrones) == StatKind_t::Additive);
-static_assert(KindFor(StatId_t::BureaucracyFreeDrones) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::StartingExperience) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::StartingMinerals) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::MoraleBonus) == StatKind_t::Additive);
@@ -140,7 +139,7 @@ static_assert(KindFor(StatId_t::PositiveMoraleScale) == StatKind_t::PureMultipli
 static_assert(KindFor(StatId_t::GrowthRate) == StatKind_t::RawScaled);
 static_assert(KindFor(StatId_t::TechCost) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::TechCostDiff) == StatKind_t::Additive);
-static_assert(KindFor(StatId_t::BureaucracyDifficulty) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::Bureaucracy) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::MoistureTier) == StatKind_t::RawScaled);
 static_assert(KindFor(StatId_t::CommerceRate) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::CouncilVotes) == StatKind_t::Additive);
