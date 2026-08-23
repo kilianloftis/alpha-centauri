@@ -4,8 +4,10 @@
 
 #include "GameFixtures.h"
 #include "TempConfigFile.h"
+#include "TestHelpers.h"
 
 #include "game/effects/ActiveEffect.h"
+#include "game/effects/EffectEnums.h"
 #include "game/population/calculators/GoldenAgeCalculator.h"
 #include "game/population/calculators/GrowthCalculator.h"
 #include "game/population/calculators/DroneCalculator.h"
@@ -411,7 +413,7 @@ PopCompositionConfig_t BureaucracyConfig_()
     config.bureaucracyLimitFormula =
         "math.floor(bureaucracy * math.sqrt(map_width * map_height) / math.sqrt(12800) + 0.5)";
     config.droneFormula =
-        "max(0, min(base_size, floor((residue + faction_base_count - bureaucracy_limit) / bureaucracy_limit) + max(0, base_size - size_free_drones) + social_drone_modifier))";
+        "max(0, min(base_size, floor((residue + faction_base_count - bureaucracy_limit) / bureaucracy_limit) + max(0, resolved_drones - size_free_drones)))";
     config.droneTypeId = "Drone";
     config.talentFormula = "0";
     config.talentTypeId = "Talent";
@@ -534,23 +536,29 @@ TEST_CASE("Size drones appear for every pop past SizeFreeDrones",
     DroneCalculator calculator(config, lua);
 
     // Under the bureaucracy limit so only size contributes.
+    // resolvedDrones is Resolve(Drones, seed=baseSize); with no modifiers that is baseSize.
     DroneInputs_t inputs = StandardMapInputs_();
     inputs.factionBaseCount = 1;
     inputs.sizeFreeDrones = 4; // Talent
 
     inputs.baseSize = 4;
+    inputs.resolvedDrones = 4;
     CHECK(calculator.Calculate(inputs) == 0);
 
     inputs.baseSize = 5;
+    inputs.resolvedDrones = 5;
     CHECK(calculator.Calculate(inputs) == 1);
 
     inputs.baseSize = 8;
+    inputs.resolvedDrones = 8;
     CHECK(calculator.Calculate(inputs) == 4);
 
     inputs.sizeFreeDrones = 6; // Citizen
     inputs.baseSize = 6;
+    inputs.resolvedDrones = 6;
     CHECK(calculator.Calculate(inputs) == 0);
     inputs.baseSize = 7;
+    inputs.resolvedDrones = 7;
     CHECK(calculator.Calculate(inputs) == 1);
 }
 
@@ -563,12 +571,38 @@ TEST_CASE("Size and bureaucracy drone contributions stack, capped by base size",
 
     DroneInputs_t inputs = StandardMapInputs_();
     inputs.sizeFreeDrones = 4;
-    inputs.baseSize = 6;          // 2 size drones
+    inputs.baseSize = 6;
+    inputs.resolvedDrones = 6; // 2 size drones after free
     inputs.factionBaseCount = 32; // 1 bureaucracy drone at double the limit
     CHECK(calculator.Calculate(inputs) == 3);
 
-    inputs.baseSize = 2; // size drones 0; bureaucracy still wants 1 → capped at 2
+    inputs.baseSize = 2;
+    inputs.resolvedDrones = 2; // size drones 0; bureaucracy still wants 1 → capped at 2
     CHECK(calculator.Calculate(inputs) == 1);
+}
+
+TEST_CASE("University-style Drones MultiplyGeometric scales base size before SizeFreeDrones",
+          "[population][drones][size]")
+{
+    LuaRuntime lua;
+    const PopCompositionConfig_t config = BureaucracyConfig_();
+    DroneCalculator calculator(config, lua);
+
+    actest::EffectPool pool;
+    const std::vector<ActiveEffect_t> effects = {
+        actest::Active(pool.StatMod(StatId_t::Drones, 1.25, ModifierOp_t::MultiplyGeometric)),
+    };
+    // floor(8 * 1.25) = 10; then max(0, 10 - 4) = 6.
+    const int resolved =
+        FinalizeResolvedStat(ResolveStatModifiers(effects, 8.0).total);
+    REQUIRE(resolved == 10);
+
+    DroneInputs_t inputs = StandardMapInputs_();
+    inputs.factionBaseCount = 1; // under bureaucracy limit
+    inputs.baseSize = 8;
+    inputs.sizeFreeDrones = 4;
+    inputs.resolvedDrones = resolved;
+    CHECK(calculator.Calculate(inputs) == 6);
 }
 
 TEST_CASE("A non-positive bureaucracy limit is a config error", "[population][drones][bureaucracy]")

@@ -55,7 +55,7 @@ int DroneCalculator::Calculate(const DroneInputs_t& rInputs) const
         {"base_size",               static_cast<double>(rInputs.baseSize)},
         {"faction_base_count",      static_cast<double>(rInputs.factionBaseCount)},
         {"garrison_count",          static_cast<double>(rInputs.garrisonCount)},
-        {"social_drone_modifier",   static_cast<double>(rInputs.socialDroneModifier)},
+        {"resolved_drones",         static_cast<double>(rInputs.resolvedDrones)},
         {"turns_since_conquered",   static_cast<double>(rInputs.turnsSinceConquered)},
         {"size_free_drones",        static_cast<double>(rInputs.sizeFreeDrones)},
         {"bureaucracy_limit",       static_cast<double>(limit)},

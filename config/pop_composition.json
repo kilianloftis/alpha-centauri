@@ -1,6 +1,6 @@
 {
   "bureaucracy_limit_formula": "math.floor(bureaucracy * math.sqrt(map_width * map_height) / math.sqrt(12800) + 0.5)",
-  "drone_formula": "max(0, min(base_size, floor((residue + faction_base_count - bureaucracy_limit) / bureaucracy_limit) + max(0, base_size - size_free_drones) + social_drone_modifier))",
+  "drone_formula": "max(0, min(base_size, floor((residue + faction_base_count - bureaucracy_limit) / bureaucracy_limit) + max(0, resolved_drones - size_free_drones)))",
   "drone_type": "Drone",
   "talent_formula": "math.floor(psych_output / 2)",
   "talent_type": "Talent"

@@ -5,6 +5,8 @@
 #include "GameFixtures.h"
 
 #include "game/Faction.h"
+#include "game/effects/ActiveEffect.h"
+#include "game/effects/EffectEnums.h"
 #include "game/faction/EconomyManager.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/population/PopulationManager.h"
@@ -86,11 +88,18 @@ TEST_CASE("Drone and talent StatModifiers resolve on bases", "[effects][psych][p
     Faction& faction = fixture.MakeFaction();
     BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
 
-    CHECK(base.GetDroneModifier() == 0);
+    const auto resolveDrones = [&]() {
+        return FinalizeResolvedStat(
+            ResolveStatModifiers(
+                FilterBaseLevelByStatId(base.GetBaseEffects(), StatId_t::Drones), 0.0)
+                .total);
+    };
+
+    CHECK(resolveDrones() == 0);
     CHECK(base.GetTalentModifier() == 0);
 
     base.GetBuildingManager().AddBuilding("drone_hall");
-    CHECK(base.GetDroneModifier() == 2);
+    CHECK(resolveDrones() == 2);
 
     base.GetBuildingManager().AddBuilding("talent_academy");
     CHECK(base.GetTalentModifier() == 1);

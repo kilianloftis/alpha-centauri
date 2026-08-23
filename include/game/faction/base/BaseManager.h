@@ -162,8 +162,7 @@ public:
     // Local energy-psych share + this base's Psych StatModifiers.
     int GetPsychProduction() const;
 
-    // Composition modifiers from StatModifier(drones/talents) effects at this base.
-    int GetDroneModifier() const;
+    // Composition modifier from StatModifier(talents) effects at this base.
     int GetTalentModifier() const;
 
     // Resource subsystem: per-turn stockpiles and their consumption.

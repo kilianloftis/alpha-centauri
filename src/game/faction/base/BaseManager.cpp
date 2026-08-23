@@ -142,7 +142,6 @@ BaseManager::BaseManager(
     m_pPopulation->SetDroneInputSupplier([this]() {
         DroneInputs_t inputs;
         inputs.baseSize = m_pPopulation->GetSize();
-        inputs.socialDroneModifier = GetDroneModifier();
         inputs.factionBaseCount = static_cast<int>(m_pFaction->GetBaseCount());
         const WorldMap& rMap = m_rTileEffects.GetWorldMap();
         inputs.mapWidth = rMap.GetWidth();
@@ -154,6 +153,13 @@ BaseManager::BaseManager(
         inputs.bureaucracy = ResolveStatModifiersTotal(
             FilterBaseLevelByStatId(rBaseEffects, StatId_t::Bureaucracy),
             SeedFor(StatId_t::Bureaucracy));
+        // Seed with base size so MultiplyGeometric (e.g. University 1.25) scales population;
+        // SizeFreeDrones is applied after resolve in the formula, not as an Add on this stack.
+        inputs.resolvedDrones = FinalizeResolvedStat(
+            ResolveStatModifiers(
+                FilterBaseLevelByStatId(rBaseEffects, StatId_t::Drones),
+                static_cast<double>(inputs.baseSize))
+                .total);
         inputs.sizeFreeDrones = FinalizeResolvedStat(
             ResolveStatModifiers(
                 FilterBaseLevelByStatId(rBaseEffects, StatId_t::SizeFreeDrones),
@@ -402,13 +408,6 @@ int BaseManager::GetLabsProduction() const
 int BaseManager::GetPsychProduction() const
 {
     return m_pResources->GetPsychProduction(BuildBaseEffects_());
-}
-
-int BaseManager::GetDroneModifier() const
-{
-    return FinalizeResolvedStat(
-        ResolveStatModifiers(FilterBaseLevelByStatId(BuildBaseEffects_(), StatId_t::Drones), 0.0)
-            .total);
 }
 
 int BaseManager::GetTalentModifier() const

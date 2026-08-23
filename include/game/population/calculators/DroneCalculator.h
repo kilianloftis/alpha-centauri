@@ -21,7 +21,9 @@ struct DroneInputs_t
     int baseSize = 0;
     int factionBaseCount = 0;
     int garrisonCount = 0;
-    int socialDroneModifier = 0;
+    // Drones resolved with seed = baseSize (University MultiplyGeometric 1.25, Police Adds, …).
+    // Size free drones are subtracted after resolve so they are not scaled by geometric multipliers.
+    int resolvedDrones = 0;
     int turnsSinceConquered = 0;
 };
 
