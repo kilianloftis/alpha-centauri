@@ -27,6 +27,15 @@
         },
         {
           "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "conquered_drone_cap",
+            "amount": 0.25,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
           "scope": "FactionGlobal",
           "parameters": {
             "stat": "bureaucracy",
@@ -145,6 +154,15 @@
         },
         {
           "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "conquered_drone_cap",
+            "amount": 0.5,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
           "scope": "FactionGlobal",
           "parameters": {
             "stat": "bureaucracy",
@@ -250,6 +268,15 @@
         },
         {
           "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "conquered_drone_cap",
+            "amount": 0.75,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
           "scope": "FactionGlobal",
           "parameters": {
             "stat": "bureaucracy",
@@ -334,6 +361,15 @@
         },
         {
           "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "conquered_drone_cap",
+            "amount": 1,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
           "scope": "FactionGlobal",
           "parameters": {
             "stat": "bureaucracy",
@@ -387,6 +423,15 @@
           "parameters": {
             "stat": "size_free_drones",
             "amount": 2,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "conquered_drone_cap",
+            "amount": 1.25,
             "op": "Add"
           }
         },
@@ -458,6 +503,15 @@
           "parameters": {
             "stat": "size_free_drones",
             "amount": 1,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "AllOwnerBases",
+          "parameters": {
+            "stat": "conquered_drone_cap",
+            "amount": 1.5,
             "op": "Add"
           }
         },

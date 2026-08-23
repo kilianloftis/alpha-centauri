@@ -147,6 +147,7 @@ Difficulty stats split cleanly by whether the resolve site holds a raw number:
 | `Bureaucracy` | PureMultiplier | `1.0` — difficulty and Efficiency SE emit MultiplyGeometric; map root stays in the Lua limit formula |
 | `TechCostDiff` | Additive | `0.0` — ordinals fed to the Lua formulas |
 | `LastDefenderPopLoss`, `CapturePopLoss` | Additive | `0.0` — `base_conquest.json`'s effects list Adds the baseline |
+| `ConqueredDroneCap` | Additive | `0.0` — difficulty Adds `0.25 × level` (Citizen = 1); `base_conquest.json` Adds −0.5 |
 | `FacilityEnergyUpkeep` | RawScaled | `BuildingConfig_t::upkeep` |
 | `EcologicalDamage` | RawScaled | the accrued amount the resolve site holds |
 

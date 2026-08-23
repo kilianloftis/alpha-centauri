@@ -35,6 +35,15 @@
         "amount": 50,
         "op": "Add"
       }
+    },
+    {
+      "type": "StatModifier",
+      "scope": "AllOwnerBases",
+      "parameters": {
+        "stat": "conquered_drone_cap",
+        "amount": -0.5,
+        "op": "Add"
+      }
     }
   ],
   "escape_colony_pod": {

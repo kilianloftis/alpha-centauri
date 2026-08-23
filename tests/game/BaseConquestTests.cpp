@@ -598,3 +598,108 @@ TEST_CASE("A base that starves to nothing is razed through the conquest pathway"
     }
     CHECK_FALSE(bStillPresent);
 }
+
+TEST_CASE("Capturing a base starts the recently-conquered drone window", "[unit][conquest][drones]")
+{
+    ConquestGame_ game;
+    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/3);
+    CHECK_FALSE(rBase.IsAssimilating());
+
+    Unit& attacker = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon"});
+    MoveOrder_t order;
+    REQUIRE(game.pState->GetUnitOrderExecutor().TryStep(attacker, rBase.GetTile(), order).bEntered);
+
+    REQUIRE(game.pPlayer->GetBaseCount() == 1);
+    BaseManager& rCaptured = *game.pPlayer->Bases().begin();
+    CHECK(rCaptured.IsAssimilating());
+    CHECK(rCaptured.GetAssimilationFormerFactionId() == game.pAi->GetFactionId());
+    CHECK(rCaptured.GetAssimilationPeakDrones() == 5);
+    CHECK(rCaptured.GetAssimilationDurationTurns() == 50);
+    CHECK(rCaptured.GetTurnsSinceConquered() == 0);
+}
+
+TEST_CASE("Diplomatic transfer does not start assimilation", "[unit][conquest][drones]")
+{
+    ConquestGame_ game;
+    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/3);
+    game.pAi->TransferBaseTo(rBase.GetBaseId(), *game.pPlayer);
+    CHECK_FALSE(rBase.IsAssimilating());
+}
+
+TEST_CASE("Recapture by the former owner reverses remaining assimilation",
+          "[unit][conquest][drones]")
+{
+    ConquestGame_ game;
+    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/3);
+
+    rBase.NotifyCaptured(game.pAi->GetFactionId(), game.pPlayer->GetFactionId());
+    for (int i = 0; i < 12; ++i)
+    {
+        rBase.AdvanceAssimilation();
+    }
+    CHECK(rBase.GetTurnsSinceConquered() == 12);
+
+    rBase.NotifyCaptured(game.pPlayer->GetFactionId(), game.pAi->GetFactionId());
+    CHECK(rBase.IsAssimilating());
+    CHECK(rBase.GetAssimilationFormerFactionId() == game.pPlayer->GetFactionId());
+    CHECK(rBase.GetAssimilationPeakDrones() == 1);
+    CHECK(rBase.GetAssimilationDurationTurns() == 12);
+    CHECK(rBase.GetTurnsSinceConquered() == 0);
+
+    for (int i = 0; i < 12; ++i)
+    {
+        rBase.AdvanceAssimilation();
+    }
+    CHECK_FALSE(rBase.IsAssimilating());
+}
+
+TEST_CASE("Recapture within ten turns clears the penalty", "[unit][conquest][drones]")
+{
+    ConquestGame_ game;
+    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/3);
+
+    rBase.NotifyCaptured(game.pAi->GetFactionId(), game.pPlayer->GetFactionId());
+    for (int i = 0; i < 5; ++i)
+    {
+        rBase.AdvanceAssimilation();
+    }
+    rBase.NotifyCaptured(game.pPlayer->GetFactionId(), game.pAi->GetFactionId());
+    CHECK_FALSE(rBase.IsAssimilating());
+}
+
+TEST_CASE("A third faction capturing during assimilation starts a fresh window",
+          "[unit][conquest][drones]")
+{
+    ConquestGame_ game;
+    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/3);
+    rBase.NotifyCaptured(game.pAi->GetFactionId(), game.pPlayer->GetFactionId());
+    for (int i = 0; i < 12; ++i)
+    {
+        rBase.AdvanceAssimilation();
+    }
+
+    const FactionId_t third = game.pPlayer->GetFactionId() + game.pAi->GetFactionId() + 1;
+    rBase.NotifyCaptured(game.pPlayer->GetFactionId(), third);
+    CHECK(rBase.GetAssimilationFormerFactionId() == game.pPlayer->GetFactionId());
+    CHECK(rBase.GetAssimilationPeakDrones() == 5);
+    CHECK(rBase.GetAssimilationDurationTurns() == 50);
+    CHECK(rBase.GetTurnsSinceConquered() == 0);
+}
+
+TEST_CASE("Assimilation expires after fifty turns and the next capture is fresh",
+          "[unit][conquest][drones]")
+{
+    ConquestGame_ game;
+    BaseManager& rBase = game.MakeBase(*game.pAi, 5, 4, /*pop=*/3);
+    rBase.NotifyCaptured(game.pAi->GetFactionId(), game.pPlayer->GetFactionId());
+    for (int i = 0; i < 50; ++i)
+    {
+        rBase.AdvanceAssimilation();
+    }
+    CHECK_FALSE(rBase.IsAssimilating());
+
+    rBase.NotifyCaptured(game.pPlayer->GetFactionId(), game.pAi->GetFactionId());
+    CHECK(rBase.GetAssimilationFormerFactionId() == game.pPlayer->GetFactionId());
+    CHECK(rBase.GetAssimilationPeakDrones() == 5);
+    CHECK(rBase.GetAssimilationDurationTurns() == 50);
+}

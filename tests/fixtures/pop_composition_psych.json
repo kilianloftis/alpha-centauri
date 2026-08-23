@@ -1,6 +1,8 @@
 {
   "bureaucracy_limit_formula": "1",
   "drone_formula": "0",
+  "assimilation_drones": 5,
+  "assimilation_decay_turns": 10,
   "drone_type": "Drone",
   "talent_formula": "math.floor(psych_output / 2)",
   "talent_type": "Talent"

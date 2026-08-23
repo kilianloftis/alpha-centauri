@@ -22,6 +22,7 @@ PopCompositionConfig_t PopCompositionConfigParser::ParseConfig(const std::string
             static const std::vector<std::string> knownKeys = {
                 "bureaucracy_limit_formula", "drone_formula", "drone_type",
                 "talent_formula", "talent_type",
+                "assimilation_drones", "assimilation_decay_turns",
             };
             for (const auto& [rKey, rUnused] : rJson.items())
             {
@@ -44,12 +45,28 @@ PopCompositionConfig_t PopCompositionConfigParser::ParseConfig(const std::string
                 return value;
             };
 
+            const auto requirePositiveInt = [&](const char* key) {
+                if (!rJson.contains(key) || !rJson.at(key).is_number_integer())
+                {
+                    fail(std::string("'") + key + "' must be a positive integer");
+                }
+                const int value = rJson.at(key).get<int>();
+                if (value <= 0)
+                {
+                    fail(std::string("'") + key + "' must be > 0, got "
+                         + std::to_string(value));
+                }
+                return value;
+            };
+
             PopCompositionConfig_t config;
             config.bureaucracyLimitFormula = requireNonEmptyString("bureaucracy_limit_formula");
             config.droneFormula = requireNonEmptyString("drone_formula");
             config.droneTypeId = requireNonEmptyString("drone_type");
             config.talentFormula = requireNonEmptyString("talent_formula");
             config.talentTypeId = requireNonEmptyString("talent_type");
+            config.assimilationDrones = requirePositiveInt("assimilation_drones");
+            config.assimilationDecayTurns = requirePositiveInt("assimilation_decay_turns");
             return config;
         });
 }

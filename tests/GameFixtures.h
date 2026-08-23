@@ -108,7 +108,7 @@ struct PopTypeRegistryOnly
 // rewriting that Add's amount in place. Replacing BaseConquestConfig_t wholesale would
 // dangle the reference FactionEffectsPool holds into `effects`, so never do that; editing an
 // existing entry is safe because the pool resolves through a pointer to it.
-inline void SetBaseConquestStat(ac::BaseConquestConfig_t& rConfig, ac::StatId_t stat, int amount)
+inline void SetBaseConquestStat(ac::BaseConquestConfig_t& rConfig, ac::StatId_t stat, double amount)
 {
     for (ac::EffectConfig_t& rEffect : rConfig.effects)
     {
@@ -208,6 +208,7 @@ struct WorldFixture
                             ac::StatId_t::CaptureFacilitiesDestroyedMin, 0);
         SetBaseConquestStat(*dataContext.baseConquestConfig,
                             ac::StatId_t::CaptureFacilitiesDestroyedMaxPercent, 50);
+        SetBaseConquestStat(*dataContext.baseConquestConfig, ac::StatId_t::ConqueredDroneCap, -0.5);
     }
 
     ac::MoraleCalculator& morale() const { return *dataContext.moraleCalculator; }

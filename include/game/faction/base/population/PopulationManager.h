@@ -86,6 +86,8 @@ public:
     // Same composition recalculation rules as ConvertTo.
     void ConvertToFallback(Pop& rPop);
 
+    const PopCompositionConfig_t& GetCompositionConfig() const;
+
     // Drone and talent calculations
     bool IsRioting() const;
     bool IsDestroyed() const;

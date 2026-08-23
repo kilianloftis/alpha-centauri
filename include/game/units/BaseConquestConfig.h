@@ -19,9 +19,10 @@ struct EscapeColonyPodConfig_t
 struct BaseConquestConfig_t
 {
     // Continuous effects injected into every faction's pool: the LastDefenderPopLoss,
-    // CapturePopLoss, CaptureFacilitiesDestroyedMin and CaptureFacilitiesDestroyedMaxPercent
-    // baselines, each an Add. Every numeric conquest tunable is a modifiable stat rather than
-    // a hard-coded seed, so a mod can shift any of them without touching C++.
+    // CapturePopLoss, CaptureFacilitiesDestroyedMin, CaptureFacilitiesDestroyedMaxPercent
+    // and ConqueredDroneCap baselines, each an Add. Every numeric conquest tunable is a
+    // modifiable stat rather than a hard-coded seed, so a mod can shift any of them without
+    // touching C++.
     std::vector<EffectConfig_t> effects;
     EscapeColonyPodConfig_t escapeColonyPod;
 };

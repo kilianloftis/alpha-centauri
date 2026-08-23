@@ -1,5 +1,7 @@
 {
   "bureaucracy_limit_formula": "1",
   "drone_formula": "0",
+  "assimilation_drones": 5,
+  "assimilation_decay_turns": 10,
   "talent_formula": "0"
 }

@@ -25,6 +25,12 @@ struct DroneInputs_t
     // Size free drones are subtracted after resolve so they are not scaled by geometric multipliers.
     int resolvedDrones = 0;
     int turnsSinceConquered = 0;
+    // 0 duration / peak means the base is not assimilating (never captured, or the window ended).
+    int assimilationDuration = 0;
+    int assimilationPeak = 0;
+    // Resolved ConqueredDroneCap (difficulty 0.25×level + base_conquest −0.5). Kept as a
+    // double so the 0.25 steps survive until Lua takes floor(base_size/4 + this).
+    double conqueredDroneCap = 0.0;
 };
 
 uint64_t StableBaseHash(int baseId);

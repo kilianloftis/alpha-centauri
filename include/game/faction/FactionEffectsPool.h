@@ -63,7 +63,7 @@ private:
     // Production.json continuous effects (prototype StartingExperience, …).
     std::vector<ActiveEffect_t> CollectProductionEffects_() const;
 
-    // base_conquest.json continuous effects (pop-loss baselines).
+    // base_conquest.json continuous effects (pop-loss and conquered-drone-cap baselines).
     std::vector<ActiveEffect_t> CollectBaseConquestEffects_() const;
 
     // Session difficulty continuous effects, re-resolved from the owner's GameDataContext

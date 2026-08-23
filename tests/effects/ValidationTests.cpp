@@ -148,8 +148,9 @@ static_assert(KindFor(StatId_t::InefficiencyDenominator) == StatKind_t::Additive
 static_assert(KindFor(StatId_t::ScrapRefund) == StatKind_t::RawScaled);
 // Additive, not RawScaled: base_conquest.json's effects list supplies the whole baseline.
 static_assert(KindFor(StatId_t::LastDefenderPopLoss) == StatKind_t::Additive);
-static_assert(KindFor(StatId_t::CapturePopLoss) == StatKind_t::Additive);
-static_assert(KindFor(StatId_t::CaptureFacilitiesDestroyedMin) == StatKind_t::Additive);
+    static_assert(KindFor(StatId_t::CapturePopLoss) == StatKind_t::Additive);
+    static_assert(KindFor(StatId_t::ConqueredDroneCap) == StatKind_t::Additive);
+    static_assert(KindFor(StatId_t::CaptureFacilitiesDestroyedMin) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::CaptureFacilitiesDestroyedMaxPercent) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::EcologicalDamage) == StatKind_t::RawScaled);
 

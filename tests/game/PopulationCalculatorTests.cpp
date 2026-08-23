@@ -413,10 +413,12 @@ PopCompositionConfig_t BureaucracyConfig_()
     config.bureaucracyLimitFormula =
         "math.floor(bureaucracy * math.sqrt(map_width * map_height) / math.sqrt(12800) + 0.5)";
     config.droneFormula =
-        "max(0, min(base_size, floor((residue + faction_base_count - bureaucracy_limit) / bureaucracy_limit) + max(0, resolved_drones - size_free_drones)))";
+        "max(0, min(base_size, max(0, floor((residue + faction_base_count - bureaucracy_limit) / bureaucracy_limit)) + max(0, resolved_drones - size_free_drones) + ((assimilation_peak > 0 and assimilation_duration > 0 and turns_since_conquered < assimilation_duration) and 1 or 0) * min(max(0, assimilation_peak - floor(turns_since_conquered / max(1, floor(assimilation_duration / max(1, assimilation_peak))))), max(0, floor(base_size / 4 + conquered_drone_cap)))))";
     config.droneTypeId = "Drone";
     config.talentFormula = "0";
     config.talentTypeId = "Talent";
+    config.assimilationDrones = 5;
+    config.assimilationDecayTurns = 10;
     return config;
 }
 
@@ -615,4 +617,112 @@ TEST_CASE("A non-positive bureaucracy limit is a config error", "[population][dr
     CHECK_THROWS_WITH(calculator.Calculate(StandardMapInputs_()),
                       Catch::Matchers::ContainsSubstring("limit")
                           && Catch::Matchers::ContainsSubstring("0"));
+}
+
+TEST_CASE("Recently-conquered drones decay one per ten turns and respect the cap",
+          "[population][drones][conquest]")
+{
+    LuaRuntime lua;
+    const PopCompositionConfig_t config = BureaucracyConfig_();
+    DroneCalculator calculator(config, lua);
+
+    // Under the bureaucracy limit, with SizeFreeDrones covering the whole base, so only
+    // the assimilation term contributes.
+    DroneInputs_t inputs = StandardMapInputs_();
+    inputs.factionBaseCount = 1;
+    inputs.sizeFreeDrones = 100;
+    inputs.resolvedDrones = 8;
+    inputs.baseSize = 8;
+    inputs.assimilationPeak = 5;
+    inputs.assimilationDuration = 50;
+    // Cap (8 + 3 - 2)/4 = 2.25 → floor 2. Talent offset 0.75 plus base_conquest −0.5.
+    inputs.conqueredDroneCap = 0.25;
+
+    inputs.turnsSinceConquered = 0;
+    CHECK(calculator.Calculate(inputs) == 2); // rate 5, cap 2
+
+    inputs.turnsSinceConquered = 9;
+    CHECK(calculator.Calculate(inputs) == 2); // still 5, still capped
+
+    inputs.turnsSinceConquered = 10;
+    CHECK(calculator.Calculate(inputs) == 2); // rate 4, still capped
+
+    inputs.turnsSinceConquered = 30;
+    CHECK(calculator.Calculate(inputs) == 2); // rate 2, cap 2
+
+    inputs.turnsSinceConquered = 40;
+    CHECK(calculator.Calculate(inputs) == 1); // rate 1
+
+    inputs.turnsSinceConquered = 50;
+    CHECK(calculator.Calculate(inputs) == 0); // window ended
+
+    inputs.assimilationDuration = 0;
+    inputs.assimilationPeak = 0;
+    inputs.turnsSinceConquered = 0;
+    CHECK(calculator.Calculate(inputs) == 0); // never captured
+}
+
+TEST_CASE("The conquered-drone cap is (BaseSize + Difficulty - 2) / 4",
+          "[population][drones][conquest]")
+{
+    LuaRuntime lua;
+    const PopCompositionConfig_t config = BureaucracyConfig_();
+    DroneCalculator calculator(config, lua);
+
+    DroneInputs_t inputs = StandardMapInputs_();
+    inputs.factionBaseCount = 1;
+    inputs.sizeFreeDrones = 100;
+    inputs.assimilationPeak = 5;
+    inputs.assimilationDuration = 50;
+    inputs.turnsSinceConquered = 0;
+
+    // Citizen: 0.25 − 0.5 = −0.25. Size 6 → (6+1−2)/4 = 1.
+    inputs.baseSize = 6;
+    inputs.resolvedDrones = 6;
+    inputs.conqueredDroneCap = -0.25;
+    CHECK(calculator.Calculate(inputs) == 1);
+
+    // Talent: 0.75 − 0.5 = 0.25. Size 8 → (8+3−2)/4 = 2.
+    inputs.baseSize = 8;
+    inputs.resolvedDrones = 8;
+    inputs.conqueredDroneCap = 0.25;
+    CHECK(calculator.Calculate(inputs) == 2);
+
+    // Transcend: 1.5 − 0.5 = 1.0. Size 4 → (4+6−2)/4 = 2.
+    inputs.baseSize = 4;
+    inputs.resolvedDrones = 4;
+    inputs.conqueredDroneCap = 1.0;
+    CHECK(calculator.Calculate(inputs) == 2);
+
+    // Citizen size 3 → (3+1−2)/4 = 0.
+    inputs.baseSize = 3;
+    inputs.resolvedDrones = 3;
+    inputs.conqueredDroneCap = -0.25;
+    CHECK(calculator.Calculate(inputs) == 0);
+}
+
+TEST_CASE("A reversed assimilation window is one drone for twelve turns",
+          "[population][drones][conquest]")
+{
+    // Recapture after 12 turns: duration becomes 12, peak becomes floor(12/10)=1,
+    // and duration/peak = 12 so the single drone lasts the whole reversed window.
+    LuaRuntime lua;
+    const PopCompositionConfig_t config = BureaucracyConfig_();
+    DroneCalculator calculator(config, lua);
+
+    DroneInputs_t inputs = StandardMapInputs_();
+    inputs.factionBaseCount = 1;
+    inputs.sizeFreeDrones = 100;
+    inputs.baseSize = 16;
+    inputs.resolvedDrones = 16;
+    inputs.conqueredDroneCap = 100.0; // cap does not bind
+    inputs.assimilationPeak = 1;
+    inputs.assimilationDuration = 12;
+
+    inputs.turnsSinceConquered = 0;
+    CHECK(calculator.Calculate(inputs) == 1);
+    inputs.turnsSinceConquered = 11;
+    CHECK(calculator.Calculate(inputs) == 1);
+    inputs.turnsSinceConquered = 12;
+    CHECK(calculator.Calculate(inputs) == 0);
 }

@@ -159,6 +159,26 @@ TEST_CASE("SizeFreeDrones follows the difficulty matrix", "[difficulty][effects]
     CHECK(ResolveBaseStat_(rBase, StatId_t::SizeFreeDrones, 0.0) == Approx(4.0));
 }
 
+TEST_CASE("ConqueredDroneCap is 0.25 per difficulty level plus base_conquest -0.5",
+          "[difficulty][effects][conquest]")
+{
+    const auto resolveCap = [](const char* difficultyId) {
+        FactionFixture fixtures;
+        UseShippingDifficulty_(fixtures, difficultyId);
+        Faction& rFaction = fixtures.MakeFaction();
+        BaseManager& rBase = fixtures.MakeFactionBase(rFaction, 3, 3);
+        return ResolveBaseStat_(rBase, StatId_t::ConqueredDroneCap, 0.0);
+    };
+
+    // (Difficulty − 2)/4 with Citizen = 1. Fixture base_conquest Adds −0.5.
+    CHECK(resolveCap("citizen") == Approx(-0.25));
+    CHECK(resolveCap("specialist") == Approx(0.0));
+    CHECK(resolveCap("talent") == Approx(0.25));
+    CHECK(resolveCap("librarian") == Approx(0.5));
+    CHECK(resolveCap("thinker") == Approx(0.75));
+    CHECK(resolveCap("transcend") == Approx(1.0));
+}
+
 TEST_CASE("EcologicalDamage MultiplyGeometric is present on Talent", "[difficulty][effects]")
 {
     FactionFixture fixtures;
@@ -255,6 +275,40 @@ TEST_CASE("Bureaucracy drones distribute past the limit end-to-end",
 
     const int residue = static_cast<int>(StableBaseHash(rOver.GetBaseId()) % 16);
     CHECK(rOver.GetPopulation().GetDroneCount() == (residue + 1) / 16);
+}
+
+TEST_CASE("A captured base gains recently-conquered drones",
+          "[difficulty][effects][drones][conquest]")
+{
+    FactionFixture fixtures(80, 40);
+    UseShippingDifficulty_(fixtures, "citizen");
+    fixtures.dataContext.socialRatingRegistry = std::make_unique<SocialRatingRegistry>();
+    fixtures.dataContext.socialRatingRegistry->Load(
+        std::string(AC_TEST_FIXTURES_DIR) + "/../../config/social_rating_effects.json");
+    fixtures.dataContext.popCompositionConfig = std::make_unique<PopCompositionConfig_t>(
+        PopCompositionConfigParser{}.ParseConfig(
+            std::string(AC_TEST_FIXTURES_DIR) + "/../../config/pop_composition.json"));
+    fixtures.dataContext.droneCalculator = std::make_unique<DroneCalculator>(
+        *fixtures.dataContext.popCompositionConfig, *fixtures.dataContext.luaRuntime);
+    fixtures.dataContext.popCompositionCalculator = std::make_unique<PopCompositionCalculator>(
+        *fixtures.dataContext.popCompositionConfig, *fixtures.dataContext.luaRuntime);
+
+    Faction& rGiver = fixtures.MakeFaction();
+    Faction& rTaker = fixtures.MakeFaction();
+    BaseManager& rBase = fixtures.MakeFactionBase(rGiver, 3, 3);
+    while (rBase.GetPopulation().GetSize() < 6)
+    {
+        rBase.GetPopulation().AddPop();
+    }
+    rBase.GetPopulation().RecalculateComposition();
+    // Citizen SizeFreeDrones 6 → no size drones; one base is under the bureaucracy limit.
+    CHECK(rBase.GetPopulation().GetDroneCount() == 0);
+
+    rBase.NotifyCaptured(rGiver.GetFactionId(), rTaker.GetFactionId());
+    rGiver.TransferBaseTo(rBase.GetBaseId(), rTaker);
+    // Cap (6 + 1 − 2)/4 = 1 extra drone while assimilating.
+    CHECK(rBase.GetPopulation().GetDroneCount() == 1);
+    CHECK(rBase.IsAssimilating());
 }
 
 TEST_CASE("ProbeActionCost -50 applies to AI bases on Citizen", "[difficulty][effects]")

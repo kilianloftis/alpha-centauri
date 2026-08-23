@@ -238,6 +238,8 @@ TEST_CASE("Shrinking a base reconciles composition immediately", "[population][c
     const TempConfigFile compositionConfig("ac_comp_halfdrones.json", R"cfg({
   "bureaucracy_limit_formula": "1",
   "drone_formula": "math.floor(base_size / 2)",
+  "assimilation_drones": 5,
+  "assimilation_decay_turns": 10,
   "drone_type": "Drone",
   "talent_formula": "0",
   "talent_type": "Talent"

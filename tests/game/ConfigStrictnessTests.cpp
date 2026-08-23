@@ -256,6 +256,32 @@ TEST_CASE("Pop composition requires formulas and rejects unknown keys",
         CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
                           Catch::Matchers::ContainsSubstring("unknown key"));
     }
+
+    SECTION("assimilation_drones is required and must be positive")
+    {
+        const TempConfigFile missing("ac_comp_no_assim_drones.json", R"({
+            "bureaucracy_limit_formula": "1",
+            "drone_formula": "0",
+            "drone_type": "Drone",
+            "talent_formula": "0",
+            "talent_type": "Talent",
+            "assimilation_decay_turns": 10
+        })");
+        CHECK_THROWS_WITH(parser.ParseConfig(missing.Path()),
+                          Catch::Matchers::ContainsSubstring("assimilation_drones"));
+
+        const TempConfigFile zero("ac_comp_zero_assim_drones.json", R"({
+            "bureaucracy_limit_formula": "1",
+            "drone_formula": "0",
+            "drone_type": "Drone",
+            "talent_formula": "0",
+            "talent_type": "Talent",
+            "assimilation_drones": 0,
+            "assimilation_decay_turns": 10
+        })");
+        CHECK_THROWS_WITH(parser.ParseConfig(zero.Path()),
+                          Catch::Matchers::ContainsSubstring("assimilation_drones"));
+    }
 }
 
 TEST_CASE("A pop type without a role is rejected", "[config][population]")

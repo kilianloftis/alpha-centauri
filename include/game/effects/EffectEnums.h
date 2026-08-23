@@ -140,6 +140,12 @@ enum class StatId_t
     // nothing in the shipping config modifies it. Floored at 0 at the resolve site.
     CapturePopLoss,
 
+    // Offset on the recently-conquered drone cap (Additive). The formula is
+    // floor(base_size/4 + this), i.e. (BaseSize + Difficulty - 2) / 4 when difficulty
+    // Adds 0.25 per level (Citizen = 1) and base_conquest.json Adds -0.5. Passed to Lua
+    // as a double so the 0.25 steps are not rounded away before the cap is taken.
+    ConqueredDroneCap,
+
     // Ecological damage accrued from terraforming / population (RawScaled: seed is the raw
     // accrued amount the resolve site holds). Difficulty emits MultiplyGeometric.
     EcologicalDamage
@@ -198,6 +204,7 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::TechCost:
         case StatId_t::LastDefenderPopLoss:
         case StatId_t::CapturePopLoss:
+        case StatId_t::ConqueredDroneCap:
         case StatId_t::CaptureFacilitiesDestroyedMin:
         case StatId_t::CaptureFacilitiesDestroyedMaxPercent:
         case StatId_t::TechCostDiff:
@@ -290,6 +297,7 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "scrap_refund")             return StatId_t::ScrapRefund;
     if (rStat == "last_defender_pop_loss")   return StatId_t::LastDefenderPopLoss;
     if (rStat == "capture_pop_loss")         return StatId_t::CapturePopLoss;
+    if (rStat == "conquered_drone_cap")      return StatId_t::ConqueredDroneCap;
     if (rStat == "capture_facilities_destroyed_min")
         return StatId_t::CaptureFacilitiesDestroyedMin;
     if (rStat == "capture_facilities_destroyed_max_percent")

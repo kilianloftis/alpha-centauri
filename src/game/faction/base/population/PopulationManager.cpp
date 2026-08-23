@@ -400,6 +400,11 @@ void PopulationManager::MaybeRecalculateComposition_()
     RecalculateComposition();
 }
 
+const PopCompositionConfig_t& PopulationManager::GetCompositionConfig() const
+{
+    return m_rCompositionCalculator.GetConfig();
+}
+
 void PopulationManager::CheckRiotEndOfTurn()
 {
     m_riot.Update(BuildRiotInputs_());

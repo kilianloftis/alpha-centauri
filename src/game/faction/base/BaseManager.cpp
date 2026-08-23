@@ -24,6 +24,7 @@
 #include "game/stockpiles/StockpileRegistry.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/MapUtils.h"
+#include "game/map/TerritoryMap.h"
 #include "game/map/WorldMap.h"
 #include "game/social-engineering/SocialRatingResolver.h"
 #include "game/units/UnitDesign.h"
@@ -147,7 +148,10 @@ BaseManager::BaseManager(
         inputs.mapWidth = rMap.GetWidth();
         inputs.mapHeight = rMap.GetHeight();
         inputs.baseId = m_baseId;
-        // TODO: garrisonCount, turnsSinceConquered
+        inputs.turnsSinceConquered = m_turnsSinceConquered;
+        inputs.assimilationDuration = m_assimilationDurationTurns;
+        inputs.assimilationPeak = m_assimilationPeakDrones;
+        // TODO: garrisonCount
         // GetBaseEffects includes SE rating expansion (Efficiency → Bureaucracy MultiplyGeometric).
         const BaseEffects_t& rBaseEffects = GetBaseEffects();
         inputs.bureaucracy = ResolveStatModifiersTotal(
@@ -165,6 +169,9 @@ BaseManager::BaseManager(
                 FilterBaseLevelByStatId(rBaseEffects, StatId_t::SizeFreeDrones),
                 SeedFor(StatId_t::SizeFreeDrones))
                 .total);
+        inputs.conqueredDroneCap = ResolveStatModifiersTotal(
+            FilterBaseLevelByStatId(rBaseEffects, StatId_t::ConqueredDroneCap),
+            SeedFor(StatId_t::ConqueredDroneCap));
         return inputs;
     });
 
@@ -850,6 +857,85 @@ const Faction& BaseManager::GetFaction() const
 FactionId_t BaseManager::GetFactionId() const
 {
     return m_pFaction->GetFactionId();
+}
+
+void BaseManager::ClearAssimilation_()
+{
+    m_assimilationFormerFactionId = k_NoFactionOwner;
+    m_turnsSinceConquered = 0;
+    m_assimilationDurationTurns = 0;
+    m_assimilationPeakDrones = 0;
+}
+
+void BaseManager::NotifyCaptured(FactionId_t previousOwner, FactionId_t newOwner)
+{
+    const bool bReclaim = m_assimilationDurationTurns > 0
+        && m_turnsSinceConquered < m_assimilationDurationTurns
+        && m_assimilationFormerFactionId == newOwner;
+
+    if (bReclaim)
+    {
+        const int elapsed = m_turnsSinceConquered;
+        const int decay = (m_assimilationPeakDrones > 0)
+            ? std::max(1, m_assimilationDurationTurns / m_assimilationPeakDrones)
+            : 1;
+        const int reversedPeak = elapsed / decay;
+        if (reversedPeak <= 0 || elapsed <= 0)
+        {
+            ClearAssimilation_();
+            return;
+        }
+        m_assimilationFormerFactionId = previousOwner;
+        m_assimilationDurationTurns = elapsed;
+        m_assimilationPeakDrones = reversedPeak;
+        m_turnsSinceConquered = 0;
+        return;
+    }
+
+    const PopCompositionConfig_t& rConfig = m_pPopulation->GetCompositionConfig();
+    m_assimilationFormerFactionId = previousOwner;
+    m_assimilationPeakDrones = rConfig.assimilationDrones;
+    m_assimilationDurationTurns = rConfig.assimilationDrones * rConfig.assimilationDecayTurns;
+    m_turnsSinceConquered = 0;
+}
+
+void BaseManager::AdvanceAssimilation()
+{
+    if (m_assimilationDurationTurns <= 0)
+    {
+        return;
+    }
+    ++m_turnsSinceConquered;
+    if (m_turnsSinceConquered >= m_assimilationDurationTurns)
+    {
+        ClearAssimilation_();
+    }
+}
+
+bool BaseManager::IsAssimilating() const
+{
+    return m_assimilationDurationTurns > 0
+        && m_turnsSinceConquered < m_assimilationDurationTurns;
+}
+
+FactionId_t BaseManager::GetAssimilationFormerFactionId() const
+{
+    return m_assimilationFormerFactionId;
+}
+
+int BaseManager::GetTurnsSinceConquered() const
+{
+    return m_turnsSinceConquered;
+}
+
+int BaseManager::GetAssimilationDurationTurns() const
+{
+    return m_assimilationDurationTurns;
+}
+
+int BaseManager::GetAssimilationPeakDrones() const
+{
+    return m_assimilationPeakDrones;
 }
 
 void BaseManager::RebindFaction(Faction& rFaction)

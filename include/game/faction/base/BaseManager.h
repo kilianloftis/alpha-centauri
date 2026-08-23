@@ -301,6 +301,23 @@ public:
     // may differ under the new owner). See docs/architecture/high-level.md, "Object lifetime".
     void RebindFaction(Faction& rFaction);
 
+    // Combat capture / probe mind-control: start or reverse the recently-conquered drone
+    // window. Call before TransferBaseTo so the transfer's composition recalculation sees
+    // the new peak/duration. previousOwner is the faction losing the base; newOwner is the
+    // capturer. Recapture by the faction this window still names as former owner inverts
+    // elapsed time into remaining duration (12 turns in → 1 drone for 12 turns).
+    void NotifyCaptured(FactionId_t previousOwner, FactionId_t newOwner);
+
+    // One turn of the assimilation window. Called from the Population stage before
+    // RecalculateComposition; expires the penalty when duration elapses.
+    void AdvanceAssimilation();
+
+    bool IsAssimilating() const;
+    FactionId_t GetAssimilationFormerFactionId() const;
+    int GetTurnsSinceConquered() const;
+    int GetAssimilationDurationTurns() const;
+    int GetAssimilationPeakDrones() const;
+
     // Fired at the start of ~BaseManager, while the object is still fully valid, so observers
     // (e.g. an open BaseView) can invalidate their reference before it dangles. Not fired on
     // ownership transfer — the object survives that; see RebindFaction / GetFaction().
@@ -361,6 +378,12 @@ private:
     std::unique_ptr<ProductionManager> m_pProduction;
     std::string m_name;
 
+    // Recently-conquered drone window. Former owner is k_NoFactionOwner when idle.
+    FactionId_t m_assimilationFormerFactionId = -1;
+    int m_turnsSinceConquered = 0;
+    int m_assimilationDurationTurns = 0;
+    int m_assimilationPeakDrones = 0;
+
     // Set when ApplyProduction is ready to finish an item that would leave size <= 0.
     // Cleared by ConfirmProductionAbandon / DeferProductionAbandon, or when production changes.
     bool m_bPendingProductionAbandonConfirm = false;
@@ -369,6 +392,8 @@ private:
     bool IsCurrentProductionPrototype_() const;
     // What the queued item still needs, shared by the quote and the spend.
     HurryInputs_t BuildHurryInputs_(const IConstructable& rItem) const;
+
+    void ClearAssimilation_();
 
     // Per-copy price and destroy. Faction::QuoteScrapBuilding / ScrapBuilding are the
     // player-order entry; these exist so the empire-wide pair can reuse the same path.
