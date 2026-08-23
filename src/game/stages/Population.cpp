@@ -33,7 +33,7 @@ StageResult_t Population::ExecuteImpl(GameState& rGameState, Faction& rFaction)
             depopulated.push_back(rBase.GetBaseId());
             continue;
         }
-        rBase.AdvanceAssimilation();
+        rPopulation.AdvanceAssimilation();
         rPopulation.RecalculateComposition();
         rPopulation.CheckRiotEndOfTurn();
         rPopulation.CheckGoldenAgeEndOfTurn();

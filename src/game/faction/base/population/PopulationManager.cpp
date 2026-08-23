@@ -405,6 +405,18 @@ const PopCompositionConfig_t& PopulationManager::GetCompositionConfig() const
     return m_rCompositionCalculator.GetConfig();
 }
 
+void PopulationManager::NotifyCaptured(FactionId_t previousOwner, FactionId_t newOwner)
+{
+    const PopCompositionConfig_t& rConfig = GetCompositionConfig();
+    m_assimilation.NotifyCaptured(previousOwner, newOwner, rConfig.assimilationDrones,
+                                  rConfig.assimilationDecayTurns);
+}
+
+void PopulationManager::AdvanceAssimilation()
+{
+    m_assimilation.Advance();
+}
+
 void PopulationManager::CheckRiotEndOfTurn()
 {
     m_riot.Update(BuildRiotInputs_());

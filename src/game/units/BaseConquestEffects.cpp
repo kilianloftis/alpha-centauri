@@ -330,7 +330,7 @@ BaseConquestResult_t ApplyCapture_(Unit& rCapturer, BaseManager& rBase, GameStat
         return result;
     }
 
-    rBase.NotifyCaptured(rOldOwner.GetFactionId(), rNewOwner.GetFactionId());
+    rBase.GetPopulation().NotifyCaptured(rOldOwner.GetFactionId(), rNewOwner.GetFactionId());
     rOldOwner.TransferBaseTo(baseId, rNewOwner);
     RepairCapturer_(rCapturer);
     return result;

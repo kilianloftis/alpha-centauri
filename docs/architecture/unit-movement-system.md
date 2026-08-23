@@ -198,9 +198,11 @@ Two entry points, reached from `UnitOrderExecutor`:
 Same-species capture (and probe mind-control) also starts a recently-conquered drone window
 on the base: extra drones for `assimilation_drones × assimilation_decay_turns` turns
 (shipping 50), at `assimilation_drones` (shipping 5) minus one per decay interval, capped by
-`floor(base_size/4 + ConqueredDroneCap)`. Recapture by the faction the window still names as
-former owner inverts elapsed time into remaining duration — 12 turns in becomes 1 drone for
-12 turns. Diplomatic `TransferBaseTo` does not start the window.
+`floor(base_size/4 + ConqueredDroneCap)`. `PopulationManager` keeps an occupier window plus a
+claim per faction that lost the base; claims expire independently. Recapture by a faction
+with an active claim inverts *that* claim's elapsed time — 12 turns away becomes 1 drone
+for 12 turns, including after a third party captured in between. A later occupier still
+gets a fresh 5/50. Diplomatic `TransferBaseTo` does not start a window.
 
 Razing (population reaching zero) tombstones the base's Secret Projects through
 `GameState::MarkSecretProjectDestroyed`, so no faction can rebuild them.

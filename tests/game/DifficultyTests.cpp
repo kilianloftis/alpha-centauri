@@ -304,11 +304,11 @@ TEST_CASE("A captured base gains recently-conquered drones",
     // Citizen SizeFreeDrones 6 → no size drones; one base is under the bureaucracy limit.
     CHECK(rBase.GetPopulation().GetDroneCount() == 0);
 
-    rBase.NotifyCaptured(rGiver.GetFactionId(), rTaker.GetFactionId());
+    rBase.GetPopulation().NotifyCaptured(rGiver.GetFactionId(), rTaker.GetFactionId());
     rGiver.TransferBaseTo(rBase.GetBaseId(), rTaker);
     // Cap (6 + 1 − 2)/4 = 1 extra drone while assimilating.
     CHECK(rBase.GetPopulation().GetDroneCount() == 1);
-    CHECK(rBase.IsAssimilating());
+    CHECK(rBase.GetPopulation().GetAssimilation().IsAssimilating());
 }
 
 TEST_CASE("ProbeActionCost -50 applies to AI bases on Citizen", "[difficulty][effects]")

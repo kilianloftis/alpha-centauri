@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/faction/base/population/PopContainer.h"
+#include "game/faction/base/population/AssimilationTracker.h"
 #include "game/population/calculators/DroneCalculator.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/population/calculators/RiotCalculator.h"
@@ -87,6 +88,15 @@ public:
     void ConvertToFallback(Pop& rPop);
 
     const PopCompositionConfig_t& GetCompositionConfig() const;
+
+    // Combat capture / probe mind-control: start or reverse the recently-conquered drone
+    // window. Call before TransferBaseTo so the transfer's composition recalculation sees
+    // the new peak/duration. Recapture by a faction that still has a claim (including the
+    // original owner after a third party took the base) inverts that faction's elapsed time.
+    void NotifyCaptured(FactionId_t previousOwner, FactionId_t newOwner);
+    void AdvanceAssimilation();
+
+    const AssimilationTracker& GetAssimilation() const { return m_assimilation; }
 
     // Drone and talent calculations
     bool IsRioting() const;
@@ -198,6 +208,7 @@ private:
 
     RiotCalculator m_riot;
     GoldenAgeCalculator m_goldenAge;
+    AssimilationTracker m_assimilation;
 
     RiotConditionInputs_t BuildRiotInputs_() const;
     DroneInputs_t BuildDroneInputs_() const;

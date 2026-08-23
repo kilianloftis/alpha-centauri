@@ -195,7 +195,7 @@ bool ApplyMindControlBase_(Faction& rActor, BaseManager& rBase, ProbeActionResul
 {
     Faction& rTarget = rBase.GetFaction();
     const BaseId_t baseId = rBase.GetBaseId();
-    rBase.NotifyCaptured(rTarget.GetFactionId(), rActor.GetFactionId());
+    rBase.GetPopulation().NotifyCaptured(rTarget.GetFactionId(), rActor.GetFactionId());
     rTarget.TransferBaseTo(baseId, rActor);
     rResult.detail = ProbeActionStatus_t::BaseCaptured;
     return true;

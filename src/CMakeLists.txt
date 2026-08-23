@@ -50,6 +50,7 @@ add_library(ac-core STATIC
     game/faction/base/resources/WorkerAssignmentManager.cpp
     game/faction/EconomyManager.cpp
     game/faction/base/population/PopulationManager.cpp
+    game/faction/base/population/AssimilationTracker.cpp
     game/faction/base/population/PopContainer.cpp
     game/population/pop-types/Pop.cpp
     game/population/pop-types/PopTypeConfigParser.cpp
