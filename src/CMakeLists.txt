@@ -49,6 +49,8 @@ add_library(ac-core STATIC
     game/faction/base/resources/MineralSupport.cpp
     game/faction/base/resources/WorkerAssignmentManager.cpp
     game/faction/EconomyManager.cpp
+    game/faction/base/population/AwayFromHomeDrones.cpp
+    game/faction/base/population/GarrisonPolice.cpp
     game/faction/base/population/PopulationManager.cpp
     game/faction/base/population/AssimilationTracker.cpp
     game/faction/base/population/PopContainer.cpp
@@ -74,6 +76,7 @@ add_library(ac-core STATIC
     game/effects/InfiltrationRules.cpp
     game/effects/TileEffectsContext.cpp
     game/effects/TileYieldRulesConfigParser.cpp
+    game/effects/PoliceRulesConfigParser.cpp
     game/TurnStageFactory.cpp
     game/TurnStageConfigParser.cpp
     game/HookContext.cpp

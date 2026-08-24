@@ -41,6 +41,9 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
           == StatId_t::DifficultTerrainCost);
     CHECK(ParseStatId("mineral_upkeep") == StatId_t::MineralUpkeep);
     CHECK(ParseStatId("free_unit_support") == StatId_t::FreeUnitSupport);
+    CHECK(ParseStatId("max_police") == StatId_t::MaxPolice);
+    CHECK(ParseStatId("police_effectiveness") == StatId_t::PoliceEffectiveness);
+    CHECK(ParseStatId("away_from_home_drones") == StatId_t::AwayFromHomeDrones);
     CHECK(ParseStatId("cost_multiplier") == StatId_t::CostMultiplier);
     CHECK(ParseStatId("prototype_surcharge_scale") == StatId_t::PrototypeSurchargeScale);
     CHECK(ParseStatId("retool_penalty_scale") == StatId_t::RetoolPenaltyScale);
@@ -654,6 +657,20 @@ TEST_CASE("ParseEffectConfig: unitFilter", "[effects][parser][unitFilter]")
         const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
         REQUIRE(config.unitFilter.has_value());
         CHECK(std::holds_alternative<UnitFilterIsPrototype_t>(*config.unitFilter));
+    }
+
+    SECTION("IsCombatUnit filter")
+    {
+        const json effectJson = json::parse(R"({
+            "type": "StatModifier",
+            "scope": "FactionUnits",
+            "unitFilter": { "kind": "IsCombatUnit" },
+            "parameters": { "stat": "police_effectiveness", "amount": 1 }
+        })");
+
+        const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
+        REQUIRE(config.unitFilter.has_value());
+        CHECK(std::holds_alternative<UnitFilterIsCombatUnit_t>(*config.unitFilter));
     }
 
     SECTION("Domain without domain throws")

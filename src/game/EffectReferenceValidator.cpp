@@ -312,6 +312,7 @@ void ValidateEffectReferences(const GameDataContext& rData)
     }
     // tileYieldRules is a plain vector on GameDataContext (always present; may be empty).
     validate(rData.tileYieldRules, "tile_yield_rules");
+    validate(rData.policeRules, "police_rules");
     validate(rProductionConfig.effects, "production");
     validate(RequireRegistry(rData.baseConquestConfig, "baseConquestConfig").effects,
              "base_conquest");

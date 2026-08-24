@@ -182,5 +182,11 @@
     "category": "discover",
     "cost": 120,
     "prerequisites": ["orbital_spaceflight"]
+  },
+  {
+    "id": "intellectual_integrity",
+    "name": "Intellectual Integrity",
+    "category": "discover",
+    "cost": 50
   }
 ]

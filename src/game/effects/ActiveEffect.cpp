@@ -397,6 +397,10 @@ bool UnitFilterSatisfied(const EffectConfig_t& config, const Unit& rUnit)
             {
                 return rUnit.IsPrototype();
             }
+            else if constexpr (std::is_same_v<T, UnitFilterIsCombatUnit_t>)
+            {
+                return rUnit.GetDesign().IsCombatUnit();
+            }
             else
             {
                 static_assert(k_AlwaysFalse<T>, "Unhandled UnitFilter_t alternative");

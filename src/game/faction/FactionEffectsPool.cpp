@@ -28,7 +28,8 @@ FactionEffectsPool::FactionEffectsPool(const Faction& rFaction,
                                        const std::vector<EffectConfig_t>& rTileYieldRules,
                                        const SocialRatingRegistry& rSocialRatings,
                                        const std::vector<EffectConfig_t>& rProductionEffects,
-                                       const std::vector<EffectConfig_t>& rBaseConquestEffects)
+                                       const std::vector<EffectConfig_t>& rBaseConquestEffects,
+                                       const std::vector<EffectConfig_t>& rPoliceRules)
     : m_rFaction(rFaction)
     , m_rBuildingRegistry(rBuildingRegistry)
     , m_rBaseListRevision(rBaseListRevision)
@@ -36,6 +37,7 @@ FactionEffectsPool::FactionEffectsPool(const Faction& rFaction,
     , m_rSocialRatings(rSocialRatings)
     , m_rProductionEffects(rProductionEffects)
     , m_rBaseConquestEffects(rBaseConquestEffects)
+    , m_rPoliceRules(rPoliceRules)
 {
 }
 
@@ -135,6 +137,13 @@ std::vector<ActiveEffect_t> FactionEffectsPool::CollectBaseConquestEffects_() co
     return result;
 }
 
+std::vector<ActiveEffect_t> FactionEffectsPool::CollectPoliceRulesEffects_() const
+{
+    std::vector<ActiveEffect_t> result;
+    AppendActiveEffects(m_rPoliceRules, nullptr, "police_rules", result);
+    return result;
+}
+
 std::vector<ActiveEffect_t> FactionEffectsPool::CollectDifficultyEffects_() const
 {
     const GameDataContext& rData = m_rFaction.GetDataContext();
@@ -216,6 +225,10 @@ void FactionEffectsPool::Rebuild_() const
     const std::vector<ActiveEffect_t> conquestEffects = CollectBaseConquestEffects_();
     factionEffects.effects.insert(factionEffects.effects.end(), conquestEffects.begin(),
                                   conquestEffects.end());
+
+    const std::vector<ActiveEffect_t> policeEffects = CollectPoliceRulesEffects_();
+    factionEffects.effects.insert(factionEffects.effects.end(), policeEffects.begin(),
+                                  policeEffects.end());
 
     const std::vector<ActiveEffect_t> diffEffects = CollectDifficultyEffects_();
     factionEffects.effects.insert(factionEffects.effects.end(), diffEffects.begin(),

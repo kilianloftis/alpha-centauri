@@ -32,6 +32,11 @@ public:
     // True if any filled slot carries a component with the given id.
     bool HasComponent(const std::string& rComponentId) const;
 
+    // True when additive Attack > 0 or ForcesPsiCombat (component-only resolve). Used by
+    // combat rules (disengage) and UnitFilter IsCombatUnit; design-only so FactionUnits
+    // collection cannot recurse through CollectLiveUnitEffects.
+    bool IsCombatUnit() const;
+
     // True when every filled component's requiredTech is discovered (empty requiredTech
     // always passes). Used when deciding whether a transferred base may keep a queued design.
     bool IsAvailable(const std::vector<std::string>& rDiscoveredTechs) const;

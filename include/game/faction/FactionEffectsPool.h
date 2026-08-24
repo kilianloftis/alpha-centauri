@@ -30,7 +30,8 @@ public:
                        const std::vector<EffectConfig_t>& rTileYieldRules,
                        const SocialRatingRegistry& rSocialRatings,
                        const std::vector<EffectConfig_t>& rProductionEffects,
-                       const std::vector<EffectConfig_t>& rBaseConquestEffects);
+                       const std::vector<EffectConfig_t>& rBaseConquestEffects,
+                       const std::vector<EffectConfig_t>& rPoliceRules);
 
     // The validated local pool. Valid until the next effect-source mutation on the owner.
     const FactionEffects_t& Get() const;
@@ -66,6 +67,9 @@ private:
     // base_conquest.json continuous effects (pop-loss and conquered-drone-cap baselines).
     std::vector<ActiveEffect_t> CollectBaseConquestEffects_() const;
 
+    // police_rules.json continuous effects (combat-unit away weight and effectiveness).
+    std::vector<ActiveEffect_t> CollectPoliceRulesEffects_() const;
+
     // Session difficulty continuous effects, re-resolved from the owner's GameDataContext
     // and current game rules. Not cached at construction: difficulty is changeable
     // mid-campaign, and CollectRevisions_ samples the game-rules revision to catch it.
@@ -93,6 +97,7 @@ private:
     const SocialRatingRegistry& m_rSocialRatings;
     const std::vector<EffectConfig_t>& m_rProductionEffects;
     const std::vector<EffectConfig_t>& m_rBaseConquestEffects;
+    const std::vector<EffectConfig_t>& m_rPoliceRules;
 
     // The empty initial stamp never equals a real collection, so no "never built"
     // sentinel is needed. m_scratchRevisions is reused between validations to keep the

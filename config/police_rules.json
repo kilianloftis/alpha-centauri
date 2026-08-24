@@ -1,0 +1,18 @@
+{
+  "effects": [
+    {
+      "type": "StatModifier",
+      "scope": "FactionUnits",
+      "persistence": "Continuous",
+      "unitFilter": { "kind": "IsCombatUnit" },
+      "parameters": { "stat": "away_from_home_drones", "amount": 1, "op": "Add" }
+    },
+    {
+      "type": "StatModifier",
+      "scope": "FactionUnits",
+      "persistence": "Continuous",
+      "unitFilter": { "kind": "IsCombatUnit" },
+      "parameters": { "stat": "police_effectiveness", "amount": 1, "op": "Add" }
+    }
+  ]
+}

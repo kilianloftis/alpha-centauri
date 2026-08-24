@@ -34,6 +34,7 @@ struct GameDataPaths
     std::string councilRules = "config/council/rules.json";
     std::string terraformBindings = "config/ui/terraform_bindings.json";
     std::string difficulty = "config/difficulty.json";
+    std::string policeRules = "config/police_rules.json";
 };
 
 } // namespace ac

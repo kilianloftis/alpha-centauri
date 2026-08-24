@@ -119,6 +119,46 @@
     ]
   },
   {
+    "id": "police_minus5_policy",
+    "name": "Police -5",
+    "category": "politics",
+    "effects": [
+      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "police", "amount": -5 } }
+    ]
+  },
+  {
+    "id": "police_minus4_policy",
+    "name": "Police -4",
+    "category": "politics",
+    "effects": [
+      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "police", "amount": -4 } }
+    ]
+  },
+  {
+    "id": "police_minus3_policy",
+    "name": "Police -3",
+    "category": "politics",
+    "effects": [
+      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "police", "amount": -3 } }
+    ]
+  },
+  {
+    "id": "police_minus2_policy",
+    "name": "Police -2",
+    "category": "politics",
+    "effects": [
+      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "police", "amount": -2 } }
+    ]
+  },
+  {
+    "id": "police_plus3_policy",
+    "name": "Police +3",
+    "category": "politics",
+    "effects": [
+      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "police", "amount": 3 } }
+    ]
+  },
+  {
     "id": "morale_policy",
     "name": "Morale Policy (+2 Morale rating, faction-wide)",
     "category": "values",

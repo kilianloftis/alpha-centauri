@@ -80,6 +80,8 @@ struct GameDataContext
     std::vector<LandmarkConfig_t> worldGenLandmarks;
     // FactionGlobal TileResourceCap rules (and any other universal tile-yield effects).
     std::vector<EffectConfig_t> tileYieldRules;
+    // FactionUnits police baselines (away-from-home weight + effectiveness for combat units).
+    std::vector<EffectConfig_t> policeRules;
     std::unique_ptr<MoraleConfig_t> moraleConfig;
     std::unique_ptr<ProbeActionsConfig_t> probeActionsConfig;
     std::unique_ptr<BaseConquestConfig_t> baseConquestConfig;

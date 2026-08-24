@@ -123,6 +123,9 @@ static_assert(KindFor(StatId_t::CargoCapacity) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::DifficultTerrainCost) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::MineralUpkeep) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::FreeUnitSupport) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::MaxPolice) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::PoliceEffectiveness) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::AwayFromHomeDrones) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::SizeFreeDrones) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::StartingExperience) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::StartingMinerals) == StatKind_t::Additive);
@@ -198,16 +201,16 @@ TEST_CASE("ValidateEffectReferences: social rating axes must have a table",
     CHECK_NOTHROW(ValidateEffectReferences(ratingModifier(SocialRatingId_t::Growth), "policy_x",
                                            nullptr, nullptr, nullptr, nullptr, &ratings));
 
-    // The fixture defines no table for Police.
-    REQUIRE(ratings.Find("police") == nullptr);
-    CHECK_THROWS_WITH(ValidateEffectReferences(ratingModifier(SocialRatingId_t::Police),
+    // The fixture defines no table for Planet.
+    REQUIRE(ratings.Find("planet") == nullptr);
+    CHECK_THROWS_WITH(ValidateEffectReferences(ratingModifier(SocialRatingId_t::Planet),
                                                "policy_x", nullptr, nullptr, nullptr, nullptr,
                                                &ratings),
-                      Catch::Matchers::ContainsSubstring("police")
+                      Catch::Matchers::ContainsSubstring("planet")
                           && Catch::Matchers::ContainsSubstring("policy_x"));
 
     // A null registry skips the check (partial validation context).
-    CHECK_NOTHROW(ValidateEffectReferences(ratingModifier(SocialRatingId_t::Police), "policy_x",
+    CHECK_NOTHROW(ValidateEffectReferences(ratingModifier(SocialRatingId_t::Planet), "policy_x",
                                            nullptr, nullptr, nullptr, nullptr, nullptr));
 }
 

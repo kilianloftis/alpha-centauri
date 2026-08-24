@@ -50,6 +50,16 @@ enum class StatId_t
     // How many positive-upkeep home units a base may support at zero mineral cost.
     // Support SE levels emit absolute FreeUnitSupport Adds (level 0 = 2); facilities Add on top.
     FreeUnitSupport,
+    // How many garrison combat units at this base may suppress drones (Additive). Police SE
+    // levels emit absolute Adds (level 0 = 1).
+    MaxPolice,
+    // Drones one selected police unit suppresses (Additive). police_rules baseline +1 for
+    // combat units; Police SE +3 and Non-Lethal Methods Add on top.
+    PoliceEffectiveness,
+    // Float weight toward away-from-home drones when the unit is off owner territory
+    // (Additive). police_rules baseline +1 for combat units; Police SE MaxClamp /
+    // MultiplyGeometric scale the per-base sum.
+    AwayFromHomeDrones,
     CostMultiplier,
     // Scales the prototype mineral surcharge term only (PureMultiplier, seed 1.0). Production
     // cost uses baseCost * CostMultiplier * (1 + surchargePercent/100 * this). Skunkworks emits
@@ -197,6 +207,9 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::DifficultTerrainCost:
         case StatId_t::MineralUpkeep:
         case StatId_t::FreeUnitSupport:
+        case StatId_t::MaxPolice:
+        case StatId_t::PoliceEffectiveness:
+        case StatId_t::AwayFromHomeDrones:
         case StatId_t::StartingExperience:
         case StatId_t::StartingMinerals:
         case StatId_t::MoraleBonus:
@@ -273,6 +286,9 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "difficult_terrain_cost")  return StatId_t::DifficultTerrainCost;
     if (rStat == "mineral_upkeep")          return StatId_t::MineralUpkeep;
     if (rStat == "free_unit_support")       return StatId_t::FreeUnitSupport;
+    if (rStat == "max_police")              return StatId_t::MaxPolice;
+    if (rStat == "police_effectiveness")    return StatId_t::PoliceEffectiveness;
+    if (rStat == "away_from_home_drones")   return StatId_t::AwayFromHomeDrones;
     if (rStat == "cost_multiplier")         return StatId_t::CostMultiplier;
     if (rStat == "prototype_surcharge_scale") return StatId_t::PrototypeSurchargeScale;
     if (rStat == "retool_penalty_scale")     return StatId_t::RetoolPenaltyScale;
@@ -598,6 +614,7 @@ enum class EffectSourceKind_t
     Stockpile,
     Difficulty,
     BaseConquest,
+    PoliceRules,
 };
 
 } // namespace ac

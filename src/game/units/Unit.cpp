@@ -231,6 +231,7 @@ int Unit::GetMineralUpkeep() const
 int Unit::GetMoveFragmentsRemaining() const { return m_moveFragmentsRemaining; }
 int Unit::GetXp() const                     { return m_xp; }
 bool Unit::IsPrototype() const              { return m_bPrototype; }
+bool Unit::IsCombatUnit() const             { return m_rDesign.IsCombatUnit(); }
 
 // Current stats are clamped to [0, live max] so the invariant 0 <= current <= max holds
 // regardless of caller arithmetic (overkill damage, refuel past capacity, ...). The maxima

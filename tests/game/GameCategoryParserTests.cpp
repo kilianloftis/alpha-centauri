@@ -13,7 +13,7 @@ TEST_CASE("TechConfigParser parses game categories", "[game][category][parser]")
     TechConfigParser parser;
     const std::vector<TechConfig_t> configs = parser.ParseConfig(FixturePath("techs.json"));
 
-    REQUIRE(configs.size() == 8);
+    REQUIRE(configs.size() == 9);
     CHECK(configs[0].category == GameCategory_t::Build);
     CHECK(configs[1].category == GameCategory_t::Grow);
     CHECK(configs[2].category == GameCategory_t::Discover);
@@ -27,6 +27,8 @@ TEST_CASE("TechConfigParser parses game categories", "[game][category][parser]")
     CHECK(configs[7].category == GameCategory_t::Discover);
     CHECK(configs[7].id == "quantum_power");
     CHECK(configs[7].effects.size() == 1);
+    CHECK(configs[8].category == GameCategory_t::Discover);
+    CHECK(configs[8].id == "intellectual_integrity");
 }
 
 TEST_CASE("BuildingConfigParser parses game categories", "[game][category][parser]")

@@ -100,6 +100,8 @@ public:
     // moment the unit was created. Fixed for life: the faction's build ledger keeps moving,
     // but what a given unit was when it rolled off the line does not.
     bool IsPrototype() const;
+    // Forwards to UnitDesign::IsCombatUnit (component Attack / ForcesPsiCombat).
+    bool IsCombatUnit() const;
 
     void SetCurrentHp(int hp);
     void SetCurrentFuel(int fuel);

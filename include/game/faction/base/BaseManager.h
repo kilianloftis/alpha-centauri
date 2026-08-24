@@ -162,7 +162,9 @@ public:
     // Local energy-psych share + this base's Psych StatModifiers.
     int GetPsychProduction() const;
 
-    // Composition modifier from StatModifier(talents) effects at this base.
+    // Composition modifiers from StatModifier(drones/talents) effects at this base
+    // (facilities, etc.). Away-from-home / garrison police are separate calculators.
+    int GetDroneModifier() const;
     int GetTalentModifier() const;
 
     // Resource subsystem: per-turn stockpiles and their consumption.

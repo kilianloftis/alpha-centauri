@@ -15,7 +15,7 @@ class WorldMap;
 // mutate units or roll dice — CombatResolver owns the HP threshold, tile pick, and move.
 //
 // CanDisengage is true when ALL of:
-//   - rCandidate is a combat unit (resolved Attack > 0 or ForcesPsiCombat),
+//   - rCandidate is a combat unit (UnitDesign::IsCombatUnit: Attack > 0 or ForcesPsiCombat),
 //   - rCandidate is strictly faster than rOpponent (Movement points),
 //   - rCandidate is not stacked with other units on its tile,
 //   - rCandidate did not attack on its current or previous turn,

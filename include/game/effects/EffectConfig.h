@@ -355,9 +355,15 @@ struct UnitFilterIsPrototype_t
 {
 };
 
+// True when UnitDesign::IsCombatUnit (additive Attack > 0 or ForcesPsiCombat).
+// Design-only (same recursion rule as HasFlag) so FactionUnits collection stays safe.
+struct UnitFilterIsCombatUnit_t
+{
+};
+
 using UnitFilter_t =
     std::variant<UnitFilterDomain_t, UnitFilterHasComponent_t, UnitFilterHasFlag_t,
-                 UnitFilterIsPrototype_t>;
+                 UnitFilterIsPrototype_t, UnitFilterIsCombatUnit_t>;
 
 // Restricts which buildings a FacilityEnergyUpkeep (or similar) modifier applies to.
 // Absent buildingFilter = all buildings. Distinct from unitFilter.

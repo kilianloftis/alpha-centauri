@@ -43,6 +43,7 @@
 #include "game/units/BaseConquestConfig.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/effects/TileYieldRulesConfigParser.h"
+#include "game/effects/PoliceRulesConfigParser.h"
 #include "game/DifficultyConfigParser.h"
 
 #include <deque>
@@ -188,6 +189,8 @@ struct WorldFixture
         dataContext.socialRatingRegistry->Load(FixturePath("social_rating_effects.json"));
         dataContext.tileYieldRules = ac::TileYieldRulesConfigParser{}.ParseConfig(
             FixturePath("tile_yield_rules.json"));
+        dataContext.policeRules = ac::PoliceRulesConfigParser{}.ParseConfig(
+            FixturePath("police_rules.json"));
         dataContext.popTypeAvailabilityCalculator =
             std::make_unique<ac::PopTypeAvailabilityCalculator>(*dataContext.popTypeRegistry);
         dataContext.popCompositionConfig = std::make_unique<ac::PopCompositionConfig_t>(

@@ -28,6 +28,7 @@
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitSlotRegistry.h"
 #include "game/effects/TileYieldRulesConfigParser.h"
+#include "game/effects/PoliceRulesConfigParser.h"
 #include "game/units/MoraleCalculator.h"
 #include "game/units/MoraleConfigParser.h"
 #include "game/units/ProbeActionConfigParser.h"
@@ -155,6 +156,9 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
 
     TileYieldRulesConfigParser tileYieldRulesParser;
     rData.tileYieldRules = tileYieldRulesParser.ParseConfig(rPaths.tileYieldRules);
+
+    PoliceRulesConfigParser policeRulesParser;
+    rData.policeRules = policeRulesParser.ParseConfig(rPaths.policeRules);
 
     MoraleConfigParser moraleParser;
     rData.moraleConfig =

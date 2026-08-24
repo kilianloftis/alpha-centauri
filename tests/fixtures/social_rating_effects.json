@@ -137,6 +137,47 @@
     }
   },
   {
+    "id": "police",
+    "levels": {
+      "-5": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "max_police", "amount": 0, "op": "Add" } },
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "away_from_home_drones", "amount": 2, "op": "MultiplyGeometric" } }
+      ],
+      "-4": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "max_police", "amount": 0, "op": "Add" } }
+      ],
+      "-3": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "max_police", "amount": 0, "op": "Add" } },
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "away_from_home_drones", "amount": 1, "op": "MaxClamp" } }
+      ],
+      "-2": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "max_police", "amount": 0, "op": "Add" } },
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "away_from_home_drones", "amount": 0, "op": "MaxClamp" } }
+      ],
+      "-1": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "max_police", "amount": 0, "op": "Add" } },
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "away_from_home_drones", "amount": 0, "op": "MaxClamp" } }
+      ],
+      "0": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "max_police", "amount": 1, "op": "Add" } },
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "away_from_home_drones", "amount": 0, "op": "MaxClamp" } }
+      ],
+      "1": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "max_police", "amount": 2, "op": "Add" } },
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "away_from_home_drones", "amount": 0, "op": "MaxClamp" } }
+      ],
+      "2": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "max_police", "amount": 3, "op": "Add" } },
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "away_from_home_drones", "amount": 0, "op": "MaxClamp" } }
+      ],
+      "3": [
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "max_police", "amount": 3, "op": "Add" } },
+        { "type": "StatModifier", "scope": "AllOwnerBases", "parameters": { "stat": "away_from_home_drones", "amount": 0, "op": "MaxClamp" } },
+        { "type": "StatModifier", "scope": "FactionUnits", "parameters": { "stat": "police_effectiveness", "amount": 1, "op": "Add" } }
+      ]
+    }
+  },
+  {
     "id": "morale",
     "levels": {
       "-4": [

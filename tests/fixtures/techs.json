@@ -85,5 +85,11 @@
         "buildingFilter": { "kind": "BuildingId", "building": "Command_Center" }
       }
     ]
+  },
+  {
+    "id": "intellectual_integrity",
+    "name": "Intellectual Integrity",
+    "category": "discover",
+    "cost": 50
   }
 ]

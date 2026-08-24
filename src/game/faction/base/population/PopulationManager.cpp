@@ -308,7 +308,10 @@ void PopulationManager::RecalculateComposition()
     PopCompositionInputs_t inputs;
     inputs.targetDrones = m_rDroneCalculator.Calculate(BuildDroneInputs_());
     inputs.psychOutput = m_container.ComputePsychOutput();
-    // TODO: supply faction talent modifiers once faction modifiers are accessible here
+    // TODO: supply faction talent modifiers once accessible; drone path already uses
+    // DroneCalculator — fold GetDroneModifier() + ComputeAwayFromHomeDrones()
+    // - ComputeGarrisonPoliceSuppression() into that supplier when composition should
+    // observe live police (see AwayFromHomeDrones.h / GarrisonPolice.h).
     const PopCompositionResult_t targets = m_rCompositionCalculator.Calculate(inputs);
     const PopCompositionConfig_t& rConfig = m_rCompositionCalculator.GetConfig();
 

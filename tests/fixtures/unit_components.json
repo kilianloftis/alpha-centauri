@@ -1248,5 +1248,20 @@
         }
       }
     ]
+  },
+  {
+    "id": "Non_Lethal_Methods",
+    "name": "Non-Lethal Methods",
+    "type": "ability",
+    "required_tech": "intellectual_integrity",
+    "mineral_cost": 1,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "persistence": "Continuous",
+        "parameters": { "stat": "police_effectiveness", "amount": 1, "op": "Add" }
+      }
+    ]
   }
 ]

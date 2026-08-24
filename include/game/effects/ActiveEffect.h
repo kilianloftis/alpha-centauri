@@ -142,8 +142,8 @@ bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx
                         const BaseManager* pOriginBase = nullptr);
 
 // True if config carries no unitFilter, or its unitFilter matches rUnit (Domain /
-// HasComponent). Used by CollectLiveUnitEffects to drop FactionUnits (and any other)
-// effects that do not apply to this unit.
+// HasComponent / HasFlag / IsPrototype / IsCombatUnit). Used by CollectLiveUnitEffects to
+// drop FactionUnits (and any other) effects that do not apply to this unit.
 bool UnitFilterSatisfied(const EffectConfig_t& config, const Unit& rUnit);
 
 struct BuildingConfig_t;

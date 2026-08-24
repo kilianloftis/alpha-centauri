@@ -44,8 +44,7 @@ DisengageRules::DisengageRules(const MoveCostCalculator& rMoveCosts,
 
 bool DisengageRules::CanDisengage(const Unit& rCandidate, const Unit& rOpponent) const
 {
-    if (ResolveStat(rCandidate, StatId_t::Attack) <= 0
-        && !ResolveFlag(rCandidate, RuleFlagId_t::ForcesPsiCombat))
+    if (!rCandidate.IsCombatUnit())
     {
         return false; // conventional and psi combat units may disengage
     }

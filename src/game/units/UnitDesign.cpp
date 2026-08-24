@@ -99,6 +99,12 @@ const UnitComponentConfig_t* UnitDesign::GetComponentForSlot(const std::string& 
     return nullptr;
 }
 
+bool UnitDesign::IsCombatUnit() const
+{
+    return ResolveAdditiveStat(*this, StatId_t::Attack) > 0
+           || ResolveFlag(*this, RuleFlagId_t::ForcesPsiCombat);
+}
+
 bool UnitDesign::HasComponent(const std::string& rComponentId) const
 {
     for (const UnitComponentConfig_t* pComp : m_components)
