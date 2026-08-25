@@ -10,12 +10,15 @@
 #include "game/map/Tile.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
+#include "game/faction/base/population/PopulationManager.h"
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <ranges>
 
 using namespace ac;
 using actest::Active;
+using Catch::Approx;
 
 TEST_CASE("FilterByStatId: keeps only StatModifiers targeting the requested stat", "[effects][filter]")
 {
@@ -135,6 +138,86 @@ TEST_CASE("FilterBaseLevelByStatId excludes MineralsConverted",
         actest::Materialize(FilterBaseLevelByStatId(baseEffects, StatId_t::Energy));
     REQUIRE(baseLevel.size() == 1);
     CHECK(baseLevel[0].sourceId == "flat");
+}
+
+TEST_CASE("FilterBaseLevelByStatId includes amountFormula only when context is ready",
+          "[effects][filter][amount_formula]")
+{
+    actest::EffectPool pool;
+    StatModifierEffect_t formula;
+    formula.stat = StatId_t::Drones;
+    formula.op = ModifierOp_t::Add;
+    formula.amountFormula = "floor(base_size / 4)";
+    EffectConfig_t formulaConfig;
+    formulaConfig.effect = formula;
+    formulaConfig.scope = EffectScope_t::AllOwnerBases;
+    formulaConfig.persistence = EffectPersistence_t::Continuous;
+
+    const BaseEffects_t baseEffects{{
+        Active(pool.StatMod(StatId_t::Drones, -2.0), "commons"),
+        Active(pool.Add(std::move(formulaConfig)), "university"),
+    }};
+
+    const auto contextFree =
+        actest::Materialize(FilterBaseLevelByStatId(baseEffects, StatId_t::Drones));
+    REQUIRE(contextFree.size() == 1);
+    CHECK(contextFree[0].sourceId == "commons");
+
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(4, 4);
+    EffectContext_t ctx;
+    ctx.pBase = &base;
+    const auto withCtx =
+        actest::Materialize(FilterBaseLevelByStatId(baseEffects, StatId_t::Drones, &ctx));
+    REQUIRE(withCtx.size() == 2);
+}
+
+TEST_CASE("EffectiveStatModifierAmount evaluates amountFormula with base_size",
+          "[effects][math][amount_formula]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(4, 4);
+    // Fixture bases start with 3 workers — floor(3/4)=0; avoid AddPop (worker-assignment
+    // ConvertToFallback) for the size-13 case, which PopulationCalculatorTests covers.
+    REQUIRE(base.GetPopulation().GetSize() == 3);
+
+    StatModifierEffect_t uni;
+    uni.stat = StatId_t::Drones;
+    uni.op = ModifierOp_t::Add;
+    uni.amountFormula = "floor(base_size / 4)";
+
+    EffectContext_t ctx;
+    ctx.pBase = &base;
+    REQUIRE(FormulaVarsFromContext(ctx).at("base_size") == Approx(3.0));
+    // BaseFixture::MakeBase is not registered on the faction — count stays 0.
+    REQUIRE(FormulaVarsFromContext(ctx).at("faction_base_count") == Approx(0.0));
+    CHECK(EffectiveStatModifierAmount(uni, &ctx) == Approx(0.0));
+
+    // Commons −2 + University-style contribution 3 (formula independent of growing this base).
+    uni.amountFormula = "floor(13 / 4)";
+    actest::EffectPool pool;
+    StatModifierEffect_t commons;
+    commons.stat = StatId_t::Drones;
+    commons.amount = -2.0;
+    commons.op = ModifierOp_t::Add;
+    EffectConfig_t commonsConfig;
+    commonsConfig.effect = commons;
+    EffectConfig_t uniConfig;
+    uniConfig.effect = uni;
+    uniConfig.scope = EffectScope_t::AllOwnerBases;
+    const BaseEffects_t baseEffects{{
+        Active(pool.Add(std::move(commonsConfig)), "commons"),
+        Active(pool.Add(std::move(uniConfig)), "university"),
+    }};
+    CHECK(FinalizeResolvedStat(
+              ResolveStatModifiers(
+                  FilterBaseLevelByStatId(baseEffects, StatId_t::Drones, &ctx),
+                  SeedFor(StatId_t::Drones),
+                  &ctx)
+                  .total)
+          == 1);
+
+    CHECK_THROWS(EffectiveStatModifierAmount(uni, nullptr));
 }
 
 TEST_CASE("ConditionSatisfied: no condition always applies", "[effects][condition]")

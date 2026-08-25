@@ -230,6 +230,58 @@ TEST_CASE("ParseEffectConfig: amount as numeric string (used by real configs)", 
     const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
     REQUIRE(pMod != nullptr);
     CHECK(pMod->amount == Approx(2.0));
+    CHECK_FALSE(pMod->amountFormula.has_value());
+}
+
+TEST_CASE("ParseEffectConfig: amount as formula string", "[effects][parser]")
+{
+    SECTION("University-style floor(base_size / 4)")
+    {
+        // Custom delimiter: the formula string contains )" which would end R"(...)".
+        const json effectJson = json::parse(R"json({
+            "type": "StatModifier",
+            "scope": "AllOwnerBases",
+            "parameters": { "stat": "drones", "op": "Add", "amount": "floor(base_size / 4)" }
+        })json");
+
+        const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
+        const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
+        REQUIRE(pMod != nullptr);
+        REQUIRE(pMod->amountFormula.has_value());
+        CHECK(*pMod->amountFormula == "floor(base_size / 4)");
+        CHECK(pMod->amount == Approx(0.0));
+    }
+
+    SECTION("empty formula string is rejected")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisBase",
+            "parameters": { "stat": "drones", "amount": "" }
+        })")));
+    }
+
+    SECTION("formula amount requires op Add")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"json({
+            "type": "StatModifier",
+            "scope": "ThisBase",
+            "parameters": { "stat": "drones", "op": "MultiplyGeometric", "amount": "floor(base_size / 4)" }
+        })json")));
+    }
+
+    SECTION("amount_source rejects formula amount")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"json({
+            "type": "StatModifier",
+            "scope": "ThisTile",
+            "parameters": {
+                "stat": "energy",
+                "amount_source": "ElevationEnergySeed",
+                "amount": "floor(base_size / 4)"
+            }
+        })json")));
+    }
 }
 
 TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")

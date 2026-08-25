@@ -85,8 +85,16 @@ using TileSelector_t = std::variant<TileSelectorBaseTile_t, TileSelectorHasImpro
 struct StatModifierEffect_t
 {
     StatId_t stat = StatId_t::Nutrients;
+    // Literal contribution, or per-source scale when amountSource is set. Unused for eval when
+    // amountFormula is set (JSON string amount that is not a pure numeric string).
     double amount = 0.0;
     ModifierOp_t op = ModifierOp_t::Add;
+    // When set, contribution amount is LuaRuntime::EvalInt(amountFormula, FormulaVarsFromContext).
+    // Wire JSON: string `amount` that is not wholly numeric (numeric strings like "2" stay
+    // literals for legacy configs). Requires op Add; mutually exclusive with amountSource.
+    // Excluded from context-free filters; needs EffectContext_t::pBase for formula vars
+    // (eval uses a thread_local LuaRuntime).
+    std::optional<std::string> amountFormula;
     // When set, `amount` scales a runtime value instead of being a literal add.
     // ElevationEnergySeed: contribution = GetElevationEnergySeed() * amount (per-band scale).
     //   Requires EffectContext_t::targetTile; energy + ThisTile only.

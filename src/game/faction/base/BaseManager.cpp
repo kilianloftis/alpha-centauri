@@ -151,18 +151,20 @@ BaseManager::BaseManager(
         inputs.turnsSinceConquered = rWindow.turnsElapsed;
         inputs.assimilationDuration = rWindow.durationTurns;
         inputs.assimilationPeak = rWindow.peakDrones;
-        // TODO: garrisonCount
         // GetBaseEffects includes SE rating expansion (Efficiency → Bureaucracy MultiplyGeometric).
         const BaseEffects_t& rBaseEffects = GetBaseEffects();
         inputs.bureaucracy = ResolveStatModifiersTotal(
             FilterBaseLevelByStatId(rBaseEffects, StatId_t::Bureaucracy),
             SeedFor(StatId_t::Bureaucracy));
-        // Seed with base size so MultiplyGeometric (e.g. University 1.25) scales population;
-        // SizeFreeDrones is applied after resolve in the formula, not as an Add on this stack.
+        // Additive Drones with SeedFor(0): literal Adds (Commons) plus amountFormula Adds
+        // (University floor(base_size/4)). Size drones live in drone_formula, not this seed.
+        EffectContext_t droneCtx;
+        droneCtx.pBase = this;
         inputs.resolvedDrones = FinalizeResolvedStat(
             ResolveStatModifiers(
-                FilterBaseLevelByStatId(rBaseEffects, StatId_t::Drones),
-                static_cast<double>(inputs.baseSize))
+                FilterBaseLevelByStatId(rBaseEffects, StatId_t::Drones, &droneCtx),
+                SeedFor(StatId_t::Drones),
+                &droneCtx)
                 .total);
         inputs.sizeFreeDrones = FinalizeResolvedStat(
             ResolveStatModifiers(

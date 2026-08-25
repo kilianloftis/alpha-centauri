@@ -20,6 +20,7 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 #include "game/effects/EffectConfig.h"
+#include "lib/LuaRuntime.h"
 #include <algorithm>
 #include <cmath>
 #include <span>
@@ -33,6 +34,70 @@
 
 namespace ac
 {
+
+namespace
+{
+
+// Per-thread interpreter for StatModifier amountFormula. Long-lived for the chunk cache;
+// thread_local so parallel effect resolve does not share sol::state / EvalInt globals.
+LuaRuntime& AmountFormulaLua_()
+{
+    thread_local LuaRuntime runtime;
+    return runtime;
+}
+
+} // namespace
+
+bool AmountFormulaContextReady(const EffectContext_t& rCtx)
+{
+    return rCtx.pBase != nullptr;
+}
+
+std::unordered_map<std::string, double> FormulaVarsFromContext(const EffectContext_t& rCtx)
+{
+    std::unordered_map<std::string, double> vars;
+    if (rCtx.pBase != nullptr)
+    {
+        vars.emplace("base_size", static_cast<double>(rCtx.pBase->GetPopulation().GetSize()));
+        vars.emplace("faction_base_count",
+                     static_cast<double>(rCtx.pBase->GetFaction().GetBaseCount()));
+    }
+    return vars;
+}
+
+double EffectiveStatModifierAmount(const StatModifierEffect_t& rMod, const EffectContext_t* pCtx)
+{
+    if (rMod.amountFormula.has_value())
+    {
+        if (pCtx == nullptr || !AmountFormulaContextReady(*pCtx))
+        {
+            throw std::logic_error(
+                "StatModifier amountFormula requires EffectContext with pBase");
+        }
+        return static_cast<double>(
+            AmountFormulaLua_().EvalInt(*rMod.amountFormula, FormulaVarsFromContext(*pCtx)));
+    }
+    if (!rMod.amountSource.has_value())
+    {
+        return rMod.amount;
+    }
+    switch (*rMod.amountSource)
+    {
+        case StatModifierEffect_t::AmountSource_t::ElevationEnergySeed:
+            if (!pCtx || !pCtx->targetTile)
+            {
+                return 0.0;
+            }
+            return static_cast<double>(pCtx->targetTile->GetElevationEnergySeed()) * rMod.amount;
+        case StatModifierEffect_t::AmountSource_t::MineralsConverted:
+            if (!pCtx)
+            {
+                return 0.0;
+            }
+            return static_cast<double>(pCtx->mineralsConverted) * rMod.amount;
+    }
+    return rMod.amount;
+}
 
 namespace
 {

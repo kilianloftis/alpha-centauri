@@ -129,6 +129,36 @@ void ParseStatModifier_(const nlohmann::json& parameters, EffectConfig_t& rEffec
         }
         statModifier.amountSource =
             ParseAmountSource(parameters.at("amount_source").get<std::string>());
+        // amount is the per-source scale when amount_source is set (default 1). Must be numeric
+        // (or a wholly-numeric string) — formula amounts are not valid with amount_source.
+        if (parameters.contains("amount") && parameters.at("amount").is_string())
+        {
+            const std::string& rStr = parameters.at("amount").get_ref<const std::string&>();
+            std::size_t idx = 0;
+            try
+            {
+                const double value = std::stod(rStr, &idx);
+                if (idx != rStr.size())
+                {
+                    throw std::runtime_error(
+                        "StatModifier 'amount_source' requires a numeric amount, got formula '"
+                        + rStr + "'");
+                }
+                (void)value;
+            }
+            catch (const std::invalid_argument&)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' requires a numeric amount, got formula '" + rStr
+                    + "'");
+            }
+            catch (const std::out_of_range&)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' requires a numeric amount, got formula '" + rStr
+                    + "'");
+            }
+        }
         // amount is the per-source scale when amount_source is set (default 1).
         statModifier.amount = ParseNumber(parameters, "amount", 1.0);
         switch (*statModifier.amountSource)
@@ -174,9 +204,53 @@ void ParseStatModifier_(const nlohmann::json& parameters, EffectConfig_t& rEffec
             break;
         }
     }
+    else if (!parameters.contains("amount"))
+    {
+        statModifier.amount = 0.0;
+    }
+    else if (parameters.at("amount").is_number())
+    {
+        statModifier.amount = parameters.at("amount").get<double>();
+    }
+    else if (parameters.at("amount").is_string())
+    {
+        const std::string& rStr = parameters.at("amount").get_ref<const std::string&>();
+        if (rStr.empty())
+        {
+            throw std::runtime_error("StatModifier 'amount' formula string must be non-empty");
+        }
+        // Wholly-numeric strings stay literals (legacy configs use "amount": "2").
+        bool bNumericLiteral = false;
+        try
+        {
+            std::size_t idx = 0;
+            const double value = std::stod(rStr, &idx);
+            if (idx == rStr.size())
+            {
+                statModifier.amount = value;
+                bNumericLiteral = true;
+            }
+        }
+        catch (const std::invalid_argument&)
+        {
+        }
+        catch (const std::out_of_range&)
+        {
+            throw std::runtime_error("StatModifier 'amount' numeric string is out of range");
+        }
+        if (!bNumericLiteral)
+        {
+            if (statModifier.op != ModifierOp_t::Add)
+            {
+                throw std::runtime_error("StatModifier formula 'amount' requires op Add");
+            }
+            statModifier.amountFormula = rStr;
+            statModifier.amount = 0.0;
+        }
+    }
     else
     {
-        statModifier.amount = ParseNumber(parameters, "amount", 0.0);
+        throw std::runtime_error("StatModifier 'amount' must be a number or a string");
     }
     // Optional per-tile selector: when present, this modifier applies to each worked
     // tile satisfying the selector instead of once at the base level. Selectors are
@@ -189,6 +263,10 @@ void ParseStatModifier_(const nlohmann::json& parameters, EffectConfig_t& rEffec
             throw std::runtime_error(
                 "StatModifier 'selector' is only valid on tile resource "
                 "stats (nutrients/minerals/energy), got '" + parameters.value("stat", "") + "'");
+        }
+        if (statModifier.amountFormula)
+        {
+            throw std::runtime_error("StatModifier formula 'amount' cannot carry a tile selector");
         }
         statModifier.selector = ParseTileSelector(parameters.at("selector"));
         if (statModifier.amountSource
@@ -208,6 +286,11 @@ void ParseStatModifier_(const nlohmann::json& parameters, EffectConfig_t& rEffec
     if (statModifier.applyAfterRestriction && statModifier.op != ModifierOp_t::Add)
     {
         throw std::runtime_error("StatModifier 'apply_after_restriction' requires op Add");
+    }
+    if (statModifier.applyAfterRestriction && statModifier.amountFormula)
+    {
+        throw std::runtime_error(
+            "StatModifier formula 'amount' cannot set apply_after_restriction");
     }
     rEffect.effect = statModifier;
 }

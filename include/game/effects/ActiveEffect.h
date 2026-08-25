@@ -9,6 +9,7 @@
 #include <ranges>
 #include <span>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -91,13 +92,15 @@ enum class CombatRole_t
     Defender,
 };
 
-// Runtime context an effect's condition is evaluated against. Fields are optional; a
-// condition that references an absent field evaluates false. Combat sets targetTile to the
-// defender's tile so TargetTileHas conditions can inspect it. Tile yield also sets
-// targetTile so amount_source (e.g. ElevationEnergySeed) can read the host tile.
+// Runtime context an effect's condition / amount formula is evaluated against. Fields are
+// optional; a condition that references an absent field evaluates false. Combat sets
+// targetTile to the defender's tile so TargetTileHas conditions can inspect it. Tile yield
+// also sets targetTile so amount_source (e.g. ElevationEnergySeed) can read the host tile.
 // combatRole enables IsDefending (SE Morale defense-in-base extras).
 // pAttacker enables AttackerIsEmbarked (and future attacker-side conditions).
-// pBase enables IsHeadquarters (Economy SE energy-at-HQ) for base-level resource resolve.
+// pBase enables IsHeadquarters (Economy SE energy-at-HQ) and amountFormula vars
+// (base_size, faction_base_count). Formula strings evaluate on a thread_local LuaRuntime
+// inside EffectiveStatModifierAmount — call sites do not pass an interpreter.
 // mineralsConverted is this turn's consumed minerals for MineralsConverted amount_source.
 struct EffectContext_t
 {
@@ -108,33 +111,18 @@ struct EffectContext_t
     int mineralsConverted = 0;
 };
 
-// Resolves a StatModifier's effective contribution amount. Literal `amount` when
-// amountSource is absent; otherwise scales a context value (tile elevation seed or
-// this turn's converted minerals).
-inline double EffectiveStatModifierAmount(const StatModifierEffect_t& rMod,
-                                          const EffectContext_t* pCtx)
-{
-    if (!rMod.amountSource.has_value())
-    {
-        return rMod.amount;
-    }
-    switch (*rMod.amountSource)
-    {
-        case StatModifierEffect_t::AmountSource_t::ElevationEnergySeed:
-            if (!pCtx || !pCtx->targetTile)
-            {
-                return 0.0;
-            }
-            return static_cast<double>(pCtx->targetTile->GetElevationEnergySeed()) * rMod.amount;
-        case StatModifierEffect_t::AmountSource_t::MineralsConverted:
-            if (!pCtx)
-            {
-                return 0.0;
-            }
-            return static_cast<double>(pCtx->mineralsConverted) * rMod.amount;
-    }
-    return rMod.amount;
-}
+// True when ctx can evaluate an amountFormula (needs pBase for the var catalog).
+// Call sites set handles only; eval uses a thread_local LuaRuntime.
+bool AmountFormulaContextReady(const EffectContext_t& rCtx);
+
+// Closed formula-var catalog from context handles. v1 from pBase: base_size (population),
+// faction_base_count (owned bases). Extending the catalog means extending this helper —
+// not every resolve call site.
+std::unordered_map<std::string, double> FormulaVarsFromContext(const EffectContext_t& rCtx);
+
+// Resolves a StatModifier's effective contribution amount: literal `amount`, amountSource
+// scale, or amountFormula via Lua. Formula path throws if context is not ready.
+double EffectiveStatModifierAmount(const StatModifierEffect_t& rMod, const EffectContext_t* pCtx);
 
 // True if config carries no condition, or its condition is satisfied by ctx.
 // OriginBaseIsTargetBase requires pOriginBase (ActiveEffect_t::originBase).
@@ -302,9 +290,9 @@ inline auto FilterByStatId(const std::vector<ActiveEffect_t>& effects, StatId_t 
     return effects | std::views::filter([statId](const ActiveEffect_t& effect)
     {
         const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
-        // Conditional / amount_source effects are excluded from context-free resolution.
+        // Conditional / amount_source / amountFormula effects need context (or another path).
         return pStatModifier && pStatModifier->stat == statId && !effect.config->condition
-            && !pStatModifier->amountSource;
+            && !pStatModifier->amountSource && !pStatModifier->amountFormula;
     });
 }
 inline auto FilterByStatId(std::vector<ActiveEffect_t>&& effects, StatId_t statId) = delete;
@@ -316,8 +304,15 @@ inline bool StatModifierMatchesInContext(const ActiveEffect_t& effect, StatId_t 
                                          const EffectContext_t& ctx)
 {
     const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
-    return pStatModifier && pStatModifier->stat == statId
-        && ConditionSatisfied(*effect.config, ctx, effect.originBase);
+    if (!pStatModifier || pStatModifier->stat != statId)
+    {
+        return false;
+    }
+    if (pStatModifier->amountFormula && !AmountFormulaContextReady(ctx))
+    {
+        return false;
+    }
+    return ConditionSatisfied(*effect.config, ctx, effect.originBase);
 }
 
 // Like FilterByStatId, but for a specific runtime context: includes unconditional effects
@@ -343,9 +338,10 @@ inline auto FilterByStatIdInContext(std::vector<ActiveEffect_t>&& effects,
 // (never a raw vector or the pool) makes running this filter at any other stage a compile
 // error instead of a doc violation.
 //
-// Without pCtx (or with a null pCtx): condition-carrying effects are excluded (context-free).
-// With pCtx: unconditional modifiers plus condition-satisfied ones (e.g. IsHeadquarters
-// when EffectContext_t::pBase is set) are included.
+// Without pCtx (or with a null pCtx): condition-carrying and amountFormula effects are
+// excluded (context-free). With pCtx: unconditional modifiers plus condition-satisfied
+// ones (e.g. IsHeadquarters when EffectContext_t::pBase is set). amountFormula modifiers
+// are included only when AmountFormulaContextReady(*pCtx).
 inline auto FilterBaseLevelByStatId(const BaseEffects_t& rBaseEffects, StatId_t statId,
                                     const EffectContext_t* pCtx = nullptr)
 {
@@ -354,6 +350,11 @@ inline auto FilterBaseLevelByStatId(const BaseEffects_t& rBaseEffects, StatId_t 
         const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
         if (!pStatModifier || pStatModifier->stat != statId || pStatModifier->selector
             || pStatModifier->amountSource)
+        {
+            return false;
+        }
+        if (pStatModifier->amountFormula
+            && (pCtx == nullptr || !AmountFormulaContextReady(*pCtx)))
         {
             return false;
         }

@@ -167,7 +167,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 - **Purpose**: Modifies any stat identified by `StatId_t` — both base resources and unit stats. Also expresses **per-tile yield modifiers** via its optional `selector` (see below); there is no separate tile-yield effect type.
 - **Responsibilities**:
   - Identifies the target stat via `StatId_t`.
-  - Stores an `amount` and a `ModifierOp_t`.
+  - Stores an `amount` and a `ModifierOp_t`. Wire JSON `amount` may be a **number** (literal), a **wholly-numeric string** (legacy literal, e.g. `"2"`), or a **non-numeric string** (Lua formula evaluated at resolve time into the contribution, then `op` applies — v1 requires `op: Add`). Formula amounts need `EffectContext_t::pBase` for the var catalog; evaluation uses a `thread_local` `LuaRuntime` (chunk cache per thread, safe for parallel resolve). `FormulaVarsFromContext` supplies the closed var catalog (`base_size`, `faction_base_count`). Mutually exclusive with `amount_source`.
   - Optionally carries a `TileSelector_t selector`. When **absent**, the modifier is either an intrinsic tile yield (`ThisTile` scope) or a flat base/unit modifier (resolved once). When **present**, the modifier applies to each worked tile whose features satisfy the selector — e.g. a building's "+1 mineral to every worked Mine".
 
 ### StatId_t
@@ -316,9 +316,11 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 
 ### FilterBaseLevelByStatId
 - **Purpose**: Like `FilterByStatId`, but for **base-level** resolution: excludes
-  selector-carrying (per-tile) modifiers and condition-carrying effects. Per-tile
-  modifiers have already been applied to each worked tile and must not be counted a
-  second time.
+  selector-carrying (per-tile) modifiers and `amount_source` modifiers. Condition-carrying
+  and `amountFormula` modifiers are excluded without a ready `EffectContext_t` (`pCtx`);
+  with `pCtx`, conditions are evaluated and formula amounts are included when
+  `AmountFormulaContextReady` (`pBase` set). Per-tile modifiers have already been
+  applied to each worked tile and must not be counted a second time.
 - **Signature**: Accepts only a `BaseEffects_t` — never a raw vector or the faction pool —
   so running this filter at any other stage is a compile error.
 - **Returns**: A lazy view of matching `ActiveEffect_t` instances.
@@ -502,7 +504,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   - `ParseTileSelector` — parses a `TileSelector_t` from a `selector` JSON object. Called by the `StatModifier` branch when a `selector` field is present, making that modifier a per-tile yield modifier. A `selector` on any stat other than `nutrients`/`minerals`/`energy` is rejected at parse time — selectors only take part in tile-yield resolution, so such a modifier would silently never apply.
   - `ParseEffectConfig` — parses one entry of an `effects` array (`type`/`scope`/`persistence`/`condition`/`parameters`) into an `EffectConfig_t`. Required keys `type` and `scope` use `.at()` (missing → throw). Dispatches on `type` via a static table of per-type parse functions (one focused function per `EffectVariant_t` alternative). Additional strictness:
     - Nonzero `radius` requires `scope: ThisTile`.
-    - `StatModifier` with `amount_source` requires `op: Add` (or omitted op, which defaults to Add). `ElevationEnergySeed` is energy + `ThisTile`. `MineralsConverted` is a stockpile-output stat (`k_StockpileOutputStats`: nutrients / energy / econ / labs / psych — not minerals, the input) + `ThisBase` + Continuous + positive amount; `ValidateEffectForSource` further restricts it to `EffectSourceKind_t::Stockpile`, since nothing else converts minerals. `energy` is not a bank, so conversion routes it through `ResourceManager::AddAllocatedEnergy` (inefficiency, then the econ/labs/psych split) rather than crediting it directly — using the faction's split math alone, never `CalculateEcon_`/`Labs_`/`Psych_`, which would re-apply flat modifiers already paid during collection.
+    - `StatModifier` `amount` may be a number, a wholly-numeric string (legacy literal), or a non-numeric string (Lua `amountFormula`, requires `op: Add`). Formula amounts are mutually exclusive with `amount_source`. `StatModifier` with `amount_source` requires `op: Add` (or omitted op, which defaults to Add) and a numeric `amount`. `ElevationEnergySeed` is energy + `ThisTile`. `MineralsConverted` is a stockpile-output stat (`k_StockpileOutputStats`: nutrients / energy / econ / labs / psych — not minerals, the input) + `ThisBase` + Continuous + positive amount; `ValidateEffectForSource` further restricts it to `EffectSourceKind_t::Stockpile`, since nothing else converts minerals. `energy` is not a bank, so conversion routes it through `ResourceManager::AddAllocatedEnergy` (inefficiency, then the econ/labs/psych split) rather than crediting it directly — using the faction's split math alone, never `CalculateEcon_`/`Labs_`/`Psych_`, which would re-apply flat modifiers already paid during collection.
     - Balance keys listed under `RequireNumber` above have no C++ invent-defaults.
   - `ParseEffects` — parses the `effects` array of a containing JSON object, returning `{}` if absent; throws if `"effects"` is present but not an array. The validating overload takes an `EffectSourceKind_t` (`Building`, `UnitComponent`, `PopType`, `Improvement`, `SocialPolicy`, `SocialRating`, `Faction`, `CouncilProposal`, `CouncilRules`, `ProbeAction`, `TileYieldRules`, `Tech`, `Production`, `Stockpile`, `Difficulty`, `BaseConquest`) and runs `ValidateEffectForSource` on every entry.
 - **Consumers**: Every effect-declaring config parser calls `EffectConfigParser::ParseEffects` (or `ParseEffectConfig` + `ValidateEffectForSource`). Council proposal / governor parsers add a second honored-shape check after scope validation (see council-system.md).

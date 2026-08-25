@@ -211,6 +211,22 @@
     "category": "grow"
   },
   {
+    "id": "per_base_energy",
+    "name": "Per-Base Energy",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "energy",
+          "op": "Add",
+          "amount": "faction_base_count*2"
+        }
+      }
+    ],
+    "category": "build"
+  },
+  {
     "id": "farm_booster",
     "name": "Farm Booster",
     "effects": [

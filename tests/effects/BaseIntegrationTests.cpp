@@ -248,3 +248,17 @@ TEST_CASE("Full pipeline: building and pop bonuses land in base resource product
     // Psych: no energy to split (all elevation 0), so exactly the Doctor's +2.
     CHECK(base.GetPsychProduction() == 2);
 }
+
+TEST_CASE("per_base_energy amount formula adds one energy per owned base",
+          "[effects][base][amount_formula]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& home = fixture.MakeFactionBase(faction, 4, 4);
+    fixture.MakeFactionBase(faction, 6, 6);
+    REQUIRE(faction.GetBaseCount() == 2);
+
+    const int before = home.GetEnergyProduction();
+    home.GetBuildingManager().AddBuilding("per_base_energy");
+    CHECK(home.GetEnergyProduction() - before == 4);
+}

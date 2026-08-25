@@ -22,7 +22,9 @@ enum class StatId_t
     Labs,
     Psych,
 
-    // Composition modifiers: add/remove drones or talents at a base (Police SE, facilities).
+    // Composition modifiers: literal Adds (facilities / SE) plus optional amountFormula Adds
+    // (e.g. University floor(base_size / 4)). Size drones are not this stat — they live in
+    // drone_formula as max(0, base_size - size_free_drones).
     Drones,
     Talents,
 

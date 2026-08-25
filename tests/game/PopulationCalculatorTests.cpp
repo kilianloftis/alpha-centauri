@@ -413,7 +413,7 @@ PopCompositionConfig_t BureaucracyConfig_()
     config.bureaucracyLimitFormula =
         "math.floor(bureaucracy * math.sqrt(map_width * map_height) / math.sqrt(12800) + 0.5)";
     config.droneFormula =
-        "max(0, min(base_size, max(0, floor((residue + faction_base_count - bureaucracy_limit) / bureaucracy_limit)) + max(0, resolved_drones - size_free_drones) + ((assimilation_peak > 0 and assimilation_duration > 0 and turns_since_conquered < assimilation_duration) and 1 or 0) * min(max(0, assimilation_peak - floor(turns_since_conquered / max(1, floor(assimilation_duration / max(1, assimilation_peak))))), max(0, floor(base_size / 4 + conquered_drone_cap)))))";
+        "max(0, min(base_size, max(0, floor((residue + faction_base_count - bureaucracy_limit) / bureaucracy_limit)) + max(0, base_size - size_free_drones) + resolved_drones + ((assimilation_peak > 0 and assimilation_duration > 0 and turns_since_conquered < assimilation_duration) and 1 or 0) * min(max(0, assimilation_peak - floor(turns_since_conquered / max(1, floor(assimilation_duration / max(1, assimilation_peak))))), max(0, floor(base_size / 4 + conquered_drone_cap)))))";
     config.droneTypeId = "Drone";
     config.talentFormula = "0";
     config.talentTypeId = "Talent";
@@ -538,29 +538,25 @@ TEST_CASE("Size drones appear for every pop past SizeFreeDrones",
     DroneCalculator calculator(config, lua);
 
     // Under the bureaucracy limit so only size contributes.
-    // resolvedDrones is Resolve(Drones, seed=baseSize); with no modifiers that is baseSize.
+    // Size drones are max(0, base_size - size_free); resolvedDrones is effect-only (0 here).
     DroneInputs_t inputs = StandardMapInputs_();
     inputs.factionBaseCount = 1;
     inputs.sizeFreeDrones = 4; // Talent
+    inputs.resolvedDrones = 0;
 
     inputs.baseSize = 4;
-    inputs.resolvedDrones = 4;
     CHECK(calculator.Calculate(inputs) == 0);
 
     inputs.baseSize = 5;
-    inputs.resolvedDrones = 5;
     CHECK(calculator.Calculate(inputs) == 1);
 
     inputs.baseSize = 8;
-    inputs.resolvedDrones = 8;
     CHECK(calculator.Calculate(inputs) == 4);
 
     inputs.sizeFreeDrones = 6; // Citizen
     inputs.baseSize = 6;
-    inputs.resolvedDrones = 6;
     CHECK(calculator.Calculate(inputs) == 0);
     inputs.baseSize = 7;
-    inputs.resolvedDrones = 7;
     CHECK(calculator.Calculate(inputs) == 1);
 }
 
@@ -573,38 +569,35 @@ TEST_CASE("Size and bureaucracy drone contributions stack, capped by base size",
 
     DroneInputs_t inputs = StandardMapInputs_();
     inputs.sizeFreeDrones = 4;
-    inputs.baseSize = 6;
-    inputs.resolvedDrones = 6; // 2 size drones after free
+    inputs.resolvedDrones = 0;
+    inputs.baseSize = 6; // 2 size drones after free
     inputs.factionBaseCount = 32; // 1 bureaucracy drone at double the limit
     CHECK(calculator.Calculate(inputs) == 3);
 
-    inputs.baseSize = 2;
-    inputs.resolvedDrones = 2; // size drones 0; bureaucracy still wants 1 → capped at 2
+    inputs.baseSize = 2; // size drones 0; bureaucracy still wants 1 → capped at 2
     CHECK(calculator.Calculate(inputs) == 1);
 }
 
-TEST_CASE("University-style Drones MultiplyGeometric scales base size before SizeFreeDrones",
+TEST_CASE("University-style amount formula Adds drones on top of size drones",
           "[population][drones][size]")
 {
     LuaRuntime lua;
     const PopCompositionConfig_t config = BureaucracyConfig_();
     DroneCalculator calculator(config, lua);
 
-    actest::EffectPool pool;
-    const std::vector<ActiveEffect_t> effects = {
-        actest::Active(pool.StatMod(StatId_t::Drones, 1.25, ModifierOp_t::MultiplyGeometric)),
-    };
-    // floor(8 * 1.25) = 10; then max(0, 10 - 4) = 6.
-    const int resolved =
-        FinalizeResolvedStat(ResolveStatModifiers(effects, 8.0).total);
-    REQUIRE(resolved == 10);
-
+    // Supplier would resolve amount "floor(base_size / 4)" → 2 at size 8; Commons would Add −2.
+    // Size drones: max(0, 8 - 4) = 4. Effect term 2 → total 6.
     DroneInputs_t inputs = StandardMapInputs_();
     inputs.factionBaseCount = 1; // under bureaucracy limit
     inputs.baseSize = 8;
     inputs.sizeFreeDrones = 4;
-    inputs.resolvedDrones = resolved;
+    inputs.resolvedDrones = 2;
     CHECK(calculator.Calculate(inputs) == 6);
+
+    // Size 13: size drones max(0, 13-4)=9; Uni floor(13/4)=3 + Commons −2 → effect 1 → total 10.
+    inputs.baseSize = 13;
+    inputs.resolvedDrones = 1;
+    CHECK(calculator.Calculate(inputs) == 10);
 }
 
 TEST_CASE("A non-positive bureaucracy limit is a config error", "[population][drones][bureaucracy]")
@@ -631,7 +624,7 @@ TEST_CASE("Recently-conquered drones decay one per ten turns and respect the cap
     DroneInputs_t inputs = StandardMapInputs_();
     inputs.factionBaseCount = 1;
     inputs.sizeFreeDrones = 100;
-    inputs.resolvedDrones = 8;
+    inputs.resolvedDrones = 0;
     inputs.baseSize = 8;
     inputs.assimilationPeak = 5;
     inputs.assimilationDuration = 50;
@@ -672,31 +665,28 @@ TEST_CASE("The conquered-drone cap is (BaseSize + Difficulty - 2) / 4",
     DroneInputs_t inputs = StandardMapInputs_();
     inputs.factionBaseCount = 1;
     inputs.sizeFreeDrones = 100;
+    inputs.resolvedDrones = 0;
     inputs.assimilationPeak = 5;
     inputs.assimilationDuration = 50;
     inputs.turnsSinceConquered = 0;
 
     // Citizen: 0.25 − 0.5 = −0.25. Size 6 → (6+1−2)/4 = 1.
     inputs.baseSize = 6;
-    inputs.resolvedDrones = 6;
     inputs.conqueredDroneCap = -0.25;
     CHECK(calculator.Calculate(inputs) == 1);
 
     // Talent: 0.75 − 0.5 = 0.25. Size 8 → (8+3−2)/4 = 2.
     inputs.baseSize = 8;
-    inputs.resolvedDrones = 8;
     inputs.conqueredDroneCap = 0.25;
     CHECK(calculator.Calculate(inputs) == 2);
 
     // Transcend: 1.5 − 0.5 = 1.0. Size 4 → (4+6−2)/4 = 2.
     inputs.baseSize = 4;
-    inputs.resolvedDrones = 4;
     inputs.conqueredDroneCap = 1.0;
     CHECK(calculator.Calculate(inputs) == 2);
 
     // Citizen size 3 → (3+1−2)/4 = 0.
     inputs.baseSize = 3;
-    inputs.resolvedDrones = 3;
     inputs.conqueredDroneCap = -0.25;
     CHECK(calculator.Calculate(inputs) == 0);
 }
@@ -714,7 +704,7 @@ TEST_CASE("A reversed assimilation window is one drone for twelve turns",
     inputs.factionBaseCount = 1;
     inputs.sizeFreeDrones = 100;
     inputs.baseSize = 16;
-    inputs.resolvedDrones = 16;
+    inputs.resolvedDrones = 0;
     inputs.conqueredDroneCap = 100.0; // cap does not bind
     inputs.assimilationPeak = 1;
     inputs.assimilationDuration = 12;
