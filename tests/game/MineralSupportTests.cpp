@@ -303,7 +303,7 @@ TEST_CASE("Turns to completion is remaining minerals over after-support rate, ro
     BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
     const BuildingConfig_t* pFacility = fixture.buildings().Find("test_hurry_facility");
     REQUIRE(pFacility != nullptr);
-    base.GetProduction().SetProduction(pFacility);
+    base.GetProduction().SetProduction(pFacility, base.GetBaseEffects());
     base.GetProduction().SetMineralStockpile(0);
 
     CHECK_FALSE(base.GetTurnsToProductionCompletion().has_value());

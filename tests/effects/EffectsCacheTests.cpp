@@ -94,6 +94,11 @@ namespace
 // Minimal provider double with an externally mutable pool + version.
 struct FakeEffectsProvider : ac::IEffectsProvider
 {
+    explicit FakeEffectsProvider(const ac::Faction& rFaction)
+        : pool(rFaction)
+    {
+    }
+
     ac::FactionEffects_t pool;
     uint64_t version = 1;
 
@@ -108,6 +113,8 @@ struct FakeEffectsProvider : ac::IEffectsProvider
 TEST_CASE("ResearchManager: a TechCost effect appearing mid-research updates the needed points",
           "[research][cache]")
 {
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
     TechRegistry techRegistry;
     techRegistry.Load(actest::FixturePath("techs.json"));
     LuaRuntime lua;
@@ -116,7 +123,7 @@ TEST_CASE("ResearchManager: a TechCost effect appearing mid-research updates the
         parser.ParseConfig(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/tech_cost.lua", lua);
     TechCostCalculator calculator(config, lua);
 
-    FakeEffectsProvider provider;
+    FakeEffectsProvider provider(faction);
     ResearchManager research(techRegistry, calculator, &provider);
 
     research.SetResearchTarget("build_tech");
@@ -163,6 +170,8 @@ TEST_CASE("ResearchManager: AddDiscoveredTech revalidates cost with a null effec
 TEST_CASE("ResearchManager: AddDiscoveredTech revalidates cost when provider version is frozen",
           "[research][cache]")
 {
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
     TechRegistry techRegistry;
     techRegistry.Load(actest::FixturePath("techs.json"));
     LuaRuntime lua;
@@ -171,7 +180,7 @@ TEST_CASE("ResearchManager: AddDiscoveredTech revalidates cost when provider ver
         parser.ParseConfig(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/tech_cost.lua", lua);
     TechCostCalculator calculator(config, lua);
 
-    FakeEffectsProvider provider;
+    FakeEffectsProvider provider(faction);
     ResearchManager research(techRegistry, calculator, &provider);
     research.SetResearchTarget("advanced_build");
     const int costBefore = research.GetPointsNeededForCurrentTech();

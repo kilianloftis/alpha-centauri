@@ -24,8 +24,10 @@ using Catch::Approx;
 
 TEST_CASE("AccumulateSocialRatings: sums per axis across sources", "[effects][rating]")
 {
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(4, 4);
     actest::EffectPool pool;
-    const BaseEffects_t baseEffects{{
+    const BaseEffects_t baseEffects{base, {
         Active(pool.RatingMod(SocialRatingId_t::Growth, 2), "policy"),
         Active(pool.RatingMod(SocialRatingId_t::Growth, 1), "building"),
         Active(pool.RatingMod(SocialRatingId_t::Police, -2), "policy"),
@@ -42,11 +44,13 @@ TEST_CASE("ResolveSocialRatingLevelEffects: maps accumulated levels through the 
           "[effects][rating]")
 {
     actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
     actest::EffectPool pool;
 
     SECTION("a defined level returns its gameplay effects")
     {
-        const BaseEffects_t ratingSource{{
+        const BaseEffects_t ratingSource{base, {
             Active(pool.RatingMod(SocialRatingId_t::Growth, 2), "policy"),
         }};
         const std::vector<ActiveEffect_t> levelEffects =
@@ -68,7 +72,7 @@ TEST_CASE("ResolveSocialRatingLevelEffects: maps accumulated levels through the 
     SECTION("totals above the highest configured level clamp to that extreme")
     {
         // Fixture growth levels: {2, 3}. Total 5 clamps to 3 -> +3 nutrients.
-        const BaseEffects_t ratingSource{{
+        const BaseEffects_t ratingSource{base, {
             Active(pool.RatingMod(SocialRatingId_t::Growth, 5), "policy"),
         }};
         const std::vector<ActiveEffect_t> levelEffects =
@@ -89,7 +93,7 @@ TEST_CASE("ResolveSocialRatingLevelEffects: maps accumulated levels through the 
     SECTION("totals below the lowest configured level clamp to that extreme")
     {
         // Fixture industry levels: {-1, 1, 2}. Total -5 clamps to -1 -> CostMultiplier +10%.
-        const BaseEffects_t ratingSource{{
+        const BaseEffects_t ratingSource{base, {
             Active(pool.RatingMod(SocialRatingId_t::Industry, -5), "policy"),
         }};
         const std::vector<ActiveEffect_t> levelEffects =
@@ -101,7 +105,7 @@ TEST_CASE("ResolveSocialRatingLevelEffects: maps accumulated levels through the 
     SECTION("in-range missing levels still produce no effects for that axis")
     {
         // Fixture industry levels: {-1, 1, 2}. Total 0 is inside [-1, 2] but unlisted.
-        const BaseEffects_t ratingSource{{
+        const BaseEffects_t ratingSource{base, {
             Active(pool.RatingMod(SocialRatingId_t::Industry, 1), "policy"),
             Active(pool.RatingMod(SocialRatingId_t::Industry, -1), "malus"),
         }};
@@ -115,7 +119,7 @@ TEST_CASE("ResolveSocialRatingLevelEffects: maps accumulated levels through the 
 
     SECTION("modifiers that cancel to zero use the axis level-0 row when configured")
     {
-        const BaseEffects_t ratingSource{{
+        const BaseEffects_t ratingSource{base, {
             Active(pool.RatingMod(SocialRatingId_t::Growth, 2), "policy"),
             Active(pool.RatingMod(SocialRatingId_t::Growth, -2), "malus"),
         }};
@@ -132,7 +136,7 @@ TEST_CASE("ResolveSocialRatingLevelEffects: maps accumulated levels through the 
 
     SECTION("untouched axes still expand a configured level-0 row")
     {
-        const BaseEffects_t ratingSource{{}};
+        const BaseEffects_t ratingSource{base};
         const std::vector<ActiveEffect_t> levelEffects =
             ResolveSocialRatingLevelEffects(ratingSource, fixture.socialRatings());
         CHECK(ResolveStatModifiers(FilterByStatId(levelEffects, StatId_t::FreeUnitSupport), 0.0)
@@ -212,7 +216,7 @@ TEST_CASE("Industry rating affects production cost via CostMultiplier modifiers"
         }
     } item;
 
-    base.GetProduction().SetProduction(&item);
+    base.GetProduction().SetProduction(&item, base.GetBaseEffects());
     CHECK(base.GetMineralCost() == 10); // Industry 0 → multiplier 1.0
 
     // Policy: +2 Industry → level 2 → CostMultiplier -20% → 0.8

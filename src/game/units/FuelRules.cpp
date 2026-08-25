@@ -27,7 +27,7 @@ namespace
 
 bool UnitProjectsRefuelsAir_(const Unit& rUnit)
 {
-    for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rUnit))
+    for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rUnit).effects)
     {
         const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.config->effect);
         if (pFlag && pFlag->flag == RuleFlagId_t::RefuelsAir

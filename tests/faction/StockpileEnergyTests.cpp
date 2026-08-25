@@ -187,10 +187,10 @@ TEST_CASE("Clearing production falls back to the default stockpile", "[productio
     const BuildingConfig_t* pFacility = fixtures.buildings().Find("test_facility_a");
     REQUIRE(pFacility != nullptr);
 
-    base.GetProduction().SetProduction(pFacility);
+    base.GetProduction().SetProduction(pFacility, base.GetBaseEffects());
     REQUIRE(base.GetProduction().GetCurrentProduction() == pFacility);
 
-    base.GetProduction().SetProduction(nullptr);
+    base.GetProduction().SetProduction(nullptr, base.GetBaseEffects());
     CHECK(base.GetProduction().GetCurrentProduction() == pStockpile);
 }
 
@@ -205,10 +205,10 @@ TEST_CASE("Falling back to the default never charges the retool penalty",
     const BuildingConfig_t* pFacility = fixtures.buildings().Find("test_facility_a");
     REQUIRE(pFacility != nullptr);
 
-    base.GetProduction().SetProduction(pFacility);
+    base.GetProduction().SetProduction(pFacility, base.GetBaseEffects());
     base.GetProduction().SetMineralStockpile(40);
 
-    base.GetProduction().SetProduction(nullptr);
+    base.GetProduction().SetProduction(nullptr, base.GetBaseEffects());
     CHECK(base.GetProduction().GetCurrentProduction()->GetId() == "Stockpile_Energy");
     CHECK(base.GetProduction().GetMineralStockpile() == 40);
 }
@@ -493,7 +493,7 @@ TEST_CASE("The default skips a tech-gated stockpile until the tech is discovered
     CHECK(base.GetProduction().GetCurrentProduction()->GetId() == "open");
 
     faction.GetResearch().AddDiscoveredTech("advanced_build");
-    base.GetProduction().SetProduction(nullptr);
+    base.GetProduction().SetProduction(nullptr, base.GetBaseEffects());
     CHECK(base.GetProduction().GetCurrentProduction()->GetId() == "gated");
 }
 
@@ -710,7 +710,7 @@ TEST_CASE("ConvertMinerals banks leftover minerals into a real production item",
     const BuildingConfig_t* pFacility = fixtures.buildings().Find("test_facility_a");
     REQUIRE(pFacility != nullptr);
 
-    base.GetProduction().SetProduction(pFacility);
+    base.GetProduction().SetProduction(pFacility, base.GetBaseEffects());
     const int stockpileBefore = base.GetProduction().GetMineralStockpile();
     LeaveMineralBank_(base, 5);
     base.ConvertMinerals();
@@ -731,7 +731,7 @@ TEST_CASE("ApplyProduction does not drain the mineral bank for a real production
     const BuildingConfig_t* pFacility = fixtures.buildings().Find("test_facility_a");
     REQUIRE(pFacility != nullptr);
 
-    base.GetProduction().SetProduction(pFacility);
+    base.GetProduction().SetProduction(pFacility, base.GetBaseEffects());
     LeaveMineralBank_(base, 5);
     (void)base.ApplyProduction();
     CHECK(base.GetResources().GetMineralBank() == 5);

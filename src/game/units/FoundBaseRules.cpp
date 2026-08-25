@@ -94,7 +94,7 @@ int ResolveStartingMinerals(const BaseManager& rBase, const Unit* pFoundingUnit)
     if (pFoundingUnit)
     {
         // Materialize: FilterByStatId borrows the vector.
-        const std::vector<ActiveEffect_t> unitEffects = CollectLiveUnitEffects(*pFoundingUnit);
+        const std::vector<ActiveEffect_t> unitEffects = CollectLiveUnitEffects(*pFoundingUnit).effects;
         for (const ActiveEffect_t& rEffect :
              FilterByStatId(unitEffects, StatId_t::StartingMinerals))
         {

@@ -106,7 +106,7 @@ not by which config declared it. Each scope has one "lane":
 | `ThisBase` | owning base | source collector tags `originBase`; `FilterForBase` |
 | `AllOwnerBases` / `FactionGlobal` | every base of the faction | faction pool (`CollectActiveEffects`) |
 | `WorldGlobal` | every base of every faction | composed into `Faction::GetActiveEffects()` (local `FactionEffectsPool` + `IWorldEffectsSource` / `GameState::CollectWorldExtras` for peer WorldGlobal and council extras). Turn stages call no-arg `ProduceBaseResources` / `ApplyBaseGrowth`; they do not append a second list. |
-| `FactionUnits` | live units of the faction (home-base scoped when `originBase` is set) | faction pool → `CollectLiveUnitEffects`; building effects tag `originBase` so train bonuses apply only to units home to that base. Combat Attack/Defense also fold in morale `AddPercent` from `morale_levels.json` via `ResolveCombatStat`. `EffectContext_t::combatRole` enables `IsDefending` (SE Morale defense-in-base). |
+| `FactionUnits` | live units of the faction (home-base scoped when `originBase` is set) | faction pool → `CollectLiveUnitEffects`; building effects tag `originBase` so train bonuses apply only to units home to that base. Combat Attack/Defense use `ResolveCombatUnitStat` (Unit-domain resolve + morale `AddPercent` from `MoraleCalculator::CombatMoraleAddPercent` / `morale_levels.json`). `EffectContext_t::combatRole` enables `IsDefending` (SE Morale defense-in-base). |
 | `ThisUnit` | the unit itself | `CollectUnitEffects` (design components) |
 | `ThisPop` | the pop itself | `Pop::ApplyTileMultipliers` (per worked-tile Add / %) |
 | `ThisTile` | tile resolvers | `CollectTileEffects`/`CollectAreaEffects` — features on the tile, radius-reaching features nearby, and units projecting component effects |
@@ -180,7 +180,8 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   - Difficulty stats (see [difficulty-system.md](difficulty-system.md)): `SizeFreeDrones` (Additive free population before size drones — difficulty is the sole emitter), `TechCostDiff` (Additive ordinal fed to `tech_cost.lua` as `diff`), `Bureaucracy` (PureMultiplier product for the bureaucracy base-limit formula; difficulty and Efficiency SE emit MultiplyGeometric), `EcologicalDamage` (RawScaled: seed is the accrued amount), `ConqueredDroneCap` (Additive offset on the recently-conquered drone cap; difficulty Adds `0.25 × level` with Citizen = 1, `base_conquest.json` Adds −0.5).
   - Population modifier: `GrowthRate` (`AddPercent`, base = 100%) — modifies the faction-wide population growth rate. `LastDefenderPopLoss` and `CapturePopLoss` are two independent Additive stats whose baselines come from `base_conquest.json`'s own `effects` array (an `Add` each, injected into every faction's pool like `production.json`'s). Perimeter Defense and Citizen difficulty `MaxClamp` 0 the last-defender one only; nothing in the shipping config modifies capture loss. `CaptureFacilitiesDestroyedMin` and `CaptureFacilitiesDestroyedMaxPercent` are the same shape. `ConqueredDroneCap` is the recently-conquered drone-cap offset: difficulty Adds `0.25` per level (Citizen = 1) and `base_conquest.json` Adds −0.5, so the drone formula's `floor(base_size/4 + conquered_drone_cap)` is `(BaseSize + Difficulty − 2) / 4`. Peak extra drones and the 10-turn decay live on `pop_composition.json` (`assimilation_drones`, `assimilation_decay_turns`) because they are calculator coefficients, not modifiers. So **every numeric tunable in `base_conquest.json` is a modifiable stat** — the file holds no scalars at all, only its effects list and the escape-pod component ids. Because each baseline is an ordinary contribution rather than a hard-coded seed, a mod can *raise* these values, not merely clamp them; vanilla simply ships no emitter besides the baseline for most of them.
   - Terrain mutation: `MoistureTier` — resolved back into `Tile::SetMoisture` by `RecomputeMoisture`; not a runtime-queried stat (see Tile Improvement Effects).
-- **Consumers**: `StatModifierEffect_t::stat`. `Defense` is also the target stat for tile-granted combat bonuses (rockiness, fungus, improvements) — see Tile Improvement Effects below.
+- **Consumers**: `StatModifierEffect_t::stat`. Unit armor uses `Defense`; tile-granted combat
+  bonuses (rockiness, fungus, improvements) use `TileDefense` — see Tile Improvement Effects.
 
 ### StatKind_t / KindFor / SeedFor
 - **Purpose**: The seed-semantics single source of truth, mirroring `LaneFor`. Defined next
@@ -199,13 +200,12 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 - **`constexpr SeedFor(StatId_t) -> double`**: derives the context-free seed from the kind
   (`0.0`/`1.0`); throws for `RawScaled`, forcing those sites to pass their raw value
   explicitly. Sites that deliberately resolve an Additive stat against a raw base (tile
-  yield's elevation energy seed, pop tile multipliers, the tile defense multiplier,
-  `ResourceManager` base-level production) also pass their seed explicitly and say so in a
-  comment.
+  yield's elevation energy seed, pop tile multipliers, `ResourceManager` base-level
+  production) also pass their seed explicitly and say so in a comment.
 - **`FinalizeResolvedStat(double) -> int`**: the single float→int rule for a resolved
   modifier total — `std::lround`, half away from zero. Every consumer of a
   `ResolveStatModifiers` / `ApplyModifierStack` total goes through it: `ResolveStat` (design
-  and live unit) and `ResolveAdditiveStat`, `MoraleCalculator::ResolveCombatStat`,
+  and live unit) and `ResolveAdditiveStat`, `ResolveCombatUnitStat`,
   `PlanetaryCouncil` vote weight, `ResourceManager` base-level production and the
   Econ/Labs/Psych splits, `Pop::ApplyTileMultipliers` and specialist output,
   `TileEffectsContext::ResolveResource_` (per-tile yield), `UnitDesign::GetBaseCost`,
@@ -214,6 +214,28 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   values depending on which path asked, which is what this helper exists to prevent. The one
   deliberate exception is `MoraleCalculator`'s `PositiveMoraleScale` step, which truncates
   toward zero to match integer halving and says so at the call site.
+
+### ResolveDomain_t / DomainFor
+- **Purpose**: Consumer-side **subject** taxonomy — which typed resolve / amount-source
+  evaluation owns a stat. Distinct from `EffectLane_t` / `LaneFor` (producer routing: where
+  an effect is collected). Defined next to `KindFor` in `EffectEnums.h`.
+- **`ResolveDomain_t`**: `Base`, `Faction`, `Unit`, `Tile`, `Stockpile`. Stockpile is an
+  amount-source subject (minerals-converted conversion event) only — no `StatId` uses
+  `DomainFor → Stockpile` (resource stats stay Base). There is no Combat domain: combat role
+  / attacker live on `EffectContext_t`; Attack/Defense/Morale are Unit.
+- **`constexpr DomainFor(StatId_t) -> ResolveDomain_t`**: exhaustive switch — adding a
+  `StatId_t` forces both a seed decision (`KindFor`) and a subject decision. Domains pin in
+  `ValidationTests.cpp`.
+- **Subject ≠ single effect list**: DomainFor names the subject that evaluates the number
+  (and amount sources). Sources may still emit from any pool; the consumer assembles
+  applicable lists. Examples:
+  - **CostMultiplier** (`DomainFor → Base`): design UI resolves the unit/component pool only
+    (preview); production assembles unit ∪ base under the base subject so Industry applies.
+  - **StartingMinerals** (`DomainFor → Base`): founding merges base-list + founding-unit
+    effects into one stockpile credit — multi-pool ubiquity, not a DomainFor escape hatch.
+- **When to split a StatId**: different *quantities*, not “two pools contribute.” Precedent:
+  unit `Defense` (armor, Additive) vs `TileDefense` (terrain/sensor multiplier,
+  PureMultiplier). Combat multiplies unit Defense by `ResolveTileDefenseMultiplier`.
 
 ### TileSelector_t
 - **Purpose**: On a `StatModifierEffect_t`, selects which worked tiles the modifier applies to. A tile improvement is identified by its plain string id (`ImprovementConfig_t::id`), matching `Tile::HasFeature()` — there is no separate improvement-type enum.
@@ -316,9 +338,13 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 
 ### FilterBaseLevelByStatId
 - **Purpose**: Like `FilterByStatId`, but for **base-level** resolution: excludes
-  selector-carrying (per-tile) modifiers and condition-carrying effects. Per-tile
-  modifiers have already been applied to each worked tile and must not be counted a
-  second time.
+  selector-carrying (per-tile) modifiers and most `amount_source` modifiers.
+  `ElevationEnergySeed` / `MineralsConverted` stay on tile-yield / stockpile paths.
+  `BaseSize` is **included** when `EffectContext_t::pBase` is set (contribution =
+  population size × `amount`). Condition-carrying effects are excluded without a
+  context, and included when the context satisfies them (e.g. `IsHeadquarters`).
+  Per-tile modifiers have already been applied to each worked tile and must not be
+  counted a second time.
 - **Signature**: Accepts only a `BaseEffects_t` — never a raw vector or the faction pool —
   so running this filter at any other stage is a compile error.
 - **Returns**: A lazy view of matching `ActiveEffect_t` instances.
@@ -502,7 +528,22 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   - `ParseTileSelector` — parses a `TileSelector_t` from a `selector` JSON object. Called by the `StatModifier` branch when a `selector` field is present, making that modifier a per-tile yield modifier. A `selector` on any stat other than `nutrients`/`minerals`/`energy` is rejected at parse time — selectors only take part in tile-yield resolution, so such a modifier would silently never apply.
   - `ParseEffectConfig` — parses one entry of an `effects` array (`type`/`scope`/`persistence`/`condition`/`parameters`) into an `EffectConfig_t`. Required keys `type` and `scope` use `.at()` (missing → throw). Dispatches on `type` via a static table of per-type parse functions (one focused function per `EffectVariant_t` alternative). Additional strictness:
     - Nonzero `radius` requires `scope: ThisTile`.
-    - `StatModifier` with `amount_source` requires `op: Add` (or omitted op, which defaults to Add). `ElevationEnergySeed` is energy + `ThisTile`. `MineralsConverted` is a stockpile-output stat (`k_StockpileOutputStats`: nutrients / energy / econ / labs / psych — not minerals, the input) + `ThisBase` + Continuous + positive amount; `ValidateEffectForSource` further restricts it to `EffectSourceKind_t::Stockpile`, since nothing else converts minerals. `energy` is not a bank, so conversion routes it through `ResourceManager::AddAllocatedEnergy` (inefficiency, then the econ/labs/psych split) rather than crediting it directly — using the faction's split math alone, never `CalculateEcon_`/`Labs_`/`Psych_`, which would re-apply flat modifiers already paid during collection.
+    - `StatModifier` with `amount_source` requires `op: Add` (or omitted op, which defaults to Add).
+      Legality is a table keyed by `AmountSource_t` → required **subject domain** + allowed
+      stats/scopes (independent of `DomainFor(stat)` — Option A). `ElevationEnergySeed` needs a
+      Tile subject and allows energy + `ThisTile`. `MineralsConverted` needs a Stockpile
+      conversion subject and allows stockpile-output stats + `ThisBase` + Continuous (+
+      `ValidateEffectForSource` Stockpile kind). `BaseSize` needs a Base subject and allows
+      Base-domain stats with scopes `ThisBase` / `AllOwnerBases` / `FactionGlobal`. `BasesOwned`
+      needs a Faction subject and allows Unit-domain stats with scope `ThisUnit` (live unit
+      resolve stamps `pFaction` from the unit's owner; design-only resolve drops it). Each
+      amount_source contribution for `BaseSize` is **floored** before entering the modifier
+      stack (vanilla University `floor(size×0.25)` does not share fractional residue with
+      another fractional BaseSize source; `ElevationEnergySeed` / `MineralsConverted` /
+      `BasesOwned` keep fractional scales). Missing required subject at resolve throws (no silent `0.0`). `energy` is not a
+      bank, so conversion routes it through `ResourceManager::AddAllocatedEnergy` (inefficiency,
+      then the econ/labs/psych split) rather than crediting it directly — using the faction's
+      split math alone, never `CalculateEcon_`/`Labs_`/`Psych_`, which would re-apply flat modifiers already paid during collection.
     - Balance keys listed under `RequireNumber` above have no C++ invent-defaults.
   - `ParseEffects` — parses the `effects` array of a containing JSON object, returning `{}` if absent; throws if `"effects"` is present but not an array. The validating overload takes an `EffectSourceKind_t` (`Building`, `UnitComponent`, `PopType`, `Improvement`, `SocialPolicy`, `SocialRating`, `Faction`, `CouncilProposal`, `CouncilRules`, `ProbeAction`, `TileYieldRules`, `Tech`, `Production`, `Stockpile`, `Difficulty`, `BaseConquest`) and runs `ValidateEffectForSource` on every entry.
 - **Consumers**: Every effect-declaring config parser calls `EffectConfigParser::ParseEffects` (or `ParseEffectConfig` + `ValidateEffectForSource`). Council proposal / governor parsers add a second honored-shape check after scope validation (see council-system.md).
@@ -594,7 +635,9 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
 - **`radius` (aura effects)**: radius is a **per-effect** property (`EffectConfig_t::radius`, default `0` = the host tile only), declared on the effect entry itself — e.g. `Sensor`'s `+25%` defense effect carries `radius: 2`, `Mirror`'s `+1 energy` carries `radius: 2`, `Condenser`'s `+1 moisture_tier` carries `radius: 1`. There is **no** improvement-level radius default: `ImprovementConfig_t` has no radius member and `ImprovementConfigParser` never reads one, so siblings do not inherit a radius from their container and each effect states its own. Only continuous `ThisTile`-scoped effects take part in aura resolution — neighbor collection applies the exact same scope/persistence filter as own-tile collection.
 - **Unit auras**: unit components can carry `ThisTile`-scoped effects with a radius (e.g. a sensor pod granting `+25%` defense within 2 tiles). `CollectAreaEffects` scans `WorldMap::GetUnitsOnTile` over the aura radius — including units standing on the resolved tile itself — so the aura follows the unit as it moves. Each collected aura stamps `ActiveEffect_t::ownerFaction` from the projecting unit's faction (same gate as territory-owned improvements for defense / area Conceal; Detect additionally requires a stamped owner and fails closed without one). `TileEffectsContext` takes the `UnitComponentRegistry` at construction to size its scan bound.
 - **`CollectAreaEffects(tile, worldMap, registry)`**: the single function powering all three radius-aware resolvers (defense, yield, and moisture recompute). `WorldMap` is needed to look up neighboring tiles and units.
-- **`ResolveTileDefenseMultiplier(tile, worldMap, improvementRegistry)`**: `ResolveStatModifiers(FilterByStatId(CollectAreaEffects(...), Defense), 1.0).total`.
+- **`ResolveTileDefenseMultiplier(tile, worldMap, improvementRegistry)`**:
+  `ResolveStatModifiers(FilterByStatId(CollectAreaEffects(...), TileDefense),
+  SeedFor(TileDefense)).total`.
 - **`ResolveTileYield(tile)`**: returns `TileYieldView_t` from `CollectAreaEffects` (so a nearby Mirror's energy aura IS included), including `apply_after_restriction` bonuses, with **no** `TileResourceCap` (`effective == potential`). Used where only intrinsic + area yield is wanted (e.g. the auto-assign tile scorer).
 - **`ResolveTileYield(tile, bIsBaseTile, baseEffects)`**: the full worked-tile yield as `TileYieldView_t`. Starts from `CollectAreaEffects`, then appends every `baseEffects` `StatModifier` whose `selector` matches this tile, splits the list into pre-cap vs `apply_after_restriction` lanes, clamps the pre-cap lane via any `TileResourceCap` effects still in `baseEffects`, then adds the after-restriction lane. Caps with `removed_by_tech` are omitted from the faction pool once that tech is discovered. Production reads `.effective`; UI may also use `.potential`. Unworked-tile preview (`BaseManager::GetPreviewTileYield`) uses this same overload with `bIsBaseTile == false` — as-if-worked tile-level yield (selectors + caps), without pop `ApplyTileMultipliers`.
 - **`StatId_t::MoistureTier`** (`"moisture_tier"` in JSON): integer tile tier (Arid=0, Moist=1, Wet=2), used exclusively by `RecomputeMoisture` as a terrain-mutation target. Not queryable at runtime — it is a seed for `SetMoisture()`, not a cached stat. `Condenser`'s `+1 moisture_tier Add` effect flows through `RecomputeMoisture` to actually call `Tile::SetMoisture()`, making the change visible in rendering and tile-yield resolution.
@@ -645,9 +688,13 @@ units, pops, or tiles according to each entry's `scope`.
 
 1. Add the `StatId_t` enumerator (`EffectEnums.h`) and its string mapping in `ParseStatId`
    (same header); extend the mapping test in `ParserTests.cpp`.
-2. Classify its seed semantics in `KindFor` (`EffectEnums.h`) — the compiler forces this via
-   the exhaustive switch — and pin it in `ValidationTests.cpp` alongside the others.
+2. Classify its seed semantics in `KindFor` and its resolve subject in `DomainFor`
+   (`EffectEnums.h`) — the compiler forces both via exhaustive switches — and pin both in
+   `ValidationTests.cpp` alongside the others. Split into two StatIds when the quantities
+   differ (e.g. unit `Defense` vs `TileDefense`), not merely because two pools contribute.
 3. Resolve it where the value is needed, choosing the filter by context:
+   - Prefer typed `ResolveBaseStat` / `ResolveFactionStat` / `ResolveUnitStat` once present
+     (they assert `DomainFor` and supply the subject for amount sources).
    - `FilterBaseLevelByStatId` for **base-level** resolution — excludes per-tile selector
      modifiers and conditional effects, and only accepts a `BaseEffects_t`; always the
      right choice at base level.
@@ -749,6 +796,8 @@ selector pass won't compile against the raw pool.
   rating's extreme levels (and the `population_boom` project) declare them, and they reach the
   base pool, but `GrowthCalculator` doesn't check them yet — their gameplay rules are undefined
   (TODO at the resolve site).
-- **No combat system consumes `ResolveTileDefenseMultiplier` yet**: `Unit::GetDefense()` still returns only the unit's own design stat. Wiring an actual attack/defense resolution (and deciding how/whether it multiplies the attacker's tile bonus too) is a separate, larger feature.
+- **TileDefense vs unit Defense**: tile bonuses use `TileDefense`; `Unit::GetDefense()` /
+  design stats remain unit armor. Combat multiplies unit Defense by
+  `ResolveTileDefenseMultiplier`.
 - **No improvement-construction flow consumes `CanBuildImprovement` yet**: `Tile::AddImprovement()` has no caller besides `BaseManager`'s `"Base"` wiring — there's no UI/production path for the player to actually build Farm/Mine/Bunker, so the `excludes` exclusivity check is unenforced in practice today.
 - **`Base`'s defense bonus value (+100%) is an unconfirmed placeholder**, same as the other round test-data numbers (`test_tech_1`, etc.) in this repo — needs real balance input.

@@ -1036,5 +1036,25 @@
       }
     ],
     "category": "discover"
+  },
+  {
+    "id": "Recreation_Commons",
+    "name": "Recreation Commons",
+    "mineral_cost": 4,
+    "category": "build",
+    "required_tech": "",
+    "upkeep": 1,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "persistence": "Continuous",
+        "parameters": {
+          "stat": "drones",
+          "amount": -2,
+          "op": "Add"
+        }
+      }
+    ]
   }
 ]

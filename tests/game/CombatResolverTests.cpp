@@ -88,17 +88,18 @@ TEST_CASE("Combat strength is resolved rating times 0x100", "[combat]")
 
     Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
     Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "test_armor"});
-    // Disciplined = 0% morale so ResolveCombatStat matches weapon/armour only.
+    // Disciplined = 0% morale so ResolveCombatUnitStat matches weapon/armour only.
     attacker.SetXp(2);
     defender.SetXp(2);
 
     const MoraleCalculator& morale = fixture.morale();
     const EffectContext_t attackCtx{&defender.GetTile(), CombatRole_t::Attacker};
     const EffectContext_t defenseCtx{&defender.GetTile(), CombatRole_t::Defender};
-    const int attackRating =
-        morale.ResolveCombatStat(attacker, StatId_t::Attack, attackCtx);
-    const int defenseRating =
-        morale.ResolveCombatStat(defender, StatId_t::Defense, defenseCtx);
+    const int attackRating = ResolveCombatUnitStat(
+        attacker, StatId_t::Attack, attackCtx, morale.CombatMoraleAddPercent(attacker, attackCtx));
+    const int defenseRating = ResolveCombatUnitStat(
+        defender, StatId_t::Defense, defenseCtx,
+        morale.CombatMoraleAddPercent(defender, defenseCtx));
 
     CombatHarness_ harness(fixture, /*seed*/ 1);
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);

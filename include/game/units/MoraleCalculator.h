@@ -35,11 +35,6 @@ public:
     bool TryPromote(Unit& rSurvivor, int attackStrength, int defenseStrength,
                     std::mt19937& rRng) const;
 
-    // Resolves Attack/Defense for combat: live unit effects + synthetic morale AddPercent.
-    int ResolveCombatStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx) const;
-    double ResolveCombatMultiplicativeStat(const Unit& rUnit, StatId_t statId, double baseValue,
-                                           const EffectContext_t& rCtx) const;
-
 private:
     const MoraleConfig_t& m_rConfig;
 };

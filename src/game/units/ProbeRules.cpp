@@ -30,26 +30,20 @@ constexpr int k_defaultHqDistance = 12;
 
 int ResolveProbeDefenseBonus_(const BaseManager& rBase)
 {
-    return static_cast<int>(std::lround(
-        ResolveStatModifiers(FilterBaseLevelByStatId(rBase.GetBaseEffects(), StatId_t::ProbeDefense),
-                             SeedFor(StatId_t::ProbeDefense))
-            .total));
+    return static_cast<int>(std::lround(ResolveBaseStat(
+        rBase.GetBaseEffects(), StatId_t::ProbeDefense, SeedFor(StatId_t::ProbeDefense))));
 }
 
 double ResolveProbeSuccessScale_(const BaseManager& rBase)
 {
-    return ResolveStatModifiers(
-               FilterBaseLevelByStatId(rBase.GetBaseEffects(), StatId_t::ProbeSuccessScale),
-               SeedFor(StatId_t::ProbeSuccessScale))
-        .total;
+    return ResolveBaseStat(rBase.GetBaseEffects(), StatId_t::ProbeSuccessScale,
+                           SeedFor(StatId_t::ProbeSuccessScale));
 }
 
 double ResolveProbeActionCostMultiplier_(const BaseManager& rBase)
 {
-    return ResolveStatModifiers(
-               FilterBaseLevelByStatId(rBase.GetBaseEffects(), StatId_t::ProbeActionCost),
-               SeedFor(StatId_t::ProbeActionCost))
-        .total;
+    return ResolveBaseStat(rBase.GetBaseEffects(), StatId_t::ProbeActionCost,
+                           SeedFor(StatId_t::ProbeActionCost));
 }
 
 int CountCombatUnitsOnTile_(const Tile& rTile, const WorldMap& rMap, FactionId_t ownerId)

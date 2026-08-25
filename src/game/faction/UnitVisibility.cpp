@@ -25,7 +25,7 @@ void CollectConcealmentChannels_(const Unit& rSubject, std::span<const ActiveEff
 {
     const EffectContext_t ctx{&rSubject.GetTile()};
 
-    for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rSubject))
+    for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rSubject).effects)
     {
         if (!ConditionSatisfied(*rEffect.config, ctx, rEffect.originBase))
         {

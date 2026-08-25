@@ -170,7 +170,7 @@ bool ApplySabotage_(GameState& rGameState, BaseManager& rBase, ProbeActionId_t a
         rResult.detail = ProbeDestroyedFacility_t{chosenId};
         return true;
     }
-    rBase.GetProduction().SetProduction(nullptr);
+    rBase.GetProduction().SetProduction(nullptr, rBase.GetBaseEffects());
     rBase.GetProduction().SetMineralStockpile(0);
     rResult.detail = ProbeActionStatus_t::ProductionWiped;
     return true;

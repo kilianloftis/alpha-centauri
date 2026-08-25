@@ -309,7 +309,7 @@ const BuildingConfig_t* QueueHurryFacility_(BaseManager& rBase, ViewFixture& rFi
 {
     const BuildingConfig_t* pFacility = rFixture.dataContext.buildingRegistry->Find("test_hurry_facility");
     REQUIRE(pFacility != nullptr);
-    rBase.GetProduction().SetProduction(pFacility);
+    rBase.GetProduction().SetProduction(pFacility, rBase.GetBaseEffects());
     rBase.GetProduction().SetMineralStockpile(0);
     return pFacility;
 }

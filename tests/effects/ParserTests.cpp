@@ -29,6 +29,7 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("talents") == StatId_t::Talents);
     CHECK(ParseStatId("attack") == StatId_t::Attack);
     CHECK(ParseStatId("defense") == StatId_t::Defense);
+    CHECK(ParseStatId("tile_defense") == StatId_t::TileDefense);
     CHECK(ParseStatId("movement") == StatId_t::Movement);
     CHECK(ParseStatId("vision") == StatId_t::Vision);
     CHECK(ParseStatId("hit_points") == StatId_t::HitPoints);
@@ -407,6 +408,103 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
                 "amount_source": "MineralsConverted",
                 "selector": { "kind": "BaseTile" }
             }
+        })")));
+    }
+
+    SECTION("BaseSize University-style scale")
+    {
+        const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisBase",
+            "parameters": {
+                "stat": "drones",
+                "amount_source": "BaseSize",
+                "amount": 0.25,
+                "op": "Add"
+            }
+        })"));
+        const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
+        REQUIRE(pMod != nullptr);
+        REQUIRE(pMod->amountSource.has_value());
+        CHECK(*pMod->amountSource == StatModifierEffect_t::AmountSource_t::BaseSize);
+        CHECK(pMod->amount == Approx(0.25));
+    }
+
+    SECTION("BaseSize on AllOwnerBases is OK")
+    {
+        CHECK_NOTHROW(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "AllOwnerBases",
+            "parameters": { "stat": "drones", "amount_source": "BaseSize", "amount": 0.25 }
+        })")));
+    }
+
+    SECTION("BaseSize outside base-level scopes throws")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisTile",
+            "parameters": { "stat": "drones", "amount_source": "BaseSize", "amount": 0.25 }
+        })")));
+    }
+
+    SECTION("BaseSize with a tile selector throws")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisBase",
+            "parameters": {
+                "stat": "energy",
+                "amount_source": "BaseSize",
+                "amount": 1,
+                "selector": { "kind": "BaseTile" }
+            }
+        })")));
+    }
+
+    SECTION("BaseSize on a Unit-domain stat throws")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisBase",
+            "parameters": { "stat": "attack", "amount_source": "BaseSize", "amount": 0.25 }
+        })")));
+    }
+
+    SECTION("BasesOwned Empire Pulse-style scale")
+    {
+        const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisUnit",
+            "parameters": {
+                "stat": "attack",
+                "amount_source": "BasesOwned",
+                "amount": 1,
+                "op": "Add"
+            }
+        })"));
+        const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
+        REQUIRE(pMod != nullptr);
+        REQUIRE(pMod->amountSource.has_value());
+        CHECK(*pMod->amountSource == StatModifierEffect_t::AmountSource_t::BasesOwned);
+        CHECK(pMod->amount == Approx(1.0));
+    }
+
+    SECTION("BasesOwned outside ThisUnit throws")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisBase",
+            "parameters": { "stat": "attack", "amount_source": "BasesOwned", "amount": 1 }
+        })")));
+    }
+
+    SECTION("BasesOwned on a Base-domain stat throws")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisUnit",
+            "parameters": { "stat": "drones", "amount_source": "BasesOwned", "amount": 1 }
         })")));
     }
 }

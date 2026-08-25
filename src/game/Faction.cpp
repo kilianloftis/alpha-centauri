@@ -72,6 +72,7 @@ Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
                     rDataContext.policeRules)
     , m_rWorldMap(rWorldMap)
     , m_rSettings(rSettings)
+    , m_composedEffects(*this)
 {
     m_pResearchSelector->EnsureResearchTarget();
     // Size the fog maps from the map this faction is bound to for life, then take a first
@@ -687,7 +688,7 @@ std::optional<ScrapPayout_t> Faction::QuoteScrapUnit(const Unit& rUnit) const
 
     const ScrapQuote_t quote = m_rDataContext.scrapRefundCalculator->Quote(
         rUnit.GetDesign().GetBaseCost(), ConstructableKind_t::Unit, override,
-        CollectLiveUnitEffects(rUnit));
+        CollectLiveUnitEffects(rUnit).effects);
     if (!quote.bAvailable)
     {
         return std::nullopt;

@@ -68,8 +68,18 @@ inline bool AppliesForFaction(const ActiveEffect_t& rEffect, FactionId_t forFact
 // distinct type from BaseEffects_t: the pool still holds every base's ThisBase effects and the
 // FactionUnits lane, so resolving base stats directly against it would count effects that don't
 // apply — FilterForBase is the only path from a pool to a base's effect list.
+// Subject is constructor-injected so ResolveFactionStat / amount sources cannot omit it.
 struct FactionEffects_t
 {
+    explicit FactionEffects_t(const Faction& rFaction)
+        : pFaction(&rFaction)
+    {}
+    FactionEffects_t(const Faction& rFaction, std::vector<ActiveEffect_t> effectsIn)
+        : pFaction(&rFaction)
+        , effects(std::move(effectsIn))
+    {}
+
+    const Faction* pFaction;
     std::vector<ActiveEffect_t> effects;
 };
 
@@ -78,8 +88,32 @@ struct FactionEffects_t
 // (ResolveSocialRatingLevelEffects) merged in — see BaseManager::BuildBaseEffects_. Every entry
 // applies to that single base, which is the precondition for base-level resolution
 // (FilterBaseLevelByStatId) and the per-tile selector pass (TileEffectsContext::ResolveTileYield).
+// Subject is constructor-injected so ResolveBaseStat / amount sources cannot omit it.
 struct BaseEffects_t
 {
+    explicit BaseEffects_t(const BaseManager& rBase)
+        : pBase(&rBase)
+    {}
+    BaseEffects_t(const BaseManager& rBase, std::vector<ActiveEffect_t> effectsIn)
+        : pBase(&rBase)
+        , effects(std::move(effectsIn))
+    {}
+
+    const BaseManager* pBase;
+    std::vector<ActiveEffect_t> effects;
+};
+
+// Live-unit or design-only effect list for Unit-domain resolve. Design-only leaves pUnit null
+// (preview / intrinsic); amount sources that need a live Unit throw if evaluated then.
+struct UnitEffects_t
+{
+    explicit UnitEffects_t(const Unit& rUnit);
+    explicit UnitEffects_t(const UnitDesign& rDesign);
+    UnitEffects_t(const Unit& rUnit, std::vector<ActiveEffect_t> effectsIn);
+    UnitEffects_t(const UnitDesign& rDesign, std::vector<ActiveEffect_t> effectsIn);
+
+    const Unit* pUnit = nullptr;
+    const UnitDesign* pDesign = nullptr;
     std::vector<ActiveEffect_t> effects;
 };
 
@@ -97,7 +131,10 @@ enum class CombatRole_t
 // targetTile so amount_source (e.g. ElevationEnergySeed) can read the host tile.
 // combatRole enables IsDefending (SE Morale defense-in-base extras).
 // pAttacker enables AttackerIsEmbarked (and future attacker-side conditions).
-// pBase enables IsHeadquarters (Economy SE energy-at-HQ) for base-level resource resolve.
+// pBase enables IsHeadquarters (Economy SE energy-at-HQ) and amount_source BaseSize
+// (population size × amount) for base-level resolve.
+// pFaction enables amount_source BasesOwned (owned-base count × amount); live unit resolve
+// stamps it from Unit::GetFaction when absent.
 // mineralsConverted is this turn's consumed minerals for MineralsConverted amount_source.
 struct EffectContext_t
 {
@@ -106,35 +143,34 @@ struct EffectContext_t
     const Unit* pAttacker = nullptr;
     const BaseManager* pBase = nullptr;
     int mineralsConverted = 0;
+    const Faction* pFaction = nullptr;
 };
 
-// Resolves a StatModifier's effective contribution amount. Literal `amount` when
-// amountSource is absent; otherwise scales a context value (tile elevation seed or
-// this turn's converted minerals).
-inline double EffectiveStatModifierAmount(const StatModifierEffect_t& rMod,
-                                          const EffectContext_t* pCtx)
+// Stockpile conversion subject for MineralsConverted amount_source (not a ResolveDomain
+// DomainFor target — resource stats stay Base).
+struct StockpileConversionSubject_t
 {
-    if (!rMod.amountSource.has_value())
-    {
-        return rMod.amount;
-    }
-    switch (*rMod.amountSource)
-    {
-        case StatModifierEffect_t::AmountSource_t::ElevationEnergySeed:
-            if (!pCtx || !pCtx->targetTile)
-            {
-                return 0.0;
-            }
-            return static_cast<double>(pCtx->targetTile->GetElevationEnergySeed()) * rMod.amount;
-        case StatModifierEffect_t::AmountSource_t::MineralsConverted:
-            if (!pCtx)
-            {
-                return 0.0;
-            }
-            return static_cast<double>(pCtx->mineralsConverted) * rMod.amount;
-    }
-    return rMod.amount;
-}
+    int mineralsConverted = 0;
+};
+
+// Per-subject amount_source evaluation. Literal `amount` when amountSource is absent.
+// Prefer typed subject overloads; the EffectContext_t* form bridges tile-yield / combat
+// paths that still build a context. Missing required subject for an amount_source throws
+// (no silent 0.0). nullptr context is only valid for literal (no amountSource) modifiers.
+double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double scale,
+                         const BaseManager& rBase);
+double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double scale,
+                         const Tile& rTile);
+double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double scale,
+                         const StockpileConversionSubject_t& rStockpile);
+double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double scale,
+                         const Faction& rFaction);
+double AmountSourceValue(const StatModifierEffect_t& rMod, const BaseManager& rBase);
+double AmountSourceValue(const StatModifierEffect_t& rMod, const Tile& rTile);
+double AmountSourceValue(const StatModifierEffect_t& rMod,
+                         const StockpileConversionSubject_t& rStockpile);
+double AmountSourceValue(const StatModifierEffect_t& rMod, const Faction& rFaction);
+double AmountSourceValue(const StatModifierEffect_t& rMod, const EffectContext_t* pCtx);
 
 // True if config carries no condition, or its condition is satisfied by ctx.
 // OriginBaseIsTargetBase requires pOriginBase (ActiveEffect_t::originBase).
@@ -232,12 +268,13 @@ inline int FinalizeResolvedStat(double value)
 
 // baseValue seeds the additive total before contributions are summed. It is deliberately
 // NOT defaulted: stats resolved purely through multiplicative modifiers (e.g.
-// CostMultiplier, tile defense) silently resolve to 0 from a 0 base, so every caller must
+// CostMultiplier, TileDefense) silently resolve to 0 from a 0 base, so every caller must
 // state its seed — 0.0 for additive stats, 1.0 for pure multipliers, or a raw value the
 // modifiers scale (tile yield, growth rate's 100). Templated on the input range so it
 // accepts both an owned vector and a lazy Filter* view below without materializing one.
-// pCtx resolves amount_source modifiers (e.g. ElevationEnergySeed); pass nullptr for
-// context-free resolves (those filters already drop amount_source effects).
+// pCtx resolves amount_source modifiers (ElevationEnergySeed, MineralsConverted, BaseSize);
+// pass nullptr for context-free resolves (those filters already drop amount_source effects,
+// except BaseSize which FilterBaseLevelByStatId includes when pBase is set).
 template <std::ranges::input_range Range>
 StatBreakdown_t ResolveStatModifiers(Range&& matching, double baseValue,
                                      const EffectContext_t* pCtx = nullptr)
@@ -255,7 +292,7 @@ StatBreakdown_t ResolveStatModifiers(Range&& matching, double baseValue,
 
         StatBreakdown_t::Contribution_t contribution;
         contribution.sourceId = active.sourceId;
-        contribution.amount = EffectiveStatModifierAmount(*pStatModifier, pCtx);
+        contribution.amount = AmountSourceValue(*pStatModifier, pCtx);
         contribution.op = pStatModifier->op;
         breakdown.contributions.push_back(contribution);
     }
@@ -290,7 +327,7 @@ double ResolveStatModifiersTotal(Range&& matching, double baseValue,
         {
             continue;
         }
-        stack.emplace_back(EffectiveStatModifierAmount(*pStatModifier, pCtx), pStatModifier->op);
+        stack.emplace_back(AmountSourceValue(*pStatModifier, pCtx), pStatModifier->op);
     }
     return ApplyModifierStack(baseValue, stack);
 }
@@ -316,8 +353,23 @@ inline bool StatModifierMatchesInContext(const ActiveEffect_t& effect, StatId_t 
                                          const EffectContext_t& ctx)
 {
     const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
-    return pStatModifier && pStatModifier->stat == statId
-        && ConditionSatisfied(*effect.config, ctx, effect.originBase);
+    if (!pStatModifier || pStatModifier->stat != statId)
+    {
+        return false;
+    }
+    // BaseSize needs pBase; BasesOwned needs pFaction; other amount_sources use tile/minerals
+    // context on their own paths (or throw from AmountSourceValue if the subject is missing).
+    if (pStatModifier->amountSource == StatModifierEffect_t::AmountSource_t::BaseSize
+        && ctx.pBase == nullptr)
+    {
+        return false;
+    }
+    if (pStatModifier->amountSource == StatModifierEffect_t::AmountSource_t::BasesOwned
+        && ctx.pFaction == nullptr)
+    {
+        return false;
+    }
+    return ConditionSatisfied(*effect.config, ctx, effect.originBase);
 }
 
 // Like FilterByStatId, but for a specific runtime context: includes unconditional effects
@@ -335,27 +387,37 @@ inline auto FilterByStatIdInContext(std::vector<ActiveEffect_t>&& effects,
                                     StatId_t statId, const EffectContext_t& ctx) = delete;
 
 // Like FilterByStatId, but for base-level resolution only: excludes per-tile modifiers
-// (StatModifiers carrying a tile selector) and amountSource modifiers. Selector
-// modifiers have already been applied per worked tile and must not be counted a second
-// time. Amount sources are context-specific: ElevationEnergySeed is tile yield,
-// MineralsConverted is stockpile conversion (StockpileConversion.cpp, which resolves the
-// stockpile config's own effects and never consults this pool). Accepting BaseEffects_t
-// (never a raw vector or the pool) makes running this filter at any other stage a compile
-// error instead of a doc violation.
+// (StatModifiers carrying a tile selector). ElevationEnergySeed / MineralsConverted
+// amount_sources stay off this filter (tile yield / stockpile paths). BaseSize is included
+// when the bundle subject (rBaseEffects.pBase) is set, or when pCtx->pBase is set.
+// Accepting BaseEffects_t (never a raw vector or the pool) makes running this filter at any
+// other stage a compile error instead of a doc violation.
 //
-// Without pCtx (or with a null pCtx): condition-carrying effects are excluded (context-free).
-// With pCtx: unconditional modifiers plus condition-satisfied ones (e.g. IsHeadquarters
-// when EffectContext_t::pBase is set) are included.
+// pCtx is optional conditions-only context (IsHeadquarters, etc.). Prefer ResolveBaseStat,
+// which stamps pBase from the bundle for amount sources.
 inline auto FilterBaseLevelByStatId(const BaseEffects_t& rBaseEffects, StatId_t statId,
                                     const EffectContext_t* pCtx = nullptr)
 {
-    return rBaseEffects.effects | std::views::filter([statId, pCtx](const ActiveEffect_t& effect)
+    return rBaseEffects.effects
+           | std::views::filter([statId, pCtx, &rBaseEffects](const ActiveEffect_t& effect)
     {
         const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
-        if (!pStatModifier || pStatModifier->stat != statId || pStatModifier->selector
-            || pStatModifier->amountSource)
+        if (!pStatModifier || pStatModifier->stat != statId || pStatModifier->selector)
         {
             return false;
+        }
+        if (pStatModifier->amountSource)
+        {
+            if (*pStatModifier->amountSource != StatModifierEffect_t::AmountSource_t::BaseSize)
+            {
+                return false;
+            }
+            const BaseManager* pBase =
+                (pCtx && pCtx->pBase) ? pCtx->pBase : rBaseEffects.pBase;
+            if (pBase == nullptr)
+            {
+                return false;
+            }
         }
         if (!effect.config->condition)
         {
@@ -367,6 +429,24 @@ inline auto FilterBaseLevelByStatId(const BaseEffects_t& rBaseEffects, StatId_t 
 }
 inline auto FilterBaseLevelByStatId(BaseEffects_t&& rBaseEffects, StatId_t statId,
                                     const EffectContext_t* pCtx = nullptr) = delete;
+
+// Domain-scoped resolve: asserts DomainFor(stat), filters, and evaluates amount sources
+// against the bundle subject. Callers cannot omit the subject or mismatch filter to domain.
+double ResolveBaseStat(const BaseEffects_t& rBaseEffects, StatId_t statId, double seed,
+                       const EffectContext_t* pCtx = nullptr);
+double ResolveFactionStat(const FactionEffects_t& rFactionEffects, StatId_t statId, double seed,
+                          const EffectContext_t* pCtx = nullptr);
+double ResolveUnitStat(const UnitEffects_t& rUnitEffects, StatId_t statId, double seed,
+                       const EffectContext_t* pCtx = nullptr);
+
+// Live-unit Attack/Defense for combat: same Unit-domain resolve as ResolveUnitStat /
+// ResolveStat (amount sources included), then folds moraleAddPercent into the same
+// AddPercent bucket (must not be applied as a post-multiply — that disagrees with other
+// unit AddPercents). moraleAddPercent comes from MoraleCalculator::CombatMoraleAddPercent.
+int ResolveCombatUnitStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx,
+                          double moraleAddPercent);
+double ResolveCombatUnitMultiplicativeStat(const Unit& rUnit, StatId_t statId, double baseValue,
+                                           const EffectContext_t& rCtx, double moraleAddPercent);
 
 // Narrows the faction pool to the effects that apply to the given base: ThisBase effects
 // originating from it, plus all AllOwnerBases, FactionGlobal, and WorldGlobal effects.
@@ -384,8 +464,8 @@ inline auto FilterByScope(const std::vector<ActiveEffect_t>& effects, EffectScop
 }
 inline auto FilterByScope(std::vector<ActiveEffect_t>&& effects, EffectScope_t scope) = delete;
 
-// Collects all effects from a list of unit components as ActiveEffect_t instances.
-std::vector<ActiveEffect_t> CollectUnitEffects(const std::vector<const UnitComponentConfig_t*>& components);
+// Design-only UnitEffects_t (pUnit null) from a design's components.
+UnitEffects_t CollectUnitEffects(const UnitDesign& rDesign);
 
 // Resolve a unit design's intrinsic (component-only) stats / flags — no faction pool.
 // Context-free: effects carrying a condition are skipped (same rule as FilterByStatId).
@@ -401,7 +481,7 @@ int ResolveAdditiveStat(const UnitDesign& rDesign, StatId_t statId);
 // and ProducedAtThisBase matching Unit::GetProducedAtBase. Returned effects already
 // satisfy UnitFilterSatisfied and the ProducedAt origin match — consumers (ResolveStat,
 // HasPermission, etc.) need not re-check the unitFilter.
-std::vector<ActiveEffect_t> CollectLiveUnitEffects(const Unit& rUnit);
+UnitEffects_t CollectLiveUnitEffects(const Unit& rUnit);
 
 // Resolve a live unit's stats / flags: design effects plus FactionUnits from the owner.
 int ResolveStat(const Unit& rUnit, StatId_t statId);

@@ -21,7 +21,7 @@ namespace
 int SumMoraleBonus_(const Unit& rUnit, const EffectContext_t& rCtx, bool bConditionalOnly)
 {
     int total = 0;
-    for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rUnit))
+    for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rUnit).effects)
     {
         const StatModifierEffect_t* pMod =
             std::get_if<StatModifierEffect_t>(&rEffect.config->effect);
@@ -38,7 +38,7 @@ int SumMoraleBonus_(const Unit& rUnit, const EffectContext_t& rCtx, bool bCondit
         {
             continue;
         }
-        total += static_cast<int>(std::lround(EffectiveStatModifierAmount(*pMod, &rCtx)));
+        total += static_cast<int>(std::lround(AmountSourceValue(*pMod, &rCtx)));
     }
     return total;
 }
@@ -205,43 +205,6 @@ bool MoraleCalculator::TryPromote(Unit& rSurvivor, int attackStrength, int defen
     }
     rSurvivor.SetXp(xp + 1);
     return true;
-}
-
-int MoraleCalculator::ResolveCombatStat(const Unit& rUnit, StatId_t statId,
-                                        const EffectContext_t& rCtx) const
-{
-    const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects(rUnit);
-    std::vector<std::pair<double, ModifierOp_t>> contributions;
-    for (const ActiveEffect_t& rEffect : FilterByStatIdInContext(effects, statId, rCtx))
-    {
-        const StatModifierEffect_t* pModifier =
-            std::get_if<StatModifierEffect_t>(&rEffect.config->effect);
-        if (pModifier)
-        {
-            contributions.emplace_back(EffectiveStatModifierAmount(*pModifier, &rCtx), pModifier->op);
-        }
-    }
-    contributions.emplace_back(CombatMoraleAddPercent(rUnit, rCtx), ModifierOp_t::AddPercent);
-    return FinalizeResolvedStat(ApplyModifierStack(SeedFor(statId), contributions));
-}
-
-double MoraleCalculator::ResolveCombatMultiplicativeStat(const Unit& rUnit, StatId_t statId,
-                                                         double baseValue,
-                                                         const EffectContext_t& rCtx) const
-{
-    const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects(rUnit);
-    std::vector<std::pair<double, ModifierOp_t>> contributions;
-    for (const ActiveEffect_t& rEffect : FilterByStatIdInContext(effects, statId, rCtx))
-    {
-        const StatModifierEffect_t* pModifier =
-            std::get_if<StatModifierEffect_t>(&rEffect.config->effect);
-        if (pModifier && pModifier->op != ModifierOp_t::Add)
-        {
-            contributions.emplace_back(EffectiveStatModifierAmount(*pModifier, &rCtx), pModifier->op);
-        }
-    }
-    contributions.emplace_back(CombatMoraleAddPercent(rUnit, rCtx), ModifierOp_t::AddPercent);
-    return ApplyModifierStack(baseValue, contributions);
 }
 
 } // namespace ac

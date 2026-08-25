@@ -68,12 +68,13 @@ TEST_CASE("BaseManager::CollectBuildingEffects tags ThisBase effects with the ow
 
 TEST_CASE("FilterForBase: scope rules with real base identities", "[effects][base][filter]")
 {
-    actest::BaseFixture fixture;
-    BaseManager& baseA = fixture.MakeBase(2, 2);
-    BaseManager& baseB = fixture.MakeBase(6, 6);
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& baseA = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& baseB = fixture.MakeFactionBase(faction, 6, 6);
 
     actest::EffectPool pool;
-    const FactionEffects_t factionEffects{{
+    const FactionEffects_t factionEffects{faction, {
         actest::Active(pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase),
                        "mine_a", &baseA),
         actest::Active(pool.StatMod(StatId_t::Nutrients, 2.0, ModifierOp_t::Add, EffectScope_t::ThisBase),
@@ -105,11 +106,12 @@ TEST_CASE("FilterForBase: scope rules with real base identities", "[effects][bas
 
 TEST_CASE("FilterForBase: a ThisBase effect with no origin base applies to no base", "[effects][base][filter]")
 {
-    actest::BaseFixture fixture;
-    BaseManager& baseA = fixture.MakeBase(2, 2);
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& baseA = fixture.MakeFactionBase(faction, 2, 2);
 
     actest::EffectPool pool;
-    const FactionEffects_t factionEffects{{
+    const FactionEffects_t factionEffects{faction, {
         actest::Active(pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase),
                        "orphan", nullptr),
     }};
@@ -177,8 +179,8 @@ TEST_CASE("Production completion dispatches Instantaneous Infiltration into the 
     REQUIRE_FALSE(state.GetDiplomacyLedger().HasInfiltration(
         beneficiary.GetFactionId(), other.GetFactionId()));
 
-    base.GetProduction().SetProduction(pInfiltrator);
-    CHECK(base.GetProduction().CompleteProduction() == pInfiltrator->id);
+    base.GetProduction().SetProduction(pInfiltrator, base.GetBaseEffects());
+    CHECK(base.GetProduction().CompleteProduction(base.GetBaseEffects()) == pInfiltrator->id);
 
     CHECK(state.GetDiplomacyLedger().HasInfiltration(
         beneficiary.GetFactionId(), other.GetFactionId()));
@@ -194,8 +196,8 @@ TEST_CASE("Production completion without Bound GameState throws on Instantaneous
 
     const BuildingConfig_t* pGrantor = fixture.buildings().Find("instant_grantor");
     REQUIRE(pGrantor != nullptr);
-    base.GetProduction().SetProduction(pGrantor);
-    CHECK_THROWS_AS(base.GetProduction().CompleteProduction(), std::runtime_error);
+    base.GetProduction().SetProduction(pGrantor, base.GetBaseEffects());
+    CHECK_THROWS_AS(base.GetProduction().CompleteProduction(BaseEffects_t{base}), std::runtime_error);
 
     // The throw precedes every mutation: no half-completed base with the building
     // constructed but its Instantaneous effects never dispatched.

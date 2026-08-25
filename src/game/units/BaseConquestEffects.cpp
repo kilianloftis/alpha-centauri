@@ -58,10 +58,8 @@ int RemovePopulation_(BaseManager& rBase, int amount)
 // ThisBase clamp still counts even if the building granting it is then randomly demolished.
 int ResolveBaseConquestStat_(const BaseManager& rBase, StatId_t stat)
 {
-    const int resolved = FinalizeResolvedStat(
-        ResolveStatModifiers(FilterBaseLevelByStatId(rBase.GetBaseEffects(), stat),
-                             SeedFor(stat))
-            .total);
+    const int resolved =
+        FinalizeResolvedStat(ResolveBaseStat(rBase.GetBaseEffects(), stat, SeedFor(stat)));
     return std::max(0, resolved);
 }
 

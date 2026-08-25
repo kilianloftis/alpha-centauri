@@ -138,6 +138,7 @@ BaseManager::BaseManager(
                   m_pFaction->GetResearch().GetDiscoveredTechs());
           }))
     , m_name(std::move(name))
+    , m_cachedBaseEffects(*this)
 {
     m_pPopulation->SetDroneInputSupplier([this]() {
         DroneInputs_t inputs;
@@ -151,27 +152,19 @@ BaseManager::BaseManager(
         inputs.turnsSinceConquered = rWindow.turnsElapsed;
         inputs.assimilationDuration = rWindow.durationTurns;
         inputs.assimilationPeak = rWindow.peakDrones;
-        // TODO: garrisonCount
         // GetBaseEffects includes SE rating expansion (Efficiency → Bureaucracy MultiplyGeometric).
         const BaseEffects_t& rBaseEffects = GetBaseEffects();
-        inputs.bureaucracy = ResolveStatModifiersTotal(
-            FilterBaseLevelByStatId(rBaseEffects, StatId_t::Bureaucracy),
-            SeedFor(StatId_t::Bureaucracy));
-        // Seed with base size so MultiplyGeometric (e.g. University 1.25) scales population;
-        // SizeFreeDrones is applied after resolve in the formula, not as an Add on this stack.
+        inputs.bureaucracy =
+            ResolveBaseStat(rBaseEffects, StatId_t::Bureaucracy, SeedFor(StatId_t::Bureaucracy));
+        // Additive Drones at SeedFor(0): literal Adds (Commons) plus BaseSize × amount
+        // (University 0.25). Size drones live in drone_formula as max(0, base_size - free).
         inputs.resolvedDrones = FinalizeResolvedStat(
-            ResolveStatModifiers(
-                FilterBaseLevelByStatId(rBaseEffects, StatId_t::Drones),
-                static_cast<double>(inputs.baseSize))
-                .total);
+            ResolveBaseStat(rBaseEffects, StatId_t::Drones, SeedFor(StatId_t::Drones)));
         inputs.sizeFreeDrones = FinalizeResolvedStat(
-            ResolveStatModifiers(
-                FilterBaseLevelByStatId(rBaseEffects, StatId_t::SizeFreeDrones),
-                SeedFor(StatId_t::SizeFreeDrones))
-                .total);
-        inputs.conqueredDroneCap = ResolveStatModifiersTotal(
-            FilterBaseLevelByStatId(rBaseEffects, StatId_t::ConqueredDroneCap),
-            SeedFor(StatId_t::ConqueredDroneCap));
+            ResolveBaseStat(rBaseEffects, StatId_t::SizeFreeDrones,
+                            SeedFor(StatId_t::SizeFreeDrones)));
+        inputs.conqueredDroneCap = ResolveBaseStat(
+            rBaseEffects, StatId_t::ConqueredDroneCap, SeedFor(StatId_t::ConqueredDroneCap));
         return inputs;
     });
 
@@ -420,15 +413,12 @@ int BaseManager::GetPsychProduction() const
 int BaseManager::GetDroneModifier() const
 {
     return FinalizeResolvedStat(
-        ResolveStatModifiers(FilterBaseLevelByStatId(BuildBaseEffects_(), StatId_t::Drones), 0.0)
-            .total);
+        ResolveBaseStat(BuildBaseEffects_(), StatId_t::Drones, SeedFor(StatId_t::Drones)));
 }
 
 int BaseManager::GetTalentModifier() const
 {
-    return FinalizeResolvedStat(
-        ResolveStatModifiers(FilterBaseLevelByStatId(BuildBaseEffects_(), StatId_t::Talents), 0.0)
-            .total);
+    return FinalizeResolvedStat(ResolveBaseStat(BuildBaseEffects_(), StatId_t::Talents, 0.0));
 }
 
 BuildingManager& BaseManager::GetBuildingManager()

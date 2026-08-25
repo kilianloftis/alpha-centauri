@@ -21,8 +21,8 @@ struct DroneInputs_t
     int baseSize = 0;
     int factionBaseCount = 0;
     int garrisonCount = 0;
-    // Drones resolved with seed = baseSize (University MultiplyGeometric 1.25, Police Adds, …).
-    // Size free drones are subtracted after resolve so they are not scaled by geometric multipliers.
+    // Effect-only Drones contribution (SeedFor=0): BaseSize×amount Adds, flat Adds, etc.
+    // Size drones are max(0, base_size - size_free_drones) in drone_formula, not this field.
     int resolvedDrones = 0;
     int turnsSinceConquered = 0;
     // 0 duration / peak means the base is not assimilating (never captured, or the window ended).

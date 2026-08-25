@@ -434,7 +434,7 @@ TEST_CASE("Hurry spends treasury credits into the production stockpile",
     REQUIRE(pFacility != nullptr);
     REQUIRE(pFacility->GetConstructableKind() == ConstructableKind_t::Building);
 
-    pBase->GetProduction().SetProduction(pFacility);
+    pBase->GetProduction().SetProduction(pFacility, pBase->GetBaseEffects());
     REQUIRE(pBase->GetMineralCost() >= 1);
     pBase->GetProduction().SetMineralStockpile(0);
 
@@ -479,7 +479,7 @@ TEST_CASE("Hurry spends treasury credits into the production stockpile",
 
     SECTION("a stockpile cannot be hurried")
     {
-        pBase->GetProduction().SetProduction(nullptr);
+        pBase->GetProduction().SetProduction(nullptr, pBase->GetBaseEffects());
         REQUIRE(pBase->GetProduction().GetCurrentProduction() != nullptr);
         REQUIRE(pBase->GetProduction().GetCurrentProduction()->NeverCompletes());
         CHECK_FALSE(pBase->QuoteHurry().bAvailable);
@@ -494,7 +494,7 @@ TEST_CASE("Hurry spends treasury credits into the production stockpile",
         const BuildingConfig_t* pProject = fixtures.buildings().Find("test_secret_project");
         REQUIRE(pProject != nullptr);
         REQUIRE(pProject->GetConstructableKind() == ConstructableKind_t::SecretProject);
-        pBase->GetProduction().SetProduction(pProject);
+        pBase->GetProduction().SetProduction(pProject, pBase->GetBaseEffects());
         pBase->GetProduction().SetMineralStockpile(0);
         const HurryQuote_t projectQuote = pBase->QuoteHurry();
         CHECK(projectQuote.creditCost == 4 * projectQuote.billedMinerals);

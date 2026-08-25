@@ -192,7 +192,7 @@ TEST_CASE("Production abandon still presents when pause-on-event flags are off",
     }
 
     const UnitDesign& rPod = AddPodDesign_(harness.fixture);
-    rBase.GetProduction().SetProduction(&rPod);
+    rBase.GetProduction().SetProduction(&rPod, rBase.GetBaseEffects());
     rBase.GetProduction().SetMineralStockpile(rBase.GetMineralCost());
     REQUIRE(rBase.ApplyProduction().kind == ProductionApplyKind_t::AwaitingAbandonConfirm);
     REQUIRE(rBase.HasPendingProductionAbandonConfirm());

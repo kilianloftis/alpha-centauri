@@ -214,7 +214,12 @@ graph TB
   - `TileEffectsContext::CollectAreaEffects` / `ResolveTileYield` / `ResolveTileDefenseMultiplier` — gather own-tile and neighbor aura effects (Chebyshev scan).
   - `CanBuildImprovement(tile, candidate)` (`include/game/map/ImprovementConfigParser.h`) — exclusivity check (e.g. Farm excludes Rocky). Not wired into any UI yet; there's no improvement-construction flow to call it from.
 - **Configuration**: `config/improvements.json` — one array covering terrain values (`Flat`/`Rolling`/`Rocky`, `Arid`/`Moist`/`Wet`), natural features (`River`, `Fungus`), and improvements (`Farm`, `Mine`, `Bunker`, `Base`, `Sensor`, …).
-- **Combat bonus example**: `Rocky`, `Fungus`, and `Bunker` each grant a `StatModifier` effect on `StatId_t::Defense` with `op: AddPercent, amount: 25` (+25%, stacking additively per `ResolveStatModifiers`'s arithmetic-factor formula). `Base` grants a larger placeholder bonus the same way. No combat system exists yet to consume `ResolveTileDefenseMultiplier` — it's exposed as a ready-to-call resolver (takes a defending `FactionId` so territory-owned Sensor auras only apply for the owner).
+- **Combat bonus example**: `Rocky`, `Fungus`, and `Bunker` each grant a `StatModifier`
+  effect on `StatId_t::TileDefense` with `op: AddPercent, amount: 25` (+25%, stacking
+  additively per `ResolveStatModifiers`'s arithmetic-factor formula). `Base` grants a larger
+  placeholder bonus the same way. Combat folds `ResolveTileDefenseMultiplier` onto unit
+  `Defense` armor (takes a defending `FactionId` so territory-owned Sensor auras only apply
+  for the owner).
 - **Aura example**: `Sensor` declares `radius: 2` on its defense (and vision) effect entries and projects `+25%` defense to every tile within **Chebyshev** distance 2 — `AppendAreaEffectsFromNeighbors_` uses `ForEachTileInChebyshevRadius`. Prefer per-effect `"radius"` over the improvement-level default. `owned_by_territory: true` means only the faction that owns the Sensor's tile (via `TerritoryMap`) receives the aura and Sensor fog vision. `ResolveTileYield` / own-tile `CollectTileEffects` only look at a tile's own terrain features and improvements unless scanning neighbors for auras.
 
 ### Tile Bonuses (special resources)

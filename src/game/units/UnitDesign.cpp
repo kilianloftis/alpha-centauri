@@ -131,7 +131,7 @@ bool UnitDesign::IsAvailable(const std::vector<std::string>& rDiscoveredTechs) c
 
 std::vector<ActiveEffect_t> UnitDesign::CollectEffects() const
 {
-    return CollectUnitEffects(m_components);
+    return CollectUnitEffects(*this).effects;
 }
 
 int UnitDesign::GetBaseCost() const

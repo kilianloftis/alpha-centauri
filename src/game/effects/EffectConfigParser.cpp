@@ -34,6 +34,106 @@ void RequireScope_(EffectScope_t scope,
     throw std::runtime_error(rErrorMessage);
 }
 
+// Option A: amount_source legality is independent of DomainFor(stat). Subject domain is
+// what AmountSourceValue needs; allowed stats/scopes are per-source (Energy stays Base
+// while ElevationEnergySeed still requires a Tile subject at eval time).
+void ValidateAmountSourceLegality_(StatModifierEffect_t::AmountSource_t source,
+                                   StatId_t stat,
+                                   EffectScope_t scope,
+                                   EffectPersistence_t persistence,
+                                   double amount,
+                                   const std::string& rStatWire)
+{
+    switch (source)
+    {
+        case StatModifierEffect_t::AmountSource_t::ElevationEnergySeed:
+            // Required subject: Tile. Allowed: energy + ThisTile.
+            if (stat != StatId_t::Energy)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' ElevationEnergySeed is only valid on the energy "
+                    "stat, got '"
+                    + rStatWire + "'");
+            }
+            if (scope != EffectScope_t::ThisTile)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' ElevationEnergySeed requires scope ThisTile");
+            }
+            break;
+        case StatModifierEffect_t::AmountSource_t::MineralsConverted:
+            // Required subject: Stockpile conversion. Allowed: stockpile-output stats +
+            // ThisBase + Continuous (source-kind Stockpile checked in ValidateEffectForSource).
+            if (!IsStockpileOutputStat(stat))
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' MineralsConverted is only valid on a stockpile "
+                    "output stat (nutrients, energy, econ, labs, psych), got '"
+                    + rStatWire
+                    + "'. Minerals are the conversion input, so converting to them is a loop");
+            }
+            if (scope != EffectScope_t::ThisBase)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' MineralsConverted requires scope ThisBase");
+            }
+            if (persistence != EffectPersistence_t::Continuous)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' MineralsConverted requires persistence Continuous");
+            }
+            if (amount <= 0.0 || !std::isfinite(amount))
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' MineralsConverted requires amount > 0");
+            }
+            break;
+        case StatModifierEffect_t::AmountSource_t::BaseSize:
+            // Required subject: Base. Allowed on Base-domain stats with base/faction scopes.
+            if (DomainFor(stat) != ResolveDomain_t::Base)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' BaseSize is only valid on a Base-domain stat, got '"
+                    + rStatWire + "'");
+            }
+            if (scope != EffectScope_t::ThisBase
+                && scope != EffectScope_t::AllOwnerBases
+                && scope != EffectScope_t::FactionGlobal)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' BaseSize requires scope ThisBase, AllOwnerBases, "
+                    "or FactionGlobal");
+            }
+            if (!std::isfinite(amount))
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' BaseSize requires a finite amount (per-pop scale)");
+            }
+            break;
+        case StatModifierEffect_t::AmountSource_t::BasesOwned:
+            // Required subject: Faction. Allowed on Unit-domain stats with ThisUnit
+            // (weapon / chassis components that scale with empire size).
+            if (DomainFor(stat) != ResolveDomain_t::Unit)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' BasesOwned is only valid on a Unit-domain stat, got '"
+                    + rStatWire + "'");
+            }
+            if (scope != EffectScope_t::ThisUnit)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' BasesOwned requires scope ThisUnit");
+            }
+            if (!std::isfinite(amount))
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' BasesOwned requires a finite amount "
+                    "(per-base scale)");
+            }
+            break;
+    }
+}
+
 void ParseGrantBuilding_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
 {
     GrantBuildingEffect_t grantBuilding;
@@ -131,48 +231,9 @@ void ParseStatModifier_(const nlohmann::json& parameters, EffectConfig_t& rEffec
             ParseAmountSource(parameters.at("amount_source").get<std::string>());
         // amount is the per-source scale when amount_source is set (default 1).
         statModifier.amount = ParseNumber(parameters, "amount", 1.0);
-        switch (*statModifier.amountSource)
-        {
-        case StatModifierEffect_t::AmountSource_t::ElevationEnergySeed:
-            if (statModifier.stat != StatId_t::Energy)
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' ElevationEnergySeed is only valid on the energy "
-                    "stat, got '"
-                    + parameters.value("stat", "") + "'");
-            }
-            if (rEffect.scope != EffectScope_t::ThisTile)
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' ElevationEnergySeed requires scope ThisTile");
-            }
-            break;
-        case StatModifierEffect_t::AmountSource_t::MineralsConverted:
-            if (!IsStockpileOutputStat(statModifier.stat))
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' MineralsConverted is only valid on a stockpile "
-                    "output stat (nutrients, energy, econ, labs, psych), got '"
-                    + parameters.value("stat", "")
-                    + "'. Minerals are the conversion input, so converting to them is a loop");
-            }
-            if (rEffect.scope != EffectScope_t::ThisBase)
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' MineralsConverted requires scope ThisBase");
-            }
-            if (rEffect.persistence != EffectPersistence_t::Continuous)
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' MineralsConverted requires persistence Continuous");
-            }
-            if (statModifier.amount <= 0.0 || !std::isfinite(statModifier.amount))
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' MineralsConverted requires amount > 0");
-            }
-            break;
-        }
+        ValidateAmountSourceLegality_(*statModifier.amountSource, statModifier.stat, rEffect.scope,
+                                      rEffect.persistence, statModifier.amount,
+                                      parameters.value("stat", ""));
     }
     else
     {
@@ -196,6 +257,16 @@ void ParseStatModifier_(const nlohmann::json& parameters, EffectConfig_t& rEffec
         {
             throw std::runtime_error(
                 "StatModifier 'amount_source' MineralsConverted cannot carry a tile selector");
+        }
+        if (statModifier.amountSource == StatModifierEffect_t::AmountSource_t::BaseSize)
+        {
+            throw std::runtime_error(
+                "StatModifier 'amount_source' BaseSize cannot carry a tile selector");
+        }
+        if (statModifier.amountSource == StatModifierEffect_t::AmountSource_t::BasesOwned)
+        {
+            throw std::runtime_error(
+                "StatModifier 'amount_source' BasesOwned cannot carry a tile selector");
         }
     }
     statModifier.applyAfterRestriction = parameters.value("apply_after_restriction", false);

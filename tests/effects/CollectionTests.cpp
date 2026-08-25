@@ -8,9 +8,13 @@
 #include "game/map/Tile.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
 #include "game/units/UnitComponentConfig.h"
+#include "game/units/UnitDesign.h"
+#include "game/units/UnitSlotConfig.h"
 #include "game/effects/ActiveEffect.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <unordered_map>
+#include <vector>
 
 using namespace ac;
 
@@ -76,31 +80,46 @@ TEST_CASE("AppendActiveEffects: originBase follows TagsOriginBase", "[effects][c
     CHECK(out[5].originBase == nullptr);   // ThisPop (PopLocal)
 }
 
-TEST_CASE("CollectUnitEffects: gathers component effects, tagged with the component id",
+TEST_CASE("CollectUnitEffects: gathers design component effects, tagged with the component id",
           "[effects][collect][unit]")
 {
     actest::EffectPool pool;
 
     UnitComponentConfig_t weapon;
     weapon.id = "laser";
+    weapon.type = "weapon";
     weapon.effects = {pool.StatMod(StatId_t::Attack, 4.0, ModifierOp_t::Add, EffectScope_t::ThisUnit)};
 
     UnitComponentConfig_t chassis;
     chassis.id = "speeder";
+    chassis.type = "chassis";
     chassis.effects = {
         pool.StatMod(StatId_t::Movement, 2.0, ModifierOp_t::Add, EffectScope_t::ThisUnit),
         pool.StatMod(StatId_t::Attack, 25.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit,
                      std::nullopt, std::nullopt, EffectPersistence_t::Instantaneous),
     };
 
-    const std::vector<const UnitComponentConfig_t*> components = {&weapon, nullptr, &chassis};
-    const std::vector<ActiveEffect_t> effects = CollectUnitEffects(components);
+    const std::vector<UnitSlotConfig_t> slots = {
+        {.id = "weapon", .displayName = "Weapon", .componentType = "weapon", .required = true},
+        {.id = "chassis", .displayName = "Chassis", .componentType = "chassis", .required = true},
+        {.id = "empty", .displayName = "Empty", .componentType = "ability", .required = false},
+    };
+    const std::unordered_map<std::string, const UnitComponentConfig_t*> components = {
+        {"weapon", &weapon},
+        {"chassis", &chassis},
+        {"empty", nullptr},
+    };
+    const UnitDesign design(slots, components);
+    const UnitEffects_t unitEffects = CollectUnitEffects(design);
+    const std::vector<ActiveEffect_t>& effects = unitEffects.effects;
 
     // Null components are skipped, Instantaneous effects are skipped.
     REQUIRE(effects.size() == 2);
     CHECK(effects[0].sourceId == "laser");
     CHECK(effects[1].sourceId == "speeder");
     CHECK(effects[0].originBase == nullptr);
+    CHECK(unitEffects.pDesign == &design);
+    CHECK(unitEffects.pUnit == nullptr);
 }
 
 TEST_CASE("CollectPopEffects: gathers all scopes of a pop type's effects, tagged with the type id",

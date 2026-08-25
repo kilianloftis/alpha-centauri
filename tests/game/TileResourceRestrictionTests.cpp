@@ -31,14 +31,15 @@ ActiveEffect_t CapEffect_(actest::EffectPool& rPool, StatId_t stat, int max)
 TEST_CASE("ResolveTileYield: absent TileResourceCap leaves yield uncapped",
           "[resources][restrictions]")
 {
-    actest::WorldFixture world;
-    Tile& tile = world.At(4, 4);
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(1, 1);
+    Tile& tile = fixture.At(4, 4);
     tile.SetBaseMoisture(Moisture_t::Wet);
     tile.SetMoisture(Moisture_t::Wet);
-    world.ctx->AddImprovementWithEffects(tile, "Farm"); // Wet+2 Farm+1 = 3
+    fixture.ctx->AddImprovementWithEffects(tile, "Farm"); // Wet+2 Farm+1 = 3
 
-    const BaseEffects_t noCaps;
-    const TileYieldView_t yield = world.ctx->ResolveTileYield(tile, false, noCaps);
+    const BaseEffects_t noCaps{base};
+    const TileYieldView_t yield = fixture.ctx->ResolveTileYield(tile, false, noCaps);
     CHECK(yield.effective.nutrients == 3);
     CHECK(yield.potential.nutrients == 3);
 }
@@ -46,15 +47,16 @@ TEST_CASE("ResolveTileYield: absent TileResourceCap leaves yield uncapped",
 TEST_CASE("ResolveTileYield: TileResourceCap clamps the pre-restriction lane",
           "[resources][restrictions]")
 {
-    actest::WorldFixture world;
-    Tile& tile = world.At(4, 4);
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(1, 1);
+    Tile& tile = fixture.At(4, 4);
     tile.SetBaseMoisture(Moisture_t::Wet);
     tile.SetMoisture(Moisture_t::Wet);
-    world.ctx->AddImprovementWithEffects(tile, "Farm");
+    fixture.ctx->AddImprovementWithEffects(tile, "Farm");
 
     actest::EffectPool pool;
-    BaseEffects_t caps{{CapEffect_(pool, StatId_t::Nutrients, 2)}};
-    const TileYieldView_t yield = world.ctx->ResolveTileYield(tile, false, caps);
+    BaseEffects_t caps{base, {CapEffect_(pool, StatId_t::Nutrients, 2)}};
+    const TileYieldView_t yield = fixture.ctx->ResolveTileYield(tile, false, caps);
     CHECK(yield.effective.nutrients == 2);
     CHECK(yield.potential.nutrients == 3);
 }
@@ -62,16 +64,17 @@ TEST_CASE("ResolveTileYield: TileResourceCap clamps the pre-restriction lane",
 TEST_CASE("ResolveTileYield: apply_after_restriction bonuses bypass the cap",
           "[resources][restrictions]")
 {
-    actest::WorldFixture world;
-    Tile& tile = world.At(4, 4);
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(1, 1);
+    Tile& tile = fixture.At(4, 4);
     tile.SetBaseMoisture(Moisture_t::Wet);
     tile.SetMoisture(Moisture_t::Wet);
-    world.ctx->AddImprovementWithEffects(tile, "Farm");
-    world.ctx->AddImprovementWithEffects(tile, "Nutrients"); // +2 after restriction
+    fixture.ctx->AddImprovementWithEffects(tile, "Farm");
+    fixture.ctx->AddImprovementWithEffects(tile, "Nutrients"); // +2 after restriction
 
     actest::EffectPool pool;
-    BaseEffects_t caps{{CapEffect_(pool, StatId_t::Nutrients, 2)}};
-    const TileYieldView_t yield = world.ctx->ResolveTileYield(tile, false, caps);
+    BaseEffects_t caps{base, {CapEffect_(pool, StatId_t::Nutrients, 2)}};
+    const TileYieldView_t yield = fixture.ctx->ResolveTileYield(tile, false, caps);
     // min(Wet+Farm=3, 2) + Nutrients 2 = 4
     CHECK(yield.effective.nutrients == 4);
     CHECK(yield.potential.nutrients == 5);

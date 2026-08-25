@@ -116,13 +116,9 @@ void ResearchManager::ComputePointsNeeded_() const
     {
         const FactionEffects_t& rFactionEffects = m_pEffectsProvider->GetActiveEffects();
         inputs.factionTechCostModifier = FinalizeResolvedStat(
-            ResolveStatModifiers(FilterByStatId(rFactionEffects.effects, StatId_t::TechCost),
-                                 SeedFor(StatId_t::TechCost))
-                .total);
-        inputs.diff = FinalizeResolvedStat(
-            ResolveStatModifiers(FilterByStatId(rFactionEffects.effects, StatId_t::TechCostDiff),
-                                 SeedFor(StatId_t::TechCostDiff))
-                .total);
+            ResolveFactionStat(rFactionEffects, StatId_t::TechCost, SeedFor(StatId_t::TechCost)));
+        inputs.diff = FinalizeResolvedStat(ResolveFactionStat(
+            rFactionEffects, StatId_t::TechCostDiff, SeedFor(StatId_t::TechCostDiff)));
         m_costEffectsVersion = m_pEffectsProvider->GetEffectsVersion();
     }
     else

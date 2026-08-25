@@ -232,7 +232,7 @@ TEST_CASE("Base transfer changes ownership", "[diplomacy][executor]")
     pBase->GetBuildingManager().AddBuilding("flat_nutrient");
     pBase->GetPopulation().SetNutrientStockpile(17);
     pBase->GetProduction().SetProduction(
-        &game.fixtures.dataContext.buildingRegistry->Get("farm_booster"));
+        &game.fixtures.dataContext.buildingRegistry->Get("farm_booster"), pBase->GetBaseEffects());
     pBase->GetProduction().SetMineralStockpile(9);
     REQUIRE(game.pPlayer->GetBaseCount() == 1);
     REQUIRE(game.pAi->GetBaseCount() == 0);

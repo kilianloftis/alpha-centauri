@@ -22,7 +22,7 @@ namespace
 template <typename Fn>
 void ForEachTransportParams_(const Unit& rCarrier, Fn&& rFn)
 {
-    for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rCarrier))
+    for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rCarrier).effects)
     {
         const auto* pParams = std::get_if<TransportParamsEffect_t>(&rEffect.config->effect);
         if (pParams)

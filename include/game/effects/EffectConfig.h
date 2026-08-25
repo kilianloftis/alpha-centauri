@@ -89,15 +89,21 @@ struct StatModifierEffect_t
     ModifierOp_t op = ModifierOp_t::Add;
     // When set, `amount` scales a runtime value instead of being a literal add.
     // ElevationEnergySeed: contribution = GetElevationEnergySeed() * amount (per-band scale).
-    //   Requires EffectContext_t::targetTile; energy + ThisTile only.
+    //   Requires EffectContext_t::targetTile; energy + ThisTile only. Not in FilterBaseLevel.
     // MineralsConverted: contribution = mineralsConverted * amount (output per mineral).
     //   Requires EffectContext_t::mineralsConverted; stockpile-output stats + ThisBase only.
-    // Excluded from context-free filters; MineralsConverted is resolved only during
-    // stockpile conversion, not FilterBaseLevelByStatId.
+    //   Resolved only during stockpile conversion, not FilterBaseLevelByStatId.
+    // BaseSize: contribution = base population size * amount (e.g. University drones 0.25).
+    //   Requires EffectContext_t::pBase; included in FilterBaseLevelByStatId when pBase is set.
+    // BasesOwned: contribution = faction base count * amount (e.g. +1 Attack per owned base).
+    //   Requires EffectContext_t::pFaction (stamped from the live unit on Unit resolve);
+    //   Unit-domain stats + ThisUnit only. Design-only resolve drops it (no faction subject).
     enum class AmountSource_t
     {
         ElevationEnergySeed,
         MineralsConverted,
+        BaseSize,
+        BasesOwned,
     };
     std::optional<AmountSource_t> amountSource;
     // When set, this modifier is a per-tile yield modifier: it applies to each worked tile

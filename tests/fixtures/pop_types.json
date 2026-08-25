@@ -8,7 +8,8 @@
     "can_work_tile": true,
     "player_assignable": true,
     "obsoletes": [],
-    "effects": []
+    "effects": [],
+    "fallback_pop_type": "Doctor"
   },
   {
     "id": "Drone",
@@ -18,7 +19,8 @@
     "can_work_tile": true,
     "player_assignable": false,
     "obsoletes": [],
-    "effects": []
+    "effects": [],
+    "fallback_pop_type": "Doctor"
   },
   {
     "id": "SuperDrone",
@@ -29,7 +31,8 @@
     "player_assignable": false,
     "riot_contribution": 2,
     "obsoletes": [],
-    "effects": []
+    "effects": [],
+    "fallback_pop_type": "Doctor"
   },
   {
     "id": "Talent",
@@ -39,7 +42,8 @@
     "can_work_tile": true,
     "player_assignable": false,
     "obsoletes": [],
-    "effects": []
+    "effects": [],
+    "fallback_pop_type": "Doctor"
   },
   {
     "id": "Doctor",
@@ -50,7 +54,15 @@
     "player_assignable": true,
     "obsoletes": [],
     "effects": [
-      { "type": "StatModifier", "scope": "ThisBase", "parameters": { "stat": "psych", "amount": 2, "op": "Add" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "psych",
+          "amount": 2,
+          "op": "Add"
+        }
+      }
     ]
   },
   {
@@ -62,8 +74,17 @@
     "player_assignable": true,
     "obsoletes": [],
     "effects": [
-      { "type": "StatModifier", "scope": "ThisBase", "parameters": { "stat": "econ", "amount": 3, "op": "Add" } }
-    ]
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "econ",
+          "amount": 3,
+          "op": "Add"
+        }
+      }
+    ],
+    "fallback_pop_type": "Doctor"
   },
   {
     "id": "Networker",
@@ -74,20 +95,36 @@
     "player_assignable": true,
     "obsoletes": [],
     "effects": [
-      { "type": "StatModifier", "scope": "FactionGlobal", "parameters": { "stat": "labs", "amount": 1 } }
-    ]
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "labs",
+          "amount": 1
+        }
+      }
+    ],
+    "fallback_pop_type": "Doctor"
   },
   {
     "id": "MoraleOfficer",
-    "name": "Morale Officer (+1 Morale rating, FactionGlobal — faction-lane rating source)",
+    "name": "Morale Officer (+1 Morale rating, FactionGlobal \u2014 faction-lane rating source)",
     "role": "specialist",
     "display_glyph": "M",
     "can_work_tile": false,
     "player_assignable": true,
     "obsoletes": [],
     "effects": [
-      { "type": "SocialRatingModifier", "scope": "FactionGlobal", "parameters": { "rating": "morale", "amount": 1 } }
-    ]
+      {
+        "type": "SocialRatingModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "rating": "morale",
+          "amount": 1
+        }
+      }
+    ],
+    "fallback_pop_type": "Doctor"
   },
   {
     "id": "FungalFarmer",
@@ -98,9 +135,26 @@
     "player_assignable": true,
     "obsoletes": [],
     "effects": [
-      { "type": "StatModifier", "scope": "ThisPop", "parameters": { "stat": "nutrients", "amount": 50, "op": "AddPercent" } },
-      { "type": "StatModifier", "scope": "ThisBase", "parameters": { "stat": "econ", "amount": 1, "op": "Add" } }
-    ]
+      {
+        "type": "StatModifier",
+        "scope": "ThisPop",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 50,
+          "op": "AddPercent"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "econ",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
+    "fallback_pop_type": "Doctor"
   },
   {
     "id": "NutrientHand",
@@ -111,7 +165,16 @@
     "player_assignable": true,
     "obsoletes": [],
     "effects": [
-      { "type": "StatModifier", "scope": "ThisPop", "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" } }
-    ]
+      {
+        "type": "StatModifier",
+        "scope": "ThisPop",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
+    "fallback_pop_type": "Doctor"
   }
 ]

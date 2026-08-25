@@ -25,9 +25,11 @@ TEST_CASE("GrowthRate <= 0 blocks nutrient-threshold growth instead of silently 
     GrowthConfig_t config;
     config.nutrientsPerPop = 10;
 
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(4, 4);
     actest::EffectPool pool;
     // -100% on the 100 baseline → GrowthRate 0.
-    BaseEffects_t effects{{
+    BaseEffects_t effects{base, {
         Active(pool.StatMod(StatId_t::GrowthRate, -100.0, ModifierOp_t::AddPercent), "crush"),
     }};
 
@@ -47,7 +49,7 @@ TEST_CASE("ApplyGrowth banks nutrients at max size instead of spending them on a
     REQUIRE(rPopulation.GetSize() == 3);
     REQUIRE_FALSE(rPopulation.CanGrow());
 
-    rPopulation.ApplyGrowth(/*nutrients*/ 100, {});
+    rPopulation.ApplyGrowth(/*nutrients*/ 100, BaseEffects_t{base});
 
     CHECK(rPopulation.GetNutrientStockpile() == 100);
     CHECK(rPopulation.GetSize() == 3);
@@ -82,7 +84,7 @@ TEST_CASE("ApplyGrowth spends the threshold and grows when under the cap", "[pop
     REQUIRE(rPopulation.GetSize() == 3);
 
     // Threshold = 3 * 10 = 30 at GrowthRate 100%.
-    rPopulation.ApplyGrowth(/*nutrients*/ 30, {});
+    rPopulation.ApplyGrowth(/*nutrients*/ 30, BaseEffects_t{base});
     CHECK(rPopulation.GetSize() == 4);
     CHECK(rPopulation.GetNutrientStockpile() == 0);
 }
@@ -148,7 +150,7 @@ TEST_CASE("A base that has already lost its last pop does not starve further",
         rPopulation.RemovePop();
     }
 
-    CHECK_NOTHROW(rPopulation.ApplyGrowth(-10, {}));
+    CHECK_NOTHROW(rPopulation.ApplyGrowth(-10, BaseEffects_t{rBase}));
     CHECK(rPopulation.GetSize() == 0);
 }
 

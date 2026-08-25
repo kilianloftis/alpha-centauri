@@ -29,6 +29,9 @@ enum class StatId_t
     // Unit stats
     Attack,
     Defense,
+    // Tile defense multiplier (terrain / sensors / bunkers). Distinct quantity from unit
+    // Defense armor — combat folds ResolveTileDefenseMultiplier on top of unit Defense.
+    TileDefense,
     Movement,
     Vision,
     HitPoints,
@@ -233,7 +236,8 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::ProbeSuccessScale:
         case StatId_t::PositiveMoraleScale:
         case StatId_t::CommerceRate:
-        case StatId_t::Bureaucracy:          return StatKind_t::PureMultiplier;
+        case StatId_t::Bureaucracy:
+        case StatId_t::TileDefense:          return StatKind_t::PureMultiplier;
         case StatId_t::GrowthRate:
         case StatId_t::MoistureTier:
         case StatId_t::FacilityEnergyUpkeep:
@@ -246,8 +250,8 @@ constexpr StatKind_t KindFor(StatId_t stat)
 // The ResolveStatModifiers seed for a context-free resolve of `stat`: 0.0 for Additive,
 // 1.0 for PureMultiplier. RawScaled stats throw — their resolve site passes the raw value
 // being scaled instead. A site that deliberately resolves an Additive stat against a raw
-// base (tile yield's elevation energy seed, pop tile multipliers, the tile defense
-// multiplier) also passes its seed explicitly rather than calling this.
+// base (tile yield's elevation energy seed, pop tile multipliers, ResourceManager worked
+// totals) also passes its seed explicitly rather than calling this.
 constexpr double SeedFor(StatId_t stat)
 {
     switch (KindFor(stat))
@@ -258,6 +262,87 @@ constexpr double SeedFor(StatId_t stat)
             throw std::logic_error("SeedFor: RawScaled stat has no universal seed - pass the raw value it scales");
     }
     return 0.0; // unreachable; all enumerators handled above
+}
+
+// Consumer-side subject for typed resolve / amount_source evaluation — distinct from
+// EffectLane_t / LaneFor (producer routing). DomainFor is which subject resolves the
+// number, not which single effect list may contribute: sources may still emit from any
+// pool; the consumer assembles applicable lists then resolves under one subject.
+enum class ResolveDomain_t
+{
+    Base,
+    Faction,
+    Unit,
+    Tile,
+    // Amount-source subject for MineralsConverted (stockpile conversion event). No StatId
+    // uses DomainFor → Stockpile; resource stats stay Base.
+    Stockpile,
+};
+
+constexpr ResolveDomain_t DomainFor(StatId_t stat)
+{
+    switch (stat)
+    {
+        case StatId_t::Nutrients:
+        case StatId_t::Minerals:
+        case StatId_t::Energy:
+        case StatId_t::EnergyCredits:
+        case StatId_t::Econ:
+        case StatId_t::Labs:
+        case StatId_t::Psych:
+        case StatId_t::Drones:
+        case StatId_t::Talents:
+        case StatId_t::SizeFreeDrones:
+        case StatId_t::FreeUnitSupport:
+        case StatId_t::MaxPolice:
+        case StatId_t::CostMultiplier:
+        case StatId_t::PrototypeSurchargeScale:
+        case StatId_t::RetoolPenaltyScale:
+        case StatId_t::FacilityEnergyUpkeep:
+        case StatId_t::ProbeActionCost:
+        case StatId_t::ProbeDefense:
+        case StatId_t::ProbeSuccessScale:
+        case StatId_t::StartingMinerals:
+        case StatId_t::GrowthRate:
+        case StatId_t::Bureaucracy:
+        case StatId_t::CommerceEnergyBonus:
+        case StatId_t::InefficiencyDenominator:
+        case StatId_t::ScrapRefund:
+        case StatId_t::LastDefenderPopLoss:
+        case StatId_t::CaptureFacilitiesDestroyedMin:
+        case StatId_t::CaptureFacilitiesDestroyedMaxPercent:
+        case StatId_t::CapturePopLoss:
+        case StatId_t::ConqueredDroneCap:
+        case StatId_t::EcologicalDamage: return ResolveDomain_t::Base;
+
+        case StatId_t::TechCost:
+        case StatId_t::TechCostDiff:
+        case StatId_t::CommerceRate:
+        case StatId_t::CouncilVotes: return ResolveDomain_t::Faction;
+
+        case StatId_t::Attack:
+        case StatId_t::Defense:
+        case StatId_t::Movement:
+        case StatId_t::Vision:
+        case StatId_t::HitPoints:
+        case StatId_t::PsiDamage:
+        case StatId_t::DisengageChance:
+        case StatId_t::TurnsOfFuel:
+        case StatId_t::DamageFromOutOfFuel:
+        case StatId_t::CargoCapacity:
+        case StatId_t::DifficultTerrainCost:
+        case StatId_t::MineralUpkeep:
+        case StatId_t::PoliceEffectiveness:
+        case StatId_t::AwayFromHomeDrones:
+        case StatId_t::ProbeFailureScale:
+        case StatId_t::StartingExperience:
+        case StatId_t::MoraleBonus:
+        case StatId_t::PositiveMoraleScale: return ResolveDomain_t::Unit;
+
+        case StatId_t::MoistureTier:
+        case StatId_t::TileDefense: return ResolveDomain_t::Tile;
+    }
+    return ResolveDomain_t::Base; // unreachable; all enumerators handled above
 }
 
 // Snake_case JSON wire form differs from enumerator names — one explicit map next to the enum.
@@ -275,6 +360,7 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "size_free_drones")        return StatId_t::SizeFreeDrones;
     if (rStat == "attack")                  return StatId_t::Attack;
     if (rStat == "defense")                 return StatId_t::Defense;
+    if (rStat == "tile_defense")            return StatId_t::TileDefense;
     if (rStat == "movement")                return StatId_t::Movement;
     if (rStat == "vision")                  return StatId_t::Vision;
     if (rStat == "hit_points")              return StatId_t::HitPoints;
@@ -464,7 +550,8 @@ enum class EffectScope_t
     ThisPop,
     // Only the specific tile the effect belongs to (terrain classification, river, fungus,
     // or improvement). Resolved locally via CollectTileEffects/ResolveTileYield/
-    // ResolveTileDefenseMultiplier and must never enter the base-wide active effects pool.
+    // ResolveTileDefenseMultiplier (TileDefense) and must never enter the base-wide
+    // active effects pool.
     ThisTile,
     // Units produced at the originating base (Unit::GetProducedAtBase). Distinct from home
     // base and from FactionUnits: train-at-this-base bonuses (Command Center, Aerospace).

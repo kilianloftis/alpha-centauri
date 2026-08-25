@@ -119,7 +119,7 @@ TEST_CASE("Defense floor keeps defender at Green", "[morale]")
     CHECK(morale.EffectiveMoraleLevel(unit, defCtx) == 1);
 }
 
-TEST_CASE("ResolveCombatStat applies morale AddPercent", "[morale][combat]")
+TEST_CASE("ResolveCombatUnitStat applies morale AddPercent", "[morale][combat]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
@@ -129,7 +129,8 @@ TEST_CASE("ResolveCombatStat applies morale AddPercent", "[morale][combat]")
     const EffectContext_t ctx{&unit.GetTile(), CombatRole_t::Attacker};
 
     const int baseAttack = ResolveStat(unit, StatId_t::Attack, ctx);
-    const int combatAttack = morale.ResolveCombatStat(unit, StatId_t::Attack, ctx);
+    const int combatAttack = ResolveCombatUnitStat(
+        unit, StatId_t::Attack, ctx, morale.CombatMoraleAddPercent(unit, ctx));
     CHECK(combatAttack == static_cast<int>(std::lround(baseAttack * 1.25)));
 }
 

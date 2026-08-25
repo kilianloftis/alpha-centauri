@@ -20,7 +20,7 @@ namespace
 
 double UnitAwayWeight_(const Unit& rUnit)
 {
-    const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects(rUnit);
+    const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects(rUnit).effects;
     return ResolveStatModifiersTotal(
         FilterByStatId(effects, StatId_t::AwayFromHomeDrones),
         SeedFor(StatId_t::AwayFromHomeDrones));

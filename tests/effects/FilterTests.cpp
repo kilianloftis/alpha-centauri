@@ -6,16 +6,19 @@
 #include "GameFixtures.h"
 #include "TestHelpers.h"
 
+#include "game/faction/base/population/PopulationManager.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/Tile.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <ranges>
 
 using namespace ac;
 using actest::Active;
+using Catch::Approx;
 
 TEST_CASE("FilterByStatId: keeps only StatModifiers targeting the requested stat", "[effects][filter]")
 {
@@ -62,8 +65,10 @@ TEST_CASE("FilterByStatId: excludes condition-carrying effects from context-free
 TEST_CASE("FilterBaseLevelByStatId: excludes both selector-carrying and condition-carrying modifiers",
           "[effects][filter]")
 {
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(4, 4);
     actest::EffectPool pool;
-    const BaseEffects_t baseEffects{{
+    const BaseEffects_t baseEffects{base, {
         Active(pool.StatMod(StatId_t::Nutrients, 2.0), "flat"),
         Active(pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
                             actest::ImprovementSelector("Farm")), "per_tile"),
@@ -79,8 +84,14 @@ TEST_CASE("FilterBaseLevelByStatId: excludes both selector-carrying and conditio
 TEST_CASE("FilterBaseLevelByStatId with context includes satisfied conditions",
           "[effects][filter][condition]")
 {
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& hq = fixture.MakeFactionBase(faction, 2, 2);
+    hq.GetBuildingManager().AddBuilding("Headquarters");
+    BaseManager& remote = fixture.MakeFactionBase(faction, 6, 6);
+
     actest::EffectPool pool;
-    const BaseEffects_t baseEffects{{
+    const BaseEffects_t baseEffects{hq, {
         Active(pool.StatMod(StatId_t::Energy, -1.0, ModifierOp_t::Add, EffectScope_t::AllOwnerBases,
                             std::nullopt, IsHeadquarters_t{}), "hq_only"),
         Active(pool.StatMod(StatId_t::Energy, 2.0), "flat"),
@@ -88,12 +99,6 @@ TEST_CASE("FilterBaseLevelByStatId with context includes satisfied conditions",
 
     // Without context: HQ-gated modifier stays out of base-level resolution.
     CHECK(std::ranges::distance(FilterBaseLevelByStatId(baseEffects, StatId_t::Energy)) == 1);
-
-    actest::FactionFixture fixture;
-    Faction& faction = fixture.MakeFaction();
-    BaseManager& hq = fixture.MakeFactionBase(faction, 2, 2);
-    hq.GetBuildingManager().AddBuilding("Headquarters");
-    BaseManager& remote = fixture.MakeFactionBase(faction, 6, 6);
 
     const EffectContext_t hqCtx{.pBase = &hq};
     const auto hqMatching = actest::Materialize(
@@ -115,6 +120,8 @@ TEST_CASE("FilterBaseLevelByStatId with context includes satisfied conditions",
 TEST_CASE("FilterBaseLevelByStatId excludes MineralsConverted",
           "[effects][filter][amount_source]")
 {
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(4, 4);
     actest::EffectPool pool;
     StatModifierEffect_t converted;
     converted.stat = StatId_t::Energy;
@@ -126,7 +133,7 @@ TEST_CASE("FilterBaseLevelByStatId excludes MineralsConverted",
     convertedConfig.scope = EffectScope_t::ThisBase;
     convertedConfig.persistence = EffectPersistence_t::Continuous;
 
-    const BaseEffects_t baseEffects{{
+    const BaseEffects_t baseEffects{base, {
         Active(pool.StatMod(StatId_t::Energy, 2.0), "flat"),
         Active(pool.Add(std::move(convertedConfig)), "converted"),
     }};
@@ -135,6 +142,144 @@ TEST_CASE("FilterBaseLevelByStatId excludes MineralsConverted",
         actest::Materialize(FilterBaseLevelByStatId(baseEffects, StatId_t::Energy));
     REQUIRE(baseLevel.size() == 1);
     CHECK(baseLevel[0].sourceId == "flat");
+}
+
+TEST_CASE("FilterBaseLevelByStatId includes BaseSize when pBase is set",
+          "[effects][filter][amount_source]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(4, 4);
+
+    actest::EffectPool pool;
+    StatModifierEffect_t baseSize;
+    baseSize.stat = StatId_t::Drones;
+    baseSize.amount = 0.25;
+    baseSize.op = ModifierOp_t::Add;
+    baseSize.amountSource = StatModifierEffect_t::AmountSource_t::BaseSize;
+    EffectConfig_t baseSizeConfig;
+    baseSizeConfig.effect = baseSize;
+    baseSizeConfig.scope = EffectScope_t::ThisBase;
+    baseSizeConfig.persistence = EffectPersistence_t::Continuous;
+
+    const BaseEffects_t baseEffects{base, {
+        Active(pool.StatMod(StatId_t::Drones, -2.0), "commons"),
+        Active(pool.Add(std::move(baseSizeConfig)), "university"),
+    }};
+
+    // Bundle subject makes BaseSize eligible without a separate pCtx.
+    CHECK(std::ranges::distance(FilterBaseLevelByStatId(baseEffects, StatId_t::Drones)) == 2);
+
+    const EffectContext_t ctx{.pBase = &base};
+    const std::vector<ActiveEffect_t> withBase =
+        actest::Materialize(FilterBaseLevelByStatId(baseEffects, StatId_t::Drones, &ctx));
+    REQUIRE(withBase.size() == 2);
+}
+
+TEST_CASE("ResolveBaseStat: University BaseSize floors per source then stacks with Commons",
+          "[effects][amount_source][drones]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(4, 4);
+    base.GetPopulation().SetMaxSize(16);
+    while (base.GetPopulation().GetSize() < 13)
+    {
+        base.GetPopulation().AddPop();
+    }
+    REQUIRE(base.GetPopulation().GetSize() == 13);
+
+    actest::EffectPool pool;
+    StatModifierEffect_t baseSize;
+    baseSize.stat = StatId_t::Drones;
+    baseSize.amount = 0.25;
+    baseSize.op = ModifierOp_t::Add;
+    baseSize.amountSource = StatModifierEffect_t::AmountSource_t::BaseSize;
+    EffectConfig_t baseSizeConfig;
+    baseSizeConfig.effect = baseSize;
+    baseSizeConfig.scope = EffectScope_t::ThisBase;
+    baseSizeConfig.persistence = EffectPersistence_t::Continuous;
+
+    const BaseEffects_t baseEffects{base, {
+        Active(pool.StatMod(StatId_t::Drones, -2.0), "commons"),
+        Active(pool.Add(std::move(baseSizeConfig)), "university"),
+    }};
+
+    // floor(13×0.25)=3, plus Commons −2 → 1 (vanilla per-source floor).
+    CHECK(FinalizeResolvedStat(
+              ResolveBaseStat(baseEffects, StatId_t::Drones, SeedFor(StatId_t::Drones)))
+          == 1);
+}
+
+TEST_CASE("ResolveBaseStat: BaseSize evaluates on GrowthRate without a wired call-site ctx",
+          "[effects][amount_source][drop_in]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(4, 4);
+    // Default size is typically 1; floor(1×10)=10 AddPercent-scale amount as RawScaled seed 100.
+    actest::EffectPool pool;
+    StatModifierEffect_t baseSize;
+    baseSize.stat = StatId_t::GrowthRate;
+    baseSize.amount = 10.0;
+    baseSize.op = ModifierOp_t::Add;
+    baseSize.amountSource = StatModifierEffect_t::AmountSource_t::BaseSize;
+    EffectConfig_t baseSizeConfig;
+    baseSizeConfig.effect = baseSize;
+    baseSizeConfig.scope = EffectScope_t::ThisBase;
+    baseSizeConfig.persistence = EffectPersistence_t::Continuous;
+
+    const BaseEffects_t baseEffects{base, {
+        Active(pool.Add(std::move(baseSizeConfig)), "size_growth"),
+    }};
+
+    const int size = base.GetPopulation().GetSize();
+    CHECK(ResolveBaseStat(baseEffects, StatId_t::GrowthRate, 100.0)
+          == Approx(100.0 + static_cast<double>(size) * 10.0));
+}
+
+TEST_CASE("AmountSourceValue: missing BaseSize subject throws",
+          "[effects][amount_source]")
+{
+    StatModifierEffect_t mod;
+    mod.stat = StatId_t::Drones;
+    mod.amount = 0.25;
+    mod.op = ModifierOp_t::Add;
+    mod.amountSource = StatModifierEffect_t::AmountSource_t::BaseSize;
+    CHECK_THROWS_AS(AmountSourceValue(mod, nullptr), std::runtime_error);
+    EffectContext_t empty{};
+    CHECK_THROWS_AS(AmountSourceValue(mod, &empty), std::runtime_error);
+}
+
+TEST_CASE("AmountSourceValue: missing BasesOwned subject throws",
+          "[effects][amount_source]")
+{
+    StatModifierEffect_t mod;
+    mod.stat = StatId_t::Attack;
+    mod.amount = 1.0;
+    mod.op = ModifierOp_t::Add;
+    mod.amountSource = StatModifierEffect_t::AmountSource_t::BasesOwned;
+    CHECK_THROWS_AS(AmountSourceValue(mod, nullptr), std::runtime_error);
+    EffectContext_t empty{};
+    CHECK_THROWS_AS(AmountSourceValue(mod, &empty), std::runtime_error);
+}
+
+TEST_CASE("BasesOwned: Empire Pulse Attack scales with owned base count",
+          "[effects][amount_source][unit]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis", "test_empire_pulse"});
+
+    // Flat +1 Attack; BasesOwned contribution is 0 with no bases.
+    CHECK(unit.GetStat(StatId_t::Attack) == 1);
+    // Design-only resolve has no faction subject, so BasesOwned is dropped.
+    CHECK(ResolveStat(unit.GetDesign(), StatId_t::Attack) == 1);
+
+    fixture.MakeFactionBase(faction, 2, 2);
+    CHECK(faction.GetBaseCount() == 1);
+    CHECK(unit.GetStat(StatId_t::Attack) == 2);
+
+    fixture.MakeFactionBase(faction, 6, 6);
+    CHECK(faction.GetBaseCount() == 2);
+    CHECK(unit.GetStat(StatId_t::Attack) == 3);
 }
 
 TEST_CASE("ConditionSatisfied: no condition always applies", "[effects][condition]")

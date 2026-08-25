@@ -112,6 +112,7 @@ static_assert(KindFor(StatId_t::Drones) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Talents) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Attack) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Defense) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::TileDefense) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::Movement) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Vision) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::HitPoints) == StatKind_t::Additive);
@@ -164,6 +165,22 @@ static_assert(SeedFor(StatId_t::Attack) == 0.0);
 static_assert(SeedFor(StatId_t::CostMultiplier) == 1.0);
 static_assert(SeedFor(StatId_t::PrototypeSurchargeScale) == 1.0);
 static_assert(SeedFor(StatId_t::RetoolPenaltyScale) == 1.0);
+static_assert(SeedFor(StatId_t::TileDefense) == 1.0);
+
+// DomainFor is the consumer-subject counterpart of KindFor: pin every stat's resolve domain.
+static_assert(DomainFor(StatId_t::Nutrients) == ResolveDomain_t::Base);
+static_assert(DomainFor(StatId_t::Drones) == ResolveDomain_t::Base);
+static_assert(DomainFor(StatId_t::CostMultiplier) == ResolveDomain_t::Base);
+static_assert(DomainFor(StatId_t::StartingMinerals) == ResolveDomain_t::Base);
+static_assert(DomainFor(StatId_t::ProbeDefense) == ResolveDomain_t::Base);
+static_assert(DomainFor(StatId_t::TechCost) == ResolveDomain_t::Faction);
+static_assert(DomainFor(StatId_t::CouncilVotes) == ResolveDomain_t::Faction);
+static_assert(DomainFor(StatId_t::CommerceRate) == ResolveDomain_t::Faction);
+static_assert(DomainFor(StatId_t::Attack) == ResolveDomain_t::Unit);
+static_assert(DomainFor(StatId_t::Defense) == ResolveDomain_t::Unit);
+static_assert(DomainFor(StatId_t::MoraleBonus) == ResolveDomain_t::Unit);
+static_assert(DomainFor(StatId_t::MoistureTier) == ResolveDomain_t::Tile);
+static_assert(DomainFor(StatId_t::TileDefense) == ResolveDomain_t::Tile);
 
 TEST_CASE("ValidateEffectReferences: GrantBuilding targets must exist", "[effects][validation]")
 {

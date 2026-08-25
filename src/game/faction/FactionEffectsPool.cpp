@@ -38,6 +38,7 @@ FactionEffectsPool::FactionEffectsPool(const Faction& rFaction,
     , m_rProductionEffects(rProductionEffects)
     , m_rBaseConquestEffects(rBaseConquestEffects)
     , m_rPoliceRules(rPoliceRules)
+    , m_cachedPool(rFaction)
 {
 }
 
@@ -216,7 +217,7 @@ void FactionEffectsPool::Rebuild_() const
     // gate → stamp from the Validate_ scratch snapshot (do not re-collect). Every
     // expansion is bracketed by the gate, so no derivative outlives the effect that
     // produced it.
-    FactionEffects_t factionEffects;
+    FactionEffects_t factionEffects(m_rFaction);
 
     const std::vector<ActiveEffect_t> tileYieldRules = CollectTileYieldRuleEffects_();
     factionEffects.effects.insert(factionEffects.effects.end(), tileYieldRules.begin(),

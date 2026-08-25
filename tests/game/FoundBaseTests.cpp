@@ -281,9 +281,9 @@ TEST_CASE("Founding minerals above the retool threshold may switch freely",
     REQUIRE(pFacilityB);
 
     ProductionManager& rProd = pNew->GetProduction();
-    rProd.SetProduction(pFacilityA);
+    rProd.SetProduction(pFacilityA, pNew->GetBaseEffects());
     CHECK(rProd.GetMineralStockpile() == 40);
-    rProd.SetProduction(pFacilityB);
+    rProd.SetProduction(pFacilityB, pNew->GetBaseEffects());
     CHECK(rProd.GetMineralStockpile() == 40);
 }
 

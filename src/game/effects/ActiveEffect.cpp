@@ -37,6 +37,179 @@ namespace ac
 namespace
 {
 
+double FloorAmountSource_(double raw)
+{
+    // Vanilla per-source floor: University floor(size×0.25) does not share fractional
+    // residue with another fractional amount_source (e.g. Commons).
+    return std::floor(raw);
+}
+
+} // namespace
+
+UnitEffects_t::UnitEffects_t(const Unit& rUnit)
+    : pUnit(&rUnit)
+    , pDesign(&rUnit.GetDesign())
+{
+}
+
+UnitEffects_t::UnitEffects_t(const UnitDesign& rDesign)
+    : pUnit(nullptr)
+    , pDesign(&rDesign)
+{
+}
+
+UnitEffects_t::UnitEffects_t(const Unit& rUnit, std::vector<ActiveEffect_t> effectsIn)
+    : pUnit(&rUnit)
+    , pDesign(&rUnit.GetDesign())
+    , effects(std::move(effectsIn))
+{
+}
+
+UnitEffects_t::UnitEffects_t(const UnitDesign& rDesign, std::vector<ActiveEffect_t> effectsIn)
+    : pUnit(nullptr)
+    , pDesign(&rDesign)
+    , effects(std::move(effectsIn))
+{
+}
+
+double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double scale,
+                         const BaseManager& rBase)
+{
+    switch (source)
+    {
+        case StatModifierEffect_t::AmountSource_t::BaseSize:
+            // Vanilla per-source floor: University floor(size×0.25) does not share
+            // fractional residue with another fractional BaseSize source.
+            return FloorAmountSource_(
+                static_cast<double>(rBase.GetPopulation().GetSize()) * scale);
+        default:
+            throw std::runtime_error(
+                "AmountSourceValue: source requires a non-Base subject");
+    }
+}
+
+double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double scale,
+                         const Tile& rTile)
+{
+    switch (source)
+    {
+        case StatModifierEffect_t::AmountSource_t::ElevationEnergySeed:
+            return static_cast<double>(rTile.GetElevationEnergySeed()) * scale;
+        default:
+            throw std::runtime_error(
+                "AmountSourceValue: source requires a non-Tile subject");
+    }
+}
+
+double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double scale,
+                         const StockpileConversionSubject_t& rStockpile)
+{
+    switch (source)
+    {
+        case StatModifierEffect_t::AmountSource_t::MineralsConverted:
+            return static_cast<double>(rStockpile.mineralsConverted) * scale;
+        default:
+            throw std::runtime_error(
+                "AmountSourceValue: source requires a non-Stockpile subject");
+    }
+}
+
+double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double scale,
+                         const Faction& rFaction)
+{
+    switch (source)
+    {
+        case StatModifierEffect_t::AmountSource_t::BasesOwned:
+            return static_cast<double>(rFaction.GetBaseCount()) * scale;
+        default:
+            throw std::runtime_error(
+                "AmountSourceValue: source requires a non-Faction subject");
+    }
+}
+
+double AmountSourceValue(const StatModifierEffect_t& rMod, const BaseManager& rBase)
+{
+    if (!rMod.amountSource)
+    {
+        return rMod.amount;
+    }
+    return AmountSourceValue(*rMod.amountSource, rMod.amount, rBase);
+}
+
+double AmountSourceValue(const StatModifierEffect_t& rMod, const Tile& rTile)
+{
+    if (!rMod.amountSource)
+    {
+        return rMod.amount;
+    }
+    return AmountSourceValue(*rMod.amountSource, rMod.amount, rTile);
+}
+
+double AmountSourceValue(const StatModifierEffect_t& rMod,
+                         const StockpileConversionSubject_t& rStockpile)
+{
+    if (!rMod.amountSource)
+    {
+        return rMod.amount;
+    }
+    return AmountSourceValue(*rMod.amountSource, rMod.amount, rStockpile);
+}
+
+double AmountSourceValue(const StatModifierEffect_t& rMod, const Faction& rFaction)
+{
+    if (!rMod.amountSource)
+    {
+        return rMod.amount;
+    }
+    return AmountSourceValue(*rMod.amountSource, rMod.amount, rFaction);
+}
+
+double AmountSourceValue(const StatModifierEffect_t& rMod, const EffectContext_t* pCtx)
+{
+    if (!rMod.amountSource.has_value())
+    {
+        return rMod.amount;
+    }
+    // Exhaustive: each new AmountSource_t must pick a subject field here. Subject
+    // overloads use default for wrong-subject rejects so they need not list every source.
+    switch (*rMod.amountSource)
+    {
+        case StatModifierEffect_t::AmountSource_t::ElevationEnergySeed:
+            if (!pCtx || !pCtx->targetTile)
+            {
+                throw std::runtime_error(
+                    "AmountSourceValue: ElevationEnergySeed requires targetTile");
+            }
+            return AmountSourceValue(*rMod.amountSource, rMod.amount, *pCtx->targetTile);
+        case StatModifierEffect_t::AmountSource_t::MineralsConverted:
+            if (!pCtx)
+            {
+                throw std::runtime_error(
+                    "AmountSourceValue: MineralsConverted requires conversion context");
+            }
+            return AmountSourceValue(*rMod.amountSource, rMod.amount,
+                                    StockpileConversionSubject_t{pCtx->mineralsConverted});
+        case StatModifierEffect_t::AmountSource_t::BaseSize:
+            if (!pCtx || !pCtx->pBase)
+            {
+                throw std::runtime_error(
+                    "AmountSourceValue: BaseSize requires pBase");
+            }
+            return AmountSourceValue(*rMod.amountSource, rMod.amount, *pCtx->pBase);
+        case StatModifierEffect_t::AmountSource_t::BasesOwned:
+            if (!pCtx || !pCtx->pFaction)
+            {
+                throw std::runtime_error(
+                    "AmountSourceValue: BasesOwned requires pFaction");
+            }
+            return AmountSourceValue(*rMod.amountSource, rMod.amount, *pCtx->pFaction);
+    }
+    throw std::runtime_error("AmountSourceValue: unknown amount_source");
+}
+
+namespace
+{
+
 // The one config->ActiveEffect_t loop. Every public collect/append helper funnels through
 // here so the Instantaneous exclusion (those fire once via DispatchInstantaneousEffects)
 // and TagsOriginBase origin tagging can never be forgotten by an individual collector.
@@ -48,6 +221,7 @@ void AppendActiveEffectsIf_(std::span<const EffectConfig_t> rEffects,
                             std::vector<ActiveEffect_t>& rOut)
 {
     for (const EffectConfig_t& rEffect : rEffects)
+
     {
         if (rEffect.persistence == EffectPersistence_t::Instantaneous)
             continue;
@@ -451,7 +625,7 @@ bool FactionFilterMatchesOwner(const EffectConfig_t& rConfig, bool bPlayerContro
 
 BaseEffects_t FilterForBase(const FactionEffects_t& rFactionEffects, const BaseManager& rBase)
 {
-    BaseEffects_t matching;
+    BaseEffects_t matching(rBase);
     for (const ActiveEffect_t& effect : rFactionEffects.effects)
     {
         switch (LaneFor(effect.config->scope))
@@ -477,7 +651,11 @@ BaseEffects_t FilterForBase(const FactionEffects_t& rFactionEffects, const BaseM
     return matching;
 }
 
-std::vector<ActiveEffect_t> CollectUnitEffects(const std::vector<const UnitComponentConfig_t*>& components)
+namespace
+{
+
+std::vector<ActiveEffect_t> CollectUnitComponentEffects_(
+    const std::vector<const UnitComponentConfig_t*>& components)
 {
     std::vector<ActiveEffect_t> result;
     for (const UnitComponentConfig_t* pComp : components)
@@ -489,6 +667,8 @@ std::vector<ActiveEffect_t> CollectUnitEffects(const std::vector<const UnitCompo
     }
     return result;
 }
+
+} // namespace
 
 std::vector<ActiveEffect_t> CollectPopEffects(const PopTypeConfig_t& rConfig)
 {
@@ -687,7 +867,7 @@ void DispatchInstantaneousEffects(const UnitDesign& rDesign, BaseManager& rBase,
 // A live unit's full effect list: design components, all FactionUnits, and ProducedAtThisBase
 // effects whose origin matches the unit's production base. unitFilter and ProducedAt origin
 // are applied here — see CollectLiveUnitEffects declaration.
-std::vector<ActiveEffect_t> CollectLiveUnitEffects(const Unit& rUnit)
+UnitEffects_t CollectLiveUnitEffects(const Unit& rUnit)
 {
     std::vector<ActiveEffect_t> effects = rUnit.GetDesign().CollectEffects();
     const auto& rPool = rUnit.GetFaction().GetActiveEffects().effects;
@@ -710,7 +890,118 @@ std::vector<ActiveEffect_t> CollectLiveUnitEffects(const Unit& rUnit)
         }
         return false;
     });
-    return effects;
+    return UnitEffects_t(rUnit, std::move(effects));
+}
+
+UnitEffects_t CollectUnitEffects(const UnitDesign& rDesign)
+{
+    return UnitEffects_t(rDesign, CollectUnitComponentEffects_(rDesign.GetComponents()));
+}
+
+double ResolveBaseStat(const BaseEffects_t& rBaseEffects, StatId_t statId, double seed,
+                       const EffectContext_t* pCtx)
+{
+    if (DomainFor(statId) != ResolveDomain_t::Base)
+    {
+        throw std::logic_error("ResolveBaseStat: DomainFor(stat) is not Base");
+    }
+    if (!rBaseEffects.pBase)
+    {
+        throw std::logic_error("ResolveBaseStat: BaseEffects_t missing subject");
+    }
+    EffectContext_t ctx = pCtx ? *pCtx : EffectContext_t{};
+    if (!ctx.pBase)
+    {
+        ctx.pBase = rBaseEffects.pBase;
+    }
+    return ResolveStatModifiers(FilterBaseLevelByStatId(rBaseEffects, statId, &ctx), seed, &ctx)
+        .total;
+}
+
+double ResolveFactionStat(const FactionEffects_t& rFactionEffects, StatId_t statId, double seed,
+                          const EffectContext_t* pCtx)
+{
+    if (DomainFor(statId) != ResolveDomain_t::Faction)
+    {
+        throw std::logic_error("ResolveFactionStat: DomainFor(stat) is not Faction");
+    }
+    if (!rFactionEffects.pFaction)
+    {
+        throw std::logic_error("ResolveFactionStat: FactionEffects_t missing subject");
+    }
+    if (pCtx)
+    {
+        return ResolveStatModifiers(
+                   FilterByStatIdInContext(rFactionEffects.effects, statId, *pCtx), seed, pCtx)
+            .total;
+    }
+    return ResolveStatModifiers(FilterByStatId(rFactionEffects.effects, statId), seed).total;
+}
+
+double ResolveUnitStat(const UnitEffects_t& rUnitEffects, StatId_t statId, double seed,
+                       const EffectContext_t* pCtx)
+{
+    if (DomainFor(statId) != ResolveDomain_t::Unit)
+    {
+        throw std::logic_error("ResolveUnitStat: DomainFor(stat) is not Unit");
+    }
+    if (!rUnitEffects.pDesign)
+    {
+        throw std::logic_error("ResolveUnitStat: UnitEffects_t missing design subject");
+    }
+    EffectContext_t ctx = pCtx ? *pCtx : EffectContext_t{};
+    // BasesOwned (and future faction subjects) stamp from the live unit when present.
+    if (!ctx.pFaction && rUnitEffects.pUnit)
+    {
+        ctx.pFaction = &rUnitEffects.pUnit->GetFaction();
+    }
+    return ResolveStatModifiers(
+               FilterByStatIdInContext(rUnitEffects.effects, statId, ctx), seed, &ctx)
+        .total;
+}
+
+int ResolveCombatUnitStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx,
+                          double moraleAddPercent)
+{
+    EffectContext_t ctx = rCtx;
+    if (!ctx.pFaction)
+    {
+        ctx.pFaction = &rUnit.GetFaction();
+    }
+    const UnitEffects_t unitEffects = CollectLiveUnitEffects(rUnit);
+    StatBreakdown_t breakdown = ResolveStatModifiers(
+        FilterByStatIdInContext(unitEffects.effects, statId, ctx), SeedFor(statId), &ctx);
+    std::vector<std::pair<double, ModifierOp_t>> stack;
+    stack.reserve(breakdown.contributions.size() + 1);
+    for (const StatBreakdown_t::Contribution_t& c : breakdown.contributions)
+    {
+        stack.emplace_back(c.amount, c.op);
+    }
+    stack.emplace_back(moraleAddPercent, ModifierOp_t::AddPercent);
+    return FinalizeResolvedStat(ApplyModifierStack(SeedFor(statId), stack));
+}
+
+double ResolveCombatUnitMultiplicativeStat(const Unit& rUnit, StatId_t statId, double baseValue,
+                                           const EffectContext_t& rCtx, double moraleAddPercent)
+{
+    EffectContext_t ctx = rCtx;
+    if (!ctx.pFaction)
+    {
+        ctx.pFaction = &rUnit.GetFaction();
+    }
+    const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects(rUnit).effects;
+    std::vector<std::pair<double, ModifierOp_t>> contributions;
+    for (const ActiveEffect_t& rEffect : FilterByStatIdInContext(effects, statId, ctx))
+    {
+        const StatModifierEffect_t* pModifier =
+            std::get_if<StatModifierEffect_t>(&rEffect.config->effect);
+        if (pModifier && pModifier->op != ModifierOp_t::Add)
+        {
+            contributions.emplace_back(AmountSourceValue(*pModifier, &ctx), pModifier->op);
+        }
+    }
+    contributions.emplace_back(moraleAddPercent, ModifierOp_t::AddPercent);
+    return ApplyModifierStack(baseValue, contributions);
 }
 
 namespace
@@ -776,31 +1067,33 @@ bool ResolveFlag(const UnitDesign& rDesign, RuleFlagId_t flagId)
 
 int ResolveStat(const Unit& rUnit, StatId_t statId)
 {
-    const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects(rUnit);
     return FinalizeResolvedStat(
-        ResolveStatModifiers(FilterByStatId(effects, statId), SeedFor(statId)).total);
+        ResolveUnitStat(CollectLiveUnitEffects(rUnit), statId, SeedFor(statId)));
 }
 
 int ResolveStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx)
 {
-    const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects(rUnit);
     return FinalizeResolvedStat(
-        ResolveStatModifiers(FilterByStatIdInContext(effects, statId, rCtx), SeedFor(statId),
-                             &rCtx).total);
+        ResolveUnitStat(CollectLiveUnitEffects(rUnit), statId, SeedFor(statId), &rCtx));
 }
 
 double ResolveMultiplicativeStat(const Unit& rUnit, StatId_t statId, double baseValue,
                                  const EffectContext_t& rCtx)
 {
-    const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects(rUnit);
+    EffectContext_t ctx = rCtx;
+    if (!ctx.pFaction)
+    {
+        ctx.pFaction = &rUnit.GetFaction();
+    }
+    const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects(rUnit).effects;
     std::vector<std::pair<double, ModifierOp_t>> contributions;
-    for (const ActiveEffect_t& rEffect : FilterByStatIdInContext(effects, statId, rCtx))
+    for (const ActiveEffect_t& rEffect : FilterByStatIdInContext(effects, statId, ctx))
     {
         const StatModifierEffect_t* pModifier =
             std::get_if<StatModifierEffect_t>(&rEffect.config->effect);
         if (pModifier && pModifier->op != ModifierOp_t::Add)
         {
-            contributions.emplace_back(EffectiveStatModifierAmount(*pModifier, &rCtx), pModifier->op);
+            contributions.emplace_back(AmountSourceValue(*pModifier, &ctx), pModifier->op);
         }
     }
     return ApplyModifierStack(baseValue, contributions);
@@ -808,7 +1101,7 @@ double ResolveMultiplicativeStat(const Unit& rUnit, StatId_t statId, double base
 
 bool ResolveFlag(const Unit& rUnit, RuleFlagId_t flagId)
 {
-    return ResolveFlagFromEffects_(CollectLiveUnitEffects(rUnit), flagId);
+    return ResolveFlagFromEffects_(CollectLiveUnitEffects(rUnit).effects, flagId);
 }
 
 bool ResolveFlag(const Faction& rFaction, RuleFlagId_t flagId)
@@ -823,7 +1116,7 @@ bool ResolveFlag(const BaseManager& rBase, RuleFlagId_t flagId)
 
 bool HasPermission(const Unit& rUnit, PermissionId_t permission, const EffectContext_t& rCtx)
 {
-    for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rUnit))
+    for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rUnit).effects)
     {
         const PermissionEffect_t* pPerm =
             std::get_if<PermissionEffect_t>(&rEffect.config->effect);
@@ -903,7 +1196,7 @@ bool TileProvidesFlag(const Tile& rTile, RuleFlagId_t flagId, const WorldMap& rW
         }
         // Live effects, not design-only: a tile capability must honour unitFilter and pick
         // up FactionUnits-scoped grants, exactly as the transport rules that consume it do.
-        for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(*pUnit))
+        for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(*pUnit).effects)
         {
             if (DeclaresTileFlag_(*rEffect.config, flagId))
             {

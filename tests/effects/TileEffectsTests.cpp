@@ -198,53 +198,57 @@ TEST_CASE("ResolveTileYield: a Mirror's energy aura reaches nearby tiles", "[eff
 TEST_CASE("ResolveTileYield with base effects: selector-carrying modifiers apply per matching tile",
           "[effects][tile][yield][selector]")
 {
-    actest::WorldFixture world;
-    Tile& farmTile = world.At(4, 4);
-    Tile& plainTile = world.At(5, 4);
-    world.ctx->AddImprovementWithEffects(farmTile, "Farm");
+    actest::BaseFixture fixture;
+    // Subject for BaseEffects_t only — keep yield tiles free of a Base improvement.
+    BaseManager& base = fixture.MakeBase(1, 1);
+    Tile& farmTile = fixture.At(4, 4);
+    Tile& plainTile = fixture.At(5, 4);
+    fixture.ctx->AddImprovementWithEffects(farmTile, "Farm");
 
     actest::EffectPool pool;
-    const BaseEffects_t baseEffects{{
+    const BaseEffects_t baseEffects{base, {
         actest::Active(pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
                                     actest::ImprovementSelector("Farm")), "farm_booster"),
     }};
 
     // Farm tile: 1 (Farm) + 1 (booster). Plain tile: unaffected.
-    CHECK(world.ctx->ResolveTileYield(farmTile, false, baseEffects).effective.nutrients == 2);
-    CHECK(world.ctx->ResolveTileYield(plainTile, false, baseEffects).effective.nutrients == 0);
+    CHECK(fixture.ctx->ResolveTileYield(farmTile, false, baseEffects).effective.nutrients == 2);
+    CHECK(fixture.ctx->ResolveTileYield(plainTile, false, baseEffects).effective.nutrients == 0);
 }
 
 TEST_CASE("ResolveTileYield with base effects: BaseTile selector applies only to the base center tile",
           "[effects][tile][yield][selector]")
 {
-    actest::WorldFixture world;
-    Tile& tile = world.At(4, 4);
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(1, 1);
+    Tile& tile = fixture.At(4, 4);
 
     actest::EffectPool pool;
-    const BaseEffects_t baseEffects{{
+    const BaseEffects_t baseEffects{base, {
         actest::Active(pool.StatMod(StatId_t::Energy, 2.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
                                     actest::BaseTileSelector()), "center_booster"),
     }};
 
-    CHECK(world.ctx->ResolveTileYield(tile, true, baseEffects).effective.energy == 2);
-    CHECK(world.ctx->ResolveTileYield(tile, false, baseEffects).effective.energy == 0);
+    CHECK(fixture.ctx->ResolveTileYield(tile, true, baseEffects).effective.energy == 2);
+    CHECK(fixture.ctx->ResolveTileYield(tile, false, baseEffects).effective.energy == 0);
 }
 
 TEST_CASE("ResolveTileYield with base effects: AnyTile selector applies to every worked tile",
           "[effects][tile][yield][selector]")
 {
-    actest::WorldFixture world;
-    Tile& center = world.At(4, 4);
-    Tile& outer = world.At(5, 4);
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(1, 1);
+    Tile& center = fixture.At(4, 4);
+    Tile& outer = fixture.At(5, 4);
 
     actest::EffectPool pool;
-    const BaseEffects_t baseEffects{{
+    const BaseEffects_t baseEffects{base, {
         actest::Active(pool.StatMod(StatId_t::Energy, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
                                     actest::AnyTileSelector()), "economy_sq"),
     }};
 
-    CHECK(world.ctx->ResolveTileYield(center, true, baseEffects).effective.energy == 1);
-    CHECK(world.ctx->ResolveTileYield(outer, false, baseEffects).effective.energy == 1);
+    CHECK(fixture.ctx->ResolveTileYield(center, true, baseEffects).effective.energy == 1);
+    CHECK(fixture.ctx->ResolveTileYield(outer, false, baseEffects).effective.energy == 1);
 }
 
 TEST_CASE("ResolveTileYield with base effects: flat (non-selector) modifiers are NOT applied per tile",
@@ -252,31 +256,33 @@ TEST_CASE("ResolveTileYield with base effects: flat (non-selector) modifiers are
 {
     // Flat base bonuses resolve once at the base level (FilterBaseLevelByStatId); applying them
     // per worked tile would multiply them by the number of workers.
-    actest::WorldFixture world;
-    Tile& tile = world.At(4, 4);
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(1, 1);
+    Tile& tile = fixture.At(4, 4);
 
     actest::EffectPool pool;
-    const BaseEffects_t baseEffects{{
+    const BaseEffects_t baseEffects{base, {
         actest::Active(pool.StatMod(StatId_t::Nutrients, 2.0, ModifierOp_t::Add, EffectScope_t::ThisBase),
                        "flat_nutrient"),
     }};
 
-    CHECK(world.ctx->ResolveTileYield(tile, true, baseEffects).effective.nutrients == 0);
-    CHECK(world.ctx->ResolveTileYield(tile, false, baseEffects).effective.nutrients == 0);
+    CHECK(fixture.ctx->ResolveTileYield(tile, true, baseEffects).effective.nutrients == 0);
+    CHECK(fixture.ctx->ResolveTileYield(tile, false, baseEffects).effective.nutrients == 0);
 }
 
 TEST_CASE("ResolveTileYield: percentage modifiers scale a tile's own yield", "[effects][tile][yield]")
 {
-    actest::WorldFixture world;
-    Tile& tile = world.At(4, 4);
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(1, 1);
+    Tile& tile = fixture.At(4, 4);
     // Base moisture must be set too: AddImprovementWithEffects triggers RecomputeMoisture,
     // which re-derives the effective value from the base value (world-gen sets both).
     tile.SetBaseMoisture(Moisture_t::Wet);
     tile.SetMoisture(Moisture_t::Wet); // +2 nutrients
-    world.ctx->AddImprovementWithEffects(tile, "Farm"); // +1 nutrients
+    fixture.ctx->AddImprovementWithEffects(tile, "Farm"); // +1 nutrients
 
     actest::EffectPool pool;
-    const BaseEffects_t baseEffects{{
+    const BaseEffects_t baseEffects{base, {
         actest::Active(pool.StatMod(StatId_t::Nutrients, 50.0, ModifierOp_t::AddPercent, EffectScope_t::ThisBase,
                                     actest::ImprovementSelector("Farm")), "gene_splicer"),
     }};
@@ -284,7 +290,7 @@ TEST_CASE("ResolveTileYield: percentage modifiers scale a tile's own yield", "[e
     // (2 + 1) * 1.5 = 4.5 → FinalizeResolvedStat → 5. Per-tile yield shares the one
     // float→int rule with base-level resolve, so the worked total it feeds into
     // ResourceManager::CalculateResource_ is not truncated first and rounded again after.
-    CHECK(world.ctx->ResolveTileYield(tile, false, baseEffects).effective.nutrients == 5);
+    CHECK(fixture.ctx->ResolveTileYield(tile, false, baseEffects).effective.nutrients == 5);
 }
 
 TEST_CASE("RecomputeMoisture: Condenser aura raises effective moisture, derived fresh from base moisture",
@@ -599,19 +605,20 @@ TEST_CASE("Fungus overrides tile yield to 1 nutrient",
 TEST_CASE("Fungus yield can be boosted by base-effect selectors",
           "[effects][tile][yield][fungus][selector]")
 {
-    actest::WorldFixture world;
-    Tile& tile = world.At(4, 4);
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(1, 1);
+    Tile& tile = fixture.At(4, 4);
     tile.SetRockiness(Rockiness_t::Rocky);
     tile.SetMoisture(Moisture_t::Wet);
     tile.SetHasFungus(true);
 
     actest::EffectPool pool;
-    const BaseEffects_t baseEffects{{
+    const BaseEffects_t baseEffects{base, {
         actest::Active(pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
                                     actest::ImprovementSelector("Fungus")), "fungus_booster"),
     }};
 
-    const TileResources_t yield = world.ctx->ResolveTileYield(tile, false, baseEffects).effective;
+    const TileResources_t yield = fixture.ctx->ResolveTileYield(tile, false, baseEffects).effective;
     CHECK(yield.nutrients == 2);
     CHECK(yield.minerals == 0);
     CHECK(yield.energy == 0);

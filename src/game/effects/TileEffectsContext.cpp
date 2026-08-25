@@ -412,10 +412,9 @@ double TileEffectsContext::ResolveTileDefenseMultiplier(const Tile& rTile, Facti
             applicable.push_back(rEffect);
         }
     }
-    // Explicit 1.0, not SeedFor: Defense is Additive as a unit stat (armor rating), but the
-    // tile lane resolves a different quantity — a multiplier composed of the tile's percent
-    // effects, seeded at identity.
-    return ResolveStatModifiers(FilterByStatId(applicable, StatId_t::Defense), 1.0).total;
+    return ResolveStatModifiers(FilterByStatId(applicable, StatId_t::TileDefense),
+                                SeedFor(StatId_t::TileDefense))
+        .total;
 }
 
 void TileEffectsContext::RecomputeMoisture(Tile& rTile)

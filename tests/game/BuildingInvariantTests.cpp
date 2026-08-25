@@ -174,7 +174,7 @@ TEST_CASE("Losing a secret-project race drops the item instead of killing the tu
 
     const BuildingConfig_t& rProject =
         game.fixtures.dataContext.buildingRegistry->Get("test_secret_project");
-    loser.GetProduction().SetProduction(&rProject);
+    loser.GetProduction().SetProduction(&rProject, loser.GetBaseEffects());
     loser.GetProduction().SetMineralStockpile(10000); // far past any cost, so it completes now
 
     CHECK_NOTHROW(loser.ApplyProduction());

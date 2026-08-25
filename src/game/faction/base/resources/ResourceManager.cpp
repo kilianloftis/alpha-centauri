@@ -129,12 +129,9 @@ int ResourceManager::CalculateResource_(StatId_t stat, const TileResources_t& wo
     // Per-tile yield modifiers are already folded into `worked`; only base-level
     // (non-selector) stat modifiers remain. Seed with the worked value so AddPercent
     // scales it (SeedFor is 0 for Additive and would discard percents).
-    const EffectContext_t ctx{.pBase = &m_rBase};
     const int workedVal = GetResourceValue_(worked, stat);
     return FinalizeResolvedStat(
-        ResolveStatModifiers(FilterBaseLevelByStatId(rBaseEffects, stat, &ctx),
-                             static_cast<double>(workedVal))
-            .total);
+        ResolveBaseStat(rBaseEffects, stat, static_cast<double>(workedVal)));
 }
 
 int ResourceManager::GetNutrientProduction(const BaseEffects_t& rBaseEffects) const
@@ -177,31 +174,25 @@ int ResourceManager::AllocatableEnergy_(const BaseEffects_t& rBaseEffects) const
 
 int ResourceManager::CalculateEcon_(int energy, const BaseEffects_t& rBaseEffects) const
 {
-    // FilterBaseLevelByStatId, not FilterByStatId: base-level resolution must never pick up
+    // ResolveBaseStat (FilterBaseLevelByStatId): base-level resolution must never pick up
     // selector-carrying (per-tile) modifiers, even on stats where none make sense today.
     const int split = m_pEconomy->CalculateEnergyForEcon(energy);
     return FinalizeResolvedStat(
-        ResolveStatModifiers(FilterBaseLevelByStatId(rBaseEffects, StatId_t::Econ),
-                             static_cast<double>(split))
-            .total);
+        ResolveBaseStat(rBaseEffects, StatId_t::Econ, static_cast<double>(split)));
 }
 
 int ResourceManager::CalculateLabs_(int energy, const BaseEffects_t& rBaseEffects) const
 {
     const int split = m_pEconomy->CalculateEnergyForLabs(energy);
     return FinalizeResolvedStat(
-        ResolveStatModifiers(FilterBaseLevelByStatId(rBaseEffects, StatId_t::Labs),
-                             static_cast<double>(split))
-            .total);
+        ResolveBaseStat(rBaseEffects, StatId_t::Labs, static_cast<double>(split)));
 }
 
 int ResourceManager::CalculatePsych_(int energy, const BaseEffects_t& rBaseEffects) const
 {
     const int split = m_pEconomy->CalculateEnergyForPsych(energy);
     return FinalizeResolvedStat(
-        ResolveStatModifiers(FilterBaseLevelByStatId(rBaseEffects, StatId_t::Psych),
-                             static_cast<double>(split))
-            .total);
+        ResolveBaseStat(rBaseEffects, StatId_t::Psych, static_cast<double>(split)));
 }
 
 int ResourceManager::GetEconProduction(const BaseEffects_t& rBaseEffects) const

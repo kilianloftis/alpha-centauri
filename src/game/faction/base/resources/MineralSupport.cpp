@@ -20,11 +20,8 @@ namespace
 
 int ResolveFreeUnitSupport_(const BaseManager& rBase)
 {
-    const int raw = FinalizeResolvedStat(
-        ResolveStatModifiers(
-            FilterBaseLevelByStatId(rBase.GetBaseEffects(), StatId_t::FreeUnitSupport),
-            SeedFor(StatId_t::FreeUnitSupport))
-            .total);
+    const int raw = FinalizeResolvedStat(ResolveBaseStat(
+        rBase.GetBaseEffects(), StatId_t::FreeUnitSupport, SeedFor(StatId_t::FreeUnitSupport)));
     return std::max(0, raw);
 }
 

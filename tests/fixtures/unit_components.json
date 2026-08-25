@@ -261,6 +261,33 @@
     ]
   },
   {
+    "id": "test_empire_pulse",
+    "name": "Test Empire Pulse",
+    "unit_name": "Empire",
+    "type": "weapon",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "attack",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "attack",
+          "amount": 1,
+          "op": "Add",
+          "amount_source": "BasesOwned"
+        }
+      }
+    ]
+  },
+  {
     "id": "test_weak_weapon",
     "name": "Test Weak Weapon",
     "unit_name": "Hand Weapon",
@@ -396,7 +423,7 @@
         "scope": "ThisTile",
         "radius": 2,
         "parameters": {
-          "stat": "defense",
+          "stat": "tile_defense",
           "amount": 25,
           "op": "AddPercent"
         }
@@ -1260,7 +1287,11 @@
         "type": "StatModifier",
         "scope": "ThisUnit",
         "persistence": "Continuous",
-        "parameters": { "stat": "police_effectiveness", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "police_effectiveness",
+          "amount": 1,
+          "op": "Add"
+        }
       }
     ]
   }

@@ -85,9 +85,8 @@ void ProductionManager::ApplyRetoolPenalty_(const IConstructable* pNewItem,
     // afterward so RetoolPenaltyScale 0 (Skunkworks) cancels the forfeit without changing
     // threshold / percent semantics when scale is 1.
     const int baseForfeit = m_mineralStockpile * m_rConfig.retoolPenaltyPercent / 100;
-    const double scale = ResolveStatModifiers(
-        FilterBaseLevelByStatId(rBaseEffects, StatId_t::RetoolPenaltyScale),
-        SeedFor(StatId_t::RetoolPenaltyScale)).total;
+    const double scale = ResolveBaseStat(rBaseEffects, StatId_t::RetoolPenaltyScale,
+                                         SeedFor(StatId_t::RetoolPenaltyScale));
     const int forfeited = std::max(0, static_cast<int>(std::lround(baseForfeit * scale)));
     m_mineralStockpile -= forfeited;
 }

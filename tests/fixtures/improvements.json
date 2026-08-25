@@ -15,7 +15,7 @@
     "move_cost": 2,
     "effects": [
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "minerals", "amount": 2, "op": "Add" } },
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "defense", "amount": 25, "op": "AddPercent" } }
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "tile_defense", "amount": 25, "op": "AddPercent" } }
     ]
   },
   { "id": "Arid", "name": "Arid", "tags": ["landform"], "effects": [] },
@@ -77,7 +77,7 @@
     ],
     "effects": [
       { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" } },
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "defense", "amount": 25, "op": "AddPercent" } },
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "tile_defense", "amount": 25, "op": "AddPercent" } },
       { "type": "Conceal", "scope": "ThisTile", "parameters": { "channel": "terrain" } }
     ]
   },
@@ -194,7 +194,7 @@
     "turns_required": 5,
     "energy_cost": 0,
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "defense", "amount": 50, "op": "AddPercent" } },
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "tile_defense", "amount": 50, "op": "AddPercent" } },
       { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "prevents_disengage" } }
     ]
   },
@@ -202,7 +202,7 @@
     "id": "Base",
     "name": "Base",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "defense", "amount": 100, "op": "AddPercent" } },
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "tile_defense", "amount": 100, "op": "AddPercent" } },
       { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "prevents_disengage" } },
       { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "refuels_air" } },
       { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "loads_air_transport" } }
@@ -229,7 +229,7 @@
         "type": "StatModifier",
         "scope": "ThisTile",
         "radius": 2,
-        "parameters": { "stat": "defense", "amount": 25, "op": "AddPercent" }
+        "parameters": { "stat": "tile_defense", "amount": 25, "op": "AddPercent" }
       },
       {
         "type": "StatModifier",

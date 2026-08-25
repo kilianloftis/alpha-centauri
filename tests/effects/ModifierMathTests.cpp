@@ -6,13 +6,17 @@
 //         * (product of MultiplyGeometric factors)
 
 #include "TestHelpers.h"
+#include "GameFixtures.h"
 
 #include "game/effects/ActiveEffect.h"
+#include "game/effects/EffectEnums.h"
+#include "game/faction/base/population/PopulationManager.h"
 #include "game/map/Tile.h"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include <cmath>
 #include <ranges>
 
 using namespace ac;
@@ -261,7 +265,7 @@ TEST_CASE("ResolveStatModifiers: amount_source ElevationEnergySeed scales seed b
     const std::vector<ActiveEffect_t> effects = {Active(rConfig, "solar")};
 
     CHECK(ResolveStatModifiers(effects, 0.0, &ctx).total == Approx(4.0)); // 2 * 2
-    CHECK(ResolveStatModifiers(effects, 0.0, nullptr).total == Approx(0.0));
+    CHECK_THROWS_AS(ResolveStatModifiers(effects, 0.0, nullptr), std::runtime_error);
     CHECK(std::ranges::distance(FilterByStatId(effects, StatId_t::Energy)) == 0);
     CHECK(std::ranges::distance(FilterByStatIdInContext(effects, StatId_t::Energy, ctx)) == 1);
 }
@@ -286,6 +290,43 @@ TEST_CASE("ResolveStatModifiers: amount_source MineralsConverted scales by miner
     const std::vector<ActiveEffect_t> effects = {Active(rConfig, "stockpile")};
 
     CHECK(ResolveStatModifiers(effects, 0.0, &ctx).total == Approx(2.5));
-    CHECK(ResolveStatModifiers(effects, 0.0, nullptr).total == Approx(0.0));
+    CHECK_THROWS_AS(ResolveStatModifiers(effects, 0.0, nullptr), std::runtime_error);
     CHECK(std::ranges::distance(FilterByStatId(effects, StatId_t::Energy)) == 0);
+}
+
+TEST_CASE("ResolveStatModifiers: amount_source BaseSize scales by population",
+          "[effects][math][amount_source]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(4, 4);
+    const int size = base.GetPopulation().GetSize();
+    REQUIRE(size > 0);
+
+    actest::EffectPool pool;
+    StatModifierEffect_t university;
+    university.stat = StatId_t::Drones;
+    university.amount = 0.25;
+    university.op = ModifierOp_t::Add;
+    university.amountSource = StatModifierEffect_t::AmountSource_t::BaseSize;
+    EffectConfig_t universityConfig;
+    universityConfig.effect = university;
+    universityConfig.scope = EffectScope_t::ThisBase;
+    universityConfig.persistence = EffectPersistence_t::Continuous;
+
+    const std::vector<ActiveEffect_t> effects = {
+        Active(pool.Add(std::move(universityConfig)), "university"),
+        Active(pool.StatMod(StatId_t::Drones, -2.0), "commons"),
+    };
+
+    const EffectContext_t ctx{.pBase = &base};
+    // Per-source floor: floor(size×0.25) then + Commons −2.
+    const double expected = std::floor(static_cast<double>(size) * 0.25) + (-2.0);
+    CHECK(ResolveStatModifiers(effects, SeedFor(StatId_t::Drones), &ctx).total == Approx(expected));
+    CHECK(FinalizeResolvedStat(
+              ResolveStatModifiers(effects, SeedFor(StatId_t::Drones), &ctx).total)
+          == FinalizeResolvedStat(expected));
+    CHECK_THROWS_AS(ResolveStatModifiers(effects, SeedFor(StatId_t::Drones), nullptr),
+                    std::runtime_error);
+    // Size-13 University+Commons composition requirement (effect drones only).
+    CHECK(FinalizeResolvedStat(std::floor(13.0 * 0.25) + (-2.0)) == 1);
 }

@@ -245,10 +245,11 @@
       {
         "type": "GrantBuilding",
         "scope": "AllOwnerBases",
-        "parameters": { "building_id": "Command_Center" }
+        "parameters": {
+          "building_id": "Command_Center"
+        }
       }
     ],
-    
     "category": "conquer"
   },
   {
@@ -306,7 +307,9 @@
         }
       }
     ],
-    "scrap": { "formula": null },
+    "scrap": {
+      "formula": null
+    },
     "category": "conquer",
     "required_tech": "",
     "upkeep": 0
@@ -350,5 +353,25 @@
     "category": "conquer",
     "required_tech": "test_tech_1",
     "upkeep": 2
+  },
+  {
+    "id": "Recreation_Commons",
+    "name": "Recreation Commons",
+    "mineral_cost": 4,
+    "category": "build",
+    "required_tech": "",
+    "upkeep": 1,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "persistence": "Continuous",
+        "parameters": {
+          "stat": "drones",
+          "amount": -2,
+          "op": "Add"
+        }
+      }
+    ]
   }
 ]

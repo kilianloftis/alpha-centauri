@@ -29,26 +29,10 @@ public:
 
     // Set the item to produce; nullptr resets to the default item (see the constructor), not
     // to an empty queue — a base only goes idle when no default exists. Setting the item
-    // already queued is a no-op
-    // and does not re-announce a change. rBaseEffects scales the retool forfeit via
-    // RetoolPenaltyScale (omit / empty → seed 1.0). Callers with a live base should pass
-    // BaseManager::GetBaseEffects() so Skunkworks and similar apply.
-    //
-    // **Retooling.** Switching away from the item the base started this turn on forfeits a
-    // share of the minerals already spent (config: retool_penalty_*, scaled by
-    // RetoolPenaltyScale), but only once more than the threshold has accumulated. Switching
-    // *back* to the turn's original item is free; switching on to a third item pays again.
-    // No turn original yet (null) — free to queue and switch. Clearing production keeps the
-    // stockpile; re-queuing pays only once a turn original exists (BankProduction stamped one).
-    //
-    // BankProduction marks the item in place at that moment as the turn's original, which is
-    // the last thing to touch production before PlayerActions hands control to the player.
-    //
-    // The item is not validated against what this base may actually build — BaseManager owns
-    // that question (GetConstructable), and its availability calculator is optional, so the
-    // check cannot live here.
-    void SetProduction(const IConstructable* pItem,
-                       const BaseEffects_t& rBaseEffects = {});
+    // already queued is a no-op and does not re-announce a change. rBaseEffects is required
+    // and scales the retool forfeit via RetoolPenaltyScale (empty → seed 1.0). Callers with
+    // a live base should pass BaseManager::GetBaseEffects() so Skunkworks and similar apply.
+    void SetProduction(const IConstructable* pItem, const BaseEffects_t& rBaseEffects);
 
     // Replace the queued constructable pointer without retooling. Used when the logical item
     // is unchanged but the backing object moved (base ownership transfer re-homing a unit
@@ -94,7 +78,7 @@ public:
     // minerals stay on the stockpile — and therefore on whatever is queued next — up to
     // retoolPenaltyThreshold. The rest is lost, so choosing the next item is a free retool.
     // Completing also clears the turn original: the default fallback is not a player choice.
-    std::string CompleteProduction(const BaseEffects_t& rBaseEffects = {},
+    std::string CompleteProduction(const BaseEffects_t& rBaseEffects,
                                    bool bPrototype = false);
 
     // Emitted when a production item is completed, with the completed item id.
@@ -116,7 +100,8 @@ private:
     // Queue the default item (or leave the queue empty when there is none), announcing the
     // change if it moved. Never charges retool: the player did not pick this.
     void ResetProduction_();
-    void ApplyRetoolPenalty_(const IConstructable* pNewItem, const BaseEffects_t& rBaseEffects);
+    void ApplyRetoolPenalty_(const IConstructable* pNewItem,
+                             const BaseEffects_t& rBaseEffects);
 };
 
 } // namespace ac
