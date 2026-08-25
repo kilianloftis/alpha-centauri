@@ -1238,7 +1238,8 @@ void ValidateScopeForSource_(EffectScope_t scope, EffectPersistence_t persistenc
 TEST_CASE("ValidateEffectForSource: rejects only the certainly-impossible combinations",
           "[effects][parser][validation]")
 {
-    // ThisPop can only ever resolve against a pop type; ThisUnit against a unit component.
+    // ThisPop can only ever resolve against a pop type; ThisUnit against a unit component
+    // or morale level (combat rank effects folded in at resolve time).
     CHECK_THROWS(ValidateScopeForSource_(
         EffectScope_t::ThisPop, EffectPersistence_t::Continuous, EffectSourceKind_t::Building,
         "some_building"));
@@ -1252,6 +1253,12 @@ TEST_CASE("ValidateEffectForSource: rejects only the certainly-impossible combin
     CHECK_NOTHROW(ValidateScopeForSource_(
         EffectScope_t::ThisUnit, EffectPersistence_t::Continuous, EffectSourceKind_t::UnitComponent,
         "some_component"));
+    CHECK_NOTHROW(ValidateScopeForSource_(
+        EffectScope_t::ThisUnit, EffectPersistence_t::Continuous, EffectSourceKind_t::MoraleLevel,
+        "morale_level_4"));
+    CHECK_THROWS(ValidateScopeForSource_(
+        EffectScope_t::ThisBase, EffectPersistence_t::Continuous, EffectSourceKind_t::MoraleLevel,
+        "morale_level_4"));
 
     // ThisBase / ProducedAtThisBase need an origin base (or pop-merge path).
     CHECK_THROWS(ValidateScopeForSource_(

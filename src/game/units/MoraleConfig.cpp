@@ -35,16 +35,4 @@ const MoraleLevel_t* MoraleConfig_t::FindLevel(int index) const
     return nullptr;
 }
 
-const PromotionRule_t* MoraleConfig_t::FindPromotionRule(int intrinsicXp) const
-{
-    for (const PromotionRule_t& rRule : promotionRules)
-    {
-        if (intrinsicXp >= rRule.minLevel && intrinsicXp <= rRule.maxLevel)
-        {
-            return &rRule;
-        }
-    }
-    return nullptr;
-}
-
 } // namespace ac

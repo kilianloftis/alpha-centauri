@@ -153,6 +153,8 @@ struct StockpileConversionSubject_t
     int mineralsConverted = 0;
 };
 
+// Post-combat promotion uses MoraleConfig_t::promotionSeedFormula (Lua), not amount_source.
+
 // Per-subject amount_source evaluation. Literal `amount` when amountSource is absent.
 // Prefer typed subject overloads; the EffectContext_t* form bridges tile-yield / combat
 // paths that still build a context. Missing required subject for an amount_source throws
@@ -440,13 +442,14 @@ double ResolveUnitStat(const UnitEffects_t& rUnitEffects, StatId_t statId, doubl
                        const EffectContext_t* pCtx = nullptr);
 
 // Live-unit Attack/Defense for combat: same Unit-domain resolve as ResolveUnitStat /
-// ResolveStat (amount sources included), then folds moraleAddPercent into the same
-// AddPercent bucket (must not be applied as a post-multiply — that disagrees with other
-// unit AddPercents). moraleAddPercent comes from MoraleCalculator::CombatMoraleAddPercent.
+// ResolveStat (amount sources included), then folds moraleLevelEffects (from the unit's
+// effective MoraleLevel_t) into the same stack. Morale Attack/Defense AddPercents must
+// share the AddPercent bucket with other unit modifiers — not a post-multiply.
 int ResolveCombatUnitStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx,
-                          double moraleAddPercent);
+                          std::span<const EffectConfig_t> moraleLevelEffects);
 double ResolveCombatUnitMultiplicativeStat(const Unit& rUnit, StatId_t statId, double baseValue,
-                                           const EffectContext_t& rCtx, double moraleAddPercent);
+                                           const EffectContext_t& rCtx,
+                                           std::span<const EffectConfig_t> moraleLevelEffects);
 
 // Narrows the faction pool to the effects that apply to the given base: ThisBase effects
 // originating from it, plus all AllOwnerBases, FactionGlobal, and WorldGlobal effects.

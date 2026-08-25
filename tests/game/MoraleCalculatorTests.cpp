@@ -1,6 +1,6 @@
 #include "GameFixtures.h"
+#include "TempConfigFile.h"
 
-#include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include "game/faction/SocialEngineeringManager.h"
 #include "game/faction/base/buildings/BuildingManager.h"
@@ -13,9 +13,13 @@
 #include "game/units/StepEvaluator.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "game/units/Pathfinder.h"
+#include "lib/LuaRuntime.h"
+
+#include "game/effects/ActiveEffect.h"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <cmath>
 #include <random>
@@ -30,27 +34,97 @@ TEST_CASE("MoraleConfigParser loads SMAC defaults", "[morale][config]")
     CHECK(config.baseIntrinsic == 1);
     CHECK(config.probeBaseIntrinsic == 2);
     CHECK(config.defenseFloorIndex == 1);
+    CHECK(config.promotionSeedFormula
+          == "(attack_strength + defense_strength) > 0 and defense_strength / "
+             "(attack_strength + defense_strength) or 0");
     CHECK(config.levels.size() == 7);
     CHECK(config.levels[4].conventional == "Veteran");
     CHECK(config.levels[4].native == "Mature Boil");
-    CHECK(config.levels[4].combatBonusPercent == Catch::Approx(25.0));
-    CHECK(config.FindPromotionRule(0) != nullptr);
-    CHECK(config.FindPromotionRule(6) == nullptr);
+    REQUIRE(config.levels[4].effects.size() == 3);
+    const auto* pAtk = std::get_if<StatModifierEffect_t>(&config.levels[4].effects[0].effect);
+    REQUIRE(pAtk);
+    CHECK(pAtk->stat == StatId_t::Attack);
+    CHECK(pAtk->amount == Catch::Approx(25.0));
+    CHECK(pAtk->op == ModifierOp_t::AddPercent);
+    const auto* pPromote =
+        std::get_if<StatModifierEffect_t>(&config.levels[4].effects[2].effect);
+    REQUIRE(pPromote);
+    CHECK(pPromote->stat == StatId_t::PromotionChance);
+    CHECK(pPromote->op == ModifierOp_t::MultiplyGeometric);
+    CHECK(pPromote->amount == Catch::Approx(0.5));
 }
 
-TEST_CASE("CombatMoraleAddPercent follows configured level percents", "[morale]")
+TEST_CASE("ResolvePromotionChanceFromLevel: D/(A+D) with level promotion_chance effects",
+          "[morale][promotion]")
+{
+    const MoraleConfig_t config =
+        MoraleConfigParser{}.ParseConfig(FixturePath("morale_levels.json"));
+    LuaRuntime lua;
+
+    const auto seed = [&](int attack, int defense) {
+        return lua.EvalDouble(config.promotionSeedFormula,
+                              {{"attack_strength",  static_cast<double>(attack)},
+                               {"defense_strength", static_cast<double>(defense)}});
+    };
+
+    // Green: MinClamp 1 → always 100% regardless of fight balance.
+    CHECK(ResolvePromotionChanceFromLevel(seed(100, 0), config.levels[1].effects)
+          == Catch::Approx(1.0));
+
+    // Disciplined: seed D/(A+D) only.
+    CHECK(ResolvePromotionChanceFromLevel(seed(30, 70), config.levels[2].effects)
+          == Catch::Approx(0.7));
+    CHECK(ResolvePromotionChanceFromLevel(seed(0, 0), config.levels[2].effects)
+          == Catch::Approx(0.0));
+
+    // Commando (3–5 band): D/(A+D)/2 (seed ≤ 1, so MaxClamp 1 would never bind).
+    CHECK(ResolvePromotionChanceFromLevel(seed(30, 70), config.levels[5].effects)
+          == Catch::Approx(0.35));
+    CHECK(ResolvePromotionChanceFromLevel(seed(0, 100), config.levels[5].effects)
+          == Catch::Approx(0.5));
+}
+
+TEST_CASE("MoraleConfigParser rejects invalid level effects", "[morale][config]")
+{
+    const actest::TempConfigFile config("ac_morale_bad_op.json", R"({
+      "defense_floor_index": 0,
+      "promotion_seed_formula": "0",
+      "levels": [{
+        "index": 0, "conventional": "X", "native": "Y",
+        "effects": [{
+          "type": "StatModifier", "scope": "ThisUnit",
+          "parameters": { "stat": "attack", "amount": 1, "op": "Add" }
+        }]
+      }]
+    })");
+    CHECK_THROWS_WITH(MoraleConfigParser{}.ParseConfig(config.Path()),
+                      Catch::Matchers::ContainsSubstring("AddPercent"));
+}
+
+TEST_CASE("Morale level effects apply Attack AddPercent in combat resolve", "[morale]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis", "test_weapon"});
     const MoraleCalculator& morale = fixture.morale();
+    const EffectContext_t ctx{};
 
-    unit.SetXp(0);
-    CHECK(morale.CombatMoraleAddPercent(unit, {}) == Catch::Approx(-25.0));
-    unit.SetXp(2);
-    CHECK(morale.CombatMoraleAddPercent(unit, {}) == Catch::Approx(0.0));
-    unit.SetXp(4);
-    CHECK(morale.CombatMoraleAddPercent(unit, {}) == Catch::Approx(25.0));
+    const int baseAttack = ResolveStat(unit, StatId_t::Attack, ctx);
+
+    unit.SetXp(0); // Very Green −25%
+    CHECK(ResolveCombatUnitStat(unit, StatId_t::Attack, ctx,
+                                morale.EffectiveLevelEffects(unit, ctx))
+          == static_cast<int>(std::lround(baseAttack * 0.75)));
+
+    unit.SetXp(2); // Disciplined 0%
+    CHECK(ResolveCombatUnitStat(unit, StatId_t::Attack, ctx,
+                                morale.EffectiveLevelEffects(unit, ctx))
+          == baseAttack);
+
+    unit.SetXp(4); // Veteran +25%
+    CHECK(ResolveCombatUnitStat(unit, StatId_t::Attack, ctx,
+                                morale.EffectiveLevelEffects(unit, ctx))
+          == static_cast<int>(std::lround(baseAttack * 1.25)));
 }
 
 TEST_CASE("DisplayName switches on ForcesPsiCombat", "[morale]")
@@ -119,7 +193,7 @@ TEST_CASE("Defense floor keeps defender at Green", "[morale]")
     CHECK(morale.EffectiveMoraleLevel(unit, defCtx) == 1);
 }
 
-TEST_CASE("ResolveCombatUnitStat applies morale AddPercent", "[morale][combat]")
+TEST_CASE("ResolveCombatUnitStat applies morale level Attack AddPercent", "[morale][combat]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
@@ -130,7 +204,7 @@ TEST_CASE("ResolveCombatUnitStat applies morale AddPercent", "[morale][combat]")
 
     const int baseAttack = ResolveStat(unit, StatId_t::Attack, ctx);
     const int combatAttack = ResolveCombatUnitStat(
-        unit, StatId_t::Attack, ctx, morale.CombatMoraleAddPercent(unit, ctx));
+        unit, StatId_t::Attack, ctx, morale.EffectiveLevelEffects(unit, ctx));
     CHECK(combatAttack == static_cast<int>(std::lround(baseAttack * 1.25)));
 }
 

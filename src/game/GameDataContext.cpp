@@ -39,6 +39,7 @@
 #include "lib/LuaRuntime.h"
 
 #include <stdexcept>
+#include <unordered_map>
 
 namespace ac
 {
@@ -209,6 +210,17 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
     // --- Formula configs / calculators (depend on registries + LuaRuntime) ---
     rData.luaRuntime = std::make_unique<LuaRuntime>();
 
+    {
+        const std::unordered_map<std::string, double> kSmokeCases[] = {
+            {{"attack_strength", 1.0}, {"defense_strength", 1.0}},
+            {{"attack_strength", 0.0}, {"defense_strength", 0.0}},
+        };
+        for (const auto& vars : kSmokeCases)
+        {
+            (void)rData.luaRuntime->EvalDouble(rData.moraleConfig->promotionSeedFormula, vars);
+        }
+    }
+
     PopCompositionConfigParser compositionParser;
     rData.popCompositionConfig = std::make_unique<PopCompositionConfig_t>(
         compositionParser.ParseConfig(rPaths.popComposition));
@@ -247,7 +259,8 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
     rData.scrapRefundCalculator =
         std::make_unique<ScrapRefundCalculator>(*rData.productionConfig, *rData.luaRuntime);
 
-    rData.moraleCalculator = std::make_unique<MoraleCalculator>(*rData.moraleConfig);
+    rData.moraleCalculator =
+        std::make_unique<MoraleCalculator>(*rData.moraleConfig, *rData.luaRuntime);
 
     ThrowIfIncomplete(rData);
     return rData;

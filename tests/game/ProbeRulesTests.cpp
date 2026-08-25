@@ -1,10 +1,12 @@
 #include "game/units/ProbeActionConfigParser.h"
 #include "game/units/ProbeRules.h"
-#include "game/units/MoraleCalculator.h"
 #include "game/units/MoraleConfigParser.h"
+#include "game/units/Unit.h"
 #include "game/social-engineering/SocialRatingConfigParser.h"
 #include "game/effects/EffectConfig.h"
+#include "game/effects/EffectEnums.h"
 
+#include "GameFixtures.h"
 #include "TestHelpers.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -163,12 +165,17 @@ TEST_CASE("RollProbeAction RISK 0 always succeeds mission", "[probe][rules]")
 
 TEST_CASE("TryPromoteProbeMission bumps XP up to max", "[probe][morale]")
 {
-    const MoraleConfig_t moraleConfig =
-        MoraleConfigParser{}.ParseConfig(FixturePath("morale_levels.json"));
-    MoraleCalculator morale(moraleConfig);
+    FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    Unit& probe = fixture.MakeUnit(faction, 4, 4, {"test_chassis", "Probe_Team"});
+    REQUIRE(ResolveFlag(probe, RuleFlagId_t::ProbeTeam));
 
-    // Minimal unit isn't needed — just verify helper clamps via a stub is awkward without
-    // Unit. Covered in ProbeAction integration tests; here pin config max.
-    CHECK(moraleConfig.MaxLevel() == 6);
-    CHECK(moraleConfig.probeBaseIntrinsic == 2);
+    const MoraleCalculator& morale = fixture.morale();
+    probe.SetXp(0);
+    while (probe.GetXp() < morale.GetConfig().MaxLevel())
+    {
+        CHECK(TryPromoteProbeMission(probe, morale));
+    }
+    CHECK(probe.GetXp() == morale.GetConfig().MaxLevel());
+    CHECK_FALSE(TryPromoteProbeMission(probe, morale));
 }

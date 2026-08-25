@@ -6,10 +6,14 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/units/Unit.h"
+#include "lib/LuaRuntime.h"
 
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace ac
 {
@@ -98,8 +102,25 @@ int AdjustLiveBonus_(const Unit& rUnit, const EffectContext_t& rCtx)
 
 } // namespace
 
-MoraleCalculator::MoraleCalculator(const MoraleConfig_t& rConfig)
+double ResolvePromotionChanceFromLevel(double seed,
+                                       std::span<const EffectConfig_t> levelEffects)
+{
+    std::vector<std::pair<double, ModifierOp_t>> stack;
+    for (const EffectConfig_t& config : levelEffects)
+    {
+        const StatModifierEffect_t* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
+        if (!pMod || pMod->stat != StatId_t::PromotionChance)
+        {
+            continue;
+        }
+        stack.emplace_back(pMod->amount, pMod->op);
+    }
+    return ApplyModifierStack(seed, stack);
+}
+
+MoraleCalculator::MoraleCalculator(const MoraleConfig_t& rConfig, LuaRuntime& rLua)
     : m_rConfig(rConfig)
+    , m_rLua(rLua)
 {
 }
 
@@ -129,16 +150,15 @@ int MoraleCalculator::EffectiveMoraleLevel(const Unit& rUnit, const EffectContex
     return level;
 }
 
-double MoraleCalculator::CombatMoraleAddPercent(const Unit& rUnit,
-                                                 const EffectContext_t& rCtx) const
+std::span<const EffectConfig_t> MoraleCalculator::EffectiveLevelEffects(
+    const Unit& rUnit, const EffectContext_t& rCtx) const
 {
-    const int level = EffectiveMoraleLevel(rUnit, rCtx);
-    const MoraleLevel_t* pLevel = m_rConfig.FindLevel(level);
+    const MoraleLevel_t* pLevel = m_rConfig.FindLevel(EffectiveMoraleLevel(rUnit, rCtx));
     if (!pLevel)
     {
-        return 0.0;
+        return {};
     }
-    return pLevel->combatBonusPercent;
+    return pLevel->effects;
 }
 
 const std::string& MoraleCalculator::DisplayName(int level, bool bNativeLifecycle) const
@@ -172,31 +192,19 @@ bool MoraleCalculator::TryPromote(Unit& rSurvivor, int attackStrength, int defen
     {
         return false;
     }
-    const PromotionRule_t* pRule = m_rConfig.FindPromotionRule(xp);
-    if (!pRule)
+    const MoraleLevel_t* pLevel = m_rConfig.FindLevel(xp);
+    if (!pLevel)
     {
-        throw std::runtime_error("No promotion rule found for XP " + std::to_string(xp));
+        throw std::runtime_error("No morale level found for XP " + std::to_string(xp));
     }
 
-    double chance = 0.0;
-    switch (pRule->formula)
-    {
-        case PromotionFormula_t::FlatChance:
-            chance = pRule->chance;
-            break;
-        case PromotionFormula_t::DefenseOverTotal:
-        {
-            const int total = attackStrength + defenseStrength;
-            chance = total > 0 ? static_cast<double>(defenseStrength) / total : 0.0;
-            break;
-        }
-        case PromotionFormula_t::DefenseOverTotalHalf:
-        {
-            const int total = attackStrength + defenseStrength;
-            chance = total > 0 ? (static_cast<double>(defenseStrength) / total) * 0.5 : 0.0;
-            break;
-        }
-    }
+    const std::unordered_map<std::string, double> vars = {
+        {"attack_strength",  static_cast<double>(attackStrength)},
+        {"defense_strength", static_cast<double>(defenseStrength)},
+    };
+    const double seed =
+        m_rLua.EvalDouble(m_rConfig.promotionSeedFormula, vars);
+    const double chance = ResolvePromotionChanceFromLevel(seed, pLevel->effects);
 
     std::uniform_real_distribution<double> dist(0.0, 1.0);
     if (dist(rRng) >= chance)

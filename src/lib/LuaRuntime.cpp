@@ -56,8 +56,8 @@ sol::protected_function& LuaRuntime::LoadChunk_(const std::string& formula)
     return m_chunks.emplace(formula, chunk.get<sol::protected_function>()).first->second;
 }
 
-int LuaRuntime::EvalInt(const std::string& formula,
-                        const std::unordered_map<std::string, double>& vars)
+double LuaRuntime::EvalNumber_(const std::string& formula,
+                               const std::unordered_map<std::string, double>& vars)
 {
     if (formula.empty())
     {
@@ -106,14 +106,33 @@ int LuaRuntime::EvalInt(const std::string& formula,
     }
     clearVars();
 
-    lua_Number integral = 0.0;
+    if (!std::isfinite(number))
+    {
+        throw std::runtime_error("Lua formula (\"" + formula + "\") returned "
+                                 + std::to_string(number) + ", which is not finite");
+    }
+    return static_cast<double>(number);
+}
+
+double LuaRuntime::EvalDouble(const std::string& formula,
+                              const std::unordered_map<std::string, double>& vars)
+{
+    return EvalNumber_(formula, vars);
+}
+
+int LuaRuntime::EvalInt(const std::string& formula,
+                        const std::unordered_map<std::string, double>& vars)
+{
+    const double number = EvalNumber_(formula, vars);
+
+    double integral = 0.0;
     if (std::modf(number, &integral) != 0.0)
     {
         throw std::runtime_error("Lua formula (\"" + formula + "\") returned "
                                  + std::to_string(number) + ", which is not a whole number");
     }
-    if (integral < static_cast<lua_Number>(std::numeric_limits<int>::min())
-        || integral > static_cast<lua_Number>(std::numeric_limits<int>::max()))
+    if (integral < static_cast<double>(std::numeric_limits<int>::min())
+        || integral > static_cast<double>(std::numeric_limits<int>::max()))
     {
         throw std::runtime_error("Lua formula (\"" + formula + "\") returned "
                                  + std::to_string(number) + ", which does not fit in an int");

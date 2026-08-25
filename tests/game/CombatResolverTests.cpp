@@ -96,10 +96,10 @@ TEST_CASE("Combat strength is resolved rating times 0x100", "[combat]")
     const EffectContext_t attackCtx{&defender.GetTile(), CombatRole_t::Attacker};
     const EffectContext_t defenseCtx{&defender.GetTile(), CombatRole_t::Defender};
     const int attackRating = ResolveCombatUnitStat(
-        attacker, StatId_t::Attack, attackCtx, morale.CombatMoraleAddPercent(attacker, attackCtx));
+        attacker, StatId_t::Attack, attackCtx, morale.EffectiveLevelEffects(attacker, attackCtx));
     const int defenseRating = ResolveCombatUnitStat(
         defender, StatId_t::Defense, defenseCtx,
-        morale.CombatMoraleAddPercent(defender, defenseCtx));
+        morale.EffectiveLevelEffects(defender, defenseCtx));
 
     CombatHarness_ harness(fixture, /*seed*/ 1);
     const CombatResult_t result = harness.combat.Resolve(attacker, defender);

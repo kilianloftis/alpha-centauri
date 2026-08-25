@@ -2,20 +2,89 @@
   "base_intrinsic": 1,
   "probe_base_intrinsic": 2,
   "defense_floor_index": 1,
+  "promotion_seed_formula": "(attack_strength + defense_strength) > 0 and defense_strength / (attack_strength + defense_strength) or 0",
   "levels": [
-    { "index": 0, "conventional": "Very Green",  "native": "Hatchling",    "combat_bonus_percent": -25 },
-    { "index": 1, "conventional": "Green",       "native": "Larval Mass",  "combat_bonus_percent": -12.5 },
-    { "index": 2, "conventional": "Disciplined", "native": "Pre-Boil",     "combat_bonus_percent": 0 },
-    { "index": 3, "conventional": "Hardened",    "native": "Boil",         "combat_bonus_percent": 12.5 },
-    { "index": 4, "conventional": "Veteran",     "native": "Mature Boil",  "combat_bonus_percent": 25 },
-    { "index": 5, "conventional": "Commando",    "native": "Great Boil",   "combat_bonus_percent": 37.5 },
-    { "index": 6, "conventional": "Elite",       "native": "Demon Boil",   "combat_bonus_percent": 50 }
-  ],
-  "promotion": {
-    "rules": [
-      { "max_level": 1, "chance": 1.0 },
-      { "level": 2, "formula": "defense_over_total" },
-      { "min_level": 3, "max_level": 5, "formula": "defense_over_total_half" }
-    ]
-  }
+    {
+      "index": 0,
+      "conventional": "Very Green",
+      "native": "Hatchling",
+      "effects": [
+        { "type": "StatModifier", "scope": "ThisUnit",
+          "parameters": { "stat": "attack", "amount": -25, "op": "AddPercent" } },
+        { "type": "StatModifier", "scope": "ThisUnit",
+          "parameters": { "stat": "defense", "amount": -25, "op": "AddPercent" } },
+        { "type": "StatModifier", "scope": "ThisUnit",
+          "parameters": { "stat": "promotion_chance", "amount": 1, "op": "MinClamp" } }
+      ]
+    },
+    {
+      "index": 1,
+      "conventional": "Green",
+      "native": "Larval Mass",
+      "effects": [
+        { "type": "StatModifier", "scope": "ThisUnit",
+          "parameters": { "stat": "attack", "amount": -12.5, "op": "AddPercent" } },
+        { "type": "StatModifier", "scope": "ThisUnit",
+          "parameters": { "stat": "defense", "amount": -12.5, "op": "AddPercent" } },
+        { "type": "StatModifier", "scope": "ThisUnit",
+          "parameters": { "stat": "promotion_chance", "amount": 1, "op": "MinClamp" } }
+      ]
+    },
+    {
+      "index": 2,
+      "conventional": "Disciplined",
+      "native": "Pre-Boil",
+      "effects": []
+    },
+    {
+      "index": 3,
+      "conventional": "Hardened",
+      "native": "Boil",
+      "effects": [
+        { "type": "StatModifier", "scope": "ThisUnit",
+          "parameters": { "stat": "attack", "amount": 12.5, "op": "AddPercent" } },
+        { "type": "StatModifier", "scope": "ThisUnit",
+          "parameters": { "stat": "defense", "amount": 12.5, "op": "AddPercent" } },
+        { "type": "StatModifier", "scope": "ThisUnit",
+          "parameters": { "stat": "promotion_chance", "amount": 0.5, "op": "MultiplyGeometric" } }
+      ]
+    },
+    {
+      "index": 4,
+      "conventional": "Veteran",
+      "native": "Mature Boil",
+      "effects": [
+        { "type": "StatModifier", "scope": "ThisUnit",
+          "parameters": { "stat": "attack", "amount": 25, "op": "AddPercent" } },
+        { "type": "StatModifier", "scope": "ThisUnit",
+          "parameters": { "stat": "defense", "amount": 25, "op": "AddPercent" } },
+        { "type": "StatModifier", "scope": "ThisUnit",
+          "parameters": { "stat": "promotion_chance", "amount": 0.5, "op": "MultiplyGeometric" } }
+      ]
+    },
+    {
+      "index": 5,
+      "conventional": "Commando",
+      "native": "Great Boil",
+      "effects": [
+        { "type": "StatModifier", "scope": "ThisUnit",
+          "parameters": { "stat": "attack", "amount": 37.5, "op": "AddPercent" } },
+        { "type": "StatModifier", "scope": "ThisUnit",
+          "parameters": { "stat": "defense", "amount": 37.5, "op": "AddPercent" } },
+        { "type": "StatModifier", "scope": "ThisUnit",
+          "parameters": { "stat": "promotion_chance", "amount": 0.5, "op": "MultiplyGeometric" } }
+      ]
+    },
+    {
+      "index": 6,
+      "conventional": "Elite",
+      "native": "Demon Boil",
+      "effects": [
+        { "type": "StatModifier", "scope": "ThisUnit",
+          "parameters": { "stat": "attack", "amount": 50, "op": "AddPercent" } },
+        { "type": "StatModifier", "scope": "ThisUnit",
+          "parameters": { "stat": "defense", "amount": 50, "op": "AddPercent" } }
+      ]
+    }
+  ]
 }

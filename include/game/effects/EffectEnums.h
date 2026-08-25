@@ -98,6 +98,10 @@ enum class StatId_t
     // Scales positive *conditional* morale_bonus contributions (Creche in-base, etc.).
     // PureMultiplier (seed 1.0); SE Morale ≤ -2 uses AddPercent -50 ("+ modifiers halved").
     PositiveMoraleScale,
+    // Post-combat promotion probability (RawScaled). Resolve site seeds D/(A+D) from final
+    // combat weapon/armor strengths; morale level effects apply MinClamp / MultiplyGeometric /
+    // MaxClamp. Not resolved during combat stat passes.
+    PromotionChance,
 
     // Population growth rate modifier (AddPercent, base = 100%)
     GrowthRate,
@@ -238,6 +242,7 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::CommerceRate:
         case StatId_t::Bureaucracy:
         case StatId_t::TileDefense:          return StatKind_t::PureMultiplier;
+        case StatId_t::PromotionChance:
         case StatId_t::GrowthRate:
         case StatId_t::MoistureTier:
         case StatId_t::FacilityEnergyUpkeep:
@@ -337,7 +342,8 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::ProbeFailureScale:
         case StatId_t::StartingExperience:
         case StatId_t::MoraleBonus:
-        case StatId_t::PositiveMoraleScale: return ResolveDomain_t::Unit;
+        case StatId_t::PositiveMoraleScale:
+        case StatId_t::PromotionChance: return ResolveDomain_t::Unit;
 
         case StatId_t::MoistureTier:
         case StatId_t::TileDefense: return ResolveDomain_t::Tile;
@@ -387,6 +393,7 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "starting_minerals")       return StatId_t::StartingMinerals;
     if (rStat == "morale_bonus")            return StatId_t::MoraleBonus;
     if (rStat == "positive_morale_scale")   return StatId_t::PositiveMoraleScale;
+    if (rStat == "promotion_chance")        return StatId_t::PromotionChance;
     if (rStat == "growth_rate")             return StatId_t::GrowthRate;
     if (rStat == "tech_cost")               return StatId_t::TechCost;
     if (rStat == "tech_cost_diff")          return StatId_t::TechCostDiff;
@@ -702,6 +709,7 @@ enum class EffectSourceKind_t
     Difficulty,
     BaseConquest,
     PoliceRules,
+    MoraleLevel,
 };
 
 } // namespace ac

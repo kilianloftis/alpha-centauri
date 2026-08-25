@@ -911,10 +911,12 @@ void ValidateEffectForSource(const EffectConfig_t& rEffect, EffectSourceKind_t s
         throw std::runtime_error("Effect on '" + rSourceId
             + "': scope ThisPop is only meaningful on a pop type config");
     }
-    if (scope == EffectScope_t::ThisUnit && sourceKind != EffectSourceKind_t::UnitComponent)
+    if (scope == EffectScope_t::ThisUnit
+        && sourceKind != EffectSourceKind_t::UnitComponent
+        && sourceKind != EffectSourceKind_t::MoraleLevel)
     {
         throw std::runtime_error("Effect on '" + rSourceId
-            + "': scope ThisUnit is only meaningful on a unit component config");
+            + "': scope ThisUnit is only meaningful on a unit component or morale level config");
     }
     if (scope == EffectScope_t::ThisBase || scope == EffectScope_t::ProducedAtThisBase)
     {
@@ -948,6 +950,7 @@ void ValidateEffectForSource(const EffectConfig_t& rEffect, EffectSourceKind_t s
         case EffectSourceKind_t::Difficulty:
         case EffectSourceKind_t::BaseConquest:
         case EffectSourceKind_t::PoliceRules:
+        case EffectSourceKind_t::MoraleLevel:
             bCanSupplyOriginBase = false;
             break;
         }

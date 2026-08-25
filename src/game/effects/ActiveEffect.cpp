@@ -961,35 +961,31 @@ double ResolveUnitStat(const UnitEffects_t& rUnitEffects, StatId_t statId, doubl
 }
 
 int ResolveCombatUnitStat(const Unit& rUnit, StatId_t statId, const EffectContext_t& rCtx,
-                          double moraleAddPercent)
+                          std::span<const EffectConfig_t> moraleLevelEffects)
 {
     EffectContext_t ctx = rCtx;
     if (!ctx.pFaction)
     {
         ctx.pFaction = &rUnit.GetFaction();
     }
-    const UnitEffects_t unitEffects = CollectLiveUnitEffects(rUnit);
-    StatBreakdown_t breakdown = ResolveStatModifiers(
-        FilterByStatIdInContext(unitEffects.effects, statId, ctx), SeedFor(statId), &ctx);
-    std::vector<std::pair<double, ModifierOp_t>> stack;
-    stack.reserve(breakdown.contributions.size() + 1);
-    for (const StatBreakdown_t::Contribution_t& c : breakdown.contributions)
-    {
-        stack.emplace_back(c.amount, c.op);
-    }
-    stack.emplace_back(moraleAddPercent, ModifierOp_t::AddPercent);
-    return FinalizeResolvedStat(ApplyModifierStack(SeedFor(statId), stack));
+    std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects(rUnit).effects;
+    AppendActiveEffects(moraleLevelEffects, nullptr, "morale_level", effects);
+    return FinalizeResolvedStat(
+        ResolveStatModifiers(FilterByStatIdInContext(effects, statId, ctx), SeedFor(statId), &ctx)
+            .total);
 }
 
 double ResolveCombatUnitMultiplicativeStat(const Unit& rUnit, StatId_t statId, double baseValue,
-                                           const EffectContext_t& rCtx, double moraleAddPercent)
+                                           const EffectContext_t& rCtx,
+                                           std::span<const EffectConfig_t> moraleLevelEffects)
 {
     EffectContext_t ctx = rCtx;
     if (!ctx.pFaction)
     {
         ctx.pFaction = &rUnit.GetFaction();
     }
-    const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects(rUnit).effects;
+    std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects(rUnit).effects;
+    AppendActiveEffects(moraleLevelEffects, nullptr, "morale_level", effects);
     std::vector<std::pair<double, ModifierOp_t>> contributions;
     for (const ActiveEffect_t& rEffect : FilterByStatIdInContext(effects, statId, ctx))
     {
@@ -1000,7 +996,6 @@ double ResolveCombatUnitMultiplicativeStat(const Unit& rUnit, StatId_t statId, d
             contributions.emplace_back(AmountSourceValue(*pModifier, &ctx), pModifier->op);
         }
     }
-    contributions.emplace_back(moraleAddPercent, ModifierOp_t::AddPercent);
     return ApplyModifierStack(baseValue, contributions);
 }
 

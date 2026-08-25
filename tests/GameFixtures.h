@@ -154,13 +154,13 @@ struct WorldFixture
         improvements.Load(FixturePath("improvements.json"));
         unitComponents.Load(FixturePath("unit_components.json"));
         ctx = std::make_unique<ac::TileEffectsContext>(map, improvements, &unitComponents);
+        dataContext.luaRuntime = std::make_unique<ac::LuaRuntime>();
         // Same morale table Engine loads, and the one calculator built from it.
         dataContext.moraleConfig = std::make_unique<ac::MoraleConfig_t>(
             ac::MoraleConfigParser{}.ParseConfig(FixturePath("morale_levels.json")));
-        dataContext.moraleCalculator =
-            std::make_unique<ac::MoraleCalculator>(*dataContext.moraleConfig);
+        dataContext.moraleCalculator = std::make_unique<ac::MoraleCalculator>(
+            *dataContext.moraleConfig, *dataContext.luaRuntime);
 
-        dataContext.luaRuntime = std::make_unique<ac::LuaRuntime>();
         dataContext.buildingRegistry = std::make_unique<ac::BuildingRegistry>();
         dataContext.buildingRegistry->Load(FixturePath("buildings.json"));
         dataContext.stockpileRegistry = std::make_unique<ac::StockpileRegistry>();

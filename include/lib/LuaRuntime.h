@@ -40,7 +40,15 @@ public:
     int EvalInt(const std::string& formula,
                 const std::unordered_map<std::string, double>& vars);
 
+    // Same as EvalInt but allows fractional results (e.g. promotion chance 0.0–1.0).
+    // Throws if the formula is empty, fails to evaluate, or returns a non-finite number.
+    double EvalDouble(const std::string& formula,
+                      const std::unordered_map<std::string, double>& vars);
+
 private:
+    double EvalNumber_(const std::string& formula,
+                       const std::unordered_map<std::string, double>& vars);
+
     // Compiled "return <formula>" for a formula string, compiling it on first use. Throws if
     // the formula does not compile.
     sol::protected_function& LoadChunk_(const std::string& formula);

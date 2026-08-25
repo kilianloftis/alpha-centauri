@@ -117,10 +117,10 @@ CombatResult_t CombatResolver::Resolve(Unit& rAttacker, Unit& rDefender)
     {
         const double attackRating = ResolveCombatUnitMultiplicativeStat(
             rAttacker, StatId_t::Attack, 1.0, attackCtx,
-            m_rMorale.CombatMoraleAddPercent(rAttacker, attackCtx));
+            m_rMorale.EffectiveLevelEffects(rAttacker, attackCtx));
         const double defenseRating = ResolveCombatUnitMultiplicativeStat(
             rDefender, StatId_t::Defense, 1.0, defenseCtx,
-            m_rMorale.CombatMoraleAddPercent(rDefender, defenseCtx));
+            m_rMorale.EffectiveLevelEffects(rDefender, defenseCtx));
         result.attackStrength =
             static_cast<int>(std::lround(attackRating * k_combatStrengthScale));
         result.defenseStrength = static_cast<int>(
@@ -130,10 +130,10 @@ CombatResult_t CombatResolver::Resolve(Unit& rAttacker, Unit& rDefender)
     {
         const int attackRating = ResolveCombatUnitStat(
             rAttacker, StatId_t::Attack, attackCtx,
-            m_rMorale.CombatMoraleAddPercent(rAttacker, attackCtx));
+            m_rMorale.EffectiveLevelEffects(rAttacker, attackCtx));
         const int defenseRating = ResolveCombatUnitStat(
             rDefender, StatId_t::Defense, defenseCtx,
-            m_rMorale.CombatMoraleAddPercent(rDefender, defenseCtx));
+            m_rMorale.EffectiveLevelEffects(rDefender, defenseCtx));
         result.attackStrength = attackRating * k_combatStrengthScale;
         result.defenseStrength = static_cast<int>(
             std::lround(defenseRating * tileDefenseMult * k_combatStrengthScale));

@@ -140,6 +140,7 @@ static_assert(KindFor(StatId_t::ProbeDefense) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::ProbeFailureScale) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::ProbeSuccessScale) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::PositiveMoraleScale) == StatKind_t::PureMultiplier);
+static_assert(KindFor(StatId_t::PromotionChance) == StatKind_t::RawScaled);
 static_assert(KindFor(StatId_t::GrowthRate) == StatKind_t::RawScaled);
 static_assert(KindFor(StatId_t::TechCost) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::TechCostDiff) == StatKind_t::Additive);
