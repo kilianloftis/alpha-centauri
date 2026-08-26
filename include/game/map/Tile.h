@@ -87,10 +87,6 @@ public:
     bool IsWater() const;
     bool IsLand() const;
 
-    // Raw energy bands from elevation (floor(elev/1000) on land). SolarCollector/Mirror
-    // apply these via StatModifier amount_source ElevationEnergySeed, scaled by amount.
-    int GetElevationEnergySeed() const;
-
     // Rivers (derived from aquifer downhill flow; rebuilt by RecomputeRivers)
     void SetHasRiver(bool bHasRiver);
     bool GetHasRiver() const;

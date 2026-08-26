@@ -310,8 +310,8 @@ void ValidateEffectReferences(const GameDataContext& rData)
         validate(rAction.effects,
                  std::string("probe_action:") + ProbeActionIdToString(rAction.id));
     }
-    // tileYieldRules is a plain vector on GameDataContext (always present; may be empty).
-    validate(rData.tileYieldRules, "tile_yield_rules");
+    // tileYieldRules is a value on GameDataContext (always present; effects may be empty).
+    validate(rData.tileYieldRules.effects, "tile_yield_rules");
     validate(rData.policeRules, "police_rules");
     validate(rProductionConfig.effects, "production");
     validate(RequireRegistry(rData.baseConquestConfig, "baseConquestConfig").effects,

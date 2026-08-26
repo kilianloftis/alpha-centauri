@@ -28,6 +28,7 @@ class WorldMap;
 struct BuildingConfig_t;
 struct UnitComponentConfig_t;
 struct PopTypeConfig_t;
+struct TileYieldRulesConfig_t;
 
 struct ActiveEffect_t
 {
@@ -139,7 +140,8 @@ struct StockpileConversionSubject_t
 // field evaluates false, and an amount_source whose subject is absent is dropped by the
 // filters (StatModifierMatchesInContext / FilterBaseLevelByStatId) before resolve.
 // Combat sets targetTile to the defender's tile so TargetTileHas conditions can inspect it.
-// Tile yield also sets targetTile so amount_source ElevationEnergySeed can read the host tile.
+// Tile yield sets targetTile to the *receiving* tile — for a radius aura that is the tile
+// being resolved, not the aura's host — plus pTileYieldRules for amount_source ElevationEnergy.
 // combatRole enables IsDefending (SE Morale defense-in-base extras).
 // pAttacker enables AttackerIsEmbarked (and future attacker-side conditions).
 // pBase enables IsHeadquarters (Economy SE energy-at-HQ) and amount_source BaseSize
@@ -155,6 +157,9 @@ struct EffectContext_t
     const BaseManager* pBase = nullptr;
     const StockpileConversionSubject_t* pStockpile = nullptr;
     const Faction* pFaction = nullptr;
+    // World yield rules for terrain-scaled amount sources. Stamped by TileEffectsContext,
+    // which is the only place tile yield is resolved.
+    const TileYieldRulesConfig_t* pTileYieldRules = nullptr;
 };
 
 // Post-combat promotion uses MoraleConfig_t::promotionSeedFormula (Lua), not amount_source.
@@ -168,7 +173,7 @@ struct EffectContext_t
 double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double scale,
                          const BaseManager& rBase);
 double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double scale,
-                         const Tile& rTile);
+                         const Tile& rTile, const TileYieldRulesConfig_t& rYieldRules);
 double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double scale,
                          const StockpileConversionSubject_t& rStockpile);
 double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double scale,
@@ -230,9 +235,9 @@ void AppendFactionLaneEffects(std::span<const EffectConfig_t> rEffects,
                               std::vector<ActiveEffect_t>& rOut);
 
 // True if rEffect projects onto a tile `distance` tiles from its host: ThisTile lane,
-// Continuous, and radius >= distance. distance 0 = the host tile itself. The single
-// filter for a tile's own effects, neighboring improvement/terrain auras, and
-// unit-projected auras.
+// Continuous, and minRadius <= distance <= radius. distance 0 = the host tile itself, which
+// minRadius 1 excludes (the Echelon Mirror's ring). The single filter for a tile's own
+// effects, neighboring improvement/terrain auras, and unit-projected auras.
 bool TileEffectReaches(const EffectConfig_t& rEffect, int distance);
 
 // As AppendActiveEffects, but keeps only effects satisfying TileEffectReaches(e, distance).
@@ -376,8 +381,9 @@ inline bool StatModifierMatchesInContext(const ActiveEffect_t& effect, StatId_t 
     {
         return false;
     }
-    // BaseSize needs pBase; BasesOwned needs pFaction; other amount_sources use tile/minerals
-    // context on their own paths (or throw from AmountSourceValue if the subject is missing).
+    // Drop an amount_source whose subject this context lacks, rather than letting
+    // AmountSourceValue throw on it further down. MineralsConverted is not listed: it only
+    // ever resolves on the stockpile path, which builds its own filter.
     if (pStatModifier->amountSource == StatModifierEffect_t::AmountSource_t::BaseSize
         && ctx.pBase == nullptr)
     {
@@ -385,6 +391,11 @@ inline bool StatModifierMatchesInContext(const ActiveEffect_t& effect, StatId_t 
     }
     if (pStatModifier->amountSource == StatModifierEffect_t::AmountSource_t::BasesOwned
         && ctx.pFaction == nullptr)
+    {
+        return false;
+    }
+    if (pStatModifier->amountSource == StatModifierEffect_t::AmountSource_t::ElevationEnergy
+        && (ctx.targetTile == nullptr || ctx.pTileYieldRules == nullptr))
     {
         return false;
     }

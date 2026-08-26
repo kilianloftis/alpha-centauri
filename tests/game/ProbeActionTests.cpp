@@ -74,7 +74,8 @@ struct ProbeGame_
         }
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
-            *fixtures.dataContext.moraleCalculator, actest::k_TestRngSeed);
+            *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules,
+            actest::k_TestRngSeed);
 
         auto pFactionA = std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition,

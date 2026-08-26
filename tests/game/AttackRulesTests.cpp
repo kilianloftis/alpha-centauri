@@ -57,7 +57,7 @@ struct AttackGame_
         FillWater_(*pMap);
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
-            *fixtures.dataContext.moraleCalculator, actest::k_TestRngSeed);
+            *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, actest::k_TestRngSeed);
 
         fixtures.dataContext.unitComponentRegistry =
             std::make_unique<UnitComponentRegistry>();

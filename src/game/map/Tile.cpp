@@ -116,15 +116,6 @@ bool Tile::IsLand() const
     return !IsWater();
 }
 
-int Tile::GetElevationEnergySeed() const
-{
-    if (IsWater())
-    {
-        return 0;
-    }
-    return static_cast<int>(std::floor(m_elevation / 1000.0));
-}
-
 void Tile::SetHasRiver(bool bHasRiver)
 {
     m_bHasRiver = bHasRiver;

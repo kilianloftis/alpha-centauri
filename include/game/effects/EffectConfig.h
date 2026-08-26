@@ -88,8 +88,10 @@ struct StatModifierEffect_t
     double amount = 0.0;
     ModifierOp_t op = ModifierOp_t::Add;
     // When set, `amount` scales a runtime value instead of being a literal add.
-    // ElevationEnergySeed: contribution = GetElevationEnergySeed() * amount (per-band scale).
-    //   Requires EffectContext_t::targetTile; energy + ThisTile only. Not in FilterBaseLevel.
+    // ElevationEnergy: contribution = ceil(tile elevation / elevation_energy_step_meters)
+    //   * amount, clamped at 0. This is the whole of a solar collector's yield — a bare tile
+    //   produces no energy of its own. Requires EffectContext_t::targetTile and
+    //   pTileYieldRules; energy + ThisTile only. Not in FilterBaseLevel.
     // MineralsConverted: contribution = mineralsConverted * amount (output per mineral).
     //   Requires EffectContext_t::mineralsConverted; stockpile-output stats + ThisBase only.
     //   Resolved only during stockpile conversion, not FilterBaseLevelByStatId.
@@ -100,7 +102,7 @@ struct StatModifierEffect_t
     //   Unit-domain stats + ThisUnit only. Design-only resolve drops it (no faction subject).
     enum class AmountSource_t
     {
-        ElevationEnergySeed,
+        ElevationEnergy,
         MineralsConverted,
         BaseSize,
         BasesOwned,
@@ -425,6 +427,11 @@ struct EffectConfig_t
     // For ThisTile-scoped effects: how far (Chebyshev tiles) beyond the host tile the effect
     // reaches. 0 (default) = the host tile only. Parsed from the effect entry's "radius" field.
     int radius = 0;
+    // Nearest Chebyshev distance the effect reaches, so an aura can skip its own host tile.
+    // 0 (default) = includes the host. 1 with radius 1 is a ring: the Echelon Mirror boosts
+    // neighbouring solar collectors but not the one it counts as itself. Parsed from
+    // "min_radius"; must be <= radius.
+    int minRadius = 0;
 };
 
 } // namespace ac

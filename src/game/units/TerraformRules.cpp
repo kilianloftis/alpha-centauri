@@ -23,6 +23,12 @@
 namespace ac
 {
 
+// Metres a Former raises or lowers land in one action, and the band width the energy quote
+// scales by. A terraform rule, so it lives with the terraform rules — distinct from
+// tile_yield_rules' elevation_energy_step_meters, which is the yield rule. They ship the same
+// number today; a mod may want to move either alone.
+constexpr int k_ElevationStepMeters = 1000;
+
 namespace
 {
 
@@ -93,17 +99,17 @@ bool CanApplyMutation_(const Tile& rTile, const ImprovementConfig_t& rConfig, Un
         case TerraformResult_t::RaiseLand:
             if (domain == UnitDomain_t::Sea)
             {
-                return rTile.GetElevation() <= -1000;
+                return rTile.GetElevation() <= -k_ElevationStepMeters;
             }
             return rTile.GetElevation() < 3500;
         case TerraformResult_t::LowerLand:
             if (domain == UnitDomain_t::Land)
             {
-                return rTile.GetElevation() >= 1000;
+                return rTile.GetElevation() >= k_ElevationStepMeters;
             }
             // TODO: SMAC's floor for sea-former lowering is unknown; Planet's own floor is the
             // only limit we can state.
-            return rTile.GetElevation() - 1000 >= k_MinElevation;
+            return rTile.GetElevation() - k_ElevationStepMeters >= k_MinElevation;
     }
     return false;
 }
@@ -112,7 +118,7 @@ bool CanApplyMutation_(const Tile& rTile, const ImprovementConfig_t& rConfig, Un
 
 int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId, const WorldMap& rWorldMap)
 {
-    const int elevBand = std::abs(rTile.GetElevation()) / 1000 + 1;
+    const int elevBand = std::abs(rTile.GetElevation()) / k_ElevationStepMeters + 1;
     int nearest = std::numeric_limits<int>::max();
     const int mapWidth = rWorldMap.GetWidth();
 
@@ -230,7 +236,7 @@ bool ApplyTerraformResult(Tile& rTile, const ImprovementConfig_t& rConfig,
 
         case TerraformResult_t::RaiseLand:
         {
-            const int newElev = std::min(3500, rTile.GetElevation() + 1000);
+            const int newElev = std::min(3500, rTile.GetElevation() + k_ElevationStepMeters);
             rTile.SetElevation(newElev);
             ForEachTileInChebyshevRadius(rTile, rWorldMap, 1, false,
                 [&](Tile* pNeighbor, int /*distance*/)
@@ -242,7 +248,7 @@ bool ApplyTerraformResult(Tile& rTile, const ImprovementConfig_t& rConfig,
                     if (pNeighbor->GetElevation() < newElev)
                     {
                         pNeighbor->SetElevation(
-                            std::min(newElev, pNeighbor->GetElevation() + 1000));
+                            std::min(newElev, pNeighbor->GetElevation() + k_ElevationStepMeters));
                     }
                 });
             RecomputeRivers(rWorldMap);
@@ -252,15 +258,15 @@ bool ApplyTerraformResult(Tile& rTile, const ImprovementConfig_t& rConfig,
 
         case TerraformResult_t::LowerLand:
         {
-            if (rFormer.GetDomain() == UnitDomain_t::Land && rTile.GetElevation() < 1000)
+            if (rFormer.GetDomain() == UnitDomain_t::Land && rTile.GetElevation() < k_ElevationStepMeters)
             {
                 return false;
             }
-            if (rTile.GetElevation() - 1000 < k_MinElevation)
+            if (rTile.GetElevation() - k_ElevationStepMeters < k_MinElevation)
             {
                 return false;
             }
-            rTile.SetElevation(rTile.GetElevation() - 1000);
+            rTile.SetElevation(rTile.GetElevation() - k_ElevationStepMeters);
             RecomputeRivers(rWorldMap);
             return true;
         }

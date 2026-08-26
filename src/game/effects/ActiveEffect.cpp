@@ -20,6 +20,7 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 #include "game/effects/EffectConfig.h"
+#include "game/effects/TileYieldRulesConfig.h"
 #include <magic_enum.hpp>
 #include <algorithm>
 #include <cmath>
@@ -93,12 +94,24 @@ double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double sca
 }
 
 double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double scale,
-                         const Tile& rTile)
+                         const Tile& rTile, const TileYieldRulesConfig_t& rYieldRules)
 {
     switch (source)
     {
-        case StatModifierEffect_t::AmountSource_t::ElevationEnergySeed:
-            return static_cast<double>(rTile.GetElevationEnergySeed()) * scale;
+        case StatModifierEffect_t::AmountSource_t::ElevationEnergy:
+        {
+            if (rYieldRules.elevationEnergyStepMeters <= 0)
+            {
+                throw std::runtime_error(
+                    "AmountSourceValue: elevation_energy_step_meters must be > 0");
+            }
+            // Rounded up, so any land above sea level is worth at least one point. Clamped
+            // at 0 rather than reading a negative band off the sea floor — an ocean tile
+            // yields nothing here, whatever a mod lets you build on it.
+            const double bands = std::ceil(static_cast<double>(rTile.GetElevation())
+                                           / static_cast<double>(rYieldRules.elevationEnergyStepMeters));
+            return std::max(0.0, bands) * scale;
+        }
         default:
             ThrowNoEvaluation_(source, "Tile");
     }
@@ -136,13 +149,14 @@ double AmountSourceValue(const StatModifierEffect_t& rMod, const EffectContext_t
     }
     switch (*rMod.amountSource)
     {
-        case StatModifierEffect_t::AmountSource_t::ElevationEnergySeed:
-            if (!pCtx || !pCtx->targetTile)
+        case StatModifierEffect_t::AmountSource_t::ElevationEnergy:
+            if (!pCtx || !pCtx->targetTile || !pCtx->pTileYieldRules)
             {
                 throw std::runtime_error(
-                    "AmountSourceValue: ElevationEnergySeed requires targetTile");
+                    "AmountSourceValue: ElevationEnergy requires targetTile and pTileYieldRules");
             }
-            return AmountSourceValue(*rMod.amountSource, rMod.amount, *pCtx->targetTile);
+            return AmountSourceValue(*rMod.amountSource, rMod.amount, *pCtx->targetTile,
+                                     *pCtx->pTileYieldRules);
         case StatModifierEffect_t::AmountSource_t::MineralsConverted:
             if (!pCtx || !pCtx->pStockpile)
             {
@@ -225,7 +239,8 @@ bool TileEffectReaches(const EffectConfig_t& rEffect, int distance)
 {
     return LaneFor(rEffect.scope) == EffectLane_t::TileLocal
         && rEffect.persistence != EffectPersistence_t::Instantaneous
-        && rEffect.radius >= distance;
+        && distance >= rEffect.minRadius
+        && distance <= rEffect.radius;
 }
 
 void AppendTileEffects(std::span<const EffectConfig_t> rEffects,

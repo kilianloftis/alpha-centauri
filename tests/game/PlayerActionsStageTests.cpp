@@ -41,7 +41,7 @@ struct PlayerActionsGame_
     {
         pState = std::make_unique<GameState>(
             std::make_unique<WorldMap>(9, 9), fixtures.improvements, &fixtures.unitComponents,
-            settings, *fixtures.dataContext.moraleCalculator, actest::k_TestRngSeed);
+            settings, *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, actest::k_TestRngSeed);
 
         auto pFaction = std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
@@ -308,7 +308,7 @@ TEST_CASE("WorldEvents consumes GameState session RNG", "[WorldEvents]")
     {
         auto pState = std::make_unique<GameState>(
             std::make_unique<WorldMap>(16, 16), fixtures.improvements, &fixtures.unitComponents,
-            settings, *fixtures.dataContext.moraleCalculator, actest::k_TestRngSeed);
+            settings, *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, actest::k_TestRngSeed);
         pState->GetRng().seed(seed);
         pState->SetMissionYear(GameState::k_FirstPlayableMissionYear);
         return pState;

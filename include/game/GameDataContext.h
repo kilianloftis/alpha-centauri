@@ -3,6 +3,7 @@
 #include "game/faction/base/production/ProductionConfigParser.h"
 #include "game/GameDataPaths.h"
 #include "game/effects/EffectConfig.h"
+#include "game/effects/TileYieldRulesConfig.h"
 
 #include <memory>
 #include <vector>
@@ -78,8 +79,9 @@ struct GameDataContext
     std::unique_ptr<WorldGenPresetRegistry> worldGenPresetRegistry;
     std::unique_ptr<WorldGenDecorationConfig_t> worldGenDecorationConfig;
     std::vector<LandmarkConfig_t> worldGenLandmarks;
-    // FactionGlobal TileResourceCap rules (and any other universal tile-yield effects).
-    std::vector<EffectConfig_t> tileYieldRules;
+    // FactionGlobal TileResourceCap rules (and any other universal tile-yield effects), plus
+    // the world yield scalars TileEffectsContext stamps into per-tile resolution.
+    TileYieldRulesConfig_t tileYieldRules;
     // FactionUnits police baselines (away-from-home weight + effectiveness for combat units).
     std::vector<EffectConfig_t> policeRules;
     std::unique_ptr<MoraleConfig_t> moraleConfig;

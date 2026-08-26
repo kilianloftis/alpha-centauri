@@ -13,6 +13,7 @@
 #include "game/units/UnitDesign.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
+#include "game/effects/TileYieldRulesConfig.h"
 #include <algorithm>
 #include <cmath>
 #include <optional>
@@ -262,9 +263,11 @@ void PartitionYieldEffects_(const Tile& rTile, const std::vector<ActiveEffect_t>
 } // namespace
 
 TileEffectsContext::TileEffectsContext(WorldMap& rWorldMap, const ImprovementRegistry& rImprovements,
-                                       const UnitComponentRegistry* pUnitComponents)
+                                       const UnitComponentRegistry* pUnitComponents,
+                                       const TileYieldRulesConfig_t& rYieldRules)
     : m_rWorldMap(rWorldMap)
     , m_rImprovements(rImprovements)
+    , m_rYieldRules(rYieldRules)
     , m_maxRadius(0)
 {
     // Mirror terrain enums/bools as ImprovementConfig_t pointers so hot-path collectors
@@ -341,7 +344,10 @@ int TileEffectsContext::ResolveResource_(const Tile& rTile,
                                          std::span<const ActiveEffect_t*> effects,
                                          StatId_t stat) const
 {
-    const EffectContext_t ctx{&rTile};
+    // targetTile is the receiving tile, so an aura's ElevationEnergy would read the tile it
+    // lands on, not its host. Only radius-0 effects use it today (a solar collector yields
+    // off its own elevation), and min_radius keeps the Mirror's ring a flat +1.
+    const EffectContext_t ctx{.targetTile = &rTile, .pTileYieldRules = &m_rYieldRules};
     auto matching = effects
         | std::views::transform([](const ActiveEffect_t* pEffect) -> const ActiveEffect_t& {
               return *pEffect;
@@ -359,8 +365,9 @@ TileEffectsContext::YieldLanes_t TileEffectsContext::ResolveYieldLanes_(
     std::vector<const ActiveEffect_t*> afterRestriction;
     PartitionYieldEffects_(rTile, effects, beforeRestriction, afterRestriction);
 
-    // Energy seed is 0 here: elevation bands come from SolarCollector/Mirror amount_source
-    // effects (ElevationEnergySeed), not a hardcoded improvement-id gate.
+    // Every resource seeds at 0: a bare tile yields no energy of its own. Elevation energy
+    // comes from SolarCollector/Mirror amount_source effects (ElevationEnergy), not a
+    // hardcoded improvement-id gate.
     const TileResources_t subject{
         ResolveResource_(rTile, beforeRestriction, StatId_t::Nutrients),
         ResolveResource_(rTile, beforeRestriction, StatId_t::Energy),

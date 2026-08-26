@@ -132,22 +132,30 @@ TEST_CASE("ResolveTileYield: bare tiles start at zero; SolarCollector applies el
         CHECK(yield.energy == 0);
     }
 
-    SECTION("elevation energy comes from SolarCollector amount_source")
+    SECTION("a solar collector's whole yield is ceil(elevation / step)")
     {
         tile.SetElevation(1000);
         CHECK(world.ctx->ResolveTileYield(tile).effective.energy == 0);
         world.ctx->AddImprovementWithEffects(tile, "SolarCollector");
-        // flat +1 + ElevationEnergySeed*1 (=1)
-        CHECK(world.ctx->ResolveTileYield(tile).effective.energy == 2);
+        CHECK(world.ctx->ResolveTileYield(tile).effective.energy == 1);
         tile.SetElevation(2500);
         CHECK(world.ctx->ResolveTileYield(tile).effective.energy == 3);
     }
 
-    SECTION("negative elevation yields only Solar flat bonus")
+    SECTION("rounded up, so any land above sea level is worth a point")
     {
-        tile.SetElevation(-2000);
+        tile.SetElevation(1);
         world.ctx->AddImprovementWithEffects(tile, "SolarCollector");
         CHECK(world.ctx->ResolveTileYield(tile).effective.energy == 1);
+    }
+
+    SECTION("sea level and below yield nothing")
+    {
+        world.ctx->AddImprovementWithEffects(tile, "SolarCollector");
+        tile.SetElevation(0);
+        CHECK(world.ctx->ResolveTileYield(tile).effective.energy == 0);
+        tile.SetElevation(-2000);
+        CHECK(world.ctx->ResolveTileYield(tile).effective.energy == 0);
     }
 }
 
@@ -157,16 +165,16 @@ TEST_CASE("ResolveTileYield: each resource resolves from the matching StatId_t (
     actest::WorldFixture world;
     Tile& tile = world.At(4, 4);
 
-    tile.SetElevation(1000);   // ElevationEnergySeed 1 with SolarCollector
+    tile.SetElevation(1000);   // one elevation band
     tile.SetHasRiver(true);    // +1 energy
     world.ctx->AddImprovementWithEffects(tile, "Farm"); // +1 nutrients
     world.ctx->AddImprovementWithEffects(tile, "Mine"); // +2 minerals
-    world.ctx->AddImprovementWithEffects(tile, "SolarCollector"); // +1 flat + seed
+    world.ctx->AddImprovementWithEffects(tile, "SolarCollector");
 
     const TileResources_t yield = world.ctx->ResolveTileYield(tile).effective;
     CHECK(yield.nutrients == 1);
     CHECK(yield.minerals == 2);
-    CHECK(yield.energy == 3); // solar flat 1 + seed 1 + river 1
+    CHECK(yield.energy == 2); // solar ceil(1000/1000) = 1, river 1
 }
 
 TEST_CASE("ResolveTileYield: terrain classification contributes through the same registry ids",
@@ -182,17 +190,52 @@ TEST_CASE("ResolveTileYield: terrain classification contributes through the same
     CHECK(yield.minerals == 1);
 }
 
-TEST_CASE("ResolveTileYield: a Mirror's energy aura reaches nearby tiles", "[effects][tile][yield][aura]")
+TEST_CASE("ResolveTileYield: a Mirror boosts adjacent solar collectors only",
+          "[effects][tile][yield][aura]")
 {
     actest::WorldFixture world;
     world.ctx->AddImprovementWithEffects(world.At(4, 4), "Mirror");
 
-    CHECK(world.ctx->ResolveTileYield(world.At(6, 4)).effective.energy == 1); // distance 2
-    CHECK(world.ctx->ResolveTileYield(world.At(7, 4)).effective.energy == 0); // distance 3
+    SECTION("a bare neighbour gets nothing — the aura is not a blanket +1")
+    {
+        CHECK(world.ctx->ResolveTileYield(world.At(5, 4)).effective.energy == 0);
+    }
 
-    // Two mirrors in range stack.
-    world.ctx->AddImprovementWithEffects(world.At(6, 5), "Mirror");
-    CHECK(world.ctx->ResolveTileYield(world.At(6, 4)).effective.energy == 2);
+    SECTION("an adjacent solar collector gets +1 on top of its own elevation")
+    {
+        Tile& neighbour = world.At(5, 4);
+        neighbour.SetElevation(2000);
+        world.ctx->AddImprovementWithEffects(neighbour, "SolarCollector");
+        CHECK(world.ctx->ResolveTileYield(neighbour).effective.energy == 3); // 2 bands + mirror 1
+    }
+
+    SECTION("out of range gets nothing")
+    {
+        Tile& far = world.At(6, 4); // distance 2
+        far.SetElevation(1000);
+        world.ctx->AddImprovementWithEffects(far, "SolarCollector");
+        CHECK(world.ctx->ResolveTileYield(far).effective.energy == 1); // its own band only
+    }
+}
+
+TEST_CASE("ResolveTileYield: a Mirror is its own solar collector but not its own beneficiary",
+          "[effects][tile][yield][aura]")
+{
+    actest::WorldFixture world;
+    Tile& host = world.At(4, 4);
+    host.SetElevation(2000);
+    world.ctx->AddImprovementWithEffects(host, "Mirror");
+
+    // Counts as a collector: two elevation bands. Does not add its own +1 (min_radius 1).
+    CHECK(world.ctx->ResolveTileYield(host).effective.energy == 2);
+
+    // A second mirror adjacent to the first: each is a collector the other can see, so both
+    // gain exactly one +1 — from the neighbour, never from themselves.
+    Tile& second = world.At(5, 4);
+    second.SetElevation(1000);
+    world.ctx->AddImprovementWithEffects(second, "Mirror");
+    CHECK(world.ctx->ResolveTileYield(host).effective.energy == 3);   // 2 bands + 1 from second
+    CHECK(world.ctx->ResolveTileYield(second).effective.energy == 2); // 1 band  + 1 from host
 }
 
 TEST_CASE("ResolveTileYield with base effects: selector-carrying modifiers apply per matching tile",

@@ -199,9 +199,9 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   `tests/effects/ValidationTests.cpp` pins every stat's kind with `static_assert`s.
 - **`constexpr SeedFor(StatId_t) -> double`**: derives the context-free seed from the kind
   (`0.0`/`1.0`); throws for `RawScaled`, forcing those sites to pass their raw value
-  explicitly. Sites that deliberately resolve an Additive stat against a raw base (tile
-  yield's elevation energy seed, pop tile multipliers, `ResourceManager` base-level
-  production) also pass their seed explicitly and say so in a comment.
+  explicitly. Sites that deliberately resolve an Additive stat against a raw base (pop tile
+  multipliers, `ResourceManager` base-level production) also pass their seed explicitly and
+  say so in a comment.
 - **`FinalizeResolvedStat(double) -> int`**: the single float→int rule for a resolved
   modifier total — `std::lround`, half away from zero. Every consumer of a
   `ResolveStatModifiers` / `ApplyModifierStack` total goes through it: `ResolveStat` (design
@@ -376,7 +376,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 ### FilterBaseLevelByStatId
 - **Purpose**: Like `FilterByStatId`, but for **base-level** resolution: excludes
   selector-carrying (per-tile) modifiers and most `amount_source` modifiers.
-  `ElevationEnergySeed` / `MineralsConverted` stay on tile-yield / stockpile paths.
+  `ElevationEnergy` / `MineralsConverted` stay on tile-yield / stockpile paths.
   `BaseSize` is **included** when `EffectContext_t::pBase` is set (contribution =
   population size × `amount`). Condition-carrying effects are excluded without a
   context, and included when the context satisfies them (e.g. `IsHeadquarters`).
@@ -573,8 +573,9 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
     - Nonzero `radius` requires `scope: ThisTile`.
     - `StatModifier` with `amount_source` requires `op: Add` (or omitted op, which defaults to Add).
       Legality is a table keyed by `AmountSource_t` → required **subject domain** + allowed
-      stats/scopes (independent of `DomainFor(stat)` — Option A). `ElevationEnergySeed` needs a
-      Tile subject and allows energy + `ThisTile`. `MineralsConverted` needs a Stockpile
+      stats/scopes (independent of `DomainFor(stat)` — Option A). `ElevationEnergy` needs a
+      Tile subject plus `pTileYieldRules`, allows energy + `ThisTile`, and rejects a `radius`
+      (an aura would scale off the receiving tile's elevation, not its host's). `MineralsConverted` needs a Stockpile
       conversion subject and allows stockpile-output stats + `ThisBase` + Continuous (+
       `ValidateEffectForSource` Stockpile kind). `BaseSize` needs a Base subject and allows
       Base-domain stats with scopes `ThisBase` / `AllOwnerBases` / `FactionGlobal`. `BasesOwned`
@@ -584,7 +585,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
       selectors route through tile-yield resolution, which supplies only a tile subject. Each
       amount_source contribution for `BaseSize` is **floored** before entering the modifier
       stack (vanilla University `floor(size×0.25)` does not share fractional residue with
-      another fractional BaseSize source; `ElevationEnergySeed` / `MineralsConverted` /
+      another fractional BaseSize source; `ElevationEnergy` / `MineralsConverted` /
       `BasesOwned` keep fractional scales). Missing required subject at resolve throws (no silent `0.0`). `energy` is not a
       bank, so conversion routes it through `ResourceManager::AddAllocatedEnergy` (inefficiency,
       then the econ/labs/psych split) rather than crediting it directly — using the faction's
@@ -677,12 +678,23 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
 - **`ImprovementConfig_t`**: `id`, `name`, `description`, `mineralCost`, `requiredTech`, `excludes` (other feature ids that can't coexist with this one on a tile), `radius` (default `0`), `frequency`, `spritePath`, `effects` (the standard `EffectConfig_t` vector, parsed via `EffectConfigParser::ParseEffects`).
 - **How a tile holds features**: improvements are stored directly as non-owning `const ImprovementConfig_t*` in `Tile::GetImprovements()` (the same pattern `BuildingManager` uses for `BuildingConfig_t*`); the caller resolves the id via `ImprovementRegistry` (the funnel is `TileEffectsContext`). Terrain stays as typed enums/bools on `Tile` — world-gen and rendering need the exhaustive/exclusive guarantee (every tile is *exactly one* of Flat/Rolling/Rocky) — and is exposed for effect resolution as resolved config pointers via `Tile::GetTerrainFeatures()` (Rockiness_t, Moisture_t, and each active `TerrainFeature_t`), cached by `RefreshTerrainFeatures_` whenever a terrain setter runs. `Tile::HasFeature(id)` answers "is this feature present?" across both (terrain names + improvement ids) for conditions/selectors/`CanBuildImprovement`.
 - **`CollectTileEffects(tile, improvementRegistry)`**: collects a tile's own `ThisTile`-scoped effects into a flat `ActiveEffect_t` list (sourceId = the feature's id) in two passes — each `GetTerrainFeatures()` config, plus each `GetImprovements()` config, both read directly (no lookup). Mirrors `CollectPopEffects`/`CollectUnitEffects`. Only ever resolves a tile's *own* effects (radius 0) — it has no `WorldMap` to look at neighbors.
-- **`radius` (aura effects)**: radius is a **per-effect** property (`EffectConfig_t::radius`, default `0` = the host tile only), declared on the effect entry itself — e.g. `Sensor`'s `+25%` defense effect carries `radius: 2`, `Mirror`'s `+1 energy` carries `radius: 2`, `Condenser`'s `+1 moisture_tier` carries `radius: 1`. There is **no** improvement-level radius default: `ImprovementConfig_t` has no radius member and `ImprovementConfigParser` never reads one, so siblings do not inherit a radius from their container and each effect states its own. Only continuous `ThisTile`-scoped effects take part in aura resolution — neighbor collection applies the exact same scope/persistence filter as own-tile collection.
+- **`radius` (aura effects)**: radius is a **per-effect** property (`EffectConfig_t::radius`, default `0` = the host tile only), declared on the effect entry itself — e.g. `Sensor`'s `+25%` defense effect carries `radius: 2`, `Mirror`'s `+1 energy` carries `radius: 1`, `Condenser`'s `+1 moisture_tier` carries `radius: 1`. There is **no** improvement-level radius default: `ImprovementConfig_t` has no radius member and `ImprovementConfigParser` never reads one, so siblings do not inherit a radius from their container and each effect states its own. Only continuous `ThisTile`-scoped effects take part in aura resolution — neighbor collection applies the exact same scope/persistence filter as own-tile collection.
+- **`min_radius` (ring auras)**: the nearest distance an aura reaches (`EffectConfig_t::minRadius`, default `0` = includes the host tile). `TileEffectReaches` is `minRadius <= distance <= radius`. The Echelon Mirror uses `min_radius: 1, radius: 1`: it counts as a solar collector for its own elevation energy and for *other* mirrors' bonuses, but must not hand its `+1` to itself. Rejected when it exceeds `radius` (the effect would reach no tile at all) or on a non-`ThisTile` scope, both at parse time.
 - **Unit auras**: unit components can carry `ThisTile`-scoped effects with a radius (e.g. a sensor pod granting `+25%` defense within 2 tiles). `CollectAreaEffects` scans `WorldMap::GetUnitsOnTile` over the aura radius — including units standing on the resolved tile itself — so the aura follows the unit as it moves. Each collected aura stamps `ActiveEffect_t::ownerFaction` from the projecting unit's faction (same gate as territory-owned improvements for defense / area Conceal; Detect additionally requires a stamped owner and fails closed without one). `TileEffectsContext` takes the `UnitComponentRegistry` at construction to size its scan bound.
 - **`CollectAreaEffects(tile, worldMap, registry)`**: the single function powering all three radius-aware resolvers (defense, yield, and moisture recompute). `WorldMap` is needed to look up neighboring tiles and units.
 - **`ResolveTileDefenseMultiplier(tile, worldMap, improvementRegistry)`**:
   `ResolveStatModifiers(FilterByStatId(CollectAreaEffects(...), TileDefense),
   SeedFor(TileDefense)).total`.
+- **Energy is never intrinsic**: every resource seeds at `0` per tile, and elevation energy is
+  entirely the solar collector's. `SolarCollector` declares one effect — `energy`,
+  `amount_source: ElevationEnergy` — whose contribution is
+  `ceil(elevation / elevation_energy_step_meters)`, rounded **up** so any land above sea level
+  is worth a point, and clamped at `0` so sea level and below yield nothing. `Mirror` declares
+  the same effect (it *is* a collector) plus a `min_radius: 1, radius: 1` `+1 energy` aura
+  conditioned on `TargetTileHas` `SolarCollector` or `Mirror` — two effects rather than one
+  because `TargetTileHas` takes a single id, and safe from double-counting because the two
+  improvements `excludes` each other. The step lives in `config/tile_yield_rules.json`; nothing
+  about the mechanic is hard-coded, so a mod can add a third collector or move the band width.
 - **`ResolveTileYield(tile)`**: returns `TileYieldView_t` from `CollectAreaEffects` (so a nearby Mirror's energy aura IS included), including `apply_after_restriction` bonuses, with **no** `TileResourceCap` (`effective == potential`). Used where only intrinsic + area yield is wanted (e.g. the auto-assign tile scorer).
 - **`ResolveTileYield(tile, bIsBaseTile, baseEffects)`**: the full worked-tile yield as `TileYieldView_t`. Starts from `CollectAreaEffects`, then appends every `baseEffects` `StatModifier` whose `selector` matches this tile, splits the list into pre-cap vs `apply_after_restriction` lanes, clamps the pre-cap lane via any `TileResourceCap` effects still in `baseEffects`, then adds the after-restriction lane. Caps with `removed_by_tech` are omitted from the faction pool once that tech is discovered. Production reads `.effective`; UI may also use `.potential`. Unworked-tile preview (`BaseManager::GetPreviewTileYield`) uses this same overload with `bIsBaseTile == false` — as-if-worked tile-level yield (selectors + caps), without pop `ApplyTileMultipliers`.
 - **`StatId_t::MoistureTier`** (`"moisture_tier"` in JSON): integer tile tier (Arid=0, Moist=1, Wet=2), used exclusively by `RecomputeMoisture` as a terrain-mutation target. Not queryable at runtime — it is a seed for `SetMoisture()`, not a cached stat. `Condenser`'s `+1 moisture_tier Add` effect flows through `RecomputeMoisture` to actually call `Tile::SetMoisture()`, making the change visible in rendering and tile-yield resolution.

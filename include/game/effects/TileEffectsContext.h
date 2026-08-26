@@ -13,6 +13,7 @@ class ImprovementRegistry;
 class Tile;
 class UnitComponentRegistry;
 class WorldMap;
+struct TileYieldRulesConfig_t;
 
 // Bundles WorldMap and ImprovementRegistry into a single dependency that knows how to resolve
 // tile-level effects - yield, defense multipliers, and terrain mutations like Condenser moisture.
@@ -24,8 +25,11 @@ public:
     // pUnitComponents is only used to size the aura scan radius: unit components can carry
     // ThisTile-scoped effects with a radius (mobile auras, e.g. a sensor pod), and the scan
     // bound must cover the largest such radius. Pass nullptr if units never project auras.
+    // rYieldRules must outlive this context: it is stamped into every per-tile EffectContext_t
+    // so terrain-scaled amount sources (ElevationEnergy) can read the world's yield scalars.
     TileEffectsContext(WorldMap& rWorldMap, const ImprovementRegistry& rImprovements,
-                       const UnitComponentRegistry* pUnitComponents);
+                       const UnitComponentRegistry* pUnitComponents,
+                       const TileYieldRulesConfig_t& rYieldRules);
 
     // WorldMap access — used by callers (e.g. BaseManager) that need the map for spatial
     // queries like computing workable tile positions.
@@ -99,6 +103,7 @@ private:
 
     WorldMap& m_rWorldMap;
     const ImprovementRegistry& m_rImprovements;
+    const TileYieldRulesConfig_t& m_rYieldRules;
     // Max ThisTile-scoped effect radius across improvement configs and unit components;
     // bounds the aura scan. Cached in the constructor.
     int m_maxRadius;

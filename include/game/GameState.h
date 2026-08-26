@@ -37,6 +37,7 @@ class EventBus;
 class GameSettings;
 class CouncilProposalRegistry;
 struct CouncilRulesConfig_t;
+struct TileYieldRulesConfig_t;
 class PlanetaryCouncil;
 
 class GameState : public IUnitOrderWorld, public IWorldEffectsSource
@@ -55,11 +56,14 @@ public:
     // rngSeed seeds the session RNG behind every combat, promotion and probe roll. Injected
     // rather than drawn from std::random_device so a session is reproducible from the seed the
     // composition root resolves and reports; tests pass a fixed value to keep rolls stable.
+    // rYieldRules must outlive this GameState: it is handed to the TileEffectsContext, which
+    // stamps it into per-tile resolution for terrain-scaled amount sources.
     GameState(std::unique_ptr<WorldMap> pWorldMap,
               const ImprovementRegistry& rImprovements,
               const UnitComponentRegistry* pUnitComponents,
               GameSettings& rSettings,
               const MoraleCalculator& rMorale,
+              const TileYieldRulesConfig_t& rYieldRules,
               uint32_t rngSeed);
     ~GameState();
 

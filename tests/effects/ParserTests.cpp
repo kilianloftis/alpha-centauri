@@ -235,14 +235,14 @@ TEST_CASE("ParseEffectConfig: amount as numeric string (used by real configs)", 
 
 TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
 {
-    SECTION("ElevationEnergySeed with explicit per-band scale")
+    SECTION("ElevationEnergy with explicit per-band scale")
     {
         const json effectJson = json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisTile",
             "parameters": {
                 "stat": "energy",
-                "amount_source": "ElevationEnergySeed",
+                "amount_source": "ElevationEnergy",
                 "amount": 2,
                 "op": "Add"
             }
@@ -252,7 +252,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
         REQUIRE(pMod != nullptr);
         REQUIRE(pMod->amountSource.has_value());
-        CHECK(*pMod->amountSource == StatModifierEffect_t::AmountSource_t::ElevationEnergySeed);
+        CHECK(*pMod->amountSource == StatModifierEffect_t::AmountSource_t::ElevationEnergy);
         CHECK(pMod->amount == Approx(2.0));
     }
 
@@ -261,7 +261,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         const json effectJson = json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisTile",
-            "parameters": { "stat": "energy", "amount_source": "ElevationEnergySeed" }
+            "parameters": { "stat": "energy", "amount_source": "ElevationEnergy" }
         })");
 
         const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
@@ -275,7 +275,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisTile",
-            "parameters": { "stat": "minerals", "amount_source": "ElevationEnergySeed" }
+            "parameters": { "stat": "minerals", "amount_source": "ElevationEnergy" }
         })")));
     }
 
@@ -284,7 +284,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisBase",
-            "parameters": { "stat": "energy", "amount_source": "ElevationEnergySeed" }
+            "parameters": { "stat": "energy", "amount_source": "ElevationEnergy" }
         })")));
     }
 
@@ -302,7 +302,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         CHECK_NOTHROW(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisTile",
-            "parameters": { "stat": "energy", "amount_source": "ElevationEnergySeed" }
+            "parameters": { "stat": "energy", "amount_source": "ElevationEnergy" }
         })")));
     }
 
@@ -313,7 +313,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
             "scope": "ThisTile",
             "parameters": {
                 "stat": "energy",
-                "amount_source": "ElevationEnergySeed",
+                "amount_source": "ElevationEnergy",
                 "op": "MultiplyGeometric"
             }
         })")));
@@ -508,6 +508,18 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         })")));
     }
 
+    SECTION("ElevationEnergy with a radius throws")
+    {
+        // targetTile is the receiving tile, so an aura would scale off whatever tile it
+        // landed on rather than its own host — silently wrong rather than merely useless.
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisTile",
+            "radius": 1,
+            "parameters": { "stat": "energy", "amount_source": "ElevationEnergy", "amount": 1 }
+        })")));
+    }
+
     SECTION("any amount_source with a tile selector throws")
     {
         // Selectors resolve during tile-yield, which supplies only a tile subject — so the
@@ -528,7 +540,7 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
             "scope": "ThisTile",
             "parameters": {
                 "stat": "energy",
-                "amount_source": "ElevationEnergySeed",
+                "amount_source": "ElevationEnergy",
                 "amount": 1,
                 "selector": { "kind": "Improvement", "improvement": "Mine" }
             }
@@ -1194,6 +1206,53 @@ TEST_CASE("ParseEffectConfig: per-effect radius", "[effects][parser][radius]")
     {
         CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier", "scope": "ThisBase", "radius": 2,
+            "parameters": { "stat": "energy", "amount": 1 }
+        })")));
+    }
+}
+
+TEST_CASE("ParseEffectConfig: per-effect min_radius", "[effects][parser][radius]")
+{
+    SECTION("parsed from the effect entry, default 0")
+    {
+        const json ring = json::parse(R"({
+            "type": "StatModifier", "scope": "ThisTile", "radius": 1, "min_radius": 1,
+            "parameters": { "stat": "energy", "amount": 1 }
+        })");
+        CHECK(EffectConfigParser::ParseEffectConfig(ring).minRadius == 1);
+
+        const json plain = json::parse(R"({
+            "type": "StatModifier", "scope": "ThisTile", "radius": 1,
+            "parameters": { "stat": "energy", "amount": 1 }
+        })");
+        CHECK(EffectConfigParser::ParseEffectConfig(plain).minRadius == 0);
+    }
+
+    SECTION("negative min_radius throws")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier", "scope": "ThisTile", "radius": 1, "min_radius": -1,
+            "parameters": { "stat": "energy", "amount": 1 }
+        })")));
+    }
+
+    SECTION("min_radius above radius throws — the effect would reach nothing")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier", "scope": "ThisTile", "radius": 1, "min_radius": 2,
+            "parameters": { "stat": "energy", "amount": 1 }
+        })")));
+        // Bare min_radius with no radius is the same mistake: radius defaults to 0.
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier", "scope": "ThisTile", "min_radius": 1,
+            "parameters": { "stat": "energy", "amount": 1 }
+        })")));
+    }
+
+    SECTION("nonzero min_radius on non-ThisTile throws")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier", "scope": "ThisBase", "min_radius": 1,
             "parameters": { "stat": "energy", "amount": 1 }
         })")));
     }

@@ -541,7 +541,7 @@ TEST_CASE("TurnStart restores move fragments", "[movement][turn]")
 
     GameSettings settings;
     GameState state(std::make_unique<WorldMap>(3, 3), fixture.improvements, &fixture.unitComponents,
-                    settings, *fixture.dataContext.moraleCalculator, actest::k_TestRngSeed);
+                    settings, *fixture.dataContext.moraleCalculator, fixture.dataContext.tileYieldRules, actest::k_TestRngSeed);
     state.AddFaction(std::move(fixture.factions[0]));
 
     TurnStart stage(HookContext{});
@@ -563,7 +563,7 @@ TEST_CASE("TurnStart clears SkipTurn via UnitOrderExecutor so the unit needs ord
 
     GameSettings settings;
     GameState state(std::make_unique<WorldMap>(3, 3), fixture.improvements, &fixture.unitComponents,
-                    settings, *fixture.dataContext.moraleCalculator, actest::k_TestRngSeed);
+                    settings, *fixture.dataContext.moraleCalculator, fixture.dataContext.tileYieldRules, actest::k_TestRngSeed);
     Faction& rOwned = state.AddFaction(std::move(fixture.factions[0]));
 
     TurnStart stage(HookContext{});

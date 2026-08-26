@@ -10,6 +10,7 @@
 
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
+#include "game/effects/TileYieldRulesConfig.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/map/Tile.h"
 
@@ -243,7 +244,7 @@ TEST_CASE("ResolveStatModifiers: does NOT itself filter by stat — callers must
     CHECK(ResolveStatModifiers(effects, 0.0).total == Approx(5.0));
 }
 
-TEST_CASE("ResolveStatModifiers: amount_source ElevationEnergySeed scales seed by amount",
+TEST_CASE("ResolveStatModifiers: amount_source ElevationEnergy scales bands by amount",
           "[effects][math][amount_source]")
 {
     actest::EffectPool pool;
@@ -251,7 +252,7 @@ TEST_CASE("ResolveStatModifiers: amount_source ElevationEnergySeed scales seed b
     mod.stat = StatId_t::Energy;
     mod.amount = 2.0;
     mod.op = ModifierOp_t::Add;
-    mod.amountSource = StatModifierEffect_t::AmountSource_t::ElevationEnergySeed;
+    mod.amountSource = StatModifierEffect_t::AmountSource_t::ElevationEnergy;
 
     EffectConfig_t config;
     config.effect = mod;
@@ -260,11 +261,12 @@ TEST_CASE("ResolveStatModifiers: amount_source ElevationEnergySeed scales seed b
     const EffectConfig_t& rConfig = pool.Add(std::move(config));
 
     Tile tile(0, 0);
-    tile.SetElevation(2000); // seed = 2
-    const EffectContext_t ctx{&tile};
+    tile.SetElevation(2000); // 2 bands at a 1000m step
+    const TileYieldRulesConfig_t yieldRules{.elevationEnergyStepMeters = 1000};
+    const EffectContext_t ctx{.targetTile = &tile, .pTileYieldRules = &yieldRules};
     const std::vector<ActiveEffect_t> effects = {Active(rConfig, "solar")};
 
-    CHECK(ResolveStatModifiers(effects, 0.0, &ctx).total == Approx(4.0)); // 2 * 2
+    CHECK(ResolveStatModifiers(effects, 0.0, &ctx).total == Approx(4.0)); // 2 bands * 2
     CHECK_THROWS_AS(ResolveStatModifiers(effects, 0.0, nullptr), std::runtime_error);
     CHECK(std::ranges::distance(FilterByStatId(effects, StatId_t::Energy)) == 0);
     CHECK(std::ranges::distance(FilterByStatIdInContext(effects, StatId_t::Energy, ctx)) == 1);

@@ -174,14 +174,14 @@
     "tags": ["land_terraform"],
     "turns_required": 4,
     "energy_cost": 0,
+    "excludes": ["Mine", "Forest", "ThermalBorehole", "Mirror"],
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "energy", "amount": 1, "op": "Add" } },
       {
         "type": "StatModifier",
         "scope": "ThisTile",
         "parameters": {
           "stat": "energy",
-          "amount_source": "ElevationEnergySeed",
+          "amount_source": "ElevationEnergy",
           "amount": 1,
           "op": "Add"
         }
@@ -276,19 +276,34 @@
     "tags": ["land_terraform"],
     "turns_required": 12,
     "energy_cost": 0,
+    "excludes": ["SolarCollector", "ThermalBorehole"],
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "energy", "amount": 1, "op": "Add" } },
       {
         "type": "StatModifier",
         "scope": "ThisTile",
         "parameters": {
           "stat": "energy",
-          "amount_source": "ElevationEnergySeed",
+          "amount_source": "ElevationEnergy",
           "amount": 1,
           "op": "Add"
         }
       },
-      { "type": "StatModifier", "scope": "ThisTile", "radius": 2, "parameters": { "stat": "energy", "amount": 1, "op": "Add" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "radius": 1,
+        "min_radius": 1,
+        "condition": { "kind": "TargetTileHas", "value": "SolarCollector" },
+        "parameters": { "stat": "energy", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "radius": 1,
+        "min_radius": 1,
+        "condition": { "kind": "TargetTileHas", "value": "Mirror" },
+        "parameters": { "stat": "energy", "amount": 1, "op": "Add" }
+      }
     ]
   },
   {

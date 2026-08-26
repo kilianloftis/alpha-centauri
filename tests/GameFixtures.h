@@ -153,7 +153,12 @@ struct WorldFixture
     {
         improvements.Load(FixturePath("improvements.json"));
         unitComponents.Load(FixturePath("unit_components.json"));
-        ctx = std::make_unique<ac::TileEffectsContext>(map, improvements, &unitComponents);
+        // Before the TileEffectsContext: it holds the yield rules by reference and stamps
+        // them into every per-tile resolve (ElevationEnergy reads the step from here).
+        dataContext.tileYieldRules = ac::TileYieldRulesConfigParser{}.ParseConfig(
+            FixturePath("tile_yield_rules.json"));
+        ctx = std::make_unique<ac::TileEffectsContext>(map, improvements, &unitComponents,
+                                                       dataContext.tileYieldRules);
         dataContext.luaRuntime = std::make_unique<ac::LuaRuntime>();
         // Same morale table Engine loads, and the one calculator built from it.
         dataContext.moraleConfig = std::make_unique<ac::MoraleConfig_t>(
@@ -187,8 +192,6 @@ struct WorldFixture
         dataContext.socialPolicyRegistry->Load(FixturePath("social_policies.json"));
         dataContext.socialRatingRegistry = std::make_unique<ac::SocialRatingRegistry>();
         dataContext.socialRatingRegistry->Load(FixturePath("social_rating_effects.json"));
-        dataContext.tileYieldRules = ac::TileYieldRulesConfigParser{}.ParseConfig(
-            FixturePath("tile_yield_rules.json"));
         dataContext.policeRules = ac::PoliceRulesConfigParser{}.ParseConfig(
             FixturePath("police_rules.json"));
         dataContext.popTypeAvailabilityCalculator =

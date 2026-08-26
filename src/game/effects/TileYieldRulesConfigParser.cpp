@@ -9,7 +9,7 @@
 namespace ac
 {
 
-std::vector<EffectConfig_t> TileYieldRulesConfigParser::ParseConfig(const std::string& configPath)
+TileYieldRulesConfig_t TileYieldRulesConfigParser::ParseConfig(const std::string& configPath)
 {
     std::ifstream file(configPath);
     if (!file.is_open())
@@ -18,8 +18,18 @@ std::vector<EffectConfig_t> TileYieldRulesConfigParser::ParseConfig(const std::s
     }
 
     const nlohmann::json json = nlohmann::json::parse(file);
-    return EffectConfigParser::ParseEffects(
+
+    TileYieldRulesConfig_t config;
+    config.elevationEnergyStepMeters =
+        static_cast<int>(EffectConfigParser::RequireNumber(json, "elevation_energy_step_meters"));
+    if (config.elevationEnergyStepMeters <= 0)
+    {
+        throw std::runtime_error("tile_yield_rules 'elevation_energy_step_meters' must be > 0, got "
+                                 + std::to_string(config.elevationEnergyStepMeters));
+    }
+    config.effects = EffectConfigParser::ParseEffects(
         json, EffectSourceKind_t::TileYieldRules, "tile_yield_rules");
+    return config;
 }
 
 } // namespace ac

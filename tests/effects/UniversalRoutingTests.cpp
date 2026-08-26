@@ -196,7 +196,7 @@ TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other fact
     actest::FactionFixture fixture;
     GameSettings settings;
     GameState state(std::make_unique<WorldMap>(9, 9), fixture.improvements, &fixture.unitComponents,
-                    settings, *fixture.dataContext.moraleCalculator, actest::k_TestRngSeed);
+                    settings, *fixture.dataContext.moraleCalculator, fixture.dataContext.tileYieldRules, actest::k_TestRngSeed);
 
     Faction& factionA = state.AddFaction(std::make_unique<Faction>(
                                                1, /*bIsPlayerControlled*/ true, fixture.factionDefinition,

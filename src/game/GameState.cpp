@@ -35,6 +35,7 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
                      const UnitComponentRegistry* pUnitComponents,
                      GameSettings& rSettings,
                      const MoraleCalculator& rMorale,
+                     const TileYieldRulesConfig_t& rYieldRules,
                      uint32_t rngSeed)
     : m_missionYear(k_StartingMissionYear)
     , m_rSettings(rSettings)
@@ -52,7 +53,8 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
     {
         throw std::invalid_argument("GameState: pWorldMap is null");
     }
-    m_pTileEffects = std::make_unique<TileEffectsContext>(*m_worldMap, rImprovements, pUnitComponents);
+    m_pTileEffects = std::make_unique<TileEffectsContext>(*m_worldMap, rImprovements,
+                                                          pUnitComponents, rYieldRules);
     m_pMoveCosts = std::make_unique<MoveCostCalculator>(rImprovements);
     m_pSteps = std::make_unique<StepEvaluator>(*m_worldMap, *m_pTileEffects);
     m_pPathfinder = std::make_unique<Pathfinder>(*m_pMoveCosts, *m_pSteps, *m_worldMap);

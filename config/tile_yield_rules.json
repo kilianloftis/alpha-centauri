@@ -1,4 +1,5 @@
 {
+  "elevation_energy_step_meters": 1000,
   "effects": [
     {
       "type": "TileResourceCap",

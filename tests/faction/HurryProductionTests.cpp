@@ -418,7 +418,7 @@ TEST_CASE("Hurry spends treasury credits into the production stockpile",
     }
     auto pState = std::make_unique<GameState>(
         std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
-        *fixtures.dataContext.moraleCalculator, k_TestRngSeed);
+        *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, k_TestRngSeed);
     Faction& rFaction = pState->AddFaction(std::make_unique<Faction>(
         pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
         pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));

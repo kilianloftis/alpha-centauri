@@ -113,7 +113,7 @@ TEST_CASE("AddFaction scans a faction that already owns bases", "[composition][f
     WorldFixture fixture;
     GameSettings settings;
     GameState state(std::make_unique<WorldMap>(9, 9), fixture.improvements,
-                    &fixture.unitComponents, settings, *fixture.dataContext.moraleCalculator,
+                    &fixture.unitComponents, settings, *fixture.dataContext.moraleCalculator, fixture.dataContext.tileYieldRules,
                     k_TestRngSeed);
 
     FactionConfig_t definition;
@@ -146,7 +146,7 @@ TEST_CASE("AddFaction establishes contact in both directions", "[composition][fa
     WorldFixture fixture;
     GameSettings settings;
     GameState state(std::make_unique<WorldMap>(9, 9), fixture.improvements,
-                    &fixture.unitComponents, settings, *fixture.dataContext.moraleCalculator,
+                    &fixture.unitComponents, settings, *fixture.dataContext.moraleCalculator, fixture.dataContext.tileYieldRules,
                     k_TestRngSeed);
 
     // The sighting must be one-way, or the newcomer's own sweep would establish contact and

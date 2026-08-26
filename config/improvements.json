@@ -242,14 +242,9 @@
       {
         "type": "StatModifier",
         "scope": "ThisTile",
-        "parameters": { "stat": "energy", "amount": 1, "op": "Add" }
-      },
-      {
-        "type": "StatModifier",
-        "scope": "ThisTile",
         "parameters": {
           "stat": "energy",
-          "amount_source": "ElevationEnergySeed",
+          "amount_source": "ElevationEnergy",
           "amount": 1,
           "op": "Add"
         }
@@ -353,14 +348,9 @@
       {
         "type": "StatModifier",
         "scope": "ThisTile",
-        "parameters": { "stat": "energy", "amount": 1, "op": "Add" }
-      },
-      {
-        "type": "StatModifier",
-        "scope": "ThisTile",
         "parameters": {
           "stat": "energy",
-          "amount_source": "ElevationEnergySeed",
+          "amount_source": "ElevationEnergy",
           "amount": 1,
           "op": "Add"
         }
@@ -369,6 +359,16 @@
         "type": "StatModifier",
         "scope": "ThisTile",
         "radius": 1,
+        "min_radius": 1,
+        "condition": { "kind": "TargetTileHas", "value": "SolarCollector" },
+        "parameters": { "stat": "energy", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "radius": 1,
+        "min_radius": 1,
+        "condition": { "kind": "TargetTileHas", "value": "Mirror" },
         "parameters": { "stat": "energy", "amount": 1, "op": "Add" }
       }
     ]

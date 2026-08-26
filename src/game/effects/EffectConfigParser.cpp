@@ -47,19 +47,27 @@ void ValidateAmountSourceLegality_(const StatModifierEffect_t& rMod,
     const double amount = rMod.amount;
     switch (*rMod.amountSource)
     {
-        case StatModifierEffect_t::AmountSource_t::ElevationEnergySeed:
-            // Required subject: Tile. Allowed: energy + ThisTile.
+        case StatModifierEffect_t::AmountSource_t::ElevationEnergy:
+            // Required subject: Tile (+ the world's tile_yield_rules). Allowed: energy +
+            // ThisTile. A radius makes no sense here — targetTile is the receiving tile, so an
+            // aura would read the elevation of whatever it lands on, not its own host.
             if (stat != StatId_t::Energy)
             {
                 throw std::runtime_error(
-                    "StatModifier 'amount_source' ElevationEnergySeed is only valid on the energy "
+                    "StatModifier 'amount_source' ElevationEnergy is only valid on the energy "
                     "stat, got '"
                     + rStatWire + "'");
             }
             if (scope != EffectScope_t::ThisTile)
             {
                 throw std::runtime_error(
-                    "StatModifier 'amount_source' ElevationEnergySeed requires scope ThisTile");
+                    "StatModifier 'amount_source' ElevationEnergy requires scope ThisTile");
+            }
+            if (rEffect.radius != 0)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' ElevationEnergy cannot carry a radius: the "
+                    "contribution is read from the receiving tile, not the aura's host");
             }
             break;
         case StatModifierEffect_t::AmountSource_t::MineralsConverted:
@@ -851,6 +859,21 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
     if (effect.radius != 0 && effect.scope != EffectScope_t::ThisTile)
     {
         throw std::runtime_error("Effect 'radius' is only valid with scope ThisTile");
+    }
+    effect.minRadius = effectJson.value("min_radius", 0);
+    if (effect.minRadius < 0)
+    {
+        throw std::runtime_error("Effect 'min_radius' must be >= 0");
+    }
+    if (effect.minRadius != 0 && effect.scope != EffectScope_t::ThisTile)
+    {
+        throw std::runtime_error("Effect 'min_radius' is only valid with scope ThisTile");
+    }
+    if (effect.minRadius > effect.radius)
+    {
+        throw std::runtime_error("Effect 'min_radius' (" + std::to_string(effect.minRadius)
+                                 + ") must be <= 'radius' (" + std::to_string(effect.radius)
+                                 + "); the effect would reach no tile at all");
     }
     if (effectJson.contains("condition"))
     {

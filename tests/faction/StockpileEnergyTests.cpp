@@ -316,7 +316,7 @@ TEST_CASE("Stockpile Energy appears in the constructable list", "[production][st
     }
     auto pState = std::make_unique<GameState>(
         std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
-        *fixtures.dataContext.moraleCalculator, k_TestRngSeed);
+        *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, k_TestRngSeed);
     Faction& faction = pState->AddFaction(std::make_unique<Faction>(
         pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
         pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
@@ -627,7 +627,7 @@ TEST_CASE("The stage sequence converts and banks surplus in the same turn",
     }
     auto pState = std::make_unique<GameState>(
         std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
-        *fixtures.dataContext.moraleCalculator, k_TestRngSeed);
+        *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, k_TestRngSeed);
     Faction& faction = pState->AddFaction(std::make_unique<Faction>(
         pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
         pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
@@ -673,7 +673,7 @@ TEST_CASE("A base restored from a snapshot keeps its queued stockpile",
     }
     auto pState = std::make_unique<GameState>(
         std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
-        *fixtures.dataContext.moraleCalculator, k_TestRngSeed);
+        *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, k_TestRngSeed);
     Faction& faction = pState->AddFaction(std::make_unique<Faction>(
         pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
         pState->GetWorldMap(), fixtures.settings, k_TestFactionSeed));
