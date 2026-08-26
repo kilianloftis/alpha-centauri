@@ -14,6 +14,7 @@
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <cmath>
 #include <ranges>
 
 using namespace ac;
@@ -144,7 +145,7 @@ TEST_CASE("FilterBaseLevelByStatId excludes MineralsConverted",
     CHECK(baseLevel[0].sourceId == "flat");
 }
 
-TEST_CASE("FilterBaseLevelByStatId includes BaseSize when pBase is set",
+TEST_CASE("FilterBaseLevelByStatId includes BaseSize only when the context carries pBase",
           "[effects][filter][amount_source]")
 {
     actest::BaseFixture fixture;
@@ -166,8 +167,14 @@ TEST_CASE("FilterBaseLevelByStatId includes BaseSize when pBase is set",
         Active(pool.Add(std::move(baseSizeConfig)), "university"),
     }};
 
-    // Bundle subject makes BaseSize eligible without a separate pCtx.
-    CHECK(std::ranges::distance(FilterBaseLevelByStatId(baseEffects, StatId_t::Drones)) == 2);
+    // Without a context, BaseSize is dropped even though the bundle knows its base: the
+    // caller's pCtx is what ResolveStatModifiers evaluates the amount source against, so
+    // admitting on the bundle would hand the resolve a modifier it cannot evaluate.
+    // ResolveBaseStat stamps the bundle's subject into the context and gets both.
+    const std::vector<ActiveEffect_t> contextFree =
+        actest::Materialize(FilterBaseLevelByStatId(baseEffects, StatId_t::Drones));
+    REQUIRE(contextFree.size() == 1);
+    CHECK(contextFree[0].sourceId == "commons");
 
     const EffectContext_t ctx{.pBase = &base};
     const std::vector<ActiveEffect_t> withBase =
@@ -233,6 +240,49 @@ TEST_CASE("ResolveBaseStat: BaseSize evaluates on GrowthRate without a wired cal
     const int size = base.GetPopulation().GetSize();
     CHECK(ResolveBaseStat(baseEffects, StatId_t::GrowthRate, 100.0)
           == Approx(100.0 + static_cast<double>(size) * 10.0));
+}
+
+TEST_CASE("FilterBaseLevelByStatId: BaseSize admission keys on pCtx, not the bundle subject",
+          "[effects][filter][amount_source]")
+{
+    // A hand-rolled filter+resolve pair (FoundBaseRules, AwayFromHomeDrones) passes no context
+    // or one context to both. Admitting BaseSize on the bundle's own subject while
+    // ResolveStatModifiers evaluates against the context is what made the no-context form
+    // throw instead of resolving.
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(4, 4);
+
+    actest::EffectPool pool;
+    StatModifierEffect_t baseSize;
+    baseSize.stat = StatId_t::StartingMinerals;
+    baseSize.amount = 2.0;
+    baseSize.op = ModifierOp_t::Add;
+    baseSize.amountSource = StatModifierEffect_t::AmountSource_t::BaseSize;
+    EffectConfig_t baseSizeConfig;
+    baseSizeConfig.effect = baseSize;
+    baseSizeConfig.scope = EffectScope_t::ThisBase;
+    baseSizeConfig.persistence = EffectPersistence_t::Continuous;
+
+    const BaseEffects_t baseEffects{base, {
+        Active(pool.StatMod(StatId_t::StartingMinerals, 10.0), "pod"),
+        Active(pool.Add(std::move(baseSizeConfig)), "per_pop"),
+    }};
+
+    // No context: BaseSize is dropped, and resolving the same range must not throw.
+    const std::vector<ActiveEffect_t> contextFree =
+        actest::Materialize(FilterBaseLevelByStatId(baseEffects, StatId_t::StartingMinerals));
+    REQUIRE(contextFree.size() == 1);
+    CHECK(ResolveStatModifiers(contextFree, SeedFor(StatId_t::StartingMinerals)).total
+          == Approx(10.0));
+
+    // With a context carrying the subject: admitted and scaled by population size.
+    const EffectContext_t ctx{.pBase = &base};
+    const std::vector<ActiveEffect_t> withBase = actest::Materialize(
+        FilterBaseLevelByStatId(baseEffects, StatId_t::StartingMinerals, &ctx));
+    REQUIRE(withBase.size() == 2);
+    const double size = static_cast<double>(base.GetPopulation().GetSize());
+    CHECK(ResolveStatModifiers(withBase, SeedFor(StatId_t::StartingMinerals), &ctx).total
+          == Approx(10.0 + std::floor(size * 2.0)));
 }
 
 TEST_CASE("AmountSourceValue: missing BaseSize subject throws",

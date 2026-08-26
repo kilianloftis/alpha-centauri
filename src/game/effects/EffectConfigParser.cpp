@@ -37,14 +37,15 @@ void RequireScope_(EffectScope_t scope,
 // Option A: amount_source legality is independent of DomainFor(stat). Subject domain is
 // what AmountSourceValue needs; allowed stats/scopes are per-source (Energy stays Base
 // while ElevationEnergySeed still requires a Tile subject at eval time).
-void ValidateAmountSourceLegality_(StatModifierEffect_t::AmountSource_t source,
-                                   StatId_t stat,
-                                   EffectScope_t scope,
-                                   EffectPersistence_t persistence,
-                                   double amount,
+void ValidateAmountSourceLegality_(const StatModifierEffect_t& rMod,
+                                   const EffectConfig_t& rEffect,
                                    const std::string& rStatWire)
 {
-    switch (source)
+    const StatId_t stat = rMod.stat;
+    const EffectScope_t scope = rEffect.scope;
+    const EffectPersistence_t persistence = rEffect.persistence;
+    const double amount = rMod.amount;
+    switch (*rMod.amountSource)
     {
         case StatModifierEffect_t::AmountSource_t::ElevationEnergySeed:
             // Required subject: Tile. Allowed: energy + ThisTile.
@@ -231,9 +232,7 @@ void ParseStatModifier_(const nlohmann::json& parameters, EffectConfig_t& rEffec
             ParseAmountSource(parameters.at("amount_source").get<std::string>());
         // amount is the per-source scale when amount_source is set (default 1).
         statModifier.amount = ParseNumber(parameters, "amount", 1.0);
-        ValidateAmountSourceLegality_(*statModifier.amountSource, statModifier.stat, rEffect.scope,
-                                      rEffect.persistence, statModifier.amount,
-                                      parameters.value("stat", ""));
+        ValidateAmountSourceLegality_(statModifier, rEffect, parameters.value("stat", ""));
     }
     else
     {
@@ -251,23 +250,16 @@ void ParseStatModifier_(const nlohmann::json& parameters, EffectConfig_t& rEffec
                 "StatModifier 'selector' is only valid on tile resource "
                 "stats (nutrients/minerals/energy), got '" + parameters.value("stat", "") + "'");
         }
+        // A selector routes the modifier through tile-yield resolution, which supplies only a
+        // tile subject and never the base / faction / stockpile ones. Rather than enumerate
+        // which pairings are impossible (and silently miss the next amount_source added), the
+        // combination is rejected outright.
+        if (statModifier.amountSource)
+        {
+            throw std::runtime_error(
+                "StatModifier 'selector' cannot be combined with 'amount_source'");
+        }
         statModifier.selector = ParseTileSelector(parameters.at("selector"));
-        if (statModifier.amountSource
-            == StatModifierEffect_t::AmountSource_t::MineralsConverted)
-        {
-            throw std::runtime_error(
-                "StatModifier 'amount_source' MineralsConverted cannot carry a tile selector");
-        }
-        if (statModifier.amountSource == StatModifierEffect_t::AmountSource_t::BaseSize)
-        {
-            throw std::runtime_error(
-                "StatModifier 'amount_source' BaseSize cannot carry a tile selector");
-        }
-        if (statModifier.amountSource == StatModifierEffect_t::AmountSource_t::BasesOwned)
-        {
-            throw std::runtime_error(
-                "StatModifier 'amount_source' BasesOwned cannot carry a tile selector");
-        }
     }
     statModifier.applyAfterRestriction = parameters.value("apply_after_restriction", false);
     if (statModifier.applyAfterRestriction && !IsTileResourceStat_(statModifier.stat))

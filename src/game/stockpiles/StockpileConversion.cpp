@@ -19,9 +19,9 @@ namespace
 {
 
 // ThisBase modifiers for `statId` drawn from the stockpile's own effects: the
-// MineralsConverted ones (scaled by ctx.mineralsConverted) plus the percentage / multiplier
-// ops that scale them. Tile selectors and other amount sources stay out — a selector modifier
-// belongs to tile-yield resolution, and ElevationEnergySeed has no meaning without a tile.
+// MineralsConverted ones (scaled by ctx.pStockpile) plus the percentage / multiplier ops that
+// scale them. Tile selectors and other amount sources stay out — a selector modifier belongs
+// to tile-yield resolution, and ElevationEnergySeed has no meaning without a tile.
 auto FilterStockpileYield_(const std::vector<ActiveEffect_t>& rEffects, StatId_t statId,
                            const EffectContext_t& rCtx)
 {
@@ -86,7 +86,8 @@ void ApplyStockpileConversionAtBase(BaseManager& rBase, const StockpileConfig_t&
     std::vector<ActiveEffect_t> effects;
     AppendActiveEffects(rStockpile.effects, &rBase, rStockpile.id, effects);
 
-    const EffectContext_t ctx{.pBase = &rBase, .mineralsConverted = minerals};
+    const StockpileConversionSubject_t stockpile{minerals};
+    const EffectContext_t ctx{.pBase = &rBase, .pStockpile = &stockpile};
     for (const StatId_t stat : k_StockpileOutputStats)
     {
         const int yield = StatYield_(effects, stat, ctx, rStockpile.rounding);

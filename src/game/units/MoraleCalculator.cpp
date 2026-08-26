@@ -22,6 +22,9 @@ namespace
 {
 
 // Sum MoraleBonus Add contributions, optionally only conditional or only unconditional.
+// rCtx must already carry the unit's subjects (see AdjustLiveBonus_): matching goes through
+// StatModifierMatchesInContext so an amount_source whose subject is absent is dropped here
+// rather than thrown from AmountSourceValue below.
 int SumMoraleBonus_(const Unit& rUnit, const EffectContext_t& rCtx, bool bConditionalOnly)
 {
     int total = 0;
@@ -29,16 +32,15 @@ int SumMoraleBonus_(const Unit& rUnit, const EffectContext_t& rCtx, bool bCondit
     {
         const StatModifierEffect_t* pMod =
             std::get_if<StatModifierEffect_t>(&rEffect.config->effect);
-        if (!pMod || pMod->stat != StatId_t::MoraleBonus || pMod->op != ModifierOp_t::Add)
+        if (!pMod || pMod->op != ModifierOp_t::Add)
         {
             continue;
         }
-        const bool bHasCondition = rEffect.config->condition.has_value();
-        if (bConditionalOnly != bHasCondition)
+        if (rEffect.config->condition.has_value() != bConditionalOnly)
         {
             continue;
         }
-        if (!ConditionSatisfied(*rEffect.config, rCtx, rEffect.originBase))
+        if (!StatModifierMatchesInContext(rEffect, StatId_t::MoraleBonus, rCtx))
         {
             continue;
         }
@@ -74,8 +76,11 @@ bool HomeBaseIsRioting_(const Unit& rUnit)
 
 int AdjustLiveBonus_(const Unit& rUnit, const EffectContext_t& rCtx)
 {
-    int unconditional = SumMoraleBonus_(rUnit, rCtx, /*bConditionalOnly=*/false);
-    int conditional = SumMoraleBonus_(rUnit, rCtx, /*bConditionalOnly=*/true);
+    // Stamp the unit's subjects once: callers build a combat/UI context that carries no
+    // faction, and MoraleBonus is Unit-domain, so BasesOwned-style sources are legal on it.
+    const EffectContext_t ctx = UnitSubjectContext(&rUnit, rCtx);
+    int unconditional = SumMoraleBonus_(rUnit, ctx, /*bConditionalOnly=*/false);
+    int conditional = SumMoraleBonus_(rUnit, ctx, /*bConditionalOnly=*/true);
 
     // Children's Crèche (home): soften negative SE-style morale_bonus (toward 0).
     if (HomeBaseHasCreche_(rUnit) && unconditional < 0)
@@ -88,7 +93,7 @@ int AdjustLiveBonus_(const Unit& rUnit, const EffectContext_t& rCtx)
     if (conditional > 0)
     {
         const double scale =
-            ResolveMultiplicativeStat(rUnit, StatId_t::PositiveMoraleScale, 1.0, rCtx);
+            ResolveMultiplicativeStat(rUnit, StatId_t::PositiveMoraleScale, 1.0, ctx);
         conditional = static_cast<int>(std::trunc(conditional * scale));
     }
 

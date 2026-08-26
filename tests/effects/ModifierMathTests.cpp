@@ -286,7 +286,8 @@ TEST_CASE("ResolveStatModifiers: amount_source MineralsConverted scales by miner
     config.persistence = EffectPersistence_t::Continuous;
     const EffectConfig_t& rConfig = pool.Add(std::move(config));
 
-    const EffectContext_t ctx{.mineralsConverted = 5};
+    const StockpileConversionSubject_t stockpile{5};
+    const EffectContext_t ctx{.pStockpile = &stockpile};
     const std::vector<ActiveEffect_t> effects = {Active(rConfig, "stockpile")};
 
     CHECK(ResolveStatModifiers(effects, 0.0, &ctx).total == Approx(2.5));

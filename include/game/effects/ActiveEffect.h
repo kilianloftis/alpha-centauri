@@ -125,40 +125,46 @@ enum class CombatRole_t
     Defender,
 };
 
-// Runtime context an effect's condition is evaluated against. Fields are optional; a
-// condition that references an absent field evaluates false. Combat sets targetTile to the
-// defender's tile so TargetTileHas conditions can inspect it. Tile yield also sets
-// targetTile so amount_source (e.g. ElevationEnergySeed) can read the host tile.
+// Stockpile conversion subject for the MineralsConverted amount_source (not a ResolveDomain
+// DomainFor target — resource stats stay Base). A named subject rather than a bare int on
+// EffectContext_t: conversion can grow subject fields without widening the context, and the
+// subject has one home instead of two.
+struct StockpileConversionSubject_t
+{
+    int mineralsConverted = 0;
+};
+
+// Runtime context an effect's condition is evaluated against, and the bag of subjects
+// amount_source evaluation reads. Fields are optional; a condition that references an absent
+// field evaluates false, and an amount_source whose subject is absent is dropped by the
+// filters (StatModifierMatchesInContext / FilterBaseLevelByStatId) before resolve.
+// Combat sets targetTile to the defender's tile so TargetTileHas conditions can inspect it.
+// Tile yield also sets targetTile so amount_source ElevationEnergySeed can read the host tile.
 // combatRole enables IsDefending (SE Morale defense-in-base extras).
 // pAttacker enables AttackerIsEmbarked (and future attacker-side conditions).
 // pBase enables IsHeadquarters (Economy SE energy-at-HQ) and amount_source BaseSize
 // (population size × amount) for base-level resolve.
-// pFaction enables amount_source BasesOwned (owned-base count × amount); live unit resolve
-// stamps it from Unit::GetFaction when absent.
-// mineralsConverted is this turn's consumed minerals for MineralsConverted amount_source.
+// pFaction enables amount_source BasesOwned (owned-base count × amount); unit resolve stamps
+// it from the live unit via UnitSubjectContext.
+// pStockpile carries this turn's consumed minerals for the MineralsConverted amount_source.
 struct EffectContext_t
 {
     const Tile* targetTile = nullptr;
     CombatRole_t combatRole = CombatRole_t::None;
     const Unit* pAttacker = nullptr;
     const BaseManager* pBase = nullptr;
-    int mineralsConverted = 0;
+    const StockpileConversionSubject_t* pStockpile = nullptr;
     const Faction* pFaction = nullptr;
-};
-
-// Stockpile conversion subject for MineralsConverted amount_source (not a ResolveDomain
-// DomainFor target — resource stats stay Base).
-struct StockpileConversionSubject_t
-{
-    int mineralsConverted = 0;
 };
 
 // Post-combat promotion uses MoraleConfig_t::promotionSeedFormula (Lua), not amount_source.
 
-// Per-subject amount_source evaluation. Literal `amount` when amountSource is absent.
-// Prefer typed subject overloads; the EffectContext_t* form bridges tile-yield / combat
-// paths that still build a context. Missing required subject for an amount_source throws
-// (no silent 0.0). nullptr context is only valid for literal (no amountSource) modifiers.
+// Per-subject amount_source evaluation: `scale` is the modifier's `amount`, and the subject
+// supplies the runtime value it multiplies. One overload per subject type; a new
+// AmountSource_t adds a case to the one overload that owns its subject, not to all four.
+// The others keep `default:` — the dispatch below routes each source to its own subject, so
+// a wrong-subject call is unreachable and enumerating the rejects would be per-source
+// bookkeeping for a branch that never fires.
 double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double scale,
                          const BaseManager& rBase);
 double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double scale,
@@ -167,12 +173,22 @@ double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double sca
                          const StockpileConversionSubject_t& rStockpile);
 double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double scale,
                          const Faction& rFaction);
-double AmountSourceValue(const StatModifierEffect_t& rMod, const BaseManager& rBase);
-double AmountSourceValue(const StatModifierEffect_t& rMod, const Tile& rTile);
-double AmountSourceValue(const StatModifierEffect_t& rMod,
-                         const StockpileConversionSubject_t& rStockpile);
-double AmountSourceValue(const StatModifierEffect_t& rMod, const Faction& rFaction);
+
+// Literal `amount` when amountSource is absent; otherwise dispatches to the subject overload
+// above using the matching EffectContext_t field. Missing required subject throws (no silent
+// 0.0) — the filters drop such modifiers first, so reaching the throw means a resolve path
+// admitted a modifier it could not evaluate.
+//
+// This switch carries no `default:`, so -Werror=switch (see src/CMakeLists.txt) makes a new
+// AmountSource_t a compile error here. It is the single place that must name a source's
+// subject; ValidateAmountSourceLegality_ in the parser is the single place that must state
+// its legality. Two forced edits per source, not one per subject overload.
 double AmountSourceValue(const StatModifierEffect_t& rMod, const EffectContext_t* pCtx);
+
+// Fills the faction subject from a live unit when the caller left it unset, so Unit-domain
+// amount sources (BasesOwned) resolve without every unit call site remembering to stamp it.
+// pUnit null (design-only preview) leaves the subject absent and those modifiers filter out.
+EffectContext_t UnitSubjectContext(const Unit* pUnit, const EffectContext_t& rCtx);
 
 // True if config carries no condition, or its condition is satisfied by ctx.
 // OriginBaseIsTargetBase requires pOriginBase (ActiveEffect_t::originBase).
@@ -274,9 +290,10 @@ inline int FinalizeResolvedStat(double value)
 // state its seed — 0.0 for additive stats, 1.0 for pure multipliers, or a raw value the
 // modifiers scale (tile yield, growth rate's 100). Templated on the input range so it
 // accepts both an owned vector and a lazy Filter* view below without materializing one.
-// pCtx resolves amount_source modifiers (ElevationEnergySeed, MineralsConverted, BaseSize);
-// pass nullptr for context-free resolves (those filters already drop amount_source effects,
-// except BaseSize which FilterBaseLevelByStatId includes when pBase is set).
+// pCtx resolves amount_source modifiers; pass nullptr only for context-free resolves, whose
+// filters drop every amount_source effect. Whatever pCtx the matching range was filtered with
+// must be the pCtx passed here — the filters admit an amount source on the strength of a
+// subject this call then has to evaluate against.
 template <std::ranges::input_range Range>
 StatBreakdown_t ResolveStatModifiers(Range&& matching, double baseValue,
                                      const EffectContext_t* pCtx = nullptr)
@@ -390,18 +407,20 @@ inline auto FilterByStatIdInContext(std::vector<ActiveEffect_t>&& effects,
 
 // Like FilterByStatId, but for base-level resolution only: excludes per-tile modifiers
 // (StatModifiers carrying a tile selector). ElevationEnergySeed / MineralsConverted
-// amount_sources stay off this filter (tile yield / stockpile paths). BaseSize is included
-// when the bundle subject (rBaseEffects.pBase) is set, or when pCtx->pBase is set.
+// amount_sources stay off this filter (tile yield / stockpile paths).
 // Accepting BaseEffects_t (never a raw vector or the pool) makes running this filter at any
 // other stage a compile error instead of a doc violation.
 //
-// pCtx is optional conditions-only context (IsHeadquarters, etc.). Prefer ResolveBaseStat,
-// which stamps pBase from the bundle for amount sources.
+// BaseSize is admitted only when pCtx->pBase is set — deliberately keyed on the context and
+// NOT on the bundle's own subject, because the same pCtx is what ResolveStatModifiers later
+// evaluates the amount source against. Admitting on the bundle while resolving on the context
+// is what let a base-level BaseSize modifier pass the filter and then throw at resolve.
+// Prefer ResolveBaseStat, which stamps pBase from the bundle into both.
 inline auto FilterBaseLevelByStatId(const BaseEffects_t& rBaseEffects, StatId_t statId,
                                     const EffectContext_t* pCtx = nullptr)
 {
     return rBaseEffects.effects
-           | std::views::filter([statId, pCtx, &rBaseEffects](const ActiveEffect_t& effect)
+           | std::views::filter([statId, pCtx](const ActiveEffect_t& effect)
     {
         const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
         if (!pStatModifier || pStatModifier->stat != statId || pStatModifier->selector)
@@ -414,9 +433,7 @@ inline auto FilterBaseLevelByStatId(const BaseEffects_t& rBaseEffects, StatId_t 
             {
                 return false;
             }
-            const BaseManager* pBase =
-                (pCtx && pCtx->pBase) ? pCtx->pBase : rBaseEffects.pBase;
-            if (pBase == nullptr)
+            if (pCtx == nullptr || pCtx->pBase == nullptr)
             {
                 return false;
             }

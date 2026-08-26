@@ -85,15 +85,19 @@ int ResolveStartingMinerals(const BaseManager& rBase, const Unit* pFoundingUnit)
 {
     std::vector<ActiveEffect_t> combined;
     const BaseEffects_t& rBaseEffects = rBase.GetBaseEffects();
+    // The same ctx filters and resolves: the base lane may carry a BaseSize amount_source, and
+    // admitting one on a subject the resolve step doesn't get is how it throws instead of scaling.
+    const EffectContext_t ctx{.pBase = &rBase};
     for (const ActiveEffect_t& rEffect :
-         FilterBaseLevelByStatId(rBaseEffects, StatId_t::StartingMinerals))
+         FilterBaseLevelByStatId(rBaseEffects, StatId_t::StartingMinerals, &ctx))
     {
         combined.push_back(rEffect);
     }
 
     if (pFoundingUnit)
     {
-        // Materialize: FilterByStatId borrows the vector.
+        // Materialize: FilterByStatId borrows the vector. Context-free on purpose — the unit
+        // lane carries ThisUnit / FactionUnits scopes, which no amount_source is legal on.
         const std::vector<ActiveEffect_t> unitEffects = CollectLiveUnitEffects(*pFoundingUnit).effects;
         for (const ActiveEffect_t& rEffect :
              FilterByStatId(unitEffects, StatId_t::StartingMinerals))
@@ -103,7 +107,7 @@ int ResolveStartingMinerals(const BaseManager& rBase, const Unit* pFoundingUnit)
     }
 
     const int raw = FinalizeResolvedStat(
-        ResolveStatModifiers(combined, SeedFor(StatId_t::StartingMinerals)).total);
+        ResolveStatModifiers(combined, SeedFor(StatId_t::StartingMinerals), &ctx).total);
     return std::max(0, raw);
 }
 

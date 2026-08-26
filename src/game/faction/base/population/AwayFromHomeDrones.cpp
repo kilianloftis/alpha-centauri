@@ -52,10 +52,13 @@ int ComputeAwayFromHomeDrones(const BaseManager& rBase)
         weightSum += weight;
     }
 
+    // One ctx for both filter and resolve, so a base-subject amount_source cannot be admitted
+    // by one and be unevaluatable by the other.
+    const EffectContext_t ctx{.pBase = &rBase};
     const double resolved = ResolveStatModifiers(
                                 FilterBaseLevelByStatId(rBase.GetBaseEffects(),
-                                                        StatId_t::AwayFromHomeDrones),
-                                weightSum)
+                                                        StatId_t::AwayFromHomeDrones, &ctx),
+                                weightSum, &ctx)
                                 .total;
     return static_cast<int>(std::floor(std::max(0.0, resolved)));
 }

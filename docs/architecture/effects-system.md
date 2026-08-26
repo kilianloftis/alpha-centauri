@@ -233,9 +233,46 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
     (preview); production assembles unit ∪ base under the base subject so Industry applies.
   - **StartingMinerals** (`DomainFor → Base`): founding merges base-list + founding-unit
     effects into one stockpile credit — multi-pool ubiquity, not a DomainFor escape hatch.
+  - **AwayFromHomeDrones** (`DomainFor → Unit`): resolved from live-unit effects *and* from
+    the base's own list (`AwayFromHomeDrones.cpp`). Routing the base half through
+    `ResolveUnitStat` would throw, so it filters and resolves by hand with one
+    `EffectContext_t`. `DomainFor` names the amount-source subject; it is **not** a claim that
+    only one resolver may touch the stat, and the `Resolve*Stat` domain checks are therefore a
+    guard on those three entry points rather than a whole-codebase invariant.
 - **When to split a StatId**: different *quantities*, not “two pools contribute.” Precedent:
   unit `Defense` (armor, Additive) vs `TileDefense` (terrain/sensor multiplier,
   PureMultiplier). Combat multiplies unit Defense by `ResolveTileDefenseMultiplier`.
+
+### AmountSourceValue / EffectContext_t subjects
+- **Purpose**: `amount_source` makes a modifier's `amount` a *scale* on a runtime value
+  instead of a literal. `AmountSourceValue` evaluates that value against a subject.
+- **One overload per subject type** (`BaseManager`, `Tile`, `StockpileConversionSubject_t`,
+  `Faction`), plus one `(StatModifierEffect_t, const EffectContext_t*)` entry point that picks
+  the subject field for a source and dispatches.
+- **Adding an `AmountSource_t` is two forced edits, not one per subject.** The dispatch switch
+  carries no `default:`, so `-Wswitch -Werror=switch` (`src/CMakeLists.txt`) makes it a compile
+  error there — that is the one place a source must name its subject. `ValidateAmountSourceLegality_`
+  in the parser is likewise `default:`-free and is the one place a source must state its
+  legality. Then add a case to the single subject overload that owns the new subject.
+- **The subject overloads keep `default:` on purpose.** Dispatch routes each source to its own
+  subject, so a wrong-subject call is unreachable; enumerating rejects in all four would be
+  O(sources × subjects) bookkeeping on a branch that never fires, and a rote edit is a poor
+  guardrail. The residual risk — naming a subject in the dispatch whose overload was never
+  taught to evaluate it — surfaces as `ThrowNoEvaluation_`, which names the source and subject,
+  and any test of the new source hits it immediately.
+- **Subjects live on `EffectContext_t`**, which is both the condition context and the subject
+  bag. New subjects should be a named struct pointed at from the context
+  (`StockpileConversionSubject_t`) rather than loose scalars, so the subject has one home and
+  can grow fields without widening the context.
+- **Absent subject: filter, don't throw.** `StatModifierMatchesInContext` and
+  `FilterBaseLevelByStatId` drop a modifier whose subject the context lacks; the throw in
+  `AmountSourceValue` is the backstop for a resolve path that admitted one anyway. The two must
+  agree — **filter and resolve with the same `EffectContext_t`.** `UnitSubjectContext` stamps
+  the faction subject from a live unit so unit call sites cannot forget it.
+- **Known gap**: `ScrapRefund` is `DomainFor → Base` but `ScrapRefundCalculator::Quote` takes a
+  bare `std::vector<ActiveEffect_t>` (live-unit effects for unit scrap), so it has no base
+  subject and drops `BaseSize` silently. Threading a subject through the scrap API is the fix
+  if a `BaseSize`-scaled refund is ever wanted.
 
 ### TileSelector_t
 - **Purpose**: On a `StatModifierEffect_t`, selects which worked tiles the modifier applies to. A tile improvement is identified by its plain string id (`ImprovementConfig_t::id`), matching `Tile::HasFeature()` — there is no separate improvement-type enum.
@@ -347,6 +384,12 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   counted a second time.
 - **Signature**: Accepts only a `BaseEffects_t` — never a raw vector or the faction pool —
   so running this filter at any other stage is a compile error.
+- **Subject must come from the same `pCtx` the resolve uses**: `BaseSize` is admitted on the
+  strength of `pCtx->pBase`, deliberately *not* the bundle's own `pBase`. Admitting on the
+  bundle while `ResolveStatModifiers` evaluates against the context is how a base-level
+  `BaseSize` modifier passed the filter and then threw from `AmountSourceValue`. Callers that
+  filter and resolve by hand (`FoundBaseRules`, `AwayFromHomeDrones`) pass one `EffectContext_t`
+  to both; `ResolveBaseStat` stamps the bundle's subject into the context and does this for you.
 - **Returns**: A lazy view of matching `ActiveEffect_t` instances.
 
 ### FilterByScope
@@ -535,8 +578,10 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
       conversion subject and allows stockpile-output stats + `ThisBase` + Continuous (+
       `ValidateEffectForSource` Stockpile kind). `BaseSize` needs a Base subject and allows
       Base-domain stats with scopes `ThisBase` / `AllOwnerBases` / `FactionGlobal`. `BasesOwned`
-      needs a Faction subject and allows Unit-domain stats with scope `ThisUnit` (live unit
-      resolve stamps `pFaction` from the unit's owner; design-only resolve drops it). Each
+      needs a Faction subject and allows Unit-domain stats with scope `ThisUnit` (unit resolve
+      stamps `pFaction` via `UnitSubjectContext`; design-only preview leaves it unset and the
+      modifier filters out). A `selector` may not be combined with **any** `amount_source`:
+      selectors route through tile-yield resolution, which supplies only a tile subject. Each
       amount_source contribution for `BaseSize` is **floored** before entering the modifier
       stack (vanilla University `floor(size×0.25)` does not share fractional residue with
       another fractional BaseSize source; `ElevationEnergySeed` / `MineralsConverted` /

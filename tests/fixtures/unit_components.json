@@ -288,6 +288,24 @@
     ]
   },
   {
+    "id": "test_empire_morale",
+    "name": "Test Empire Morale",
+    "unit_name": "Morale",
+    "type": "weapon",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "morale_bonus",
+          "amount": 1,
+          "op": "Add",
+          "amount_source": "BasesOwned"
+        }
+      }
+    ]
+  },
+  {
     "id": "test_weak_weapon",
     "name": "Test Weak Weapon",
     "unit_name": "Hand Weapon",

@@ -208,6 +208,26 @@ TEST_CASE("ResolveCombatUnitStat applies morale level Attack AddPercent", "[mora
     CHECK(combatAttack == static_cast<int>(std::lround(baseAttack * 1.25)));
 }
 
+TEST_CASE("morale_bonus carries a Unit-domain amount_source without a caller-stamped faction",
+          "[morale][amount_source]")
+{
+    // The parser accepts BasesOwned on any Unit-domain stat with ThisUnit scope, and
+    // MoraleBonus is Unit-domain. Combat builds a context with no faction, so the resolve has
+    // to stamp the subject from the live unit rather than throwing on it.
+    FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis", "test_empire_morale"});
+    const MoraleCalculator& morale = fixture.morale();
+    const EffectContext_t ctx{&unit.GetTile(), CombatRole_t::Attacker};
+
+    const int noBases = morale.EffectiveMoraleLevel(unit, ctx);
+
+    fixture.MakeFactionBase(faction, 2, 2);
+    fixture.MakeFactionBase(faction, 6, 6);
+    REQUIRE(faction.GetBaseCount() == 2);
+    CHECK(morale.EffectiveMoraleLevel(unit, ctx) == noBases + 2);
+}
+
 TEST_CASE("Promotion: Green always promotes; Elite never", "[morale][promotion]")
 {
     FactionFixture fixture;

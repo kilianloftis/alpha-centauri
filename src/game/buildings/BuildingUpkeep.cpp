@@ -34,14 +34,23 @@ bool FacilityUpkeepEffectApplies_(const ActiveEffect_t& rEffect,
     return true;
 }
 
+// rCtx carries pOriginBase as the base subject so a BaseSize-scaled upkeep modifier resolves
+// (FacilityEnergyUpkeep is Base-domain, and this is the stat's only resolve site). Conditional
+// effects are still rejected by FacilityUpkeepEffectApplies_ — per-building upkeep has no
+// defined conditional rule yet.
 std::vector<ActiveEffect_t> MatchingFacilityUpkeepEffects_(
     const BuildingConfig_t& rBuilding,
     const std::vector<ActiveEffect_t>& rEffects,
-    const BaseManager* pOriginBase)
+    const BaseManager* pOriginBase,
+    const EffectContext_t& rCtx)
 {
     std::vector<ActiveEffect_t> matching;
-    for (const ActiveEffect_t& rEffect : FilterByStatId(rEffects, StatId_t::FacilityEnergyUpkeep))
+    for (const ActiveEffect_t& rEffect : rEffects)
     {
+        if (!StatModifierMatchesInContext(rEffect, StatId_t::FacilityEnergyUpkeep, rCtx))
+        {
+            continue;
+        }
         if (FacilityUpkeepEffectApplies_(rEffect, rBuilding, pOriginBase))
         {
             matching.push_back(rEffect);
@@ -56,13 +65,13 @@ int ResolveFacilityEnergyUpkeepPerCopy(const BuildingConfig_t& rBuilding,
                                        std::span<const ActiveEffect_t> rEffects,
                                        const BaseManager* pOriginBase)
 {
-    // FilterByStatId requires a vector; materialize the span when needed.
     const std::vector<ActiveEffect_t> effects(rEffects.begin(), rEffects.end());
+    const EffectContext_t ctx{.pBase = pOriginBase};
     const std::vector<ActiveEffect_t> matching =
-        MatchingFacilityUpkeepEffects_(rBuilding, effects, pOriginBase);
+        MatchingFacilityUpkeepEffects_(rBuilding, effects, pOriginBase, ctx);
     // FacilityEnergyUpkeep is RawScaled: seed with the building's base upkeep.
     const int resolved = FinalizeResolvedStat(
-        ResolveStatModifiers(matching, static_cast<double>(rBuilding.upkeep)).total);
+        ResolveStatModifiers(matching, static_cast<double>(rBuilding.upkeep), &ctx).total);
     return std::max(0, resolved);
 }
 
@@ -84,14 +93,15 @@ std::vector<BuildingUpkeepLine_t> TallyBuildingUpkeepByType(
     }
 
     const std::vector<ActiveEffect_t> effects(rEffects.begin(), rEffects.end());
+    const EffectContext_t ctx{.pBase = pOriginBase};
     std::vector<BuildingUpkeepLine_t> lines;
     lines.reserve(byId.size());
     for (auto& [rUnusedId, rLine] : byId)
     {
         const std::vector<ActiveEffect_t> matching =
-            MatchingFacilityUpkeepEffects_(*rLine.pConfig, effects, pOriginBase);
+            MatchingFacilityUpkeepEffects_(*rLine.pConfig, effects, pOriginBase, ctx);
         const int resolved = FinalizeResolvedStat(
-            ResolveStatModifiers(matching, static_cast<double>(rLine.pConfig->upkeep)).total);
+            ResolveStatModifiers(matching, static_cast<double>(rLine.pConfig->upkeep), &ctx).total);
         rLine.upkeepPerCopy = std::max(0, resolved);
         lines.push_back(rLine);
     }

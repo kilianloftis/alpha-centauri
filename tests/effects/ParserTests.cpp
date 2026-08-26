@@ -507,6 +507,33 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
             "parameters": { "stat": "drones", "amount_source": "BasesOwned", "amount": 1 }
         })")));
     }
+
+    SECTION("any amount_source with a tile selector throws")
+    {
+        // Selectors resolve during tile-yield, which supplies only a tile subject — so the
+        // rejection is on the combination, not on a per-source list that the next source
+        // added would quietly fall off.
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisBase",
+            "parameters": {
+                "stat": "nutrients",
+                "amount_source": "BaseSize",
+                "amount": 1,
+                "selector": { "kind": "Improvement", "improvement": "Farm" }
+            }
+        })")));
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisTile",
+            "parameters": {
+                "stat": "energy",
+                "amount_source": "ElevationEnergySeed",
+                "amount": 1,
+                "selector": { "kind": "Improvement", "improvement": "Mine" }
+            }
+        })")));
+    }
 }
 
 TEST_CASE("ParseEffectConfig: StatModifier tile selectors", "[effects][parser]")
