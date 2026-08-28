@@ -29,7 +29,8 @@ FactionEffectsPool::FactionEffectsPool(const Faction& rFaction,
                                        const SocialRatingRegistry& rSocialRatings,
                                        const std::vector<EffectConfig_t>& rProductionEffects,
                                        const std::vector<EffectConfig_t>& rBaseConquestEffects,
-                                       const std::vector<EffectConfig_t>& rPoliceRules)
+                                       const std::vector<EffectConfig_t>& rPoliceRules,
+                                       const std::vector<EffectConfig_t>& rPopCompositionEffects)
     : m_rFaction(rFaction)
     , m_rBuildingRegistry(rBuildingRegistry)
     , m_rBaseListRevision(rBaseListRevision)
@@ -38,6 +39,7 @@ FactionEffectsPool::FactionEffectsPool(const Faction& rFaction,
     , m_rProductionEffects(rProductionEffects)
     , m_rBaseConquestEffects(rBaseConquestEffects)
     , m_rPoliceRules(rPoliceRules)
+    , m_rPopCompositionEffects(rPopCompositionEffects)
     , m_cachedPool(rFaction)
 {
 }
@@ -145,6 +147,13 @@ std::vector<ActiveEffect_t> FactionEffectsPool::CollectPoliceRulesEffects_() con
     return result;
 }
 
+std::vector<ActiveEffect_t> FactionEffectsPool::CollectPopCompositionEffects_() const
+{
+    std::vector<ActiveEffect_t> result;
+    AppendActiveEffects(m_rPopCompositionEffects, nullptr, "pop_composition", result);
+    return result;
+}
+
 std::vector<ActiveEffect_t> FactionEffectsPool::CollectDifficultyEffects_() const
 {
     const GameDataContext& rData = m_rFaction.GetDataContext();
@@ -230,6 +239,10 @@ void FactionEffectsPool::Rebuild_() const
     const std::vector<ActiveEffect_t> policeEffects = CollectPoliceRulesEffects_();
     factionEffects.effects.insert(factionEffects.effects.end(), policeEffects.begin(),
                                   policeEffects.end());
+
+    const std::vector<ActiveEffect_t> compositionEffects = CollectPopCompositionEffects_();
+    factionEffects.effects.insert(factionEffects.effects.end(), compositionEffects.begin(),
+                                  compositionEffects.end());
 
     const std::vector<ActiveEffect_t> diffEffects = CollectDifficultyEffects_();
     factionEffects.effects.insert(factionEffects.effects.end(), diffEffects.begin(),

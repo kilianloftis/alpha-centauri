@@ -23,10 +23,23 @@ DroneCalculator::DroneCalculator(const PopCompositionConfig_t& rConfig, LuaRunti
 {
 }
 
-int DroneCalculator::CalculateLimit(const DroneInputs_t& rInputs) const
+int DroneCalculator::EvalNonNegative_(const std::string& rFormula, const char* pTermName,
+                                      const std::unordered_map<std::string, double>& rVars) const
+{
+    const int value = m_rLua.EvalInt(rFormula, rVars);
+    if (value < 0)
+    {
+        throw std::runtime_error(std::string(pTermName) + " formula ('" + rFormula
+                                 + "') produced " + std::to_string(value)
+                                 + "; a drone contribution must not be negative");
+    }
+    return value;
+}
+
+int DroneCalculator::CalculateBureaucracyLimit(const BureaucracyDroneInputs_t& rInputs) const
 {
     const std::unordered_map<std::string, double> vars = {
-        {"bureaucracy", static_cast<double>(rInputs.bureaucracy)},
+        {"bureaucracy", rInputs.bureaucracy},
         {"map_width",   static_cast<double>(rInputs.mapWidth)},
         {"map_height",  static_cast<double>(rInputs.mapHeight)},
     };
@@ -41,37 +54,40 @@ int DroneCalculator::CalculateLimit(const DroneInputs_t& rInputs) const
     return limit;
 }
 
-int DroneCalculator::Calculate(const DroneInputs_t& rInputs) const
+int DroneCalculator::CalculateBureaucracyDrones(const BureaucracyDroneInputs_t& rInputs) const
 {
-    const int limit = CalculateLimit(rInputs);
+    const int limit = CalculateBureaucracyLimit(rInputs);
     const int residue =
         static_cast<int>(StableBaseHash(rInputs.baseId) % static_cast<uint64_t>(limit));
 
-    const std::unordered_map<std::string, double> vars = {
-        {"bureaucracy",             rInputs.bureaucracy},
-        {"map_width",               static_cast<double>(rInputs.mapWidth)},
-        {"map_height",              static_cast<double>(rInputs.mapHeight)},
-        {"base_id",                 static_cast<double>(rInputs.baseId)},
-        {"base_size",               static_cast<double>(rInputs.baseSize)},
-        {"faction_base_count",      static_cast<double>(rInputs.factionBaseCount)},
-        {"garrison_count",          static_cast<double>(rInputs.garrisonCount)},
-        {"resolved_drones",         static_cast<double>(rInputs.resolvedDrones)},
-        {"turns_since_conquered",   static_cast<double>(rInputs.turnsSinceConquered)},
-        {"assimilation_duration",   static_cast<double>(rInputs.assimilationDuration)},
-        {"assimilation_peak",       static_cast<double>(rInputs.assimilationPeak)},
-        {"conquered_drone_cap",     rInputs.conqueredDroneCap},
-        {"size_free_drones",        static_cast<double>(rInputs.sizeFreeDrones)},
-        {"bureaucracy_limit",       static_cast<double>(limit)},
-        {"residue",                 static_cast<double>(residue)},
-    };
+    return EvalNonNegative_(m_rConfig.bureaucracyDroneFormula, "Bureaucracy drone", {
+        {"bureaucracy",        rInputs.bureaucracy},
+        {"map_width",          static_cast<double>(rInputs.mapWidth)},
+        {"map_height",         static_cast<double>(rInputs.mapHeight)},
+        {"base_id",            static_cast<double>(rInputs.baseId)},
+        {"faction_base_count", static_cast<double>(rInputs.factionBaseCount)},
+        {"bureaucracy_limit",  static_cast<double>(limit)},
+        {"residue",            static_cast<double>(residue)},
+    });
+}
 
-    const int value = m_rLua.EvalInt(m_rConfig.droneFormula, vars);
-    if (value < 0)
-    {
-        throw std::runtime_error("Drone formula ('" + m_rConfig.droneFormula + "') produced "
-                                 + std::to_string(value) + "; target must not be negative");
-    }
-    return value;
+int DroneCalculator::CalculateSizeDrones(const SizeDroneInputs_t& rInputs) const
+{
+    return EvalNonNegative_(m_rConfig.sizeDroneFormula, "Size drone", {
+        {"base_size",        static_cast<double>(rInputs.baseSize)},
+        {"size_free_drones", static_cast<double>(rInputs.sizeFreeDrones)},
+    });
+}
+
+int DroneCalculator::CalculateOccupationDrones(const OccupationDroneInputs_t& rInputs) const
+{
+    return EvalNonNegative_(m_rConfig.occupationDroneFormula, "Occupation drone", {
+        {"base_size",             static_cast<double>(rInputs.baseSize)},
+        {"turns_since_conquered", static_cast<double>(rInputs.turnsSinceConquered)},
+        {"assimilation_duration", static_cast<double>(rInputs.assimilationDuration)},
+        {"assimilation_peak",     static_cast<double>(rInputs.assimilationPeak)},
+        {"conquered_drone_cap",   rInputs.conqueredDroneCap},
+    });
 }
 
 } // namespace ac

@@ -23,8 +23,14 @@ enum class StatId_t
     Psych,
 
     // Composition modifiers: add/remove drones or talents at a base (Police SE, facilities).
+    // Drones is drone *pressure*, not a headcount — a Super Drone body absorbs two of it.
     Drones,
     Talents,
+
+    // Mood weights, resolved per seated pop from its own ThisPop effects. Only composition-pool
+    // types declare them; specialists carry neither, which is what keeps them out of both sums.
+    RiotWeight,
+    GoldenAgeWeight,
 
     // Unit stats
     Attack,
@@ -201,6 +207,8 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::Psych:
         case StatId_t::Drones:
         case StatId_t::Talents:
+        case StatId_t::RiotWeight:
+        case StatId_t::GoldenAgeWeight:
         case StatId_t::Attack:
         case StatId_t::Defense:
         case StatId_t::Movement:
@@ -297,6 +305,8 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::Psych:
         case StatId_t::Drones:
         case StatId_t::Talents:
+        case StatId_t::RiotWeight:
+        case StatId_t::GoldenAgeWeight:
         case StatId_t::SizeFreeDrones:
         case StatId_t::FreeUnitSupport:
         case StatId_t::MaxPolice:
@@ -363,6 +373,8 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "psych")                   return StatId_t::Psych;
     if (rStat == "drones")                  return StatId_t::Drones;
     if (rStat == "talents")                 return StatId_t::Talents;
+    if (rStat == "riot_weight")             return StatId_t::RiotWeight;
+    if (rStat == "golden_age_weight")       return StatId_t::GoldenAgeWeight;
     if (rStat == "size_free_drones")        return StatId_t::SizeFreeDrones;
     if (rStat == "attack")                  return StatId_t::Attack;
     if (rStat == "defense")                 return StatId_t::Defense;
@@ -710,6 +722,7 @@ enum class EffectSourceKind_t
     BaseConquest,
     PoliceRules,
     MoraleLevel,
+    PopComposition,
 };
 
 } // namespace ac

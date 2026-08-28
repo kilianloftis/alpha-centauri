@@ -201,7 +201,7 @@ struct WorldFixture
         dataContext.droneCalculator = std::make_unique<ac::DroneCalculator>(
             *dataContext.popCompositionConfig, *dataContext.luaRuntime);
         dataContext.popCompositionCalculator = std::make_unique<ac::PopCompositionCalculator>(
-            *dataContext.popCompositionConfig, *dataContext.luaRuntime);
+            *dataContext.popCompositionConfig, *dataContext.popTypeRegistry);
         dataContext.difficultyConfig = std::make_unique<ac::DifficultyConfig_t>(
             ac::DifficultyConfigParser{}.ParseConfig(FixturePath("difficulty.json")));
         // Built here, before any Faction exists: FactionEffectsPool holds a reference into
@@ -256,7 +256,7 @@ struct BaseFixture : WorldFixture
     ac::PopTypeRegistry& popTypes() { return *dataContext.popTypeRegistry; }
     const ac::PopTypeRegistry& popTypes() const { return *dataContext.popTypeRegistry; }
 
-    ac::BaseManager& MakeBase(int x, int y)
+    ac::BaseManager& MakeBase(int x, int y, int initialPopulation = 3)
     {
         bases.push_back(std::make_unique<ac::BaseManager>(
             *pOwnerFaction, nextBaseId++, "TestBase", At(x, y),
@@ -269,12 +269,12 @@ struct BaseFixture : WorldFixture
             *dataContext.productionConfig,
             *dataContext.hurryProductionCalculator,
             *dataContext.scrapRefundCalculator,
-            *dataContext.droneCalculator,
             *dataContext.popCompositionCalculator,
             // The one optional dependency: it needs a GameState, which this fixture has no
             // reason to build. Only GetBuildingsAvailableForConstruction requires it.
             /*secretProjectCalculator*/ nullptr,
-            *ctx));
+            *ctx,
+            initialPopulation));
         return *bases.back();
     }
 };
@@ -366,7 +366,6 @@ struct FactionFixture : BaseFixture
             *dataContext.productionConfig,
             *dataContext.hurryProductionCalculator,
             *dataContext.scrapRefundCalculator,
-            *dataContext.droneCalculator,
             *dataContext.popCompositionCalculator,
             /*secretProjectCalculator*/ nullptr,
             *ctx);

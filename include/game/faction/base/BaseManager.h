@@ -9,6 +9,7 @@
 #include "game/faction/base/production/HurryProductionCalculator.h"
 #include "game/faction/base/production/ScrapRefundCalculator.h"
 #include "game/faction/base/production/ScrapPayout.h"
+#include "game/faction/base/BaseEffectsCache.h"
 #include "game/faction/base/HomeBaseIndex.h"
 #include "game/map/WorkedTileIndex.h"
 #include "game/effects/ActiveEffect.h"
@@ -41,8 +42,8 @@ class Faction;
 class PopTypeRegistry;
 class PopTypeAvailabilityCalculator;
 struct GrowthConfig_t;
-class DroneCalculator;
 class PopCompositionCalculator;
+class ProductionCompletion;
 class SecretProjectAvailabilityCalculator;
 
 // Outcome of BaseManager::HurryProduction: what the treasury paid for, and what the resulting
@@ -106,7 +107,6 @@ public:
         const ProductionConfig_t& rProductionConfig,
         const HurryProductionCalculator& rHurryCalculator,
         const ScrapRefundCalculator& rScrapCalculator,
-        DroneCalculator& rDroneCalculator,
         PopCompositionCalculator& rCompositionCalculator,
         const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
         TileEffectsContext& rTileEffects,
@@ -237,7 +237,7 @@ public:
 
     // Collect nutrients/minerals and allocate energy into econ/labs/psych stockpiles.
     // Called once per turn per base during ResourceCollection (via Faction::ProduceBaseResources).
-    // Resolves against the composed provider pool (BuildBaseEffects_ memo).
+    // Resolves against the composed provider pool (BaseEffectsCache memo).
     void ProduceResources();
 
     // Charge home-unit mineral support against this turn's mineral bank; disband if short.
@@ -275,7 +275,7 @@ public:
     const BaseEffects_t& GetBaseEffects() const;
 
     // Worked / preview tile yield after base-wide (and, for worked tiles, pop) effects.
-    // .effective applies TileResourceCap; .potential is uncapped (for UI).
+    // .effective honours MaxClamp; .potential is uncapped (for UI).
     TileYieldView_t GetWorkedTileYield(const Tile& rTile) const;
     TileYieldView_t GetPreviewTileYield(const Tile& rTile) const;
 
@@ -311,27 +311,6 @@ public:
 private:
     friend class Faction;
 
-    // FilterForBase over a faction-wide pool, plus this base's own pop-generated ThisBase
-    // effects — everything from that pool that applies to this base, before rating
-    // expansion. Called with the composed pool for resolution (BuildBaseEffects_) and with
-    // the local pool for ratings (CollectRatingSource_).
-    BaseEffects_t CollectBaseLocalEffects_(const FactionEffects_t& rFactionEffects) const;
-
-    // The final effect list this base resolves against: CollectBaseLocalEffects_ over the
-    // composed pool, plus the gameplay effects of this base's effective social rating
-    // levels — which are accumulated from the *local* pool only (ratings are a
-    // faction-internal axis; see SocialRatingResolver).
-    BaseEffects_t BuildBaseEffects_(const FactionEffects_t& rFactionEffects) const;
-
-    // This base's rating context: CollectBaseLocalEffects_ over the provider's local pool.
-    // The one input to both GetEffectiveSocialRating and the base-lane rating expansion,
-    // so the number the UI reports and the effects the base resolves cannot disagree.
-    BaseEffects_t CollectRatingSource_() const;
-
-    // Memoized variant over the provider's pool: rebuilt only when the provider's effects
-    // version changed. The reference is valid until the next effect-source mutation.
-    const BaseEffects_t& BuildBaseEffects_() const;
-
     // Rebindable owner (RebindFaction): never null while the base lives in a Faction.
     Faction* m_pFaction;
     int m_baseId;
@@ -353,7 +332,6 @@ private:
     const ScrapRefundCalculator& m_rScrapCalculator;
     // Always the owning faction (set in the ctor, re-pointed by RebindFaction). A pointer only
     // because it is rebindable; never null.
-    const IEffectsProvider* m_pEffectsProvider = nullptr;
     // Declaration order is construction order: resources depends on worker assignments
     // and buildings, so it is declared after both.
     std::unique_ptr<PopulationManager> m_pPopulation;
@@ -363,12 +341,6 @@ private:
     std::unique_ptr<ProductionManager> m_pProduction;
     std::string m_name;
 
-    // Set when ApplyProduction is ready to finish an item that would leave size <= 0.
-    // Cleared by ConfirmProductionAbandon / DeferProductionAbandon, or when production changes.
-    bool m_bPendingProductionAbandonConfirm = false;
-
-    bool WouldEmptyBaseOnProductionComplete_() const;
-    bool IsCurrentProductionPrototype_() const;
     // What the queued item still needs, shared by the quote and the spend.
     HurryInputs_t BuildHurryInputs_(const IConstructable& rItem) const;
 
@@ -377,10 +349,10 @@ private:
     std::optional<ScrapPayout_t> QuoteScrapBuilding_(const BuildingId_t& buildingId) const;
     int ScrapBuilding_(const BuildingId_t& buildingId);
 
-    // Memoized BuildBaseEffects_ result, keyed on the provider's pool version
-    // (empty = never built).
-    mutable BaseEffects_t m_cachedBaseEffects;
-    mutable std::optional<uint64_t> m_cachedPoolVersion;
+    // Assembles and memoizes the effect list this base resolves against.
+    BaseEffectsCache m_effects;
+    // The end-of-turn completion state machine, including the abandon prompt.
+    std::unique_ptr<ProductionCompletion> m_pCompletion;
 };
 
 } // namespace ac

@@ -8,7 +8,7 @@ namespace ac
 
 // config/tile_yield_rules.json — the world-level rules for what a tile yields.
 // Two consumers: `effects` is merged into every faction's pool (FactionGlobal
-// TileResourceCap and friends), and the scalars below are read during per-tile
+// MaxClamp resource caps and friends), and the scalars below are read during per-tile
 // resolution by amount sources that scale a modifier off terrain state.
 struct TileYieldRulesConfig_t
 {

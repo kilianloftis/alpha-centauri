@@ -31,27 +31,52 @@ bool Pop::IsWorker() const
 
 bool Pop::IsDrone() const
 {
-    return m_pConfig->role == PopRole_t::Drone;
+    return m_pConfig->derivedClass == PopClass_t::Drone;
 }
 
 bool Pop::IsTalent() const
 {
-    return m_pConfig->role == PopRole_t::Talent;
-}
-
-bool Pop::IsSpecialist() const
-{
-    return m_pConfig->role == PopRole_t::Specialist;
+    return m_pConfig->derivedClass == PopClass_t::Talent;
 }
 
 bool Pop::IsPlainWorker() const
 {
-    return m_pConfig->role == PopRole_t::Worker;
+    return m_pConfig->derivedClass == PopClass_t::PlainWorker;
 }
 
-int Pop::GetRiotContribution() const
+bool Pop::IsPlayerChoiceType() const
 {
-    return m_pConfig->riotContribution;
+    return m_pConfig->bPlayerAssignable && !m_pConfig->bIsDefault;
+}
+
+bool Pop::IsInCompositionGraph() const
+{
+    return m_pConfig->derivedClass != PopClass_t::Outside;
+}
+
+bool Pop::ParticipatesInComposition() const
+{
+    return IsInCompositionGraph() && !IsPlayerChoiceType();
+}
+
+MoodWeights_t Pop::GetMoodWeights() const
+{
+    // Same ThisPop lane as ApplyTileMultipliers: resolved off this pop's own type, never
+    // through ResolveBaseStat, so summing mood never builds virtual citizens.
+    const std::vector<ActiveEffect_t> popEffects = CollectScoped_(EffectScope_t::ThisPop);
+
+    auto resolve = [&](StatId_t statId) -> int
+    {
+        return FinalizeResolvedStat(
+            ResolveStatModifiers(FilterByStatId(popEffects, statId), SeedFor(statId)).total);
+    };
+
+    return MoodWeights_t{resolve(StatId_t::RiotWeight), resolve(StatId_t::GoldenAgeWeight)};
+}
+
+int Pop::GetDroneWeight() const
+{
+    return m_pConfig->droneWeight;
 }
 
 void Pop::Convert(const PopTypeConfig_t& rConfig)
@@ -83,22 +108,26 @@ bool Pop::IsUserAssigned() const
     return m_tileClaim.IsUserAssigned();
 }
 
+std::vector<ActiveEffect_t> Pop::CollectScoped_(EffectScope_t scope) const
+{
+    // Materialized, not a view: CollectPopEffects(...) is a temporary, and every caller below
+    // resolves several stats against the result, so the list has to outlive this statement.
+    const std::vector<ActiveEffect_t> popEffects = CollectPopEffects(*m_pConfig);
+    auto scopedView = FilterByScope(popEffects, scope);
+    return std::vector<ActiveEffect_t>(scopedView.begin(), scopedView.end());
+}
+
 TileResources_t Pop::ApplyTileMultipliers(const TileResources_t& resources) const
 {
     // Only ThisPop-scoped effects (tile multipliers) apply here — ThisBase-scoped flat
     // generation bonuses are resolved separately via CollectFromPops/ResourceManager.
-    // Bind the source to a named local before filtering: CollectPopEffects(...) is
-    // otherwise a temporary, and tileEffects must survive past this statement (used by
-    // the lambda below, invoked once per resource).
-    const std::vector<ActiveEffect_t> popEffects = CollectPopEffects(*m_pConfig);
-    auto tileEffectsView = FilterByScope(popEffects, EffectScope_t::ThisPop);
-    const std::vector<ActiveEffect_t> tileEffects(tileEffectsView.begin(), tileEffectsView.end());
+    const std::vector<ActiveEffect_t> tileEffects = CollectScoped_(EffectScope_t::ThisPop);
 
     auto scaleByMultiplier = [&](StatId_t statId, int rawValue) -> int
     {
-        const StatBreakdown_t breakdown =
-            ResolveStatModifiers(FilterByStatId(tileEffects, statId), static_cast<double>(rawValue));
-        return FinalizeResolvedStat(breakdown.total);
+        return FinalizeResolvedStat(
+            ResolveStatModifiers(FilterByStatId(tileEffects, statId),
+                                 static_cast<double>(rawValue)).total);
     };
 
     return TileResources_t{
@@ -110,10 +139,7 @@ TileResources_t Pop::ApplyTileMultipliers(const TileResources_t& resources) cons
 
 SpecialistOutput_t Pop::GetSpecialistOutput() const
 {
-    // Same reasoning as ApplyTileMultipliers above: materialize before the lambda reuses it.
-    const std::vector<ActiveEffect_t> popEffects = CollectPopEffects(*m_pConfig);
-    auto flatEffectsView = FilterByScope(popEffects, EffectScope_t::ThisBase);
-    const std::vector<ActiveEffect_t> flatEffects(flatEffectsView.begin(), flatEffectsView.end());
+    const std::vector<ActiveEffect_t> flatEffects = CollectScoped_(EffectScope_t::ThisBase);
 
     auto resolveFlat = [&](StatId_t statId) -> int
     {

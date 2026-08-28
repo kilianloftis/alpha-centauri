@@ -49,7 +49,10 @@ add_library(ac-core STATIC
     game/faction/base/resources/MineralSupport.cpp
     game/faction/base/resources/WorkerAssignmentManager.cpp
     game/faction/EconomyManager.cpp
+    game/faction/base/BaseEffectsCache.cpp
+    game/faction/base/production/ProductionCompletion.cpp
     game/faction/base/population/AwayFromHomeDrones.cpp
+    game/faction/base/population/CompositionInputs.cpp
     game/faction/base/population/GarrisonPolice.cpp
     game/faction/base/population/PopulationManager.cpp
     game/faction/base/population/AssimilationTracker.cpp

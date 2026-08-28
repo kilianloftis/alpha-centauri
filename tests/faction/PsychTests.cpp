@@ -52,8 +52,8 @@ TEST_CASE("Energy-psych stays at the producing base; effect psych stacks locally
     CHECK(small.GetPsychProduction() == 3);
 
     faction.ProduceBaseResources();
-    CHECK(large.GetResources().ConsumePsych() == 0);
-    CHECK(small.GetResources().ConsumePsych() == 3);
+    CHECK(large.GetResources().GetPsych() == 0);
+    CHECK(small.GetResources().GetPsych() == 3);
 }
 
 TEST_CASE("Default energy split at a base: 40/50/10 of post-inefficiency energy",
@@ -73,7 +73,7 @@ TEST_CASE("Default energy split at a base: 40/50/10 of post-inefficiency energy"
     faction.ProduceBaseResources();
     CHECK(base.GetResources().ConsumeEcon() == 4);
     CHECK(base.GetResources().ConsumeLabs() == 5);
-    CHECK(base.GetResources().ConsumePsych() == 1);
+    CHECK(base.GetResources().GetPsych() == 1);
 
     // Faction collection drains the same stockpiles (re-produce after consume).
     faction.ProduceBaseResources();

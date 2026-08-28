@@ -143,14 +143,8 @@ TEST_CASE("CollectFromPops: only ThisBase-scoped pop effects enter the base pool
           "[effects][collect][pop]")
 {
     actest::BaseFixture fixture;
-    const BaseManager& base = fixture.MakeBase(4, 4);
-
-    PopulationManager pops(*fixture.dataContext.popTypeRegistry,
-                           *fixture.dataContext.popTypeAvailabilityCalculator,
-                           *fixture.dataContext.growthConfig,
-                           *fixture.dataContext.droneCalculator,
-                           *fixture.dataContext.popCompositionCalculator,
-                           fixture.pOwnerFaction->GetResearch(), 0);
+    ac::BaseManager& base = fixture.MakeBase(4, 4, /*initialPopulation*/ 0);
+    ac::PopulationManager& pops = base.GetPopulation();
     pops.AddPop("Doctor");
     pops.AddPop("Doctor");
     pops.AddPop("Technician");

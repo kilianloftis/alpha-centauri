@@ -13,22 +13,17 @@ using namespace ac;
 namespace
 {
 
-ActiveEffect_t CapEffect_(actest::EffectPool& rPool, StatId_t stat, int max)
+ActiveEffect_t ClampEffect_(actest::EffectPool& rPool, StatId_t stat, double max)
 {
-    TileResourceCapEffect_t cap;
-    cap.stat = stat;
-    cap.max = max;
-
-    EffectConfig_t config;
-    config.effect = cap;
-    config.scope = EffectScope_t::FactionGlobal;
-    config.persistence = EffectPersistence_t::Continuous;
-    return actest::Active(rPool.Add(std::move(config)), "tile_yield_rules");
+    return actest::Active(
+        rPool.StatMod(stat, max, ModifierOp_t::MaxClamp, EffectScope_t::FactionGlobal,
+                      actest::AnyTileSelector()),
+        "tile_yield_rules");
 }
 
 } // namespace
 
-TEST_CASE("ResolveTileYield: absent TileResourceCap leaves yield uncapped",
+TEST_CASE("ResolveTileYield: absent MaxClamp leaves yield uncapped",
           "[resources][restrictions]")
 {
     actest::BaseFixture fixture;
@@ -44,7 +39,7 @@ TEST_CASE("ResolveTileYield: absent TileResourceCap leaves yield uncapped",
     CHECK(yield.potential.nutrients == 3);
 }
 
-TEST_CASE("ResolveTileYield: TileResourceCap clamps the pre-restriction lane",
+TEST_CASE("ResolveTileYield: MaxClamp clamps the pre-bypass lane",
           "[resources][restrictions]")
 {
     actest::BaseFixture fixture;
@@ -55,13 +50,13 @@ TEST_CASE("ResolveTileYield: TileResourceCap clamps the pre-restriction lane",
     fixture.ctx->AddImprovementWithEffects(tile, "Farm");
 
     actest::EffectPool pool;
-    BaseEffects_t caps{base, {CapEffect_(pool, StatId_t::Nutrients, 2)}};
+    BaseEffects_t caps{base, {ClampEffect_(pool, StatId_t::Nutrients, 2)}};
     const TileYieldView_t yield = fixture.ctx->ResolveTileYield(tile, false, caps);
     CHECK(yield.effective.nutrients == 2);
     CHECK(yield.potential.nutrients == 3);
 }
 
-TEST_CASE("ResolveTileYield: apply_after_restriction bonuses bypass the cap",
+TEST_CASE("ResolveTileYield: bypass_clamp bonuses bypass MaxClamp",
           "[resources][restrictions]")
 {
     actest::BaseFixture fixture;
@@ -70,10 +65,10 @@ TEST_CASE("ResolveTileYield: apply_after_restriction bonuses bypass the cap",
     tile.SetBaseMoisture(Moisture_t::Wet);
     tile.SetMoisture(Moisture_t::Wet);
     fixture.ctx->AddImprovementWithEffects(tile, "Farm");
-    fixture.ctx->AddImprovementWithEffects(tile, "Nutrients"); // +2 after restriction
+    fixture.ctx->AddImprovementWithEffects(tile, "Nutrients"); // +2 after clamp
 
     actest::EffectPool pool;
-    BaseEffects_t caps{base, {CapEffect_(pool, StatId_t::Nutrients, 2)}};
+    BaseEffects_t caps{base, {ClampEffect_(pool, StatId_t::Nutrients, 2)}};
     const TileYieldView_t yield = fixture.ctx->ResolveTileYield(tile, false, caps);
     // min(Wet+Farm=3, 2) + Nutrients 2 = 4
     CHECK(yield.effective.nutrients == 4);
@@ -104,7 +99,7 @@ TEST_CASE("Tile resource restrictions: production caps worked tiles but not flat
     CHECK(base.GetWorkedTileYield(farmTile).potential.nutrients == 4);
     CHECK(base.GetPreviewTileYield(farmTile).potential.nutrients == 4);
 
-    // Discovering the lift tech rebuilds the faction pool without the nutrient cap.
+    // Discovering the lift tech rebuilds the faction pool without the nutrient MaxClamp.
     faction.GetResearch().AddDiscoveredTech("gene_splicing");
     CHECK(base.GetNutrientProduction() == 6);
     CHECK(base.GetWorkedTileYield(farmTile).effective.nutrients == 4);
@@ -132,7 +127,7 @@ TEST_CASE("Preview yield on an unworked tile includes selector modifiers",
     fixture.ctx->AddImprovementWithEffects(farmTile, "Farm");
 
     base.GetBuildingManager().AddBuilding("farm_booster"); // +1 on Farms
-    faction.GetResearch().AddDiscoveredTech("gene_splicing"); // lift the nutrient cap
+    faction.GetResearch().AddDiscoveredTech("gene_splicing"); // lift the nutrient MaxClamp
 
     // No worker assigned to farmTile — Wet(+2) + Farm(+1) + booster(+1) = 4.
     CHECK(base.GetPreviewTileYield(farmTile).effective.nutrients == 4);
@@ -144,7 +139,7 @@ TEST_CASE("Preview yield on an unworked tile includes selector modifiers",
           == base.GetPreviewTileYield(farmTile).effective.nutrients);
 }
 
-TEST_CASE("Tile resource restrictions: resource-bonus improvements apply after the cap",
+TEST_CASE("Tile resource restrictions: resource-bonus improvements apply after MaxClamp",
           "[resources][restrictions][bonus]")
 {
     actest::FactionFixture fixture;
@@ -155,7 +150,7 @@ TEST_CASE("Tile resource restrictions: resource-bonus improvements apply after t
     rich.SetBaseMoisture(Moisture_t::Wet);
     rich.SetMoisture(Moisture_t::Wet); // +2 nutrients
     fixture.ctx->AddImprovementWithEffects(rich, "Farm"); // +1
-    fixture.ctx->AddImprovementWithEffects(rich, "Nutrients"); // +2 after restriction
+    fixture.ctx->AddImprovementWithEffects(rich, "Nutrients"); // +2 after clamp
 
     base.UserAssignBestAvailableWorker(&rich);
 

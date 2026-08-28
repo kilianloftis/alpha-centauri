@@ -47,8 +47,13 @@ public:
     int GetDroneCount() const;
     int GetSpecialistCount() const;
 
-    // Sum of each pop's riot_contribution (Super Drone counts as 2).
-    int GetRiotContribution() const;
+    // Bodies available to carry drone pressure and talents: every pop in the promotion graph.
+    // This is the pool composition seats into, and the population the mood sums range over.
+    int GetCompositionPoolCount() const;
+
+    // Mood sums over the seated pops, both from one pass. Types outside the graph declare no
+    // weights and so contribute 0 to each without needing to be filtered out.
+    MoodWeights_t GetMoodWeightSums() const;
 
     // Container operations. AddPop takes an already-resolved type for the same reason ConvertTo
     // does: which types are legal is PopulationManager's decision, not the container's.

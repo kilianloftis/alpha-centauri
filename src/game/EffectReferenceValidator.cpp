@@ -19,6 +19,7 @@
 #include "game/council/CouncilRulesConfig.h"
 #include "game/DifficultyConfig.h"
 #include "game/units/BaseConquestConfig.h"
+#include "game/population/pop-types/PopCompositionConfigParser.h"
 #include "game/social-engineering/SocialRatingConfig.h"
 #include "game/social-engineering/SocialRatingRegistry.h"
 #include "game/units/UnitComponentConfig.h"
@@ -102,7 +103,6 @@ struct EffectPayloadValidator
     void operator()(const GrantEnergyEffect_t&) const {}
     void operator()(const WorldParameterEffect_t&) const {}
     void operator()(const InfiltrationEffect_t&) const {}
-    void operator()(const TileResourceCapEffect_t&) const {}
     void operator()(const RuleFlagEffect_t&) const {}
     void operator()(const SocialEngineeringOverrideEffect_t&) const {}
     void operator()(const DiplomaticModifierEffect_t&) const {}
@@ -313,6 +313,8 @@ void ValidateEffectReferences(const GameDataContext& rData)
     // tileYieldRules is a value on GameDataContext (always present; effects may be empty).
     validate(rData.tileYieldRules.effects, "tile_yield_rules");
     validate(rData.policeRules, "police_rules");
+    validate(RequireRegistry(rData.popCompositionConfig, "popCompositionConfig").effects,
+             "pop_composition");
     validate(rProductionConfig.effects, "production");
     validate(RequireRegistry(rData.baseConquestConfig, "baseConquestConfig").effects,
              "base_conquest");

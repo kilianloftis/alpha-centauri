@@ -2,25 +2,40 @@
   "elevation_energy_step_meters": 1000,
   "effects": [
     {
-      "type": "TileResourceCap",
+      "type": "StatModifier",
       "scope": "FactionGlobal",
       "persistence": "Continuous",
       "removed_by_tech": "gene_splicing",
-      "parameters": { "stat": "nutrients", "max": 2 }
+      "parameters": {
+        "stat": "nutrients",
+        "amount": 2,
+        "op": "MaxClamp",
+        "selector": { "kind": "AnyTile" }
+      }
     },
     {
-      "type": "TileResourceCap",
+      "type": "StatModifier",
       "scope": "FactionGlobal",
       "persistence": "Continuous",
       "removed_by_tech": "ecological_engineering",
-      "parameters": { "stat": "minerals", "max": 2 }
+      "parameters": {
+        "stat": "minerals",
+        "amount": 2,
+        "op": "MaxClamp",
+        "selector": { "kind": "AnyTile" }
+      }
     },
     {
-      "type": "TileResourceCap",
+      "type": "StatModifier",
       "scope": "FactionGlobal",
       "persistence": "Continuous",
       "removed_by_tech": "environmental_economics",
-      "parameters": { "stat": "energy", "max": 2 }
+      "parameters": {
+        "stat": "energy",
+        "amount": 2,
+        "op": "MaxClamp",
+        "selector": { "kind": "AnyTile" }
+      }
     }
   ]
 }

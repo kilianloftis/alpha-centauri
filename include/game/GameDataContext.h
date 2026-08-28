@@ -79,7 +79,7 @@ struct GameDataContext
     std::unique_ptr<WorldGenPresetRegistry> worldGenPresetRegistry;
     std::unique_ptr<WorldGenDecorationConfig_t> worldGenDecorationConfig;
     std::vector<LandmarkConfig_t> worldGenLandmarks;
-    // FactionGlobal TileResourceCap rules (and any other universal tile-yield effects), plus
+    // FactionGlobal MaxClamp resource-cap rules (and any other universal tile-yield effects), plus
     // the world yield scalars TileEffectsContext stamps into per-tile resolution.
     TileYieldRulesConfig_t tileYieldRules;
     // FactionUnits police baselines (away-from-home weight + effectiveness for combat units).

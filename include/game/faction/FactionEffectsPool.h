@@ -31,7 +31,8 @@ public:
                        const SocialRatingRegistry& rSocialRatings,
                        const std::vector<EffectConfig_t>& rProductionEffects,
                        const std::vector<EffectConfig_t>& rBaseConquestEffects,
-                       const std::vector<EffectConfig_t>& rPoliceRules);
+                       const std::vector<EffectConfig_t>& rPoliceRules,
+                       const std::vector<EffectConfig_t>& rPopCompositionEffects);
 
     // The validated local pool. Valid until the next effect-source mutation on the owner.
     const FactionEffects_t& Get() const;
@@ -58,7 +59,7 @@ private:
     // Continuous effects declared on techs this faction has discovered.
     std::vector<ActiveEffect_t> CollectDiscoveredTechEffects_() const;
 
-    // Universal tile-yield rules (TileResourceCap, etc.) from GameDataContext.
+    // Universal tile-yield rules (MaxClamp resource caps, etc.) from GameDataContext.
     std::vector<ActiveEffect_t> CollectTileYieldRuleEffects_() const;
 
     // Production.json continuous effects (prototype StartingExperience, …).
@@ -69,6 +70,7 @@ private:
 
     // police_rules.json continuous effects (combat-unit away weight and effectiveness).
     std::vector<ActiveEffect_t> CollectPoliceRulesEffects_() const;
+    std::vector<ActiveEffect_t> CollectPopCompositionEffects_() const;
 
     // Session difficulty continuous effects, re-resolved from the owner's GameDataContext
     // and current game rules. Not cached at construction: difficulty is changeable
@@ -98,6 +100,7 @@ private:
     const std::vector<EffectConfig_t>& m_rProductionEffects;
     const std::vector<EffectConfig_t>& m_rBaseConquestEffects;
     const std::vector<EffectConfig_t>& m_rPoliceRules;
+    const std::vector<EffectConfig_t>& m_rPopCompositionEffects;
 
     // The empty initial stamp never equals a real collection, so no "never built"
     // sentinel is needed. m_scratchRevisions is reused between validations to keep the

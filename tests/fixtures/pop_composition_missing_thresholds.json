@@ -1,0 +1,11 @@
+{
+  "bureaucracy_limit_formula": "1",
+  "bureaucracy_drone_formula": "0",
+  "size_drone_formula": "0",
+  "occupation_drone_formula": "0",
+  "assimilation_drones": 5,
+  "assimilation_decay_turns": 10,
+  "drone_type": "Drone",
+  "talent_type": "Talent",
+  "effects": []
+}

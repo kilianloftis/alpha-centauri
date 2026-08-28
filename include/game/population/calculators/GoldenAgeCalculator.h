@@ -6,8 +6,13 @@ namespace ac
 {
 
 // Tracks golden age state for a base population.
-// A golden age occurs when the base has no Drones and the Talent count
-// is at least equal to the combined count of Workers and Specialists.
+//
+// A golden age needs no drone-class pops at all, and the seated pops' golden age weights to
+// reach the base's threshold. Talents weigh +1, plain workers and drones −1, and specialists
+// declare no weight — so the shipping rule reads "talents >= workers + drones", with
+// specialists neither helping nor hindering. Neither this nor the riot condition is a function
+// of base size; both range over the composition pool only.
+//
 // Call Update(inputs) at end of turn to drive golden_age_started / golden_age_ended.
 class GoldenAgeCalculator
 {
@@ -17,10 +22,9 @@ public:
 
     struct Inputs_t
     {
-        int droneCount     = 0;
-        int talentCount    = 0;
-        int workerCount    = 0;
-        int specialistCount = 0;
+        int droneCount    = 0;
+        int goldenAgeSum  = 0;
+        int threshold     = 0;
     };
 
     // Call at end of turn. Emits golden_age_started when conditions become met,

@@ -2,25 +2,23 @@
 
 #include "lib/Signal.h"
 
-#include <optional>
-
 namespace ac
 {
 
-// Inputs for the natural riot condition: weighted drones outnumber the talent target.
-// droneCount is the sum of pop riot_contribution (Super Drone = 2), not head-count.
+// Inputs for the natural riot condition: the seated pops' riot weights against the base's
+// threshold. Drones weigh +1 (Super Drones too — a super absorbs two drones of *pressure*, but
+// riots like any single citizen), talents −1, and everything else 0.
 struct RiotConditionInputs_t
 {
-    int droneCount = 0;
-    int talentCount = 0;
-    // The composition's talent target when there is one; otherwise the actual talent count.
-    std::optional<int> targetTalents;
+    int riotSum = 0;
+    int threshold = 0;
 };
 
 // Tracks drone riot state for a base population.
 //
 // Two independent sources keep a riot alive, because they expire differently:
-//   - the natural condition (drones > talent target), recomputed on every Update
+//   - the natural condition (riotSum >= riot_threshold from pop_composition.json), recomputed
+//     on every Update
 //   - a forced riot (probe Incite Drone Riots), which lasts a fixed number of turns and which
 //     the natural condition cannot sustain, since the action does not change composition
 // A base is rioting while either holds.

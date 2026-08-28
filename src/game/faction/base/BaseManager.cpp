@@ -1,4 +1,6 @@
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/BaseEffectsCache.h"
+#include "game/faction/base/production/ProductionCompletion.h"
 #include "game/Faction.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
@@ -16,7 +18,6 @@
 #include "game/faction/EconomyManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopulationManager.h"
-#include "game/population/calculators/DroneCalculator.h"
 #include "game/buildings/BuildingConfig.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/stockpiles/StockpileConfig.h"
@@ -64,29 +65,6 @@ WorkedTileClaim ClaimCenterTile_(TileEffectsContext& rTileEffects, const Tile& t
     return rTileEffects.GetWorldMap().GetWorkedTiles().ClaimDisplacing(tile, /*bUserAssigned*/false);
 }
 
-PauseOnEventId_t ClassifyCompletedItem_(const IConstructable& rItem)
-{
-    switch (rItem.GetConstructableKind())
-    {
-    case ConstructableKind_t::Building:
-    case ConstructableKind_t::SecretProject:
-        return PauseOnEventId_t::NewFacilityBuilt;
-    case ConstructableKind_t::Unit:
-    {
-        const auto* pDesign = dynamic_cast<const UnitDesign*>(&rItem);
-        if (pDesign && (pDesign->GetStat(StatId_t::Attack) > 0
-                        || pDesign->GetFlag(RuleFlagId_t::ForcesPsiCombat)))
-        {
-            return PauseOnEventId_t::CombatUnitBuilt;
-        }
-        return PauseOnEventId_t::NonCombatUnitBuilt;
-    }
-    case ConstructableKind_t::Stockpile:
-        throw std::logic_error("ClassifyCompletedItem_: a stockpile cannot complete");
-    }
-    throw std::logic_error("ClassifyCompletedItem_: unhandled constructable kind");
-}
-
 } // namespace
 
 BaseManager::BaseManager(
@@ -103,7 +81,6 @@ BaseManager::BaseManager(
     const ProductionConfig_t& rProductionConfig,
     const HurryProductionCalculator& rHurryCalculator,
     const ScrapRefundCalculator& rScrapCalculator,
-    DroneCalculator& rDroneCalculator,
     PopCompositionCalculator& rCompositionCalculator,
     const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
     TileEffectsContext& rTileEffects,
@@ -119,10 +96,9 @@ BaseManager::BaseManager(
     , m_rSocialRatings(rSocialRatingRegistry)
     , m_rHurryCalculator(rHurryCalculator)
     , m_rScrapCalculator(rScrapCalculator)
-    , m_pEffectsProvider(&rFaction)
     , m_pPopulation(std::make_unique<PopulationManager>(
-          rPopTypeRegistry, rPopTypeAvailabilityCalculator, rGrowthConfig, rDroneCalculator,
-          rCompositionCalculator, rFaction.GetResearch(), initialPopulation))
+          rPopTypeRegistry, rPopTypeAvailabilityCalculator, rGrowthConfig,
+          rCompositionCalculator, rFaction.GetResearch(), *this, initialPopulation))
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(
           ComputeWorkableTiles_(rTileEffects, tile), *m_pPopulation, rTileEffects,
           rTileEffects.GetWorldMap().GetWorkedTiles()))
@@ -138,36 +114,9 @@ BaseManager::BaseManager(
                   m_pFaction->GetResearch().GetDiscoveredTechs());
           }))
     , m_name(std::move(name))
-    , m_cachedBaseEffects(*this)
+    , m_effects(*this, m_rSocialRatings, rFaction)
+    , m_pCompletion(std::make_unique<ProductionCompletion>(*this, rBuildingRegistry))
 {
-    m_pPopulation->SetDroneInputSupplier([this]() {
-        DroneInputs_t inputs;
-        inputs.baseSize = m_pPopulation->GetSize();
-        inputs.factionBaseCount = static_cast<int>(m_pFaction->GetBaseCount());
-        const WorldMap& rMap = m_rTileEffects.GetWorldMap();
-        inputs.mapWidth = rMap.GetWidth();
-        inputs.mapHeight = rMap.GetHeight();
-        inputs.baseId = m_baseId;
-        const AssimilationState& rWindow = m_pPopulation->GetAssimilation().OccupierWindow();
-        inputs.turnsSinceConquered = rWindow.turnsElapsed;
-        inputs.assimilationDuration = rWindow.durationTurns;
-        inputs.assimilationPeak = rWindow.peakDrones;
-        // GetBaseEffects includes SE rating expansion (Efficiency → Bureaucracy MultiplyGeometric).
-        const BaseEffects_t& rBaseEffects = GetBaseEffects();
-        inputs.bureaucracy =
-            ResolveBaseStat(rBaseEffects, StatId_t::Bureaucracy, SeedFor(StatId_t::Bureaucracy));
-        // Additive Drones at SeedFor(0): literal Adds (Commons) plus BaseSize × amount
-        // (University 0.25). Size drones live in drone_formula as max(0, base_size - free).
-        inputs.resolvedDrones = FinalizeResolvedStat(
-            ResolveBaseStat(rBaseEffects, StatId_t::Drones, SeedFor(StatId_t::Drones)));
-        inputs.sizeFreeDrones = FinalizeResolvedStat(
-            ResolveBaseStat(rBaseEffects, StatId_t::SizeFreeDrones,
-                            SeedFor(StatId_t::SizeFreeDrones)));
-        inputs.conqueredDroneCap = ResolveBaseStat(
-            rBaseEffects, StatId_t::ConqueredDroneCap, SeedFor(StatId_t::ConqueredDroneCap));
-        return inputs;
-    });
-
     // A base provides its own garrison defense bonus, modeled as the "Base" improvement.
     m_rTileEffects.AddImprovementWithEffects(m_tile, std::string(ImprovementIds::k_Base));
 
@@ -175,7 +124,7 @@ BaseManager::BaseManager(
     // Only BaseManager can resolve a worked tile's yield, which is why the rule is injected
     // rather than living in PopulationManager.
     m_pPopulation->SetPopValuator([this](const Pop& rPop) {
-        if (rPop.IsSpecialist())
+        if (!rPop.IsWorker())
         {
             const SpecialistOutput_t output = rPop.GetSpecialistOutput();
             return output.econ + output.labs + output.psych;
@@ -218,7 +167,7 @@ BaseManager::BaseManager(
 
     m_pProduction->OnProductionChanged.Connect([this]() {
         // Switching or clearing the queue cancels an unresolved abandon prompt.
-        m_bPendingProductionAbandonConfirm = false;
+        m_pCompletion->NotifyProductionChanged();
     });
 
     m_pProduction->OnProductionCompleted.Connect([this](const std::string& itemId) {
@@ -352,12 +301,12 @@ bool BaseManager::UserAssignBestAvailableWorker(const Tile* pTile)
 
 int BaseManager::GetNutrientProduction() const
 {
-    return m_pResources->GetNutrientProduction(BuildBaseEffects_());
+    return m_pResources->GetNutrientProduction(m_effects.Get());
 }
 
 int BaseManager::GetMineralProduction() const
 {
-    return m_pResources->GetMineralProduction(BuildBaseEffects_());
+    return m_pResources->GetMineralProduction(m_effects.Get());
 }
 
 int BaseManager::GetMineralSupportCost() const
@@ -392,33 +341,33 @@ std::optional<int> BaseManager::GetTurnsToProductionCompletion() const
 
 int BaseManager::GetEnergyProduction() const
 {
-    return m_pResources->GetEnergyProduction(BuildBaseEffects_());
+    return m_pResources->GetEnergyProduction(m_effects.Get());
 }
 
 int BaseManager::GetEconProduction() const
 {
-    return m_pResources->GetEconProduction(BuildBaseEffects_());
+    return m_pResources->GetEconProduction(m_effects.Get());
 }
 
 int BaseManager::GetLabsProduction() const
 {
-    return m_pResources->GetLabsProduction(BuildBaseEffects_());
+    return m_pResources->GetLabsProduction(m_effects.Get());
 }
 
 int BaseManager::GetPsychProduction() const
 {
-    return m_pResources->GetPsychProduction(BuildBaseEffects_());
+    return m_pResources->GetPsychProduction(m_effects.Get());
 }
 
 int BaseManager::GetDroneModifier() const
 {
     return FinalizeResolvedStat(
-        ResolveBaseStat(BuildBaseEffects_(), StatId_t::Drones, SeedFor(StatId_t::Drones)));
+        ResolveBaseStat(m_effects.Get(), StatId_t::Drones, SeedFor(StatId_t::Drones)));
 }
 
 int BaseManager::GetTalentModifier() const
 {
-    return FinalizeResolvedStat(ResolveBaseStat(BuildBaseEffects_(), StatId_t::Talents, 0.0));
+    return FinalizeResolvedStat(ResolveBaseStat(m_effects.Get(), StatId_t::Talents, 0.0));
 }
 
 BuildingManager& BaseManager::GetBuildingManager()
@@ -492,110 +441,32 @@ const ProductionManager& BaseManager::GetProduction() const
 
 ProductionApplyResult_t BaseManager::ApplyProduction()
 {
-    if (m_bPendingProductionAbandonConfirm)
-    {
-        // ConvertMinerals already claimed the bank; wait for Confirm / Defer.
-        return ProductionApplyResult_t{ProductionApplyKind_t::AwaitingAbandonConfirm, {}};
-    }
-
-    // Stamp the turn original without adding minerals: ConvertMinerals already moved this
-    // turn's leftover bank onto a real item (or converted / wasted it).
-    m_pProduction->BankProduction(0);
-    return TryCompleteReadyProduction();
+    return m_pCompletion->Apply();
 }
 
 ProductionApplyResult_t BaseManager::TryCompleteReadyProduction()
 {
-    if (m_bPendingProductionAbandonConfirm)
-    {
-        return ProductionApplyResult_t{ProductionApplyKind_t::AwaitingAbandonConfirm, {}};
-    }
-
-    if (!m_pProduction->HasProduction())
-    {
-        return ProductionApplyResult_t{ProductionApplyKind_t::Idle, {}};
-    }
-
-    const BaseEffects_t& rEffects = BuildBaseEffects_();
-    const bool bPrototype = IsCurrentProductionPrototype_();
-    if (!m_pProduction->IsReadyToComplete(rEffects, bPrototype))
-    {
-        return ProductionApplyResult_t{ProductionApplyKind_t::InProgress, {}};
-    }
-
-    if (WouldEmptyBaseOnProductionComplete_())
-    {
-        m_bPendingProductionAbandonConfirm = true;
-        return ProductionApplyResult_t{ProductionApplyKind_t::AwaitingAbandonConfirm, {}};
-    }
-
-    const IConstructable& rItem = *m_pProduction->GetCurrentProduction();
-    // TODO: a prototype reports PrototypeBuilt instead of CombatUnitBuilt / NonCombatUnitBuilt,
-    // so a player who wants combat-unit pauses but not prototype pauses gets no prompt at all
-    // for a prototype combat unit. Whether prototype overrides the item classification or the
-    // two gates should both be consulted is an unrecorded UI rules decision.
-    const PauseOnEventId_t completedEvent =
-        bPrototype ? PauseOnEventId_t::PrototypeBuilt : ClassifyCompletedItem_(rItem);
-    const std::string completedName = rItem.GetName();
-    return ProductionApplyResult_t{ProductionApplyKind_t::Completed,
-                                  m_pProduction->CompleteProduction(rEffects, bPrototype),
-                                  completedEvent, completedName};
+    return m_pCompletion->TryCompleteReady();
 }
 
 bool BaseManager::HasPendingProductionAbandonConfirm() const
 {
-    return m_bPendingProductionAbandonConfirm;
+    return m_pCompletion->HasPendingAbandonConfirm();
 }
 
 std::string BaseManager::ConfirmProductionAbandon()
 {
-    if (!m_bPendingProductionAbandonConfirm)
-    {
-        throw std::runtime_error(
-            "BaseManager::ConfirmProductionAbandon: no pending abandon confirmation");
-    }
-    // Clear before CompleteProduction: ResetProduction_ emits OnProductionChanged which
-    // would also clear the flag, but Confirm must own the transition explicitly.
-    m_bPendingProductionAbandonConfirm = false;
-    return m_pProduction->CompleteProduction(BuildBaseEffects_(),
-                                             IsCurrentProductionPrototype_());
+    return m_pCompletion->ConfirmAbandon();
 }
 
 void BaseManager::DeferProductionAbandon()
 {
-    if (!m_bPendingProductionAbandonConfirm)
-    {
-        throw std::runtime_error(
-            "BaseManager::DeferProductionAbandon: no pending abandon confirmation");
-    }
-    m_bPendingProductionAbandonConfirm = false;
-    // Excess / invested minerals are lost; the item stays queued for a fresh stockpile.
-    m_pProduction->SetMineralStockpile(0);
-}
-
-bool BaseManager::WouldEmptyBaseOnProductionComplete_() const
-{
-    const IConstructable* pItem = m_pProduction->GetCurrentProduction();
-    if (!pItem)
-    {
-        return false;
-    }
-
-    const int size = m_pPopulation->GetSize();
-    if (const BuildingConfig_t* pBuilding = m_rBuildingRegistry.Find(pItem->GetId()))
-    {
-        return PredictInstantaneousPopulationSize(pBuilding->effects, size) <= 0;
-    }
-    if (const UnitDesign* pDesign = m_pFaction->GetMilitary().GetDesign(pItem->GetId()))
-    {
-        return PredictUnitProductionPopulationSize(*pDesign, size) <= 0;
-    }
-    return false;
+    m_pCompletion->DeferAbandon();
 }
 
 int BaseManager::GetMineralCost() const
 {
-    return m_pProduction->GetMineralCost(BuildBaseEffects_(), IsCurrentProductionPrototype_());
+    return m_pProduction->GetMineralCost(m_effects.Get(), m_pCompletion->IsCurrentPrototype());
 }
 
 HurryInputs_t BaseManager::BuildHurryInputs_(const IConstructable& rItem) const
@@ -665,7 +536,7 @@ std::optional<ScrapPayout_t> BaseManager::QuoteScrapBuilding_(const BuildingId_t
         const ScrapQuote_t quote =
             m_rScrapCalculator.Quote(pBuilding->mineralCost, ConstructableKind_t::Building,
                                      pBuilding->scrap.value_or(ScrapOverride_t{}),
-                                     BuildBaseEffects_().effects);
+                                     m_effects.Get().effects);
         if (!quote.bAvailable)
         {
             return std::nullopt;
@@ -690,72 +561,14 @@ int BaseManager::ScrapBuilding_(const BuildingId_t& buildingId)
     return CreditScrapRefund(*payout, *m_pFaction);
 }
 
-bool BaseManager::IsCurrentProductionPrototype_() const
-{
-    // Same test ClassifyCompletedItem_ uses. Resolving the design by id instead would scan
-    // every design of the faction on a call GetMineralCost makes from render paths, and would
-    // mistake a building for a unit if the two ever shared an id.
-    const UnitDesign* pDesign =
-        dynamic_cast<const UnitDesign*>(m_pProduction->GetCurrentProduction());
-    return pDesign && m_pFaction->GetMilitary().IsPrototype(*pDesign);
-}
-
-BaseEffects_t BaseManager::CollectBaseLocalEffects_(const FactionEffects_t& rFactionEffects) const
-{
-    BaseEffects_t baseEffects = FilterForBase(rFactionEffects, *this);
-
-    const std::vector<ActiveEffect_t> popEffects = CollectFromPops(*m_pPopulation, *this);
-    baseEffects.effects.insert(baseEffects.effects.end(), popEffects.begin(), popEffects.end());
-
-    return baseEffects;
-}
-
-BaseEffects_t BaseManager::CollectRatingSource_() const
-{
-    return CollectBaseLocalEffects_(m_pEffectsProvider->GetLocalActiveEffects());
-}
-
-BaseEffects_t BaseManager::BuildBaseEffects_(const FactionEffects_t& rFactionEffects) const
-{
-    BaseEffects_t baseEffects = CollectBaseLocalEffects_(rFactionEffects);
-
-    // Ratings are a faction-internal axis: accumulate from the local pool only, then append
-    // the level effects onto the composed base list (which may also carry world/council
-    // StatModifiers). The two lists differ, which is why the resolver returns its effects
-    // instead of expanding in place.
-    const std::vector<ActiveEffect_t> ratingEffects =
-        ResolveSocialRatingLevelEffects(CollectRatingSource_(), m_rSocialRatings);
-    baseEffects.effects.insert(baseEffects.effects.end(), ratingEffects.begin(),
-                               ratingEffects.end());
-
-    return baseEffects;
-}
-
-const BaseEffects_t& BaseManager::BuildBaseEffects_() const
-{
-    const FactionEffects_t& rPool = m_pEffectsProvider->GetActiveEffects();
-    const uint64_t poolVersion = m_pEffectsProvider->GetEffectsVersion();
-    if (poolVersion != m_cachedPoolVersion)
-    {
-        m_cachedBaseEffects = BuildBaseEffects_(rPool);
-        m_cachedPoolVersion = poolVersion;
-    }
-    return m_cachedBaseEffects;
-}
-
 int BaseManager::GetEffectiveSocialRating(SocialRatingId_t rating) const
 {
-    // Local-only ratings: peer WorldGlobal / council SocialRatingModifiers never move this
-    // axis (see AccumulateSocialRatings). Same source list as the base-lane expansion.
-    const std::map<SocialRatingId_t, int> totals =
-        AccumulateSocialRatings(CollectRatingSource_().effects);
-    const auto it = totals.find(rating);
-    return it == totals.end() ? 0 : it->second;
+    return m_effects.GetEffectiveRating(rating);
 }
 
 void BaseManager::ProduceResources()
 {
-    m_pResources->ProduceResources(BuildBaseEffects_());
+    m_pResources->ProduceResources(m_effects.Get());
 }
 
 void BaseManager::ApplyMineralSupport()
@@ -803,12 +616,12 @@ const ResourceManager& BaseManager::GetResources() const
 
 void BaseManager::ApplyGrowth()
 {
-    m_pPopulation->ApplyGrowth(m_pResources->ConsumeNutrients(), BuildBaseEffects_());
+    m_pPopulation->ApplyGrowth(m_pResources->ConsumeNutrients(), m_effects.Get());
 }
 
 int BaseManager::GetNutrientsRequired() const
 {
-    return m_pPopulation->GetNutrientsRequired(BuildBaseEffects_());
+    return m_pPopulation->GetNutrientsRequired(m_effects.Get());
 }
 
 Tile& BaseManager::GetTile()
@@ -823,17 +636,17 @@ const Tile& BaseManager::GetTile() const
 
 const BaseEffects_t& BaseManager::GetBaseEffects() const
 {
-    return BuildBaseEffects_();
+    return m_effects.Get();
 }
 
 TileYieldView_t BaseManager::GetWorkedTileYield(const Tile& rTile) const
 {
-    return m_pWorkerAssignments->GetWorkedTileYield(rTile, BuildBaseEffects_());
+    return m_pWorkerAssignments->GetWorkedTileYield(rTile, m_effects.Get());
 }
 
 TileYieldView_t BaseManager::GetPreviewTileYield(const Tile& rTile) const
 {
-    return m_rTileEffects.ResolveTileYield(rTile, /*bIsBaseTile*/ false, BuildBaseEffects_());
+    return m_rTileEffects.ResolveTileYield(rTile, /*bIsBaseTile*/ false, m_effects.Get());
 }
 
 const std::string& BaseManager::GetName() const
@@ -859,13 +672,10 @@ FactionId_t BaseManager::GetFactionId() const
 void BaseManager::RebindFaction(Faction& rFaction)
 {
     m_pFaction = &rFaction;
-    m_pEffectsProvider = &rFaction;
+    m_effects.BindProvider(rFaction);
     m_pPopulation->RebindResearch(rFaction.GetResearch());
     m_pBuildings->RebindResearch(rFaction.GetResearch());
     m_pResources->RebindEconomy(rFaction.GetEconomy());
-    // The cached BuildBaseEffects_ result was built from the old owner's pool; force a
-    // rebuild against the new provider even if version numbers happen to collide.
-    m_cachedPoolVersion.reset();
 
     // Buildings live in the shared registry, so a queued building pointer stays valid when
     // the new owner has its required tech. Unit designs are owned by Military: re-home to the

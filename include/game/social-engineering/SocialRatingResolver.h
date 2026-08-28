@@ -58,7 +58,7 @@ const std::vector<EffectConfig_t>* FindSocialRatingLevelEffects(
 // attributes ThisBase-scoped rating modifiers to the right base. It *returns* the effects
 // rather than appending in place because the list ratings are accumulated from is not
 // always the list the base resolves against: ratings accumulate over the local pool,
-// while resolution runs over the composed pool (see BaseManager::BuildBaseEffects_).
+// while resolution runs over the composed pool (see BaseEffectsCache::Get).
 std::vector<ActiveEffect_t> ResolveSocialRatingLevelEffects(
     const BaseEffects_t& rRatingSource, const SocialRatingRegistry& rRatings);
 

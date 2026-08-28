@@ -2,38 +2,87 @@
   {
     "id": "Worker",
     "name": "Worker",
-    "role": "worker",
     "display_glyph": "W",
     "is_default": true,
     "can_work_tile": true,
     "player_assignable": true,
     "obsoletes": [],
-    "effects": []
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisPop",
+        "parameters": {
+          "stat": "golden_age_weight",
+          "amount": -1,
+          "op": "Add"
+        }
+      }
+    ],
+    "psych_to_promote": 2,
+    "promotes_to": "Talent"
   },
   {
     "id": "Drone",
     "name": "Drone",
-    "role": "drone",
     "display_glyph": "R",
     "can_work_tile": true,
     "player_assignable": false,
     "obsoletes": [],
-    "effects": []
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisPop",
+        "parameters": {
+          "stat": "riot_weight",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisPop",
+        "parameters": {
+          "stat": "golden_age_weight",
+          "amount": -1,
+          "op": "Add"
+        }
+      }
+    ],
+    "drone_weight": 1,
+    "psych_to_promote": 2,
+    "promotes_to": "Worker"
   },
   {
     "id": "Talent",
     "name": "Talent",
-    "role": "talent",
     "display_glyph": "A",
     "can_work_tile": true,
     "player_assignable": false,
     "obsoletes": [],
-    "effects": []
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisPop",
+        "parameters": {
+          "stat": "riot_weight",
+          "amount": -1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisPop",
+        "parameters": {
+          "stat": "golden_age_weight",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
   },
   {
     "id": "Technician",
     "name": "Technician",
-    "role": "specialist",
     "display_glyph": "T",
     "can_work_tile": false,
     "player_assignable": true,
@@ -44,25 +93,27 @@
   {
     "id": "Engineer",
     "name": "Engineer",
-    "role": "specialist",
     "display_glyph": "E",
     "can_work_tile": false,
     "player_assignable": true,
     "required_tech": "advanced_build",
     "fallback_pop_type": "Worker",
-    "obsoletes": ["Technician"],
+    "obsoletes": [
+      "Technician"
+    ],
     "effects": []
   },
   {
     "id": "Transcend",
     "name": "Transcend",
-    "role": "specialist",
     "display_glyph": "T",
     "can_work_tile": false,
     "player_assignable": true,
     "required_tech": "transcendence",
     "fallback_pop_type": "Worker",
-    "obsoletes": ["Engineer"],
+    "obsoletes": [
+      "Engineer"
+    ],
     "effects": []
   }
 ]

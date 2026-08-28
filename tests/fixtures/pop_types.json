@@ -2,53 +2,122 @@
   {
     "id": "Worker",
     "name": "Worker",
-    "role": "worker",
     "display_glyph": "W",
     "is_default": true,
     "can_work_tile": true,
     "player_assignable": true,
     "obsoletes": [],
-    "effects": [],
-    "fallback_pop_type": "Doctor"
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisPop",
+        "parameters": {
+          "stat": "golden_age_weight",
+          "amount": -1,
+          "op": "Add"
+        }
+      }
+    ],
+    "fallback_pop_type": "Doctor",
+    "psych_to_promote": 2,
+    "promotes_to": "Talent"
   },
   {
     "id": "Drone",
     "name": "Drone",
-    "role": "drone",
     "display_glyph": "R",
     "can_work_tile": true,
     "player_assignable": false,
     "obsoletes": [],
-    "effects": [],
-    "fallback_pop_type": "Doctor"
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisPop",
+        "parameters": {
+          "stat": "riot_weight",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisPop",
+        "parameters": {
+          "stat": "golden_age_weight",
+          "amount": -1,
+          "op": "Add"
+        }
+      }
+    ],
+    "fallback_pop_type": "Doctor",
+    "drone_weight": 1,
+    "psych_to_promote": 2,
+    "promotes_to": "Worker"
   },
   {
     "id": "SuperDrone",
     "name": "Super Drone",
-    "role": "drone",
     "display_glyph": "S",
     "can_work_tile": true,
     "player_assignable": false,
-    "riot_contribution": 2,
     "obsoletes": [],
-    "effects": [],
-    "fallback_pop_type": "Doctor"
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisPop",
+        "parameters": {
+          "stat": "riot_weight",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisPop",
+        "parameters": {
+          "stat": "golden_age_weight",
+          "amount": -1,
+          "op": "Add"
+        }
+      }
+    ],
+    "fallback_pop_type": "Doctor",
+    "drone_weight": 2,
+    "psych_to_promote": 2,
+    "promotes_to": "Drone"
   },
   {
     "id": "Talent",
     "name": "Talent",
-    "role": "talent",
     "display_glyph": "A",
     "can_work_tile": true,
     "player_assignable": false,
     "obsoletes": [],
-    "effects": [],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisPop",
+        "parameters": {
+          "stat": "riot_weight",
+          "amount": -1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisPop",
+        "parameters": {
+          "stat": "golden_age_weight",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
     "fallback_pop_type": "Doctor"
   },
   {
     "id": "Doctor",
     "name": "Doctor",
-    "role": "specialist",
     "display_glyph": "D",
     "can_work_tile": false,
     "player_assignable": true,
@@ -68,7 +137,6 @@
   {
     "id": "Technician",
     "name": "Technician",
-    "role": "specialist",
     "display_glyph": "T",
     "can_work_tile": false,
     "player_assignable": true,
@@ -89,7 +157,6 @@
   {
     "id": "Networker",
     "name": "Networker (faction-lane effect on a pop type)",
-    "role": "specialist",
     "display_glyph": "N",
     "can_work_tile": false,
     "player_assignable": true,
@@ -109,7 +176,6 @@
   {
     "id": "MoraleOfficer",
     "name": "Morale Officer (+1 Morale rating, FactionGlobal \u2014 faction-lane rating source)",
-    "role": "specialist",
     "display_glyph": "M",
     "can_work_tile": false,
     "player_assignable": true,
@@ -129,7 +195,6 @@
   {
     "id": "FungalFarmer",
     "name": "Fungal Farmer (worker with a ThisPop tile multiplier plus a ThisBase flat bonus)",
-    "role": "worker",
     "display_glyph": "F",
     "can_work_tile": true,
     "player_assignable": true,
@@ -159,7 +224,6 @@
   {
     "id": "NutrientHand",
     "name": "Nutrient Hand (worker with a ThisPop flat nutrient Add on the worked tile)",
-    "role": "worker",
     "display_glyph": "N",
     "can_work_tile": true,
     "player_assignable": true,

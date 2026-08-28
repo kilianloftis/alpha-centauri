@@ -16,7 +16,6 @@
 #include "game/effects/TileYieldRulesConfig.h"
 #include <algorithm>
 #include <cmath>
-#include <optional>
 #include <type_traits>
 #include <unordered_set>
 #include <variant>
@@ -27,47 +26,9 @@ namespace ac
 namespace
 {
 
-std::optional<int> CapForStat_(StatId_t stat, const std::vector<ActiveEffect_t>& rEffects)
+bool IsClampOp_(ModifierOp_t op)
 {
-    std::optional<int> cap;
-    for (const ActiveEffect_t& rEffect : rEffects)
-    {
-        const auto* pCap = std::get_if<TileResourceCapEffect_t>(&rEffect.config->effect);
-        if (!pCap || pCap->stat != stat)
-        {
-            continue;
-        }
-        // Multiple caps: keep the tightest (lowest max).
-        cap = cap.has_value() ? std::min(*cap, pCap->max) : pCap->max;
-    }
-    return cap;
-}
-
-int ApplyCap_(int value, std::optional<int> cap)
-{
-    return cap.has_value() ? std::min(value, *cap) : value;
-}
-
-TileResources_t ApplyTileResourceRestrictions_(TileResources_t yield,
-                                               const std::vector<ActiveEffect_t>& rEffects)
-{
-    yield.nutrients = ApplyCap_(yield.nutrients, CapForStat_(StatId_t::Nutrients, rEffects));
-    yield.minerals  = ApplyCap_(yield.minerals, CapForStat_(StatId_t::Minerals, rEffects));
-    yield.energy    = ApplyCap_(yield.energy, CapForStat_(StatId_t::Energy, rEffects));
-    return yield;
-}
-
-TileResources_t AssembleRestrictedTileYield_(TileResources_t subjectToRestriction,
-                                             TileResources_t afterRestriction,
-                                             const std::vector<ActiveEffect_t>& rEffects)
-{
-    const TileResources_t capped =
-        ApplyTileResourceRestrictions_(subjectToRestriction, rEffects);
-    return TileResources_t{
-        capped.nutrients + afterRestriction.nutrients,
-        capped.energy + afterRestriction.energy,
-        capped.minerals + afterRestriction.minerals,
-    };
+    return op == ModifierOp_t::MaxClamp || op == ModifierOp_t::MinClamp;
 }
 
 // How far an improvement's effects can reach: the max per-effect radius.
@@ -215,11 +176,11 @@ void RecomputeMoistureInRadius_(const Tile& rChangedTile, int radius, TileEffect
         });
 }
 
-// Pointer-partition into pre-cap vs apply_after_restriction lanes, skipping suppressed sources.
+// Pointer-partition into pre-clamp vs bypass_clamp lanes, skipping suppressed sources.
 // Does not clone ActiveEffect_t — callers resolve through the pointer lists.
 void PartitionYieldEffects_(const Tile& rTile, const std::vector<ActiveEffect_t>& effects,
-                            std::vector<const ActiveEffect_t*>& rBeforeRestriction,
-                            std::vector<const ActiveEffect_t*>& rAfterRestriction)
+                            std::vector<const ActiveEffect_t*>& rBeforeClamp,
+                            std::vector<const ActiveEffect_t*>& rBypassClamp)
 {
     std::unordered_set<std::string> suppress;
     auto absorbSuppress = [&](const std::vector<const ImprovementConfig_t*>& rConfigs)
@@ -239,8 +200,8 @@ void PartitionYieldEffects_(const Tile& rTile, const std::vector<ActiveEffect_t>
     absorbSuppress(rTile.GetImprovements());
     absorbSuppress(rTile.GetTerrainFeatures());
 
-    rBeforeRestriction.reserve(effects.size());
-    rAfterRestriction.reserve(effects.size());
+    rBeforeClamp.reserve(effects.size());
+    rBypassClamp.reserve(effects.size());
     for (const ActiveEffect_t& rEffect : effects)
     {
         if (suppress.count(rEffect.sourceId) > 0)
@@ -249,13 +210,13 @@ void PartitionYieldEffects_(const Tile& rTile, const std::vector<ActiveEffect_t>
         }
         const auto* pMod =
             rEffect.config ? std::get_if<StatModifierEffect_t>(&rEffect.config->effect) : nullptr;
-        if (pMod && pMod->applyAfterRestriction)
+        if (pMod && pMod->bypassClamp)
         {
-            rAfterRestriction.push_back(&rEffect);
+            rBypassClamp.push_back(&rEffect);
         }
         else
         {
-            rBeforeRestriction.push_back(&rEffect);
+            rBeforeClamp.push_back(&rEffect);
         }
     }
 }
@@ -337,12 +298,12 @@ TileYieldView_t TileEffectsContext::ResolveTileYield(const Tile& rTile, bool bIs
 {
     std::vector<ActiveEffect_t> effects = CollectAreaEffects(rTile);
     AppendMatchingTileModifiers_(rBaseEffects.effects, rTile, bIsBaseTile, effects);
-    return ResolveYieldFromEffects_(rTile, effects, rBaseEffects);
+    return ResolveYieldFromEffects_(rTile, effects);
 }
 
 int TileEffectsContext::ResolveResource_(const Tile& rTile,
                                          std::span<const ActiveEffect_t*> effects,
-                                         StatId_t stat) const
+                                         StatId_t stat, bool bIncludeClamps) const
 {
     // targetTile is the receiving tile, so an aura's ElevationEnergy would read the tile it
     // lands on, not its host. Only radius-0 effects use it today (a solar collector yields
@@ -353,7 +314,18 @@ int TileEffectsContext::ResolveResource_(const Tile& rTile,
               return *pEffect;
           })
         | std::views::filter([&](const ActiveEffect_t& effect) {
-              return StatModifierMatchesInContext(effect, stat, ctx);
+              if (!StatModifierMatchesInContext(effect, stat, ctx))
+              {
+                  return false;
+              }
+              if (bIncludeClamps)
+              {
+                  return true;
+              }
+              const auto* pMod =
+                  effect.config ? std::get_if<StatModifierEffect_t>(&effect.config->effect)
+                                : nullptr;
+              return !pMod || !IsClampOp_(pMod->op);
           });
     return FinalizeResolvedStat(ResolveStatModifiersTotal(matching, SeedFor(stat), &ctx));
 }
@@ -361,30 +333,38 @@ int TileEffectsContext::ResolveResource_(const Tile& rTile,
 TileEffectsContext::YieldLanes_t TileEffectsContext::ResolveYieldLanes_(
     const Tile& rTile, const std::vector<ActiveEffect_t>& effects) const
 {
-    std::vector<const ActiveEffect_t*> beforeRestriction;
-    std::vector<const ActiveEffect_t*> afterRestriction;
-    PartitionYieldEffects_(rTile, effects, beforeRestriction, afterRestriction);
+    std::vector<const ActiveEffect_t*> beforeClamp;
+    std::vector<const ActiveEffect_t*> bypassClamp;
+    PartitionYieldEffects_(rTile, effects, beforeClamp, bypassClamp);
 
     // Every resource seeds at 0: a bare tile yields no energy of its own. Elevation energy
     // comes from SolarCollector/Mirror amount_source effects (ElevationEnergy), not a
     // hardcoded improvement-id gate.
-    const TileResources_t subject{
-        ResolveResource_(rTile, beforeRestriction, StatId_t::Nutrients),
-        ResolveResource_(rTile, beforeRestriction, StatId_t::Energy),
-        ResolveResource_(rTile, beforeRestriction, StatId_t::Minerals),
+    const TileResources_t preClamped{
+        ResolveResource_(rTile, beforeClamp, StatId_t::Nutrients, /*bIncludeClamps*/ true),
+        ResolveResource_(rTile, beforeClamp, StatId_t::Energy, /*bIncludeClamps*/ true),
+        ResolveResource_(rTile, beforeClamp, StatId_t::Minerals, /*bIncludeClamps*/ true),
     };
-    const TileResources_t after{
-        ResolveResource_(rTile, afterRestriction, StatId_t::Nutrients),
-        ResolveResource_(rTile, afterRestriction, StatId_t::Energy),
-        ResolveResource_(rTile, afterRestriction, StatId_t::Minerals),
+    const TileResources_t preUnclamped{
+        ResolveResource_(rTile, beforeClamp, StatId_t::Nutrients, /*bIncludeClamps*/ false),
+        ResolveResource_(rTile, beforeClamp, StatId_t::Energy, /*bIncludeClamps*/ false),
+        ResolveResource_(rTile, beforeClamp, StatId_t::Minerals, /*bIncludeClamps*/ false),
+    };
+    const TileResources_t bypass{
+        ResolveResource_(rTile, bypassClamp, StatId_t::Nutrients, /*bIncludeClamps*/ true),
+        ResolveResource_(rTile, bypassClamp, StatId_t::Energy, /*bIncludeClamps*/ true),
+        ResolveResource_(rTile, bypassClamp, StatId_t::Minerals, /*bIncludeClamps*/ true),
     };
     return YieldLanes_t{
-        subject,
-        after,
         TileResources_t{
-            subject.nutrients + after.nutrients,
-            subject.energy + after.energy,
-            subject.minerals + after.minerals,
+            preClamped.nutrients + bypass.nutrients,
+            preClamped.energy + bypass.energy,
+            preClamped.minerals + bypass.minerals,
+        },
+        TileResources_t{
+            preUnclamped.nutrients + bypass.nutrients,
+            preUnclamped.energy + bypass.energy,
+            preUnclamped.minerals + bypass.minerals,
         },
     };
 }
@@ -393,18 +373,7 @@ TileYieldView_t TileEffectsContext::ResolveYieldFromEffects_(
     const Tile& rTile, const std::vector<ActiveEffect_t>& effects) const
 {
     const YieldLanes_t lanes = ResolveYieldLanes_(rTile, effects);
-    return TileYieldView_t{lanes.potential, lanes.potential};
-}
-
-TileYieldView_t TileEffectsContext::ResolveYieldFromEffects_(
-    const Tile& rTile, const std::vector<ActiveEffect_t>& effects,
-    const BaseEffects_t& rCapEffects) const
-{
-    const YieldLanes_t lanes = ResolveYieldLanes_(rTile, effects);
-    return TileYieldView_t{
-        AssembleRestrictedTileYield_(lanes.subject, lanes.after, rCapEffects.effects),
-        lanes.potential,
-    };
+    return TileYieldView_t{lanes.effective, lanes.potential};
 }
 
 double TileEffectsContext::ResolveTileDefenseMultiplier(const Tile& rTile, FactionId_t forFaction) const

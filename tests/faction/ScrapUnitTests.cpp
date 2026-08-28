@@ -212,7 +212,7 @@ TEST_CASE("CreditScrapRefund pays treasury, production, and resource banks", "[u
     CHECK(base.GetResources().ConsumeLabs() == 1);
 
     CHECK(pay(6, StatId_t::Psych, baseId) == 6);
-    CHECK(base.GetResources().ConsumePsych() == 6);
+    CHECK(base.GetResources().GetPsych() == 6);
 }
 
 TEST_CASE("Planning a scrap payout zeroes a base-destined refund with no base", "[unit][scrap]")

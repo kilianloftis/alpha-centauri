@@ -202,6 +202,27 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
     rData.difficultyConfig =
         std::make_unique<DifficultyConfig_t>(difficultyParser.ParseConfig(rPaths.difficulty));
 
+    // pop_composition.json: drone clamps (effects) plus mood thresholds (plain scalars). Loaded
+    // before the Lua-backed calculators that consume it.
+    PopCompositionConfigParser compositionParser;
+    rData.popCompositionConfig = std::make_unique<PopCompositionConfig_t>(
+        compositionParser.ParseConfig(rPaths.popComposition));
+    {
+        const PopCompositionConfig_t& rComposition = *rData.popCompositionConfig;
+        if (!rData.popTypeRegistry->Find(rComposition.droneTypeId))
+        {
+            throw std::runtime_error(
+                "pop composition drone_type '" + rComposition.droneTypeId
+                + "' is not a known pop type");
+        }
+        if (!rData.popTypeRegistry->Find(rComposition.talentTypeId))
+        {
+            throw std::runtime_error(
+                "pop composition talent_type '" + rComposition.talentTypeId
+                + "' is not a known pop type");
+        }
+    }
+
     // Cross-config id checks — only safe once every registry above is loaded.
     ValidateTerrainFeatures(*rData.improvementRegistry);
     ValidateEffectReferences(rData);
@@ -221,28 +242,10 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
         }
     }
 
-    PopCompositionConfigParser compositionParser;
-    rData.popCompositionConfig = std::make_unique<PopCompositionConfig_t>(
-        compositionParser.ParseConfig(rPaths.popComposition));
-    {
-        const PopCompositionConfig_t& rComposition = *rData.popCompositionConfig;
-        if (!rData.popTypeRegistry->Find(rComposition.droneTypeId))
-        {
-            throw std::runtime_error(
-                "pop composition drone_type '" + rComposition.droneTypeId
-                + "' is not a known pop type");
-        }
-        if (!rData.popTypeRegistry->Find(rComposition.talentTypeId))
-        {
-            throw std::runtime_error(
-                "pop composition talent_type '" + rComposition.talentTypeId
-                + "' is not a known pop type");
-        }
-    }
     rData.droneCalculator =
         std::make_unique<DroneCalculator>(*rData.popCompositionConfig, *rData.luaRuntime);
     rData.popCompositionCalculator = std::make_unique<PopCompositionCalculator>(
-        *rData.popCompositionConfig, *rData.luaRuntime);
+        *rData.popCompositionConfig, *rData.popTypeRegistry);
 
     GrowthConfigParser growthParser;
     rData.growthConfig =

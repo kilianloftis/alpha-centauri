@@ -86,7 +86,7 @@ struct FactionEffects_t
 
 // One base's effect list: FilterForBase over the faction pool, then the base's pop-generated
 // ThisBase effects (CollectFromPops) and expanded social-rating effects
-// (ResolveSocialRatingLevelEffects) merged in — see BaseManager::BuildBaseEffects_. Every entry
+// (ResolveSocialRatingLevelEffects) merged in — see BaseEffectsCache::Get. Every entry
 // applies to that single base, which is the precondition for base-level resolution
 // (FilterBaseLevelByStatId) and the per-tile selector pass (TileEffectsContext::ResolveTileYield).
 // Subject is constructor-injected so ResolveBaseStat / amount sources cannot omit it.
@@ -482,7 +482,7 @@ double ResolveCombatUnitMultiplicativeStat(const Unit& rUnit, StatId_t statId, d
 // Narrows the faction pool to the effects that apply to the given base: ThisBase effects
 // originating from it, plus all AllOwnerBases, FactionGlobal, and WorldGlobal effects.
 // The only constructor of a BaseEffects_t from a pool. Eager, not a view: the result is an
-// independently-owned collection meant to be cached (see BaseManager::BuildBaseEffects_).
+// independently-owned collection meant to be cached (see BaseEffectsCache::Get).
 BaseEffects_t FilterForBase(const FactionEffects_t& rFactionEffects, const BaseManager& rBase);
 
 // Returns a lazy view of effects whose scope matches exactly.

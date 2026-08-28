@@ -502,16 +502,15 @@ TEST_CASE("removed_by_tech gates GrantBuilding before expansion",
     BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
 
     base.GetBuildingManager().AddBuilding("gated_grantor");
-    REQUIRE(ResolveStatModifiers(
-                FilterByStatId(faction.GetLocalActiveEffects().effects, StatId_t::Minerals),
-                0.0)
-                .total
+    // FilterBaseLevelByStatId excludes AnyTile MaxClamp from tile_yield_rules — same cut
+    // production uses. FilterByStatId would include those clamps and mute the grant Adds.
+    const BaseEffects_t local{base, faction.GetLocalActiveEffects().effects};
+    REQUIRE(ResolveStatModifiers(FilterBaseLevelByStatId(local, StatId_t::Minerals), 0.0).total
             == Approx(3.0));
 
     faction.GetResearch().AddDiscoveredTech("gene_splicing");
-    CHECK(ResolveStatModifiers(
-              FilterByStatId(faction.GetLocalActiveEffects().effects, StatId_t::Minerals), 0.0)
-              .total
+    const BaseEffects_t afterLift{base, faction.GetLocalActiveEffects().effects};
+    CHECK(ResolveStatModifiers(FilterBaseLevelByStatId(afterLift, StatId_t::Minerals), 0.0).total
           == Approx(0.0));
 }
 
@@ -596,13 +595,14 @@ TEST_CASE("Two factions with equal revision stamps do not share a local effect p
     auto pFactionB = std::make_unique<Faction>(2, false, defB, fixture.dataContext,
                                                fixture.map, fixture.settings,
                                                actest::k_TestFactionSeed + 2);
+    BaseManager& baseA = fixture.MakeFactionBase(*pFactionA, 2, 2);
+    BaseManager& baseB = fixture.MakeFactionBase(*pFactionB, 4, 4);
 
-    CHECK(ResolveStatModifiers(
-              FilterByStatId(pFactionA->GetLocalActiveEffects().effects, StatId_t::Energy), 0.0)
-              .total
+    // Base-level filter so tile_yield_rules AnyTile MaxClamp is not part of this assert.
+    const BaseEffects_t localA{baseA, pFactionA->GetLocalActiveEffects().effects};
+    const BaseEffects_t localB{baseB, pFactionB->GetLocalActiveEffects().effects};
+    CHECK(ResolveStatModifiers(FilterBaseLevelByStatId(localA, StatId_t::Energy), 0.0).total
           == Approx(5.0));
-    CHECK(ResolveStatModifiers(
-              FilterByStatId(pFactionB->GetLocalActiveEffects().effects, StatId_t::Energy), 0.0)
-              .total
+    CHECK(ResolveStatModifiers(FilterBaseLevelByStatId(localB, StatId_t::Energy), 0.0).total
           == Approx(11.0));
 }

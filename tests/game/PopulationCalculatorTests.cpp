@@ -61,16 +61,16 @@ struct RiotSignals_
 RiotConditionInputs_t Calm_()
 {
     RiotConditionInputs_t inputs;
-    inputs.droneCount = 0;
-    inputs.talentCount = 2;
+    inputs.riotSum = 0;
+    inputs.threshold = 1;
     return inputs;
 }
 
 RiotConditionInputs_t Unrest_()
 {
     RiotConditionInputs_t inputs;
-    inputs.droneCount = 3;
-    inputs.talentCount = 1;
+    inputs.riotSum = 2;
+    inputs.threshold = 1;
     return inputs;
 }
 
@@ -165,20 +165,20 @@ TEST_CASE("NotifyPopGrown warns only when a riot is not already running", "[popu
     CHECK(signals.willRiotCount == 1);
 }
 
-TEST_CASE("The composition talent target overrides the actual talent count", "[population][riot]")
+TEST_CASE("The riot threshold moves what counts as unrest", "[population][riot]")
 {
     RiotSignals_ signals;
     RiotCalculator riot(signals.willRiot, signals.isRioting, signals.riotEnded);
 
+    // Net unrest of 1 riots at the shipping threshold (1); threshold 2 needs two net drones.
     RiotConditionInputs_t inputs;
-    inputs.droneCount = 2;
-    inputs.talentCount = 0;
-    inputs.targetTalents = 3; // target satisfied: no riot despite zero actual talents
+    inputs.riotSum = 1;
+    inputs.threshold = 2;
 
     riot.Update(inputs);
     CHECK_FALSE(riot.IsRioting());
 
-    inputs.targetTalents = 1;
+    inputs.riotSum = 2;
     riot.Update(inputs);
     CHECK(riot.IsRioting());
 }
@@ -197,9 +197,8 @@ TEST_CASE("GoldenAgeCalculator starts and ends on its condition", "[population][
     CHECK_FALSE(goldenAge.IsInGoldenAge());
 
     GoldenAgeCalculator::Inputs_t inputs;
-    inputs.talentCount = 4;
-    inputs.workerCount = 2;
-    inputs.specialistCount = 2;
+    inputs.goldenAgeSum = 1;
+    inputs.threshold = 0;
     inputs.droneCount = 0;
 
     goldenAge.Update(inputs);
@@ -223,8 +222,8 @@ TEST_CASE("GoldenAgeCalculator starts and ends on its condition", "[population][
     REQUIRE(goldenAge.IsInGoldenAge());
     CHECK(startedCount == 2);
 
-    // Too few talents ends it: the condition is talents >= workers + specialists.
-    inputs.talentCount = 3;
+    // Too few talents ends it: the sum falls below the threshold.
+    inputs.goldenAgeSum = -1;
     goldenAge.Update(inputs);
     CHECK_FALSE(goldenAge.IsInGoldenAge());
     CHECK(endedCount == 2);
@@ -319,70 +318,34 @@ TEST_CASE("An obsolescence cycle is rejected at load", "[population][pop-types][
     // must not be reachable, and a hang is not something a caller's try/catch can absorb.
     PopTypeRegistry registry;
     const TempConfigFile config("ac_pop_cycle.json", R"([
-        { "id": "Worker", "name": "Worker", "role": "worker", "display_glyph": "X", "is_default": true,
+        { "id": "Worker", "name": "Worker", "display_glyph": "X", "is_default": true,
           "can_work_tile": true },
-        { "id": "A", "name": "A", "role": "specialist", "display_glyph": "X", "obsoletes": ["B"] },
-        { "id": "B", "name": "B", "role": "specialist", "display_glyph": "X", "obsoletes": ["A"] }
+        { "id": "A", "name": "A", "display_glyph": "X", "obsoletes": ["B"] },
+        { "id": "B", "name": "B", "display_glyph": "X", "obsoletes": ["A"] }
     ])");
 
     CHECK_THROWS_WITH(registry.Load(config.Path()),
                       Catch::Matchers::ContainsSubstring("cycle"));
 }
 
-TEST_CASE("A pop type whose role contradicts can_work_tile is rejected",
-          "[population][pop-types][config]")
-{
-    PopTypeRegistry registry;
-    const TempConfigFile config("ac_pop_role_clash.json", R"([
-        { "id": "Worker", "name": "Worker", "role": "worker", "display_glyph": "X", "is_default": true,
-          "can_work_tile": true },
-        { "id": "Odd", "name": "Odd", "role": "specialist", "display_glyph": "X", "can_work_tile": true }
-    ])");
-
-    CHECK_THROWS_WITH(registry.Load(config.Path()),
-                      Catch::Matchers::ContainsSubstring("Odd")
-                          && Catch::Matchers::ContainsSubstring("can_work_tile"));
-}
-
-TEST_CASE("A negative drone target is a config error", "[population][composition]")
+TEST_CASE("A negative drone contribution is a config error", "[population][composition]")
 {
     LuaRuntime lua;
 
     PopCompositionConfig_t config;
     config.bureaucracyLimitFormula = "1";
-    config.droneFormula = "base_size - 10";
+    config.sizeDroneFormula = "base_size - 10";
     config.droneTypeId = "Drone";
     DroneCalculator droneCalculator(config, lua);
 
-    DroneInputs_t inputs;
+    SizeDroneInputs_t inputs;
     inputs.baseSize = 3;
-    CHECK_THROWS_WITH(droneCalculator.Calculate(inputs),
-                      Catch::Matchers::ContainsSubstring("Drone")
+    CHECK_THROWS_WITH(droneCalculator.CalculateSizeDrones(inputs),
+                      Catch::Matchers::ContainsSubstring("Size drone")
                           && Catch::Matchers::ContainsSubstring("-7"));
 
     inputs.baseSize = 12;
-    CHECK(droneCalculator.Calculate(inputs) == 2);
-}
-
-TEST_CASE("A negative talent target is a config error", "[population][composition]")
-{
-    LuaRuntime lua;
-
-    PopCompositionConfig_t config;
-    config.talentFormula = "psych_output - 10";
-    config.talentTypeId = "Talent";
-
-    PopCompositionCalculator calculator(config, lua);
-
-    PopCompositionInputs_t inputs;
-    inputs.targetDrones = 0;
-    inputs.psychOutput = 3;
-    CHECK_THROWS_WITH(calculator.Calculate(inputs),
-                      Catch::Matchers::ContainsSubstring("talent")
-                          && Catch::Matchers::ContainsSubstring("-7"));
-
-    inputs.psychOutput = 12;
-    CHECK(calculator.Calculate(inputs).targetTalents == 2);
+    CHECK(droneCalculator.CalculateSizeDrones(inputs) == 2);
 }
 
 TEST_CASE("Growth threshold saturates instead of overflowing", "[population][growth]")
@@ -414,14 +377,72 @@ PopCompositionConfig_t BureaucracyConfig_()
     PopCompositionConfig_t config;
     config.bureaucracyLimitFormula =
         "math.floor(bureaucracy * math.sqrt(map_width * map_height) / math.sqrt(12800) + 0.5)";
-    config.droneFormula =
-        "max(0, min(base_size, max(0, floor((residue + faction_base_count - bureaucracy_limit) / bureaucracy_limit)) + max(0, base_size - size_free_drones) + resolved_drones + ((assimilation_peak > 0 and assimilation_duration > 0 and turns_since_conquered < assimilation_duration) and 1 or 0) * min(max(0, assimilation_peak - floor(turns_since_conquered / max(1, floor(assimilation_duration / max(1, assimilation_peak))))), max(0, floor(base_size / 4 + conquered_drone_cap)))))";
+    config.bureaucracyDroneFormula =
+        "max(0, floor((residue + faction_base_count - bureaucracy_limit) / bureaucracy_limit))";
+    config.sizeDroneFormula = "max(0, base_size - size_free_drones)";
+    config.occupationDroneFormula =
+        "((assimilation_peak > 0 and assimilation_duration > 0 and turns_since_conquered < assimilation_duration) and 1 or 0) * min(max(0, assimilation_peak - floor(turns_since_conquered / max(1, floor(assimilation_duration / max(1, assimilation_peak))))), max(0, floor(base_size / 4 + conquered_drone_cap)))";
     config.droneTypeId = "Drone";
-    config.talentFormula = "0";
     config.talentTypeId = "Talent";
     config.assimilationDrones = 5;
     config.assimilationDecayTurns = 10;
     return config;
+}
+
+// The drone sources are separate calculators now; these tests exercise how they compose, so
+// the fixture keeps one struct and sums the terms exactly as BaseManager does when it seeds
+// Finalize(Drones) - including the clamp, which lives there because the base_size cap needs
+// the BaseSize amount source that the effect parser only accepts with op Add.
+struct DroneInputs_t
+{
+    double bureaucracy = 1.0;
+    int mapWidth = 0;
+    int mapHeight = 0;
+    int baseId = 0;
+    int baseSize = 0;
+    int factionBaseCount = 0;
+    int sizeFreeDrones = 0;
+    int resolvedDrones = 0;
+    int turnsSinceConquered = 0;
+    int assimilationDuration = 0;
+    int assimilationPeak = 0;
+    double conqueredDroneCap = 0.0;
+};
+
+BureaucracyDroneInputs_t Bureaucracy_(const DroneInputs_t& rInputs)
+{
+    BureaucracyDroneInputs_t out;
+    out.bureaucracy = rInputs.bureaucracy;
+    out.mapWidth = rInputs.mapWidth;
+    out.mapHeight = rInputs.mapHeight;
+    out.baseId = rInputs.baseId;
+    out.factionBaseCount = rInputs.factionBaseCount;
+    return out;
+}
+
+int LimitOf_(const DroneCalculator& rCalculator, const DroneInputs_t& rInputs)
+{
+    return rCalculator.CalculateBureaucracyLimit(Bureaucracy_(rInputs));
+}
+
+int TotalDrones_(const DroneCalculator& rCalculator, const DroneInputs_t& rInputs)
+{
+    SizeDroneInputs_t size;
+    size.baseSize = rInputs.baseSize;
+    size.sizeFreeDrones = rInputs.sizeFreeDrones;
+
+    OccupationDroneInputs_t occupation;
+    occupation.baseSize = rInputs.baseSize;
+    occupation.turnsSinceConquered = rInputs.turnsSinceConquered;
+    occupation.assimilationDuration = rInputs.assimilationDuration;
+    occupation.assimilationPeak = rInputs.assimilationPeak;
+    occupation.conqueredDroneCap = rInputs.conqueredDroneCap;
+
+    const int total = rCalculator.CalculateBureaucracyDrones(Bureaucracy_(rInputs))
+                    + rCalculator.CalculateSizeDrones(size)
+                    + rCalculator.CalculateOccupationDrones(occupation)
+                    + rInputs.resolvedDrones;
+    return std::clamp(total, 0, rInputs.baseSize);
 }
 
 DroneInputs_t StandardMapInputs_()
@@ -447,23 +468,23 @@ TEST_CASE("Bureaucracy limit uses resolved bureaucracy and map root",
     DroneCalculator calculator(config, lua);
 
     const DroneInputs_t citizen = StandardMapInputs_();
-    CHECK(calculator.CalculateLimit(citizen) == 16);
+    CHECK(LimitOf_(calculator, citizen) == 16);
 
     // Efficiency ≤ 0 still emits MultiplyGeometric 4 → same factor as citizen.
     DroneInputs_t negEffSameAsCitizen = citizen;
-    CHECK(calculator.CalculateLimit(negEffSameAsCitizen) == 16);
+    CHECK(LimitOf_(calculator, negEffSameAsCitizen) == 16);
 
     DroneInputs_t planned = citizen;
     planned.bureaucracy = 48; // 8 * 6
-    CHECK(calculator.CalculateLimit(planned) == 24);
+    CHECK(LimitOf_(calculator, planned) == 24);
 
     DroneInputs_t thinker = citizen;
     thinker.bureaucracy = 16; // 4 * 4
-    CHECK(calculator.CalculateLimit(thinker) == 8);
+    CHECK(LimitOf_(calculator, thinker) == 8);
 
     DroneInputs_t transcend = citizen;
     transcend.bureaucracy = 12; // 3 * 4
-    CHECK(calculator.CalculateLimit(transcend) == 6);
+    CHECK(LimitOf_(calculator, transcend) == 6);
 }
 
 TEST_CASE("Bureaucracy limit rounds to nearest after the full product",
@@ -479,20 +500,20 @@ TEST_CASE("Bureaucracy limit rounds to nearest after the full product",
 
     inputs.mapWidth = 110;
     inputs.mapHeight = 70;
-    CHECK(calculator.CalculateLimit(inputs) == 9);
+    CHECK(LimitOf_(calculator, inputs) == 9);
 
     inputs.mapWidth = 70;
     inputs.mapHeight = 45;
-    CHECK(calculator.CalculateLimit(inputs) == 6);
+    CHECK(LimitOf_(calculator, inputs) == 6);
 
     inputs.bureaucracy = 20; // Librarian × Efficiency 0
     inputs.mapWidth = 110;
     inputs.mapHeight = 70;
-    CHECK(calculator.CalculateLimit(inputs) == 16);
+    CHECK(LimitOf_(calculator, inputs) == 16);
 
     inputs.mapWidth = 70;
     inputs.mapHeight = 45;
-    CHECK(calculator.CalculateLimit(inputs) == 10);
+    CHECK(LimitOf_(calculator, inputs) == 10);
 }
 
 TEST_CASE("Bureaucracy drones appear only past the limit and follow residue classes",
@@ -502,22 +523,22 @@ TEST_CASE("Bureaucracy drones appear only past the limit and follow residue clas
     const PopCompositionConfig_t config = BureaucracyConfig_();
     DroneCalculator calculator(config, lua);
     const DroneInputs_t atLimit = StandardMapInputs_();
-    CHECK(calculator.Calculate(atLimit) == 0);
+    CHECK(TotalDrones_(calculator, atLimit) == 0);
 
     DroneInputs_t doubleLimit = atLimit;
     doubleLimit.factionBaseCount = 32;
-    CHECK(calculator.Calculate(doubleLimit) == 1);
+    CHECK(TotalDrones_(calculator, doubleLimit) == 1);
 
     DroneInputs_t over = atLimit;
     over.baseId = 42;
     over.factionBaseCount = 17;
     const int residue = static_cast<int>(StableBaseHash(42) % 16);
-    CHECK(calculator.Calculate(over) == (residue + 1) / 16);
+    CHECK(TotalDrones_(calculator, over) == (residue + 1) / 16);
 
     DroneInputs_t crowded = atLimit;
     crowded.factionBaseCount = 144;
     crowded.baseSize = 3;
-    CHECK(calculator.Calculate(crowded) == 3);
+    CHECK(TotalDrones_(calculator, crowded) == 3);
 }
 
 TEST_CASE("Bureaucracy limit preserves fractional bureaucracy through the product",
@@ -529,7 +550,7 @@ TEST_CASE("Bureaucracy limit preserves fractional bureaucracy through the produc
 
     DroneInputs_t inputs = StandardMapInputs_();
     inputs.bureaucracy = 32.0 * 0.5; // MultiplyGeometric 0.5 on Citizen×Efficiency
-    CHECK(calculator.CalculateLimit(inputs) == 8);
+    CHECK(LimitOf_(calculator, inputs) == 8);
 }
 
 TEST_CASE("Size drones appear for every pop past SizeFreeDrones",
@@ -547,19 +568,19 @@ TEST_CASE("Size drones appear for every pop past SizeFreeDrones",
     inputs.resolvedDrones = 0;
 
     inputs.baseSize = 4;
-    CHECK(calculator.Calculate(inputs) == 0);
+    CHECK(TotalDrones_(calculator, inputs) == 0);
 
     inputs.baseSize = 5;
-    CHECK(calculator.Calculate(inputs) == 1);
+    CHECK(TotalDrones_(calculator, inputs) == 1);
 
     inputs.baseSize = 8;
-    CHECK(calculator.Calculate(inputs) == 4);
+    CHECK(TotalDrones_(calculator, inputs) == 4);
 
     inputs.sizeFreeDrones = 6; // Citizen
     inputs.baseSize = 6;
-    CHECK(calculator.Calculate(inputs) == 0);
+    CHECK(TotalDrones_(calculator, inputs) == 0);
     inputs.baseSize = 7;
-    CHECK(calculator.Calculate(inputs) == 1);
+    CHECK(TotalDrones_(calculator, inputs) == 1);
 }
 
 TEST_CASE("Size and bureaucracy drone contributions stack, capped by base size",
@@ -574,11 +595,11 @@ TEST_CASE("Size and bureaucracy drone contributions stack, capped by base size",
     inputs.baseSize = 6;
     inputs.resolvedDrones = 0; // 2 size drones after free
     inputs.factionBaseCount = 32; // 1 bureaucracy drone at double the limit
-    CHECK(calculator.Calculate(inputs) == 3);
+    CHECK(TotalDrones_(calculator, inputs) == 3);
 
     inputs.baseSize = 2;
     inputs.resolvedDrones = 0; // size drones 0; bureaucracy still wants 1 → capped at 2
-    CHECK(calculator.Calculate(inputs) == 1);
+    CHECK(TotalDrones_(calculator, inputs) == 1);
 }
 
 TEST_CASE("University BaseSize plus Commons Add compose as effect drones beside size drones",
@@ -597,7 +618,7 @@ TEST_CASE("University BaseSize plus Commons Add compose as effect drones beside 
     inputs.baseSize = 13;
     inputs.sizeFreeDrones = 4;
     inputs.resolvedDrones = 1;
-    CHECK(calculator.Calculate(inputs) == 10);
+    CHECK(TotalDrones_(calculator, inputs) == 10);
 }
 
 TEST_CASE("A non-positive bureaucracy limit is a config error", "[population][drones][bureaucracy]")
@@ -607,7 +628,7 @@ TEST_CASE("A non-positive bureaucracy limit is a config error", "[population][dr
     config.bureaucracyLimitFormula = "0";
     DroneCalculator calculator(config, lua);
 
-    CHECK_THROWS_WITH(calculator.Calculate(StandardMapInputs_()),
+    CHECK_THROWS_WITH(TotalDrones_(calculator, StandardMapInputs_()),
                       Catch::Matchers::ContainsSubstring("limit")
                           && Catch::Matchers::ContainsSubstring("0"));
 }
@@ -632,27 +653,27 @@ TEST_CASE("Recently-conquered drones decay one per ten turns and respect the cap
     inputs.conqueredDroneCap = 0.25;
 
     inputs.turnsSinceConquered = 0;
-    CHECK(calculator.Calculate(inputs) == 2); // rate 5, cap 2
+    CHECK(TotalDrones_(calculator, inputs) == 2); // rate 5, cap 2
 
     inputs.turnsSinceConquered = 9;
-    CHECK(calculator.Calculate(inputs) == 2); // still 5, still capped
+    CHECK(TotalDrones_(calculator, inputs) == 2); // still 5, still capped
 
     inputs.turnsSinceConquered = 10;
-    CHECK(calculator.Calculate(inputs) == 2); // rate 4, still capped
+    CHECK(TotalDrones_(calculator, inputs) == 2); // rate 4, still capped
 
     inputs.turnsSinceConquered = 30;
-    CHECK(calculator.Calculate(inputs) == 2); // rate 2, cap 2
+    CHECK(TotalDrones_(calculator, inputs) == 2); // rate 2, cap 2
 
     inputs.turnsSinceConquered = 40;
-    CHECK(calculator.Calculate(inputs) == 1); // rate 1
+    CHECK(TotalDrones_(calculator, inputs) == 1); // rate 1
 
     inputs.turnsSinceConquered = 50;
-    CHECK(calculator.Calculate(inputs) == 0); // window ended
+    CHECK(TotalDrones_(calculator, inputs) == 0); // window ended
 
     inputs.assimilationDuration = 0;
     inputs.assimilationPeak = 0;
     inputs.turnsSinceConquered = 0;
-    CHECK(calculator.Calculate(inputs) == 0); // never captured
+    CHECK(TotalDrones_(calculator, inputs) == 0); // never captured
 }
 
 TEST_CASE("The conquered-drone cap is (BaseSize + Difficulty - 2) / 4",
@@ -673,25 +694,25 @@ TEST_CASE("The conquered-drone cap is (BaseSize + Difficulty - 2) / 4",
     inputs.baseSize = 6;
     inputs.resolvedDrones = 0;
     inputs.conqueredDroneCap = -0.25;
-    CHECK(calculator.Calculate(inputs) == 1);
+    CHECK(TotalDrones_(calculator, inputs) == 1);
 
     // Talent: 0.75 − 0.5 = 0.25. Size 8 → (8+3−2)/4 = 2.
     inputs.baseSize = 8;
     inputs.resolvedDrones = 0;
     inputs.conqueredDroneCap = 0.25;
-    CHECK(calculator.Calculate(inputs) == 2);
+    CHECK(TotalDrones_(calculator, inputs) == 2);
 
     // Transcend: 1.5 − 0.5 = 1.0. Size 4 → (4+6−2)/4 = 2.
     inputs.baseSize = 4;
     inputs.resolvedDrones = 0;
     inputs.conqueredDroneCap = 1.0;
-    CHECK(calculator.Calculate(inputs) == 2);
+    CHECK(TotalDrones_(calculator, inputs) == 2);
 
     // Citizen size 3 → (3+1−2)/4 = 0.
     inputs.baseSize = 3;
     inputs.resolvedDrones = 0;
     inputs.conqueredDroneCap = -0.25;
-    CHECK(calculator.Calculate(inputs) == 0);
+    CHECK(TotalDrones_(calculator, inputs) == 0);
 }
 
 TEST_CASE("A reversed assimilation window is one drone for twelve turns",
@@ -713,9 +734,9 @@ TEST_CASE("A reversed assimilation window is one drone for twelve turns",
     inputs.assimilationDuration = 12;
 
     inputs.turnsSinceConquered = 0;
-    CHECK(calculator.Calculate(inputs) == 1);
+    CHECK(TotalDrones_(calculator, inputs) == 1);
     inputs.turnsSinceConquered = 11;
-    CHECK(calculator.Calculate(inputs) == 1);
+    CHECK(TotalDrones_(calculator, inputs) == 1);
     inputs.turnsSinceConquered = 12;
-    CHECK(calculator.Calculate(inputs) == 0);
+    CHECK(TotalDrones_(calculator, inputs) == 0);
 }

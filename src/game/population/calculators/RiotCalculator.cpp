@@ -60,8 +60,7 @@ bool RiotCalculator::IsRioting() const
 
 bool RiotCalculator::NaturalCondition_(const RiotConditionInputs_t& rInputs)
 {
-    const int threshold = rInputs.targetTalents.value_or(rInputs.talentCount);
-    return rInputs.droneCount > threshold;
+    return rInputs.riotSum >= rInputs.threshold;
 }
 
 } // namespace ac

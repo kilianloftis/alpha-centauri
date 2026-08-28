@@ -113,9 +113,9 @@ struct StatModifierEffect_t
     // than once at the base level. Absent selector: intrinsic tile yield (ThisTile scope) or
     // a flat base modifier (ThisBase scope), depending on the effect's scope.
     std::optional<TileSelector_t> selector;
-    // When true, this contribution is added after per-tile resource caps (classic SMAC
-    // resource-bonus specials). Only valid on nutrients/minerals/energy.
-    bool applyAfterRestriction = false;
+    // When true, this contribution is added after per-tile MaxClamp / MinClamp (classic SMAC
+    // resource-bonus specials). Only valid on nutrients/minerals/energy with op Add.
+    bool bypassClamp = false;
 };
 
 // Stats a MineralsConverted modifier may target.
@@ -139,15 +139,6 @@ inline bool IsStockpileOutputStat(StatId_t stat)
     return std::find(std::begin(k_StockpileOutputStats), std::end(k_StockpileOutputStats), stat)
            != std::end(k_StockpileOutputStats);
 }
-
-// Caps one tile resource at `max`. Lift the cap by putting `removed_by_tech` on the
-// EffectConfig_t (FactionEffectsPool drops it once that tech is discovered).
-struct TileResourceCapEffect_t
-{
-    StatId_t stat = StatId_t::Nutrients;
-    // Required in JSON (`max`); no SMAC balance default — set explicitly when hand-building.
-    int max;
-};
 
 struct RuleFlagEffect_t
 {
@@ -264,7 +255,6 @@ using EffectVariant_t = std::variant<
     WorldParameterEffect_t,
     InfiltrationEffect_t,
     StatModifierEffect_t,
-    TileResourceCapEffect_t,
     RuleFlagEffect_t,
     SocialEngineeringOverrideEffect_t,
     DiplomaticModifierEffect_t,

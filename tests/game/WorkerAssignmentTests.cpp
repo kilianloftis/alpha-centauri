@@ -363,7 +363,7 @@ TEST_CASE("ResetAllAssignments demotes specialists and fills free tiles", "[work
     for (Pop& rPop : base.GetPopulation().Pops())
     {
         base.GetPopulation().ConvertTo(rPop, "Doctor");
-        REQUIRE(rPop.IsSpecialist());
+        REQUIRE(rPop.IsWorker() == false);
         REQUIRE(rPop.GetTile() == nullptr);
     }
 
@@ -380,7 +380,7 @@ TEST_CASE("ResetAllAssignments demotes specialists and fills free tiles", "[work
         }
         else
         {
-            CHECK(rPop.IsSpecialist());
+            CHECK(rPop.IsWorker() == false);
             ++specialists;
         }
     }

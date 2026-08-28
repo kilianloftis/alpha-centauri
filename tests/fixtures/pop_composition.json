@@ -1,9 +1,35 @@
 {
   "bureaucracy_limit_formula": "1",
-  "drone_formula": "0",
+  "bureaucracy_drone_formula": "0",
+  "size_drone_formula": "0",
+  "occupation_drone_formula": "0",
   "assimilation_drones": 5,
   "assimilation_decay_turns": 10,
   "drone_type": "Drone",
-  "talent_formula": "0",
-  "talent_type": "Talent"
+  "talent_type": "Talent",
+  "riot_threshold": 1,
+  "golden_age_threshold": 0,
+  "effects": [
+    {
+      "type": "StatModifier",
+      "scope": "AllOwnerBases",
+      "persistence": "Continuous",
+      "parameters": {
+        "stat": "drones",
+        "amount": 0,
+        "op": "MinClamp"
+      }
+    },
+    {
+      "type": "StatModifier",
+      "scope": "AllOwnerBases",
+      "persistence": "Continuous",
+      "parameters": {
+        "stat": "drones",
+        "amount": 1,
+        "op": "MaxClamp",
+        "amount_source": "BaseSize"
+      }
+    }
+  ]
 }

@@ -48,7 +48,7 @@ public:
     ~ResourceManager();
 
     // Resource production per turn.
-    // rBaseEffects is this base's final effect list (BaseManager::BuildBaseEffects_).
+    // rBaseEffects is this base's final effect list (BaseEffectsCache::Get).
     int GetNutrientProduction(const BaseEffects_t& rBaseEffects) const;
     int GetMineralProduction(const BaseEffects_t& rBaseEffects) const;
     // Raw energy after Energy effects, before inefficiency.
@@ -60,12 +60,15 @@ public:
 
     // Consume the full accumulated stockpile, returning the amount consumed.
     // ConsumeMinerals is the leftover-bank drain in ConvertMinerals (MineralConversion).
-    // ConsumePsych is for pop composition (not yet wired).
     int ConsumeNutrients();
     int ConsumeMinerals();
     int ConsumeEcon();
     int ConsumeLabs();
-    int ConsumePsych();
+
+    // Psych available this turn. Non-destructive, unlike the Consume* drains above: pop
+    // composition reads it on every recalculation, and it is reset in ProduceResources rather
+    // than consumed. See docs/game-rules-decisions.md §6.
+    int GetPsych() const;
 
     // Current per-turn mineral bank (filled by ProduceResources; drained by support /
     // MineralConversion).

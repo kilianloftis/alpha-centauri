@@ -306,15 +306,45 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         })")));
     }
 
-    SECTION("amount_source with explicit non-Add op throws")
+    SECTION("amount_source works with any op, because it computes the amount not the operation")
     {
-        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        // "Cap drone pressure at base size" — pop_composition.json ships exactly this. The op
+        // used to be restricted to Add, which was a parse-time guard rather than a limitation:
+        // ResolveStatModifiers calls AmountSourceValue for every contribution and hands
+        // (amount, op) to ApplyModifierStack, which handles clamps identically.
+        const EffectConfig_t clamp = EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisBase",
+            "parameters": {
+                "stat": "drones",
+                "amount": 1,
+                "amount_source": "BaseSize",
+                "op": "MaxClamp"
+            }
+        })"));
+        const auto* pMod = std::get_if<StatModifierEffect_t>(&clamp.effect);
+        REQUIRE(pMod != nullptr);
+        CHECK(pMod->op == ModifierOp_t::MaxClamp);
+        CHECK(pMod->amountSource == StatModifierEffect_t::AmountSource_t::BaseSize);
+
+        CHECK_NOTHROW(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisTile",
             "parameters": {
                 "stat": "energy",
                 "amount_source": "ElevationEnergy",
                 "op": "MultiplyGeometric"
+            }
+        })")));
+
+        // Per-source legality still constrains it: BaseSize is Base-domain stats only.
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisUnit",
+            "parameters": {
+                "stat": "attack",
+                "amount_source": "BaseSize",
+                "op": "MaxClamp"
             }
         })")));
     }
@@ -1036,44 +1066,45 @@ TEST_CASE("ParseEffectConfig: Permission and AttackerIsEmbarked", "[effects][par
     })")));
 }
 
-TEST_CASE("ParseEffectConfig: TileResourceCap and apply_after_restriction", "[effects][parser]")
+TEST_CASE("ParseEffectConfig: tile MaxClamp and bypass_clamp", "[effects][parser]")
 {
-    const json capJson = json::parse(R"({
-        "type": "TileResourceCap", "scope": "FactionGlobal",
+    const json clampJson = json::parse(R"({
+        "type": "StatModifier", "scope": "FactionGlobal",
         "removed_by_tech": "gene_splicing",
-        "parameters": { "stat": "nutrients", "max": 2 }
+        "parameters": {
+            "stat": "nutrients", "amount": 2, "op": "MaxClamp",
+            "selector": { "kind": "AnyTile" }
+        }
     })");
-    const EffectConfig_t capConfig = EffectConfigParser::ParseEffectConfig(capJson);
-    const auto* pCap = std::get_if<TileResourceCapEffect_t>(&capConfig.effect);
-    REQUIRE(pCap != nullptr);
-    CHECK(pCap->stat == StatId_t::Nutrients);
-    CHECK(pCap->max == 2);
-    CHECK(capConfig.removedByTech == "gene_splicing");
+    const EffectConfig_t clampConfig = EffectConfigParser::ParseEffectConfig(clampJson);
+    const auto* pClamp = std::get_if<StatModifierEffect_t>(&clampConfig.effect);
+    REQUIRE(pClamp != nullptr);
+    CHECK(pClamp->stat == StatId_t::Nutrients);
+    CHECK(pClamp->amount == Approx(2.0));
+    CHECK(pClamp->op == ModifierOp_t::MaxClamp);
+    REQUIRE(pClamp->selector.has_value());
+    CHECK(std::holds_alternative<TileSelectorAnyTile_t>(*pClamp->selector));
+    CHECK(clampConfig.removedByTech == "gene_splicing");
 
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "TileResourceCap", "scope": "ThisTile",
-        "parameters": { "stat": "nutrients", "max": 2 }
+        "type": "StatModifier", "scope": "FactionGlobal",
+        "parameters": { "stat": "nutrients", "amount": 2, "op": "MaxClamp" }
     })")));
 
-    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "TileResourceCap", "scope": "FactionGlobal",
-        "parameters": { "stat": "nutrients" }
-    })")));
-
-    const json afterJson = json::parse(R"({
+    const json bypassJson = json::parse(R"({
         "type": "StatModifier", "scope": "ThisTile",
-        "parameters": { "stat": "nutrients", "amount": 2, "op": "Add", "apply_after_restriction": true }
+        "parameters": { "stat": "nutrients", "amount": 2, "op": "Add", "bypass_clamp": true }
     })");
-    const EffectConfig_t afterConfig = EffectConfigParser::ParseEffectConfig(afterJson);
-    const auto* pMod = std::get_if<StatModifierEffect_t>(&afterConfig.effect);
+    const EffectConfig_t bypassConfig = EffectConfigParser::ParseEffectConfig(bypassJson);
+    const auto* pMod = std::get_if<StatModifierEffect_t>(&bypassConfig.effect);
     REQUIRE(pMod != nullptr);
-    CHECK(pMod->applyAfterRestriction);
+    CHECK(pMod->bypassClamp);
 
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "StatModifier", "scope": "ThisTile",
         "parameters": {
             "stat": "nutrients", "amount": 2, "op": "AddPercent",
-            "apply_after_restriction": true
+            "bypass_clamp": true
         }
     })")));
 }

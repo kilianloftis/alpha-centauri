@@ -244,7 +244,7 @@ TEST_CASE("Bureaucracy drones distribute past the limit end-to-end",
     fixtures.dataContext.droneCalculator = std::make_unique<DroneCalculator>(
         *fixtures.dataContext.popCompositionConfig, *fixtures.dataContext.luaRuntime);
     fixtures.dataContext.popCompositionCalculator = std::make_unique<PopCompositionCalculator>(
-        *fixtures.dataContext.popCompositionConfig, *fixtures.dataContext.luaRuntime);
+        *fixtures.dataContext.popCompositionConfig, *fixtures.dataContext.popTypeRegistry);
 
     Faction& rFaction = fixtures.MakeFaction();
     std::vector<BaseManager*> bases;
@@ -291,7 +291,7 @@ TEST_CASE("A captured base gains recently-conquered drones",
     fixtures.dataContext.droneCalculator = std::make_unique<DroneCalculator>(
         *fixtures.dataContext.popCompositionConfig, *fixtures.dataContext.luaRuntime);
     fixtures.dataContext.popCompositionCalculator = std::make_unique<PopCompositionCalculator>(
-        *fixtures.dataContext.popCompositionConfig, *fixtures.dataContext.luaRuntime);
+        *fixtures.dataContext.popCompositionConfig, *fixtures.dataContext.popTypeRegistry);
 
     Faction& rGiver = fixtures.MakeFaction();
     Faction& rTaker = fixtures.MakeFaction();
@@ -300,14 +300,24 @@ TEST_CASE("A captured base gains recently-conquered drones",
     {
         rBase.GetPopulation().AddPop();
     }
-    rBase.GetPopulation().RecalculateComposition();
+    // Seated drone bodies, not pop types: phase 2 (reconciling these counts against the actual
+    // pops) is not implemented, so this asserts what composition computes.
+    const auto seatedDrones = [&rBase]() {
+        int total = 0;
+        for (const DroneSeat_t& rSeat : rBase.GetPopulation().ComputeComposition().droneSeats)
+        {
+            total += rSeat.count;
+        }
+        return total;
+    };
+
     // Citizen SizeFreeDrones 6 → no size drones; one base is under the bureaucracy limit.
-    CHECK(rBase.GetPopulation().GetDroneCount() == 0);
+    CHECK(seatedDrones() == 0);
 
     rBase.GetPopulation().NotifyCaptured(rGiver.GetFactionId(), rTaker.GetFactionId());
     rGiver.TransferBaseTo(rBase.GetBaseId(), rTaker);
     // Cap (6 + 1 − 2)/4 = 1 extra drone while assimilating.
-    CHECK(rBase.GetPopulation().GetDroneCount() == 1);
+    CHECK(seatedDrones() == 1);
     CHECK(rBase.GetPopulation().GetAssimilation().IsAssimilating());
 }
 

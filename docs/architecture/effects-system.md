@@ -571,7 +571,12 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   - `ParseTileSelector` — parses a `TileSelector_t` from a `selector` JSON object. Called by the `StatModifier` branch when a `selector` field is present, making that modifier a per-tile yield modifier. A `selector` on any stat other than `nutrients`/`minerals`/`energy` is rejected at parse time — selectors only take part in tile-yield resolution, so such a modifier would silently never apply.
   - `ParseEffectConfig` — parses one entry of an `effects` array (`type`/`scope`/`persistence`/`condition`/`parameters`) into an `EffectConfig_t`. Required keys `type` and `scope` use `.at()` (missing → throw). Dispatches on `type` via a static table of per-type parse functions (one focused function per `EffectVariant_t` alternative). Additional strictness:
     - Nonzero `radius` requires `scope: ThisTile`.
-    - `StatModifier` with `amount_source` requires `op: Add` (or omitted op, which defaults to Add).
+    - `StatModifier` with `amount_source` works with **any op**. An amount source computes the
+      modifier's *amount*; `ResolveStatModifiers` calls `AmountSourceValue` for every
+      contribution and hands `(amount, op)` to `ApplyModifierStack`, which is op-agnostic — so
+      `MaxClamp` at `BaseSize` resolves exactly like `Add 0.25` per pop, and
+      `pop_composition.json` ships that as the drone-pressure cap. (This used to require
+      `op: Add`, which was a parse-time guard rather than a limitation of the machinery.)
       Legality is a table keyed by `AmountSource_t` → required **subject domain** + allowed
       stats/scopes (independent of `DomainFor(stat)` — Option A). `ElevationEnergy` needs a
       Tile subject plus `pTileYieldRules`, allows energy + `ThisTile`, and rejects a `radius`

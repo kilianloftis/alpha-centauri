@@ -232,10 +232,11 @@ void ParseStatModifier_(const nlohmann::json& parameters, EffectConfig_t& rEffec
     statModifier.op = ParseModifierOp(parameters.value("op", "Add"));
     if (parameters.contains("amount_source"))
     {
-        if (statModifier.op != ModifierOp_t::Add)
-        {
-            throw std::runtime_error("StatModifier 'amount_source' requires op Add");
-        }
+        // Any op. An amount source computes the modifier's *amount*; ResolveStatModifiers calls
+        // AmountSourceValue for every contribution and hands (amount, op) to ApplyModifierStack,
+        // which is op-agnostic. So "MaxClamp at base size" resolves exactly like "Add 0.25 per
+        // pop" — the per-source legality rules below (stat domain, scope, finiteness) are what
+        // actually constrain this, not the op.
         statModifier.amountSource =
             ParseAmountSource(parameters.at("amount_source").get<std::string>());
         // amount is the per-source scale when amount_source is set (default 1).
@@ -269,41 +270,27 @@ void ParseStatModifier_(const nlohmann::json& parameters, EffectConfig_t& rEffec
         }
         statModifier.selector = ParseTileSelector(parameters.at("selector"));
     }
-    statModifier.applyAfterRestriction = parameters.value("apply_after_restriction", false);
-    if (statModifier.applyAfterRestriction && !IsTileResourceStat_(statModifier.stat))
+    // MaxClamp / MinClamp on tile resources must carry a selector so they apply per-tile
+    // (via ResolveTileYield) rather than clamping the base-wide production total.
+    if ((statModifier.op == ModifierOp_t::MaxClamp || statModifier.op == ModifierOp_t::MinClamp)
+        && IsTileResourceStat_(statModifier.stat) && !statModifier.selector)
     {
         throw std::runtime_error(
-            "StatModifier 'apply_after_restriction' is only valid on tile resource "
+            "StatModifier MaxClamp/MinClamp on tile resource stats requires a 'selector' "
+            "(e.g. AnyTile) so the clamp applies per tile, not to base-level totals");
+    }
+    statModifier.bypassClamp = parameters.value("bypass_clamp", false);
+    if (statModifier.bypassClamp && !IsTileResourceStat_(statModifier.stat))
+    {
+        throw std::runtime_error(
+            "StatModifier 'bypass_clamp' is only valid on tile resource "
             "stats (nutrients/minerals/energy), got '" + parameters.value("stat", "") + "'");
     }
-    if (statModifier.applyAfterRestriction && statModifier.op != ModifierOp_t::Add)
+    if (statModifier.bypassClamp && statModifier.op != ModifierOp_t::Add)
     {
-        throw std::runtime_error("StatModifier 'apply_after_restriction' requires op Add");
+        throw std::runtime_error("StatModifier 'bypass_clamp' requires op Add");
     }
     rEffect.effect = statModifier;
-}
-
-void ParseTileResourceCap_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
-{
-    TileResourceCapEffect_t cap;
-    cap.stat = ParseStatId(parameters.value("stat", ""));
-    if (!IsTileResourceStat_(cap.stat))
-    {
-        throw std::runtime_error(
-            "TileResourceCap 'stat' must be nutrients/minerals/energy, got '"
-            + parameters.value("stat", "") + "'");
-    }
-    cap.max = static_cast<int>(RequireNumber(parameters, "max"));
-    if (cap.max < 0)
-    {
-        throw std::runtime_error("TileResourceCap 'max' must be >= 0");
-    }
-    RequireScope_(
-        rEffect.scope,
-        {EffectScope_t::FactionGlobal, EffectScope_t::AllOwnerBases, EffectScope_t::WorldGlobal},
-        "TileResourceCap requires a faction-wide scope (FactionGlobal / AllOwnerBases / "
-        "WorldGlobal)");
-    rEffect.effect = cap;
 }
 
 void ParseRuleFlag_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
@@ -534,7 +521,6 @@ const std::unordered_map<std::string, ParseEffectFn_>& EffectTypeParsers_()
         {"WorldParameter", ParseWorldParameter_},
         {"Infiltration", ParseInfiltration_},
         {"StatModifier", ParseStatModifier_},
-        {"TileResourceCap", ParseTileResourceCap_},
         {"RuleFlag", ParseRuleFlag_},
         {"Permission", ParsePermission_},
         {"SocialEngineeringOverride", ParseSocialEngineeringOverride_},
@@ -926,6 +912,19 @@ void ValidateEffectForSource(const EffectConfig_t& rEffect, EffectSourceKind_t s
         throw std::runtime_error("Effect on '" + rSourceId
             + "': scope ThisPop is only meaningful on a pop type config");
     }
+
+    // Mood weights are summed by walking the seated pops, never resolved through
+    // ResolveBaseStat — a weight emitted anywhere but a pop type would silently never apply.
+    if (pStatModifier
+        && (pStatModifier->stat == StatId_t::RiotWeight
+            || pStatModifier->stat == StatId_t::GoldenAgeWeight)
+        && (sourceKind != EffectSourceKind_t::PopType || scope != EffectScope_t::ThisPop))
+    {
+        throw std::runtime_error(
+            "Effect on '" + rSourceId
+            + "': riot_weight / golden_age_weight are per-pop and must be ThisPop on a pop type "
+              "config");
+    }
     if (scope == EffectScope_t::ThisUnit
         && sourceKind != EffectSourceKind_t::UnitComponent
         && sourceKind != EffectSourceKind_t::MoraleLevel)
@@ -966,6 +965,7 @@ void ValidateEffectForSource(const EffectConfig_t& rEffect, EffectSourceKind_t s
         case EffectSourceKind_t::BaseConquest:
         case EffectSourceKind_t::PoliceRules:
         case EffectSourceKind_t::MoraleLevel:
+        case EffectSourceKind_t::PopComposition:
             bCanSupplyOriginBase = false;
             break;
         }

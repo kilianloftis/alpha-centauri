@@ -10,9 +10,14 @@ Decided 2026-08-08.
 
 ## 1. Which pop is lost when a base shrinks
 
-**Rule:** specialists are taken **last**. Within whichever group is being drawn from — tile
-workers first (which includes drones and talents), or specialists only if there are no tile
-workers left — take the pop **producing the least total resource**.
+**Rule:** pops the player deliberately chose are taken **last**. Within whichever group is
+being drawn from — the rest first (which includes drones, talents and default workers), or
+player-choice pops only if there is nothing else left — take the pop **producing the least total
+resource**.
+
+A pop is player-choice when its type is `player_assignable` and not `is_default`
+(`Pop::IsPlayerChoiceType`). Default workers are assignable but unprotected: they are what
+composition converts from.
 
 "Total resource" is the sum of what that pop currently contributes: for a tile worker, the
 nutrients + minerals + energy of its worked tile; for a specialist, its econ + labs + psych
@@ -24,8 +29,8 @@ added pop and so could take a talent while drones remained.
 **Applies to** every shrink path: starvation, conquest, probe pop-kill, `EnforceMaxSize_`.
 
 **Implemented** 2026-08-08. `PopulationManager::SelectDoomedPop_` orders candidates by
-`(isSpecialist, value)` and takes the minimum, so any non-specialist outranks any specialist and
-the lowest producer within a group goes first; ties keep the earliest pop, which makes the choice
+`(IsPlayerChoiceType, value)` and takes the minimum, so any ordinary pop outranks any
+player-choice pop and the lowest producer within a group goes first; ties keep the earliest pop, which makes the choice
 deterministic rather than allocation-order dependent. The value itself is injected by
 `BaseManager` (`SetPopValuator`) because only it can resolve a worked tile's yield — the same
 shape as `WorkerAssignmentManager::SetTileScorer`. An unassigned worker scores zero, so idle pops
@@ -122,12 +127,19 @@ StatModifiers), on top of the local energy-psych share.
 **Consequence:** composition's `psych_output` counting specialist psych only is wrong — it is one
 source among several.
 
-**Implemented** 2026-08-09 (per-base pipeline + ConsumePsych). Inefficiency implemented
+**Implemented** 2026-08-09 (per-base pipeline). Inefficiency implemented
 2026-08-09: tabletop-diagonal HQ distance + Efficiency SE rating
 (`Inefficiency = Energy × Distance / denominator`, with per-level denominators in
 `social_rating_effects.json`; no HQ → Distance 16; HQ base loses nothing; loss capped
-at Energy; denom 0 → 100% loss). Composition still needs to consume the stockpile and
-feed full psych into the talent formula — next step.
+at Energy; denom 0 → 100% loss).
+
+**Psych is per-turn, never consumed** (2026-08-27). `ConsumePsych` became `GetPsych`, a
+non-destructive read, and `ProduceResources` resets the bank. Two reasons: composition
+recalculates several times a turn, so a draining read let the first pass empty the bank and
+every later pass undo its own talents; and the player needs to preview what this turn's psych
+will do to a base before committing, the same way minerals preview against production. The psych
+ladder is now the only psych consumer — the old `talent_formula` spent the same psych a second
+time.
 
 ## 7. Prototype StartingExperience — first one you built
 
@@ -178,6 +190,33 @@ Two things in it are **not** rules of record, and are marked TODO at the config:
   `QuoteHurry` is the whole API.
 
 ---
+
+## 9. Riot and golden age range over the composition pool
+
+**Rule:** neither riot nor golden age is a function of base size. Both sum per-pop weights over
+the composition pool — drones, super drones, workers and talents — and specialists participate
+in neither.
+
+- Riot while `Σ riot_weight >= riot_threshold` (shipping threshold **1**).
+- Golden age while the base has **no** drone-class pops **and**
+  `Σ golden_age_weight >= golden_age_threshold` (shipping threshold **0**).
+
+With Drone `+1` / Talent `−1` the riot rule is "at least one net drone". With Talent `+1` and
+plain workers and drones `−1`, the golden age rule is `talents >= workers + drones`.
+
+The thresholds differ deliberately: riot needs strict net unrest, golden age allows the tie.
+
+**Changes behaviour.** `GoldenAgeCalculator` previously counted specialists on the non-talent
+side, so a doctor-heavy base could not reach a golden age. It now can. Riot already ignored
+specialists, so this makes the two consistent rather than introducing an asymmetry.
+
+**Drone weight is not riot weight.** `StatId_t::Drones` is drone *pressure*; a Super Drone body
+absorbs 2 of it (`drone_weight`) but riots at `+1` like any other citizen. The old
+`riot_contribution: 2` conflated the two.
+
+**Implemented** 2026-08-27. Weights are `ThisPop` effects on the pop types; thresholds are
+`riot_threshold` / `golden_age_threshold` scalars in `pop_composition.json`. See
+`docs/architecture/population-system.md`.
 
 ## Deferred by decision, not by uncertainty
 

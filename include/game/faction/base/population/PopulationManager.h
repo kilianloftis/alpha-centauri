@@ -1,8 +1,9 @@
 #pragma once
 
+inputs.psychAvailable = rBase.GetResources().GetPsych();#include "game/faction/base/population/CompositionInputs.h"
 #include "game/faction/base/population/PopContainer.h"
 #include "game/faction/base/population/AssimilationTracker.h"
-#include "game/population/calculators/DroneCalculator.h"
+#include "game/population/calculators/PopCompositionCalculator.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/population/calculators/RiotCalculator.h"
 #include "game/population/calculators/GoldenAgeCalculator.h"
@@ -22,6 +23,7 @@ class DroneCalculator;
 class PopCompositionCalculator;
 struct PopCompositionResult_t;
 class ResearchManager;
+class BaseManager;
 
 // PopulationManager is the API surface for the population component.
 // It manages pop counts, composition, growth, and riot state for a single base,
@@ -29,23 +31,16 @@ class ResearchManager;
 class PopulationManager
 {
 public:
-    // References throughout: the growth config in particular used to be "optional" (falling
-    // back to a hardcoded max size of 7, duplicating pop_growth.json's own default) while
-    // GetNutrientsRequired and ApplyGrowth dereferenced it unchecked — so the supported null
-    // case was a crash on the first growth turn. A null composition calculator likewise made
-    // RecalculateComposition a silent no-op, which is the state fixtures used to build.
+    // rBase outlives this manager — BaseManager owns it. Composition inputs are assembled from
+    // the base via BuildCompositionInputs; mood thresholds come from GetCompositionConfig().
     PopulationManager(const PopTypeRegistry& rPopTypeRegistry,
                       const PopTypeAvailabilityCalculator& rPopTypeAvailabilityCalculator,
                       const GrowthConfig_t& rGrowthConfig,
-                      DroneCalculator& rDroneCalculator,
                       PopCompositionCalculator& rCompositionCalculator,
                       const ResearchManager& rResearchManager,
+                      BaseManager& rBase,
                       int initialSize);
     ~PopulationManager();
-
-    // Supplies faction- and base-scoped drone formula inputs. When unset, only base_size is
-    // filled from the local population.
-    void SetDroneInputSupplier(std::function<DroneInputs_t()> supplier);
 
     // Population size management
     int GetSize() const;
@@ -62,9 +57,10 @@ public:
     int GetPlainWorkerCount() const { return m_container.GetPlainWorkerCount(); }
     int GetTalentCount() const { return m_container.GetTalentCount(); }
     int GetDroneCount() const { return m_container.GetDroneCount(); }
-    // Weighted drone count for riots (Super Drone = 2).
-    int GetRiotContribution() const { return m_container.GetRiotContribution(); }
     int GetSpecialistCount() const { return m_container.GetSpecialistCount(); }
+    // Mood sums over the composition pool only (graph members). Not ResolveBaseStat: summing
+    // the actual population avoids building virtual citizens.
+    MoodWeights_t GetMoodWeightSums() const { return m_container.GetMoodWeightSums(); }
 
     // Bumped on every pop mutation (add/remove/convert); consumed by effect-pool caches.
     uint64_t GetRevision() const { return m_container.GetRevision(); }
@@ -102,18 +98,12 @@ public:
     bool IsRioting() const;
     bool IsDestroyed() const;
 
-    // Reconcile actual pop composition against calculator targets.
-    // Converts workers to drones/talents (or back) to match targetDrones/targetTalents.
+    // Run phase 1 of composition and hand the result to phase 2.
     void RecalculateComposition();
 
-    // Reconcile against explicitly supplied targets. This is population *policy* — which pops
-    // change and in what order — and lives here rather than in PopContainer, which is storage.
-    // Every conversion it performs is resolved through the obsolescence chain, so the tech gate
-    // applies here exactly as it does to ConvertTo and ConvertToFallback; the container's own
-    // version applied it to neither.
-    void ApplyCompositionTargets(const PopCompositionResult_t& rTargets,
-                                 const std::string& droneTypeId,
-                                 const std::string& talentTypeId);
+    // Phase 1's answer for this base, recomputed on demand. Exposed because the UI previews
+    // what this turn's psych will do to the base before the player commits to it.
+    PopCompositionResult_t ComputeComposition() const;
 
     // Defers specialist-driven RecalculateComposition until the outermost batch ends, so
     // multi-pop conversions (reset / auto-assign overflow) apply composition once.
@@ -150,7 +140,7 @@ public:
     void SetNutrientStockpile(int amount);
 
     // Nutrients required for the next population growth step.
-    // rBaseEffects is this base's final effect list (BaseManager::BuildBaseEffects_).
+    // rBaseEffects is this base's final effect list (BaseEffectsCache::Get).
     int GetNutrientsRequired(const BaseEffects_t& rBaseEffects) const;
 
     // Apply nutrients produced this turn: add to stockpile, grow or starve if threshold is met.
@@ -197,9 +187,8 @@ private:
     // A pointer only because RebindResearch re-points it when the base changes owner.
     const ResearchManager* m_pResearch;
     const GrowthConfig_t& m_rGrowthConfig;
-    DroneCalculator& m_rDroneCalculator;
     PopCompositionCalculator& m_rCompositionCalculator;
-    std::function<DroneInputs_t()> m_droneInputSupplier;
+    BaseManager& m_rBase;
     int m_maxSize;
     int m_nutrientStockpile = 0;
     int m_compositionBatchDepth = 0;
@@ -211,12 +200,12 @@ private:
     AssimilationTracker m_assimilation;
 
     RiotConditionInputs_t BuildRiotInputs_() const;
-    DroneInputs_t BuildDroneInputs_() const;
+    CompositionEffectInputs_t BuildCompositionInputs_() const;
 
     void NotifyPopGained_();
     void NotifyPopLost_();
     void MaybeRecalculateComposition_();
-    // Specialists last; within a group, the pop producing the least. See
+    // Specialists / player-choice pops last; within a group, the pop producing the least. See
     // docs/game-rules-decisions.md, "Which pop is lost when a base shrinks".
     Pop& SelectDoomedPop_();
     const std::string& GetDefaultPopType_() const;

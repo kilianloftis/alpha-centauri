@@ -1,6 +1,6 @@
 #include "game/faction/base/population/PopulationManager.h"
+#include "game/faction/base/population/CompositionInputs.h"
 #include "game/population/calculators/GrowthCalculator.h"
-#include "game/population/calculators/DroneCalculator.h"
 #include "game/population/calculators/PopCompositionCalculator.h"
 #include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
@@ -17,17 +17,17 @@ namespace ac
 PopulationManager::PopulationManager(const PopTypeRegistry& rPopTypeRegistry,
                                      const PopTypeAvailabilityCalculator& rPopTypeAvailabilityCalculator,
                                      const GrowthConfig_t& rGrowthConfig,
-                                     DroneCalculator& rDroneCalculator,
                                      PopCompositionCalculator& rCompositionCalculator,
                                      const ResearchManager& rResearchManager,
+                                     BaseManager& rBase,
                                      int initialSize)
     : m_container(rPopTypeRegistry, initialSize)
     , m_rRegistry(rPopTypeRegistry)
     , m_rAvailabilityCalculator(rPopTypeAvailabilityCalculator)
     , m_pResearch(&rResearchManager)
     , m_rGrowthConfig(rGrowthConfig)
-    , m_rDroneCalculator(rDroneCalculator)
     , m_rCompositionCalculator(rCompositionCalculator)
+    , m_rBase(rBase)
     // The cap comes from pop_growth.json; there is no second, compiled-in default to drift.
     , m_maxSize(rGrowthConfig.maxBaseSize)
     , m_nutrientStockpile(0)
@@ -85,14 +85,16 @@ void PopulationManager::SetPopValuator(std::function<int(const Pop&)> valuator)
 
 Pop& PopulationManager::SelectDoomedPop_()
 {
-    // Specialists are taken last, so the comparison key leads with "is a specialist" — false
-    // sorts first. Within a group the pop producing the least total resource goes; ties keep
-    // the earliest, which makes the choice deterministic rather than allocation-order dependent.
+    // Pops the player deliberately chose are taken last, so the comparison key leads with
+    // "is a player-choice type" — false sorts first. Within a group the pop producing the least
+    // total resource goes; ties keep the earliest, which makes the choice deterministic rather
+    // than allocation-order dependent. Default workers are assignable but not player-choice:
+    // they are what composition converts from.
     Pop* pDoomed = nullptr;
     std::pair<bool, int> worst;
     for (Pop& rPop : m_container.Pops())
     {
-        const std::pair<bool, int> key{rPop.IsSpecialist(),
+        const std::pair<bool, int> key{rPop.IsPlayerChoiceType(),
                                        m_popValuator ? m_popValuator(rPop) : 0};
         if (!pDoomed || key < worst)
         {
@@ -143,9 +145,11 @@ void PopulationManager::ConvertResolved_(Pop& rPop, const std::string& typeId)
 
 void PopulationManager::ConvertTo(Pop& rPop, const std::string& typeId)
 {
-    const bool wasSpecialist = rPop.IsSpecialist();
+    // A conversion to or from a non-tile-worker changes this base's psych output, which is a
+    // composition input — so the split has to be recomputed against the new psych.
+    const bool bWasSpecialist = !rPop.IsWorker();
     ConvertResolved_(rPop, typeId);
-    if (wasSpecialist || rPop.IsSpecialist())
+    if (bWasSpecialist || !rPop.IsWorker())
     {
         MaybeRecalculateComposition_();
     }
@@ -275,122 +279,36 @@ bool PopulationManager::IsDestroyed() const
     return m_container.GetSize() == 0;
 }
 
-void PopulationManager::SetDroneInputSupplier(std::function<DroneInputs_t()> supplier)
+CompositionEffectInputs_t PopulationManager::BuildCompositionInputs_() const
 {
-    m_droneInputSupplier = std::move(supplier);
-}
-
-DroneInputs_t PopulationManager::BuildDroneInputs_() const
-{
-    if (m_droneInputSupplier)
-    {
-        return m_droneInputSupplier();
-    }
-    DroneInputs_t inputs;
-    inputs.baseSize = m_container.GetSize();
-    return inputs;
+    return BuildCompositionInputs(m_rBase);
 }
 
 RiotConditionInputs_t PopulationManager::BuildRiotInputs_() const
 {
+    const PopCompositionConfig_t& rConfig = GetCompositionConfig();
     RiotConditionInputs_t inputs;
-    inputs.droneCount = m_container.GetRiotContribution();
-    inputs.talentCount = m_container.GetTalentCount();
-    PopCompositionInputs_t compInputs;
-    compInputs.targetDrones = m_rDroneCalculator.Calculate(BuildDroneInputs_());
-    compInputs.psychOutput = m_container.ComputePsychOutput();
-    inputs.targetTalents = m_rCompositionCalculator.Calculate(compInputs).targetTalents;
+    inputs.riotSum = m_container.GetMoodWeightSums().riot;
+    inputs.threshold = rConfig.riotThreshold;
     return inputs;
+}
+
+PopCompositionResult_t PopulationManager::ComputeComposition() const
+{
+    const CompositionEffectInputs_t effects = BuildCompositionInputs_();
+
+    PopCompositionInputs_t inputs;
+    inputs.dronePressure = effects.dronePressure;
+    inputs.resolvedTalents = effects.resolvedTalents;
+    inputs.psychAvailable = effects.psychAvailable;
+    inputs.poolSize = m_container.GetCompositionPoolCount();
+    return m_rCompositionCalculator.Calculate(inputs);
 }
 
 void PopulationManager::RecalculateComposition()
 {
-    PopCompositionInputs_t inputs;
-    inputs.targetDrones = m_rDroneCalculator.Calculate(BuildDroneInputs_());
-    inputs.psychOutput = m_container.ComputePsychOutput();
-    // TODO: supply faction talent modifiers once accessible; drone path already uses
-    // DroneCalculator — fold GetDroneModifier() + ComputeAwayFromHomeDrones()
-    // - ComputeGarrisonPoliceSuppression() into that supplier when composition should
-    // observe live police (see AwayFromHomeDrones.h / GarrisonPolice.h).
-    const PopCompositionResult_t targets = m_rCompositionCalculator.Calculate(inputs);
-    const PopCompositionConfig_t& rConfig = m_rCompositionCalculator.GetConfig();
-
-    ApplyCompositionTargets(targets, rConfig.droneTypeId, rConfig.talentTypeId);
-}
-
-void PopulationManager::ApplyCompositionTargets(const PopCompositionResult_t& rTargets,
-                                                const std::string& droneTypeId,
-                                                const std::string& talentTypeId)
-{
-    // Reconciliation is population *policy*, so it lives here rather than in the container:
-    // it decides which pops change and in what order, and every conversion it performs is
-    // resolved through the obsolescence chain like any other.
-    //
-    // ConvertResolved_ rather than ConvertTo: we are already inside a recalculation, and
-    // ConvertTo's specialist hook would re-enter it. Drones and talents are tile-workers, so
-    // that hook does not fire for them today — but relying on that is how a recursion bug gets
-    // introduced by a later pop type that is a specialist.
-    const std::string& rDefaultTypeId = GetDefaultPopType_();
-
-    // Demote surplus first, so the promotions below have plain workers to draw from.
-    int currentDrones = m_container.GetDroneCount();
-    for (Pop& rPop : m_container.Pops())
-    {
-        if (currentDrones <= rTargets.targetDrones)
-        {
-            break;
-        }
-        if (rPop.IsDrone())
-        {
-            ConvertResolved_(rPop, rDefaultTypeId);
-            --currentDrones;
-        }
-    }
-
-    int currentTalents = m_container.GetTalentCount();
-    for (Pop& rPop : m_container.Pops())
-    {
-        if (currentTalents <= rTargets.targetTalents)
-        {
-            break;
-        }
-        if (rPop.IsTalent())
-        {
-            ConvertResolved_(rPop, rDefaultTypeId);
-            --currentTalents;
-        }
-    }
-
-    // TODO: this promotes to drones first. When plain workers are scarce the order decides who
-    // gets promoted, and SMAC's rule for it is unknown. No config controls it - the parser
-    // rejects a `precedence` key rather than accepting one it cannot honour.
-    currentDrones = m_container.GetDroneCount();
-    for (Pop& rPop : m_container.Pops())
-    {
-        if (currentDrones >= rTargets.targetDrones)
-        {
-            break;
-        }
-        if (rPop.IsPlainWorker())
-        {
-            ConvertResolved_(rPop, droneTypeId);
-            ++currentDrones;
-        }
-    }
-
-    currentTalents = m_container.GetTalentCount();
-    for (Pop& rPop : m_container.Pops())
-    {
-        if (currentTalents >= rTargets.targetTalents)
-        {
-            break;
-        }
-        if (rPop.IsPlainWorker())
-        {
-            ConvertResolved_(rPop, talentTypeId);
-            ++currentTalents;
-        }
-    }
+    // Phase 2 — reconciling ComputeComposition() against actual pops — is not implemented
+    // yet, so this is a true no-op. Preview and tests call ComputeComposition() directly.
 }
 
 void PopulationManager::MaybeRecalculateComposition_()
@@ -434,13 +352,8 @@ void PopulationManager::CheckGoldenAgeEndOfTurn()
 {
     GoldenAgeCalculator::Inputs_t inputs;
     inputs.droneCount = m_container.GetDroneCount();
-    inputs.talentCount = m_container.GetTalentCount();
-    // Plain workers, not GetWorkerCount(): that counts every tile-capable pop, so drones and
-    // talents landed on both sides of the calculator's documented
-    // "talents >= workers + specialists" rule. Counting talents against themselves made the
-    // effective condition "every pop must be a talent" — far stricter than the stated rule.
-    inputs.workerCount = m_container.GetPlainWorkerCount();
-    inputs.specialistCount = m_container.GetSpecialistCount();
+    inputs.goldenAgeSum = m_container.GetMoodWeightSums().goldenAge;
+    inputs.threshold = GetCompositionConfig().goldenAgeThreshold;
     m_goldenAge.Update(inputs);
 }
 

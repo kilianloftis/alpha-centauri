@@ -139,7 +139,7 @@
     "tags": ["resource_bonus"],
     "frequency": 10,
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 2, "op": "Add", "apply_after_restriction": true } }
+      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 2, "op": "Add", "bypass_clamp": true } }
     ]
   },
   {

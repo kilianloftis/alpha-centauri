@@ -21,6 +21,7 @@
 #include "game/effects/EffectConfig.h"
 #include "game/DifficultyConfig.h"
 #include "game/units/BaseConquestConfig.h"
+#include "game/population/pop-types/PopCompositionConfigParser.h"
 
 #include "TestHelpers.h"
 
@@ -61,6 +62,7 @@ void FillEffectReferenceContext(GameDataContext& rData)
     rData.productionConfig = std::make_unique<ProductionConfig_t>();
     rData.difficultyConfig = std::make_unique<DifficultyConfig_t>();
     rData.baseConquestConfig = std::make_unique<BaseConquestConfig_t>();
+    rData.popCompositionConfig = std::make_unique<PopCompositionConfig_t>();
 }
 
 } // namespace

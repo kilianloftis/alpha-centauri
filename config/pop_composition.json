@@ -1,9 +1,26 @@
 {
   "bureaucracy_limit_formula": "math.floor(bureaucracy * math.sqrt(map_width * map_height) / math.sqrt(12800) + 0.5)",
-  "drone_formula": "max(0, min(base_size, max(0, floor((residue + faction_base_count - bureaucracy_limit) / bureaucracy_limit)) + max(0, base_size - size_free_drones) + resolved_drones + ((assimilation_peak > 0 and assimilation_duration > 0 and turns_since_conquered < assimilation_duration) and 1 or 0) * min(max(0, assimilation_peak - floor(turns_since_conquered / max(1, floor(assimilation_duration / max(1, assimilation_peak))))), max(0, floor(base_size / 4 + conquered_drone_cap)))))",
+  "bureaucracy_drone_formula": "max(0, floor((residue + faction_base_count - bureaucracy_limit) / bureaucracy_limit))",
+  "size_drone_formula": "max(0, base_size - size_free_drones)",
+  "occupation_drone_formula": "((assimilation_peak > 0 and assimilation_duration > 0 and turns_since_conquered < assimilation_duration) and 1 or 0) * min(max(0, assimilation_peak - floor(turns_since_conquered / max(1, floor(assimilation_duration / max(1, assimilation_peak))))), max(0, floor(base_size / 4 + conquered_drone_cap)))",
   "assimilation_drones": 5,
   "assimilation_decay_turns": 10,
   "drone_type": "Drone",
-  "talent_formula": "math.floor(psych_output / 2)",
-  "talent_type": "Talent"
+  "talent_type": "Talent",
+  "riot_threshold": 1,
+  "golden_age_threshold": 0,
+  "effects": [
+    {
+      "type": "StatModifier",
+      "scope": "AllOwnerBases",
+      "persistence": "Continuous",
+      "parameters": { "stat": "drones", "amount": 0, "op": "MinClamp" }
+    },
+    {
+      "type": "StatModifier",
+      "scope": "AllOwnerBases",
+      "persistence": "Continuous",
+      "parameters": { "stat": "drones", "amount": 1, "op": "MaxClamp", "amount_source": "BaseSize" }
+    }
+  ]
 }

@@ -735,7 +735,7 @@
       {
         "type": "StatModifier",
         "scope": "ThisTile",
-        "parameters": { "stat": "nutrients", "amount": 2, "op": "Add", "apply_after_restriction": true }
+        "parameters": { "stat": "nutrients", "amount": 2, "op": "Add", "bypass_clamp": true }
       }
     ]
   },
@@ -750,7 +750,7 @@
       {
         "type": "StatModifier",
         "scope": "ThisTile",
-        "parameters": { "stat": "minerals", "amount": 2, "op": "Add", "apply_after_restriction": true }
+        "parameters": { "stat": "minerals", "amount": 2, "op": "Add", "bypass_clamp": true }
       }
     ]
   },
@@ -765,7 +765,7 @@
       {
         "type": "StatModifier",
         "scope": "ThisTile",
-        "parameters": { "stat": "energy", "amount": 2, "op": "Add", "apply_after_restriction": true }
+        "parameters": { "stat": "energy", "amount": 2, "op": "Add", "bypass_clamp": true }
       }
     ]
   },

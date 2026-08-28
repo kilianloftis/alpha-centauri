@@ -44,16 +44,16 @@ public:
 
     // Combined nutrient/mineral/energy yield including aura effects (e.g. nearby Mirror).
     // Intrinsic (terrain/improvement/river) plus area effects only — no base-wide modifiers
-    // and no tech-gated resource caps. apply_after_restriction modifiers are included.
-    // effective == potential (no caps in this path).
+    // and no tech-gated MaxClamp. bypass_clamp modifiers are included.
+    // effective == potential when no MaxClamp/MinClamp is present in the effect list.
     TileYieldView_t ResolveTileYield(const Tile& rTile) const;
 
     // As above, but also folds in any per-tile StatModifier from rBaseEffects whose selector
-    // matches this tile. TileResourceCap effects still present in rBaseEffects clamp the
-    // pre-restriction lane; apply_after_restriction modifiers are added after. Caps whose
-    // removed_by_tech has been discovered are already absent from the faction pool.
-    // Production reads .effective; UI preview for unworked tiles uses the same path with
-    // bIsBaseTile == false (as-if-worked tile-level yield, without pop multipliers).
+    // matches this tile (including AnyTile MaxClamp resource caps). bypass_clamp modifiers
+    // are added after clamps. Caps whose removed_by_tech has been discovered are already
+    // absent from the faction pool. Production reads .effective; UI preview for unworked
+    // tiles uses the same path with bIsBaseTile == false (as-if-worked tile-level yield,
+    // without pop multipliers).
     TileYieldView_t ResolveTileYield(const Tile& rTile, bool bIsBaseTile,
                                      const BaseEffects_t& rBaseEffects) const;
 
@@ -79,27 +79,24 @@ public:
     void RemoveImprovementWithEffects(Tile& rTile, const std::string& improvementId);
 
 private:
-    // Resolves one resource lane from an already-partitioned pointer list (no ActiveEffect_t copies).
+    // Resolves one resource lane from an already-partitioned pointer list (no ActiveEffect_t
+    // copies). When bIncludeClamps is false, MaxClamp / MinClamp contributions are skipped
+    // (UI potential yield).
     int ResolveResource_(const Tile& rTile, std::span<const ActiveEffect_t*> effects,
-                         StatId_t stat) const;
+                         StatId_t stat, bool bIncludeClamps) const;
 
-    // Pointer-partition + resolve into pre-cap / after-restriction / potential lanes.
+    // Pointer-partition + resolve into effective (clamped) / potential (unclamped) totals.
+    // Both include bypass_clamp Adds.
     struct YieldLanes_t
     {
-        TileResources_t subject;
-        TileResources_t after;
+        TileResources_t effective;
         TileResources_t potential;
     };
     YieldLanes_t ResolveYieldLanes_(const Tile& rTile,
                                     const std::vector<ActiveEffect_t>& effects) const;
 
-    // Builds TileYieldView_t from lanes. No-cap overload: effective == potential.
-    // Cap overload clamps via TileResourceCap in rCapEffects.
     TileYieldView_t ResolveYieldFromEffects_(const Tile& rTile,
                                              const std::vector<ActiveEffect_t>& effects) const;
-    TileYieldView_t ResolveYieldFromEffects_(const Tile& rTile,
-                                             const std::vector<ActiveEffect_t>& effects,
-                                             const BaseEffects_t& rCapEffects) const;
 
     WorldMap& m_rWorldMap;
     const ImprovementRegistry& m_rImprovements;

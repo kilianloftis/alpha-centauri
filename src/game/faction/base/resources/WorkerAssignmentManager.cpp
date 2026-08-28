@@ -132,7 +132,7 @@ void WorkerAssignmentManager::ResetAllAssignments()
     // overflow is promoted to the fallback specialist again.
     for (Pop& rPop : m_rPops.Pops())
     {
-        if (rPop.IsSpecialist())
+        if (!rPop.IsWorker())
         {
             m_rPops.ConvertToDefaultPopType(rPop);
         }
@@ -268,7 +268,7 @@ bool WorkerAssignmentManager::UserAssignBestAvailableWorker(const Tile* pTile)
 
     for (Pop& rPop : std::views::reverse(m_rPops.Pops()))
     {
-        if (rPop.IsSpecialist())
+        if (!rPop.IsWorker())
         {
             m_rPops.ConvertToDefaultPopType(rPop);
             if (UserAssignWorker(rPop, pTile))

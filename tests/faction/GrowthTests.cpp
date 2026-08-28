@@ -216,7 +216,7 @@ TEST_CASE("Specialists are the last pops lost", "[population][growth]")
     }
     REQUIRE(pLastWorker != nullptr);
     rBase.ConvertPop(*pLastWorker, "Doctor");
-    ac::Pop* pSpecialist = pLastWorker->IsSpecialist() ? pLastWorker : nullptr;
+    ac::Pop* pSpecialist = pLastWorker->IsPlayerChoiceType() ? pLastWorker : nullptr;
     if (!pSpecialist)
     {
         SUCCEED("fixture pop types offer no specialist to convert to");
@@ -232,7 +232,7 @@ TEST_CASE("Specialists are the last pops lost", "[population][growth]")
     bool bSurvivorIsSpecialist = false;
     for (const ac::Pop& rPop : rPopulation.Pops())
     {
-        bSurvivorIsSpecialist = rPop.IsSpecialist();
+        bSurvivorIsSpecialist = rPop.IsPlayerChoiceType();
     }
     CHECK(bSurvivorIsSpecialist);
 }

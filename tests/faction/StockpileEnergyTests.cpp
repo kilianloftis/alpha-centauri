@@ -107,7 +107,6 @@ BaseManager& MakeBaseWithStockpiles_(FactionFixture& rFixtures, Faction& rFactio
         *rFixtures.dataContext.productionConfig,
         *rFixtures.dataContext.hurryProductionCalculator,
         *rFixtures.dataContext.scrapRefundCalculator,
-        *rFixtures.dataContext.droneCalculator,
         *rFixtures.dataContext.popCompositionCalculator,
         nullptr,
         *rFixtures.ctx);
@@ -130,7 +129,6 @@ BaseManager& MakeBaseWith_(FactionFixture& rFixtures, Faction& rFaction,
         *rFixtures.dataContext.productionConfig,
         *rFixtures.dataContext.hurryProductionCalculator,
         *rFixtures.dataContext.scrapRefundCalculator,
-        *rFixtures.dataContext.droneCalculator,
         *rFixtures.dataContext.popCompositionCalculator,
         nullptr,
         *rFixtures.ctx);
@@ -155,11 +153,12 @@ int TakeEcon_(BaseManager& rBase)
     return rBase.GetResources().ConsumeEcon();
 }
 
+// Psych is absent: it is reset by ProduceResources rather than drained, so there is nothing
+// to take here. Assertions about psych below measure the conversion against that reset value.
 void DrainEnergyBanks_(BaseManager& rBase)
 {
     (void)rBase.GetResources().ConsumeEcon();
     (void)rBase.GetResources().ConsumeLabs();
-    (void)rBase.GetResources().ConsumePsych();
 }
 
 } // namespace
@@ -382,7 +381,7 @@ TEST_CASE("Converted energy goes through the slider split", "[production][stockp
 
     CHECK(base.GetResources().ConsumeLabs() > 0);
     CHECK(base.GetResources().ConsumeEcon() == 0);
-    CHECK(base.GetResources().ConsumePsych() == 0);
+    CHECK(base.GetResources().GetPsych() == 0);
 }
 
 // Energy conversion reuses only the faction's split math, never CalculateEcon_ / Labs_ /

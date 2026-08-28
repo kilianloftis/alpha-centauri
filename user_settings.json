@@ -1,7 +1,8 @@
 {
   "game_rules": {
     "auto_return_low_fuel_air": true,
-    "pause_at_end_of_turn": true
+    "pause_at_end_of_turn": true,
+    "difficulty": "transcend"
   },
   "graphics": {
     "font_paths": [

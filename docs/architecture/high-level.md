@@ -341,6 +341,30 @@ seed. (Persisting that seed into save state is still open — see the world-gene
   - Each Faction owns its subsystems
 - **Details**: See `docs/architecture/faction-system.md` for detailed architecture
 
+### Population System
+- **Purpose**: A base's pops — how many, what type each is, and whether the base riots or enters
+  a golden age.
+- **Components**:
+  - `PopContainer`: storage for the pops, the counts, and the revision. No policy.
+  - `PopulationManager`: population policy — growth, pop loss, conversion legality, and the
+    composition orchestration.
+  - `DroneCalculator`: the three drone-pressure terms that need real math (bureaucracy residue,
+    size-free subtraction, occupation decay). Each emits a contribution; there is no combined
+    drone formula.
+  - `PopCompositionCalculator`: phase 1 — the psych ladder, drone/talent annihilation, and
+    lightest-type-first seating. Works on counts only.
+  - `RiotCalculator` / `GoldenAgeCalculator`: both are a sum of per-pop weights against a
+    threshold, over the composition pool rather than base size.
+  - `PopTypeRegistry`: derives each type's `PopClass_t` from the promotion graph at load, and
+    rejects a graph that is not a single chain through `is_default`.
+- **Dependencies**:
+  - `BaseManager` supplies everything composition needs from the effect list (drone pressure,
+    talents, psych, both thresholds) — only it can build the base's effect list
+  - `StatId_t::Drones` is drone *pressure*, resolved like any other stat; `drone_weight` is how
+    much of it one body absorbs, and is distinct from `riot_weight`
+- **Details**: See `docs/architecture/population-system.md`. **Phase 2** (reconciling computed
+  counts against actual pops) is not implemented — composition computes but changes no pop.
+
 ### Diplomacy and Trade
 - **Purpose**: Pairwise relationships and the proposal/trade pipeline.
 - **Scope**: world, not per-faction. `DiplomacyLedger` and `DiplomaticActionExecutor` live on

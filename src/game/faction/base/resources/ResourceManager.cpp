@@ -297,11 +297,9 @@ int ResourceManager::ConsumeLabs()
     return consumed;
 }
 
-int ResourceManager::ConsumePsych()
+int ResourceManager::GetPsych() const
 {
-    int consumed = m_psych;
-    m_psych = 0;
-    return consumed;
+    return m_psych;
 }
 
 void ResourceManager::ProduceNutrients_(const TileResources_t& worked, const BaseEffects_t& rBaseEffects)
@@ -326,6 +324,11 @@ void ResourceManager::AllocateEnergy_(const TileResources_t& worked, const BaseE
 
 void ResourceManager::ProduceResources(const BaseEffects_t& rBaseEffects)
 {
+    // Psych is the one bank nothing drains: composition reads it every recalculation, and a
+    // draining read would make composition flap within a single turn. It is reset here instead,
+    // so it always means "psych available this turn".
+    m_psych = 0;
+
     const TileResources_t worked = ComputeWorked_(rBaseEffects);
     ProduceNutrients_(worked, rBaseEffects);
     ProduceMinerals_(worked, rBaseEffects);

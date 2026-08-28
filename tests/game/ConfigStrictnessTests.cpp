@@ -205,39 +205,41 @@ TEST_CASE("Pop composition requires formulas and rejects unknown keys",
 {
     PopCompositionConfigParser parser;
 
-    SECTION("an empty drone formula would mean zero drones forever")
+    SECTION("an empty drone source formula would mean zero drones from that source forever")
     {
         const TempConfigFile config("ac_comp_empty_drone.json", R"({
             "bureaucracy_limit_formula": "1",
-            "drone_formula": "",
+            "bureaucracy_drone_formula": "0",
+            "size_drone_formula": "",
+            "occupation_drone_formula": "0",
             "drone_type": "Drone",
-            "talent_formula": "0",
             "talent_type": "Talent"
         })");
         CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
-                          Catch::Matchers::ContainsSubstring("drone_formula"));
+                          Catch::Matchers::ContainsSubstring("size_drone_formula"));
     }
 
-    SECTION("an empty talent formula would mean zero talents forever")
+    SECTION("a missing occupation formula is refused rather than defaulted")
     {
-        const TempConfigFile config("ac_comp_empty_talent.json", R"({
+        const TempConfigFile config("ac_comp_no_occupation.json", R"({
             "bureaucracy_limit_formula": "1",
-            "drone_formula": "0",
+            "bureaucracy_drone_formula": "0",
+            "size_drone_formula": "0",
             "drone_type": "Drone",
-            "talent_formula": "",
             "talent_type": "Talent"
         })");
         CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
-                          Catch::Matchers::ContainsSubstring("talent_formula"));
+                          Catch::Matchers::ContainsSubstring("occupation_drone_formula"));
     }
 
     SECTION("an empty bureaucracy limit would make residue modulo undefined")
     {
         const TempConfigFile config("ac_comp_empty_limit.json", R"({
             "bureaucracy_limit_formula": "",
-            "drone_formula": "0",
+            "bureaucracy_drone_formula": "0",
+            "size_drone_formula": "0",
+            "occupation_drone_formula": "0",
             "drone_type": "Drone",
-            "talent_formula": "0",
             "talent_type": "Talent"
         })");
         CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
@@ -247,9 +249,10 @@ TEST_CASE("Pop composition requires formulas and rejects unknown keys",
     {
         const TempConfigFile config("ac_comp_unknown.json", R"({
             "bureaucracy_limit_formula": "1",
-            "drone_formula": "0",
+            "bureaucracy_drone_formula": "0",
+            "size_drone_formula": "0",
+            "occupation_drone_formula": "0",
             "drone_type": "Drone",
-            "talent_formula": "0",
             "talent_type": "Talent",
             "precedence": ["Talent", "Drone"]
         })");
@@ -261,9 +264,10 @@ TEST_CASE("Pop composition requires formulas and rejects unknown keys",
     {
         const TempConfigFile missing("ac_comp_no_assim_drones.json", R"({
             "bureaucracy_limit_formula": "1",
-            "drone_formula": "0",
+            "bureaucracy_drone_formula": "0",
+            "size_drone_formula": "0",
+            "occupation_drone_formula": "0",
             "drone_type": "Drone",
-            "talent_formula": "0",
             "talent_type": "Talent",
             "assimilation_decay_turns": 10
         })");
@@ -272,42 +276,16 @@ TEST_CASE("Pop composition requires formulas and rejects unknown keys",
 
         const TempConfigFile zero("ac_comp_zero_assim_drones.json", R"({
             "bureaucracy_limit_formula": "1",
-            "drone_formula": "0",
+            "bureaucracy_drone_formula": "0",
+            "size_drone_formula": "0",
+            "occupation_drone_formula": "0",
             "drone_type": "Drone",
-            "talent_formula": "0",
             "talent_type": "Talent",
             "assimilation_drones": 0,
             "assimilation_decay_turns": 10
         })");
         CHECK_THROWS_WITH(parser.ParseConfig(zero.Path()),
                           Catch::Matchers::ContainsSubstring("assimilation_drones"));
-    }
-}
-
-TEST_CASE("A pop type without a role is rejected", "[config][population]")
-{
-    // Role used to be inferred from riot_contribution / golden_age_contribution magnitudes, so
-    // it could not be stated and could not be wrong. Now it is stated, it must be present.
-    PopTypeRegistry registry;
-
-    SECTION("missing")
-    {
-        const TempConfigFile config("ac_pop_no_role.json", R"([
-            { "id": "Worker", "name": "Worker", "is_default": true, "can_work_tile": true }
-        ])");
-        CHECK_THROWS_WITH(registry.Load(config.Path()),
-                          Catch::Matchers::ContainsSubstring("Worker")
-                              && Catch::Matchers::ContainsSubstring("role"));
-    }
-
-    SECTION("unknown value")
-    {
-        const TempConfigFile config("ac_pop_bad_role.json", R"([
-            { "id": "Worker", "name": "Worker", "role": "supervisor", "is_default": true,
-              "can_work_tile": true }
-        ])");
-        CHECK_THROWS_WITH(registry.Load(config.Path()),
-                          Catch::Matchers::ContainsSubstring("supervisor"));
     }
 }
 
@@ -320,9 +298,9 @@ TEST_CASE("Pop types validate their references to other pop types", "[config][po
     SECTION("an unknown fallback_pop_type is rejected")
     {
         const TempConfigFile config("ac_pop_fallback.json", R"([
-            { "id": "Worker", "name": "Worker", "role": "worker", "display_glyph": "X", "is_default": true,
+            { "id": "Worker", "name": "Worker", "display_glyph": "X", "is_default": true,
               "can_work_tile": true },
-            { "id": "Specialist", "name": "Specialist", "role": "specialist", "display_glyph": "X",
+            { "id": "Specialist", "name": "Specialist", "display_glyph": "X",
               "fallback_pop_type": "Typo" }
         ])");
         CHECK_THROWS_WITH(registry.Load(config.Path()),
@@ -332,9 +310,9 @@ TEST_CASE("Pop types validate their references to other pop types", "[config][po
     SECTION("an unknown obsoletes entry is rejected")
     {
         const TempConfigFile config("ac_pop_obsoletes.json", R"([
-            { "id": "Worker", "name": "Worker", "role": "worker", "display_glyph": "X", "is_default": true,
+            { "id": "Worker", "name": "Worker", "display_glyph": "X", "is_default": true,
               "can_work_tile": true },
-            { "id": "Doctor", "name": "Doctor", "role": "specialist", "display_glyph": "X",
+            { "id": "Doctor", "name": "Doctor", "display_glyph": "X",
               "obsoletes": ["NoSuchType"] }
         ])");
         CHECK_THROWS_WITH(registry.Load(config.Path()),
@@ -344,11 +322,11 @@ TEST_CASE("Pop types validate their references to other pop types", "[config][po
     SECTION("valid references load")
     {
         const TempConfigFile config("ac_pop_ok.json", R"([
-            { "id": "Worker", "name": "Worker", "role": "worker", "display_glyph": "X", "is_default": true,
+            { "id": "Worker", "name": "Worker", "display_glyph": "X", "is_default": true,
               "can_work_tile": true },
-            { "id": "Doctor", "name": "Doctor", "role": "specialist", "display_glyph": "X",
+            { "id": "Doctor", "name": "Doctor", "display_glyph": "X",
               "fallback_pop_type": "Worker" },
-            { "id": "Empath", "name": "Empath", "role": "specialist", "display_glyph": "X", "obsoletes": ["Doctor"] }
+            { "id": "Empath", "name": "Empath", "display_glyph": "X", "obsoletes": ["Doctor"] }
         ])");
         CHECK_NOTHROW(registry.Load(config.Path()));
     }

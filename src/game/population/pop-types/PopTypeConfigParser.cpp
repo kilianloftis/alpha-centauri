@@ -21,12 +21,6 @@ PopTypeConfig_t PopTypeConfigParser::ParsePopTypeConfig(const nlohmann::json& po
     PopTypeConfig_t config;
     config.id = ConfigFields::ParseId(popJson);
     config.name = ConfigFields::ParseName(popJson, config.id);
-    if (!popJson.contains("role"))
-    {
-        throw std::runtime_error("Pop type '" + config.id + "': missing required field 'role'");
-    }
-    config.role =
-        EnumFromName<PopRole_t>(popJson.at("role").get<std::string>(), "pop type role");
     if (!popJson.contains("display_glyph"))
     {
         throw std::runtime_error("Pop type '" + config.id
@@ -48,13 +42,22 @@ PopTypeConfig_t PopTypeConfigParser::ParsePopTypeConfig(const nlohmann::json& po
     config.obsoletes             = ConfigFields::ParseStringArray(popJson, "obsoletes");
     config.effects               = EffectConfigParser::ParseEffects(popJson, EffectSourceKind_t::PopType, config.id);
 
-    // Riot weight: drones default to 1, everyone else to 0. Explicit override for Super Drone.
-    const int defaultRiot = (config.role == PopRole_t::Drone) ? 1 : 0;
-    config.riotContribution = popJson.value("riot_contribution", defaultRiot);
-    if (config.riotContribution < 0)
+    config.psychToPromote = popJson.value("psych_to_promote", 0);
+    config.promotesToId   = popJson.value("promotes_to", "");
+    if (config.promotesToId.empty() != (config.psychToPromote == 0))
     {
-        throw std::runtime_error("Pop type '" + config.id
-                                 + "': riot_contribution must be >= 0");
+        throw std::runtime_error(
+            "Pop type '" + config.id + "': psych_to_promote and promotes_to must be set together");
+    }
+    if (config.psychToPromote < 0)
+    {
+        throw std::runtime_error("Pop type '" + config.id + "': psych_to_promote must be >= 0");
+    }
+
+    config.droneWeight = popJson.value("drone_weight", 0);
+    if (config.droneWeight < 0)
+    {
+        throw std::runtime_error("Pop type '" + config.id + "': drone_weight must be >= 0");
     }
 
     return config;

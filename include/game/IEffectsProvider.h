@@ -20,7 +20,7 @@ public:
     virtual const FactionEffects_t& GetActiveEffects() const = 0;
 
     // Monotonic version of the pool; changes iff the pool content changed. Consumers can
-    // memoize derived state keyed on this value (see BaseManager::BuildBaseEffects_).
+    // memoize derived state keyed on this value (see BaseEffectsCache::Get).
     virtual uint64_t GetEffectsVersion() const = 0;
 
     // The provider's own contributions only — no peer WorldGlobal, no council extras.

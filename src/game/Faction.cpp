@@ -69,7 +69,8 @@ Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
                     rDataContext.tileYieldRules.effects, *rDataContext.socialRatingRegistry,
                     rDataContext.productionConfig->effects,
                     rDataContext.baseConquestConfig->effects,
-                    rDataContext.policeRules)
+                    rDataContext.policeRules,
+                    rDataContext.popCompositionConfig->effects)
     , m_rWorldMap(rWorldMap)
     , m_rSettings(rSettings)
     , m_composedEffects(*this)
@@ -393,7 +394,6 @@ BaseManager* Faction::CreateBaseFromSnapshot(
         *rDataContext.productionConfig,
         *rDataContext.hurryProductionCalculator,
         *rDataContext.scrapRefundCalculator,
-        *rDataContext.droneCalculator,
         *rDataContext.popCompositionCalculator,
         &rSecretProjectAvailability,
         rTileEffects,
@@ -754,7 +754,6 @@ BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile*
         *rDataContext.productionConfig,
         *rDataContext.hurryProductionCalculator,
         *rDataContext.scrapRefundCalculator,
-        *rDataContext.droneCalculator,
         *rDataContext.popCompositionCalculator,
         &rSecretProjectAvailability,
         rTileEffects);

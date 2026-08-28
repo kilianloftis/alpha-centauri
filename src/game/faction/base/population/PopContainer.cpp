@@ -24,8 +24,8 @@ int PopContainer::GetSize() const
 
 int PopContainer::GetWorkerCount() const
 {
-    // Every tile-capable pop: plain workers *plus* drones and talents. PopTypeRegistry enforces
-    // role Specialist <=> !can_work_tile, so IsWorker() already excludes specialists.
+    // Every tile-capable pop: plain workers *plus* drones and talents. Specialists have
+    // can_work_tile false, so IsWorker() already excludes them.
     return CountPops_([](const Pop* p) { return p->IsWorker(); });
 }
 
@@ -46,17 +46,30 @@ int PopContainer::GetDroneCount() const
 
 int PopContainer::GetSpecialistCount() const
 {
-    return CountPops_([](const Pop* p) { return p->IsSpecialist(); });
+    return CountPops_([](const Pop* p) { return !p->IsWorker(); });
 }
 
-int PopContainer::GetRiotContribution() const
+int PopContainer::GetCompositionPoolCount() const
 {
-    int total = 0;
+    return CountPops_([](const Pop* p) { return p->IsInCompositionGraph(); });
+}
+
+MoodWeights_t PopContainer::GetMoodWeightSums() const
+{
+    // Composition pool only (docs/game-rules-decisions.md §9). Specialists are Outside the
+    // graph; filtering here enforces that even if a specialist type declares mood weights.
+    MoodWeights_t sums;
     for (const auto& pPop : m_pops)
     {
-        total += pPop->GetRiotContribution();
+        if (!pPop->IsInCompositionGraph())
+        {
+            continue;
+        }
+        const MoodWeights_t weights = pPop->GetMoodWeights();
+        sums.riot += weights.riot;
+        sums.goldenAge += weights.goldenAge;
     }
-    return total;
+    return sums;
 }
 
 void PopContainer::AddPop(const PopTypeConfig_t& rConfig)

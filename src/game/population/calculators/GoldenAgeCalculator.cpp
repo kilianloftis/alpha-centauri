@@ -15,7 +15,7 @@ bool GoldenAgeCalculator::EvaluateCondition_(const Inputs_t& inputs)
     {
         return false;
     }
-    return inputs.talentCount >= (inputs.workerCount + inputs.specialistCount);
+    return inputs.goldenAgeSum >= inputs.threshold;
 }
 
 void GoldenAgeCalculator::Update(const Inputs_t& inputs)

@@ -38,6 +38,7 @@
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitSlotConfig.h"
 #include "game/units/MoraleConfig.h"
+#include "game/units/FoundBaseRules.h"
 #include "ui/IGameView.h"
 #include "ui/TileHitTester.h"
 #include "game/map/MapGenerationConfig.h"
@@ -56,6 +57,47 @@
 
 namespace ac
 {
+
+namespace
+{
+
+Tile* PickStartingBaseTile_(WorldMap& rMap,
+                            const std::vector<const BaseManager*>& rPlacedBases,
+                            const std::vector<std::pair<int, int>>& rPreferred)
+{
+    const auto isValidStart = [&](const Tile& rTile) {
+        if (!rTile.IsLand())
+        {
+            return false;
+        }
+        if (rMap.GetWorkedTiles().IsWorked(rTile))
+        {
+            return false;
+        }
+        return !IsTooCloseToAnyBase(rTile, rMap, rPlacedBases);
+    };
+
+    for (const auto& [x, y] : rPreferred)
+    {
+        if (Tile* pTile = rMap.GetTile(x, y); pTile && isValidStart(*pTile))
+        {
+            return pTile;
+        }
+    }
+
+    for (const auto& pTilePtr : rMap.GetTiles())
+    {
+        Tile* pTile = pTilePtr.get();
+        if (pTile && isValidStart(*pTile))
+        {
+            return pTile;
+        }
+    }
+
+    return nullptr;
+}
+
+} // namespace
 
 Engine::Engine()
     : m_pSettings(std::make_unique<GameSettings>())
@@ -215,14 +257,18 @@ void Engine::StartNewGame_()
     });
 
     // Create factions from config with a starting base each.
-    // Player base at x=0 so horizontal wrap is easy to exercise in the viewport.
-    const int centerX = m_pGameState->GetWorldMap().GetWidth() / 2;
+    // Player base prefers x=0 so horizontal wrap is easy to exercise in the viewport.
+    // Spacing must respect k_MinBaseFoundingSeparation; extra factions must not reuse
+    // an earlier slot (modulo over a short list used to place two factions on the same tile).
     const int centerY = m_pGameState->GetWorldMap().GetHeight() / 2;
-    const std::vector<std::pair<int, int>> startPositions = {
-        {0, centerY},
-        {5, centerY},
-    };
+    const int mapWidth = m_pGameState->GetWorldMap().GetWidth();
+    std::vector<std::pair<int, int>> preferredStartPositions;
+    for (int x = 0; x < mapWidth; x += 10)
+    {
+        preferredStartPositions.push_back({x, centerY});
+    }
 
+    std::vector<const BaseManager*> placedBases;
     size_t positionIndex = 0;
     for (const FactionConfig_t& rFactionConfig : m_gameDataContext->factionRegistry->GetAll())
     {
@@ -246,13 +292,21 @@ void Engine::StartNewGame_()
         // hook, rather than a per-call-site WireBase chore (see EventBridge::WireBase).
         pFaction->OnBaseAdded.Connect([this](BaseManager& rBase) { m_eventBridge->WireBase(rBase); });
 
-        const auto& [startX, startY] = startPositions[positionIndex % startPositions.size()];
+        Tile* pStartTile = PickStartingBaseTile_(
+            m_pGameState->GetWorldMap(), placedBases, preferredStartPositions);
+        if (!pStartTile)
+        {
+            throw std::runtime_error(
+                "Engine setup: no valid land tile for faction '" + rFactionConfig.id
+                + "' starting base");
+        }
+
         BaseManager* pBase = pFaction->CreateBase(
-            m_pGameState->AllocateBaseId(), pFaction->SuggestBaseName(),
-            m_pGameState->GetWorldMap().GetTile(startX, startY),
+            m_pGameState->AllocateBaseId(), pFaction->SuggestBaseName(), pStartTile,
             *m_gameDataContext,
             m_pGameState->GetTileEffects(),
             m_pGameState->GetSecretProjectAvailability());
+        placedBases.push_back(pBase);
 
         Faction& rFaction = m_pGameState->AddFaction(std::move(pFaction));
         // After AddFaction: the faction's id and subsystems are final, and the bridge captures
@@ -347,6 +401,8 @@ void Engine::StartNewGame_()
                     std::make_unique<UnitDesign>(rSlots, missileParts), "missile");
 
                 // Vision-1 HoverTank scout beside the base (Deep Radar would stack to 2).
+                const int startX = pStartTile->GetX();
+                const int startY = pStartTile->GetY();
                 rFaction.GetUnitManager().CreateUnit(
                     m_pGameState->AllocateUnitId(), rBasicDesign, rPositions,
                     *rMap.GetTile(startX + 1, startY), pBase);
@@ -369,6 +425,8 @@ void Engine::StartNewGame_()
             else
             {
                 // Enemy scout / probe beside the AI base for multi-faction checks.
+                const int startX = pStartTile->GetX();
+                const int startY = pStartTile->GetY();
                 rFaction.GetUnitManager().CreateUnit(
                     m_pGameState->AllocateUnitId(), rBasicDesign, rPositions,
                     *rMap.GetTile(startX + 1, startY), pBase);

@@ -25,8 +25,8 @@ struct TileResources_t
 };
 
 // Per-tile yield as shown to the UI / collected in production.
-// `effective` applies TileResourceCap; `potential` is the same resolve without caps
-// (resource-bonus apply_after_restriction contributions are in both).
+// `effective` honours MaxClamp / MinClamp on the pre-bypass lane; `potential` is the same
+// resolve with those clamps stripped (resource-bonus bypass_clamp contributions are in both).
 struct TileYieldView_t
 {
     TileResources_t effective;
