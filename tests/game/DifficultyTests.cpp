@@ -300,24 +300,13 @@ TEST_CASE("A captured base gains recently-conquered drones",
     {
         rBase.GetPopulation().AddPop();
     }
-    // Seated drone bodies, not pop types: phase 2 (reconciling these counts against the actual
-    // pops) is not implemented, so this asserts what composition computes.
-    const auto seatedDrones = [&rBase]() {
-        int total = 0;
-        for (const DroneSeat_t& rSeat : rBase.GetPopulation().ComputeComposition().droneSeats)
-        {
-            total += rSeat.count;
-        }
-        return total;
-    };
-
-    // Citizen SizeFreeDrones 6 → no size drones; one base is under the bureaucracy limit.
-    CHECK(seatedDrones() == 0);
+    rBase.GetPopulation().RecalculateComposition();
+    CHECK(rBase.GetPopulation().GetDroneCount() == 0);
 
     rBase.GetPopulation().NotifyCaptured(rGiver.GetFactionId(), rTaker.GetFactionId());
     rGiver.TransferBaseTo(rBase.GetBaseId(), rTaker);
     // Cap (6 + 1 − 2)/4 = 1 extra drone while assimilating.
-    CHECK(seatedDrones() == 1);
+    CHECK(rBase.GetPopulation().GetDroneCount() == 1);
     CHECK(rBase.GetPopulation().GetAssimilation().IsAssimilating());
 }
 

@@ -16,7 +16,7 @@ struct PopCompositionInputs_t
     int dronePressure = 0;
     // Finalize(StatId_t::Talents). Seats with no psych cost; the ladder is the only psych path.
     int resolvedTalents = 0;
-    // This turn's psych. Read, never consumed — see ResourceManager::GetPsych.
+    // This turn's psych, from the current worked layout and pops — see GetPsychProduction.
     int psychAvailable = 0;
     // Non-specialist pop count: the bodies available to carry pressure and talents.
     int poolSize = 0;

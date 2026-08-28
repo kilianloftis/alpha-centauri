@@ -1,6 +1,8 @@
 #pragma once
 
-inputs.psychAvailable = rBase.GetResources().GetPsych();#include "game/faction/base/population/CompositionInputs.h"
+#include "game/faction/base/population/CompositionInputs.h"
+
+#include <optional>
 #include "game/faction/base/population/PopContainer.h"
 #include "game/faction/base/population/AssimilationTracker.h"
 #include "game/population/calculators/PopCompositionCalculator.h"
@@ -58,6 +60,8 @@ public:
     int GetTalentCount() const { return m_container.GetTalentCount(); }
     int GetDroneCount() const { return m_container.GetDroneCount(); }
     int GetSpecialistCount() const { return m_container.GetSpecialistCount(); }
+    // Bodies available to carry drone pressure and talents (graph members only).
+    int GetCompositionPoolCount() const { return m_container.GetCompositionPoolCount(); }
     // Mood sums over the composition pool only (graph members). Not ResolveBaseStat: summing
     // the actual population avoids building virtual citizens.
     MoodWeights_t GetMoodWeightSums() const { return m_container.GetMoodWeightSums(); }
@@ -98,8 +102,18 @@ public:
     bool IsRioting() const;
     bool IsDestroyed() const;
 
-    // Run phase 1 of composition and hand the result to phase 2.
+    // Run phase 1 of composition and reconcile actual pops (phase 2).
     void RecalculateComposition();
+
+    // Reconcile seated pops when phase-1 inputs differ from the last apply. Safe to call
+    // frequently — compares ReadCompositionInputKey and skips work when nothing moved.
+    void EnsureCompositionCurrent();
+
+    // Reconcile against an explicit phase-1 result. Reset-then-seat: participating pops
+    // return to default workers, then drone tiers and talents are seated. Never touches
+    // specialists or player-choice types. Uses ConvertResolved_ — not ConvertTo — to avoid
+    // re-entering recalculation.
+    void ApplyCompositionResult(const PopCompositionResult_t& rResult);
 
     // Phase 1's answer for this base, recomputed on demand. Exposed because the UI previews
     // what this turn's psych will do to the base before the player commits to it.
@@ -193,6 +207,7 @@ private:
     int m_nutrientStockpile = 0;
     int m_compositionBatchDepth = 0;
     bool m_bCompositionDirty = false;
+    std::optional<CompositionInputKey_t> m_appliedCompositionInputKey;
     std::function<int(const Pop&)> m_popValuator;
 
     RiotCalculator m_riot;

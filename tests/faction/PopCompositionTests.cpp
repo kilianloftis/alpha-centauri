@@ -5,9 +5,15 @@
 #include "TempConfigFile.h"
 #include "TestHelpers.h"
 
+#include "game/faction/base/BaseManager.h"
 #include "game/faction/base/population/PopContainer.h"
 #include "game/faction/base/population/PopulationManager.h"
+#include "game/faction/base/production/ProductionApplyResult.h"
+#include "game/faction/base/production/ProductionManager.h"
 #include "game/faction/ResearchManager.h"
+#include "game/GameSettings.h"
+#include "game/GameState.h"
+#include "game/buildings/BuildingConfig.h"
 #include "game/population/calculators/DroneCalculator.h"
 #include "game/population/calculators/PopCompositionCalculator.h"
 #include "game/population/calculators/PopTypeAvailabilityCalculator.h"
@@ -139,6 +145,48 @@ TEST_CASE("Drone weight and riot weight are different quantities", "[population]
     const Pop doctor(reg.popTypes.Get("Doctor"));
     CHECK(doctor.GetMoodWeights().riot == 0);
     CHECK(doctor.GetMoodWeights().goldenAge == 0);
+}
+
+TEST_CASE("ApplyCompositionResult seats configured drone tiers and talents",
+          "[population][composition]")
+{
+    actest::BaseFixture fixture;
+    ac::PopulationManager& pops = fixture.MakeBase(4, 4, /*initialPopulation*/ 0).GetPopulation();
+    pops.AddPop("Worker");
+    pops.AddPop("Worker");
+    pops.AddPop("Drone");
+    pops.AddPop("Worker");
+
+    ac::PopCompositionResult_t targets;
+    targets.droneSeats = {{"Drone", 2}};
+    targets.expectedTalents = 1;
+
+    pops.ApplyCompositionResult(targets);
+
+    CHECK(pops.GetSize() == 4);
+    CHECK(pops.GetDroneCount() == 2);
+    CHECK(pops.GetTalentCount() == 1);
+    CHECK(pops.GetPlainWorkerCount() == 1);
+}
+
+TEST_CASE("RecalculateComposition is stable when called repeatedly within a turn",
+          "[population][composition][psych]")
+{
+    actest::BaseFixture fixture;
+    ac::BaseManager& base = fixture.MakeBase(4, 4, /*initialPopulation*/ 6);
+    ac::PopulationManager& pops = base.GetPopulation();
+
+    const int dronesAfterFirst = pops.GetDroneCount();
+    const int talentsAfterFirst = pops.GetTalentCount();
+    const int workersAfterFirst = pops.GetPlainWorkerCount();
+
+    for (int pass = 0; pass < 5; ++pass)
+    {
+        pops.RecalculateComposition();
+        CHECK(pops.GetDroneCount() == dronesAfterFirst);
+        CHECK(pops.GetTalentCount() == talentsAfterFirst);
+        CHECK(pops.GetPlainWorkerCount() == workersAfterFirst);
+    }
 }
 
 TEST_CASE("Mood sums range over the composition pool, never base size",
@@ -684,4 +732,43 @@ TEST_CASE("Each drone source is computed on its own formula", "[population][comp
     bureaucracy.factionBaseCount = 1;
     CHECK(calculator.CalculateBureaucracyDrones(bureaucracy) == 0);
     CHECK(calculator.CalculateBureaucracyLimit(bureaucracy) == 4);
+}
+
+TEST_CASE("Completing a drone-reducing building reapplies composition immediately",
+          "[population][composition][production]")
+{
+    actest::FactionFixture fixtures;
+    ac::GameSettings settings;
+    auto pMap = std::make_unique<ac::WorldMap>(9, 9);
+    for (auto& pTile : pMap->GetTiles())
+    {
+        pTile->SetElevation(100);
+    }
+    auto pState = std::make_unique<ac::GameState>(
+        std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
+        *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules,
+        actest::k_TestRngSeed);
+    ac::Faction& rFaction = pState->AddFaction(std::make_unique<ac::Faction>(
+        pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
+        pState->GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed));
+    ac::BaseManager* pBase = rFaction.CreateBase(
+        pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(4, 4),
+        fixtures.dataContext, pState->GetTileEffects(), pState->GetSecretProjectAvailability());
+    REQUIRE(pBase != nullptr);
+
+    pBase->GetBuildingManager().AddBuilding("drone_hall");
+    pBase->GetPopulation().RecalculateComposition();
+    REQUIRE(pBase->GetPopulation().GetDroneCount() == 2);
+
+    const ac::BuildingConfig_t* pCommons = fixtures.buildings().Find("Recreation_Commons");
+    REQUIRE(pCommons != nullptr);
+    pBase->GetProduction().SetProduction(pCommons, pBase->GetBaseEffects());
+    pBase->GetProduction().SetMineralStockpile(pBase->GetMineralCost());
+
+    const ac::ProductionApplyResult_t applied = pBase->ApplyProduction();
+    REQUIRE(applied.kind == ac::ProductionApplyKind_t::Completed);
+    REQUIRE(pBase->GetBuildingManager().HasBuilding("Recreation_Commons"));
+
+    pBase->GetPopulation().EnsureCompositionCurrent();
+    CHECK(pBase->GetPopulation().GetDroneCount() == 0);
 }

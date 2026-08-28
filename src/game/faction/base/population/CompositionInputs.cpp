@@ -66,8 +66,19 @@ CompositionEffectInputs_t BuildCompositionInputs(const BaseManager& rBase)
         FinalizeResolvedStat(ResolveBaseStat(rBaseEffects, StatId_t::Drones, seed));
     inputs.resolvedTalents = FinalizeResolvedStat(
         ResolveBaseStat(rBaseEffects, StatId_t::Talents, SeedFor(StatId_t::Talents)));
-    inputs.psychAvailable = rBase.GetResources().GetPsych();
+    inputs.psychAvailable = rBase.GetPsychProduction();
     return inputs;
+}
+
+CompositionInputKey_t ReadCompositionInputKey(const BaseManager& rBase)
+{
+    const CompositionEffectInputs_t effects = BuildCompositionInputs(rBase);
+    CompositionInputKey_t key;
+    key.dronePressure = effects.dronePressure;
+    key.resolvedTalents = effects.resolvedTalents;
+    key.psychAvailable = effects.psychAvailable;
+    key.poolSize = rBase.GetPopulation().GetCompositionPoolCount();
+    return key;
 }
 
 } // namespace ac

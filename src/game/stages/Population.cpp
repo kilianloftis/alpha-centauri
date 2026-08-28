@@ -34,7 +34,7 @@ StageResult_t Population::ExecuteImpl(GameState& rGameState, Faction& rFaction)
             continue;
         }
         rPopulation.AdvanceAssimilation();
-        rPopulation.RecalculateComposition();
+        rPopulation.EnsureCompositionCurrent();
         rPopulation.CheckRiotEndOfTurn();
         rPopulation.CheckGoldenAgeEndOfTurn();
     }

@@ -19,7 +19,7 @@ flowchart TD
   annihilate["Annihilate drone/talent pairs"]
   seatpressure["Seat lightest-type-first"]
   result["PopCompositionResult_t"]
-  phase2["Phase 2: reconcile against pops<br/>(NOT IMPLEMENTED — no-op)"]
+  phase2["ApplyCompositionResult<br/>(reset-then-seat)"]
   pops["Seated pops"]
   riot["Riot: Σ riot_weight >= riot_threshold"]
   ga["GA: no drones AND Σ golden_age_weight >= golden_age_threshold"]
@@ -42,8 +42,9 @@ flowchart TD
 effect list. `PopulationManager` holds the owning `BaseManager&` and calls it on demand. Mood
 thresholds are plain scalars in `pop_composition.json`; `PopulationManager` reads them from
 `GetCompositionConfig()` — the same config its `PopCompositionCalculator` was built from.
-`PopCompositionCalculator` owns everything from the ladder to the result, and works entirely on
-counts — no pop instance is touched, which is why it runs today with phase 2 unimplemented.
+`PopCompositionCalculator` owns everything from the ladder to the result. `PopulationManager`
+applies it via reset-then-seat: participating pops return to default workers, then drone tiers
+and talents are seated. Specialists and player-choice types are never touched.
 
 ## Drones are pressure, not a headcount
 
@@ -134,9 +135,6 @@ production.
 The psych ladder is the **only** psych consumer. `StatId_t::Talents` contributions seat with no
 psych cost.
 
-## Not implemented
+## Deferred
 
-- **Phase 2**: reconciling `PopCompositionResult_t` against actual pops. `RecalculateComposition`
-  is a true no-op until then; call `ComputeComposition()` for phase-1 answers. Composition is
-  fully testable; the game does not yet act on it.
 - Branching promotion graphs (rejected at load).

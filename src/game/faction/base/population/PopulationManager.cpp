@@ -198,7 +198,7 @@ PopulationManager::BatchCompositionUpdate::~BatchCompositionUpdate()
     // stale, which is recoverable, unlike termination.
     try
     {
-        m_rPops.RecalculateComposition();
+        m_rPops.EnsureCompositionCurrent();
     }
     catch (const std::exception& rError)
     {
@@ -307,8 +307,79 @@ PopCompositionResult_t PopulationManager::ComputeComposition() const
 
 void PopulationManager::RecalculateComposition()
 {
-    // Phase 2 — reconciling ComputeComposition() against actual pops — is not implemented
-    // yet, so this is a true no-op. Preview and tests call ComputeComposition() directly.
+    ApplyCompositionResult(ComputeComposition());
+    m_appliedCompositionInputKey = ReadCompositionInputKey(m_rBase);
+}
+
+void PopulationManager::EnsureCompositionCurrent()
+{
+    if (m_compositionBatchDepth > 0)
+    {
+        return;
+    }
+    const CompositionInputKey_t current = ReadCompositionInputKey(m_rBase);
+    if (m_appliedCompositionInputKey == current)
+    {
+        return;
+    }
+    RecalculateComposition();
+}
+
+void PopulationManager::ApplyCompositionResult(const PopCompositionResult_t& rResult)
+{
+    const PopCompositionConfig_t& rConfig = GetCompositionConfig();
+    const std::string& rDefaultTypeId = GetDefaultPopType_();
+
+    for (Pop& rPop : m_container.Pops())
+    {
+        if (rPop.ParticipatesInComposition())
+        {
+            ConvertResolved_(rPop, rDefaultTypeId);
+        }
+    }
+
+    for (const DroneSeat_t& rSeat : rResult.droneSeats)
+    {
+        int remaining = rSeat.count;
+        for (Pop& rPop : m_container.Pops())
+        {
+            if (remaining <= 0)
+            {
+                break;
+            }
+            if (rPop.ParticipatesInComposition() && rPop.IsPlainWorker())
+            {
+                ConvertResolved_(rPop, rSeat.typeId);
+                --remaining;
+            }
+        }
+        if (remaining > 0)
+        {
+            throw std::runtime_error(
+                "ApplyCompositionResult: could not seat " + std::to_string(remaining)
+                + " pop(s) of type '" + rSeat.typeId + "' — pool smaller than phase-1 result");
+        }
+    }
+
+    int talentsRemaining = rResult.expectedTalents;
+    for (Pop& rPop : m_container.Pops())
+    {
+        if (talentsRemaining <= 0)
+        {
+            break;
+        }
+        if (rPop.ParticipatesInComposition() && rPop.IsPlainWorker())
+        {
+            ConvertResolved_(rPop, rConfig.talentTypeId);
+            --talentsRemaining;
+        }
+    }
+    if (talentsRemaining > 0)
+    {
+        throw std::runtime_error(
+            "ApplyCompositionResult: could not seat " + std::to_string(talentsRemaining)
+            + " talent(s) — pool smaller than phase-1 result");
+    }
 }
 
 void PopulationManager::MaybeRecalculateComposition_()
@@ -318,7 +389,7 @@ void PopulationManager::MaybeRecalculateComposition_()
         m_bCompositionDirty = true;
         return;
     }
-    RecalculateComposition();
+    EnsureCompositionCurrent();
 }
 
 const PopCompositionConfig_t& PopulationManager::GetCompositionConfig() const

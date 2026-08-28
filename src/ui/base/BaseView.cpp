@@ -17,6 +17,7 @@
 #include "game/population/pop-types/PopTypeConfigParser.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/buildings/BuildingManager.h"
+#include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/production/HurryProductionCalculator.h"
 #include "game/faction/base/production/ScrapConfig.h"
 #include "game/faction/base/production/ScrapPayout.h"
@@ -44,11 +45,13 @@ BaseView::BaseView(
 )
     : IGameView(layout)
     , m_rBase(rBase)
-    , m_snapshot(BuildBaseDisplaySnapshot(rBase))
     , m_pOwnerAtOpen(&rBase.GetFaction())
     , m_bEditable(bEditable)
     , m_destroyedConnection(rBase.OnDestroyed.ConnectScoped([this]() { m_bShouldClose = true; }))
 {
+    m_rBase.GetPopulation().EnsureCompositionCurrent();
+    m_snapshot = BuildBaseDisplaySnapshot(m_rBase);
+
     const auto& bv = Style().baseView;
     const WindowLayout_t topPanel = ResolveLayout(m_layout, Style().layouts.topPanel);
     const WindowLayout_t leftPanel = ResolveLayout(m_layout, Style().layouts.leftPanel);
@@ -146,6 +149,8 @@ void BaseView::Render(Graphics& rGraphics)
         m_bShouldClose = true;
         return;
     }
+
+    m_rBase.GetPopulation().EnsureCompositionCurrent();
 
     RefreshSnapshot_();
     RefreshUnitStack_();
