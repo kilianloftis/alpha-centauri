@@ -28,6 +28,8 @@ struct PopCompositionConfig_t
     int goldenAgeThreshold = 0;
     // Drone-pressure clamps injected into every faction pool (MinClamp 0, MaxClamp BaseSize).
     std::vector<EffectConfig_t> effects;
+    // While IsInGoldenAge(), appended per base in BaseEffectsCache (not faction-wide).
+    std::vector<EffectConfig_t> goldenAgeEffects;
 };
 
 class PopCompositionConfigParser

@@ -26,7 +26,7 @@ PopCompositionConfig_t PopCompositionConfigParser::ParseConfig(const std::string
                 "drone_type", "talent_type",
                 "assimilation_drones", "assimilation_decay_turns",
                 "riot_threshold", "golden_age_threshold",
-                "effects",
+                "effects", "golden_age_effects",
             };
             for (const auto& [rKey, rUnused] : rJson.items())
             {
@@ -84,6 +84,22 @@ PopCompositionConfig_t PopCompositionConfigParser::ParseConfig(const std::string
             config.goldenAgeThreshold = requireInt("golden_age_threshold");
             config.effects = EffectConfigParser::ParseEffects(
                 rJson, EffectSourceKind_t::PopComposition, "pop_composition");
+            if (rJson.contains("golden_age_effects"))
+            {
+                const nlohmann::json& rGoldenAgeJson = rJson.at("golden_age_effects");
+                if (!rGoldenAgeJson.is_array())
+                {
+                    fail("'golden_age_effects' must be a JSON array");
+                }
+                for (const auto& rEffectJson : rGoldenAgeJson)
+                {
+                    EffectConfig_t effect = EffectConfigParser::ParseEffectConfig(rEffectJson);
+                    EffectConfigParser::ValidateEffectForSource(
+                        effect, EffectSourceKind_t::PopComposition,
+                        "pop_composition.golden_age_effects");
+                    config.goldenAgeEffects.push_back(std::move(effect));
+                }
+            }
             return config;
         });
 }

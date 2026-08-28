@@ -1,11 +1,15 @@
 #include "game/faction/base/BaseEffectsCache.h"
 
+#include "game/Faction.h"
+#include "game/GameDataContext.h"
 #include "game/IEffectsProvider.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/population/PopulationManager.h"
+#include "game/population/pop-types/PopCompositionConfigParser.h"
 #include "game/social-engineering/SocialRatingResolver.h"
 
 #include <map>
+#include <stdexcept>
 
 namespace ac
 {
@@ -24,6 +28,7 @@ void BaseEffectsCache::BindProvider(const IEffectsProvider& rProvider)
 {
     m_pProvider = &rProvider;
     m_cachedPoolVersion.reset();
+    m_cachedGoldenAge = false;
 }
 
 BaseEffects_t BaseEffectsCache::CollectBaseLocal_(const FactionEffects_t& rFactionEffects) const
@@ -33,6 +38,21 @@ BaseEffects_t BaseEffectsCache::CollectBaseLocal_(const FactionEffects_t& rFacti
     const std::vector<ActiveEffect_t> popEffects =
         CollectFromPops(m_rBase.GetPopulation(), m_rBase);
     baseEffects.effects.insert(baseEffects.effects.end(), popEffects.begin(), popEffects.end());
+
+    if (m_rBase.GetPopulation().IsInGoldenAge())
+    {
+        const GameDataContext& rData = m_rBase.GetFaction().GetDataContext();
+        if (!rData.popCompositionConfig)
+        {
+            throw std::runtime_error(
+                "BaseEffectsCache: GameDataContext has no popCompositionConfig");
+        }
+        std::vector<ActiveEffect_t> goldenAgeEffects;
+        AppendActiveEffects(rData.popCompositionConfig->goldenAgeEffects, &m_rBase,
+                            "golden_age", goldenAgeEffects);
+        baseEffects.effects.insert(baseEffects.effects.end(), goldenAgeEffects.begin(),
+                                   goldenAgeEffects.end());
+    }
 
     return baseEffects;
 }
@@ -61,10 +81,12 @@ BaseEffects_t BaseEffectsCache::Build(const FactionEffects_t& rFactionEffects) c
 const BaseEffects_t& BaseEffectsCache::Get() const
 {
     const uint64_t poolVersion = m_pProvider->GetEffectsVersion();
-    if (poolVersion != m_cachedPoolVersion)
+    const bool bGoldenAge = m_rBase.GetPopulation().IsInGoldenAge();
+    if (poolVersion != m_cachedPoolVersion || bGoldenAge != m_cachedGoldenAge)
     {
         m_cached = Build(m_pProvider->GetActiveEffects());
         m_cachedPoolVersion = poolVersion;
+        m_cachedGoldenAge = bGoldenAge;
     }
     return m_cached;
 }

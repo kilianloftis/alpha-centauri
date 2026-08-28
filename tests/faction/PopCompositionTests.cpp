@@ -24,9 +24,13 @@
 #include "game/population/pop-types/Pop.h"
 #include "game/population/pop-types/PopCompositionConfigParser.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
+#include "game/effects/ActiveEffect.h"
+#include "game/effects/EffectEnums.h"
+#include "game/population/calculators/GrowthCalculator.h"
 #include "lib/LuaRuntime.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/catch_approx.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <algorithm>
@@ -35,6 +39,7 @@
 using actest::TempConfigFile;
 
 using namespace ac;
+using Catch::Approx;
 using Catch::Matchers::ContainsSubstring;
 
 namespace
@@ -292,6 +297,46 @@ TEST_CASE("Any drone blocks a golden age regardless of the weight sum",
     REQUIRE(pops.GetMoodWeightSums().goldenAge == 3);
     pops.CheckGoldenAgeEndOfTurn();
     CHECK_FALSE(pops.IsInGoldenAge());
+}
+
+TEST_CASE("Golden age grants +1 econ and +2% growth via pop_composition effects",
+          "[population][goldenage][effects]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(4, 4, /*initialPopulation*/ 0);
+    PopulationManager& pops = base.GetPopulation();
+    pops.AddPop("Talent");
+    pops.AddPop("Talent");
+    pops.AddPop("Worker");
+    pops.AddPop("Worker");
+
+    const auto resolveEcon = [&](double seed) {
+        return ResolveBaseStat(base.GetBaseEffects(), StatId_t::Econ, seed);
+    };
+    const auto resolveGrowthRate = [&]() {
+        return ResolveBaseStat(base.GetBaseEffects(), StatId_t::GrowthRate, 100.0);
+    };
+
+    CHECK(resolveEcon(4.0) == Approx(4.0));
+    CHECK(resolveGrowthRate() == Approx(100.0));
+
+    pops.CheckGoldenAgeEndOfTurn();
+    REQUIRE(pops.IsInGoldenAge());
+
+    CHECK(resolveEcon(4.0) == Approx(5.0));
+    CHECK(resolveGrowthRate() == Approx(102.0));
+
+    GrowthConfig_t growthConfig;
+    growthConfig.nutrientsPerPop = 10;
+    CHECK(GrowthCalculator::ComputeNutrientsRequired(growthConfig, 3, base.GetBaseEffects()) == 29);
+
+    pops.AddPop("Worker");
+    pops.CheckGoldenAgeEndOfTurn();
+    REQUIRE_FALSE(pops.IsInGoldenAge());
+
+    CHECK(resolveEcon(4.0) == Approx(4.0));
+    CHECK(resolveGrowthRate() == Approx(100.0));
+    CHECK(GrowthCalculator::ComputeNutrientsRequired(growthConfig, 3, base.GetBaseEffects()) == 30);
 }
 
 TEST_CASE("Composition seats drone pressure into the pool", "[population][composition]")

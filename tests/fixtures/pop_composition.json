@@ -31,5 +31,19 @@
         "amount_source": "BaseSize"
       }
     }
+  ],
+  "golden_age_effects": [
+    {
+      "type": "StatModifier",
+      "scope": "AllOwnerBases",
+      "persistence": "Continuous",
+      "parameters": { "stat": "econ", "amount": 1, "op": "Add" }
+    },
+    {
+      "type": "StatModifier",
+      "scope": "AllOwnerBases",
+      "persistence": "Continuous",
+      "parameters": { "stat": "growth_rate", "amount": 2, "op": "AddPercent" }
+    }
   ]
 }
