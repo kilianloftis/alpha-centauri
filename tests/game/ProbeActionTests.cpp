@@ -155,12 +155,15 @@ TEST_CASE("TryProbeAction infiltrate sets diplomacy infiltration", "[probe][acti
     }
 }
 
-TEST_CASE("ForceRiot activates drone riot state", "[probe][riot]")
+TEST_CASE("ForceRiot sets pending riot until CommitRiot", "[probe][riot]")
 {
     BaseFixture fixture;
     BaseManager& base = fixture.MakeBase(4, 4);
     CHECK_FALSE(base.GetPopulation().IsRioting());
     base.GetPopulation().ForceRiot(/*turns=*/1);
+    CHECK(base.GetPopulation().IsPendingRiot());
+    CHECK_FALSE(base.GetPopulation().IsRioting());
+    base.GetPopulation().CommitMood();
     CHECK(base.GetPopulation().IsRioting());
 }
 

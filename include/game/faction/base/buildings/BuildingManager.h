@@ -43,6 +43,10 @@ public:
     // Whether this base currently holds at least one copy.
     bool HasBuilding(const BuildingId_t& buildingId) const;
 
+    // The constructed copy's config, or null when this base does not hold one. Targeted
+    // sabotage starts from an id but needs the config to decide secret-project tombstoning.
+    const BuildingConfig_t* FindBuilding(const BuildingId_t& buildingId) const;
+
     // All currently constructed buildings.
     const std::vector<const BuildingConfig_t*>& GetBuildings() const;
 

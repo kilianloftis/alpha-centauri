@@ -54,6 +54,18 @@ void PopulationDisplay::Render(Graphics& rGraphics)
 
     std::ostringstream oss;
     oss << "Population: " << m_rPopulation.GetSize();
+    if (m_rPopulation.IsRioting())
+    {
+        oss << "  [Riot T" << m_rPopulation.GetConsecutiveRiotTurns() << "]";
+    }
+    else if (m_rPopulation.IsPendingRiot())
+    {
+        oss << "  [Riot pending]";
+    }
+    if (m_rPopulation.IsInGoldenAge())
+    {
+        oss << "  [Golden Age]";
+    }
     const float leftPadding = m_layout.width * style.leftPaddingRatio;
     rGraphics.DrawText(oss.str(), m_layout.x + leftPadding, m_layout.y, headerFontSize, style.headerTextColor);
 

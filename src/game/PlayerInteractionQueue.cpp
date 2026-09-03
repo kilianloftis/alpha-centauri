@@ -1,5 +1,8 @@
 #include "game/PlayerInteractionQueue.h"
 
+#include "game/Faction.h"
+#include "game/GameState.h"
+
 #include <stdexcept>
 #include <utility>
 
@@ -39,6 +42,17 @@ bool PlayerInteractionQueue::HasPendingFor(FactionId_t audienceFactionId) const
         }
     }
     return false;
+}
+
+void EnqueueForPlayer(GameState& rGameState, PlayerInteraction_t payload)
+{
+    const Faction* pPlayer = rGameState.GetPlayerFaction();
+    if (!pPlayer)
+    {
+        return;
+    }
+    rGameState.GetPlayerInteractions().Enqueue(
+        QueuedInteraction_t{std::move(payload), pPlayer->GetFactionId()});
 }
 
 } // namespace ac

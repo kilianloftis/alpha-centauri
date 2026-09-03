@@ -17,6 +17,7 @@ add_library(ac-core STATIC
     game/faction/FactionFlavor.cpp
     game/faction/Military.cpp
     game/faction/UnitManager.cpp
+    game/faction/RebelFactionPicker.cpp
     game/research/TechRegistry.cpp
     game/research/TechCostCalculator.cpp
     game/research/TechCostConfigParser.cpp
@@ -50,6 +51,8 @@ add_library(ac-core STATIC
     game/faction/base/resources/WorkerAssignmentManager.cpp
     game/faction/EconomyManager.cpp
     game/faction/base/BaseEffectsCache.cpp
+    game/faction/base/BuildingDestruction.cpp
+    game/faction/base/BaseMoodEffects.cpp
     game/faction/base/production/ProductionCompletion.cpp
     game/faction/base/population/AwayFromHomeDrones.cpp
     game/faction/base/population/CompositionInputs.cpp
@@ -63,6 +66,7 @@ add_library(ac-core STATIC
     game/population/pop-types/GrowthConfigParser.cpp
     game/population/calculators/DroneCalculator.cpp
     game/population/calculators/PopCompositionCalculator.cpp
+    game/population/calculators/MoodLatch.cpp
     game/population/calculators/RiotCalculator.cpp
     game/population/calculators/GrowthCalculator.cpp
     game/population/calculators/GoldenAgeCalculator.cpp
@@ -178,6 +182,7 @@ add_library(ac-turn-stages OBJECT
     game/stages/Population.cpp
     game/stages/Upkeep.cpp
     game/stages/PlayerActions.cpp
+    game/stages/Mood.cpp
     game/stages/WorldEvents.cpp
     game/stages/VictoryConditionChecks.cpp
     game/stages/TurnEnd.cpp

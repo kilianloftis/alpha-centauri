@@ -144,10 +144,12 @@ struct StockpileConversionSubject_t
 // being resolved, not the aura's host — plus pTileYieldRules for amount_source ElevationEnergy.
 // combatRole enables IsDefending (SE Morale defense-in-base extras).
 // pAttacker enables AttackerIsEmbarked (and future attacker-side conditions).
-// pBase enables IsHeadquarters (Economy SE energy-at-HQ) and amount_source BaseSize
-// (population size × amount) for base-level resolve.
+// pBase enables IsHeadquarters (Economy SE energy-at-HQ) and amount_source BaseSize /
+// BuildingUpkeep (population size / facility upkeep × amount) for base-level resolve.
 // pFaction enables amount_source BasesOwned (owned-base count × amount); unit resolve stamps
 // it from the live unit via UnitSubjectContext.
+// pUnit enables OriginBaseIsHomeBase (unit's home vs ActiveEffect_t::originBase); stamped
+// from the live unit via UnitSubjectContext on Unit-domain resolve.
 // pStockpile carries this turn's consumed minerals for the MineralsConverted amount_source.
 struct EffectContext_t
 {
@@ -157,6 +159,7 @@ struct EffectContext_t
     const BaseManager* pBase = nullptr;
     const StockpileConversionSubject_t* pStockpile = nullptr;
     const Faction* pFaction = nullptr;
+    const Unit* pUnit = nullptr;
     // World yield rules for terrain-scaled amount sources. Stamped by TileEffectsContext,
     // which is the only place tile yield is resolved.
     const TileYieldRulesConfig_t* pTileYieldRules = nullptr;
@@ -190,13 +193,14 @@ double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double sca
 // its legality. Two forced edits per source, not one per subject overload.
 double AmountSourceValue(const StatModifierEffect_t& rMod, const EffectContext_t* pCtx);
 
-// Fills the faction subject from a live unit when the caller left it unset, so Unit-domain
-// amount sources (BasesOwned) resolve without every unit call site remembering to stamp it.
-// pUnit null (design-only preview) leaves the subject absent and those modifiers filter out.
+// Fills the faction and unit subjects from a live unit when the caller left them unset, so
+// Unit-domain amount sources (BasesOwned) and conditions (OriginBaseIsHomeBase) resolve
+// without every unit call site remembering to stamp them. pUnit null (design-only preview)
+// leaves those subjects absent and those modifiers / conditions filter out.
 EffectContext_t UnitSubjectContext(const Unit* pUnit, const EffectContext_t& rCtx);
 
 // True if config carries no condition, or its condition is satisfied by ctx.
-// OriginBaseIsTargetBase requires pOriginBase (ActiveEffect_t::originBase).
+// OriginBaseIsTargetBase / OriginBaseIsHomeBase require pOriginBase (ActiveEffect_t::originBase).
 bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx,
                         const BaseManager* pOriginBase = nullptr);
 
@@ -229,10 +233,21 @@ void AppendActiveEffects(std::span<const EffectConfig_t> rEffects,
 
 // As AppendActiveEffects, but keeps only faction-lane scopes (see IsFactionLane): what a
 // source contributes to the faction pool when its base/pop/unit/tile-local scopes are
-// resolved elsewhere. Used by Faction's pop and unit collectors.
+// resolved elsewhere. Used by Faction's pop and mood collectors. pOriginBase is still
+// recorded where TagsOriginBase says to (FactionUnits), which is what lets a FactionUnits
+// effect carry a per-base condition like OriginBaseIsHomeBase.
 void AppendFactionLaneEffects(std::span<const EffectConfig_t> rEffects,
+                              const BaseManager* pOriginBase,
                               const std::string& sourceId,
                               std::vector<ActiveEffect_t>& rOut);
+
+// The complement: keeps only Base-lane scopes, for a source whose faction-lane half is
+// collected into the pool separately. Together the two partition a config array so no
+// effect is counted on both paths.
+void AppendBaseLaneEffects(std::span<const EffectConfig_t> rEffects,
+                           const BaseManager* pOriginBase,
+                           const std::string& sourceId,
+                           std::vector<ActiveEffect_t>& rOut);
 
 // True if rEffect projects onto a tile `distance` tiles from its host: ThisTile lane,
 // Continuous, and minRadius <= distance <= radius. distance 0 = the host tile itself, which
@@ -389,6 +404,11 @@ inline bool StatModifierMatchesInContext(const ActiveEffect_t& effect, StatId_t 
     {
         return false;
     }
+    if (pStatModifier->amountSource == StatModifierEffect_t::AmountSource_t::BuildingUpkeep
+        && ctx.pBase == nullptr)
+    {
+        return false;
+    }
     if (pStatModifier->amountSource == StatModifierEffect_t::AmountSource_t::BasesOwned
         && ctx.pFaction == nullptr)
     {
@@ -422,11 +442,12 @@ inline auto FilterByStatIdInContext(std::vector<ActiveEffect_t>&& effects,
 // Accepting BaseEffects_t (never a raw vector or the pool) makes running this filter at any
 // other stage a compile error instead of a doc violation.
 //
-// BaseSize is admitted only when pCtx->pBase is set — deliberately keyed on the context and
-// NOT on the bundle's own subject, because the same pCtx is what ResolveStatModifiers later
-// evaluates the amount source against. Admitting on the bundle while resolving on the context
-// is what let a base-level BaseSize modifier pass the filter and then throw at resolve.
-// Prefer ResolveBaseStat, which stamps pBase from the bundle into both.
+// BaseSize / BuildingUpkeep are admitted only when pCtx->pBase is set — deliberately keyed
+// on the context and NOT on the bundle's own subject, because the same pCtx is what
+// ResolveStatModifiers later evaluates the amount source against. Admitting on the bundle
+// while resolving on the context is what let a base-level BaseSize modifier pass the filter
+// and then throw at resolve. Prefer ResolveBaseStat, which stamps pBase from the bundle
+// into both.
 inline auto FilterBaseLevelByStatId(const BaseEffects_t& rBaseEffects, StatId_t statId,
                                     const EffectContext_t* pCtx = nullptr)
 {
@@ -440,7 +461,9 @@ inline auto FilterBaseLevelByStatId(const BaseEffects_t& rBaseEffects, StatId_t 
         }
         if (pStatModifier->amountSource)
         {
-            if (*pStatModifier->amountSource != StatModifierEffect_t::AmountSource_t::BaseSize)
+            const auto source = *pStatModifier->amountSource;
+            if (source != StatModifierEffect_t::AmountSource_t::BaseSize
+                && source != StatModifierEffect_t::AmountSource_t::BuildingUpkeep)
             {
                 return false;
             }
@@ -586,9 +609,12 @@ int PredictUnitProductionPopulationSize(const UnitDesign& rDesign, int size);
 
 // Fire all Instantaneous effects in rEffects against rBase.
 // GrantBuilding: adds the granted building to the base immediately.
-// GrantTech / GrantUnit: logged as TODO stubs until those systems are wired.
+// GrantTech: adds the tech to the owning faction's discovered list.
+// GrantUnit: logged as a TODO stub until that system is wired.
 // Infiltration: always applies via ApplyInfiltrationEffect (needs a live session GameState).
 // ModifyPopulation: ApplyModifyPopulation.
+// DestroyFacility: DestroyRandomFacilities (shared with conquest / probe sabotage).
+// Rebel: PickRebelFactionAndTransfer via pop_composition rebel_selection.
 // Continuous Infiltration is honored at query time via HasInfiltration — no dispatch.
 void DispatchInstantaneousEffects(std::span<const EffectConfig_t> rEffects, BaseManager& rBase,
                                   GameState& rGameState);

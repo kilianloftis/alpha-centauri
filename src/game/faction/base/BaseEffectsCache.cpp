@@ -1,15 +1,12 @@
 #include "game/faction/base/BaseEffectsCache.h"
 
-#include "game/Faction.h"
-#include "game/GameDataContext.h"
 #include "game/IEffectsProvider.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/BaseMoodEffects.h"
 #include "game/faction/base/population/PopulationManager.h"
-#include "game/population/pop-types/PopCompositionConfigParser.h"
 #include "game/social-engineering/SocialRatingResolver.h"
 
 #include <map>
-#include <stdexcept>
 
 namespace ac
 {
@@ -28,7 +25,7 @@ void BaseEffectsCache::BindProvider(const IEffectsProvider& rProvider)
 {
     m_pProvider = &rProvider;
     m_cachedPoolVersion.reset();
-    m_cachedGoldenAge = false;
+    m_cachedMoodRevision.reset();
 }
 
 BaseEffects_t BaseEffectsCache::CollectBaseLocal_(const FactionEffects_t& rFactionEffects) const
@@ -39,20 +36,9 @@ BaseEffects_t BaseEffectsCache::CollectBaseLocal_(const FactionEffects_t& rFacti
         CollectFromPops(m_rBase.GetPopulation(), m_rBase);
     baseEffects.effects.insert(baseEffects.effects.end(), popEffects.begin(), popEffects.end());
 
-    if (m_rBase.GetPopulation().IsInGoldenAge())
-    {
-        const GameDataContext& rData = m_rBase.GetFaction().GetDataContext();
-        if (!rData.popCompositionConfig)
-        {
-            throw std::runtime_error(
-                "BaseEffectsCache: GameDataContext has no popCompositionConfig");
-        }
-        std::vector<ActiveEffect_t> goldenAgeEffects;
-        AppendActiveEffects(rData.popCompositionConfig->goldenAgeEffects, &m_rBase,
-                            "golden_age", goldenAgeEffects);
-        baseEffects.effects.insert(baseEffects.effects.end(), goldenAgeEffects.begin(),
-                                   goldenAgeEffects.end());
-    }
+    // Base-lane half only: the faction-lane half of the same arrays enters the pool via
+    // FactionEffectsPool::CollectMoodEffects_, so nothing is counted on both paths.
+    AppendBaseMoodBaseLaneEffects(m_rBase, baseEffects.effects);
 
     return baseEffects;
 }
@@ -80,13 +66,15 @@ BaseEffects_t BaseEffectsCache::Build(const FactionEffects_t& rFactionEffects) c
 
 const BaseEffects_t& BaseEffectsCache::Get() const
 {
+    // The mood revision is a separate key rather than folded into the pool version because a
+    // base's own mood also changes its base-lane list, which the pool never sees.
     const uint64_t poolVersion = m_pProvider->GetEffectsVersion();
-    const bool bGoldenAge = m_rBase.GetPopulation().IsInGoldenAge();
-    if (poolVersion != m_cachedPoolVersion || bGoldenAge != m_cachedGoldenAge)
+    const uint64_t moodRevision = m_rBase.GetPopulation().GetMoodRevision();
+    if (poolVersion != m_cachedPoolVersion || moodRevision != m_cachedMoodRevision)
     {
         m_cached = Build(m_pProvider->GetActiveEffects());
         m_cachedPoolVersion = poolVersion;
-        m_cachedGoldenAge = bGoldenAge;
+        m_cachedMoodRevision = moodRevision;
     }
     return m_cached;
 }

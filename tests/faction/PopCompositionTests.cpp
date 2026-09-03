@@ -266,19 +266,22 @@ TEST_CASE("Golden age is talents against workers and drones, ignoring specialist
 
     // +1 +1 −1 −1 = 0, and the shipping threshold is 0: the tie is a golden age.
     REQUIRE(pops.GetMoodWeightSums().goldenAge == 0);
-    pops.CheckGoldenAgeEndOfTurn();
+    pops.ForecastMood();
+    pops.CommitMood();
     CHECK(pops.IsInGoldenAge());
 
     // Doctors are outside the calculation: a doctor-heavy base can still reach a golden age.
     pops.AddPop("Doctor");
     pops.AddPop("Doctor");
-    pops.CheckGoldenAgeEndOfTurn();
+    pops.ForecastMood();
+    pops.CommitMood();
     CHECK(pops.IsInGoldenAge());
 
     // One more plain worker tips the sum negative.
     pops.AddPop("Worker");
     REQUIRE(pops.GetMoodWeightSums().goldenAge == -1);
-    pops.CheckGoldenAgeEndOfTurn();
+    pops.ForecastMood();
+    pops.CommitMood();
     CHECK_FALSE(pops.IsInGoldenAge());
 }
 
@@ -295,7 +298,8 @@ TEST_CASE("Any drone blocks a golden age regardless of the weight sum",
 
     // Sum is +4 −1 = 3, comfortably over the threshold, but the gate is unconditional.
     REQUIRE(pops.GetMoodWeightSums().goldenAge == 3);
-    pops.CheckGoldenAgeEndOfTurn();
+    pops.ForecastMood();
+    pops.CommitMood();
     CHECK_FALSE(pops.IsInGoldenAge());
 }
 
@@ -320,7 +324,8 @@ TEST_CASE("Golden age grants +1 econ and +2% growth via pop_composition effects"
     CHECK(resolveEcon(4.0) == Approx(4.0));
     CHECK(resolveGrowthRate() == Approx(100.0));
 
-    pops.CheckGoldenAgeEndOfTurn();
+    pops.ForecastMood();
+    pops.CommitMood();
     REQUIRE(pops.IsInGoldenAge());
 
     CHECK(resolveEcon(4.0) == Approx(5.0));
@@ -331,7 +336,8 @@ TEST_CASE("Golden age grants +1 econ and +2% growth via pop_composition effects"
     CHECK(GrowthCalculator::ComputeNutrientsRequired(growthConfig, 3, base.GetBaseEffects()) == 29);
 
     pops.AddPop("Worker");
-    pops.CheckGoldenAgeEndOfTurn();
+    pops.ForecastMood();
+    pops.CommitMood();
     REQUIRE_FALSE(pops.IsInGoldenAge());
 
     CHECK(resolveEcon(4.0) == Approx(4.0));
@@ -747,7 +753,14 @@ TEST_CASE("Each drone source is computed on its own formula", "[population][comp
   "drone_type": "Drone",
   "talent_type": "Talent",
   "riot_threshold": 1,
-  "golden_age_threshold": 0
+  "golden_age_threshold": 0,
+  "rebel_selection": {
+    "distance_mode": "none",
+    "fade_radius": 8,
+    "distance_weight_per_tile": 1,
+    "base_join_weight": 1,
+    "missing_hq_distance": 12
+  }
 })cfg");
 
     PopCompositionConfig_t config =
@@ -816,4 +829,97 @@ TEST_CASE("Completing a drone-reducing building reapplies composition immediatel
 
     pBase->GetPopulation().EnsureCompositionCurrent();
     CHECK(pBase->GetPopulation().GetDroneCount() == 0);
+}
+TEST_CASE("Committed riot applies disable_production and resource clamps", "[riot][economy]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    PopulationManager& pops = base.GetPopulation();
+
+    const BuildingConfig_t* pCommons = fixture.buildings().Find("Recreation_Commons");
+    REQUIRE(pCommons != nullptr);
+    base.GetProduction().SetProduction(pCommons, base.GetBaseEffects());
+    const int cost = base.GetMineralCost();
+    REQUIRE(cost > 0);
+    base.GetProduction().SetMineralStockpile(cost);
+
+    pops.ForceRiot(/*turns=*/3);
+    pops.CommitMood();
+    REQUIRE(pops.IsRioting());
+    REQUIRE(pops.GetConsecutiveRiotTurns() == 1);
+    REQUIRE(ResolveFlag(base, RuleFlagId_t::DisableProduction));
+
+    // Stockpile freezes: completion skipped, minerals preserved.
+    CHECK(base.GetProduction().GetMineralStockpile() == cost);
+    CHECK(base.ApplyProduction().kind == ProductionApplyKind_t::InProgress);
+    CHECK(base.GetProduction().GetMineralStockpile() == cost);
+
+    faction.GetEconomy().AddEnergy(100);
+    CHECK_THROWS_WITH(base.HurryProduction(10), Catch::Matchers::ContainsSubstring("disabled"));
+
+    // Leftover mineral bank is discarded — no BankProduction under disable_production.
+    if (!base.GetBuildingManager().HasBuilding("mineral_cache"))
+    {
+        base.GetBuildingManager().AddBuilding("mineral_cache");
+    }
+    base.ProduceResources();
+    REQUIRE(base.GetResources().GetMineralBank() > 0);
+    const int stockpileBefore = base.GetProduction().GetMineralStockpile();
+    base.ConvertMinerals();
+    CHECK(base.GetProduction().GetMineralStockpile() == stockpileBefore);
+    CHECK(base.GetResources().GetMineralBank() == 0);
+
+    CHECK(base.GetLabsProduction() == 0);
+    CHECK(base.GetEconProduction() <= std::max(0, base.GetBuildingUpkeep()));
+}
+
+TEST_CASE("Riot mood state survives snapshot restore", "[riot][save]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(4, 4, /*initialPopulation*/ 3);
+    base.GetPopulation().ForceRiot(2);
+    base.GetPopulation().CommitMood();
+    base.GetPopulation().CommitMood();
+    REQUIRE(base.GetPopulation().IsRioting());
+    REQUIRE(base.GetPopulation().GetConsecutiveRiotTurns() == 2);
+    REQUIRE(base.GetPopulation().CaptureMoodState().forcedRiotTurnsRemaining == 0);
+
+    const BaseSnapshot_t snapshot = base.CaptureSnapshot();
+    CHECK(snapshot.mood.bRioting);
+    CHECK(snapshot.mood.consecutiveRiotTurns == 2);
+
+    base.GetPopulation().ResetMoodEscalation();
+    CHECK_FALSE(base.GetPopulation().IsRioting());
+    CHECK(base.GetPopulation().GetConsecutiveRiotTurns() == 0);
+
+    base.GetPopulation().RestoreMoodState(snapshot.mood);
+    CHECK(base.GetPopulation().IsRioting());
+    CHECK(base.GetPopulation().GetConsecutiveRiotTurns() == 2);
+}
+
+TEST_CASE("Ownership transfer restarts the riot escalation ladder", "[riot][transfer]")
+{
+    actest::FactionFixture fixture;
+    Faction& owner = fixture.MakeFaction();
+    Faction& receiver = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(owner, 4, 4);
+
+    base.GetPopulation().ForceRiot(/*turns=*/3);
+    base.GetPopulation().CommitMood();
+    base.GetPopulation().CommitMood();
+    base.GetPopulation().CommitMood();
+    REQUIRE(base.GetPopulation().IsRioting());
+    REQUIRE(base.GetPopulation().GetConsecutiveRiotTurns() == 3);
+
+    const BaseId_t baseId = base.GetBaseId();
+    owner.TransferBaseTo(baseId, receiver);
+
+    // A base that rebelled at the top tier must not arrive at its new owner still standing
+    // there: the next Mood commit would re-fire Rebel and pass it straight on again.
+    BaseManager* pMoved = receiver.FindBase(baseId);
+    REQUIRE(pMoved != nullptr);
+    CHECK_FALSE(pMoved->GetPopulation().IsRioting());
+    CHECK(pMoved->GetPopulation().GetConsecutiveRiotTurns() == 0);
+    CHECK(pMoved->GetPopulation().CaptureMoodState().forcedRiotTurnsRemaining == 0);
 }

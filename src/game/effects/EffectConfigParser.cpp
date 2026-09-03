@@ -140,6 +140,41 @@ void ValidateAmountSourceLegality_(const StatModifierEffect_t& rMod,
                     "(per-base scale)");
             }
             break;
+        case StatModifierEffect_t::AmountSource_t::BuildingUpkeep:
+            // Required subject: Base. Allowed: Continuous MaxClamp on econ (cap energy
+            // commerce at facility upkeep). Base-level scopes only.
+            if (stat != StatId_t::Econ)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' BuildingUpkeep is only valid on the econ "
+                    "stat, got '"
+                    + rStatWire + "'");
+            }
+            if (rMod.op != ModifierOp_t::MaxClamp)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' BuildingUpkeep requires op MaxClamp");
+            }
+            if (persistence != EffectPersistence_t::Continuous)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' BuildingUpkeep requires persistence Continuous");
+            }
+            if (scope != EffectScope_t::ThisBase
+                && scope != EffectScope_t::AllOwnerBases
+                && scope != EffectScope_t::FactionGlobal)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' BuildingUpkeep requires scope ThisBase, "
+                    "AllOwnerBases, or FactionGlobal");
+            }
+            if (!std::isfinite(amount))
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' BuildingUpkeep requires a finite amount "
+                    "(upkeep scale)");
+            }
+            break;
     }
 }
 
@@ -460,6 +495,54 @@ void ParseModifyPopulation_(const nlohmann::json& parameters, EffectConfig_t& rE
     rEffect.effect = modify;
 }
 
+void ParseDestroyFacility_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
+{
+    if (rEffect.persistence != EffectPersistence_t::Instantaneous)
+    {
+        throw std::runtime_error("DestroyFacility requires persistence Instantaneous");
+    }
+    RequireScope_(
+        rEffect.scope,
+        {EffectScope_t::ThisBase},
+        "DestroyFacility requires scope ThisBase");
+
+    const auto requireBool = [&parameters](const char* key) {
+        if (!parameters.contains(key) || !parameters.at(key).is_boolean())
+        {
+            throw std::runtime_error(std::string("DestroyFacility '") + key
+                                     + "' must be a boolean");
+        }
+        return parameters.at(key).get<bool>();
+    };
+
+    DestroyFacilityEffect_t destroy;
+    if (!parameters.contains("count") || !parameters.at("count").is_number_integer())
+    {
+        throw std::runtime_error("DestroyFacility 'count' must be an integer");
+    }
+    destroy.count = parameters.at("count").get<int>();
+    if (destroy.count < 1)
+    {
+        throw std::runtime_error("DestroyFacility 'count' must be >= 1");
+    }
+    destroy.excludeHq = requireBool("exclude_hq");
+    destroy.excludeSecretProjects = requireBool("exclude_secret_projects");
+    rEffect.effect = destroy;
+}
+
+void ParseRebel_(const nlohmann::json& /*parameters*/, EffectConfig_t& rEffect)
+{
+    if (rEffect.persistence != EffectPersistence_t::Instantaneous)
+    {
+        throw std::runtime_error("Rebel requires persistence Instantaneous");
+    }
+    RequireScope_(
+        rEffect.scope,
+        {EffectScope_t::ThisBase},
+        "Rebel requires scope ThisBase");
+    rEffect.effect = RebelEffect_t{};
+}
+
 void ParseTransportParams_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
 {
     RequireScope_(
@@ -532,6 +615,8 @@ const std::unordered_map<std::string, ParseEffectFn_>& EffectTypeParsers_()
         {"InterceptAttempt", ParseInterceptAttempt_},
         {"TransportParams", ParseTransportParams_},
         {"ModifyPopulation", ParseModifyPopulation_},
+        {"DestroyFacility", ParseDestroyFacility_},
+        {"Rebel", ParseRebel_},
     };
     return k_Parsers;
 }
@@ -636,6 +721,10 @@ Condition_t ParseCondition(const nlohmann::json& conditionJson)
     if (kindStr == "OriginBaseIsTargetBase")
     {
         return OriginBaseIsTargetBase_t{};
+    }
+    if (kindStr == "OriginBaseIsHomeBase")
+    {
+        return OriginBaseIsHomeBase_t{};
     }
     if (kindStr == "AttackerIsEmbarked")
     {
@@ -954,6 +1043,14 @@ void ValidateEffectForSource(const EffectConfig_t& rEffect, EffectSourceKind_t s
             bCanSupplyOriginBase = persistence == EffectPersistence_t::Instantaneous
                 && scope == EffectScope_t::ThisBase;
             break;
+        case EffectSourceKind_t::PopCompositionBaseLocal:
+            // Mood arrays are collected per base: Continuous ThisBase is stamped with the
+            // rioting base by the effects pool / base cache, Instantaneous ThisBase is
+            // dispatched by Mood against the committing base. ProducedAtThisBase is not
+            // collected on either path.
+            bCanSupplyOriginBase = scope == EffectScope_t::ThisBase;
+            break;
+        case EffectSourceKind_t::PopComposition:
         case EffectSourceKind_t::Improvement:
         case EffectSourceKind_t::Faction:
         case EffectSourceKind_t::CouncilProposal:
@@ -965,7 +1062,6 @@ void ValidateEffectForSource(const EffectConfig_t& rEffect, EffectSourceKind_t s
         case EffectSourceKind_t::BaseConquest:
         case EffectSourceKind_t::PoliceRules:
         case EffectSourceKind_t::MoraleLevel:
-        case EffectSourceKind_t::PopComposition:
             bCanSupplyOriginBase = false;
             break;
         }
@@ -976,8 +1072,9 @@ void ValidateEffectForSource(const EffectConfig_t& rEffect, EffectSourceKind_t s
             throw std::runtime_error(
                 "Effect on '" + rSourceId + "': scope " + pScopeName
                 + " requires a source that can supply an origin base "
-                  "(Building, PopType, SocialPolicy, or SocialRating; or Instantaneous "
-                  "ThisBase on UnitComponent / ProbeAction)");
+                  "(Building, PopType, SocialPolicy, SocialRating, or "
+                  "PopCompositionBaseLocal; or Instantaneous ThisBase on UnitComponent / "
+                  "ProbeAction)");
         }
     }
 }

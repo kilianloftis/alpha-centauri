@@ -132,6 +132,17 @@
     }
   },
   {
+    "id": "Mood",
+    "name": "Mood",
+    "description": "Commits pending drone riots and golden ages after the player has had a chance to respond",
+    "repeatForEachFaction": true,
+    "hooks": {
+      "pre": [],
+      "post": [],
+      "replace": []
+    }
+  },
+  {
     "id": "TurnEnd",
     "name": "Turn End",
     "description": "Finalizes the end of the turn",

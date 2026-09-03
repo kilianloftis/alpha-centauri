@@ -72,6 +72,12 @@ private:
     std::vector<ActiveEffect_t> CollectPoliceRulesEffects_() const;
     std::vector<ActiveEffect_t> CollectPopCompositionEffects_() const;
 
+    // Faction-lane half of each base's active mood arrays (riot tier / golden age), stamped
+    // with the base that is rioting. Without this the FactionUnits morale penalty a riot
+    // tier declares would sit in that base's local list, which no unit ever reads. The
+    // ThisBase half stays on the base path via BaseEffectsCache.
+    std::vector<ActiveEffect_t> CollectMoodEffects_() const;
+
     // Session difficulty continuous effects, re-resolved from the owner's GameDataContext
     // and current game rules. Not cached at construction: difficulty is changeable
     // mid-campaign, and CollectRevisions_ samples the game-rules revision to catch it.

@@ -6,15 +6,20 @@
 #include "game/buildings/BuildingConfig.h"
 #include "game/effects/InfiltrationRules.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/faction/RebelFactionPicker.h"
 #include "game/faction/SocialEngineeringManager.h"
+#include "game/faction/ResearchManager.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/BuildingDestruction.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/population/pop-types/Pop.h"
+#include "game/population/pop-types/PopCompositionConfigParser.h"
 #include "game/population/pop-types/PopTypeConfigParser.h"
+#include "game/GameDataContext.h"
 #include "game/social-engineering/SocialPolicyConfig.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/Unit.h"
@@ -88,6 +93,8 @@ double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double sca
             // Vanilla per-source floor: University floor(size×0.25) does not share fractional
             // residue with another fractional BaseSize source (e.g. Commons).
             return std::floor(static_cast<double>(rBase.GetPopulation().GetSize()) * scale);
+        case StatModifierEffect_t::AmountSource_t::BuildingUpkeep:
+            return static_cast<double>(rBase.GetBuildingUpkeep()) * scale;
         default:
             ThrowNoEvaluation_(source, "Base");
     }
@@ -171,6 +178,13 @@ double AmountSourceValue(const StatModifierEffect_t& rMod, const EffectContext_t
                     "AmountSourceValue: BaseSize requires pBase");
             }
             return AmountSourceValue(*rMod.amountSource, rMod.amount, *pCtx->pBase);
+        case StatModifierEffect_t::AmountSource_t::BuildingUpkeep:
+            if (!pCtx || !pCtx->pBase)
+            {
+                throw std::runtime_error(
+                    "AmountSourceValue: BuildingUpkeep requires pBase");
+            }
+            return AmountSourceValue(*rMod.amountSource, rMod.amount, *pCtx->pBase);
         case StatModifierEffect_t::AmountSource_t::BasesOwned:
             if (!pCtx || !pCtx->pFaction)
             {
@@ -185,9 +199,16 @@ double AmountSourceValue(const StatModifierEffect_t& rMod, const EffectContext_t
 EffectContext_t UnitSubjectContext(const Unit* pUnit, const EffectContext_t& rCtx)
 {
     EffectContext_t ctx = rCtx;
-    if (!ctx.pFaction && pUnit)
+    if (pUnit)
     {
-        ctx.pFaction = &pUnit->GetFaction();
+        if (!ctx.pFaction)
+        {
+            ctx.pFaction = &pUnit->GetFaction();
+        }
+        if (!ctx.pUnit)
+        {
+            ctx.pUnit = pUnit;
+        }
     }
     return ctx;
 }
@@ -227,11 +248,23 @@ void AppendActiveEffects(std::span<const EffectConfig_t> rEffects,
 }
 
 void AppendFactionLaneEffects(std::span<const EffectConfig_t> rEffects,
+                              const BaseManager* pOriginBase,
                               const std::string& sourceId,
                               std::vector<ActiveEffect_t>& rOut)
 {
-    AppendActiveEffectsIf_(rEffects, nullptr, sourceId,
+    AppendActiveEffectsIf_(rEffects, pOriginBase, sourceId,
                            [](const EffectConfig_t& rEffect) { return IsFactionLane(rEffect.scope); },
+                           rOut);
+}
+
+void AppendBaseLaneEffects(std::span<const EffectConfig_t> rEffects,
+                           const BaseManager* pOriginBase,
+                           const std::string& sourceId,
+                           std::vector<ActiveEffect_t>& rOut)
+{
+    AppendActiveEffectsIf_(rEffects, pOriginBase, sourceId,
+                           [](const EffectConfig_t& rEffect)
+                           { return LaneFor(rEffect.scope) == EffectLane_t::Base; },
                            rOut);
 }
 
@@ -483,6 +516,11 @@ bool ConditionBodySatisfied_(const Condition_t& condition, const EffectContext_t
             {
                 return pOriginBase != nullptr && ctx.targetTile != nullptr
                     && &pOriginBase->GetTile() == ctx.targetTile;
+            }
+            else if constexpr (std::is_same_v<T, OriginBaseIsHomeBase_t>)
+            {
+                return pOriginBase != nullptr && ctx.pUnit != nullptr
+                    && ctx.pUnit->GetHomeBase() == pOriginBase;
             }
             else if constexpr (std::is_same_v<T, AttackerIsEmbarked_t>)
             {
@@ -809,9 +847,9 @@ void DispatchInstantaneousEffects(std::span<const EffectConfig_t> rEffects, Base
                 rBase.GetBuildingManager().AddBuilding(pGrant->buildingId);
             }
         }
-        else if (std::get_if<GrantTechEffect_t>(&effect.effect))
+        else if (const GrantTechEffect_t* pGrant = std::get_if<GrantTechEffect_t>(&effect.effect))
         {
-            std::cerr << "[TODO] Instantaneous GrantTech not yet implemented\n";
+            rBase.GetFaction().GetResearch().AddDiscoveredTech(pGrant->techId);
         }
         else if (std::get_if<GrantUnitEffect_t>(&effect.effect))
         {
@@ -825,6 +863,24 @@ void DispatchInstantaneousEffects(std::span<const EffectConfig_t> rEffects, Base
                      std::get_if<ModifyPopulationEffect_t>(&effect.effect))
         {
             ApplyModifyPopulation(rBase, *pModify);
+        }
+        else if (const DestroyFacilityEffect_t* pDestroy =
+                     std::get_if<DestroyFacilityEffect_t>(&effect.effect))
+        {
+            DestroyRandomFacilities(rGameState, rBase, pDestroy->count, pDestroy->excludeHq,
+                                    pDestroy->excludeSecretProjects, rGameState.GetRng());
+        }
+        else if (std::get_if<RebelEffect_t>(&effect.effect))
+        {
+            const GameDataContext& rData = rBase.GetFaction().GetDataContext();
+            if (!rData.popCompositionConfig)
+            {
+                throw std::runtime_error(
+                    "DispatchInstantaneousEffects: Rebel requires a popCompositionConfig");
+            }
+            PickRebelFactionAndTransfer(rBase, rGameState,
+                                        rData.popCompositionConfig->rebelSelection,
+                                        rGameState.GetRng());
         }
     }
 }

@@ -160,6 +160,7 @@ static_assert(KindFor(StatId_t::LastDefenderPopLoss) == StatKind_t::Additive);
     static_assert(KindFor(StatId_t::CaptureFacilitiesDestroyedMin) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::CaptureFacilitiesDestroyedMaxPercent) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::EcologicalDamage) == StatKind_t::RawScaled);
+static_assert(KindFor(StatId_t::RebelJoinWeight) == StatKind_t::Additive);
 
 // SeedFor derives the context-free seed from the kind; RawScaled stats have none (SeedFor
 // throws for them, which is not constexpr-evaluable, so no pin here).
@@ -169,6 +170,7 @@ static_assert(SeedFor(StatId_t::CostMultiplier) == 1.0);
 static_assert(SeedFor(StatId_t::PrototypeSurchargeScale) == 1.0);
 static_assert(SeedFor(StatId_t::RetoolPenaltyScale) == 1.0);
 static_assert(SeedFor(StatId_t::TileDefense) == 1.0);
+static_assert(SeedFor(StatId_t::RebelJoinWeight) == 0.0);
 
 // DomainFor is the consumer-subject counterpart of KindFor: pin every stat's resolve domain.
 static_assert(DomainFor(StatId_t::Nutrients) == ResolveDomain_t::Base);
@@ -179,6 +181,7 @@ static_assert(DomainFor(StatId_t::ProbeDefense) == ResolveDomain_t::Base);
 static_assert(DomainFor(StatId_t::TechCost) == ResolveDomain_t::Faction);
 static_assert(DomainFor(StatId_t::CouncilVotes) == ResolveDomain_t::Faction);
 static_assert(DomainFor(StatId_t::CommerceRate) == ResolveDomain_t::Faction);
+static_assert(DomainFor(StatId_t::RebelJoinWeight) == ResolveDomain_t::Faction);
 static_assert(DomainFor(StatId_t::Attack) == ResolveDomain_t::Unit);
 static_assert(DomainFor(StatId_t::Defense) == ResolveDomain_t::Unit);
 static_assert(DomainFor(StatId_t::MoraleBonus) == ResolveDomain_t::Unit);

@@ -61,8 +61,8 @@ public:
 
     // Add minerals to the stockpile without completing: ConvertMinerals banks this turn's
     // leftover mineral bank here for a real build item. ApplyProduction stamps with 0.
-    // BaseManager still decides whether completion is allowed (abandon confirmation) and
-    // calls CompleteProduction.
+    // BaseManager decides whether completion is allowed (abandon confirmation) and
+    // calls CompleteProduction / ProductionCompletion::TryCompleteReady.
     //
     // Also stamps m_pTurnOriginalItem from the item then queued (or clears it when empty).
     // Until that stamp exists, SetProduction does not retool — there is no "original" to

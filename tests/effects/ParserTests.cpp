@@ -7,6 +7,7 @@
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 #include <nlohmann/json.hpp>
 #include <stdexcept>
 #include <string>
@@ -14,6 +15,7 @@
 
 using namespace ac;
 using Catch::Approx;
+using Catch::Matchers::ContainsSubstring;
 using nlohmann::json;
 
 TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
@@ -136,6 +138,8 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
     CHECK(ParseRuleFlagId("remove_fog") == RuleFlagId_t::RemoveFog);
     CHECK(ParseRuleFlagId("atrocities_forbidden")
           == RuleFlagId_t::AtrocitiesForbidden);
+    CHECK(ParseRuleFlagId("disable_production")
+          == RuleFlagId_t::DisableProduction);
     CHECK_THROWS(ParseRuleFlagId("hover"));
     CHECK_THROWS(ParseRuleFlagId("sea"));
     CHECK_THROWS(ParseRuleFlagId("prevents_conquest_pop_loss"));
@@ -538,6 +542,51 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         })")));
     }
 
+    SECTION("BuildingUpkeep MaxClamp on econ")
+    {
+        const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisBase",
+            "persistence": "Continuous",
+            "parameters": {
+                "stat": "econ",
+                "amount_source": "BuildingUpkeep",
+                "amount": 1,
+                "op": "MaxClamp"
+            }
+        })"));
+        const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
+        REQUIRE(pMod != nullptr);
+        REQUIRE(pMod->amountSource.has_value());
+        CHECK(*pMod->amountSource == StatModifierEffect_t::AmountSource_t::BuildingUpkeep);
+        CHECK(pMod->op == ModifierOp_t::MaxClamp);
+        CHECK(pMod->amount == Approx(1.0));
+    }
+
+    SECTION("BuildingUpkeep on non-econ throws")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisBase",
+            "persistence": "Continuous",
+            "parameters": {
+                "stat": "energy",
+                "amount_source": "BuildingUpkeep",
+                "op": "MaxClamp"
+            }
+        })")));
+    }
+
+    SECTION("BuildingUpkeep without MaxClamp throws")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisBase",
+            "persistence": "Continuous",
+            "parameters": { "stat": "econ", "amount_source": "BuildingUpkeep", "op": "Add" }
+        })")));
+    }
+
     SECTION("ElevationEnergy with a radius throws")
     {
         // targetTile is the receiving tile, so an aura would scale off whatever tile it
@@ -721,6 +770,13 @@ TEST_CASE("ParseEffectConfig: conditions", "[effects][parser][condition]")
         const Condition_t condition = EffectConfigParser::ParseCondition(
             json::parse(R"({ "kind": "IsHeadquarters" })"));
         CHECK(std::holds_alternative<IsHeadquarters_t>(condition.AsVariant()));
+    }
+
+    SECTION("OriginBaseIsHomeBase condition")
+    {
+        const Condition_t condition = EffectConfigParser::ParseCondition(
+            json::parse(R"({ "kind": "OriginBaseIsHomeBase" })"));
+        CHECK(std::holds_alternative<OriginBaseIsHomeBase_t>(condition.AsVariant()));
     }
 }
 
@@ -970,6 +1026,71 @@ TEST_CASE("ParseEffectConfig: ModifyPopulation Instantaneous ThisBase", "[effect
         "type": "ModifyPopulation", "scope": "ThisBase",
         "persistence": "Instantaneous",
         "parameters": { "amount": -1, "op": "MultiplyGeometric" }
+    })")));
+}
+
+TEST_CASE("ParseEffectConfig: DestroyFacility Instantaneous ThisBase", "[effects][parser]")
+{
+    const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "DestroyFacility",
+        "scope": "ThisBase",
+        "persistence": "Instantaneous",
+        "parameters": { "count": 2, "exclude_hq": false, "exclude_secret_projects": true }
+    })"));
+    CHECK(config.persistence == EffectPersistence_t::Instantaneous);
+    CHECK(config.scope == EffectScope_t::ThisBase);
+    const auto* pDestroy = std::get_if<DestroyFacilityEffect_t>(&config.effect);
+    REQUIRE(pDestroy != nullptr);
+    CHECK(pDestroy->count == 2);
+    CHECK_FALSE(pDestroy->excludeHq);
+    CHECK(pDestroy->excludeSecretProjects);
+
+    // Every parameter is required: which facilities are off-limits is a per-caller rule, and
+    // a silent default is what let the shipping config and this fixture disagree about
+    // whether sabotage may destroy a secret project.
+    CHECK_THROWS_WITH(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "DestroyFacility", "scope": "ThisBase",
+        "persistence": "Instantaneous", "parameters": {}
+    })")), ContainsSubstring("count"));
+    CHECK_THROWS_WITH(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "DestroyFacility", "scope": "ThisBase", "persistence": "Instantaneous",
+        "parameters": { "count": 1, "exclude_secret_projects": true }
+    })")), ContainsSubstring("exclude_hq"));
+    CHECK_THROWS_WITH(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "DestroyFacility", "scope": "ThisBase", "persistence": "Instantaneous",
+        "parameters": { "count": 1, "exclude_hq": true }
+    })")), ContainsSubstring("exclude_secret_projects"));
+    CHECK_THROWS_WITH(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "DestroyFacility", "scope": "ThisBase", "persistence": "Instantaneous",
+        "parameters": { "count": 0, "exclude_hq": true, "exclude_secret_projects": true }
+    })")), ContainsSubstring("count"));
+
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "DestroyFacility", "scope": "ThisBase",
+        "parameters": { "count": 1, "exclude_hq": true, "exclude_secret_projects": true }
+    })")));
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "DestroyFacility", "scope": "FactionGlobal", "persistence": "Instantaneous",
+        "parameters": { "count": 1, "exclude_hq": true, "exclude_secret_projects": true }
+    })")));
+}
+
+TEST_CASE("ParseEffectConfig: Rebel Instantaneous ThisBase", "[effects][parser]")
+{
+    const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "Rebel",
+        "scope": "ThisBase",
+        "persistence": "Instantaneous"
+    })"));
+    CHECK(config.persistence == EffectPersistence_t::Instantaneous);
+    CHECK(config.scope == EffectScope_t::ThisBase);
+    REQUIRE(std::get_if<RebelEffect_t>(&config.effect) != nullptr);
+
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "Rebel", "scope": "ThisBase"
+    })")));
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "Rebel", "scope": "AllOwnerBases", "persistence": "Instantaneous"
     })")));
 }
 
@@ -1409,6 +1530,32 @@ TEST_CASE("ValidateEffectForSource: rejects only the certainly-impossible combin
     CHECK_NOTHROW(ValidateScopeForSource_(
         EffectScope_t::ThisBase, EffectPersistence_t::Instantaneous, EffectSourceKind_t::ProbeAction,
         "genetic_plague"));
+
+    // pop_composition splits into two source kinds because they have opposite origin-base
+    // capabilities. The faction-wide `effects` array enters the pool with no origin base, so
+    // ThisBase there would never resolve; the per-base mood arrays (riot_tiers,
+    // golden_age_effects) are collected against a specific base, so ThisBase is exactly how a
+    // riot tier declares its resource clamps.
+    CHECK_THROWS(ValidateScopeForSource_(
+        EffectScope_t::ThisBase, EffectPersistence_t::Continuous,
+        EffectSourceKind_t::PopComposition, "pop_composition"));
+    CHECK_THROWS(ValidateScopeForSource_(
+        EffectScope_t::ThisBase, EffectPersistence_t::Instantaneous,
+        EffectSourceKind_t::PopComposition, "pop_composition"));
+    CHECK_NOTHROW(ValidateScopeForSource_(
+        EffectScope_t::ThisBase, EffectPersistence_t::Continuous,
+        EffectSourceKind_t::PopCompositionBaseLocal, "pop_composition.riot_tiers.effects"));
+    CHECK_NOTHROW(ValidateScopeForSource_(
+        EffectScope_t::ThisBase, EffectPersistence_t::Instantaneous,
+        EffectSourceKind_t::PopCompositionBaseLocal,
+        "pop_composition.riot_tiers.on_enter_effects"));
+    CHECK_NOTHROW(ValidateScopeForSource_(
+        EffectScope_t::FactionUnits, EffectPersistence_t::Continuous,
+        EffectSourceKind_t::PopCompositionBaseLocal, "pop_composition.riot_tiers.effects"));
+    // Neither collector walks ProducedAtThisBase off a mood array.
+    CHECK_THROWS(ValidateScopeForSource_(
+        EffectScope_t::ProducedAtThisBase, EffectPersistence_t::Continuous,
+        EffectSourceKind_t::PopCompositionBaseLocal, "pop_composition.riot_tiers.effects"));
 
     // Legal-but-inert: faction-lane on improvement (pending territory) still loads.
     CHECK_NOTHROW(ValidateScopeForSource_(

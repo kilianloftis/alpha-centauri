@@ -27,9 +27,6 @@ protected:
     // enqueued it). Callers Yield so the queue drains before more state changes.
     static bool PlayerHasPending_(const GameState& rGameState);
 
-    // Queue an interaction for the player faction. No-op when there is no player faction.
-    static void EnqueueForPlayer_(GameState& rGameState, PlayerInteraction_t payload);
-
     // Subclasses clear stage-local resume state here; m_activeFactionId is cleared by ResetPassState_.
     virtual void OnResetPassState_() {}
 

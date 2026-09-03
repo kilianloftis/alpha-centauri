@@ -125,6 +125,8 @@ struct EffectPayloadValidator
     void operator()(const TransportParamsEffect_t&) const {}
     void operator()(const PermissionEffect_t&) const {}
     void operator()(const ModifyPopulationEffect_t&) const {}
+    void operator()(const DestroyFacilityEffect_t&) const {}
+    void operator()(const RebelEffect_t&) const {}
 };
 
 } // namespace
@@ -179,6 +181,7 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
                         }
                         else if constexpr (std::is_same_v<T, IsDefending_t>
                                            || std::is_same_v<T, OriginBaseIsTargetBase_t>
+                                           || std::is_same_v<T, OriginBaseIsHomeBase_t>
                                            || std::is_same_v<T, AttackerIsEmbarked_t>
                                            || std::is_same_v<T, IsHeadquarters_t>)
                         {

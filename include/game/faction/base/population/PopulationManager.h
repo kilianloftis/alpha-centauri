@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/faction/base/population/CompositionInputs.h"
+#include "game/faction/base/BaseTypes.h"
 
 #include <optional>
 #include "game/faction/base/population/PopContainer.h"
@@ -9,6 +10,7 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/population/calculators/RiotCalculator.h"
 #include "game/population/calculators/GoldenAgeCalculator.h"
+#include "lib/Revision.h"
 
 #include <functional>
 #include <memory>
@@ -17,7 +19,6 @@
 namespace ac
 {
 
-struct RiotConditionInputs_t;
 struct GrowthConfig_t;
 class PopTypeRegistry;
 class PopTypeAvailabilityCalculator;
@@ -69,6 +70,11 @@ public:
     // Bumped on every pop mutation (add/remove/convert); consumed by effect-pool caches.
     uint64_t GetRevision() const { return m_container.GetRevision(); }
 
+    // Bumped on every mood transition, including each commit while a riot continues — the
+    // consecutive count selects the riot tier, so the tier's effects change without any pop
+    // mutation. Sampled by FactionEffectsPool and BaseEffectsCache.
+    uint64_t GetMoodRevision() const { return m_moodRevision.Get(); }
+
     // Add a pop of the default type (growth) or of an explicit type.
     // Throws if the base is at max size.
     void AddPop();
@@ -98,8 +104,33 @@ public:
 
     const AssimilationTracker& GetAssimilation() const { return m_assimilation; }
 
-    // Drone and talent calculations
+    // Mood (riot / golden age). The calculators stay private: their Forecast/Commit ordering
+    // is a turn-stage contract, not something an arbitrary caller should be able to re-drive.
+
+    // Population stage: evaluate both conditions and set pending, emitting OnWillRiot /
+    // OnWillGoldenAge so the player can be warned before PlayerActions. Activates nothing.
+    void ForecastMood();
+    // Mood stage: commit pending state into active after the player has had a chance to act.
+    void CommitMood();
+
     bool IsRioting() const;
+    bool IsPendingRiot() const;
+    // Consecutive Mood commits while rioting; selects the active riot tier. 0 when calm.
+    int GetConsecutiveRiotTurns() const;
+    bool IsInGoldenAge() const;
+    bool IsPendingGoldenAge() const;
+
+    // Probe Incite Drone Riots: force a riot for the next `turns` Mood commits.
+    void ForceRiot(int turns);
+
+    // Save / load and base transfer. Restoring emits no signals.
+    MoodState_t CaptureMoodState() const;
+    void RestoreMoodState(const MoodState_t& rState);
+    // Ownership change: escalation is a grievance against the old owner, so the new owner
+    // starts the tier ladder over rather than inheriting a rebel-tier base.
+    void ResetMoodEscalation();
+
+    // Drone and talent calculations
     bool IsDestroyed() const;
 
     // Run phase 1 of composition and reconcile actual pops (phase 2).
@@ -132,17 +163,6 @@ public:
     private:
         PopulationManager& m_rPops;
     };
-
-    // Check riot conditions at end of turn. Delegates to m_riot.Update(inputs).
-    void CheckRiotEndOfTurn();
-
-    // Force an active drone riot for `turns` end-of-turn passes (probe action). Does not alter
-    // pop composition, so it needs its own lifetime — the natural condition will not sustain it.
-    void ForceRiot(int turns);
-
-    // Check golden age conditions at end of turn. Delegates to m_goldenAge.Update(...).
-    void CheckGoldenAgeEndOfTurn();
-    bool IsInGoldenAge() const;
 
     // Population limits (initial value from GrowthConfig_t::maxBaseSize).
     // Hab Complex / Habitation Dome should raise this via SetMaxSize (TODO).
@@ -180,15 +200,16 @@ public:
     void SetPopValuator(std::function<int(const Pop&)> valuator);
 
     // Riot signals
-    Signal<> OnWillRiot;    // conditions met after growth, riot not yet active
-    Signal<> OnIsRioting;   // end-of-turn: conditions still met, riot now active
-    Signal<> OnRiotEnded;   // end-of-turn: conditions no longer met, riot was active
+    Signal<> OnWillRiot;    // Forecast: conditions met, riot not yet active
+    Signal<> OnIsRioting;   // Mood Commit: riot newly active
+    Signal<> OnRiotEnded;   // Mood Commit: riot ended
 
     // Growth signals
     Signal<> OnGrowth;       // base has gained a pop
     Signal<> OnStarvation;   // base has lost a pop
 
     // Golden age signals
+    Signal<> OnWillGoldenAge;   // Forecast: conditions met, age not yet active
     Signal<> OnGoldenAgeStarted;
     Signal<> OnGoldenAgeEnded;
 
@@ -213,9 +234,11 @@ private:
     RiotCalculator m_riot;
     GoldenAgeCalculator m_goldenAge;
     AssimilationTracker m_assimilation;
+    Revision m_moodRevision;
 
-    RiotConditionInputs_t BuildRiotInputs_() const;
     CompositionEffectInputs_t BuildCompositionInputs_() const;
+    RiotConditionInputs_t BuildRiotInputs_() const;
+    GoldenAgeCalculator::Inputs_t BuildGoldenAgeInputs_() const;
 
     void NotifyPopGained_();
     void NotifyPopLost_();

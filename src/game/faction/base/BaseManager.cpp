@@ -166,7 +166,7 @@ BaseManager::BaseManager(
     });
 
     m_pProduction->OnProductionChanged.Connect([this]() {
-        // Switching or clearing the queue cancels an unresolved abandon prompt.
+        // Switching or clearing the queue cancels an unresolved abandon prompt / defer freeze.
         m_pCompletion->NotifyProductionChanged();
     });
 
@@ -248,6 +248,7 @@ BaseSnapshot_t BaseManager::CaptureSnapshot() const
     }
     snapshot.mineralStockpile = m_pProduction->GetMineralStockpile();
     snapshot.nutrientStockpile = m_pPopulation->GetNutrientStockpile();
+    snapshot.mood = m_pPopulation->CaptureMoodState();
     return snapshot;
 }
 
@@ -494,6 +495,12 @@ HurryResult_t BaseManager::HurryProduction(int energyCredits)
                                     + std::to_string(energyCredits) + " must be positive");
     }
 
+    if (ResolveFlag(*this, RuleFlagId_t::DisableProduction))
+    {
+        throw std::runtime_error("BaseManager::HurryProduction: production is disabled at this "
+                                 "base");
+    }
+
     const IConstructable* pItem = m_pProduction->GetCurrentProduction();
     if (!pItem)
     {
@@ -580,6 +587,11 @@ void BaseManager::ConvertMinerals()
 {
     const IConstructable* pItem = m_pProduction->GetCurrentProduction();
     const int minerals = m_pResources->ConsumeMinerals();
+    if (ResolveFlag(*this, RuleFlagId_t::DisableProduction))
+    {
+        // Leftovers are discarded: no BankProduction, no stockpile conversion.
+        return;
+    }
     if (pItem && !pItem->NeverCompletes())
     {
         m_pProduction->BankProduction(minerals);

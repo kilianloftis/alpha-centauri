@@ -7,6 +7,7 @@
 #include "game/TurnProcessor.h"
 #include "game/faction/UnitManager.h"
 #include "game/map/WorldMap.h"
+#include "game/stages/Mood.h"
 #include "game/stages/PlayerActions.h"
 #include "game/stages/Population.h"
 #include "game/stages/WorldEvents.h"
@@ -257,8 +258,8 @@ TEST_CASE("SkipTurn stays out of needs-orders when another unit yields mid-pass"
     CHECK(game.pPlayer->GetUnitManager().GetNextAvailableUnit() == &shortHold);
 }
 
-TEST_CASE("Population stage invokes riot and golden-age end-of-turn updates",
-          "[Population][TurnProcessor]")
+TEST_CASE("Population forecasts and Mood commits riot and golden-age state",
+          "[Population][Mood][TurnProcessor]")
 {
     PlayerActionsGame_ game;
     Tile* pTile = game.pState->GetWorldMap().GetTile(3, 3);
@@ -273,29 +274,28 @@ TEST_CASE("Population stage invokes riot and golden-age end-of-turn updates",
     pBase->GetPopulation().OnGoldenAgeEnded.Connect([&]() { ++goldenAgeCallbacks; });
 
     pBase->GetPopulation().ForceRiot(/*turns=*/1);
-    REQUIRE(pBase->GetPopulation().IsRioting());
+    REQUIRE(pBase->GetPopulation().IsPendingRiot());
+    REQUIRE_FALSE(pBase->GetPopulation().IsRioting());
 
     PerFactionTurnStageRegistry_t perFaction;
     perFaction["Population"] = std::make_unique<Population>(HookContext{});
+    perFaction["Mood"] = std::make_unique<Mood>(HookContext{});
 
     GlobalTurnStageRegistry_t global;
     global["Stop"] = std::make_unique<AlwaysYieldStage_>();
 
-    TurnProcessor processor(std::move(global), std::move(perFaction), {"Population", "Stop"});
+    TurnProcessor processor(std::move(global), std::move(perFaction),
+                            {"Population", "Mood", "Stop"});
     processor.Advance(*game.pState);
 
-    // The fixture base is not drone-majority, so only the forced riot keeps this true. An
-    // incited riot has to outlive the end of turn it was incited on for the probe action to do
-    // anything observable.
+    // Mood committed the forced riot. The fixture base is not drone-majority, so only the
+    // forced counter keeps this true through the commit that consumes ForceRiot(1).
     CHECK(pBase->GetPopulation().IsRioting());
 
-    // Golden-age Update ran (may or may not transition); calling both EOT APIs is required.
-    // A second stage pass must also be safe (exercises CheckGoldenAgeEndOfTurn again), and it
-    // is where the one forced turn expires.
     (void)goldenAgeCallbacks;
-    processor.Advance(*game.pState);
-    Population stage(HookContext{});
-    CHECK(stage.Execute(*game.pState, *game.pPlayer) == StageResult_t::Continue);
+    // TurnProcessor is parked on Stop (always Yield); drive Mood directly for the expiry pass.
+    Mood mood(HookContext{});
+    CHECK(mood.Execute(*game.pState, *game.pPlayer) == StageResult_t::Continue);
     CHECK_FALSE(pBase->GetPopulation().IsRioting());
 }
 

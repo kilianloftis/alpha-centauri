@@ -285,7 +285,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 - **Shape**: inherits `std::variant` (so `AllOf_t` can recurse). Alternatives:
   - `TargetTileHas_t` — the targeted tile has `featureId`, matched via `Tile::HasFeature`. One alternative covers terrain classification (`Rocky`), river/fungus, and any improvement id — including `Base` (a founded base registers itself as the `Base` improvement) and tile specials. In combat the target is the defender's tile.
   - `AllOf_t` — every nested `Condition_t` is satisfied (AND). Wire JSON may still supply `"values": ["A","B"]` and/or `"conditions"`; the parser desugars each values entry to `TargetTileHas_t` so only nested conditions exist in memory.
-  - `IsDefending_t`, `OriginBaseIsTargetBase_t`, `AttackerIsEmbarked_t` — parameterless situational predicates.
+  - `IsDefending_t`, `OriginBaseIsTargetBase_t`, `OriginBaseIsHomeBase_t`, `AttackerIsEmbarked_t`, `IsHeadquarters_t` — parameterless situational predicates. `OriginBaseIsTargetBase_t` keys on the combat tile; `OriginBaseIsHomeBase_t` keys on `EffectContext_t::pUnit`'s home base, which is how a base-sourced `FactionUnits` effect (a riot tier's morale penalty) narrows to that base's own garrison.
 - **Evaluation**: `ConditionSatisfied(config, EffectContext_t)` in `ActiveEffect` via exhaustive `std::visit`. `EffectContext_t` carries the runtime target (`targetTile`); combat builds one from the defender. `FilterByStatIdInContext` includes unconditional effects plus condition-satisfied ones; `FilterByStatId`/`FilterBaseLevelByStatId` exclude all condition-carrying effects.
 
 ### UnitFilter_t
@@ -415,9 +415,15 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
     `CollectUnitEffects`/`CollectPopEffects`, `BuildingManager::CollectEffects(rOriginBase)`,
     and `SocialEngineeringManager` collect through this. Base-anchored sources pass the
     owning base so tagging happens at append time (no post-pass re-tag).
-  - `AppendFactionLaneEffects(effects, sourceId, out)` — only `IsFactionLane` scopes; what a
-    source contributes to the faction pool when its local scopes are resolved elsewhere.
-    Used by `Faction::CollectPopFactionEffects`.
+  - `AppendFactionLaneEffects(effects, pOriginBase, sourceId, out)` — only `IsFactionLane`
+    scopes; what a source contributes to the faction pool when its local scopes are resolved
+    elsewhere. Used by `FactionEffectsPool`'s pop and mood collectors. The origin base is
+    still recorded where `TagsOriginBase` says to (`FactionUnits`), which is what lets a
+    faction-lane effect carry a per-base condition.
+  - `AppendBaseLaneEffects(effects, pOriginBase, sourceId, out)` — the complement, only
+    `EffectLane_t::Base` scopes. Together the two **partition** one config array between the
+    base path and the pool, so a source whose effects straddle both lanes (riot tiers, via
+    `BaseMoodEffects`) counts nothing twice and drops nothing.
   - `AppendTileEffects(effects, sourceId, distance, out)` — only effects satisfying
     `TileEffectReaches(e, distance)` (ThisTile lane, continuous, `radius >= distance`).
     Used by own-tile collection (`distance` 0), neighbor auras, and unit auras alike.
@@ -477,6 +483,11 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
      (`FactionEffects_t`): accumulate only `LaneFor(scope) == FactionWide` modifiers,
      append only `FactionUnits` gameplay effects from the level table.
   6. **Gate** a last time (a level table's own effects may carry the field).
+
+     Between steps 2 and 3 the pool also collects `CollectMoodEffects_`: the faction-lane
+     half of each rioting / golden-age base's `pop_composition` mood arrays, stamped with
+     that base. Cache invalidation samples `PopulationManager::GetMoodRevision()` per base
+     alongside the building and pop revisions.
   7. **Stamp** the cache from the pre-rebuild revision snapshot (`m_scratchRevisions`);
      do not re-walk contributors after rebuild.
 - **Returns**: `FactionEffects_t` (local pool). Composed view is

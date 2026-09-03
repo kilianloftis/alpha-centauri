@@ -1,7 +1,8 @@
 # Population system
 
 Owns a base's pops: how many there are, what type each one is, and whether the base is rioting
-or in a golden age.
+or in a golden age — including how long a riot has been running, which is what drives
+escalation up to rebellion.
 
 ## Composition pipeline
 
@@ -120,6 +121,75 @@ are plain integers in `pop_composition.json` (`riot_threshold`, `golden_age_thre
 
 > **Trap:** omitting `riot_threshold` from config fails at load. A value of **0** makes
 > `riotSum 0 >= 0` true, so every calm base riots.
+
+### Forecast and commit
+
+Both moods run a two-phase lifecycle across the turn, shared by `MoodLatch` and specialised by
+`RiotCalculator` / `GoldenAgeCalculator`:
+
+```mermaid
+sequenceDiagram
+    participant Population as Population stage
+    participant Latch as MoodLatch
+    participant Player as PlayerActions
+    participant Mood as Mood stage
+
+    Population->>Latch: ForecastMood()
+    Latch-->>Population: pending + OnWillRiot / OnWillGoldenAge
+    Population->>Player: EnqueueForPlayer(notice)
+    Player-->>Player: player may move specialists / psych
+    Mood->>Latch: CommitMood()
+    Latch-->>Mood: active + OnIsRioting / OnGoldenAgeStarted
+```
+
+The split exists so the warning lands *before* the player acts and the latch closes *after*.
+Pending state carries no gameplay effect — only `IsRioting()` / `IsInGoldenAge()` do. A riot
+additionally ages a probe-forced timer and counts consecutive commits.
+
+`PopulationManager` owns both calculators privately and exposes only `ForecastMood` /
+`CommitMood` / the query pair: the phase ordering is a turn-stage contract, not something an
+arbitrary caller should be able to re-drive.
+
+### Riot escalation
+
+`riot_tiers` in `pop_composition.json` is a ladder keyed by `min_turns` against the consecutive
+commit count; the highest matching entry is the active tier (`FindActiveRiotTier`). Each tier
+carries `effects` (continuous, while at that tier) and `on_enter_effects` (instantaneous, each
+commit at that tier — facility destruction, rebellion).
+
+A tier's `effects` array **straddles both effect lanes**, and `BaseMoodEffects` is the one place
+that splits it:
+
+| Scope in the tier | Collected by | Reaches |
+|---|---|---|
+| `ThisBase` | `BaseEffectsCache` (base lane) | the rioting base's own resolves |
+| `FactionUnits` | `FactionEffectsPool::CollectMoodEffects_` (faction lane) | units, narrowed by `OriginBaseIsHomeBase` |
+
+> **Trap:** a `FactionUnits` effect appended only to the rioting base's local list reaches
+> nothing — `CollectLiveUnitEffects` reads `FactionUnits` from the *faction pool*. That is how
+> the riot morale penalty came to be configured and never applied. Both appenders stamp the
+> rioting base as `originBase`, which is what lets `OriginBaseIsHomeBase` narrow the unit-side
+> half to that base's own garrison.
+
+Invalidation runs off `PopulationManager::GetMoodRevision()`, bumped on every commit (not only
+on the on/off edge, because the consecutive count selects the tier). Both the faction pool and
+`BaseEffectsCache` sample it.
+
+Escalation resets on ownership change (`Faction::TransferBaseTo` → `ResetMoodEscalation`): a
+base that rebelled at the top tier must not arrive at its new owner one commit from rebelling
+again.
+
+### Rebellion
+
+`Rebel` (instantaneous, `ThisBase`) hands the base to another faction chosen by weight:
+`RebelJoinWeight` (a Faction-domain Additive stat, seeded from `rebel_selection.base_join_weight`)
+plus a distance bonus selected by `rebel_selection.distance_mode`. Every `rebel_selection` field
+is required at load — these are the rebellion's tuning numbers, so a missing key fails rather
+than resolving to whatever a C++ member initializer happened to say.
+
+> Shipping `distance_mode` is `none`, so selection is currently weight-only. SMAC's actual rule
+> for which faction a base defects to is not recorded in `docs/game-rules-decisions.md`; the
+> other three modes exist for when it is.
 
 ## Psych
 

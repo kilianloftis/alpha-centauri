@@ -4,6 +4,7 @@
 #include "game/effects/EffectEnums.h"
 #include "game/faction/SocialEngineeringManager.h"
 #include "game/faction/base/buildings/BuildingManager.h"
+#include "game/faction/base/population/PopulationManager.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/units/CombatResolver.h"
 #include "game/units/MoraleCalculator.h"
@@ -276,4 +277,40 @@ TEST_CASE("TryAttack promotes survivor after a kill", "[morale][promotion]")
         CHECK(attacker.GetXp() >= xpBefore); // may promote (Green = 100%)
         CHECK(attacker.GetXp() == xpBefore + 1);
     }
+}
+
+TEST_CASE("A committed riot costs morale only for units homed at the rioting base",
+          "[morale][riot]")
+{
+    FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& rioting = fixture.MakeFactionBase(faction, 4, 4);
+    BaseManager& calm = fixture.MakeFactionBase(faction, 6, 6);
+    Unit& homedAtRiot = fixture.MakeUnit(faction, 4, 4, {"test_chassis"}, &rioting);
+    Unit& homedElsewhere = fixture.MakeUnit(faction, 6, 6, {"test_chassis"}, &calm);
+    homedAtRiot.SetXp(3);
+    homedElsewhere.SetXp(3);
+
+    const EffectContext_t riotCtx{&homedAtRiot.GetTile(), CombatRole_t::Attacker};
+    const EffectContext_t calmCtx{&homedElsewhere.GetTile(), CombatRole_t::Attacker};
+    const int levelBefore = fixture.morale().EffectiveMoraleLevel(homedAtRiot, riotCtx);
+    REQUIRE(ResolveStat(homedAtRiot, StatId_t::MoraleBonus, riotCtx) == 0);
+
+    rioting.GetPopulation().ForceRiot(/*turns=*/1);
+    rioting.GetPopulation().CommitMood();
+    REQUIRE(rioting.GetPopulation().IsRioting());
+    REQUIRE_FALSE(calm.GetPopulation().IsRioting());
+
+    // The riot tier declares this penalty FactionUnits-scoped with an OriginBaseIsHomeBase
+    // condition, so it can only work if the tier's faction-lane effects reach the faction
+    // pool: a FactionUnits effect sitting in the rioting base's own effect list is read by
+    // nothing. It must also narrow to that base's own garrison.
+    CHECK(ResolveStat(homedAtRiot, StatId_t::MoraleBonus, riotCtx) == -1);
+    CHECK(ResolveStat(homedElsewhere, StatId_t::MoraleBonus, calmCtx) == 0);
+    CHECK(fixture.morale().EffectiveMoraleLevel(homedAtRiot, riotCtx) == levelBefore - 1);
+    CHECK(fixture.morale().EffectiveMoraleLevel(homedElsewhere, calmCtx) == levelBefore);
+
+    // The base-lane half of the same tier stays on the base path and does not leak to units.
+    CHECK(ResolveFlag(rioting, RuleFlagId_t::DisableProduction));
+    CHECK_FALSE(ResolveFlag(calm, RuleFlagId_t::DisableProduction));
 }

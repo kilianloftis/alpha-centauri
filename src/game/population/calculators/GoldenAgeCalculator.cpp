@@ -3,39 +3,35 @@
 namespace ac
 {
 
-GoldenAgeCalculator::GoldenAgeCalculator(Signal<>& rGoldenAgeStarted, Signal<>& rGoldenAgeEnded)
-    : m_rGoldenAgeStarted(rGoldenAgeStarted)
-    , m_rGoldenAgeEnded(rGoldenAgeEnded)
+GoldenAgeCalculator::GoldenAgeCalculator(Signal<>& rWillGoldenAge,
+                                         Signal<>& rGoldenAgeStarted,
+                                         Signal<>& rGoldenAgeEnded)
+    : MoodLatch(rWillGoldenAge, rGoldenAgeStarted, rGoldenAgeEnded)
 {
 }
 
-bool GoldenAgeCalculator::EvaluateCondition_(const Inputs_t& inputs)
+bool GoldenAgeCalculator::EvaluateCondition_(const Inputs_t& rInputs)
 {
-    if (inputs.droneCount > 0)
+    if (rInputs.droneCount > 0)
     {
         return false;
     }
-    return inputs.goldenAgeSum >= inputs.threshold;
+    return rInputs.goldenAgeSum >= rInputs.threshold;
 }
 
-void GoldenAgeCalculator::Update(const Inputs_t& inputs)
+void GoldenAgeCalculator::Forecast(const Inputs_t& rInputs)
 {
-    const bool bCondition = EvaluateCondition_(inputs);
-    if (bCondition && !m_bInGoldenAge)
-    {
-        m_bInGoldenAge = true;
-        m_rGoldenAgeStarted.Emit();
-    }
-    else if (!bCondition && m_bInGoldenAge)
-    {
-        m_bInGoldenAge = false;
-        m_rGoldenAgeEnded.Emit();
-    }
+    Forecast_(EvaluateCondition_(rInputs), /*bHoldPending=*/false);
 }
 
-bool GoldenAgeCalculator::IsInGoldenAge() const
+void GoldenAgeCalculator::Commit(const Inputs_t& rInputs)
 {
-    return m_bInGoldenAge;
+    Commit_(EvaluateCondition_(rInputs));
+}
+
+void GoldenAgeCalculator::RestoreState(bool bActive, bool bPending)
+{
+    Restore_(bActive, bPending);
 }
 
 } // namespace ac

@@ -78,10 +78,10 @@ int ApplyProbeCostMultiplier_(int rawCost, double multiplier)
     return std::max(1, static_cast<int>(std::lround(rawCost * multiplier)));
 }
 
-// (garrison + pop) * (energy + bias) / (dist + bias), then SE multiplier; riot halves.
+// (garrison + pop) * (energy + bias) / (dist + bias), then SE multiplier.
 std::optional<int> QuoteMindControlBaseCost_(const ProbeCostConfig_t& rCost, int garrison,
                                              int population, int energy, int distToHq,
-                                             double costMultiplier, bool bRioting)
+                                             double costMultiplier)
 {
     if (distToHq <= 0)
     {
@@ -90,10 +90,6 @@ std::optional<int> QuoteMindControlBaseCost_(const ProbeCostConfig_t& rCost, int
     int cost = (garrison + population)
                * ((energy + rCost.energyBias) / (distToHq + rCost.distBias));
     cost = ApplyProbeCostMultiplier_(cost, costMultiplier);
-    if (bRioting)
-    {
-        cost = std::max(1, cost / 2);
-    }
     return cost;
 }
 
@@ -125,8 +121,7 @@ std::optional<int> QuoteBaseActionCost_(const ProbeCostConfig_t& rCost,
         rBase.GetPopulation().GetSize(),
         rTargetFaction.GetEconomy().GetEnergy(),
         DistanceToHeadquarters_(rTargetFaction, rBase.GetTile(), rMap.GetWidth()),
-        costMultiplier,
-        rBase.GetPopulation().IsRioting());
+        costMultiplier);
 }
 
 std::optional<int> QuoteUnitActionCost_(const ProbeCostConfig_t& rCost, const Unit& rTargetUnit,

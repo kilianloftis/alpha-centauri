@@ -45,6 +45,7 @@ graph TB
         BaseProduction[BaseProduction]
         Population[Population]
         PlayerActions[PlayerActions]
+        Mood[Mood]
     end
 
     subgraph "Turn Execution"
@@ -95,6 +96,7 @@ graph TB
     PerFactionTurnStage --> BaseProduction
     PerFactionTurnStage --> Population
     PerFactionTurnStage --> PlayerActions
+    PerFactionTurnStage --> Mood
     PerFactionTurnStage --> CustomPerFactionTurnStage
 
     TurnProcessor --> Advance
@@ -138,8 +140,10 @@ Mid-stage player prompts (production abandon, tech notices, …) use the
 [player interaction queue](player-interaction-system.md): stages `Enqueue` + `Yield` when
 `HasPendingFor` the player; `InteractionPresenter` maps `Front` to Notice / OpenView and
 calls `CompleteFront` then `ProcessTurn_` after resolution.
-`YieldingPerFactionTurnStage` shares faction-bind, `PlayerHasPending_` and
-`EnqueueForPlayer_` for `BaseProduction` and `PlayerActions` (entity loops stay separate).
+`YieldingPerFactionTurnStage` shares faction-bind and `PlayerHasPending_` for `BaseProduction`
+and `PlayerActions` (entity loops stay separate). Enqueuing itself is the free function
+`EnqueueForPlayer` next to `PlayerInteractionQueue`, not a stage member: `Population` warns
+about a pending riot without being a yielding stage.
 
 `PlayerActions` for a player faction:
 
@@ -181,8 +185,9 @@ calls `CompleteFront` then `ProcessTurn_` after resolution.
 - **`WorldEvents`**: forest/kelp spread via `SpreadTerraformImprovements`, using
   `GameState::GetRng()` and `GetYearsSinceFirstPlayableYear()` (session stream — not a
   private year×area seed).
-- **`Population`**: growth, composition recalculation, then
-  `CheckRiotEndOfTurn` / `CheckGoldenAgeEndOfTurn` per base.
+- **`Population`**: growth, composition recalculation, then `ForecastMood` per base —
+  which sets *pending* riot / golden-age state and enqueues the player's warning, without
+  applying any gameplay effect. Starve-to-zero bases are razed here.
 - **`ResourceCollection`**: `ProduceBaseResources` only.
 - **`UnitSupport`**: `ApplyMineralSupport` — home-unit support charged against the mineral
   bank ResourceCollection just filled; surplus units disband.
@@ -203,6 +208,16 @@ calls `CompleteFront` then `ProcessTurn_` after resolution.
   turns (`ResourceManager::ProduceMinerals_`), so minerals left standing convert next turn at
   the right stage rather than being lost.
 - **`PlayerActions`**: interactive yield + idempotent order resolution (above).
+- **`Mood`**: `CommitMood` per base — the second half of the split `Population` began.
+  Forecast warns *before* `PlayerActions` so the player can still avert a riot by moving
+  specialists or psych; commit re-evaluates *after* they had that chance and latches the
+  result, ages a probe-forced riot, and advances the consecutive-riot count that selects the
+  escalation tier. The active tier's `on_enter_effects` (facility destruction, rebellion)
+  fire here. See `docs/architecture/population-system.md` for the mood lifecycle itself.
+
+  The stage keeps pass-local state (`m_committedBaseIds`, cleared in `OnEnterImpl`) because a
+  rebelling base changes owner mid-pass: without it the receiving faction's turn through the
+  faction loop would commit the same base a second time in one turn.
 
 ### Configuration (`config/turn_stages.json`)
 

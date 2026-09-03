@@ -36,16 +36,4 @@ bool YieldingPerFactionTurnStage::PlayerHasPending_(const GameState& rGameState)
     return rGameState.GetPlayerInteractions().HasPendingFor(pPlayer->GetFactionId());
 }
 
-void YieldingPerFactionTurnStage::EnqueueForPlayer_(GameState& rGameState,
-                                                    PlayerInteraction_t payload)
-{
-    const Faction* pPlayer = rGameState.GetPlayerFaction();
-    if (!pPlayer)
-    {
-        return;
-    }
-    rGameState.GetPlayerInteractions().Enqueue(
-        QueuedInteraction_t{std::move(payload), pPlayer->GetFactionId()});
-}
-
 } // namespace ac

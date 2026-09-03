@@ -68,6 +68,8 @@ struct BaseSnapshot_t
     std::string productionItemId;
     int mineralStockpile = 0;  // progress toward current production
     int nutrientStockpile = 0; // growth bank
+    // Mood state (riot / golden age). Previously not persisted — riots reset on save/load.
+    MoodState_t mood;
 };
 
 // BaseManager coordinates base management subsystems.
@@ -202,7 +204,7 @@ public:
     // Complete the queued item if the stockpile already meets the current cost, without
     // touching this turn's mineral bank. ApplyProduction stamps first, then calls this; the
     // BaseProduction pass also calls it when a sibling prototype finishes and this queue's
-    // surcharge drops. Does not consume resources.
+    // surcharge drops. Does not consume resources. Honours the same abandon-confirm gate.
     ProductionApplyResult_t TryCompleteReadyProduction();
 
     // True when ApplyProduction returned AwaitingAbandonConfirm and the player has not yet
@@ -213,8 +215,8 @@ public:
     // Throws if nothing is pending. Returns the completed item id.
     std::string ConfirmProductionAbandon();
 
-    // Keep the queued item, set mineral stockpile to 0 (progress / excess lost). Throws if
-    // nothing is pending.
+    // Keep the queued item and preserve mineral progress; freeze completion until the queue
+    // changes. Throws if nothing is pending.
     void DeferProductionAbandon();
 
     // Effective mineral cost of the current production item after CostMultiplier effects

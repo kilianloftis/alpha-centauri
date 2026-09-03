@@ -1,6 +1,6 @@
 #pragma once
 
-#include "lib/Signal.h"
+#include "game/population/calculators/MoodLatch.h"
 
 namespace ac
 {
@@ -14,42 +14,47 @@ struct RiotConditionInputs_t
     int threshold = 0;
 };
 
-// Tracks drone riot state for a base population.
+// Tracks drone riot state for a base population. See MoodLatch for the Forecast / Commit
+// lifecycle this shares with GoldenAgeCalculator.
 //
-// Two independent sources keep a riot alive, because they expire differently:
-//   - the natural condition (riotSum >= riot_threshold from pop_composition.json), recomputed
-//     on every Update
-//   - a forced riot (probe Incite Drone Riots), which lasts a fixed number of turns and which
-//     the natural condition cannot sustain, since the action does not change composition
-// A base is rioting while either holds.
-class RiotCalculator
+// Two independent sources keep a riot alive once committed:
+//   - the natural condition (riotSum >= riot_threshold), recomputed on every Commit
+//   - a forced riot (probe Incite Drone Riots), which lasts a fixed number of Mood commits
+//     and which the natural condition cannot sustain, since the action does not change
+//     composition
+class RiotCalculator : public MoodLatch
 {
 public:
     RiotCalculator(Signal<>& rWillRiot, Signal<>& rIsRioting, Signal<>& rRiotEnded);
     ~RiotCalculator() = default;
 
-    // Call after a pop is added. Emits will_riot if the natural condition is newly met.
+    // Call after a pop is added, so growth into a riot warns immediately rather than waiting
+    // for the next Population stage.
     void NotifyPopGrown(const RiotConditionInputs_t& rInputs);
 
-    // Call at end of turn. Ages any forced riot by one turn, then emits is_rioting while the
-    // base is rioting, or riot_ended on the turn it stops.
-    void Update(const RiotConditionInputs_t& rInputs);
+    void Forecast(const RiotConditionInputs_t& rInputs);
 
-    // Force a riot for the next `turns` end-of-turn passes (probe Incite Drone Riots).
-    // Extends but never shortens an existing forced riot. Emits OnIsRioting if newly active.
+    // Additionally ages the forced timer by one pass and maintains the consecutive count.
+    void Commit(const RiotConditionInputs_t& rInputs);
+
+    // Force a riot for the next `turns` Mood commits. Extends but never shortens an existing
+    // forced timer. Does not activate until Commit — sets pending so the player is still
+    // warned if Forecast already ran this turn.
     void ForceRiot(int turns);
 
-    // True if the base is currently in an active drone riot, from either source.
-    bool IsRioting() const;
+    // Consecutive Mood commits while active; selects the active riot tier. 0 when calm.
+    int GetConsecutiveTurns() const { return m_consecutiveTurns; }
+    int GetForcedTurnsRemaining() const { return m_forcedTurnsRemaining; }
+
+    // Save/load without emitting signals.
+    void RestoreState(bool bActive, bool bPending, int forcedTurnsRemaining,
+                      int consecutiveTurns);
 
 private:
     static bool NaturalCondition_(const RiotConditionInputs_t& rInputs);
 
-    Signal<>& m_rWillRiot;
-    Signal<>& m_rIsRioting;
-    Signal<>& m_rRiotEnded;
-    bool m_bRioting = false;
     int m_forcedTurnsRemaining = 0;
+    int m_consecutiveTurns = 0;
 };
 
 } // namespace ac

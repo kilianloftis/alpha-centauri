@@ -16,7 +16,9 @@
           "type": "Infiltration",
           "scope": "FactionGlobal",
           "persistence": "Instantaneous",
-          "factionFilter": { "kind": "ActionTarget" }
+          "factionFilter": {
+            "kind": "ActionTarget"
+          }
         }
       ]
     },
@@ -37,7 +39,19 @@
       "id": "sabotage_random",
       "name": "Activate Sabotage Virus (Random)",
       "target": "base",
-      "risk": 0
+      "risk": 0,
+      "effects": [
+        {
+          "type": "DestroyFacility",
+          "scope": "ThisBase",
+          "persistence": "Instantaneous",
+          "parameters": {
+            "count": 1,
+            "exclude_hq": true,
+            "exclude_secret_projects": false
+          }
+        }
+      ]
     },
     {
       "id": "sabotage_facility",
@@ -93,7 +107,11 @@
           "type": "ModifyPopulation",
           "scope": "ThisBase",
           "persistence": "Instantaneous",
-          "parameters": { "amount": -50, "op": "AddPercent", "min_size": 1 }
+          "parameters": {
+            "amount": -50,
+            "op": "AddPercent",
+            "min_size": 1
+          }
         }
       ]
     },

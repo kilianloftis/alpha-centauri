@@ -32,7 +32,7 @@ PopulationManager::PopulationManager(const PopTypeRegistry& rPopTypeRegistry,
     , m_maxSize(rGrowthConfig.maxBaseSize)
     , m_nutrientStockpile(0)
     , m_riot(OnWillRiot, OnIsRioting, OnRiotEnded)
-    , m_goldenAge(OnGoldenAgeStarted, OnGoldenAgeEnded)
+    , m_goldenAge(OnWillGoldenAge, OnGoldenAgeStarted, OnGoldenAgeEnded)
 {
 }
 
@@ -269,9 +269,85 @@ void PopulationManager::ApplyGrowth(int nutrients, const BaseEffects_t& rBaseEff
     }
 }
 
+RiotConditionInputs_t PopulationManager::BuildRiotInputs_() const
+{
+    const PopCompositionConfig_t& rConfig = GetCompositionConfig();
+    RiotConditionInputs_t inputs;
+    inputs.riotSum = m_container.GetMoodWeightSums().riot;
+    inputs.threshold = rConfig.riotThreshold;
+    return inputs;
+}
+
+void PopulationManager::ForecastMood()
+{
+    m_riot.Forecast(BuildRiotInputs_());
+    m_goldenAge.Forecast(BuildGoldenAgeInputs_());
+    // Pending state carries no effects, but the UI reads it; no revision bump.
+}
+
+void PopulationManager::CommitMood()
+{
+    m_riot.Commit(BuildRiotInputs_());
+    m_goldenAge.Commit(BuildGoldenAgeInputs_());
+    m_moodRevision.Bump();
+}
+
 bool PopulationManager::IsRioting() const
 {
-    return m_riot.IsRioting();
+    return m_riot.IsActive();
+}
+
+bool PopulationManager::IsPendingRiot() const
+{
+    return m_riot.IsPending();
+}
+
+int PopulationManager::GetConsecutiveRiotTurns() const
+{
+    return m_riot.GetConsecutiveTurns();
+}
+
+bool PopulationManager::IsInGoldenAge() const
+{
+    return m_goldenAge.IsActive();
+}
+
+bool PopulationManager::IsPendingGoldenAge() const
+{
+    return m_goldenAge.IsPending();
+}
+
+void PopulationManager::ForceRiot(int turns)
+{
+    m_riot.ForceRiot(turns);
+    m_moodRevision.Bump();
+}
+
+MoodState_t PopulationManager::CaptureMoodState() const
+{
+    MoodState_t state;
+    state.bRioting = m_riot.IsActive();
+    state.bPendingRiot = m_riot.IsPending();
+    state.forcedRiotTurnsRemaining = m_riot.GetForcedTurnsRemaining();
+    state.consecutiveRiotTurns = m_riot.GetConsecutiveTurns();
+    state.bInGoldenAge = m_goldenAge.IsActive();
+    state.bPendingGoldenAge = m_goldenAge.IsPending();
+    return state;
+}
+
+void PopulationManager::RestoreMoodState(const MoodState_t& rState)
+{
+    m_riot.RestoreState(rState.bRioting, rState.bPendingRiot, rState.forcedRiotTurnsRemaining,
+                        rState.consecutiveRiotTurns);
+    m_goldenAge.RestoreState(rState.bInGoldenAge, rState.bPendingGoldenAge);
+    m_moodRevision.Bump();
+}
+
+void PopulationManager::ResetMoodEscalation()
+{
+    m_riot.RestoreState(false, false, 0, 0);
+    m_goldenAge.RestoreState(false, false);
+    m_moodRevision.Bump();
 }
 
 bool PopulationManager::IsDestroyed() const
@@ -282,15 +358,6 @@ bool PopulationManager::IsDestroyed() const
 CompositionEffectInputs_t PopulationManager::BuildCompositionInputs_() const
 {
     return BuildCompositionInputs(m_rBase);
-}
-
-RiotConditionInputs_t PopulationManager::BuildRiotInputs_() const
-{
-    const PopCompositionConfig_t& rConfig = GetCompositionConfig();
-    RiotConditionInputs_t inputs;
-    inputs.riotSum = m_container.GetMoodWeightSums().riot;
-    inputs.threshold = rConfig.riotThreshold;
-    return inputs;
 }
 
 PopCompositionResult_t PopulationManager::ComputeComposition() const
@@ -409,28 +476,13 @@ void PopulationManager::AdvanceAssimilation()
     m_assimilation.Advance();
 }
 
-void PopulationManager::CheckRiotEndOfTurn()
-{
-    m_riot.Update(BuildRiotInputs_());
-}
-
-void PopulationManager::ForceRiot(int turns)
-{
-    m_riot.ForceRiot(turns);
-}
-
-void PopulationManager::CheckGoldenAgeEndOfTurn()
+GoldenAgeCalculator::Inputs_t PopulationManager::BuildGoldenAgeInputs_() const
 {
     GoldenAgeCalculator::Inputs_t inputs;
     inputs.droneCount = m_container.GetDroneCount();
     inputs.goldenAgeSum = m_container.GetMoodWeightSums().goldenAge;
     inputs.threshold = GetCompositionConfig().goldenAgeThreshold;
-    m_goldenAge.Update(inputs);
-}
-
-bool PopulationManager::IsInGoldenAge() const
-{
-    return m_goldenAge.IsInGoldenAge();
+    return inputs;
 }
 
 void PopulationManager::NotifyPopGained_()

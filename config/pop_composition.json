@@ -14,27 +14,243 @@
       "type": "StatModifier",
       "scope": "AllOwnerBases",
       "persistence": "Continuous",
-      "parameters": { "stat": "drones", "amount": 0, "op": "MinClamp" }
+      "parameters": {
+        "stat": "drones",
+        "amount": 0,
+        "op": "MinClamp"
+      }
     },
     {
       "type": "StatModifier",
       "scope": "AllOwnerBases",
       "persistence": "Continuous",
-      "parameters": { "stat": "drones", "amount": 1, "op": "MaxClamp", "amount_source": "BaseSize" }
+      "parameters": {
+        "stat": "drones",
+        "amount": 1,
+        "op": "MaxClamp",
+        "amount_source": "BaseSize"
+      }
     }
   ],
   "golden_age_effects": [
     {
       "type": "StatModifier",
-      "scope": "AllOwnerBases",
+      "scope": "ThisBase",
       "persistence": "Continuous",
-      "parameters": { "stat": "econ", "amount": 1, "op": "Add" }
+      "parameters": {
+        "stat": "econ",
+        "amount": 1,
+        "op": "Add"
+      }
     },
     {
       "type": "StatModifier",
-      "scope": "AllOwnerBases",
+      "scope": "ThisBase",
       "persistence": "Continuous",
-      "parameters": { "stat": "growth_rate", "amount": 2, "op": "AddPercent" }
+      "parameters": {
+        "stat": "growth_rate",
+        "amount": 2,
+        "op": "AddPercent"
+      }
     }
-  ]
+  ],
+  "riot_tiers": [
+    {
+      "min_turns": 1,
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "ThisBase",
+          "persistence": "Continuous",
+          "parameters": {
+            "stat": "labs",
+            "op": "MaxClamp",
+            "amount": 0
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisBase",
+          "persistence": "Continuous",
+          "parameters": {
+            "stat": "econ",
+            "op": "MaxClamp",
+            "amount": 1,
+            "amount_source": "BuildingUpkeep"
+          }
+        },
+        {
+          "type": "RuleFlag",
+          "scope": "ThisBase",
+          "persistence": "Continuous",
+          "parameters": {
+            "flag": "disable_production"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionUnits",
+          "persistence": "Continuous",
+          "condition": {
+            "kind": "OriginBaseIsHomeBase"
+          },
+          "parameters": {
+            "stat": "morale_bonus",
+            "amount": -1,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisBase",
+          "persistence": "Continuous",
+          "parameters": {
+            "stat": "probe_action_cost",
+            "amount": -50,
+            "op": "AddPercent"
+          }
+        }
+      ]
+    },
+    {
+      "min_turns": 2,
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "ThisBase",
+          "persistence": "Continuous",
+          "parameters": {
+            "stat": "labs",
+            "op": "MaxClamp",
+            "amount": 0
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisBase",
+          "persistence": "Continuous",
+          "parameters": {
+            "stat": "econ",
+            "op": "MaxClamp",
+            "amount": 1,
+            "amount_source": "BuildingUpkeep"
+          }
+        },
+        {
+          "type": "RuleFlag",
+          "scope": "ThisBase",
+          "persistence": "Continuous",
+          "parameters": {
+            "flag": "disable_production"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionUnits",
+          "persistence": "Continuous",
+          "condition": {
+            "kind": "OriginBaseIsHomeBase"
+          },
+          "parameters": {
+            "stat": "morale_bonus",
+            "amount": -1,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisBase",
+          "persistence": "Continuous",
+          "parameters": {
+            "stat": "probe_action_cost",
+            "amount": -50,
+            "op": "AddPercent"
+          }
+        }
+      ],
+      "on_enter_effects": [
+        {
+          "type": "DestroyFacility",
+          "scope": "ThisBase",
+          "persistence": "Instantaneous",
+          "parameters": {
+            "count": 1,
+            "exclude_hq": true,
+            "exclude_secret_projects": false
+          }
+        }
+      ]
+    },
+    {
+      "min_turns": 3,
+      "effects": [
+        {
+          "type": "StatModifier",
+          "scope": "ThisBase",
+          "persistence": "Continuous",
+          "parameters": {
+            "stat": "labs",
+            "op": "MaxClamp",
+            "amount": 0
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisBase",
+          "persistence": "Continuous",
+          "parameters": {
+            "stat": "econ",
+            "op": "MaxClamp",
+            "amount": 1,
+            "amount_source": "BuildingUpkeep"
+          }
+        },
+        {
+          "type": "RuleFlag",
+          "scope": "ThisBase",
+          "persistence": "Continuous",
+          "parameters": {
+            "flag": "disable_production"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "FactionUnits",
+          "persistence": "Continuous",
+          "condition": {
+            "kind": "OriginBaseIsHomeBase"
+          },
+          "parameters": {
+            "stat": "morale_bonus",
+            "amount": -1,
+            "op": "Add"
+          }
+        },
+        {
+          "type": "StatModifier",
+          "scope": "ThisBase",
+          "persistence": "Continuous",
+          "parameters": {
+            "stat": "probe_action_cost",
+            "amount": -50,
+            "op": "AddPercent"
+          }
+        }
+      ],
+      "on_enter_effects": [
+        {
+          "type": "Rebel",
+          "scope": "ThisBase",
+          "persistence": "Instantaneous"
+        }
+      ]
+    }
+  ],
+  "rebel_selection": {
+    "distance_mode": "none",
+    "fade_radius": 8,
+    "distance_weight_per_tile": 1,
+    "base_join_weight": 1,
+    "missing_hq_distance": 12
+  }
 }

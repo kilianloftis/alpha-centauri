@@ -37,4 +37,16 @@ struct TileYieldView_t
 // {-1, -1} means unassigned.
 using TileCoord_t = std::pair<int, int>;
 
+// Riot / golden-age state as it crosses a save or a base transfer. One struct rather than
+// loose snapshot fields so adding a mood flag cannot be captured without being restored.
+struct MoodState_t
+{
+    bool bRioting = false;
+    bool bPendingRiot = false;
+    int forcedRiotTurnsRemaining = 0;
+    int consecutiveRiotTurns = 0;
+    bool bInGoldenAge = false;
+    bool bPendingGoldenAge = false;
+};
+
 } // namespace ac

@@ -100,12 +100,15 @@ struct StatModifierEffect_t
     // BasesOwned: contribution = faction base count * amount (e.g. +1 Attack per owned base).
     //   Requires EffectContext_t::pFaction (stamped from the live unit on Unit resolve);
     //   Unit-domain stats + ThisUnit only. Design-only resolve drops it (no faction subject).
+    // BuildingUpkeep: contribution = base facility upkeep * amount (e.g. MaxClamp econ at
+    //   upkeep). Requires EffectContext_t::pBase; Continuous MaxClamp on econ only.
     enum class AmountSource_t
     {
         ElevationEnergy,
         MineralsConverted,
         BaseSize,
         BasesOwned,
+        BuildingUpkeep,
     };
     std::optional<AmountSource_t> amountSource;
     // When set, this modifier is a per-tile yield modifier: it applies to each worked tile
@@ -247,6 +250,23 @@ struct ModifyPopulationEffect_t
     int minSize = 0;
 };
 
+// Instantaneous random facility destruction at ThisBase (riot escalation, probe sabotage).
+// Every field is required in JSON: which facilities are off-limits is a game rule per caller,
+// and a C++ default here is how the shipping config and the test fixture came to disagree
+// about whether sabotage can destroy a secret project.
+struct DestroyFacilityEffect_t
+{
+    int count = 0;
+    bool excludeHq = false;
+    bool excludeSecretProjects = false;
+};
+
+// Instantaneous base ownership transfer to a weighted other faction (riot rebellion).
+// Candidate selection uses pop_composition rebel_selection + RebelJoinWeight.
+struct RebelEffect_t
+{
+};
+
 using EffectVariant_t = std::variant<
     GrantBuildingEffect_t,
     GrantTechEffect_t,
@@ -265,7 +285,9 @@ using EffectVariant_t = std::variant<
     InterceptAttemptEffect_t,
     TransportParamsEffect_t,
     PermissionEffect_t,
-    ModifyPopulationEffect_t
+    ModifyPopulationEffect_t,
+    DestroyFacilityEffect_t,
+    RebelEffect_t
 >;
 
 // Runtime predicates on EffectConfig_t. Sum type so kind/parameter mismatches are
@@ -301,6 +323,12 @@ struct OriginBaseIsTargetBase_t
 {
 };
 
+// True when ActiveEffect_t::originBase is EffectContext_t::pUnit's home base
+// (home-base aura, distinct from OriginBaseIsTargetBase which keys on the combat tile).
+struct OriginBaseIsHomeBase_t
+{
+};
+
 // True when EffectContext_t::pAttacker is non-null and embarked.
 struct AttackerIsEmbarked_t
 {
@@ -313,12 +341,12 @@ struct IsHeadquarters_t
 };
 
 struct Condition_t : std::variant<TargetTileHas_t, AllOf_t, IsDefending_t,
-                                  OriginBaseIsTargetBase_t, AttackerIsEmbarked_t,
-                                  IsHeadquarters_t>
+                                  OriginBaseIsTargetBase_t, OriginBaseIsHomeBase_t,
+                                  AttackerIsEmbarked_t, IsHeadquarters_t>
 {
     using Variant = std::variant<TargetTileHas_t, AllOf_t, IsDefending_t,
-                                 OriginBaseIsTargetBase_t, AttackerIsEmbarked_t,
-                                 IsHeadquarters_t>;
+                                 OriginBaseIsTargetBase_t, OriginBaseIsHomeBase_t,
+                                 AttackerIsEmbarked_t, IsHeadquarters_t>;
     using Variant::Variant;
     using Variant::operator=;
 

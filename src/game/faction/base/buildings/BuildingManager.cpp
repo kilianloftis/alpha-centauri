@@ -64,6 +64,18 @@ bool BuildingManager::HasBuilding(const BuildingId_t& buildingId) const
     return DoesBuildingExist_(buildingId);
 }
 
+const BuildingConfig_t* BuildingManager::FindBuilding(const BuildingId_t& buildingId) const
+{
+    for (const BuildingConfig_t* pBuilding : m_buildings)
+    {
+        if (pBuilding && pBuilding->id == buildingId)
+        {
+            return pBuilding;
+        }
+    }
+    return nullptr;
+}
+
 void BuildingManager::DestroyBuilding(const BuildingId_t& buildingId)
 {
     auto it = std::find_if(m_buildings.begin(), m_buildings.end(),

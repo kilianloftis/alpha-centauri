@@ -5,6 +5,8 @@
 #include "game/PauseOnEventsConfig.h"
 #include "game/buildings/BuildingConfig.h"
 #include "game/buildings/BuildingRegistry.h"
+#include "game/effects/ActiveEffect.h"
+#include "game/effects/EffectEnums.h"
 #include "game/faction/Military.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/population/PopulationManager.h"
@@ -101,6 +103,12 @@ ProductionApplyResult_t ProductionCompletion::TryCompleteReady()
     {
         return ProductionApplyResult_t{ProductionApplyKind_t::AwaitingAbandonConfirm, {}};
     }
+    if (m_bAbandonDeferred || ResolveFlag(m_rBase, RuleFlagId_t::DisableProduction))
+    {
+        // Stockpile is preserved; completion (and re-prompting) stays blocked until the
+        // queue changes or the flag lifts.
+        return ProductionApplyResult_t{ProductionApplyKind_t::InProgress, {}};
+    }
 
     ProductionManager& rProduction = m_rBase.GetProduction();
     if (!rProduction.HasProduction())
@@ -146,8 +154,8 @@ std::string ProductionCompletion::ConfirmAbandon()
         throw std::runtime_error(
             "ProductionCompletion::ConfirmAbandon: no pending abandon confirmation");
     }
-    // Clear before CompleteProduction: ResetProduction_ emits OnProductionChanged which
-    // would also clear the flag, but Confirm must own the transition explicitly.
+    // Clear before CompleteProduction: ResetProduction_ emits OnProductionChanged which would
+    // also clear the flag, but Confirm must own the transition explicitly.
     m_bPendingAbandonConfirm = false;
     return m_rBase.GetProduction().CompleteProduction(m_rBase.GetBaseEffects(),
                                                       IsCurrentPrototype());
@@ -161,13 +169,13 @@ void ProductionCompletion::DeferAbandon()
             "ProductionCompletion::DeferAbandon: no pending abandon confirmation");
     }
     m_bPendingAbandonConfirm = false;
-    // Excess / invested minerals are lost; the item stays queued for a fresh stockpile.
-    m_rBase.GetProduction().SetMineralStockpile(0);
+    m_bAbandonDeferred = true;
 }
 
 void ProductionCompletion::NotifyProductionChanged()
 {
     m_bPendingAbandonConfirm = false;
+    m_bAbandonDeferred = false;
 }
 
 } // namespace ac

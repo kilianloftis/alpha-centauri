@@ -10,6 +10,7 @@
 #include "game/faction/EconomyManager.h"
 #include "game/faction/ResearchManager.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/BuildingDestruction.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/production/ProductionManager.h"
@@ -103,73 +104,52 @@ bool ApplyDrainEnergy_(Unit& rProbe, BaseManager& rBase, GameState& rGameState,
     return true;
 }
 
-// Destroy a building and tell the owning faction, so a cooling ASAT/interceptor deploy record
-// for that copy is retired. Every other destruction path (raze, orbital attack, intercept
-// fail) notifies; sabotage did not, leaving m_buildingDeploys stale so CountReadyBuildings
-// under-counted the faction's remaining copies for the rest of the cooldown.
-void DestroyBuildingAndNotify_(GameState& rGameState, BaseManager& rBase,
-                               const BuildingId_t& rBuildingId)
-{
-    bool bSecretProject = false;
-    for (const BuildingConfig_t* pHeld : rBase.GetBuildingManager().GetBuildings())
-    {
-        if (pHeld && pHeld->id == rBuildingId)
-        {
-            bSecretProject = pHeld->bIsSecretProject;
-            break;
-        }
-    }
-    rBase.GetBuildingManager().DestroyBuilding(rBuildingId);
-    rBase.GetFaction().NotifyBuildingDestroyed(rBase.GetBaseId(), rBuildingId);
-    // TODO: a sabotaged secret project is tombstoned, so one probe mission removes it from the
-    // world permanently for every faction. That is consistent with raze/ASAT/intercept but the
-    // SMAC rule for sabotage specifically is not recorded here.
-    if (bSecretProject)
-    {
-        rGameState.MarkSecretProjectDestroyed(rBuildingId);
-    }
-}
-
-bool ApplySabotage_(GameState& rGameState, BaseManager& rBase, ProbeActionId_t actionId,
+bool ApplySabotage_(GameState& rGameState, BaseManager& rBase, const ProbeActionConfig_t& rAction,
                     const BuildingId_t& facilityId, ProbeActionResult_t& rResult,
                     std::mt19937& rRng)
 {
     // Targeted sabotage is a distinct action from random sabotage, so an empty or unknown
     // facility id is a failed action — not a silent fall-through to the random branch, and not
     // a ProbeDestroyedFacility_t report after DestroyBuilding's documented no-op.
-    if (actionId == ProbeActionId_t::SabotageFacility)
+    if (rAction.id == ProbeActionId_t::SabotageFacility)
     {
-        if (facilityId.empty() || !rBase.GetBuildingManager().HasBuilding(facilityId))
+        const BuildingConfig_t* pTarget =
+            facilityId.empty() ? nullptr : rBase.GetBuildingManager().FindBuilding(facilityId);
+        if (!pTarget)
         {
             rResult.detail = ProbeActionStatus_t::NoTarget;
             return false;
         }
-        DestroyBuildingAndNotify_(rGameState, rBase, facilityId);
+        DestroyBuildingAndNotify(rGameState, rBase, *pTarget);
         rResult.detail = ProbeDestroyedFacility_t{facilityId};
         return true;
     }
 
-    // Random: destroy a uniformly chosen non-HQ facility; else wipe current production.
-    std::vector<const BuildingConfig_t*> candidates;
-    for (const BuildingConfig_t* pBuilding : rBase.GetBuildingManager().GetBuildings())
+    // Random: the action's DestroyFacility effect carries the target policy (which facilities
+    // are off-limits), the same way genetic plague reads its ModifyPopulation below. When
+    // nothing is eligible, wipe current production instead.
+    for (const EffectConfig_t& rEffect : rAction.effects)
     {
-        if (pBuilding && pBuilding->id != "Headquarters")
+        if (rEffect.persistence != EffectPersistence_t::Instantaneous)
         {
-            candidates.push_back(pBuilding);
+            continue;
+        }
+        const DestroyFacilityEffect_t* pDestroy =
+            std::get_if<DestroyFacilityEffect_t>(&rEffect.effect);
+        if (!pDestroy)
+        {
+            continue;
+        }
+        const std::vector<BuildingId_t> destroyed =
+            DestroyRandomFacilities(rGameState, rBase, pDestroy->count, pDestroy->excludeHq,
+                                    pDestroy->excludeSecretProjects, rRng);
+        if (!destroyed.empty())
+        {
+            rResult.detail = ProbeDestroyedFacility_t{destroyed.front()};
+            return true;
         }
     }
-    if (!candidates.empty())
-    {
-        std::uniform_int_distribution<size_t> dist(0, candidates.size() - 1);
-        const BuildingConfig_t* pChosen = candidates[dist(rRng)];
-        // Copy the id before destroying: the config itself outlives this (BuildingManager holds
-        // registry pointers and only erases its own), but reading through pChosen after the
-        // erase relies on that indirection staying true.
-        const BuildingId_t chosenId = pChosen->id;
-        DestroyBuildingAndNotify_(rGameState, rBase, chosenId);
-        rResult.detail = ProbeDestroyedFacility_t{chosenId};
-        return true;
-    }
+
     rBase.GetProduction().SetProduction(nullptr, rBase.GetBaseEffects());
     rBase.GetProduction().SetMineralStockpile(0);
     rResult.detail = ProbeActionStatus_t::ProductionWiped;
@@ -251,7 +231,7 @@ bool ApplyBaseAction_(Unit& rProbe, const ProbeActionConfig_t& rAction, BaseMana
             return ApplyDrainEnergy_(rProbe, rBase, rGameState, rResult);
         case ProbeActionId_t::SabotageRandom:
         case ProbeActionId_t::SabotageFacility:
-            return ApplySabotage_(rGameState, rBase, rAction.id, facilityId, rResult, rRng);
+            return ApplySabotage_(rGameState, rBase, rAction, facilityId, rResult, rRng);
         case ProbeActionId_t::InciteDroneRiots:
             return ApplyInciteDroneRiots_(rBase, rAction, rResult);
         case ProbeActionId_t::Assassinate:

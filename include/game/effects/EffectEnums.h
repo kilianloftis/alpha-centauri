@@ -171,7 +171,11 @@ enum class StatId_t
 
     // Ecological damage accrued from terraforming / population (RawScaled: seed is the raw
     // accrued amount the resolve site holds). Difficulty emits MultiplyGeometric.
-    EcologicalDamage
+    EcologicalDamage,
+
+    // Weight toward receiving a rebelling base (Additive, Faction domain). RebelFactionPicker
+    // resolves with seed 1.0 so factions without modifiers still participate equally.
+    RebelJoinWeight
     // TODO: add more stats as they are defined
 };
 
@@ -239,7 +243,8 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::SizeFreeDrones:
         case StatId_t::CouncilVotes:
         case StatId_t::CommerceEnergyBonus:
-        case StatId_t::InefficiencyDenominator: return StatKind_t::Additive;
+        case StatId_t::InefficiencyDenominator:
+        case StatId_t::RebelJoinWeight: return StatKind_t::Additive;
         case StatId_t::CostMultiplier:
         case StatId_t::PrototypeSurchargeScale:
         case StatId_t::RetoolPenaltyScale:
@@ -333,7 +338,8 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::TechCost:
         case StatId_t::TechCostDiff:
         case StatId_t::CommerceRate:
-        case StatId_t::CouncilVotes: return ResolveDomain_t::Faction;
+        case StatId_t::CouncilVotes:
+        case StatId_t::RebelJoinWeight: return ResolveDomain_t::Faction;
 
         case StatId_t::Attack:
         case StatId_t::Defense:
@@ -424,6 +430,7 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "capture_facilities_destroyed_max_percent")
         return StatId_t::CaptureFacilitiesDestroyedMaxPercent;
     if (rStat == "ecological_damage")        return StatId_t::EcologicalDamage;
+    if (rStat == "rebel_join_weight")         return StatId_t::RebelJoinWeight;
     throw std::runtime_error("Unknown stat id: '" + rStat + "'");
 }
 
@@ -521,7 +528,11 @@ enum class RuleFlagId_t
     RemoveFog,
 
     // U.N. Charter: atrocities are illegal while this flag is in force planet-wide.
-    AtrocitiesForbidden
+    AtrocitiesForbidden,
+
+    // Base cannot bank minerals into production, complete construction, or hurry.
+    // ConvertMinerals still drains the leftover bank (discarded); stockpile is preserved.
+    DisableProduction,
 };
 
 // Snake_case JSON wire form differs from enumerator names — one explicit map next to the enum.
@@ -553,6 +564,7 @@ inline RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "blocks_probe_teams")          return RuleFlagId_t::BlocksProbeTeams;
     if (rFlag == "ignores_probe_block")         return RuleFlagId_t::IgnoresProbeBlock;
     if (rFlag == "atrocities_forbidden")        return RuleFlagId_t::AtrocitiesForbidden;
+    if (rFlag == "disable_production")          return RuleFlagId_t::DisableProduction;
     throw std::runtime_error("Unknown rule flag id: '" + rFlag + "'");
 }
 
@@ -722,7 +734,11 @@ enum class EffectSourceKind_t
     BaseConquest,
     PoliceRules,
     MoraleLevel,
+    // pop_composition.json's faction-wide `effects` array: enters the pool with no origin base.
     PopComposition,
+    // pop_composition.json's per-base mood arrays (riot_tiers, golden_age_effects): collected
+    // against a specific base, so ThisBase is legal here and rejected for PopComposition.
+    PopCompositionBaseLocal,
 };
 
 } // namespace ac

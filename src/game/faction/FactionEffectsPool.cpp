@@ -9,6 +9,7 @@
 #include "game/faction/SocialEngineeringManager.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/BaseMoodEffects.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/research/TechConfigParser.h"
@@ -76,8 +77,19 @@ std::vector<ActiveEffect_t> FactionEffectsPool::CollectPopEffects_() const
         {
             // ThisPop is resolved by the pop itself; ThisBase merges per base via
             // CollectFromPops. Only faction-lane scopes enter the pool.
-            AppendFactionLaneEffects(rPop.GetConfig().effects, rPop.GetConfig().id, result);
+            AppendFactionLaneEffects(rPop.GetConfig().effects, nullptr, rPop.GetConfig().id,
+                                     result);
         }
+    }
+    return result;
+}
+
+std::vector<ActiveEffect_t> FactionEffectsPool::CollectMoodEffects_() const
+{
+    std::vector<ActiveEffect_t> result;
+    for (const BaseManager& rBase : m_rFaction.Bases())
+    {
+        AppendBaseMoodFactionLaneEffects(rBase, result);
     }
     return result;
 }
@@ -208,6 +220,7 @@ void FactionEffectsPool::CollectRevisions_(std::vector<uint64_t>& rOut) const
     {
         rOut.push_back(rBase.GetBuildingManager().GetRevision());
         rOut.push_back(rBase.GetPopulation().GetRevision());
+        rOut.push_back(rBase.GetPopulation().GetMoodRevision());
     }
 }
 
@@ -272,6 +285,10 @@ void FactionEffectsPool::Rebuild_() const
     const std::vector<ActiveEffect_t> popEffects = CollectPopEffects_();
     factionEffects.effects.insert(factionEffects.effects.end(), popEffects.begin(),
                                   popEffects.end());
+
+    const std::vector<ActiveEffect_t> moodEffects = CollectMoodEffects_();
+    factionEffects.effects.insert(factionEffects.effects.end(), moodEffects.begin(),
+                                  moodEffects.end());
 
     const std::vector<ActiveEffect_t> unitEffects = CollectUnitEffects_();
     factionEffects.effects.insert(factionEffects.effects.end(), unitEffects.begin(),

@@ -39,16 +39,17 @@ StageResult_t BaseProduction::HandleAbandonConfirm_(GameState& rGameState, Facti
     if (!rFaction.IsPlayerControlled())
     {
         // TODO: the real rule for an AI base whose production would empty it is unknown.
-        // Deferring every turn keeps the base but re-loses the stockpile each turn, so an AI
-        // that never re-queues burns minerals indefinitely. Needs a rules decision (refuse
-        // the queue entry at size 1 / let the AI abandon / something else), not this stopgap.
+        // Deferring keeps the base and preserves the stockpile, so the same ready item will
+        // re-prompt every turn until the AI re-queues or grows. Needs a rules decision
+        // (refuse the queue entry at size 1 / let the AI abandon / something else), not this
+        // stopgap.
         rBase.DeferProductionAbandon();
         std::cout << "  Base '" << rBase.GetName()
                   << "' deferred production that would empty the base (AI)\n";
         return StageResult_t::Continue;
     }
 
-    EnqueueForPlayer_(rGameState,
+    EnqueueForPlayer(rGameState,
                       ProductionAbandonInteraction_t{rFaction.GetFactionId(), rBase.GetBaseId()});
     std::cout << "  Base '" << rBase.GetName()
               << "' awaiting abandon confirmation for production\n";
@@ -66,7 +67,7 @@ StageResult_t BaseProduction::HandleProductionCompleted_(GameState& rGameState, 
 
     // Production finished — Stockpile Energy is already queued as the fallback. Still offer
     // Continue / Zoom so the player can pick the next real item.
-    EnqueueForPlayer_(
+    EnqueueForPlayer(
         rGameState,
         ProductionIdleInteraction_t{
             rFaction.GetFactionId(),

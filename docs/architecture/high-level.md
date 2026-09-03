@@ -353,8 +353,14 @@ seed. (Persisting that seed into save state is still open — see the world-gene
     drone formula.
   - `PopCompositionCalculator`: phase 1 — the psych ladder, drone/talent annihilation, and
     lightest-type-first seating. Works on counts only.
-  - `RiotCalculator` / `GoldenAgeCalculator`: both are a sum of per-pop weights against a
-    threshold, over the composition pool rather than base size.
+  - `MoodLatch` + `RiotCalculator` / `GoldenAgeCalculator`: both moods are a sum of per-pop
+    weights against a threshold, over the composition pool rather than base size, and both run
+    the same forecast (Population stage) / commit (Mood stage) lifecycle.
+  - `BaseMoodEffects`: the one place a riot tier's effect array is split between the base lane
+    (`BaseEffectsCache`) and the faction lane (`FactionEffectsPool`), so a `FactionUnits`
+    penalty declared by a rioting base actually reaches its units.
+  - `BuildingDestruction` / `RebelFactionPicker`: shared consequences of riot escalation, also
+    used by conquest and probe sabotage.
   - `PopTypeRegistry`: derives each type's `PopClass_t` from the promotion graph at load, and
     rejects a graph that is not a single chain through `is_default`.
 - **Dependencies**:

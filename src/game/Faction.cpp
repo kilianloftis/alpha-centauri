@@ -405,6 +405,7 @@ BaseManager* Faction::CreateBaseFromSnapshot(
     }
 
     pBase->GetPopulation().SetNutrientStockpile(rSnapshot.nutrientStockpile);
+    pBase->GetPopulation().RestoreMoodState(rSnapshot.mood);
 
     if (!rSnapshot.productionItemId.empty())
     {
@@ -484,6 +485,12 @@ void Faction::TransferBaseTo(BaseId_t baseId, Faction& rReceiver)
     // transfer protocol treats as invalid; drop exactly those (same rule ReleaseAndAdopt_
     // applies to unit transfer). Units the receiver already owns keep their home.
     DropForeignHomeClaims_(rBase);
+
+    // Riot escalation is a grievance against the faction that let it get this far. A base
+    // that rebelled at tier 3 must not arrive at its new owner already one commit away from
+    // rebelling again — the ladder restarts, and the natural condition re-earns it if the
+    // new owner cannot keep the base calm either.
+    rBase.GetPopulation().ResetMoodEscalation();
 
     // Psych (and thus drone/talent targets) may differ under the new owner — same
     // recalculation CreateBaseFromSnapshot used to apply after reconstruct.

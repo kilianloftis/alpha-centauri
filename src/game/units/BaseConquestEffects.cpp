@@ -9,6 +9,7 @@
 #include "game/faction/Military.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/BuildingDestruction.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/map/MapUtils.h"
@@ -63,22 +64,10 @@ int ResolveBaseConquestStat_(const BaseManager& rBase, StatId_t stat)
     return std::max(0, resolved);
 }
 
-std::vector<const BuildingConfig_t*> DestroyableFacilities_(const BaseManager& rBase)
+int DestroyRandomFacilities_(BaseManager& rBase, GameState& rGameState, std::mt19937& rRng)
 {
-    std::vector<const BuildingConfig_t*> candidates;
-    for (const BuildingConfig_t* pBuilding : rBase.GetBuildingManager().GetBuildings())
-    {
-        if (pBuilding && !pBuilding->bIsSecretProject)
-        {
-            candidates.push_back(pBuilding);
-        }
-    }
-    return candidates;
-}
-
-int DestroyRandomFacilities_(BaseManager& rBase, std::mt19937& rRng)
-{
-    std::vector<const BuildingConfig_t*> candidates = DestroyableFacilities_(rBase);
+    std::vector<const BuildingConfig_t*> candidates =
+        CollectDestroyableFacilities(rBase, /*excludeHq=*/false, /*excludeSecretProjects=*/true);
     if (candidates.empty())
     {
         return 0;
@@ -98,13 +87,9 @@ int DestroyRandomFacilities_(BaseManager& rBase, std::mt19937& rRng)
     const int toDestroy = countDist(rRng);
 
     std::shuffle(candidates.begin(), candidates.end(), rRng);
-    Faction& rOwner = rBase.GetFaction();
-    const BaseId_t baseId = rBase.GetBaseId();
     for (int i = 0; i < toDestroy; ++i)
     {
-        const BuildingId_t id = candidates[static_cast<size_t>(i)]->id;
-        rBase.GetBuildingManager().DestroyBuilding(id);
-        rOwner.NotifyBuildingDestroyed(baseId, id);
+        DestroyBuildingAndNotify(rGameState, rBase, *candidates[static_cast<size_t>(i)]);
     }
     return toDestroy;
 }
@@ -270,7 +255,8 @@ BaseConquestResult_t ApplyNativeRaid_(Unit& rNative, BaseManager& rBase, GameSta
     BaseConquestResult_t result;
     result.outcome = BaseConquestOutcome_t::NativeRaid;
 
-    std::vector<const BuildingConfig_t*> facilities = DestroyableFacilities_(rBase);
+    std::vector<const BuildingConfig_t*> facilities =
+        CollectDestroyableFacilities(rBase, /*excludeHq=*/false, /*excludeSecretProjects=*/true);
     std::uniform_int_distribution<int> coin(0, 1);
     const bool bDestroyFacility = !facilities.empty() && (rBase.GetPopulation().GetSize() <= 0
                                                           || coin(rRng) == 0);
@@ -278,9 +264,7 @@ BaseConquestResult_t ApplyNativeRaid_(Unit& rNative, BaseManager& rBase, GameSta
     if (bDestroyFacility)
     {
         std::uniform_int_distribution<size_t> pick(0, facilities.size() - 1);
-        const BuildingId_t id = facilities[pick(rRng)]->id;
-        rBase.GetBuildingManager().DestroyBuilding(id);
-        rBase.GetFaction().NotifyBuildingDestroyed(rBase.GetBaseId(), id);
+        DestroyBuildingAndNotify(rGameState, rBase, *facilities[pick(rRng)]);
         result.facilitiesDestroyed = 1;
     }
     else if (rBase.GetPopulation().GetSize() > 0)
@@ -312,7 +296,7 @@ BaseConquestResult_t ApplyCapture_(Unit& rCapturer, BaseManager& rBase, GameStat
     const int capturePopLoss =
         bCrossSpecies ? 0 : ResolveBaseConquestStat_(rBase, StatId_t::CapturePopLoss);
 
-    result.facilitiesDestroyed = DestroyRandomFacilities_(rBase, rRng);
+    result.facilitiesDestroyed = DestroyRandomFacilities_(rBase, rGameState, rRng);
 
     if (bCrossSpecies)
     {

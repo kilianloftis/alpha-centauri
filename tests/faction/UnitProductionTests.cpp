@@ -248,7 +248,7 @@ TEST_CASE("ConfirmProductionAbandon completes the unit and empties the base",
     CHECK(std::ranges::distance(game.pFaction->GetUnitManager().Units()) == 1);
 }
 
-TEST_CASE("DeferProductionAbandon keeps the base and loses minerals",
+TEST_CASE("DeferProductionAbandon keeps the base and preserves minerals",
           "[production][unit][population][abandon]")
 {
     UnitProductionGame_ game;
@@ -261,7 +261,8 @@ TEST_CASE("DeferProductionAbandon keeps the base and loses minerals",
     const UnitDesign& rPod =
         game.AddDesign({"test_chassis", "test_colony_pod", "test_armor"});
     base.GetProduction().SetProduction(&rPod, base.GetBaseEffects());
-    base.GetProduction().SetMineralStockpile(base.GetMineralCost() + 5);
+    const int stockpile = base.GetMineralCost() + 5;
+    base.GetProduction().SetMineralStockpile(stockpile);
     REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::AwaitingAbandonConfirm);
     REQUIRE(base.HasPendingProductionAbandonConfirm());
 
@@ -270,7 +271,7 @@ TEST_CASE("DeferProductionAbandon keeps the base and loses minerals",
     CHECK(base.GetPopulation().GetSize() == 1);
     CHECK(base.GetProduction().HasProduction());
     CHECK(base.GetProduction().GetCurrentProduction() == &rPod);
-    CHECK(base.GetProduction().GetMineralStockpile() == 0);
+    CHECK(base.GetProduction().GetMineralStockpile() == stockpile);
     CHECK(game.pFaction->GetUnitManager().Units().empty());
 }
 
@@ -326,7 +327,7 @@ TEST_CASE("BaseProduction yields for player abandon confirm and resumes after de
     CHECK_FALSE(base.HasPendingProductionAbandonConfirm());
     CHECK(game.pState->GetPlayerInteractions().Empty());
     CHECK(base.GetPopulation().GetSize() == 1);
-    CHECK(base.GetProduction().GetMineralStockpile() == 0);
+    CHECK(base.GetProduction().GetMineralStockpile() == base.GetMineralCost());
     CHECK(base.GetProduction().HasProduction());
 }
 
@@ -350,7 +351,7 @@ TEST_CASE("BaseProduction AI auto-defers abandon without yielding",
     CHECK(stage.Execute(*game.pState, *game.pOther) == StageResult_t::Continue);
     CHECK_FALSE(base.HasPendingProductionAbandonConfirm());
     CHECK(base.GetPopulation().GetSize() == 1);
-    CHECK(base.GetProduction().GetMineralStockpile() == 0);
+    CHECK(base.GetProduction().GetMineralStockpile() == base.GetMineralCost());
     CHECK(game.pOther->GetUnitManager().Units().empty());
 }
 

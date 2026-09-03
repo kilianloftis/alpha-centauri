@@ -32,4 +32,12 @@ private:
     std::deque<QueuedInteraction_t> m_queue;
 };
 
+class GameState;
+
+// Queue an interaction addressed to the player faction. No-op when there is no player
+// faction (all-AI game). A free function rather than a member because addressing the player
+// needs GameState, and rather than a turn-stage helper because the stages that enqueue are
+// not all yielding stages — Population warns about a pending riot without yielding itself.
+void EnqueueForPlayer(GameState& rGameState, PlayerInteraction_t payload);
+
 } // namespace ac

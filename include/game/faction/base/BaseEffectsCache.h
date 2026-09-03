@@ -65,7 +65,7 @@ private:
     mutable BaseEffects_t m_cached;
     // Empty means never built.
     mutable std::optional<uint64_t> m_cachedPoolVersion;
-    mutable bool m_cachedGoldenAge = false;
+    mutable std::optional<uint64_t> m_cachedMoodRevision;
 };
 
 } // namespace ac

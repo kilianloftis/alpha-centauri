@@ -4,7 +4,6 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include "game/faction/base/BaseManager.h"
-#include "game/faction/base/population/PopulationManager.h"
 #include "game/units/Unit.h"
 #include "lib/LuaRuntime.h"
 
@@ -68,12 +67,6 @@ bool HomeBaseHasCreche_(const Unit& rUnit)
     return false;
 }
 
-bool HomeBaseIsRioting_(const Unit& rUnit)
-{
-    const BaseManager* pHome = rUnit.GetHomeBase();
-    return pHome && pHome->GetPopulation().IsRioting();
-}
-
 int AdjustLiveBonus_(const Unit& rUnit, const EffectContext_t& rCtx)
 {
     // Stamp the unit's subjects once: callers build a combat/UI context that carries no
@@ -97,12 +90,7 @@ int AdjustLiveBonus_(const Unit& rUnit, const EffectContext_t& rCtx)
         conditional = static_cast<int>(std::trunc(conditional * scale));
     }
 
-    int live = unconditional + conditional;
-    if (HomeBaseIsRioting_(rUnit))
-    {
-        live -= 1;
-    }
-    return live;
+    return unconditional + conditional;
 }
 
 } // namespace
