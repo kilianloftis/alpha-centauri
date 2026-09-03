@@ -3,6 +3,7 @@
 #include <memory>
 #include <optional>
 #include <functional>
+#include <ranges>
 #include <vector>
 
 #include "game/IEffectsProvider.h"
@@ -50,6 +51,16 @@ struct GameDataContext;
 class WorldMap;
 class GameSettings;
 class GameState;
+
+// Deref the owning pointers, then drop razed bases. Free rather than a member because both
+// Bases() overloads deduce their return type from it, and an in-class helper is not deduced
+// early enough for that. See Faction::Bases.
+template <typename Vec>
+auto LiveBasesView(Vec& rBases)
+{
+    return DerefView(rBases)
+        | std::views::filter([](const BaseManager& rBase) { return !rBase.IsRazed(); });
+}
 
 class Faction : public IEffectsProvider
 {
@@ -122,14 +133,29 @@ public:
                             const GameDataContext& rDataContext,
                             TileEffectsContext& rTileEffects,
                             const SecretProjectAvailabilityCalculator& rSecretProjectAvailability);
-    // Iterate bases by reference without exposing the owning unique_ptrs.
-    auto Bases() { return DerefView(m_bases); }
-    auto Bases() const { return DerefView(m_bases); }
-    size_t GetBaseCount() const { return m_bases.size(); }
+    // Iterate live bases by reference without exposing the owning unique_ptrs. Razed bases are
+    // filtered out here rather than erased at raze time, which is what lets a base die from
+    // inside a signal handler or mid-iteration: every existing loop stops seeing it at once,
+    // while the object itself survives until ReapRazedBases.
+    auto Bases() { return LiveBasesView(m_bases); }
+    auto Bases() const { return LiveBasesView(m_bases); }
+    size_t GetBaseCount() const;
 
-    // Base with this id, or nullptr.
+    // Live base with this id, or nullptr. A razed base is already gone as far as this answers.
     BaseManager* FindBase(BaseId_t baseId);
     const BaseManager* FindBase(BaseId_t baseId) const;
+
+    // Take rBase out of the game now: mark secret projects destroyed, orphan home-base claims,
+    // release the tile, drop deploy records, and emit BaseManager::OnDestroyed. Everything the
+    // rest of the game can observe happens here; only the object's destruction waits for
+    // ReapRazedBases. Idempotent — the pop-loss handler and a conquest path may both ask.
+    // Throws if rBase is not this faction's.
+    void RazeBase(BaseManager& rBase);
+
+    // Destroy the BaseManagers razed since the last call. Pure memory hygiene: a razed base is
+    // already invisible to Bases() / FindBase, so the timing carries no game meaning. Called
+    // between turn stages (TurnProcessor::Advance), where nothing is iterating bases.
+    void ReapRazedBases();
 
     // Fired at the end of AddBase for every insertion — founding, load, and post-transfer
     // adopt alike. The single hook EventBridge wires from (see EventBridge::WireBase);

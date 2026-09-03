@@ -7,8 +7,6 @@
 #include "game/PlayerInteractionQueue.h"
 #include "game/TurnStageRegistrar.h"
 
-#include <vector>
-
 namespace ac
 {
 
@@ -22,26 +20,18 @@ Population::Population(HookContext hookContext)
 StageResult_t Population::ExecuteImpl(GameState& rGameState, Faction& rFaction)
 {
     // World/council extras are already in Faction::GetActiveEffects via BindWorldEffects.
+    // A base that starves to nothing is razed by the pop-loss handler as it happens, so it
+    // drops out of Bases() before this loop reaches it.
     rFaction.ApplyBaseGrowth();
 
-    std::vector<BaseId_t> depopulated;
     for (BaseManager& rBase : rFaction.Bases())
     {
-        if (rBase.GetPopulation().GetSize() == 0)
-        {
-            // Collected, not razed in place: RazeBase destroys the BaseManager, which would
-            // invalidate this iteration.
-            depopulated.push_back(rBase.GetBaseId());
-            continue;
-        }
-        ProcessLivingBase_(rGameState, rFaction, rBase);
+        ProcessBase_(rGameState, rFaction, rBase);
     }
-
-    RazeDepopulatedBases_(rGameState, rFaction, depopulated);
     return StageResult_t::Continue;
 }
 
-void Population::ProcessLivingBase_(GameState& rGameState, Faction& rFaction, BaseManager& rBase)
+void Population::ProcessBase_(GameState& rGameState, Faction& rFaction, BaseManager& rBase)
 {
     PopulationManager& rPopulation = rBase.GetPopulation();
     rPopulation.AdvanceAssimilation();
@@ -87,19 +77,6 @@ void Population::EnqueuePendingMoodNotices_(GameState& rGameState, Faction& rFac
                 rBase.GetName() + " is on the verge of a Golden Age.",
                 at,
             });
-    }
-}
-
-void Population::RazeDepopulatedBases_(GameState& rGameState, Faction& rFaction,
-                                       const std::vector<BaseId_t>& rDepopulated)
-{
-    // A base that starves to nothing is razed, through the same pathway conquest uses.
-    for (const BaseId_t baseId : rDepopulated)
-    {
-        if (BaseManager* pBase = rFaction.FindBase(baseId))
-        {
-            rGameState.RazeBase(*pBase);
-        }
     }
 }
 

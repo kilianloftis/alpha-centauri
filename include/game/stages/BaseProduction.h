@@ -13,8 +13,8 @@ namespace ac
 class Faction;
 
 // Per-faction production completion. Owns only turn-pass resume state (which bases already
-// ticked). Minerals were already claimed by MineralConversion. Production rules and abandon
-// pending live on BaseManager; queue + presenter own the UI prompt.
+    // ticked). Minerals were already claimed by MineralConversion. Production rules and the
+    // WouldEmptyBase pending live on BaseManager; queue + presenter own the UI prompt.
 class BaseProduction : public YieldingPerFactionTurnStage
 {
 public:
@@ -32,7 +32,7 @@ private:
     StageResult_t HandleApplyResult_(GameState& rGameState, Faction& rFaction, BaseManager& rBase,
                                      const ProductionApplyResult_t& rResult);
     StageResult_t ReevaluateProcessedBases_(GameState& rGameState, Faction& rFaction);
-    StageResult_t HandleAbandonConfirm_(GameState& rGameState, Faction& rFaction, BaseManager& rBase);
+    StageResult_t HandleWouldEmptyBase_(GameState& rGameState, Faction& rFaction, BaseManager& rBase);
     StageResult_t HandleProductionCompleted_(GameState& rGameState, Faction& rFaction,
                                             BaseManager& rBase,
                                             const ProductionApplyResult_t& rResult);

@@ -516,16 +516,12 @@ const SecretProjectAvailabilityCalculator& GameState::GetSecretProjectAvailabili
     return m_secretProjectAvailability;
 }
 
-void GameState::RazeBase(BaseManager& rBase)
+void GameState::ReapRazedBases()
 {
-    for (const BuildingConfig_t* pBuilding : rBase.GetBuildingManager().GetBuildings())
+    for (Faction& rFaction : Factions())
     {
-        if (pBuilding && pBuilding->bIsSecretProject)
-        {
-            MarkSecretProjectDestroyed(pBuilding->id);
-        }
+        rFaction.ReapRazedBases();
     }
-    rBase.GetFaction().ExtractBase(rBase.GetBaseId());
 }
 
 void GameState::MarkSecretProjectDestroyed(const std::string& buildingId)

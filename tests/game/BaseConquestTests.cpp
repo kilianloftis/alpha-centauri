@@ -572,11 +572,12 @@ TEST_CASE("NoConquestRepair leaves the capturer damaged", "[unit][conquest]")
     CHECK(attacker.GetCurrentHp() == 1);
 }
 
-TEST_CASE("A base that starves to nothing is razed through the conquest pathway",
+TEST_CASE("Losing the last pop razes a base where it happens, with no explicit raze call",
           "[base][raze]")
 {
-    // Rule: a base at size zero is destroyed, and there is one raze pathway — the same one
-    // conquest uses, so secret-project tombstoning cannot drift between them.
+    // Rule: a base at size zero leaves the game the instant it is emptied, whatever emptied it
+    // — starvation, a production pop cost, genetic plague, conquest. One pathway (the pop-loss
+    // handler), so secret-project tombstoning cannot drift between them.
     // See docs/game-rules-decisions.md.
     ConquestGame_ game;
     BaseManager& rBase = game.MakeBase(*game.pAi, 4, 4);
@@ -588,15 +589,39 @@ TEST_CASE("A base that starves to nothing is razed through the conquest pathway"
         rBase.GetPopulation().RemovePop();
     }
 
-    game.pState->RazeBase(rBase);
-
+    CHECK(rBase.IsRazed());
     CHECK(game.pAi->GetBaseCount() == 0);
+    CHECK(game.pAi->FindBase(baseId) == nullptr);
     bool bStillPresent = false;
     for (const BaseManager& rRemaining : game.pAi->Bases())
     {
         bStillPresent = bStillPresent || rRemaining.GetBaseId() == baseId;
     }
     CHECK_FALSE(bStillPresent);
+}
+
+TEST_CASE("A razed base outlives the raze until it is reaped", "[base][raze]")
+{
+    // The whole point of marking rather than erasing: a base can die from inside its own signal
+    // handler, or mid-iteration, without the object going away under the caller.
+    ConquestGame_ game;
+    BaseManager& rBase = game.MakeBase(*game.pAi, 4, 4);
+
+    bool bDestroyedFired = false;
+    Signal<>::ScopedConnection connection =
+        rBase.OnDestroyed.ConnectScoped([&bDestroyedFired]() { bDestroyedFired = true; });
+
+    while (rBase.GetPopulation().GetSize() > 0)
+    {
+        rBase.GetPopulation().RemovePop();
+    }
+
+    // OnDestroyed fires at the raze, not at the reap, and the object is still readable here.
+    CHECK(bDestroyedFired);
+    CHECK(rBase.GetBaseId() != 0);
+
+    game.pState->ReapRazedBases();
+    CHECK(game.pAi->GetBaseCount() == 0);
 }
 
 TEST_CASE("Capturing a base starts the recently-conquered drone window", "[unit][conquest][drones]")

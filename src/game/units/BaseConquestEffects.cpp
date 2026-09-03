@@ -94,14 +94,15 @@ int DestroyRandomFacilities_(BaseManager& rBase, GameState& rGameState, std::mt1
     return toDestroy;
 }
 
-bool MaybeRazeBase_(BaseManager& rBase, GameState& rGameState, BaseConquestResult_t& rResult)
+// Report whether the pop losses just applied took the base out of the game. The raze itself
+// already happened, synchronously, in the pop-loss handler that RemovePopulation_ tripped.
+bool NoteIfAlreadyRazed_(BaseManager& rBase, BaseConquestResult_t& rResult)
 {
-    if (!rBase.GetPopulation().IsDestroyed())
+    if (!rBase.IsRazed())
     {
         return false;
     }
 
-    rGameState.RazeBase(rBase);
     rResult.bBaseRazed = true;
     rResult.outcome = BaseConquestOutcome_t::Razed;
     return true;
@@ -236,8 +237,7 @@ void RepairCapturer_(Unit& rCapturer)
     rCapturer.SetCurrentHp(ResolveStat(rCapturer, StatId_t::HitPoints));
 }
 
-BaseConquestResult_t ApplyLastDefenderCasualty_(BaseManager& rBase, GameState& rGameState,
-                                                const BaseConquestConfig_t& rConfig)
+BaseConquestResult_t ApplyLastDefenderCasualty_(BaseManager& rBase)
 {
     BaseConquestResult_t result;
     result.outcome = BaseConquestOutcome_t::LastDefenderCasualty;
@@ -245,7 +245,7 @@ BaseConquestResult_t ApplyLastDefenderCasualty_(BaseManager& rBase, GameState& r
     result.populationLost = RemovePopulation_(
         rBase, ResolveBaseConquestStat_(rBase, StatId_t::LastDefenderPopLoss));
 
-    MaybeRazeBase_(rBase, rGameState, result);
+    NoteIfAlreadyRazed_(rBase, result);
     return result;
 }
 
@@ -275,7 +275,7 @@ BaseConquestResult_t ApplyNativeRaid_(Unit& rNative, BaseManager& rBase, GameSta
     rNative.GetFaction().GetUnitManager().DestroyUnit(rNative);
     result.bActorDestroyed = true;
 
-    MaybeRazeBase_(rBase, rGameState, result);
+    NoteIfAlreadyRazed_(rBase, result);
     return result;
 }
 
@@ -307,7 +307,7 @@ BaseConquestResult_t ApplyCapture_(Unit& rCapturer, BaseManager& rBase, GameStat
         result.populationLost = RemovePopulation_(rBase, capturePopLoss);
     }
 
-    if (MaybeRazeBase_(rBase, rGameState, result))
+    if (NoteIfAlreadyRazed_(rBase, result))
     {
         return result;
     }
@@ -338,8 +338,7 @@ BaseConquestResult_t ResolvePostCombatBaseConquest(Unit& rAttacker,
 
     // Capture requires stepping onto the tile; combat only applies last-defender
     // casualties (and native raids from the adjacent attacker).
-    const BaseConquestConfig_t& rConfig = RequireBaseConquestConfig_(rDataContext);
-    BaseConquestResult_t result = ApplyLastDefenderCasualty_(*pBase, rGameState, rConfig);
+    BaseConquestResult_t result = ApplyLastDefenderCasualty_(*pBase);
     if (result.bBaseRazed)
     {
         return result;

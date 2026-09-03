@@ -187,7 +187,9 @@ about a pending riot without being a yielding stage.
   private year×area seed).
 - **`Population`**: growth, composition recalculation, then `ForecastMood` per base —
   which sets *pending* riot / golden-age state and enqueues the player's warning, without
-  applying any gameplay effect. Starve-to-zero bases are razed here.
+  applying any gameplay effect. A base that starves to nothing is razed by `BaseManager`'s
+  pop-loss handler as it happens, not swept for here, so it has already dropped out of
+  `Faction::Bases()` before the loop reaches it (see "Object lifetime" in `high-level.md`).
 - **`ResourceCollection`**: `ProduceBaseResources` only.
 - **`UnitSupport`**: `ApplyMineralSupport` — home-unit support charged against the mineral
   bank ResourceCollection just filled; surplus units disband.

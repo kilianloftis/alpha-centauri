@@ -66,6 +66,9 @@ private:
     // Empty means never built.
     mutable std::optional<uint64_t> m_cachedPoolVersion;
     mutable std::optional<uint64_t> m_cachedMoodRevision;
+    // Player-chosen DisableProduction is base-local (like mood), so it is not in the pool
+    // version. Empty means never built.
+    mutable std::optional<bool> m_cachedPlayerDisabledProduction;
 };
 
 } // namespace ac

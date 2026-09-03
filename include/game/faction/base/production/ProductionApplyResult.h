@@ -11,11 +11,11 @@ namespace ac
 // Outcome of BaseManager::ApplyProduction / TryCompleteReadyProduction.
 enum class ProductionApplyKind_t
 {
-    Idle,                   // nothing queued and no available stockpile fallback
-    InProgress,             // cost not yet met (or a never-completing stockpile)
+    Idle,          // nothing queued and no available stockpile fallback
+    InProgress,    // cost not yet met (or a never-completing stockpile)
 
-    Completed,              // item finished; completedId set
-    AwaitingAbandonConfirm, // would empty the base; Confirm / Defer required
+    Completed,     // item finished; completedId set
+    WouldEmptyBase, // cost met; CompletePendingProduction / DisableProduction required
 };
 
 struct ProductionApplyResult_t

@@ -33,26 +33,26 @@ void BaseProduction::OnExitImpl()
     ResetPassState_();
 }
 
-StageResult_t BaseProduction::HandleAbandonConfirm_(GameState& rGameState, Faction& rFaction,
+StageResult_t BaseProduction::HandleWouldEmptyBase_(GameState& rGameState, Faction& rFaction,
                                                    BaseManager& rBase)
 {
     if (!rFaction.IsPlayerControlled())
     {
         // TODO: the real rule for an AI base whose production would empty it is unknown.
-        // Deferring keeps the base and preserves the stockpile, so the same ready item will
-        // re-prompt every turn until the AI re-queues or grows. Needs a rules decision
-        // (refuse the queue entry at size 1 / let the AI abandon / something else), not this
+        // Disabling keeps the base and preserves the stockpile, so the same ready item will
+        // stay frozen until the AI re-queues or grows. Needs a rules decision
+        // (refuse the queue entry at size 1 / let the AI complete / something else), not this
         // stopgap.
-        rBase.DeferProductionAbandon();
+        rBase.DisableProduction();
         std::cout << "  Base '" << rBase.GetName()
-                  << "' deferred production that would empty the base (AI)\n";
+                  << "' disabled production that would empty the base (AI)\n";
         return StageResult_t::Continue;
     }
 
     EnqueueForPlayer(rGameState,
-                      ProductionAbandonInteraction_t{rFaction.GetFactionId(), rBase.GetBaseId()});
+                      ProductionWouldEmptyInteraction_t{rFaction.GetFactionId(), rBase.GetBaseId()});
     std::cout << "  Base '" << rBase.GetName()
-              << "' awaiting abandon confirmation for production\n";
+              << "' awaiting choice for production that would empty the base\n";
     return StageResult_t::Yield;
 }
 
@@ -114,8 +114,8 @@ StageResult_t BaseProduction::HandleApplyResult_(GameState& rGameState, Faction&
 {
     switch (rResult.kind)
     {
-    case ProductionApplyKind_t::AwaitingAbandonConfirm:
-        return HandleAbandonConfirm_(rGameState, rFaction, rBase);
+    case ProductionApplyKind_t::WouldEmptyBase:
+        return HandleWouldEmptyBase_(rGameState, rFaction, rBase);
     case ProductionApplyKind_t::Completed:
         return HandleProductionCompleted_(rGameState, rFaction, rBase, rResult);
     case ProductionApplyKind_t::Idle:
@@ -137,14 +137,14 @@ StageResult_t BaseProduction::ReevaluateProcessedBases_(GameState& rGameState, F
             {
                 continue;
             }
-            if (rBase.HasPendingProductionAbandonConfirm())
+            if (rBase.HasPendingEmptyBaseChoice())
             {
                 continue;
             }
 
             const ProductionApplyResult_t result = rBase.TryCompleteReadyProduction();
             if (result.kind != ProductionApplyKind_t::Completed
-                && result.kind != ProductionApplyKind_t::AwaitingAbandonConfirm)
+                && result.kind != ProductionApplyKind_t::WouldEmptyBase)
             {
                 continue;
             }

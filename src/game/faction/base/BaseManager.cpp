@@ -143,13 +143,6 @@ BaseManager::BaseManager(
         m_pPopulation->AddPop();
     });
     m_pPopulation->OnStarvation.Connect([this]() {
-        // A base that has already lost its last pop cannot starve further. It is razed by the
-        // Population stage at the end of the turn (GameState::RazeBase), not here: razing
-        // destroys this BaseManager, and this lambda is one of its own signal handlers.
-        if (m_pPopulation->GetSize() == 0)
-        {
-            return;
-        }
         m_pPopulation->RemovePop();
     });
     m_pPopulation->OnPopGained.Connect([this](int newSize) {
@@ -160,14 +153,24 @@ BaseManager::BaseManager(
     m_pWorkerAssignments->AutoAssignWorkers();
     m_pPopulation->OnPopLost.Connect([this](int newSize) {
         OnPopLost.Emit(newSize);
+        // The one place "a base with no pops is gone" is decided, whatever emptied it —
+        // starvation, a production pop cost, genetic plague, conquest, a world event.
+        // RazeBase only marks; this object stays alive until the next ReapRazedBases, so
+        // returning into the middle of whatever caused the loss is safe.
+        if (newSize == 0)
+        {
+            m_pFaction->RazeBase(*this);
+        }
     });
     m_pPopulation->OnIsRioting.Connect([this]() {
         OnIsRioting.Emit();
     });
 
     m_pProduction->OnProductionChanged.Connect([this]() {
-        // Switching or clearing the queue cancels an unresolved abandon prompt / defer freeze.
+        // Switching or clearing the queue cancels an unresolved WouldEmptyBase prompt and
+        // lifts the player-chosen DisableProduction flag.
         m_pCompletion->NotifyProductionChanged();
+        m_bPlayerDisabledProduction = false;
     });
 
     m_pProduction->OnProductionCompleted.Connect([this](const std::string& itemId) {
@@ -221,11 +224,35 @@ BaseManager::BaseManager(
 
 BaseManager::~BaseManager()
 {
+    if (m_bRazed)
+    {
+        // MarkRazed_ already did both, back when the base left the game.
+        return;
+    }
     // Emitted first, while every member is still fully alive, so an observer (BaseView's
     // pop-on-destroy) can drop its reference before the object actually goes away — mirrors
     // UnitManager::OnUnitDestroyed's "signal before erase" contract.
     OnDestroyed.Emit();
     m_rTileEffects.RemoveImprovementWithEffects(m_tile, std::string(ImprovementIds::k_Base));
+}
+
+bool BaseManager::IsRazed() const
+{
+    return m_bRazed;
+}
+
+void BaseManager::MarkRazed_()
+{
+    if (m_bRazed)
+    {
+        throw std::logic_error("BaseManager::MarkRazed_: base " + std::to_string(m_baseId)
+                               + " is already razed");
+    }
+    m_bRazed = true;
+    // The square must be free the instant the base dies — another unit may move onto it, or a
+    // colony pod may found here, long before ReapRazedBases destroys this object.
+    m_rTileEffects.RemoveImprovementWithEffects(m_tile, std::string(ImprovementIds::k_Base));
+    OnDestroyed.Emit();
 }
 
 BaseSnapshot_t BaseManager::CaptureSnapshot() const
@@ -323,7 +350,7 @@ int BaseManager::GetMineralsForProduction() const
 std::optional<int> BaseManager::GetTurnsToProductionCompletion() const
 {
     const IConstructable* pItem = m_pProduction->GetCurrentProduction();
-    if (!pItem || pItem->NeverCompletes())
+    if (!pItem || pItem->NeverCompletes() || IsProductionDisabled())
     {
         return std::nullopt;
     }
@@ -450,19 +477,30 @@ ProductionApplyResult_t BaseManager::TryCompleteReadyProduction()
     return m_pCompletion->TryCompleteReady();
 }
 
-bool BaseManager::HasPendingProductionAbandonConfirm() const
+bool BaseManager::IsProductionDisabled() const
 {
-    return m_pCompletion->HasPendingAbandonConfirm();
+    return ResolveFlag(*this, RuleFlagId_t::DisableProduction);
 }
 
-std::string BaseManager::ConfirmProductionAbandon()
+bool BaseManager::HasPlayerDisabledProduction() const
 {
-    return m_pCompletion->ConfirmAbandon();
+    return m_bPlayerDisabledProduction;
 }
 
-void BaseManager::DeferProductionAbandon()
+bool BaseManager::HasPendingEmptyBaseChoice() const
 {
-    m_pCompletion->DeferAbandon();
+    return m_pCompletion->HasPendingEmptyBaseChoice();
+}
+
+std::string BaseManager::CompletePendingProduction()
+{
+    return m_pCompletion->CompletePending();
+}
+
+void BaseManager::DisableProduction()
+{
+    m_pCompletion->DisableProduction();
+    m_bPlayerDisabledProduction = true;
 }
 
 int BaseManager::GetMineralCost() const
@@ -495,7 +533,7 @@ HurryResult_t BaseManager::HurryProduction(int energyCredits)
                                     + std::to_string(energyCredits) + " must be positive");
     }
 
-    if (ResolveFlag(*this, RuleFlagId_t::DisableProduction))
+    if (IsProductionDisabled())
     {
         throw std::runtime_error("BaseManager::HurryProduction: production is disabled at this "
                                  "base");
@@ -587,7 +625,7 @@ void BaseManager::ConvertMinerals()
 {
     const IConstructable* pItem = m_pProduction->GetCurrentProduction();
     const int minerals = m_pResources->ConsumeMinerals();
-    if (ResolveFlag(*this, RuleFlagId_t::DisableProduction))
+    if (IsProductionDisabled())
     {
         // Leftovers are discarded: no BankProduction, no stockpile conversion.
         return;

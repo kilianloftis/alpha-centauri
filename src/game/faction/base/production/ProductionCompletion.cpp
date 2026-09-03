@@ -85,10 +85,10 @@ bool ProductionCompletion::WouldEmptyBase_() const
 
 ProductionApplyResult_t ProductionCompletion::Apply()
 {
-    if (m_bPendingAbandonConfirm)
+    if (m_bPendingEmptyBaseChoice)
     {
-        // ConvertMinerals already claimed the bank; wait for Confirm / Defer.
-        return ProductionApplyResult_t{ProductionApplyKind_t::AwaitingAbandonConfirm, {}};
+        // ConvertMinerals already claimed the bank; wait for CompletePending / DisableProduction.
+        return ProductionApplyResult_t{ProductionApplyKind_t::WouldEmptyBase, {}};
     }
 
     // Stamp the turn original without adding minerals: ConvertMinerals already moved this
@@ -99,14 +99,14 @@ ProductionApplyResult_t ProductionCompletion::Apply()
 
 ProductionApplyResult_t ProductionCompletion::TryCompleteReady()
 {
-    if (m_bPendingAbandonConfirm)
+    if (m_bPendingEmptyBaseChoice)
     {
-        return ProductionApplyResult_t{ProductionApplyKind_t::AwaitingAbandonConfirm, {}};
+        return ProductionApplyResult_t{ProductionApplyKind_t::WouldEmptyBase, {}};
     }
-    if (m_bAbandonDeferred || ResolveFlag(m_rBase, RuleFlagId_t::DisableProduction))
+    if (m_rBase.IsProductionDisabled())
     {
         // Stockpile is preserved; completion (and re-prompting) stays blocked until the
-        // queue changes or the flag lifts.
+        // DisableProduction RuleFlag lifts (riot ends, or the player changes the queue).
         return ProductionApplyResult_t{ProductionApplyKind_t::InProgress, {}};
     }
 
@@ -125,8 +125,8 @@ ProductionApplyResult_t ProductionCompletion::TryCompleteReady()
 
     if (WouldEmptyBase_())
     {
-        m_bPendingAbandonConfirm = true;
-        return ProductionApplyResult_t{ProductionApplyKind_t::AwaitingAbandonConfirm, {}};
+        m_bPendingEmptyBaseChoice = true;
+        return ProductionApplyResult_t{ProductionApplyKind_t::WouldEmptyBase, {}};
     }
 
     const IConstructable& rItem = *rProduction.GetCurrentProduction();
@@ -142,40 +142,38 @@ ProductionApplyResult_t ProductionCompletion::TryCompleteReady()
                                    completedEvent, completedName};
 }
 
-bool ProductionCompletion::HasPendingAbandonConfirm() const
+bool ProductionCompletion::HasPendingEmptyBaseChoice() const
 {
-    return m_bPendingAbandonConfirm;
+    return m_bPendingEmptyBaseChoice;
 }
 
-std::string ProductionCompletion::ConfirmAbandon()
+std::string ProductionCompletion::CompletePending()
 {
-    if (!m_bPendingAbandonConfirm)
+    if (!m_bPendingEmptyBaseChoice)
     {
         throw std::runtime_error(
-            "ProductionCompletion::ConfirmAbandon: no pending abandon confirmation");
+            "ProductionCompletion::CompletePending: no pending empty-base choice");
     }
     // Clear before CompleteProduction: ResetProduction_ emits OnProductionChanged which would
-    // also clear the flag, but Confirm must own the transition explicitly.
-    m_bPendingAbandonConfirm = false;
+    // also clear the flag, but CompletePending must own the transition explicitly.
+    m_bPendingEmptyBaseChoice = false;
     return m_rBase.GetProduction().CompleteProduction(m_rBase.GetBaseEffects(),
                                                       IsCurrentPrototype());
 }
 
-void ProductionCompletion::DeferAbandon()
+void ProductionCompletion::DisableProduction()
 {
-    if (!m_bPendingAbandonConfirm)
+    if (!m_bPendingEmptyBaseChoice)
     {
         throw std::runtime_error(
-            "ProductionCompletion::DeferAbandon: no pending abandon confirmation");
+            "ProductionCompletion::DisableProduction: no pending empty-base choice");
     }
-    m_bPendingAbandonConfirm = false;
-    m_bAbandonDeferred = true;
+    m_bPendingEmptyBaseChoice = false;
 }
 
 void ProductionCompletion::NotifyProductionChanged()
 {
-    m_bPendingAbandonConfirm = false;
-    m_bAbandonDeferred = false;
+    m_bPendingEmptyBaseChoice = false;
 }
 
 } // namespace ac

@@ -166,8 +166,8 @@ TEST_CASE("Disabled build-orders-out-of-date skips the idle prompt",
     CHECK_FALSE(harness.pWorldView->HasModalElement());
 }
 
-TEST_CASE("Production abandon still presents when pause-on-event flags are off",
-          "[ui][InteractionPresenter][PlayerInteraction][abandon]")
+TEST_CASE("Production would-empty choice still presents when pause-on-event flags are off",
+          "[ui][InteractionPresenter][PlayerInteraction][empty-base]")
 {
     PresenterHarness_ harness;
     PauseOnEventsConfig_t config{};
@@ -194,17 +194,17 @@ TEST_CASE("Production abandon still presents when pause-on-event flags are off",
     const UnitDesign& rPod = AddPodDesign_(harness.fixture);
     rBase.GetProduction().SetProduction(&rPod, rBase.GetBaseEffects());
     rBase.GetProduction().SetMineralStockpile(rBase.GetMineralCost());
-    REQUIRE(rBase.ApplyProduction().kind == ProductionApplyKind_t::AwaitingAbandonConfirm);
-    REQUIRE(rBase.HasPendingProductionAbandonConfirm());
+    REQUIRE(rBase.ApplyProduction().kind == ProductionApplyKind_t::WouldEmptyBase);
+    REQUIRE(rBase.HasPendingEmptyBaseChoice());
 
-    harness.Enqueue(ProductionAbandonInteraction_t{
+    harness.Enqueue(ProductionWouldEmptyInteraction_t{
         harness.fixture.pPlayer->GetFactionId(),
         rBase.GetBaseId(),
     });
 
     harness.pPresenter->Update();
 
-    CHECK(rBase.HasPendingProductionAbandonConfirm());
+    CHECK(rBase.HasPendingEmptyBaseChoice());
     CHECK(harness.advanceCount == 0);
     CHECK(harness.pWorldView->HasModalElement());
     CHECK(harness.fixture.pState->GetPlayerInteractions().Size() == 1);

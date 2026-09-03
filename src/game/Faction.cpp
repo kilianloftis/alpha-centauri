@@ -1,6 +1,7 @@
 #include "game/faction/VisibilityRules.h"
 #include "game/Faction.h"
 #include "game/GameSettings.h"
+#include "game/GameState.h"
 
 #include "game/buildings/BuildingRegistry.h"
 #include "game/stockpiles/StockpileRegistry.h"
@@ -106,9 +107,9 @@ const EconomyManager& Faction::GetEconomy() const
 int Faction::CollectIncome()
 {
     int total = 0;
-    for (const auto& pBase : m_bases)
+    for (BaseManager& rBase : Bases())
     {
-        total += pBase->GetResources().ConsumeEcon();
+        total += rBase.GetResources().ConsumeEcon();
     }
     m_pEconomy->AddEnergy(total);
     return total;
@@ -117,9 +118,9 @@ int Faction::CollectIncome()
 int Faction::CollectResearch()
 {
     int total = 0;
-    for (const auto& pBase : m_bases)
+    for (BaseManager& rBase : Bases())
     {
-        total += pBase->GetResources().ConsumeLabs();
+        total += rBase.GetResources().ConsumeLabs();
     }
     m_pResearch->AddResearchPoints(total);
     return total;
@@ -128,12 +129,9 @@ int Faction::CollectResearch()
 int Faction::GetNetIncomePerTurn() const
 {
     int total = 0;
-    for (const auto& pBase : m_bases)
+    for (const BaseManager& rBase : Bases())
     {
-        if (pBase)
-        {
-            total += pBase->GetEconProduction();
-        }
+        total += rBase.GetEconProduction();
     }
     return total - GetBuildingUpkeep();
 }
@@ -296,12 +294,9 @@ void Faction::DropBuildingDeploys_(BaseId_t baseId)
 int Faction::GetResearchPerTurn_() const
 {
     int total = 0;
-    for (const auto& pBase : m_bases)
+    for (const BaseManager& rBase : Bases())
     {
-        if (pBase)
-        {
-            total += pBase->GetLabsProduction();
-        }
+        total += rBase.GetLabsProduction();
     }
     return total;
 }
@@ -460,7 +455,79 @@ void DropForeignHomeClaims_(BaseManager& rBase)
     }
 }
 
+// Clear every home-base link at rBase, whoever owns the unit: the base is leaving the game, so
+// no claim on it can stay valid. Same copy-then-iterate reason as DropForeignHomeClaims_.
+void DropAllHomeClaims_(BaseManager& rBase)
+{
+    const std::vector<Unit*> homed = rBase.GetHomeUnits().GetUnits();
+    for (Unit* pUnit : homed)
+    {
+        if (pUnit)
+        {
+            pUnit->SetHomeBase(nullptr);
+        }
+    }
+}
+
 } // namespace
+
+void Faction::RazeBase(BaseManager& rBase)
+{
+    if (&rBase.GetFaction() != this)
+    {
+        throw std::invalid_argument("Faction::RazeBase: base " + std::to_string(rBase.GetBaseId())
+                                    + " is not owned by this faction");
+    }
+    if (rBase.IsRazed())
+    {
+        return;
+    }
+
+    for (const BuildingConfig_t* pBuilding : rBase.GetBuildingManager().GetBuildings())
+    {
+        if (!pBuilding || !pBuilding->bIsSecretProject)
+        {
+            continue;
+        }
+        if (!m_pGameState)
+        {
+            throw std::runtime_error(
+                "Faction::RazeBase: base " + std::to_string(rBase.GetBaseId()) + " holds secret "
+                "project '" + pBuilding->id + "' but no GameState is bound to record its loss");
+        }
+        m_pGameState->MarkSecretProjectDestroyed(pBuilding->id);
+    }
+
+    DropAllHomeClaims_(rBase);
+    rBase.MarkRazed_();
+    DropBuildingDeploys_(rBase.GetBaseId());
+    m_baseListRevision.Bump();
+    if (m_onBaseListChanged)
+    {
+        m_onBaseListChanged();
+    }
+    RebuildVisibility();
+}
+
+void Faction::ReapRazedBases()
+{
+    std::erase_if(m_bases, [](const std::unique_ptr<BaseManager>& pBase) {
+        return pBase && pBase->IsRazed();
+    });
+}
+
+size_t Faction::GetBaseCount() const
+{
+    size_t count = 0;
+    for (const std::unique_ptr<BaseManager>& pBase : m_bases)
+    {
+        if (pBase && !pBase->IsRazed())
+        {
+            ++count;
+        }
+    }
+    return count;
+}
 
 void Faction::TransferBaseTo(BaseId_t baseId, Faction& rReceiver)
 {
@@ -790,34 +857,25 @@ BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile*
 
 void Faction::ProduceBaseResources()
 {
-    for (const auto& pBase : m_bases)
+    for (BaseManager& rBase : Bases())
     {
-        if (pBase)
-        {
-            pBase->ProduceResources();
-        }
+        rBase.ProduceResources();
     }
 }
 
 void Faction::ApplyMineralSupport()
 {
-    for (const auto& pBase : m_bases)
+    for (BaseManager& rBase : Bases())
     {
-        if (pBase)
-        {
-            pBase->ApplyMineralSupport();
-        }
+        rBase.ApplyMineralSupport();
     }
 }
 
 void Faction::ConvertMinerals()
 {
-    for (const auto& pBase : m_bases)
+    for (BaseManager& rBase : Bases())
     {
-        if (pBase)
-        {
-            pBase->ConvertMinerals();
-        }
+        rBase.ConvertMinerals();
     }
 }
 
@@ -856,12 +914,9 @@ void Faction::ApplyBuildingUpkeep()
 
 void Faction::ApplyBaseGrowth()
 {
-    for (const auto& pBase : m_bases)
+    for (BaseManager& rBase : Bases())
     {
-        if (pBase)
-        {
-            pBase->ApplyGrowth();
-        }
+        rBase.ApplyGrowth();
     }
 }
 

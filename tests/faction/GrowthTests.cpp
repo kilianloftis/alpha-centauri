@@ -136,13 +136,15 @@ TEST_CASE("Removing a pop from an empty base is a caller bug, not a no-op",
     CHECK_THROWS_AS(rPopulation.RemovePop(), std::runtime_error);
 }
 
-TEST_CASE("A base that has already lost its last pop does not starve further",
-          "[population][growth]")
+TEST_CASE("Losing the last pop razes the base so it is not starved again",
+          "[population][growth][raze]")
 {
-    // Starvation fires whenever the stockpile goes negative, and nothing removes a base at size
-    // zero — so an empty base keeps starving every turn. That must not reach RemovePop.
-    actest::BaseFixture fixture;
-    ac::BaseManager& rBase = fixture.MakeBase(4, 4);
+    // Rule: size 0 razes immediately via OnPopLost. ApplyBaseGrowth only walks live bases,
+    // so a starved-out base never receives another OnStarvation. See docs/game-rules-decisions.md.
+    actest::FactionFixture fixture;
+    ac::Faction& rFaction = fixture.MakeFaction();
+    ac::BaseManager& rBase = fixture.MakeFactionBase(rFaction, 4, 4);
+    const ac::BaseId_t baseId = rBase.GetBaseId();
     ac::PopulationManager& rPopulation = rBase.GetPopulation();
 
     while (rPopulation.GetSize() > 0)
@@ -150,8 +152,10 @@ TEST_CASE("A base that has already lost its last pop does not starve further",
         rPopulation.RemovePop();
     }
 
-    CHECK_NOTHROW(rPopulation.ApplyGrowth(-10, BaseEffects_t{rBase}));
-    CHECK(rPopulation.GetSize() == 0);
+    CHECK(rBase.IsRazed());
+    CHECK(rFaction.FindBase(baseId) == nullptr);
+    CHECK(rFaction.GetBaseCount() == 0);
+    CHECK_NOTHROW(rFaction.ApplyBaseGrowth());
 }
 
 TEST_CASE("A shrinking base loses its least productive pop", "[population][growth]")

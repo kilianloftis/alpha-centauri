@@ -181,13 +181,12 @@ public:
     // rebuilt by any faction.
     void MarkSecretProjectDestroyed(const std::string& buildingId);
 
-    // The one raze pathway. Tombstones any secret project the base held (nobody may rebuild it)
-    // and removes the base from its owner. Every way a base can be destroyed — conquest,
-    // starving to nothing — goes through here, so the tombstoning and the removal cannot drift
-    // apart. Not safe to call from inside one of the base's own signal handlers: it destroys the
-    // BaseManager.
-    void RazeBase(BaseManager& rBase);
     bool IsSecretProjectDestroyed(const std::string& buildingId) const;
+
+    // Destroy every base razed since the last call, across all factions. Razing itself is
+    // Faction::RazeBase, driven by the pop-loss signal; this only reclaims the objects, at a
+    // point where nothing is iterating bases (TurnProcessor::Advance, between stages).
+    void ReapRazedBases();
 
     // Public orbital building census (buildings with orbital == true). Visible to all factions.
     std::vector<OrbitalCensusEntry_t> GetOrbitalCensus() const;

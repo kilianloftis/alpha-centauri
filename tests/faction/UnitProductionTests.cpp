@@ -12,6 +12,7 @@
 #include "game/faction/Military.h"
 #include "game/faction/UnitManager.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/EconomyManager.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/resources/ResourceManager.h"
@@ -33,6 +34,7 @@
 #include "game/effects/EffectEnums.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <algorithm>
 #include <memory>
@@ -199,8 +201,8 @@ TEST_CASE("Completing colony pod production decreases base population by 1",
     CHECK(onTile.front()->GetFlag(RuleFlagId_t::FoundBase));
 }
 
-TEST_CASE("Colony pod that would empty the base opens abandon confirmation",
-          "[production][unit][population][abandon]")
+TEST_CASE("Colony pod that would empty the base opens a disable-production choice",
+          "[production][unit][population][empty-base]")
 {
     UnitProductionGame_ game;
     BaseManager& base = game.MakeBase(4, 4);
@@ -216,16 +218,17 @@ TEST_CASE("Colony pod that would empty the base opens abandon confirmation",
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
 
     const ProductionApplyResult_t applied = base.ApplyProduction();
-    CHECK(applied.kind == ProductionApplyKind_t::AwaitingAbandonConfirm);
-    CHECK(base.HasPendingProductionAbandonConfirm());
+    CHECK(applied.kind == ProductionApplyKind_t::WouldEmptyBase);
+    CHECK(base.HasPendingEmptyBaseChoice());
+    CHECK_FALSE(base.IsProductionDisabled());
     CHECK(base.GetPopulation().GetSize() == 1);
     CHECK(base.GetProduction().HasProduction());
     CHECK(base.GetProduction().GetMineralStockpile() >= base.GetMineralCost());
     CHECK(game.pFaction->GetUnitManager().Units().empty());
 }
 
-TEST_CASE("ConfirmProductionAbandon completes the unit and empties the base",
-          "[production][unit][population][abandon]")
+TEST_CASE("CompletePendingProduction completes the unit and empties the base",
+          "[production][unit][population][empty-base]")
 {
     UnitProductionGame_ game;
     BaseManager& base = game.MakeBase(4, 4);
@@ -238,18 +241,21 @@ TEST_CASE("ConfirmProductionAbandon completes the unit and empties the base",
         game.AddDesign({"test_chassis", "test_colony_pod", "test_armor"});
     base.GetProduction().SetProduction(&rPod, base.GetBaseEffects());
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
-    REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::AwaitingAbandonConfirm);
-    REQUIRE(base.HasPendingProductionAbandonConfirm());
+    REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::WouldEmptyBase);
+    REQUIRE(base.HasPendingEmptyBaseChoice());
 
-    CHECK(base.ConfirmProductionAbandon() == rPod.GetId());
-    CHECK_FALSE(base.HasPendingProductionAbandonConfirm());
+    CHECK(base.CompletePendingProduction() == rPod.GetId());
+    CHECK_FALSE(base.HasPendingEmptyBaseChoice());
     CHECK(base.GetPopulation().GetSize() == 0);
+    CHECK(base.IsRazed());
+    CHECK(game.pFaction->FindBase(base.GetBaseId()) == nullptr);
+    CHECK(game.pFaction->GetBaseCount() == 0);
     CheckQueuedStockpileEnergy_(base, game);
     CHECK(std::ranges::distance(game.pFaction->GetUnitManager().Units()) == 1);
 }
 
-TEST_CASE("DeferProductionAbandon keeps the base and preserves minerals",
-          "[production][unit][population][abandon]")
+TEST_CASE("DisableProduction from an empty-base choice keeps the base and uses disable_production",
+          "[production][unit][population][empty-base]")
 {
     UnitProductionGame_ game;
     BaseManager& base = game.MakeBase(4, 4);
@@ -263,16 +269,41 @@ TEST_CASE("DeferProductionAbandon keeps the base and preserves minerals",
     base.GetProduction().SetProduction(&rPod, base.GetBaseEffects());
     const int stockpile = base.GetMineralCost() + 5;
     base.GetProduction().SetMineralStockpile(stockpile);
-    REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::AwaitingAbandonConfirm);
-    REQUIRE(base.HasPendingProductionAbandonConfirm());
+    REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::WouldEmptyBase);
+    REQUIRE(base.HasPendingEmptyBaseChoice());
 
-    base.DeferProductionAbandon();
-    CHECK_FALSE(base.HasPendingProductionAbandonConfirm());
+    base.DisableProduction();
+    CHECK_FALSE(base.HasPendingEmptyBaseChoice());
+    CHECK(base.IsProductionDisabled());
+    CHECK(base.HasPlayerDisabledProduction());
+    CHECK(ResolveFlag(base, RuleFlagId_t::DisableProduction));
     CHECK(base.GetPopulation().GetSize() == 1);
     CHECK(base.GetProduction().HasProduction());
     CHECK(base.GetProduction().GetCurrentProduction() == &rPod);
     CHECK(base.GetProduction().GetMineralStockpile() == stockpile);
     CHECK(game.pFaction->GetUnitManager().Units().empty());
+    CHECK_FALSE(base.GetTurnsToProductionCompletion().has_value());
+    CHECK(base.ApplyProduction().kind == ProductionApplyKind_t::InProgress);
+
+    game.pFaction->GetEconomy().AddEnergy(100);
+    CHECK_THROWS_WITH(base.HurryProduction(10), Catch::Matchers::ContainsSubstring("disabled"));
+
+    if (!base.GetBuildingManager().HasBuilding("mineral_cache"))
+    {
+        base.GetBuildingManager().AddBuilding("mineral_cache");
+    }
+    base.ProduceResources();
+    REQUIRE(base.GetResources().GetMineralBank() > 0);
+    base.ConvertMinerals();
+    CHECK(base.GetProduction().GetMineralStockpile() == stockpile);
+    CHECK(base.GetResources().GetMineralBank() == 0);
+
+    const UnitDesign& rScout =
+        game.AddDesign({"test_chassis", "test_weapon", "test_armor"});
+    base.GetProduction().SetProduction(&rScout, base.GetBaseEffects());
+    CHECK_FALSE(base.HasPlayerDisabledProduction());
+    CHECK_FALSE(ResolveFlag(base, RuleFlagId_t::DisableProduction));
+    CHECK_FALSE(base.IsProductionDisabled());
 }
 
 TEST_CASE("CreateUnit without production does not apply Instantaneous component effects",
@@ -291,8 +322,8 @@ TEST_CASE("CreateUnit without production does not apply Instantaneous component 
     CHECK(base.GetPopulation().GetSize() == 3);
 }
 
-TEST_CASE("BaseProduction yields for player abandon confirm and resumes after defer",
-          "[production][BaseProduction][abandon]")
+TEST_CASE("BaseProduction yields for player empty-base choice and resumes after disable",
+          "[production][BaseProduction][empty-base]")
 {
     UnitProductionGame_ game;
     BaseManager& base = game.MakeBase(4, 4);
@@ -314,25 +345,27 @@ TEST_CASE("BaseProduction yields for player abandon confirm and resumes after de
                             {"BaseProduction", "Stop"});
 
     processor.Advance(*game.pState);
-    CHECK(base.HasPendingProductionAbandonConfirm());
+    CHECK(base.HasPendingEmptyBaseChoice());
     CHECK(base.GetPopulation().GetSize() == 1);
     REQUIRE(game.pState->GetPlayerInteractions().Front());
-    CHECK(std::holds_alternative<ProductionAbandonInteraction_t>(
+    CHECK(std::holds_alternative<ProductionWouldEmptyInteraction_t>(
         game.pState->GetPlayerInteractions().Front()->payload));
 
-    base.DeferProductionAbandon();
+    base.DisableProduction();
     game.pState->GetPlayerInteractions().CompleteFront();
     processor.Advance(*game.pState);
 
-    CHECK_FALSE(base.HasPendingProductionAbandonConfirm());
+    CHECK_FALSE(base.HasPendingEmptyBaseChoice());
+    CHECK(base.IsProductionDisabled());
+    CHECK(ResolveFlag(base, RuleFlagId_t::DisableProduction));
     CHECK(game.pState->GetPlayerInteractions().Empty());
     CHECK(base.GetPopulation().GetSize() == 1);
     CHECK(base.GetProduction().GetMineralStockpile() == base.GetMineralCost());
     CHECK(base.GetProduction().HasProduction());
 }
 
-TEST_CASE("BaseProduction AI auto-defers abandon without yielding",
-          "[production][BaseProduction][abandon]")
+TEST_CASE("BaseProduction AI auto-disables empty-base production without yielding",
+          "[production][BaseProduction][empty-base]")
 {
     UnitProductionGame_ game;
     // pOther is not player-controlled.
@@ -349,7 +382,9 @@ TEST_CASE("BaseProduction AI auto-defers abandon without yielding",
 
     BaseProduction stage(HookContext{});
     CHECK(stage.Execute(*game.pState, *game.pOther) == StageResult_t::Continue);
-    CHECK_FALSE(base.HasPendingProductionAbandonConfirm());
+    CHECK_FALSE(base.HasPendingEmptyBaseChoice());
+    CHECK(base.IsProductionDisabled());
+    CHECK(ResolveFlag(base, RuleFlagId_t::DisableProduction));
     CHECK(base.GetPopulation().GetSize() == 1);
     CHECK(base.GetProduction().GetMineralStockpile() == base.GetMineralCost());
     CHECK(game.pOther->GetUnitManager().Units().empty());

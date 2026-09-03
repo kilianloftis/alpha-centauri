@@ -36,8 +36,8 @@ struct OpenViewInteraction_t
     std::string techId;
 };
 
-// Production would empty the base; player Confirm (abandon) or Defer (lose minerals).
-struct ProductionAbandonInteraction_t
+// Production would empty the base; player Complete (allow emptying) or Disable production.
+struct ProductionWouldEmptyInteraction_t
 {
     FactionId_t factionId = 0;
     BaseId_t baseId = 0;
@@ -57,7 +57,7 @@ struct ProductionIdleInteraction_t
 using PlayerInteraction_t = std::variant<
     NoticeInteraction_t,
     OpenViewInteraction_t,
-    ProductionAbandonInteraction_t,
+    ProductionWouldEmptyInteraction_t,
     ProductionIdleInteraction_t
 >;
 

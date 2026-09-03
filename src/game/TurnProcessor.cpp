@@ -183,7 +183,12 @@ void TurnProcessor::Advance(GameState& rGameState)
             m_stageIndex = 0;
         }
 
-        if (ExecuteCurrentStage_(rGameState) == StageResult_t::Yield)
+        const StageResult_t result = ExecuteCurrentStage_(rGameState);
+        // Between stages is the one point where nothing is iterating bases, so it is where the
+        // objects behind already-razed bases are reclaimed. Also on yield: the UI gets control
+        // back here, and it should not be holding the last reference to a dead base.
+        rGameState.ReapRazedBases();
+        if (result == StageResult_t::Yield)
         {
             return;
         }

@@ -39,20 +39,26 @@ go before productive ones. `PopContainer` lost `RemovePop`/`NextRemoved` and gai
 
 ## 2. A base that reaches size zero
 
-**Rule:** it is razed. There is to be **one** raze pathway — the existing
-`Faction::ExtractBase` / raze path — not a second one written for this case.
+**Rule:** it is razed, immediately, wherever it happened. There is to be **one** raze pathway —
+not a second one written for each way a base can be emptied.
 
 **Replaces:** the guard added in `BaseManager`'s starvation handler, which returned early at size
 zero and left an empty base alive forever.
 
-**Implemented** 2026-08-08. `GameState::RazeBase` is now the one pathway: it tombstones any
-secret project the base held and removes the base from its owner. Conquest's razing was inlined
-in `BaseConquestEffects` and now calls it, so the two cannot drift.
+**Implemented** 2026-08-08, **revised** 2026-09-02. The pathway is now `BaseManager`'s pop-loss
+handler: any pop loss that leaves the base at size zero calls `Faction::RazeBase`. Starvation, a
+production pop cost, genetic plague, conquest and any future world event all reach it without
+knowing about each other. Conquest's `NoteIfAlreadyRazed_` no longer razes — it only reports whether
+the raze already happened.
 
-The Population stage razes any base it finds at size zero — collected first, then razed after the
-loop, because razing destroys the `BaseManager` and would otherwise invalidate the iteration.
-Not done from the starvation handler itself: that lambda is one of the base's own signals, and
-razing from inside it would destroy the object mid-callback.
+Razing is split from destroying, which is what lets it run from inside the base's own signal
+handler and mid-iteration. `Faction::RazeBase` does everything observable — tombstones secret
+projects, orphans home-base claims, releases the tile, drops deploy records, emits
+`OnDestroyed` — and marks the base razed; `Faction::Bases()` and `FindBase` skip razed bases from
+that instant, so nothing in the game can still see it. The `BaseManager` object itself is
+destroyed later by `Faction::ReapRazedBases`, which `TurnProcessor::Advance` calls between
+stages. That timing carries no game meaning; it exists so references held across the raze do not
+dangle.
 
 ## 3. Production retooling penalty
 

@@ -96,8 +96,8 @@ void InteractionPresenter::PresentFront_(const PlayerInteraction_t& rPayload)
         Overloaded{
             [this](const NoticeInteraction_t& rNotice) { PresentNotice_(rNotice); },
             [this](const OpenViewInteraction_t& rOpen) { PresentOpenView_(rOpen); },
-            [this](const ProductionAbandonInteraction_t& rAbandon) {
-                PresentProductionAbandon_(rAbandon);
+            [this](const ProductionWouldEmptyInteraction_t& rWouldEmpty) {
+                PresentProductionWouldEmpty_(rWouldEmpty);
             },
             [this](const ProductionIdleInteraction_t& rIdle) { PresentProductionIdle_(rIdle); },
         },
@@ -162,10 +162,11 @@ void InteractionPresenter::PresentOpenView_(const OpenViewInteraction_t& rOpen)
     }
 }
 
-void InteractionPresenter::PresentProductionAbandon_(const ProductionAbandonInteraction_t& rAbandon)
+void InteractionPresenter::PresentProductionWouldEmpty_(
+    const ProductionWouldEmptyInteraction_t& rWouldEmpty)
 {
-    BaseManager* pBase = FindAudienceBase_(rAbandon.factionId, rAbandon.baseId);
-    if (!pBase || !pBase->HasPendingProductionAbandonConfirm())
+    BaseManager* pBase = FindAudienceBase_(rWouldEmpty.factionId, rWouldEmpty.baseId);
+    if (!pBase || !pBase->HasPendingEmptyBaseChoice())
     {
         CompleteAndAdvance_();
         return;
@@ -178,31 +179,31 @@ void InteractionPresenter::PresentProductionAbandon_(const ProductionAbandonInte
     {
         itemName = pItem->GetName();
     }
-    const BaseId_t baseId = rAbandon.baseId;
-    const FactionId_t factionId = rAbandon.factionId;
+    const BaseId_t baseId = rWouldEmpty.baseId;
+    const FactionId_t factionId = rWouldEmpty.factionId;
 
-    auto resolveAbandon = [this, baseId, factionId](bool bConfirm)
+    auto resolveChoice = [this, baseId, factionId](bool bComplete)
     {
         BaseManager* pResolve = FindAudienceBase_(factionId, baseId);
-        if (pResolve && pResolve->HasPendingProductionAbandonConfirm())
+        if (pResolve && pResolve->HasPendingEmptyBaseChoice())
         {
-            if (bConfirm)
+            if (bComplete)
             {
-                pResolve->ConfirmProductionAbandon();
+                pResolve->CompletePendingProduction();
             }
             else
             {
-                pResolve->DeferProductionAbandon();
+                pResolve->DisableProduction();
             }
         }
         CompleteAndAdvance_();
     };
 
     std::vector<PopupChoice_t> choices;
-    choices.push_back({"Complete " + itemName + " (abandon base)",
-                       [resolveAbandon] { resolveAbandon(true); }});
-    choices.push_back({"Defer (lose minerals)", [resolveAbandon] { resolveAbandon(false); }});
-    PushChoice_("Abandon " + pBase->GetName() + "?", std::move(choices));
+    choices.push_back({"Complete " + itemName + " anyway",
+                       [resolveChoice] { resolveChoice(true); }});
+    choices.push_back({"Disable production", [resolveChoice] { resolveChoice(false); }});
+    PushChoice_("Completing this would empty " + pBase->GetName() + ".", std::move(choices));
 }
 
 void InteractionPresenter::PresentProductionIdle_(const ProductionIdleInteraction_t& rIdle)

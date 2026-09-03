@@ -198,26 +198,35 @@ public:
     // ConvertMinerals already claimed the leftover mineral bank (banked into a real item,
     // converted, or wasted). Completes construction if the production stockpile meets the
     // cost — unless completing would leave the base at size <= 0, in which case kind is
-    // AwaitingAbandonConfirm until ConfirmProductionAbandon or DeferProductionAbandon.
+    // WouldEmptyBase until CompletePendingProduction or DisableProduction.
     ProductionApplyResult_t ApplyProduction();
 
     // Complete the queued item if the stockpile already meets the current cost, without
     // touching this turn's mineral bank. ApplyProduction stamps first, then calls this; the
     // BaseProduction pass also calls it when a sibling prototype finishes and this queue's
-    // surcharge drops. Does not consume resources. Honours the same abandon-confirm gate.
+    // surcharge drops. Does not consume resources. Honours the same WouldEmptyBase gate.
     ProductionApplyResult_t TryCompleteReadyProduction();
 
-    // True when ApplyProduction returned AwaitingAbandonConfirm and the player has not yet
-    // Confirm'd or Defer'd.
-    bool HasPendingProductionAbandonConfirm() const;
+    // True when the DisableProduction RuleFlag is in force at this base — riot tiers and a
+    // player decline of WouldEmptyBase both emit that flag. ConvertMinerals, Hurry, and
+    // completion all consult this.
+    bool IsProductionDisabled() const;
 
-    // Complete the pending item (unit/building Instantaneous effects may raze via size 0).
+    // Effect-source bit for the player-chosen DisableProduction flag (WouldEmptyBase decline).
+    // IsProductionDisabled / ResolveFlag is the consumer query.
+    bool HasPlayerDisabledProduction() const;
+
+    // True when ApplyProduction returned WouldEmptyBase and the player has not yet chosen
+    // CompletePendingProduction or DisableProduction.
+    bool HasPendingEmptyBaseChoice() const;
+
+    // Complete the pending item (Instantaneous pop cost may take the base to size 0).
     // Throws if nothing is pending. Returns the completed item id.
-    std::string ConfirmProductionAbandon();
+    std::string CompletePendingProduction();
 
-    // Keep the queued item and preserve mineral progress; freeze completion until the queue
-    // changes. Throws if nothing is pending.
-    void DeferProductionAbandon();
+    // Decline the WouldEmptyBase prompt: keep the queue and stockpile, and emit the
+    // DisableProduction RuleFlag until the queue changes. Throws if nothing is pending.
+    void DisableProduction();
 
     // Effective mineral cost of the current production item after CostMultiplier effects
     // (e.g. Industry social-rating levels expanded into the base effect list) and the
@@ -233,8 +242,9 @@ public:
     // Spend up to energyCredits from the owning faction treasury on minerals for the queued
     // item, at the price QuoteHurry reports. Credits that would not buy a whole mineral are
     // left unspent. Completes immediately when the stockpile then meets cost (same
-    // abandon-confirm gate as ApplyProduction). Throws if credits is not positive, if the
-    // item cannot be hurried, or if the treasury cannot cover the charge.
+    // WouldEmptyBase gate as ApplyProduction). Throws if credits is not positive, if the
+    // item cannot be hurried, production is disabled, or if the treasury cannot cover
+    // the charge.
     HurryResult_t HurryProduction(int energyCredits);
 
     // Collect nutrients/minerals and allocate energy into econ/labs/psych stockpiles.
@@ -305,13 +315,23 @@ public:
     // may differ under the new owner). See docs/architecture/high-level.md, "Object lifetime".
     void RebindFaction(Faction& rFaction);
 
-    // Fired at the start of ~BaseManager, while the object is still fully valid, so observers
-    // (e.g. an open BaseView) can invalidate their reference before it dangles. Not fired on
-    // ownership transfer — the object survives that; see RebindFaction / GetFaction().
+    // Fired exactly once, when this base leaves the game: at Faction::RazeBase if it is razed,
+    // otherwise at the start of ~BaseManager. Either way the object is still fully valid, so
+    // observers (e.g. an open BaseView) can invalidate their reference before it dangles. Not
+    // fired on ownership transfer — the object survives that; see RebindFaction / GetFaction().
     Signal<> OnDestroyed;
+
+    // True once Faction::RazeBase has run. A razed base is already out of the game — Bases()
+    // skips it and FindBase does not return it — but the object stays alive until the next
+    // Faction::ReapRazedBases, so references held across the raze do not dangle.
+    bool IsRazed() const;
 
 private:
     friend class Faction;
+
+    // Leave the game without being destroyed: release the tile and emit OnDestroyed. Only
+    // Faction::RazeBase calls this, and only once — it throws on a second call.
+    void MarkRazed_();
 
     // Rebindable owner (RebindFaction): never null while the base lives in a Faction.
     Faction* m_pFaction;
@@ -353,8 +373,14 @@ private:
 
     // Assembles and memoizes the effect list this base resolves against.
     BaseEffectsCache m_effects;
-    // The end-of-turn completion state machine, including the abandon prompt.
+    // The end-of-turn completion state machine, including the WouldEmptyBase prompt.
     std::unique_ptr<ProductionCompletion> m_pCompletion;
+    // Player declined WouldEmptyBase: CollectBaseLocal_ emits DisableProduction until the
+    // queue changes. Distinct from riot, which emits the same flag from mood config.
+    bool m_bPlayerDisabledProduction = false;
+    // Set by MarkRazed_. Suppresses the destructor's OnDestroyed / tile release, which the
+    // raze already performed.
+    bool m_bRazed = false;
 };
 
 } // namespace ac

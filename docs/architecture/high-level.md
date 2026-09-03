@@ -400,12 +400,22 @@ seed. (Persisting that seed into save state is still open — see the world-gene
   previous owner, and keeping it would let the unit claim `ProducedAtThisBase` bonuses if the new
   owner ever captured that base). Mods/observers see one adopt event, never a fake
   death-then-birth pair.
-- **Destroy (base) = raze / extract-and-destroy (`Faction::ExtractBase`).** The `BaseManager`
-  object dies: `~BaseManager` emits `OnDestroyed` (while still fully valid, so an open `BaseView`
-  can pop before the reference dangles), `HomeBaseIndex` orphans every claim into the base
-  (units keep existing, just lose that home), deploy-cooldown records for that `baseId` are
-  dropped (`Faction::DropBuildingDeploys_`), and any `WorkerAssignmentManager` displaced-worker
-  handlers are cleared before it or the base disappears.
+- **Destroy (base) = raze, then reap — two steps, deliberately.** A base leaves the game the
+  instant its population hits zero, from `BaseManager`'s pop-loss handler, whatever emptied it
+  (starvation, a production pop cost, genetic plague, conquest). That handler calls
+  `Faction::RazeBase`, which does everything the rest of the game can observe: tombstones any
+  secret project the base held, orphans every `HomeBaseIndex` claim into it (units keep existing,
+  just lose that home), releases the base's tile improvement, drops deploy-cooldown records for
+  that `baseId` (`Faction::DropBuildingDeploys_`), emits `OnDestroyed` (while the object is still
+  fully valid, so an open `BaseView` can pop before the reference dangles), and marks the base
+  razed. `Faction::Bases()` filters razed bases out and `FindBase` stops returning them, so every
+  existing loop drops it at once with no call-site changes.
+  The `BaseManager` object is destroyed separately, by `Faction::ReapRazedBases`, which
+  `TurnProcessor::Advance` calls between turn stages. Splitting the two is what makes razing safe
+  from inside one of the base's own signal handlers and from the middle of a `Bases()` loop —
+  neither destroys anything under the caller. The reap point carries no game meaning; a razed
+  base is already gone as far as anything can tell. `Faction::ExtractBase` remains the manual
+  extract-and-destroy used by snapshot reconstruction and tests, not the raze path.
 - **Transfer (base) = identity-preserving ownership move, not snapshot recreate.**
   `Faction::TransferBaseTo` does `ReleaseBase` (moves the `unique_ptr<BaseManager>` out of the
   giver — same object, same address, same `baseId`, same `Tile`/`HomeBaseIndex`/

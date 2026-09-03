@@ -41,7 +41,7 @@ private:
 
     void PresentNotice_(const NoticeInteraction_t& rNotice);
     void PresentOpenView_(const OpenViewInteraction_t& rOpen);
-    void PresentProductionAbandon_(const ProductionAbandonInteraction_t& rAbandon);
+    void PresentProductionWouldEmpty_(const ProductionWouldEmptyInteraction_t& rWouldEmpty);
     void PresentProductionIdle_(const ProductionIdleInteraction_t& rIdle);
 
     BaseManager* FindAudienceBase_(FactionId_t factionId, BaseId_t baseId);

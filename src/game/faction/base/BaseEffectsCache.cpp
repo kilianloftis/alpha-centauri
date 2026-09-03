@@ -1,15 +1,34 @@
 #include "game/faction/base/BaseEffectsCache.h"
 
 #include "game/IEffectsProvider.h"
+#include "game/effects/EffectEnums.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/BaseMoodEffects.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/social-engineering/SocialRatingResolver.h"
 
 #include <map>
+#include <span>
 
 namespace ac
 {
+
+namespace
+{
+
+const EffectConfig_t& PlayerDisableProductionEffect_()
+{
+    static const EffectConfig_t kEffect = [] {
+        EffectConfig_t config;
+        config.effect = RuleFlagEffect_t{RuleFlagId_t::DisableProduction};
+        config.scope = EffectScope_t::ThisBase;
+        config.persistence = EffectPersistence_t::Continuous;
+        return config;
+    }();
+    return kEffect;
+}
+
+} // namespace
 
 BaseEffectsCache::BaseEffectsCache(const BaseManager& rBase,
                                    const SocialRatingRegistry& rSocialRatings,
@@ -26,6 +45,7 @@ void BaseEffectsCache::BindProvider(const IEffectsProvider& rProvider)
     m_pProvider = &rProvider;
     m_cachedPoolVersion.reset();
     m_cachedMoodRevision.reset();
+    m_cachedPlayerDisabledProduction.reset();
 }
 
 BaseEffects_t BaseEffectsCache::CollectBaseLocal_(const FactionEffects_t& rFactionEffects) const
@@ -39,6 +59,14 @@ BaseEffects_t BaseEffectsCache::CollectBaseLocal_(const FactionEffects_t& rFacti
     // Base-lane half only: the faction-lane half of the same arrays enters the pool via
     // FactionEffectsPool::CollectMoodEffects_, so nothing is counted on both paths.
     AppendBaseMoodBaseLaneEffects(m_rBase, baseEffects.effects);
+
+    if (m_rBase.HasPlayerDisabledProduction())
+    {
+        // Same RuleFlag riot tiers emit; player decline of WouldEmptyBase is another source.
+        const EffectConfig_t& rEffect = PlayerDisableProductionEffect_();
+        AppendBaseLaneEffects(std::span<const EffectConfig_t>(&rEffect, 1), &m_rBase,
+                              "production_disabled", baseEffects.effects);
+    }
 
     return baseEffects;
 }
@@ -66,15 +94,19 @@ BaseEffects_t BaseEffectsCache::Build(const FactionEffects_t& rFactionEffects) c
 
 const BaseEffects_t& BaseEffectsCache::Get() const
 {
-    // The mood revision is a separate key rather than folded into the pool version because a
-    // base's own mood also changes its base-lane list, which the pool never sees.
+    // The mood revision and player-disable bit are separate keys rather than folded into the
+    // pool version because a base's own mood / WouldEmptyBase decline also change its
+    // base-lane list, which the pool never sees.
     const uint64_t poolVersion = m_pProvider->GetEffectsVersion();
     const uint64_t moodRevision = m_rBase.GetPopulation().GetMoodRevision();
-    if (poolVersion != m_cachedPoolVersion || moodRevision != m_cachedMoodRevision)
+    const bool bPlayerDisabled = m_rBase.HasPlayerDisabledProduction();
+    if (poolVersion != m_cachedPoolVersion || moodRevision != m_cachedMoodRevision
+        || bPlayerDisabled != m_cachedPlayerDisabledProduction)
     {
         m_cached = Build(m_pProvider->GetActiveEffects());
         m_cachedPoolVersion = poolVersion;
         m_cachedMoodRevision = moodRevision;
+        m_cachedPlayerDisabledProduction = bPlayerDisabled;
     }
     return m_cached;
 }
