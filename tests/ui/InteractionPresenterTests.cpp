@@ -194,8 +194,8 @@ TEST_CASE("Production would-empty choice still presents when pause-on-event flag
     const UnitDesign& rPod = AddPodDesign_(harness.fixture);
     rBase.GetProduction().SetProduction(&rPod, rBase.GetBaseEffects());
     rBase.GetProduction().SetMineralStockpile(rBase.GetMineralCost());
-    REQUIRE(rBase.ApplyProduction().kind == ProductionApplyKind_t::WouldEmptyBase);
-    REQUIRE(rBase.HasPendingEmptyBaseChoice());
+    REQUIRE(rBase.ApplyProduction().kind == ProductionApplyKind_t::AwaitingConfirmation);
+    REQUIRE(rBase.HasPendingProductionConfirmation());
 
     harness.Enqueue(ProductionWouldEmptyInteraction_t{
         harness.fixture.pPlayer->GetFactionId(),
@@ -204,7 +204,7 @@ TEST_CASE("Production would-empty choice still presents when pause-on-event flag
 
     harness.pPresenter->Update();
 
-    CHECK(rBase.HasPendingEmptyBaseChoice());
+    CHECK(rBase.HasPendingProductionConfirmation());
     CHECK(harness.advanceCount == 0);
     CHECK(harness.pWorldView->HasModalElement());
     CHECK(harness.fixture.pState->GetPlayerInteractions().Size() == 1);

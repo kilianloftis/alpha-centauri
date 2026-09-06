@@ -33,19 +33,17 @@ void BaseProduction::OnExitImpl()
     ResetPassState_();
 }
 
-StageResult_t BaseProduction::HandleWouldEmptyBase_(GameState& rGameState, Faction& rFaction,
-                                                   BaseManager& rBase)
+StageResult_t BaseProduction::HandleAwaitingConfirmation_(GameState& rGameState,
+                                                         Faction& rFaction, BaseManager& rBase)
 {
     if (!rFaction.IsPlayerControlled())
     {
-        // TODO: the real rule for an AI base whose production would empty it is unknown.
-        // Disabling keeps the base and preserves the stockpile, so the same ready item will
-        // stay frozen until the AI re-queues or grows. Needs a rules decision
-        // (refuse the queue entry at size 1 / let the AI complete / something else), not this
-        // stopgap.
-        rBase.DisableProduction();
+        // The AI answers "not this turn", the same answer a player can give. The item stays
+        // queued and funded and is re-asked next turn, so a base that grows completes it on its
+        // own without the AI needing a rule for abandoning itself.
+        rBase.DeferProductionCompletion();
         std::cout << "  Base '" << rBase.GetName()
-                  << "' disabled production that would empty the base (AI)\n";
+                  << "' deferred production that would abandon the base (AI)\n";
         return StageResult_t::Continue;
     }
 
@@ -114,8 +112,8 @@ StageResult_t BaseProduction::HandleApplyResult_(GameState& rGameState, Faction&
 {
     switch (rResult.kind)
     {
-    case ProductionApplyKind_t::WouldEmptyBase:
-        return HandleWouldEmptyBase_(rGameState, rFaction, rBase);
+    case ProductionApplyKind_t::AwaitingConfirmation:
+        return HandleAwaitingConfirmation_(rGameState, rFaction, rBase);
     case ProductionApplyKind_t::Completed:
         return HandleProductionCompleted_(rGameState, rFaction, rBase, rResult);
     case ProductionApplyKind_t::Idle:
@@ -137,14 +135,14 @@ StageResult_t BaseProduction::ReevaluateProcessedBases_(GameState& rGameState, F
             {
                 continue;
             }
-            if (rBase.HasPendingEmptyBaseChoice())
+            if (rBase.HasPendingProductionConfirmation())
             {
                 continue;
             }
 
             const ProductionApplyResult_t result = rBase.TryCompleteReadyProduction();
             if (result.kind != ProductionApplyKind_t::Completed
-                && result.kind != ProductionApplyKind_t::WouldEmptyBase)
+                && result.kind != ProductionApplyKind_t::AwaitingConfirmation)
             {
                 continue;
             }

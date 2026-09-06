@@ -37,6 +37,7 @@ graph TB
 
     subgraph "Built-in Per-Faction Stages"
         ResourceCollection[ResourceCollection]
+        BaseGrowth[BaseGrowth]
         UnitSupport[UnitSupport]
         SurplusConversion[SurplusConversion]
         IncomeCollection[IncomeCollection]
@@ -88,6 +89,7 @@ graph TB
     GlobalTurnStage --> Save
     GlobalTurnStage --> CustomGlobalTurnStage
     PerFactionTurnStage --> ResourceCollection
+    PerFactionTurnStage --> BaseGrowth
     PerFactionTurnStage --> UnitSupport
     PerFactionTurnStage --> SurplusConversion
     PerFactionTurnStage --> IncomeCollection
@@ -185,12 +187,19 @@ about a pending riot without being a yielding stage.
 - **`WorldEvents`**: forest/kelp spread via `SpreadTerraformImprovements`, using
   `GameState::GetRng()` and `GetYearsSinceFirstPlayableYear()` (session stream — not a
   private year×area seed).
-- **`Population`**: growth, composition recalculation, then `ForecastMood` per base —
-  which sets *pending* riot / golden-age state and enqueues the player's warning, without
-  applying any gameplay effect. A base that starves to nothing is razed by `BaseManager`'s
-  pop-loss handler as it happens, not swept for here, so it has already dropped out of
-  `Faction::Bases()` before the loop reaches it (see "Object lifetime" in `high-level.md`).
+- **`Population`**: composition recalculation, then `ForecastMood` per base — which sets
+  *pending* riot / golden-age state and enqueues the player's warning, without applying any
+  gameplay effect. Stays after `BaseProduction` because a facility completed this turn can
+  change either. A base that starves to nothing is razed by `BaseManager`'s pop-loss handler as
+  it happens, not swept for here, so it has already dropped out of `Faction::Bases()` before the
+  loop reaches it (see "Object lifetime" in `high-level.md`).
 - **`ResourceCollection`**: `ProduceBaseResources` only.
+- **`BaseGrowth`**: `ApplyBaseGrowth` — spends the nutrient stockpile `ResourceCollection` just
+  filled: grow a pop at the threshold, starve one when it goes negative. Split out of
+  `Population` and ordered *before* `BaseProduction` so an item whose pop cost would abandon the
+  base is judged against the size the base actually ends the turn at. With growth after
+  production, a size-1 base that was about to grow was asked to abandon itself for an item it
+  could have afforded a stage later.
 - **`UnitSupport`**: `ApplyMineralSupport` — home-unit support charged against the mineral
   bank ResourceCollection just filled; surplus units disband.
 - **`SurplusConversion`**: `ConvertSurplusMinerals` — whatever support left goes through the

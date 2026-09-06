@@ -224,6 +224,39 @@ absorbs 2 of it (`drone_weight`) but riots at `+1` like any other citizen. The o
 `riot_threshold` / `golden_age_threshold` scalars in `pop_composition.json`. See
 `docs/architecture/population-system.md`.
 
+## 10. Completing production that would abandon the base
+
+**Rule:** when finishing the queued item would take the base to size zero, the player is asked.
+Answering "not this turn" **defers completion**: the item simply does not complete that turn. It
+stays queued, stays funded, and the check runs again next turn.
+
+Deferring is **not** disabling production, and the two were wrongly unified. Riot's
+`disable_production` means the base produces nothing at all — the item is unfunded, minerals are
+discarded because there is nothing to give, and hurrying is refused. A deferral means the base is
+working normally and the item is already fully paid for; minerals are discarded only because
+there is nothing left to apply them to, and hurrying is meaningless rather than forbidden. The
+two coincide on "does not complete" and "does not bank", for opposite reasons.
+
+The deferral answers for **one turn and one item**. It does not latch: `Apply` clears it each
+turn and re-derives `BaseManager::WouldCompletionAbandonBase`, so a base that has since grown
+completes the item with no further player action. Switching or clearing the queue cancels it.
+
+**AI:** defers too — the same answer, not a special case. A base that grows finishes the item on
+its own, so no rule about an AI abandoning its own base is needed.
+
+**Implemented** 2026-09-02. `ProductionCompletion` holds the two bits (`m_bPendingConfirmation`,
+`m_bDeferredThisTurn`) and knows only that an answer is outstanding; the abandonment rule itself
+is `BaseManager::WouldCompletionAbandonBase`, which is also what let `ProductionCompletion` drop
+its `BuildingRegistry` dependency. `IsProductionDisabled` is riot and only riot — the synthetic
+player-disable effect, its `BaseEffectsCache` cache key, and `HasPlayerDisabledProduction` are
+gone. `GetTurnsToProductionCompletion` reports `0` for a deferred item (funded and ready, waiting
+on an answer, not on minerals) and `nullopt` under riot. `ApplyProduction` stamps the turn
+original before any early-out, so switching away from a deferred item charges retool normally.
+
+Ordering matters to this rule: growth is the `BaseGrowth` stage and runs **before**
+`BaseProduction` (see `docs/architecture/turn-system.md`), so the question is asked against the
+size the base ends the turn at rather than its size one stage earlier.
+
 ## Deferred by decision, not by uncertainty
 
 - **Mid-proposal trade failure should crash.** A `TransferBaseTo` that throws part-way through a

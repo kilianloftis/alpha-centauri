@@ -166,7 +166,7 @@ void InteractionPresenter::PresentProductionWouldEmpty_(
     const ProductionWouldEmptyInteraction_t& rWouldEmpty)
 {
     BaseManager* pBase = FindAudienceBase_(rWouldEmpty.factionId, rWouldEmpty.baseId);
-    if (!pBase || !pBase->HasPendingEmptyBaseChoice())
+    if (!pBase || !pBase->HasPendingProductionConfirmation())
     {
         CompleteAndAdvance_();
         return;
@@ -185,7 +185,7 @@ void InteractionPresenter::PresentProductionWouldEmpty_(
     auto resolveChoice = [this, baseId, factionId](bool bComplete)
     {
         BaseManager* pResolve = FindAudienceBase_(factionId, baseId);
-        if (pResolve && pResolve->HasPendingEmptyBaseChoice())
+        if (pResolve && pResolve->HasPendingProductionConfirmation())
         {
             if (bComplete)
             {
@@ -193,7 +193,7 @@ void InteractionPresenter::PresentProductionWouldEmpty_(
             }
             else
             {
-                pResolve->DisableProduction();
+                pResolve->DeferProductionCompletion();
             }
         }
         CompleteAndAdvance_();
@@ -202,7 +202,7 @@ void InteractionPresenter::PresentProductionWouldEmpty_(
     std::vector<PopupChoice_t> choices;
     choices.push_back({"Complete " + itemName + " anyway",
                        [resolveChoice] { resolveChoice(true); }});
-    choices.push_back({"Disable production", [resolveChoice] { resolveChoice(false); }});
+    choices.push_back({"Not this turn", [resolveChoice] { resolveChoice(false); }});
     PushChoice_("Completing this would empty " + pBase->GetName() + ".", std::move(choices));
 }
 

@@ -3,13 +3,10 @@
 #include "game/Faction.h"
 #include "game/IConstructable.h"
 #include "game/PauseOnEventsConfig.h"
-#include "game/buildings/BuildingConfig.h"
-#include "game/buildings/BuildingRegistry.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include "game/faction/Military.h"
 #include "game/faction/base/BaseManager.h"
-#include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/production/ProductionManager.h"
 #include "game/units/UnitDesign.h"
 
@@ -46,10 +43,8 @@ PauseOnEventId_t ClassifyCompletedItem_(const IConstructable& rItem)
 
 } // namespace
 
-ProductionCompletion::ProductionCompletion(BaseManager& rBase,
-                                           const BuildingRegistry& rBuildings)
+ProductionCompletion::ProductionCompletion(BaseManager& rBase)
     : m_rBase(rBase)
-    , m_rBuildings(rBuildings)
 {
 }
 
@@ -63,57 +58,35 @@ bool ProductionCompletion::IsCurrentPrototype() const
     return pDesign && m_rBase.GetFaction().GetMilitary().IsPrototype(*pDesign);
 }
 
-bool ProductionCompletion::WouldEmptyBase_() const
-{
-    const IConstructable* pItem = m_rBase.GetProduction().GetCurrentProduction();
-    if (!pItem)
-    {
-        return false;
-    }
-
-    const int size = m_rBase.GetPopulation().GetSize();
-    if (const BuildingConfig_t* pBuilding = m_rBuildings.Find(pItem->GetId()))
-    {
-        return PredictInstantaneousPopulationSize(pBuilding->effects, size) <= 0;
-    }
-    if (const UnitDesign* pDesign = m_rBase.GetFaction().GetMilitary().GetDesign(pItem->GetId()))
-    {
-        return PredictUnitProductionPopulationSize(*pDesign, size) <= 0;
-    }
-    return false;
-}
-
 ProductionApplyResult_t ProductionCompletion::Apply()
 {
-    if (m_bPendingEmptyBaseChoice)
-    {
-        // ConvertMinerals already claimed the bank; wait for CompletePending / DisableProduction.
-        return ProductionApplyResult_t{ProductionApplyKind_t::WouldEmptyBase, {}};
-    }
-
     // Stamp the turn original without adding minerals: ConvertMinerals already moved this
-    // turn's leftover bank onto a real item (or converted / wasted it).
+    // turn's leftover bank onto a real item (or converted / wasted it). Stamped before any
+    // early-out, so an item left funded by a deferral is still a turn original and switching
+    // away from it charges retool like any other switch.
     m_rBase.GetProduction().BankProduction(0);
+    // Last turn's "not this turn" does not answer for this turn.
+    m_bDeferredThisTurn = false;
     return TryCompleteReady();
 }
 
 ProductionApplyResult_t ProductionCompletion::TryCompleteReady()
 {
-    if (m_bPendingEmptyBaseChoice)
+    if (m_bPendingConfirmation)
     {
-        return ProductionApplyResult_t{ProductionApplyKind_t::WouldEmptyBase, {}};
-    }
-    if (m_rBase.IsProductionDisabled())
-    {
-        // Stockpile is preserved; completion (and re-prompting) stays blocked until the
-        // DisableProduction RuleFlag lifts (riot ends, or the player changes the queue).
-        return ProductionApplyResult_t{ProductionApplyKind_t::InProgress, {}};
+        return ProductionApplyResult_t{ProductionApplyKind_t::AwaitingConfirmation, {}};
     }
 
     ProductionManager& rProduction = m_rBase.GetProduction();
     if (!rProduction.HasProduction())
     {
         return ProductionApplyResult_t{ProductionApplyKind_t::Idle, {}};
+    }
+    if (m_rBase.IsProductionDisabled())
+    {
+        // Riot: the base produces nothing this turn. The stockpile is untouched and completion
+        // stays blocked until the DisableProduction RuleFlag lifts.
+        return ProductionApplyResult_t{ProductionApplyKind_t::InProgress, {}};
     }
 
     const BaseEffects_t& rEffects = m_rBase.GetBaseEffects();
@@ -123,10 +96,14 @@ ProductionApplyResult_t ProductionCompletion::TryCompleteReady()
         return ProductionApplyResult_t{ProductionApplyKind_t::InProgress, {}};
     }
 
-    if (WouldEmptyBase_())
+    if (m_rBase.WouldCompletionAbandonBase())
     {
-        m_bPendingEmptyBaseChoice = true;
-        return ProductionApplyResult_t{ProductionApplyKind_t::WouldEmptyBase, {}};
+        if (m_bDeferredThisTurn)
+        {
+            return ProductionApplyResult_t{ProductionApplyKind_t::InProgress, {}};
+        }
+        m_bPendingConfirmation = true;
+        return ProductionApplyResult_t{ProductionApplyKind_t::AwaitingConfirmation, {}};
     }
 
     const IConstructable& rItem = *rProduction.GetCurrentProduction();
@@ -142,38 +119,45 @@ ProductionApplyResult_t ProductionCompletion::TryCompleteReady()
                                    completedEvent, completedName};
 }
 
-bool ProductionCompletion::HasPendingEmptyBaseChoice() const
+bool ProductionCompletion::HasPendingConfirmation() const
 {
-    return m_bPendingEmptyBaseChoice;
+    return m_bPendingConfirmation;
+}
+
+bool ProductionCompletion::IsCompletionBlocked() const
+{
+    return m_bPendingConfirmation || m_bDeferredThisTurn;
 }
 
 std::string ProductionCompletion::CompletePending()
 {
-    if (!m_bPendingEmptyBaseChoice)
+    if (!m_bPendingConfirmation)
     {
         throw std::runtime_error(
-            "ProductionCompletion::CompletePending: no pending empty-base choice");
+            "ProductionCompletion::CompletePending: no answer is outstanding");
     }
     // Clear before CompleteProduction: ResetProduction_ emits OnProductionChanged which would
     // also clear the flag, but CompletePending must own the transition explicitly.
-    m_bPendingEmptyBaseChoice = false;
+    m_bPendingConfirmation = false;
     return m_rBase.GetProduction().CompleteProduction(m_rBase.GetBaseEffects(),
                                                       IsCurrentPrototype());
 }
 
-void ProductionCompletion::DisableProduction()
+void ProductionCompletion::DeferCompletion()
 {
-    if (!m_bPendingEmptyBaseChoice)
+    if (!m_bPendingConfirmation)
     {
         throw std::runtime_error(
-            "ProductionCompletion::DisableProduction: no pending empty-base choice");
+            "ProductionCompletion::DeferCompletion: no answer is outstanding");
     }
-    m_bPendingEmptyBaseChoice = false;
+    m_bPendingConfirmation = false;
+    m_bDeferredThisTurn = true;
 }
 
 void ProductionCompletion::NotifyProductionChanged()
 {
-    m_bPendingEmptyBaseChoice = false;
+    m_bPendingConfirmation = false;
+    m_bDeferredThisTurn = false;
 }
 
 } // namespace ac

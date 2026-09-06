@@ -115,7 +115,7 @@ BaseManager::BaseManager(
           }))
     , m_name(std::move(name))
     , m_effects(*this, m_rSocialRatings, rFaction)
-    , m_pCompletion(std::make_unique<ProductionCompletion>(*this, rBuildingRegistry))
+    , m_pCompletion(std::make_unique<ProductionCompletion>(*this))
 {
     // A base provides its own garrison defense bonus, modeled as the "Base" improvement.
     m_rTileEffects.AddImprovementWithEffects(m_tile, std::string(ImprovementIds::k_Base));
@@ -167,10 +167,9 @@ BaseManager::BaseManager(
     });
 
     m_pProduction->OnProductionChanged.Connect([this]() {
-        // Switching or clearing the queue cancels an unresolved WouldEmptyBase prompt and
-        // lifts the player-chosen DisableProduction flag.
+        // Switching or clearing the queue cancels an unresolved abandon prompt and the
+        // one-turn deferral with it.
         m_pCompletion->NotifyProductionChanged();
-        m_bPlayerDisabledProduction = false;
     });
 
     m_pProduction->OnProductionCompleted.Connect([this](const std::string& itemId) {
@@ -354,6 +353,11 @@ std::optional<int> BaseManager::GetTurnsToProductionCompletion() const
     {
         return std::nullopt;
     }
+    if (m_pCompletion->IsCompletionBlocked())
+    {
+        // Funded and ready; it is waiting on an answer, not on minerals, so no turns remain.
+        return 0;
+    }
     const int remaining = std::max(0, GetMineralCost() - m_pProduction->GetMineralStockpile());
     if (remaining == 0)
     {
@@ -482,14 +486,29 @@ bool BaseManager::IsProductionDisabled() const
     return ResolveFlag(*this, RuleFlagId_t::DisableProduction);
 }
 
-bool BaseManager::HasPlayerDisabledProduction() const
+bool BaseManager::WouldCompletionAbandonBase() const
 {
-    return m_bPlayerDisabledProduction;
+    const IConstructable* pItem = m_pProduction->GetCurrentProduction();
+    if (!pItem)
+    {
+        return false;
+    }
+
+    const int size = m_pPopulation->GetSize();
+    if (const BuildingConfig_t* pBuilding = m_rBuildingRegistry.Find(pItem->GetId()))
+    {
+        return PredictInstantaneousPopulationSize(pBuilding->effects, size) <= 0;
+    }
+    if (const UnitDesign* pDesign = m_pFaction->GetMilitary().GetDesign(pItem->GetId()))
+    {
+        return PredictUnitProductionPopulationSize(*pDesign, size) <= 0;
+    }
+    return false;
 }
 
-bool BaseManager::HasPendingEmptyBaseChoice() const
+bool BaseManager::HasPendingProductionConfirmation() const
 {
-    return m_pCompletion->HasPendingEmptyBaseChoice();
+    return m_pCompletion->HasPendingConfirmation();
 }
 
 std::string BaseManager::CompletePendingProduction()
@@ -497,10 +516,9 @@ std::string BaseManager::CompletePendingProduction()
     return m_pCompletion->CompletePending();
 }
 
-void BaseManager::DisableProduction()
+void BaseManager::DeferProductionCompletion()
 {
-    m_pCompletion->DisableProduction();
-    m_bPlayerDisabledProduction = true;
+    m_pCompletion->DeferCompletion();
 }
 
 int BaseManager::GetMineralCost() const
@@ -627,11 +645,18 @@ void BaseManager::ConvertMinerals()
     const int minerals = m_pResources->ConsumeMinerals();
     if (IsProductionDisabled())
     {
-        // Leftovers are discarded: no BankProduction, no stockpile conversion.
+        // Riot: the base has nothing to give. Leftovers are discarded — no BankProduction, no
+        // stockpile conversion.
         return;
     }
     if (pItem && !pItem->NeverCompletes())
     {
+        if (m_pProduction->IsReadyToComplete(m_effects.Get(), m_pCompletion->IsCurrentPrototype()))
+        {
+            // Nothing to receive: the item is already funded and only waiting to finish, so
+            // banking more would pile minerals past cost and carry them to the next item.
+            return;
+        }
         m_pProduction->BankProduction(minerals);
         return;
     }

@@ -198,35 +198,36 @@ public:
     // ConvertMinerals already claimed the leftover mineral bank (banked into a real item,
     // converted, or wasted). Completes construction if the production stockpile meets the
     // cost — unless completing would leave the base at size <= 0, in which case kind is
-    // WouldEmptyBase until CompletePendingProduction or DisableProduction.
+    // AwaitingConfirmation until CompletePendingProduction or DeferProductionCompletion.
     ProductionApplyResult_t ApplyProduction();
 
     // Complete the queued item if the stockpile already meets the current cost, without
     // touching this turn's mineral bank. ApplyProduction stamps first, then calls this; the
     // BaseProduction pass also calls it when a sibling prototype finishes and this queue's
-    // surcharge drops. Does not consume resources. Honours the same WouldEmptyBase gate.
+    // surcharge drops. Does not consume resources. Honours the same confirmation gate.
     ProductionApplyResult_t TryCompleteReadyProduction();
 
-    // True when the DisableProduction RuleFlag is in force at this base — riot tiers and a
-    // player decline of WouldEmptyBase both emit that flag. ConvertMinerals, Hurry, and
-    // completion all consult this.
+    // True when the DisableProduction RuleFlag is in force at this base. That is riot, and only
+    // riot: the base produces nothing this turn, so ConvertMinerals discards the bank, Hurry
+    // throws, and completion is blocked. A deferred completion is a different thing entirely —
+    // see ProductionCompletion::IsCompletionBlocked.
     bool IsProductionDisabled() const;
 
-    // Effect-source bit for the player-chosen DisableProduction flag (WouldEmptyBase decline).
-    // IsProductionDisabled / ResolveFlag is the consumer query.
-    bool HasPlayerDisabledProduction() const;
+    // True when finishing the queued item would take this base to size 0 or below. The one
+    // place the abandonment rule is stated; ProductionCompletion asks and does not care why.
+    bool WouldCompletionAbandonBase() const;
 
-    // True when ApplyProduction returned WouldEmptyBase and the player has not yet chosen
-    // CompletePendingProduction or DisableProduction.
-    bool HasPendingEmptyBaseChoice() const;
+    // True when ApplyProduction returned AwaitingConfirmation and the player has not yet chosen
+    // CompletePendingProduction or DeferProductionCompletion.
+    bool HasPendingProductionConfirmation() const;
 
-    // Complete the pending item (Instantaneous pop cost may take the base to size 0).
-    // Throws if nothing is pending. Returns the completed item id.
+    // Complete the pending item (Instantaneous pop cost may take the base to size 0, which
+    // razes it). Throws if nothing is pending. Returns the completed item id.
     std::string CompletePendingProduction();
 
-    // Decline the WouldEmptyBase prompt: keep the queue and stockpile, and emit the
-    // DisableProduction RuleFlag until the queue changes. Throws if nothing is pending.
-    void DisableProduction();
+    // Answer "not this turn": the item stays queued and funded, and is asked about again next
+    // turn against the base's size then. Throws if nothing is pending.
+    void DeferProductionCompletion();
 
     // Effective mineral cost of the current production item after CostMultiplier effects
     // (e.g. Industry social-rating levels expanded into the base effect list) and the
@@ -242,7 +243,7 @@ public:
     // Spend up to energyCredits from the owning faction treasury on minerals for the queued
     // item, at the price QuoteHurry reports. Credits that would not buy a whole mineral are
     // left unspent. Completes immediately when the stockpile then meets cost (same
-    // WouldEmptyBase gate as ApplyProduction). Throws if credits is not positive, if the
+    // confirmation gate as ApplyProduction). Throws if credits is not positive, if the
     // item cannot be hurried, production is disabled, or if the treasury cannot cover
     // the charge.
     HurryResult_t HurryProduction(int energyCredits);
@@ -373,11 +374,8 @@ private:
 
     // Assembles and memoizes the effect list this base resolves against.
     BaseEffectsCache m_effects;
-    // The end-of-turn completion state machine, including the WouldEmptyBase prompt.
+    // The end-of-turn completion state machine, including the abandon-confirmation prompt.
     std::unique_ptr<ProductionCompletion> m_pCompletion;
-    // Player declined WouldEmptyBase: CollectBaseLocal_ emits DisableProduction until the
-    // queue changes. Distinct from riot, which emits the same flag from mood config.
-    bool m_bPlayerDisabledProduction = false;
     // Set by MarkRazed_. Suppresses the destructor's OnDestroyed / tile release, which the
     // raze already performed.
     bool m_bRazed = false;

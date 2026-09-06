@@ -15,7 +15,10 @@ enum class ProductionApplyKind_t
     InProgress,    // cost not yet met (or a never-completing stockpile)
 
     Completed,     // item finished; completedId set
-    WouldEmptyBase, // cost met; CompletePendingProduction / DisableProduction required
+    // cost met, but finishing needs a player answer: CompletePendingProduction or
+    // DeferProductionCompletion. The reason lives with the asker (BaseProduction / the UI),
+    // not here.
+    AwaitingConfirmation,
 };
 
 struct ProductionApplyResult_t

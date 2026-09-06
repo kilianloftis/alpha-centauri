@@ -174,6 +174,7 @@ add_library(ac-turn-stages OBJECT
     game/stages/YieldingPerFactionTurnStage.cpp
     game/stages/TurnStart.cpp
     game/stages/ResourceCollection.cpp
+    game/stages/BaseGrowth.cpp
     game/stages/UnitSupport.cpp
     game/stages/MineralConversion.cpp
     game/stages/IncomeCollection.cpp

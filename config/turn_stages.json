@@ -22,6 +22,17 @@
     }
   },
   {
+    "id": "BaseGrowth",
+    "name": "Base Growth",
+    "description": "Spends each base's nutrient stockpile: grows a pop at the threshold, starves one when the stockpile goes negative. Must run after ResourceCollection has banked nutrients, and before BaseProduction so an item whose pop cost would empty the base is judged against the size the base actually ends the turn at",
+    "repeatForEachFaction": true,
+    "hooks": {
+      "pre": [],
+      "post": [],
+      "replace": []
+    }
+  },
+  {
     "id": "UnitSupport",
     "name": "Unit Support",
     "description": "Charges home-unit mineral support against this turn's mineral bank; disbands units the base cannot support. Must run after ResourceCollection has banked minerals and before MineralConversion",
