@@ -145,13 +145,16 @@ void PopulationManager::ConvertResolved_(Pop& rPop, const std::string& typeId)
 
 void PopulationManager::ConvertTo(Pop& rPop, const std::string& typeId)
 {
-    // A conversion to or from a non-tile-worker changes this base's psych output, which is a
-    // composition input — so the split has to be recomputed against the new psych.
+    // Pool participation: Drone ↔ Worker (and Talent player-choice edges) can leave phase-1
+    // inputs identical while seating is wrong — EnsureCompositionCurrent would skip. Specialist
+    // boundary: psych output changes, which is a composition input.
+    const bool bWasParticipating = rPop.ParticipatesInComposition();
     const bool bWasSpecialist = !rPop.IsWorker();
     ConvertResolved_(rPop, typeId);
-    if (bWasSpecialist || !rPop.IsWorker())
+    if (bWasParticipating || rPop.ParticipatesInComposition() || bWasSpecialist
+        || !rPop.IsWorker())
     {
-        MaybeRecalculateComposition_();
+        ForceRecalculateComposition_();
     }
 }
 
@@ -198,7 +201,8 @@ PopulationManager::BatchCompositionUpdate::~BatchCompositionUpdate()
     // stale, which is recoverable, unlike termination.
     try
     {
-        m_rPops.EnsureCompositionCurrent();
+        // Force: dirty may mean ConvertTo mutated seating under an unchanged input key.
+        m_rPops.RecalculateComposition();
     }
     catch (const std::exception& rError)
     {
@@ -457,6 +461,16 @@ void PopulationManager::MaybeRecalculateComposition_()
         return;
     }
     EnsureCompositionCurrent();
+}
+
+void PopulationManager::ForceRecalculateComposition_()
+{
+    if (m_compositionBatchDepth > 0)
+    {
+        m_bCompositionDirty = true;
+        return;
+    }
+    RecalculateComposition();
 }
 
 const PopCompositionConfig_t& PopulationManager::GetCompositionConfig() const

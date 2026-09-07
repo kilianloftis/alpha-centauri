@@ -194,6 +194,40 @@ TEST_CASE("RecalculateComposition is stable when called repeatedly within a turn
     }
 }
 
+TEST_CASE("ConvertTo Drone to Worker reseats under unchanged pressure",
+          "[population][composition]")
+{
+    // Phase-1 inputs are unchanged by a pool-member convert, so EnsureCompositionCurrent
+    // would skip — ConvertTo must force recalculation or the drone stays a worker.
+    // Building effects only reach composition when the base is on the faction's list.
+    actest::FactionFixture fixture;
+    ac::Faction& rFaction = fixture.MakeFaction();
+    ac::BaseManager& base = fixture.MakeFactionBase(rFaction, 4, 4);
+    base.GetBuildingManager().AddBuilding("drone_hall");
+    ac::PopulationManager& pops = base.GetPopulation();
+    pops.RecalculateComposition();
+    REQUIRE(pops.GetDroneCount() == 2);
+
+    ac::Pop* pDrone = nullptr;
+    for (ac::Pop& rPop : pops.Pops())
+    {
+        if (rPop.IsDrone())
+        {
+            pDrone = &rPop;
+            break;
+        }
+    }
+    REQUIRE(pDrone != nullptr);
+
+    pops.ConvertTo(*pDrone, "Worker");
+    CHECK(pops.GetDroneCount() == 2);
+
+    // Ensure alone would not have fixed a skipped ConvertTo — after a force reseat it is a
+    // no-op and must leave the restored drones in place.
+    pops.EnsureCompositionCurrent();
+    CHECK(pops.GetDroneCount() == 2);
+}
+
 TEST_CASE("Mood sums range over the composition pool, never base size",
           "[population][riot][goldenage]")
 {

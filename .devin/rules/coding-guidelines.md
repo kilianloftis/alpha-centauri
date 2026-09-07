@@ -15,6 +15,7 @@ If a class owns a resource, if possible, the class should construct that resourc
 Prefer throwing exceptions over returning default values
 Throw errors if expected pointers are null
 Do not keep old code for legacy of backwards compatibilty reasons. Update all call sites as needed.
+When asked to address review findings or implement a review/plan, treat every finding as in-scope unless the user explicitly defers it. Severity ranks order of work, not whether it gets done — do not park fixes as "optional polish" or "leave as-is."
 
 ## Commmenting
 Keep comments to a minimum. Code should be self-documenting. We don't need comments explainging why something was changed.

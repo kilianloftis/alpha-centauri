@@ -82,8 +82,9 @@ public:
     void RemovePop();
 
     // Convert a pop to any type by config id (e.g. "Worker", "Drone", "Talent", "Librarian").
-    // Recalculates drone/talent composition when the pop changes to or from a specialist,
-    // or between specialist types (psych output can change talent targets).
+    // Forces composition when the pop participates in the composition pool before or after
+    // (Drone ↔ Worker leaves phase-1 inputs unchanged, so EnsureCompositionCurrent would skip),
+    // or when crossing the specialist boundary (psych output changes talent targets).
     void ConvertTo(Pop& rPop, const std::string& typeId);
 
     // Convert a pop to the registry default worker type (same composition rules as ConvertTo).
@@ -150,8 +151,9 @@ public:
     // what this turn's psych will do to the base before the player commits to it.
     PopCompositionResult_t ComputeComposition() const;
 
-    // Defers specialist-driven RecalculateComposition until the outermost batch ends, so
-    // multi-pop conversions (reset / auto-assign overflow) apply composition once.
+    // Defers ConvertTo-driven RecalculateComposition until the outermost batch ends, so
+    // multi-pop conversions (reset / auto-assign overflow) apply composition once. Flush
+    // forces recalculation — dirty can mean seating changed under an unchanged input key.
     class BatchCompositionUpdate
     {
     public:
@@ -243,6 +245,9 @@ private:
     void NotifyPopGained_();
     void NotifyPopLost_();
     void MaybeRecalculateComposition_();
+    // Always re-runs phase 1+2 (or marks the batch dirty). Used when seating may have diverged
+    // without CompositionInputKey_t changing — ConvertTo of pool members.
+    void ForceRecalculateComposition_();
     // Specialists / player-choice pops last; within a group, the pop producing the least. See
     // docs/game-rules-decisions.md, "Which pop is lost when a base shrinks".
     Pop& SelectDoomedPop_();
@@ -250,7 +255,7 @@ private:
     // Requested type id -> the type a pop actually becomes, walking the obsolescence chain
     // against currently discovered techs. The one place that rule is applied.
     const PopTypeConfig_t& ResolveType_(const std::string& typeId) const;
-    // ConvertTo without the specialist-change recalculation hook, for callers that are already
+    // ConvertTo without the composition recalculation hook, for callers that are already
     // inside a recalculation.
     void ConvertResolved_(Pop& rPop, const std::string& typeId);
 };
