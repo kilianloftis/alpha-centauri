@@ -35,7 +35,7 @@
   {
     "id": "UnitSupport",
     "name": "Unit Support",
-    "description": "Charges home-unit mineral support against this turn's mineral bank; disbands units the base cannot support. Must run after ResourceCollection has banked minerals and before MineralConversion",
+    "description": "Charges home-unit mineral support against this turn's mineral bank; disbands units the base cannot support. Must run after ResourceCollection has banked minerals and before BaseProduction",
     "repeatForEachFaction": true,
     "hooks": {
       "pre": [],
@@ -44,9 +44,9 @@
     }
   },
   {
-    "id": "MineralConversion",
-    "name": "Mineral Conversion",
-    "description": "Converts minerals into other resources. Must run after UnitSupport has taken its share and before IncomeCollection / ResearchAccumulation drain econ and labs",
+    "id": "BaseProduction",
+    "name": "Base Production",
+    "description": "Allocates leftover minerals to the queued build or converts them through a stockpile, then completes funded items. Must run after UnitSupport and before IncomeCollection / ResearchAccumulation so stockpile econ and labs are spent this turn",
     "repeatForEachFaction": true,
     "hooks": {
       "pre": [],
@@ -80,17 +80,6 @@
     "id": "Upkeep",
     "name": "Upkeep",
     "description": "Retires expired deploy records and charges facility energy upkeep against the faction treasury; must run after IncomeCollection has banked this turn's econ",
-    "repeatForEachFaction": true,
-    "hooks": {
-      "pre": [],
-      "post": [],
-      "replace": []
-    }
-  },
-  {
-    "id": "BaseProduction",
-    "name": "Base Production",
-    "description": "Handles production in all bases",
     "repeatForEachFaction": true,
     "hooks": {
       "pre": [],

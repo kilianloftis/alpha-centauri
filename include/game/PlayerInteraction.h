@@ -7,6 +7,7 @@
 #include <optional>
 #include <string>
 #include <variant>
+#include <vector>
 
 namespace ac
 {
@@ -51,7 +52,9 @@ struct ProductionIdleInteraction_t
     bool afterCompletion = false;
     std::string completedItemId;
     std::string completedItemName;
-    std::optional<PauseOnEventId_t> completedEvent;
+    // Applicable pause gates after a completion (OR-matched). Empty idle-without-completion
+    // falls back to BuildOrdersOutOfDate in the presenter.
+    std::vector<PauseOnEventId_t> completedEvents;
 };
 
 using PlayerInteraction_t = std::variant<

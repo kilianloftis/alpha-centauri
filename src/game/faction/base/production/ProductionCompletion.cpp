@@ -1,122 +1,62 @@
 #include "game/faction/base/production/ProductionCompletion.h"
 
-#include "game/Faction.h"
-#include "game/IConstructable.h"
-#include "game/PauseOnEventsConfig.h"
-#include "game/effects/ActiveEffect.h"
-#include "game/effects/EffectEnums.h"
-#include "game/faction/Military.h"
-#include "game/faction/base/BaseManager.h"
-#include "game/faction/base/production/ProductionManager.h"
-#include "game/units/UnitDesign.h"
-
 #include <stdexcept>
 
 namespace ac
 {
 
-namespace
+ProductionCompletion::EvaluateResult_t
+ProductionCompletion::MakeReadyToFinish_(const ProductionCompletionProbe_t& probe)
 {
-
-PauseOnEventId_t ClassifyCompletedItem_(const IConstructable& rItem)
-{
-    switch (rItem.GetConstructableKind())
+    if (!probe.hasProduction)
     {
-    case ConstructableKind_t::Building:
-    case ConstructableKind_t::SecretProject:
-        return PauseOnEventId_t::NewFacilityBuilt;
-    case ConstructableKind_t::Unit:
+        throw std::logic_error("ProductionCompletion::MakeReadyToFinish_: nothing queued");
+    }
+    return EvaluateResult_t{Outcome_t::ReadyToFinish, probe.isPrototype};
+}
+
+ProductionCompletion::EvaluateResult_t
+ProductionCompletion::TryCompleteReady(const ProductionCompletionProbe_t& probe, bool bNewTurn)
+{
+    if (bNewTurn)
     {
-        const auto* pDesign = dynamic_cast<const UnitDesign*>(&rItem);
-        if (pDesign && (pDesign->GetStat(StatId_t::Attack) > 0
-                        || pDesign->GetFlag(RuleFlagId_t::ForcesPsiCombat)))
-        {
-            return PauseOnEventId_t::CombatUnitBuilt;
-        }
-        return PauseOnEventId_t::NonCombatUnitBuilt;
+        // Last turn's "not this turn" does not answer for this turn.
+        m_bDeferredThisTurn = false;
     }
-    case ConstructableKind_t::Stockpile:
-        throw std::logic_error("ClassifyCompletedItem_: a stockpile cannot complete");
-    }
-    throw std::logic_error("ClassifyCompletedItem_: unhandled constructable kind");
-}
 
-} // namespace
-
-ProductionCompletion::ProductionCompletion(BaseManager& rBase)
-    : m_rBase(rBase)
-{
-}
-
-bool ProductionCompletion::IsCurrentPrototype() const
-{
-    // Same test ClassifyCompletedItem_ uses. Resolving the design by id instead would scan
-    // every design of the faction on a call GetMineralCost makes from render paths, and would
-    // mistake a building for a unit if the two ever shared an id.
-    const UnitDesign* pDesign =
-        dynamic_cast<const UnitDesign*>(m_rBase.GetProduction().GetCurrentProduction());
-    return pDesign && m_rBase.GetFaction().GetMilitary().IsPrototype(*pDesign);
-}
-
-ProductionApplyResult_t ProductionCompletion::Apply()
-{
-    // Stamp the turn original without adding minerals: ConvertMinerals already moved this
-    // turn's leftover bank onto a real item (or converted / wasted it). Stamped before any
-    // early-out, so an item left funded by a deferral is still a turn original and switching
-    // away from it charges retool like any other switch.
-    m_rBase.GetProduction().BankProduction(0);
-    // Last turn's "not this turn" does not answer for this turn.
-    m_bDeferredThisTurn = false;
-    return TryCompleteReady();
-}
-
-ProductionApplyResult_t ProductionCompletion::TryCompleteReady()
-{
     if (m_bPendingConfirmation)
     {
-        return ProductionApplyResult_t{ProductionApplyKind_t::AwaitingConfirmation, {}};
+        return EvaluateResult_t{Outcome_t::AwaitingConfirmation, false};
     }
 
-    ProductionManager& rProduction = m_rBase.GetProduction();
-    if (!rProduction.HasProduction())
+    if (!probe.hasProduction)
     {
-        return ProductionApplyResult_t{ProductionApplyKind_t::Idle, {}};
+        return EvaluateResult_t{Outcome_t::Idle, false};
     }
-    if (m_rBase.IsProductionDisabled())
+    if (probe.productionDisabled)
     {
         // Riot: the base produces nothing this turn. The stockpile is untouched and completion
-        // stays blocked until the DisableProduction RuleFlag lifts.
-        return ProductionApplyResult_t{ProductionApplyKind_t::InProgress, {}};
+        // stays blocked until the DisableProduction RuleFlag lifts. BaseManager::ApplyProduction
+        // also early-outs on riot before banking leftovers — both sites are required.
+        return EvaluateResult_t{Outcome_t::InProgress, false};
     }
 
-    const BaseEffects_t& rEffects = m_rBase.GetBaseEffects();
-    const bool bPrototype = IsCurrentPrototype();
-    if (!rProduction.IsReadyToComplete(rEffects, bPrototype))
+    if (!probe.readyToComplete)
     {
-        return ProductionApplyResult_t{ProductionApplyKind_t::InProgress, {}};
+        return EvaluateResult_t{Outcome_t::InProgress, false};
     }
 
-    if (m_rBase.WouldCompletionAbandonBase())
+    if (probe.wouldAbandonBase)
     {
         if (m_bDeferredThisTurn)
         {
-            return ProductionApplyResult_t{ProductionApplyKind_t::InProgress, {}};
+            return EvaluateResult_t{Outcome_t::InProgress, false};
         }
         m_bPendingConfirmation = true;
-        return ProductionApplyResult_t{ProductionApplyKind_t::AwaitingConfirmation, {}};
+        return EvaluateResult_t{Outcome_t::AwaitingConfirmation, false};
     }
 
-    const IConstructable& rItem = *rProduction.GetCurrentProduction();
-    // TODO: a prototype reports PrototypeBuilt instead of CombatUnitBuilt / NonCombatUnitBuilt,
-    // so a player who wants combat-unit pauses but not prototype pauses gets no prompt at all
-    // for a prototype combat unit. Whether prototype overrides the item classification or the
-    // two gates should both be consulted is an unrecorded UI rules decision.
-    const PauseOnEventId_t completedEvent =
-        bPrototype ? PauseOnEventId_t::PrototypeBuilt : ClassifyCompletedItem_(rItem);
-    const std::string completedName = rItem.GetName();
-    return ProductionApplyResult_t{ProductionApplyKind_t::Completed,
-                                   rProduction.CompleteProduction(rEffects, bPrototype),
-                                   completedEvent, completedName};
+    return MakeReadyToFinish_(probe);
 }
 
 bool ProductionCompletion::HasPendingConfirmation() const
@@ -129,18 +69,18 @@ bool ProductionCompletion::IsCompletionBlocked() const
     return m_bPendingConfirmation || m_bDeferredThisTurn;
 }
 
-std::string ProductionCompletion::CompletePending()
+ProductionCompletion::EvaluateResult_t
+ProductionCompletion::AcceptPending(const ProductionCompletionProbe_t& probe)
 {
     if (!m_bPendingConfirmation)
     {
         throw std::runtime_error(
-            "ProductionCompletion::CompletePending: no answer is outstanding");
+            "ProductionCompletion::AcceptPending: no answer is outstanding");
     }
-    // Clear before CompleteProduction: ResetProduction_ emits OnProductionChanged which would
-    // also clear the flag, but CompletePending must own the transition explicitly.
+    // Clear before the owner spends the queue: ResetProduction_ emits OnProductionChanged
+    // which would also clear the flag, but AcceptPending must own the transition explicitly.
     m_bPendingConfirmation = false;
-    return m_rBase.GetProduction().CompleteProduction(m_rBase.GetBaseEffects(),
-                                                      IsCurrentPrototype());
+    return MakeReadyToFinish_(probe);
 }
 
 void ProductionCompletion::DeferCompletion()

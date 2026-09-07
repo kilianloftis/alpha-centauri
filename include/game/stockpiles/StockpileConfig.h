@@ -23,9 +23,10 @@ enum class StockpileRounding_t
     Nearest,
 };
 
-// A never-completing production item. Each turn the MineralConversion stage feeds the base's
-// leftover minerals through the MineralsConverted StatModifiers in `effects` and credits the
-// results. Selectable from the build menu and used as the empty-queue fallback.
+// A stockpile production item. Each turn BaseProduction feeds the base's leftover
+// minerals (and any prior production-stockpile leftovers) through the MineralsConverted
+// StatModifiers in `effects` and credits the results. Selectable from the build menu and
+// used as the empty-queue fallback.
 //
 // Deliberately not a BuildingConfig_t: a stockpile is never constructed, so cost, upkeep,
 // allow_multiple, secret_project and orbital have no meaning for it. Keeping it a separate
@@ -46,7 +47,6 @@ struct StockpileConfig_t : public IConstructable
     const std::string& GetId() const override { return id; }
     const std::string& GetName() const override { return name; }
     int GetBaseCost() const override { return 0; }
-    bool NeverCompletes() const override { return true; }
     ConstructableKind_t GetConstructableKind() const override
     {
         return ConstructableKind_t::Stockpile;

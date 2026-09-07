@@ -481,7 +481,7 @@ TEST_CASE("Hurry spends treasury credits into the production stockpile",
     {
         pBase->GetProduction().SetProduction(nullptr, pBase->GetBaseEffects());
         REQUIRE(pBase->GetProduction().GetCurrentProduction() != nullptr);
-        REQUIRE(pBase->GetProduction().GetCurrentProduction()->NeverCompletes());
+        REQUIRE(pBase->GetProduction().GetCurrentProduction()->IsStockpile());
         CHECK_FALSE(pBase->QuoteHurry().bAvailable);
         rFaction.GetEconomy().AddEnergy(10);
         CHECK_THROWS_WITH(pBase->HurryProduction(10),

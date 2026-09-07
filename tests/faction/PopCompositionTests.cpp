@@ -858,7 +858,8 @@ TEST_CASE("Committed riot applies disable_production and resource clamps", "[rio
     faction.GetEconomy().AddEnergy(100);
     CHECK_THROWS_WITH(base.HurryProduction(10), Catch::Matchers::ContainsSubstring("disabled"));
 
-    // Leftover mineral bank is discarded — no BankProduction under disable_production.
+    // Under disable_production, leftovers stay in the resource bank; production stockpile
+    // progress is unchanged.
     if (!base.GetBuildingManager().HasBuilding("mineral_cache"))
     {
         base.GetBuildingManager().AddBuilding("mineral_cache");
@@ -866,9 +867,10 @@ TEST_CASE("Committed riot applies disable_production and resource clamps", "[rio
     base.ProduceResources();
     REQUIRE(base.GetResources().GetMineralBank() > 0);
     const int stockpileBefore = base.GetProduction().GetMineralStockpile();
-    base.ConvertMinerals();
+    const int bankBefore = base.GetResources().GetMineralBank();
+    CHECK(base.ApplyProduction().kind == ProductionApplyKind_t::InProgress);
     CHECK(base.GetProduction().GetMineralStockpile() == stockpileBefore);
-    CHECK(base.GetResources().GetMineralBank() == 0);
+    CHECK(base.GetResources().GetMineralBank() == bankBefore);
 
     CHECK(base.GetLabsProduction() == 0);
     CHECK(base.GetEconProduction() <= std::max(0, base.GetBuildingUpkeep()));

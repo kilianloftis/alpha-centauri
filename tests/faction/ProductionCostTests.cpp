@@ -1,5 +1,7 @@
 #include "game/faction/base/production/ProductionCostCalculator.h"
 #include "game/faction/base/production/ProductionManager.h"
+#include "game/faction/base/production/ProductionApplyResult.h"
+#include "game/Faction.h"
 #include "game/IConstructable.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
@@ -124,7 +126,7 @@ TEST_CASE("ProductionManager resolves cost from base effects", "[production][cos
 {
     actest::BaseFixture fixture;
     BaseManager& base = fixture.MakeBase(4, 4);
-    ProductionManager production(k_TestConfig, nullptr);
+    ProductionManager production(k_TestConfig, nullptr, base);
     StubConstructable item;
     production.SetProduction(&item, BaseEffects_t{base});
 
@@ -139,24 +141,29 @@ TEST_CASE("ProductionManager resolves cost from base effects", "[production][cos
 
     production.BankProduction(5);
     REQUIRE(production.IsReadyToComplete(BaseEffects_t{base}, false));
-    CHECK(production.CompleteProduction(BaseEffects_t{base}) == "stub_item");
+    const ProductionApplyResult_t applied = production.TryCompleteReady(/*bNewTurn=*/true);
+    REQUIRE(applied.kind == ProductionApplyKind_t::Completed);
+    CHECK(applied.completedId == "stub_item");
     CHECK_FALSE(production.HasProduction());
     CHECK(production.GetMineralStockpile() == 0);
 }
 
-TEST_CASE("A never-completing item has no mineral cost and is never ready",
+TEST_CASE("A stockpile item has no mineral cost and is never ready",
           "[production][stockpile]")
 {
     actest::BaseFixture fixture;
     BaseManager& base = fixture.MakeBase(4, 4);
-    struct NeverCompleteItem : StubConstructable
+    struct StockpileItem : StubConstructable
     {
-        bool NeverCompletes() const override { return true; }
+        ConstructableKind_t GetConstructableKind() const override
+        {
+            return ConstructableKind_t::Stockpile;
+        }
     };
 
-    NeverCompleteItem item;
+    StockpileItem item;
     item.baseCost = 0;
-    ProductionManager production(k_TestConfig, nullptr);
+    ProductionManager production(k_TestConfig, nullptr, base);
     production.SetProduction(&item, BaseEffects_t{base});
     production.SetMineralStockpile(100);
 
@@ -191,7 +198,7 @@ TEST_CASE("Retooling forfeits half the minerals spent past the threshold", "[pro
     const StubConstructable itemA = RetoolItem("a", "A");
     const StubConstructable itemB = RetoolItem("b", "B");
 
-    ProductionManager production(k_TestConfig, nullptr);
+    ProductionManager production(k_TestConfig, nullptr, base);
     production.SetProduction(&itemA, BaseEffects_t{base});
     production.BankProduction(0); // marks A as this turn's original
     production.SetMineralStockpile(40);
@@ -212,7 +219,7 @@ TEST_CASE("RetoolPenaltyScale 0 cancels the forfeit", "[production][retool]")
                "skunkworks"),
     }};
 
-    ProductionManager production(k_TestConfig, nullptr);
+    ProductionManager production(k_TestConfig, nullptr, base);
     production.SetProduction(&itemA, BaseEffects_t{base});
     production.BankProduction(0);
     production.SetMineralStockpile(40);
@@ -228,7 +235,7 @@ TEST_CASE("Retooling is free at or below the threshold", "[production][retool]")
     const StubConstructable itemA = RetoolItem("a", "A");
     const StubConstructable itemB = RetoolItem("b", "B");
 
-    ProductionManager production(k_TestConfig, nullptr);
+    ProductionManager production(k_TestConfig, nullptr, base);
     production.SetProduction(&itemA, BaseEffects_t{base});
     production.BankProduction(0);
     production.SetMineralStockpile(k_TestConfig.retoolPenaltyThreshold);
@@ -244,7 +251,7 @@ TEST_CASE("Switching back to the turn's original item is free", "[production][re
     const StubConstructable itemA = RetoolItem("a", "A");
     const StubConstructable itemB = RetoolItem("b", "B");
 
-    ProductionManager production(k_TestConfig, nullptr);
+    ProductionManager production(k_TestConfig, nullptr, base);
     production.SetProduction(&itemA, BaseEffects_t{base});
     production.BankProduction(0);
     production.SetMineralStockpile(40);
@@ -265,7 +272,7 @@ TEST_CASE("Switching on to a third item pays again", "[production][retool]")
     const StubConstructable itemB = RetoolItem("b", "B");
     const StubConstructable itemC = RetoolItem("c", "C");
 
-    ProductionManager production(k_TestConfig, nullptr);
+    ProductionManager production(k_TestConfig, nullptr, base);
     production.SetProduction(&itemA, BaseEffects_t{base});
     production.BankProduction(0);
     production.SetMineralStockpile(40);
@@ -285,7 +292,7 @@ TEST_CASE("The turn's original item follows production, turn by turn", "[product
     const StubConstructable itemA = RetoolItem("a", "A");
     const StubConstructable itemB = RetoolItem("b", "B");
 
-    ProductionManager production(k_TestConfig, nullptr);
+    ProductionManager production(k_TestConfig, nullptr, base);
     production.SetProduction(&itemA, BaseEffects_t{base});
     production.BankProduction(0);
     production.SetMineralStockpile(40);
@@ -309,7 +316,7 @@ TEST_CASE("Null turn original skips retool until BankProduction stamps one",
     const StubConstructable itemA = RetoolItem("a", "A");
     const StubConstructable itemB = RetoolItem("b", "B");
 
-    ProductionManager production(k_TestConfig, nullptr);
+    ProductionManager production(k_TestConfig, nullptr, base);
     production.SetMineralStockpile(40);
 
     production.SetProduction(&itemA, BaseEffects_t{base});
@@ -324,7 +331,7 @@ TEST_CASE("Null turn original skips retool until BankProduction stamps one",
 
 // Completion leftover. Minerals past the item's effective cost stay on the next queued item
 // (the default fallback, or whatever the player queues next), but only up to the retool
-// threshold — so choosing the next build is a free switch. See CompleteProduction.
+// threshold — so choosing the next build is a free switch.
 TEST_CASE("Completion leftover minerals carry to the next item up to the retool threshold",
           "[production][retool]")
 {
@@ -335,13 +342,15 @@ TEST_CASE("Completion leftover minerals carry to the next item up to the retool 
     StubConstructable nextDefault{"next", "Next"};
     nextDefault.baseCost = 100;
 
-    ProductionManager production(k_TestConfig, [&] { return &nextDefault; });
+    ProductionManager production(k_TestConfig, [&] { return &nextDefault; }, base);
     production.SetProduction(&item, BaseEffects_t{base});
 
     SECTION("exact cost leaves nothing")
     {
         production.SetMineralStockpile(10);
-        CHECK(production.CompleteProduction(BaseEffects_t{base}) == "stub_item");
+        const ProductionApplyResult_t applied = production.TryCompleteReady(/*bNewTurn=*/true);
+        REQUIRE(applied.kind == ProductionApplyKind_t::Completed);
+        CHECK(applied.completedId == "stub_item");
         CHECK(production.GetCurrentProduction() == &nextDefault);
         CHECK(production.GetMineralStockpile() == 0);
     }
@@ -349,7 +358,9 @@ TEST_CASE("Completion leftover minerals carry to the next item up to the retool 
     SECTION("leftover below the threshold is kept in full")
     {
         production.SetMineralStockpile(17);
-        CHECK(production.CompleteProduction(BaseEffects_t{base}) == "stub_item");
+        const ProductionApplyResult_t applied = production.TryCompleteReady(/*bNewTurn=*/true);
+        REQUIRE(applied.kind == ProductionApplyKind_t::Completed);
+        CHECK(applied.completedId == "stub_item");
         CHECK(production.GetCurrentProduction() == &nextDefault);
         CHECK(production.GetMineralStockpile() == 7);
     }
@@ -357,40 +368,33 @@ TEST_CASE("Completion leftover minerals carry to the next item up to the retool 
     SECTION("leftover above the threshold is capped")
     {
         production.SetMineralStockpile(40);
-        CHECK(production.CompleteProduction(BaseEffects_t{base}) == "stub_item");
+        const ProductionApplyResult_t applied = production.TryCompleteReady(/*bNewTurn=*/true);
+        REQUIRE(applied.kind == ProductionApplyKind_t::Completed);
+        CHECK(applied.completedId == "stub_item");
         CHECK(production.GetCurrentProduction() == &nextDefault);
         CHECK(production.GetMineralStockpile() == k_TestConfig.retoolPenaltyThreshold);
     }
 }
 
-TEST_CASE("Completion leftover uses the effective cost including prototype surcharge",
-          "[production][retool][prototype]")
-{
-    actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
-    StubConstructable item;
-    item.baseCost = 10; // 50% surcharge → 15
-    ProductionManager production(k_TestConfig, nullptr);
-    production.SetProduction(&item, BaseEffects_t{base});
-    production.SetMineralStockpile(20);
-
-    CHECK(production.CompleteProduction(BaseEffects_t{base}, true) == "stub_item");
-    CHECK(production.GetMineralStockpile() == 5);
-}
-
 TEST_CASE("Completion leftover uses CostMultiplier when computing what was spent",
           "[production][retool][cost]")
 {
-    actest::BaseFixture fixture;
-    BaseManager& base = fixture.MakeBase(4, 4);
-    actest::EffectPool pool;
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    // Policy: +2 Industry → CostMultiplier -20% → effective cost 8.
+    faction.GetSocialEngineering().SetActivePolicy(fixture.socialPolicies().Get("industry_policy"));
+
     StubConstructable item;
-    item.baseCost = 10; // -20% Industry → 8
-    ProductionManager production(k_TestConfig, nullptr);
-    production.SetProduction(&item, BaseEffects_t{base});
+    item.baseCost = 10;
+    ProductionManager production(k_TestConfig, nullptr, base);
+    production.SetProduction(&item, base.GetBaseEffects());
+    REQUIRE(production.GetMineralCost(base.GetBaseEffects(), false) == 8);
     production.SetMineralStockpile(12);
 
-    CHECK(production.CompleteProduction(WithCostPercent(base, pool, -20.0), false) == "stub_item");
+    const ProductionApplyResult_t applied = production.TryCompleteReady(/*bNewTurn=*/true);
+    REQUIRE(applied.kind == ProductionApplyKind_t::Completed);
+    CHECK(applied.completedId == "stub_item");
     CHECK(production.GetMineralStockpile() == 4);
 }
 
@@ -403,12 +407,14 @@ TEST_CASE("Completion leftover on the next item is a free retool", "[production]
     StubConstructable nextDefault{"stockpile", "Stockpile"};
     const StubConstructable playerPick = RetoolItem("pick", "Pick");
 
-    ProductionManager production(k_TestConfig, [&] { return &nextDefault; });
+    ProductionManager production(k_TestConfig, [&] { return &nextDefault; }, base);
     production.SetProduction(&item, BaseEffects_t{base});
     production.BankProduction(0);
     production.SetMineralStockpile(40);
 
-    REQUIRE(production.CompleteProduction(BaseEffects_t{base}) == "stub_item");
+    const ProductionApplyResult_t applied = production.TryCompleteReady(/*bNewTurn=*/true);
+    REQUIRE(applied.kind == ProductionApplyKind_t::Completed);
+    REQUIRE(applied.completedId == "stub_item");
     REQUIRE(production.GetCurrentProduction() == &nextDefault);
     REQUIRE(production.GetMineralStockpile() == k_TestConfig.retoolPenaltyThreshold);
 

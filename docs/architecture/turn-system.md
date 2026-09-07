@@ -39,11 +39,10 @@ graph TB
         ResourceCollection[ResourceCollection]
         BaseGrowth[BaseGrowth]
         UnitSupport[UnitSupport]
-        SurplusConversion[SurplusConversion]
+        BaseProduction[BaseProduction]
         IncomeCollection[IncomeCollection]
         ResearchAccumulation[ResearchAccumulation]
         Upkeep[Upkeep]
-        BaseProduction[BaseProduction]
         Population[Population]
         PlayerActions[PlayerActions]
         Mood[Mood]
@@ -91,11 +90,10 @@ graph TB
     PerFactionTurnStage --> ResourceCollection
     PerFactionTurnStage --> BaseGrowth
     PerFactionTurnStage --> UnitSupport
-    PerFactionTurnStage --> SurplusConversion
+    PerFactionTurnStage --> BaseProduction
     PerFactionTurnStage --> IncomeCollection
     PerFactionTurnStage --> ResearchAccumulation
     PerFactionTurnStage --> Upkeep
-    PerFactionTurnStage --> BaseProduction
     PerFactionTurnStage --> Population
     PerFactionTurnStage --> PlayerActions
     PerFactionTurnStage --> Mood
@@ -202,22 +200,20 @@ about a pending riot without being a yielding stage.
   could have afforded a stage later.
 - **`UnitSupport`**: `ApplyMineralSupport` — home-unit support charged against the mineral
   bank ResourceCollection just filled; surplus units disband.
-- **`SurplusConversion`**: `ConvertSurplusMinerals` — whatever support left goes through the
-  base's queued stockpile item (or is wasted when none is available). Ordered before
-  `IncomeCollection` / `ResearchAccumulation` so converted econ and labs are spent this turn.
-  Stockpiles are their own config family (`config/stockpiles.json`, `StockpileRegistry`), not
-  buildings; `BaseManager::ConvertSurplusMinerals` delegates to `ApplyStockpileConversionAtBase`,
-  which resolves the stockpile config's own effects and never touches the base effect pool.
-- **`Upkeep`**: deploy-record pruning and facility energy upkeep (after income).
+- **`BaseProduction`**: `ApplyProduction` — allocate leftover minerals to the queued build or
+  convert them through a stockpile (`AllocateOrConvertLeftoverMinerals`), then complete funded
+  items. Ordered after `UnitSupport` and before `IncomeCollection` / `ResearchAccumulation` so
+  converted econ and labs are spent this turn. Leftovers after a completion stay on the next
+  item and convert only on a later turn if that item is a stockpile. Stockpiles are their own
+  config family (`config/stockpiles.json`, `StockpileRegistry`); conversion delegates to
+  `ApplyStockpileConversionAtBase`, which resolves the stockpile config's own effects and never
+  touches the base effect pool.
+- **`Upkeep`**: deploy-record pruning and facility energy upkeep (after income). A facility
+  completed earlier in this turn is present for upkeep.
 
-  The three mineral phases are separate stages rather than one because the ordering is a
-  game rule, and `turn_stages.json` is where turn order is expressed and where a mod can
-  change it. Exactly one stage drains the mineral bank per turn: `SurplusConversion` for
-  stockpile and empty queues, `BaseProduction` for real build items. `ApplyProduction` must
-  not convert on the stockpile path even when it finds a non-empty bank — conversion is only
-  correct before `IncomeCollection` / `ResearchAccumulation`. The bank accumulates across
-  turns (`ResourceManager::ProduceMinerals_`), so minerals left standing convert next turn at
-  the right stage rather than being lost.
+  Mineral support and production are separate stages because support must claim the bank first,
+  and `turn_stages.json` is where that order is expressed. Exactly one drain of the leftover
+  mineral bank happens per turn, inside `BaseProduction`.
 - **`PlayerActions`**: interactive yield + idempotent order resolution (above).
 - **`Mood`**: `CommitMood` per base — the second half of the split `Population` began.
   Forecast warns *before* `PlayerActions` so the player can still avert a riot by moving

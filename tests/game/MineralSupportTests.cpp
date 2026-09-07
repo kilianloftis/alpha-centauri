@@ -328,7 +328,7 @@ TEST_CASE("A stockpile has no turns to completion", "[production][stockpile]")
     Faction& faction = fixture.MakeFaction();
     BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
     REQUIRE(base.GetProduction().GetCurrentProduction() != nullptr);
-    REQUIRE(base.GetProduction().GetCurrentProduction()->NeverCompletes());
+    REQUIRE(base.GetProduction().GetCurrentProduction()->IsStockpile());
     CHECK_FALSE(base.GetTurnsToProductionCompletion().has_value());
 }
 

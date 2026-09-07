@@ -12,9 +12,10 @@ namespace ac
 
 class Faction;
 
-// Per-faction production completion. Owns only turn-pass resume state (which bases already
-// ticked). Minerals were already claimed by MineralConversion. Production rules and the pending
-// confirmation live on BaseManager; queue + presenter own the UI prompt.
+// Per-faction production. Owns only turn-pass resume state (which bases already ticked).
+// Each ApplyProduction banks leftover minerals then converts or completes. Production rules
+// and the pending confirmation live on BaseManager / ProductionManager; queue + presenter
+// own the UI prompt.
 class BaseProduction : public YieldingPerFactionTurnStage
 {
 public:

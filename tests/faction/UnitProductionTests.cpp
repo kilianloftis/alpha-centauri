@@ -292,21 +292,21 @@ TEST_CASE("Deferring completion keeps the base and does not disable production",
     // cannot re-prompt for an answer already given.
     CHECK(base.TryCompleteReadyProduction().kind == ProductionApplyKind_t::InProgress);
 
-    // Nothing to apply this turn's minerals to: the item is already funded, so banking more
-    // would carry past cost onto the next item.
+    // Already funded: this turn's minerals still bank so surplus can carry onto the next
+    // item after completion (or stay on the deferred item until it finishes).
     if (!base.GetBuildingManager().HasBuilding("mineral_cache"))
     {
         base.GetBuildingManager().AddBuilding("mineral_cache");
     }
     base.ProduceResources();
     REQUIRE(base.GetResources().GetMineralBank() > 0);
-    base.ConvertMinerals();
-    CHECK(base.GetProduction().GetMineralStockpile() == stockpile);
-    CHECK(base.GetResources().GetMineralBank() == 0);
-
-    // A new turn asks again.
+    const int stockpileBefore = base.GetProduction().GetMineralStockpile();
+    const int bank = base.GetResources().GetMineralBank();
+    // A new turn asks again — and banks this turn's leftovers onto the funded item.
     CHECK(base.ApplyProduction().kind == ProductionApplyKind_t::AwaitingConfirmation);
     CHECK(base.HasPendingProductionConfirmation());
+    CHECK(base.GetResources().GetMineralBank() == 0);
+    CHECK(base.GetProduction().GetMineralStockpile() == stockpileBefore + bank);
 }
 
 TEST_CASE("A deferred item completes on its own once the base has grown",
@@ -445,7 +445,13 @@ TEST_CASE("BaseProduction enqueues an idle prompt after completion and queues St
         const auto& rIdle = std::get<ProductionIdleInteraction_t>(
             game.pState->GetPlayerInteractions().Front()->payload);
         CHECK(rIdle.afterCompletion);
-        CHECK(rIdle.completedEvent == PauseOnEventId_t::PrototypeBuilt);
+        CHECK(rIdle.completedEvents.size() == 2);
+        CHECK(std::find(rIdle.completedEvents.begin(), rIdle.completedEvents.end(),
+                        PauseOnEventId_t::PrototypeBuilt)
+              != rIdle.completedEvents.end());
+        CHECK(std::find(rIdle.completedEvents.begin(), rIdle.completedEvents.end(),
+                        PauseOnEventId_t::CombatUnitBuilt)
+              != rIdle.completedEvents.end());
         CHECK(rIdle.baseId == base.GetBaseId());
         CHECK(rIdle.completedItemId == rDesign.GetId());
         CHECK(rIdle.completedItemName == rDesign.GetId());
@@ -623,6 +629,27 @@ TEST_CASE("A unit is a prototype when any component is new to the faction",
     CHECK(onTile.front()->GetXp() == 2);
 }
 
+TEST_CASE("Completion leftover uses the effective cost including prototype surcharge",
+          "[production][retool][prototype]")
+{
+    UnitProductionGame_ game;
+    BaseManager& base = game.MakeBase(4, 4);
+    const UnitDesign& rDesign =
+        game.AddDesign({"test_chassis", "test_costly_weapon", "test_costly_armor"});
+    REQUIRE(game.pFaction->GetMilitary().IsPrototype(rDesign));
+
+    base.GetProduction().SetProduction(&rDesign, base.GetBaseEffects());
+    const int prototypeCost = base.GetMineralCost();
+    REQUIRE(prototypeCost
+            == ProductionCostCalculator::ComputeCost(rDesign.GetBaseCost(), BaseEffects_t{base},
+                                                     50));
+
+    // Five minerals past the surcharged cost — below the retool threshold, so all stay.
+    base.GetProduction().SetMineralStockpile(prototypeCost + 5);
+    REQUIRE(base.TryCompleteReadyProduction().kind == ProductionApplyKind_t::Completed);
+    CHECK(base.GetProduction().GetMineralStockpile() == 5);
+}
+
 TEST_CASE("Skunkworks cancels prototype mineral surcharge but not prototype XP",
           "[production][unit][prototype]")
 {
@@ -730,7 +757,12 @@ TEST_CASE("Fielding a unit removes the prototype penalty from other queues of th
     second.GetProduction().SetMineralStockpile(prototypeCost);
     const ProductionApplyResult_t finished = second.ApplyProduction();
     REQUIRE(finished.kind == ProductionApplyKind_t::Completed);
-    CHECK(finished.completedEvent == PauseOnEventId_t::PrototypeBuilt);
+    CHECK(std::find(finished.completedEvents.begin(), finished.completedEvents.end(),
+                    PauseOnEventId_t::PrototypeBuilt)
+          != finished.completedEvents.end());
+    CHECK(std::find(finished.completedEvents.begin(), finished.completedEvents.end(),
+                    PauseOnEventId_t::CombatUnitBuilt)
+          != finished.completedEvents.end());
 
     CHECK(first.GetMineralCost() == standardCost);
     CHECK(first.GetProduction().HasProduction());
@@ -902,8 +934,8 @@ TEST_CASE("A base that already ticked is not revisited when a sibling completion
     // The player answers the prompt by queueing something new at the base that already
     // completed this turn, and that base now has minerals in its resource bank. Resuming
     // the pass must not tick it a second time: doing so used to bank income twice in one
-    // turn and complete a second unit off the back of it. ConvertMinerals already ran
-    // earlier; ApplyProduction must still not consume the leftover bank.
+    // turn and complete a second unit off the back of it. ApplyProduction already ran for
+    // this base; resume must still not consume the leftover bank.
     finisher.GetBuildingManager().AddBuilding("mineral_cache");
     finisher.GetProduction().SetProduction(&rDesign, finisher.GetBaseEffects());
     finisher.GetProduction().SetMineralStockpile(0);

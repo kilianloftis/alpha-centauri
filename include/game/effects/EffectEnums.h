@@ -531,7 +531,8 @@ enum class RuleFlagId_t
     AtrocitiesForbidden,
 
     // Base cannot bank minerals into production, complete construction, or hurry.
-    // ConvertMinerals still drains the leftover bank (discarded); stockpile is preserved.
+    // ApplyProduction returns InProgress without consuming the leftover mineral bank;
+    // stockpile progress is preserved.
     DisableProduction,
 };
 

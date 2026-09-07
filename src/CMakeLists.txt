@@ -54,6 +54,7 @@ add_library(ac-core STATIC
     game/faction/base/BuildingDestruction.cpp
     game/faction/base/BaseMoodEffects.cpp
     game/faction/base/production/ProductionCompletion.cpp
+    game/faction/base/production/ProductionPauseGates.cpp
     game/faction/base/population/AwayFromHomeDrones.cpp
     game/faction/base/population/CompositionInputs.cpp
     game/faction/base/population/GarrisonPolice.cpp
@@ -176,7 +177,6 @@ add_library(ac-turn-stages OBJECT
     game/stages/ResourceCollection.cpp
     game/stages/BaseGrowth.cpp
     game/stages/UnitSupport.cpp
-    game/stages/MineralConversion.cpp
     game/stages/IncomeCollection.cpp
     game/stages/ResearchAccumulation.cpp
     game/stages/BaseProduction.cpp

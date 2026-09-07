@@ -73,7 +73,7 @@ StageResult_t BaseProduction::HandleProductionCompleted_(GameState& rGameState, 
             true,
             rResult.completedId,
             rResult.completedName.empty() ? rResult.completedId : rResult.completedName,
-            rResult.completedEvent,
+            rResult.completedEvents,
         });
     return StageResult_t::Yield;
 }
@@ -94,7 +94,7 @@ void BaseProduction::LogProductionTick_(const BaseManager& rBase,
     const ProductionManager& rProduction = rBase.GetProduction();
     if (const IConstructable* pItem = rProduction.GetCurrentProduction())
     {
-        if (pItem->NeverCompletes())
+        if (pItem->IsStockpile())
         {
             std::cout << "  Base '" << rBase.GetName() << "' stockpiling '" << pItem->GetName()
                       << "'\n";

@@ -58,8 +58,8 @@ public:
     // Local psych% of post-inefficiency energy + Psych StatModifiers (facilities/specialists).
     int GetPsychProduction(const BaseEffects_t& rBaseEffects) const;
 
-    // Consume the full accumulated stockpile, returning the amount consumed.
-    // ConsumeMinerals is the leftover-bank drain in ConvertMinerals (MineralConversion).
+    // ConsumeMinerals is the leftover-bank drain in BaseManager::ApplyProduction
+    // (BaseProduction), when production is enabled.
     int ConsumeNutrients();
     int ConsumeMinerals();
     int ConsumeEcon();
@@ -71,7 +71,7 @@ public:
     int GetPsych() const;
 
     // Current per-turn mineral bank (filled by ProduceResources; drained by support /
-    // MineralConversion).
+    // BaseProduction when enabled).
     int GetMineralBank() const;
     // Deduct up to `amount` from the mineral bank. `amount` must be >= 0 and <= bank.
     void SpendMinerals(int amount);

@@ -43,7 +43,6 @@ class PopTypeRegistry;
 class PopTypeAvailabilityCalculator;
 struct GrowthConfig_t;
 class PopCompositionCalculator;
-class ProductionCompletion;
 class SecretProjectAvailabilityCalculator;
 
 // Outcome of BaseManager::HurryProduction: what the treasury paid for, and what the resulting
@@ -150,7 +149,7 @@ public:
     int GetMineralProduction() const;
     // Home-unit mineral support this turn (free slots applied; current roster, no disband).
     int GetMineralSupportCost() const;
-    // Minerals that ConvertMinerals will bank if the current roster stays: production minus
+    // Minerals ApplyProduction will allocate if the current roster stays: production minus
     // support, floored at 0. The production panel shows this, not the gross yield.
     int GetMineralsForProduction() const;
     // Turns until the queued item reaches cost at GetMineralsForProduction(). Empty when
@@ -194,23 +193,20 @@ public:
     ProductionManager& GetProduction();
     const ProductionManager& GetProduction() const;
 
-    // Stamp this turn's original item (BankProduction 0) and TryCompleteReadyProduction.
-    // ConvertMinerals already claimed the leftover mineral bank (banked into a real item,
-    // converted, or wasted). Completes construction if the production stockpile meets the
-    // cost — unless completing would leave the base at size <= 0, in which case kind is
-    // AwaitingConfirmation until CompletePendingProduction or DeferProductionCompletion.
+    // Bank this turn's leftover minerals into production, then convert (stockpile) or try to
+    // complete. Under DisableProduction returns InProgress without consuming the mineral bank.
+    // Completing may return AwaitingConfirmation until CompletePendingProduction or
+    // DeferProductionCompletion.
     ProductionApplyResult_t ApplyProduction();
 
     // Complete the queued item if the stockpile already meets the current cost, without
-    // touching this turn's mineral bank. ApplyProduction stamps first, then calls this; the
-    // BaseProduction pass also calls it when a sibling prototype finishes and this queue's
-    // surcharge drops. Does not consume resources. Honours the same confirmation gate.
+    // touching this turn's mineral bank. Used when a sibling prototype finishes and this
+    // queue's surcharge drops, and after hurry. Honours the same confirmation gate.
     ProductionApplyResult_t TryCompleteReadyProduction();
 
     // True when the DisableProduction RuleFlag is in force at this base. That is riot, and only
-    // riot: the base produces nothing this turn, so ConvertMinerals discards the bank, Hurry
-    // throws, and completion is blocked. A deferred completion is a different thing entirely —
-    // see ProductionCompletion::IsCompletionBlocked.
+    // riot: ApplyProduction does not consume minerals, hurry throws, and completion is blocked.
+    // A deferred completion is a different thing entirely — see ProductionManager::IsCompletionBlocked.
     bool IsProductionDisabled() const;
 
     // True when finishing the queued item would take this base to size 0 or below. The one
@@ -229,10 +225,13 @@ public:
     // turn against the base's size then. Throws if nothing is pending.
     void DeferProductionCompletion();
 
+    // Stockpile configs for conversion and the empty-queue fallback.
+    const StockpileRegistry& GetStockpileRegistry() const { return m_rStockpileRegistry; }
+
     // Effective mineral cost of the current production item after CostMultiplier effects
     // (e.g. Industry social-rating levels expanded into the base effect list) and the
     // prototype surcharge when the queued unit fields a component this faction has not
-    // built. Returns 0 when nothing is queued or the item never completes (stockpile).
+    // built. Returns 0 when nothing is queued or the item is a stockpile.
     int GetMineralCost() const;
 
     // Energy-credit cost to finish the queued item outright. bAvailable is false when nothing
@@ -255,15 +254,8 @@ public:
 
     // Charge home-unit mineral support against this turn's mineral bank; disband if short.
     // Called once per turn per base during UnitSupport (via Faction::ApplyMineralSupport),
-    // after ProduceResources and before ConvertMinerals.
+    // after ProduceResources and before BaseProduction disposes leftovers.
     void ApplyMineralSupport();
-
-    // After support: consume the remaining mineral bank. A real build item banks it into
-    // production (without completing). A stockpile queue converts it via MineralsConverted
-    // effects; an empty queue wastes it. Called from the MineralConversion stage — the only
-    // drain of leftover minerals, ordered before IncomeCollection / ResearchAccumulation
-    // so stockpile econ and labs are spent this turn.
-    void ConvertMinerals();
 
     // Constructed-facility energy upkeep for this base (FacilityEnergyUpkeep mods applied).
     std::vector<BuildingUpkeepLine_t> GetBuildingUpkeepByType() const;
@@ -374,8 +366,6 @@ private:
 
     // Assembles and memoizes the effect list this base resolves against.
     BaseEffectsCache m_effects;
-    // The end-of-turn completion state machine, including the abandon-confirmation prompt.
-    std::unique_ptr<ProductionCompletion> m_pCompletion;
     // Set by MarkRazed_. Suppresses the destructor's OnDestroyed / tile release, which the
     // raze already performed.
     bool m_bRazed = false;

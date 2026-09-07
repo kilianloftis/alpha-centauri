@@ -53,7 +53,7 @@ TEST_CASE("The stockpile parser rejects rather than silently defaulting", "[stoc
         ])")));
         const StockpileConfig_t* pStockpile = registry.Find("Stockpile_Energy");
         REQUIRE(pStockpile != nullptr);
-        CHECK(pStockpile->NeverCompletes());
+        CHECK(pStockpile->IsStockpile());
         CHECK(pStockpile->GetBaseCost() == 0);
         CHECK(pStockpile->rounding == StockpileRounding_t::Down);
         REQUIRE(pStockpile->effects.size() == 1);

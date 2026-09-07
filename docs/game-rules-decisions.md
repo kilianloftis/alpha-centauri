@@ -231,11 +231,12 @@ Answering "not this turn" **defers completion**: the item simply does not comple
 stays queued, stays funded, and the check runs again next turn.
 
 Deferring is **not** disabling production, and the two were wrongly unified. Riot's
-`disable_production` means the base produces nothing at all — the item is unfunded, minerals are
-discarded because there is nothing to give, and hurrying is refused. A deferral means the base is
-working normally and the item is already fully paid for; minerals are discarded only because
-there is nothing left to apply them to, and hurrying is meaningless rather than forbidden. The
-two coincide on "does not complete" and "does not bank", for opposite reasons.
+`disable_production` means the base produces nothing at all — `ApplyProduction` does not
+consume the leftover mineral bank (it stays for when production resumes), hurry is refused,
+and completion is blocked. A deferral means the base is working normally and the item is
+already fully paid for; this turn's leftover minerals still bank onto the item (so surplus
+can carry after it eventually completes), and hurrying is meaningless rather than forbidden.
+The two coincide on "does not complete", for opposite reasons.
 
 The deferral answers for **one turn and one item**. It does not latch: `Apply` clears it each
 turn and re-derives `BaseManager::WouldCompletionAbandonBase`, so a base that has since grown
@@ -245,17 +246,35 @@ completes the item with no further player action. Switching or clearing the queu
 its own, so no rule about an AI abandoning its own base is needed.
 
 **Implemented** 2026-09-02. `ProductionCompletion` holds the two bits (`m_bPendingConfirmation`,
-`m_bDeferredThisTurn`) and knows only that an answer is outstanding; the abandonment rule itself
-is `BaseManager::WouldCompletionAbandonBase`, which is also what let `ProductionCompletion` drop
-its `BuildingRegistry` dependency. `IsProductionDisabled` is riot and only riot — the synthetic
-player-disable effect, its `BaseEffectsCache` cache key, and `HasPlayerDisabledProduction` are
-gone. `GetTurnsToProductionCompletion` reports `0` for a deferred item (funded and ready, waiting
+`m_bDeferredThisTurn`) and evaluates a `ProductionCompletionProbe_t` gathered by
+`ProductionManager` — it does not hold `BaseManager` or `ProductionManager`. The abandonment
+rule itself is `BaseManager::WouldCompletionAbandonBase`. Pause gates are collected by
+`CollectProductionPauseGates` (not Completion): kind / combat vs non-combat, plus
+`PrototypeBuilt` as an **additional** gate when the completion is a prototype fielding.
+`ProductionManager` packs `completedEvents` / `completedName` onto `ProductionApplyResult_t`
+for `BaseProduction` / the UI; the presenter pauses if **any** matching setting is enabled
+(OR-match). `AwaitingConfirmation` is the abandon prompt (`ProductionWouldEmptyInteraction`).
+`IsProductionDisabled` is riot and only riot — the synthetic player-disable effect, its
+`BaseEffectsCache` cache key, and `HasPlayerDisabledProduction` are gone.
+`GetTurnsToProductionCompletion` reports `0` for a deferred item (funded and ready, waiting
 on an answer, not on minerals) and `nullopt` under riot. `ApplyProduction` stamps the turn
 original before any early-out, so switching away from a deferred item charges retool normally.
 
 Ordering matters to this rule: growth is the `BaseGrowth` stage and runs **before**
 `BaseProduction` (see `docs/architecture/turn-system.md`), so the question is asked against the
 size the base ends the turn at rather than its size one stage earlier.
+
+## 11. Production pause gates OR-match
+
+**Rule:** finishing a queue item can match several pause-on-event settings at once (e.g. a
+prototype combat unit is both `CombatUnitBuilt` and `PrototypeBuilt`). The UI pauses if **any**
+matching setting is enabled. Prototype does not replace combat / non-combat / facility gates.
+
+Domain (Sea / Air / Orbital) and future flags such as planet buster are item facts elsewhere
+(`UnitDomain_t`, RuleFlags); they are not pause ids on `IConstructable`. New pause settings for
+those can append gates in `CollectProductionPauseGates` later.
+
+**Implemented** 2026-09-07.
 
 ## Deferred by decision, not by uncertainty
 

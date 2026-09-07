@@ -1,6 +1,5 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/BaseEffectsCache.h"
-#include "game/faction/base/production/ProductionCompletion.h"
 #include "game/Faction.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
@@ -21,7 +20,6 @@
 #include "game/buildings/BuildingConfig.h"
 #include "game/buildings/BuildingRegistry.h"
 #include "game/stockpiles/StockpileConfig.h"
-#include "game/stockpiles/StockpileConversion.h"
 #include "game/stockpiles/StockpileRegistry.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/MapUtils.h"
@@ -112,10 +110,10 @@ BaseManager::BaseManager(
           [this]() -> const IConstructable* {
               return m_rStockpileRegistry.FindFallback(
                   m_pFaction->GetResearch().GetDiscoveredTechs());
-          }))
+          },
+          *this))
     , m_name(std::move(name))
     , m_effects(*this, m_rSocialRatings, rFaction)
-    , m_pCompletion(std::make_unique<ProductionCompletion>(*this))
 {
     // A base provides its own garrison defense bonus, modeled as the "Base" improvement.
     m_rTileEffects.AddImprovementWithEffects(m_tile, std::string(ImprovementIds::k_Base));
@@ -164,12 +162,6 @@ BaseManager::BaseManager(
     });
     m_pPopulation->OnIsRioting.Connect([this]() {
         OnIsRioting.Emit();
-    });
-
-    m_pProduction->OnProductionChanged.Connect([this]() {
-        // Switching or clearing the queue cancels an unresolved abandon prompt and the
-        // one-turn deferral with it.
-        m_pCompletion->NotifyProductionChanged();
     });
 
     m_pProduction->OnProductionCompleted.Connect([this](const std::string& itemId) {
@@ -349,11 +341,11 @@ int BaseManager::GetMineralsForProduction() const
 std::optional<int> BaseManager::GetTurnsToProductionCompletion() const
 {
     const IConstructable* pItem = m_pProduction->GetCurrentProduction();
-    if (!pItem || pItem->NeverCompletes() || IsProductionDisabled())
+    if (!pItem || pItem->IsStockpile() || IsProductionDisabled())
     {
         return std::nullopt;
     }
-    if (m_pCompletion->IsCompletionBlocked())
+    if (m_pProduction->IsCompletionBlocked())
     {
         // Funded and ready; it is waiting on an answer, not on minerals, so no turns remain.
         return 0;
@@ -473,12 +465,19 @@ const ProductionManager& BaseManager::GetProduction() const
 
 ProductionApplyResult_t BaseManager::ApplyProduction()
 {
-    return m_pCompletion->Apply();
+    // Riot: do not ConsumeMinerals / BankProduction. Mid-turn TryCompleteReady still sees
+    // productionDisabled via the completion probe — both gates are required.
+    if (IsProductionDisabled())
+    {
+        return ProductionApplyResult_t{ProductionApplyKind_t::InProgress, {}};
+    }
+    m_pProduction->BankProduction(m_pResources->ConsumeMinerals());
+    return m_pProduction->ApplyProduction();
 }
 
 ProductionApplyResult_t BaseManager::TryCompleteReadyProduction()
 {
-    return m_pCompletion->TryCompleteReady();
+    return m_pProduction->TryCompleteReady(/*bNewTurn=*/false);
 }
 
 bool BaseManager::IsProductionDisabled() const
@@ -508,22 +507,22 @@ bool BaseManager::WouldCompletionAbandonBase() const
 
 bool BaseManager::HasPendingProductionConfirmation() const
 {
-    return m_pCompletion->HasPendingConfirmation();
+    return m_pProduction->HasPendingConfirmation();
 }
 
 std::string BaseManager::CompletePendingProduction()
 {
-    return m_pCompletion->CompletePending();
+    return m_pProduction->CompletePending();
 }
 
 void BaseManager::DeferProductionCompletion()
 {
-    m_pCompletion->DeferCompletion();
+    m_pProduction->DeferCompletion();
 }
 
 int BaseManager::GetMineralCost() const
 {
-    return m_pProduction->GetMineralCost(m_effects.Get(), m_pCompletion->IsCurrentPrototype());
+    return m_pProduction->GetMineralCost(m_effects.Get(), m_pProduction->IsCurrentPrototype());
 }
 
 HurryInputs_t BaseManager::BuildHurryInputs_(const IConstructable& rItem) const
@@ -637,35 +636,6 @@ void BaseManager::ProduceResources()
 void BaseManager::ApplyMineralSupport()
 {
     ApplyMineralSupportAtBase(*this);
-}
-
-void BaseManager::ConvertMinerals()
-{
-    const IConstructable* pItem = m_pProduction->GetCurrentProduction();
-    const int minerals = m_pResources->ConsumeMinerals();
-    if (IsProductionDisabled())
-    {
-        // Riot: the base has nothing to give. Leftovers are discarded — no BankProduction, no
-        // stockpile conversion.
-        return;
-    }
-    if (pItem && !pItem->NeverCompletes())
-    {
-        if (m_pProduction->IsReadyToComplete(m_effects.Get(), m_pCompletion->IsCurrentPrototype()))
-        {
-            // Nothing to receive: the item is already funded and only waiting to finish, so
-            // banking more would pile minerals past cost and carry them to the next item.
-            return;
-        }
-        m_pProduction->BankProduction(minerals);
-        return;
-    }
-    if (!pItem || minerals <= 0)
-    {
-        return;
-    }
-
-    ApplyStockpileConversionAtBase(*this, m_rStockpileRegistry.Get(pItem->GetId()), minerals);
 }
 
 std::vector<BuildingUpkeepLine_t> BaseManager::GetBuildingUpkeepByType() const

@@ -131,7 +131,7 @@ TEST_CASE("Disabled combat-unit-built skips the completion prompt",
         true,
         "item",
         "Laser Infantry",
-        PauseOnEventId_t::CombatUnitBuilt,
+        {PauseOnEventId_t::CombatUnitBuilt},
     });
 
     harness.pPresenter->Update();
@@ -139,6 +139,32 @@ TEST_CASE("Disabled combat-unit-built skips the completion prompt",
     CHECK(harness.fixture.pState->GetPlayerInteractions().Empty());
     CHECK(harness.advanceCount == 1);
     CHECK_FALSE(harness.pWorldView->HasModalElement());
+}
+
+TEST_CASE("Prototype combat still pauses when only combat-unit-built is enabled",
+          "[ui][InteractionPresenter][PlayerInteraction][prototype]")
+{
+    PresenterHarness_ harness;
+    PauseOnEventsConfig_t config = harness.fixture.settings.GetPauseOnEvents();
+    config.prototypeBuilt = false;
+    config.combatUnitBuilt = true;
+    harness.fixture.settings.SetPauseOnEvents(config);
+
+    BaseManager& rBase = harness.fixture.MakeBase(4, 4);
+    harness.Enqueue(ProductionIdleInteraction_t{
+        harness.fixture.pPlayer->GetFactionId(),
+        rBase.GetBaseId(),
+        true,
+        "item",
+        "Laser Infantry",
+        {PauseOnEventId_t::CombatUnitBuilt, PauseOnEventId_t::PrototypeBuilt},
+    });
+
+    harness.pPresenter->Update();
+
+    CHECK(harness.fixture.pState->GetPlayerInteractions().Size() == 1);
+    CHECK(harness.advanceCount == 0);
+    CHECK(harness.pWorldView->HasModalElement());
 }
 
 TEST_CASE("Disabled build-orders-out-of-date skips the idle prompt",
@@ -156,7 +182,7 @@ TEST_CASE("Disabled build-orders-out-of-date skips the idle prompt",
         false,
         {},
         {},
-        std::nullopt,
+        {},
     });
 
     harness.pPresenter->Update();

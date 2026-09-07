@@ -50,10 +50,13 @@ rounds in the player's favour (5 minerals → 3 econ).
 
 ## Turn order
 
-Conversion runs in the `SurplusConversion` turn stage, which `config/turn_stages.json` orders
-after `UnitSupport` (so support claims its minerals first) and before `IncomeCollection` /
-`ResearchAccumulation` (so converted econ and labs are spent the same turn). Moving that
-stage later silently delays every stockpile's output by a turn.
+Conversion runs inside the `BaseProduction` turn stage (allocate leftovers to a real build, or
+convert through a stockpile), which `config/turn_stages.json` orders after `UnitSupport` (so
+support claims its minerals first) and before `IncomeCollection` / `ResearchAccumulation` (so
+converted econ and labs are spent the same turn). Moving that stage later silently delays every
+stockpile's output by a turn. Leftovers left on the production stockpile after a real item
+completes are not converted in that same Apply — they convert on a later turn while a stockpile
+remains queued.
 
 ## The empty-queue default
 

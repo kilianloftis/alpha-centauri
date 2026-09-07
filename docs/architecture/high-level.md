@@ -289,7 +289,7 @@ graph TB
 - **Components**:
   - `IConstructable`: Abstract interface for entities that can be constructed in a base; exposes `GetId()`, `GetName()`, and `GetMineralCost()`
   - `BuildingRegistry`: All building definitions loaded from `config/buildings.json`; each entry may have `secret_project: true` to mark it as a Secret Project
-  - `StockpileRegistry`: Never-completing production items loaded from `config/stockpiles.json` (see `config/README-stockpiles.md`). Queued like a building but never constructed: each turn `SurplusConversion` converts the base's leftover minerals through the queued entry's `MineralsConverted` modifiers. Also supplies the empty-queue default via `FindFallback`
+  - `StockpileRegistry`: Never-completing production items loaded from `config/stockpiles.json` (see `config/README-stockpiles.md`). Queued like a building but never constructed: each turn `BaseProduction` converts the base's leftover minerals through the queued entry's `MineralsConverted` modifiers. Also supplies the empty-queue default via `FindFallback`
   - `TechRegistry`: All tech definitions loaded from `config/techs.json`
   - `PopTypeRegistry`: All pop type definitions loaded from `config/pop_types.json`
   - `PopCompositionConfig_t`: Composition formula config loaded via Lua

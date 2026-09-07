@@ -11,6 +11,7 @@
 #include "game/faction/ResearchManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/production/ProductionManager.h"
+#include "game/faction/base/production/ProductionApplyResult.h"
 #include "game/map/Tile.h"
 #include "game/effects/ActiveEffect.h"
 
@@ -156,8 +157,8 @@ TEST_CASE("DispatchInstantaneousEffects: Instantaneous GrantBuilding constructs 
 
 // End-to-end for the whole dispatch path: GameState::AddFaction binds the session, so
 // completing production reaches ApplyInfiltrationEffect without the caller passing anything.
-// Drives CompleteProduction rather than DispatchInstantaneousEffects so that dropping either
-// BindGameState or the dispatch call in BaseManager's completion handler fails here.
+// Drives TryCompleteReadyProduction rather than DispatchInstantaneousEffects so that dropping
+// either BindGameState or the dispatch call in BaseManager's completion handler fails here.
 TEST_CASE("Production completion dispatches Instantaneous Infiltration into the DiplomacyLedger",
           "[effects][base][instantaneous][infiltration]")
 {
@@ -182,7 +183,8 @@ TEST_CASE("Production completion dispatches Instantaneous Infiltration into the 
         beneficiary.GetFactionId(), other.GetFactionId()));
 
     base.GetProduction().SetProduction(pInfiltrator, base.GetBaseEffects());
-    CHECK(base.GetProduction().CompleteProduction(base.GetBaseEffects()) == pInfiltrator->id);
+    base.GetProduction().SetMineralStockpile(base.GetMineralCost());
+    REQUIRE(base.TryCompleteReadyProduction().kind == ProductionApplyKind_t::Completed);
 
     CHECK(state.GetDiplomacyLedger().HasInfiltration(
         beneficiary.GetFactionId(), other.GetFactionId()));
@@ -199,7 +201,8 @@ TEST_CASE("Production completion without Bound GameState throws on Instantaneous
     const BuildingConfig_t* pGrantor = fixture.buildings().Find("instant_grantor");
     REQUIRE(pGrantor != nullptr);
     base.GetProduction().SetProduction(pGrantor, base.GetBaseEffects());
-    CHECK_THROWS_AS(base.GetProduction().CompleteProduction(BaseEffects_t{base}), std::runtime_error);
+    base.GetProduction().SetMineralStockpile(base.GetMineralCost());
+    CHECK_THROWS_AS(base.TryCompleteReadyProduction(), std::runtime_error);
 
     // The throw precedes every mutation: no half-completed base with the building
     // constructed but its Instantaneous effects never dispatched.

@@ -871,14 +871,6 @@ void Faction::ApplyMineralSupport()
     }
 }
 
-void Faction::ConvertMinerals()
-{
-    for (BaseManager& rBase : Bases())
-    {
-        rBase.ConvertMinerals();
-    }
-}
-
 int Faction::GetBuildingUpkeep() const
 {
     int total = 0;

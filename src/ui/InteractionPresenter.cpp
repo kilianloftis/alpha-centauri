@@ -16,6 +16,7 @@
 #include "ui/style/UiStyle.h"
 #include "ui/world/WorldView.h"
 
+#include <algorithm>
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -215,9 +216,12 @@ void InteractionPresenter::PresentProductionIdle_(const ProductionIdleInteractio
         return;
     }
 
-    const PauseOnEventId_t gate = rIdle.completedEvent.value_or(
-        PauseOnEventId_t::BuildOrdersOutOfDate);
-    if (!m_rGameState.GetSettings().GetPauseOnEvents().Allows(gate))
+    const PauseOnEventsConfig_t& rPause = m_rGameState.GetSettings().GetPauseOnEvents();
+    const bool bAllowed = rIdle.completedEvents.empty()
+        ? rPause.Allows(PauseOnEventId_t::BuildOrdersOutOfDate)
+        : std::any_of(rIdle.completedEvents.begin(), rIdle.completedEvents.end(),
+                      [&rPause](PauseOnEventId_t gate) { return rPause.Allows(gate); });
+    if (!bAllowed)
     {
         CompleteAndAdvance_();
         return;

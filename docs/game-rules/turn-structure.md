@@ -2,10 +2,13 @@ Turn start
 New year begins
 Resource collection
 - Nutrients, minerals, energy tallied per base
+Base growth
+- Nutrient stockpile spent; bases may grow or starve
 Unit support
 - Unit mineral support (charged against this turn's mineral bank; surplus units disbanded)
-Surplus conversion
-- Leftover minerals convert if a stockpile is queued (else left for production, or wasted)
+Base production
+- Leftover minerals allocated to the queued unit/facility or converted through a stockpile
+- Funded items complete (facilities, units, terraforming, secret projects)
 - Stockpile output credits the base's nutrient/econ/labs/psych banks, so econ reaches the
   treasury during the income step below
 Income collection
@@ -16,15 +19,8 @@ Research accumulation
 - Lab output added; tech discovered if threshold met
 Upkeep
 - Facility energy upkeep (summed across owned buildings; deducted from the faction energy treasury)
-Base production
-- Remaining minerals spent on the queued unit or facility
--- Facilities
--- Units
--- Terraforming
--- Secret projects
-Population & nutrients
-- Nutrient surplus/deficit applied; bases may grow or shrink
-- Drone/talent balance
+Population
+- Drone/talent balance and mood forecast
 Player Actions
 World events
 - Mindworms, fungus, disasters, monolith effects
