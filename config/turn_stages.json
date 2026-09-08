@@ -22,17 +22,6 @@
     }
   },
   {
-    "id": "BaseGrowth",
-    "name": "Base Growth",
-    "description": "Spends each base's nutrient stockpile: grows a pop at the threshold, starves one when the stockpile goes negative. Must run after ResourceCollection has banked nutrients, and before BaseProduction so an item whose pop cost would empty the base is judged against the size the base actually ends the turn at",
-    "repeatForEachFaction": true,
-    "hooks": {
-      "pre": [],
-      "post": [],
-      "replace": []
-    }
-  },
-  {
     "id": "UnitSupport",
     "name": "Unit Support",
     "description": "Charges home-unit mineral support against this turn's mineral bank; disbands units the base cannot support. Must run after ResourceCollection has banked minerals and before BaseProduction",
@@ -46,7 +35,18 @@
   {
     "id": "BaseProduction",
     "name": "Base Production",
-    "description": "Allocates leftover minerals to the queued build or converts them through a stockpile, then completes funded items. Must run after UnitSupport and before IncomeCollection / ResearchAccumulation so stockpile econ and labs are spent this turn",
+    "description": "Allocates leftover minerals to the queued build or converts them through a stockpile, then completes funded items. Must run after UnitSupport and before BaseGrowth so Hab Complex / Dome can raise max size before growth, and before IncomeCollection / ResearchAccumulation so stockpile econ and labs are spent this turn. Colony-pod abandon uses WouldGrowThisTurn plus CommitPendingGrowth before Instantaneous pop costs",
+    "repeatForEachFaction": true,
+    "hooks": {
+      "pre": [],
+      "post": [],
+      "replace": []
+    }
+  },
+  {
+    "id": "BaseGrowth",
+    "name": "Base Growth",
+    "description": "Applies each base's nutrient production: PopulationManager subtracts citizen intake, then grow or starve, half tanks when full at the population limit, then deposit and cap. Must run after ResourceCollection has banked nutrients and after BaseProduction so a Hab facility completed this turn unlocks growth the same turn",
     "repeatForEachFaction": true,
     "hooks": {
       "pre": [],

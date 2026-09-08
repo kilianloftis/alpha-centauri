@@ -144,6 +144,8 @@ static_assert(KindFor(StatId_t::ProbeSuccessScale) == StatKind_t::PureMultiplier
 static_assert(KindFor(StatId_t::PositiveMoraleScale) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::PromotionChance) == StatKind_t::RawScaled);
 static_assert(KindFor(StatId_t::GrowthRate) == StatKind_t::RawScaled);
+static_assert(KindFor(StatId_t::StartingSize) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::MaxBaseSize) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::TechCost) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::TechCostDiff) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Bureaucracy) == StatKind_t::PureMultiplier);
@@ -177,6 +179,8 @@ static_assert(DomainFor(StatId_t::Nutrients) == ResolveDomain_t::Base);
 static_assert(DomainFor(StatId_t::Drones) == ResolveDomain_t::Base);
 static_assert(DomainFor(StatId_t::CostMultiplier) == ResolveDomain_t::Base);
 static_assert(DomainFor(StatId_t::StartingMinerals) == ResolveDomain_t::Base);
+static_assert(DomainFor(StatId_t::StartingSize) == ResolveDomain_t::Base);
+static_assert(DomainFor(StatId_t::MaxBaseSize) == ResolveDomain_t::Base);
 static_assert(DomainFor(StatId_t::ProbeDefense) == ResolveDomain_t::Base);
 static_assert(DomainFor(StatId_t::TechCost) == ResolveDomain_t::Faction);
 static_assert(DomainFor(StatId_t::CouncilVotes) == ResolveDomain_t::Faction);

@@ -3,6 +3,7 @@
 #include "game/Faction.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/HomeBaseIndex.h"
+#include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/resources/Inefficiency.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/map/MapUtils.h"
@@ -208,6 +209,11 @@ int ResourceManager::GetLabsProduction(const BaseEffects_t& rBaseEffects) const
 int ResourceManager::GetPsychProduction(const BaseEffects_t& rBaseEffects) const
 {
     return CalculatePsych_(AllocatableEnergy_(rBaseEffects), rBaseEffects);
+}
+
+int ResourceManager::GetNutrientBank() const
+{
+    return m_nutrients;
 }
 
 int ResourceManager::ConsumeNutrients()

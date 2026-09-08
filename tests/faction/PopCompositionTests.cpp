@@ -367,7 +367,7 @@ TEST_CASE("Golden age grants +1 econ and +2% growth via pop_composition effects"
 
     GrowthConfig_t growthConfig;
     growthConfig.nutrientsPerPop = 10;
-    CHECK(GrowthCalculator::ComputeNutrientsRequired(growthConfig, 3, base.GetBaseEffects()) == 29);
+    CHECK(GrowthCalculator::ComputeNutrientsRequired(growthConfig, 3, base.GetBaseEffects()) == 39);
 
     pops.AddPop("Worker");
     pops.ForecastMood();
@@ -376,7 +376,7 @@ TEST_CASE("Golden age grants +1 econ and +2% growth via pop_composition effects"
 
     CHECK(resolveEcon(4.0) == Approx(4.0));
     CHECK(resolveGrowthRate() == Approx(100.0));
-    CHECK(GrowthCalculator::ComputeNutrientsRequired(growthConfig, 3, base.GetBaseEffects()) == 30);
+    CHECK(GrowthCalculator::ComputeNutrientsRequired(growthConfig, 3, base.GetBaseEffects()) == 40);
 }
 
 TEST_CASE("Composition seats drone pressure into the pool", "[population][composition]")
@@ -845,7 +845,8 @@ TEST_CASE("Completing a drone-reducing building reapplies composition immediatel
         pState->GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed));
     ac::BaseManager* pBase = rFaction.CreateBase(
         pState->AllocateBaseId(), "TestBase", pState->GetWorldMap().GetTile(4, 4),
-        fixtures.dataContext, pState->GetTileEffects(), pState->GetSecretProjectAvailability());
+        fixtures.dataContext, pState->GetTileEffects(), pState->GetSecretProjectAvailability(),
+        /*initialPopulation*/ 3);
     REQUIRE(pBase != nullptr);
 
     pBase->GetBuildingManager().AddBuilding("drone_hall");

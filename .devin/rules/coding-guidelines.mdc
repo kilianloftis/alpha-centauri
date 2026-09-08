@@ -1,6 +1,7 @@
 ---
-trigger: always_on
 description: Coding guidelines for the project
+alwaysApply: true
+trigger: always_on
 ---
 
 # Coding Guidelines

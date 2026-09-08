@@ -166,22 +166,39 @@ public:
         PopulationManager& m_rPops;
     };
 
-    // Population limits (initial value from GrowthConfig_t::maxBaseSize).
-    // Hab Complex / Habitation Dome should raise this via SetMaxSize (TODO).
+    // Population limits from resolved MaxBaseSize (pop_growth baselines + Hab effects).
     int GetMaxSize() const;
-    void SetMaxSize(int maxSize);
 
-    // Nutrient stockpile owned by this manager (growth bank).
+    // Nutrient stockpile owned by this manager (growth bank / tanks).
     int GetNutrientStockpile() const;
     void SetNutrientStockpile(int amount);
 
-    // Nutrients required for the next population growth step.
+    // Total citizen eating this turn: size × intake per citizen (specialists included).
+    int GetCitizenNutrientIntake() const;
+
+    // Nutrients required for the next population growth step (tank capacity).
     // rBaseEffects is this base's final effect list (BaseEffectsCache::Get).
     int GetNutrientsRequired(const BaseEffects_t& rBaseEffects) const;
 
-    // Apply nutrients produced this turn: add to stockpile, grow or starve if threshold is met.
-    // At max size, nutrients bank but the growth threshold is not spent.
-    void ApplyGrowth(int nutrients, const BaseEffects_t& rBaseEffects);
+    // True when tanks are full, net (gross − citizen intake) is >= 0, and CanGrow().
+    // `nutrientProduction` is gross (ResourceManager bank). Used by abandon prediction and
+    // CommitPendingGrowth; does not mutate.
+    bool WouldGrowThisTurn(int nutrientProduction, const BaseEffects_t& rBaseEffects) const;
+
+    // The counterpart gate: net loss exhausts the tank, so ApplyGrowth will drop a pop. Mutually
+    // exclusive with WouldGrowThisTurn, and independent of the growth threshold, so it needs no
+    // effect list. Abandon prediction subtracts it for the same reason it adds pending growth.
+    bool WouldStarveThisTurn(int nutrientProduction) const;
+
+    // If WouldGrowThisTurn, grow one pop and empty the stockpile (no deposit). Used before
+    // Instantaneous production pop costs so a size-1 colony pod does not raze the base.
+    // Returns true when a pop was added. Later ApplyGrowth uses the post-growth size for intake.
+    bool CommitPendingGrowth(int nutrientProduction, const BaseEffects_t& rBaseEffects);
+
+    // Apply this turn's gross nutrient production: subtract citizen intake, then grow/starve
+    // or half-tank at the cap, deposit and cap. After a grow in this call, subtracts one more
+    // intake for the new citizen before depositing.
+    void ApplyGrowth(int nutrientProduction, const BaseEffects_t& rBaseEffects);
 
     // Ownership transfer (BaseManager::RebindFaction): pop fallback/obsolescence resolution
     // is research-gated, so a transferred base's pops must read the new owner's discovered
@@ -226,7 +243,6 @@ private:
     const GrowthConfig_t& m_rGrowthConfig;
     PopCompositionCalculator& m_rCompositionCalculator;
     BaseManager& m_rBase;
-    int m_maxSize;
     int m_nutrientStockpile = 0;
     int m_compositionBatchDepth = 0;
     bool m_bCompositionDirty = false;

@@ -63,6 +63,26 @@ WorkedTileClaim ClaimCenterTile_(TileEffectsContext& rTileEffects, const Tile& t
     return rTileEffects.GetWorldMap().GetWorkedTiles().ClaimDisplacing(tile, /*bUserAssigned*/false);
 }
 
+int ResolveFoundingPopulation_(Faction& rFaction, std::optional<int> initialPopulation)
+{
+    if (initialPopulation.has_value())
+    {
+        return *initialPopulation;
+    }
+    // StartingSize is Base-domain; resolve the Additive stack from the faction pool directly
+    // (AllOwnerBases baselines need no base subject).
+    const int size = FinalizeResolvedStat(
+        ResolveStatModifiersTotal(
+            FilterByStatId(rFaction.GetActiveEffects().effects, StatId_t::StartingSize),
+            SeedFor(StatId_t::StartingSize)));
+    if (size <= 0)
+    {
+        throw std::runtime_error(
+            "BaseManager: resolved StartingSize must be > 0, got " + std::to_string(size));
+    }
+    return size;
+}
+
 } // namespace
 
 BaseManager::BaseManager(
@@ -82,7 +102,7 @@ BaseManager::BaseManager(
     PopCompositionCalculator& rCompositionCalculator,
     const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
     TileEffectsContext& rTileEffects,
-    int initialPopulation)
+    std::optional<int> initialPopulation)
     : m_pFaction(&rFaction)
     , m_baseId(baseId)
     , m_tile(tile)
@@ -96,7 +116,8 @@ BaseManager::BaseManager(
     , m_rScrapCalculator(rScrapCalculator)
     , m_pPopulation(std::make_unique<PopulationManager>(
           rPopTypeRegistry, rPopTypeAvailabilityCalculator, rGrowthConfig,
-          rCompositionCalculator, rFaction.GetResearch(), *this, initialPopulation))
+          rCompositionCalculator, rFaction.GetResearch(), *this,
+          ResolveFoundingPopulation_(rFaction, initialPopulation)))
     , m_pWorkerAssignments(std::make_unique<WorkerAssignmentManager>(
           ComputeWorkableTiles_(rTileEffects, tile), *m_pPopulation, rTileEffects,
           rTileEffects.GetWorldMap().GetWorkedTiles()))
@@ -188,6 +209,15 @@ BaseManager::BaseManager(
                 return;
             }
             m_pBuildings->AddBuilding(itemId);
+            // Pending nutrient growth commits before Instantaneous effects so a pop-cost item
+            // (and Hab raising the cap) sees the post-growth size. Hab added above unlocks
+            // CanGrow for a full tank at the old max. Intake for the new citizen is applied
+            // later in ApplyGrowth (gross bank − post-growth size × intake).
+            if (m_pPopulation->CommitPendingGrowth(m_pResources->GetNutrientBank(),
+                                                   m_effects.Get()))
+            {
+                m_pPopulation->EnsureCompositionCurrent();
+            }
             DispatchInstantaneousEffects(*pBuilding, *this, *pGameState);
             OnProductionCompleted.Emit(itemId);
             return;
@@ -202,6 +232,11 @@ BaseManager::BaseManager(
                 m_tile,
                 this,
                 this);
+            if (m_pPopulation->CommitPendingGrowth(m_pResources->GetNutrientBank(),
+                                                   m_effects.Get()))
+            {
+                m_pPopulation->EnsureCompositionCurrent();
+            }
             DispatchInstantaneousEffects(*pDesign, *this, *pGameState);
             OnProductionCompleted.Emit(itemId);
             return;
@@ -493,7 +528,22 @@ bool BaseManager::WouldCompletionAbandonBase() const
         return false;
     }
 
-    const int size = m_pPopulation->GetSize();
+    // Judge the pop cost against the size the base ends the turn at. BaseGrowth runs after
+    // BaseProduction, so both pending pop events have to be predicted here or the answer is
+    // one stage stale — and a base that starves after paying a pop cost is razed without ever
+    // having been asked. The two gates are mutually exclusive.
+    int size = m_pPopulation->GetSize();
+    if (m_pPopulation->WouldGrowThisTurn(m_pResources->GetNutrientBank(), m_effects.Get()))
+    {
+        ++size;
+    }
+    else if (m_pPopulation->WouldStarveThisTurn(m_pResources->GetNutrientBank()))
+    {
+        // Floored at 1: the question is whether *this item* empties the base. A base already
+        // starving out from size 1 is lost whatever it builds, and predicting size 0 here would
+        // make every item — pop cost or not — answer yes.
+        size = std::max(1, size - 1);
+    }
     if (const BuildingConfig_t* pBuilding = m_rBuildingRegistry.Find(pItem->GetId()))
     {
         return PredictInstantaneousPopulationSize(pBuilding->effects, size) <= 0;

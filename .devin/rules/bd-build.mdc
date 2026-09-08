@@ -1,6 +1,7 @@
 ---
 description: Use the bd script for all builds and tests; do not fall back
 alwaysApply: true
+trigger: always_on
 ---
 
 # Build and test with `bd`

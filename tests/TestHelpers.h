@@ -2,12 +2,14 @@
 
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
+#include "game/population/pop-types/GrowthConfigParser.h"
 
 #include <deque>
 #include <optional>
 #include <ranges>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace ac
@@ -130,6 +132,33 @@ inline ac::UnitFilter_t DomainFilter(ac::UnitDomain_t domain)
 inline ac::UnitFilter_t HasComponentFilter(std::string componentId)
 {
     return ac::UnitFilterHasComponent_t{std::move(componentId)};
+}
+
+// Replace (or append) a population baseline on a programmatic GrowthConfig_t.
+// Mutates in place so FactionEffectsPool ActiveEffect_t pointers stay valid.
+inline void SetGrowthBaseline(ac::GrowthConfig_t& rConfig, ac::StatId_t stat, double amount)
+{
+    for (ac::EffectConfig_t& rEffect : rConfig.effects)
+    {
+        if (auto* pMod = std::get_if<ac::StatModifierEffect_t>(&rEffect.effect);
+            pMod && pMod->stat == stat)
+        {
+            pMod->amount = amount;
+            pMod->op = ac::ModifierOp_t::Add;
+            return;
+        }
+    }
+    rConfig.effects.push_back(ac::MakeGrowthBaselineStat(stat, amount));
+}
+
+inline void SetMaxBaseSize(ac::GrowthConfig_t& rConfig, double maxSize)
+{
+    SetGrowthBaseline(rConfig, ac::StatId_t::MaxBaseSize, maxSize);
+}
+
+inline void SetStartingSize(ac::GrowthConfig_t& rConfig, double startingSize)
+{
+    SetGrowthBaseline(rConfig, ac::StatId_t::StartingSize, startingSize);
 }
 
 } // namespace actest

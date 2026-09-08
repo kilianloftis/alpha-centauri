@@ -31,7 +31,8 @@ FactionEffectsPool::FactionEffectsPool(const Faction& rFaction,
                                        const std::vector<EffectConfig_t>& rProductionEffects,
                                        const std::vector<EffectConfig_t>& rBaseConquestEffects,
                                        const std::vector<EffectConfig_t>& rPoliceRules,
-                                       const std::vector<EffectConfig_t>& rPopCompositionEffects)
+                                       const std::vector<EffectConfig_t>& rPopCompositionEffects,
+                                       const std::vector<EffectConfig_t>& rGrowthEffects)
     : m_rFaction(rFaction)
     , m_rBuildingRegistry(rBuildingRegistry)
     , m_rBaseListRevision(rBaseListRevision)
@@ -41,6 +42,7 @@ FactionEffectsPool::FactionEffectsPool(const Faction& rFaction,
     , m_rBaseConquestEffects(rBaseConquestEffects)
     , m_rPoliceRules(rPoliceRules)
     , m_rPopCompositionEffects(rPopCompositionEffects)
+    , m_rGrowthEffects(rGrowthEffects)
     , m_cachedPool(rFaction)
 {
 }
@@ -195,6 +197,13 @@ std::vector<ActiveEffect_t> FactionEffectsPool::CollectProductionEffects_() cons
     return result;
 }
 
+std::vector<ActiveEffect_t> FactionEffectsPool::CollectGrowthEffects_() const
+{
+    std::vector<ActiveEffect_t> result;
+    AppendActiveEffects(m_rGrowthEffects, nullptr, "pop_growth", result);
+    return result;
+}
+
 void FactionEffectsPool::ApplyRemovedByTech_(FactionEffects_t& rEffects,
                                              const ResearchManager& rResearch)
 {
@@ -264,6 +273,10 @@ void FactionEffectsPool::Rebuild_() const
     const std::vector<ActiveEffect_t> productionEffects = CollectProductionEffects_();
     factionEffects.effects.insert(factionEffects.effects.end(), productionEffects.begin(),
                                   productionEffects.end());
+
+    const std::vector<ActiveEffect_t> growthEffects = CollectGrowthEffects_();
+    factionEffects.effects.insert(factionEffects.effects.end(), growthEffects.begin(),
+                                  growthEffects.end());
 
     const std::vector<ActiveEffect_t> defEffects = CollectDefinitionEffects_();
     factionEffects.effects.insert(factionEffects.effects.end(), defEffects.begin(),

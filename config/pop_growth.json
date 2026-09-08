@@ -1,4 +1,24 @@
 {
   "nutrients_per_pop": 10,
-  "max_base_size": 7
+  "nutrient_intake_per_citizen": 2,
+  "effects": [
+    {
+      "type": "StatModifier",
+      "scope": "AllOwnerBases",
+      "parameters": {
+        "stat": "starting_size",
+        "amount": 1,
+        "op": "Add"
+      }
+    },
+    {
+      "type": "StatModifier",
+      "scope": "AllOwnerBases",
+      "parameters": {
+        "stat": "max_base_size",
+        "amount": 7,
+        "op": "Add"
+      }
+    }
+  ]
 }

@@ -1,6 +1,7 @@
 ---
-trigger: always_on
 description: Notify the user when agent tools fail instead of silently working around them
+alwaysApply: true
+trigger: always_on
 ---
 
 # Notify on Tool Failures

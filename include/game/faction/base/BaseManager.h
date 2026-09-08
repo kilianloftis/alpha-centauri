@@ -111,7 +111,7 @@ public:
         PopCompositionCalculator& rCompositionCalculator,
         const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
         TileEffectsContext& rTileEffects,
-        int initialPopulation = 3);
+        std::optional<int> initialPopulation = std::nullopt);
     ~BaseManager();
 
     // Capture identity, size, buildings, production, and stockpiles for transfer.

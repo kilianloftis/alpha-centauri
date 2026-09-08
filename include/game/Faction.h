@@ -132,7 +132,8 @@ public:
     BaseManager* CreateBase(BaseId_t baseId, const std::string& name, Tile* pTile,
                             const GameDataContext& rDataContext,
                             TileEffectsContext& rTileEffects,
-                            const SecretProjectAvailabilityCalculator& rSecretProjectAvailability);
+                            const SecretProjectAvailabilityCalculator& rSecretProjectAvailability,
+                            std::optional<int> initialPopulation = std::nullopt);
     // Iterate live bases by reference without exposing the owning unique_ptrs. Razed bases are
     // filtered out here rather than erased at raze time, which is what lets a base die from
     // inside a signal handler or mid-iteration: every existing loop stops seeing it at once,

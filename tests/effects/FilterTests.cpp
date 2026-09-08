@@ -186,8 +186,8 @@ TEST_CASE("ResolveBaseStat: University BaseSize floors per source then stacks wi
           "[effects][amount_source][drones]")
 {
     actest::BaseFixture fixture;
+    actest::SetMaxBaseSize(*fixture.dataContext.growthConfig, 16);
     BaseManager& base = fixture.MakeBase(4, 4);
-    base.GetPopulation().SetMaxSize(16);
     while (base.GetPopulation().GetSize() < 13)
     {
         base.GetPopulation().AddPop();

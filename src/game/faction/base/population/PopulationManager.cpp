@@ -1,5 +1,6 @@
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/population/CompositionInputs.h"
+#include "game/faction/base/BaseManager.h"
 #include "game/population/calculators/GrowthCalculator.h"
 #include "game/population/calculators/PopCompositionCalculator.h"
 #include "game/population/calculators/PopTypeAvailabilityCalculator.h"
@@ -7,6 +8,8 @@
 #include "game/population/pop-types/PopTypeRegistry.h"
 #include "game/population/pop-types/GrowthConfigParser.h"
 #include "game/faction/ResearchManager.h"
+#include "game/effects/ActiveEffect.h"
+#include "game/effects/EffectEnums.h"
 #include <iostream>
 #include <stdexcept>
 #include <utility>
@@ -28,8 +31,6 @@ PopulationManager::PopulationManager(const PopTypeRegistry& rPopTypeRegistry,
     , m_rGrowthConfig(rGrowthConfig)
     , m_rCompositionCalculator(rCompositionCalculator)
     , m_rBase(rBase)
-    // The cap comes from pop_growth.json; there is no second, compiled-in default to drift.
-    , m_maxSize(rGrowthConfig.maxBaseSize)
     , m_nutrientStockpile(0)
     , m_riot(OnWillRiot, OnIsRioting, OnRiotEnded)
     , m_goldenAge(OnWillGoldenAge, OnGoldenAgeStarted, OnGoldenAgeEnded)
@@ -57,7 +58,7 @@ const std::string& PopulationManager::GetDefaultPopType_() const
 
 bool PopulationManager::CanGrow() const
 {
-    return m_container.GetSize() < m_maxSize;
+    return m_container.GetSize() < GetMaxSize();
 }
 
 void PopulationManager::AddPop()
@@ -217,19 +218,9 @@ PopulationManager::BatchCompositionUpdate::~BatchCompositionUpdate()
 
 int PopulationManager::GetMaxSize() const
 {
-    return m_maxSize;
-}
-
-void PopulationManager::SetMaxSize(int maxSize)
-{
-    // TODO: Hab Complex / Habitation Dome buildings should call this to raise the
-    // population cap (SMAC: 7 without Hab Complex, 14 without Hab Dome).
-    m_maxSize = maxSize;
-    // Trim excess pops if max size decreased
-    while (m_container.GetSize() > m_maxSize)
-    {
-        RemovePop();
-    }
+    return FinalizeResolvedStat(
+        ResolveBaseStat(m_rBase.GetBaseEffects(), StatId_t::MaxBaseSize,
+                        SeedFor(StatId_t::MaxBaseSize)));
 }
 
 int PopulationManager::GetNutrientStockpile() const
@@ -242,34 +233,89 @@ void PopulationManager::SetNutrientStockpile(int amount)
     m_nutrientStockpile = amount;
 }
 
+int PopulationManager::GetCitizenNutrientIntake() const
+{
+    return GetSize() * m_rGrowthConfig.nutrientIntakePerCitizen;
+}
+
 int PopulationManager::GetNutrientsRequired(const BaseEffects_t& rBaseEffects) const
 {
     return GrowthCalculator::ComputeNutrientsRequired(m_rGrowthConfig, GetSize(), rBaseEffects);
 }
 
-void PopulationManager::ApplyGrowth(int nutrients, const BaseEffects_t& rBaseEffects)
+bool PopulationManager::WouldGrowThisTurn(int nutrientProduction,
+                                          const BaseEffects_t& rBaseEffects) const
 {
-    m_nutrientStockpile += nutrients;
+    const int net = nutrientProduction - GetCitizenNutrientIntake();
+    if (net < 0 || !CanGrow())
+    {
+        return false;
+    }
+    const int required =
+        GrowthCalculator::ComputeNutrientsRequired(m_rGrowthConfig, GetSize(), rBaseEffects);
+    return m_nutrientStockpile >= required;
+}
 
-    if (m_nutrientStockpile < 0)
+bool PopulationManager::WouldStarveThisTurn(int nutrientProduction) const
+{
+    // The ApplyGrowth starve gate. No grow/blocked check is needed to exclude it: that branch
+    // requires stockpile >= required (> 0) and net >= 0, which can never sum below zero.
+    return m_nutrientStockpile + (nutrientProduction - GetCitizenNutrientIntake()) < 0;
+}
+
+bool PopulationManager::CommitPendingGrowth(int nutrientProduction,
+                                            const BaseEffects_t& rBaseEffects)
+{
+    if (!WouldGrowThisTurn(nutrientProduction, rBaseEffects))
+    {
+        return false;
+    }
+    m_nutrientStockpile = 0;
+    OnGrowth.Emit();
+    return true;
+}
+
+void PopulationManager::ApplyGrowth(int nutrientProduction, const BaseEffects_t& rBaseEffects)
+{
+    const int required =
+        GrowthCalculator::ComputeNutrientsRequired(m_rGrowthConfig, GetSize(), rBaseEffects);
+    int net = nutrientProduction - GetCitizenNutrientIntake();
+
+    if (m_nutrientStockpile >= required && net >= 0)
+    {
+        if (CanGrow())
+        {
+            m_nutrientStockpile = 0;
+            OnGrowth.Emit();
+            // Post-growth eating: intake above used the pre-grow size.
+            net -= m_rGrowthConfig.nutrientIntakePerCitizen;
+        }
+        else
+        {
+            // Full tanks at the population limit: half the box, then deposit.
+            m_nutrientStockpile = required / 2;
+        }
+    }
+    else if (m_nutrientStockpile + net < 0)
     {
         m_nutrientStockpile = 0;
         OnStarvation.Emit();
         return;
     }
 
-    // At the population cap, bank nutrients but do not spend the growth threshold
-    // on a pop that cannot appear. Hab buildings raise the cap via SetMaxSize.
-    if (!CanGrow())
+    m_nutrientStockpile += net;
+    // Only the post-grow intake adjustment above can push the deposit below zero (every other
+    // path reaching here was gated on stockpile + net >= 0). A base that just grew carries no
+    // hidden debt into next turn's starve check, so floor it rather than bank a negative tank.
+    if (m_nutrientStockpile < 0)
     {
-        return;
+        m_nutrientStockpile = 0;
     }
-
-    const int required = GrowthCalculator::ComputeNutrientsRequired(m_rGrowthConfig, GetSize(), rBaseEffects);
-    if (m_nutrientStockpile >= required)
+    const int requiredAfter =
+        GrowthCalculator::ComputeNutrientsRequired(m_rGrowthConfig, GetSize(), rBaseEffects);
+    if (m_nutrientStockpile > requiredAfter)
     {
-        m_nutrientStockpile -= required;
-        OnGrowth.Emit();
+        m_nutrientStockpile = requiredAfter;
     }
 }
 

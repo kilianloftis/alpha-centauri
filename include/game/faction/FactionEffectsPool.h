@@ -32,7 +32,8 @@ public:
                        const std::vector<EffectConfig_t>& rProductionEffects,
                        const std::vector<EffectConfig_t>& rBaseConquestEffects,
                        const std::vector<EffectConfig_t>& rPoliceRules,
-                       const std::vector<EffectConfig_t>& rPopCompositionEffects);
+                       const std::vector<EffectConfig_t>& rPopCompositionEffects,
+                       const std::vector<EffectConfig_t>& rGrowthEffects);
 
     // The validated local pool. Valid until the next effect-source mutation on the owner.
     const FactionEffects_t& Get() const;
@@ -64,6 +65,9 @@ private:
 
     // Production.json continuous effects (prototype StartingExperience, …).
     std::vector<ActiveEffect_t> CollectProductionEffects_() const;
+
+    // pop_growth.json continuous baselines (StartingSize / MaxBaseSize).
+    std::vector<ActiveEffect_t> CollectGrowthEffects_() const;
 
     // base_conquest.json continuous effects (pop-loss and conquered-drone-cap baselines).
     std::vector<ActiveEffect_t> CollectBaseConquestEffects_() const;
@@ -107,6 +111,7 @@ private:
     const std::vector<EffectConfig_t>& m_rBaseConquestEffects;
     const std::vector<EffectConfig_t>& m_rPoliceRules;
     const std::vector<EffectConfig_t>& m_rPopCompositionEffects;
+    const std::vector<EffectConfig_t>& m_rGrowthEffects;
 
     // The empty initial stamp never equals a real collection, so no "never built"
     // sentinel is needed. m_scratchRevisions is reused between validations to keep the

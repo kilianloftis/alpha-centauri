@@ -60,6 +60,8 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("morale_bonus") == StatId_t::MoraleBonus);
     CHECK(ParseStatId("positive_morale_scale") == StatId_t::PositiveMoraleScale);
     CHECK(ParseStatId("growth_rate") == StatId_t::GrowthRate);
+    CHECK(ParseStatId("starting_size") == StatId_t::StartingSize);
+    CHECK(ParseStatId("max_base_size") == StatId_t::MaxBaseSize);
     CHECK(ParseStatId("tech_cost") == StatId_t::TechCost);
     CHECK(ParseStatId("moisture_tier") == StatId_t::MoistureTier);
     CHECK(ParseStatId("commerce_rate") == StatId_t::CommerceRate);
@@ -88,6 +90,7 @@ TEST_CASE("ParseModifierOp / ParseEffectScope / ParseEffectPersistence mappings"
     CHECK(EffectConfigParser::ParseModifierOp("MaxClamp") == ModifierOp_t::MaxClamp);
     CHECK(EffectConfigParser::ParseModifierOp("MinClamp") == ModifierOp_t::MinClamp);
     CHECK_THROWS(EffectConfigParser::ParseModifierOp("Multiply"));
+    CHECK_THROWS(EffectConfigParser::ParseModifierOp("Unlimited"));
 
     CHECK(EffectConfigParser::ParseEffectScope("ThisBase") == EffectScope_t::ThisBase);
     CHECK(EffectConfigParser::ParseEffectScope("AllOwnerBases") == EffectScope_t::AllOwnerBases);

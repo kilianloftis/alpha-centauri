@@ -224,8 +224,8 @@ struct WorldFixture
 
 // WorldFixture plus the ability to found real bases (the registries themselves are loaded by
 // WorldFixture, since Faction now requires them). Each base starts with 3 default Worker pops
-// (BaseManager's built-in initial size) and registers the "Base" improvement on its tile,
-// exactly as in the game.
+// when MakeBase / MakeFactionBase omit an override (shipping CreateBase resolves StartingSize,
+// currently 1). Registers the "Base" improvement on its tile, exactly as in the game.
 struct BaseFixture : WorldFixture
 {
     ac::EconomyManager economy; // default 40/50/10 energy split
@@ -256,7 +256,9 @@ struct BaseFixture : WorldFixture
     ac::PopTypeRegistry& popTypes() { return *dataContext.popTypeRegistry; }
     const ac::PopTypeRegistry& popTypes() const { return *dataContext.popTypeRegistry; }
 
-    ac::BaseManager& MakeBase(int x, int y, int initialPopulation = 3)
+    // std::nullopt exercises the shipping founding path (resolved StartingSize); the 3 default
+    // keeps the pre-existing fixture size for tests that only care about having pops.
+    ac::BaseManager& MakeBase(int x, int y, std::optional<int> initialPopulation = 3)
     {
         bases.push_back(std::make_unique<ac::BaseManager>(
             *pOwnerFaction, nextBaseId++, "TestBase", At(x, y),
@@ -353,7 +355,8 @@ struct FactionFixture : BaseFixture
         return rFaction;
     }
 
-    ac::BaseManager& MakeFactionBase(ac::Faction& rFaction, int x, int y)
+    ac::BaseManager& MakeFactionBase(ac::Faction& rFaction, int x, int y,
+                                     std::optional<int> initialPopulation = 3)
     {
         auto pBase = std::make_unique<ac::BaseManager>(
             rFaction, nextBaseId++, "TestBase", At(x, y),
@@ -368,7 +371,8 @@ struct FactionFixture : BaseFixture
             *dataContext.scrapRefundCalculator,
             *dataContext.popCompositionCalculator,
             /*secretProjectCalculator*/ nullptr,
-            *ctx);
+            *ctx,
+            initialPopulation);
         ac::BaseManager& rBase = *pBase;
         rFaction.AddBase(std::move(pBase));
         return rBase;

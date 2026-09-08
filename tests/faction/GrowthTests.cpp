@@ -13,6 +13,7 @@
 #include "game/map/Tile.h"
 #include <catch2/catch_test_macros.hpp>
 #include <limits>
+#include <optional>
 #include <stdexcept>
 #include <string>
 
@@ -37,11 +38,10 @@ TEST_CASE("GrowthRate <= 0 blocks nutrient-threshold growth instead of silently 
           == std::numeric_limits<int>::max());
 }
 
-TEST_CASE("ApplyGrowth banks nutrients at max size instead of spending them on a phantom pop",
-          "[population][growth]")
+TEST_CASE("ApplyGrowth halves full tanks at max size then deposits net", "[population][growth]")
 {
     actest::BaseFixture fixture;
-    fixture.dataContext.growthConfig->maxBaseSize = 3;
+    actest::SetMaxBaseSize(*fixture.dataContext.growthConfig, 3);
 
     BaseManager& base = fixture.MakeBase(2, 2);
     PopulationManager& rPopulation = base.GetPopulation();
@@ -49,44 +49,100 @@ TEST_CASE("ApplyGrowth banks nutrients at max size instead of spending them on a
     REQUIRE(rPopulation.GetSize() == 3);
     REQUIRE_FALSE(rPopulation.CanGrow());
 
-    rPopulation.ApplyGrowth(/*nutrients*/ 100, BaseEffects_t{base});
+    // size 3 → required (3+1)*10 = 40; ApplyGrowth takes gross and subtracts intake.
+    rPopulation.SetNutrientStockpile(40);
+    const int gross = 8 + rPopulation.GetCitizenNutrientIntake();
+    rPopulation.ApplyGrowth(gross, BaseEffects_t{base});
 
-    CHECK(rPopulation.GetNutrientStockpile() == 100);
+    CHECK(rPopulation.GetNutrientStockpile() == 20 + 8); // half of 40, then +8
     CHECK(rPopulation.GetSize() == 3);
 }
 
 TEST_CASE("AddPop throws at max size instead of silently no-oping", "[population][growth]")
 {
     actest::BaseFixture fixture;
-    fixture.dataContext.growthConfig->maxBaseSize = 3;
+    actest::SetMaxBaseSize(*fixture.dataContext.growthConfig, 3);
 
     BaseManager& base = fixture.MakeBase(2, 2);
     CHECK_THROWS_AS(base.GetPopulation().AddPop(), std::runtime_error);
 }
 
-TEST_CASE("Max base size comes from GrowthConfig", "[population][growth]")
+TEST_CASE("Max base size comes from resolved MaxBaseSize effects", "[population][growth]")
 {
     actest::BaseFixture fixture;
-    fixture.dataContext.growthConfig->maxBaseSize = 5;
+    actest::SetMaxBaseSize(*fixture.dataContext.growthConfig, 5);
 
     BaseManager& base = fixture.MakeBase(2, 2);
     CHECK(base.GetPopulation().GetMaxSize() == 5);
 }
 
-TEST_CASE("ApplyGrowth spends the threshold and grows when under the cap", "[population][growth]")
+TEST_CASE("MaxBaseSize Adds stack with the pop_growth baseline", "[population][growth]")
 {
     actest::BaseFixture fixture;
-    fixture.dataContext.growthConfig->maxBaseSize = 7;
+    // Baseline 7 + Hab-Dome-style large Add → classic-ish hard cap.
+    actest::SetMaxBaseSize(*fixture.dataContext.growthConfig, 7);
+    fixture.dataContext.growthConfig->effects.push_back(
+        MakeGrowthBaselineStat(StatId_t::MaxBaseSize, 120.0));
+    fixture.pOwnerFaction = std::make_unique<Faction>(
+        /*factionId*/ 1, /*bIsPlayerControlled*/ true, fixture.ownerDefinition, fixture.dataContext,
+        fixture.map, fixture.settings, actest::k_TestFactionSeed);
+
+    BaseManager& base = fixture.MakeBase(2, 2);
+    CHECK(base.GetPopulation().GetMaxSize() == 127);
+    CHECK(base.GetPopulation().CanGrow());
+}
+
+TEST_CASE("ApplyGrowth grows from a full tank then deposits adjusted net", "[population][growth]")
+{
+    actest::BaseFixture fixture;
+    actest::SetMaxBaseSize(*fixture.dataContext.growthConfig, 7);
     fixture.dataContext.growthConfig->nutrientsPerPop = 10;
+    fixture.dataContext.growthConfig->nutrientIntakePerCitizen = 2;
 
     BaseManager& base = fixture.MakeBase(2, 2);
     PopulationManager& rPopulation = base.GetPopulation();
     REQUIRE(rPopulation.GetSize() == 3);
 
-    // Threshold = 3 * 10 = 30 at GrowthRate 100%.
-    rPopulation.ApplyGrowth(/*nutrients*/ 30, BaseEffects_t{base});
+    // required = (3+1)*10 = 40; gross 14 → net 8 at size 3 (intake 2×3).
+    rPopulation.SetNutrientStockpile(40);
+    rPopulation.ApplyGrowth(/*gross*/ 14, BaseEffects_t{base});
     CHECK(rPopulation.GetSize() == 4);
-    CHECK(rPopulation.GetNutrientStockpile() == 0);
+    // Emptied, then deposit 8 - 2 intake for the new citizen, capped at new required 50.
+    CHECK(rPopulation.GetNutrientStockpile() == 6);
+}
+
+TEST_CASE("ApplyGrowth does not grow in the same pass that fills the tank", "[population][growth]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(2, 2);
+    PopulationManager& rPopulation = base.GetPopulation();
+    REQUIRE(rPopulation.GetSize() == 3);
+
+    rPopulation.SetNutrientStockpile(30);
+    rPopulation.ApplyGrowth(20 + rPopulation.GetCitizenNutrientIntake(), BaseEffects_t{base});
+    CHECK(rPopulation.GetSize() == 3);
+    CHECK(rPopulation.GetNutrientStockpile() == 40); // capped at required
+}
+
+TEST_CASE("Full tank with negative net does not grow", "[population][growth]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(2, 2);
+    PopulationManager& rPopulation = base.GetPopulation();
+    rPopulation.SetNutrientStockpile(40);
+    // Gross that yields net -5 after size-3 intake.
+    rPopulation.ApplyGrowth(-5 + rPopulation.GetCitizenNutrientIntake(), BaseEffects_t{base});
+    CHECK(rPopulation.GetSize() == 3);
+    CHECK(rPopulation.GetNutrientStockpile() == 35);
+}
+
+TEST_CASE("Threshold at size 3 uses size+1 rows", "[population][growth]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(2, 2);
+    GrowthConfig_t config;
+    config.nutrientsPerPop = 10;
+    CHECK(GrowthCalculator::ComputeNutrientsRequired(config, 3, BaseEffects_t{base}) == 40);
 }
 
 TEST_CASE("Losing a pop announces it while it is still valid", "[population][growth]")
@@ -239,4 +295,56 @@ TEST_CASE("Specialists are the last pops lost", "[population][growth]")
         bSurvivorIsSpecialist = rPop.IsPlayerChoiceType();
     }
     CHECK(bSurvivorIsSpecialist);
+}
+
+TEST_CASE("Falling max size does not trim existing pops", "[population][growth]")
+{
+    actest::BaseFixture fixture;
+    actest::SetMaxBaseSize(*fixture.dataContext.growthConfig, 7);
+    BaseManager& base = fixture.MakeBase(2, 2);
+    REQUIRE(base.GetPopulation().GetSize() == 3);
+
+    actest::SetMaxBaseSize(*fixture.dataContext.growthConfig, 2);
+    // Pool rebuilds from the mutated config on next effects access.
+    CHECK(base.GetPopulation().GetSize() == 3);
+    CHECK_FALSE(base.GetPopulation().CanGrow());
+}
+
+TEST_CASE("Growing never leaves a negative tank", "[population][growth]")
+{
+    actest::BaseFixture fixture;
+    BaseManager& base = fixture.MakeBase(2, 2);
+    PopulationManager& rPopulation = base.GetPopulation();
+    REQUIRE(rPopulation.GetSize() == 3);
+
+    // Net exactly 0 at size 3 clears the grow gate, but the new citizen's intake is charged
+    // after the tank is emptied — the only path that can undershoot zero.
+    rPopulation.SetNutrientStockpile(40);
+    rPopulation.ApplyGrowth(rPopulation.GetCitizenNutrientIntake(), BaseEffects_t{base});
+    CHECK(rPopulation.GetSize() == 4);
+    CHECK(rPopulation.GetNutrientStockpile() == 0);
+}
+
+TEST_CASE("Founding without an explicit size resolves StartingSize", "[population][growth]")
+{
+    actest::BaseFixture fixture;
+    actest::SetStartingSize(*fixture.dataContext.growthConfig, 2);
+    fixture.pOwnerFaction = std::make_unique<Faction>(
+        /*factionId*/ 1, /*bIsPlayerControlled*/ true, fixture.ownerDefinition, fixture.dataContext,
+        fixture.map, fixture.settings, actest::k_TestFactionSeed);
+
+    BaseManager& base = fixture.MakeBase(2, 2, std::nullopt);
+    CHECK(base.GetPopulation().GetSize() == 2);
+}
+
+TEST_CASE("A StartingSize that resolves to zero fails loudly at founding",
+          "[population][growth]")
+{
+    actest::BaseFixture fixture;
+    actest::SetStartingSize(*fixture.dataContext.growthConfig, 0);
+    fixture.pOwnerFaction = std::make_unique<Faction>(
+        /*factionId*/ 1, /*bIsPlayerControlled*/ true, fixture.ownerDefinition, fixture.dataContext,
+        fixture.map, fixture.settings, actest::k_TestFactionSeed);
+
+    CHECK_THROWS_AS(fixture.MakeBase(2, 2, std::nullopt), std::runtime_error);
 }

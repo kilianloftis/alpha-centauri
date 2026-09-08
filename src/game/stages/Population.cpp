@@ -19,10 +19,9 @@ Population::Population(HookContext hookContext)
 
 StageResult_t Population::ExecuteImpl(GameState& rGameState, Faction& rFaction)
 {
-    // Growth and starvation are the BaseGrowth stage, which runs before BaseProduction so a
-    // pop cost is judged against the size the base ends the turn at. What is left here is the
-    // composition and mood pass, which stays after production because a completed facility can
-    // change either.
+    // Growth and starvation are the BaseGrowth stage (after BaseProduction). What is left here
+    // is the composition and mood pass, which stays after production because a completed
+    // facility can change either.
     for (BaseManager& rBase : rFaction.Bases())
     {
         ProcessBase_(rGameState, rFaction, rBase);

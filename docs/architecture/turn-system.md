@@ -37,9 +37,9 @@ graph TB
 
     subgraph "Built-in Per-Faction Stages"
         ResourceCollection[ResourceCollection]
-        BaseGrowth[BaseGrowth]
         UnitSupport[UnitSupport]
         BaseProduction[BaseProduction]
+        BaseGrowth[BaseGrowth]
         IncomeCollection[IncomeCollection]
         ResearchAccumulation[ResearchAccumulation]
         Upkeep[Upkeep]
@@ -88,9 +88,9 @@ graph TB
     GlobalTurnStage --> Save
     GlobalTurnStage --> CustomGlobalTurnStage
     PerFactionTurnStage --> ResourceCollection
-    PerFactionTurnStage --> BaseGrowth
     PerFactionTurnStage --> UnitSupport
     PerFactionTurnStage --> BaseProduction
+    PerFactionTurnStage --> BaseGrowth
     PerFactionTurnStage --> IncomeCollection
     PerFactionTurnStage --> ResearchAccumulation
     PerFactionTurnStage --> Upkeep
@@ -192,22 +192,23 @@ about a pending riot without being a yielding stage.
   it happens, not swept for here, so it has already dropped out of `Faction::Bases()` before the
   loop reaches it (see "Object lifetime" in `high-level.md`).
 - **`ResourceCollection`**: `ProduceBaseResources` only.
-- **`BaseGrowth`**: `ApplyBaseGrowth` — spends the nutrient stockpile `ResourceCollection` just
-  filled: grow a pop at the threshold, starve one when it goes negative. Split out of
-  `Population` and ordered *before* `BaseProduction` so an item whose pop cost would abandon the
-  base is judged against the size the base actually ends the turn at. With growth after
-  production, a size-1 base that was about to grow was asked to abandon itself for an item it
-  could have afforded a stage later.
 - **`UnitSupport`**: `ApplyMineralSupport` — home-unit support charged against the mineral
   bank ResourceCollection just filled; surplus units disband.
 - **`BaseProduction`**: `ApplyProduction` — allocate leftover minerals to the queued build or
   convert them through a stockpile (`AllocateOrConvertLeftoverMinerals`), then complete funded
-  items. Ordered after `UnitSupport` and before `IncomeCollection` / `ResearchAccumulation` so
-  converted econ and labs are spent this turn. Leftovers after a completion stay on the next
-  item and convert only on a later turn if that item is a stockpile. Stockpiles are their own
-  config family (`config/stockpiles.json`, `StockpileRegistry`); conversion delegates to
-  `ApplyStockpileConversionAtBase`, which resolves the stockpile config's own effects and never
-  touches the base effect pool.
+  items. Ordered after `UnitSupport` and before `BaseGrowth` so Hab Complex / Dome raise
+  `MaxBaseSize` before growth, and before `IncomeCollection` / `ResearchAccumulation` so
+  converted econ and labs are spent this turn. Colony-pod abandon uses `WouldGrowThisTurn`
+  and `CommitPendingGrowth` before Instantaneous pop costs. Leftovers after a completion stay
+  on the next item and convert only on a later turn if that item is a stockpile. Stockpiles
+  are their own config family (`config/stockpiles.json`, `StockpileRegistry`); conversion
+  delegates to `ApplyStockpileConversionAtBase`, which resolves the stockpile config's own
+  effects and never touches the base effect pool.
+- **`BaseGrowth`**: `ApplyBaseGrowth` — spends the gross nutrient bank `ResourceCollection`
+  filled; `PopulationManager` subtracts citizen intake, then grows when tanks were already
+  full and net ≥ 0, starves when net exhausts storage, halves tanks when full at the
+  population limit, then deposits and caps. Ordered *after* `BaseProduction` so a
+  cap-raising facility unlocks growth the same turn.
 - **`Upkeep`**: deploy-record pruning and facility energy upkeep (after income). A facility
   completed earlier in this turn is present for upkeep.
 

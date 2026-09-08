@@ -184,16 +184,16 @@ TEST_CASE("Growth rating affects the growth threshold via GrowthRate modifiers",
     BaseManager& baseWithShrine = fixture.MakeFactionBase(faction, 2, 2);
     BaseManager& plainBase = fixture.MakeFactionBase(faction, 6, 6);
 
-    // No rating: 3 starting pops * 10 nutrients per pop.
-    CHECK(plainBase.GetNutrientsRequired() == 30);
+    // No rating: (3+1) * 10 nutrients per pop row.
+    CHECK(plainBase.GetNutrientsRequired() == 40);
 
     // Policy: +2 Growth faction-wide (fixture level 2 -> +20% growth rate). Shrine: +1
     // Growth in its base only (level 3 -> +30%). The threshold shrinks per base.
     faction.GetSocialEngineering().SetActivePolicy(fixture.socialPolicies().Get("growth_policy"));
     baseWithShrine.GetBuildingManager().AddBuilding("growth_shrine");
 
-    CHECK(plainBase.GetNutrientsRequired() == 25);      // 30 / 1.2
-    CHECK(baseWithShrine.GetNutrientsRequired() == 23); // 30 / 1.3
+    CHECK(plainBase.GetNutrientsRequired() == 33);      // 40 / 1.2
+    CHECK(baseWithShrine.GetNutrientsRequired() == 30); // 40 / 1.3
 }
 
 TEST_CASE("Industry rating affects production cost via CostMultiplier modifiers",

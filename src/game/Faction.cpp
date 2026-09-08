@@ -9,6 +9,7 @@
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/GameDataContext.h"
 #include "game/DifficultyConfig.h"
+#include "game/population/pop-types/GrowthConfigParser.h"
 #include "game/units/BaseConquestConfig.h"
 #include "game/map/WorldMap.h"
 #include "game/map/MapUtils.h"
@@ -71,7 +72,8 @@ Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
                     rDataContext.productionConfig->effects,
                     rDataContext.baseConquestConfig->effects,
                     rDataContext.policeRules,
-                    rDataContext.popCompositionConfig->effects)
+                    rDataContext.popCompositionConfig->effects,
+                    rDataContext.growthConfig->effects)
     , m_rWorldMap(rWorldMap)
     , m_rSettings(rSettings)
     , m_composedEffects(*this)
@@ -811,7 +813,8 @@ const BaseManager* Faction::GetHeadquarters() const
 BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile* pTile,
                                   const GameDataContext& rDataContext,
                                   TileEffectsContext& rTileEffects,
-                                  const SecretProjectAvailabilityCalculator& rSecretProjectAvailability)
+                                  const SecretProjectAvailabilityCalculator& rSecretProjectAvailability,
+                                  std::optional<int> initialPopulation)
 {
     if (!pTile)
     {
@@ -830,7 +833,8 @@ BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile*
         *rDataContext.scrapRefundCalculator,
         *rDataContext.popCompositionCalculator,
         &rSecretProjectAvailability,
-        rTileEffects);
+        rTileEffects,
+        initialPopulation);
 
     pBase->GetWorkerAssignments().UnassignAll();
     pBase->GetWorkerAssignments().AutoAssignWorkers();

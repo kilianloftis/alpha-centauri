@@ -112,6 +112,14 @@ enum class StatId_t
     // Population growth rate modifier (AddPercent, base = 100%)
     GrowthRate,
 
+    // Population when a base is founded if the caller does not override size (Additive).
+    // pop_growth.json baselines at Add 1 (AllOwnerBases).
+    StartingSize,
+
+    // Soft population cap for CanGrow (Additive). pop_growth.json baselines at Add 7;
+    // Hab Complex Adds further; Hab Dome Adds a large amount (classic hard cap ~127).
+    MaxBaseSize,
+
     // Research tech cost percentage modifier (Add, base = 0; negative = cheaper)
     TechCost,
 
@@ -231,6 +239,8 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::AwayFromHomeDrones:
         case StatId_t::StartingExperience:
         case StatId_t::StartingMinerals:
+        case StatId_t::StartingSize:
+        case StatId_t::MaxBaseSize:
         case StatId_t::MoraleBonus:
         case StatId_t::ProbeDefense:
         case StatId_t::TechCost:
@@ -324,6 +334,8 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::ProbeSuccessScale:
         case StatId_t::StartingMinerals:
         case StatId_t::GrowthRate:
+        case StatId_t::StartingSize:
+        case StatId_t::MaxBaseSize:
         case StatId_t::Bureaucracy:
         case StatId_t::CommerceEnergyBonus:
         case StatId_t::InefficiencyDenominator:
@@ -413,6 +425,8 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "positive_morale_scale")   return StatId_t::PositiveMoraleScale;
     if (rStat == "promotion_chance")        return StatId_t::PromotionChance;
     if (rStat == "growth_rate")             return StatId_t::GrowthRate;
+    if (rStat == "starting_size")           return StatId_t::StartingSize;
+    if (rStat == "max_base_size")           return StatId_t::MaxBaseSize;
     if (rStat == "tech_cost")               return StatId_t::TechCost;
     if (rStat == "tech_cost_diff")          return StatId_t::TechCostDiff;
     if (rStat == "moisture_tier")           return StatId_t::MoistureTier;
@@ -740,6 +754,9 @@ enum class EffectSourceKind_t
     // pop_composition.json's per-base mood arrays (riot_tiers, golden_age_effects): collected
     // against a specific base, so ThisBase is legal here and rejected for PopComposition.
     PopCompositionBaseLocal,
+    // pop_growth.json continuous baselines (starting_size / max_base_size). No origin base —
+    // AllOwnerBases only, like Difficulty.
+    Growth,
 };
 
 } // namespace ac

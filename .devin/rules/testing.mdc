@@ -1,6 +1,7 @@
 ---
 description: Write requirement-based tests; treat failures as signals, always report them
 alwaysApply: true
+trigger: always_on
 ---
 
 # Testing

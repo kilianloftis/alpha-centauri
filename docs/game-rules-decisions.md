@@ -260,9 +260,15 @@ for `BaseProduction` / the UI; the presenter pauses if **any** matching setting 
 on an answer, not on minerals) and `nullopt` under riot. `ApplyProduction` stamps the turn
 original before any early-out, so switching away from a deferred item charges retool normally.
 
-Ordering matters to this rule: growth is the `BaseGrowth` stage and runs **before**
-`BaseProduction` (see `docs/architecture/turn-system.md`), so the question is asked against the
-size the base ends the turn at rather than its size one stage earlier.
+Ordering: `BaseProduction` runs **before** `BaseGrowth` so Hab Complex / Dome can raise
+`MaxBaseSize` before growth. That puts both of the turn's pop events after the question, so the
+prediction accounts for each: `WouldGrowThisTurn` (full tanks, net ≥ 0, `CanGrow`) adds one, so a
+size-1 base that will grow is not prompted, and `WouldStarveThisTurn` (net loss exhausts the tank)
+subtracts one, so a size-2 base that starves after paying a pod's pop cost is not razed having
+answered "no". The starve adjustment is floored at size 1: a base starving out from size 1 is lost
+whatever it builds, and predicting 0 would make every item answer yes. `CommitPendingGrowth` then
+runs before Instantaneous pop costs on completion so the pod does not raze the base before
+BaseGrowth deposits. See `docs/architecture/turn-system.md`.
 
 ## 11. Production pause gates OR-match
 

@@ -168,7 +168,8 @@ TEST_CASE("Growth config requires its keys and positive values", "[config][popul
 
     SECTION("a missing key names the key, not just the file")
     {
-        const TempConfigFile config("ac_growth_missing.json", R"({"max_base_size": 8})");
+        const TempConfigFile config("ac_growth_missing.json",
+                                    R"({"nutrient_intake_per_citizen": 2, "effects": []})");
         CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
                           Catch::Matchers::ContainsSubstring("nutrients_per_pop")
                               && Catch::Matchers::ContainsSubstring("required"));
@@ -176,27 +177,105 @@ TEST_CASE("Growth config requires its keys and positive values", "[config][popul
 
     SECTION("a non-positive value is rejected")
     {
-        const TempConfigFile config("ac_growth_zero.json",
-                                 R"({"nutrients_per_pop": 0, "max_base_size": 8})");
+        const TempConfigFile config(
+            "ac_growth_zero.json",
+            R"({"nutrients_per_pop": 0, "nutrient_intake_per_citizen": 2, "effects": []})");
         CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
                           Catch::Matchers::ContainsSubstring("nutrients_per_pop"));
     }
 
     SECTION("a fractional value is rejected rather than truncated")
     {
-        const TempConfigFile config("ac_growth_float.json",
-                                 R"({"nutrients_per_pop": 10.9, "max_base_size": 8})");
+        const TempConfigFile config(
+            "ac_growth_float.json",
+            R"({"nutrients_per_pop": 10.9, "nutrient_intake_per_citizen": 2, "effects": []})");
         CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
                           Catch::Matchers::ContainsSubstring("integer"));
     }
 
     SECTION("a complete config loads")
     {
-        const TempConfigFile config("ac_growth_ok.json",
-                                 R"({"nutrients_per_pop": 10, "max_base_size": 8})");
+        const TempConfigFile config("ac_growth_ok.json", R"({
+            "nutrients_per_pop": 10,
+            "nutrient_intake_per_citizen": 2,
+            "effects": [
+              {
+                "type": "StatModifier",
+                "scope": "AllOwnerBases",
+                "parameters": { "stat": "starting_size", "amount": 1, "op": "Add" }
+              },
+              {
+                "type": "StatModifier",
+                "scope": "AllOwnerBases",
+                "parameters": { "stat": "max_base_size", "amount": 8, "op": "Add" }
+              }
+            ]
+        })");
         const GrowthConfig_t growth = parser.ParseConfig(config.Path());
         CHECK(growth.nutrientsPerPop == 10);
-        CHECK(growth.maxBaseSize == 8);
+        CHECK(growth.nutrientIntakePerCitizen == 2);
+        CHECK(growth.effects.size() == 2);
+    }
+
+    // The population baselines moved out of scalar keys and into 'effects', so they need the
+    // strictness the keys had. Absent, they resolve to the Additive seed 0: StartingSize 0
+    // throws on the first base founded, and MaxBaseSize 0 silently stops every base growing.
+    const auto growthConfigWith = [](const std::string& rEffects) {
+        return R"({"nutrients_per_pop": 10, "nutrient_intake_per_citizen": 2, "effects": )"
+               + rEffects + "}";
+    };
+    const std::string k_StartingSize =
+        R"({"type": "StatModifier", "scope": "AllOwnerBases",
+            "parameters": {"stat": "starting_size", "amount": 1, "op": "Add"}})";
+
+    SECTION("an empty effects list is rejected rather than resolving both baselines to zero")
+    {
+        const TempConfigFile config("ac_growth_no_effects.json", growthConfigWith("[]"));
+        CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
+                          Catch::Matchers::ContainsSubstring("starting_size"));
+    }
+
+    SECTION("a missing max_base_size baseline names the stat")
+    {
+        const TempConfigFile config("ac_growth_no_max.json",
+                                    growthConfigWith("[" + k_StartingSize + "]"));
+        CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
+                          Catch::Matchers::ContainsSubstring("max_base_size"));
+    }
+
+    SECTION("an unrelated stat is rejected instead of joining the faction pool")
+    {
+        const TempConfigFile config(
+            "ac_growth_foreign_stat.json",
+            growthConfigWith("[" + k_StartingSize + R"(,
+              {"type": "StatModifier", "scope": "AllOwnerBases",
+               "parameters": {"stat": "max_base_size", "amount": 8, "op": "Add"}},
+              {"type": "StatModifier", "scope": "AllOwnerBases",
+               "parameters": {"stat": "attack", "amount": 8, "op": "Add"}}])"));
+        CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
+                          Catch::Matchers::ContainsSubstring("stat is not allowed"));
+    }
+
+    SECTION("a non-Add op is rejected")
+    {
+        const TempConfigFile config(
+            "ac_growth_bad_op.json",
+            growthConfigWith("[" + k_StartingSize + R"(,
+              {"type": "StatModifier", "scope": "AllOwnerBases",
+               "parameters": {"stat": "max_base_size", "amount": 8, "op": "AddPercent"}}])"));
+        CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
+                          Catch::Matchers::ContainsSubstring("op Add"));
+    }
+
+    SECTION("a non-positive baseline is rejected")
+    {
+        const TempConfigFile config(
+            "ac_growth_zero_baseline.json",
+            growthConfigWith("[" + k_StartingSize + R"(,
+              {"type": "StatModifier", "scope": "AllOwnerBases",
+               "parameters": {"stat": "max_base_size", "amount": 0, "op": "Add"}}])"));
+        CHECK_THROWS_WITH(parser.ParseConfig(config.Path()),
+                          Catch::Matchers::ContainsSubstring("must be > 0"));
     }
 }
 

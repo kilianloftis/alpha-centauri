@@ -1,4 +1,6 @@
 ---
+description: Keep and update architecture diagrams when components change
+alwaysApply: true
 trigger: always_on
 ---
 

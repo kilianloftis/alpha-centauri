@@ -362,23 +362,21 @@ TEST_CASE("A negative drone contribution is a config error", "[population][compo
 
 TEST_CASE("Growth threshold saturates instead of overflowing", "[population][growth]")
 {
-    // baseSize * nutrientsPerPop was multiplied as int before the rate was applied, so a large
-    // modded base size wrapped before the division could bring it back into range.
+    // (baseSize+1) * nutrientsPerPop was multiplied as int before the rate was applied, so a
+    // large modded base size wrapped before the division could bring it back into range.
     actest::BaseFixture fixture;
     BaseManager& base = fixture.MakeBase(4, 4);
     const BaseEffects_t noEffects{base};
 
     GrowthConfig_t config;
     config.nutrientsPerPop = 1000000;
-    config.maxBaseSize = std::numeric_limits<int>::max();
 
     CHECK(GrowthCalculator::ComputeNutrientsRequired(config, 1000000, noEffects)
           == std::numeric_limits<int>::max());
 
     GrowthConfig_t normal;
     normal.nutrientsPerPop = 10;
-    normal.maxBaseSize = 8;
-    CHECK(GrowthCalculator::ComputeNutrientsRequired(normal, 3, noEffects) == 30);
+    CHECK(GrowthCalculator::ComputeNutrientsRequired(normal, 3, noEffects) == 40);
 }
 
 namespace

@@ -25,8 +25,9 @@ int GrowthCalculator::ComputeNutrientsRequired(const GrowthConfig_t& rConfig, in
     // Widened, because baseSize * nutrientsPerPop can exceed int before the rate divides it
     // back into range.
     const double multiplier = growthRate / 100.0;
-    const double required =
-        static_cast<double>(baseSize) * static_cast<double>(rConfig.nutrientsPerPop) / multiplier;
+    // Tank capacity uses (size + 1): rows needed for the size after the next growth step.
+    const double required = static_cast<double>(baseSize + 1)
+                            * static_cast<double>(rConfig.nutrientsPerPop) / multiplier;
     if (required >= static_cast<double>(std::numeric_limits<int>::max()))
     {
         return std::numeric_limits<int>::max();

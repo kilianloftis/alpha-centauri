@@ -58,6 +58,11 @@ public:
     // Local psych% of post-inefficiency energy + Psych StatModifiers (facilities/specialists).
     int GetPsychProduction(const BaseEffects_t& rBaseEffects) const;
 
+    // Current per-turn nutrient bank (gross production from ProduceResources / stockpile
+    // credits; drained by BaseGrowth via ConsumeNutrients). Peekable so Production can ask
+    // WouldGrowThisTurn.
+    int GetNutrientBank() const;
+
     // ConsumeMinerals is the leftover-bank drain in BaseManager::ApplyProduction
     // (BaseProduction), when production is enabled.
     int ConsumeNutrients();

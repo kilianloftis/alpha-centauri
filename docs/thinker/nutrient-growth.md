@@ -14,7 +14,7 @@ When `nutrients_accumulated >= nutrient_cost` but the base cannot grow (over hab
 2. Still add this turn’s `nutrient_surplus` afterward.
 3. Original UI shows a population-limit notice (`POPULATIONLIMIT`).
 
-The [Nutrients wiki](https://alphacentauri.miraheze.org/wiki/Nutrients) does not describe this. Our shipping growth path leaves tanks unchanged on a blocked-full check (no grow, then deposit net and cap). Revisit if we want this penalty.
+The [Nutrients wiki](https://alphacentauri.miraheze.org/wiki/Nutrients) does not describe this. **In scope** for the base-size-limits plan: with BaseProduction before BaseGrowth, half inside `ApplyGrowth` when still full and blocked (Hab/Dome already had their chance). Integer `/ 2` toward zero. The `POPULATIONLIMIT` notice remains deferred.
 
 ### No “net ≥ 0” gate on normal growth
 

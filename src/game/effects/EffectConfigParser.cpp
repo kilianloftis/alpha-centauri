@@ -1059,6 +1059,7 @@ void ValidateEffectForSource(const EffectConfig_t& rEffect, EffectSourceKind_t s
         case EffectSourceKind_t::Tech:
         case EffectSourceKind_t::Production:
         case EffectSourceKind_t::Difficulty:
+        case EffectSourceKind_t::Growth:
         case EffectSourceKind_t::BaseConquest:
         case EffectSourceKind_t::PoliceRules:
         case EffectSourceKind_t::MoraleLevel:

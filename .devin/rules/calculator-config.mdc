@@ -1,6 +1,7 @@
 ---
-trigger: always_on
 description: Calculator rates, percents, and formulas live in JSON, not hardcoded C++
+alwaysApply: true
+trigger: always_on
 ---
 
 # Calculator parameters come from config
