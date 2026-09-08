@@ -31,6 +31,8 @@ public:
                std::function<void()> onFinished);
 
     void Render(Graphics& rGraphics) override;
+    void UpdateFrame() override;
+    bool NeedsContinuousRedraw() const override;
     bool HandleKey(const KeyEvent_t& rEvent) override;
     void HandleMouse(const MouseEvent_t& rEvent) override;
     void OnPopped() override;

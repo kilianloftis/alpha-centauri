@@ -9,6 +9,7 @@ namespace ac
 
 struct ImprovementConfig_t;
 class ImprovementRegistry;
+class Revision;
 
 enum class Rockiness_t
 {
@@ -105,6 +106,10 @@ public:
     // refresh the cached configs whenever the registry is bound.
     void BindImprovements(const ImprovementRegistry& rImprovements);
 
+    // WorldMap appearance cache (minimap fill colours). Optional — unbound tiles used in unit
+    // tests do not notify.
+    void BindAppearanceRevision(Revision& rRevision);
+
     // Improvements: every non-terrain feature on this tile, held as non-owning pointers into
     // ImprovementRegistry (the same way BuildingManager holds BuildingConfig_t*). This one
     // collection covers player-built improvements (Farm, Mine, Bunker), the "Base" marker
@@ -130,6 +135,7 @@ public:
 
 private:
     void RefreshTerrainFeatures_();
+    void NotifyAppearanceChanged_();
 
     int m_x;
     int m_y;
@@ -144,6 +150,7 @@ private:
     bool m_bHasFungus;
 
     const ImprovementRegistry* m_pImprovements = nullptr;
+    Revision* m_pAppearanceRevision = nullptr;
     std::vector<const ImprovementConfig_t*> m_terrainFeatures;
     std::vector<const ImprovementConfig_t*> m_improvements;
 };

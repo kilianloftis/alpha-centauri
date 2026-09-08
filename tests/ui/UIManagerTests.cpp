@@ -32,11 +32,21 @@ public:
 
     void Render(Graphics&) override { ++renderCount; }
 
-    void UpdateCameraInput(bool bEnabled, std::optional<MousePosition_t> mousePosition) override
+    bool UpdateCameraInput(bool bEnabled, std::optional<MousePosition_t> mousePosition) override
     {
         ++cameraUpdateCount;
         bLastCameraEnabled = bEnabled;
         lastMousePosition = mousePosition;
+        return bCameraMoved;
+    }
+
+    void UpdatePresentation() override { ++presentationUpdateCount; }
+
+    bool ConsumePresentationDirty() override
+    {
+        const bool bDirty = bPresentationDirty;
+        bPresentationDirty = false;
+        return bDirty;
     }
 
     void ProcessPendingAutoEndTurn() override { ++autoEndTurnCount; }
@@ -45,10 +55,13 @@ public:
 
     int renderCount = 0;
     int cameraUpdateCount = 0;
+    int presentationUpdateCount = 0;
     int autoEndTurnCount = 0;
     bool bLastCameraEnabled = false;
     std::optional<MousePosition_t> lastMousePosition;
     bool bBlocksTurn = false;
+    bool bCameraMoved = false;
+    bool bPresentationDirty = false;
 };
 
 class FakeOverlay_ : public IGameView
@@ -197,8 +210,25 @@ TEST_CASE("Camera input is driven from Update, not from Render", "[ui][manager]"
 
     fixture.manager.Update();
     CHECK(pWorld->cameraUpdateCount == 1);
+    CHECK(pWorld->presentationUpdateCount == 1);
     CHECK(pWorld->autoEndTurnCount == 1);
+}
 
+TEST_CASE("Quiet frames skip Clear/Display and only pace", "[ui][manager]")
+{
+    ManagerFixture_ fixture;
+    fixture.AddWorldView();
+
+    fixture.manager.Render();
+    CHECK(fixture.graphics.clearCount == 1);
+    CHECK(fixture.graphics.displayCount == 1);
+    CHECK(fixture.graphics.paceCount == 0);
+
+    fixture.manager.Update();
+    fixture.manager.Render();
+    CHECK(fixture.graphics.clearCount == 1);
+    CHECK(fixture.graphics.displayCount == 1);
+    CHECK(fixture.graphics.paceCount == 1);
 }
 
 TEST_CASE("A queued auto end-turn survives an overlay instead of being dropped",

@@ -45,29 +45,25 @@ bool CameraInputController::HandleKey(const KeyEvent_t& rEvent)
 
     if (rEvent.key == Key_t::ArrowLeft)
     {
-        rViewport.ScrollBy(-s.cameraScrollStep, 0);
-        return true;
+        return rViewport.ScrollBy(-s.cameraScrollStep, 0);
     }
-    else if (rEvent.key == Key_t::ArrowRight)
+    if (rEvent.key == Key_t::ArrowRight)
     {
-        rViewport.ScrollBy(s.cameraScrollStep, 0);
-        return true;
+        return rViewport.ScrollBy(s.cameraScrollStep, 0);
     }
-    else if (rEvent.key == Key_t::ArrowUp)
+    if (rEvent.key == Key_t::ArrowUp)
     {
-        rViewport.SetCamera(camX, std::max(s.initialCameraOffset, camY - s.cameraScrollStep));
-        return true;
+        return rViewport.SetCamera(camX, std::max(s.initialCameraOffset, camY - s.cameraScrollStep));
     }
-    else if (rEvent.key == Key_t::ArrowDown)
+    if (rEvent.key == Key_t::ArrowDown)
     {
-        rViewport.SetCamera(camX, std::min(maxCamY, camY + s.cameraScrollStep));
-        return true;
+        return rViewport.SetCamera(camX, std::min(maxCamY, camY + s.cameraScrollStep));
     }
 
     return false;
 }
 
-void CameraInputController::CenterOnTile(int tileX, int tileY)
+bool CameraInputController::CenterOnTile(int tileX, int tileY)
 {
     const int initialOffset = Style().cameraInput.initialCameraOffset;
     const int maxCamY = ComputeMaxCameraY_();
@@ -75,22 +71,22 @@ void CameraInputController::CenterOnTile(int tileX, int tileY)
     const int cameraX = tileX - (rViewport.VisibleCols() / 2);
     const int cameraY = std::clamp(
         tileY - (rViewport.VisibleRows() / 2), initialOffset, maxCamY);
-    rViewport.SetCamera(cameraX, cameraY);
+    return rViewport.SetCamera(cameraX, cameraY);
 }
 
-void CameraInputController::Update(bool bEnabled, std::optional<MousePosition_t> mousePosition)
+bool CameraInputController::Update(bool bEnabled, std::optional<MousePosition_t> mousePosition)
 {
     if (!bEnabled || !mousePosition)
     {
         m_edgeScrollAccumulatorX = 0.0f;
         m_edgeScrollAccumulatorY = 0.0f;
-        return;
+        return false;
     }
 
-    ApplyEdgeScroll_(mousePosition->x, mousePosition->y);
+    return ApplyEdgeScroll_(mousePosition->x, mousePosition->y);
 }
 
-void CameraInputController::ApplyEdgeScroll_(int mouseX, int mouseY)
+bool CameraInputController::ApplyEdgeScroll_(int mouseX, int mouseY)
 {
     const auto& s = Style().cameraInput;
     const int maxCamY = ComputeMaxCameraY_();
@@ -105,7 +101,7 @@ void CameraInputController::ApplyEdgeScroll_(int mouseX, int mouseY)
     {
         m_edgeScrollAccumulatorX = 0.0f;
         m_edgeScrollAccumulatorY = 0.0f;
-        return;
+        return false;
     }
 
     float scrollDirX = s.relativeMin;
@@ -125,7 +121,7 @@ void CameraInputController::ApplyEdgeScroll_(int mouseX, int mouseY)
     {
         m_edgeScrollAccumulatorX = 0.0f;
         m_edgeScrollAccumulatorY = 0.0f;
-        return;
+        return false;
     }
 
     m_edgeScrollAccumulatorX += scrollDirX * m_edgeScrollSpeed;
@@ -134,14 +130,16 @@ void CameraInputController::ApplyEdgeScroll_(int mouseX, int mouseY)
     const int deltaX = static_cast<int>(m_edgeScrollAccumulatorX);
     const int deltaY = static_cast<int>(m_edgeScrollAccumulatorY);
 
-    if (deltaX != 0 || deltaY != 0)
+    if (deltaX == 0 && deltaY == 0)
     {
-        m_edgeScrollAccumulatorX -= static_cast<float>(deltaX);
-        m_edgeScrollAccumulatorY -= static_cast<float>(deltaY);
-
-        const int newCamY = std::clamp(rViewport.CameraY() + deltaY, s.initialCameraOffset, maxCamY);
-        rViewport.SetCamera(rViewport.CameraX() + deltaX, newCamY);
+        return false;
     }
+
+    m_edgeScrollAccumulatorX -= static_cast<float>(deltaX);
+    m_edgeScrollAccumulatorY -= static_cast<float>(deltaY);
+
+    const int newCamY = std::clamp(rViewport.CameraY() + deltaY, s.initialCameraOffset, maxCamY);
+    return rViewport.SetCamera(rViewport.CameraX() + deltaX, newCamY);
 }
 
 } // namespace ac

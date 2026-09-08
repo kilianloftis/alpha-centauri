@@ -17,8 +17,9 @@ class MapViewport
 public:
     MapViewport(const WorldMap& rWorldMap, WindowLayout_t layout, float tileSize);
 
-    void SetCamera(int tileX, int tileY);
-    void ScrollBy(int deltaX, int deltaY);
+    // Returns true when the camera position actually changed.
+    bool SetCamera(int tileX, int tileY);
+    bool ScrollBy(int deltaX, int deltaY);
 
     int CameraX() const { return m_cameraX; }
     int CameraY() const { return m_cameraY; }

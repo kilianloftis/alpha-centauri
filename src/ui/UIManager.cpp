@@ -25,6 +25,12 @@ UIManager::~UIManager() = default;
 void UIManager::SetWorldView(std::unique_ptr<IWorldView> pWorldView)
 {
     m_pWorldView = std::move(pWorldView);
+    MarkFrameDirty();
+}
+
+void UIManager::MarkFrameDirty()
+{
+    m_bFrameDirty = true;
 }
 
 IGameView* UIManager::GetActiveView_()
@@ -53,6 +59,7 @@ void UIManager::PruneClosedViews_()
         {
             m_overlayStack[i]->OnPopped();
             m_overlayStack.erase(m_overlayStack.begin() + i);
+            MarkFrameDirty();
         }
     }
 }
@@ -61,6 +68,8 @@ void UIManager::ProcessKeys_()
 {
     while (auto event = m_rInput.PollKey())
     {
+        MarkFrameDirty();
+
         // Per event, not per batch: one keystroke can close the top view, and the next event in
         // the same drain must go to whatever is active *now*.
         PruneClosedViews_();
@@ -101,6 +110,13 @@ void UIManager::ProcessMouse_()
 {
     while (auto event = m_rInput.PollMouse())
     {
+        // MouseMoved alone does not dirty: edge-scroll and path-preview changes are detected
+        // in Update(). Button presses/releases always change presentation.
+        if (event->button != MouseButton_t::None)
+        {
+            MarkFrameDirty();
+        }
+
         PruneClosedViews_();
 
         IGameView* pActive = GetActiveView_();
@@ -120,7 +136,25 @@ void UIManager::Update()
 
     // Edge scrolling is an input-driven state change, so it belongs here rather than on the
     // render path, where a second pass (screenshot, minimap) would apply it twice.
-    m_pWorldView->UpdateCameraInput(m_overlayStack.empty(), m_rInput.GetLastMousePosition());
+    if (m_pWorldView->UpdateCameraInput(m_overlayStack.empty(), m_rInput.GetLastMousePosition()))
+    {
+        MarkFrameDirty();
+    }
+
+    m_pWorldView->UpdatePresentation();
+    if (m_pWorldView->ConsumePresentationDirty())
+    {
+        MarkFrameDirty();
+    }
+
+    for (auto& pView : m_overlayStack)
+    {
+        pView->UpdateFrame();
+        if (pView->NeedsContinuousRedraw())
+        {
+            MarkFrameDirty();
+        }
+    }
 
     // Only the world view queues an out-of-band advance request (auto end-turn). It must stay
     // queued while the turn is gated: ProcessPendingAutoEndTurn clears the flag before calling
@@ -148,6 +182,13 @@ bool UIManager::CanAdvanceTurn() const
 
 void UIManager::Render()
 {
+    if (!m_bFrameDirty)
+    {
+        m_rGraphics.PaceFrame();
+        return;
+    }
+    m_bFrameDirty = false;
+
     m_rGraphics.Clear();
     if (m_pWorldView)
     {
@@ -164,10 +205,11 @@ void UIManager::PushView(std::unique_ptr<IGameView> pView)
 {
     if (!pView)
     {
-        throw std::invalid_argument("UIManager::PushView was given no view");
+                throw std::invalid_argument("UIManager::PushView was given no view");
     }
     pView->OnPushed(m_rGraphics);
     m_overlayStack.push_back(std::move(pView));
+    MarkFrameDirty();
 }
 
 void UIManager::PopView()
@@ -178,6 +220,7 @@ void UIManager::PopView()
     }
     m_overlayStack.back()->OnPopped();
     m_overlayStack.pop_back();
+    MarkFrameDirty();
 }
 
 bool UIManager::HasOverlayView() const

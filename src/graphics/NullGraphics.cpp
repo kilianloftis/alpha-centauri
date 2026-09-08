@@ -31,10 +31,14 @@ public:
     {
     }
 
-    // Paces the frame loop. SFML's setFramerateLimit is the only thing that stops the loop
-    // spinning, and a headless build has no window to provide it - without this a headless run
-    // pins a core for as long as it lives.
     void Display() override
+    {
+        PaceFrame();
+    }
+
+    // Paces the frame loop. SFML's setFramerateLimit is the only thing that stops the loop
+    // spinning in the windowed build; without this a headless run pins a core.
+    void PaceFrame() override
     {
         if (m_config.framerateLimit == 0)
         {
@@ -55,7 +59,18 @@ public:
         return true;
     }
 
+    bool UpsertTextureRGBA(const std::string&, unsigned int, unsigned int,
+                           const std::uint8_t*) override
+    {
+        return true;
+    }
+
     bool DrawSprite(const std::string&, float, float) override
+    {
+        return true;
+    }
+
+    bool DrawSprite(const std::string&, float, float, float, float) override
     {
         return true;
     }

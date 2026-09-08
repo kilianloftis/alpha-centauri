@@ -98,11 +98,18 @@ MouseEvent_t ClickAtDrawnText_(const RecordingGraphics& rGraphics, const std::st
         true};
 }
 
-std::unique_ptr<IGameView> MakeWorldView_(ViewFixture& rFixture)
+std::unique_ptr<WorldView> MakeWorldView_(ViewFixture& rFixture)
 {
     return rFixture.pFactory->CreateWorldView(
         ViewFixture::FullScreen(), [] {}, [] {},
         [](BaseManager&) {}, [](auto&&...) {}, [] {});
+}
+
+// Auto-select and panel wiring live on UpdatePresentation (Engine's Update path), not Render.
+void PrimeWorldView_(WorldView& rView, RecordingGraphics& rGraphics)
+{
+    rView.UpdatePresentation();
+    rView.Render(rGraphics);
 }
 
 KeyEvent_t ShiftD_()
@@ -181,7 +188,7 @@ TEST_CASE("Shift+D on a selected unit opens Disband, Self Destruct, and Cancel",
     MakeUnit_(fixture, 4, 4, &rBase, {"test_chassis", "test_costly_weapon"}, designs);
 
     auto pView = MakeWorldView_(fixture);
-    pView->Render(fixture.graphics);
+    PrimeWorldView_(*pView, fixture.graphics);
     CHECK(pView->HandleKey(ShiftD_()));
     CHECK(pView->HasModalElement());
 
@@ -197,7 +204,7 @@ TEST_CASE("Shift+D does nothing when no unit is selected", "[ui][world][disband]
 {
     ViewFixture fixture;
     auto pView = MakeWorldView_(fixture);
-    pView->Render(fixture.graphics);
+    PrimeWorldView_(*pView, fixture.graphics);
     CHECK_FALSE(pView->HandleKey(ShiftD_()));
     CHECK_FALSE(pView->HasModalElement());
 }
@@ -210,7 +217,7 @@ TEST_CASE("Plain D does not open the disband menu", "[ui][world][disband]")
     MakeUnit_(fixture, 4, 4, &rBase, {"test_chassis", "test_costly_weapon"}, designs);
 
     auto pView = MakeWorldView_(fixture);
-    pView->Render(fixture.graphics);
+    PrimeWorldView_(*pView, fixture.graphics);
     pView->HandleKey(KeyEvent_t{Key_t::D, {}});
     CHECK_FALSE(pView->HasModalElement());
 }
@@ -229,7 +236,7 @@ TEST_CASE("Confirming Disband quotes the refund and then grants it", "[ui][world
     REQUIRE(rBase.GetProduction().GetMineralStockpile() == 0);
 
     auto pView = MakeWorldView_(fixture);
-    pView->Render(fixture.graphics);
+    PrimeWorldView_(*pView, fixture.graphics);
     REQUIRE(pView->HandleKey(ShiftD_()));
     fixture.graphics.texts.clear();
     pView->Render(fixture.graphics);
@@ -258,7 +265,7 @@ TEST_CASE("Cancel on the disband menu leaves the unit in place", "[ui][world][di
     const UnitId_t unitId = rUnit.GetUnitId();
 
     auto pView = MakeWorldView_(fixture);
-    pView->Render(fixture.graphics);
+    PrimeWorldView_(*pView, fixture.graphics);
     REQUIRE(pView->HandleKey(ShiftD_()));
     fixture.graphics.texts.clear();
     pView->Render(fixture.graphics);
@@ -278,7 +285,7 @@ TEST_CASE("Cancel on the disband confirm leaves the unit in place", "[ui][world]
     const UnitId_t unitId = rUnit.GetUnitId();
 
     auto pView = MakeWorldView_(fixture);
-    pView->Render(fixture.graphics);
+    PrimeWorldView_(*pView, fixture.graphics);
     REQUIRE(pView->HandleKey(ShiftD_()));
     fixture.graphics.texts.clear();
     pView->Render(fixture.graphics);
@@ -302,7 +309,7 @@ TEST_CASE("Self Destruct explains that it is not implemented and leaves the unit
     const UnitId_t unitId = rUnit.GetUnitId();
 
     auto pView = MakeWorldView_(fixture);
-    pView->Render(fixture.graphics);
+    PrimeWorldView_(*pView, fixture.graphics);
     REQUIRE(pView->HandleKey(ShiftD_()));
     fixture.graphics.texts.clear();
     pView->Render(fixture.graphics);

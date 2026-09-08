@@ -68,8 +68,16 @@ public:
 
     virtual void Clear() = 0;
     virtual void Display() = 0;
+    // Sleep to honor framerateLimit without presenting. Used when a frame is skipped so the
+    // loop does not spin; Display() already paces on backends that present.
+    virtual void PaceFrame() = 0;
     virtual bool LoadTexture(const std::string& id, const std::string& path) = 0;
+    // Create or replace a tightly packed RGBA8 texture (row-major, width*height*4 bytes).
+    virtual bool UpsertTextureRGBA(const std::string& id, unsigned int width, unsigned int height,
+                                   const std::uint8_t* rgba) = 0;
     virtual bool DrawSprite(const std::string& textureId, float x, float y) = 0;
+    virtual bool DrawSprite(const std::string& textureId, float x, float y, float destWidth,
+                            float destHeight) = 0;
     virtual void DrawText(const std::string& text, float x, float y, unsigned int size = 24, const Color_t& color = Color_t::White()) = 0;
     virtual void DrawRect(float x, float y, float width, float height, const Color_t& color, float thickness = 1.0f) = 0;
     virtual void DrawFilledRect(float x, float y, float width, float height, const Color_t& color) = 0;

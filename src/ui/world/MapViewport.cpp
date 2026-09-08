@@ -16,16 +16,23 @@ MapViewport::MapViewport(const WorldMap& rWorldMap, WindowLayout_t layout, float
 {
 }
 
-void MapViewport::SetCamera(int tileX, int tileY)
+bool MapViewport::SetCamera(int tileX, int tileY)
 {
     const int mapWidth = m_rWorldMap.GetWidth();
-    m_cameraX = mapWidth > 0 ? WrapX(tileX, mapWidth) : tileX;
-    m_cameraY = tileY;
+    const int newX = mapWidth > 0 ? WrapX(tileX, mapWidth) : tileX;
+    const int newY = tileY;
+    if (newX == m_cameraX && newY == m_cameraY)
+    {
+        return false;
+    }
+    m_cameraX = newX;
+    m_cameraY = newY;
+    return true;
 }
 
-void MapViewport::ScrollBy(int deltaX, int deltaY)
+bool MapViewport::ScrollBy(int deltaX, int deltaY)
 {
-    SetCamera(m_cameraX + deltaX, m_cameraY + deltaY);
+    return SetCamera(m_cameraX + deltaX, m_cameraY + deltaY);
 }
 
 int MapViewport::RowStart() const

@@ -95,6 +95,12 @@ public:
     // reasons to block (none today) may override.
     virtual bool BlocksTurnAdvance() const { return HasModalElement(); }
 
+    // Per-frame logic that must run even when paint is skipped (timers, panel refresh).
+    virtual void UpdateFrame() {}
+
+    // True while this view needs a paint every frame (combat playback, etc.).
+    virtual bool NeedsContinuousRedraw() const { return false; }
+
 protected:
     // Topmost element (z-order, checked back-to-front) reporting IsModal() and not already
     // closing, or nullptr. Shared by the default HandleKey/HandleMouse above and by views

@@ -28,6 +28,9 @@ public:
     void Update();
     void Render();
 
+    // Request a paint on the next Render(). Safe to call when nothing is dirty yet.
+    void MarkFrameDirty();
+
     void RegisterViewShortcut(Key_t key, ViewFactory_t factory);
     void SetWorldView(std::unique_ptr<IWorldView> pWorldView);
     void PushView(std::unique_ptr<IGameView> pView);
@@ -55,5 +58,6 @@ private:
     std::vector<std::unique_ptr<IGameView>> m_overlayStack;
     std::unordered_map<Key_t, ViewFactory_t> m_shortcutMap;
     bool m_bShouldExit = false;
+    bool m_bFrameDirty = true;
 };
 } // namespace ac

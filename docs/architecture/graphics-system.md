@@ -61,9 +61,11 @@ graph TB
 - **Virtual Methods**:
   - `PumpEvents()`: Drain the window's event queue into the `PlatformEventQueue` this backend was constructed with. Deliberately **not** part of `Display()`: pumping used to hang off the render call, which made rendering a prerequisite for receiving a keystroke and gave a draw call hidden I/O side effects.
   - `Clear()`: Clear the render surface
-  - `Display()`: Present the rendered frame
+  - `Display()`: Present the rendered frame (SFML also applies `framerateLimit` here)
+  - `PaceFrame()`: Sleep to honor `framerateLimit` without presenting — used when UIManager skips a quiet frame
   - `LoadTexture(id, path)`: Load a texture from file
-  - `DrawSprite(textureId, x, y)`: Draw a sprite at position
+  - `UpsertTextureRGBA(id, width, height, rgba)`: Create or replace an RGBA8 texture from tightly packed pixels (minimap terrain cache)
+  - `DrawSprite(textureId, x, y)` / `DrawSprite(..., destWidth, destHeight)`: Draw a sprite at position, optionally scaled
   - `DrawText(text, x, y, size)`: Draw text at position
   - `DrawRect(x, y, width, height, color, thickness)`: Draw an outline rectangle (negative thickness draws inward)
 
@@ -84,7 +86,9 @@ graph TB
 - **Behavior**:
   - Draw calls do nothing and **report success**: a caller should not have to special-case headless to tell "did nothing" from "went wrong"
   - `PumpEvents()` writes nothing, so with no other producer the queue stays empty and `Input` polls empty — never blocking
-  - `Display()` **paces the frame loop** to `GraphicsConfig_t::framerateLimit`. SFML's `setFramerateLimit` is the only pacing in the SFML build; without an equivalent here a headless run would spin at 100% CPU
+  - `Display()` presents; `PaceFrame()` sleeps to `GraphicsConfig_t::framerateLimit`. SFML's
+    `setFramerateLimit` paces presented frames; skip-redraw paths call `PaceFrame()` instead.
+    Without an equivalent here a headless run would spin at 100% CPU
   - Reports the same window size as the SFML backend, from the shared `GraphicsConfig_t`
   - Used when `USE_SFML` is not defined
 

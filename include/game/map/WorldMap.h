@@ -4,6 +4,7 @@
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorkedTileIndex.h"
 #include "game/map/TerritoryMap.h"
+#include "lib/Revision.h"
 #include <memory>
 #include <span>
 #include <vector>
@@ -54,6 +55,9 @@ public:
     TerritoryMap& GetTerritory();
     const TerritoryMap& GetTerritory() const;
 
+    // Bumped when a tile's minimap fill inputs change (elevation, fungus, improvements).
+    uint64_t GetAppearanceRevision() const { return m_appearanceRevision.Get(); }
+
 private:
     int m_width;
     int m_height;
@@ -61,6 +65,7 @@ private:
     UnitPositionIndex m_unitPositionIndex;
     WorkedTileIndex m_workedTiles;
     TerritoryMap m_territory;
+    Revision m_appearanceRevision;
 };
 
 } // namespace ac

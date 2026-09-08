@@ -36,9 +36,25 @@ public:
     void PumpEvents() override {}
     void Clear() override { ++clearCount; }
     void Display() override { ++displayCount; }
+    void PaceFrame() override { ++paceCount; }
 
     bool LoadTexture(const std::string&, const std::string&) override { return true; }
-    bool DrawSprite(const std::string&, float, float) override { return true; }
+    bool UpsertTextureRGBA(const std::string&, unsigned int, unsigned int,
+                           const std::uint8_t*) override
+    {
+        ++upsertTextureCount;
+        return true;
+    }
+    bool DrawSprite(const std::string&, float, float) override
+    {
+        ++spriteCount;
+        return true;
+    }
+    bool DrawSprite(const std::string&, float, float, float, float) override
+    {
+        ++spriteCount;
+        return true;
+    }
 
     void DrawText(const std::string& rText, float x, float y, unsigned int size,
                   const ac::Color_t& rColor) override
@@ -121,6 +137,9 @@ public:
     std::vector<RectDraw_t> rects;
     int clearCount = 0;
     int displayCount = 0;
+    int paceCount = 0;
+    int upsertTextureCount = 0;
+    int spriteCount = 0;
 };
 
 } // namespace actest

@@ -65,13 +65,22 @@ CombatView::CombatView(WindowLayout_t layout,
     }
 }
 
-void CombatView::Render(Graphics& rGraphics)
+void CombatView::UpdateFrame()
 {
     m_presentation.Update();
     RefreshPanels_();
+    FinishIfDone_();
+}
+
+bool CombatView::NeedsContinuousRedraw() const
+{
+    return m_presentation.IsActive();
+}
+
+void CombatView::Render(Graphics& rGraphics)
+{
     m_presentation.Render(rGraphics, m_rWorldDisplay);
     IGameView::Render(rGraphics);
-    FinishIfDone_();
 }
 
 bool CombatView::HandleKey(const KeyEvent_t& /*rEvent*/)

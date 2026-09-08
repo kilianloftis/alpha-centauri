@@ -12,7 +12,9 @@
 #include "ui/world/MapViewport.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <stdexcept>
+#include <string>
 
 namespace ac
 {
@@ -36,6 +38,15 @@ PlayerFogMaps_t PlayerFog_(const GameState& rGameState)
     return {&pPlayer->GetExploredMap(), &pPlayer->GetVisibleMap()};
 }
 
+void WritePixel_(std::vector<std::uint8_t>& rPixels, size_t index, const Color_t& rColor)
+{
+    const size_t offset = index * 4;
+    rPixels[offset] = rColor.r;
+    rPixels[offset + 1] = rColor.g;
+    rPixels[offset + 2] = rColor.b;
+    rPixels[offset + 3] = rColor.a;
+}
+
 } // namespace
 
 MinimapDisplay::MinimapDisplay(const GameState& rGameState, WindowLayout_t layout,
@@ -45,6 +56,7 @@ MinimapDisplay::MinimapDisplay(const GameState& rGameState, WindowLayout_t layou
     , m_rGameState(rGameState)
     , m_rViewport(rViewport)
     , m_onCenterOnTile(std::move(onCenterOnTile))
+    , m_textureId("minimap:" + std::to_string(reinterpret_cast<std::uintptr_t>(this)))
 {
     if (!m_onCenterOnTile)
     {
@@ -150,19 +162,45 @@ void MinimapDisplay::RenderViewportFrame_(Graphics& rGraphics,
     }
 }
 
-void MinimapDisplay::Render(Graphics& rGraphics)
+MinimapDisplay::TerrainCacheKey_t MinimapDisplay::CurrentTerrainKey_() const
 {
-    const MapContentLayout_t layout = ComputeMapContentLayout_();
+    const WorldMap& rWorldMap = m_rGameState.GetWorldMap();
+    const PlayerFogMaps_t fog = PlayerFog_(m_rGameState);
+    TerrainCacheKey_t key;
+    key.appearanceRevision = rWorldMap.GetAppearanceRevision();
+    key.mapWidth = rWorldMap.GetWidth();
+    key.mapHeight = rWorldMap.GetHeight();
+    key.bHasExplored = fog.pExplored != nullptr;
+    key.bHasVisible = fog.pVisible != nullptr;
+    if (fog.pExplored)
+    {
+        key.exploredRevision = fog.pExplored->GetRevision();
+    }
+    if (fog.pVisible)
+    {
+        key.visibleRevision = fog.pVisible->GetRevision();
+    }
+    return key;
+}
 
-    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height,
-                             Style().worldDisplay.shroudColor);
+void MinimapDisplay::EnsureTerrainCache_(Graphics& rGraphics, const MapContentLayout_t& rLayout)
+{
+    const TerrainCacheKey_t key = CurrentTerrainKey_();
+    if (m_bTerrainCacheValid && key == m_terrainCacheKey)
+    {
+        return;
+    }
 
     const WorldMap& rWorldMap = m_rGameState.GetWorldMap();
     const PlayerFogMaps_t fog = PlayerFog_(m_rGameState);
+    const Color_t shroud = Style().worldDisplay.shroudColor;
+    const size_t pixelCount =
+        static_cast<size_t>(rLayout.mapWidth) * static_cast<size_t>(rLayout.mapHeight);
+    m_terrainPixels.assign(pixelCount * 4, 0);
 
-    for (int row = 0; row < layout.mapHeight; ++row)
+    for (int row = 0; row < rLayout.mapHeight; ++row)
     {
-        for (int col = 0; col < layout.mapWidth; ++col)
+        for (int col = 0; col < rLayout.mapWidth; ++col)
         {
             const Tile* pTile = rWorldMap.GetTile(col, row);
             if (!pTile)
@@ -170,19 +208,46 @@ void MinimapDisplay::Render(Graphics& rGraphics)
                 throw std::runtime_error("MinimapDisplay: missing tile in world map");
             }
 
-            const float tileX = layout.originX + static_cast<float>(col) * layout.tileSize;
-            const float tileY = layout.originY + static_cast<float>(row) * layout.tileSize;
+            const size_t index =
+                static_cast<size_t>(row) * static_cast<size_t>(rLayout.mapWidth)
+                + static_cast<size_t>(col);
 
             if (fog.pExplored && !fog.pExplored->IsExplored(*pTile))
             {
-                // Already filled with shroud via the panel background.
+                WritePixel_(m_terrainPixels, index, shroud);
                 continue;
             }
 
             const bool bFogged = fog.pVisible && !fog.pVisible->IsVisible(*pTile);
-            rGraphics.DrawFilledRect(tileX, tileY, layout.tileSize, layout.tileSize,
-                                     TileRenderer::FillColor(*pTile, bFogged));
+            WritePixel_(m_terrainPixels, index, TileRenderer::FillColor(*pTile, bFogged));
         }
+    }
+
+    if (!rGraphics.UpsertTextureRGBA(m_textureId, static_cast<unsigned int>(rLayout.mapWidth),
+                                     static_cast<unsigned int>(rLayout.mapHeight),
+                                     m_terrainPixels.data()))
+    {
+        throw std::runtime_error("MinimapDisplay: failed to upload terrain cache texture");
+    }
+
+    m_terrainCacheKey = key;
+    m_bTerrainCacheValid = true;
+}
+
+void MinimapDisplay::Render(Graphics& rGraphics)
+{
+    const MapContentLayout_t layout = ComputeMapContentLayout_();
+
+    rGraphics.DrawFilledRect(m_layout.x, m_layout.y, m_layout.width, m_layout.height,
+                             Style().worldDisplay.shroudColor);
+
+    EnsureTerrainCache_(rGraphics, layout);
+
+    const float mapPixelW = layout.tileSize * static_cast<float>(layout.mapWidth);
+    const float mapPixelH = layout.tileSize * static_cast<float>(layout.mapHeight);
+    if (!rGraphics.DrawSprite(m_textureId, layout.originX, layout.originY, mapPixelW, mapPixelH))
+    {
+        throw std::runtime_error("MinimapDisplay: failed to draw terrain cache texture");
     }
 
     RenderViewportFrame_(rGraphics, layout);

@@ -178,6 +178,7 @@ void Engine::ProcessTurn_()
 
     // Runs until a stage yields for interaction; turn boundaries are handled inside stages.
     m_turnProcessor->Advance(*m_pGameState);
+    m_uiManager->MarkFrameDirty();
 }
 
 void Engine::Initialize_()

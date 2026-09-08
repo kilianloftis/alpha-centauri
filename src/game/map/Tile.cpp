@@ -1,6 +1,8 @@
 #include "game/map/Tile.h"
+
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
+#include "lib/Revision.h"
 #include <magic_enum.hpp>
 #include <algorithm>
 #include <cmath>
@@ -97,8 +99,13 @@ void Tile::SetElevation(int elevation)
                                 + std::to_string(k_MinElevation) + ", "
                                 + std::to_string(k_MaxElevation) + "]");
     }
+    if (m_elevation == elevation)
+    {
+        return;
+    }
     m_elevation = elevation;
     RefreshTerrainFeatures_();
+    NotifyAppearanceChanged_();
 }
 
 int Tile::GetElevation() const
@@ -140,8 +147,13 @@ bool Tile::GetHasAquifer() const
 
 void Tile::SetHasFungus(bool bHasFungus)
 {
+    if (m_bHasFungus == bHasFungus)
+    {
+        return;
+    }
     m_bHasFungus = bHasFungus;
     RefreshTerrainFeatures_();
+    NotifyAppearanceChanged_();
 }
 
 bool Tile::GetHasFungus() const
@@ -155,22 +167,41 @@ void Tile::BindImprovements(const ImprovementRegistry& rImprovements)
     RefreshTerrainFeatures_();
 }
 
+void Tile::BindAppearanceRevision(Revision& rRevision)
+{
+    m_pAppearanceRevision = &rRevision;
+}
+
+void Tile::NotifyAppearanceChanged_()
+{
+    if (m_pAppearanceRevision)
+    {
+        m_pAppearanceRevision->Bump();
+    }
+}
+
 void Tile::AddImprovement(const ImprovementConfig_t& rConfig)
 {
-    if (!HasImprovement(rConfig.id))
+    if (HasImprovement(rConfig.id))
     {
-        m_improvements.push_back(&rConfig);
+        return;
     }
+    m_improvements.push_back(&rConfig);
+    NotifyAppearanceChanged_();
 }
 
 void Tile::RemoveImprovement(std::string_view improvementId)
 {
-    auto it = std::remove_if(m_improvements.begin(), m_improvements.end(),
-                             [&](const ImprovementConfig_t* pConfig)
-                             {
-                                 return pConfig->id == improvementId;
-                             });
+    const auto it = std::remove_if(m_improvements.begin(), m_improvements.end(),
+                                   [&](const ImprovementConfig_t* pConfig) {
+                                       return pConfig->id == improvementId;
+                                   });
+    if (it == m_improvements.end())
+    {
+        return;
+    }
     m_improvements.erase(it, m_improvements.end());
+    NotifyAppearanceChanged_();
 }
 
 bool Tile::HasImprovement(std::string_view improvementId) const

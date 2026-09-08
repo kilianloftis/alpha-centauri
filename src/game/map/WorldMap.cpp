@@ -23,7 +23,9 @@ WorldMap::WorldMap(int width, int height)
     {
         for (int x = 0; x < width; ++x)
         {
-            m_tiles.push_back(std::make_unique<Tile>(x, y));
+            auto pTile = std::make_unique<Tile>(x, y);
+            pTile->BindAppearanceRevision(m_appearanceRevision);
+            m_tiles.push_back(std::move(pTile));
         }
     }
     m_territory.Reset(width, height);
