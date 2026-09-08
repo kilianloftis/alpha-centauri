@@ -180,6 +180,7 @@ add_library(ac-turn-stages OBJECT
     game/stages/IncomeCollection.cpp
     game/stages/ResearchAccumulation.cpp
     game/stages/BaseProduction.cpp
+    game/stages/PostActionsProduction.cpp
     game/stages/Population.cpp
     game/stages/Upkeep.cpp
     game/stages/PlayerActions.cpp

@@ -23,6 +23,11 @@ BaseProduction::BaseProduction(HookContext hookContext)
 {
 }
 
+ProductionApplyResult_t BaseProduction::TickBase_(BaseManager& rBase)
+{
+    return rBase.ApplyProduction();
+}
+
 void BaseProduction::OnResetPassState_()
 {
     m_processedBaseIds.clear();
@@ -164,7 +169,7 @@ StageResult_t BaseProduction::ReevaluateProcessedBases_(GameState& rGameState, F
 StageResult_t BaseProduction::ProcessBase_(GameState& rGameState, Faction& rFaction,
                                            BaseManager& rBase)
 {
-    const ProductionApplyResult_t result = rBase.ApplyProduction();
+    const ProductionApplyResult_t result = TickBase_(rBase);
     LogProductionTick_(rBase, result);
 
     const StageResult_t applyResult = HandleApplyResult_(rGameState, rFaction, rBase, result);
@@ -210,8 +215,8 @@ StageResult_t BaseProduction::ExecuteImpl(GameState& rGameState, Faction& rFacti
         }
 
         // Marked before the call, not after: ProcessBase_ can yield from any of several
-        // nested paths, and a base that has already had ApplyProduction run
-        // must not be revisited when the pass resumes.
+        // nested paths, and a base that has already been ticked this pass must not be
+        // revisited when the pass resumes.
         m_processedBaseIds.insert(baseId);
         if (ProcessBase_(rGameState, rFaction, rBase) == StageResult_t::Yield)
         {

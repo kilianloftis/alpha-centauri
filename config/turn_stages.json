@@ -132,6 +132,17 @@
     }
   },
   {
+    "id": "PostActionsProduction",
+    "name": "Post Actions Production",
+    "description": "Completes funded production queues after PlayerActions without banking leftover minerals or clearing same-turn abandon deferrals. Finishes items hurried (or otherwise funded) during the player window",
+    "repeatForEachFaction": true,
+    "hooks": {
+      "pre": [],
+      "post": [],
+      "replace": []
+    }
+  },
+  {
     "id": "Mood",
     "name": "Mood",
     "description": "Commits pending drone riots and golden ages after the player has had a chance to respond",

@@ -23,6 +23,7 @@
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
 #include "game/stages/BaseProduction.h"
+#include "game/stages/PostActionsProduction.h"
 #include "game/stockpiles/StockpileConfig.h"
 #include "game/stockpiles/StockpileRegistry.h"
 #include "game/PlayerInteraction.h"
@@ -1078,4 +1079,69 @@ TEST_CASE("A facility never takes the prototype surcharge", "[production][protot
     base.GetProduction().SetProduction(pFacility, base.GetBaseEffects());
     CHECK(base.GetMineralCost()
           == ProductionCostCalculator::ComputeCost(pFacility->GetBaseCost(), BaseEffects_t{base}, 0));
+}
+
+TEST_CASE("PostActionsProduction completes a funded queue without banking leftovers",
+          "[production][PostActionsProduction]")
+{
+    UnitProductionGame_ game;
+    BaseManager& base = game.MakeBase(4, 4);
+    const BuildingConfig_t* pFacility = game.fixtures.buildings().Find("test_facility_a");
+    REQUIRE(pFacility != nullptr);
+
+    base.GetProduction().SetProduction(pFacility, base.GetBaseEffects());
+    base.GetProduction().SetMineralStockpile(base.GetMineralCost());
+    if (!base.GetBuildingManager().HasBuilding("mineral_cache"))
+    {
+        base.GetBuildingManager().AddBuilding("mineral_cache");
+    }
+    base.ProduceResources();
+    const int leftoverBank = base.GetResources().GetMineralBank();
+    REQUIRE(leftoverBank > 0);
+
+    PerFactionTurnStageRegistry_t perFaction;
+    perFaction["PostActionsProduction"] = std::make_unique<PostActionsProduction>(HookContext{});
+    GlobalTurnStageRegistry_t global;
+    global["Stop"] = std::make_unique<AlwaysYieldStage_>(HookContext{});
+    TurnProcessor processor(std::move(global), std::move(perFaction),
+                            {"PostActionsProduction", "Stop"});
+
+    processor.Advance(*game.pState);
+
+    CHECK(base.GetResources().GetMineralBank() == leftoverBank);
+    CheckQueuedStockpileEnergy_(base, game);
+    CHECK(base.GetBuildingManager().HasBuilding(pFacility->id));
+    REQUIRE(game.pState->GetPlayerInteractions().Size() >= 1);
+    CHECK(std::holds_alternative<ProductionIdleInteraction_t>(
+        game.pState->GetPlayerInteractions().Front()->payload));
+}
+
+TEST_CASE("PostActionsProduction keeps a same-turn abandon deferral deferred",
+          "[production][PostActionsProduction][abandon]")
+{
+    UnitProductionGame_ game;
+    BaseManager& base = game.MakeBase(4, 4);
+    while (base.GetPopulation().GetSize() > 1)
+    {
+        base.GetPopulation().RemovePop();
+    }
+
+    const UnitDesign& rPod =
+        game.AddDesign({"test_chassis", "test_colony_pod", "test_armor"});
+    base.GetProduction().SetProduction(&rPod, base.GetBaseEffects());
+    base.GetProduction().SetMineralStockpile(base.GetMineralCost());
+    REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::AwaitingConfirmation);
+    base.DeferProductionCompletion();
+    REQUIRE_FALSE(base.HasPendingProductionConfirmation());
+
+    PostActionsProduction stage(HookContext{});
+    CHECK(stage.Execute(*game.pState, *game.pFaction) == StageResult_t::Continue);
+
+    CHECK_FALSE(base.HasPendingProductionConfirmation());
+    CHECK(game.pState->GetPlayerInteractions().Empty());
+    CHECK(base.GetPopulation().GetSize() == 1);
+    CHECK(base.GetProduction().HasProduction());
+    CHECK(base.GetProduction().GetCurrentProduction() == &rPod);
+    CHECK(base.GetProduction().GetMineralStockpile() == base.GetMineralCost());
+    CHECK(game.pFaction->GetUnitManager().Units().empty());
 }

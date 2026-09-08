@@ -13,19 +13,23 @@ namespace ac
 class Faction;
 
 // Per-faction production. Owns only turn-pass resume state (which bases already ticked).
-// Each ApplyProduction banks leftover minerals then converts or completes. Production rules
-// and the pending confirmation live on BaseManager / ProductionManager; queue + presenter
-// own the UI prompt.
+// Default TickBase_ banks leftover minerals then converts or completes (ApplyProduction).
+// PostActionsProduction overrides TickBase_ for completion-only (TryCompleteReady, bNewTurn=false).
+// Production rules and the pending confirmation live on BaseManager / ProductionManager;
+// queue + presenter own the UI prompt.
 class BaseProduction : public YieldingPerFactionTurnStage
 {
 public:
     explicit BaseProduction(HookContext hookContext);
-    ~BaseProduction() = default;
+    ~BaseProduction() override = default;
 
 protected:
     StageResult_t ExecuteImpl(GameState& rGameState, Faction& rFaction) override;
     void OnExitImpl() override;
     void OnResetPassState_() override;
+
+    // Per-base production tick for this pass. Override for completion-only late passes.
+    virtual ProductionApplyResult_t TickBase_(BaseManager& rBase);
 
 private:
     // Continue = this base is done for the pass; Yield = stop and wait on the player.

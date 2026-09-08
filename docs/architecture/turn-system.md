@@ -45,6 +45,7 @@ graph TB
         Upkeep[Upkeep]
         Population[Population]
         PlayerActions[PlayerActions]
+        PostActionsProduction[PostActionsProduction]
         Mood[Mood]
     end
 
@@ -96,6 +97,7 @@ graph TB
     PerFactionTurnStage --> Upkeep
     PerFactionTurnStage --> Population
     PerFactionTurnStage --> PlayerActions
+    PerFactionTurnStage --> PostActionsProduction
     PerFactionTurnStage --> Mood
     PerFactionTurnStage --> CustomPerFactionTurnStage
 
@@ -195,15 +197,18 @@ about a pending riot without being a yielding stage.
 - **`UnitSupport`**: `ApplyMineralSupport` — home-unit support charged against the mineral
   bank ResourceCollection just filled; surplus units disband.
 - **`BaseProduction`**: `ApplyProduction` — allocate leftover minerals to the queued build or
-  convert them through a stockpile (`AllocateOrConvertLeftoverMinerals`), then complete funded
-  items. Ordered after `UnitSupport` and before `BaseGrowth` so Hab Complex / Dome raise
-  `MaxBaseSize` before growth, and before `IncomeCollection` / `ResearchAccumulation` so
-  converted econ and labs are spent this turn. Colony-pod abandon uses `WouldGrowThisTurn`
-  and `CommitPendingGrowth` before Instantaneous pop costs. Leftovers after a completion stay
-  on the next item and convert only on a later turn if that item is a stockpile. Stockpiles
-  are their own config family (`config/stockpiles.json`, `StockpileRegistry`); conversion
-  delegates to `ApplyStockpileConversionAtBase`, which resolves the stockpile config's own
-  effects and never touches the base effect pool.
+  convert them through a stockpile, then complete funded items. Ordered after `UnitSupport` and
+  before `BaseGrowth` so Hab Complex / Dome raise `MaxBaseSize` before growth, and before
+  `IncomeCollection` / `ResearchAccumulation` so converted econ and labs are spent this turn.
+  Colony-pod abandon uses `WouldGrowThisTurn` and `CommitPendingGrowth` before Instantaneous pop
+  costs. Leftovers after a completion stay on the next item and convert only on a later turn if
+  that item is a stockpile. Stockpiles are their own config family (`config/stockpiles.json`,
+  `StockpileRegistry`); conversion delegates to `ApplyStockpileConversionAtBase`, which resolves
+  the stockpile config's own effects and never touches the base effect pool.
+- **`PostActionsProduction`**: after `PlayerActions`, completion-only pass via
+  `TryCompleteReadyProduction` (`bNewTurn=false`) — finishes funded queues (e.g. hurried during
+  the player window) without banking leftover minerals or clearing same-turn abandon deferrals.
+  Shares yield / abandon / pick-next handling with `BaseProduction`. Ordered before `Mood`.
 - **`BaseGrowth`**: `ApplyBaseGrowth` — spends the gross nutrient bank `ResourceCollection`
   filled; `PopulationManager` subtracts citizen intake, then grows when tanks were already
   full and net ≥ 0, starves when net exhausts storage, halves tanks when full at the
