@@ -95,10 +95,10 @@ TEST_CASE("FactionUnits lane: a building's FactionUnits rule flag applies to liv
     Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"}, &base);
     EffectContext_t attackCtx;
     attackCtx.pAttacker = &unit;
-    CHECK_FALSE(HasPermission(unit, PermissionId_t::Attack, attackCtx));
+    CHECK_FALSE(HasPermission(unit, PermissionId_t::AttackTile, attackCtx));
 
     base.GetBuildingManager().AddBuilding("amphibious_grantor"); // Permission Enter/Attack, FactionUnits
-    CHECK(HasPermission(unit, PermissionId_t::Attack, attackCtx));
+    CHECK(HasPermission(unit, PermissionId_t::AttackTile, attackCtx));
 
     // Intrinsic design unchanged — grant arrives from the faction pool only.
     bool bDesignHasAttack = false;
@@ -107,7 +107,7 @@ TEST_CASE("FactionUnits lane: a building's FactionUnits rule flag applies to liv
         const auto* pPerm = rEffect.config
             ? std::get_if<PermissionEffect_t>(&rEffect.config->effect)
             : nullptr;
-        if (pPerm && pPerm->permission == PermissionId_t::Attack)
+        if (pPerm && pPerm->permission == PermissionId_t::AttackTile)
         {
             bDesignHasAttack = true;
         }

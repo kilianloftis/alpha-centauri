@@ -353,3 +353,97 @@ TEST_CASE("Embarked cargo defends only in a base; carrier preferred",
         CHECK(pAfter->GetFaction().GetFactionId() == game.pAi->GetFactionId());
     }
 }
+
+TEST_CASE("Air and Orbital targets require Air Superiority unless RefuelsAir",
+          "[unit][attack][air-superiority]")
+{
+    AttackGame_ game;
+    WorldMap& rMap = game.pState->GetWorldMap();
+    auto& rEffects = game.pState->GetTileEffects();
+    rMap.GetTile(4, 4)->SetElevation(100);
+    rMap.GetTile(5, 4)->SetElevation(100);
+    rMap.GetTile(6, 4)->SetElevation(100);
+
+    Unit& land = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon"});
+    Unit& airDefender =
+        game.MakeUnit(*game.pAi, 5, 4, {"test_flight_chassis", "test_weapon"});
+    Unit& missileDefender =
+        game.MakeUnit(*game.pAi, 6, 4, {"test_orbital_chassis", "test_weapon"});
+
+    SECTION("land cannot attack air or orbital without the flag")
+    {
+        CHECK_FALSE(CanDeclareAttack(land, airDefender.GetTile(), rMap, rEffects));
+        Unit& landNearMissile =
+            game.MakeUnit(*game.pPlayer, 5, 5, {"test_chassis", "test_weapon"});
+        rMap.GetTile(5, 5)->SetElevation(100);
+        CHECK_FALSE(CanDeclareAttack(landNearMissile, missileDefender.GetTile(), rMap, rEffects));
+    }
+
+    SECTION("Air Superiority unlocks air and orbital targets")
+    {
+        // (5,5) is adjacent to both (5,4) and (6,4).
+        Unit& withFlag = game.MakeUnit(*game.pPlayer, 5, 5,
+                                       {"test_chassis", "test_weapon", "air_superiority"});
+        rMap.GetTile(5, 5)->SetElevation(100);
+        CHECK(CanDeclareAttack(withFlag, airDefender.GetTile(), rMap, rEffects));
+        CHECK(CanDeclareAttack(withFlag, missileDefender.GetTile(), rMap, rEffects));
+    }
+
+    SECTION("air-to-air and missile-to-air still need the flag")
+    {
+        Unit& airAttacker =
+            game.MakeUnit(*game.pPlayer, 4, 5, {"test_flight_chassis", "test_weapon"});
+        Unit& missileAttacker =
+            game.MakeUnit(*game.pPlayer, 5, 5, {"test_orbital_chassis", "test_weapon"});
+        rMap.GetTile(4, 5)->SetElevation(100);
+        rMap.GetTile(5, 5)->SetElevation(100);
+        CHECK_FALSE(CanDeclareAttack(airAttacker, airDefender.GetTile(), rMap, rEffects));
+        CHECK_FALSE(CanDeclareAttack(missileAttacker, airDefender.GetTile(), rMap, rEffects));
+
+        Unit& flagged = game.MakeUnit(
+            *game.pPlayer, 6, 5, {"test_flight_chassis", "test_weapon", "air_superiority"});
+        rMap.GetTile(6, 5)->SetElevation(100);
+        CHECK(CanDeclareAttack(flagged, airDefender.GetTile(), rMap, rEffects));
+    }
+
+    SECTION("RefuelsAir base tile exempts the gate")
+    {
+        rMap.GetTile(5, 5)->SetElevation(100);
+        rMap.GetTile(6, 5)->SetElevation(100);
+        rMap.GetTile(4, 5)->SetElevation(100);
+        rMap.GetTile(5, 6)->SetElevation(100);
+        BaseManager& rAirBase = game.MakeBase(*game.pAi, 5, 5);
+        BaseManager& rMissileBase = game.MakeBase(*game.pAi, 6, 5);
+        Unit& groundedAir =
+            game.MakeUnit(*game.pAi, 5, 5, {"test_flight_chassis", "test_weapon"}, &rAirBase);
+        Unit& groundedMissile = game.MakeUnit(
+            *game.pAi, 6, 5, {"test_orbital_chassis", "test_weapon"}, &rMissileBase);
+        Unit& nearAir = game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "test_weapon"});
+        Unit& nearMissile = game.MakeUnit(*game.pPlayer, 5, 6, {"test_chassis", "test_weapon"});
+        REQUIRE(FindAttackableHostileOnTile(nearAir, groundedAir.GetTile(), rMap, rEffects)
+                == &groundedAir);
+        REQUIRE(FindAttackableHostileOnTile(
+                    nearMissile, groundedMissile.GetTile(), rMap, rEffects)
+                == &groundedMissile);
+        CHECK(CanDeclareAttack(nearAir, groundedAir.GetTile(), rMap, rEffects));
+        CHECK(CanDeclareAttack(nearMissile, groundedMissile.GetTile(), rMap, rEffects));
+    }
+
+    SECTION("friendly carrier deck tile exempts the gate")
+    {
+        // Open sea: land amphibious Enter needs Water+Base, so use an air attacker without
+        // Air Superiority — RefuelsAir from the carrier must open the declare gate.
+        rMap.GetTile(5, 5)->SetElevation(-100);
+        rMap.GetTile(4, 5)->SetElevation(100);
+        Unit& airOnDeck =
+            game.MakeUnit(*game.pAi, 5, 5, {"test_flight_chassis", "test_weapon"});
+        game.MakeUnit(*game.pAi, 5, 5,
+                      {"test_sea_chassis", "test_carrier_deck", "test_weapon"});
+        Unit& airAttacker =
+            game.MakeUnit(*game.pPlayer, 4, 5, {"test_flight_chassis", "test_weapon"});
+        Unit* pTarget =
+            FindAttackableHostileOnTile(airAttacker, airOnDeck.GetTile(), rMap, rEffects);
+        REQUIRE(pTarget == &airOnDeck);
+        CHECK(CanDeclareAttack(airAttacker, airOnDeck.GetTile(), rMap, rEffects));
+    }
+}

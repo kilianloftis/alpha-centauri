@@ -183,9 +183,10 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
                                            || std::is_same_v<T, OriginBaseIsTargetBase_t>
                                            || std::is_same_v<T, OriginBaseIsHomeBase_t>
                                            || std::is_same_v<T, AttackerIsEmbarked_t>
+                                           || std::is_same_v<T, AttackerDomain_t>
                                            || std::is_same_v<T, IsHeadquarters_t>)
                         {
-                            // Parameterless predicates: no config ids to resolve.
+                            // No config feature/component ids to resolve (domains are enums).
                         }
                         else
                         {

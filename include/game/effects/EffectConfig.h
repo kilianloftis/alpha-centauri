@@ -233,11 +233,13 @@ struct TransportParamsEffect_t
     std::vector<RuleFlagId_t> loadSiteFlags;
 };
 
-// Grants a capability the rules otherwise deny. Enter almost always carries a condition
-// selecting which tiles; Attack on stock pods is unconditional (any channel cross).
+// Grants a capability the rules otherwise deny. EnterTile almost always carries a condition
+// selecting which tiles; AttackTile on stock pods is unconditional (any channel cross).
+// AttackDomain lists defender domains this unit may strike (e.g. air, orbital).
 struct PermissionEffect_t
 {
-    PermissionId_t permission = PermissionId_t::Attack;
+    PermissionId_t permission = PermissionId_t::AttackTile;
+    std::vector<UnitDomain_t> domains;
 };
 
 // Instantaneous base-size mutation (colony-pod production cost, genetic plague, …).
@@ -334,6 +336,13 @@ struct AttackerIsEmbarked_t
 {
 };
 
+// True when EffectContext_t::pAttacker is non-null and its domain is in `domains`
+// (e.g. AAA Tracking vs air / orbital attackers). Empty is rejected by the parser.
+struct AttackerDomain_t
+{
+    std::vector<UnitDomain_t> domains;
+};
+
 // True when EffectContext_t::pBase has the Headquarters rule flag (Economy SE −1
 // energy-at-HQ). Requires pBase in the resolve context.
 struct IsHeadquarters_t
@@ -342,11 +351,11 @@ struct IsHeadquarters_t
 
 struct Condition_t : std::variant<TargetTileHas_t, AllOf_t, IsDefending_t,
                                   OriginBaseIsTargetBase_t, OriginBaseIsHomeBase_t,
-                                  AttackerIsEmbarked_t, IsHeadquarters_t>
+                                  AttackerIsEmbarked_t, AttackerDomain_t, IsHeadquarters_t>
 {
     using Variant = std::variant<TargetTileHas_t, AllOf_t, IsDefending_t,
                                  OriginBaseIsTargetBase_t, OriginBaseIsHomeBase_t,
-                                 AttackerIsEmbarked_t, IsHeadquarters_t>;
+                                 AttackerIsEmbarked_t, AttackerDomain_t, IsHeadquarters_t>;
     using Variant::Variant;
     using Variant::operator=;
 

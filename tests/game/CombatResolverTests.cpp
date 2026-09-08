@@ -109,6 +109,45 @@ TEST_CASE("Combat strength is resolved rating times 0x100", "[combat]")
     CHECK_FALSE(result.rounds.empty());
 }
 
+TEST_CASE("AAA Tracking doubles defense vs air and orbital attackers", "[combat][aaa]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    Unit& landAttacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
+    Unit& airAttacker =
+        fixture.MakeUnit(player, 4, 5, {"test_flight_chassis", "test_weapon"});
+    Unit& orbitalAttacker =
+        fixture.MakeUnit(player, 4, 3, {"test_orbital_chassis", "test_weapon"});
+    Unit& defender =
+        fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "test_armor", "aaa_tracking"});
+    landAttacker.SetXp(2);
+    airAttacker.SetXp(2);
+    orbitalAttacker.SetXp(2);
+    defender.SetXp(2);
+
+    const MoraleCalculator& morale = fixture.morale();
+
+    auto defenseVs = [&](Unit& rAttacker) {
+        EffectContext_t defenseCtx{&defender.GetTile(), CombatRole_t::Defender};
+        defenseCtx.pAttacker = &rAttacker;
+        return ResolveCombatUnitStat(
+            defender, StatId_t::Defense, defenseCtx,
+            morale.EffectiveLevelEffects(defender, defenseCtx));
+    };
+
+    // Armor base defense 3; +100% AddPercent vs air/orbital → 6.
+    CHECK(defenseVs(landAttacker) == 3);
+    CHECK(defenseVs(airAttacker) == 6);
+    CHECK(defenseVs(orbitalAttacker) == 6);
+
+    CombatHarness_ harness(fixture, /*seed*/ 7);
+    const CombatResult_t vsAir = harness.combat.Resolve(airAttacker, defender);
+    CHECK(vsAir.defenseStrength == 6 * CombatResolver::k_combatStrengthScale);
+}
+
 TEST_CASE("Higher roll wins the round; ties go to the defender", "[combat]")
 {
     FactionFixture fixture;

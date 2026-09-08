@@ -456,7 +456,7 @@ TEST_CASE("ConditionSatisfied: AttackerIsEmbarked requires pAttacker", "[effects
 {
     actest::EffectPool pool;
     EffectConfig_t config;
-    config.effect = PermissionEffect_t{PermissionId_t::Attack};
+    config.effect = PermissionEffect_t{PermissionId_t::AttackTile};
     config.scope = EffectScope_t::ThisUnit;
     config.persistence = EffectPersistence_t::Continuous;
     config.condition = AttackerIsEmbarked_t{};

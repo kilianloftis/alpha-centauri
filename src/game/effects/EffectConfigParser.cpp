@@ -354,6 +354,32 @@ void ParsePermission_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
         throw std::runtime_error("Unknown permission id: '" + permissionStr + "'");
     }
     permission.permission = *id;
+    if (parameters.contains("domains"))
+    {
+        if (!parameters.at("domains").is_array() || parameters.at("domains").empty())
+        {
+            throw std::runtime_error(
+                "Permission 'domains' must be a non-empty array when present");
+        }
+        if (permission.permission != PermissionId_t::AttackDomain)
+        {
+            throw std::runtime_error(
+                "Permission 'domains' is only valid for AttackDomain");
+        }
+        for (const auto& rDomain : parameters.at("domains"))
+        {
+            if (!rDomain.is_string())
+            {
+                throw std::runtime_error("Permission domains must be strings");
+            }
+            permission.domains.push_back(ParseUnitDomain(rDomain.get<std::string>()));
+        }
+    }
+    else if (permission.permission == PermissionId_t::AttackDomain)
+    {
+        throw std::runtime_error(
+            "AttackDomain permission requires a non-empty 'domains' array");
+    }
     rEffect.effect = permission;
 }
 
@@ -729,6 +755,26 @@ Condition_t ParseCondition(const nlohmann::json& conditionJson)
     if (kindStr == "AttackerIsEmbarked")
     {
         return AttackerIsEmbarked_t{};
+    }
+    if (kindStr == "AttackerDomain")
+    {
+        if (!conditionJson.contains("domains") || !conditionJson.at("domains").is_array()
+            || conditionJson.at("domains").empty())
+        {
+            throw std::runtime_error(
+                "AttackerDomain condition requires a non-empty 'domains' array");
+        }
+        AttackerDomain_t attackerDomain;
+        for (const auto& rDomain : conditionJson.at("domains"))
+        {
+            if (!rDomain.is_string())
+            {
+                throw std::runtime_error(
+                    "AttackerDomain condition domains must be strings");
+            }
+            attackerDomain.domains.push_back(ParseUnitDomain(rDomain.get<std::string>()));
+        }
+        return attackerDomain;
     }
     if (kindStr == "IsHeadquarters")
     {

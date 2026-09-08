@@ -432,6 +432,47 @@
     ]
   },
   {
+    "id": "air_superiority",
+    "name": "Air Superiority",
+    "type": "ability",
+    "effects": [
+      {
+        "type": "Permission",
+        "scope": "ThisUnit",
+        "parameters": {
+          "permission": "AttackDomain",
+          "domains": ["air", "orbital"]
+        }
+      }
+    ]
+  },
+  {
+    "id": "aaa_tracking",
+    "name": "AAA Tracking",
+    "type": "ability",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "defense",
+          "amount": 100,
+          "op": "AddPercent"
+        },
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            { "kind": "IsDefending" },
+            { "kind": "AttackerDomain", "domains": ["air", "orbital"] }
+          ]
+        }
+      }
+    ],
+    "combat_rating_modifiers": [
+      { "target": "defense", "prefix": "<", "suffix": ">" }
+    ]
+  },
+  {
     "id": "sensor_pod",
     "name": "Sensor Pod (mobile ThisTile aura, radius 2)",
     "type": "special",
@@ -810,7 +851,7 @@
         "type": "Permission",
         "scope": "ThisUnit",
         "parameters": {
-          "permission": "Enter"
+          "permission": "EnterTile"
         },
         "condition": {
           "kind": "AllOf",
@@ -824,7 +865,7 @@
         "type": "Permission",
         "scope": "ThisUnit",
         "parameters": {
-          "permission": "Attack"
+          "permission": "AttackTile"
         }
       }
     ]

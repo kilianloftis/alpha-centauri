@@ -61,9 +61,36 @@
     "type": "ability",
     "required_tech": "",
     "mineral_cost": 0,
-    "effects": [],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "defense", "amount": 100, "op": "AddPercent" },
+        "condition": {
+          "kind": "AllOf",
+          "conditions": [
+            { "kind": "IsDefending" },
+            { "kind": "AttackerDomain", "domains": ["air", "orbital"] }
+          ]
+        }
+      }
+    ],
     "combat_rating_modifiers": [
       { "target": "defense", "prefix": "<", "suffix": ">" }
+    ]
+  },
+  {
+    "id": "Air_Superiority",
+    "name": "Air Superiority",
+    "type": "ability",
+    "required_tech": "",
+    "mineral_cost": 0,
+    "effects": [
+      {
+        "type": "Permission",
+        "scope": "ThisUnit",
+        "parameters": { "permission": "AttackDomain", "domains": ["air", "orbital"] }
+      }
     ]
   },
   {
@@ -79,13 +106,13 @@
       {
         "type": "Permission",
         "scope": "ThisUnit",
-        "parameters": { "permission": "Enter" },
+        "parameters": { "permission": "EnterTile" },
         "condition": { "kind": "AllOf", "values": ["Water", "Base"] }
       },
       {
         "type": "Permission",
         "scope": "ThisUnit",
-        "parameters": { "permission": "Attack" }
+        "parameters": { "permission": "AttackTile" }
       }
     ]
   },

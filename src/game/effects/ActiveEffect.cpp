@@ -526,6 +526,22 @@ bool ConditionBodySatisfied_(const Condition_t& condition, const EffectContext_t
             {
                 return ctx.pAttacker != nullptr && ctx.pAttacker->IsEmbarked();
             }
+            else if constexpr (std::is_same_v<T, AttackerDomain_t>)
+            {
+                if (ctx.pAttacker == nullptr || rAlt.domains.empty())
+                {
+                    return false;
+                }
+                const UnitDomain_t domain = ctx.pAttacker->GetDomain();
+                for (UnitDomain_t allowed : rAlt.domains)
+                {
+                    if (allowed == domain)
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
             else if constexpr (std::is_same_v<T, IsHeadquarters_t>)
             {
                 return ctx.pBase != nullptr
@@ -1152,6 +1168,26 @@ bool HasPermission(const Unit& rUnit, PermissionId_t permission, const EffectCon
         if (!pPerm || pPerm->permission != permission)
         {
             continue;
+        }
+        if (permission == PermissionId_t::AttackDomain)
+        {
+            if (!rCtx.hostileDomain.has_value() || pPerm->domains.empty())
+            {
+                continue;
+            }
+            bool bDomainOk = false;
+            for (UnitDomain_t domain : pPerm->domains)
+            {
+                if (domain == *rCtx.hostileDomain)
+                {
+                    bDomainOk = true;
+                    break;
+                }
+            }
+            if (!bDomainOk)
+            {
+                continue;
+            }
         }
         if (!ConditionSatisfied(*rEffect.config, rCtx, rEffect.originBase))
         {

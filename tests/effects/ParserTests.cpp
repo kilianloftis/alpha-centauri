@@ -1145,13 +1145,13 @@ TEST_CASE("ParseEffectConfig: Permission and AttackerIsEmbarked", "[effects][par
 {
     const json enterJson = json::parse(R"({
         "type": "Permission", "scope": "ThisUnit",
-        "parameters": { "permission": "Enter" },
+        "parameters": { "permission": "EnterTile" },
         "condition": { "kind": "AllOf", "values": ["Water", "Base"] }
     })");
     const EffectConfig_t enterConfig = EffectConfigParser::ParseEffectConfig(enterJson);
     const auto* pEnter = std::get_if<PermissionEffect_t>(&enterConfig.effect);
     REQUIRE(pEnter != nullptr);
-    CHECK(pEnter->permission == PermissionId_t::Enter);
+    CHECK(pEnter->permission == PermissionId_t::EnterTile);
     REQUIRE(enterConfig.condition.has_value());
     const auto* pAllOf = std::get_if<AllOf_t>(&enterConfig.condition->AsVariant());
     REQUIRE(pAllOf);
@@ -1165,22 +1165,66 @@ TEST_CASE("ParseEffectConfig: Permission and AttackerIsEmbarked", "[effects][par
 
     const json attackJson = json::parse(R"({
         "type": "Permission", "scope": "ThisUnit",
-        "parameters": { "permission": "Attack" }
+        "parameters": { "permission": "AttackTile" }
     })");
     const EffectConfig_t attackConfig = EffectConfigParser::ParseEffectConfig(attackJson);
     const auto* pAttack = std::get_if<PermissionEffect_t>(&attackConfig.effect);
     REQUIRE(pAttack != nullptr);
-    CHECK(pAttack->permission == PermissionId_t::Attack);
+    CHECK(pAttack->permission == PermissionId_t::AttackTile);
     CHECK_FALSE(attackConfig.condition.has_value());
+    CHECK(pAttack->domains.empty());
+
+    const json attackDomainJson = json::parse(R"({
+        "type": "Permission", "scope": "ThisUnit",
+        "parameters": { "permission": "AttackDomain", "domains": ["air", "orbital"] }
+    })");
+    const EffectConfig_t attackDomainConfig =
+        EffectConfigParser::ParseEffectConfig(attackDomainJson);
+    const auto* pAttackDomain =
+        std::get_if<PermissionEffect_t>(&attackDomainConfig.effect);
+    REQUIRE(pAttackDomain != nullptr);
+    CHECK(pAttackDomain->permission == PermissionId_t::AttackDomain);
+    REQUIRE(pAttackDomain->domains.size() == 2);
+    CHECK(pAttackDomain->domains[0] == UnitDomain_t::Air);
+    CHECK(pAttackDomain->domains[1] == UnitDomain_t::Orbital);
+
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "Permission", "scope": "ThisUnit",
+        "parameters": { "permission": "AttackDomain" }
+    })")));
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "Permission", "scope": "ThisUnit",
+        "parameters": { "permission": "AttackTile", "domains": ["air"] }
+    })")));
 
     const json embarkedJson = json::parse(R"({
         "type": "Permission", "scope": "ThisUnit",
-        "parameters": { "permission": "Attack" },
+        "parameters": { "permission": "AttackTile" },
         "condition": { "kind": "AttackerIsEmbarked" }
     })");
     const EffectConfig_t embarkedConfig = EffectConfigParser::ParseEffectConfig(embarkedJson);
     REQUIRE(embarkedConfig.condition.has_value());
     CHECK(std::holds_alternative<AttackerIsEmbarked_t>(embarkedConfig.condition->AsVariant()));
+
+    const json attackerDomainJson = json::parse(R"({
+        "type": "StatModifier", "scope": "ThisUnit",
+        "parameters": { "stat": "defense", "amount": 100, "op": "AddPercent" },
+        "condition": { "kind": "AttackerDomain", "domains": ["air", "orbital"] }
+    })");
+    const EffectConfig_t domainConfig =
+        EffectConfigParser::ParseEffectConfig(attackerDomainJson);
+    REQUIRE(domainConfig.condition.has_value());
+    const auto* pDomains =
+        std::get_if<AttackerDomain_t>(&domainConfig.condition->AsVariant());
+    REQUIRE(pDomains);
+    REQUIRE(pDomains->domains.size() == 2);
+    CHECK(pDomains->domains[0] == UnitDomain_t::Air);
+    CHECK(pDomains->domains[1] == UnitDomain_t::Orbital);
+
+    CHECK_THROWS(EffectConfigParser::ParseCondition(
+        json::parse(R"({ "kind": "AttackerDomain" })")));
+    CHECK_THROWS(EffectConfigParser::ParseCondition(
+        json::parse(R"({ "kind": "AttackerDomain", "domains": [] })")));
 
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(
         json::parse(R"({ "type": "Permission", "scope": "ThisUnit", "parameters": {} })")));

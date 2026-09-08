@@ -106,8 +106,10 @@ CombatResult_t CombatResolver::Resolve(Unit& rAttacker, Unit& rDefender)
     result.attackerId = rAttacker.GetUnitId();
     result.defenderId = rDefender.GetUnitId();
 
-    const EffectContext_t attackCtx{&rDefender.GetTile(), CombatRole_t::Attacker};
-    const EffectContext_t defenseCtx{&rDefender.GetTile(), CombatRole_t::Defender};
+    EffectContext_t attackCtx{&rDefender.GetTile(), CombatRole_t::Attacker};
+    EffectContext_t defenseCtx{&rDefender.GetTile(), CombatRole_t::Defender};
+    attackCtx.pAttacker = &rAttacker;
+    defenseCtx.pAttacker = &rAttacker;
     const double tileDefenseMult = m_rTileEffects.ResolveTileDefenseMultiplier(
         rDefender.GetTile(), rDefender.GetFaction().GetFactionId());
 

@@ -91,7 +91,7 @@ bool CanEnterTile(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldM
     }
     EffectContext_t ctx;
     ctx.targetTile = &rTile;
-    return HasPermission(rMover, PermissionId_t::Enter, ctx);
+    return HasPermission(rMover, PermissionId_t::EnterTile, ctx);
 }
 
 bool HasFriendlyOccupant(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap)

@@ -698,10 +698,13 @@ enum class WorldParameterId_t
 
 enum class PermissionId_t
 {
-    // Lifts a channel-crossing attack that reachability already allows.
-    Attack,
+    // Lifts a channel-crossing attack that reachability already allows (shore <-> sea).
+    AttackTile,
     // Lifts land -> water entry onto a qualifying tile (sea base).
-    Enter,
+    EnterTile,
+    // Lifts attacks against hostiles whose domain is listed on the Permission effect
+    // (Air Superiority: air + orbital). Requires EffectContext_t::hostileDomain.
+    AttackDomain,
 };
 
 // Restricts which *other* factions a cross-faction effect (Infiltration, future

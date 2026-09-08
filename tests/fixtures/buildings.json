@@ -254,7 +254,7 @@
         "type": "Permission",
         "scope": "FactionUnits",
         "parameters": {
-          "permission": "Enter"
+          "permission": "EnterTile"
         },
         "condition": {
           "kind": "AllOf",
@@ -268,7 +268,7 @@
         "type": "Permission",
         "scope": "FactionUnits",
         "parameters": {
-          "permission": "Attack"
+          "permission": "AttackTile"
         }
       }
     ],

@@ -25,7 +25,7 @@ bool CanAttackTile(const Unit& rAttacker, const Tile& rTargetTile, const WorldMa
         return false;
     }
 
-    // Channel-crossing Permission(Attack) is a land rule (embarked cargo, shore <-> sea).
+    // Channel-crossing Permission(AttackTile) is a land rule (embarked cargo, shore <-> sea).
     if (rAttacker.GetDomain() != UnitDomain_t::Land)
     {
         return true;
@@ -41,7 +41,7 @@ bool CanAttackTile(const Unit& rAttacker, const Tile& rTargetTile, const WorldMa
     EffectContext_t ctx;
     ctx.targetTile = &rTargetTile;
     ctx.pAttacker = &rAttacker;
-    return HasPermission(rAttacker, PermissionId_t::Attack, ctx);
+    return HasPermission(rAttacker, PermissionId_t::AttackTile, ctx);
 }
 
 Unit* FindVisibleHostileOnTile(const Unit& rObserver, const Tile& rTile,
@@ -88,7 +88,31 @@ Unit* FindAttackableHostileOnTile(const Unit& rAttacker, const Tile& rTargetTile
     {
         return nullptr;
     }
-    return FindVisibleHostileOnTile(rAttacker, rTargetTile, rWorldMap, rTileEffects);
+    Unit* pDefender =
+        FindVisibleHostileOnTile(rAttacker, rTargetTile, rWorldMap, rTileEffects);
+    if (!pDefender)
+    {
+        return nullptr;
+    }
+
+    // Air / Orbital hostiles require Permission(AttackDomain) covering that domain, unless
+    // the tile provides RefuelsAir (base, airbase, friendly carrier deck).
+    const UnitDomain_t defenderDomain = pDefender->GetDomain();
+    if (defenderDomain == UnitDomain_t::Air || defenderDomain == UnitDomain_t::Orbital)
+    {
+        if (!TileProvidesFlag(rTargetTile, RuleFlagId_t::RefuelsAir, rWorldMap,
+                              pDefender->GetFaction().GetFactionId()))
+        {
+            EffectContext_t ctx;
+            ctx.pAttacker = &rAttacker;
+            ctx.hostileDomain = defenderDomain;
+            if (!HasPermission(rAttacker, PermissionId_t::AttackDomain, ctx))
+            {
+                return nullptr;
+            }
+        }
+    }
+    return pDefender;
 }
 
 } // namespace ac

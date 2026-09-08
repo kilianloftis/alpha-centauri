@@ -785,8 +785,9 @@ check it with a `std::get_if<RuleFlagEffect_t>` scan over the relevant pool — 
 that carry a `condition` (same rule as `FilterByStatId`).
 
 **Permissions** (`PermissionEffect_t` / `PermissionId_t`): capability grants consumed via
-`HasPermission(unit, id, ctx)`. Stock Amphibious Pods use `Enter` (conditioned on
-Water+Base) and unconditional `Attack` for channel-crossing fights. `Water` is a real
+`HasPermission(unit, id, ctx)`. Stock Amphibious Pods use `EnterTile` (conditioned on
+Water+Base) and unconditional `AttackTile` for channel-crossing fights. `AttackDomain`
+lists defender domains a unit may strike (Air Superiority: air + orbital). `Water` is a real
 improvement entry covering any sea tile (`elevation < 0`), and it **stacks** with the depth
 band rather than replacing it: a submerged tile carries `Water` plus exactly one of `Ocean` /
 `OceanShelf` (split at `k_OceanShelfMinElevation`), in that order. Put rules shared by all sea

@@ -143,7 +143,8 @@ struct StockpileConversionSubject_t
 // Tile yield sets targetTile to the *receiving* tile — for a radius aura that is the tile
 // being resolved, not the aura's host — plus pTileYieldRules for amount_source ElevationEnergy.
 // combatRole enables IsDefending (SE Morale defense-in-base extras).
-// pAttacker enables AttackerIsEmbarked (and future attacker-side conditions).
+// pAttacker enables AttackerIsEmbarked / AttackerDomain (and future attacker-side conditions).
+// hostileDomain enables Permission(AttackDomain) matching (defender's unit domain).
 // pBase enables IsHeadquarters (Economy SE energy-at-HQ) and amount_source BaseSize /
 // BuildingUpkeep (population size / facility upkeep × amount) for base-level resolve.
 // pFaction enables amount_source BasesOwned (owned-base count × amount); unit resolve stamps
@@ -163,6 +164,8 @@ struct EffectContext_t
     // World yield rules for terrain-scaled amount sources. Stamped by TileEffectsContext,
     // which is the only place tile yield is resolved.
     const TileYieldRulesConfig_t* pTileYieldRules = nullptr;
+    // Set when querying Permission(AttackDomain): the prospective defender's domain.
+    std::optional<UnitDomain_t> hostileDomain;
 };
 
 // Post-combat promotion uses MoraleConfig_t::promotionSeedFormula (Lua), not amount_source.
