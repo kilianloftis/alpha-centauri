@@ -57,6 +57,7 @@ struct CouncilGame_
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
             *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules,
+            fixtures.dataContext.interactionGrids,
             actest::k_TestRngSeed);
 
         auto pFactionA = std::make_unique<Faction>(
@@ -353,7 +354,7 @@ TEST_CASE("CouncilMembers filter matches nobody when no PlanetaryCouncil exists"
     GameSettings settings;
     auto pMap = std::make_unique<WorldMap>(9, 9);
     GameState state(std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
-                    *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, actest::k_TestRngSeed);
+                    *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, fixtures.dataContext.interactionGrids, actest::k_TestRngSeed);
 
     Faction& rA = state.AddFaction(std::make_unique<Faction>(
         state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,

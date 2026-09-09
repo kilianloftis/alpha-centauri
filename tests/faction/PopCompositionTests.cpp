@@ -839,6 +839,7 @@ TEST_CASE("Completing a drone-reducing building reapplies composition immediatel
     auto pState = std::make_unique<ac::GameState>(
         std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
         *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules,
+        fixtures.dataContext.interactionGrids,
         actest::k_TestRngSeed);
     ac::Faction& rFaction = pState->AddFaction(std::make_unique<ac::Faction>(
         pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,

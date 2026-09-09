@@ -57,7 +57,7 @@ struct AttackGame_
         FillWater_(*pMap);
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
-            *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, actest::k_TestRngSeed);
+            *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, fixtures.dataContext.interactionGrids, actest::k_TestRngSeed);
 
         fixtures.dataContext.unitComponentRegistry =
             std::make_unique<UnitComponentRegistry>();
@@ -228,12 +228,14 @@ void CheckMatrixCase_(const AttackCase_t& rCase, bool bPods)
     const Tile& rTarget = PlaceTarget_(game, rCase.target, 5, 4);
     Unit& rAttacker = PlaceAttacker_(game, rCase.from, bPods, 4, 4);
     const bool bExpected = bPods ? rCase.bAllowedWithPods : rCase.bAllowedWithoutPods;
-    CHECK(CanAttackTile(rAttacker, rTarget, game.pState->GetWorldMap()) == bExpected);
+    const InteractionGridsConfig_t& rGrids =
+        game.pState->GetTileEffects().GetInteractionGrids();
+    CHECK(CanAttackTile(rAttacker, rTarget, game.pState->GetWorldMap(), rGrids) == bExpected);
 }
 
 } // namespace
 
-TEST_CASE("Land attack matrix: reachability plus channel-crossing Permission(Attack)",
+TEST_CASE("Land attack matrix: reachability plus the attack_tile grid's footing cell",
           "[unit][attack][amphibious]")
 {
     for (const AttackCase_t& rCase : k_AttackMatrix)
@@ -249,43 +251,47 @@ TEST_CASE("Land attack matrix: reachability plus channel-crossing Permission(Att
     }
 }
 
-TEST_CASE("CanAttackTile implies CanEnterTile; land channel still needs pods",
+TEST_CASE("CanAttackTile implies CanEnterTile; amphibious assault still needs pods",
           "[unit][attack][coherence]")
 {
     AttackGame_ game;
     WorldMap& rMap = game.pState->GetWorldMap();
+    const InteractionGridsConfig_t& rGrids =
+        game.pState->GetTileEffects().GetInteractionGrids();
     rMap.GetTile(4, 4)->SetElevation(100);
     Unit& land = game.MakeUnit(*game.pPlayer, 4, 4, {"test_chassis", "test_weapon"});
     Unit& pods = game.MakeUnit(*game.pPlayer, 3, 4,
                                {"test_chassis", "test_weapon", "test_amphibious"});
 
     BaseManager& rEnemy = game.MakeBase(*game.pAi, 5, 4);
-    CHECK_FALSE(CanEnterTile(land, rEnemy.GetTile(), rMap));
-    CHECK_FALSE(CanAttackTile(land, rEnemy.GetTile(), rMap));
-    CHECK(CanEnterTile(pods, rEnemy.GetTile(), rMap));
-    CHECK(CanAttackTile(pods, rEnemy.GetTile(), rMap));
+    CHECK_FALSE(CanEnterTile(land, rEnemy.GetTile(), rMap, rGrids));
+    CHECK_FALSE(CanAttackTile(land, rEnemy.GetTile(), rMap, rGrids));
+    CHECK(CanEnterTile(pods, rEnemy.GetTile(), rMap, rGrids));
+    CHECK(CanAttackTile(pods, rEnemy.GetTile(), rMap, rGrids));
 
     rMap.GetTile(3, 4)->SetElevation(100);
-    CHECK(CanEnterTile(land, *rMap.GetTile(3, 4), rMap));
-    CHECK(CanAttackTile(land, *rMap.GetTile(3, 4), rMap));
+    CHECK(CanEnterTile(land, *rMap.GetTile(3, 4), rMap, rGrids));
+    CHECK(CanAttackTile(land, *rMap.GetTile(3, 4), rMap, rGrids));
 }
 
 TEST_CASE("All domains: CanAttackTile requires CanEnterTile", "[unit][attack]")
 {
     AttackGame_ game;
     WorldMap& rMap = game.pState->GetWorldMap();
+    const InteractionGridsConfig_t& rGrids =
+        game.pState->GetTileEffects().GetInteractionGrids();
     rMap.GetTile(4, 4)->SetElevation(100);
     rMap.GetTile(5, 5)->SetElevation(-100);
     Unit& sea = game.MakeUnit(*game.pPlayer, 5, 5, {"test_sea_chassis", "test_weapon"});
     Unit& air = game.MakeUnit(*game.pPlayer, 4, 4, {"test_flight_chassis", "test_weapon"});
 
-    CHECK_FALSE(CanAttackTile(sea, *rMap.GetTile(4, 4), rMap)); // shore
-    CHECK(CanAttackTile(sea, *rMap.GetTile(6, 5), rMap));        // open water
+    CHECK_FALSE(CanAttackTile(sea, *rMap.GetTile(4, 4), rMap, rGrids)); // shore
+    CHECK(CanAttackTile(sea, *rMap.GetTile(6, 5), rMap, rGrids));        // open water
     // Air can enter land and water, so both attacks are legal.
-    CHECK(CanAttackTile(air, *rMap.GetTile(4, 4), rMap));
-    CHECK(CanAttackTile(air, *rMap.GetTile(5, 5), rMap));
-    CHECK(CanEnterTile(air, *rMap.GetTile(4, 4), rMap));
-    CHECK(CanEnterTile(air, *rMap.GetTile(5, 5), rMap));
+    CHECK(CanAttackTile(air, *rMap.GetTile(4, 4), rMap, rGrids));
+    CHECK(CanAttackTile(air, *rMap.GetTile(5, 5), rMap, rGrids));
+    CHECK(CanEnterTile(air, *rMap.GetTile(4, 4), rMap, rGrids));
+    CHECK(CanEnterTile(air, *rMap.GetTile(5, 5), rMap, rGrids));
 }
 
 TEST_CASE("FindAttackableHostileOnTile matches TryAttack declare gates", "[unit][attack]")
@@ -354,7 +360,7 @@ TEST_CASE("Embarked cargo defends only in a base; carrier preferred",
     }
 }
 
-TEST_CASE("Air and Orbital targets require Air Superiority unless RefuelsAir",
+TEST_CASE("Air and Orbital targets require Air Superiority unless pad InteractionOverride",
           "[unit][attack][air-superiority]")
 {
     AttackGame_ game;
@@ -406,7 +412,7 @@ TEST_CASE("Air and Orbital targets require Air Superiority unless RefuelsAir",
         CHECK(CanDeclareAttack(flagged, airDefender.GetTile(), rMap, rEffects));
     }
 
-    SECTION("RefuelsAir base tile exempts the gate")
+    SECTION("Base ThisTile InteractionOverride exempts the gate")
     {
         rMap.GetTile(5, 5)->SetElevation(100);
         rMap.GetTile(6, 5)->SetElevation(100);
@@ -429,10 +435,10 @@ TEST_CASE("Air and Orbital targets require Air Superiority unless RefuelsAir",
         CHECK(CanDeclareAttack(nearMissile, groundedMissile.GetTile(), rMap, rEffects));
     }
 
-    SECTION("friendly carrier deck tile exempts the gate")
+    SECTION("friendly carrier deck ThisTile InteractionOverride exempts the gate")
     {
-        // Open sea: land amphibious Enter needs Water+Base, so use an air attacker without
-        // Air Superiority — RefuelsAir from the carrier must open the declare gate.
+        // Open sea: land amphibious enter needs Water+Base, so use an air attacker without
+        // Air Superiority — pad InteractionOverride from the carrier must open the declare gate.
         rMap.GetTile(5, 5)->SetElevation(-100);
         rMap.GetTile(4, 5)->SetElevation(100);
         Unit& airOnDeck =

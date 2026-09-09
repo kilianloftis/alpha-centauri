@@ -246,6 +246,7 @@ TEST_CASE("A secret project cannot be scrapped", "[building][scrap][secret-proje
     auto pState = std::make_unique<GameState>(
         std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
         *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules,
+        fixtures.dataContext.interactionGrids,
         k_TestRngSeed);
     Faction& faction = pState->AddFaction(std::make_unique<Faction>(
         pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,

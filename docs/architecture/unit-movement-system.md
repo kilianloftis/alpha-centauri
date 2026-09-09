@@ -122,25 +122,58 @@ means it already happened. `TryStep` is `[[nodiscard]]` so this cannot be droppe
 case it asks `TransportRules::FindBoardableTransport` (`.cpp` edge only; headers stay
 acyclic). Three entry predicates form a ladder:
 
-- `CanEnterTileTerrain` (MovementRules) — chassis domain against raw terrain.
+- `CanEnterTileTerrain` (MovementRules) — `Resolve(enter)` for chassis domain × land/water
+  (including unit `InteractionOverride`s such as Amphibious Pods on Water+Base).
 - `CanOccupyTileUnaided` (MovementRules) — the above, plus a land unit garrisoning a friendly
   sea base. "Can this unit hold this tile with nothing under it?"
-- `CanEnterTile` (MovementRules) — the above, plus the land exceptions that depend on what
-  else is on the tile: boarding a friendly transport, or `Permission(Enter)` onto a
-  qualifying sea-base tile. Neither grants free ocean movement.
+- `CanEnterTile` (MovementRules) — `Resolve(enter)` over the widest source set (the mover's
+  overrides, the tile's improvements and features, and `ThisTile` overrides projected by units
+  already on the tile), plus the two land-on-water exceptions: boarding a friendly transport,
+  or garrisoning a friendly sea base. Neither exception grants free ocean movement.
+
+Note the deliberate asymmetry: `CanEnterTileTerrain` and `CanOccupyTileUnaided` do *not* see
+overrides projected by units standing on the target tile, because they answer "can this unit
+hold the tile with nothing under it?". Only `CanEnterTile` passes the `WorldMap` in.
 
 Carrier capability is entirely config-driven via the `TransportParams` effect: which
 passenger domains a carrier accepts, and which tile capabilities it needs in order to
 exchange cargo (`loadSiteFlags`, resolved through `TileProvidesFlag` — see
 `effects-system.md`). Capacity itself is the `cargo_capacity` stat.
 
-**Attack implies entry (every domain).** `AttackRules::CanAttackTile` requires
-`CanEnterTile` — ships therefore cannot attack shore; air may attack wherever it can land.
-Land additionally needs `Permission(Attack)` on a channel crossing (embarked, or attacker
-tile water-ness differs from the target). Amphibious Pods grant conditional `Enter`
-(Water+Base) and unconditional `Attack`. Declare-attack legality for `TryAttack` / UI is
-`FindAttackableHostileOnTile` (moves, adjacency, visible hostile, `CanAttackTile`);
-targeting rules (embarked-in-base, prefer carrier) live in `FindVisibleHostileOnTile`.
+**Attack implies entry, but entry is not enough.** `AttackRules::CanAttackTile` requires
+`CanEnterTile` — ships therefore cannot attack shore; air may attack wherever it can land —
+*and* `Resolve(attack_tile)` over the attacker's domain × `footing` — what the attacker is
+standing on (`land`, `water`, or `embarked`). Stock allows land units to assault only from
+`land`, which is what stops an assault out of a boat or off a sea base. This is deliberately a separate grid from `enter`: folding
+it in would mean any unit allowed to assault across water could also walk across it. The two
+are genuinely independent — a non-amphibious land unit on a transport *may* disembark onto
+adjacent land (`CanUnloadTo` → `CanEnterTile`) but *may not* attack onto it, so no definition
+of `enter` can express the rule. Amphibious Pods therefore carries two overrides — a
+Water+Base `enter` override for garrisoning sea bases, and an `attack_tile` override with the
+`footing` axis omitted — "assault from anywhere" — for the assault itself. Declare-attack legality for `TryAttack` / UI is
+`FindAttackableHostileOnTile` (moves, adjacency, visible hostile, `CanAttackTile`, then
+`Resolve(attack_unit)` with attacker unit + defender-tile overrides); targeting rules
+(embarked-in-base, prefer carrier) live in `FindVisibleHostileOnTile`.
+
+**Grid shape.** Every grid in `interaction_grids.json` is the acting unit's domain (the row)
+against one other thing (the column). "Actor" is always the unit whose own overrides
+`ResolveInteractionCell` consults first — the mover, the attacker, the ZOC projector — so the
+row axis is `actor_domain` everywhere. Only the column vocabulary differs: `enter` uses
+`surface` (the target tile's land/water), `attack_tile` uses `footing` (what the acting unit is
+standing on), and `attack_unit` and `zoc` both use `target_domain`. Every axis value is read
+directly off a unit or tile — no axis is a derived predicate, so new values are added by
+extending an enum and its grid column, never by writing new classification logic. An `InteractionOverride` names the grid plus any subset of
+its two axes; an omitted axis wild-cards, and a column axis belonging to a different grid is
+rejected at load.
+
+**Resolution cost.** `ResolveInteractionCell` consults unit-level overrides via
+`CollectLiveUnitEffects`, which allocates. Because entry and ZOC are evaluated per tile
+during pathfinding, both the acting unit and any unit projecting onto a tile are gated by
+`UnitMayOverride` first — a mask test against `UnitDesign::GetInteractionMask()` OR'd with
+`Faction::GetInteractionMask()`. Both masks are cached (design at construction, faction
+alongside the existing composed-effects version cache) and are conservative: a set bit means
+"collect and check", a clear bit means no override can exist, so the resolve drops straight
+to the stock cell.
 
 An embarked unit shares its carrier's tile. Outside a base it is excluded from ZOC,
 combat targeting, and tile occupancy; in a base it may defend and block (carrier preferred

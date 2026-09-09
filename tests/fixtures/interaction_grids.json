@@ -1,0 +1,38 @@
+{
+  "enter": {
+    "axes": ["actor_domain", "surface"],
+    "cells": {
+      "land": { "land": "allow", "water": "deny" },
+      "sea": { "land": "deny", "water": "allow" },
+      "air": { "land": "allow", "water": "allow" },
+      "orbital": { "land": "allow", "water": "allow" }
+    }
+  },
+  "attack_tile": {
+    "axes": ["actor_domain", "footing"],
+    "cells": {
+      "land": { "land": "allow", "water": "deny", "embarked": "deny" },
+      "sea": { "land": "allow", "water": "allow", "embarked": "allow" },
+      "air": { "land": "allow", "water": "allow", "embarked": "allow" },
+      "orbital": { "land": "allow", "water": "allow", "embarked": "allow" }
+    }
+  },
+  "attack_unit": {
+    "axes": ["actor_domain", "target_domain"],
+    "cells": {
+      "land": { "land": "allow", "sea": "allow", "air": "deny", "orbital": "deny" },
+      "sea": { "land": "allow", "sea": "allow", "air": "deny", "orbital": "deny" },
+      "air": { "land": "allow", "sea": "allow", "air": "deny", "orbital": "deny" },
+      "orbital": { "land": "allow", "sea": "allow", "air": "deny", "orbital": "deny" }
+    }
+  },
+  "zoc": {
+    "axes": ["actor_domain", "target_domain"],
+    "cells": {
+      "land": { "land": "allow", "sea": "deny", "air": "deny", "orbital": "deny" },
+      "sea": { "land": "deny", "sea": "allow", "air": "deny", "orbital": "deny" },
+      "air": { "land": "allow", "sea": "allow", "air": "deny", "orbital": "deny" },
+      "orbital": { "land": "deny", "sea": "deny", "air": "deny", "orbital": "deny" }
+    }
+  }
+}

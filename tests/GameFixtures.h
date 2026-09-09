@@ -43,6 +43,7 @@
 #include "game/units/BaseConquestConfig.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/effects/TileYieldRulesConfigParser.h"
+#include "game/effects/InteractionGridsConfigParser.h"
 #include "game/effects/PoliceRulesConfigParser.h"
 #include "game/DifficultyConfigParser.h"
 
@@ -157,8 +158,11 @@ struct WorldFixture
         // them into every per-tile resolve (ElevationEnergy reads the step from here).
         dataContext.tileYieldRules = ac::TileYieldRulesConfigParser{}.ParseConfig(
             FixturePath("tile_yield_rules.json"));
+        dataContext.interactionGrids = ac::InteractionGridsConfigParser{}.ParseConfig(
+            FixturePath("interaction_grids.json"));
         ctx = std::make_unique<ac::TileEffectsContext>(map, improvements, &unitComponents,
-                                                       dataContext.tileYieldRules);
+                                                       dataContext.tileYieldRules,
+                                                       dataContext.interactionGrids);
         dataContext.luaRuntime = std::make_unique<ac::LuaRuntime>();
         // Same morale table Engine loads, and the one calculator built from it.
         dataContext.moraleConfig = std::make_unique<ac::MoraleConfig_t>(

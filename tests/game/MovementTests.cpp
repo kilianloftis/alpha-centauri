@@ -139,8 +139,9 @@ TEST_CASE("Land may enter friendly sea base or transport; pods are not open ocea
     {
         Unit& amph = fixture.MakeUnit(faction, 4, 4, {"test_chassis", "test_amphibious"});
         CHECK_FALSE(move.steps.CanStep(amph, amph.GetTile(), fixture.At(5, 4)));
-        CHECK_FALSE(CanEnterTileTerrain(amph, fixture.At(5, 4)));
-        CHECK_FALSE(CanEnterTile(amph, fixture.At(5, 4), fixture.map));
+        CHECK_FALSE(CanEnterTileTerrain(amph, fixture.At(5, 4), fixture.dataContext.interactionGrids));
+        CHECK_FALSE(CanEnterTile(amph, fixture.At(5, 4), fixture.map,
+                                 fixture.dataContext.interactionGrids));
     }
 }
 
@@ -541,7 +542,7 @@ TEST_CASE("TurnStart restores move fragments", "[movement][turn]")
 
     GameSettings settings;
     GameState state(std::make_unique<WorldMap>(3, 3), fixture.improvements, &fixture.unitComponents,
-                    settings, *fixture.dataContext.moraleCalculator, fixture.dataContext.tileYieldRules, actest::k_TestRngSeed);
+                    settings, *fixture.dataContext.moraleCalculator, fixture.dataContext.tileYieldRules, fixture.dataContext.interactionGrids, actest::k_TestRngSeed);
     state.AddFaction(std::move(fixture.factions[0]));
 
     TurnStart stage(HookContext{});
@@ -563,7 +564,7 @@ TEST_CASE("TurnStart clears SkipTurn via UnitOrderExecutor so the unit needs ord
 
     GameSettings settings;
     GameState state(std::make_unique<WorldMap>(3, 3), fixture.improvements, &fixture.unitComponents,
-                    settings, *fixture.dataContext.moraleCalculator, fixture.dataContext.tileYieldRules, actest::k_TestRngSeed);
+                    settings, *fixture.dataContext.moraleCalculator, fixture.dataContext.tileYieldRules, fixture.dataContext.interactionGrids, actest::k_TestRngSeed);
     Faction& rOwned = state.AddFaction(std::move(fixture.factions[0]));
 
     TurnStart stage(HookContext{});

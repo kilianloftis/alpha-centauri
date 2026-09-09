@@ -437,12 +437,14 @@
     "type": "ability",
     "effects": [
       {
-        "type": "Permission",
+        "type": "InteractionOverride",
         "scope": "ThisUnit",
-        "parameters": {
-          "permission": "AttackDomain",
-          "domains": ["air", "orbital"]
-        }
+        "parameters": { "grid": "attack_unit", "target_domain": "air", "cell": "allow" }
+      },
+      {
+        "type": "InteractionOverride",
+        "scope": "ThisUnit",
+        "parameters": { "grid": "attack_unit", "target_domain": "orbital", "cell": "allow" }
       }
     ]
   },
@@ -848,10 +850,13 @@
     "type": "ability",
     "effects": [
       {
-        "type": "Permission",
+        "type": "InteractionOverride",
         "scope": "ThisUnit",
         "parameters": {
-          "permission": "EnterTile"
+          "grid": "enter",
+          "actor_domain": "land",
+          "surface": "water",
+          "cell": "allow"
         },
         "condition": {
           "kind": "AllOf",
@@ -862,10 +867,11 @@
         }
       },
       {
-        "type": "Permission",
+        "type": "InteractionOverride",
         "scope": "ThisUnit",
         "parameters": {
-          "permission": "AttackTile"
+          "grid": "attack_tile",
+          "cell": "allow"
         }
       }
     ]
@@ -1030,6 +1036,16 @@
         "parameters": {
           "flag": "loads_air_transport"
         }
+      },
+      {
+        "type": "InteractionOverride",
+        "scope": "ThisTile",
+        "parameters": { "grid": "attack_unit", "target_domain": "air", "cell": "allow" }
+      },
+      {
+        "type": "InteractionOverride",
+        "scope": "ThisTile",
+        "parameters": { "grid": "attack_unit", "target_domain": "orbital", "cell": "allow" }
       }
     ]
   },

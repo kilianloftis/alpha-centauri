@@ -464,9 +464,9 @@ seed. (Persisting that seed into save state is still open — see the world-gene
 - **Purpose**: Tile entry costs, step legality, path planning, move-order execution, cargo transport, and base conquest
 - **Components**:
   - `MoveCostCalculator`: Single home of the tile-entry rules — resolves a unit + tile into `EntryTerms_t` (fragment cost, fungus full-cost banking, forced end-of-turn) and a shroud-aware planning weight
-  - `MovementRules`: Free functions for terrain-domain entry, unaided occupancy, full `CanEnterTile` (asks TransportRules only for boarding), ZOC, friendly occupant/base, and stacking
+  - `MovementRules`: Free functions for enter-grid terrain, unaided occupancy, full `CanEnterTile` (asks TransportRules only for boarding), ZOC grid, friendly occupant/base, and stacking
   - `TransportRules`: Cargo domains, capacity, load sites (`TransportParams`), boarding/unload helpers (`FindBoardableTransport`, `CanUnloadTo`, attach)
-  - `AttackRules`: Attack legality — enterability, channel `Permission(Attack)`, targeting (`FindVisibleHostileOnTile`), declare gate (`FindAttackableHostileOnTile`)
+  - `AttackRules`: Attack legality — enterability (`CanAttackTile` = enter), targeting (`FindVisibleHostileOnTile`), declare gate (`FindAttackableHostileOnTile` + `attack_unit` resolve)
   - `StepEvaluator`: Edge legality (adjacency, terrain domain, occupants, ZOC) at objective or faction-known knowledge levels
   - `Pathfinder`: Dijkstra over planned fragment costs and plannable steps
   - `UnitOrderExecutor`: Executes unit orders; spends fragments and banks multi-turn fungus charges per `EntryTerms_t`

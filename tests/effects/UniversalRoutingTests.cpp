@@ -17,6 +17,8 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
+#include "game/effects/InteractionResolve.h"
+#include "game/units/MovementRules.h"
 
 #include <variant>
 
@@ -85,34 +87,45 @@ TEST_CASE("FactionUnits lane: a building's FactionUnits stat modifier boosts liv
     CHECK(unit.GetStat(StatId_t::Attack) == 4);
 }
 
-TEST_CASE("FactionUnits lane: a building's FactionUnits rule flag applies to live units",
+TEST_CASE("FactionUnits lane: a building's FactionUnits InteractionOverride applies to live units",
           "[effects][routing][unit]")
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+    BaseManager& home = fixture.MakeFactionBase(faction, 2, 2);
+    fixture.At(5, 4).SetElevation(-100);
+    BaseManager& seaBase = fixture.MakeFactionBase(faction, 5, 4);
 
-    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"}, &base);
-    EffectContext_t attackCtx;
-    attackCtx.pAttacker = &unit;
-    CHECK_FALSE(HasPermission(unit, PermissionId_t::AttackTile, attackCtx));
+    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"}, &home);
+    InteractionQuery_t enterWater;
+    enterWater.grid = InteractionGridId_t::Enter;
+    enterWater.actorDomain = UnitDomain_t::Land;
+    enterWater.surface = InteractionSurface_t::Water;
+    EffectContext_t ctx;
+    ctx.targetTile = &seaBase.GetTile();
 
-    base.GetBuildingManager().AddBuilding("amphibious_grantor"); // Permission Enter/Attack, FactionUnits
-    CHECK(HasPermission(unit, PermissionId_t::AttackTile, attackCtx));
+    CHECK(ResolveInteractionCell(fixture.dataContext.interactionGrids, enterWater, &unit, ctx,
+                                 &seaBase.GetTile(), &fixture.map, faction.GetFactionId())
+          == InteractionCell_t::Deny);
+
+    home.GetBuildingManager().AddBuilding("amphibious_grantor");
+    CHECK(ResolveInteractionCell(fixture.dataContext.interactionGrids, enterWater, &unit, ctx,
+                                 &seaBase.GetTile(), &fixture.map, faction.GetFactionId())
+          == InteractionCell_t::Allow);
 
     // Intrinsic design unchanged — grant arrives from the faction pool only.
-    bool bDesignHasAttack = false;
+    bool bDesignHasEnterOverride = false;
     for (const ActiveEffect_t& rEffect : unit.GetDesign().CollectEffects())
     {
-        const auto* pPerm = rEffect.config
-            ? std::get_if<PermissionEffect_t>(&rEffect.config->effect)
+        const auto* pOv = rEffect.config
+            ? std::get_if<InteractionOverrideEffect_t>(&rEffect.config->effect)
             : nullptr;
-        if (pPerm && pPerm->permission == PermissionId_t::AttackTile)
+        if (pOv && pOv->grid == InteractionGridId_t::Enter)
         {
-            bDesignHasAttack = true;
+            bDesignHasEnterOverride = true;
         }
     }
-    CHECK_FALSE(bDesignHasAttack);
+    CHECK_FALSE(bDesignHasEnterOverride);
 }
 
 TEST_CASE("ResolveFlag: context-free resolution skips condition-carrying RuleFlags",
@@ -196,7 +209,7 @@ TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other fact
     actest::FactionFixture fixture;
     GameSettings settings;
     GameState state(std::make_unique<WorldMap>(9, 9), fixture.improvements, &fixture.unitComponents,
-                    settings, *fixture.dataContext.moraleCalculator, fixture.dataContext.tileYieldRules, actest::k_TestRngSeed);
+                    settings, *fixture.dataContext.moraleCalculator, fixture.dataContext.tileYieldRules, fixture.dataContext.interactionGrids, actest::k_TestRngSeed);
 
     Faction& factionA = state.AddFaction(std::make_unique<Faction>(
                                                1, /*bIsPlayerControlled*/ true, fixture.factionDefinition,

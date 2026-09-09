@@ -47,7 +47,7 @@ struct OrbitalGame_
         }
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
-            *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, actest::k_TestRngSeed);
+            *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, fixtures.dataContext.interactionGrids, actest::k_TestRngSeed);
 
         auto pFactionA = std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
@@ -116,9 +116,9 @@ TEST_CASE("Orbital domain can enter any terrain", "[movement][orbital]")
     Faction& faction = fixture.MakeFaction();
     Unit& missile = fixture.MakeUnit(faction, 4, 4, {"test_orbital_chassis", "test_weapon"});
     CHECK(missile.GetDomain() == UnitDomain_t::Orbital);
-    CHECK(CanEnterTileTerrain(missile, fixture.At(4, 4)));
+    CHECK(CanEnterTileTerrain(missile, fixture.At(4, 4), fixture.dataContext.interactionGrids));
     fixture.At(5, 5).SetElevation(-100);
-    CHECK(CanEnterTileTerrain(missile, fixture.At(5, 5)));
+    CHECK(CanEnterTileTerrain(missile, fixture.At(5, 5), fixture.dataContext.interactionGrids));
 }
 
 TEST_CASE("Orbital census counts stackable orbitals for every faction", "[orbital][census]")

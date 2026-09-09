@@ -18,6 +18,7 @@
 #include "game/faction/base/resources/ResourceManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/FactionIdentity.h"
+#include "game/effects/InteractionResolve.h"
 #include <iostream>
 #include <limits>
 #include <stdexcept>
@@ -1102,6 +1103,9 @@ void Faction::EnsureComposedEffects_() const
         m_composedEffects.effects.insert(m_composedEffects.effects.end(), extras.begin(),
                                          extras.end());
     }
+    // Deliberately not filtered to the unit-facing scopes: a superset can only cost a
+    // wasted collection, never a missed override.
+    m_composedInteractionMask = InteractionMaskOf(std::span{m_composedEffects.effects});
     m_composedLocalVersion = localVersion;
     m_composedWorldStamp = worldStamp;
     // Monotonic, so consumers comparing versions for equality (BaseManager's base-effect
@@ -1114,6 +1118,12 @@ const FactionEffects_t& Faction::GetActiveEffects() const
 {
     EnsureComposedEffects_();
     return m_composedEffects;
+}
+
+InteractionGridMask_t Faction::GetInteractionMask() const
+{
+    EnsureComposedEffects_();
+    return m_composedInteractionMask;
 }
 
 uint64_t Faction::GetEffectsVersion() const

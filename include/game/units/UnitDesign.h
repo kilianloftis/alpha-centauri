@@ -5,6 +5,7 @@
 #include "game/units/UnitSlotConfig.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
+#include "game/effects/InteractionGridsConfig.h"
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -64,6 +65,12 @@ public:
     // Intrinsic mineral support cost (component MineralUpkeep), floored at 0.
     int GetMineralUpkeep() const;
 
+    // Which interaction grids this design's components carry an InteractionOverride for.
+    // Cached at construction so movement / attack / ZOC resolution can skip effect
+    // collection outright for the overwhelmingly common no-override design. Conservative:
+    // ignores unitFilter and condition, so a set bit means "maybe", a clear bit means "no".
+    InteractionGridMask_t GetInteractionMask() const { return m_interactionMask; }
+
     // Cached at construction from component TurnsOfFuel / Movement (design properties).
     bool UsesFuel() const;
     // Max fuel pool in move-points: TurnsOfFuel × Movement (0 when !UsesFuel).
@@ -83,6 +90,7 @@ private:
     std::vector<const UnitComponentConfig_t*> m_components; // non-null only; stable after construction
     bool m_bUsesFuel = false;
     int m_maxFuel = 0;
+    InteractionGridMask_t m_interactionMask = 0;
 };
 
 } // namespace ac

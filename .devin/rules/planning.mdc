@@ -1,0 +1,18 @@
+---
+description: Plans describe the settled change only — not rejected alternatives
+alwaysApply: true
+---
+
+# Planning
+
+Plans describe **what needs to change** — the settled design, target behavior, and concrete edits.
+
+Do **not** narrate abandoned options, rejected approaches, or “we are not doing X” leftovers from earlier draft iterations. If something is out of scope, omit it unless the reader must know a deliberate deletion or behavior change.
+
+```text
+# BAD
+No separate grounds_air RuleFlag. We rejected Unlock keys.
+
+# GOOD
+Pads grant ThisTile InteractionOverride for attack_unit air/orbital.
+```

@@ -14,6 +14,7 @@ class Tile;
 class UnitComponentRegistry;
 class WorldMap;
 struct TileYieldRulesConfig_t;
+struct InteractionGridsConfig_t;
 
 // Bundles WorldMap and ImprovementRegistry into a single dependency that knows how to resolve
 // tile-level effects - yield, defense multipliers, and terrain mutations like Condenser moisture.
@@ -27,9 +28,11 @@ public:
     // bound must cover the largest such radius. Pass nullptr if units never project auras.
     // rYieldRules must outlive this context: it is stamped into every per-tile EffectContext_t
     // so terrain-scaled amount sources (ElevationEnergy) can read the world's yield scalars.
+    // rInteractionGrids must outlive this context: movement / attack / ZOC consult it.
     TileEffectsContext(WorldMap& rWorldMap, const ImprovementRegistry& rImprovements,
                        const UnitComponentRegistry* pUnitComponents,
-                       const TileYieldRulesConfig_t& rYieldRules);
+                       const TileYieldRulesConfig_t& rYieldRules,
+                       const InteractionGridsConfig_t& rInteractionGrids);
 
     // WorldMap access — used by callers (e.g. BaseManager) that need the map for spatial
     // queries like computing workable tile positions.
@@ -63,6 +66,8 @@ public:
     double ResolveTileDefenseMultiplier(const Tile& rTile, FactionId_t forFaction) const;
 
     const ImprovementRegistry& GetImprovements() const;
+
+    const InteractionGridsConfig_t& GetInteractionGrids() const { return m_rInteractionGrids; }
 
     // Re-derives rTile's effective moisture from its stored base moisture plus any Condenser
     // aura in range, then calls Tile::SetMoisture(). Always recomputed from scratch so
@@ -101,6 +106,7 @@ private:
     WorldMap& m_rWorldMap;
     const ImprovementRegistry& m_rImprovements;
     const TileYieldRulesConfig_t& m_rYieldRules;
+    const InteractionGridsConfig_t& m_rInteractionGrids;
     // Max ThisTile-scoped effect radius across improvement configs and unit components;
     // bounds the aura scan. Cached in the constructor.
     int m_maxRadius;

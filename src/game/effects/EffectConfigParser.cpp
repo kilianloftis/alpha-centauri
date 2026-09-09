@@ -340,47 +340,151 @@ void ParseRuleFlag_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
     rEffect.effect = ruleFlag;
 }
 
-void ParsePermission_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
+void ParseInteractionOverride_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
 {
-    PermissionEffect_t permission;
-    const std::string permissionStr = parameters.value("permission", "");
-    if (permissionStr.empty())
+    InteractionOverrideEffect_t overrideFx;
+    const std::string gridStr = parameters.value("grid", "");
+    if (gridStr.empty())
     {
-        throw std::runtime_error("Permission effect missing required 'permission'");
+        throw std::runtime_error("InteractionOverride missing required 'grid'");
     }
-    const auto id = magic_enum::enum_cast<PermissionId_t>(permissionStr);
-    if (!id.has_value())
+    if (gridStr == "enter")
     {
-        throw std::runtime_error("Unknown permission id: '" + permissionStr + "'");
+        overrideFx.grid = InteractionGridId_t::Enter;
     }
-    permission.permission = *id;
-    if (parameters.contains("domains"))
+    else if (gridStr == "attack_tile")
     {
-        if (!parameters.at("domains").is_array() || parameters.at("domains").empty())
+        overrideFx.grid = InteractionGridId_t::AttackTile;
+    }
+    else if (gridStr == "attack_unit")
+    {
+        overrideFx.grid = InteractionGridId_t::AttackUnit;
+    }
+    else if (gridStr == "zoc")
+    {
+        overrideFx.grid = InteractionGridId_t::Zoc;
+    }
+    else
+    {
+        throw std::runtime_error("Unknown InteractionOverride grid: '" + gridStr + "'");
+    }
+
+    const std::string cellStr = parameters.value("cell", "");
+    if (cellStr.empty())
+    {
+        throw std::runtime_error("InteractionOverride missing required 'cell'");
+    }
+    if (cellStr == "allow")
+    {
+        overrideFx.cell = InteractionCell_t::Allow;
+    }
+    else if (cellStr == "deny")
+    {
+        overrideFx.cell = InteractionCell_t::Deny;
+    }
+    else
+    {
+        throw std::runtime_error("Unknown InteractionOverride cell: '" + cellStr + "'");
+    }
+
+    auto parseDomainOpt = [&](const char* key) -> std::optional<UnitDomain_t> {
+        if (!parameters.contains(key))
+        {
+            return std::nullopt;
+        }
+        if (!parameters.at(key).is_string())
+        {
+            throw std::runtime_error(std::string("InteractionOverride '") + key
+                                     + "' must be a string");
+        }
+        return ParseUnitDomain(parameters.at(key).get<std::string>());
+    };
+
+    auto parseSurfaceOpt = [&]() -> std::optional<InteractionSurface_t> {
+        if (!parameters.contains("surface"))
+        {
+            return std::nullopt;
+        }
+        if (!parameters.at("surface").is_string())
+        {
+            throw std::runtime_error("InteractionOverride 'surface' must be a string");
+        }
+        const std::string surfaceStr = parameters.at("surface").get<std::string>();
+        if (surfaceStr == "land")
+        {
+            return InteractionSurface_t::Land;
+        }
+        if (surfaceStr == "water")
+        {
+            return InteractionSurface_t::Water;
+        }
+        throw std::runtime_error("Unknown InteractionOverride surface: '" + surfaceStr + "'");
+    };
+
+    auto parseFootingOpt = [&]() -> std::optional<InteractionFooting_t> {
+        if (!parameters.contains("footing"))
+        {
+            return std::nullopt;
+        }
+        if (!parameters.at("footing").is_string())
+        {
+            throw std::runtime_error("InteractionOverride 'footing' must be a string");
+        }
+        const std::string footingStr = parameters.at("footing").get<std::string>();
+        if (footingStr == "land")
+        {
+            return InteractionFooting_t::Land;
+        }
+        if (footingStr == "water")
+        {
+            return InteractionFooting_t::Water;
+        }
+        if (footingStr == "embarked")
+        {
+            return InteractionFooting_t::Embarked;
+        }
+        throw std::runtime_error("Unknown InteractionOverride footing: '" + footingStr + "'");
+    };
+
+    overrideFx.actorDomain = parseDomainOpt("actor_domain");
+    overrideFx.surface = parseSurfaceOpt();
+    overrideFx.footing = parseFootingOpt();
+    overrideFx.targetDomain = parseDomainOpt("target_domain");
+
+    // actor_domain is the row on every grid, so only the column needs checking: reject the
+    // two columns that do not belong to the selected grid, and typos fail at load rather
+    // than silently never matching.
+    const bool bSurface = overrideFx.surface.has_value();
+    const bool bFooting = overrideFx.footing.has_value();
+    const bool bTarget = overrideFx.targetDomain.has_value();
+    switch (overrideFx.grid)
+    {
+    case InteractionGridId_t::Enter:
+        if (bFooting || bTarget)
         {
             throw std::runtime_error(
-                "Permission 'domains' must be a non-empty array when present");
+                "InteractionOverride enter only accepts actor_domain / surface axes");
         }
-        if (permission.permission != PermissionId_t::AttackDomain)
+        break;
+    case InteractionGridId_t::AttackTile:
+        if (bSurface || bTarget)
         {
             throw std::runtime_error(
-                "Permission 'domains' is only valid for AttackDomain");
+                "InteractionOverride attack_tile only accepts actor_domain / footing axes");
         }
-        for (const auto& rDomain : parameters.at("domains"))
+        break;
+    case InteractionGridId_t::AttackUnit:
+    case InteractionGridId_t::Zoc:
+        if (bSurface || bFooting)
         {
-            if (!rDomain.is_string())
-            {
-                throw std::runtime_error("Permission domains must be strings");
-            }
-            permission.domains.push_back(ParseUnitDomain(rDomain.get<std::string>()));
+            throw std::runtime_error(
+                "InteractionOverride attack_unit / zoc only accept actor_domain / "
+                "target_domain axes");
         }
+        break;
     }
-    else if (permission.permission == PermissionId_t::AttackDomain)
-    {
-        throw std::runtime_error(
-            "AttackDomain permission requires a non-empty 'domains' array");
-    }
-    rEffect.effect = permission;
+
+    rEffect.effect = overrideFx;
 }
 
 void ParseSocialEngineeringOverride_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
@@ -631,7 +735,7 @@ const std::unordered_map<std::string, ParseEffectFn_>& EffectTypeParsers_()
         {"Infiltration", ParseInfiltration_},
         {"StatModifier", ParseStatModifier_},
         {"RuleFlag", ParseRuleFlag_},
-        {"Permission", ParsePermission_},
+        {"InteractionOverride", ParseInteractionOverride_},
         {"SocialEngineeringOverride", ParseSocialEngineeringOverride_},
         {"DiplomaticModifier", ParseDiplomaticModifier_},
         {"SocialRatingModifier", ParseSocialRatingModifier_},
@@ -779,6 +883,10 @@ Condition_t ParseCondition(const nlohmann::json& conditionJson)
     if (kindStr == "IsHeadquarters")
     {
         return IsHeadquarters_t{};
+    }
+    if (kindStr == "TargetTileIsOwnBase")
+    {
+        return TargetTileIsOwnBase_t{};
     }
     if (kindStr == "AllOf")
     {

@@ -696,17 +696,6 @@ enum class WorldParameterId_t
     SeaLevel,
 };
 
-enum class PermissionId_t
-{
-    // Lifts a channel-crossing attack that reachability already allows (shore <-> sea).
-    AttackTile,
-    // Lifts land -> water entry onto a qualifying tile (sea base).
-    EnterTile,
-    // Lifts attacks against hostiles whose domain is listed on the Permission effect
-    // (Air Superiority: air + orbital). Requires EffectContext_t::hostileDomain.
-    AttackDomain,
-};
-
 // Restricts which *other* factions a cross-faction effect (Infiltration, future
 // DiplomaticModifier, …) applies to. Orthogonal to EffectScope_t: scope is the resolution
 // lane (FactionGlobal / WorldGlobal); factionFilter narrows the diplomatic target set.

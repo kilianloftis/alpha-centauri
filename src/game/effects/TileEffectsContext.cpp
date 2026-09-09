@@ -14,6 +14,7 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/TileYieldRulesConfig.h"
+#include "game/effects/InteractionGridsConfig.h"
 #include <algorithm>
 #include <cmath>
 #include <type_traits>
@@ -225,10 +226,12 @@ void PartitionYieldEffects_(const Tile& rTile, const std::vector<ActiveEffect_t>
 
 TileEffectsContext::TileEffectsContext(WorldMap& rWorldMap, const ImprovementRegistry& rImprovements,
                                        const UnitComponentRegistry* pUnitComponents,
-                                       const TileYieldRulesConfig_t& rYieldRules)
+                                       const TileYieldRulesConfig_t& rYieldRules,
+                                       const InteractionGridsConfig_t& rInteractionGrids)
     : m_rWorldMap(rWorldMap)
     , m_rImprovements(rImprovements)
     , m_rYieldRules(rYieldRules)
+    , m_rInteractionGrids(rInteractionGrids)
     , m_maxRadius(0)
 {
     // Mirror terrain enums/bools as ImprovementConfig_t pointers so hot-path collectors

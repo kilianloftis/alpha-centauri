@@ -542,6 +542,21 @@ bool ConditionBodySatisfied_(const Condition_t& condition, const EffectContext_t
                 }
                 return false;
             }
+            else if constexpr (std::is_same_v<T, TargetTileIsOwnBase_t>)
+            {
+                if (ctx.pUnit == nullptr || ctx.targetTile == nullptr)
+                {
+                    return false;
+                }
+                for (const BaseManager& rBase : ctx.pUnit->GetFaction().Bases())
+                {
+                    if (&rBase.GetTile() == ctx.targetTile)
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
             else if constexpr (std::is_same_v<T, IsHeadquarters_t>)
             {
                 return ctx.pBase != nullptr
@@ -1157,45 +1172,6 @@ bool ResolveFlag(const Faction& rFaction, RuleFlagId_t flagId)
 bool ResolveFlag(const BaseManager& rBase, RuleFlagId_t flagId)
 {
     return ResolveFlagFromEffects_(rBase.GetBaseEffects().effects, flagId);
-}
-
-bool HasPermission(const Unit& rUnit, PermissionId_t permission, const EffectContext_t& rCtx)
-{
-    for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rUnit).effects)
-    {
-        const PermissionEffect_t* pPerm =
-            std::get_if<PermissionEffect_t>(&rEffect.config->effect);
-        if (!pPerm || pPerm->permission != permission)
-        {
-            continue;
-        }
-        if (permission == PermissionId_t::AttackDomain)
-        {
-            if (!rCtx.hostileDomain.has_value() || pPerm->domains.empty())
-            {
-                continue;
-            }
-            bool bDomainOk = false;
-            for (UnitDomain_t domain : pPerm->domains)
-            {
-                if (domain == *rCtx.hostileDomain)
-                {
-                    bDomainOk = true;
-                    break;
-                }
-            }
-            if (!bDomainOk)
-            {
-                continue;
-            }
-        }
-        if (!ConditionSatisfied(*rEffect.config, rCtx, rEffect.originBase))
-        {
-            continue;
-        }
-        return true;
-    }
-    return false;
 }
 
 namespace

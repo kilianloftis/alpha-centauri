@@ -77,7 +77,7 @@ struct ViewFixture : WorldFixture
 
         pState = std::make_unique<ac::GameState>(
             std::move(pMap), improvements, &unitComponents, settings,
-            morale(), dataContext.tileYieldRules, k_TestRngSeed);
+            morale(), dataContext.tileYieldRules, dataContext.interactionGrids, k_TestRngSeed);
 
         if (bWithPlayerFaction)
         {

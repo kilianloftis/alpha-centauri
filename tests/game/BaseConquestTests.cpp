@@ -72,7 +72,7 @@ struct ConquestGame_
         FillLand_(*pMap);
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
-            *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, actest::k_TestRngSeed);
+            *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, fixtures.dataContext.interactionGrids, actest::k_TestRngSeed);
 
         actest::SetBaseConquestStat(*fixtures.dataContext.baseConquestConfig,
                                     StatId_t::CaptureFacilitiesDestroyedMin, 1);
@@ -185,15 +185,17 @@ TEST_CASE("Sea-base assault: attack needs pods for land; capture is flag-gated",
                                {"test_chassis", "test_weapon", "test_amphibious"});
     Unit& sea = game.MakeUnit(*game.pPlayer, 3, 4, {"test_sea_chassis", "test_weapon"});
 
-    // Capture itself is flag-gated only; entry/attack use Permission + CanAttackTile.
+    // Capture itself is flag-gated only; entry/attack use enter + attack_unit grids.
     CHECK(CanCaptureBase(land));
     CHECK(CanCaptureBase(amph));
     CHECK(CanCaptureBase(sea));
 
     WorldMap& rMap = game.pState->GetWorldMap();
-    CHECK_FALSE(CanAttackTile(land, rBase.GetTile(), rMap));
-    CHECK(CanAttackTile(amph, rBase.GetTile(), rMap));
-    CHECK(CanAttackTile(sea, rBase.GetTile(), rMap));
+    const InteractionGridsConfig_t& rGrids =
+        game.pState->GetTileEffects().GetInteractionGrids();
+    CHECK_FALSE(CanAttackTile(land, rBase.GetTile(), rMap, rGrids));
+    CHECK(CanAttackTile(amph, rBase.GetTile(), rMap, rGrids));
+    CHECK(CanAttackTile(sea, rBase.GetTile(), rMap, rGrids));
 }
 
 TEST_CASE("Land without pods cannot attack or enter a sea base", "[unit][conquest][amphibious]")

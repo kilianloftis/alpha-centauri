@@ -144,7 +144,6 @@ struct StockpileConversionSubject_t
 // being resolved, not the aura's host — plus pTileYieldRules for amount_source ElevationEnergy.
 // combatRole enables IsDefending (SE Morale defense-in-base extras).
 // pAttacker enables AttackerIsEmbarked / AttackerDomain (and future attacker-side conditions).
-// hostileDomain enables Permission(AttackDomain) matching (defender's unit domain).
 // pBase enables IsHeadquarters (Economy SE energy-at-HQ) and amount_source BaseSize /
 // BuildingUpkeep (population size / facility upkeep × amount) for base-level resolve.
 // pFaction enables amount_source BasesOwned (owned-base count × amount); unit resolve stamps
@@ -164,8 +163,6 @@ struct EffectContext_t
     // World yield rules for terrain-scaled amount sources. Stamped by TileEffectsContext,
     // which is the only place tile yield is resolved.
     const TileYieldRulesConfig_t* pTileYieldRules = nullptr;
-    // Set when querying Permission(AttackDomain): the prospective defender's domain.
-    std::optional<UnitDomain_t> hostileDomain;
 };
 
 // Post-combat promotion uses MoraleConfig_t::promotionSeedFormula (Lua), not amount_source.
@@ -537,7 +534,7 @@ int ResolveAdditiveStat(const UnitDesign& rDesign, StatId_t statId);
 // A live unit's full effect list: design components, FactionUnits (all faction units),
 // and ProducedAtThisBase matching Unit::GetProducedAtBase. Returned effects already
 // satisfy UnitFilterSatisfied and the ProducedAt origin match — consumers (ResolveStat,
-// HasPermission, etc.) need not re-check the unitFilter.
+// ResolveFlag, etc.) need not re-check the unitFilter.
 UnitEffects_t CollectLiveUnitEffects(const Unit& rUnit);
 
 // Resolve a live unit's stats / flags: design effects plus FactionUnits from the owner.
@@ -561,10 +558,6 @@ bool ResolveFlag(const Faction& rFaction, RuleFlagId_t flagId);
 // buildings). Prefer this for ThisBase flags (Headquarters) and for FactionGlobal SE effects
 // (e.g. probe_subversion_immune). Context-free: effects carrying a condition are skipped.
 bool ResolveFlag(const BaseManager& rBase, RuleFlagId_t flagId);
-
-// True when rUnit has a live PermissionEffect of the given id whose condition is satisfied
-// in rCtx. unitFilter is already applied by CollectLiveUnitEffects.
-bool HasPermission(const Unit& rUnit, PermissionId_t permission, const EffectContext_t& rCtx);
 
 // True if any of rTile's own features (terrain + improvements) declares flagId as an
 // unconditional ThisTile rule flag on the tile itself. Radius auras don't project flags —

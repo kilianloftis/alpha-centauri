@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/effects/EffectEnums.h"
+#include "game/effects/InteractionGridsConfig.h"
 #include "game/GameCategory.h"
 #include "game/units/UnitDomain.h"
 
@@ -233,13 +234,18 @@ struct TransportParamsEffect_t
     std::vector<RuleFlagId_t> loadSiteFlags;
 };
 
-// Grants a capability the rules otherwise deny. EnterTile almost always carries a condition
-// selecting which tiles; AttackTile on stock pods is unconditional (any channel cross).
-// AttackDomain lists defender domains this unit may strike (e.g. air, orbital).
-struct PermissionEffect_t
+// Overrides one cell (or a wild-card slice) of an interaction grid. Omit an axis to match
+// any value on that axis. Optional EffectConfig_t::condition still applies (e.g. Water+Base).
+// actorDomain is the row on every grid; the parser rejects a column axis that does not
+// belong to the selected grid, so typos fail at load rather than silently never matching.
+struct InteractionOverrideEffect_t
 {
-    PermissionId_t permission = PermissionId_t::AttackTile;
-    std::vector<UnitDomain_t> domains;
+    InteractionGridId_t grid = InteractionGridId_t::Enter;
+    InteractionCell_t cell = InteractionCell_t::Allow;
+    std::optional<UnitDomain_t> actorDomain;             // row, every grid
+    std::optional<InteractionSurface_t> surface;         // Enter column
+    std::optional<InteractionFooting_t> footing;         // AttackTile column
+    std::optional<UnitDomain_t> targetDomain;            // AttackUnit / Zoc column
 };
 
 // Instantaneous base-size mutation (colony-pod production cost, genetic plague, …).
@@ -286,7 +292,7 @@ using EffectVariant_t = std::variant<
     OrbitalAttackEffect_t,
     InterceptAttemptEffect_t,
     TransportParamsEffect_t,
-    PermissionEffect_t,
+    InteractionOverrideEffect_t,
     ModifyPopulationEffect_t,
     DestroyFacilityEffect_t,
     RebelEffect_t
@@ -316,6 +322,14 @@ struct AllOf_t
 
 // True when EffectContext_t::combatRole is Defender (defense-only SE Morale extras).
 struct IsDefending_t
+{
+};
+
+// True when the acting unit's own faction holds a base on the target tile. Distinct from
+// TargetTileHas("Base"), which is faction-blind: this is what lets a tile-scoped effect on
+// the Base improvement apply only to its owner's units (a ship docking at its own coastal
+// base). Requires EffectContext_t::pUnit and targetTile.
+struct TargetTileIsOwnBase_t
 {
 };
 
@@ -351,11 +365,13 @@ struct IsHeadquarters_t
 
 struct Condition_t : std::variant<TargetTileHas_t, AllOf_t, IsDefending_t,
                                   OriginBaseIsTargetBase_t, OriginBaseIsHomeBase_t,
-                                  AttackerIsEmbarked_t, AttackerDomain_t, IsHeadquarters_t>
+                                  AttackerIsEmbarked_t, AttackerDomain_t, IsHeadquarters_t,
+                                  TargetTileIsOwnBase_t>
 {
     using Variant = std::variant<TargetTileHas_t, AllOf_t, IsDefending_t,
                                  OriginBaseIsTargetBase_t, OriginBaseIsHomeBase_t,
-                                 AttackerIsEmbarked_t, AttackerDomain_t, IsHeadquarters_t>;
+                                 AttackerIsEmbarked_t, AttackerDomain_t, IsHeadquarters_t,
+                                 TargetTileIsOwnBase_t>;
     using Variant::Variant;
     using Variant::operator=;
 

@@ -127,6 +127,7 @@ TEST_CASE("DispatchInstantaneousEffects: Instantaneous GrantBuilding constructs 
     auto pMap = std::make_unique<WorldMap>(9, 9);
     GameState state(std::move(pMap), fixture.improvements, &fixture.unitComponents, settings,
                     fixture.morale(), fixture.dataContext.tileYieldRules,
+                    fixture.dataContext.interactionGrids,
                     actest::k_TestRngSeed);
     Faction& faction = state.AddFaction(std::make_unique<Faction>(
         state.AllocateFactionId(), true, fixture.factionDefinition, fixture.dataContext,
@@ -167,6 +168,7 @@ TEST_CASE("Production completion dispatches Instantaneous Infiltration into the 
     auto pMap = std::make_unique<WorldMap>(9, 9);
     GameState state(std::move(pMap), fixture.improvements, &fixture.unitComponents, settings,
                     fixture.morale(), fixture.dataContext.tileYieldRules,
+                    fixture.dataContext.interactionGrids,
                     actest::k_TestRngSeed);
     Faction& beneficiary = state.AddFaction(std::make_unique<Faction>(
         state.AllocateFactionId(), true, fixture.factionDefinition, fixture.dataContext,

@@ -380,6 +380,11 @@ public:
     // world composition, and for social-rating accumulation / faction-lane rating expand
     // (ratings are a faction-internal axis — see SocialRatingResolver).
     const FactionEffects_t& GetLocalActiveEffects() const override;
+
+    // Which interaction grids this faction's pooled effects carry an InteractionOverride
+    // for. OR'd with the design mask by UnitMayOverride to decide whether a movement /
+    // attack / ZOC resolve needs to collect effects at all.
+    InteractionGridMask_t GetInteractionMask() const;
     uint64_t GetLocalEffectsVersion() const;
 
 private:
@@ -424,6 +429,8 @@ private:
     mutable uint64_t m_composedLocalVersion = UINT64_MAX;
     mutable uint64_t m_composedWorldStamp = UINT64_MAX;
     mutable uint64_t m_composedVersion = 0;
+    // Recomputed with m_composedEffects, so it can never go stale independently.
+    mutable InteractionGridMask_t m_composedInteractionMask = 0;
 
     // Migrate every deploy record for baseId to rReceiver (TransferBaseTo) so a cooling
     // ASAT/interceptor copy keeps its cooldown under the new owner instead of leaking a

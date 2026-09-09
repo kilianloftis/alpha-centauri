@@ -248,13 +248,16 @@
   },
   {
     "id": "amphibious_grantor",
-    "name": "Amphibious Grantor (grants amphibious permissions to all faction units)",
+    "name": "Amphibious Grantor (grants amphibious enter override to all faction units)",
     "effects": [
       {
-        "type": "Permission",
+        "type": "InteractionOverride",
         "scope": "FactionUnits",
         "parameters": {
-          "permission": "EnterTile"
+          "grid": "enter",
+          "actor_domain": "land",
+          "surface": "water",
+          "cell": "allow"
         },
         "condition": {
           "kind": "AllOf",
@@ -262,13 +265,6 @@
             "Water",
             "Base"
           ]
-        }
-      },
-      {
-        "type": "Permission",
-        "scope": "FactionUnits",
-        "parameters": {
-          "permission": "AttackTile"
         }
       }
     ],

@@ -307,6 +307,16 @@
         "type": "RuleFlag",
         "scope": "ThisTile",
         "parameters": { "flag": "loads_air_transport" }
+      },
+      {
+        "type": "InteractionOverride",
+        "scope": "ThisTile",
+        "parameters": { "grid": "attack_unit", "target_domain": "air", "cell": "allow" }
+      },
+      {
+        "type": "InteractionOverride",
+        "scope": "ThisTile",
+        "parameters": { "grid": "attack_unit", "target_domain": "orbital", "cell": "allow" }
       }
     ]
   },
@@ -545,6 +555,22 @@
         "type": "RuleFlag",
         "scope": "ThisTile",
         "parameters": { "flag": "loads_air_transport" }
+      },
+      {
+        "type": "InteractionOverride",
+        "scope": "ThisTile",
+        "parameters": { "grid": "attack_unit", "target_domain": "air", "cell": "allow" }
+      },
+      {
+        "type": "InteractionOverride",
+        "scope": "ThisTile",
+        "parameters": { "grid": "attack_unit", "target_domain": "orbital", "cell": "allow" }
+      },
+      {
+        "type": "InteractionOverride",
+        "scope": "ThisTile",
+        "parameters": { "grid": "enter", "actor_domain": "sea", "surface": "land", "cell": "allow" },
+        "condition": { "kind": "TargetTileIsOwnBase" }
       }
     ]
   },

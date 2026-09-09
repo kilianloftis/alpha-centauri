@@ -3,6 +3,7 @@
 #include "game/faction/base/production/ProductionConfigParser.h"
 #include "game/GameDataPaths.h"
 #include "game/effects/EffectConfig.h"
+#include "game/effects/InteractionGridsConfig.h"
 #include "game/effects/TileYieldRulesConfig.h"
 
 #include <memory>
@@ -84,6 +85,8 @@ struct GameDataContext
     TileYieldRulesConfig_t tileYieldRules;
     // FactionUnits police baselines (away-from-home weight + effectiveness for combat units).
     std::vector<EffectConfig_t> policeRules;
+    // Domain × terrain / attack_unit / ZOC matrices (+ InteractionOverride holes).
+    InteractionGridsConfig_t interactionGrids;
     std::unique_ptr<MoraleConfig_t> moraleConfig;
     std::unique_ptr<ProbeActionsConfig_t> probeActionsConfig;
     std::unique_ptr<BaseConquestConfig_t> baseConquestConfig;

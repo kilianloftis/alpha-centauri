@@ -87,9 +87,14 @@
     "mineral_cost": 0,
     "effects": [
       {
-        "type": "Permission",
+        "type": "InteractionOverride",
         "scope": "ThisUnit",
-        "parameters": { "permission": "AttackDomain", "domains": ["air", "orbital"] }
+        "parameters": { "grid": "attack_unit", "target_domain": "air", "cell": "allow" }
+      },
+      {
+        "type": "InteractionOverride",
+        "scope": "ThisUnit",
+        "parameters": { "grid": "attack_unit", "target_domain": "orbital", "cell": "allow" }
       }
     ]
   },
@@ -104,15 +109,20 @@
     ],
     "effects": [
       {
-        "type": "Permission",
+        "type": "InteractionOverride",
         "scope": "ThisUnit",
-        "parameters": { "permission": "EnterTile" },
+        "parameters": {
+          "grid": "enter",
+          "actor_domain": "land",
+          "surface": "water",
+          "cell": "allow"
+        },
         "condition": { "kind": "AllOf", "values": ["Water", "Base"] }
       },
       {
-        "type": "Permission",
+        "type": "InteractionOverride",
         "scope": "ThisUnit",
-        "parameters": { "permission": "AttackTile" }
+        "parameters": { "grid": "attack_tile", "cell": "allow" }
       }
     ]
   },
@@ -133,6 +143,16 @@
         "type": "RuleFlag",
         "scope": "ThisTile",
         "parameters": { "flag": "refuels_air" }
+      },
+      {
+        "type": "InteractionOverride",
+        "scope": "ThisTile",
+        "parameters": { "grid": "attack_unit", "target_domain": "air", "cell": "allow" }
+      },
+      {
+        "type": "InteractionOverride",
+        "scope": "ThisTile",
+        "parameters": { "grid": "attack_unit", "target_domain": "orbital", "cell": "allow" }
       }
     ]
   },

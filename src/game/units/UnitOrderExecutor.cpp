@@ -152,7 +152,7 @@ bool UnitOrderExecutor::TryAutoAttachWhenMustLand(Unit& rPassenger)
 
 bool UnitOrderExecutor::TryUnloadTransport(Unit& rCarrier)
 {
-    return TryUnloadTransportInPlace(rCarrier);
+    return TryUnloadTransportInPlace(rCarrier, m_rTileEffects.GetInteractionGrids());
 }
 
 bool UnitOrderExecutor::ApplyArrivalEffects_(Unit& rMover, bool bWasEmbarked)
@@ -161,7 +161,7 @@ bool UnitOrderExecutor::ApplyArrivalEffects_(Unit& rMover, bool bWasEmbarked)
     // (step onto open water); entering a base leaves it a garrison, not cargo.
     if (!bWasEmbarked)
     {
-        ac::TryAutoAttachOnEntry(rMover, m_rWorldMap);
+        ac::TryAutoAttachOnEntry(rMover, m_rWorldMap, m_rTileEffects.GetInteractionGrids());
     }
 
     // No world bound means no session to conquer into — a legitimate mode for movement-only

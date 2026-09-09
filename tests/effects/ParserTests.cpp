@@ -1141,17 +1141,25 @@ TEST_CASE("ParseEffectConfig: RuleFlag requires a valid flag", "[effects][parser
         json::parse(R"({ "type": "RuleFlag", "scope": "ThisUnit", "parameters": {} })")));
 }
 
-TEST_CASE("ParseEffectConfig: Permission and AttackerIsEmbarked", "[effects][parser][permission]")
+TEST_CASE("ParseEffectConfig: InteractionOverride and AttackerIsEmbarked",
+          "[effects][parser][interaction]")
 {
     const json enterJson = json::parse(R"({
-        "type": "Permission", "scope": "ThisUnit",
-        "parameters": { "permission": "EnterTile" },
+        "type": "InteractionOverride", "scope": "ThisUnit",
+        "parameters": {
+            "grid": "enter", "actor_domain": "land", "surface": "water", "cell": "allow"
+        },
         "condition": { "kind": "AllOf", "values": ["Water", "Base"] }
     })");
     const EffectConfig_t enterConfig = EffectConfigParser::ParseEffectConfig(enterJson);
-    const auto* pEnter = std::get_if<PermissionEffect_t>(&enterConfig.effect);
+    const auto* pEnter = std::get_if<InteractionOverrideEffect_t>(&enterConfig.effect);
     REQUIRE(pEnter != nullptr);
-    CHECK(pEnter->permission == PermissionId_t::EnterTile);
+    CHECK(pEnter->grid == InteractionGridId_t::Enter);
+    CHECK(pEnter->cell == InteractionCell_t::Allow);
+    REQUIRE(pEnter->actorDomain.has_value());
+    CHECK(*pEnter->actorDomain == UnitDomain_t::Land);
+    REQUIRE(pEnter->surface.has_value());
+    CHECK(*pEnter->surface == InteractionSurface_t::Water);
     REQUIRE(enterConfig.condition.has_value());
     const auto* pAllOf = std::get_if<AllOf_t>(&enterConfig.condition->AsVariant());
     REQUIRE(pAllOf);
@@ -1163,56 +1171,77 @@ TEST_CASE("ParseEffectConfig: Permission and AttackerIsEmbarked", "[effects][par
     CHECK(pWater->featureId == "Water");
     CHECK(pBase->featureId == "Base");
 
-    const json attackJson = json::parse(R"({
-        "type": "Permission", "scope": "ThisUnit",
-        "parameters": { "permission": "AttackTile" }
+    const json attackUnitJson = json::parse(R"({
+        "type": "InteractionOverride", "scope": "ThisUnit",
+        "parameters": { "grid": "attack_unit", "target_domain": "air", "cell": "allow" }
     })");
-    const EffectConfig_t attackConfig = EffectConfigParser::ParseEffectConfig(attackJson);
-    const auto* pAttack = std::get_if<PermissionEffect_t>(&attackConfig.effect);
-    REQUIRE(pAttack != nullptr);
-    CHECK(pAttack->permission == PermissionId_t::AttackTile);
-    CHECK_FALSE(attackConfig.condition.has_value());
-    CHECK(pAttack->domains.empty());
-
-    const json attackDomainJson = json::parse(R"({
-        "type": "Permission", "scope": "ThisUnit",
-        "parameters": { "permission": "AttackDomain", "domains": ["air", "orbital"] }
-    })");
-    const EffectConfig_t attackDomainConfig =
-        EffectConfigParser::ParseEffectConfig(attackDomainJson);
-    const auto* pAttackDomain =
-        std::get_if<PermissionEffect_t>(&attackDomainConfig.effect);
-    REQUIRE(pAttackDomain != nullptr);
-    CHECK(pAttackDomain->permission == PermissionId_t::AttackDomain);
-    REQUIRE(pAttackDomain->domains.size() == 2);
-    CHECK(pAttackDomain->domains[0] == UnitDomain_t::Air);
-    CHECK(pAttackDomain->domains[1] == UnitDomain_t::Orbital);
+    const EffectConfig_t attackUnitConfig =
+        EffectConfigParser::ParseEffectConfig(attackUnitJson);
+    const auto* pAttackUnit =
+        std::get_if<InteractionOverrideEffect_t>(&attackUnitConfig.effect);
+    REQUIRE(pAttackUnit != nullptr);
+    CHECK(pAttackUnit->grid == InteractionGridId_t::AttackUnit);
+    REQUIRE(pAttackUnit->targetDomain.has_value());
+    CHECK(*pAttackUnit->targetDomain == UnitDomain_t::Air);
+    CHECK_FALSE(pAttackUnit->actorDomain.has_value());
 
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "Permission", "scope": "ThisUnit",
-        "parameters": { "permission": "AttackDomain" }
+        "type": "InteractionOverride", "scope": "ThisUnit",
+        "parameters": { "grid": "enter", "target_domain": "air", "cell": "allow" }
+    })")));
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "InteractionOverride", "scope": "ThisUnit",
+        "parameters": { "grid": "attack_unit", "surface": "water", "cell": "allow" }
     })")));
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "Permission", "scope": "ThisUnit",
-        "parameters": { "permission": "AttackTile", "domains": ["air"] }
+        "parameters": { "permission": "EnterTile" }
+    })")));
+
+    // attack_tile shares actor_domain with every grid but owns the footing column.
+    const json attackTileJson = json::parse(R"({
+        "type": "InteractionOverride", "scope": "ThisUnit",
+        "parameters": { "grid": "attack_tile", "footing": "embarked", "cell": "allow" }
+    })");
+    const EffectConfig_t attackTileConfig =
+        EffectConfigParser::ParseEffectConfig(attackTileJson);
+    const auto* pAttackTile =
+        std::get_if<InteractionOverrideEffect_t>(&attackTileConfig.effect);
+    REQUIRE(pAttackTile != nullptr);
+    CHECK(pAttackTile->grid == InteractionGridId_t::AttackTile);
+    CHECK(pAttackTile->footing == InteractionFooting_t::Embarked);
+    CHECK(pAttackTile->cell == InteractionCell_t::Allow);
+    CHECK_FALSE(pAttackTile->actorDomain.has_value());
+
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "InteractionOverride", "scope": "ThisUnit",
+        "parameters": { "grid": "attack_tile", "target_domain": "air", "cell": "allow" }
+    })")));
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "InteractionOverride", "scope": "ThisUnit",
+        "parameters": { "grid": "enter", "footing": "embarked", "cell": "allow" }
+    })")));
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "InteractionOverride", "scope": "ThisUnit",
+        "parameters": { "grid": "attack_tile", "footing": "sideways", "cell": "allow" }
     })")));
 
     const json embarkedJson = json::parse(R"({
-        "type": "Permission", "scope": "ThisUnit",
-        "parameters": { "permission": "AttackTile" },
+        "type": "InteractionOverride", "scope": "ThisUnit",
+        "parameters": { "grid": "attack_unit", "cell": "allow" },
         "condition": { "kind": "AttackerIsEmbarked" }
     })");
     const EffectConfig_t embarkedConfig = EffectConfigParser::ParseEffectConfig(embarkedJson);
     REQUIRE(embarkedConfig.condition.has_value());
     CHECK(std::holds_alternative<AttackerIsEmbarked_t>(embarkedConfig.condition->AsVariant()));
 
-    const json attackerDomainJson = json::parse(R"({
+    const json actorDomainJson = json::parse(R"({
         "type": "StatModifier", "scope": "ThisUnit",
         "parameters": { "stat": "defense", "amount": 100, "op": "AddPercent" },
         "condition": { "kind": "AttackerDomain", "domains": ["air", "orbital"] }
     })");
     const EffectConfig_t domainConfig =
-        EffectConfigParser::ParseEffectConfig(attackerDomainJson);
+        EffectConfigParser::ParseEffectConfig(actorDomainJson);
     REQUIRE(domainConfig.condition.has_value());
     const auto* pDomains =
         std::get_if<AttackerDomain_t>(&domainConfig.condition->AsVariant());

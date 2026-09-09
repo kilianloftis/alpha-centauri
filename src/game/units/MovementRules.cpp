@@ -3,7 +3,7 @@
 #include "game/Faction.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
-#include "game/effects/EffectEnums.h"
+#include "game/effects/InteractionResolve.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
@@ -14,8 +14,27 @@
 
 namespace ac
 {
+namespace
+{
 
-bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject)
+InteractionSurface_t SurfaceOf_(const Tile& rTile)
+{
+    return rTile.IsWater() ? InteractionSurface_t::Water : InteractionSurface_t::Land;
+}
+
+InteractionQuery_t EnterQuery_(const Unit& rMover, const Tile& rTile)
+{
+    InteractionQuery_t q;
+    q.grid = InteractionGridId_t::Enter;
+    q.actorDomain = rMover.GetDomain();
+    q.surface = SurfaceOf_(rTile);
+    return q;
+}
+
+} // namespace
+
+bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject,
+                     const InteractionGridsConfig_t& rGrids)
 {
     if (rProjector.IsEmbarked())
     {
@@ -25,48 +44,39 @@ bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject)
     {
         return false;
     }
-    // Air subjects are already excluded by the domain match below; this flag is for
-    // land/sea units (e.g. probes) that ignore ZOC without changing domain.
-    if (ResolveFlag(rSubject, RuleFlagId_t::IgnoreZoneOfControl))
+    InteractionQuery_t q;
+    q.grid = InteractionGridId_t::Zoc;
+    q.actorDomain = rProjector.GetDomain();
+    q.targetDomain = rSubject.GetDomain();
+    EffectContext_t ctx;
+    if (ResolveInteractionCell(rGrids, q, &rProjector, ctx, nullptr, nullptr,
+                               rProjector.GetFaction().GetFactionId())
+        != InteractionCell_t::Allow)
     {
         return false;
     }
 
-    switch (rProjector.GetDomain())
-    {
-    case UnitDomain_t::Air:
-        // Air exerts on land and sea units, not on other air/orbital units.
-        return rSubject.GetDomain() != UnitDomain_t::Air
-            && rSubject.GetDomain() != UnitDomain_t::Orbital;
-    case UnitDomain_t::Orbital:
-        // Orbital projectors do not exert ZOC.
-        return false;
-    case UnitDomain_t::Sea:
-        return rSubject.GetDomain() == UnitDomain_t::Sea;
-    case UnitDomain_t::Land:
-        return rSubject.GetDomain() == UnitDomain_t::Land;
-    }
-    return false;
+    // Air subjects are already excluded by the stock zoc grid; this flag is for land/sea
+    // units (e.g. probes) that ignore ZOC without changing domain. Resolved last because it
+    // collects the subject's effects — only worth paying once the grid says ZOC applies.
+    return !ResolveFlag(rSubject, RuleFlagId_t::IgnoreZoneOfControl);
 }
 
-bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile)
+bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile,
+                         const InteractionGridsConfig_t& rGrids)
 {
-    switch (rMover.GetDomain())
-    {
-    case UnitDomain_t::Air:
-    case UnitDomain_t::Orbital:
-        return true;
-    case UnitDomain_t::Sea:
-        return rTile.IsWater();
-    case UnitDomain_t::Land:
-        return rTile.IsLand();
-    }
-    return false;
+    EffectContext_t ctx;
+    ctx.targetTile = &rTile;
+    ctx.pUnit = &rMover;
+    return ResolveInteractionCell(rGrids, EnterQuery_(rMover, rTile), &rMover, ctx, &rTile,
+                                  nullptr, rMover.GetFaction().GetFactionId())
+        == InteractionCell_t::Allow;
 }
 
-bool CanOccupyTileUnaided(const Unit& rMover, const Tile& rTile)
+bool CanOccupyTileUnaided(const Unit& rMover, const Tile& rTile,
+                          const InteractionGridsConfig_t& rGrids)
 {
-    if (CanEnterTileTerrain(rMover, rTile))
+    if (CanEnterTileTerrain(rMover, rTile, rGrids))
     {
         return true;
     }
@@ -75,23 +85,30 @@ bool CanOccupyTileUnaided(const Unit& rMover, const Tile& rTile)
         && HasFriendlyBase(rMover, rTile);
 }
 
-bool CanEnterTile(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap)
+bool CanEnterTile(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
+                  const InteractionGridsConfig_t& rGrids)
 {
-    if (CanOccupyTileUnaided(rMover, rTile))
+    EffectContext_t ctx;
+    ctx.targetTile = &rTile;
+    ctx.pUnit = &rMover;
+    // Widest source set: the mover's own overrides, the tile's improvements and features,
+    // and ThisTile overrides projected by units already standing here.
+    if (ResolveInteractionCell(rGrids, EnterQuery_(rMover, rTile), &rMover, ctx, &rTile,
+                               &rWorldMap, rMover.GetFaction().GetFactionId())
+        == InteractionCell_t::Allow)
     {
         return true;
     }
+    // That resolve ran the same query CanOccupyTileUnaided would, over a superset of the
+    // sources, so re-running it here would only repeat the work. Boarding is the one
+    // remaining way onto water: a land unit reaches even its own sea base by transport, so
+    // HasFriendlyBase is deliberately *not* consulted here. It still governs whether a unit
+    // already there may stay (CanOccupyTileUnaided / SurvivesCarrierLoss).
     if (rMover.GetDomain() != UnitDomain_t::Land || !rTile.IsWater())
     {
         return false;
     }
-    if (FindBoardableTransport(rMover, rTile, rWorldMap))
-    {
-        return true;
-    }
-    EffectContext_t ctx;
-    ctx.targetTile = &rTile;
-    return HasPermission(rMover, PermissionId_t::EnterTile, ctx);
+    return FindBoardableTransport(rMover, rTile, rWorldMap) != nullptr;
 }
 
 bool HasFriendlyOccupant(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap)

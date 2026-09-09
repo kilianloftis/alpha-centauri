@@ -38,6 +38,7 @@ class GameSettings;
 class CouncilProposalRegistry;
 struct CouncilRulesConfig_t;
 struct TileYieldRulesConfig_t;
+struct InteractionGridsConfig_t;
 class PlanetaryCouncil;
 
 class GameState : public IUnitOrderWorld, public IWorldEffectsSource
@@ -58,12 +59,14 @@ public:
     // composition root resolves and reports; tests pass a fixed value to keep rolls stable.
     // rYieldRules must outlive this GameState: it is handed to the TileEffectsContext, which
     // stamps it into per-tile resolution for terrain-scaled amount sources.
+    // rInteractionGrids must outlive this GameState (movement / attack / ZOC matrices).
     GameState(std::unique_ptr<WorldMap> pWorldMap,
               const ImprovementRegistry& rImprovements,
               const UnitComponentRegistry* pUnitComponents,
               GameSettings& rSettings,
               const MoraleCalculator& rMorale,
               const TileYieldRulesConfig_t& rYieldRules,
+              const InteractionGridsConfig_t& rInteractionGrids,
               uint32_t rngSeed);
     ~GameState();
 

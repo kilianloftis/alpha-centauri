@@ -7,26 +7,31 @@ class Tile;
 class Unit;
 class WorldMap;
 class UnitPositionIndex;
+struct InteractionGridsConfig_t;
 
 // Whether rProjector (a foreign unit) exerts zone of control that applies to rSubject.
-// Embarked cargo never projects. Air projectors affect land and sea subjects; sea/land
-// projectors affect their own domain only. Air subjects never match those rules;
-// IgnoreZoneOfControl also exempts.
-bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject);
+// Embarked cargo never projects. Stock pairs come from the zoc interaction grid; IgnoreZOC
+// and same-faction still short-circuit here.
+bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject,
+                     const InteractionGridsConfig_t& rGrids);
 
-// Whether rMover may enter rTile for its chassis domain (air any; sea water; land land).
-bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile);
+// Whether rMover may enter rTile for its chassis domain per the enter interaction grid
+// (stock: air any; sea water; land land).
+bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile,
+                         const InteractionGridsConfig_t& rGrids);
 
-// Tiles rMover can hold on its own: its domain terrain, or a friendly sea base (a land
-// unit garrisons one without a hull). Excludes anything that depends on other units being
-// present — see CanEnterTile for boarding / Permission(Enter).
-bool CanOccupyTileUnaided(const Unit& rMover, const Tile& rTile);
+// Tiles rMover can hold on its own: enter-grid allow, or a friendly sea base (a land unit
+// garrisons one without a hull). Excludes anything that depends on other units being
+// present — see CanEnterTile for boarding / InteractionOverride enter.
+bool CanOccupyTileUnaided(const Unit& rMover, const Tile& rTile,
+                          const InteractionGridsConfig_t& rGrids);
 
 // Full tile-entry predicate used by stepping, unloading, and attack legality.
-// CanOccupyTileUnaided, plus land exceptions that depend on what else is on the tile:
-// board a friendly transport (TransportRules), or Permission(Enter) onto a qualifying
-// sea-base tile. Neither grants free ocean movement.
-bool CanEnterTile(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap);
+// Resolve(enter) allow, plus land exceptions that depend on what else is on the tile:
+// board a friendly transport, or CanOccupyTileUnaided (friendly sea base). Neither grants
+// free ocean movement.
+bool CanEnterTile(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
+                  const InteractionGridsConfig_t& rGrids);
 
 // True when a same-faction unit already occupies rTile (friend-on-fungus shortcut).
 bool HasFriendlyOccupant(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap);

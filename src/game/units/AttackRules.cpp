@@ -3,7 +3,7 @@
 #include "game/Faction.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
-#include "game/effects/EffectEnums.h"
+#include "game/effects/InteractionResolve.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/faction/UnitVisibility.h"
 #include "game/map/ImprovementIds.h"
@@ -17,31 +17,28 @@
 namespace ac
 {
 
-bool CanAttackTile(const Unit& rAttacker, const Tile& rTargetTile, const WorldMap& rWorldMap)
+bool CanAttackTile(const Unit& rAttacker, const Tile& rTargetTile, const WorldMap& rWorldMap,
+                   const InteractionGridsConfig_t& rGrids)
 {
-    // Every domain: no attacking a tile the unit could not enter.
-    if (!CanEnterTile(rAttacker, rTargetTile, rWorldMap))
+    // No attacking a tile the unit could not enter...
+    if (!CanEnterTile(rAttacker, rTargetTile, rWorldMap, rGrids))
     {
         return false;
     }
 
-    // Channel-crossing Permission(AttackTile) is a land rule (embarked cargo, shore <-> sea).
-    if (rAttacker.GetDomain() != UnitDomain_t::Land)
-    {
-        return true;
-    }
-
-    const bool bChannelCrossing = rAttacker.IsEmbarked()
-        || rAttacker.GetTile().IsWater() != rTargetTile.IsWater();
-    if (!bChannelCrossing)
-    {
-        return true;
-    }
-
+    // ...but entry is not sufficient: whether the attacker may strike at all from the ground
+    // it is standing on is its own question, so an amphibious override opens the assault
+    // without also opening ocean movement.
+    InteractionQuery_t q;
+    q.grid = InteractionGridId_t::AttackTile;
+    q.actorDomain = rAttacker.GetDomain();
+    q.footing = FootingFor(rAttacker);
     EffectContext_t ctx;
-    ctx.targetTile = &rTargetTile;
     ctx.pAttacker = &rAttacker;
-    return HasPermission(rAttacker, PermissionId_t::AttackTile, ctx);
+    ctx.targetTile = &rTargetTile;
+    return ResolveInteractionCell(rGrids, q, &rAttacker, ctx, &rTargetTile, &rWorldMap,
+                                  rAttacker.GetFaction().GetFactionId())
+        == InteractionCell_t::Allow;
 }
 
 Unit* FindVisibleHostileOnTile(const Unit& rObserver, const Tile& rTile,
@@ -76,6 +73,7 @@ Unit* FindAttackableHostileOnTile(const Unit& rAttacker, const Tile& rTargetTile
                                   const WorldMap& rWorldMap,
                                   const TileEffectsContext& rTileEffects)
 {
+    const InteractionGridsConfig_t& rGrids = rTileEffects.GetInteractionGrids();
     if (rAttacker.GetMoveFragmentsRemaining() <= 0)
     {
         return nullptr;
@@ -84,7 +82,7 @@ Unit* FindAttackableHostileOnTile(const Unit& rAttacker, const Tile& rTargetTile
     {
         return nullptr;
     }
-    if (!CanAttackTile(rAttacker, rTargetTile, rWorldMap))
+    if (!CanAttackTile(rAttacker, rTargetTile, rWorldMap, rGrids))
     {
         return nullptr;
     }
@@ -95,22 +93,18 @@ Unit* FindAttackableHostileOnTile(const Unit& rAttacker, const Tile& rTargetTile
         return nullptr;
     }
 
-    // Air / Orbital hostiles require Permission(AttackDomain) covering that domain, unless
-    // the tile provides RefuelsAir (base, airbase, friendly carrier deck).
-    const UnitDomain_t defenderDomain = pDefender->GetDomain();
-    if (defenderDomain == UnitDomain_t::Air || defenderDomain == UnitDomain_t::Orbital)
+    InteractionQuery_t q;
+    q.grid = InteractionGridId_t::AttackUnit;
+    q.actorDomain = rAttacker.GetDomain();
+    q.targetDomain = pDefender->GetDomain();
+    EffectContext_t ctx;
+    ctx.pAttacker = &rAttacker;
+    ctx.targetTile = &rTargetTile;
+    if (ResolveInteractionCell(rGrids, q, &rAttacker, ctx, &rTargetTile, &rWorldMap,
+                               pDefender->GetFaction().GetFactionId())
+        == InteractionCell_t::Deny)
     {
-        if (!TileProvidesFlag(rTargetTile, RuleFlagId_t::RefuelsAir, rWorldMap,
-                              pDefender->GetFaction().GetFactionId()))
-        {
-            EffectContext_t ctx;
-            ctx.pAttacker = &rAttacker;
-            ctx.hostileDomain = defenderDomain;
-            if (!HasPermission(rAttacker, PermissionId_t::AttackDomain, ctx))
-            {
-                return nullptr;
-            }
-        }
+        return nullptr;
     }
     return pDefender;
 }

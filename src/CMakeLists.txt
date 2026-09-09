@@ -84,6 +84,8 @@ add_library(ac-core STATIC
     game/effects/InfiltrationRules.cpp
     game/effects/TileEffectsContext.cpp
     game/effects/TileYieldRulesConfigParser.cpp
+    game/effects/InteractionGridsConfigParser.cpp
+    game/effects/InteractionResolve.cpp
     game/effects/PoliceRulesConfigParser.cpp
     game/TurnStageFactory.cpp
     game/TurnStageConfigParser.cpp

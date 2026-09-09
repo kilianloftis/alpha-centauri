@@ -8,6 +8,7 @@
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/MovementRules.h"
+#include "game/effects/InteractionGridsConfig.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDomain.h"
 
@@ -141,7 +142,7 @@ Unit* FindBoardableTransport(const Unit& rPassenger, const Tile& rTile,
 }
 
 bool CanUnloadTo(const Unit& rPassenger, const Tile& rFrom, const Tile& rTo,
-                 const WorldMap& rWorldMap)
+                 const WorldMap& rWorldMap, const InteractionGridsConfig_t& rGrids)
 {
     if (!rPassenger.IsEmbarked())
     {
@@ -151,8 +152,8 @@ bool CanUnloadTo(const Unit& rPassenger, const Tile& rFrom, const Tile& rTo,
     {
         return false;
     }
-    // Unload uses full enter rules (friendly base, Permission(Enter) sea base, land, etc.).
-    return CanEnterTile(rPassenger, rTo, rWorldMap);
+    // Unload uses full enter rules (friendly base, InteractionOverride sea base, land, etc.).
+    return CanEnterTile(rPassenger, rTo, rWorldMap, rGrids);
 }
 
 bool TryAttachToTransport(Unit& rPassenger, const WorldMap& rWorldMap)
@@ -170,9 +171,10 @@ bool TryAttachToTransport(Unit& rPassenger, const WorldMap& rWorldMap)
     return true;
 }
 
-bool TryAutoAttachOnEntry(Unit& rPassenger, const WorldMap& rWorldMap)
+bool TryAutoAttachOnEntry(Unit& rPassenger, const WorldMap& rWorldMap,
+                          const InteractionGridsConfig_t& rGrids)
 {
-    if (CanOccupyTileUnaided(rPassenger, rPassenger.GetTile()))
+    if (CanOccupyTileUnaided(rPassenger, rPassenger.GetTile(), rGrids))
     {
         return false;
     }
@@ -184,12 +186,13 @@ bool TryAutoAttachWhenMustLand(Unit& rPassenger, const WorldMap& rWorldMap)
     return TryAttachToTransport(rPassenger, rWorldMap);
 }
 
-bool SurvivesCarrierLoss(const Unit& rPassenger, const Tile& rTile)
+bool SurvivesCarrierLoss(const Unit& rPassenger, const Tile& rTile,
+                         const InteractionGridsConfig_t& rGrids)
 {
-    return CanOccupyTileUnaided(rPassenger, rTile);
+    return CanOccupyTileUnaided(rPassenger, rTile, rGrids);
 }
 
-bool CanUnloadTransportInPlace(const Unit& rCarrier)
+bool CanUnloadTransportInPlace(const Unit& rCarrier, const InteractionGridsConfig_t& rGrids)
 {
     if (rCarrier.GetDomain() != UnitDomain_t::Air || rCarrier.GetCargo().empty())
     {
@@ -200,7 +203,7 @@ bool CanUnloadTransportInPlace(const Unit& rCarrier)
     {
         // Dropping in place leaves nothing under the passenger, so it must hold the tile
         // on its own — boarding another carrier here is not what this order does.
-        if (!pPassenger || !CanOccupyTileUnaided(*pPassenger, rTile))
+        if (!pPassenger || !CanOccupyTileUnaided(*pPassenger, rTile, rGrids))
         {
             return false;
         }
@@ -208,9 +211,9 @@ bool CanUnloadTransportInPlace(const Unit& rCarrier)
     return true;
 }
 
-bool TryUnloadTransportInPlace(Unit& rCarrier)
+bool TryUnloadTransportInPlace(Unit& rCarrier, const InteractionGridsConfig_t& rGrids)
 {
-    if (!CanUnloadTransportInPlace(rCarrier))
+    if (!CanUnloadTransportInPlace(rCarrier, rGrids))
     {
         return false;
     }

@@ -1,6 +1,7 @@
 #include "game/units/UnitDesign.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
+#include "game/effects/InteractionResolve.h"
 #include <algorithm>
 #include <stdexcept>
 #include <sstream>
@@ -78,6 +79,11 @@ UnitDesign::UnitDesign(
     const int turnsOfFuel = ResolveStat(*this, StatId_t::TurnsOfFuel);
     m_bUsesFuel = turnsOfFuel > 0;
     m_maxFuel = m_bUsesFuel ? turnsOfFuel * GetMovementPoints() : 0;
+
+    for (const UnitComponentConfig_t* pComp : m_components)
+    {
+        m_interactionMask |= InteractionMaskOf(pComp->effects);
+    }
 }
 
 const std::string& UnitDesign::GetId() const   { return m_id; }

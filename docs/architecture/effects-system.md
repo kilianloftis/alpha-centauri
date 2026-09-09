@@ -441,7 +441,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 
 ### CollectLiveUnitEffects
 - Returns design + FactionUnits + matching ProducedAtThisBase effects. The list already
-  satisfies `UnitFilterSatisfied` and the ProducedAt origin match — `HasPermission` /
+  satisfies `UnitFilterSatisfied` and the ProducedAt origin match — `ResolveFlag` /
   resolve paths re-check conditions only, not unitFilter.
 
 ### CouncilEffects
@@ -784,10 +784,16 @@ check it with a `std::get_if<RuleFlagEffect_t>` scan over the relevant pool — 
 `Unit::ResolveFlag_` for the pattern. Context-free `ResolveFlag` overloads skip effects
 that carry a `condition` (same rule as `FilterByStatId`).
 
-**Permissions** (`PermissionEffect_t` / `PermissionId_t`): capability grants consumed via
-`HasPermission(unit, id, ctx)`. Stock Amphibious Pods use `EnterTile` (conditioned on
-Water+Base) and unconditional `AttackTile` for channel-crossing fights. `AttackDomain`
-lists defender domains a unit may strike (Air Superiority: air + orbital). `Water` is a real
+**Interaction grids** (`config/interaction_grids.json`) hold stock domain matrices for
+`enter` (mover domain × land/water), `attack_unit` (attacker × defender domain), and `zoc`
+(projector × subject). Cells are `allow` / `deny` only. Holes are filled by
+`InteractionOverride` effects: omit an axis to match any value; optional `condition` still
+applies. Resolve order is acting-unit overrides → `ThisTile` overrides on the relevant tile
+(improvements + radius-0 projectors for the queried faction, same shape as
+`TileProvidesFlag`) → stock grid. Stock Amphibious Pods override `enter` for land×water when
+Water+Base. Air Superiority overrides `attack_unit` for defender air/orbital. Base, Airbase,
+and Carrier Deck declare `ThisTile` `attack_unit` overrides so grounded air/orbital are
+attackable; fuel still uses `RefuelsAir` only. `Water` is a real
 improvement entry covering any sea tile (`elevation < 0`), and it **stacks** with the depth
 band rather than replacing it: a submerged tile carries `Water` plus exactly one of `Ocean` /
 `OceanShelf` (split at `k_OceanShelfMinElevation`), in that order. Put rules shared by all sea
@@ -796,7 +802,7 @@ tiles on `Water` — including `suppress_yield_sources` for rockiness, moisture,
 yield). Shelf-only rules stay on `OceanShelf` (+1 nutrient); deep `Ocean` adds nothing and is
 excluded by sea terraform. Do not suppress `@landform` from `Water`: that tag includes
 `OceanShelf` and would erase the shelf nutrient. `AttackerIsEmbarked` is available for
-mod-scoped attack grants.
+mod-scoped override conditions.
 
 **Tile capability flags** are the `ThisTile`-scoped subset, resolved by two helpers in
 `ActiveEffect.h` rather than by a hand-rolled scan:

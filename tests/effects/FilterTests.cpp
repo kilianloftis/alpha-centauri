@@ -456,7 +456,11 @@ TEST_CASE("ConditionSatisfied: AttackerIsEmbarked requires pAttacker", "[effects
 {
     actest::EffectPool pool;
     EffectConfig_t config;
-    config.effect = PermissionEffect_t{PermissionId_t::AttackTile};
+    InteractionOverrideEffect_t overrideFx;
+    overrideFx.grid = InteractionGridId_t::AttackUnit;
+    overrideFx.cell = InteractionCell_t::Allow;
+    overrideFx.targetDomain = UnitDomain_t::Air;
+    config.effect = overrideFx;
     config.scope = EffectScope_t::ThisUnit;
     config.persistence = EffectPersistence_t::Continuous;
     config.condition = AttackerIsEmbarked_t{};

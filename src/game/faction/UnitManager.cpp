@@ -7,6 +7,7 @@
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/Faction.h"
+#include "game/GameDataContext.h"
 #include "game/faction/Military.h"
 #include <algorithm>
 #include <stdexcept>
@@ -89,7 +90,8 @@ void UnitManager::DestroyUnit(Unit& rUnit)
         {
             continue;
         }
-        if (SurvivesCarrierLoss(*pPassenger, rCarrierTile))
+        if (SurvivesCarrierLoss(*pPassenger, rCarrierTile,
+                                m_rFaction.GetDataContext().interactionGrids))
         {
             pPassenger->Disembark();
         }

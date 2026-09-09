@@ -27,6 +27,7 @@ struct GameDataPaths
     std::string worldGenDecoration = "config/worldGen/decoration.json";
     std::string worldGenLandmarks = "config/worldGen/landmarks.json";
     std::string tileYieldRules = "config/tile_yield_rules.json";
+    std::string interactionGrids = "config/interaction_grids.json";
     std::string moraleLevels = "config/morale_levels.json";
     std::string probeActions = "config/probe_actions.json";
     std::string baseConquest = "config/base_conquest.json";
