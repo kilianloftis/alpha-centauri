@@ -236,10 +236,11 @@
     "type": "ability",
     "effects": [
       {
-        "type": "RuleFlag",
+        "type": "InteractionOverride",
         "scope": "ThisUnit",
         "parameters": {
-          "flag": "ignore_zone_of_control"
+          "grid": "zoc",
+          "cell": "deny"
         }
       }
     ]
@@ -534,10 +535,11 @@
         }
       },
       {
-        "type": "RuleFlag",
+        "type": "InteractionOverride",
         "scope": "ThisUnit",
         "parameters": {
-          "flag": "ignore_zone_of_control"
+          "grid": "zoc",
+          "cell": "deny"
         }
       }
     ]
@@ -716,10 +718,11 @@
         }
       },
       {
-        "type": "RuleFlag",
+        "type": "InteractionOverride",
         "scope": "ThisUnit",
         "parameters": {
-          "flag": "ignore_zone_of_control"
+          "grid": "zoc",
+          "cell": "deny"
         }
       },
       {
@@ -1036,16 +1039,6 @@
         "parameters": {
           "flag": "loads_air_transport"
         }
-      },
-      {
-        "type": "InteractionOverride",
-        "scope": "ThisTile",
-        "parameters": { "grid": "attack_unit", "target_domain": "air", "cell": "allow" }
-      },
-      {
-        "type": "InteractionOverride",
-        "scope": "ThisTile",
-        "parameters": { "grid": "attack_unit", "target_domain": "orbital", "cell": "allow" }
       }
     ]
   },

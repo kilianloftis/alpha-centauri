@@ -3,9 +3,7 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
 #include "game/Faction.h"
-#include "game/map/ImprovementConfigParser.h"
 #include "game/map/Tile.h"
-#include "game/map/WorldMap.h"
 #include "game/units/Unit.h"
 
 namespace ac
@@ -53,14 +51,9 @@ bool OverrideMatchesQuery_(const InteractionOverrideEffect_t& rOverride,
         && ColumnMatches_(rOverride, rQuery);
 }
 
-bool IsHostTileOverride_(const EffectConfig_t& rEffect)
-{
-    return rEffect.scope == EffectScope_t::ThisTile && rEffect.radius == 0;
-}
-
-std::optional<InteractionCell_t> FirstMatchingOverride_(
+std::optional<InteractionCell_t> FirstNonDefaultOverride_(
     const std::vector<ActiveEffect_t>& rEffects, const InteractionQuery_t& rQuery,
-    const EffectContext_t& rCtx)
+    const EffectContext_t& rCtx, InteractionCell_t stock)
 {
     for (const ActiveEffect_t& rEffect : rEffects)
     {
@@ -74,94 +67,13 @@ std::optional<InteractionCell_t> FirstMatchingOverride_(
         {
             continue;
         }
-        return pOverride->cell;
-    }
-    return std::nullopt;
-}
-
-std::optional<InteractionCell_t> FirstMatchingConfigOverride_(
-    const std::vector<EffectConfig_t>& rEffects, const InteractionQuery_t& rQuery,
-    const EffectContext_t& rCtx)
-{
-    for (const EffectConfig_t& rEffect : rEffects)
-    {
-        if (!IsHostTileOverride_(rEffect))
-        {
-            continue;
-        }
-        const InteractionOverrideEffect_t* pOverride =
-            std::get_if<InteractionOverrideEffect_t>(&rEffect.effect);
-        if (!pOverride || !OverrideMatchesQuery_(*pOverride, rQuery))
-        {
-            continue;
-        }
-        if (!ConditionSatisfied(rEffect, rCtx, nullptr))
+        // Non-default only: restating stock is a no-op. For any concrete query exactly one
+        // polarity differs from stock, so overlapping matches cannot disagree.
+        if (pOverride->cell == stock)
         {
             continue;
         }
         return pOverride->cell;
-    }
-    return std::nullopt;
-}
-
-std::optional<InteractionCell_t> ResolveTileOverrides_(const Tile& rTile,
-                                                       const InteractionQuery_t& rQuery,
-                                                       const EffectContext_t& rCtx,
-                                                       const WorldMap* pWorldMap,
-                                                       FactionId_t tileFaction)
-{
-    for (const ImprovementConfig_t* pConfig : rTile.GetTerrainFeatures())
-    {
-        if (!pConfig)
-        {
-            continue;
-        }
-        if (auto cell = FirstMatchingConfigOverride_(pConfig->effects, rQuery, rCtx))
-        {
-            return cell;
-        }
-    }
-    for (const ImprovementConfig_t* pConfig : rTile.GetImprovements())
-    {
-        if (!pConfig)
-        {
-            continue;
-        }
-        if (auto cell = FirstMatchingConfigOverride_(pConfig->effects, rQuery, rCtx))
-        {
-            return cell;
-        }
-    }
-    if (!pWorldMap)
-    {
-        return std::nullopt;
-    }
-    for (const Unit* pUnit : pWorldMap->GetUnitsOnTile(rTile))
-    {
-        if (!pUnit || pUnit->IsEmbarked()
-            || pUnit->GetFaction().GetFactionId() != tileFaction
-            || !UnitMayOverride(*pUnit, rQuery.grid))
-        {
-            continue;
-        }
-        for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(*pUnit).effects)
-        {
-            if (!IsHostTileOverride_(*rEffect.config))
-            {
-                continue;
-            }
-            const InteractionOverrideEffect_t* pOverride =
-                std::get_if<InteractionOverrideEffect_t>(&rEffect.config->effect);
-            if (!pOverride || !OverrideMatchesQuery_(*pOverride, rQuery))
-            {
-                continue;
-            }
-            if (!ConditionSatisfied(*rEffect.config, rCtx, rEffect.originBase))
-            {
-                continue;
-            }
-            return pOverride->cell;
-        }
     }
     return std::nullopt;
 }
@@ -232,28 +144,18 @@ InteractionFooting_t FootingFor(const Unit& rUnit)
 InteractionCell_t ResolveInteractionCell(const InteractionGridsConfig_t& rGrids,
                                          const InteractionQuery_t& rQuery,
                                          const Unit* pActingUnit,
-                                         const EffectContext_t& rCtx,
-                                         const Tile* pRelevantTile,
-                                         const WorldMap* pWorldMap,
-                                         FactionId_t tileFaction)
+                                         const EffectContext_t& rCtx)
 {
+    const InteractionCell_t stock = StockCell_(rGrids, rQuery);
     if (pActingUnit && UnitMayOverride(*pActingUnit, rQuery.grid))
     {
-        if (auto cell =
-                FirstMatchingOverride_(CollectLiveUnitEffects(*pActingUnit).effects, rQuery, rCtx))
+        if (auto cell = FirstNonDefaultOverride_(CollectLiveUnitEffects(*pActingUnit).effects,
+                                                 rQuery, rCtx, stock))
         {
             return *cell;
         }
     }
-    if (pRelevantTile)
-    {
-        if (auto cell =
-                ResolveTileOverrides_(*pRelevantTile, rQuery, rCtx, pWorldMap, tileFaction))
-        {
-            return *cell;
-        }
-    }
-    return StockCell_(rGrids, rQuery);
+    return stock;
 }
 
 } // namespace ac

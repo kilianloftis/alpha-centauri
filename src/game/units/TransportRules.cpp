@@ -174,7 +174,7 @@ bool TryAttachToTransport(Unit& rPassenger, const WorldMap& rWorldMap)
 bool TryAutoAttachOnEntry(Unit& rPassenger, const WorldMap& rWorldMap,
                           const InteractionGridsConfig_t& rGrids)
 {
-    if (CanOccupyTileUnaided(rPassenger, rPassenger.GetTile(), rGrids))
+    if (CanHoldTileWithoutCarrier(rPassenger, rPassenger.GetTile(), rGrids))
     {
         return false;
     }
@@ -189,7 +189,7 @@ bool TryAutoAttachWhenMustLand(Unit& rPassenger, const WorldMap& rWorldMap)
 bool SurvivesCarrierLoss(const Unit& rPassenger, const Tile& rTile,
                          const InteractionGridsConfig_t& rGrids)
 {
-    return CanOccupyTileUnaided(rPassenger, rTile, rGrids);
+    return CanHoldTileWithoutCarrier(rPassenger, rTile, rGrids);
 }
 
 bool CanUnloadTransportInPlace(const Unit& rCarrier, const InteractionGridsConfig_t& rGrids)
@@ -203,7 +203,7 @@ bool CanUnloadTransportInPlace(const Unit& rCarrier, const InteractionGridsConfi
     {
         // Dropping in place leaves nothing under the passenger, so it must hold the tile
         // on its own — boarding another carrier here is not what this order does.
-        if (!pPassenger || !CanOccupyTileUnaided(*pPassenger, rTile, rGrids))
+        if (!pPassenger || !CanHoldTileWithoutCarrier(*pPassenger, rTile, rGrids))
         {
             return false;
         }

@@ -10,8 +10,10 @@ class UnitPositionIndex;
 struct InteractionGridsConfig_t;
 
 // Whether rProjector (a foreign unit) exerts zone of control that applies to rSubject.
-// Embarked cargo never projects. Stock pairs come from the zoc interaction grid; IgnoreZOC
-// and same-faction still short-circuit here.
+// Embarked cargo never projects and same-faction never applies; both short-circuit here.
+// Everything else is the zoc grid, resolved with rSubject as the acting unit — the row is
+// the held unit's domain, the column the projector's, so a unit that ignores ZOC declares a
+// zoc `deny` on itself (non-default where stock would hold it).
 bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject,
                      const InteractionGridsConfig_t& rGrids);
 
@@ -20,15 +22,17 @@ bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject,
 bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile,
                          const InteractionGridsConfig_t& rGrids);
 
-// Tiles rMover can hold on its own: enter-grid allow, or a friendly sea base (a land unit
-// garrisons one without a hull). Excludes anything that depends on other units being
-// present — see CanEnterTile for boarding / InteractionOverride enter.
-bool CanOccupyTileUnaided(const Unit& rMover, const Tile& rTile,
-                          const InteractionGridsConfig_t& rGrids);
+// Whether rMover could stand on rTile with no hull under it: enter-grid allow, or any
+// friendly base tile. NOT a movement predicate — it never grants entry, and reaching a tile
+// is strictly harder than holding one (a land unit may hold its own sea base but may only
+// *reach* it by transport or Amphibious Pods; see CanEnterTile). Asked only when a carrier
+// is about to stop supporting a passenger: auto-boarding, carrier loss, unload-in-place.
+bool CanHoldTileWithoutCarrier(const Unit& rMover, const Tile& rTile,
+                               const InteractionGridsConfig_t& rGrids);
 
 // Full tile-entry predicate used by stepping, unloading, and attack legality.
 // Resolve(enter) allow, plus land exceptions that depend on what else is on the tile:
-// board a friendly transport, or CanOccupyTileUnaided (friendly sea base). Neither grants
+// board a friendly transport, or CanHoldTileWithoutCarrier (friendly sea base). Neither grants
 // free ocean movement.
 bool CanEnterTile(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
                   const InteractionGridsConfig_t& rGrids);

@@ -212,7 +212,6 @@ TEST_CASE("Non-combat specials resolve capability flags and cargo capacity", "[u
     {
         const UnitDesign design = MakeSpecialDesign_(chassis, specials.Get("Probe_Team"));
         CHECK(ResolveFlag(design, RuleFlagId_t::ProbeTeam));
-        CHECK(ResolveFlag(design, RuleFlagId_t::IgnoreZoneOfControl));
         CHECK(ResolveStat(design, StatId_t::Attack) == 0);
     }
 }

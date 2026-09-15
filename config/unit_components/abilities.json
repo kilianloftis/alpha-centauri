@@ -27,9 +27,9 @@
         "parameters": { "channel": "cloak" }
       },
       {
-        "type": "RuleFlag",
+        "type": "InteractionOverride",
         "scope": "ThisUnit",
-        "parameters": { "flag": "ignore_zone_of_control" }
+        "parameters": { "grid": "zoc", "cell": "deny" }
       }
     ]
   },
@@ -143,16 +143,6 @@
         "type": "RuleFlag",
         "scope": "ThisTile",
         "parameters": { "flag": "refuels_air" }
-      },
-      {
-        "type": "InteractionOverride",
-        "scope": "ThisTile",
-        "parameters": { "grid": "attack_unit", "target_domain": "air", "cell": "allow" }
-      },
-      {
-        "type": "InteractionOverride",
-        "scope": "ThisTile",
-        "parameters": { "grid": "attack_unit", "target_domain": "orbital", "cell": "allow" }
       }
     ]
   },

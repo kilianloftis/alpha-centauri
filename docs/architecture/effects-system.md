@@ -784,16 +784,26 @@ check it with a `std::get_if<RuleFlagEffect_t>` scan over the relevant pool — 
 `Unit::ResolveFlag_` for the pattern. Context-free `ResolveFlag` overloads skip effects
 that carry a `condition` (same rule as `FilterByStatId`).
 
-**Interaction grids** (`config/interaction_grids.json`) hold stock domain matrices for
-`enter` (mover domain × land/water), `attack_unit` (attacker × defender domain), and `zoc`
-(projector × subject). Cells are `allow` / `deny` only. Holes are filled by
-`InteractionOverride` effects: omit an axis to match any value; optional `condition` still
-applies. Resolve order is acting-unit overrides → `ThisTile` overrides on the relevant tile
-(improvements + radius-0 projectors for the queried faction, same shape as
-`TileProvidesFlag`) → stock grid. Stock Amphibious Pods override `enter` for land×water when
-Water+Base. Air Superiority overrides `attack_unit` for defender air/orbital. Base, Airbase,
-and Carrier Deck declare `ThisTile` `attack_unit` overrides so grounded air/orbital are
-attackable; fuel still uses `RefuelsAir` only. `Water` is a real
+**Interaction grids** (`config/interaction_grids.json`) hold the stock matrices. Every grid is
+the acting unit's domain (the row) against one other thing (the column): `enter` uses
+`surface`, `attack_tile` uses `footing`, and `attack_unit` and `zoc` use `target_domain`. On
+`zoc` the actor is the unit a zone of control would *hold*, not the one projecting it, so its
+row is the held unit's domain and its column the projector's.
+Cells are `allow` / `deny` on the stock grids. Holes are filled by `InteractionOverride`
+effects: omit an axis to match any value; optional `condition` still applies; `cell` is
+required and may be either polarity. At resolve, an override that restates the stock cell is
+skipped (non-default only), so for any concrete query only one polarity can fire and
+first-match order among overrides never matters. Scope must be `ThisUnit` or `FactionUnits`;
+a tile-scoped override fails at load rather than silently never matching. Resolution is
+acting-unit overrides → stock grid, and nothing else — the unit is the only override source,
+so `ResolveInteractionCell` takes no tile and its inputs never vary by call site. A rule that
+belongs to a *tile* is plain code at the call site that needs it: the port rule sits beside
+`HasFriendlyBase` in `MovementRules`, and a grounded aircraft's attackability derives from the
+defender tile's `RefuelsAir` in `AttackRules`. Stock Amphibious Pods override `enter` for
+land×water when Water+Base, plus `attack_tile` for every footing. Air Superiority overrides
+`attack_unit` for target air/orbital. Cloaking Device and Probe Team override `zoc` to `deny`
+with both axes omitted — where stock would hold the unit that is non-default; where stock
+already denies, the override is a no-op. `Water` is a real
 improvement entry covering any sea tile (`elevation < 0`), and it **stacks** with the depth
 band rather than replacing it: a submerged tile carries `Water` plus exactly one of `Ocean` /
 `OceanShelf` (split at `k_OceanShelfMinElevation`), in that order. Put rules shared by all sea

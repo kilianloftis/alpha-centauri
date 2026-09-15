@@ -44,22 +44,15 @@ bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject,
     {
         return false;
     }
+    // The subject is the actor: it is the unit whose move is being gated, and overrides
+    // resolve from the acting unit. That is what lets a unit declare "nothing holds me"
+    // (Cloaking Device, Probe Team) as a zoc deny on itself — non-default where stock allows.
     InteractionQuery_t q;
     q.grid = InteractionGridId_t::Zoc;
-    q.actorDomain = rProjector.GetDomain();
-    q.targetDomain = rSubject.GetDomain();
+    q.actorDomain = rSubject.GetDomain();
+    q.targetDomain = rProjector.GetDomain();
     EffectContext_t ctx;
-    if (ResolveInteractionCell(rGrids, q, &rProjector, ctx, nullptr, nullptr,
-                               rProjector.GetFaction().GetFactionId())
-        != InteractionCell_t::Allow)
-    {
-        return false;
-    }
-
-    // Air subjects are already excluded by the stock zoc grid; this flag is for land/sea
-    // units (e.g. probes) that ignore ZOC without changing domain. Resolved last because it
-    // collects the subject's effects — only worth paying once the grid says ZOC applies.
-    return !ResolveFlag(rSubject, RuleFlagId_t::IgnoreZoneOfControl);
+    return ResolveInteractionCell(rGrids, q, &rSubject, ctx) == InteractionCell_t::Allow;
 }
 
 bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile,
@@ -67,22 +60,20 @@ bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile,
 {
     EffectContext_t ctx;
     ctx.targetTile = &rTile;
-    ctx.pUnit = &rMover;
-    return ResolveInteractionCell(rGrids, EnterQuery_(rMover, rTile), &rMover, ctx, &rTile,
-                                  nullptr, rMover.GetFaction().GetFactionId())
+    return ResolveInteractionCell(rGrids, EnterQuery_(rMover, rTile), &rMover, ctx)
         == InteractionCell_t::Allow;
 }
 
-bool CanOccupyTileUnaided(const Unit& rMover, const Tile& rTile,
-                          const InteractionGridsConfig_t& rGrids)
+bool CanHoldTileWithoutCarrier(const Unit& rMover, const Tile& rTile,
+                               const InteractionGridsConfig_t& rGrids)
 {
     if (CanEnterTileTerrain(rMover, rTile, rGrids))
     {
         return true;
     }
-    // A land unit garrisons a friendly sea base without needing a hull under it.
-    return rMover.GetDomain() == UnitDomain_t::Land && rTile.IsWater()
-        && HasFriendlyBase(rMover, rTile);
+    // Any unit may *hold* a friendly base tile its own domain would refuse. This grants no
+    // entry: a land unit still reaches its own sea base only by transport or pods.
+    return HasFriendlyBase(rMover, rTile);
 }
 
 bool CanEnterTile(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
@@ -90,25 +81,23 @@ bool CanEnterTile(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldM
 {
     EffectContext_t ctx;
     ctx.targetTile = &rTile;
-    ctx.pUnit = &rMover;
-    // Widest source set: the mover's own overrides, the tile's improvements and features,
-    // and ThisTile overrides projected by units already standing here.
-    if (ResolveInteractionCell(rGrids, EnterQuery_(rMover, rTile), &rMover, ctx, &rTile,
-                               &rWorldMap, rMover.GetFaction().GetFactionId())
+    if (ResolveInteractionCell(rGrids, EnterQuery_(rMover, rTile), &rMover, ctx)
         == InteractionCell_t::Allow)
     {
         return true;
     }
-    // That resolve ran the same query CanOccupyTileUnaided would, over a superset of the
-    // sources, so re-running it here would only repeat the work. Boarding is the one
-    // remaining way onto water: a land unit reaches even its own sea base by transport, so
-    // HasFriendlyBase is deliberately *not* consulted here. It still governs whether a unit
-    // already there may stay (CanOccupyTileUnaided / SurvivesCarrierLoss).
-    if (rMover.GetDomain() != UnitDomain_t::Land || !rTile.IsWater())
+    // Port rule: a ship may berth in a friendly coastal base even though the enter grid
+    // refuses its land tile. "Coastal" needs no test of its own — movement is step by step
+    // between adjacent tiles, so a ship can only arrive from water it already occupies.
+    if (rMover.GetDomain() == UnitDomain_t::Sea && HasFriendlyBase(rMover, rTile))
     {
-        return false;
+        return true;
     }
-    return FindBoardableTransport(rMover, rTile, rWorldMap) != nullptr;
+    // Water is reached only by boarding. A land unit gets to its own sea base by transport
+    // too, so HasFriendlyBase is deliberately not consulted here — it governs only whether a
+    // unit already there may stay (CanHoldTileWithoutCarrier / SurvivesCarrierLoss).
+    return rMover.GetDomain() == UnitDomain_t::Land && rTile.IsWater()
+        && FindBoardableTransport(rMover, rTile, rWorldMap) != nullptr;
 }
 
 bool HasFriendlyOccupant(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap)

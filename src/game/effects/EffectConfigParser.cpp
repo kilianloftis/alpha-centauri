@@ -342,6 +342,13 @@ void ParseRuleFlag_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
 
 void ParseInteractionOverride_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
 {
+    if (rEffect.scope != EffectScope_t::ThisUnit
+        && rEffect.scope != EffectScope_t::FactionUnits)
+    {
+        throw std::runtime_error(
+            "InteractionOverride scope must be ThisUnit or FactionUnits");
+    }
+
     InteractionOverrideEffect_t overrideFx;
     const std::string gridStr = parameters.value("grid", "");
     if (gridStr.empty())
@@ -369,6 +376,8 @@ void ParseInteractionOverride_(const nlohmann::json& parameters, EffectConfig_t&
         throw std::runtime_error("Unknown InteractionOverride grid: '" + gridStr + "'");
     }
 
+    // cell is required. Either polarity is legal; resolve skips overrides that restate the
+    // stock cell (non-default only), so first-match order among overrides never matters.
     const std::string cellStr = parameters.value("cell", "");
     if (cellStr.empty())
     {
@@ -883,10 +892,6 @@ Condition_t ParseCondition(const nlohmann::json& conditionJson)
     if (kindStr == "IsHeadquarters")
     {
         return IsHeadquarters_t{};
-    }
-    if (kindStr == "TargetTileIsOwnBase")
-    {
-        return TargetTileIsOwnBase_t{};
     }
     if (kindStr == "AllOf")
     {

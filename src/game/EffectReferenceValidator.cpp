@@ -184,11 +184,9 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
                                            || std::is_same_v<T, OriginBaseIsHomeBase_t>
                                            || std::is_same_v<T, AttackerIsEmbarked_t>
                                            || std::is_same_v<T, AttackerDomain_t>
-                                           || std::is_same_v<T, IsHeadquarters_t>
-                                           || std::is_same_v<T, TargetTileIsOwnBase_t>)
+                                           || std::is_same_v<T, IsHeadquarters_t>)
                         {
-                            // No config feature/component ids to resolve (domains are enums;
-                            // TargetTileIsOwnBase reads live faction state, not config).
+                            // No config feature/component ids to resolve (domains are enums).
                         }
                         else
                         {

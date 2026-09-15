@@ -36,9 +36,7 @@ bool CanAttackTile(const Unit& rAttacker, const Tile& rTargetTile, const WorldMa
     EffectContext_t ctx;
     ctx.pAttacker = &rAttacker;
     ctx.targetTile = &rTargetTile;
-    return ResolveInteractionCell(rGrids, q, &rAttacker, ctx, &rTargetTile, &rWorldMap,
-                                  rAttacker.GetFaction().GetFactionId())
-        == InteractionCell_t::Allow;
+    return ResolveInteractionCell(rGrids, q, &rAttacker, ctx) == InteractionCell_t::Allow;
 }
 
 Unit* FindVisibleHostileOnTile(const Unit& rObserver, const Tile& rTile,
@@ -100,9 +98,12 @@ Unit* FindAttackableHostileOnTile(const Unit& rAttacker, const Tile& rTargetTile
     EffectContext_t ctx;
     ctx.pAttacker = &rAttacker;
     ctx.targetTile = &rTargetTile;
-    if (ResolveInteractionCell(rGrids, q, &rAttacker, ctx, &rTargetTile, &rWorldMap,
-                               pDefender->GetFaction().GetFactionId())
-        == InteractionCell_t::Deny)
+    // A grounded aircraft is attackable by anything: sitting on a pad (base, airbase,
+    // friendly carrier deck) is what takes it out of its own domain's protection, so that
+    // exemption derives from the tile's RefuelsAir rather than from the grid.
+    if (ResolveInteractionCell(rGrids, q, &rAttacker, ctx) == InteractionCell_t::Deny
+        && !TileProvidesFlag(rTargetTile, RuleFlagId_t::RefuelsAir, rWorldMap,
+                             pDefender->GetFaction().GetFactionId()))
     {
         return nullptr;
     }

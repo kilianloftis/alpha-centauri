@@ -486,7 +486,6 @@ enum class RuleFlagId_t
     // DestroyUnit's (PlayerActions under deferral, or TryAttack / TryFoundBase directly).
     // ResolveFlag ORs across every component on the design.
     SingleUse,
-    IgnoreZoneOfControl,
     IgnoreDifficultTerrain,
     TreatFungusAsRoad,
     // Any combat involving a unit with this flag uses psi strengths and damage.
@@ -559,7 +558,6 @@ inline RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "remove_shroud")               return RuleFlagId_t::RemoveShroud;
     if (rFlag == "remove_fog")                  return RuleFlagId_t::RemoveFog;
     if (rFlag == "single_use")                  return RuleFlagId_t::SingleUse;
-    if (rFlag == "ignore_zone_of_control")      return RuleFlagId_t::IgnoreZoneOfControl;
     if (rFlag == "ignores_difficult_terrain")   return RuleFlagId_t::IgnoreDifficultTerrain;
     if (rFlag == "treat_fungus_as_road")         return RuleFlagId_t::TreatFungusAsRoad;
     if (rFlag == "forces_psi_combat")            return RuleFlagId_t::ForcesPsiCombat;

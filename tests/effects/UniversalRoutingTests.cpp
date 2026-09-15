@@ -104,13 +104,11 @@ TEST_CASE("FactionUnits lane: a building's FactionUnits InteractionOverride appl
     EffectContext_t ctx;
     ctx.targetTile = &seaBase.GetTile();
 
-    CHECK(ResolveInteractionCell(fixture.dataContext.interactionGrids, enterWater, &unit, ctx,
-                                 &seaBase.GetTile(), &fixture.map, faction.GetFactionId())
+    CHECK(ResolveInteractionCell(fixture.dataContext.interactionGrids, enterWater, &unit, ctx)
           == InteractionCell_t::Deny);
 
     home.GetBuildingManager().AddBuilding("amphibious_grantor");
-    CHECK(ResolveInteractionCell(fixture.dataContext.interactionGrids, enterWater, &unit, ctx,
-                                 &seaBase.GetTile(), &fixture.map, faction.GetFactionId())
+    CHECK(ResolveInteractionCell(fixture.dataContext.interactionGrids, enterWater, &unit, ctx)
           == InteractionCell_t::Allow);
 
     // Intrinsic design unchanged — grant arrives from the faction pool only.

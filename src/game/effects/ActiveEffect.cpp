@@ -542,21 +542,6 @@ bool ConditionBodySatisfied_(const Condition_t& condition, const EffectContext_t
                 }
                 return false;
             }
-            else if constexpr (std::is_same_v<T, TargetTileIsOwnBase_t>)
-            {
-                if (ctx.pUnit == nullptr || ctx.targetTile == nullptr)
-                {
-                    return false;
-                }
-                for (const BaseManager& rBase : ctx.pUnit->GetFaction().Bases())
-                {
-                    if (&rBase.GetTile() == ctx.targetTile)
-                    {
-                        return true;
-                    }
-                }
-                return false;
-            }
             else if constexpr (std::is_same_v<T, IsHeadquarters_t>)
             {
                 return ctx.pBase != nullptr

@@ -360,7 +360,7 @@ TEST_CASE("Embarked cargo defends only in a base; carrier preferred",
     }
 }
 
-TEST_CASE("Air and Orbital targets require Air Superiority unless pad InteractionOverride",
+TEST_CASE("Air and Orbital targets require Air Superiority unless RefuelsAir",
           "[unit][attack][air-superiority]")
 {
     AttackGame_ game;
@@ -412,7 +412,7 @@ TEST_CASE("Air and Orbital targets require Air Superiority unless pad Interactio
         CHECK(CanDeclareAttack(flagged, airDefender.GetTile(), rMap, rEffects));
     }
 
-    SECTION("Base ThisTile InteractionOverride exempts the gate")
+    SECTION("RefuelsAir base tile exempts the gate")
     {
         rMap.GetTile(5, 5)->SetElevation(100);
         rMap.GetTile(6, 5)->SetElevation(100);
@@ -435,10 +435,10 @@ TEST_CASE("Air and Orbital targets require Air Superiority unless pad Interactio
         CHECK(CanDeclareAttack(nearMissile, groundedMissile.GetTile(), rMap, rEffects));
     }
 
-    SECTION("friendly carrier deck ThisTile InteractionOverride exempts the gate")
+    SECTION("friendly carrier deck exempts the gate")
     {
         // Open sea: land amphibious enter needs Water+Base, so use an air attacker without
-        // Air Superiority — pad InteractionOverride from the carrier must open the declare gate.
+        // Air Superiority — RefuelsAir from the carrier must open the declare gate.
         rMap.GetTile(5, 5)->SetElevation(-100);
         rMap.GetTile(4, 5)->SetElevation(100);
         Unit& airOnDeck =

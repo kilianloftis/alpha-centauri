@@ -1,16 +1,13 @@
 #pragma once
 
 #include "game/effects/InteractionGridsConfig.h"
-#include "game/faction/base/BaseTypes.h"
 
 #include <span>
 
 namespace ac
 {
 
-class Tile;
 class Unit;
-class WorldMap;
 struct ActiveEffect_t;
 struct EffectConfig_t;
 struct EffectContext_t;
@@ -40,15 +37,14 @@ struct InteractionQuery_t
 // What rUnit is standing on. Purely a property of the unit — no target tile involved.
 InteractionFooting_t FootingFor(const Unit& rUnit);
 
-// Resolve order: acting-unit InteractionOverride (first match) → ThisTile overrides on
-// pRelevantTile (improvements + radius-0 projectors for tileFaction) → stock grid cell.
-// pActingUnit / pRelevantTile / pWorldMap may be null when that layer is not needed.
+// The acting unit's first matching InteractionOverride whose cell differs from stock, else
+// the stock grid cell. Overrides that restate stock are skipped (non-default only), so for
+// any concrete query only one polarity can fire. The unit is the only override source: rules
+// that belong to a *tile* (a port, a landing pad) are plain code at their call site, so this
+// function's inputs never vary by caller. pActingUnit may be null when no unit is in play.
 InteractionCell_t ResolveInteractionCell(const InteractionGridsConfig_t& rGrids,
                                          const InteractionQuery_t& rQuery,
                                          const Unit* pActingUnit,
-                                         const EffectContext_t& rCtx,
-                                         const Tile* pRelevantTile,
-                                         const WorldMap* pWorldMap,
-                                         FactionId_t tileFaction);
+                                         const EffectContext_t& rCtx);
 
 } // namespace ac

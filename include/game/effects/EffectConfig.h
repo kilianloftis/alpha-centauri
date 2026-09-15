@@ -234,10 +234,14 @@ struct TransportParamsEffect_t
     std::vector<RuleFlagId_t> loadSiteFlags;
 };
 
-// Overrides one cell (or a wild-card slice) of an interaction grid. Omit an axis to match
-// any value on that axis. Optional EffectConfig_t::condition still applies (e.g. Water+Base).
-// actorDomain is the row on every grid; the parser rejects a column axis that does not
-// belong to the selected grid, so typos fail at load rather than silently never matching.
+// Overrides one cell (or a wild-card slice) of an interaction grid to a non-default value.
+// `cell` is required and may be allow or deny; at resolve, an override that restates the
+// stock cell is skipped, so for any concrete query only one polarity can fire and first-match
+// order among overrides never matters. Omit an axis to match any value on that axis.
+// Optional EffectConfig_t::condition still applies (e.g. Water+Base). actorDomain is the row
+// on every grid; the parser rejects a column axis that does not belong to the selected grid,
+// and rejects any scope other than ThisUnit / FactionUnits, so typos fail at load rather
+// than silently never matching.
 struct InteractionOverrideEffect_t
 {
     InteractionGridId_t grid = InteractionGridId_t::Enter;
@@ -325,13 +329,6 @@ struct IsDefending_t
 {
 };
 
-// True when the acting unit's own faction holds a base on the target tile. Distinct from
-// TargetTileHas("Base"), which is faction-blind: this is what lets a tile-scoped effect on
-// the Base improvement apply only to its owner's units (a ship docking at its own coastal
-// base). Requires EffectContext_t::pUnit and targetTile.
-struct TargetTileIsOwnBase_t
-{
-};
 
 // True when ActiveEffect_t::originBase is the base sitting on EffectContext_t::targetTile
 // (Creche combat bonus for the base being defended, not the unit's home).
@@ -365,13 +362,11 @@ struct IsHeadquarters_t
 
 struct Condition_t : std::variant<TargetTileHas_t, AllOf_t, IsDefending_t,
                                   OriginBaseIsTargetBase_t, OriginBaseIsHomeBase_t,
-                                  AttackerIsEmbarked_t, AttackerDomain_t, IsHeadquarters_t,
-                                  TargetTileIsOwnBase_t>
+                                  AttackerIsEmbarked_t, AttackerDomain_t, IsHeadquarters_t>
 {
     using Variant = std::variant<TargetTileHas_t, AllOf_t, IsDefending_t,
                                  OriginBaseIsTargetBase_t, OriginBaseIsHomeBase_t,
-                                 AttackerIsEmbarked_t, AttackerDomain_t, IsHeadquarters_t,
-                                 TargetTileIsOwnBase_t>;
+                                 AttackerIsEmbarked_t, AttackerDomain_t, IsHeadquarters_t>;
     using Variant::Variant;
     using Variant::operator=;
 

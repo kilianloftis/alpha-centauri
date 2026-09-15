@@ -147,9 +147,9 @@
         "parameters": { "flag": "probe_team" }
       },
       {
-        "type": "RuleFlag",
+        "type": "InteractionOverride",
         "scope": "ThisUnit",
-        "parameters": { "flag": "ignore_zone_of_control" }
+        "parameters": { "grid": "zoc", "cell": "deny" }
       },
       {
         "type": "RuleFlag",

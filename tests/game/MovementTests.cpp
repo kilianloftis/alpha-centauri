@@ -102,7 +102,7 @@ TEST_CASE("Land cannot enter water; sea cannot enter land", "[movement][domain]"
     CHECK(move.steps.CanStep(sea, sea.GetTile(), fixture.At(5, 5)));
 }
 
-TEST_CASE("Land may enter friendly sea base or transport; pods are not open ocean",
+TEST_CASE("Land reaches water only by transport; pods are not open ocean",
           "[movement][domain][amphibious]")
 {
     FactionFixture fixture;
@@ -114,11 +114,15 @@ TEST_CASE("Land may enter friendly sea base or transport; pods are not open ocea
     MakeWater_(fixture.At(5, 5));
     MakeWater_(fixture.At(4, 5));
 
-    SECTION("friendly sea base")
+    SECTION("a friendly sea base is not a walk-in: it still takes a transport")
     {
         fixture.MakeFactionBase(faction, 5, 4);
         Unit& land = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
-        CHECK(move.steps.CanStep(land, land.GetTile(), fixture.At(5, 4)));
+        CHECK_FALSE(move.steps.CanStep(land, land.GetTile(), fixture.At(5, 4)));
+        // Holding the tile is a separate question from reaching it — a garrison whose
+        // carrier dies in its own sea base still survives there.
+        CHECK(CanHoldTileWithoutCarrier(land, fixture.At(5, 4),
+                                   fixture.dataContext.interactionGrids));
     }
 
     SECTION("friendly transport (sea unit with cargo capacity)")
@@ -142,6 +146,36 @@ TEST_CASE("Land may enter friendly sea base or transport; pods are not open ocea
         CHECK_FALSE(CanEnterTileTerrain(amph, fixture.At(5, 4), fixture.dataContext.interactionGrids));
         CHECK_FALSE(CanEnterTile(amph, fixture.At(5, 4), fixture.map,
                                  fixture.dataContext.interactionGrids));
+    }
+}
+
+TEST_CASE("Sea may enter its own land base, but not open land or a foreign base",
+          "[movement][domain]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    MovementHarness_ move(fixture);
+    Faction& faction = fixture.MakeFaction();
+    Faction& other = fixture.MakeFaction();
+
+    MakeWater_(fixture.At(4, 4));
+    Unit& sea = fixture.MakeUnit(faction, 4, 4, {"test_sea_chassis"});
+
+    SECTION("plain land stays closed")
+    {
+        CHECK_FALSE(move.steps.CanStep(sea, sea.GetTile(), fixture.At(5, 4)));
+    }
+
+    SECTION("own coastal land base is enterable")
+    {
+        fixture.MakeFactionBase(faction, 5, 4);
+        CHECK(move.steps.CanStep(sea, sea.GetTile(), fixture.At(5, 4)));
+    }
+
+    SECTION("another faction's coastal land base is not")
+    {
+        fixture.MakeFactionBase(other, 5, 4);
+        CHECK_FALSE(move.steps.CanStep(sea, sea.GetTile(), fixture.At(5, 4)));
     }
 }
 
@@ -450,7 +484,7 @@ TEST_CASE("Air ignores ZOC but exerts on land", "[movement][zoc]")
     CHECK(move.steps.CanStep(flyer, flyer.GetTile(), fixture.At(4, 5))); // would be ZOC->ZOC for land
 }
 
-TEST_CASE("IgnoreZoneOfControl flag bypasses ZOC", "[movement][zoc]")
+TEST_CASE("A zoc deny override on the held unit bypasses ZOC", "[movement][zoc]")
 {
     FactionFixture fixture;
     FillLand_(fixture);
@@ -460,9 +494,12 @@ TEST_CASE("IgnoreZoneOfControl flag bypasses ZOC", "[movement][zoc]")
 
     fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
     Unit& probe = fixture.MakeUnit(player, 4, 4, {"test_chassis", "ignore_zoc"});
-    CHECK(probe.GetFlag(RuleFlagId_t::IgnoreZoneOfControl));
     CHECK_FALSE(move.steps.IsTileInHostileZoc(probe, probe.GetTile()));
     CHECK(move.steps.CanStep(probe, probe.GetTile(), fixture.At(4, 5)));
+
+    // The override is the unit's own, so an identical neighbour without it is still held.
+    Unit& plain = fixture.MakeUnit(player, 4, 3, {"test_chassis"});
+    CHECK(move.steps.IsTileInHostileZoc(plain, plain.GetTile()));
 }
 
 TEST_CASE("UnitOrderExecutor advances until moves run out", "[movement][orders]")

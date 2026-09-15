@@ -112,7 +112,6 @@ TEST_CASE("ParseModifierOp / ParseEffectScope / ParseEffectPersistence mappings"
 TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]")
 {
     CHECK(ParseRuleFlagId("single_use") == RuleFlagId_t::SingleUse);
-    CHECK(ParseRuleFlagId("ignore_zone_of_control") == RuleFlagId_t::IgnoreZoneOfControl);
     CHECK(ParseRuleFlagId("population_boom") == RuleFlagId_t::PopulationBoom);
     CHECK(ParseRuleFlagId("near_zero_growth") == RuleFlagId_t::NearZeroGrowth);
     CHECK(ParseRuleFlagId("ignores_difficult_terrain") == RuleFlagId_t::IgnoreDifficultTerrain);
@@ -1185,6 +1184,18 @@ TEST_CASE("ParseEffectConfig: InteractionOverride and AttackerIsEmbarked",
     CHECK(*pAttackUnit->targetDomain == UnitDomain_t::Air);
     CHECK_FALSE(pAttackUnit->actorDomain.has_value());
 
+    const json zocDenyJson = json::parse(R"({
+        "type": "InteractionOverride", "scope": "ThisUnit",
+        "parameters": { "grid": "zoc", "cell": "deny" }
+    })");
+    const EffectConfig_t zocDenyConfig =
+        EffectConfigParser::ParseEffectConfig(zocDenyJson);
+    const auto* pZocDeny =
+        std::get_if<InteractionOverrideEffect_t>(&zocDenyConfig.effect);
+    REQUIRE(pZocDeny != nullptr);
+    CHECK(pZocDeny->grid == InteractionGridId_t::Zoc);
+    CHECK(pZocDeny->cell == InteractionCell_t::Deny);
+
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "InteractionOverride", "scope": "ThisUnit",
         "parameters": { "grid": "enter", "target_domain": "air", "cell": "allow" }
@@ -1196,6 +1207,24 @@ TEST_CASE("ParseEffectConfig: InteractionOverride and AttackerIsEmbarked",
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "Permission", "scope": "ThisUnit",
         "parameters": { "permission": "EnterTile" }
+    })")));
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "InteractionOverride", "scope": "ThisUnit",
+        "parameters": { "grid": "enter" }
+    })")));
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "InteractionOverride", "scope": "ThisUnit",
+        "parameters": { "grid": "zoc", "cell": "maybe" }
+    })")));
+
+    // Tile-scoped overrides are rejected: resolve only consults the acting unit.
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "InteractionOverride", "scope": "ThisTile",
+        "parameters": { "grid": "attack_unit", "target_domain": "air", "cell": "allow" }
+    })")));
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "InteractionOverride", "scope": "ThisBase",
+        "parameters": { "grid": "enter", "surface": "water", "cell": "allow" }
     })")));
 
     // attack_tile shares actor_domain with every grid but owns the footing column.
@@ -1234,6 +1263,14 @@ TEST_CASE("ParseEffectConfig: InteractionOverride and AttackerIsEmbarked",
     const EffectConfig_t embarkedConfig = EffectConfigParser::ParseEffectConfig(embarkedJson);
     REQUIRE(embarkedConfig.condition.has_value());
     CHECK(std::holds_alternative<AttackerIsEmbarked_t>(embarkedConfig.condition->AsVariant()));
+
+    const json factionUnitsJson = json::parse(R"({
+        "type": "InteractionOverride", "scope": "FactionUnits",
+        "parameters": { "grid": "enter", "actor_domain": "land", "surface": "water",
+                       "cell": "allow" }
+    })");
+    CHECK(std::holds_alternative<InteractionOverrideEffect_t>(
+        EffectConfigParser::ParseEffectConfig(factionUnitsJson).effect));
 
     const json actorDomainJson = json::parse(R"({
         "type": "StatModifier", "scope": "ThisUnit",

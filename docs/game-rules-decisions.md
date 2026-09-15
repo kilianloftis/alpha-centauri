@@ -282,6 +282,39 @@ those can append gates in `CollectProductionPauseGates` later.
 
 **Implemented** 2026-09-07.
 
+## 12. Any unit can be in a base (the port rule)
+
+**Rule:** a base tile admits any unit, whatever its domain and whatever the terrain under it.
+A sea unit may enter the land tile of a **friendly** base; a foreign coastal base cannot be
+entered by sea. Occupancy is the general form: `CanHoldTileWithoutCarrier` lets any unit hold a
+friendly base tile, which is what keeps a land garrison alive in a sea base when its carrier
+dies (`SurvivesCarrierLoss`).
+
+Reaching a tile and holding it are separate questions, and they are deliberately asymmetric.
+A ship berths under its own power. A land unit does **not**: it reaches water only by
+boarding a transport, and its own sea base is not a walk-in, so `CanEnterTile` does not
+consult `HasFriendlyBase` for a land mover.
+
+"Adjacent to the sea tile" needs no rule of its own. Movement is step by step between
+adjacent tiles, so a ship can only arrive at a coastal base from water it already occupies.
+A ship berthed in a land base may leave only to tiles its domain allows — plus any *other*
+adjacent friendly base, which is accepted rather than blocked.
+
+This lives in code (`MovementRules`, beside `HasFriendlyBase`) and not in an
+`InteractionOverride`. It is a property of the *tile*, and the interaction grids resolve
+overrides from the acting unit only — keeping tile-shaped rules out of the resolver is what
+lets `ResolveInteractionCell` take the same inputs at every call site.
+
+**Consequence, accepted:** a *sea* transport cannot put an unembarked land garrison into a sea
+base. `CanUnloadTo` requires an adjacent destination and routes through `CanEnterTile`, and
+`CanUnloadTransportInPlace` is air-only, so cargo stays embarked in the docked ship (where it
+still defends and blocks). Two routes to unembarked-in-sea-base remain: an **air** transport
+unloading in place over the base, and a carrier dying under its passenger. Both go through
+`CanHoldTileWithoutCarrier`, which admits any friendly base tile — holding a tile is
+deliberately easier than reaching one.
+
+**Implemented** 2026-09-10.
+
 ## Deferred by decision, not by uncertainty
 
 - **Mid-proposal trade failure should crash.** A `TransferBaseTo` that throws part-way through a
