@@ -85,11 +85,60 @@ std::vector<RankedBase_t> RankBasesByEnergy_(const Faction& rFaction)
     return ranked;
 }
 
+int CommercePairValue_(const Faction& rBeneficiary,
+                       const BaseManager& rBeneficiaryBase,
+                       int beneficiaryEnergy,
+                       int partnerEnergy,
+                       DiplomaticStatus_t status,
+                       const CommerceConfig_t& rConfig,
+                       int techDenominator)
+{
+    const double combined = static_cast<double>(beneficiaryEnergy + partnerEnergy);
+    int value = static_cast<int>(std::ceil(combined * rConfig.pairMultiplier));
+
+    value = FinalizeResolvedStat(ResolveFactionStat(
+        rBeneficiary.GetActiveEffects(), StatId_t::CommerceRate, static_cast<double>(value)));
+
+    const int commerceTech = FinalizeResolvedStat(ResolveBaseStat(
+        rBeneficiaryBase.GetBaseEffects(), StatId_t::CommerceRating,
+        SeedFor(StatId_t::CommerceRating)));
+    value = (value * (commerceTech + 1)) / techDenominator;
+
+    if (status == DiplomaticStatus_t::Friendship)
+    {
+        value = static_cast<int>(std::floor(static_cast<double>(value) * rConfig.treatyMultiplier));
+    }
+
+    value += FinalizeResolvedStat(ResolveBaseStat(
+        rBeneficiaryBase.GetBaseEffects(), StatId_t::CommerceEnergyBonus,
+        SeedFor(StatId_t::CommerceEnergyBonus)));
+
+    return value;
+}
+
 } // namespace
 
 std::unordered_map<BaseId_t, int> CommerceCalculator::ComputeForFaction(
     const Faction& rOwner, const GameState& rGameState) const
 {
+    std::unordered_map<BaseId_t, int> result;
+    for (const BaseManager& rBase : rOwner.Bases())
+    {
+        for (const CommercePartnerLine_t& rLine : ComputeForBase(rBase, rGameState))
+        {
+            if (rLine.ourEnergy > 0)
+            {
+                result[rBase.GetBaseId()] += rLine.ourEnergy;
+            }
+        }
+    }
+    return result;
+}
+
+std::vector<CommercePartnerLine_t> CommerceCalculator::ComputeForBase(
+    const BaseManager& rBase, const GameState& rGameState) const
+{
+    const Faction& rOwner = rBase.GetFaction();
     const CommerceConfig_t* pConfig = rOwner.GetDataContext().commerceConfig.get();
     if (pConfig == nullptr)
     {
@@ -99,13 +148,24 @@ std::unordered_map<BaseId_t, int> CommerceCalculator::ComputeForFaction(
 
     // TODO: zero commerce when sanctions are in effect against either faction.
 
-    // Planet-wide tech points only (discovered techs' commerce_rating Adds). Owner numerator
-    // uses full CommerceRating resolve (techs + Economy SE + faction bonuses).
     const int techDenominator = TotalTechCommerceRating_(rGameState) + 1;
-
     const std::vector<RankedBase_t> ownerBases = RankBasesByEnergy_(rOwner);
-    std::unordered_map<BaseId_t, int> result;
 
+    std::size_t ownerIndex = ownerBases.size();
+    for (std::size_t i = 0; i < ownerBases.size(); ++i)
+    {
+        if (ownerBases[i].pBase == &rBase)
+        {
+            ownerIndex = i;
+            break;
+        }
+    }
+    if (ownerIndex >= ownerBases.size())
+    {
+        throw std::runtime_error("CommerceCalculator: base is not owned by its faction");
+    }
+
+    std::vector<CommercePartnerLine_t> lines;
     const DiplomacyLedger& rDiplomacy = rGameState.GetDiplomacyLedger();
     const FactionId_t ownerId = rOwner.GetFactionId();
 
@@ -124,40 +184,27 @@ std::unordered_map<BaseId_t, int> CommerceCalculator::ComputeForFaction(
         }
 
         const std::vector<RankedBase_t> partnerBases = RankBasesByEnergy_(rPartner);
-        const std::size_t pairCount = std::min(ownerBases.size(), partnerBases.size());
-        for (std::size_t i = 0; i < pairCount; ++i)
+        if (ownerIndex >= partnerBases.size())
         {
-            const BaseManager& rOwnerBase = *ownerBases[i].pBase;
-            const double combined =
-                static_cast<double>(ownerBases[i].energy + partnerBases[i].energy);
-            int value = static_cast<int>(std::ceil(combined * rConfig.pairMultiplier));
-
-            value = FinalizeResolvedStat(ResolveFactionStat(
-                rOwner.GetActiveEffects(), StatId_t::CommerceRate, static_cast<double>(value)));
-
-            const int commerceTech = FinalizeResolvedStat(ResolveBaseStat(
-                rOwnerBase.GetBaseEffects(), StatId_t::CommerceRating,
-                SeedFor(StatId_t::CommerceRating)));
-            value = (value * (commerceTech + 1)) / techDenominator;
-
-            if (status == DiplomaticStatus_t::Friendship)
-            {
-                value = static_cast<int>(
-                    std::floor(static_cast<double>(value) * rConfig.treatyMultiplier));
-            }
-
-            value += FinalizeResolvedStat(ResolveBaseStat(
-                rOwnerBase.GetBaseEffects(), StatId_t::CommerceEnergyBonus,
-                SeedFor(StatId_t::CommerceEnergyBonus)));
-
-            if (value > 0)
-            {
-                result[rOwnerBase.GetBaseId()] += value;
-            }
+            continue;
         }
+
+        const RankedBase_t& rOwnerRank = ownerBases[ownerIndex];
+        const RankedBase_t& rPartnerRank = partnerBases[ownerIndex];
+
+        CommercePartnerLine_t line;
+        line.pPartner = &rPartner;
+        line.status = status;
+        line.ourEnergy = CommercePairValue_(
+            rOwner, rBase, rOwnerRank.energy, rPartnerRank.energy, status, rConfig,
+            techDenominator);
+        line.theirEnergy = CommercePairValue_(
+            rPartner, *rPartnerRank.pBase, rPartnerRank.energy, rOwnerRank.energy, status, rConfig,
+            techDenominator);
+        lines.push_back(line);
     }
 
-    return result;
+    return lines;
 }
 
 } // namespace ac

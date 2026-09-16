@@ -4,14 +4,17 @@
 #include "ViewFixture.h"
 
 #include "game/buildings/BuildingConfig.h"
+#include "game/Faction.h"
+#include "game/faction/CommerceCalculator.h"
+#include "game/faction/DiplomacyLedger.h"
+#include "game/faction/EconomyManager.h"
+#include "game/faction/FactionConfig.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/production/HurryProductionCalculator.h"
 #include "game/faction/base/production/ProductionManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
-#include "game/faction/EconomyManager.h"
-#include "game/Faction.h"
 #include "game/map/Tile.h"
 #include "game/population/pop-types/Pop.h"
 #include "ui/base/BaseDisplaySnapshot.h"
@@ -21,7 +24,9 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <memory>
 #include <optional>
+#include <string>
 
 using namespace ac;
 using actest::RecordingGraphics;
@@ -689,4 +694,45 @@ TEST_CASE("A Command Nexus grant offers scrap and then denies it", "[ui][base][s
     CHECK(fixture.graphics.AnyTextContaining("This building cannot be scrapped."));
     CHECK_FALSE(rBase.GetBuildingManager().HasBuilding("Command_Center"));
     CHECK(rBase.GetBuildingManager().HasBuilding("Command_Nexus"));
+}
+
+TEST_CASE("BaseView commerce panel lists partner shorthand and treaty energy", "[ui][base][commerce]")
+{
+    ViewFixture fixture;
+
+    FactionConfig_t partnerDef = fixture.factionDefinition;
+    partnerDef.id = "partner_faction";
+    partnerDef.identity.name = "Gaian";
+    Faction& rPartner = fixture.pState->AddFaction(std::make_unique<Faction>(
+        fixture.pState->AllocateFactionId(), /*bIsPlayerControlled*/ false, partnerDef,
+        fixture.dataContext, fixture.pState->GetWorldMap(), fixture.settings,
+        actest::k_TestFactionSeed));
+
+    BaseManager& rBase = fixture.MakeBase(2, 2);
+    rBase.GetBuildingManager().AddBuilding("world_beacon");
+
+    BaseManager* pPartnerBase = rPartner.CreateBase(
+        fixture.pState->AllocateBaseId(), "PartnerBase",
+        fixture.pState->GetWorldMap().GetTile(6, 2), fixture.dataContext,
+        fixture.pState->GetTileEffects(), fixture.pState->GetSecretProjectAvailability());
+    REQUIRE(pPartnerBase != nullptr);
+    pPartnerBase->GetBuildingManager().AddBuilding("world_beacon");
+
+    fixture.pState->GetDiplomacyLedger().SetStatus(
+        fixture.pPlayer->GetFactionId(), rPartner.GetFactionId(), DiplomaticStatus_t::Pact);
+
+    const auto lines = CommerceCalculator{}.ComputeForBase(rBase, *fixture.pState);
+    REQUIRE(lines.size() == 1);
+
+    auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());
+    REQUIRE(pView);
+    pView->Render(fixture.graphics);
+
+    CHECK(DrawnText_(fixture.graphics, "Commerce") != nullptr);
+    CHECK(DrawnText_(fixture.graphics,
+                     "GAIAN: " + std::to_string(lines[0].ourEnergy))
+          != nullptr);
+    CHECK(DrawnText_(fixture.graphics,
+                     "Pact (They get " + std::to_string(lines[0].theirEnergy) + ")")
+          != nullptr);
 }

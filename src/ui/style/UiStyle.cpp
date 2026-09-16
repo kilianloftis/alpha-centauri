@@ -362,6 +362,7 @@ BaseViewStyle_t ParseBaseViewStyle_(const nlohmann::json& j)
 {
     BaseViewStyle_t s{};
     s.growthLayout = ParseLayout_(j, "growth_layout");
+    s.commerceLayout = ParseLayout_(j, "commerce_layout");
     s.workableLayout = ParseLayout_(j, "workable_layout");
     s.buildingsLayout = ParseLayout_(j, "buildings_layout");
     s.productionLayout = ParseLayout_(j, "production_layout");
@@ -737,6 +738,7 @@ void UiStyle::Load(const std::string& filePath)
     style.settingsPanel = ParseSettingsPanelStyle_(root.at("settings_panel"));
     style.baseView = ParseBaseViewStyle_(root.at("base_view"));
     style.growthDisplay = ParseResourceLinesPanelStyle_(root.at("growth_display"));
+    style.commerceDisplay = ParseResourceLinesPanelStyle_(root.at("commerce_display"));
     style.productionDisplay = ParseResourceLinesPanelStyle_(root.at("production_display"));
     style.populationDisplay = ParsePopulationDisplayStyle_(root.at("population_display"));
     style.supportDisplay = ParseSupportDisplayStyle_(root.at("support_display"));

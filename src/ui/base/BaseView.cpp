@@ -3,6 +3,7 @@
 #include "ui/base/BaseWorkableAreaDisplay.h"
 #include "ui/base/BuildQueueDisplay.h"
 #include "ui/base/BuildingsDisplay.h"
+#include "ui/base/CommerceDisplay.h"
 #include "ui/base/GrowthDisplay.h"
 #include "ui/base/HurryProductionPopup.h"
 #include "ui/base/ProductionDisplay.h"
@@ -74,11 +75,15 @@ BaseView::BaseView(
         { HandleBuildingClicked_(rBuilding); };
     }
 
-    // TopPanel: Growth | Workable (60%) | Buildings
+    // TopPanel: Growth + Commerce | Workable (60%) | Buildings
     m_elements.push_back(std::make_unique<GrowthDisplay>(
         m_rBase,
         m_snapshot,
         ResolveLayout(topPanel, bv.growthLayout)
+    ));
+    m_elements.push_back(std::make_unique<CommerceDisplay>(
+        m_rBase,
+        ResolveLayout(topPanel, bv.commerceLayout)
     ));
     m_elements.push_back(std::make_unique<BaseWorkableAreaDisplay>(
         m_rBase,

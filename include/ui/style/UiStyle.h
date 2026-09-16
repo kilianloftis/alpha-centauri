@@ -285,6 +285,7 @@ struct SettingsPanelStyle_t
 struct BaseViewStyle_t
 {
     RatioLayout_t growthLayout{};
+    RatioLayout_t commerceLayout{};
     RatioLayout_t workableLayout{};
     RatioLayout_t buildingsLayout{};
     RatioLayout_t productionLayout{};
@@ -623,6 +624,7 @@ public:
     BaseViewStyle_t baseView;
     // Two instances of one type: same widget, independent values.
     ResourceLinesPanelStyle_t growthDisplay;
+    ResourceLinesPanelStyle_t commerceDisplay;
     ResourceLinesPanelStyle_t productionDisplay;
     PopulationDisplayStyle_t populationDisplay;
     SupportDisplayStyle_t supportDisplay;

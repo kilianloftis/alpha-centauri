@@ -438,7 +438,10 @@
   },
   "base_view": {
     "growth_layout": [
-      0.0, 0.0, 0.2, 1.0
+      0.0, 0.0, 0.2, 0.333333
+    ],
+    "commerce_layout": [
+      0.0, 0.333333, 0.2, 0.666667
     ],
     "workable_layout": [
       0.2, 0.0, 0.6, 1.0
@@ -466,9 +469,25 @@
     "text_color": [
       255, 255, 255, 255
     ],
-    "header_font_size_ratio": 0.04,
-    "entry_font_size_ratio": 0.03,
-    "line_height_ratio": 0.05,
+    "header_font_size_ratio": 0.12,
+    "entry_font_size_ratio": 0.09,
+    "line_height_ratio": 0.15,
+    "left_padding_ratio": 0.02,
+    "stockpile_line_index": 1.0,
+    "required_line_index": 2.0,
+    "production_line_index": 3.0,
+    "turns_line_index": 4.0
+  },
+  "commerce_display": {
+    "background_color": [
+      20, 20, 20, 255
+    ],
+    "text_color": [
+      255, 255, 255, 255
+    ],
+    "header_font_size_ratio": 0.06,
+    "entry_font_size_ratio": 0.045,
+    "line_height_ratio": 0.075,
     "left_padding_ratio": 0.02,
     "stockpile_line_index": 1.0,
     "required_line_index": 2.0,

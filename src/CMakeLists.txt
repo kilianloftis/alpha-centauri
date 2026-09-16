@@ -326,6 +326,7 @@ add_library(ac-ui STATIC
     ui/base/BaseNameDisplay.cpp
     ui/base/BaseWorkableAreaDisplay.cpp
     ui/base/GrowthDisplay.cpp
+    ui/base/CommerceDisplay.cpp
     ui/base/ProductionDisplay.cpp
     ui/base/BuildQueueDisplay.cpp
     ui/base/HurryProductionPopup.cpp

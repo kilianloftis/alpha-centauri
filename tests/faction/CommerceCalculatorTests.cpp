@@ -68,6 +68,49 @@ int ExpectedPairRaw_(int energyA, int energyB)
 
 } // namespace
 
+TEST_CASE("ComputeForBase reports our and their energy for a paired partner", "[commerce]")
+{
+    CommerceGame_ game;
+    BaseManager& a1 = game.MakeHqBase(*game.pA, 2, 2);
+    BaseManager& b1 = game.MakeHqBase(*game.pB, 6, 2);
+
+    game.pState->GetDiplomacyLedger().SetStatus(
+        game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Pact);
+
+    const auto lines = CommerceCalculator{}.ComputeForBase(a1, *game.pState);
+    REQUIRE(lines.size() == 1);
+    CHECK(lines[0].pPartner == game.pB);
+    CHECK(lines[0].status == DiplomaticStatus_t::Pact);
+
+    const int expectedOurs =
+        ExpectedPairRaw_(a1.GetEnergyProduction(), b1.GetEnergyProduction());
+    const int expectedTheirs =
+        ExpectedPairRaw_(b1.GetEnergyProduction(), a1.GetEnergyProduction());
+    CHECK(lines[0].ourEnergy == expectedOurs);
+    CHECK(lines[0].theirEnergy == expectedTheirs);
+    CHECK(CommerceCalculator{}.ComputeForFaction(*game.pA, *game.pState).at(a1.GetBaseId())
+          == expectedOurs);
+}
+
+TEST_CASE("ComputeForBase is empty for surplus bases and non-commerce treaties", "[commerce]")
+{
+    CommerceGame_ game;
+    BaseManager& a1 = game.MakeHqBase(*game.pA, 2, 2);
+    BaseManager& a2 = game.MakeHqBase(*game.pA, 2, 6);
+    game.MakeHqBase(*game.pB, 6, 2);
+    a1.GetBuildingManager().AddBuilding("energy_tap");
+    REQUIRE(a1.GetEnergyProduction() > a2.GetEnergyProduction());
+
+    DiplomacyLedger& rDiplomacy = game.pState->GetDiplomacyLedger();
+    rDiplomacy.SetStatus(
+        game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Pact);
+    CHECK(CommerceCalculator{}.ComputeForBase(a2, *game.pState).empty());
+
+    rDiplomacy.SetStatus(
+        game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Truce);
+    CHECK(CommerceCalculator{}.ComputeForBase(a1, *game.pState).empty());
+}
+
 TEST_CASE("Commerce pairs by pre-commerce energy; surplus bases ignored", "[commerce]")
 {
     CommerceGame_ game;

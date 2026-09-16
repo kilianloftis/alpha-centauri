@@ -5,6 +5,7 @@
 #include "game/GameSettings.h"
 #include "game/DifficultyConfig.h"
 #include "game/Faction.h"
+#include "game/faction/DiplomacyLedger.h"
 #include "game/faction/EconomyManager.h"
 #include "game/TurnStageFactory.h"
 #include "game/TurnProcessor.h"
@@ -31,9 +32,7 @@
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/base/population/PopContainer.h"
 #include "game/faction/Military.h"
-#include "game/faction/ResearchManager.h"
 #include "game/faction/UnitManager.h"
-#include "game/research/TechRegistry.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitDesign.h"
 #include "game/units/UnitSlotConfig.h"
@@ -307,7 +306,8 @@ void Engine::StartNewGame_()
             m_pGameState->AllocateBaseId(), pFaction->SuggestBaseName(), pStartTile,
             *m_gameDataContext,
             m_pGameState->GetTileEffects(),
-            m_pGameState->GetSecretProjectAvailability());
+            m_pGameState->GetSecretProjectAvailability(),
+            /*initialPopulation=*/3);
         placedBases.push_back(pBase);
 
         Faction& rFaction = m_pGameState->AddFaction(std::move(pFaction));
@@ -438,18 +438,6 @@ void Engine::StartNewGame_()
             }
         }
 
-        // Temporary: unlock the full tech tree for in-game testing.
-        {
-            ResearchManager& rResearch = rFaction.GetResearch();
-            for (const TechConfig_t& rTech : m_gameDataContext->techRegistry->GetAll())
-            {
-                if (!rResearch.HasDiscoveredTech(rTech.id))
-                {
-                    rResearch.AddDiscoveredTech(rTech.id);
-                }
-            }
-        }
-
         ++positionIndex;
     }
 
@@ -457,6 +445,38 @@ void Engine::StartNewGame_()
     // AttachToSession_'s catch-up sweep as it is registered. This final rebuild is the
     // whole-world pass once every faction exists.
     m_pGameState->RebuildTerritory();
+
+    // Temporary: give the player commerce partners — first AI Pact, second AI Friendship.
+    {
+        Faction* pPlayer = m_pGameState->GetPlayerFaction();
+        if (pPlayer == nullptr)
+        {
+            throw std::runtime_error("Engine setup: no player faction for starting diplomacy");
+        }
+
+        DiplomacyLedger& rDiplomacy = m_pGameState->GetDiplomacyLedger();
+        const FactionId_t playerId = pPlayer->GetFactionId();
+        int aiIndex = 0;
+        for (Faction& rFaction : m_pGameState->Factions())
+        {
+            if (rFaction.GetFactionId() == playerId)
+            {
+                continue;
+            }
+
+            rDiplomacy.SetKnown(playerId, rFaction.GetFactionId());
+            if (aiIndex == 0)
+            {
+                rDiplomacy.SetStatus(playerId, rFaction.GetFactionId(), DiplomaticStatus_t::Pact);
+            }
+            else if (aiIndex == 1)
+            {
+                rDiplomacy.SetStatus(
+                    playerId, rFaction.GetFactionId(), DiplomaticStatus_t::Friendship);
+            }
+            ++aiIndex;
+        }
+    }
 
     m_pGameState->CreatePlanetaryCouncil(*m_gameDataContext->councilProposalRegistry,
                                          *m_gameDataContext->councilRules);

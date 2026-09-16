@@ -35,6 +35,7 @@ graph TB
         BaseWorkableAreaDisplay[BaseWorkableAreaDisplay<br/>implements IBasePanel]
         PopulationDisplay[PopulationDisplay<br/>implements IBasePanel]
         GrowthDisplay[GrowthDisplay<br/>implements IBasePanel]
+        CommerceDisplay[CommerceDisplay<br/>implements IBasePanel]
     end
 
     subgraph "Base Popups"
@@ -58,12 +59,14 @@ graph TB
     BaseView -->|owns| BaseDisplay
     BaseView -->|owns| PopulationDisplay
     BaseView -->|owns| GrowthDisplay
+    BaseView -->|owns| CommerceDisplay
     BaseView -->|refs| BaseWorkableAreaDisplay
     BaseView -->|coordinates via| IBasePanel
     BaseDisplay -.->|implements| IBasePanel
     BaseWorkableAreaDisplay -.->|implements| IBasePanel
     PopulationDisplay -.->|implements| IBasePanel
     GrowthDisplay -.->|implements| IBasePanel
+    CommerceDisplay -.->|implements| IBasePanel
 
     UIManager -->|manages stack of| IGameView
     UIManagerImpl -->|holds persistent| IWorldView
@@ -96,6 +99,7 @@ graph TB
     style BaseWorkableAreaDisplay fill:#bfb,stroke:#333,stroke-width:2px
     style PopulationDisplay fill:#bfb,stroke:#333,stroke-width:2px
     style GrowthDisplay fill:#bfb,stroke:#333,stroke-width:2px
+    style CommerceDisplay fill:#bfb,stroke:#333,stroke-width:2px
     style ListSelectorPopup fill:#bfb,stroke:#333,stroke-width:3px
 
     subgraph "Unit Designer"

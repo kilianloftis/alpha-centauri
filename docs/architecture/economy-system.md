@@ -85,6 +85,7 @@ graph TB
 - **totalCommerceTech**: sum across living factions of `commerce_rating` **Add** amounts on
   discovered tech configs only (SE / faction bonuses excluded).
 - **Wiring**: `ResourceCollection` → `Faction::ProduceBaseResources(GameState&)` → calculator → `ResourceManager::ProduceResources(..., commerceEnergy)`. Commerce that becomes econ reaches the treasury only through `IncomeCollection` / `CollectIncome`.
+- **UI**: `ComputeForBase` returns per-partner our/their energy for `CommerceDisplay` in BaseView (nutrients column, bottom 2/3).
 - **Net income**: `GetNetIncomePerTurn` projects econ with the same commerce seed when a `GameState` is bound.
 
 ### Economic technologies

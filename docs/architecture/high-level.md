@@ -31,7 +31,7 @@ graph TB
         Views[WorldView, BaseView, ResearchView<br/>implement IGameView]
         ViewFactory[ViewFactory]
         IBasePanel[IBasePanel<br/>interface for base panels]
-        BasePanels[BaseDisplay, BaseWorkableAreaDisplay,<br/>PopulationDisplay, GrowthDisplay<br/>implement IBasePanel]
+        BasePanels[BaseDisplay, BaseWorkableAreaDisplay,<br/>PopulationDisplay, GrowthDisplay, CommerceDisplay<br/>implement IBasePanel]
     end
 
     subgraph "Turn System"
@@ -547,11 +547,12 @@ seed. (Persisting that seed into save state is still open — see the world-gene
   - `BaseDisplay`: Displays base name, resource stockpiles, and click status text
   - `PopulationDisplay`: Displays current population and per-pop type breakdown
   - `GrowthDisplay`: Displays nutrient stockpile, growth threshold, and nutrient production
+  - `CommerceDisplay`: Lists Friendship/Pact commerce partners for the open base (shorthand, our energy, their energy)
   - `WorldDisplay`: Displays the world map as a grid of tiles with terrain info
   - `BaseWorkableAreaDisplay`: Displays the 21-tile workable area around a base with resource production
 - **Dependencies**:
   - All UI components depend on Graphics for rendering
   - PopulationDisplay subscribes to EventBus for population change events
   - WorldDisplay reads from Tile objects for terrain data
-  - `BaseView` coordinates `BaseDisplay`, `BaseWorkableAreaDisplay`, `PopulationDisplay`, and `GrowthDisplay` via `IBasePanel`
+  - `BaseView` coordinates `BaseDisplay`, `BaseWorkableAreaDisplay`, `PopulationDisplay`, `GrowthDisplay`, and `CommerceDisplay` via `IBasePanel`
 - **Details**: See `docs/architecture/graphics-system.md` for detailed UI component documentation
