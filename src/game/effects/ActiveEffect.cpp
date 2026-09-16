@@ -14,6 +14,7 @@
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/map/ImprovementConfigParser.h"
+#include "game/map/TerritoryMap.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/population/pop-types/Pop.h"
@@ -1184,6 +1185,27 @@ bool AnyDeclaresTileFlag_(const std::vector<EffectConfig_t>& rEffects, RuleFlagI
     return false;
 }
 
+bool DeclaresTileHarbors_(const EffectConfig_t& rEffect, UnitDomain_t domain)
+{
+    const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.effect);
+    return pFlag && pFlag->flag == RuleFlagId_t::Harbors
+        && pFlag->domain.has_value() && *pFlag->domain == domain
+        && rEffect.scope == EffectScope_t::ThisTile
+        && rEffect.radius == 0 && !rEffect.condition.has_value();
+}
+
+bool AnyDeclaresTileHarbors_(const std::vector<EffectConfig_t>& rEffects, UnitDomain_t domain)
+{
+    for (const EffectConfig_t& rEffect : rEffects)
+    {
+        if (DeclaresTileHarbors_(rEffect, domain))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 } // namespace
 
 bool ResolveFlag(const Tile& rTile, RuleFlagId_t flagId)
@@ -1214,9 +1236,7 @@ bool TileProvidesFlag(const Tile& rTile, RuleFlagId_t flagId, const WorldMap& rW
     }
     for (const Unit* pUnit : rWorldMap.GetUnitsOnTile(rTile))
     {
-        // An embarked unit is cargo, not a site: its deck is unavailable while stowed.
-        if (!pUnit || pUnit->IsEmbarked()
-            || pUnit->GetFaction().GetFactionId() != factionId)
+        if (!pUnit || pUnit->GetFaction().GetFactionId() != factionId)
         {
             continue;
         }
@@ -1228,6 +1248,30 @@ bool TileProvidesFlag(const Tile& rTile, RuleFlagId_t flagId, const WorldMap& rW
             {
                 return true;
             }
+        }
+    }
+    return false;
+}
+
+bool TileHarbors(const Tile& rTile, UnitDomain_t domain, FactionId_t factionId,
+                 const TerritoryMap& rTerritory)
+{
+    if (rTerritory.GetOwner(rTile) != factionId)
+    {
+        return false;
+    }
+    for (const ImprovementConfig_t* pConfig : rTile.GetTerrainFeatures())
+    {
+        if (pConfig && AnyDeclaresTileHarbors_(pConfig->effects, domain))
+        {
+            return true;
+        }
+    }
+    for (const ImprovementConfig_t* pConfig : rTile.GetImprovements())
+    {
+        if (pConfig && AnyDeclaresTileHarbors_(pConfig->effects, domain))
+        {
+            return true;
         }
     }
     return false;

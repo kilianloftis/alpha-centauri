@@ -795,15 +795,15 @@ required and may be either polarity. At resolve, an override that restates the s
 skipped (non-default only), so for any concrete query only one polarity can fire and
 first-match order among overrides never matters. Scope must be `ThisUnit` or `FactionUnits`;
 a tile-scoped override fails at load rather than silently never matching. Resolution is
-acting-unit overrides → stock grid, and nothing else — the unit is the only override source,
-so `ResolveInteractionCell` takes no tile and its inputs never vary by call site. A rule that
-belongs to a *tile* is plain code at the call site that needs it: the port rule sits beside
-`HasFriendlyBase` in `MovementRules`, and a grounded aircraft's attackability derives from the
-defender tile's `RefuelsAir` in `AttackRules`. Stock Amphibious Pods override `enter` for
-land×water when Water+Base, plus `attack_tile` for every footing. Air Superiority overrides
-`attack_unit` for target air/orbital. Cloaking Device and Probe Team override `zoc` to `deny`
-with both axes omitted — where stock would hold the unit that is non-default; where stock
-already denies, the override is a no-op. `Water` is a real
+acting-unit overrides → stock grid, and nothing else — there is no tile `InteractionOverride`
+layer, so `ResolveInteractionCell` takes no tile and its inputs never vary by call site. A
+rule that belongs to a *tile* is plain code at the call site that needs it: `TileHarbors` in
+`MovementRules` / `FuelRules` / `AttackRules`, and boarding via `UnitCarries` in
+`TransportRules`. Stock Amphibious Pods override `enter` for land×water when Water+Base, plus
+`attack_tile` for every footing. Air Superiority overrides `attack_unit` for target
+air/orbital. Cloaking Device and Probe Team override `zoc` to `deny` with both axes omitted —
+where stock would hold the unit that is non-default; where stock already denies, the override
+is a no-op. `Water` is a real
 improvement entry covering any sea tile (`elevation < 0`), and it **stacks** with the depth
 band rather than replacing it: a submerged tile carries `Water` plus exactly one of `Ocean` /
 `OceanShelf` (split at `k_OceanShelfMinElevation`), in that order. Put rules shared by all sea
@@ -814,28 +814,30 @@ excluded by sea terraform. Do not suppress `@landform` from `Water`: that tag in
 `OceanShelf` and would erase the shelf nutrient. `AttackerIsEmbarked` is available for
 mod-scoped override conditions.
 
+**Harbors** is the parameterized `RuleFlag` (`flag: "harbors"`, `domain`) on `ThisTile`
+improvements (Base harbors land/sea/air/orbital; Airbase harbors air/orbital).
+`TileHarbors(tile, domain, faction)` is true when the tile's territory owner is `faction` and
+a terrain feature or improvement on it declares `harbors(domain)` (`radius == 0`, no
+condition). Consumers ask that helper rather than naming improvement ids. Resting-aircraft
+attackability and pad refuel both go through `TileHarbors`; embark refuel goes through
+`UnitCarries` on the carrier (carrying a domain refuels that cargo).
+
 **Tile capability flags** are the `ThisTile`-scoped subset, resolved by two helpers in
 `ActiveEffect.h` rather than by a hand-rolled scan:
 
 - `ResolveFlag(const Tile&, RuleFlagId_t)` — the tile's own terrain features and
   improvements. Used by `DisengageRules` for `PreventsDisengage`.
 - `TileProvidesFlag(const Tile&, RuleFlagId_t, const WorldMap&, FactionId_t)` — the above,
-  plus any non-embarked unit of that faction standing on the tile whose design declares the
-  flag at `ThisTile`. The faction check belongs to this helper: `TileEffectsContext`'s unit
-  auras are deliberately not territory-owned.
+  plus any non-embarked unit of that faction standing on the tile whose live effects declare
+  the flag at `ThisTile`. The faction check belongs to this helper: `TileEffectsContext`'s
+  unit auras are deliberately not territory-owned.
 
 Both require `radius == 0` and no condition — a capability describes its host tile, not the
-host's neighbourhood, so radius auras never project flags.
-
-This is the mechanism for "what can this tile do for me" questions, and the reason consumers
-never name improvement or component ids. `TransportParamsEffect_t::loadSiteFlags` lists
-capabilities (`loads_air_transport`), and `CanLoadAtTile` asks whether the tile provides any
-of them; a Base, an Airbase, or a carrier deck participates purely by declaring the flag.
-`RefuelsAir` and `LoadsAirTransport` are kept separate for exactly this reason — SMAC
-co-locates them at bases and airbases, but a carrier deck declaring only `RefuelsAir` is the
-stock rule, and adding `LoadsAirTransport` to it is the supported way to allow air transports
-to load at sea. Note that `RuleFlagId_t` is a C++ enum: mods can add new *sites*, but not new
-*capabilities*.
+host's neighbourhood, so radius auras never project flags. Harbor queries use `TileHarbors`
+(territory-owned) rather than `TileProvidesFlag`. `TransportParams` (`carries`,
+`requires_harbor`) is the carrier-side counterpart; `CanLoadAtTile` asks `TileHarbors` for
+the carrier's domain when `requires_harbor` is set. Note that
+`RuleFlagId_t` is a C++ enum: mods can add new *sites*, but not new *capabilities*.
 
 **A new effect type** (a new `EffectVariant_t` alternative):
 

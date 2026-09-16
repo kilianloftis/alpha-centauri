@@ -897,7 +897,7 @@
         "type": "TransportParams",
         "scope": "ThisUnit",
         "parameters": {
-          "passenger_domains": [
+          "carries": [
             "land"
           ]
         }
@@ -910,9 +910,7 @@
           "domain": "air"
         },
         "parameters": {
-          "load_site_flags": [
-            "loads_air_transport"
-          ]
+          "requires_harbor": true
         }
       },
       {
@@ -994,7 +992,7 @@
         "type": "TransportParams",
         "scope": "ThisUnit",
         "parameters": {
-          "passenger_domains": [
+          "carries": [
             "land"
           ]
         }
@@ -1021,23 +1019,9 @@
           "domain": "sea"
         },
         "parameters": {
-          "passenger_domains": [
+          "carries": [
             "air"
           ]
-        }
-      },
-      {
-        "type": "RuleFlag",
-        "scope": "ThisTile",
-        "parameters": {
-          "flag": "refuels_air"
-        }
-      },
-      {
-        "type": "RuleFlag",
-        "scope": "ThisTile",
-        "parameters": {
-          "flag": "loads_air_transport"
         }
       }
     ]
@@ -1060,12 +1044,8 @@
         "type": "TransportParams",
         "scope": "ThisUnit",
         "parameters": {
-          "passenger_domains": [
-            "land"
-          ],
-          "load_site_flags": [
-            "loads_air_transport"
-          ]
+          "carries": ["land"],
+          "requires_harbor": true
         }
       },
       {

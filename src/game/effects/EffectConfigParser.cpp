@@ -337,6 +337,20 @@ void ParseRuleFlag_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
         throw std::runtime_error("RuleFlag effect missing required 'flag'");
     }
     ruleFlag.flag = ParseRuleFlagId(flagStr);
+    if (ruleFlag.flag == RuleFlagId_t::Harbors)
+    {
+        const std::string domainStr = parameters.value("domain", "");
+        if (domainStr.empty())
+        {
+            throw std::runtime_error("RuleFlag 'harbors' requires a 'domain' string");
+        }
+        ruleFlag.domain = ParseUnitDomain(domainStr);
+    }
+    else if (parameters.contains("domain"))
+    {
+        throw std::runtime_error(
+            "RuleFlag 'domain' is only valid with flag 'harbors'");
+    }
     rEffect.effect = ruleFlag;
 }
 
@@ -688,45 +702,44 @@ void ParseTransportParams_(const nlohmann::json& parameters, EffectConfig_t& rEf
         rEffect.scope,
         {EffectScope_t::ThisUnit},
         "TransportParams requires scope ThisUnit");
-    TransportParamsEffect_t transport;
     if (parameters.contains("passenger_domains"))
     {
-        if (!parameters.at("passenger_domains").is_array())
+        throw std::runtime_error(
+            "TransportParams no longer accepts 'passenger_domains'; use 'carries'");
+    }
+    if (parameters.contains("load_site_flags"))
+    {
+        throw std::runtime_error(
+            "TransportParams no longer accepts 'load_site_flags'; use 'requires_harbor'");
+    }
+    if (parameters.contains("refuels_cargo"))
+    {
+        throw std::runtime_error(
+            "TransportParams no longer accepts 'refuels_cargo'; carrying a domain refuels "
+            "that cargo");
+    }
+    TransportParamsEffect_t transport;
+    if (parameters.contains("carries"))
+    {
+        if (!parameters.at("carries").is_array())
         {
-            throw std::runtime_error("TransportParams 'passenger_domains' must be an array");
+            throw std::runtime_error("TransportParams 'carries' must be an array");
         }
-        for (const auto& rDomainJson : parameters.at("passenger_domains"))
+        for (const auto& rDomainJson : parameters.at("carries"))
         {
             if (!rDomainJson.is_string())
             {
                 throw std::runtime_error(
-                    "TransportParams passenger_domains entries must be strings");
+                    "TransportParams carries entries must be strings");
             }
-            transport.passengerDomains.push_back(
-                ParseUnitDomain(rDomainJson.get<std::string>()));
+            transport.carries.push_back(ParseUnitDomain(rDomainJson.get<std::string>()));
         }
     }
-    if (parameters.contains("load_site_flags"))
-    {
-        if (!parameters.at("load_site_flags").is_array())
-        {
-            throw std::runtime_error("TransportParams 'load_site_flags' must be an array");
-        }
-        for (const auto& rFlagJson : parameters.at("load_site_flags"))
-        {
-            if (!rFlagJson.is_string() || rFlagJson.get<std::string>().empty())
-            {
-                throw std::runtime_error(
-                    "TransportParams load_site_flags entries must be non-empty strings");
-            }
-            transport.loadSiteFlags.push_back(ParseRuleFlagId(rFlagJson.get<std::string>()));
-        }
-    }
-    if (transport.passengerDomains.empty() && transport.loadSiteFlags.empty())
+    transport.requiresHarbor = parameters.value("requires_harbor", false);
+    if (transport.carries.empty() && !transport.requiresHarbor)
     {
         throw std::runtime_error(
-            "TransportParams requires at least one of 'passenger_domains' "
-            "or 'load_site_flags'");
+            "TransportParams requires non-empty 'carries' or 'requires_harbor': true");
     }
     rEffect.effect = transport;
 }

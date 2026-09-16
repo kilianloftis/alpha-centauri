@@ -24,11 +24,6 @@ bool IsHostileTo_(const Unit& rMover, const Unit& rOther)
     {
         return false;
     }
-    // Embarked cargo blocks only in a base (same eligibility as combat defense).
-    if (rOther.IsEmbarked() && !rOther.GetTile().HasImprovement(ImprovementIds::k_Base))
-    {
-        return false;
-    }
     return true;
 }
 
@@ -38,6 +33,18 @@ void ForEachHostileOnTile_(const Unit& rMover, const Tile& rTile, const WorldMap
                            Fn&& rFn)
 {
     for (Unit* pUnit : rWorldMap.GetUnitsOnTile(rTile))
+    {
+        if (pUnit && IsHostileTo_(rMover, *pUnit) && !rFn(*pUnit))
+        {
+            return;
+        }
+    }
+    // Embarked cargo is hostile only in a base (same eligibility as combat defense).
+    if (!rTile.HasImprovement(ImprovementIds::k_Base))
+    {
+        return;
+    }
+    for (Unit* pUnit : rWorldMap.GetCargoOnTile(rTile))
     {
         if (pUnit && IsHostileTo_(rMover, *pUnit) && !rFn(*pUnit))
         {
@@ -207,13 +214,12 @@ StepEvaluation_t StepEvaluator::EvaluateStep_(const Unit& rMover, const Tile& rF
     // Deliberately not UnitPositionIndex::CanPlaceUnit: that answers "is the tile occupied",
     // while the planner needs "which units block *this mover, given what it knows*" —
     // UnitCountsForPlanner_ filters by visibility so a hidden occupant does not leak into path
-    // planning. The occupancy half (skip embarked units) matches CanPlaceUnit exactly; only the
-    // knowledge filter is extra.
+    // planning. GetUnitsOnTile is occupants-only; only the knowledge filter is extra.
     if (m_rWorldMap.GetUnitPositions().IsSingleUnitPerTile())
     {
         for (Unit* pUnit : m_rWorldMap.GetUnitsOnTile(rTo))
         {
-            if (pUnit && !pUnit->IsEmbarked() && UnitCountsForPlanner_(rMover, *pUnit, knowledge))
+            if (pUnit && UnitCountsForPlanner_(rMover, *pUnit, knowledge))
             {
                 result.blockingUnits.push_back(pUnit);
             }

@@ -51,14 +51,14 @@
       {
         "type": "TransportParams",
         "scope": "ThisUnit",
-        "parameters": { "passenger_domains": ["land"] }
+        "parameters": { "carries": ["land"] }
       },
       {
         "type": "TransportParams",
         "scope": "ThisUnit",
         "unitFilter": { "kind": "Domain", "domain": "air" },
         "parameters": {
-          "load_site_flags": ["loads_air_transport"]
+          "requires_harbor": true
         }
       },
       {

@@ -360,7 +360,7 @@ TEST_CASE("Embarked cargo defends only in a base; carrier preferred",
     }
 }
 
-TEST_CASE("Air and Orbital targets require Air Superiority unless RefuelsAir",
+TEST_CASE("Air and Orbital targets require Air Superiority unless harbored",
           "[unit][attack][air-superiority]")
 {
     AttackGame_ game;
@@ -412,7 +412,7 @@ TEST_CASE("Air and Orbital targets require Air Superiority unless RefuelsAir",
         CHECK(CanDeclareAttack(flagged, airDefender.GetTile(), rMap, rEffects));
     }
 
-    SECTION("RefuelsAir base tile exempts the gate")
+    SECTION("harbored base tile exempts the gate")
     {
         rMap.GetTile(5, 5)->SetElevation(100);
         rMap.GetTile(6, 5)->SetElevation(100);
@@ -435,10 +435,10 @@ TEST_CASE("Air and Orbital targets require Air Superiority unless RefuelsAir",
         CHECK(CanDeclareAttack(nearMissile, groundedMissile.GetTile(), rMap, rEffects));
     }
 
-    SECTION("friendly carrier deck exempts the gate")
+    SECTION("carrier deck under an aircraft exempts the gate")
     {
         // Open sea: land amphibious enter needs Water+Base, so use an air attacker without
-        // Air Superiority — RefuelsAir from the carrier must open the declare gate.
+        // Air Superiority — a co-located carrier that carries air opens the declare gate.
         rMap.GetTile(5, 5)->SetElevation(-100);
         rMap.GetTile(4, 5)->SetElevation(100);
         Unit& airOnDeck =

@@ -16,13 +16,13 @@ namespace ac
 bool HasBaseGarrison(const BaseManager& rBase, const WorldMap& rWorldMap)
 {
     const FactionId_t ownerId = rBase.GetFactionId();
-    for (const Unit* pUnit : rWorldMap.GetUnitsOnTile(rBase.GetTile()))
+    for (const Unit* pUnit : rWorldMap.GetAllUnitsOnTile(rBase.GetTile()))
     {
-        // Embarked units count here: cargo sitting in a base is still a garrison (it
-        // survives its carrier being sunk in port via SurvivesCarrierLoss and holds the
-        // base against capture). Embarked-in-base cargo is also eligible as a combat
-        // defender — see AttackRules::FindVisibleHostileOnTile — with the carrier preferred
-        // when both are present.
+        // Occupants and cargo both count: cargo in a base is still a garrison (it survives
+        // its carrier being sunk in port via SurvivesCarrierLoss and holds the base against
+        // capture). Embarked-in-base cargo is also eligible as a combat defender — see
+        // AttackRules::FindVisibleHostileOnTile — with the carrier preferred when both are
+        // present.
         if (pUnit && pUnit->GetFaction().GetFactionId() == ownerId)
         {
             return true;

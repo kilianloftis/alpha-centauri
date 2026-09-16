@@ -65,15 +65,17 @@ bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile,
 }
 
 bool CanHoldTileWithoutCarrier(const Unit& rMover, const Tile& rTile,
+                               const WorldMap& rWorldMap,
                                const InteractionGridsConfig_t& rGrids)
 {
     if (CanEnterTileTerrain(rMover, rTile, rGrids))
     {
         return true;
     }
-    // Any unit may *hold* a friendly base tile its own domain would refuse. This grants no
-    // entry: a land unit still reaches its own sea base only by transport or pods.
-    return HasFriendlyBase(rMover, rTile);
+    // Any unit may *hold* a tile that harbors its domain. This grants no entry: a land unit
+    // still reaches its own sea base only by transport or pods.
+    return TileHarbors(rTile, rMover.GetDomain(), rMover.GetFaction().GetFactionId(),
+                       rWorldMap.GetTerritory());
 }
 
 bool CanEnterTile(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
@@ -86,15 +88,17 @@ bool CanEnterTile(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldM
     {
         return true;
     }
-    // Port rule: a ship may berth in a friendly coastal base even though the enter grid
+    // Port rule: a ship may berth where the tile harbors sea even though the enter grid
     // refuses its land tile. "Coastal" needs no test of its own — movement is step by step
     // between adjacent tiles, so a ship can only arrive from water it already occupies.
-    if (rMover.GetDomain() == UnitDomain_t::Sea && HasFriendlyBase(rMover, rTile))
+    if (rMover.GetDomain() == UnitDomain_t::Sea && !rTile.IsWater()
+        && TileHarbors(rTile, UnitDomain_t::Sea, rMover.GetFaction().GetFactionId(),
+                       rWorldMap.GetTerritory()))
     {
         return true;
     }
     // Water is reached only by boarding. A land unit gets to its own sea base by transport
-    // too, so HasFriendlyBase is deliberately not consulted here — it governs only whether a
+    // too, so TileHarbors is deliberately not consulted here — it governs only whether a
     // unit already there may stay (CanHoldTileWithoutCarrier / SurvivesCarrierLoss).
     return rMover.GetDomain() == UnitDomain_t::Land && rTile.IsWater()
         && FindBoardableTransport(rMover, rTile, rWorldMap) != nullptr;
@@ -105,8 +109,7 @@ bool HasFriendlyOccupant(const Unit& rMover, const Tile& rTile, const WorldMap& 
     const FactionId_t moverId = rMover.GetFaction().GetFactionId();
     for (const Unit* pUnit : rWorldMap.GetUnitsOnTile(rTile))
     {
-        if (pUnit && pUnit != &rMover && !pUnit->IsEmbarked()
-            && pUnit->GetFaction().GetFactionId() == moverId)
+        if (pUnit && pUnit != &rMover && pUnit->GetFaction().GetFactionId() == moverId)
         {
             return true;
         }

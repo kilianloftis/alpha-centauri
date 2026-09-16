@@ -252,7 +252,7 @@ TEST_CASE("Carrier Deck allows air passengers; without it air cannot board", "[t
     CHECK(air.GetCarrier() == &carrier);
 }
 
-TEST_CASE("Must-land attach boards carrier; air carrier loads at Base/Airbase or carrier deck",
+TEST_CASE("Must-land attach boards carrier; air carrier loads at Base/Airbase",
           "[transport]")
 {
     FactionFixture fixture;
@@ -273,7 +273,7 @@ TEST_CASE("Must-land attach boards carrier; air carrier loads at Base/Airbase or
 
     Unit& airTransport = fixture.MakeUnit(faction, 4, 4, {"test_flight_chassis", "test_air_transport"});
     Unit& land = fixture.MakeUnit(faction, 3, 4, {"test_chassis"});
-    // Bare tile provides no loads_air_transport capability — air carrier cannot load.
+    // Bare tile does not harbor air — air carrier cannot load.
     CHECK_FALSE(CanLoadAtTile(airTransport, fixture.At(4, 4), fixture.map));
     fixture.MoveUnit(land, 4, 4);
     CHECK_FALSE(harness.orders.TryAttachToTransport(land));
@@ -292,34 +292,29 @@ TEST_CASE("Must-land attach boards carrier; air carrier loads at Base/Airbase or
     REQUIRE(harness.orders.TryUnloadTransport(airTransport));
     CHECK_FALSE(land.IsEmbarked());
 
-    // A co-located carrier deck supplies loads_air_transport, so it is a valid load site.
-    // SMAC ships carrier decks with refuels_air only; test_carrier_deck declares both, which
-    // is exactly the one-flag config edit that opts into loading at sea.
+    // A carrier deck is not a harbor — air transports still need a Base/Airbase tile.
     MakeWater_(fixture.At(5, 5));
     fixture.MakeUnit(faction, 5, 5, {"test_sea_chassis", "test_carrier_deck"});
     fixture.MoveUnit(airTransport, 5, 5);
     Unit& land2 = fixture.MakeUnit(faction, 5, 5, {"test_chassis"});
-    CHECK(CanLoadAtTile(airTransport, fixture.At(5, 5), fixture.map));
-    REQUIRE(harness.orders.TryAttachToTransport(land2));
-    CHECK(land2.IsEmbarked());
-    CHECK(land2.GetCarrier() == &airTransport);
+    CHECK_FALSE(CanLoadAtTile(airTransport, fixture.At(5, 5), fixture.map));
+    CHECK_FALSE(harness.orders.TryAttachToTransport(land2));
 }
 
-TEST_CASE("A hostile carrier deck is not a load site", "[transport]")
+TEST_CASE("A hostile base is not an air-transport load site", "[transport]")
 {
     FactionFixture fixture;
     FillLand_(fixture);
     Faction& player = fixture.MakeFaction();
     Faction& enemy = fixture.MakeFaction();
 
-    MakeWater_(fixture.At(5, 5));
     Unit& airTransport = fixture.MakeUnit(player, 5, 5, {"test_flight_chassis", "test_air_transport"});
-    // TileProvidesFlag runs its own on-tile unit faction check: an enemy deck supplies nothing.
-    fixture.MakeUnit(enemy, 5, 5, {"test_sea_chassis", "test_carrier_deck"});
+    fixture.MakeFactionBase(enemy, 5, 5);
     CHECK_FALSE(CanLoadAtTile(airTransport, fixture.At(5, 5), fixture.map));
 
-    fixture.MakeUnit(player, 5, 5, {"test_sea_chassis", "test_carrier_deck"});
-    CHECK(CanLoadAtTile(airTransport, fixture.At(5, 5), fixture.map));
+    fixture.MakeFactionBase(player, 4, 5);
+    fixture.MoveUnit(airTransport, 4, 5);
+    CHECK(CanLoadAtTile(airTransport, fixture.At(4, 5), fixture.map));
 }
 
 TEST_CASE("Attack on transport tile hits carrier not cargo", "[transport][combat]")

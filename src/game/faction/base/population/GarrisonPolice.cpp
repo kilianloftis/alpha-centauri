@@ -43,10 +43,6 @@ int ComputeGarrisonPoliceSuppression(const BaseManager& rBase)
         {
             continue;
         }
-        if (pUnit->IsEmbarked())
-        {
-            continue;
-        }
         const int effectiveness = UnitPoliceEffectiveness_(*pUnit);
         if (effectiveness <= 0)
         {

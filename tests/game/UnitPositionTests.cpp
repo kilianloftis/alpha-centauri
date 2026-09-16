@@ -11,6 +11,7 @@
 #include "game/units/MoveCostCalculator.h"
 #include "game/units/Pathfinder.h"
 #include "game/units/StepEvaluator.h"
+#include "game/units/TransportRules.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitOrder.h"
 #include "game/units/UnitOrderExecutor.h"
@@ -49,6 +50,24 @@ struct MovementHarness_
     {
     }
 };
+
+} // namespace
+
+namespace
+{
+
+void FillLand_(WorldFixture& fixture)
+{
+    for (auto& pTile : fixture.map.GetTiles())
+    {
+        pTile->SetElevation(100);
+    }
+}
+
+void MakeWater_(Tile& rTile)
+{
+    rTile.SetElevation(-100);
+}
 
 } // namespace
 
@@ -159,14 +178,22 @@ TEST_CASE("Moving a unit keeps its tile pointer and the index in sync", "[unit][
     CHECK(fixture.map.GetUnitsOnTile(fixture.At(5, 4)).front() == &unit);
 }
 
-TEST_CASE("Units stack without limit by default", "[unit][index]")
+TEST_CASE("GetUnitsOnTile is occupants-only; cargo needs GetCargoOnTile", "[unit][index][harbors]")
 {
     FactionFixture fixture;
+    FillLand_(fixture);
     Faction& faction = fixture.MakeFaction();
-    fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
-    fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    MakeWater_(fixture.At(5, 4));
+    Unit& carrier = fixture.MakeUnit(
+        faction, 5, 4, {"test_sea_chassis", "test_transport", "test_carrier_deck"});
+    Unit& jet = fixture.MakeUnit(faction, 5, 4, {"test_fuel_flight_chassis"});
+    REQUIRE(TryAttachToTransport(jet, fixture.map));
 
-    CHECK(fixture.map.GetUnitsOnTile(fixture.At(4, 4)).size() == 2);
+    REQUIRE(fixture.map.GetUnitsOnTile(fixture.At(5, 4)).size() == 1);
+    CHECK(fixture.map.GetUnitsOnTile(fixture.At(5, 4)).front() == &carrier);
+    REQUIRE(fixture.map.GetCargoOnTile(fixture.At(5, 4)).size() == 1);
+    CHECK(fixture.map.GetCargoOnTile(fixture.At(5, 4)).front() == &jet);
+    REQUIRE(fixture.map.GetAllUnitsOnTile(fixture.At(5, 4)).size() == 2);
 }
 
 TEST_CASE("Single-unit-per-tile rule blocks placement and movement onto occupied tiles",

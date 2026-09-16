@@ -34,7 +34,7 @@ void UnitMarkerRenderer::Render(Graphics& rGraphics,
     const Faction* pPlayer = rGameState.GetPlayerFaction();
 
     rViewport.ForEachVisibleTile([&](const Tile& rTile, float tileX, float tileY) {
-        const std::vector<Unit*>& units = rWorldMap.GetUnitsOnTile(rTile);
+        const std::vector<Unit*>& units = rWorldMap.GetAllUnitsOnTile(rTile);
         if (units.empty())
         {
             return;

@@ -137,12 +137,7 @@
         "type": "TransportParams",
         "scope": "ThisUnit",
         "unitFilter": { "kind": "Domain", "domain": "sea" },
-        "parameters": { "passenger_domains": ["air"] }
-      },
-      {
-        "type": "RuleFlag",
-        "scope": "ThisTile",
-        "parameters": { "flag": "refuels_air" }
+        "parameters": { "carries": ["air"] }
       }
     ]
   },

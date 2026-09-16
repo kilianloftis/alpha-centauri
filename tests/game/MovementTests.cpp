@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include "GameFixtures.h"
 #include "game/units/MovementRules.h"
+#include "game/units/AttackRules.h"
 #include "game/units/MoveCostCalculator.h"
 #include "game/units/MovementConstants.h"
 #include "game/units/Pathfinder.h"
@@ -121,7 +122,7 @@ TEST_CASE("Land reaches water only by transport; pods are not open ocean",
         CHECK_FALSE(move.steps.CanStep(land, land.GetTile(), fixture.At(5, 4)));
         // Holding the tile is a separate question from reaching it — a garrison whose
         // carrier dies in its own sea base still survives there.
-        CHECK(CanHoldTileWithoutCarrier(land, fixture.At(5, 4),
+        CHECK(CanHoldTileWithoutCarrier(land, fixture.At(5, 4), fixture.map,
                                    fixture.dataContext.interactionGrids));
     }
 
@@ -176,6 +177,13 @@ TEST_CASE("Sea may enter its own land base, but not open land or a foreign base"
     {
         fixture.MakeFactionBase(other, 5, 4);
         CHECK_FALSE(move.steps.CanStep(sea, sea.GetTile(), fixture.At(5, 4)));
+    }
+
+    SECTION("cannot attack another faction's coastal land base")
+    {
+        fixture.MakeFactionBase(other, 5, 4);
+        CHECK_FALSE(CanAttackTile(sea, fixture.At(5, 4), fixture.map,
+                                  fixture.dataContext.interactionGrids));
     }
 }
 

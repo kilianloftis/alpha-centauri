@@ -136,6 +136,7 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
           == RuleFlagId_t::IgnoresProbeBlock);
     CHECK(ParseRuleFlagId("creche") == RuleFlagId_t::Creche);
     CHECK(ParseRuleFlagId("prevents_disengage") == RuleFlagId_t::PreventsDisengage);
+    CHECK(ParseRuleFlagId("harbors") == RuleFlagId_t::Harbors);
     CHECK(ParseRuleFlagId("remove_shroud") == RuleFlagId_t::RemoveShroud);
     CHECK(ParseRuleFlagId("remove_fog") == RuleFlagId_t::RemoveFog);
     CHECK(ParseRuleFlagId("atrocities_forbidden")
@@ -788,51 +789,57 @@ TEST_CASE("ParseEffectConfig: TransportParams", "[effects][parser][transport]")
         "type": "TransportParams",
         "scope": "ThisUnit",
         "unitFilter": { "kind": "Domain", "domain": "sea" },
-        "parameters": { "passenger_domains": ["air"] }
+        "parameters": { "carries": ["air"] }
     })");
 
     const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
     const auto* pParams = std::get_if<TransportParamsEffect_t>(&config.effect);
     REQUIRE(pParams);
-    REQUIRE(pParams->passengerDomains.size() == 1);
-    CHECK(pParams->passengerDomains.front() == UnitDomain_t::Air);
+    REQUIRE(pParams->carries.size() == 1);
+    CHECK(pParams->carries.front() == UnitDomain_t::Air);
+    CHECK_FALSE(pParams->requiresHarbor);
     REQUIRE(config.unitFilter.has_value());
     const auto* pDomain = std::get_if<UnitFilterDomain_t>(&*config.unitFilter);
     REQUIRE(pDomain);
     CHECK(pDomain->domain == UnitDomain_t::Sea);
 
-    const json loadSitesJson = json::parse(R"({
+    const json harborOnlyJson = json::parse(R"({
         "type": "TransportParams",
         "scope": "ThisUnit",
         "unitFilter": { "kind": "Domain", "domain": "air" },
-        "parameters": {
-            "load_site_flags": ["loads_air_transport", "refuels_air"]
-        }
+        "parameters": { "requires_harbor": true }
     })");
-    const EffectConfig_t loadSites = EffectConfigParser::ParseEffectConfig(loadSitesJson);
-    const auto* pLoad = std::get_if<TransportParamsEffect_t>(&loadSites.effect);
-    REQUIRE(pLoad);
-    CHECK(pLoad->passengerDomains.empty());
-    REQUIRE(pLoad->loadSiteFlags.size() == 2);
-    CHECK(pLoad->loadSiteFlags[0] == RuleFlagId_t::LoadsAirTransport);
-    CHECK(pLoad->loadSiteFlags[1] == RuleFlagId_t::RefuelsAir);
+    const EffectConfig_t harborOnly = EffectConfigParser::ParseEffectConfig(harborOnlyJson);
+    const auto* pHarbor = std::get_if<TransportParamsEffect_t>(&harborOnly.effect);
+    REQUIRE(pHarbor);
+    CHECK(pHarbor->carries.empty());
+    CHECK(pHarbor->requiresHarbor);
 
-    // Load sites name capabilities, not improvement or component ids.
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "TransportParams",
         "scope": "ThisUnit",
-        "parameters": { "load_site_flags": ["Airbase"] }
+        "parameters": { "passenger_domains": ["air"] }
     })")));
-
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "TransportParams",
-        "scope": "ThisBase",
-        "parameters": { "passenger_domains": ["land"] }
+        "scope": "ThisUnit",
+        "parameters": { "load_site_flags": ["loads_air_transport"] }
+    })")));
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "TransportParams",
+        "scope": "ThisUnit",
+        "parameters": { "carries": ["air"], "refuels_cargo": true }
     })")));
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "TransportParams",
         "scope": "ThisUnit",
         "parameters": {}
+    })")));
+
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "TransportParams",
+        "scope": "ThisBase",
+        "parameters": { "carries": ["land"] }
     })")));
 }
 

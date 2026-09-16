@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game/effects/EffectEnums.h"
+#include "game/faction/base/BaseTypes.h"
 
 #include <unordered_set>
 
@@ -16,20 +16,20 @@ enum class UnitDomain_t;
 // Cargo capability and boarding/unload mutations. Tile entry itself lives in MovementRules
 // (CanEnterTile), which calls FindBoardableTransport for the boarding case.
 
-// Effective passenger domains the carrier may take (union of TransportParams; land-only
-// default when CargoCapacity > 0 but no params apply).
-std::unordered_set<UnitDomain_t> ResolvePassengerDomains(const Unit& rCarrier);
+// Effective domains the carrier may carry (union of TransportParams::carries; land-only
+// default when CargoCapacity > 0 but no carries saw).
+std::unordered_set<UnitDomain_t> ResolveCarriedDomains(const Unit& rCarrier);
 
-// Union of load_site_flags from the carrier's TransportParams.
-std::unordered_set<RuleFlagId_t> ResolveLoadSiteFlags(const Unit& rCarrier);
+// Same faction as factionId, and ResolveCarriedDomains contains domain. No capacity check.
+bool UnitCarries(const Unit& rCarrier, UnitDomain_t domain, FactionId_t factionId);
 
 bool HasCargoCapacity(const Unit& rCarrier);
 int FreeCargoSlots(const Unit& rCarrier);
 
 bool CanCarryPassenger(const Unit& rCarrier, const Unit& rPassenger);
 
-// True when the carrier requires no load-site capability, or rTile provides any one it
-// requires (from an improvement on the tile or a friendly unit standing there).
+// True when the carrier requires no harbor, or rTile harbors the carrier's domain for its
+// faction (TileHarbors). requires_harbor ORs across every TransportParams on the carrier.
 bool CanLoadAtTile(const Unit& rCarrier, const Tile& rTile, const WorldMap& rWorldMap);
 
 // First non-embarked friendly carrier on rTile that can accept rPassenger.
@@ -58,11 +58,13 @@ bool TryAutoAttachWhenMustLand(Unit& rPassenger, const WorldMap& rWorldMap);
 // Whether rPassenger survives its carrier being destroyed on rTile: cargo that can hold the
 // tile unaided is set down there, anything else goes down with the carrier.
 bool SurvivesCarrierLoss(const Unit& rPassenger, const Tile& rTile,
-                         const InteractionGridsConfig_t& rGrids);
+                         const WorldMap& rWorldMap, const InteractionGridsConfig_t& rGrids);
 
 // Drop all cargo of an air carrier onto its current tile when every passenger can hold it
 // unaided.
-bool CanUnloadTransportInPlace(const Unit& rCarrier, const InteractionGridsConfig_t& rGrids);
-bool TryUnloadTransportInPlace(Unit& rCarrier, const InteractionGridsConfig_t& rGrids);
+bool CanUnloadTransportInPlace(const Unit& rCarrier, const WorldMap& rWorldMap,
+                               const InteractionGridsConfig_t& rGrids);
+bool TryUnloadTransportInPlace(Unit& rCarrier, const WorldMap& rWorldMap,
+                               const InteractionGridsConfig_t& rGrids);
 
 } // namespace ac

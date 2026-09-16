@@ -175,7 +175,7 @@ void BaseView::RefreshUnitStack_()
     const Tile& rTile = m_rBase.GetTile();
 
     std::vector<Unit*> stackUnits;
-    for (Unit* pUnit : rMap.GetUnitsOnTile(rTile))
+    for (Unit* pUnit : rMap.GetAllUnitsOnTile(rTile))
     {
         if (pUnit)
         {

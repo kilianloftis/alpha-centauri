@@ -81,7 +81,7 @@ std::optional<ProbeTarget_t> ResolveProbeTarget(const Unit& rProbe, const Tile& 
     // Units must be visible, matching the gate TryAttack applies via
     // FindVisibleHostileOnTile_. A concealed occupant resolves to no target at all, so the
     // order stays a move; bumping into it reveals it through the blocked-step path.
-    for (Unit* pUnit : rGameState.GetWorldMap().GetUnitsOnTile(rTile))
+    for (Unit* pUnit : rGameState.GetWorldMap().GetAllUnitsOnTile(rTile))
     {
         if (pUnit && &pUnit->GetFaction() != &rProbeFaction
             && IsUnitVisibleTo(rProbeFaction, *pUnit, rGameState.GetTileEffects()))

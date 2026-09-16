@@ -36,7 +36,14 @@ public:
     UnitPositionIndex(const UnitPositionIndex&) = delete;
     UnitPositionIndex& operator=(const UnitPositionIndex&) = delete;
 
-    const std::vector<Unit*>& GetUnitsOnTile(const Tile& rTile) const;
+    // Occupants on rTile (non-embarked). Cargo is excluded — carried units are aboard a
+    // carrier, not present on the tile for occupancy, ZOC, or load-site projection.
+    std::vector<Unit*> GetUnitsOnTile(const Tile& rTile) const;
+    // Embarked units whose carrier stands on rTile.
+    std::vector<Unit*> GetCargoOnTile(const Tile& rTile) const;
+    // Occupants and cargo together. Prefer GetUnitsOnTile / GetCargoOnTile; use this for
+    // garrison/defence and UI that must see every unit sharing the tile.
+    const std::vector<Unit*>& GetAllUnitsOnTile(const Tile& rTile) const;
 
     // Visit every registered unit once, in unspecified order. O(units) — the index only holds
     // occupied tiles, so this is the way to sweep all units without walking the whole map.

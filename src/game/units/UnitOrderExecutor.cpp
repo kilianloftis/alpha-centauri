@@ -152,7 +152,8 @@ bool UnitOrderExecutor::TryAutoAttachWhenMustLand(Unit& rPassenger)
 
 bool UnitOrderExecutor::TryUnloadTransport(Unit& rCarrier)
 {
-    return TryUnloadTransportInPlace(rCarrier, m_rTileEffects.GetInteractionGrids());
+    return TryUnloadTransportInPlace(rCarrier, m_rWorldMap,
+                                     m_rTileEffects.GetInteractionGrids());
 }
 
 bool UnitOrderExecutor::ApplyArrivalEffects_(Unit& rMover, bool bWasEmbarked)

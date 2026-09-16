@@ -90,7 +90,7 @@ void UnitManager::DestroyUnit(Unit& rUnit)
         {
             continue;
         }
-        if (SurvivesCarrierLoss(*pPassenger, rCarrierTile,
+        if (SurvivesCarrierLoss(*pPassenger, rCarrierTile, m_rFaction.GetWorldMap(),
                                 m_rFaction.GetDataContext().interactionGrids))
         {
             pPassenger->Disembark();

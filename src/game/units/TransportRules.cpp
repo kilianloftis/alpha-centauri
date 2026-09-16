@@ -3,7 +3,6 @@
 #include "game/Faction.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectConfig.h"
-#include "game/effects/EffectEnums.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
@@ -35,40 +34,36 @@ void ForEachTransportParams_(const Unit& rCarrier, Fn&& rFn)
 
 } // namespace
 
-std::unordered_set<UnitDomain_t> ResolvePassengerDomains(const Unit& rCarrier)
+std::unordered_set<UnitDomain_t> ResolveCarriedDomains(const Unit& rCarrier)
 {
     std::unordered_set<UnitDomain_t> domains;
-    bool bSawPassengerDomains = false;
+    bool bSawCarries = false;
     ForEachTransportParams_(rCarrier, [&](const TransportParamsEffect_t& rParams)
     {
-        if (rParams.passengerDomains.empty())
+        if (rParams.carries.empty())
         {
             return;
         }
-        bSawPassengerDomains = true;
-        for (UnitDomain_t domain : rParams.passengerDomains)
+        bSawCarries = true;
+        for (UnitDomain_t domain : rParams.carries)
         {
             domains.insert(domain);
         }
     });
-    if (!bSawPassengerDomains && HasCargoCapacity(rCarrier))
+    if (!bSawCarries && HasCargoCapacity(rCarrier))
     {
         domains.insert(UnitDomain_t::Land);
     }
     return domains;
 }
 
-std::unordered_set<RuleFlagId_t> ResolveLoadSiteFlags(const Unit& rCarrier)
+bool UnitCarries(const Unit& rCarrier, UnitDomain_t domain, FactionId_t factionId)
 {
-    std::unordered_set<RuleFlagId_t> flags;
-    ForEachTransportParams_(rCarrier, [&](const TransportParamsEffect_t& rParams)
+    if (rCarrier.GetFaction().GetFactionId() != factionId)
     {
-        for (RuleFlagId_t flag : rParams.loadSiteFlags)
-        {
-            flags.insert(flag);
-        }
-    });
-    return flags;
+        return false;
+    }
+    return ResolveCarriedDomains(rCarrier).contains(domain);
 }
 
 bool HasCargoCapacity(const Unit& rCarrier)
@@ -89,10 +84,6 @@ bool CanCarryPassenger(const Unit& rCarrier, const Unit& rPassenger)
     {
         return false;
     }
-    if (rCarrier.GetFaction().GetFactionId() != rPassenger.GetFaction().GetFactionId())
-    {
-        return false;
-    }
     if (rCarrier.IsEmbarked() || FreeCargoSlots(rCarrier) <= 0)
     {
         return false;
@@ -102,26 +93,25 @@ bool CanCarryPassenger(const Unit& rCarrier, const Unit& rPassenger)
     {
         return false;
     }
-    const auto domains = ResolvePassengerDomains(rCarrier);
-    return domains.contains(rPassenger.GetDomain());
+    return UnitCarries(rCarrier, rPassenger.GetDomain(), rPassenger.GetFaction().GetFactionId());
 }
 
 bool CanLoadAtTile(const Unit& rCarrier, const Tile& rTile, const WorldMap& rWorldMap)
 {
-    const auto requiredFlags = ResolveLoadSiteFlags(rCarrier);
-    if (requiredFlags.empty())
+    bool bNeedsHarbor = false;
+    ForEachTransportParams_(rCarrier, [&](const TransportParamsEffect_t& rParams)
     {
-        return true; // no capability required — load anywhere the carrier can be
-    }
-    const FactionId_t factionId = rCarrier.GetFaction().GetFactionId();
-    for (RuleFlagId_t flag : requiredFlags)
-    {
-        if (TileProvidesFlag(rTile, flag, rWorldMap, factionId))
+        if (rParams.requiresHarbor)
         {
-            return true;
+            bNeedsHarbor = true;
         }
+    });
+    if (!bNeedsHarbor)
+    {
+        return true;
     }
-    return false;
+    return TileHarbors(rTile, rCarrier.GetDomain(), rCarrier.GetFaction().GetFactionId(),
+                       rWorldMap.GetTerritory());
 }
 
 Unit* FindBoardableTransport(const Unit& rPassenger, const Tile& rTile,
@@ -129,7 +119,7 @@ Unit* FindBoardableTransport(const Unit& rPassenger, const Tile& rTile,
 {
     for (Unit* pUnit : rWorldMap.GetUnitsOnTile(rTile))
     {
-        if (!pUnit || pUnit == &rPassenger || pUnit->IsEmbarked())
+        if (!pUnit || pUnit == &rPassenger)
         {
             continue;
         }
@@ -152,7 +142,7 @@ bool CanUnloadTo(const Unit& rPassenger, const Tile& rFrom, const Tile& rTo,
     {
         return false;
     }
-    // Unload uses full enter rules (friendly base, InteractionOverride sea base, land, etc.).
+    // Unload uses full enter rules (friendly harbor, InteractionOverride sea base, land, etc.).
     return CanEnterTile(rPassenger, rTo, rWorldMap, rGrids);
 }
 
@@ -174,7 +164,7 @@ bool TryAttachToTransport(Unit& rPassenger, const WorldMap& rWorldMap)
 bool TryAutoAttachOnEntry(Unit& rPassenger, const WorldMap& rWorldMap,
                           const InteractionGridsConfig_t& rGrids)
 {
-    if (CanHoldTileWithoutCarrier(rPassenger, rPassenger.GetTile(), rGrids))
+    if (CanHoldTileWithoutCarrier(rPassenger, rPassenger.GetTile(), rWorldMap, rGrids))
     {
         return false;
     }
@@ -187,12 +177,13 @@ bool TryAutoAttachWhenMustLand(Unit& rPassenger, const WorldMap& rWorldMap)
 }
 
 bool SurvivesCarrierLoss(const Unit& rPassenger, const Tile& rTile,
-                         const InteractionGridsConfig_t& rGrids)
+                         const WorldMap& rWorldMap, const InteractionGridsConfig_t& rGrids)
 {
-    return CanHoldTileWithoutCarrier(rPassenger, rTile, rGrids);
+    return CanHoldTileWithoutCarrier(rPassenger, rTile, rWorldMap, rGrids);
 }
 
-bool CanUnloadTransportInPlace(const Unit& rCarrier, const InteractionGridsConfig_t& rGrids)
+bool CanUnloadTransportInPlace(const Unit& rCarrier, const WorldMap& rWorldMap,
+                               const InteractionGridsConfig_t& rGrids)
 {
     if (rCarrier.GetDomain() != UnitDomain_t::Air || rCarrier.GetCargo().empty())
     {
@@ -203,7 +194,7 @@ bool CanUnloadTransportInPlace(const Unit& rCarrier, const InteractionGridsConfi
     {
         // Dropping in place leaves nothing under the passenger, so it must hold the tile
         // on its own — boarding another carrier here is not what this order does.
-        if (!pPassenger || !CanHoldTileWithoutCarrier(*pPassenger, rTile, rGrids))
+        if (!pPassenger || !CanHoldTileWithoutCarrier(*pPassenger, rTile, rWorldMap, rGrids))
         {
             return false;
         }
@@ -211,9 +202,10 @@ bool CanUnloadTransportInPlace(const Unit& rCarrier, const InteractionGridsConfi
     return true;
 }
 
-bool TryUnloadTransportInPlace(Unit& rCarrier, const InteractionGridsConfig_t& rGrids)
+bool TryUnloadTransportInPlace(Unit& rCarrier, const WorldMap& rWorldMap,
+                               const InteractionGridsConfig_t& rGrids)
 {
-    if (!CanUnloadTransportInPlace(rCarrier, rGrids))
+    if (!CanUnloadTransportInPlace(rCarrier, rWorldMap, rGrids))
     {
         return false;
     }

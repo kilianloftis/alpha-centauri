@@ -282,38 +282,36 @@ those can append gates in `CollectProductionPauseGates` later.
 
 **Implemented** 2026-09-07.
 
-## 12. Any unit can be in a base (the port rule)
+## 12. Harbors and carry
 
-**Rule:** a base tile admits any unit, whatever its domain and whatever the terrain under it.
-A sea unit may enter the land tile of a **friendly** base; a foreign coastal base cannot be
-entered by sea. Occupancy is the general form: `CanHoldTileWithoutCarrier` lets any unit hold a
-friendly base tile, which is what keeps a land garrison alive in a sea base when its carrier
-dies (`SurvivesCarrierLoss`).
+**Rule:** a tile *harbors* a domain when an improvement on it declares `harbors(domain)` and
+the tile's territory owner matches the querying faction (`TileHarbors`). A unit *carries* a
+domain when its `TransportParams` include that domain (`UnitCarries`). Wrong-surface presence
+is legal only through one of those two lifts.
 
-Reaching a tile and holding it are separate questions, and they are deliberately asymmetric.
-A ship berths under its own power. A land unit does **not**: it reaches water only by
-boarding a transport, and its own sea base is not a walk-in, so `CanEnterTile` does not
-consult `HasFriendlyBase` for a land mover.
+**Entry and hold.** Ships enter their own coastal (land) base under power when the tile
+harbors sea; a foreign coastal base does not. Land reaches a sea base only by transport or
+Amphibious Pods. Once there, `CanHoldTileWithoutCarrier` admits the unit via
+`TileHarbors(land)`, so a garrison whose carrier dies in its own sea base survives
+(`SurvivesCarrierLoss`). "Coastal" needs no separate test: movement is step by step between
+adjacent tiles, so a ship arrives only from water it already occupies.
 
-"Adjacent to the sea tile" needs no rule of its own. Movement is step by step between
-adjacent tiles, so a ship can only arrive at a coastal base from water it already occupies.
-A ship berthed in a land base may leave only to tiles its domain allows — plus any *other*
-adjacent friendly base, which is accepted rather than blocked.
+**Attack implies entry.** Naval units cannot attack coastal bases: `CanAttackTile` requires
+`CanEnterTile`, and a foreign shore is not a harbor for them.
 
-This lives in code (`MovementRules`, beside `HasFriendlyBase`) and not in an
-`InteractionOverride`. It is a property of the *tile*, and the interaction grids resolve
-overrides from the acting unit only — keeping tile-shaped rules out of the resolver is what
-lets `ResolveInteractionCell` take the same inputs at every call site.
+**Refuel is owner-scoped.** Pads refuel only via `TileHarbors` for the unit's domain and
+faction (territory). Embarked cargo also refuels on a same-faction carrier that carries its
+domain. Co-located but unembarked air over a full deck does not.
 
-**Consequence, accepted:** a *sea* transport cannot put an unembarked land garrison into a sea
-base. `CanUnloadTo` requires an adjacent destination and routes through `CanEnterTile`, and
-`CanUnloadTransportInPlace` is air-only, so cargo stays embarked in the docked ship (where it
-still defends and blocks). Two routes to unembarked-in-sea-base remain: an **air** transport
-unloading in place over the base, and a carrier dying under its passenger. Both go through
-`CanHoldTileWithoutCarrier`, which admits any friendly base tile — holding a tile is
-deliberately easier than reaching one.
+**Resting aircraft.** An aircraft on a tile that harbors its domain, or embarked on a
+same-faction carrier that carries it, is attackable by any domain — resting lifts the stock
+`attack_unit` deny in `AttackRules`.
 
-**Implemented** 2026-09-10.
+**Harbored vs carried.** A tile harbors; a unit carries. Carried units share the carrier's
+tile but are not occupants: excluded from occupancy, ZOC, and normal targeting. In a base
+they may still garrison and defend.
+
+**Implemented** 2026-09-14.
 
 ## Deferred by decision, not by uncertainty
 

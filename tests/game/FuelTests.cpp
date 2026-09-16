@@ -160,6 +160,8 @@ TEST_CASE("End turn on Base, Airbase, or friendly carrier refuels without damage
 
     SECTION("Airbase")
     {
+        // Territory comes from a nearby base; the Airbase on this tile supplies harbors(air).
+        fixture.MakeFactionBase(faction, 1, 4);
         fixture.ctx->AddImprovementWithEffects(fixture.At(4, 4), "Airbase");
         Unit& jet = fixture.MakeUnit(faction, 4, 4, {"test_fuel_flight_chassis"});
         jet.SetCurrentFuel(0);
@@ -195,6 +197,28 @@ TEST_CASE("End turn on Base, Airbase, or friendly carrier refuels without damage
         CHECK(jet.GetCarrier() == &carrier);
         CHECK(jet.GetCurrentFuel() == jet.GetMaxFuel());
     }
+}
+
+TEST_CASE("Refuel is owner-scoped: enemy air on your base does not refuel", "[fuel][harbors]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& owner = fixture.MakeFaction();
+    Faction& intruder = fixture.MakeFaction();
+    fixture.MakeFactionBase(owner, 4, 4);
+
+    Unit& ownJet = fixture.MakeUnit(owner, 4, 4, {"test_fuel_flight_chassis"});
+    Unit& enemyJet = fixture.MakeUnit(intruder, 4, 4, {"test_fuel_flight_chassis"});
+    ownJet.SetCurrentFuel(0);
+    enemyJet.SetCurrentFuel(0);
+
+    CHECK(IsRefuelSite(ownJet, fixture.map));
+    CHECK_FALSE(IsRefuelSite(enemyJet, fixture.map));
+
+    ProcessFuelAtTurnEnd(ownJet, fixture.map);
+    ProcessFuelAtTurnEnd(enemyJet, fixture.map);
+    CHECK(ownJet.GetCurrentFuel() == ownJet.GetMaxFuel());
+    CHECK(enemyJet.GetCurrentFuel() == 0);
 }
 
 TEST_CASE("Carrier deck does not refuel air that could not land (no cargo slot)", "[fuel]")
@@ -290,7 +314,7 @@ TEST_CASE("NeedsAutoReturnToFuel when this turn's out-of-fuel damage would destr
 
     jet.SetCurrentFuel(4);
     fixture.MakeFactionBase(faction, 4, 4);
-    CHECK(IsRefuelSite(jet));
+    CHECK(IsRefuelSite(jet, fixture.map));
     CHECK_FALSE(NeedsAutoReturnToFuel(jet, fixture.map));
 }
 

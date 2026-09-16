@@ -22,25 +22,27 @@ bool UnitExertsZocOn(const Unit& rProjector, const Unit& rSubject,
 bool CanEnterTileTerrain(const Unit& rMover, const Tile& rTile,
                          const InteractionGridsConfig_t& rGrids);
 
-// Whether rMover could stand on rTile with no hull under it: enter-grid allow, or any
-// friendly base tile. NOT a movement predicate — it never grants entry, and reaching a tile
-// is strictly harder than holding one (a land unit may hold its own sea base but may only
-// *reach* it by transport or Amphibious Pods; see CanEnterTile). Asked only when a carrier
-// is about to stop supporting a passenger: auto-boarding, carrier loss, unload-in-place.
+// Whether rMover could stand on rTile with no hull under it: enter-grid allow, or a tile
+// that TileHarbors the mover's domain for its faction. NOT a movement predicate — it never
+// grants entry, and reaching a tile is strictly harder than holding one (a land unit may
+// hold its own sea base but may only *reach* it by transport or Amphibious Pods; see
+// CanEnterTile). Asked only when a carrier is about to stop supporting a passenger:
+// auto-boarding, carrier loss, unload-in-place.
 bool CanHoldTileWithoutCarrier(const Unit& rMover, const Tile& rTile,
+                               const WorldMap& rWorldMap,
                                const InteractionGridsConfig_t& rGrids);
 
 // Full tile-entry predicate used by stepping, unloading, and attack legality.
-// Resolve(enter) allow, plus land exceptions that depend on what else is on the tile:
-// board a friendly transport, or CanHoldTileWithoutCarrier (friendly sea base). Neither grants
-// free ocean movement.
+// Resolve(enter) allow, plus lifts that depend on the tile: sea on land via TileHarbors,
+// or land on water via FindBoardableTransport. Neither grants free ocean movement.
 bool CanEnterTile(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap,
                   const InteractionGridsConfig_t& rGrids);
 
 // True when a same-faction unit already occupies rTile (friend-on-fungus shortcut).
 bool HasFriendlyOccupant(const Unit& rMover, const Tile& rTile, const WorldMap& rWorldMap);
 
-// True when rMover's faction has a base centered on rTile.
+// True when rMover's faction has a base centered on rTile. Used by ZOC callers
+// (StepEvaluator); enter/hold use TileHarbors instead.
 bool HasFriendlyBase(const Unit& rMover, const Tile& rTile);
 
 // Whether a new unit (or move destination) may occupy rTile under the stacking rule.

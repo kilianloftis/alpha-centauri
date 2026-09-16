@@ -301,12 +301,12 @@
       {
         "type": "RuleFlag",
         "scope": "ThisTile",
-        "parameters": { "flag": "refuels_air" }
+        "parameters": { "flag": "harbors", "domain": "air" }
       },
       {
         "type": "RuleFlag",
         "scope": "ThisTile",
-        "parameters": { "flag": "loads_air_transport" }
+        "parameters": { "flag": "harbors", "domain": "orbital" }
       }
     ]
   },
@@ -539,12 +539,22 @@
       {
         "type": "RuleFlag",
         "scope": "ThisTile",
-        "parameters": { "flag": "refuels_air" }
+        "parameters": { "flag": "harbors", "domain": "land" }
       },
       {
         "type": "RuleFlag",
         "scope": "ThisTile",
-        "parameters": { "flag": "loads_air_transport" }
+        "parameters": { "flag": "harbors", "domain": "sea" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": { "flag": "harbors", "domain": "air" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": { "flag": "harbors", "domain": "orbital" }
       }
     ]
   },

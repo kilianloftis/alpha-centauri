@@ -7,11 +7,37 @@
 namespace ac
 {
 
-const std::vector<Unit*>& UnitPositionIndex::GetUnitsOnTile(const Tile& rTile) const
+const std::vector<Unit*>& UnitPositionIndex::GetAllUnitsOnTile(const Tile& rTile) const
 {
     static const std::vector<Unit*> empty;
     auto it = m_index.find(&rTile);
     return it != m_index.end() ? it->second : empty;
+}
+
+std::vector<Unit*> UnitPositionIndex::GetUnitsOnTile(const Tile& rTile) const
+{
+    std::vector<Unit*> occupants;
+    for (Unit* pUnit : GetAllUnitsOnTile(rTile))
+    {
+        if (pUnit && !pUnit->IsEmbarked())
+        {
+            occupants.push_back(pUnit);
+        }
+    }
+    return occupants;
+}
+
+std::vector<Unit*> UnitPositionIndex::GetCargoOnTile(const Tile& rTile) const
+{
+    std::vector<Unit*> cargo;
+    for (Unit* pUnit : GetAllUnitsOnTile(rTile))
+    {
+        if (pUnit && pUnit->IsEmbarked())
+        {
+            cargo.push_back(pUnit);
+        }
+    }
+    return cargo;
 }
 
 void UnitPositionIndex::MoveUnit(Unit& rUnit, const Tile& rNewTile)

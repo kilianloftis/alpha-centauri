@@ -2,7 +2,6 @@
 
 #include "game/Faction.h"
 #include "game/effects/ActiveEffect.h"
-#include "game/effects/EffectConfig.h"
 #include "game/effects/InteractionResolve.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/faction/UnitVisibility.h"
@@ -11,11 +10,42 @@
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/MovementRules.h"
+#include "game/units/TransportRules.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDomain.h"
 
 namespace ac
 {
+
+namespace
+{
+
+// Harbor pad, embarked on a carrier that carries it, or standing on one (deck underfoot).
+bool DefenderIsResting_(const Unit& rDefender, const Tile& rTile, const WorldMap& rWorldMap)
+{
+    const FactionId_t factionId = rDefender.GetFaction().GetFactionId();
+    const UnitDomain_t domain = rDefender.GetDomain();
+    if (TileHarbors(rTile, domain, factionId, rWorldMap.GetTerritory()))
+    {
+        return true;
+    }
+    if (rDefender.IsEmbarked())
+    {
+        const Unit* pCarrier = rDefender.GetCarrier();
+        return pCarrier && UnitCarries(*pCarrier, domain, factionId);
+    }
+    for (const Unit* pOccupant : rWorldMap.GetUnitsOnTile(rTile))
+    {
+        if (pOccupant && pOccupant != &rDefender
+            && UnitCarries(*pOccupant, domain, factionId))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+} // namespace
 
 bool CanAttackTile(const Unit& rAttacker, const Tile& rTargetTile, const WorldMap& rWorldMap,
                    const InteractionGridsConfig_t& rGrids)
@@ -45,26 +75,28 @@ Unit* FindVisibleHostileOnTile(const Unit& rObserver, const Tile& rTile,
 {
     const Faction& rObserverFaction = rObserver.GetFaction();
     const FactionId_t observerId = rObserverFaction.GetFactionId();
-    const bool bBaseTile = rTile.HasImprovement(ImprovementIds::k_Base);
-    Unit* pEmbarkedInBase = nullptr;
     for (Unit* pUnit : rWorldMap.GetUnitsOnTile(rTile))
     {
-        if (!pUnit || pUnit->GetFaction().GetFactionId() == observerId
-            || !IsUnitVisibleTo(rObserverFaction, *pUnit, rTileEffects))
-        {
-            continue;
-        }
-        if (!pUnit->IsEmbarked())
+        if (pUnit && pUnit->GetFaction().GetFactionId() != observerId
+            && IsUnitVisibleTo(rObserverFaction, *pUnit, rTileEffects))
         {
             return pUnit;
         }
-        // Embarked cargo defends only in a base; prefer a non-embarked hostile above.
-        if (bBaseTile && !pEmbarkedInBase)
+    }
+    // Embarked cargo defends only in a base; prefer a non-embarked hostile above.
+    if (!rTile.HasImprovement(ImprovementIds::k_Base))
+    {
+        return nullptr;
+    }
+    for (Unit* pUnit : rWorldMap.GetCargoOnTile(rTile))
+    {
+        if (pUnit && pUnit->GetFaction().GetFactionId() != observerId
+            && IsUnitVisibleTo(rObserverFaction, *pUnit, rTileEffects))
         {
-            pEmbarkedInBase = pUnit;
+            return pUnit;
         }
     }
-    return pEmbarkedInBase;
+    return nullptr;
 }
 
 Unit* FindAttackableHostileOnTile(const Unit& rAttacker, const Tile& rTargetTile,
@@ -98,12 +130,8 @@ Unit* FindAttackableHostileOnTile(const Unit& rAttacker, const Tile& rTargetTile
     EffectContext_t ctx;
     ctx.pAttacker = &rAttacker;
     ctx.targetTile = &rTargetTile;
-    // A grounded aircraft is attackable by anything: sitting on a pad (base, airbase,
-    // friendly carrier deck) is what takes it out of its own domain's protection, so that
-    // exemption derives from the tile's RefuelsAir rather than from the grid.
     if (ResolveInteractionCell(rGrids, q, &rAttacker, ctx) == InteractionCell_t::Deny
-        && !TileProvidesFlag(rTargetTile, RuleFlagId_t::RefuelsAir, rWorldMap,
-                             pDefender->GetFaction().GetFactionId()))
+        && !DefenderIsResting_(*pDefender, rTargetTile, rWorldMap))
     {
         return nullptr;
     }

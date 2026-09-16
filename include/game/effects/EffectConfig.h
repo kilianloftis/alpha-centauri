@@ -147,6 +147,7 @@ inline bool IsStockpileOutputStat(StatId_t stat)
 struct RuleFlagEffect_t
 {
     RuleFlagId_t flag;
+    std::optional<UnitDomain_t> domain;
 };
 
 struct SocialEngineeringOverrideEffect_t
@@ -219,19 +220,15 @@ struct InterceptAttemptEffect_t
     int chanceOfDestructionOnFail = 0;
 };
 
-// Declares which passenger domains this unit may carry, and optionally where it may load.
-// Capacity remains cargo_capacity. Contributions union across matching ThisUnit effects
-// (see unitFilter for carrier domain).
+// Declares which passenger domains this unit may carry (`carries`), and whether loading
+// requires a matching harbor tile (`requires_harbor`). Embarked cargo of a carried domain
+// refuels on the carrier — that follows from carries, not a separate flag. Capacity remains
+// cargo_capacity. Contributions union across matching ThisUnit effects (see unitFilter for
+// carrier domain).
 struct TransportParamsEffect_t
 {
-    std::vector<UnitDomain_t> passengerDomains;
-    // Tile capabilities required to load or unload cargo, ORed together (and across every
-    // TransportParams on the carrier). Empty means load anywhere. These name capabilities,
-    // not sites: a tile qualifies when an improvement on it or a friendly unit standing on
-    // it declares the flag (TileProvidesFlag), so a new load site — an improvement, a
-    // carrier deck, a future variant of one — participates by declaring the capability
-    // without any carrier's config changing.
-    std::vector<RuleFlagId_t> loadSiteFlags;
+    std::vector<UnitDomain_t> carries;
+    bool requiresHarbor = false;
 };
 
 // Overrides one cell (or a wild-card slice) of an interaction grid to a non-default value.

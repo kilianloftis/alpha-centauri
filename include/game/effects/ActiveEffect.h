@@ -22,6 +22,7 @@ class Faction;
 class GameState;
 class IEffectsProvider;
 class PopulationManager;
+class TerritoryMap;
 class Unit;
 class UnitDesign;
 class WorldMap;
@@ -570,6 +571,11 @@ bool ResolveFlag(const Tile& rTile, RuleFlagId_t flagId);
 // on-tile unit faction check; projected auras stamp ownerFaction from the unit separately.
 bool TileProvidesFlag(const Tile& rTile, RuleFlagId_t flagId, const WorldMap& rWorldMap,
                       FactionId_t factionId);
+
+// True when rTile is owned by factionId and a terrain feature or improvement on it declares
+// RuleFlag Harbors for domain (ThisTile, radius 0, no condition).
+bool TileHarbors(const Tile& rTile, UnitDomain_t domain, FactionId_t factionId,
+                 const TerritoryMap& rTerritory);
 
 // Collects a single pop type's own effects (both ThisPop-scoped tile multipliers and
 // ThisBase-scoped flat generation bonuses). sourceId is the pop type's id.

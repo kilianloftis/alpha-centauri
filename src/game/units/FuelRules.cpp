@@ -3,8 +3,6 @@
 #include "game/Faction.h"
 #include "game/GameState.h"
 #include "game/effects/ActiveEffect.h"
-#include "game/effects/EffectConfig.h"
-#include "game/effects/EffectEnums.h"
 #include "game/faction/UnitManager.h"
 #include "game/map/MapUtils.h"
 #include "game/map/TerritoryMap.h"
@@ -25,22 +23,6 @@ namespace ac
 namespace
 {
 
-bool UnitProjectsRefuelsAir_(const Unit& rUnit)
-{
-    for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rUnit).effects)
-    {
-        const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.config->effect);
-        if (pFlag && pFlag->flag == RuleFlagId_t::RefuelsAir
-            && rEffect.config->scope == EffectScope_t::ThisTile
-            && rEffect.config->radius == 0
-            && !rEffect.config->condition.has_value())
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
 // Pads / carriers the mover could reach this turn (Chebyshev radius = remaining move points).
 // Pathfinding still decides real reachability and cost.
 void CollectFriendlyRefuelTiles_(const Unit& rUnit, const WorldMap& rWorldMap,
@@ -55,8 +37,9 @@ void CollectFriendlyRefuelTiles_(const Unit& rUnit, const WorldMap& rWorldMap,
 
     const FactionId_t factionId = rUnit.GetFaction().GetFactionId();
     const Tile& rOrigin = rUnit.GetTile();
+    const TerritoryMap& rTerritory = rWorldMap.GetTerritory();
 
-    // One disk pass: territory pads, plus boardable RefuelsAir carriers already in range
+    // One disk pass: territory pads, plus boardable carriers already in range
     // (GetUnitsOnTile) instead of scanning the whole faction roster.
     ForEachTileInChebyshevRadius(rOrigin, rWorldMap, rangePoints, /*includeOrigin=*/true,
         [&](const Tile* pTile, int /*distance*/)
@@ -66,15 +49,14 @@ void CollectFriendlyRefuelTiles_(const Unit& rUnit, const WorldMap& rWorldMap,
                 return;
             }
 
-            if (ResolveFlag(*pTile, RuleFlagId_t::RefuelsAir)
-                && rWorldMap.GetTerritory().GetOwner(*pTile) == factionId)
+            if (TileHarbors(*pTile, rUnit.GetDomain(), factionId, rTerritory))
             {
                 rOut.push_back(pTile);
             }
 
             for (const Unit* pOccupant : rWorldMap.GetUnitsOnTile(*pTile))
             {
-                if (!pOccupant || pOccupant == &rUnit || !UnitProjectsRefuelsAir_(*pOccupant))
+                if (!pOccupant || pOccupant == &rUnit)
                 {
                     continue;
                 }
@@ -89,21 +71,23 @@ void CollectFriendlyRefuelTiles_(const Unit& rUnit, const WorldMap& rWorldMap,
 
 } // namespace
 
-bool IsRefuelSite(const Unit& rUnit)
+bool IsRefuelSite(const Unit& rUnit, const WorldMap& rWorldMap)
 {
-    // Pad improvements (Base, Airbase): any unit ending the turn on the tile.
-    if (ResolveFlag(rUnit.GetTile(), RuleFlagId_t::RefuelsAir))
+    // Pad improvements (Base, Airbase): territory must harbor the unit's domain.
+    if (TileHarbors(rUnit.GetTile(), rUnit.GetDomain(), rUnit.GetFaction().GetFactionId(),
+                    rWorldMap.GetTerritory()))
     {
         return true;
     }
 
-    // Carrier decks (and similar unit-projected pads): only landed cargo.
+    // Carriers: only landed cargo of a domain the carrier carries.
     if (!rUnit.IsEmbarked())
     {
         return false;
     }
     const Unit* pCarrier = rUnit.GetCarrier();
-    return pCarrier && UnitProjectsRefuelsAir_(*pCarrier);
+    return pCarrier
+        && UnitCarries(*pCarrier, rUnit.GetDomain(), rUnit.GetFaction().GetFactionId());
 }
 
 namespace
@@ -131,7 +115,7 @@ bool WouldBeDestroyedWithoutRefuelThisTurn_(const Unit& rUnit, const WorldMap& r
         return false;
     }
 
-    if (IsRefuelSite(rUnit))
+    if (IsRefuelSite(rUnit, rWorldMap))
     {
         return false;
     }
@@ -211,7 +195,7 @@ void ProcessFuelAtTurnEnd(Unit& rUnit, const WorldMap& rWorldMap)
         TryAttachToTransport(rUnit, rWorldMap);
     }
     
-    if (IsRefuelSite(rUnit))
+    if (IsRefuelSite(rUnit, rWorldMap))
     {
         rUnit.SetCurrentFuel(rUnit.GetMaxFuel());
         return;

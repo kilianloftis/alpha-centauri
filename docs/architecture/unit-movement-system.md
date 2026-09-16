@@ -9,8 +9,8 @@ executor and pathfinder only consume its output and never inspect tile features 
 ```mermaid
 graph TD
     subgraph Rules
-        MovementRules[MovementRules<br/>terrain / unaided / CanEnterTile,<br/>ZOC, friendly occupant / base]
-        TransportRules[TransportRules<br/>cargo domains / capacity / load sites,<br/>boarding, CanUnloadTo]
+        MovementRules[MovementRules<br/>terrain / hold / CanEnterTile,<br/>ZOC, friendly occupant / base]
+        TransportRules[TransportRules<br/>carries / capacity / harbor load,<br/>boarding, CanUnloadTo]
         MoveCostCalculator[MoveCostCalculator<br/>tile costs + fungus entry rules]
         EntryTerms[EntryTerms_t<br/>costFragments,<br/>bRequiresFullCost, bEndsTurn]
         MoveCostCalculator -->|resolves per unit + tile| EntryTerms
@@ -123,50 +123,51 @@ case it asks `TransportRules::FindBoardableTransport` (`.cpp` edge only; headers
 acyclic). Three entry predicates form a ladder:
 
 - `CanEnterTileTerrain` (MovementRules) — `Resolve(enter)` for chassis domain × land/water.
-- `CanHoldTileWithoutCarrier` (MovementRules) — the above, plus any unit holding a friendly base
-  tile. "Can this unit hold this tile with nothing under it?"
-- `CanEnterTile` (MovementRules) — the grid, plus the two tile-dependent exceptions: a ship
-  berthing in a friendly base (the port rule), or a land unit boarding a friendly transport.
+- `CanHoldTileWithoutCarrier` (MovementRules) — terrain allow, or a tile that `TileHarbors`
+  the mover's domain for its faction. "Can this unit hold this tile with nothing under it?"
+  Grants no entry.
+- `CanEnterTile` (MovementRules) — stock enter allow, plus the two wrong-surface lifts: sea
+  onto land via `TileHarbors(sea)` (own coastal base), or land onto water via boarding
+  (`FindBoardableTransport` → `UnitCarries`).
 
 All three call the same `ResolveInteractionCell(grids, query, actingUnit, ctx)`. The unit is
-the *only* override source, so the resolve function's inputs never vary by call site. Rules
-that belong to a tile rather than a unit — the port rule, a landing pad — are plain code at
-the call site that needs them, not a second override layer inside the resolver.
+the *only* override source; there is no tile `InteractionOverride` layer. Tile-shaped rules
+(`TileHarbors`, boarding) are plain code at the call sites that need them.
 
-**Reaching a tile and holding it are different questions.** A land unit gets onto water only
-by boarding — even its own sea base is not a walk-in, so `CanEnterTile` deliberately does not
-consult `HasFriendlyBase` for it. That predicate governs whether a unit *already* there may
-stay: a garrison whose carrier dies inside its own sea base survives (`SurvivesCarrierLoss`)
-rather than drowning.
+**Wrong-surface lifts.** Stock `enter` denies domain × wrong surface. That deny is lifted by
+exactly one of two predicates: `TileHarbors` (the *tile* harbors the mover's domain for its
+faction) or `UnitCarries` (a *unit* on the tile carries the mover's domain). Ships berth under
+power at their own coastal base; land reaches water — including its own sea base — only by
+transport or Amphibious Pods. Holding is easier than reaching: once on a harboring tile,
+`CanHoldTileWithoutCarrier` keeps a land garrison alive when its carrier dies
+(`SurvivesCarrierLoss`).
 
-**The port rule.** Any unit can be in a base, so `CanEnterTile` lets a sea unit onto the land
-tile of a friendly base (`HasFriendlyBase`), and `CanHoldTileWithoutCarrier` lets any unit hold
-one. "Adjacent to water" needs no expression: movement is step by step between adjacent tiles,
-so a ship can only reach a coastal base from water it already occupies. A ship berthed in a
-land base can leave only to tiles its domain allows — plus any *other* adjacent friendly base.
-Ships dock at friendly bases only; a foreign coastal base cannot be entered by sea.
+**`TransportParams`.** Carrier capability is config-driven: `carries` (passenger domains) and
+`requires_harbor` (load only where the tile harbors the *carrier's* domain). Embarked cargo of
+a carried domain refuels on the carrier — that follows from `carries`, not a separate flag.
+Contributions union across matching `ThisUnit` effects; there is no separate carry
+interaction grid. Capacity is the `cargo_capacity` stat. Stock Carrier Deck is one
+`TransportParams` (`carries: [air]`).
 
-Carrier capability is entirely config-driven via the `TransportParams` effect: which
-passenger domains a carrier accepts, and which tile capabilities it needs in order to
-exchange cargo (`loadSiteFlags`, resolved through `TileProvidesFlag` — see
-`effects-system.md`). Capacity itself is the `cargo_capacity` stat.
+**Occupants vs cargo.** `WorldMap::GetUnitsOnTile` / `UnitPositionIndex::GetUnitsOnTile` return
+occupants only — carried units are not on the tile for occupancy, ZOC, or load-site
+projection. Callers that need cargo use `GetCargoOnTile` or `GetAllUnitsOnTile` (garrison,
+defence, UI). `UnitPositionIndex::MoveUnit` tows cargo with the carrier; `StepEvaluator`
+routes an embarked mover through `CanUnloadTo` instead of the normal terrain check.
 
 **Attack implies entry, but entry is not enough.** `AttackRules::CanAttackTile` requires
-`CanEnterTile` — ships therefore cannot attack shore; air may attack wherever it can land —
-*and* `Resolve(attack_tile)` over the attacker's domain × `footing` — what the attacker is
-standing on (`land`, `water`, or `embarked`). Stock allows land units to assault only from
-`land`, which is what stops an assault out of a boat or off a sea base. This is deliberately a
-separate grid from `enter`: folding it in would mean any unit allowed to assault across water
-could also walk across it. The two
-are genuinely independent — a non-amphibious land unit on a transport *may* disembark onto
-adjacent land (`CanUnloadTo` → `CanEnterTile`) but *may not* attack onto it, so no definition
-of `enter` can express the rule. Amphibious Pods therefore carries two overrides — a
-Water+Base `enter` override for garrisoning sea bases, and an `attack_tile` override with the
-`footing` axis omitted — "assault from anywhere" — for the assault itself. Declare-attack legality for `TryAttack` / UI is
-`FindAttackableHostileOnTile` (moves, adjacency, visible hostile, `CanAttackTile`, then
-`Resolve(attack_unit)`, which the defender's tile lifts when it provides `RefuelsAir` — a
-grounded aircraft on a pad is attackable by anything); targeting rules
-(embarked-in-base, prefer carrier) live in `FindVisibleHostileOnTile`.
+`CanEnterTile` — ships therefore cannot attack shore (attack ⇒ enter, and a foreign shore is
+not a harbor); air may attack wherever it can land — *and* `Resolve(attack_tile)` over the
+attacker's domain × `footing` (`land`, `water`, or `embarked`). Stock allows land units to
+assault only from `land`, which stops an assault out of a boat or off a sea base. The two
+grids are independent: a non-amphibious land unit on a transport *may* disembark onto adjacent
+land (`CanUnloadTo` → `CanEnterTile`) but *may not* attack onto it. Amphibious Pods carries
+two overrides — a Water+Base `enter` allow for garrisoning sea bases, and an `attack_tile`
+allow with the `footing` axis omitted ("assault from anywhere"). Declare-attack legality for
+`TryAttack` / UI is `FindAttackableHostileOnTile` (moves, adjacency, visible hostile,
+`CanAttackTile`, then `Resolve(attack_unit)`); a resting aircraft — on a tile that harbors its
+domain, or embarked on a same-faction carrier that carries it — is attackable by any domain.
+Targeting rules (embarked-in-base, prefer carrier) live in `FindVisibleHostileOnTile`.
 
 **Grid shape.** Every grid in `interaction_grids.json` is the acting unit's domain (the row)
 against one other thing (the column). "Actor" is always the unit whose own overrides
@@ -198,12 +199,6 @@ and are conservative: a set bit means "collect and check", a clear bit means no 
 exist, so the resolve drops straight to the stock cell. There is no scan of the units standing
 on the target tile — that was a second allocation on the pathfinder's hot path, and the rules
 that needed it are now plain code at their call sites.
-
-An embarked unit shares its carrier's tile. Outside a base it is excluded from ZOC,
-combat targeting, and tile occupancy; in a base it may defend and block (carrier preferred
-as the combat target). `UnitPositionIndex::MoveUnit` carries cargo along with the carrier,
-and `StepEvaluator` routes an embarked mover through `CanUnloadTo` instead of the normal
-terrain check.
 
 ### Boarding is only automatic where it has to be
 

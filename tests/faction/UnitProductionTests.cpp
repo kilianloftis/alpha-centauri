@@ -197,8 +197,8 @@ TEST_CASE("Completing colony pod production decreases base population by 1",
     CHECK(applied.completedId == rPod.GetId());
     CHECK(base.GetPopulation().GetSize() == 2);
 
-    const std::vector<Unit*>& onTile =
-        game.pState->GetWorldMap().GetUnitPositions().GetUnitsOnTile(base.GetTile());
+    const std::vector<Unit*> onTile =
+        game.pState->GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(base.GetTile());
     REQUIRE(onTile.size() == 1);
     CHECK(onTile.front()->GetFlag(RuleFlagId_t::FoundBase));
 }
@@ -550,7 +550,7 @@ TEST_CASE("Completing unit production places the unit on the base tile", "[produ
     const UnitDesign& rDesign = game.AddDesign({"test_chassis", "test_weapon", "test_armor"});
 
     REQUIRE(game.pFaction->GetUnitManager().Units().empty());
-    REQUIRE(game.pState->GetWorldMap().GetUnitPositions().GetUnitsOnTile(base.GetTile()).empty());
+    REQUIRE(game.pState->GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(base.GetTile()).empty());
 
     base.GetProduction().SetProduction(&rDesign, base.GetBaseEffects());
     REQUIRE(base.GetMineralCost() >= 1);
@@ -561,8 +561,8 @@ TEST_CASE("Completing unit production places the unit on the base tile", "[produ
     CHECK(applied.completedId == rDesign.GetId());
     CheckQueuedStockpileEnergy_(base, game);
 
-    const std::vector<Unit*>& onTile =
-        game.pState->GetWorldMap().GetUnitPositions().GetUnitsOnTile(base.GetTile());
+    const std::vector<Unit*> onTile =
+        game.pState->GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(base.GetTile());
     REQUIRE(onTile.size() == 1);
     Unit& rUnit = *onTile.front();
     CHECK(&rUnit.GetTile() == &base.GetTile());
@@ -703,8 +703,8 @@ TEST_CASE("A unit is a prototype when any component is new to the faction",
     REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
 
     CHECK_FALSE(game.pFaction->GetMilitary().IsPrototype(rDesign));
-    const std::vector<Unit*>& onTile =
-        game.pState->GetWorldMap().GetUnitPositions().GetUnitsOnTile(base.GetTile());
+    const std::vector<Unit*> onTile =
+        game.pState->GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(base.GetTile());
     REQUIRE(onTile.size() == 1);
     CHECK(onTile.front()->GetXp() == 2);
 }
@@ -755,8 +755,8 @@ TEST_CASE("Skunkworks cancels prototype mineral surcharge but not prototype XP",
     withSkunk.GetProduction().SetMineralStockpile(standardCost);
     REQUIRE(withSkunk.ApplyProduction().kind == ProductionApplyKind_t::Completed);
 
-    const std::vector<Unit*>& onTile =
-        game.pState->GetWorldMap().GetUnitPositions().GetUnitsOnTile(withSkunk.GetTile());
+    const std::vector<Unit*> onTile =
+        game.pState->GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(withSkunk.GetTile());
     REQUIRE(onTile.size() == 1);
     CHECK(onTile.front()->IsPrototype());
     CHECK(onTile.front()->GetXp() == 2);
@@ -794,8 +794,8 @@ TEST_CASE("Prototype StartingExperience stacks with ProducedAtThisBase train bon
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
     REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
 
-    const std::vector<Unit*>& onTile =
-        game.pState->GetWorldMap().GetUnitPositions().GetUnitsOnTile(base.GetTile());
+    const std::vector<Unit*> onTile =
+        game.pState->GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(base.GetTile());
     REQUIRE(onTile.size() == 1);
     CHECK(onTile.front()->GetXp() == 4);
 }
@@ -1043,8 +1043,8 @@ TEST_CASE("A unit keeps the prototype status it was built with after the ledger 
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
     REQUIRE(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
 
-    const std::vector<Unit*>& onTile =
-        game.pState->GetWorldMap().GetUnitPositions().GetUnitsOnTile(base.GetTile());
+    const std::vector<Unit*> onTile =
+        game.pState->GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(base.GetTile());
     REQUIRE(onTile.size() == 1);
     const Unit& rPrototype = *onTile.front();
 
@@ -1061,8 +1061,8 @@ TEST_CASE("A unit keeps the prototype status it was built with after the ledger 
     second.GetProduction().SetMineralStockpile(second.GetMineralCost());
     REQUIRE(second.ApplyProduction().kind == ProductionApplyKind_t::Completed);
 
-    const std::vector<Unit*>& onSecondTile =
-        game.pState->GetWorldMap().GetUnitPositions().GetUnitsOnTile(second.GetTile());
+    const std::vector<Unit*> onSecondTile =
+        game.pState->GetWorldMap().GetUnitPositions().GetAllUnitsOnTile(second.GetTile());
     REQUIRE(onSecondTile.size() == 1);
     CHECK_FALSE(onSecondTile.front()->IsPrototype());
     CHECK(onSecondTile.front()->GetXp() == 1);

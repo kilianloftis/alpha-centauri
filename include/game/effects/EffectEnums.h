@@ -509,17 +509,9 @@ enum class RuleFlagId_t
     // a unit on this tile from disengaging when declared ThisTile (Base, Bunker, Airbase).
     PreventsDisengage,
 
-    // Tile service capabilities. Declared ThisTile — by an improvement on the tile, or
-    // projected onto the tile by a component of a friendly unit standing there (Carrier
-    // Deck). Queried via TileProvidesFlag, never named directly by the consumer, so a new
-    // site kind only has to declare the capability to participate.
-    // Air units restore Fuel here.
-    RefuelsAir,
-    // Air transports may exchange cargo here. Separate from RefuelsAir because the two are
-    // independent capabilities that SMAC happens to co-locate: Base and Airbase declare
-    // both, while a Carrier Deck refuels without being a load site. Granting a carrier deck
-    // this flag is the supported way to opt into loading at sea.
-    LoadsAirTransport,
+    // Tile declares it harbors a domain (ThisTile). Queried via TileHarbors with territory
+    // ownership.
+    Harbors,
 
     // Faction/global flags
     PopulationBoom,
@@ -569,8 +561,7 @@ inline RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "attacking_ends_turn")         return RuleFlagId_t::AttackingEndsTurn;
     if (rFlag == "no_conquest_repair")          return RuleFlagId_t::NoConquestRepair;
     if (rFlag == "prevents_disengage")          return RuleFlagId_t::PreventsDisengage;
-    if (rFlag == "refuels_air")                 return RuleFlagId_t::RefuelsAir;
-    if (rFlag == "loads_air_transport")         return RuleFlagId_t::LoadsAirTransport;
+    if (rFlag == "harbors")                     return RuleFlagId_t::Harbors;
     if (rFlag == "creche")                      return RuleFlagId_t::Creche;
     if (rFlag == "headquarters")                return RuleFlagId_t::Headquarters;
     if (rFlag == "probe_subversion_immune")     return RuleFlagId_t::ProbeSubversionImmune;
