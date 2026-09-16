@@ -1,4 +1,5 @@
 #include "game/faction/base/resources/ResourceManager.h"
+#include "game/faction/CommerceManager.h"
 #include "game/faction/EconomyManager.h"
 #include "game/Faction.h"
 #include "game/faction/base/BaseManager.h"
@@ -80,6 +81,7 @@ TileResources_t CollectSupplyCrawlYield_(const HomeBaseIndex& rHomeUnits,
 ResourceManager::ResourceManager(
     const WorkerAssignmentManager& rWorkerAssignments,
     const EconomyManager& rEconomy,
+    const CommerceManager& rCommerce,
     const BaseManager& rBase,
     const SocialRatingRegistry& rSocialRatings,
     const Tile& rBaseTile,
@@ -87,6 +89,7 @@ ResourceManager::ResourceManager(
     const HomeBaseIndex& rHomeUnits)
     : m_rWorkerAssignments(rWorkerAssignments)
     , m_pEconomy(&rEconomy)
+    , m_pCommerce(&rCommerce)
     , m_rBase(rBase)
     , m_rSocialRatings(rSocialRatings)
     , m_rBaseTile(rBaseTile)
@@ -98,6 +101,11 @@ ResourceManager::ResourceManager(
 void ResourceManager::RebindEconomy(const EconomyManager& rEconomy)
 {
     m_pEconomy = &rEconomy;
+}
+
+void ResourceManager::RebindCommerce(const CommerceManager& rCommerce)
+{
+    m_pCommerce = &rCommerce;
 }
 
 ResourceManager::~ResourceManager()
@@ -168,13 +176,27 @@ int ResourceManager::ApplyInefficiency_(int energy) const
     return energy - CalculateInefficiencyLoss(energy, distance, denominator);
 }
 
-int ResourceManager::AllocatableEnergy_(const BaseEffects_t& rBaseEffects, int commerceEnergy) const
+int ResourceManager::CommerceEnergy_() const
 {
-    if (commerceEnergy < 0)
+    if (m_pCommerce == nullptr)
     {
-        throw std::invalid_argument("AllocatableEnergy_: commerceEnergy must be non-negative");
+        throw std::runtime_error("ResourceManager: commerce manager is null");
     }
-    return ApplyInefficiency_(GetEnergyProduction(rBaseEffects) + commerceEnergy);
+    return m_pCommerce->GetCommerceEnergy(m_rBase);
+}
+
+const std::vector<CommercePartnerLine_t>& ResourceManager::GetCommercePartners() const
+{
+    if (m_pCommerce == nullptr)
+    {
+        throw std::runtime_error("ResourceManager: commerce manager is null");
+    }
+    return m_pCommerce->ComputeForBase(m_rBase);
+}
+
+int ResourceManager::AllocatableEnergy_(const BaseEffects_t& rBaseEffects) const
+{
+    return ApplyInefficiency_(GetEnergyProduction(rBaseEffects) + CommerceEnergy_());
 }
 
 int ResourceManager::CalculateEcon_(int energy, const BaseEffects_t& rBaseEffects) const
@@ -200,19 +222,19 @@ int ResourceManager::CalculatePsych_(int energy, const BaseEffects_t& rBaseEffec
         ResolveBaseStat(rBaseEffects, StatId_t::Psych, static_cast<double>(split)));
 }
 
-int ResourceManager::GetEconProduction(const BaseEffects_t& rBaseEffects, int commerceEnergy) const
+int ResourceManager::GetEconProduction(const BaseEffects_t& rBaseEffects) const
 {
-    return CalculateEcon_(AllocatableEnergy_(rBaseEffects, commerceEnergy), rBaseEffects);
+    return CalculateEcon_(AllocatableEnergy_(rBaseEffects), rBaseEffects);
 }
 
-int ResourceManager::GetLabsProduction(const BaseEffects_t& rBaseEffects, int commerceEnergy) const
+int ResourceManager::GetLabsProduction(const BaseEffects_t& rBaseEffects) const
 {
-    return CalculateLabs_(AllocatableEnergy_(rBaseEffects, commerceEnergy), rBaseEffects);
+    return CalculateLabs_(AllocatableEnergy_(rBaseEffects), rBaseEffects);
 }
 
-int ResourceManager::GetPsychProduction(const BaseEffects_t& rBaseEffects, int commerceEnergy) const
+int ResourceManager::GetPsychProduction(const BaseEffects_t& rBaseEffects) const
 {
-    return CalculatePsych_(AllocatableEnergy_(rBaseEffects, commerceEnergy), rBaseEffects);
+    return CalculatePsych_(AllocatableEnergy_(rBaseEffects), rBaseEffects);
 }
 
 int ResourceManager::GetNutrientBank() const
@@ -322,22 +344,17 @@ void ResourceManager::ProduceMinerals_(const TileResources_t& worked, const Base
     m_minerals += CalculateResource_(StatId_t::Minerals, worked, rBaseEffects);
 }
 
-void ResourceManager::AllocateEnergy_(const TileResources_t& worked, const BaseEffects_t& rBaseEffects,
-                                      int commerceEnergy)
+void ResourceManager::AllocateEnergy_(const TileResources_t& worked, const BaseEffects_t& rBaseEffects)
 {
-    if (commerceEnergy < 0)
-    {
-        throw std::invalid_argument("AllocateEnergy_: commerceEnergy must be non-negative");
-    }
     const int energy = ApplyInefficiency_(
-        CalculateResource_(StatId_t::Energy, worked, rBaseEffects) + commerceEnergy);
+        CalculateResource_(StatId_t::Energy, worked, rBaseEffects) + CommerceEnergy_());
 
     m_econ  += CalculateEcon_(energy, rBaseEffects);
     m_labs  += CalculateLabs_(energy, rBaseEffects);
     m_psych += CalculatePsych_(energy, rBaseEffects);
 }
 
-void ResourceManager::ProduceResources(const BaseEffects_t& rBaseEffects, int commerceEnergy)
+void ResourceManager::ProduceResources(const BaseEffects_t& rBaseEffects)
 {
     // Psych is the one bank nothing drains: composition reads it every recalculation, and a
     // draining read would make composition flap within a single turn. It is reset here instead,
@@ -347,7 +364,7 @@ void ResourceManager::ProduceResources(const BaseEffects_t& rBaseEffects, int co
     const TileResources_t worked = ComputeWorked_(rBaseEffects);
     ProduceNutrients_(worked, rBaseEffects);
     ProduceMinerals_(worked, rBaseEffects);
-    AllocateEnergy_(worked, rBaseEffects, commerceEnergy);
+    AllocateEnergy_(worked, rBaseEffects);
 }
 
 } // namespace ac

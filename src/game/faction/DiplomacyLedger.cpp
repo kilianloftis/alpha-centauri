@@ -37,10 +37,18 @@ void DiplomacyLedger::SetStatus(FactionId_t a, FactionId_t b, DiplomaticStatus_t
     const FactionPair key = FactionPair::Canonical(a, b);
     if (status == DiplomaticStatus_t::None)
     {
-        m_statuses.erase(key);
+        if (m_statuses.erase(key) > 0)
+        {
+            m_statusRevision.Bump();
+        }
         return;
     }
-    m_statuses[key] = status;
+    const auto [it, bInserted] = m_statuses.insert({key, status});
+    if (bInserted || it->second != status)
+    {
+        it->second = status;
+        m_statusRevision.Bump();
+    }
 }
 
 bool DiplomacyLedger::HasTruce(FactionId_t a, FactionId_t b) const

@@ -1,10 +1,10 @@
 #include "ui/base/CommerceDisplay.h"
 
 #include "game/Faction.h"
-#include "game/GameState.h"
 #include "game/faction/CommerceCalculator.h"
 #include "game/faction/DiplomacyLedger.h"
 #include "game/faction/base/BaseManager.h"
+#include "game/faction/base/resources/ResourceManager.h"
 #include "graphics/Graphics.h"
 #include "ui/style/UiStyle.h"
 
@@ -51,15 +51,8 @@ void CommerceDisplay::Render(Graphics& rGraphics)
     rGraphics.DrawText(
         "Commerce", m_layout.x + leftPadding, m_layout.y, headerFontSize, style.textColor);
 
-    GameState* pState = m_rBase.GetFaction().GetGameState();
-    if (pState == nullptr)
-    {
-        return;
-    }
-
     float lineIndex = 1.0f;
-    for (const CommercePartnerLine_t& rLine :
-         CommerceCalculator{}.ComputeForBase(m_rBase, *pState))
+    for (const CommercePartnerLine_t& rLine : m_rBase.GetResources().GetCommercePartners())
     {
         if (rLine.pPartner == nullptr)
         {

@@ -2,6 +2,8 @@
 
 #include "game/faction/FactionPair.h"
 #include "game/faction/base/BaseTypes.h"
+#include "lib/Revision.h"
+#include <cstdint>
 #include <map>
 #include <string>
 #include <vector>
@@ -50,11 +52,16 @@ public:
     bool HasInfiltration(FactionId_t infiltrator, FactionId_t target) const;
     void SetInfiltration(FactionId_t infiltrator, FactionId_t target, bool infiltrated = true);
 
+    // Moves on every status change. Commerce pairing is treaty-gated, so CommerceManager
+    // memoizes against this rather than re-deriving pairs on every query.
+    uint64_t GetRevision() const { return m_statusRevision.Get(); }
+
     int GetIntegrity(FactionId_t faction) const;
     void SetIntegrity(FactionId_t faction, int value);
     void AddIntegrity(FactionId_t faction, int delta);
 
 private:
+    Revision m_statusRevision;
     std::map<FactionPair, DiplomaticStatus_t> m_statuses;
     std::map<FactionPair, bool> m_known;
     std::map<DirectedFactionPair, int> m_grievances;

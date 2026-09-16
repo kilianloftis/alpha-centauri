@@ -159,11 +159,11 @@ public:
     // Pre-inefficiency energy from worked tiles + flat Energy mods (Economy SE, etc.).
     // Does not include commerce.
     int GetEnergyProduction() const;
-    // commerceEnergy is added to raw energy before inefficiency (must be >= 0).
-    int GetEconProduction(int commerceEnergy = 0) const;
-    int GetLabsProduction(int commerceEnergy = 0) const;
+    // Post-split production; commerce is resolved inside ResourceManager via CommerceManager.
+    int GetEconProduction() const;
+    int GetLabsProduction() const;
     // Local energy-psych share + this base's Psych StatModifiers.
-    int GetPsychProduction(int commerceEnergy = 0) const;
+    int GetPsychProduction() const;
 
     // Composition modifiers from StatModifier(drones/talents) effects at this base
     // (facilities, etc.). Away-from-home / garrison police are separate calculators.
@@ -252,8 +252,8 @@ public:
     // Collect nutrients/minerals and allocate energy into econ/labs/psych stockpiles.
     // Called once per turn per base during ResourceCollection (via Faction::ProduceBaseResources).
     // Resolves against the composed provider pool (BaseEffectsCache memo).
-    // commerceEnergy is added to raw energy before inefficiency (must be >= 0).
-    void ProduceResources(int commerceEnergy = 0);
+    // Commerce is resolved inside ResourceManager via the injected CommerceManager.
+    void ProduceResources();
 
     // Charge home-unit mineral support against this turn's mineral bank; disband if short.
     // Called once per turn per base during UnitSupport (via Faction::ApplyMineralSupport),

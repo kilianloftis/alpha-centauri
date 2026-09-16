@@ -20,7 +20,7 @@ StageResult_t ResourceCollection::ExecuteImpl(GameState& rGameState, Faction& rF
     std::cout << "Executing ResourceCollection stage for faction\n";
 
     // World/council extras are already in Faction::GetActiveEffects via BindWorldEffects.
-    rFaction.ProduceBaseResources(rGameState);
+    rFaction.ProduceBaseResources();
     return StageResult_t::Continue;
 }
 

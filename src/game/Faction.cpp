@@ -8,7 +8,7 @@
 #include "game/stockpiles/StockpileRegistry.h"
 #include "game/buildings/BuildingUpkeep.h"
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
-#include "game/faction/CommerceCalculator.h"
+#include "game/faction/CommerceManager.h"
 #include "game/DifficultyConfig.h"
 #include "game/population/pop-types/GrowthConfigParser.h"
 #include "game/units/BaseConquestConfig.h"
@@ -63,6 +63,7 @@ Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
     // Distinct sub-streams from one seed, so flavor and research picks do not correlate.
     , m_pFlavor(std::make_unique<FactionFlavor>(rDefinition.flavor, *m_pIdentity, seed))
     , m_pEconomy(std::make_unique<EconomyManager>())
+    , m_pCommerce(std::make_unique<CommerceManager>(*this))
     , m_pMilitary(std::make_unique<Military>())
     , m_pResearch(std::make_unique<ResearchManager>(*rDataContext.techRegistry,
                                                     *rDataContext.techCostCalculator, this))
@@ -109,6 +110,16 @@ const EconomyManager& Faction::GetEconomy() const
     return *m_pEconomy;
 }
 
+CommerceManager& Faction::GetCommerce()
+{
+    return *m_pCommerce;
+}
+
+const CommerceManager& Faction::GetCommerce() const
+{
+    return *m_pCommerce;
+}
+
 int Faction::CollectIncome()
 {
     int total = 0;
@@ -133,22 +144,10 @@ int Faction::CollectResearch()
 
 int Faction::GetNetIncomePerTurn() const
 {
-    std::unordered_map<BaseId_t, int> commerceByBase;
-    if (m_pGameState != nullptr)
-    {
-        commerceByBase = CommerceCalculator{}.ComputeForFaction(*this, *m_pGameState);
-    }
-
     int total = 0;
     for (const BaseManager& rBase : Bases())
     {
-        int commerce = 0;
-        const auto it = commerceByBase.find(rBase.GetBaseId());
-        if (it != commerceByBase.end())
-        {
-            commerce = it->second;
-        }
-        total += rBase.GetEconProduction(commerce);
+        total += rBase.GetEconProduction();
     }
     return total - GetBuildingUpkeep();
 }
@@ -444,13 +443,16 @@ BaseManager* Faction::CreateBaseFromSnapshot(
     }
     pBase->GetProduction().SetMineralStockpile(rSnapshot.mineralStockpile);
 
-    // Psych (and thus drone/talent targets) may differ under the new owner.
-    pBase->GetPopulation().RecalculateComposition();
-    pBase->GetWorkerAssignments().UnassignAll();
-    pBase->GetWorkerAssignments().AutoAssignWorkers();
-
     BaseManager* pRawBase = pBase.get();
     AddBase(std::move(pBase));
+
+    // Psych (and thus drone/talent targets) may differ under the new owner. Must run after
+    // AddBase: composition reads GetPsychProduction, which resolves commerce and requires the
+    // base to appear in Faction::Bases().
+    pRawBase->GetPopulation().RecalculateComposition();
+    pRawBase->GetWorkerAssignments().UnassignAll();
+    pRawBase->GetWorkerAssignments().AutoAssignWorkers();
+
     return pRawBase;
 }
 
@@ -874,27 +876,11 @@ BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile*
     return pRawBase;
 }
 
-void Faction::ProduceBaseResources(GameState& rGameState)
-{
-    const std::unordered_map<BaseId_t, int> commerceByBase =
-        CommerceCalculator{}.ComputeForFaction(*this, rGameState);
-    for (BaseManager& rBase : Bases())
-    {
-        int commerce = 0;
-        const auto it = commerceByBase.find(rBase.GetBaseId());
-        if (it != commerceByBase.end())
-        {
-            commerce = it->second;
-        }
-        rBase.ProduceResources(commerce);
-    }
-}
-
 void Faction::ProduceBaseResources()
 {
     for (BaseManager& rBase : Bases())
     {
-        rBase.ProduceResources(0);
+        rBase.ProduceResources();
     }
 }
 

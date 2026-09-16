@@ -124,8 +124,8 @@ BaseManager::BaseManager(
     , m_pBuildings(std::make_unique<BuildingManager>(rBuildingRegistry, pSecretProjectCalculator,
                                                      rFaction.GetResearch()))
     , m_pResources(std::make_unique<ResourceManager>(
-          *m_pWorkerAssignments, rFaction.GetEconomy(), *this, m_rSocialRatings, m_tile,
-          m_rTileEffects, m_homeUnits))
+          *m_pWorkerAssignments, rFaction.GetEconomy(), rFaction.GetCommerce(), *this,
+          m_rSocialRatings, m_tile, m_rTileEffects, m_homeUnits))
     , m_pProduction(std::make_unique<ProductionManager>(
           rProductionConfig,
           [this]() -> const IConstructable* {
@@ -403,19 +403,19 @@ int BaseManager::GetEnergyProduction() const
     return m_pResources->GetEnergyProduction(m_effects.Get());
 }
 
-int BaseManager::GetEconProduction(int commerceEnergy) const
+int BaseManager::GetEconProduction() const
 {
-    return m_pResources->GetEconProduction(m_effects.Get(), commerceEnergy);
+    return m_pResources->GetEconProduction(m_effects.Get());
 }
 
-int BaseManager::GetLabsProduction(int commerceEnergy) const
+int BaseManager::GetLabsProduction() const
 {
-    return m_pResources->GetLabsProduction(m_effects.Get(), commerceEnergy);
+    return m_pResources->GetLabsProduction(m_effects.Get());
 }
 
-int BaseManager::GetPsychProduction(int commerceEnergy) const
+int BaseManager::GetPsychProduction() const
 {
-    return m_pResources->GetPsychProduction(m_effects.Get(), commerceEnergy);
+    return m_pResources->GetPsychProduction(m_effects.Get());
 }
 
 int BaseManager::GetDroneModifier() const
@@ -678,9 +678,9 @@ int BaseManager::GetEffectiveSocialRating(SocialRatingId_t rating) const
     return m_effects.GetEffectiveRating(rating);
 }
 
-void BaseManager::ProduceResources(int commerceEnergy)
+void BaseManager::ProduceResources()
 {
-    m_pResources->ProduceResources(m_effects.Get(), commerceEnergy);
+    m_pResources->ProduceResources(m_effects.Get());
 }
 
 void BaseManager::ApplyMineralSupport()
@@ -771,6 +771,7 @@ void BaseManager::RebindFaction(Faction& rFaction)
     m_pPopulation->RebindResearch(rFaction.GetResearch());
     m_pBuildings->RebindResearch(rFaction.GetResearch());
     m_pResources->RebindEconomy(rFaction.GetEconomy());
+    m_pResources->RebindCommerce(rFaction.GetCommerce());
 
     // Buildings live in the shared registry, so a queued building pointer stays valid when
     // the new owner has its required tech. Unit designs are owned by Military: re-home to the

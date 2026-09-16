@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/faction/base/BaseTypes.h"
+#include "game/faction/CommerceCalculator.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include <memory>
@@ -11,6 +12,7 @@ namespace ac
 
 class WorkerAssignmentManager;
 class EconomyManager;
+class CommerceManager;
 class BuildingManager;
 class BaseManager;
 class HomeBaseIndex;
@@ -37,9 +39,11 @@ public:
     // rBase is the owning BaseManager (same object for life; ownership transfer rebinds the
     // faction underneath it). Used for Efficiency rating and HQ identity.
     // rSocialRatings supplies the Efficiency level → inefficiency_denominator table.
+    // rCommerce supplies Friendship/Pact commerce energy for this base (rebound on transfer).
     ResourceManager(
         const WorkerAssignmentManager& rWorkerAssignments,
         const EconomyManager& rEconomy,
+        const CommerceManager& rCommerce,
         const BaseManager& rBase,
         const SocialRatingRegistry& rSocialRatings,
         const Tile& rBaseTile,
@@ -53,11 +57,12 @@ public:
     int GetMineralProduction(const BaseEffects_t& rBaseEffects) const;
     // Raw energy after Energy effects, before inefficiency. Does not include commerce.
     int GetEnergyProduction(const BaseEffects_t& rBaseEffects) const;
-    // commerceEnergy is added to GetEnergyProduction before inefficiency (must be >= 0).
-    int GetEconProduction(const BaseEffects_t& rBaseEffects, int commerceEnergy = 0) const;
-    int GetLabsProduction(const BaseEffects_t& rBaseEffects, int commerceEnergy = 0) const;
+    // Post-split production; includes commerce from the injected CommerceManager when the
+    // owning faction has a bound GameState.
+    int GetEconProduction(const BaseEffects_t& rBaseEffects) const;
+    int GetLabsProduction(const BaseEffects_t& rBaseEffects) const;
     // Local psych% of post-inefficiency energy + Psych StatModifiers (facilities/specialists).
-    int GetPsychProduction(const BaseEffects_t& rBaseEffects, int commerceEnergy = 0) const;
+    int GetPsychProduction(const BaseEffects_t& rBaseEffects) const;
 
     // Current per-turn nutrient bank (gross production from ProduceResources / stockpile
     // credits; drained by BaseGrowth via ConsumeNutrients). Peekable so Production can ask
@@ -97,19 +102,24 @@ public:
     void AddAllocatedEnergy(int energy);
 
     // Produce nutrients/minerals and allocate energy into econ/labs/psych stockpiles.
-    // Called once per turn per base from the ResourceCollection stage.
-    // commerceEnergy is added to pre-commerce raw energy before inefficiency (must be >= 0).
-    void ProduceResources(const BaseEffects_t& rBaseEffects, int commerceEnergy = 0);
+    // Called once per turn per base from the ResourceCollection stage. Commerce energy is
+    // resolved from the injected CommerceManager.
+    void ProduceResources(const BaseEffects_t& rBaseEffects);
 
-    // Ownership transfer (BaseManager::RebindFaction): the energy allocation split (econ /
-    // labs / psych percentages) is per-faction, so a transferred base must read the new
-    // owner's EconomyManager from the next ProduceResources call.
+    // Partner commerce lines for this base (UI). Empty when unbound / unpaired. Borrowed
+    // from the owner's CommerceManager memo; valid until the next commerce-input change.
+    const std::vector<CommercePartnerLine_t>& GetCommercePartners() const;
+
+    // Ownership transfer (BaseManager::RebindFaction): energy split and commerce are
+    // per-faction, so a transferred base must read the new owner's managers.
     void RebindEconomy(const EconomyManager& rEconomy);
+    void RebindCommerce(const CommerceManager& rCommerce);
 
 private:
     const WorkerAssignmentManager& m_rWorkerAssignments;
-    // Re-pointed by RebindEconomy on ownership transfer; always the current owner's.
+    // Re-pointed by RebindEconomy / RebindCommerce on ownership transfer.
     const EconomyManager* m_pEconomy;
+    const CommerceManager* m_pCommerce;
     const BaseManager& m_rBase;
     const SocialRatingRegistry& m_rSocialRatings;
     const Tile& m_rBaseTile;
@@ -124,8 +134,9 @@ private:
     TileResources_t ComputeWorked_(const BaseEffects_t& rBaseEffects) const;
 
     int CalculateResource_(StatId_t stat, const TileResources_t& worked, const BaseEffects_t& rBaseEffects) const;
+    int CommerceEnergy_() const;
     // Post-inefficiency energy used for the econ/labs/psych split.
-    int AllocatableEnergy_(const BaseEffects_t& rBaseEffects, int commerceEnergy) const;
+    int AllocatableEnergy_(const BaseEffects_t& rBaseEffects) const;
     int ApplyInefficiency_(int energy) const;
     int CalculateEcon_(int energy, const BaseEffects_t& rBaseEffects) const;
     int CalculateLabs_(int energy, const BaseEffects_t& rBaseEffects) const;
@@ -133,8 +144,7 @@ private:
 
     void ProduceNutrients_(const TileResources_t& worked, const BaseEffects_t& rBaseEffects);
     void ProduceMinerals_(const TileResources_t& worked, const BaseEffects_t& rBaseEffects);
-    void AllocateEnergy_(const TileResources_t& worked, const BaseEffects_t& rBaseEffects,
-                         int commerceEnergy);
+    void AllocateEnergy_(const TileResources_t& worked, const BaseEffects_t& rBaseEffects);
 };
 
 } // namespace ac

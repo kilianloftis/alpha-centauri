@@ -37,6 +37,7 @@ class FactionIdentity;
 class AIProfile;
 class FactionFlavor;
 class EconomyManager;
+class CommerceManager;
 class Military;
 class ResearchManager;
 class ResearchSelector;
@@ -201,6 +202,10 @@ public:
     EconomyManager& GetEconomy();
     const EconomyManager& GetEconomy() const;
 
+    // Commerce subsystem: Friendship/Pact pairing queries for produce, net income, and UI.
+    CommerceManager& GetCommerce();
+    const CommerceManager& GetCommerce() const;
+
     // Consume every base's accumulated econ stockpile into the treasury.
     // Returns the amount collected this call.
     int CollectIncome();
@@ -215,11 +220,9 @@ public:
 
     // Resource production — routes to all bases. Each base resolves against the composed
     // provider pool (local + world/council via GetActiveEffects), applies inefficiency,
-    // splits energy into econ/labs/psych locally, then stockpiles. Faction collection of
-    // econ/labs is CollectIncome / CollectResearch; psych stays at the base.
-    // When rGameState is provided (ResourceCollection), commerce from Friendship/Pact partners
-    // is added to each base's raw energy before inefficiency.
-    void ProduceBaseResources(GameState& rGameState);
+    // splits energy into econ/labs/psych locally (including commerce when a GameState is
+    // bound), then stockpiles. Faction collection of econ/labs is CollectIncome /
+    // CollectResearch; psych stays at the base.
     void ProduceBaseResources();
 
     // Charge mineral support at every base (home units vs this turn's mineral bank).
@@ -356,9 +359,9 @@ public:
     // Optional session back-pointer (GameState::AttachToSession). Required for Instantaneous
     // Infiltration dispatch on production completion; null when the faction is unbound.
     void BindGameState(GameState& rGameState) { m_pGameState = &rGameState; }
-    // Non-const: the session is handed out to be mutated (Instantaneous Infiltration writes
-    // the diplomacy ledger), so a const Faction must not be able to produce it.
     GameState* GetGameState() { return m_pGameState; }
+    // Const read for commerce / projections; writers use the non-const overload.
+    const GameState* GetGameState() const { return m_pGameState; }
 
     // Sticky fog removal from ApplyRemoveFog (Instantaneous project completion). Continuous
     // RuleFlag / debug settings are layered on top in ApplyVisibilityRules.
@@ -402,6 +405,7 @@ private:
     std::unique_ptr<AIProfile> m_pAIProfile;
     std::unique_ptr<FactionFlavor> m_pFlavor;
     std::unique_ptr<EconomyManager> m_pEconomy;
+    std::unique_ptr<CommerceManager> m_pCommerce;
     std::unique_ptr<Military> m_pMilitary;
     std::unique_ptr<ResearchManager> m_pResearch;
     std::unique_ptr<ResearchSelector> m_pResearchSelector;

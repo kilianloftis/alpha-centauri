@@ -5,7 +5,7 @@
 
 #include "game/buildings/BuildingConfig.h"
 #include "game/Faction.h"
-#include "game/faction/CommerceCalculator.h"
+#include "game/faction/CommerceManager.h"
 #include "game/faction/DiplomacyLedger.h"
 #include "game/faction/EconomyManager.h"
 #include "game/faction/FactionConfig.h"
@@ -14,6 +14,7 @@
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/production/HurryProductionCalculator.h"
 #include "game/faction/base/production/ProductionManager.h"
+#include "game/faction/base/resources/ResourceManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/map/Tile.h"
 #include "game/population/pop-types/Pop.h"
@@ -721,7 +722,7 @@ TEST_CASE("BaseView commerce panel lists partner shorthand and treaty energy", "
     fixture.pState->GetDiplomacyLedger().SetStatus(
         fixture.pPlayer->GetFactionId(), rPartner.GetFactionId(), DiplomaticStatus_t::Pact);
 
-    const auto lines = CommerceCalculator{}.ComputeForBase(rBase, *fixture.pState);
+    const auto lines = rBase.GetResources().GetCommercePartners();
     REQUIRE(lines.size() == 1);
 
     auto pView = fixture.pFactory->CreateBaseView(rBase, ViewFixture::FullScreen());

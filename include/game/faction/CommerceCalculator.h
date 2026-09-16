@@ -30,11 +30,22 @@ class CommerceCalculator
 public:
     CommerceCalculator() = default;
 
+    // Every base of rOwner that earns commerce, with its per-partner breakdown. One
+    // planet-wide pass: each faction's bases are ranked once and reused across every pair,
+    // so this is the entry point to prefer over calling ComputeForBase in a loop.
+    // Bases with no eligible pair are absent rather than present-and-empty.
+    std::unordered_map<BaseId_t, std::vector<CommercePartnerLine_t>> ComputeAllLines(
+        const Faction& rOwner, const GameState& rGameState) const;
+
     // Per-base commerce energy for rOwner this turn (missing keys mean 0).
     std::unordered_map<BaseId_t, int> ComputeForFaction(const Faction& rOwner,
                                                         const GameState& rGameState) const;
 
-    // Partner breakdown for one base (UI). Empty when unbound, unpaired, or no eligible treaties.
+    // Partner breakdown for one base (UI). Empty when unpaired or on no eligible treaty, and
+    // for a base not (yet) in its faction's list — mid CreateBaseFromSnapshot / RebindFaction
+    // a base is momentarily ownerless, which is simply no commerce, not an error.
+    // Runs a whole ComputeAllLines pass; per-base callers should go through CommerceManager,
+    // which memoizes it.
     std::vector<CommercePartnerLine_t> ComputeForBase(const BaseManager& rBase,
                                                       const GameState& rGameState) const;
 };

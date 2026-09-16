@@ -6,7 +6,8 @@ graph TB
         Faction[Faction]
         EconomyManager[EconomyManager]
         EnergyAllocation[EnergyAllocation_t<br/>econPercent<br/>labsPercent<br/>psychPercent]
-        CommerceCalculator[CommerceCalculator]
+        CommerceManager[CommerceManager]
+        CommerceCalculator[CommerceCalculator<br/>pure pairing math]
     end
 
     subgraph "Base Resource Flow"
@@ -18,8 +19,8 @@ graph TB
 
     Faction --> EconomyManager
     EconomyManager --> EnergyAllocation
-    Faction --> CommerceCalculator
-    CommerceCalculator --> ResourceManager
+    CommerceManager -->|"injected into"| ResourceManager
+    CommerceManager --> CommerceCalculator
 
     Faction --> BaseManager
     BaseManager --> ResourceManager
@@ -29,6 +30,7 @@ graph TB
 
     style Faction fill:#f9f,stroke:#333,stroke-width:4px
     style EconomyManager fill:#bfb,stroke:#333,stroke-width:3px
+    style CommerceManager fill:#bfb,stroke:#333,stroke-width:3px
     style CommerceCalculator fill:#bfb,stroke:#333,stroke-width:2px
     style ResourceManager fill:#bfb,stroke:#333,stroke-width:2px
     style EnergyAllocation fill:#bbf,stroke:#333,stroke-width:2px
@@ -62,14 +64,36 @@ graph TB
 - **Purpose**: Calculates and caches per-base resource production.
 - **Responsibilities**:
   - Read energy from worked tiles (plus crawlers / base center / Energy StatModifiers).
-  - Add per-base **commerce** energy to that pre-inefficiency total when `ProduceResources` is given a commerce amount.
+  - Add per-base **commerce** energy (from the injected `CommerceManager`) to that
+    pre-inefficiency total during `ProduceResources` / production getters.
   - Apply inefficiency, then ask the faction's `EconomyManager` how to split energy into econ, labs, and psych.
   - Add the split amounts to the base's stockpiles.
 - **Interaction**: Holds a `const EconomyManager*` so it can query the split without mutating it.
 - **`GetEnergyProduction()`**: pre-commerce raw energy only (used for commerce pairing ranks).
 
+### CommerceManager
+- **Purpose**: Faction-owned façade for commerce queries; injected into each base
+  `ResourceManager` (like `EconomyManager`) and used by `CommerceDisplay`.
+- **API**: `ComputeForBase(base)` — partner lines (our/their energy + treaty);
+  `GetCommerceEnergy(base)` — those lines summed, negatives dropped. Reads the owner's bound
+  `GameState` (empty when unbound).
+- **Owned by**: `Faction` (`GetCommerce()`). Rebound onto bases on ownership transfer.
+- **Memo**: caches the owner's whole per-base breakdown, because the pass underneath is
+  planet-wide while the callers are per-base and hot — `AllocatableEnergy_` backs
+  econ/labs/psych, so `EnsureCompositionCurrent`'s input key and every base-screen frame
+  land here. Validated like `FactionEffectsPool`: an element-wise compare of the revisions
+  it was built from, never a hash. The key is the world's worked-tile revision and map
+  appearance revision (worker placement and improvements move base energy without touching
+  any effect pool), the `DiplomacyLedger` status revision, and every faction's
+  `GetEffectsVersion()` (which already folds in base list, buildings, pops, research and SE).
+
 ### CommerceCalculator
 - **Purpose**: Pure per-turn commerce income math for Friendship / Pact partners.
+- **Entry point**: `ComputeAllLines(owner, state)` — one planet-wide pass that ranks each
+  faction's bases once and reuses the ranking for every pair. `ComputeForFaction` (energy per
+  base) and `ComputeForBase` (one base's lines) are views onto it; ranking prices every base
+  of every partner, so per-base callers belong behind `CommerceManager`'s memo rather than in
+  a loop over `ComputeForBase`.
 - **Config**: `config/commerce.json` (`pair_multiplier`, `treaty_multiplier`) via `CommerceConfig_t`.
 - **Formula** (per paired bases, owning faction):
   1. Rank each side's bases by pre-commerce `GetEnergyProduction()` (descending).
@@ -83,10 +107,19 @@ graph TB
 - **commerceTech**: resolved `CommerceRating` for the owning base (discovered economic techs'
   `commerce_rating` Adds + Economy SE + faction bonuses).
 - **totalCommerceTech**: sum across living factions of `commerce_rating` **Add** amounts on
-  discovered tech configs only (SE / faction bonuses excluded).
-- **Wiring**: `ResourceCollection` → `Faction::ProduceBaseResources(GameState&)` → calculator → `ResourceManager::ProduceResources(..., commerceEnergy)`. Commerce that becomes econ reaches the treasury only through `IncomeCollection` / `CollectIncome`.
-- **UI**: `ComputeForBase` returns per-partner our/their energy for `CommerceDisplay` in BaseView (nutrients column, bottom 2/3).
-- **Net income**: `GetNetIncomePerTurn` projects econ with the same commerce seed when a `GameState` is bound.
+  discovered tech configs only (SE / faction bonuses excluded). Because this figure is
+  planet-wide and divides, it counts only entries that resolve the same way for everyone —
+  no runtime condition, no unit/building/faction filter, no `amount_source`, no per-tile
+  selector, and not already retired by `removed_by_tech` — and the denominator is clamped to
+  at least 1, so negative `commerce_rating` Adds cannot zero or invert it.
+- **Wiring**: `ResourceCollection` → `Faction::ProduceBaseResources()` → each base
+  `ResourceManager` resolves commerce via the injected `CommerceManager` and adds it to raw
+  energy before inefficiency. Commerce that becomes econ reaches the treasury only through
+  `IncomeCollection` / `CollectIncome`.
+- **UI**: `ResourceManager::GetCommercePartners` (via the injected manager) feeds
+  `CommerceDisplay` in BaseView.
+- **Net income**: `GetNetIncomePerTurn` uses `GetEconProduction()` (commerce included when
+  a `GameState` is bound).
 
 ### Economic technologies
 Economic techs emit FactionGlobal `commerce_rating` +1 in `techs.json`: Industrial Economics, Industrial Automation, Planetary Economics, Industrial Nanorobotics, Sentient Econometrics, Environmental Economics. (Costs/prerequisites for stub entries remain content TODOs.)

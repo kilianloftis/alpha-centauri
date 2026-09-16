@@ -1,0 +1,250 @@
+[
+  {
+    "id": "build_tech",
+    "name": "Build Tech",
+    "category": "build",
+    "cost": 10
+  },
+  {
+    "id": "grow_tech",
+    "name": "Grow Tech",
+    "category": "grow",
+    "cost": 10
+  },
+  {
+    "id": "discover_tech",
+    "name": "Discover Tech",
+    "category": "discover",
+    "cost": 10
+  },
+  {
+    "id": "conquer_tech",
+    "name": "Conquer Tech",
+    "category": "conquer",
+    "cost": 10
+  },
+  {
+    "id": "advanced_build",
+    "name": "Advanced Build",
+    "category": "build",
+    "cost": 20,
+    "prerequisites": [
+      "build_tech"
+    ]
+  },
+  {
+    "id": "efficient_maintenance",
+    "name": "Efficient Maintenance",
+    "category": "build",
+    "cost": 15,
+    "prerequisites": [
+      "advanced_build"
+    ],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "facility_energy_upkeep",
+          "amount": -50,
+          "op": "AddPercent"
+        },
+        "buildingFilter": {
+          "kind": "BuildingId",
+          "building": "upkeep_hall"
+        }
+      }
+    ]
+  },
+  {
+    "id": "fusion_power",
+    "name": "Fusion Power",
+    "category": "discover",
+    "cost": 60,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "facility_energy_upkeep",
+          "amount": 1,
+          "op": "Add"
+        },
+        "buildingFilter": {
+          "kind": "BuildingId",
+          "building": "Command_Center"
+        }
+      }
+    ]
+  },
+  {
+    "id": "quantum_power",
+    "name": "Quantum Power",
+    "category": "discover",
+    "cost": 120,
+    "prerequisites": [
+      "fusion_power"
+    ],
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "facility_energy_upkeep",
+          "amount": 1,
+          "op": "Add"
+        },
+        "buildingFilter": {
+          "kind": "BuildingId",
+          "building": "Command_Center"
+        }
+      }
+    ]
+  },
+  {
+    "id": "intellectual_integrity",
+    "name": "Intellectual Integrity",
+    "category": "discover",
+    "cost": 50
+  },
+  {
+    "id": "industrial_automation",
+    "name": "Industrial Automation",
+    "category": "build",
+    "cost": 30,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "environmental_economics",
+    "name": "Environmental Economics",
+    "category": "build",
+    "cost": 70,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "planetary_economics",
+    "name": "Planetary Economics",
+    "category": "build",
+    "cost": 110,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "industrial_economics",
+    "name": "Industrial Economics",
+    "category": "build",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "industrial_nanorobotics",
+    "name": "Industrial Nanorobotics",
+    "category": "build",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "sentient_econometrics",
+    "name": "Sentient Econometrics",
+    "category": "build",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "negative_commerce_tech",
+    "name": "Negative Commerce (test)",
+    "category": "build",
+    "cost": 10,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": -1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "gated_commerce_tech",
+    "name": "Gated Commerce (test)",
+    "category": "build",
+    "cost": 10,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 5,
+          "op": "Add"
+        },
+        "buildingFilter": {
+          "kind": "BuildingId",
+          "building": "Command_Center"
+        }
+      }
+    ]
+  }
+]
