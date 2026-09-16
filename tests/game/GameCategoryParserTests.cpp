@@ -1,9 +1,12 @@
 #include "game/buildings/BuildingConfigParser.h"
+#include "game/effects/EffectConfig.h"
+#include "game/effects/EffectEnums.h"
 #include "game/research/TechConfigParser.h"
 
 #include "TestHelpers.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <variant>
 
 using namespace ac;
 using namespace actest;
@@ -13,7 +16,7 @@ TEST_CASE("TechConfigParser parses game categories", "[game][category][parser]")
     TechConfigParser parser;
     const std::vector<TechConfig_t> configs = parser.ParseConfig(FixturePath("techs.json"));
 
-    REQUIRE(configs.size() == 9);
+    REQUIRE(configs.size() == 15);
     CHECK(configs[0].category == GameCategory_t::Build);
     CHECK(configs[1].category == GameCategory_t::Grow);
     CHECK(configs[2].category == GameCategory_t::Discover);
@@ -29,6 +32,21 @@ TEST_CASE("TechConfigParser parses game categories", "[game][category][parser]")
     CHECK(configs[7].effects.size() == 1);
     CHECK(configs[8].category == GameCategory_t::Discover);
     CHECK(configs[8].id == "intellectual_integrity");
+    CHECK(configs[9].id == "industrial_automation");
+    REQUIRE(configs[9].effects.size() == 1);
+    {
+        const auto* pStat = std::get_if<StatModifierEffect_t>(&configs[9].effects[0].effect);
+        REQUIRE(pStat != nullptr);
+        CHECK(pStat->stat == StatId_t::CommerceRating);
+        CHECK(pStat->amount == 1.0);
+    }
+    CHECK(configs[14].id == "sentient_econometrics");
+    REQUIRE(configs[14].effects.size() == 1);
+    {
+        const auto* pStat = std::get_if<StatModifierEffect_t>(&configs[14].effects[0].effect);
+        REQUIRE(pStat != nullptr);
+        CHECK(pStat->stat == StatId_t::CommerceRating);
+    }
 }
 
 TEST_CASE("BuildingConfigParser parses game categories", "[game][category][parser]")

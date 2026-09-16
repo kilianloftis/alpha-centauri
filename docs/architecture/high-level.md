@@ -61,6 +61,7 @@ graph TB
         PopCompositionCalculator[PopCompositionCalculator]
         HurryProductionCalculator[HurryProductionCalculator]
         ScrapRefundCalculator[ScrapRefundCalculator]
+        CommerceConfig_t[CommerceConfig_t]
         ScrapPayout[ScrapPayout<br/>plan + credit]
         LuaRuntime[LuaRuntime]
     end
@@ -70,7 +71,7 @@ graph TB
         WorldMap[WorldMap]
         FactionVector[FactionVector<br/>vector&lt;unique_ptr&lt;Faction&gt;&gt;]
         Faction[Faction]
-        FactionSubsystems[Faction Subsystems:<br/>FactionIdentity, AIProfile,<br/>Economy, Military,<br/>Research, Diplomacy]
+        FactionSubsystems[Faction Subsystems:<br/>FactionIdentity, AIProfile,<br/>Economy, Military,<br/>Research, SocialEngineering]
     end
 
     subgraph "Event System"
@@ -159,6 +160,7 @@ graph TB
     GameDataContext --> PopCompositionCalculator
     GameDataContext --> HurryProductionCalculator
     GameDataContext --> ScrapRefundCalculator
+    GameDataContext --> CommerceConfig_t
     ScrapRefundCalculator --> LuaRuntime
     ScrapPayout -->|consumes quote| ScrapRefundCalculator
     HurryProductionCalculator --> LuaRuntime
@@ -296,6 +298,7 @@ graph TB
   - `PopCompositionCalculator`: Evaluates composition formulas at runtime
   - `HurryProductionCalculator`: Prices energy-for-minerals hurrying from `production.json` `kinds.<kind>.hurry`; borrowed by every `BaseManager`
   - `ScrapRefundCalculator`: Prices player scrap from `production.json` `kinds.<kind>.default_scrap`; unit/building configs may override formula and refund_type (`StatId_t` whitelist), or set `"formula": null` to deny scrap. Borrowed by `BaseManager` (buildings) and `Faction` (units). Where the refund *lands* is `ScrapPayout`'s job, not the calculator's
+  - `CommerceConfig_t` / `CommerceCalculator`: `commerce.json` multipliers; calculator pairs Friendship/Pact bases and feeds commerce into `ResourceManager` raw energy (see [economy-system.md](economy-system.md))
   - `DifficultyConfig_t`: Session difficulty levels loaded from `config/difficulty.json`. Each level carries an `effects` list (injected per faction into `FactionEffectsPool`) and a `DifficultyRules_t` of non-effect knobs. `GameRulesConfig_t::difficultyId` selects one; empty defers to the file's `default`. See [difficulty-system.md](difficulty-system.md)
   - `LuaRuntime`: Shared Lua state used to load and evaluate config scripts
 - **Note**: Implemented as a plain struct with public `unique_ptr` members (no getters/setters needed)

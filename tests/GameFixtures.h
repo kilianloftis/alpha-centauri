@@ -14,6 +14,7 @@
 #include "game/faction/base/production/HurryProductionCalculator.h"
 #include "game/faction/base/production/ScrapRefundCalculator.h"
 #include "game/faction/base/production/ProductionConfigParser.h"
+#include "game/faction/CommerceConfigParser.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/resources/ResourceManager.h"
 #include "game/GameSettings.h"
@@ -179,6 +180,8 @@ struct WorldFixture
         dataContext.growthConfig = std::make_unique<ac::GrowthConfig_t>();
         dataContext.productionConfig = std::make_unique<ac::ProductionConfig_t>(
             ac::ProductionConfigParser{}.ParseConfig(FixturePath("production.json")));
+        dataContext.commerceConfig = std::make_unique<ac::CommerceConfig_t>(
+            ac::CommerceConfigParser{}.ParseConfig(FixturePath("commerce.json")));
         dataContext.hurryProductionCalculator =
             std::make_unique<ac::HurryProductionCalculator>(*dataContext.productionConfig,
                                                            *dataContext.luaRuntime);

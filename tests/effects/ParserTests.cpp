@@ -65,6 +65,7 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("tech_cost") == StatId_t::TechCost);
     CHECK(ParseStatId("moisture_tier") == StatId_t::MoistureTier);
     CHECK(ParseStatId("commerce_rate") == StatId_t::CommerceRate);
+    CHECK(ParseStatId("commerce_rating") == StatId_t::CommerceRating);
     CHECK(ParseStatId("council_votes") == StatId_t::CouncilVotes);
     CHECK(ParseStatId("commerce_energy_bonus") == StatId_t::CommerceEnergyBonus);
     CHECK(ParseStatId("inefficiency_denominator") == StatId_t::InefficiencyDenominator);

@@ -132,6 +132,9 @@ enum class StatId_t
 
     // Planetary commerce income multiplier (PureMultiplier; Global Trade Pact uses AddPercent).
     CommerceRate,
+    // Faction & Economy SE bonuses folded into the commerce tech ratio (Additive; Base domain
+    // so social-rating level expansions in BaseEffectsCache resolve via ResolveBaseStat).
+    CommerceRating,
     // Bureaucracy base-limit product factor (PureMultiplier; seed 1.0). Difficulty and
     // Efficiency SE emit MultiplyGeometric; pop_composition.json multiplies by map root.
     Bureaucracy,
@@ -253,6 +256,7 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::SizeFreeDrones:
         case StatId_t::CouncilVotes:
         case StatId_t::CommerceEnergyBonus:
+        case StatId_t::CommerceRating:
         case StatId_t::InefficiencyDenominator:
         case StatId_t::RebelJoinWeight: return StatKind_t::Additive;
         case StatId_t::CostMultiplier:
@@ -338,6 +342,7 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::MaxBaseSize:
         case StatId_t::Bureaucracy:
         case StatId_t::CommerceEnergyBonus:
+        case StatId_t::CommerceRating:
         case StatId_t::InefficiencyDenominator:
         case StatId_t::ScrapRefund:
         case StatId_t::LastDefenderPopLoss:
@@ -431,6 +436,7 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "tech_cost_diff")          return StatId_t::TechCostDiff;
     if (rStat == "moisture_tier")           return StatId_t::MoistureTier;
     if (rStat == "commerce_rate")           return StatId_t::CommerceRate;
+    if (rStat == "commerce_rating")         return StatId_t::CommerceRating;
     if (rStat == "bureaucracy")             return StatId_t::Bureaucracy;
     if (rStat == "council_votes")           return StatId_t::CouncilVotes;
     if (rStat == "commerce_energy_bonus")   return StatId_t::CommerceEnergyBonus;

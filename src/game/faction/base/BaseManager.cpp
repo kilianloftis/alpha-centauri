@@ -403,19 +403,19 @@ int BaseManager::GetEnergyProduction() const
     return m_pResources->GetEnergyProduction(m_effects.Get());
 }
 
-int BaseManager::GetEconProduction() const
+int BaseManager::GetEconProduction(int commerceEnergy) const
 {
-    return m_pResources->GetEconProduction(m_effects.Get());
+    return m_pResources->GetEconProduction(m_effects.Get(), commerceEnergy);
 }
 
-int BaseManager::GetLabsProduction() const
+int BaseManager::GetLabsProduction(int commerceEnergy) const
 {
-    return m_pResources->GetLabsProduction(m_effects.Get());
+    return m_pResources->GetLabsProduction(m_effects.Get(), commerceEnergy);
 }
 
-int BaseManager::GetPsychProduction() const
+int BaseManager::GetPsychProduction(int commerceEnergy) const
 {
-    return m_pResources->GetPsychProduction(m_effects.Get());
+    return m_pResources->GetPsychProduction(m_effects.Get(), commerceEnergy);
 }
 
 int BaseManager::GetDroneModifier() const
@@ -678,9 +678,9 @@ int BaseManager::GetEffectiveSocialRating(SocialRatingId_t rating) const
     return m_effects.GetEffectiveRating(rating);
 }
 
-void BaseManager::ProduceResources()
+void BaseManager::ProduceResources(int commerceEnergy)
 {
-    m_pResources->ProduceResources(m_effects.Get());
+    m_pResources->ProduceResources(m_effects.Get(), commerceEnergy);
 }
 
 void BaseManager::ApplyMineralSupport()

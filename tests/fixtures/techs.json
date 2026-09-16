@@ -28,14 +28,18 @@
     "name": "Advanced Build",
     "category": "build",
     "cost": 20,
-    "prerequisites": ["build_tech"]
+    "prerequisites": [
+      "build_tech"
+    ]
   },
   {
     "id": "efficient_maintenance",
     "name": "Efficient Maintenance",
     "category": "build",
     "cost": 15,
-    "prerequisites": ["advanced_build"],
+    "prerequisites": [
+      "advanced_build"
+    ],
     "effects": [
       {
         "type": "StatModifier",
@@ -45,7 +49,10 @@
           "amount": -50,
           "op": "AddPercent"
         },
-        "buildingFilter": { "kind": "BuildingId", "building": "upkeep_hall" }
+        "buildingFilter": {
+          "kind": "BuildingId",
+          "building": "upkeep_hall"
+        }
       }
     ]
   },
@@ -63,7 +70,10 @@
           "amount": 1,
           "op": "Add"
         },
-        "buildingFilter": { "kind": "BuildingId", "building": "Command_Center" }
+        "buildingFilter": {
+          "kind": "BuildingId",
+          "building": "Command_Center"
+        }
       }
     ]
   },
@@ -72,7 +82,9 @@
     "name": "Quantum Power",
     "category": "discover",
     "cost": 120,
-    "prerequisites": ["fusion_power"],
+    "prerequisites": [
+      "fusion_power"
+    ],
     "effects": [
       {
         "type": "StatModifier",
@@ -82,7 +94,10 @@
           "amount": 1,
           "op": "Add"
         },
-        "buildingFilter": { "kind": "BuildingId", "building": "Command_Center" }
+        "buildingFilter": {
+          "kind": "BuildingId",
+          "building": "Command_Center"
+        }
       }
     ]
   },
@@ -91,5 +106,107 @@
     "name": "Intellectual Integrity",
     "category": "discover",
     "cost": 50
+  },
+  {
+    "id": "industrial_automation",
+    "name": "Industrial Automation",
+    "category": "build",
+    "cost": 30,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "environmental_economics",
+    "name": "Environmental Economics",
+    "category": "build",
+    "cost": 70,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "planetary_economics",
+    "name": "Planetary Economics",
+    "category": "build",
+    "cost": 110,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "industrial_economics",
+    "name": "Industrial Economics",
+    "category": "build",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "industrial_nanorobotics",
+    "name": "Industrial Nanorobotics",
+    "category": "build",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "sentient_econometrics",
+    "name": "Sentient Econometrics",
+    "category": "build",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
   }
 ]

@@ -168,9 +168,13 @@ int ResourceManager::ApplyInefficiency_(int energy) const
     return energy - CalculateInefficiencyLoss(energy, distance, denominator);
 }
 
-int ResourceManager::AllocatableEnergy_(const BaseEffects_t& rBaseEffects) const
+int ResourceManager::AllocatableEnergy_(const BaseEffects_t& rBaseEffects, int commerceEnergy) const
 {
-    return ApplyInefficiency_(GetEnergyProduction(rBaseEffects));
+    if (commerceEnergy < 0)
+    {
+        throw std::invalid_argument("AllocatableEnergy_: commerceEnergy must be non-negative");
+    }
+    return ApplyInefficiency_(GetEnergyProduction(rBaseEffects) + commerceEnergy);
 }
 
 int ResourceManager::CalculateEcon_(int energy, const BaseEffects_t& rBaseEffects) const
@@ -196,19 +200,19 @@ int ResourceManager::CalculatePsych_(int energy, const BaseEffects_t& rBaseEffec
         ResolveBaseStat(rBaseEffects, StatId_t::Psych, static_cast<double>(split)));
 }
 
-int ResourceManager::GetEconProduction(const BaseEffects_t& rBaseEffects) const
+int ResourceManager::GetEconProduction(const BaseEffects_t& rBaseEffects, int commerceEnergy) const
 {
-    return CalculateEcon_(AllocatableEnergy_(rBaseEffects), rBaseEffects);
+    return CalculateEcon_(AllocatableEnergy_(rBaseEffects, commerceEnergy), rBaseEffects);
 }
 
-int ResourceManager::GetLabsProduction(const BaseEffects_t& rBaseEffects) const
+int ResourceManager::GetLabsProduction(const BaseEffects_t& rBaseEffects, int commerceEnergy) const
 {
-    return CalculateLabs_(AllocatableEnergy_(rBaseEffects), rBaseEffects);
+    return CalculateLabs_(AllocatableEnergy_(rBaseEffects, commerceEnergy), rBaseEffects);
 }
 
-int ResourceManager::GetPsychProduction(const BaseEffects_t& rBaseEffects) const
+int ResourceManager::GetPsychProduction(const BaseEffects_t& rBaseEffects, int commerceEnergy) const
 {
-    return CalculatePsych_(AllocatableEnergy_(rBaseEffects), rBaseEffects);
+    return CalculatePsych_(AllocatableEnergy_(rBaseEffects, commerceEnergy), rBaseEffects);
 }
 
 int ResourceManager::GetNutrientBank() const
@@ -318,17 +322,22 @@ void ResourceManager::ProduceMinerals_(const TileResources_t& worked, const Base
     m_minerals += CalculateResource_(StatId_t::Minerals, worked, rBaseEffects);
 }
 
-void ResourceManager::AllocateEnergy_(const TileResources_t& worked, const BaseEffects_t& rBaseEffects)
+void ResourceManager::AllocateEnergy_(const TileResources_t& worked, const BaseEffects_t& rBaseEffects,
+                                      int commerceEnergy)
 {
+    if (commerceEnergy < 0)
+    {
+        throw std::invalid_argument("AllocateEnergy_: commerceEnergy must be non-negative");
+    }
     const int energy = ApplyInefficiency_(
-        CalculateResource_(StatId_t::Energy, worked, rBaseEffects));
+        CalculateResource_(StatId_t::Energy, worked, rBaseEffects) + commerceEnergy);
 
     m_econ  += CalculateEcon_(energy, rBaseEffects);
     m_labs  += CalculateLabs_(energy, rBaseEffects);
     m_psych += CalculatePsych_(energy, rBaseEffects);
 }
 
-void ResourceManager::ProduceResources(const BaseEffects_t& rBaseEffects)
+void ResourceManager::ProduceResources(const BaseEffects_t& rBaseEffects, int commerceEnergy)
 {
     // Psych is the one bank nothing drains: composition reads it every recalculation, and a
     // draining read would make composition flap within a single turn. It is reset here instead,
@@ -338,7 +347,7 @@ void ResourceManager::ProduceResources(const BaseEffects_t& rBaseEffects)
     const TileResources_t worked = ComputeWorked_(rBaseEffects);
     ProduceNutrients_(worked, rBaseEffects);
     ProduceMinerals_(worked, rBaseEffects);
-    AllocateEnergy_(worked, rBaseEffects);
+    AllocateEnergy_(worked, rBaseEffects, commerceEnergy);
 }
 
 } // namespace ac

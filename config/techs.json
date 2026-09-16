@@ -16,7 +16,10 @@
     "name": "Advanced Tech",
     "category": "discover",
     "cost": 50,
-    "prerequisites": ["test_tech_1", "test_tech_2"]
+    "prerequisites": [
+      "test_tech_1",
+      "test_tech_2"
+    ]
   },
   {
     "id": "ethical_calculus",
@@ -52,7 +55,18 @@
     "id": "industrial_automation",
     "name": "Industrial Automation",
     "category": "build",
-    "cost": 30
+    "cost": 30,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
   },
   {
     "id": "eudaimonia",
@@ -86,7 +100,10 @@
           "amount": 1,
           "op": "Add"
         },
-        "buildingFilter": { "kind": "BuildingId", "building": "Command_Center" }
+        "buildingFilter": {
+          "kind": "BuildingId",
+          "building": "Command_Center"
+        }
       }
     ]
   },
@@ -95,7 +112,9 @@
     "name": "Quantum Power",
     "category": "discover",
     "cost": 120,
-    "prerequisites": ["fusion_power"],
+    "prerequisites": [
+      "fusion_power"
+    ],
     "effects": [
       {
         "type": "StatModifier",
@@ -105,7 +124,10 @@
           "amount": 1,
           "op": "Add"
         },
-        "buildingFilter": { "kind": "BuildingId", "building": "Command_Center" }
+        "buildingFilter": {
+          "kind": "BuildingId",
+          "building": "Command_Center"
+        }
       }
     ]
   },
@@ -149,7 +171,18 @@
     "id": "environmental_economics",
     "name": "Environmental Economics",
     "category": "build",
-    "cost": 70
+    "cost": 70,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
   },
   {
     "id": "monopole_magnets",
@@ -162,7 +195,9 @@
     "name": "Advanced Ecological Engineering",
     "category": "build",
     "cost": 90,
-    "prerequisites": ["ecological_engineering"]
+    "prerequisites": [
+      "ecological_engineering"
+    ]
   },
   {
     "id": "orbital_spaceflight",
@@ -174,14 +209,78 @@
     "id": "planetary_economics",
     "name": "Planetary Economics",
     "category": "build",
-    "cost": 110
+    "cost": 110,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "industrial_economics",
+    "name": "Industrial Economics",
+    "category": "build",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "industrial_nanorobotics",
+    "name": "Industrial Nanorobotics",
+    "category": "build",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "sentient_econometrics",
+    "name": "Sentient Econometrics",
+    "category": "build",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
   },
   {
     "id": "advanced_spaceflight",
     "name": "Advanced Spaceflight",
     "category": "discover",
     "cost": 120,
-    "prerequisites": ["orbital_spaceflight"]
+    "prerequisites": [
+      "orbital_spaceflight"
+    ]
   },
   {
     "id": "intellectual_integrity",

@@ -19,7 +19,8 @@ struct TechConfig_t
     GameCategory_t category;
     int cost;
     std::vector<std::string> prerequisites;
-    // Continuous bonuses while this tech is discovered (e.g. FacilityEnergyUpkeep).
+    // Continuous bonuses while this tech is discovered (e.g. FacilityEnergyUpkeep,
+    // commerce_rating +1 for economic techs).
     std::vector<EffectConfig_t> effects;
 };
 

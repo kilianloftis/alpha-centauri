@@ -217,6 +217,9 @@ public:
     // provider pool (local + world/council via GetActiveEffects), applies inefficiency,
     // splits energy into econ/labs/psych locally, then stockpiles. Faction collection of
     // econ/labs is CollectIncome / CollectResearch; psych stays at the base.
+    // When rGameState is provided (ResourceCollection), commerce from Friendship/Pact partners
+    // is added to each base's raw energy before inefficiency.
+    void ProduceBaseResources(GameState& rGameState);
     void ProduceBaseResources();
 
     // Charge mineral support at every base (home units vs this turn's mineral bank).

@@ -10,6 +10,7 @@
 #include "game/council/CouncilRulesConfig.h"
 #include "game/faction/FactionRegistry.h"
 #include "game/faction/base/production/ProductionConfigParser.h"
+#include "game/faction/CommerceConfig.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/TerrainFeatureValidation.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
@@ -60,6 +61,7 @@ void FillEffectReferenceContext(GameDataContext& rData)
     rData.councilRules = std::make_unique<CouncilRulesConfig_t>();
     rData.probeActionsConfig = std::make_unique<ProbeActionsConfig_t>();
     rData.productionConfig = std::make_unique<ProductionConfig_t>();
+    rData.commerceConfig = std::make_unique<CommerceConfig_t>();
     rData.difficultyConfig = std::make_unique<DifficultyConfig_t>();
     rData.baseConquestConfig = std::make_unique<BaseConquestConfig_t>();
     rData.popCompositionConfig = std::make_unique<PopCompositionConfig_t>();
@@ -151,6 +153,7 @@ static_assert(KindFor(StatId_t::TechCostDiff) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Bureaucracy) == StatKind_t::PureMultiplier);
 static_assert(KindFor(StatId_t::MoistureTier) == StatKind_t::RawScaled);
 static_assert(KindFor(StatId_t::CommerceRate) == StatKind_t::PureMultiplier);
+static_assert(KindFor(StatId_t::CommerceRating) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::CouncilVotes) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::CommerceEnergyBonus) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::InefficiencyDenominator) == StatKind_t::Additive);
@@ -185,6 +188,7 @@ static_assert(DomainFor(StatId_t::ProbeDefense) == ResolveDomain_t::Base);
 static_assert(DomainFor(StatId_t::TechCost) == ResolveDomain_t::Faction);
 static_assert(DomainFor(StatId_t::CouncilVotes) == ResolveDomain_t::Faction);
 static_assert(DomainFor(StatId_t::CommerceRate) == ResolveDomain_t::Faction);
+static_assert(DomainFor(StatId_t::CommerceRating) == ResolveDomain_t::Base);
 static_assert(DomainFor(StatId_t::RebelJoinWeight) == ResolveDomain_t::Faction);
 static_assert(DomainFor(StatId_t::Attack) == ResolveDomain_t::Unit);
 static_assert(DomainFor(StatId_t::Defense) == ResolveDomain_t::Unit);

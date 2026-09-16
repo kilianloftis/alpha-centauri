@@ -22,7 +22,7 @@ class TileEffectsContext;
 // stockpiles. It is owned by BaseManager and holds const pointers to the managers it reads from.
 //
 // Energy pipeline (per base, each turn):
-//   1. Produce energy (tiles, crawlers, buildings, Energy StatModifiers)
+//   1. Produce energy (tiles, crawlers, buildings, Energy StatModifiers) + commerce
 //   2. Apply inefficiency (HQ tabletop-diagonal distance + Efficiency SE rating)
 //   3. Split into econ / labs / psych via the faction EconomyManager percentages
 //   4. Apply Econ / Labs / Psych StatModifiers to each category
@@ -51,12 +51,13 @@ public:
     // rBaseEffects is this base's final effect list (BaseEffectsCache::Get).
     int GetNutrientProduction(const BaseEffects_t& rBaseEffects) const;
     int GetMineralProduction(const BaseEffects_t& rBaseEffects) const;
-    // Raw energy after Energy effects, before inefficiency.
+    // Raw energy after Energy effects, before inefficiency. Does not include commerce.
     int GetEnergyProduction(const BaseEffects_t& rBaseEffects) const;
-    int GetEconProduction(const BaseEffects_t& rBaseEffects) const;
-    int GetLabsProduction(const BaseEffects_t& rBaseEffects) const;
+    // commerceEnergy is added to GetEnergyProduction before inefficiency (must be >= 0).
+    int GetEconProduction(const BaseEffects_t& rBaseEffects, int commerceEnergy = 0) const;
+    int GetLabsProduction(const BaseEffects_t& rBaseEffects, int commerceEnergy = 0) const;
     // Local psych% of post-inefficiency energy + Psych StatModifiers (facilities/specialists).
-    int GetPsychProduction(const BaseEffects_t& rBaseEffects) const;
+    int GetPsychProduction(const BaseEffects_t& rBaseEffects, int commerceEnergy = 0) const;
 
     // Current per-turn nutrient bank (gross production from ProduceResources / stockpile
     // credits; drained by BaseGrowth via ConsumeNutrients). Peekable so Production can ask
@@ -97,7 +98,8 @@ public:
 
     // Produce nutrients/minerals and allocate energy into econ/labs/psych stockpiles.
     // Called once per turn per base from the ResourceCollection stage.
-    void ProduceResources(const BaseEffects_t& rBaseEffects);
+    // commerceEnergy is added to pre-commerce raw energy before inefficiency (must be >= 0).
+    void ProduceResources(const BaseEffects_t& rBaseEffects, int commerceEnergy = 0);
 
     // Ownership transfer (BaseManager::RebindFaction): the energy allocation split (econ /
     // labs / psych percentages) is per-faction, so a transferred base must read the new
@@ -123,7 +125,7 @@ private:
 
     int CalculateResource_(StatId_t stat, const TileResources_t& worked, const BaseEffects_t& rBaseEffects) const;
     // Post-inefficiency energy used for the econ/labs/psych split.
-    int AllocatableEnergy_(const BaseEffects_t& rBaseEffects) const;
+    int AllocatableEnergy_(const BaseEffects_t& rBaseEffects, int commerceEnergy) const;
     int ApplyInefficiency_(int energy) const;
     int CalculateEcon_(int energy, const BaseEffects_t& rBaseEffects) const;
     int CalculateLabs_(int energy, const BaseEffects_t& rBaseEffects) const;
@@ -131,7 +133,8 @@ private:
 
     void ProduceNutrients_(const TileResources_t& worked, const BaseEffects_t& rBaseEffects);
     void ProduceMinerals_(const TileResources_t& worked, const BaseEffects_t& rBaseEffects);
-    void AllocateEnergy_(const TileResources_t& worked, const BaseEffects_t& rBaseEffects);
+    void AllocateEnergy_(const TileResources_t& worked, const BaseEffects_t& rBaseEffects,
+                         int commerceEnergy);
 };
 
 } // namespace ac

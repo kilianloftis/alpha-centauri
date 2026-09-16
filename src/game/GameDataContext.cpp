@@ -15,6 +15,7 @@
 #include "game/population/calculators/PopCompositionCalculator.h"
 #include "game/population/calculators/PopTypeAvailabilityCalculator.h"
 #include "game/faction/base/production/ProductionConfigParser.h"
+#include "game/faction/CommerceConfigParser.h"
 #include "game/population/pop-types/GrowthConfigParser.h"
 #include "game/population/pop-types/PopCompositionConfigParser.h"
 #include "game/population/pop-types/PopTypeRegistry.h"
@@ -68,6 +69,7 @@ void ThrowIfIncomplete(const GameDataContext& rData)
         {rData.popCompositionConfig.get(), "popCompositionConfig"},
         {rData.growthConfig.get(), "growthConfig"},
         {rData.productionConfig.get(), "productionConfig"},
+        {rData.commerceConfig.get(), "commerceConfig"},
         {rData.techCostConfig.get(), "techCostConfig"},
         {rData.improvementRegistry.get(), "improvementRegistry"},
         {rData.worldGenPresetRegistry.get(), "worldGenPresetRegistry"},
@@ -201,6 +203,10 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
     ProductionConfigParser productionParser;
     rData.productionConfig =
         std::make_unique<ProductionConfig_t>(productionParser.ParseConfig(rPaths.production));
+
+    CommerceConfigParser commerceParser;
+    rData.commerceConfig =
+        std::make_unique<CommerceConfig_t>(commerceParser.ParseConfig(rPaths.commerce));
 
     DifficultyConfigParser difficultyParser;
     rData.difficultyConfig =

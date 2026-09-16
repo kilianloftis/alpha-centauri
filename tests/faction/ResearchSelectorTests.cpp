@@ -66,9 +66,14 @@ TEST_CASE("ResearchSelector prefers selected categories", "[research][selector]"
     fixture.selector->SetCategoryEnabled(GameCategory_t::Conquer, false);
 
     const std::vector<const TechConfig_t*> candidates = fixture.selector->GetCandidateTargets();
-    REQUIRE(candidates.size() == 1);
-    REQUIRE(candidates.front() != nullptr);
-    CHECK(candidates.front()->id == "build_tech");
+    REQUIRE(candidates.size() == 7);
+    for (const TechConfig_t* pTech : candidates)
+    {
+        REQUIRE(pTech != nullptr);
+        CHECK(pTech->category == GameCategory_t::Build);
+    }
+    CHECK(std::any_of(candidates.begin(), candidates.end(),
+                      [](const TechConfig_t* pTech) { return pTech->id == "build_tech"; }));
 }
 
 TEST_CASE("ResearchSelector falls back when selected categories have no available techs", "[research][selector]")
@@ -84,7 +89,7 @@ TEST_CASE("ResearchSelector falls back when selected categories have no availabl
     fixture.selector->SetCategoryEnabled(GameCategory_t::Conquer, false);
 
     const std::vector<const TechConfig_t*> candidates = fixture.selector->GetCandidateTargets();
-    REQUIRE(candidates.size() == 4);
+    REQUIRE(candidates.size() == 10);
 
     auto hasTechId = [&candidates](const TechId& rTechId) {
         return std::any_of(candidates.begin(), candidates.end(),
@@ -94,6 +99,8 @@ TEST_CASE("ResearchSelector falls back when selected categories have no availabl
     CHECK(hasTechId("advanced_build"));
     CHECK(hasTechId("fusion_power"));
     CHECK(hasTechId("intellectual_integrity"));
+    CHECK(hasTechId("industrial_automation"));
+    CHECK(hasTechId("planetary_economics"));
 }
 
 TEST_CASE("ResearchSelector assigns a target from the selected pool", "[research][selector]")

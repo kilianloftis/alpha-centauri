@@ -1052,5 +1052,56 @@
         }
       }
     ]
+  },
+  {
+    "id": "commerce_rate_doubler",
+    "name": "Commerce Rate Doubler (test)",
+    "allow_multiple": true,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rate",
+          "amount": 100,
+          "op": "AddPercent"
+        }
+      }
+    ],
+    "category": "build"
+  },
+  {
+    "id": "commerce_energy_bonus_shrine",
+    "name": "Commerce Energy Bonus Shrine (test)",
+    "allow_multiple": true,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisBase",
+        "parameters": {
+          "stat": "commerce_energy_bonus",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "build"
+  },
+  {
+    "id": "commerce_rating_shrine",
+    "name": "Commerce Rating Shrine (test)",
+    "allow_multiple": true,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "commerce_rating",
+          "amount": 2,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "build"
   }
 ]

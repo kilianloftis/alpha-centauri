@@ -299,7 +299,7 @@ TEST_CASE("Economy rating -1 subtracts energy only at the headquarters base",
     CHECK(remote.GetResources().GetEnergyProduction(remote.GetBaseEffects()) == remoteBefore);
 }
 
-TEST_CASE("Economy rating +4 adds per-square energy, flat energy, and commerce bonus",
+TEST_CASE("Economy rating +4 adds per-square energy, flat energy, and commerce rating",
           "[effects][rating][economy]")
 {
     actest::FactionFixture fixture;
@@ -325,12 +325,9 @@ TEST_CASE("Economy rating +4 adds per-square energy, flat energy, and commerce b
     CHECK(base.GetResources().GetEnergyProduction(base.GetBaseEffects())
           == energyBefore + workedTiles + 2);
 
-    const int commerceBonus = FinalizeResolvedStat(
-        ResolveStatModifiers(
-            FilterBaseLevelByStatId(base.GetBaseEffects(), StatId_t::CommerceEnergyBonus),
-            SeedFor(StatId_t::CommerceEnergyBonus))
-            .total);
-    CHECK(commerceBonus == 2);
+    const int commerceRating = FinalizeResolvedStat(ResolveBaseStat(
+        base.GetBaseEffects(), StatId_t::CommerceRating, SeedFor(StatId_t::CommerceRating)));
+    CHECK(commerceRating == 2);
 }
 
 TEST_CASE("Base-level minerals AddPercent scales worked minerals",

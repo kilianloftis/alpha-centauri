@@ -193,7 +193,9 @@ about a pending riot without being a yielding stage.
   change either. A base that starves to nothing is razed by `BaseManager`'s pop-loss handler as
   it happens, not swept for here, so it has already dropped out of `Faction::Bases()` before the
   loop reaches it (see "Object lifetime" in `high-level.md`).
-- **`ResourceCollection`**: `ProduceBaseResources` only.
+- **`ResourceCollection`**: `ProduceBaseResources(GameState&)` — computes Friendship/Pact
+  commerce via `CommerceCalculator`, then each base's `ProduceResources` adds that commerce to
+  raw energy before inefficiency and the econ/labs/psych split.
 - **`UnitSupport`**: `ApplyMineralSupport` — home-unit support charged against the mineral
   bank ResourceCollection just filled; surplus units disband.
 - **`BaseProduction`**: `ApplyProduction` — allocate leftover minerals to the queued build or

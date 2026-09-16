@@ -10,13 +10,6 @@ namespace ac
 using FactionId_t = int;
 using BaseId_t = int;
 
-struct TradeRoute_t
-{
-    int energyBonus;
-    int targetFactionId;
-    int targetBaseId;
-};
-
 struct TileResources_t
 {
     int nutrients;

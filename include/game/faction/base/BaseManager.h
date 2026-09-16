@@ -157,11 +157,13 @@ public:
     // Already-met cost is 1 (completes this turn).
     std::optional<int> GetTurnsToProductionCompletion() const;
     // Pre-inefficiency energy from worked tiles + flat Energy mods (Economy SE, etc.).
+    // Does not include commerce.
     int GetEnergyProduction() const;
-    int GetEconProduction() const;
-    int GetLabsProduction() const;
+    // commerceEnergy is added to raw energy before inefficiency (must be >= 0).
+    int GetEconProduction(int commerceEnergy = 0) const;
+    int GetLabsProduction(int commerceEnergy = 0) const;
     // Local energy-psych share + this base's Psych StatModifiers.
-    int GetPsychProduction() const;
+    int GetPsychProduction(int commerceEnergy = 0) const;
 
     // Composition modifiers from StatModifier(drones/talents) effects at this base
     // (facilities, etc.). Away-from-home / garrison police are separate calculators.
@@ -250,7 +252,8 @@ public:
     // Collect nutrients/minerals and allocate energy into econ/labs/psych stockpiles.
     // Called once per turn per base during ResourceCollection (via Faction::ProduceBaseResources).
     // Resolves against the composed provider pool (BaseEffectsCache memo).
-    void ProduceResources();
+    // commerceEnergy is added to raw energy before inefficiency (must be >= 0).
+    void ProduceResources(int commerceEnergy = 0);
 
     // Charge home-unit mineral support against this turn's mineral bank; disband if short.
     // Called once per turn per base during UnitSupport (via Faction::ApplyMineralSupport),

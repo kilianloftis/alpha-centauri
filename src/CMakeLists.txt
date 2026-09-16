@@ -50,6 +50,8 @@ add_library(ac-core STATIC
     game/faction/base/resources/MineralSupport.cpp
     game/faction/base/resources/WorkerAssignmentManager.cpp
     game/faction/EconomyManager.cpp
+    game/faction/CommerceConfigParser.cpp
+    game/faction/CommerceCalculator.cpp
     game/faction/base/BaseEffectsCache.cpp
     game/faction/base/BuildingDestruction.cpp
     game/faction/base/BaseMoodEffects.cpp

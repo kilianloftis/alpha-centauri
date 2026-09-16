@@ -2,12 +2,13 @@
 #include "game/Faction.h"
 #include "game/GameSettings.h"
 #include "game/GameState.h"
+#include "game/GameDataContext.h"
 
 #include "game/buildings/BuildingRegistry.h"
 #include "game/stockpiles/StockpileRegistry.h"
 #include "game/buildings/BuildingUpkeep.h"
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
-#include "game/GameDataContext.h"
+#include "game/faction/CommerceCalculator.h"
 #include "game/DifficultyConfig.h"
 #include "game/population/pop-types/GrowthConfigParser.h"
 #include "game/units/BaseConquestConfig.h"
@@ -22,6 +23,7 @@
 #include <iostream>
 #include <limits>
 #include <stdexcept>
+#include <unordered_map>
 #include <utility>
 #include "game/faction/AIProfile.h"
 #include "game/faction/FactionFlavor.h"
@@ -131,10 +133,22 @@ int Faction::CollectResearch()
 
 int Faction::GetNetIncomePerTurn() const
 {
+    std::unordered_map<BaseId_t, int> commerceByBase;
+    if (m_pGameState != nullptr)
+    {
+        commerceByBase = CommerceCalculator{}.ComputeForFaction(*this, *m_pGameState);
+    }
+
     int total = 0;
     for (const BaseManager& rBase : Bases())
     {
-        total += rBase.GetEconProduction();
+        int commerce = 0;
+        const auto it = commerceByBase.find(rBase.GetBaseId());
+        if (it != commerceByBase.end())
+        {
+            commerce = it->second;
+        }
+        total += rBase.GetEconProduction(commerce);
     }
     return total - GetBuildingUpkeep();
 }
@@ -860,11 +874,27 @@ BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile*
     return pRawBase;
 }
 
+void Faction::ProduceBaseResources(GameState& rGameState)
+{
+    const std::unordered_map<BaseId_t, int> commerceByBase =
+        CommerceCalculator{}.ComputeForFaction(*this, rGameState);
+    for (BaseManager& rBase : Bases())
+    {
+        int commerce = 0;
+        const auto it = commerceByBase.find(rBase.GetBaseId());
+        if (it != commerceByBase.end())
+        {
+            commerce = it->second;
+        }
+        rBase.ProduceResources(commerce);
+    }
+}
+
 void Faction::ProduceBaseResources()
 {
     for (BaseManager& rBase : Bases())
     {
-        rBase.ProduceResources();
+        rBase.ProduceResources(0);
     }
 }
 
