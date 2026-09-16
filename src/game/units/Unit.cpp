@@ -90,12 +90,15 @@ void Unit::ClearCargoLinks_()
         auto& rCargo = m_pCarrier->m_cargo;
         rCargo.erase(std::remove(rCargo.begin(), rCargo.end(), this), rCargo.end());
         m_pCarrier = nullptr;
+        // Still listed as cargo in the index until Unregister_ / RemoveFromTile_.
     }
     for (Unit* pPassenger : m_cargo)
     {
         if (pPassenger && pPassenger->m_pCarrier == this)
         {
             pPassenger->m_pCarrier = nullptr;
+            // Orphaned passenger becomes an independent occupant on the same tile.
+            m_rPositions.NoteDisembarked_(*pPassenger);
         }
     }
     m_cargo.clear();
@@ -157,6 +160,7 @@ void Unit::EmbarkInto(Unit& rCarrier)
     }
     m_pCarrier = &rCarrier;
     rCarrier.m_cargo.push_back(this);
+    m_rPositions.NoteEmbarked_(*this);
 }
 
 void Unit::Disembark()
@@ -168,6 +172,7 @@ void Unit::Disembark()
     auto& rCargo = m_pCarrier->m_cargo;
     rCargo.erase(std::remove(rCargo.begin(), rCargo.end(), this), rCargo.end());
     m_pCarrier = nullptr;
+    m_rPositions.NoteDisembarked_(*this);
 }
 
 UnitId_t Unit::GetUnitId() const { return m_unitId; }

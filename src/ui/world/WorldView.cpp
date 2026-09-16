@@ -785,7 +785,7 @@ void WorldView::TryOpenProbeActions_(Unit& rProbe, const Tile& rTargetTile)
 
 std::string WorldView::FindUnitNameOnTile_(const Tile& rTile) const
 {
-    const std::vector<Unit*>& units = m_rGameState.GetWorldMap().GetAllUnitsOnTile(rTile);
+    const std::vector<Unit*> units = m_rGameState.GetWorldMap().GetAllUnitsOnTile(rTile);
     for (const Unit* pUnit : units)
     {
         if (pUnit)
@@ -806,7 +806,7 @@ void WorldView::SelectUnitAtTile_(int tileX, int tileY)
         return;
     }
 
-    const std::vector<Unit*>& units = rWorldMap.GetAllUnitsOnTile(*pTile);
+    const std::vector<Unit*> units = rWorldMap.GetAllUnitsOnTile(*pTile);
     if (units.empty())
     {
         SetSelectedUnit_(nullptr, true);

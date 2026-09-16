@@ -45,9 +45,10 @@ public:
     UnitPositionIndex& GetUnitPositions();
     const UnitPositionIndex& GetUnitPositions() const;
     // Occupants only (non-embarked). See UnitPositionIndex.
-    std::vector<Unit*> GetUnitsOnTile(const Tile& rTile) const;
-    std::vector<Unit*> GetCargoOnTile(const Tile& rTile) const;
-    const std::vector<Unit*>& GetAllUnitsOnTile(const Tile& rTile) const;
+    const std::vector<Unit*>& GetUnitsOnTile(const Tile& rTile) const;
+    const std::vector<Unit*>& GetCargoOnTile(const Tile& rTile) const;
+    // Occupants + cargo (fresh vector). See UnitPositionIndex.
+    std::vector<Unit*> GetAllUnitsOnTile(const Tile& rTile) const;
 
     // Worked-tile occupancy: the single owner of the one-worker-per-tile rule, shared by
     // every base of every faction (see WorkedTileIndex).

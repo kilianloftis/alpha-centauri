@@ -38,12 +38,12 @@ public:
 
     // Occupants on rTile (non-embarked). Cargo is excluded — carried units are aboard a
     // carrier, not present on the tile for occupancy, ZOC, or load-site projection.
-    std::vector<Unit*> GetUnitsOnTile(const Tile& rTile) const;
+    const std::vector<Unit*>& GetUnitsOnTile(const Tile& rTile) const;
     // Embarked units whose carrier stands on rTile.
-    std::vector<Unit*> GetCargoOnTile(const Tile& rTile) const;
-    // Occupants and cargo together. Prefer GetUnitsOnTile / GetCargoOnTile; use this for
-    // garrison/defence and UI that must see every unit sharing the tile.
-    const std::vector<Unit*>& GetAllUnitsOnTile(const Tile& rTile) const;
+    const std::vector<Unit*>& GetCargoOnTile(const Tile& rTile) const;
+    // Occupants and cargo together (fresh vector). Prefer GetUnitsOnTile / GetCargoOnTile;
+    // use this for garrison/defence and UI that must see every unit sharing the tile.
+    std::vector<Unit*> GetAllUnitsOnTile(const Tile& rTile) const;
 
     // Visit every registered unit once, in unspecified order. O(units) — the index only holds
     // occupied tiles, so this is the way to sweep all units without walking the whole map.
@@ -79,9 +79,20 @@ private:
     void Register_(Unit& rUnit, const Tile& rTile);
     void Unregister_(Unit& rUnit);
 
+    // EmbarkInto / Disembark (and orphaning in ClearCargoLinks_) move the unit between the
+    // per-tile occupant and cargo lists without changing its tile pointer.
+    void NoteEmbarked_(Unit& rUnit);
+    void NoteDisembarked_(Unit& rUnit);
+
     void RemoveFromTile_(Unit& rUnit);
 
-    std::unordered_map<const Tile*, std::vector<Unit*>> m_index;
+    struct TileUnits_t
+    {
+        std::vector<Unit*> occupants;
+        std::vector<Unit*> cargo;
+    };
+
+    std::unordered_map<const Tile*, TileUnits_t> m_index;
     bool m_bSingleUnitPerTile = false;
 };
 

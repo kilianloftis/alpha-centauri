@@ -150,10 +150,12 @@ interaction grid. Capacity is the `cargo_capacity` stat. Stock Carrier Deck is o
 `TransportParams` (`carries: [air]`).
 
 **Occupants vs cargo.** `WorldMap::GetUnitsOnTile` / `UnitPositionIndex::GetUnitsOnTile` return
-occupants only — carried units are not on the tile for occupancy, ZOC, or load-site
-projection. Callers that need cargo use `GetCargoOnTile` or `GetAllUnitsOnTile` (garrison,
-defence, UI). `UnitPositionIndex::MoveUnit` tows cargo with the carrier; `StepEvaluator`
-routes an embarked mover through `CanUnloadTo` instead of the normal terrain check.
+a const ref to the per-tile occupant list; `GetCargoOnTile` likewise for embarked units.
+Carried units are not on the tile for occupancy, ZOC, or load-site projection. Callers that
+need both use `GetAllUnitsOnTile` (concatenated copy — garrison, defence, UI).
+`UnitPositionIndex` maintains the two lists on move / embark / disembark; `MoveUnit` tows
+cargo with the carrier; `StepEvaluator` routes an embarked mover through `CanUnloadTo`
+instead of the normal terrain check.
 
 **Attack implies entry, but entry is not enough.** `AttackRules::CanAttackTile` requires
 `CanEnterTile` — ships therefore cannot attack shore (attack ⇒ enter, and a foreign shore is

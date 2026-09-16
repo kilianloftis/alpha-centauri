@@ -435,21 +435,22 @@ TEST_CASE("Air and Orbital targets require Air Superiority unless harbored",
         CHECK(CanDeclareAttack(nearMissile, groundedMissile.GetTile(), rMap, rEffects));
     }
 
-    SECTION("carrier deck under an aircraft exempts the gate")
+    SECTION("co-located unembarked air over a carrier is not resting")
     {
-        // Open sea: land amphibious enter needs Water+Base, so use an air attacker without
-        // Air Superiority — a co-located carrier that carries air opens the declare gate.
+        // Open sea: air without Air Superiority cannot declare. A friendly deck underfoot
+        // does not ground the aircraft for targeting (same as IsRefuelSite).
         rMap.GetTile(5, 5)->SetElevation(-100);
         rMap.GetTile(4, 5)->SetElevation(100);
-        Unit& airOnDeck =
+        Unit& airOverDeck =
             game.MakeUnit(*game.pAi, 5, 5, {"test_flight_chassis", "test_weapon"});
         game.MakeUnit(*game.pAi, 5, 5,
                       {"test_sea_chassis", "test_carrier_deck", "test_weapon"});
         Unit& airAttacker =
             game.MakeUnit(*game.pPlayer, 4, 5, {"test_flight_chassis", "test_weapon"});
-        Unit* pTarget =
-            FindAttackableHostileOnTile(airAttacker, airOnDeck.GetTile(), rMap, rEffects);
-        REQUIRE(pTarget == &airOnDeck);
-        CHECK(CanDeclareAttack(airAttacker, airOnDeck.GetTile(), rMap, rEffects));
+        REQUIRE(FindVisibleHostileOnTile(airAttacker, airOverDeck.GetTile(), rMap, rEffects)
+                == &airOverDeck);
+        CHECK(FindAttackableHostileOnTile(airAttacker, airOverDeck.GetTile(), rMap, rEffects)
+              == nullptr);
+        CHECK_FALSE(CanDeclareAttack(airAttacker, airOverDeck.GetTile(), rMap, rEffects));
     }
 }

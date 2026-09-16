@@ -20,7 +20,8 @@ namespace ac
 namespace
 {
 
-// Harbor pad, embarked on a carrier that carries it, or standing on one (deck underfoot).
+// Harbor pad, or embarked on a same-faction carrier that carries it. Co-located but
+// unembarked air over a deck is not resting (same rule as IsRefuelSite).
 bool DefenderIsResting_(const Unit& rDefender, const Tile& rTile, const WorldMap& rWorldMap)
 {
     const FactionId_t factionId = rDefender.GetFaction().GetFactionId();
@@ -29,20 +30,12 @@ bool DefenderIsResting_(const Unit& rDefender, const Tile& rTile, const WorldMap
     {
         return true;
     }
-    if (rDefender.IsEmbarked())
+    if (!rDefender.IsEmbarked())
     {
-        const Unit* pCarrier = rDefender.GetCarrier();
-        return pCarrier && UnitCarries(*pCarrier, domain, factionId);
+        return false;
     }
-    for (const Unit* pOccupant : rWorldMap.GetUnitsOnTile(rTile))
-    {
-        if (pOccupant && pOccupant != &rDefender
-            && UnitCarries(*pOccupant, domain, factionId))
-        {
-            return true;
-        }
-    }
-    return false;
+    const Unit* pCarrier = rDefender.GetCarrier();
+    return pCarrier && UnitCarries(*pCarrier, domain, factionId);
 }
 
 } // namespace

@@ -90,17 +90,17 @@ const UnitPositionIndex& WorldMap::GetUnitPositions() const
     return m_unitPositionIndex;
 }
 
-std::vector<Unit*> WorldMap::GetUnitsOnTile(const Tile& rTile) const
+const std::vector<Unit*>& WorldMap::GetUnitsOnTile(const Tile& rTile) const
 {
     return m_unitPositionIndex.GetUnitsOnTile(rTile);
 }
 
-std::vector<Unit*> WorldMap::GetCargoOnTile(const Tile& rTile) const
+const std::vector<Unit*>& WorldMap::GetCargoOnTile(const Tile& rTile) const
 {
     return m_unitPositionIndex.GetCargoOnTile(rTile);
 }
 
-const std::vector<Unit*>& WorldMap::GetAllUnitsOnTile(const Tile& rTile) const
+std::vector<Unit*> WorldMap::GetAllUnitsOnTile(const Tile& rTile) const
 {
     return m_unitPositionIndex.GetAllUnitsOnTile(rTile);
 }
