@@ -12,6 +12,8 @@ namespace ac
 class BaseManager;
 class Faction;
 class GameState;
+struct CommerceConfig_t;
+class LuaRuntime;
 
 // One Friendship/Pact partner that contributes commerce to a specific base this turn.
 struct CommercePartnerLine_t
@@ -24,11 +26,14 @@ struct CommercePartnerLine_t
 
 // Pure commerce income math: pairs Friendship/Pact bases by pre-commerce energy and returns
 // per-base commerce energy for the owning faction. Does not mutate ResourceManager or treasury.
+// Pair income is one Lua formula from commerce.json; CommerceRate then CommerceEnergyBonus
+// are applied in C++ after.
 // TODO: zero commerce when sanctions are in effect against either faction.
 class CommerceCalculator
 {
 public:
-    CommerceCalculator() = default;
+    // rConfig and rLua outlive every faction (GameDataContext owns both).
+    CommerceCalculator(const CommerceConfig_t& rConfig, LuaRuntime& rLua);
 
     // Every base of rOwner that earns commerce, with its per-partner breakdown. One
     // planet-wide pass: each faction's bases are ranked once and reused across every pair,
@@ -48,6 +53,11 @@ public:
     // which memoizes it.
     std::vector<CommercePartnerLine_t> ComputeForBase(const BaseManager& rBase,
                                                       const GameState& rGameState) const;
+
+private:
+    const CommerceConfig_t* m_pConfig;
+    // Not const: EvalInt mutates interpreter globals.
+    LuaRuntime* m_pLua;
 };
 
 } // namespace ac

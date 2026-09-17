@@ -94,16 +94,18 @@ graph TB
   base) and `ComputeForBase` (one base's lines) are views onto it; ranking prices every base
   of every partner, so per-base callers belong behind `CommerceManager`'s memo rather than in
   a loop over `ComputeForBase`.
-- **Config**: `config/commerce.json` (`pair_multiplier`, `treaty_multiplier`) via `CommerceConfig_t`.
+- **Config**: `config/commerce.json` — `pair_multiplier`, `treaty_multiplier`, and a single
+  Lua `formula` (same pattern as hurry). Inputs: `energy_ours`, `energy_theirs`,
+  `pair_multiplier`, `commerce_tech`, `tech_denominator`, `treaty_factor` (1.0 for Pact,
+  `treaty_multiplier` for Friendship). `CommerceRate` and `CommerceEnergyBonus` are applied
+  in C++ after the formula (rate scales the result like scrap; flat bonus last).
 - **Formula** (per paired bases, owning faction):
   1. Rank each side's bases by pre-commerce `GetEnergyProduction()` (descending).
   2. Pair top-to-top; ignore surplus bases.
-  3. `ceil((energyA + energyB) * pair_multiplier)`.
-  4. Apply faction `CommerceRate` (PureMultiplier; Global Trade Pact emits +100% AddPercent).
-  5. Multiply by `(commerceTech + 1) / (totalCommerceTech + 1)` (integer floor).
-  6. If Friendship (not Pact), multiply by `treaty_multiplier` and floor.
-  7. Add base `CommerceEnergyBonus` (Planetary Governor and similar).
-  8. TODO: zero when sanctions apply to either faction.
+  3. Eval `formula` (shipping SMAC: ceil pair → tech ratio → treaty factor).
+  4. Scale by faction `CommerceRate` (PureMultiplier on the formula result).
+  5. Add base `CommerceEnergyBonus` (Planetary Governor and similar).
+  6. TODO: zero when sanctions apply to either faction.
 - **commerceTech**: resolved `CommerceRating` for the owning base (discovered economic techs'
   `commerce_rating` Adds + Economy SE + faction bonuses).
 - **totalCommerceTech**: sum across living factions of `commerce_rating` **Add** amounts on

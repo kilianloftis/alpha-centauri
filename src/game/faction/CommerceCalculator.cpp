@@ -12,11 +12,13 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/research/TechConfigParser.h"
 #include "game/research/TechRegistry.h"
+#include "lib/LuaRuntime.h"
 
 #include <algorithm>
-#include <cmath>
 #include <cstddef>
 #include <stdexcept>
+#include <string>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -103,30 +105,48 @@ std::vector<RankedBase_t> RankBasesByEnergy_(const Faction& rFaction)
     return ranked;
 }
 
+} // namespace
+
+CommerceCalculator::CommerceCalculator(const CommerceConfig_t& rConfig, LuaRuntime& rLua)
+    : m_pConfig(&rConfig)
+    , m_pLua(&rLua)
+{}
+
+namespace
+{
+
 int CommercePairValue_(const Faction& rBeneficiary,
                        const BaseManager& rBeneficiaryBase,
                        int beneficiaryEnergy,
                        int partnerEnergy,
                        DiplomaticStatus_t status,
                        const CommerceConfig_t& rConfig,
+                       LuaRuntime& rLua,
                        int techDenominator)
 {
-    const double combined = static_cast<double>(beneficiaryEnergy + partnerEnergy);
-    int value = static_cast<int>(std::ceil(combined * rConfig.pairMultiplier));
-
-    value = FinalizeResolvedStat(ResolveFactionStat(
-        rBeneficiary.GetActiveEffects(), StatId_t::CommerceRate, static_cast<double>(value)));
-
     const int commerceTech = FinalizeResolvedStat(ResolveBaseStat(
         rBeneficiaryBase.GetBaseEffects(), StatId_t::CommerceRating,
         SeedFor(StatId_t::CommerceRating)));
-    value = (value * (commerceTech + 1)) / techDenominator;
 
-    if (status == DiplomaticStatus_t::Friendship)
-    {
-        value = static_cast<int>(std::floor(static_cast<double>(value) * rConfig.treatyMultiplier));
-    }
+    const double treatyFactor =
+        (status == DiplomaticStatus_t::Friendship) ? rConfig.treatyMultiplier : 1.0;
 
+    const std::unordered_map<std::string, double> vars = {
+        {"energy_ours", static_cast<double>(beneficiaryEnergy)},
+        {"energy_theirs", static_cast<double>(partnerEnergy)},
+        {"pair_multiplier", rConfig.pairMultiplier},
+        {"commerce_tech", static_cast<double>(commerceTech)},
+        {"tech_denominator", static_cast<double>(techDenominator)},
+        {"treaty_factor", treatyFactor},
+        {"treaty_multiplier", rConfig.treatyMultiplier},
+    };
+    int value = rLua.EvalInt(rConfig.formula, vars);
+
+    // Same seam as scrap: formula first, then PureMultiplier effects scale the result
+    // (Global Trade Pact AddPercent 100 → ×2). Flat bonus last.
+    value = FinalizeResolvedStat(ResolveFactionStat(
+        rBeneficiary.GetActiveEffects(), StatId_t::CommerceRate,
+        static_cast<double>(value)));
     value += FinalizeResolvedStat(ResolveBaseStat(
         rBeneficiaryBase.GetBaseEffects(), StatId_t::CommerceEnergyBonus,
         SeedFor(StatId_t::CommerceEnergyBonus)));
@@ -139,12 +159,11 @@ int CommercePairValue_(const Faction& rBeneficiary,
 std::unordered_map<BaseId_t, std::vector<CommercePartnerLine_t>>
 CommerceCalculator::ComputeAllLines(const Faction& rOwner, const GameState& rGameState) const
 {
-    const CommerceConfig_t* pConfig = rOwner.GetDataContext().commerceConfig.get();
-    if (pConfig == nullptr)
+    if (m_pConfig == nullptr || m_pLua == nullptr)
     {
-        throw std::runtime_error("CommerceCalculator: commerceConfig is null");
+        throw std::runtime_error("CommerceCalculator: config or Lua runtime is null");
     }
-    const CommerceConfig_t& rConfig = *pConfig;
+    const CommerceConfig_t& rConfig = *m_pConfig;
 
     // TODO: zero commerce when sanctions are in effect against either faction.
 
@@ -182,9 +201,11 @@ CommerceCalculator::ComputeAllLines(const Faction& rOwner, const GameState& rGam
             line.pPartner = &rPartner;
             line.status = status;
             line.ourEnergy = CommercePairValue_(rOwner, *rOurs.pBase, rOurs.energy,
-                                                rTheirs.energy, status, rConfig, techDenominator);
+                                                rTheirs.energy, status, rConfig, *m_pLua,
+                                                techDenominator);
             line.theirEnergy = CommercePairValue_(rPartner, *rTheirs.pBase, rTheirs.energy,
-                                                  rOurs.energy, status, rConfig, techDenominator);
+                                                  rOurs.energy, status, rConfig, *m_pLua,
+                                                  techDenominator);
             lines[rOurs.pBase->GetBaseId()].push_back(line);
         }
     }

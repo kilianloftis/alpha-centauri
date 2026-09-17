@@ -20,7 +20,7 @@ CommerceConfig_t CommerceConfigParser::ParseConfig(const std::string& configPath
 
             for (const auto& [rKey, rUnused] : rJson.items())
             {
-                if (rKey != "pair_multiplier" && rKey != "treaty_multiplier")
+                if (rKey != "pair_multiplier" && rKey != "treaty_multiplier" && rKey != "formula")
                 {
                     fail("unknown key '" + rKey + "'");
                 }
@@ -43,9 +43,24 @@ CommerceConfig_t CommerceConfigParser::ParseConfig(const std::string& configPath
                 return value;
             };
 
+            if (!rJson.contains("formula"))
+            {
+                fail("'formula' is required");
+            }
+            if (!rJson.at("formula").is_string())
+            {
+                fail("'formula' must be a string");
+            }
+            std::string formula = rJson.at("formula").get<std::string>();
+            if (formula.empty())
+            {
+                fail("'formula' must be a non-empty Lua expression");
+            }
+
             CommerceConfig_t config;
             config.pairMultiplier = readPositive("pair_multiplier");
             config.treatyMultiplier = readPositive("treaty_multiplier");
+            config.formula = std::move(formula);
             return config;
         });
 }

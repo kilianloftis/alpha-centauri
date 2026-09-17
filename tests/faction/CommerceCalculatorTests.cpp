@@ -26,12 +26,14 @@ namespace
 struct CommerceGame_
 {
     FactionFixture fixtures;
+    CommerceCalculator calculator;
     GameSettings settings;
     std::unique_ptr<GameState> pState;
     Faction* pA = nullptr;
     Faction* pB = nullptr;
 
     CommerceGame_()
+        : calculator(*fixtures.dataContext.commerceConfig, *fixtures.dataContext.luaRuntime)
     {
         // techs.json plus two commerce_rating entries the denominator tests need. Loaded
         // here rather than added to the shared fixture, which several tests count.
@@ -96,7 +98,7 @@ TEST_CASE("ComputeForBase reports our and their energy for a paired partner", "[
     game.pState->GetDiplomacyLedger().SetStatus(
         game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Pact);
 
-    const auto lines = CommerceCalculator{}.ComputeForBase(a1, *game.pState);
+    const auto lines = game.calculator.ComputeForBase(a1, *game.pState);
     REQUIRE(lines.size() == 1);
     CHECK(lines[0].pPartner == game.pB);
     CHECK(lines[0].status == DiplomaticStatus_t::Pact);
@@ -107,7 +109,7 @@ TEST_CASE("ComputeForBase reports our and their energy for a paired partner", "[
         ExpectedPairRaw_(b1.GetEnergyProduction(), a1.GetEnergyProduction());
     CHECK(lines[0].ourEnergy == expectedOurs);
     CHECK(lines[0].theirEnergy == expectedTheirs);
-    CHECK(CommerceCalculator{}.ComputeForFaction(*game.pA, *game.pState).at(a1.GetBaseId())
+    CHECK(game.calculator.ComputeForFaction(*game.pA, *game.pState).at(a1.GetBaseId())
           == expectedOurs);
 }
 
@@ -121,7 +123,7 @@ TEST_CASE("Faction GetCommerce matches calculator for the same pair", "[commerce
         game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Pact);
 
     const auto viaManager = game.pA->GetCommerce().ComputeForBase(a1);
-    const auto viaCalculator = CommerceCalculator{}.ComputeForBase(a1, *game.pState);
+    const auto viaCalculator = game.calculator.ComputeForBase(a1, *game.pState);
     REQUIRE(viaManager.size() == 1);
     REQUIRE(viaCalculator.size() == 1);
     CHECK(viaManager[0].ourEnergy == viaCalculator[0].ourEnergy);
@@ -140,11 +142,11 @@ TEST_CASE("ComputeForBase is empty for surplus bases and non-commerce treaties",
     DiplomacyLedger& rDiplomacy = game.pState->GetDiplomacyLedger();
     rDiplomacy.SetStatus(
         game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Pact);
-    CHECK(CommerceCalculator{}.ComputeForBase(a2, *game.pState).empty());
+    CHECK(game.calculator.ComputeForBase(a2, *game.pState).empty());
 
     rDiplomacy.SetStatus(
         game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Truce);
-    CHECK(CommerceCalculator{}.ComputeForBase(a1, *game.pState).empty());
+    CHECK(game.calculator.ComputeForBase(a1, *game.pState).empty());
 }
 
 TEST_CASE("Commerce pairs by pre-commerce energy; surplus bases ignored", "[commerce]")
@@ -160,7 +162,7 @@ TEST_CASE("Commerce pairs by pre-commerce energy; surplus bases ignored", "[comm
     game.pState->GetDiplomacyLedger().SetStatus(
         game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Pact);
 
-    const auto commerce = CommerceCalculator{}.ComputeForFaction(*game.pA, *game.pState);
+    const auto commerce = game.calculator.ComputeForFaction(*game.pA, *game.pState);
     REQUIRE(commerce.count(a1.GetBaseId()) == 1);
     CHECK(commerce.count(a2.GetBaseId()) == 0);
 
@@ -180,11 +182,11 @@ TEST_CASE("Friendship applies treaty_multiplier; Pact does not", "[commerce]")
     DiplomacyLedger& rDiplomacy = game.pState->GetDiplomacyLedger();
     rDiplomacy.SetStatus(game.pA->GetFactionId(), game.pB->GetFactionId(),
                          DiplomaticStatus_t::Friendship);
-    CHECK(CommerceCalculator{}.ComputeForFaction(*game.pA, *game.pState).at(a1.GetBaseId())
+    CHECK(game.calculator.ComputeForFaction(*game.pA, *game.pState).at(a1.GetBaseId())
           == static_cast<int>(std::floor(pairRaw * 0.5)));
 
     rDiplomacy.SetStatus(game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Pact);
-    CHECK(CommerceCalculator{}.ComputeForFaction(*game.pA, *game.pState).at(a1.GetBaseId())
+    CHECK(game.calculator.ComputeForFaction(*game.pA, *game.pState).at(a1.GetBaseId())
           == pairRaw);
 }
 
@@ -195,17 +197,16 @@ TEST_CASE("No commerce for Truce, None, or Vendetta", "[commerce]")
     game.MakeHqBase(*game.pB, 6, 2);
 
     DiplomacyLedger& rDiplomacy = game.pState->GetDiplomacyLedger();
-    CommerceCalculator calc;
 
     rDiplomacy.SetStatus(game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Truce);
-    CHECK(calc.ComputeForFaction(*game.pA, *game.pState).empty());
+    CHECK(game.calculator.ComputeForFaction(*game.pA, *game.pState).empty());
 
     rDiplomacy.SetStatus(game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::None);
-    CHECK(calc.ComputeForFaction(*game.pA, *game.pState).empty());
+    CHECK(game.calculator.ComputeForFaction(*game.pA, *game.pState).empty());
 
     rDiplomacy.SetStatus(
         game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Vendetta);
-    CHECK(calc.ComputeForFaction(*game.pA, *game.pState).empty());
+    CHECK(game.calculator.ComputeForFaction(*game.pA, *game.pState).empty());
 }
 
 TEST_CASE("CommerceRate doubles pair value when present", "[commerce]")
@@ -219,7 +220,7 @@ TEST_CASE("CommerceRate doubles pair value when present", "[commerce]")
         game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Pact);
 
     const int pairRaw = ExpectedPairRaw_(a1.GetEnergyProduction(), b1.GetEnergyProduction());
-    CHECK(CommerceCalculator{}.ComputeForFaction(*game.pA, *game.pState).at(a1.GetBaseId())
+    CHECK(game.calculator.ComputeForFaction(*game.pA, *game.pState).at(a1.GetBaseId())
           == pairRaw * 2);
 }
 
@@ -241,7 +242,7 @@ TEST_CASE("commerce_rating and economic techs feed the tech ratio; total ignores
     // totalCommerceTech = tech-only Adds across factions = 2
     // value = pairRaw * (3+1)/(2+1) = pairRaw * 4/3
     const int pairRaw = ExpectedPairRaw_(a1.GetEnergyProduction(), b1.GetEnergyProduction());
-    CHECK(CommerceCalculator{}.ComputeForFaction(*game.pA, *game.pState).at(a1.GetBaseId())
+    CHECK(game.calculator.ComputeForFaction(*game.pA, *game.pState).at(a1.GetBaseId())
           == (pairRaw * 4) / 3);
 }
 
@@ -256,7 +257,7 @@ TEST_CASE("CommerceEnergyBonus adds at the end of each pair", "[commerce]")
         game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Pact);
 
     const int pairRaw = ExpectedPairRaw_(a1.GetEnergyProduction(), b1.GetEnergyProduction());
-    CHECK(CommerceCalculator{}.ComputeForFaction(*game.pA, *game.pState).at(a1.GetBaseId())
+    CHECK(game.calculator.ComputeForFaction(*game.pA, *game.pState).at(a1.GetBaseId())
           == pairRaw + 1);
 }
 
@@ -270,7 +271,7 @@ TEST_CASE("Commerce feeds ResourceManager raw energy before the econ split", "[c
         game.pA->GetFactionId(), game.pB->GetFactionId(), DiplomaticStatus_t::Pact);
 
     const int commerce =
-        CommerceCalculator{}.ComputeForFaction(*game.pA, *game.pState).at(a1.GetBaseId());
+        game.calculator.ComputeForFaction(*game.pA, *game.pState).at(a1.GetBaseId());
     REQUIRE(commerce > 0);
 
     const int econWithCommerce = a1.GetEconProduction();
@@ -298,8 +299,8 @@ TEST_CASE("Commerce is reciprocal: the partner earns it too, and the lines agree
 
     game.SetStatus(*game.pB, DiplomaticStatus_t::Pact);
 
-    const auto ours = CommerceCalculator{}.ComputeForBase(a1, *game.pState);
-    const auto theirs = CommerceCalculator{}.ComputeForBase(b1, *game.pState);
+    const auto ours = game.calculator.ComputeForBase(a1, *game.pState);
+    const auto theirs = game.calculator.ComputeForBase(b1, *game.pState);
     REQUIRE(ours.size() == 1);
     REQUIRE(theirs.size() == 1);
 
@@ -309,7 +310,7 @@ TEST_CASE("Commerce is reciprocal: the partner earns it too, and the lines agree
     CHECK(ours[0].theirEnergy == theirs[0].ourEnergy);
     CHECK(theirs[0].theirEnergy == ours[0].ourEnergy);
 
-    CHECK(CommerceCalculator{}.ComputeForFaction(*game.pB, *game.pState).at(b1.GetBaseId())
+    CHECK(game.calculator.ComputeForFaction(*game.pB, *game.pState).at(b1.GetBaseId())
           == theirs[0].ourEnergy);
 }
 
@@ -324,17 +325,17 @@ TEST_CASE("A base accumulates one commerce line per eligible partner", "[commerc
     game.SetStatus(*game.pB, DiplomaticStatus_t::Pact);
     game.SetStatus(rC, DiplomaticStatus_t::Pact);
 
-    const auto lines = CommerceCalculator{}.ComputeForBase(a1, *game.pState);
+    const auto lines = game.calculator.ComputeForBase(a1, *game.pState);
     REQUIRE(lines.size() == 2);
 
     const int expected = ExpectedPairRaw_(a1.GetEnergyProduction(), b1.GetEnergyProduction())
                        + ExpectedPairRaw_(a1.GetEnergyProduction(), c1.GetEnergyProduction());
-    CHECK(CommerceCalculator{}.ComputeForFaction(*game.pA, *game.pState).at(a1.GetBaseId())
+    CHECK(game.calculator.ComputeForFaction(*game.pA, *game.pState).at(a1.GetBaseId())
           == expected);
 
     // Dropping one treaty drops exactly that partner's line.
     game.SetStatus(rC, DiplomaticStatus_t::Truce);
-    CHECK(CommerceCalculator{}.ComputeForBase(a1, *game.pState).size() == 1);
+    CHECK(game.calculator.ComputeForBase(a1, *game.pState).size() == 1);
 }
 
 TEST_CASE("Commerce reaches labs and psych, not just econ", "[commerce]")
@@ -351,7 +352,7 @@ TEST_CASE("Commerce reaches labs and psych, not just econ", "[commerce]")
     const int psychBefore = a1.GetPsychProduction();
 
     game.SetStatus(*game.pB, DiplomaticStatus_t::Pact);
-    REQUIRE(CommerceCalculator{}.ComputeForFaction(*game.pA, *game.pState).at(a1.GetBaseId()) > 0);
+    REQUIRE(game.calculator.ComputeForFaction(*game.pA, *game.pState).at(a1.GetBaseId()) > 0);
 
     CHECK(a1.GetEconProduction() > econBefore);
     CHECK(a1.GetLabsProduction() > labsBefore);
@@ -370,7 +371,7 @@ TEST_CASE("A negative commerce_rating tech cannot zero the tech denominator", "[
     game.SetStatus(*game.pB, DiplomaticStatus_t::Pact);
 
     int value = 0;
-    REQUIRE_NOTHROW(value = CommerceCalculator{}.ComputeForBase(a1, *game.pState).at(0).ourEnergy);
+    REQUIRE_NOTHROW(value = game.calculator.ComputeForBase(a1, *game.pState).at(0).ourEnergy);
     // Clamped to 1: pairRaw * (rating + 1) / 1, and the base's own rating is -1 → 0.
     CHECK(value == 0);
     (void)b1;
@@ -383,13 +384,13 @@ TEST_CASE("A gated commerce_rating tech stays out of the planet-wide denominator
     BaseManager& b1 = game.MakeHqBase(*game.pB, 6, 2);
 
     game.SetStatus(*game.pB, DiplomaticStatus_t::Pact);
-    const int baseline = CommerceCalculator{}.ComputeForFaction(*game.pA, *game.pState)
+    const int baseline = game.calculator.ComputeForFaction(*game.pA, *game.pState)
                              .at(a1.GetBaseId());
 
     // +5 commerce_rating, but only for Command_Center — it resolves to nothing for anyone,
     // so counting it would lower every faction's commerce.
     game.pB->GetResearch().AddDiscoveredTech("gated_commerce_tech");
-    CHECK(CommerceCalculator{}.ComputeForFaction(*game.pA, *game.pState).at(a1.GetBaseId())
+    CHECK(game.calculator.ComputeForFaction(*game.pA, *game.pState).at(a1.GetBaseId())
           == baseline);
     (void)b1;
 }
@@ -403,7 +404,7 @@ TEST_CASE("A base detached from its faction reports no commerce instead of throw
     game.MakeHqBase(*game.pB, 6, 2);
 
     game.SetStatus(*game.pB, DiplomaticStatus_t::Pact);
-    REQUIRE_FALSE(CommerceCalculator{}.ComputeForBase(a1, *game.pState).empty());
+    REQUIRE_FALSE(game.calculator.ComputeForBase(a1, *game.pState).empty());
 
     // ReleaseBase leaves a live BaseManager that is no longer in Faction::Bases() — the same
     // momentarily-ownerless state CreateBaseFromSnapshot passes through.
@@ -411,7 +412,7 @@ TEST_CASE("A base detached from its faction reports no commerce instead of throw
     std::unique_ptr<BaseManager> pDetached = game.pA->ReleaseBase(detachedId);
     REQUIRE(pDetached != nullptr);
 
-    CHECK(CommerceCalculator{}.ComputeForBase(*pDetached, *game.pState).empty());
+    CHECK(game.calculator.ComputeForBase(*pDetached, *game.pState).empty());
     CHECK(game.pA->GetCommerce().ComputeForBase(*pDetached).empty());
     CHECK(pDetached->GetResources().GetCommercePartners().empty());
 }

@@ -1,4 +1,5 @@
 {
   "pair_multiplier": 0.125,
-  "treaty_multiplier": 0.5
+  "treaty_multiplier": 0.5,
+  "formula": "math.floor(math.floor(math.ceil((energy_ours + energy_theirs) * pair_multiplier) * (commerce_tech + 1) / tech_denominator) * treaty_factor)"
 }
