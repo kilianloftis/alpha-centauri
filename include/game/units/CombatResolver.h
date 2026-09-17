@@ -61,6 +61,9 @@ struct CombatResult_t
     bool bAttackerDisengaged = false;
     bool bDefenderDisengaged = false;
     const Tile* pRetreatTile = nullptr;
+    // Hops the scrambled defender walked before combat (origin excluded). Empty when no
+    // scramble fired. UI can play these tile-by-tile before combat rounds.
+    std::vector<const Tile*> scramblePath;
 };
 
 // Resolves SMAC-style firefight rounds: each side rolls [0, strength), higher roll wins the

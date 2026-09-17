@@ -54,9 +54,9 @@ enum class StatId_t
     // Percent of max HP applied as flat landing damage after an airdrop (skipped on
     // airdrop_launch pads). Drop Pods baseline; reactors may Add further.
     AirdropLandingDamage,
-    // Chebyshev radius from a drop destination within which this unit interdicts airdrops.
-    // > 0 grants interdiction (Air Superiority Add 2). Not inferred from combat overrides.
-    AirdropInterdictionRadius,
+    // Chebyshev radius for airdrop hard-deny and air scramble intercept (Air Superiority Add 2).
+    // Not inferred from combat overrides.
+    InterceptRadius,
     CargoCapacity,
     DifficultTerrainCost,
     // Minerals spent each turn to keep a live unit supported by its home base. Chassis
@@ -244,7 +244,7 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::DamageFromOutOfFuel:
         case StatId_t::AirdropRange:
         case StatId_t::AirdropLandingDamage:
-        case StatId_t::AirdropInterdictionRadius:
+        case StatId_t::InterceptRadius:
         case StatId_t::CargoCapacity:
         case StatId_t::DifficultTerrainCost:
         case StatId_t::MineralUpkeep:
@@ -381,7 +381,7 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::DamageFromOutOfFuel:
         case StatId_t::AirdropRange:
         case StatId_t::AirdropLandingDamage:
-        case StatId_t::AirdropInterdictionRadius:
+        case StatId_t::InterceptRadius:
         case StatId_t::CargoCapacity:
         case StatId_t::DifficultTerrainCost:
         case StatId_t::MineralUpkeep:
@@ -426,7 +426,7 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "damage_from_out_of_fuel") return StatId_t::DamageFromOutOfFuel;
     if (rStat == "airdrop_range")           return StatId_t::AirdropRange;
     if (rStat == "airdrop_landing_damage")  return StatId_t::AirdropLandingDamage;
-    if (rStat == "airdrop_interdiction_radius") return StatId_t::AirdropInterdictionRadius;
+    if (rStat == "intercept_radius")            return StatId_t::InterceptRadius;
     if (rStat == "cargo_capacity")          return StatId_t::CargoCapacity;
     if (rStat == "difficult_terrain_cost")  return StatId_t::DifficultTerrainCost;
     if (rStat == "mineral_upkeep")          return StatId_t::MineralUpkeep;

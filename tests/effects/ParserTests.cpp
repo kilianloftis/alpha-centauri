@@ -1575,6 +1575,15 @@ TEST_CASE("ParseEffectConfig: required balance keys", "[effects][parser][orbital
     REQUIRE(pIntercept);
     CHECK(pIntercept->chance == 50);
     CHECK(pIntercept->cooldownTurns == -1);
+
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "ScrambleIntercept", "scope": "ThisUnit"
+    })")));
+    const EffectConfig_t scramble = EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "ScrambleIntercept", "scope": "ThisUnit",
+        "unitFilter": { "kind": "Domain", "domain": "air" }
+    })"));
+    REQUIRE(std::get_if<ScrambleInterceptEffect_t>(&scramble.effect));
 }
 
 TEST_CASE("ParseEffects: non-array effects throws", "[effects][parser]")

@@ -99,7 +99,12 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "airdrop_interdiction_radius", "amount": 2, "op": "Add" }
+        "parameters": { "stat": "intercept_radius", "amount": 2, "op": "Add" }
+      },
+      {
+        "type": "ScrambleIntercept",
+        "scope": "ThisUnit",
+        "unitFilter": { "kind": "Domain", "domain": "air" }
       }
     ]
   },

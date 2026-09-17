@@ -621,6 +621,15 @@ void ParseInterceptAttempt_(const nlohmann::json& parameters, EffectConfig_t& rE
     rEffect.effect = intercept;
 }
 
+void ParseScrambleIntercept_(const nlohmann::json& /*parameters*/, EffectConfig_t& rEffect)
+{
+    if (!rEffect.unitFilter)
+    {
+        throw std::runtime_error("ScrambleIntercept requires a unitFilter");
+    }
+    rEffect.effect = ScrambleInterceptEffect_t{};
+}
+
 void ParseModifyPopulation_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
 {
     if (rEffect.persistence != EffectPersistence_t::Instantaneous)
@@ -765,6 +774,7 @@ const std::unordered_map<std::string, ParseEffectFn_>& EffectTypeParsers_()
         {"Detect", ParseDetect_},
         {"OrbitalAttack", ParseOrbitalAttack_},
         {"InterceptAttempt", ParseInterceptAttempt_},
+        {"ScrambleIntercept", ParseScrambleIntercept_},
         {"TransportParams", ParseTransportParams_},
         {"ModifyPopulation", ParseModifyPopulation_},
         {"DestroyFacility", ParseDestroyFacility_},

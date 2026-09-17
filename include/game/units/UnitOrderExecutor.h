@@ -85,9 +85,10 @@ public:
     // playback. SingleUse attackers return as destroyed after the caller (or this method)
     // runs DestroyUnit on OrderProgress_t::Expended.
     // When world is bound, ready InterceptAttempt effects may destroy the attacker before
-    // CombatResolver runs. After the last garrison dies on a base tile, last-defender
-    // casualties / adjacent native raid apply when GameDataContext is bound — ownership
-    // transfer still requires a later enter-tile order while moves remain.
+    // CombatResolver runs. Otherwise an eligible ScrambleIntercept unit may path onto the
+    // target tile hop-by-hop and become the combat defender. After the last garrison dies on a
+    // base tile, last-defender casualties / adjacent native raid apply when GameDataContext is
+    // bound — ownership transfer still requires a later enter-tile order while moves remain.
     std::optional<CombatResult_t> TryAttack(Unit& rAttacker, const Tile& rTargetTile);
 
     // Found a base on the unit's tile. Requires FoundBase flag and a legal tile (spacing +
@@ -155,6 +156,12 @@ private:
                                  const std::unordered_set<UnitId_t>& rPreviouslyVisible) const;
     void CancelMoveOrderIfNewHostile_(Unit& rMover,
                                       const std::unordered_set<UnitId_t>& rPreviouslyVisible);
+
+    // Assign a MoveOrder to an eligible scrambler and Execute until arrival (or failure).
+    // Fills rOutPath with hops taken. Returns the combat defender (scrambler if arrived).
+    Unit& ResolveScrambleDefender_(Unit& rAttacker,
+                                   Unit& rOriginalDefender,
+                                   std::vector<const Tile*>& rOutPath);
 
     const MoveCostCalculator& m_rMoveCosts;
     const StepEvaluator& m_rSteps;

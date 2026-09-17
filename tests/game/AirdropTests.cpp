@@ -291,7 +291,7 @@ TEST_CASE("Airdrop rejects enemy-occupied tiles and interdiction", "[unit][airdr
         game.MakeUnit(*game.pAi, 7, 6, {"test_flight_chassis", "test_weapon", "air_superiority"});
     interceptor.SetMoveFragmentsRemaining(
         interceptor.GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint);
-    CHECK(ResolveStat(interceptor, StatId_t::AirdropInterdictionRadius) == 2);
+    CHECK(ResolveStat(interceptor, StatId_t::InterceptRadius) == 2);
     CHECK(CanAirdropTo(dropper, *pClear, rMap, rEffects).failReason
           == AirdropFailReason_t::Interdicted);
 

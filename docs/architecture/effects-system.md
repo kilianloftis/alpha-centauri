@@ -807,7 +807,8 @@ rule that belongs to a *tile* is plain code at the call site that needs it: `Til
 `MovementRules` / `FuelRules` / `AttackRules`, and boarding via `UnitCarries` in
 `TransportRules`. Stock Amphibious Pods override `enter` for land×water when Water+Base, plus
 `attack_tile` for every footing. Air Superiority overrides `attack_unit` for target
-air/orbital. Cloaking Device and Probe Team override `zoc` to `deny` with both axes omitted —
+air/orbital, grants `intercept_radius`, and carries `ScrambleIntercept` with
+`unitFilter` Domain air. Cloaking Device and Probe Team override `zoc` to `deny` with both axes omitted —
 where stock would hold the unit that is non-default; where stock already denies, the override
 is a no-op. `Water` is a real
 improvement entry covering any sea tile (`elevation < 0`), and it **stacks** with the depth

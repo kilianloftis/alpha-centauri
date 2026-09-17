@@ -81,7 +81,7 @@ bool IsAirdropInterdicted(const Unit& rDropper, const Tile& rDest, const WorldMa
         {
             return;
         }
-        const int radius = ResolveStat(rCandidate, StatId_t::AirdropInterdictionRadius);
+        const int radius = ResolveStat(rCandidate, StatId_t::InterceptRadius);
         if (radius <= 0)
         {
             return;

@@ -122,6 +122,7 @@ struct EffectPayloadValidator
     void operator()(const DetectEffect_t&) const {}
     void operator()(const OrbitalAttackEffect_t&) const {}
     void operator()(const InterceptAttemptEffect_t&) const {}
+    void operator()(const ScrambleInterceptEffect_t&) const {}
     void operator()(const TransportParamsEffect_t&) const {}
     void operator()(const InteractionOverrideEffect_t&) const {}
     void operator()(const ModifyPopulationEffect_t&) const {}

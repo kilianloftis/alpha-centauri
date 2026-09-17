@@ -220,6 +220,13 @@ struct InterceptAttemptEffect_t
     int chanceOfDestructionOnFail = 0;
 };
 
+// Marker: this unit may scramble to become the combat defender against an attacker that
+// satisfies unitFilter (required on EffectConfig_t). Range is InterceptRadius; eligibility
+// and move-onto-tile live in ScrambleRules.
+struct ScrambleInterceptEffect_t
+{
+};
+
 // Declares which passenger domains this unit may carry (`carries`), and whether loading
 // requires a matching harbor tile (`requires_harbor`). Embarked cargo of a carried domain
 // refuels on the carrier — that follows from carries, not a separate flag. Capacity remains
@@ -292,6 +299,7 @@ using EffectVariant_t = std::variant<
     DetectEffect_t,
     OrbitalAttackEffect_t,
     InterceptAttemptEffect_t,
+    ScrambleInterceptEffect_t,
     TransportParamsEffect_t,
     InteractionOverrideEffect_t,
     ModifyPopulationEffect_t,

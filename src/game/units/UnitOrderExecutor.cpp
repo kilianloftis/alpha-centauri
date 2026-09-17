@@ -1,6 +1,7 @@
 #include "game/units/UnitOrderExecutor.h"
 
 #include "game/units/InterceptRules.h"
+#include "game/units/ScrambleRules.h"
 #include "game/units/UnitOrder.h"
 #include "game/units/MoveCostCalculator.h"
 #include "game/units/MovementConstants.h"
@@ -330,7 +331,11 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
     const bool bDefenderOnBase =
         m_pWorld && m_pWorld->FindBaseAt(rDefenderTile.GetX(), rDefenderTile.GetY()) != nullptr;
 
-    CombatResult_t result = m_combat.Resolve(rAttacker, *pDefender);
+    std::vector<const Tile*> scrambleHops;
+    Unit& rCombatDefender = ResolveScrambleDefender_(rAttacker, *pDefender, scrambleHops);
+
+    CombatResult_t result = m_combat.Resolve(rAttacker, rCombatDefender);
+    result.scramblePath = std::move(scrambleHops);
 
     // Promotion on kill (not mere disengage). Probe teams skipped inside TryPromote.
     if (result.bDefenderDestroyed && !result.bAttackerDestroyed)
@@ -339,7 +344,8 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
     }
     if (result.bAttackerDestroyed && !result.bDefenderDestroyed)
     {
-        m_rMorale.TryPromote(*pDefender, result.attackStrength, result.defenseStrength, m_rRng);
+        m_rMorale.TryPromote(rCombatDefender, result.attackStrength, result.defenseStrength,
+                             m_rRng);
     }
 
     if (!result.bAttackerDestroyed)
@@ -621,6 +627,47 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, TerraformOrder_t& rOrde
                   << ") — the tile likely changed during the project\n";
     }
     return OrderProgress_t::Complete;
+}
+
+Unit& UnitOrderExecutor::ResolveScrambleDefender_(Unit& rAttacker,
+                                                  Unit& rOriginalDefender,
+                                                  std::vector<const Tile*>& rOutPath)
+{
+    rOutPath.clear();
+    Unit* pScrambler = FindScrambleInterceptor(
+        rAttacker, rOriginalDefender, m_rWorldMap, m_rTileEffects, m_rPathfinder);
+    if (!pScrambler)
+    {
+        return rOriginalDefender;
+    }
+
+    const Tile& rDest = rOriginalDefender.GetTile();
+    MoveOrder_t order;
+    order.pDestination = &rDest;
+    pScrambler->SetOrder(order);
+
+    auto movedConn = m_rWorldMap.GetUnitPositions().OnUnitMoved.ConnectScoped(
+        [&](Unit& rUnit)
+        {
+            if (&rUnit == pScrambler)
+            {
+                rOutPath.push_back(&rUnit.GetTile());
+            }
+        });
+
+    const OrderProgress_t progress = Execute(*pScrambler);
+    if (progress == OrderProgress_t::UnitDestroyed)
+    {
+        rOutPath.clear();
+        return rOriginalDefender;
+    }
+    if (&pScrambler->GetTile() != &rDest)
+    {
+        rOutPath.clear();
+        pScrambler->ClearOrder();
+        return rOriginalDefender;
+    }
+    return *pScrambler;
 }
 
 } // namespace ac

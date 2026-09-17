@@ -111,6 +111,7 @@ add_library(ac-core STATIC
     game/units/MoraleCalculator.cpp
     game/units/DisengageRules.cpp
     game/units/InterceptRules.cpp
+    game/units/ScrambleRules.cpp
     game/units/MovementRules.cpp
     game/units/TransportRules.cpp
     game/units/FuelRules.cpp

@@ -72,6 +72,7 @@ Each entry in `effects` describes a single gameplay effect applied when the buil
 | `TileYieldModifier` | Modifies the yield of selected tiles (`parameters.resource`, `parameters.selector`, `parameters.amount`, `parameters.op`) — see below |
 | `OrbitalAttack` | ASAT charge against other factions' `orbital` buildings (`parameters.chance`, `parameters.cooldown_turns`, `parameters.chance_of_destruction_on_fail`) |
 | `InterceptAttempt` | Pre-combat intercept (`parameters.chance`, optional `cooldown_turns`, `chance_of_destruction_on_fail`; requires `unitFilter`) |
+| `ScrambleIntercept` | Marker: unit may scramble to become the combat defender (requires `unitFilter` on the attacker; range is `intercept_radius`) |
 
 `amount`/`value` accept either a JSON number or a numeric string. `op` is one of `Add`, `AddPercent` (amount in percent points, e.g. `25` = +25%), `MultiplyGeometric` (factor form, e.g. `0.5`), `MaxClamp`, `MinClamp` — defaults to `Add`.
 
