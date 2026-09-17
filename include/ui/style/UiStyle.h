@@ -76,6 +76,10 @@ struct WorldDisplayStyle_t
     Color_t baseNameColor{};
     Color_t sensorLabelColor{};
     Color_t monolithLabelColor{};
+    // Empty path: airdrop targeting does not change the mouse cursor.
+    std::string airdropCursorPath{};
+    unsigned int airdropCursorHotspotX = 0;
+    unsigned int airdropCursorHotspotY = 0;
 };
 
 struct MinimapDisplayStyle_t

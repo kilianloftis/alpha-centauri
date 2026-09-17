@@ -59,6 +59,10 @@ public:
     // True after Shift+D. WorldView opens Disband / Self Destruct / Cancel.
     bool WasDisbandRequested() const { return m_bDisbandRequested; }
 
+    // True after I on an airdrop-capable unit on a launch pad with full moves that has not
+    // already airdropped this turn. WorldView toggles airdrop targeting mode.
+    bool WasAirdropModeToggleRequested() const { return m_bAirdropModeToggleRequested; }
+
     // Non-null while a left-click hold has exceeded the threshold and the path is valid.
     const Path_t* GetPathPreview() const;
 
@@ -103,6 +107,7 @@ private:
     bool m_bAttachTransportRequested = false;
     bool m_bUnloadTransportRequested = false;
     bool m_bDisbandRequested = false;
+    bool m_bAirdropModeToggleRequested = false;
     const Tile* m_pInteractTarget = nullptr;
 
     // Left-click long-press path preview.

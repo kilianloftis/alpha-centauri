@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/units/AirdropRules.h"
 #include "game/units/CombatResolver.h"
 #include "game/units/MoraleCalculator.h"
 #include "game/units/StepEvaluator.h"
@@ -113,6 +114,19 @@ public:
     // Air carrier: unload all passengers onto the current tile (Shift+U).
     bool TryUnloadTransport(Unit& rCarrier);
 
+    // Airdrop rUnit onto rDest (teleport enter, no terrain spend). Returns eligibility fail
+    // reason on deny; on success marks airdropped, applies landing damage, EnterTile_ +
+    // arrival, and drains remaining moves for non-combat units. Stop using rUnit when
+    // bMoverDestroyed.
+    struct AirdropActionResult_t
+    {
+        AirdropFailReason_t failReason = AirdropFailReason_t::None;
+        bool bEntered = false;
+        bool bMoverDestroyed = false;
+        bool Ok() const { return failReason == AirdropFailReason_t::None && bEntered; }
+    };
+    [[nodiscard]] AirdropActionResult_t TryAirdrop(Unit& rUnit, const Tile& rDest);
+
 private:
     // SingleUse outcome for a completed use-action. Does not destroy — callers (TryAttack /
     // TryFoundBase, or PlayerActions for Execute) must DestroyUnit on Expended.
@@ -130,7 +144,7 @@ private:
     // Position only; caller spends moves (SpendMoveFragments) before enter.
     void EnterTile_(Unit& rMover, const Tile& rTo);
     // Returns false when the arrival destroyed rMover (native raid).
-    bool ApplyArrivalEffects_(Unit& rMover, bool bWasEmbarked);
+    bool ApplyArrivalEffects_(Unit& rMover);
     StepResult_t SpendMovesAndEnter_(Unit& rMover, const Tile& rTo, MoveOrder_t& rMoveOrder);
     // Throws when a conquest path is reached with a world bound but no GameDataContext. That
     // combination used to no-op silently: no capture, no native raid, no diagnostic.

@@ -4,7 +4,7 @@
 graph TB
     subgraph "Graphics Interface"
         Graphics[Graphics<br/>(abstract base class)]
-        Methods[Virtual Methods:<br/>PumpEvents()<br/>Clear()<br/>Display()<br/>LoadTexture()<br/>DrawSprite()<br/>DrawText()]
+        Methods[Virtual Methods:<br/>PumpEvents()<br/>Clear()<br/>Display()<br/>LoadTexture()<br/>DrawSprite()<br/>DrawText()<br/>SetMouseCursor()<br/>ResetMouseCursor()]
     end
 
     subgraph "SFML Implementation"
@@ -68,6 +68,8 @@ graph TB
   - `DrawSprite(textureId, x, y)` / `DrawSprite(..., destWidth, destHeight)`: Draw a sprite at position, optionally scaled
   - `DrawText(text, x, y, size)`: Draw text at position
   - `DrawRect(x, y, width, height, color, thickness)`: Draw an outline rectangle (negative thickness draws inward)
+  - `SetMouseCursor(path, hotspotX, hotspotY)`: Apply a custom OS cursor from an image file. Empty path or load failure leaves the current cursor and returns false; the backend keeps the cursor object alive until the next set/reset
+  - `ResetMouseCursor()`: Restore the system arrow cursor
 
 ### SFMLGraphics
 - **Purpose**: SFML-based graphics implementation

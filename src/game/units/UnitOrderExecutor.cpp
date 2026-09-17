@@ -8,6 +8,7 @@
 #include "game/units/AttackRules.h"
 #include "game/units/BaseConquestRules.h"
 #include "game/units/FoundBaseRules.h"
+#include "game/units/AirdropRules.h"
 #include "game/units/IUnitOrderWorld.h"
 #include "game/units/TransportRules.h"
 #include "game/units/TerraformRules.h"
@@ -22,10 +23,12 @@
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
 #include "game/effects/EffectEnums.h"
+#include "game/effects/ActiveEffect.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
+#include <algorithm>
 #include <iostream>
 #include <stdexcept>
 #include <variant>
@@ -156,14 +159,49 @@ bool UnitOrderExecutor::TryUnloadTransport(Unit& rCarrier)
                                      m_rTileEffects.GetInteractionGrids());
 }
 
-bool UnitOrderExecutor::ApplyArrivalEffects_(Unit& rMover, bool bWasEmbarked)
+UnitOrderExecutor::AirdropActionResult_t UnitOrderExecutor::TryAirdrop(Unit& rUnit,
+                                                                       const Tile& rDest)
+{
+    AirdropActionResult_t result;
+    const AirdropEligibility_t eligibility = CanAirdropTo(rUnit, rDest, m_rWorldMap, m_rTileEffects);
+    if (!eligibility.Ok())
+    {
+        result.failReason = eligibility.failReason;
+        return result;
+    }
+
+    rUnit.MarkAirdropped();
+    rUnit.ClearOrder();
+
+    const int damageHp = AirdropLandingDamageHp(rUnit, rDest, m_rWorldMap);
+    if (damageHp > 0)
+    {
+        const int hp = rUnit.GetCurrentHp();
+        rUnit.SetCurrentHp(std::max(1, hp - damageHp));
+    }
+
+    EnterTile_(rUnit, rDest);
+    result.bEntered = true;
+    if (!ApplyArrivalEffects_(rUnit))
+    {
+        result.bMoverDestroyed = true;
+        return result;
+    }
+
+    if (!rUnit.IsCombatUnit())
+    {
+        rUnit.SpendRemainingMoveFragments();
+    }
+
+    return result;
+}
+
+bool UnitOrderExecutor::ApplyArrivalEffects_(Unit& rMover)
 {
     // Board a transport on this tile only when the mover cannot hold the tile itself
-    // (step onto open water); entering a base leaves it a garrison, not cargo.
-    if (!bWasEmbarked)
-    {
-        ac::TryAutoAttachOnEntry(rMover, m_rWorldMap, m_rTileEffects.GetInteractionGrids());
-    }
+    // (step onto open water / ship-to-ship transfer); entering a base leaves it a garrison,
+    // not cargo.
+    ac::TryAutoAttachOnEntry(rMover, m_rWorldMap, m_rTileEffects.GetInteractionGrids());
 
     // No world bound means no session to conquer into — a legitimate mode for movement-only
     // harnesses.
@@ -229,12 +267,11 @@ StepResult_t UnitOrderExecutor::SpendMovesAndEnter_(Unit& rMover, const Tile& rT
     {
         rMover.SpendMoveFragments(terms.costFragments);
     }
-    const bool bWasEmbarked = rMover.IsEmbarked();
     EnterTile_(rMover, rTo);
 
     StepResult_t result;
     result.bEntered = true;
-    result.bMoverDestroyed = !ApplyArrivalEffects_(rMover, bWasEmbarked);
+    result.bMoverDestroyed = !ApplyArrivalEffects_(rMover);
     return result;
 }
 

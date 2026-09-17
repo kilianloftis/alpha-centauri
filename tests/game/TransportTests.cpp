@@ -172,6 +172,30 @@ TEST_CASE("Unload to adjacent land; destroying a carrier over water drowns its c
     CHECK(unitsAfter == unitsBefore - 2);
 }
 
+TEST_CASE("Land cargo can step from one sea transport onto an adjacent one", "[transport]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    TransportHarness_ harness(fixture);
+    Faction& faction = fixture.MakeFaction();
+
+    MakeWater_(fixture.At(5, 4));
+    MakeWater_(fixture.At(6, 4));
+    Unit& transportA = fixture.MakeUnit(faction, 5, 4, {"test_sea_chassis", "test_transport"});
+    Unit& transportB = fixture.MakeUnit(faction, 6, 4, {"test_sea_chassis", "test_transport"});
+    Unit& land = fixture.MakeUnit(faction, 5, 4, {"test_chassis"});
+    REQUIRE(harness.orders.TryAttachToTransport(land));
+    REQUIRE(land.GetCarrier() == &transportA);
+
+    MoveOrder_t transfer;
+    REQUIRE(harness.orders.TryStep(land, fixture.At(6, 4), transfer).bEntered);
+    CHECK(land.IsEmbarked());
+    CHECK(land.GetCarrier() == &transportB);
+    CHECK(transportA.GetCargo().empty());
+    CHECK(transportB.GetCargo().size() == 1);
+    CHECK(&land.GetTile() == &fixture.At(6, 4));
+}
+
 TEST_CASE("Entering a base garrisons it rather than boarding a transport there",
           "[transport][base]")
 {

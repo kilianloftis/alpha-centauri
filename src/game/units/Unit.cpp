@@ -255,6 +255,15 @@ void Unit::SetMoveFragmentsRemaining(int fragments)
         GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint;
     m_moveFragmentsRemaining = std::clamp(fragments, 0, maxFragments);
 }
+
+void Unit::BeginTurn()
+{
+    SetMoveFragmentsRemaining(
+        GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint);
+    AdvanceAttackHistory();
+    ClearAirdroppedThisTurn();
+}
+
 void Unit::SpendMoveFragments(int fragments)
 {
     if (fragments <= 0)
@@ -375,6 +384,10 @@ void Unit::AdvanceAttackHistory()
     m_bAttackedLastTurn = m_bAttackedThisTurn;
     m_bAttackedThisTurn = false;
 }
+
+bool Unit::HasAirdroppedThisTurn() const { return m_bAirdroppedThisTurn; }
+void Unit::MarkAirdropped()              { m_bAirdroppedThisTurn = true; }
+void Unit::ClearAirdroppedThisTurn()     { m_bAirdroppedThisTurn = false; }
 
 bool Unit::IsInterceptReady(int missionYear) const
 {

@@ -12,6 +12,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace ac
 {
@@ -102,6 +103,10 @@ private:
     void HandleDisbandChoice_(Unit& rUnit);
     void HandleDisbandConfirmed_(Unit& rUnit);
     void ShowSelfDestructStub_();
+    void ClearAirdropTargeting_();
+    void SyncAirdropCursor_(Graphics& rGraphics);
+    void TryCommitAirdrop_(Unit& rUnit, const Tile& rDest);
+    void ShowAirdropNotice_(std::string message);
 
     GameState& m_rGameState;
     GameDataContext& m_rGameDataContext;
@@ -123,6 +128,9 @@ private:
     // Set by UpdatePresentation; consumed by UIManager::Update for skip-redraw.
     bool m_bPendingAutoEndTurn = false;
     bool m_bPresentationDirty = true;
+    bool m_bAirdropTargeting = false;
+    // True after a successful SetMouseCursor for airdrop targeting (so we Reset on clear).
+    bool m_bAirdropCursorApplied = false;
 
     // Snapshots used by UpdatePresentation to detect paint-relevant changes without input.
     Unit* m_pLastPresentedUnit = nullptr;

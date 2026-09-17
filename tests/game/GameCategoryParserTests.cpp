@@ -16,7 +16,7 @@ TEST_CASE("TechConfigParser parses game categories", "[game][category][parser]")
     TechConfigParser parser;
     const std::vector<TechConfig_t> configs = parser.ParseConfig(FixturePath("techs.json"));
 
-    REQUIRE(configs.size() == 15);
+    REQUIRE(configs.size() == 16);
     CHECK(configs[0].category == GameCategory_t::Build);
     CHECK(configs[1].category == GameCategory_t::Grow);
     CHECK(configs[2].category == GameCategory_t::Discover);
@@ -46,6 +46,14 @@ TEST_CASE("TechConfigParser parses game categories", "[game][category][parser]")
         const auto* pStat = std::get_if<StatModifierEffect_t>(&configs[14].effects[0].effect);
         REQUIRE(pStat != nullptr);
         CHECK(pStat->stat == StatId_t::CommerceRating);
+    }
+    CHECK(configs[15].id == "graviton_theory");
+    CHECK(configs[15].category == GameCategory_t::Discover);
+    REQUIRE(configs[15].effects.size() == 1);
+    {
+        const auto* pFlag = std::get_if<RuleFlagEffect_t>(&configs[15].effects[0].effect);
+        REQUIRE(pFlag != nullptr);
+        CHECK(pFlag->flag == RuleFlagId_t::OrbitalInsertion);
     }
 }
 

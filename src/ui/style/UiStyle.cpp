@@ -117,6 +117,14 @@ WorldDisplayStyle_t ParseWorldDisplayStyle_(const nlohmann::json& j)
     s.baseNameColor = ParseColor_(j, "base_name_color");
     s.sensorLabelColor = ParseColor_(j, "sensor_label_color");
     s.monolithLabelColor = ParseColor_(j, "monolith_label_color");
+    s.airdropCursorPath = j.at("airdrop_cursor_path").get<std::string>();
+    const auto& hotspot = j.at("airdrop_cursor_hotspot");
+    if (!hotspot.is_array() || hotspot.size() != 2)
+    {
+        throw std::runtime_error("world_display.airdrop_cursor_hotspot must be [x, y]");
+    }
+    s.airdropCursorHotspotX = hotspot.at(0).get<unsigned int>();
+    s.airdropCursorHotspotY = hotspot.at(1).get<unsigned int>();
     return s;
 }
 

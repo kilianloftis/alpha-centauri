@@ -45,5 +45,24 @@
     "category": "conquer",
     "required_tech": "planetary_networks",
     "upkeep": 2
+  },
+  {
+    "id": "The_Space_Elevator",
+    "name": "The Space Elevator",
+    "mineral_cost": 400,
+    "secret_project": true,
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "FactionGlobal",
+        "persistence": "Continuous",
+        "parameters": {
+          "flag": "orbital_insertion"
+        }
+      }
+    ],
+    "category": "conquer",
+    "required_tech": "graviton_theory",
+    "upkeep": 2
   }
 ]

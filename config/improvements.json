@@ -307,6 +307,11 @@
         "type": "RuleFlag",
         "scope": "ThisTile",
         "parameters": { "flag": "harbors", "domain": "orbital" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": { "flag": "airdrop_launch" }
       }
     ]
   },
@@ -555,6 +560,11 @@
         "type": "RuleFlag",
         "scope": "ThisTile",
         "parameters": { "flag": "harbors", "domain": "orbital" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": { "flag": "airdrop_launch" }
       }
     ]
   },

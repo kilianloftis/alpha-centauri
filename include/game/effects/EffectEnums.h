@@ -48,6 +48,15 @@ enum class StatId_t
     TurnsOfFuel,
     // Percent of max HP applied when a fueled unit ends a turn at 0 fuel away from a refuel site.
     DamageFromOutOfFuel,
+    // Chebyshev airdrop range from the launch tile (Drop Pods). 0 = cannot airdrop by range
+    // alone; OrbitalInsertion ignores this cap.
+    AirdropRange,
+    // Percent of max HP applied as flat landing damage after an airdrop (skipped on
+    // airdrop_launch pads). Drop Pods baseline; reactors may Add further.
+    AirdropLandingDamage,
+    // Chebyshev radius from a drop destination within which this unit interdicts airdrops.
+    // > 0 grants interdiction (Air Superiority Add 2). Not inferred from combat overrides.
+    AirdropInterdictionRadius,
     CargoCapacity,
     DifficultTerrainCost,
     // Minerals spent each turn to keep a live unit supported by its home base. Chassis
@@ -233,6 +242,9 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::DisengageChance:
         case StatId_t::TurnsOfFuel:
         case StatId_t::DamageFromOutOfFuel:
+        case StatId_t::AirdropRange:
+        case StatId_t::AirdropLandingDamage:
+        case StatId_t::AirdropInterdictionRadius:
         case StatId_t::CargoCapacity:
         case StatId_t::DifficultTerrainCost:
         case StatId_t::MineralUpkeep:
@@ -367,6 +379,9 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::DisengageChance:
         case StatId_t::TurnsOfFuel:
         case StatId_t::DamageFromOutOfFuel:
+        case StatId_t::AirdropRange:
+        case StatId_t::AirdropLandingDamage:
+        case StatId_t::AirdropInterdictionRadius:
         case StatId_t::CargoCapacity:
         case StatId_t::DifficultTerrainCost:
         case StatId_t::MineralUpkeep:
@@ -409,6 +424,9 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "disengage_chance")        return StatId_t::DisengageChance;
     if (rStat == "turns_of_fuel")           return StatId_t::TurnsOfFuel;
     if (rStat == "damage_from_out_of_fuel") return StatId_t::DamageFromOutOfFuel;
+    if (rStat == "airdrop_range")           return StatId_t::AirdropRange;
+    if (rStat == "airdrop_landing_damage")  return StatId_t::AirdropLandingDamage;
+    if (rStat == "airdrop_interdiction_radius") return StatId_t::AirdropInterdictionRadius;
     if (rStat == "cargo_capacity")          return StatId_t::CargoCapacity;
     if (rStat == "difficult_terrain_cost")  return StatId_t::DifficultTerrainCost;
     if (rStat == "mineral_upkeep")          return StatId_t::MineralUpkeep;
@@ -502,6 +520,8 @@ enum class RuleFlagId_t
     Terraform,
     SupplyCrawl,
     ProbeTeam,
+    // Unit may attempt an airdrop when it began the turn on an airdrop_launch pad.
+    Airdrop,
 
     // Sole capture veto: chassis (Needlejet / Missile) or noncombat weapon modules.
     CannotCaptureBases,
@@ -518,6 +538,9 @@ enum class RuleFlagId_t
     // Tile declares it harbors a domain (ThisTile). Queried via TileHarbors with territory
     // ownership.
     Harbors,
+    // Tile may serve as an airdrop launch / safe-landing pad (Base, Airbase). Queried via
+    // TileProvidesFlag — distinct from Harbors so carrier decks do not qualify.
+    AirdropLaunch,
 
     // Faction/global flags
     PopulationBoom,
@@ -532,6 +555,9 @@ enum class RuleFlagId_t
     BlocksProbeTeams,
     // Probe may attempt actions against BlocksProbeTeams / ProbeSubversionImmune targets.
     IgnoresProbeBlock,
+    // Faction may airdrop anywhere on the map (ignores AirdropRange). Graviton Theory /
+    // Space Elevator.
+    OrbitalInsertion,
 
     // Map visibility. RemoveShroud permanently explores the map (satellite); RemoveFog
     // clears current fog while active (secret project). See VisibilityRules helpers.
@@ -563,16 +589,19 @@ inline RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "terraform")                   return RuleFlagId_t::Terraform;
     if (rFlag == "supply_crawl")                return RuleFlagId_t::SupplyCrawl;
     if (rFlag == "probe_team")                  return RuleFlagId_t::ProbeTeam;
+    if (rFlag == "airdrop")                     return RuleFlagId_t::Airdrop;
     if (rFlag == "cannot_capture_bases")        return RuleFlagId_t::CannotCaptureBases;
     if (rFlag == "attacking_ends_turn")         return RuleFlagId_t::AttackingEndsTurn;
     if (rFlag == "no_conquest_repair")          return RuleFlagId_t::NoConquestRepair;
     if (rFlag == "prevents_disengage")          return RuleFlagId_t::PreventsDisengage;
     if (rFlag == "harbors")                     return RuleFlagId_t::Harbors;
+    if (rFlag == "airdrop_launch")              return RuleFlagId_t::AirdropLaunch;
     if (rFlag == "creche")                      return RuleFlagId_t::Creche;
     if (rFlag == "headquarters")                return RuleFlagId_t::Headquarters;
     if (rFlag == "probe_subversion_immune")     return RuleFlagId_t::ProbeSubversionImmune;
     if (rFlag == "blocks_probe_teams")          return RuleFlagId_t::BlocksProbeTeams;
     if (rFlag == "ignores_probe_block")         return RuleFlagId_t::IgnoresProbeBlock;
+    if (rFlag == "orbital_insertion")           return RuleFlagId_t::OrbitalInsertion;
     if (rFlag == "atrocities_forbidden")        return RuleFlagId_t::AtrocitiesForbidden;
     if (rFlag == "disable_production")          return RuleFlagId_t::DisableProduction;
     throw std::runtime_error("Unknown rule flag id: '" + rFlag + "'");

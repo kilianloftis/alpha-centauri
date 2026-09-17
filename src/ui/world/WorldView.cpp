@@ -26,6 +26,8 @@
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/FuelRules.h"
+#include "game/units/AirdropRules.h"
+#include "ui/world/AirdropFailMessages.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
@@ -141,6 +143,7 @@ WorldView::WorldView(
 
 void WorldView::Render(Graphics& rGraphics)
 {
+    SyncAirdropCursor_(rGraphics);
     m_pWorldDisplay->Render(rGraphics);
     if (!m_bSuppressDashboard)
     {
@@ -300,6 +303,11 @@ void WorldView::SetSelectedUnit_(Unit* pUnit, bool bManualSelection)
     const bool bSelectionChanged = m_pSelectedUnit != pUnit;
     m_pSelectedUnit = pUnit;
     m_bManualSelection = bManualSelection;
+
+    if (bSelectionChanged)
+    {
+        ClearAirdropTargeting_();
+    }
 
     // Keep location / stack panels on the selected unit's tile when cycling or picking.
     if (pUnit)
@@ -530,6 +538,19 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
             }
             return true;
         }
+        else if (m_pUnitOrderInputController->WasAirdropModeToggleRequested() && pControllable)
+        {
+            if (m_bAirdropTargeting)
+            {
+                ClearAirdropTargeting_();
+            }
+            else
+            {
+                m_bAirdropTargeting = true;
+                m_bPresentationDirty = true;
+            }
+            return true;
+        }
         else if (m_pUnitOrderInputController->WasProbeActionRequested() && pControllable
                  && m_pUnitOrderInputController->GetProbeTarget())
         {
@@ -567,6 +588,12 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
 
     if (rEvent.key == Key_t::Escape)
     {
+        if (m_bAirdropTargeting)
+        {
+            ClearAirdropTargeting_();
+            m_bPresentationDirty = true;
+            return true;
+        }
         m_onRequestExit();
         return true;
     }
@@ -632,6 +659,13 @@ void WorldView::HandleMouse(const MouseEvent_t& rEvent)
     const Tile* pClickedTile = m_rGameState.GetWorldMap().GetTile(worldX, worldY);
 
     Unit* pControllable = GetControllableSelectedUnit_();
+    if (m_bAirdropTargeting && pControllable && pClickedTile
+        && rEvent.button == MouseButton_t::Left && rEvent.bPressed)
+    {
+        TryCommitAirdrop_(*pControllable, *pClickedTile);
+        return;
+    }
+
     const bool bOrderHandled = m_pUnitOrderInputController->HandleMouse(
         rEvent, pControllable, pClickedTile, &m_rGameState.GetPathfinder(), &m_rGameState,
         &m_rGameDataContext);
@@ -922,6 +956,59 @@ void WorldView::ShowSelfDestructStub_()
         ResolveLayout(m_layout, Style().layouts.popupSmall),
         "Self Destruct",
         "Self Destruct is not implemented."));
+}
+
+void WorldView::ClearAirdropTargeting_()
+{
+    m_bAirdropTargeting = false;
+}
+
+void WorldView::SyncAirdropCursor_(Graphics& rGraphics)
+{
+    const WorldDisplayStyle_t& rStyle = Style().worldDisplay;
+    if (m_bAirdropTargeting && !rStyle.airdropCursorPath.empty())
+    {
+        if (!m_bAirdropCursorApplied)
+        {
+            m_bAirdropCursorApplied = rGraphics.SetMouseCursor(
+                rStyle.airdropCursorPath, rStyle.airdropCursorHotspotX,
+                rStyle.airdropCursorHotspotY);
+        }
+        return;
+    }
+
+    if (m_bAirdropCursorApplied)
+    {
+        rGraphics.ResetMouseCursor();
+        m_bAirdropCursorApplied = false;
+    }
+}
+
+void WorldView::ShowAirdropNotice_(std::string message)
+{
+    DismissOpenModals_();
+    m_elements.push_back(std::make_unique<NoticePopup>(
+        ResolveLayout(m_layout, Style().layouts.popupSmall),
+        "Airdrop",
+        std::move(message)));
+}
+
+void WorldView::TryCommitAirdrop_(Unit& rUnit, const Tile& rDest)
+{
+    const auto result = m_rGameState.GetUnitOrderExecutor().TryAirdrop(rUnit, rDest);
+    if (!result.Ok())
+    {
+        ShowAirdropNotice_(AirdropFailReasonMessage(result.failReason));
+        m_bPresentationDirty = true;
+        return;
+    }
+
+    ClearAirdropTargeting_();
+    m_bPresentationDirty = true;
+    if (!result.bMoverDestroyed)
+    {
+        SelectNextAvailableUnit_();
+    }
 }
 
 } // namespace ac

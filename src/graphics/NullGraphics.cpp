@@ -101,6 +101,15 @@ public:
         return m_config.windowHeight;
     }
 
+    bool SetMouseCursor(const std::string&, unsigned int, unsigned int) override
+    {
+        return false;
+    }
+
+    void ResetMouseCursor() override
+    {
+    }
+
 private:
     GraphicsConfig_t m_config;
     std::chrono::steady_clock::time_point m_lastDisplay = std::chrono::steady_clock::now();

@@ -527,6 +527,11 @@ bool ConditionBodySatisfied_(const Condition_t& condition, const EffectContext_t
             {
                 return ctx.pAttacker != nullptr && ctx.pAttacker->IsEmbarked();
             }
+            else if constexpr (std::is_same_v<T, HasAirdroppedThisTurn_t>)
+            {
+                const Unit* pSubject = ctx.pUnit != nullptr ? ctx.pUnit : ctx.pAttacker;
+                return pSubject != nullptr && pSubject->HasAirdroppedThisTurn();
+            }
             else if constexpr (std::is_same_v<T, AttackerDomain_t>)
             {
                 if (ctx.pAttacker == nullptr || rAlt.domains.empty())

@@ -108,6 +108,9 @@ public:
     // Clamps to [0, MovementPoints * k_moveFragmentsPerPoint]. Does not burn fuel
     // (TurnStart refresh, test setup). Gameplay spend uses SpendMoveFragments.
     void SetMoveFragmentsRemaining(int fragments);
+    // Refill moves and roll Unit-owned turn latches (attack history, airdropped). Called from
+    // TurnStart; order policy (e.g. clearing SkipTurn) stays on UnitOrderExecutor::OnTurnStart.
+    void BeginTurn();
     // Subtract remaining fragments and, when the design uses fuel, burn the matching
     // move-points of fuel (attacks, steps, and other intentional move spends).
     void SpendMoveFragments(int fragments);
@@ -141,11 +144,18 @@ public:
 
     // Attack history for the disengage rule: a unit that attacked on its current or previous
     // turn may not disengage. MarkAttacked is called by UnitOrderExecutor::TryAttack;
-    // AdvanceAttackHistory shifts this-turn → last-turn at TurnStart.
+    // BeginTurn shifts this-turn → last-turn.
     bool HasAttackedThisTurn() const;
     bool HasAttackedLastTurn() const;
     void MarkAttacked();
     void AdvanceAttackHistory();
+
+    // Latched for the turn after a successful airdrop (cleared in BeginTurn). Gates post-drop
+    // attack StatModifiers via HasAirdroppedThisTurn, and blocks chaining a second drop onto
+    // a friendly pad while moves remain.
+    bool HasAirdroppedThisTurn() const;
+    void MarkAirdropped();
+    void ClearAirdroppedThisTurn();
 
     // ThisUnit-scoped InterceptAttempt deploy cooldown (mission year when ready again).
     bool IsInterceptReady(int missionYear) const;
@@ -199,6 +209,7 @@ private:
     bool m_bRegistered;
     bool m_bAttackedThisTurn = false;
     bool m_bAttackedLastTurn = false;
+    bool m_bAirdroppedThisTurn = false;
     // Available when missionYear >= this (0 = always ready at game start).
     int m_interceptReadyMissionYear = 0;
     Unit* m_pCarrier = nullptr;

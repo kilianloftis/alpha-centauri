@@ -71,5 +71,37 @@
     "combat_rating_modifiers": [
       { "target": "rating", "suffix": "*3" }
     ]
+  },
+  {
+    "id": "Singularity_Inductor",
+    "name": "Singularity Inductor",
+    "type": "reactor",
+    "required_tech": "graviton_theory",
+    "mineral_cost": 15,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "hit_points", "amount": 40, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "psi_damage", "amount": 4, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "cost_multiplier", "amount": 0.125, "op": "MultiplyGeometric" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "airdrop_landing_damage", "amount": 6, "op": "Add" }
+      }
+    ],
+    "combat_rating_modifiers": [
+      { "target": "rating", "suffix": "*4" }
+    ]
   }
 ]

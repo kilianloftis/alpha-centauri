@@ -7,6 +7,7 @@
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/units/AttackRules.h"
+#include "game/units/AirdropRules.h"
 #include "ui/style/UiStyle.h"
 
 namespace ac
@@ -66,6 +67,17 @@ bool UnitOrderInputController::HandleKey(const KeyEvent_t& rEvent, Unit* pSelect
         return false;
     }
 
+    // I toggles airdrop targeting when the unit can attempt an airdrop this turn.
+    if (rEvent.key == Key_t::I)
+    {
+        if (CanAttemptAirdrop(*pSelectedUnit).Ok())
+        {
+            m_bAirdropModeToggleRequested = true;
+            return true;
+        }
+        return false;
+    }
+
     auto it = m_orderHandlers.find(rEvent.key);
     if (it == m_orderHandlers.end())
     {
@@ -107,6 +119,7 @@ void UnitOrderInputController::ClearRequestFlags_()
     m_bAttachTransportRequested = false;
     m_bUnloadTransportRequested = false;
     m_bDisbandRequested = false;
+    m_bAirdropModeToggleRequested = false;
     m_bProbeActionRequested = false;
     m_pInteractTarget = nullptr;
 }

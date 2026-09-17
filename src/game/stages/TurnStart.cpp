@@ -3,7 +3,6 @@
 #include "game/GameState.h"
 #include "game/TurnStageRegistrar.h"
 #include "game/faction/UnitManager.h"
-#include "game/units/MovementConstants.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "lib/EventBus.h"
@@ -32,10 +31,8 @@ StageResult_t TurnStart::ExecuteImpl(GameState& rGameState)
     {
         for (Unit& rUnit : rFaction.GetUnitManager().Units())
         {
-            rUnit.SetMoveFragmentsRemaining(
-                rUnit.GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint);
+            rUnit.BeginTurn();
             rOrders.OnTurnStart(rUnit);
-            rUnit.AdvanceAttackHistory();
         }
     }
     return StageResult_t::Continue;

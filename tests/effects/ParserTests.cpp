@@ -776,6 +776,13 @@ TEST_CASE("ParseEffectConfig: conditions", "[effects][parser][condition]")
         CHECK(std::holds_alternative<IsHeadquarters_t>(condition.AsVariant()));
     }
 
+    SECTION("HasAirdroppedThisTurn condition")
+    {
+        const Condition_t condition = EffectConfigParser::ParseCondition(
+            json::parse(R"({ "kind": "HasAirdroppedThisTurn" })"));
+        CHECK(std::holds_alternative<HasAirdroppedThisTurn_t>(condition.AsVariant()));
+    }
+
     SECTION("OriginBaseIsHomeBase condition")
     {
         const Condition_t condition = EffectConfigParser::ParseCondition(

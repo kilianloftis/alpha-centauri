@@ -116,6 +116,11 @@
     ],
     "monolith_label_color": [
       255, 255, 255, 255
+    ],
+    "airdrop_cursor_path": "",
+    "airdrop_cursor_hotspot": [
+      0,
+      0
     ]
   },
   "minimap_display": {

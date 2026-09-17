@@ -207,7 +207,8 @@
       { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "harbors", "domain": "land" } },
       { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "harbors", "domain": "sea" } },
       { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "harbors", "domain": "air" } },
-      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "harbors", "domain": "orbital" } }
+      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "harbors", "domain": "orbital" } },
+      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "airdrop_launch" } }
     ]
   },
   {
@@ -217,7 +218,8 @@
     "energy_cost": 0,
     "effects": [
       { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "harbors", "domain": "air" } },
-      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "harbors", "domain": "orbital" } }
+      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "harbors", "domain": "orbital" } },
+      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "airdrop_launch" } }
     ]
   },
   {

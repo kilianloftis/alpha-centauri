@@ -17,6 +17,7 @@
 #include "ui/UIElement.h"
 #include "ui/style/UiStyle.h"
 #include "ui/world/WorldView.h"
+#include "ui/world/AirdropFailMessages.h"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -321,4 +322,11 @@ TEST_CASE("Self Destruct explains that it is not implemented and leaves the unit
     CHECK(fixture.graphics.AnyTextContaining("Self Destruct is not implemented."));
     CHECK(UnitStillLive_(*fixture.pPlayer, unitId));
     CHECK(rBase.GetProduction().GetMineralStockpile() == 0);
+}
+
+TEST_CASE("AirdropFailReasonMessage covers interdiction and occupation denies",
+          "[ui][world][airdrop]")
+{
+    CHECK_FALSE(AirdropFailReasonMessage(AirdropFailReason_t::Interdicted).empty());
+    CHECK_FALSE(AirdropFailReasonMessage(AirdropFailReason_t::EnemyOccupied).empty());
 }

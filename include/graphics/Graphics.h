@@ -84,6 +84,15 @@ public:
     virtual void DrawLine(float x1, float y1, float x2, float y2, const Color_t& color, float thickness = 1.0f) = 0;
     virtual unsigned int GetWindowWidth() const = 0;
     virtual unsigned int GetWindowHeight() const = 0;
+
+    // Custom mouse cursor from an image file (RGBA via the backend's image loader). Empty
+    // path is a no-op and returns false without changing the cursor. Failed load likewise
+    // leaves the current cursor and returns false. hotspot is pixels from the image top-left.
+    // The backend keeps the cursor alive until the next SetMouseCursor / ResetMouseCursor.
+    virtual bool SetMouseCursor(const std::string& path, unsigned int hotspotX,
+                                unsigned int hotspotY) = 0;
+    // Restore the system default arrow cursor.
+    virtual void ResetMouseCursor() = 0;
 };
 
 // rEvents receives whatever this backend's window produces; the composition root owns it and

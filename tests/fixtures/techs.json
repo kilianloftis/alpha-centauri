@@ -208,5 +208,18 @@
         }
       }
     ]
+  },
+  {
+    "id": "graviton_theory",
+    "name": "Graviton Theory",
+    "category": "discover",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "FactionGlobal",
+        "parameters": { "flag": "orbital_insertion" }
+      }
+    ]
   }
 ]

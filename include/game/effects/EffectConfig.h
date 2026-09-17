@@ -344,6 +344,12 @@ struct AttackerIsEmbarked_t
 {
 };
 
+// True when the unit subject (pUnit, else pAttacker) airdropped this turn — post-drop
+// attack penalty on Drop Pods.
+struct HasAirdroppedThisTurn_t
+{
+};
+
 // True when EffectContext_t::pAttacker is non-null and its domain is in `domains`
 // (e.g. AAA Tracking vs air / orbital attackers). Empty is rejected by the parser.
 struct AttackerDomain_t
@@ -359,11 +365,13 @@ struct IsHeadquarters_t
 
 struct Condition_t : std::variant<TargetTileHas_t, AllOf_t, IsDefending_t,
                                   OriginBaseIsTargetBase_t, OriginBaseIsHomeBase_t,
-                                  AttackerIsEmbarked_t, AttackerDomain_t, IsHeadquarters_t>
+                                  AttackerIsEmbarked_t, HasAirdroppedThisTurn_t,
+                                  AttackerDomain_t, IsHeadquarters_t>
 {
     using Variant = std::variant<TargetTileHas_t, AllOf_t, IsDefending_t,
                                  OriginBaseIsTargetBase_t, OriginBaseIsHomeBase_t,
-                                 AttackerIsEmbarked_t, AttackerDomain_t, IsHeadquarters_t>;
+                                 AttackerIsEmbarked_t, HasAirdroppedThisTurn_t,
+                                 AttackerDomain_t, IsHeadquarters_t>;
     using Variant::Variant;
     using Variant::operator=;
 

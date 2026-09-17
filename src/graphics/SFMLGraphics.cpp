@@ -290,6 +290,51 @@ public:
         return m_window.getSize().y;
     }
 
+    bool SetMouseCursor(const std::string& path, unsigned int hotspotX,
+                        unsigned int hotspotY) override
+    {
+        if (path.empty())
+        {
+            return false;
+        }
+
+        sf::Image image;
+        if (!image.loadFromFile(path))
+        {
+            std::cerr << "[Graphics] Failed to load mouse cursor '" << path << "'.\n";
+            return false;
+        }
+
+        const sf::Vector2u size = image.getSize();
+        if (size.x == 0 || size.y == 0)
+        {
+            return false;
+        }
+
+        auto cursor = sf::Cursor::createFromPixels(image.getPixelsPtr(), size,
+                                                   sf::Vector2u{hotspotX, hotspotY});
+        if (!cursor)
+        {
+            std::cerr << "[Graphics] Failed to create mouse cursor from '" << path << "'.\n";
+            return false;
+        }
+
+        m_customCursor = std::move(*cursor);
+        m_window.setMouseCursor(*m_customCursor);
+        return true;
+    }
+
+    void ResetMouseCursor() override
+    {
+        auto arrow = sf::Cursor::createFromSystem(sf::Cursor::Type::Arrow);
+        if (!arrow)
+        {
+            return;
+        }
+        m_customCursor = std::move(*arrow);
+        m_window.setMouseCursor(*m_customCursor);
+    }
+
 private:
     // Non-virtual, because the constructor's maximize wait pumps too and a virtual call there
     // would not reach an override.
@@ -383,6 +428,8 @@ private:
     sf::RenderWindow m_window;
     sf::Font m_font;
     std::unordered_map<std::string, sf::Texture> m_textures;
+    // Kept alive while applied — SFML requires the Cursor object to outlive setMouseCursor.
+    std::optional<sf::Cursor> m_customCursor;
     std::chrono::steady_clock::time_point m_lastPace = std::chrono::steady_clock::now();
 };
 

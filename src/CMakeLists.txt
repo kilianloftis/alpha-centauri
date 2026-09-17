@@ -116,6 +116,7 @@ add_library(ac-core STATIC
     game/units/FuelRules.cpp
     game/units/AttackRules.cpp
     game/units/FoundBaseRules.cpp
+    game/units/AirdropRules.cpp
     game/units/TerraformRules.cpp
     game/units/BaseConquestConfigParser.cpp
     game/units/BaseConquestRules.cpp

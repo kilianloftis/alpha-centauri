@@ -287,5 +287,21 @@
     "name": "Intellectual Integrity",
     "category": "discover",
     "cost": 50
+  },
+  {
+    "id": "graviton_theory",
+    "name": "Graviton Theory",
+    "category": "discover",
+    "cost": 150,
+    "prerequisites": [
+      "advanced_spaceflight"
+    ],
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "FactionGlobal",
+        "parameters": { "flag": "orbital_insertion" }
+      }
+    ]
   }
 ]

@@ -79,6 +79,9 @@ public:
     unsigned int GetWindowWidth() const override { return 1280; }
     unsigned int GetWindowHeight() const override { return 900; }
 
+    bool SetMouseCursor(const std::string&, unsigned int, unsigned int) override { return false; }
+    void ResetMouseCursor() override {}
+
     // Every y a given string was drawn at, in draw order.
     std::vector<float> TextYs(const std::string& rText) const
     {

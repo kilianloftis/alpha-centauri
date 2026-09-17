@@ -882,6 +882,10 @@ Condition_t ParseCondition(const nlohmann::json& conditionJson)
     {
         return AttackerIsEmbarked_t{};
     }
+    if (kindStr == "HasAirdroppedThisTurn")
+    {
+        return HasAirdroppedThisTurn_t{};
+    }
     if (kindStr == "AttackerDomain")
     {
         if (!conditionJson.contains("domains") || !conditionJson.at("domains").is_array()

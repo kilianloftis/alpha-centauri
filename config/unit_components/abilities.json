@@ -95,6 +95,41 @@
         "type": "InteractionOverride",
         "scope": "ThisUnit",
         "parameters": { "grid": "attack_unit", "target_domain": "orbital", "cell": "allow" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "airdrop_interdiction_radius", "amount": 2, "op": "Add" }
+      }
+    ]
+  },
+  {
+    "id": "Drop_Pods",
+    "name": "Drop Pods",
+    "type": "ability",
+    "required_tech": "",
+    "mineral_cost": 5,
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "airdrop" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "airdrop_range", "amount": 8, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "airdrop_landing_damage", "amount": 20, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "attack", "amount": -50, "op": "AddPercent" },
+        "condition": { "kind": "HasAirdroppedThisTurn" }
       }
     ]
   },

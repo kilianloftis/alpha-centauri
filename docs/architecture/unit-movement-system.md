@@ -210,7 +210,8 @@ Two entry points, deliberately different:
   including inside a base.
 - `TryAutoAttachOnEntry` — applied silently by `ApplyArrivalEffects_` after a step. Boards
   **only** when the passenger fails `CanHoldTileWithoutCarrier`, i.e. when it could not otherwise
-  be on that tile at all.
+  be on that tile at all. That covers stepping onto open water and transferring from one
+  transport onto another adjacent one.
 
 So stepping onto open water loads a land unit onto the transport waiting there, while walking
 into a base never stows a unit behind the player's back. `SurvivesCarrierLoss` uses the same

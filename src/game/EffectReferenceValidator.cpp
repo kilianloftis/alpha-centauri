@@ -183,6 +183,7 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
                                            || std::is_same_v<T, OriginBaseIsTargetBase_t>
                                            || std::is_same_v<T, OriginBaseIsHomeBase_t>
                                            || std::is_same_v<T, AttackerIsEmbarked_t>
+                                           || std::is_same_v<T, HasAirdroppedThisTurn_t>
                                            || std::is_same_v<T, AttackerDomain_t>
                                            || std::is_same_v<T, IsHeadquarters_t>)
                         {

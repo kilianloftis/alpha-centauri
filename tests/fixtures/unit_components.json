@@ -446,6 +446,61 @@
         "type": "InteractionOverride",
         "scope": "ThisUnit",
         "parameters": { "grid": "attack_unit", "target_domain": "orbital", "cell": "allow" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "airdrop_interdiction_radius", "amount": 2, "op": "Add" }
+      }
+    ]
+  },
+  {
+    "id": "drop_pods",
+    "name": "Drop Pods",
+    "type": "ability",
+    "effects": [
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "airdrop" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "airdrop_range", "amount": 8, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "airdrop_landing_damage", "amount": 20, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "attack", "amount": -50, "op": "AddPercent" },
+        "condition": { "kind": "HasAirdroppedThisTurn" }
+      }
+    ]
+  },
+  {
+    "id": "singularity_inductor",
+    "name": "Singularity Inductor",
+    "type": "reactor",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "hit_points", "amount": 40, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "psi_damage", "amount": 4, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "airdrop_landing_damage", "amount": 6, "op": "Add" }
       }
     ]
   },
