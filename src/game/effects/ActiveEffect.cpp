@@ -548,6 +548,22 @@ bool ConditionBodySatisfied_(const Condition_t& condition, const EffectContext_t
                 }
                 return false;
             }
+            else if constexpr (std::is_same_v<T, DefenderDomain_t>)
+            {
+                if (ctx.pDefender == nullptr || rAlt.domains.empty())
+                {
+                    return false;
+                }
+                const UnitDomain_t domain = ctx.pDefender->GetDomain();
+                for (UnitDomain_t allowed : rAlt.domains)
+                {
+                    if (allowed == domain)
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
             else if constexpr (std::is_same_v<T, IsHeadquarters_t>)
             {
                 return ctx.pBase != nullptr

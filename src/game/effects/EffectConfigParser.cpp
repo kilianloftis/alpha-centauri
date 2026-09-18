@@ -916,6 +916,26 @@ Condition_t ParseCondition(const nlohmann::json& conditionJson)
         }
         return attackerDomain;
     }
+    if (kindStr == "DefenderDomain")
+    {
+        if (!conditionJson.contains("domains") || !conditionJson.at("domains").is_array()
+            || conditionJson.at("domains").empty())
+        {
+            throw std::runtime_error(
+                "DefenderDomain condition requires a non-empty 'domains' array");
+        }
+        DefenderDomain_t defenderDomain;
+        for (const auto& rDomain : conditionJson.at("domains"))
+        {
+            if (!rDomain.is_string())
+            {
+                throw std::runtime_error(
+                    "DefenderDomain condition domains must be strings");
+            }
+            defenderDomain.domains.push_back(ParseUnitDomain(rDomain.get<std::string>()));
+        }
+        return defenderDomain;
+    }
     if (kindStr == "IsHeadquarters")
     {
         return IsHeadquarters_t{};

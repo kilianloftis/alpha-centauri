@@ -148,6 +148,52 @@ TEST_CASE("AAA Tracking doubles defense vs air and orbital attackers", "[combat]
     CHECK(vsAir.defenseStrength == 6 * CombatResolver::k_combatStrengthScale);
 }
 
+TEST_CASE("Air Superiority doubles attack vs air/orbital and halves vs land/sea",
+          "[combat][air-superiority]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    Unit& attacker = fixture.MakeUnit(
+        player, 4, 4, {"test_chassis", "test_weapon", "air_superiority"});
+    Unit& baseline =
+        fixture.MakeUnit(player, 3, 4, {"test_chassis", "test_weapon"});
+    Unit& landDefender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "test_armor"});
+    Unit& airDefender =
+        fixture.MakeUnit(enemy, 5, 5, {"test_flight_chassis", "test_armor"});
+    Unit& seaDefender =
+        fixture.MakeUnit(enemy, 5, 3, {"test_sea_chassis", "test_armor"});
+    attacker.SetXp(2);
+    baseline.SetXp(2);
+    landDefender.SetXp(2);
+    airDefender.SetXp(2);
+    seaDefender.SetXp(2);
+
+    const MoraleCalculator& morale = fixture.morale();
+
+    auto attackVs = [&](Unit& rAttacker, Unit& rDefender) {
+        EffectContext_t attackCtx{&rDefender.GetTile(), CombatRole_t::Attacker};
+        attackCtx.pAttacker = &rAttacker;
+        attackCtx.pDefender = &rDefender;
+        return ResolveCombatUnitStat(
+            rAttacker, StatId_t::Attack, attackCtx,
+            morale.EffectiveLevelEffects(rAttacker, attackCtx));
+    };
+
+    // Weapon base attack 4; +100% vs air → 8; −50% vs land/sea → 2.
+    CHECK(attackVs(attacker, airDefender) == 8);
+    CHECK(attackVs(attacker, landDefender) == 2);
+    CHECK(attackVs(attacker, seaDefender) == 2);
+    CHECK(attackVs(baseline, landDefender) == 4);
+    CHECK(attackVs(baseline, airDefender) == 4);
+
+    CombatHarness_ harness(fixture, /*seed*/ 11);
+    const CombatResult_t vsAir = harness.combat.Resolve(attacker, airDefender);
+    CHECK(vsAir.attackStrength == 8 * CombatResolver::k_combatStrengthScale);
+}
+
 TEST_CASE("Higher roll wins the round; ties go to the defender", "[combat]")
 {
     FactionFixture fixture;

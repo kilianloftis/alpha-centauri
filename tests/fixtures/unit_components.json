@@ -456,7 +456,22 @@
         "type": "ScrambleIntercept",
         "scope": "ThisUnit",
         "unitFilter": { "kind": "Domain", "domain": "air" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "attack", "amount": 100, "op": "AddPercent" },
+        "condition": { "kind": "DefenderDomain", "domains": ["air", "orbital"] }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "attack", "amount": -50, "op": "AddPercent" },
+        "condition": { "kind": "DefenderDomain", "domains": ["land", "sea"] }
       }
+    ],
+    "combat_rating_modifiers": [
+      { "target": "attack", "suffix": "^" }
     ]
   },
   {

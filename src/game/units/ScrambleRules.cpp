@@ -106,7 +106,7 @@ Unit* FindScrambleInterceptor(const Unit& rAttacker,
         {
             continue;
         }
-        if (!pBest || (rCandidate, *pBest))
+        if (!pBest || BetterScrambleCandidate_(rCandidate, *pBest))
         {
             pBest = &rCandidate;
         }

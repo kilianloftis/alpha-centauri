@@ -1307,6 +1307,26 @@ TEST_CASE("ParseEffectConfig: InteractionOverride and AttackerIsEmbarked",
     CHECK_THROWS(EffectConfigParser::ParseCondition(
         json::parse(R"({ "kind": "AttackerDomain", "domains": [] })")));
 
+    const json defenderDomainJson = json::parse(R"({
+        "type": "StatModifier", "scope": "ThisUnit",
+        "parameters": { "stat": "attack", "amount": 100, "op": "AddPercent" },
+        "condition": { "kind": "DefenderDomain", "domains": ["air", "orbital"] }
+    })");
+    const EffectConfig_t defenderDomainConfig =
+        EffectConfigParser::ParseEffectConfig(defenderDomainJson);
+    REQUIRE(defenderDomainConfig.condition.has_value());
+    const auto* pDefenderDomains =
+        std::get_if<DefenderDomain_t>(&defenderDomainConfig.condition->AsVariant());
+    REQUIRE(pDefenderDomains);
+    REQUIRE(pDefenderDomains->domains.size() == 2);
+    CHECK(pDefenderDomains->domains[0] == UnitDomain_t::Air);
+    CHECK(pDefenderDomains->domains[1] == UnitDomain_t::Orbital);
+
+    CHECK_THROWS(EffectConfigParser::ParseCondition(
+        json::parse(R"({ "kind": "DefenderDomain" })")));
+    CHECK_THROWS(EffectConfigParser::ParseCondition(
+        json::parse(R"({ "kind": "DefenderDomain", "domains": [] })")));
+
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(
         json::parse(R"({ "type": "Permission", "scope": "ThisUnit", "parameters": {} })")));
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({

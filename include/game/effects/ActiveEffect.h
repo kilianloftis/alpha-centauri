@@ -145,6 +145,7 @@ struct StockpileConversionSubject_t
 // being resolved, not the aura's host — plus pTileYieldRules for amount_source ElevationEnergy.
 // combatRole enables IsDefending (SE Morale defense-in-base extras).
 // pAttacker enables AttackerIsEmbarked / AttackerDomain (and future attacker-side conditions).
+// pDefender enables DefenderDomain (e.g. Air Superiority attack vs air / orbital).
 // pBase enables IsHeadquarters (Economy SE energy-at-HQ) and amount_source BaseSize /
 // BuildingUpkeep (population size / facility upkeep × amount) for base-level resolve.
 // pFaction enables amount_source BasesOwned (owned-base count × amount); unit resolve stamps
@@ -157,6 +158,7 @@ struct EffectContext_t
     const Tile* targetTile = nullptr;
     CombatRole_t combatRole = CombatRole_t::None;
     const Unit* pAttacker = nullptr;
+    const Unit* pDefender = nullptr;
     const BaseManager* pBase = nullptr;
     const StockpileConversionSubject_t* pStockpile = nullptr;
     const Faction* pFaction = nullptr;

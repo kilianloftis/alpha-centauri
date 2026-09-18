@@ -186,6 +186,7 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
                                            || std::is_same_v<T, AttackerIsEmbarked_t>
                                            || std::is_same_v<T, HasAirdroppedThisTurn_t>
                                            || std::is_same_v<T, AttackerDomain_t>
+                                           || std::is_same_v<T, DefenderDomain_t>
                                            || std::is_same_v<T, IsHeadquarters_t>)
                         {
                             // No config feature/component ids to resolve (domains are enums).

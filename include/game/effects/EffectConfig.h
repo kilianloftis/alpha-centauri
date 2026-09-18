@@ -365,6 +365,13 @@ struct AttackerDomain_t
     std::vector<UnitDomain_t> domains;
 };
 
+// True when EffectContext_t::pDefender is non-null and its domain is in `domains`
+// (e.g. Air Superiority attack vs air / orbital). Empty is rejected by the parser.
+struct DefenderDomain_t
+{
+    std::vector<UnitDomain_t> domains;
+};
+
 // True when EffectContext_t::pBase has the Headquarters rule flag (Economy SE −1
 // energy-at-HQ). Requires pBase in the resolve context.
 struct IsHeadquarters_t
@@ -374,12 +381,12 @@ struct IsHeadquarters_t
 struct Condition_t : std::variant<TargetTileHas_t, AllOf_t, IsDefending_t,
                                   OriginBaseIsTargetBase_t, OriginBaseIsHomeBase_t,
                                   AttackerIsEmbarked_t, HasAirdroppedThisTurn_t,
-                                  AttackerDomain_t, IsHeadquarters_t>
+                                  AttackerDomain_t, DefenderDomain_t, IsHeadquarters_t>
 {
     using Variant = std::variant<TargetTileHas_t, AllOf_t, IsDefending_t,
                                  OriginBaseIsTargetBase_t, OriginBaseIsHomeBase_t,
                                  AttackerIsEmbarked_t, HasAirdroppedThisTurn_t,
-                                 AttackerDomain_t, IsHeadquarters_t>;
+                                 AttackerDomain_t, DefenderDomain_t, IsHeadquarters_t>;
     using Variant::Variant;
     using Variant::operator=;
 
