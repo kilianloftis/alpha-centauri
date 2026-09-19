@@ -410,7 +410,7 @@
     "name": "Test SAM Battery",
     "effects": [
       {
-        "type": "InterceptAttempt",
+        "type": "Intercept",
         "scope": "ThisTile",
         "parameters": { "chance": 100 },
         "unitFilter": { "kind": "Domain", "domain": "orbital" }

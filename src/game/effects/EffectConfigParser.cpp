@@ -591,24 +591,24 @@ void ParseOrbitalAttack_(const nlohmann::json& parameters, EffectConfig_t& rEffe
     rEffect.effect = orbitalAttack;
 }
 
-void ParseInterceptAttempt_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
+void ParseIntercept_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
 {
     if (!rEffect.unitFilter)
     {
-        throw std::runtime_error("InterceptAttempt requires a unitFilter");
+        throw std::runtime_error("Intercept requires a unitFilter");
     }
-    InterceptAttemptEffect_t intercept;
+    InterceptEffect_t intercept;
     intercept.chance = static_cast<int>(RequireNumber(parameters, "chance"));
     if (intercept.chance < 0 || intercept.chance > 100)
     {
-        throw std::runtime_error("InterceptAttempt 'chance' must be in [0, 100]");
+        throw std::runtime_error("Intercept 'chance' must be in [0, 100]");
     }
     if (parameters.contains("cooldown_turns"))
     {
         intercept.cooldownTurns = static_cast<int>(RequireNumber(parameters, "cooldown_turns"));
         if (intercept.cooldownTurns < 0)
         {
-            throw std::runtime_error("InterceptAttempt 'cooldown_turns' must be >= 0");
+            throw std::runtime_error("Intercept 'cooldown_turns' must be >= 0");
         }
     }
     intercept.chanceOfDestructionOnFail =
@@ -616,18 +616,24 @@ void ParseInterceptAttempt_(const nlohmann::json& parameters, EffectConfig_t& rE
     if (intercept.chanceOfDestructionOnFail < 0 || intercept.chanceOfDestructionOnFail > 100)
     {
         throw std::runtime_error(
-            "InterceptAttempt 'chance_of_destruction_on_fail' must be in [0, 100]");
+            "Intercept 'chance_of_destruction_on_fail' must be in [0, 100]");
     }
     rEffect.effect = intercept;
 }
 
-void ParseScrambleIntercept_(const nlohmann::json& /*parameters*/, EffectConfig_t& rEffect)
+void ParseScramble_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
 {
     if (!rEffect.unitFilter)
     {
-        throw std::runtime_error("ScrambleIntercept requires a unitFilter");
+        throw std::runtime_error("Scramble requires a unitFilter");
     }
-    rEffect.effect = ScrambleInterceptEffect_t{};
+    ScrambleEffect_t scramble;
+    scramble.range = static_cast<int>(RequireNumber(parameters, "range"));
+    if (scramble.range <= 0)
+    {
+        throw std::runtime_error("Scramble 'range' must be > 0");
+    }
+    rEffect.effect = scramble;
 }
 
 void ParseModifyPopulation_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
@@ -773,8 +779,8 @@ const std::unordered_map<std::string, ParseEffectFn_>& EffectTypeParsers_()
         {"Conceal", ParseConceal_},
         {"Detect", ParseDetect_},
         {"OrbitalAttack", ParseOrbitalAttack_},
-        {"InterceptAttempt", ParseInterceptAttempt_},
-        {"ScrambleIntercept", ParseScrambleIntercept_},
+        {"Intercept", ParseIntercept_},
+        {"Scramble", ParseScramble_},
         {"TransportParams", ParseTransportParams_},
         {"ModifyPopulation", ParseModifyPopulation_},
         {"DestroyFacility", ParseDestroyFacility_},

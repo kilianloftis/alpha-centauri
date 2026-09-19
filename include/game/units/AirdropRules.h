@@ -39,9 +39,10 @@ bool OccupantBlocksAirdrop(const Unit& rDropper, const Unit& rOccupant);
 // airdrop_launch pad for the unit's faction. Caller clamps so at least 1 HP remains.
 int AirdropLandingDamageHp(const Unit& rUnit, const Tile& rDest, const WorldMap& rWorldMap);
 
-// True when an enemy air unit with intercept_radius > 0 has not spent moves this turn and is
-// within that radius (Chebyshev) of rDest.
-bool IsAirdropInterdicted(const Unit& rDropper, const Tile& rDest, const WorldMap& rWorldMap);
+// True when CollectAreaEffects(rDest) includes a hostile-owned airdrop_interdiction RuleFlag
+// (ThisTile aura, typically with radius — stock Air Superiority).
+bool IsAirdropInterdicted(const Unit& rDropper, const Tile& rDest,
+                          const TileEffectsContext& rTileEffects);
 
 // Unit-side gates only: airdrop flag, currently on launch pad, full moves remaining, and
 // has not already airdropped this turn.

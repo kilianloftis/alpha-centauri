@@ -135,6 +135,8 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
           == RuleFlagId_t::BlocksProbeTeams);
     CHECK(ParseRuleFlagId("ignores_probe_block")
           == RuleFlagId_t::IgnoresProbeBlock);
+    CHECK(ParseRuleFlagId("airdrop_launch") == RuleFlagId_t::AirdropLaunch);
+    CHECK(ParseRuleFlagId("airdrop_interdiction") == RuleFlagId_t::AirdropInterdiction);
     CHECK(ParseRuleFlagId("creche") == RuleFlagId_t::Creche);
     CHECK(ParseRuleFlagId("prevents_disengage") == RuleFlagId_t::PreventsDisengage);
     CHECK(ParseRuleFlagId("harbors") == RuleFlagId_t::Harbors);
@@ -1581,29 +1583,41 @@ TEST_CASE("ParseEffectConfig: required balance keys", "[effects][parser][orbital
         "parameters": { "chance": 50 }
     })")));
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "InterceptAttempt", "scope": "FactionGlobal",
+        "type": "Intercept", "scope": "FactionGlobal",
         "parameters": {},
         "unitFilter": { "kind": "Domain", "domain": "orbital" }
     })")));
 
     const EffectConfig_t interceptNoCooldown = EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "InterceptAttempt", "scope": "FactionGlobal",
+        "type": "Intercept", "scope": "FactionGlobal",
         "parameters": { "chance": 50 },
         "unitFilter": { "kind": "Domain", "domain": "orbital" }
     })"));
-    const auto* pIntercept = std::get_if<InterceptAttemptEffect_t>(&interceptNoCooldown.effect);
+    const auto* pIntercept = std::get_if<InterceptEffect_t>(&interceptNoCooldown.effect);
     REQUIRE(pIntercept);
     CHECK(pIntercept->chance == 50);
     CHECK(pIntercept->cooldownTurns == -1);
 
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "ScrambleIntercept", "scope": "ThisUnit"
+        "type": "Scramble", "scope": "ThisUnit"
+    })")));
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "Scramble", "scope": "ThisUnit",
+        "unitFilter": { "kind": "Domain", "domain": "air" }
+    })")));
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "Scramble", "scope": "ThisUnit",
+        "parameters": { "range": 0 },
+        "unitFilter": { "kind": "Domain", "domain": "air" }
     })")));
     const EffectConfig_t scramble = EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "ScrambleIntercept", "scope": "ThisUnit",
+        "type": "Scramble", "scope": "ThisUnit",
+        "parameters": { "range": 2 },
         "unitFilter": { "kind": "Domain", "domain": "air" }
     })"));
-    REQUIRE(std::get_if<ScrambleInterceptEffect_t>(&scramble.effect));
+    const auto* pScramble = std::get_if<ScrambleEffect_t>(&scramble.effect);
+    REQUIRE(pScramble);
+    CHECK(pScramble->range == 2);
 }
 
 TEST_CASE("ParseEffects: non-array effects throws", "[effects][parser]")

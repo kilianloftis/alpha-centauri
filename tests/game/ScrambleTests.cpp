@@ -118,18 +118,27 @@ struct ScrambleGame_
 
 } // namespace
 
-TEST_CASE("Parse ScrambleIntercept requires unitFilter", "[effects][parser][scramble]")
+TEST_CASE("Parse Scramble requires unitFilter and range", "[effects][parser][scramble]")
 {
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "ScrambleIntercept", "scope": "ThisUnit"
+        "type": "Scramble", "scope": "ThisUnit"
+    })")));
+
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "Scramble",
+        "scope": "ThisUnit",
+        "unitFilter": { "kind": "Domain", "domain": "air" }
     })")));
 
     const EffectConfig_t scramble = EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "ScrambleIntercept",
+        "type": "Scramble",
         "scope": "ThisUnit",
+        "parameters": { "range": 2 },
         "unitFilter": { "kind": "Domain", "domain": "air" }
     })"));
-    REQUIRE(std::get_if<ScrambleInterceptEffect_t>(&scramble.effect));
+    const auto* pScramble = std::get_if<ScrambleEffect_t>(&scramble.effect);
+    REQUIRE(pScramble);
+    CHECK(pScramble->range == 2);
     REQUIRE(scramble.unitFilter);
 }
 
@@ -195,7 +204,7 @@ TEST_CASE("Scramble skips insufficient moves, out of radius, wrong faction, and 
         scrambler.SpendMoveFragments(MovementConstants_t::k_moveFragmentsPerPoint);
         Unit& attacker =
             game.MakeUnit(*game.pPlayer, 4, 5, {"test_flight_chassis", "test_weapon"});
-        CHECK(FindScrambleInterceptor(attacker, ground, rMap, rEffects, rPathfinder)
+        CHECK(FindScrambler(attacker, ground, rMap, rEffects, rPathfinder)
               == nullptr);
     }
 
@@ -207,7 +216,7 @@ TEST_CASE("Scramble skips insufficient moves, out of radius, wrong faction, and 
         game.FullMoves(scrambler);
         Unit& attacker =
             game.MakeUnit(*game.pPlayer, 4, 5, {"test_flight_chassis", "test_weapon"});
-        CHECK(FindScrambleInterceptor(attacker, ground, rMap, rEffects, rPathfinder)
+        CHECK(FindScrambler(attacker, ground, rMap, rEffects, rPathfinder)
               == nullptr);
     }
 
@@ -219,7 +228,7 @@ TEST_CASE("Scramble skips insufficient moves, out of radius, wrong faction, and 
         game.FullMoves(enemyScrambler);
         Unit& attacker =
             game.MakeUnit(*game.pPlayer, 4, 5, {"test_flight_chassis", "test_weapon"});
-        CHECK(FindScrambleInterceptor(attacker, ground, rMap, rEffects, rPathfinder)
+        CHECK(FindScrambler(attacker, ground, rMap, rEffects, rPathfinder)
               == nullptr);
     }
 
@@ -232,7 +241,7 @@ TEST_CASE("Scramble skips insufficient moves, out of radius, wrong faction, and 
         const Tile& rScramblerTile = scrambler.GetTile();
         Unit& landAttacker =
             game.MakeUnit(*game.pPlayer, 4, 5, {"test_chassis", "test_weapon"});
-        CHECK(FindScrambleInterceptor(landAttacker, ground, rMap, rEffects, rPathfinder)
+        CHECK(FindScrambler(landAttacker, ground, rMap, rEffects, rPathfinder)
               == nullptr);
 
         const UnitId_t groundId = ground.GetUnitId();
@@ -266,7 +275,7 @@ TEST_CASE("Scramble ranking prefers higher Attack then higher HP", "[unit][scram
                           {"test_flight_chassis", "test_weapon", "air_superiority"});
         game.FullMoves(weak);
         game.FullMoves(strong);
-        CHECK(FindScrambleInterceptor(attacker, ground, rMap, rEffects, rPathfinder)
+        CHECK(FindScrambler(attacker, ground, rMap, rEffects, rPathfinder)
               == &strong);
     }
 
@@ -282,7 +291,7 @@ TEST_CASE("Scramble ranking prefers higher Attack then higher HP", "[unit][scram
         game.FullMoves(highHp);
         lowHp.SetCurrentHp(3);
         highHp.SetCurrentHp(8);
-        CHECK(FindScrambleInterceptor(attacker, ground, rMap, rEffects, rPathfinder)
+        CHECK(FindScrambler(attacker, ground, rMap, rEffects, rPathfinder)
               == &highHp);
     }
 }

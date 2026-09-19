@@ -634,7 +634,7 @@ Unit& UnitOrderExecutor::ResolveScrambleDefender_(Unit& rAttacker,
                                                   std::vector<const Tile*>& rOutPath)
 {
     rOutPath.clear();
-    Unit* pScrambler = FindScrambleInterceptor(
+    Unit* pScrambler = FindScrambler(
         rAttacker, rOriginalDefender, m_rWorldMap, m_rTileEffects, m_rPathfinder);
     if (!pScrambler)
     {

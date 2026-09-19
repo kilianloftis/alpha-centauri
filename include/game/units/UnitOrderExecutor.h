@@ -84,8 +84,8 @@ public:
     // resolves combat (HP / DestroyUnit) and returns the round-by-round result for UI
     // playback. SingleUse attackers return as destroyed after the caller (or this method)
     // runs DestroyUnit on OrderProgress_t::Expended.
-    // When world is bound, ready InterceptAttempt effects may destroy the attacker before
-    // CombatResolver runs. Otherwise an eligible ScrambleIntercept unit may path onto the
+    // When world is bound, ready Intercept effects may destroy the attacker before
+    // CombatResolver runs. Otherwise an eligible Scramble unit may path onto the
     // target tile hop-by-hop and become the combat defender. After the last garrison dies on a
     // base tile, last-defender casualties / adjacent native raid apply when GameDataContext is
     // bound — ownership transfer still requires a later enter-tile order while moves remain.

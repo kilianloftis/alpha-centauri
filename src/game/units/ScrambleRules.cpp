@@ -13,30 +13,40 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 
+#include <optional>
+
 namespace ac
 {
 
 namespace
 {
 
-bool HasMatchingScrambleIntercept_(const Unit& rCandidate, const Unit& rAttacker)
+// Max Scramble.range among ThisUnit effects whose unitFilter matches the attacker.
+std::optional<int> MatchingScrambleRange_(const Unit& rCandidate, const Unit& rAttacker)
 {
+    std::optional<int> best;
     for (const ActiveEffect_t& rEffect : rCandidate.GetDesign().CollectEffects())
     {
         if (rEffect.config->scope != EffectScope_t::ThisUnit)
         {
             continue;
         }
-        if (!std::get_if<ScrambleInterceptEffect_t>(&rEffect.config->effect))
+        const ScrambleEffect_t* pScramble =
+            std::get_if<ScrambleEffect_t>(&rEffect.config->effect);
+        if (!pScramble)
         {
             continue;
         }
-        if (UnitFilterSatisfied(*rEffect.config, rAttacker))
+        if (!UnitFilterSatisfied(*rEffect.config, rAttacker))
         {
-            return true;
+            continue;
+        }
+        if (!best || pScramble->range > *best)
+        {
+            best = pScramble->range;
         }
     }
-    return false;
+    return best;
 }
 
 bool BetterScrambleCandidate_(const Unit& rCandidate, const Unit& rBest)
@@ -55,16 +65,16 @@ bool BetterScrambleCandidate_(const Unit& rCandidate, const Unit& rBest)
 }
 
 bool CanScrambleTo_(const Unit& rCandidate,
+                    int range,
                     const Tile& rDest,
                     const WorldMap& rWorldMap,
                     const Pathfinder& rPathfinder)
 {
-    const int radius = ResolveStat(rCandidate, StatId_t::InterceptRadius);
-    if (radius <= 0)
+    if (range <= 0)
     {
         return false;
     }
-    if (ChebyshevDistance(rCandidate.GetTile(), rDest, rWorldMap.GetWidth()) > radius)
+    if (ChebyshevDistance(rCandidate.GetTile(), rDest, rWorldMap.GetWidth()) > range)
     {
         return false;
     }
@@ -83,7 +93,7 @@ bool CanScrambleTo_(const Unit& rCandidate,
 
 } // namespace
 
-Unit* FindScrambleInterceptor(const Unit& rAttacker,
+Unit* FindScrambler(const Unit& rAttacker,
                               Unit& rOriginalDefender,
                               const WorldMap& rWorldMap,
                               const TileEffectsContext& /*rTileEffects*/,
@@ -98,11 +108,12 @@ Unit* FindScrambleInterceptor(const Unit& rAttacker,
         {
             continue;
         }
-        if (!HasMatchingScrambleIntercept_(rCandidate, rAttacker))
+        const std::optional<int> range = MatchingScrambleRange_(rCandidate, rAttacker);
+        if (!range)
         {
             continue;
         }
-        if (!CanScrambleTo_(rCandidate, rDest, rWorldMap, rPathfinder))
+        if (!CanScrambleTo_(rCandidate, *range, rDest, rWorldMap, rPathfinder))
         {
             continue;
         }

@@ -208,7 +208,7 @@ struct OrbitalAttackEffect_t
 // unitFilter (on EffectConfig_t) selects eligible attackers; condition gates the situation.
 // Optional cooldownTurns: when >= 0, attempting deploys the source (shared with OrbitalAttack
 // when both live on the same building id).
-struct InterceptAttemptEffect_t
+struct InterceptEffect_t
 {
     // Success percent points. Required in JSON; set explicitly when hand-building.
     int chance;
@@ -220,11 +220,13 @@ struct InterceptAttemptEffect_t
     int chanceOfDestructionOnFail = 0;
 };
 
-// Marker: this unit may scramble to become the combat defender against an attacker that
-// satisfies unitFilter (required on EffectConfig_t). Range is InterceptRadius; eligibility
-// and move-onto-tile live in ScrambleRules.
-struct ScrambleInterceptEffect_t
+// This unit may scramble to become the combat defender against an attacker that satisfies
+// unitFilter (required on EffectConfig_t). `range` is Chebyshev tiles from the candidate to
+// the original defender's tile; eligibility and move-onto-tile live in ScrambleRules.
+struct ScrambleEffect_t
 {
+    // Required in JSON; set explicitly when hand-building. Must be > 0.
+    int range;
 };
 
 // Declares which passenger domains this unit may carry (`carries`), and whether loading
@@ -298,8 +300,8 @@ using EffectVariant_t = std::variant<
     ConcealEffect_t,
     DetectEffect_t,
     OrbitalAttackEffect_t,
-    InterceptAttemptEffect_t,
-    ScrambleInterceptEffect_t,
+    InterceptEffect_t,
+    ScrambleEffect_t,
     TransportParamsEffect_t,
     InteractionOverrideEffect_t,
     ModifyPopulationEffect_t,

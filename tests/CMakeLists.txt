@@ -54,7 +54,7 @@ add_executable(effects-tests
     game/SupplyCrawlTests.cpp
     game/FoundBaseTests.cpp
     game/AirdropTests.cpp
-    game/ScrambleInterceptTests.cpp
+    game/ScrambleTests.cpp
     game/BaseConquestTests.cpp
     game/AssimilationTrackerTests.cpp
     game/AttackRulesTests.cpp

@@ -584,7 +584,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   - `ModifierOp_t` includes clamping ops: `MaxClamp` and `MinClamp`. `ParseModifierOp` accepts these names; `ApplyModifierStack` applies clamps after the Add / AddPercent / MultiplyGeometric math so clamps bound the final resolved value. The tightest clamp of each kind wins; when a MinClamp and a MaxClamp cross, MinClamp wins. **Only resolve sites that route through `ApplyModifierStack` honour clamps** — the deliberately Add-only collectors (`ResolveAdditiveStat` over a `UnitDesign`, the `MoraleCalculator` additive pass, stockpile `MineralsConverted`) drop them silently.
   - `ParseFactionFilter` accepts a `PlayerType` kind: `{ "kind": "PlayerType", "type": "Player" | "AI" }`, parsed case-insensitively through `magic_enum`. Two different resolve paths read it: `FactionFilterMatchesOwner` (owner-side — does this effect apply to the faction that *owns* the pool, used when difficulty injects its effect list) and `FactionFilterCoversTarget` (target-side — does this effect reach that *other* faction, used for cross-faction dispatch such as infiltration). Neither substitutes for the other.
   - `ParseNumber` — reads a JSON field as either a number or a numeric string (used for optional numeric params with a caller-supplied default).
-  - `RequireNumber` — same, but throws if the key is absent (no silent balance defaults). Used for `TileResourceCap.max`, `OrbitalAttack.chance` / `cooldown_turns`, and `InterceptAttempt.chance`.
+  - `RequireNumber` — same, but throws if the key is absent (no silent balance defaults). Used for `TileResourceCap.max`, `OrbitalAttack.chance` / `cooldown_turns`, and `Intercept.chance`.
   - `ParseTileSelector` — parses a `TileSelector_t` from a `selector` JSON object. Called by the `StatModifier` branch when a `selector` field is present, making that modifier a per-tile yield modifier. A `selector` on any stat other than `nutrients`/`minerals`/`energy` is rejected at parse time — selectors only take part in tile-yield resolution, so such a modifier would silently never apply.
   - `ParseEffectConfig` — parses one entry of an `effects` array (`type`/`scope`/`persistence`/`condition`/`parameters`) into an `EffectConfig_t`. Required keys `type` and `scope` use `.at()` (missing → throw). Dispatches on `type` via a static table of per-type parse functions (one focused function per `EffectVariant_t` alternative). Additional strictness:
     - Nonzero `radius` requires `scope: ThisTile`.
@@ -807,8 +807,8 @@ rule that belongs to a *tile* is plain code at the call site that needs it: `Til
 `MovementRules` / `FuelRules` / `AttackRules`, and boarding via `UnitCarries` in
 `TransportRules`. Stock Amphibious Pods override `enter` for land×water when Water+Base, plus
 `attack_tile` for every footing. Air Superiority overrides `attack_unit` for target
-air/orbital, grants `intercept_radius`, and carries `ScrambleIntercept` with
-`unitFilter` Domain air. Cloaking Device and Probe Team override `zoc` to `deny` with both axes omitted —
+air/orbital, carries `Scramble` with `unitFilter` Domain air and `parameters.range`
+2, and projects a ThisTile `airdrop_interdiction` RuleFlag at radius 2. Cloaking Device and Probe Team override `zoc` to `deny` with both axes omitted —
 where stock would hold the unit that is non-default; where stock already denies, the override
 is a no-op. `Water` is a real
 improvement entry covering any sea tile (`elevation < 0`), and it **stacks** with the depth
@@ -840,8 +840,10 @@ attackability and pad refuel both go through `TileHarbors`; embark refuel goes t
   unit auras are deliberately not territory-owned.
 
 Both require `radius == 0` and no condition — a capability describes its host tile, not the
-host's neighbourhood, so radius auras never project flags. Harbor queries use `TileHarbors`
-(territory-owned) rather than `TileProvidesFlag`. `TransportParams` (`carries`,
+host's neighbourhood, so radius auras never project flags through these helpers. Harbor
+queries use `TileHarbors` (territory-owned) rather than `TileProvidesFlag`. Consumers that
+need a neighbourhood RuleFlag (e.g. airdrop interdiction) scan `CollectAreaEffects` and
+check `ownerFaction` themselves. `TransportParams` (`carries`,
 `requires_harbor`) is the carrier-side counterpart; `CanLoadAtTile` asks `TileHarbors` for
 the carrier's domain when `requires_harbor` is set. Note that
 `RuleFlagId_t` is a C++ enum: mods can add new *sites*, but not new *capabilities*.

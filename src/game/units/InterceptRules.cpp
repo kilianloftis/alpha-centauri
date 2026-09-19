@@ -35,7 +35,7 @@ enum class InterceptDeployKind_t
 
 struct InterceptCandidate_t
 {
-    const InterceptAttemptEffect_t* pIntercept = nullptr;
+    const InterceptEffect_t* pIntercept = nullptr;
     // Ledger used for cooldown (None when the effect opts out or the lane has no ledger).
     InterceptDeployKind_t deployKind = InterceptDeployKind_t::None;
     // Physical source kind for destroy-on-fail (not downgraded when cooldown is opted out).
@@ -73,7 +73,7 @@ void AppendMatchingIntercepts_(std::vector<InterceptCandidate_t>& rOut,
             continue;
         }
         const auto* pIntercept =
-            std::get_if<InterceptAttemptEffect_t>(&rEffect.config->effect);
+            std::get_if<InterceptEffect_t>(&rEffect.config->effect);
         if (!pIntercept
             || !UnitFilterSatisfied(*rEffect.config, rAttacker)
             || !ConditionSatisfied(*rEffect.config, rCtx, rEffect.originBase))
@@ -145,7 +145,7 @@ bool TryDeployInterceptSource_(Faction& rDefFaction,
                                InterceptCandidate_t& rCandidate,
                                int missionYear)
 {
-    const InterceptAttemptEffect_t& rIntercept = *rCandidate.pIntercept;
+    const InterceptEffect_t& rIntercept = *rCandidate.pIntercept;
     switch (rCandidate.deployKind)
     {
     case InterceptDeployKind_t::None:

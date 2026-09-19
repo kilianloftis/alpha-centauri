@@ -2,17 +2,16 @@
 
 #include "game/Faction.h"
 #include "game/effects/ActiveEffect.h"
+#include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
-#include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
 #include "game/units/MovementConstants.h"
 #include "game/units/MovementRules.h"
 #include "game/units/Unit.h"
-#include "game/units/UnitDomain.h"
 
 namespace ac
 {
@@ -62,40 +61,25 @@ int AirdropLandingDamageHp(const Unit& rUnit, const Tile& rDest, const WorldMap&
     return maxHp * percent / 100;
 }
 
-bool IsAirdropInterdicted(const Unit& rDropper, const Tile& rDest, const WorldMap& rWorldMap)
+bool IsAirdropInterdicted(const Unit& rDropper, const Tile& rDest,
+                          const TileEffectsContext& rTileEffects)
 {
     const FactionId_t dropperId = rDropper.GetFaction().GetFactionId();
-    const int mapWidth = rWorldMap.GetWidth();
-    bool blocked = false;
-    rWorldMap.GetUnitPositions().ForEachUnit([&](const Unit& rCandidate)
+    for (const ActiveEffect_t& rEffect : rTileEffects.CollectAreaEffects(rDest))
     {
-        if (blocked)
+        // Fail closed without attribution — same pattern as Detect. Friendly auras do not deny.
+        if (!rEffect.ownerFaction.has_value() || *rEffect.ownerFaction == dropperId)
         {
-            return;
+            continue;
         }
-        if (rCandidate.GetFaction().GetFactionId() == dropperId)
+        const RuleFlagEffect_t* pFlag =
+            std::get_if<RuleFlagEffect_t>(&rEffect.config->effect);
+        if (pFlag && pFlag->flag == RuleFlagId_t::AirdropInterdiction)
         {
-            return;
+            return true;
         }
-        if (rCandidate.GetDomain() != UnitDomain_t::Air)
-        {
-            return;
-        }
-        const int radius = ResolveStat(rCandidate, StatId_t::InterceptRadius);
-        if (radius <= 0)
-        {
-            return;
-        }
-        if (!UnitHasFullMoves_(rCandidate))
-        {
-            return;
-        }
-        if (ChebyshevDistance(rCandidate.GetTile(), rDest, mapWidth) <= radius)
-        {
-            blocked = true;
-        }
-    });
-    return blocked;
+    }
+    return false;
 }
 
 AirdropEligibility_t CanAttemptAirdrop(const Unit& rUnit)
@@ -192,7 +176,7 @@ AirdropEligibility_t CanAirdropTo(const Unit& rUnit, const Tile& rDest, const Wo
         }
     }
 
-    if (IsAirdropInterdicted(rUnit, rDest, rWorldMap))
+    if (IsAirdropInterdicted(rUnit, rDest, rTileEffects))
     {
         result.failReason = AirdropFailReason_t::Interdicted;
         return result;

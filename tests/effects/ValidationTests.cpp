@@ -126,7 +126,6 @@ static_assert(KindFor(StatId_t::TurnsOfFuel) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::DamageFromOutOfFuel) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::AirdropRange) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::AirdropLandingDamage) == StatKind_t::Additive);
-static_assert(KindFor(StatId_t::InterceptRadius) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::CargoCapacity) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::DifficultTerrainCost) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::MineralUpkeep) == StatKind_t::Additive);

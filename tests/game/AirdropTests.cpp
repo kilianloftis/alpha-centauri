@@ -284,19 +284,18 @@ TEST_CASE("Airdrop rejects enemy-occupied tiles and interdiction", "[unit][airdr
     CHECK(CanAirdropTo(dropper, *pDest, rMap, rEffects).failReason
           == AirdropFailReason_t::EnemyOccupied);
 
-    // Clear occupant by using another dest; place unmoved air superiority nearby.
+    // Clear occupant by using another dest; place air superiority nearby.
     Tile* pClear = rMap.GetTile(7, 4);
     REQUIRE(pClear);
     Unit& interceptor =
         game.MakeUnit(*game.pAi, 7, 6, {"test_flight_chassis", "test_weapon", "air_superiority"});
-    interceptor.SetMoveFragmentsRemaining(
-        interceptor.GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint);
-    CHECK(ResolveStat(interceptor, StatId_t::InterceptRadius) == 2);
     CHECK(CanAirdropTo(dropper, *pClear, rMap, rEffects).failReason
           == AirdropFailReason_t::Interdicted);
 
+    // Spent moves do not lift the ThisTile aura — denial is projected like Detect.
     interceptor.SpendMoveFragments(MovementConstants_t::k_moveFragmentsPerPoint);
-    CHECK(CanAirdropTo(dropper, *pClear, rMap, rEffects).Ok());
+    CHECK(CanAirdropTo(dropper, *pClear, rMap, rEffects).failReason
+          == AirdropFailReason_t::Interdicted);
 }
 
 TEST_CASE("Friendly interceptor does not block airdrop", "[unit][airdrop]")

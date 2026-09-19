@@ -141,7 +141,7 @@
         }
       },
       {
-        "type": "InterceptAttempt",
+        "type": "Intercept",
         "scope": "FactionGlobal",
         "parameters": {
           "chance": 50,

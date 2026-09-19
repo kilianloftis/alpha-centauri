@@ -16,8 +16,8 @@ graph TD
         MoveCostCalculator -->|resolves per unit + tile| EntryTerms
         MovementRules --> TransportRules
         AttackRules[AttackRules<br/>CanAttackTile / targeting /<br/>FindAttackableHostileOnTile]
-        InterceptRules[InterceptRules<br/>InterceptAttempt % kill]
-        ScrambleRules[ScrambleRules<br/>FindScrambleInterceptor]
+        InterceptRules[InterceptRules<br/>Intercept % kill]
+        ScrambleRules[ScrambleRules<br/>FindScrambler]
         AttackRules --> MovementRules
     end
 
@@ -177,20 +177,23 @@ Targeting rules (embarked-in-base, prefer carrier) live in `FindVisibleHostileOn
 
 **Intercept vs scramble vs airdrop interdiction.** Three related but distinct paths:
 
-1. **`InterceptAttempt`** (ODP / SAM-style) — rolled in `TryInterceptAttack` before combat.
+1. **`Intercept`** (ODP / SAM-style) — rolled in `TryInterceptAttack` before combat.
    Success destroys the attacker with empty rounds. Stock filters orbital attackers on base
    tiles.
-2. **`ScrambleIntercept`** — after InterceptAttempt misses/skips, `ApplyScrambleIntercept`
-   picks a same-faction unit with a matching `unitFilter` against the attacker,
-   `intercept_radius > 0`, Chebyshev range to the original defender's tile, and a
-   `Pathfinder` path whose `totalCostFragments` fit in remaining moves. Ranking: highest
-   live Attack, then current HP, then lowest unit id. `TryAttack` assigns a `MoveOrder` to
-   the destination and `Execute`s it — the same hop-by-hop `TryStep` loop as normal movement
-   — then uses the arrived unit as the `CombatResolver` defender (original defender does not
-   fight). Hops are recorded on `CombatResult_t::scramblePath` for future UI playback.
-   Stock Air Superiority uses `unitFilter` Domain air and `intercept_radius` +2.
-3. **Airdrop hard-deny** — `IsAirdropInterdicted` still blocks drops near an enemy with
-   `intercept_radius > 0` and full moves; it does not scramble or fight.
+2. **`Scramble`** — after Intercept misses/skips, `ResolveScrambleDefender_`
+   picks a same-faction unit with a matching `unitFilter` against the attacker, Chebyshev
+   distance within the effect's `range`, and a `Pathfinder` path whose `totalCostFragments`
+   fit in remaining moves. Ranking: highest live Attack, then current HP, then lowest unit
+   id. `TryAttack` assigns a `MoveOrder` to the destination and `Execute`s it — the same
+   hop-by-hop `TryStep` loop as normal movement — then uses the arrived unit as the
+   `CombatResolver` defender (original defender does not fight). Hops are recorded on
+   `CombatResult_t::scramblePath` for future UI playback. Stock Air Superiority uses
+   `unitFilter` Domain air and `parameters.range` 2.
+3. **Airdrop hard-deny** — `IsAirdropInterdicted` scans `CollectAreaEffects` on the
+   destination for a hostile-owned `airdrop_interdiction` RuleFlag (ThisTile aura, typically
+   with radius). Stock Air Superiority projects radius 2 the same way units project Detect;
+   spent moves do not lift the aura. Aerospace Complex would use the same flag once building
+   `ThisTile` has a base-tile anchor (today that scope on buildings is legal but inert).
 
 **Grid shape.** Every grid in `interaction_grids.json` is the acting unit's domain (the row)
 against one other thing (the column). "Actor" is always the unit whose own overrides

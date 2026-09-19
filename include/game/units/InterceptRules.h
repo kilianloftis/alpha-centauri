@@ -12,7 +12,7 @@ class GameState;
 class TileEffectsContext;
 class Unit;
 
-// Before CombatResolver::Resolve: roll ready InterceptAttempt sources on the defender side.
+// Before CombatResolver::Resolve: roll ready Intercept sources on the defender side.
 // Sources are gathered from four lanes — the defender faction's pool, the base on the
 // defender's tile, the defender's own design, and the tile's area effects.
 // On success, destroys the attacker and returns a CombatResult_t with combat skipped.

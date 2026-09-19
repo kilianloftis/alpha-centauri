@@ -157,7 +157,7 @@ public:
     void MarkAirdropped();
     void ClearAirdroppedThisTurn();
 
-    // ThisUnit-scoped InterceptAttempt deploy cooldown (mission year when ready again).
+    // ThisUnit-scoped Intercept deploy cooldown (mission year when ready again).
     bool IsInterceptReady(int missionYear) const;
     void DeployIntercept(int readyMissionYear);
 

@@ -218,7 +218,7 @@
     "type": "ability",
     "effects": [
       {
-        "type": "InterceptAttempt",
+        "type": "Intercept",
         "scope": "ThisUnit",
         "parameters": {
           "chance": 100
@@ -448,14 +448,16 @@
         "parameters": { "grid": "attack_unit", "target_domain": "orbital", "cell": "allow" }
       },
       {
-        "type": "StatModifier",
+        "type": "Scramble",
         "scope": "ThisUnit",
-        "parameters": { "stat": "intercept_radius", "amount": 2, "op": "Add" }
+        "unitFilter": { "kind": "Domain", "domain": "air" },
+        "parameters": { "range": 2 }
       },
       {
-        "type": "ScrambleIntercept",
-        "scope": "ThisUnit",
-        "unitFilter": { "kind": "Domain", "domain": "air" }
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "radius": 2,
+        "parameters": { "flag": "airdrop_interdiction" }
       },
       {
         "type": "StatModifier",

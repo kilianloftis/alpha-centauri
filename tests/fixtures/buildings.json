@@ -647,7 +647,7 @@
         }
       },
       {
-        "type": "InterceptAttempt",
+        "type": "Intercept",
         "scope": "FactionGlobal",
         "parameters": {
           "chance": 100,
@@ -680,7 +680,7 @@
         }
       },
       {
-        "type": "InterceptAttempt",
+        "type": "Intercept",
         "scope": "FactionGlobal",
         "parameters": {
           "chance": 0,
@@ -714,7 +714,7 @@
         }
       },
       {
-        "type": "InterceptAttempt",
+        "type": "Intercept",
         "scope": "FactionGlobal",
         "parameters": {
           "chance": 0,
@@ -740,7 +740,7 @@
     "orbital": true,
     "effects": [
       {
-        "type": "InterceptAttempt",
+        "type": "Intercept",
         "scope": "ThisBase",
         "parameters": {
           "chance": 0,
@@ -764,7 +764,7 @@
     "name": "Test Base AAA",
     "effects": [
       {
-        "type": "InterceptAttempt",
+        "type": "Intercept",
         "scope": "ThisBase",
         "parameters": {
           "chance": 100

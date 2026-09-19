@@ -456,7 +456,7 @@ TEST_CASE("ListReadyOrbitalAttackers lists ready ASAT buildings for selection", 
     CHECK(after.front().readyCount == 2);
 }
 
-TEST_CASE("ThisUnit InterceptAttempt fires for the defending unit only", "[orbital][intercept]")
+TEST_CASE("ThisUnit Intercept fires for the defending unit only", "[orbital][intercept]")
 {
     OrbitalGame_ game;
     BaseManager& playerBase = game.MakeBase(*game.pPlayer, 4, 4);
@@ -474,7 +474,7 @@ TEST_CASE("ThisUnit InterceptAttempt fires for the defending unit only", "[orbit
     CHECK(result->rounds.empty());
 }
 
-TEST_CASE("ThisTile InterceptAttempt fires on the battery tile", "[orbital][intercept]")
+TEST_CASE("ThisTile Intercept fires on the battery tile", "[orbital][intercept]")
 {
     OrbitalGame_ game;
     BaseManager& playerBase = game.MakeBase(*game.pPlayer, 4, 4);
@@ -492,7 +492,7 @@ TEST_CASE("ThisTile InterceptAttempt fires on the battery tile", "[orbital][inte
     CHECK(result->rounds.empty());
 }
 
-TEST_CASE("Parse OrbitalAttack and InterceptAttempt effects", "[effects][parser][orbital]")
+TEST_CASE("Parse OrbitalAttack and Intercept effects", "[effects][parser][orbital]")
 {
     const EffectConfig_t attack = EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "OrbitalAttack",
@@ -510,7 +510,7 @@ TEST_CASE("Parse OrbitalAttack and InterceptAttempt effects", "[effects][parser]
     CHECK(pAttack->chanceOfDestructionOnFail == 50);
 
     const EffectConfig_t intercept = EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "InterceptAttempt",
+        "type": "Intercept",
         "scope": "FactionGlobal",
         "parameters": {
             "chance": 50,
@@ -520,7 +520,7 @@ TEST_CASE("Parse OrbitalAttack and InterceptAttempt effects", "[effects][parser]
         "unitFilter": { "kind": "Domain", "domain": "orbital" },
         "condition": { "kind": "TargetTileHas", "value": "Base" }
     })"));
-    const auto* pIntercept = std::get_if<InterceptAttemptEffect_t>(&intercept.effect);
+    const auto* pIntercept = std::get_if<InterceptEffect_t>(&intercept.effect);
     REQUIRE(pIntercept);
     CHECK(pIntercept->chance == 50);
     CHECK(pIntercept->chanceOfDestructionOnFail == 0);
@@ -528,7 +528,7 @@ TEST_CASE("Parse OrbitalAttack and InterceptAttempt effects", "[effects][parser]
     CHECK(intercept.condition.has_value());
 
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "InterceptAttempt",
+        "type": "Intercept",
         "scope": "FactionGlobal",
         "parameters": { "chance": 50 }
     })")));
