@@ -80,6 +80,7 @@ add_executable(effects-tests
     game/MoveCostTests.cpp
     game/PathfindingTests.cpp
     game/TerritoryTests.cpp
+    game/EvacuateTerritoryTests.cpp
     game/WorkerAssignmentTests.cpp
     game/HomeBaseTests.cpp
     game/MineralSupportTests.cpp

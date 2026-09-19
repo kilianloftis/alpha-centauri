@@ -157,6 +157,7 @@ save-game serialisation work to exist first. Recorded in
 | Does the giver actually have it? | `DiplomaticActionExecutor::ValidateItem_` |
 | Can the giver afford all of it at once? | `DiplomaticActionExecutor::ValidateGiverTotals_` |
 | What does accepting change? | `DiplomaticActionExecutor::ApplyItem_` |
+| How are guest units cleared off host territory? | `EvacuateUnitsFromTerritory` (Rules + Effects; not wired into Apply_ yet) |
 
 ## Not yet built
 
@@ -166,3 +167,5 @@ save-game serialisation work to exist first. Recorded in
   ordering and expiry rules that are not specified anywhere.
 - **Treaty terms with duration** (tribute per turn, ceasefire timers). `DiplomaticProposal_t`
   carries only immediate transfers and a status change.
+- **Wiring evacuate into status changes.** `EvacuateUnitsFromTerritory` exists for cancel /
+  vendetta side effects; `DiplomaticActionExecutor::Apply_` does not call it yet.

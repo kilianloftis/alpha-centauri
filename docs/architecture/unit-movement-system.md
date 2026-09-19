@@ -19,6 +19,9 @@ graph TD
         InterceptRules[InterceptRules<br/>Intercept % kill]
         ScrambleRules[ScrambleRules<br/>FindScrambler]
         AttackRules --> MovementRules
+        EvacuateTerritoryRules[EvacuateTerritoryRules<br/>on-host / nearest own tile]
+        EvacuateTerritoryEffects[EvacuateTerritoryEffects<br/>ClearOrder + MoveUnit]
+        EvacuateTerritoryEffects --> EvacuateTerritoryRules
     end
 
     subgraph Conquest
@@ -194,6 +197,17 @@ Targeting rules (embarked-in-base, prefer carrier) live in `FindVisibleHostileOn
    with radius). Stock Air Superiority projects radius 2 the same way units project Detect;
    spent moves do not lift the aura. Aerospace Complex would use the same flag once building
    `ThisTile` has a base-tile anchor (today that scope on buildings is legal but inert).
+
+**Diplomatic evacuate (forced relocate).** `EvacuateUnitsFromTerritory` teleports a guest
+faction's free units off a named host's territory onto the nearest Chebyshev own-territory
+tile that passes `CanHoldTileWithoutCarrier` and `CanPlaceUnitOnTile`. Search expands
+rings and stops at the first hit; free units that share an origin tile share one search and
+move together when placement allows. Mutation is raw `UnitPositionIndex::MoveUnit` — no
+move fragments spent, no airdrop/arrival combat path. Every guest unit on the host's tiles
+(including embarked cargo) has its order cleared; embarked passengers are not relocated
+separately (the carrier tows them). When no legal own-territory tile exists the unit stays
+put (orders still cleared). Diplomacy is the intended caller; `DiplomaticActionExecutor`
+does not invoke it yet.
 
 **Grid shape.** Every grid in `interaction_grids.json` is the acting unit's domain (the row)
 against one other thing (the column). "Actor" is always the unit whose own overrides

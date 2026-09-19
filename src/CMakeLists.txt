@@ -110,6 +110,8 @@ add_library(ac-core STATIC
     game/units/MoraleConfigParser.cpp
     game/units/MoraleCalculator.cpp
     game/units/DisengageRules.cpp
+    game/units/EvacuateTerritoryRules.cpp
+    game/units/EvacuateTerritoryEffects.cpp
     game/units/InterceptRules.cpp
     game/units/ScrambleRules.cpp
     game/units/MovementRules.cpp
