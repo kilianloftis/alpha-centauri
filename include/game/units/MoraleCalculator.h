@@ -37,7 +37,7 @@ public:
     const std::string& DisplayName(const Unit& rUnit) const;
     const std::string& DisplayName(int level, bool bNativeLifecycle) const;
 
-    // Promote survivor one intrinsic XP on success. Skips ProbeTeam. Caps at max level.
+    // Promote survivor one intrinsic XP on success. Caps at max level.
     // Promotion chance uses intrinsic XP level effects (not SE-shifted effective level).
     bool TryPromote(Unit& rSurvivor, int attackStrength, int defenseStrength,
                     std::mt19937& rRng) const;

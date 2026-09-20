@@ -337,7 +337,7 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
     CombatResult_t result = m_combat.Resolve(rAttacker, rCombatDefender);
     result.scramblePath = std::move(scrambleHops);
 
-    // Promotion on kill (not mere disengage). Probe teams skipped inside TryPromote.
+    // Promotion on kill (not mere disengage).
     if (result.bDefenderDestroyed && !result.bAttackerDestroyed)
     {
         m_rMorale.TryPromote(rAttacker, result.attackStrength, result.defenseStrength, m_rRng);

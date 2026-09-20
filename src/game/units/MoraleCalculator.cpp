@@ -176,10 +176,6 @@ const std::string& MoraleCalculator::DisplayName(const Unit& rUnit) const
 bool MoraleCalculator::TryPromote(Unit& rSurvivor, int attackStrength, int defenseStrength,
                                   std::mt19937& rRng) const
 {
-    if (ResolveFlag(rSurvivor, RuleFlagId_t::ProbeTeam))
-    {
-        return false;
-    }
     const int xp = rSurvivor.GetXp();
     if (xp >= m_rConfig.MaxLevel())
     {
