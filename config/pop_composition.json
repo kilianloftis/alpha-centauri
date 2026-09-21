@@ -13,7 +13,6 @@
     {
       "type": "StatModifier",
       "scope": "AllOwnerBases",
-      "persistence": "Continuous",
       "parameters": {
         "stat": "drones",
         "amount": 0,
@@ -23,7 +22,6 @@
     {
       "type": "StatModifier",
       "scope": "AllOwnerBases",
-      "persistence": "Continuous",
       "parameters": {
         "stat": "drones",
         "amount": 1,
@@ -36,7 +34,6 @@
     {
       "type": "StatModifier",
       "scope": "ThisBase",
-      "persistence": "Continuous",
       "parameters": {
         "stat": "econ",
         "amount": 1,
@@ -46,7 +43,6 @@
     {
       "type": "StatModifier",
       "scope": "ThisBase",
-      "persistence": "Continuous",
       "parameters": {
         "stat": "growth_rate",
         "amount": 2,
@@ -61,7 +57,6 @@
         {
           "type": "StatModifier",
           "scope": "ThisBase",
-          "persistence": "Continuous",
           "parameters": {
             "stat": "labs",
             "op": "MaxClamp",
@@ -71,7 +66,6 @@
         {
           "type": "StatModifier",
           "scope": "ThisBase",
-          "persistence": "Continuous",
           "parameters": {
             "stat": "econ",
             "op": "MaxClamp",
@@ -82,7 +76,6 @@
         {
           "type": "RuleFlag",
           "scope": "ThisBase",
-          "persistence": "Continuous",
           "parameters": {
             "flag": "disable_production"
           }
@@ -90,7 +83,6 @@
         {
           "type": "StatModifier",
           "scope": "FactionUnits",
-          "persistence": "Continuous",
           "condition": {
             "kind": "OriginBaseIsHomeBase"
           },
@@ -103,7 +95,6 @@
         {
           "type": "StatModifier",
           "scope": "ThisBase",
-          "persistence": "Continuous",
           "parameters": {
             "stat": "probe_action_cost",
             "amount": -50,
@@ -118,7 +109,6 @@
         {
           "type": "StatModifier",
           "scope": "ThisBase",
-          "persistence": "Continuous",
           "parameters": {
             "stat": "labs",
             "op": "MaxClamp",
@@ -128,7 +118,6 @@
         {
           "type": "StatModifier",
           "scope": "ThisBase",
-          "persistence": "Continuous",
           "parameters": {
             "stat": "econ",
             "op": "MaxClamp",
@@ -139,7 +128,6 @@
         {
           "type": "RuleFlag",
           "scope": "ThisBase",
-          "persistence": "Continuous",
           "parameters": {
             "flag": "disable_production"
           }
@@ -147,7 +135,6 @@
         {
           "type": "StatModifier",
           "scope": "FactionUnits",
-          "persistence": "Continuous",
           "condition": {
             "kind": "OriginBaseIsHomeBase"
           },
@@ -160,7 +147,6 @@
         {
           "type": "StatModifier",
           "scope": "ThisBase",
-          "persistence": "Continuous",
           "parameters": {
             "stat": "probe_action_cost",
             "amount": -50,
@@ -171,8 +157,6 @@
       "on_enter_effects": [
         {
           "type": "DestroyFacility",
-          "scope": "ThisBase",
-          "persistence": "Instantaneous",
           "parameters": {
             "count": 1,
             "exclude_hq": true,
@@ -187,7 +171,6 @@
         {
           "type": "StatModifier",
           "scope": "ThisBase",
-          "persistence": "Continuous",
           "parameters": {
             "stat": "labs",
             "op": "MaxClamp",
@@ -197,7 +180,6 @@
         {
           "type": "StatModifier",
           "scope": "ThisBase",
-          "persistence": "Continuous",
           "parameters": {
             "stat": "econ",
             "op": "MaxClamp",
@@ -208,7 +190,6 @@
         {
           "type": "RuleFlag",
           "scope": "ThisBase",
-          "persistence": "Continuous",
           "parameters": {
             "flag": "disable_production"
           }
@@ -216,7 +197,6 @@
         {
           "type": "StatModifier",
           "scope": "FactionUnits",
-          "persistence": "Continuous",
           "condition": {
             "kind": "OriginBaseIsHomeBase"
           },
@@ -229,7 +209,6 @@
         {
           "type": "StatModifier",
           "scope": "ThisBase",
-          "persistence": "Continuous",
           "parameters": {
             "stat": "probe_action_cost",
             "amount": -50,
@@ -239,9 +218,7 @@
       ],
       "on_enter_effects": [
         {
-          "type": "Rebel",
-          "scope": "ThisBase",
-          "persistence": "Instantaneous"
+          "type": "Rebel"
         }
       ]
     }

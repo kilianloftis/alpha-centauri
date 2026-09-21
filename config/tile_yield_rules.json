@@ -4,7 +4,6 @@
     {
       "type": "StatModifier",
       "scope": "FactionGlobal",
-      "persistence": "Continuous",
       "removed_by_tech": "gene_splicing",
       "parameters": {
         "stat": "nutrients",
@@ -16,7 +15,6 @@
     {
       "type": "StatModifier",
       "scope": "FactionGlobal",
-      "persistence": "Continuous",
       "removed_by_tech": "ecological_engineering",
       "parameters": {
         "stat": "minerals",
@@ -28,7 +26,6 @@
     {
       "type": "StatModifier",
       "scope": "FactionGlobal",
-      "persistence": "Continuous",
       "removed_by_tech": "environmental_economics",
       "parameters": {
         "stat": "energy",

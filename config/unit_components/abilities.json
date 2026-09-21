@@ -208,7 +208,6 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "persistence": "Continuous",
         "parameters": { "stat": "police_effectiveness", "amount": 1, "op": "Add" }
       }
     ]

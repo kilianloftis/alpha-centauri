@@ -228,18 +228,15 @@ TEST_CASE("FacilityEnergyUpkeep modifiers apply via buildingFilter", "[building]
     EffectPool pool;
     const EffectConfig_t& rAll = pool.StatMod(
         StatId_t::FacilityEnergyUpkeep, -50.0, ModifierOp_t::AddPercent,
-        EffectScope_t::FactionGlobal, std::nullopt, std::nullopt,
-        EffectPersistence_t::Continuous, std::nullopt,
+        EffectScope_t::FactionGlobal, std::nullopt, std::nullopt, std::nullopt,
         BuildingFilterAll_t{});
     const EffectConfig_t& rId = pool.StatMod(
         StatId_t::FacilityEnergyUpkeep, -50.0, ModifierOp_t::AddPercent,
-        EffectScope_t::FactionGlobal, std::nullopt, std::nullopt,
-        EffectPersistence_t::Continuous, std::nullopt,
+        EffectScope_t::FactionGlobal, std::nullopt, std::nullopt, std::nullopt,
         BuildingFilterId_t{"upkeep_hall"});
     const EffectConfig_t& rCat = pool.StatMod(
         StatId_t::FacilityEnergyUpkeep, -50.0, ModifierOp_t::AddPercent,
-        EffectScope_t::FactionGlobal, std::nullopt, std::nullopt,
-        EffectPersistence_t::Continuous, std::nullopt,
+        EffectScope_t::FactionGlobal, std::nullopt, std::nullopt, std::nullopt,
         BuildingFilterCategory_t{GameCategory_t::Discover});
 
     ActiveEffect_t allFx{rAll, "test"};

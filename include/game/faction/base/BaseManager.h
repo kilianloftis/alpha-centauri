@@ -1,5 +1,7 @@
 #pragma once
 
+#include <set>
+
 #include "game/IConstructable.h"
 #include "game/buildings/BuildingConfig.h"
 #include "game/buildings/BuildingUpkeep.h"
@@ -219,7 +221,7 @@ public:
     // CompletePendingProduction or DeferProductionCompletion.
     bool HasPendingProductionConfirmation() const;
 
-    // Complete the pending item (Instantaneous pop cost may take the base to size 0, which
+    // Complete the pending item (an on-complete pop cost may take the base to size 0, which
     // razes it). Throws if nothing is pending. Returns the completed item id.
     std::string CompletePendingProduction();
 
@@ -322,6 +324,13 @@ public:
     // Faction::ReapRazedBases, so references held across the raze do not dangle.
     bool IsRazed() const;
 
+
+    // Keys of triggered effects carrying `oncePer` that this base has already consumed
+    // (see TriggeredEffectConfig_t::oncePer). Authored keys, so the rule spans instances
+    // rather than being tied to one config entry.
+    std::set<std::string>& ConsumedTriggerKeys() { return m_consumedTriggerKeys; }
+    const std::set<std::string>& ConsumedTriggerKeys() const { return m_consumedTriggerKeys; }
+
 private:
     friend class Faction;
 
@@ -329,6 +338,7 @@ private:
     // Faction::RazeBase calls this, and only once — it throws on a second call.
     void MarkRazed_();
 
+    std::set<std::string> m_consumedTriggerKeys;
     // Rebindable owner (RebindFaction): never null while the base lives in a Faction.
     Faction* m_pFaction;
     int m_baseId;

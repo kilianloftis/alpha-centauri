@@ -45,11 +45,11 @@ public:
     // All continuous effects attached to this design's components, as ActiveEffect_t
     // instances (sourceId = component id). The single way anything outside UnitDesign
     // consumes continuous component effects — live-unit stat resolution, faction-lane
-    // collection, and tile aura scans all work on this list; Instantaneous production
-    // effects are dispatched via GetComponents() + DispatchInstantaneousEffects.
+    // collection, and tile aura scans all work on this list; one-shot production costs
+    // live in each component's onCompleteEffects and are fired via GetComponents().
     std::vector<ActiveEffect_t> CollectEffects() const;
 
-    // Filled (non-null) components in slot order. Instantaneous production-complete
+    // Filled (non-null) components in slot order. On-complete production
     // dispatch walks these; continuous consumers should prefer CollectEffects().
     const std::vector<const UnitComponentConfig_t*>& GetComponents() const { return m_components; }
 

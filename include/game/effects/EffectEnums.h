@@ -628,12 +628,6 @@ enum class EffectScope_t
     ProducedAtThisBase,
 };
 
-enum class EffectPersistence_t
-{
-    Instantaneous,
-    Continuous,
-};
-
 // Where an effect is resolved — its scope's "lane". This is the single source of truth for
 // scope routing: collectors and filters derive their decisions from LaneFor instead of
 // hand-maintained scope lists. Adding a value to EffectScope_t forces an update to LaneFor's
@@ -714,11 +708,18 @@ enum class ModifierOp_t
     MinClamp,
 };
 
-// Instantaneous world-state mutation id (sea level / climate) for WorldParameterEffect_t.
+// World-state change id (sea level / climate) for the triggered WorldParameterEffect_t.
 enum class WorldParameterId_t
 {
     SeaLevel,
 };
+
+// Snake_case JSON wire form differs from enumerator names — one explicit map next to the enum.
+inline WorldParameterId_t ParseWorldParameterId(const std::string& rParameter)
+{
+    if (rParameter == "sea_level") return WorldParameterId_t::SeaLevel;
+    throw std::runtime_error("Unknown world parameter: '" + rParameter + "'");
+}
 
 // Restricts which *other* factions a cross-faction effect (Infiltration, future
 // DiplomaticModifier, …) applies to. Orthogonal to EffectScope_t: scope is the resolution

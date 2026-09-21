@@ -18,7 +18,6 @@ namespace EffectConfigParser
 
 ModifierOp_t ParseModifierOp(const std::string& rOp);
 EffectScope_t ParseEffectScope(const std::string& rScope);
-EffectPersistence_t ParseEffectPersistence(const std::string& rPersistence);
 StatModifierEffect_t::AmountSource_t ParseAmountSource(const std::string& rSource);
 
 // Reads parameters[key] as either a JSON number or a numeric string. Returns defaultValue if absent.
@@ -51,17 +50,22 @@ BuildingFilter_t ParseBuildingFilter(const nlohmann::json& filterJson);
 //  { "kind": "PlayerType", "type": "Player" | "AI" }).
 FactionFilter_t ParseFactionFilter(const nlohmann::json& filterJson);
 
-// Parses a single entry of an "effects" JSON array
-// (type/scope/persistence/condition/unitFilter/factionFilter/radius/parameters).
+// True when typeName is a continuous effect type. Answers from the same dispatch table
+// ParseEffectConfig uses, so the two can never disagree about what `effects` accepts —
+// TriggeredEffectParser consults this to tell an author which list an entry belongs in.
+bool IsEffectType(const std::string& rTypeName);
+
+// Parses a single entry of a continuous "effects" JSON array
+// (type/scope/condition/unitFilter/factionFilter/radius/parameters). A one-shot effect type
+// found here throws, naming the trigger-named list it belongs in instead.
 EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson);
 
 // Throws if the effect can never be resolved for the given source kind: a scope with no
 // resolvable anchor (ThisPop off a pop type, ThisUnit off a unit component,
 // ThisBase/ProducedAtThisBase off a source that cannot supply an origin base), or an
 // amount_source only one kind of config can feed (MineralsConverted off a stockpile).
-// Instantaneous ThisBase is allowed on UnitComponent / ProbeAction (fired at production
-// complete / probe success against a concrete base). Deliberately leaves intentional
-// legal-but-inert combos alone (e.g. faction-lane effects on improvements, pending territory).
+// Deliberately leaves intentional legal-but-inert combos alone (e.g. faction-lane effects on
+// improvements, pending territory).
 void ValidateEffectForSource(const EffectConfig_t& rEffect, EffectSourceKind_t sourceKind,
                              const std::string& rSourceId);
 

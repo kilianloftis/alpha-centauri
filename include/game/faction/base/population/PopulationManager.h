@@ -191,7 +191,7 @@ public:
     bool WouldStarveThisTurn(int nutrientProduction) const;
 
     // If WouldGrowThisTurn, grow one pop and empty the stockpile (no deposit). Used before
-    // Instantaneous production pop costs so a size-1 colony pod does not raze the base.
+    // on-complete production pop costs so a size-1 colony pod does not raze the base.
     // Returns true when a pop was added. Later ApplyGrowth uses the post-growth size for intake.
     bool CommitPendingGrowth(int nutrientProduction, const BaseEffects_t& rBaseEffects);
 

@@ -258,7 +258,6 @@ TEST_CASE("ResolveStatModifiers: amount_source ElevationEnergy scales bands by a
     EffectConfig_t config;
     config.effect = mod;
     config.scope = EffectScope_t::ThisTile;
-    config.persistence = EffectPersistence_t::Continuous;
     const EffectConfig_t& rConfig = pool.Add(std::move(config));
 
     Tile tile(0, 0);
@@ -286,7 +285,6 @@ TEST_CASE("ResolveStatModifiers: amount_source MineralsConverted scales by miner
     EffectConfig_t config;
     config.effect = mod;
     config.scope = EffectScope_t::ThisBase;
-    config.persistence = EffectPersistence_t::Continuous;
     const EffectConfig_t& rConfig = pool.Add(std::move(config));
 
     const StockpileConversionSubject_t stockpile{5};
@@ -315,7 +313,6 @@ TEST_CASE("ResolveStatModifiers: amount_source BaseSize scales by population",
     EffectConfig_t universityConfig;
     universityConfig.effect = university;
     universityConfig.scope = EffectScope_t::ThisBase;
-    universityConfig.persistence = EffectPersistence_t::Continuous;
 
     const std::vector<ActiveEffect_t> effects = {
         Active(pool.Add(std::move(universityConfig)), "university"),

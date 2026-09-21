@@ -3,7 +3,6 @@
     {
       "type": "StatModifier",
       "scope": "FactionGlobal",
-      "persistence": "Continuous",
       "parameters": {
         "stat": "drones",
         "amount": 0.25,
@@ -14,7 +13,6 @@
     {
       "type": "StatModifier",
       "scope": "FactionGlobal",
-      "persistence": "Continuous",
       "parameters": { "stat": "tech_cost", "amount": -20, "op": "Add" }
     }
   ]

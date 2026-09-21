@@ -1,6 +1,7 @@
 #include "game/council/CouncilRulesConfigParser.h"
 
 #include "game/effects/EffectConfigParser.h"
+#include "game/effects/TriggeredEffectParser.h"
 
 #include <cstddef>
 #include <fstream>
@@ -15,25 +16,19 @@ namespace ac
 namespace
 {
 
-// Honored governor shapes: Continuous+FactionGlobal (CouncilEffects::SetGovernorEffects);
-// Instantaneous+Infiltration (ApplyGovernor). Infiltration scopes are already enforced at parse.
+// CouncilEffects::SetGovernorEffects only reads FactionGlobal entries, so anything else here
+// would be silently inert. One-shot governor perks live in on_elected_effects.
 void ValidateGovernorEffectHonored_(const EffectConfig_t& rEffect, std::size_t index,
                                     const std::string& rConfigPath)
 {
-    if (rEffect.persistence == EffectPersistence_t::Continuous
-        && rEffect.scope == EffectScope_t::FactionGlobal)
-    {
-        return;
-    }
-    if (rEffect.persistence == EffectPersistence_t::Instantaneous
-        && std::holds_alternative<InfiltrationEffect_t>(rEffect.effect))
+    if (rEffect.scope == EffectScope_t::FactionGlobal)
     {
         return;
     }
     throw std::runtime_error(
         "governor_effects[" + std::to_string(index) + "] in '" + rConfigPath
-        + "' has a shape that is not honored by the council runtime "
-          "(allowed: Continuous+FactionGlobal; Instantaneous+Infiltration)");
+        + "' is not honored by the council runtime (a continuous governor effect must be "
+          "FactionGlobal; a one-shot perk belongs in 'on_elected_effects')");
 }
 
 } // namespace
@@ -82,6 +77,8 @@ CouncilRulesConfig_t CouncilRulesConfigParser::ParseConfig(const std::string& co
             ValidateGovernorEffectHonored_(config.governorEffects[index], index, configPath);
         }
     }
+    config.onElectedEffects = TriggeredEffectParser::ParseTriggeredEffects(
+        json, "on_elected_effects", "council_governor");
 
     return config;
 }

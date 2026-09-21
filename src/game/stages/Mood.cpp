@@ -3,6 +3,7 @@
 #include "game/Faction.h"
 #include "game/GameState.h"
 #include "game/effects/ActiveEffect.h"
+#include "game/effects/TriggeredEffectDispatch.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/BaseMoodEffects.h"
 #include "game/faction/base/population/PopulationManager.h"
@@ -75,7 +76,8 @@ void Mood::DispatchRiotTierOnEnter_(GameState& rGameState, BaseManager& rBase)
         return;
     }
 
-    DispatchInstantaneousEffects(pTier->onEnterEffects, rBase, rGameState);
+    TriggeredEffectContext_t context(rGameState, rBase);
+    ApplyTriggeredEffects(pTier->onEnterEffects, context);
 }
 
 } // namespace ac

@@ -267,7 +267,7 @@ size-1 base that will grow is not prompted, and `WouldStarveThisTurn` (net loss 
 subtracts one, so a size-2 base that starves after paying a pod's pop cost is not razed having
 answered "no". The starve adjustment is floored at size 1: a base starving out from size 1 is lost
 whatever it builds, and predicting 0 would make every item answer yes. `CommitPendingGrowth` then
-runs before Instantaneous pop costs on completion so the pod does not raze the base before
+runs before on-complete pop costs so the pod does not raze the base before
 BaseGrowth deposits. See `docs/architecture/turn-system.md`.
 
 ## 11. Production pause gates OR-match

@@ -23,42 +23,19 @@ namespace ac
 template <typename T>
 inline constexpr bool k_AlwaysFalse = false;
 
+// Expands the target's effects onto this source only — no constructed copy, no upkeep. To
+// actually build the facility, use the triggered AddBuildingEffect_t.
 struct GrantBuildingEffect_t
 {
     std::string buildingId;
 };
 
-struct GrantTechEffect_t
-{
-    std::string techId;
-};
-
-struct GrantUnitEffect_t
-{
-    std::string unitId;
-};
-
-// Instantaneous treasury credit. Council proposals (Salvage Unity Fusion Core) dispatch this
-// via PlanetaryCouncil rather than the building construction path.
-struct GrantEnergyEffect_t
-{
-    int amount = 0;
-};
-
-// Instantaneous world-state mutation applied by PlanetaryCouncil (sea level / climate).
-struct WorldParameterEffect_t
-{
-    WorldParameterId_t parameter = WorldParameterId_t::SeaLevel;
-    // Signed delta applied when the effect fires (negative = cooling / falling seas).
-    int amount = 0;
-};
-
-// Directed datalink infiltration. The beneficiary (effect owner / acting faction) gains
-// visibility into other factions. Target set is scope + optional factionFilter:
-//   WorldGlobal, no filter     → every other faction
-//   FactionGlobal + CouncilMembers / ActionTarget → filter selects targets
-// Instantaneous: written to DiplomacyLedger at apply time.
-// Continuous: honored at query time (HasInfiltration) while the effect remains active.
+// Directed datalink infiltration as a standing law: the beneficiary (effect owner) sees into
+// other factions for as long as this effect remains active, honored at query time by
+// HasInfiltration. Target set is scope + optional factionFilter:
+//   WorldGlobal, no filter                        → every other faction
+//   FactionGlobal + CouncilMembers / PlayerType   → filter selects targets
+// For a one-shot write that outlives its source, use the triggered SetInfiltrationEffect_t.
 struct InfiltrationEffect_t
 {
 };
@@ -258,39 +235,8 @@ struct InteractionOverrideEffect_t
     std::optional<UnitDomain_t> targetDomain;            // AttackUnit / Zoc column
 };
 
-// Instantaneous base-size mutation (colony-pod production cost, genetic plague, …).
-// Add: `amount` is a signed absolute delta. AddPercent: delta = size * amount / 100
-// (integer division toward zero; −50 on size 5 → −2). Never shrinks below minSize.
-struct ModifyPopulationEffect_t
-{
-    int amount = 0;
-    ModifierOp_t op = ModifierOp_t::Add;
-    int minSize = 0;
-};
-
-// Instantaneous random facility destruction at ThisBase (riot escalation, probe sabotage).
-// Every field is required in JSON: which facilities are off-limits is a game rule per caller,
-// and a C++ default here is how the shipping config and the test fixture came to disagree
-// about whether sabotage can destroy a secret project.
-struct DestroyFacilityEffect_t
-{
-    int count = 0;
-    bool excludeHq = false;
-    bool excludeSecretProjects = false;
-};
-
-// Instantaneous base ownership transfer to a weighted other faction (riot rebellion).
-// Candidate selection uses pop_composition rebel_selection + RebelJoinWeight.
-struct RebelEffect_t
-{
-};
-
 using EffectVariant_t = std::variant<
     GrantBuildingEffect_t,
-    GrantTechEffect_t,
-    GrantUnitEffect_t,
-    GrantEnergyEffect_t,
-    WorldParameterEffect_t,
     InfiltrationEffect_t,
     StatModifierEffect_t,
     RuleFlagEffect_t,
@@ -303,10 +249,7 @@ using EffectVariant_t = std::variant<
     InterceptEffect_t,
     ScrambleEffect_t,
     TransportParamsEffect_t,
-    InteractionOverrideEffect_t,
-    ModifyPopulationEffect_t,
-    DestroyFacilityEffect_t,
-    RebelEffect_t
+    InteractionOverrideEffect_t
 >;
 
 // Runtime predicates on EffectConfig_t. Sum type so kind/parameter mismatches are
@@ -466,7 +409,6 @@ struct EffectConfig_t
 {
     EffectVariant_t effect;
     EffectScope_t scope;
-    EffectPersistence_t persistence;
     // Absent = the effect always applies. When present, the effect only applies in a runtime
     // context that satisfies the condition (see ConditionSatisfied / EffectContext_t). Such
     // effects are excluded from context-free resolution (base economy, intrinsic unit stats).

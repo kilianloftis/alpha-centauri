@@ -558,20 +558,18 @@ TEST_CASE("Per-effect radius: sibling effects may declare different radii",
     CHECK(pSensor->ownedByTerritory);
 }
 
-TEST_CASE("Aura collection: non-ThisTile and Instantaneous effects do not leak into neighbors",
+TEST_CASE("Aura collection: non-ThisTile effects do not leak into neighbors",
           "[effects][tile][aura]")
 {
-    // The neighbor-aura path applies the same filter as a tile's own features: only
-    // continuous ThisTile-scoped effects. WeirdAura (radius 1) carries a FactionGlobal +5
-    // nutrients and an Instantaneous +7 minerals alongside its legitimate ThisTile +1 energy;
-    // only the energy may reach the neighbor.
+    // The neighbor-aura path applies the same filter as a tile's own features: ThisTile scope
+    // only. WeirdAura (radius 1) carries a FactionGlobal +5 nutrients alongside its legitimate
+    // ThisTile +1 energy; only the energy may reach the neighbor.
     actest::WorldFixture world;
     world.ctx->AddImprovementWithEffects(world.At(4, 4), "WeirdAura");
 
     const TileResources_t neighborYield = world.ctx->ResolveTileYield(world.At(5, 4)).effective;
     CHECK(neighborYield.energy == 1);    // the legitimate ThisTile aura effect
     CHECK(neighborYield.nutrients == 0); // FactionGlobal-scoped effect must not apply here
-    CHECK(neighborYield.minerals == 0);  // Instantaneous effect must not apply continuously
 }
 
 TEST_CASE("Sensor aura wraps horizontally across the map seam",

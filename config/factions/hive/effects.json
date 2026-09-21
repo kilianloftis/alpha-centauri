@@ -3,13 +3,11 @@
     {
       "type": "StatModifier",
       "scope": "FactionGlobal",
-      "persistence": "Continuous",
       "parameters": { "stat": "psych", "amount": 1, "op": "Add" }
     },
     {
       "type": "StatModifier",
       "scope": "FactionGlobal",
-      "persistence": "Continuous",
       "parameters": { "stat": "tech_cost", "amount": 5, "op": "Add" }
     }
   ]

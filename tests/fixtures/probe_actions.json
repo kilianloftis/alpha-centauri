@@ -11,11 +11,9 @@
       "name": "Infiltrate Datalinks",
       "target": "base",
       "risk": 0,
-      "effects": [
+      "on_success_effects": [
         {
-          "type": "Infiltration",
-          "scope": "FactionGlobal",
-          "persistence": "Instantaneous",
+          "type": "SetInfiltration",
           "factionFilter": {
             "kind": "ActionTarget"
           }
@@ -40,11 +38,9 @@
       "name": "Activate Sabotage Virus (Random)",
       "target": "base",
       "risk": 0,
-      "effects": [
+      "on_success_effects": [
         {
           "type": "DestroyFacility",
-          "scope": "ThisBase",
-          "persistence": "Instantaneous",
           "parameters": {
             "count": 1,
             "exclude_hq": true,
@@ -102,11 +98,9 @@
       "risk": 0,
       "atrocity": true,
       "required_tech": "gene_splicing",
-      "effects": [
+      "on_success_effects": [
         {
           "type": "ModifyPopulation",
-          "scope": "ThisBase",
-          "persistence": "Instantaneous",
           "parameters": {
             "amount": -50,
             "op": "AddPercent",

@@ -26,7 +26,6 @@
       {
         "type": "RuleFlag",
         "scope": "FactionGlobal",
-        "persistence": "Continuous",
         "parameters": {
           "flag": "blocks_probe_teams"
         }
@@ -34,7 +33,6 @@
       {
         "type": "StatModifier",
         "scope": "FactionGlobal",
-        "persistence": "Continuous",
         "parameters": {
           "stat": "probe_success_scale",
           "amount": -50,
@@ -55,7 +53,6 @@
       {
         "type": "RuleFlag",
         "scope": "FactionGlobal",
-        "persistence": "Continuous",
         "parameters": {
           "flag": "orbital_insertion"
         }

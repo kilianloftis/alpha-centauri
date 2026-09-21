@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/effects/EffectConfig.h"
+#include "game/effects/TriggeredEffect.h"
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <string>
@@ -69,6 +70,15 @@ struct ImprovementConfig_t
     std::optional<int> moveCostFragments;
     std::optional<int> moveCostOverrideFragments;
     std::vector<EffectConfig_t> effects;
+    // One-shot effects for a unit deliberately visiting this improvement — a distinct trigger
+    // from entering the tile, which fires nothing.
+    //
+    // NOT YET FIRED BY ANYTHING. The visit order does not exist, so entries here are parsed
+    // and reference-validated at load and then never dispatched. The slot is declared ahead
+    // of that order so the monolith lands as config plus two payload structs; until it does,
+    // ImprovementConfigParser rejects a non-empty list rather than accept config that
+    // silently does nothing. Wiring it means: add the order, and delete that rejection.
+    std::vector<TriggeredEffectConfig_t> onVisitEffects;
     // Fog sight range granted by this improvement's ThisTile Vision StatModifiers, resolved at
     // parse. Derived purely from `effects`, and read on every visibility rebuild — resolving it
     // per tile per rebuild allocated a vector and ran the stat resolver for static config data.

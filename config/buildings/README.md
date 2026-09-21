@@ -52,7 +52,6 @@ Each entry in `effects` describes a single gameplay effect applied when the buil
 |---|---|---|---|---|
 | `type` | string | Yes | — | Effect category (see Types below) |
 | `scope` | string | Yes | — | Who is affected (see Scopes below) |
-| `persistence` | string | No | `"Continuous"` | When the effect applies (see Persistence below) |
 | `condition` | string | No | `""` | Optional Lua expression; effect is suppressed when it evaluates to false |
 | `unitFilter` | object | No | absent | Restricts which units receive the effect (`Domain` / `HasComponent` / `HasFlag`) |
 | `buildingFilter` | object | No | absent (= all buildings) | Restricts which building types receive FacilityEnergyUpkeep (and similar) modifiers: `{ "kind": "All" }`, `{ "kind": "BuildingId", "building": "..." }`, or `{ "kind": "Category", "category": "grow" }` |
@@ -62,9 +61,7 @@ Each entry in `effects` describes a single gameplay effect applied when the buil
 
 | Value | Description |
 |---|---|
-| `GrantBuilding` | Instantly grants another building by ID (`parameters.building_id`). Continuous grants expand the target's effects only (no constructed copy, no maintenance). Instantaneous grants call `AddBuilding` and the real facility pays upkeep normally. |
-| `GrantTech` | Instantly grants a technology by ID (`parameters.tech_id`) |
-| `GrantUnit` | Spawns a unit (`parameters.unit_design_id`) |
+| `GrantBuilding` | Expands another building's effects onto this one by ID (`parameters.building_id`) — no constructed copy, no maintenance. To actually build it, use the triggered `AddBuilding` instead. |
 | `StatModifier` | Adds or multiplies a named stat (`parameters.stat`, `parameters.amount`, `parameters.op`) |
 | `RuleFlag` | Enables a named gameplay rule (`parameters.flag`) |
 | `SocialEngineeringOverride` | Forces a social engineering value (`parameters.category`, `parameters.value`) |
@@ -114,14 +111,28 @@ Any effect may carry an optional top-level `condition` object making it situatio
 | `WorldGlobal` | Affects every faction, not just the owner |
 | `ThisPop` | Only the specific pop instance the effect belongs to (pop type tile-multiplier effects only) |
 
-### Persistence
+### `on_complete_effects`
 
-| Value | Description |
+Entries in `effects` are **continuous**: active for as long as the building stands. A building
+may also declare `on_complete_effects`, a separate array of **one-shot** effects that fire once,
+when the facility is completed here. Which list an effect sits in is what says when it fires —
+there is no `persistence` field.
+
+One-shot entries carry no `scope`, `condition`, `radius` or filters: they act on the base that
+just completed the building. They accept an optional `once_per`
+(`{ "scope": "unit" | "base" | "faction", "key": "..." }`, both fields required) to fire at
+most once per subject — and only an entry that actually changed something spends its key.
+
+| Type | Description |
 |---|---|
-| `Continuous` (default) | Active as long as the building exists |
-| `Instantaneous` | Fires once when the building is first completed |
-
-`persistence` may be omitted entirely when `Continuous` — it's the default, so config files only need to write it for `Instantaneous` effects.
+| `AddBuilding` | Constructs another building here (`parameters.building_id`); the real facility pays upkeep |
+| `GrantTech` | Grants a technology to the owning faction (`parameters.tech_id`) |
+| `GrantUnit` | Spawns units assembled from `parameters.component_ids` (optional `parameters.count`, default 1), homed at this base but not built there — no train bonuses, no starting experience |
+| `GrantEnergy` | Credits the faction treasury (`parameters.amount`) |
+| `ModifyPopulation` | Changes base size (`parameters.amount`, `op`, `min_size`) — the colony pod's cost |
+| `DestroyFacility` | Destroys random facilities (`parameters.count`, `exclude_hq`, `exclude_secret_projects`) |
+| `SetInfiltration` | Writes lasting datalink infiltration; optional `factionFilter` picks the targets (absent = every other faction). This is the only type that accepts a `factionFilter` |
+| `Rebel` | Hands the base to a weighted other faction |
 
 ---
 
@@ -171,7 +182,7 @@ Any effect may carry an optional top-level `condition` object making it situatio
 Never-completing production items live in `config/stockpiles.json`, not here — they are not
 buildings and share none of a building's fields. See `config/README-stockpiles.md`.
 
-### Instantaneous grant
+### One-shot grant on completion
 
 ```json
 {
@@ -181,13 +192,8 @@ buildings and share none of a building's fields. See `config/README-stockpiles.m
   "upkeep": 2,
   "secret_project": true,
   "required_tech": "industrial_economics",
-  "effects": [
-    {
-      "type": "GrantBuilding",
-      "scope": "AllOwnerBases",
-      "persistence": "Instantaneous",
-      "parameters": { "building_id": "Energy_Bank" }
-    }
+  "on_complete_effects": [
+    { "type": "AddBuilding", "parameters": { "building_id": "Energy_Bank" } }
   ]
 }
 ```

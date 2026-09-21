@@ -62,22 +62,24 @@ TEST_CASE("ExpandGrantBuildingEffects: a ThisBase-scoped grant expands the grant
     CHECK(TotalFor(expanded, StatId_t::Energy, nullptr) == 1.0);
 }
 
-TEST_CASE("ExpandGrantBuildingEffects: Instantaneous effects of the granted building are not expanded",
+TEST_CASE("ExpandGrantBuildingEffects: the granted building's triggered effects are not expanded",
           "[effects][grant]")
 {
     actest::BaseFixture fixture;
     BaseManager& baseA = fixture.MakeBase(2, 2);
 
+    // granted_hall declares a GrantTech in on_complete_effects. A continuous GrantBuilding
+    // expands the target's `effects` only — it does not construct the facility, so nothing
+    // completes and no triggered effect fires. The two lists are different members of
+    // BuildingConfig_t, so this cannot regress into the old silent-skip behaviour.
+    REQUIRE_FALSE(fixture.buildings().Find("granted_hall")->onCompleteEffects.empty());
+
     baseA.GetBuildingManager().AddBuilding("grantor_local");
     const auto expanded = ExpandGrantBuildingEffects(
         baseA.CollectBuildingEffects(), fixture.buildings(), {&baseA});
 
-    // granted_hall declares an Instantaneous GrantTech; it must not appear in the pool.
-    for (const ActiveEffect_t& effect : expanded)
-    {
-        REQUIRE(effect.config != nullptr);
-        CHECK(effect.config->persistence == EffectPersistence_t::Continuous);
-    }
+    CHECK_FALSE(baseA.GetFaction().GetResearch().HasDiscoveredTech("some_tech"));
+    CHECK_FALSE(expanded.empty());
 }
 
 TEST_CASE("ExpandGrantBuildingEffects: an unknown granted building id throws",
@@ -209,18 +211,19 @@ TEST_CASE("ExpandGrantBuildingEffects: a cycle does not duplicate the originatin
     CHECK(TotalFor(expanded, StatId_t::Minerals, &baseA) == 11.0);
 }
 
-TEST_CASE("Instantaneous GrantBuilding effects never enter the active pool, so they do not expand",
+TEST_CASE("A triggered AddBuilding never enters the active pool, so it does not expand",
           "[effects][grant]")
 {
     actest::BaseFixture fixture;
     BaseManager& baseA = fixture.MakeBase(2, 2);
 
+    // instant_grantor declares only an on_complete AddBuilding(flat_nutrient), which fires at
+    // completion against a live session — it is not an EffectConfig_t and cannot be collected.
+    REQUIRE(fixture.buildings().Find("instant_grantor")->effects.empty());
     baseA.GetBuildingManager().AddBuilding("instant_grantor");
     const auto expanded = ExpandGrantBuildingEffects(
         baseA.CollectBuildingEffects(), fixture.buildings(), {&baseA});
 
-    // instant_grantor's only effect is an Instantaneous GrantBuilding(flat_nutrient); it is
-    // dispatched at construction time (DispatchInstantaneousEffects), not collected here.
     CHECK(expanded.empty());
     CHECK(TotalFor(expanded, StatId_t::Nutrients, &baseA) == 0.0);
 }

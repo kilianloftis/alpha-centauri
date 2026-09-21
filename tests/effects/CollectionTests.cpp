@@ -36,13 +36,13 @@ int CountBySource(const std::vector<ActiveEffect_t>& effects, const std::string&
 
 } // namespace
 
-TEST_CASE("AppendActiveEffects: skips Instantaneous effects", "[effects][collect]")
+TEST_CASE("AppendActiveEffects: tags every entry with its source", "[effects][collect]")
 {
+    // There is no one-shot entry to skip here any more: a triggered effect is a different
+    // type and cannot be put in an `effects` vector at all.
     actest::EffectPool pool;
     std::vector<EffectConfig_t> configs = {
         pool.StatMod(StatId_t::Nutrients, 1.0, ModifierOp_t::Add, EffectScope_t::ThisBase),
-        pool.StatMod(StatId_t::Nutrients, 5.0, ModifierOp_t::Add, EffectScope_t::ThisBase,
-                     std::nullopt, std::nullopt, EffectPersistence_t::Instantaneous),
     };
 
     std::vector<ActiveEffect_t> out;
@@ -95,9 +95,10 @@ TEST_CASE("CollectUnitEffects: gathers design component effects, tagged with the
     chassis.type = "chassis";
     chassis.effects = {
         pool.StatMod(StatId_t::Movement, 2.0, ModifierOp_t::Add, EffectScope_t::ThisUnit),
-        pool.StatMod(StatId_t::Attack, 25.0, ModifierOp_t::AddPercent, EffectScope_t::ThisUnit,
-                     std::nullopt, std::nullopt, EffectPersistence_t::Instantaneous),
     };
+    // A component's one-shot production cost lives in a separate list, which unit-effect
+    // collection never reads.
+    chassis.onCompleteEffects = {TriggeredEffectConfig_t{ModifyPopulationEffect_t{-1}}};
 
     const std::vector<UnitSlotConfig_t> slots = {
         {.id = "weapon", .displayName = "Weapon", .componentType = "weapon", .required = true},
@@ -113,7 +114,7 @@ TEST_CASE("CollectUnitEffects: gathers design component effects, tagged with the
     const UnitEffects_t unitEffects = CollectUnitEffects(design);
     const std::vector<ActiveEffect_t>& effects = unitEffects.effects;
 
-    // Null components are skipped, Instantaneous effects are skipped.
+    // Null components are skipped; on_complete_effects are not part of a unit's stats.
     REQUIRE(effects.size() == 2);
     CHECK(effects[0].sourceId == "laser");
     CHECK(effects[1].sourceId == "speeder");
@@ -239,16 +240,14 @@ TEST_CASE("CollectTileEffects: only ThisTile-scoped effects are collected from a
     CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Nutrients), 0.0).total == 0.0);
 }
 
-TEST_CASE("CollectTileEffects: Instantaneous effects do not enter the continuous tile pool",
+TEST_CASE("CollectTileEffects: only a tile's own ThisTile effects enter the pool",
           "[effects][collect][tile]")
 {
-    // Same rule as AppendActiveEffects (buildings/pops/units): Instantaneous effects fire
-    // once when applied, never as part of continuous resolution. WeirdAura declares an
-    // Instantaneous ThisTile +7 minerals effect that must be ignored here.
+    // WeirdAura's FactionGlobal nutrients entry belongs to the faction lane, not the tile.
     actest::WorldFixture world;
     Tile& tile = world.At(2, 2);
     tile.AddImprovement(*world.improvements.Find("WeirdAura"));
 
     const auto effects = CollectTileEffects(tile);
-    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Minerals), 0.0).total == 0.0);
+    CHECK(ResolveStatModifiers(FilterByStatId(effects, StatId_t::Nutrients), 0.0).total == 0.0);
 }

@@ -86,6 +86,8 @@ add_library(ac-core STATIC
     game/effects/EffectConfigParser.cpp
     game/effects/InfiltrationRules.cpp
     game/effects/TileEffectsContext.cpp
+    game/effects/TriggeredEffectDispatch.cpp
+    game/effects/TriggeredEffectParser.cpp
     game/effects/TileYieldRulesConfigParser.cpp
     game/effects/InteractionGridsConfigParser.cpp
     game/effects/InteractionResolve.cpp
@@ -121,6 +123,7 @@ add_library(ac-core STATIC
     game/units/FoundBaseRules.cpp
     game/units/AirdropRules.cpp
     game/units/TerraformRules.cpp
+    game/units/AdHocDesign.cpp
     game/units/BaseConquestConfigParser.cpp
     game/units/BaseConquestRules.cpp
     game/units/BaseConquestEffects.cpp

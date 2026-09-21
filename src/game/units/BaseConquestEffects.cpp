@@ -1,5 +1,7 @@
 #include "game/units/BaseConquestEffects.h"
 
+#include "game/units/AdHocDesign.h"
+
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
@@ -108,60 +110,6 @@ bool NoteIfAlreadyRazed_(BaseManager& rBase, BaseConquestResult_t& rResult)
     return true;
 }
 
-const UnitDesign* EnsureEscapePodDesign_(Faction& rFaction, const GameDataContext& rDataContext,
-                                         const EscapeColonyPodConfig_t& rPodConfig)
-{
-    // No configured pod is a legitimate "this ruleset has no escape pods" — nothing to build.
-    if (rPodConfig.componentIds.empty())
-    {
-        return nullptr;
-    }
-    // A configured pod that cannot be assembled is a config error, not a silent no-op: it used
-    // to return null and spawn nothing, so a cross-species capture stripped population and
-    // produced no pods — the player lost the pops the rule says they escape with, silently.
-    //
-    // These throws should be unreachable: LoadGameData validates every componentIds entry
-    // against the registry (and ThrowIfIncomplete guarantees the registry itself), so a bad
-    // config fails at startup naming the file rather than here, mid-capture, after facilities
-    // have already been destroyed. Kept as assertions for a context assembled by hand.
-    if (!rDataContext.unitComponentRegistry)
-    {
-        throw std::runtime_error(
-            "EnsureEscapePodDesign_: escape colony pods are configured but no unit component "
-            "registry is available to build them");
-    }
-
-    std::vector<UnitSlotConfig_t> slots;
-    std::unordered_map<std::string, const UnitComponentConfig_t*> assigned;
-    int slotIndex = 0;
-    for (const std::string& rId : rPodConfig.componentIds)
-    {
-        const UnitComponentConfig_t* pComponent = rDataContext.unitComponentRegistry->Find(rId);
-        if (!pComponent)
-        {
-            throw std::runtime_error(
-                "EnsureEscapePodDesign_: escape colony pod component '" + rId
-                + "' is not in the unit component registry");
-        }
-        UnitSlotConfig_t slot;
-        slot.id = "escape_slot_" + std::to_string(slotIndex++);
-        slot.displayName = slot.id;
-        slot.componentType = pComponent->type;
-        slot.required = true;
-        assigned[slot.id] = pComponent;
-        slots.push_back(slot);
-    }
-
-    auto pDesign = std::make_unique<UnitDesign>(slots, assigned);
-    const std::string designId = pDesign->GetId();
-    if (const UnitDesign* pExisting = rFaction.GetMilitary().GetDesign(designId))
-    {
-        return pExisting;
-    }
-    rFaction.GetMilitary().AddDesign(std::move(pDesign));
-    return rFaction.GetMilitary().GetDesign(designId);
-}
-
 int SpawnEscapePods_(Faction& rFleeingFaction, const Tile& rOrigin, int podCount,
                      GameState& rGameState, const GameDataContext& rDataContext,
                      const EscapeColonyPodConfig_t& rPodConfig, std::mt19937& rRng)
@@ -172,7 +120,7 @@ int SpawnEscapePods_(Faction& rFleeingFaction, const Tile& rOrigin, int podCount
     }
 
     const UnitDesign* pDesign =
-        EnsureEscapePodDesign_(rFleeingFaction, rDataContext, rPodConfig);
+        EnsureAdHocDesign(rFleeingFaction, rDataContext, rPodConfig.componentIds, "escape");
     if (!pDesign)
     {
         return 0;

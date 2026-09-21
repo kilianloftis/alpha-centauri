@@ -2,6 +2,7 @@
 #include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
 #include "game/effects/EffectConfigParser.h"
+#include "game/effects/TriggeredEffectParser.h"
 #include "game/faction/base/production/ScrapConfigParser.h"
 
 #include <stdexcept>
@@ -93,6 +94,8 @@ UnitComponentConfig_t UnitComponentConfigParser::ParseComponentConfig(const nloh
     config.requiredTech = ConfigFields::ParseRequiredTech(rComponentJson);
     config.mineralCost = rComponentJson.value("mineral_cost", 0);
     config.effects = EffectConfigParser::ParseEffects(rComponentJson, EffectSourceKind_t::UnitComponent, config.id);
+    config.onCompleteEffects = TriggeredEffectParser::ParseTriggeredEffects(
+        rComponentJson, "on_complete_effects", config.id);
     config.combatRatingModifiers = ParseCombatRatingModifiers_(rComponentJson, config.id);
     config.combatRatingLabels = ParseCombatRatingLabels_(rComponentJson, config.id);
     if (rComponentJson.contains("scrap"))

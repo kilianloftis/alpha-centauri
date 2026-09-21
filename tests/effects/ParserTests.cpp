@@ -4,6 +4,8 @@
 
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectConfigParser.h"
+#include "game/effects/TriggeredEffect.h"
+#include "game/effects/TriggeredEffectParser.h"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -83,7 +85,7 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK_THROWS(ParseStatId("Nutrients"));
 }
 
-TEST_CASE("ParseModifierOp / ParseEffectScope / ParseEffectPersistence mappings", "[effects][parser]")
+TEST_CASE("ParseModifierOp / ParseEffectScope mappings", "[effects][parser]")
 {
     CHECK(EffectConfigParser::ParseModifierOp("Add") == ModifierOp_t::Add);
     CHECK(EffectConfigParser::ParseModifierOp("AddPercent") == ModifierOp_t::AddPercent);
@@ -104,10 +106,6 @@ TEST_CASE("ParseModifierOp / ParseEffectScope / ParseEffectPersistence mappings"
     CHECK(EffectConfigParser::ParseEffectScope("ThisPop") == EffectScope_t::ThisPop);
     CHECK(EffectConfigParser::ParseEffectScope("ThisTile") == EffectScope_t::ThisTile);
     CHECK_THROWS(EffectConfigParser::ParseEffectScope("Global"));
-
-    CHECK(EffectConfigParser::ParseEffectPersistence("Instantaneous") == EffectPersistence_t::Instantaneous);
-    CHECK(EffectConfigParser::ParseEffectPersistence("Continuous") == EffectPersistence_t::Continuous);
-    CHECK_THROWS(EffectConfigParser::ParseEffectPersistence("Permanent"));
 }
 
 TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]")
@@ -195,13 +193,11 @@ TEST_CASE("ParseEffectConfig: StatModifier with explicit fields", "[effects][par
     const json effectJson = json::parse(R"({
         "type": "StatModifier",
         "scope": "ThisBase",
-        "persistence": "Continuous",
         "parameters": { "stat": "minerals", "amount": 3, "op": "AddPercent" }
     })");
 
     const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
     CHECK(config.scope == EffectScope_t::ThisBase);
-    CHECK(config.persistence == EffectPersistence_t::Continuous);
     CHECK_FALSE(config.condition.has_value());
 
     const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
@@ -212,7 +208,7 @@ TEST_CASE("ParseEffectConfig: StatModifier with explicit fields", "[effects][par
     CHECK_FALSE(pMod->selector.has_value());
 }
 
-TEST_CASE("ParseEffectConfig: defaults — persistence Continuous, op Add, amount 0", "[effects][parser]")
+TEST_CASE("ParseEffectConfig: defaults — op Add, amount 0", "[effects][parser]")
 {
     const json effectJson = json::parse(R"({
         "type": "StatModifier",
@@ -221,7 +217,6 @@ TEST_CASE("ParseEffectConfig: defaults — persistence Continuous, op Add, amoun
     })");
 
     const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
-    CHECK(config.persistence == EffectPersistence_t::Continuous);
 
     const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
     REQUIRE(pMod != nullptr);
@@ -419,16 +414,6 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         })")));
     }
 
-    SECTION("MineralsConverted Instantaneous throws")
-    {
-        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
-            "type": "StatModifier",
-            "scope": "ThisBase",
-            "persistence": "Instantaneous",
-            "parameters": { "stat": "econ", "amount_source": "MineralsConverted" }
-        })")));
-    }
-
     SECTION("MineralsConverted amount 0 throws")
     {
         CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
@@ -553,7 +538,6 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisBase",
-            "persistence": "Continuous",
             "parameters": {
                 "stat": "econ",
                 "amount_source": "BuildingUpkeep",
@@ -574,7 +558,6 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisBase",
-            "persistence": "Continuous",
             "parameters": {
                 "stat": "energy",
                 "amount_source": "BuildingUpkeep",
@@ -588,7 +571,6 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
             "type": "StatModifier",
             "scope": "ThisBase",
-            "persistence": "Continuous",
             "parameters": { "stat": "econ", "amount_source": "BuildingUpkeep", "op": "Add" }
         })")));
     }
@@ -999,17 +981,14 @@ TEST_CASE("ParseEffectConfig: buildingFilter", "[effects][parser][buildingFilter
     }
 }
 
-TEST_CASE("ParseEffectConfig: ModifyPopulation Instantaneous ThisBase", "[effects][parser]")
+TEST_CASE("ParseTriggeredEffectConfig: ModifyPopulation", "[effects][parser][triggered]")
 {
     const json absJson = json::parse(R"({
         "type": "ModifyPopulation",
-        "scope": "ThisBase",
-        "persistence": "Instantaneous",
         "parameters": { "amount": -1 }
     })");
-    const EffectConfig_t absConfig = EffectConfigParser::ParseEffectConfig(absJson);
-    CHECK(absConfig.persistence == EffectPersistence_t::Instantaneous);
-    CHECK(absConfig.scope == EffectScope_t::ThisBase);
+    const TriggeredEffectConfig_t absConfig =
+        TriggeredEffectParser::ParseTriggeredEffectConfig(absJson, "on_complete_effects");
     const auto* pAbs = std::get_if<ModifyPopulationEffect_t>(&absConfig.effect);
     REQUIRE(pAbs != nullptr);
     CHECK(pAbs->amount == -1);
@@ -1018,46 +997,32 @@ TEST_CASE("ParseEffectConfig: ModifyPopulation Instantaneous ThisBase", "[effect
 
     const json pctJson = json::parse(R"({
         "type": "ModifyPopulation",
-        "scope": "ThisBase",
-        "persistence": "Instantaneous",
         "parameters": { "amount": -50, "op": "AddPercent", "min_size": 1 }
     })");
-    const EffectConfig_t pctConfig = EffectConfigParser::ParseEffectConfig(pctJson);
+    const TriggeredEffectConfig_t pctConfig =
+        TriggeredEffectParser::ParseTriggeredEffectConfig(pctJson, "on_success_effects");
     const auto* pPct = std::get_if<ModifyPopulationEffect_t>(&pctConfig.effect);
     REQUIRE(pPct != nullptr);
     CHECK(pPct->amount == -50);
     CHECK(pPct->op == ModifierOp_t::AddPercent);
     CHECK(pPct->minSize == 1);
 
-    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "ModifyPopulation", "scope": "ThisBase",
-        "parameters": { "amount": -1 }
-    })")));
-    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "ModifyPopulation", "scope": "FactionGlobal",
-        "persistence": "Instantaneous", "parameters": { "amount": -1 }
-    })")));
-    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "ModifyPopulation", "scope": "ThisBase",
-        "persistence": "Instantaneous", "parameters": {}
-    })")));
-    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "ModifyPopulation", "scope": "ThisBase",
-        "persistence": "Instantaneous",
-        "parameters": { "amount": -1, "op": "MultiplyGeometric" }
-    })")));
+    CHECK_THROWS(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "ModifyPopulation", "parameters": {} })"), "on_enter_effects"));
+    CHECK_THROWS(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({
+            "type": "ModifyPopulation",
+            "parameters": { "amount": -1, "op": "MultiplyGeometric" }
+        })"), "on_enter_effects"));
 }
 
-TEST_CASE("ParseEffectConfig: DestroyFacility Instantaneous ThisBase", "[effects][parser]")
+TEST_CASE("ParseTriggeredEffectConfig: DestroyFacility", "[effects][parser][triggered]")
 {
-    const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "DestroyFacility",
-        "scope": "ThisBase",
-        "persistence": "Instantaneous",
-        "parameters": { "count": 2, "exclude_hq": false, "exclude_secret_projects": true }
-    })"));
-    CHECK(config.persistence == EffectPersistence_t::Instantaneous);
-    CHECK(config.scope == EffectScope_t::ThisBase);
+    const TriggeredEffectConfig_t config = TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({
+            "type": "DestroyFacility",
+            "parameters": { "count": 2, "exclude_hq": false, "exclude_secret_projects": true }
+        })"), "on_enter_effects");
     const auto* pDestroy = std::get_if<DestroyFacilityEffect_t>(&config.effect);
     REQUIRE(pDestroy != nullptr);
     CHECK(pDestroy->count == 2);
@@ -1067,50 +1032,150 @@ TEST_CASE("ParseEffectConfig: DestroyFacility Instantaneous ThisBase", "[effects
     // Every parameter is required: which facilities are off-limits is a per-caller rule, and
     // a silent default is what let the shipping config and this fixture disagree about
     // whether sabotage may destroy a secret project.
-    CHECK_THROWS_WITH(EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "DestroyFacility", "scope": "ThisBase",
-        "persistence": "Instantaneous", "parameters": {}
-    })")), ContainsSubstring("count"));
-    CHECK_THROWS_WITH(EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "DestroyFacility", "scope": "ThisBase", "persistence": "Instantaneous",
+    CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "DestroyFacility", "parameters": {} })"), "on_enter_effects"),
+        ContainsSubstring("count"));
+    CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(json::parse(R"({
+        "type": "DestroyFacility",
         "parameters": { "count": 1, "exclude_secret_projects": true }
-    })")), ContainsSubstring("exclude_hq"));
-    CHECK_THROWS_WITH(EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "DestroyFacility", "scope": "ThisBase", "persistence": "Instantaneous",
+    })"), "on_enter_effects"), ContainsSubstring("exclude_hq"));
+    CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(json::parse(R"({
+        "type": "DestroyFacility",
         "parameters": { "count": 1, "exclude_hq": true }
-    })")), ContainsSubstring("exclude_secret_projects"));
-    CHECK_THROWS_WITH(EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "DestroyFacility", "scope": "ThisBase", "persistence": "Instantaneous",
+    })"), "on_enter_effects"), ContainsSubstring("exclude_secret_projects"));
+    CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(json::parse(R"({
+        "type": "DestroyFacility",
         "parameters": { "count": 0, "exclude_hq": true, "exclude_secret_projects": true }
-    })")), ContainsSubstring("count"));
-
-    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "DestroyFacility", "scope": "ThisBase",
-        "parameters": { "count": 1, "exclude_hq": true, "exclude_secret_projects": true }
-    })")));
-    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "DestroyFacility", "scope": "FactionGlobal", "persistence": "Instantaneous",
-        "parameters": { "count": 1, "exclude_hq": true, "exclude_secret_projects": true }
-    })")));
+    })"), "on_enter_effects"), ContainsSubstring("count"));
 }
 
-TEST_CASE("ParseEffectConfig: Rebel Instantaneous ThisBase", "[effects][parser]")
+TEST_CASE("ParseTriggeredEffectConfig: Rebel", "[effects][parser][triggered]")
 {
-    const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "Rebel",
-        "scope": "ThisBase",
-        "persistence": "Instantaneous"
-    })"));
-    CHECK(config.persistence == EffectPersistence_t::Instantaneous);
-    CHECK(config.scope == EffectScope_t::ThisBase);
+    const TriggeredEffectConfig_t config = TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "Rebel" })"), "on_enter_effects");
     REQUIRE(std::get_if<RebelEffect_t>(&config.effect) != nullptr);
+    CHECK_FALSE(config.oncePer.has_value());
+}
 
-    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+// The two families are separate types, so a mis-filed entry is a parse error that names the
+// list it belongs in — where the old persistence flag let it parse and then never fire.
+TEST_CASE("Effects and triggered effects reject each other's types", "[effects][parser][triggered]")
+{
+    CHECK_THROWS_WITH(EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "Rebel", "scope": "ThisBase"
-    })")));
-    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "Rebel", "scope": "AllOwnerBases", "persistence": "Instantaneous"
-    })")));
+    })")), ContainsSubstring("on_enter_effects"));
+    CHECK_THROWS_WITH(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "ModifyPopulation", "scope": "ThisBase", "parameters": { "amount": -1 }
+    })")), ContainsSubstring("one-shot"));
+
+    CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(json::parse(R"({
+        "type": "StatModifier", "parameters": { "stat": "minerals", "amount": 1 }
+    })"), "on_enter_effects"), ContainsSubstring("belongs in 'effects'"));
+    CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "NotAnEffect" })"), "on_enter_effects"),
+        ContainsSubstring("Unknown triggered effect type"));
+}
+
+// Scope, persistence, condition and the filters described *where and when* a continuous effect
+// resolves. A triggered effect gets both from the list it sits in, so carrying one is a config
+// error rather than a key that is quietly ignored — which is what `condition` used to be.
+TEST_CASE("ParseTriggeredEffectConfig: rejects continuous-only keys", "[effects][parser][triggered]")
+{
+    for (const char* pKey : {"scope", "persistence", "condition", "radius", "min_radius",
+                             "unitFilter", "buildingFilter", "removed_by_tech"})
+    {
+        json effectJson = json::parse(R"({ "type": "Rebel" })");
+        effectJson[pKey] = "ThisBase";
+        CHECK_THROWS_WITH(
+            TriggeredEffectParser::ParseTriggeredEffectConfig(effectJson, "on_enter_effects"),
+            ContainsSubstring(pKey));
+    }
+}
+
+TEST_CASE("ParseTriggeredEffectConfig: once_per", "[effects][parser][triggered]")
+{
+    const TriggeredEffectConfig_t config = TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({
+            "type": "GrantTech",
+            "once_per": { "scope": "unit", "key": "monolith_xp" },
+            "parameters": { "tech_id": "some_tech" }
+        })"), "on_visit_effects");
+    REQUIRE(config.oncePer.has_value());
+    CHECK(config.oncePer->scope == OnceScope_t::Unit);
+    CHECK(config.oncePer->key == "monolith_xp");
+
+    // The key is what makes the rule span instances, so it cannot be omitted and defaulted.
+    CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(json::parse(R"({
+        "type": "Rebel", "once_per": { "scope": "base" }
+    })"), "on_enter_effects"), ContainsSubstring("key"));
+    CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(json::parse(R"({
+        "type": "Rebel", "once_per": { "scope": "galaxy", "key": "k" }
+    })"), "on_enter_effects"), ContainsSubstring("scope"));
+    // Nor may scope be omitted: defaulting it to "unit" would turn a typo into an entry that
+    // silently never fires from a trigger with no unit.
+    CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(json::parse(R"({
+        "type": "Rebel", "once_per": { "key": "k" }
+    })"), "on_enter_effects"), ContainsSubstring("scope"));
+}
+
+// Only SetInfiltration reads the filter. Accepting it elsewhere would read as narrowing the
+// targets while changing nothing.
+TEST_CASE("ParseTriggeredEffectConfig: factionFilter is rejected on types that ignore it",
+          "[effects][parser][triggered]")
+{
+    CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(json::parse(R"({
+        "type": "GrantEnergy",
+        "factionFilter": { "kind": "CouncilMembers" },
+        "parameters": { "amount": 500 }
+    })"), "on_passed_effects"), ContainsSubstring("factionFilter"));
+    CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(json::parse(R"({
+        "type": "Rebel", "factionFilter": { "kind": "CouncilMembers" }
+    })"), "on_enter_effects"), ContainsSubstring("SetInfiltration"));
+}
+
+// The "belongs in effects" message reads the continuous parser's own table, so a continuous
+// type added there is never misreported here as an unknown triggered type.
+TEST_CASE("Continuous type detection tracks the continuous parser's table",
+          "[effects][parser][triggered]")
+{
+    for (const char* pType : {"StatModifier", "RuleFlag", "GrantBuilding", "Infiltration",
+                              "Conceal", "Detect", "Intercept", "Scramble", "TransportParams",
+                              "InteractionOverride", "SocialEngineeringOverride",
+                              "DiplomaticModifier", "SocialRatingModifier", "OrbitalAttack"})
+    {
+        INFO(pType);
+        CHECK(EffectConfigParser::IsEffectType(pType));
+        CHECK(TriggeredEffectParser::IsContinuousEffectType(pType));
+        CHECK_FALSE(TriggeredEffectParser::IsTriggeredEffectType(pType));
+    }
+    CHECK_FALSE(EffectConfigParser::IsEffectType("Rebel"));
+    CHECK_FALSE(EffectConfigParser::IsEffectType("NotAnEffect"));
+}
+
+TEST_CASE("ParseTriggeredEffectConfig: GrantUnit takes component ids", "[effects][parser][triggered]")
+{
+    const TriggeredEffectConfig_t config = TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({
+            "type": "GrantUnit",
+            "parameters": { "component_ids": ["Scout", "Infantry"], "count": 2 }
+        })"), "on_complete_effects");
+    const auto* pGrant = std::get_if<GrantUnitEffect_t>(&config.effect);
+    REQUIRE(pGrant != nullptr);
+    CHECK(pGrant->componentIds == std::vector<std::string>{"Scout", "Infantry"});
+    CHECK(pGrant->count == 2);
+
+    const TriggeredEffectConfig_t defaultCount =
+        TriggeredEffectParser::ParseTriggeredEffectConfig(json::parse(R"({
+            "type": "GrantUnit", "parameters": { "component_ids": ["Scout"] }
+        })"), "on_complete_effects");
+    CHECK(std::get<GrantUnitEffect_t>(defaultCount.effect).count == 1);
+
+    CHECK_THROWS(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "GrantUnit", "parameters": { "component_ids": [] } })"),
+        "on_complete_effects"));
+    CHECK_THROWS(TriggeredEffectParser::ParseTriggeredEffectConfig(json::parse(R"({
+        "type": "GrantUnit", "parameters": { "component_ids": ["Scout"], "count": 0 }
+    })"), "on_complete_effects"));
 }
 
 TEST_CASE("ParseEffectConfig: grant effects require their id parameter", "[effects][parser]")
@@ -1126,18 +1191,16 @@ TEST_CASE("ParseEffectConfig: grant effects require their id parameter", "[effec
 
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(
         json::parse(R"({ "type": "GrantBuilding", "scope": "ThisBase", "parameters": {} })")));
-    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(
-        json::parse(R"({ "type": "GrantTech", "scope": "FactionGlobal", "parameters": {} })")));
-    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(
-        json::parse(R"({ "type": "GrantUnit", "scope": "FactionGlobal", "parameters": {} })")));
+    CHECK_THROWS(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "AddBuilding", "parameters": {} })"), "on_complete_effects"));
+    CHECK_THROWS(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "GrantTech", "parameters": {} })"), "on_complete_effects"));
+    CHECK_THROWS(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "GrantUnit", "parameters": {} })"), "on_complete_effects"));
 
-    const json grantTech = json::parse(R"({
-        "type": "GrantTech", "scope": "FactionGlobal",
-        "persistence": "Instantaneous",
-        "parameters": { "tech_id": "biogenetics" }
-    })");
-    const EffectConfig_t techConfig = EffectConfigParser::ParseEffectConfig(grantTech);
-    CHECK(techConfig.persistence == EffectPersistence_t::Instantaneous);
+    const TriggeredEffectConfig_t techConfig = TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "GrantTech", "parameters": { "tech_id": "biogenetics" } })"),
+        "on_complete_effects");
     const auto* pTech = std::get_if<GrantTechEffect_t>(&techConfig.effect);
     REQUIRE(pTech != nullptr);
     CHECK(pTech->techId == "biogenetics");
@@ -1401,36 +1464,23 @@ TEST_CASE("ParseEffectConfig: Infiltration uses scope + factionFilter", "[effect
     const EffectConfig_t council = EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "Infiltration",
         "scope": "FactionGlobal",
-        "persistence": "Continuous",
         "factionFilter": { "kind": "CouncilMembers" }
     })"));
     CHECK(council.scope == EffectScope_t::FactionGlobal);
-    CHECK(council.persistence == EffectPersistence_t::Continuous);
     CHECK(std::get_if<InfiltrationEffect_t>(&council.effect));
     REQUIRE(council.factionFilter);
     CHECK(council.factionFilter->kind == FactionFilterKind_t::CouncilMembers);
 
     const EffectConfig_t world = EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "Infiltration",
-        "scope": "WorldGlobal",
-        "persistence": "Continuous"
+        "scope": "WorldGlobal"
     })"));
     CHECK(world.scope == EffectScope_t::WorldGlobal);
     CHECK_FALSE(world.factionFilter.has_value());
 
-    const EffectConfig_t probe = EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "Infiltration",
-        "scope": "FactionGlobal",
-        "persistence": "Instantaneous",
-        "factionFilter": { "kind": "ActionTarget" }
-    })"));
-    REQUIRE(probe.factionFilter);
-    CHECK(probe.factionFilter->kind == FactionFilterKind_t::ActionTarget);
-
     const EffectConfig_t aiFilter = EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "Infiltration",
         "scope": "FactionGlobal",
-        "persistence": "Continuous",
         "factionFilter": { "kind": "PlayerType", "type": "AI" }
     })"));
     REQUIRE(aiFilter.factionFilter);
@@ -1438,14 +1488,32 @@ TEST_CASE("ParseEffectConfig: Infiltration uses scope + factionFilter", "[effect
     CHECK(aiFilter.factionFilter->playerType == PlayerType_t::AI);
 
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
-        "type": "Infiltration", "scope": "FactionGlobal", "persistence": "Continuous"
+        "type": "Infiltration", "scope": "FactionGlobal"
     })")));
-    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+    // Only a probe mission supplies an action target, and a mission fires a triggered list.
+    CHECK_THROWS_WITH(EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "Infiltration",
         "scope": "FactionGlobal",
-        "persistence": "Continuous",
         "factionFilter": { "kind": "ActionTarget" }
-    })")));
+    })")), ContainsSubstring("SetInfiltration"));
+}
+
+TEST_CASE("ParseTriggeredEffectConfig: SetInfiltration takes a bare factionFilter",
+          "[effects][parser][triggered]")
+{
+    const TriggeredEffectConfig_t probe = TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({
+            "type": "SetInfiltration",
+            "factionFilter": { "kind": "ActionTarget" }
+        })"), "on_success_effects");
+    REQUIRE(std::get_if<SetInfiltrationEffect_t>(&probe.effect) != nullptr);
+    REQUIRE(probe.factionFilter);
+    CHECK(probe.factionFilter->kind == FactionFilterKind_t::ActionTarget);
+
+    // No scope to consult, so an absent filter means every other faction rather than an error.
+    const TriggeredEffectConfig_t all = TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "SetInfiltration" })"), "on_elected_effects");
+    CHECK_FALSE(all.factionFilter.has_value());
 }
 
 TEST_CASE("ParseEffectConfig: Conceal and Detect require a channel", "[effects][parser][detection]")
@@ -1632,13 +1700,12 @@ namespace
 {
 
 // ValidateEffectForSource takes the whole effect (it also checks amount_source). These cases
-// only vary scope / persistence, so they build a default StatModifier carrying them.
-void ValidateScopeForSource_(EffectScope_t scope, EffectPersistence_t persistence,
-                             EffectSourceKind_t sourceKind, const std::string& rSourceId)
+// only vary scope, so they build a default StatModifier carrying it.
+void ValidateScopeForSource_(EffectScope_t scope, EffectSourceKind_t sourceKind,
+                             const std::string& rSourceId)
 {
     EffectConfig_t effect;
     effect.scope = scope;
-    effect.persistence = persistence;
     EffectConfigParser::ValidateEffectForSource(effect, sourceKind, rSourceId);
 }
 
@@ -1650,57 +1717,40 @@ TEST_CASE("ValidateEffectForSource: rejects only the certainly-impossible combin
     // ThisPop can only ever resolve against a pop type; ThisUnit against a unit component
     // or morale level (combat rank effects folded in at resolve time).
     CHECK_THROWS(ValidateScopeForSource_(
-        EffectScope_t::ThisPop, EffectPersistence_t::Continuous, EffectSourceKind_t::Building,
-        "some_building"));
+        EffectScope_t::ThisPop, EffectSourceKind_t::Building, "some_building"));
     CHECK_THROWS(ValidateScopeForSource_(
-        EffectScope_t::ThisUnit, EffectPersistence_t::Continuous, EffectSourceKind_t::PopType,
-        "some_pop"));
+        EffectScope_t::ThisUnit, EffectSourceKind_t::PopType, "some_pop"));
 
     CHECK_NOTHROW(ValidateScopeForSource_(
-        EffectScope_t::ThisPop, EffectPersistence_t::Continuous, EffectSourceKind_t::PopType,
-        "some_pop"));
+        EffectScope_t::ThisPop, EffectSourceKind_t::PopType, "some_pop"));
     CHECK_NOTHROW(ValidateScopeForSource_(
-        EffectScope_t::ThisUnit, EffectPersistence_t::Continuous, EffectSourceKind_t::UnitComponent,
-        "some_component"));
+        EffectScope_t::ThisUnit, EffectSourceKind_t::UnitComponent, "some_component"));
     CHECK_NOTHROW(ValidateScopeForSource_(
-        EffectScope_t::ThisUnit, EffectPersistence_t::Continuous, EffectSourceKind_t::MoraleLevel,
-        "morale_level_4"));
+        EffectScope_t::ThisUnit, EffectSourceKind_t::MoraleLevel, "morale_level_4"));
     CHECK_THROWS(ValidateScopeForSource_(
-        EffectScope_t::ThisBase, EffectPersistence_t::Continuous, EffectSourceKind_t::MoraleLevel,
-        "morale_level_4"));
+        EffectScope_t::ThisBase, EffectSourceKind_t::MoraleLevel, "morale_level_4"));
 
-    // ThisBase / ProducedAtThisBase need an origin base (or pop-merge path).
+    // ThisBase / ProducedAtThisBase need an origin base (or pop-merge path). A unit component
+    // or probe action that wants to act on the production / mission base at the moment the
+    // trigger fires uses a triggered list, which carries the base in its context instead.
     CHECK_THROWS(ValidateScopeForSource_(
-        EffectScope_t::ThisBase, EffectPersistence_t::Continuous, EffectSourceKind_t::UnitComponent,
-        "sensor_pod"));
+        EffectScope_t::ThisBase, EffectSourceKind_t::UnitComponent, "sensor_pod"));
     CHECK_THROWS(ValidateScopeForSource_(
-        EffectScope_t::ProducedAtThisBase, EffectPersistence_t::Instantaneous,
-        EffectSourceKind_t::UnitComponent, "colony_pod"));
+        EffectScope_t::ThisBase, EffectSourceKind_t::ProbeAction, "genetic_plague"));
     CHECK_THROWS(ValidateScopeForSource_(
-        EffectScope_t::ProducedAtThisBase, EffectPersistence_t::Continuous,
-        EffectSourceKind_t::Improvement, "monolith"));
+        EffectScope_t::ProducedAtThisBase, EffectSourceKind_t::UnitComponent, "colony_pod"));
     CHECK_THROWS(ValidateScopeForSource_(
-        EffectScope_t::ThisBase, EffectPersistence_t::Continuous, EffectSourceKind_t::CouncilProposal,
-        "trade_pact"));
+        EffectScope_t::ProducedAtThisBase, EffectSourceKind_t::Improvement, "monolith"));
     CHECK_THROWS(ValidateScopeForSource_(
-        EffectScope_t::ThisBase, EffectPersistence_t::Continuous, EffectSourceKind_t::TileYieldRules,
-        "tile_yield_rules"));
+        EffectScope_t::ThisBase, EffectSourceKind_t::CouncilProposal, "trade_pact"));
     CHECK_THROWS(ValidateScopeForSource_(
-        EffectScope_t::ThisBase, EffectPersistence_t::Continuous, EffectSourceKind_t::Production,
-        "production"));
+        EffectScope_t::ThisBase, EffectSourceKind_t::TileYieldRules, "tile_yield_rules"));
+    CHECK_THROWS(ValidateScopeForSource_(
+        EffectScope_t::ThisBase, EffectSourceKind_t::Production, "production"));
     CHECK_NOTHROW(ValidateScopeForSource_(
-        EffectScope_t::ThisBase, EffectPersistence_t::Continuous, EffectSourceKind_t::Building,
-        "recycling_tanks"));
+        EffectScope_t::ThisBase, EffectSourceKind_t::Building, "recycling_tanks"));
     CHECK_NOTHROW(ValidateScopeForSource_(
-        EffectScope_t::ProducedAtThisBase, EffectPersistence_t::Continuous,
-        EffectSourceKind_t::Building, "aerospace"));
-    // Instantaneous ThisBase on unit components / probe actions (production cost, genetic plague).
-    CHECK_NOTHROW(ValidateScopeForSource_(
-        EffectScope_t::ThisBase, EffectPersistence_t::Instantaneous,
-        EffectSourceKind_t::UnitComponent, "Colony_Pod"));
-    CHECK_NOTHROW(ValidateScopeForSource_(
-        EffectScope_t::ThisBase, EffectPersistence_t::Instantaneous, EffectSourceKind_t::ProbeAction,
-        "genetic_plague"));
+        EffectScope_t::ProducedAtThisBase, EffectSourceKind_t::Building, "aerospace"));
 
     // pop_composition splits into two source kinds because they have opposite origin-base
     // capabilities. The faction-wide `effects` array enters the pool with no origin base, so
@@ -1708,36 +1758,25 @@ TEST_CASE("ValidateEffectForSource: rejects only the certainly-impossible combin
     // golden_age_effects) are collected against a specific base, so ThisBase is exactly how a
     // riot tier declares its resource clamps.
     CHECK_THROWS(ValidateScopeForSource_(
-        EffectScope_t::ThisBase, EffectPersistence_t::Continuous,
-        EffectSourceKind_t::PopComposition, "pop_composition"));
-    CHECK_THROWS(ValidateScopeForSource_(
-        EffectScope_t::ThisBase, EffectPersistence_t::Instantaneous,
-        EffectSourceKind_t::PopComposition, "pop_composition"));
+        EffectScope_t::ThisBase, EffectSourceKind_t::PopComposition, "pop_composition"));
     CHECK_NOTHROW(ValidateScopeForSource_(
-        EffectScope_t::ThisBase, EffectPersistence_t::Continuous,
-        EffectSourceKind_t::PopCompositionBaseLocal, "pop_composition.riot_tiers.effects"));
+        EffectScope_t::ThisBase, EffectSourceKind_t::PopCompositionBaseLocal,
+        "pop_composition.riot_tiers.effects"));
     CHECK_NOTHROW(ValidateScopeForSource_(
-        EffectScope_t::ThisBase, EffectPersistence_t::Instantaneous,
-        EffectSourceKind_t::PopCompositionBaseLocal,
-        "pop_composition.riot_tiers.on_enter_effects"));
-    CHECK_NOTHROW(ValidateScopeForSource_(
-        EffectScope_t::FactionUnits, EffectPersistence_t::Continuous,
-        EffectSourceKind_t::PopCompositionBaseLocal, "pop_composition.riot_tiers.effects"));
+        EffectScope_t::FactionUnits, EffectSourceKind_t::PopCompositionBaseLocal,
+        "pop_composition.riot_tiers.effects"));
     // Neither collector walks ProducedAtThisBase off a mood array.
     CHECK_THROWS(ValidateScopeForSource_(
-        EffectScope_t::ProducedAtThisBase, EffectPersistence_t::Continuous,
-        EffectSourceKind_t::PopCompositionBaseLocal, "pop_composition.riot_tiers.effects"));
+        EffectScope_t::ProducedAtThisBase, EffectSourceKind_t::PopCompositionBaseLocal,
+        "pop_composition.riot_tiers.effects"));
 
     // Legal-but-inert: faction-lane on improvement (pending territory) still loads.
     CHECK_NOTHROW(ValidateScopeForSource_(
-        EffectScope_t::FactionGlobal, EffectPersistence_t::Continuous,
-        EffectSourceKind_t::Improvement, "monolith"));
+        EffectScope_t::FactionGlobal, EffectSourceKind_t::Improvement, "monolith"));
     CHECK_NOTHROW(ValidateScopeForSource_(
-        EffectScope_t::ThisTile, EffectPersistence_t::Continuous, EffectSourceKind_t::UnitComponent,
-        "sensor_pod"));
+        EffectScope_t::ThisTile, EffectSourceKind_t::UnitComponent, "sensor_pod"));
     CHECK_NOTHROW(ValidateScopeForSource_(
-        EffectScope_t::WorldGlobal, EffectPersistence_t::Continuous, EffectSourceKind_t::Building,
-        "beacon"));
+        EffectScope_t::WorldGlobal, EffectSourceKind_t::Building, "beacon"));
 }
 
 TEST_CASE("ParseEffects with a source kind validates every entry", "[effects][parser][validation]")

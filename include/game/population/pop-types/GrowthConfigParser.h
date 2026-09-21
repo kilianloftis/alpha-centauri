@@ -15,7 +15,6 @@ inline EffectConfig_t MakeGrowthBaselineStat(StatId_t stat, double amount,
 {
     EffectConfig_t effect;
     effect.scope = EffectScope_t::AllOwnerBases;
-    effect.persistence = EffectPersistence_t::Continuous;
     StatModifierEffect_t modifier;
     modifier.stat = stat;
     modifier.amount = amount;

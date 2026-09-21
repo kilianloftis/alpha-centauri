@@ -3,6 +3,7 @@
 #include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
 #include "game/effects/EffectConfigParser.h"
+#include "game/effects/TriggeredEffectParser.h"
 #include <nlohmann/json.hpp>
 #include <stdexcept>
 #include <variant>
@@ -34,33 +35,36 @@ std::vector<RuleFlagId_t> ParseRuleFlagList_(const nlohmann::json& rJson, const 
     return flags;
 }
 
-// Honored proposal shapes (runtime consumers): Continuous+WorldGlobal (CouncilEffects world
-// store); Instantaneous+GrantEnergy (applier); Instantaneous+WorldParameter+WorldGlobal
-// (deferred no-op until WorldEvents — still loadable). Everything else would pass a vote
-// and do nothing.
+// A standing law is the only continuous shape the council runtime reads (CouncilEffects world
+// store), so anything else would pass a vote and do nothing. One-shot outcomes live in
+// on_passed_effects and are checked by ValidatePassedEffectHonored_ instead.
 void ValidateProposalEffectHonored_(const EffectConfig_t& rEffect, const std::string& rProposalId)
 {
-    if (rEffect.persistence == EffectPersistence_t::Continuous
-        && rEffect.scope == EffectScope_t::WorldGlobal)
-    {
-        return;
-    }
-    if (rEffect.persistence == EffectPersistence_t::Instantaneous
-        && std::holds_alternative<GrantEnergyEffect_t>(rEffect.effect))
-    {
-        return;
-    }
-    if (rEffect.persistence == EffectPersistence_t::Instantaneous
-        && std::holds_alternative<WorldParameterEffect_t>(rEffect.effect)
-        && rEffect.scope == EffectScope_t::WorldGlobal)
+    if (rEffect.scope == EffectScope_t::WorldGlobal)
     {
         return;
     }
     throw std::runtime_error(
         "Council proposal '" + rProposalId
-        + "' has an effect shape that is not honored by the council runtime "
-          "(allowed: Continuous+WorldGlobal; Instantaneous+GrantEnergy; "
-          "Instantaneous+WorldParameter+WorldGlobal)");
+        + "' has an 'effects' entry that is not honored by the council runtime "
+          "(a continuous proposal effect must be WorldGlobal; a one-shot outcome belongs in "
+          "'on_passed_effects')");
+}
+
+// Honored one-shot outcomes: GrantEnergy (credited to every member) and WorldParameter
+// (a deferred no-op until WorldEvents — still loadable).
+void ValidatePassedEffectHonored_(const TriggeredEffectConfig_t& rEffect,
+                                  const std::string& rProposalId)
+{
+    if (std::holds_alternative<GrantEnergyEffect_t>(rEffect.effect)
+        || std::holds_alternative<WorldParameterEffect_t>(rEffect.effect))
+    {
+        return;
+    }
+    throw std::runtime_error(
+        "Council proposal '" + rProposalId
+        + "' has an 'on_passed_effects' entry that is not honored by the council runtime "
+          "(allowed: GrantEnergy, WorldParameter)");
 }
 
 } // namespace
@@ -107,6 +111,12 @@ CouncilProposalConfig_t CouncilProposalConfigParser::ParseProposalConfig_(
     for (const EffectConfig_t& rEffect : config.effects)
     {
         ValidateProposalEffectHonored_(rEffect, config.id);
+    }
+    config.onPassedEffects = TriggeredEffectParser::ParseTriggeredEffects(
+        proposalJson, "on_passed_effects", config.id);
+    for (const TriggeredEffectConfig_t& rEffect : config.onPassedEffects)
+    {
+        ValidatePassedEffectHonored_(rEffect, config.id);
     }
     return config;
 }

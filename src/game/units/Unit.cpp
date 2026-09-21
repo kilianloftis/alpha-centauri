@@ -33,7 +33,7 @@ Unit::Unit(UnitId_t unitId,
            BaseManager* pHomeBase,
            Faction& rFaction,
            const MoraleCalculator& rMorale,
-           BaseManager* pProducedAt)
+           std::optional<BaseManager*> pProducedAt)
     : m_unitId(unitId)
     , m_rDesign(rDesign)
     , m_rPositions(rPositions)
@@ -51,16 +51,18 @@ Unit::Unit(UnitId_t unitId,
     // production base latches true. Free spawns (Engine starting units, escape pods) still
     // unlock the ledger via UnitManager::RecordBuiltComponents, but do not collect the bonus.
     // Latch before that record so StartingExperience below and later IsPrototype() agree.
-    , m_bPrototype(pProducedAt != nullptr && rFaction.GetMilitary().IsPrototype(rDesign))
+    , m_bPrototype(pProducedAt.value_or(nullptr) != nullptr
+                   && rFaction.GetMilitary().IsPrototype(rDesign))
     , m_bRegistered(false)
 {
     if (pHomeBase)
     {
         m_homeBaseClaim = pHomeBase->GetHomeUnits().Claim(*this);
     }
-    // Production base is independent of home; default to home when the caller omits it
-    // (train-bonus bookkeeping only — not a prototype signal; see m_bPrototype above).
-    if (BaseManager* pBuiltAt = pProducedAt ? pProducedAt : pHomeBase)
+    // Production base is independent of home; an omitted value defaults to home, while an
+    // explicit nullptr means built nowhere — a gift is homed but collects no train bonus.
+    // Bookkeeping only, not a prototype signal; see m_bPrototype above.
+    if (BaseManager* pBuiltAt = pProducedAt.has_value() ? *pProducedAt : pHomeBase)
     {
         m_producedAtBaseId = pBuiltAt->GetBaseId();
     }
@@ -73,7 +75,6 @@ Unit::Unit(UnitId_t unitId,
         GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint;
     m_xp = m_rMorale.BaseIntrinsicXp(*this)
         + ResolveStat(*this, StatId_t::StartingExperience);
-
     m_rPositions.Register_(*this, rTile);
     m_bRegistered = true;
 }

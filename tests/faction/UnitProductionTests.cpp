@@ -419,7 +419,7 @@ TEST_CASE("A starving size-1 base is not asked about an item with no pop cost",
     CHECK(base.ApplyProduction().kind == ProductionApplyKind_t::Completed);
 }
 
-TEST_CASE("CreateUnit without production does not apply Instantaneous component effects",
+TEST_CASE("CreateUnit without production does not apply on-complete component effects",
           "[production][unit][population]")
 {
     UnitProductionGame_ game;

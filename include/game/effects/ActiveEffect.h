@@ -2,6 +2,7 @@
 
 #include "game/faction/base/BaseTypes.h"
 #include "game/effects/EffectConfig.h"
+#include "game/effects/TriggeredEffect.h"
 #include "game/map/Tile.h"
 #include <algorithm>
 #include <cmath>
@@ -223,7 +224,7 @@ bool BuildingFilterSatisfied(const EffectConfig_t& config, const BuildingConfig_
 // (difficulty). Distinct from FactionFilterCoversTarget (cross-faction targets only).
 bool FactionFilterMatchesOwner(const EffectConfig_t& rConfig, bool bPlayerControlled);
 
-// Appends non-Instantaneous effects from a config list as ActiveEffect_t instances.
+// Appends effects from a config list as ActiveEffect_t instances.
 // Used by building, pop, unit, and tile effect collection; pOriginBase is recorded when
 // TagsOriginBase(scope) (ThisBase, ProducedAtThisBase, FactionUnits). This (and its
 // filtered variants below) is the single config->ActiveEffect_t conversion — new effect
@@ -594,9 +595,8 @@ std::vector<ActiveEffect_t> CollectFromPops(const PopulationManager& rPops, cons
 // Never enters the base-wide active effects pool (FilterForBase always excludes ThisTile).
 std::vector<ActiveEffect_t> CollectTileEffects(const Tile& rTile);
 
-// Apply one Instantaneous ModifyPopulation mutation. Returns the signed size delta actually
-// applied (negative when pops were removed). Honors minSize when shrinking; stops adding when
-// CanGrow() is false.
+// Apply one ModifyPopulation. Returns the signed size delta actually applied (negative when
+// pops were removed). Honors minSize when shrinking; stops adding when CanGrow() is false.
 int ApplyModifyPopulation(BaseManager& rBase, const ModifyPopulationEffect_t& rEffect);
 
 // Signed size delta for one ModifyPopulation against a base of `size` (no mutation). The one
@@ -605,32 +605,10 @@ int ApplyModifyPopulation(BaseManager& rBase, const ModifyPopulationEffect_t& rE
 // gates below only care about emptying).
 int PredictModifyPopulationDelta(int size, const ModifyPopulationEffect_t& rEffect);
 
-// Final population size after applying every Instantaneous ModifyPopulation in order.
-int PredictInstantaneousPopulationSize(std::span<const EffectConfig_t> rEffects, int size);
+// Final population size after applying every ModifyPopulation in order.
+int PredictTriggeredPopulationSize(std::span<const TriggeredEffectConfig_t> rEffects, int size);
 
-// Same for a unit design's filled components (production Instantaneous costs).
+// Same for a unit design's filled components (production pop costs).
 int PredictUnitProductionPopulationSize(const UnitDesign& rDesign, int size);
-
-// Fire all Instantaneous effects in rEffects against rBase.
-// GrantBuilding: adds the granted building to the base immediately.
-// GrantTech: adds the tech to the owning faction's discovered list.
-// GrantUnit: logged as a TODO stub until that system is wired.
-// Infiltration: always applies via ApplyInfiltrationEffect (needs a live session GameState).
-// ModifyPopulation: ApplyModifyPopulation.
-// DestroyFacility: DestroyRandomFacilities (shared with conquest / probe sabotage).
-// Rebel: PickRebelFactionAndTransfer via pop_composition rebel_selection.
-// Continuous Infiltration is honored at query time via HasInfiltration — no dispatch.
-void DispatchInstantaneousEffects(std::span<const EffectConfig_t> rEffects, BaseManager& rBase,
-                                  GameState& rGameState);
-
-// Call right after a building is added to the base (e.g. from OnProductionCompleted).
-void DispatchInstantaneousEffects(const BuildingConfig_t& rBuilding, BaseManager& rBase,
-                                  GameState& rGameState);
-
-// Instantaneous effects on a design's filled components (e.g. colony-pod pop cost). Call right
-// after CreateUnit on production complete — not from CreateUnit itself (escape pods / starting
-// units must not pay production Instantaneous costs).
-void DispatchInstantaneousEffects(const UnitDesign& rDesign, BaseManager& rBase,
-                                  GameState& rGameState);
 
 } // namespace ac

@@ -166,7 +166,6 @@ TEST_CASE("Council rules config loads propose intervals and governor effects", "
     REQUIRE(pStat);
     CHECK(pStat->stat == StatId_t::CommerceEnergyBonus);
     CHECK(pStat->amount == Catch::Approx(1.0));
-    CHECK(rules.governorEffects[1].persistence == EffectPersistence_t::Continuous);
     CHECK(std::get_if<InfiltrationEffect_t>(&rules.governorEffects[1].effect));
     REQUIRE(rules.governorEffects[1].factionFilter);
     CHECK(rules.governorEffects[1].factionFilter->kind == FactionFilterKind_t::CouncilMembers);
@@ -174,12 +173,12 @@ TEST_CASE("Council rules config loads propose intervals and governor effects", "
 
 TEST_CASE("Council proposal honored shapes: stock OK; inert shapes throw", "[council][parser]")
 {
-    // Stock fixture already exercised Continuous+WorldGlobal, Instantaneous+GrantEnergy,
-    // Instantaneous+WorldParameter+WorldGlobal via the load test above.
+    // Stock fixture already exercised WorldGlobal `effects`, on_passed GrantEnergy and
+    // on_passed WorldParameter via the load test above.
     const std::filesystem::path path =
         std::filesystem::temp_directory_path() / "ac_council_bad_proposal.json";
 
-    SECTION("Continuous FactionGlobal throws")
+    SECTION("A non-WorldGlobal standing law throws")
     {
         {
             std::ofstream out(path);
@@ -189,7 +188,6 @@ TEST_CASE("Council proposal honored shapes: stock OK; inert shapes throw", "[cou
                 "effects": [{
                     "type": "StatModifier",
                     "scope": "FactionGlobal",
-                    "persistence": "Continuous",
                     "parameters": { "stat": "energy", "amount": 1 }
                 }]
             }])";
@@ -197,19 +195,14 @@ TEST_CASE("Council proposal honored shapes: stock OK; inert shapes throw", "[cou
         CHECK_THROWS(CouncilProposalConfigParser{}.ParseConfig(path.string()));
     }
 
-    SECTION("Instantaneous StatModifier throws")
+    SECTION("A one-shot outcome the applier does not handle throws")
     {
         {
             std::ofstream out(path);
             out << R"([{
-                "id": "bad_instant_stat",
+                "id": "bad_passed_effect",
                 "name": "Bad",
-                "effects": [{
-                    "type": "StatModifier",
-                    "scope": "WorldGlobal",
-                    "persistence": "Instantaneous",
-                    "parameters": { "stat": "energy", "amount": 1 }
-                }]
+                "on_passed_effects": [{ "type": "Rebel" }]
             }])";
         }
         CHECK_THROWS(CouncilProposalConfigParser{}.ParseConfig(path.string()));
@@ -223,7 +216,7 @@ TEST_CASE("Council governor honored shapes: inert shapes throw", "[council][pars
     const std::filesystem::path path =
         std::filesystem::temp_directory_path() / "ac_council_bad_rules.json";
 
-    SECTION("Continuous WorldGlobal throws")
+    SECTION("A non-FactionGlobal standing governor effect throws")
     {
         {
             std::ofstream out(path);
@@ -233,7 +226,6 @@ TEST_CASE("Council governor honored shapes: inert shapes throw", "[council][pars
                 "governor_effects": [{
                     "type": "StatModifier",
                     "scope": "WorldGlobal",
-                    "persistence": "Continuous",
                     "parameters": { "stat": "energy", "amount": 1 }
                 }]
             })";
@@ -241,22 +233,32 @@ TEST_CASE("Council governor honored shapes: inert shapes throw", "[council][pars
         CHECK_THROWS(CouncilRulesConfigParser{}.ParseConfig(path.string()));
     }
 
-    SECTION("Instantaneous StatModifier throws")
+    SECTION("A one-shot effect in governor_effects throws, naming on_elected_effects")
     {
         {
             std::ofstream out(path);
             out << R"({
                 "governor_propose_interval_years": 10,
                 "member_propose_interval_years": 20,
-                "governor_effects": [{
-                    "type": "StatModifier",
-                    "scope": "FactionGlobal",
-                    "persistence": "Instantaneous",
-                    "parameters": { "stat": "energy", "amount": 1 }
-                }]
+                "governor_effects": [{ "type": "SetInfiltration" }]
             })";
         }
         CHECK_THROWS(CouncilRulesConfigParser{}.ParseConfig(path.string()));
+    }
+
+    SECTION("A one-shot effect in on_elected_effects loads")
+    {
+        {
+            std::ofstream out(path);
+            out << R"({
+                "governor_propose_interval_years": 10,
+                "member_propose_interval_years": 20,
+                "on_elected_effects": [{ "type": "SetInfiltration" }]
+            })";
+        }
+        const CouncilRulesConfig_t rules = CouncilRulesConfigParser{}.ParseConfig(path.string());
+        REQUIRE(rules.onElectedEffects.size() == 1);
+        CHECK(std::get_if<SetInfiltrationEffect_t>(&rules.onElectedEffects[0].effect) != nullptr);
     }
 
     std::filesystem::remove(path);
@@ -345,7 +347,6 @@ TEST_CASE("CouncilMembers filter matches nobody when no PlanetaryCouncil exists"
     EffectConfig_t config;
     config.effect = InfiltrationEffect_t{};
     config.scope = EffectScope_t::FactionGlobal;
-    config.persistence = EffectPersistence_t::Continuous;
     config.factionFilter = FactionFilter_t{FactionFilterKind_t::CouncilMembers};
     // Declared on the faction definition so it reaches the faction's active effect pool —
     // otherwise HasInfiltration walks an empty list and passes regardless of the filter.
@@ -639,7 +640,7 @@ TEST_CASE("Solar shade and polar caps proposals pass; the shade is repeatable", 
 
     PlanetaryCouncil& rCouncil = *game.pState->GetPlanetaryCouncil();
     game.PassStandard(*game.pA, "launch_solar_shade");
-    // These carry only Instantaneous effects, so they are history, not standing law: HasPassed,
+    // These carry only one-shot outcomes, so they are history, not standing law: HasPassed,
     // not IsActive. The in-force set means "contributes continuous world effects right now" —
     // conflating the two is what let a pure repeal be consumed for the rest of the game.
     CHECK(rCouncil.HasPassed("launch_solar_shade"));

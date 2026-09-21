@@ -51,7 +51,8 @@ UnitManager::DeferredDestructionScope UnitManager::DeferDestruction()
 
 Unit& UnitManager::CreateUnit(UnitId_t unitId, const UnitDesign& rDesign,
                               UnitPositionIndex& rPositions, const Tile& rTile,
-                              BaseManager* pHomeBase, BaseManager* pProducedAt)
+                              BaseManager* pHomeBase,
+                              std::optional<BaseManager*> pProducedAt)
 {
     if (!CanPlaceUnitOnTile(rTile, rPositions))
     {

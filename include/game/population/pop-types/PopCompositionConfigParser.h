@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/effects/EffectConfig.h"
+#include "game/effects/TriggeredEffect.h"
 #include <optional>
 #include <string>
 #include <vector>
@@ -16,8 +17,8 @@ struct RiotTier_t
     // entries resolve through BaseEffectsCache; FactionUnits entries reach units homed at the
     // rioting base through the faction pool. See BaseMoodEffects.
     std::vector<EffectConfig_t> effects;
-    // Instantaneous effects dispatched each Mood commit while at this tier.
-    std::vector<EffectConfig_t> onEnterEffects;
+    // One-shot effects fired each Mood commit while at this tier.
+    std::vector<TriggeredEffectConfig_t> onEnterEffects;
 };
 
 // How physical distance weights a faction's chance of receiving a rebelling base.

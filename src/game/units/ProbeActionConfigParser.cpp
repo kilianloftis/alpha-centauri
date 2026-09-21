@@ -1,6 +1,7 @@
 #include "game/units/ProbeActionConfigParser.h"
 
 #include "game/effects/EffectConfigParser.h"
+#include "game/effects/TriggeredEffectParser.h"
 
 #include <nlohmann/json.hpp>
 #include <fstream>
@@ -83,6 +84,8 @@ ProbeActionConfig_t ParseAction_(const json& rActionJson)
             wrapper, EffectSourceKind_t::ProbeAction,
             ProbeActionIdToString(action.id));
     }
+    action.onSuccessEffects = TriggeredEffectParser::ParseTriggeredEffects(
+        rActionJson, "on_success_effects", ProbeActionIdToString(action.id));
     return action;
 }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/effects/EffectConfig.h"
+#include "game/effects/TriggeredEffect.h"
 #include "game/faction/base/production/ScrapConfig.h"
 #include "game/units/UnitDomain.h"
 
@@ -41,6 +42,9 @@ struct UnitComponentConfig_t
     // Required when type == "chassis"; must be unset for other component types.
     std::optional<UnitDomain_t> domain;
     std::vector<EffectConfig_t> effects;
+    // One-shot effects fired once, when a unit carrying this component finishes production
+    // (the colony pod's population cost). Free spawns never pay these — see BaseManager.
+    std::vector<TriggeredEffectConfig_t> onCompleteEffects;
     // Optional partial override of kinds.unit.default_scrap, folded per design by
     // MergeScrapOverride: later occupied slots win on a given key. `"formula": null` denies
     // scrap.

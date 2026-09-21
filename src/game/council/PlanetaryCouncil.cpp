@@ -258,7 +258,7 @@ bool PlanetaryCouncil::CanPropose(const Faction& rProposer, const std::string& r
 
     // required_proposals asks "has this been enacted", not "is it still in force". The two
     // used to be the same set, which is why splitting them matters here: launch_solar_shade
-    // carries only an Instantaneous effect, so it is history rather than a standing law, yet
+    // carries only a one-shot outcome, so it is history rather than a standing law, yet
     // increase_solar_shade must still require it.
     for (const std::string& rRequired : pConfig->requiredProposals)
     {
@@ -656,7 +656,7 @@ ResolveProposalResult_t PlanetaryCouncil::ApplyPassedProposal_(
     }
 
     ++m_passCounts[rConfig.id];
-    m_applier.ApplyInstantaneousEffects(m_members, rConfig);
+    m_applier.ApplyPassedEffects(rGameState, m_members, rConfig);
 
     // Unconditional: ActivateProposal_ itself decides what belongs in the in-force set (only
     // proposals carrying continuous world effects), so the election special-cases that used to

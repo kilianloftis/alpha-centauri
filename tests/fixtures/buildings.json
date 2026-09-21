@@ -21,11 +21,11 @@
           "amount": 1,
           "op": "Add"
         }
-      },
+      }
+    ],
+    "on_complete_effects": [
       {
         "type": "GrantTech",
-        "scope": "FactionGlobal",
-        "persistence": "Instantaneous",
         "parameters": {
           "tech_id": "some_tech"
         }
@@ -169,12 +169,10 @@
   },
   {
     "id": "instant_grantor",
-    "name": "Instantaneous Grantor",
-    "effects": [
+    "name": "On-Complete Grantor",
+    "on_complete_effects": [
       {
-        "type": "GrantBuilding",
-        "scope": "ThisBase",
-        "persistence": "Instantaneous",
+        "type": "AddBuilding",
         "parameters": {
           "building_id": "flat_nutrient"
         }
@@ -184,12 +182,10 @@
   },
   {
     "id": "instant_infiltrator",
-    "name": "Instantaneous Infiltrator",
-    "effects": [
+    "name": "On-Complete Infiltrator",
+    "on_complete_effects": [
       {
-        "type": "Infiltration",
-        "scope": "WorldGlobal",
-        "persistence": "Instantaneous"
+        "type": "SetInfiltration"
       }
     ],
     "category": "build"
@@ -788,7 +784,6 @@
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "persistence": "Continuous",
         "parameters": {
           "stat": "last_defender_pop_loss",
           "amount": 0,
@@ -805,7 +800,6 @@
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "persistence": "Continuous",
         "parameters": {
           "stat": "last_defender_pop_loss",
           "amount": 1,
@@ -822,7 +816,6 @@
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "persistence": "Continuous",
         "parameters": {
           "stat": "capture_facilities_destroyed_min",
           "amount": 0,
@@ -832,7 +825,6 @@
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "persistence": "Continuous",
         "parameters": {
           "stat": "capture_facilities_destroyed_max_percent",
           "amount": 0,
@@ -1044,7 +1036,6 @@
       {
         "type": "StatModifier",
         "scope": "ThisBase",
-        "persistence": "Continuous",
         "parameters": {
           "stat": "drones",
           "amount": -2,

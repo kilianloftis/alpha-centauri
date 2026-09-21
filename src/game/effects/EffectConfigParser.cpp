@@ -1,5 +1,7 @@
 #include "game/effects/EffectConfigParser.h"
 
+#include "game/effects/TriggeredEffectParser.h"
+
 #include <magic_enum.hpp>
 #include <cmath>
 #include <cstddef>
@@ -43,7 +45,6 @@ void ValidateAmountSourceLegality_(const StatModifierEffect_t& rMod,
 {
     const StatId_t stat = rMod.stat;
     const EffectScope_t scope = rEffect.scope;
-    const EffectPersistence_t persistence = rEffect.persistence;
     const double amount = rMod.amount;
     switch (*rMod.amountSource)
     {
@@ -85,11 +86,6 @@ void ValidateAmountSourceLegality_(const StatModifierEffect_t& rMod,
             {
                 throw std::runtime_error(
                     "StatModifier 'amount_source' MineralsConverted requires scope ThisBase");
-            }
-            if (persistence != EffectPersistence_t::Continuous)
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' MineralsConverted requires persistence Continuous");
             }
             if (amount <= 0.0 || !std::isfinite(amount))
             {
@@ -155,11 +151,6 @@ void ValidateAmountSourceLegality_(const StatModifierEffect_t& rMod,
                 throw std::runtime_error(
                     "StatModifier 'amount_source' BuildingUpkeep requires op MaxClamp");
             }
-            if (persistence != EffectPersistence_t::Continuous)
-            {
-                throw std::runtime_error(
-                    "StatModifier 'amount_source' BuildingUpkeep requires persistence Continuous");
-            }
             if (scope != EffectScope_t::ThisBase
                 && scope != EffectScope_t::AllOwnerBases
                 && scope != EffectScope_t::FactionGlobal)
@@ -189,55 +180,6 @@ void ParseGrantBuilding_(const nlohmann::json& parameters, EffectConfig_t& rEffe
     rEffect.effect = grantBuilding;
 }
 
-void ParseGrantTech_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
-{
-    GrantTechEffect_t grantTech;
-    grantTech.techId = parameters.value("tech_id", "");
-    if (grantTech.techId.empty())
-    {
-        throw std::runtime_error("GrantTech effect missing required 'tech_id'");
-    }
-    rEffect.effect = grantTech;
-}
-
-void ParseGrantUnit_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
-{
-    GrantUnitEffect_t grantUnit;
-    grantUnit.unitId = parameters.value("unit_id", "");
-    if (grantUnit.unitId.empty())
-    {
-        throw std::runtime_error("GrantUnit effect missing required 'unit_id'");
-    }
-    rEffect.effect = grantUnit;
-}
-
-void ParseGrantEnergy_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
-{
-    GrantEnergyEffect_t grantEnergy;
-    grantEnergy.amount = static_cast<int>(ParseNumber(parameters, "amount", 0.0));
-    if (grantEnergy.amount < 0)
-    {
-        throw std::runtime_error("GrantEnergy 'amount' must be >= 0");
-    }
-    rEffect.effect = grantEnergy;
-}
-
-void ParseWorldParameter_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
-{
-    WorldParameterEffect_t worldParam;
-    const std::string paramStr = parameters.value("parameter", "");
-    if (paramStr == "sea_level")
-    {
-        worldParam.parameter = WorldParameterId_t::SeaLevel;
-    }
-    else
-    {
-        throw std::runtime_error("Unknown WorldParameter '" + paramStr + "'");
-    }
-    worldParam.amount = static_cast<int>(ParseNumber(parameters, "amount", 0.0));
-    rEffect.effect = worldParam;
-}
-
 void ParseInfiltration_(const nlohmann::json& /*parameters*/, EffectConfig_t& rEffect)
 {
     RequireScope_(
@@ -251,11 +193,13 @@ void ParseInfiltration_(const nlohmann::json& /*parameters*/, EffectConfig_t& rE
             "(WorldGlobal without a filter means all other factions)");
     }
     if (rEffect.factionFilter
-        && rEffect.factionFilter->kind == FactionFilterKind_t::ActionTarget
-        && rEffect.persistence != EffectPersistence_t::Instantaneous)
+        && rEffect.factionFilter->kind == FactionFilterKind_t::ActionTarget)
     {
+        // Only a probe mission supplies an action target, and a mission fires a triggered
+        // list — there is no continuous context that could resolve this filter.
         throw std::runtime_error(
-            "factionFilter ActionTarget requires persistence Instantaneous");
+            "factionFilter ActionTarget requires the triggered 'SetInfiltration' effect, not "
+            "the continuous 'Infiltration'");
     }
     rEffect.effect = InfiltrationEffect_t{};
 }
@@ -636,81 +580,6 @@ void ParseScramble_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
     rEffect.effect = scramble;
 }
 
-void ParseModifyPopulation_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
-{
-    if (rEffect.persistence != EffectPersistence_t::Instantaneous)
-    {
-        throw std::runtime_error("ModifyPopulation requires persistence Instantaneous");
-    }
-    RequireScope_(
-        rEffect.scope,
-        {EffectScope_t::ThisBase},
-        "ModifyPopulation requires scope ThisBase");
-
-    ModifyPopulationEffect_t modify;
-    modify.amount = static_cast<int>(RequireNumber(parameters, "amount"));
-    modify.op = ParseModifierOp(parameters.value("op", "Add"));
-    if (modify.op != ModifierOp_t::Add && modify.op != ModifierOp_t::AddPercent)
-    {
-        throw std::runtime_error(
-            "ModifyPopulation op must be Add or AddPercent");
-    }
-    modify.minSize = static_cast<int>(ParseNumber(parameters, "min_size", 0.0));
-    if (modify.minSize < 0)
-    {
-        throw std::runtime_error("ModifyPopulation 'min_size' must be >= 0");
-    }
-    rEffect.effect = modify;
-}
-
-void ParseDestroyFacility_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
-{
-    if (rEffect.persistence != EffectPersistence_t::Instantaneous)
-    {
-        throw std::runtime_error("DestroyFacility requires persistence Instantaneous");
-    }
-    RequireScope_(
-        rEffect.scope,
-        {EffectScope_t::ThisBase},
-        "DestroyFacility requires scope ThisBase");
-
-    const auto requireBool = [&parameters](const char* key) {
-        if (!parameters.contains(key) || !parameters.at(key).is_boolean())
-        {
-            throw std::runtime_error(std::string("DestroyFacility '") + key
-                                     + "' must be a boolean");
-        }
-        return parameters.at(key).get<bool>();
-    };
-
-    DestroyFacilityEffect_t destroy;
-    if (!parameters.contains("count") || !parameters.at("count").is_number_integer())
-    {
-        throw std::runtime_error("DestroyFacility 'count' must be an integer");
-    }
-    destroy.count = parameters.at("count").get<int>();
-    if (destroy.count < 1)
-    {
-        throw std::runtime_error("DestroyFacility 'count' must be >= 1");
-    }
-    destroy.excludeHq = requireBool("exclude_hq");
-    destroy.excludeSecretProjects = requireBool("exclude_secret_projects");
-    rEffect.effect = destroy;
-}
-
-void ParseRebel_(const nlohmann::json& /*parameters*/, EffectConfig_t& rEffect)
-{
-    if (rEffect.persistence != EffectPersistence_t::Instantaneous)
-    {
-        throw std::runtime_error("Rebel requires persistence Instantaneous");
-    }
-    RequireScope_(
-        rEffect.scope,
-        {EffectScope_t::ThisBase},
-        "Rebel requires scope ThisBase");
-    rEffect.effect = RebelEffect_t{};
-}
-
 void ParseTransportParams_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
 {
     RequireScope_(
@@ -765,10 +634,6 @@ const std::unordered_map<std::string, ParseEffectFn_>& EffectTypeParsers_()
 {
     static const std::unordered_map<std::string, ParseEffectFn_> k_Parsers = {
         {"GrantBuilding", ParseGrantBuilding_},
-        {"GrantTech", ParseGrantTech_},
-        {"GrantUnit", ParseGrantUnit_},
-        {"GrantEnergy", ParseGrantEnergy_},
-        {"WorldParameter", ParseWorldParameter_},
         {"Infiltration", ParseInfiltration_},
         {"StatModifier", ParseStatModifier_},
         {"RuleFlag", ParseRuleFlag_},
@@ -782,9 +647,6 @@ const std::unordered_map<std::string, ParseEffectFn_>& EffectTypeParsers_()
         {"Intercept", ParseIntercept_},
         {"Scramble", ParseScramble_},
         {"TransportParams", ParseTransportParams_},
-        {"ModifyPopulation", ParseModifyPopulation_},
-        {"DestroyFacility", ParseDestroyFacility_},
-        {"Rebel", ParseRebel_},
     };
     return k_Parsers;
 }
@@ -819,16 +681,6 @@ EffectScope_t ParseEffectScope(const std::string& rScope)
         throw std::runtime_error("Unknown effect scope: '" + rScope + "'");
     }
     return *scope;
-}
-
-EffectPersistence_t ParseEffectPersistence(const std::string& rPersistence)
-{
-    const auto persistence = magic_enum::enum_cast<EffectPersistence_t>(rPersistence);
-    if (!persistence.has_value())
-    {
-        throw std::runtime_error("Unknown effect persistence: '" + rPersistence + "'");
-    }
-    return *persistence;
 }
 
 double ParseNumber(const nlohmann::json& parameters, const std::string& key, double defaultValue)
@@ -1127,17 +979,26 @@ FactionFilter_t ParseFactionFilter(const nlohmann::json& filterJson)
     return filter;
 }
 
+bool IsEffectType(const std::string& rTypeName)
+{
+    return EffectTypeParsers_().count(rTypeName) != 0;
+}
+
 EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
 {
     EffectConfig_t effect;
 
     const std::string typeStr = effectJson.at("type").get<std::string>();
+    if (TriggeredEffectParser::IsTriggeredEffectType(typeStr))
+    {
+        throw std::runtime_error(
+            "'" + typeStr + "' is a one-shot effect and belongs in a trigger-named list "
+            "(on_complete_effects / on_enter_effects / on_visit_effects / …), not 'effects'");
+    }
     const std::string scopeStr = effectJson.at("scope").get<std::string>();
-    const std::string persistenceStr = effectJson.value("persistence", "Continuous");
     const auto& parameters = effectJson.value("parameters", nlohmann::json::object());
 
     effect.scope = ParseEffectScope(scopeStr);
-    effect.persistence = ParseEffectPersistence(persistenceStr);
     effect.radius = effectJson.value("radius", 0);
     if (effect.radius < 0)
     {
@@ -1195,7 +1056,6 @@ void ValidateEffectForSource(const EffectConfig_t& rEffect, EffectSourceKind_t s
                              const std::string& rSourceId)
 {
     const EffectScope_t scope = rEffect.scope;
-    const EffectPersistence_t persistence = rEffect.persistence;
 
     const auto* pStatModifier = std::get_if<StatModifierEffect_t>(&rEffect.effect);
     if (pStatModifier
@@ -1250,16 +1110,14 @@ void ValidateEffectForSource(const EffectConfig_t& rEffect, EffectSourceKind_t s
             break;
         case EffectSourceKind_t::UnitComponent:
         case EffectSourceKind_t::ProbeAction:
-            // Instantaneous ThisBase fires against the producing / mission-target base.
-            // Continuous ThisBase (and any ProducedAtThisBase) still needs a pool origin.
-            bCanSupplyOriginBase = persistence == EffectPersistence_t::Instantaneous
-                && scope == EffectScope_t::ThisBase;
+            // A continuous ThisBase effect here has no pool origin to be stamped with: the
+            // producing / mission-target base only exists at the moment the trigger fires, so
+            // that behaviour belongs in a triggered list instead.
+            bCanSupplyOriginBase = false;
             break;
         case EffectSourceKind_t::PopCompositionBaseLocal:
-            // Mood arrays are collected per base: Continuous ThisBase is stamped with the
-            // rioting base by the effects pool / base cache, Instantaneous ThisBase is
-            // dispatched by Mood against the committing base. ProducedAtThisBase is not
-            // collected on either path.
+            // Mood arrays are collected per base, so ThisBase is stamped with the rioting base
+            // by the effects pool / base cache. ProducedAtThisBase is not collected here.
             bCanSupplyOriginBase = scope == EffectScope_t::ThisBase;
             break;
         case EffectSourceKind_t::PopComposition:
@@ -1286,8 +1144,8 @@ void ValidateEffectForSource(const EffectConfig_t& rEffect, EffectSourceKind_t s
                 "Effect on '" + rSourceId + "': scope " + pScopeName
                 + " requires a source that can supply an origin base "
                   "(Building, PopType, SocialPolicy, SocialRating, or "
-                  "PopCompositionBaseLocal; or Instantaneous ThisBase on UnitComponent / "
-                  "ProbeAction)");
+                  "PopCompositionBaseLocal). A unit component or probe action that should act "
+                  "on the base at production / mission time wants a triggered list instead.");
         }
     }
 }

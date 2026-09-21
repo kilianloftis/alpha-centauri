@@ -124,7 +124,6 @@ inline void SetBaseConquestStat(ac::BaseConquestConfig_t& rConfig, ac::StatId_t 
     }
     ac::EffectConfig_t effect;
     effect.scope = ac::EffectScope_t::FactionGlobal;
-    effect.persistence = ac::EffectPersistence_t::Continuous;
     ac::StatModifierEffect_t modifier;
     modifier.stat = stat;
     modifier.amount = amount;

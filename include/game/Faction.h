@@ -1,5 +1,7 @@
 #pragma once
 
+#include <set>
+
 #include <memory>
 #include <optional>
 #include <functional>
@@ -170,6 +172,11 @@ public:
     // Base with the Headquarters RuleFlag, or nullptr if none.
     BaseManager* GetHeadquarters();
     const BaseManager* GetHeadquarters() const;
+
+    // Base closest to rFrom by wrap-aware Chebyshev distance, or nullptr when the faction holds
+    // none. Ties break on Bases() order, so the answer is stable for a given base list.
+    BaseManager* FindNearestBase(const Tile& rFrom);
+    const BaseManager* FindNearestBase(const Tile& rFrom) const;
 
 
     // Sum of constructed copies of buildingId across all bases.
@@ -356,14 +363,14 @@ public:
     // Read by FactionEffectsPool to re-resolve the session difficulty on rebuild.
     const GameDataContext& GetDataContext() const { return m_rDataContext; }
 
-    // Optional session back-pointer (GameState::AttachToSession). Required for Instantaneous
+    // Optional session back-pointer (GameState::AttachToSession). Required for triggered
     // Infiltration dispatch on production completion; null when the faction is unbound.
     void BindGameState(GameState& rGameState) { m_pGameState = &rGameState; }
     GameState* GetGameState() { return m_pGameState; }
     // Const read for commerce / projections; writers use the non-const overload.
     const GameState* GetGameState() const { return m_pGameState; }
 
-    // Sticky fog removal from ApplyRemoveFog (Instantaneous project completion). Continuous
+    // Sticky fog removal from ApplyRemoveFog (one-shot project completion). Continuous
     // RuleFlag / debug settings are layered on top in ApplyVisibilityRules.
     void SetFogRemoved(bool bFogRemoved) { m_bFogRemoved = bFogRemoved; }
     bool IsFogRemoved() const { return m_bFogRemoved; }
@@ -393,10 +400,18 @@ public:
     InteractionGridMask_t GetInteractionMask() const;
     uint64_t GetLocalEffectsVersion() const;
 
+
+    // Keys of triggered effects carrying `oncePer` that this faction has already consumed
+    // (see TriggeredEffectConfig_t::oncePer). Authored keys, so the rule spans instances
+    // rather than being tied to one config entry.
+    std::set<std::string>& ConsumedTriggerKeys() { return m_consumedTriggerKeys; }
+    const std::set<std::string>& ConsumedTriggerKeys() const { return m_consumedTriggerKeys; }
+
 private:
     void EnsureComposedEffects_() const;
     int GetResearchPerTurn_() const;
 
+    std::set<std::string> m_consumedTriggerKeys;
     FactionId_t m_factionId;
     bool m_bIsPlayerControlled;
     const FactionConfig_t& m_rDefinition;

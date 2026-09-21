@@ -1,18 +1,26 @@
 ---
-description: Plans describe the settled change only — not rejected alternatives
+description: Plans describe the settled change only — not rejected alternatives or revision history
 alwaysApply: true
 ---
 
 # Planning
 
-Plans describe **what needs to change** — the settled design, target behavior, and concrete edits.
+Plans describe **what needs to change** — the settled design, target behavior, and concrete edits. They exist to guide implementation.
 
-Do **not** narrate abandoned options, rejected approaches, or “we are not doing X” leftovers from earlier draft iterations. If something is out of scope, omit it unless the reader must know a deliberate deletion or behavior change.
+Do **not** narrate abandoned options, rejected approaches, “we are not doing X” leftovers, or earlier draft revisions. Do **not** add “Correction:” / “Why not …” / “Earlier we thought …” sections that explain how the plan changed. If something is out of scope, omit it unless the reader must know a deliberate deletion or behavior change.
 
 ```text
+# BAD
+## Correction: Instantaneous is not base-only
+We previously assumed DispatchInstantaneousEffects was base-only…
+
 # BAD
 No separate grounds_air RuleFlag. We rejected Unlock keys.
 
 # GOOD
 Pads grant ThisTile InteractionOverride for attack_unit air/orbital.
+
+# GOOD
+Instantaneous RestoreHitPoints / GrantExperience on improvements; Investigate
+dispatches them on the arriver only.
 ```

@@ -154,7 +154,7 @@ arbitrary caller should be able to re-drive.
 
 `riot_tiers` in `pop_composition.json` is a ladder keyed by `min_turns` against the consecutive
 commit count; the highest matching entry is the active tier (`FindActiveRiotTier`). Each tier
-carries `effects` (continuous, while at that tier) and `on_enter_effects` (instantaneous, each
+carries `effects` (continuous, while at that tier) and `on_enter_effects` (one-shot, each
 commit at that tier — facility destruction, rebellion).
 
 A tier's `effects` array **straddles both effect lanes**, and `BaseMoodEffects` is the one place
@@ -181,7 +181,7 @@ again.
 
 ### Rebellion
 
-`Rebel` (instantaneous, `ThisBase`) hands the base to another faction chosen by weight:
+`Rebel` (a triggered effect, fired against the rioting base) hands the base to another faction chosen by weight:
 `RebelJoinWeight` (a Faction-domain Additive stat, seeded from `rebel_selection.base_join_weight`)
 plus a distance bonus selected by `rebel_selection.distance_mode`. Every `rebel_selection` field
 is required at load — these are the rebellion's tuning numbers, so a missing key fails rather

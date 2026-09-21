@@ -41,7 +41,6 @@ EffectConfig_t GrantBuilding(std::string buildingId)
     EffectConfig_t config;
     config.effect = GrantBuildingEffect_t{std::move(buildingId)};
     config.scope = EffectScope_t::ThisBase;
-    config.persistence = EffectPersistence_t::Continuous;
     return config;
 }
 
@@ -227,7 +226,6 @@ TEST_CASE("ValidateEffectReferences: social rating axes must have a table",
         EffectConfig_t config;
         config.effect = SocialRatingModifierEffect_t{rating, 2};
         config.scope = EffectScope_t::FactionGlobal;
-        config.persistence = EffectPersistence_t::Continuous;
         return std::vector<EffectConfig_t>{config};
     };
 
@@ -313,15 +311,13 @@ TEST_CASE("ValidateEffectReferences: BuildingId buildingFilter ids must exist",
     actest::EffectPool pool;
     const std::vector<EffectConfig_t> good = {
         pool.StatMod(StatId_t::FacilityEnergyUpkeep, -50.0, ModifierOp_t::AddPercent,
-                     EffectScope_t::FactionGlobal, std::nullopt, std::nullopt,
-                     EffectPersistence_t::Continuous, std::nullopt,
+                     EffectScope_t::FactionGlobal, std::nullopt, std::nullopt, std::nullopt,
                      BuildingFilterId_t{"upkeep_hall"})};
     CHECK_NOTHROW(ValidateEffectReferences(good, "src", &buildings, nullptr, nullptr));
 
     const std::vector<EffectConfig_t> bad = {
         pool.StatMod(StatId_t::FacilityEnergyUpkeep, -50.0, ModifierOp_t::AddPercent,
-                     EffectScope_t::FactionGlobal, std::nullopt, std::nullopt,
-                     EffectPersistence_t::Continuous, std::nullopt,
+                     EffectScope_t::FactionGlobal, std::nullopt, std::nullopt, std::nullopt,
                      BuildingFilterId_t{"no_such_building"})};
     CHECK_THROWS_WITH(ValidateEffectReferences(bad, "src", &buildings, nullptr, nullptr),
                       Catch::Matchers::ContainsSubstring("no_such_building"));
@@ -336,13 +332,13 @@ TEST_CASE("ValidateEffectReferences: HasComponent unitFilter ids must exist",
     actest::EffectPool pool;
     const std::vector<EffectConfig_t> good = {
         pool.StatMod(StatId_t::Attack, 1.0, ModifierOp_t::Add, EffectScope_t::FactionUnits,
-                     std::nullopt, std::nullopt, EffectPersistence_t::Continuous,
+                     std::nullopt, std::nullopt,
                      actest::HasComponentFilter("test_weapon"))};
     CHECK_NOTHROW(ValidateEffectReferences(good, "src", nullptr, nullptr, nullptr, &components));
 
     const std::vector<EffectConfig_t> bad = {
         pool.StatMod(StatId_t::Attack, 1.0, ModifierOp_t::Add, EffectScope_t::FactionUnits,
-                     std::nullopt, std::nullopt, EffectPersistence_t::Continuous,
+                     std::nullopt, std::nullopt,
                      actest::HasComponentFilter("no_such_component"))};
     CHECK_THROWS_WITH(
         ValidateEffectReferences(bad, "src", nullptr, nullptr, nullptr, &components),

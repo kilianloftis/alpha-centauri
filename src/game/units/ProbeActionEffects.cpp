@@ -5,8 +5,7 @@
 #include "game/GameState.h"
 #include "game/buildings/BuildingConfig.h"
 #include "game/effects/ActiveEffect.h"
-#include "game/effects/InfiltrationRules.h"
-#include "game/faction/DiplomacyLedger.h"
+#include "game/effects/TriggeredEffectDispatch.h"
 #include "game/faction/EconomyManager.h"
 #include "game/faction/ResearchManager.h"
 #include "game/faction/base/BaseManager.h"
@@ -14,8 +13,6 @@
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/production/ProductionManager.h"
-#include "game/map/UnitPositionIndex.h"
-#include "game/map/WorldMap.h"
 #include "game/research/TechConfigParser.h"
 #include "game/units/MoraleCalculator.h"
 #include "game/units/Unit.h"
@@ -32,10 +29,27 @@ namespace ac
 namespace
 {
 
-bool ApplyInfiltrate_(Faction& rActor, BaseManager& rBase, GameState& rGameState,
-                      const ProbeActionConfig_t& rAction, ProbeActionResult_t& rResult)
+// Every base mission resolves its config effects the same way: the acting faction is the
+// subject (it gains the infiltration), the target's base is what the effects act on, and the
+// target faction is named so a SetInfiltration's ActionTarget filter can find it. The mission's
+// own generator drives any roll, so a seeded caller stays reproducible.
+TriggeredEffectContext_t MissionContext_(Faction& rActor, BaseManager& rBase,
+                                         GameState& rGameState, std::mt19937& rRng)
 {
-    ApplyInfiltrationEffects(rGameState, rActor, rAction.effects, rBase.GetFactionId());
+    TriggeredEffectContext_t context(rGameState, rActor);
+    context.pBase = &rBase;
+    context.pTile = &rBase.GetTile();
+    context.actionTarget = rBase.GetFactionId();
+    context.pRng = &rRng;
+    return context;
+}
+
+bool ApplyInfiltrate_(Faction& rActor, BaseManager& rBase, GameState& rGameState,
+                      const ProbeActionConfig_t& rAction, ProbeActionResult_t& rResult,
+                      std::mt19937& rRng)
+{
+    TriggeredEffectContext_t context = MissionContext_(rActor, rBase, rGameState, rRng);
+    ApplyTriggeredEffects(rAction.onSuccessEffects, context);
     rResult.detail = ProbeActionStatus_t::Infiltrated;
     return true;
 }
@@ -104,7 +118,8 @@ bool ApplyDrainEnergy_(Unit& rProbe, BaseManager& rBase, GameState& rGameState,
     return true;
 }
 
-bool ApplySabotage_(GameState& rGameState, BaseManager& rBase, const ProbeActionConfig_t& rAction,
+bool ApplySabotage_(Faction& rActor, GameState& rGameState, BaseManager& rBase,
+                    const ProbeActionConfig_t& rAction,
                     const BuildingId_t& facilityId, ProbeActionResult_t& rResult,
                     std::mt19937& rRng)
 {
@@ -125,27 +140,17 @@ bool ApplySabotage_(GameState& rGameState, BaseManager& rBase, const ProbeAction
         return true;
     }
 
-    // Random: the action's DestroyFacility effect carries the target policy (which facilities
-    // are off-limits), the same way genetic plague reads its ModifyPopulation below. When
-    // nothing is eligible, wipe current production instead.
-    for (const EffectConfig_t& rEffect : rAction.effects)
+    // Random: the action's DestroyFacility entry carries the target policy (which facilities
+    // are off-limits), and the dispatcher reports back what it actually destroyed. When
+    // nothing was eligible, wipe current production instead.
+    TriggeredEffectContext_t context = MissionContext_(rActor, rBase, rGameState, rRng);
+    for (const TriggeredEffectResult_t& rResultEntry :
+         ApplyTriggeredEffects(rAction.onSuccessEffects, context))
     {
-        if (rEffect.persistence != EffectPersistence_t::Instantaneous)
+        const auto* pDestroyed = std::get_if<FacilitiesDestroyed_t>(&rResultEntry);
+        if (pDestroyed && !pDestroyed->buildingIds.empty())
         {
-            continue;
-        }
-        const DestroyFacilityEffect_t* pDestroy =
-            std::get_if<DestroyFacilityEffect_t>(&rEffect.effect);
-        if (!pDestroy)
-        {
-            continue;
-        }
-        const std::vector<BuildingId_t> destroyed =
-            DestroyRandomFacilities(rGameState, rBase, pDestroy->count, pDestroy->excludeHq,
-                                    pDestroy->excludeSecretProjects, rRng);
-        if (!destroyed.empty())
-        {
-            rResult.detail = ProbeDestroyedFacility_t{destroyed.front()};
+            rResult.detail = ProbeDestroyedFacility_t{pDestroyed->buildingIds.front()};
             return true;
         }
     }
@@ -181,26 +186,18 @@ bool ApplyMindControlBase_(Faction& rActor, BaseManager& rBase, ProbeActionResul
     return true;
 }
 
-bool ApplyGeneticPlague_(BaseManager& rBase, const ProbeActionConfig_t& rAction,
-                         ProbeActionResult_t& rResult)
+bool ApplyGeneticPlague_(Faction& rActor, BaseManager& rBase, GameState& rGameState,
+                         const ProbeActionConfig_t& rAction, ProbeActionResult_t& rResult,
+                         std::mt19937& rRng)
 {
+    TriggeredEffectContext_t context = MissionContext_(rActor, rBase, rGameState, rRng);
     int killed = 0;
-    for (const EffectConfig_t& rEffect : rAction.effects)
+    for (const TriggeredEffectResult_t& rResultEntry :
+         ApplyTriggeredEffects(rAction.onSuccessEffects, context))
     {
-        if (rEffect.persistence != EffectPersistence_t::Instantaneous)
+        if (const auto* pChanged = std::get_if<PopulationChanged_t>(&rResultEntry))
         {
-            continue;
-        }
-        const ModifyPopulationEffect_t* pModify =
-            std::get_if<ModifyPopulationEffect_t>(&rEffect.effect);
-        if (!pModify)
-        {
-            continue;
-        }
-        const int delta = ApplyModifyPopulation(rBase, *pModify);
-        if (delta < 0)
-        {
-            killed += -delta;
+            killed += std::max(0, -pChanged->delta);
         }
     }
     rResult.detail = ProbePopulationKilled_t{killed};
@@ -224,14 +221,14 @@ bool ApplyBaseAction_(Unit& rProbe, const ProbeActionConfig_t& rAction, BaseMana
     switch (rAction.id)
     {
         case ProbeActionId_t::Infiltrate:
-            return ApplyInfiltrate_(rActor, rBase, rGameState, rAction, rResult);
+            return ApplyInfiltrate_(rActor, rBase, rGameState, rAction, rResult, rRng);
         case ProbeActionId_t::StealTech:
             return ApplyStealTech_(rActor, rBase, rResult, rRng);
         case ProbeActionId_t::DrainEnergy:
             return ApplyDrainEnergy_(rProbe, rBase, rGameState, rResult);
         case ProbeActionId_t::SabotageRandom:
         case ProbeActionId_t::SabotageFacility:
-            return ApplySabotage_(rGameState, rBase, rAction, facilityId, rResult, rRng);
+            return ApplySabotage_(rActor, rGameState, rBase, rAction, facilityId, rResult, rRng);
         case ProbeActionId_t::InciteDroneRiots:
             return ApplyInciteDroneRiots_(rBase, rAction, rResult);
         case ProbeActionId_t::Assassinate:
@@ -240,7 +237,7 @@ bool ApplyBaseAction_(Unit& rProbe, const ProbeActionConfig_t& rAction, BaseMana
         case ProbeActionId_t::TotalThoughtControl:
             return ApplyMindControlBase_(rActor, rBase, rResult);
         case ProbeActionId_t::GeneticPlague:
-            return ApplyGeneticPlague_(rBase, rAction, rResult);
+            return ApplyGeneticPlague_(rActor, rBase, rGameState, rAction, rResult, rRng);
         case ProbeActionId_t::SubvertUnit:
             break;
     }

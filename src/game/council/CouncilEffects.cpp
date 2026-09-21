@@ -24,8 +24,7 @@ void AppendBorrowed_(const EffectConfig_t& rEffect, const std::string& rSourceId
 
 bool IsContinuousWorldEffect(const EffectConfig_t& rEffect)
 {
-    return rEffect.persistence == EffectPersistence_t::Continuous
-           && rEffect.scope == EffectScope_t::WorldGlobal;
+    return rEffect.scope == EffectScope_t::WorldGlobal;
 }
 
 void CouncilEffects::RebuildWorld(const std::vector<std::string>& rActiveProposalIds,
@@ -54,8 +53,7 @@ void CouncilEffects::SetGovernorEffects(const std::vector<EffectConfig_t>& rGove
     m_governorEffects.clear();
     for (const EffectConfig_t& rEffect : rGovernorEffects)
     {
-        if (rEffect.persistence == EffectPersistence_t::Continuous
-            && rEffect.scope == EffectScope_t::FactionGlobal)
+        if (rEffect.scope == EffectScope_t::FactionGlobal)
         {
             AppendBorrowed_(rEffect, "council_governor", m_governorEffects);
         }

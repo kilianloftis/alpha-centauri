@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/effects/EffectConfig.h"
+#include "game/effects/TriggeredEffect.h"
 
 #include <algorithm>
 #include <string>
@@ -48,7 +49,7 @@ struct CouncilProposalConfig_t
     std::string requiredTech; // empty if none; checked on the proposing faction
     // Proposal ids that must have been *enacted* (passed at least once) to propose this.
     // Deliberately not "still in force": increase_solar_shade requires launch_solar_shade,
-    // which carries only an Instantaneous effect and so is history rather than standing law.
+    // whose only effect is a one-shot outcome and so is history rather than standing law.
     // TODO: there is currently no way to express "must still be in force" in config — the one
     // proposal that needs it (repeal_trade_pact) gets it from the repeal gate in CanPropose,
     // which keys off `repeals`. If a non-repeal ever needs that meaning, split this into two
@@ -60,7 +61,10 @@ struct CouncilProposalConfig_t
     std::vector<RuleFlagId_t> requiresRuleFlags;
     std::vector<RuleFlagId_t> forbidsRuleFlags;
     CouncilElectionOutcome_t electionOutcome = CouncilElectionOutcome_t::None;
+    // Standing laws the proposal installs while it is active (WorldGlobal only).
     std::vector<EffectConfig_t> effects;
+    // One-shot outcomes applied once, when the vote passes.
+    std::vector<TriggeredEffectConfig_t> onPassedEffects;
 
     bool IsAvailable(const std::vector<std::string>& rDiscoveredTechIds) const
     {

@@ -202,7 +202,7 @@ about a pending riot without being a yielding stage.
   convert them through a stockpile, then complete funded items. Ordered after `UnitSupport` and
   before `BaseGrowth` so Hab Complex / Dome raise `MaxBaseSize` before growth, and before
   `IncomeCollection` / `ResearchAccumulation` so converted econ and labs are spent this turn.
-  Colony-pod abandon uses `WouldGrowThisTurn` and `CommitPendingGrowth` before Instantaneous pop
+  Colony-pod abandon uses `WouldGrowThisTurn` and `CommitPendingGrowth` before on-complete pop
   costs. Leftovers after a completion stay on the next item and convert only on a later turn if
   that item is a stockpile. Stockpiles are their own config family (`config/stockpiles.json`,
   `StockpileRegistry`); conversion delegates to `ApplyStockpileConversionAtBase`, which resolves

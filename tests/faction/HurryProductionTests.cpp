@@ -408,7 +408,7 @@ TEST_CASE("Production config groups hurry under kinds", "[production][hurry][con
 TEST_CASE("Hurry spends treasury credits into the production stockpile",
           "[production][hurry][base]")
 {
-    // Completing a hurried item dispatches Instantaneous effects, which need a bound GameState.
+    // Completing a hurried item fires on_complete_effects, which need a bound GameState.
     FactionFixture fixtures;
     GameSettings settings;
     auto pMap = std::make_unique<WorldMap>(9, 9);

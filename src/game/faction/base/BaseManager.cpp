@@ -27,6 +27,7 @@
 #include "game/social-engineering/SocialRatingResolver.h"
 #include "game/units/UnitDesign.h"
 #include "game/effects/ActiveEffect.h"
+#include "game/effects/TriggeredEffectDispatch.h"
 #include "game/effects/EffectEnums.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/PauseOnEventsConfig.h"
@@ -209,7 +210,7 @@ BaseManager::BaseManager(
                 return;
             }
             m_pBuildings->AddBuilding(itemId);
-            // Pending nutrient growth commits before Instantaneous effects so a pop-cost item
+            // Pending nutrient growth commits before on_complete_effects so a pop-cost item
             // (and Hab raising the cap) sees the post-growth size. Hab added above unlocks
             // CanGrow for a full tank at the old max. Intake for the new citizen is applied
             // later in ApplyGrowth (gross bank − post-growth size × intake).
@@ -218,7 +219,10 @@ BaseManager::BaseManager(
             {
                 m_pPopulation->EnsureCompositionCurrent();
             }
-            DispatchInstantaneousEffects(*pBuilding, *this, *pGameState);
+            {
+                TriggeredEffectContext_t context(*pGameState, *this);
+                ApplyTriggeredEffects(pBuilding->onCompleteEffects, context);
+            }
             OnProductionCompleted.Emit(itemId);
             return;
         }
@@ -237,7 +241,18 @@ BaseManager::BaseManager(
             {
                 m_pPopulation->EnsureCompositionCurrent();
             }
-            DispatchInstantaneousEffects(*pDesign, *this, *pGameState);
+            // Only a produced unit pays its components' completion costs: a free spawn
+            // (escape pod, starting unit, a granted unit) never goes through here.
+            {
+                TriggeredEffectContext_t context(*pGameState, *this);
+                for (const UnitComponentConfig_t* pComp : pDesign->GetComponents())
+                {
+                    if (pComp)
+                    {
+                        ApplyTriggeredEffects(pComp->onCompleteEffects, context);
+                    }
+                }
+            }
             OnProductionCompleted.Emit(itemId);
             return;
         }
@@ -546,7 +561,7 @@ bool BaseManager::WouldCompletionAbandonBase() const
     }
     if (const BuildingConfig_t* pBuilding = m_rBuildingRegistry.Find(pItem->GetId()))
     {
-        return PredictInstantaneousPopulationSize(pBuilding->effects, size) <= 0;
+        return PredictTriggeredPopulationSize(pBuilding->onCompleteEffects, size) <= 0;
     }
     if (const UnitDesign* pDesign = m_pFaction->GetMilitary().GetDesign(pItem->GetId()))
     {

@@ -1,5 +1,5 @@
 // Integration tests through real BaseManager instances: base-scoped effect attribution,
-// FilterForBase, instantaneous dispatch, and the full resource-production pipeline.
+// FilterForBase, triggered-effect dispatch, and the full resource-production pipeline.
 
 #include "GameFixtures.h"
 #include "TestHelpers.h"
@@ -14,6 +14,7 @@
 #include "game/faction/base/production/ProductionApplyResult.h"
 #include "game/map/Tile.h"
 #include "game/effects/ActiveEffect.h"
+#include "game/effects/TriggeredEffectDispatch.h"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -119,8 +120,8 @@ TEST_CASE("FilterForBase: a ThisBase effect with no origin base applies to no ba
     CHECK(FilterForBase(factionEffects, baseA).effects.empty());
 }
 
-TEST_CASE("DispatchInstantaneousEffects: Instantaneous GrantBuilding constructs the building immediately",
-          "[effects][base][instantaneous]")
+TEST_CASE("ApplyTriggeredEffects: AddBuilding constructs the building immediately",
+          "[effects][base][triggered]")
 {
     actest::FactionFixture fixture;
     GameSettings settings;
@@ -139,7 +140,8 @@ TEST_CASE("DispatchInstantaneousEffects: Instantaneous GrantBuilding constructs 
 
     // Simulate OnProductionCompleted for instant_grantor.
     base.GetBuildingManager().AddBuilding(pGrantor->id);
-    DispatchInstantaneousEffects(*pGrantor, base, state);
+    TriggeredEffectContext_t context(state, base);
+    ApplyTriggeredEffects(pGrantor->onCompleteEffects, context);
 
     bool hasGranted = false;
     for (const BuildingConfig_t* pBuilding : base.GetBuildingManager().GetBuildings())
@@ -157,11 +159,11 @@ TEST_CASE("DispatchInstantaneousEffects: Instantaneous GrantBuilding constructs 
 }
 
 // End-to-end for the whole dispatch path: GameState::AddFaction binds the session, so
-// completing production reaches ApplyInfiltrationEffect without the caller passing anything.
-// Drives TryCompleteReadyProduction rather than DispatchInstantaneousEffects so that dropping
-// either BindGameState or the dispatch call in BaseManager's completion handler fails here.
-TEST_CASE("Production completion dispatches Instantaneous Infiltration into the DiplomacyLedger",
-          "[effects][base][instantaneous][infiltration]")
+// completing production reaches the SetInfiltration arm without the caller passing anything.
+// Drives TryCompleteReadyProduction rather than ApplyTriggeredEffects so that dropping either
+// BindGameState or the dispatch call in BaseManager's completion handler fails here.
+TEST_CASE("Production completion writes on_complete SetInfiltration into the DiplomacyLedger",
+          "[effects][base][triggered][infiltration]")
 {
     actest::FactionFixture fixture;
     GameSettings settings;
@@ -193,8 +195,8 @@ TEST_CASE("Production completion dispatches Instantaneous Infiltration into the 
     // Ledger forbids self-pairs; FactionFilterCoversTarget also excludes the beneficiary.
 }
 
-TEST_CASE("Production completion without Bound GameState throws on Instantaneous dispatch",
-          "[effects][base][instantaneous]")
+TEST_CASE("Production completion without a bound GameState throws before any mutation",
+          "[effects][base][triggered]")
 {
     actest::BaseFixture fixture;
     BaseManager& base = fixture.MakeBase(4, 4);
@@ -207,7 +209,7 @@ TEST_CASE("Production completion without Bound GameState throws on Instantaneous
     CHECK_THROWS_AS(base.TryCompleteReadyProduction(), std::runtime_error);
 
     // The throw precedes every mutation: no half-completed base with the building
-    // constructed but its Instantaneous effects never dispatched.
+    // constructed but its on_complete_effects never fired.
     CHECK(base.GetBuildingManager().GetBuildings().empty());
 }
 

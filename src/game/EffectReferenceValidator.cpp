@@ -58,7 +58,7 @@ const T& RequireRegistry(const std::unique_ptr<T>& pRegistry, const char* fieldN
 }
 
 // Exhaustive over EffectVariant_t: a new alternative without an arm fails to compile.
-// Id-bearing arms check registries; all others (including GrantUnit) are explicit no-ops.
+// Id-bearing arms check registries; all others are explicit no-ops.
 struct EffectPayloadValidator
 {
     const std::string& rSourceId;
@@ -72,14 +72,6 @@ struct EffectPayloadValidator
         if (pBuildings && !pBuildings->Find(rGrant.buildingId))
         {
             ThrowBadReference(rSourceId, "building", rGrant.buildingId);
-        }
-    }
-
-    void operator()(const GrantTechEffect_t& rTech) const
-    {
-        if (pTechs && !pTechs->Find(rTech.techId))
-        {
-            ThrowBadReference(rSourceId, "tech", rTech.techId);
         }
     }
 
@@ -99,9 +91,6 @@ struct EffectPayloadValidator
         }
     }
 
-    void operator()(const GrantUnitEffect_t&) const {}
-    void operator()(const GrantEnergyEffect_t&) const {}
-    void operator()(const WorldParameterEffect_t&) const {}
     void operator()(const InfiltrationEffect_t&) const {}
     void operator()(const RuleFlagEffect_t&) const {}
     void operator()(const SocialEngineeringOverrideEffect_t&) const {}
@@ -125,6 +114,54 @@ struct EffectPayloadValidator
     void operator()(const ScrambleEffect_t&) const {}
     void operator()(const TransportParamsEffect_t&) const {}
     void operator()(const InteractionOverrideEffect_t&) const {}
+};
+
+// The same for TriggeredEffectVariant_t. A separate visitor rather than a shared one: the two
+// variants have no alternatives in common, and an exhaustive visitor per family is what makes
+// adding an alternative to either break the build here.
+struct TriggeredPayloadValidator
+{
+    const std::string& rSourceId;
+    const BuildingRegistry* pBuildings;
+    const TechRegistry* pTechs;
+    const UnitComponentRegistry* pUnitComponents;
+
+    void operator()(const AddBuildingEffect_t& rAdd) const
+    {
+        if (pBuildings && !pBuildings->Find(rAdd.buildingId))
+        {
+            ThrowBadReference(rSourceId, "building", rAdd.buildingId);
+        }
+    }
+
+    void operator()(const GrantTechEffect_t& rTech) const
+    {
+        if (pTechs && !pTechs->Find(rTech.techId))
+        {
+            ThrowBadReference(rSourceId, "tech", rTech.techId);
+        }
+    }
+
+    // Validated here rather than at spawn: a granted unit may be assembled hours into a
+    // session, and a typo should fail at startup naming the config, not mid-rule.
+    void operator()(const GrantUnitEffect_t& rGrant) const
+    {
+        if (!pUnitComponents)
+        {
+            return;
+        }
+        for (const std::string& rId : rGrant.componentIds)
+        {
+            if (!pUnitComponents->Find(rId))
+            {
+                ThrowBadReference(rSourceId, "unit component", rId);
+            }
+        }
+    }
+
+    void operator()(const GrantEnergyEffect_t&) const {}
+    void operator()(const WorldParameterEffect_t&) const {}
+    void operator()(const SetInfiltrationEffect_t&) const {}
     void operator()(const ModifyPopulationEffect_t&) const {}
     void operator()(const DestroyFacilityEffect_t&) const {}
     void operator()(const RebelEffect_t&) const {}
@@ -228,6 +265,19 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
     }
 }
 
+void ValidateTriggeredEffectReferences(const std::vector<TriggeredEffectConfig_t>& rEffects,
+                                       const std::string& rSourceId,
+                                       const BuildingRegistry* pBuildings,
+                                       const TechRegistry* pTechs,
+                                       const UnitComponentRegistry* pUnitComponents)
+{
+    for (const TriggeredEffectConfig_t& rEffect : rEffects)
+    {
+        std::visit(TriggeredPayloadValidator{rSourceId, pBuildings, pTechs, pUnitComponents},
+                   rEffect.effect);
+    }
+}
+
 void ValidateEffectReferences(const GameDataContext& rData)
 {
     // Target registries LoadGameData always installs — unexpected null means every id check
@@ -267,10 +317,17 @@ void ValidateEffectReferences(const GameDataContext& rData)
         ValidateEffectReferences(rEffects, rSourceId, &rBuildings, &rImprovements, &rTechs,
                                  &rUnitComponents, &rSocialRatings);
     };
+    auto validateTriggered = [&](const std::vector<TriggeredEffectConfig_t>& rEffects,
+                                 const std::string& rSourceId)
+    {
+        ValidateTriggeredEffectReferences(rEffects, rSourceId, &rBuildings, &rTechs,
+                                          &rUnitComponents);
+    };
 
     for (const BuildingConfig_t& rConfig : rBuildings.GetAll())
     {
         validate(rConfig.effects, rConfig.id);
+        validateTriggered(rConfig.onCompleteEffects, rConfig.id);
     }
     for (const StockpileConfig_t& rConfig : rStockpiles.GetAll())
     {
@@ -283,6 +340,7 @@ void ValidateEffectReferences(const GameDataContext& rData)
     for (const ImprovementConfig_t& rConfig : rImprovements.GetAll())
     {
         validate(rConfig.effects, rConfig.id);
+        validateTriggered(rConfig.onVisitEffects, rConfig.id);
     }
     for (const PopTypeConfig_t& rConfig : rPopTypes.GetAll())
     {
@@ -291,6 +349,7 @@ void ValidateEffectReferences(const GameDataContext& rData)
     for (const UnitComponentConfig_t& rConfig : rUnitComponents.GetAll())
     {
         validate(rConfig.effects, rConfig.id);
+        validateTriggered(rConfig.onCompleteEffects, rConfig.id);
     }
     for (const SocialPolicyConfig_t& rConfig : rSocialPolicies.GetAll())
     {
@@ -310,18 +369,30 @@ void ValidateEffectReferences(const GameDataContext& rData)
     for (const CouncilProposalConfig_t& rConfig : rCouncilProposals.GetAll())
     {
         validate(rConfig.effects, rConfig.id);
+        validateTriggered(rConfig.onPassedEffects, rConfig.id);
     }
     validate(rCouncilRules.governorEffects, "council_governor");
+    validateTriggered(rCouncilRules.onElectedEffects, "council_governor");
     for (const ProbeActionConfig_t& rAction : rProbeActions.actions)
     {
-        validate(rAction.effects,
-                 std::string("probe_action:") + ProbeActionIdToString(rAction.id));
+        const std::string sourceId =
+            std::string("probe_action:") + ProbeActionIdToString(rAction.id);
+        validate(rAction.effects, sourceId);
+        validateTriggered(rAction.onSuccessEffects, sourceId);
     }
     // tileYieldRules is a value on GameDataContext (always present; effects may be empty).
     validate(rData.tileYieldRules.effects, "tile_yield_rules");
     validate(rData.policeRules, "police_rules");
-    validate(RequireRegistry(rData.popCompositionConfig, "popCompositionConfig").effects,
-             "pop_composition");
+    const PopCompositionConfig_t& rPopComposition =
+        RequireRegistry(rData.popCompositionConfig, "popCompositionConfig");
+    validate(rPopComposition.effects, "pop_composition");
+    validate(rPopComposition.goldenAgeEffects, "pop_composition.golden_age_effects");
+    for (std::size_t tier = 0; tier < rPopComposition.riotTiers.size(); ++tier)
+    {
+        const std::string sourceId = "pop_composition.riot_tiers[" + std::to_string(tier) + "]";
+        validate(rPopComposition.riotTiers[tier].effects, sourceId);
+        validateTriggered(rPopComposition.riotTiers[tier].onEnterEffects, sourceId);
+    }
     validate(rProductionConfig.effects, "production");
     validate(RequireRegistry(rData.baseConquestConfig, "baseConquestConfig").effects,
              "base_conquest");

@@ -173,7 +173,7 @@ private:
     // Tally an election; returns the winning member, or null when no candidate clears the
     // threshold (i.e. the proposal failed).
     Faction* TallyElection_(const CouncilProposalConfig_t& rConfig) const;
-    // Apply a passed proposal (repeals, instantaneous effects, activation, governor /
+    // Apply a passed proposal (repeals, on_passed_effects, activation, governor /
     // victory outcomes) and return the result. pElectionWinner is null for standard ballots.
     ResolveProposalResult_t ApplyPassedProposal_(GameState& rGameState,
                                                  const CouncilProposalConfig_t& rConfig,
@@ -194,7 +194,7 @@ private:
 
     // Active continuous proposal ids (in force).
     std::vector<std::string> m_activeProposalIds;
-    // Lifetime pass counts (instantaneous one-shots / history).
+    // Lifetime pass counts (one-shot outcomes / history).
     std::map<std::string, int> m_passCounts;
 
     // Continuous world effects in force, plus governor-only faction effects.

@@ -132,7 +132,6 @@ TEST_CASE("FilterBaseLevelByStatId excludes MineralsConverted",
     EffectConfig_t convertedConfig;
     convertedConfig.effect = converted;
     convertedConfig.scope = EffectScope_t::ThisBase;
-    convertedConfig.persistence = EffectPersistence_t::Continuous;
 
     const BaseEffects_t baseEffects{base, {
         Active(pool.StatMod(StatId_t::Energy, 2.0), "flat"),
@@ -160,7 +159,6 @@ TEST_CASE("FilterBaseLevelByStatId includes BaseSize only when the context carri
     EffectConfig_t baseSizeConfig;
     baseSizeConfig.effect = baseSize;
     baseSizeConfig.scope = EffectScope_t::ThisBase;
-    baseSizeConfig.persistence = EffectPersistence_t::Continuous;
 
     const BaseEffects_t baseEffects{base, {
         Active(pool.StatMod(StatId_t::Drones, -2.0), "commons"),
@@ -203,7 +201,6 @@ TEST_CASE("ResolveBaseStat: University BaseSize floors per source then stacks wi
     EffectConfig_t baseSizeConfig;
     baseSizeConfig.effect = baseSize;
     baseSizeConfig.scope = EffectScope_t::ThisBase;
-    baseSizeConfig.persistence = EffectPersistence_t::Continuous;
 
     const BaseEffects_t baseEffects{base, {
         Active(pool.StatMod(StatId_t::Drones, -2.0), "commons"),
@@ -231,7 +228,6 @@ TEST_CASE("ResolveBaseStat: BaseSize evaluates on GrowthRate without a wired cal
     EffectConfig_t baseSizeConfig;
     baseSizeConfig.effect = baseSize;
     baseSizeConfig.scope = EffectScope_t::ThisBase;
-    baseSizeConfig.persistence = EffectPersistence_t::Continuous;
 
     const BaseEffects_t baseEffects{base, {
         Active(pool.Add(std::move(baseSizeConfig)), "size_growth"),
@@ -261,7 +257,6 @@ TEST_CASE("FilterBaseLevelByStatId: BaseSize admission keys on pCtx, not the bun
     EffectConfig_t baseSizeConfig;
     baseSizeConfig.effect = baseSize;
     baseSizeConfig.scope = EffectScope_t::ThisBase;
-    baseSizeConfig.persistence = EffectPersistence_t::Continuous;
 
     const BaseEffects_t baseEffects{base, {
         Active(pool.StatMod(StatId_t::StartingMinerals, 10.0), "pod"),
@@ -462,7 +457,6 @@ TEST_CASE("ConditionSatisfied: AttackerIsEmbarked requires pAttacker", "[effects
     overrideFx.targetDomain = UnitDomain_t::Air;
     config.effect = overrideFx;
     config.scope = EffectScope_t::ThisUnit;
-    config.persistence = EffectPersistence_t::Continuous;
     config.condition = AttackerIsEmbarked_t{};
     const EffectConfig_t& rConfig = pool.Add(std::move(config));
 

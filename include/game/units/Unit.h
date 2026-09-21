@@ -1,5 +1,7 @@
 #pragma once
 
+#include <set>
+
 #include "game/faction/base/HomeBaseIndex.h"
 #include "game/map/WorkedTileIndex.h"
 #include "game/units/MoraleCalculator.h"
@@ -41,8 +43,12 @@ public:
     // (UnitManager::CreateUnit). unitId must be unique for the life of the game
     // (WorldMap's unit IdAllocator).
     // pProducedAt is the base that built this unit (train bonuses + prototype latch). Distinct
-    // from pHomeBase; when null, produced-at bookkeeping defaults to pHomeBase but the unit is
-    // not a prototype (free spawns / CreateUnit(home) only). Production passes both as this.
+    // from pHomeBase, and three-valued so "homed but built nowhere" is sayable:
+    //   nullopt (default) — unspecified; produced-at bookkeeping falls back to pHomeBase
+    //   a base           — built there; the only form that can latch the prototype bonus
+    //   nullptr          — explicitly produced nowhere, so no train bonuses and no
+    //                      StartingExperience even when homed (a granted or gifted unit)
+    // Production passes the same base as both.
     // rMorale is the game-wide calculator owned by GameDataContext (supplied by the owning
     // UnitManager); used here only to seed intrinsic XP and clamp SetXp.
     Unit(UnitId_t unitId,
@@ -52,7 +58,7 @@ public:
          BaseManager* pHomeBase,
          Faction& rFaction,
          const MoraleCalculator& rMorale,
-         BaseManager* pProducedAt = nullptr);
+         std::optional<BaseManager*> pProducedAt = std::nullopt);
     ~Unit();
 
     UnitId_t GetUnitId() const;
@@ -95,6 +101,12 @@ public:
     int GetMineralUpkeep() const;
     // Remaining movement in fragments (k_moveFragmentsPerPoint per Movement point).
     int GetMoveFragmentsRemaining() const;
+    // Keys of triggered effects carrying `oncePer` that this unit has already consumed
+    // (see TriggeredEffectConfig_t::oncePer). Authored keys, so the rule spans instances:
+    // every Monolith shares "monolith_xp", and a second visit grants nothing.
+    std::set<std::string>& ConsumedTriggerKeys() { return m_consumedTriggerKeys; }
+    const std::set<std::string>& ConsumedTriggerKeys() const { return m_consumedTriggerKeys; }
+
     int GetXp() const;
     // True when this unit's design carried a component its faction had never fielded at the
     // moment the unit was created. Fixed for life: the faction's build ledger keeps moving,
@@ -195,11 +207,12 @@ private:
     Faction* m_pFaction;
     const MoraleCalculator& m_rMorale;
 
+    std::set<std::string> m_consumedTriggerKeys;
     int m_currentHp;
     int m_currentFuel;
     int m_moveFragmentsRemaining;
     int m_xp;
-    // Latched at construction: true only when this unit was produced (explicit pProducedAt)
+    // Latched at construction: true only when this unit was produced (a non-null pProducedAt)
     // and Military::IsPrototype was true before the ledger recorded the design. Free spawns
     // never latch; see docs/game-rules-decisions.md ("first one you built").
     bool m_bPrototype;

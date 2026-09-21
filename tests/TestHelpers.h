@@ -42,7 +42,6 @@ public:
                                       ac::EffectScope_t scope = ac::EffectScope_t::FactionGlobal,
                                       std::optional<ac::TileSelector_t> selector = std::nullopt,
                                       std::optional<ac::Condition_t> condition = std::nullopt,
-                                      ac::EffectPersistence_t persistence = ac::EffectPersistence_t::Continuous,
                                       std::optional<ac::UnitFilter_t> unitFilter = std::nullopt,
                                       std::optional<ac::BuildingFilter_t> buildingFilter = std::nullopt)
     {
@@ -55,7 +54,6 @@ public:
         ac::EffectConfig_t config;
         config.effect = modifier;
         config.scope = scope;
-        config.persistence = persistence;
         config.condition = std::move(condition);
         config.unitFilter = std::move(unitFilter);
         config.buildingFilter = std::move(buildingFilter);
@@ -69,7 +67,6 @@ public:
         ac::EffectConfig_t config;
         config.effect = ac::RuleFlagEffect_t{flag};
         config.scope = scope;
-        config.persistence = ac::EffectPersistence_t::Continuous;
         config.condition = std::move(condition);
         return Add(std::move(config));
     }
@@ -80,7 +77,6 @@ public:
         ac::EffectConfig_t config;
         config.effect = ac::SocialRatingModifierEffect_t{rating, amount};
         config.scope = scope;
-        config.persistence = ac::EffectPersistence_t::Continuous;
         return Add(std::move(config));
     }
 

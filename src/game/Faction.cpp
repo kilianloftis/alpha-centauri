@@ -827,6 +827,28 @@ const BaseManager* Faction::GetHeadquarters() const
     return nullptr;
 }
 
+BaseManager* Faction::FindNearestBase(const Tile& rFrom)
+{
+    return const_cast<BaseManager*>(std::as_const(*this).FindNearestBase(rFrom));
+}
+
+const BaseManager* Faction::FindNearestBase(const Tile& rFrom) const
+{
+    const int mapWidth = m_rWorldMap.GetWidth();
+    const BaseManager* pBest = nullptr;
+    int best = std::numeric_limits<int>::max();
+    for (const BaseManager& rBase : Bases())
+    {
+        const int distance = ChebyshevDistance(rFrom, rBase.GetTile(), mapWidth);
+        if (distance < best)
+        {
+            best = distance;
+            pBest = &rBase;
+        }
+    }
+    return pBest;
+}
+
 BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile* pTile,
                                   const GameDataContext& rDataContext,
                                   TileEffectsContext& rTileEffects,

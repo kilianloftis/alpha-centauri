@@ -10,6 +10,7 @@ add_executable(effects-tests
     effects/ModifierMathTests.cpp
     effects/FilterTests.cpp
     effects/ParserTests.cpp
+    effects/TriggeredEffectTests.cpp
     effects/CollectionTests.cpp
     effects/GrantExpansionTests.cpp
     effects/TileEffectsTests.cpp

@@ -8,8 +8,9 @@ graph TB
         PopTypeConfig[PopTypeConfig_t]
         UnitComponentConfig[UnitComponentConfig_t]
         SocialPolicyConfig_t[SocialPolicyConfig_t]
-        EffectConfig[EffectConfig_t<br/>EffectVariant_t<br/>scope<br/>persistence<br/>condition]
-        EffectStructs[Effect Structs<br/>GrantBuildingEffect_t<br/>GrantTechEffect_t<br/>GrantUnitEffect_t<br/>StatModifierEffect_t<br/>TileResourceCapEffect_t<br/>RuleFlagEffect_t<br/>SocialEngineeringOverrideEffect_t<br/>SocialRatingModifierEffect_t<br/>DiplomaticModifierEffect_t]
+        EffectConfig[EffectConfig_t<br/>EffectVariant_t<br/>scope<br/>condition]
+        EffectStructs[Effect Structs<br/>GrantBuildingEffect_t<br/>InfiltrationEffect_t<br/>StatModifierEffect_t<br/>RuleFlagEffect_t<br/>SocialEngineeringOverrideEffect_t<br/>SocialRatingModifierEffect_t<br/>DiplomaticModifierEffect_t]
+        TriggeredConfig[TriggeredEffectConfig_t<br/>TriggeredEffectVariant_t<br/>factionFilter<br/>oncePer]
     end
 
     subgraph "Active Effect Instances"
@@ -143,7 +144,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 - **Purpose**: A single static effect definition loaded from configuration.
 - **Responsibilities**:
   - Holds the typed effect variant via `EffectVariant_t`.
-  - Stores metadata: `scope`, `persistence`, `condition`, and `radius`.
+  - Stores metadata: `scope`, `condition`, and `radius`.
   - `radius` (default `0`) applies only to `ThisTile`-scoped effects: how far (Chebyshev
     tiles) beyond the host tile the effect reaches. A nonzero `"radius"` on any other
     scope is rejected at parse time. Parsed from the effect entry's own `"radius"` field —
@@ -412,10 +413,10 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 - **Returns**: A `BaseEffects_t`.
 
 ### Collection helpers (AppendActiveEffects and variants)
-- **Purpose**: The single config→`ActiveEffect_t` conversion. One core loop owns the two
-  universal rules — `Instantaneous` effects never enter the continuous pool (they fire once
-  via `DispatchInstantaneousEffects`), and `originBase` is tagged when `TagsOriginBase(scope)`
-  (next to `LaneFor` / `IsFactionLane` in `EffectEnums.h`).
+- **Purpose**: The single config→`ActiveEffect_t` conversion. One core loop owns the universal
+  rule: `originBase` is tagged when `TagsOriginBase(scope)` (next to `LaneFor` /
+  `IsFactionLane` in `EffectEnums.h`). One-shot effects cannot reach these collectors at all —
+  they are a separate type in a separate list (see Triggered effects below).
 - **Variants** (all in `ActiveEffect.h`):
   - `AppendActiveEffects(effects, pOriginBase, sourceId, out)` — every continuous effect.
     `CollectUnitEffects`/`CollectPopEffects`, `BuildingManager::CollectEffects(rOriginBase)`,
@@ -431,19 +432,107 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
     base path and the pool, so a source whose effects straddle both lanes (riot tiers, via
     `BaseMoodEffects`) counts nothing twice and drops nothing.
   - `AppendTileEffects(effects, sourceId, distance, out)` — only effects satisfying
-    `TileEffectReaches(e, distance)` (ThisTile lane, continuous, `radius >= distance`).
-    Used by own-tile collection (`distance` 0), neighbor auras, and unit auras alike.
+    `TileEffectReaches(e, distance)` (ThisTile lane, `radius >= distance`). Used by own-tile
+    collection (`distance` 0), neighbor auras, and unit auras alike.
 - **Adding a new effect source** is therefore two calls: `EffectConfigParser::ParseEffects`
   at load time, and one of these at collection time — no hand-rolled loops.
 
-### DispatchInstantaneousEffects
-- **Signature**: `DispatchInstantaneousEffects(building, base, GameState&)` — no default; a live
-  session is required so Instantaneous Infiltration can write the diplomacy ledger.
+## Triggered effects
+
+Continuous effects are **queried**: pooled, filtered by context, idempotent, read during stat
+resolution. One-shot effects are **executed**: RNG, ledger writes, ownership transfers, exactly
+once. These are two machines, and they are two types.
+
+- **`TriggeredEffectConfig_t`** (`TriggeredEffect.h`) holds a `TriggeredEffectVariant_t` —
+  `AddBuilding`, `GrantTech`, `GrantUnit`, `GrantEnergy`, `WorldParameter`, `SetInfiltration`,
+  `ModifyPopulation`, `DestroyFacility`, `Rebel` — plus an optional `oncePer`, and a
+  `factionFilter` that **only `SetInfiltration` accepts** (every other type acts on the
+  subjects its context supplies, so a filter there would narrow nothing and is a parse error). It carries **no** scope, condition, radius or unit/building filter: those describe
+  where and when a continuous effect resolves, and a triggered one gets both from its slot.
+- **`GrantBuilding` / `Infiltration` exist in both families**, under names that say what they
+  do. Continuous `GrantBuildingEffect_t` expands the target's effects only; triggered
+  `AddBuildingEffect_t` calls `AddBuilding` and the facility pays upkeep. Continuous
+  `InfiltrationEffect_t` is a standing law honored by `HasInfiltration`; triggered
+  `SetInfiltrationEffect_t` writes the ledger for good.
+
+### Trigger slots
+Timing is a property of the list, not the entry — so there is no `persistence` field. Each
+container declares a continuous `effects` array and, where a trigger exists, a named one:
+
+| Config | continuous | triggered |
+|---|---|---|
+| `buildings/*.json`, `unit_components/*.json` | `effects` | `on_complete_effects` |
+| `probe_actions.json` | `effects` | `on_success_effects` |
+| `council/proposals.json` | `effects` | `on_passed_effects` |
+| `council/rules.json` | `governor_effects` | `on_elected_effects` |
+| `pop_composition.json` riot tiers | `effects` | `on_enter_effects` |
+| `improvements.json` | `effects` | `on_visit_effects` — **declared, not yet fired** |
+
+`on_visit_effects` has no consumer yet: there is no unit visit order. Rather than accept
+config that silently does nothing — the exact failure this split exists to kill —
+`ImprovementConfigParser` **throws on a non-empty list**. Wiring the monolith means adding the
+order and deleting that rejection.
+
+`TriggeredEffectParser` and `EffectConfigParser` reject each other's type names, naming the
+list the entry belongs in. The "belongs in `effects`" check reads `EffectConfigParser`'s own
+dispatch table rather than a second hand-written list, so the two cannot drift. Under the old `persistence` flag a mis-filed entry parsed fine and
+then silently never fired.
+
+### ApplyTriggeredEffects
+- **Signature**: `ApplyTriggeredEffects(span<const TriggeredEffectConfig_t>,
+  TriggeredEffectContext_t&) -> vector<TriggeredEffectResult_t>`. The one dispatcher; the five
+  hand-rolled `persistence == Instantaneous` scans it replaced are gone.
+- **`TriggeredEffectContext_t`** carries whatever the trigger had: `factions` (never empty),
+  and optionally `pBase`, `pUnit`, `pTile`, `actionTarget`, `pRng`. A production completion has
+  a base; a council vote has a faction list and no base; a monolith visit has a unit and a tile.
+  An entry needing a subject the context lacks is **skipped**, not guessed at.
+- **One application per subject**: a faction-subject entry (`GrantTech`, `GrantEnergy`,
+  `GrantUnit`, `SetInfiltration`) runs once per listed faction, which is how a council
+  `GrantEnergy` credits every member. A base-, unit- or world-subject entry runs once however
+  long the faction list is, so a `DestroyFacility` cannot hit one base once per member.
+- **Results** are what let callers report. Probe missions map `FacilitiesDestroyed_t` /
+  `PopulationChanged_t` into `ProbeActionResult_t::detail` instead of re-scanning the config,
+  and riot tiers can name what rioting destroyed.
+- **`pRng`** overrides the session generator so a caller driving its own sequence (a probe
+  mission, a seeded test) stays reproducible.
 - **Production completion**: `BaseManager` reads `Faction::GetGameState()` (bound by
   `GameState::AddFaction` via `BindGameState`) and throws if null. Both that check and the
   registry check run *before* the completed building is added, so a throw never leaves a base
-  holding a building whose Instantaneous effects were never dispatched.
-- GrantTech / GrantUnit remain TODO stubs; Infiltration always calls `ApplyInfiltrationEffect`.
+  holding a building whose `on_complete_effects` never fired.
+- `WorldParameter` remains a TODO stub pending the WorldEvents trigger API.
+
+### oncePer
+`oncePer: {scope: unit | base | faction, key: "..."}` fires an entry at most once per subject.
+Both fields are required — a defaulted `scope` would turn a typo into an entry that silently
+never fires from a trigger with no unit.
+`Unit`, `BaseManager` and `Faction` each hold a `ConsumedTriggerKeys()` set; the dispatcher
+checks it before applying and records after. The key is **authored in config**, not derived
+from the entry, because the rule usually spans instances: every Monolith shares
+`"monolith_xp"`, so visiting a second one grants nothing. An entry whose subject the context
+lacks is skipped rather than firing forever. Because the check is per entry, a list applies
+partially and honestly — a spent one-shot grant does not suppress the repeatable heal beside it.
+
+A key is spent only by an entry that **actually changed something**: `ApplyOne_` returns
+whether it did, so a grant that found nothing to do (no eligible facility, no placeable tile,
+a tech the faction already knew) stays unspent and fires when the situation changes.
+
+### GrantUnit
+There is no registry of named designs (they are per-faction and player-authored, with ids
+derived from components via `UnitDesign::GetId`), so `GrantUnitEffect_t` names `component_ids`
+and a `count`, the same shape as `base_conquest`'s `escape_colony_pod`. Both go through the
+shared `EnsureAdHocDesign` (`units/AdHocDesign.h`). Ids are validated at load in
+`GameDataContext`, so a typo fails at startup naming the file.
+
+A granted unit is **homed but produced nowhere** (`CreateUnit` with an explicit null
+`pProducedAt`): it pays support, but collects neither the anchor's `ProducedAtThisBase` train
+bonuses nor `StartingExperience`, matching the prototype latch that already denies free spawns
+the bonus. `Unit`'s `pProducedAt` is three-valued for exactly this — omitted defaults to home,
+an explicit `nullptr` means built nowhere.
+
+The **anchor base** — where the unit appears and what it is homed to — resolves in order of how specific the context is: `ctx.pBase`, else the faction
+base nearest `ctx.pTile` (`Faction::FindNearestBase`), else `GetHeadquarters()`, else any base;
+no bases means no spawn. Placement takes the anchor tile if free, then outward rings. A full map
+grants fewer units and reports the real count rather than throwing.
 
 ### CollectLiveUnitEffects
 - Returns design + FactionUnits + matching ProducedAtThisBase effects. The list already
@@ -580,13 +669,13 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 - **Purpose**: Single shared implementation of the JSON `effects` array schema, used by every config parser that defines `EffectConfig_t` entries.
 - **Location**: `include/game/effects/EffectConfigParser.h` / `src/game/effects/EffectConfigParser.cpp`.
 - **Responsibilities**:
-  - `ParseModifierOp`, `ParseEffectScope`, `ParseEffectPersistence` — the canonical string&lt;-&gt;enum mappings for effect-config enums. These previously existed as separate, drifting copies in `BuildingConfigParser` and `UnitComponentConfigParser`. The snake_case id maps (`ParseStatId`, `ParseRuleFlagId`, `ParseSocialRatingId`) live next to their enums in `EffectEnums.h` at `ac` scope, per the one-map-next-to-the-enum guideline.
+  - `ParseModifierOp`, `ParseEffectScope` — the canonical string&lt;-&gt;enum mappings for effect-config enums. These previously existed as separate, drifting copies in `BuildingConfigParser` and `UnitComponentConfigParser`. The snake_case id maps (`ParseStatId`, `ParseRuleFlagId`, `ParseSocialRatingId`) live next to their enums in `EffectEnums.h` at `ac` scope, per the one-map-next-to-the-enum guideline.
   - `ModifierOp_t` includes clamping ops: `MaxClamp` and `MinClamp`. `ParseModifierOp` accepts these names; `ApplyModifierStack` applies clamps after the Add / AddPercent / MultiplyGeometric math so clamps bound the final resolved value. The tightest clamp of each kind wins; when a MinClamp and a MaxClamp cross, MinClamp wins. **Only resolve sites that route through `ApplyModifierStack` honour clamps** — the deliberately Add-only collectors (`ResolveAdditiveStat` over a `UnitDesign`, the `MoraleCalculator` additive pass, stockpile `MineralsConverted`) drop them silently.
   - `ParseFactionFilter` accepts a `PlayerType` kind: `{ "kind": "PlayerType", "type": "Player" | "AI" }`, parsed case-insensitively through `magic_enum`. Two different resolve paths read it: `FactionFilterMatchesOwner` (owner-side — does this effect apply to the faction that *owns* the pool, used when difficulty injects its effect list) and `FactionFilterCoversTarget` (target-side — does this effect reach that *other* faction, used for cross-faction dispatch such as infiltration). Neither substitutes for the other.
   - `ParseNumber` — reads a JSON field as either a number or a numeric string (used for optional numeric params with a caller-supplied default).
   - `RequireNumber` — same, but throws if the key is absent (no silent balance defaults). Used for `TileResourceCap.max`, `OrbitalAttack.chance` / `cooldown_turns`, and `Intercept.chance`.
   - `ParseTileSelector` — parses a `TileSelector_t` from a `selector` JSON object. Called by the `StatModifier` branch when a `selector` field is present, making that modifier a per-tile yield modifier. A `selector` on any stat other than `nutrients`/`minerals`/`energy` is rejected at parse time — selectors only take part in tile-yield resolution, so such a modifier would silently never apply.
-  - `ParseEffectConfig` — parses one entry of an `effects` array (`type`/`scope`/`persistence`/`condition`/`parameters`) into an `EffectConfig_t`. Required keys `type` and `scope` use `.at()` (missing → throw). Dispatches on `type` via a static table of per-type parse functions (one focused function per `EffectVariant_t` alternative). Additional strictness:
+  - `ParseEffectConfig` — parses one entry of a continuous `effects` array (`type`/`scope`/`condition`/`parameters`) into an `EffectConfig_t`. A one-shot type name here throws, naming the trigger-named list it belongs in. Required keys `type` and `scope` use `.at()` (missing → throw). Dispatches on `type` via a static table of per-type parse functions (one focused function per `EffectVariant_t` alternative). Additional strictness:
     - Nonzero `radius` requires `scope: ThisTile`.
     - `StatModifier` with `amount_source` works with **any op**. An amount source computes the
       modifier's *amount*; `ResolveStatModifiers` calls `AmountSourceValue` for every
@@ -700,7 +789,7 @@ Pop types (`config/pop_types.json`) also use the standard `effects` array. Unlik
 - **`ImprovementConfig_t`**: `id`, `name`, `description`, `mineralCost`, `requiredTech`, `excludes` (other feature ids that can't coexist with this one on a tile), `radius` (default `0`), `frequency`, `spritePath`, `effects` (the standard `EffectConfig_t` vector, parsed via `EffectConfigParser::ParseEffects`).
 - **How a tile holds features**: improvements are stored directly as non-owning `const ImprovementConfig_t*` in `Tile::GetImprovements()` (the same pattern `BuildingManager` uses for `BuildingConfig_t*`); the caller resolves the id via `ImprovementRegistry` (the funnel is `TileEffectsContext`). Terrain stays as typed enums/bools on `Tile` — world-gen and rendering need the exhaustive/exclusive guarantee (every tile is *exactly one* of Flat/Rolling/Rocky) — and is exposed for effect resolution as resolved config pointers via `Tile::GetTerrainFeatures()` (Rockiness_t, Moisture_t, and each active `TerrainFeature_t`), cached by `RefreshTerrainFeatures_` whenever a terrain setter runs. `Tile::HasFeature(id)` answers "is this feature present?" across both (terrain names + improvement ids) for conditions/selectors/`CanBuildImprovement`.
 - **`CollectTileEffects(tile, improvementRegistry)`**: collects a tile's own `ThisTile`-scoped effects into a flat `ActiveEffect_t` list (sourceId = the feature's id) in two passes — each `GetTerrainFeatures()` config, plus each `GetImprovements()` config, both read directly (no lookup). Mirrors `CollectPopEffects`/`CollectUnitEffects`. Only ever resolves a tile's *own* effects (radius 0) — it has no `WorldMap` to look at neighbors.
-- **`radius` (aura effects)**: radius is a **per-effect** property (`EffectConfig_t::radius`, default `0` = the host tile only), declared on the effect entry itself — e.g. `Sensor`'s `+25%` defense effect carries `radius: 2`, `Mirror`'s `+1 energy` carries `radius: 1`, `Condenser`'s `+1 moisture_tier` carries `radius: 1`. There is **no** improvement-level radius default: `ImprovementConfig_t` has no radius member and `ImprovementConfigParser` never reads one, so siblings do not inherit a radius from their container and each effect states its own. Only continuous `ThisTile`-scoped effects take part in aura resolution — neighbor collection applies the exact same scope/persistence filter as own-tile collection.
+- **`radius` (aura effects)**: radius is a **per-effect** property (`EffectConfig_t::radius`, default `0` = the host tile only), declared on the effect entry itself — e.g. `Sensor`'s `+25%` defense effect carries `radius: 2`, `Mirror`'s `+1 energy` carries `radius: 1`, `Condenser`'s `+1 moisture_tier` carries `radius: 1`. There is **no** improvement-level radius default: `ImprovementConfig_t` has no radius member and `ImprovementConfigParser` never reads one, so siblings do not inherit a radius from their container and each effect states its own. Only `ThisTile`-scoped effects take part in aura resolution — neighbor collection applies the exact same scope filter as own-tile collection.
 - **`min_radius` (ring auras)**: the nearest distance an aura reaches (`EffectConfig_t::minRadius`, default `0` = includes the host tile). `TileEffectReaches` is `minRadius <= distance <= radius`. The Echelon Mirror uses `min_radius: 1, radius: 1`: it counts as a solar collector for its own elevation energy and for *other* mirrors' bonuses, but must not hand its `+1` to itself. Rejected when it exceeds `radius` (the effect would reach no tile at all) or on a non-`ThisTile` scope, both at parse time.
 - **Unit auras**: unit components can carry `ThisTile`-scoped effects with a radius (e.g. a sensor pod granting `+25%` defense within 2 tiles). `CollectAreaEffects` scans `WorldMap::GetUnitsOnTile` over the aura radius — including units standing on the resolved tile itself — so the aura follows the unit as it moves. Each collected aura stamps `ActiveEffect_t::ownerFaction` from the projecting unit's faction (same gate as territory-owned improvements for defense / area Conceal; Detect additionally requires a stamped owner and fails closed without one). `TileEffectsContext` takes the `UnitComponentRegistry` at construction to size its scan bound.
 - **`CollectAreaEffects(tile, worldMap, registry)`**: the single function powering all three radius-aware resolvers (defense, yield, and moisture recompute). `WorldMap` is needed to look up neighboring tiles and units.
@@ -741,7 +830,7 @@ parsed and collected identically everywhere.
    for the source; scopes whose anchor concept is pending stay legal-but-inert (see
    Universal scope routing).
 2. **Collect**: never hand-roll the config→`ActiveEffect_t` loop — use a collection helper,
-   which owns the Instantaneous exclusion and `originBase` tagging (see Collection helpers):
+   which owns `originBase` tagging (see Collection helpers):
    - Faction-anchored source (policy-like): `AppendActiveEffects(effects, nullptr, id, out)`
      from a collector wired into `CollectActiveEffects`.
    - Base-anchored source (building-like): `AppendActiveEffects(effects, &base, id, out)` so
@@ -850,17 +939,33 @@ the carrier's domain when `requires_harbor` is set. Note that
 
 **A new effect type** (a new `EffectVariant_t` alternative):
 
+First decide which family it belongs to: is it **queried** during resolution (continuous), or
+**executed** once when something happens (triggered)? That answers every step below.
+
+*Continuous:*
 1. Define the struct in `EffectConfig.h` and add it to `EffectVariant_t`.
 2. Add a focused `ParseYourEffect_` function in `EffectConfigParser.cpp` and register it in
    the `EffectTypeParsers_` dispatch table (type string → parse fn). Validate required
    parameters there (throw on missing/empty ids — don't parse permissively).
-3. If it references other configs by id, add an id-checking arm (not a catch-all) to the
-   exhaustive `std::visit` in `ValidateEffectReferences`; otherwise add an explicit empty
+3. If it references other configs by id, add an id-checking arm (not a catch-all) to
+   `EffectPayloadValidator` in `ValidateEffectReferences`; otherwise add an explicit empty
    arm so the compile-time exhaustiveness guard stays intact.
 4. Consume it with `std::get_if<YourEffect_t>` wherever it applies (`SocialRatingResolver`
-   is the model for a type-specific consumer). If it can be `Instantaneous`, it also needs a
-   branch in `DispatchInstantaneousEffects`.
-5. Add parser coverage in `ParserTests.cpp`.
+   is the model for a type-specific consumer).
+
+*Triggered:*
+1. Define the struct in `TriggeredEffect.h` and add it to `TriggeredEffectVariant_t`.
+2. Add a `ParseYourEffect_` to `TriggeredEffectParser.cpp` and its dispatch table.
+3. Add an arm to `TriggeredPayloadValidator` (id-checking or explicitly empty).
+4. Add an arm to `ApplyOne_` in `TriggeredEffectDispatch.cpp` — the `k_AlwaysFalse` visitor
+   will not compile without one. Skip rather than guess when the context lacks your subject,
+   and push a `TriggeredEffectResult_t` if a caller could need to report what happened.
+5. If no existing slot fits, add one: a field on the container config, a
+   `ParseTriggeredEffects` call in its parser, a `validateTriggered` call in
+   `ValidateEffectReferences`, and a row in the trigger-slot table above.
+
+Either way, add parser coverage in `ParserTests.cpp` (and dispatcher coverage in
+`TriggeredEffectTests.cpp` for a triggered effect).
 
 **A new resolution site** (consuming existing effects somewhere new): fetch the right pool
 rather than building a parallel collection path — the faction pool via

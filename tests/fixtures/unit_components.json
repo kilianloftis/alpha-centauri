@@ -726,11 +726,11 @@
           "amount": 10,
           "op": "Add"
         }
-      },
+      }
+    ],
+    "on_complete_effects": [
       {
         "type": "ModifyPopulation",
-        "scope": "ThisBase",
-        "persistence": "Instantaneous",
         "parameters": {
           "amount": -1
         }
@@ -771,11 +771,11 @@
           "amount": 40,
           "op": "Add"
         }
-      },
+      }
+    ],
+    "on_complete_effects": [
       {
         "type": "ModifyPopulation",
-        "scope": "ThisBase",
-        "persistence": "Instantaneous",
         "parameters": {
           "amount": -1
         }
@@ -1411,7 +1411,6 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "persistence": "Continuous",
         "parameters": {
           "stat": "police_effectiveness",
           "amount": 1,

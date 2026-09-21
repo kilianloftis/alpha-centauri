@@ -35,7 +35,7 @@
   {
     "id": "BaseProduction",
     "name": "Base Production",
-    "description": "Allocates leftover minerals to the queued build or converts them through a stockpile, then completes funded items. Must run after UnitSupport and before BaseGrowth so Hab Complex / Dome can raise max size before growth, and before IncomeCollection / ResearchAccumulation so stockpile econ and labs are spent this turn. Colony-pod abandon uses WouldGrowThisTurn plus CommitPendingGrowth before Instantaneous pop costs",
+    "description": "Allocates leftover minerals to the queued build or converts them through a stockpile, then completes funded items. Must run after UnitSupport and before BaseGrowth so Hab Complex / Dome can raise max size before growth, and before IncomeCollection / ResearchAccumulation so stockpile econ and labs are spent this turn. Colony-pod abandon uses WouldGrowThisTurn plus CommitPendingGrowth before on-complete pop costs",
     "repeatForEachFaction": true,
     "hooks": {
       "pre": [],

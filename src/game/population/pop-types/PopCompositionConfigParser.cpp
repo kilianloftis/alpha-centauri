@@ -1,5 +1,6 @@
 #include "game/population/pop-types/PopCompositionConfigParser.h"
 #include "game/effects/EffectConfigParser.h"
+#include "game/effects/TriggeredEffectParser.h"
 #include "lib/config/JsonConfigLoader.h"
 
 #include <nlohmann/json.hpp>
@@ -177,12 +178,8 @@ PopCompositionConfig_t PopCompositionConfigParser::ParseConfig(const std::string
                                                          "pop_composition.riot_tiers.effects",
                                                          fail);
                     }
-                    if (rTierJson.contains("on_enter_effects"))
-                    {
-                        tier.onEnterEffects = ParseEffectArray_(
-                            rTierJson.at("on_enter_effects"),
-                            "pop_composition.riot_tiers.on_enter_effects", fail);
-                    }
+                    tier.onEnterEffects = TriggeredEffectParser::ParseTriggeredEffects(
+                        rTierJson, "on_enter_effects", "pop_composition.riot_tiers");
                     config.riotTiers.push_back(std::move(tier));
                 }
             }

@@ -218,8 +218,7 @@ namespace
 {
 
 // The one config->ActiveEffect_t loop. Every public collect/append helper funnels through
-// here so the Instantaneous exclusion (those fire once via DispatchInstantaneousEffects)
-// and TagsOriginBase origin tagging can never be forgotten by an individual collector.
+// here so TagsOriginBase origin tagging can never be forgotten by an individual collector.
 template <typename IncludePred>
 void AppendActiveEffectsIf_(std::span<const EffectConfig_t> rEffects,
                             const BaseManager* pOriginBase,
@@ -229,8 +228,6 @@ void AppendActiveEffectsIf_(std::span<const EffectConfig_t> rEffects,
 {
     for (const EffectConfig_t& rEffect : rEffects)
     {
-        if (rEffect.persistence == EffectPersistence_t::Instantaneous)
-            continue;
         if (!include(rEffect))
             continue;
         rOut.emplace_back(rEffect, sourceId, TagsOriginBase(rEffect.scope) ? pOriginBase : nullptr);
@@ -272,7 +269,6 @@ void AppendBaseLaneEffects(std::span<const EffectConfig_t> rEffects,
 bool TileEffectReaches(const EffectConfig_t& rEffect, int distance)
 {
     return LaneFor(rEffect.scope) == EffectLane_t::TileLocal
-        && rEffect.persistence != EffectPersistence_t::Instantaneous
         && distance >= rEffect.minRadius
         && distance <= rEffect.radius;
 }
@@ -835,15 +831,11 @@ int PredictModifyPopulationDelta(int size, const ModifyPopulationEffect_t& rEffe
     return delta;
 }
 
-int PredictInstantaneousPopulationSize(std::span<const EffectConfig_t> rEffects, int size)
+int PredictTriggeredPopulationSize(std::span<const TriggeredEffectConfig_t> rEffects, int size)
 {
     int current = size;
-    for (const EffectConfig_t& rEffect : rEffects)
+    for (const TriggeredEffectConfig_t& rEffect : rEffects)
     {
-        if (rEffect.persistence != EffectPersistence_t::Instantaneous)
-        {
-            continue;
-        }
         const ModifyPopulationEffect_t* pModify =
             std::get_if<ModifyPopulationEffect_t>(&rEffect.effect);
         if (!pModify)
@@ -864,83 +856,9 @@ int PredictUnitProductionPopulationSize(const UnitDesign& rDesign, int size)
         {
             continue;
         }
-        current = PredictInstantaneousPopulationSize(pComp->effects, current);
+        current = PredictTriggeredPopulationSize(pComp->onCompleteEffects, current);
     }
     return current;
-}
-
-void DispatchInstantaneousEffects(std::span<const EffectConfig_t> rEffects, BaseManager& rBase,
-                                  GameState& rGameState)
-{
-    for (const EffectConfig_t& effect : rEffects)
-    {
-        if (effect.persistence != EffectPersistence_t::Instantaneous)
-            continue;
-
-        if (const GrantBuildingEffect_t* pGrant = std::get_if<GrantBuildingEffect_t>(&effect.effect))
-        {
-            // A grant whose target the base already holds is an ordinary outcome, not an error.
-            if (rBase.GetBuildingManager().CanAddBuilding(pGrant->buildingId))
-            {
-                rBase.GetBuildingManager().AddBuilding(pGrant->buildingId);
-            }
-        }
-        else if (const GrantTechEffect_t* pGrant = std::get_if<GrantTechEffect_t>(&effect.effect))
-        {
-            rBase.GetFaction().GetResearch().AddDiscoveredTech(pGrant->techId);
-        }
-        else if (std::get_if<GrantUnitEffect_t>(&effect.effect))
-        {
-            std::cerr << "[TODO] Instantaneous GrantUnit not yet implemented\n";
-        }
-        else if (std::get_if<InfiltrationEffect_t>(&effect.effect))
-        {
-            ApplyInfiltrationEffect(rGameState, rBase.GetFaction(), effect);
-        }
-        else if (const ModifyPopulationEffect_t* pModify =
-                     std::get_if<ModifyPopulationEffect_t>(&effect.effect))
-        {
-            ApplyModifyPopulation(rBase, *pModify);
-        }
-        else if (const DestroyFacilityEffect_t* pDestroy =
-                     std::get_if<DestroyFacilityEffect_t>(&effect.effect))
-        {
-            DestroyRandomFacilities(rGameState, rBase, pDestroy->count, pDestroy->excludeHq,
-                                    pDestroy->excludeSecretProjects, rGameState.GetRng());
-        }
-        else if (std::get_if<RebelEffect_t>(&effect.effect))
-        {
-            const GameDataContext& rData = rBase.GetFaction().GetDataContext();
-            if (!rData.popCompositionConfig)
-            {
-                throw std::runtime_error(
-                    "DispatchInstantaneousEffects: Rebel requires a popCompositionConfig");
-            }
-            PickRebelFactionAndTransfer(rBase, rGameState,
-                                        rData.popCompositionConfig->rebelSelection,
-                                        rGameState.GetRng());
-        }
-    }
-}
-
-void DispatchInstantaneousEffects(const BuildingConfig_t& rBuilding, BaseManager& rBase,
-                                  GameState& rGameState)
-{
-    DispatchInstantaneousEffects(std::span<const EffectConfig_t>{rBuilding.effects}, rBase,
-                                 rGameState);
-}
-
-void DispatchInstantaneousEffects(const UnitDesign& rDesign, BaseManager& rBase,
-                                  GameState& rGameState)
-{
-    for (const UnitComponentConfig_t* pComp : rDesign.GetComponents())
-    {
-        if (pComp)
-        {
-            DispatchInstantaneousEffects(std::span<const EffectConfig_t>{pComp->effects}, rBase,
-                                         rGameState);
-        }
-    }
 }
 
 // A live unit's full effect list: design components, all FactionUnits, and ProducedAtThisBase

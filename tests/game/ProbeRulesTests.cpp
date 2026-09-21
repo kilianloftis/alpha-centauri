@@ -51,11 +51,11 @@ TEST_CASE("ProbeActionConfigParser loads SMAC defaults", "[probe][config]")
     CHECK(config.successFormula.strengthOffset == 1);
     REQUIRE(config.Find(ProbeActionId_t::Infiltrate) != nullptr);
     CHECK(config.Find(ProbeActionId_t::Infiltrate)->risk == 0);
-    REQUIRE(config.Find(ProbeActionId_t::Infiltrate)->effects.size() == 1);
-    CHECK(std::get_if<InfiltrationEffect_t>(
-        &config.Find(ProbeActionId_t::Infiltrate)->effects.front().effect));
-    REQUIRE(config.Find(ProbeActionId_t::Infiltrate)->effects.front().factionFilter);
-    CHECK(config.Find(ProbeActionId_t::Infiltrate)->effects.front().factionFilter->kind
+    REQUIRE(config.Find(ProbeActionId_t::Infiltrate)->onSuccessEffects.size() == 1);
+    CHECK(std::get_if<SetInfiltrationEffect_t>(
+        &config.Find(ProbeActionId_t::Infiltrate)->onSuccessEffects.front().effect));
+    REQUIRE(config.Find(ProbeActionId_t::Infiltrate)->onSuccessEffects.front().factionFilter);
+    CHECK(config.Find(ProbeActionId_t::Infiltrate)->onSuccessEffects.front().factionFilter->kind
           == FactionFilterKind_t::ActionTarget);
     REQUIRE(config.Find(ProbeActionId_t::StealTech) != nullptr);
     CHECK(config.Find(ProbeActionId_t::StealTech)->riskRepeat == 1);
@@ -70,9 +70,9 @@ TEST_CASE("ProbeActionConfigParser loads SMAC defaults", "[probe][config]")
     CHECK(config.Find(ProbeActionId_t::SubvertUnit)->target == ProbeTargetKind_t::Unit);
 
     REQUIRE(config.Find(ProbeActionId_t::GeneticPlague) != nullptr);
-    REQUIRE(config.Find(ProbeActionId_t::GeneticPlague)->effects.size() == 1);
+    REQUIRE(config.Find(ProbeActionId_t::GeneticPlague)->onSuccessEffects.size() == 1);
     const auto* pPlague = std::get_if<ModifyPopulationEffect_t>(
-        &config.Find(ProbeActionId_t::GeneticPlague)->effects.front().effect);
+        &config.Find(ProbeActionId_t::GeneticPlague)->onSuccessEffects.front().effect);
     REQUIRE(pPlague);
     CHECK(pPlague->amount == -50);
     CHECK(pPlague->op == ModifierOp_t::AddPercent);

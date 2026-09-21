@@ -14,6 +14,7 @@
 #include <cmath>
 #include <iostream>
 #include <limits>
+#include <optional>
 #include <vector>
 
 namespace ac
@@ -26,16 +27,6 @@ namespace
 int FadedBonus_(int distance, const RebelSelectionConfig_t& rConfig)
 {
     return std::max(0, rConfig.fadeRadius - distance) * rConfig.distanceWeightPerTile;
-}
-
-int NearestBaseDistance_(const Faction& rFaction, const Tile& rFrom, int mapWidth)
-{
-    int best = std::numeric_limits<int>::max();
-    for (const BaseManager& rBase : rFaction.Bases())
-    {
-        best = std::min(best, ChebyshevDistance(rFrom, rBase.GetTile(), mapWidth));
-    }
-    return best;
 }
 
 int HqDistance_(const Faction& rFaction, const Tile& rFrom, int mapWidth,
@@ -58,9 +49,11 @@ int DistanceBonus_(const Faction& rCandidate, const BaseManager& rRebelling,
         case RebelDistanceMode_t::None:
             return 0;
         case RebelDistanceMode_t::NearestBase:
-            // Candidates are pre-filtered to faction with at least one base, so the scan
-            // below always sees one.
-            return FadedBonus_(NearestBaseDistance_(rCandidate, rFrom, mapWidth), rConfig);
+        {
+            // Candidates are pre-filtered to factions with at least one base, so this is set.
+            const BaseManager* pNearest = rCandidate.FindNearestBase(rFrom);
+            return FadedBonus_(ChebyshevDistance(rFrom, pNearest->GetTile(), mapWidth), rConfig);
+        }
         case RebelDistanceMode_t::HqDistance:
             return FadedBonus_(HqDistance_(rCandidate, rFrom, mapWidth, rConfig), rConfig);
         case RebelDistanceMode_t::NearbyBases:
@@ -92,8 +85,9 @@ struct Candidate_t
 
 } // namespace
 
-void PickRebelFactionAndTransfer(BaseManager& rBase, GameState& rGameState,
-                                 const RebelSelectionConfig_t& rConfig, std::mt19937& rRng)
+std::optional<FactionId_t> PickRebelFactionAndTransfer(BaseManager& rBase, GameState& rGameState,
+                                                       const RebelSelectionConfig_t& rConfig,
+                                                       std::mt19937& rRng)
 {
     Faction& rOwner = rBase.GetFaction();
     const FactionId_t ownerId = rOwner.GetFactionId();
@@ -124,7 +118,7 @@ void PickRebelFactionAndTransfer(BaseManager& rBase, GameState& rGameState,
     if (candidates.empty())
     {
         std::cerr << "[Rebel] no candidate factions for base " << rBase.GetBaseId() << '\n';
-        return;
+        return std::nullopt;
     }
 
     int totalWeight = 0;
@@ -151,6 +145,7 @@ void PickRebelFactionAndTransfer(BaseManager& rBase, GameState& rGameState,
     // base still belongs to the loser, then TransferBaseTo moves it (and resets escalation).
     rBase.GetPopulation().NotifyCaptured(ownerId, pChosen->GetFactionId());
     rOwner.TransferBaseTo(baseId, *pChosen);
+    return pChosen->GetFactionId();
 }
 
 } // namespace ac

@@ -9,7 +9,6 @@
       {
         "type": "RuleFlag",
         "scope": "WorldGlobal",
-        "persistence": "Continuous",
         "parameters": { "flag": "atrocities_forbidden" }
       }
     ]
@@ -20,13 +19,8 @@
     "description": "+500 energy credits for each Council member",
     "vote_weight": "representative",
     "required_tech": "orbital_spaceflight",
-    "effects": [
-      {
-        "type": "GrantEnergy",
-        "scope": "FactionGlobal",
-        "persistence": "Instantaneous",
-        "parameters": { "amount": 500 }
-      }
+    "on_passed_effects": [
+      { "type": "GrantEnergy", "parameters": { "amount": 500 } }
     ]
   },
   {
@@ -39,7 +33,6 @@
       {
         "type": "StatModifier",
         "scope": "WorldGlobal",
-        "persistence": "Continuous",
         "parameters": { "stat": "commerce_rate", "amount": 100, "op": "AddPercent" }
       }
     ]
@@ -59,13 +52,8 @@
     "description": "Global cooling; sea levels fall",
     "vote_weight": "representative",
     "required_tech": "advanced_spaceflight",
-    "effects": [
-      {
-        "type": "WorldParameter",
-        "scope": "WorldGlobal",
-        "persistence": "Instantaneous",
-        "parameters": { "parameter": "sea_level", "amount": -1 }
-      }
+    "on_passed_effects": [
+      { "type": "WorldParameter", "parameters": { "parameter": "sea_level", "amount": -1 } }
     ]
   },
   {
@@ -76,13 +64,8 @@
     "required_tech": "advanced_spaceflight",
     "required_proposals": ["launch_solar_shade"],
     "repeatable": true,
-    "effects": [
-      {
-        "type": "WorldParameter",
-        "scope": "WorldGlobal",
-        "persistence": "Instantaneous",
-        "parameters": { "parameter": "sea_level", "amount": -1 }
-      }
+    "on_passed_effects": [
+      { "type": "WorldParameter", "parameters": { "parameter": "sea_level", "amount": -1 } }
     ]
   },
   {
@@ -92,13 +75,8 @@
     "vote_weight": "representative",
     "required_tech": "advanced_ecological_engineering",
     "repeatable": true,
-    "effects": [
-      {
-        "type": "WorldParameter",
-        "scope": "WorldGlobal",
-        "persistence": "Instantaneous",
-        "parameters": { "parameter": "sea_level", "amount": 1 }
-      }
+    "on_passed_effects": [
+      { "type": "WorldParameter", "parameters": { "parameter": "sea_level", "amount": 1 } }
     ]
   },
   {
@@ -121,7 +99,6 @@
       {
         "type": "RuleFlag",
         "scope": "WorldGlobal",
-        "persistence": "Continuous",
         "parameters": { "flag": "atrocities_forbidden" }
       }
     ]

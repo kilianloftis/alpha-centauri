@@ -26,13 +26,10 @@
         "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": { "stat": "starting_minerals", "amount": 10, "op": "Add" }
-      },
-      {
-        "type": "ModifyPopulation",
-        "scope": "ThisBase",
-        "persistence": "Instantaneous",
-        "parameters": { "amount": -1 }
       }
+    ],
+    "on_complete_effects": [
+      { "type": "ModifyPopulation", "parameters": { "amount": -1 } }
     ]
   },
   {
@@ -168,7 +165,6 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "persistence": "Continuous",
         "parameters": { "stat": "probe_failure_scale", "amount": -50, "op": "AddPercent" }
       },
       {

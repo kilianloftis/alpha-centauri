@@ -100,7 +100,7 @@ graph TB
     `CastElectionVote` and the tally both validate against that snapshot.
   - Governorship bookkeeping and the Supreme Leader victory stub.
   - Delegating outward effects to `CouncilEffects` (continuous) and
-    `CouncilOutcomeApplier` (instantaneous / governor).
+    `CouncilOutcomeApplier` (one-shot outcomes / governor).
 - **Owned by**: `GameState` (`std::unique_ptr<PlanetaryCouncil> m_pCouncil`), created by
   `GameState::CreatePlanetaryCouncil`. Non-copyable/non-movable (holds `Signal`s).
 - **Depends on**: `CouncilProposalRegistry` + `CouncilRulesConfig_t` (references),
@@ -125,11 +125,13 @@ graph TB
 - **Purpose**: Applies the game-state mutations a passed proposal produces, keeping this
   outward-facing mutation out of the voting logic.
 - **Responsibilities**:
-  - `ApplyInstantaneousEffects` — energy grants to every member (`EconomyManager::AddEnergy`).
-    World-parameter effects (sea level) are a documented **TODO**: they must trigger a
+  - `ApplyPassedEffects` — runs a proposal's `on_passed_effects` through
+    `ApplyTriggeredEffects` with every member as a subject, so `GrantEnergy` credits each of
+    them. World-parameter effects (sea level) are a documented **TODO**: they must trigger a
     `WorldEvents` world event, not mutate the map here.
-  - `ApplyGovernor` — applies Instantaneous `governorEffects` via shared infiltration
-    helpers. Continuous `Infiltration` + `factionFilter: CouncilMembers` is query-time.
+  - `ApplyGovernor` — runs the rules' `on_elected_effects` for the incoming governor (e.g. a
+    `SetInfiltration` that outlives the term). Continuous `Infiltration` +
+    `factionFilter: CouncilMembers` stays query-time.
 - **Depends on**: `CouncilRulesConfig_t` (reference); `GameState`/`Faction`/`DiplomacyLedger`
   passed per call.
 
@@ -137,23 +139,21 @@ graph TB
 - **CouncilProposalConfig_t**: one proposal definition — `kind` (Standard/Election),
   `voteWeight` (Representative/Population), `voteThreshold`, `repeatable`, `initiallyActive`,
   `proposable`, `requiredTech`, `requiredProposals`, `repeals`, `requires/forbidsRuleFlags`,
-  `electionOutcome`, and `effects`.
+  `electionOutcome`, `effects` (standing law) and `onPassedEffects` (one-shot outcomes).
 - **CouncilRulesConfig_t**: standing rules — `governorProposeIntervalYears`,
-  `memberProposeIntervalYears`, and `governorEffects`.
+  `memberProposeIntervalYears`, `governorEffects` (standing) and `onElectedEffects`
+  (one-shot).
 - **CouncilProposalRegistry**: loads/validates the proposal list (rejects `requiredProposals`
   / `repeals` that reference unknown ids). Parsed by `CouncilProposalConfigParser`; rules by
   `CouncilRulesConfigParser`. Loaded from `config/council/`.
 - **Honored effect shapes** (load-time; anything else throws — a passed proposal must not be a
   silent no-op):
-  - **Proposals** (`EffectSourceKind_t::CouncilProposal`):
-    1. `Continuous` + `WorldGlobal` (any type the continuous world store can hold)
-    2. `Instantaneous` + `GrantEnergy` (any scope; the applier ignores scope and grants all
-       members)
-    3. `Instantaneous` + `WorldParameter` + `WorldGlobal` — **explicit deferred** shape:
-       load is allowed, apply is a no-op until `WorldEvents` exposes a trigger API
-  - **Governor** (`EffectSourceKind_t::CouncilRules`, via `governor_effects`):
-    1. `Continuous` + `FactionGlobal`
-    2. `Instantaneous` + `Infiltration` (scopes already enforced by Infiltration parse)
+  - **Proposals**: `effects` must be `WorldGlobal` (any type the continuous world store can
+    hold). `on_passed_effects` must be `GrantEnergy` (credited to every member) or
+    `WorldParameter` — the latter an **explicit deferred** shape: load is allowed, apply is a
+    no-op until `WorldEvents` exposes a trigger API.
+  - **Governor**: `governor_effects` must be `FactionGlobal`. `on_elected_effects` accepts any
+    triggered type.
 
 ### Notifications
 - `Signal<Faction&, const std::string&> OnProposalOpened` — fired when a proposal is put
@@ -175,7 +175,7 @@ graph TB
 
 ### A passed proposal
 1. `ApplyPassedProposal_` runs repeals (`RemoveActiveProposal_`), records the pass, and applies
-   instantaneous effects via `CouncilOutcomeApplier`.
+   `on_passed_effects` via `CouncilOutcomeApplier`.
 2. Continuous proposals are activated (`ActivateProposal_` → `CouncilEffects::RebuildWorld`).
 3. Governor / Supreme Leader election outcomes apply governor privileges or record the
    victory stub.
@@ -193,8 +193,8 @@ one reason to change.
 World-parameter outcomes (sea level, climate) are triggers, not direct edits — gradual map
 mutation belongs to the `WorldEvents` system. Until that system exposes a trigger API, the
 applier holds a TODO and no world state lives on the council. Stock proposals that declare
-`Instantaneous` + `WorldParameter` + `WorldGlobal` (solar shade, polar caps) are still
-**allowed at load** as a deferred surface; apply is a documented no-op until WorldEvents.
+an `on_passed` `WorldParameter` (solar shade, polar caps) are still **allowed at load** as a
+deferred surface; apply is a documented no-op until WorldEvents.
 
 ### Moddability
 Governor benefits are fully config-driven via `governorEffects` (continuous FactionGlobal

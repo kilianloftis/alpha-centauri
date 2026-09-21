@@ -4,7 +4,6 @@
 #include "game/GameState.h"
 #include "game/council/PlanetaryCouncil.h"
 #include "game/effects/ActiveEffect.h"
-#include "game/faction/DiplomacyLedger.h"
 
 #include <variant>
 
@@ -36,8 +35,7 @@ bool ContinuousEffectGrantsInfiltration_(const ActiveEffect_t& rEffect,
                                          FactionId_t target,
                                          const GameState& rState)
 {
-    if (rEffect.config->persistence != EffectPersistence_t::Continuous
-        || !std::get_if<InfiltrationEffect_t>(&rEffect.config->effect))
+    if (!std::get_if<InfiltrationEffect_t>(&rEffect.config->effect))
     {
         return false;
     }
@@ -46,7 +44,8 @@ bool ContinuousEffectGrantsInfiltration_(const ActiveEffect_t& rEffect,
 
 } // namespace
 
-bool FactionFilterCoversTarget(const EffectConfig_t& rConfig,
+bool FactionFilterCoversTarget(const std::optional<FactionFilter_t>& rFilter,
+                               bool bDefaultCoversAllOthers,
                                FactionId_t beneficiary,
                                FactionId_t candidate,
                                const GameState& rState,
@@ -57,13 +56,12 @@ bool FactionFilterCoversTarget(const EffectConfig_t& rConfig,
         return false;
     }
 
-    if (!rConfig.factionFilter)
+    if (!rFilter)
     {
-        // Default: WorldGlobal reaches every other faction; other scopes need an explicit filter.
-        return rConfig.scope == EffectScope_t::WorldGlobal;
+        return bDefaultCoversAllOthers;
     }
 
-    switch (rConfig.factionFilter->kind)
+    switch (rFilter->kind)
     {
         case FactionFilterKind_t::ActionTarget:
             return actionTarget.has_value() && *actionTarget == candidate;
@@ -77,44 +75,23 @@ bool FactionFilterCoversTarget(const EffectConfig_t& rConfig,
                 return false;
             }
             const bool bIsPlayer = pCandidate->IsPlayerControlled();
-            return (rConfig.factionFilter->playerType == PlayerType_t::Player) == bIsPlayer;
+            return (rFilter->playerType == PlayerType_t::Player) == bIsPlayer;
         }
     }
     return false;
 }
 
-void ApplyInfiltrationEffect(GameState& rState,
-                             const Faction& rBeneficiary,
-                             const EffectConfig_t& rConfig,
-                             std::optional<FactionId_t> actionTarget)
+bool FactionFilterCoversTarget(const EffectConfig_t& rConfig,
+                               FactionId_t beneficiary,
+                               FactionId_t candidate,
+                               const GameState& rState,
+                               std::optional<FactionId_t> actionTarget)
 {
-    if (rConfig.persistence != EffectPersistence_t::Instantaneous
-        || !std::get_if<InfiltrationEffect_t>(&rConfig.effect))
-    {
-        return;
-    }
-
-    const FactionId_t beneficiaryId = rBeneficiary.GetFactionId();
-    DiplomacyLedger& rDiplomacy = rState.GetDiplomacyLedger();
-    for (const Faction& rFaction : rState.Factions())
-    {
-        const FactionId_t candidateId = rFaction.GetFactionId();
-        if (FactionFilterCoversTarget(rConfig, beneficiaryId, candidateId, rState, actionTarget))
-        {
-            rDiplomacy.SetInfiltration(beneficiaryId, candidateId, true);
-        }
-    }
-}
-
-void ApplyInfiltrationEffects(GameState& rState,
-                              const Faction& rBeneficiary,
-                              const std::vector<EffectConfig_t>& rEffects,
-                              std::optional<FactionId_t> actionTarget)
-{
-    for (const EffectConfig_t& rEffect : rEffects)
-    {
-        ApplyInfiltrationEffect(rState, rBeneficiary, rEffect, actionTarget);
-    }
+    // Default for a continuous effect: WorldGlobal reaches every other faction; any other
+    // scope needs an explicit filter.
+    return FactionFilterCoversTarget(rConfig.factionFilter,
+                                     rConfig.scope == EffectScope_t::WorldGlobal, beneficiary,
+                                     candidate, rState, actionTarget);
 }
 
 bool HasInfiltration(const GameState& rState, FactionId_t infiltrator, FactionId_t target)

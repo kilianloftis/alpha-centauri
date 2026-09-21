@@ -3,6 +3,7 @@
 #include "game/GameCategory.h"
 #include "game/IConstructable.h"
 #include "game/effects/EffectConfig.h"
+#include "game/effects/TriggeredEffect.h"
 #include "game/faction/base/production/ScrapConfig.h"
 #include <algorithm>
 #include <string>
@@ -29,6 +30,8 @@ struct BuildingConfig_t : public IConstructable
     // Public orbital census: counts of buildings with this flag are visible to all factions.
     bool orbital = false;
     std::vector<EffectConfig_t> effects;
+    // One-shot effects fired once, when the facility is completed here.
+    std::vector<TriggeredEffectConfig_t> onCompleteEffects;
     // Optional partial override of kinds.building.default_scrap. `"formula": null` denies
     // scrap. Secret projects reject this.
     std::optional<ScrapOverride_t> scrap;

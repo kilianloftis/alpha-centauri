@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/effects/EffectConfig.h"
+#include "game/effects/TriggeredEffect.h"
 
 #include <optional>
 #include <stdexcept>
@@ -103,8 +104,12 @@ struct ProbeActionConfig_t
     // least that makes the action do anything.
     int riotTurns = 0;
     std::optional<ProbeCostConfig_t> cost;
-    // Optional Instantaneous effects applied on success (e.g. Infiltration + ActionTarget).
+    // Continuous effects the action declares. Probe actions have no pool origin, so this is
+    // effectively unused today; the mission's real work is in onSuccessEffects.
     std::vector<EffectConfig_t> effects;
+    // One-shot effects applied when the mission succeeds (SetInfiltration + ActionTarget, the
+    // sabotage DestroyFacility policy, the genetic-plague ModifyPopulation).
+    std::vector<TriggeredEffectConfig_t> onSuccessEffects;
 };
 
 struct ProbeActionsConfig_t
