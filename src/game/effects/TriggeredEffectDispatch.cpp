@@ -88,7 +88,7 @@ bool AddTech_(TriggeredEffectContext_t& rCtx, Faction& rFaction, const GrantTech
               std::vector<TriggeredEffectResult_t>& rOut)
 {
     TechId techId;
-)
+    if (rGrant.techId.has_value())
     {
         techId = *rGrant.techId;
     }

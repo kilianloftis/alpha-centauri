@@ -67,9 +67,10 @@ constexpr uint32_t k_TestFactionSeed = 1234u;
 // std::random_device made every roll-dependent test a coin flip across runs.
 constexpr uint32_t k_TestRngSeed = 4321u;
 
-// Tech cost formula for fixtures that do not care about research cost: it just echoes the
-// tech's own cost. A formula is required config, so "no formula" is not expressible.
-inline const std::string k_TestTechCostFormula = "base_cost";
+// Tech cost formula for fixtures that do not care about research cost: a fixed positive
+// value. A formula is required config, so "no formula" is not expressible. Per-tech cost
+// lives in ThisTech TechCost effects (or the shipping Lua formula), not a base_cost field.
+inline const std::string k_TestTechCostFormula = "10";
 
 // The pop-type registry plus the two rules services PopContainer / PopulationManager require
 // (availability resolution and the discovered-tech source behind it). Small enough for

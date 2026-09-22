@@ -2,32 +2,27 @@
   {
     "id": "build_tech",
     "name": "Build Tech",
-    "category": "build",
-    "cost": 10
+    "category": "build"
   },
   {
     "id": "grow_tech",
     "name": "Grow Tech",
-    "category": "grow",
-    "cost": 10
+    "category": "grow"
   },
   {
     "id": "discover_tech",
     "name": "Discover Tech",
-    "category": "discover",
-    "cost": 10
+    "category": "discover"
   },
   {
     "id": "conquer_tech",
     "name": "Conquer Tech",
-    "category": "conquer",
-    "cost": 10
+    "category": "conquer"
   },
   {
     "id": "advanced_build",
     "name": "Advanced Build",
     "category": "build",
-    "cost": 20,
     "prerequisites": [
       "build_tech"
     ]
@@ -36,7 +31,6 @@
     "id": "efficient_maintenance",
     "name": "Efficient Maintenance",
     "category": "build",
-    "cost": 15,
     "prerequisites": [
       "advanced_build"
     ],
@@ -60,7 +54,6 @@
     "id": "fusion_power",
     "name": "Fusion Power",
     "category": "discover",
-    "cost": 60,
     "effects": [
       {
         "type": "StatModifier",
@@ -81,7 +74,6 @@
     "id": "quantum_power",
     "name": "Quantum Power",
     "category": "discover",
-    "cost": 120,
     "prerequisites": [
       "fusion_power"
     ],
@@ -104,14 +96,12 @@
   {
     "id": "intellectual_integrity",
     "name": "Intellectual Integrity",
-    "category": "discover",
-    "cost": 50
+    "category": "discover"
   },
   {
     "id": "industrial_automation",
     "name": "Industrial Automation",
     "category": "build",
-    "cost": 30,
     "effects": [
       {
         "type": "StatModifier",
@@ -128,7 +118,6 @@
     "id": "environmental_economics",
     "name": "Environmental Economics",
     "category": "build",
-    "cost": 70,
     "effects": [
       {
         "type": "StatModifier",
@@ -145,7 +134,6 @@
     "id": "planetary_economics",
     "name": "Planetary Economics",
     "category": "build",
-    "cost": 110,
     "effects": [
       {
         "type": "StatModifier",
@@ -162,7 +150,6 @@
     "id": "industrial_economics",
     "name": "Industrial Economics",
     "category": "build",
-    "cost": 1,
     "effects": [
       {
         "type": "StatModifier",
@@ -179,7 +166,6 @@
     "id": "industrial_nanorobotics",
     "name": "Industrial Nanorobotics",
     "category": "build",
-    "cost": 1,
     "effects": [
       {
         "type": "StatModifier",
@@ -196,7 +182,6 @@
     "id": "sentient_econometrics",
     "name": "Sentient Econometrics",
     "category": "build",
-    "cost": 1,
     "effects": [
       {
         "type": "StatModifier",
@@ -213,12 +198,13 @@
     "id": "graviton_theory",
     "name": "Graviton Theory",
     "category": "discover",
-    "cost": 1,
     "effects": [
       {
         "type": "RuleFlag",
         "scope": "FactionGlobal",
-        "parameters": { "flag": "orbital_insertion" }
+        "parameters": {
+          "flag": "orbital_insertion"
+        }
       }
     ]
   },
@@ -226,12 +212,16 @@
     "id": "secrets_of_the_human_brain",
     "name": "Secrets of the Human Brain",
     "category": "discover",
-    "cost": 20,
     "on_discover_effects": [
       {
         "type": "GrantTech",
-        "parameters": { "selection": "Available" },
-        "once_per": { "scope": "world", "key": "secrets_of_the_human_brain_first" }
+        "parameters": {
+          "selection": "Available"
+        },
+        "once_per": {
+          "scope": "world",
+          "key": "secrets_of_the_human_brain_first"
+        }
       }
     ]
   },
@@ -239,18 +229,18 @@
     "id": "discover_chain_parent",
     "name": "Discover Chain Parent",
     "category": "discover",
-    "cost": 1,
     "on_discover_effects": [
       {
         "type": "GrantTech",
-        "parameters": { "tech_id": "discover_chain_child" }
+        "parameters": {
+          "tech_id": "discover_chain_child"
+        }
       }
     ]
   },
   {
     "id": "discover_chain_child",
     "name": "Discover Chain Child",
-    "category": "discover",
-    "cost": 1
+    "category": "discover"
   }
 ]

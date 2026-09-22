@@ -112,6 +112,7 @@ not by which config declared it. Each scope has one "lane":
 | `ThisUnit` | the unit itself | `CollectUnitEffects` (design components) |
 | `ThisPop` | the pop itself | `Pop::ApplyTileMultipliers` (per worked-tile Add / %) |
 | `ThisTile` | tile resolvers | `CollectTileEffects`/`CollectAreaEffects` — features on the tile, radius-reaching features nearby, and units projecting component effects |
+| `ThisTech` | research cost for that tech | Resolved from the tech config when it is the research target (`ResearchManager`); never enters the faction pool on discovery (`AppendFactionLaneEffects` in `CollectDiscoveredTechEffects_`) |
 
 In code, this table is a single constexpr function: `LaneFor(EffectScope_t) -> EffectLane_t`
 in `EffectEnums.h`, with the derived predicate `IsFactionLane`. Every collector/filter
@@ -125,6 +126,7 @@ certainly-impossible combinations — with a clear error:
 
 - `ThisPop` only on a pop type
 - `ThisUnit` only on a unit component
+- `ThisTech` only on a tech, and only as a `tech_cost` `StatModifier`
 - `ThisBase` / `ProducedAtThisBase` only on sources that can supply an origin base or
   pop-merge path: `Building`, `PopType`, `SocialPolicy`, `SocialRating`. Rejected on
   `UnitComponent`, `Improvement`, `ProbeAction`, `Faction`, `CouncilProposal`,
@@ -180,6 +182,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   - Base output allocated directly rather than via energy split: `Econ`, `Labs`, `Psych`.
   - Unit stats: `Attack`, `Defense`, `Movement`, `HitPoints`, `DisengageChance`, `TurnsOfFuel`, `DamageFromOutOfFuel`, `CargoCapacity`, `DifficultTerrainCost`, `MineralUpkeep` (home-base mineral support cost; floored at 0), `FreeUnitSupport` (base-level free support slots), `CostMultiplier` (also used for base production cost after Industry rating expansion), `PrototypeSurchargeScale` (PureMultiplier on the prototype mineral *extra* only; Skunkworks uses `MultiplyGeometric` 0 on `ThisBase`), `RetoolPenaltyScale` (PureMultiplier on the retool forfeit; Skunkworks zeros it the same way), `FacilityEnergyUpkeep` (RawScaled on constructed-facility energy maintenance from `BuildingConfig_t::upkeep`; optional `buildingFilter`), `StartingMinerals` (credited to a new base's production stockpile at founding; resolved from the new base's effects plus the founding unit), `ScrapRefund` (RawScaled: player-scrap amount after the kind formula or config override; bonuses stack, then `refund_ceiling_percent` clamps).
   - Difficulty stats (see [difficulty-system.md](difficulty-system.md)): `SizeFreeDrones` (Additive free population before size drones — difficulty is the sole emitter), `TechCostDiff` (Additive ordinal fed to `tech_cost.lua` as `diff`), `Bureaucracy` (PureMultiplier product for the bureaucracy base-limit formula; difficulty and Efficiency SE emit MultiplyGeometric), `EcologicalDamage` (RawScaled: seed is the accrued amount), `ConqueredDroneCap` (Additive offset on the recently-conquered drone cap; difficulty Adds `0.25 × level` with Citizen = 1, `base_conquest.json` Adds −0.5).
+  - Research cost: `TechCost` (Additive percent points fed to `tech_cost.lua`). Faction-scoped emitters (e.g. University) become `faction_modifier`. Optional per-tech `ThisTech` emitters on the tech being researched become `tech_modifier`. There is no per-tech base cost field.
   - Population modifier: `GrowthRate` (`AddPercent`, base = 100%) — modifies the faction-wide population growth rate. `LastDefenderPopLoss` and `CapturePopLoss` are two independent Additive stats whose baselines come from `base_conquest.json`'s own `effects` array (an `Add` each, injected into every faction's pool like `production.json`'s). Perimeter Defense and Citizen difficulty `MaxClamp` 0 the last-defender one only; nothing in the shipping config modifies capture loss. `CaptureFacilitiesDestroyedMin` and `CaptureFacilitiesDestroyedMaxPercent` are the same shape. `ConqueredDroneCap` is the recently-conquered drone-cap offset: difficulty Adds `0.25` per level (Citizen = 1) and `base_conquest.json` Adds −0.5, so the drone formula's `floor(base_size/4 + conquered_drone_cap)` is `(BaseSize + Difficulty − 2) / 4`. Peak extra drones and the 10-turn decay live on `pop_composition.json` (`assimilation_drones`, `assimilation_decay_turns`) because they are calculator coefficients, not modifiers. So **every numeric tunable in `base_conquest.json` is a modifiable stat** — the file holds no scalars at all, only its effects list and the escape-pod component ids. Because each baseline is an ordinary contribution rather than a hard-coded seed, a mod can *raise* these values, not merely clamp them; vanilla simply ships no emitter besides the baseline for most of them.
   - Terrain mutation: `MoistureTier` — resolved back into `Tile::SetMoisture` by `RecomputeMoisture`; not a runtime-queried stat (see Tile Improvement Effects).
   - Commerce: `CommerceRate` (PureMultiplier, Faction — Global Trade Pact; scales formula
@@ -324,6 +327,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
     uncomposed pool used when harvesting peers.
   - `ThisPop` — only the specific pop instance the effect belongs to (pop type tile-multiplier effects use this scope). Resolved locally by `Pop::ApplyTileMultipliers` and never enters the base-wide active effects pool — `FilterForBase` always excludes it, same as `ThisUnit`/`FactionUnits`.
   - `ThisTile` — only the specific tile the effect belongs to (terrain classification, river, fungus, or improvement). Resolved locally via `CollectTileEffects`/`ResolveTileYield`/`ResolveTileDefenseMultiplier` and never enters the base-wide active effects pool — `FilterForBase` always excludes it too. See Tile Improvement Effects below.
+  - `ThisTech` — only the tech definition that declares the effect (`TechLocal` lane). Resolved when that tech is the current research target (`ResearchManager` feeds `tech_modifier` into `tech_cost.lua`). Must be a `tech_cost` `StatModifier` on a tech config. Never enters the faction pool when the tech is discovered.
 
 ### ActiveEffect_t
 - **Purpose**: A runtime instance of an effect tied to a specific source.
@@ -578,7 +582,8 @@ grants fewer units and reports the real count rather than throwing.
   extras are composed later by `Faction::GetActiveEffects` — they never enter this rebuild.
 - **Pipeline** (strict order):
   1. **Collect** raw continuous contributors: tile-yield rules, faction definition,
-     discovered-tech `effects[]`, constructed buildings (no grant expand yet), social
+     discovered-tech faction-lane `effects[]` (`AppendFactionLaneEffects` — skips `ThisTech`),
+     constructed buildings (no grant expand yet), social
      engineering, pop faction-lane, unit faction-lane.
   2. **Gate** `removed_by_tech` (erase effects whose tech is already discovered). Every
      expansion below is bracketed by this gate: a derivative outlives its producer

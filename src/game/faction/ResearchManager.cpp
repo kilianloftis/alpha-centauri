@@ -126,6 +126,18 @@ void ResearchManager::ComputePointsNeeded_() const
     {
         m_costEffectsVersion = 0;
     }
+
+    std::vector<ActiveEffect_t> thisTechEffects;
+    for (const EffectConfig_t& rEffect : m_pCurrentResearchTarget->effects)
+    {
+        if (rEffect.scope == EffectScope_t::ThisTech)
+        {
+            thisTechEffects.emplace_back(rEffect, m_pCurrentResearchTarget->id);
+        }
+    }
+    inputs.techTechCostModifier = FinalizeResolvedStat(ResolveStatModifiersTotal(
+        FilterByStatId(thisTechEffects, StatId_t::TechCost), SeedFor(StatId_t::TechCost)));
+
     m_costResearchRevision = GetRevision();
     // Remaining fields are placeholder defaults (turns=0, bIsAI=false, etc.)
 

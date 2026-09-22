@@ -104,6 +104,7 @@ TEST_CASE("ParseModifierOp / ParseEffectScope mappings", "[effects][parser]")
     CHECK(EffectConfigParser::ParseEffectScope("WorldGlobal") == EffectScope_t::WorldGlobal);
     CHECK(EffectConfigParser::ParseEffectScope("ThisPop") == EffectScope_t::ThisPop);
     CHECK(EffectConfigParser::ParseEffectScope("ThisTile") == EffectScope_t::ThisTile);
+    CHECK(EffectConfigParser::ParseEffectScope("ThisTech") == EffectScope_t::ThisTech);
     CHECK_THROWS(EffectConfigParser::ParseEffectScope("Global"));
 }
 
@@ -1864,6 +1865,36 @@ TEST_CASE("ValidateEffectForSource: rejects only the certainly-impossible combin
         EffectScope_t::ThisTile, EffectSourceKind_t::UnitComponent, "sensor_pod"));
     CHECK_NOTHROW(ValidateScopeForSource_(
         EffectScope_t::WorldGlobal, EffectSourceKind_t::Building, "beacon"));
+
+    // ThisTech is tech-config-local research cost modifiers only.
+    CHECK_THROWS(ValidateScopeForSource_(
+        EffectScope_t::ThisTech, EffectSourceKind_t::Building, "some_building"));
+    CHECK_THROWS(ValidateScopeForSource_(
+        EffectScope_t::ThisTech, EffectSourceKind_t::Tech, "cheap_tech"));
+}
+
+TEST_CASE("ValidateEffectForSource: ThisTech accepts only tech_cost StatModifiers",
+          "[effects][parser][validation]")
+{
+    EffectConfig_t techCost;
+    techCost.scope = EffectScope_t::ThisTech;
+    techCost.effect = StatModifierEffect_t{StatId_t::TechCost, 50.0, ModifierOp_t::Add};
+    CHECK_NOTHROW(EffectConfigParser::ValidateEffectForSource(
+        techCost, EffectSourceKind_t::Tech, "pricey_tech"));
+
+    EffectConfig_t wrongStat = techCost;
+    wrongStat.effect = StatModifierEffect_t{StatId_t::Labs, 1.0, ModifierOp_t::Add};
+    CHECK_THROWS_WITH(
+        EffectConfigParser::ValidateEffectForSource(
+            wrongStat, EffectSourceKind_t::Tech, "labs_tech"),
+        Catch::Matchers::ContainsSubstring("ThisTech")
+            && Catch::Matchers::ContainsSubstring("tech_cost"));
+
+    CHECK_THROWS_WITH(
+        EffectConfigParser::ValidateEffectForSource(
+            techCost, EffectSourceKind_t::Faction, "gaians"),
+        Catch::Matchers::ContainsSubstring("ThisTech")
+            && Catch::Matchers::ContainsSubstring("tech"));
 }
 
 TEST_CASE("ParseEffects with a source kind validates every entry", "[effects][parser][validation]")

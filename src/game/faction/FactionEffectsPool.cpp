@@ -135,7 +135,9 @@ std::vector<ActiveEffect_t> FactionEffectsPool::CollectDiscoveredTechEffects_() 
         {
             continue;
         }
-        AppendActiveEffects(pTech->effects, nullptr, pTech->id, result);
+        // Faction-lane only: ThisTech (TechLocal) cost modifiers resolve on the research
+        // target, not after discovery.
+        AppendFactionLaneEffects(pTech->effects, nullptr, pTech->id, result);
     }
     return result;
 }

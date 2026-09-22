@@ -1083,6 +1083,21 @@ void ValidateEffectForSource(const EffectConfig_t& rEffect, EffectSourceKind_t s
         throw std::runtime_error("Effect on '" + rSourceId
             + "': scope ThisUnit is only meaningful on a unit component or morale level config");
     }
+    if (scope == EffectScope_t::ThisTech)
+    {
+        if (sourceKind != EffectSourceKind_t::Tech)
+        {
+            throw std::runtime_error("Effect on '" + rSourceId
+                + "': scope ThisTech is only meaningful on a tech config");
+        }
+        if (pStatModifier == nullptr || pStatModifier->stat != StatId_t::TechCost)
+        {
+            throw std::runtime_error(
+                "Effect on '" + rSourceId
+                + "': scope ThisTech only accepts StatModifier tech_cost (research cost "
+                  "modifiers for this tech as a research target)");
+        }
+    }
     if (scope == EffectScope_t::ThisBase || scope == EffectScope_t::ProducedAtThisBase)
     {
         // Listed exhaustively (no default:) so adding an EffectSourceKind_t forces a decision

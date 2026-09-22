@@ -37,8 +37,8 @@ TEST_CASE("A tech tree with a prerequisite cycle fails at load", "[config][tech]
     SECTION("a two-tech cycle is named")
     {
         const TempConfigFile config("ac_tech_cycle.json", R"([
-            { "id": "a", "name": "A", "category": "build", "cost": 10, "prerequisites": ["b"] },
-            { "id": "b", "name": "B", "category": "build", "cost": 10, "prerequisites": ["a"] }
+            { "id": "a", "name": "A", "category": "build", "prerequisites": ["b"] },
+            { "id": "b", "name": "B", "category": "build", "prerequisites": ["a"] }
         ])");
         CHECK_THROWS_WITH(registry.Load(config.Path()),
                           Catch::Matchers::ContainsSubstring("cycle")
@@ -49,9 +49,9 @@ TEST_CASE("A tech tree with a prerequisite cycle fails at load", "[config][tech]
     SECTION("a longer cycle is caught too")
     {
         const TempConfigFile config("ac_tech_cycle3.json", R"([
-            { "id": "a", "name": "A", "category": "build", "cost": 10, "prerequisites": ["c"] },
-            { "id": "b", "name": "B", "category": "build", "cost": 10, "prerequisites": ["a"] },
-            { "id": "c", "name": "C", "category": "build", "cost": 10, "prerequisites": ["b"] }
+            { "id": "a", "name": "A", "category": "build", "prerequisites": ["c"] },
+            { "id": "b", "name": "B", "category": "build", "prerequisites": ["a"] },
+            { "id": "c", "name": "C", "category": "build", "prerequisites": ["b"] }
         ])");
         CHECK_THROWS_WITH(registry.Load(config.Path()),
                           Catch::Matchers::ContainsSubstring("cycle"));
@@ -60,12 +60,12 @@ TEST_CASE("A tech tree with a prerequisite cycle fails at load", "[config][tech]
     SECTION("a diamond is not a cycle")
     {
         const TempConfigFile config("ac_tech_diamond.json", R"([
-            { "id": "root", "name": "Root", "category": "build", "cost": 10 },
-            { "id": "left", "name": "Left", "category": "build", "cost": 10,
+            { "id": "root", "name": "Root", "category": "build" },
+            { "id": "left", "name": "Left", "category": "build",
               "prerequisites": ["root"] },
-            { "id": "right", "name": "Right", "category": "build", "cost": 10,
+            { "id": "right", "name": "Right", "category": "build",
               "prerequisites": ["root"] },
-            { "id": "join", "name": "Join", "category": "build", "cost": 10,
+            { "id": "join", "name": "Join", "category": "build",
               "prerequisites": ["left", "right"] }
         ])");
         CHECK_NOTHROW(registry.Load(config.Path()));
@@ -74,41 +74,16 @@ TEST_CASE("A tech tree with a prerequisite cycle fails at load", "[config][tech]
     SECTION("a cycle behind a valid prefix is still caught")
     {
         const TempConfigFile config("ac_tech_cycle_deep.json", R"([
-            { "id": "root", "name": "Root", "category": "build", "cost": 10 },
-            { "id": "mid", "name": "Mid", "category": "build", "cost": 10,
+            { "id": "root", "name": "Root", "category": "build" },
+            { "id": "mid", "name": "Mid", "category": "build",
               "prerequisites": ["root", "loop_a"] },
-            { "id": "loop_a", "name": "LoopA", "category": "build", "cost": 10,
+            { "id": "loop_a", "name": "LoopA", "category": "build",
               "prerequisites": ["loop_b"] },
-            { "id": "loop_b", "name": "LoopB", "category": "build", "cost": 10,
+            { "id": "loop_b", "name": "LoopB", "category": "build",
               "prerequisites": ["loop_a"] }
         ])");
         CHECK_THROWS_WITH(registry.Load(config.Path()),
                           Catch::Matchers::ContainsSubstring("cycle"));
-    }
-}
-
-TEST_CASE("A tech without a usable cost is rejected, by name", "[config][tech]")
-{
-    // cost defaulted to 0, and base_cost is already exposed to the cost formula.
-    TechRegistry registry;
-
-    SECTION("missing")
-    {
-        const TempConfigFile config("ac_tech_no_cost.json",
-                                 R"([{ "id": "flight", "name": "Flight", "category": "build" }])");
-        CHECK_THROWS_WITH(registry.Load(config.Path()),
-                          Catch::Matchers::ContainsSubstring("flight")
-                              && Catch::Matchers::ContainsSubstring("cost"));
-    }
-
-    SECTION("wrong type")
-    {
-        const TempConfigFile config(
-            "ac_tech_bad_cost.json",
-            R"([{ "id": "flight", "name": "Flight", "category": "build", "cost": "cheap" }])");
-        CHECK_THROWS_WITH(registry.Load(config.Path()),
-                          Catch::Matchers::ContainsSubstring("flight")
-                              && Catch::Matchers::ContainsSubstring("cost"));
     }
 }
 
@@ -117,7 +92,7 @@ TEST_CASE("A wrong-shaped prerequisites list names the tech", "[config][tech]")
     // "prerequisites": "tech_x" read identically to no prerequisites at all.
     TechRegistry registry;
     const TempConfigFile config("ac_tech_bad_prereqs.json", R"([
-        { "id": "flight", "name": "Flight", "category": "build", "cost": 10,
+        { "id": "flight", "name": "Flight", "category": "build",
           "prerequisites": "industrial_base" }
     ])");
     CHECK_THROWS_WITH(registry.Load(config.Path()),
@@ -132,7 +107,6 @@ TEST_CASE("Tech cost refuses to invent a number", "[config][tech]")
     LuaRuntime lua;
     TechConfig_t tech;
     tech.id = "test_tech";
-    tech.cost = 40;
     const TechCostInputs_t inputs;
 
     SECTION("an empty formula throws rather than costing 1")
@@ -154,9 +128,18 @@ TEST_CASE("Tech cost refuses to invent a number", "[config][tech]")
 
     SECTION("a working formula is returned as-is")
     {
-        const TechCostConfig_t config{"base_cost * 2"};
+        const TechCostConfig_t config{"40 * 2"};
         const TechCostCalculator calculator(config, lua);
         CHECK(calculator.CalculateCost(tech, inputs) == 80);
+    }
+
+    SECTION("tech_modifier is bound for the formula")
+    {
+        const TechCostConfig_t config{"100 + tech_modifier"};
+        const TechCostCalculator calculator(config, lua);
+        TechCostInputs_t scaled = inputs;
+        scaled.techTechCostModifier = 50;
+        CHECK(calculator.CalculateCost(tech, scaled) == 150);
     }
 }
 

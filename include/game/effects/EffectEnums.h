@@ -622,6 +622,10 @@ enum class EffectScope_t
     // (Unit::GetProductionGrants). Distinct from home base and from FactionUnits: permanent
     // train-at-this-base bonuses (Command Center, Aerospace).
     ProducedAtThisBase,
+    // Only the tech definition this effect is declared on. Resolved when that tech is the
+    // current research target (e.g. TechCost modifiers); never enters the faction pool when
+    // the tech is discovered.
+    ThisTech,
 };
 
 // Where an effect is resolved — its scope's "lane". This is the single source of truth for
@@ -652,6 +656,8 @@ enum class EffectLane_t
     // Resolved by the tile resolvers (CollectTileEffects/CollectAreaEffects). Never enters
     // the pool.
     TileLocal,
+    // Resolved when costing the tech that declares the effect. Never enters the pool.
+    TechLocal,
 };
 
 constexpr EffectLane_t LaneFor(EffectScope_t scope)
@@ -667,6 +673,7 @@ constexpr EffectLane_t LaneFor(EffectScope_t scope)
         case EffectScope_t::ThisUnit:      return EffectLane_t::UnitLocal;
         case EffectScope_t::ThisPop:       return EffectLane_t::PopLocal;
         case EffectScope_t::ThisTile:      return EffectLane_t::TileLocal;
+        case EffectScope_t::ThisTech:      return EffectLane_t::TechLocal;
     }
     return EffectLane_t::FactionWide; // unreachable; all enumerators handled above
 }

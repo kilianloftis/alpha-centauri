@@ -80,6 +80,7 @@ static_assert(LaneFor(EffectScope_t::ProducedAtThisBase) == EffectLane_t::Produc
 static_assert(LaneFor(EffectScope_t::ThisUnit) == EffectLane_t::UnitLocal);
 static_assert(LaneFor(EffectScope_t::ThisPop) == EffectLane_t::PopLocal);
 static_assert(LaneFor(EffectScope_t::ThisTile) == EffectLane_t::TileLocal);
+static_assert(LaneFor(EffectScope_t::ThisTech) == EffectLane_t::TechLocal);
 
 static_assert(!IsFactionLane(EffectScope_t::ThisBase));
 static_assert(IsFactionLane(EffectScope_t::AllOwnerBases));
@@ -90,6 +91,7 @@ static_assert(!IsFactionLane(EffectScope_t::ProducedAtThisBase));
 static_assert(!IsFactionLane(EffectScope_t::ThisUnit));
 static_assert(!IsFactionLane(EffectScope_t::ThisPop));
 static_assert(!IsFactionLane(EffectScope_t::ThisTile));
+static_assert(!IsFactionLane(EffectScope_t::ThisTech));
 
 static_assert(TagsOriginBase(EffectScope_t::ThisBase));
 static_assert(TagsOriginBase(EffectScope_t::ProducedAtThisBase));
@@ -100,6 +102,7 @@ static_assert(!TagsOriginBase(EffectScope_t::WorldGlobal));
 static_assert(!TagsOriginBase(EffectScope_t::ThisUnit));
 static_assert(!TagsOriginBase(EffectScope_t::ThisPop));
 static_assert(!TagsOriginBase(EffectScope_t::ThisTile));
+static_assert(!TagsOriginBase(EffectScope_t::ThisTech));
 
 // KindFor is the same single-source-of-truth pattern for stat seed semantics: pin every
 // stat's kind so a new StatId_t (which the compiler forces into KindFor's switch) gets a

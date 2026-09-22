@@ -62,9 +62,9 @@ graph TB
 ### Tech
 - **Purpose**: Data structure representing a single technology
 - **Responsibilities**:
-  - Store tech ID, name, description
-  - Manage prerequisites (vector<TechId>)
-  - Store base cost for research
+  - Store tech ID, name, category
+  - Manage prerequisites (vector of tech ids)
+  - Hold continuous `effects` (faction bonuses while discovered; optional `ThisTech` `tech_cost` modifiers while researching) and `on_discover_effects`
 - **Owned by**: TechRegistry
 - **Referenced by**: ResearchManager, TechCostCalculator
 
@@ -79,10 +79,11 @@ graph TB
 ### TechCostCalculator
 - **Purpose**: Calculate research points needed for a technology
 - **Responsibilities**:
-  - Evaluate the `cost_formula` from `config/tech_cost.lua` with the runtime inputs in `TechCostInputs_t` plus the tech's own `cost` as `base_cost`
+  - Evaluate the `cost_formula` from `config/tech_cost.lua` with the runtime inputs in `TechCostInputs_t` (discovered-tech count, difficulty, faction and per-tech `TechCost` percent modifiers, and other Lua vars)
   - Reject a non-positive result
 - **No C++ formula and no minimum-cost floor**: both live in the Lua config. The floor used to be `std::max(1, cost)` in C++, which turned an empty or broken formula — `LuaRuntime::EvalInt` returned 0 for both — into a valid-looking research cost of 1. `EvalInt` now throws, the parser requires a non-empty `cost_formula`, and the calculator rejects a non-positive result, so a broken mod formula fails loudly instead of making every tech cost 1.
 - **Pattern**: Thin Lua bridge, same shape as `PopCompositionCalculator`
+- **Per-tech modifiers**: optional `ThisTech` `tech_cost` StatModifiers on the tech config are resolved by `ResearchManager` into `tech_modifier` (same percent step as `faction_modifier`). There is no per-tech base cost field.
 
 ## Usage Flow
 

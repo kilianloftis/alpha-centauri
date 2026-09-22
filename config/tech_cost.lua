@@ -10,9 +10,9 @@
 --   tech_stagnation      : 1 if tech stagnation is active, 0 otherwise
 --   research_modifier    : -1=natural bonus, 0=neutral, +1=natural penalty
 --   world_size_modifier  : percentage modifier from world size (0 = no change)
---   faction_modifier     : percentage modifier from TechCost bonus effects
+--   faction_modifier     : percentage modifier from faction TechCost bonus effects
+--   tech_modifier        : percentage modifier from ThisTech TechCost on the target tech
 --   alphax_modifier      : percentage modifier from alpha(x).txt
---   base_cost            : per-tech base cost scalar from Tech definition
 
 function tech_cost_formula()
     -- Step 1: Difficulty-based base value, clamped to [-12, 12].
@@ -55,11 +55,11 @@ function tech_cost_formula()
     local tech_factor = math.max(1, techs + research_modifier)
     local step5 = tech_factor * step4
 
-    -- Step 6: Apply world size, faction, and alpha(x).txt cost modifiers.
-    -- TODO: Default formula (integration of base_cost) is TBD.
+    -- Step 6: Apply world size, faction, per-tech, and alpha(x).txt cost modifiers.
     local step6 = step5
     step6 = step6 + math.floor(step6 * world_size_modifier / 100)
     step6 = step6 + math.floor(step6 * faction_modifier     / 100)
+    step6 = step6 + math.floor(step6 * tech_modifier        / 100)
     step6 = step6 + math.floor(step6 * alphax_modifier      / 100)
     if tech_stagnation ~= 0 then
         step6 = math.floor(step6 * 1.5)

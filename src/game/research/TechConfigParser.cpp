@@ -22,20 +22,6 @@ TechConfig_t TechConfigParser::ParseTechConfig_(const nlohmann::json& techJson)
     config.id = ConfigFields::ParseId(techJson);
     config.name = ConfigFields::ParseName(techJson, config.id);
     config.category = ParseGameCategoryField(techJson);
-    // Required: base_cost feeds the cost formula, so an omitted key silently cheapens the tech.
-    if (!techJson.contains("cost"))
-    {
-        throw std::runtime_error("Tech '" + config.id + "': missing required field 'cost'");
-    }
-    if (!techJson.at("cost").is_number_integer())
-    {
-        throw std::runtime_error("Tech '" + config.id + "': 'cost' must be an integer");
-    }
-    config.cost = techJson.at("cost").get<int>();
-    if (config.cost < 0)
-    {
-        throw std::runtime_error("Tech '" + config.id + "': 'cost' must not be negative");
-    }
     config.prerequisites = ConfigFields::ParseStringArray(techJson, "prerequisites");
     config.effects = EffectConfigParser::ParseEffects(
         techJson, EffectSourceKind_t::Tech, config.id);

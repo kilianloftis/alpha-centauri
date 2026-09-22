@@ -26,8 +26,8 @@ int TechCostCalculator::CalculateCost(const TechConfig_t& rTech, const TechCostI
         {"research_modifier",   static_cast<double>(rInputs.researchModifier)},
         {"world_size_modifier", static_cast<double>(rInputs.worldSizeModifier)},
         {"faction_modifier",    static_cast<double>(rInputs.factionTechCostModifier)},
+        {"tech_modifier",       static_cast<double>(rInputs.techTechCostModifier)},
         {"alphax_modifier",     static_cast<double>(rInputs.alphaxTechCostModifier)},
-        {"base_cost",           static_cast<double>(rTech.cost)},
     };
 
     const int cost = m_pLua->EvalInt(m_pConfig->costFormula, vars);

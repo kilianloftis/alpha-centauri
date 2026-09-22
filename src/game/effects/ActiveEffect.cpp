@@ -733,7 +733,8 @@ BaseEffects_t FilterForBase(const FactionEffects_t& rFactionEffects, const BaseM
             case EffectLane_t::UnitLocal:
             case EffectLane_t::PopLocal:
             case EffectLane_t::TileLocal:
-                // Resolved by their own unit/pop/tile; never apply to base-level calculations.
+            case EffectLane_t::TechLocal:
+                // Resolved by their own unit/pop/tile/tech; never apply to base-level calculations.
                 break;
         }
     }

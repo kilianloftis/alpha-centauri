@@ -2,20 +2,17 @@
   {
     "id": "test_tech_1",
     "name": "Test Tech 1",
-    "category": "build",
-    "cost": 10
+    "category": "build"
   },
   {
     "id": "test_tech_2",
     "name": "Test Tech 2",
-    "category": "grow",
-    "cost": 20
+    "category": "grow"
   },
   {
     "id": "test_tech_3",
     "name": "Advanced Tech",
     "category": "discover",
-    "cost": 50,
     "prerequisites": [
       "test_tech_1",
       "test_tech_2"
@@ -24,45 +21,44 @@
   {
     "id": "ethical_calculus",
     "name": "Ethical Calculus",
-    "category": "grow",
-    "cost": 20
+    "category": "grow"
   },
   {
     "id": "secrets_of_the_human_brain",
     "name": "Secrets of the Human Brain",
     "category": "discover",
-    "cost": 20,
     "on_discover_effects": [
       {
         "type": "GrantTech",
-        "parameters": { "selection": "Available" },
-        "once_per": { "scope": "world", "key": "secrets_of_the_human_brain_first" }
+        "parameters": {
+          "selection": "Available"
+        },
+        "once_per": {
+          "scope": "world",
+          "key": "secrets_of_the_human_brain_first"
+        }
       }
     ]
   },
   {
     "id": "planetary_networks",
     "name": "Planetary Networks",
-    "category": "discover",
-    "cost": 20
+    "category": "discover"
   },
   {
     "id": "centauri_empathy",
     "name": "Centauri Empathy",
-    "category": "grow",
-    "cost": 30
+    "category": "grow"
   },
   {
     "id": "cyberethics",
     "name": "Cyberethics",
-    "category": "build",
-    "cost": 40
+    "category": "build"
   },
   {
     "id": "industrial_automation",
     "name": "Industrial Automation",
     "category": "build",
-    "cost": 30,
     "effects": [
       {
         "type": "StatModifier",
@@ -78,26 +74,22 @@
   {
     "id": "eudaimonia",
     "name": "Eudaimonia",
-    "category": "grow",
-    "cost": 120
+    "category": "grow"
   },
   {
     "id": "the_will_to_power",
     "name": "The Will to Power",
-    "category": "grow",
-    "cost": 90
+    "category": "grow"
   },
   {
     "id": "centauri_meditation",
     "name": "Centauri Meditation",
-    "category": "grow",
-    "cost": 50
+    "category": "grow"
   },
   {
     "id": "fusion_power",
     "name": "Fusion Power",
     "category": "discover",
-    "cost": 60,
     "effects": [
       {
         "type": "StatModifier",
@@ -118,7 +110,6 @@
     "id": "quantum_power",
     "name": "Quantum Power",
     "category": "discover",
-    "cost": 120,
     "prerequisites": [
       "fusion_power"
     ],
@@ -141,44 +132,37 @@
   {
     "id": "mind_machine_interface",
     "name": "Mind/Machine Interface",
-    "category": "conquer",
-    "cost": 60
+    "category": "conquer"
   },
   {
     "id": "secrets_of_alpha_centauri",
     "name": "Secrets of Alpha Centauri",
-    "category": "discover",
-    "cost": 120
+    "category": "discover"
   },
   {
     "id": "doctrine_air_power",
     "name": "Doctrine: Air Power",
-    "category": "conquer",
-    "cost": 40
+    "category": "conquer"
   },
   {
     "id": "gene_splicing",
     "name": "Gene Splicing",
-    "category": "discover",
-    "cost": 40
+    "category": "discover"
   },
   {
     "id": "ecological_engineering",
     "name": "Ecological Engineering",
-    "category": "build",
-    "cost": 50
+    "category": "build"
   },
   {
     "id": "advanced_military_algorithms",
     "name": "Advanced Military Algorithms",
-    "category": "conquer",
-    "cost": 60
+    "category": "conquer"
   },
   {
     "id": "environmental_economics",
     "name": "Environmental Economics",
     "category": "build",
-    "cost": 70,
     "effects": [
       {
         "type": "StatModifier",
@@ -194,14 +178,12 @@
   {
     "id": "monopole_magnets",
     "name": "Monopole Magnets",
-    "category": "discover",
-    "cost": 80
+    "category": "discover"
   },
   {
     "id": "advanced_ecological_engineering",
     "name": "Advanced Ecological Engineering",
     "category": "build",
-    "cost": 90,
     "prerequisites": [
       "ecological_engineering"
     ]
@@ -209,14 +191,12 @@
   {
     "id": "orbital_spaceflight",
     "name": "Orbital Spaceflight",
-    "category": "discover",
-    "cost": 100
+    "category": "discover"
   },
   {
     "id": "planetary_economics",
     "name": "Planetary Economics",
     "category": "build",
-    "cost": 110,
     "effects": [
       {
         "type": "StatModifier",
@@ -233,7 +213,6 @@
     "id": "industrial_economics",
     "name": "Industrial Economics",
     "category": "build",
-    "cost": 1,
     "effects": [
       {
         "type": "StatModifier",
@@ -250,7 +229,6 @@
     "id": "industrial_nanorobotics",
     "name": "Industrial Nanorobotics",
     "category": "build",
-    "cost": 1,
     "effects": [
       {
         "type": "StatModifier",
@@ -267,7 +245,6 @@
     "id": "sentient_econometrics",
     "name": "Sentient Econometrics",
     "category": "build",
-    "cost": 1,
     "effects": [
       {
         "type": "StatModifier",
@@ -284,7 +261,6 @@
     "id": "advanced_spaceflight",
     "name": "Advanced Spaceflight",
     "category": "discover",
-    "cost": 120,
     "prerequisites": [
       "orbital_spaceflight"
     ]
@@ -292,14 +268,12 @@
   {
     "id": "intellectual_integrity",
     "name": "Intellectual Integrity",
-    "category": "discover",
-    "cost": 50
+    "category": "discover"
   },
   {
     "id": "graviton_theory",
     "name": "Graviton Theory",
     "category": "discover",
-    "cost": 150,
     "prerequisites": [
       "advanced_spaceflight"
     ],
@@ -307,7 +281,9 @@
       {
         "type": "RuleFlag",
         "scope": "FactionGlobal",
-        "parameters": { "flag": "orbital_insertion" }
+        "parameters": {
+          "flag": "orbital_insertion"
+        }
       }
     ]
   }

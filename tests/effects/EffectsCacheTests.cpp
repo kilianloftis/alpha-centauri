@@ -3,6 +3,7 @@
 // (base effects, research cost) key on the pool version.
 
 #include "GameFixtures.h"
+#include "TempConfigFile.h"
 #include "TestHelpers.h"
 
 #include "game/IEffectsProvider.h"
@@ -23,6 +24,7 @@
 
 using namespace ac;
 using Catch::Approx;
+using actest::TempConfigFile;
 
 TEST_CASE("Effect pool cache: stable across reads, invalidated by every contributor",
           "[effects][cache]")
@@ -190,4 +192,59 @@ TEST_CASE("ResearchManager: AddDiscoveredTech revalidates cost when provider ver
     REQUIRE(provider.version == frozenVersion);
     const int costAfter = research.GetPointsNeededForCurrentTech();
     CHECK(costAfter != costBefore);
+}
+
+TEST_CASE("ResearchManager: ThisTech TechCost raises research cost without entering the pool",
+          "[research][this-tech]")
+{
+    const TempConfigFile techs("ac_this_tech_cost.json", R"([
+        { "id": "plain", "name": "Plain", "category": "build" },
+        {
+          "id": "pricey",
+          "name": "Pricey",
+          "category": "build",
+          "effects": [
+            {
+              "type": "StatModifier",
+              "scope": "ThisTech",
+              "parameters": { "stat": "tech_cost", "amount": 50, "op": "Add" }
+            }
+          ]
+        }
+    ])");
+
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    TechRegistry techRegistry;
+    techRegistry.Load(techs.Path());
+    LuaRuntime lua;
+    TechCostConfigParser parser;
+    const TechCostConfig_t config =
+        parser.ParseConfig(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/tech_cost.lua", lua);
+    TechCostCalculator calculator(config, lua);
+
+    FakeEffectsProvider provider(faction);
+    ResearchManager research(techRegistry, calculator, &provider);
+
+    research.SetResearchTarget("plain");
+    const int plainCost = research.GetPointsNeededForCurrentTech();
+
+    research.SetResearchTarget("pricey");
+    const int priceyCost = research.GetPointsNeededForCurrentTech();
+    CHECK(priceyCost > plainCost);
+    // Shipping step 6: +50% → floor(plain + plain*50/100) when other modifiers are 0.
+    CHECK(priceyCost == plainCost + plainCost / 2);
+
+    const int factionTechCostBefore = FinalizeResolvedStat(
+        ResolveFactionStat(provider.pool, StatId_t::TechCost, SeedFor(StatId_t::TechCost)));
+    research.AddDiscoveredTech("pricey");
+    // Rebuild would normally pull discovered tech effects; ThisTech must not leak TechCost.
+    std::vector<ActiveEffect_t> discovered;
+    const TechConfig_t* pPricey = techRegistry.Find("pricey");
+    REQUIRE(pPricey != nullptr);
+    AppendFactionLaneEffects(pPricey->effects, nullptr, pPricey->id, discovered);
+    CHECK(discovered.empty());
+    CHECK(FinalizeResolvedStat(ResolveFactionStat(provider.pool, StatId_t::TechCost,
+                                                   SeedFor(StatId_t::TechCost)))
+          == factionTechCostBefore);
 }
