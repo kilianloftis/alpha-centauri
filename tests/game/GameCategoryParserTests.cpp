@@ -16,7 +16,7 @@ TEST_CASE("TechConfigParser parses game categories", "[game][category][parser]")
     TechConfigParser parser;
     const std::vector<TechConfig_t> configs = parser.ParseConfig(FixturePath("techs.json"));
 
-    REQUIRE(configs.size() == 16);
+    REQUIRE(configs.size() == 19);
     CHECK(configs[0].category == GameCategory_t::Build);
     CHECK(configs[1].category == GameCategory_t::Grow);
     CHECK(configs[2].category == GameCategory_t::Discover);
@@ -55,6 +55,11 @@ TEST_CASE("TechConfigParser parses game categories", "[game][category][parser]")
         REQUIRE(pFlag != nullptr);
         CHECK(pFlag->flag == RuleFlagId_t::OrbitalInsertion);
     }
+    CHECK(configs[16].id == "secrets_of_the_human_brain");
+    CHECK(configs[16].category == GameCategory_t::Discover);
+    REQUIRE(configs[16].onDiscoverEffects.size() == 1);
+    CHECK(configs[17].id == "discover_chain_parent");
+    CHECK(configs[18].id == "discover_chain_child");
 }
 
 TEST_CASE("BuildingConfigParser parses game categories", "[game][category][parser]")

@@ -31,7 +31,9 @@ struct AddBuildingEffect_t
 
 struct GrantTechEffect_t
 {
-    std::string techId;
+    // Present: grant this tech id. Absent: pick uniformly from GetAvailableTechs() (Secrets
+    // first-discover bonus). Parser requires exactly one of tech_id / selection Available.
+    std::optional<std::string> techId;
 };
 
 // A unit assembled from component ids, the same shape as EscapeColonyPodConfig_t — there is no
@@ -141,6 +143,7 @@ enum class OnceScope_t
     Unit,
     Base,
     Faction,
+    World,
 };
 
 // Absent = fires every time its trigger does. Present = fires at most once per subject.

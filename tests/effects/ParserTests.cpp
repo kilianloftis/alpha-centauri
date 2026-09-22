@@ -1110,6 +1110,14 @@ TEST_CASE("ParseTriggeredEffectConfig: once_per", "[effects][parser][triggered]"
     CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(json::parse(R"({
         "type": "Rebel", "once_per": { "scope": "galaxy", "key": "k" }
     })"), "on_enter_effects"), ContainsSubstring("scope"));
+    const TriggeredEffectConfig_t worldOnce = TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({
+            "type": "GrantTech",
+            "once_per": { "scope": "world", "key": "first" },
+            "parameters": { "selection": "Available" }
+        })"), "on_discover_effects");
+    REQUIRE(worldOnce.oncePer.has_value());
+    CHECK(worldOnce.oncePer->scope == OnceScope_t::World);
     // Nor may scope be omitted: defaulting it to "unit" would turn a typo into an entry that
     // silently never fires from a trigger with no unit.
     CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(json::parse(R"({
@@ -1254,7 +1262,35 @@ TEST_CASE("ParseEffectConfig: grant effects require their id parameter", "[effec
         "on_complete_effects");
     const auto* pTech = std::get_if<GrantTechEffect_t>(&techConfig.effect);
     REQUIRE(pTech != nullptr);
-    CHECK(pTech->techId == "biogenetics");
+    REQUIRE(pTech->techId.has_value());
+    CHECK(*pTech->techId == "biogenetics");
+
+    const TriggeredEffectConfig_t availableConfig =
+        TriggeredEffectParser::ParseTriggeredEffectConfig(
+            json::parse(R"({
+                "type": "GrantTech",
+                "parameters": { "selection": "Available" },
+                "once_per": { "scope": "world", "key": "first_bonus" }
+            })"),
+            "on_discover_effects");
+    const auto* pAvailable = std::get_if<GrantTechEffect_t>(&availableConfig.effect);
+    REQUIRE(pAvailable != nullptr);
+    CHECK_FALSE(pAvailable->techId.has_value());
+    REQUIRE(availableConfig.oncePer.has_value());
+    CHECK(availableConfig.oncePer->scope == OnceScope_t::World);
+
+    CHECK_THROWS(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({
+            "type": "GrantTech",
+            "parameters": { "tech_id": "biogenetics", "selection": "Available" }
+        })"),
+        "on_discover_effects"));
+    CHECK_THROWS(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({
+            "type": "GrantTech",
+            "parameters": { "selection": "Everything" }
+        })"),
+        "on_discover_effects"));
 }
 
 TEST_CASE("ParseEffectConfig: RuleFlag requires a valid flag", "[effects][parser]")

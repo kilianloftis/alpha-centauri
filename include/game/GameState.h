@@ -23,6 +23,7 @@
 #include <memory>
 #include <optional>
 #include <random>
+#include <set>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -99,6 +100,10 @@ public:
     // InteractionPresenter presents Front and CompleteFront after resolution.
     PlayerInteractionQueue& GetPlayerInteractions();
     const PlayerInteractionQueue& GetPlayerInteractions() const;
+
+    // Keys of triggered effects carrying oncePer scope World (first-discover bonuses, …).
+    std::set<std::string>& ConsumedTriggerKeys() { return m_consumedTriggerKeys; }
+    const std::set<std::string>& ConsumedTriggerKeys() const { return m_consumedTriggerKeys; }
 
     // Factions. Registration only: the faction is already valid when it arrives (world map and
     // settings are constructor dependencies). This adds the session wiring that must close over
@@ -219,6 +224,7 @@ private:
     Signal<>::ScopedConnection m_visibilitySettingsChanged;
     std::unique_ptr<EventBus> m_pEventBus;
     PlayerInteractionQueue m_playerInteractions;
+    std::set<std::string> m_consumedTriggerKeys;
     // WorldMap and TileEffectsContext are declared before m_factions so they outlive all
     // BaseManagers (which hold TileEffectsContext& references). Members are destroyed in
     // reverse declaration order, so m_factions is destroyed before these two.

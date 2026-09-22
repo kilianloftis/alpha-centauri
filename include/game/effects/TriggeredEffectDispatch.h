@@ -151,4 +151,7 @@ void ApplyVisitEffects(Unit& rMover, std::mt19937& rRng);
 // True when any improvement on the tile carries a non-empty on_visit_effects list.
 bool TileHasVisitEffects(const Tile& rTile);
 
+// Tech on_discover_effects for rTechId. No-op when the faction has no bound GameState.
+void ApplyTechDiscoverEffects(Faction& rFaction, const TechId& rTechId);
+
 } // namespace ac

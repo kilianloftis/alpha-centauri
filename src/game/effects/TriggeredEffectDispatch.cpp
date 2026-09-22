@@ -30,6 +30,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <random>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -77,21 +78,39 @@ std::set<std::string>* OnceSubjectFor_(const OncePer_t& rOncePer, TriggeredEffec
             return rCtx.pBase ? &rCtx.pBase->ConsumedTriggerKeys() : nullptr;
         case OnceScope_t::Faction:
             return &rFaction.ConsumedTriggerKeys();
+        case OnceScope_t::World:
+            return &rCtx.rGameState.ConsumedTriggerKeys();
     }
     return nullptr;
 }
 
-bool AddTech_(Faction& rFaction, const GrantTechEffect_t& rGrant,
+bool AddTech_(TriggeredEffectContext_t& rCtx, Faction& rFaction, const GrantTechEffect_t& rGrant,
               std::vector<TriggeredEffectResult_t>& rOut)
 {
+    TechId techId;
+)
+    {
+        techId = *rGrant.techId;
+    }
+    else
+    {
+        const std::optional<TechId> picked =
+            rFaction.GetResearch().PickRandomAvailableTech(rCtx.Rng());
+        if (!picked)
+        {
+            return false;
+        }
+        techId = *picked;
+    }
+
     // Granting what the faction already knows is an ordinary outcome — two facilities can
     // grant the same tech — not the programmer error AddDiscoveredTech throws on.
-    if (rFaction.GetResearch().HasDiscoveredTech(rGrant.techId))
+    if (rFaction.GetResearch().HasDiscoveredTech(techId))
     {
         return false;
     }
-    rFaction.GetResearch().AddDiscoveredTech(rGrant.techId);
-    rOut.push_back(TechGranted_t{rGrant.techId});
+    rFaction.GetResearch().AddDiscoveredTech(techId);
+    rOut.push_back(TechGranted_t{techId});
     return true;
 }
 
@@ -339,7 +358,7 @@ bool ApplyOne_(const TriggeredEffectConfig_t& rConfig, TriggeredEffectContext_t&
             }
             else if constexpr (std::is_same_v<T, GrantTechEffect_t>)
             {
-                return AddTech_(rFaction, rConcrete, rOut);
+                return AddTech_(rCtx, rFaction, rConcrete, rOut);
             }
             else if constexpr (std::is_same_v<T, GrantUnitEffect_t>)
             {
@@ -592,6 +611,22 @@ void ApplyVisitEffects(Unit& rMover, std::mt19937& rRng)
         ApplyTriggeredEffects(pConfig->onVisitEffects, context);
     }
     context.hostImprovementId.reset();
+}
+
+void ApplyTechDiscoverEffects(Faction& rFaction, const TechId& rTechId)
+{
+    GameState* pGameState = rFaction.GetGameState();
+    if (!pGameState)
+    {
+        return;
+    }
+    const TechConfig_t* pTech = rFaction.GetResearch().GetTechRegistry().Find(rTechId);
+    if (!pTech || pTech->onDiscoverEffects.empty())
+    {
+        return;
+    }
+    TriggeredEffectContext_t context(*pGameState, rFaction);
+    ApplyTriggeredEffects(pTech->onDiscoverEffects, context);
 }
 
 } // namespace ac

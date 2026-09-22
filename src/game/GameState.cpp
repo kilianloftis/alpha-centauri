@@ -9,9 +9,11 @@
 #include "game/faction/DiplomacyLedger.h"
 #include "game/faction/DiplomaticActionExecutor.h"
 #include "game/faction/UnitManager.h"
+#include "game/faction/ResearchManager.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/WorldMap.h"
 #include "game/effects/TileEffectsContext.h"
+#include "game/effects/TriggeredEffectDispatch.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "game/units/ProbeActionExecutor.h"
 #include "game/units/Pathfinder.h"
@@ -232,6 +234,11 @@ void GameState::AttachToSession_(Faction& rFaction)
     // back-pointer and the observers, which necessarily close over this GameState.
     rFaction.BindWorldEffects(*this);
     rFaction.BindGameState(*this);
+    rFaction.GetResearch().OnTechDiscovered.Connect(
+        [&rFaction](const TechId& rTechId)
+        {
+            ApplyTechDiscoverEffects(rFaction, rTechId);
+        });
     rFaction.SetOnBaseListChanged([this]()
     {
         RebuildTerritory();

@@ -539,3 +539,60 @@ TEST_CASE("Player arrival on Monolith enqueues visit interaction; AI auto-applie
     CHECK(aiMover.GetCurrentHp() == aiMover.GetStat(StatId_t::HitPoints));
     CHECK(aiMover.GetXp() == aiXp + 1);
 }
+
+TEST_CASE("First discoverer of Secrets gets Available GrantTech; second does not",
+          "[effects][triggered][discover][secrets]")
+{
+    TriggerGame_ game;
+    ResearchManager& rResearch = game.pFaction->GetResearch();
+    const std::size_t before = rResearch.GetDiscoveredTechs().size();
+    REQUIRE_FALSE(rResearch.HasDiscoveredTech("secrets_of_the_human_brain"));
+
+    rResearch.AddDiscoveredTech("secrets_of_the_human_brain");
+    CHECK(rResearch.HasDiscoveredTech("secrets_of_the_human_brain"));
+    CHECK(rResearch.GetDiscoveredTechs().size() == before + 2);
+    CHECK(game.pState->ConsumedTriggerKeys().count("secrets_of_the_human_brain_first") == 1);
+
+    FactionConfig_t aiDef = game.fixtures.factionDefinition;
+    aiDef.id = "ai";
+    Faction* pAi = &game.pState->AddFaction(std::make_unique<Faction>(
+        game.pState->AllocateFactionId(), false, aiDef, game.fixtures.dataContext,
+        game.pState->GetWorldMap(), game.settings, actest::k_TestFactionSeed));
+    const std::size_t aiBefore = pAi->GetResearch().GetDiscoveredTechs().size();
+    pAi->GetResearch().AddDiscoveredTech("secrets_of_the_human_brain");
+    CHECK(pAi->GetResearch().GetDiscoveredTechs().size() == aiBefore + 1);
+}
+
+TEST_CASE("Available GrantTech leaves world oncePer unspent when the pool is empty",
+          "[effects][triggered][discover]")
+{
+    TriggerGame_ game;
+    ResearchManager& rResearch = game.pFaction->GetResearch();
+    while (true)
+    {
+        std::vector<const TechConfig_t*> available = rResearch.GetAvailableTechs();
+        std::erase_if(available,
+                      [](const TechConfig_t* pTech)
+                      {
+                          return pTech->id == "secrets_of_the_human_brain";
+                      });
+        if (available.empty())
+        {
+            break;
+        }
+        rResearch.AddDiscoveredTech(available.front()->id);
+    }
+
+    const std::size_t before = rResearch.GetDiscoveredTechs().size();
+    rResearch.AddDiscoveredTech("secrets_of_the_human_brain");
+    CHECK(rResearch.GetDiscoveredTechs().size() == before + 1);
+    CHECK(game.pState->ConsumedTriggerKeys().count("secrets_of_the_human_brain_first") == 0);
+}
+
+TEST_CASE("on_discover_effects nest when GrantTech discovers another tech",
+          "[effects][triggered][discover]")
+{
+    TriggerGame_ game;
+    game.pFaction->GetResearch().AddDiscoveredTech("discover_chain_parent");
+    CHECK(game.pFaction->GetResearch().HasDiscoveredTech("discover_chain_child"));
+}

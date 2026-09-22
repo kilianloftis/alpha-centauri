@@ -6,6 +6,7 @@
 #include "lib/Signal.h"
 #include <cstdint>
 #include <optional>
+#include <random>
 #include <vector>
 
 namespace ac
@@ -60,6 +61,9 @@ public:
     Signal<const TechId&> OnTechDiscovered;
 
     std::vector<const TechConfig_t*> GetAvailableTechs() const;
+
+    // Uniform pick from GetAvailableTechs(). Empty when nothing is researchable.
+    std::optional<TechId> PickRandomAvailableTech(std::mt19937& rRng) const;
 
     // Bumped when a tech is discovered; FactionEffectsPool includes this in its stamp so
     // removed_by_tech effects drop out of the pool on the next Get.

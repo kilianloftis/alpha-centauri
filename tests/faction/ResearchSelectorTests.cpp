@@ -89,7 +89,7 @@ TEST_CASE("ResearchSelector falls back when selected categories have no availabl
     fixture.selector->SetCategoryEnabled(GameCategory_t::Conquer, false);
 
     const std::vector<const TechConfig_t*> candidates = fixture.selector->GetCandidateTargets();
-    REQUIRE(candidates.size() == 11);
+    REQUIRE(candidates.size() == 14);
 
     auto hasTechId = [&candidates](const TechId& rTechId) {
         return std::any_of(candidates.begin(), candidates.end(),
@@ -102,6 +102,7 @@ TEST_CASE("ResearchSelector falls back when selected categories have no availabl
     CHECK(hasTechId("industrial_automation"));
     CHECK(hasTechId("planetary_economics"));
     CHECK(hasTechId("graviton_theory"));
+    CHECK(hasTechId("secrets_of_the_human_brain"));
 }
 
 TEST_CASE("ResearchSelector assigns a target from the selected pool", "[research][selector]")

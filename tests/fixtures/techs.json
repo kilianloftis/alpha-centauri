@@ -221,5 +221,36 @@
         "parameters": { "flag": "orbital_insertion" }
       }
     ]
+  },
+  {
+    "id": "secrets_of_the_human_brain",
+    "name": "Secrets of the Human Brain",
+    "category": "discover",
+    "cost": 20,
+    "on_discover_effects": [
+      {
+        "type": "GrantTech",
+        "parameters": { "selection": "Available" },
+        "once_per": { "scope": "world", "key": "secrets_of_the_human_brain_first" }
+      }
+    ]
+  },
+  {
+    "id": "discover_chain_parent",
+    "name": "Discover Chain Parent",
+    "category": "discover",
+    "cost": 1,
+    "on_discover_effects": [
+      {
+        "type": "GrantTech",
+        "parameters": { "tech_id": "discover_chain_child" }
+      }
+    ]
+  },
+  {
+    "id": "discover_chain_child",
+    "name": "Discover Chain Child",
+    "category": "discover",
+    "cost": 1
   }
 ]

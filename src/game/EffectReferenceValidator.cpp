@@ -136,9 +136,13 @@ struct TriggeredPayloadValidator
 
     void operator()(const GrantTechEffect_t& rTech) const
     {
-        if (pTechs && !pTechs->Find(rTech.techId))
+        if (!rTech.techId || !pTechs)
         {
-            ThrowBadReference(rSourceId, "tech", rTech.techId);
+            return;
+        }
+        if (!pTechs->Find(*rTech.techId))
+        {
+            ThrowBadReference(rSourceId, "tech", *rTech.techId);
         }
     }
 
@@ -347,6 +351,7 @@ void ValidateEffectReferences(const GameDataContext& rData)
     for (const TechConfig_t& rConfig : rTechs.GetAll())
     {
         validate(rConfig.effects, rConfig.id);
+        validateTriggered(rConfig.onDiscoverEffects, rConfig.id);
     }
     for (const ImprovementConfig_t& rConfig : rImprovements.GetAll())
     {

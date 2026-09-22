@@ -31,7 +31,14 @@
     "id": "secrets_of_the_human_brain",
     "name": "Secrets of the Human Brain",
     "category": "discover",
-    "cost": 20
+    "cost": 20,
+    "on_discover_effects": [
+      {
+        "type": "GrantTech",
+        "parameters": { "selection": "Available" },
+        "once_per": { "scope": "world", "key": "secrets_of_the_human_brain_first" }
+      }
+    ]
   },
   {
     "id": "planetary_networks",

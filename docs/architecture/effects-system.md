@@ -474,11 +474,17 @@ container declares a continuous `effects` array and, where a trigger exists, a n
 | `council/rules.json` | `governor_effects` | `on_elected_effects` |
 | `pop_composition.json` riot tiers | `effects` | `on_enter_effects` |
 | `improvements.json` | `effects` | `on_visit_effects` — Investigate / AI auto via `ApplyVisitEffects` |
+| `techs.json` | `effects` | `on_discover_effects` — `ApplyTechDiscoverEffects` on `OnTechDiscovered` |
 
 `on_visit_effects` fire when a unit Investigates a visit tile (player prompt) or when an AI
 unit arrives (`ApplyArrivalEffects_` → `ApplyVisitEffects`). Continuous tile yields stay in
 `effects`. Monolith authors heal (`RestoreHitPoints`) plus once-per-unit `GrantXp` with
 optional `remove_host_chance`.
+
+`on_discover_effects` fire whenever a tech joins a faction's discovered set (research
+breakthrough, probe steal, diplomatic grant, nested `GrantTech`). Secrets of the Human Brain
+uses world-scoped `oncePer` plus `GrantTech` `selection: Available` so only the first
+discoverer in the session receives one random currently-researchable tech.
 
 `TriggeredEffectParser` and `EffectConfigParser` reject each other's type names, naming the
 list the entry belongs in. The "belongs in `effects`" check reads `EffectConfigParser`'s own
@@ -513,13 +519,16 @@ then silently never fired.
 - `WorldParameter` remains a TODO stub pending the WorldEvents trigger API.
 
 ### oncePer
-`oncePer: {scope: unit | base | faction, key: "..."}` fires an entry at most once per subject.
+`oncePer: {scope: unit | base | faction | world, key: "..."}` fires an entry at most once per
+subject.
 Both fields are required — a defaulted `scope` would turn a typo into an entry that silently
 never fires from a trigger with no unit.
-`Unit`, `BaseManager` and `Faction` each hold a `ConsumedTriggerKeys()` set; the dispatcher
+`Unit`, `BaseManager`, `Faction`, and `GameState` (world) each hold a `ConsumedTriggerKeys()`
+set; the dispatcher
 checks it before applying and records after. The key is **authored in config**, not derived
 from the entry, because the rule usually spans instances: every Monolith shares
-`"monolith_xp"`, so visiting a second one grants nothing. An entry whose subject the context
+`"monolith_xp"`, so visiting a second one grants nothing. World scope is how a first-discover
+bonus fires for only one faction in the session. An entry whose subject the context
 lacks is skipped rather than firing forever. Because the check is per entry, a list applies
 partially and honestly — a spent one-shot grant does not suppress the repeatable heal beside it.
 

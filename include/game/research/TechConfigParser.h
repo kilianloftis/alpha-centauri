@@ -2,6 +2,7 @@
 
 #include "game/GameCategory.h"
 #include "game/effects/EffectConfig.h"
+#include "game/effects/TriggeredEffect.h"
 
 #include <nlohmann/json.hpp>
 #include <string>
@@ -22,6 +23,9 @@ struct TechConfig_t
     // Continuous bonuses while this tech is discovered (e.g. FacilityEnergyUpkeep,
     // commerce_rating +1 for economic techs).
     std::vector<EffectConfig_t> effects;
+    // One-shot effects when this tech joins a faction's discovered set (research, probe,
+    // diplomatic grant, nested GrantTech). Fired via ApplyTechDiscoverEffects.
+    std::vector<TriggeredEffectConfig_t> onDiscoverEffects;
 };
 
 class TechConfigParser

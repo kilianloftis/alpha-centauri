@@ -1,5 +1,6 @@
 #include "game/research/TechConfigParser.h"
 #include "game/effects/EffectConfigParser.h"
+#include "game/effects/TriggeredEffectParser.h"
 #include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
 #include <nlohmann/json.hpp>
@@ -38,6 +39,8 @@ TechConfig_t TechConfigParser::ParseTechConfig_(const nlohmann::json& techJson)
     config.prerequisites = ConfigFields::ParseStringArray(techJson, "prerequisites");
     config.effects = EffectConfigParser::ParseEffects(
         techJson, EffectSourceKind_t::Tech, config.id);
+    config.onDiscoverEffects = TriggeredEffectParser::ParseTriggeredEffects(
+        techJson, "on_discover_effects", config.id);
 
     return config;
 }

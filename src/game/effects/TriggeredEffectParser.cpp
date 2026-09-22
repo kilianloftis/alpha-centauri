@@ -32,12 +32,40 @@ void ParseAddBuilding_(const nlohmann::json& parameters, TriggeredEffectConfig_t
 
 void ParseGrantTech_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
 {
-    const std::string techId = parameters.value("tech_id", "");
-    if (techId.empty())
+    const bool bHasTechId = parameters.contains("tech_id");
+    const bool bHasSelection = parameters.contains("selection");
+    if (bHasTechId == bHasSelection)
     {
-        throw std::runtime_error("GrantTech requires a non-empty 'tech_id'");
+        throw std::runtime_error(
+            "GrantTech requires exactly one of 'tech_id' or 'selection' (Available)");
     }
-    rEffect.effect = GrantTechEffect_t{techId};
+    GrantTechEffect_t grant;
+    if (bHasTechId)
+    {
+        if (!parameters.at("tech_id").is_string())
+        {
+            throw std::runtime_error("GrantTech 'tech_id' must be a string");
+        }
+        grant.techId = parameters.at("tech_id").get<std::string>();
+        if (grant.techId->empty())
+        {
+            throw std::runtime_error("GrantTech 'tech_id' must be non-empty");
+        }
+    }
+    else
+    {
+        if (!parameters.at("selection").is_string())
+        {
+            throw std::runtime_error("GrantTech 'selection' must be a string");
+        }
+        const std::string selection = parameters.at("selection").get<std::string>();
+        if (selection != "Available")
+        {
+            throw std::runtime_error(
+                "GrantTech 'selection' must be 'Available' (got '" + selection + "')");
+        }
+    }
+    rEffect.effect = grant;
 }
 
 void ParseGrantUnit_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
@@ -194,14 +222,14 @@ OncePer_t ParseOncePer_(const nlohmann::json& onceJson)
     // an entry that silently never fires from a trigger that has no unit.
     if (!onceJson.contains("scope") || !onceJson.at("scope").is_string())
     {
-        throw std::runtime_error("once_per requires a 'scope' of unit, base, or faction");
+        throw std::runtime_error("once_per requires a 'scope' of unit, base, faction, or world");
     }
     const std::string scopeStr = onceJson.at("scope").get<std::string>();
     const auto scope = magic_enum::enum_cast<OnceScope_t>(scopeStr, magic_enum::case_insensitive);
     if (!scope.has_value())
     {
         throw std::runtime_error("once_per has unknown 'scope': '" + scopeStr
-                                 + "' (expected unit, base, or faction)");
+                                 + "' (expected unit, base, faction, or world)");
     }
     oncePer.scope = *scope;
     oncePer.key = onceJson.value("key", "");

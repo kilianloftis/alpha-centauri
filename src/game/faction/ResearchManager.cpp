@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <optional>
+#include <random>
 
 namespace ac
 {
@@ -229,6 +230,17 @@ std::vector<const TechConfig_t*> ResearchManager::GetAvailableTechs() const
     }
 
     return available;
+}
+
+std::optional<TechId> ResearchManager::PickRandomAvailableTech(std::mt19937& rRng) const
+{
+    const std::vector<const TechConfig_t*> available = GetAvailableTechs();
+    if (available.empty())
+    {
+        return std::nullopt;
+    }
+    std::uniform_int_distribution<std::size_t> dist(0, available.size() - 1);
+    return available[dist(rRng)]->id;
 }
 
 void ResearchManager::ResetAccumulatedPoints_()
