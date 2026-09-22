@@ -6,9 +6,13 @@
 #include "game/IConstructable.h"
 #include "game/PauseOnEventsConfig.h"
 #include "game/PlayerInteractionQueue.h"
+#include "game/effects/TriggeredEffectDispatch.h"
+#include "game/faction/UnitManager.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/production/ProductionManager.h"
+#include "game/map/ImprovementConfigParser.h"
 #include "game/map/Tile.h"
+#include "game/units/Unit.h"
 #include "ui/ListSelectorPopup.h"
 #include "ui/NoticePopup.h"
 #include "ui/UIManager.h"
@@ -101,6 +105,9 @@ void InteractionPresenter::PresentFront_(const PlayerInteraction_t& rPayload)
                 PresentProductionWouldEmpty_(rWouldEmpty);
             },
             [this](const ProductionIdleInteraction_t& rIdle) { PresentProductionIdle_(rIdle); },
+            [this](const ImprovementVisitInteraction_t& rVisit) {
+                PresentImprovementVisit_(rVisit);
+            },
         },
         rPayload);
 }
@@ -252,6 +259,44 @@ void InteractionPresenter::PresentProductionIdle_(const ProductionIdleInteractio
     PushChoice_(title, std::move(choices));
 }
 
+void InteractionPresenter::PresentImprovementVisit_(const ImprovementVisitInteraction_t& rVisit)
+{
+    Unit* pUnit = FindUnit_(rVisit.unitId);
+    if (!pUnit || !TileHasVisitEffects(pUnit->GetTile()))
+    {
+        CompleteAndAdvance_();
+        return;
+    }
+
+    const Tile& rTile = pUnit->GetTile();
+    m_rWorldView.CenterOnTile(rTile.GetX(), rTile.GetY());
+
+    std::string hostName = "site";
+    for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
+    {
+        if (pImprovement && !pImprovement->onVisitEffects.empty())
+        {
+            hostName = pImprovement->name.empty() ? pImprovement->id : pImprovement->name;
+            break;
+        }
+    }
+
+    const UnitId_t unitId = rVisit.unitId;
+    std::vector<PopupChoice_t> choices;
+    choices.push_back(
+        {"Investigate the " + hostName,
+         [this, unitId]
+         {
+             if (Unit* pResolve = FindUnit_(unitId))
+             {
+                 ApplyVisitEffects(*pResolve, m_rGameState.GetRng());
+             }
+             CompleteAndAdvance_();
+         }});
+    choices.push_back({"Leave it Alone", [this] { CompleteAndAdvance_(); }});
+    PushChoice_("A " + hostName + " stands here.", std::move(choices));
+}
+
 BaseManager* InteractionPresenter::FindAudienceBase_(FactionId_t factionId, BaseId_t baseId)
 {
     Faction* pFaction = m_rGameState.FindFaction(factionId);
@@ -260,6 +305,21 @@ BaseManager* InteractionPresenter::FindAudienceBase_(FactionId_t factionId, Base
         return nullptr;
     }
     return pFaction->FindBase(baseId);
+}
+
+Unit* InteractionPresenter::FindUnit_(UnitId_t unitId)
+{
+    for (Faction& rFaction : m_rGameState.Factions())
+    {
+        for (Unit& rUnit : rFaction.GetUnitManager().Units())
+        {
+            if (rUnit.GetUnitId() == unitId)
+            {
+                return &rUnit;
+            }
+        }
+    }
+    return nullptr;
 }
 
 void InteractionPresenter::FocusBase_(const BaseManager& rBase)

@@ -26,9 +26,12 @@
 #include "game/effects/EffectEnums.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/TileEffectsContext.h"
+#include "game/effects/TriggeredEffectDispatch.h"
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
+#include "game/PlayerInteraction.h"
+#include "game/PlayerInteractionQueue.h"
 #include <algorithm>
 #include <iostream>
 #include <stdexcept>
@@ -203,6 +206,26 @@ bool UnitOrderExecutor::ApplyArrivalEffects_(Unit& rMover)
     // (step onto open water / ship-to-ship transfer); entering a base leaves it a garrison,
     // not cargo.
     ac::TryAutoAttachOnEntry(rMover, m_rWorldMap, m_rTileEffects.GetInteractionGrids());
+
+    if (TileHasVisitEffects(rMover.GetTile()))
+    {
+        // Stop multi-hop so the unit does not walk off before Investigate / Leave resolves.
+        rMover.ClearOrder();
+
+        GameState* pGameState = rMover.GetFaction().GetGameState();
+        if (pGameState)
+        {
+            if (rMover.GetFaction().IsPlayerControlled())
+            {
+                EnqueueForPlayer(*pGameState,
+                                 ImprovementVisitInteraction_t{rMover.GetUnitId()});
+            }
+            else
+            {
+                ApplyVisitEffects(rMover, m_rRng);
+            }
+        }
+    }
 
     // No world bound means no session to conquer into — a legitimate mode for movement-only
     // harnesses.

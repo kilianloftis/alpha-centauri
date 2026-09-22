@@ -6,6 +6,7 @@
 #include "game/buildings/BuildingConfig.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/InfiltrationRules.h"
+#include "game/effects/TileEffectsContext.h"
 #include "game/faction/DiplomacyLedger.h"
 #include "game/faction/EconomyManager.h"
 #include "game/faction/RebelFactionPicker.h"
@@ -15,6 +16,7 @@
 #include "game/faction/base/BuildingDestruction.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/production/ProductionConfigParser.h"
+#include "game/map/ImprovementConfigParser.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
@@ -24,7 +26,9 @@
 #include "game/units/MovementRules.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
+#include "lib/RandomRoll.h"
 
+#include <algorithm>
 #include <cmath>
 #include <set>
 #include <stdexcept>
@@ -304,6 +308,7 @@ bool IsPerFactionSubject_(const TriggeredEffectVariant_t& rEffect)
             else if constexpr (std::is_same_v<T, AddBuildingEffect_t>
                                || std::is_same_v<T, ModifyPopulationEffect_t>
                                || std::is_same_v<T, GrantXpEffect_t>
+                               || std::is_same_v<T, RestoreHitPointsEffect_t>
                                || std::is_same_v<T, DestroyFacilityEffect_t>
                                || std::is_same_v<T, RebelEffect_t>
                                || std::is_same_v<T, WorldParameterEffect_t>)
@@ -381,7 +386,49 @@ bool ApplyOne_(const TriggeredEffectConfig_t& rConfig, TriggeredEffectContext_t&
                 rCtx.pUnit->SetXp(static_cast<int>(std::lround(next)));
                 const int granted = rCtx.pUnit->GetXp() - before;
                 rOut.push_back(XpGranted_t{granted});
+                if (granted > 0 && rConcrete.removeHostChance && rCtx.hostImprovementId
+                    && rCtx.pTile)
+                {
+                    if (RollRational(*rConcrete.removeHostChance, rCtx.Rng()))
+                    {
+                        rCtx.rGameState.GetTileEffects().RemoveImprovementWithEffects(
+                            *rCtx.pTile, *rCtx.hostImprovementId);
+                    }
+                }
                 return granted != 0;
+            }
+            else if constexpr (std::is_same_v<T, RestoreHitPointsEffect_t>)
+            {
+                if (!rCtx.pUnit)
+                {
+                    return false;
+                }
+                Unit& rUnit = *rCtx.pUnit;
+                const int before = rUnit.GetCurrentHp();
+                const int maxHp = ResolveStat(rUnit, StatId_t::HitPoints);
+                int next = before;
+                switch (rConcrete.op)
+                {
+                case RestoreHitPointsOp_t::Add:
+                    next = before + rConcrete.amount;
+                    break;
+                case RestoreHitPointsOp_t::AddPercent:
+                    next = before + (maxHp * rConcrete.amount) / 100;
+                    break;
+                case RestoreHitPointsOp_t::MaxClamp:
+                    next = std::min(before, rConcrete.amount);
+                    break;
+                case RestoreHitPointsOp_t::MinClamp:
+                    next = std::max(before, rConcrete.amount);
+                    break;
+                case RestoreHitPointsOp_t::SetPercent:
+                    next = std::max(before, (maxHp * rConcrete.amount) / 100);
+                    break;
+                }
+                rUnit.SetCurrentHp(next);
+                const int restored = rUnit.GetCurrentHp() - before;
+                rOut.push_back(HitPointsRestored_t{restored});
+                return restored != 0;
             }
             else if constexpr (std::is_same_v<T, DestroyFacilityEffect_t>)
             {
@@ -491,6 +538,60 @@ void ApplyUnitProducedTriggers(Unit& rUnit, BaseManager& rProducedAt)
             ApplyTriggeredEffects(pBuilding->onUnitProducedEffects, context);
         }
     }
+}
+
+bool TileHasVisitEffects(const Tile& rTile)
+{
+    for (const ImprovementConfig_t* pImprovement : rTile.GetImprovements())
+    {
+        if (pImprovement && !pImprovement->onVisitEffects.empty())
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+void ApplyVisitEffects(Unit& rMover, std::mt19937& rRng)
+{
+    GameState* pGameState = rMover.GetFaction().GetGameState();
+    if (!pGameState)
+    {
+        return;
+    }
+
+    Tile* pTile = pGameState->GetWorldMap().GetTile(rMover.GetTile().GetX(), rMover.GetTile().GetY());
+    if (!pTile)
+    {
+        throw std::runtime_error("ApplyVisitEffects: mover tile is not on the world map");
+    }
+
+    // Snapshot hosts first: GrantXp remove_host_chance can erase an improvement mid-loop.
+    // Config pointers stay valid (registry-owned) even after the tile loses the improvement.
+    std::vector<const ImprovementConfig_t*> hosts;
+    for (const ImprovementConfig_t* pImprovement : pTile->GetImprovements())
+    {
+        if (pImprovement && !pImprovement->onVisitEffects.empty())
+        {
+            hosts.push_back(pImprovement);
+        }
+    }
+
+    TriggeredEffectContext_t context(*pGameState, rMover.GetFaction());
+    context.pUnit = &rMover;
+    context.pTile = pTile;
+    context.pRng = &rRng;
+
+    for (const ImprovementConfig_t* pConfig : hosts)
+    {
+        if (!pTile->HasImprovement(pConfig->id))
+        {
+            continue;
+        }
+        context.hostImprovementId = pConfig->id;
+        ApplyTriggeredEffects(pConfig->onVisitEffects, context);
+    }
+    context.hostImprovementId.reset();
 }
 
 } // namespace ac

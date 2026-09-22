@@ -1172,6 +1172,37 @@ TEST_CASE("ParseTriggeredEffectConfig: GrantXp takes amount and optional conditi
         "on_unit_produced_effects"));
 }
 
+TEST_CASE("ParseTriggeredEffectConfig: GrantXp remove_host_chance and RestoreHitPoints",
+          "[effects][parser][triggered]")
+{
+    const TriggeredEffectConfig_t grant = TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({
+            "type": "GrantXp",
+            "parameters": { "amount": 1, "op": "Add", "remove_host_chance": "1/32" }
+        })"), "on_visit_effects");
+    const auto* pGrant = std::get_if<GrantXpEffect_t>(&grant.effect);
+    REQUIRE(pGrant != nullptr);
+    REQUIRE(pGrant->removeHostChance.has_value());
+    CHECK(pGrant->removeHostChance->numerator == 1);
+    CHECK(pGrant->removeHostChance->denominator == 32);
+
+    const TriggeredEffectConfig_t heal = TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({
+            "type": "RestoreHitPoints",
+            "parameters": { "amount": 100, "op": "SetPercent" }
+        })"), "on_visit_effects");
+    const auto* pHeal = std::get_if<RestoreHitPointsEffect_t>(&heal.effect);
+    REQUIRE(pHeal != nullptr);
+    CHECK(pHeal->amount == 100);
+    CHECK(pHeal->op == RestoreHitPointsOp_t::SetPercent);
+
+    CHECK_THROWS(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({
+            "type": "RestoreHitPoints",
+            "parameters": { "amount": 1, "op": "MultiplyGeometric" }
+        })"), "on_visit_effects"));
+}
+
 TEST_CASE("ParseTriggeredEffectConfig: GrantUnit takes component ids", "[effects][parser][triggered]")
 {
     const TriggeredEffectConfig_t config = TriggeredEffectParser::ParseTriggeredEffectConfig(

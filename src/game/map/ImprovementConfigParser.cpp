@@ -289,16 +289,6 @@ ImprovementConfig_t ImprovementConfigParser::ParseImprovementConfig(const nlohma
     config.effects = EffectConfigParser::ParseEffects(improvementJson, EffectSourceKind_t::Improvement, config.id);
     config.onVisitEffects = TriggeredEffectParser::ParseTriggeredEffects(
         improvementJson, "on_visit_effects", config.id);
-    // Nothing fires this list yet — there is no visit order. Refusing it is the whole point
-    // of the triggered/continuous split: config that cannot fire must fail at load rather
-    // than load quietly and do nothing. Delete this once the visit order dispatches it.
-    if (!config.onVisitEffects.empty())
-    {
-        throw std::runtime_error(
-            "Improvement '" + config.id
-            + "': 'on_visit_effects' is parsed but not yet fired by anything — the unit visit "
-              "order does not exist, so these effects would never run");
-    }
     config.visionRadius = ResolveVisionRadius_(config);
 
     return config;

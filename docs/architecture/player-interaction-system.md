@@ -64,6 +64,7 @@ The visit is an overload set, so a new `PlayerInteraction_t` alternative fails t
 | `OpenViewInteraction_t` | `PushView` Base / Research / UnitDesigner / SE; close Completes |
 | `ProductionAbandonInteraction_t` | Confirm / Defer → `BaseManager` API → Complete |
 | `ProductionIdleInteraction_t` | Assign (open BaseView) / Later |
+| `ImprovementVisitInteraction_t` | Investigate / Leave it Alone → `ApplyVisitEffects` or Complete |
 
 Modal widgets used from here must set `ShouldClose` **before** invoking their callback: `UIManager::CanAdvanceTurn` counts a still-open modal as a reason to refuse `Advance`, so a callback that completes an interaction would otherwise leave the turn stalled.
 
@@ -77,6 +78,7 @@ Modal widgets used from here must set `ShouldClose` **before** invoking their ca
 
 - Production would empty base → `ProductionAbandonInteraction_t`
 - Production completed with empty queue → `NoticeInteraction_t` then `ProductionIdleInteraction_t`
+- Improvement visit (Monolith) → `ImprovementVisitInteraction_t`
 
 **Follow-on PRs on the same spine**
 

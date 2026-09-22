@@ -111,7 +111,8 @@ step because each step can reveal fog or hostiles (which also cancels the order 
 
 `SpendMovesAndEnter_` splits arrival into two phases. `EnterTile_` does position and move
 cost only; `ApplyArrivalEffects_` then runs the side effects of *being* on the new tile —
-boarding a transport parked there, and base-entry conquest.
+boarding a transport parked there, improvement visit (Investigate prompt or AI auto-apply of
+`on_visit_effects`), and base-entry conquest.
 
 ### A step can destroy the mover
 

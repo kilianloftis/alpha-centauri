@@ -16,6 +16,7 @@ class BaseManager;
 class GameState;
 class IGameView;
 class UIManager;
+class Unit;
 class ViewFactory;
 class WorldView;
 
@@ -43,8 +44,10 @@ private:
     void PresentOpenView_(const OpenViewInteraction_t& rOpen);
     void PresentProductionWouldEmpty_(const ProductionWouldEmptyInteraction_t& rWouldEmpty);
     void PresentProductionIdle_(const ProductionIdleInteraction_t& rIdle);
+    void PresentImprovementVisit_(const ImprovementVisitInteraction_t& rVisit);
 
     BaseManager* FindAudienceBase_(FactionId_t factionId, BaseId_t baseId);
+    Unit* FindUnit_(UnitId_t unitId);
     void FocusBase_(const BaseManager& rBase);
     void PushChoice_(std::string title, std::vector<PopupChoice_t> choices);
     // Push a full-screen overlay; onClosed runs once the overlay stack empties again.

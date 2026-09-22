@@ -375,6 +375,17 @@
           "op": "Add"
         }
       }
+    ],
+    "on_visit_effects": [
+      {
+        "type": "RestoreHitPoints",
+        "parameters": { "amount": 100, "op": "SetPercent" }
+      },
+      {
+        "type": "GrantXp",
+        "parameters": { "amount": 1, "op": "Add", "remove_host_chance": "1/32" },
+        "once_per": { "scope": "unit", "key": "monolith_xp" }
+      }
     ]
   },
   {

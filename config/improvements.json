@@ -792,7 +792,7 @@
   {
     "id": "Monolith",
     "name": "Monolith",
-    "description": "An alien monolith; tile yields are fixed at 2 nutrients, 2 minerals, and 2 energy",
+    "description": "An alien monolith; tile yields are fixed at 2 nutrients, 2 minerals, and 2 energy. Investigating heals the unit and may grant experience (once per unit across all monoliths), with a chance the monolith vanishes.",
     "tags": ["resource_bonus"],
     "frequency": 3,
     "excludes": ["@landmark", "@resource_bonus", "Monolith"],
@@ -815,6 +815,17 @@
         "type": "StatModifier",
         "scope": "ThisTile",
         "parameters": { "stat": "energy", "amount": 2, "op": "Add" }
+      }
+    ],
+    "on_visit_effects": [
+      {
+        "type": "RestoreHitPoints",
+        "parameters": { "amount": 100, "op": "SetPercent" }
+      },
+      {
+        "type": "GrantXp",
+        "parameters": { "amount": 1, "op": "Add", "remove_host_chance": "1/32" },
+        "once_per": { "scope": "unit", "key": "monolith_xp" }
       }
     ]
   }

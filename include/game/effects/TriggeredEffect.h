@@ -2,6 +2,7 @@
 
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
+#include "lib/Rational.h"
 
 #include <optional>
 #include <string>
@@ -74,12 +75,33 @@ struct ModifyPopulationEffect_t
     int minSize = 0;
 };
 
-// Instant XP credit on a unit subject (train bonuses, prototype first-fielding).
+// Instant XP credit on a unit subject (train bonuses, prototype first-fielding, monolith).
 // Stacks via ApplyModifierStack onto the unit's current XP; SetXp clamps to morale max.
+// Optional removeHostChance: after XP actually increases, roll to remove the visit host
+// improvement named on TriggeredEffectContext_t::hostImprovementId (Monolith 1/32).
 struct GrantXpEffect_t
 {
     int amount = 0;
     ModifierOp_t op = ModifierOp_t::Add;
+    std::optional<Rational_t> removeHostChance;
+};
+
+// Ops for RestoreHitPoints. AddPercent / SetPercent are relative to the unit's max HitPoints,
+// not ApplyModifierStack's percent-of-current semantics — hence a dedicated enum.
+enum class RestoreHitPointsOp_t
+{
+    Add,
+    AddPercent,
+    MaxClamp,
+    MinClamp,
+    SetPercent,
+};
+
+// Instant heal on a unit subject (monolith visit). SetCurrentHp clamps to live max.
+struct RestoreHitPointsEffect_t
+{
+    int amount = 0;
+    RestoreHitPointsOp_t op = RestoreHitPointsOp_t::Add;
 };
 
 // Random facility destruction at the context base (riot escalation, probe sabotage).
@@ -108,6 +130,7 @@ using TriggeredEffectVariant_t = std::variant<
     SetInfiltrationEffect_t,
     ModifyPopulationEffect_t,
     GrantXpEffect_t,
+    RestoreHitPointsEffect_t,
     DestroyFacilityEffect_t,
     RebelEffect_t
 >;

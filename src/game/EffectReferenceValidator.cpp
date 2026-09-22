@@ -164,6 +164,7 @@ struct TriggeredPayloadValidator
     void operator()(const SetInfiltrationEffect_t&) const {}
     void operator()(const ModifyPopulationEffect_t&) const {}
     void operator()(const GrantXpEffect_t&) const {}
+    void operator()(const RestoreHitPointsEffect_t&) const {}
     void operator()(const DestroyFacilityEffect_t&) const {}
     void operator()(const RebelEffect_t&) const {}
 };

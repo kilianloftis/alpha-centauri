@@ -5,7 +5,9 @@
 
 #include "game/GameSettings.h"
 #include "game/GameState.h"
+#include "game/PlayerInteraction.h"
 #include "game/buildings/BuildingConfig.h"
+#include "game/effects/EffectEnums.h"
 #include "game/effects/TriggeredEffect.h"
 #include "game/effects/TriggeredEffectDispatch.h"
 #include "game/faction/Military.h"
@@ -20,12 +22,18 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitDesign.h"
+#include "game/units/UnitOrder.h"
+#include "game/units/UnitOrderExecutor.h"
+#include "game/units/UnitSlotConfig.h"
+#include "lib/Rational.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <algorithm>
 #include <memory>
 #include <ranges>
+#include <span>
 #include <string>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -117,6 +125,38 @@ const Unit& LastUnit_(const Faction& rFaction)
     const auto count = std::ranges::distance(units);
     REQUIRE(count > 0);
     return *std::ranges::next(units.begin(), count - 1);
+}
+
+Unit& MakeUnitOn_(TriggerGame_& rGame, Faction& rFaction, int x, int y,
+                  const std::vector<std::string>& rComponentIds)
+{
+    std::vector<UnitSlotConfig_t> slots;
+    std::unordered_map<std::string, const UnitComponentConfig_t*> assigned;
+    int slotIndex = 0;
+    for (const std::string& rId : rComponentIds)
+    {
+        const UnitComponentConfig_t* pComponent = rGame.fixtures.unitComponents.Find(rId);
+        REQUIRE(pComponent);
+        UnitSlotConfig_t slot;
+        slot.id = "slot_" + std::to_string(slotIndex++);
+        slot.displayName = slot.id;
+        slot.componentType = pComponent->type;
+        slot.required = true;
+        assigned[slot.id] = pComponent;
+        slots.push_back(slot);
+    }
+    rGame.fixtures.designs.emplace_back(slots, assigned);
+    Tile* pTile = rGame.pState->GetWorldMap().GetTile(x, y);
+    REQUIRE(pTile);
+    return rFaction.GetUnitManager().CreateUnit(
+        rGame.pState->AllocateUnitId(), rGame.fixtures.designs.back(),
+        rGame.pState->GetWorldMap().GetUnitPositions(), *pTile);
+}
+
+Unit& MakeUnitOn_(TriggerGame_& rGame, int x, int y,
+                  const std::vector<std::string>& rComponentIds)
+{
+    return MakeUnitOn_(rGame, *rGame.pFaction, x, y, rComponentIds);
 }
 
 } // namespace
@@ -393,4 +433,109 @@ TEST_CASE("GrantUnit reports a short count when there is nowhere left to stand",
     CHECK(spawned > 0);
     CHECK(spawned < many.count);
     CHECK(UnitCount_(*game.pFaction) == spawned);
+}
+
+TEST_CASE("ApplyVisitEffects heals and grants XP once across monoliths",
+          "[effects][triggered][visit][monolith]")
+{
+    TriggerGame_ game;
+    for (auto& pTile : game.pState->GetWorldMap().GetTiles())
+    {
+        pTile->SetElevation(100);
+    }
+    Tile& rMonoA = *game.pState->GetWorldMap().GetTile(4, 4);
+    Tile& rMonoB = *game.pState->GetWorldMap().GetTile(5, 4);
+    game.pState->GetTileEffects().AddImprovementWithEffects(rMonoA, "Monolith");
+    game.pState->GetTileEffects().AddImprovementWithEffects(rMonoB, "Monolith");
+
+    Unit& unit = MakeUnitOn_(game, 4, 4, {"test_chassis", "test_weapon"});
+    const int maxHp = unit.GetStat(StatId_t::HitPoints);
+    unit.SetCurrentHp(1);
+    const int xpBefore = unit.GetXp();
+
+    ApplyVisitEffects(unit, game.pState->GetRng());
+    CHECK(unit.GetCurrentHp() == maxHp);
+    CHECK(unit.GetXp() == xpBefore + 1);
+    CHECK(unit.ConsumedTriggerKeys().count("monolith_xp") == 1);
+
+    // Relocate onto the second monolith without re-entering (direct MoveUnit).
+    game.pState->GetWorldMap().GetUnitPositions().MoveUnit(unit, rMonoB);
+    unit.SetCurrentHp(1);
+    ApplyVisitEffects(unit, game.pState->GetRng());
+    CHECK(unit.GetCurrentHp() == maxHp);
+    CHECK(unit.GetXp() == xpBefore + 1);
+}
+
+TEST_CASE("GrantXp remove_host_chance removes the visit host when the roll succeeds",
+          "[effects][triggered][visit]")
+{
+    TriggerGame_ game;
+    for (auto& pTile : game.pState->GetWorldMap().GetTiles())
+    {
+        pTile->SetElevation(100);
+    }
+    Tile& rTile = *game.pState->GetWorldMap().GetTile(4, 4);
+    game.pState->GetTileEffects().AddImprovementWithEffects(rTile, "Monolith");
+    Unit& unit = MakeUnitOn_(game, 4, 4, {"test_chassis", "test_weapon"});
+
+    TriggeredEffectConfig_t grant;
+    grant.effect = GrantXpEffect_t{1, ModifierOp_t::Add, Rational_t{1, 1}};
+    grant.oncePer = OncePer_t{OnceScope_t::Unit, "force_remove"};
+    TriggeredEffectContext_t context(*game.pState, *game.pFaction);
+    context.pUnit = &unit;
+    context.pTile = &rTile;
+    context.hostImprovementId = "Monolith";
+    context.pRng = &game.pState->GetRng();
+
+    REQUIRE(rTile.HasImprovement("Monolith"));
+    ApplyTriggeredEffects(std::span{&grant, 1}, context);
+    CHECK_FALSE(rTile.HasImprovement("Monolith"));
+}
+
+TEST_CASE("Player arrival on Monolith enqueues visit interaction; AI auto-applies",
+          "[effects][triggered][visit][movement]")
+{
+    TriggerGame_ game;
+    for (auto& pTile : game.pState->GetWorldMap().GetTiles())
+    {
+        pTile->SetElevation(100);
+    }
+    game.pState->GetUnitOrderExecutor().SetGameDataContext(game.fixtures.dataContext);
+
+    Tile& rMono = *game.pState->GetWorldMap().GetTile(5, 4);
+    game.pState->GetTileEffects().AddImprovementWithEffects(rMono, "Monolith");
+
+    Unit& playerUnit = MakeUnitOn_(game, 4, 4, {"test_chassis", "test_weapon"});
+    playerUnit.SetCurrentHp(1);
+    const int xpBefore = playerUnit.GetXp();
+    MoveOrder_t move;
+    REQUIRE(game.pState->GetUnitOrderExecutor().TryStep(playerUnit, rMono, move).bEntered);
+    REQUIRE(game.pState->GetPlayerInteractions().Size() == 1);
+    CHECK(std::holds_alternative<ImprovementVisitInteraction_t>(
+        game.pState->GetPlayerInteractions().Front()->payload));
+    CHECK(playerUnit.GetCurrentHp() == 1);
+    CHECK(playerUnit.GetXp() == xpBefore);
+
+    ApplyVisitEffects(playerUnit, game.pState->GetRng());
+    CHECK(playerUnit.GetCurrentHp() == playerUnit.GetStat(StatId_t::HitPoints));
+    CHECK(playerUnit.GetXp() == xpBefore + 1);
+
+    // AI faction auto-Investigate on arrival (no queue item).
+    FactionConfig_t aiDef = game.fixtures.factionDefinition;
+    aiDef.id = "ai";
+    Faction* pAi = &game.pState->AddFaction(std::make_unique<Faction>(
+        game.pState->AllocateFactionId(), false, aiDef, game.fixtures.dataContext,
+        game.pState->GetWorldMap(), game.settings, actest::k_TestFactionSeed));
+
+    Tile& rMono2 = *game.pState->GetWorldMap().GetTile(3, 4);
+    game.pState->GetTileEffects().AddImprovementWithEffects(rMono2, "Monolith");
+    Unit& aiMover = MakeUnitOn_(game, *pAi, 2, 4, {"test_chassis", "test_weapon"});
+    aiMover.SetCurrentHp(1);
+    const int aiXp = aiMover.GetXp();
+    const std::size_t queueBefore = game.pState->GetPlayerInteractions().Size();
+    MoveOrder_t aiMove;
+    REQUIRE(game.pState->GetUnitOrderExecutor().TryStep(aiMover, rMono2, aiMove).bEntered);
+    CHECK(game.pState->GetPlayerInteractions().Size() == queueBefore);
+    CHECK(aiMover.GetCurrentHp() == aiMover.GetStat(StatId_t::HitPoints));
+    CHECK(aiMover.GetXp() == aiXp + 1);
 }

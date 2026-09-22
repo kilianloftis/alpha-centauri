@@ -1,49 +1,46 @@
 ---
 name: Monolith visit rules
-overview: Instantaneous RestoreHitPoints and GrantExperience on improvements; player (or AI) chooses Investigate vs Leave alone via PlayerInteractionQueue before any arrival Instantaneous effects run on the mover.
+overview: Wire improvement on_visit_effects (GrantXp + new RestoreHitPoints) behind Investigate / Leave alone; reuse oncePer and ApplyTriggeredEffects. Continuous tile yields stay Continuous.
 todos:
-  - id: effect-types
-    content: Add RestoreHitPoints + GrantExperience Instantaneous variants, parse/validate, RollRational
-    status: pending
+  - id: restore-hp
+    content: Add RestoreHitPoints triggered type (amount+op); optional remove_host_chance on GrantXp + RollRational
+    status: completed
   - id: visit-prompt
-    content: MonolithVisitInteraction + presenter choices; enqueue on arrival; Investigate dispatches
-    status: pending
-  - id: arrival-gate
-    content: Gate arrival Instantaneous behind Investigate; stop multi-hop; AI auto-Investigate
-    status: pending
+    content: ImprovementVisitInteraction + presenter; enqueue on arrival; Investigate applies on_visit_effects
+    status: completed
+  - id: fire-site
+    content: ApplyArrivalEffects_ visit gate; stop multi-hop; AI auto-Investigate; drop parser empty-list reject
+    status: completed
   - id: monolith-json
-    content: Wire Monolith Instantaneous heal + GrantExperience (remove_host_chance 1/32, once)
-    status: pending
+    content: Monolith on_visit_effects — full heal + GrantXp oncePer monolith_xp, remove_host_chance 1/32
+    status: completed
   - id: tests-docs
     content: Parser/prompt/dispatch/arrival tests; effects + movement + player-interaction docs
-    status: pending
-  - id: try-promote-probe
-    content: Remove TryPromote ProbeTeam early-out; promote on kill uses same mechanics
-    status: pending
+    status: completed
 isProject: false
 ---
 
-# Monolith visit via Instantaneous effects
+# Monolith visit via on_visit_effects
 
-Instantaneous `RestoreHitPoints` and `GrantExperience` on improvements. Unit arrival on a visit tile prompts Investigate / Leave it Alone; only Investigate applies those effects to the mover. Continuous yields stay Continuous.
+Arrival on a tile that hosts an improvement with `on_visit_effects` prompts Investigate / Leave it Alone. Investigate runs that list against the mover through `ApplyTriggeredEffects`. Continuous yields stay Continuous.
 
 ```mermaid
 sequenceDiagram
   participant Exec as UnitOrderExecutor
   participant Queue as PlayerInteractionQueue
   participant UI as InteractionPresenter
-  participant Domain as DispatchUnitArrivalEffects
+  participant Domain as ApplyVisitEffects
 
   Exec->>Exec: EnterTile_ then ApplyArrivalEffects_
   Exec->>Exec: Board transport / base conquest as today
-  alt Tile has Instantaneous ThisTile visit effects
+  alt Tile has improvement with on_visit_effects
     Exec->>Exec: Clear remaining MoveOrder hops
     alt Human player
-      Exec->>Queue: Enqueue MonolithVisitInteraction
+      Exec->>Queue: Enqueue ImprovementVisitInteraction
       Note over Queue: PlayerActions Yields
       UI->>UI: Investigate / Leave it Alone
       alt Investigate
-        UI->>Domain: DispatchUnitArrivalEffects mover only
+        UI->>Domain: ApplyTriggeredEffects per visit improvement
       else Leave it Alone
         UI->>UI: CompleteFront no effects
       end
@@ -53,107 +50,95 @@ sequenceDiagram
   end
 ```
 
-
-
-
-| Piece                                  | Role                                                                                |
-| -------------------------------------- | ----------------------------------------------------------------------------------- |
-| `RestoreHitPoints` / `GrantExperience` | Instantaneous effect types on the improvement                                       |
-| `MonolithVisitInteraction_t`           | Typed `PlayerInteraction_t` arm (unit id)                                           |
-| `DispatchUnitArrivalEffects`           | Applies Instantaneous `ThisTile` visit effects to the mover only, after Investigate |
-| Unit latch                             | Once-per-unit GrantExperience memory by source improvement id                       |
-
+| Piece | Role |
+| --- | --- |
+| `on_visit_effects` | Already on `ImprovementConfig_t`; parser rejects non-empty until this wires the fire site |
+| `GrantXp` | Existing triggered type; Monolith uses `oncePer: {scope: unit, key: "monolith_xp"}` |
+| `RestoreHitPoints` | New triggered type (heal the context unit) |
+| `remove_host_chance` | Optional Rational on `GrantXp`; roll only after XP actually increases |
+| `ImprovementVisitInteraction_t` | `PlayerInteraction_t` arm (unit id) |
+| `ApplyVisitEffects` | Stamps mover + tile + host improvement id; runs each visit list |
 
 - Prompt and effects target the **arriver only**; co-located units are untouched until they enter.
-- Heal only on Investigate (every Investigate can heal; no once latch on RestoreHitPoints).
-- GrantExperience applies to any unit, including ProbeTeam.
-- Disappear only when GrantExperience increases XP and `remove_host_chance` rolls.
-- Leave it Alone: stay on tile; no Instantaneous effects; no latch; later re-entry can prompt again.
+- Heal every Investigate (no `oncePer` on RestoreHitPoints). GrantXp latches via existing `oncePer` only when XP increases.
+- Disappear only when GrantXp increases XP and `remove_host_chance` rolls.
+- Leave it Alone: stay on tile; no triggered apply; no latch spend; later re-entry can prompt again.
 - AI / non-player: auto-Investigate (dispatch immediately; no popup).
-- Remove `TryPromote`’s ProbeTeam early-out (probe-vs-probe kills use the same promotion roll; attack eligibility stays in the order handler).
 
 ## Trigger: Investigate vs Leave alone
 
-Production-abandon spine (`[player-interaction-system.md](docs/architecture/player-interaction-system.md)`): enqueue → Yield → present → domain resolve → `CompleteFront` → Advance.
+Same production-abandon spine ([player-interaction-system.md](docs/architecture/player-interaction-system.md)): enqueue → Yield → present → domain resolve → `CompleteFront` → Advance.
 
-1. After `EnterTile_`, in `ApplyArrivalEffects_` (shared with airdrop): if the mover’s tile has Instantaneous `ThisTile` RestoreHitPoints / GrantExperience on an improvement, treat it as a visit opportunity.
-2. Clear any remaining `MoveOrder` hops so the unit does not walk off before the choice.
-3. Player faction: `EnqueueForPlayer(MonolithVisitInteraction_t{ unitId })` without dispatching. `PlayerActions` Yields while pending.
-4. `InteractionPresenter`: `ListSelectorPopup` — “Investigate the Monolith” / “Leave it Alone” (use improvement name when useful). Investigate → `DispatchUnitArrivalEffects` → `CompleteAndAdvance_`. Leave alone → `CompleteAndAdvance_` only.
-5. AI / non-player: `DispatchUnitArrivalEffects` immediately.
+1. After `EnterTile_`, in `ApplyArrivalEffects_` (shared with airdrop): if any improvement on the mover’s tile has a non-empty `onVisitEffects`, treat it as a visit opportunity.
+2. Clear remaining `MoveOrder` hops so the unit does not walk off before the choice.
+3. Player faction: `EnqueueForPlayer(ImprovementVisitInteraction_t{ unitId })` without dispatching. `PlayerActions` Yields while pending.
+4. `InteractionPresenter`: `ListSelectorPopup` — “Investigate …” / “Leave it Alone” (improvement name when useful). Investigate → `ApplyVisitEffects` → `CompleteAndAdvance_`. Leave alone → `CompleteAndAdvance_` only.
+5. AI / non-player: `ApplyVisitEffects` immediately.
 
-Wire enqueue through the same session path conquest already uses (`IUnitOrderWorld` / `GameState`). Domain APIs for Investigate / Leave; presenter only chooses. Escape / click-outside keeps Front pending and re-presents.
+Wire enqueue through the same session path conquest already uses (`IUnitOrderWorld` / `GameState`). Escape / click-outside keeps Front pending and re-presents.
 
 ## Effect types
 
-In `[EffectConfig.h](include/game/effects/EffectConfig.h)` / parser / `EffectVariant_t`. Add `RollRational` to `[RandomRoll.h](include/lib/RandomRoll.h)`.
+**GrantXp** — already shipped (`amount` + `op`, optional `condition`, optional `oncePer`). Add optional `remove_host_chance` (Rational string, e.g. `"1/32"`). Add `RollRational` to [RandomRoll.h](include/lib/RandomRoll.h).
 
-**RestoreHitPoints** — Instantaneous; `ThisTile` on Improvement. Required `amount` + `op`:
+Apply steps for one GrantXp (existing plus host remove):
 
+1. Existing `oncePer` gate / condition / subject skip as today.
+2. Apply XP via `ApplyModifierStack` + `SetXp`; `oncePer` spends only when XP actually changes (existing rule).
+3. If XP increased and `remove_host_chance` is set and `RollRational` succeeds → remove the host improvement named on the visit context from `subjects.pTile`.
 
-| `op`         | Meaning for current HP                                 |
-| ------------ | ------------------------------------------------------ |
-| `Add`        | Heal `amount` HP                                       |
-| `AddPercent` | Heal `maxHp * amount / 100` (percent of max HitPoints) |
-| `MaxClamp`   | `hp = min(hp, amount)`                                 |
-| `MinClamp`   | `hp = max(hp, amount)`                                 |
-| `SetPercent` | Raise HP up to `maxHp * amount / 100` (never reduces)  |
+Train / prototype GrantXp omit `remove_host_chance`. Visit fire site stamps the host improvement id on the context for the duration of that list.
 
+**RestoreHitPoints** — new triggered variant; subject is `pUnit`. Required `amount` + `op`:
 
-Reject `MultiplyGeometric`. Monolith: ~~~~`{ "amount": 100, "op": "SetPercent" }`~~. Heal-then-absolute-cap: two effects in order (~~`AddPercent` ~~then~~ `MaxClamp`~~).~~
+| `op` | Meaning for current HP |
+| --- | --- |
+| `Add` | Heal `amount` HP |
+| `AddPercent` | Heal `maxHp * amount / 100` |
+| `MaxClamp` | `hp = min(hp, amount)` |
+| `MinClamp` | `hp = max(hp, amount)` |
+| `SetPercent` | Raise HP up to `maxHp * amount / 100` (never reduces) |
 
-~~**GrantExperience** — Instantaneous; same op set (percents relative to~~ `MaxLevel()`~~). Optional~~ `once_per_unit` ~~(bool, default~~ `false`~~); optional~~ `remove_host_chance` ~~(Rational).~~
-
-Monolith: `{ "amount": 1, "op": "Add", "once_per_unit": true, "remove_host_chance": "1/32" }`.
-
-### `once_per_unit` semantics
-
-This flag is only on **GrantExperience** (not RestoreHitPoints, not the visit prompt).
-
-
-| Rule                                       | Behavior                                                                                                                                                                                                                       |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Latch key                                  | Host **improvement config id** (`sourceId`, e.g. `"Monolith"`). One latch entry per id per unit.                                                                                                                               |
-| When latch is written                      | Only when this effect **increases** the unit’s XP.                                                                                                                                                                             |
-| When latch is read                         | If `once_per_unit` and the unit already has this `sourceId` latched → skip the effect entirely (no XP op, no remove roll).                                                                                                     |
-| XP unchanged                               | At max level, `SetPercent` already met, `MaxClamp` with no change, etc. → **do not** latch; **do not** roll remove. The unit may Investigate again later for heal, and if XP can rise again the once-bonus is still available. |
-| Investigate vs latch                       | Choosing Investigate does not latch by itself. Leave it Alone never latches.                                                                                                                                                   |
-| Heal independence                          | RestoreHitPoints always runs on Investigate regardless of GrantExperience latches.                                                                                                                                             |
-| Lifetime                                   | Latch lives on the `Unit` for its life (survives ownership transfer). A newly built unit has an empty set.                                                                                                                     |
-| Default `false`                            | Every Investigate may apply the XP op again (modding). Stock Monolith sets `true`.                                                                                                                                             |
-| Several GrantExperience on one improvement | They share one latch key (the improvement id). First successful XP increase latches; later once-effects on that same id no-op. Stock Monolith has a single GrantExperience.                                                    |
-
-
-Apply steps for one GrantExperience:
-
-1. If `once_per_unit` and `sourceId` already latched → return.
-2. Compute new XP from `amount`/`op`; if equal to current → return.
-3. `SetXp(newXp)`; if `once_per_unit`, record `sourceId`.
-4. If XP increased and `remove_host_chance` is set and `RollRational` succeeds → `RemoveImprovementWithEffects` for `sourceId`.
+Reject `MultiplyGeometric`. Returns whether HP changed (so a future `oncePer` on heal would only latch on a real heal). Monolith uses `{ "amount": 100, "op": "SetPercent" }`.
 
 ## Dispatch (Investigate only)
 
 ```cpp
-void DispatchUnitArrivalEffects(Unit& rMover, TileEffectsContext& rTileEffects,
-                                std::mt19937& rRng);
+void ApplyVisitEffects(Unit& rMover, TileEffectsContext& rTileEffects, std::mt19937& rRng);
 ```
 
-Subject is `rMover` only. Walk Instantaneous `ThisTile` RestoreHitPoints / GrantExperience on that tile’s improvements. Reject Instantaneous StatModifier on Improvement at parse; update WeirdAura fixture. Humans call this only from Investigate; AI from the auto path. Boarding and base conquest stay unconditional in `ApplyArrivalEffects_`.
+For each improvement on the mover’s tile with a non-empty `onVisitEffects`:
 
-## Unit latch
+1. Build `TriggeredEffectContext_t` with `pUnit = &rMover`, `pTile` / target tile = mover’s tile, host improvement id = that improvement’s config id, session RNG (or `rRng`).
+2. `ApplyTriggeredEffects(improvement.onVisitEffects, ctx)`.
 
-`Unit` holds the set of improvement ids for which a `once_per_unit` GrantExperience has already increased XP. API shape: query/record by `sourceId` (names can match existing latch style on `Unit`). Not a RuleFlag.
+Boarding and base conquest stay unconditional in `ApplyArrivalEffects_`. Drop the ImprovementConfigParser reject of non-empty `on_visit_effects` once this path exists.
 
 ## Monolith config
 
-Keep Continuous yields; add the Instantaneous pair above; update description.
+Keep Continuous 2-2-2 yields. Add:
+
+```json
+"on_visit_effects": [
+  {
+    "type": "RestoreHitPoints",
+    "parameters": { "amount": 100, "op": "SetPercent" }
+  },
+  {
+    "type": "GrantXp",
+    "parameters": { "amount": 1, "op": "Add", "remove_host_chance": "1/32" },
+    "once_per": { "scope": "unit", "key": "monolith_xp" }
+  }
+]
+```
+
+Update the description. Second Investigate on any Monolith heals again but skips GrantXp once the unit has spent `monolith_xp` (including after visiting a different Monolith tile).
 
 ## Tests and docs
 
-- Parser coverage for both effect types and ops.
+- Parser: RestoreHitPoints ops; GrantXp `remove_host_chance`; reject MultiplyGeometric on heal.
 - Prompt: step onto Monolith as player → visit interaction Front; Leave alone → no heal/XP; Investigate → heal/XP; co-located unit unchanged.
 - Multi-hop stops on the visit tile until Investigate/Leave completes.
 - AI: effects apply without a queue item.
-- GrantExperience: `once_per_unit` latches only after XP increases; second Investigate on same Monolith heals but does not add XP; at-max Investigate does not latch (heal still works); `remove_host_chance` only when XP increased; ProbeTeam can gain XP; TryPromote allows ProbeTeam survivors.
-- Docs: Instantaneous unit-arrival + interaction gate in `[effects-system.md](docs/architecture/effects-system.md)`, `[player-interaction-system.md](docs/architecture/player-interaction-system.md)`, `[unit-movement-system.md](docs/architecture/unit-movement-system.md)`; remove monolith from World events in `[turn-structure.md](docs/game-rules/turn-structure.md)`.
-
+- GrantXp: `oncePer` latches only after XP increases; second Investigate heals but does not add XP; at-max Investigate does not latch (heal still works); `remove_host_chance` only when XP increased; ProbeTeam can gain XP.
+- Docs: mark `on_visit_effects` fired; visit gate in [effects-system.md](docs/architecture/effects-system.md), [player-interaction-system.md](docs/architecture/player-interaction-system.md), [unit-movement-system.md](docs/architecture/unit-movement-system.md); remove monolith from World events in [turn-structure.md](docs/game-rules/turn-structure.md).

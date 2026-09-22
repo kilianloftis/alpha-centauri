@@ -445,7 +445,8 @@ resolution. One-shot effects are **executed**: RNG, ledger writes, ownership tra
 once. These are two machines, and they are two types.
 
 - **`TriggeredEffectConfig_t`** (`TriggeredEffect.h`) holds a `TriggeredEffectVariant_t` —
-  `AddBuilding`, `GrantTech`, `GrantUnit`, `GrantEnergy`, `GrantXp`, `WorldParameter`,
+  `AddBuilding`, `GrantTech`, `GrantUnit`, `GrantEnergy`, `GrantXp`, `RestoreHitPoints`,
+  `WorldParameter`,
   `SetInfiltration`, `ModifyPopulation`, `DestroyFacility`, `Rebel` — plus an optional
   `oncePer`, an optional `condition` (same `Condition_t` as continuous, evaluated against
   `TriggeredEffectContext_t::subjects`), and a `factionFilter` that **only `SetInfiltration`
@@ -472,12 +473,12 @@ container declares a continuous `effects` array and, where a trigger exists, a n
 | `council/proposals.json` | `effects` | `on_passed_effects` |
 | `council/rules.json` | `governor_effects` | `on_elected_effects` |
 | `pop_composition.json` riot tiers | `effects` | `on_enter_effects` |
-| `improvements.json` | `effects` | `on_visit_effects` — **declared, not yet fired** |
+| `improvements.json` | `effects` | `on_visit_effects` — Investigate / AI auto via `ApplyVisitEffects` |
 
-`on_visit_effects` has no consumer yet: there is no unit visit order. Rather than accept
-config that silently does nothing — the exact failure this split exists to kill —
-`ImprovementConfigParser` **throws on a non-empty list**. Wiring the monolith means adding the
-order and deleting that rejection.
+`on_visit_effects` fire when a unit Investigates a visit tile (player prompt) or when an AI
+unit arrives (`ApplyArrivalEffects_` → `ApplyVisitEffects`). Continuous tile yields stay in
+`effects`. Monolith authors heal (`RestoreHitPoints`) plus once-per-unit `GrantXp` with
+optional `remove_host_chance`.
 
 `TriggeredEffectParser` and `EffectConfigParser` reject each other's type names, naming the
 list the entry belongs in. The "belongs in `effects`" check reads `EffectConfigParser`'s own
@@ -489,9 +490,11 @@ then silently never fired.
   TriggeredEffectContext_t&) -> vector<TriggeredEffectResult_t>`. The one dispatcher; the five
   hand-rolled `persistence == Instantaneous` scans it replaced are gone.
 - **`TriggeredEffectContext_t`** carries trigger-only fields (`factions`, optional `actionTarget` /
-  RNG) plus non-const subjects (`pBase`, `pUnit`, `pFaction`, `pTile`). Conditions and amount
+  RNG, optional `hostImprovementId` for visit `remove_host_chance`) plus non-const subjects
+  (`pBase`, `pUnit`, `pFaction`, `pTile`). Conditions and amount
   sources read through `Subjects()`, which materialises a const `EffectContext_t`. A production
-  completion stamps base + tile; unit production stamps `pUnit`. `pFaction` is re-stamped per
+  completion stamps base + tile; unit production stamps `pUnit`. Visit lists stamp `pUnit`,
+  `pTile`, and the host improvement id. `pFaction` is re-stamped per
   apply so a faction-identity condition sees the member being credited. An entry needing a
   subject the bag lacks is **skipped**, not guessed at.
 - **One application per subject**: a faction-subject entry (`GrantTech`, `GrantEnergy`,

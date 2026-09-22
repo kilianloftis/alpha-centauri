@@ -23,7 +23,7 @@ Population
 - Drone/talent balance and mood forecast
 Player Actions
 World events
-- Mindworms, fungus, disasters, monolith effects
+- Mindworms, fungus, disasters
 Victory condition checks
 - Conquest, transcendence, diplomatic, economic
 Turn end

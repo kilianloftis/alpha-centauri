@@ -2,6 +2,7 @@
 
 #include "game/faction/base/BaseTypes.h"
 #include "game/PauseOnEventsConfig.h"
+#include "game/units/Unit.h"
 #include "lib/GameEvent.h"
 
 #include <optional>
@@ -57,11 +58,19 @@ struct ProductionIdleInteraction_t
     std::vector<PauseOnEventId_t> completedEvents;
 };
 
+// Unit stepped onto a tile with improvement on_visit_effects (Monolith). Investigate applies
+// those effects to this unit; Leave it Alone completes without firing.
+struct ImprovementVisitInteraction_t
+{
+    UnitId_t unitId = 0;
+};
+
 using PlayerInteraction_t = std::variant<
     NoticeInteraction_t,
     OpenViewInteraction_t,
     ProductionWouldEmptyInteraction_t,
-    ProductionIdleInteraction_t
+    ProductionIdleInteraction_t,
+    ImprovementVisitInteraction_t
 >;
 
 // Every queued item pauses turn processing for its audience until CompleteFront.

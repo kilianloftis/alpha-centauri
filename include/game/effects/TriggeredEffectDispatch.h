@@ -63,6 +63,11 @@ struct XpGranted_t
     int amount = 0;
 };
 
+struct HitPointsRestored_t
+{
+    int amount = 0;
+};
+
 struct BaseRebelled_t
 {
     BaseId_t baseId = 0;
@@ -82,6 +87,7 @@ using TriggeredEffectResult_t = std::variant<
     UnitsGranted_t,
     EnergyGranted_t,
     XpGranted_t,
+    HitPointsRestored_t,
     BaseRebelled_t,
     InfiltrationSet_t
 >;
@@ -104,7 +110,9 @@ struct TriggeredEffectContext_t
     BaseManager* pBase = nullptr;
     Unit* pUnit = nullptr;
     Faction* pFaction = nullptr;
-    const Tile* pTile = nullptr;
+    Tile* pTile = nullptr;
+    // Visit-list host: GrantXp remove_host_chance removes this improvement from pTile.
+    std::optional<std::string> hostImprovementId;
     std::optional<FactionId_t> actionTarget;
     std::mt19937* pRng = nullptr;
 
@@ -135,5 +143,12 @@ ApplyTriggeredEffects(std::span<const TriggeredEffectConfig_t> rEffects,
 // first, then each building present at rProducedAt. Stamps pUnit. No-op when the faction has
 // no bound GameState (pre-session construction).
 void ApplyUnitProducedTriggers(Unit& rUnit, BaseManager& rProducedAt);
+
+// Improvement on_visit_effects for each visit-capable improvement on the mover's tile.
+// Stamps pUnit / pTile / hostImprovementId per list. Investigate (or AI auto) only.
+void ApplyVisitEffects(Unit& rMover, std::mt19937& rRng);
+
+// True when any improvement on the tile carries a non-empty on_visit_effects list.
+bool TileHasVisitEffects(const Tile& rTile);
 
 } // namespace ac

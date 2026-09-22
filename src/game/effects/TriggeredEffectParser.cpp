@@ -1,6 +1,7 @@
 #include "game/effects/TriggeredEffectParser.h"
 
 #include "game/effects/EffectConfigParser.h"
+#include "lib/Rational.h"
 
 #include <magic_enum.hpp>
 
@@ -108,7 +109,31 @@ void ParseGrantXp_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rE
     GrantXpEffect_t grant;
     grant.amount = static_cast<int>(EffectConfigParser::RequireNumber(parameters, "amount"));
     grant.op = EffectConfigParser::ParseModifierOp(parameters.value("op", "Add"));
+    if (parameters.contains("remove_host_chance"))
+    {
+        grant.removeHostChance = Rational_t::ParseJson(parameters.at("remove_host_chance"));
+        if (grant.removeHostChance->denominator <= 0)
+        {
+            throw std::runtime_error("GrantXp 'remove_host_chance' denominator must be positive");
+        }
+    }
     rEffect.effect = grant;
+}
+
+void ParseRestoreHitPoints_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+{
+    RestoreHitPointsEffect_t restore;
+    restore.amount = static_cast<int>(EffectConfigParser::RequireNumber(parameters, "amount"));
+    const std::string opStr = parameters.value("op", "Add");
+    const auto op =
+        magic_enum::enum_cast<RestoreHitPointsOp_t>(opStr, magic_enum::case_insensitive);
+    if (!op.has_value())
+    {
+        throw std::runtime_error(
+            "RestoreHitPoints op must be Add, AddPercent, MaxClamp, MinClamp, or SetPercent");
+    }
+    restore.op = *op;
+    rEffect.effect = restore;
 }
 
 void ParseDestroyFacility_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
@@ -154,6 +179,7 @@ const std::unordered_map<std::string, ParseFn_>& TypeParsers_()
         {"SetInfiltration", ParseSetInfiltration_},
         {"ModifyPopulation", ParseModifyPopulation_},
         {"GrantXp", ParseGrantXp_},
+        {"RestoreHitPoints", ParseRestoreHitPoints_},
         {"DestroyFacility", ParseDestroyFacility_},
         {"Rebel", ParseRebel_},
     };
