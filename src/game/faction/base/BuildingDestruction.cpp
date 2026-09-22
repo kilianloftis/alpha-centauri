@@ -1,7 +1,5 @@
 #include "game/faction/base/BuildingDestruction.h"
 
-#include "game/Faction.h"
-#include "game/GameState.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
 #include "game/faction/base/BaseManager.h"
@@ -30,21 +28,9 @@ bool BuildingIsHeadquarters_(const BuildingConfig_t& rBuilding)
 
 } // namespace
 
-void DestroyBuildingAndNotify(GameState& rGameState, BaseManager& rBase,
-                              const BuildingConfig_t& rBuilding)
+void DestroyBuildingAndNotify(BaseManager& rBase, const BuildingConfig_t& rBuilding)
 {
-    // Copy the id before destroying: the config outlives the erase (BuildingManager holds
-    // registry pointers and only drops its own), but reading through rBuilding afterwards
-    // would rely on that indirection staying true.
-    const BuildingId_t id = rBuilding.id;
-    const bool bSecretProject = rBuilding.bIsSecretProject;
-
-    rBase.GetBuildingManager().DestroyBuilding(id);
-    rBase.GetFaction().NotifyBuildingDestroyed(rBase.GetBaseId(), id);
-    if (bSecretProject)
-    {
-        rGameState.MarkSecretProjectDestroyed(id);
-    }
+    rBase.GetBuildingManager().DestroyBuilding(rBuilding.id);
 }
 
 std::vector<const BuildingConfig_t*> CollectDestroyableFacilities(const BaseManager& rBase,
@@ -71,8 +57,7 @@ std::vector<const BuildingConfig_t*> CollectDestroyableFacilities(const BaseMana
     return candidates;
 }
 
-std::vector<BuildingId_t> DestroyRandomFacilities(GameState& rGameState, BaseManager& rBase,
-                                                  int count, bool bExcludeHq,
+std::vector<BuildingId_t> DestroyRandomFacilities(BaseManager& rBase, int count, bool bExcludeHq,
                                                   bool bExcludeSecretProjects, std::mt19937& rRng)
 {
     if (count <= 0)
@@ -95,7 +80,7 @@ std::vector<BuildingId_t> DestroyRandomFacilities(GameState& rGameState, BaseMan
     {
         const BuildingConfig_t& rBuilding = *candidates[static_cast<size_t>(i)];
         destroyed.push_back(rBuilding.id);
-        DestroyBuildingAndNotify(rGameState, rBase, rBuilding);
+        DestroyBuildingAndNotify(rBase, rBuilding);
     }
     return destroyed;
 }

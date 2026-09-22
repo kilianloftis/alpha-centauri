@@ -2,6 +2,7 @@
 
 #include "game/buildings/BuildingConfig.h"
 #include "lib/Revision.h"
+#include "lib/Signal.h"
 #include "game/effects/ActiveEffect.h"
 #include <string>
 #include <vector>
@@ -37,8 +38,13 @@ public:
     // lose a race (production completion) must check first.
     void AddBuilding(const BuildingId_t& buildingId);
 
-    // Destroy the first building with the given id. No-op if not present.
+    // Destroy the first building with the given id. No-op if not present. Emits
+    // OnBuildingDestroyed after a successful erase so deploy ledger / SP tombstone subscribers
+    // do not have to be hand-wired at every call site.
     void DestroyBuilding(const BuildingId_t& buildingId);
+
+    // Fired after DestroyBuilding removes a constructed copy (config pointer is registry-owned).
+    Signal<const BuildingConfig_t&> OnBuildingDestroyed;
 
     // Whether this base currently holds at least one copy.
     bool HasBuilding(const BuildingId_t& buildingId) const;

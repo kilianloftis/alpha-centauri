@@ -8,18 +8,25 @@
 #include "game/GameState.h"
 #include "game/buildings/BuildingConfig.h"
 #include "game/faction/DiplomacyLedger.h"
+#include "game/faction/Military.h"
 #include "game/faction/ResearchManager.h"
+#include "game/faction/UnitManager.h"
 #include "game/faction/base/population/PopulationManager.h"
 #include "game/faction/base/production/ProductionManager.h"
 #include "game/faction/base/production/ProductionApplyResult.h"
 #include "game/map/Tile.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/TriggeredEffectDispatch.h"
+#include "game/units/UnitComponentConfig.h"
+#include "game/units/UnitDesign.h"
+#include "game/units/UnitSlotConfig.h"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <memory>
 #include <stdexcept>
+#include <unordered_map>
+#include <vector>
 
 using namespace ac;
 using Catch::Approx;
@@ -195,7 +202,9 @@ TEST_CASE("Production completion writes on_complete SetInfiltration into the Dip
     // Ledger forbids self-pairs; FactionFilterCoversTarget also excludes the beneficiary.
 }
 
-TEST_CASE("Production completion without a bound GameState throws before any mutation",
+// Building completion no longer needs session spawn services; on_complete effects only run
+// when a session subscriber is wired (GameState::AttachToSession_).
+TEST_CASE("Building production without spawn services completes without on_complete effects",
           "[effects][base][triggered]")
 {
     actest::BaseFixture fixture;
@@ -206,11 +215,60 @@ TEST_CASE("Production completion without a bound GameState throws before any mut
     REQUIRE(pGrantor != nullptr);
     base.GetProduction().SetProduction(pGrantor, base.GetBaseEffects());
     base.GetProduction().SetMineralStockpile(base.GetMineralCost());
-    CHECK_THROWS_AS(base.TryCompleteReadyProduction(), std::runtime_error);
+    REQUIRE(base.TryCompleteReadyProduction().kind == ProductionApplyKind_t::Completed);
 
-    // The throw precedes every mutation: no half-completed base with the building
-    // constructed but its on_complete_effects never fired.
-    CHECK(base.GetBuildingManager().GetBuildings().empty());
+    bool hasGrantor = false;
+    bool hasGranted = false;
+    for (const BuildingConfig_t* pBuilding : base.GetBuildingManager().GetBuildings())
+    {
+        if (pBuilding->id == "instant_grantor")
+        {
+            hasGrantor = true;
+        }
+        if (pBuilding->id == "flat_nutrient")
+        {
+            hasGranted = true;
+        }
+    }
+    CHECK(hasGrantor);
+    CHECK_FALSE(hasGranted);
+}
+
+TEST_CASE("Unit production without spawn services throws before spawning",
+          "[effects][base][triggered]")
+{
+    actest::FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+
+    UnitSlotConfig_t chassisSlot;
+    chassisSlot.id = "slot_0";
+    chassisSlot.displayName = "slot_0";
+    chassisSlot.componentType = "chassis";
+    chassisSlot.required = true;
+    UnitSlotConfig_t weaponSlot;
+    weaponSlot.id = "slot_1";
+    weaponSlot.displayName = "slot_1";
+    weaponSlot.componentType = "weapon";
+    weaponSlot.required = true;
+    const UnitComponentConfig_t* pChassis = fixture.unitComponents.Find("test_chassis");
+    const UnitComponentConfig_t* pWeapon = fixture.unitComponents.Find("test_weapon");
+    REQUIRE(pChassis != nullptr);
+    REQUIRE(pWeapon != nullptr);
+    std::unordered_map<std::string, const UnitComponentConfig_t*> assigned{
+        {chassisSlot.id, pChassis},
+        {weaponSlot.id, pWeapon},
+    };
+    auto pDesign =
+        std::make_unique<UnitDesign>(std::vector{chassisSlot, weaponSlot}, assigned);
+    REQUIRE(faction.GetMilitary().AddDesign(std::move(pDesign)));
+    const UnitDesign* pQueued = faction.GetMilitary().GetDesigns().front().get();
+    REQUIRE(pQueued != nullptr);
+
+    base.GetProduction().SetProduction(pQueued, base.GetBaseEffects());
+    base.GetProduction().SetMineralStockpile(base.GetMineralCost());
+    CHECK_THROWS_AS(base.TryCompleteReadyProduction(), std::runtime_error);
+    CHECK(faction.GetUnitManager().Units().empty());
 }
 
 TEST_CASE("Full pipeline: building and pop bonuses land in base resource production",

@@ -400,7 +400,6 @@ TEST_CASE("NotifyBuildingDestroyed only drops the record for its own base",
 
     // Destroy baseA's copy specifically; baseB's still-cooling copy must be unaffected.
     baseA.GetBuildingManager().DestroyBuilding("test_facility_a");
-    faction.NotifyBuildingDestroyed(baseA.GetBaseId(), "test_facility_a");
 
     CHECK(faction.CountReadyBuildings("test_facility_a", /*missionYear*/ 1) == 0);
     CHECK(faction.CountReadyBuildings("test_facility_a", /*missionYear*/ 100) == 1);
@@ -426,7 +425,6 @@ TEST_CASE("NotifyBuildingDestroyed retires the still-cooling record, not an expi
     REQUIRE(faction.CountReadyBuildings("test_facility_a", /*missionYear*/ 50) == 1);
 
     base.GetBuildingManager().DestroyBuilding("test_facility_a");
-    faction.NotifyBuildingDestroyed(base.GetBaseId(), "test_facility_a");
 
     // One copy left. Dropping the *expired* record instead would leave the year-100 cooldown
     // attached to a copy that no longer exists and report 0 ready — a copy suppressed by a

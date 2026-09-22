@@ -111,7 +111,7 @@ public:
     // unit selection) can drop any reference to it while it is still valid.
     Signal<Unit&> OnUnitDestroyed;
     // Fired after CreateUnit finishes (unit is live and visibility has been rebuilt).
-    Signal<Unit&> OnUnitCreated;
+    Signal<Unit&, BaseManager*> OnUnitCreated;
     // Fired from ReleaseUnit before the unit is removed from this manager (giver side of a
     // transfer). Distinct from OnUnitDestroyed: the unit is not dying. Observers holding a
     // raw Unit* for "my faction's unit" (e.g. WorldView selection) should drop it here even

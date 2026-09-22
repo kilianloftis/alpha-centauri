@@ -2,7 +2,6 @@
 #include "game/faction/base/BaseEffectsCache.h"
 #include "game/Faction.h"
 #include "game/GameSettings.h"
-#include "game/GameState.h"
 #include "game/DifficultyConfig.h"
 #include "game/IConstructable.h"
 #include "game/IEffectsProvider.h"
@@ -27,7 +26,6 @@
 #include "game/social-engineering/SocialRatingResolver.h"
 #include "game/units/UnitDesign.h"
 #include "game/effects/ActiveEffect.h"
-#include "game/effects/TriggeredEffectDispatch.h"
 #include "game/effects/EffectEnums.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/PauseOnEventsConfig.h"
@@ -137,6 +135,15 @@ BaseManager::BaseManager(
     , m_name(std::move(name))
     , m_effects(*this, m_rSocialRatings, rFaction)
 {
+    m_pBuildings->OnBuildingDestroyed.Connect([this](const BuildingConfig_t& rBuilding)
+    {
+        m_pFaction->NotifyBuildingDestroyed(m_baseId, rBuilding.id);
+        if (rBuilding.bIsSecretProject)
+        {
+            m_pFaction->OnSecretProjectDestroyed.Emit(rBuilding.id);
+        }
+    });
+
     // A base provides its own garrison defense bonus, modeled as the "Base" improvement.
     m_rTileEffects.AddImprovementWithEffects(m_tile, std::string(ImprovementIds::k_Base));
 
@@ -187,13 +194,6 @@ BaseManager::BaseManager(
     });
 
     m_pProduction->OnProductionCompleted.Connect([this](const std::string& itemId) {
-        GameState* pGameState = m_pFaction->GetGameState();
-        if (!pGameState)
-        {
-            throw std::runtime_error(
-                "BaseManager: Faction has no GameState bound; cannot complete production");
-        }
-
         if (const BuildingConfig_t* pBuilding = m_rBuildingRegistry.Find(itemId))
         {
             // Losing a race for a secret project, or finishing a copy of something already here, is
@@ -219,20 +219,16 @@ BaseManager::BaseManager(
             {
                 m_pPopulation->EnsureCompositionCurrent();
             }
-            {
-                TriggeredEffectContext_t context(*pGameState, *this);
-                ApplyTriggeredEffects(pBuilding->onCompleteEffects, context);
-            }
-            OnProductionCompleted.Emit(itemId);
+            OnProductionCompleted.Emit(ProductionCompleted_t{*this, itemId, nullptr});
             return;
         }
 
         if (const UnitDesign* pDesign = m_pFaction->GetMilitary().GetDesign(itemId))
         {
             Unit& rUnit = m_pFaction->GetUnitManager().CreateUnit(
-                pGameState->AllocateUnitId(),
+                m_pFaction->AllocateUnitId(),
                 *pDesign,
-                pGameState->GetWorldMap().GetUnitPositions(),
+                m_pFaction->GetUnitPositions(),
                 m_tile,
                 this,
                 this);
@@ -241,20 +237,7 @@ BaseManager::BaseManager(
             {
                 m_pPopulation->EnsureCompositionCurrent();
             }
-            // Only a produced unit pays its components' completion costs: a free spawn
-            // (escape pod, starting unit, a granted unit) never goes through here.
-            {
-                TriggeredEffectContext_t context(*pGameState, *this);
-                context.pUnit = &rUnit;
-                for (const UnitComponentConfig_t* pComp : pDesign->GetComponents())
-                {
-                    if (pComp)
-                    {
-                        ApplyTriggeredEffects(pComp->onCompleteEffects, context);
-                    }
-                }
-            }
-            OnProductionCompleted.Emit(itemId);
+            OnProductionCompleted.Emit(ProductionCompleted_t{*this, itemId, &rUnit});
             return;
         }
 
@@ -685,7 +668,6 @@ int BaseManager::ScrapBuilding_(const BuildingId_t& buildingId)
     }
 
     m_pBuildings->DestroyBuilding(buildingId);
-    m_pFaction->NotifyBuildingDestroyed(m_baseId, buildingId);
     return CreditScrapRefund(*payout, *m_pFaction);
 }
 

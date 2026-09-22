@@ -289,7 +289,7 @@ void InteractionPresenter::PresentImprovementVisit_(const ImprovementVisitIntera
          {
              if (Unit* pResolve = FindUnit_(unitId))
              {
-                 ApplyVisitEffects(*pResolve, m_rGameState.GetRng());
+                 ApplyVisitEffects(m_rGameState, *pResolve, m_rGameState.GetRng());
              }
              CompleteAndAdvance_();
          }});

@@ -149,7 +149,6 @@ TEST_CASE("A destroyed secret project stays unavailable but is owned by nobody",
 
     // Destroying the copy tombstones it: still unavailable, but no longer owned.
     base.GetBuildingManager().DestroyBuilding("test_secret_project");
-    game.pState->MarkSecretProjectDestroyed("test_secret_project");
     CHECK(rAvailability.IsUnavailable("test_secret_project"));
     CHECK_FALSE(rAvailability.IsOwnedByAnyFaction("test_secret_project"));
 

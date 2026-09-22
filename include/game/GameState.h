@@ -250,6 +250,8 @@ private:
     // GameState's own construction, so binding it before m_factions is populated is safe.
     SecretProjectAvailabilityCalculator m_secretProjectAvailability;
     std::unordered_set<std::string> m_destroyedSecretProjects;
+    // Idempotent session wiring for production on_complete + mood notices (transfer-safe).
+    std::unordered_set<BaseManager*> m_sessionWiredBases;
 };
 
 } // namespace ac

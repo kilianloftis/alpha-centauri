@@ -176,10 +176,13 @@ Caller contract: the faction must have been constructed against the session's `W
   its `m_bases`, its effects pool, and its explored/visible/revealed-unit maps. **Not**
   diplomacy — that is world-scoped (see below).
 - **Turn processing is not here.** `Faction` has no `ProcessTurn`; stages drive the turn.
-- **Signals**: exactly one — `OnBaseAdded(BaseManager&)`, which `EventBridge` uses to wire each
-  base and to publish `EvBaseBuilt`. Tech discovery is `ResearchManager::OnTechDiscovered`.
-  There is **no** elimination signal: factions are never removed from the game (a defeated
-  faction's leader can be freed to re-establish it), so there is nothing to observe. See
+- **Signals**: `OnBaseAdded(BaseManager&)` (add-only; `EventBridge` wires each base and
+  publishes `EvBaseBuilt`), `OnBaseListChanged` (create/destroy/transfer territory refresh),
+  `OnVisibilityRebuilt(Faction&)`, and `OnSecretProjectDestroyed` (session tombstone for
+  razes and inventory destroy). Tech discovery is `ResearchManager::OnTechDiscovered`
+  (session applies discover effects and `EnsureResearchTarget`). There is **no** elimination
+  signal: factions are never removed from the game (a defeated faction's leader can be
+  freed to re-establish it), so there is nothing to observe. See
   `docs/game-rules-decisions.md`.
 
 ### FactionIdentity

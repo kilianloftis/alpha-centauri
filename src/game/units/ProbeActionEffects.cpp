@@ -136,7 +136,7 @@ bool ApplySabotage_(Faction& rActor, GameState& rGameState, BaseManager& rBase,
             rResult.detail = ProbeActionStatus_t::NoTarget;
             return false;
         }
-        DestroyBuildingAndNotify(rGameState, rBase, *pTarget);
+        DestroyBuildingAndNotify(rBase, *pTarget);
         rResult.detail = ProbeDestroyedFacility_t{facilityId};
         return true;
     }

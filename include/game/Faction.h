@@ -2,9 +2,9 @@
 
 #include <set>
 
+#include <functional>
 #include <memory>
 #include <optional>
-#include <functional>
 #include <ranges>
 #include <vector>
 
@@ -166,6 +166,14 @@ public:
     // conquest/probe/diplomacy callers do not need to remember to wire anything themselves.
     Signal<BaseManager&> OnBaseAdded;
 
+    // Fired after any base-list membership change (add / extract / release / raze), before
+    // visibility rebuild on add. GameState rebuilds territory and first-contact from this;
+    // distinct from OnBaseAdded (add-only, carries the new BaseManager&).
+    Signal<> OnBaseListChanged;
+
+    // Fired at the end of RebuildVisibility. GameState uses this for first-contact scans.
+    Signal<Faction&> OnVisibilityRebuilt;
+
     // Sum of population size across all bases.
     int TotalPopulation() const;
 
@@ -204,6 +212,10 @@ public:
     // No-op if the copy at baseId was not cooling — never drops another base's record for
     // the same buildingId.
     void NotifyBuildingDestroyed(BaseId_t baseId, const BuildingId_t& buildingId);
+
+    // Fired when a secret project is permanently lost (destroyed or razed with the base).
+    // GameState tombstones the id so it cannot be rebuilt.
+    Signal<const BuildingId_t&> OnSecretProjectDestroyed;
 
     // Economy subsystem: energy treasury and allocation split.
     EconomyManager& GetEconomy();
@@ -258,6 +270,9 @@ public:
 
     // Discover the current research target and auto-select the next one.
     bool DiscoverCurrentResearch();
+
+    // Assign a research target when none is set (grants/steals while idle, startup).
+    void EnsureResearchTarget();
 
     // Social engineering subsystem.
     SocialEngineeringManager& GetSocialEngineering();
@@ -370,17 +385,17 @@ public:
     // Const read for commerce / projections; writers use the non-const overload.
     const GameState* GetGameState() const { return m_pGameState; }
 
+    // Optional session spawn services (GameState::AttachToSession). Required to complete
+    // unit production; null when the faction is unbound.
+    void BindUnitSpawnServices(std::function<UnitId_t()> allocateUnitId,
+                               UnitPositionIndex& rPositions);
+    UnitId_t AllocateUnitId() const;
+    UnitPositionIndex& GetUnitPositions();
+
     // Sticky fog removal from ApplyRemoveFog (one-shot project completion). Continuous
     // RuleFlag / debug settings are layered on top in ApplyVisibilityRules.
     void SetFogRemoved(bool bFogRemoved) { m_bFogRemoved = bFogRemoved; }
     bool IsFogRemoved() const { return m_bFogRemoved; }
-
-    // Invoked after AddBase (after visibility rebuild). GameState uses this to rebuild
-    // world territory; tests may leave it unset and call TerritoryMap::Rebuild directly.
-    void SetOnBaseListChanged(std::function<void()> handler);
-
-    // Invoked at the end of RebuildVisibility. GameState uses this for first-contact scans.
-    void SetOnVisibilityRebuilt(std::function<void(Faction&)> handler);
 
     // Pop types
     std::vector<const PopTypeConfig_t*> GetAvailablePopTypes() const;
@@ -439,11 +454,11 @@ private:
     const GameSettings& m_rSettings; // non-owning session prefs; constructor-injected
     IWorldEffectsSource* m_pWorldEffects = nullptr; // set by BindWorldEffects; optional
     GameState* m_pGameState = nullptr; // set by BindGameState; optional session back-pointer
+    std::function<UnitId_t()> m_allocateUnitId;
+    UnitPositionIndex* m_pUnitPositions = nullptr;
     bool m_bFogRemoved = false; // sticky ApplyRemoveFog
     int m_visibilityDeferralDepth = 0;
     bool m_bVisibilityDirty = false;
-    std::function<void()> m_onBaseListChanged;
-    std::function<void(Faction&)> m_onVisibilityRebuilt;
 
     // Composed GetActiveEffects cache (local pool + world extras). The two stamps are the
     // cache key; m_composedVersion is what GetEffectsVersion publishes.

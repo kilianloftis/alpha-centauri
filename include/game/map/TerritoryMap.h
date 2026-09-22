@@ -21,7 +21,7 @@ inline constexpr FactionId_t k_NoFactionOwner = -1;
 // nearest claiming base by Euclidean distance, then lower BaseId.
 //
 // Rebuild when a base is created, destroyed, or changes hands (GameState::RebuildTerritory
-// via Faction::SetOnBaseListChanged). Queries read the last rebuilt owners.
+// via Faction::OnBaseListChanged). Queries read the last rebuilt owners.
 class TerritoryMap
 {
 public:

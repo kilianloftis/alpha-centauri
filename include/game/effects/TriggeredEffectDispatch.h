@@ -140,18 +140,17 @@ ApplyTriggeredEffects(std::span<const TriggeredEffectConfig_t> rEffects,
                       TriggeredEffectContext_t& rContext);
 
 // Production-base train / prototype XP and other on_unit_produced_effects: production.json
-// first, then each building present at rProducedAt. Stamps pUnit. No-op when the faction has
-// no bound GameState (pre-session construction).
-void ApplyUnitProducedTriggers(Unit& rUnit, BaseManager& rProducedAt);
+// first, then each building present at rProducedAt. Stamps pUnit.
+void ApplyUnitProducedTriggers(GameState& rGameState, Unit& rUnit, BaseManager& rProducedAt);
 
 // Improvement on_visit_effects for each visit-capable improvement on the mover's tile.
 // Stamps pUnit / pTile / hostImprovementId per list. Investigate (or AI auto) only.
-void ApplyVisitEffects(Unit& rMover, std::mt19937& rRng);
+void ApplyVisitEffects(GameState& rGameState, Unit& rMover, std::mt19937& rRng);
 
 // True when any improvement on the tile carries a non-empty on_visit_effects list.
 bool TileHasVisitEffects(const Tile& rTile);
 
-// Tech on_discover_effects for rTechId. No-op when the faction has no bound GameState.
-void ApplyTechDiscoverEffects(Faction& rFaction, const TechId& rTechId);
+// Tech on_discover_effects for rTechId.
+void ApplyTechDiscoverEffects(GameState& rGameState, Faction& rFaction, const TechId& rTechId);
 
 } // namespace ac

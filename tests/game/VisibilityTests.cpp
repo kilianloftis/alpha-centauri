@@ -306,7 +306,7 @@ TEST_CASE("Visibility rebuilds are coalesced inside a deferral scope", "[visibil
     Faction& faction = fixture.MakeFaction();
 
     int rebuilds = 0;
-    faction.SetOnVisibilityRebuilt([&rebuilds](Faction&) { ++rebuilds; });
+    faction.OnVisibilityRebuilt.Connect([&rebuilds](Faction&) { ++rebuilds; });
 
     {
         Faction::VisibilityRebuildScope scope = faction.DeferVisibilityRebuild();
@@ -345,7 +345,7 @@ TEST_CASE("Sinking a loaded transport rebuilds visibility once", "[visibility][f
     REQUIRE(rTransport.GetCargo().size() == 2);
 
     int rebuilds = 0;
-    faction.SetOnVisibilityRebuilt([&rebuilds](Faction&) { ++rebuilds; });
+    faction.OnVisibilityRebuilt.Connect([&rebuilds](Faction&) { ++rebuilds; });
 
     faction.GetUnitManager().DestroyUnit(rTransport);
     CHECK(rebuilds == 1);

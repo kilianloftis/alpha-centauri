@@ -46,6 +46,7 @@ class PopTypeAvailabilityCalculator;
 struct GrowthConfig_t;
 class PopCompositionCalculator;
 class SecretProjectAvailabilityCalculator;
+class Unit;
 
 // Outcome of BaseManager::HurryProduction: what the treasury paid for, and what the resulting
 // stockpile did to the queued item.
@@ -71,6 +72,15 @@ struct BaseSnapshot_t
     int nutrientStockpile = 0; // growth bank
     // Mood state (riot / golden age). Previously not persisted — riots reset on save/load.
     MoodState_t mood;
+};
+
+// Outcome published after BaseManager mutates inventory / spawns a unit for a completed
+// production item. Session subscribers (on_complete effects) hang off this signal.
+struct ProductionCompleted_t
+{
+    BaseManager& rBase;
+    const std::string& itemId;
+    Unit* pUnit = nullptr; // null for buildings
 };
 
 // BaseManager coordinates base management subsystems.
@@ -133,8 +143,8 @@ public:
     Signal<int> OnPopLost;
     Signal<> OnIsRioting;
 
-    // Signals forwarded from ProductionManager
-    Signal<std::string> OnProductionCompleted;
+    // Signals forwarded from ProductionManager (enriched with spawn outcome).
+    Signal<const ProductionCompleted_t&> OnProductionCompleted;
 
     // Worker assignment - delegated to WorkerAssignmentManager
     WorkerAssignmentManager& GetWorkerAssignments();

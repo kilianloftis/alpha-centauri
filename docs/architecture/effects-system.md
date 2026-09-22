@@ -481,14 +481,22 @@ container declares a continuous `effects` array and, where a trigger exists, a n
 | `techs.json` | `effects` | `on_discover_effects` — `ApplyTechDiscoverEffects` on `OnTechDiscovered` |
 
 `on_visit_effects` fire when a unit Investigates a visit tile (player prompt) or when an AI
-unit arrives (`ApplyArrivalEffects_` → `ApplyVisitEffects`). Continuous tile yields stay in
-`effects`. Monolith authors heal (`RestoreHitPoints`) plus once-per-unit `GrantXp` with
-optional `remove_host_chance`.
+unit arrives. `UnitOrderExecutor` receives an injected visit handler from `GameState` (player
+enqueue vs `ApplyVisitEffects`); movement harnesses leave it unset and skip visit. Continuous
+tile yields stay in `effects`. Monolith authors heal (`RestoreHitPoints`) plus once-per-unit
+`GrantXp` with optional `remove_host_chance`.
 
 `on_discover_effects` fire whenever a tech joins a faction's discovered set (research
 breakthrough, probe steal, diplomatic grant, nested `GrantTech`). Secrets of the Human Brain
 uses world-scoped `oncePer` plus `GrantTech` `selection: Available` so only the first
-discoverer in the session receives one random currently-researchable tech.
+discoverer in the session receives one random currently-researchable tech. The same
+`OnTechDiscovered` session subscriber calls `EnsureResearchTarget` so idle grants auto-pick.
+
+`on_unit_produced_effects` run from `GameState::AttachToSession_` on
+`UnitManager::OnUnitCreated` when `pBuiltAt` is non-null (production bases only).
+
+Player mood notices (pending riot / golden age) subscribe to `PopulationManager::OnWillRiot` /
+`OnWillGoldenAge` at session base attach; the Population stage only forecasts.
 
 `TriggeredEffectParser` and `EffectConfigParser` reject each other's type names, naming the
 list the entry belongs in. The "belongs in `effects`" check reads `EffectConfigParser`'s own
@@ -516,10 +524,11 @@ then silently never fired.
   and riot tiers can name what rioting destroyed.
 - **`pRng`** overrides the session generator so a caller driving its own sequence (a probe
   mission, a seeded test) stays reproducible.
-- **Production completion**: `BaseManager` reads `Faction::GetGameState()` (bound by
-  `GameState::AddFaction` via `BindGameState`) and throws if null. Both that check and the
-  registry check run *before* the completed building is added, so a throw never leaves a base
-  holding a building whose `on_complete_effects` never fired.
+- **Production completion**: `GameState::AttachToSession_` injects unit-id allocation and
+  `UnitPositionIndex` into the faction, and subscribes each base's
+  `OnProductionCompleted` so `on_complete_effects` run in the session (not inside
+  `BaseManager`). Unit completion without spawn services throws; building-only completion
+  can run unbound (effects simply do not fire without a subscriber).
 - `WorldParameter` remains a TODO stub pending the WorldEvents trigger API.
 
 ### oncePer

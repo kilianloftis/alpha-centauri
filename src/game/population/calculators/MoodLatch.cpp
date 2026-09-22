@@ -51,6 +51,10 @@ void MoodLatch::Restore_(bool bActive, bool bPending)
 {
     m_bActive = bActive;
     m_bPending = bPending;
+    if (m_bPending && !m_bActive)
+    {
+        m_rWill.Emit();
+    }
 }
 
 void MoodLatch::SetPendingAndWarn_()

@@ -453,7 +453,7 @@ TEST_CASE("ApplyVisitEffects heals and grants XP once across monoliths",
     unit.SetCurrentHp(1);
     const int xpBefore = unit.GetXp();
 
-    ApplyVisitEffects(unit, game.pState->GetRng());
+    ApplyVisitEffects(*game.pState, unit, game.pState->GetRng());
     CHECK(unit.GetCurrentHp() == maxHp);
     CHECK(unit.GetXp() == xpBefore + 1);
     CHECK(unit.ConsumedTriggerKeys().count("monolith_xp") == 1);
@@ -461,7 +461,7 @@ TEST_CASE("ApplyVisitEffects heals and grants XP once across monoliths",
     // Relocate onto the second monolith without re-entering (direct MoveUnit).
     game.pState->GetWorldMap().GetUnitPositions().MoveUnit(unit, rMonoB);
     unit.SetCurrentHp(1);
-    ApplyVisitEffects(unit, game.pState->GetRng());
+    ApplyVisitEffects(*game.pState, unit, game.pState->GetRng());
     CHECK(unit.GetCurrentHp() == maxHp);
     CHECK(unit.GetXp() == xpBefore + 1);
 }
@@ -516,7 +516,7 @@ TEST_CASE("Player arrival on Monolith enqueues visit interaction; AI auto-applie
     CHECK(playerUnit.GetCurrentHp() == 1);
     CHECK(playerUnit.GetXp() == xpBefore);
 
-    ApplyVisitEffects(playerUnit, game.pState->GetRng());
+    ApplyVisitEffects(*game.pState, playerUnit, game.pState->GetRng());
     CHECK(playerUnit.GetCurrentHp() == playerUnit.GetStat(StatId_t::HitPoints));
     CHECK(playerUnit.GetXp() == xpBefore + 1);
 
@@ -538,6 +538,31 @@ TEST_CASE("Player arrival on Monolith enqueues visit interaction; AI auto-applie
     CHECK(game.pState->GetPlayerInteractions().Size() == queueBefore);
     CHECK(aiMover.GetCurrentHp() == aiMover.GetStat(StatId_t::HitPoints));
     CHECK(aiMover.GetXp() == aiXp + 1);
+}
+
+TEST_CASE("Unset visit handler skips Investigate enqueue and auto-apply",
+          "[effects][triggered][visit][movement]")
+{
+    TriggerGame_ game;
+    for (auto& pTile : game.pState->GetWorldMap().GetTiles())
+    {
+        pTile->SetElevation(100);
+    }
+    game.pState->GetUnitOrderExecutor().SetGameDataContext(game.fixtures.dataContext);
+    game.pState->GetUnitOrderExecutor().SetImprovementVisitHandler({});
+
+    Tile& rMono = *game.pState->GetWorldMap().GetTile(5, 4);
+    game.pState->GetTileEffects().AddImprovementWithEffects(rMono, "Monolith");
+
+    Unit& playerUnit = MakeUnitOn_(game, 4, 4, {"test_chassis", "test_weapon"});
+    playerUnit.SetCurrentHp(1);
+    const int xpBefore = playerUnit.GetXp();
+    const std::size_t queueBefore = game.pState->GetPlayerInteractions().Size();
+    MoveOrder_t move;
+    REQUIRE(game.pState->GetUnitOrderExecutor().TryStep(playerUnit, rMono, move).bEntered);
+    CHECK(game.pState->GetPlayerInteractions().Size() == queueBefore);
+    CHECK(playerUnit.GetCurrentHp() == 1);
+    CHECK(playerUnit.GetXp() == xpBefore);
 }
 
 TEST_CASE("First discoverer of Secrets gets Available GrantTech; second does not",

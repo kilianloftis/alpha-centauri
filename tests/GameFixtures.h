@@ -18,6 +18,8 @@
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/resources/ResourceManager.h"
 #include "game/GameSettings.h"
+#include "game/GameState.h"
+#include "game/effects/TriggeredEffectDispatch.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/research/TechCostCalculator.h"
 #include "game/research/TechCostConfig.h"
@@ -47,7 +49,6 @@
 #include "game/effects/InteractionGridsConfigParser.h"
 #include "game/effects/PoliceRulesConfigParser.h"
 #include "game/DifficultyConfigParser.h"
-#include "game/GameState.h"
 
 #include <deque>
 #include <memory>
@@ -356,7 +357,7 @@ struct FactionFixture : BaseFixture
             }
         });
         // Keep territory current when bases are founded (same hook GameState uses).
-        rFaction.SetOnBaseListChanged([this]()
+        rFaction.OnBaseListChanged.Connect([this]()
         {
             std::vector<const ac::BaseManager*> bases;
             for (const auto& pFaction : factions)
@@ -369,6 +370,19 @@ struct FactionFixture : BaseFixture
             map.GetTerritory().Rebuild(map, bases);
         });
         rFaction.BindGameState(*pBindState);
+        rFaction.OnSecretProjectDestroyed.Connect([this](const ac::BuildingId_t& rId)
+        {
+            pBindState->MarkSecretProjectDestroyed(rId);
+        });
+        // Mirror GameState::AttachToSession_: CreateUnit no longer applies produced triggers.
+        rFaction.GetUnitManager().OnUnitCreated.Connect(
+            [this](ac::Unit& rCreated, ac::BaseManager* pBuiltAt)
+            {
+                if (pBuiltAt)
+                {
+                    ac::ApplyUnitProducedTriggers(*pBindState, rCreated, *pBuiltAt);
+                }
+            });
         return rFaction;
     }
 

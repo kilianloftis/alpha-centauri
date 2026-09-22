@@ -456,7 +456,7 @@ bool ApplyOne_(const TriggeredEffectConfig_t& rConfig, TriggeredEffectContext_t&
                     return false;
                 }
                 std::vector<BuildingId_t> destroyed = DestroyRandomFacilities(
-                    rCtx.rGameState, *rCtx.pBase, rConcrete.count, rConcrete.excludeHq,
+                    *rCtx.pBase, rConcrete.count, rConcrete.excludeHq,
                     rConcrete.excludeSecretProjects, rCtx.Rng());
                 const bool bDidAnything = !destroyed.empty();
                 rOut.push_back(FacilitiesDestroyed_t{std::move(destroyed)});
@@ -535,14 +535,9 @@ ApplyTriggeredEffects(std::span<const TriggeredEffectConfig_t> rEffects,
     return results;
 }
 
-void ApplyUnitProducedTriggers(Unit& rUnit, BaseManager& rProducedAt)
+void ApplyUnitProducedTriggers(GameState& rGameState, Unit& rUnit, BaseManager& rProducedAt)
 {
-    GameState* pGameState = rProducedAt.GetFaction().GetGameState();
-    if (!pGameState)
-    {
-        return;
-    }
-    TriggeredEffectContext_t context(*pGameState, rProducedAt);
+    TriggeredEffectContext_t context(rGameState, rProducedAt);
     context.pUnit = &rUnit;
 
     const GameDataContext& rData = rProducedAt.GetFaction().GetDataContext();
@@ -571,15 +566,9 @@ bool TileHasVisitEffects(const Tile& rTile)
     return false;
 }
 
-void ApplyVisitEffects(Unit& rMover, std::mt19937& rRng)
+void ApplyVisitEffects(GameState& rGameState, Unit& rMover, std::mt19937& rRng)
 {
-    GameState* pGameState = rMover.GetFaction().GetGameState();
-    if (!pGameState)
-    {
-        return;
-    }
-
-    Tile* pTile = pGameState->GetWorldMap().GetTile(rMover.GetTile().GetX(), rMover.GetTile().GetY());
+    Tile* pTile = rGameState.GetWorldMap().GetTile(rMover.GetTile().GetX(), rMover.GetTile().GetY());
     if (!pTile)
     {
         throw std::runtime_error("ApplyVisitEffects: mover tile is not on the world map");
@@ -596,7 +585,7 @@ void ApplyVisitEffects(Unit& rMover, std::mt19937& rRng)
         }
     }
 
-    TriggeredEffectContext_t context(*pGameState, rMover.GetFaction());
+    TriggeredEffectContext_t context(rGameState, rMover.GetFaction());
     context.pUnit = &rMover;
     context.pTile = pTile;
     context.pRng = &rRng;
@@ -613,19 +602,14 @@ void ApplyVisitEffects(Unit& rMover, std::mt19937& rRng)
     context.hostImprovementId.reset();
 }
 
-void ApplyTechDiscoverEffects(Faction& rFaction, const TechId& rTechId)
+void ApplyTechDiscoverEffects(GameState& rGameState, Faction& rFaction, const TechId& rTechId)
 {
-    GameState* pGameState = rFaction.GetGameState();
-    if (!pGameState)
-    {
-        return;
-    }
     const TechConfig_t* pTech = rFaction.GetResearch().GetTechRegistry().Find(rTechId);
     if (!pTech || pTech->onDiscoverEffects.empty())
     {
         return;
     }
-    TriggeredEffectContext_t context(*pGameState, rFaction);
+    TriggeredEffectContext_t context(rGameState, rFaction);
     ApplyTriggeredEffects(pTech->onDiscoverEffects, context);
 }
 

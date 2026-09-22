@@ -59,6 +59,14 @@ public:
     // matching DiplomaticActionExecutor — GameState is built before the data context binds.
     void SetGameDataContext(const GameDataContext& rGameData) { m_pGameData = &rGameData; }
 
+    // Session visit/investigate policy for tiles with on_visit_effects. Unset skips visit
+    // handling (movement-only harnesses). Engine / GameState set after construction.
+    using ImprovementVisitHandler = std::function<void(Unit&)>;
+    void SetImprovementVisitHandler(ImprovementVisitHandler handler)
+    {
+        m_improvementVisitHandler = std::move(handler);
+    }
+
     // Advance the unit's current order one pass. Returns Continue if the order remains,
     // Complete if it finished and the unit survives, Expended if SingleUse should be
     // DestroyUnit'd by the caller (PlayerActions under DeferDestruction), or UnitDestroyed
@@ -172,6 +180,7 @@ private:
     std::mt19937& m_rRng;
     CombatResolver m_combat;
     const GameDataContext* m_pGameData = nullptr;
+    ImprovementVisitHandler m_improvementVisitHandler;
     IUnitOrderWorld* const m_pWorld;
 };
 

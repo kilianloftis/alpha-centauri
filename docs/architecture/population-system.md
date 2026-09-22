@@ -131,19 +131,22 @@ Both moods run a two-phase lifecycle across the turn, shared by `MoodLatch` and 
 sequenceDiagram
     participant Population as Population stage
     participant Latch as MoodLatch
+    participant Session as Session OnWill subscriber
     participant Player as PlayerActions
     participant Mood as Mood stage
 
     Population->>Latch: ForecastMood()
-    Latch-->>Population: pending + OnWillRiot / OnWillGoldenAge
-    Population->>Player: EnqueueForPlayer(notice)
+    Latch-->>Session: OnWillRiot / OnWillGoldenAge (edge)
+    Session->>Player: EnqueueForPlayer(notice)
     Player-->>Player: player may move specialists / psych
     Mood->>Latch: CommitMood()
     Latch-->>Mood: active + OnIsRioting / OnGoldenAgeStarted
 ```
 
 The split exists so the warning lands *before* the player acts and the latch closes *after*.
-Pending state carries no gameplay effect — only `IsRioting()` / `IsInGoldenAge()` do. A riot
+`OnWill*` edge-emits when pending first latches (and again on `Restore_` if load-mid-pending);
+session attach wires player notices — the Population stage does not poll. Pending state
+carries no gameplay effect — only `IsRioting()` / `IsInGoldenAge()` do. A riot
 additionally ages a probe-forced timer and counts consecutive commits.
 
 `PopulationManager` owns both calculators privately and exposes only `ForecastMood` /

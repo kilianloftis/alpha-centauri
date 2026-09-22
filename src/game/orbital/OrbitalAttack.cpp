@@ -28,7 +28,7 @@ const OrbitalAttackEffect_t* FindOrbitalAttackEffect_(const BuildingConfig_t& rB
     return nullptr;
 }
 
-void DestroyOneBuilding_(GameState& rGameState, Faction& rOwner, const BuildingId_t& buildingId)
+void DestroyOneBuilding_(Faction& rOwner, const BuildingId_t& buildingId)
 {
     BaseManager* pBase = rOwner.FindBaseWithBuilding(buildingId);
     if (!pBase)
@@ -37,22 +37,7 @@ void DestroyOneBuilding_(GameState& rGameState, Faction& rOwner, const BuildingI
         throw std::logic_error("DestroyOneBuilding_: faction owns no base holding building '"
                                + buildingId + "'");
     }
-    const BaseId_t baseId = pBase->GetBaseId();
-    bool bSecretProject = false;
-    for (const BuildingConfig_t* pHeld : pBase->GetBuildingManager().GetBuildings())
-    {
-        if (pHeld && pHeld->id == buildingId)
-        {
-            bSecretProject = pHeld->bIsSecretProject;
-            break;
-        }
-    }
     pBase->GetBuildingManager().DestroyBuilding(buildingId);
-    rOwner.NotifyBuildingDestroyed(baseId, buildingId);
-    if (bSecretProject)
-    {
-        rGameState.MarkSecretProjectDestroyed(buildingId);
-    }
 }
 
 } // namespace
@@ -137,11 +122,11 @@ OrbitalAttackResult_t TryAttackSatellite(GameState& rGameState,
     result.bHit = RollPercent(pEffect->chance, rRng);
     if (result.bHit)
     {
-        DestroyOneBuilding_(rGameState, rDefender, targetOrbitalBuildingId);
+        DestroyOneBuilding_(rDefender, targetOrbitalBuildingId);
     }
     else if (RollPercent(pEffect->chanceOfDestructionOnFail, rRng))
     {
-        DestroyOneBuilding_(rGameState, rAttacker, attackerBuildingId);
+        DestroyOneBuilding_(rAttacker, attackerBuildingId);
         result.bAttackerDestroyed = true;
     }
     return result;

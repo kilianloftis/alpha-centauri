@@ -30,8 +30,6 @@
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
-#include "game/PlayerInteraction.h"
-#include "game/PlayerInteractionQueue.h"
 #include <algorithm>
 #include <iostream>
 #include <stdexcept>
@@ -212,18 +210,9 @@ bool UnitOrderExecutor::ApplyArrivalEffects_(Unit& rMover)
         // Stop multi-hop so the unit does not walk off before Investigate / Leave resolves.
         rMover.ClearOrder();
 
-        GameState* pGameState = rMover.GetFaction().GetGameState();
-        if (pGameState)
+        if (m_improvementVisitHandler)
         {
-            if (rMover.GetFaction().IsPlayerControlled())
-            {
-                EnqueueForPlayer(*pGameState,
-                                 ImprovementVisitInteraction_t{rMover.GetUnitId()});
-            }
-            else
-            {
-                ApplyVisitEffects(rMover, m_rRng);
-            }
+            m_improvementVisitHandler(rMover);
         }
     }
 

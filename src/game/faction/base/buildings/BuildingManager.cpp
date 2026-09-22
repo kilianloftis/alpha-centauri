@@ -86,8 +86,10 @@ void BuildingManager::DestroyBuilding(const BuildingId_t& buildingId)
 
     if (it != m_buildings.end())
     {
+        const BuildingConfig_t& rDestroyed = **it;
         m_buildings.erase(it);
         m_revision.Bump();
+        OnBuildingDestroyed.Emit(rDestroyed);
     }
 }
 

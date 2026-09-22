@@ -154,7 +154,6 @@ TEST_CASE("Destroying a building without scrap grants no energy", "[building][sc
     base.GetBuildingManager().AddBuilding("test_hurry_facility");
 
     base.GetBuildingManager().DestroyBuilding("test_hurry_facility");
-    faction.NotifyBuildingDestroyed(base.GetBaseId(), "test_hurry_facility");
 
     CHECK(faction.GetEconomy().GetEnergy() == 0);
     CHECK_FALSE(base.GetBuildingManager().HasBuilding("test_hurry_facility"));

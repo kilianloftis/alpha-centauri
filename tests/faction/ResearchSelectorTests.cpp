@@ -1,11 +1,16 @@
 #include "game/faction/ResearchManager.h"
 #include "game/faction/ResearchSelector.h"
 #include "game/GameCategory.h"
+#include "game/GameSettings.h"
+#include "game/GameState.h"
+#include "game/Faction.h"
+#include "game/map/WorldMap.h"
 #include "game/research/TechCostCalculator.h"
 #include "game/research/TechCostConfig.h"
 #include "game/research/TechRegistry.h"
 #include "lib/LuaRuntime.h"
 
+#include "GameFixtures.h"
 #include "TestHelpers.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -177,4 +182,34 @@ TEST_CASE("ResearchManager: unknown SetResearchTarget with no prior target stays
     ResearchTestFixture fixture;
     REQUIRE_THROWS_AS(fixture.research->SetResearchTarget("not_a_tech"), std::runtime_error);
     CHECK_FALSE(fixture.research->HasResearchTarget());
+}
+
+TEST_CASE("OnTechDiscovered EnsureResearchTarget fills idle; leaves busy target alone",
+          "[research][selector][session]")
+{
+    actest::FactionFixture fixtures;
+    GameSettings settings;
+    auto pMap = std::make_unique<WorldMap>(9, 9);
+    GameState state(std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
+                    fixtures.morale(), fixtures.dataContext.tileYieldRules,
+                    fixtures.dataContext.interactionGrids, actest::k_TestRngSeed);
+    Faction& faction = state.AddFaction(std::make_unique<Faction>(
+        state.AllocateFactionId(), true, fixtures.factionDefinition, fixtures.dataContext,
+        state.GetWorldMap(), fixtures.settings, actest::k_TestFactionSeed));
+
+    ResearchManager& research = faction.GetResearch();
+    // Faction construction auto-picks a target; clear to exercise the idle-grant path.
+    research.ClearResearchTarget();
+    CHECK_FALSE(research.HasResearchTarget());
+
+    // Idle grant: discover assigns a research target via session EnsureResearchTarget.
+    research.AddDiscoveredTech("build_tech");
+    REQUIRE(research.HasResearchTarget());
+    const TechId afterIdle = research.GetResearchTarget();
+    CHECK(afterIdle != "build_tech");
+
+    // Busy grant: discovering another tech does not retarget.
+    research.AddDiscoveredTech("grow_tech");
+    REQUIRE(research.HasResearchTarget());
+    CHECK(research.GetResearchTarget() == afterIdle);
 }

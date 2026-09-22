@@ -288,6 +288,24 @@ TEST_CASE("Mood sums skip Outside pops even when they declare weights",
     CHECK(pops.GetMoodWeightSums().riot == 1);
 }
 
+TEST_CASE("RestoreMoodState pending emits OnWillRiot once", "[population][mood][restore]")
+{
+    actest::BaseFixture fixture;
+    ac::PopulationManager& pops = fixture.MakeBase(4, 4, /*initialPopulation*/ 0).GetPopulation();
+    int willRiot = 0;
+    pops.OnWillRiot.Connect([&]() { ++willRiot; });
+
+    MoodState_t pending;
+    pending.bPendingRiot = true;
+    pops.RestoreMoodState(pending);
+    CHECK(pops.IsPendingRiot());
+    CHECK(willRiot == 1);
+
+    // Second restore of the same pending still emits (load path is one-shot per restore).
+    pops.RestoreMoodState(pending);
+    CHECK(willRiot == 2);
+}
+
 TEST_CASE("Golden age is talents against workers and drones, ignoring specialists",
           "[population][goldenage]")
 {

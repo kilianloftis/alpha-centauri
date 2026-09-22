@@ -1,11 +1,16 @@
 #include "game/GameState.h"
 #include "game/buildings/BuildingConfig.h"
 #include "game/faction/base/buildings/BuildingManager.h"
+#include "game/faction/base/BaseManager.h"
+#include "game/faction/base/population/PopulationManager.h"
+#include "game/faction/Military.h"
+#include "game/PlayerInteraction.h"
+#include "game/PlayerInteractionQueue.h"
+#include "game/PauseOnEventsConfig.h"
 
 #include "game/GameSettings.h"
 #include "game/faction/FactionIdentity.h"
 #include "game/faction/AIProfile.h"
-#include "game/faction/Military.h"
 #include "game/faction/DiplomacyLedger.h"
 #include "game/faction/DiplomaticActionExecutor.h"
 #include "game/faction/UnitManager.h"
@@ -18,6 +23,8 @@
 #include "game/units/ProbeActionExecutor.h"
 #include "game/units/Pathfinder.h"
 #include "game/units/Unit.h"
+#include "game/units/UnitDesign.h"
+#include "game/units/UnitComponentConfig.h"
 #include "game/units/BaseConquestEffects.h"
 #include "game/units/InterceptRules.h"
 #include "game/GameDataContext.h"
@@ -31,6 +38,82 @@
 
 namespace ac
 {
+
+namespace
+{
+
+void ApplyProductionCompleteEffects_(GameState& rGameState, const ProductionCompleted_t& rCompleted)
+{
+    BaseManager& rBase = rCompleted.rBase;
+    Faction& rFaction = rBase.GetFaction();
+    if (const BuildingConfig_t* pBuilding =
+            rBase.GetBuildingManager().FindBuilding(rCompleted.itemId))
+    {
+        TriggeredEffectContext_t context(rGameState, rBase);
+        ApplyTriggeredEffects(pBuilding->onCompleteEffects, context);
+        return;
+    }
+
+    if (const UnitDesign* pDesign = rFaction.GetMilitary().GetDesign(rCompleted.itemId))
+    {
+        // Only a produced unit pays its components' completion costs: a free spawn
+        // (escape pod, starting unit, a granted unit) never goes through here.
+        TriggeredEffectContext_t context(rGameState, rBase);
+        context.pUnit = rCompleted.pUnit;
+        for (const UnitComponentConfig_t* pComp : pDesign->GetComponents())
+        {
+            if (pComp)
+            {
+                ApplyTriggeredEffects(pComp->onCompleteEffects, context);
+            }
+        }
+    }
+}
+
+void WireMoodNotices_(GameState& rGameState, BaseManager& rBase)
+{
+    Faction& rFaction = rBase.GetFaction();
+    if (!rFaction.IsPlayerControlled())
+    {
+        return;
+    }
+
+    PopulationManager& rPopulation = rBase.GetPopulation();
+    rPopulation.OnWillRiot.Connect(
+        [&rGameState, &rBase]()
+        {
+            const TileCoord_t at{rBase.GetTile().GetX(), rBase.GetTile().GetY()};
+            EnqueueForPlayer(
+                rGameState,
+                NoticeInteraction_t{
+                    PauseOnEventId_t::DroneRiots,
+                    "Drone Riots",
+                    "Drones threaten to riot at " + rBase.GetName()
+                        + ". Adjust specialists or psych before the turn ends.",
+                    at,
+                });
+        });
+    // TODO: unlike a riot, a pending golden age is not something the player can or would want
+    // to avert, so warning about it before Mood commits may be noise rather than a decision.
+    // Whether a golden age should announce on the verge or only on arrival is an unrecorded
+    // rules question; the forecast/commit split itself is still needed to keep both moods on
+    // one lifecycle.
+    rPopulation.OnWillGoldenAge.Connect(
+        [&rGameState, &rBase]()
+        {
+            const TileCoord_t at{rBase.GetTile().GetX(), rBase.GetTile().GetY()};
+            EnqueueForPlayer(
+                rGameState,
+                NoticeInteraction_t{
+                    PauseOnEventId_t::GoldenAgeStarts,
+                    "Golden Age",
+                    rBase.GetName() + " is on the verge of a Golden Age.",
+                    at,
+                });
+        });
+}
+
+} // namespace
 
 GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
                      const ImprovementRegistry& rImprovements,
@@ -77,6 +160,18 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
     m_pUnitOrderExecutor = std::make_unique<UnitOrderExecutor>(
         *m_pMoveCosts, *m_pSteps, *m_worldMap, *m_pTileEffects, *m_pPathfinder, m_rMorale,
         m_rng, this);
+    m_pUnitOrderExecutor->SetImprovementVisitHandler(
+        [this](Unit& rMover)
+        {
+            if (rMover.GetFaction().IsPlayerControlled())
+            {
+                EnqueueForPlayer(*this, ImprovementVisitInteraction_t{rMover.GetUnitId()});
+            }
+            else
+            {
+                ApplyVisitEffects(*this, rMover, m_rng);
+            }
+        });
     m_pProbeActions = std::make_unique<ProbeActionExecutor>(*m_worldMap, m_rMorale, m_rng);
 }
 
@@ -234,12 +329,19 @@ void GameState::AttachToSession_(Faction& rFaction)
     // back-pointer and the observers, which necessarily close over this GameState.
     rFaction.BindWorldEffects(*this);
     rFaction.BindGameState(*this);
+    rFaction.BindUnitSpawnServices([this]() { return AllocateUnitId(); },
+                                   GetWorldMap().GetUnitPositions());
+    rFaction.OnSecretProjectDestroyed.Connect([this](const BuildingId_t& rBuildingId)
+    {
+        MarkSecretProjectDestroyed(rBuildingId);
+    });
     rFaction.GetResearch().OnTechDiscovered.Connect(
-        [&rFaction](const TechId& rTechId)
+        [this, &rFaction](const TechId& rTechId)
         {
-            ApplyTechDiscoverEffects(rFaction, rTechId);
+            ApplyTechDiscoverEffects(*this, rFaction, rTechId);
+            rFaction.EnsureResearchTarget();
         });
-    rFaction.SetOnBaseListChanged([this]()
+    rFaction.OnBaseListChanged.Connect([this]()
     {
         RebuildTerritory();
         // A new base may sit inside another faction's existing vision cone.
@@ -248,7 +350,7 @@ void GameState::AttachToSession_(Faction& rFaction)
             m_pFirstContact->ConsiderObserver(rObserver);
         }
     });
-    rFaction.SetOnVisibilityRebuilt([this](Faction& rObserver)
+    rFaction.OnVisibilityRebuilt.Connect([this](Faction& rObserver)
     {
         m_pFirstContact->ConsiderObserver(rObserver);
     });
@@ -260,11 +362,17 @@ void GameState::AttachToSession_(Faction& rFaction)
             rOther.GetRevealedUnits().Forget(rDestroyed);
         }
     });
-    rFaction.GetUnitManager().OnUnitCreated.Connect([this](Unit& rCreated)
-    {
-        // Created into another faction's existing vision (no move event).
-        m_pFirstContact->ConsiderUnit(rCreated);
-    });
+    // Unit-produced triggers before first-contact so XP/grants are applied when peers scan.
+    rFaction.GetUnitManager().OnUnitCreated.Connect(
+        [this](Unit& rCreated, BaseManager* pBuiltAt)
+        {
+            if (pBuiltAt)
+            {
+                ApplyUnitProducedTriggers(*this, rCreated, *pBuiltAt);
+            }
+            // Created into another faction's existing vision (no move event).
+            m_pFirstContact->ConsiderUnit(rCreated);
+        });
     rFaction.GetUnitManager().OnUnitAdopted.Connect([this](Unit& rAdopted)
     {
         // Transfer is not a birth (see UnitManager::OnUnitAdopted), but the unit now sits in
@@ -272,6 +380,26 @@ void GameState::AttachToSession_(Faction& rFaction)
         // scan as a genuine creation.
         m_pFirstContact->ConsiderUnit(rAdopted);
     });
+
+    auto wireBaseSession = [this](BaseManager& rBase)
+    {
+        if (!m_sessionWiredBases.insert(&rBase).second)
+        {
+            return;
+        }
+        // on_complete effects before any later UI/mod observers of the same signal.
+        rBase.OnProductionCompleted.Connect(
+            [this](const ProductionCompleted_t& rCompleted)
+            {
+                ApplyProductionCompleteEffects_(*this, rCompleted);
+            });
+        WireMoodNotices_(*this, rBase);
+    };
+    rFaction.OnBaseAdded.Connect(wireBaseSession);
+    for (BaseManager& rBase : rFaction.Bases())
+    {
+        wireBaseSession(rBase);
+    }
 
     // Catch up on anything the faction already owns. A freshly-constructed faction has no
     // bases and no units, so this is a no-op for the new-game path; it is what makes an

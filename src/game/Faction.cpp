@@ -331,10 +331,7 @@ void Faction::AddBase(std::unique_ptr<BaseManager> pBase)
     BaseManager& rAdded = *pBase;
     m_bases.push_back(std::move(pBase));
     m_baseListRevision.Bump();
-    if (m_onBaseListChanged)
-    {
-        m_onBaseListChanged();
-    }
+    OnBaseListChanged.Emit();
     RebuildVisibility();
     // Single "a base now exists in this faction" hook — founding, load, and post-transfer
     // adopt alike. EventBridge wires from this so conquest/probe/diplomacy callers never
@@ -352,10 +349,7 @@ std::optional<BaseSnapshot_t> Faction::ExtractBase(BaseId_t baseId)
             m_bases.erase(it);
             DropBuildingDeploys_(baseId);
             m_baseListRevision.Bump();
-            if (m_onBaseListChanged)
-            {
-                m_onBaseListChanged();
-            }
+            OnBaseListChanged.Emit();
             RebuildVisibility();
             return snapshot;
         }
@@ -372,10 +366,7 @@ std::unique_ptr<BaseManager> Faction::ReleaseBase(BaseId_t baseId)
             std::unique_ptr<BaseManager> pReleased = std::move(*it);
             m_bases.erase(it);
             m_baseListRevision.Bump();
-            if (m_onBaseListChanged)
-            {
-                m_onBaseListChanged();
-            }
+            OnBaseListChanged.Emit();
             RebuildVisibility();
             return pReleased;
         }
@@ -508,23 +499,14 @@ void Faction::RazeBase(BaseManager& rBase)
         {
             continue;
         }
-        if (!m_pGameState)
-        {
-            throw std::runtime_error(
-                "Faction::RazeBase: base " + std::to_string(rBase.GetBaseId()) + " holds secret "
-                "project '" + pBuilding->id + "' but no GameState is bound to record its loss");
-        }
-        m_pGameState->MarkSecretProjectDestroyed(pBuilding->id);
+        OnSecretProjectDestroyed.Emit(pBuilding->id);
     }
 
     DropAllHomeClaims_(rBase);
     rBase.MarkRazed_();
     DropBuildingDeploys_(rBase.GetBaseId());
     m_baseListRevision.Bump();
-    if (m_onBaseListChanged)
-    {
-        m_onBaseListChanged();
-    }
+    OnBaseListChanged.Emit();
     RebuildVisibility();
 }
 
@@ -981,8 +963,40 @@ bool Faction::DiscoverCurrentResearch()
         return false;
     }
 
-    m_pResearchSelector->EnsureResearchTarget();
+    EnsureResearchTarget();
     return true;
+}
+
+void Faction::EnsureResearchTarget()
+{
+    m_pResearchSelector->EnsureResearchTarget();
+}
+
+void Faction::BindUnitSpawnServices(std::function<UnitId_t()> allocateUnitId,
+                                    UnitPositionIndex& rPositions)
+{
+    m_allocateUnitId = std::move(allocateUnitId);
+    m_pUnitPositions = &rPositions;
+}
+
+UnitId_t Faction::AllocateUnitId() const
+{
+    if (!m_allocateUnitId)
+    {
+        throw std::runtime_error(
+            "Faction::AllocateUnitId: unit spawn services are not bound (no session)");
+    }
+    return m_allocateUnitId();
+}
+
+UnitPositionIndex& Faction::GetUnitPositions()
+{
+    if (!m_pUnitPositions)
+    {
+        throw std::runtime_error(
+            "Faction::GetUnitPositions: unit spawn services are not bound (no session)");
+    }
+    return *m_pUnitPositions;
 }
 
 SocialEngineeringManager& Faction::GetSocialEngineering()
@@ -1087,20 +1101,7 @@ void Faction::RebuildVisibility()
 
     m_visible.RebuildFromSources(*this, m_rWorldMap, m_explored);
     ApplyVisibilityRules(*this, m_rSettings);
-    if (m_onVisibilityRebuilt)
-    {
-        m_onVisibilityRebuilt(*this);
-    }
-}
-
-void Faction::SetOnBaseListChanged(std::function<void()> handler)
-{
-    m_onBaseListChanged = std::move(handler);
-}
-
-void Faction::SetOnVisibilityRebuilt(std::function<void(Faction&)> handler)
-{
-    m_onVisibilityRebuilt = std::move(handler);
+    OnVisibilityRebuilt.Emit(*this);
 }
 
 std::vector<const PopTypeConfig_t*> Faction::GetAvailablePopTypes() const

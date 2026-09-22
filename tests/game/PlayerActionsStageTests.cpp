@@ -17,6 +17,9 @@
 #include "game/units/UnitSlotConfig.h"
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/population/PopulationManager.h"
+#include "game/PlayerInteraction.h"
+#include "game/PlayerInteractionQueue.h"
+#include "game/PauseOnEventsConfig.h"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -273,9 +276,14 @@ TEST_CASE("Population forecasts and Mood commits riot and golden-age state",
     pBase->GetPopulation().OnGoldenAgeStarted.Connect([&]() { ++goldenAgeCallbacks; });
     pBase->GetPopulation().OnGoldenAgeEnded.Connect([&]() { ++goldenAgeCallbacks; });
 
+    const std::size_t queueBefore = game.pState->GetPlayerInteractions().Size();
     pBase->GetPopulation().ForceRiot(/*turns=*/1);
     REQUIRE(pBase->GetPopulation().IsPendingRiot());
     REQUIRE_FALSE(pBase->GetPopulation().IsRioting());
+    // OnWillRiot (session-wired) enqueues once; Population stage must not poll-reenqueue.
+    REQUIRE(game.pState->GetPlayerInteractions().Size() == queueBefore + 1);
+    CHECK(std::holds_alternative<NoticeInteraction_t>(
+        game.pState->GetPlayerInteractions().Front()->payload));
 
     PerFactionTurnStageRegistry_t perFaction;
     perFaction["Population"] = std::make_unique<Population>(HookContext{});
@@ -287,6 +295,8 @@ TEST_CASE("Population forecasts and Mood commits riot and golden-age state",
     TurnProcessor processor(std::move(global), std::move(perFaction),
                             {"Population", "Mood", "Stop"});
     processor.Advance(*game.pState);
+
+    CHECK(game.pState->GetPlayerInteractions().Size() == queueBefore + 1);
 
     // Mood committed the forced riot. The fixture base is not drone-majority, so only the
     // forced counter keeps this true through the commit that consumes ForceRiot(1).
