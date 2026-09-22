@@ -14,7 +14,7 @@ struct EffectContext_t;
 
 // Which grids these effects carry an InteractionOverride for. Callers cache the result on
 // long-lived sources (designs, faction pools) so a resolve can skip effect collection when
-// no override could possibly match. Conservative — scope, unitFilter, and condition are all
+// no override could possibly match. Conservative — scope and condition are all
 // ignored, so a set bit means "maybe" and a clear bit means "definitely not".
 InteractionGridMask_t InteractionMaskOf(std::span<const EffectConfig_t> effects);
 InteractionGridMask_t InteractionMaskOf(std::span<const ActiveEffect_t> effects);

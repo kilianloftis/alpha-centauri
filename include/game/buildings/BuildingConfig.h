@@ -32,6 +32,8 @@ struct BuildingConfig_t : public IConstructable
     std::vector<EffectConfig_t> effects;
     // One-shot effects fired once, when the facility is completed here.
     std::vector<TriggeredEffectConfig_t> onCompleteEffects;
+    // One-shot effects fired when a unit is produced at a base that holds this facility.
+    std::vector<TriggeredEffectConfig_t> onUnitProducedEffects;
     // Optional partial override of kinds.building.default_scrap. `"formula": null` denies
     // scrap. Secret projects reject this.
     std::optional<ScrapOverride_t> scrap;

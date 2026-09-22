@@ -99,8 +99,6 @@ enum class StatId_t
     // Scales mission/escape success rates against this target (PureMultiplier). Hunter-Seeker
     // Algorithm emits AddPercent -50.
     ProbeSuccessScale,
-    // XP granted when a unit is created (seeded into Unit::m_xp at spawn; not a live max).
-    StartingExperience,
     // Minerals credited to a newly founded base's production stockpile (resolved once at
     // founding from the new base's effect list plus the founding unit). Not a live yield.
     StartingMinerals,
@@ -248,7 +246,6 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::MaxPolice:
         case StatId_t::PoliceEffectiveness:
         case StatId_t::AwayFromHomeDrones:
-        case StatId_t::StartingExperience:
         case StatId_t::StartingMinerals:
         case StatId_t::StartingSize:
         case StatId_t::MaxBaseSize:
@@ -383,7 +380,6 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::PoliceEffectiveness:
         case StatId_t::AwayFromHomeDrones:
         case StatId_t::ProbeFailureScale:
-        case StatId_t::StartingExperience:
         case StatId_t::MoraleBonus:
         case StatId_t::PositiveMoraleScale:
         case StatId_t::PromotionChance: return ResolveDomain_t::Unit;
@@ -436,7 +432,6 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "probe_defense")           return StatId_t::ProbeDefense;
     if (rStat == "probe_failure_scale")     return StatId_t::ProbeFailureScale;
     if (rStat == "probe_success_scale")     return StatId_t::ProbeSuccessScale;
-    if (rStat == "starting_experience")     return StatId_t::StartingExperience;
     if (rStat == "starting_minerals")       return StatId_t::StartingMinerals;
     if (rStat == "morale_bonus")            return StatId_t::MoraleBonus;
     if (rStat == "positive_morale_scale")   return StatId_t::PositiveMoraleScale;
@@ -623,8 +618,9 @@ enum class EffectScope_t
     // ResolveTileDefenseMultiplier (TileDefense) and must never enter the base-wide
     // active effects pool.
     ThisTile,
-    // Units produced at the originating base (Unit::GetProducedAtBase). Distinct from home
-    // base and from FactionUnits: train-at-this-base bonuses (Command Center, Aerospace).
+    // Units produced at the originating base: stamped onto the unit at construction
+    // (Unit::GetProductionGrants). Distinct from home base and from FactionUnits: permanent
+    // train-at-this-base bonuses (Command Center, Aerospace).
     ProducedAtThisBase,
 };
 
@@ -645,8 +641,9 @@ enum class EffectLane_t
     // Merged into every live unit's stat resolution. Lives in the faction pool; consumed by
     // Unit::Get* via FilterByScope(FactionUnits), never applies at base level.
     FactionUnits,
-    // Merged into live units whose production base matches originBase. Lives in the faction
-    // pool tagged with originBase; never applies at base level.
+    // Merged into units at construction when the production base matches originBase
+    // (Unit::GetProductionGrants). Lives in the faction pool tagged with originBase for
+    // stamp lookup; never applies at base level.
     ProducedAtBase,
     // Resolved by the unit's own design (intrinsic component stats). Never enters the pool.
     UnitLocal,

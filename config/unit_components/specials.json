@@ -10,26 +10,41 @@
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "single_use" }
+        "parameters": {
+          "flag": "single_use"
+        }
       },
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "found_base" }
+        "parameters": {
+          "flag": "found_base"
+        }
       },
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "cannot_capture_bases" }
+        "parameters": {
+          "flag": "cannot_capture_bases"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "starting_minerals", "amount": 10, "op": "Add" }
+        "parameters": {
+          "stat": "starting_minerals",
+          "amount": 10,
+          "op": "Add"
+        }
       }
     ],
     "on_complete_effects": [
-      { "type": "ModifyPopulation", "parameters": { "amount": -1 } }
+      {
+        "type": "ModifyPopulation",
+        "parameters": {
+          "amount": -1
+        }
+      }
     ]
   },
   {
@@ -43,49 +58,90 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "cargo_capacity", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "cargo_capacity",
+          "amount": 1,
+          "op": "Add"
+        }
       },
       {
         "type": "TransportParams",
         "scope": "ThisUnit",
-        "parameters": { "carries": ["land"] }
+        "parameters": {
+          "carries": [
+            "land"
+          ]
+        }
       },
       {
         "type": "TransportParams",
         "scope": "ThisUnit",
-        "unitFilter": { "kind": "Domain", "domain": "air" },
         "parameters": {
           "requires_harbor": true
+        },
+        "condition": {
+          "kind": "SubjectDomain",
+          "domain": "air"
         }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "unitFilter": { "kind": "Domain", "domain": "land" },
-        "parameters": { "stat": "movement", "amount": -1, "op": "Add" }
+        "parameters": {
+          "stat": "movement",
+          "amount": -1,
+          "op": "Add"
+        },
+        "condition": {
+          "kind": "SubjectDomain",
+          "domain": "land"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "unitFilter": { "kind": "Domain", "domain": "sea" },
-        "parameters": { "stat": "movement", "amount": -1, "op": "Add" }
+        "parameters": {
+          "stat": "movement",
+          "amount": -1,
+          "op": "Add"
+        },
+        "condition": {
+          "kind": "SubjectDomain",
+          "domain": "sea"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "unitFilter": { "kind": "Domain", "domain": "air" },
-        "parameters": { "stat": "movement", "amount": -50, "op": "AddPercent" }
+        "parameters": {
+          "stat": "movement",
+          "amount": -50,
+          "op": "AddPercent"
+        },
+        "condition": {
+          "kind": "SubjectDomain",
+          "domain": "air"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "unitFilter": { "kind": "Domain", "domain": "air" },
-        "parameters": { "stat": "movement", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "movement",
+          "amount": 1,
+          "op": "Add"
+        },
+        "condition": {
+          "kind": "SubjectDomain",
+          "domain": "air"
+        }
       },
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "cannot_capture_bases" }
+        "parameters": {
+          "flag": "cannot_capture_bases"
+        }
       }
     ]
   },
@@ -100,15 +156,21 @@
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "supply_crawl" }
+        "parameters": {
+          "flag": "supply_crawl"
+        }
       },
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "cannot_capture_bases" }
+        "parameters": {
+          "flag": "cannot_capture_bases"
+        }
       }
     ],
-    "scrap": { "formula": "minerals" }
+    "scrap": {
+      "formula": "minerals"
+    }
   },
   {
     "id": "Terraformer",
@@ -121,12 +183,16 @@
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "terraform" }
+        "parameters": {
+          "flag": "terraform"
+        }
       },
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "cannot_capture_bases" }
+        "parameters": {
+          "flag": "cannot_capture_bases"
+        }
       }
     ]
   },
@@ -141,17 +207,24 @@
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "probe_team" }
+        "parameters": {
+          "flag": "probe_team"
+        }
       },
       {
         "type": "InteractionOverride",
         "scope": "ThisUnit",
-        "parameters": { "grid": "zoc", "cell": "deny" }
+        "parameters": {
+          "grid": "zoc",
+          "cell": "deny"
+        }
       },
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "cannot_capture_bases" }
+        "parameters": {
+          "flag": "cannot_capture_bases"
+        }
       }
     ]
   },
@@ -165,12 +238,18 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "probe_failure_scale", "amount": -50, "op": "AddPercent" }
+        "parameters": {
+          "stat": "probe_failure_scale",
+          "amount": -50,
+          "op": "AddPercent"
+        }
       },
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "ignores_probe_block" }
+        "parameters": {
+          "flag": "ignores_probe_block"
+        }
       }
     ]
   }

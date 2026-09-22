@@ -283,18 +283,16 @@
   {
     "id": "Aerospace_Complex",
     "name": "Aerospace Complex (+2 starting XP to air units)",
-    "effects": [
+    "on_unit_produced_effects": [
       {
-        "type": "StatModifier",
-        "scope": "ProducedAtThisBase",
-        "unitFilter": {
-          "kind": "Domain",
-          "domain": "air"
-        },
+        "type": "GrantXp",
         "parameters": {
-          "stat": "starting_experience",
           "amount": 2,
           "op": "Add"
+        },
+        "condition": {
+          "kind": "SubjectDomain",
+          "domain": "air"
         }
       }
     ],
@@ -328,23 +326,37 @@
   {
     "id": "Command_Center",
     "name": "Command Center (+2 starting XP to land units)",
-    "effects": [
+    "on_unit_produced_effects": [
       {
-        "type": "StatModifier",
-        "scope": "ProducedAtThisBase",
-        "unitFilter": {
-          "kind": "Domain",
-          "domain": "land"
-        },
+        "type": "GrantXp",
         "parameters": {
-          "stat": "starting_experience",
           "amount": 2,
           "op": "Add"
+        },
+        "condition": {
+          "kind": "SubjectDomain",
+          "domain": "land"
         }
       }
     ],
     "category": "conquer",
     "upkeep": 1
+  },
+  {
+    "id": "test_train_attack",
+    "name": "Test Train Attack (+1 Attack stamped at production)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ProducedAtThisBase",
+        "parameters": {
+          "stat": "attack",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "conquer"
   },
   {
     "id": "Command_Nexus",
@@ -406,14 +418,14 @@
       {
         "type": "StatModifier",
         "scope": "FactionUnits",
-        "unitFilter": {
-          "kind": "HasComponent",
-          "component": "test_weapon"
-        },
         "parameters": {
           "stat": "attack",
           "amount": 1,
           "op": "Add"
+        },
+        "condition": {
+          "kind": "HasComponent",
+          "component": "test_weapon"
         }
       }
     ],
@@ -649,13 +661,20 @@
           "chance": 100,
           "cooldown_turns": 1
         },
-        "unitFilter": {
-          "kind": "Domain",
-          "domain": "orbital"
-        },
         "condition": {
-          "kind": "TargetTileHas",
-          "value": "Base"
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "AttackerDomain",
+              "domains": [
+                "orbital"
+              ]
+            },
+            {
+              "kind": "TargetTileHas",
+              "value": "Base"
+            }
+          ]
         }
       }
     ],
@@ -682,13 +701,20 @@
           "chance": 0,
           "cooldown_turns": 1
         },
-        "unitFilter": {
-          "kind": "Domain",
-          "domain": "orbital"
-        },
         "condition": {
-          "kind": "TargetTileHas",
-          "value": "Base"
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "AttackerDomain",
+              "domains": [
+                "orbital"
+              ]
+            },
+            {
+              "kind": "TargetTileHas",
+              "value": "Base"
+            }
+          ]
         }
       }
     ],
@@ -717,13 +743,20 @@
           "cooldown_turns": 1,
           "chance_of_destruction_on_fail": 100
         },
-        "unitFilter": {
-          "kind": "Domain",
-          "domain": "orbital"
-        },
         "condition": {
-          "kind": "TargetTileHas",
-          "value": "Base"
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "AttackerDomain",
+              "domains": [
+                "orbital"
+              ]
+            },
+            {
+              "kind": "TargetTileHas",
+              "value": "Base"
+            }
+          ]
         }
       }
     ],
@@ -743,13 +776,20 @@
           "cooldown_turns": 1,
           "chance_of_destruction_on_fail": 100
         },
-        "unitFilter": {
-          "kind": "Domain",
-          "domain": "orbital"
-        },
         "condition": {
-          "kind": "TargetTileHas",
-          "value": "Base"
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "AttackerDomain",
+              "domains": [
+                "orbital"
+              ]
+            },
+            {
+              "kind": "TargetTileHas",
+              "value": "Base"
+            }
+          ]
         }
       }
     ],
@@ -765,13 +805,20 @@
         "parameters": {
           "chance": 100
         },
-        "unitFilter": {
-          "kind": "Domain",
-          "domain": "orbital"
-        },
         "condition": {
-          "kind": "TargetTileHas",
-          "value": "Base"
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "AttackerDomain",
+              "domains": [
+                "orbital"
+              ]
+            },
+            {
+              "kind": "TargetTileHas",
+              "value": "Base"
+            }
+          ]
         }
       }
     ],

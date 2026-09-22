@@ -119,7 +119,7 @@ struct GameDataContext
 // order is deliberate: registries that are reference targets (techs, improvements, unit
 // components) load before configs that may cite them; effect-declaring configs (including
 // production) load next; then ValidateEffectReferences / ValidateRequiredTechReferences run
-// once everything they walk is present — so a typo'd unitFilter HasComponent id (or
+// once everything they walk is present — so a typo'd HasComponent condition id (or
 // grant/tech/selector id) fails here instead of becoming a silent no-op. Formula configs
 // and the calculators built from them load last.
 //

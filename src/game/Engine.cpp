@@ -199,7 +199,7 @@ void Engine::InitializeApp_()
     // Settings are already loaded: the constructor needs them to open the window.
     UiStyle::Load("config/ui/style.json");
 
-    // Every config parser + cross-config id validation (including unitFilter HasComponent).
+    // Every config parser + cross-config id validation (including HasComponent conditions).
     // Returns complete or throws: nothing downstream has to check a member for null.
     m_gameDataContext = std::make_unique<GameDataContext>(LoadGameData());
 

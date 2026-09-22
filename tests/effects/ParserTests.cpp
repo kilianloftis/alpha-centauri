@@ -57,7 +57,6 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("probe_defense") == StatId_t::ProbeDefense);
     CHECK(ParseStatId("probe_failure_scale") == StatId_t::ProbeFailureScale);
     CHECK(ParseStatId("probe_success_scale") == StatId_t::ProbeSuccessScale);
-    CHECK(ParseStatId("starting_experience") == StatId_t::StartingExperience);
     CHECK(ParseStatId("starting_minerals") == StatId_t::StartingMinerals);
     CHECK(ParseStatId("morale_bonus") == StatId_t::MoraleBonus);
     CHECK(ParseStatId("positive_morale_scale") == StatId_t::PositiveMoraleScale);
@@ -780,7 +779,7 @@ TEST_CASE("ParseEffectConfig: TransportParams", "[effects][parser][transport]")
     const json effectJson = json::parse(R"({
         "type": "TransportParams",
         "scope": "ThisUnit",
-        "unitFilter": { "kind": "Domain", "domain": "sea" },
+        "condition": { "kind": "SubjectDomain", "domain": "sea" },
         "parameters": { "carries": ["air"] }
     })");
 
@@ -790,15 +789,15 @@ TEST_CASE("ParseEffectConfig: TransportParams", "[effects][parser][transport]")
     REQUIRE(pParams->carries.size() == 1);
     CHECK(pParams->carries.front() == UnitDomain_t::Air);
     CHECK_FALSE(pParams->requiresHarbor);
-    REQUIRE(config.unitFilter.has_value());
-    const auto* pDomain = std::get_if<UnitFilterDomain_t>(&*config.unitFilter);
+    REQUIRE(config.condition.has_value());
+    const auto* pDomain = std::get_if<SubjectDomain_t>(&*config.condition);
     REQUIRE(pDomain);
     CHECK(pDomain->domain == UnitDomain_t::Sea);
 
     const json harborOnlyJson = json::parse(R"({
         "type": "TransportParams",
         "scope": "ThisUnit",
-        "unitFilter": { "kind": "Domain", "domain": "air" },
+        "condition": { "kind": "SubjectDomain", "domain": "air" },
         "parameters": { "requires_harbor": true }
     })");
     const EffectConfig_t harborOnly = EffectConfigParser::ParseEffectConfig(harborOnlyJson);
@@ -835,81 +834,81 @@ TEST_CASE("ParseEffectConfig: TransportParams", "[effects][parser][transport]")
     })")));
 }
 
-TEST_CASE("ParseEffectConfig: unitFilter", "[effects][parser][unitFilter]")
+TEST_CASE("ParseEffectConfig: identity condition arms", "[effects][parser][condition]")
 {
-    SECTION("Domain filter")
+    SECTION("Domain")
     {
         const json effectJson = json::parse(R"({
             "type": "StatModifier",
             "scope": "FactionUnits",
-            "unitFilter": { "kind": "Domain", "domain": "air" },
-            "parameters": { "stat": "starting_experience", "amount": 2 }
+            "condition": { "kind": "SubjectDomain", "domain": "air" },
+            "parameters": { "stat": "attack", "amount": 2 }
         })");
 
         const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
-        REQUIRE(config.unitFilter.has_value());
-        const auto* pDomain = std::get_if<UnitFilterDomain_t>(&*config.unitFilter);
+        REQUIRE(config.condition.has_value());
+        const auto* pDomain = std::get_if<SubjectDomain_t>(&*config.condition);
         REQUIRE(pDomain);
         CHECK(pDomain->domain == UnitDomain_t::Air);
     }
 
-    SECTION("HasComponent filter")
+    SECTION("HasComponent")
     {
         const json effectJson = json::parse(R"({
             "type": "RuleFlag",
             "scope": "FactionUnits",
-            "unitFilter": { "kind": "HasComponent", "component": "test_weapon" },
+            "condition": { "kind": "HasComponent", "component": "test_weapon" },
             "parameters": { "flag": "forces_psi_combat" }
         })");
 
         const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
-        REQUIRE(config.unitFilter.has_value());
-        const auto* pComp = std::get_if<UnitFilterHasComponent_t>(&*config.unitFilter);
+        REQUIRE(config.condition.has_value());
+        const auto* pComp = std::get_if<HasComponent_t>(&*config.condition);
         REQUIRE(pComp);
         CHECK(pComp->component == "test_weapon");
     }
 
-    SECTION("IsPrototype filter")
+    SECTION("IsPrototype")
     {
         const json effectJson = json::parse(R"({
             "type": "StatModifier",
             "scope": "FactionUnits",
-            "unitFilter": { "kind": "IsPrototype" },
-            "parameters": { "stat": "starting_experience", "amount": 1 }
+            "condition": { "kind": "IsPrototype" },
+            "parameters": { "stat": "attack", "amount": 1 }
         })");
 
         const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
-        REQUIRE(config.unitFilter.has_value());
-        CHECK(std::holds_alternative<UnitFilterIsPrototype_t>(*config.unitFilter));
+        REQUIRE(config.condition.has_value());
+        CHECK(std::holds_alternative<IsPrototype_t>(*config.condition));
     }
 
-    SECTION("IsCombatUnit filter")
+    SECTION("IsCombatUnit")
     {
         const json effectJson = json::parse(R"({
             "type": "StatModifier",
             "scope": "FactionUnits",
-            "unitFilter": { "kind": "IsCombatUnit" },
+            "condition": { "kind": "IsCombatUnit" },
             "parameters": { "stat": "police_effectiveness", "amount": 1 }
         })");
 
         const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
-        REQUIRE(config.unitFilter.has_value());
-        CHECK(std::holds_alternative<UnitFilterIsCombatUnit_t>(*config.unitFilter));
+        REQUIRE(config.condition.has_value());
+        CHECK(std::holds_alternative<IsCombatUnit_t>(*config.condition));
     }
 
     SECTION("Domain without domain throws")
     {
-        CHECK_THROWS(EffectConfigParser::ParseUnitFilter(json::parse(R"({ "kind": "Domain" })")));
+        CHECK_THROWS(EffectConfigParser::ParseCondition(json::parse(R"({ "kind": "SubjectDomain" })")));
     }
 
     SECTION("HasComponent without component throws")
     {
-        CHECK_THROWS(EffectConfigParser::ParseUnitFilter(json::parse(R"({ "kind": "HasComponent" })")));
+        CHECK_THROWS(EffectConfigParser::ParseCondition(json::parse(R"({ "kind": "HasComponent" })")));
     }
 
-    SECTION("unknown unitFilter kind throws")
+    SECTION("unknown condition kind throws")
     {
-        CHECK_THROWS(EffectConfigParser::ParseUnitFilter(json::parse(R"({ "kind": "Everything" })")));
+        CHECK_THROWS(EffectConfigParser::ParseCondition(json::parse(R"({ "kind": "Everything" })")));
     }
 
     SECTION("orbital domain parses")
@@ -1076,13 +1075,13 @@ TEST_CASE("Effects and triggered effects reject each other's types", "[effects][
         ContainsSubstring("Unknown triggered effect type"));
 }
 
-// Scope, persistence, condition and the filters described *where and when* a continuous effect
-// resolves. A triggered effect gets both from the list it sits in, so carrying one is a config
-// error rather than a key that is quietly ignored — which is what `condition` used to be.
+// Scope, persistence, radius and buildingFilter describe *where* a continuous effect resolves.
+// A triggered effect gets timing from its list, so carrying those is a config error. `condition`
+// is allowed (gates against subjects).
 TEST_CASE("ParseTriggeredEffectConfig: rejects continuous-only keys", "[effects][parser][triggered]")
 {
-    for (const char* pKey : {"scope", "persistence", "condition", "radius", "min_radius",
-                             "unitFilter", "buildingFilter", "removed_by_tech"})
+    for (const char* pKey : {"scope", "persistence", "radius", "min_radius",
+                             "buildingFilter", "removed_by_tech"})
     {
         json effectJson = json::parse(R"({ "type": "Rebel" })");
         effectJson[pKey] = "ThisBase";
@@ -1150,6 +1149,27 @@ TEST_CASE("Continuous type detection tracks the continuous parser's table",
     }
     CHECK_FALSE(EffectConfigParser::IsEffectType("Rebel"));
     CHECK_FALSE(EffectConfigParser::IsEffectType("NotAnEffect"));
+}
+
+TEST_CASE("ParseTriggeredEffectConfig: GrantXp takes amount and optional condition",
+          "[effects][parser][triggered]")
+{
+    const TriggeredEffectConfig_t config = TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({
+            "type": "GrantXp",
+            "parameters": { "amount": 2, "op": "Add" },
+            "condition": { "kind": "SubjectDomain", "domain": "air" }
+        })"), "on_unit_produced_effects");
+    const auto* pGrant = std::get_if<GrantXpEffect_t>(&config.effect);
+    REQUIRE(pGrant != nullptr);
+    CHECK(pGrant->amount == 2);
+    CHECK(pGrant->op == ModifierOp_t::Add);
+    REQUIRE(config.condition.has_value());
+    CHECK(std::holds_alternative<SubjectDomain_t>(*config.condition));
+
+    CHECK_THROWS(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "GrantXp", "parameters": {} })"),
+        "on_unit_produced_effects"));
 }
 
 TEST_CASE("ParseTriggeredEffectConfig: GrantUnit takes component ids", "[effects][parser][triggered]")
@@ -1653,13 +1673,13 @@ TEST_CASE("ParseEffectConfig: required balance keys", "[effects][parser][orbital
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "Intercept", "scope": "FactionGlobal",
         "parameters": {},
-        "unitFilter": { "kind": "Domain", "domain": "orbital" }
+        "condition": { "kind": "AttackerDomain", "domains": ["orbital"] }
     })")));
 
     const EffectConfig_t interceptNoCooldown = EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "Intercept", "scope": "FactionGlobal",
         "parameters": { "chance": 50 },
-        "unitFilter": { "kind": "Domain", "domain": "orbital" }
+        "condition": { "kind": "AttackerDomain", "domains": ["orbital"] }
     })"));
     const auto* pIntercept = std::get_if<InterceptEffect_t>(&interceptNoCooldown.effect);
     REQUIRE(pIntercept);
@@ -1671,17 +1691,17 @@ TEST_CASE("ParseEffectConfig: required balance keys", "[effects][parser][orbital
     })")));
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "Scramble", "scope": "ThisUnit",
-        "unitFilter": { "kind": "Domain", "domain": "air" }
+        "condition": { "kind": "AttackerDomain", "domains": ["air"] }
     })")));
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "Scramble", "scope": "ThisUnit",
         "parameters": { "range": 0 },
-        "unitFilter": { "kind": "Domain", "domain": "air" }
+        "condition": { "kind": "AttackerDomain", "domains": ["air"] }
     })")));
     const EffectConfig_t scramble = EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "Scramble", "scope": "ThisUnit",
         "parameters": { "range": 2 },
-        "unitFilter": { "kind": "Domain", "domain": "air" }
+        "condition": { "kind": "AttackerDomain", "domains": ["air"] }
     })"));
     const auto* pScramble = std::get_if<ScrambleEffect_t>(&scramble.effect);
     REQUIRE(pScramble);

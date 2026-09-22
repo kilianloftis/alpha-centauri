@@ -42,7 +42,6 @@ public:
                                       ac::EffectScope_t scope = ac::EffectScope_t::FactionGlobal,
                                       std::optional<ac::TileSelector_t> selector = std::nullopt,
                                       std::optional<ac::Condition_t> condition = std::nullopt,
-                                      std::optional<ac::UnitFilter_t> unitFilter = std::nullopt,
                                       std::optional<ac::BuildingFilter_t> buildingFilter = std::nullopt)
     {
         ac::StatModifierEffect_t modifier;
@@ -55,7 +54,6 @@ public:
         config.effect = modifier;
         config.scope = scope;
         config.condition = std::move(condition);
-        config.unitFilter = std::move(unitFilter);
         config.buildingFilter = std::move(buildingFilter);
         return Add(std::move(config));
     }
@@ -120,14 +118,14 @@ inline ac::Condition_t TargetTileHas(std::string featureId)
     return ac::TargetTileHas_t{std::move(featureId)};
 }
 
-inline ac::UnitFilter_t DomainFilter(ac::UnitDomain_t domain)
+inline ac::Condition_t SubjectDomainCondition(ac::UnitDomain_t domain)
 {
-    return ac::UnitFilterDomain_t{domain};
+    return ac::SubjectDomain_t{domain};
 }
 
-inline ac::UnitFilter_t HasComponentFilter(std::string componentId)
+inline ac::Condition_t HasComponentCondition(std::string componentId)
 {
-    return ac::UnitFilterHasComponent_t{std::move(componentId)};
+    return ac::HasComponent_t{std::move(componentId)};
 }
 
 // Replace (or append) a population baseline on a programmatic GrowthConfig_t.

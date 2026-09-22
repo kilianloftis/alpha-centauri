@@ -223,9 +223,11 @@
         "parameters": {
           "chance": 100
         },
-        "unitFilter": {
-          "kind": "Domain",
-          "domain": "orbital"
+        "condition": {
+          "kind": "AttackerDomain",
+          "domains": [
+            "orbital"
+          ]
         }
       }
     ]
@@ -440,40 +442,80 @@
       {
         "type": "InteractionOverride",
         "scope": "ThisUnit",
-        "parameters": { "grid": "attack_unit", "target_domain": "air", "cell": "allow" }
+        "parameters": {
+          "grid": "attack_unit",
+          "target_domain": "air",
+          "cell": "allow"
+        }
       },
       {
         "type": "InteractionOverride",
         "scope": "ThisUnit",
-        "parameters": { "grid": "attack_unit", "target_domain": "orbital", "cell": "allow" }
+        "parameters": {
+          "grid": "attack_unit",
+          "target_domain": "orbital",
+          "cell": "allow"
+        }
       },
       {
         "type": "Scramble",
         "scope": "ThisUnit",
-        "unitFilter": { "kind": "Domain", "domain": "air" },
-        "parameters": { "range": 2 }
+        "parameters": {
+          "range": 2
+        },
+        "condition": {
+          "kind": "AttackerDomain",
+          "domains": [
+            "air"
+          ]
+        }
       },
       {
         "type": "RuleFlag",
         "scope": "ThisTile",
         "radius": 2,
-        "parameters": { "flag": "airdrop_interdiction" }
+        "parameters": {
+          "flag": "airdrop_interdiction"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "attack", "amount": 100, "op": "AddPercent" },
-        "condition": { "kind": "DefenderDomain", "domains": ["air", "orbital"] }
+        "parameters": {
+          "stat": "attack",
+          "amount": 100,
+          "op": "AddPercent"
+        },
+        "condition": {
+          "kind": "DefenderDomain",
+          "domains": [
+            "air",
+            "orbital"
+          ]
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "attack", "amount": -50, "op": "AddPercent" },
-        "condition": { "kind": "DefenderDomain", "domains": ["land", "sea"] }
+        "parameters": {
+          "stat": "attack",
+          "amount": -50,
+          "op": "AddPercent"
+        },
+        "condition": {
+          "kind": "DefenderDomain",
+          "domains": [
+            "land",
+            "sea"
+          ]
+        }
       }
     ],
     "combat_rating_modifiers": [
-      { "target": "attack", "suffix": "^" }
+      {
+        "target": "attack",
+        "suffix": "^"
+      }
     ]
   },
   {
@@ -484,23 +526,39 @@
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "airdrop" }
+        "parameters": {
+          "flag": "airdrop"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "airdrop_range", "amount": 8, "op": "Add" }
+        "parameters": {
+          "stat": "airdrop_range",
+          "amount": 8,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "airdrop_landing_damage", "amount": 20, "op": "Add" }
+        "parameters": {
+          "stat": "airdrop_landing_damage",
+          "amount": 20,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "attack", "amount": -50, "op": "AddPercent" },
-        "condition": { "kind": "HasAirdroppedThisTurn" }
+        "parameters": {
+          "stat": "attack",
+          "amount": -50,
+          "op": "AddPercent"
+        },
+        "condition": {
+          "kind": "HasAirdroppedThisTurn"
+        }
       }
     ]
   },
@@ -512,17 +570,29 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "hit_points", "amount": 40, "op": "Add" }
+        "parameters": {
+          "stat": "hit_points",
+          "amount": 40,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "psi_damage", "amount": 4, "op": "Add" }
+        "parameters": {
+          "stat": "psi_damage",
+          "amount": 4,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "airdrop_landing_damage", "amount": 6, "op": "Add" }
+        "parameters": {
+          "stat": "airdrop_landing_damage",
+          "amount": 6,
+          "op": "Add"
+        }
       }
     ]
   },
@@ -542,14 +612,26 @@
         "condition": {
           "kind": "AllOf",
           "conditions": [
-            { "kind": "IsDefending" },
-            { "kind": "AttackerDomain", "domains": ["air", "orbital"] }
+            {
+              "kind": "IsDefending"
+            },
+            {
+              "kind": "AttackerDomain",
+              "domains": [
+                "air",
+                "orbital"
+              ]
+            }
           ]
         }
       }
     ],
     "combat_rating_modifiers": [
-      { "target": "defense", "prefix": "<", "suffix": ">" }
+      {
+        "target": "defense",
+        "prefix": "<",
+        "suffix": ">"
+      }
     ]
   },
   {
@@ -982,64 +1064,64 @@
       {
         "type": "TransportParams",
         "scope": "ThisUnit",
-        "unitFilter": {
-          "kind": "Domain",
-          "domain": "air"
-        },
         "parameters": {
           "requires_harbor": true
-        }
-      },
-      {
-        "type": "StatModifier",
-        "scope": "ThisUnit",
-        "unitFilter": {
-          "kind": "Domain",
-          "domain": "land"
         },
-        "parameters": {
-          "stat": "movement",
-          "amount": -1,
-          "op": "Add"
-        }
-      },
-      {
-        "type": "StatModifier",
-        "scope": "ThisUnit",
-        "unitFilter": {
-          "kind": "Domain",
-          "domain": "sea"
-        },
-        "parameters": {
-          "stat": "movement",
-          "amount": -1,
-          "op": "Add"
-        }
-      },
-      {
-        "type": "StatModifier",
-        "scope": "ThisUnit",
-        "unitFilter": {
-          "kind": "Domain",
+        "condition": {
+          "kind": "SubjectDomain",
           "domain": "air"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "movement",
+          "amount": -1,
+          "op": "Add"
         },
+        "condition": {
+          "kind": "SubjectDomain",
+          "domain": "land"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "movement",
+          "amount": -1,
+          "op": "Add"
+        },
+        "condition": {
+          "kind": "SubjectDomain",
+          "domain": "sea"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
         "parameters": {
           "stat": "movement",
           "amount": -50,
           "op": "AddPercent"
+        },
+        "condition": {
+          "kind": "SubjectDomain",
+          "domain": "air"
         }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "unitFilter": {
-          "kind": "Domain",
-          "domain": "air"
-        },
         "parameters": {
           "stat": "movement",
           "amount": -1,
           "op": "Add"
+        },
+        "condition": {
+          "kind": "SubjectDomain",
+          "domain": "air"
         }
       },
       {
@@ -1091,14 +1173,14 @@
       {
         "type": "TransportParams",
         "scope": "ThisUnit",
-        "unitFilter": {
-          "kind": "Domain",
-          "domain": "sea"
-        },
         "parameters": {
           "carries": [
             "air"
           ]
+        },
+        "condition": {
+          "kind": "SubjectDomain",
+          "domain": "sea"
         }
       }
     ]
@@ -1121,7 +1203,9 @@
         "type": "TransportParams",
         "scope": "ThisUnit",
         "parameters": {
-          "carries": ["land"],
+          "carries": [
+            "land"
+          ],
           "requires_harbor": true
         }
       },

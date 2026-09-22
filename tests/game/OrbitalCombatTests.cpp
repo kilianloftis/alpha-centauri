@@ -517,14 +517,18 @@ TEST_CASE("Parse OrbitalAttack and Intercept effects", "[effects][parser][orbita
             "cooldown_turns": 1,
             "chance_of_destruction_on_fail": 0
         },
-        "unitFilter": { "kind": "Domain", "domain": "orbital" },
-        "condition": { "kind": "TargetTileHas", "value": "Base" }
+        "condition": {
+            "kind": "AllOf",
+            "conditions": [
+                { "kind": "AttackerDomain", "domains": ["orbital"] },
+                { "kind": "TargetTileHas", "value": "Base" }
+            ]
+        }
     })"));
     const auto* pIntercept = std::get_if<InterceptEffect_t>(&intercept.effect);
     REQUIRE(pIntercept);
     CHECK(pIntercept->chance == 50);
     CHECK(pIntercept->chanceOfDestructionOnFail == 0);
-    CHECK(intercept.unitFilter.has_value());
     CHECK(intercept.condition.has_value());
 
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({

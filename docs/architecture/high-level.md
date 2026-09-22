@@ -399,10 +399,10 @@ seed. (Persisting that seed into save state is still open — see the world-gene
   while embarked on someone else's carrier is disembarked cleanly first (no destroy, no
   `CanPlaceUnitOnTile` conflict against the carrier's own tile), then transferred. Home-base
   claims do not follow a transferred unit to a foreign faction's base — cleared on transfer, not
-  reassigned; the produced-at record is cleared for the same reason (it names a base of the
-  previous owner, and keeping it would let the unit claim `ProducedAtThisBase` bonuses if the new
-  owner ever captured that base). Mods/observers see one adopt event, never a fake
-  death-then-birth pair.
+  reassigned. Permanent `ProducedAtThisBase` grants stamped at construction stay on the unit
+  (`Unit::GetProductionGrants`); they do not re-query the new owner's pool by a production-base
+  id, so capturing the old base cannot retroactively add train bonuses. Mods/observers see one
+  adopt event, never a fake death-then-birth pair.
 - **Destroy (base) = raze, then reap — two steps, deliberately.** A base leaves the game the
   instant its population hits zero, from `BaseManager`'s pop-loss handler, whatever emptied it
   (starvation, a production pop cost, genetic plague, conquest). That handler calls

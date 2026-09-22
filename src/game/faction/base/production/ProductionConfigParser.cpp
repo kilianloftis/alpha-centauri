@@ -1,6 +1,7 @@
 #include "game/faction/base/production/ProductionConfigParser.h"
 #include "game/faction/base/production/ScrapConfigParser.h"
 #include "game/effects/EffectConfigParser.h"
+#include "game/effects/TriggeredEffectParser.h"
 #include "game/ConstructableKind.h"
 #include "lib/config/JsonConfigLoader.h"
 #include <nlohmann/json.hpp>
@@ -23,6 +24,7 @@ ProductionConfig_t ProductionConfigParser::ParseConfig(const std::string& config
             static const std::vector<std::string> knownKeys = {
                 "retool_penalty_threshold", "retool_penalty_percent",
                 "prototype_surcharge_percent", "kinds", "effects",
+                "on_unit_produced_effects",
             };
             for (const auto& [rKey, rUnused] : rJson.items())
             {
@@ -177,6 +179,8 @@ ProductionConfig_t ProductionConfigParser::ParseConfig(const std::string& config
 
             config.effects = EffectConfigParser::ParseEffects(
                 rJson, EffectSourceKind_t::Production, "production");
+            config.onUnitProducedEffects = TriggeredEffectParser::ParseTriggeredEffects(
+                rJson, "on_unit_produced_effects", "production");
             return config;
         });
 }

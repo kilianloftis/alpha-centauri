@@ -45,8 +45,9 @@ struct ActiveEffect_t
 
     const EffectConfig_t* config;
     std::string sourceId;           // "command_nexus", "free_market", etc — for breakdown/UI
-    // Set for ThisBase / ProducedAtThisBase, and for FactionUnits collected from a base
-    // (per-base attribution for conditions like OriginBaseIsTargetBase — not a membership filter).
+    // Set for ThisBase / ProducedAtThisBase (pool tagging / stamp source), and for FactionUnits
+    // collected from a base (per-base attribution for conditions like OriginBaseIsTargetBase —
+    // not a membership filter). Cleared on Unit production-grant stamps after construction.
     const BaseManager* originBase = nullptr;
     // Set for improvements with owned_by_territory (e.g. Sensor): the FactionId_t that owns
     // the host tile's territory at collection time. Also set for unit-projected ThisTile auras
@@ -151,8 +152,9 @@ struct StockpileConversionSubject_t
 // BuildingUpkeep (population size / facility upkeep × amount) for base-level resolve.
 // pFaction enables amount_source BasesOwned (owned-base count × amount); unit resolve stamps
 // it from the live unit via UnitSubjectContext.
-// pUnit enables OriginBaseIsHomeBase (unit's home vs ActiveEffect_t::originBase); stamped
-// from the live unit via UnitSubjectContext on Unit-domain resolve.
+// pUnit is the *effect subject*: the unit CollectLiveUnitEffects is resolving for, the unit
+// a GrantXp / identity condition gates, OriginBaseIsHomeBase's home owner. Not the combat
+// attacker — use pAttacker / AttackerDomain for that.
 // pStockpile carries this turn's consumed minerals for the MineralsConverted amount_source.
 struct EffectContext_t
 {
@@ -207,11 +209,14 @@ EffectContext_t UnitSubjectContext(const Unit* pUnit, const EffectContext_t& rCt
 // OriginBaseIsTargetBase / OriginBaseIsHomeBase require pOriginBase (ActiveEffect_t::originBase).
 bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx,
                         const BaseManager* pOriginBase = nullptr);
+bool ConditionSatisfied(const Condition_t& rCondition, const EffectContext_t& ctx,
+                        const BaseManager* pOriginBase = nullptr);
 
-// True if config carries no unitFilter, or its unitFilter matches rUnit (Domain /
-// HasComponent / HasFlag / IsPrototype / IsCombatUnit). Used by CollectLiveUnitEffects to
-// drop FactionUnits (and any other) effects that do not apply to this unit.
-bool UnitFilterSatisfied(const EffectConfig_t& config, const Unit& rUnit);
+// True when the condition tree needs tile/combat/HQ (or similar) subjects beyond pUnit.
+// Identity-only trees (SubjectDomain, HasComponent, IsPrototype, …) return false. Used to keep
+// situational modifiers out of context-free FilterByStatId while still allowing identity
+// gates in CollectLiveUnitEffects / in-context resolve.
+bool ConditionNeedsSituationalContext(const Condition_t& rCondition);
 
 struct BuildingConfig_t;
 
@@ -382,7 +387,9 @@ inline auto FilterByStatId(const std::vector<ActiveEffect_t>& effects, StatId_t 
     return effects | std::views::filter([statId](const ActiveEffect_t& effect)
     {
         const StatModifierEffect_t* pStatModifier = std::get_if<StatModifierEffect_t>(&effect.config->effect);
-        // Conditional / amount_source effects are excluded from context-free resolution.
+        // Any condition (identity or situational) and amount_source effects are excluded from
+        // true context-free resolution. Live units apply identity conditions in
+        // CollectLiveUnitEffects and re-check via FilterByStatIdInContext with pUnit stamped.
         return pStatModifier && pStatModifier->stat == statId && !effect.config->condition
             && !pStatModifier->amountSource;
     });
@@ -536,9 +543,10 @@ bool ResolveFlag(const UnitDesign& rDesign, RuleFlagId_t flagId);
 int ResolveAdditiveStat(const UnitDesign& rDesign, StatId_t statId);
 
 // A live unit's full effect list: design components, FactionUnits (all faction units),
-// and ProducedAtThisBase matching Unit::GetProducedAtBase. Returned effects already
-// satisfy UnitFilterSatisfied and the ProducedAt origin match — consumers (ResolveStat,
-// ResolveFlag, etc.) need not re-check the unitFilter.
+// and permanent ProducedAtThisBase grants stamped on the unit at construction. Returned
+// effects already satisfy identity conditions (Domain / IsPrototype / …) against this unit
+// — consumers (ResolveStat, ResolveFlag, etc.) need not re-check those. Situational
+// conditions remain on the entries for in-context resolve.
 UnitEffects_t CollectLiveUnitEffects(const Unit& rUnit);
 
 // Resolve a live unit's stats / flags: design effects plus FactionUnits from the owner.

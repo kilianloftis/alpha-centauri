@@ -3,6 +3,7 @@
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
+#include "game/buildings/BuildingConfig.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/InfiltrationRules.h"
 #include "game/faction/DiplomacyLedger.h"
@@ -13,6 +14,7 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/BuildingDestruction.h"
 #include "game/faction/base/buildings/BuildingManager.h"
+#include "game/faction/base/production/ProductionConfigParser.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
@@ -23,6 +25,7 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
 
+#include <cmath>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -35,6 +38,7 @@ namespace ac
 TriggeredEffectContext_t::TriggeredEffectContext_t(GameState& rGameStateIn, Faction& rFaction)
     : rGameState(rGameStateIn)
     , factions{&rFaction}
+    , pFaction(&rFaction)
 {
 }
 
@@ -42,6 +46,7 @@ TriggeredEffectContext_t::TriggeredEffectContext_t(GameState& rGameStateIn, Base
     : rGameState(rGameStateIn)
     , factions{&rBase.GetFaction()}
     , pBase(&rBase)
+    , pFaction(&rBase.GetFaction())
     , pTile(&rBase.GetTile())
 {
 }
@@ -269,8 +274,7 @@ bool GrantUnit_(TriggeredEffectContext_t& rCtx, const GrantUnitEffect_t& rGrant,
             break;
         }
         // Homed at the anchor so it pays support, but explicitly produced nowhere: a gift is
-        // not a build, so it collects neither the anchor's ProducedAtThisBase train bonuses
-        // nor StartingExperience — the same rule that already denies it the prototype latch.
+        // not a build, so it receives no on_unit_produced train bonuses and no prototype latch.
         rFaction.GetUnitManager().CreateUnit(rCtx.rGameState.AllocateUnitId(), *pDesign,
                                              rMap.GetUnitPositions(), *pTile, pAnchor,
                                              /*pProducedAt=*/nullptr);
@@ -299,6 +303,7 @@ bool IsPerFactionSubject_(const TriggeredEffectVariant_t& rEffect)
             }
             else if constexpr (std::is_same_v<T, AddBuildingEffect_t>
                                || std::is_same_v<T, ModifyPopulationEffect_t>
+                               || std::is_same_v<T, GrantXpEffect_t>
                                || std::is_same_v<T, DestroyFacilityEffect_t>
                                || std::is_same_v<T, RebelEffect_t>
                                || std::is_same_v<T, WorldParameterEffect_t>)
@@ -363,6 +368,21 @@ bool ApplyOne_(const TriggeredEffectConfig_t& rConfig, TriggeredEffectContext_t&
                 rOut.push_back(PopulationChanged_t{delta});
                 return delta != 0;
             }
+            else if constexpr (std::is_same_v<T, GrantXpEffect_t>)
+            {
+                if (!rCtx.pUnit)
+                {
+                    return false;
+                }
+                const int before = rCtx.pUnit->GetXp();
+                const double next = ApplyModifierStack(
+                    static_cast<double>(before),
+                    {{static_cast<double>(rConcrete.amount), rConcrete.op}});
+                rCtx.pUnit->SetXp(static_cast<int>(std::lround(next)));
+                const int granted = rCtx.pUnit->GetXp() - before;
+                rOut.push_back(XpGranted_t{granted});
+                return granted != 0;
+            }
             else if constexpr (std::is_same_v<T, DestroyFacilityEffect_t>)
             {
                 if (!rCtx.pBase)
@@ -394,6 +414,7 @@ std::vector<TriggeredEffectResult_t>
 ApplyTriggeredEffects(std::span<const TriggeredEffectConfig_t> rEffects,
                       TriggeredEffectContext_t& rContext)
 {
+    Faction* const pFactionOnEntry = rContext.pFaction;
     std::vector<TriggeredEffectResult_t> results;
     for (const TriggeredEffectConfig_t& rConfig : rEffects)
     {
@@ -403,6 +424,13 @@ ApplyTriggeredEffects(std::span<const TriggeredEffectConfig_t> rEffects,
         const auto applyFor = [&](Faction* pFaction)
         {
             if (!pFaction)
+            {
+                return;
+            }
+            // Stamp before condition so a future faction-identity arm sees the apply subject.
+            rContext.pFaction = pFaction;
+            if (rConfig.condition
+                && !ConditionSatisfied(*rConfig.condition, rContext.Subjects()))
             {
                 return;
             }
@@ -437,7 +465,32 @@ ApplyTriggeredEffects(std::span<const TriggeredEffectConfig_t> rEffects,
                                                                  : rContext.factions.front()));
         }
     }
+    rContext.pFaction = pFactionOnEntry;
     return results;
+}
+
+void ApplyUnitProducedTriggers(Unit& rUnit, BaseManager& rProducedAt)
+{
+    GameState* pGameState = rProducedAt.GetFaction().GetGameState();
+    if (!pGameState)
+    {
+        return;
+    }
+    TriggeredEffectContext_t context(*pGameState, rProducedAt);
+    context.pUnit = &rUnit;
+
+    const GameDataContext& rData = rProducedAt.GetFaction().GetDataContext();
+    if (rData.productionConfig)
+    {
+        ApplyTriggeredEffects(rData.productionConfig->onUnitProducedEffects, context);
+    }
+    for (const BuildingConfig_t* pBuilding : rProducedAt.GetBuildingManager().GetBuildings())
+    {
+        if (pBuilding)
+        {
+            ApplyTriggeredEffects(pBuilding->onUnitProducedEffects, context);
+        }
+    }
 }
 
 } // namespace ac

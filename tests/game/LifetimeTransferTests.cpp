@@ -101,7 +101,7 @@ TEST_CASE("TransferUnitTo does not destroy: identity preserved, no OnUnitDestroy
     }
 }
 
-TEST_CASE("TransferUnitTo clears the produced-at record, not just the home claim",
+TEST_CASE("TransferUnitTo keeps train XP; home claim is cleared",
           "[unit][lifetime][transfer]")
 {
     FactionFixture fixture;
@@ -109,22 +109,57 @@ TEST_CASE("TransferUnitTo clears the produced-at record, not just the home claim
     Faction& receiver = fixture.MakeFaction();
 
     BaseManager& giverBase = fixture.MakeFactionBase(giver, 2, 2);
-    Unit& unit = fixture.MakeUnit(giver, 3, 2, {"test_chassis"}, &giverBase, &giverBase);
+    giverBase.GetBuildingManager().AddBuilding("Aerospace_Complex");
+    Unit& unit =
+        fixture.MakeUnit(giver, 3, 2, {"test_flight_chassis"}, &giverBase, &giverBase);
     Unit* pAddress = &unit;
-    REQUIRE(unit.GetProducedAtBase() == &giverBase);
     REQUIRE(unit.GetHomeBase() == &giverBase);
+    const int xpAtSpawn = unit.GetXp();
+    REQUIRE(xpAtSpawn == 4); // intrinsic + prototype + Aerospace
 
     giver.TransferUnitTo(unit.GetUnitId(), receiver);
 
     CHECK(pAddress->GetHomeBase() == nullptr);
-    CHECK(pAddress->GetProducedAtBase() == nullptr);
+    // GrantXp is instantaneous into m_xp; transfer / capturing the old base cannot strip it.
+    CHECK(pAddress->GetXp() == xpAtSpawn);
 
-    // The record must be cleared, not merely unresolvable: GetProducedAtBase looks the id up
-    // among the unit's *own* faction's bases, so a surviving id would come back to life the
-    // moment the receiver captured that base and let the unit claim ProducedAtThisBase bonuses
-    // for a base it was never built in.
     giver.TransferBaseTo(giverBase.GetBaseId(), receiver);
-    CHECK(pAddress->GetProducedAtBase() == nullptr);
+    CHECK(pAddress->GetXp() == xpAtSpawn);
+}
+
+TEST_CASE("ProducedAtThisBase stamp survives rehome and ownership transfer",
+          "[unit][lifetime][transfer][producedAt]")
+{
+    FactionFixture fixture;
+    Faction& giver = fixture.MakeFaction();
+    Faction& receiver = fixture.MakeFaction();
+
+    BaseManager& giverBase = fixture.MakeFactionBase(giver, 2, 2);
+    BaseManager& otherBase = fixture.MakeFactionBase(giver, 6, 6);
+    giverBase.GetBuildingManager().AddBuilding("test_train_attack");
+
+    Unit& unit =
+        fixture.MakeUnit(giver, 3, 2, {"test_chassis", "test_weapon"}, &giverBase, &giverBase);
+    Unit* pAddress = &unit;
+    // test_weapon Attack 4 + stamped +1 from production base.
+    REQUIRE(unit.GetStat(StatId_t::Attack) == 5);
+    REQUIRE(unit.GetProductionGrants().size() == 1);
+    CHECK(unit.GetProductionGrants().front().originBase == nullptr);
+
+    unit.SetHomeBase(&otherBase);
+    CHECK(pAddress->GetHomeBase() == &otherBase);
+    CHECK(pAddress->GetStat(StatId_t::Attack) == 5);
+    CHECK(pAddress->GetProductionGrants().size() == 1);
+
+    giver.TransferUnitTo(unit.GetUnitId(), receiver);
+    CHECK(pAddress->GetHomeBase() == nullptr);
+    CHECK(pAddress->GetStat(StatId_t::Attack) == 5);
+    CHECK(pAddress->GetProductionGrants().size() == 1);
+
+    // Capturing the production base does not strip or re-query stamps.
+    giver.TransferBaseTo(giverBase.GetBaseId(), receiver);
+    CHECK(pAddress->GetStat(StatId_t::Attack) == 5);
+    CHECK(pAddress->GetProductionGrants().size() == 1);
 }
 
 TEST_CASE("Transfer to self is rejected rather than corrupting ownership",

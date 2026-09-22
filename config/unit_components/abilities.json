@@ -9,10 +9,14 @@
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "prevents_disengage" }
+        "parameters": {
+          "flag": "prevents_disengage"
+        }
       }
     ],
-    "combat_rating_labels": ["ECM"]
+    "combat_rating_labels": [
+      "ECM"
+    ]
   },
   {
     "id": "Cloaking_Device",
@@ -24,12 +28,17 @@
       {
         "type": "Conceal",
         "scope": "ThisUnit",
-        "parameters": { "channel": "cloak" }
+        "parameters": {
+          "channel": "cloak"
+        }
       },
       {
         "type": "InteractionOverride",
         "scope": "ThisUnit",
-        "parameters": { "grid": "zoc", "cell": "deny" }
+        "parameters": {
+          "grid": "zoc",
+          "cell": "deny"
+        }
       }
     ]
   },
@@ -43,7 +52,11 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "vision", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "vision",
+          "amount": 1,
+          "op": "Add"
+        }
       }
     ]
   },
@@ -65,18 +78,34 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "defense", "amount": 100, "op": "AddPercent" },
+        "parameters": {
+          "stat": "defense",
+          "amount": 100,
+          "op": "AddPercent"
+        },
         "condition": {
           "kind": "AllOf",
           "conditions": [
-            { "kind": "IsDefending" },
-            { "kind": "AttackerDomain", "domains": ["air", "orbital"] }
+            {
+              "kind": "IsDefending"
+            },
+            {
+              "kind": "AttackerDomain",
+              "domains": [
+                "air",
+                "orbital"
+              ]
+            }
           ]
         }
       }
     ],
     "combat_rating_modifiers": [
-      { "target": "defense", "prefix": "<", "suffix": ">" }
+      {
+        "target": "defense",
+        "prefix": "<",
+        "suffix": ">"
+      }
     ]
   },
   {
@@ -89,40 +118,80 @@
       {
         "type": "InteractionOverride",
         "scope": "ThisUnit",
-        "parameters": { "grid": "attack_unit", "target_domain": "air", "cell": "allow" }
+        "parameters": {
+          "grid": "attack_unit",
+          "target_domain": "air",
+          "cell": "allow"
+        }
       },
       {
         "type": "InteractionOverride",
         "scope": "ThisUnit",
-        "parameters": { "grid": "attack_unit", "target_domain": "orbital", "cell": "allow" }
+        "parameters": {
+          "grid": "attack_unit",
+          "target_domain": "orbital",
+          "cell": "allow"
+        }
       },
       {
         "type": "Scramble",
         "scope": "ThisUnit",
-        "unitFilter": { "kind": "Domain", "domain": "air" },
-        "parameters": { "range": 2 }
+        "parameters": {
+          "range": 2
+        },
+        "condition": {
+          "kind": "AttackerDomain",
+          "domains": [
+            "air"
+          ]
+        }
       },
       {
         "type": "RuleFlag",
         "scope": "ThisTile",
         "radius": 2,
-        "parameters": { "flag": "airdrop_interdiction" }
+        "parameters": {
+          "flag": "airdrop_interdiction"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "attack", "amount": 100, "op": "AddPercent" },
-        "condition": { "kind": "DefenderDomain", "domains": ["air", "orbital"] }
+        "parameters": {
+          "stat": "attack",
+          "amount": 100,
+          "op": "AddPercent"
+        },
+        "condition": {
+          "kind": "DefenderDomain",
+          "domains": [
+            "air",
+            "orbital"
+          ]
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "attack", "amount": -50, "op": "AddPercent" },
-        "condition": { "kind": "DefenderDomain", "domains": ["land", "sea"] }
+        "parameters": {
+          "stat": "attack",
+          "amount": -50,
+          "op": "AddPercent"
+        },
+        "condition": {
+          "kind": "DefenderDomain",
+          "domains": [
+            "land",
+            "sea"
+          ]
+        }
       }
     ],
     "combat_rating_modifiers": [
-      { "target": "attack", "suffix": "^" }
+      {
+        "target": "attack",
+        "suffix": "^"
+      }
     ]
   },
   {
@@ -135,23 +204,39 @@
       {
         "type": "RuleFlag",
         "scope": "ThisUnit",
-        "parameters": { "flag": "airdrop" }
+        "parameters": {
+          "flag": "airdrop"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "airdrop_range", "amount": 8, "op": "Add" }
+        "parameters": {
+          "stat": "airdrop_range",
+          "amount": 8,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "airdrop_landing_damage", "amount": 20, "op": "Add" }
+        "parameters": {
+          "stat": "airdrop_landing_damage",
+          "amount": 20,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "attack", "amount": -50, "op": "AddPercent" },
-        "condition": { "kind": "HasAirdroppedThisTurn" }
+        "parameters": {
+          "stat": "attack",
+          "amount": -50,
+          "op": "AddPercent"
+        },
+        "condition": {
+          "kind": "HasAirdroppedThisTurn"
+        }
       }
     ]
   },
@@ -162,7 +247,10 @@
     "required_tech": "",
     "mineral_cost": 5,
     "combat_rating_modifiers": [
-      { "target": "attack", "suffix": "~" }
+      {
+        "target": "attack",
+        "suffix": "~"
+      }
     ],
     "effects": [
       {
@@ -174,12 +262,21 @@
           "surface": "water",
           "cell": "allow"
         },
-        "condition": { "kind": "AllOf", "values": ["Water", "Base"] }
+        "condition": {
+          "kind": "AllOf",
+          "values": [
+            "Water",
+            "Base"
+          ]
+        }
       },
       {
         "type": "InteractionOverride",
         "scope": "ThisUnit",
-        "parameters": { "grid": "attack_tile", "cell": "allow" }
+        "parameters": {
+          "grid": "attack_tile",
+          "cell": "allow"
+        }
       }
     ]
   },
@@ -193,8 +290,15 @@
       {
         "type": "TransportParams",
         "scope": "ThisUnit",
-        "unitFilter": { "kind": "Domain", "domain": "sea" },
-        "parameters": { "carries": ["air"] }
+        "parameters": {
+          "carries": [
+            "air"
+          ]
+        },
+        "condition": {
+          "kind": "SubjectDomain",
+          "domain": "sea"
+        }
       }
     ]
   },
@@ -208,7 +312,11 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": { "stat": "police_effectiveness", "amount": 1, "op": "Add" }
+        "parameters": {
+          "stat": "police_effectiveness",
+          "amount": 1,
+          "op": "Add"
+        }
       }
     ]
   }

@@ -313,9 +313,9 @@ TEST_CASE("GrantUnit spawns at the context base and homes the unit there",
     const Unit& rUnit = FirstUnit_(*game.pFaction);
     CHECK(&rUnit.GetTile() == &base.GetTile());
     CHECK(rUnit.GetHomeBase() == &base);
-    // Homed, but not built anywhere: a gift collects no ProducedAtThisBase train bonus and
-    // no prototype latch, the same way an escape pod does not.
-    CHECK(rUnit.GetProducedAtBase() == nullptr);
+    // Homed, but not built anywhere: a gift receives no stamped ProducedAtThisBase train
+    // bonus and no prototype latch, the same way an escape pod does not.
+    CHECK(rUnit.GetProductionGrants().empty());
     CHECK_FALSE(rUnit.IsPrototype());
     // The ad-hoc design is registered, so a second grant of the same components reuses it.
     CHECK(game.pFaction->GetMilitary().GetDesign(granted.designId) != nullptr);
@@ -352,7 +352,7 @@ TEST_CASE("GrantUnit resolves an anchor base when the context has none",
     BaseManager& base = game.MakeBase(4, 4);
 
     const std::vector<TriggeredEffectConfig_t> grant = GrantList_();
-    TriggeredEffectContext_t context(*game.pState, *game.pFaction); // no pBase, no pTile
+    TriggeredEffectContext_t context(*game.pState, *game.pFaction); // no pBase / pTile
     const std::vector<TriggeredEffectResult_t> results = ApplyTriggeredEffects(grant, context);
 
     REQUIRE(std::get<UnitsGranted_t>(results[0]).count == 1);

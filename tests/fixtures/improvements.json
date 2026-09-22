@@ -1,69 +1,162 @@
 [
-  { "id": "Flat", "name": "Flat", "tags": ["landform"], "effects": [] },
+  {
+    "id": "Flat",
+    "name": "Flat",
+    "tags": [
+      "landform"
+    ],
+    "effects": []
+  },
   {
     "id": "Rolling",
     "name": "Rolling",
-    "tags": ["landform"],
+    "tags": [
+      "landform"
+    ],
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "minerals", "amount": 1, "op": "Add" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "minerals",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
     ]
   },
   {
     "id": "Rocky",
     "name": "Rocky",
-    "tags": ["landform"],
+    "tags": [
+      "landform"
+    ],
     "move_cost": 2,
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "minerals", "amount": 2, "op": "Add" } },
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "tile_defense", "amount": 25, "op": "AddPercent" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "minerals",
+          "amount": 2,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "tile_defense",
+          "amount": 25,
+          "op": "AddPercent"
+        }
+      }
     ]
   },
-  { "id": "Arid", "name": "Arid", "tags": ["landform"], "effects": [] },
+  {
+    "id": "Arid",
+    "name": "Arid",
+    "tags": [
+      "landform"
+    ],
+    "effects": []
+  },
   {
     "id": "Moist",
     "name": "Moist",
-    "tags": ["landform"],
+    "tags": [
+      "landform"
+    ],
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
     ]
   },
   {
     "id": "Wet",
     "name": "Wet",
-    "tags": ["landform"],
+    "tags": [
+      "landform"
+    ],
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 2, "op": "Add" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 2,
+          "op": "Add"
+        }
+      }
     ]
   },
   {
     "id": "River",
     "name": "River",
-    "excludes": ["Mine"],
+    "excludes": [
+      "Mine"
+    ],
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "energy", "amount": 1, "op": "Add" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "energy",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
     ]
   },
   {
     "id": "Water",
     "name": "Water",
-    "tags": ["landform"],
+    "tags": [
+      "landform"
+    ],
     "suppress_yield_sources": [
-      "Flat", "Rolling", "Rocky", "Arid", "Moist", "Wet", "River", "@resource_bonus"
+      "Flat",
+      "Rolling",
+      "Rocky",
+      "Arid",
+      "Moist",
+      "Wet",
+      "River",
+      "@resource_bonus"
     ],
     "effects": []
   },
   {
     "id": "Ocean",
     "name": "Ocean",
-    "tags": ["landform"],
+    "tags": [
+      "landform"
+    ],
     "effects": []
   },
   {
     "id": "OceanShelf",
     "name": "Ocean Shelf",
-    "tags": ["landform"],
+    "tags": [
+      "landform"
+    ],
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
     ]
   },
   {
@@ -71,14 +164,43 @@
     "name": "Fungus",
     "move_cost": 3,
     "suppress_yield_sources": [
-      "@landform", "River", "@land_terraform",
-      "SoilEnricher", "KelpFarm", "MiningPlatform", "TidalHarness",
-      "@resource_bonus", "Minerals", "Energy"
+      "@landform",
+      "River",
+      "@land_terraform",
+      "SoilEnricher",
+      "KelpFarm",
+      "MiningPlatform",
+      "TidalHarness",
+      "@resource_bonus",
+      "Minerals",
+      "Energy"
     ],
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" } },
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "tile_defense", "amount": 25, "op": "AddPercent" } },
-      { "type": "Conceal", "scope": "ThisTile", "parameters": { "channel": "terrain" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "tile_defense",
+          "amount": 25,
+          "op": "AddPercent"
+        }
+      },
+      {
+        "type": "Conceal",
+        "scope": "ThisTile",
+        "parameters": {
+          "channel": "terrain"
+        }
+      }
     ]
   },
   {
@@ -100,81 +222,195 @@
   {
     "id": "Farm",
     "name": "Farm",
-    "tags": ["land_terraform"],
+    "tags": [
+      "land_terraform"
+    ],
     "turns_required": 4,
     "energy_cost": 0,
-    "excludes": ["Rocky"],
+    "excludes": [
+      "Rocky"
+    ],
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
     ]
   },
   {
     "id": "Forest",
     "name": "Forest",
-    "tags": ["land_terraform"],
+    "tags": [
+      "land_terraform"
+    ],
     "turns_required": 4,
     "energy_cost": 0,
-    "excludes": ["Fungus"],
-    "suppress_yield_sources": ["@landform"],
+    "excludes": [
+      "Fungus"
+    ],
+    "suppress_yield_sources": [
+      "@landform"
+    ],
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 1, "op": "Add" } },
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "minerals", "amount": 2, "op": "Add" } },
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "energy", "amount": 1, "op": "Add" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "minerals",
+          "amount": 2,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "energy",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
     ]
   },
   {
     "id": "KelpFarm",
     "name": "Kelp Farm",
-    "tags": ["sea_terraform"],
+    "tags": [
+      "sea_terraform"
+    ],
     "turns_required": 4,
     "energy_cost": 0,
-    "excludes": ["Ocean"],
+    "excludes": [
+      "Ocean"
+    ],
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 2, "op": "Add" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 2,
+          "op": "Add"
+        }
+      }
     ]
   },
   {
     "id": "Nutrients",
     "name": "Nutrients",
-    "tags": ["resource_bonus"],
+    "tags": [
+      "resource_bonus"
+    ],
     "frequency": 10,
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 2, "op": "Add", "bypass_clamp": true } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 2,
+          "op": "Add",
+          "bypass_clamp": true
+        }
+      }
     ]
   },
   {
     "id": "Monolith",
     "name": "Monolith",
-    "tags": ["resource_bonus"],
+    "tags": [
+      "resource_bonus"
+    ],
     "frequency": 3,
-    "excludes": ["@resource_bonus", "Monolith"],
+    "excludes": [
+      "@resource_bonus",
+      "Monolith"
+    ],
     "suppress_yield_sources": [
-      "@landform", "River", "@land_terraform",
-      "SoilEnricher", "@resource_bonus"
+      "@landform",
+      "River",
+      "@land_terraform",
+      "SoilEnricher",
+      "@resource_bonus"
     ],
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "nutrients", "amount": 2, "op": "Add" } },
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "minerals", "amount": 2, "op": "Add" } },
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "energy", "amount": 2, "op": "Add" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 2,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "minerals",
+          "amount": 2,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "energy",
+          "amount": 2,
+          "op": "Add"
+        }
+      }
     ]
   },
   {
     "id": "Mine",
     "name": "Mine",
-    "tags": ["land_terraform"],
+    "tags": [
+      "land_terraform"
+    ],
     "turns_required": 8,
     "energy_cost": 0,
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "minerals", "amount": 2, "op": "Add" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "minerals",
+          "amount": 2,
+          "op": "Add"
+        }
+      }
     ]
   },
   {
     "id": "SolarCollector",
     "name": "Solar Collector",
-    "tags": ["land_terraform"],
+    "tags": [
+      "land_terraform"
+    ],
     "turns_required": 4,
     "energy_cost": 0,
-    "excludes": ["Mine", "Forest", "ThermalBorehole", "Mirror"],
+    "excludes": [
+      "Mine",
+      "Forest",
+      "ThermalBorehole",
+      "Mirror"
+    ],
     "effects": [
       {
         "type": "StatModifier",
@@ -194,21 +430,83 @@
     "turns_required": 5,
     "energy_cost": 0,
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "tile_defense", "amount": 50, "op": "AddPercent" } },
-      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "prevents_disengage" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "tile_defense",
+          "amount": 50,
+          "op": "AddPercent"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": {
+          "flag": "prevents_disengage"
+        }
+      }
     ]
   },
   {
     "id": "Base",
     "name": "Base",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "tile_defense", "amount": 100, "op": "AddPercent" } },
-      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "prevents_disengage" } },
-      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "harbors", "domain": "land" } },
-      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "harbors", "domain": "sea" } },
-      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "harbors", "domain": "air" } },
-      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "harbors", "domain": "orbital" } },
-      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "airdrop_launch" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "tile_defense",
+          "amount": 100,
+          "op": "AddPercent"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": {
+          "flag": "prevents_disengage"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": {
+          "flag": "harbors",
+          "domain": "land"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": {
+          "flag": "harbors",
+          "domain": "sea"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": {
+          "flag": "harbors",
+          "domain": "air"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": {
+          "flag": "harbors",
+          "domain": "orbital"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": {
+          "flag": "airdrop_launch"
+        }
+      }
     ]
   },
   {
@@ -217,9 +515,29 @@
     "turns_required": 10,
     "energy_cost": 0,
     "effects": [
-      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "harbors", "domain": "air" } },
-      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "harbors", "domain": "orbital" } },
-      { "type": "RuleFlag", "scope": "ThisTile", "parameters": { "flag": "airdrop_launch" } }
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": {
+          "flag": "harbors",
+          "domain": "air"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": {
+          "flag": "harbors",
+          "domain": "orbital"
+        }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisTile",
+        "parameters": {
+          "flag": "airdrop_launch"
+        }
+      }
     ]
   },
   {
@@ -233,18 +551,28 @@
         "type": "StatModifier",
         "scope": "ThisTile",
         "radius": 2,
-        "parameters": { "stat": "tile_defense", "amount": 25, "op": "AddPercent" }
+        "parameters": {
+          "stat": "tile_defense",
+          "amount": 25,
+          "op": "AddPercent"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisTile",
-        "parameters": { "stat": "vision", "amount": 2, "op": "Add" }
+        "parameters": {
+          "stat": "vision",
+          "amount": 2,
+          "op": "Add"
+        }
       },
       {
         "type": "Detect",
         "scope": "ThisTile",
         "radius": 2,
-        "parameters": { "channel": "terrain" }
+        "parameters": {
+          "channel": "terrain"
+        }
       }
     ]
   },
@@ -257,8 +585,13 @@
         "type": "Detect",
         "scope": "ThisTile",
         "radius": 2,
-        "condition": { "kind": "TargetTileHas", "value": "River" },
-        "parameters": { "channel": "cloak" }
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "River"
+        },
+        "parameters": {
+          "channel": "cloak"
+        }
       }
     ]
   },
@@ -270,17 +603,24 @@
         "type": "Detect",
         "scope": "ThisTile",
         "radius": 2,
-        "parameters": { "channel": "cloak" }
+        "parameters": {
+          "channel": "cloak"
+        }
       }
     ]
   },
   {
     "id": "Mirror",
     "name": "Mirror",
-    "tags": ["land_terraform"],
+    "tags": [
+      "land_terraform"
+    ],
     "turns_required": 12,
     "energy_cost": 0,
-    "excludes": ["SolarCollector", "ThermalBorehole"],
+    "excludes": [
+      "SolarCollector",
+      "ThermalBorehole"
+    ],
     "effects": [
       {
         "type": "StatModifier",
@@ -297,40 +637,87 @@
         "scope": "ThisTile",
         "radius": 1,
         "min_radius": 1,
-        "condition": { "kind": "TargetTileHas", "value": "SolarCollector" },
-        "parameters": { "stat": "energy", "amount": 1, "op": "Add" }
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "SolarCollector"
+        },
+        "parameters": {
+          "stat": "energy",
+          "amount": 1,
+          "op": "Add"
+        }
       },
       {
         "type": "StatModifier",
         "scope": "ThisTile",
         "radius": 1,
         "min_radius": 1,
-        "condition": { "kind": "TargetTileHas", "value": "Mirror" },
-        "parameters": { "stat": "energy", "amount": 1, "op": "Add" }
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "Mirror"
+        },
+        "parameters": {
+          "stat": "energy",
+          "amount": 1,
+          "op": "Add"
+        }
       }
     ]
   },
   {
     "id": "Condenser",
     "name": "Condenser",
-    "tags": ["land_terraform"],
+    "tags": [
+      "land_terraform"
+    ],
     "turns_required": 12,
     "energy_cost": 0,
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "radius": 1, "parameters": { "stat": "moisture_tier", "amount": 1, "op": "Add" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "radius": 1,
+        "parameters": {
+          "stat": "moisture_tier",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
     ]
   },
   {
     "id": "ThermalBorehole",
     "name": "Thermal Borehole",
-    "tags": ["land_terraform"],
+    "tags": [
+      "land_terraform"
+    ],
     "turns_required": 24,
     "energy_cost": 0,
     "terminates_river": true,
-    "suppress_yield_sources": ["@landform", "Farm", "Mine"],
+    "suppress_yield_sources": [
+      "@landform",
+      "Farm",
+      "Mine"
+    ],
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "minerals", "amount": 6, "op": "Add" } },
-      { "type": "StatModifier", "scope": "ThisTile", "parameters": { "stat": "energy", "amount": 6, "op": "Add" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "minerals",
+          "amount": 6,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": {
+          "stat": "energy",
+          "amount": 6,
+          "op": "Add"
+        }
+      }
     ]
   },
   {
@@ -338,7 +725,9 @@
     "name": "Raise Land",
     "turns_required": 12,
     "energy_cost": 0,
-    "terraform": { "result": "raise_land" },
+    "terraform": {
+      "result": "raise_land"
+    },
     "effects": []
   },
   {
@@ -346,7 +735,9 @@
     "name": "Level Terrain",
     "turns_required": 8,
     "energy_cost": 0,
-    "terraform": { "result": "level_terrain" },
+    "terraform": {
+      "result": "level_terrain"
+    },
     "effects": []
   },
   {
@@ -354,7 +745,9 @@
     "name": "Plant Fungus",
     "turns_required": 6,
     "energy_cost": 0,
-    "terraform": { "result": "plant_fungus" },
+    "terraform": {
+      "result": "plant_fungus"
+    },
     "effects": []
   },
   {
@@ -362,7 +755,9 @@
     "name": "Remove Fungus",
     "turns_required": 6,
     "energy_cost": 0,
-    "terraform": { "result": "remove_fungus" },
+    "terraform": {
+      "result": "remove_fungus"
+    },
     "effects": []
   },
   {
@@ -370,7 +765,9 @@
     "name": "Aquifer",
     "turns_required": 18,
     "energy_cost": 0,
-    "terraform": { "result": "aquifer" },
+    "terraform": {
+      "result": "aquifer"
+    },
     "effects": []
   },
   {
@@ -378,30 +775,73 @@
     "name": "Lower Land",
     "turns_required": 12,
     "energy_cost": 0,
-    "terraform": { "result": "lower_land" },
+    "terraform": {
+      "result": "lower_land"
+    },
     "effects": []
   },
   {
     "id": "EffectRadiusBeacon",
     "name": "Effect Radius Beacon (radius on the effect)",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "radius": 2, "parameters": { "stat": "energy", "amount": 1 } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "radius": 2,
+        "parameters": {
+          "stat": "energy",
+          "amount": 1
+        }
+      }
     ]
   },
   {
     "id": "MixedRadius",
     "name": "Mixed Radius (sibling effects with different radii)",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "radius": 2, "parameters": { "stat": "energy", "amount": 1 } },
-      { "type": "StatModifier", "scope": "ThisTile", "radius": 1, "parameters": { "stat": "minerals", "amount": 1 } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "radius": 2,
+        "parameters": {
+          "stat": "energy",
+          "amount": 1
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "radius": 1,
+        "parameters": {
+          "stat": "minerals",
+          "amount": 1
+        }
+      }
     ]
   },
   {
     "id": "WeirdAura",
     "name": "Weird Aura (probe: non-ThisTile effects on an improvement)",
     "effects": [
-      { "type": "StatModifier", "scope": "ThisTile", "radius": 1, "parameters": { "stat": "energy", "amount": 1, "op": "Add" } },
-      { "type": "StatModifier", "scope": "FactionGlobal", "parameters": { "stat": "nutrients", "amount": 5, "op": "Add" } }
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "radius": 1,
+        "parameters": {
+          "stat": "energy",
+          "amount": 1,
+          "op": "Add"
+        }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "FactionGlobal",
+        "parameters": {
+          "stat": "nutrients",
+          "amount": 5,
+          "op": "Add"
+        }
+      }
     ]
   },
   {
@@ -411,8 +851,15 @@
       {
         "type": "Intercept",
         "scope": "ThisTile",
-        "parameters": { "chance": 100 },
-        "unitFilter": { "kind": "Domain", "domain": "orbital" }
+        "parameters": {
+          "chance": 100
+        },
+        "condition": {
+          "kind": "AttackerDomain",
+          "domains": [
+            "orbital"
+          ]
+        }
       }
     ]
   }

@@ -537,9 +537,9 @@ void ParseOrbitalAttack_(const nlohmann::json& parameters, EffectConfig_t& rEffe
 
 void ParseIntercept_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
 {
-    if (!rEffect.unitFilter)
+    if (!rEffect.condition)
     {
-        throw std::runtime_error("Intercept requires a unitFilter");
+        throw std::runtime_error("Intercept requires a condition");
     }
     InterceptEffect_t intercept;
     intercept.chance = static_cast<int>(RequireNumber(parameters, "chance"));
@@ -567,9 +567,9 @@ void ParseIntercept_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
 
 void ParseScramble_(const nlohmann::json& parameters, EffectConfig_t& rEffect)
 {
-    if (!rEffect.unitFilter)
+    if (!rEffect.condition)
     {
-        throw std::runtime_error("Scramble requires a unitFilter");
+        throw std::runtime_error("Scramble requires a condition");
     }
     ScrambleEffect_t scramble;
     scramble.range = static_cast<int>(RequireNumber(parameters, "range"));
@@ -798,6 +798,42 @@ Condition_t ParseCondition(const nlohmann::json& conditionJson)
     {
         return IsHeadquarters_t{};
     }
+    if (kindStr == "SubjectDomain")
+    {
+        const std::string domainStr = conditionJson.value("domain", "");
+        if (domainStr.empty())
+        {
+            throw std::runtime_error("SubjectDomain condition requires a non-empty 'domain'");
+        }
+        return SubjectDomain_t{ParseUnitDomain(domainStr)};
+    }
+    if (kindStr == "HasComponent")
+    {
+        const std::string componentId = conditionJson.value("component", "");
+        if (componentId.empty())
+        {
+            throw std::runtime_error(
+                "HasComponent condition requires a non-empty 'component' id");
+        }
+        return HasComponent_t{componentId};
+    }
+    if (kindStr == "HasFlag")
+    {
+        const std::string flagId = conditionJson.value("flag", "");
+        if (flagId.empty())
+        {
+            throw std::runtime_error("HasFlag condition requires a non-empty 'flag' id");
+        }
+        return HasFlag_t{ParseRuleFlagId(flagId)};
+    }
+    if (kindStr == "IsPrototype")
+    {
+        return IsPrototype_t{};
+    }
+    if (kindStr == "IsCombatUnit")
+    {
+        return IsCombatUnit_t{};
+    }
     if (kindStr == "AllOf")
     {
         const bool bHasValues = conditionJson.contains("values")
@@ -878,48 +914,6 @@ UnitDomain_t ParseUnitDomain(const std::string& rDomain)
     if (rDomain == "orbital") return UnitDomain_t::Orbital;
     throw std::runtime_error(
         "Unknown unit domain '" + rDomain + "' (expected land, sea, air, or orbital)");
-}
-
-UnitFilter_t ParseUnitFilter(const nlohmann::json& filterJson)
-{
-    const std::string kindStr = filterJson.value("kind", "");
-    if (kindStr == "Domain")
-    {
-        const std::string domainStr = filterJson.value("domain", "");
-        if (domainStr.empty())
-        {
-            throw std::runtime_error("Domain unitFilter requires a non-empty 'domain'");
-        }
-        return UnitFilterDomain_t{ParseUnitDomain(domainStr)};
-    }
-    if (kindStr == "HasComponent")
-    {
-        const std::string componentId = filterJson.value("component", "");
-        if (componentId.empty())
-        {
-            throw std::runtime_error("HasComponent unitFilter requires a non-empty 'component' id");
-        }
-        return UnitFilterHasComponent_t{componentId};
-    }
-    if (kindStr == "HasFlag")
-    {
-        const std::string flagId = filterJson.value("flag", "");
-        if (flagId.empty())
-        {
-            throw std::runtime_error("HasFlag unitFilter requires a non-empty 'flag' id");
-        }
-        return UnitFilterHasFlag_t{ParseRuleFlagId(flagId)};
-    }
-    if (kindStr == "IsPrototype")
-    {
-        return UnitFilterIsPrototype_t{};
-    }
-    if (kindStr == "IsCombatUnit")
-    {
-        return UnitFilterIsCombatUnit_t{};
-    }
-
-    throw std::runtime_error("Unknown unitFilter kind: '" + kindStr + "'");
 }
 
 BuildingFilter_t ParseBuildingFilter(const nlohmann::json& filterJson)
@@ -1026,10 +1020,6 @@ EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson)
     if (effectJson.contains("condition"))
     {
         effect.condition = ParseCondition(effectJson.at("condition"));
-    }
-    if (effectJson.contains("unitFilter"))
-    {
-        effect.unitFilter = ParseUnitFilter(effectJson.at("unitFilter"));
     }
     if (effectJson.contains("buildingFilter"))
     {

@@ -148,13 +148,20 @@
           "cooldown_turns": 1,
           "chance_of_destruction_on_fail": 0
         },
-        "unitFilter": {
-          "kind": "Domain",
-          "domain": "orbital"
-        },
         "condition": {
-          "kind": "TargetTileHas",
-          "value": "Base"
+          "kind": "AllOf",
+          "conditions": [
+            {
+              "kind": "AttackerDomain",
+              "domains": [
+                "orbital"
+              ]
+            },
+            {
+              "kind": "TargetTileHas",
+              "value": "Base"
+            }
+          ]
         }
       }
     ],
@@ -166,18 +173,16 @@
     "id": "Aerospace_Complex",
     "name": "Aerospace Complex",
     "mineral_cost": 12,
-    "effects": [
+    "on_unit_produced_effects": [
       {
-        "type": "StatModifier",
-        "scope": "ProducedAtThisBase",
-        "unitFilter": {
-          "kind": "Domain",
-          "domain": "air"
-        },
+        "type": "GrantXp",
         "parameters": {
-          "stat": "starting_experience",
           "amount": 2,
           "op": "Add"
+        },
+        "condition": {
+          "kind": "SubjectDomain",
+          "domain": "air"
         }
       }
     ],
@@ -217,18 +222,16 @@
     "id": "Command_Center",
     "name": "Command Center",
     "mineral_cost": 10,
-    "effects": [
+    "on_unit_produced_effects": [
       {
-        "type": "StatModifier",
-        "scope": "ProducedAtThisBase",
-        "unitFilter": {
-          "kind": "Domain",
-          "domain": "land"
-        },
+        "type": "GrantXp",
         "parameters": {
-          "stat": "starting_experience",
           "amount": 2,
           "op": "Add"
+        },
+        "condition": {
+          "kind": "SubjectDomain",
+          "domain": "land"
         }
       }
     ],

@@ -47,8 +47,8 @@ public:
     // The unit registers itself on rTile in rPositions for its lifetime (see Unit's
     // constructor). Rejects the tile under the stacking rule (MovementRules) before
     // constructing. unitId must be unique across the game (caller: GameState::AllocateUnitId).
-    // pProducedAt is three-valued (see Unit's constructor): omit it to default to pHomeBase,
-    // or pass an explicit nullptr for a unit that is homed but built nowhere.
+    // pProducedAt is three-valued (see Unit's constructor): omit it to stamp from pHomeBase,
+    // or pass an explicit nullptr for a unit that is homed but built nowhere (no production grants).
     Unit& CreateUnit(UnitId_t unitId, const UnitDesign& rDesign, UnitPositionIndex& rPositions,
                      const Tile& rTile,
                      BaseManager* pHomeBase = nullptr,

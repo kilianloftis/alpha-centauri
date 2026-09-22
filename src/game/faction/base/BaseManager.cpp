@@ -229,7 +229,7 @@ BaseManager::BaseManager(
 
         if (const UnitDesign* pDesign = m_pFaction->GetMilitary().GetDesign(itemId))
         {
-            m_pFaction->GetUnitManager().CreateUnit(
+            Unit& rUnit = m_pFaction->GetUnitManager().CreateUnit(
                 pGameState->AllocateUnitId(),
                 *pDesign,
                 pGameState->GetWorldMap().GetUnitPositions(),
@@ -245,6 +245,7 @@ BaseManager::BaseManager(
             // (escape pod, starting unit, a granted unit) never goes through here.
             {
                 TriggeredEffectContext_t context(*pGameState, *this);
+                context.pUnit = &rUnit;
                 for (const UnitComponentConfig_t* pComp : pDesign->GetComponents())
                 {
                     if (pComp)

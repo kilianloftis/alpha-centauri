@@ -35,11 +35,6 @@ TileSelector_t ParseTileSelector(const nlohmann::json& selectorJson);
 
 UnitDomain_t ParseUnitDomain(const std::string& rDomain);
 
-// Parses a UnitFilter_t from a unitFilter JSON object
-// ({ "kind": "Domain", "domain": "air" }, { "kind": "HasComponent", "component": "..." },
-//  { "kind": "HasFlag", "flag": "..." }, or { "kind": "IsPrototype" }).
-UnitFilter_t ParseUnitFilter(const nlohmann::json& filterJson);
-
 // Parses a BuildingFilter_t from a buildingFilter JSON object
 // ({ "kind": "All" }, { "kind": "BuildingId", "building": "..." },
 //  { "kind": "Category", "category": "grow" }).
@@ -56,7 +51,7 @@ FactionFilter_t ParseFactionFilter(const nlohmann::json& filterJson);
 bool IsEffectType(const std::string& rTypeName);
 
 // Parses a single entry of a continuous "effects" JSON array
-// (type/scope/condition/unitFilter/factionFilter/radius/parameters). A one-shot effect type
+// (type/scope/condition/factionFilter/radius/parameters). A one-shot effect type
 // found here throws, naming the trigger-named list it belongs in instead.
 EffectConfig_t ParseEffectConfig(const nlohmann::json& effectJson);
 

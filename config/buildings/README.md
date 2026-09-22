@@ -52,8 +52,7 @@ Each entry in `effects` describes a single gameplay effect applied when the buil
 |---|---|---|---|---|
 | `type` | string | Yes | — | Effect category (see Types below) |
 | `scope` | string | Yes | — | Who is affected (see Scopes below) |
-| `condition` | string | No | `""` | Optional Lua expression; effect is suppressed when it evaluates to false |
-| `unitFilter` | object | No | absent | Restricts which units receive the effect (`Domain` / `HasComponent` / `HasFlag`) |
+| `condition` | object | No | absent | Optional gate (`kind` SubjectDomain / HasComponent / HasFlag / IsPrototype / IsCombatUnit / AttackerDomain / AllOf / …); effect is suppressed when unsatisfied |
 | `buildingFilter` | object | No | absent (= all buildings) | Restricts which building types receive FacilityEnergyUpkeep (and similar) modifiers: `{ "kind": "All" }`, `{ "kind": "BuildingId", "building": "..." }`, or `{ "kind": "Category", "category": "grow" }` |
 | `parameters` | object | No | `{}` | Key/value strings interpreted by the effect handler |
 
@@ -68,8 +67,8 @@ Each entry in `effects` describes a single gameplay effect applied when the buil
 | `DiplomaticModifier` | Adjusts diplomatic standing (`parameters.target_faction_id`, `parameters.value`) |
 | `TileYieldModifier` | Modifies the yield of selected tiles (`parameters.resource`, `parameters.selector`, `parameters.amount`, `parameters.op`) — see below |
 | `OrbitalAttack` | ASAT charge against other factions' `orbital` buildings (`parameters.chance`, `parameters.cooldown_turns`, `parameters.chance_of_destruction_on_fail`) |
-| `Intercept` | Pre-combat intercept (`parameters.chance`, optional `cooldown_turns`, `chance_of_destruction_on_fail`; requires `unitFilter`) |
-| `Scramble` | Unit may scramble to become the combat defender (`parameters.range`; requires `unitFilter` on the attacker) |
+| `Intercept` | Pre-combat intercept (`parameters.chance`, optional `cooldown_turns`, `chance_of_destruction_on_fail`; requires `condition`) |
+| `Scramble` | Unit may scramble to become the combat defender (`parameters.range`; requires `condition` on the attacker) |
 
 `amount`/`value` accept either a JSON number or a numeric string. `op` is one of `Add`, `AddPercent` (amount in percent points, e.g. `25` = +25%), `MultiplyGeometric` (factor form, e.g. `0.5`), `MaxClamp`, `MinClamp` — defaults to `Add`.
 

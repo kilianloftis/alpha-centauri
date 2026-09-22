@@ -68,7 +68,7 @@ public:
     // Which interaction grids this design's components carry an InteractionOverride for.
     // Cached at construction so movement / attack / ZOC resolution can skip effect
     // collection outright for the overwhelmingly common no-override design. Conservative:
-    // ignores unitFilter and condition, so a set bit means "maybe", a clear bit means "no".
+    // ignores condition, so a set bit means "maybe", a clear bit means "no".
     InteractionGridMask_t GetInteractionMask() const { return m_interactionMask; }
 
     // Cached at construction from component TurnsOfFuel / Movement (design properties).

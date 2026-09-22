@@ -47,6 +47,7 @@
 #include "game/effects/InteractionGridsConfigParser.h"
 #include "game/effects/PoliceRulesConfigParser.h"
 #include "game/DifficultyConfigParser.h"
+#include "game/GameState.h"
 
 #include <deque>
 #include <memory>
@@ -297,6 +298,10 @@ struct FactionFixture : BaseFixture
     // release can reach WorkerAssignmentManager while the home base is still alive.
     std::deque<ac::UnitDesign> designs;
     std::vector<std::unique_ptr<ac::Faction>> factions;
+    // Session back-pointer for CreateUnit's on_unit_produced_effects (GrantXp). Owns a
+    // throwaway 1×1 map so it does not steal FactionFixture::map; GrantXp never touches it.
+    std::unique_ptr<ac::WorldMap> pBindMap;
+    std::unique_ptr<ac::GameState> pBindState;
     int nextFactionId = 1;
     int nextUnitId = 1;
 
@@ -319,6 +324,10 @@ struct FactionFixture : BaseFixture
         {
             rMoved.GetFaction().RebuildVisibility();
         });
+        pBindMap = std::make_unique<ac::WorldMap>(1, 1);
+        pBindState = std::make_unique<ac::GameState>(
+            std::move(pBindMap), improvements, &unitComponents, settings, morale(),
+            dataContext.tileYieldRules, dataContext.interactionGrids, k_TestRngSeed);
     }
 
     ac::SocialPolicyRegistry& socialPolicies() { return *dataContext.socialPolicyRegistry; }
@@ -358,6 +367,7 @@ struct FactionFixture : BaseFixture
             }
             map.GetTerritory().Rebuild(map, bases);
         });
+        rFaction.BindGameState(*pBindState);
         return rFaction;
     }
 

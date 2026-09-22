@@ -75,7 +75,6 @@ void AppendMatchingIntercepts_(std::vector<InterceptCandidate_t>& rOut,
         const auto* pIntercept =
             std::get_if<InterceptEffect_t>(&rEffect.config->effect);
         if (!pIntercept
-            || !UnitFilterSatisfied(*rEffect.config, rAttacker)
             || !ConditionSatisfied(*rEffect.config, rCtx, rEffect.originBase))
         {
             continue;
@@ -100,8 +99,7 @@ std::vector<InterceptCandidate_t> CollectInterceptCandidates_(GameState& rGameSt
     Faction& rDefFaction = rDefender.GetFaction();
     // The intercepting side is the defender, and the live attacker is available — so say so.
     // Marking the role Attacker and leaving pAttacker null meant an IsDefending condition on
-    // an intercept effect never matched and AttackerIsEmbarked was always false, silently, even
-    // though UnitFilterSatisfied right below already has the attacker.
+    // an intercept effect never matched and AttackerIsEmbarked was always false, silently.
     EffectContext_t ctx{&rDefender.GetTile(), CombatRole_t::Defender};
     ctx.pAttacker = &rAttacker;
     std::vector<InterceptCandidate_t> candidates;

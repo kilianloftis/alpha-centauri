@@ -163,9 +163,70 @@ struct TriggeredPayloadValidator
     void operator()(const WorldParameterEffect_t&) const {}
     void operator()(const SetInfiltrationEffect_t&) const {}
     void operator()(const ModifyPopulationEffect_t&) const {}
+    void operator()(const GrantXpEffect_t&) const {}
     void operator()(const DestroyFacilityEffect_t&) const {}
     void operator()(const RebelEffect_t&) const {}
 };
+
+void ValidateConditionReferences_(const Condition_t& rCondition,
+                                  const std::string& rSourceId,
+                                  const ImprovementRegistry* pImprovements,
+                                  const UnitComponentRegistry* pUnitComponents)
+{
+    auto checkFeature = [&](const std::string& rFeatureId)
+    {
+        if (pImprovements && !pImprovements->Find(rFeatureId))
+        {
+            ThrowBadReference(rSourceId, "condition feature", rFeatureId);
+        }
+    };
+    std::function<void(const Condition_t&)> checkCondition = [&](const Condition_t& rCond)
+    {
+        std::visit(
+            [&](const auto& rAlt)
+            {
+                using T = std::decay_t<decltype(rAlt)>;
+                if constexpr (std::is_same_v<T, TargetTileHas_t>)
+                {
+                    checkFeature(rAlt.featureId);
+                }
+                else if constexpr (std::is_same_v<T, AllOf_t>)
+                {
+                    for (const Condition_t& rNested : rAlt.conditions)
+                    {
+                        checkCondition(rNested);
+                    }
+                }
+                else if constexpr (std::is_same_v<T, HasComponent_t>)
+                {
+                    if (pUnitComponents && !pUnitComponents->Find(rAlt.component))
+                    {
+                        ThrowBadReference(rSourceId, "condition component", rAlt.component);
+                    }
+                }
+                else if constexpr (std::is_same_v<T, IsDefending_t>
+                                   || std::is_same_v<T, OriginBaseIsTargetBase_t>
+                                   || std::is_same_v<T, OriginBaseIsHomeBase_t>
+                                   || std::is_same_v<T, AttackerIsEmbarked_t>
+                                   || std::is_same_v<T, HasAirdroppedThisTurn_t>
+                                   || std::is_same_v<T, AttackerDomain_t>
+                                   || std::is_same_v<T, DefenderDomain_t>
+                                   || std::is_same_v<T, IsHeadquarters_t>
+                                   || std::is_same_v<T, SubjectDomain_t>
+                                   || std::is_same_v<T, HasFlag_t>
+                                   || std::is_same_v<T, IsPrototype_t>
+                                   || std::is_same_v<T, IsCombatUnit_t>)
+                {
+                }
+                else
+                {
+                    static_assert(k_AlwaysFalse<T>, "Unhandled Condition_t alternative");
+                }
+            },
+            rCond.AsVariant());
+    };
+    checkCondition(rCondition);
+}
 
 } // namespace
 
@@ -188,68 +249,10 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
             ThrowBadReference(rSourceId, "tech", rEffect.removedByTech);
         }
 
-        // Condition feature ids match Tile::HasFeature, and every one of them - including the
-        // intrinsic TerrainFeature_t ids - is an improvement entry. IsDefending /
-        // AttackerIsEmbarked have no feature id.
-        if (rEffect.condition && pImprovements)
+        if (rEffect.condition)
         {
-            auto checkFeature = [&](const std::string& rFeatureId)
-            {
-                if (!pImprovements->Find(rFeatureId))
-                {
-                    ThrowBadReference(rSourceId, "condition feature", rFeatureId);
-                }
-            };
-            std::function<void(const Condition_t&)> checkCondition = [&](const Condition_t& rCond)
-            {
-                std::visit(
-                    [&](const auto& rAlt)
-                    {
-                        using T = std::decay_t<decltype(rAlt)>;
-                        if constexpr (std::is_same_v<T, TargetTileHas_t>)
-                        {
-                            checkFeature(rAlt.featureId);
-                        }
-                        else if constexpr (std::is_same_v<T, AllOf_t>)
-                        {
-                            for (const Condition_t& rNested : rAlt.conditions)
-                            {
-                                checkCondition(rNested);
-                            }
-                        }
-                        else if constexpr (std::is_same_v<T, IsDefending_t>
-                                           || std::is_same_v<T, OriginBaseIsTargetBase_t>
-                                           || std::is_same_v<T, OriginBaseIsHomeBase_t>
-                                           || std::is_same_v<T, AttackerIsEmbarked_t>
-                                           || std::is_same_v<T, HasAirdroppedThisTurn_t>
-                                           || std::is_same_v<T, AttackerDomain_t>
-                                           || std::is_same_v<T, DefenderDomain_t>
-                                           || std::is_same_v<T, IsHeadquarters_t>)
-                        {
-                            // No config feature/component ids to resolve (domains are enums).
-                        }
-                        else
-                        {
-                            // A void visitor has no missing-return diagnostic, so without this
-                            // a new alternative would silently skip reference validation.
-                            static_assert(k_AlwaysFalse<T>, "Unhandled Condition_t alternative");
-                        }
-                    },
-                    rCond.AsVariant());
-            };
-            checkCondition(*rEffect.condition);
-        }
-
-        if (rEffect.unitFilter && pUnitComponents)
-        {
-            if (const auto* pHas =
-                    std::get_if<UnitFilterHasComponent_t>(&*rEffect.unitFilter))
-            {
-                if (!pUnitComponents->Find(pHas->component))
-                {
-                    ThrowBadReference(rSourceId, "unitFilter component", pHas->component);
-                }
-            }
+            ValidateConditionReferences_(*rEffect.condition, rSourceId, pImprovements,
+                                         pUnitComponents);
         }
 
         if (rEffect.buildingFilter && pBuildings)
@@ -269,12 +272,18 @@ void ValidateTriggeredEffectReferences(const std::vector<TriggeredEffectConfig_t
                                        const std::string& rSourceId,
                                        const BuildingRegistry* pBuildings,
                                        const TechRegistry* pTechs,
-                                       const UnitComponentRegistry* pUnitComponents)
+                                       const UnitComponentRegistry* pUnitComponents,
+                                       const ImprovementRegistry* pImprovements)
 {
     for (const TriggeredEffectConfig_t& rEffect : rEffects)
     {
         std::visit(TriggeredPayloadValidator{rSourceId, pBuildings, pTechs, pUnitComponents},
                    rEffect.effect);
+        if (rEffect.condition)
+        {
+            ValidateConditionReferences_(*rEffect.condition, rSourceId, pImprovements,
+                                         pUnitComponents);
+        }
     }
 }
 
@@ -321,13 +330,14 @@ void ValidateEffectReferences(const GameDataContext& rData)
                                  const std::string& rSourceId)
     {
         ValidateTriggeredEffectReferences(rEffects, rSourceId, &rBuildings, &rTechs,
-                                          &rUnitComponents);
+                                          &rUnitComponents, &rImprovements);
     };
 
     for (const BuildingConfig_t& rConfig : rBuildings.GetAll())
     {
         validate(rConfig.effects, rConfig.id);
         validateTriggered(rConfig.onCompleteEffects, rConfig.id);
+        validateTriggered(rConfig.onUnitProducedEffects, rConfig.id);
     }
     for (const StockpileConfig_t& rConfig : rStockpiles.GetAll())
     {
@@ -394,6 +404,7 @@ void ValidateEffectReferences(const GameDataContext& rData)
         validateTriggered(rPopComposition.riotTiers[tier].onEnterEffects, sourceId);
     }
     validate(rProductionConfig.effects, "production");
+    validateTriggered(rProductionConfig.onUnitProducedEffects, "production");
     validate(RequireRegistry(rData.baseConquestConfig, "baseConquestConfig").effects,
              "base_conquest");
     for (const DifficultyLevel_t& rLevel : rDifficultyConfig.levels)

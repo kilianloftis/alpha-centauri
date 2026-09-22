@@ -103,6 +103,14 @@ void ParseModifyPopulation_(const nlohmann::json& parameters, TriggeredEffectCon
     rEffect.effect = modify;
 }
 
+void ParseGrantXp_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+{
+    GrantXpEffect_t grant;
+    grant.amount = static_cast<int>(EffectConfigParser::RequireNumber(parameters, "amount"));
+    grant.op = EffectConfigParser::ParseModifierOp(parameters.value("op", "Add"));
+    rEffect.effect = grant;
+}
+
 void ParseDestroyFacility_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
 {
     const auto requireBool = [&parameters](const char* key)
@@ -145,6 +153,7 @@ const std::unordered_map<std::string, ParseFn_>& TypeParsers_()
         {"WorldParameter", ParseWorldParameter_},
         {"SetInfiltration", ParseSetInfiltration_},
         {"ModifyPopulation", ParseModifyPopulation_},
+        {"GrantXp", ParseGrantXp_},
         {"DestroyFacility", ParseDestroyFacility_},
         {"Rebel", ParseRebel_},
     };
@@ -234,11 +243,15 @@ TriggeredEffectConfig_t ParseTriggeredEffectConfig(const nlohmann::json& effectJ
     {
         effect.oncePer = ParseOncePer_(effectJson.at("once_per"));
     }
+    if (effectJson.contains("condition"))
+    {
+        effect.condition = EffectConfigParser::ParseCondition(effectJson.at("condition"));
+    }
     // Trigger timing comes from the list this entry sits in, and a triggered effect resolves
     // against an explicit context rather than a scope lane — so the continuous-only keys are
-    // rejected rather than silently ignored, which is how `condition` used to behave here.
-    for (const char* pKey : {"scope", "persistence", "condition", "radius", "min_radius",
-                             "unitFilter", "buildingFilter", "removed_by_tech"})
+    // rejected rather than silently ignored.
+    for (const char* pKey : {"scope", "persistence", "radius", "min_radius",
+                             "buildingFilter", "removed_by_tech"})
     {
         if (effectJson.contains(pKey))
         {

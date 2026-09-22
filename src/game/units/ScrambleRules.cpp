@@ -21,10 +21,12 @@ namespace ac
 namespace
 {
 
-// Max Scramble.range among ThisUnit effects whose unitFilter matches the attacker.
+// Max Scramble.range among ThisUnit effects whose condition matches the attacker.
 std::optional<int> MatchingScrambleRange_(const Unit& rCandidate, const Unit& rAttacker)
 {
     std::optional<int> best;
+    EffectContext_t ctx;
+    ctx.pAttacker = &rAttacker;
     for (const ActiveEffect_t& rEffect : rCandidate.GetDesign().CollectEffects())
     {
         if (rEffect.config->scope != EffectScope_t::ThisUnit)
@@ -37,7 +39,7 @@ std::optional<int> MatchingScrambleRange_(const Unit& rCandidate, const Unit& rA
         {
             continue;
         }
-        if (!UnitFilterSatisfied(*rEffect.config, rAttacker))
+        if (!ConditionSatisfied(*rEffect.config, ctx, rEffect.originBase))
         {
             continue;
         }

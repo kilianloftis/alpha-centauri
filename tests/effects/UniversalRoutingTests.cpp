@@ -136,8 +136,8 @@ TEST_CASE("ResolveFlag: context-free resolution skips condition-carrying RuleFla
     CHECK_FALSE(unit.GetDesign().GetFlag(RuleFlagId_t::ForcesPsiCombat));
 }
 
-TEST_CASE("ProducedAtThisBase unitFilter Domain: Aerospace Complex only boosts air starting XP",
-          "[effects][routing][unitFilter]")
+TEST_CASE("on_unit_produced GrantXp: Aerospace Complex only boosts air starting XP",
+          "[effects][routing][condition]")
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
@@ -148,15 +148,12 @@ TEST_CASE("ProducedAtThisBase unitFilter Domain: Aerospace Complex only boosts a
     Unit& land = fixture.MakeUnit(faction, 4, 4, {"test_chassis"}, &base, &base);
     Unit& air = fixture.MakeUnit(faction, 5, 4, {"test_flight_chassis"}, &base, &base);
 
-    // Both are the first built of their components, so both are prototypes. GetStat re-resolves
-    // the same effects that seeded GetXp, so the two must agree.
-    CHECK(land.GetXp() == 2); // base_intrinsic + prototype StartingExperience
-    CHECK(land.GetStat(StatId_t::StartingExperience) == 1);
+    // Both are the first built of their components, so both are prototypes.
+    CHECK(land.GetXp() == 2); // base_intrinsic + prototype GrantXp
     CHECK(air.GetXp() == 4); // base_intrinsic 1 + prototype 1 + Aerospace 2
-    CHECK(air.GetStat(StatId_t::StartingExperience) == 3);
 }
 
-TEST_CASE("ProducedAtThisBase StartingExperience requires matching production base",
+TEST_CASE("on_unit_produced GrantXp applies at the production base only",
           "[effects][routing][producedAt]")
 {
     actest::FactionFixture fixture;
@@ -170,7 +167,7 @@ TEST_CASE("ProducedAtThisBase StartingExperience requires matching production ba
     Unit& airBuiltElsewhere =
         fixture.MakeUnit(faction, 5, 5, {"test_flight_chassis"}, &otherBase, &otherBase);
     Unit& airNoBase = fixture.MakeUnit(faction, 4, 4, {"test_flight_chassis"});
-    // Home reassigned away from the production base must not strip train XP.
+    // Home reassigned away from the production base must not strip train XP already granted.
     Unit& airRehomed = fixture.MakeUnit(faction, 7, 7, {"test_flight_chassis"}, &withComplex,
                                         &withComplex);
     airRehomed.SetHomeBase(&otherBase);
@@ -179,13 +176,11 @@ TEST_CASE("ProducedAtThisBase StartingExperience requires matching production ba
     CHECK(airBuiltElsewhere.GetXp() == 1); // chassis already fielded; wrong base for Aerospace
     CHECK(airNoBase.GetXp() == 1);
     CHECK(airRehomed.GetHomeBase() == &otherBase);
-    CHECK(airRehomed.GetProducedAtBase() == &withComplex);
     CHECK(airRehomed.GetXp() == 3); // Aerospace only; chassis already fielded
-    CHECK(airRehomed.GetStat(StatId_t::StartingExperience) == 2);
 }
 
-TEST_CASE("FactionUnits unitFilter HasComponent: only matching designs receive the bonus",
-          "[effects][routing][unitFilter]")
+TEST_CASE("FactionUnits condition HasComponent: only matching designs receive the bonus",
+          "[effects][routing][condition]")
 {
     actest::FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();

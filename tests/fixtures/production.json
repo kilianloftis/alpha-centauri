@@ -35,15 +35,15 @@
       }
     }
   },
-  "effects": [
+  "on_unit_produced_effects": [
     {
-      "type": "StatModifier",
-      "scope": "FactionUnits",
-      "unitFilter": { "kind": "IsPrototype" },
+      "type": "GrantXp",
       "parameters": {
-        "stat": "starting_experience",
         "amount": 1,
         "op": "Add"
+      },
+      "condition": {
+        "kind": "IsPrototype"
       }
     }
   ]

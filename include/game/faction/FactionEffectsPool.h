@@ -63,7 +63,7 @@ private:
     // Universal tile-yield rules (MaxClamp resource caps, etc.) from GameDataContext.
     std::vector<ActiveEffect_t> CollectTileYieldRuleEffects_() const;
 
-    // Production.json continuous effects (prototype StartingExperience, …).
+    // Production.json continuous effects (merged into every faction pool).
     std::vector<ActiveEffect_t> CollectProductionEffects_() const;
 
     // pop_growth.json continuous baselines (StartingSize / MaxBaseSize).

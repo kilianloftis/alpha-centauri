@@ -2,6 +2,7 @@
 
 #include <set>
 
+#include "game/effects/ActiveEffect.h"
 #include "game/faction/base/HomeBaseIndex.h"
 #include "game/map/WorkedTileIndex.h"
 #include "game/units/MoraleCalculator.h"
@@ -42,13 +43,13 @@ public:
     // other way to change a unit's position. Placement legality is the caller's job
     // (UnitManager::CreateUnit). unitId must be unique for the life of the game
     // (WorldMap's unit IdAllocator).
-    // pProducedAt is the base that built this unit (train bonuses + prototype latch). Distinct
+    // pProducedAt is ephemeral: stamp ProducedAtThisBase grants + prototype latch. Distinct
     // from pHomeBase, and three-valued so "homed but built nowhere" is sayable:
-    //   nullopt (default) — unspecified; produced-at bookkeeping falls back to pHomeBase
-    //   a base           — built there; the only form that can latch the prototype bonus
-    //   nullptr          — explicitly produced nowhere, so no train bonuses and no
-    //                      StartingExperience even when homed (a granted or gifted unit)
-    // Production passes the same base as both.
+    //   nullopt (default) — unspecified; stamp from pHomeBase when set; fires on_unit_produced
+    //                       when that base is set (but does not latch prototype)
+    //   a base           — stamp / on_unit_produced from that base; only form that latches prototype
+    //   nullptr          — explicitly produced nowhere: no stamps, no on_unit_produced (gift)
+    // Production passes the same base as both. The production base is not stored.
     // rMorale is the game-wide calculator owned by GameDataContext (supplied by the owning
     // UnitManager); used here only to seed intrinsic XP and clamp SetXp.
     Unit(UnitId_t unitId,
@@ -76,13 +77,9 @@ public:
     const Tile& GetTile() const;
     // Home base from the held HomeBaseClaim (nullptr when unset or the base was destroyed).
     BaseManager* GetHomeBase() const;
-    // Base that produced this unit (nullptr if unknown / destroyed). Independent of home.
-    BaseManager* GetProducedAtBase() const;
-    // Forget the production base. Ownership transfer calls this: the record names a base of
-    // the *previous* owner, and GetProducedAtBase resolves ids against the unit's own faction,
-    // so keeping it would let the unit retroactively claim ProducedAtThisBase bonuses if the
-    // new owner ever captured that base (see docs/architecture/high-level.md, "Object lifetime").
-    void ClearProducedAtBase();
+    // Permanent ProducedAtThisBase grants stamped at construction (empty for gifts / free spawns
+    // with an explicit null production base). Survives rehome and ownership transfer.
+    const std::vector<ActiveEffect_t>& GetProductionGrants() const;
     Faction& GetFaction();
     const Faction& GetFaction() const;
     // Ownership transfer (Faction::TransferUnitTo): rebind to the new owner without
@@ -201,8 +198,11 @@ private:
     const Tile* m_pTile;
     // Holding the claim IS the home-base link (see HomeBaseIndex).
     HomeBaseClaim m_homeBaseClaim;
-    // Production base id (looked up via GetProducedAtBase); independent of home claim.
-    std::optional<int> m_producedAtBaseId;
+    // ProducedAtThisBase effects copied at construction; originBase cleared on each copy.
+    // config pointers remain valid for the unit's life: every ProducedAtThisBase EffectConfig_t
+    // is owned by a load-time registry (buildings, ratings, …), not by the ephemeral faction
+    // effects pool — the stamp deliberately outlives pool rebuilds.
+    std::vector<ActiveEffect_t> m_productionGrants;
     // Rebindable owner (RebindFaction): never null while the unit lives in a UnitManager.
     Faction* m_pFaction;
     const MoraleCalculator& m_rMorale;

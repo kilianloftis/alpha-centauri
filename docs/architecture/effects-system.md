@@ -107,7 +107,8 @@ not by which config declared it. Each scope has one "lane":
 | `ThisBase` | owning base | source collector tags `originBase`; `FilterForBase` |
 | `AllOwnerBases` / `FactionGlobal` | every base of the faction | faction pool (`CollectActiveEffects`) |
 | `WorldGlobal` | every base of every faction | composed into `Faction::GetActiveEffects()` (local `FactionEffectsPool` + `IWorldEffectsSource` / `GameState::CollectWorldExtras` for peer WorldGlobal and council extras). Turn stages call no-arg `ProduceBaseResources` / `ApplyBaseGrowth`; they do not append a second list. |
-| `FactionUnits` | live units of the faction (home-base scoped when `originBase` is set) | faction pool → `CollectLiveUnitEffects`; building effects tag `originBase` so train bonuses apply only to units home to that base. Combat Attack/Defense use `ResolveCombatUnitStat`, which merges the unit's effective `MoraleLevel_t::effects` (Attack/Defense `AddPercent` from `morale_levels.json`) into the same stack. `EffectContext_t::combatRole` enables `IsDefending` (SE Morale defense-in-base). Post-combat promotion uses `morale_levels.json` `promotion_seed_formula` (Lua: `attack_strength`, `defense_strength`) plus intrinsic-level `promotion_chance` stack modifiers; promotion rolls use stored XP, not SE-shifted effective level. |
+| `FactionUnits` | live units of the faction (home-base narrowed when conditions use `OriginBaseIsHomeBase`) | faction pool → `CollectLiveUnitEffects`. Combat Attack/Defense use `ResolveCombatUnitStat`, which merges the unit's effective `MoraleLevel_t::effects` (Attack/Defense `AddPercent` from `morale_levels.json`) into the same stack. `EffectContext_t::combatRole` enables `IsDefending` (SE Morale defense-in-base). Post-combat promotion uses `morale_levels.json` `promotion_seed_formula` (Lua: `attack_strength`, `defense_strength`) plus intrinsic-level `promotion_chance` stack modifiers; promotion rolls use stored XP, not SE-shifted effective level. |
+| `ProducedAtThisBase` | units built at the originating base | stamped onto the unit at construction (`Unit::GetProductionGrants`); collected by `CollectLiveUnitEffects` from the unit, not by live pool origin matching. Permanent non-XP train grants. Starting XP (Command Center, Aerospace, prototype) uses triggered `GrantXp` on `on_unit_produced_effects` instead. |
 | `ThisUnit` | the unit itself | `CollectUnitEffects` (design components) |
 | `ThisPop` | the pop itself | `Pop::ApplyTileMultipliers` (per worked-tile Add / %) |
 | `ThisTile` | tile resolvers | `CollectTileEffects`/`CollectAreaEffects` — features on the tile, radius-reaching features nearby, and units projecting component effects |
@@ -177,7 +178,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   - Base resources: `Nutrients`, `Minerals`, `Energy`. `EnergyCredits` is the spendable
     faction treasury (`EconomyManager`), not tile energy.
   - Base output allocated directly rather than via energy split: `Econ`, `Labs`, `Psych`.
-  - Unit stats: `Attack`, `Defense`, `Movement`, `HitPoints`, `DisengageChance`, `TurnsOfFuel`, `DamageFromOutOfFuel`, `CargoCapacity`, `DifficultTerrainCost`, `MineralUpkeep` (home-base mineral support cost; floored at 0), `FreeUnitSupport` (base-level free support slots), `CostMultiplier` (also used for base production cost after Industry rating expansion), `PrototypeSurchargeScale` (PureMultiplier on the prototype mineral *extra* only; Skunkworks uses `MultiplyGeometric` 0 on `ThisBase`), `RetoolPenaltyScale` (PureMultiplier on the retool forfeit; Skunkworks zeros it the same way), `FacilityEnergyUpkeep` (RawScaled on constructed-facility energy maintenance from `BuildingConfig_t::upkeep`; optional `buildingFilter`), `StartingExperience` (seeded into unit XP at spawn), `StartingMinerals` (credited to a new base's production stockpile at founding; resolved from the new base's effects plus the founding unit), `ScrapRefund` (RawScaled: player-scrap amount after the kind formula or config override; bonuses stack, then `refund_ceiling_percent` clamps).
+  - Unit stats: `Attack`, `Defense`, `Movement`, `HitPoints`, `DisengageChance`, `TurnsOfFuel`, `DamageFromOutOfFuel`, `CargoCapacity`, `DifficultTerrainCost`, `MineralUpkeep` (home-base mineral support cost; floored at 0), `FreeUnitSupport` (base-level free support slots), `CostMultiplier` (also used for base production cost after Industry rating expansion), `PrototypeSurchargeScale` (PureMultiplier on the prototype mineral *extra* only; Skunkworks uses `MultiplyGeometric` 0 on `ThisBase`), `RetoolPenaltyScale` (PureMultiplier on the retool forfeit; Skunkworks zeros it the same way), `FacilityEnergyUpkeep` (RawScaled on constructed-facility energy maintenance from `BuildingConfig_t::upkeep`; optional `buildingFilter`), `StartingMinerals` (credited to a new base's production stockpile at founding; resolved from the new base's effects plus the founding unit), `ScrapRefund` (RawScaled: player-scrap amount after the kind formula or config override; bonuses stack, then `refund_ceiling_percent` clamps).
   - Difficulty stats (see [difficulty-system.md](difficulty-system.md)): `SizeFreeDrones` (Additive free population before size drones — difficulty is the sole emitter), `TechCostDiff` (Additive ordinal fed to `tech_cost.lua` as `diff`), `Bureaucracy` (PureMultiplier product for the bureaucracy base-limit formula; difficulty and Efficiency SE emit MultiplyGeometric), `EcologicalDamage` (RawScaled: seed is the accrued amount), `ConqueredDroneCap` (Additive offset on the recently-conquered drone cap; difficulty Adds `0.25 × level` with Citizen = 1, `base_conquest.json` Adds −0.5).
   - Population modifier: `GrowthRate` (`AddPercent`, base = 100%) — modifies the faction-wide population growth rate. `LastDefenderPopLoss` and `CapturePopLoss` are two independent Additive stats whose baselines come from `base_conquest.json`'s own `effects` array (an `Add` each, injected into every faction's pool like `production.json`'s). Perimeter Defense and Citizen difficulty `MaxClamp` 0 the last-defender one only; nothing in the shipping config modifies capture loss. `CaptureFacilitiesDestroyedMin` and `CaptureFacilitiesDestroyedMaxPercent` are the same shape. `ConqueredDroneCap` is the recently-conquered drone-cap offset: difficulty Adds `0.25` per level (Citizen = 1) and `base_conquest.json` Adds −0.5, so the drone formula's `floor(base_size/4 + conquered_drone_cap)` is `(BaseSize + Difficulty − 2) / 4`. Peak extra drones and the 10-turn decay live on `pop_composition.json` (`assimilation_drones`, `assimilation_decay_turns`) because they are calculator coefficients, not modifiers. So **every numeric tunable in `base_conquest.json` is a modifiable stat** — the file holds no scalars at all, only its effects list and the escape-pod component ids. Because each baseline is an ordinary contribution rather than a hard-coded seed, a mod can *raise* these values, not merely clamp them; vanilla simply ships no emitter besides the baseline for most of them.
   - Terrain mutation: `MoistureTier` — resolved back into `Tile::SetMoisture` by `RecomputeMoisture`; not a runtime-queried stat (see Tile Improvement Effects).
@@ -444,11 +445,14 @@ resolution. One-shot effects are **executed**: RNG, ledger writes, ownership tra
 once. These are two machines, and they are two types.
 
 - **`TriggeredEffectConfig_t`** (`TriggeredEffect.h`) holds a `TriggeredEffectVariant_t` —
-  `AddBuilding`, `GrantTech`, `GrantUnit`, `GrantEnergy`, `WorldParameter`, `SetInfiltration`,
-  `ModifyPopulation`, `DestroyFacility`, `Rebel` — plus an optional `oncePer`, and a
-  `factionFilter` that **only `SetInfiltration` accepts** (every other type acts on the
-  subjects its context supplies, so a filter there would narrow nothing and is a parse error). It carries **no** scope, condition, radius or unit/building filter: those describe
-  where and when a continuous effect resolves, and a triggered one gets both from its slot.
+  `AddBuilding`, `GrantTech`, `GrantUnit`, `GrantEnergy`, `GrantXp`, `WorldParameter`,
+  `SetInfiltration`, `ModifyPopulation`, `DestroyFacility`, `Rebel` — plus an optional
+  `oncePer`, an optional `condition` (same `Condition_t` as continuous, evaluated against
+  `TriggeredEffectContext_t::subjects`), and a `factionFilter` that **only `SetInfiltration`
+  accepts** (every other type acts on the subjects its context supplies, so a filter there
+  would narrow nothing and is a parse error). It carries **no** scope, radius, or
+  buildingFilter: those describe where a continuous effect resolves; trigger timing comes
+  from the slot list.
 - **`GrantBuilding` / `Infiltration` exist in both families**, under names that say what they
   do. Continuous `GrantBuildingEffect_t` expands the target's effects only; triggered
   `AddBuildingEffect_t` calls `AddBuilding` and the facility pays upkeep. Continuous
@@ -461,7 +465,9 @@ container declares a continuous `effects` array and, where a trigger exists, a n
 
 | Config | continuous | triggered |
 |---|---|---|
-| `buildings/*.json`, `unit_components/*.json` | `effects` | `on_complete_effects` |
+| `buildings/*.json` | `effects` | `on_complete_effects`, `on_unit_produced_effects` |
+| `production.json` | `effects` | `on_unit_produced_effects` |
+| `unit_components/*.json` | `effects` | `on_complete_effects` |
 | `probe_actions.json` | `effects` | `on_success_effects` |
 | `council/proposals.json` | `effects` | `on_passed_effects` |
 | `council/rules.json` | `governor_effects` | `on_elected_effects` |
@@ -482,10 +488,12 @@ then silently never fired.
 - **Signature**: `ApplyTriggeredEffects(span<const TriggeredEffectConfig_t>,
   TriggeredEffectContext_t&) -> vector<TriggeredEffectResult_t>`. The one dispatcher; the five
   hand-rolled `persistence == Instantaneous` scans it replaced are gone.
-- **`TriggeredEffectContext_t`** carries whatever the trigger had: `factions` (never empty),
-  and optionally `pBase`, `pUnit`, `pTile`, `actionTarget`, `pRng`. A production completion has
-  a base; a council vote has a faction list and no base; a monolith visit has a unit and a tile.
-  An entry needing a subject the context lacks is **skipped**, not guessed at.
+- **`TriggeredEffectContext_t`** carries trigger-only fields (`factions`, optional `actionTarget` /
+  RNG) plus non-const subjects (`pBase`, `pUnit`, `pFaction`, `pTile`). Conditions and amount
+  sources read through `Subjects()`, which materialises a const `EffectContext_t`. A production
+  completion stamps base + tile; unit production stamps `pUnit`. `pFaction` is re-stamped per
+  apply so a faction-identity condition sees the member being credited. An entry needing a
+  subject the bag lacks is **skipped**, not guessed at.
 - **One application per subject**: a faction-subject entry (`GrantTech`, `GrantEnergy`,
   `GrantUnit`, `SetInfiltration`) runs once per listed faction, which is how a council
   `GrantEnergy` credits every member. A base-, unit- or world-subject entry runs once however
@@ -524,20 +532,20 @@ shared `EnsureAdHocDesign` (`units/AdHocDesign.h`). Ids are validated at load in
 `GameDataContext`, so a typo fails at startup naming the file.
 
 A granted unit is **homed but produced nowhere** (`CreateUnit` with an explicit null
-`pProducedAt`): it pays support, but collects neither the anchor's `ProducedAtThisBase` train
-bonuses nor `StartingExperience`, matching the prototype latch that already denies free spawns
-the bonus. `Unit`'s `pProducedAt` is three-valued for exactly this — omitted defaults to home,
-an explicit `nullptr` means built nowhere.
+`pProducedAt`): it pays support, but receives neither stamped `ProducedAtThisBase` grants
+nor `on_unit_produced` `GrantXp`, matching the prototype latch that already denies free spawns
+the bonus. `Unit`'s `pProducedAt` is three-valued for exactly this — omitted stamps / fires
+`on_unit_produced` from home, an explicit `nullptr` means built nowhere.
 
-The **anchor base** — where the unit appears and what it is homed to — resolves in order of how specific the context is: `ctx.pBase`, else the faction
-base nearest `ctx.pTile` (`Faction::FindNearestBase`), else `GetHeadquarters()`, else any base;
+The **anchor base** — where the unit appears and what it is homed to — resolves in order of how specific the context is: `subjects.pBase`, else the faction
+base nearest `subjects.targetTile` (`Faction::FindNearestBase`), else `GetHeadquarters()`, else any base;
 no bases means no spawn. Placement takes the anchor tile if free, then outward rings. A full map
 grants fewer units and reports the real count rather than throwing.
 
 ### CollectLiveUnitEffects
-- Returns design + FactionUnits + matching ProducedAtThisBase effects. The list already
-  satisfies `UnitFilterSatisfied` and the ProducedAt origin match — `ResolveFlag` /
-  resolve paths re-check conditions only, not unitFilter.
+- Returns design + FactionUnits + permanent `ProducedAtThisBase` grants stamped on the unit at
+  construction (`Unit::GetProductionGrants`). Identity conditions (Domain / IsPrototype / …)
+  are applied at collect; resolve paths re-check via `ConditionSatisfied`.
 
 ### CouncilEffects
 - **Borrows, never copies**: wrappers point straight at the `EffectConfig_t` entries owned by
@@ -896,7 +904,7 @@ rule that belongs to a *tile* is plain code at the call site that needs it: `Til
 `MovementRules` / `FuelRules` / `AttackRules`, and boarding via `UnitCarries` in
 `TransportRules`. Stock Amphibious Pods override `enter` for land×water when Water+Base, plus
 `attack_tile` for every footing. Air Superiority overrides `attack_unit` for target
-air/orbital, carries `Scramble` with `unitFilter` Domain air and `parameters.range`
+air/orbital, carries `Scramble` with `condition` Domain air and `parameters.range`
 2, and projects a ThisTile `airdrop_interdiction` RuleFlag at radius 2. Cloaking Device and Probe Team override `zoc` to `deny` with both axes omitted —
 where stock would hold the unit that is non-default; where stock already denies, the override
 is a no-op. `Water` is a real

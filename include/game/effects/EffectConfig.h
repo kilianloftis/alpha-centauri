@@ -182,7 +182,7 @@ struct OrbitalAttackEffect_t
 };
 
 // Generic pre-combat intercept: before Resolve, roll to destroy the attacker.
-// unitFilter (on EffectConfig_t) selects eligible attackers; condition gates the situation.
+// condition (typically AttackerDomain) selects eligible attackers and gates the situation.
 // Optional cooldownTurns: when >= 0, attempting deploys the source (shared with OrbitalAttack
 // when both live on the same building id).
 struct InterceptEffect_t
@@ -198,8 +198,9 @@ struct InterceptEffect_t
 };
 
 // This unit may scramble to become the combat defender against an attacker that satisfies
-// unitFilter (required on EffectConfig_t). `range` is Chebyshev tiles from the candidate to
-// the original defender's tile; eligibility and move-onto-tile live in ScrambleRules.
+// condition (required; typically AttackerDomain). `range` is Chebyshev tiles from the
+// candidate to the original defender's tile; eligibility and move-onto-tile live in
+// ScrambleRules.
 struct ScrambleEffect_t
 {
     // Required in JSON; set explicitly when hand-building. Must be > 0.
@@ -209,8 +210,8 @@ struct ScrambleEffect_t
 // Declares which passenger domains this unit may carry (`carries`), and whether loading
 // requires a matching harbor tile (`requires_harbor`). Embarked cargo of a carried domain
 // refuels on the carrier — that follows from carries, not a separate flag. Capacity remains
-// cargo_capacity. Contributions union across matching ThisUnit effects (see unitFilter for
-// carrier domain).
+// cargo_capacity. Contributions union across matching ThisUnit effects (see condition for
+// carrier SubjectDomain).
 struct TransportParamsEffect_t
 {
     std::vector<UnitDomain_t> carries;
@@ -323,15 +324,49 @@ struct IsHeadquarters_t
 {
 };
 
+// Identity predicates on EffectContext_t::pUnit — the *effect subject* (the unit carrying
+// or receiving the effect: CollectLiveUnitEffects carrier, GrantXp produced unit, stamps).
+// Fail closed if pUnit is absent. Distinct from AttackerDomain / DefenderDomain (combat roles).
+struct SubjectDomain_t
+{
+    UnitDomain_t domain = UnitDomain_t::Land;
+};
+
+struct HasComponent_t
+{
+    std::string component;
+};
+
+struct HasFlag_t
+{
+    RuleFlagId_t flag = RuleFlagId_t::Flight;
+};
+
+// True when the unit was created carrying a component its faction had never fielded.
+// Reads Unit::IsPrototype, latched at construction — not a live ledger read.
+struct IsPrototype_t
+{
+};
+
+// True when UnitDesign::IsCombatUnit (additive Attack > 0 or ForcesPsiCombat). Design-only
+// flag resolve so FactionUnits collection stays recursion-safe.
+struct IsCombatUnit_t
+{
+};
+
 struct Condition_t : std::variant<TargetTileHas_t, AllOf_t, IsDefending_t,
                                   OriginBaseIsTargetBase_t, OriginBaseIsHomeBase_t,
                                   AttackerIsEmbarked_t, HasAirdroppedThisTurn_t,
-                                  AttackerDomain_t, DefenderDomain_t, IsHeadquarters_t>
+                                  AttackerDomain_t, DefenderDomain_t, IsHeadquarters_t,
+                                  SubjectDomain_t, HasComponent_t, HasFlag_t, IsPrototype_t,
+                                  IsCombatUnit_t>
 {
     using Variant = std::variant<TargetTileHas_t, AllOf_t, IsDefending_t,
                                  OriginBaseIsTargetBase_t, OriginBaseIsHomeBase_t,
                                  AttackerIsEmbarked_t, HasAirdroppedThisTurn_t,
-                                 AttackerDomain_t, DefenderDomain_t, IsHeadquarters_t>;
+                                 AttackerDomain_t, DefenderDomain_t, IsHeadquarters_t,
+                                 SubjectDomain_t, HasComponent_t, HasFlag_t, IsPrototype_t,
+                                 IsCombatUnit_t>;
     using Variant::Variant;
     using Variant::operator=;
 
@@ -339,45 +374,8 @@ struct Condition_t : std::variant<TargetTileHas_t, AllOf_t, IsDefending_t,
     const Variant& AsVariant() const & { return *this; }
 };
 
-// Restricts which units an effect applies to when merged into a live unit's effect list
-// (CollectLiveUnitEffects). Absent = all units. Distinct from condition: filters are
-// unit-identity predicates evaluated context-free (domain, component loadout), not combat
-// situational predicates.
-struct UnitFilterDomain_t
-{
-    UnitDomain_t domain = UnitDomain_t::Land;
-};
-
-struct UnitFilterHasComponent_t
-{
-    std::string component;
-};
-
-// Unit resolves true for the named RuleFlag (design + FactionUnits).
-struct UnitFilterHasFlag_t
-{
-    RuleFlagId_t flag = RuleFlagId_t::Flight;
-};
-
-// True when the unit was created carrying a component its faction had never fielded.
-// Reads Unit::IsPrototype, latched at construction, so it stays a context-free identity
-// predicate like the filters above rather than a live read of the faction's build ledger.
-struct UnitFilterIsPrototype_t
-{
-};
-
-// True when UnitDesign::IsCombatUnit (additive Attack > 0 or ForcesPsiCombat).
-// Design-only (same recursion rule as HasFlag) so FactionUnits collection stays safe.
-struct UnitFilterIsCombatUnit_t
-{
-};
-
-using UnitFilter_t =
-    std::variant<UnitFilterDomain_t, UnitFilterHasComponent_t, UnitFilterHasFlag_t,
-                 UnitFilterIsPrototype_t, UnitFilterIsCombatUnit_t>;
-
 // Restricts which buildings a FacilityEnergyUpkeep (or similar) modifier applies to.
-// Absent buildingFilter = all buildings. Distinct from unitFilter.
+// Absent buildingFilter = all buildings.
 struct BuildingFilterAll_t
 {
 };
@@ -410,12 +408,11 @@ struct EffectConfig_t
     EffectVariant_t effect;
     EffectScope_t scope;
     // Absent = the effect always applies. When present, the effect only applies in a runtime
-    // context that satisfies the condition (see ConditionSatisfied / EffectContext_t). Such
-    // effects are excluded from context-free resolution (base economy, intrinsic unit stats).
+    // context that satisfies the condition (see ConditionSatisfied / EffectContext_t).
+    // Situational arms (TargetTileHas, IsDefending, …) are excluded from context-free
+    // resolution; identity arms (Domain, IsPrototype, …) are applied in CollectLiveUnitEffects
+    // / in-context resolve when pUnit is set.
     std::optional<Condition_t> condition;
-    // Absent = applies to every unit that receives this effect. When present, CollectLiveUnitEffects
-    // drops the effect for units that do not match (e.g. Domain=Air for Aerospace Complex).
-    std::optional<UnitFilter_t> unitFilter;
     // Absent = applies to every building when resolving FacilityEnergyUpkeep. When present,
     // only matching building types receive the modifier (All / BuildingId / Category).
     std::optional<BuildingFilter_t> buildingFilter;
@@ -424,7 +421,7 @@ struct EffectConfig_t
     std::optional<FactionFilter_t> factionFilter;
     // When set, FactionEffectsPool omits this effect once the faction has discovered the tech.
     // Empty / absent = never removed by research. Parsed from the effect entry's
-    // "removed_by_tech" field (alongside condition / unitFilter).
+    // "removed_by_tech" field (alongside condition / buildingFilter).
     std::string removedByTech;
     // For ThisTile-scoped effects: how far (Chebyshev tiles) beyond the host tile the effect
     // reaches. 0 (default) = the host tile only. Parsed from the effect entry's "radius" field.

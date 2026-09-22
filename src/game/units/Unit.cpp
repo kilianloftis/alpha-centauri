@@ -47,10 +47,7 @@ Unit::Unit(UnitId_t unitId,
     , m_currentFuel(0)
     , m_moveFragmentsRemaining(0)
     , m_xp(0)
-    // Prototype XP is "first one you built" (docs/game-rules-decisions.md): only an explicit
-    // production base latches true. Free spawns (Engine starting units, escape pods) still
-    // unlock the ledger via UnitManager::RecordBuiltComponents, but do not collect the bonus.
-    // Latch before that record so StartingExperience below and later IsPrototype() agree.
+    // Latch before RecordBuiltComponents so later IsPrototype() agrees with construction.
     , m_bPrototype(pProducedAt.value_or(nullptr) != nullptr
                    && rFaction.GetMilitary().IsPrototype(rDesign))
     , m_bRegistered(false)
@@ -59,22 +56,32 @@ Unit::Unit(UnitId_t unitId,
     {
         m_homeBaseClaim = pHomeBase->GetHomeUnits().Claim(*this);
     }
-    // Production base is independent of home; an omitted value defaults to home, while an
-    // explicit nullptr means built nowhere — a gift is homed but collects no train bonus.
-    // Bookkeeping only, not a prototype signal; see m_bPrototype above.
+    // Stamp ProducedAtThisBase grants once from the ephemeral production base. Omitted falls
+    // back to home; explicit nullptr means built nowhere (gift) — no stamp.
     if (BaseManager* pBuiltAt = pProducedAt.has_value() ? *pProducedAt : pHomeBase)
     {
-        m_producedAtBaseId = pBuiltAt->GetBaseId();
+        EffectContext_t stampCtx;
+        stampCtx.pUnit = this;
+        for (const ActiveEffect_t& rEffect : rFaction.GetActiveEffects().effects)
+        {
+            if (rEffect.config->scope != EffectScope_t::ProducedAtThisBase
+                || rEffect.originBase != pBuiltAt
+                || !ConditionSatisfied(*rEffect.config, stampCtx, rEffect.originBase))
+            {
+                continue;
+            }
+            // Membership was one-shot; clear origin so transfer / destroyed bases cannot
+            // be consulted again.
+            m_productionGrants.emplace_back(*rEffect.config, rEffect.sourceId, nullptr);
+        }
     }
 
     // Members used by ResolveStat are initialised above; seed after the mem-init list.
-    // ProducedAtThisBase StartingExperience needs m_producedAtBaseId before this resolve.
     m_currentHp = ResolveStat(*this, StatId_t::HitPoints);
     m_currentFuel = GetMaxFuel();
     m_moveFragmentsRemaining =
         GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint;
-    m_xp = m_rMorale.BaseIntrinsicXp(*this)
-        + ResolveStat(*this, StatId_t::StartingExperience);
+    m_xp = m_rMorale.BaseIntrinsicXp(*this);
     m_rPositions.Register_(*this, rTile);
     m_bRegistered = true;
 }
@@ -202,22 +209,10 @@ UnitDomain_t Unit::GetDomain() const
 
 const Tile& Unit::GetTile() const                                      { return *m_pTile; }
 BaseManager* Unit::GetHomeBase() const      { return m_homeBaseClaim.GetBase(); }
-BaseManager* Unit::GetProducedAtBase() const
+const std::vector<ActiveEffect_t>& Unit::GetProductionGrants() const
 {
-    if (!m_producedAtBaseId.has_value())
-    {
-        return nullptr;
-    }
-    for (BaseManager& rBase : m_pFaction->Bases())
-    {
-        if (rBase.GetBaseId() == *m_producedAtBaseId)
-        {
-            return &rBase;
-        }
-    }
-    return nullptr;
+    return m_productionGrants;
 }
-void Unit::ClearProducedAtBase()            { m_producedAtBaseId.reset(); }
 Faction& Unit::GetFaction()                 { return *m_pFaction; }
 const Faction& Unit::GetFaction() const     { return *m_pFaction; }
 

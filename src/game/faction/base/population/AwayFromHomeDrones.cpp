@@ -10,7 +10,6 @@
 #include "game/units/Unit.h"
 
 #include <cmath>
-#include <vector>
 
 namespace ac
 {
@@ -20,10 +19,8 @@ namespace
 
 double UnitAwayWeight_(const Unit& rUnit)
 {
-    const std::vector<ActiveEffect_t> effects = CollectLiveUnitEffects(rUnit).effects;
-    return ResolveStatModifiersTotal(
-        FilterByStatId(effects, StatId_t::AwayFromHomeDrones),
-        SeedFor(StatId_t::AwayFromHomeDrones));
+    return ResolveUnitStat(CollectLiveUnitEffects(rUnit), StatId_t::AwayFromHomeDrones,
+                           SeedFor(StatId_t::AwayFromHomeDrones));
 }
 
 } // namespace

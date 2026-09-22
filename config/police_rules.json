@@ -3,14 +3,26 @@
     {
       "type": "StatModifier",
       "scope": "FactionUnits",
-      "unitFilter": { "kind": "IsCombatUnit" },
-      "parameters": { "stat": "away_from_home_drones", "amount": 1, "op": "Add" }
+      "parameters": {
+        "stat": "away_from_home_drones",
+        "amount": 1,
+        "op": "Add"
+      },
+      "condition": {
+        "kind": "IsCombatUnit"
+      }
     },
     {
       "type": "StatModifier",
       "scope": "FactionUnits",
-      "unitFilter": { "kind": "IsCombatUnit" },
-      "parameters": { "stat": "police_effectiveness", "amount": 1, "op": "Add" }
+      "parameters": {
+        "stat": "police_effectiveness",
+        "amount": 1,
+        "op": "Add"
+      },
+      "condition": {
+        "kind": "IsCombatUnit"
+      }
     }
   ]
 }

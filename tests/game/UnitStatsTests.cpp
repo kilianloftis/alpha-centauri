@@ -52,9 +52,8 @@ TEST_CASE("A fresh unit starts at its live resolved maxima", "[unit][stats]")
     CHECK(unit.GetMovementPoints() == unit.GetStat(StatId_t::Movement));
     CHECK(unit.GetMoveFragmentsRemaining()
           == unit.GetMovementPoints() * MovementConstants_t::k_moveFragmentsPerPoint);
-    // Free spawn: no pProducedAt, so no prototype StartingExperience (first one you built).
+    // Free spawn: no pProducedAt, so no prototype GrantXp (first one you built).
     CHECK(unit.GetXp() == 1); // base_intrinsic (Green)
-    CHECK(unit.GetStat(StatId_t::StartingExperience) == 0);
 }
 
 TEST_CASE("Current-stat setters clamp to [0, live max]", "[unit][stats]")

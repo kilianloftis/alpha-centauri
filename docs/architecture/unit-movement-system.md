@@ -184,14 +184,14 @@ Targeting rules (embarked-in-base, prefer carrier) live in `FindVisibleHostileOn
    Success destroys the attacker with empty rounds. Stock filters orbital attackers on base
    tiles.
 2. **`Scramble`** — after Intercept misses/skips, `ResolveScrambleDefender_`
-   picks a same-faction unit with a matching `unitFilter` against the attacker, Chebyshev
+   picks a same-faction unit with a matching `condition` against the attacker, Chebyshev
    distance within the effect's `range`, and a `Pathfinder` path whose `totalCostFragments`
    fit in remaining moves. Ranking: highest live Attack, then current HP, then lowest unit
    id. `TryAttack` assigns a `MoveOrder` to the destination and `Execute`s it — the same
    hop-by-hop `TryStep` loop as normal movement — then uses the arrived unit as the
    `CombatResolver` defender (original defender does not fight). Hops are recorded on
    `CombatResult_t::scramblePath` for future UI playback. Stock Air Superiority uses
-   `unitFilter` Domain air and `parameters.range` 2.
+   `condition` Domain air and `parameters.range` 2.
 3. **Airdrop hard-deny** — `IsAirdropInterdicted` scans `CollectAreaEffects` on the
    destination for a hostile-owned `airdrop_interdiction` RuleFlag (ThisTile aura, typically
    with radius). Stock Air Superiority projects radius 2 the same way units project Detect;

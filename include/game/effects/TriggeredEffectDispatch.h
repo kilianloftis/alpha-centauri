@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/buildings/BuildingConfig.h"
+#include "game/effects/ActiveEffect.h"
 #include "game/effects/TriggeredEffect.h"
 #include "game/faction/base/BaseTypes.h"
 #include "game/research/TechConfigParser.h"
@@ -57,6 +58,11 @@ struct EnergyGranted_t
     int amount = 0;
 };
 
+struct XpGranted_t
+{
+    int amount = 0;
+};
+
 struct BaseRebelled_t
 {
     BaseId_t baseId = 0;
@@ -75,14 +81,14 @@ using TriggeredEffectResult_t = std::variant<
     TechGranted_t,
     UnitsGranted_t,
     EnergyGranted_t,
+    XpGranted_t,
     BaseRebelled_t,
     InfiltrationSet_t
 >;
 
-// Everything a triggered effect may need to resolve itself. Fields are optional because the
-// trigger decides what it has: a production completion has a base; a council vote has a faction
-// list and no base at all; a monolith visit has a unit and a tile and no base. An effect that
-// needs a subject the context lacks is skipped rather than guessed at.
+// Trigger-only fields plus non-const subjects for mutate arms. Conditions and amount sources
+// read through Subjects(), which materialises a const EffectContext_t bag — the same shape
+// continuous resolve uses — without sharing a const_cast seam.
 struct TriggeredEffectContext_t
 {
     TriggeredEffectContext_t(GameState& rGameStateIn, std::vector<Faction*> factionsIn)
@@ -90,37 +96,44 @@ struct TriggeredEffectContext_t
         , factions(std::move(factionsIn))
     {
     }
-    // Convenience for the common single-faction trigger.
     TriggeredEffectContext_t(GameState& rGameStateIn, Faction& rFaction);
-    // The base the trigger fired against; also supplies the faction.
     TriggeredEffectContext_t(GameState& rGameStateIn, BaseManager& rBase);
 
     GameState& rGameState;
-    // Factions the effects apply to. Never empty.
     std::vector<Faction*> factions;
-    // The base the trigger fired against, when it had one.
     BaseManager* pBase = nullptr;
-    // The unit the trigger fired for, when it had one. Set even where pBase is — a trigger may
-    // name both — so an effect that targets a unit never has to guess from tile occupancy.
     Unit* pUnit = nullptr;
-    // Location anchor when there is no base (probe target tile, monolith tile).
+    Faction* pFaction = nullptr;
     const Tile* pTile = nullptr;
-    // Probe mission target, for a factionFilter of kind ActionTarget.
     std::optional<FactionId_t> actionTarget;
-    // Generator for the effects that roll (DestroyFacility, Rebel). Null = the session's own,
-    // which is what a turn-stage trigger wants; a caller driving its own sequence (a probe
-    // mission, a seeded test) sets this so the roll stays reproducible from its seed.
     std::mt19937* pRng = nullptr;
 
     std::mt19937& Rng() const;
+
+    EffectContext_t Subjects() const
+    {
+        EffectContext_t ctx;
+        ctx.targetTile = pTile;
+        ctx.pBase = pBase;
+        ctx.pFaction = pFaction;
+        ctx.pUnit = pUnit;
+        return ctx;
+    }
 };
 
 // Fire every entry in order against rContext, returning what each one did (entries that report
 // nothing contribute no result). Entries carrying `oncePer` are skipped when their subject has
 // already consumed that key, and record it when they fire — so a list applies partially and
-// honestly rather than all-or-nothing.
+// honestly rather than all-or-nothing. Entries with a `condition` that fails against
+// Subjects() (after pFaction is stamped for the current apply) are skipped without spending
+// oncePer.
 std::vector<TriggeredEffectResult_t>
 ApplyTriggeredEffects(std::span<const TriggeredEffectConfig_t> rEffects,
                       TriggeredEffectContext_t& rContext);
+
+// Production-base train / prototype XP and other on_unit_produced_effects: production.json
+// first, then each building present at rProducedAt. Stamps pUnit. No-op when the faction has
+// no bound GameState (pre-session construction).
+void ApplyUnitProducedTriggers(Unit& rUnit, BaseManager& rProducedAt);
 
 } // namespace ac

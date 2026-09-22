@@ -565,6 +565,29 @@ bool ConditionBodySatisfied_(const Condition_t& condition, const EffectContext_t
                 return ctx.pBase != nullptr
                     && ResolveFlag(*ctx.pBase, RuleFlagId_t::Headquarters);
             }
+            else if constexpr (std::is_same_v<T, SubjectDomain_t>)
+            {
+                return ctx.pUnit != nullptr && ctx.pUnit->GetDomain() == rAlt.domain;
+            }
+            else if constexpr (std::is_same_v<T, HasComponent_t>)
+            {
+                return ctx.pUnit != nullptr
+                    && ctx.pUnit->GetDesign().HasComponent(rAlt.component);
+            }
+            else if constexpr (std::is_same_v<T, HasFlag_t>)
+            {
+                // Design-only: avoid CollectLiveUnitEffects recursion while building that list.
+                return ctx.pUnit != nullptr
+                    && ResolveFlag(ctx.pUnit->GetDesign(), rAlt.flag);
+            }
+            else if constexpr (std::is_same_v<T, IsPrototype_t>)
+            {
+                return ctx.pUnit != nullptr && ctx.pUnit->IsPrototype();
+            }
+            else if constexpr (std::is_same_v<T, IsCombatUnit_t>)
+            {
+                return ctx.pUnit != nullptr && ctx.pUnit->GetDesign().IsCombatUnit();
+            }
             else if constexpr (std::is_same_v<T, AllOf_t>)
             {
                 if (rAlt.conditions.empty())
@@ -597,47 +620,56 @@ bool ConditionSatisfied(const EffectConfig_t& config, const EffectContext_t& ctx
     {
         return true;
     }
-    return ConditionBodySatisfied_(*config.condition, ctx, pOriginBase);
+    return ConditionSatisfied(*config.condition, ctx, pOriginBase);
 }
 
-bool UnitFilterSatisfied(const EffectConfig_t& config, const Unit& rUnit)
+bool ConditionSatisfied(const Condition_t& rCondition, const EffectContext_t& ctx,
+                        const BaseManager* pOriginBase)
 {
-    if (!config.unitFilter)
-    {
-        return true;
-    }
+    return ConditionBodySatisfied_(rCondition, ctx, pOriginBase);
+}
+
+bool ConditionNeedsSituationalContext(const Condition_t& rCondition)
+{
     return std::visit(
-        [&](const auto& rAlt) -> bool
+        [](const auto& rAlt) -> bool
         {
             using T = std::decay_t<decltype(rAlt)>;
-            if constexpr (std::is_same_v<T, UnitFilterDomain_t>)
+            if constexpr (std::is_same_v<T, SubjectDomain_t> || std::is_same_v<T, HasComponent_t>
+                          || std::is_same_v<T, HasFlag_t> || std::is_same_v<T, IsPrototype_t>
+                          || std::is_same_v<T, IsCombatUnit_t>)
             {
-                return rUnit.GetDomain() == rAlt.domain;
+                return false;
             }
-            else if constexpr (std::is_same_v<T, UnitFilterHasComponent_t>)
+            else if constexpr (std::is_same_v<T, AllOf_t>)
             {
-                return rUnit.GetDesign().HasComponent(rAlt.component);
+                for (const Condition_t& rNested : rAlt.conditions)
+                {
+                    if (ConditionNeedsSituationalContext(rNested))
+                    {
+                        return true;
+                    }
+                }
+                return false;
             }
-            else if constexpr (std::is_same_v<T, UnitFilterHasFlag_t>)
+            else if constexpr (std::is_same_v<T, TargetTileHas_t>
+                               || std::is_same_v<T, IsDefending_t>
+                               || std::is_same_v<T, OriginBaseIsTargetBase_t>
+                               || std::is_same_v<T, OriginBaseIsHomeBase_t>
+                               || std::is_same_v<T, AttackerIsEmbarked_t>
+                               || std::is_same_v<T, HasAirdroppedThisTurn_t>
+                               || std::is_same_v<T, AttackerDomain_t>
+                               || std::is_same_v<T, DefenderDomain_t>
+                               || std::is_same_v<T, IsHeadquarters_t>)
             {
-                // Design-only: avoid CollectLiveUnitEffects recursion (HasFlag is evaluated
-                // while building that list). Native / probe filters key off chassis/specials.
-                return ResolveFlag(rUnit.GetDesign(), rAlt.flag);
-            }
-            else if constexpr (std::is_same_v<T, UnitFilterIsPrototype_t>)
-            {
-                return rUnit.IsPrototype();
-            }
-            else if constexpr (std::is_same_v<T, UnitFilterIsCombatUnit_t>)
-            {
-                return rUnit.GetDesign().IsCombatUnit();
+                return true;
             }
             else
             {
-                static_assert(k_AlwaysFalse<T>, "Unhandled UnitFilter_t alternative");
+                static_assert(k_AlwaysFalse<T>, "Unhandled Condition_t alternative");
             }
         },
-        *config.unitFilter);
+        rCondition.AsVariant());
 }
 
 bool BuildingFilterSatisfied(const EffectConfig_t& config, const BuildingConfig_t& rBuilding)
@@ -861,31 +893,32 @@ int PredictUnitProductionPopulationSize(const UnitDesign& rDesign, int size)
     return current;
 }
 
-// A live unit's full effect list: design components, all FactionUnits, and ProducedAtThisBase
-// effects whose origin matches the unit's production base. unitFilter and ProducedAt origin
-// are applied here — see CollectLiveUnitEffects declaration.
+// A live unit's full effect list: design components, all FactionUnits, and permanent
+// ProducedAtThisBase grants stamped onto the unit at construction. Identity conditions are
+// applied here; situational conditions remain for in-context resolve.
 UnitEffects_t CollectLiveUnitEffects(const Unit& rUnit)
 {
     std::vector<ActiveEffect_t> effects = rUnit.GetDesign().CollectEffects();
     const auto& rPool = rUnit.GetFaction().GetActiveEffects().effects;
     auto factionEffects = FilterByScope(rPool, EffectScope_t::FactionUnits);
     effects.insert(effects.end(), factionEffects.begin(), factionEffects.end());
-    auto producedEffects = FilterByScope(rPool, EffectScope_t::ProducedAtThisBase);
-    effects.insert(effects.end(), producedEffects.begin(), producedEffects.end());
+    const auto& rGrants = rUnit.GetProductionGrants();
+    effects.insert(effects.end(), rGrants.begin(), rGrants.end());
 
-    const BaseManager* pProducedAt = rUnit.GetProducedAtBase();
+    EffectContext_t identityCtx;
+    identityCtx.pUnit = &rUnit;
     std::erase_if(effects, [&](const ActiveEffect_t& rEffect)
     {
-        if (!UnitFilterSatisfied(*rEffect.config, rUnit))
+        if (!rEffect.config->condition)
         {
-            return true;
+            return false;
         }
-        if (rEffect.config->scope == EffectScope_t::ProducedAtThisBase
-            && rEffect.originBase != pProducedAt)
+        // Situational conditions wait for combat / tile context.
+        if (ConditionNeedsSituationalContext(*rEffect.config->condition))
         {
-            return true;
+            return false;
         }
-        return false;
+        return !ConditionSatisfied(*rEffect.config, identityCtx, rEffect.originBase);
     });
     return UnitEffects_t(rUnit, std::move(effects));
 }
@@ -1086,7 +1119,20 @@ double ResolveMultiplicativeStat(const Unit& rUnit, StatId_t statId, double base
 
 bool ResolveFlag(const Unit& rUnit, RuleFlagId_t flagId)
 {
-    return ResolveFlagFromEffects_(CollectLiveUnitEffects(rUnit).effects, flagId);
+    const EffectContext_t ctx = UnitSubjectContext(&rUnit, EffectContext_t{});
+    for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(rUnit).effects)
+    {
+        if (!ConditionSatisfied(*rEffect.config, ctx, rEffect.originBase))
+        {
+            continue;
+        }
+        const RuleFlagEffect_t* pFlag = std::get_if<RuleFlagEffect_t>(&rEffect.config->effect);
+        if (pFlag && pFlag->flag == flagId)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool ResolveFlag(const Faction& rFaction, RuleFlagId_t flagId)
@@ -1179,8 +1225,8 @@ bool TileProvidesFlag(const Tile& rTile, RuleFlagId_t flagId, const WorldMap& rW
         {
             continue;
         }
-        // Live effects, not design-only: a tile capability must honour unitFilter and pick
-        // up FactionUnits-scoped grants, exactly as the transport rules that consume it do.
+        // Live effects, not design-only: a tile capability must honour identity conditions and
+        // pick up FactionUnits-scoped grants, exactly as the transport rules that consume it do.
         for (const ActiveEffect_t& rEffect : CollectLiveUnitEffects(*pUnit).effects)
         {
             if (DeclaresTileFlag_(*rEffect.config, flagId))

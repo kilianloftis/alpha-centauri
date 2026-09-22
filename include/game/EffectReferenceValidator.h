@@ -17,7 +17,7 @@ struct TriggeredEffectConfig_t;
 
 // Validates the cross-config id references inside one continuous effects list: GrantBuilding
 // targets, HasImprovement selector ids, TargetTileHas / AllOf condition feature ids (always an
-// improvement id), HasComponent unitFilter component ids, BuildingId buildingFilter building
+// HasComponent condition component ids, BuildingId buildingFilter building
 // ids, and SocialRatingModifier axes. Throws std::runtime_error naming rSourceId and the
 // offending id.
 //
@@ -32,13 +32,14 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
                               const UnitComponentRegistry* pUnitComponents = nullptr,
                               const SocialRatingRegistry* pSocialRatings = nullptr);
 
-// The same for one triggered list: AddBuilding targets, GrantTech targets, and the component
-// ids a GrantUnit assembles its design from.
+// The same for one triggered list: AddBuilding / GrantTech / GrantUnit targets, plus the
+// same condition feature / HasComponent checks continuous lists get.
 void ValidateTriggeredEffectReferences(const std::vector<TriggeredEffectConfig_t>& rEffects,
                                        const std::string& rSourceId,
                                        const BuildingRegistry* pBuildings,
                                        const TechRegistry* pTechs,
-                                       const UnitComponentRegistry* pUnitComponents = nullptr);
+                                       const UnitComponentRegistry* pUnitComponents = nullptr,
+                                       const ImprovementRegistry* pImprovements = nullptr);
 
 // Walks every loaded config that declares effects (buildings, techs, improvements, pop types,
 // unit components, social policies, social rating tables, factions, council proposals,

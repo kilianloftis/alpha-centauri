@@ -118,7 +118,7 @@ struct ScrambleGame_
 
 } // namespace
 
-TEST_CASE("Parse Scramble requires unitFilter and range", "[effects][parser][scramble]")
+TEST_CASE("Parse Scramble requires condition and range", "[effects][parser][scramble]")
 {
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "Scramble", "scope": "ThisUnit"
@@ -127,19 +127,19 @@ TEST_CASE("Parse Scramble requires unitFilter and range", "[effects][parser][scr
     CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "Scramble",
         "scope": "ThisUnit",
-        "unitFilter": { "kind": "Domain", "domain": "air" }
+        "condition": { "kind": "AttackerDomain", "domains": ["air"] }
     })")));
 
     const EffectConfig_t scramble = EffectConfigParser::ParseEffectConfig(json::parse(R"({
         "type": "Scramble",
         "scope": "ThisUnit",
         "parameters": { "range": 2 },
-        "unitFilter": { "kind": "Domain", "domain": "air" }
+        "condition": { "kind": "AttackerDomain", "domains": ["air"] }
     })"));
     const auto* pScramble = std::get_if<ScrambleEffect_t>(&scramble.effect);
     REQUIRE(pScramble);
     CHECK(pScramble->range == 2);
-    REQUIRE(scramble.unitFilter);
+    REQUIRE(scramble.condition);
 }
 
 TEST_CASE("Air Superiority scrambler becomes combat defender", "[unit][scramble]")
@@ -232,7 +232,7 @@ TEST_CASE("Scramble skips insufficient moves, out of radius, wrong faction, and 
               == nullptr);
     }
 
-    SECTION("land attacker fails Domain air unitFilter")
+    SECTION("land attacker fails Domain air condition")
     {
         Unit& scrambler =
             game.MakeUnit(*game.pAi, 5, 7,

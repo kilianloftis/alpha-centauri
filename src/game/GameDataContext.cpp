@@ -111,7 +111,7 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
     rData.improvementRegistry = std::make_unique<ImprovementRegistry>();
     rData.improvementRegistry->Load(rPaths.improvements);
 
-    // unitFilter HasComponent and component required_tech need this present before
+    // HasComponent conditions and component required_tech need this present before
     // ValidateEffectReferences / ValidateRequiredTechReferences below.
     rData.unitComponentRegistry = std::make_unique<UnitComponentRegistry>();
     rData.unitComponentRegistry->Load(rPaths.unitComponents);

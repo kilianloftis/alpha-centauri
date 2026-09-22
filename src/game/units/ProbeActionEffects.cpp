@@ -39,6 +39,7 @@ TriggeredEffectContext_t MissionContext_(Faction& rActor, BaseManager& rBase,
     TriggeredEffectContext_t context(rGameState, rActor);
     context.pBase = &rBase;
     context.pTile = &rBase.GetTile();
+    context.pFaction = &rBase.GetFaction();
     context.actionTarget = rBase.GetFactionId();
     context.pRng = &rRng;
     return context;

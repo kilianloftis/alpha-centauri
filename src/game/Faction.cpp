@@ -600,16 +600,15 @@ Unit* FindUnitById_(Faction& rFaction, UnitId_t unitId)
     return nullptr;
 }
 
-// Release + adopt one unit (giver→receiver), clearing the home-base claim and the production
-// base: both name bases of the previous owner, and a claim on a base the receiver does not own
-// is a foreign home claim, which the transfer protocol treats as invalid (see
-// Unit::ClearProducedAtBase and docs/architecture/high-level.md, "Object lifetime").
+// Release + adopt one unit (giver→receiver), clearing the home-base claim: it names a base
+// of the previous owner, and a claim on a base the receiver does not own is a foreign home
+// claim, which the transfer protocol treats as invalid (see docs/architecture/high-level.md,
+// "Object lifetime"). Production grants stamped at construction stay on the unit.
 Unit& ReleaseAndAdopt_(Faction& rGiver, Faction& rReceiver, Unit& rUnit)
 {
     std::unique_ptr<Unit> pReleased = rGiver.GetUnitManager().ReleaseUnit(rUnit);
     Unit& rAdopted = rReceiver.GetUnitManager().AdoptUnit(std::move(pReleased));
     rAdopted.SetHomeBase(nullptr);
-    rAdopted.ClearProducedAtBase();
     return rAdopted;
 }
 

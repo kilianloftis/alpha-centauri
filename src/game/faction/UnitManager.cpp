@@ -8,7 +8,9 @@
 #include "game/map/UnitPositionIndex.h"
 #include "game/Faction.h"
 #include "game/GameDataContext.h"
+#include "game/effects/TriggeredEffectDispatch.h"
 #include "game/faction/Military.h"
+#include "game/faction/base/BaseManager.h"
 #include <algorithm>
 #include <stdexcept>
 #include <string>
@@ -68,6 +70,11 @@ Unit& UnitManager::CreateUnit(UnitId_t unitId, const UnitDesign& rDesign,
     // After construction: the unit latches Military::IsPrototype in its constructor, and this
     // is what makes the next one of the same design ordinary.
     m_rFaction.GetMilitary().RecordBuiltComponents(rDesign);
+    // Same three-valued production base as Unit's stamp path: omit → home; explicit null → skip.
+    if (BaseManager* pBuiltAt = pProducedAt.has_value() ? *pProducedAt : pHomeBase)
+    {
+        ApplyUnitProducedTriggers(rUnit, *pBuiltAt);
+    }
     m_revision.Bump();
     m_rFaction.RebuildVisibility();
     OnUnitCreated.Emit(rUnit);

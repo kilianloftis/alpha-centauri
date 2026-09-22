@@ -9,6 +9,8 @@ Plans describe **what needs to change** — the settled design, target behavior,
 
 Do **not** narrate abandoned options, rejected approaches, “we are not doing X” leftovers, or earlier draft revisions. Do **not** add “Correction:” / “Why not …” / “Earlier we thought …” sections that explain how the plan changed. If something is out of scope, omit it unless the reader must know a deliberate deletion or behavior change.
 
+When a rename deletes an in-repo-only config key or API, the plan is “use the new name; update every config.” Do not plan parser migration shims or “reject old key with a helpful message” branches — see coding-guidelines.
+
 ```text
 # BAD
 ## Correction: Instantaneous is not base-only

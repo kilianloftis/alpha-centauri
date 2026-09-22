@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/effects/EffectConfig.h"
+#include "game/effects/TriggeredEffect.h"
 #include "game/faction/base/production/ScrapConfig.h"
 #include "game/ConstructableKind.h"
 
@@ -56,9 +57,10 @@ struct ProductionConfig_t
     // rejected (those items never complete). Secret-project scrap is rejected (destruction
     // tombstones them). Unit components and buildings may partially override default_scrap.
     std::unordered_map<ConstructableKind_t, ProductionKindConfig_t> kinds;
-    // Continuous effects merged into every faction pool (source id "production"). Prototype
-    // starting XP is a FactionUnits StartingExperience StatModifier with unitFilter IsPrototype.
+    // Continuous effects merged into every faction pool (source id "production").
     std::vector<EffectConfig_t> effects;
+    // One-shot effects fired when any unit is produced at a base (prototype XP, …).
+    std::vector<TriggeredEffectConfig_t> onUnitProducedEffects;
 };
 
 class ProductionConfigParser

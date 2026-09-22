@@ -52,7 +52,7 @@ const std::vector<std::string>& KnownBuildingKeys_()
     static const std::vector<std::string> keys = {
         "id", "name", "category", "mineral_cost", "upkeep", "required_tech",
         "allow_multiple", "secret_project", "orbital", "effects", "on_complete_effects",
-        "scrap",
+        "on_unit_produced_effects", "scrap",
     };
     return keys;
 }
@@ -97,6 +97,8 @@ BuildingConfig_t BuildingConfigParser::ParseBuildingConfig_(const nlohmann::json
     config.effects = EffectConfigParser::ParseEffects(buildingJson, EffectSourceKind_t::Building, config.id);
     config.onCompleteEffects = TriggeredEffectParser::ParseTriggeredEffects(
         buildingJson, "on_complete_effects", config.id);
+    config.onUnitProducedEffects = TriggeredEffectParser::ParseTriggeredEffects(
+        buildingJson, "on_unit_produced_effects", config.id);
     config.mineralCost = ParseTyped_<int>(buildingJson, "mineral_cost", config.id, 0,
                                           &nlohmann::json::is_number_integer, "an integer");
     if (buildingJson.contains("scrap"))

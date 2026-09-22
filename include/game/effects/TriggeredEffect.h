@@ -74,6 +74,14 @@ struct ModifyPopulationEffect_t
     int minSize = 0;
 };
 
+// Instant XP credit on a unit subject (train bonuses, prototype first-fielding).
+// Stacks via ApplyModifierStack onto the unit's current XP; SetXp clamps to morale max.
+struct GrantXpEffect_t
+{
+    int amount = 0;
+    ModifierOp_t op = ModifierOp_t::Add;
+};
+
 // Random facility destruction at the context base (riot escalation, probe sabotage).
 // Every field is required in JSON: which facilities are off-limits is a game rule per caller,
 // and a C++ default here is how the shipping config and the test fixture came to disagree
@@ -99,6 +107,7 @@ using TriggeredEffectVariant_t = std::variant<
     WorldParameterEffect_t,
     SetInfiltrationEffect_t,
     ModifyPopulationEffect_t,
+    GrantXpEffect_t,
     DestroyFacilityEffect_t,
     RebelEffect_t
 >;
@@ -127,6 +136,8 @@ struct TriggeredEffectConfig_t
     // target set for everything else.
     std::optional<FactionFilter_t> factionFilter;
     std::optional<OncePer_t> oncePer;
+    // Optional gate against TriggeredEffectContext_t::subjects (same Condition_t as continuous).
+    std::optional<Condition_t> condition;
 };
 
 } // namespace ac

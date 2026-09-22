@@ -567,7 +567,6 @@ TEST_CASE("Completing unit production places the unit on the base tile", "[produ
     Unit& rUnit = *onTile.front();
     CHECK(&rUnit.GetTile() == &base.GetTile());
     CHECK(rUnit.GetHomeBase() == &base);
-    CHECK(rUnit.GetProducedAtBase() == &base);
     CHECK(&rUnit.GetDesign() == &rDesign);
 }
 
@@ -781,7 +780,7 @@ TEST_CASE("Skunkworks cancels retool penalty", "[production][retool][prototype]"
     CHECK(base.GetProduction().GetMineralStockpile() == 40);
 }
 
-TEST_CASE("Prototype StartingExperience stacks with ProducedAtThisBase train bonuses",
+TEST_CASE("Prototype GrantXp stacks with on_unit_produced train bonuses",
           "[production][unit][prototype]")
 {
     UnitProductionGame_ game;
@@ -893,7 +892,7 @@ TEST_CASE("Prototype knowledge is per faction", "[production][unit][prototype]")
           == ProductionCostCalculator::ComputeCost(rAi.GetBaseCost(), BaseEffects_t{aiBase}, 50));
 }
 
-TEST_CASE("CreateUnit applies prototype StartingExperience then unlocks the components",
+TEST_CASE("CreateUnit applies prototype GrantXp then unlocks the components",
           "[production][unit][prototype]")
 {
     UnitProductionGame_ game;
@@ -906,7 +905,6 @@ TEST_CASE("CreateUnit applies prototype StartingExperience then unlocks the comp
         *game.pState->GetWorldMap().GetTile(0, 0), &base, &base);
     CHECK(spawned.IsPrototype());
     CHECK(spawned.GetXp() == 2);
-    CHECK(spawned.GetStat(StatId_t::StartingExperience) == 1);
     CHECK_FALSE(game.pFaction->GetMilitary().IsPrototype(rDesign));
 
     base.GetProduction().SetProduction(&rDesign, base.GetBaseEffects());
@@ -929,7 +927,6 @@ TEST_CASE("Free CreateUnit does not latch prototype but still unlocks the ledger
         *game.pState->GetWorldMap().GetTile(0, 0), &base);
     CHECK_FALSE(gifted.IsPrototype());
     CHECK(gifted.GetXp() == 1);
-    CHECK(gifted.GetStat(StatId_t::StartingExperience) == 0);
     CHECK_FALSE(game.pFaction->GetMilitary().IsPrototype(rDesign));
 
     base.GetProduction().SetProduction(&rDesign, base.GetBaseEffects());
@@ -1050,11 +1047,9 @@ TEST_CASE("A unit keeps the prototype status it was built with after the ledger 
 
     // The faction has fielded the design, so the ledger no longer calls it a prototype...
     REQUIRE_FALSE(game.pFaction->GetMilitary().IsPrototype(rDesign));
-    // ...but the unit built as one still is, and a live re-resolve of the effect agrees with
-    // the XP that was baked at construction rather than silently dropping to 0.
+    // ...but the unit built as one still is, and the XP baked at construction stays.
     CHECK(rPrototype.IsPrototype());
     CHECK(rPrototype.GetXp() == 2);
-    CHECK(rPrototype.GetStat(StatId_t::StartingExperience) == 1);
 
     BaseManager& second = game.MakeBase(6, 6);
     second.GetProduction().SetProduction(&rDesign, second.GetBaseEffects());
@@ -1066,7 +1061,6 @@ TEST_CASE("A unit keeps the prototype status it was built with after the ledger 
     REQUIRE(onSecondTile.size() == 1);
     CHECK_FALSE(onSecondTile.front()->IsPrototype());
     CHECK(onSecondTile.front()->GetXp() == 1);
-    CHECK(onSecondTile.front()->GetStat(StatId_t::StartingExperience) == 0);
 }
 
 TEST_CASE("A facility never takes the prototype surcharge", "[production][prototype]")

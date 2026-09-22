@@ -133,7 +133,6 @@ static_assert(KindFor(StatId_t::MaxPolice) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::PoliceEffectiveness) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::AwayFromHomeDrones) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::SizeFreeDrones) == StatKind_t::Additive);
-static_assert(KindFor(StatId_t::StartingExperience) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::StartingMinerals) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::MoraleBonus) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::CostMultiplier) == StatKind_t::PureMultiplier);
@@ -311,20 +310,20 @@ TEST_CASE("ValidateEffectReferences: BuildingId buildingFilter ids must exist",
     actest::EffectPool pool;
     const std::vector<EffectConfig_t> good = {
         pool.StatMod(StatId_t::FacilityEnergyUpkeep, -50.0, ModifierOp_t::AddPercent,
-                     EffectScope_t::FactionGlobal, std::nullopt, std::nullopt, std::nullopt,
+                     EffectScope_t::FactionGlobal, std::nullopt, std::nullopt,
                      BuildingFilterId_t{"upkeep_hall"})};
     CHECK_NOTHROW(ValidateEffectReferences(good, "src", &buildings, nullptr, nullptr));
 
     const std::vector<EffectConfig_t> bad = {
         pool.StatMod(StatId_t::FacilityEnergyUpkeep, -50.0, ModifierOp_t::AddPercent,
-                     EffectScope_t::FactionGlobal, std::nullopt, std::nullopt, std::nullopt,
+                     EffectScope_t::FactionGlobal, std::nullopt, std::nullopt,
                      BuildingFilterId_t{"no_such_building"})};
     CHECK_THROWS_WITH(ValidateEffectReferences(bad, "src", &buildings, nullptr, nullptr),
                       Catch::Matchers::ContainsSubstring("no_such_building"));
 }
 
-TEST_CASE("ValidateEffectReferences: HasComponent unitFilter ids must exist",
-          "[effects][validation][unitFilter]")
+TEST_CASE("ValidateEffectReferences: HasComponent condition ids must exist",
+          "[effects][validation][condition]")
 {
     UnitComponentRegistry components;
     components.Load(actest::FixturePath("unit_components.json"));
@@ -332,14 +331,12 @@ TEST_CASE("ValidateEffectReferences: HasComponent unitFilter ids must exist",
     actest::EffectPool pool;
     const std::vector<EffectConfig_t> good = {
         pool.StatMod(StatId_t::Attack, 1.0, ModifierOp_t::Add, EffectScope_t::FactionUnits,
-                     std::nullopt, std::nullopt,
-                     actest::HasComponentFilter("test_weapon"))};
+                     std::nullopt, actest::HasComponentCondition("test_weapon"))};
     CHECK_NOTHROW(ValidateEffectReferences(good, "src", nullptr, nullptr, nullptr, &components));
 
     const std::vector<EffectConfig_t> bad = {
         pool.StatMod(StatId_t::Attack, 1.0, ModifierOp_t::Add, EffectScope_t::FactionUnits,
-                     std::nullopt, std::nullopt,
-                     actest::HasComponentFilter("no_such_component"))};
+                     std::nullopt, actest::HasComponentCondition("no_such_component"))};
     CHECK_THROWS_WITH(
         ValidateEffectReferences(bad, "src", nullptr, nullptr, nullptr, &components),
         Catch::Matchers::ContainsSubstring("no_such_component"));

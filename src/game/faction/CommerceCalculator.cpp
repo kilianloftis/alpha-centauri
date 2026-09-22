@@ -53,7 +53,7 @@ int TechCommerceRatingContribution_(const Faction& rFaction)
             // way for everyone: no runtime condition, no filter, no amount source, no
             // per-tile selector, and not already retired by a later tech.
             if (rEffect.condition.has_value() || rEffect.buildingFilter.has_value()
-                || rEffect.unitFilter.has_value() || rEffect.factionFilter.has_value()
+                || rEffect.factionFilter.has_value()
                 || pStat->amountSource.has_value() || pStat->selector.has_value())
             {
                 continue;

@@ -15,7 +15,15 @@ Constructors should accept all arguments required to make the object valid
 If a class owns a resource, if possible, the class should construct that resource itself
 Prefer throwing exceptions over returning default values
 Throw errors if expected pointers are null
-Do not keep old code for legacy of backwards compatibilty reasons. Update all call sites as needed.
+Do not keep old code for legacy or backwards-compatibility reasons. Update all call sites
+and in-repo configs as needed.
+
+When renaming or removing a config key, wire format, or API that only this repo authors:
+delete the old name and migrate every shipping/fixture config in the same change. Do **not**
+add parser branches, reject messages, or tests whose only job is to say "X is no longer
+supported; use Y". That shim is for shipped external mods after launch — not for keys we
+still control end-to-end. Unknown leftover keys may fail a known-key whitelist or be ignored
+like any other typo; do not special-case the retired name.
 When asked to address review findings or implement a review/plan, treat every finding as in-scope unless the user explicitly defers it. Severity ranks order of work, not whether it gets done — do not park fixes as "optional polish" or "leave as-is."
 
 ## Commmenting
