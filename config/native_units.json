@@ -1,0 +1,216 @@
+[
+  {
+    "id": "Mind_Worm",
+    "name": "Mind Worm",
+    "domain": "land",
+    "mineral_cost": 0,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "movement", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "mineral_upkeep", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "vision", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "hit_points", "amount": 10, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "psi_damage", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "forces_psi_combat" }
+      }
+    ]
+  },
+  {
+    "id": "Isle_of_the_Deep",
+    "name": "Isle of the Deep",
+    "domain": "sea",
+    "mineral_cost": 0,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "movement", "amount": 4, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "vision", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "hit_points", "amount": 10, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "psi_damage", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "cargo_capacity",
+          "amount": 1,
+          "op": "Add",
+          "amount_source": "IntrinsicXp"
+        }
+      },
+      {
+        "type": "TransportParams",
+        "scope": "ThisUnit",
+        "parameters": { "carries": ["land"] }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "forces_psi_combat" }
+      }
+    ]
+  },
+  {
+    "id": "Sea_Lurk",
+    "name": "Sea Lurk",
+    "domain": "sea",
+    "mineral_cost": 0,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "movement", "amount": 4, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "vision", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "hit_points", "amount": 10, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "psi_damage", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "Conceal",
+        "scope": "ThisUnit",
+        "condition": { "kind": "TargetTileHas", "value": "Water" },
+        "parameters": { "channel": "deep_pressure" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "forces_psi_combat" }
+      }
+    ]
+  },
+  {
+    "id": "Locusts_of_Chiron",
+    "name": "Locusts of Chiron",
+    "domain": "air",
+    "mineral_cost": 0,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "movement", "amount": 8, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "vision", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "hit_points", "amount": 10, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "psi_damage", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "forces_psi_combat" }
+      }
+    ]
+  },
+  {
+    "id": "Spore_Launcher",
+    "name": "Spore Launcher",
+    "domain": "land",
+    "mineral_cost": 0,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "movement", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "vision", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "hit_points", "amount": 10, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "psi_damage", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "forces_psi_combat" }
+      }
+    ]
+  },
+  {
+    "id": "Alien_Artifact",
+    "name": "Alien Artifact",
+    "domain": "land",
+    "mineral_cost": 0,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "movement", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "vision", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "hit_points", "amount": 10, "op": "Add" }
+      }
+    ]
+  }
+]

@@ -16,6 +16,7 @@ class BuildingRegistry;
 class StockpileRegistry;
 class UnitComponentRegistry;
 class UnitSlotRegistry;
+class NativeUnitRegistry;
 class PopTypeRegistry;
 class TechRegistry;
 class SocialPolicyRegistry;
@@ -68,6 +69,7 @@ struct GameDataContext
     std::unique_ptr<StockpileRegistry> stockpileRegistry;
     std::unique_ptr<UnitComponentRegistry> unitComponentRegistry;
     std::unique_ptr<UnitSlotRegistry> unitSlotRegistry;
+    std::unique_ptr<NativeUnitRegistry> nativeUnitRegistry;
     std::unique_ptr<TechRegistry> techRegistry;
     std::unique_ptr<SocialPolicyRegistry> socialPolicyRegistry;
     std::unique_ptr<SocialRatingRegistry> socialRatingRegistry;

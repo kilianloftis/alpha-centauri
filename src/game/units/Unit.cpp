@@ -27,7 +27,7 @@ bool IsCrawlResource(StatId_t resource)
 }
 
 Unit::Unit(UnitId_t unitId,
-           const UnitDesign& rDesign,
+           const IDesign& rDesign,
            UnitPositionIndex& rPositions,
            const Tile& rTile,
            BaseManager* pHomeBase,
@@ -185,7 +185,7 @@ void Unit::Disembark()
 
 UnitId_t Unit::GetUnitId() const { return m_unitId; }
 
-const UnitDesign& Unit::GetDesign() const { return m_rDesign; }
+const IDesign& Unit::GetDesign() const { return m_rDesign; }
 
 int Unit::GetStat(StatId_t statId) const
 {

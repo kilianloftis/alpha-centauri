@@ -8,6 +8,7 @@
 namespace ac
 {
 
+class IDesign;
 class UnitDesign;
 
 class Military
@@ -16,20 +17,20 @@ public:
     Military();
     ~Military();
 
-    bool AddDesign(std::unique_ptr<UnitDesign> pDesign);
-    const std::vector<std::unique_ptr<UnitDesign>>& GetDesigns() const;
-    const UnitDesign* GetDesign(const std::string& designId) const;
+    bool AddDesign(std::unique_ptr<IDesign> pDesign);
+    const std::vector<std::unique_ptr<IDesign>>& GetDesigns() const;
+    const IDesign* GetDesign(const std::string& designId) const;
 
-    // True when any filled component on rDesign has never been fielded by this faction.
-    // Several unknown components still count as a single prototype.
-    bool IsPrototype(const UnitDesign& rDesign) const;
+    // True when any filled component on a UnitDesign has never been fielded by this faction.
+    // NativeDesign is never a prototype. Several unknown components still count as one prototype.
+    bool IsPrototype(const IDesign& rDesign) const;
 
-    // Mark every filled component on rDesign as fielded. Idempotent. Called from
-    // UnitManager::CreateUnit so starting units and produced units share one ledger.
-    void RecordBuiltComponents(const UnitDesign& rDesign);
+    // Mark every filled component on a UnitDesign as fielded. No-op for NativeDesign.
+    // Idempotent. Called from UnitManager::CreateUnit.
+    void RecordBuiltComponents(const IDesign& rDesign);
 
 private:
-    std::vector<std::unique_ptr<UnitDesign>> m_designs;
+    std::vector<std::unique_ptr<IDesign>> m_designs;
     std::unordered_set<std::string> m_builtComponentIds;
 };
 

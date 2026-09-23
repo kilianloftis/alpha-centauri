@@ -1,11 +1,10 @@
 #pragma once
 
 #include "game/IConstructable.h"
+#include "game/units/IDesign.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitSlotConfig.h"
-#include "game/effects/ActiveEffect.h"
-#include "game/effects/EffectEnums.h"
-#include "game/effects/InteractionGridsConfig.h"
+
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -14,14 +13,14 @@
 namespace ac
 {
 
-class UnitDesign : public IConstructable
+class UnitDesign : public IDesign, public IConstructable
 {
 public:
     UnitDesign(
         const std::vector<UnitSlotConfig_t>& rSlots,
         const std::unordered_map<std::string, const UnitComponentConfig_t*>& rComponents
     );
-    ~UnitDesign() = default;
+    ~UnitDesign() override = default;
 
     const std::string& GetId() const override;
     const std::string& GetName() const override;
@@ -30,58 +29,24 @@ public:
 
     const UnitComponentConfig_t* GetComponentForSlot(const std::string& rSlotId) const;
 
-    // True if any filled slot carries a component with the given id.
-    bool HasComponent(const std::string& rComponentId) const;
-
-    // True when additive Attack > 0 or ForcesPsiCombat (component-only resolve). Used by
-    // combat rules (disengage) and UnitFilter IsCombatUnit; design-only so FactionUnits
-    // collection cannot recurse through CollectLiveUnitEffects.
-    bool IsCombatUnit() const;
+    bool HasComponent(const std::string& rComponentId) const override;
+    bool IsCombatUnit() const override;
 
     // True when every filled component's requiredTech is discovered (empty requiredTech
     // always passes). Used when deciding whether a transferred base may keep a queued design.
     bool IsAvailable(const std::vector<std::string>& rDiscoveredTechs) const;
 
-    // All continuous effects attached to this design's components, as ActiveEffect_t
-    // instances (sourceId = component id). The single way anything outside UnitDesign
-    // consumes continuous component effects — live-unit stat resolution, faction-lane
-    // collection, and tile aura scans all work on this list; one-shot production costs
-    // live in each component's onCompleteEffects and are fired via GetComponents().
-    std::vector<ActiveEffect_t> CollectEffects() const;
+    std::vector<ActiveEffect_t> CollectEffects() const override;
 
     // Filled (non-null) components in slot order. On-complete production
     // dispatch walks these; continuous consumers should prefer CollectEffects().
     const std::vector<const UnitComponentConfig_t*>& GetComponents() const { return m_components; }
 
-    // Intrinsic (component-only) stat / flag resolution. Prefer the free ResolveStat /
-    // ResolveFlag overloads; these forward to them.
-    int GetStat(StatId_t statId) const;
-    int GetStat(StatId_t statId, const EffectContext_t& rCtx) const;
-    bool GetFlag(RuleFlagId_t flagId) const;
-
-    // Chassis Movement stat in move-points (not fragments).
-    int GetMovementPoints() const;
-
-    // Intrinsic mineral support cost (component MineralUpkeep), floored at 0.
-    int GetMineralUpkeep() const;
-
-    // Which interaction grids this design's components carry an InteractionOverride for.
-    // Cached at construction so movement / attack / ZOC resolution can skip effect
-    // collection outright for the overwhelmingly common no-override design. Conservative:
-    // ignores condition, so a set bit means "maybe", a clear bit means "no".
-    InteractionGridMask_t GetInteractionMask() const { return m_interactionMask; }
-
-    // Cached at construction from component TurnsOfFuel / Movement (design properties).
-    bool UsesFuel() const;
-    // Max fuel pool in move-points: TurnsOfFuel × Movement (0 when !UsesFuel).
-    int MaxFuel() const;
-
-    // Domain of the design's chassis component (required on every valid design).
-    UnitDomain_t GetDomain() const;
-
-    // SMAC-style combat rating: additive A-D-M with component display annotations
-    // (e.g. "2~-<3r>-1*2, ECM").
-    std::string FormatCombatRating() const;
+    InteractionGridMask_t GetInteractionMask() const override { return m_interactionMask; }
+    bool UsesFuel() const override;
+    int MaxFuel() const override;
+    UnitDomain_t GetDomain() const override;
+    std::string FormatCombatRating() const override;
 
 private:
     std::string m_id;

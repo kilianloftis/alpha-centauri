@@ -25,6 +25,7 @@ class IEffectsProvider;
 class PopulationManager;
 class TerritoryMap;
 class Unit;
+class IDesign;
 class UnitDesign;
 class WorldMap;
 struct BuildingConfig_t;
@@ -107,17 +108,17 @@ struct BaseEffects_t
     std::vector<ActiveEffect_t> effects;
 };
 
-// Live-unit or design-only effect list for Unit-domain resolve. Design-only leaves pUnit null
+// Live-unit or design-only effect list for Unit-domain resolve. IDesign-only leaves pUnit null
 // (preview / intrinsic); amount sources that need a live Unit throw if evaluated then.
 struct UnitEffects_t
 {
     explicit UnitEffects_t(const Unit& rUnit);
-    explicit UnitEffects_t(const UnitDesign& rDesign);
+    explicit UnitEffects_t(const IDesign& rDesign);
     UnitEffects_t(const Unit& rUnit, std::vector<ActiveEffect_t> effectsIn);
-    UnitEffects_t(const UnitDesign& rDesign, std::vector<ActiveEffect_t> effectsIn);
+    UnitEffects_t(const IDesign& rDesign, std::vector<ActiveEffect_t> effectsIn);
 
     const Unit* pUnit = nullptr;
-    const UnitDesign* pDesign = nullptr;
+    const IDesign* pDesign = nullptr;
     std::vector<ActiveEffect_t> effects;
 };
 
@@ -187,6 +188,8 @@ double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double sca
                          const StockpileConversionSubject_t& rStockpile);
 double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double scale,
                          const Faction& rFaction);
+double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double scale,
+                         const Unit& rUnit);
 
 // Literal `amount` when amountSource is absent; otherwise dispatches to the subject overload
 // above using the matching EffectContext_t field. Missing required subject throws (no silent
@@ -425,6 +428,11 @@ inline bool StatModifierMatchesInContext(const ActiveEffect_t& effect, StatId_t 
     {
         return false;
     }
+    if (pStatModifier->amountSource == StatModifierEffect_t::AmountSource_t::IntrinsicXp
+        && ctx.pUnit == nullptr)
+    {
+        return false;
+    }
     if (pStatModifier->amountSource == StatModifierEffect_t::AmountSource_t::ElevationEnergy
         && (ctx.targetTile == nullptr || ctx.pTileYieldRules == nullptr))
     {
@@ -529,18 +537,18 @@ inline auto FilterByScope(const std::vector<ActiveEffect_t>& effects, EffectScop
 }
 inline auto FilterByScope(std::vector<ActiveEffect_t>&& effects, EffectScope_t scope) = delete;
 
-// Design-only UnitEffects_t (pUnit null) from a design's components.
-UnitEffects_t CollectUnitEffects(const UnitDesign& rDesign);
+// IDesign-only UnitEffects_t (pUnit null) from IDesign::CollectEffects.
+UnitEffects_t CollectUnitEffects(const IDesign& rDesign);
 
-// Resolve a unit design's intrinsic (component-only) stats / flags — no faction pool.
+// Resolve a design's intrinsic stats / flags — no faction pool.
 // Context-free: effects carrying a condition are skipped (same rule as FilterByStatId).
-int ResolveStat(const UnitDesign& rDesign, StatId_t statId);
-int ResolveStat(const UnitDesign& rDesign, StatId_t statId, const EffectContext_t& rCtx);
-bool ResolveFlag(const UnitDesign& rDesign, RuleFlagId_t flagId);
+int ResolveStat(const IDesign& rDesign, StatId_t statId);
+int ResolveStat(const IDesign& rDesign, StatId_t statId, const EffectContext_t& rCtx);
+bool ResolveFlag(const IDesign& rDesign, RuleFlagId_t flagId);
 
-// Sum of ModifierOp_t::Add contributions only (component effects). Ignores AddPercent /
+// Sum of ModifierOp_t::Add contributions only. Ignores AddPercent /
 // MultiplyGeometric — the SMAC-style base combat rating (e.g. laser 2, not 2 * 1.25).
-int ResolveAdditiveStat(const UnitDesign& rDesign, StatId_t statId);
+int ResolveAdditiveStat(const IDesign& rDesign, StatId_t statId);
 
 // A live unit's full effect list: design components, FactionUnits (all faction units),
 // and permanent ProducedAtThisBase grants stamped on the unit at construction. Returned

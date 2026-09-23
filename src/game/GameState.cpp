@@ -54,7 +54,8 @@ void ApplyProductionCompleteEffects_(GameState& rGameState, const ProductionComp
         return;
     }
 
-    if (const UnitDesign* pDesign = rFaction.GetMilitary().GetDesign(rCompleted.itemId))
+    if (const auto* pDesign =
+        dynamic_cast<const UnitDesign*>(rFaction.GetMilitary().GetDesign(rCompleted.itemId)))
     {
         // Only a produced unit pays its components' completion costs: a free spawn
         // (escape pod, starting unit, a granted unit) never goes through here.

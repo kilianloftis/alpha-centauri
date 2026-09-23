@@ -57,6 +57,7 @@ graph TB
         BuildingRegistry[BuildingRegistry]
         StockpileRegistry[StockpileRegistry]
         TechRegistry[TechRegistry]
+        NativeUnitRegistry[NativeUnitRegistry]
         PopCompositionConfig_t[PopCompositionConfig_t]
         PopCompositionCalculator[PopCompositionCalculator]
         HurryProductionCalculator[HurryProductionCalculator]
@@ -479,7 +480,8 @@ seed. (Persisting that seed into save state is still open — see the world-gene
   - GameState owns UnitOrderExecutor and implements `IUnitOrderWorld` for it; all bind the live WorldMap
   - MoveCostCalculator reads ImprovementRegistry configs (move_cost / move_cost_override)
   - BaseConquestEffects reads `config/base_conquest.json` via `GameDataContext::baseConquestConfig`
-- **Details**: See `docs/architecture/unit-movement-system.md` for detailed architecture
+- **Details**: See `docs/architecture/unit-movement-system.md` for detailed architecture.
+  Native life designs: `docs/architecture/native-units-system.md`.
 
 ### UI System
 - **Purpose**: View-stack management and layered rendering, with no backend dependency.

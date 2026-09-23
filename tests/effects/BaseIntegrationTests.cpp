@@ -262,7 +262,8 @@ TEST_CASE("Unit production without spawn services throws before spawning",
     auto pDesign =
         std::make_unique<UnitDesign>(std::vector{chassisSlot, weaponSlot}, assigned);
     REQUIRE(faction.GetMilitary().AddDesign(std::move(pDesign)));
-    const UnitDesign* pQueued = faction.GetMilitary().GetDesigns().front().get();
+    const UnitDesign* pQueued =
+        dynamic_cast<const UnitDesign*>(faction.GetMilitary().GetDesigns().front().get());
     REQUIRE(pQueued != nullptr);
 
     base.GetProduction().SetProduction(pQueued, base.GetBaseEffects());

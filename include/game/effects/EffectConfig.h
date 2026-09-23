@@ -77,7 +77,10 @@ struct StatModifierEffect_t
     //   Requires EffectContext_t::pBase; included in FilterBaseLevelByStatId when pBase is set.
     // BasesOwned: contribution = faction base count * amount (e.g. +1 Attack per owned base).
     //   Requires EffectContext_t::pFaction (stamped from the live unit on Unit resolve);
-    //   Unit-domain stats + ThisUnit only. Design-only resolve drops it (no faction subject).
+    //   Unit-domain stats + ThisUnit only. IDesign-only resolve drops it (no faction subject).
+    // IntrinsicXp: contribution = unit intrinsic XP * amount (e.g. Isle cargo 1×XP).
+    //   Requires EffectContext_t::pUnit; Unit-domain stats + ThisUnit only. IDesign-only
+    //   resolve drops it (no unit subject). Uses GetXp(), not SE-shifted effective morale.
     // BuildingUpkeep: contribution = base facility upkeep * amount (e.g. MaxClamp econ at
     //   upkeep). Requires EffectContext_t::pBase; Continuous MaxClamp on econ only.
     enum class AmountSource_t
@@ -86,6 +89,7 @@ struct StatModifierEffect_t
         MineralsConverted,
         BaseSize,
         BasesOwned,
+        IntrinsicXp,
         BuildingUpkeep,
     };
     std::optional<AmountSource_t> amountSource;
@@ -348,7 +352,7 @@ struct IsPrototype_t
 {
 };
 
-// True when UnitDesign::IsCombatUnit (additive Attack > 0 or ForcesPsiCombat). Design-only
+// True when UnitDesign::IsCombatUnit (additive Attack > 0 or ForcesPsiCombat). IDesign-only
 // flag resolve so FactionUnits collection stays recursion-safe.
 struct IsCombatUnit_t
 {

@@ -19,6 +19,7 @@
 #include "game/social-engineering/SocialRatingRegistry.h"
 #include "game/units/ProbeActionConfig.h"
 #include "game/units/UnitComponentRegistry.h"
+#include "game/units/NativeUnitRegistry.h"
 #include "game/effects/EffectConfig.h"
 #include "game/DifficultyConfig.h"
 #include "game/units/BaseConquestConfig.h"
@@ -52,6 +53,7 @@ void FillEffectReferenceContext(GameDataContext& rData)
     rData.improvementRegistry = std::make_unique<ImprovementRegistry>();
     rData.techRegistry = std::make_unique<TechRegistry>();
     rData.unitComponentRegistry = std::make_unique<UnitComponentRegistry>();
+    rData.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
     rData.popTypeRegistry = std::make_unique<PopTypeRegistry>();
     rData.socialPolicyRegistry = std::make_unique<SocialPolicyRegistry>();
     rData.socialRatingRegistry = std::make_unique<SocialRatingRegistry>();

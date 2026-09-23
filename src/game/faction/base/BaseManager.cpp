@@ -24,6 +24,7 @@
 #include "game/map/MapUtils.h"
 #include "game/map/WorldMap.h"
 #include "game/social-engineering/SocialRatingResolver.h"
+#include "game/units/IDesign.h"
 #include "game/units/UnitDesign.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
@@ -223,7 +224,7 @@ BaseManager::BaseManager(
             return;
         }
 
-        if (const UnitDesign* pDesign = m_pFaction->GetMilitary().GetDesign(itemId))
+        if (const IDesign* pDesign = m_pFaction->GetMilitary().GetDesign(itemId))
         {
             Unit& rUnit = m_pFaction->GetUnitManager().CreateUnit(
                 m_pFaction->AllocateUnitId(),
@@ -480,9 +481,12 @@ std::vector<const IConstructable*> BaseManager::GetConstructable() const
             available.push_back(&rStockpile);
         }
     }
-    for (const std::unique_ptr<UnitDesign>& pDesign : m_pFaction->GetMilitary().GetDesigns())
+    for (const std::unique_ptr<IDesign>& pDesign : m_pFaction->GetMilitary().GetDesigns())
     {
-        available.push_back(pDesign.get());
+        if (const auto* pItem = dynamic_cast<const IConstructable*>(pDesign.get()))
+        {
+            available.push_back(pItem);
+        }
     }
     return available;
 }
@@ -547,7 +551,8 @@ bool BaseManager::WouldCompletionAbandonBase() const
     {
         return PredictTriggeredPopulationSize(pBuilding->onCompleteEffects, size) <= 0;
     }
-    if (const UnitDesign* pDesign = m_pFaction->GetMilitary().GetDesign(pItem->GetId()))
+    if (const auto* pDesign =
+        dynamic_cast<const UnitDesign*>(m_pFaction->GetMilitary().GetDesign(pItem->GetId())))
     {
         return PredictUnitProductionPopulationSize(*pDesign, size) <= 0;
     }
@@ -787,14 +792,16 @@ void BaseManager::RebindFaction(Faction& rFaction)
         }
         else
         {
-            const UnitDesign* pDesign = rFaction.GetMilitary().GetDesign(pItem->GetId());
-            if (!pDesign || !pDesign->IsAvailable(rTechs))
+            const IDesign* pDesign = rFaction.GetMilitary().GetDesign(pItem->GetId());
+            const auto* pConstructable = dynamic_cast<const IConstructable*>(pDesign);
+            const auto* pUnitDesign = dynamic_cast<const UnitDesign*>(pDesign);
+            if (!pConstructable || (pUnitDesign && !pUnitDesign->IsAvailable(rTechs)))
             {
                 m_pProduction->RebindProductionItem(nullptr);
             }
             else
             {
-                m_pProduction->RebindProductionItem(pDesign);
+                m_pProduction->RebindProductionItem(pConstructable);
             }
         }
     }

@@ -733,7 +733,7 @@
   },
   {
     "id": "deep_pressure_hull",
-    "name": "Deep Pressure Hull (cloak only on Fungus \u2014 stand-in for sea-only)",
+    "name": "Deep Pressure Hull",
     "type": "ability",
     "effects": [
       {
@@ -741,10 +741,10 @@
         "scope": "ThisUnit",
         "condition": {
           "kind": "TargetTileHas",
-          "value": "Fungus"
+          "value": "Water"
         },
         "parameters": {
-          "channel": "cloak"
+          "channel": "deep_pressure"
         }
       }
     ]

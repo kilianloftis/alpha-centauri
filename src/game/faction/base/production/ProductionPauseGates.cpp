@@ -1,7 +1,7 @@
 #include "game/faction/base/production/ProductionPauseGates.h"
 
 #include "game/IConstructable.h"
-#include "game/units/UnitDesign.h"
+#include "game/units/IDesign.h"
 
 #include <stdexcept>
 
@@ -21,7 +21,7 @@ std::vector<PauseOnEventId_t> CollectProductionPauseGates(const IConstructable& 
         break;
     case ConstructableKind_t::Unit:
     {
-        const auto* pDesign = dynamic_cast<const UnitDesign*>(&rItem);
+        const auto* pDesign = dynamic_cast<const IDesign*>(&rItem);
         if (pDesign && pDesign->IsCombatUnit())
         {
             gates.push_back(PauseOnEventId_t::CombatUnitBuilt);

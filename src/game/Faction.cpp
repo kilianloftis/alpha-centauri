@@ -19,6 +19,10 @@
 #include "game/faction/base/resources/ResourceManager.h"
 #include "game/faction/base/resources/WorkerAssignmentManager.h"
 #include "game/faction/FactionIdentity.h"
+#include "game/units/UnitDesign.h"
+#include "game/units/EnsureNativeDesign.h"
+#include "game/units/NativeUnitRegistry.h"
+#include "game/units/UnitComponentConfig.h"
 #include "game/effects/InteractionResolve.h"
 #include <iostream>
 #include <limits>
@@ -89,6 +93,14 @@ Faction::Faction(FactionId_t factionId, bool bIsPlayerControlled,
     m_explored.Reset(rWorldMap.GetWidth(), rWorldMap.GetHeight());
     m_visible.Reset(rWorldMap.GetWidth(), rWorldMap.GetHeight());
     RebuildVisibility();
+
+    if (rDataContext.nativeUnitRegistry)
+    {
+        for (const NativeUnitConfig_t& rConfig : rDataContext.nativeUnitRegistry->GetAll())
+        {
+            EnsureNativeDesign(*this, rDataContext, rConfig.id);
+        }
+    }
 }
 
 Faction::~Faction()
@@ -422,7 +434,10 @@ BaseManager* Faction::CreateBaseFromSnapshot(
         }
         if (!pItem)
         {
-            pItem = GetMilitary().GetDesign(rSnapshot.productionItemId);
+            if (const IDesign* pDesign = GetMilitary().GetDesign(rSnapshot.productionItemId))
+            {
+                pItem = dynamic_cast<const IConstructable*>(pDesign);
+            }
         }
         if (!pItem)
         {
@@ -752,11 +767,14 @@ std::optional<ScrapPayout_t> Faction::QuoteScrapUnit(const Unit& rUnit) const
     }
 
     ScrapOverride_t override;
-    for (const UnitComponentConfig_t* pComponent : rUnit.GetDesign().GetComponents())
+    if (const auto* pUnitDesign = dynamic_cast<const UnitDesign*>(&rUnit.GetDesign()))
     {
-        if (pComponent && pComponent->scrap)
+        for (const UnitComponentConfig_t* pComponent : pUnitDesign->GetComponents())
         {
-            MergeScrapOverride(*pComponent->scrap, override);
+            if (pComponent && pComponent->scrap)
+            {
+                MergeScrapOverride(*pComponent->scrap, override);
+            }
         }
     }
 

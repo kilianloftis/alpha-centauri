@@ -6,7 +6,7 @@
 #include "game/faction/base/HomeBaseIndex.h"
 #include "game/map/WorkedTileIndex.h"
 #include "game/units/MoraleCalculator.h"
-#include "game/units/UnitDesign.h"
+#include "game/units/IDesign.h"
 #include "game/units/UnitOrder.h"
 #include <array>
 #include <optional>
@@ -53,7 +53,7 @@ public:
     // rMorale is the game-wide calculator owned by GameDataContext (supplied by the owning
     // UnitManager); used here only to seed intrinsic XP and clamp SetXp.
     Unit(UnitId_t unitId,
-         const UnitDesign& rDesign,
+         const IDesign& rDesign,
          UnitPositionIndex& rPositions,
          const Tile& rTile,
          BaseManager* pHomeBase,
@@ -64,7 +64,7 @@ public:
 
     UnitId_t GetUnitId() const;
 
-    const UnitDesign& GetDesign() const;
+    const IDesign& GetDesign() const;
 
     // Live-unit stat / flag resolution (design effects + FactionUnits). Prefer the free
     // ResolveStat / ResolveFlag overloads; these forward to them.
@@ -89,7 +89,7 @@ public:
 
     int GetCurrentHp() const;
     int GetCurrentFuel() const;
-    // Design max fuel pool (TurnsOfFuel × Movement); 0 when the design does not use fuel.
+    // IDesign max fuel pool (TurnsOfFuel × Movement); 0 when the design does not use fuel.
     int GetMaxFuel() const;
     // Chassis Movement stat in move-points (not fragments).
     int GetMovementPoints() const;
@@ -109,7 +109,7 @@ public:
     // moment the unit was created. Fixed for life: the faction's build ledger keeps moving,
     // but what a given unit was when it rolled off the line does not.
     bool IsPrototype() const;
-    // Forwards to UnitDesign::IsCombatUnit (component Attack / ForcesPsiCombat).
+    // Forwards to IDesign::IsCombatUnit (Attack / ForcesPsiCombat).
     bool IsCombatUnit() const;
 
     void SetCurrentHp(int hp);
@@ -193,7 +193,7 @@ private:
     void ClearCargoLinks_();
 
     UnitId_t m_unitId;
-    const UnitDesign& m_rDesign;
+    const IDesign& m_rDesign;
     UnitPositionIndex& m_rPositions;
     const Tile* m_pTile;
     // Holding the claim IS the home-base link (see HomeBaseIndex).

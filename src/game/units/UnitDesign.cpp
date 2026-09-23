@@ -137,7 +137,15 @@ bool UnitDesign::IsAvailable(const std::vector<std::string>& rDiscoveredTechs) c
 
 std::vector<ActiveEffect_t> UnitDesign::CollectEffects() const
 {
-    return CollectUnitEffects(*this).effects;
+    std::vector<ActiveEffect_t> result;
+    for (const UnitComponentConfig_t* pComp : m_components)
+    {
+        if (pComp)
+        {
+            AppendActiveEffects(pComp->effects, nullptr, pComp->id, result);
+        }
+    }
+    return result;
 }
 
 int UnitDesign::GetBaseCost() const
@@ -155,31 +163,6 @@ int UnitDesign::GetBaseCost() const
     const float costMult = static_cast<float>(breakdown.total);
 
     return FinalizeResolvedStat(static_cast<double>(rawCost) * costMult);
-}
-
-int UnitDesign::GetStat(StatId_t statId) const
-{
-    return ResolveStat(*this, statId);
-}
-
-int UnitDesign::GetStat(StatId_t statId, const EffectContext_t& rCtx) const
-{
-    return ResolveStat(*this, statId, rCtx);
-}
-
-bool UnitDesign::GetFlag(RuleFlagId_t flagId) const
-{
-    return ResolveFlag(*this, flagId);
-}
-
-int UnitDesign::GetMovementPoints() const
-{
-    return GetStat(StatId_t::Movement);
-}
-
-int UnitDesign::GetMineralUpkeep() const
-{
-    return std::max(0, GetStat(StatId_t::MineralUpkeep));
 }
 
 bool UnitDesign::UsesFuel() const

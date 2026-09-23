@@ -28,6 +28,7 @@
 #include "game/social-engineering/SocialRatingRegistry.h"
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitSlotRegistry.h"
+#include "game/units/NativeUnitRegistry.h"
 #include "game/effects/TileYieldRulesConfigParser.h"
 #include "game/effects/InteractionGridsConfigParser.h"
 #include "game/effects/PoliceRulesConfigParser.h"
@@ -61,6 +62,7 @@ void ThrowIfIncomplete(const GameDataContext& rData)
         {rData.stockpileRegistry.get(), "stockpileRegistry"},
         {rData.unitComponentRegistry.get(), "unitComponentRegistry"},
         {rData.unitSlotRegistry.get(), "unitSlotRegistry"},
+        {rData.nativeUnitRegistry.get(), "nativeUnitRegistry"},
         {rData.techRegistry.get(), "techRegistry"},
         {rData.socialPolicyRegistry.get(), "socialPolicyRegistry"},
         {rData.socialRatingRegistry.get(), "socialRatingRegistry"},
@@ -118,6 +120,9 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
 
     rData.unitSlotRegistry = std::make_unique<UnitSlotRegistry>();
     rData.unitSlotRegistry->Load(rPaths.unitSlots);
+
+    rData.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
+    rData.nativeUnitRegistry->Load(rPaths.nativeUnits);
 
     // --- Effect-declaring (and required_tech-bearing) registries ---
     rData.popTypeRegistry = std::make_unique<PopTypeRegistry>();

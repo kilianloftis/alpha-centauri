@@ -258,7 +258,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
 - **Purpose**: `amount_source` makes a modifier's `amount` a *scale* on a runtime value
   instead of a literal. `AmountSourceValue` evaluates that value against a subject.
 - **One overload per subject type** (`BaseManager`, `Tile`, `StockpileConversionSubject_t`,
-  `Faction`), plus one `(StatModifierEffect_t, const EffectContext_t*)` entry point that picks
+  `Faction`, `Unit`), plus one `(StatModifierEffect_t, const EffectContext_t*)` entry point that picks
   the subject field for a source and dispatches.
 - **Adding an `AmountSource_t` is two forced edits, not one per subject.** The dispatch switch
   carries no `default:`, so `-Wswitch -Werror=switch` (`src/CMakeLists.txt`) makes it a compile
@@ -726,18 +726,20 @@ grants fewer units and reports the real count rather than throwing.
       Base-domain stats with scopes `ThisBase` / `AllOwnerBases` / `FactionGlobal`. `BasesOwned`
       needs a Faction subject and allows Unit-domain stats with scope `ThisUnit` (unit resolve
       stamps `pFaction` via `UnitSubjectContext`; design-only preview leaves it unset and the
-      modifier filters out). A `selector` may not be combined with **any** `amount_source`:
+      modifier filters out). `IntrinsicXp` needs a Unit subject (`pUnit`) and allows Unit-domain
+      stats with scope `ThisUnit` + op `Add` (contribution = `GetXp() * amount`; used by Isle of
+      the Deep cargo). A `selector` may not be combined with **any** `amount_source`:
       selectors route through tile-yield resolution, which supplies only a tile subject. Each
       amount_source contribution for `BaseSize` is **floored** before entering the modifier
       stack (vanilla University `floor(size×0.25)` does not share fractional residue with
       another fractional BaseSize source; `ElevationEnergy` / `MineralsConverted` /
-      `BasesOwned` keep fractional scales). Missing required subject at resolve throws (no silent `0.0`). `energy` is not a
+      `BasesOwned` / `IntrinsicXp` keep fractional scales). Missing required subject at resolve throws (no silent `0.0`). `energy` is not a
       bank, so conversion routes it through `ResourceManager::AddAllocatedEnergy` (inefficiency,
       then the econ/labs/psych split) rather than crediting it directly — using the faction's
       split math alone, never `CalculateEcon_`/`Labs_`/`Psych_`, which would re-apply flat modifiers already paid during collection.
     - Balance keys listed under `RequireNumber` above have no C++ invent-defaults.
   - `ParseEffects` — parses the `effects` array of a containing JSON object, returning `{}` if absent; throws if `"effects"` is present but not an array. The validating overload takes an `EffectSourceKind_t` (`Building`, `UnitComponent`, `PopType`, `Improvement`, `SocialPolicy`, `SocialRating`, `Faction`, `CouncilProposal`, `CouncilRules`, `ProbeAction`, `TileYieldRules`, `Tech`, `Production`, `Stockpile`, `Difficulty`, `BaseConquest`) and runs `ValidateEffectForSource` on every entry.
-- **Consumers**: Every effect-declaring config parser calls `EffectConfigParser::ParseEffects` (or `ParseEffectConfig` + `ValidateEffectForSource`). Council proposal / governor parsers add a second honored-shape check after scope validation (see council-system.md).
+- **Consumers**: Every effect-declaring config parser calls `EffectConfigParser::ParseEffects` (or `ParseEffectConfig` + `ValidateEffectForSource`). Council proposal / governor parsers add a second honored-shape check after scope validation (see council-system.md). `ThisUnit` is legal on `UnitComponent`, `MoraleLevel`, and `NativeUnit` sources.
 
 ### EffectReferenceValidator (post-load id validation)
 

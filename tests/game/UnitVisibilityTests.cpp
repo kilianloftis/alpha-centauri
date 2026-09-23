@@ -222,15 +222,16 @@ TEST_CASE("Conditional Conceal applies only when TargetTileHas is satisfied",
     Faction& owner = fixture.MakeFaction();
 
     fixture.MakeUnit(observer, 4, 4, {"test_chassis"});
-    Unit& subject = fixture.MakeUnit(owner, 5, 4, {"test_chassis", "deep_pressure_hull"});
+    fixture.At(5, 4).SetElevation(-100);
+    Unit& subject = fixture.MakeUnit(owner, 5, 4, {"test_sea_chassis", "deep_pressure_hull"});
     observer.RebuildVisibility();
 
     REQUIRE(observer.GetVisibleMap().IsVisible(subject.GetTile()));
-    // Clear tile: condition fails → no active Conceal → visible.
-    CHECK(IsUnitVisibleTo(observer, subject, *fixture.ctx));
-
-    fixture.At(5, 4).SetHasFungus(true);
+    // Water tile: Deep Pressure Hull Conceal is active → hidden.
     CHECK_FALSE(IsUnitVisibleTo(observer, subject, *fixture.ctx));
+
+    fixture.At(5, 4).SetElevation(100);
+    CHECK(IsUnitVisibleTo(observer, subject, *fixture.ctx));
 }
 
 TEST_CASE("Conditional Detect applies only when TargetTileHas is satisfied",

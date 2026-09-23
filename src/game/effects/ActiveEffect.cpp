@@ -24,6 +24,7 @@
 #include "game/social-engineering/SocialPolicyConfig.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/Unit.h"
+#include "game/units/IDesign.h"
 #include "game/units/UnitDesign.h"
 #include "game/effects/EffectConfig.h"
 #include "game/effects/TileYieldRulesConfig.h"
@@ -65,7 +66,7 @@ UnitEffects_t::UnitEffects_t(const Unit& rUnit)
 {
 }
 
-UnitEffects_t::UnitEffects_t(const UnitDesign& rDesign)
+UnitEffects_t::UnitEffects_t(const IDesign& rDesign)
     : pUnit(nullptr)
     , pDesign(&rDesign)
 {
@@ -78,7 +79,7 @@ UnitEffects_t::UnitEffects_t(const Unit& rUnit, std::vector<ActiveEffect_t> effe
 {
 }
 
-UnitEffects_t::UnitEffects_t(const UnitDesign& rDesign, std::vector<ActiveEffect_t> effectsIn)
+UnitEffects_t::UnitEffects_t(const IDesign& rDesign, std::vector<ActiveEffect_t> effectsIn)
     : pUnit(nullptr)
     , pDesign(&rDesign)
     , effects(std::move(effectsIn))
@@ -149,6 +150,18 @@ double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double sca
     }
 }
 
+double AmountSourceValue(StatModifierEffect_t::AmountSource_t source, double scale,
+                         const Unit& rUnit)
+{
+    switch (source)
+    {
+        case StatModifierEffect_t::AmountSource_t::IntrinsicXp:
+            return static_cast<double>(rUnit.GetXp()) * scale;
+        default:
+            ThrowNoEvaluation_(source, "Unit");
+    }
+}
+
 double AmountSourceValue(const StatModifierEffect_t& rMod, const EffectContext_t* pCtx)
 {
     if (!rMod.amountSource.has_value())
@@ -193,6 +206,13 @@ double AmountSourceValue(const StatModifierEffect_t& rMod, const EffectContext_t
                     "AmountSourceValue: BasesOwned requires pFaction");
             }
             return AmountSourceValue(*rMod.amountSource, rMod.amount, *pCtx->pFaction);
+        case StatModifierEffect_t::AmountSource_t::IntrinsicXp:
+            if (!pCtx || !pCtx->pUnit)
+            {
+                throw std::runtime_error(
+                    "AmountSourceValue: IntrinsicXp requires pUnit");
+            }
+            return AmountSourceValue(*rMod.amountSource, rMod.amount, *pCtx->pUnit);
     }
     throw std::runtime_error("AmountSourceValue: unknown amount_source");
 }
@@ -576,7 +596,7 @@ bool ConditionBodySatisfied_(const Condition_t& condition, const EffectContext_t
             }
             else if constexpr (std::is_same_v<T, HasFlag_t>)
             {
-                // Design-only: avoid CollectLiveUnitEffects recursion while building that list.
+                // IDesign-only: avoid CollectLiveUnitEffects recursion while building that list.
                 return ctx.pUnit != nullptr
                     && ResolveFlag(ctx.pUnit->GetDesign(), rAlt.flag);
             }
@@ -740,25 +760,6 @@ BaseEffects_t FilterForBase(const FactionEffects_t& rFactionEffects, const BaseM
     }
     return matching;
 }
-
-namespace
-{
-
-std::vector<ActiveEffect_t> CollectUnitComponentEffects_(
-    const std::vector<const UnitComponentConfig_t*>& components)
-{
-    std::vector<ActiveEffect_t> result;
-    for (const UnitComponentConfig_t* pComp : components)
-    {
-        if (pComp)
-        {
-            AppendActiveEffects(pComp->effects, nullptr, pComp->id, result);
-        }
-    }
-    return result;
-}
-
-} // namespace
 
 std::vector<ActiveEffect_t> CollectPopEffects(const PopTypeConfig_t& rConfig)
 {
@@ -924,9 +925,9 @@ UnitEffects_t CollectLiveUnitEffects(const Unit& rUnit)
     return UnitEffects_t(rUnit, std::move(effects));
 }
 
-UnitEffects_t CollectUnitEffects(const UnitDesign& rDesign)
+UnitEffects_t CollectUnitEffects(const IDesign& rDesign)
 {
-    return UnitEffects_t(rDesign, CollectUnitComponentEffects_(rDesign.GetComponents()));
+    return UnitEffects_t(rDesign, rDesign.CollectEffects());
 }
 
 double ResolveBaseStat(const BaseEffects_t& rBaseEffects, StatId_t statId, double seed,
@@ -1062,7 +1063,7 @@ bool ResolveFlagFromEffects_(Range&& effects, RuleFlagId_t flagId)
 
 } // namespace
 
-int ResolveStat(const UnitDesign& rDesign, StatId_t statId)
+int ResolveStat(const IDesign& rDesign, StatId_t statId)
 {
     // Materialize first: FilterByStatId rejects rvalues (borrowing view).
     const std::vector<ActiveEffect_t> effects = rDesign.CollectEffects();
@@ -1070,7 +1071,7 @@ int ResolveStat(const UnitDesign& rDesign, StatId_t statId)
         ResolveStatModifiers(FilterByStatId(effects, statId), SeedFor(statId)).total);
 }
 
-int ResolveStat(const UnitDesign& rDesign, StatId_t statId, const EffectContext_t& rCtx)
+int ResolveStat(const IDesign& rDesign, StatId_t statId, const EffectContext_t& rCtx)
 {
     const std::vector<ActiveEffect_t> effects = rDesign.CollectEffects();
     return FinalizeResolvedStat(
@@ -1078,7 +1079,7 @@ int ResolveStat(const UnitDesign& rDesign, StatId_t statId, const EffectContext_
                              SeedFor(statId), &rCtx).total);
 }
 
-int ResolveAdditiveStat(const UnitDesign& rDesign, StatId_t statId)
+int ResolveAdditiveStat(const IDesign& rDesign, StatId_t statId)
 {
     // Materialize first: FilterByStatId returns a borrowing view (see its contract).
     const std::vector<ActiveEffect_t> effects = rDesign.CollectEffects();
@@ -1095,7 +1096,7 @@ int ResolveAdditiveStat(const UnitDesign& rDesign, StatId_t statId)
     return FinalizeResolvedStat(addTotal);
 }
 
-bool ResolveFlag(const UnitDesign& rDesign, RuleFlagId_t flagId)
+bool ResolveFlag(const IDesign& rDesign, RuleFlagId_t flagId)
 {
     return ResolveFlagFromEffects_(rDesign.CollectEffects(), flagId);
 }

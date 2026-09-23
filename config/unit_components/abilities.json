@@ -19,6 +19,26 @@
     ]
   },
   {
+    "id": "Deep_Pressure_Hull",
+    "name": "Deep Pressure Hull",
+    "type": "ability",
+    "required_tech": "",
+    "mineral_cost": 10,
+    "effects": [
+      {
+        "type": "Conceal",
+        "scope": "ThisUnit",
+        "condition": {
+          "kind": "TargetTileHas",
+          "value": "Water"
+        },
+        "parameters": {
+          "channel": "deep_pressure"
+        }
+      }
+    ]
+  },
+  {
     "id": "Cloaking_Device",
     "name": "Cloaking Device",
     "type": "ability",

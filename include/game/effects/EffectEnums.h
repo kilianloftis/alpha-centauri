@@ -770,6 +770,8 @@ enum class EffectSourceKind_t
     BaseConquest,
     PoliceRules,
     MoraleLevel,
+    // Flat native-life designs (config/native_units.json): ThisUnit continuous effects only.
+    NativeUnit,
     // pop_composition.json's faction-wide `effects` array: enters the pool with no origin base.
     PopComposition,
     // pop_composition.json's per-base mood arrays (riot_tiers, golden_age_effects): collected

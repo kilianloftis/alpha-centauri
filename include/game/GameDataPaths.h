@@ -15,6 +15,7 @@ struct GameDataPaths
     std::string improvements = "config/improvements.json";
     std::string unitComponents = "config/unit_components";
     std::string unitSlots = "config/unit_slot_config.json";
+    std::string nativeUnits = "config/native_units.json";
     std::string techs = "config/techs.json";
     std::string socialPolicies = "config/social_policies.json";
     std::string socialRatings = "config/social_rating_effects.json";

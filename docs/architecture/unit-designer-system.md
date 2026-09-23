@@ -2,6 +2,11 @@
 
 The Unit Designer lets the player compose a `UnitDesign` from components, review its combined stats, save designs to `Military`, and browse saved designs.
 
+`UnitDesign` shares the abstract `IDesign` base with `NativeDesign` (see
+[native-units-system.md](native-units-system.md)). The designer UI only lists `UnitDesign`.
+Both kinds are `IConstructable` and can be queued at a base; natives are registered on the
+faction from `config/native_units.json`.
+
 ## Layout
 
 ```

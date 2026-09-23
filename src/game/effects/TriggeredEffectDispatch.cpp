@@ -204,7 +204,7 @@ BaseManager* ResolveAnchorBase_(TriggeredEffectContext_t& rCtx, Faction& rFactio
     return nullptr;
 }
 
-// Design-level stand-in for CanHoldTileWithoutCarrier, which needs a live Unit and so cannot
+// IDesign-level stand-in for CanHoldTileWithoutCarrier, which needs a live Unit and so cannot
 // be asked before the unit exists. A tile that harbors the domain for this faction always
 // works (its own base, a port); otherwise the tile's own surface has to suit the domain.
 bool DesignCanHoldTile_(const UnitDesign& rDesign, const Tile& rTile, FactionId_t factionId,

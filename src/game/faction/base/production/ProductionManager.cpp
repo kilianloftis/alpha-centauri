@@ -7,7 +7,7 @@
 #include "game/faction/Military.h"
 #include "game/stockpiles/StockpileConversion.h"
 #include "game/stockpiles/StockpileRegistry.h"
-#include "game/units/UnitDesign.h"
+#include "game/units/IDesign.h"
 
 #include <algorithm>
 #include <cmath>
@@ -265,7 +265,7 @@ bool ProductionManager::IsCurrentPrototype() const
     // Same test ClassifyCompletedItem uses. Resolving the design by id instead would scan
     // every design of the faction on a call GetMineralCost makes from render paths, and would
     // mistake a building for a unit if the two ever shared an id.
-    const UnitDesign* pDesign = dynamic_cast<const UnitDesign*>(m_pCurrentItem);
+    const IDesign* pDesign = dynamic_cast<const IDesign*>(m_pCurrentItem);
     return pDesign && m_rBase.GetFaction().GetMilitary().IsPrototype(*pDesign);
 }
 

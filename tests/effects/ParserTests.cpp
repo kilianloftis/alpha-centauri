@@ -515,6 +515,39 @@ TEST_CASE("ParseEffectConfig: StatModifier amount_source", "[effects][parser]")
         CHECK(pMod->amount == Approx(1.0));
     }
 
+    SECTION("IntrinsicXp Isle-style cargo scale")
+    {
+        const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisUnit",
+            "parameters": {
+                "stat": "cargo_capacity",
+                "amount_source": "IntrinsicXp",
+                "amount": 1,
+                "op": "Add"
+            }
+        })"));
+        const auto* pMod = std::get_if<StatModifierEffect_t>(&config.effect);
+        REQUIRE(pMod != nullptr);
+        REQUIRE(pMod->amountSource.has_value());
+        CHECK(*pMod->amountSource == StatModifierEffect_t::AmountSource_t::IntrinsicXp);
+        CHECK(pMod->amount == Approx(1.0));
+    }
+
+    SECTION("IntrinsicXp non-Add op throws")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+            "type": "StatModifier",
+            "scope": "ThisUnit",
+            "parameters": {
+                "stat": "cargo_capacity",
+                "amount_source": "IntrinsicXp",
+                "amount": 1,
+                "op": "AddPercent"
+            }
+        })")));
+    }
+
     SECTION("BasesOwned outside ThisUnit throws")
     {
         CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
@@ -1817,6 +1850,10 @@ TEST_CASE("ValidateEffectForSource: rejects only the certainly-impossible combin
         EffectScope_t::ThisUnit, EffectSourceKind_t::MoraleLevel, "morale_level_4"));
     CHECK_THROWS(ValidateScopeForSource_(
         EffectScope_t::ThisBase, EffectSourceKind_t::MoraleLevel, "morale_level_4"));
+    CHECK_NOTHROW(ValidateScopeForSource_(
+        EffectScope_t::ThisUnit, EffectSourceKind_t::NativeUnit, "Mind_Worm"));
+    CHECK_THROWS(ValidateScopeForSource_(
+        EffectScope_t::ThisBase, EffectSourceKind_t::NativeUnit, "Mind_Worm"));
 
     // ThisBase / ProducedAtThisBase need an origin base (or pop-merge path). A unit component
     // or probe action that wants to act on the production / mission base at the moment the

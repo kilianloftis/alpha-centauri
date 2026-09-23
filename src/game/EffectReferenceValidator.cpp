@@ -24,6 +24,8 @@
 #include "game/social-engineering/SocialRatingRegistry.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitComponentRegistry.h"
+#include "game/units/NativeUnitConfig.h"
+#include "game/units/NativeUnitRegistry.h"
 #include "game/units/ProbeActionConfig.h"
 #include "game/effects/EffectConfig.h"
 
@@ -305,6 +307,8 @@ void ValidateEffectReferences(const GameDataContext& rData)
     const TechRegistry& rTechs = RequireRegistry(rData.techRegistry, "techRegistry");
     const UnitComponentRegistry& rUnitComponents =
         RequireRegistry(rData.unitComponentRegistry, "unitComponentRegistry");
+    const NativeUnitRegistry& rNativeUnits =
+        RequireRegistry(rData.nativeUnitRegistry, "nativeUnitRegistry");
 
     // Effect-source registries / configs LoadGameData always populates before calling us.
     const PopTypeRegistry& rPopTypes =
@@ -366,6 +370,10 @@ void ValidateEffectReferences(const GameDataContext& rData)
     {
         validate(rConfig.effects, rConfig.id);
         validateTriggered(rConfig.onCompleteEffects, rConfig.id);
+    }
+    for (const NativeUnitConfig_t& rConfig : rNativeUnits.GetAll())
+    {
+        validate(rConfig.effects, rConfig.id);
     }
     for (const SocialPolicyConfig_t& rConfig : rSocialPolicies.GetAll())
     {

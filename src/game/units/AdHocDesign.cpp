@@ -57,12 +57,12 @@ const UnitDesign* EnsureAdHocDesign(Faction& rFaction, const GameDataContext& rD
 
     auto pDesign = std::make_unique<UnitDesign>(slots, assigned);
     const std::string designId = pDesign->GetId();
-    if (const UnitDesign* pExisting = rFaction.GetMilitary().GetDesign(designId))
+    if (const IDesign* pExisting = rFaction.GetMilitary().GetDesign(designId))
     {
-        return pExisting;
+        return dynamic_cast<const UnitDesign*>(pExisting);
     }
     rFaction.GetMilitary().AddDesign(std::move(pDesign));
-    return rFaction.GetMilitary().GetDesign(designId);
+    return dynamic_cast<const UnitDesign*>(rFaction.GetMilitary().GetDesign(designId));
 }
 
 } // namespace ac

@@ -136,6 +136,33 @@ void ValidateAmountSourceLegality_(const StatModifierEffect_t& rMod,
                     "(per-base scale)");
             }
             break;
+        case StatModifierEffect_t::AmountSource_t::IntrinsicXp:
+            // Required subject: Unit. Allowed on Unit-domain stats with ThisUnit
+            // (e.g. Isle of the Deep cargo = 1 × intrinsic XP).
+            if (DomainFor(stat) != ResolveDomain_t::Unit)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' IntrinsicXp is only valid on a Unit-domain "
+                    "stat, got '"
+                    + rStatWire + "'");
+            }
+            if (scope != EffectScope_t::ThisUnit)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' IntrinsicXp requires scope ThisUnit");
+            }
+            if (rMod.op != ModifierOp_t::Add)
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' IntrinsicXp requires op Add");
+            }
+            if (!std::isfinite(amount))
+            {
+                throw std::runtime_error(
+                    "StatModifier 'amount_source' IntrinsicXp requires a finite amount "
+                    "(per-XP scale)");
+            }
+            break;
         case StatModifierEffect_t::AmountSource_t::BuildingUpkeep:
             // Required subject: Base. Allowed: Continuous MaxClamp on econ (cap energy
             // commerce at facility upkeep). Base-level scopes only.
@@ -1078,10 +1105,12 @@ void ValidateEffectForSource(const EffectConfig_t& rEffect, EffectSourceKind_t s
     }
     if (scope == EffectScope_t::ThisUnit
         && sourceKind != EffectSourceKind_t::UnitComponent
-        && sourceKind != EffectSourceKind_t::MoraleLevel)
+        && sourceKind != EffectSourceKind_t::MoraleLevel
+        && sourceKind != EffectSourceKind_t::NativeUnit)
     {
         throw std::runtime_error("Effect on '" + rSourceId
-            + "': scope ThisUnit is only meaningful on a unit component or morale level config");
+            + "': scope ThisUnit is only meaningful on a unit component, morale level, "
+              "or native unit config");
     }
     if (scope == EffectScope_t::ThisTech)
     {
@@ -1138,6 +1167,7 @@ void ValidateEffectForSource(const EffectConfig_t& rEffect, EffectSourceKind_t s
         case EffectSourceKind_t::BaseConquest:
         case EffectSourceKind_t::PoliceRules:
         case EffectSourceKind_t::MoraleLevel:
+        case EffectSourceKind_t::NativeUnit:
             bCanSupplyOriginBase = false;
             break;
         }

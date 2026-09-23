@@ -49,7 +49,7 @@ public:
     // constructing. unitId must be unique across the game (caller: GameState::AllocateUnitId).
     // pProducedAt is three-valued (see Unit's constructor): omit it to stamp from pHomeBase,
     // or pass an explicit nullptr for a unit that is homed but built nowhere (no production grants).
-    Unit& CreateUnit(UnitId_t unitId, const UnitDesign& rDesign, UnitPositionIndex& rPositions,
+    Unit& CreateUnit(UnitId_t unitId, const IDesign& rDesign, UnitPositionIndex& rPositions,
                      const Tile& rTile,
                      BaseManager* pHomeBase = nullptr,
                      std::optional<BaseManager*> pProducedAt = std::nullopt);

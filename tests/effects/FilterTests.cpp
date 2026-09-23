@@ -315,7 +315,7 @@ TEST_CASE("BasesOwned: Empire Pulse Attack scales with owned base count",
 
     // Flat +1 Attack; BasesOwned contribution is 0 with no bases.
     CHECK(unit.GetStat(StatId_t::Attack) == 1);
-    // Design-only resolve has no faction subject, so BasesOwned is dropped.
+    // IDesign-only resolve has no faction subject, so BasesOwned is dropped.
     CHECK(ResolveStat(unit.GetDesign(), StatId_t::Attack) == 1);
 
     fixture.MakeFactionBase(faction, 2, 2);

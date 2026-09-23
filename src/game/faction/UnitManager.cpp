@@ -1,6 +1,6 @@
 #include "game/faction/UnitManager.h"
 #include "game/units/Unit.h"
-#include "game/units/UnitDesign.h"
+#include "game/units/IDesign.h"
 #include "game/units/MoraleCalculator.h"
 #include "game/units/MovementRules.h"
 #include "game/units/TransportRules.h"
@@ -50,7 +50,7 @@ UnitManager::DeferredDestructionScope UnitManager::DeferDestruction()
     return DeferredDestructionScope(*this);
 }
 
-Unit& UnitManager::CreateUnit(UnitId_t unitId, const UnitDesign& rDesign,
+Unit& UnitManager::CreateUnit(UnitId_t unitId, const IDesign& rDesign,
                               UnitPositionIndex& rPositions, const Tile& rTile,
                               BaseManager* pHomeBase,
                               std::optional<BaseManager*> pProducedAt)

@@ -1,5 +1,6 @@
 #include "ui/unit-designer/DesignListPanel.h"
 #include "game/faction/Military.h"
+#include "game/units/IDesign.h"
 #include "game/units/UnitDesign.h"
 #include "graphics/Graphics.h"
 #include "ui/style/UiStyle.h"
@@ -35,7 +36,17 @@ void DesignListPanel::Render(Graphics& rGraphics)
 
     const auto& rDesigns = m_pMilitary->GetDesigns();
 
-    if (rDesigns.empty())
+    bool bHasPlayerDesign = false;
+    for (const auto& pDesign : rDesigns)
+    {
+        if (dynamic_cast<const UnitDesign*>(pDesign.get()))
+        {
+            bHasPlayerDesign = true;
+            break;
+        }
+    }
+
+    if (!bHasPlayerDesign)
     {
         const unsigned int labelSize = static_cast<unsigned int>(
             m_layout.height * Style().designListPanel.labelFontRatio);
@@ -61,7 +72,12 @@ void DesignListPanel::Render(Graphics& rGraphics)
     float x = m_layout.x + boxPad;
     for (const auto& pDesign : rDesigns)
     {
-        const bool bSelected = pDesign.get() == m_pSelectedDesign;
+        const auto* pUnitDesign = dynamic_cast<const UnitDesign*>(pDesign.get());
+        if (!pUnitDesign)
+        {
+            continue;
+        }
+        const bool bSelected = pUnitDesign == m_pSelectedDesign;
         const Color_t fillColor = bSelected
             ? Style().designListPanel.selectedBoxFillColor
             : Style().designListPanel.unselectedBoxFillColor;
@@ -74,7 +90,7 @@ void DesignListPanel::Render(Graphics& rGraphics)
 
         const float textPad = boxWidth * Style().designListPanel.textPadRatio;
         rGraphics.DrawText(
-            pDesign->GetName(),
+            pUnitDesign->GetName(),
             x + textPad,
             m_layout.y + boxPad + boxHeight * Style().designListPanel.textVerticalRatio,
             fontSize
@@ -104,10 +120,15 @@ void DesignListPanel::HandleMouseClick(const MouseEvent_t& rEvent)
     float x = m_layout.x + boxPad;
     for (const auto& pDesign : rDesigns)
     {
+        const auto* pUnitDesign = dynamic_cast<const UnitDesign*>(pDesign.get());
+        if (!pUnitDesign)
+        {
+            continue;
+        }
         const Rectangle_t rect{x, m_layout.y + boxPad, boxWidth, boxHeight};
         if (ContainsMouseCoord(rect, rEvent))
         {
-            m_pSelectedDesign = pDesign.get();
+            m_pSelectedDesign = pUnitDesign;
             if (m_onDesignSelected)
             {
                 m_onDesignSelected(m_pSelectedDesign);
