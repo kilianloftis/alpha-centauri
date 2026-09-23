@@ -20,7 +20,8 @@ namespace ac
 // unrepresentable instead of silently doing nothing.
 //
 // Containers declare these in trigger-named lists (`on_complete_effects`, `on_enter_effects`,
-// `on_visit_effects`, …); the slot says when they fire, so there is no persistence field.
+// `on_visit_effects`, `on_hold_effects`, …); the slot says when they fire, so there is no
+// persistence field.
 
 // Constructs the facility for real: the base gains a copy and pays its upkeep. Distinct from
 // the continuous GrantBuildingEffect_t, which only expands the target's effects.
@@ -123,6 +124,12 @@ struct RebelEffect_t
 {
 };
 
+// Destroys the context unit. No parameters: the subject is whichever unit the trigger stamped.
+// Absent unit does nothing.
+struct DestroyUnitEffect_t
+{
+};
+
 using TriggeredEffectVariant_t = std::variant<
     AddBuildingEffect_t,
     GrantTechEffect_t,
@@ -134,7 +141,8 @@ using TriggeredEffectVariant_t = std::variant<
     GrantXpEffect_t,
     RestoreHitPointsEffect_t,
     DestroyFacilityEffect_t,
-    RebelEffect_t
+    RebelEffect_t,
+    DestroyUnitEffect_t
 >;
 
 // Which subject remembers that a once-only entry has already fired.

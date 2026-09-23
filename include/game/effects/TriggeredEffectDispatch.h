@@ -5,6 +5,7 @@
 #include "game/effects/TriggeredEffect.h"
 #include "game/faction/base/BaseTypes.h"
 #include "game/research/TechConfigParser.h"
+#include "game/units/Unit.h"
 
 #include <optional>
 #include <random>
@@ -79,6 +80,11 @@ struct InfiltrationSet_t
     std::vector<FactionId_t> targets;
 };
 
+struct UnitDestroyed_t
+{
+    UnitId_t unitId = 0;
+};
+
 using TriggeredEffectResult_t = std::variant<
     FacilitiesDestroyed_t,
     PopulationChanged_t,
@@ -89,7 +95,8 @@ using TriggeredEffectResult_t = std::variant<
     XpGranted_t,
     HitPointsRestored_t,
     BaseRebelled_t,
-    InfiltrationSet_t
+    InfiltrationSet_t,
+    UnitDestroyed_t
 >;
 
 // Trigger-only fields plus non-const subjects for mutate arms. Conditions and amount sources
@@ -152,5 +159,17 @@ bool TileHasVisitEffects(const Tile& rTile);
 
 // Tech on_discover_effects for rTechId.
 void ApplyTechDiscoverEffects(GameState& rGameState, Faction& rFaction, const TechId& rTechId);
+
+// True when rUnit has a Hold order at a base its faction owns, and its design's
+// on_hold_effects contain an entry whose condition matches that base.
+bool UnitHasHoldLink(const GameState& rGameState, const Unit& rUnit);
+
+// Display name of the place that satisfied the first matching hold entry. Empty when
+// UnitHasHoldLink is false. A BaseHasBuilding condition names that facility; otherwise
+// the base's own name.
+std::string HoldLinkHostName(const GameState& rGameState, const Unit& rUnit);
+
+// Run the design's on_hold_effects. A DestroyUnit entry in that list removes the subject.
+void ApplyHoldLink(GameState& rGameState, Unit& rUnit);
 
 } // namespace ac

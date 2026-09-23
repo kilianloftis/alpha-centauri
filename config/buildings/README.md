@@ -132,6 +132,7 @@ most once per subject — and only an entry that actually changed something spen
 | `DestroyFacility` | Destroys random facilities (`parameters.count`, `exclude_hq`, `exclude_secret_projects`) |
 | `SetInfiltration` | Writes lasting datalink infiltration; optional `factionFilter` picks the targets (absent = every other faction). This is the only type that accepts a `factionFilter` |
 | `Rebel` | Hands the base to a weighted other faction |
+| `DestroyUnit` | Destroys the context unit. No parameters |
 
 ---
 

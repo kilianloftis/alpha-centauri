@@ -164,6 +164,11 @@ public:
 
     UnitOrderExecutor& GetUnitOrderExecutor();
 
+    // Hold order whose design list matches this friendly base: the player is asked to link;
+    // an AI holder applies the list immediately. Also runs when a building is completed
+    // under a unit that is already Holding.
+    void ConsiderHoldLink(Unit& rUnit);
+
     ProbeActionExecutor& GetProbeActions();
     const ProbeActionExecutor& GetProbeActions() const;
 

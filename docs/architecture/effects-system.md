@@ -297,6 +297,8 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   - `TargetTileHas_t` — the targeted tile has `featureId`, matched via `Tile::HasFeature`. One alternative covers terrain classification (`Rocky`), river/fungus, and any improvement id — including `Base` (a founded base registers itself as the `Base` improvement) and tile specials. In combat the target is the defender's tile.
   - `AllOf_t` — every nested `Condition_t` is satisfied (AND). Wire JSON may still supply `"values": ["A","B"]` and/or `"conditions"`; the parser desugars each values entry to `TargetTileHas_t` so only nested conditions exist in memory.
   - `IsDefending_t`, `OriginBaseIsTargetBase_t`, `OriginBaseIsHomeBase_t`, `AttackerIsEmbarked_t`, `IsHeadquarters_t` — parameterless situational predicates. `OriginBaseIsTargetBase_t` keys on the combat tile; `OriginBaseIsHomeBase_t` keys on `EffectContext_t::pUnit`'s home base, which is how a base-sourced `FactionUnits` effect (a riot tier's morale penalty) narrows to that base's own garrison.
+  - `SubjectDesign_t` — identity predicate. True when `EffectContext_t::pUnit`'s design id equals `designId`. Absent unit fails closed. Load validation checks the id against `NativeUnitRegistry`.
+  - `BaseHasBuilding_t` — situational predicate. True when `EffectContext_t::pBase` has a constructed copy of `buildingId`. Absent base fails closed. Load validation checks the id against `BuildingRegistry`. Alien Artifact's hold list uses this to name Network Node.
 - **Evaluation**: `ConditionSatisfied(config, EffectContext_t)` in `ActiveEffect` via exhaustive `std::visit`. `EffectContext_t` carries the runtime target (`targetTile`); combat builds one from the defender. `FilterByStatIdInContext` includes unconditional effects plus condition-satisfied ones; `FilterByStatId`/`FilterBaseLevelByStatId` exclude all condition-carrying effects.
 
 ### UnitFilter_t
@@ -451,7 +453,7 @@ once. These are two machines, and they are two types.
 - **`TriggeredEffectConfig_t`** (`TriggeredEffect.h`) holds a `TriggeredEffectVariant_t` —
   `AddBuilding`, `GrantTech`, `GrantUnit`, `GrantEnergy`, `GrantXp`, `RestoreHitPoints`,
   `WorldParameter`,
-  `SetInfiltration`, `ModifyPopulation`, `DestroyFacility`, `Rebel` — plus an optional
+  `SetInfiltration`, `ModifyPopulation`, `DestroyFacility`, `Rebel`, `DestroyUnit` — plus an optional
   `oncePer`, an optional `condition` (same `Condition_t` as continuous, evaluated against
   `TriggeredEffectContext_t::subjects`), and a `factionFilter` that **only `SetInfiltration`
   accepts** (every other type acts on the subjects its context supplies, so a filter there
@@ -472,7 +474,8 @@ container declares a continuous `effects` array and, where a trigger exists, a n
 |---|---|---|
 | `buildings/*.json` | `effects` | `on_complete_effects`, `on_unit_produced_effects` |
 | `production.json` | `effects` | `on_unit_produced_effects` |
-| `unit_components/*.json` | `effects` | `on_complete_effects` |
+| `unit_components/*.json` | `effects` | `on_complete_effects`, `on_hold_effects` |
+| `native_units.json` | `effects` | `on_hold_effects` |
 | `probe_actions.json` | `effects` | `on_success_effects` |
 | `council/proposals.json` | `effects` | `on_passed_effects` |
 | `council/rules.json` | `governor_effects` | `on_elected_effects` |
@@ -485,6 +488,18 @@ unit arrives. `UnitOrderExecutor` receives an injected visit handler from `GameS
 enqueue vs `ApplyVisitEffects`); movement harnesses leave it unset and skip visit. Continuous
 tile yields stay in `effects`. Monolith authors heal (`RestoreHitPoints`) plus once-per-unit
 `GrantXp` with optional `remove_host_chance`.
+
+`on_hold_effects` live on the unit blueprint: a player design gathers them from its components,
+and a native returns the list on its config. They are considered when that unit is given a
+`Hold` order at a friendly base, and again when a building is completed under a unit already
+Holding there (a `BaseHasBuilding` condition may have just become true). An improvement is
+named with the existing `TargetTileHas` condition. `GameState::ConsiderHoldLink` enqueues a
+Link / Do nothing prompt for the player and calls `ApplyHoldLink` immediately for an AI
+holder. Do nothing leaves the Hold in place. Link runs the list in order. Alien Artifact
+authors `GrantTech` `selection: Available` and then `DestroyUnit`, both gated by
+`BaseHasBuilding` `Network_Node`, so linking spends the artifact whether or not a tech was
+granted. `DestroyUnit` removes the context unit after that entry's `oncePer` key is recorded;
+an entry with no unit subject does nothing.
 
 `on_discover_effects` fire whenever a tech joins a faction's discovered set (research
 breakthrough, probe steal, diplomatic grant, nested `GrantTech`). Secrets of the Human Brain

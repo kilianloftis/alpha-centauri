@@ -43,6 +43,7 @@ Commands:
 
   test [build-dir] [--config <Debug|Release>] [-j N|--jobs N]
       Build the test suite and run it via ctest.
+      CTest output is printed only when a test fails.
 
   clean [build-dir]
       Remove the build directory.
@@ -180,7 +181,16 @@ function run_tests() {
 
   echo "Building tests with -j${JOBS}"
   cmake --build "$build_dir" --config "$config" --target effects-tests -j"$JOBS"
-  ctest --test-dir "$build_dir" --output-on-failure
+
+  local test_log
+  test_log="$(mktemp)"
+  local test_status=0
+  ctest --test-dir "$build_dir" --output-on-failure >"$test_log" 2>&1 || test_status=$?
+  if [[ "$test_status" -ne 0 ]]; then
+    cat "$test_log"
+  fi
+  rm -f "$test_log"
+  return "$test_status"
 }
 
 function clean() {

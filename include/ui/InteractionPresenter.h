@@ -45,6 +45,7 @@ private:
     void PresentProductionWouldEmpty_(const ProductionWouldEmptyInteraction_t& rWouldEmpty);
     void PresentProductionIdle_(const ProductionIdleInteraction_t& rIdle);
     void PresentImprovementVisit_(const ImprovementVisitInteraction_t& rVisit);
+    void PresentArtifactLink_(const ArtifactLinkInteraction_t& rLink);
 
     BaseManager* FindAudienceBase_(FactionId_t factionId, BaseId_t baseId);
     Unit* FindUnit_(UnitId_t unitId);

@@ -148,6 +148,20 @@ std::vector<ActiveEffect_t> UnitDesign::CollectEffects() const
     return result;
 }
 
+std::vector<TriggeredEffectConfig_t> UnitDesign::CollectOnHoldEffects() const
+{
+    std::vector<TriggeredEffectConfig_t> result;
+    for (const UnitComponentConfig_t* pComp : m_components)
+    {
+        if (!pComp)
+        {
+            continue;
+        }
+        result.insert(result.end(), pComp->onHoldEffects.begin(), pComp->onHoldEffects.end());
+    }
+    return result;
+}
+
 int UnitDesign::GetBaseCost() const
 {
     int rawCost = 0;

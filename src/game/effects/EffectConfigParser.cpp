@@ -844,6 +844,16 @@ Condition_t ParseCondition(const nlohmann::json& conditionJson)
         }
         return HasComponent_t{componentId};
     }
+    if (kindStr == "SubjectDesign")
+    {
+        const std::string designId = conditionJson.value("design", "");
+        if (designId.empty())
+        {
+            throw std::runtime_error(
+                "SubjectDesign condition requires a non-empty 'design' id");
+        }
+        return SubjectDesign_t{designId};
+    }
     if (kindStr == "HasFlag")
     {
         const std::string flagId = conditionJson.value("flag", "");
@@ -860,6 +870,16 @@ Condition_t ParseCondition(const nlohmann::json& conditionJson)
     if (kindStr == "IsCombatUnit")
     {
         return IsCombatUnit_t{};
+    }
+    if (kindStr == "BaseHasBuilding")
+    {
+        const std::string buildingId = conditionJson.value("building", "");
+        if (buildingId.empty())
+        {
+            throw std::runtime_error(
+                "BaseHasBuilding condition requires a non-empty 'building' id");
+        }
+        return BaseHasBuilding_t{buildingId};
     }
     if (kindStr == "AllOf")
     {

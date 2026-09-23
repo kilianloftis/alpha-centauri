@@ -940,6 +940,48 @@ TEST_CASE("ParseEffectConfig: identity condition arms", "[effects][parser][condi
         CHECK_THROWS(EffectConfigParser::ParseCondition(json::parse(R"({ "kind": "HasComponent" })")));
     }
 
+    SECTION("SubjectDesign")
+    {
+        const json effectJson = json::parse(R"({
+            "type": "RuleFlag",
+            "scope": "FactionUnits",
+            "condition": { "kind": "SubjectDesign", "design": "Alien_Artifact" },
+            "parameters": { "flag": "forces_psi_combat" }
+        })");
+
+        const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
+        REQUIRE(config.condition.has_value());
+        const auto* pDesign = std::get_if<SubjectDesign_t>(&*config.condition);
+        REQUIRE(pDesign);
+        CHECK(pDesign->designId == "Alien_Artifact");
+    }
+
+    SECTION("SubjectDesign without design throws")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseCondition(json::parse(R"({ "kind": "SubjectDesign" })")));
+    }
+
+    SECTION("BaseHasBuilding")
+    {
+        const json effectJson = json::parse(R"({
+            "type": "RuleFlag",
+            "scope": "ThisUnit",
+            "condition": { "kind": "BaseHasBuilding", "building": "Network_Node" },
+            "parameters": { "flag": "forces_psi_combat" }
+        })");
+
+        const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
+        REQUIRE(config.condition.has_value());
+        const auto* pBuilding = std::get_if<BaseHasBuilding_t>(&*config.condition);
+        REQUIRE(pBuilding);
+        CHECK(pBuilding->buildingId == "Network_Node");
+    }
+
+    SECTION("BaseHasBuilding without building throws")
+    {
+        CHECK_THROWS(EffectConfigParser::ParseCondition(json::parse(R"({ "kind": "BaseHasBuilding" })")));
+    }
+
     SECTION("unknown condition kind throws")
     {
         CHECK_THROWS(EffectConfigParser::ParseCondition(json::parse(R"({ "kind": "Everything" })")));
@@ -1088,6 +1130,13 @@ TEST_CASE("ParseTriggeredEffectConfig: Rebel", "[effects][parser][triggered]")
         json::parse(R"({ "type": "Rebel" })"), "on_enter_effects");
     REQUIRE(std::get_if<RebelEffect_t>(&config.effect) != nullptr);
     CHECK_FALSE(config.oncePer.has_value());
+}
+
+TEST_CASE("ParseTriggeredEffectConfig: DestroyUnit", "[effects][parser][triggered]")
+{
+    const TriggeredEffectConfig_t config = TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "DestroyUnit" })"), "on_hold_effects");
+    REQUIRE(std::get_if<DestroyUnitEffect_t>(&config.effect) != nullptr);
 }
 
 // The two families are separate types, so a mis-filed entry is a parse error that names the

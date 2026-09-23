@@ -23,6 +23,7 @@ public:
     ConstructableKind_t GetConstructableKind() const override;
 
     std::vector<ActiveEffect_t> CollectEffects() const override;
+    std::vector<TriggeredEffectConfig_t> CollectOnHoldEffects() const override;
     bool IsCombatUnit() const override;
     bool HasComponent(const std::string& rComponentId) const override;
     UnitDomain_t GetDomain() const override;

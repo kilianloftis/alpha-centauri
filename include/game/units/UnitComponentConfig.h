@@ -45,6 +45,9 @@ struct UnitComponentConfig_t
     // One-shot effects fired once, when a unit carrying this component finishes production
     // (the colony pod's population cost). Free spawns never pay these — see BaseManager.
     std::vector<TriggeredEffectConfig_t> onCompleteEffects;
+    // Considered when a unit carrying this component is ordered to Hold, and again when a
+    // building is completed on its tile. UnitDesign gathers these in slot order.
+    std::vector<TriggeredEffectConfig_t> onHoldEffects;
     // Optional partial override of kinds.unit.default_scrap, folded per design by
     // MergeScrapOverride: later occupied slots win on a given key. `"formula": null` denies
     // scrap.

@@ -196,6 +196,11 @@ void ParseRebel_(const nlohmann::json& /*parameters*/, TriggeredEffectConfig_t& 
     rEffect.effect = RebelEffect_t{};
 }
 
+void ParseDestroyUnit_(const nlohmann::json& /*parameters*/, TriggeredEffectConfig_t& rEffect)
+{
+    rEffect.effect = DestroyUnitEffect_t{};
+}
+
 const std::unordered_map<std::string, ParseFn_>& TypeParsers_()
 {
     static const std::unordered_map<std::string, ParseFn_> k_Parsers = {
@@ -210,6 +215,7 @@ const std::unordered_map<std::string, ParseFn_>& TypeParsers_()
         {"RestoreHitPoints", ParseRestoreHitPoints_},
         {"DestroyFacility", ParseDestroyFacility_},
         {"Rebel", ParseRebel_},
+        {"DestroyUnit", ParseDestroyUnit_},
     };
     return k_Parsers;
 }

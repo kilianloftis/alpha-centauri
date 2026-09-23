@@ -341,6 +341,13 @@ struct HasComponent_t
     std::string component;
 };
 
+// True when EffectContext_t::pUnit's IDesign::GetId equals designId.
+// Fail closed if pUnit is absent. Natives have no components, so HasComponent cannot name them.
+struct SubjectDesign_t
+{
+    std::string designId;
+};
+
 struct HasFlag_t
 {
     RuleFlagId_t flag = RuleFlagId_t::Flight;
@@ -358,19 +365,24 @@ struct IsCombatUnit_t
 {
 };
 
-struct Condition_t : std::variant<TargetTileHas_t, AllOf_t, IsDefending_t,
-                                  OriginBaseIsTargetBase_t, OriginBaseIsHomeBase_t,
-                                  AttackerIsEmbarked_t, HasAirdroppedThisTurn_t,
-                                  AttackerDomain_t, DefenderDomain_t, IsHeadquarters_t,
-                                  SubjectDomain_t, HasComponent_t, HasFlag_t, IsPrototype_t,
-                                  IsCombatUnit_t>
+// True when EffectContext_t::pBase has a constructed copy of buildingId.
+// Fail closed if pBase is absent. This is how a unit's on_hold_effects names a facility.
+struct BaseHasBuilding_t
 {
-    using Variant = std::variant<TargetTileHas_t, AllOf_t, IsDefending_t,
-                                 OriginBaseIsTargetBase_t, OriginBaseIsHomeBase_t,
-                                 AttackerIsEmbarked_t, HasAirdroppedThisTurn_t,
-                                 AttackerDomain_t, DefenderDomain_t, IsHeadquarters_t,
-                                 SubjectDomain_t, HasComponent_t, HasFlag_t, IsPrototype_t,
-                                 IsCombatUnit_t>;
+    std::string buildingId;
+};
+
+using ConditionVariant_t = std::variant<TargetTileHas_t, AllOf_t, IsDefending_t,
+                                        OriginBaseIsTargetBase_t, OriginBaseIsHomeBase_t,
+                                        AttackerIsEmbarked_t, HasAirdroppedThisTurn_t,
+                                        AttackerDomain_t, DefenderDomain_t, IsHeadquarters_t,
+                                        SubjectDomain_t, HasComponent_t, SubjectDesign_t,
+                                        HasFlag_t, IsPrototype_t, IsCombatUnit_t,
+                                        BaseHasBuilding_t>;
+
+struct Condition_t : ConditionVariant_t
+{
+    using Variant = ConditionVariant_t;
     using Variant::Variant;
     using Variant::operator=;
 

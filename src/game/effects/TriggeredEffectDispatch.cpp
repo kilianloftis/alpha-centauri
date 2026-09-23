@@ -26,6 +26,7 @@
 #include "game/units/MovementRules.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDesign.h"
+#include "game/units/UnitOrder.h"
 #include "lib/RandomRoll.h"
 
 #include <algorithm>
@@ -330,6 +331,7 @@ bool IsPerFactionSubject_(const TriggeredEffectVariant_t& rEffect)
                                || std::is_same_v<T, RestoreHitPointsEffect_t>
                                || std::is_same_v<T, DestroyFacilityEffect_t>
                                || std::is_same_v<T, RebelEffect_t>
+                               || std::is_same_v<T, DestroyUnitEffect_t>
                                || std::is_same_v<T, WorldParameterEffect_t>)
             {
                 return false;
@@ -466,6 +468,15 @@ bool ApplyOne_(const TriggeredEffectConfig_t& rConfig, TriggeredEffectContext_t&
             {
                 return Rebel_(rCtx, rOut);
             }
+            else if constexpr (std::is_same_v<T, DestroyUnitEffect_t>)
+            {
+                if (!rCtx.pUnit)
+                {
+                    return false;
+                }
+                rOut.push_back(UnitDestroyed_t{rCtx.pUnit->GetUnitId()});
+                return true;
+            }
             else
             {
                 static_assert(k_AlwaysFalse<T>);
@@ -517,6 +528,7 @@ ApplyTriggeredEffects(std::span<const TriggeredEffectConfig_t> rEffects,
             }
         };
 
+        const std::size_t resultsBefore = results.size();
         if (IsPerFactionSubject_(rConfig.effect))
         {
             for (Faction* pFaction : rContext.factions)
@@ -529,6 +541,17 @@ ApplyTriggeredEffects(std::span<const TriggeredEffectConfig_t> rEffects,
             applyFor(rContext.pBase ? &rContext.pBase->GetFaction()
                                     : (rContext.factions.empty() ? nullptr
                                                                  : rContext.factions.front()));
+        }
+        for (std::size_t i = resultsBefore; i < results.size(); ++i)
+        {
+            if (!std::holds_alternative<UnitDestroyed_t>(results[i]) || !rContext.pUnit)
+            {
+                continue;
+            }
+            Unit& rSubject = *rContext.pUnit;
+            rContext.pUnit = nullptr;
+            rSubject.GetFaction().GetUnitManager().DestroyUnit(rSubject);
+            break;
         }
     }
     rContext.pFaction = pFactionOnEntry;
@@ -611,6 +634,149 @@ void ApplyTechDiscoverEffects(GameState& rGameState, Faction& rFaction, const Te
     }
     TriggeredEffectContext_t context(rGameState, rFaction);
     ApplyTriggeredEffects(pTech->onDiscoverEffects, context);
+}
+
+namespace
+{
+
+bool HoldOrderActive_(const Unit& rUnit)
+{
+    const std::optional<UnitOrder_t>& rOrder = rUnit.GetOrder();
+    return rOrder.has_value() && std::holds_alternative<HoldOrder_t>(*rOrder);
+}
+
+const BaseManager* OwnBaseAt_(const GameState& rGameState, const Unit& rUnit)
+{
+    const BaseManager* pBase =
+        rGameState.FindBaseAt(rUnit.GetTile().GetX(), rUnit.GetTile().GetY());
+    if (!pBase || pBase->GetFaction().GetFactionId() != rUnit.GetFaction().GetFactionId())
+    {
+        return nullptr;
+    }
+    return pBase;
+}
+
+bool HoldEffectMatches_(const TriggeredEffectConfig_t& rEffect, const Unit& rUnit,
+                        const BaseManager& rBase)
+{
+    if (!rEffect.condition)
+    {
+        return true;
+    }
+    EffectContext_t ctx;
+    ctx.pUnit = &rUnit;
+    ctx.pBase = &rBase;
+    ctx.pFaction = &rUnit.GetFaction();
+    ctx.targetTile = &rUnit.GetTile();
+    return ConditionSatisfied(*rEffect.condition, ctx);
+}
+
+void CollectBaseHasBuilding_(const Condition_t& rCondition, std::vector<std::string>& rIds)
+{
+    std::visit(
+        [&](const auto& rAlt)
+        {
+            using T = std::decay_t<decltype(rAlt)>;
+            if constexpr (std::is_same_v<T, BaseHasBuilding_t>)
+            {
+                rIds.push_back(rAlt.buildingId);
+            }
+            else if constexpr (std::is_same_v<T, AllOf_t>)
+            {
+                for (const Condition_t& rNested : rAlt.conditions)
+                {
+                    CollectBaseHasBuilding_(rNested, rIds);
+                }
+            }
+            else
+            {
+                (void)rAlt;
+            }
+        },
+        rCondition.AsVariant());
+}
+
+std::string HostNameForEffect_(const TriggeredEffectConfig_t& rEffect, const BaseManager& rBase)
+{
+    if (rEffect.condition)
+    {
+        std::vector<std::string> buildingIds;
+        CollectBaseHasBuilding_(*rEffect.condition, buildingIds);
+        for (const std::string& rId : buildingIds)
+        {
+            if (const BuildingConfig_t* pBuilding = rBase.GetBuildingManager().FindBuilding(rId))
+            {
+                return pBuilding->name.empty() ? pBuilding->id : pBuilding->name;
+            }
+        }
+    }
+    return rBase.GetName();
+}
+
+} // namespace
+
+bool UnitHasHoldLink(const GameState& rGameState, const Unit& rUnit)
+{
+    if (!HoldOrderActive_(rUnit))
+    {
+        return false;
+    }
+    const BaseManager* pBase = OwnBaseAt_(rGameState, rUnit);
+    if (!pBase)
+    {
+        return false;
+    }
+    for (const TriggeredEffectConfig_t& rEffect : rUnit.GetDesign().CollectOnHoldEffects())
+    {
+        if (HoldEffectMatches_(rEffect, rUnit, *pBase))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::string HoldLinkHostName(const GameState& rGameState, const Unit& rUnit)
+{
+    if (!HoldOrderActive_(rUnit))
+    {
+        return {};
+    }
+    const BaseManager* pBase = OwnBaseAt_(rGameState, rUnit);
+    if (!pBase)
+    {
+        return {};
+    }
+    for (const TriggeredEffectConfig_t& rEffect : rUnit.GetDesign().CollectOnHoldEffects())
+    {
+        if (HoldEffectMatches_(rEffect, rUnit, *pBase))
+        {
+            return HostNameForEffect_(rEffect, *pBase);
+        }
+    }
+    return {};
+}
+
+void ApplyHoldLink(GameState& rGameState, Unit& rUnit)
+{
+    if (!UnitHasHoldLink(rGameState, rUnit))
+    {
+        return;
+    }
+    BaseManager* pBase = rGameState.FindBaseAt(rUnit.GetTile().GetX(), rUnit.GetTile().GetY());
+    if (!pBase)
+    {
+        return;
+    }
+
+    Tile* pTile = rGameState.GetWorldMap().GetTile(rUnit.GetTile().GetX(), rUnit.GetTile().GetY());
+    TriggeredEffectContext_t context(rGameState, *pBase);
+    context.pUnit = &rUnit;
+    context.pTile = pTile;
+    context.pRng = &rGameState.GetRng();
+
+    const std::vector<TriggeredEffectConfig_t> effects = rUnit.GetDesign().CollectOnHoldEffects();
+    ApplyTriggeredEffects(effects, context);
 }
 
 } // namespace ac

@@ -65,12 +65,21 @@ struct ImprovementVisitInteraction_t
     UnitId_t unitId = 0;
 };
 
+// A unit whose design has a matching on_hold_effects entry was ordered to Hold at a friendly
+// base, or a building was completed under a unit already Holding there. Link applies that
+// list; Do nothing leaves the Hold.
+struct ArtifactLinkInteraction_t
+{
+    UnitId_t unitId = 0;
+};
+
 using PlayerInteraction_t = std::variant<
     NoticeInteraction_t,
     OpenViewInteraction_t,
     ProductionWouldEmptyInteraction_t,
     ProductionIdleInteraction_t,
-    ImprovementVisitInteraction_t
+    ImprovementVisitInteraction_t,
+    ArtifactLinkInteraction_t
 >;
 
 // Every queued item pauses turn processing for its audience until CompleteFront.

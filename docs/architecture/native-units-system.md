@@ -36,7 +36,7 @@ classDiagram
 
 [`config/native_units.json`](../../config/native_units.json) — each entry: `id`, `name`,
 `domain`, `mineral_cost`, `effects[]` (continuous `EffectConfig_t` with
-`EffectSourceKind_t::NativeUnit`).
+`EffectSourceKind_t::NativeUnit`), and optional `on_hold_effects[]`.
 
 Shipping natives: Mind Worm, Isle of the Deep, Sea Lurk, Locusts of Chiron, Spore Launcher,
 Alien Artifact.
@@ -57,3 +57,12 @@ lifecycle index, not SE-shifted effective morale). Design-only resolve drops the
 
 Sea Lurk and the `Deep_Pressure_Hull` ability share Conceal channel `deep_pressure` gated by
 `TargetTileHas Water` (covers Ocean and OceanShelf).
+
+## Alien Artifact link
+
+Alien Artifact declares `on_hold_effects` in [`config/native_units.json`](../../config/native_units.json):
+`GrantTech` `selection: Available`, then `DestroyUnit`, both gated by `BaseHasBuilding`
+`Network_Node`. Network Node is an ordinary building (mineral cost 20, upkeep 1). The prompt
+fires when the artifact is ordered to Hold in a friendly base that has the node, and when the
+node is completed under an artifact that is already Holding there. Linking spends the artifact.
+A player design gathers the same list from its components.

@@ -37,6 +37,7 @@ public:
     bool IsAvailable(const std::vector<std::string>& rDiscoveredTechs) const;
 
     std::vector<ActiveEffect_t> CollectEffects() const override;
+    std::vector<TriggeredEffectConfig_t> CollectOnHoldEffects() const override;
 
     // Filled (non-null) components in slot order. On-complete production
     // dispatch walks these; continuous consumers should prefer CollectEffects().

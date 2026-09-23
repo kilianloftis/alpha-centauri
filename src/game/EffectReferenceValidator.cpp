@@ -173,12 +173,15 @@ struct TriggeredPayloadValidator
     void operator()(const RestoreHitPointsEffect_t&) const {}
     void operator()(const DestroyFacilityEffect_t&) const {}
     void operator()(const RebelEffect_t&) const {}
+    void operator()(const DestroyUnitEffect_t&) const {}
 };
 
 void ValidateConditionReferences_(const Condition_t& rCondition,
                                   const std::string& rSourceId,
                                   const ImprovementRegistry* pImprovements,
-                                  const UnitComponentRegistry* pUnitComponents)
+                                  const UnitComponentRegistry* pUnitComponents,
+                                  const NativeUnitRegistry* pNativeUnits,
+                                  const BuildingRegistry* pBuildings)
 {
     auto checkFeature = [&](const std::string& rFeatureId)
     {
@@ -209,6 +212,20 @@ void ValidateConditionReferences_(const Condition_t& rCondition,
                     if (pUnitComponents && !pUnitComponents->Find(rAlt.component))
                     {
                         ThrowBadReference(rSourceId, "condition component", rAlt.component);
+                    }
+                }
+                else if constexpr (std::is_same_v<T, SubjectDesign_t>)
+                {
+                    if (pNativeUnits && !pNativeUnits->Find(rAlt.designId))
+                    {
+                        ThrowBadReference(rSourceId, "condition design", rAlt.designId);
+                    }
+                }
+                else if constexpr (std::is_same_v<T, BaseHasBuilding_t>)
+                {
+                    if (pBuildings && !pBuildings->Find(rAlt.buildingId))
+                    {
+                        ThrowBadReference(rSourceId, "condition building", rAlt.buildingId);
                     }
                 }
                 else if constexpr (std::is_same_v<T, IsDefending_t>
@@ -243,7 +260,8 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
                               const ImprovementRegistry* pImprovements,
                               const TechRegistry* pTechs,
                               const UnitComponentRegistry* pUnitComponents,
-                              const SocialRatingRegistry* pSocialRatings)
+                              const SocialRatingRegistry* pSocialRatings,
+                              const NativeUnitRegistry* pNativeUnits)
 {
     for (const EffectConfig_t& rEffect : rEffects)
     {
@@ -259,7 +277,7 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
         if (rEffect.condition)
         {
             ValidateConditionReferences_(*rEffect.condition, rSourceId, pImprovements,
-                                         pUnitComponents);
+                                         pUnitComponents, pNativeUnits, pBuildings);
         }
 
         if (rEffect.buildingFilter && pBuildings)
@@ -280,7 +298,8 @@ void ValidateTriggeredEffectReferences(const std::vector<TriggeredEffectConfig_t
                                        const BuildingRegistry* pBuildings,
                                        const TechRegistry* pTechs,
                                        const UnitComponentRegistry* pUnitComponents,
-                                       const ImprovementRegistry* pImprovements)
+                                       const ImprovementRegistry* pImprovements,
+                                       const NativeUnitRegistry* pNativeUnits)
 {
     for (const TriggeredEffectConfig_t& rEffect : rEffects)
     {
@@ -289,7 +308,7 @@ void ValidateTriggeredEffectReferences(const std::vector<TriggeredEffectConfig_t
         if (rEffect.condition)
         {
             ValidateConditionReferences_(*rEffect.condition, rSourceId, pImprovements,
-                                         pUnitComponents);
+                                         pUnitComponents, pNativeUnits, pBuildings);
         }
     }
 }
@@ -333,13 +352,13 @@ void ValidateEffectReferences(const GameDataContext& rData)
     auto validate = [&](const std::vector<EffectConfig_t>& rEffects, const std::string& rSourceId)
     {
         ValidateEffectReferences(rEffects, rSourceId, &rBuildings, &rImprovements, &rTechs,
-                                 &rUnitComponents, &rSocialRatings);
+                                 &rUnitComponents, &rSocialRatings, &rNativeUnits);
     };
     auto validateTriggered = [&](const std::vector<TriggeredEffectConfig_t>& rEffects,
                                  const std::string& rSourceId)
     {
         ValidateTriggeredEffectReferences(rEffects, rSourceId, &rBuildings, &rTechs,
-                                          &rUnitComponents, &rImprovements);
+                                          &rUnitComponents, &rImprovements, &rNativeUnits);
     };
 
     for (const BuildingConfig_t& rConfig : rBuildings.GetAll())
@@ -370,10 +389,12 @@ void ValidateEffectReferences(const GameDataContext& rData)
     {
         validate(rConfig.effects, rConfig.id);
         validateTriggered(rConfig.onCompleteEffects, rConfig.id);
+        validateTriggered(rConfig.onHoldEffects, rConfig.id);
     }
     for (const NativeUnitConfig_t& rConfig : rNativeUnits.GetAll())
     {
         validate(rConfig.effects, rConfig.id);
+        validateTriggered(rConfig.onHoldEffects, rConfig.id);
     }
     for (const SocialPolicyConfig_t& rConfig : rSocialPolicies.GetAll())
     {

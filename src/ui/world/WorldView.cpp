@@ -561,6 +561,11 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
         {
             if (m_pUnitOrderInputController->WasOrderAssigned())
             {
+                if (pControllable && pControllable->GetOrder()
+                    && std::holds_alternative<HoldOrder_t>(*pControllable->GetOrder()))
+                {
+                    m_rGameState.ConsiderHoldLink(*pControllable);
+                }
                 SelectNextAvailableUnit_();
             }
             return true;

@@ -51,6 +51,16 @@ void ApplyProductionCompleteEffects_(GameState& rGameState, const ProductionComp
     {
         TriggeredEffectContext_t context(rGameState, rBase);
         ApplyTriggeredEffects(pBuilding->onCompleteEffects, context);
+        const std::vector<Unit*> occupants =
+            rGameState.GetWorldMap().GetUnitPositions().GetUnitsOnTile(rBase.GetTile());
+        const std::vector<Unit*> holders(occupants.begin(), occupants.end());
+        for (Unit* pUnit : holders)
+        {
+            if (pUnit)
+            {
+                rGameState.ConsiderHoldLink(*pUnit);
+            }
+        }
         return;
     }
 
@@ -585,6 +595,20 @@ const Pathfinder& GameState::GetPathfinder() const
 UnitOrderExecutor& GameState::GetUnitOrderExecutor()
 {
     return *m_pUnitOrderExecutor;
+}
+
+void GameState::ConsiderHoldLink(Unit& rUnit)
+{
+    if (!UnitHasHoldLink(*this, rUnit))
+    {
+        return;
+    }
+    if (rUnit.GetFaction().IsPlayerControlled())
+    {
+        EnqueueForPlayer(*this, ArtifactLinkInteraction_t{rUnit.GetUnitId()});
+        return;
+    }
+    ApplyHoldLink(*this, rUnit);
 }
 
 ProbeActionExecutor& GameState::GetProbeActions()

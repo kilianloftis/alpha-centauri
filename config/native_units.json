@@ -211,6 +211,17 @@
         "scope": "ThisUnit",
         "parameters": { "stat": "hit_points", "amount": 10, "op": "Add" }
       }
+    ],
+    "on_hold_effects": [
+      {
+        "type": "GrantTech",
+        "parameters": { "selection": "Available" },
+        "condition": { "kind": "BaseHasBuilding", "building": "Network_Node" }
+      },
+      {
+        "type": "DestroyUnit",
+        "condition": { "kind": "BaseHasBuilding", "building": "Network_Node" }
+      }
     ]
   }
 ]

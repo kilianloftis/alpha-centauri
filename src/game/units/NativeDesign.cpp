@@ -32,6 +32,11 @@ std::vector<ActiveEffect_t> NativeDesign::CollectEffects() const
     return result;
 }
 
+std::vector<TriggeredEffectConfig_t> NativeDesign::CollectOnHoldEffects() const
+{
+    return m_config.onHoldEffects;
+}
+
 bool NativeDesign::IsCombatUnit() const
 {
     return ResolveAdditiveStat(*this, StatId_t::Attack) > 0

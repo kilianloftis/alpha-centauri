@@ -75,6 +75,7 @@ add_executable(effects-tests
     game/VisibilityTests.cpp
     game/UnitVisibilityTests.cpp
     game/NativeUnitsTests.cpp
+    game/ArtifactLinkTests.cpp
     game/MovementTests.cpp
     game/TransportTests.cpp
     game/FuelTests.cpp

@@ -21,6 +21,7 @@
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/NativeUnitRegistry.h"
 #include "game/effects/EffectConfig.h"
+#include "game/effects/TriggeredEffect.h"
 #include "game/DifficultyConfig.h"
 #include "game/units/BaseConquestConfig.h"
 #include "game/population/pop-types/PopCompositionConfigParser.h"
@@ -348,6 +349,51 @@ TEST_CASE("ValidateEffectReferences: HasComponent condition ids must exist",
 
     // A null registry skips the check (partial validation context).
     CHECK_NOTHROW(ValidateEffectReferences(bad, "src", nullptr, nullptr, nullptr, nullptr));
+}
+
+TEST_CASE("ValidateTriggeredEffectReferences: SubjectDesign ids must exist",
+          "[effects][validation][condition]")
+{
+    const std::filesystem::path repoRoot =
+        std::filesystem::path(AC_TEST_FIXTURES_DIR) / ".." / "..";
+    NativeUnitRegistry natives;
+    natives.Load((repoRoot / "config" / "native_units.json").string());
+
+    TriggeredEffectConfig_t good;
+    good.effect = GrantTechEffect_t{};
+    good.condition = SubjectDesign_t{"Alien_Artifact"};
+    CHECK_NOTHROW(ValidateTriggeredEffectReferences(
+        {good}, "src", nullptr, nullptr, nullptr, nullptr, &natives));
+
+    TriggeredEffectConfig_t bad = good;
+    bad.condition = SubjectDesign_t{"No_Such_Native"};
+    CHECK_THROWS_WITH(
+        ValidateTriggeredEffectReferences(
+            {bad}, "src", nullptr, nullptr, nullptr, nullptr, &natives),
+        Catch::Matchers::ContainsSubstring("No_Such_Native"));
+
+    CHECK_NOTHROW(ValidateTriggeredEffectReferences(
+        {bad}, "src", nullptr, nullptr, nullptr, nullptr, nullptr));
+}
+
+TEST_CASE("ValidateTriggeredEffectReferences: BaseHasBuilding ids must exist",
+          "[effects][validation][condition]")
+{
+    BuildingRegistry buildings;
+    buildings.Load(actest::FixturePath("buildings.json"));
+
+    TriggeredEffectConfig_t good;
+    good.effect = GrantTechEffect_t{};
+    good.condition = BaseHasBuilding_t{"Network_Node"};
+    CHECK_NOTHROW(ValidateTriggeredEffectReferences(
+        {good}, "src", &buildings, nullptr, nullptr, nullptr, nullptr));
+
+    TriggeredEffectConfig_t bad = good;
+    bad.condition = BaseHasBuilding_t{"No_Such_Building"};
+    CHECK_THROWS_WITH(
+        ValidateTriggeredEffectReferences(
+            {bad}, "src", &buildings, nullptr, nullptr, nullptr, nullptr),
+        Catch::Matchers::ContainsSubstring("No_Such_Building"));
 }
 
 TEST_CASE("ValidateEffectReferences(GameDataContext): null required registry throws",

@@ -10,15 +10,17 @@ class BuildingRegistry;
 class ImprovementRegistry;
 class TechRegistry;
 class UnitComponentRegistry;
+class NativeUnitRegistry;
 class SocialRatingRegistry;
 struct EffectConfig_t;
 struct GameDataContext;
 struct TriggeredEffectConfig_t;
 
 // Validates the cross-config id references inside one continuous effects list: GrantBuilding
-// targets, HasImprovement selector ids, TargetTileHas / AllOf condition feature ids (always an
-// HasComponent condition component ids, BuildingId buildingFilter building
-// ids, and SocialRatingModifier axes. Throws std::runtime_error naming rSourceId and the
+// targets, HasImprovement selector ids, TargetTileHas / AllOf condition feature ids,
+// HasComponent condition component ids, SubjectDesign condition design ids, BuildingId
+// buildingFilter building ids, and SocialRatingModifier axes. Throws std::runtime_error
+// naming rSourceId and the
 // offending id.
 //
 // Null registry pointers skip only the checks that need that registry — intentional for
@@ -30,16 +32,18 @@ void ValidateEffectReferences(const std::vector<EffectConfig_t>& rEffects,
                               const ImprovementRegistry* pImprovements,
                               const TechRegistry* pTechs,
                               const UnitComponentRegistry* pUnitComponents = nullptr,
-                              const SocialRatingRegistry* pSocialRatings = nullptr);
+                              const SocialRatingRegistry* pSocialRatings = nullptr,
+                              const NativeUnitRegistry* pNativeUnits = nullptr);
 
 // The same for one triggered list: AddBuilding / GrantTech / GrantUnit targets, plus the
-// same condition feature / HasComponent checks continuous lists get.
+// same condition feature / HasComponent / SubjectDesign checks continuous lists get.
 void ValidateTriggeredEffectReferences(const std::vector<TriggeredEffectConfig_t>& rEffects,
                                        const std::string& rSourceId,
                                        const BuildingRegistry* pBuildings,
                                        const TechRegistry* pTechs,
                                        const UnitComponentRegistry* pUnitComponents = nullptr,
-                                       const ImprovementRegistry* pImprovements = nullptr);
+                                       const ImprovementRegistry* pImprovements = nullptr,
+                                       const NativeUnitRegistry* pNativeUnits = nullptr);
 
 // Walks every loaded config that declares effects (buildings, techs, improvements, pop types,
 // unit components, social policies, social rating tables, factions, council proposals,

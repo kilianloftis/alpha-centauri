@@ -594,6 +594,11 @@ bool ConditionBodySatisfied_(const Condition_t& condition, const EffectContext_t
                 return ctx.pUnit != nullptr
                     && ctx.pUnit->GetDesign().HasComponent(rAlt.component);
             }
+            else if constexpr (std::is_same_v<T, SubjectDesign_t>)
+            {
+                return ctx.pUnit != nullptr
+                    && ctx.pUnit->GetDesign().GetId() == rAlt.designId;
+            }
             else if constexpr (std::is_same_v<T, HasFlag_t>)
             {
                 // IDesign-only: avoid CollectLiveUnitEffects recursion while building that list.
@@ -607,6 +612,11 @@ bool ConditionBodySatisfied_(const Condition_t& condition, const EffectContext_t
             else if constexpr (std::is_same_v<T, IsCombatUnit_t>)
             {
                 return ctx.pUnit != nullptr && ctx.pUnit->GetDesign().IsCombatUnit();
+            }
+            else if constexpr (std::is_same_v<T, BaseHasBuilding_t>)
+            {
+                return ctx.pBase != nullptr
+                    && ctx.pBase->GetBuildingManager().FindBuilding(rAlt.buildingId) != nullptr;
             }
             else if constexpr (std::is_same_v<T, AllOf_t>)
             {
@@ -656,8 +666,8 @@ bool ConditionNeedsSituationalContext(const Condition_t& rCondition)
         {
             using T = std::decay_t<decltype(rAlt)>;
             if constexpr (std::is_same_v<T, SubjectDomain_t> || std::is_same_v<T, HasComponent_t>
-                          || std::is_same_v<T, HasFlag_t> || std::is_same_v<T, IsPrototype_t>
-                          || std::is_same_v<T, IsCombatUnit_t>)
+                          || std::is_same_v<T, SubjectDesign_t> || std::is_same_v<T, HasFlag_t>
+                          || std::is_same_v<T, IsPrototype_t> || std::is_same_v<T, IsCombatUnit_t>)
             {
                 return false;
             }
@@ -680,7 +690,8 @@ bool ConditionNeedsSituationalContext(const Condition_t& rCondition)
                                || std::is_same_v<T, HasAirdroppedThisTurn_t>
                                || std::is_same_v<T, AttackerDomain_t>
                                || std::is_same_v<T, DefenderDomain_t>
-                               || std::is_same_v<T, IsHeadquarters_t>)
+                               || std::is_same_v<T, IsHeadquarters_t>
+                               || std::is_same_v<T, BaseHasBuilding_t>)
             {
                 return true;
             }

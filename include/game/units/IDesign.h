@@ -3,6 +3,7 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include "game/effects/InteractionGridsConfig.h"
+#include "game/effects/TriggeredEffect.h"
 #include "game/units/UnitDomain.h"
 
 #include <string>
@@ -23,6 +24,10 @@ public:
 
     // Continuous effects as ActiveEffect_t (sourceId = component id or native id).
     virtual std::vector<ActiveEffect_t> CollectEffects() const = 0;
+
+    // One-shot effects considered when this unit is ordered to Hold. A player design
+    // gathers them from its components; a native returns the list on its config.
+    virtual std::vector<TriggeredEffectConfig_t> CollectOnHoldEffects() const = 0;
 
     // True when additive Attack > 0 or ForcesPsiCombat (design-only resolve).
     virtual bool IsCombatUnit() const = 0;

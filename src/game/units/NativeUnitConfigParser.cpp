@@ -1,6 +1,7 @@
 #include "game/units/NativeUnitConfigParser.h"
 
 #include "game/effects/EffectConfigParser.h"
+#include "game/effects/TriggeredEffectParser.h"
 #include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
 
@@ -29,6 +30,8 @@ NativeUnitConfig_t NativeUnitConfigParser::ParseNativeUnitConfig(const nlohmann:
     config.mineralCost = rJson.value("mineral_cost", 0);
     config.effects =
         EffectConfigParser::ParseEffects(rJson, EffectSourceKind_t::NativeUnit, config.id);
+    config.onHoldEffects = TriggeredEffectParser::ParseTriggeredEffects(
+        rJson, "on_hold_effects", config.id);
     return config;
 }
 

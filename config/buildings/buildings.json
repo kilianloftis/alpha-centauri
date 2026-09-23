@@ -372,5 +372,11 @@
         }
       }
     ]
+  },
+  {
+    "id": "Network_Node",
+    "name": "Network Node",
+    "mineral_cost": 20,
+    "upkeep": 1
   }
 ]

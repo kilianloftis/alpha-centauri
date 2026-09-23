@@ -108,6 +108,9 @@ void InteractionPresenter::PresentFront_(const PlayerInteraction_t& rPayload)
             [this](const ImprovementVisitInteraction_t& rVisit) {
                 PresentImprovementVisit_(rVisit);
             },
+            [this](const ArtifactLinkInteraction_t& rLink) {
+                PresentArtifactLink_(rLink);
+            },
         },
         rPayload);
 }
@@ -295,6 +298,36 @@ void InteractionPresenter::PresentImprovementVisit_(const ImprovementVisitIntera
          }});
     choices.push_back({"Leave it Alone", [this] { CompleteAndAdvance_(); }});
     PushChoice_("A " + hostName + " stands here.", std::move(choices));
+}
+
+void InteractionPresenter::PresentArtifactLink_(const ArtifactLinkInteraction_t& rLink)
+{
+    Unit* pUnit = FindUnit_(rLink.unitId);
+    const std::string hostName = pUnit ? HoldLinkHostName(m_rGameState, *pUnit) : std::string{};
+    if (!pUnit || hostName.empty())
+    {
+        CompleteAndAdvance_();
+        return;
+    }
+
+    const Tile& rTile = pUnit->GetTile();
+    m_rWorldView.CenterOnTile(rTile.GetX(), rTile.GetY());
+
+    const std::string unitName = pUnit->GetDesign().GetName();
+    const UnitId_t unitId = rLink.unitId;
+    std::vector<PopupChoice_t> choices;
+    choices.push_back(
+        {"Link the " + unitName + " to the " + hostName,
+         [this, unitId]
+         {
+             if (Unit* pResolve = FindUnit_(unitId))
+             {
+                 ApplyHoldLink(m_rGameState, *pResolve);
+             }
+             CompleteAndAdvance_();
+         }});
+    choices.push_back({"Do nothing", [this] { CompleteAndAdvance_(); }});
+    PushChoice_("Link the " + unitName + " to the " + hostName + "?", std::move(choices));
 }
 
 BaseManager* InteractionPresenter::FindAudienceBase_(FactionId_t factionId, BaseId_t baseId)
