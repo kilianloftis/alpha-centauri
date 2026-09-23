@@ -1,6 +1,8 @@
 #include "game/effects/EffectConfigParser.h"
 
 #include "game/effects/TriggeredEffectParser.h"
+#include "game/units/MovementConstants.h"
+#include "lib/Rational.h"
 
 #include <magic_enum.hpp>
 #include <cmath>
@@ -236,7 +238,36 @@ void ParseStatModifier_(const nlohmann::json& parameters, EffectConfig_t& rEffec
     StatModifierEffect_t statModifier;
     statModifier.stat = ParseStatId(parameters.value("stat", ""));
     statModifier.op = ParseModifierOp(parameters.value("op", "Add"));
-    if (parameters.contains("amount_source"))
+    if (statModifier.stat == StatId_t::MoveCost)
+    {
+        if (statModifier.op != ModifierOp_t::MaxClamp)
+        {
+            throw std::runtime_error("StatModifier move_cost requires op MaxClamp");
+        }
+        if (parameters.contains("amount_source"))
+        {
+            throw std::runtime_error("StatModifier move_cost does not accept amount_source");
+        }
+        if (!parameters.contains("amount"))
+        {
+            throw std::runtime_error("StatModifier move_cost requires 'amount'");
+        }
+        const Rational_t cost = Rational_t::ParseJson(parameters.at("amount"));
+        if (cost.numerator < 0 || cost.denominator <= 0)
+        {
+            throw std::runtime_error("StatModifier move_cost amount must be non-negative");
+        }
+        try
+        {
+            statModifier.amount =
+                static_cast<double>(cost.ScaledInt(MovementConstants_t::k_moveFragmentsPerPoint));
+        }
+        catch (const std::exception& e)
+        {
+            throw std::runtime_error(std::string("StatModifier move_cost amount: ") + e.what());
+        }
+    }
+    else if (parameters.contains("amount_source"))
     {
         // Any op. An amount source computes the modifier's *amount*; ResolveStatModifiers calls
         // AmountSourceValue for every contribution and hands (amount, op) to ApplyModifierStack,

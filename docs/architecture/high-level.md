@@ -478,7 +478,7 @@ seed. (Persisting that seed into save state is still open — see the world-gene
   - `IUnitOrderWorld`: Narrow session surface — base lookup, intercept, conquest — that `GameState` implements and injects into `UnitOrderExecutor`; nullable so movement-only harnesses need no `GameState`
 - **Dependencies**:
   - GameState owns UnitOrderExecutor and implements `IUnitOrderWorld` for it; all bind the live WorldMap
-  - MoveCostCalculator reads ImprovementRegistry configs (move_cost / move_cost_override)
+  - MoveCostCalculator reads ImprovementRegistry configs (`move_cost`, and `move_cost` MaxClamp effects)
   - BaseConquestEffects reads `config/base_conquest.json` via `GameDataContext::baseConquestConfig`
 - **Details**: See `docs/architecture/unit-movement-system.md` for detailed architecture.
   Native life designs: `docs/architecture/native-units-system.md`.

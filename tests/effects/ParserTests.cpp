@@ -4,6 +4,7 @@
 
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectConfigParser.h"
+#include "game/units/MovementConstants.h"
 #include "game/effects/TriggeredEffect.h"
 #include "game/effects/TriggeredEffectParser.h"
 
@@ -44,6 +45,7 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("cargo_capacity") == StatId_t::CargoCapacity);
     CHECK(ParseStatId("difficult_terrain_cost")
           == StatId_t::DifficultTerrainCost);
+    CHECK(ParseStatId("move_cost") == StatId_t::MoveCost);
     CHECK(ParseStatId("mineral_upkeep") == StatId_t::MineralUpkeep);
     CHECK(ParseStatId("free_unit_support") == StatId_t::FreeUnitSupport);
     CHECK(ParseStatId("max_police") == StatId_t::MaxPolice);
@@ -114,7 +116,6 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
     CHECK(ParseRuleFlagId("population_boom") == RuleFlagId_t::PopulationBoom);
     CHECK(ParseRuleFlagId("near_zero_growth") == RuleFlagId_t::NearZeroGrowth);
     CHECK(ParseRuleFlagId("ignores_difficult_terrain") == RuleFlagId_t::IgnoreDifficultTerrain);
-    CHECK(ParseRuleFlagId("treat_fungus_as_road") == RuleFlagId_t::TreatFungusAsRoad);
     CHECK(ParseRuleFlagId("forces_psi_combat") == RuleFlagId_t::ForcesPsiCombat);
     CHECK(ParseRuleFlagId("found_base") == RuleFlagId_t::FoundBase);
     CHECK(ParseRuleFlagId("terraform") == RuleFlagId_t::Terraform);
@@ -140,6 +141,7 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
     CHECK(ParseRuleFlagId("harbors") == RuleFlagId_t::Harbors);
     CHECK(ParseRuleFlagId("remove_shroud") == RuleFlagId_t::RemoveShroud);
     CHECK(ParseRuleFlagId("remove_fog") == RuleFlagId_t::RemoveFog);
+    CHECK(ParseRuleFlagId("visible_in_fog") == RuleFlagId_t::VisibleInFog);
     CHECK(ParseRuleFlagId("atrocities_forbidden")
           == RuleFlagId_t::AtrocitiesForbidden);
     CHECK(ParseRuleFlagId("disable_production")
@@ -865,6 +867,39 @@ TEST_CASE("ParseEffectConfig: TransportParams", "[effects][parser][transport]")
         "type": "TransportParams",
         "scope": "ThisBase",
         "parameters": { "carries": ["land"] }
+    })")));
+}
+
+TEST_CASE("ParseEffectConfig: move_cost MaxClamp stores move fragments", "[effects][parser][movement]")
+{
+    const json effectJson = json::parse(R"({
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "condition": { "kind": "TargetTileHas", "value": "Fungus" },
+        "parameters": { "stat": "move_cost", "amount": "1/3", "op": "MaxClamp" }
+    })");
+
+    const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
+    const auto* pModifier = std::get_if<StatModifierEffect_t>(&config.effect);
+    REQUIRE(pModifier);
+    CHECK(pModifier->stat == StatId_t::MoveCost);
+    CHECK(pModifier->op == ModifierOp_t::MaxClamp);
+    CHECK(pModifier->amount == MovementConstants_t::k_moveFragmentsPerPoint / 3);
+
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "move_cost", "amount": 1, "op": "Add" }
+    })")));
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "move_cost", "op": "MaxClamp" }
+    })")));
+    CHECK_THROWS(EffectConfigParser::ParseEffectConfig(json::parse(R"({
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "move_cost", "amount": "1/7", "op": "MaxClamp" }
     })")));
 }
 

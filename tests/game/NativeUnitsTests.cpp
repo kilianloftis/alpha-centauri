@@ -6,12 +6,15 @@
 #include "game/faction/UnitManager.h"
 #include "game/faction/UnitVisibility.h"
 #include "game/units/EnsureNativeDesign.h"
+#include "game/units/MoveCostCalculator.h"
+#include "game/units/MovementConstants.h"
 #include "game/units/NativeDesign.h"
 #include "game/units/NativeUnitRegistry.h"
 #include "game/units/TransportRules.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitDomain.h"
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include <filesystem>
@@ -37,7 +40,7 @@ GameDataContext LoadNativeAwareData_()
 
 } // namespace
 
-TEST_CASE("Native unit registry loads the six shipping natives", "[native][gamedata]")
+TEST_CASE("Native unit registry loads the shipping natives", "[native][gamedata]")
 {
     const GameDataContext data = LoadNativeAwareData_();
     REQUIRE(data.nativeUnitRegistry);
@@ -46,6 +49,7 @@ TEST_CASE("Native unit registry loads the six shipping natives", "[native][gamed
     CHECK(data.nativeUnitRegistry->Find("Sea_Lurk") != nullptr);
     CHECK(data.nativeUnitRegistry->Find("Locusts_of_Chiron") != nullptr);
     CHECK(data.nativeUnitRegistry->Find("Spore_Launcher") != nullptr);
+    CHECK(data.nativeUnitRegistry->Find("Fungal_Tower") != nullptr);
     CHECK(data.nativeUnitRegistry->Find("Alien_Artifact") != nullptr);
 }
 
@@ -98,6 +102,171 @@ TEST_CASE("Locusts of Chiron are air without fuel", "[native]")
     CHECK(pDesign->GetMovementPoints() == 8);
     CHECK_FALSE(pDesign->UsesFuel());
     CHECK(pDesign->MaxFuel() == 0);
+}
+
+TEST_CASE("Mind Worms and Spore Launchers treat fungus as roads", "[native][movement]")
+{
+    FactionFixture fixture;
+    fixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
+    const std::filesystem::path repoRoot =
+        std::filesystem::path(AC_TEST_FIXTURES_DIR) / ".." / "..";
+    fixture.dataContext.nativeUnitRegistry->Load(
+        (repoRoot / "config" / "native_units.json").string());
+
+    Faction& rFaction = fixture.MakeFaction();
+    const NativeDesign* pWorm =
+        EnsureNativeDesign(rFaction, fixture.dataContext, "Mind_Worm");
+    const NativeDesign* pSpore =
+        EnsureNativeDesign(rFaction, fixture.dataContext, "Spore_Launcher");
+    REQUIRE(pWorm);
+    REQUIRE(pSpore);
+
+    Tile& rFungus = fixture.At(5, 4);
+    rFungus.SetElevation(100);
+    rFungus.SetHasFungus(true);
+    Tile& rRockyFungus = fixture.At(6, 4);
+    rRockyFungus.SetElevation(100);
+    rRockyFungus.SetRockiness(Rockiness_t::Rocky);
+    rRockyFungus.SetHasFungus(true);
+
+    fixture.At(4, 4).SetElevation(100);
+    fixture.At(4, 5).SetElevation(100);
+    Unit& rWorm = rFaction.GetUnitManager().CreateUnit(
+        fixture.nextUnitId++, *pWorm, fixture.map.GetUnitPositions(), fixture.At(4, 4));
+    Unit& rSpore = rFaction.GetUnitManager().CreateUnit(
+        fixture.nextUnitId++, *pSpore, fixture.map.GetUnitPositions(), fixture.At(4, 5));
+
+    const MoveCostCalculator calc(fixture.improvements);
+    constexpr int k_point = MovementConstants_t::k_moveFragmentsPerPoint;
+    for (const Unit* pUnit : {&rWorm, &rSpore})
+    {
+        const auto costs = calc.ForUnit(*pUnit, fixture.map);
+        const EntryTerms_t fungusTerms = costs.EntryTerms(rFungus);
+        CHECK(fungusTerms.costFragments == k_point / 3);
+        CHECK_FALSE(fungusTerms.bRequiresFullCost);
+        CHECK_FALSE(fungusTerms.bEndsTurn);
+
+        const EntryTerms_t rockyTerms = costs.EntryTerms(rRockyFungus);
+        CHECK(rockyTerms.costFragments == k_point / 3);
+        CHECK_FALSE(rockyTerms.bRequiresFullCost);
+        CHECK_FALSE(rockyTerms.bEndsTurn);
+    }
+}
+
+TEST_CASE("Isle of the Deep and Sea Lurk treat fungus as a normal tile", "[native][movement]")
+{
+    FactionFixture fixture;
+    fixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
+    const std::filesystem::path repoRoot =
+        std::filesystem::path(AC_TEST_FIXTURES_DIR) / ".." / "..";
+    fixture.dataContext.nativeUnitRegistry->Load(
+        (repoRoot / "config" / "native_units.json").string());
+
+    Faction& rFaction = fixture.MakeFaction();
+    const NativeDesign* pIsle =
+        EnsureNativeDesign(rFaction, fixture.dataContext, "Isle_of_the_Deep");
+    const NativeDesign* pLurk =
+        EnsureNativeDesign(rFaction, fixture.dataContext, "Sea_Lurk");
+    REQUIRE(pIsle);
+    REQUIRE(pLurk);
+
+    Tile& rOpenSea = fixture.At(6, 4);
+    rOpenSea.SetElevation(-100);
+    Tile& rSeaFungus = fixture.At(7, 4);
+    rSeaFungus.SetElevation(-100);
+    rSeaFungus.SetHasFungus(true);
+
+    fixture.At(5, 4).SetElevation(-100);
+    fixture.At(5, 5).SetElevation(-100);
+    fixture.At(5, 6).SetElevation(-100);
+    Unit& rIsle = rFaction.GetUnitManager().CreateUnit(
+        fixture.nextUnitId++, *pIsle, fixture.map.GetUnitPositions(), fixture.At(5, 4));
+    Unit& rLurk = rFaction.GetUnitManager().CreateUnit(
+        fixture.nextUnitId++, *pLurk, fixture.map.GetUnitPositions(), fixture.At(5, 5));
+    Unit& rShip = fixture.MakeUnit(rFaction, 5, 6, {"test_sea_chassis"});
+
+    const MoveCostCalculator calc(fixture.improvements);
+    constexpr int k_point = MovementConstants_t::k_moveFragmentsPerPoint;
+    const EntryTerms_t shipTerms = calc.ForUnit(rShip, fixture.map).EntryTerms(rSeaFungus);
+    CHECK(shipTerms.costFragments == 3 * k_point);
+    CHECK(shipTerms.bRequiresFullCost);
+    CHECK(shipTerms.bEndsTurn);
+
+    for (const Unit* pUnit : {&rIsle, &rLurk})
+    {
+        const auto costs = calc.ForUnit(*pUnit, fixture.map);
+        const EntryTerms_t openTerms = costs.EntryTerms(rOpenSea);
+        const EntryTerms_t fungusTerms = costs.EntryTerms(rSeaFungus);
+        CHECK(fungusTerms.costFragments == openTerms.costFragments);
+        CHECK(fungusTerms.costFragments == k_point);
+        CHECK_FALSE(fungusTerms.bRequiresFullCost);
+        CHECK_FALSE(fungusTerms.bEndsTurn);
+    }
+}
+
+TEST_CASE("Fungal Tower is immobile land psi with 50 percent defense", "[native]")
+{
+    FactionFixture fixture;
+    fixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
+    const std::filesystem::path repoRoot =
+        std::filesystem::path(AC_TEST_FIXTURES_DIR) / ".." / "..";
+    fixture.dataContext.nativeUnitRegistry->Load(
+        (repoRoot / "config" / "native_units.json").string());
+
+    Faction& rFaction = fixture.MakeFaction();
+    const NativeDesign* pDesign =
+        EnsureNativeDesign(rFaction, fixture.dataContext, "Fungal_Tower");
+    REQUIRE(pDesign);
+    CHECK(pDesign->GetDomain() == UnitDomain_t::Land);
+    CHECK(pDesign->GetMovementPoints() == 0);
+    CHECK(pDesign->IsCombatUnit());
+    CHECK(ResolveFlag(*pDesign, RuleFlagId_t::ForcesPsiCombat));
+    CHECK(ResolveFlag(*pDesign, RuleFlagId_t::VisibleInFog));
+
+    Unit& rTower = rFaction.GetUnitManager().CreateUnit(
+        fixture.nextUnitId++, *pDesign, fixture.map.GetUnitPositions(), fixture.At(2, 2));
+    CHECK(ResolveStat(rTower, StatId_t::Movement) == 0);
+    CHECK(ResolveMultiplicativeStat(rTower, StatId_t::Defense, 1.0) == Catch::Approx(1.5));
+}
+
+TEST_CASE("Fungal Tower stays visible in fog once its tile is explored", "[native][visibility]")
+{
+    FactionFixture fixture;
+    fixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
+    const std::filesystem::path repoRoot =
+        std::filesystem::path(AC_TEST_FIXTURES_DIR) / ".." / "..";
+    fixture.dataContext.nativeUnitRegistry->Load(
+        (repoRoot / "config" / "native_units.json").string());
+
+    Faction& rOwner = fixture.MakeFaction();
+    Faction& rObserver = fixture.MakeFaction();
+    const NativeDesign* pTowerDesign =
+        EnsureNativeDesign(rOwner, fixture.dataContext, "Fungal_Tower");
+    const NativeDesign* pWormDesign =
+        EnsureNativeDesign(rOwner, fixture.dataContext, "Mind_Worm");
+    REQUIRE(pTowerDesign);
+    REQUIRE(pWormDesign);
+
+    Tile& rTowerTile = fixture.At(4, 4);
+    Tile& rWormTile = fixture.At(4, 5);
+    Unit& rTower = rOwner.GetUnitManager().CreateUnit(
+        fixture.nextUnitId++, *pTowerDesign, fixture.map.GetUnitPositions(), rTowerTile);
+    Unit& rWorm = rOwner.GetUnitManager().CreateUnit(
+        fixture.nextUnitId++, *pWormDesign, fixture.map.GetUnitPositions(), rWormTile);
+
+    rObserver.RebuildVisibility();
+    REQUIRE_FALSE(rObserver.GetExploredMap().IsExplored(rTowerTile));
+    REQUIRE_FALSE(rObserver.GetVisibleMap().IsVisible(rTowerTile));
+    CHECK_FALSE(IsUnitVisibleTo(rObserver, rTower, *fixture.ctx));
+
+    rObserver.GetExploredMap().Mark(rTowerTile);
+    rObserver.GetExploredMap().Mark(rWormTile);
+    rObserver.RebuildVisibility();
+    REQUIRE(rObserver.GetExploredMap().IsExplored(rTowerTile));
+    REQUIRE_FALSE(rObserver.GetVisibleMap().IsVisible(rTowerTile));
+    REQUIRE_FALSE(rObserver.GetVisibleMap().IsVisible(rWormTile));
+    CHECK(IsUnitVisibleTo(rObserver, rTower, *fixture.ctx));
+    CHECK_FALSE(IsUnitVisibleTo(rObserver, rWorm, *fixture.ctx));
 }
 
 TEST_CASE("Alien Artifact is non-combat", "[native]")

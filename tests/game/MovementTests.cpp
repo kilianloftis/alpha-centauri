@@ -730,7 +730,6 @@ TEST_CASE("TreatFungusAsRoad uses road cost without forced end-turn", "[movement
     MovementHarness_ move(fixture);
     Faction& faction = fixture.MakeFaction();
     Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis", "treat_fungus_as_road"});
-    REQUIRE(unit.GetFlag(RuleFlagId_t::TreatFungusAsRoad));
     REQUIRE(unit.GetMoveFragmentsRemaining() == 2 * k_point);
 
     Tile& fungus = fixture.At(5, 4);

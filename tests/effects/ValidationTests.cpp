@@ -133,6 +133,7 @@ static_assert(KindFor(StatId_t::AirdropRange) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::AirdropLandingDamage) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::CargoCapacity) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::DifficultTerrainCost) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::MoveCost) == StatKind_t::RawScaled);
 static_assert(KindFor(StatId_t::MineralUpkeep) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::FreeUnitSupport) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::MaxPolice) == StatKind_t::Additive);
@@ -201,6 +202,7 @@ static_assert(DomainFor(StatId_t::Defense) == ResolveDomain_t::Unit);
 static_assert(DomainFor(StatId_t::MoraleBonus) == ResolveDomain_t::Unit);
 static_assert(DomainFor(StatId_t::MoistureTier) == ResolveDomain_t::Tile);
 static_assert(DomainFor(StatId_t::TileDefense) == ResolveDomain_t::Tile);
+static_assert(DomainFor(StatId_t::MoveCost) == ResolveDomain_t::Tile);
 
 TEST_CASE("ValidateEffectReferences: GrantBuilding targets must exist", "[effects][validation]")
 {

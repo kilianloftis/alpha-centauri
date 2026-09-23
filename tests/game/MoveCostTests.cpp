@@ -30,7 +30,26 @@ TEST_CASE("Invalid move_cost fraction fails at improvement parse time", "[move-c
     {
         std::ofstream out(path);
         out << R"([
-          { "id": "BadRoad", "name": "Bad Road", "move_cost_override": "1/7", "effects": [] }
+          { "id": "BadRoad", "name": "Bad Road", "effects": [
+              { "type": "StatModifier", "scope": "ThisTile",
+                "parameters": { "stat": "move_cost", "amount": "1/7", "op": "MaxClamp" } }
+            ] }
+        ])";
+    }
+
+    ImprovementConfigParser parser;
+    CHECK_THROWS(parser.ParseConfig(path.string()));
+    fs::remove(path);
+}
+
+TEST_CASE("move_cost_override field is rejected", "[move-cost]")
+{
+    namespace fs = std::filesystem;
+    const fs::path path = fs::temp_directory_path() / "ac_old_move_cost_override.json";
+    {
+        std::ofstream out(path);
+        out << R"([
+          { "id": "OldRoad", "name": "Old Road", "move_cost_override": "1/3", "effects": [] }
         ])";
     }
 
@@ -60,7 +79,6 @@ TEST_CASE("Improvement move_cost is optional when omitted", "[move-cost]")
     WorldFixture fixture;
     const ImprovementConfig_t& flat = fixture.improvements.Get("Flat");
     CHECK_FALSE(flat.moveCostFragments.has_value());
-    CHECK_FALSE(flat.moveCostOverrideFragments.has_value());
 
     const ImprovementConfig_t& rocky = fixture.improvements.Get("Rocky");
     REQUIRE(rocky.moveCostFragments.has_value());
@@ -68,8 +86,12 @@ TEST_CASE("Improvement move_cost is optional when omitted", "[move-cost]")
 
     const ImprovementConfig_t& road = fixture.improvements.Get("Road");
     CHECK_FALSE(road.moveCostFragments.has_value());
-    REQUIRE(road.moveCostOverrideFragments.has_value());
-    CHECK(*road.moveCostOverrideFragments == MovementConstants_t::k_moveFragmentsPerPoint / 3);
+    REQUIRE_FALSE(road.effects.empty());
+    const auto* pClamp = std::get_if<StatModifierEffect_t>(&road.effects.front().effect);
+    REQUIRE(pClamp);
+    CHECK(pClamp->stat == StatId_t::MoveCost);
+    CHECK(pClamp->op == ModifierOp_t::MaxClamp);
+    CHECK(pClamp->amount == MovementConstants_t::k_moveFragmentsPerPoint / 3);
 }
 
 TEST_CASE("MoveCostCalculator takes max cost or min override", "[move-cost]")
@@ -112,14 +134,36 @@ TEST_CASE("MoveCostCalculator takes max cost or min override", "[move-cost]")
     tube.AddImprovement(fixture.improvements.Get("MagTube"));
     CHECK(costs.EntryTerms(tube).costFragments == 0);
 
-    // Override replaces max cost even when the override is numerically higher.
-    ImprovementConfig_t highOverride;
-    highOverride.id = "TestHighOverride";
-    highOverride.moveCostOverrideFragments = 5 * k_point;
-    Tile& overridden = fixture.At(6, 5);
-    overridden.SetRockiness(Rockiness_t::Rocky); // move_cost 2
-    overridden.AddImprovement(highOverride);
-    CHECK(costs.EntryTerms(overridden).costFragments == 5 * k_point);
+    // A ceiling above the tile cost does not raise it. A lower ceiling does.
+    ImprovementConfig_t highCeiling;
+    highCeiling.id = "TestHighCeiling";
+    EffectConfig_t highEffect;
+    highEffect.scope = EffectScope_t::ThisTile;
+    StatModifierEffect_t highMod;
+    highMod.stat = StatId_t::MoveCost;
+    highMod.op = ModifierOp_t::MaxClamp;
+    highMod.amount = 5 * k_point;
+    highEffect.effect = highMod;
+    highCeiling.effects.push_back(highEffect);
+    Tile& highTile = fixture.At(6, 5);
+    highTile.SetRockiness(Rockiness_t::Rocky); // move_cost 2
+    highTile.AddImprovement(highCeiling);
+    CHECK(costs.EntryTerms(highTile).costFragments == 2 * k_point);
+
+    ImprovementConfig_t lowCeiling;
+    lowCeiling.id = "TestLowCeiling";
+    EffectConfig_t lowEffect;
+    lowEffect.scope = EffectScope_t::ThisTile;
+    StatModifierEffect_t lowMod;
+    lowMod.stat = StatId_t::MoveCost;
+    lowMod.op = ModifierOp_t::MaxClamp;
+    lowMod.amount = k_point;
+    lowEffect.effect = lowMod;
+    lowCeiling.effects.push_back(lowEffect);
+    Tile& lowTile = fixture.At(7, 5);
+    lowTile.SetRockiness(Rockiness_t::Rocky);
+    lowTile.AddImprovement(lowCeiling);
+    CHECK(costs.EntryTerms(lowTile).costFragments == k_point);
 }
 
 TEST_CASE("MoveCostCalculator honours UnitMoveProfile flags", "[move-cost]")
@@ -204,7 +248,7 @@ TEST_CASE("EntryTerms resolve the fungus entry rules", "[move-cost][fungus]")
     CHECK_FALSE(roadTerms.bRequiresFullCost);
     CHECK_FALSE(roadTerms.bEndsTurn);
 
-    // TreatFungusAsRoad behaves as if the tile had a Road.
+    // A fungus move_cost MaxClamp of 1/3 behaves as if the tile had a Road.
     Unit& native = fixture.MakeUnit(faction, 4, 6, {"test_chassis", "treat_fungus_as_road"});
     const auto nativeCosts = calc.ForUnit(native, fixture.map);
     const EntryTerms_t nativeTerms = nativeCosts.EntryTerms(emptyFungus);

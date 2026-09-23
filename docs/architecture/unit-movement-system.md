@@ -59,24 +59,26 @@ graph TD
 ## MoveCostCalculator — the single home of entry rules
 
 `ForUnit(unit, map)` returns a `Query` that caches the unit's rule flags
-(`IgnoreDifficultTerrain`, `TreatFungusAsRoad`). A `Query` resolves each tile into an
+(`IgnoreDifficultTerrain`). A `Query` resolves each tile into an
 `EntryTerms_t`:
 
 - **`costFragments`** — the tile's entry price. Highest `move_cost` among the tile's terrain
-  features and improvements; any `move_cost_override` replaces that result entirely (even
-  when higher), and among multiple overrides the lowest wins (MagTube 0 beats Road 1/3).
-  Nothing configured → `defaultMoveCost`. `IgnoreDifficultTerrain` caps non-fungus feature
-  costs at the default. `TreatFungusAsRoad` makes fungus contribute Road's
-  `move_cost_override` instead of its own cost.
+  features and improvements. Nothing configured → `defaultMoveCost`. `IgnoreDifficultTerrain`
+  caps non-fungus feature costs at the default. That seed is passed to
+  `ResolveStatModifiers` with the matching `move_cost` `MaxClamp`s from
+  `CollectTileEffects` (Road, River, and MagTube) plus the entering unit's live effects.
+  Mind Worms use `"1/3"` on Fungus and Isles use `1`. The tightest
+  clamp wins (MagTube 0 beats Road 1/3) and does not raise a lower cost. The parsed amount
+  is move fragments. A `MaxClamp` contribution in the breakdown cancels fungus entry rules.
 - **`bRequiresFullCost`** — the full price must be banked (possibly across turns) before the
-  unit may enter. Set for fungus without an override in play and without a friendly occupant.
-  When false, any positive fragment balance admits the unit (the cost clamps to what
-  remains) — the default terrain rule.
+  unit may enter. Set for fungus without a matching `move_cost` clamp and without a friendly
+  occupant. When false, any positive fragment balance admits the unit (the cost clamps to
+  what remains) — the default terrain rule.
 - **`bEndsTurn`** — entering zeroes the unit's remaining fragments. Set for fungus without
-  an override in play, friendly occupant or not.
+  a matching `move_cost` clamp, friendly occupant or not.
 
-An override "in play" (a Road or MagTube built on the tile, or `TreatFungusAsRoad`) negates
-both fungus flags along with the cost — infrastructure bypasses the fungus entry rules.
+A matching `move_cost` clamp (a Road, River, or MagTube on the tile, or the unit) negates
+the fungus entry rules.
 
 Costs are integer *fragments*: `MovementConstants_t::k_moveFragmentsPerPoint` (360) per
 movement point, so fractional configs like Road's `"1/3"` stay exact integers.

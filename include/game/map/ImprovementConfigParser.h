@@ -63,12 +63,10 @@ struct ImprovementConfig_t
     // When true, downhill river flow marks this tile then stops (ThermalBorehole).
     bool terminatesRiver = false;
     // Optional move cost in fragments (JSON still uses move-points; conversion happens at
-    // parse). On a tile, the highest moveCostFragments among features that define one is used,
-    // unless any feature defines moveCostOverrideFragments — then the lowest override replaces
-    // the cost entirely (even if higher than the max moveCostFragments). If neither is present,
-    // defaultMoveCost applies.
+    // parse). On a tile, the highest moveCostFragments among features that define one is used.
+    // A move_cost MaxClamp on a feature's effects, or on the entering unit, then ceilings
+    // that price. If no feature defines a cost, defaultMoveCost applies.
     std::optional<int> moveCostFragments;
-    std::optional<int> moveCostOverrideFragments;
     std::vector<EffectConfig_t> effects;
     // One-shot effects for a unit deliberately visiting this improvement (Investigate). Fired
     // by ApplyVisitEffects after arrival when the player chooses Investigate (AI auto-fires).

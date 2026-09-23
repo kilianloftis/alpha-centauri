@@ -98,7 +98,12 @@ bool IsUnitVisibleTo(const Faction& rObserver, const Unit& rSubject,
     const Tile& rTile = rSubject.GetTile();
     if (!rObserver.GetVisibleMap().IsVisible(rTile))
     {
-        return false;
+        const bool bVisibleInFog = ResolveFlag(rSubject, RuleFlagId_t::VisibleInFog)
+            && rObserver.GetExploredMap().IsExplored(rTile);
+        if (!bVisibleInFog)
+        {
+            return false;
+        }
     }
 
     const std::vector<ActiveEffect_t> areaEffects = rTileEffects.CollectAreaEffects(rTile);

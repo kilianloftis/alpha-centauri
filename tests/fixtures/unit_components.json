@@ -709,11 +709,10 @@
     "type": "ability",
     "effects": [
       {
-        "type": "RuleFlag",
+        "type": "StatModifier",
         "scope": "ThisUnit",
-        "parameters": {
-          "flag": "treat_fungus_as_road"
-        }
+        "condition": { "kind": "TargetTileHas", "value": "Fungus" },
+        "parameters": { "stat": "move_cost", "amount": "1/3", "op": "MaxClamp" }
       }
     ]
   },

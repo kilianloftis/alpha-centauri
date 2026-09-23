@@ -39,7 +39,10 @@ classDiagram
 `EffectSourceKind_t::NativeUnit`), and optional `on_hold_effects[]`.
 
 Shipping natives: Mind Worm, Isle of the Deep, Sea Lurk, Locusts of Chiron, Spore Launcher,
-Alien Artifact.
+Fungal Tower, Alien Artifact. Fungal Tower is land, movement 0, psi combat, and +50% defense.
+It declares `visible_in_fog`: once an observer has explored its tile, `IsUnitVisibleTo`
+keeps the live tower drawn and attackable while that tile is fogged. Shroud still hides
+it, and concealment still applies. Destroying the tower removes the marker.
 
 ## Factory
 
@@ -52,6 +55,13 @@ component lists. Eco-damage / fungal-pop spawning should call this when those sy
 Isle of the Deep uses `amount_source: IntrinsicXp` on `cargo_capacity` (scale 1) plus
 `TransportParams` `carries: [land]`. Live capacity is `Unit::GetXp() * amount` (intrinsic
 lifecycle index, not SE-shifted effective morale). Design-only resolve drops the contribution.
+
+## Fungus movement
+
+Mind Worm and Spore Launcher declare a `move_cost` `MaxClamp` of `"1/3"` when the tile has
+Fungus. Isle of the Deep and Sea Lurk declare the same stat with amount `1`. The clamp
+ceilings the tile price and cancels the fungus entry rules. On sea fungus, `1` is the
+open-sea cost.
 
 ## Sea concealment
 

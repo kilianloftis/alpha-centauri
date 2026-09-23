@@ -294,9 +294,23 @@ A new triggered effect carries the grant:
 ```
 
 placed in `on_complete_effects` on Tree Farm, Hybrid Forest, Centauri Preserve and Temple of
-Planet. `TriggeredEffectDispatch` credits `pFaction` and honours
-`eco_damage.json`'s `clean_minerals.grants_require_first_bloom`, so a build before the faction's
-first bloom credits nothing — the quirk all three sources describe, switchable by mods.
+Planet — and **not** on Nanoreplicator, which raises `Goodfacs` but never the cap.
+`TriggeredEffectDispatch` credits `pFaction` and honours `eco_damage.json`'s
+`clean_minerals.grants_require_first_bloom`, so a build before the faction's first bloom credits
+nothing — the quirk Apolyton #175, *Ecology (Revised)* and the CivFanatics thread all describe,
+switchable by mods.
+
+**"Built, not acquired" is why the grant lives in `on_complete_effects`.** The sources are
+specific that the facility must be *built*: a captured or granted one does not raise the cap.
+That falls out of the slot rather than needing a check, because `on_complete_effects` fires from
+exactly one place — `ApplyProductionCompleteEffects_`, on a `ProductionCompleted_t`. The
+triggered `AddBuilding` effect and the direct `BuildingManager::AddBuilding` calls behind base
+capture and the free Headquarters never reach it, so a facility that arrives any way other than
+being produced credits nothing.
+
+> **Trap:** this makes the slot choice a rule, not a detail. Moving the grant to a continuous
+> `FactionGlobal` effect would break two rules at once — it would credit acquired facilities and
+> stop being permanent when one is scrapped — and both failures are silent.
 
 ## Config shape
 
@@ -507,7 +521,9 @@ with a named input, not a silent zero.
   - an active Perihelion event doubles a base's resolved `EcologicalDamage`, and ending it
     restores the prior value rather than serving a stale pool.
 - `tests/ecology/CleanMineralsTests.cpp` — a `GrantCleanMinerals` before the first bloom credits
-  nothing; after it credits 1 and survives the facility being scrapped.
+  nothing; after it credits 1 and survives the facility being scrapped; a Tree Farm that arrives
+  by capture or by a triggered `AddBuilding` credits nothing at any time; and a Nanoreplicator
+  credits nothing while still counting toward `EcoDamageReduction`.
 - Turn-stage test — a base with a 100% score blooms, the faction's counter increments, and
   `EvFungalBloom` fires; a 0% score does neither.
 - New `tests/game/WorldEventTests.cpp` — Perihelion is active for mission years 0–19, inactive

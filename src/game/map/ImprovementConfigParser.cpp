@@ -282,9 +282,9 @@ ImprovementConfig_t ImprovementConfigParser::ParseImprovementConfig(const nlohma
     }
     if (improvementJson.contains("move_cost_override"))
     {
-        const Rational_t cost = Rational_t::ParseJson(improvementJson.at("move_cost_override"));
-        config.moveCostOverrideFragments =
-            ParseMoveCostFragments_(cost, "move_cost_override", config.id);
+        throw std::runtime_error(
+            "Improvement '" + config.id
+            + "': 'move_cost_override' is a StatModifier on move_cost with op MaxClamp");
     }
     config.effects = EffectConfigParser::ParseEffects(improvementJson, EffectSourceKind_t::Improvement, config.id);
     config.onVisitEffects = TriggeredEffectParser::ParseTriggeredEffects(

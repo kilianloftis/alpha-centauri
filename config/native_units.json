@@ -34,6 +34,12 @@
         "type": "RuleFlag",
         "scope": "ThisUnit",
         "parameters": { "flag": "forces_psi_combat" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "condition": { "kind": "TargetTileHas", "value": "Fungus" },
+        "parameters": { "stat": "move_cost", "amount": "1/3", "op": "MaxClamp" }
       }
     ]
   },
@@ -82,6 +88,12 @@
         "type": "RuleFlag",
         "scope": "ThisUnit",
         "parameters": { "flag": "forces_psi_combat" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "condition": { "kind": "TargetTileHas", "value": "Fungus" },
+        "parameters": { "stat": "move_cost", "amount": 1, "op": "MaxClamp" }
       }
     ]
   },
@@ -121,6 +133,12 @@
         "type": "RuleFlag",
         "scope": "ThisUnit",
         "parameters": { "flag": "forces_psi_combat" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "condition": { "kind": "TargetTileHas", "value": "Fungus" },
+        "parameters": { "stat": "move_cost", "amount": 1, "op": "MaxClamp" }
       }
     ]
   },
@@ -187,6 +205,55 @@
         "type": "RuleFlag",
         "scope": "ThisUnit",
         "parameters": { "flag": "forces_psi_combat" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "condition": { "kind": "TargetTileHas", "value": "Fungus" },
+        "parameters": { "stat": "move_cost", "amount": "1/3", "op": "MaxClamp" }
+      }
+    ]
+  },
+  {
+    "id": "Fungal_Tower",
+    "name": "Fungal Tower",
+    "domain": "land",
+    "mineral_cost": 0,
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "movement", "amount": 0, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "vision", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "hit_points", "amount": 10, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "psi_damage", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "defense", "amount": 50, "op": "AddPercent" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "forces_psi_combat" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "visible_in_fog" }
       }
     ]
   },

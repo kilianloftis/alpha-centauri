@@ -56,6 +56,12 @@ enum class StatId_t
     AirdropLandingDamage,
     CargoCapacity,
     DifficultTerrainCost,
+    // Ceiling on tile entry price. JSON amount is a move-point rational ("1/3", 1, 0);
+    // the parsed amount is move fragments. Only MaxClamp is legal. MoveCostCalculator
+    // seeds with the tile's highest move_cost and applies the tightest matching clamp
+    // from ThisTile feature effects and the entering unit. A clamp does not raise a
+    // lower cost. A matching clamp cancels fungus entry rules.
+    MoveCost,
     // Minerals spent each turn to keep a live unit supported by its home base. Chassis
     // baseline is typically 1; abilities / FactionUnits SE can raise or zero it. Floor at 0.
     MineralUpkeep,
@@ -279,7 +285,8 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::MoistureTier:
         case StatId_t::FacilityEnergyUpkeep:
         case StatId_t::ScrapRefund:
-        case StatId_t::EcologicalDamage:    return StatKind_t::RawScaled;
+        case StatId_t::EcologicalDamage:
+        case StatId_t::MoveCost:             return StatKind_t::RawScaled;
     }
     return StatKind_t::Additive; // unreachable; all enumerators handled above
 }
@@ -385,7 +392,8 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::PromotionChance: return ResolveDomain_t::Unit;
 
         case StatId_t::MoistureTier:
-        case StatId_t::TileDefense: return ResolveDomain_t::Tile;
+        case StatId_t::TileDefense:
+        case StatId_t::MoveCost: return ResolveDomain_t::Tile;
     }
     return ResolveDomain_t::Base; // unreachable; all enumerators handled above
 }
@@ -419,6 +427,7 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "airdrop_landing_damage")  return StatId_t::AirdropLandingDamage;
     if (rStat == "cargo_capacity")          return StatId_t::CargoCapacity;
     if (rStat == "difficult_terrain_cost")  return StatId_t::DifficultTerrainCost;
+    if (rStat == "move_cost")               return StatId_t::MoveCost;
     if (rStat == "mineral_upkeep")          return StatId_t::MineralUpkeep;
     if (rStat == "free_unit_support")       return StatId_t::FreeUnitSupport;
     if (rStat == "max_police")              return StatId_t::MaxPolice;
@@ -500,7 +509,6 @@ enum class RuleFlagId_t
     // ResolveFlag ORs across every component on the design.
     SingleUse,
     IgnoreDifficultTerrain,
-    TreatFungusAsRoad,
     // Any combat involving a unit with this flag uses psi strengths and damage.
     ForcesPsiCombat,
 
@@ -557,6 +565,9 @@ enum class RuleFlagId_t
     // clears current fog while active (secret project). See VisibilityRules helpers.
     RemoveShroud,
     RemoveFog,
+    // This unit stays visible on tiles the observer has explored, including while those
+    // tiles are not currently lit. Shroud still hides it. Concealment still applies.
+    VisibleInFog,
 
     // U.N. Charter: atrocities are illegal while this flag is in force planet-wide.
     AtrocitiesForbidden,
@@ -575,9 +586,9 @@ inline RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "near_zero_growth")            return RuleFlagId_t::NearZeroGrowth;
     if (rFlag == "remove_shroud")               return RuleFlagId_t::RemoveShroud;
     if (rFlag == "remove_fog")                  return RuleFlagId_t::RemoveFog;
+    if (rFlag == "visible_in_fog")              return RuleFlagId_t::VisibleInFog;
     if (rFlag == "single_use")                  return RuleFlagId_t::SingleUse;
     if (rFlag == "ignores_difficult_terrain")   return RuleFlagId_t::IgnoreDifficultTerrain;
-    if (rFlag == "treat_fungus_as_road")         return RuleFlagId_t::TreatFungusAsRoad;
     if (rFlag == "forces_psi_combat")            return RuleFlagId_t::ForcesPsiCombat;
     if (rFlag == "found_base")                   return RuleFlagId_t::FoundBase;
     if (rFlag == "terraform")                   return RuleFlagId_t::Terraform;
