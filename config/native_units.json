@@ -36,6 +36,11 @@
         "parameters": { "flag": "forces_psi_combat" }
       },
       {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "native_life" }
+      },
+      {
         "type": "StatModifier",
         "scope": "ThisUnit",
         "condition": { "kind": "TargetTileHas", "value": "Fungus" },
@@ -90,6 +95,11 @@
         "parameters": { "flag": "forces_psi_combat" }
       },
       {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "native_life" }
+      },
+      {
         "type": "StatModifier",
         "scope": "ThisUnit",
         "condition": { "kind": "TargetTileHas", "value": "Fungus" },
@@ -135,6 +145,11 @@
         "parameters": { "flag": "forces_psi_combat" }
       },
       {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "native_life" }
+      },
+      {
         "type": "StatModifier",
         "scope": "ThisUnit",
         "condition": { "kind": "TargetTileHas", "value": "Fungus" },
@@ -172,6 +187,11 @@
         "type": "RuleFlag",
         "scope": "ThisUnit",
         "parameters": { "flag": "forces_psi_combat" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "native_life" }
       }
     ]
   },
@@ -205,6 +225,11 @@
         "type": "RuleFlag",
         "scope": "ThisUnit",
         "parameters": { "flag": "forces_psi_combat" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "native_life" }
       },
       {
         "type": "StatModifier",
@@ -249,6 +274,11 @@
         "type": "RuleFlag",
         "scope": "ThisUnit",
         "parameters": { "flag": "forces_psi_combat" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "native_life" }
       },
       {
         "type": "RuleFlag",

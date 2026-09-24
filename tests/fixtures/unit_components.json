@@ -1501,5 +1501,23 @@
         }
       }
     ]
+  },
+  {
+    "id": "native_life_chassis",
+    "name": "Native Life Chassis",
+    "type": "chassis",
+    "domain": "land",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "movement", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": { "flag": "native_life" }
+      }
+    ]
   }
 ]

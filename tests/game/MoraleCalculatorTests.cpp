@@ -128,14 +128,23 @@ TEST_CASE("Morale level effects apply Attack AddPercent in combat resolve", "[mo
           == static_cast<int>(std::lround(baseAttack * 1.25)));
 }
 
-TEST_CASE("DisplayName switches on ForcesPsiCombat", "[morale]")
+TEST_CASE("DisplayName switches on IsNativeLife", "[morale]")
 {
     FactionFixture fixture;
     Faction& faction = fixture.MakeFaction();
-    Unit& conventional = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
     const MoraleCalculator& morale = fixture.morale();
+
+    Unit& conventional = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
     conventional.SetXp(3);
     CHECK(morale.DisplayName(conventional) == "Hardened");
+
+    Unit& psi = fixture.MakeUnit(faction, 5, 4, {"test_chassis", "test_psi"});
+    psi.SetXp(3);
+    CHECK(morale.DisplayName(psi) == "Hardened");
+
+    Unit& native = fixture.MakeUnit(faction, 6, 4, {"native_life_chassis"});
+    native.SetXp(3);
+    CHECK(morale.DisplayName(native) == "Boil");
 }
 
 TEST_CASE("SE Morale +2 adds defense-in-base morale_bonus only when defending", "[morale][se]")

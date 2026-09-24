@@ -36,7 +36,9 @@ classDiagram
 
 [`config/native_units.json`](../../config/native_units.json) — each entry: `id`, `name`,
 `domain`, `mineral_cost`, `effects[]` (continuous `EffectConfig_t` with
-`EffectSourceKind_t::NativeUnit`), and optional `on_hold_effects[]`.
+`EffectSourceKind_t::NativeUnit`), and optional `on_hold_effects[]`. Combat natives declare the `native_life` RuleFlag. Alien Artifact does not.
+`IDesign::IsNativeLife` reads that flag, so a composed `UnitDesign` is native life when any
+filled component declares it.
 
 Shipping natives: Mind Worm, Isle of the Deep, Sea Lurk, Locusts of Chiron, Spore Launcher,
 Fungal Tower, Alien Artifact. Fungal Tower is land, movement 0, psi combat, and +50% defense.
@@ -49,6 +51,15 @@ it, and concealment still applies. Destroying the tower removes the marker.
 `EnsureNativeDesign(Faction&, GameDataContext&, nativeId)` registers (or returns) the
 faction’s `NativeDesign` by stable config id — same role as `EnsureAdHocDesign` for
 component lists. Eco-damage / fungal-pop spawning should call this when those systems land.
+
+## Lifecycle starting XP
+
+Centauri Preserve grants `GrantXp` +1 on `on_unit_produced_effects` when `IsNativeLife`
+matches. Command Center and Aerospace Complex require `IsNativeLife` `"value": false`
+alongside their domain check, so those train bonuses stay on units that are not native life. Rank names
+use the `native` column of `morale_levels.json` when `IsNativeLife` is set. A native-life
+unit homed at a base pays no mineral support when `UnitSupport` runs if its tile has fungus.
+`GetMineralUpkeep` is unchanged, and a zero charge does not take a free support slot.
 
 ## Isle cargo (IntrinsicXp)
 

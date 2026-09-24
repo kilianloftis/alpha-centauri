@@ -350,6 +350,68 @@ TEST_CASE("Mineral support leaves remainder for production", "[unit][support]")
     CHECK(base.GetResources().GetMineralBank() == 4);
 }
 
+TEST_CASE("Native life on fungus pays no mineral support", "[unit][support]")
+{
+    FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+
+    faction.GetSocialEngineering().SetActivePolicy(
+        fixture.socialPolicies().Get("collapse_support_policy"));
+
+    fixture.At(5, 4).SetHasFungus(true);
+    Unit& lifeform = fixture.MakeUnit(
+        faction, 5, 4, {"native_life_chassis", "test_chassis"}, &base);
+    // Support -4 adds 1. Standing on fungus does not change the stat.
+    CHECK(lifeform.GetMineralUpkeep() == 2);
+
+    LeaveMineralBank_(base, 0);
+    base.ApplyMineralSupport();
+
+    CHECK(base.GetHomeUnits().GetUnits().size() == 1);
+    CHECK(base.GetResources().GetMineralBank() == 0);
+}
+
+TEST_CASE("Native life off fungus still pays mineral support", "[unit][support]")
+{
+    FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+
+    faction.GetSocialEngineering().SetActivePolicy(
+        fixture.socialPolicies().Get("collapse_support_policy"));
+
+    Unit& lifeform = fixture.MakeUnit(
+        faction, 5, 4, {"native_life_chassis", "test_chassis"}, &base);
+    const UnitId_t lifeformId = lifeform.GetUnitId();
+
+    LeaveMineralBank_(base, 0);
+    base.ApplyMineralSupport();
+
+    CHECK(base.GetHomeUnits().GetUnits().empty());
+    CHECK_FALSE(UnitStillLive_(faction, lifeformId));
+}
+
+TEST_CASE("A non-lifeform on fungus still pays mineral support", "[unit][support]")
+{
+    FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+
+    faction.GetSocialEngineering().SetActivePolicy(
+        fixture.socialPolicies().Get("collapse_support_policy"));
+
+    fixture.At(5, 4).SetHasFungus(true);
+    Unit& unit = fixture.MakeUnit(faction, 5, 4, {"test_chassis"}, &base);
+    const UnitId_t unitId = unit.GetUnitId();
+
+    LeaveMineralBank_(base, 0);
+    base.ApplyMineralSupport();
+
+    CHECK(base.GetHomeUnits().GetUnits().empty());
+    CHECK_FALSE(UnitStillLive_(faction, unitId));
+}
+
 TEST_CASE("SpendMinerals rejects overspend", "[unit][support][resources]")
 {
     FactionFixture fixture;

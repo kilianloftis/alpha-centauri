@@ -181,8 +181,11 @@
           "op": "Add"
         },
         "condition": {
-          "kind": "SubjectDomain",
-          "domain": "air"
+          "kind": "AllOf",
+          "conditions": [
+            { "kind": "SubjectDomain", "domain": "air" },
+            { "kind": "IsNativeLife", "value": false }
+          ]
         }
       }
     ],
@@ -230,8 +233,11 @@
           "op": "Add"
         },
         "condition": {
-          "kind": "SubjectDomain",
-          "domain": "land"
+          "kind": "AllOf",
+          "conditions": [
+            { "kind": "SubjectDomain", "domain": "land" },
+            { "kind": "IsNativeLife", "value": false }
+          ]
         }
       }
     ],
@@ -378,5 +384,25 @@
     "name": "Network Node",
     "mineral_cost": 20,
     "upkeep": 1
+  },
+  {
+    "id": "Centauri_Preserve",
+    "name": "Centauri Preserve",
+    "mineral_cost": 100,
+    "upkeep": 1,
+    "category": "grow",
+    "required_tech": "centauri_meditation",
+    "on_unit_produced_effects": [
+      {
+        "type": "GrantXp",
+        "parameters": {
+          "amount": 1,
+          "op": "Add"
+        },
+        "condition": {
+          "kind": "IsNativeLife"
+        }
+      }
+    ]
   }
 ]

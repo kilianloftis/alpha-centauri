@@ -9,6 +9,7 @@
 #include "game/units/MoveCostCalculator.h"
 #include "game/units/MovementConstants.h"
 #include "game/units/NativeDesign.h"
+#include "game/units/NativeUnitConfigParser.h"
 #include "game/units/NativeUnitRegistry.h"
 #include "game/units/TransportRules.h"
 #include "game/units/Unit.h"
@@ -16,6 +17,8 @@
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+
+#include <nlohmann/json.hpp>
 
 #include <filesystem>
 #include <memory>
@@ -344,4 +347,149 @@ TEST_CASE("Sea Lurk is concealed on Water via deep_pressure", "[native][visibili
 
     fixture.At(5, 4).SetElevation(100);
     CHECK(IsUnitVisibleTo(observer, subject, *fixture.ctx));
+}
+
+namespace
+{
+
+void LoadShippingNatives_(FactionFixture& rFixture)
+{
+    rFixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
+    const std::filesystem::path repoRoot =
+        std::filesystem::path(AC_TEST_FIXTURES_DIR) / ".." / "..";
+    rFixture.dataContext.nativeUnitRegistry->Load(
+        (repoRoot / "config" / "native_units.json").string());
+}
+
+const NativeDesign& RequireNative_(Faction& rFaction, const GameDataContext& rData,
+                                   const std::string& rId)
+{
+    const NativeDesign* pDesign = EnsureNativeDesign(rFaction, rData, rId);
+    REQUIRE(pDesign);
+    return *pDesign;
+}
+
+} // namespace
+
+TEST_CASE("native_life is the RuleFlag on the design", "[native][parser]")
+{
+    NativeUnitConfigParser parser;
+    const nlohmann::json marked = nlohmann::json::parse(R"({
+        "id": "Marked",
+        "name": "Marked",
+        "domain": "land",
+        "effects": [
+            { "type": "RuleFlag", "scope": "ThisUnit",
+              "parameters": { "flag": "native_life" } }
+        ]
+    })");
+    const NativeDesign markedDesign(parser.ParseNativeUnitConfig(marked));
+    CHECK(markedDesign.IsNativeLife());
+
+    const nlohmann::json plain = nlohmann::json::parse(R"({
+        "id": "Plain",
+        "name": "Plain",
+        "domain": "land"
+    })");
+    const NativeDesign plainDesign(parser.ParseNativeUnitConfig(plain));
+    CHECK_FALSE(plainDesign.IsNativeLife());
+}
+
+TEST_CASE("Command Center and Aerospace Complex do not raise native starting XP",
+          "[native][xp]")
+{
+    FactionFixture fixture;
+    LoadShippingNatives_(fixture);
+    Faction& rFaction = fixture.MakeFaction();
+    BaseManager& rBase = fixture.MakeFactionBase(rFaction, 2, 2);
+    rBase.GetBuildingManager().AddBuilding("Command_Center");
+    rBase.GetBuildingManager().AddBuilding("Aerospace_Complex");
+
+    const NativeDesign& rWorm = RequireNative_(rFaction, fixture.dataContext, "Mind_Worm");
+    const NativeDesign& rLocust =
+        RequireNative_(rFaction, fixture.dataContext, "Locusts_of_Chiron");
+    CHECK(rWorm.IsNativeLife());
+    CHECK(rLocust.IsNativeLife());
+
+    Unit& rWormUnit = rFaction.GetUnitManager().CreateUnit(
+        fixture.nextUnitId++, rWorm, fixture.map.GetUnitPositions(), fixture.At(4, 4),
+        &rBase, &rBase);
+    Unit& rLocustUnit = rFaction.GetUnitManager().CreateUnit(
+        fixture.nextUnitId++, rLocust, fixture.map.GetUnitPositions(), fixture.At(5, 4),
+        &rBase, &rBase);
+    Unit& rLand = fixture.MakeUnit(rFaction, 6, 4, {"test_chassis"}, &rBase, &rBase);
+
+    CHECK(rWormUnit.GetXp() == 1);
+    CHECK(rLocustUnit.GetXp() == 1);
+    CHECK_FALSE(rLand.GetDesign().IsNativeLife());
+    CHECK(rLand.GetXp() == 4);
+}
+
+TEST_CASE("Centauri Preserve grants +1 starting XP only to native life", "[native][xp]")
+{
+    NativeUnitConfigParser parser;
+    const NativeDesign quietDesign(parser.ParseNativeUnitConfig(nlohmann::json::parse(R"({
+        "id": "Quiet_Form",
+        "name": "Quiet Form",
+        "domain": "land",
+        "effects": [
+            { "type": "RuleFlag", "scope": "ThisUnit",
+              "parameters": { "flag": "native_life" } }
+        ]
+    })")));
+    NativeUnitConfig_t plainConfig;
+    plainConfig.id = "Plain_Form";
+    plainConfig.name = "Plain Form";
+    plainConfig.domain = UnitDomain_t::Land;
+    NativeDesign plainDesign(plainConfig);
+
+    FactionFixture fixture;
+    LoadShippingNatives_(fixture);
+    Faction& rFaction = fixture.MakeFaction();
+    BaseManager& rBase = fixture.MakeFactionBase(rFaction, 2, 2);
+    rBase.GetBuildingManager().AddBuilding("Centauri_Preserve");
+
+    const NativeDesign& rWorm = RequireNative_(rFaction, fixture.dataContext, "Mind_Worm");
+
+    Unit& rWormUnit = rFaction.GetUnitManager().CreateUnit(
+        fixture.nextUnitId++, rWorm, fixture.map.GetUnitPositions(), fixture.At(4, 4),
+        &rBase, &rBase);
+    Unit& rQuiet = rFaction.GetUnitManager().CreateUnit(
+        fixture.nextUnitId++, quietDesign, fixture.map.GetUnitPositions(), fixture.At(5, 4),
+        &rBase, &rBase);
+    Unit& rPlain = rFaction.GetUnitManager().CreateUnit(
+        fixture.nextUnitId++, plainDesign, fixture.map.GetUnitPositions(), fixture.At(6, 4),
+        &rBase, &rBase);
+    Unit& rLand = fixture.MakeUnit(rFaction, 7, 4, {"test_chassis"}, &rBase, &rBase);
+
+    CHECK(rWorm.IsNativeLife());
+    CHECK(ResolveFlag(rWorm, RuleFlagId_t::ForcesPsiCombat));
+    CHECK(rWormUnit.GetXp() == 2);
+    CHECK(quietDesign.IsNativeLife());
+    CHECK_FALSE(ResolveFlag(quietDesign, RuleFlagId_t::ForcesPsiCombat));
+    CHECK(rQuiet.GetXp() == 2);
+    CHECK_FALSE(plainDesign.IsNativeLife());
+    CHECK(rPlain.GetXp() == 1);
+    CHECK_FALSE(rLand.GetDesign().IsNativeLife());
+    CHECK(rLand.GetXp() == 2);
+}
+
+TEST_CASE("a composed unit with native_life takes lifecycle train bonuses", "[native][xp]")
+{
+    FactionFixture fixture;
+    Faction& rFaction = fixture.MakeFaction();
+    BaseManager& rCommand = fixture.MakeFactionBase(rFaction, 2, 2);
+    BaseManager& rPreserve = fixture.MakeFactionBase(rFaction, 3, 2);
+    rCommand.GetBuildingManager().AddBuilding("Command_Center");
+    rPreserve.GetBuildingManager().AddBuilding("Centauri_Preserve");
+
+    Unit& rAtCommand =
+        fixture.MakeUnit(rFaction, 4, 4, {"native_life_chassis"}, &rCommand, &rCommand);
+    Unit& rAtPreserve =
+        fixture.MakeUnit(rFaction, 5, 4, {"native_life_chassis"}, &rPreserve, &rPreserve);
+
+    CHECK(rAtCommand.GetDesign().IsNativeLife());
+    CHECK(rAtCommand.GetXp() == 2);
+    CHECK(rAtPreserve.GetDesign().IsNativeLife());
+    CHECK(rAtPreserve.GetXp() == 2);
 }

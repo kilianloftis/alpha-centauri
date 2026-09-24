@@ -511,6 +511,9 @@ enum class RuleFlagId_t
     IgnoreDifficultTerrain,
     // Any combat involving a unit with this flag uses psi strengths and damage.
     ForcesPsiCombat,
+    // This blueprint is native life. Train bonuses (Centauri Preserve, Command Center)
+    // read it through IsNativeLife. A composed design carries it on a component.
+    NativeLife,
 
     // Non-combat special equipment (weapon-slot) capability gates.
     FoundBase,
@@ -590,6 +593,7 @@ inline RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "single_use")                  return RuleFlagId_t::SingleUse;
     if (rFlag == "ignores_difficult_terrain")   return RuleFlagId_t::IgnoreDifficultTerrain;
     if (rFlag == "forces_psi_combat")            return RuleFlagId_t::ForcesPsiCombat;
+    if (rFlag == "native_life")                  return RuleFlagId_t::NativeLife;
     if (rFlag == "found_base")                   return RuleFlagId_t::FoundBase;
     if (rFlag == "terraform")                   return RuleFlagId_t::Terraform;
     if (rFlag == "supply_crawl")                return RuleFlagId_t::SupplyCrawl;

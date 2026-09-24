@@ -197,7 +197,8 @@ about a pending riot without being a yielding stage.
   commerce from the injected `CommerceManager`, then each base's `ProduceResources` adds that commerce to
   raw energy before inefficiency and the econ/labs/psych split.
 - **`UnitSupport`**: `ApplyMineralSupport` — home-unit support charged against the mineral
-  bank ResourceCollection just filled; surplus units disband.
+  bank ResourceCollection just filled; surplus units disband. A native-life home unit
+  standing on fungus is charged nothing.
 - **`BaseProduction`**: `ApplyProduction` — allocate leftover minerals to the queued build or
   convert them through a stockpile, then complete funded items. Ordered after `UnitSupport` and
   before `BaseGrowth` so Hab Complex / Dome raise `MaxBaseSize` before growth, and before

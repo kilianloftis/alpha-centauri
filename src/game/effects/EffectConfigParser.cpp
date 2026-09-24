@@ -902,6 +902,19 @@ Condition_t ParseCondition(const nlohmann::json& conditionJson)
     {
         return IsCombatUnit_t{};
     }
+    if (kindStr == "IsNativeLife")
+    {
+        IsNativeLife_t native;
+        if (conditionJson.contains("value"))
+        {
+            if (!conditionJson.at("value").is_boolean())
+            {
+                throw std::runtime_error("IsNativeLife condition 'value' must be a boolean");
+            }
+            native.bMatches = conditionJson.at("value").get<bool>();
+        }
+        return native;
+    }
     if (kindStr == "BaseHasBuilding")
     {
         const std::string buildingId = conditionJson.value("building", "");

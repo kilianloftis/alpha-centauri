@@ -365,6 +365,14 @@ struct IsCombatUnit_t
 {
 };
 
+// True when the design's native_life RuleFlag matches bMatches. Omit value in JSON to
+// require the flag; "value": false matches units that do not carry it. Fail closed if
+// pUnit is absent.
+struct IsNativeLife_t
+{
+    bool bMatches = true;
+};
+
 // True when EffectContext_t::pBase has a constructed copy of buildingId.
 // Fail closed if pBase is absent. This is how a unit's on_hold_effects names a facility.
 struct BaseHasBuilding_t
@@ -378,7 +386,7 @@ using ConditionVariant_t = std::variant<TargetTileHas_t, AllOf_t, IsDefending_t,
                                         AttackerDomain_t, DefenderDomain_t, IsHeadquarters_t,
                                         SubjectDomain_t, HasComponent_t, SubjectDesign_t,
                                         HasFlag_t, IsPrototype_t, IsCombatUnit_t,
-                                        BaseHasBuilding_t>;
+                                        IsNativeLife_t, BaseHasBuilding_t>;
 
 struct Condition_t : ConditionVariant_t
 {

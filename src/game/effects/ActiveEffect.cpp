@@ -613,6 +613,11 @@ bool ConditionBodySatisfied_(const Condition_t& condition, const EffectContext_t
             {
                 return ctx.pUnit != nullptr && ctx.pUnit->GetDesign().IsCombatUnit();
             }
+            else if constexpr (std::is_same_v<T, IsNativeLife_t>)
+            {
+                return ctx.pUnit != nullptr
+                    && ctx.pUnit->GetDesign().IsNativeLife() == rAlt.bMatches;
+            }
             else if constexpr (std::is_same_v<T, BaseHasBuilding_t>)
             {
                 return ctx.pBase != nullptr
@@ -667,7 +672,8 @@ bool ConditionNeedsSituationalContext(const Condition_t& rCondition)
             using T = std::decay_t<decltype(rAlt)>;
             if constexpr (std::is_same_v<T, SubjectDomain_t> || std::is_same_v<T, HasComponent_t>
                           || std::is_same_v<T, SubjectDesign_t> || std::is_same_v<T, HasFlag_t>
-                          || std::is_same_v<T, IsPrototype_t> || std::is_same_v<T, IsCombatUnit_t>)
+                          || std::is_same_v<T, IsPrototype_t> || std::is_same_v<T, IsCombatUnit_t>
+                          || std::is_same_v<T, IsNativeLife_t>)
             {
                 return false;
             }

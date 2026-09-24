@@ -239,7 +239,8 @@ void ValidateConditionReferences_(const Condition_t& rCondition,
                                    || std::is_same_v<T, SubjectDomain_t>
                                    || std::is_same_v<T, HasFlag_t>
                                    || std::is_same_v<T, IsPrototype_t>
-                                   || std::is_same_v<T, IsCombatUnit_t>)
+                                   || std::is_same_v<T, IsCombatUnit_t>
+                                   || std::is_same_v<T, IsNativeLife_t>)
                 {
                 }
                 else

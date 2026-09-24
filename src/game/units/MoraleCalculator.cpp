@@ -167,7 +167,7 @@ const std::string& MoraleCalculator::DisplayName(int level, bool bNativeLifecycl
 
 const std::string& MoraleCalculator::DisplayName(const Unit& rUnit) const
 {
-    const bool bNative = ResolveFlag(rUnit, RuleFlagId_t::ForcesPsiCombat);
+    const bool bNative = rUnit.GetDesign().IsNativeLife();
     // Display uses intrinsic rank name (not SE-shifted effective), matching stored XP.
     return DisplayName(std::clamp(rUnit.GetXp(), m_rConfig.MinLevel(), m_rConfig.MaxLevel()),
                        bNative);

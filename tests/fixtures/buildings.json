@@ -291,8 +291,11 @@
           "op": "Add"
         },
         "condition": {
-          "kind": "SubjectDomain",
-          "domain": "air"
+          "kind": "AllOf",
+          "conditions": [
+            { "kind": "SubjectDomain", "domain": "air" },
+            { "kind": "IsNativeLife", "value": false }
+          ]
         }
       }
     ],
@@ -334,13 +337,36 @@
           "op": "Add"
         },
         "condition": {
-          "kind": "SubjectDomain",
-          "domain": "land"
+          "kind": "AllOf",
+          "conditions": [
+            { "kind": "SubjectDomain", "domain": "land" },
+            { "kind": "IsNativeLife", "value": false }
+          ]
         }
       }
     ],
     "category": "conquer",
     "upkeep": 1
+  },
+  {
+    "id": "Centauri_Preserve",
+    "name": "Centauri Preserve (+1 starting XP to native life)",
+    "mineral_cost": 100,
+    "upkeep": 1,
+    "category": "grow",
+    "required_tech": "centauri_meditation",
+    "on_unit_produced_effects": [
+      {
+        "type": "GrantXp",
+        "parameters": {
+          "amount": 1,
+          "op": "Add"
+        },
+        "condition": {
+          "kind": "IsNativeLife"
+        }
+      }
+    ]
   },
   {
     "id": "test_train_attack",

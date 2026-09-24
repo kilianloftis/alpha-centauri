@@ -7,6 +7,7 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/faction/base/HomeBaseIndex.h"
 #include "game/faction/base/resources/ResourceManager.h"
+#include "game/map/Tile.h"
 #include "game/units/Unit.h"
 
 #include <algorithm>
@@ -40,7 +41,11 @@ std::vector<int> ComputeCharges_(const BaseManager& rBase)
             charges.push_back(0);
             continue;
         }
-        const int cost = pUnit->GetMineralUpkeep();
+        int cost = pUnit->GetMineralUpkeep();
+        if (pUnit->GetDesign().IsNativeLife() && pUnit->GetTile().GetHasFungus())
+        {
+            cost = 0;
+        }
         if (cost <= 0)
         {
             charges.push_back(0);

@@ -117,6 +117,7 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
     CHECK(ParseRuleFlagId("near_zero_growth") == RuleFlagId_t::NearZeroGrowth);
     CHECK(ParseRuleFlagId("ignores_difficult_terrain") == RuleFlagId_t::IgnoreDifficultTerrain);
     CHECK(ParseRuleFlagId("forces_psi_combat") == RuleFlagId_t::ForcesPsiCombat);
+    CHECK(ParseRuleFlagId("native_life") == RuleFlagId_t::NativeLife);
     CHECK(ParseRuleFlagId("found_base") == RuleFlagId_t::FoundBase);
     CHECK(ParseRuleFlagId("terraform") == RuleFlagId_t::Terraform);
     CHECK(ParseRuleFlagId("supply_crawl") == RuleFlagId_t::SupplyCrawl);
@@ -963,6 +964,31 @@ TEST_CASE("ParseEffectConfig: identity condition arms", "[effects][parser][condi
         const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
         REQUIRE(config.condition.has_value());
         CHECK(std::holds_alternative<IsCombatUnit_t>(*config.condition));
+    }
+
+    SECTION("IsNativeLife")
+    {
+        const json effectJson = json::parse(R"({
+            "type": "StatModifier",
+            "scope": "FactionUnits",
+            "condition": { "kind": "IsNativeLife" },
+            "parameters": { "stat": "attack", "amount": 1 }
+        })");
+
+        const EffectConfig_t config = EffectConfigParser::ParseEffectConfig(effectJson);
+        REQUIRE(config.condition.has_value());
+        const auto* pNative = std::get_if<IsNativeLife_t>(&*config.condition);
+        REQUIRE(pNative);
+        CHECK(pNative->bMatches);
+
+        const json negated = json::parse(R"({ "kind": "IsNativeLife", "value": false })");
+        const Condition_t parsed = EffectConfigParser::ParseCondition(negated);
+        const auto* pNegated = std::get_if<IsNativeLife_t>(&parsed);
+        REQUIRE(pNegated);
+        CHECK_FALSE(pNegated->bMatches);
+
+        CHECK_THROWS(EffectConfigParser::ParseCondition(
+            json::parse(R"({ "kind": "IsNativeLife", "value": "yes" })")));
     }
 
     SECTION("Domain without domain throws")

@@ -22,6 +22,11 @@ bool IDesign::GetFlag(RuleFlagId_t flagId) const
     return ResolveFlag(*this, flagId);
 }
 
+bool IDesign::IsNativeLife() const
+{
+    return GetFlag(RuleFlagId_t::NativeLife);
+}
+
 int IDesign::GetMovementPoints() const
 {
     return GetStat(StatId_t::Movement);
