@@ -2,6 +2,8 @@
 
 #include "game/GameSettings.h"
 #include "game/GameState.h"
+#include "game/council/CouncilProposalRegistry.h"
+#include "game/council/CouncilRulesConfigParser.h"
 #include "game/orbital/OrbitalAttack.h"
 #include "game/orbital/OrbitalCensus.h"
 #include "game/units/InterceptRules.h"
@@ -542,4 +544,49 @@ TEST_CASE("Parse OrbitalAttack and Intercept effects", "[effects][parser][orbita
         "scope": "FactionGlobal",
         "parameters": { "chance": 50 }
     })")));
+}
+
+TEST_CASE("WorldGlobal building intercept fires for another faction and charges the grantor",
+          "[orbital][intercept][world]")
+{
+    OrbitalGame_ game;
+    BaseManager& grantorBase = game.MakeBase(*game.pPlayer, 1, 1);
+    grantorBase.GetBuildingManager().AddBuilding("world_intercept_always_hit");
+    CHECK(game.pPlayer->CountReadyBuildings("world_intercept_always_hit",
+                                            game.pState->GetMissionYear()) == 1);
+
+    Unit& defender = game.MakeUnit(*game.pAi, 4, 4, {"test_chassis", "test_armor"});
+    Unit& attacker = game.MakeUnit(*game.pPlayer, 5, 4, {"test_chassis", "test_weapon"});
+    attacker.SetMoveFragmentsRemaining(attacker.GetMovementPoints() * k_point);
+
+    auto result = game.pState->GetUnitOrderExecutor().TryAttack(attacker, defender.GetTile());
+    REQUIRE(result);
+    CHECK(result->bAttackerDestroyed);
+    CHECK(result->rounds.empty());
+    CHECK(game.pPlayer->CountReadyBuildings("world_intercept_always_hit",
+                                            game.pState->GetMissionYear()) == 0);
+    CHECK(game.pAi->CountBuildings("world_intercept_always_hit") == 0);
+}
+
+TEST_CASE("Council WorldGlobal intercept fires with no building deploy",
+          "[orbital][intercept][world][council]")
+{
+    CouncilProposalRegistry councilRegistry;
+    councilRegistry.Load(FixturePath("council/world_intercept.json"));
+    const CouncilRulesConfig_t rules =
+        CouncilRulesConfigParser{}.ParseConfig(FixturePath("council/rules.json"));
+
+    OrbitalGame_ game;
+    game.pState->CreatePlanetaryCouncil(councilRegistry, rules);
+
+    Unit& defender = game.MakeUnit(*game.pAi, 4, 4, {"test_chassis", "test_armor"});
+    Unit& attacker = game.MakeUnit(*game.pPlayer, 5, 4, {"test_chassis", "test_weapon"});
+    attacker.SetMoveFragmentsRemaining(attacker.GetMovementPoints() * k_point);
+
+    auto result = game.pState->GetUnitOrderExecutor().TryAttack(attacker, defender.GetTile());
+    REQUIRE(result);
+    CHECK(result->bAttackerDestroyed);
+    CHECK(result->rounds.empty());
+    CHECK(game.pPlayer->CountBuildings("world_intercept_always_hit") == 0);
+    CHECK(game.pAi->CountBuildings("world_intercept_always_hit") == 0);
 }

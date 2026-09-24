@@ -666,9 +666,10 @@ enum class EffectLane_t
     // included per base by FilterForBase (pop ThisBase effects merge via CollectFromPops
     // instead, so they never enter the pool).
     Base,
-    // Resolved at every base of the faction (WorldGlobal additionally crosses factions via
-    // GameState::CollectWorldExtras / Faction composition). Lives in the faction pool;
-    // FilterForBase includes it.
+    // Resolved at every base of the faction. WorldGlobal additionally crosses factions via
+    // GameState::CollectWorldExtras / Faction composition, and that same session set is
+    // appended to live units (unit-domain stats and rule flags) and tiles (tile-domain
+    // stats and rule flags). Lives in the faction pool; FilterForBase includes it.
     FactionWide,
     // Merged into every live unit's stat resolution. Lives in the faction pool; consumed by
     // Unit::Get* via FilterByScope(FactionUnits), never applies at base level.

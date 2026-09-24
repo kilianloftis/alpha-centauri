@@ -1,0 +1,23 @@
+[
+  {
+    "id": "world_land_intercept",
+    "name": "World Land Intercept",
+    "description": "Destroy any land attacker",
+    "initially_active": true,
+    "proposable": false,
+    "effects": [
+      {
+        "type": "Intercept",
+        "scope": "WorldGlobal",
+        "parameters": {
+          "chance": 100,
+          "cooldown_turns": 1
+        },
+        "condition": {
+          "kind": "AttackerDomain",
+          "domains": ["land"]
+        }
+      }
+    ]
+  }
+]

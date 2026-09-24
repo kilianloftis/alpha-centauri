@@ -153,6 +153,7 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
     m_pTileEffects = std::make_unique<TileEffectsContext>(*m_worldMap, rImprovements,
                                                           pUnitComponents, rYieldRules,
                                                           rInteractionGrids);
+    m_pTileEffects->BindWorldEffects(*this);
     m_pMoveCosts = std::make_unique<MoveCostCalculator>(rImprovements);
     m_pSteps = std::make_unique<StepEvaluator>(*m_worldMap, *m_pTileEffects);
     m_pPathfinder = std::make_unique<Pathfinder>(*m_pMoveCosts, *m_pSteps, *m_worldMap);
@@ -186,7 +187,15 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
     m_pProbeActions = std::make_unique<ProbeActionExecutor>(*m_worldMap, m_rMorale, m_rng);
 }
 
-GameState::~GameState() = default;
+GameState::~GameState()
+{
+    // Base teardown recomputes moisture through this context. Factions are already
+    // partially destroyed by then, so the session list must not be queried.
+    if (m_pTileEffects)
+    {
+        m_pTileEffects->UnbindWorldEffects();
+    }
+}
 
 const MoraleCalculator& GameState::GetMoraleCalculator() const
 {
@@ -276,6 +285,23 @@ uint64_t GameState::GetWorldCompositionStamp(const Faction& rFor) const
         stamp = mix(stamp, m_pCouncil->GetRevision().Get());
     }
     return stamp;
+}
+
+std::vector<ActiveEffect_t> GameState::CollectSessionWorldEffects() const
+{
+    std::vector<ActiveEffect_t> result;
+    for (const auto& pFaction : m_factions)
+    {
+        auto worldEffects =
+            FilterByScope(pFaction->GetLocalActiveEffects().effects, EffectScope_t::WorldGlobal);
+        result.insert(result.end(), worldEffects.begin(), worldEffects.end());
+    }
+    if (m_pCouncil)
+    {
+        const std::vector<ActiveEffect_t>& councilWorld = m_pCouncil->CollectWorldEffects();
+        result.insert(result.end(), councilWorld.begin(), councilWorld.end());
+    }
+    return result;
 }
 
 std::vector<ActiveEffect_t> GameState::CollectWorldExtras(const Faction& rFor) const

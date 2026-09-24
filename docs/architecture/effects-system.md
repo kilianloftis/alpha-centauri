@@ -106,7 +106,7 @@ not by which config declared it. Each scope has one "lane":
 |---|---|---|
 | `ThisBase` | owning base | source collector tags `originBase`; `FilterForBase` |
 | `AllOwnerBases` / `FactionGlobal` | every base of the faction | faction pool (`CollectActiveEffects`) |
-| `WorldGlobal` | every base of every faction | composed into `Faction::GetActiveEffects()` (local `FactionEffectsPool` + `IWorldEffectsSource` / `GameState::CollectWorldExtras` for peer WorldGlobal and council extras). Turn stages call no-arg `ProduceBaseResources` / `ApplyBaseGrowth`; they do not append a second list. |
+| `WorldGlobal` | every resolver that can apply the effect | composed into `Faction::GetActiveEffects()` (local `FactionEffectsPool` + `IWorldEffectsSource` / `GameState::CollectWorldExtras` for peer WorldGlobal and council extras). Bases and faction stats read that pool. `CollectLiveUnitEffects` appends the unit-domain stat modifiers and rule flags. `TileEffectsContext::CollectAreaEffects` and move-cost entry append the tile-domain slice from `CollectSessionWorldEffects()`. Intercept bills a `WorldGlobal` charge to the granting faction; a council charge has no building ledger. Turn stages call no-arg `ProduceBaseResources` / `ApplyBaseGrowth`; they do not append a second list. |
 | `FactionUnits` | live units of the faction (home-base narrowed when conditions use `OriginBaseIsHomeBase`) | faction pool → `CollectLiveUnitEffects`. Combat Attack/Defense use `ResolveCombatUnitStat`, which merges the unit's effective `MoraleLevel_t::effects` (Attack/Defense `AddPercent` from `morale_levels.json`) into the same stack. `EffectContext_t::combatRole` enables `IsDefending` (SE Morale defense-in-base). Post-combat promotion uses `morale_levels.json` `promotion_seed_formula` (Lua: `attack_strength`, `defense_strength`) plus intrinsic-level `promotion_chance` stack modifiers; promotion rolls use stored XP, not SE-shifted effective level. |
 | `ProducedAtThisBase` | units built at the originating base | stamped onto the unit at construction (`Unit::GetProductionGrants`); collected by `CollectLiveUnitEffects` from the unit, not by live pool origin matching. Permanent non-XP train grants. Starting XP (Command Center, Aerospace, prototype) uses triggered `GrantXp` on `on_unit_produced_effects` instead. |
 | `ThisUnit` | the unit itself | `CollectUnitEffects` (design components) |
@@ -324,10 +324,12 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
     `Is*` resolution, which merges the design's own `ThisUnit` effects with the faction
     pool's `FactionUnits` effects (so a building or policy can boost every unit).
   - `FactionGlobal` — the whole faction.
-  - `WorldGlobal` — all factions. A faction's own `FactionEffectsPool` carries its own
+  - `WorldGlobal` — the session. A faction's own `FactionEffectsPool` carries its own
     `WorldGlobal` effects; `Faction::GetActiveEffects()` (when bound to `IWorldEffectsSource`)
     also appends peer WorldGlobal and council extras. `GetLocalActiveEffects()` is the
-    uncomposed pool used when harvesting peers.
+    uncomposed pool used when harvesting peers. `CollectSessionWorldEffects()` is that set
+    once: every faction's local `WorldGlobal` effects, then council world laws. Live units
+    take the unit-domain slice and rule flags; tiles take the tile-domain slice and rule flags.
   - `ThisPop` — only the specific pop instance the effect belongs to (pop type tile-multiplier effects use this scope). Resolved locally by `Pop::ApplyTileMultipliers` and never enters the base-wide active effects pool — `FilterForBase` always excludes it, same as `ThisUnit`/`FactionUnits`.
   - `ThisTile` — only the specific tile the effect belongs to (terrain classification, river, fungus, or improvement). Resolved locally via `CollectTileEffects`/`ResolveTileYield`/`ResolveTileDefenseMultiplier` and never enters the base-wide active effects pool — `FilterForBase` always excludes it too. See Tile Improvement Effects below.
   - `ThisTech` — only the tech definition that declares the effect (`TechLocal` lane). Resolved when that tech is the current research target (`ResearchManager` feeds `tech_modifier` into `tech_cost.lua`). Must be a `tech_cost` `StatModifier` on a tech config. Never enters the faction pool when the tech is discovered.
@@ -584,7 +586,8 @@ no bases means no spawn. Placement takes the anchor tile if free, then outward r
 grants fewer units and reports the real count rather than throwing.
 
 ### CollectLiveUnitEffects
-- Returns design + FactionUnits + permanent `ProducedAtThisBase` grants stamped on the unit at
+- Returns design + FactionUnits + `WorldGlobal` unit-domain stat modifiers and rule flags from
+  the composed pool + permanent `ProducedAtThisBase` grants stamped on the unit at
   construction (`Unit::GetProductionGrants`). Identity conditions (Domain / IsPrototype / …)
   are applied at collect; resolve paths re-check via `ConditionSatisfied`.
 
@@ -1023,9 +1026,9 @@ Either way, add parser coverage in `ParserTests.cpp` (and dispatcher coverage in
 rather than building a parallel collection path — the faction pool via
 `CollectActiveEffects(faction)` (a `FactionEffects_t`), a base's final list via
 `BaseManager::BuildBaseEffects_` (a `BaseEffects_t`, already including pop effects and
-rating expansion), a live unit's via its design's `ThisUnit` effects plus the pool's
-`FactionUnits` (see `CollectLiveUnitEffects_` in `Unit.cpp`), a tile's via
-`TileEffectsContext`. The pool types enforce the stage: base-level filters and the per-tile
+rating expansion), a live unit's via `CollectLiveUnitEffects` (design `ThisUnit` effects, the pool's
+`FactionUnits`, and `WorldGlobal` unit-domain stats and rule flags), a tile's via
+`TileEffectsContext` (own tile, auras, and `WorldGlobal` tile-domain stats and rule flags). The pool types enforce the stage: base-level filters and the per-tile
 selector pass won't compile against the raw pool.
 
 ## Design Rationale

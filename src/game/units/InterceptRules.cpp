@@ -2,6 +2,7 @@
 
 #include "game/Faction.h"
 #include "game/GameState.h"
+#include "game/council/PlanetaryCouncil.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/DeployCooldown.h"
 #include "game/effects/TileEffectsContext.h"
@@ -51,6 +52,8 @@ struct InterceptCandidate_t
     // building in two bases the wrong copy was destroyed and the deploy cleared against the
     // wrong inventory.
     BaseManager* pBaseSource = nullptr;
+    // WorldGlobal building charges bill this faction, not the defender. Null uses the defender.
+    Faction* pGrantingFaction = nullptr;
 };
 
 // sourceKind is the calling lane's physical source. deployKind matches it unless the effect
@@ -63,7 +66,8 @@ void AppendMatchingIntercepts_(std::vector<InterceptCandidate_t>& rOut,
                                std::initializer_list<EffectScope_t> allowedScopes,
                                InterceptDeployKind_t sourceKind,
                                Unit* pUnitSource,
-                               BaseManager* pBaseSource)
+                               BaseManager* pBaseSource,
+                               Faction* pGrantingFaction)
 {
     for (const ActiveEffect_t& rEffect : rEffects)
     {
@@ -84,6 +88,7 @@ void AppendMatchingIntercepts_(std::vector<InterceptCandidate_t>& rOut,
         candidate.sourceId = rEffect.sourceId;
         candidate.pUnitSource = pUnitSource;
         candidate.pBaseSource = pBaseSource;
+        candidate.pGrantingFaction = pGrantingFaction;
         candidate.sourceKind = sourceKind;
         candidate.deployKind =
             pIntercept->cooldownTurns < 0 ? InterceptDeployKind_t::None : sourceKind;
@@ -107,7 +112,7 @@ std::vector<InterceptCandidate_t> CollectInterceptCandidates_(GameState& rGameSt
     // Faction-wide charges are not tied to one base, so there is no originating base to carry.
     AppendMatchingIntercepts_(candidates, rDefFaction.GetActiveEffects().effects, rAttacker, ctx,
                               {EffectScope_t::FactionGlobal, EffectScope_t::AllOwnerBases},
-                              InterceptDeployKind_t::Building, nullptr, nullptr);
+                              InterceptDeployKind_t::Building, nullptr, nullptr, nullptr);
 
     if (BaseManager* pBase =
             rGameState.FindBaseAt(rDefender.GetTile().GetX(), rDefender.GetTile().GetY());
@@ -117,12 +122,27 @@ std::vector<InterceptCandidate_t> CollectInterceptCandidates_(GameState& rGameSt
         // that actually fired rather than whichever base FindBaseWithBuilding happens to return.
         AppendMatchingIntercepts_(candidates, pBase->CollectBuildingEffects(), rAttacker, ctx,
                                   {EffectScope_t::ThisBase}, InterceptDeployKind_t::Building,
-                                  nullptr, pBase);
+                                  nullptr, pBase, nullptr);
     }
 
     AppendMatchingIntercepts_(candidates, rDefender.GetDesign().CollectEffects(), rAttacker, ctx,
                               {EffectScope_t::ThisUnit}, InterceptDeployKind_t::Unit, &rDefender,
-                              nullptr);
+                              nullptr, nullptr);
+
+    // WorldGlobal charges belong to the faction that granted them. The defender's composed
+    // pool also contains peer copies; billing those against the defender would never be ready.
+    for (Faction& rGrantor : rGameState.Factions())
+    {
+        AppendMatchingIntercepts_(candidates, rGrantor.GetLocalActiveEffects().effects,
+                                  rAttacker, ctx, {EffectScope_t::WorldGlobal},
+                                  InterceptDeployKind_t::Building, nullptr, nullptr, &rGrantor);
+    }
+    if (const PlanetaryCouncil* pCouncil = rGameState.GetPlanetaryCouncil())
+    {
+        AppendMatchingIntercepts_(candidates, pCouncil->CollectWorldEffects(), rAttacker, ctx,
+                                  {EffectScope_t::WorldGlobal}, InterceptDeployKind_t::None,
+                                  nullptr, nullptr, nullptr);
+    }
 
     // TODO: a ThisTile source has no deploy ledger to charge, so it ignores cooldownTurns and
     // may attempt on every attack. Honouring the configured cooldown needs a per-tile (or
@@ -133,9 +153,14 @@ std::vector<InterceptCandidate_t> CollectInterceptCandidates_(GameState& rGameSt
     // obvious fix, but whether a neutral/allied tile source may intercept is not a settled rule.
     AppendMatchingIntercepts_(candidates, rTileEffects.CollectAreaEffects(rDefender.GetTile()),
                               rAttacker, ctx, {EffectScope_t::ThisTile},
-                              InterceptDeployKind_t::None, nullptr, nullptr);
+                              InterceptDeployKind_t::None, nullptr, nullptr, nullptr);
 
     return candidates;
+}
+
+Faction& InterceptLedger_(Faction& rDefFaction, const InterceptCandidate_t& rCandidate)
+{
+    return rCandidate.pGrantingFaction != nullptr ? *rCandidate.pGrantingFaction : rDefFaction;
 }
 
 // Returns false when the source cannot act (already deployed / no ready charge).
@@ -143,6 +168,7 @@ bool TryDeployInterceptSource_(Faction& rDefFaction,
                                InterceptCandidate_t& rCandidate,
                                int missionYear)
 {
+    Faction& rLedger = InterceptLedger_(rDefFaction, rCandidate);
     const InterceptEffect_t& rIntercept = *rCandidate.pIntercept;
     switch (rCandidate.deployKind)
     {
@@ -160,7 +186,7 @@ bool TryDeployInterceptSource_(Faction& rDefFaction,
     {
         // DeployBuilding appends a deploy record that CountReadyBuildings subtracts, so the
         // faction's own ready count is the running tally across candidates — no local memo.
-        if (rDefFaction.CountReadyBuildings(rCandidate.sourceId, missionYear) <= 0)
+        if (rLedger.CountReadyBuildings(rCandidate.sourceId, missionYear) <= 0)
         {
             return false;
         }
@@ -175,9 +201,9 @@ bool TryDeployInterceptSource_(Faction& rDefFaction,
         // supports (see Faction::DeployBuilding).
         const BaseManager* pBase = rCandidate.pBaseSource
                                        ? rCandidate.pBaseSource
-                                       : rDefFaction.FindBaseWithBuilding(rCandidate.sourceId);
+                                       : rLedger.FindBaseWithBuilding(rCandidate.sourceId);
         const BaseId_t baseId = pBase ? pBase->GetBaseId() : BaseId_t{};
-        rDefFaction.DeployBuilding(
+        rLedger.DeployBuilding(
             baseId, rCandidate.sourceId,
             ReadyYearAfterDeploy(missionYear, rIntercept.cooldownTurns));
         return true;
@@ -206,6 +232,7 @@ void MaybeDestroyInterceptSourceOnFail_(GameState& rGameState, Faction& rDefFact
     {
         return;
     }
+    Faction& rLedger = InterceptLedger_(rDefFaction, rCandidate);
     switch (rCandidate.sourceKind)
     {
     case InterceptDeployKind_t::None:
@@ -218,7 +245,7 @@ void MaybeDestroyInterceptSourceOnFail_(GameState& rGameState, Faction& rDefFact
         // destroying "a" copy is the best the model supports.
         BaseManager* pBase = rCandidate.pBaseSource
                                  ? rCandidate.pBaseSource
-                                 : rDefFaction.FindBaseWithBuilding(rCandidate.sourceId);
+                                 : rLedger.FindBaseWithBuilding(rCandidate.sourceId);
         if (!pBase)
         {
             throw std::logic_error(

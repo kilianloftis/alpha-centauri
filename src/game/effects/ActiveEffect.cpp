@@ -912,15 +912,40 @@ int PredictUnitProductionPopulationSize(const UnitDesign& rDesign, int size)
     return current;
 }
 
-// A live unit's full effect list: design components, all FactionUnits, and permanent
-// ProducedAtThisBase grants stamped onto the unit at construction. Identity conditions are
-// applied here; situational conditions remain for in-context resolve.
+void AppendWorldGlobalEffects(const std::vector<ActiveEffect_t>& rPool, ResolveDomain_t domain,
+                              std::vector<ActiveEffect_t>& rOut)
+{
+    for (const ActiveEffect_t& rEffect : rPool)
+    {
+        if (!rEffect.config || rEffect.config->scope != EffectScope_t::WorldGlobal)
+        {
+            continue;
+        }
+        if (std::holds_alternative<RuleFlagEffect_t>(rEffect.config->effect))
+        {
+            rOut.push_back(rEffect);
+            continue;
+        }
+        const StatModifierEffect_t* pModifier =
+            std::get_if<StatModifierEffect_t>(&rEffect.config->effect);
+        if (pModifier && DomainFor(pModifier->stat) == domain)
+        {
+            rOut.push_back(rEffect);
+        }
+    }
+}
+
+// A live unit's full effect list: design components, all FactionUnits, WorldGlobal
+// unit-domain stats and rule flags, and permanent ProducedAtThisBase grants stamped onto
+// the unit at construction. Identity conditions are applied here; situational conditions
+// remain for in-context resolve.
 UnitEffects_t CollectLiveUnitEffects(const Unit& rUnit)
 {
     std::vector<ActiveEffect_t> effects = rUnit.GetDesign().CollectEffects();
     const auto& rPool = rUnit.GetFaction().GetActiveEffects().effects;
     auto factionEffects = FilterByScope(rPool, EffectScope_t::FactionUnits);
     effects.insert(effects.end(), factionEffects.begin(), factionEffects.end());
+    AppendWorldGlobalEffects(rPool, ResolveDomain_t::Unit, effects);
     const auto& rGrants = rUnit.GetProductionGrants();
     effects.insert(effects.end(), rGrants.begin(), rGrants.end());
 

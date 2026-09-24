@@ -10,6 +10,7 @@ namespace ac
 {
 
 class ImprovementRegistry;
+class IWorldEffectsSource;
 class Tile;
 class UnitComponentRegistry;
 class WorldMap;
@@ -33,6 +34,10 @@ public:
                        const UnitComponentRegistry* pUnitComponents,
                        const TileYieldRulesConfig_t& rYieldRules,
                        const InteractionGridsConfig_t& rInteractionGrids);
+
+    // Session WorldGlobal source. Unbound contexts resolve tile-local effects only.
+    void BindWorldEffects(IWorldEffectsSource& rWorldEffects);
+    void UnbindWorldEffects();
 
     // WorldMap access — used by callers (e.g. BaseManager) that need the map for spatial
     // queries like computing workable tile positions.
@@ -110,6 +115,7 @@ private:
     // Max ThisTile-scoped effect radius across improvement configs and unit components;
     // bounds the aura scan. Cached in the constructor.
     int m_maxRadius;
+    IWorldEffectsSource* m_pWorldEffects = nullptr;
 };
 
 } // namespace ac

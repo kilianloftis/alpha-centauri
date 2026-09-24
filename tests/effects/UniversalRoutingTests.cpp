@@ -18,6 +18,8 @@
 #include "game/effects/EffectConfig.h"
 #include "game/effects/EffectEnums.h"
 #include "game/effects/InteractionResolve.h"
+#include "game/units/MoveCostCalculator.h"
+#include "game/units/MovementConstants.h"
 #include "game/units/MovementRules.h"
 
 #include <variant>
@@ -254,6 +256,89 @@ TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other fact
         baseA.GetBuildingManager().AddBuilding("world_beacon"); // second +10 energy
         CHECK(baseB.GetEconProduction() == 8);
     }
+}
+
+TEST_CASE("WorldGlobal lane: a peer unit-domain modifier changes the other faction's unit",
+          "[effects][routing][world][unit]")
+{
+    actest::FactionFixture fixture;
+    GameSettings settings;
+    GameState state(std::make_unique<WorldMap>(9, 9), fixture.improvements, &fixture.unitComponents,
+                    settings, *fixture.dataContext.moraleCalculator, fixture.dataContext.tileYieldRules,
+                    fixture.dataContext.interactionGrids, actest::k_TestRngSeed);
+
+    Faction& factionA = state.AddFaction(std::make_unique<Faction>(
+        1, true, fixture.factionDefinition, fixture.dataContext, state.GetWorldMap(),
+        fixture.settings, actest::k_TestFactionSeed));
+    Faction& factionB = state.AddFaction(std::make_unique<Faction>(
+        2, false, fixture.factionDefinition, fixture.dataContext, state.GetWorldMap(),
+        fixture.settings, actest::k_TestFactionSeed));
+
+    BaseManager& baseA = fixture.MakeFactionBase(factionA, 2, 2);
+    Unit& unitB = fixture.MakeUnit(factionB, 6, 6, {"test_weapon"});
+    const int attackBefore = unitB.GetStat(StatId_t::Attack);
+
+    baseA.GetBuildingManager().AddBuilding("world_beacon"); // +10 energy, base domain
+    CHECK(unitB.GetStat(StatId_t::Attack) == attackBefore);
+
+    baseA.GetBuildingManager().AddBuilding("world_unit_attack"); // +1 attack, unit domain
+    CHECK(unitB.GetStat(StatId_t::Attack) == attackBefore + 1);
+}
+
+TEST_CASE("WorldGlobal lane: tile defense applies and base yield stats stay on the base",
+          "[effects][routing][world][tile]")
+{
+    actest::FactionFixture fixture;
+    GameSettings settings;
+    GameState state(std::make_unique<WorldMap>(9, 9), fixture.improvements, &fixture.unitComponents,
+                    settings, *fixture.dataContext.moraleCalculator, fixture.dataContext.tileYieldRules,
+                    fixture.dataContext.interactionGrids, actest::k_TestRngSeed);
+
+    Faction& factionA = state.AddFaction(std::make_unique<Faction>(
+        1, true, fixture.factionDefinition, fixture.dataContext, state.GetWorldMap(),
+        fixture.settings, actest::k_TestFactionSeed));
+    BaseManager& baseA = fixture.MakeFactionBase(factionA, 2, 2);
+
+    Tile& tile = *state.GetWorldMap().GetTile(4, 4);
+    const TileResources_t yieldBefore =
+        state.GetTileEffects().ResolveTileYield(tile).effective;
+    CHECK(state.GetTileEffects().ResolveTileDefenseMultiplier(tile, factionA.GetFactionId())
+          == Approx(1.0));
+
+    baseA.GetBuildingManager().AddBuilding("world_beacon");
+    baseA.GetBuildingManager().AddBuilding("world_tile_defense");
+
+    const TileResources_t yieldAfter =
+        state.GetTileEffects().ResolveTileYield(tile).effective;
+    CHECK(yieldAfter.nutrients == yieldBefore.nutrients);
+    CHECK(yieldAfter.energy == yieldBefore.energy);
+    CHECK(yieldAfter.minerals == yieldBefore.minerals);
+    CHECK(state.GetTileEffects().ResolveTileDefenseMultiplier(tile, factionA.GetFactionId())
+          == Approx(1.5));
+}
+
+TEST_CASE("WorldGlobal lane: a move_cost clamp applies when entering a tile",
+          "[effects][routing][world][movement]")
+{
+    actest::FactionFixture fixture;
+    for (auto& pTile : fixture.map.GetTiles())
+    {
+        pTile->SetElevation(100);
+    }
+
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 2, 2);
+    Unit& unit = fixture.MakeUnit(faction, 4, 4, {"test_chassis"});
+    MoveCostCalculator calc(fixture.improvements);
+    const auto costs = calc.ForUnit(unit, fixture.map);
+
+    Tile& rocky = fixture.At(5, 4);
+    rocky.SetRockiness(Rockiness_t::Rocky);
+    const int rockyCost = 2 * MovementConstants_t::k_moveFragmentsPerPoint;
+    CHECK(costs.EntryTerms(rocky).costFragments == rockyCost);
+
+    base.GetBuildingManager().AddBuilding("world_move_clamp");
+    CHECK(costs.EntryTerms(rocky).costFragments == 0);
 }
 
 TEST_CASE("Social policy stat effects flow through the standard pool (no special-casing)",

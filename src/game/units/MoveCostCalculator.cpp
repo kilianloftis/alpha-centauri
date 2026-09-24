@@ -44,6 +44,8 @@ EntryTerms_t MoveCostCalculator::Query::EntryTerms(const Tile& rTile) const
                          .value_or(m_rCalc.m_constants.DefaultMoveCostFragments());
 
     std::vector<ActiveEffect_t> effects = CollectTileEffects(rTile);
+    AppendWorldGlobalEffects(m_rUnit.GetFaction().GetActiveEffects().effects,
+                             ResolveDomain_t::Tile, effects);
     const UnitEffects_t live = CollectLiveUnitEffects(m_rUnit);
     effects.insert(effects.end(), live.effects.begin(), live.effects.end());
 

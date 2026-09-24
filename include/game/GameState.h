@@ -153,6 +153,7 @@ public:
     // Bound onto each Faction in AddFaction so GetActiveEffects composes one pool.
     std::vector<ActiveEffect_t> CollectWorldExtras(const Faction& rFor) const override;
     uint64_t GetWorldCompositionStamp(const Faction& rFor) const override;
+    std::vector<ActiveEffect_t> CollectSessionWorldEffects() const override;
 
     // Tile effects context (WorldMap + ImprovementRegistry bundled for tile resolution).
     TileEffectsContext& GetTileEffects();

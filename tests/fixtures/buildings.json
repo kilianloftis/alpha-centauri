@@ -1173,5 +1173,72 @@
     "name": "Network Node",
     "mineral_cost": 20,
     "upkeep": 1
+  },
+  {
+    "id": "world_unit_attack",
+    "name": "World Unit Attack (+1 attack to every unit)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "WorldGlobal",
+        "parameters": {
+          "stat": "attack",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "world_tile_defense",
+    "name": "World Tile Defense (+50% tile defense)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "WorldGlobal",
+        "parameters": {
+          "stat": "tile_defense",
+          "amount": 50,
+          "op": "AddPercent"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "world_move_clamp",
+    "name": "World Move Clamp (move cost ceiling 0)",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "WorldGlobal",
+        "parameters": {
+          "stat": "move_cost",
+          "amount": 0,
+          "op": "MaxClamp"
+        }
+      }
+    ],
+    "category": "conquer"
+  },
+  {
+    "id": "world_intercept_always_hit",
+    "name": "World Intercept Always Hit",
+    "effects": [
+      {
+        "type": "Intercept",
+        "scope": "WorldGlobal",
+        "parameters": {
+          "chance": 100,
+          "cooldown_turns": 1
+        },
+        "condition": {
+          "kind": "AttackerDomain",
+          "domains": ["land"]
+        }
+      }
+    ],
+    "category": "conquer"
   }
 ]

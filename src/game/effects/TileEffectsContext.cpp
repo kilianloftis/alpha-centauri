@@ -1,6 +1,7 @@
 #include "game/effects/TileEffectsContext.h"
 
 #include "game/Faction.h"
+#include "game/IWorldEffectsSource.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/MapUtils.h"
@@ -283,11 +284,26 @@ const ImprovementRegistry& TileEffectsContext::GetImprovements() const
     return m_rImprovements;
 }
 
+void TileEffectsContext::BindWorldEffects(IWorldEffectsSource& rWorldEffects)
+{
+    m_pWorldEffects = &rWorldEffects;
+}
+
+void TileEffectsContext::UnbindWorldEffects()
+{
+    m_pWorldEffects = nullptr;
+}
+
 std::vector<ActiveEffect_t> TileEffectsContext::CollectAreaEffects(const Tile& rTile) const
 {
     std::vector<ActiveEffect_t> effects;
     AppendOwnTileEffects_(rTile, m_rWorldMap, effects);
     AppendNeighborAndUnitAreaEffects_(rTile, m_rWorldMap, m_maxRadius, effects);
+    if (m_pWorldEffects)
+    {
+        AppendWorldGlobalEffects(m_pWorldEffects->CollectSessionWorldEffects(),
+                                 ResolveDomain_t::Tile, effects);
+    }
     return effects;
 }
 

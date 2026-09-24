@@ -551,11 +551,18 @@ bool ResolveFlag(const IDesign& rDesign, RuleFlagId_t flagId);
 int ResolveAdditiveStat(const IDesign& rDesign, StatId_t statId);
 
 // A live unit's full effect list: design components, FactionUnits (all faction units),
-// and permanent ProducedAtThisBase grants stamped on the unit at construction. Returned
+// WorldGlobal unit-domain stat modifiers and rule flags from the composed pool, and
+// permanent ProducedAtThisBase grants stamped on the unit at construction. Returned
 // effects already satisfy identity conditions (Domain / IsPrototype / …) against this unit
 // — consumers (ResolveStat, ResolveFlag, etc.) need not re-check those. Situational
 // conditions remain on the entries for in-context resolve.
 UnitEffects_t CollectLiveUnitEffects(const Unit& rUnit);
+
+// WorldGlobal entries from rPool that this consumer can apply: stat modifiers whose
+// DomainFor matches domain, and rule flags. Base- and faction-domain modifiers stay on
+// the resolvers that already read the composed pool.
+void AppendWorldGlobalEffects(const std::vector<ActiveEffect_t>& rPool, ResolveDomain_t domain,
+                              std::vector<ActiveEffect_t>& rOut);
 
 // Resolve a live unit's stats / flags: design effects plus FactionUnits from the owner.
 int ResolveStat(const Unit& rUnit, StatId_t statId);
