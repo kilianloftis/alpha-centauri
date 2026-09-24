@@ -94,8 +94,11 @@ public:
                    std::mt19937& rRng);
 
     // Applies HP each round, moves a unit on disengage, and DestroyUnit when a side
-    // reaches 0. Attack uses EffectContext_t{defender tile, Attacker}; defense uses
-    // {defender tile, Defender} so IsDefending / Base conditions apply.
+    // reaches 0. A killed defender also splashes collateral_damage onto other occupants
+    // (attacker effects plus the defender tile; a MaxClamp that leaves 0 suppresses it)
+    // and destroys wild native stackmates. Each destroyed wild native pays planet pearls
+    // to the attacker's treasury. Attack uses EffectContext_t{defender tile,
+    // Attacker}; defense uses {defender tile, Defender} so IsDefending / Base conditions apply.
     CombatResult_t Resolve(Unit& rAttacker, Unit& rDefender);
 
 private:

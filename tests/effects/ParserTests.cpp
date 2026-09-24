@@ -39,6 +39,8 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("vision") == StatId_t::Vision);
     CHECK(ParseStatId("hit_points") == StatId_t::HitPoints);
     CHECK(ParseStatId("psi_damage") == StatId_t::PsiDamage);
+    CHECK(ParseStatId("collateral_damage") == StatId_t::CollateralDamage);
+    CHECK(ParseStatId("planet_pearls") == StatId_t::PlanetPearls);
     CHECK(ParseStatId("disengage_chance") == StatId_t::DisengageChance);
     CHECK(ParseStatId("turns_of_fuel") == StatId_t::TurnsOfFuel);
     CHECK(ParseStatId("damage_from_out_of_fuel") == StatId_t::DamageFromOutOfFuel);

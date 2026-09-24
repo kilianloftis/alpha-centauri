@@ -294,6 +294,11 @@
         "parameters": { "stat": "tile_defense", "amount": 50, "op": "AddPercent" }
       },
       {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "collateral_damage", "amount": 0, "op": "MaxClamp" }
+      },
+      {
         "type": "RuleFlag",
         "scope": "ThisTile",
         "parameters": { "flag": "prevents_disengage" }
@@ -549,6 +554,11 @@
         "type": "StatModifier",
         "scope": "ThisTile",
         "parameters": { "stat": "tile_defense", "amount": 100, "op": "AddPercent" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisTile",
+        "parameters": { "stat": "collateral_damage", "amount": 0, "op": "MaxClamp" }
       },
       {
         "type": "RuleFlag",

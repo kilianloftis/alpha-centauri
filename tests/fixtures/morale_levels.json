@@ -14,7 +14,9 @@
         { "type": "StatModifier", "scope": "ThisUnit",
           "parameters": { "stat": "defense", "amount": -25, "op": "AddPercent" } },
         { "type": "StatModifier", "scope": "ThisUnit",
-          "parameters": { "stat": "promotion_chance", "amount": 1, "op": "MinClamp" } }
+          "parameters": { "stat": "promotion_chance", "amount": 1, "op": "MinClamp" } },
+        { "type": "StatModifier", "scope": "ThisUnit",
+          "parameters": { "stat": "planet_pearls", "amount": 1, "op": "MultiplyGeometric" } }
       ]
     },
     {
@@ -27,14 +29,19 @@
         { "type": "StatModifier", "scope": "ThisUnit",
           "parameters": { "stat": "defense", "amount": -12.5, "op": "AddPercent" } },
         { "type": "StatModifier", "scope": "ThisUnit",
-          "parameters": { "stat": "promotion_chance", "amount": 1, "op": "MinClamp" } }
+          "parameters": { "stat": "promotion_chance", "amount": 1, "op": "MinClamp" } },
+        { "type": "StatModifier", "scope": "ThisUnit",
+          "parameters": { "stat": "planet_pearls", "amount": 2, "op": "MultiplyGeometric" } }
       ]
     },
     {
       "index": 2,
       "conventional": "Disciplined",
       "native": "Pre-Boil",
-      "effects": []
+      "effects": [
+        { "type": "StatModifier", "scope": "ThisUnit",
+          "parameters": { "stat": "planet_pearls", "amount": 3, "op": "MultiplyGeometric" } }
+      ]
     },
     {
       "index": 3,
@@ -46,7 +53,9 @@
         { "type": "StatModifier", "scope": "ThisUnit",
           "parameters": { "stat": "defense", "amount": 12.5, "op": "AddPercent" } },
         { "type": "StatModifier", "scope": "ThisUnit",
-          "parameters": { "stat": "promotion_chance", "amount": 0.5, "op": "MultiplyGeometric" } }
+          "parameters": { "stat": "promotion_chance", "amount": 0.5, "op": "MultiplyGeometric" } },
+        { "type": "StatModifier", "scope": "ThisUnit",
+          "parameters": { "stat": "planet_pearls", "amount": 4, "op": "MultiplyGeometric" } }
       ]
     },
     {
@@ -59,7 +68,9 @@
         { "type": "StatModifier", "scope": "ThisUnit",
           "parameters": { "stat": "defense", "amount": 25, "op": "AddPercent" } },
         { "type": "StatModifier", "scope": "ThisUnit",
-          "parameters": { "stat": "promotion_chance", "amount": 0.5, "op": "MultiplyGeometric" } }
+          "parameters": { "stat": "promotion_chance", "amount": 0.5, "op": "MultiplyGeometric" } },
+        { "type": "StatModifier", "scope": "ThisUnit",
+          "parameters": { "stat": "planet_pearls", "amount": 5, "op": "MultiplyGeometric" } }
       ]
     },
     {
@@ -72,7 +83,9 @@
         { "type": "StatModifier", "scope": "ThisUnit",
           "parameters": { "stat": "defense", "amount": 37.5, "op": "AddPercent" } },
         { "type": "StatModifier", "scope": "ThisUnit",
-          "parameters": { "stat": "promotion_chance", "amount": 0.5, "op": "MultiplyGeometric" } }
+          "parameters": { "stat": "promotion_chance", "amount": 0.5, "op": "MultiplyGeometric" } },
+        { "type": "StatModifier", "scope": "ThisUnit",
+          "parameters": { "stat": "planet_pearls", "amount": 6, "op": "MultiplyGeometric" } }
       ]
     },
     {
@@ -83,7 +96,9 @@
         { "type": "StatModifier", "scope": "ThisUnit",
           "parameters": { "stat": "attack", "amount": 50, "op": "AddPercent" } },
         { "type": "StatModifier", "scope": "ThisUnit",
-          "parameters": { "stat": "defense", "amount": 50, "op": "AddPercent" } }
+          "parameters": { "stat": "defense", "amount": 50, "op": "AddPercent" } },
+        { "type": "StatModifier", "scope": "ThisUnit",
+          "parameters": { "stat": "planet_pearls", "amount": 7, "op": "MultiplyGeometric" } }
       ]
     }
   ]

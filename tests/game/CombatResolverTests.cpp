@@ -760,3 +760,343 @@ TEST_CASE("Fungus blocks retreat unless it has a road", "[combat][disengage]")
         CHECK(&setup.pDefender->GetTile() == &setup.fixture.At(3, 4));
     }
 }
+
+namespace
+{
+
+Faction& MakeWildFaction_(FactionFixture& rFixture)
+{
+    FactionConfig_t definition = rFixture.factionDefinition;
+    definition.id = "wild_life";
+    definition.identity.species = FactionSpecies_t::NativeLife;
+    return rFixture.MakeFaction(definition);
+}
+
+const Unit* FindOnTile_(FactionFixture& rFixture, int x, int y, UnitId_t id)
+{
+    for (const Unit* pUnit : rFixture.map.GetUnitsOnTile(rFixture.At(x, y)))
+    {
+        if (pUnit != nullptr && pUnit->GetUnitId() == id)
+        {
+            return pUnit;
+        }
+    }
+    return nullptr;
+}
+
+} // namespace
+
+TEST_CASE("Killing a defender in the open damages the rest of the stack", "[combat][collateral]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    Unit& attacker =
+        fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_1"});
+    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    Unit& stackmate = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    defender.SetCurrentHp(1);
+
+    CombatHarness_ harness(fixture, /*seed*/ 42);
+    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+
+    REQUIRE(result.bDefenderDestroyed);
+    REQUIRE(FindOnTile_(fixture, 5, 4, stackmate.GetUnitId()) != nullptr);
+    CHECK(stackmate.GetCurrentHp() == 9);
+}
+
+TEST_CASE("Collateral damage follows the attacker's reactor tier", "[combat][collateral]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    Unit& attacker =
+        fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_2"});
+    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    Unit& stackmate = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    defender.SetCurrentHp(1);
+
+    CombatHarness_ harness(fixture, /*seed*/ 42);
+    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+
+    REQUIRE(result.bDefenderDestroyed);
+    CHECK(stackmate.GetCurrentHp() == 8);
+}
+
+TEST_CASE("Base and bunker clamp collateral to zero; an airbase does not", "[combat][collateral]")
+{
+    auto fightOn = [](const char* improvementId, bool bExpectSplash)
+    {
+        FactionFixture fixture;
+        FillLand_(fixture);
+        Faction& player = fixture.MakeFaction();
+        Faction& enemy = fixture.MakeFaction();
+        fixture.ctx->AddImprovementWithEffects(fixture.At(5, 4), improvementId);
+
+        Unit& attacker =
+            fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_2"});
+        Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+        Unit& stackmate = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+        defender.SetCurrentHp(1);
+
+        CombatHarness_ harness(fixture, /*seed*/ 42);
+        const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+        REQUIRE(result.bDefenderDestroyed);
+        CHECK(stackmate.GetCurrentHp() == (bExpectSplash ? 8 : 10));
+    };
+
+    SECTION("base") { fightOn("Base", false); }
+    SECTION("bunker") { fightOn("Bunker", false); }
+    SECTION("airbase") { fightOn("Airbase", true); }
+}
+
+TEST_CASE("A surviving defender leaves the stack untouched", "[combat][collateral]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_collateral_1"});
+    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    Unit& stackmate = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+
+    CombatHarness_ harness(fixture, /*seed*/ 7);
+    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+
+    CHECK_FALSE(result.bDefenderDestroyed);
+    CHECK(stackmate.GetCurrentHp() == 10);
+    CHECK(defender.GetCurrentHp() == 10);
+}
+
+TEST_CASE("Collateral that reaches zero hit points destroys the stackmate", "[combat][collateral]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    Unit& attacker =
+        fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_1"});
+    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    Unit& stackmate = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    defender.SetCurrentHp(1);
+    stackmate.SetCurrentHp(1);
+    const UnitId_t stackmateId = stackmate.GetUnitId();
+
+    CombatHarness_ harness(fixture, /*seed*/ 42);
+    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+
+    REQUIRE(result.bDefenderDestroyed);
+    CHECK(FindOnTile_(fixture, 5, 4, stackmateId) == nullptr);
+}
+
+TEST_CASE("A wild native stack is wiped when one of them dies in the open", "[combat][collateral]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    FactionConfig_t wildDefinition = fixture.factionDefinition;
+    wildDefinition.id = "wild_life";
+    wildDefinition.identity.species = FactionSpecies_t::NativeLife;
+    Faction& wild = fixture.MakeFaction(wildDefinition);
+
+    Unit& attacker =
+        fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_1"});
+    Unit& defender =
+        fixture.MakeUnit(wild, 5, 4, {"test_chassis", "native_life_chassis"});
+    Unit& stackmate =
+        fixture.MakeUnit(wild, 5, 4, {"test_chassis", "native_life_chassis"});
+    defender.SetCurrentHp(1);
+    const UnitId_t stackmateId = stackmate.GetUnitId();
+
+    CombatHarness_ harness(fixture, /*seed*/ 42);
+    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+
+    REQUIRE(result.bDefenderDestroyed);
+    CHECK(FindOnTile_(fixture, 5, 4, stackmateId) == nullptr);
+}
+
+TEST_CASE("A wild native in a base survives the stackmate's death", "[combat][collateral]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    FactionConfig_t wildDefinition = fixture.factionDefinition;
+    wildDefinition.id = "wild_life";
+    wildDefinition.identity.species = FactionSpecies_t::NativeLife;
+    Faction& wild = fixture.MakeFaction(wildDefinition);
+    fixture.ctx->AddImprovementWithEffects(fixture.At(5, 4), "Base");
+
+    Unit& attacker =
+        fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_1"});
+    Unit& defender =
+        fixture.MakeUnit(wild, 5, 4, {"test_chassis", "native_life_chassis"});
+    Unit& stackmate =
+        fixture.MakeUnit(wild, 5, 4, {"test_chassis", "native_life_chassis"});
+    defender.SetCurrentHp(1);
+
+    CombatHarness_ harness(fixture, /*seed*/ 42);
+    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+
+    REQUIRE(result.bDefenderDestroyed);
+    REQUIRE(FindOnTile_(fixture, 5, 4, stackmate.GetUnitId()) != nullptr);
+    CHECK(stackmate.GetCurrentHp() == 10);
+}
+
+TEST_CASE("A faction-owned native takes collateral damage and stays alive", "[combat][collateral]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    Unit& attacker =
+        fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_1"});
+    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    Unit& native =
+        fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "native_life_chassis"});
+    defender.SetCurrentHp(1);
+    REQUIRE(native.GetDesign().IsNativeLife());
+
+    CombatHarness_ harness(fixture, /*seed*/ 42);
+    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+
+    REQUIRE(result.bDefenderDestroyed);
+    REQUIRE(FindOnTile_(fixture, 5, 4, native.GetUnitId()) != nullptr);
+    CHECK(native.GetCurrentHp() == 9);
+}
+
+TEST_CASE("A native-life attacker deals one collateral damage", "[combat][collateral]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    Unit& attacker = fixture.MakeUnit(
+        player, 4, 4, {"test_chassis", "native_life_chassis", "test_weapon"});
+    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    Unit& stackmate = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    defender.SetCurrentHp(1);
+    REQUIRE(attacker.GetDesign().IsNativeLife());
+
+    CombatHarness_ harness(fixture, /*seed*/ 42);
+    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+
+    REQUIRE(result.bDefenderDestroyed);
+    CHECK(stackmate.GetCurrentHp() == 9);
+}
+
+TEST_CASE("Killing a wild native pays planet pearls for its lifecycle stage", "[combat][pearls]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& wild = MakeWildFaction_(fixture);
+
+    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
+    Unit& defender =
+        fixture.MakeUnit(wild, 5, 4, {"test_chassis", "native_life_chassis"});
+    defender.SetCurrentHp(1);
+    defender.SetXp(0);
+
+    CombatHarness_ harness(fixture, /*seed*/ 42);
+    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+
+    REQUIRE(result.bDefenderDestroyed);
+    CHECK(player.GetEconomy().GetEnergy() == 10);
+}
+
+TEST_CASE("A later lifecycle stage pays another multiple of the pearl base", "[combat][pearls]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& wild = MakeWildFaction_(fixture);
+
+    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
+    Unit& defender =
+        fixture.MakeUnit(wild, 5, 4, {"test_chassis", "native_life_chassis"});
+    defender.SetCurrentHp(1);
+    defender.SetXp(2);
+
+    CombatHarness_ harness(fixture, /*seed*/ 42);
+    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+
+    REQUIRE(result.bDefenderDestroyed);
+    CHECK(player.GetEconomy().GetEnergy() == 30);
+}
+
+TEST_CASE("Every wild native destroyed in the stack pays pearls", "[combat][pearls]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& wild = MakeWildFaction_(fixture);
+
+    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
+    Unit& defender =
+        fixture.MakeUnit(wild, 5, 4, {"test_chassis", "native_life_chassis"});
+    Unit& stackmate =
+        fixture.MakeUnit(wild, 5, 4, {"test_chassis", "native_life_chassis"});
+    defender.SetCurrentHp(1);
+    defender.SetXp(0);
+    stackmate.SetXp(1);
+
+    CombatHarness_ harness(fixture, /*seed*/ 42);
+    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+
+    REQUIRE(result.bDefenderDestroyed);
+    CHECK(FindOnTile_(fixture, 5, 4, stackmate.GetUnitId()) == nullptr);
+    CHECK(player.GetEconomy().GetEnergy() == 30);
+}
+
+TEST_CASE("A faction-owned native pays no planet pearls", "[combat][pearls]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
+    Unit& defender =
+        fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "native_life_chassis"});
+    defender.SetCurrentHp(1);
+    defender.SetXp(0);
+
+    CombatHarness_ harness(fixture, /*seed*/ 42);
+    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+
+    REQUIRE(result.bDefenderDestroyed);
+    CHECK(player.GetEconomy().GetEnergy() == 0);
+}
+
+TEST_CASE("A wild native killed in a base pays pearls and the survivor does not", "[combat][pearls]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& wild = MakeWildFaction_(fixture);
+    fixture.ctx->AddImprovementWithEffects(fixture.At(5, 4), "Base");
+
+    Unit& attacker = fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon"});
+    Unit& defender =
+        fixture.MakeUnit(wild, 5, 4, {"test_chassis", "native_life_chassis"});
+    Unit& stackmate =
+        fixture.MakeUnit(wild, 5, 4, {"test_chassis", "native_life_chassis"});
+    defender.SetCurrentHp(1);
+    defender.SetXp(0);
+    stackmate.SetXp(3);
+
+    CombatHarness_ harness(fixture, /*seed*/ 42);
+    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+
+    REQUIRE(result.bDefenderDestroyed);
+    REQUIRE(FindOnTile_(fixture, 5, 4, stackmate.GetUnitId()) != nullptr);
+    CHECK(player.GetEconomy().GetEnergy() == 10);
+}

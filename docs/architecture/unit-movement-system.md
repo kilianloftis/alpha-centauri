@@ -181,6 +181,8 @@ allow with the `footing` axis omitted ("assault from anywhere"). Declare-attack 
 domain, or embarked on a same-faction carrier that carries it — is attackable by any domain.
 Targeting rules (embarked-in-base, prefer carrier) live in `FindVisibleHostileOnTile`.
 
+**Stack collateral.** When `CombatResolver` kills the defender, it resolves `collateral_damage` from the attacker's live effects plus `CollectTileEffects` on the defender's tile (seed 0). Other occupants lose that many HP, and a result of 0 HP is `DestroyUnit`. Embarked cargo is not in the stack. A wild native — `IsNativeLife` owned by a `NativeLife` faction — is destroyed outright. Base and Bunker `MaxClamp` the stat to 0; a clamp that leaves 0 skips both the HP loss and the wild wipe. Reactors Add their tier. Native life designs Add 1.
+
 **Intercept vs scramble vs airdrop interdiction.** Three related but distinct paths:
 
 1. **`Intercept`** (ODP / SAM-style) — rolled in `TryInterceptAttack` before combat.

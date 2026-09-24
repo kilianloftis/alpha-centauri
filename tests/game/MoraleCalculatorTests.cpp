@@ -41,7 +41,7 @@ TEST_CASE("MoraleConfigParser loads SMAC defaults", "[morale][config]")
     CHECK(config.levels.size() == 7);
     CHECK(config.levels[4].conventional == "Veteran");
     CHECK(config.levels[4].native == "Mature Boil");
-    REQUIRE(config.levels[4].effects.size() == 3);
+    REQUIRE(config.levels[4].effects.size() == 4);
     const auto* pAtk = std::get_if<StatModifierEffect_t>(&config.levels[4].effects[0].effect);
     REQUIRE(pAtk);
     CHECK(pAtk->stat == StatId_t::Attack);

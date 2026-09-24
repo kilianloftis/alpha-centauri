@@ -92,9 +92,15 @@ void ValidateMoraleLevelEffect_(const EffectConfig_t& rEffect, int levelIndex)
                          "MaxClamp");
             }
             break;
+        case StatId_t::PlanetPearls:
+            if (pMod->op != ModifierOp_t::MultiplyGeometric)
+            {
+                fail("planet_pearls morale effects must use MultiplyGeometric");
+            }
+            break;
         default:
-            fail("stat is not allowed on morale levels (use attack, defense, or "
-                 "promotion_chance)");
+            fail("stat is not allowed on morale levels (use attack, defense, "
+                 "promotion_chance, or planet_pearls)");
     }
 }
 

@@ -43,6 +43,13 @@ enum class StatId_t
     HitPoints,
     // Damage received per lost psi-combat round. Reactors set this to their tier.
     PsiDamage,
+    // HP removed from each other occupant when this unit kills a defender. Reactors set
+    // this to their tier; native life Adds 1. Combat resolves the attacker's effects
+    // together with the defender tile, so a tile MaxClamp can zero it.
+    CollateralDamage,
+    // Energy credits paid to the killer for a destroyed wild native. The design Adds the
+    // base; the intrinsic lifecycle level MultiplyGeometrics it (10, 20, 30, …).
+    PlanetPearls,
     DisengageChance,
     // Turns of fuel capacity; max fuel pool = TurnsOfFuel × Movement. 0 = unlimited / no tracking.
     TurnsOfFuel,
@@ -240,6 +247,8 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::Vision:
         case StatId_t::HitPoints:
         case StatId_t::PsiDamage:
+        case StatId_t::CollateralDamage:
+        case StatId_t::PlanetPearls:
         case StatId_t::DisengageChance:
         case StatId_t::TurnsOfFuel:
         case StatId_t::DamageFromOutOfFuel:
@@ -376,6 +385,8 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::Vision:
         case StatId_t::HitPoints:
         case StatId_t::PsiDamage:
+        case StatId_t::CollateralDamage:
+        case StatId_t::PlanetPearls:
         case StatId_t::DisengageChance:
         case StatId_t::TurnsOfFuel:
         case StatId_t::DamageFromOutOfFuel:
@@ -420,6 +431,8 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "vision")                  return StatId_t::Vision;
     if (rStat == "hit_points")              return StatId_t::HitPoints;
     if (rStat == "psi_damage")              return StatId_t::PsiDamage;
+    if (rStat == "collateral_damage")       return StatId_t::CollateralDamage;
+    if (rStat == "planet_pearls")           return StatId_t::PlanetPearls;
     if (rStat == "disengage_chance")        return StatId_t::DisengageChance;
     if (rStat == "turns_of_fuel")           return StatId_t::TurnsOfFuel;
     if (rStat == "damage_from_out_of_fuel") return StatId_t::DamageFromOutOfFuel;

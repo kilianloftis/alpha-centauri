@@ -299,6 +299,9 @@ struct FactionFixture : BaseFixture
     // Units are destroyed before bases (~Faction member order), so crawler claim
     // release can reach WorkerAssignmentManager while the home base is still alive.
     std::deque<ac::UnitDesign> designs;
+    // Heap copies so a faction can outlive a caller-supplied definition. Declared before
+    // factions: ~Faction must not outlive the config it references.
+    std::vector<std::unique_ptr<ac::FactionConfig_t>> extraDefinitions;
     std::vector<std::unique_ptr<ac::Faction>> factions;
     // Session back-pointer for CreateUnit's on_unit_produced_effects (GrantXp). Owns a
     // throwaway 1×1 map so it does not steal FactionFixture::map; GrantXp never touches it.
@@ -339,13 +342,25 @@ struct FactionFixture : BaseFixture
 
     ac::Faction& MakeFaction()
     {
+        return MakeFaction_(factionDefinition);
+    }
+
+    // Copies rDefinition onto the fixture so the faction's reference stays valid.
+    ac::Faction& MakeFaction(const ac::FactionConfig_t& rDefinition)
+    {
+        extraDefinitions.push_back(std::make_unique<ac::FactionConfig_t>(rDefinition));
+        return MakeFaction_(*extraDefinitions.back());
+    }
+
+    ac::Faction& MakeFaction_(const ac::FactionConfig_t& rDefinition)
+    {
         // Only the first fixture faction is player-controlled; tests needing a second
         // faction (e.g. WorldGlobal routing between two factions) get an AI one.
         const bool bIsPlayerControlled = factions.empty();
         // Distinct per faction so two fixture factions do not make identical picks.
         const uint32_t seed = k_TestFactionSeed + static_cast<uint32_t>(nextFactionId);
         factions.push_back(std::make_unique<ac::Faction>(
-            nextFactionId++, bIsPlayerControlled, factionDefinition, dataContext,
+            nextFactionId++, bIsPlayerControlled, rDefinition, dataContext,
             map, settings, seed));
         ac::Faction& rFaction = *factions.back();
         // Drop destroyed units from every faction's contact-reveal set (address reuse safety).

@@ -3,11 +3,13 @@
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
 #include "game/effects/TileEffectsContext.h"
+#include "game/faction/EconomyManager.h"
 #include "game/faction/UnitManager.h"
 #include "game/Faction.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorldMap.h"
+#include "game/units/BaseConquestRules.h"
 #include "game/units/MoveCostCalculator.h"
 #include "game/units/StepEvaluator.h"
 #include "lib/RandomRoll.h"
@@ -18,6 +20,121 @@
 
 namespace ac
 {
+
+namespace
+{
+
+// Attacker Adds and the defender tile's MaxClamp share one stack, same as move cost.
+// A clamp that leaves 0 (Base, Bunker) suppresses both the HP loss and the wild wipe.
+struct Collateral_t
+{
+    int damage = 0;
+    bool bSuppressed = false;
+};
+
+Collateral_t ResolveCollateral_(const Unit& rAttacker, const Tile& rTile)
+{
+    std::vector<ActiveEffect_t> effects = CollectTileEffects(rTile);
+    const UnitEffects_t live = CollectLiveUnitEffects(rAttacker);
+    effects.insert(effects.end(), live.effects.begin(), live.effects.end());
+
+    EffectContext_t ctx;
+    ctx.targetTile = &rTile;
+    ctx.pUnit = &rAttacker;
+    ctx.pAttacker = &rAttacker;
+
+    const StatBreakdown_t breakdown = ResolveStatModifiers(
+        FilterByStatIdInContext(effects, StatId_t::CollateralDamage, ctx),
+        SeedFor(StatId_t::CollateralDamage),
+        &ctx);
+
+    Collateral_t collateral;
+    collateral.damage = std::max(0, FinalizeResolvedStat(breakdown.total));
+    bool bClamped = false;
+    for (const StatBreakdown_t::Contribution_t& rContribution : breakdown.contributions)
+    {
+        if (rContribution.op == ModifierOp_t::MaxClamp)
+        {
+            bClamped = true;
+            break;
+        }
+    }
+    collateral.bSuppressed = bClamped && collateral.damage == 0;
+    return collateral;
+}
+
+bool IsWildNative_(const Unit& rUnit)
+{
+    return rUnit.GetDesign().IsNativeLife()
+        && IsNativeLifeFaction(rUnit.GetFaction().GetDefinition().identity.species);
+}
+
+// Base Add on the design, times the intrinsic lifecycle level's MultiplyGeometric.
+// Stage 0 pays the base; each later stage pays one more multiple of it.
+void GrantPlanetPearls_(const MoraleCalculator& rMorale, Faction& rKiller, const Unit& rVictim)
+{
+    if (!IsWildNative_(rVictim))
+    {
+        return;
+    }
+
+    const MoraleConfig_t& rConfig = rMorale.GetConfig();
+    const int level = std::clamp(rVictim.GetXp(), rConfig.MinLevel(), rConfig.MaxLevel());
+    const MoraleLevel_t* pLevel = rConfig.FindLevel(level);
+    const std::span<const EffectConfig_t> levelEffects =
+        pLevel != nullptr ? std::span<const EffectConfig_t>(pLevel->effects)
+                          : std::span<const EffectConfig_t>{};
+
+    EffectContext_t ctx;
+    ctx.pUnit = &rVictim;
+    const int pearls = std::max(
+        0, ResolveCombatUnitStat(rVictim, StatId_t::PlanetPearls, ctx, levelEffects));
+    if (pearls > 0)
+    {
+        rKiller.GetEconomy().AddEnergy(pearls);
+    }
+}
+
+void ApplyStackCollateral_(WorldMap& rWorldMap, const MoraleCalculator& rMorale,
+                           Unit& rAttacker, Unit& rDefender)
+{
+    const Tile& rTile = rDefender.GetTile();
+    const Collateral_t collateral = ResolveCollateral_(rAttacker, rTile);
+    if (collateral.bSuppressed)
+    {
+        return;
+    }
+
+    std::vector<Unit*> others;
+    for (Unit* pOccupant : rWorldMap.GetUnitsOnTile(rTile))
+    {
+        if (pOccupant != nullptr && pOccupant != &rDefender)
+        {
+            others.push_back(pOccupant);
+        }
+    }
+
+    for (Unit* pOther : others)
+    {
+        if (IsWildNative_(*pOther))
+        {
+            GrantPlanetPearls_(rMorale, rAttacker.GetFaction(), *pOther);
+            pOther->GetFaction().GetUnitManager().DestroyUnit(*pOther);
+            continue;
+        }
+        if (collateral.damage <= 0)
+        {
+            continue;
+        }
+        pOther->SetCurrentHp(pOther->GetCurrentHp() - collateral.damage);
+        if (pOther->GetCurrentHp() <= 0)
+        {
+            pOther->GetFaction().GetUnitManager().DestroyUnit(*pOther);
+        }
+    }
+}
+
+} // namespace
 
 CombatResolver::CombatResolver(const MoveCostCalculator& rMoveCosts,
                                const StepEvaluator& rSteps,
@@ -213,6 +330,8 @@ CombatResult_t CombatResolver::Resolve(Unit& rAttacker, Unit& rDefender)
 
     if (result.bDefenderDestroyed)
     {
+        ApplyStackCollateral_(m_rWorldMap, m_rMorale, rAttacker, rDefender);
+        GrantPlanetPearls_(m_rMorale, rAttacker.GetFaction(), rDefender);
         rDefender.GetFaction().GetUnitManager().DestroyUnit(rDefender);
     }
     if (result.bAttackerDestroyed)

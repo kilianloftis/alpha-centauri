@@ -31,6 +31,16 @@
         "parameters": { "stat": "psi_damage", "amount": 1, "op": "Add" }
       },
       {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "collateral_damage", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "planet_pearls", "amount": 10, "op": "Add" }
+      },
+      {
         "type": "RuleFlag",
         "scope": "ThisUnit",
         "parameters": { "flag": "forces_psi_combat" }
@@ -73,6 +83,16 @@
         "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": { "stat": "psi_damage", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "collateral_damage", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "planet_pearls", "amount": 10, "op": "Add" }
       },
       {
         "type": "StatModifier",
@@ -134,6 +154,16 @@
         "parameters": { "stat": "psi_damage", "amount": 1, "op": "Add" }
       },
       {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "collateral_damage", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "planet_pearls", "amount": 10, "op": "Add" }
+      },
+      {
         "type": "Conceal",
         "scope": "ThisUnit",
         "condition": { "kind": "TargetTileHas", "value": "Water" },
@@ -184,6 +214,16 @@
         "parameters": { "stat": "psi_damage", "amount": 1, "op": "Add" }
       },
       {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "collateral_damage", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "planet_pearls", "amount": 10, "op": "Add" }
+      },
+      {
         "type": "RuleFlag",
         "scope": "ThisUnit",
         "parameters": { "flag": "forces_psi_combat" }
@@ -220,6 +260,16 @@
         "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": { "stat": "psi_damage", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "collateral_damage", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "planet_pearls", "amount": 10, "op": "Add" }
       },
       {
         "type": "RuleFlag",
@@ -264,6 +314,16 @@
         "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": { "stat": "psi_damage", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "collateral_damage", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "planet_pearls", "amount": 10, "op": "Add" }
       },
       {
         "type": "StatModifier",

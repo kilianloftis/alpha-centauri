@@ -126,6 +126,8 @@ static_assert(KindFor(StatId_t::Movement) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::Vision) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::HitPoints) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::PsiDamage) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::CollateralDamage) == StatKind_t::Additive);
+static_assert(KindFor(StatId_t::PlanetPearls) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::DisengageChance) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::TurnsOfFuel) == StatKind_t::Additive);
 static_assert(KindFor(StatId_t::DamageFromOutOfFuel) == StatKind_t::Additive);

@@ -421,6 +421,38 @@
     ]
   },
   {
+    "id": "test_collateral_1",
+    "name": "Test Collateral 1",
+    "type": "reactor",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "collateral_damage",
+          "amount": 1,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
+    "id": "test_collateral_2",
+    "name": "Test Collateral 2",
+    "type": "reactor",
+    "effects": [
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": {
+          "stat": "collateral_damage",
+          "amount": 2,
+          "op": "Add"
+        }
+      }
+    ]
+  },
+  {
     "id": "comm_jammer",
     "name": "Comm Jammer",
     "type": "ability",
@@ -1517,6 +1549,16 @@
         "type": "RuleFlag",
         "scope": "ThisUnit",
         "parameters": { "flag": "native_life" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "collateral_damage", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "planet_pearls", "amount": 10, "op": "Add" }
       }
     ]
   }

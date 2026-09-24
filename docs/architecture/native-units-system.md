@@ -38,7 +38,14 @@ classDiagram
 `domain`, `mineral_cost`, `effects[]` (continuous `EffectConfig_t` with
 `EffectSourceKind_t::NativeUnit`), and optional `on_hold_effects[]`. Combat natives declare the `native_life` RuleFlag. Alien Artifact does not.
 `IDesign::IsNativeLife` reads that flag, so a composed `UnitDesign` is native life when any
-filled component declares it.
+filled component declares it. Combat natives Add `collateral_damage` 1, the fission-tier
+splash they deal without a reactor. When one unit of a wild stack — native life owned by a
+`NativeLife` faction — dies in the open, the other native occupants are destroyed. A
+faction-owned native takes the numeric splash. Base and Bunker `MaxClamp` collateral to 0,
+which suppresses both. Combat natives Add `planet_pearls` 10. Killing a wild native — the
+defender or a stackmate the fight destroys — pays that base times the intrinsic lifecycle
+multiplier from `morale_levels.json` (1 through 7) to the attacker's energy treasury.
+A faction-owned native pays nothing.
 
 Shipping natives: Mind Worm, Isle of the Deep, Sea Lurk, Locusts of Chiron, Spore Launcher,
 Fungal Tower, Alien Artifact. Fungal Tower is land, movement 0, psi combat, and +50% defense.
