@@ -92,6 +92,7 @@ add_library(ac-core STATIC
     game/effects/InteractionGridsConfigParser.cpp
     game/effects/InteractionResolve.cpp
     game/effects/PoliceRulesConfigParser.cpp
+    game/effects/WorldRulesConfigParser.cpp
     game/TurnStageFactory.cpp
     game/TurnStageConfigParser.cpp
     game/HookContext.cpp

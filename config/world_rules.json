@@ -1,0 +1,19 @@
+{
+  "effects": [
+    {
+      "type": "StatModifier",
+      "scope": "WorldGlobal",
+      "condition": { "kind": "SubjectDomain", "domain": "air" },
+      "parameters": {
+        "stat": "collateral_susceptibility",
+        "amount": 0,
+        "op": "MultiplyGeometric"
+      }
+    },
+    {
+      "type": "RuleFlag",
+      "scope": "WorldGlobal",
+      "parameters": { "flag": "non_combatants_destroyed_without_combatant" }
+    }
+  ]
+}

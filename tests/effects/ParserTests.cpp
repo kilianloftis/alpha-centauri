@@ -40,6 +40,7 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("hit_points") == StatId_t::HitPoints);
     CHECK(ParseStatId("psi_damage") == StatId_t::PsiDamage);
     CHECK(ParseStatId("collateral_damage") == StatId_t::CollateralDamage);
+    CHECK(ParseStatId("collateral_susceptibility") == StatId_t::CollateralSusceptibility);
     CHECK(ParseStatId("planet_pearls") == StatId_t::PlanetPearls);
     CHECK(ParseStatId("disengage_chance") == StatId_t::DisengageChance);
     CHECK(ParseStatId("turns_of_fuel") == StatId_t::TurnsOfFuel);
@@ -124,6 +125,7 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
     CHECK(ParseRuleFlagId("terraform") == RuleFlagId_t::Terraform);
     CHECK(ParseRuleFlagId("supply_crawl") == RuleFlagId_t::SupplyCrawl);
     CHECK(ParseRuleFlagId("probe_team") == RuleFlagId_t::ProbeTeam);
+    CHECK(ParseRuleFlagId("non_combatant") == RuleFlagId_t::NonCombatant);
     CHECK(ParseRuleFlagId("cannot_capture_bases")
           == RuleFlagId_t::CannotCaptureBases);
     CHECK(ParseRuleFlagId("attacking_ends_turn")
@@ -145,6 +147,8 @@ TEST_CASE("ParseRuleFlagId and ParseSocialRatingId mappings", "[effects][parser]
     CHECK(ParseRuleFlagId("remove_shroud") == RuleFlagId_t::RemoveShroud);
     CHECK(ParseRuleFlagId("remove_fog") == RuleFlagId_t::RemoveFog);
     CHECK(ParseRuleFlagId("visible_in_fog") == RuleFlagId_t::VisibleInFog);
+    CHECK(ParseRuleFlagId("non_combatants_destroyed_without_combatant")
+          == RuleFlagId_t::NonCombatantsDestroyedWithoutCombatant);
     CHECK(ParseRuleFlagId("atrocities_forbidden")
           == RuleFlagId_t::AtrocitiesForbidden);
     CHECK(ParseRuleFlagId("disable_production")

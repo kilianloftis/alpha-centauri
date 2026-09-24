@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/Faction.h"
+#include "game/effects/EffectConfig.h"
 #include "game/IWorldEffectsSource.h"
 #include "game/buildings/SecretProjectAvailabilityCalculator.h"
 #include "game/faction/DiplomacyLedger.h"
@@ -61,6 +62,7 @@ public:
     // rYieldRules must outlive this GameState: it is handed to the TileEffectsContext, which
     // stamps it into per-tile resolution for terrain-scaled amount sources.
     // rInteractionGrids must outlive this GameState (movement / attack / ZOC matrices).
+    // rWorldRules is copied. Empty leaves the standing world rules off.
     GameState(std::unique_ptr<WorldMap> pWorldMap,
               const ImprovementRegistry& rImprovements,
               const UnitComponentRegistry* pUnitComponents,
@@ -68,7 +70,8 @@ public:
               const MoraleCalculator& rMorale,
               const TileYieldRulesConfig_t& rYieldRules,
               const InteractionGridsConfig_t& rInteractionGrids,
-              uint32_t rngSeed);
+              uint32_t rngSeed,
+              const std::vector<EffectConfig_t>& rWorldRules = {});
     ~GameState();
 
     // Build the Planetary Council from factions currently in this GameState that
@@ -218,6 +221,7 @@ public:
 
 private:
     void OnVisibilitySettingsChanged_();
+    void AppendStandingWorldRules_(std::vector<ActiveEffect_t>& rOut) const;
     // All session wiring for one faction (back-pointer + observers), applied by AddFaction
     // after the faction is in m_factions — the observers iterate Factions(), so the order is
     // load-bearing. Ends with a territory/visibility sweep so a faction that arrives already
@@ -258,6 +262,7 @@ private:
     std::unordered_set<std::string> m_destroyedSecretProjects;
     // Idempotent session wiring for production on_complete + mood notices (transfer-safe).
     std::unordered_set<BaseManager*> m_sessionWiredBases;
+    std::vector<EffectConfig_t> m_worldRules;
 };
 
 } // namespace ac

@@ -17,6 +17,7 @@
 #include "game/faction/ResearchManager.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/WorldMap.h"
+#include "game/effects/ActiveEffect.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/effects/TriggeredEffectDispatch.h"
 #include "game/units/UnitOrderExecutor.h"
@@ -133,7 +134,8 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
                      const MoraleCalculator& rMorale,
                      const TileYieldRulesConfig_t& rYieldRules,
                      const InteractionGridsConfig_t& rInteractionGrids,
-                     uint32_t rngSeed)
+                     uint32_t rngSeed,
+                     const std::vector<EffectConfig_t>& rWorldRules)
     : m_missionYear(k_StartingMissionYear)
     , m_rSettings(rSettings)
     , m_rMorale(rMorale)
@@ -145,6 +147,7 @@ GameState::GameState(std::unique_ptr<WorldMap> pWorldMap,
     , m_pDiplomaticActionExecutor(std::make_unique<DiplomaticActionExecutor>())
     , m_rng(rngSeed)
     , m_secretProjectAvailability(*this)
+    , m_worldRules(rWorldRules)
 {
     if (!m_worldMap)
     {
@@ -301,6 +304,7 @@ std::vector<ActiveEffect_t> GameState::CollectSessionWorldEffects() const
         const std::vector<ActiveEffect_t>& councilWorld = m_pCouncil->CollectWorldEffects();
         result.insert(result.end(), councilWorld.begin(), councilWorld.end());
     }
+    AppendStandingWorldRules_(result);
     return result;
 }
 
@@ -327,7 +331,13 @@ std::vector<ActiveEffect_t> GameState::CollectWorldExtras(const Faction& rFor) c
         const std::vector<ActiveEffect_t>& councilFaction = m_pCouncil->CollectFactionEffects(rFor);
         result.insert(result.end(), councilFaction.begin(), councilFaction.end());
     }
+    AppendStandingWorldRules_(result);
     return result;
+}
+
+void GameState::AppendStandingWorldRules_(std::vector<ActiveEffect_t>& rOut) const
+{
+    AppendActiveEffects(m_worldRules, nullptr, "world_rules", rOut);
 }
 
 Faction& GameState::AddFaction(std::unique_ptr<Faction> pFaction)

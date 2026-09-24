@@ -429,6 +429,7 @@ void ValidateEffectReferences(const GameDataContext& rData)
     // tileYieldRules is a value on GameDataContext (always present; effects may be empty).
     validate(rData.tileYieldRules.effects, "tile_yield_rules");
     validate(rData.policeRules, "police_rules");
+    validate(rData.worldRules, "world_rules");
     const PopCompositionConfig_t& rPopComposition =
         RequireRegistry(rData.popCompositionConfig, "popCompositionConfig");
     validate(rPopComposition.effects, "pop_composition");

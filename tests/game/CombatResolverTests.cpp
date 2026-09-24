@@ -10,6 +10,7 @@
 #include "game/units/UnitOrderExecutor.h"
 #include "game/effects/ActiveEffect.h"
 #include "game/effects/EffectEnums.h"
+#include "game/effects/WorldRulesConfigParser.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
 #include "game/Faction.h"
@@ -827,7 +828,8 @@ TEST_CASE("Collateral damage follows the attacker's reactor tier", "[combat][col
     CHECK(stackmate.GetCurrentHp() == 8);
 }
 
-TEST_CASE("Base and bunker clamp collateral to zero; an airbase does not", "[combat][collateral]")
+TEST_CASE("Base and bunker clamp collateral susceptibility to zero; an airbase does not",
+          "[combat][collateral]")
 {
     auto fightOn = [](const char* improvementId, bool bExpectSplash)
     {
@@ -1099,4 +1101,169 @@ TEST_CASE("A wild native killed in a base pays pearls and the survivor does not"
     REQUIRE(result.bDefenderDestroyed);
     REQUIRE(FindOnTile_(fixture, 5, 4, stackmate.GetUnitId()) != nullptr);
     CHECK(player.GetEconomy().GetEnergy() == 10);
+}
+
+std::vector<EffectConfig_t> LoadWorldRules_()
+{
+    return WorldRulesConfigParser{}.ParseConfig(FixturePath("world_rules.json"));
+}
+
+TEST_CASE("A unit with susceptibility zero takes no splash while a stackmate does",
+          "[combat][collateral]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    Unit& attacker =
+        fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_1"});
+    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    Unit& immune = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "test_susceptibility_0"});
+    Unit& stackmate = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    defender.SetCurrentHp(1);
+
+    CombatHarness_ harness(fixture, /*seed*/ 42);
+    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+
+    REQUIRE(result.bDefenderDestroyed);
+    CHECK(immune.GetCurrentHp() == 10);
+    CHECK(stackmate.GetCurrentHp() == 9);
+}
+
+TEST_CASE("An air unit takes no splash and a wild locust in the open is still wiped",
+          "[combat][collateral]")
+{
+    FactionFixture fixture(9, 9, LoadWorldRules_());
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    Faction& wild = MakeWildFaction_(fixture);
+
+    Unit& attacker =
+        fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_1"});
+    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    Unit& air = fixture.MakeUnit(enemy, 5, 4, {"test_flight_chassis"});
+    Unit& locust =
+        fixture.MakeUnit(wild, 5, 4, {"test_flight_chassis", "test_native_life"});
+    defender.SetCurrentHp(1);
+    const UnitId_t locustId = locust.GetUnitId();
+
+    CombatHarness_ harness(fixture, /*seed*/ 42);
+    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+
+    REQUIRE(result.bDefenderDestroyed);
+    REQUIRE(FindOnTile_(fixture, 5, 4, air.GetUnitId()) != nullptr);
+    CHECK(air.GetCurrentHp() == 10);
+    CHECK(FindOnTile_(fixture, 5, 4, locustId) == nullptr);
+}
+
+TEST_CASE("A non-combatant is destroyed when no combatant remains", "[combat][collateral]")
+{
+    FactionFixture fixture(9, 9, LoadWorldRules_());
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    Unit& attacker =
+        fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_1"});
+    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    Unit& probe = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "Probe_Team"});
+    defender.SetCurrentHp(1);
+    const UnitId_t probeId = probe.GetUnitId();
+
+    CombatHarness_ harness(fixture, /*seed*/ 42);
+    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+
+    REQUIRE(result.bDefenderDestroyed);
+    CHECK(FindOnTile_(fixture, 5, 4, probeId) == nullptr);
+}
+
+TEST_CASE("A stack of only non-combatants is wiped", "[combat][collateral]")
+{
+    FactionFixture fixture(9, 9, LoadWorldRules_());
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    Unit& attacker =
+        fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_1"});
+    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "Probe_Team"});
+    Unit& probe = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "Probe_Team"});
+    defender.SetCurrentHp(1);
+    const UnitId_t probeId = probe.GetUnitId();
+
+    CombatHarness_ harness(fixture, /*seed*/ 42);
+    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+
+    REQUIRE(result.bDefenderDestroyed);
+    CHECK(FindOnTile_(fixture, 5, 4, probeId) == nullptr);
+}
+
+TEST_CASE("A non-combatant stacked with a surviving combatant takes only the splash",
+          "[combat][collateral]")
+{
+    FactionFixture fixture(9, 9, LoadWorldRules_());
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    Unit& attacker =
+        fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_1"});
+    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    Unit& combatant = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    Unit& probe = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "Probe_Team"});
+    defender.SetCurrentHp(1);
+
+    CombatHarness_ harness(fixture, /*seed*/ 42);
+    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+
+    REQUIRE(result.bDefenderDestroyed);
+    REQUIRE(FindOnTile_(fixture, 5, 4, probe.GetUnitId()) != nullptr);
+    CHECK(combatant.GetCurrentHp() == 9);
+    CHECK(probe.GetCurrentHp() == 9);
+}
+
+TEST_CASE("Without the world rule a lone non-combatant takes only the splash",
+          "[combat][collateral]")
+{
+    FactionFixture fixture;
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+
+    Unit& attacker =
+        fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_1"});
+    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    Unit& probe = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "Probe_Team"});
+    defender.SetCurrentHp(1);
+
+    CombatHarness_ harness(fixture, /*seed*/ 42);
+    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+
+    REQUIRE(result.bDefenderDestroyed);
+    REQUIRE(FindOnTile_(fixture, 5, 4, probe.GetUnitId()) != nullptr);
+    CHECK(probe.GetCurrentHp() == 9);
+}
+
+TEST_CASE("A non-combatant in a base survives the defender's death", "[combat][collateral]")
+{
+    FactionFixture fixture(9, 9, LoadWorldRules_());
+    FillLand_(fixture);
+    Faction& player = fixture.MakeFaction();
+    Faction& enemy = fixture.MakeFaction();
+    fixture.ctx->AddImprovementWithEffects(fixture.At(5, 4), "Base");
+
+    Unit& attacker =
+        fixture.MakeUnit(player, 4, 4, {"test_chassis", "test_weapon", "test_collateral_1"});
+    Unit& defender = fixture.MakeUnit(enemy, 5, 4, {"test_chassis"});
+    Unit& probe = fixture.MakeUnit(enemy, 5, 4, {"test_chassis", "Probe_Team"});
+    defender.SetCurrentHp(1);
+
+    CombatHarness_ harness(fixture, /*seed*/ 42);
+    const CombatResult_t result = harness.combat.Resolve(attacker, defender);
+
+    REQUIRE(result.bDefenderDestroyed);
+    REQUIRE(FindOnTile_(fixture, 5, 4, probe.GetUnitId()) != nullptr);
+    CHECK(probe.GetCurrentHp() == 10);
 }

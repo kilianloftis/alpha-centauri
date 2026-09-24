@@ -296,7 +296,7 @@
       {
         "type": "StatModifier",
         "scope": "ThisTile",
-        "parameters": { "stat": "collateral_damage", "amount": 0, "op": "MaxClamp" }
+        "parameters": { "stat": "collateral_susceptibility", "amount": 0, "op": "MaxClamp" }
       },
       {
         "type": "RuleFlag",
@@ -558,7 +558,7 @@
       {
         "type": "StatModifier",
         "scope": "ThisTile",
-        "parameters": { "stat": "collateral_damage", "amount": 0, "op": "MaxClamp" }
+        "parameters": { "stat": "collateral_susceptibility", "amount": 0, "op": "MaxClamp" }
       },
       {
         "type": "RuleFlag",

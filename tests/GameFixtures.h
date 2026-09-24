@@ -48,6 +48,7 @@
 #include "game/effects/TileYieldRulesConfigParser.h"
 #include "game/effects/InteractionGridsConfigParser.h"
 #include "game/effects/PoliceRulesConfigParser.h"
+#include "game/effects/WorldRulesConfigParser.h"
 #include "game/DifficultyConfigParser.h"
 
 #include <deque>
@@ -315,7 +316,8 @@ struct FactionFixture : BaseFixture
     {
     }
 
-    explicit FactionFixture(int width, int height)
+    explicit FactionFixture(int width, int height,
+                            std::vector<ac::EffectConfig_t> worldRules = {})
         : BaseFixture(width, height)
     {
         factionDefinition.id = "test_faction";
@@ -332,7 +334,8 @@ struct FactionFixture : BaseFixture
         pBindMap = std::make_unique<ac::WorldMap>(1, 1);
         pBindState = std::make_unique<ac::GameState>(
             std::move(pBindMap), improvements, &unitComponents, settings, morale(),
-            dataContext.tileYieldRules, dataContext.interactionGrids, k_TestRngSeed);
+            dataContext.tileYieldRules, dataContext.interactionGrids, k_TestRngSeed,
+            worldRules);
     }
 
     ac::SocialPolicyRegistry& socialPolicies() { return *dataContext.socialPolicyRegistry; }
@@ -384,6 +387,7 @@ struct FactionFixture : BaseFixture
             }
             map.GetTerritory().Rebuild(map, bases);
         });
+        rFaction.BindWorldEffects(*pBindState);
         rFaction.BindGameState(*pBindState);
         rFaction.OnSecretProjectDestroyed.Connect([this](const ac::BuildingId_t& rId)
         {

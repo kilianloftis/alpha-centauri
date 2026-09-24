@@ -212,6 +212,13 @@
         }
       },
       {
+        "type": "RuleFlag",
+        "scope": "ThisUnit",
+        "parameters": {
+          "flag": "non_combatant"
+        }
+      },
+      {
         "type": "InteractionOverride",
         "scope": "ThisUnit",
         "parameters": {

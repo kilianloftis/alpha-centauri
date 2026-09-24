@@ -44,9 +44,11 @@ enum class StatId_t
     // Damage received per lost psi-combat round. Reactors set this to their tier.
     PsiDamage,
     // HP removed from each other occupant when this unit kills a defender. Reactors set
-    // this to their tier; native life Adds 1. Combat resolves the attacker's effects
-    // together with the defender tile, so a tile MaxClamp can zero it.
+    // this to their tier; native life Adds 1. Combat reads the attacker's effects only.
     CollateralDamage,
+    // Pure multiplier on incoming collateral. Seed 1. A tile MaxClamp that leaves 0 skips
+    // that occupant. An air unit's own geometric 0 does not.
+    CollateralSusceptibility,
     // Energy credits paid to the killer for a destroyed wild native. The design Adds the
     // base; the intrinsic lifecycle level MultiplyGeometrics it (10, 20, 30, …).
     PlanetPearls,
@@ -288,7 +290,8 @@ constexpr StatKind_t KindFor(StatId_t stat)
         case StatId_t::PositiveMoraleScale:
         case StatId_t::CommerceRate:
         case StatId_t::Bureaucracy:
-        case StatId_t::TileDefense:          return StatKind_t::PureMultiplier;
+        case StatId_t::TileDefense:
+        case StatId_t::CollateralSusceptibility: return StatKind_t::PureMultiplier;
         case StatId_t::PromotionChance:
         case StatId_t::GrowthRate:
         case StatId_t::MoistureTier:
@@ -386,6 +389,7 @@ constexpr ResolveDomain_t DomainFor(StatId_t stat)
         case StatId_t::HitPoints:
         case StatId_t::PsiDamage:
         case StatId_t::CollateralDamage:
+        case StatId_t::CollateralSusceptibility:
         case StatId_t::PlanetPearls:
         case StatId_t::DisengageChance:
         case StatId_t::TurnsOfFuel:
@@ -432,6 +436,7 @@ inline StatId_t ParseStatId(const std::string& rStat)
     if (rStat == "hit_points")              return StatId_t::HitPoints;
     if (rStat == "psi_damage")              return StatId_t::PsiDamage;
     if (rStat == "collateral_damage")       return StatId_t::CollateralDamage;
+    if (rStat == "collateral_susceptibility") return StatId_t::CollateralSusceptibility;
     if (rStat == "planet_pearls")           return StatId_t::PlanetPearls;
     if (rStat == "disengage_chance")        return StatId_t::DisengageChance;
     if (rStat == "turns_of_fuel")           return StatId_t::TurnsOfFuel;
@@ -533,6 +538,8 @@ enum class RuleFlagId_t
     Terraform,
     SupplyCrawl,
     ProbeTeam,
+    // Not a combatant for the non-combatant stack census. Probe Team declares it.
+    NonCombatant,
     // Unit may attempt an airdrop when it began the turn on an airdrop_launch pad.
     Airdrop,
 
@@ -587,6 +594,9 @@ enum class RuleFlagId_t
 
     // U.N. Charter: atrocities are illegal while this flag is in force planet-wide.
     AtrocitiesForbidden,
+    // While present, a stack left with only non-combatants loses those occupants after
+    // collateral. Standing world rule; the non_combatant tag stays either way.
+    NonCombatantsDestroyedWithoutCombatant,
 
     // Base cannot bank minerals into production, complete construction, or hurry.
     // ApplyProduction returns InProgress without consuming the leftover mineral bank;
@@ -611,6 +621,7 @@ inline RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "terraform")                   return RuleFlagId_t::Terraform;
     if (rFlag == "supply_crawl")                return RuleFlagId_t::SupplyCrawl;
     if (rFlag == "probe_team")                  return RuleFlagId_t::ProbeTeam;
+    if (rFlag == "non_combatant")               return RuleFlagId_t::NonCombatant;
     if (rFlag == "airdrop")                     return RuleFlagId_t::Airdrop;
     if (rFlag == "cannot_capture_bases")        return RuleFlagId_t::CannotCaptureBases;
     if (rFlag == "attacking_ends_turn")         return RuleFlagId_t::AttackingEndsTurn;
@@ -626,6 +637,8 @@ inline RuleFlagId_t ParseRuleFlagId(const std::string& rFlag)
     if (rFlag == "ignores_probe_block")         return RuleFlagId_t::IgnoresProbeBlock;
     if (rFlag == "orbital_insertion")           return RuleFlagId_t::OrbitalInsertion;
     if (rFlag == "atrocities_forbidden")        return RuleFlagId_t::AtrocitiesForbidden;
+    if (rFlag == "non_combatants_destroyed_without_combatant")
+        return RuleFlagId_t::NonCombatantsDestroyedWithoutCombatant;
     if (rFlag == "disable_production")          return RuleFlagId_t::DisableProduction;
     throw std::runtime_error("Unknown rule flag id: '" + rFlag + "'");
 }
@@ -809,6 +822,8 @@ enum class EffectSourceKind_t
     // pop_growth.json continuous baselines (starting_size / max_base_size). No origin base —
     // AllOwnerBases only, like Difficulty.
     Growth,
+    // config/world_rules.json: standing WorldGlobal effects appended once per session.
+    WorldRules,
 };
 
 } // namespace ac

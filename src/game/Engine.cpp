@@ -239,7 +239,8 @@ void Engine::StartNewGame_()
         m_gameDataContext->interactionGrids,
         // Distinct sub-stream from world generation, so changing map size does not shift
         // combat rolls (and vice versa).
-        static_cast<uint32_t>(m_sessionSeed ^ 0x5BF03635u));
+        static_cast<uint32_t>(m_sessionSeed ^ 0x5BF03635u),
+        m_gameDataContext->worldRules);
     m_pGameState->GetUnitOrderExecutor().SetGameDataContext(*m_gameDataContext);
     std::cout << "Generated world map: " << m_pGameState->GetWorldMap().GetWidth() << "x" << m_pGameState->GetWorldMap().GetHeight() << "\n";
 

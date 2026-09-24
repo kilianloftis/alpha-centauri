@@ -89,6 +89,8 @@ struct GameDataContext
     TileYieldRulesConfig_t tileYieldRules;
     // FactionUnits police baselines (away-from-home weight + effectiveness for combat units).
     std::vector<EffectConfig_t> policeRules;
+    // Standing WorldGlobal rules (air collateral susceptibility, non-combatant census).
+    std::vector<EffectConfig_t> worldRules;
     // Domain × terrain / attack_unit / ZOC matrices (+ InteractionOverride holes).
     InteractionGridsConfig_t interactionGrids;
     std::unique_ptr<MoraleConfig_t> moraleConfig;
