@@ -66,32 +66,6 @@ double ResolveBaseStat_(const BaseManager& rBase, StatId_t stat, double seed)
 
 } // namespace
 
-TEST_CASE("DifficultyConfigParser loads all six shipping levels", "[difficulty][parser]")
-{
-    const DifficultyConfig_t config =
-        DifficultyConfigParser{}.ParseConfig(ShippingDifficultyPath());
-
-    CHECK(config.defaultId == "talent");
-    REQUIRE(config.levels.size() == 6);
-    CHECK(config.RequireForSession("").id == "talent"); // empty defers to "default"
-    CHECK(config.RequireForSession("citizen").id == "citizen");
-    CHECK(config.RequireForSession("transcend").id == "transcend");
-    CHECK(config.RequireForSession("librarian").id == "librarian");
-    CHECK_THROWS(config.RequireForSession("nonesuch"));
-
-    const DifficultyLevel_t& rCitizen = config.RequireForSession("citizen");
-    CHECK(rCitizen.rules.randomEventsAfterTurn == 75);
-    CHECK(rCitizen.rules.researchDisabledTurns == 5);
-    CHECK(rCitizen.rules.aiSecretProjectsRequireHumanPrereq);
-    CHECK_FALSE(rCitizen.rules.aiAutoPersonality);
-    CHECK(rCitizen.rules.combatHandicap);
-    CHECK_FALSE(rCitizen.rules.combatHandicapNativesOnly);
-
-    const DifficultyLevel_t& rTalent = config.RequireForSession("talent");
-    CHECK(rTalent.rules.combatHandicapNativesOnly);
-    CHECK(rTalent.rules.researchDisabledTurns == 0);
-}
-
 TEST_CASE("DifficultyConfigParser rejects bad configs", "[difficulty][parser]")
 {
     const std::filesystem::path path =

@@ -1,7 +1,6 @@
 #include "game/map/RockinessGeneration.h"
 #include "game/map/WorldGenDecorationConfigParser.h"
 
-#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 #include <filesystem>
@@ -10,7 +9,6 @@
 
 using namespace ac;
 using namespace ac::rockiness_gen;
-using Catch::Approx;
 
 namespace
 {
@@ -21,25 +19,6 @@ std::filesystem::path TempDecorationPath_(const char* name)
 }
 
 } // namespace
-
-TEST_CASE("WorldGenDecorationConfigParser loads rockiness knobs from decoration.json",
-          "[worldgen][rockiness][parser]")
-{
-    WorldGenDecorationConfigParser parser;
-    const WorldGenDecorationConfig_t config =
-        parser.ParseConfig(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/worldGen/decoration.json");
-
-    const RockinessDecorationConfig_t& r = config.rockiness;
-    CHECK(r.low.flat == Approx(0.45f));
-    CHECK(r.low.rolling == Approx(0.35f));
-    CHECK(r.low.rocky == Approx(0.2f));
-    CHECK(r.average.flat == Approx(0.55f));
-    CHECK(r.average.rolling == Approx(0.35f));
-    CHECK(r.average.rocky == Approx(0.1f));
-    CHECK(r.high.flat == Approx(0.7f));
-    CHECK(r.high.rolling == Approx(0.25f));
-    CHECK(r.high.rocky == Approx(0.05f));
-}
 
 TEST_CASE("WorldGenDecorationConfigParser throws when a rockiness level is missing",
           "[worldgen][rockiness][parser]")

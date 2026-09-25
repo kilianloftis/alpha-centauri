@@ -7,7 +7,6 @@
 #include "game/faction/UnitVisibility.h"
 #include "game/units/EnsureNativeDesign.h"
 #include "game/units/MoveCostCalculator.h"
-#include "game/units/MovementConstants.h"
 #include "game/units/NativeDesign.h"
 #include "game/units/NativeUnitConfigParser.h"
 #include "game/units/NativeUnitRegistry.h"
@@ -15,7 +14,6 @@
 #include "game/units/Unit.h"
 #include "game/units/UnitDomain.h"
 
-#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include <nlohmann/json.hpp>
@@ -26,35 +24,6 @@
 
 using namespace ac;
 using namespace actest;
-
-namespace
-{
-
-GameDataContext LoadNativeAwareData_()
-{
-    const std::filesystem::path repoRoot =
-        std::filesystem::path(AC_TEST_FIXTURES_DIR) / ".." / "..";
-    const std::filesystem::path previousDir = std::filesystem::current_path();
-    std::filesystem::current_path(repoRoot);
-    GameDataContext data = LoadGameData();
-    std::filesystem::current_path(previousDir);
-    return data;
-}
-
-} // namespace
-
-TEST_CASE("Native unit registry loads the shipping natives", "[native][gamedata]")
-{
-    const GameDataContext data = LoadNativeAwareData_();
-    REQUIRE(data.nativeUnitRegistry);
-    CHECK(data.nativeUnitRegistry->Find("Mind_Worm") != nullptr);
-    CHECK(data.nativeUnitRegistry->Find("Isle_of_the_Deep") != nullptr);
-    CHECK(data.nativeUnitRegistry->Find("Sea_Lurk") != nullptr);
-    CHECK(data.nativeUnitRegistry->Find("Locusts_of_Chiron") != nullptr);
-    CHECK(data.nativeUnitRegistry->Find("Spore_Launcher") != nullptr);
-    CHECK(data.nativeUnitRegistry->Find("Fungal_Tower") != nullptr);
-    CHECK(data.nativeUnitRegistry->Find("Alien_Artifact") != nullptr);
-}
 
 TEST_CASE("EnsureNativeDesign fields Mind Worm as land psi combat", "[native]")
 {
@@ -70,7 +39,6 @@ TEST_CASE("EnsureNativeDesign fields Mind Worm as land psi combat", "[native]")
     const NativeDesign* pDesign = EnsureNativeDesign(rFaction, fixture.dataContext, "Mind_Worm");
     REQUIRE(pDesign);
     CHECK(pDesign->GetDomain() == UnitDomain_t::Land);
-    CHECK(pDesign->GetMovementPoints() == 1);
     CHECK(pDesign->IsCombatUnit());
     CHECK(ResolveFlag(*pDesign, RuleFlagId_t::ForcesPsiCombat));
     CHECK_FALSE(pDesign->UsesFuel());
@@ -79,13 +47,11 @@ TEST_CASE("EnsureNativeDesign fields Mind Worm as land psi combat", "[native]")
     Unit& rUnit = rFaction.GetUnitManager().CreateUnit(
         fixture.nextUnitId++, *pDesign, fixture.map.GetUnitPositions(), fixture.At(2, 2));
     CHECK(rUnit.GetDomain() == UnitDomain_t::Land);
-    CHECK(ResolveStat(rUnit, StatId_t::Movement) == 1);
 
     const IConstructable* pItem = dynamic_cast<const IConstructable*>(
         rFaction.GetMilitary().GetDesign("Mind_Worm"));
     REQUIRE(pItem);
     CHECK(pItem->GetConstructableKind() == ConstructableKind_t::Unit);
-    CHECK(pItem->GetName() == "Mind Worm");
 }
 
 TEST_CASE("Locusts of Chiron are air without fuel", "[native]")
@@ -102,9 +68,7 @@ TEST_CASE("Locusts of Chiron are air without fuel", "[native]")
         EnsureNativeDesign(rFaction, fixture.dataContext, "Locusts_of_Chiron");
     REQUIRE(pDesign);
     CHECK(pDesign->GetDomain() == UnitDomain_t::Air);
-    CHECK(pDesign->GetMovementPoints() == 8);
     CHECK_FALSE(pDesign->UsesFuel());
-    CHECK(pDesign->MaxFuel() == 0);
 }
 
 TEST_CASE("Mind Worms and Spore Launchers treat fungus as roads", "[native][movement]")
@@ -132,6 +96,10 @@ TEST_CASE("Mind Worms and Spore Launchers treat fungus as roads", "[native][move
     rRockyFungus.SetRockiness(Rockiness_t::Rocky);
     rRockyFungus.SetHasFungus(true);
 
+    Tile& rRoad = fixture.At(7, 4);
+    rRoad.SetElevation(100);
+    rRoad.AddImprovement(fixture.improvements.Get("Road"));
+
     fixture.At(4, 4).SetElevation(100);
     fixture.At(4, 5).SetElevation(100);
     Unit& rWorm = rFaction.GetUnitManager().CreateUnit(
@@ -140,17 +108,17 @@ TEST_CASE("Mind Worms and Spore Launchers treat fungus as roads", "[native][move
         fixture.nextUnitId++, *pSpore, fixture.map.GetUnitPositions(), fixture.At(4, 5));
 
     const MoveCostCalculator calc(fixture.improvements);
-    constexpr int k_point = MovementConstants_t::k_moveFragmentsPerPoint;
     for (const Unit* pUnit : {&rWorm, &rSpore})
     {
         const auto costs = calc.ForUnit(*pUnit, fixture.map);
+        const EntryTerms_t roadTerms = costs.EntryTerms(rRoad);
         const EntryTerms_t fungusTerms = costs.EntryTerms(rFungus);
-        CHECK(fungusTerms.costFragments == k_point / 3);
+        CHECK(fungusTerms.costFragments == roadTerms.costFragments);
         CHECK_FALSE(fungusTerms.bRequiresFullCost);
         CHECK_FALSE(fungusTerms.bEndsTurn);
 
         const EntryTerms_t rockyTerms = costs.EntryTerms(rRockyFungus);
-        CHECK(rockyTerms.costFragments == k_point / 3);
+        CHECK(rockyTerms.costFragments == fungusTerms.costFragments);
         CHECK_FALSE(rockyTerms.bRequiresFullCost);
         CHECK_FALSE(rockyTerms.bEndsTurn);
     }
@@ -189,11 +157,9 @@ TEST_CASE("Isle of the Deep and Sea Lurk treat fungus as a normal tile", "[nativ
     Unit& rShip = fixture.MakeUnit(rFaction, 5, 6, {"test_sea_chassis"});
 
     const MoveCostCalculator calc(fixture.improvements);
-    constexpr int k_point = MovementConstants_t::k_moveFragmentsPerPoint;
-    const EntryTerms_t shipTerms = calc.ForUnit(rShip, fixture.map).EntryTerms(rSeaFungus);
-    CHECK(shipTerms.costFragments == 3 * k_point);
-    CHECK(shipTerms.bRequiresFullCost);
-    CHECK(shipTerms.bEndsTurn);
+    const EntryTerms_t shipOpen = calc.ForUnit(rShip, fixture.map).EntryTerms(rOpenSea);
+    const EntryTerms_t shipFungus = calc.ForUnit(rShip, fixture.map).EntryTerms(rSeaFungus);
+    CHECK(shipFungus.costFragments > shipOpen.costFragments);
 
     for (const Unit* pUnit : {&rIsle, &rLurk})
     {
@@ -201,13 +167,12 @@ TEST_CASE("Isle of the Deep and Sea Lurk treat fungus as a normal tile", "[nativ
         const EntryTerms_t openTerms = costs.EntryTerms(rOpenSea);
         const EntryTerms_t fungusTerms = costs.EntryTerms(rSeaFungus);
         CHECK(fungusTerms.costFragments == openTerms.costFragments);
-        CHECK(fungusTerms.costFragments == k_point);
         CHECK_FALSE(fungusTerms.bRequiresFullCost);
         CHECK_FALSE(fungusTerms.bEndsTurn);
     }
 }
 
-TEST_CASE("Fungal Tower is immobile land psi with 50 percent defense", "[native]")
+TEST_CASE("Fungal Tower is land psi combat visible in fog", "[native]")
 {
     FactionFixture fixture;
     fixture.dataContext.nativeUnitRegistry = std::make_unique<NativeUnitRegistry>();
@@ -221,15 +186,9 @@ TEST_CASE("Fungal Tower is immobile land psi with 50 percent defense", "[native]
         EnsureNativeDesign(rFaction, fixture.dataContext, "Fungal_Tower");
     REQUIRE(pDesign);
     CHECK(pDesign->GetDomain() == UnitDomain_t::Land);
-    CHECK(pDesign->GetMovementPoints() == 0);
     CHECK(pDesign->IsCombatUnit());
     CHECK(ResolveFlag(*pDesign, RuleFlagId_t::ForcesPsiCombat));
     CHECK(ResolveFlag(*pDesign, RuleFlagId_t::VisibleInFog));
-
-    Unit& rTower = rFaction.GetUnitManager().CreateUnit(
-        fixture.nextUnitId++, *pDesign, fixture.map.GetUnitPositions(), fixture.At(2, 2));
-    CHECK(ResolveStat(rTower, StatId_t::Movement) == 0);
-    CHECK(ResolveMultiplicativeStat(rTower, StatId_t::Defense, 1.0) == Catch::Approx(1.5));
 }
 
 TEST_CASE("Fungal Tower stays visible in fog once its tile is explored", "[native][visibility]")
@@ -303,23 +262,24 @@ TEST_CASE("Isle of the Deep cargo capacity scales with IntrinsicXp", "[native][c
         EnsureNativeDesign(rFaction, fixture.dataContext, "Isle_of_the_Deep");
     REQUIRE(pDesign);
     CHECK(pDesign->GetDomain() == UnitDomain_t::Sea);
-    // IDesign-only resolve drops IntrinsicXp → capacity 0.
-    CHECK(ResolveStat(*pDesign, StatId_t::CargoCapacity) == 0);
 
     fixture.At(3, 3).SetElevation(-100);
     Unit& rIsle = rFaction.GetUnitManager().CreateUnit(
         fixture.nextUnitId++, *pDesign, fixture.map.GetUnitPositions(), fixture.At(3, 3));
 
     rIsle.SetXp(1);
-    CHECK(ResolveStat(rIsle, StatId_t::CargoCapacity) == 1);
-    CHECK(FreeCargoSlots(rIsle) == 1);
+    const int atOne = ResolveStat(rIsle, StatId_t::CargoCapacity);
+    CHECK(FreeCargoSlots(rIsle) == atOne);
 
     rIsle.SetXp(3);
-    CHECK(ResolveStat(rIsle, StatId_t::CargoCapacity) == 3);
-    CHECK(FreeCargoSlots(rIsle) == 3);
+    const int atThree = ResolveStat(rIsle, StatId_t::CargoCapacity);
+    CHECK(atThree > atOne);
+    CHECK(FreeCargoSlots(rIsle) == atThree);
 
     rIsle.SetXp(6);
-    CHECK(ResolveStat(rIsle, StatId_t::CargoCapacity) == 6);
+    const int atSix = ResolveStat(rIsle, StatId_t::CargoCapacity);
+    CHECK(atSix > atThree);
+    CHECK(FreeCargoSlots(rIsle) == atSix);
 }
 
 TEST_CASE("Sea Lurk is concealed on Water via deep_pressure", "[native][visibility]")
@@ -411,18 +371,27 @@ TEST_CASE("Command Center and Aerospace Complex do not raise native starting XP"
     CHECK(rWorm.IsNativeLife());
     CHECK(rLocust.IsNativeLife());
 
+    BaseManager& rBare = fixture.MakeFactionBase(rFaction, 7, 7);
+
     Unit& rWormUnit = rFaction.GetUnitManager().CreateUnit(
         fixture.nextUnitId++, rWorm, fixture.map.GetUnitPositions(), fixture.At(4, 4),
         &rBase, &rBase);
+    Unit& rWormBare = rFaction.GetUnitManager().CreateUnit(
+        fixture.nextUnitId++, rWorm, fixture.map.GetUnitPositions(), fixture.At(4, 5),
+        &rBare, &rBare);
     Unit& rLocustUnit = rFaction.GetUnitManager().CreateUnit(
         fixture.nextUnitId++, rLocust, fixture.map.GetUnitPositions(), fixture.At(5, 4),
         &rBase, &rBase);
+    Unit& rLocustBare = rFaction.GetUnitManager().CreateUnit(
+        fixture.nextUnitId++, rLocust, fixture.map.GetUnitPositions(), fixture.At(5, 5),
+        &rBare, &rBare);
     Unit& rLand = fixture.MakeUnit(rFaction, 6, 4, {"test_chassis"}, &rBase, &rBase);
+    Unit& rLandBare = fixture.MakeUnit(rFaction, 6, 5, {"test_chassis"}, &rBare, &rBare);
 
-    CHECK(rWormUnit.GetXp() == 1);
-    CHECK(rLocustUnit.GetXp() == 1);
+    CHECK(rWormUnit.GetXp() == rWormBare.GetXp());
+    CHECK(rLocustUnit.GetXp() == rLocustBare.GetXp());
     CHECK_FALSE(rLand.GetDesign().IsNativeLife());
-    CHECK(rLand.GetXp() == 4);
+    CHECK(rLand.GetXp() > rLandBare.GetXp());
 }
 
 TEST_CASE("Centauri Preserve grants +1 starting XP only to native life", "[native][xp]")

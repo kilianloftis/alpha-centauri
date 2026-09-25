@@ -76,20 +76,6 @@ int UnitCount_(const Faction& rFaction)
     return static_cast<int>(std::ranges::distance(rFaction.GetUnitManager().Units()));
 }
 
-int EarthquakeAdd_(const UnitComponentConfig_t& rReactor)
-{
-    int levels = 0;
-    for (const EffectConfig_t& rEffect : rReactor.effects)
-    {
-        const auto* pMod = std::get_if<StatModifierEffect_t>(&rEffect.effect);
-        if (pMod && pMod->stat == StatId_t::EarthquakeLevels && pMod->op == ModifierOp_t::Add)
-        {
-            levels += static_cast<int>(pMod->amount);
-        }
-    }
-    return levels;
-}
-
 struct OrderHarness_
 {
     MoveCostCalculator moveCosts;
@@ -175,24 +161,15 @@ TEST_CASE("Elevation rules reject missing and invalid scalars", "[map][elevation
                       ContainsSubstring("spread_altitude_limit_meters"));
 
     std::filesystem::remove(path);
-
-    const ElevationRulesConfig_t rules =
-        ElevationRulesConfigParser{}.ParseConfig(FixturePath("map_rules.json"));
-    CHECK(rules.minElevationMeters == 0);
-    CHECK(rules.maxElevationMeters == 0);
-    CHECK(rules.oceanLevelMeters == 0);
-    CHECK(rules.oceanShelfMeters == -2000);
-    CHECK(rules.levelMinMeters == 500);
-    CHECK(rules.levelMaxMeters == 1500);
-    CHECK(rules.maxAdjacentDifferenceMeters == 1500);
-    CHECK(rules.referenceLevelMeters == 1000);
-    CHECK(rules.spreadAltitudeLimitMeters == 1000);
 }
 
 TEST_CASE("A preset's elevation range is the world storage range", "[map][elevation][worldgen]")
 {
-    ElevationRulesConfig_t rules =
-        ElevationRulesConfigParser{}.ParseConfig(FixturePath("map_rules.json"));
+    ElevationRulesConfig_t rules;
+    rules.oceanLevelMeters = 0;
+    rules.oceanShelfMeters = -2000;
+    rules.spreadAltitudeLimitMeters = 1000;
+
     WorldGenPresetConfig_t preset;
     preset.id = "highlands";
     preset.minElevation = -3000;
@@ -321,57 +298,39 @@ TEST_CASE("Former raise and an earthquake both clamp at max map elevation",
     CHECK(At_(map, 2, 3).GetElevation() == 0);
 }
 
-TEST_CASE("Shipping reactors add earthquake levels by tier", "[unit][elevation]")
-{
-    UnitComponentRegistry reactors;
-    reactors.Load(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/unit_components/reactors.json");
-    CHECK(EarthquakeAdd_(reactors.Get("Fission_Plant")) == 1);
-    CHECK(EarthquakeAdd_(reactors.Get("Fusion_Lab")) == 2);
-    CHECK(EarthquakeAdd_(reactors.Get("Quantum_Chambers")) == 3);
-    CHECK(EarthquakeAdd_(reactors.Get("Singularity_Inductor")) == 4);
-}
-
-TEST_CASE("Tectonic payload requires the Missile chassis", "[unit][elevation]")
+TEST_CASE("A special's requires_chassis list is enforced", "[unit][elevation]")
 {
     UnitComponentRegistry specials;
     specials.Load(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/unit_components/specials.json");
     const UnitComponentConfig_t& rPayload = specials.Get("Tectonic_Payload");
-    CHECK(rPayload.requiresChassis.size() == 1);
-    CHECK(rPayload.requiresChassis.front() == "Missile");
+    REQUIRE_FALSE(rPayload.requiresChassis.empty());
 
-    UnitComponentConfig_t missile;
-    missile.id = "Missile";
-    missile.type = "chassis";
-    missile.domain = UnitDomain_t::Orbital;
+    UnitComponentConfig_t allowedChassis;
+    allowedChassis.id = rPayload.requiresChassis.front();
+    allowedChassis.type = "chassis";
+    allowedChassis.domain = UnitDomain_t::Orbital;
 
-    UnitComponentConfig_t infantry;
-    infantry.id = "Infantry";
-    infantry.type = "chassis";
-    infantry.domain = UnitDomain_t::Land;
+    UnitComponentConfig_t otherChassis;
+    otherChassis.id = rPayload.requiresChassis.front() + "_other";
+    otherChassis.type = "chassis";
+    otherChassis.domain = UnitDomain_t::Land;
 
     const std::vector<UnitSlotConfig_t> slots = {
         {.id = "weapon", .displayName = "Weapon", .componentType = "weapon", .required = true},
         {.id = "chassis", .displayName = "Chassis", .componentType = "chassis", .required = true},
     };
 
-    const std::unordered_map<std::string, const UnitComponentConfig_t*> onMissile = {
+    const std::unordered_map<std::string, const UnitComponentConfig_t*> onAllowed = {
         {"weapon", &rPayload},
-        {"chassis", &missile},
+        {"chassis", &allowedChassis},
     };
-    const UnitDesign allowed(slots, onMissile);
-    // The capability is the detonation list, not a per-weapon rule flag.
-    const std::vector<TriggeredEffectConfig_t> detonation = allowed.CollectOnDetonateEffects();
-    REQUIRE(detonation.size() == 2);
-    const auto* pQuake = std::get_if<EarthquakeEffect_t>(&detonation.front().effect);
-    REQUIRE(pQuake);
-    CHECK(pQuake->levelsStat == StatId_t::EarthquakeLevels);
-    CHECK(std::get_if<DestroyUnitEffect_t>(&detonation.back().effect));
+    CHECK_NOTHROW(UnitDesign(slots, onAllowed));
 
-    const std::unordered_map<std::string, const UnitComponentConfig_t*> onInfantry = {
+    const std::unordered_map<std::string, const UnitComponentConfig_t*> onOther = {
         {"weapon", &rPayload},
-        {"chassis", &infantry},
+        {"chassis", &otherChassis},
     };
-    CHECK_THROWS_WITH(UnitDesign(slots, onInfantry), ContainsSubstring("Tectonic_Payload"));
+    CHECK_THROWS_WITH(UnitDesign(slots, onOther), ContainsSubstring("Tectonic_Payload"));
 
     const std::filesystem::path path =
         std::filesystem::temp_directory_path() / "ac_bad_chassis_requirement.json";

@@ -2,15 +2,12 @@
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/Tile.h"
 #include "game/map/TileBonusGeneration.h"
-#include "game/map/WorldGenDecorationConfigParser.h"
 #include "game/map/WorldMap.h"
 
-#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <random>
 
 using namespace ac;
-using Catch::Approx;
 
 namespace
 {
@@ -24,16 +21,6 @@ void FillLand_(WorldMap& rWorld)
 }
 
 } // namespace
-
-TEST_CASE("WorldGenDecorationConfigParser loads tile_bonuses knobs",
-          "[worldgen][tile-bonus][parser]")
-{
-    WorldGenDecorationConfigParser parser;
-    const WorldGenDecorationConfig_t config =
-        parser.ParseConfig(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/worldGen/decoration.json");
-
-    CHECK(config.tileBonuses.landFraction == Approx(0.04f));
-}
 
 TEST_CASE("PlaceTileBonuses stamps frequency-weighted improvements on land",
           "[worldgen][tile-bonus]")

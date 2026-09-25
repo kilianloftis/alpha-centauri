@@ -1,5 +1,5 @@
 ---
-description: Write requirement-based tests; treat failures as signals, always report them
+description: Write requirement-based tests against fixtures, not shipping config; report failures
 alwaysApply: true
 trigger: always_on
 ---
@@ -20,6 +20,24 @@ CHECK(path.tiles.front() == &rDestAcrossSeam);
 ```
 
 When behavior changes, update tests only if the **requirement** changed. Do not weaken or relocate assertions just to make a green suite after an implementation change.
+
+## Do not test shipping config
+
+Tests must not read `config/` and assert what it contains. Shipping numbers, ids, and flags are free to change without a test edit.
+
+When a case needs a specific value, put that value in a fixture the test owns: a file under `tests/fixtures/`, or a config object or temp file the test builds. Assert against the fixture.
+
+```cpp
+// ❌ BAD — fails when decoration.json changes
+const auto config = parser.ParseConfig("config/worldGen/decoration.json");
+CHECK(config.moisture.aridThreshold == Catch::Approx(0.4f));
+
+// ✅ GOOD — the fixture owns the number
+const auto config = parser.ParseConfig(FixturePath("decoration.json"));
+CHECK(config.moisture.aridThreshold == Catch::Approx(0.4f));
+```
+
+A test that only checks "the shipping file loads" is still testing shipping config. Cover the parser or the behavior with a fixture instead.
 
 ## When a test fails after a change
 

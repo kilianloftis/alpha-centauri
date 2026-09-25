@@ -1,7 +1,6 @@
 #include "TestHelpers.h"
 #include "game/map/MoistureGeneration.h"
 #include "game/map/Tile.h"
-#include "game/map/WorldGenDecorationConfigParser.h"
 #include "game/map/WorldMap.h"
 
 #include <catch2/catch_approx.hpp>
@@ -19,26 +18,6 @@ MoistureDecorationConfig_t DefaultMoisture_()
 }
 
 } // namespace
-
-TEST_CASE("WorldGenDecorationConfigParser loads moisture knobs from decoration.json",
-          "[worldgen][moisture][parser]")
-{
-    WorldGenDecorationConfigParser parser;
-    const WorldGenDecorationConfig_t config =
-        parser.ParseConfig(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/worldGen/decoration.json");
-
-    const MoistureDecorationConfig_t& m = config.moisture;
-    CHECK(m.baseMin == Catch::Approx(0.25f));
-    CHECK(m.baseRange == Catch::Approx(0.5f));
-    CHECK(m.coastalPeakBonus == Catch::Approx(0.12f));
-    CHECK(m.coastalRadius == 2);
-    CHECK(m.tropicalPeakBonus == Catch::Approx(0.1f));
-    CHECK(m.tropicalHalfWidth == Catch::Approx(0.35f));
-    CHECK(m.orographicStrength == Catch::Approx(0.45f));
-    CHECK(m.orographicElevScale == Catch::Approx(1000.0f));
-    CHECK(m.aridThreshold == Catch::Approx(0.4f));
-    CHECK(m.moistThreshold == Catch::Approx(0.7f));
-}
 
 TEST_CASE("TropicalMoistureBonus peaks at equator and falls off toward poles",
           "[worldgen][moisture]")
@@ -135,13 +114,13 @@ TEST_CASE("OrographicMoistureBias reaches full strength at the preset elevation 
 TEST_CASE("QuantizeMoistureScore maps bands to Arid/Moist/Wet",
           "[worldgen][moisture]")
 {
-    const MoistureDecorationConfig_t cfg = DefaultMoisture_();
-    CHECK(QuantizeMoistureScore(0.0f, cfg) == Moisture_t::Arid);
-    CHECK(QuantizeMoistureScore(0.39f, cfg) == Moisture_t::Arid);
-    CHECK(QuantizeMoistureScore(0.40f, cfg) == Moisture_t::Moist);
-    CHECK(QuantizeMoistureScore(0.69f, cfg) == Moisture_t::Moist);
-    CHECK(QuantizeMoistureScore(0.70f, cfg) == Moisture_t::Wet);
-    CHECK(QuantizeMoistureScore(1.0f, cfg) == Moisture_t::Wet);
-    CHECK(QuantizeMoistureScore(-1.0f, cfg) == Moisture_t::Arid);
-    CHECK(QuantizeMoistureScore(2.0f, cfg) == Moisture_t::Wet);
+    MoistureDecorationConfig_t cfg;
+    cfg.aridThreshold = 0.4f;
+    cfg.moistThreshold = 0.7f;
+    CHECK(QuantizeMoistureScore(cfg.aridThreshold - 0.01f, cfg) == Moisture_t::Arid);
+    CHECK(QuantizeMoistureScore(cfg.aridThreshold, cfg) == Moisture_t::Moist);
+    CHECK(QuantizeMoistureScore(cfg.moistThreshold - 0.01f, cfg) == Moisture_t::Moist);
+    CHECK(QuantizeMoistureScore(cfg.moistThreshold, cfg) == Moisture_t::Wet);
+    CHECK(QuantizeMoistureScore(-1.0f, cfg) == QuantizeMoistureScore(0.0f, cfg));
+    CHECK(QuantizeMoistureScore(2.0f, cfg) == QuantizeMoistureScore(1.0f, cfg));
 }

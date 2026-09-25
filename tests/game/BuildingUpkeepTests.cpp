@@ -183,16 +183,8 @@ TEST_CASE("Headquarters does not charge facility energy upkeep", "[building][upk
     Faction& faction = fixture.MakeFaction();
     BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
 
-    CHECK(fixture.buildings().Get("Headquarters").upkeep == 0);
     base.GetBuildingManager().AddBuilding("Headquarters");
     CHECK(faction.GetBuildingUpkeep() == 0);
-}
-
-TEST_CASE("Stock Headquarters charges no energy upkeep", "[building][upkeep]")
-{
-    BuildingRegistry registry;
-    registry.Load(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/buildings/buildings.json");
-    CHECK(registry.Get("Headquarters").upkeep == 0);
 }
 
 TEST_CASE("Continuous GrantBuilding targets do not pay maintenance", "[building][upkeep][grant]")
@@ -296,11 +288,4 @@ TEST_CASE("Fusion and Quantum Power raise Command Center upkeep", "[building][up
     CHECK(lines[0].UpkeepPerCopy() == 3);
     CHECK(lines[1].pConfig->id == "upkeep_hall");
     CHECK(lines[1].UpkeepPerCopy() == 2);
-}
-
-TEST_CASE("Stock Command Center upkeep starts at 1", "[building][upkeep]")
-{
-    BuildingRegistry registry;
-    registry.Load(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/buildings/buildings.json");
-    CHECK(registry.Get("Command_Center").upkeep == 1);
 }

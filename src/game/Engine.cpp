@@ -227,7 +227,7 @@ void Engine::StartNewGame_()
     WorldGenerator worldGen;
     const WorldGenPresetConfig_t& rPreset =
         m_gameDataContext->worldGenPresetRegistry->Get(rWorldConfig.presetId);
-    WorldGenPresetConfigParser::ApplyElevationRange(m_gameDataContext->elevationRules, rPreset);
+    WorldGenPresetConfigParser::0(m_gameDataContext->elevationRules, rPreset);
     m_pGameState = std::make_unique<GameState>(
         worldGen.Generate(rWorldConfig, rPreset, *m_gameDataContext->worldGenDecorationConfig,
                           m_gameDataContext->worldGenLandmarks,

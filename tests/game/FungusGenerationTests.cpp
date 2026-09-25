@@ -5,7 +5,6 @@
 #include "game/map/WorldGenDecorationConfigParser.h"
 #include "game/map/WorldMap.h"
 
-#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 #include <filesystem>
@@ -15,7 +14,6 @@
 #include <vector>
 
 using namespace ac;
-using Catch::Approx;
 
 namespace
 {
@@ -110,21 +108,6 @@ std::vector<int> FungusPatchSizes_(WorldMap& rWorld)
 }
 
 } // namespace
-
-TEST_CASE("WorldGenDecorationConfigParser loads fungus knobs from decoration.json",
-          "[worldgen][fungus][parser]")
-{
-    WorldGenDecorationConfigParser parser;
-    const WorldGenDecorationConfig_t config =
-        parser.ParseConfig(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/worldGen/decoration.json");
-
-    CHECK(config.fungus.landFraction == Approx(0.08f));
-    CHECK(config.fungus.waterFraction == Approx(0.02f));
-    CHECK(config.fungus.minPatchTiles == 1);
-    CHECK(config.fungus.maxPatchTiles == 16);
-    CHECK(config.fungus.patchSizeSkew == Approx(4.0f));
-    CHECK(config.tileBonuses.landFraction == Approx(0.04f));
-}
 
 TEST_CASE("WorldGenDecorationConfigParser throws when fungus object is missing",
           "[worldgen][fungus][parser]")

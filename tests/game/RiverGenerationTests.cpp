@@ -3,14 +3,12 @@
 #include "game/map/WorldGenDecorationConfigParser.h"
 #include "game/map/WorldMap.h"
 
-#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 #include <filesystem>
 #include <fstream>
 
 using namespace ac;
-using Catch::Approx;
 
 namespace
 {
@@ -51,15 +49,6 @@ TEST_CASE("GetRiverConnections reports orthogonal river neighbors", "[worldgen][
     CHECK_FALSE(HasRiverConnection(mask, RiverConnection_t::West));
 
     CHECK(GetRiverConnections(*world.GetTile(0, 0), world) == RiverConnection_t::None);
-}
-
-TEST_CASE("WorldGenDecorationConfigParser loads aquifers from decoration.json",
-          "[worldgen][aquifers][parser]")
-{
-    WorldGenDecorationConfigParser parser;
-    const WorldGenDecorationConfig_t config =
-        parser.ParseConfig(std::string(AC_TEST_FIXTURES_DIR) + "/../../config/worldGen/decoration.json");
-    CHECK(config.aquifers.landFraction == Approx(0.002f));
 }
 
 TEST_CASE("WorldGenDecorationConfigParser throws when aquifers object is missing",
