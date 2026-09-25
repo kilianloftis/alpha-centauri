@@ -406,6 +406,10 @@ BaseManager* UnitOrderExecutor::TryFoundBase(Unit& rUnit, GameState& rGameState,
 
     Faction& rFaction = rUnit.GetFaction();
     const Tile& rUnitTile = rUnit.GetTile();
+    if (rUnitTile.IsWater() && rUnit.GetDomain() != UnitDomain_t::Sea)
+    {
+        return nullptr;
+    }
     if (!CanFoundBaseAt(rUnitTile, rFaction.GetFactionId(), rGameState))
     {
         return nullptr;
@@ -417,13 +421,17 @@ BaseManager* UnitOrderExecutor::TryFoundBase(Unit& rUnit, GameState& rGameState,
         return nullptr;
     }
 
+    const bool bMayOccupyWater =
+        rUnitTile.IsWater() && rUnit.GetDomain() == UnitDomain_t::Sea;
     BaseManager* pBase = rFaction.CreateBase(
         rGameState.AllocateBaseId(),
         rFaction.SuggestBaseName(),
         pTile,
         rDataContext,
         rGameState.GetTileEffects(),
-        rGameState.GetSecretProjectAvailability());
+        rGameState.GetSecretProjectAvailability(),
+        std::nullopt,
+        bMayOccupyWater);
 
     // Before SingleUse destroy: founding-unit StartingMinerals still resolve on the pod.
     ApplyStartingMinerals(*pBase, &rUnit);
@@ -634,7 +642,7 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, TerraformOrder_t& rOrde
 
     RequireGameData_("terraform");
     if (!ApplyTerraformResult(*pTile, *pConfig, m_rTileEffects, m_rWorldMap, rUnit, m_rRng,
-                              m_pGameData->elevationRules))
+                              m_pGameData->elevationRules, m_pWorld))
     {
         std::cerr << "Terraform completed with no effect: '" << rOrder.improvementId
                   << "' could not be applied at (" << pTile->GetX() << ", " << pTile->GetY()

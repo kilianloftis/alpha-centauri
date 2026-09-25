@@ -11,8 +11,12 @@
 #include "game/buildings/BuildingConfig.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/production/ProductionManager.h"
+#include "game/map/ElevationChange.h"
+#include "game/map/ImprovementIds.h"
+#include "game/map/SurfaceOccupancy.h"
 #include "game/units/FoundBaseRules.h"
 #include "game/units/Unit.h"
+#include "game/units/UnitDomain.h"
 #include "game/units/UnitOrderExecutor.h"
 #include "game/units/UnitComponentConfig.h"
 #include "game/units/UnitSlotConfig.h"
@@ -331,4 +335,112 @@ TEST_CASE("TryFoundBase fails without FoundBase or on an illegal tile", "[unit][
     CHECK_FALSE(game.pState->GetUnitOrderExecutor().TryFoundBase(
         inForeign, *game.pState, game.fixtures.dataContext));
     CHECK(game.pPlayer->GetBaseCount() == 1);
+}
+
+void CrossElevation_(GameState& rState, Tile& rTile, int deltaMeters)
+{
+    const ElevationRulesConfig_t& rRules = rTile.MapRules();
+    REQUIRE(ApplyElevationDelta(rTile, rState.GetWorldMap(), deltaMeters, rRules,
+                                rRules.minElevationMeters, rRules.maxElevationMeters,
+                                &rState.GetTileEffects(), &rState));
+}
+
+TEST_CASE("A land colony pod cannot found on water; a sea pod can and may occupy water",
+          "[unit][found-base][surface]")
+{
+    FoundBaseGame_ game;
+    BaseManager& home = game.MakeBase(*game.pPlayer, 4, 4);
+    Tile& water = *game.pState->GetWorldMap().GetTile(7, 4);
+    water.SetElevation(-100);
+    REQUIRE(water.IsWater());
+
+    Unit& landPod = game.MakeUnit(*game.pPlayer, 7, 4, {"test_chassis", "test_colony_pod"}, &home);
+    CHECK(landPod.GetDomain() == UnitDomain_t::Land);
+    CHECK_FALSE(game.pState->GetUnitOrderExecutor().TryFoundBase(
+        landPod, *game.pState, game.fixtures.dataContext));
+    CHECK(game.pPlayer->GetBaseCount() == 1);
+
+    Unit& seaOnLand = game.MakeUnit(*game.pPlayer, 1, 4, {"test_sea_chassis", "test_colony_pod"}, &home);
+    BaseManager* pLandFounded = game.pState->GetUnitOrderExecutor().TryFoundBase(
+        seaOnLand, *game.pState, game.fixtures.dataContext);
+    REQUIRE(pLandFounded);
+    CHECK_FALSE(pLandFounded->MayOccupyWater());
+
+    Unit& seaPod = game.MakeUnit(*game.pPlayer, 7, 4, {"test_sea_chassis", "test_colony_pod"}, &home);
+    BaseManager* pSea = game.pState->GetUnitOrderExecutor().TryFoundBase(
+        seaPod, *game.pState, game.fixtures.dataContext);
+    REQUIRE(pSea);
+    CHECK(pSea->GetTile().IsWater());
+    CHECK(pSea->MayOccupyWater());
+    CHECK(pSea->GetTile().HasImprovement(ImprovementIds::k_Base));
+}
+
+TEST_CASE("A surface flip removes improvements whose domain no longer matches",
+          "[unit][elevation][surface]")
+{
+    FoundBaseGame_ game;
+    Tile& origin = *game.pState->GetWorldMap().GetTile(4, 4);
+    Tile& neighbor = *game.pState->GetWorldMap().GetTile(4, 5);
+    REQUIRE(origin.IsLand());
+    game.pState->GetTileEffects().AddImprovementWithEffects(origin, "Farm");
+    game.pState->GetTileEffects().AddImprovementWithEffects(origin, "Road");
+    game.pState->GetTileEffects().AddImprovementWithEffects(neighbor, "Farm");
+    game.pState->GetTileEffects().AddImprovementWithEffects(neighbor, "Road");
+
+    // 100 - 2000 = -1900. The neighbor is pulled down to stay within 1500m, onto water.
+    CrossElevation_(*game.pState, origin, -2000);
+    CHECK(origin.IsWater());
+    CHECK(neighbor.IsWater());
+    CHECK_FALSE(origin.HasImprovement("Farm"));
+    CHECK(origin.HasImprovement("Road"));
+    CHECK_FALSE(neighbor.HasImprovement("Farm"));
+    CHECK(neighbor.HasImprovement("Road"));
+
+    Tile& sea = *game.pState->GetWorldMap().GetTile(1, 1);
+    sea.SetElevation(-100);
+    game.pState->GetTileEffects().AddImprovementWithEffects(sea, "KelpFarm");
+    game.pState->GetTileEffects().AddImprovementWithEffects(sea, "Road");
+    CrossElevation_(*game.pState, sea, 500);
+    CHECK(sea.IsLand());
+    CHECK_FALSE(sea.HasImprovement("KelpFarm"));
+    CHECK(sea.HasImprovement("Road"));
+}
+
+TEST_CASE("A land base is razed when its tile becomes water unless it may occupy water",
+          "[unit][found-base][elevation][surface]")
+{
+    FoundBaseGame_ game;
+    BaseManager& land = game.MakeBase(*game.pPlayer, 4, 4);
+    game.pState->GetTileEffects().AddImprovementWithEffects(land.GetTile(), "Farm");
+    CrossElevation_(*game.pState, land.GetTile(), -500);
+    CHECK(land.GetTile().IsWater());
+    CHECK(land.IsRazed());
+    CHECK_FALSE(land.GetTile().HasImprovement(ImprovementIds::k_Base));
+    CHECK_FALSE(land.GetTile().HasImprovement("Farm"));
+    CHECK(game.pState->FindBaseAt(4, 4) == nullptr);
+
+    BaseManager& domed = game.MakeBase(*game.pPlayer, 4, 7);
+    domed.GetBuildingManager().AddBuilding(k_PressureDomeBuildingId);
+    game.pState->GetTileEffects().AddImprovementWithEffects(domed.GetTile(), "Farm");
+    CrossElevation_(*game.pState, domed.GetTile(), -500);
+    CHECK(domed.GetTile().IsWater());
+    CHECK_FALSE(domed.IsRazed());
+    CHECK(domed.GetTile().HasImprovement(ImprovementIds::k_Base));
+    CHECK_FALSE(domed.GetTile().HasImprovement("Farm"));
+
+    Tile& water = *game.pState->GetWorldMap().GetTile(7, 1);
+    water.SetElevation(-100);
+    Unit& seaPod = game.MakeUnit(*game.pPlayer, 7, 1, {"test_sea_chassis", "test_colony_pod"});
+    BaseManager* pSea = game.pState->GetUnitOrderExecutor().TryFoundBase(
+        seaPod, *game.pState, game.fixtures.dataContext);
+    REQUIRE(pSea);
+    REQUIRE(pSea->MayOccupyWater());
+    CrossElevation_(*game.pState, pSea->GetTile(), 500);
+    CHECK(pSea->GetTile().IsLand());
+    CHECK_FALSE(pSea->IsRazed());
+    CrossElevation_(*game.pState, pSea->GetTile(), -500);
+    CHECK(pSea->GetTile().IsWater());
+    CHECK_FALSE(pSea->IsRazed());
+    CHECK(pSea->MayOccupyWater());
+    CHECK(pSea->GetTile().HasImprovement(ImprovementIds::k_Base));
 }

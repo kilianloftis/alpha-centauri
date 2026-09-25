@@ -21,6 +21,7 @@
 #include "game/stockpiles/StockpileConfig.h"
 #include "game/stockpiles/StockpileRegistry.h"
 #include "game/map/ImprovementIds.h"
+#include "game/map/SurfaceOccupancy.h"
 #include "game/map/MapUtils.h"
 #include "game/map/WorldMap.h"
 #include "game/social-engineering/SocialRatingResolver.h"
@@ -102,7 +103,8 @@ BaseManager::BaseManager(
     PopCompositionCalculator& rCompositionCalculator,
     const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
     TileEffectsContext& rTileEffects,
-    std::optional<int> initialPopulation)
+    std::optional<int> initialPopulation,
+    bool bMayOccupyWater)
     : m_pFaction(&rFaction)
     , m_baseId(baseId)
     , m_tile(tile)
@@ -135,6 +137,7 @@ BaseManager::BaseManager(
           *this))
     , m_name(std::move(name))
     , m_effects(*this, m_rSocialRatings, rFaction)
+    , m_bMayOccupyWater(bMayOccupyWater)
 {
     m_pBuildings->OnBuildingDestroyed.Connect([this](const BuildingConfig_t& rBuilding)
     {
@@ -302,7 +305,13 @@ BaseSnapshot_t BaseManager::CaptureSnapshot() const
     snapshot.mineralStockpile = m_pProduction->GetMineralStockpile();
     snapshot.nutrientStockpile = m_pPopulation->GetNutrientStockpile();
     snapshot.mood = m_pPopulation->CaptureMoodState();
+    snapshot.bMayOccupyWater = m_bMayOccupyWater;
     return snapshot;
+}
+
+bool BaseManager::MayOccupyWater() const
+{
+    return m_bMayOccupyWater || m_pBuildings->HasBuilding(k_PressureDomeBuildingId);
 }
 
 PopulationManager& BaseManager::GetPopulation()

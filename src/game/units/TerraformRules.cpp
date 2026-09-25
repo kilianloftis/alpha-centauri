@@ -42,28 +42,22 @@ bool IsSeaTile_(const Tile& rTile)
     return rTile.GetElevation() < 0;
 }
 
-// Improvements a sea former builds, and only on water. Driven by the config tag rather than a
-// closed id list: config/improvements.json already tags KelpFarm / MiningPlatform /
-// TidalHarness "sea_terraform", so a modded sea improvement with a new id used to be treated
-// as land-only.
-constexpr const char* k_SeaTerraformTag = "sea_terraform";
-
-bool IsSeaOnlyImprovement_(const ImprovementConfig_t& rConfig)
-{
-    return std::find(rConfig.tags.begin(), rConfig.tags.end(), k_SeaTerraformTag)
-           != rConfig.tags.end();
-}
-
 bool DomainAllows_(const Unit& rUnit, const ImprovementConfig_t& rConfig, const Tile& rTile)
 {
-    const bool bSea = IsSeaTile_(rTile);
+    const bool bSea = rTile.IsWater();
     const UnitDomain_t domain = rUnit.GetDomain();
 
-    if (IsSeaOnlyImprovement_(rConfig))
+    if (rConfig.domain == ImprovementDomain_t::Sea)
     {
         return bSea && domain == UnitDomain_t::Sea;
     }
+    if (rConfig.domain == ImprovementDomain_t::Land)
+    {
+        return !bSea && domain == UnitDomain_t::Land;
+    }
 
+    // Order-only projects have no occupancy domain. Raise and lower are either former;
+    // anything else still has to match the tile the former is standing on.
     if (rConfig.terraformResult == TerraformResult_t::RaiseLand
         || rConfig.terraformResult == TerraformResult_t::LowerLand)
     {
@@ -187,7 +181,7 @@ bool CanStartTerraform(const Unit& rUnit, const ImprovementConfig_t& rConfig,
 bool ApplyTerraformResult(Tile& rTile, const ImprovementConfig_t& rConfig,
                           TileEffectsContext& rTileEffects, WorldMap& rWorldMap,
                           const Unit& rFormer, std::mt19937& rRng,
-                          const ElevationRulesConfig_t& rRules)
+                          const ElevationRulesConfig_t& rRules, IUnitOrderWorld* pWorld)
 {
     switch (rConfig.terraformResult)
     {
@@ -241,7 +235,8 @@ bool ApplyTerraformResult(Tile& rTile, const ImprovementConfig_t& rConfig,
         {
             const int roll = RollLevelMeters(rRng, rRules);
             return ApplyElevationDelta(rTile, rWorldMap, roll, rRules, rRules.minElevationMeters,
-                                       rRules.maxElevationMeters);
+                                       rRules.maxElevationMeters, pWorld ? &rTileEffects : nullptr,
+                                       pWorld);
         }
 
         case TerraformResult_t::LowerLand:
@@ -254,7 +249,8 @@ bool ApplyTerraformResult(Tile& rTile, const ImprovementConfig_t& rConfig,
                                   ? rRules.oceanLevelMeters
                                   : rRules.minElevationMeters;
             return ApplyElevationDelta(rTile, rWorldMap, -roll, rRules, floor,
-                                       rRules.maxElevationMeters);
+                                       rRules.maxElevationMeters, pWorld ? &rTileEffects : nullptr,
+                                       pWorld);
         }
     }
     return false;

@@ -243,6 +243,7 @@
     "tags": [
       "land_terraform"
     ],
+    "domain": "land",
     "turns_required": 4,
     "energy_cost": 0,
     "excludes": [
@@ -266,6 +267,7 @@
     "tags": [
       "land_terraform"
     ],
+    "domain": "land",
     "turns_required": 4,
     "energy_cost": 0,
     "excludes": [
@@ -310,6 +312,7 @@
     "tags": [
       "sea_terraform"
     ],
+    "domain": "sea",
     "turns_required": 4,
     "energy_cost": 0,
     "excludes": [
@@ -412,6 +415,7 @@
     "tags": [
       "land_terraform"
     ],
+    "domain": "land",
     "turns_required": 8,
     "energy_cost": 0,
     "effects": [
@@ -432,6 +436,7 @@
     "tags": [
       "land_terraform"
     ],
+    "domain": "land",
     "turns_required": 4,
     "energy_cost": 0,
     "excludes": [
@@ -489,6 +494,7 @@
   {
     "id": "Base",
     "name": "Base",
+    "domain": "land",
     "effects": [
       {
         "type": "StatModifier",
@@ -662,6 +668,7 @@
     "tags": [
       "land_terraform"
     ],
+    "domain": "land",
     "turns_required": 12,
     "energy_cost": 0,
     "excludes": [
@@ -717,6 +724,7 @@
     "tags": [
       "land_terraform"
     ],
+    "domain": "land",
     "turns_required": 12,
     "energy_cost": 0,
     "effects": [
@@ -738,6 +746,7 @@
     "tags": [
       "land_terraform"
     ],
+    "domain": "land",
     "turns_required": 24,
     "energy_cost": 0,
     "terminates_river": true,

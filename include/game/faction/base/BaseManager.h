@@ -72,6 +72,8 @@ struct BaseSnapshot_t
     int nutrientStockpile = 0; // growth bank
     // Mood state (riot / golden age). Previously not persisted — riots reset on save/load.
     MoodState_t mood;
+    // Set when a sea colony pod founds this base on water. Survives transfer.
+    bool bMayOccupyWater = false;
 };
 
 // Outcome published after BaseManager mutates inventory / spawns a unit for a completed
@@ -123,7 +125,8 @@ public:
         PopCompositionCalculator& rCompositionCalculator,
         const SecretProjectAvailabilityCalculator* pSecretProjectCalculator,
         TileEffectsContext& rTileEffects,
-        std::optional<int> initialPopulation = std::nullopt);
+        std::optional<int> initialPopulation = std::nullopt,
+        bool bMayOccupyWater = false);
     ~BaseManager();
 
     // Capture identity, size, buildings, production, and stockpiles for transfer.
@@ -189,6 +192,10 @@ public:
     // Building subsystem.
     BuildingManager& GetBuildingManager();
     const BuildingManager& GetBuildingManager() const;
+
+    // True when this base may sit on water: a sea colony pod founded it there, or it has
+    // Pressure_Dome. Checked when the tile becomes water.
+    bool MayOccupyWater() const;
 
     // This base's building effects, with ThisBase-scoped ones stamped with this base's identity.
     std::vector<ActiveEffect_t> CollectBuildingEffects() const;
@@ -392,6 +399,8 @@ private:
     // Set by MarkRazed_. Suppresses the destructor's OnDestroyed / tile release, which the
     // raze already performed.
     bool m_bRazed = false;
+    // Sea colony pod founded this base on water. Pressure Dome is checked live, not stored here.
+    bool m_bMayOccupyWater = false;
 };
 
 } // namespace ac

@@ -10,6 +10,7 @@
 namespace ac
 {
 
+class IUnitOrderWorld;
 class Tile;
 class WorldMap;
 class TileEffectsContext;
@@ -31,10 +32,12 @@ int TerraformEnergyCost(const Unit& rUnit, const ImprovementConfig_t& rConfig,
                         const GameState& rGameState, const ElevationRulesConfig_t& rRules);
 
 // Apply a completed terraform: place improvement or mutate tile. Returns false on failure.
-// Raise and lower roll one level from rRules and relax adjacent slopes.
+// Raise and lower roll one level from rRules and relax adjacent slopes. pWorld is forwarded
+// to ApplyElevationDelta so a surface flip reconciles occupancy there.
 bool ApplyTerraformResult(Tile& rTile, const ImprovementConfig_t& rConfig,
                           TileEffectsContext& rTileEffects, WorldMap& rWorldMap,
                           const Unit& rFormer, std::mt19937& rRng,
-                          const ElevationRulesConfig_t& rRules);
+                          const ElevationRulesConfig_t& rRules,
+                          IUnitOrderWorld* pWorld = nullptr);
 
 } // namespace ac

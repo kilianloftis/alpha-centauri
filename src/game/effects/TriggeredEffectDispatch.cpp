@@ -328,7 +328,8 @@ bool Earthquake_(TriggeredEffectContext_t& rCtx, const EarthquakeEffect_t& rConf
     // The tile already carries the map rules WorldMap bound to it, so the quake needs no
     // GameDataContext of its own.
     if (!ApplyEarthquake(*rCtx.pTile, rCtx.rGameState.GetWorldMap(), levels, rCtx.Rng(),
-                         rCtx.pTile->MapRules()))
+                         rCtx.pTile->MapRules(), &rCtx.rGameState.GetTileEffects(),
+                         &rCtx.rGameState))
     {
         return false;
     }

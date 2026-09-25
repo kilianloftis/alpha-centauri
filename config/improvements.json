@@ -175,6 +175,7 @@
     "id": "Farm",
     "name": "Farm",
     "tags": ["land_terraform"],
+    "domain": "land",
     "turns_required": 4,
     "energy_cost": 0,
     "excludes": ["Rocky", "Forest", "ThermalBorehole"],
@@ -190,6 +191,7 @@
     "id": "Forest",
     "name": "Forest",
     "tags": ["land_terraform"],
+    "domain": "land",
     "turns_required": 4,
     "energy_cost": 0,
     "sprite_path": "assets/sprites/landforms/forest.png",
@@ -217,6 +219,7 @@
     "id": "Mine",
     "name": "Mine",
     "tags": ["land_terraform"],
+    "domain": "land",
     "turns_required": 8,
     "energy_cost": 0,
     "excludes": ["Forest", "ThermalBorehole", "SolarCollector"],
@@ -249,6 +252,7 @@
     "id": "SolarCollector",
     "name": "Solar Collector",
     "tags": ["land_terraform"],
+    "domain": "land",
     "turns_required": 4,
     "energy_cost": 0,
     "excludes": ["Mine", "Forest", "ThermalBorehole", "Mirror"],
@@ -269,6 +273,7 @@
     "id": "SoilEnricher",
     "name": "Soil Enricher",
     "tags": ["land_terraform"],
+    "domain": "land",
     "turns_required": 8,
     "energy_cost": 0,
     "required_tech": "advanced_ecological_engineering",
@@ -364,6 +369,7 @@
     "id": "Mirror",
     "name": "Echelon Mirror",
     "tags": ["land_terraform"],
+    "domain": "land",
     "turns_required": 12,
     "energy_cost": 0,
     "required_tech": "ecological_engineering",
@@ -401,6 +407,7 @@
     "id": "Condenser",
     "name": "Condenser",
     "tags": ["land_terraform"],
+    "domain": "land",
     "turns_required": 12,
     "energy_cost": 0,
     "required_tech": "ecological_engineering",
@@ -423,6 +430,7 @@
     "id": "ThermalBorehole",
     "name": "Thermal Borehole",
     "tags": ["land_terraform"],
+    "domain": "land",
     "turns_required": 24,
     "energy_cost": 0,
     "required_tech": "ecological_engineering",
@@ -448,6 +456,7 @@
     "id": "KelpFarm",
     "name": "Kelp Farm",
     "tags": ["sea_terraform"],
+    "domain": "sea",
     "turns_required": 4,
     "energy_cost": 0,
     "excludes": ["Ocean", "MiningPlatform", "TidalHarness", "ThermalBorehole"],
@@ -463,6 +472,7 @@
     "id": "MiningPlatform",
     "name": "Mining Platform",
     "tags": ["sea_terraform"],
+    "domain": "sea",
     "turns_required": 8,
     "energy_cost": 0,
     "excludes": ["Ocean", "KelpFarm", "TidalHarness", "ThermalBorehole"],
@@ -483,6 +493,7 @@
     "id": "TidalHarness",
     "name": "Tidal Harness",
     "tags": ["sea_terraform"],
+    "domain": "sea",
     "turns_required": 4,
     "energy_cost": 0,
     "excludes": ["Ocean", "KelpFarm", "MiningPlatform", "ThermalBorehole"],
@@ -549,6 +560,7 @@
   {
     "id": "Base",
     "name": "Base",
+    "domain": "land",
     "effects": [
       {
         "type": "StatModifier",
@@ -597,6 +609,7 @@
     "name": "Monsoon Jungle",
     "description": "Anomalous earthlike jungle; rich soil yields extra nutrients",
     "tags": ["landmark"],
+    "domain": "land",
     "excludes": ["@landmark"],
     "effects": [
       {
@@ -611,6 +624,7 @@
     "name": "Garland Crater",
     "description": "Impact crater rich in industrial metals",
     "tags": ["landmark"],
+    "domain": "land",
     "excludes": ["@landmark", "@resource_bonus"],
     "effects": [
       {
@@ -625,6 +639,7 @@
     "name": "Uranium Flats",
     "description": "Savanna rich in heavy elements",
     "tags": ["landmark"],
+    "domain": "land",
     "excludes": ["@landmark", "@resource_bonus"],
     "effects": [
       {
@@ -639,6 +654,7 @@
     "name": "Pholus Ridge",
     "description": "Tectonic ridge unleashing geothermal energy",
     "tags": ["landmark"],
+    "domain": "land",
     "excludes": ["@landmark", "@resource_bonus"],
     "effects": [
       {
@@ -653,6 +669,7 @@
     "name": "Mount Planet",
     "description": "Active shield volcano; slopes yield minerals and energy",
     "tags": ["landmark"],
+    "domain": "land",
     "excludes": ["@landmark", "@resource_bonus"],
     "effects": [
       {
@@ -672,6 +689,7 @@
     "name": "Freshwater Sea",
     "description": "Inland sea rich in nutrients",
     "tags": ["landmark"],
+    "domain": "sea",
     "excludes": ["@landmark", "@resource_bonus", "Monolith"],
     "effects": [
       {
@@ -686,6 +704,7 @@
     "name": "Geothermal Shallows",
     "description": "Coastal shelf of underwater geysers",
     "tags": ["landmark"],
+    "domain": "sea",
     "excludes": ["@landmark", "@resource_bonus", "Monolith"],
     "effects": [
       {
@@ -700,6 +719,7 @@
     "name": "Fossil Field Ridge",
     "description": "Undersea coral formation rich in minerals",
     "tags": ["landmark"],
+    "domain": "sea",
     "excludes": ["@landmark", "@resource_bonus", "Monolith"],
     "effects": [
       {
@@ -714,6 +734,7 @@
     "name": "Sunny Mesa",
     "description": "Highland excellent for harvesting energy",
     "tags": ["landmark"],
+    "domain": "land",
     "excludes": ["@landmark", "@resource_bonus", "Monolith"],
     "effects": [
       {
@@ -728,6 +749,7 @@
     "name": "Nessus Canyon",
     "description": "Vast canyon with millennia of mineral deposits",
     "tags": ["landmark"],
+    "domain": "land",
     "excludes": ["@landmark", "@resource_bonus", "Monolith"],
     "effects": [
       {
@@ -742,6 +764,7 @@
     "name": "Great Dunes",
     "description": "Vast inhospitable desert; no resource bonus",
     "tags": ["landmark"],
+    "domain": "land",
     "excludes": ["@landmark", "@resource_bonus", "Monolith"],
     "effects": []
   },
@@ -750,6 +773,7 @@
     "name": "Manifold Nexus",
     "description": "Progenitor control nexus; +1 Planet when inside faction territory",
     "tags": ["landmark"],
+    "domain": "land",
     "owned_by_territory": true,
     "excludes": ["@landmark", "@resource_bonus", "Monolith"],
     "effects": [
@@ -765,6 +789,7 @@
     "name": "U.N.S. Unity Wreckage",
     "description": "Shattered hull of the Unity",
     "tags": ["landmark"],
+    "domain": "land",
     "excludes": ["@landmark", "@resource_bonus", "Monolith"],
     "effects": []
   },

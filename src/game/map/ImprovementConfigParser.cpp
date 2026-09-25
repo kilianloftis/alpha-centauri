@@ -10,6 +10,7 @@
 #include "game/effects/EffectEnums.h"
 
 #include <algorithm>
+#include <magic_enum.hpp>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -131,6 +132,15 @@ bool AnyExcludesCandidate_(const std::vector<const ImprovementConfig_t*>& rFeatu
 bool CanBuildImprovement(const Tile& rTile, const ImprovementConfig_t& rCandidate,
                          std::string_view clearedFeatureId)
 {
+    if (rCandidate.domain == ImprovementDomain_t::Land && !rTile.IsLand())
+    {
+        return false;
+    }
+    if (rCandidate.domain == ImprovementDomain_t::Sea && !rTile.IsWater())
+    {
+        return false;
+    }
+
     for (const std::string& excludedId : rCandidate.excludes)
     {
         if (excludedId != clearedFeatureId && rTile.HasFeature(excludedId))
@@ -270,6 +280,22 @@ ImprovementConfig_t ImprovementConfigParser::ParseImprovementConfig(const nlohma
     config.frequency = improvementJson.value("frequency", 0);
     config.spritePath = improvementJson.value("sprite_path", "");
     config.tags = ConfigFields::ParseStringArray(improvementJson, "tags");
+    if (improvementJson.contains("domain") && !improvementJson.at("domain").is_null())
+    {
+        if (!improvementJson.at("domain").is_string())
+        {
+            throw std::runtime_error("Improvement '" + config.id + "': 'domain' must be a string");
+        }
+        const std::string domain = improvementJson.at("domain").get<std::string>();
+        const auto parsed =
+            magic_enum::enum_cast<ImprovementDomain_t>(domain, magic_enum::case_insensitive);
+        if (!parsed)
+        {
+            throw std::runtime_error("Improvement '" + config.id + "': unknown domain '" + domain
+                                     + "'");
+        }
+        config.domain = *parsed;
+    }
     config.excludes = ConfigFields::ParseStringArray(improvementJson, "excludes");
     config.suppressYieldSources =
         ConfigFields::ParseStringArray(improvementJson, "suppress_yield_sources");

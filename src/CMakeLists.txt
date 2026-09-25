@@ -159,6 +159,7 @@ add_library(ac-core STATIC
     game/map/ImprovementConfigParser.cpp
     game/map/ElevationRulesConfigParser.cpp
     game/map/ElevationChange.cpp
+    game/map/SurfaceOccupancy.cpp
     game/map/TerrainFeatureValidation.cpp
     game/map/TerraformSpread.cpp
     game/map/WorldGenPresetConfigParser.cpp

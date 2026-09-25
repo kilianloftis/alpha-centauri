@@ -1240,5 +1240,13 @@
       }
     ],
     "category": "conquer"
+  },
+  {
+    "id": "Pressure_Dome",
+    "name": "Pressure Dome",
+    "category": "build",
+    "mineral_cost": 0,
+    "upkeep": 0,
+    "effects": []
   }
 ]

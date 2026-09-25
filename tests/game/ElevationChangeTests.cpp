@@ -521,6 +521,24 @@ TEST_CASE("Detonating a warhead raises its own tile and spends the carrier",
     CHECK(UnitCount_(*game.pFaction) == 0);
 }
 
+TEST_CASE("An earthquake that raises a sea tile onto land removes sea-domain improvements",
+          "[unit][elevation][surface]")
+{
+    DetonateGame_ game;
+    Tile& tile = At_(game.pState->GetWorldMap(), 4, 4);
+    tile.SetElevation(-100);
+    REQUIRE(tile.IsWater());
+    game.pState->GetTileEffects().AddImprovementWithEffects(tile, "KelpFarm");
+    game.pState->GetTileEffects().AddImprovementWithEffects(tile, "Road");
+
+    Unit& warhead = game.MakeWarhead(4, 4, /*reactorLevels=*/1);
+    REQUIRE(ApplyDetonation(*game.pState, warhead));
+
+    CHECK(tile.IsLand());
+    CHECK_FALSE(tile.HasImprovement("KelpFarm"));
+    CHECK(tile.HasImprovement("Road"));
+}
+
 TEST_CASE("A design with no detonation list cannot detonate", "[unit][elevation][detonate]")
 {
     DetonateGame_ game;

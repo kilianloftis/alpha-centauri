@@ -411,7 +411,8 @@ BaseManager* Faction::CreateBaseFromSnapshot(
         *rDataContext.popCompositionCalculator,
         &rSecretProjectAvailability,
         rTileEffects,
-        rSnapshot.populationSize);
+        rSnapshot.populationSize,
+        rSnapshot.bMayOccupyWater);
 
     for (const std::string& buildingId : rSnapshot.buildingIds)
     {
@@ -852,7 +853,8 @@ BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile*
                                   const GameDataContext& rDataContext,
                                   TileEffectsContext& rTileEffects,
                                   const SecretProjectAvailabilityCalculator& rSecretProjectAvailability,
-                                  std::optional<int> initialPopulation)
+                                  std::optional<int> initialPopulation,
+                                  bool bMayOccupyWater)
 {
     if (!pTile)
     {
@@ -872,7 +874,8 @@ BaseManager* Faction::CreateBase(BaseId_t baseId, const std::string& name, Tile*
         *rDataContext.popCompositionCalculator,
         &rSecretProjectAvailability,
         rTileEffects,
-        initialPopulation);
+        initialPopulation,
+        bMayOccupyWater);
 
     pBase->GetWorkerAssignments().UnassignAll();
     pBase->GetWorkerAssignments().AutoAssignWorkers();

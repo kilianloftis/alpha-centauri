@@ -27,6 +27,14 @@ enum class TerraformResult_t
     Aquifer,
 };
 
+// Which tile surface a placed improvement may occupy. Omitted means either surface.
+// Land and Sea match the enumerator names aside from case; parse with magic_enum.
+enum class ImprovementDomain_t
+{
+    Land,
+    Sea,
+};
+
 // A single tile feature definition: a terrain classification (Flat/Rolling/Rocky,
 // Arid/Moist/Wet), a natural feature (River, Fungus), or an improvement (Farm, Mine, Bunker,
 // Base, and what were formerly "bonus"/"landmark" specials - all just improvements now).
@@ -45,6 +53,9 @@ struct ImprovementConfig_t
     // Optional classification labels (e.g. "landmark", "landform"). Stored for later use and
     // available as "@tag" references in excludes / suppress_yield_sources (expanded at parse).
     std::vector<std::string> tags;
+    // Occupancy after the feature is on the tile. A surface flip removes an improvement whose
+    // domain is not the new surface. Empty means the improvement survives either surface.
+    std::optional<ImprovementDomain_t> domain;
     std::vector<std::string> excludes; // feature ids that can't coexist with this one on a tile
     // Aura reach is per-effect (EffectConfig_t::radius); MaxEffectReach is derived from those.
     // Resolvers honour radius via TileEffectsContext::CollectAreaEffects.
