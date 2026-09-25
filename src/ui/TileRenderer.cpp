@@ -158,19 +158,20 @@ Color_t TileRenderer::FillColor(const Tile& rTile, bool bFogged)
     }
     else if (rTile.IsWater())
     {
-        // Water: darker at depth, lighter near sea level (-1) — same continuous elevation
-        // remap as land, using Planet's elevation clamp.
+        const ElevationRulesConfig_t& rRules = rTile.MapRules();
+        // Water: darker at the floor, lighter one meter below ocean level.
         const float t = Remap01_(static_cast<float>(elevation),
-                                 static_cast<float>(k_MinElevation),
-                                 -1.0f);
+                                 static_cast<float>(rRules.minElevationMeters),
+                                 static_cast<float>(rRules.oceanLevelMeters - 1));
         fill = LerpColor_(s.waterLowColor, s.waterHighColor, t);
     }
     else
     {
-        // Land: darker near sea level (0), lighter at peaks.
+        const ElevationRulesConfig_t& rRules = rTile.MapRules();
+        // Land: darker at ocean level, lighter at the map's maximum elevation.
         const float t = Remap01_(static_cast<float>(elevation),
-                                 0.0f,
-                                 static_cast<float>(k_MaxElevation));
+                                 static_cast<float>(rRules.oceanLevelMeters),
+                                 static_cast<float>(rRules.maxElevationMeters));
         fill = LerpColor_(s.landLowColor, s.landHighColor, t);
     }
 

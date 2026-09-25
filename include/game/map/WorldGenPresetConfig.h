@@ -34,7 +34,8 @@ struct WorldGenPresetConfig_t
     float centerBias = 0.0f;
     float edgeFalloff = 0.0f;
 
-    // Elevation remap of final noise to meters
+    // Elevation remap of final noise to meters. Must lie inside map_rules min/max,
+    // with min below ocean level and max at or above it.
     int minElevation = -4000;
     int maxElevation = 4000;
 };

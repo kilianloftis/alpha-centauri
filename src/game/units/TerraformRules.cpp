@@ -7,6 +7,7 @@
 #include "game/faction/EconomyManager.h"
 #include "game/faction/ResearchManager.h"
 #include "game/faction/base/BaseTypes.h"
+#include "game/map/ElevationChange.h"
 #include "game/map/ImprovementIds.h"
 #include "game/map/MapUtils.h"
 #include "game/map/RiverGeneration.h"
@@ -19,15 +20,10 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <stdexcept>
 
 namespace ac
 {
-
-// Metres a Former raises or lowers land in one action, and the band width the energy quote
-// scales by. A terraform rule, so it lives with the terraform rules — distinct from
-// tile_yield_rules' elevation_energy_step_meters, which is the yield rule. They ship the same
-// number today; a mod may want to move either alone.
-constexpr int k_ElevationStepMeters = 1000;
 
 namespace
 {
@@ -81,7 +77,8 @@ bool DomainAllows_(const Unit& rUnit, const ImprovementConfig_t& rConfig, const 
     return domain == UnitDomain_t::Land;
 }
 
-bool CanApplyMutation_(const Tile& rTile, const ImprovementConfig_t& rConfig, UnitDomain_t domain)
+bool CanApplyMutation_(const Tile& rTile, const ImprovementConfig_t& rConfig, UnitDomain_t domain,
+                       const ElevationRulesConfig_t& rRules)
 {
     switch (rConfig.terraformResult)
     {
@@ -99,26 +96,31 @@ bool CanApplyMutation_(const Tile& rTile, const ImprovementConfig_t& rConfig, Un
         case TerraformResult_t::RaiseLand:
             if (domain == UnitDomain_t::Sea)
             {
-                return rTile.GetElevation() <= -k_ElevationStepMeters;
+                return rTile.GetElevation() <= -rRules.referenceLevelMeters;
             }
-            return rTile.GetElevation() < 3500;
+            return rTile.GetElevation() < rRules.maxElevationMeters;
         case TerraformResult_t::LowerLand:
             if (domain == UnitDomain_t::Land)
             {
-                return rTile.GetElevation() >= k_ElevationStepMeters;
+                return rTile.GetElevation() >= rRules.referenceLevelMeters;
             }
             // TODO: SMAC's floor for sea-former lowering is unknown; Planet's own floor is the
             // only limit we can state.
-            return rTile.GetElevation() - k_ElevationStepMeters >= k_MinElevation;
+            return rTile.GetElevation() - rRules.referenceLevelMeters >= rRules.minElevationMeters;
     }
     return false;
 }
 
 } // namespace
 
-int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId, const WorldMap& rWorldMap)
+int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId, const WorldMap& rWorldMap,
+                              const ElevationRulesConfig_t& rRules)
 {
-    const int elevBand = std::abs(rTile.GetElevation()) / k_ElevationStepMeters + 1;
+    if (rRules.referenceLevelMeters <= 0)
+    {
+        throw std::logic_error("QuoteRaiseLowerEnergyCost: reference_level_meters must be > 0");
+    }
+    const int elevBand = std::abs(rTile.GetElevation()) / rRules.referenceLevelMeters + 1;
     int nearest = std::numeric_limits<int>::max();
     const int mapWidth = rWorldMap.GetWidth();
 
@@ -141,19 +143,19 @@ int QuoteRaiseLowerEnergyCost(const Tile& rTile, FactionId_t factionId, const Wo
 }
 
 int TerraformEnergyCost(const Unit& rUnit, const ImprovementConfig_t& rConfig,
-                        const GameState& rGameState)
+                        const GameState& rGameState, const ElevationRulesConfig_t& rRules)
 {
     if (rConfig.terraformResult == TerraformResult_t::RaiseLand
         || rConfig.terraformResult == TerraformResult_t::LowerLand)
     {
         return QuoteRaiseLowerEnergyCost(rUnit.GetTile(), rUnit.GetFaction().GetFactionId(),
-                                         rGameState.GetWorldMap());
+                                         rGameState.GetWorldMap(), rRules);
     }
     return rConfig.energyCost;
 }
 
 bool CanStartTerraform(const Unit& rUnit, const ImprovementConfig_t& rConfig,
-                       const GameState& rGameState)
+                       const GameState& rGameState, const ElevationRulesConfig_t& rRules)
 {
     if (!rUnit.GetFlag(RuleFlagId_t::Terraform))
     {
@@ -173,18 +175,19 @@ bool CanStartTerraform(const Unit& rUnit, const ImprovementConfig_t& rConfig,
     {
         return false;
     }
-    if (!CanApplyMutation_(rTile, rConfig, rUnit.GetDomain()))
+    if (!CanApplyMutation_(rTile, rConfig, rUnit.GetDomain(), rRules))
     {
         return false;
     }
 
-    const int cost = TerraformEnergyCost(rUnit, rConfig, rGameState);
+    const int cost = TerraformEnergyCost(rUnit, rConfig, rGameState, rRules);
     return rUnit.GetFaction().GetEconomy().CanAfford(cost);
 }
 
 bool ApplyTerraformResult(Tile& rTile, const ImprovementConfig_t& rConfig,
                           TileEffectsContext& rTileEffects, WorldMap& rWorldMap,
-                          const Unit& rFormer)
+                          const Unit& rFormer, std::mt19937& rRng,
+                          const ElevationRulesConfig_t& rRules)
 {
     switch (rConfig.terraformResult)
     {
@@ -236,39 +239,22 @@ bool ApplyTerraformResult(Tile& rTile, const ImprovementConfig_t& rConfig,
 
         case TerraformResult_t::RaiseLand:
         {
-            const int newElev = std::min(3500, rTile.GetElevation() + k_ElevationStepMeters);
-            rTile.SetElevation(newElev);
-            ForEachTileInChebyshevRadius(rTile, rWorldMap, 1, false,
-                [&](Tile* pNeighbor, int /*distance*/)
-                {
-                    if (!pNeighbor)
-                    {
-                        return;
-                    }
-                    if (pNeighbor->GetElevation() < newElev)
-                    {
-                        pNeighbor->SetElevation(
-                            std::min(newElev, pNeighbor->GetElevation() + k_ElevationStepMeters));
-                    }
-                });
-            RecomputeRivers(rWorldMap);
-            (void)rFormer;
-            return true;
+            const int roll = RollLevelMeters(rRng, rRules);
+            return ApplyElevationDelta(rTile, rWorldMap, roll, rRules, rRules.minElevationMeters,
+                                       rRules.maxElevationMeters);
         }
 
         case TerraformResult_t::LowerLand:
         {
-            if (rFormer.GetDomain() == UnitDomain_t::Land && rTile.GetElevation() < k_ElevationStepMeters)
-            {
-                return false;
-            }
-            if (rTile.GetElevation() - k_ElevationStepMeters < k_MinElevation)
-            {
-                return false;
-            }
-            rTile.SetElevation(rTile.GetElevation() - k_ElevationStepMeters);
-            RecomputeRivers(rWorldMap);
-            return true;
+            // A roll deeper than the floor lowers to the floor rather than failing. Refusing
+            // here would keep the energy CanStartTerraform already charged and the turns the
+            // order already spent, and whether it happens is a die roll the player never saw.
+            const int roll = RollLevelMeters(rRng, rRules);
+            const int floor = rFormer.GetDomain() == UnitDomain_t::Land
+                                  ? rRules.oceanLevelMeters
+                                  : rRules.minElevationMeters;
+            return ApplyElevationDelta(rTile, rWorldMap, -roll, rRules, floor,
+                                       rRules.maxElevationMeters);
         }
     }
     return false;

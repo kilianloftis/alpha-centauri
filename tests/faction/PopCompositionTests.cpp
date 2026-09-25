@@ -849,7 +849,7 @@ TEST_CASE("Completing a drone-reducing building reapplies composition immediatel
 {
     actest::FactionFixture fixtures;
     ac::GameSettings settings;
-    auto pMap = std::make_unique<ac::WorldMap>(9, 9);
+    auto pMap = std::make_unique<ac::WorldMap>(9, 9, actest::TestMapRules());
     for (auto& pTile : pMap->GetTiles())
     {
         pTile->SetElevation(100);

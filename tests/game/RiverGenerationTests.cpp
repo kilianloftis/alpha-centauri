@@ -29,7 +29,7 @@ void SetLandElev_(Tile& rTile, int elev)
 
 TEST_CASE("GetRiverConnections reports orthogonal river neighbors", "[worldgen][rivers]")
 {
-    WorldMap world(3, 3);
+    WorldMap world(3, 3, actest::TestMapRules());
     for (int y = 0; y < 3; ++y)
     {
         for (int x = 0; x < 3; ++x)
@@ -86,7 +86,7 @@ TEST_CASE("WorldGenDecorationConfigParser throws when aquifers object is missing
 TEST_CASE("TraceRiverFrom follows orthogonal downhill and keeps terminus HasRiver",
           "[worldgen][rivers]")
 {
-    WorldMap world(5, 5);
+    WorldMap world(5, 5, actest::TestMapRules());
     // Path: (2,0) -> (2,1) -> (2,2) sink
     SetLandElev_(*world.GetTile(2, 0), 3000);
     SetLandElev_(*world.GetTile(2, 1), 2000);
@@ -116,7 +116,7 @@ TEST_CASE("TraceRiverFrom follows orthogonal downhill and keeps terminus HasRive
 
 TEST_CASE("TraceRiverFrom does not step diagonally from the aquifer", "[worldgen][rivers]")
 {
-    WorldMap world(3, 3);
+    WorldMap world(3, 3, actest::TestMapRules());
     // Aquifer is a local orthogonal minimum; diagonal (1,1) is much lower but must not be used.
     SetLandElev_(*world.GetTile(0, 0), 2000);
     SetLandElev_(*world.GetTile(1, 0), 2000);
@@ -145,7 +145,7 @@ TEST_CASE("TraceRiverFrom does not step diagonally from the aquifer", "[worldgen
 TEST_CASE("TraceRiverFrom ends on water but marks the water tile", "[worldgen][rivers]")
 {
     // Column path (avoids X-wrap stealing the downhill step).
-    WorldMap world(3, 4);
+    WorldMap world(3, 4, actest::TestMapRules());
     for (int y = 0; y < 4; ++y)
     {
         for (int x = 0; x < 3; ++x)
@@ -169,7 +169,7 @@ TEST_CASE("TraceRiverFrom ends on water but marks the water tile", "[worldgen][r
 
 TEST_CASE("TraceRiverFrom prefers N before E on equal lower elevation", "[worldgen][rivers]")
 {
-    WorldMap world(3, 3);
+    WorldMap world(3, 3, actest::TestMapRules());
     SetLandElev_(*world.GetTile(1, 1), 2000);
     SetLandElev_(*world.GetTile(1, 0), 1000); // N
     SetLandElev_(*world.GetTile(2, 1), 1000); // E — same elev, later in NESW
@@ -198,7 +198,7 @@ TEST_CASE("TraceRiverFrom prefers N before E on equal lower elevation", "[worldg
 
 TEST_CASE("TraceRiverFrom wraps X when flowing west", "[worldgen][rivers]")
 {
-    WorldMap world(4, 2);
+    WorldMap world(4, 2, actest::TestMapRules());
     for (int y = 0; y < 2; ++y)
     {
         for (int x = 0; x < 4; ++x)
@@ -219,7 +219,7 @@ TEST_CASE("TraceRiverFrom wraps X when flowing west", "[worldgen][rivers]")
 
 TEST_CASE("RecomputeRivers clears stale path after elevation change", "[worldgen][rivers]")
 {
-    WorldMap world(3, 4);
+    WorldMap world(3, 4, actest::TestMapRules());
     for (int y = 0; y < 4; ++y)
     {
         for (int x = 0; x < 3; ++x)

@@ -34,7 +34,7 @@ struct DiplomacyGame_
 
     DiplomacyGame_()
     {
-        auto pMap = std::make_unique<WorldMap>(9, 9);
+        auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
         for (auto& pTile : pMap->GetTiles())
         {
             pTile->SetElevation(100);

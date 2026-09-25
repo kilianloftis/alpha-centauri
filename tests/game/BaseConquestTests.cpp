@@ -68,7 +68,7 @@ struct ConquestGame_
     explicit ConquestGame_(FactionSpecies_t playerSpecies = FactionSpecies_t::Human,
                            FactionSpecies_t aiSpecies = FactionSpecies_t::Human)
     {
-        auto pMap = std::make_unique<WorldMap>(9, 9);
+        auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
         FillLand_(*pMap);
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,

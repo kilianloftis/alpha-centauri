@@ -46,6 +46,7 @@
 #include "game/units/BaseConquestConfig.h"
 #include "game/effects/TileEffectsContext.h"
 #include "game/effects/TileYieldRulesConfigParser.h"
+#include "game/map/ElevationRulesConfigParser.h"
 #include "game/effects/InteractionGridsConfigParser.h"
 #include "game/effects/PoliceRulesConfigParser.h"
 #include "game/effects/WorldRulesConfigParser.h"
@@ -153,8 +154,15 @@ struct WorldFixture
     // bases used to be built with a null rating registry and null research manager, so they
     // resolved social ratings to nothing while the real game resolved them, with no
     // diagnostic. A fixture that diverges from Engine is not a fixture.
+    static const ac::ElevationRulesConfig_t& LoadMapRules(ac::GameDataContext& rContext)
+    {
+        rContext.elevationRules = ac::ElevationRulesConfigParser{}.ParseConfig(
+            FixturePath("map_rules.json"));
+        return rContext.elevationRules;
+    }
+
     explicit WorldFixture(int width = 9, int height = 9)
-        : map(width, height)
+        : map(width, height, LoadMapRules(dataContext))
     {
         improvements.Load(FixturePath("improvements.json"));
         unitComponents.Load(FixturePath("unit_components.json"));
@@ -331,7 +339,7 @@ struct FactionFixture : BaseFixture
         {
             rMoved.GetFaction().RebuildVisibility();
         });
-        pBindMap = std::make_unique<ac::WorldMap>(1, 1);
+        pBindMap = std::make_unique<ac::WorldMap>(1, 1, actest::TestMapRules());
         pBindState = std::make_unique<ac::GameState>(
             std::move(pBindMap), improvements, &unitComponents, settings, morale(),
             dataContext.tileYieldRules, dataContext.interactionGrids, k_TestRngSeed,

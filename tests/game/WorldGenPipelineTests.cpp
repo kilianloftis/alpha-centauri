@@ -107,7 +107,8 @@ TEST_CASE("Generated rivers are a fixed point of the terrain they were traced ov
     WorldGenerator generator;
     const std::unique_ptr<WorldMap> pWorld =
         generator.Generate(SmallMapConfig_(), WorldGenPresetConfig_t{}, DecorationWithRivers_(),
-                           TerrainChangingLandmarks_(), world.improvements, 99u);
+                           TerrainChangingLandmarks_(), world.improvements,
+                           world.dataContext.elevationRules, 99u);
 
     // The landmarks have to have actually landed for this to mean anything.
     int boreholeTiles = 0;
@@ -144,15 +145,15 @@ TEST_CASE("The generated map is a function of the resolved seed, not the config 
     WorldGenerator first;
     const std::unique_ptr<WorldMap> pFirst =
         first.Generate(config, WorldGenPresetConfig_t{}, DecorationWithRivers_(), {},
-                       world.improvements, 1u);
+                       world.improvements, world.dataContext.elevationRules, 1u);
     WorldGenerator second;
     const std::unique_ptr<WorldMap> pSecond =
         second.Generate(config, WorldGenPresetConfig_t{}, DecorationWithRivers_(), {},
-                        world.improvements, 2u);
+                        world.improvements, world.dataContext.elevationRules, 2u);
     WorldGenerator repeat;
     const std::unique_ptr<WorldMap> pRepeat =
         repeat.Generate(config, WorldGenPresetConfig_t{}, DecorationWithRivers_(), {},
-                        world.improvements, 1u);
+                        world.improvements, world.dataContext.elevationRules, 1u);
 
     CHECK(Elevations_(*pFirst) != Elevations_(*pSecond));
     CHECK(Elevations_(*pFirst) == Elevations_(*pRepeat));
@@ -169,7 +170,7 @@ TEST_CASE("World generation places against bound tiles", "[worldgen][improvement
     WorldGenerator generator;
     const std::unique_ptr<WorldMap> pWorld =
         generator.Generate(SmallMapConfig_(), WorldGenPresetConfig_t{}, DecorationWithRivers_(),
-                           {}, world.improvements, 7u);
+                           {}, world.improvements, world.dataContext.elevationRules, 7u);
 
     for (const auto& pTile : pWorld->GetTiles())
     {
@@ -207,7 +208,8 @@ TEST_CASE("Sculpt knobs come from landmark config", "[worldgen][landmarks][confi
     }
 
     LandmarkConfigParser parser;
-    const auto landmarks = parser.ParseConfig(path.string(), {"Nutrients"});
+    const auto landmarks =
+        parser.ParseConfig(path.string(), actest::TestMapRules(), {"Nutrients"});
     std::filesystem::remove(path);
 
     REQUIRE(landmarks.size() == 1);
@@ -252,7 +254,7 @@ TEST_CASE("A landmark that can never be placed is rejected at load", "[worldgen]
     }
 
     LandmarkConfigParser parser;
-    CHECK_THROWS_WITH(parser.ParseConfig(path.string(), {"Nutrients"}),
+    CHECK_THROWS_WITH(parser.ParseConfig(path.string(), actest::TestMapRules(), {"Nutrients"}),
                       Catch::Matchers::ContainsSubstring("Blank")
                           && Catch::Matchers::ContainsSubstring("footprint"));
     std::filesystem::remove(path);

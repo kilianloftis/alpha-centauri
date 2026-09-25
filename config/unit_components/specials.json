@@ -259,5 +259,26 @@
         }
       }
     ]
+  },
+  {
+    "id": "Tectonic_Payload",
+    "name": "Tectonic Payload",
+    "unit_name": "Tectonic",
+    "type": "weapon",
+    "required_tech": "",
+    "mineral_cost": 0,
+    "requires_chassis": ["Missile"],
+    "effects": [],
+    "on_detonate_effects": [
+      {
+        "type": "Earthquake",
+        "parameters": {
+          "levels_stat": "earthquake_levels"
+        }
+      },
+      {
+        "type": "DestroyUnit"
+      }
+    ]
   }
 ]

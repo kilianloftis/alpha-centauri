@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/map/ElevationRulesConfig.h"
 #include "game/map/Tile.h"
 #include "game/map/UnitPositionIndex.h"
 #include "game/map/WorkedTileIndex.h"
@@ -18,7 +19,13 @@ class WorldMap
 {
 public:
     // Throws unless both dimensions are positive: a zero-sized map has no valid tile.
-    WorldMap(int width, int height);
+    // Copies rMapRules and binds every tile to that copy. The map is immovable so those
+    // tile pointers stay valid.
+    WorldMap(int width, int height, const ElevationRulesConfig_t& rMapRules);
+    WorldMap(const WorldMap&) = delete;
+    WorldMap& operator=(const WorldMap&) = delete;
+    WorldMap(WorldMap&&) = delete;
+    WorldMap& operator=(WorldMap&&) = delete;
     ~WorldMap();
 
     // Map dimensions
@@ -65,6 +72,7 @@ public:
 private:
     int m_width;
     int m_height;
+    ElevationRulesConfig_t m_mapRules;
     std::vector<std::unique_ptr<Tile>> m_tiles;
     UnitPositionIndex m_unitPositionIndex;
     WorkedTileIndex m_workedTiles;

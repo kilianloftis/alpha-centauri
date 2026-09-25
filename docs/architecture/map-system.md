@@ -17,8 +17,9 @@ graph TB
     subgraph "Tile Characteristics"
         Moisture_t[Moisture_t<br/>enum: Arid/Moist/Wet]
         Rockiness_t[Rockiness_t<br/>enum: Flat/Rolling/Rocky]
-        Elevation[Elevation<br/>int -4000 to 4000 meters]
-        LandSea[IsWater / IsLand<br/>elevation less than 0]
+        Elevation[Elevation<br/>meters from map_rules.json]
+        ElevationChange[ApplyElevationDelta<br/>config/map_rules.json]
+        LandSea[IsWater / IsLand<br/>below ocean_level_meters]
     end
 
     subgraph "Tile Features"
@@ -48,6 +49,7 @@ graph TB
     Tile --> Moisture_t
     Tile --> Rockiness_t
     Tile --> Elevation
+    ElevationChange --> Elevation
     Elevation --> LandSea
     Tile --> River
     Tile --> Fungus
@@ -90,8 +92,8 @@ Territory overlap between factions is broken by crow-flies distance (`dx² + dy�
   - Store terrain characteristics:
     - Moisture_t (enum: Arid, Moist, Wet)
     - Rockiness_t (enum: Flat, Rolling, Rocky)
-    - Elevation (int: -4000 to 4000 meters)
-  - Expose `IsWater()` / `IsLand()` — water is `elevation < 0` (same rule as landform rendering)
+    - Elevation (meters; min, max, ocean level, and shelf from `config/map_rules.json`)
+  - Expose `IsWater()` / `IsLand()` — water is elevation below `ocean_level_meters` (same rule as landform rendering)
   - Track tile features (Rivers, Fungus, Improvements)
   - Expose `GetTerrainFeatures()` (terrain config pointers) and `GetImprovements()` (config pointers) so the effects system can resolve yield/defense from terrain and improvements through one mechanism — see Tile Improvement Effects below
   - Resolve intrinsic feature ids via `TerrainFeature_t`, whose enumerator names *are* the `improvements.json` ids (`magic_enum` maps between them, so there is no second list to keep in sync). `HasFeature` switches over it exhaustively — `-Werror=switch` on `ac-core` means adding an enumerator breaks the build until every site decides about it — and `ValidateTerrainFeatures` throws at load if any enumerator lacks an improvement entry. Features stack: a sea tile carries `Water` *and* one of `Ocean`/`OceanShelf`
@@ -99,7 +101,7 @@ Territory overlap between factions is broken by crow-flies distance (`dx² + dy�
   - `Position`: x,y coordinates on the map grid
   - `Moisture_t`: Enum (Arid, Moist, Wet) - affects nutrient production via its `Moist`/`Wet` entry in `config/improvements.json`
   - `Rockiness_t`: Enum (Flat, Rolling, Rocky) - affects mineral production and (for Rocky) grants a defense bonus, via its entry in `config/improvements.json`
-  - `Elevation`: Integer in meters, range -4000 to 4000. `Tile` stores it and nothing more — the elevation-to-energy rule belongs to the effects layer (`amount_source: ElevationEnergy`, band width from `tile_yield_rules.json`), same as every other terrain-to-yield rule. The Former raise/lower step is a separate constant, private to `TerraformRules.cpp`.
+  - `Elevation`: Integer in meters. The storage range, ocean level, and ocean shelf live in `config/map_rules.json` (`min_elevation_meters`, `max_elevation_meters`, `ocean_level_meters`, `ocean_shelf_meters`). `Tile` stores the meters and reads that bound config — the elevation-to-energy rule belongs to the effects layer (`amount_source: ElevationEnergy`, band width from `tile_yield_rules.json`), same as every other terrain-to-yield rule. Play-time edits (Former raise/lower and earthquakes) go through `ApplyElevationDelta` (`include/game/map/ElevationChange.h`). One level is a uniform draw in `[level_min_meters, level_max_meters]` from the same file. After the origin moves, Chebyshev neighbors of every tile that edit changed are pulled up or down until the gap is at most `max_adjacent_difference_meters`. A Former applies one level, clamped at both ends (raise stops at `max_elevation_meters`; lower stops at `ocean_level_meters` on land or `min_elevation_meters` at sea — a roll deeper than the floor lands on the floor rather than failing an order that has already been paid for). `ApplyEarthquake` sums `levelCount` rolls and clamps to that same range; the `Earthquake` triggered effect is what fires it in play (a Tectonic Payload's `on_detonate_effects`, sized by the reactor's `earthquake_levels`). Former eligibility and the raise/lower energy band use `reference_level_meters`, not the rolled size, and forest/fungus spread onto high ground uses `spread_altitude_limit_meters` — three separate knobs that ship the same number.
   - `River`: Boolean flag for river presence (grants an energy bonus via its improvements.json entry)
   - `Fungus`: Boolean flag for alien fungus presence (grants a defense bonus via its improvements.json entry). Presence-only for now — spreading fungus turn-over-turn is a separate future enhancement, not implemented.
   - `Improvements`: Vector of non-owning `const ImprovementConfig_t*` into `ImprovementRegistry` (like `BuildingManager`'s `BuildingConfig_t*`). Covers player-built improvements (e.g. "Farm", "Mine", "Bunker"), the `"Base"` marker added automatically when a `BaseManager` is founded on the tile, and tile specials that were formerly separate "bonus"/"landmark" slots (e.g. "Monsoon Jungle", "nutrient_rich_soil") — for the map all three are just improvements, with coexistence governed by `ImprovementConfig_t::excludes`

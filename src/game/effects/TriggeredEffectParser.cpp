@@ -201,6 +201,44 @@ void ParseDestroyUnit_(const nlohmann::json& /*parameters*/, TriggeredEffectConf
     rEffect.effect = DestroyUnitEffect_t{};
 }
 
+void ParseEarthquake_(const nlohmann::json& parameters, TriggeredEffectConfig_t& rEffect)
+{
+    const bool bHasLevels = parameters.contains("levels");
+    const bool bHasStat = parameters.contains("levels_stat");
+    if (bHasLevels == bHasStat)
+    {
+        throw std::runtime_error(
+            "Earthquake requires exactly one of 'levels' (a fixed count) or 'levels_stat' "
+            "(resolved off the subject unit)");
+    }
+
+    EarthquakeEffect_t quake;
+    if (bHasLevels)
+    {
+        quake.levels = static_cast<int>(EffectConfigParser::RequireNumber(parameters, "levels"));
+        if (quake.levels < 1)
+        {
+            throw std::runtime_error("Earthquake 'levels' must be >= 1");
+        }
+    }
+    else
+    {
+        if (!parameters.at("levels_stat").is_string())
+        {
+            throw std::runtime_error("Earthquake 'levels_stat' must be a string");
+        }
+        const StatId_t stat = ParseStatId(parameters.at("levels_stat").get<std::string>());
+        if (DomainFor(stat) != ResolveDomain_t::Unit)
+        {
+            throw std::runtime_error(
+                "Earthquake 'levels_stat' must be a unit stat: the magnitude is resolved off "
+                "the unit the trigger stamped");
+        }
+        quake.levelsStat = stat;
+    }
+    rEffect.effect = quake;
+}
+
 const std::unordered_map<std::string, ParseFn_>& TypeParsers_()
 {
     static const std::unordered_map<std::string, ParseFn_> k_Parsers = {
@@ -216,6 +254,7 @@ const std::unordered_map<std::string, ParseFn_>& TypeParsers_()
         {"DestroyFacility", ParseDestroyFacility_},
         {"Rebel", ParseRebel_},
         {"DestroyUnit", ParseDestroyUnit_},
+        {"Earthquake", ParseEarthquake_},
     };
     return k_Parsers;
 }

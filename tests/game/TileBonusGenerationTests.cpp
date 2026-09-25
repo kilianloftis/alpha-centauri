@@ -1,3 +1,4 @@
+#include "TestHelpers.h"
 #include "game/map/ImprovementRegistry.h"
 #include "game/map/Tile.h"
 #include "game/map/TileBonusGeneration.h"
@@ -40,7 +41,7 @@ TEST_CASE("PlaceTileBonuses stamps frequency-weighted improvements on land",
     ImprovementRegistry improvements;
     improvements.Load(std::string(AC_TEST_FIXTURES_DIR) + "/improvements.json");
 
-    WorldMap world(24, 24);
+    WorldMap world(24, 24, actest::TestMapRules());
     FillLand_(world);
 
     TileBonusDecorationConfig_t cfg;

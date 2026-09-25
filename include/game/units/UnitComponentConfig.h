@@ -41,6 +41,9 @@ struct UnitComponentConfig_t
     int mineralCost = 0;
     // Required when type == "chassis"; must be unset for other component types.
     std::optional<UnitDomain_t> domain;
+    // Absent (empty) means any chassis. A present list is the only chassis ids this component
+    // may be designed with.
+    std::vector<std::string> requiresChassis;
     std::vector<EffectConfig_t> effects;
     // One-shot effects fired once, when a unit carrying this component finishes production
     // (the colony pod's population cost). Free spawns never pay these — see BaseManager.
@@ -48,6 +51,10 @@ struct UnitComponentConfig_t
     // Considered when a unit carrying this component is ordered to Hold, and again when a
     // building is completed on its tile. UnitDesign gathers these in slot order.
     std::vector<TriggeredEffectConfig_t> onHoldEffects;
+    // Fired when a unit carrying this component is ordered to detonate in place — the
+    // delivery path for a warhead that cannot declare an attack. A DestroyUnit entry spends
+    // the carrier. UnitDesign gathers these in slot order.
+    std::vector<TriggeredEffectConfig_t> onDetonateEffects;
     // Optional partial override of kinds.unit.default_scrap, folded per design by
     // MergeScrapOverride: later occupied slots win on a given key. `"formula": null` denies
     // scrap.
@@ -67,5 +74,17 @@ struct UnitComponentConfig_t
                != rDiscoveredTechs.end();
     }
 };
+
+// Empty requiresChassis allows every chassis. Otherwise rChassisId must be in the list.
+inline bool ChassisRequirementMet(const UnitComponentConfig_t& rComponent,
+                                  const std::string& rChassisId)
+{
+    if (rComponent.requiresChassis.empty())
+    {
+        return true;
+    }
+    return std::find(rComponent.requiresChassis.begin(), rComponent.requiresChassis.end(),
+                     rChassisId) != rComponent.requiresChassis.end();
+}
 
 } // namespace ac

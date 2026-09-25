@@ -130,6 +130,16 @@ struct DestroyUnitEffect_t
 {
 };
 
+// Raises the context tile through ApplyEarthquake: levelCount rolls from map_rules.json, then
+// the neighbor slope relaxation. Exactly one of the two magnitude sources is authored —
+// `levels` is a literal (a scripted quake), `levelsStat` reads that stat off the subject unit
+// (a tectonic payload takes its size from the reactor's EarthquakeLevels).
+struct EarthquakeEffect_t
+{
+    int levels = 0;
+    std::optional<StatId_t> levelsStat;
+};
+
 using TriggeredEffectVariant_t = std::variant<
     AddBuildingEffect_t,
     GrantTechEffect_t,
@@ -142,7 +152,8 @@ using TriggeredEffectVariant_t = std::variant<
     RestoreHitPointsEffect_t,
     DestroyFacilityEffect_t,
     RebelEffect_t,
-    DestroyUnitEffect_t
+    DestroyUnitEffect_t,
+    EarthquakeEffect_t
 >;
 
 // Which subject remembers that a once-only entry has already fired.

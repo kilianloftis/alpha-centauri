@@ -8,9 +8,10 @@
 namespace ac
 {
 
-WorldMap::WorldMap(int width, int height)
+WorldMap::WorldMap(int width, int height, const ElevationRulesConfig_t& rMapRules)
     : m_width(width)
     , m_height(height)
+    , m_mapRules(rMapRules)
 {
     if (width <= 0 || height <= 0)
     {
@@ -24,6 +25,7 @@ WorldMap::WorldMap(int width, int height)
         for (int x = 0; x < width; ++x)
         {
             auto pTile = std::make_unique<Tile>(x, y);
+            pTile->BindMapRules(m_mapRules);
             pTile->BindAppearanceRevision(m_appearanceRevision);
             m_tiles.push_back(std::move(pTile));
         }

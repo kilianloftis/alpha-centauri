@@ -230,6 +230,7 @@ void Engine::StartNewGame_()
         worldGen.Generate(rWorldConfig, rPreset, *m_gameDataContext->worldGenDecorationConfig,
                           m_gameDataContext->worldGenLandmarks,
                           *m_gameDataContext->improvementRegistry,
+                          m_gameDataContext->elevationRules,
                           m_sessionSeed),
         *m_gameDataContext->improvementRegistry,
         m_gameDataContext->unitComponentRegistry.get(),

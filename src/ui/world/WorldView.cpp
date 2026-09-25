@@ -25,6 +25,7 @@
 #include "game/faction/UnitManager.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/effects/TriggeredEffectDispatch.h"
 #include "game/units/FuelRules.h"
 #include "game/units/AirdropRules.h"
 #include "ui/world/AirdropFailMessages.h"
@@ -534,6 +535,15 @@ bool WorldView::HandleKey(const KeyEvent_t& rEvent)
                     *pControllable, m_rGameState, m_rGameDataContext))
             {
                 // DestroyUnit clears selection via OnUnitDestroyed; pick the next unit.
+                SelectNextAvailableUnit_();
+            }
+            return true;
+        }
+        else if (m_pUnitOrderInputController->WasDetonateRequested() && pControllable)
+        {
+            if (ApplyDetonation(m_rGameState, *pControllable))
+            {
+                // A DestroyUnit entry in the list clears selection via OnUnitDestroyed.
                 SelectNextAvailableUnit_();
             }
             return true;

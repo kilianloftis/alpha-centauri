@@ -411,7 +411,7 @@ TEST_CASE("Hurry spends treasury credits into the production stockpile",
     // Completing a hurried item fires on_complete_effects, which need a bound GameState.
     FactionFixture fixtures;
     GameSettings settings;
-    auto pMap = std::make_unique<WorldMap>(9, 9);
+    auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
     for (auto& pTile : pMap->GetTiles())
     {
         pTile->SetElevation(100);

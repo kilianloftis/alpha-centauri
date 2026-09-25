@@ -76,14 +76,13 @@ void UnitOrderExecutor::RevealBlockingUnits_(Unit& rMover, const StepEvaluation_
     }
 }
 
-void UnitOrderExecutor::RequireGameDataForConquest_(const char* pWhat) const
+void UnitOrderExecutor::RequireGameData_(const char* pWhat) const
 {
     if (!m_pGameData)
     {
         throw std::logic_error(
             std::string("UnitOrderExecutor: ") + pWhat + " needs a GameDataContext, but none was "
-            "bound (SetGameDataContext). A world is bound, so this is a wiring error, not a "
-            "movement-only harness.");
+            "bound (SetGameDataContext). This is a wiring error, not a movement-only harness.");
     }
 }
 
@@ -230,7 +229,7 @@ bool UnitOrderExecutor::ApplyArrivalEffects_(Unit& rMover)
     {
         return true;
     }
-    RequireGameDataForConquest_("base entry");
+    RequireGameData_("base entry");
     // A native raider spends itself on the raid, so this can free rMover.
     return !m_pWorld->ResolveBaseEntryConquest(rMover, *m_pGameData, m_rRng).bActorDestroyed;
 }
@@ -387,7 +386,7 @@ std::optional<CombatResult_t> UnitOrderExecutor::TryAttack(Unit& rAttacker,
     // requires a separate enter-tile order after combat.
     if (result.bDefenderDestroyed && !result.bAttackerDestroyed && bDefenderOnBase && m_pWorld)
     {
-        RequireGameDataForConquest_("post-combat base conquest");
+        RequireGameData_("post-combat base conquest");
         // A native raider spends itself on the raid; report that so UI playback does not
         // show a survivor that no longer exists.
         result.bAttackerDestroyed =
@@ -444,12 +443,13 @@ bool UnitOrderExecutor::TryStartTerraform(Unit& rUnit, const std::string& improv
     {
         return false;
     }
-    if (!CanStartTerraform(rUnit, *pConfig, rGameState))
+    RequireGameData_("terraform");
+    if (!CanStartTerraform(rUnit, *pConfig, rGameState, m_pGameData->elevationRules))
     {
         return false;
     }
 
-    const int cost = TerraformEnergyCost(rUnit, *pConfig, rGameState);
+    const int cost = TerraformEnergyCost(rUnit, *pConfig, rGameState, m_pGameData->elevationRules);
     rUnit.GetFaction().GetEconomy().SpendEnergy(cost);
     rUnit.SetOrder(TerraformOrder_t{improvementId, pConfig->turnsRequired});
     rUnit.SpendRemainingMoveFragments();
@@ -632,7 +632,9 @@ OrderProgress_t UnitOrderExecutor::Execute_(Unit& rUnit, TerraformOrder_t& rOrde
         return OrderProgress_t::Complete;
     }
 
-    if (!ApplyTerraformResult(*pTile, *pConfig, m_rTileEffects, m_rWorldMap, rUnit))
+    RequireGameData_("terraform");
+    if (!ApplyTerraformResult(*pTile, *pConfig, m_rTileEffects, m_rWorldMap, rUnit, m_rRng,
+                              m_pGameData->elevationRules))
     {
         std::cerr << "Terraform completed with no effect: '" << rOrder.improvementId
                   << "' could not be applied at (" << pTile->GetX() << ", " << pTile->GetY()

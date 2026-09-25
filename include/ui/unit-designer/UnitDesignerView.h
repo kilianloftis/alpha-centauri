@@ -46,6 +46,8 @@ private:
         const std::string& rSlotDisplayName,
         std::function<void(const UnitComponentConfig_t&)> onSelected
     );
+    // Drops drafted components whose requires_chassis list excludes rChassisId.
+    void ClearIncompatibleComponents_(const std::string& rChassisId);
     void HandleSaveDesign_();
 
     Military& m_rMilitary;

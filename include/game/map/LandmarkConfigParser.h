@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/map/ElevationRulesConfig.h"
 #include "game/map/LandmarkConfig.h"
 #include <string>
 #include <vector>
@@ -11,9 +12,11 @@ class LandmarkConfigParser
 {
 public:
     // Load config/worldGen/landmarks.json (top-level array). Throws on parse errors.
-    // Validates that every improvement_id exists when rKnownImprovementIds is non-empty.
+    // Sculpt elevations must lie inside rMapRules. Validates that every improvement_id
+    // exists when rKnownImprovementIds is non-empty.
     std::vector<LandmarkConfig_t> ParseConfig(
         const std::string& configPath,
+        const ElevationRulesConfig_t& rMapRules,
         const std::vector<std::string>& rKnownImprovementIds = {});
 };
 

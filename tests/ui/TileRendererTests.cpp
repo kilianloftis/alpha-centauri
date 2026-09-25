@@ -1,4 +1,5 @@
 #include "RecordingGraphics.h"
+#include "TestHelpers.h"
 
 #include "game/map/Tile.h"
 #include "graphics/Graphics.h"
@@ -51,6 +52,7 @@ TEST_CASE("TileRenderer paints moisture/rockiness instead of numeric placeholder
     SECTION("moist rocky land gets a grey ring and green center, no text")
     {
         Tile tile(0, 0);
+        tile.BindMapRules(actest::TestMapRules());
         tile.SetElevation(500);
         tile.SetMoisture(Moisture_t::Moist);
         tile.SetRockiness(Rockiness_t::Rocky);
@@ -66,6 +68,7 @@ TEST_CASE("TileRenderer paints moisture/rockiness instead of numeric placeholder
     SECTION("wet rolling land uses the lighter grey and darker green")
     {
         Tile tile(1, 1);
+        tile.BindMapRules(actest::TestMapRules());
         tile.SetElevation(200);
         tile.SetMoisture(Moisture_t::Wet);
         tile.SetRockiness(Rockiness_t::Rolling);
@@ -83,6 +86,7 @@ TEST_CASE("TileRenderer paints moisture/rockiness instead of numeric placeholder
     SECTION("water keeps the elevation fill and skips landform overlays")
     {
         Tile tile(2, 2);
+        tile.BindMapRules(actest::TestMapRules());
         tile.SetElevation(-1500);
         tile.SetMoisture(Moisture_t::Wet);
         tile.SetRockiness(Rockiness_t::Rocky);
@@ -104,9 +108,11 @@ TEST_CASE("TileRenderer paints moisture/rockiness instead of numeric placeholder
     SECTION("deeper water is darker than shallower water on the elevation gradient")
     {
         Tile deep(4, 4);
-        deep.SetElevation(k_MinElevation);
+        deep.BindMapRules(actest::TestMapRules());
+        deep.SetElevation(actest::TestMapRules().minElevationMeters);
         Tile shallow(5, 5);
-        shallow.SetElevation(-1);
+        shallow.BindMapRules(actest::TestMapRules());
+        shallow.SetElevation(actest::TestMapRules().oceanLevelMeters - 1);
 
         const Color_t deepFill = TileRenderer::FillColor(deep, /*bFogged*/ false);
         const Color_t shallowFill = TileRenderer::FillColor(shallow, /*bFogged*/ false);
@@ -120,6 +126,7 @@ TEST_CASE("TileRenderer paints moisture/rockiness instead of numeric placeholder
     SECTION("arid flat land is brown fill only")
     {
         Tile tile(3, 3);
+        tile.BindMapRules(actest::TestMapRules());
         tile.SetElevation(100);
         tile.SetMoisture(Moisture_t::Arid);
         tile.SetRockiness(Rockiness_t::Flat);

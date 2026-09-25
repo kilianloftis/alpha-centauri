@@ -180,7 +180,7 @@ Every other combination loads; combinations whose anchor concept doesn't exist y
   - Base resources: `Nutrients`, `Minerals`, `Energy`. `EnergyCredits` is the spendable
     faction treasury (`EconomyManager`), not tile energy.
   - Base output allocated directly rather than via energy split: `Econ`, `Labs`, `Psych`.
-  - Unit stats: `Attack`, `Defense`, `Movement`, `HitPoints`, `CollateralDamage` (HP the attacker removes from other occupants when it kills a defender; the attacker's stat alone), `CollateralSusceptibility` (PureMultiplier, seed 1; each occupant scales that splash by `lround(splash * susceptibility)`; a tile `MaxClamp` that leaves 0 skips that occupant; `world_rules.json` `MultiplyGeometric` 0 on air), `PlanetPearls` (energy credits paid to the killer of a wild native; the design Adds the base and the intrinsic lifecycle level `MultiplyGeometric`s it), `DisengageChance`, `TurnsOfFuel`, `DamageFromOutOfFuel`, `CargoCapacity`, `DifficultTerrainCost`, `MoveCost` (RawScaled tile-entry ceiling; `MaxClamp` only; amount stored as move fragments), `MineralUpkeep` (home-base mineral support cost; floored at 0), `FreeUnitSupport` (base-level free support slots), `CostMultiplier` (also used for base production cost after Industry rating expansion), `PrototypeSurchargeScale` (PureMultiplier on the prototype mineral *extra* only; Skunkworks uses `MultiplyGeometric` 0 on `ThisBase`), `RetoolPenaltyScale` (PureMultiplier on the retool forfeit; Skunkworks zeros it the same way), `FacilityEnergyUpkeep` (RawScaled on constructed-facility energy maintenance from `BuildingConfig_t::upkeep`; optional `buildingFilter`), `StartingMinerals` (credited to a new base's production stockpile at founding; resolved from the new base's effects plus the founding unit), `ScrapRefund` (RawScaled: player-scrap amount after the kind formula or config override; bonuses stack, then `refund_ceiling_percent` clamps).
+  - Unit stats: `Attack`, `Defense`, `Movement`, `HitPoints`, `EarthquakeLevels` (Additive levels an `Earthquake` triggered effect raises when its `levels_stat` names this stat; reactors Add their tier), `CollateralDamage` (HP the attacker removes from other occupants when it kills a defender; the attacker's stat alone), `CollateralSusceptibility` (PureMultiplier, seed 1; each occupant scales that splash by `lround(splash * susceptibility)`; a tile `MaxClamp` that leaves 0 skips that occupant; `world_rules.json` `MultiplyGeometric` 0 on air), `PlanetPearls` (energy credits paid to the killer of a wild native; the design Adds the base and the intrinsic lifecycle level `MultiplyGeometric`s it), `DisengageChance`, `TurnsOfFuel`, `DamageFromOutOfFuel`, `CargoCapacity`, `DifficultTerrainCost`, `MoveCost` (RawScaled tile-entry ceiling; `MaxClamp` only; amount stored as move fragments), `MineralUpkeep` (home-base mineral support cost; floored at 0), `FreeUnitSupport` (base-level free support slots), `CostMultiplier` (also used for base production cost after Industry rating expansion), `PrototypeSurchargeScale` (PureMultiplier on the prototype mineral *extra* only; Skunkworks uses `MultiplyGeometric` 0 on `ThisBase`), `RetoolPenaltyScale` (PureMultiplier on the retool forfeit; Skunkworks zeros it the same way), `FacilityEnergyUpkeep` (RawScaled on constructed-facility energy maintenance from `BuildingConfig_t::upkeep`; optional `buildingFilter`), `StartingMinerals` (credited to a new base's production stockpile at founding; resolved from the new base's effects plus the founding unit), `ScrapRefund` (RawScaled: player-scrap amount after the kind formula or config override; bonuses stack, then `refund_ceiling_percent` clamps).
   - Difficulty stats (see [difficulty-system.md](difficulty-system.md)): `SizeFreeDrones` (Additive free population before size drones — difficulty is the sole emitter), `TechCostDiff` (Additive ordinal fed to `tech_cost.lua` as `diff`), `Bureaucracy` (PureMultiplier product for the bureaucracy base-limit formula; difficulty and Efficiency SE emit MultiplyGeometric), `EcologicalDamage` (RawScaled: seed is the accrued amount), `ConqueredDroneCap` (Additive offset on the recently-conquered drone cap; difficulty Adds `0.25 × level` with Citizen = 1, `base_conquest.json` Adds −0.5).
   - Research cost: `TechCost` (Additive percent points fed to `tech_cost.lua`). Faction-scoped emitters (e.g. University) become `faction_modifier`. Optional per-tech `ThisTech` emitters on the tech being researched become `tech_modifier`. There is no per-tech base cost field.
   - Population modifier: `GrowthRate` (`AddPercent`, base = 100%) — modifies the faction-wide population growth rate. `LastDefenderPopLoss` and `CapturePopLoss` are two independent Additive stats whose baselines come from `base_conquest.json`'s own `effects` array (an `Add` each, injected into every faction's pool like `production.json`'s). Perimeter Defense and Citizen difficulty `MaxClamp` 0 the last-defender one only; nothing in the shipping config modifies capture loss. `CaptureFacilitiesDestroyedMin` and `CaptureFacilitiesDestroyedMaxPercent` are the same shape. `ConqueredDroneCap` is the recently-conquered drone-cap offset: difficulty Adds `0.25` per level (Citizen = 1) and `base_conquest.json` Adds −0.5, so the drone formula's `floor(base_size/4 + conquered_drone_cap)` is `(BaseSize + Difficulty − 2) / 4`. Peak extra drones and the 10-turn decay live on `pop_composition.json` (`assimilation_drones`, `assimilation_decay_turns`) because they are calculator coefficients, not modifiers. So **every numeric tunable in `base_conquest.json` is a modifiable stat** — the file holds no scalars at all, only its effects list and the escape-pod component ids. Because each baseline is an ordinary contribution rather than a hard-coded seed, a mod can *raise* these values, not merely clamp them; vanilla simply ships no emitter besides the baseline for most of them.
@@ -460,7 +460,7 @@ once. These are two machines, and they are two types.
 - **`TriggeredEffectConfig_t`** (`TriggeredEffect.h`) holds a `TriggeredEffectVariant_t` —
   `AddBuilding`, `GrantTech`, `GrantUnit`, `GrantEnergy`, `GrantXp`, `RestoreHitPoints`,
   `WorldParameter`,
-  `SetInfiltration`, `ModifyPopulation`, `DestroyFacility`, `Rebel`, `DestroyUnit` — plus an optional
+  `SetInfiltration`, `ModifyPopulation`, `DestroyFacility`, `Rebel`, `DestroyUnit`, `Earthquake` — plus an optional
   `oncePer`, an optional `condition` (same `Condition_t` as continuous, evaluated against
   `TriggeredEffectContext_t::subjects`), and a `factionFilter` that **only `SetInfiltration`
   accepts** (every other type acts on the subjects its context supplies, so a filter there
@@ -481,7 +481,7 @@ container declares a continuous `effects` array and, where a trigger exists, a n
 |---|---|---|
 | `buildings/*.json` | `effects` | `on_complete_effects`, `on_unit_produced_effects` |
 | `production.json` | `effects` | `on_unit_produced_effects` |
-| `unit_components/*.json` | `effects` | `on_complete_effects`, `on_hold_effects` |
+| `unit_components/*.json` | `effects` | `on_complete_effects`, `on_hold_effects`, `on_detonate_effects` |
 | `native_units.json` | `effects` | `on_hold_effects` |
 | `probe_actions.json` | `effects` | `on_success_effects` |
 | `council/proposals.json` | `effects` | `on_passed_effects` |
@@ -507,6 +507,21 @@ authors `GrantTech` `selection: Available` and then `DestroyUnit`, both gated by
 `BaseHasBuilding` `Network_Node`, so linking spends the artifact whether or not a tech was
 granted. `DestroyUnit` removes the context unit after that entry's `oncePer` key is recorded;
 an entry with no unit subject does nothing.
+
+`on_detonate_effects` are the delivery path for a warhead that cannot declare an attack. A
+Missile chassis has no way to initiate combat, so the payload is ordered to detonate in place
+(Shift+X, gated on `UnitCanDetonate` — the capability *is* a non-empty list, so a new warhead
+is config alone and needs no rule flag of its own). `ApplyDetonation` stamps the unit, its own
+tile, and the base there if any, then runs the list in order. Tectonic Payload authors
+`Earthquake` with `levels_stat: earthquake_levels` and then `DestroyUnit`, so the quake takes
+its size from whichever reactor the design carries and the missile is spent either way.
+
+`Earthquake` raises the context tile through `ApplyEarthquake`
+(`include/game/map/ElevationChange.h`): `levels` rolls of `[level_min_meters,
+level_max_meters]` from `config/map_rules.json`, then the neighbor slope relaxation. Exactly
+one magnitude source is authored — `levels` is a literal (a scripted quake), `levels_stat`
+names a **unit** stat resolved off the subject the trigger stamped. The rules come from the
+tile's own bound `ElevationRulesConfig_t`, so the effect needs no `GameDataContext`.
 
 `on_discover_effects` fire whenever a tech joins a faction's discovered set (research
 breakthrough, probe steal, diplomatic grant, nested `GrantTech`). Secrets of the Human Brain
@@ -959,9 +974,10 @@ air/orbital, carries `Scramble` with `condition` Domain air and `parameters.rang
 2, and projects a ThisTile `airdrop_interdiction` RuleFlag at radius 2. Cloaking Device and Probe Team override `zoc` to `deny` with both axes omitted —
 where stock would hold the unit that is non-default; where stock already denies, the override
 is a no-op. `Water` is a real
-improvement entry covering any sea tile (`elevation < 0`), and it **stacks** with the depth
+improvement entry covering any sea tile (elevation below `ocean_level_meters` in
+`config/map_rules.json`), and it **stacks** with the depth
 band rather than replacing it: a submerged tile carries `Water` plus exactly one of `Ocean` /
-`OceanShelf` (split at `k_OceanShelfMinElevation`), in that order. Put rules shared by all sea
+`OceanShelf` (split at `ocean_shelf_meters`), in that order. Put rules shared by all sea
 tiles on `Water` — including `suppress_yield_sources` for rockiness, moisture, river, and
 `@resource_bonus` (sea tiles still carry those landform features, but they must not contribute
 yield). Shelf-only rules stay on `OceanShelf` (+1 nutrient); deep `Ocean` adds nothing and is

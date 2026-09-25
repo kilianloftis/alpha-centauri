@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/effects/ActiveEffect.h"
+#include "game/map/ElevationRulesConfigParser.h"
 #include "game/effects/EffectConfig.h"
 #include "game/population/pop-types/GrowthConfigParser.h"
 
@@ -23,6 +24,14 @@ namespace actest
 inline std::string FixturePath(const std::string& rName)
 {
     return std::string(AC_TEST_FIXTURES_DIR) + "/" + rName;
+}
+
+// Shipping map domain from tests/fixtures/map_rules.json. Address is stable for Tile::BindMapRules.
+inline const ac::ElevationRulesConfig_t& TestMapRules()
+{
+    static const ac::ElevationRulesConfig_t rules =
+        ac::ElevationRulesConfigParser{}.ParseConfig(FixturePath("map_rules.json"));
+    return rules;
 }
 
 // Owns EffectConfig_t storage for tests. In production ActiveEffect_t::config points into

@@ -105,10 +105,10 @@ TEST_CASE("WorldMap rejects non-positive dimensions", "[map]")
 {
     // A zero-sized map has no valid tile, GetTile always returns null, and every generation
     // stage no-ops on it - an empty world rather than a diagnostic.
-    CHECK_THROWS_AS(WorldMap(0, 10), std::invalid_argument);
-    CHECK_THROWS_AS(WorldMap(10, 0), std::invalid_argument);
-    CHECK_THROWS_AS(WorldMap(-4, -4), std::invalid_argument);
-    CHECK_NOTHROW(WorldMap(1, 1));
+    CHECK_THROWS_AS(WorldMap(0, 10, actest::TestMapRules()), std::invalid_argument);
+    CHECK_THROWS_AS(WorldMap(10, 0, actest::TestMapRules()), std::invalid_argument);
+    CHECK_THROWS_AS(WorldMap(-4, -4, actest::TestMapRules()), std::invalid_argument);
+    CHECK_NOTHROW(WorldMap(1, 1, actest::TestMapRules()));
 }
 
 TEST_CASE("TerritoryMap::Rebuild refuses to run against a mismatched grid", "[map][territory]")

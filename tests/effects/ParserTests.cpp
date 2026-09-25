@@ -40,6 +40,7 @@ TEST_CASE("ParseStatId: canonical string mappings", "[effects][parser]")
     CHECK(ParseStatId("hit_points") == StatId_t::HitPoints);
     CHECK(ParseStatId("psi_damage") == StatId_t::PsiDamage);
     CHECK(ParseStatId("collateral_damage") == StatId_t::CollateralDamage);
+    CHECK(ParseStatId("earthquake_levels") == StatId_t::EarthquakeLevels);
     CHECK(ParseStatId("collateral_susceptibility") == StatId_t::CollateralSusceptibility);
     CHECK(ParseStatId("planet_pearls") == StatId_t::PlanetPearls);
     CHECK(ParseStatId("disengage_chance") == StatId_t::DisengageChance);
@@ -1204,6 +1205,40 @@ TEST_CASE("ParseTriggeredEffectConfig: DestroyUnit", "[effects][parser][triggere
     const TriggeredEffectConfig_t config = TriggeredEffectParser::ParseTriggeredEffectConfig(
         json::parse(R"({ "type": "DestroyUnit" })"), "on_hold_effects");
     REQUIRE(std::get_if<DestroyUnitEffect_t>(&config.effect) != nullptr);
+}
+
+TEST_CASE("ParseTriggeredEffectConfig: Earthquake", "[effects][parser][triggered]")
+{
+    const TriggeredEffectConfig_t fixed = TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "Earthquake", "parameters": { "levels": 3 } })"),
+        "on_detonate_effects");
+    const auto* pFixed = std::get_if<EarthquakeEffect_t>(&fixed.effect);
+    REQUIRE(pFixed);
+    CHECK(pFixed->levels == 3);
+    CHECK_FALSE(pFixed->levelsStat.has_value());
+
+    const TriggeredEffectConfig_t fromStat = TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "Earthquake",
+                         "parameters": { "levels_stat": "earthquake_levels" } })"),
+        "on_detonate_effects");
+    const auto* pFromStat = std::get_if<EarthquakeEffect_t>(&fromStat.effect);
+    REQUIRE(pFromStat);
+    CHECK(pFromStat->levelsStat == StatId_t::EarthquakeLevels);
+
+    CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "Earthquake",
+                         "parameters": { "levels": 1, "levels_stat": "earthquake_levels" } })"),
+        "on_detonate_effects"), ContainsSubstring("exactly one"));
+    CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "Earthquake", "parameters": {} })"), "on_detonate_effects"),
+        ContainsSubstring("exactly one"));
+    CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "Earthquake", "parameters": { "levels": 0 } })"),
+        "on_detonate_effects"), ContainsSubstring("must be >= 1"));
+    // A base stat cannot be resolved off the unit the trigger stamped.
+    CHECK_THROWS_WITH(TriggeredEffectParser::ParseTriggeredEffectConfig(
+        json::parse(R"({ "type": "Earthquake", "parameters": { "levels_stat": "minerals" } })"),
+        "on_detonate_effects"), ContainsSubstring("must be a unit stat"));
 }
 
 // The two families are separate types, so a mis-filed entry is a parse error that names the

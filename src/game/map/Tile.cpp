@@ -91,13 +91,32 @@ Rockiness_t Tile::GetRockiness() const
     return m_rockiness;
 }
 
+void Tile::BindMapRules(const ElevationRulesConfig_t& rRules)
+{
+    m_pMapRules = &rRules;
+    if (m_pImprovements)
+    {
+        RefreshTerrainFeatures_();
+    }
+}
+
+const ElevationRulesConfig_t& Tile::MapRules() const
+{
+    if (!m_pMapRules)
+    {
+        throw std::logic_error("Tile map rules are not bound");
+    }
+    return *m_pMapRules;
+}
+
 void Tile::SetElevation(int elevation)
 {
-    if (elevation < k_MinElevation || elevation > k_MaxElevation)
+    const ElevationRulesConfig_t& rRules = MapRules();
+    if (elevation < rRules.minElevationMeters || elevation > rRules.maxElevationMeters)
     {
         throw std::out_of_range("Tile elevation " + std::to_string(elevation) + " is outside ["
-                                + std::to_string(k_MinElevation) + ", "
-                                + std::to_string(k_MaxElevation) + "]");
+                                + std::to_string(rRules.minElevationMeters) + ", "
+                                + std::to_string(rRules.maxElevationMeters) + "]");
     }
     if (m_elevation == elevation)
     {
@@ -115,7 +134,7 @@ int Tile::GetElevation() const
 
 bool Tile::IsWater() const
 {
-    return m_elevation < 0;
+    return m_elevation < MapRules().oceanLevelMeters;
 }
 
 bool Tile::IsLand() const
@@ -235,9 +254,9 @@ bool Tile::HasFeature(std::string_view featureId) const
             case TerrainFeature_t::Water:
                 return IsWater();
             case TerrainFeature_t::Ocean:
-                return IsWater() && m_elevation < k_OceanShelfMinElevation;
+                return IsWater() && m_elevation < MapRules().oceanShelfMeters;
             case TerrainFeature_t::OceanShelf:
-                return IsWater() && m_elevation >= k_OceanShelfMinElevation;
+                return IsWater() && m_elevation >= MapRules().oceanShelfMeters;
             case TerrainFeature_t::River:
                 return m_bHasRiver;
             case TerrainFeature_t::Aquifer:
@@ -273,7 +292,7 @@ void Tile::RefreshTerrainFeatures_()
         // General-to-specific: Water carries the rules shared by all sea tiles, then exactly
         // one depth band layers its own on top.
         pushFeature(magic_enum::enum_name(TerrainFeature_t::Water));
-        pushFeature(magic_enum::enum_name(m_elevation >= k_OceanShelfMinElevation
+        pushFeature(magic_enum::enum_name(m_elevation >= MapRules().oceanShelfMeters
                                               ? TerrainFeature_t::OceanShelf
                                               : TerrainFeature_t::Ocean));
     }

@@ -112,7 +112,7 @@ TEST_CASE("AddFaction scans a faction that already owns bases", "[composition][f
     // first and AttachToSession_ ends with a catch-up sweep.
     WorldFixture fixture;
     GameSettings settings;
-    GameState state(std::make_unique<WorldMap>(9, 9), fixture.improvements,
+    GameState state(std::make_unique<WorldMap>(9, 9, actest::TestMapRules()), fixture.improvements,
                     &fixture.unitComponents, settings, *fixture.dataContext.moraleCalculator, fixture.dataContext.tileYieldRules,
                     fixture.dataContext.interactionGrids,
                     k_TestRngSeed);
@@ -146,7 +146,7 @@ TEST_CASE("AddFaction establishes contact in both directions", "[composition][fa
     // it until some unrelated later event.
     WorldFixture fixture;
     GameSettings settings;
-    GameState state(std::make_unique<WorldMap>(9, 9), fixture.improvements,
+    GameState state(std::make_unique<WorldMap>(9, 9, actest::TestMapRules()), fixture.improvements,
                     &fixture.unitComponents, settings, *fixture.dataContext.moraleCalculator, fixture.dataContext.tileYieldRules,
                     fixture.dataContext.interactionGrids,
                     k_TestRngSeed);

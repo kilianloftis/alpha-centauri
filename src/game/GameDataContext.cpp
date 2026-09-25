@@ -26,10 +26,12 @@
 #include "game/research/TechRegistry.h"
 #include "game/social-engineering/SocialPolicyRegistry.h"
 #include "game/social-engineering/SocialRatingRegistry.h"
+#include "game/units/UnitComponentConfigParser.h"
 #include "game/units/UnitComponentRegistry.h"
 #include "game/units/UnitSlotRegistry.h"
 #include "game/units/NativeUnitRegistry.h"
 #include "game/effects/TileYieldRulesConfigParser.h"
+#include "game/map/ElevationRulesConfigParser.h"
 #include "game/effects/InteractionGridsConfigParser.h"
 #include "game/effects/PoliceRulesConfigParser.h"
 #include "game/effects/WorldRulesConfigParser.h"
@@ -118,6 +120,7 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
     // ValidateEffectReferences / ValidateRequiredTechReferences below.
     rData.unitComponentRegistry = std::make_unique<UnitComponentRegistry>();
     rData.unitComponentRegistry->Load(rPaths.unitComponents);
+    ValidateComponentChassisRequirements(*rData.unitComponentRegistry);
 
     rData.unitSlotRegistry = std::make_unique<UnitSlotRegistry>();
     rData.unitSlotRegistry->Load(rPaths.unitSlots);
@@ -146,8 +149,15 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
     rData.factionRegistry = std::make_unique<FactionRegistry>();
     rData.factionRegistry->Load(rPaths.factions);
 
+    ElevationRulesConfigParser elevationRulesParser;
+    rData.elevationRules = elevationRulesParser.ParseConfig(rPaths.elevationRules);
+
     rData.worldGenPresetRegistry = std::make_unique<WorldGenPresetRegistry>();
     rData.worldGenPresetRegistry->Load(rPaths.worldGenPresets);
+    for (const WorldGenPresetConfig_t& rPreset : rData.worldGenPresetRegistry->GetAll())
+    {
+        WorldGenPresetConfigParser::ValidateAgainstMapRules(rPreset, rData.elevationRules);
+    }
 
     WorldGenDecorationConfigParser decorationParser;
     rData.worldGenDecorationConfig = std::make_unique<WorldGenDecorationConfig_t>(
@@ -161,7 +171,8 @@ GameDataContext LoadGameData(const GameDataPaths& rPaths)
         }
         LandmarkConfigParser landmarkParser;
         rData.worldGenLandmarks =
-            landmarkParser.ParseConfig(rPaths.worldGenLandmarks, improvementIds);
+            landmarkParser.ParseConfig(rPaths.worldGenLandmarks, rData.elevationRules,
+                                       improvementIds);
     }
 
     TileYieldRulesConfigParser tileYieldRulesParser;

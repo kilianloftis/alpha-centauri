@@ -1,6 +1,5 @@
 #include "game/map/WorldGenPresetConfigParser.h"
 #include "lib/config/ConfigFields.h"
-#include "game/map/Tile.h"
 #include "lib/config/EnumNames.h"
 #include "lib/config/JsonConfigLoader.h"
 
@@ -43,26 +42,34 @@ WorldGenPresetConfig_t WorldGenPresetConfigParser::ParsePresetConfig_(
         throw std::runtime_error("World gen preset '" + config.id
                                  + "' has invalid octaves (must be >= 1)");
     }
-    if (config.minElevation >= 0)
-    {
-        throw std::runtime_error("World gen preset '" + config.id
-                                 + "' min_elevation must be < 0 (water contract)");
-    }
-    if (config.maxElevation < 0)
-    {
-        throw std::runtime_error("World gen preset '" + config.id
-                                 + "' max_elevation must be >= 0");
-    }
-    if (config.minElevation < k_MinElevation || config.maxElevation > k_MaxElevation)
-    {
-        throw std::runtime_error("World gen preset '" + config.id + "' elevation range ["
-                                 + std::to_string(config.minElevation) + ", "
-                                 + std::to_string(config.maxElevation) + "] is outside Planet's ["
-                                 + std::to_string(k_MinElevation) + ", "
-                                 + std::to_string(k_MaxElevation) + "]");
-    }
-
     return config;
+}
+
+void WorldGenPresetConfigParser::ValidateAgainstMapRules(
+    const WorldGenPresetConfig_t& rPreset, const ElevationRulesConfig_t& rMapRules)
+{
+    if (rPreset.minElevation >= rMapRules.oceanLevelMeters)
+    {
+        throw std::runtime_error("World gen preset '" + rPreset.id
+                                 + "' min_elevation must be < map ocean_level_meters ("
+                                 + std::to_string(rMapRules.oceanLevelMeters) + ")");
+    }
+    if (rPreset.maxElevation < rMapRules.oceanLevelMeters)
+    {
+        throw std::runtime_error("World gen preset '" + rPreset.id
+                                 + "' max_elevation must be >= map ocean_level_meters ("
+                                 + std::to_string(rMapRules.oceanLevelMeters) + ")");
+    }
+    if (rPreset.minElevation < rMapRules.minElevationMeters
+        || rPreset.maxElevation > rMapRules.maxElevationMeters)
+    {
+        throw std::runtime_error(
+            "World gen preset '" + rPreset.id + "' elevation range ["
+            + std::to_string(rPreset.minElevation) + ", "
+            + std::to_string(rPreset.maxElevation) + "] is outside map_rules ["
+            + std::to_string(rMapRules.minElevationMeters) + ", "
+            + std::to_string(rMapRules.maxElevationMeters) + "]");
+    }
 }
 
 WorldGenPreset_t WorldGenPresetConfigParser::ParseType_(const std::string& typeStr) const

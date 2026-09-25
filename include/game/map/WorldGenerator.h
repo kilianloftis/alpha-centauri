@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/map/ElevationRulesConfig.h"
 #include "game/map/LandmarkConfig.h"
 #include "game/map/MapGenerationConfig.h"
 #include "game/map/WorldGenDecorationConfig.h"
@@ -32,6 +33,7 @@ public:
                                        const WorldGenDecorationConfig_t& rDecoration,
                                        const std::vector<LandmarkConfig_t>& rLandmarks,
                                        const ImprovementRegistry& rImprovements,
+                                       const ElevationRulesConfig_t& rMapRules,
                                        unsigned int seed);
 
 private:

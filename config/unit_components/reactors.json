@@ -20,6 +20,11 @@
         "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": { "stat": "collateral_damage", "amount": 1, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "earthquake_levels", "amount": 1, "op": "Add" }
       }
     ]
   },
@@ -44,6 +49,11 @@
         "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": { "stat": "collateral_damage", "amount": 2, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "earthquake_levels", "amount": 2, "op": "Add" }
       },
       {
         "type": "StatModifier",
@@ -80,6 +90,11 @@
       {
         "type": "StatModifier",
         "scope": "ThisUnit",
+        "parameters": { "stat": "earthquake_levels", "amount": 3, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
         "parameters": { "stat": "cost_multiplier", "amount": 0.25, "op": "MultiplyGeometric" }
       }
     ],
@@ -108,6 +123,11 @@
         "type": "StatModifier",
         "scope": "ThisUnit",
         "parameters": { "stat": "collateral_damage", "amount": 4, "op": "Add" }
+      },
+      {
+        "type": "StatModifier",
+        "scope": "ThisUnit",
+        "parameters": { "stat": "earthquake_levels", "amount": 4, "op": "Add" }
       },
       {
         "type": "StatModifier",

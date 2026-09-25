@@ -261,6 +261,7 @@ TEST_CASE("ResolveStatModifiers: amount_source ElevationEnergy scales bands by a
     const EffectConfig_t& rConfig = pool.Add(std::move(config));
 
     Tile tile(0, 0);
+    tile.BindMapRules(actest::TestMapRules());
     tile.SetElevation(2000); // 2 bands at a 1000m step
     const TileYieldRulesConfig_t yieldRules{.elevationEnergyStepMeters = 1000};
     const EffectContext_t ctx{.targetTile = &tile, .pTileYieldRules = &yieldRules};

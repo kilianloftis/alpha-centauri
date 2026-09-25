@@ -7,6 +7,7 @@
 #include "game/faction/base/BaseManager.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
+#include "game/map/ElevationRulesConfig.h"
 #include "game/units/TerraformRules.h"
 #include "game/units/Unit.h"
 #include "game/units/UnitComponentConfig.h"
@@ -16,6 +17,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <memory>
+#include <random>
 #include <unordered_map>
 #include <variant>
 #include <vector>
@@ -35,7 +37,7 @@ struct TerraformGame_
 
     TerraformGame_()
     {
-        auto pMap = std::make_unique<WorldMap>(9, 9);
+        auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
         for (auto& pTile : pMap->GetTiles())
         {
             pTile->SetElevation(100);
@@ -44,6 +46,7 @@ struct TerraformGame_
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
             *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, fixtures.dataContext.interactionGrids, actest::k_TestRngSeed);
+        pState->GetUnitOrderExecutor().SetGameDataContext(fixtures.dataContext);
 
         auto pFaction = std::make_unique<Faction>(
             pState->AllocateFactionId(), true, fixtures.factionDefinition,
@@ -195,12 +198,17 @@ TEST_CASE("Raise and lower land change elevation", "[unit][terraform][mutate]")
         former, "RaiseLand", *game.pState));
     CHECK(game.pPlayer->GetEconomy().GetEnergy() < energyBefore);
     game.FinishTerraform(former);
-    CHECK(tile.GetElevation() == 2000);
+    const ElevationRulesConfig_t& rRules = game.fixtures.dataContext.elevationRules;
+    const int raised = tile.GetElevation();
+    CHECK(raised >= 1000 + rRules.levelMinMeters);
+    CHECK(raised <= 1000 + rRules.levelMaxMeters);
 
     REQUIRE(game.pState->GetUnitOrderExecutor().TryStartTerraform(
         former, "LowerLand", *game.pState));
     game.FinishTerraform(former);
-    CHECK(tile.GetElevation() == 1000);
+    const int lowered = tile.GetElevation();
+    CHECK(lowered >= raised - rRules.levelMaxMeters);
+    CHECK(lowered <= raised - rRules.levelMinMeters);
 }
 
 TEST_CASE("Lowering land stops at Planet's floor instead of throwing",
@@ -215,16 +223,53 @@ TEST_CASE("Lowering land stops at Planet's floor instead of throwing",
     Unit& seaFormer =
         fixture.MakeUnit(faction, 6, 4, {"test_sea_chassis", "test_terraformer"}, &base);
     Tile& tile = fixture.At(6, 4);
-    tile.SetElevation(k_MinElevation + 500);
+    const int floor = fixture.dataContext.elevationRules.minElevationMeters;
+    tile.SetElevation(floor + 500);
+
+    // A fixed 1000 m level: 500 m of headroom takes the roll down to the floor rather than
+    // refusing it. The order already charged energy and spent its turns, and whether the roll
+    // overshoots is a die the player never saw.
+    ElevationRulesConfig_t rules = fixture.dataContext.elevationRules;
+    rules.levelMinMeters = 1000;
+    rules.levelMaxMeters = 1000;
+    std::mt19937 rng(1);
 
     const ImprovementConfig_t& rLowerLand = fixture.improvements.Get("LowerLand");
-    CHECK_NOTHROW(ApplyTerraformResult(tile, rLowerLand, *fixture.ctx, fixture.map, seaFormer));
-    CHECK(tile.GetElevation() == k_MinElevation + 500);
+    CHECK(ApplyTerraformResult(tile, rLowerLand, *fixture.ctx, fixture.map, seaFormer, rng,
+                               rules));
+    CHECK(tile.GetElevation() == floor);
 
-    // One more step of headroom and it still applies.
-    tile.SetElevation(k_MinElevation + 1000);
-    CHECK(ApplyTerraformResult(tile, rLowerLand, *fixture.ctx, fixture.map, seaFormer));
-    CHECK(tile.GetElevation() == k_MinElevation);
+    tile.SetElevation(floor + 1000);
+    CHECK(ApplyTerraformResult(tile, rLowerLand, *fixture.ctx, fixture.map, seaFormer, rng, rules));
+    CHECK(tile.GetElevation() == floor);
+
+    // Already on the floor: nothing to lower, and no exception.
+    CHECK_FALSE(ApplyTerraformResult(tile, rLowerLand, *fixture.ctx, fixture.map, seaFormer, rng,
+                                     rules));
+    CHECK(tile.GetElevation() == floor);
+}
+
+TEST_CASE("A land Former's lower stops at ocean level instead of failing the order",
+          "[unit][terraform][mutate]")
+{
+    FactionFixture fixture;
+    Faction& faction = fixture.MakeFaction();
+    BaseManager& base = fixture.MakeFactionBase(faction, 4, 4);
+    Unit& former = fixture.MakeUnit(faction, 6, 4, {"test_chassis", "test_terraformer"}, &base);
+    Tile& tile = fixture.At(6, 4);
+
+    // A fixed 1500 m level on a 1000 m tile: the roll overshoots ocean level, which used to
+    // return false after CanStartTerraform had already charged for it.
+    ElevationRulesConfig_t rules = fixture.dataContext.elevationRules;
+    rules.levelMinMeters = 1500;
+    rules.levelMaxMeters = 1500;
+    tile.SetElevation(rules.referenceLevelMeters);
+    std::mt19937 rng(1);
+
+    const ImprovementConfig_t& rLowerLand = fixture.improvements.Get("LowerLand");
+    CHECK(ApplyTerraformResult(tile, rLowerLand, *fixture.ctx, fixture.map, former, rng, rules));
+    CHECK(tile.GetElevation() == rules.oceanLevelMeters);
+    CHECK(tile.IsLand());
 }
 
 TEST_CASE("ApplyTerraformResult places Farm via rules helper", "[unit][terraform]")
@@ -239,6 +284,8 @@ TEST_CASE("ApplyTerraformResult places Farm via rules helper", "[unit][terraform
 
     const ImprovementConfig_t* pFarm = fixture.improvements.Find("Farm");
     REQUIRE(pFarm);
-    REQUIRE(ApplyTerraformResult(tile, *pFarm, *fixture.ctx, fixture.map, former));
+    std::mt19937 rng(1);
+    REQUIRE(ApplyTerraformResult(tile, *pFarm, *fixture.ctx, fixture.map, former, rng,
+                                 fixture.dataContext.elevationRules));
     CHECK(tile.HasImprovement("Farm"));
 }

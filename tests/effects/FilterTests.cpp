@@ -466,8 +466,10 @@ TEST_CASE("ConditionSatisfied: AttackerIsEmbarked requires pAttacker", "[effects
 TEST_CASE("HasFeature: Water matches IsWater tiles", "[effects][condition][tile]")
 {
     Tile water(0, 0);
+    water.BindMapRules(actest::TestMapRules());
     water.SetElevation(-100);
     Tile land(1, 0);
+    land.BindMapRules(actest::TestMapRules());
     land.SetElevation(100);
 
     CHECK(water.HasFeature("Water"));
@@ -479,10 +481,13 @@ TEST_CASE("HasFeature: Water matches IsWater tiles", "[effects][condition][tile]
 TEST_CASE("HasFeature: Ocean vs OceanShelf by depth", "[effects][condition][tile]")
 {
     Tile shelf(0, 0);
+    shelf.BindMapRules(actest::TestMapRules());
     shelf.SetElevation(-100);
     Tile ocean(1, 0);
-    ocean.SetElevation(k_OceanShelfMinElevation - 1);
+    ocean.BindMapRules(actest::TestMapRules());
+    ocean.SetElevation(actest::TestMapRules().oceanShelfMeters - 1);
     Tile land(2, 0);
+    land.BindMapRules(actest::TestMapRules());
     land.SetElevation(100);
 
     CHECK(shelf.HasFeature("OceanShelf"));

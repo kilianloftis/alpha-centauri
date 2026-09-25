@@ -189,7 +189,7 @@ TEST_CASE("OnTechDiscovered EnsureResearchTarget fills idle; leaves busy target 
 {
     actest::FactionFixture fixtures;
     GameSettings settings;
-    auto pMap = std::make_unique<WorldMap>(9, 9);
+    auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
     GameState state(std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
                     fixtures.morale(), fixtures.dataContext.tileYieldRules,
                     fixtures.dataContext.interactionGrids, actest::k_TestRngSeed);

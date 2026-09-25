@@ -18,10 +18,6 @@ namespace ac
 namespace
 {
 
-// Land above 1000m only receives forest when moist/wet. Deep-ocean kelp gate uses
-// k_OceanShelfMinElevation from Tile.h.
-constexpr int k_OneAboveSeaMaxElevation = 1000;
-
 int MoistureOrdinal_(Moisture_t moisture)
 {
     return static_cast<int>(moisture);
@@ -42,9 +38,9 @@ bool MeetsAltitudeGate_(const Tile& rTile)
 {
     if (rTile.IsWater())
     {
-        return rTile.GetElevation() >= k_OceanShelfMinElevation;
+        return rTile.GetElevation() >= rTile.MapRules().oceanShelfMeters;
     }
-    if (rTile.GetElevation() <= k_OneAboveSeaMaxElevation)
+    if (rTile.GetElevation() <= rTile.MapRules().spreadAltitudeLimitMeters)
     {
         return true;
     }

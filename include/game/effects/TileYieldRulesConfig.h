@@ -14,9 +14,9 @@ struct TileYieldRulesConfig_t
 {
     // Metres of elevation per point of solar-collector energy: a tile's contribution is
     // ceil(elevation / step), clamped at 0 so sea level and below yield nothing.
-    // Deliberately not the same knob as the Former raise/lower step (TerraformRules.cpp's
-    // k_ElevationStepMeters): they ship the same number, but one is a yield rule and the
-    // other a terraform rule, and a mod may want to move either alone.
+    // Deliberately not the same knob as a play-time elevation level
+    // (config/map_rules.json): one is a yield rule and the other a terrain edit,
+    // and a mod may want to move either alone.
     int elevationEnergyStepMeters = 0;
     std::vector<EffectConfig_t> effects;
 };

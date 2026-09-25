@@ -53,7 +53,7 @@ struct AttackGame_
 
     AttackGame_()
     {
-        auto pMap = std::make_unique<WorldMap>(9, 9);
+        auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
         FillWater_(*pMap);
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,

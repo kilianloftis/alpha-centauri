@@ -43,6 +43,26 @@ UnitDesign::UnitDesign(
         }
     }
 
+    const UnitComponentConfig_t* pChassis = nullptr;
+    for (const UnitComponentConfig_t* pComp : m_components)
+    {
+        if (pComp && pComp->type == "chassis")
+        {
+            pChassis = pComp;
+            break;
+        }
+    }
+    const std::string chassisId = pChassis ? pChassis->id : std::string();
+    for (const UnitComponentConfig_t* pComp : m_components)
+    {
+        if (!pComp || ChassisRequirementMet(*pComp, chassisId))
+        {
+            continue;
+        }
+        throw std::runtime_error(
+            "Component '" + pComp->id + "' cannot be designed on chassis '" + chassisId + "'");
+    }
+
     // Stable unique id from every filled slot (abilities included).
     bool bFirstId = true;
     for (const auto& [rSlot, pComp] : m_slotComponents)
@@ -158,6 +178,21 @@ std::vector<TriggeredEffectConfig_t> UnitDesign::CollectOnHoldEffects() const
             continue;
         }
         result.insert(result.end(), pComp->onHoldEffects.begin(), pComp->onHoldEffects.end());
+    }
+    return result;
+}
+
+std::vector<TriggeredEffectConfig_t> UnitDesign::CollectOnDetonateEffects() const
+{
+    std::vector<TriggeredEffectConfig_t> result;
+    for (const UnitComponentConfig_t* pComp : m_components)
+    {
+        if (!pComp)
+        {
+            continue;
+        }
+        result.insert(result.end(), pComp->onDetonateEffects.begin(),
+                      pComp->onDetonateEffects.end());
     }
     return result;
 }

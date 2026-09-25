@@ -1,4 +1,5 @@
 #include "game/units/UnitComponentConfigParser.h"
+#include "game/units/UnitComponentRegistry.h"
 #include "lib/config/ConfigFields.h"
 #include "lib/config/JsonConfigLoader.h"
 #include "game/effects/EffectConfigParser.h"
@@ -93,11 +94,31 @@ UnitComponentConfig_t UnitComponentConfigParser::ParseComponentConfig(const nloh
     config.type = rComponentJson.at("type").get<std::string>();
     config.requiredTech = ConfigFields::ParseRequiredTech(rComponentJson);
     config.mineralCost = rComponentJson.value("mineral_cost", 0);
+    if (rComponentJson.contains("requires_chassis"))
+    {
+        config.requiresChassis = ConfigFields::ParseStringArray(rComponentJson, "requires_chassis");
+        if (config.requiresChassis.empty())
+        {
+            throw std::runtime_error(
+                "Component '" + config.id + "': requires_chassis must be a non-empty array");
+        }
+        for (const std::string& rChassisId : config.requiresChassis)
+        {
+            if (rChassisId.empty())
+            {
+                throw std::runtime_error(
+                    "Component '" + config.id
+                    + "': requires_chassis must not contain empty strings");
+            }
+        }
+    }
     config.effects = EffectConfigParser::ParseEffects(rComponentJson, EffectSourceKind_t::UnitComponent, config.id);
     config.onCompleteEffects = TriggeredEffectParser::ParseTriggeredEffects(
         rComponentJson, "on_complete_effects", config.id);
     config.onHoldEffects = TriggeredEffectParser::ParseTriggeredEffects(
         rComponentJson, "on_hold_effects", config.id);
+    config.onDetonateEffects = TriggeredEffectParser::ParseTriggeredEffects(
+        rComponentJson, "on_detonate_effects", config.id);
     config.combatRatingModifiers = ParseCombatRatingModifiers_(rComponentJson, config.id);
     config.combatRatingLabels = ParseCombatRatingLabels_(rComponentJson, config.id);
     if (rComponentJson.contains("scrap"))
@@ -123,6 +144,23 @@ UnitComponentConfig_t UnitComponentConfigParser::ParseComponentConfig(const nloh
     }
 
     return config;
+}
+
+void ValidateComponentChassisRequirements(const UnitComponentRegistry& rRegistry)
+{
+    for (const UnitComponentConfig_t& rComponent : rRegistry.GetAll())
+    {
+        for (const std::string& rChassisId : rComponent.requiresChassis)
+        {
+            const UnitComponentConfig_t* pChassis = rRegistry.Find(rChassisId);
+            if (!pChassis || pChassis->type != "chassis")
+            {
+                throw std::runtime_error(
+                    "Component '" + rComponent.id + "' requires_chassis '" + rChassisId
+                    + "' is not a chassis component");
+            }
+        }
+    }
 }
 
 } // namespace ac

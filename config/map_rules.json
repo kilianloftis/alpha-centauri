@@ -1,0 +1,11 @@
+{
+  "min_elevation_meters": -4000,
+  "max_elevation_meters": 3500,
+  "ocean_level_meters": 0,
+  "ocean_shelf_meters": -2000,
+  "level_min_meters": 500,
+  "level_max_meters": 1500,
+  "max_adjacent_difference_meters": 1500,
+  "reference_level_meters": 1000,
+  "spread_altitude_limit_meters": 1000
+}

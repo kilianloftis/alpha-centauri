@@ -3,6 +3,7 @@
 #include "game/GameDataContext.h"
 #include "game/GameState.h"
 #include "game/effects/EffectEnums.h"
+#include "game/effects/TriggeredEffectDispatch.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldMap.h"
@@ -67,6 +68,18 @@ bool UnitOrderInputController::HandleKey(const KeyEvent_t& rEvent, Unit* pSelect
         return false;
     }
 
+    // Shift+X detonates a warhead in place. Only consume the key when the design actually
+    // carries a detonation, so Shift+X stays free on ordinary units.
+    if (rEvent.key == Key_t::X && rEvent.modifier.bShift)
+    {
+        if (UnitCanDetonate(*pSelectedUnit))
+        {
+            m_bDetonateRequested = true;
+            return true;
+        }
+        return false;
+    }
+
     // I toggles airdrop targeting when the unit can attempt an airdrop this turn.
     if (rEvent.key == Key_t::I)
     {
@@ -122,6 +135,7 @@ void UnitOrderInputController::ClearRequestFlags_()
     m_bAirdropModeToggleRequested = false;
     m_bProbeActionRequested = false;
     m_pInteractTarget = nullptr;
+    m_bDetonateRequested = false;
 }
 
 bool UnitOrderInputController::HasExceededHoldThreshold_() const

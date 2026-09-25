@@ -1,3 +1,4 @@
+#include "TestHelpers.h"
 #include "game/map/MoistureGeneration.h"
 #include "game/map/Tile.h"
 #include "game/map/WorldGenDecorationConfigParser.h"
@@ -64,7 +65,7 @@ TEST_CASE("CoastalMoistureBonus is higher near water than inland",
 {
     const MoistureDecorationConfig_t cfg = DefaultMoisture_();
     // Wide enough that mid-map is outside coastal radius even with X-wrap.
-    WorldMap world(11, 7);
+    WorldMap world(11, 7, actest::TestMapRules());
 
     // Fill with land, then a water column on the left.
     for (auto& pTile : world.GetTiles())

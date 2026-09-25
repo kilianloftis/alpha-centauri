@@ -1,3 +1,4 @@
+#include "TestHelpers.h"
 #include "game/map/FungusGeneration.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
@@ -149,7 +150,7 @@ TEST_CASE("WorldGenDecorationConfigParser throws when fungus object is missing",
 
 TEST_CASE("PlaceFungus covers roughly the configured land fraction", "[worldgen][fungus]")
 {
-    WorldMap world(40, 40);
+    WorldMap world(40, 40, actest::TestMapRules());
     FillLand_(world);
 
     FungusDecorationConfig_t cfg;
@@ -171,7 +172,7 @@ TEST_CASE("PlaceFungus covers roughly the configured land fraction", "[worldgen]
 TEST_CASE("PlaceFungus respects max_patch_tiles of 1 (no intentional growth)",
           "[worldgen][fungus]")
 {
-    WorldMap world(8, 8);
+    WorldMap world(8, 8, actest::TestMapRules());
     FillLand_(world);
 
     FungusDecorationConfig_t cfg;
@@ -196,7 +197,7 @@ TEST_CASE("PlaceFungus respects max_patch_tiles of 1 (no intentional growth)",
 
 TEST_CASE("PlaceFungus grows contiguous multi-tile patches", "[worldgen][fungus]")
 {
-    WorldMap world(20, 20);
+    WorldMap world(20, 20, actest::TestMapRules());
     FillLand_(world);
 
     FungusDecorationConfig_t cfg;
@@ -230,7 +231,7 @@ TEST_CASE("PlaceFungus grows contiguous multi-tile patches", "[worldgen][fungus]
 TEST_CASE("PlaceFungus patch_size_skew weights toward small patches",
           "[worldgen][fungus]")
 {
-    WorldMap world(40, 40);
+    WorldMap world(40, 40, actest::TestMapRules());
     FillLand_(world);
 
     FungusDecorationConfig_t cfg;
@@ -267,7 +268,7 @@ TEST_CASE("PlaceFungus patch_size_skew weights toward small patches",
 
 TEST_CASE("PlaceFungus water_fraction only stamps water tiles", "[worldgen][fungus]")
 {
-    WorldMap world(16, 16);
+    WorldMap world(16, 16, actest::TestMapRules());
     for (auto& pTile : world.GetTiles())
     {
         pTile->SetElevation(-500);

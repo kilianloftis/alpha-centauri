@@ -49,7 +49,7 @@ struct CouncilGame_
         councilRegistry.Load(FixturePath("council/proposals.json"));
         councilRules = CouncilRulesConfigParser{}.ParseConfig(FixturePath("council/rules.json"));
 
-        auto pMap = std::make_unique<WorldMap>(9, 9);
+        auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
         for (auto& pTile : pMap->GetTiles())
         {
             pTile->SetElevation(100);
@@ -353,7 +353,7 @@ TEST_CASE("CouncilMembers filter matches nobody when no PlanetaryCouncil exists"
     fixtures.factionDefinition.effects.push_back(config);
 
     GameSettings settings;
-    auto pMap = std::make_unique<WorldMap>(9, 9);
+    auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
     GameState state(std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,
                     *fixtures.dataContext.moraleCalculator, fixtures.dataContext.tileYieldRules, fixtures.dataContext.interactionGrids, actest::k_TestRngSeed);
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "game/map/ElevationRulesConfig.h"
+
 #include <string>
 #include <string_view>
 #include <vector>
@@ -46,15 +48,6 @@ enum class TerrainFeature_t
 std::string ToString(Rockiness_t rockiness);
 std::string ToString(Moisture_t moisture);
 
-// SMAC ocean-shelf / "one above sea" mapped onto meter elevations: deep ocean below this
-// cannot host kelp / sea terraform; shallower water is OceanShelf.
-inline constexpr int k_OceanShelfMinElevation = -2000;
-
-// Elevation is stored in meters and clamped to Planet's range by SetElevation. World-gen preset
-// minElevation/maxElevation must stay inside this.
-inline constexpr int k_MinElevation = -4000;
-inline constexpr int k_MaxElevation = 4000;
-
 class Tile
 {
 public:
@@ -81,10 +74,15 @@ public:
     void SetRockiness(Rockiness_t rockiness);
     Rockiness_t GetRockiness() const;
 
-    void SetElevation(int elevation);  // in meters; throws outside [k_MinElevation, k_MaxElevation]
+    // Throws if map rules are unbound, or elevation is outside their min/max.
+    void SetElevation(int elevation);
     int GetElevation() const;
 
-    // Water threshold shared by landform rendering and territory: elevation < 0 is sea.
+    // Bound by WorldMap from config/map_rules.json. Throws if unbound.
+    void BindMapRules(const ElevationRulesConfig_t& rRules);
+    const ElevationRulesConfig_t& MapRules() const;
+
+    // Water when elevation is below the bound ocean level.
     bool IsWater() const;
     bool IsLand() const;
 
@@ -149,6 +147,7 @@ private:
     bool m_bHasAquifer;
     bool m_bHasFungus;
 
+    const ElevationRulesConfig_t* m_pMapRules = nullptr;
     const ImprovementRegistry* m_pImprovements = nullptr;
     Revision* m_pAppearanceRevision = nullptr;
     std::vector<const ImprovementConfig_t*> m_terrainFeatures;

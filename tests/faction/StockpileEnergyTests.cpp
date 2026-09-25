@@ -325,7 +325,7 @@ TEST_CASE("Stockpile Energy appears in the constructable list", "[production][st
 {
     FactionFixture fixtures;
     GameSettings settings;
-    auto pMap = std::make_unique<WorldMap>(9, 9);
+    auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
     for (auto& pTile : pMap->GetTiles())
     {
         pTile->SetElevation(100);
@@ -633,7 +633,7 @@ TEST_CASE("The stage sequence converts and banks surplus in the same turn",
 {
     FactionFixture fixtures;
     GameSettings settings;
-    auto pMap = std::make_unique<WorldMap>(9, 9);
+    auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
     for (auto& pTile : pMap->GetTiles())
     {
         pTile->SetElevation(100);
@@ -679,7 +679,7 @@ TEST_CASE("A base restored from a snapshot keeps its queued stockpile",
 {
     FactionFixture fixtures;
     GameSettings settings;
-    auto pMap = std::make_unique<WorldMap>(9, 9);
+    auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
     for (auto& pTile : pMap->GetTiles())
     {
         pTile->SetElevation(100);

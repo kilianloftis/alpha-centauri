@@ -214,7 +214,7 @@ Views are rendered bottom-to-top through the stack. Each view renders its own `U
 ### WorldView Input Routing
 - **Coordinator**: `WorldView::HandleKey` and `WorldView::HandleMouse` are thin coordinators that dispatch to owned sub-controllers before handling view-lifecycle input themselves.
 - **CameraInputController**: Owned by `WorldView`; constructed with `WorldDisplay&` and `WorldMap&`. Handles arrow-key camera panning and will later own mouse edge-scroll state (last mouse position, scroll accumulator).
-- **UnitOrderInputController**: Owned by `WorldView`; constructed with no dependencies. Dispatches hotkeys to unit orders through a `Key_t` → `std::function<void(Unit&)>` table (`H` → `HoldOrder_t`), plus request flags for `O` (supply crawl), `B` (found base), `L` (attach), `Shift+U` (unload), and `Shift+D` (disband). Also handles right-click-and-hold for `MoveOrder_t`.
+- **UnitOrderInputController**: Owned by `WorldView`; constructed with no dependencies. Dispatches hotkeys to unit orders through a `Key_t` → `std::function<void(Unit&)>` table (`H` → `HoldOrder_t`), plus request flags for `O` (supply crawl), `B` (found base), `L` (attach), `Shift+U` (unload), `Shift+D` (disband), and `Shift+X` (detonate a warhead in place, gated on `UnitCanDetonate`). Also handles right-click-and-hold for `MoveOrder_t`.
 - **Dispatch order**: `HandleKey` tries the order controller, then the camera controller, then handles `Escape` and `Enter` directly. `HandleMouse` tries the order controller, then the camera controller, then handles left-click unit selection and base opening.
 
 ### ViewFactory

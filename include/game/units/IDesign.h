@@ -29,6 +29,10 @@ public:
     // gathers them from its components; a native returns the list on its config.
     virtual std::vector<TriggeredEffectConfig_t> CollectOnHoldEffects() const = 0;
 
+    // One-shot effects considered when this unit is ordered to detonate in place. Empty for
+    // any design without a warhead.
+    virtual std::vector<TriggeredEffectConfig_t> CollectOnDetonateEffects() const = 0;
+
     // True when additive Attack > 0 or ForcesPsiCombat (design-only resolve).
     virtual bool IsCombatUnit() const = 0;
 

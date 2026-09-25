@@ -61,6 +61,7 @@ add_executable(effects-tests
     game/AttackRulesTests.cpp
     game/ImprovementConfigParserTests.cpp
     game/TerraformTests.cpp
+    game/ElevationChangeTests.cpp
     game/TileResourceRestrictionTests.cpp
     game/WorldGeneratorMoistureTests.cpp
     game/WorldGeneratorRockinessTests.cpp

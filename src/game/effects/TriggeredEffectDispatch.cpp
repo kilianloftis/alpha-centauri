@@ -16,6 +16,7 @@
 #include "game/faction/base/BuildingDestruction.h"
 #include "game/faction/base/buildings/BuildingManager.h"
 #include "game/faction/base/production/ProductionConfigParser.h"
+#include "game/map/ElevationChange.h"
 #include "game/map/ImprovementConfigParser.h"
 #include "game/map/MapUtils.h"
 #include "game/map/Tile.h"
@@ -308,6 +309,33 @@ bool GrantUnit_(TriggeredEffectContext_t& rCtx, const GrantUnitEffect_t& rGrant,
     return spawned > 0;
 }
 
+bool Earthquake_(TriggeredEffectContext_t& rCtx, const EarthquakeEffect_t& rConfig,
+                 std::vector<TriggeredEffectResult_t>& rOut)
+{
+    if (!rCtx.pTile)
+    {
+        return false;
+    }
+    int levels = rConfig.levels;
+    if (rConfig.levelsStat)
+    {
+        if (!rCtx.pUnit)
+        {
+            return false;
+        }
+        levels = rCtx.pUnit->GetStat(*rConfig.levelsStat);
+    }
+    // The tile already carries the map rules WorldMap bound to it, so the quake needs no
+    // GameDataContext of its own.
+    if (!ApplyEarthquake(*rCtx.pTile, rCtx.rGameState.GetWorldMap(), levels, rCtx.Rng(),
+                         rCtx.pTile->MapRules()))
+    {
+        return false;
+    }
+    rOut.push_back(EarthquakeApplied_t{levels});
+    return true;
+}
+
 // Which subject an entry acts on. A faction-subject effect applies once per faction in the
 // context — that is what makes a council GrantEnergy credit every member. A base-, unit- or
 // world-subject effect has exactly one subject and applies once, however many factions the
@@ -332,6 +360,7 @@ bool IsPerFactionSubject_(const TriggeredEffectVariant_t& rEffect)
                                || std::is_same_v<T, DestroyFacilityEffect_t>
                                || std::is_same_v<T, RebelEffect_t>
                                || std::is_same_v<T, DestroyUnitEffect_t>
+                               || std::is_same_v<T, EarthquakeEffect_t>
                                || std::is_same_v<T, WorldParameterEffect_t>)
             {
                 return false;
@@ -467,6 +496,10 @@ bool ApplyOne_(const TriggeredEffectConfig_t& rConfig, TriggeredEffectContext_t&
             else if constexpr (std::is_same_v<T, RebelEffect_t>)
             {
                 return Rebel_(rCtx, rOut);
+            }
+            else if constexpr (std::is_same_v<T, EarthquakeEffect_t>)
+            {
+                return Earthquake_(rCtx, rConcrete, rOut);
             }
             else if constexpr (std::is_same_v<T, DestroyUnitEffect_t>)
             {
@@ -777,6 +810,35 @@ void ApplyHoldLink(GameState& rGameState, Unit& rUnit)
 
     const std::vector<TriggeredEffectConfig_t> effects = rUnit.GetDesign().CollectOnHoldEffects();
     ApplyTriggeredEffects(effects, context);
+}
+
+bool UnitCanDetonate(const Unit& rUnit)
+{
+    return !rUnit.GetDesign().CollectOnDetonateEffects().empty();
+}
+
+bool ApplyDetonation(GameState& rGameState, Unit& rUnit)
+{
+    const std::vector<TriggeredEffectConfig_t> effects =
+        rUnit.GetDesign().CollectOnDetonateEffects();
+    if (effects.empty())
+    {
+        return false;
+    }
+
+    Tile* pTile = rGameState.GetWorldMap().GetTile(rUnit.GetTile().GetX(), rUnit.GetTile().GetY());
+    if (!pTile)
+    {
+        throw std::logic_error("ApplyDetonation: the unit's tile is not on the world map");
+    }
+
+    TriggeredEffectContext_t context(rGameState, rUnit.GetFaction());
+    context.pUnit = &rUnit;
+    context.pTile = pTile;
+    context.pRng = &rGameState.GetRng();
+
+    ApplyTriggeredEffects(effects, context);
+    return true;
 }
 
 } // namespace ac

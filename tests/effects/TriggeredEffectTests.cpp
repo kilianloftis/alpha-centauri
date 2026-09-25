@@ -59,7 +59,7 @@ struct TriggerGame_
         fixtures.dataContext.unitComponentRegistry = std::make_unique<UnitComponentRegistry>();
         fixtures.dataContext.unitComponentRegistry->Load(FixturePath("unit_components.json"));
 
-        auto pMap = std::make_unique<WorldMap>(9, 9);
+        auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
         for (auto& pTile : pMap->GetTiles())
         {
             pTile->SetElevation(100);

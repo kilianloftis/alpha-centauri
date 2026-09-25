@@ -450,7 +450,7 @@ TEST_CASE("ResolveTileYield: sea suppresses landform/resource yields; OceanShelf
         CHECK(yield.energy == 0);
     }
 
-    tile.SetElevation(k_OceanShelfMinElevation - 1); // Ocean
+    tile.SetElevation(tile.MapRules().oceanShelfMeters - 1); // Ocean
     CHECK(tile.HasFeature("Ocean"));
     {
         const TileResources_t yield = world.ctx->ResolveTileYield(tile).effective;
@@ -490,7 +490,7 @@ TEST_CASE("Terrain features: Water stacks with its depth band, general before sp
     CHECK(indexOf("Water") < indexOf("OceanShelf"));
     CHECK(indexOf("Ocean") == -1);
 
-    tile.SetElevation(k_OceanShelfMinElevation - 1); // deep water
+    tile.SetElevation(tile.MapRules().oceanShelfMeters - 1); // deep water
     CHECK(tile.HasFeature("Water"));
     CHECK(tile.HasFeature("Ocean"));
     CHECK_FALSE(tile.HasFeature("OceanShelf"));
@@ -518,7 +518,7 @@ TEST_CASE("CanBuildImprovement: sea terraform excludes Ocean but allows OceanShe
     CHECK(CanBuildImprovement(shelf, *pKelp));
 
     Tile& ocean = world.At(5, 4);
-    ocean.SetElevation(k_OceanShelfMinElevation - 1);
+    ocean.SetElevation(ocean.MapRules().oceanShelfMeters - 1);
     CHECK_FALSE(CanBuildImprovement(ocean, *pKelp));
 }
 

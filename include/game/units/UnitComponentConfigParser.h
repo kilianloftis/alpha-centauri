@@ -8,6 +8,11 @@
 namespace ac
 {
 
+class UnitComponentRegistry;
+
+// Throws if any requires_chassis id is missing or is not a chassis component.
+void ValidateComponentChassisRequirements(const UnitComponentRegistry& rRegistry);
+
 class UnitComponentConfigParser
 {
 public:

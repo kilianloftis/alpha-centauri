@@ -57,7 +57,7 @@ struct AirdropGame_
 
     AirdropGame_()
     {
-        auto pMap = std::make_unique<WorldMap>(20, 20);
+        auto pMap = std::make_unique<WorldMap>(20, 20, actest::TestMapRules());
         FillLand_(*pMap);
         pState = std::make_unique<GameState>(
             std::move(pMap), fixtures.improvements, &fixtures.unitComponents, settings,

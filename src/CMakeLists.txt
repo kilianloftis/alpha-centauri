@@ -157,6 +157,8 @@ add_library(ac-core STATIC
     game/faction/VisibilityRules.cpp
     game/faction/UnitVisibility.cpp
     game/map/ImprovementConfigParser.cpp
+    game/map/ElevationRulesConfigParser.cpp
+    game/map/ElevationChange.cpp
     game/map/TerrainFeatureValidation.cpp
     game/map/TerraformSpread.cpp
     game/map/WorldGenPresetConfigParser.cpp

@@ -5,6 +5,7 @@
 #include "game/effects/EffectConfig.h"
 #include "game/effects/InteractionGridsConfig.h"
 #include "game/effects/TileYieldRulesConfig.h"
+#include "game/map/ElevationRulesConfig.h"
 
 #include <memory>
 #include <vector>
@@ -87,6 +88,8 @@ struct GameDataContext
     // FactionGlobal MaxClamp resource-cap rules (and any other universal tile-yield effects), plus
     // the world yield scalars TileEffectsContext stamps into per-tile resolution.
     TileYieldRulesConfig_t tileYieldRules;
+    // Former raise/lower and earthquake level size, slope limit, and former ceiling.
+    ElevationRulesConfig_t elevationRules;
     // FactionUnits police baselines (away-from-home weight + effectiveness for combat units).
     std::vector<EffectConfig_t> policeRules;
     // Standing WorldGlobal rules (air collateral susceptibility, non-combatant census).

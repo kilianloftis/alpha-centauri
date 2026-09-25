@@ -203,7 +203,7 @@ TEST_CASE("WorldGlobal lane: one faction's WorldGlobal effect reaches other fact
 {
     actest::FactionFixture fixture;
     GameSettings settings;
-    GameState state(std::make_unique<WorldMap>(9, 9), fixture.improvements, &fixture.unitComponents,
+    GameState state(std::make_unique<WorldMap>(9, 9, actest::TestMapRules()), fixture.improvements, &fixture.unitComponents,
                     settings, *fixture.dataContext.moraleCalculator, fixture.dataContext.tileYieldRules, fixture.dataContext.interactionGrids, actest::k_TestRngSeed);
 
     Faction& factionA = state.AddFaction(std::make_unique<Faction>(
@@ -263,7 +263,7 @@ TEST_CASE("WorldGlobal lane: a peer unit-domain modifier changes the other facti
 {
     actest::FactionFixture fixture;
     GameSettings settings;
-    GameState state(std::make_unique<WorldMap>(9, 9), fixture.improvements, &fixture.unitComponents,
+    GameState state(std::make_unique<WorldMap>(9, 9, actest::TestMapRules()), fixture.improvements, &fixture.unitComponents,
                     settings, *fixture.dataContext.moraleCalculator, fixture.dataContext.tileYieldRules,
                     fixture.dataContext.interactionGrids, actest::k_TestRngSeed);
 
@@ -290,7 +290,7 @@ TEST_CASE("WorldGlobal lane: tile defense applies and base yield stats stay on t
 {
     actest::FactionFixture fixture;
     GameSettings settings;
-    GameState state(std::make_unique<WorldMap>(9, 9), fixture.improvements, &fixture.unitComponents,
+    GameState state(std::make_unique<WorldMap>(9, 9, actest::TestMapRules()), fixture.improvements, &fixture.unitComponents,
                     settings, *fixture.dataContext.moraleCalculator, fixture.dataContext.tileYieldRules,
                     fixture.dataContext.interactionGrids, actest::k_TestRngSeed);
 

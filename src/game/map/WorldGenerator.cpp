@@ -40,11 +40,12 @@ std::unique_ptr<WorldMap> WorldGenerator::Generate(const MapGenerationConfig_t& 
                                                    const WorldGenDecorationConfig_t& rDecoration,
                                                    const std::vector<LandmarkConfig_t>& rLandmarks,
                                                    const ImprovementRegistry& rImprovements,
+                                                   const ElevationRulesConfig_t& rMapRules,
                                                    unsigned int seed)
 {
     m_rng.seed(seed);
 
-    auto pWorld = std::make_unique<WorldMap>(rConfig.width, rConfig.height);
+    auto pWorld = std::make_unique<WorldMap>(rConfig.width, rConfig.height, rMapRules);
 
     // Bound before any stage runs: CanBuildImprovement reads a tile's terrain-feature configs
     // to enforce the incumbent side of `excludes`, and those are empty until binding. An

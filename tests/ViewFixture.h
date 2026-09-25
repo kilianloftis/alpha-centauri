@@ -64,7 +64,7 @@ struct ViewFixture : WorldFixture
         dataContext.unitSlotRegistry = std::make_unique<ac::UnitSlotRegistry>();
         dataContext.unitSlotRegistry->Load(FixturePath("unit_slots.json"));
 
-        auto pMap = std::make_unique<ac::WorldMap>(9, 9);
+        auto pMap = std::make_unique<ac::WorldMap>(9, 9, actest::TestMapRules());
         // Moist tiles so worked tiles actually yield something: a default WorldMap produces
         // zero nutrients everywhere, which makes every yield assertion vacuously true.
         for (int y = 0; y < pMap->GetHeight(); ++y)

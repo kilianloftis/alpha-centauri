@@ -56,9 +56,13 @@ void UnitDesignerView::BuildTopPanelElements_()
                            slotName = rSlot.displayName]()
         {
             ShowComponentSelector_(compType, slotName,
-                                   [this, slotId](const UnitComponentConfig_t& rComp)
+                                   [this, slotId, compType](const UnitComponentConfig_t& rComp)
             {
                 m_state.components[slotId] = &rComp;
+                if (compType == "chassis")
+                {
+                    ClearIncompatibleComponents_(rComp.id);
+                }
                 ClearDesignSelection_();
             });
         };
@@ -150,10 +154,22 @@ void UnitDesignerView::ShowComponentSelector_(
     std::function<void(const UnitComponentConfig_t&)> onSelected
 )
 {
+    const UnitComponentConfig_t* pChassis = nullptr;
+    for (const auto& rEntry : m_state.components)
+    {
+        const UnitComponentConfig_t* pComp = rEntry.second;
+        if (pComp && pComp->type == "chassis")
+        {
+            pChassis = pComp;
+            break;
+        }
+    }
+    const std::string chassisId = pChassis ? pChassis->id : std::string();
+
     std::vector<const UnitComponentConfig_t*> available;
     for (const UnitComponentConfig_t* pConfig : m_availableComponents)
     {
-        if (pConfig->type == rComponentType)
+        if (pConfig->type == rComponentType && ChassisRequirementMet(*pConfig, chassisId))
         {
             available.push_back(pConfig);
         }
@@ -170,6 +186,22 @@ void UnitDesignerView::ShowComponentSelector_(
     m_elements.push_back(std::make_unique<ListSelectorPopup>(
         "Select " + rSlotDisplayName, "No components available", std::move(choices),
         ResolveLayout(m_layout, Style().layouts.popupSmall), Style().componentSelectorPopup));
+}
+
+void UnitDesignerView::ClearIncompatibleComponents_(const std::string& rChassisId)
+{
+    for (auto it = m_state.components.begin(); it != m_state.components.end();)
+    {
+        const UnitComponentConfig_t* pComp = it->second;
+        if (pComp && pComp->type != "chassis" && !ChassisRequirementMet(*pComp, rChassisId))
+        {
+            it = m_state.components.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
 }
 
 void UnitDesignerView::HandleSaveDesign_()

@@ -174,6 +174,7 @@ struct TriggeredPayloadValidator
     void operator()(const DestroyFacilityEffect_t&) const {}
     void operator()(const RebelEffect_t&) const {}
     void operator()(const DestroyUnitEffect_t&) const {}
+    void operator()(const EarthquakeEffect_t&) const {}
 };
 
 void ValidateConditionReferences_(const Condition_t& rCondition,
@@ -391,6 +392,7 @@ void ValidateEffectReferences(const GameDataContext& rData)
         validate(rConfig.effects, rConfig.id);
         validateTriggered(rConfig.onCompleteEffects, rConfig.id);
         validateTriggered(rConfig.onHoldEffects, rConfig.id);
+        validateTriggered(rConfig.onDetonateEffects, rConfig.id);
     }
     for (const NativeUnitConfig_t& rConfig : rNativeUnits.GetAll())
     {

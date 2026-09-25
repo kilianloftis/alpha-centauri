@@ -1,6 +1,5 @@
 #include "game/map/LandmarkConfigParser.h"
 
-#include "game/map/Tile.h"
 #include "lib/config/ConfigFields.h"
 #include "lib/config/EnumNames.h"
 #include "lib/config/JsonConfigLoader.h"
@@ -15,7 +14,8 @@ namespace ac
 namespace
 {
 
-LandmarkSculpt_t ParseSculpt_(const nlohmann::json& rShapeJson, const std::string& landmarkId)
+LandmarkSculpt_t ParseSculpt_(const nlohmann::json& rShapeJson, const std::string& landmarkId,
+                               const ElevationRulesConfig_t& rMapRules)
 {
     LandmarkSculpt_t sculpt;
     if (!rShapeJson.contains("sculpt"))
@@ -43,18 +43,21 @@ LandmarkSculpt_t ParseSculpt_(const nlohmann::json& rShapeJson, const std::strin
         throw std::runtime_error("Landmark '" + landmarkId
                                  + "' sculpt rocky_core_radius must be >= 0");
     }
-    if (sculpt.baseElevation < k_MinElevation || sculpt.peakElevation > k_MaxElevation)
+    if (sculpt.baseElevation < rMapRules.minElevationMeters
+        || sculpt.peakElevation > rMapRules.maxElevationMeters)
     {
-        throw std::runtime_error("Landmark '" + landmarkId + "' sculpt elevations ["
-                                 + std::to_string(sculpt.baseElevation) + ", "
-                                 + std::to_string(sculpt.peakElevation)
-                                 + "] are outside Planet's [" + std::to_string(k_MinElevation)
-                                 + ", " + std::to_string(k_MaxElevation) + "]");
+        throw std::runtime_error(
+            "Landmark '" + landmarkId + "' sculpt elevations ["
+            + std::to_string(sculpt.baseElevation) + ", "
+            + std::to_string(sculpt.peakElevation) + "] are outside map_rules ["
+            + std::to_string(rMapRules.minElevationMeters) + ", "
+            + std::to_string(rMapRules.maxElevationMeters) + "]");
     }
     return sculpt;
 }
 
-LandmarkShape_t ParseShape_(const nlohmann::json& rJson, const std::string& landmarkId)
+LandmarkShape_t ParseShape_(const nlohmann::json& rJson, const std::string& landmarkId,
+                             const ElevationRulesConfig_t& rMapRules)
 {
     if (!rJson.is_object() || !rJson.contains("kind"))
     {
@@ -121,7 +124,7 @@ LandmarkShape_t ParseShape_(const nlohmann::json& rJson, const std::string& land
             throw std::runtime_error(
                 "Landmark '" + landmarkId + "' sculptor radius must be >= 1");
         }
-        shape.sculpt = ParseSculpt_(rJson, landmarkId);
+        shape.sculpt = ParseSculpt_(rJson, landmarkId, rMapRules);
     }
     else
     {
@@ -130,7 +133,8 @@ LandmarkShape_t ParseShape_(const nlohmann::json& rJson, const std::string& land
     return shape;
 }
 
-LandmarkConfig_t ParseLandmark_(const nlohmann::json& rJson)
+LandmarkConfig_t ParseLandmark_(const nlohmann::json& rJson,
+                                const ElevationRulesConfig_t& rMapRules)
 {
     LandmarkConfig_t config;
     config.id = ConfigFields::ParseId(rJson);
@@ -156,7 +160,7 @@ LandmarkConfig_t ParseLandmark_(const nlohmann::json& rJson)
     {
         throw std::runtime_error("Landmark '" + config.id + "' missing required 'shape'");
     }
-    config.shape = ParseShape_(rJson.at("shape"), config.id);
+    config.shape = ParseShape_(rJson.at("shape"), config.id, rMapRules);
     return config;
 }
 
@@ -164,11 +168,12 @@ LandmarkConfig_t ParseLandmark_(const nlohmann::json& rJson)
 
 std::vector<LandmarkConfig_t> LandmarkConfigParser::ParseConfig(
     const std::string& configPath,
+    const ElevationRulesConfig_t& rMapRules,
     const std::vector<std::string>& rKnownImprovementIds)
 {
     auto landmarks = JsonConfigLoader::LoadFile<LandmarkConfig_t>(
         configPath, "landmark",
-        [](const nlohmann::json& rJson) { return ParseLandmark_(rJson); });
+        [&rMapRules](const nlohmann::json& rJson) { return ParseLandmark_(rJson, rMapRules); });
 
     if (!rKnownImprovementIds.empty())
     {

@@ -132,7 +132,7 @@ TEST_CASE("ApplyTriggeredEffects: AddBuilding constructs the building immediatel
 {
     actest::FactionFixture fixture;
     GameSettings settings;
-    auto pMap = std::make_unique<WorldMap>(9, 9);
+    auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
     GameState state(std::move(pMap), fixture.improvements, &fixture.unitComponents, settings,
                     fixture.morale(), fixture.dataContext.tileYieldRules,
                     fixture.dataContext.interactionGrids,
@@ -174,7 +174,7 @@ TEST_CASE("Production completion writes on_complete SetInfiltration into the Dip
 {
     actest::FactionFixture fixture;
     GameSettings settings;
-    auto pMap = std::make_unique<WorldMap>(9, 9);
+    auto pMap = std::make_unique<WorldMap>(9, 9, actest::TestMapRules());
     GameState state(std::move(pMap), fixture.improvements, &fixture.unitComponents, settings,
                     fixture.morale(), fixture.dataContext.tileYieldRules,
                     fixture.dataContext.interactionGrids,

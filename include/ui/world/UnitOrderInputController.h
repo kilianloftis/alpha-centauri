@@ -63,6 +63,10 @@ public:
     // already airdropped this turn. WorldView toggles airdrop targeting mode.
     bool WasAirdropModeToggleRequested() const { return m_bAirdropModeToggleRequested; }
 
+    // True after Shift+X on a unit whose design carries on_detonate_effects. WorldView runs
+    // ApplyDetonation.
+    bool WasDetonateRequested() const { return m_bDetonateRequested; }
+
     // Non-null while a left-click hold has exceeded the threshold and the path is valid.
     const Path_t* GetPathPreview() const;
 
@@ -108,6 +112,7 @@ private:
     bool m_bUnloadTransportRequested = false;
     bool m_bDisbandRequested = false;
     bool m_bAirdropModeToggleRequested = false;
+    bool m_bDetonateRequested = false;
     const Tile* m_pInteractTarget = nullptr;
 
     // Left-click long-press path preview.

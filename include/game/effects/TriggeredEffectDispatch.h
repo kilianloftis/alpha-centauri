@@ -85,6 +85,11 @@ struct UnitDestroyed_t
     UnitId_t unitId = 0;
 };
 
+struct EarthquakeApplied_t
+{
+    int levels = 0;
+};
+
 using TriggeredEffectResult_t = std::variant<
     FacilitiesDestroyed_t,
     PopulationChanged_t,
@@ -96,7 +101,8 @@ using TriggeredEffectResult_t = std::variant<
     HitPointsRestored_t,
     BaseRebelled_t,
     InfiltrationSet_t,
-    UnitDestroyed_t
+    UnitDestroyed_t,
+    EarthquakeApplied_t
 >;
 
 // Trigger-only fields plus non-const subjects for mutate arms. Conditions and amount sources
@@ -171,5 +177,14 @@ std::string HoldLinkHostName(const GameState& rGameState, const Unit& rUnit);
 
 // Run the design's on_hold_effects. A DestroyUnit entry in that list removes the subject.
 void ApplyHoldLink(GameState& rGameState, Unit& rUnit);
+
+// True when rUnit's design carries any on_detonate_effects. The capability is the list's
+// presence, so a new warhead is config alone.
+bool UnitCanDetonate(const Unit& rUnit);
+
+// Run the design's on_detonate_effects against the unit's own tile. This is how a missile
+// that cannot declare an attack delivers its payload; a DestroyUnit entry in that list spends
+// the missile. Returns false when the design has no detonation.
+bool ApplyDetonation(GameState& rGameState, Unit& rUnit);
 
 } // namespace ac
